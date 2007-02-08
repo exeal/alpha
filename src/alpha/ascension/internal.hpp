@@ -1,0 +1,181 @@
+/**
+ * @file internal.hpp
+ * @brief Private entries used by Ascension internally.
+ * @author exeal
+ * @date 2006-2007
+ */
+
+#ifndef ASCENSION_INTERNAL_HPP
+#define ASCENSION_INTERNAL_HPP
+#include "common.hpp"
+#include <list>
+#include <algorithm>
+#include "../../manah/object.hpp"
+
+namespace ascension {
+
+	/**
+	 * Defines entities the clients of Ascension do not access.
+	 * @internal
+	 */
+	namespace internal {
+
+		/// Integer constant to type mapping trick from Loki.
+		template<int v> struct Int2Type {enum{value = v};};
+
+		/// Generates signed numeral types.
+		template<class T> class ToSigned {
+		private:
+			template<class U> struct X;
+			template<> struct X<unsigned char> {typedef char Result;};
+			template<> struct X<unsigned short> {typedef short Result;};
+			template<> struct X<unsigned int> {typedef int Result;};
+			template<> struct X<unsigned long> {typedef long Result;};
+			template<> struct X<unsigned __int64> {typedef __int64 Result;};
+		public:
+			typedef typename X<T>::Result Result;
+		};
+
+		/**
+		 * Searches upper or lower bound.
+		 * @param first the start of the range to search
+		 * @param last the end of the range to search
+		 * @param value the value to find
+		 * @param get the function takes a @c Index parameter and returns a @c Value
+		 * @param comp the comparation function takes two @c Value parameters and returns a boolean
+		 * @return the bound
+		 */
+		template<class Index, class Value, class Getter, class Comparer>
+		inline Index searchBound(Index first, Index last, const Value& value, Getter get, Comparer comp) throw() {
+			assert(first <= last);
+			Index c1 = last - first, c2, mid, p = first;
+			while(c1 > 0) {
+				c2 = c1 / 2, mid = p + c2;
+				if(comp(get(mid), value))
+					p = ++mid, c1 -= c2 + 1;
+				else
+					c1 = c2;
+			}
+			return (p != first) ? p - 1 : last;
+		}
+
+		/**
+		 * Searches upper or lower bound.
+		 * @param first the start of the range to search
+		 * @param last the end of the range to search
+		 * @param value the value to find
+		 * @param get the function takes a @c Index parameter and returns a @c Value
+		 * @return the bound
+		 */
+		template<class Index, class Value, class Getter>
+		inline Index searchBound(Index first, Index last, const Value& value, Getter get) throw() {
+			return searchBound(first, last, value, get, std::less_equal<Value>());
+		}
+
+		/// Returns absolute difference of two numerals.
+		template<class T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
+
+		/// A pointer to the owned or unowned strategy.
+		template<class Strategy> class StrategyPointer : public manah::Noncopyable {
+		public:
+			StrategyPointer() throw() : p_(0), hasOwnership_(false) {}
+			StrategyPointer(Strategy* s, bool delegateOwnership) throw() : p_(s), hasOwnership_(delegateOwnership) {}
+			~StrategyPointer() throw() {if(hasOwnership_) delete p_;}
+			Strategy& operator*() const throw() {assert(p_ != 0); return *p_;}
+			Strategy* operator->() const throw() {assert(p_ != 0); return p_;}
+			Strategy* get() const throw() {return p_;}
+			void reset(Strategy* s, bool delegateOwnership) throw() {if(hasOwnership_) delete p_; p_ = s; hasOwnership_ = delegateOwnership;}
+		private:
+			Strategy* p_;
+			bool hasOwnership_;
+		};
+
+		/// Manages the listeners.
+		template<class Listener> class Listeners : public manah::Noncopyable {
+		public:
+			void add(Listener& listener) {
+				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
+					throw std::invalid_argument("The listener already has been registered.");
+				listeners_.push_back(&listener);
+			}
+			void remove(Listener& listener) {
+				const std::list<Listener*>::iterator i = std::find(listeners_.begin(), listeners_.end(), &listener);
+				if(i == listeners_.end()) throw std::invalid_argument("The listener is not registered.");
+				listeners_.erase(i);
+			}
+			void clear() throw() {listeners_.clear();}
+			bool isEmpty() const throw() {return listeners_.empty();}
+			void notify(void(Listener::*method)()) {std::for_each(listeners_.begin(), listeners_.end(), mem_fun(method));}
+			template<class Argument> void notify(void(Listener::*method)(Argument), Argument argument) {
+				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
+					((*i)->*method)(argument);
+			}
+			template<class Arg1, class Arg2>
+			void notify(void(Listener::*method)(Arg1, Arg2), Arg1 arg1, Arg2 arg2) {
+				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
+					((*i)->*method)(arg1, arg2);
+			}
+			template<class Arg1, class Arg2, class Arg3>
+			void notify(void(Listener::*method)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3) {
+				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
+					((*i)->*method)(arg1, arg2, arg3);
+			}
+			template<class Arg1, class Arg2, class Arg3, class Arg4>
+			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
+				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
+					((*i)->*method)(arg1, arg2, arg3, arg4);
+			}
+			template<class Arg1, class Arg2, class Arg3, class Arg4, class Arg5>
+			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4, Arg5), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5) {
+				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
+					((*i)->*method)(arg1, arg2, arg3, arg4, arg5);
+			}
+		private:
+			std::list<Listener*> listeners_;
+		};
+
+#ifdef _WINDOWS_
+		template<class Entries> class SharedLibrary {
+		public:
+			explicit SharedLibrary(const char* fileName) : dll_(::LoadLibraryA(fileName)) {
+				if(dll_ == 0)
+					throw std::runtime_error("Cannot open the library.");
+				std::fill(procedures_, procedures_ + Entries::NUMBER, reinterpret_cast<FARPROC>(1));
+			}
+			~SharedLibrary() throw() {::FreeLibrary(dll_);}
+			template<size_t index> typename Entries::Procedure<index>::signature get() const throw() {
+				if(procedures_[index] == reinterpret_cast<FARPROC>(1))
+					procedures_[index] = ::GetProcAddress(dll_, Entries::Procedure<index>::name());
+				return reinterpret_cast<Entries::Procedure<index>::signature>(procedures_[index]);}
+		private:
+			HMODULE dll_;
+			mutable FARPROC procedures_[Entries::NUMBER];
+		};
+#else
+#endif
+#define ASCENSION_BEGIN_SHARED_LIB_ENTRIES(name, numberOfProcedures)	\
+	struct name {														\
+		enum {NUMBER = numberOfProcedures};								\
+		template<size_t index> struct Procedure;
+#define ASCENSION_SHARED_LIB_ENTRY(index, procedureName, procedureSignature)	\
+		template<> struct Procedure<index> {									\
+			static const char* name() {return procedureName;}					\
+			typedef procedureSignature;											\
+		};
+#define ASCENSION_END_SHARED_LIB_ENTRIES()	\
+	};
+
+		template<class T> void alert(const T& t) {
+			ostringstream_t s;
+			s << t;
+			::MessageBoxW(0, s.str().c_str(), L"alert", MB_OK);
+		}
+
+	} // namespace internal
+
+	/// Signed @c length_t
+	typedef internal::ToSigned<length_t>::Result signed_length_t;
+
+} // namespace ascension
+
+#endif /* !ASCENSION_INTERNAL_HPP */
