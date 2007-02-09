@@ -48,8 +48,8 @@ namespace ascension {
 			 */
 			template<class ConcreteIterator> class BreakIteratorFacade : public std::iterator<std::random_access_iterator_tag, Char> {
 			public:
-				reference operator*() const {return *tell();}
-				reference operator[](difference_type index) const {return tell()[index];}
+				reference operator*() const {return *getConcrete().tell();}
+				reference operator[](difference_type index) const {return getConcrete().tell()[index];}
 				ConcreteIterator& operator++() {getConcrete().next(+1); return getConcrete();}
 				const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
 				ConcreteIterator& operator--() {getConcrete().next(-1); return getConcrete();}
@@ -58,12 +58,12 @@ namespace ascension {
 				ConcreteIterator& operator-=(difference_type offset) {getConcrete().next(-offset); return getConcrete();}
 				const ConcreteIterator operator+(difference_type offset) {ConcreteIterator temp(*this); return temp += offset;}
 				const ConcreteIterator operator-(difference_type offset) {ConcreteIterator temp(*this); return temp -= offset;}
-				bool operator==(const ConcreteIterator& rhs) const {return tell() == rhs.tell();}
-				bool operator!=(const ConcreteIterator& rhs) const {return tell() != rhs.tell();}
-				bool operator<(const ConcreteIterator& rhs) const {return tell() < rhs.tell();}
-				bool operator<=(const ConcreteIterator& rhs) const {return tell() <= rhs.tell();}
-				bool operator>(const ConcreteIterator& rhs) const {return tell() > rhs.tell();}
-				bool operator>=(const ConcreteIterator& rhs) const {return tell() >= rhs.tell();}
+				bool operator==(const ConcreteIterator& rhs) const {return getConcrete().tell() == rhs.tell();}
+				bool operator!=(const ConcreteIterator& rhs) const {return getConcrete().tell() != rhs.tell();}
+				bool operator<(const ConcreteIterator& rhs) const {return getConcrete().tell() < rhs.tell();}
+				bool operator<=(const ConcreteIterator& rhs) const {return getConcrete().tell() <= rhs.tell();}
+				bool operator>(const ConcreteIterator& rhs) const {return getConcrete().tell() > rhs.tell();}
+				bool operator>=(const ConcreteIterator& rhs) const {return getConcrete().tell() >= rhs.tell();}
 			private:
 				ConcreteIterator& getConcrete() {return *static_cast<ConcreteIterator*>(this);}
 			};
@@ -84,8 +84,8 @@ namespace ascension {
 		};
 
 		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
-		template<class BaseIterator>
-		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator, public internal::BreakIteratorFacade<GraphemeBreakIterator> {
+		template<class BaseIterator> class GraphemeBreakIterator :
+			public AbstractGraphemeBreakIterator, public internal::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
 		public:
 			/**
 			 * Constructor.
@@ -145,8 +145,8 @@ namespace ascension {
 		};
 
 		/// @c WordBreakIterator locates word boundaries in text.
-		template<class BaseIterator>
-		class WordBreakIterator : public AbstractWordBreakIterator, public internal::BreakIteratorFacade<WordBreakIterator> {
+		template<class BaseIterator> class WordBreakIterator :
+			public AbstractWordBreakIterator, public internal::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
 		public:
 			/**
 			 * Constructor.
@@ -199,8 +199,8 @@ namespace ascension {
 		};
 
 		/// @c SentenceBreakIterator locates sentence boundaries in text.
-		template<class BaseIterator>
-		class SentenceBreakIterator : public AbstractSentenceBreakIterator, public internal::BreakIteratorFacade<SentenceBreakIterator> {
+		template<class BaseIterator> class SentenceBreakIterator :
+			public AbstractSentenceBreakIterator, public internal::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
 		public:
 			/**
 			 * Constructor.

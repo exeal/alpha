@@ -429,7 +429,7 @@ const Char GraphemeClusterBreak::SHORT_NAME[] = L"GCB";
 map<const Char*, int, PropertyNameComparer<Char> > GraphemeClusterBreak::names_;
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
-int GraphemeClusterBreak::of(CodePoint cp) {
+int GraphemeClusterBreak::of(CodePoint cp) throw() {
 	if(cp == CARRIAGE_RETURN)
 		return CR;
 	else if(cp == LINE_FEED)
@@ -475,7 +475,7 @@ const Char WordBreak::SHORT_NAME[] = L"WB";
 map<const Char*, int, PropertyNameComparer<Char> > WordBreak::names_;
 
 int WordBreak::of(CodePoint cp,
-		const CharacterDetector& ctypes /* = CharacterDetector(CharacterDetector::UCD) */, const locale& lc /* = locale::classic() */) {
+		const CharacterDetector& ctypes /* = CharacterDetector(CharacterDetector::UCD) */, const locale& lc /* = locale::classic() */) throw() {
 	static const CodePoint KATAKANAS[] = {
 		0x3031,	// Vertical Kana Repeat Mark
 		0x3032,	// Vertical Kana Repeat With Voiced Sound Mark

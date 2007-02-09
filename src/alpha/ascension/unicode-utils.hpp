@@ -7,8 +7,10 @@
 #ifndef ASCENSION_UNICODE_UTILS_HPP
 #define ASCENSION_UNICODE_UTILS_HPP
 #include "common.hpp"
+#include "../../manah/object.hpp"	// manah::Noncopyable
 #include "../../manah/memory.hpp"	// manah::AutoBuffer
 #include <cassert>
+#include <cmemory>
 #include <iterator>
 #include <set>
 #include <bitset>
@@ -169,7 +171,7 @@ namespace ascension {
 			CStringCharacterIterator(const CStringCharacterIterator& rhs) throw() :
 				CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
 			CStringCharacterIterator& operator=(const CStringCharacterIterator& rhs) throw() {
-				CharacterIterator::operator=(rhs); current_ = rhs.current_; first_ = rhs.first_; last_ = rhs.last_;}
+				CharacterIterator::operator=(rhs); current_ = rhs.current_; first_ = rhs.first_; last_ = rhs.last_; return *this;}
 			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new CStringCharacterIterator(*this));}
 			void decrement() {--current_;}
 			Char dereference() const {return *current_;}
@@ -287,7 +289,7 @@ namespace ascension {
 		private:
 			bool doIsFirst(const BaseIterator&) const throw() {return false;}
 			bool doIsLast(const BaseIterator&) const throw() {return false;}
-			friend UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> >;
+			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> >;
 		};
 		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES>
 				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> > {
@@ -298,7 +300,7 @@ namespace ascension {
 		private:
 			bool doIsFirst(const BaseIterator& i) const {return i.isFirst();}
 			bool doIsLast(const BaseIterator& i) const {return i.isLast();}
-			friend UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> >;
+			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> >;
 		};
 		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS>
 				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> > {
@@ -314,7 +316,7 @@ namespace ascension {
 			bool doIsLast(const BaseIterator& i) const {return i == last_;}
 		private:
 			BaseIterator first_, last_;
-			friend Base;
+			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> >;
 		};
 
 		/**
@@ -925,7 +927,7 @@ namespace ascension {
 			inline bool isupper(CodePoint cp) {return BinaryProperty::is<BinaryProperty::UPPERCASE>(cp);}
 			/// Returns true if the character can consist a word (word := [:alpha:]\p{gc=Mark}[:digit:]\p{gc=Connector_Punctuation}).
 			inline bool isword(CodePoint cp) {
-				if(isalpha(cp) || isdigit(cp)) true;
+				if(isalpha(cp) || isdigit(cp)) return true;
 				const int gc = GeneralCategory::of(cp);
 				return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::PUNCTUATION_CONNECTOR;}
 			/// Returns true if the character is a hexadecimal (xdigit := \p{gc=Decimal_Number} | \p{Hex_Digit}).
@@ -978,7 +980,7 @@ inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const Cha
 inline int GeneralCategory::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns General_Category value of the specified character.
-inline int GeneralCategory::of(CodePoint cp) {
+inline int GeneralCategory::of(CodePoint cp) throw() {
 	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
 		return p->property;
 	return OTHER_UNASSIGNED;
@@ -988,7 +990,7 @@ inline int GeneralCategory::of(CodePoint cp) {
 inline int CodeBlock::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns Block value of the specified character.
-inline int CodeBlock::of(CodePoint cp) {
+inline int CodeBlock::of(CodePoint cp) throw() {
 	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
 		return p->property;
 	return NO_BLOCK;
@@ -998,7 +1000,7 @@ inline int CodeBlock::of(CodePoint cp) {
 inline int Script::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns Script value of the specified character.
-inline int Script::of(CodePoint cp) {
+inline int Script::of(CodePoint cp) throw() {
 	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
 		return p->property;
 	return UNKNOWN;
@@ -1008,7 +1010,7 @@ inline int Script::of(CodePoint cp) {
 inline int HangulSyllableType::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns the Hangul syllable type property value of @p cp.
-inline int HangulSyllableType::of(CodePoint cp) {
+inline int HangulSyllableType::of(CodePoint cp) throw() {
 	if(cp >= 0x1100 && cp <= 0x1159 || cp == 0x115F)
 		return LEADING_JAMO;
 	else if(cp >= 0x1160 && cp <= 0x11A2)
