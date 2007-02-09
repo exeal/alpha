@@ -1,0 +1,2211 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// ニュートラル resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(932)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU MENU 
+BEGIN
+    MENUITEM "",                            65000
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BMP_LOGO            BITMAP                  "Resource\\logo.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RT_MANIFEST
+//
+
+1                       RT_MANIFEST             "Resource\\manifest.xml"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,7,90,0
+ PRODUCTVERSION 0,7,90,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName", "exeal"
+            VALUE "FileDescription", "Alpha"
+            VALUE "FileVersion", "0.7.90.0"
+            VALUE "InternalName", "abigail"
+            VALUE "LegalCopyright", "built by exeal, 2003-2006"
+            VALUE "OriginalFilename", "Alpha.exe"
+            VALUE "ProductName", "Alpha"
+            VALUE "ProductVersion", "0.7.90.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_ICONS               ICON                    "Resource\\alpha.ico"
+IDR_ICON_NARROWING      ICON                    "Resource\\narrowing.ico"
+IDR_ICON_TEMPMACRODEFINING ICON                    "Resource\\temp-macro-defining.ico"
+IDR_ICON_TEMPMACROPAUSING ICON                    "Resource\\temp-macro-pausing.ico"
+#endif    // ニュートラル resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_SEARCHOPTION MENU 
+BEGIN
+    POPUP "dummy"
+    BEGIN
+        POPUP "無視する文字種(&I)"
+        BEGIN
+            MENUITEM "区切り文字(&P)",              IDC_CHK_IGNOREPUNCTUATIONS
+
+            MENUITEM "記号(&S)",                    IDC_CHK_IGNORESYMBOLS
+            MENUITEM "空白類文字(&W)",              IDC_CHK_IGNOREWHITESPACES
+
+            MENUITEM "発音区分記号(&D)",            IDC_CHK_IGNOREDIACRITICS
+            , GRAYED
+            MENUITEM "母音字(&V)",                  IDC_CHK_IGNOREVOWELS
+            , GRAYED
+            MENUITEM "カシダ(&K)",                  IDC_CHK_IGNOREKASHIDA
+            MENUITEM "制御文字(&C)",                IDC_CHK_IGNORECONTROLS
+        END
+        POPUP "フォールディング(&F)"
+        BEGIN
+            MENUITEM "アクセント記号の除去(&A)",    IDC_CHK_ACCENTREMOVAL
+            , GRAYED
+            MENUITEM "多重登録コードポイントの統一(&C)", 
+                                                    IDC_CHK_CANONICALDUPLICATESFOLDING
+
+            MENUITEM "ダッシュの統一(&D)",          IDC_CHK_DASHESFOLDING
+            MENUITEM "ギリシャ文字記号をギリシャ文字に(&G)", 
+                                                    IDC_CHK_GREEKLETTERFORMSFOLDING
+
+            MENUITEM "全角ヘブライ代替文字をヘブライ文字に(&H)", 
+                                                    IDC_CHK_HEBREWALTERNATESFOLDING
+
+            MENUITEM "ハングル互換字母を完成形に(&J)", IDC_CHK_JAMOFOLDING
+            , GRAYED
+            MENUITEM "数学記号のフォント互換マッピング(&M)", 
+                                                    IDC_CHK_MATHSYMBOLFOLDING
+
+            MENUITEM "スクリプト固有の数字を ASCII の数字に(&N)", 
+                                                    IDC_CHK_NATIVEDIGITFOLDING
+
+            MENUITEM "改行禁止互換マッピング(&B)",  IDC_CHK_NOBREAKFOLDING
+            MENUITEM "上線を統一(&O)",              IDC_CHK_OVERLINEFOLDING
+            MENUITEM "筆記体結合形互換マッピング(&P)", 
+                                                    IDC_CHK_POSITIONALFORMSFOLDING
+            , GRAYED
+            MENUITEM "小字形互換マッピング(&S)",    IDC_CHK_SMALLFORMSFOLDING
+
+            MENUITEM "空白類文字を統一(&W)",        IDC_CHK_SPACEFOLDING
+            MENUITEM "送りありアクセント記号を送り無しアクセント記号に(非推奨)(&)", 
+                                                    IDC_CHK_SPACINGACCENTS
+            , GRAYED
+            MENUITEM "下付き文字互換マッピング(&U)", 
+                                                    IDC_CHK_SUBSCRIPTFOLDING
+            , GRAYED
+            MENUITEM "文字記号を文字に(非推奨)(&Y)", IDC_CHK_SYMBOLFOLDING
+            , GRAYED
+            MENUITEM "下線を統一(&E)",              IDC_CHK_UNDERLINEFOLDING
+            MENUITEM "縦書き互換マッピング(&V)",    IDC_CHK_VERTICALFORMSFOLDING
+            , GRAYED
+            MENUITEM SEPARATOR
+            MENUITEM "発音区分記号の除去(&R)",      IDC_CHK_DIACRITICREMOVAL
+            , GRAYED
+            MENUITEM "部首から漢字を合成(&L)",      IDC_CHK_HANRADICALFOLDING
+            , GRAYED
+            MENUITEM "平仮名/片仮名(&K)",           IDC_CHK_KANAFOLDING
+            MENUITEM "変種文字を原型に(&F)",        IDC_CHK_LETTERFORMSFOLDING
+
+            MENUITEM "簡体字/繁体字(&S)",           IDC_CHK_SIMPLIFIEDHANFOLDING
+            , GRAYED
+            MENUITEM "上付き文字互換マッピング(&T)", 
+                                                    IDC_CHK_SUPERSCRIPTFOLDING
+            , GRAYED
+            MENUITEM "蘇州(花碼)数字を漢数字に(&Z)", 
+                                                    IDC_CHK_SUZHOUNUMERALFOLDING
+            , GRAYED
+            MENUITEM "全角/半角(&)",                IDC_CHK_WIDTHFOLDING
+        END
+        POPUP "展開(&E)"
+        BEGIN
+            MENUITEM "丸付き文字(&C)",              IDC_CHK_CIRCLEDSYMBOLSEXPANSION
+            , GRAYED
+            MENUITEM "ドット付き数字(&D)",          IDC_CHK_DOTTED, GRAYED
+            MENUITEM "省略符(&E)",                  IDC_CHK_ELLIPSISEXPANSION
+            , GRAYED
+            MENUITEM "分数(&F)",                    IDC_CHK_FRACTIONEXPANSION
+            , GRAYED
+            MENUITEM "積分記号(&I)",                IDC_CHK_INTEGRALEXPANSION
+            , GRAYED
+            MENUITEM "合字(&L)",                    IDC_CHK_LIGATUREEXPANSIONMISC
+            , GRAYED
+            MENUITEM "括弧付き文字(&P)",            IDC_CHK_PARENTHESIZED
+            , GRAYED
+            MENUITEM "プライム記号(&R)",            IDC_CHK_PRIMESEXPANSION
+            , GRAYED
+            MENUITEM "ローマ数字(&O)",              IDC_CHK_ROMANNUMERALS
+            , GRAYED
+            MENUITEM "組み文字(&Q)",                IDC_CHK_SQUARED, GRAYED
+            MENUITEM "非互換形組み文字(&U)",        IDC_CHK_SQUAREDUNMARKED
+            , GRAYED
+            MENUITEM "二重字(&G)",                  IDC_CHK_DIGRAPHS, GRAYED
+            MENUITEM "多重字(&M)",                  IDC_CHK_OTHERMULTIGRAPHS
+            , GRAYED
+        END
+    END
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DLG_OPENFILE DIALOGEX 0, 0, 365, 19
+STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
+    WS_CLIPSIBLINGS
+FONT 9, "MS UI Gothic", 0, 0, 0x0
+BEGIN
+    LTEXT           "コードページ(&C):",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,67,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_DLG_SAVEFILE DIALOGEX 0, 0, 365, 35
+STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
+    WS_CLIPSIBLINGS
+FONT 9, "MS UI Gothic", 0, 0, 0x0
+BEGIN
+    LTEXT           "コードページ(&C):",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,80,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "改行コード(&B):",IDC_STATIC_2,7,18,42,9
+    COMBOBOX        IDC_COMBO_BREAKCODE,66,15,70,80,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 130
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "検索と置換"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "検索する文字列(&N):",IDC_STATIC,5,7,70,8
+    COMBOBOX        IDC_COMBO_FINDWHAT,73,5,217,86,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "置換後の文字列(&P):",IDC_STATIC,5,21,70,8
+    COMBOBOX        IDC_COMBO_REPLACEWITH,73,19,217,87,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "方法(&T):",IDC_STATIC,12,53,29,8
+    COMBOBOX        IDC_COMBO_SEARCHTYPE,45,51,140,55,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "大文字小文字の区別(&C):",IDC_STATIC,12,67,84,8
+    COMBOBOX        IDC_COMBO_CASEFOLDING,100,66,85,67,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "識別子のみ検索(&I)",IDC_STATIC,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_GROUP | WS_TABSTOP,12,83,81,10
+    CONTROL         "単語単位で探す(&W)",IDC_CHK_WHOLEWORD,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,94,84,10
+    CONTROL         "自動的にダイアログを閉じる(&L)",IDC_CHK_AUTOCLOSE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,105,113,10
+    GROUPBOX        "条件",IDC_STATIC,5,39,188,84,WS_GROUP
+    CONTROL         "置換後上へ検索(&U)",IDC_CHK_SHIFT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,203,53,77,10
+    CONTROL         "選択範囲(&S)",IDC_RADIO_SELECTION,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,203,65,54,10
+    CONTROL         "ファイル全体(&O)",IDC_RADIO_WHOLEFILE,"Button",
+                    BS_AUTORADIOBUTTON,203,76,62,10
+    GROUPBOX        "方向と範囲",IDC_STATIC,195,39,94,54,WS_GROUP
+    DEFPUSHBUTTON   "次を検索(&F)",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
+    PUSHBUTTON      "前を検索(&B)",CMD_SEARCH_FINDPREV,297,21,59,14
+    PUSHBUTTON      "すべてマーク(&M)",CMD_SEARCH_BOOKMARKALL,297,40,59,14
+    PUSHBUTTON      "置換(&R)",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
+    PUSHBUTTON      "すべて置換(&A)",CMD_SEARCH_REPLACEALL,297,74,59,14
+    PUSHBUTTON      "閉じる",IDCANCEL,297,109,59,14
+    PUSHBUTTON      "拡張オプション(&E)...",IDC_BTN_BROWSE,195,109,93,14
+END
+
+IDD_DLG_ABOUT DIALOGEX 0, 0, 261, 108
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Alpha のバージョン情報"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
+    CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
+                    10,44,64
+    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,
+                    8,SS_NOPREFIX
+    LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
+                    16,127,8,SS_NOPREFIX | WS_DISABLED
+    LTEXT           "Alpha Script Debugger version 0.3.0 alpha (inavailable)",
+                    IDC_STATIC,59,25,182,8,SS_NOPREFIX | WS_DISABLED
+    LTEXT           "これは Alpha のアルファ版です。\n最新情報は以下の URL を参照して下さい。",
+                    IDC_STATIC,59,40,142,16,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,204,87,50,14
+    CONTROL         "",IDC_STATIC,"Static",SS_GRAYFRAME | SS_SUNKEN,51,0,1,
+                    109
+END
+
+IDD_DLG_CODEPAGES DIALOGEX 0, 0, 237, 159
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "コードページの選択"
+FONT 8, "MS Shell Dlg", 400, 0, 0x0
+BEGIN
+    LTEXT           "利用可能なコードページ(&C):",IDC_STATIC,7,7,90,8
+    LISTBOX         IDC_LIST_CODEPAGES,7,16,223,115,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,180,138,50,14
+END
+
+IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 90
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "指定行へ移動"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "行番号 (0-99999999)(&N):",IDC_STATIC_1,7,8,87,8
+    EDITTEXT        IDC_EDIT_LINENUMBER,7,18,82,12,ES_RIGHT | ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN_LINENUMBER,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS,92,21,11,14
+    CONTROL         "選択を保持する(&X)",IDC_CHK_SAVESELECTION,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,39,74,10
+    CONTROL         "論理行(&L)",IDC_RADIO_LOGICALLINE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,69,45,10
+    CONTROL         "表示行(&P)",IDC_RADIO_PHYSICALLINE,"Button",
+                    BS_AUTORADIOBUTTON | WS_DISABLED,74,69,45,10
+    GROUPBOX        "行単位",IDC_STATIC,7,55,133,30,WS_GROUP
+    DEFPUSHBUTTON   "移動(&J)",IDOK,99,7,41,14,WS_GROUP
+END
+
+IDD_DLG_EXECUTECOMMAND DIALOGEX 0, 0, 342, 76
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "コマンドの実行"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "コマンド(&M):",IDC_STATIC,7,8,38,8
+    COMBOBOX        IDC_COMBO_COMMAND,48,7,222,124,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "$F は現在のファイルパスに置き換えられ、二重引用符が付加されます。",
+                    IDC_STATIC,7,25,223,8
+    CONTROL         "コンソールプログラム(&P)",IDC_CHK_GETCONSOLE,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,51,89,10
+    CONTROL         "標準入力に Unicode を使用する(&U)",
+                    IDC_CHK_USEUNICODEFORINPUT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,116,51,125,10
+    GROUPBOX        "オプション",IDC_STATIC,7,38,262,31,WS_GROUP
+    EDITTEXT        IDC_EDIT_INPUT,194,32,40,12,ES_AUTOHSCROLL | NOT 
+                    WS_VISIBLE | WS_DISABLED
+    PUSHBUTTON      "^&Z",IDC_BTN_SENDEOS,245,25,16,14,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT_OUTPUT,203,35,40,14,ES_MULTILINE | ES_READONLY | 
+                    NOT WS_VISIBLE | WS_VSCROLL
+    DEFPUSHBUTTON   "実行/入力(&E)",IDOK,280,6,55,14,WS_GROUP
+    PUSHBUTTON      "クリア(&C)",IDC_BTN_CLEAR,280,21,55,14
+    PUSHBUTTON      "閉じる/中止(&I)",IDCANCEL,280,55,55,14
+    CONTROL         "",IDC_STATIC_PROMPT,"Static",SS_BLACKFRAME | SS_SUNKEN | 
+                    NOT WS_VISIBLE,287,50,31,1
+END
+
+IDD_DLG_BOOKMARKS DIALOGEX 0, 0, 317, 164
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW | WS_EX_CONTEXTHELP
+CAPTION "ブックマーク"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "ブックマーク(&B):",IDC_STATIC,7,7,53,8
+    CONTROL         "List1",IDC_LIST_BOOKMARKS,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | 
+                    WS_TABSTOP,7,17,257,104,WS_EX_CLIENTEDGE
+    CONTROL         "自動的に閉じる(&C)",IDC_CHK_AUTOCLOSE,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,141,73,10
+    CONTROL         "すべてのバッファを表示(&S)",IDC_CHK_SHOWALLFILES,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,123,141,103,10
+    GROUPBOX        "オプション",IDC_STATIC,7,127,257,32,WS_GROUP
+    PUSHBUTTON      "移動(&J)",IDOK,270,7,40,14,WS_GROUP
+    PUSHBUTTON      "追加(&A)",IDC_BTN_ADD,270,23,40,14
+    PUSHBUTTON      "削除(&R)",IDC_BTN_DELETE,270,39,40,14
+    PUSHBUTTON      "更新(&U)",IDC_BTN_UPDATE,270,55,40,14
+    PUSHBUTTON      "閉じる",IDCANCEL,270,143,40,14
+END
+
+IDD_DLG_SELECTLANGUAGE DIALOGEX 0, 0, 321, 131
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "言語エンジンの選択"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "実行するスクリプトには関連付けられた言語エンジンが存在しないか、設定が正しくありません。\n言語を選択して実行しますか?",
+                    IDC_STATIC,7,7,307,17
+    LTEXT           "利用可能な言語(&L):",IDC_STATIC,7,33,66,8
+    LISTBOX         IDC_LIST_SCRIPTENGINES,7,42,307,60,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,229,110,41,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,273,110,41,14
+END
+
+IDD_DLG_SAVESOMEBUFFERS DIALOGEX 0, 0, 199, 161
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "保存されていないバッファ"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "以下のバッファは変更が保存されていません。\n\n保存しますか?",
+                    IDC_STATIC,42,7,150,25
+    LTEXT           "保存するバッファ(&B):",IDC_STATIC,7,41,69,8
+    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | 
+                    LBS_MULTIPLESEL | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,101,140,44,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,148,140,44,14
+    LTEXT           "|",IDC_STATIC,119,123,8,8
+    ICON            "",IDC_STATIC_1,7,7,20,20
+END
+
+IDD_DLG_FILENEWWITHFORMAT DIALOGEX 0, 0, 283, 105
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "書式を指定して新規"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "コードページ(&C):",IDC_STATIC,14,23,51,8
+    COMBOBOX        IDC_COMBO_CHARCODE,67,21,202,210,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "改行コード(&B):",IDC_STATIC,14,37,46,8
+    COMBOBOX        IDC_COMBO_BREAKCODE,67,35,202,125,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "文書タイプ(&D):",IDC_STATIC,14,52,46,8
+    COMBOBOX        IDC_COMBO_DOCTYPENAMES,67,51,202,123,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,173,84,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,226,84,50,14
+    GROUPBOX        "書式",IDC_STATIC,7,7,269,68
+END
+
+IDD_DLG_ABBREVIATIONS DIALOGEX 0, 0, 301, 134
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "短縮語句の管理"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "登録されている短縮語句(&R):",IDC_STATIC,7,7,93,8
+    CONTROL         "",IDC_LIST_ABBREVIATIONS,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_ALIGNLEFT | LVS_NOSORTHEADER | WS_TABSTOP,7,16,230,
+                    110,WS_EX_CLIENTEDGE
+    PUSHBUTTON      "追加(&A)",IDC_BTN_ADD,244,7,50,14,WS_GROUP
+    PUSHBUTTON      "削除(&D)",IDC_BTN_DELETE,244,23,50,14
+    PUSHBUTTON      "すべて削除(&L)",IDC_BTN_CLEAR,244,39,50,14
+    DEFPUSHBUTTON   "OK",IDOK,244,97,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,244,113,50,14
+END
+
+IDD_DLG_NEWABBREV DIALOGEX 0, 0, 307, 42
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_DISABLED | WS_CAPTION | WS_SYSMENU
+CAPTION "短縮語句の登録"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "短縮語句(&A):",IDC_STATIC,7,8,46,8
+    EDITTEXT        IDC_EDIT_INPUT,77,7,178,12,ES_AUTOHSCROLL
+    LTEXT           "展開後の文字列(&E):",IDC_STATIC,7,23,68,8
+    EDITTEXT        IDC_EDIT_OUTPUT,77,22,178,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,264,7,36,14
+END
+
+IDD_DLG_BUFFERLIST DIALOGEX 0, 0, 240, 120
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "バッファリスト"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_LIST_BUFFERS,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_ALIGNLEFT | WS_TABSTOP,0,0,240,120,WS_EX_CLIENTEDGE
+END
+
+IDD_DLG_LOADTEMPMACRO DIALOGEX 0, 0, 201, 123
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "キーボードマクロの読み込み"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "保存されているキーボードマクロ(&S):",IDC_STATIC,7,7,112,
+                    8
+    LISTBOX         IDC_LIST_MACROS,7,17,125,99,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "読み込み(&L)",IDOK,140,7,54,14,WS_GROUP
+    PUSHBUTTON      "実行(&E)",IDC_BTN_EXECUTE,140,24,54,14,WS_DISABLED
+    PUSHBUTTON      "キャンセル",IDCANCEL,140,41,54,14
+END
+
+IDD_DLG_SAVETEMPMACRO DIALOGEX 0, 0, 201, 123
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "キーボードマクロの保存"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "名前(&N):",IDC_STATIC,7,7,30,8
+    COMBOBOX        IDC_COMBO_MACROS,7,17,125,99,CBS_SIMPLE | CBS_SORT | 
+                    CBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "保存(&S)",IDOK,140,7,54,14,WS_DISABLED | WS_GROUP
+    PUSHBUTTON      "キャンセル",IDCANCEL,140,24,54,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DLG_OPENFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 358
+        BOTTOMMARGIN, 12
+    END
+
+    IDD_DLG_SAVEFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 358
+        BOTTOMMARGIN, 27
+    END
+
+    IDD_DLG_SEARCH, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 356
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 123
+    END
+
+    IDD_DLG_ABOUT, DIALOG
+    BEGIN
+        RIGHTMARGIN, 254
+        BOTTOMMARGIN, 101
+    END
+
+    IDD_DLG_CODEPAGES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 152
+    END
+
+    IDD_DLG_GOTOLINE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 140
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_DLG_EXECUTECOMMAND, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 335
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 69
+    END
+
+    IDD_DLG_BOOKMARKS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 310
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 157
+    END
+
+    IDD_DLG_SELECTLANGUAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 314
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 124
+    END
+
+    IDD_DLG_CONFIRMUNSAVEDDOCUMENTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 192
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 154
+    END
+
+    IDD_DLG_FILENEWWITHFORMAT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 276
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 98
+    END
+
+    IDD_DLG_ABBREVIATIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 294
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 127
+    END
+
+    IDD_DLG_NEWABBREV, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 300
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 35
+    END
+
+    IDD_DLG_BUFFERLIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 233
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 113
+    END
+
+    IDD_DLG_LOADTEMPMACRO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 194
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_DLG_SAVETEMPMACRO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 194
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Data
+//
+
+IDR_CODEPAGE_NAME_TABLE     RCDATA              "Resource\\code-page-name-table-ja"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_NEW            "新規(&N)\n文書を新しく作成します。"
+    CMD_FILE_NEWWITHFORMAT  "書式を指定して新規(&T)...\nコードページ、改行コード、文書タイプを指定して文書を新しく作成します。"
+    CMD_FILE_OPEN           "開く(&O)...\n既存の文書を開きます。"
+    CMD_FILE_CLOSE          "閉じる(&C)\n現在の文書を閉じます。"
+    CMD_FILE_CLOSEALL       "すべて閉じる(&Q)\nすべての文書を閉じます。"
+    CMD_FILE_SAVE           "上書き保存(&S)\n現在の文書を保存します。"
+    CMD_FILE_SAVEAS         "名前を付けて保存(&A)...\n現在の文書を新しい名前で保存します。"
+    CMD_FILE_SAVEALL        "すべて保存(&V)\nすべての文書を保存します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_TOP            "ファイル(&F)"
+    CMD_FILE_MRU            "最近使ったファイル(&F)"
+    CMD_FILE_OPERATE        "ファイル操作(&E)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_REOPEN         "開き直す(&R)\n現在の文書を開き直します。"
+    CMD_FILE_REOPENWITHCODEPAGE 
+                            "コードページを変更して開き直す(&G)...\n現在の文書をコードページを指定して開き直します。"
+    CMD_FILE_EXIT           "Alphaの終了(&X)\n文書の保存を確認し、Alpha を終了します。"
+    CMD_FILE_SENDMAIL       "送信(&D)...\n電子メールでこの文書を送信します。"
+    CMD_FILE_CLOSEOTHERS    "他を閉じる(&H)\nアクティブでない文書を全て閉じます。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_DELETE         "削除(&D)\n選択範囲を削除します。"
+    CMD_EDIT_BACKSPACE      "前の1文字を削除\n直前の1文字を削除します。"
+    CMD_EDIT_DELETETONEXTWORD 
+                            "次の単語まで削除\n次の単語の先頭までを削除します。"
+    CMD_EDIT_DELETETOPREVWORD 
+                            "前の単語まで削除\n前の単語の先頭までを削除します。"
+    CMD_EDIT_DELETELINE     "現在行を削除\n現在行を削除します。"
+    CMD_EDIT_INSERTPREVLINE "上に1行挿入\n1つ上の行に改行を挿入します。"
+    CMD_EDIT_BREAK          "改行\n改行文字を挿入します。"
+    CMD_EDIT_UNDO           "元に戻す(&U)\n直前に行った動作を取り消します。"
+    CMD_EDIT_REDO           "やり直し(&R)\n取り消された動作をやり直します。"
+    CMD_EDIT_CUT            "切り取り(&T)\n選択範囲を切り取ってクリップボードに移動します。"
+    CMD_EDIT_COPY           "コピー(&C)\n選択範囲をクリップボードにコピーします。"
+    CMD_EDIT_PASTE          "貼り付け(&P)\nクリップボードの内容を挿入します。"
+    CMD_EDIT_INSERTTAB      "タブを挿入\nタブを挿入します。"
+    CMD_EDIT_DELETETAB      "タブを削除\nタブを削除します。"
+    CMD_EDIT_TABIFY         "空白をタブに変換\n選択範囲の空白類文字をタブに変換します。"
+    CMD_EDIT_UNTABIFY       "タブを空白に変換\n選択範囲のタブを半角空白に変換します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_PASTEFROMCLIPBOARDRING 
+                            "クリップボードリングから貼り付け(&L)\nクリップボードリングの内容を挿入します。"
+    CMD_EDIT_CHARFROMABOVELINE 
+                            "1行上の同じ位置の文字を挿入\n現在行の1行上の同じ位置にある文字を挿入します。"
+    CMD_EDIT_CHARFROMBELOWLINE 
+                            "1行下の同じ位置の文字を挿入\n現在行の1行下の同じ位置にある文字を挿入します。"
+    CMD_EDIT_TRANSPOSELINES "行の入れ替え\n前後の行を入れ替えます。"
+    CMD_EDIT_TRANSPOSECHARS "文字の入れ替え\n前後の文字を入れ替えます。"
+    CMD_EDIT_TRANSPOSEWORDS "単語の入れ替え\n前後の単語を入れ替えます。"
+    CMD_EDIT_SHOWABBREVIATIONDLG 
+                            "短縮語句の管理(&B)...\n短縮語句の管理を行います。"
+    CMD_EDIT_FIRSTCHAR      "最初の非空白類文字に移動\n現在行の最初に現れる非空白類文字に移動します。"
+    CMD_EDIT_LASTCHAR       "最後の非空白類文字に移動\n現在行の最後に現れる非空白類文字に移動します。"
+    CMD_EDIT_FIRSTCHAREXTEND 
+                            "最初の非空白類文字まで選択を拡張\n現在の最初に現れる非空白類文字まで選択を拡張します。"
+    CMD_EDIT_LASTCHAREXTEND "最後の非空白類文字まで選択を拡張\n現在の最後に現れる非空白類文字まで選択を拡張します。"
+    CMD_EDIT_FIRSTCHARORLINEHOME 
+                            "行頭か最初の非空白類文字に移動\n行頭か現在の最初に現れる非空白類文字に移動します。"
+    CMD_EDIT_LASTCHARORLINEEND 
+                            "行末か最後の非空白類文字に移動\n行末か現後の最初に現れる非空白類文字に移動します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_CHARTOCODEPOINT 
+                            "文字をコードポイントに変換\nキャレット直前の文字をコードポイントに変換します。"
+    CMD_EDIT_CODEPOINTTOCHAR 
+                            "コードポイントを文字に変換\nキャレット直前のコードポイントを文字に変換します。"
+    CMD_EDIT_RECOMPOSE      "再変換\n選択範囲を未確定文字列として編集しなおします。"
+    CMD_EDIT_TOGGLEOVERTYPEMODE 
+                            "挿入/上書きモードの切り替え\n入力方式の挿入モード、上書きモードを切り替えます。"
+    CMD_EDIT_OPENCANDIDATEWINDOW 
+                            "入力候補(&N)\n入力候補ウィンドウを表示、または単語を補完します。"
+    CMD_EDIT_HOME           "文書の先頭に移動\n文書の先頭に移動します。"
+    CMD_EDIT_END            "文書の終端に移動\n文書の終端に移動します。"
+    CMD_EDIT_LINEHOME       "行頭に移動\n現在行の先頭に移動します。"
+    CMD_EDIT_LINEEND        "行末に移動\n現在行の終端に移動します。"
+    CMD_EDIT_CHARNEXT       "次の文字に移動\n次の文字に移動します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_SCROLLCOLUMNNEXT "1列右へスクロール\n1列右へスクロールします。"
+    CMD_EDIT_SCROLLCOLUMNPREV "1列左へスクロール\n1列左へスクロールします。"
+    CMD_EDIT_ENSURECARETCENTER 
+                            "キャレットが中央になるまでスクロール\nキャレットがウィンドウの中央に表示されるようにスクロールします。"
+    CMD_EDIT_ENSURECARETVISIBLE 
+                            "キャレットが可視になるまでスクロール\nキャレットがウィンドウ内に表示されるようにスクロールします。"
+    CMD_EDIT_ROWCHARNEXT    "次の文字まで矩形選択\n次の文字まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWCHARPREV    "前の文字まで矩形選択\n前の文字まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWLINEDOWN    "1行下まで矩形選択\n1行下まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWLINEUP      "1行上まで矩形選択\n1行上まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWLINEEND     "行末まで矩形選択\n行末まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWLINEHOME    "行頭まで矩形選択\n行頭まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWWORDNEXT    "次の単語の先頭まで矩形選択\n次の単語の先頭まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWWORDPREV    "前の単語の先頭まで矩形選択\n前の単語の先頭まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWWORDENDNEXT "次の単語の末尾まで矩形選択\n次の単語の末尾まで選択を拡張し、矩形選択を開始します。"
+    CMD_EDIT_ROWWORDENDPREV "前の単語の末尾まで矩形選択\n前の単語の末尾まで選択を拡張し、矩形選択を開始します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_CHARPREV       "前の文字に移動\n前の文字に移動します。"
+    CMD_EDIT_WORDENDNEXT    "次の単語の終端に移動\n次の単語の終端に移動します。"
+    CMD_EDIT_WORDENDPREV    "前の単語の終端に移動\n前の単語の終端に移動します。"
+    CMD_EDIT_WORDNEXT       "次の単語の先頭に移動\n次の単語の先頭に移動します。"
+    CMD_EDIT_WORDPREV       "前の単語の先頭に移動\n前の単語の先頭に移動します。"
+    CMD_EDIT_LINEDOWN       "1行下に移動\n1行下に移動します。"
+    CMD_EDIT_LINEUP         "1行上に移動\n1行上に移動します。"
+    CMD_EDIT_PAGEDOWN       "1行ページに移動\n1行ページに移動します。"
+    CMD_EDIT_PAGEUP         "1行ページに移動\n1行ページに移動します。"
+    CMD_EDIT_HOMEEXTEND     "文書の先頭まで選択を拡張\n文書の先頭まで選択を拡張します。"
+    CMD_EDIT_ENDEXTEND      "文書の終端まで選択を拡張\n文書の終端まで選択を拡張します。"
+    CMD_EDIT_LINEHOMEEXTEND "行頭まで選択を拡張\n現在行の先頭まで選択を拡張します。"
+    CMD_EDIT_LINEENDEXTEND  "行末まで選択を拡張\n現在行の終端まで選択を拡張します。"
+    CMD_EDIT_CHARNEXTEXTEND "次の文字まで選択を拡張\n次の文字まで選択を拡張します。"
+    CMD_EDIT_CHARPREVEXTEND "前の文字まで選択を拡張\n前の文字まで選択を拡張します。"
+    CMD_EDIT_WORDENDNEXTEXTEND 
+                            "次の単語の終端まで選択を拡張\n次の単語の終端まで選択を拡張します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_WORDENDPREVEXTEND 
+                            "前の単語の終端まで選択を拡張\n前の単語の終端まで選択を拡張します。"
+    CMD_EDIT_WORDNEXTEXTEND "次の単語の先頭まで選択を拡張\n次の単語の先頭まで選択を拡張します。"
+    CMD_EDIT_WORDPREVEXTEND "前の単語の先頭まで選択を拡張\n前の単語の先頭まで選択を拡張します。"
+    CMD_EDIT_LINEDOWNEXTEND "1行下まで選択を拡張\n1行下まで選択を拡張します。"
+    CMD_EDIT_LINEUPEXTEND   "1行上まで選択を拡張\n1行上まで選択を拡張します。"
+    CMD_EDIT_PAGEDOWNEXTEND "1ページ下まで選択を拡張\n1ページ下まで選択を拡張します。"
+    CMD_EDIT_PAGEUPEXTEND   "1ページ上まで選択を拡張\n1ページ上まで選択を拡張します。"
+    CMD_EDIT_SELECTALL      "すべて選択(&A)\n文書全体を選択します。"
+    CMD_EDIT_SELECTCURRENTWORD 
+                            "現在の単語を選択\n現在位置の単語を選択します。"
+    CMD_EDIT_CANCELSELECTION "選択を解除\n現在の選択を解除します。"
+    CMD_EDIT_SCROLLHOME     "先頭行へスクロール\n先頭行へスクロールします。"
+    CMD_EDIT_SCROLLEND      "最終行へスクロール\n最終行へスクロールします。"
+    CMD_EDIT_SCROLLLINEDOWN "1行下へスクロール\n1行下へスクロールします。"
+    CMD_EDIT_SCROLLLINEUP   "1行上へスクロール\n1行上へスクロールします。"
+    CMD_EDIT_SCROLLPAGEDOWN "1ページ下へスクロール\n1ページ下へスクロールします。"
+    CMD_EDIT_SCROLLPAGEUP   "1ページ上へスクロール\n1ページ上へスクロールします。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_TOP            "編集(&E)"
+    CMD_EDIT_ADVANCED       "高度な操作(&V)"
+    CMD_EDIT_INSERTUNICODECTRLS "Unicode 制御文字の挿入(&I)"
+    CMD_EDIT_INSERTUNICODEWSS "Unicode 空白文字の挿入(&W)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_TOP          "検索(&S)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_FIND         "検索と置換(&F)...\n[検索と置換] ダイアログを表示します。"
+    CMD_SEARCH_FINDNEXT     "次を検索(&N)\n検索条件に適合する次の文字列を選択します。"
+    CMD_SEARCH_FINDPREV     "前を検索(&P)\n検索条件に適合する前の文字列を選択します。"
+    CMD_SEARCH_REPLACEANDNEXT 
+                            "置換して次に\n選択文字列を置換し次を検索します。"
+    CMD_SEARCH_REPLACEALL   "すべて置換\n検索条件に適合するすべての文字列を置換します。"
+    CMD_SEARCH_BOOKMARKALL  "すべてマーク\n検索条件に適合する文字列が存在するすべての行にブックマークを設定します。"
+    CMD_SEARCH_REVOKEMARK   "検索マークの解除(&K)\n検索条件に適合する文字列の強調表示を解除します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_GOTOLINE     "指定行へ移動(&G)...\n指定した行へ移動します。"
+    CMD_SEARCH_TOGGLEBOOKMARK 
+                            "ブックマークの設定/解除(&O)\n現在行にブックマークを追加/削除します。"
+    CMD_SEARCH_NEXTBOOKMARK "次のブックマーク(&T)\n次のブックマークへ移動します。"
+    CMD_SEARCH_PREVBOOKMARK "前のブックマーク(&V)\n前のブックマークへ移動します。"
+    CMD_SEARCH_CLEARBOOKMARKS 
+                            "ブックマークのクリア(&C)\n現在の文書の全てのブックマークを解除します。"
+    CMD_SEARCH_MANAGEBOOKMARKS 
+                            "ブックマークの管理(&B)...\nブックマークの管理を行います。"
+    CMD_SEARCH_GOTOMATCHBRACKET 
+                            "対括弧に移動(&M)\n現在位置の括弧に対応する括弧に移動します。"
+    CMD_SEARCH_EXTENDTOMATCHBRACKET 
+                            "対括弧まで選択を拡張(&X)\n現在位置の括弧に対応する括弧まで選択を拡張します。"
+    CMD_SEARCH_INCREMENTALSEARCH 
+                            "インクリメンタル検索(&I)\nインクリメンタル検索を行います。"
+    CMD_SEARCH_INCREMENTALSEARCHR 
+                            "逆方向インクリメンタル検索(&R)\n逆方向インクリメンタル検索を行います。"
+    CMD_SEARCH_INCREMENTALSEARCHRF 
+                            "正規表現インクリメンタル検索(&E)\n正規表現インクリメンタル検索を行います。"
+    CMD_SEARCH_INCREMENTALSEARCHRR 
+                            "逆方向正規表現インクリメンタル検索(&U)\n逆方向正規表現インクリメンタル検索を行います。"
+    CMD_SEARCH_INCREMENTALSEARCHMF 
+                            "Migemo インクリメンタル検索(&M)\nMigemo インクリメンタル検索を行います。"
+    CMD_SEARCH_INCREMENTALSEARCHMR 
+                            "逆方向 Migemo インクリメンタル検索(&O)\n逆方向 Migemo インクリメンタル検索を行います。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_VIEW_TOP            "表示(&V)"
+    CMD_VIEW_BUFFERS        "バッファ(&F)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_VIEW_TOOLBAR        "ツールバー(&T)\nツールバーの表示/非表示を切り替えます。"
+    CMD_VIEW_STATUSBAR      "ステータスバー(&S)\nステータスバーの表示/非表示を切り替えます。"
+    CMD_VIEW_WRAPNO         "折り返さない(&O)\n行の折り返し表示を行いません。"
+    CMD_VIEW_WRAPBYSPECIFIEDWIDTH 
+                            "指定幅で折り返す(&E)\n行を指定した幅で折り返して表示します。"
+    CMD_VIEW_WRAPBYWINDOWWIDTH 
+                            "右端で折り返す(&W)\n行をウィンドウ幅で折り返して表示します。"
+    CMD_VIEW_REFRESH        "再描画(&R)\n画面を再描画します。"
+    CMD_VIEW_SPLITNS        "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
+    CMD_VIEW_NEXTBUFFER     "次のバッファ(&N)\n次のバッファを表示します。"
+    CMD_VIEW_PREVBUFFER     "前のバッファ(&P)\n前のバッファを表示します。"
+    CMD_VIEW_BUFFERBAR      "バッファバー(&B)\nバッファバーの表示/非表示を切り替えます。"
+    CMD_VIEW_TOPMOSTALWAYS  "常に最前面に表示(&A)\nウィンドウを常に最前面に表示します。"
+    CMD_VIEW_SPLITWE        "ウィンドウの左右分割(&D)\nエディタウィンドウを左右に分割します。"
+    CMD_VIEW_UNSPLITACTIVE  "現在のウィンドウを閉じる(&C)\nアクティブなエディタウィンドウを閉じ、分割を解除します。"
+    CMD_VIEW_UNSPLITOTHERS  "他のウィンドウを閉じる(&H)\nアクティブなエディタウィンドウを残し、すべてのウィンドウを閉じます。"
+    CMD_VIEW_NEXTPANE       "次のウィンドウ(&X)\n次のエディタウィンドウをアクティブにします。"
+    CMD_VIEW_PREVPANE       "前のウィンドウ(&V)\n前のエディタウィンドウをアクティブにします。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_MACRO_TOP           "マクロ(&M)"
+    CMD_MACRO_SCRIPTS       "スクリプト(&S)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_MACRO_DEFINE        "記録の開始/終了(&D)\nキーボードマクロの記録を開始/終了します。"
+    CMD_MACRO_EXECUTE       "実行(&X)\nアクティブなキーボードマクロを実行します。"
+    CMD_MACRO_APPEND        "追加記録の開始(&A)\nアクティブなキーボードマクロに追加記録を開始します。"
+    CMD_MACRO_PAUSERESTART  "記録の一時停止/再開(&P)\nキーボードマクロの記録を一時停止/再開します。"
+    CMD_MACRO_INSERTQUERY   "プロンプトの挿入(&Q)\n記録中のキーボードマクロにユーザプロンプトを挿入します。"
+    CMD_MACRO_ABORT         "記録の中止(&B)\nキーボードマクロの記録を中止します。"
+    CMD_MACRO_SAVEAS        "名前を付けて保存(&V)...\nアクティブなキーボードマクロに名前を付けて保存します。"
+    CMD_MACRO_LOAD          "読み込み(&L)...\nキーボードマクロをファイルから読み込みます。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_TOOL_TOP            "ツール(&T)"
+    CMD_TOOL_APPDOCTYPES    "適用文書タイプ(&A)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_TOOL_COMMONOPTION   "共通設定(&C)...\nすべての文書タイプに共通のオプションを設定します。"
+    CMD_TOOL_DOCTYPEOPTION  "文書タイプ別設定(&Y)...\n文書タイプ別のオプションを設定します。"
+    CMD_TOOL_FONT           "フォント設定(&F)...\nフォントの設定を行います。"
+    CMD_TOOL_EXECUTE        "実行(&E)\n現在のファイル名を引数にして文書タイプ指定のプログラムを実行します。"
+    CMD_TOOL_EXECUTECOMMAND "コマンドの実行(&X)...\n外部コマンドを実行します。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_HELP_TOP            "ヘルプ(&H)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_HELP_ABOUT          "バージョン情報(&A)\nAlpha の情報、バージョンを表示します。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_BUFFER__BUFFER_IS_DIRTY 
+                            "%1%n%nこのファイルは変更されています。保存しますか?"
+    MSG_BUFFER__CONFIRM_REOPEN "現在のファイルを開き直しますか?"
+    MSG_BUFFER__CONFIRM_REOPEN_EVEN_IF_DIRTY 
+                            "現在のファイルは変更されています。\nファイルを開き直すと変更が失われますが、よろしいですか?"
+    MSG_BUFFER__FAILED_TO_SEND_TO_MAILER "メーラへの送信に失敗しました。"
+    MSG_BUFFER__UNTITLED    "無題"
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN 
+                            "%1%n%nこのファイルは他のプロセスで変更されています。ファイルを読み込み直しますか?%n読み込み直すと現在の編集内容は破棄されます。"
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE 
+                            "%1%n%nこのファイルは他のプロセスで変更されています。ファイルの保存を続行しますか?"
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT 
+                            "%1%n%nこのファイルは他のプロセスで変更されています。編集を続行しますか?"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_BUFFER__SAVING_FILE_IS_OPENED 
+                            "%1%n%nこのファイルは既に開いています。編集中のファイルに上書きすることはできません。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_SEARCH__PATTERN_NOT_FOUND "指定された文字列は見つかりませんでした。"
+    MSG_SEARCH__REPLACE_DONE "%1 個の文字列を置換しました。"
+    MSG_SEARCH__REGEX_IS_INAVAILABLE 
+                            "正規表現エンジンのロードに失敗しました。検索を行うことはできません。"
+    MSG_SEARCH__INVALID_REGEX_PATTERN 
+                            "正規表現検索中にエラーが発生しました。%n%n理由:%t%1%n位置:%t%2"
+    MSG_SEARCH__BAD_REGEX_PATTERN_START 
+                            "存在しない部分式への後方参照が見つかりました"
+    20605                   "中括弧の内容 (""{...}"") が不正です"
+    20606                   "不正な文字クラスです"
+    20607                   "不正な文字範囲です"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_ERROR__EXE_NOT_REGISTERED 
+                            """%1""%nこの文書タイプには実行に使用するプログラムが設定されていません。"
+    MSG_ERROR__FAILED_TO_RUN_EXE 
+                            "プログラムの実行に失敗しました。\n文書タイプに設定されているプログラムのパスが正しくない可能性があります。"
+    MSG_ERROR__UNSUPPORTED_OS_VERSION 
+                            "ご使用のバージョンの OS では Alpha を実行することはできません。"
+    MSG_ERROR__DUPLICATE_ABBREV "既に同じ短縮語句が存在します。"
+    MSG_ERROR__REGEX_UNKNOWN_ERROR 
+                            "正規表現パターンマッチ中にエラーが発生しました。\nパターンが複雑すぎる可能性があります。"
+    MSG_ERROR__MIGEMO_UNKNOWN_ERROR "Migemo の内部でエラーが発生しました。"
+    MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING 
+                            "この操作はキーボードマクロ記録中には実行できません。"
+    MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO 
+                            "キーボードマクロファイルの読み込みに失敗しました。%n%nファイル: %1%n位置: (%2, %3)%n理由: %4"
+    MSG_ERROR__FAILED_TO_LOAD_SOMETHING "(読み込みに失敗しました)"
+    MSG_ERROR__OUT_OF_MEMORY "メモリ不足のため、処理に失敗しました。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_STATUS__READ_ONLY_CAPTION "[読み取り専用]"
+    MSG_STATUS__TEMP_MACRO_DEFINING "キーボードマクロ記録中"
+    MSG_STATUS__TEMP_MACRO_PAUSING "キーボードマクロ記録中断中"
+    MSG_STATUS__NARROWING   "ナローイング"
+    MSG_STATUS__DEBUGGING   "デバッグ中"
+    MSG_STATUS__INSERT_MODE "挿入"
+    MSG_STATUS__OVERTYPE_MODE "上書き"
+    MSG_STATUS__CARET_POSITION "%lu 行 、 %lu 列 、 %lu 文字"
+    MSG_STATUS__CAN_EXPAND_ABBREV "'%1' は '%2' に展開可能です。"
+    MSG_STATUS__LOADING_FILE "'%1' を読み込み中..."
+    MSG_STATUS__WAITING_FOR_2ND_KEYS 
+                            "'%1' が押されました。2番目のキー組み合わせを待っています。"
+    MSG_STATUS__INVALID_2STROKE_COMBINATION 
+                            "キーストローク '%1' に割り当てられているコマンドはありません。"
+    MSG_STATUS__ISEARCH     "インクリメンタル検索 : %1"
+    MSG_STATUS__ISEARCH_EMPTY_PATTERN 
+                            "インクリメンタル検索 : (検索文字列が入力されていません)"
+    MSG_STATUS__ISEARCH_BAD_PATTERN 
+                            "インクリメンタル検索 : %1 (パターンが正しくありません)"
+    MSG_STATUS__ISEARCH_NOT_FOUND "インクリメンタル検索 : %1 (見つかりません)"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__DEFAULT_OPENFILE_FILTER "すべてのファイル:*.*"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_IO__FAILED_TO_DETECT_ENCODE 
+                            "%1%n%nコードページを判別できませんでした。システム既定のコードページを使用します。"
+    MSG_IO__INVALID_ENCODE  "%1%n%n指定されたコードページは正しくありません。ファイルを開くことはできません。"
+    MSG_IO__INVALID_LINE_BREAK 
+                            "%1%n%n指定された改行コードは正しくありません。ファイルを開くことはできません。"
+    MSG_IO__UNCONVERTABLE_UCS_CHAR 
+                            "%1%nエンコード%2%n%nこの文書は指定したエンコードで変換できない文字を含んでいます。%nこのまま続行するとそれらの文字は正しく保存されません。%nコードページを変更しますか?"
+    MSG_IO__UNCONVERTABLE_NATIVE_CHAR 
+                            "%1%nエンコード: %2%n%nこのファイルは指定したエンコードで Unicode に変換できない文字を含んでいます。%n編集を続行して保存するとファイルの内容が破壊される可能性があります。%nコードページを変更しますか?"
+    MSG_IO__HUGE_FILE       "%1%n%nファイルサイズが大きすぎます。Alpha が扱えるファイルサイズの上限値は 2GB です。"
+    MSG_IO__FAILED_TO_WRITE_FOR_READONLY 
+                            "%1%n%nファイルを上書き保存できません。このバッファは読み取り専用です。"
+    MSG_IO__FAILED_TO_RESOLVE_SHORTCUT 
+                            "%1%n%nショートを解決できませんでした。ファイルを開くことはできません。"
+    MSG_IO__CANNOT_OPEN_FILE "%1%n%nファイルを開くことができません。"
+    MSG_IO__CANNOT_CREATE_TEMP_FILE 
+                            "%1%n%nファイルの保存に失敗しました。一時ファイルを作成できませんでした。"
+    MSG_IO__LOST_DISK_FILE  "%1%n%nファイルの保存に失敗しました。ファイルが失われました。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_SCRIPT__SCRIPT_ERROR_DIALOG 
+                            "スクリプトエラーが発生しました。%n%nスクリプト:%t%1%n行:%t%2%n文字:%t%3%nエラー:%t%4%nSCODE:%t%5%nエラー元:%t%6"
+    MSG_SCRIPT__UNSAFE_ACTIVEX_CAUTION 
+                            "%1%n%nこのスクリプトは安全でない可能性のあるオブジェクトを作成しようとしています。%nオブジェクトの作成を許可しますか?%n%n要求されたオブジェクト:%n  ProgID:%t%2%n  IID:%t%3"
+    MSG_SCRIPT__INVALID_LANGUAGE_NAME 
+                            "マクロに指定されている言語 ""%1"" は正しくないか、インストールされていません。マクロを実行することはできません。"
+    MSG_SCRIPT__FAILED_TO_OPEN_MACRO_SCRIPT 
+                            "%1%n%nマクロスクリプトが読み込めませんでした。マクロを実行することはできません。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__MATCH_CASE  "同一視しない"
+    MSG_DIALOG__IGNORE_ASCII_CASE "ASCII 文字のみ同一視"
+    MSG_DIALOG__CASE_FOLD_SIMPLE "Unicode (単純)"
+    MSG_DIALOG__CASE_FOLD_FULL "Unicode (完全)"
+    MSG_DIALOG__LITERAL_SEARCH "リテラル"
+    MSG_DIALOG__REGEXP_SEARCH "正規表現 (Boost.Regex 1.33.0)"
+    MSG_DIALOG__MIGEMO_SEARCH "Migemo (C/Migemo 1.2 expected)"
+    MSG_DIALOG__BUFFERBAR_CAPTION "バッファ"
+    MSG_DIALOG__ABBREVIATION "短縮語"
+    MSG_DIALOG__EXPANDED_ABBREVIATION "展開後の文字列"
+    MSG_DIALOG__BOOKMARKED_LINE "行"
+    MSG_DIALOG__BOOKMARKED_POSITION "位置"
+    MSG_DIALOG__LINE_NUMBER_RANGE "行番号 (%1-%2)(&N):"
+    MSG_DIALOG__SELECT_ALL  "すべて選択(&A)"
+    MSG_DIALOG__UNSELECT_ALL "選択をすべて解除(&C)"
+    MSG_DIALOG__SELECT_DIRECTORY "ディレクトリを選択してください。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_STATUS__RISEARCH    "逆方向インクリメンタル検索 : %1"
+    MSG_STATUS__RISEARCH_NOT_FOUND 
+                            "逆方向インクリメンタル検索 : %1 (見つかりません)"
+    MSG_STATUS__RISEARCH_BAD_PATTERN 
+                            "逆方向インクリメンタル検索 : %1 (パターンが正しくありません)"
+    MSG_STATUS__RISEARCH_EMPTY_PATTERN 
+                            "逆方向インクリメンタル検索 : (検索文字列が入力されていません)"
+    MSG_STATUS__MATCH_BRACKET_OUT_OF_VIEW "(対括弧) %1 : %2 "
+    MSG_STATUS__INVOKABLE_LINK_POPUP 
+                            "%1%nCtrl キーを押しながらクリックするとリンクを起動します。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__FILE_OPERATION "ファイル操作"
+    MSG_DIALOG__RENAME_FILE "名前の変更"
+    MSG_DIALOG__COPY_FILE   "コピー"
+    MSG_DIALOG__MOVE_FILE   "移動"
+    MSG_DIALOG__UNCHANGE_LINE_BREAK "統一しない"
+    MSG_DIALOG__SAVE_FILE_FILTER "すべてのファイル"
+END
+
+STRINGTABLE 
+BEGIN
+    20608                   "不正な文字セットです"
+    20609                   "不正な照合要素です"
+    20610                   "不正なエスケープです"
+    20611                   "不正な繰り返しです"
+    20612                   "対応する丸括弧 (')') が見つかりません"
+    20613                   "対応する中括弧 ('}') が見つかりません"
+    20614                   "パターンが複雑なため、検索を行うことができません"
+    20615                   "不明"
+    20616                   "メモリ不足のため、検索を行うことができません"
+    20617                   "スタック空間が枯渇しています。検索を行うことはできません"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_FIRSTCHARORLINEHOMEEXTEND 
+                            "行頭か最初の非空白類文字まで選択を拡張\n行頭か現在の最初に現れる非空白類文字まで選択を拡張します。"
+    CMD_EDIT_LASTCHARORLINEENDEXTEND 
+                            "行末か最後の非空白類文字まで選択を拡張\n行末か現在の最後に現れる非空白類文字まで選択を拡張します。"
+    CMD_EDIT_NARROWTOSELECTION 
+                            "選択範囲外の保護(&N)\n選択範囲外のテキストを変更できないように保護します。"
+    CMD_EDIT_WIDEN          "テキスト保護の解除(&W)\n変更不能テキストの保護を解除します。"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_OTHER__EMPTY_MENU_CAPTION "(なし)"
+    MSG_OTHER__UNKNOWN      "(不明)"
+    MSG_OTHER__NOT_OBTAINED "(取得できませんでした)"
+    MSG_OTHER__TEMPORARY_MACRO_QUERY 
+                            "このマクロを続行しますか?\n\nいいえ: 現在の繰り返しをスキップし、次の繰り返しを開始します\nキャンセル: マクロの実行を中止します"
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 英語 (米国) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_SEARCHOPTION MENU 
+BEGIN
+    POPUP "dummy"
+    BEGIN
+        POPUP "&Ignorable Character Types"
+        BEGIN
+            MENUITEM "&Punctuations",               IDC_CHK_IGNOREPUNCTUATIONS
+
+            MENUITEM "&Symbols",                    IDC_CHK_IGNORESYMBOLS
+            MENUITEM "&White Spaces",               IDC_CHK_IGNOREWHITESPACES
+
+            MENUITEM "&Diacritics",                 IDC_CHK_IGNOREDIACRITICS
+            , GRAYED
+            MENUITEM "&Vowels",                     IDC_CHK_IGNOREVOWELS
+            , GRAYED
+            MENUITEM "&Kashida",                    IDC_CHK_IGNOREKASHIDA
+            MENUITEM "&Controls",                   IDC_CHK_IGNORECONTROLS
+        END
+        POPUP "&Foldings"
+        BEGIN
+            MENUITEM "&Accent Removal",             IDC_CHK_ACCENTREMOVAL
+            , GRAYED
+            MENUITEM "&Canonical Duplicates Folding", 
+                                                    IDC_CHK_CANONICALDUPLICATESFOLDING
+
+            MENUITEM "&Dashes Folding",             IDC_CHK_DASHESFOLDING
+            MENUITEM "&Greek Letter Forms Folding", IDC_CHK_GREEKLETTERFORMSFOLDING
+
+            MENUITEM "&Hebrew Alternates Folding",  IDC_CHK_HEBREWALTERNATESFOLDING
+
+            MENUITEM "&Jamo Folding",               IDC_CHK_JAMOFOLDING
+            , GRAYED
+            MENUITEM "&Math Symbol Folding",        IDC_CHK_MATHSYMBOLFOLDING
+
+            MENUITEM "&Native Digit Folding",       IDC_CHK_NATIVEDIGITFOLDING
+
+            MENUITEM "No-&Break Folding",           IDC_CHK_NOBREAKFOLDING
+            MENUITEM "&Overline Folding",           IDC_CHK_OVERLINEFOLDING
+            MENUITEM "&Positional Forms Folding",   IDC_CHK_POSITIONALFORMSFOLDING
+            , GRAYED
+            MENUITEM "&Small Forms Folding",        IDC_CHK_SMALLFORMSFOLDING
+
+            MENUITEM "&White Space Folding",        IDC_CHK_SPACEFOLDING
+            MENUITEM "Spacing Accents (deprecated)", IDC_CHK_SPACINGACCENTS
+            , GRAYED
+            MENUITEM "S&upscript Folding",          IDC_CHK_SUBSCRIPTFOLDING
+            , GRAYED
+            MENUITEM "S&ymbol Folding (deprecated)", IDC_CHK_SYMBOLFOLDING
+            , GRAYED
+            MENUITEM "Und&erline Folding",          IDC_CHK_UNDERLINEFOLDING
+            MENUITEM "&Vertical Forms Folding",     IDC_CHK_VERTICALFORMSFOLDING
+            , GRAYED
+            MENUITEM SEPARATOR
+            MENUITEM "Diacritic &Removal",          IDC_CHK_DIACRITICREMOVAL
+            , GRAYED
+            MENUITEM "Han Radica&l Folding",        IDC_CHK_HANRADICALFOLDING
+            , GRAYED
+            MENUITEM "&Kana Folding",               IDC_CHK_KANAFOLDING
+            MENUITEM "Letter &Forms Folding",       IDC_CHK_LETTERFORMSFOLDING
+
+            MENUITEM "&Simplified Han Folding",     IDC_CHK_SIMPLIFIEDHANFOLDING
+            , GRAYED
+            MENUITEM "Superscrip&t Folding",        IDC_CHK_SUPERSCRIPTFOLDING
+            , GRAYED
+            MENUITEM "Su&zhou Numeral Folding",     IDC_CHK_SUZHOUNUMERALFOLDING
+            , GRAYED
+            MENUITEM "Width Folding",               IDC_CHK_WIDTHFOLDING
+        END
+        POPUP "&Expansions"
+        BEGIN
+            MENUITEM "&Circled Symbols Expansion",  IDC_CHK_CIRCLEDSYMBOLSEXPANSION
+            , GRAYED
+            MENUITEM "&Dotted",                     IDC_CHK_DOTTED, GRAYED
+            MENUITEM "&Ellipsis Expansion",         IDC_CHK_ELLIPSISEXPANSION
+            , GRAYED
+            MENUITEM "&Fraction Expansion",         IDC_CHK_FRACTIONEXPANSION
+            , GRAYED
+            MENUITEM "&Integral Expansion",         IDC_CHK_INTEGRALEXPANSION
+            , GRAYED
+            MENUITEM "&Ligature Expansion Miscellaneous", 
+                                                    IDC_CHK_LIGATUREEXPANSIONMISC
+            , GRAYED
+            MENUITEM "&Parenthesized",              IDC_CHK_PARENTHESIZED
+            , GRAYED
+            MENUITEM "P&rimes Expansion",           IDC_CHK_PRIMESEXPANSION
+            , GRAYED
+            MENUITEM "R&oman Numerals",             IDC_CHK_ROMANNUMERALS
+            , GRAYED
+            MENUITEM "S&quared",                    IDC_CHK_SQUARED, GRAYED
+            MENUITEM "Sq&uared Unmarked",           IDC_CHK_SQUAREDUNMARKED
+            , GRAYED
+            MENUITEM "Di&graphs",                   IDC_CHK_DIGRAPHS, GRAYED
+            MENUITEM "Other &Multigraphs",          IDC_CHK_OTHERMULTIGRAPHS
+            , GRAYED
+        END
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DLG_ABBREVIATIONS DIALOGEX 0, 0, 301, 134
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Manage abbreviations"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "&Registered abbreviations:",IDC_STATIC,7,7,93,8
+    CONTROL         "",IDC_LIST_ABBREVIATIONS,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_ALIGNLEFT | LVS_NOSORTHEADER | WS_TABSTOP,7,16,230,
+                    110,WS_EX_CLIENTEDGE
+    PUSHBUTTON      "&Add",IDC_BTN_ADD,244,7,50,14,WS_GROUP
+    PUSHBUTTON      "&Delete",IDC_BTN_DELETE,244,23,50,14
+    PUSHBUTTON      "Delete A&ll",IDC_BTN_CLEAR,244,39,50,14
+    DEFPUSHBUTTON   "OK",IDOK,244,97,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,244,113,50,14
+END
+
+IDD_DLG_ABOUT DIALOGEX 0, 0, 261, 108
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "About Alpha"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
+    CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
+                    10,45,42
+    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,
+                    8,SS_NOPREFIX
+    LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
+                    16,127,8,SS_NOPREFIX | WS_DISABLED
+    LTEXT           "Alpha Script Debugger version 0.3.0 alpha (inavailable)",
+                    IDC_STATIC,59,25,182,8,SS_NOPREFIX | WS_DISABLED
+    LTEXT           "This is an alpha test version of Alpha.\nFor the newest information, check the following URLs.",
+                    IDC_STATIC,59,40,192,16,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,204,87,50,14
+    CONTROL         "",IDC_STATIC,"Static",SS_GRAYFRAME | SS_SUNKEN,51,0,1,
+                    109
+END
+
+IDD_DLG_BOOKMARKS DIALOGEX 0, 0, 317, 164
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW | WS_EX_CONTEXTHELP
+CAPTION "Bookmarks"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "&Bookmarks:",IDC_STATIC,7,7,53,8
+    CONTROL         "List1",IDC_LIST_BOOKMARKS,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | 
+                    WS_TABSTOP,7,17,257,104,WS_EX_CLIENTEDGE
+    CONTROL         "&Close automatically",IDC_CHK_AUTOCLOSE,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,141,77,10
+    CONTROL         "&Show all buffers",IDC_CHK_SHOWALLFILES,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,123,141,71,10
+    GROUPBOX        "Options",IDC_STATIC,7,127,257,32,WS_GROUP
+    PUSHBUTTON      "&Jump",IDOK,270,7,40,14,WS_GROUP
+    PUSHBUTTON      "&Add",IDC_BTN_ADD,270,23,40,14
+    PUSHBUTTON      "&Remove",IDC_BTN_DELETE,270,39,40,14
+    PUSHBUTTON      "&Update",IDC_BTN_UPDATE,270,55,40,14
+    PUSHBUTTON      "Close",IDCANCEL,270,143,40,14
+END
+
+IDD_DLG_CODEPAGES DIALOGEX 0, 0, 237, 159
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Select Code Page"
+FONT 8, "MS Shell Dlg", 400, 0, 0x0
+BEGIN
+    LTEXT           "Available &code pages:",IDC_STATIC,7,7,90,8
+    LISTBOX         IDC_LIST_CODEPAGES,7,16,223,115,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,180,138,50,14
+END
+
+IDD_DLG_SAVESOMEBUFFERS DIALOGEX 0, 0, 199, 161
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Unsaved Buffers"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "Following buffers are not saved.\n\nDo you want to save them?",
+                    IDC_STATIC,42,7,150,25
+    LTEXT           "&Buffers to save:",IDC_STATIC,7,41,55,8
+    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | 
+                    LBS_MULTIPLESEL | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,101,140,44,14
+    PUSHBUTTON      "Cancel",IDCANCEL,148,140,44,14
+    LTEXT           "|",IDC_STATIC,119,123,8,8
+    ICON            "",IDC_STATIC_1,7,7,20,20
+END
+
+IDD_DLG_EXECUTECOMMAND DIALOGEX 0, 0, 342, 76
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Command Execution"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "Co&mmand:",IDC_STATIC,7,8,38,8
+    COMBOBOX        IDC_COMBO_COMMAND,48,7,222,124,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "$F will be replaced by file path with double quotation marks.",
+                    IDC_STATIC,7,25,223,8
+    CONTROL         "Console &Program",IDC_CHK_GETCONSOLE,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,51,89,10
+    CONTROL         "Use &Unicode for standard input",
+                    IDC_CHK_USEUNICODEFORINPUT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,116,51,125,10
+    GROUPBOX        "Options",IDC_STATIC,7,38,262,31,WS_GROUP
+    EDITTEXT        IDC_EDIT_INPUT,194,32,40,12,ES_AUTOHSCROLL | NOT 
+                    WS_VISIBLE | WS_DISABLED
+    PUSHBUTTON      "^&Z",IDC_BTN_SENDEOS,245,25,16,14,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT_OUTPUT,203,35,40,14,ES_MULTILINE | ES_READONLY | 
+                    NOT WS_VISIBLE | WS_VSCROLL
+    DEFPUSHBUTTON   "&Execute/Input",IDOK,280,6,55,14,WS_GROUP
+    PUSHBUTTON      "&Clear",IDC_BTN_CLEAR,280,21,55,14
+    PUSHBUTTON      "Close/&Interrupt",IDCANCEL,280,55,55,14
+    CONTROL         "",IDC_STATIC_PROMPT,"Static",SS_BLACKFRAME | SS_SUNKEN | 
+                    NOT WS_VISIBLE,287,50,31,1
+END
+
+IDD_DLG_FILENEWWITHFORMAT DIALOGEX 0, 0, 283, 105
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "New with Format"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "&Code Page:",IDC_STATIC,14,23,51,8
+    COMBOBOX        IDC_COMBO_CHARCODE,67,21,202,210,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Line &Break:",IDC_STATIC,14,37,46,8
+    COMBOBOX        IDC_COMBO_BREAKCODE,67,35,202,125,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Document Type:",IDC_STATIC,14,52,54,8
+    COMBOBOX        IDC_COMBO_DOCTYPENAMES,67,51,202,123,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,173,84,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,226,84,50,14
+    GROUPBOX        "Format",IDC_STATIC,7,7,269,68
+END
+
+IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 90
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Go to Line"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "Line &number (0-99999999):",IDC_STATIC_1,7,8,87,8
+    EDITTEXT        IDC_EDIT_LINENUMBER,7,18,82,12,ES_RIGHT | ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN_LINENUMBER,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS,92,21,11,14
+    CONTROL         "E&xtend selection",IDC_CHK_SAVESELECTION,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,39,74,10
+    CONTROL         "&Logical",IDC_RADIO_LOGICALLINE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,69,45,10
+    CONTROL         "&Physical",IDC_RADIO_PHYSICALLINE,"Button",
+                    BS_AUTORADIOBUTTON | WS_DISABLED,74,69,45,10
+    GROUPBOX        "Unit for line number",IDC_STATIC,7,55,133,30,WS_GROUP
+    DEFPUSHBUTTON   "&Jump",IDOK,99,7,41,14,WS_GROUP
+END
+
+IDD_DLG_LOADTEMPMACRO DIALOGEX 0, 0, 201, 123
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Load Keyboard Macro"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "&Saved keyboard macros:",IDC_STATIC,7,7,112,8
+    LISTBOX         IDC_LIST_MACROS,7,17,125,99,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "&Load",IDOK,140,7,54,14,WS_GROUP
+    PUSHBUTTON      "&Execute",IDC_BTN_EXECUTE,140,24,54,14,WS_DISABLED
+    PUSHBUTTON      "Cancel",IDCANCEL,140,41,54,14
+END
+
+IDD_DLG_NEWABBREV DIALOGEX 0, 0, 307, 42
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Register New Abbreviation"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "&Abbreviation:",IDC_STATIC,7,8,46,8
+    EDITTEXT        IDC_EDIT_INPUT,77,7,178,12,ES_AUTOHSCROLL
+    LTEXT           "&Expanded string:",IDC_STATIC,7,23,68,8
+    EDITTEXT        IDC_EDIT_OUTPUT,77,22,178,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,264,7,36,14,WS_DISABLED
+END
+
+IDD_DLG_OPENFILE DIALOGEX 0, 0, 365, 19
+STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
+    WS_CLIPSIBLINGS
+FONT 9, "MS UI Gothic", 0, 0, 0x0
+BEGIN
+    LTEXT           "&Code Page:",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,67,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_DLG_SAVEFILE DIALOGEX 0, 0, 365, 35
+STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
+    WS_CLIPSIBLINGS
+FONT 9, "MS UI Gothic", 0, 0, 0x0
+BEGIN
+    LTEXT           "&Code Page:",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,80,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Line &Break",IDC_STATIC_2,7,18,42,9
+    COMBOBOX        IDC_COMBO_BREAKCODE,66,15,70,80,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_DLG_SAVETEMPMACRO DIALOGEX 0, 0, 201, 123
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Save Keyboard Macro"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "&Name:",IDC_STATIC,7,7,22,8
+    COMBOBOX        IDC_COMBO_MACROS,7,17,125,99,CBS_SIMPLE | CBS_SORT | 
+                    CBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "&Save",IDOK,140,7,54,14,WS_DISABLED | WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,140,24,54,14
+END
+
+IDD_DLG_SELECTLANGUAGE DIALOGEX 0, 0, 321, 131
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Select Language Engine"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "Language engine bound to the script does not exist, or configuration is illegal.\nDo you want to select a language and execute?",
+                    IDC_STATIC,7,7,307,17
+    LTEXT           "Available &languages:",IDC_STATIC,7,33,66,8
+    LISTBOX         IDC_LIST_SCRIPTENGINES,7,42,307,60,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,229,110,41,14
+    PUSHBUTTON      "Cancel",IDCANCEL,273,110,41,14
+END
+
+IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 130
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "Search and Replace"
+FONT 8, "MS Shell Dlg", 400, 0, 0x80
+BEGIN
+    LTEXT           "Fi&nd what:",IDC_STATIC,5,7,56,8
+    COMBOBOX        IDC_COMBO_FINDWHAT,73,5,217,86,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Re&place with:",IDC_STATIC,5,21,70,8
+    COMBOBOX        IDC_COMBO_REPLACEWITH,73,19,217,87,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Type:",IDC_STATIC,12,53,29,8
+    COMBOBOX        IDC_COMBO_SEARCHTYPE,45,51,140,55,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Case folding:",IDC_STATIC,12,67,84,8
+    COMBOBOX        IDC_COMBO_CASEFOLDING,100,66,85,67,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Only &identifiers",IDC_STATIC,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_GROUP | WS_TABSTOP,12,83,81,10
+    CONTROL         "&Whole word",IDC_CHK_WHOLEWORD,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,12,94,84,10
+    CONTROL         "C&lose automatically",IDC_CHK_AUTOCLOSE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,105,113,10
+    GROUPBOX        "Conditions",IDC_STATIC,5,39,188,84,WS_GROUP
+    CONTROL         "Replace &upward",IDC_CHK_SHIFT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,203,53,77,10
+    CONTROL         "Only &selection",IDC_RADIO_SELECTION,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,203,65,54,10
+    CONTROL         "Wh&ole file",IDC_RADIO_WHOLEFILE,"Button",
+                    BS_AUTORADIOBUTTON,203,76,62,10
+    GROUPBOX        "Direction and region",IDC_STATIC,195,39,94,54,WS_GROUP
+    DEFPUSHBUTTON   "Find &Forward",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
+    PUSHBUTTON      "Find &Backward",CMD_SEARCH_FINDPREV,297,21,59,14
+    PUSHBUTTON      "&Mark All",CMD_SEARCH_BOOKMARKALL,297,40,59,14
+    PUSHBUTTON      "&Replace",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
+    PUSHBUTTON      "Replace &All",CMD_SEARCH_REPLACEALL,297,74,59,14
+    PUSHBUTTON      "Close",IDCANCEL,297,109,59,14
+    PUSHBUTTON      "&Extended Options...",IDC_BTN_BROWSE,195,109,93,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DLG_ABBREVIATIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 294
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 127
+    END
+
+    IDD_DLG_ABOUT, DIALOG
+    BEGIN
+        RIGHTMARGIN, 254
+        BOTTOMMARGIN, 101
+    END
+
+    IDD_DLG_BOOKMARKS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 310
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 157
+    END
+
+    IDD_DLG_CODEPAGES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 152
+    END
+
+    IDD_DLG_CONFIRMUNSAVEDDOCUMENTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 192
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 154
+    END
+
+    IDD_DLG_EXECUTECOMMAND, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 335
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 69
+    END
+
+    IDD_DLG_FILENEWWITHFORMAT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 276
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 98
+    END
+
+    IDD_DLG_GOTOLINE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 140
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_DLG_LOADTEMPMACRO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 194
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_DLG_NEWABBREV, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 300
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 35
+    END
+
+    IDD_DLG_OPENFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 358
+        BOTTOMMARGIN, 12
+    END
+
+    IDD_DLG_SAVEFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 358
+        BOTTOMMARGIN, 27
+    END
+
+    IDD_DLG_SAVETEMPMACRO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 194
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_DLG_SELECTLANGUAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 314
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 124
+    END
+
+    IDD_DLG_SEARCH, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 356
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 123
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Data
+//
+
+IDR_CODEPAGE_NAME_TABLE     RCDATA              "Resource\\code-page-name-table-en"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_NEW            "&New\nCreate a new document."
+    CMD_FILE_NEWWITHFORMAT  "New wi&th Format...\nCreate a new document with specified code page, line break, and document type."
+    CMD_FILE_OPEN           "&Open...\nOpen an existing document."
+    CMD_FILE_CLOSE          "&Close\nClose the document."
+    CMD_FILE_CLOSEALL       "Cl&ose All\nClose all documents."
+    CMD_FILE_SAVE           "&Save\nSave the document."
+    CMD_FILE_SAVEAS         "Save &As...\nSave the document under a different name."
+    CMD_FILE_SAVEALL        "Sa&ve All\nSave all documents."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_TOP            "&File"
+    CMD_FILE_MRU            "Most Recent Used &Files"
+    CMD_FILE_OPERATE        "File Op&erations"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_FILE_REOPEN         "&Reopen\nReopen the document."
+    CMD_FILE_REOPENWITHCODEPAGE 
+                            "Reopen with Different Code Pa&ge...\nReopen the document with a different code page."
+    CMD_FILE_EXIT           "E&xit Alpha\nClose all documents and exit."
+    CMD_FILE_SENDMAIL       "Sen&d...\nSend the file."
+    CMD_FILE_CLOSEOTHERS    "Close Ot&hers\nClose all inactive documents."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_DELETE         "&Delete\nDelete the selection."
+    CMD_EDIT_BACKSPACE      "Backspace\nDelete backward one character."
+    CMD_EDIT_DELETETONEXTWORD "Delete Next Word\nDelete to next word."
+    CMD_EDIT_DELETETOPREVWORD "Delete Previous Word\nDelete to previous word."
+    CMD_EDIT_DELETELINE     "Delete Line\nDelete current line."
+    CMD_EDIT_INSERTPREVLINE "Insert Previous\nInsert new line previous."
+    CMD_EDIT_BREAK          "Break\nBreak the line."
+    CMD_EDIT_UNDO           "&Undo\nUndo editing."
+    CMD_EDIT_REDO           "&Redo\nRedo previously undone editing."
+    CMD_EDIT_CUT            "Cu&t\nCut the selection and put it on the Clipboard."
+    CMD_EDIT_COPY           "&Copy\nCopy the selection and put it on the Clipboard."
+    CMD_EDIT_PASTE          "&Paste\nInsert Clipboard contents."
+    CMD_EDIT_INSERTTAB      "Insert Tab\nInsert a tab."
+    CMD_EDIT_DELETETAB      "Delete Tab\nDelete a tab."
+    CMD_EDIT_TABIFY         "Tabify\nConvert whitespaces in the selection to tabs."
+    CMD_EDIT_UNTABIFY       "Untabify\nConvert tabs in the selection to spaces."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_PASTEFROMCLIPBOARDRING 
+                            "Paste From C&lipboard Ring\nInsert Clipboard Ring contents."
+    CMD_EDIT_CHARFROMABOVELINE 
+                            "Input Above Character\nInput the character above caret."
+    CMD_EDIT_CHARFROMBELOWLINE 
+                            "Input Below Character\nInput the character below caret."
+    CMD_EDIT_TRANSPOSELINES "Transpose Lines\nTranspose the current line and the previous line."
+    CMD_EDIT_TRANSPOSECHARS "Transpose Characters\nTranspose the character before caret with the character after caret."
+    CMD_EDIT_TRANSPOSEWORDS "Transpose Words\nTranspose the word before caret with the word after caret."
+    CMD_EDIT_SHOWABBREVIATIONDLG 
+                            "Manage A&bbreviations...\nManage all abbreviations."
+    CMD_EDIT_FIRSTCHAR      "First Character\nGo to the first non-whitespace character in the line."
+    CMD_EDIT_LASTCHAR       "Last Character\nGo to the last non-whitespace character in the line."
+    CMD_EDIT_FIRSTCHAREXTEND 
+                            "Extend to First Character\nExtend the selection to the first non-whitespace character in the line."
+    CMD_EDIT_LASTCHAREXTEND "Extend to Last Character\nExtend the selection to the last non-whitespace character in the line."
+    CMD_EDIT_FIRSTCHARORLINEHOME 
+                            "First Character or Start of Line\nGo to the first non-whitespace character in the line or the start of the line."
+    CMD_EDIT_LASTCHARORLINEEND 
+                            "Last Character or End of Line\nGo to the last non-whitespace character in the line or the end of the line."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_CHARTOCODEPOINT 
+                            "Character to Code Point\nConvert a character to a corresponding code point."
+    CMD_EDIT_CODEPOINTTOCHAR 
+                            "Code Point to Character\nConvert a code point to a corresponding character."
+    CMD_EDIT_RECOMPOSE      "Reconvert\nReconvert the selection."
+    CMD_EDIT_TOGGLEOVERTYPEMODE "Overtype Mode\nToggle insert/overtype mode."
+    CMD_EDIT_OPENCANDIDATEWINDOW 
+                            "I&nput Candidates\nShow the candidates window or complete the word."
+    CMD_EDIT_HOME           "Start of Document\nGo to the start of the document."
+    CMD_EDIT_END            "End of Document\nGo to the end of the document."
+    CMD_EDIT_LINEHOME       "Start of Line\nGo to the start of the line."
+    CMD_EDIT_LINEEND        "End of Line\nGo to the end of the line."
+    CMD_EDIT_CHARNEXT       "Next Character\nGo to the next character."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_SCROLLCOLUMNNEXT 
+                            "Scroll Right\nScroll the window right one column right."
+    CMD_EDIT_SCROLLCOLUMNPREV 
+                            "Scroll Left\nScroll the window left one column left."
+    CMD_EDIT_ENSURECARETCENTER "Recenter\nEnsure the caret center."
+    CMD_EDIT_ENSURECARETVISIBLE "Show Caret\nEnsure the caret visible."
+    CMD_EDIT_ROWCHARNEXT    "Extend Box to Next Character\nExtend the rectangle selection to the next character."
+    CMD_EDIT_ROWCHARPREV    "Extend Box to Previous Character\nExtend the rectangle selection to the previous character."
+    CMD_EDIT_ROWLINEDOWN    "Extend Box to Down Line\nExtend the rectangle selection to the one down line."
+    CMD_EDIT_ROWLINEUP      "Extend Box to Up Line\nExtend the rectangle selection to the one up line."
+    CMD_EDIT_ROWLINEEND     "Extend Box to End of Line\nExtend the rectangle selection to the end of the line."
+    CMD_EDIT_ROWLINEHOME    "Extend Box to Start of Line\nExtend the rectangle selection to the start of the line."
+    CMD_EDIT_ROWWORDNEXT    "Extend Box to Next Word\nExtend the rectangle selection to the next word."
+    CMD_EDIT_ROWWORDPREV    "Extend Box to Previuos Word\nExtend the rectangle selection to the previous word."
+    CMD_EDIT_ROWWORDENDNEXT "Extend Box to Next Word End\nExtend the rectangle selection to the next word end."
+    CMD_EDIT_ROWWORDENDPREV "Extend Box to Previous Word End\nExtend the rectangle selection to the previous word end."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_CHARPREV       "Previous Character\nGo to the previous character."
+    CMD_EDIT_WORDENDNEXT    "Next Word End\nGo to the next word end."
+    CMD_EDIT_WORDENDPREV    "Previous Word End\nGo to the previous word end."
+    CMD_EDIT_WORDNEXT       "Next Word\nGo to the next word."
+    CMD_EDIT_WORDPREV       "Previous Word\nGo to the previous word."
+    CMD_EDIT_LINEDOWN       "Down Line\nGo to the one down line."
+    CMD_EDIT_LINEUP         "Up Line\nGo to the one up line."
+    CMD_EDIT_PAGEDOWN       "Down Page\nGo to the one down page."
+    CMD_EDIT_PAGEUP         "Up Page\nGo to the one up page."
+    CMD_EDIT_HOMEEXTEND     "Extend to Start of Document\nExtend the selection to the start of the document."
+    CMD_EDIT_ENDEXTEND      "Extend to End of Document\nExtend the selection to the end of the document."
+    CMD_EDIT_LINEHOMEEXTEND "Extend to Start of Line\nExtend the selection to the start of the line."
+    CMD_EDIT_LINEENDEXTEND  "Extend to End of Line\nExtend the selection to the end of the line."
+    CMD_EDIT_CHARNEXTEXTEND "Extend to Next Character\nExtend the selection to the next character."
+    CMD_EDIT_CHARPREVEXTEND "Extend to Previous Character\nExtend the selection to the previous character."
+    CMD_EDIT_WORDENDNEXTEXTEND 
+                            "Extend to Next Word End\nExtend the selection to the next word end."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_WORDENDPREVEXTEND 
+                            "Extend to Previous Word End\nExtend the selection to the previous word end."
+    CMD_EDIT_WORDNEXTEXTEND "Extend to Next Word\nExtend the selection to the next word."
+    CMD_EDIT_WORDPREVEXTEND "Extend to Previous Word\nExtend the selection to the previous word."
+    CMD_EDIT_LINEDOWNEXTEND "Extend to Down Line\nExtend the selection to the one down line."
+    CMD_EDIT_LINEUPEXTEND   "Extend to Up Line\nExtend the selection to the one up line."
+    CMD_EDIT_PAGEDOWNEXTEND "Extend to Down Page\nExtend the selection to the one down page."
+    CMD_EDIT_PAGEUPEXTEND   "Extend to Up Page\nExtend the selection to the one up page."
+    CMD_EDIT_SELECTALL      "Select &All\nSelect the entire document."
+    CMD_EDIT_SELECTCURRENTWORD "Select Current Word\nSelect the current word."
+    CMD_EDIT_CANCELSELECTION "Cancel Selection\nCancel the selection."
+    CMD_EDIT_SCROLLHOME     "Scroll to Start\nScroll the window to the top."
+    CMD_EDIT_SCROLLEND      "Scroll to End\nScroll the window to the bottom."
+    CMD_EDIT_SCROLLLINEDOWN "Scroll Down\nScroll the window one line down."
+    CMD_EDIT_SCROLLLINEUP   "Scroll Up\nScroll the window one line up."
+    CMD_EDIT_SCROLLPAGEDOWN "Scroll Page Down\nScroll the window one page down."
+    CMD_EDIT_SCROLLPAGEUP   "Scroll Page Up\nScroll the window one page up."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_TOP            "&Edit"
+    CMD_EDIT_ADVANCED       "Ad&vanced"
+    CMD_EDIT_INSERTUNICODECTRLS "&Insert Unicode Control Characters"
+    CMD_EDIT_INSERTUNICODEWSS "Insert Unicode &Whitespace Characters"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_TOP          "&Search"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_FIND         "&Find...\nShow [Search and Replace] dialog."
+    CMD_SEARCH_FINDNEXT     "Find &Next\nSearch next match."
+    CMD_SEARCH_FINDPREV     "Find &Previous\nSearch previous match."
+    CMD_SEARCH_REPLACEANDNEXT 
+                            "Replace and Next\nReplace the selection and search next."
+    CMD_SEARCH_REPLACEALL   "Replace All\nReplace all matches."
+    CMD_SEARCH_BOOKMARKALL  "Mark All\nSet bookmarks on all matched lines."
+    CMD_SEARCH_REVOKEMARK   "Revo&ke Highlight\nRevoke match highlight."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_GOTOLINE     "&Go to Line...\nGo to specified line."
+    CMD_SEARCH_TOGGLEBOOKMARK 
+                            "T&oggle Bookmark\nSet or remove a bookmark on current line."
+    CMD_SEARCH_NEXTBOOKMARK "Nex&t Bookmark\nGo to next bookmark."
+    CMD_SEARCH_PREVBOOKMARK "Pre&vious Bookmark\nGo to previous bookmark."
+    CMD_SEARCH_CLEARBOOKMARKS 
+                            "&Clear All Bookmarks\nRemove all bookmarks in the document."
+    CMD_SEARCH_MANAGEBOOKMARKS "Manage &Bookmarks...\nManage all bookmarks."
+    CMD_SEARCH_GOTOMATCHBRACKET "Go to &Match Brace\nGo to the match brace."
+    CMD_SEARCH_EXTENDTOMATCHBRACKET 
+                            "E&xtend Match Brace\nExtend the selection to the match brace."
+    CMD_SEARCH_INCREMENTALSEARCH 
+                            "&Incremental Search\nStart incremental search."
+    CMD_SEARCH_INCREMENTALSEARCHR 
+                            "&Reverse Incremental Search\nStart reverse incremental search."
+    CMD_SEARCH_INCREMENTALSEARCHRF 
+                            "R&egular Expression Incremental Search\nStart regular expression incremental search."
+    CMD_SEARCH_INCREMENTALSEARCHRR 
+                            "Reverse Regular Expression Incremental Search\nStart reverse regular expression incremental search."
+    CMD_SEARCH_INCREMENTALSEARCHMF 
+                            "&Migemo Incremental Search\nStart Migemo incremental search."
+    CMD_SEARCH_INCREMENTALSEARCHMR 
+                            "Reverse Migem&o Incremental Search\nStart reverse Migemo incremental search."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_VIEW_TOP            "&View"
+    CMD_VIEW_BUFFERS        "Bu&ffers"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_VIEW_TOOLBAR        "&Toolbar\nShow or hide the toolbar."
+    CMD_VIEW_STATUSBAR      "&Status Bar\nShow or hide the status bar."
+    CMD_VIEW_WRAPNO         "N&o Wrap\nDo not wrap lines."
+    CMD_VIEW_WRAPBYSPECIFIEDWIDTH 
+                            "Wrap by Sp&ecified Width(&E)\nWrap lines at specified position."
+    CMD_VIEW_WRAPBYWINDOWWIDTH 
+                            "Wrap by &Window\nWrap lines at the end of window."
+    CMD_VIEW_REFRESH        "&Refresh\nRefresh the window."
+    CMD_VIEW_SPLITNS        "Sp&lit Window\nSplit the window into up and bottom."
+    CMD_VIEW_NEXTBUFFER     "&Next Buffer\nShow next buffer."
+    CMD_VIEW_PREVBUFFER     "&Previous Buffer\nShow previous buffer."
+    CMD_VIEW_BUFFERBAR      "&Buffer Bar\nShow or hide the buffer bar."
+    CMD_VIEW_TOPMOSTALWAYS  "&Always in Foreground\nShow the application window foreground always."
+    CMD_VIEW_SPLITWE        "Split Window Si&de-by-Side\nSplit the window into side-by-side."
+    CMD_VIEW_UNSPLITACTIVE  "&Close Window\nClose active window."
+    CMD_VIEW_UNSPLITOTHERS  "Close Ot&her Windows\nClose all inactive windows."
+    CMD_VIEW_NEXTPANE       "Ne&xt Pane\nActivate next window."
+    CMD_VIEW_PREVPANE       "Pre&vious Pane\nActivate previous window."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_MACRO_TOP           "&Macros"
+    CMD_MACRO_SCRIPTS       "&Scripts"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_MACRO_DEFINE        "Start/End &Definition\nStart or end the keyboard macro definition."
+    CMD_MACRO_EXECUTE       "E&xecute\nExecute the active keyboard macro."
+    CMD_MACRO_APPEND        "&Append\nAppend definition to the active keyboard macro."
+    CMD_MACRO_PAUSERESTART  "&Pause/Restart\nPause or restart the keyboard macro definition."
+    CMD_MACRO_INSERTQUERY   "Insert &Query\nInsert an user prompt into the defining keyboard macro."
+    CMD_MACRO_ABORT         "A&bort\nAbort the keyboard macro definition."
+    CMD_MACRO_SAVEAS        "Sa&ve As...\nSave the active keyboard macro with name."
+    CMD_MACRO_LOAD          "&Load...\nLoad keyboard macro from a file."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_TOOL_TOP            "&Tool"
+    CMD_TOOL_APPDOCTYPES    "&Apply Document Type"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_TOOL_COMMONOPTION   "&Common Options...\nSet the options common to all document types."
+    CMD_TOOL_DOCTYPEOPTION  "Document T&ype Options...\nSet the options specific to the active document type."
+    CMD_TOOL_FONT           "&Font...\nSet font settings."
+    CMD_TOOL_EXECUTE        "&Execute\nExecute document type specific program."
+    CMD_TOOL_EXECUTECOMMAND "E&xecute Command...\nExecute external command."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_HELP_TOP            "&Help"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_HELP_ABOUT          "&About\nDisplay information and version of Alpha."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_BUFFER__BUFFER_IS_DIRTY 
+                            "%1%n%nThe file is modified. Do you want to save?"
+    MSG_BUFFER__CONFIRM_REOPEN "Do you want to reopen the file?"
+    MSG_BUFFER__CONFIRM_REOPEN_EVEN_IF_DIRTY 
+                            "The file is modified. If you reopen, the modification will be lost. Do you want to do?"
+    MSG_BUFFER__FAILED_TO_SEND_TO_MAILER "Failed to send to a mailer."
+    MSG_BUFFER__UNTITLED    "untitled"
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN 
+                            "%1%n%nThe file was modified by other process. Do you want to reload?%nIf you reload, current editing contents will be disposed."
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE 
+                            "%1%n%nThe file was modified by other process. Do you want to continue to save?"
+    MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT 
+                            "%1%n%nThe file was modified by other process. Do you want to continue to edit?"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_BUFFER__SAVING_FILE_IS_OPENED 
+                            "%1%n%nThe file has been already opened. Cannot write to an editing file."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_SEARCH__PATTERN_NOT_FOUND "Specified string was not found."
+    MSG_SEARCH__REPLACE_DONE "Replaced %1 string(s)."
+    MSG_SEARCH__REGEX_IS_INAVAILABLE 
+                            "Failed to load the regular expression engine. Cannot search."
+    MSG_SEARCH__INVALID_REGEX_PATTERN 
+                            "An error occured during regular expression search.%n%nReason:%t%1%nPosition:%t%2"
+    MSG_SEARCH__BAD_REGEX_PATTERN_START 
+                            "A back-reference to a non-existant marked sub-expression was encountered"
+    20605                   "Invalid contents of a {...} block"
+    20606                   "An invalid character class name was specified in a [[:name:]] block"
+    20607                   "A character range was invalid"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_ERROR__EXE_NOT_REGISTERED 
+                            """%1""%nNo program assigned to the document type."
+    MSG_ERROR__FAILED_TO_RUN_EXE 
+                            "Failed to run the program.\nThe path assigned to the document type may be incorrect."
+    MSG_ERROR__UNSUPPORTED_OS_VERSION "Alpha does not support your platform."
+    MSG_ERROR__DUPLICATE_ABBREV "There is already same abbreviation."
+    MSG_ERROR__REGEX_UNKNOWN_ERROR 
+                            "Error occured during regular expression pattern matching.\nThe pattern may be too complex."
+    MSG_ERROR__MIGEMO_UNKNOWN_ERROR "Error occured in Migemo."
+    MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING 
+                            "This command cannot execute in keyboard macro definition."
+    MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO 
+                            "Failed to load the keyboard macro file.%n%nFile: %1%nPosition: (%2, %3)%nReason: %4"
+    MSG_ERROR__FAILED_TO_LOAD_SOMETHING "(Failed to load)"
+    MSG_ERROR__OUT_OF_MEMORY "Process failed for out of memory."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_STATUS__READ_ONLY_CAPTION "[readonly]"
+    MSG_STATUS__TEMP_MACRO_DEFINING "Defining keyboard macro"
+    MSG_STATUS__TEMP_MACRO_PAUSING "Pausing keyboard macro definition"
+    MSG_STATUS__NARROWING   "Narrowing"
+    MSG_STATUS__DEBUGGING   "Debuggnig"
+    MSG_STATUS__INSERT_MODE "Insert"
+    MSG_STATUS__OVERTYPE_MODE "Overtype"
+    MSG_STATUS__CARET_POSITION "Line: %lu , Row: %lu , Char: %lu"
+    MSG_STATUS__CAN_EXPAND_ABBREV "'%1' can expand to '%2'."
+    MSG_STATUS__LOADING_FILE "Loading '%1'..."
+    MSG_STATUS__WAITING_FOR_2ND_KEYS 
+                            "'%1' is pressed. Waiting for the second key combination."
+    MSG_STATUS__INVALID_2STROKE_COMBINATION 
+                            "There are no command bound to the key combination '%1'."
+    MSG_STATUS__ISEARCH     "Incremental search : %1"
+    MSG_STATUS__ISEARCH_EMPTY_PATTERN "Incremental search : (empty pattern)"
+    MSG_STATUS__ISEARCH_BAD_PATTERN 
+                            "Incremental Search : %1 (invalid pattern)"
+    MSG_STATUS__ISEARCH_NOT_FOUND "Incremental search : %1 (not found)"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__DEFAULT_OPENFILE_FILTER "All Files:*.*"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_IO__FAILED_TO_DETECT_ENCODE 
+                            "%1%n%nFailed to detect code page of the file. Used system-default code page."
+    MSG_IO__INVALID_ENCODE  "%1%n%nSpecified code page is invalid. Cannot open the file."
+    MSG_IO__INVALID_LINE_BREAK 
+                            "%1%n%nSpecified line break is invalid. Cannot open the file."
+    MSG_IO__UNCONVERTABLE_UCS_CHAR 
+                            "%1%nEncoding: %2%n%nThe document contains unconvertable characters under specified encoding.%nThese characters will be written incorrectly.%nDo you want to change code page?"
+    MSG_IO__UNCONVERTABLE_NATIVE_CHAR 
+                            "%1%nEncoding: %2%n%nThe file contains unconvertable characters under specified encoding.%nSaving may destroy contents of the file.%nDo you want to change code page?"
+    MSG_IO__HUGE_FILE       "%1%n%nThe file size is too large. Maximum file size Alpha can handle is 2GB."
+    MSG_IO__FAILED_TO_WRITE_FOR_READONLY 
+                            "%1%n%nCannot overwrite the file. The file is read-only."
+    MSG_IO__FAILED_TO_RESOLVE_SHORTCUT 
+                            "%1%n%nFailed to resolve the shortcut. Cannot open the file."
+    MSG_IO__CANNOT_OPEN_FILE "%1%n%nCannot open the file."
+    MSG_IO__CANNOT_CREATE_TEMP_FILE 
+                            "%1%n%nFailed to save the file. Cannot create temporary file."
+    MSG_IO__LOST_DISK_FILE  "%1%n%nFailed to save the file. The file is lost."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_SCRIPT__SCRIPT_ERROR_DIALOG 
+                            "Script error occured.%n%nScript:%t%1%nLine:%t%2%nCharacter:%t%3%nError:%t%4%nSCODE:%t%5%nSource:%t%6"
+    MSG_SCRIPT__UNSAFE_ACTIVEX_CAUTION 
+                            "%1%n%nThis script is about to create an unsafe object.%nDo you allow this?%n%nQueried object:%n  ProgID:%t%2%n  IID:%t%3"
+    MSG_SCRIPT__INVALID_LANGUAGE_NAME 
+                            "The language ""%1"" bound to the macro is invalid or not installed. Cannot execute."
+    MSG_SCRIPT__FAILED_TO_OPEN_MACRO_SCRIPT 
+                            "%1%n%nFailed to load the macro file. Cannot execute."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__MATCH_CASE  "Match cases"
+    MSG_DIALOG__IGNORE_ASCII_CASE "Ignore ASCII character cases"
+    MSG_DIALOG__CASE_FOLD_SIMPLE "Unicode (simple)"
+    MSG_DIALOG__CASE_FOLD_FULL "Unicode (full)"
+    MSG_DIALOG__LITERAL_SEARCH "Literal"
+    MSG_DIALOG__REGEXP_SEARCH "Regular expression (Boost.Regex 1.33.0)"
+    MSG_DIALOG__MIGEMO_SEARCH "Migemo (C/Migemo 1.2 expected)"
+    MSG_DIALOG__BUFFERBAR_CAPTION "Buffers"
+    MSG_DIALOG__ABBREVIATION "Abbreviation"
+    MSG_DIALOG__EXPANDED_ABBREVIATION "Expanded String"
+    MSG_DIALOG__BOOKMARKED_LINE "Line"
+    MSG_DIALOG__BOOKMARKED_POSITION "Position"
+    MSG_DIALOG__LINE_NUMBER_RANGE "Line &Number (%1-%2):"
+    MSG_DIALOG__SELECT_ALL  "Select &All"
+    MSG_DIALOG__UNSELECT_ALL "&Cancel All Selections"
+    MSG_DIALOG__SELECT_DIRECTORY "Select a directory."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_STATUS__RISEARCH    "Reversal incremental search : %1"
+    MSG_STATUS__RISEARCH_NOT_FOUND 
+                            "Reversal incremental search : %1 (not found)"
+    MSG_STATUS__RISEARCH_BAD_PATTERN 
+                            "Reversal Incremental Search : %1 (invalid pattern)"
+    MSG_STATUS__RISEARCH_EMPTY_PATTERN 
+                            "Reversal incremental search : (empty pattern)"
+    MSG_STATUS__MATCH_BRACKET_OUT_OF_VIEW "(Match brace) %1 : %2 "
+    MSG_STATUS__INVOKABLE_LINK_POPUP "%1%nCtrl plus click to open the link."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_DIALOG__FILE_OPERATION "File Operation"
+    MSG_DIALOG__RENAME_FILE "Rename"
+    MSG_DIALOG__COPY_FILE   "Copy"
+    MSG_DIALOG__MOVE_FILE   "Move"
+    MSG_DIALOG__UNCHANGE_LINE_BREAK "No Change"
+    MSG_DIALOG__SAVE_FILE_FILTER "All Files"
+END
+
+STRINGTABLE 
+BEGIN
+    20608                   "An invalid character set was encountered"
+    20609                   "An invalid collating element was specified in a [[.name.]] block"
+    20610                   "An invalid or trailing escape was encountered"
+    20611                   "An attempt to repeat something that can not be repeated"
+    20612                   "Mismatched '(' and ')'"
+    20613                   "Mismatched '{' and '}'"
+    20614                   "The expression bacame too complex to handle"
+    20615                   "Unknown error"
+    20616                   "Out of memory"
+    20617                   "Out of program stack space"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_EDIT_FIRSTCHARORLINEHOMEEXTEND 
+                            "Extend to First Character or Start of Line\nExtend the selection to the first character in the line or the start of the line."
+    CMD_EDIT_LASTCHARORLINEENDEXTEND 
+                            "Extend to Last Character or End of Line\nExtend the selection to the last character in the line or the end of the line."
+    CMD_EDIT_NARROWTOSELECTION 
+                            "&Narrow\nProtect the out of the selection from modification."
+    CMD_EDIT_WIDEN          "&Widen\nRevoke the protection."
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_OTHER__EMPTY_MENU_CAPTION "(nothing)"
+    MSG_OTHER__UNKNOWN      "(unknown)"
+    MSG_OTHER__NOT_OBTAINED "(not obtained)"
+    MSG_OTHER__TEMPORARY_MACRO_QUERY 
+                            "Proceed the macro?\n\nNo: Skip this repetition and next\nCancel: Abort the macro"
+END
+
+#endif    // 英語 (米国) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
