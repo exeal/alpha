@@ -6,7 +6,7 @@
 
 #ifndef ASCENSION_UNICODE_UTILS_HPP
 #define ASCENSION_UNICODE_UTILS_HPP
-#include "internal.hpp"
+#include "common.hpp"
 #include "../../manah/memory.hpp"	// manah::AutoBuffer
 #include <cassert>
 #include <iterator>
@@ -703,36 +703,48 @@ namespace ascension {
 				|| gc == GeneralCategory::LETTER_TITLECASE
 				|| gc == GeneralCategory::LETTER_OTHER
 				|| gc == GeneralCategory::NUMBER_LETTER
-				|| BinaryProperty::is<OTHER_ALPHABETIC>(cp);}
+				|| is<OTHER_ALPHABETIC>(cp);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint cp) {
 			const int gc = GeneralCategory::of(cp);
 			return (gc == GeneralCategory::OTHER_FORMAT
 				|| gc == GeneralCategory::OTHER_CONTROL
 				|| gc == GeneralCategory::OTHER_SURROGATE
-				|| BinaryProperty::is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
-				|| BinaryProperty::is<NONCHARACTER_CODE_POINT>(cp))
-				&& !BinaryProperty::is<WHITE_SPACE>(cp);}
+				|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
+				|| is<NONCHARACTER_CODE_POINT>(cp))
+				&& !is<WHITE_SPACE>(cp)
+				&& (cp < 0xFFF9 || cp > 0xFFFB);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
-			return GeneralCategory::of(cp) == GeneralCategory::LETTER_LOWERCASE || BinaryProperty::is<OTHER_LOWERCASE>(cp);}
+			return GeneralCategory::of(cp) == GeneralCategory::LETTER_LOWERCASE || is<OTHER_LOWERCASE>(cp);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {
 			const int gc = GeneralCategory::of(cp);
 			return gc == GeneralCategory::MARK_ENCLOSING
 				|| gc == GeneralCategory::MARK_NONSPACING
-				|| BinaryProperty::is<OTHER_GRAPHEME_EXTEND>(cp);}
+				|| is<OTHER_GRAPHEME_EXTEND>(cp);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint cp) {
 			const int gc = GeneralCategory::of(cp);
-			return gc != GeneralCategory::OTHER_CONTROL
-				&& gc != GeneralCategory::OTHER_FORMAT
-				&& gc != GeneralCategory::OTHER_SURROGATE
-				&& gc != GeneralCategory::OTHER_PRIVATE_USE
-				&& gc != GeneralCategory::OTHER_UNASSIGNED
+			return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
 				&& gc != GeneralCategory::SEPARATOR_LINE
 				&& gc != GeneralCategory::SEPARATOR_PARAGRAPH
-				&& !BinaryProperty::is<GRAPHEME_EXTEND>(cp);}
+				&& !is<GRAPHEME_EXTEND>(cp);}
+		template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
+			const int gc = GeneralCategory::of(cp);
+			return GeneralCategory::is<GeneralCategory::LETTER>(gc)
+				|| gc == GeneralCategory::MARK_NONSPACING
+				|| gc == GeneralCategory::MARK_SPACING_COMBINING
+				|| gc == GeneralCategory::NUMBER_DECIMAL_DIGIT
+				|| gc == GeneralCategory::NUMBER_LETTER
+				|| gc == GeneralCategory::PUNCTUATION_CONNECTOR
+				|| is<OTHER_ID_START>(cp)
+				|| is<OTHER_ID_CONTINUE>(cp);}
+		template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint cp) {
+			const int gc = GeneralCategory::of(cp);
+			return GeneralCategory::is<GeneralCategory::LETTER>(gc)
+				|| gc == GeneralCategory::NUMBER_LETTER
+				|| is<OTHER_ID_START>(cp);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint cp) {
-			return GeneralCategory::of(cp) == GeneralCategory::SYMBOL_MATH || BinaryProperty::is<OTHER_MATH>(cp);}
+			return GeneralCategory::of(cp) == GeneralCategory::SYMBOL_MATH || is<OTHER_MATH>(cp);}
 		template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
-			return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || BinaryProperty::is<OTHER_UPPERCASE>(cp);}
+			return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || is<OTHER_UPPERCASE>(cp);}
 
 		/**
 		 * Grapheme_Cluster_Break property.

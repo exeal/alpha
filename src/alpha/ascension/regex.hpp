@@ -37,29 +37,31 @@ namespace ascension {
 				};
 			public:
 				// original interface
+				RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
 				static bool	enablesExtendedProperties;
 				// minimal requirements for traits
 				typedef CodePoint char_type;
 				typedef std::size_t size_type;
 				typedef std::basic_string<char_type> string_type;
-				typedef std::locale locale_type;	// ç°ÇÃÇ∆Ç±ÇÎégÇÌÇÒÇÃÇæÇ™
+				typedef std::locale locale_type;
 				typedef std::bitset<CLASS_END> char_class_type;
 				static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
 				char_type translate(char_type c) const;
 				char_type translate_nocase(char_type c) const {return unicode::CaseFolder::foldSimple(translate(c));}
-				string_type transform(const char_type* p1, const char_type* p2) const {return string_type(p1, p2);}
+				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
-				string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return string_type();}
+				string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				bool isctype(char_type c, const char_class_type& f) const;
 				int value(char_type c, int radix) const;
-				locale_type imbue(locale_type l) {locale_type temp = locale_; locale_ = l; return temp;}
-				locale_type get_loc() const {return locale_;}
+				locale_type imbue(locale_type l) {locale_type temp = locale_; collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l); return temp;}
+				locale_type getloc() const {return locale_;}
 				std::string error_string(boost::regex_constants::error_type n) const {return "Unknown error";}
 			private:
 				static std::size_t findPropertyValue(const String& expression);
 			private:
 				locale_type locale_;
+				const std::collate<char_type>* collator_;
 				static std::map<const Char*, int, unicode::PropertyNameComparer<Char> > names_;
 				static void buildNames();
 			};
@@ -110,7 +112,9 @@ namespace ascension {
 			// constructors
 			Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxOption>& options = NORMAL);
 			// attributes
-			String	getPatternString() const throw();
+			std::locale	getLocale() const throw();
+			String		getPatternString() const throw();
+			void		setLocale(const std::locale& lc) throw();
 			// operations
 			std::auto_ptr<MatchResult<const Char*> >	matches(const Char* first, const Char* last, const MatchOptions& flags = NONE) const;
 			std::auto_ptr<MatchResult<const Char*> >	search(const Char* first, const Char* last, const MatchOptions& flags = NONE) const;
@@ -207,6 +211,9 @@ namespace ascension {
 		template<class CharacterSequence>
 		inline CharacterSequence MatchResult<CharacterSequence>::getStart() const {assert((*impl_)[0].matched); return (*impl_)[0].first.tell();}
 
+		/// Returns the active locale.
+		inline std::locale Pattern::getLocale() const throw() {return impl_.getloc();}
+
 		/// Returns the pattern string.
 		inline String Pattern::getPatternString() const {
 			const std::basic_string<CodePoint> s(impl_.str());
@@ -268,6 +275,9 @@ namespace ascension {
 			return std::auto_ptr<MatchResult<CharacterSequence> >(boost::regex_search(I(first, first, last),
 				I(last, first, last), *p, impl_, translateMatchOptions(flags)) ? new MatchResult<CharacterSequence>(p) : 0);
 		}
+
+		/// Sets the active locale.
+		inline void Pattern::setLocale(const std::locale& lc) throw() {impl_.imbue(lc);}
 
 		inline boost::regex_constants::match_flag_type Pattern::translateMatchOptions(const MatchOptions& flags) throw() {
 			using namespace boost::regex_constants;
