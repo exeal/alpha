@@ -1,0 +1,215 @@
+// AnkhIdl.idl
+// (c) 2006 exeal
+
+#ifndef ANKH_IDL_
+#define ANKH_IDL_
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "dispex.idl";	// IDispatchEx
+
+#ifndef VARIANT_TRUE
+#define VARIANT_TRUE	((VARIANT_BOOL)-1)
+#define VARIANT_FALSE	((VARIANT_BOOL)0)
+#endif
+
+
+[
+	uuid(AD251D25-DF1F-43c0-9D16-088958183A50),
+	lcid(0), version(0.1), helpstring("Object model for Alpha script system.")
+]
+library Ankh {
+	// introduces standard definitions
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	[
+		uuid(AFF456A8-8042-46aa-ADCC-E3A32D64690C), object, dual, pointer_default(unique),
+		helpstring("Named arguments collection (copy of IHost::IWSHNamedArguments)")
+	]
+	interface INamedArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT	_NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT	Item([in] BSTR switchString, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT	length([out, retval] long* count);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT	Count([out, retval] long* count);
+		[id(0x3), helpstring("Check if the argument exists")]
+		HRESULT	Exists([in] BSTR switchString, [out, retval] VARIANT_BOOL* exists);
+	}
+
+	[
+		uuid(A8AEF8E8-35EF-49da-82A3-B57DCDE1A097), object, dual, pointer_default(unique),
+		helpstring("Unnamed arguments collection object (copy of IHost::IWSHUnnamedArguments)")
+	]
+	interface IUnnamedArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT	_NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT	Item([in] long index, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT	length([out, retval] long* count);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT	Count([out, retval] long* count);
+	}
+
+	[
+		uuid(A843FB1A-8E28-4d37-805F-9FCFB98A6F05), object, dual, pointer_default(unique),
+		helpstring("Arguments collection object (copy of IHost::IArguments2)")
+	]
+	interface IArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT	_NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT	Item([in] long index, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT	length([out, retval] long* count);
+		[id(0x3), propget, helpstring("Named set of the arguments")]
+		HRESULT	Named([out, retval] INamedArguments** named);
+		[id(0x4), propget, helpstring("Unnamed set of the arguments")]
+		HRESULT	Unnamed([out, retval] IUnnamedArguments** unnamed);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT	Count([out, retval] long* count);
+		[id(0x5), helpstring("Display the usage of the arguments")]
+		HRESULT	ShowUsage();
+	}
+
+	[
+		uuid(A34BB582-A2DA-4197-8A81-3E3FB2E3FD16), object, dual, pointer_default(unique),
+		helpstring("Script host object (copy of IHost::IHost)")
+	]
+	interface IScriptHost : IDispatch {
+		// properties
+		[id(0x64), propget, helpstring("Application object")]
+		HRESULT Application([out, retval] IDispatch** application);
+		[id(0x3ea), propget, helpstring("Command line arguments")]
+		HRESULT Arguments([out, retval] IArguments** arguments);
+		[id(0x3ec), propget, helpstring("Build version of the script host")]
+		HRESULT BuildVersion([out, retval] int* version);
+		[id(0x65), propget, helpstring("Name of the script host")]
+		HRESULT FullName([out, retval] BSTR* name);
+		[id(0x67), propget, helpstring("Interactive mode")]
+		HRESULT Interactive([out, retval] VARIANT_BOOL* interactive);
+		[id(0x67), propput, helpstring("Interactive mode")]
+		HRESULT Interactive([in] VARIANT_BOOL interactive);
+		[id(DISPID_VALUE), propget, helpstring("Name of the script host")]
+		HRESULT Name([out, retval] BSTR* name);
+		[id(0x66), propget, helpstring("Path name of the script host")]
+		HRESULT Path([out, retval] BSTR* path);
+		[id(0x3e9), propget, helpstring("Executing script full file name")]
+		HRESULT ScriptFullName([out, retval] BSTR* name);
+		[id(0x3e8), propget, helpstring("Executing script file name")]
+		HRESULT ScriptName([out, retval] BSTR* name);
+		[id(0x3f0), propget, helpstring("Standard error stream")]
+		HRESULT StdErr([out, retval] IDispatch** stdErr);
+		[id(0x3ee), propget, helpstring("Standard input stream")]
+		HRESULT StdIn([out, retval] IDispatch** stdIn);
+		[id(0x3ef), propget, helpstring("Standard output stream")]
+		HRESULT StdOut([out, retval] IDispatch** stdOut);
+		[id(0x3ed), propget, helpstring("Timeout to abort script execution")]
+		HRESULT Timeout([out, retval] long* timeout);
+		[id(0x3ed), propput, helpstring("Timeout to abort script execution")]
+		HRESULT Timeout([in] long timeout);
+		[id(0x3eb), propget, helpstring("Version of the script host")]
+		HRESULT Version([out, retval] BSTR* version);
+		// methods
+		[id(0x7d5), helpstring("Connect the event sink object")]
+		HRESULT ConnectObject([in] IDispatch* eventSource, [in] BSTR prefix);
+		[id(0x1000), helpstring("Connect the event sink object")]
+		HRESULT ConnectObjectEx([in] IDispatch* eventSource, [in] IDispatch* eventSink);
+		[id(0x7d0), helpstring("Create new automation object")]
+		HRESULT CreateObject([in] BSTR progID, [in, defaultvalue("")] BSTR prefix, [out, retval] IDispatch** object);
+		[id(0x7d3), helpstring("Revoke the connected object")]
+		HRESULT DisconnectObject([in] IDispatch* eventSource);
+		[id(0x1001), helpstring("Revoke the connected object")]
+		HRESULT DisconnectObjectEx([in] IDispatch* eventSource, [in] IDispatch* eventSink);
+		[id(0x7d1), vararg, helpstring("Print out text")]
+		HRESULT Echo([in] SAFEARRAY(VARIANT) arguments);
+		[id(0x7d2), helpstring("Get or create automation object")]
+		HRESULT GetObject([in] BSTR pathName, [in, defaultvalue("")] BSTR progID,
+			[in, defaultvalue("")] BSTR prefix, [out, retval] IDispatch** object);
+		[id(0xc8), helpstring("Quit the application")]
+		HRESULT Quit([in] int exitCode);
+		[id(0x7d4), helpstring("Sleep")]
+		HRESULT Sleep([in] long time);
+	}
+
+	[
+		uuid(AD54E19E-C3D5-4220-B954-06187D80C964), object, dual, pointer_default(unique),
+		helpstring("Manages the script system")
+	]
+	interface IScriptSystem : IDispatch {
+		// properties
+//		[id(100), propget, helpstring("Global namespace of the script system")]
+//		HRESULT GlobalNamespace([out, retval] INamespace** namespace);
+		[id(101), propget, helpstring("Get security level for scripts")]
+		HRESULT SecurityLevel([out, retval] short* level);
+		[id(101), propput, helpstring("Set security level for scripts")]
+		HRESULT SecurityLevel([in] short level);
+		// methods
+		[id(200), helpstring("Evaluate and execute the script file out of context of the script system")]
+		HRESULT ExecuteScript([in] BSTR fileName);
+		[id(201), helpstring("Check if the specified script file has been loaded")]
+		HRESULT IsScriptFileLoaded([in] BSTR fileName, [out, retval] VARIANT_BOOL* loaded);
+		[id(202), helpstring("Load constants or enumeration definition")]
+		HRESULT LoadConstants([in] VARIANT* libraryNameOrObject, [in, defaultvalue("")] BSTR itemName);
+		[id(203), helpstring("Load script file")]
+		HRESULT LoadScript([in] BSTR fileName);
+	}
+
+/*	[
+		uuid(A1E2E6F3-DEF6-4949-9D4D-D509DD0EFF14), object, dual, pointer_default(unique),
+		helpstring("A namespace for programming. Child namespaces or objects are accessible as members of this object for reading purpose")
+	]
+	interface INamespace : IDispatchEx {
+		// properties
+		[id(), propget, helpstring("Return if the namespace has no members")]
+		HRESULT Empty([out, retval] VARIANT_BOOL* empty);
+		[id(), propget, helpstring("Return if the namespace is locked")]
+		HRESULT Locked([out, retval] VARIANT_BOOL* locked);
+		[id(), propget, helpstring("Name of this namespace")]
+		Name([out, retval] BSTR* name);
+		[id(), propget, helpstring("Number of child namespaces in this namespace")]
+		HRESULT NamespaceCount([out, retval] long* count);
+		[id(), propget, helpstring("Number of objects in this namespace")]
+		HRESULT ObjectCount([out, retval] long* count);
+		[id(), propget, helpstring("Parent namespace of this (Do not use IDispatchEx::GetNameSpaceParent)")]
+		HRESULT Parent([out, retval] INamespace** parent);
+		// methods
+		[id(), helpstring("Insert new empty namespace into this namespace")]
+		HRESULT AddNamespace([in] BSTR name, [out, retval] INamespace** namespace);
+		[id(), helpstring("Insert an object into this namespace")]
+		HRESULT AddObject([in] BSTR name, [in] IDispatch* entity);
+		[id(), helpstring("Remove all members of this namespace")]
+		HRESULT Clear();
+		[id(), helpstring("Get a child namespace")]
+		HRESULT GetNamespace([in] BSTR name, [out, retval] INamespace** namespace);
+		[id(), helpstring("Get a named object in this namespace")]
+		HRESULT GetObject([in] BSTR name, [out, retval] IDispatch** memberObject);
+		[id(), helpstring("Check if the member has specified name is in this namespace")]
+		HRESULT IsDefined([in] BSTR name, [out, retval] VARIANT_BOOL* defined);
+		[id(), helpstring("Lock this namespace to prevent from changing")]
+		HRESULT Lock([out, retval] long* cookie);
+		[id(), helpstring("Remove a namespace from this namespace")]
+		HRESULT RemoveNamespace([in] BSTR name);
+		[id(), helpstring("Remove an object from this namespace")]
+		HRESULT RemoveObject([in] BSTR name);
+		[id(), helpstring("Disable the lock")]
+		HRESULT Unlock([in] long cookie);
+	}
+*/
+	[uuid(A0D98D3C-9CA7-4675-9C25-DFA2BD0369AB), helpstring("")]
+	coclass ObjectModel {[default] interface IScriptSystem;}
+}
+
+#endif /* !ANKH_IDL_ */
+
+/* [EOF] */
