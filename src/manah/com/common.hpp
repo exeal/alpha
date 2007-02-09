@@ -4,6 +4,7 @@
 #ifndef MANAH_COM_COMMON_HPP
 #define MANAH_COM_COMMON_HPP
 
+#include "../object.hpp"
 #include <objbase.h>
 #include <objsafe.h>
 #include <cassert>
@@ -22,8 +23,6 @@ namespace com {
 #define VERIFY_POINTER(p)	\
 	if((p) == 0)			\
 		return E_POINTER
-
-#define toBoolean(b)	((b) != 0)
 
 inline const BSTR safeBSTR(const BSTR bstr) throw() {return (bstr != 0) ? bstr : OLESTR("");}
 
@@ -46,29 +45,29 @@ struct AllowConversion {};
 struct DisallowConversion {};
 
 /**
- *	COM スマートポインタ
- *	@param T				インターフェイス型
- *	@param ConversionPolicy	インターフェイス型への暗黙の型変換を行うか
+ * COM スマートポインタ
+ * @param T インターフェイス型
+ * @param ConversionPolicy インターフェイス型への暗黙の型変換を行うか
  */
 template<class T, class ConversionPolicy = AllowConversion>
 class ComPtr {
 public:
 	/// インターフェイス型
 	typedef T Interface;
-	///	コンストラクタ
+	/// コンストラクタ
 	explicit ComPtr(Interface* p = 0) throw() : pointee_(p) {if(pointee_ != 0) pointee_->AddRef();}
-	///	コピーコンストラクタ
+	/// コピーコンストラクタ
 	ComPtr(const ComPtr<Interface, ConversionPolicy>& rhs) throw() : pointee_(rhs.pointee_) {if(pointee_ != 0) pointee_->AddRef();}
-	///	デストラクタ
+	/// デストラクタ
 	virtual ~ComPtr() throw() {if(pointee_ != 0) pointee_->Release();}
-	/// ::CoCreateInstance によりオブジェクトを初期化する
+	/// @c ::CoCreateInstance によりオブジェクトを初期化する
 	HRESULT createInstance(REFCLSID clsid, IUnknown* unkOuter = 0, DWORD clsContext = CLSCTX_ALL, REFIID riid = __uuidof(Interface)) {
 		assert(isNull()); return ::CoCreateInstance(clsid, unkOuter, clsContext, riid, reinterpret_cast<void**>(&pointee_));}
 	/// 生のポインタを返す
 	ComPtrProxy<Interface>* get() const throw() {return static_cast<ComPtrProxy<T>*>(pointee_);}
 	/// 初期化のための出力ポインタを返す
 	Interface** initialize() throw() {release(); return &pointee_;}
-	/// @a p と同じオブジェクトかどうかを返す
+	/// @p p と同じオブジェクトかどうかを返す
 	bool isEqualObject(IUnknown* p) const throw() {
 		if(pointee_ == 0 && p == 0)			return true;
 		else if(pointee_ == 0 || p == 0)	return false;
@@ -85,17 +84,17 @@ public:
 	void reset(Interface* p = 0) throw() {if(pointee_ != 0) pointee_->Release(); pointee_ = p; if(p != 0) pointee_->AddRef();}
 
 	/// アドレス演算子 (初期化のための出力引数にのみ使う)
-	T** operator &() throw() {return initialize();}
-	///	メンバアクセス演算子
-	ComPtrProxy<T>* operator ->() const throw() {assert(!isNull()); return get();}
+	T** operator&() throw() {return initialize();}
+	/// メンバアクセス演算子
+	ComPtrProxy<T>* operator->() const throw() {assert(!isNull()); return get();}
 	/// 逆参照演算子
-	ComPtrProxy<T>& operator *() const throw() {assert(!isNull()); return *get();}
+	ComPtrProxy<T>& operator*() const throw() {assert(!isNull()); return *get();}
 	/// 代入演算子
-	ComPtr<Interface, ConversionPolicy>& operator =(Interface* rhs) throw() {reset(rhs); return *this;}
+	ComPtr<Interface, ConversionPolicy>& operator=(Interface* rhs) throw() {reset(rhs); return *this;}
 	/// 等価演算子
-	bool operator ==(const Interface* rhs) const throw() {return pointee_ == rhs;}
+	bool operator==(const Interface* rhs) const throw() {return pointee_ == rhs;}
 	/// 不等価演算子
-	bool operator !=(const Interface* rhs) const throw() {return !(pointee_ == rhs);}
+	bool operator!=(const Interface* rhs) const throw() {return !(pointee_ == rhs);}
 	/// 暗黙の変換演算子
 	operator Interface*() const throw();
 	/// 論理値への型変換演算子
@@ -109,10 +108,10 @@ template<class T, typename AllowConversion> inline ComPtr<T, AllowConversion>::o
 
 
 /**
- *	IUnknown::QueryInterface での初期化専用の COM スマートポインタ
- *	@param T				インターフェイス型
- *	@param iid				インターフェイスの IID
- *	@param ConversionPolicy	インターフェイス型への暗黙の型変換を行うか
+ * @c IUnknown#QueryInterface での初期化専用の COM スマートポインタ
+ * @param T インターフェイス型
+ * @param iid インターフェイスの IID
+ * @param ConversionPolicy インターフェイス型への暗黙の型変換を行うか
  */
 template<class T, const IID* iid = &__uuidof(T), class ConversionPolicy = AllowConversion>
 class ComQIPtr : public ComPtr<T, ConversionPolicy> {
@@ -128,17 +127,17 @@ public:
 };
 
 
-/// IErrorInfo を C++ 例外として扱うためのラッパクラス (出所: Essential COM (Don Box))
+/// @c IErrorInfo を C++ 例外として扱うためのラッパクラス (出所: Essential COM (Don Box))
 class ComException {
 public:
 	/**
-	 *	コンストラクタ
-	 *	@param scode		SCODE
-	 *	@param riid			IID
-	 *	@param source		この例外を投げたクラス
-	 *	@param description	例外の説明。null の場合 <var>hr</var> より取得
-	 *	@param helpFile		ヘルプファイルのパス
-	 *	@param helpContext	ヘルプトピックの番号
+	 * コンストラクタ
+	 * @param scode SCODE
+	 * @param riid IID
+	 * @param source この例外を投げたクラス
+	 * @param description 例外の説明。@c null の場合 @p scode より取得
+	 * @param helpFile ヘルプファイルのパス
+	 * @param helpContext ヘルプトピックの番号
 	 */
 	ComException(HRESULT scode, REFIID riid,
 			const OLECHAR* source, const OLECHAR* description = 0, const OLECHAR* helpFile = 0, DWORD helpContext = 0) {
@@ -182,17 +181,17 @@ public:
 
 	// メソッド
 public:
-	/// エラーの IErrorInfo を返す
+	/// エラーの @c IErrorInfo を返す
 	void getErrorInfo(IErrorInfo*& errorInfo) const {errorInfo = errorInfo_; errorInfo->AddRef();}
-	/// エラーの HRESULT を返す
+	/// エラーの @c HRESULT を返す
 	HRESULT getSCode() const throw() {return hr_;}
 	/// 例外オブジェクトを論理スレッド例外として投げる
 	void throwLogicalThreadError() {::SetErrorInfo(0, errorInfo_);}
 	/**
-	 *	HRESULT に対応するエラーメッセージを返す
-	 *	@param hr			[in] HRESULT
-	 *	@param description	[out] エラーメッセージ
-	 *	@param languageId	[in] 言語 ID
+	 * @c HRESULT に対応するエラーメッセージを返す
+	 * @param[in] hr HRESULT
+	 * @param[out] description エラーメッセージ
+	 * @param[in] languageId 言語 ID
 	 */
 	static void getDescriptionOfSCode(HRESULT hr, BSTR& description, DWORD languageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)) {
 		void* buffer = 0;
@@ -211,8 +210,8 @@ private:
 
 
 /**
- *	クリティカルセクションで同期処理を行う。ATL とほとんど同じ
- *	@param automatic インスタンスの生成、破棄時に自動的にクリティカルセクションを初期化、破壊するか
+ * クリティカルセクションで同期処理を行う。ATL とほとんど同じ
+ * @param automatic インスタンスの生成、破棄時に自動的にクリティカルセクションを初期化、破壊するか
  */
 template<bool automatic = true> class ComCriticalSection {
 public:
@@ -251,9 +250,9 @@ template<> inline void ComCriticalSection<false>::terminate() {doTerminate();}
 
 
 /**
- *	@brief ISupportErrorInfo の標準的な実装
+ * @brief @c ISupportErrorInfo の標準的な実装
  *
- *	この実装は単一のインターフェイスしかサポートしない
+ * この実装は単一のインターフェイスしかサポートしない
  */
 template<const IID* iid> class ISupportErrorInfoImpl : virtual public ISupportErrorInfo {
 public:
@@ -263,11 +262,11 @@ public:
 
 
 /**
- *	@brief IObjectSafety の単純な実装
+ * @brief @c IObjectSafety の単純な実装
  *
- *	この実装は単一のインターフェイスしかサポートしない
- *	@param supportedSafety	サポートするオプション
- *	@param initialSafety	オプションの初期値
+ * この実装は単一のインターフェイスしかサポートしない
+ * @param supportedSafety サポートするオプション
+ * @param initialSafety オプションの初期値
  */
 template<DWORD supportedSafety, DWORD initialSafety> class IObjectSafetyImpl : virtual public IObjectSafety {
 public:
