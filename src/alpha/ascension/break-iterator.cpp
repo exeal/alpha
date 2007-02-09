@@ -200,7 +200,7 @@ namespace {
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-		const CharacterDetector& ctypes, const locale& lc) : BreakIterator(lc), component_(component), ctypes_(ctypes) {
+		const CharacterDetector& ctypes, const locale& lc) throw() : BreakIterator(lc), component_(component), ctypes_(ctypes) {
 }
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
@@ -324,7 +324,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			next = i.clone();
 			previousBase(*next);
 		}
-		if(nextCP == -1) nextCP = next->current();
+		if(nextCP == INVALID_CODE_POINT) nextCP = next->current();
 		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, ctypes_, getLocale());
 		if(prevClass == GraphemeClusterBreak::LF && nextClass == GraphemeClusterBreak::CR)	// (WB3)
 			/* do nothing */;
