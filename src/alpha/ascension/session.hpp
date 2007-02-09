@@ -147,7 +147,7 @@ namespace ascension {
 			class ISessionElement {
 			protected:
 				virtual void setSession(Session& session) throw() = 0;
-				friend Session;
+				friend class Session;
 			};
 		}
 
