@@ -191,6 +191,10 @@ namespace manah {
 			bool operator<=(const Iterator& rhs) const throw() {return *this == rhs || *this < rhs;}
 			bool operator>(const Iterator& rhs) const throw() {return !(*this <= rhs);}
 			bool operator>=(const Iterator& rhs) const throw() {return !(*this < rhs);}
+		private:
+			using ConstIterator::target_;
+			using ConstIterator::current_;
+			using ConstIterator::getOffset;
 			friend Iterator operator+(DifferenceType lhs, const Iterator& rhs) throw() {return rhs + lhs;}
 			friend class GapBuffer<ValueType, ElementsDeleter, Allocator>;
 		};
