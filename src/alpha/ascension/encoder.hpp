@@ -122,9 +122,8 @@ namespace ascension {
 	const uchar NATIVE_DEFAULT_CHARACTER = '?';
 
 	// 文字セットにマップされない文字
-	const wchar_t REPLACEMENT_CHARACTER	= 0xFFFD;
-	const wchar_t RP__CH				= REPLACEMENT_CHARACTER;
-	const uchar N__A					= 0x00;
+	const wchar_t RP__CH = REPLACEMENT_CHARACTER;
+	const uchar N__A = 0x00;
 
 	template<class Ch> void setDefaultChar(Ch& ch);
 	template<> inline void setDefaultChar(char& ch) {ch = NATIVE_DEFAULT_CHARACTER;}

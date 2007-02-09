@@ -266,7 +266,7 @@ namespace {
 	class RegexMatcher : virtual public ascension::searcher::internal::IPatternMatcher {
 	public:
 		RegexMatcher(const Char* first, const Char* last, bool ignoreCase)
-			: pattern_(first, last, ignoreCase ? CASEFOLDING_UNICODE_SIMPLE : CASEFOLDING_NONE) {}
+			: pattern_(first, last, ignoreCase ? regex::Pattern::CASE_INSENSITIVE : regex::Pattern::NORMAL) {}
 		const String& getPattern() const throw() {static String p; p.assign(pattern_.getPatternString()); return p;}
 		bool matches(const MatchTarget& target, const CharacterDetector* ctypes) const {
 			result_ = pattern_.matches(target.first, target.last,

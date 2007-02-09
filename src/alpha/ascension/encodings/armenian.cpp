@@ -297,7 +297,7 @@ size_t Encoder_Armenian_Armscii8a::toUnicode(CTU_ARGLIST) {
 			dest[i] = ARMSCII8AtoUCS_20[src[i] - 0x20];
 		else
 			dest[i] = ARMSCII8AtoUCS_D8[src[i] - 0xD8];
-		if(dest[i] == REPLACEMENT_CHARACTER)
+		if(dest[i] == ascension::REPLACEMENT_CHARACTER)
 			CONFIRM_ILLEGAL_CHAR(dest[i]);
 	}
 	return len;

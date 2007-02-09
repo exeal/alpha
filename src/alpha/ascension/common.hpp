@@ -19,6 +19,7 @@
 #include <sstream>
 #include <memory>
 #include <iterator>
+#include <stdexcept>
 
 #ifdef _DEBUG
 #include "../../manah/win32/timer.hpp"
@@ -39,7 +40,7 @@ namespace ascension {
 	typedef std::basic_ostream<Char>	OutputStream;	///< output stream
 
 	/// Invalid value of @c length_t.
-	const length_t INVALID_INDEX = -1;
+	const length_t INVALID_INDEX = 0xFFFFFFFFUL;
 
 	/// Unicode code point.
 	typedef unsigned long CodePoint;	// uint32_t
@@ -48,19 +49,21 @@ namespace ascension {
 	/// Code point of CARRIAGE RETURN (U+000D).
 	const Char CARRIAGE_RETURN = 0x000D;
 	/// Code point of NEXT LINE (U+0085).
-	const Char NEXT_LINE = 0x0085U;
+	const Char NEXT_LINE = 0x0085;
 	/// Code point of ZERO WIDTH NON-JOINER (U+200C).
 	const Char ZERO_WIDTH_NON_JOINER = 0x200C;
 	/// Code point of ZERO WIDTH JOINER (U+200D).
 	const Char ZERO_WIDTH_JOINER = 0x200D;
 	/// Code point of LINE SEPARATOR (U+2028).
-	const Char LINE_SEPARATOR = 0x2028U;
+	const Char LINE_SEPARATOR = 0x2028;
 	/// Code point of PARAGRAPH SEPARATOR (U+2029).
-	const Char PARAGRAPH_SEPARATOR = 0x2029U;
+	const Char PARAGRAPH_SEPARATOR = 0x2029;
+	/// Code point of REPLACEMENT CHARACTER (U+FFFD).
+	const Char REPLACEMENT_CHARACTER = 0xFFFD;
 	/// Code point of non-character (U+FFFF).
-	const Char NONCHARACTER = 0xFFFFU;
+	const Char NONCHARACTER = 0xFFFF;
 	/// Invalid code point value.
-	const CodePoint INVALID_CODE_POINT = 0xFFFFFFFFU;
+	const CodePoint INVALID_CODE_POINT = 0xFFFFFFFFUL;
 	/// Set of line break characters.
 	const Char LINE_BREAK_CHARACTERS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 
@@ -75,10 +78,11 @@ namespace ascension {
 
 	/**
 	 * Notifies about the system parameter changes.
-	 * Clients of Ascension should call this function when received @c WM_SETTINGCHANGE window message.
+	 * Clients of Ascension should call this function when the system settings are changed
+	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 */
 	void updateSystemSettings() throw();
 
 } // namespace ascension
 
-#endif /* ASCENSION_COMMON_HPP */
+#endif /* !ASCENSION_COMMON_HPP */

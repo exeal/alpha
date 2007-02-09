@@ -7,7 +7,7 @@
 #include "stdafx.h"
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 #include "../encoder.hpp"
-
+using namespace ascension;
 using namespace ascension::encodings;
 using namespace std;
 

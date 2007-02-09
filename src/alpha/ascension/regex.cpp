@@ -182,6 +182,8 @@ namespace {
  * Because of this, almost all of the ECMAScript regular expression syntax features are
  * supported. For the details, see the document of Boost.Regex (http://www.boost.org/).
  *
+ * @note Following sections are draft and subject to change.
+ *
  * <h3>Unicode support</h3>
  *
  * This class partially conformant to UTS #18: Unicode Regular Expressions revision 11.
@@ -192,7 +194,7 @@ namespace {
  *   <dd>Supports @c \x{HHHH} or @c \x{HHHHHH} notations to refer to the corresponding
  *     code point (the number of 'H' is unlimited). @c \u is not usable for this purpose.</dd>
  *   <dt>1.2 Properties</dt>
- *   <dd>Supports the following properties when @c Pattern#UNICODE_PROPERTY option is given:
+ *   <dd>Supports the following properties:
  *     <ul>
  *       <li>General_Category</li>
  *       <li>Block</li>
@@ -205,7 +207,7 @@ namespace {
  *       <li>Default_Ignorable_Code_Point</li>
  *       <li>ANY, ASCII, ASSIGNED</li>
  *     </ul>
- *     And if @c Pattern#EXTENDED_UNICODE_PROPERTY options is set, then the following
+ *     And if @c Pattern#EXTENDED_PROPERTIES syntax options is set, then the following
  *     properties are also supported:
  *     <ul>
  *       <li>Hangul_Syllable_Type</li>
@@ -226,15 +228,20 @@ namespace {
  *   <dt>1.7 Code Points</dt>
  *   <dd>Supported.</dd>
  *   <dt>2.1 Canonical Equivalents</dt>
- *   <dd>Designed @c Pattern#CANONICAL_EQUIVALENT but not supported currently.</dd>
+ *   <dd>Designed @c Pattern#CANONICAL_EQUIVALENTS but not supported currently.</dd>
  *   <dt>2.2 Default Grapheme Clusters</dt>
- *   <dd>Not supported, but supports whole grapheme cluster match feature. See "Boundaries".</dd>
+ *   <dd>Not supported. You can use @c unicode#GraphemeBreakIterator to implement "whole grapheme cluster match".</dd>
  *   <dt>2.3 Default Word Boundaries</dt>
- *   <dd>Not supported, but supports whole word match feature. See "Boundaries".</dd>
+ *   <dd>Not supported You can use @c unicode#WordBreakIterator to implement "whole word match".</dd>
  *   <dt>2.4 Default Loose Matches .. 2.6 Wildcard Properties</dt>
- *   <dd>Not supported.</dd>
- *   <dt>3.1 Tailored Punctuation .. 3.3 Tailored Word Boundaries</dt>
- *   <dd>...</dd>
+ *   <dd>Follows to Boost.Regex.</dd>
+ *   <dt>3.1 Tailored Punctuation .. 3.11 Submatchers</dt>
+ *   <dd>Follows to Boost.Regex.</dd>
+ * </dl>
+ *
+ * @c Pattern can handle property name and value pair notation like "\p{name=value}" or "\p{name:value}".
+ *
+ * POSIX compatible character classes are also supported (as standard recommendation version).
  */
 
 /**
@@ -248,7 +255,7 @@ Pattern::Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxO
 	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
 	impl_.assign(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
 		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last),
-		boost::regex_constants::perl | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
+		boost::regex_constants::perl | boost::regex_constants::collate | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
 }
 
 /**

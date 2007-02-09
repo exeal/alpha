@@ -386,8 +386,8 @@ bool BinaryProperty::is(CodePoint cp, int property) {
 	case GRAPHEME_EXTEND:						return is<GRAPHEME_EXTEND>(cp);
 	case HEX_DIGIT:								return is<HEX_DIGIT>(cp);
 	case HYPHEN:								return is<HYPHEN>(cp);
-//	case ID_CONTINUE:							return is<ID_CONTINUE>(cp);
-//	case ID_START:								return is<ID_START>(cp);
+	case ID_CONTINUE:							return is<ID_CONTINUE>(cp);
+	case ID_START:								return is<ID_START>(cp);
 	case IDEOGRAPHIC:							return is<IDEOGRAPHIC>(cp);
 	case IDS_BINARY_OPERATOR:					return is<IDS_BINARY_OPERATOR>(cp);
 	case IDS_TRINARY_OPERATOR:					return is<IDS_TRINARY_OPERATOR>(cp);
@@ -663,20 +663,8 @@ bool CharacterDetector::isIdentifierCharacter(CodePoint cp) const throw() {
 		return (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z') || (cp >= '0' && cp <= '9');
 	case LEGACY_POSIX:
 		return legacyctype::isword(cp);
-	case UCD: {
-		const int gc = GeneralCategory::of(cp);
-		return gc == GeneralCategory::LETTER_LOWERCASE
-			|| gc == GeneralCategory::LETTER_MODIFIER
-			|| gc == GeneralCategory::LETTER_OTHER
-			|| gc == GeneralCategory::LETTER_TITLECASE
-			|| gc == GeneralCategory::LETTER_UPPERCASE
-			|| gc == GeneralCategory::MARK_NONSPACING
-			|| gc == GeneralCategory::MARK_SPACING_COMBINING
-			|| gc == GeneralCategory::NUMBER_DECIMAL_DIGIT
-			|| gc == GeneralCategory::PUNCTUATION_CONNECTOR
-			|| BinaryProperty::is<BinaryProperty::OTHER_ID_START>(cp)
-			|| BinaryProperty::is<BinaryProperty::OTHER_ID_CONTINUE>(cp);
-		}
+	case UCD:
+		return BinaryProperty::is<BinaryProperty::ID_CONTINUE>(cp);
 	}
 	return false;	// –³ˆÓ–¡
 }
@@ -697,20 +685,8 @@ bool CharacterDetector::isIdentifierOnlyContinueCharacter(CodePoint cp) const th
 		return (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z') || (cp >= '0' && cp <= '9');
 	case LEGACY_POSIX:
 		return legacyctype::isword(cp);
-	case UCD: {
-		const int gc = GeneralCategory::of(cp);
-		return gc == GeneralCategory::LETTER_LOWERCASE
-			|| gc == GeneralCategory::LETTER_MODIFIER
-			|| gc == GeneralCategory::LETTER_OTHER
-			|| gc == GeneralCategory::LETTER_TITLECASE
-			|| gc == GeneralCategory::LETTER_UPPERCASE
-			|| gc == GeneralCategory::MARK_NONSPACING
-			|| gc == GeneralCategory::MARK_SPACING_COMBINING
-			|| gc == GeneralCategory::NUMBER_DECIMAL_DIGIT
-			|| gc == GeneralCategory::PUNCTUATION_CONNECTOR
-			|| BinaryProperty::is<BinaryProperty::OTHER_ID_START>(cp)
-			|| BinaryProperty::is<BinaryProperty::OTHER_ID_CONTINUE>(cp);
-		}
+	case UCD:
+		return BinaryProperty::is<BinaryProperty::ID_CONTINUE>(cp);
 	}
 	return false;	// –³ˆÓ–¡
 }
@@ -730,15 +706,8 @@ bool CharacterDetector::isIdentifierStartCharacter(CodePoint cp) const throw() {
 		return (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z');
 	case LEGACY_POSIX:
 		return legacyctype::isalpha(cp);
-	case UCD: {
-		const int gc = GeneralCategory::of(cp);
-		return gc == GeneralCategory::LETTER_LOWERCASE
-			|| gc == GeneralCategory::LETTER_MODIFIER
-			|| gc == GeneralCategory::LETTER_OTHER
-			|| gc == GeneralCategory::LETTER_TITLECASE
-			|| gc == GeneralCategory::LETTER_UPPERCASE
-			|| BinaryProperty::is<BinaryProperty::OTHER_ID_START>(cp);
-		}
+	case UCD:
+		return BinaryProperty::is<BinaryProperty::ID_START>(cp);
 	}
 	return false;	// –³ˆÓ–¡
 }
@@ -758,7 +727,8 @@ bool CharacterDetector::isWhiteSpace(CodePoint cp, bool includeTab) const throw(
 	case LEGACY_POSIX:
 		return legacyctype::isspace(cp);
 	case UCD:
-		return GeneralCategory::of(cp) == GeneralCategory::SEPARATOR_SPACE;
+//		return GeneralCategory::of(cp) == GeneralCategory::SEPARATOR_SPACE;
+		return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp);
 	}
 	return false;	// –³ˆÓ–¡
 }
