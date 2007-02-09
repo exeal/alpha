@@ -10,7 +10,6 @@
 #include "../../manah/object.hpp"	// manah::Noncopyable
 #include "../../manah/memory.hpp"	// manah::AutoBuffer
 #include <cassert>
-#include <cmemory>
 #include <iterator>
 #include <set>
 #include <bitset>
