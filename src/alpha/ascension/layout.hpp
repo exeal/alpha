@@ -139,7 +139,7 @@ namespace ascension {
 			private:
 				explicit StyledSegmentIterator(const Run*& start) throw();
 				const Run** p_;
-				friend LineLayout;
+				friend class LineLayout;
 			};
 
 			// constructors
@@ -265,7 +265,7 @@ namespace ascension {
 			 * @param first the first of created lines
 			 * @param last the last of created lines (exclusive)
 			 * @param sublines the total number of sublines of created lines
-			 * @param true if the longest line is changed
+			 * @param longestLineChanged true if the longest line is changed
 			 */
 			virtual void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw() = 0;
 			/**
@@ -280,7 +280,7 @@ namespace ascension {
 			 * @param last the last of modified lines (exclusive)
 			 * @param sublinesDifference the difference of the number of sublines between before and after the modification
 			 * @param documentChanged true if the layouts were modified for the document change
-			 * @param true if the longest line is changed
+			 * @param longestLineChanged true if the longest line is changed
 			 */
 			virtual void visualLinesModified(length_t first, length_t last,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw() = 0;
@@ -505,7 +505,7 @@ inline length_t LineLayout::getOffset(const ::POINT& pt, length_t& trailing) con
  * Returns the wrapped line containing the specified column.
  * @param column the column
  * @return the wrapped line
- * @throw BadPositionException @p column is greater than the length of the line
+ * @throw BadPositionException @a column is greater than the length of the line
  */
 inline length_t LineLayout::getSubline(length_t column) const {
 	if(column > getText().length())
@@ -518,7 +518,7 @@ inline length_t LineLayout::getSubline(length_t column) const {
  * Returns the length of the specified visual subline.
  * @param subline the visual subline
  * @return the length of the subline
- * @throw BadPositionException @p subline is greater than the count of visual lines
+ * @throw BadPositionException @a subline is greater than the count of visual lines
  */
 inline length_t LineLayout::getSublineLength(length_t subline) const {
 	return (subline < numberOfSublines_ - 1 ? getSublineOffset(subline + 1) : getText().length()) - getSublineOffset(subline);}
@@ -527,7 +527,7 @@ inline length_t LineLayout::getSublineLength(length_t subline) const {
  * Returns the offset of the start of the specified visual subline from the start of the logical line.
  * @param subline the visual subline
  * @return the offset
- * @throw BadPositionException @p subline is greater than the count of visual lines
+ * @throw BadPositionException @a subline is greater than the count of visual lines
  */
 inline length_t LineLayout::getSublineOffset(length_t subline) const {
 	if(subline >= numberOfSublines_)
@@ -587,7 +587,7 @@ inline const TextViewer& LineLayoutBuffer::getTextViewer() const throw() {return
 /**
  * Returns true if the layout of the specified line is cached.
  * @param line the line
- * @return true if @p line is cached
+ * @return true if @a line is cached
  */
 inline bool LineLayoutBuffer::isLineCached(length_t line) const throw() {
 	return line >= startLine_ && line < startLine_ + bufferSize_ && layouts_[line - startLine_] != 0;}
@@ -595,7 +595,7 @@ inline bool LineLayoutBuffer::isLineCached(length_t line) const throw() {
 /**
  * Registers the visual lines listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void TextRenderer::addVisualLinesListener(IVisualLinesListener& listener) {visualLinesListeners_.add(listener);}
 
@@ -628,7 +628,7 @@ inline int TextRenderer::getLongestLineWidth() const throw() {return longestLine
  * If the layout of the line is not calculated, this method returns 1.
  * @param line the line
  * @return the count of the sublines
- * @throw BadPositionException @p line is outside of the document
+ * @throw BadPositionException @a line is outside of the document
  * @see #getLineLayout, LineLayout#getNumberOfSublines
  */
 inline length_t TextRenderer::getNumberOfSublinesOfLine(length_t line) const {return isLineCached(line) ? getLineLayout(line).getNumberOfSublines() : 1;}
@@ -646,14 +646,14 @@ inline int TextRenderer::getWidth() const throw() {return std::max(longestLineWi
 /**
  * Removes the visual lines listener.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void TextRenderer::removeVisualLinesListener(IVisualLinesListener& listener) {visualLinesListeners_.remove(listener);}
 
 /**
  * Sets the special character drawer.
  * @param newDrawer the new drawer or @c null
- * @param set true to transfer the ownership to the callee
+ * @param delegateOwnership set true to transfer the ownership to the callee
  */
 inline void TextRenderer::setSpecialCharacterDrawer(ISpecialCharacterDrawer* newDrawer, bool delegateOwnership) throw() {specialCharacterDrawer_.reset(newDrawer, delegateOwnership);}
 

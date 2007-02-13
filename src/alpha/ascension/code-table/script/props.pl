@@ -5,16 +5,19 @@
 # This script generates C++ source files
 # - uprops-implementation
 # - uprops-table
-# for CharProperty class implementation from the public files obtained from Unicode.org
+# - uprops-binary-property-table-definition
+# for ascension::unicode::* Unicode property classes. This uses the folowing public files
+# obtained from Unicode.org:
 # - UnicodeData.txt
 # - Blocks.txt
 # - Scripts.txt
 # - PropList.txt
 # - CaseFolding.txt
-# as input.
 
 use strict;
+use warnings;
 use integer;
+use IO::File;
 
 my %categoryMap = (
 	Lu => 1, Ll => 2, Lt => 3, Lm => 4, Lo => 5,
@@ -89,6 +92,37 @@ sub processCodeBlocks() {
 	close INPUT;
 	print OUTPUT_TABLE "};\n";
 	print OUTPUT_TABLE 'const size_t CodeBlock::count_ = countof(CodeBlock::ranges_);' . "\n";
+}
+
+# generate two arrays table for Canonical_Combining_Class
+sub processCanonicalCombiningClasses() {
+	my $input = new IO::File($directory . 'UnicodeData.txt') or die "Can't open '${directory}UnicodeData.txt'.\n";
+	print "generating ccc table...\n";
+
+	my (@cp, @ccc);
+	while(<$input>) {
+		next unless /^([0-9A-F]+);[^;]+;[^;]+;(\d+)/;
+		my $klass = int $2;
+		if($klass != 0) {
+			push @cp, hex($1);
+			push @ccc, $klass;
+		}
+	}
+	print OUTPUT_TABLE "#ifndef ASCENSION_NO_UNICODE_NORMALIZATION\n";
+	print OUTPUT_TABLE 'const Char CanonicalCombiningClass::SRC_UCS2[] = {';
+	my ($i, $j, $numberOfUCS2);
+	for($i = 0; $cp[$i] < 0x10000; ++$i) {printf(OUTPUT_TABLE "0x%X,", $cp[$i]);}
+	print OUTPUT_TABLE "};\nconst uchar CanonicalCombiningClass::DEST_UCS2[] = {";
+	$numberOfUCS2 = $i;
+	for($j = 0; $j < $numberOfUCS2; ++$j) {printf(OUTPUT_TABLE "%d,", $ccc[$j]);}
+	print OUTPUT_TABLE "};\nconst CodePoint CanonicalCombiningClass::SRC_UCS4[] = {";
+	for(; $i <= $#cp; ++$i) {printf(OUTPUT_TABLE "0x%X,", $cp[$i]);}
+	print OUTPUT_TABLE "};\nconst uchar CanonicalCombiningClass::DEST_UCS4[] = {";
+	for(; $j <= $#ccc; ++$j) {printf(OUTPUT_TABLE "%d,", $ccc[$j]);}
+	printf(OUTPUT_TABLE "};\nconst size_t CanonicalCombiningClass::UCS2_COUNT = %d;\n", $numberOfUCS2);
+	printf(OUTPUT_TABLE "const size_t CanonicalCombiningClass::UCS4_COUNT = %d;\n", ($#ccc + 1) - $numberOfUCS2);
+	print OUTPUT_TABLE "#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */\n";
+	$input->close;
 }
 
 # generate scripts code
@@ -323,6 +357,7 @@ print OUTPUT_TABLE '#endif' . "\n";
 # process all!
 processGeneralCategories();
 processCodeBlocks();
+processCanonicalCombiningClasses();
 processScripts();
 processBinaryProperties();
 processCaseFolding();

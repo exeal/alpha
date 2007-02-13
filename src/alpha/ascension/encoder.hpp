@@ -346,8 +346,7 @@ namespace ascension {
 	/// Returns the Unicode auto detector or @c null if not registered.
 	inline EncoderFactory::CodePageDetector EncoderFactory::getUnicodeDetector() const {
 		DetectorMap::const_iterator	it = registeredDetectors_.find(CPEX_UNICODE_AUTODETECT);
-		return (it != registeredDetectors_.end()) ? it->second : 0;
-	}
+		return (it != registeredDetectors_.end()) ? it->second : 0;}
 
 	/// Returns true if the specified code page is for auto-detection.
 	inline bool EncoderFactory::isCodePageForAutoDetection(CodePage cp) const {return registeredDetectors_.find(cp) != registeredDetectors_.end();}
@@ -363,17 +362,14 @@ namespace ascension {
 	inline bool EncoderFactory::isValidCodePage(CodePage cp) const {
 		return toBoolean(::IsValidCodePage(cp))
 			|| isCodePageForAutoDetection(cp)
-			|| registeredEncoders_.find(cp) != registeredEncoders_.end();
-	}
+			|| registeredEncoders_.find(cp) != registeredEncoders_.end();}
 
 	/**
 	 * Registers the new code page supports only native-to-UCS conversion.
 	 * @param cp the code page
 	 * @return succeeded or not
 	 */
-	inline bool EncoderFactory::registerCodePageForReadOnly(CodePage cp) {
-		return codePagesForReadOnly_.insert(cp).second;	// VC extended return
-	}
+	inline bool EncoderFactory::registerCodePageForReadOnly(CodePage cp) {return codePagesForReadOnly_.insert(cp).second;}	// VC extended return
 
 	/**
 	 * Registers the new auto encoding detector.
@@ -382,9 +378,7 @@ namespace ascension {
 	 * @return succeeded or not
 	 */
 	inline bool EncoderFactory::registerDetector(CodePage cp, CodePageDetector factoryMethod) {
-		assert(factoryMethod != 0);
-		return registeredDetectors_.insert(std::make_pair(cp, factoryMethod)).second;	// VC extended return
-	}
+		assert(factoryMethod != 0); return registeredDetectors_.insert(std::make_pair(cp, factoryMethod)).second;}	// VC extended return
 
 	/**
 	 * Registers the new encoder.
@@ -393,11 +387,9 @@ namespace ascension {
 	 * @return succeeded or not
 	 */
 	inline bool EncoderFactory::registerEncoder(CodePage cp, EncoderProducer factoryMethod) {
-		assert(factoryMethod != 0);
-		return registeredEncoders_.insert(std::make_pair(cp, factoryMethod)).second;	// VC extended return
-	}
+		assert(factoryMethod != 0); return registeredEncoders_.insert(std::make_pair(cp, factoryMethod)).second;}	// VC extended return
 
 	}
 } // namespace ascension::encodings
 
-#endif /* ASCENSION_ENCODER_HPP */
+#endif /* !ASCENSION_ENCODER_HPP */

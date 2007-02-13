@@ -361,7 +361,7 @@ ulong DeletionCommand::execute() {
 		unicode::WordBreakIterator<DocumentCharacterIterator> to(
 			DocumentCharacterIterator(document, (type_ == NEXT_WORD) ? caret.getBottomPoint() : caret.getTopPoint()),
 			unicode::AbstractWordBreakIterator::START_OF_SEGMENT,
-				viewer.getDocument().getContentTypeInformation().getCharacterDetector(caret.getContentType()));
+				viewer.getDocument().getContentTypeInformation().getIdentifierSyntax(caret.getContentType()));
 		(type_ == NEXT_WORD) ? ++to : --to;
 		if(to.base().tell() != from) {
 			viewer.freeze();
@@ -411,7 +411,7 @@ ulong FindAllCommand::execute() {
 	else
 		return 0;	// TODO: prepares a default text searcher.
 	const searcher::DocumentSearcher s(document, *textSearcher,
-		document.getContentTypeInformation().getCharacterDetector(DEFAULT_CONTENT_TYPE));
+		document.getContentTypeInformation().getIdentifierSyntax(DEFAULT_CONTENT_TYPE));
 
 	ulong count = 0;	// マーク回数、置換回数
 	Region matched;		// マッチ位置
@@ -477,7 +477,7 @@ ulong FindNextCommand::execute() {
 		textSearcher = &session->getTextSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
-	const DocumentSearcher s(document, *textSearcher, document.getContentTypeInformation().getCharacterDetector(DEFAULT_CONTENT_TYPE));
+	const DocumentSearcher s(document, *textSearcher, document.getContentTypeInformation().getIdentifierSyntax(DEFAULT_CONTENT_TYPE));
 
 	// 置換処理
 	if(replace_) {
@@ -827,7 +827,7 @@ ulong TranspositionCommand::execute() {
  * Undo or redo.
  * @retval 0 succeeded
  * @retval 1 failed
- * @see Document#undo, #Document#redo
+ * @see Document#undo, Document#redo
  */
 ulong UndoCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);

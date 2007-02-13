@@ -140,7 +140,7 @@ namespace ascension {
 		class TokenScanner : public manah::Noncopyable {
 		public:
 			// constructors
-			explicit TokenScanner(const unicode::CharacterDetector& characterDetector) throw();
+			explicit TokenScanner(const unicode::IdentifierSyntax& identifierSyntax) throw();
 			// attributes
 			void					addRule(std::auto_ptr<const Rule> rule);
 			void					addRule(std::auto_ptr<const WordRule> rule);
@@ -150,7 +150,7 @@ namespace ascension {
 			std::auto_ptr<Token>	nextToken() throw();
 			void					parse(const text::Document& document, const text::Region& region);
 		private:
-			const unicode::CharacterDetector& ctypes_;
+			const unicode::IdentifierSyntax& idSyntax_;
 			std::list<const Rule*> rules_;
 			std::list<const WordRule*> wordRules_;
 			unicode::UTF16To32Iterator<text::DocumentCharacterIterator, unicode::utf16boundary::BASE_KNOWS_BOUNDARIES> current_;

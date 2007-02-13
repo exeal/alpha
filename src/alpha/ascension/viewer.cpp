@@ -1099,7 +1099,7 @@ bool TextViewer::endAutoScroll() {
 /**
  * Freezes the drawing of the viewer.
  * @param forAllClones true to freeze also all clones of the viewer
- * @see #isFreezed, #unfreeze
+ * @see #isFrozen, #unfreeze
  */
 void TextViewer::freeze(bool forAllClones /* = true */) {
 	assertValidAsWindow();
@@ -1133,7 +1133,7 @@ HRESULT TextViewer::getAccessibleObject(IAccessible*& acc) const throw() {
 /**
  * Returns the document position nearest from the specified point.
  * @param pt the coordinates of the point. can be outside of the window
- * @param nearestLeading if set false, the result is the position nearest @a @pt.
+ * @param nearestLeading if set false, the result is the position nearest @a pt.
  * otherwise the result is the position has leading nearest @a pt
  * @return returns the document position
  * @see #getClientXYForCharacter, #hitTest, LineLayout#getOffset
@@ -1165,7 +1165,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  * @param position the document position. can be outside of the window
  * @param edge the edge of the character
  * @return the client coordinates of the point. about the y-coordinate of the point,
- * if @p position.line is outside of the client area, the result is 32767 (upward) or -32768 (downward)
+ * if @a position.line is outside of the client area, the result is 32767 (upward) or -32768 (downward)
  * @throw BadPositionException @a position is outside of the document
  * @see #getCharacterForClientXY, #hitTest, LineLayout#getLocation
  */
@@ -1439,7 +1439,7 @@ void TextViewer::hideToolTip() {
  * Determines which part is at the specified position.
  * @param pt the position to hit test, in client coordinates
  * @return the result
- * @see #HitTestResult
+ * @see TextViewer#HitTestResult
  */
 TextViewer::HitTestResult TextViewer::hitTest(const ::POINT& pt) const {
 	assertValidAsWindow();
@@ -1555,9 +1555,9 @@ void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visual
  * @param line the logical line number
  * @param fullSearch false to return special value for the line outside of the client area
  * @return the y-coordinate of the top of the line
- * @retval 32767 @p fullSearch is false and @p line is outside of the client area upward
- * @retval -32768 @p fullSearch is false and @p line is outside of the client area downward
- * @throw BadPositionException @p line is outside of the document
+ * @retval 32767 @a fullSearch is false and @a line is outside of the client area upward
+ * @retval -32768 @a fullSearch is false and @a line is outside of the client area downward
+ * @throw BadPositionException @a line is outside of the document
  * @see #mapClientYToLine, TextRenderer#offsetVisualLine
  */
 int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
@@ -2709,7 +2709,7 @@ void TextViewer::recreateCaret() {
  * Redraws the specified line on the view.
  * If the viewer is frozen, redraws after unfrozen.
  * @param line the line to be redrawn
- * @param following true to redraw also the all lines follow to @p line
+ * @param following true to redraw also the all lines follow to @a line
  */
 void TextViewer::redrawLine(length_t line, bool following) {
 	redrawLines(line, following ? numeric_limits<length_t>::max() : line);
@@ -2720,8 +2720,8 @@ void TextViewer::redrawLine(length_t line, bool following) {
  * If the viewer is frozen, redraws after unfrozen.
  * @param first the start of the lines to be redrawn
  * @param last the end of the lines to be redrawn. this value is inclusive and this line will be redrawn.
- * if this value is @c std#numeric_limits<length_t>#max(), redraws the @p first line and the below lines
- * @throw std#invalid_argument @p first is gretaer than @p last
+ * if this value is @c std#numeric_limits<length_t>#max(), redraws the @a first line and the below lines
+ * @throw std#invalid_argument @a first is gretaer than @a last
  */
 void TextViewer::redrawLines(length_t first, length_t last) {
 	if(first > last)
@@ -2920,7 +2920,7 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
  * Updates the configurations.
  * @param general the general configurations. @c null to unchange
  * @param verticalRuler	the configurations about the vertical ruler. @c null to unchange
- * @throw std#invalid_argument the content of @p verticalRuler is invalid
+ * @throw std#invalid_argument the content of @a verticalRuler is invalid
  */
 void TextViewer::setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler) {
 	if(verticalRuler != 0) {
@@ -2988,7 +2988,7 @@ HRESULT TextViewer::startTextServices() {
 /**
  * Revokes the frozen state of the viewer.
  * @param forAllClones true to revoke also all clones of the viewer
- * @see #freeze, #isFreezed
+ * @see #freeze, #isFrozen
  */
 void TextViewer::unfreeze(bool forAllClones /* = true */) {
 	assertValidAsWindow();
@@ -3803,7 +3803,7 @@ bool SourceViewer::getNearestIdentifier(const Position& position, length_t* star
 
 	DocumentPartition partition;
 	getDocument().getPartitioner().getPartition(position, partition);
-	const CharacterDetector& ctypes = getDocument().getContentTypeInformation().getCharacterDetector(partition.contentType);
+	const IdentifierSyntax& syntax = getDocument().getContentTypeInformation().getIdentifierSyntax(partition.contentType);
 	length_t startColumn = position.column, endColumn = position.column;
 	const String& line = getDocument().getLine(position.line);
 	CodePoint cp;
@@ -3818,7 +3818,7 @@ bool SourceViewer::getNearestIdentifier(const Position& position, length_t* star
 				cp = surrogates::decode(line.data() + startColumn - 2, 2);
 			else
 				cp = line[startColumn - 1];
-			if(ctypes.isIdentifierOnlyContinueCharacter(cp))
+			if(syntax.isIdentifierContinueCharacter(cp))
 				startColumn -= ((cp >= 0x010000) ? 2 : 1);
 			else
 				break;
@@ -3836,7 +3836,7 @@ bool SourceViewer::getNearestIdentifier(const Position& position, length_t* star
 				cp = surrogates::decode(line.data() + endColumn, 2);
 			else
 				cp = line[endColumn];
-			if(ctypes.isIdentifierOnlyContinueCharacter(cp))
+			if(syntax.isIdentifierContinueCharacter(cp))
 				endColumn += ((cp >= 0x010000) ? 2 : 1);
 			else
 				break;

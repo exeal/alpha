@@ -81,7 +81,7 @@ namespace ascension {
 			 */
 			virtual const LineStyle& queryLineStyle(length_t line, bool& delegatedOwnership) const = 0;
 			friend class Presentation;
-			friend ascension::internal::StrategyPointer<ILineStyleDirector>;
+			friend class ascension::internal::StrategyPointer<ILineStyleDirector>;
 		};
 
 		/**
@@ -99,8 +99,8 @@ namespace ascension {
 			 * @return the color of the line or @c Colors#STANDARD
 			 */
 			virtual viewers::Colors queryLineColor(length_t line) const = 0;
-			friend Presentation;
-			friend ascension::internal::StrategyPointer<ILineColorDirector>;
+			friend class Presentation;
+			friend class ascension::internal::StrategyPointer<ILineColorDirector>;
 		};
 
 		/***/
@@ -108,7 +108,7 @@ namespace ascension {
 		private:
 			/***/
 			virtual void textViewerListChanged(Presentation& presentation) = 0;
-			friend Presentation;
+			friend class Presentation;
 		};
 
 		namespace internal {
@@ -116,7 +116,7 @@ namespace ascension {
 			private:
 				virtual void addTextViewer(viewers::TextViewer& viewer) throw() = 0;
 				virtual void removeTextViewer(viewers::TextViewer& viewer) throw() = 0;
-				friend viewers::TextViewer;
+				friend class viewers::TextViewer;
 			};
 		}
 
@@ -173,14 +173,14 @@ namespace ascension {
 		/**
 		 * Registers the text viewer list listener.
 		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @p listener is already registered
+		 * @throw std#invalid_argument @a listener is already registered
 		 */
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
 
 		/**
 		 * Removes the text viewer list listener.
 		 * @param listener the listener to be removed
-		 * @throw std#invalid_argument @p listener is not registered
+		 * @throw std#invalid_argument @a listener is not registered
 		 */
 		inline void Presentation::removeTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.remove(listener);}
 
@@ -188,7 +188,7 @@ namespace ascension {
 		 * Sets the line color director.
 		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
 		 * @param newDirector the director. @c null to unregister
-		 * @param delegateOwnership set true to transfer the ownership of @p newDirector to the callee
+		 * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
 		 */
 		inline void Presentation::setLineColorDirector(ILineColorDirector* newDirector,
 			bool delegateOwnership) throw() {lineColorDirector_.reset(newDirector, delegateOwnership);}
@@ -197,7 +197,7 @@ namespace ascension {
 		 * Sets the line style director.
 		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
 		 * @param newDirector the director. @c null to unregister
-		 * @param delegateOwnership set true to transfer the ownership of @p newDirector to the callee
+		 * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
 		 */
 		inline void Presentation::setLineStyleDirector(ILineStyleDirector* newDirector,
 			bool delegateOwnership) throw() {lineStyleDirector_.reset(newDirector, delegateOwnership);}

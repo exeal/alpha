@@ -192,7 +192,7 @@ length_t EditPoint::getLineLength() const {
  * 与えられた位置から指定文字数分進んだ位置を返す
  * @param pt 基準位置
  * @param length 文字数
- * @param cu 文字数計算方法。省略すると @p pt の設定値
+ * @param cu 文字数計算方法。省略すると @a pt の設定値
  */
 Position EditPoint::getNextCharPos(const EditPoint& pt, length_t length, EditPoint::CharacterUnit cu /* = CU_DEFAULT */) {
 	if(length == 0)
@@ -231,7 +231,7 @@ Position EditPoint::getNextCharPos(const EditPoint& pt, length_t length, EditPoi
  * 与えられた位置から指定文字数分戻った位置を返す
  * @param pt 基準位置
  * @param length 文字数
- * @param cu 文字数計算方法。省略すると @p pt の設定値
+ * @param cu 文字数計算方法。省略すると @a pt の設定値
  */
 Position EditPoint::getPrevCharPos(const EditPoint& pt, length_t length, EditPoint::CharacterUnit cu /* = CU_DEFAULT */) {
 	if(length == 0)
@@ -269,7 +269,7 @@ Position EditPoint::getPrevCharPos(const EditPoint& pt, length_t length, EditPoi
 /**
  * 範囲内のテキストを返す
  * @param length もう1つの位置までの文字数 (負でもよい)
- * @param lbr 改行文字の扱い (@p length の数え方には影響しないので注意)
+ * @param lbr 改行文字の扱い (@a length の数え方には影響しないので注意)
  */
 String EditPoint::getText(signed_length_t length, LineBreakRepresentation lbr /* = LBR_PHYSICAL_DATA */) const {
 	verifyDocument();
@@ -665,7 +665,7 @@ void VisualPoint::doMoveTo(const Position& to) {
  * @param character インデントに使う文字
  * @param box 矩形インデントか (インデントレベルが負のときは無視される)
  * @param level インデントレベル
- * @return 操作の結果 @p pos が移動するとよい位置
+ * @return 操作の結果 @a pos が移動するとよい位置
  */
 Position VisualPoint::doIndent(const Position& other, Char character, bool box, long level) {
 	verifyViewer();
@@ -759,8 +759,8 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 }
 
 /// 
-inline const CharacterDetector& VisualPoint::getCharacterDetector() const {
-	return getDocument()->getContentTypeInformation().getCharacterDetector(getContentType());
+inline const IdentifierSyntax& VisualPoint::getIdentifierSyntax() const {
+	return getDocument()->getContentTypeInformation().getIdentifierSyntax(getContentType());
 }
 
 /**
@@ -862,7 +862,7 @@ bool VisualPoint::isFirstCharOfLine() const {
 	const length_t offset = (start.line == getLineNumber()) ? start.column : 0;
 	const String& line = getDocument()->getLine(getLineNumber());
 	return line.data() + getColumnNumber() - offset
-		== getCharacterDetector().eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
+		== getIdentifierSyntax().eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
 }
 
 /// Returns true if the current position is the last non-white space character in the line.
@@ -873,7 +873,7 @@ bool VisualPoint::isLastCharOfLine() const {
 	const String& line = getDocument()->getLine(getLineNumber());
 	const length_t lineLength = (end.line == getLineNumber()) ? end.column : line.length();
 	return line.data() + lineLength - getColumnNumber()
-		== getCharacterDetector().eatWhiteSpaces(line.data() + getColumnNumber(), line.data() + lineLength, true);
+		== getIdentifierSyntax().eatWhiteSpaces(line.data() + getColumnNumber(), line.data() + lineLength, true);
 }
 
 /**
@@ -932,7 +932,7 @@ void VisualPoint::moveToFirstCharOfLine() {
 	verifyViewer();
 	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
 	const Char* const p = getDocument()->getLine(line).data();
-	moveTo(Position(line, getCharacterDetector().eatWhiteSpaces(p, p + getDocument()->getLineLength(line), true) - p));
+	moveTo(Position(line, getIdentifierSyntax().eatWhiteSpaces(p, p + getDocument()->getLineLength(line), true) - p));
 }
 
 /// Moves to the last non-white space character.
@@ -941,10 +941,10 @@ void VisualPoint::moveToLastCharOfLine() {
 	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
 	const length_t lineLength = getDocument()->getLineLength(line);
 	const Char* const p = getDocument()->getLine(line).data();
-	const CharacterDetector& ctypes = getCharacterDetector();
+	const IdentifierSyntax& syntax = getIdentifierSyntax();
 
 	for(length_t spaceLength = 0; spaceLength < lineLength; ++spaceLength) {
-		if(ctypes.isWhiteSpace(p[lineLength - spaceLength - 1], true)) {
+		if(syntax.isWhiteSpace(p[lineLength - spaceLength - 1], true)) {
 			moveTo(Position(line, lineLength - spaceLength));
 			return;
 		}
@@ -976,7 +976,7 @@ void VisualPoint::newLine(bool inheritIndent) {
 
 	if(inheritIndent) {	// 自動インデント
 		const String& currentLine = getDocument()->getLine(getLineNumber());
-		const length_t len = getCharacterDetector().eatWhiteSpaces(
+		const length_t len = getIdentifierSyntax().eatWhiteSpaces(
 			currentLine.data(), currentLine.data() + getColumnNumber(), true) - currentLine.data();
 		breakString += currentLine.substr(0, len);
 	}
@@ -1123,7 +1123,7 @@ bool VisualPoint::show(const Position& other) {
  * @param other もう1つの位置
  * @param box 矩形インデントか (インデントレベルが負であれば無視される)
  * @param level インデントレベル
- * @return インデント後に @p pos が移動すべき位置
+ * @return インデント後に @a pos が移動すべき位置
  */
 Position VisualPoint::spaceIndent(const Position& other, bool box, long level /* = 1 */) {
 	verifyViewer();
@@ -1135,7 +1135,7 @@ Position VisualPoint::spaceIndent(const Position& other, bool box, long level /*
  * @param other もう1つの位置
  * @param box 矩形インデントか (インデントレベルが負であれば無視される)
  * @param level インデントレベル
- * @return インデント後に @p pos が移動すべき位置
+ * @return インデント後に @a pos が移動すべき位置
  */
 Position VisualPoint::tabIndent(const Position& other, bool box, long level /* = 1 */) {
 	verifyViewer();
@@ -1286,7 +1286,7 @@ bool VisualPoint::transposeWords() {
 	const Position top = getDocument()->getStartPosition();
 	const Position bottom = getDocument()->getEndPosition();
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, getIdentifierSyntax());
 	Position pos[4];
 
 	// まず前方の単語 (1st-word-*) を探す
@@ -1378,7 +1378,7 @@ void VisualPoint::wordEndNext(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
 	i += offset;
 	moveTo(i.base().tell());
 }
@@ -1391,7 +1391,7 @@ void VisualPoint::wordEndPrev(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
 	i -= offset;
 	moveTo(i.base().tell());
 }
@@ -1422,7 +1422,7 @@ void VisualPoint::wordNext(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
 	i += offset;
 	moveTo(i.base().tell());
 }
@@ -1435,7 +1435,7 @@ void VisualPoint::wordPrev(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
 	i -= offset;
 	moveTo(i.base().tell());
 }
@@ -1455,7 +1455,6 @@ void VisualPoint::wordRight(length_t offset /* = 1 */) {
 /**
  * Constructor.
  * @param viewer the viewer
- * @param document the document
  */
 Caret::Caret(TextViewer& viewer) throw() : VisualPoint(viewer, 0),
 		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), pastingFromClipboardRing_(false),
@@ -1780,13 +1779,13 @@ void Caret::extendSelection(const Position& to) {
 	} else if(selectionMode_ == WORD) {
 		if(to.line < modeInitialAnchorLine_ || (to.line == modeInitialAnchorLine_ && to.column < wordSelectionChars_[0])) {
 			WordBreakIterator<DocumentCharacterIterator> i(
-				DocumentCharacterIterator(*getDocument(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getCharacterDetector());
+				DocumentCharacterIterator(*getDocument(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getIdentifierSyntax());
 			--i;
 			select(Position(modeInitialAnchorLine_, wordSelectionChars_[1]),
 				(i.base().tell().line == to.line) ? i.base().tell() : Position(to.line, 0));
 		} else if(to.line > modeInitialAnchorLine_ || (to.line == modeInitialAnchorLine_ && to.column > wordSelectionChars_[1])) {
 			WordBreakIterator<DocumentCharacterIterator> i(
-				DocumentCharacterIterator(*getDocument(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getCharacterDetector());
+				DocumentCharacterIterator(*getDocument(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getIdentifierSyntax());
 			++i;
 			select(Position(modeInitialAnchorLine_, wordSelectionChars_[0]),
 				(i.base().tell().line == to.line) ? i.base().tell() : Position(to.line, getDocument()->getLineLength(to.line)));
@@ -1873,7 +1872,7 @@ void Caret::extendSelection(mem_fun1_t<void, VisualPoint, length_t>& algorithm, 
  * @param[out] first the start of the range
  * @param[out] last the end of the range
  * @return true if there is selected range on the line
- * @throw text#BadPositionException @p line is outside of the document
+ * @throw text#BadPositionException @a line is outside of the document
  * @see #getSelectedRangeOnVisualLine
  */
 bool Caret::getSelectedRangeOnLine(length_t line, length_t& first, length_t& last) const {
@@ -1896,7 +1895,7 @@ bool Caret::getSelectedRangeOnLine(length_t line, length_t& first, length_t& las
  * @param[out] first the start of the range
  * @param[out] last the end of the range
  * @return true if there is selected range on the line
- * @throw text#BadPositionException @p line or @p subline is outside of the document
+ * @throw text#BadPositionException @a line or @a subline is outside of the document
  * @see #getSelectedRangeOnLine
  */
 bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const {
@@ -1917,7 +1916,7 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 /**
  * @brief キャレットの直前にある識別子を返す
  *
- * 識別子が見つからない場合や、選択がある場合、識別子が @p maxLength で指定した文字数を超えた場合は失敗する
+ * 識別子が見つからない場合や、選択がある場合、識別子が @a maxLength で指定した文字数を超えた場合は失敗する
  * @param maxLength 識別子の最大文字数
  * @param[out] identifier 識別子
  * @return 取得に成功した場合は true
@@ -1933,13 +1932,13 @@ bool Caret::getPrecedingIdentifier(length_t maxLength, String& identifier) const
 	if(partitionStart == getColumnNumber())	// どちらのパーティションに属するか微妙だ...
 		return false;
 
-	const CharacterDetector& ctypes = getCharacterDetector();
+	const IdentifierSyntax& syntax = getIdentifierSyntax();
 	const String& line = getDocument()->getLine(getLineNumber());
 	assert(getColumnNumber() > 0);
 	UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(
 		line.data() + getColumnNumber(), line.data() + partitionStart, line.data() + line.length());
 	for(--i; !i.isFirst(); --i) {
-		if(!ctypes.isIdentifierCharacter(*i))
+		if(!syntax.isIdentifierContinueCharacter(*i))
 			break;
 		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)
 			return false;
@@ -2016,8 +2015,8 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 		destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		getTextViewer().unfreeze(true);
 	} else {
-		const CharacterDetector& ctypes = getCharacterDetector();
-		const bool alpha = ctypes.isIdentifierCharacter(cp);
+		const IdentifierSyntax& ctypes = getIdentifierSyntax();
+		const bool alpha = ctypes.isIdentifierContinueCharacter(cp);
 
 //		// 識別子文字以外なら補完終了
 //		if(!alpha && completionWindow_.isRunning())
@@ -2195,7 +2194,7 @@ void Caret::selectWord() {
 	verifyViewer();
 
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getCharacterDetector());
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getIdentifierSyntax());
 	endBoxSelection();
 	if(isEndOfLine()) {
 		if(isStartOfLine())	// 0 文字行

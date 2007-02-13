@@ -2,6 +2,7 @@
  * @file unicode-utils.hpp
  * @author exeal
  * @date 2005-2007
+ * @see ascension#unicode, break-iterator.hpp
  */
 
 #ifndef ASCENSION_UNICODE_UTILS_HPP
@@ -23,7 +24,18 @@
 
 namespace ascension {
 
-	/// Utilities of Unicode relations.
+	/**
+	 * Provides stuffs implement some of the Unicode standard. This includes:
+	 * - @c Normalizer class implements <a href="http://www.unicode.org/reports/tr15/">UAX #15:
+	 *   Unicode Normalization Forms</a>
+	 * - @c BreakIterator class implements <a href="http://www.unicode.org/reports/tr29/">UAX #29:
+	 *   Text Boundary</a>
+	 * - @c IdentifierSyntax class implements <a href="http://www.unicode.org/reports/tr31/">UAX
+	 *   #31: Identifier and Pattern Syntax</a>
+	 * - @c surrogates namespace contains functions to handle UTF-16 surrogate pairs
+	 * - Unicode properties
+	 * @see ASCENSION_UNICODE_VERSION
+	 */
 	namespace unicode {
 
 		/**
@@ -34,47 +46,47 @@ namespace ascension {
 			/**
 			 * Returns if the specified code unit is high (leading)-surrogate.
 			 * @param ch the code unit
-			 * @return true if @p ch is high-surrogate
+			 * @return true if @a ch is high-surrogate
 			 */
 			inline bool isHighSurrogate(Char ch) throw() {return (ch & 0xFC00U) == 0xD800U;}
 			/**
 			 * Returns if the specified code unit is low (trailing)-surrogate.
 			 * @param ch the code unit
-			 * @return true if @p ch is low-surrogate
+			 * @return true if @a ch is low-surrogate
 			 */
 			inline bool isLowSurrogate(Char ch) throw() {return (ch & 0xFC00U) == 0xDC00U;}
 			/**
 			 * Returns if the specified code unit is surrogate.
 			 * @param ch the code unit
-			 * @return true if @p ch is surrogate
+			 * @return true if @a ch is surrogate
 			 */
 			inline bool isSurrogate(Char ch) throw() {return (ch & 0xF800U) == 0xD800U;}
 			/**
 			 * Returns high (leading)-surrogate for the specified code point.
-			 * @note If @p cp is in BMP, the behavior is undefined.
+			 * @note If @a cp is in BMP, the behavior is undefined.
 			 * @param cp the code point
-			 * @return the high-surrogate code unit for @p cp
+			 * @return the high-surrogate code unit for @a cp
 			 */
 			inline Char getHighSurrogate(CodePoint cp) throw() {return static_cast<Char>((cp >> 10) & 0xFFFF) + 0xD7C0U;}
 			/**
 			 * Returns low (trailing)-surrogate for the specified code point.
-			 * @note If @p cp is in BMP, the behavior is undefined.
+			 * @note If @a cp is in BMP, the behavior is undefined.
 			 * @param cp the code point
-			 * @return the low-surrogate code unit for @p cp
+			 * @return the low-surrogate code unit for @a cp
 			 */
 			inline Char getLowSurrogate(CodePoint cp) throw() {return static_cast<Char>(cp & 0x03FF) | 0xDC00U;}
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
 			 * @param high the high-surrogate
 			 * @param low the low-surrogate
-			 * @return the code point or the value of @p high if the pair is not valid
+			 * @return the code point or the value of @a high if the pair is not valid
 			 */
 			inline CodePoint decode(Char high, Char low) throw() {
 				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000 + (high - 0xD800) * 0x400 + low - 0xDC00 : high;}
 			/**
 			 * Converts a surrogate pair to a corresponding code point.
 			 * @param p the pointer to the surrogate pair in a UTF-16 string
-			 * @param length the length of @p p. must be greater than zero
+			 * @param length the length of @a p. must be greater than zero
 			 * @return the code point
 			 */
 			inline CodePoint decode(const Char* p, std::size_t length) throw() {
@@ -83,9 +95,9 @@ namespace ascension {
 			 * Converts the specified code point to a corresponding surrogate pair.
 			 * @param cp the code point
 			 * @param[out] dest the surrogate pair
-			 * @retval 1 @p cp is in BMP
-			 * @retval 2 @p cp is out of BMP
-			 * @throw std#invalid_argument @p cp can't be expressed by UTF-16
+			 * @retval 1 @a cp is in BMP
+			 * @retval 2 @a cp is out of BMP
+			 * @throw std#invalid_argument @a cp can't be expressed by UTF-16
 			 */
 			inline length_t encode(CodePoint cp, Char* dest) {
 				assert(dest != 0);
@@ -118,6 +130,27 @@ namespace ascension {
 			inline const Char* previous(const Char* first, const Char* start) throw() {
 				assert(first != 0 && start != 0 && first < start);
 				return start - ((isLowSurrogate(start[-1]) && (start - first > 1) && isHighSurrogate(start[-2])) ? 2 : 1);
+			}
+			/**
+			 * Searches an isolated surrogate character in the specified UTF-16 string.
+			 * About UTF-32 strings, use <code>std#find_if(,, std::ptr_fun(isSurrogate))</code> instead.
+			 * @a CharacterSequence must represent random-accessible 16-bit character sequence.
+			 * @param first the start of the string
+			 * @param last the end of the string
+			 * @return the isolated surrogate or @a last if not found
+			 */
+			template<typename CharacterSequence>
+			inline CharacterSequence searchIsolatedSurrogate(CharacterSequence first, CharacterSequence last) throw() {
+				assert(first < last);
+				while(first < last) {
+					if(isLowSurrogate(*first)) break;
+					else if(isHighSurrogate(*first)) {
+						if(last - first > 1 && isLowSurrogate(first[1])) ++first;
+						else break;
+					}
+					++first;
+				}
+				return first;
 			}
 		} // namespace surrogates
 
@@ -196,7 +229,7 @@ namespace ascension {
 				DONT_CHECK,
 				/**
 				 * The base iterator (the first template parameter of @c UTF16To32Iterator) has
-				 * own boundaries. The base iterator must have two method #isFirst and #isLast.
+				 * own boundaries. The base iterator must have two method @c isFirst and @c isLast.
 				 * take no parameter and return no value.
 				 */
 				BASE_KNOWS_BOUNDARIES,
@@ -213,10 +246,10 @@ namespace ascension {
 		 * Base class for @c UTF16To32Iterator bidirectional iterator scans a UTF-16 character
 		 * sequence as UTF-32.
 		 *
-		 * Scanned UTF-16 sequence is given by the template parameter @p BaseIterator.
+		 * Scanned UTF-16 sequence is given by the template parameter @a BaseIterator.
 		 *
 		 * This supports four relation operators general bidirectional iterators don't have.
-		 * These are available if @p BaseIterator have these facilities.
+		 * These are available if @a BaseIterator have these facilities.
 		 * @param BaseIterator the base bidirectional iterator presents UTF-16 character sequence
 		 * @param ConcreteIterator set to @c UTF16To32Iterator template class
 		 * @see UTF16To32Iterator, UTF32To16Iterator
@@ -321,10 +354,10 @@ namespace ascension {
 		/**
 		 * Bidirectional iterator scans UTF-32 character sequence as UTF-16.
 		 *
-		 * Scanned UTF-32 sequence is given by the template parameter @p BaseIterator.
+		 * Scanned UTF-32 sequence is given by the template parameter @a BaseIterator.
 		 *
 		 * This supports four relation operators general bidirectional iterators don't have.
-		 * These are available if @p BaseIterator have these facilities.
+		 * These are available if @a BaseIterator have these facilities.
 		 * @param BaseIterator the base bidirectional iterator presents UTF-32 character sequence
 		 * @see UTF16To32Iterator
 		 */
@@ -369,29 +402,91 @@ namespace ascension {
 		};
 
 		/**
-		 * A @c CharacterDetector performs character classification for lexing.
-		 * @see IDocumentPartitioner#getCharacterDetector, "UAX #31 Identifier and Pattern Syntax" (http://www.unicode.org/reports/tr31/)
+		 * Case folding types.
+		 * @note Currently, Ascension supports only locale/language-independent foldings.
+		 * @see CaseFolder, CaseFoldings
 		 */
-		class CharacterDetector {
+		enum CaseFolding {
+			CASEFOLDING_NONE			= 0x00,	///< Does not perform case foldings.
+			CASEFOLDING_ASCII			= 0x01,	///< Folds only ASCII alphabets.
+			CASEFOLDING_UNICODE_SIMPLE	= 0x02,	///< Unicode simple case folding.
+			CASEFOLDING_UNICODE_FULL	= 0x03,	///< Unicode full case folding (not implemented).
+			CASEFOLDING_TURKISH_I		= 0x04,	///< Performs Turkish mapping.
+			CASEFOLDING_TYPE_MASK		= 0x03	///< Mask for obtaining the folding type.
+		};
+
+		/// Bit combination of @c CaseFolding.
+		typedef manah::Flags<CaseFolding> CaseFoldings;
+
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+		class Normalizer : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
 		public:
-			/**
-			 * Types of character classification.
-			 * @see #setClassificationType
-			 */
-			enum ClassificationType {
-				ASCII,			///< uses only 7-bit ASCII characters. an identifier can be expresses as @c /[A-Za-z][A-Za-z0-9]*/
-				LEGACY_POSIX,	///< classifies using unicode#legacyctype functions
-				UCD				///< classifies based on Unicode properties
+			/// Normalization forms.
+			enum Form {
+				FORM_C,		///< Normalization Form C.
+				FORM_D,		///< Normalization Form D.
+				FORM_KC,	///< Normalization Form KC.
+				FORM_KD		///< Normalization Form KD.
+			};
+			/// Decomposition mapping types.
+			enum Type {
+				DONT_NORMALIZE,	///< Does not normalize.
+				CANONICAL,		///< Canonical normalization.
+				COMPATIBILITY	///< Compatibility normalization.
 			};
 			// constructors
-			CharacterDetector() throw();
-			explicit CharacterDetector(ClassificationType type) throw();
-			CharacterDetector(const CharacterDetector& rhs) throw();
-			CharacterDetector&	operator=(const CharacterDetector& rhs) throw();
+			Normalizer();
+			Normalizer(const Char* first, const Char* last, Form form);
+			Normalizer(const String& text, Form form);
+			Normalizer(const Normalizer& rhs);
+			~Normalizer() throw();
+			// operators
+			Normalizer&			operator=(const Normalizer& rhs);
+			CodePoint			operator*() const throw();
+			Normalizer&			operator++();
+			const Normalizer	operator++(int);
+			Normalizer&			operator--();
+			const Normalizer	operator--(int);
+			bool				operator==(const Normalizer& rhs) const throw();
+			bool				operator!=(const Normalizer& rhs) const throw();
+			// attributes
+			bool		isFirst() const throw();
+			bool		isLast() const throw();
+			const Char*	tell() const throw();
+			// utilities
+			static int		compare(const String& s1, const String& s2, Type type, const CaseFoldings& caseFolding);
+			static String	normalize(const Char* first, const Char* last, Form form);
+		private:
+			static std::basic_string<CodePoint>	normalize(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i, Form form);
+			void								normalizeCurrentBlock(Direction direction);
+			Form form_;
+			UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> current_;
+			std::basic_string<CodePoint> normalizedBuffer_;
+			std::size_t indexInBuffer_;
+		};
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+
+		class IdentifierSyntax {
+		public:
+			/// Types of character classification used by @c IdentifierSyntax.
+			enum CharacterClassification {
+				ASCII,				///< Uses only 7-bit ASCII characters.
+				LEGACY_POSIX,		///< Classifies using @c unicode#legacyctype namespace functions.
+				UNICODE_DEFAULT,	///< Conforms to the default identifier syntax of UAX #31.
+				UNICODE_ALTERNATIVE	///< Conforms to the alternative identifier syntax of UAX #31.
+			};
+			// constructors
+			IdentifierSyntax() throw();
+			explicit IdentifierSyntax(CharacterClassification type, const CaseFoldings& caseFolding = CASEFOLDING_NONE
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+				, Normalizer::Type normalizationType = Normalizer::DONT_NORMALIZE
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+			) throw();
+			IdentifierSyntax(const IdentifierSyntax& rhs) throw();
+			IdentifierSyntax&	operator=(const IdentifierSyntax& rhs) throw();
 			// classification for character
-			bool	isIdentifierCharacter(CodePoint cp) const throw();
-			bool	isIdentifierOnlyContinueCharacter(CodePoint cp) const throw();
 			bool	isIdentifierStartCharacter(CodePoint cp) const throw();
+			bool	isIdentifierContinueCharacter(CodePoint cp) const throw();
 			bool	isWhiteSpace(CodePoint cp, bool includeTab) const throw();
 			// classification for sequence
 			template<class CharacterSequence>
@@ -399,36 +494,24 @@ namespace ascension {
 			template<class CharacterSequence>
 			CharacterSequence	eatWhiteSpaces(CharacterSequence, CharacterSequence last, bool includeTab) const throw();
 			// attributes
+			void	overrideIdentifierStartCharacters(const String& adding, const String& subtracting);
 			void	overrideIdentifierStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
-			void	overrideIdentifierOnlyContinueCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
-			void	setClassificationType(ClassificationType type) throw();
+			void	overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting);
+			void	overrideIdentifierNonStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
 		private:
-			void	overrideCharset(const std::set<CodePoint>& adding,
-						const std::set<CodePoint>& subtracting,
-						manah::AutoBuffer<CodePoint>& added, manah::AutoBuffer<CodePoint>& subtracted);
-			ClassificationType type_;
-			manah::AutoBuffer<CodePoint> addedIDStartCharacters_, addedIDOnlyContinueCharacters_;
-			manah::AutoBuffer<CodePoint> subtractedIDStartCharacters_, subtractedIDOnlyContinueCharacters_;
-			std::size_t numberOfAddedIDStartCharacters_, numberOfAddedIDOnlyContinueCharacters_;
-			std::size_t numberOfSubtractedIDStartCharacters_, numberOfSubtractedIDOnlyContinueCharacters_;
-		};
-
-		/**
-		 * Case folding types.
-		 * @note Currently, Ascension supports only locale/language-independent foldings.
-		 * @see CaseFolder
-		 */
-		enum CaseFoldingType {
-			CASEFOLDING_NONE,			///< does not perform case foldings
-			CASEFOLDING_ASCII,			///< folds only ASCII alphabets
-			CASEFOLDING_UNICODE_SIMPLE,	///< Unicode simple case folding
-			CASEFOLDING_UNICODE_FULL	///< Unicode full case folding (full) (not implemented)
+			CharacterClassification type_;
+			CaseFoldings caseFolding_;
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+			Normalizer::Type normalizationType_;
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+			std::basic_string<CodePoint> addedIDStartCharacters_, addedIDNonStartCharacters_;
+			std::basic_string<CodePoint> subtractedIDStartCharacters_, subtractedIDNonStartCharacters_;
 		};
 
 		/// @c CaseFolder performs case foldings.
 		class CaseFolder : public manah::Noncopyable {
 		public:
-			template<CaseFoldingType type>
+			template<CaseFolding type>
 			static bool						compare(const Char* p1, const Char* p2, length_t length);
 			static Char						foldASCII(Char ch) throw();
 			static length_t					foldFull(CodePoint cp, CodePoint* dest);
@@ -609,6 +692,53 @@ namespace ascension {
 			static void buildNames();
 		};
 
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+		/**
+		 * Canonical combining classes.
+		 * These are based on Unicode standard 5.0.0 "4.3 Combining Classes".
+		 * @see Normalizer
+		 */
+		class CanonicalCombiningClass {
+		public:
+			enum {
+				NOT_REORDERED			= 0,	///< Spacing, split, enclosing, reordrant, and Tibetan subjoined (0).
+				OVERLAY					= 1,	///< Overlays and interior (1).
+				NUKTA					= 7,	///< Nuktas (7).
+				KANA_VOICING			= 8,	///< Hiragana/Katakana voicing marks (8).
+				VIRAMA					= 9,	///< Viramas (9).
+				ATTACHED_BELOW_LEFT		= 200,	///< Below left attached (200).
+				ATTACHED_BELOW			= 202,	///< Below attached (202).
+				ATTACHED_BELOW_RIGHT	= 204,	///< Below right attached (204). This class does not currently have members.
+				ATTACHED_LEFT			= 208,	///< Left attached (208). This class does not currently have members.
+				ATTACHED_RIGHT			= 210,	///< Right attached (210). This class does not currently have members.
+				ATTACHED_ABOVE_LEFT		= 212,	///< Above left attached (212). This class does not currently have members.
+				ATTACHED_ABOVE			= 214,	///< Above attached (214). This class does not currently have members.
+				ATTAHCED_ABOVE_RIGHT	= 216,	///< Above right attached (216).
+				BELOW_LEFT				= 218,	///< Below left (218).
+				BELOW					= 220,	///< Below (220)
+				BELOW_RIGHT				= 222,	///< Below right (222).
+				LEFT					= 224,	///< Left (224).
+				RIGHT					= 226,	///< Right (226).
+				ABOVE_LEFT				= 228,	///< Above left (228).
+				ABOVE					= 230,	///< Above (230).
+				ABOVE_RIGHT				= 232,	///< Above right (232).
+				DOUBLE_BELOW			= 233,	///< Double below (233).
+				DOUBLE_ABOVE			= 234,	///< Double above (234).
+				IOTA_SUBSCRIPT			= 240	///< Below (iota subscript) (240).
+			};
+			static const Char LONG_NAME[], SHORT_NAME[];
+			static int	forName(const Char* name);
+			static int	of(CodePoint cp) throw();
+		private:
+			static const Char SRC_UCS2[];
+			static const CodePoint SRC_UCS4[];
+			static const uchar DEST_UCS2[], DEST_UCS4[];
+			static const std::size_t UCS2_COUNT, UCS4_COUNT;
+			static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
+			static void buildNames();
+		};
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+
 		/**
 		 * Scripts.
 		 * These are based on Scripts.txt obtained from UCD.
@@ -692,6 +822,8 @@ namespace ascension {
 			template<int property>
 			static bool	is(CodePoint cp) throw();
 		private:
+			static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
+			static void buildNames();
 #include "code-table/uprops-binary-property-table-definition"
 		};
 
@@ -776,7 +908,7 @@ namespace ascension {
 			static const Char LONG_NAME[], SHORT_NAME[];
 			static int	forName(const Char* name);
 			static int	of(CodePoint cp,
-							const CharacterDetector& ctypes = CharacterDetector(CharacterDetector::UCD),
+							const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 							const std::locale& lc = std::locale::classic()) throw();
 		private:
 			static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
@@ -814,32 +946,32 @@ namespace ascension {
 				GREEK_LETTERFORMS,				///< Greek letter forms to Greek nominal characters
 				HEBREW_ALTERNATES,				///< Fullwidth Hebrew alternatives to Hebrew nominal characters
 				JAMO,							///< Hangul compatibility Jamo to completions
-				MATH_SYMBOL,					///< <fonts> compatibility mapping
+				MATH_SYMBOL,					///< &lt;fonts&gt; compatibility mapping
 				NATIVE_DIGIT,					///< All native digits (Nd) to ASCII digits
-				NOBREAK,						///< <noBreak> compatibility mapping
+				NOBREAK,						///< &lt;noBreak&gt; compatibility mapping
 				OVERLINE,						///< All overlines to U+203E: Overline
-				POSITIONAL_FORMS,				///< <initial, medial, final, isolated> compatibility mapping
-				SMALL_FORMS,					///< <small> compatibility mapping
+				POSITIONAL_FORMS,				///< &lt;initial, medial, final, isolated&gt; compatibility mapping
+				SMALL_FORMS,					///< &lt;small&gt; compatibility mapping
 				SPACE,							///< All white spaces (Zs) to U+0020: Space
 				SPACING_ACCENTS,				///< All spacing accents to nonspacing accents (deprecated)
-				SUBSCRIPT,						///< <sub> compatibility mapping
+				SUBSCRIPT,						///< &lt;sub&gt; compatibility mapping
 				SYMBOL,							///< All letter symbols to characters (deprecated)
 				UNDERLINE,						///< All underlines to U+005F: Underline
-				VERTICAL_FORMS,					///< <vertical> compatibility mapping
+				VERTICAL_FORMS,					///< &lt;vertical&gt; compatibility mapping
 				FOLDING_END,
 				// expansion
 				MULTIGRAPH_EXPANSION_START = FOLDING_END,
-				EXPAND_CIRCLED_SYMBOLS = MULTIGRAPH_EXPANSION_START,	///< <circled> compatibility mapping
+				EXPAND_CIRCLED_SYMBOLS = MULTIGRAPH_EXPANSION_START,	///< &lt;circled&gt; compatibility mapping
 				EXPAND_DOTTED,											///< Dotted numerals (U+2488..249B)
 				EXPAND_ELLIPSIS,										///< Ellipsis (U+2024..2026)
-				EXPAND_FRACTION,										///< <fraction> compatibility mapping
+				EXPAND_FRACTION,										///< &lt;fraction&gt; compatibility mapping
 				EXPAND_INTEGRAL,										///< Integrals (U+222C..222D, U+222F..2230)
 				EXPAND_LIGATURE,										///< Ligatures
 				EXPAND_PARENTHESIZED,									///< Parenthesized
 				EXPAND_PRIMES,											///< Primes (U+2033..2034, U+2036..2037)
 				EXPAND_ROMAN_NUMERALS,									///< Roman numerals (U+2160..2183)
-				EXPAND_SQUARED,											///< <square> compatibility mapping
-				EXPAND_SQUARED_UNMARKED,								///< <square> compatibility mapping without marked as <squared>
+				EXPAND_SQUARED,											///< &lt;square&gt; compatibility mapping
+				EXPAND_SQUARED_UNMARKED,								///< &lt;square&gt; compatibility mapping without marked as &lt;squared&gt;
 				EXPAND_DIGRAPH,											///< Digraphs
 				EXPAND_OTHER_MULTIGRAPHS,								///< Multi-graphs
 				MULTIGRAPH_EXPANSION_END,
@@ -850,7 +982,7 @@ namespace ascension {
 				KANA,											///< Hiragana and katakana
 				LETTER_FORMS,									///< Letter forms
 				SIMPLIFIED_HAN,									///< Simplified Chinese
-				SUPERSCRIPT,									///< <sup> compatibility mapping
+				SUPERSCRIPT,									///< &lt;sup&gt; compatibility mapping
 				SUZHOU_NUMERAL,									///< Suzhou (蘇州 (花碼)) numerals
 				WIDTH,											///< Fullwidth and halfwidth
 				PROVISIONAL_FOLDING_END,
@@ -869,7 +1001,7 @@ namespace ascension {
 		} // namespace foldingoptions
 
 		struct FoldingOptions {
-			CaseFoldingType caseFolding;
+			CaseFoldings caseFolding;
 			std::bitset<foldingoptions::FO_COUNT> others;
 			FoldingOptions() throw() : caseFolding(CASEFOLDING_NONE) {}
 		};
@@ -886,13 +1018,17 @@ namespace ascension {
 			String folded_;
 		};
 
-		/// Legacy character classification like @c std#ctype (from UTS #18: Unicode Regular Expression, Annex C: Compatibility Property).
+		/**
+		 * Legacy character classification like @c std#ctype (from <a
+		 * href="http://www.unicode.org/reports/tr18/">UTS #18: Unicode Regular Expression, Annex
+		 * C: Compatibility Property</a>.
+		 */
 		namespace legacyctype {
-			/// Returns true if the character is an alphabet (alpha := \p{Alphabetic}).
+			/// Returns true if the character is an alphabet (alpha := \\p{Alphabetic}).
 			inline bool isalpha(CodePoint cp) {return BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp);}
 			/// Returns true if the character is an alphabet or numeric (alnum := [:alpha:] | [:digit:]).
 			inline bool isalnum(CodePoint cp) {return isalpha(cp) || isdigit(cp);}
-			/// Returns true if the character is a blank (blank := \p{Whitespace} - [\N{LF} \N{VT} \N{FF} \N{CR} \N{NEL} \p{gc=Line_Separator} \p{gc=Paragraph_Separator}]).
+			/// Returns true if the character is a blank (blank := \\p{Whitespace} - [\\N{LF} \\N{VT} \\N{FF} \\N{CR} \\N{NEL} \\p{gc=Line_Separator} \\p{gc=Paragraph_Separator}]).
 			inline bool isblank(CodePoint cp) {
 				if(cp == LINE_FEED || cp == L'\v' || cp == L'\f' || cp == CARRIAGE_RETURN || cp == NEXT_LINE)	return false;
 				if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp)) {
@@ -901,11 +1037,11 @@ namespace ascension {
 				}
 				return false;
 			}
-			/// Returns true if the character is a control code (cntrl := \p{gc=Control}).
+			/// Returns true if the character is a control code (cntrl := \\p{gc=Control}).
 			inline bool iscntrl(CodePoint cp) {return GeneralCategory::of(cp) == GeneralCategory::OTHER_CONTROL;}
-			/// Returns true if the character is a digit (digit := \p{gc=Decimal_Number}).
+			/// Returns true if the character is a digit (digit := \\p{gc=Decimal_Number}).
 			inline bool isdigit(CodePoint cp) {return GeneralCategory::of(cp) == GeneralCategory::NUMBER_DECIMAL_DIGIT;}
-			/// Returns true if the character is graphical (graph := [^[:space:]\p{gc=Control}\p{Format}\p{Surrogate}\p{Unassigned}]).
+			/// Returns true if the character is graphical (graph := [^[:space:]\\p{gc=Control}\\p{Format}\\p{Surrogate}\\p{Unassigned}]).
 			inline bool isgraph(CodePoint cp) {
 				if(isspace(cp))	return false;
 				const int gc = GeneralCategory::of(cp);
@@ -914,28 +1050,125 @@ namespace ascension {
 					&& gc != GeneralCategory::OTHER_SURROGATE
 					&& gc != GeneralCategory::OTHER_UNASSIGNED;
 			}
-			/// Returns true if the character is lower (lower := \p{Lowercase}).
+			/// Returns true if the character is lower (lower := \\p{Lowercase}).
 			inline bool islower(CodePoint cp) {return BinaryProperty::is<BinaryProperty::LOWERCASE>(cp);}
 			/// Returns true if the character is printable (print := ([:graph] | [:blank:]) - [:cntrl:]).
 			inline bool isprint(CodePoint cp) {return (isgraph(cp) || isblank(cp)) && !iscntrl(cp);}
-			/// Returns true if the character is a punctuation (punct := \p{gc=Punctuation}).
+			/// Returns true if the character is a punctuation (punct := \\p{gc=Punctuation}).
 			inline bool ispunct(CodePoint cp) {return GeneralCategory::is<GeneralCategory::PUNCTUATION>(GeneralCategory::of(cp));}
-			/// Returns true if the character is a white space (space := \p{Whitespace}).
+			/// Returns true if the character is a white space (space := \\p{Whitespace}).
 			inline bool isspace(CodePoint cp) {return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp);}
-			/// Returns true if the character is capital (upper := \p{Uppercase}).
+			/// Returns true if the character is capital (upper := \\p{Uppercase}).
 			inline bool isupper(CodePoint cp) {return BinaryProperty::is<BinaryProperty::UPPERCASE>(cp);}
-			/// Returns true if the character can consist a word (word := [:alpha:]\p{gc=Mark}[:digit:]\p{gc=Connector_Punctuation}).
+			/// Returns true if the character can consist a word (word := [:alpha:]\\p{gc=Mark}[:digit:]\\p{gc=Connector_Punctuation}).
 			inline bool isword(CodePoint cp) {
 				if(isalpha(cp) || isdigit(cp)) return true;
 				const int gc = GeneralCategory::of(cp);
 				return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::PUNCTUATION_CONNECTOR;}
-			/// Returns true if the character is a hexadecimal (xdigit := \p{gc=Decimal_Number} | \p{Hex_Digit}).
+			/// Returns true if the character is a hexadecimal (xdigit := \\p{gc=Decimal_Number} | \\p{Hex_Digit}).
 			inline bool isxdigit(CodePoint cp) {
 				return GeneralCategory::of(cp) == GeneralCategory::NUMBER_DECIMAL_DIGIT || BinaryProperty::is<BinaryProperty::HEX_DIGIT>(cp);}
 		} // namespace legacyctype
 
 
 // inline implementations ///////////////////////////////////////////////////
+
+/// Returns the current character in the normalized text.
+inline CodePoint Normalizer::operator*() const throw() {return normalizedBuffer_[indexInBuffer_];}
+
+/// Prefix incremental operator.
+inline Normalizer& Normalizer::operator++() {
+	if(isLast())
+		throw std::out_of_range("the iterator is the last.");
+	if(++indexInBuffer_ == normalizedBuffer_.length()) {
+		if(!(++current_).isLast())
+			normalizeCurrentBlock(FORWARD);
+	}
+	return *this;
+}
+
+/// Postfix increment opearator.
+inline const Normalizer Normalizer::operator++(int) {Normalizer temp(*this); ++*this; return temp;}
+
+/// Prefix decrement operator.
+inline Normalizer& Normalizer::operator--() {
+	if(isFirst())
+		throw std::out_of_range("the iterator is the first");
+	if(indexInBuffer_ == 0) {
+		--current_;
+		normalizeCurrentBlock(BACKWARD);
+	} else
+		--indexInBuffer_;
+	return *this;
+}
+
+/// Postfix decrement opearator.
+inline const Normalizer Normalizer::operator--(int) {Normalizer temp(*this); --*this; return temp;}
+
+/// Equality operator returns true if both iterators address the same character in the normalized text.
+inline bool Normalizer::operator==(const Normalizer& rhs) const throw() {
+	return current_ == rhs.current_ && indexInBuffer_ == rhs.indexInBuffer_;}
+
+/// Inequality operator.
+inline bool Normalizer::operator!=(const Normalizer& rhs) const throw() {return !(*this == rhs);}
+
+/**
+ * Compares the two strings according to the specified decomposition mapping.
+ * @param s1 the string
+ * @param s2 the other string
+ * @param type decomposition mapping type
+ * @param caseFolding the options for case folding
+ * @retval &lt;0 @a s1 is less than @a s2
+ * @retval 0 the two strings are canonical or compatibiilty equivalent
+ * @retval &gt;0 @a s1 is greater than @a s2
+ */
+inline int Normalizer::compare(const String& s1, const String& s2, Type type, const CaseFoldings& caseFolding) {
+	const String ds1(normalize(s1.data(), s1.data() + s1.length(), (type == CANONICAL) ? FORM_D : FORM_KD));
+	const String ds2(normalize(s2.data(), s2.data() + s2.length(), (type == CANONICAL) ? FORM_D : FORM_KD));
+	return s1.compare(s2);
+}
+
+/// Returns true if the iterator addresses the start of the normalized text.
+inline bool Normalizer::isFirst() const throw() {return current_.isFirst() && indexInBuffer_ == 0;}
+
+/// Returns true if the iterator addresses the end of the normalized text.
+inline bool Normalizer::isLast() const throw() {return current_.isLast();}
+
+/// Returns the current position in the input text that is being normalized.
+inline const Char* Normalizer::tell() const throw() {return current_.tell();}
+
+/**
+ * Checks whether the specified character sequence starts with an identifier.
+ * The type @a CharacterSequence the bidirectional iterator expresses a UTF-16 character sequence.
+ * @param first the start of the character sequence
+ * @param last the end of the character sequence
+ * @return the end of the detected identifier or @a first if an identifier not found
+ */
+template<class CharacterSequence>
+inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first, CharacterSequence last) const throw() {
+	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
+	if(!isIdentifierStartCharacter(*i))
+		return first;
+	while(!i.isLast() && isIdentifierContinueCharacter(*i))
+		++i;
+	return i.tell();
+}
+
+/**
+ * Checks whether the specified character sequence starts with white space characters.
+ * The type @a CharacterSequence is the bidirectional iterator expresses a UTF-16 character sequence.
+ * @param first the start of the character sequence
+ * @param last the end of the character sequence
+ * @param includeTab set true to treat a horizontal tab as a white space
+ * @return the end of the detected identifier or @a first if an identifier not found
+ */
+template<class CharacterSequence>
+inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const throw() {
+	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
+	while(!i.isLast() && isWhiteSpace(*i, includeTab))
+		++i;
+	return i.tell();
+}
 
 #define IMPLEMENT_FORNAME																				\
 	if(name == 0) throw std::invalid_argument("the name is null.");										\
@@ -956,9 +1189,9 @@ inline bool PropertyNameComparer<CharType>::operator()(const CharType* p1, const
  * Compares the given two strings.
  * @param p1 one property name
  * @param p2 the other property name
- * @return &lt; 0 if @p p1 &lt; @p p2
- * @return 0 if @p p1 == @p p2
- * @return &gt; 0 if @p p1 &gt; @p p2
+ * @return &lt; 0 if @a p1 &lt; @a p2
+ * @return 0 if @a p1 == @a p2
+ * @return &gt; 0 if @a p1 &gt; @a p2
  */
 template<typename CharType>
 inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const CharType* p2) {
@@ -985,7 +1218,7 @@ inline int GeneralCategory::of(CodePoint cp) throw() {
 	return OTHER_UNASSIGNED;
 }
 
-/// Returns Block with the given name.
+/// Returns the Block with the given name.
 inline int CodeBlock::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns Block value of the specified character.
@@ -994,6 +1227,22 @@ inline int CodeBlock::of(CodePoint cp) throw() {
 		return p->property;
 	return NO_BLOCK;
 }
+
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+/// Returns the Canonical_Combining_Class with the given name.
+inline int CanonicalCombiningClass::forName(const Char* name) {IMPLEMENT_FORNAME}
+
+/// Returns the Canonical_Combining_Class of the specified character.
+inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
+	if(cp < 0x10000) {
+		const Char* const p = std::lower_bound(SRC_UCS2, SRC_UCS2 + UCS2_COUNT, static_cast<Char>(cp & 0xFFFFU));
+		return (*p == cp) ? DEST_UCS2[p - SRC_UCS2] : NOT_REORDERED;
+	} else {
+		const CodePoint* const p = std::lower_bound(SRC_UCS4, SRC_UCS4 + UCS4_COUNT, cp);
+		return (*p != cp) ? DEST_UCS4[p - SRC_UCS4] : NOT_REORDERED;
+	}
+}
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
 
 /// Returns the Script with the given name.
 inline int Script::forName(const Char* name) {IMPLEMENT_FORNAME}
@@ -1008,7 +1257,7 @@ inline int Script::of(CodePoint cp) throw() {
 /// Returns the Hangul_Syllable_Type with the given name.
 inline int HangulSyllableType::forName(const Char* name) {IMPLEMENT_FORNAME}
 
-/// Returns the Hangul syllable type property value of @p cp.
+/// Returns the Hangul syllable type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint cp) throw() {
 	if(cp >= 0x1100 && cp <= 0x1159 || cp == 0x115F)
 		return LEADING_JAMO;
@@ -1069,7 +1318,7 @@ inline manah::AutoBuffer<Char> CaseFolder::foldFull(const Char* first, const Cha
  * Performs full case folding.
  * @param first the start of the source text
  * @param last the end of the source text
- * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to (@p last - @p first) * 3
+ * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to (@a last - @a first) * 3
  * @throw std#invalid_argument any parameter is @c null
  */
 inline length_t CaseFolder::foldFull(const Char* first, const Char* last, Char* dest) {
@@ -1106,7 +1355,7 @@ inline manah::AutoBuffer<Char> CaseFolder::foldSimple(const Char* first, const C
  * Performs simple case folding.
  * @param first the start of the source text
  * @param last the end of the source text
- * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to @p last - @p first
+ * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to @a last - @a first
  * @throw std#invalid_argument any parameter is @c null
  */
 inline void CaseFolder::foldSimple(const Char* first, const Char* last, Char* dest) {
@@ -1124,45 +1373,6 @@ inline const String& StringFolder::getFolded() const throw() {return folded_;}
 
 /// Returns the original string.
 inline const String& StringFolder::getOriginal() const throw() {return folded_;}
-
-/**
- * Checks whether the specified character sequence starts with an identifier.
- * @param CharacterSequence the bidirectional iterator expresses a UTF-16 character sequence
- * @param first the start of the character sequence
- * @param last the end of the character sequence
- * @return the end of the detected identifier or @p first if an identifier not found
- */
-template<class CharacterSequence>
-inline CharacterSequence CharacterDetector::eatIdentifier(CharacterSequence first, CharacterSequence last) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
-	if(!isIdentifierStartCharacter(*i))
-		return first;
-	while(!i.isLast() && isIdentifierCharacter(*i))
-		++i;
-	return i.tell();
-}
-
-/**
- * Checks whether the specified character sequence starts with white space characters.
- * @param CharacterSequence the bidirectional iterator expresses a UTF-16 character sequence
- * @param first the start of the character sequence
- * @param last the end of the character sequence
- * @param includeTab set true to treat a horizontal tab as a white space
- * @return the end of the detected identifier or @p first if an identifier not found
- */
-template<class CharacterSequence>
-inline CharacterSequence CharacterDetector::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
-	while(!i.isLast() && isWhiteSpace(*i, includeTab))
-		++i;
-	return i.tell();
-}
-
-/**
- * Sets the new character classification type.
- * @param type the new type
- */
-inline void CharacterDetector::setClassificationType(ClassificationType type) throw() {type_ = type;}
 
 }} // namespace ascension::unicode
 

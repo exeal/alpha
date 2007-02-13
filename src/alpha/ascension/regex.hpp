@@ -89,7 +89,6 @@ namespace ascension {
 			friend class Pattern;
 		};
 
-		/// Regular expression pattern.
 		class Pattern : public manah::Noncopyable {
 		public:
 			/// Options for expression syntax.
@@ -111,6 +110,7 @@ namespace ascension {
 			typedef manah::Flags<MatchOption> MatchOptions;
 			// constructors
 			Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxOption>& options = NORMAL);
+			Pattern(const String& pattern, const manah::Flags<SyntaxOption>& options = NORMAL);
 			// attributes
 			std::locale	getLocale() const throw();
 			String		getPatternString() const throw();

@@ -34,8 +34,8 @@ namespace ascension {
 			 * @param oldPosition the position from which the point moved
 			 */
 			virtual void pointMoved(const EditPoint& self, const Position& oldPosition) = 0;
-			friend EditPoint;
-			friend ascension::viewers::VisualPoint;
+			friend class EditPoint;
+			friend class ascension::viewers::VisualPoint;
 		};
 
 		/**
@@ -180,7 +180,7 @@ namespace ascension {
 			void			insertBox(const Char* first, const Char* last);
 			void			newLine(bool inheritIndent);
 			void			paste(signed_length_t length = 0);
-			void			paste(const text::Position& position);
+			void			paste(const text::Position& other);
 			text::Position	spaceIndent(const text::Position& other, bool box, long level = 1);
 			text::Position	tabIndent(const text::Position& other, bool box, long level = 1);
 			bool			transposeChars();
@@ -193,7 +193,7 @@ namespace ascension {
 			using LineLayoutBuffer::getLineLayout;	// 限定公開
 			using LineLayoutBuffer::invalidate;		// 限定公開
 			virtual void						doMoveTo(const text::Position& to);
-			const unicode::CharacterDetector&	getCharacterDetector() const throw();
+			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
 			const LineLayout&					getLayout(length_t line = -1) const;
 			void								verifyViewer() const;
 		private:
@@ -212,7 +212,7 @@ namespace ascension {
 			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
 			bool crossingLines_;	// 行間移動中
 			length_t visualLine_, visualSubline_;	// 点の表示行
-			friend TextViewer;
+			friend class TextViewer;
 		};
 
 		/**
@@ -228,9 +228,10 @@ namespace ascension {
 			 */
 			virtual void caretMoved(const class Caret& self, const text::Region& oldRegion) = 0;
 			/**
-			 * 対括弧の対応が変化した
-			 * @param oldPair 前に対応していた対括弧
-			 * @param outsideOfView 新しく見つかった括弧がビューの画面外
+			 * The matched brackets are changed.
+			 * @param self the caret
+			 * @param oldPair the pair of the brackets previously matched
+			 * @param outsideOfView the brackets newly matched are outside of the view
 			 */
 			virtual void matchBracketsChanged(const Caret& self,
 				const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView) = 0;
@@ -238,7 +239,7 @@ namespace ascension {
 			virtual void overtypeModeChanged(const Caret& self) = 0;
 			/// The shape (linear or rectangle) of the selection is changed.
 			virtual void selectionShapeChanged(const Caret& self) = 0;
-			friend Caret;
+			friend class Caret;
 		};
 
 		/**

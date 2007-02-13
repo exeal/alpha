@@ -46,7 +46,7 @@ namespace {
 		 * @param runtimeFileName the name of the runtime library
 		 * @param dictionaryPathName the location of the dictionaries
 		 * @throw std#runtime_error the runtime can't load
-		 * @throw std#invalid_argument @p dictionaryPathName is empty
+		 * @throw std#invalid_argument @a dictionaryPathName is empty
 		 */
 		Migemo(const string& runtimeFileName, const string& dictionaryPathName) :
 				ascension::internal::SharedLibrary<MigemoEntries>(runtimeFileName.c_str()),
@@ -173,7 +173,7 @@ namespace {
 // Pattern //////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension#regex#Pattern
+ * @class ascension::regex::Pattern regex.hpp
  * A (compiled) regular expression pattern.
  *
  * This class is implemented in terms of Boost.Regex, so the most features are same as
@@ -182,40 +182,43 @@ namespace {
  * Because of this, almost all of the ECMAScript regular expression syntax features are
  * supported. For the details, see the document of Boost.Regex (http://www.boost.org/).
  *
+ * Standard call sequence is following:
+ *
+ * @code
+ * Pattern p(L"a*b");
+ * std::auto_ptr<MatchResult<const Char*> > m(p.matches(target, endof(target)));
+ * @endcode
+ *
  * @note Following sections are draft and subject to change.
  *
  * <h3>Unicode support</h3>
  *
- * This class partially conformant to UTS #18: Unicode Regular Expressions revision 11.
- * The following list refer to this:
+ * This class partially conformant to <a href="http://www.unicode.org/reports/tr18/">UTS #18:
+ * Unicode Regular Expressions</a> revision 11. The following list refer to this:
  *
  * <dl>
  *   <dt>1.1 Hex Notation</dt>
- *   <dd>Supports @c \x{HHHH} or @c \x{HHHHHH} notations to refer to the corresponding
- *     code point (the number of 'H' is unlimited). @c \u is not usable for this purpose.</dd>
+ *   <dd>Supports @c \\x{HHHH} or @c \\x{HHHHHH} notations to refer to the corresponding
+ *     code point (the number of 'H' is unlimited). @c \\u is not usable for this purpose.</dd>
  *   <dt>1.2 Properties</dt>
  *   <dd>Supports the following properties:
- *     <ul>
- *       <li>General_Category</li>
- *       <li>Block</li>
- *       <li>Script</li>
- *       <li>Alphabetic</li>
- *       <li>Uppercase</li>
- *       <li>Lowercase</li>
- *       <li>White_Space</li>
- *       <li>Noncharacter_Code_Point</li>
- *       <li>Default_Ignorable_Code_Point</li>
- *       <li>ANY, ASCII, ASSIGNED</li>
- *     </ul>
+ *     - General_Category
+ *     - Block
+ *     - Script
+ *     - Alphabetic
+ *     - Uppercase
+ *     - Lowercase
+ *     - White_Space
+ *     - Noncharacter_Code_Point
+ *     - Default_Ignorable_Code_Point
+ *     - ANY, ASCII, ASSIGNED
  *     And if @c Pattern#EXTENDED_PROPERTIES syntax options is set, then the following
  *     properties are also supported:
- *     <ul>
- *       <li>Hangul_Syllable_Type</li>
- *       <li>Grapheme_Cluster_Break</li>
- *       <li>Word_Break</li>
- *       <li>Sentence_Break</li>
- *       <li>any other binary properties</li>
- *     </ul>
+ *     - Hangul_Syllable_Type
+ *     - Grapheme_Cluster_Break
+ *     - Word_Break
+ *     - Sentence_Break
+ *     - any other binary properties
  *   </dd>
  *   <dt>1.3 Subtraction and Intersection</dt>
  *   <dd>Follows to Boost.Regex.</dd>
@@ -256,6 +259,16 @@ Pattern::Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxO
 	impl_.assign(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
 		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last),
 		boost::regex_constants::perl | boost::regex_constants::collate | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
+}
+
+/**
+ * Constructor builds regular expression pattern using UTF-16 string.
+ * @param pattern the pattern string
+ * @param options the syntax options
+ * @throw boost#regex_error the specified pattern is invalid
+ */
+Pattern::Pattern(const String& pattern, const manah::Flags<SyntaxOption>& options /* = NORMAL */) : options_(options) {
+	Pattern(pattern.data(), pattern.data() + pattern.length(), options);
 }
 
 /**

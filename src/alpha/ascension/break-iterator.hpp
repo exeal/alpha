@@ -1,11 +1,12 @@
 /**
  * @file break-iterator.hpp
  * Defines iterator classes find and enumerate the location of boundaries in text.
- * These iterators are based on "UAX #29 : Text Boudaries" (http://www.unicode.org/reports/tr29/).
+ * These iterators are based on <a href="http://www.unicode.org/reports/tr29/">UAX #29: Text Boudaries</a>.
  * Clients can use each concrete iterator class or abstract @c BreakIterator for their polymorphism.
  * @date 2006-2007 (was iterator.hpp)
  * @date 2007
  * @author exeal
+ * @see unicode-utils.hpp
  */
 
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
@@ -31,7 +32,7 @@ namespace ascension {
 			virtual ~BreakIterator() throw() {}
 			/// Returns the locale.
 			const std::locale& getLocale() const throw() {return locale_;}
-			/// Returns true if @p at addresses a boundary.
+			/// Returns true if @a at addresses a boundary.
 			virtual bool isBoundary(const CharacterIterator& at) const = 0;
 			/// Moves to the next boundary.
 			virtual void next(std::ptrdiff_t amount) = 0;
@@ -41,6 +42,7 @@ namespace ascension {
 			const std::locale& locale_;
 		};
 
+		/// @internal
 		namespace internal {
 			/**
 			 * Provides standard C++ iterator interface and facilities for the concrete iterator class.
@@ -90,7 +92,6 @@ namespace ascension {
 			/**
 			 * Constructor.
 			 * @param base the base iterator
-			 * @param component the component of grapheme cluster to search
 			 * @param lc the locale
 			 */
 			GraphemeBreakIterator(BaseIterator base,
@@ -134,14 +135,14 @@ namespace ascension {
 			void		next(std::ptrdiff_t amount);
 			void		setComponent(Component component) throw();
 		protected:
-			AbstractWordBreakIterator(Component component, const CharacterDetector& ctypes, const std::locale& lc) throw();
+			AbstractWordBreakIterator(Component component, const IdentifierSyntax& syntax, const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
 			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
 		private:
 			void	doNext(std::ptrdiff_t amount);
 			void	doPrevious(std::ptrdiff_t amount);
 			Component component_;
-			const CharacterDetector& ctypes_;
+			const IdentifierSyntax& syntax_;
 		};
 
 		/// @c WordBreakIterator locates word boundaries in text.
@@ -152,11 +153,11 @@ namespace ascension {
 			 * Constructor.
 			 * @param base the base iterator
 			 * @param component the component of word to search
-			 * @param ctypes the character detector to detect alphabets
+			 * @param syntax the identifier syntax for detecting identifier characters
 			 * @param lc the locale
 			 */
-			WordBreakIterator(BaseIterator base, Component component, const CharacterDetector& ctypes,
-				const std::locale& lc = std::locale::classic()) : AbstractWordBreakIterator(component, ctypes, lc), p_(base) {}
+			WordBreakIterator(BaseIterator base, Component component, const IdentifierSyntax& syntax,
+				const std::locale& lc = std::locale::classic()) : AbstractWordBreakIterator(component, syntax, lc), p_(base) {}
 			/// Returns the base iterator.
 			BaseIterator& base() throw() {return p_;}
 			/// Returns the base iterator.
@@ -188,14 +189,14 @@ namespace ascension {
 			void		next(std::ptrdiff_t amount);
 			void		setComponent(Component component) throw();
 		protected:
-			AbstractSentenceBreakIterator(Component component, const CharacterDetector& ctypes, const std::locale& lc) throw();
+			AbstractSentenceBreakIterator(Component component, const IdentifierSyntax& syntax, const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
 			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
 		private:
 			void	doNext(std::ptrdiff_t amount);
 			void	doPrevious(std::ptrdiff_t amount);
 			Component component_;
-			const CharacterDetector& ctypes_;
+			const IdentifierSyntax& syntax_;
 		};
 
 		/// @c SentenceBreakIterator locates sentence boundaries in text.
@@ -209,8 +210,8 @@ namespace ascension {
 			 * @param ctypes the character detector to detect alphabets
 			 * @param lc the locale
 			 */
-			SentenceBreakIterator(BaseIterator base, Component component, const CharacterDetector& ctypes,
-				const std::locale& lc = std::locale::classic()) : AbstractSentenceBreakIterator(component, ctypes, lc), p_(base) {}
+			SentenceBreakIterator(BaseIterator base, Component component, const IdentifierSyntax& syntax,
+				const std::locale& lc = std::locale::classic()) : AbstractSentenceBreakIterator(component, syntax, lc), p_(base) {}
 			/// Returns the base iterator.
 			BaseIterator& base() throw() {return p_;}
 			/// Returns the base iterator.

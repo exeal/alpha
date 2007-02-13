@@ -119,7 +119,7 @@ struct LineLayout::Run : public StyledText {
  * Private constructor.
  * @param textRenderer the text renderer
  * @param line the line
- * @throw text#BadPositionException @p line is invalid
+ * @throw text#BadPositionException @a line is invalid
  */
 LineLayout::LineLayout(const TextRenderer& textRenderer, length_t line) :
 		renderer_(textRenderer), lineNumber_(line),
@@ -165,7 +165,7 @@ inline void LineLayout::dispose() throw() {
 
 /**
  * Draws the layout to the output device.
- * @p selectionColor and @p marginColor must be actual color.
+ * @a selectionColor and @a marginColor must be actual color.
  * do not use @c presentation#STANDARD_COLOR or any system color using @c presentation#SYSTEM_COLOR_MASK
  * @param dc the device context
  * @param x the x-coordinate of the position to draw
@@ -442,7 +442,7 @@ inline size_t LineLayout::findRunForPosition(length_t column) const throw() {
  * Returns the bidirectional embedding level at specified position.
  * @param column the column
  * @return the embedding level
- * @throw text#BadPositionException @p column is greater than the length of the line
+ * @throw text#BadPositionException @a column is greater than the length of the line
  */
 uchar LineLayout::getBidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0 && column == 0)	// 既定のレベルを使う
@@ -470,8 +470,8 @@ uchar LineLayout::getBidiEmbeddingLevel(length_t column) const {
  * @param first the start of the range
  * @param last the end of the range
  * @return the bounds
- * @throw text#BadPositionException @p first or @p last is greater than the length of the line
- * @throw std#invalid_argument @p first is greater than @p last
+ * @throw text#BadPositionException @a first or @a last is greater than the length of the line
+ * @throw std#invalid_argument @a first is greater than @a last
  * @see #getBounds(void), #getSublineBounds
  */
 ::RECT LineLayout::getBounds(length_t first, length_t last) const {
@@ -540,7 +540,7 @@ LineLayout::StyledSegmentIterator LineLayout::getLastStyledSegment() const throw
  * @param column the character offset from the line start
  * @param edge the edge of the character to locate
  * @return the location. x-coordinate is distance from the left edge of the renderer, y-coordinate is relative in the visual lines
- * @throw text#BadPositionException @p column is greater than the length of the line
+ * @throw text#BadPositionException @a column is greater than the length of the line
  */
 ::POINT LineLayout::getLocation(length_t column, Edge edge /* = LEADING */) const {
 	::POINT location;
@@ -652,7 +652,7 @@ length_t LineLayout::getOffset(int x, int y, length_t& trailing) const throw() {
  * Returns the styled segment containing the specified column.
  * @param column the column
  * @return the styled segment
- * @throw text#BadPositionException @p column is greater than the length of the line
+ * @throw text#BadPositionException @a column is greater than the length of the line
  */
 const StyledText& LineLayout::getStyledSegment(length_t column) const {
 	if(column > getText().length())
@@ -664,7 +664,7 @@ const StyledText& LineLayout::getStyledSegment(length_t column) const {
  * Returns the smallest rectangle emcompasses the specified visual line.
  * @param subline the wrapped line
  * @return the rectangle
- * @throw text#BadPositionException @p subline is greater than the number of the wrapped lines
+ * @throw text#BadPositionException @a subline is greater than the number of the wrapped lines
  */
 ::RECT LineLayout::getSublineBounds(length_t subline) const {
 	if(subline >= numberOfSublines_)
@@ -681,7 +681,7 @@ const StyledText& LineLayout::getStyledSegment(length_t column) const {
  * Returns the indentation from the left most.
  * @param subline the visual line
  * @return the indentation in pixel
- * @throw text#BadPositionException @p subline is invalid
+ * @throw text#BadPositionException @a subline is invalid
  */
 int LineLayout::getSublineIndent(length_t subline) const {
 	const TextViewer::Configuration& c = renderer_.getTextViewer().getConfiguration();
@@ -700,7 +700,7 @@ int LineLayout::getSublineIndent(length_t subline) const {
  * Returns the width of the specified wrapped line.
  * @param subline the visual line
  * @return the width
- * @throw text#BadPositionException @p subline is greater than the number of visual lines
+ * @throw text#BadPositionException @a subline is greater than the number of visual lines
  */
 int LineLayout::getSublineWidth(length_t subline) const {
 	if(subline >= numberOfSublines_)
@@ -808,7 +808,7 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 /**
  * Merges the given item runs and the given style runs.
  * @param items the items itemized by @c #itemize()
- * @param numberOfItems the length of the array @p items
+ * @param numberOfItems the length of the array @a items
  * @param styles the attributed text segments in the line (style runs)
  */
 inline void LineLayout::merge(const ::SCRIPT_ITEM items[], size_t numberOfItems, const LineStyle& styles) throw() {
@@ -1118,7 +1118,7 @@ const StyledText& LineLayout::StyledSegmentIterator::operator->() const throw() 
  * @param viewer the text viewer
  * @param bufferSize the size of the buffer for caches in lines
  * @param autoRepair true to repair disposed layout automatically if the line number of its line was not changed
- * @throw std#invalid_argument @p bufferSize is zero
+ * @throw std#invalid_argument @a bufferSize is zero
  */
 LineLayoutBuffer::LineLayoutBuffer(TextViewer& viewer, length_t bufferSize, bool autoRepair) :
 		viewer_(viewer), layouts_(new LineLayout*[bufferSize]), bufferSize_(bufferSize),
@@ -1214,7 +1214,7 @@ length_t LineLayoutBuffer::getCacheLastLine() const throw() {
  * Returns the layout of the specified line.
  * @param line the line
  * @return the layout
- * @throw text#BadPositionException @p line is greater than the number of the lines
+ * @throw text#BadPositionException @a line is greater than the number of the lines
  */
 const LineLayout& LineLayoutBuffer::getLineLayout(length_t line) const {
 #ifdef TRACE_LAYOUT_CACHES
@@ -1259,7 +1259,7 @@ void LineLayoutBuffer::invalidate() {
  * Invalidates the layouts of the specified lines.
  * @param first the start of the lines
  * @param last the end of the lines (exclusive. this line will not be cleared)
- * @throw std#invalid_argument @p first &gt;= @p last
+ * @throw std#invalid_argument @a first &gt;= @a last
  */
 void LineLayoutBuffer::invalidate(length_t first, length_t last) {
 	if(first >= last)
@@ -1410,7 +1410,7 @@ map<uchar, const WCHAR*> TextRenderer::defaultFontAssociations_;
 /**
  * Constructor.
  * @param viewer the text viewer
- * @throw std#invalid_argument @p viewer is not a window
+ * @throw std#invalid_argument @a viewer is not a window
  */
 TextRenderer::TextRenderer(TextViewer& viewer)
 		: LineLayoutBuffer(viewer, ASCENSION_TEXT_RENDERER_CACHE_LINES, true),
@@ -1546,8 +1546,8 @@ void TextRenderer::layoutModified(length_t first, length_t last, length_t newSub
 /**
  * Returns the first visual line number of the specified logical line.
  * @param line the logical line
- * @return the first visual line of @p line
- * @throw text#BadPositionException @p line is outside of the document
+ * @return the first visual line of @a line
+ * @throw text#BadPositionException @a line is outside of the document
  * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
  */
 length_t TextRenderer::mapLogicalLineToVisualLine(length_t line) const {
@@ -1566,9 +1566,9 @@ length_t TextRenderer::mapLogicalLineToVisualLine(length_t line) const {
 /**
  * Returns the visual line number and the visual column number of the specified logical position.
  * @param position the logical coordinates of the position to be mapped
- * @param[out] column the visual column of @p position. can be @c null if not needed
- * @return the visual line of @p position
- * @throw text#BadPositionException @p position is outside of the document
+ * @param[out] column the visual column of @a position. can be @c null if not needed
+ * @return the visual line of @a position
+ * @throw text#BadPositionException @a position is outside of the document
  * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
  */
 length_t TextRenderer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
@@ -1587,9 +1587,9 @@ length_t TextRenderer::mapLogicalPositionToVisualPosition(const Position& positi
 /**
  * Returns the logical line number and the visual subline number of the specified visual line.
  * @param line the visual line
- * @param[out] subline the visual subline of @p line. can be @c null if not needed
+ * @param[out] subline the visual subline of @a line. can be @c null if not needed
  * @return the logical line
- * @throw text#BadPositionException @p line is outside of the document
+ * @throw text#BadPositionException @a line is outside of the document
  * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
  */
 length_t TextRenderer::mapVisualLineToLogicalLine(length_t line, length_t* subline) const {
@@ -1618,8 +1618,8 @@ length_t TextRenderer::mapVisualLineToLogicalLine(length_t line, length_t* subli
 /**
  * Returns the logical line number and the logical column number of the specified visual position.
  * @param position the visual coordinates of the position to be mapped
- * @return the logical coordinates of @p position
- * @throw text#BadPositionException @p position is outside of the document
+ * @return the logical coordinates of @a position
+ * @throw text#BadPositionException @a position is outside of the document
  * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
  */
 Position TextRenderer::mapVisualPositionToLogicalPosition(const Position& position) const {
@@ -1670,9 +1670,9 @@ void TextRenderer::offsetVisualLine(length_t& line, length_t& subline, signed_le
  * @param associations the association table which is a set of pairs of a (primary) language and a typeface name.
  * language can't be @c LANG_NEUTRAL and @c LANG_INVARIANT. if this value is @c null,
  * the current associations is not changed
- * @throw std#invalid_argument @p faceName is @c null,
- * any language of @p associations is invalid, or any typeface name of @p associations is @c null
- * @throw std#length_error the length of @p faceName or any typeface name of @p associations exceeds @c LF_FACESIZE
+ * @throw std#invalid_argument @a faceName is @c null,
+ * any language of @a associations is invalid, or any typeface name of @a associations is @c null
+ * @throw std#length_error the length of @a faceName or any typeface name of @a associations exceeds @c LF_FACESIZE
  */
 void TextRenderer::setFont(const WCHAR* faceName, int height, const map<uchar, const WCHAR*>* associations) {
 	// 引数をチェック
@@ -1735,7 +1735,7 @@ bool TextRenderer::supportsComplexScript() throw() {
 /**
  * Updates the longest line and invokes @c ILongestLineListener#longestLineChanged.
  * @param line the new longest line. set -1 to recalculate
- * @param width the width of the longest line. if @p line is -1, this value is ignored
+ * @param width the width of the longest line. if @a line is -1, this value is ignored
  */
 void TextRenderer::updateLongestLine(length_t line, int width) throw() {
 	if(line != -1) {
