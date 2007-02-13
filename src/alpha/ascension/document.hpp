@@ -32,13 +32,13 @@ namespace ascension {
 			 * Interface for objects which are managing the set of points.
 			 * @see Document
 			 */
-			template<class Point> class IPointCollection {
+			template<class PointType> class IPointCollection {
 			private:
 				/// Adds the newly created point.
-				virtual void addNewPoint(Point& point) = 0;
+				virtual void addNewPoint(PointType& point) = 0;
 				/// Deletes the point about to be destroyed (@a point is in its destructor call).
-				virtual void removePoint(Point& point) = 0;
-				friend Point;
+				virtual void removePoint(PointType& point) = 0;
+				friend typename PointType;
 			};
 			const Char LINE_BREAK_STRINGS[][7] = {
 				L"", {LINE_FEED, 0}, {CARRIAGE_RETURN, 0}, {CARRIAGE_RETURN, LINE_FEED, 0},
@@ -54,9 +54,9 @@ namespace ascension {
 
 		// special content types
 		const ContentType
-			DEFAULT_CONTENT_TYPE = 0,		///< Default content type.
-			PARENT_CONTENT_TYPE = -1,		///< Type of the parent (means "transition source") content.
-			UNDETERMINED_CONTENT_TYPE = -2;	///< Type of Undetermined (not calculated) content.
+			DEFAULT_CONTENT_TYPE = 0UL,					///< Default content type.
+			PARENT_CONTENT_TYPE = 0xFFFFFFFFUL,			///< Type of the parent (means "transition source") content.
+			UNDETERMINED_CONTENT_TYPE = 0xFFFFFFFEUL;	///< Type of Undetermined (not calculated) content.
 
 		/**
 		 * Line break codes.
@@ -136,7 +136,7 @@ namespace ascension {
 			Position& getBottom() throw() {return (first > second) ? first : second;}
 			/// Returns the maximum position.
 			const Position& getBottom() const throw() {return (first > second) ? first : second;}
-			/// Returns true if @p p is contained by the region.
+			/// Returns true if @a p is contained by the region.
 			bool includes(const Position& p) const throw() {return p >= getTop() && p < getBottom();}
 			/// Returns true if the region is empty.
 			bool isEmpty() const throw() {return first == second;}
@@ -170,7 +170,7 @@ namespace ascension {
 			~DocumentChange() throw() {}
 			bool deletion_;
 			Region region_;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
@@ -189,11 +189,11 @@ namespace ascension {
 		 * When the document changed occured, @c Point moves automatically as follows
 		 * ("forward" means "to the end of the document"):
 		 * <ul>
-		 *   <li>点の前方にテキストを挿入した場合やテキストを削除した場合は、テキストの長さだけ移動する</li>
-		 *   <li>点の位置にテキストを挿入した場合は、テキストの長さだけ後方に移動する。ただしグラビティが
-		 *   @c PositionUpdator#BACKWARD に設定されている場合は移動しない</li>
-		 *   <li>点の後方でテキストを挿入・削除した場合は、移動しない</li>
-		 *   <li>点を含む範囲を削除した場合、範囲の先頭に移動する</li>
+		 *   <li>���®剁E��E�«チE��E���チE��E���した場吁E��E���E���チE����E�E�た場吁E�¯�ãE���E���チE�®��E�� ぁE���すめE/li>
+		 *   <li>���®�½�E����«チE��E���チE��E���した場吁E�¯�ãE���E���チE�®��E�� ぁE��E��E�«移動する、E�E�� し�E���ビ�E���E�ぁE
+		 *   @c PositionUpdator#BACKWARD �«設定さめE�¦ぁE�場吁E�¯移動し�ªぁE/li>
+		 *   <li>���®�¾�E��E�§チE��E���チE��E�����剁E��E�E�た場吁E�¯�ç���し�ªぁE/li>
+		 *   <li>��を�E��¯�E��E����E�E�た場吁E�ç��E��E�®允E����«移動すめE/li>
 		 * </ul>
 		 * For details of gravity, see description of @c updatePosition function.
 		 *
@@ -252,7 +252,7 @@ namespace ascension {
 			bool adapting_;
 			bool excludedFromRestriction_;
 			Direction gravity_;
-			friend Document;
+			friend class Document;
 		};
 
 		/// Thrown when the read only document is about to be modified.
@@ -299,7 +299,7 @@ namespace ascension {
 			explicit Bookmarker(Document& document) throw();
 			Document& document_;
 			ascension::internal::Listeners<IBookmarkListener> listeners_;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
@@ -317,7 +317,7 @@ namespace ascension {
 			 * @param change the modification content
 			 */
 			virtual void documentChanged(const Document& document, const DocumentChange& change) = 0;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
@@ -336,58 +336,58 @@ namespace ascension {
 			virtual void documentModificationSignChanged(Document& document) = 0;
 			/// The read only mode of the document is changed.
 			virtual void documentReadOnlySignChanged(Document& document) = 0;
-			friend Document;
+			friend class Document;
 		};
 
-		/// ファイルが外部で変更されたときの対処
+		/// フ�E�����ぁE����E��§�¤�E��E�E���E��¨ぁE�®対��
 		class IUnexpectedFileTimeStampDirector {
 		public:
 			/// Context.
 			enum Context {
-				FIRST_MODIFICATION,	///< 未更新状態から初めて編集しようとしている
-				OVERWRITE_FILE,		///< 既存のファイルに上書きしようとしている
-				CLIENT_INVOCATION	///< @c Document#checkTimeStamp 呼び出しによる
+				FIRST_MODIFICATION,	///< 未���E��E�態かめE��ã¦編雁E�E���E��¨し�¦ぁE�E
+				OVERWRITE_FILE,		///< �����®フ�E������«�¸�E��E�E��E���E��¨し�¦ぁE�E
+				CLIENT_INVOCATION	///< @c Document#checkTimeStamp ��³��し�«めE�E
 			};
 		private:
 			/**
-			 * ファイルが外部で変更されているのを確認したときに呼び出される
-			 * @param document ファイルを開いているドキュメント
-			 * @param context 状況
-			 * @retval true	内部的に管理しているタイムスタンプを実際の値で更新し、@p context の処理を続行する場合
-			 * @retval false 古いタイムスタンプを維持し、@p context の処理を中断する場合
+			 * フ�E�����ぁE����E��§�¤�E��E�E���¦ぁE��®めE��誁E�E�た�¨ぁE�«��³��さ��E
+			 * @param document フ�E�����を開ぁE�¦ぁE��E���E�������チE
+			 * @param context ��況E
+			 * @retval true	冁E��E�皁E�«管琁E�E��¦ぁE��E�����������プ��際�®値�§���E�E�、@p context �®��琁E���E��E�E�る場吁E
+			 * @retval false ��ぁE��E�����������プ����ãE�、@p context �®��琁E������E�る場吁E
 			 */
 			virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) throw() = 0;
-			friend Document;
+			friend class Document;
 		};
 
-		/// ドキュメントの保存、読み込みの進捗を受け取る (未サポート)
+		/// チE��E�������チE�®保存�è���¿込�¿�®進捗を受け取る (未��ポ�E�チE
 		class IFileIOProgressListener {
 		public:
 			enum ProcessType {};
 		private:
 			/**
-			 * 進捗の通知
-			 * @param type 処理内容 (データ量の定義は処理内容による)
-			 * @param processedAmount 既に処理したデータ量
-			 * @param totalAmount 処理すべき全データ量
+			 * 進捗�®通知
+			 * @param type ��琁E�E���¹ (チE��E���釁E�®�®�E����¯��琁E�E�����«めE�E
+			 * @param processedAmount ��«��琁E�E�たチE��E���釁E
+			 * @param totalAmount ��琁E�E��¹ぁE��E�チE��E���釁E
 			 */
 			virtual void onProgress(ProcessType type, ULONGLONG processedAmount, ULONGLONG totalAmount) = 0;
-			/// 進捗を通知する間隔を行数で返す
+			/// 進捗を通知する間隔めE��E��E�§返す
 			virtual length_t queryIntervalLineCount() const = 0;
-			/// 破棄
+			/// 破棁E
 			virtual void release() = 0;
-			friend Document;
+			friend class Document;
 		};
 
-		/// @c Document#load 、@c Document#save で使うコールバック
+		/// @c Document#load 、@c Document#save �§使ぁE��E�����バ�E���E�
 		class IFileIOListener : virtual public encodings::IUnconvertableCharCallback {
 		protected:
-			/// デストラクタ
+			/// チE��E�チE��E�����
 			virtual ~IFileIOListener() throw() {}
 		private:
-			/// 処理の進捗を受け取る @c IFileIOProgressCallback インスタンスを返す。@c null を返してもよい
+			/// ��琁E�®進捗を受け取る @c IFileIOProgressCallback ������������めE�す、Ec null めE�し�¦めE��E�E
 			virtual IFileIOProgressListener* queryProgressCallback() = 0;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
@@ -417,21 +417,23 @@ namespace ascension {
 			 * @param resultPosition preferable position to put the caret
 			 */
 			virtual void documentUndoSequenceStopped(Document& document, const Position& resultPosition) = 0;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
-		 * A @c IContentTypeInformationProvider provides the information about the document's content types.
+		 * An @c IContentTypeInformationProvider provides the information about the document's content types.
 		 * @see Document#setContentTypeInformation, Document#setContentTypeInformation
 		 */
 		class IContentTypeInformationProvider {
 		public:
+			/// Destructor.
+			virtual ~IContentTypeInformationProvider() throw() {}
 			/**
-			 * Returns the character detector for the specified content type.
+			 * Returns the identifier syntax for the specified content type.
 			 * @param contentType the type of content
-			 * @return the character detector
+			 * @return the identifier syntax
 			 */
-			virtual const unicode::CharacterDetector& getCharacterDetector(ContentType contentType) const throw() = 0;
+			virtual const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const throw() = 0;
 		};
 
 		/**
@@ -445,7 +447,7 @@ namespace ascension {
 			 * @param changedRegion the region whose document partition are changed
 			 */
 			virtual void documentPartitioningChanged(const Region& changedRegion) = 0;
-			friend Document;
+			friend class Document;
 		};
 
 		/**
@@ -473,7 +475,7 @@ namespace ascension {
 			/**
 			 * Returns the partition contains the specified position.
 			 * @param at the position. this position is guaranteed to be inside of the document
-			 * @param[out] the partition
+			 * @param[out] partition the partition
 			 */
 			virtual void doGetPartition(const Position& at, DocumentPartition& partition) const throw() = 0;
 			/**
@@ -485,7 +487,7 @@ namespace ascension {
 			void install(Document& document) throw() {document_ = &document; doInstall();}
 		private:
 			Document* document_;
-			friend Document;
+			friend class Document;
 		};
 
 		/// @c NullPartitioner always returns one partition covers a whole document.
@@ -514,12 +516,12 @@ namespace ascension {
 		 * @c #deleteText deletes any text region.
 		 * Other classes also provide text manipulation for the document.
 		 *
-		 *	複数の操作を 1 回でアンドゥ・リドゥできるようにするには<strong>連続編集</strong>を使う。
-		 *	@c beginSequentialEdit 呼び出してから @c #endSequentialEdit
-		 *	を呼び出すまでに行われた操作は、単一の編集グループにまとめられる。例えば
-		 *	@c Viewer#inputCharacter は複数の文字の入力をまとめるために、この機能を使っている
+		 *	�¤�E��E�®擁E����E1 回�§����チE��E�����チE��E��§ぁE���E��«する�«�¯<strong>連�¶�E���E/strong>めE��ぁE�E
+		 *	@c beginSequentialEdit ��³��し�¦から @c #endSequentialEdit
+		 *	を�E�³��す�¾�§�«�¡�E���E������¯�å��®編雁E��E�����プ�«�¾�¨�ã��、E����E��°
+		 *	@c Viewer#inputCharacter �¯�¤�E��E�®斁E����®��力を�¾�¨�ãた�ã«�ãE��®機�E�めE����£�¦ぁE�E
 		 *
-		 *	ドキュメントの変更を監視するためのリスナがいくつかある
+		 *	チE��E�������チE�®�¤�E��E��E����E�るた�ã®����チE�E��E��E��¤か�E��E
 		 *
 		 * A document can be devides into a sequence of semantic segments called partition.
 		 * Document partitioners expressed by @c DocumentPartitioner class define these
@@ -567,21 +569,21 @@ namespace ascension {
 				encodings::CodePage codePage;	///< The code page
 				LineBreak lineBreak;			///< The line break
 				enum Option {
-					WRITE_UNICODE_BOM	= 0x01,	///< UTF-8、16、32 で保存するときに BOM を書き込む
-					BY_COPYING			= 0x02,	///< ファイルをコピーすることで書き込む
-					CREATE_BACKUP		= 0x04	///< 保存前のファイルのバックアップをごみ箱に作成する
+					WRITE_UNICODE_BOM	= 0x01,	///< UTF-8、E6、E2 �§保存する�¨ぁE�« BOM を�E�E�����
+					BY_COPYING			= 0x02,	///< フ�E�����を�E�ピ�E�するこ�¨�§��E�����
+					CREATE_BACKUP		= 0x04	///< 保存��®フ�E������®バ�E���E���チE�をご�¿箱�«作�Eする
 				};
 				manah::Flags<Option> options;	///< Miscellaneous options
 			};
 
-			/// ファイルのロック方式
+			/// フ�E������®��チE��E�����E
 			struct FileLockMode {
 				enum {
-					LOCK_TYPE_NONE		= 0x00,	///< ロック無し
-					LOCK_TYPE_SHARED	= 0x01,	///< 共有ロック
-					LOCK_TYPE_EXCLUSIVE	= 0x02	///< 排他ロック
+					LOCK_TYPE_NONE		= 0x00,	///< ��チE��E���ぁE
+					LOCK_TYPE_SHARED	= 0x01,	///< ��朁E��E�チE��E�
+					LOCK_TYPE_EXCLUSIVE	= 0x02	///< 掁E��E�チE��E�
 				} type;
-				bool onlyAsEditing;	///< 編集中のみロック
+				bool onlyAsEditing;	///< 編雁E����®�¿��チE��E�
 			};
 
 			/// Content of a line.
@@ -599,19 +601,19 @@ namespace ascension {
 				Line() throw() : operationHistory_(0), lineBreak_(LB_AUTO), bookmarked_(false) {}
 				explicit Line(String& text, LineBreak lineBreak = LB_AUTO, bool modified = false)
 					: text_(text), operationHistory_(modified ? 1 : 0), lineBreak_(lineBreak), bookmarked_(false) {}
-				String text_;					// 行
-				ulong operationHistory_ : 28;	// アンドゥカウンタ (0 で変更無しの状態)
-				LineBreak lineBreak_ : 3;		// 改行の種類
-				mutable bool bookmarked_ : 1;	// ブックマークされた行か
+				String text_;					// 衁E
+				ulong operationHistory_ : 28;	// ����チE��E��������� (0 �§�¤�E��E��E�し�®��慁E
+				LineBreak lineBreak_ : 3;		// ����E�®種顁E
+				mutable bool bookmarked_ : 1;	// ブ�E���E�マ�E���さ��E��¡�E�E�E
 #if (3 < 2 << LB_COUNT)
 #error "lineBreak_ member is not allocated efficient buffer."
 #endif
-				friend Document;
-				friend Bookmarker;
+				friend class Document;
+				friend class Bookmarker;
 			};
 			typedef manah::GapBuffer<Line*,
 				manah::GapBuffer_DeletePointer<Line*> >	LineList;	///< List of lines
-//			typedef LineList::ConstIterator	LineIterator;			///< 行の反復子
+//			typedef LineList::ConstIterator	LineIterator;			///< �¡�E�®叁E���孁E
 
 			// constructors
 			Document();
@@ -681,7 +683,7 @@ namespace ascension {
 			bool	redo();
 			bool	undo();
 			// sequential edit
-			void	beginSequentialEdit();
+			void	beginSequentialEdit() throw();
 			void	endSequentialEdit() throw();
 			bool	isSequentialEditing() const throw();
 			// narrowing
@@ -723,47 +725,47 @@ namespace ascension {
 			void	addNewPoint(Point& point) {points_.insert(&point);}
 			void	removePoint(Point& point) {points_.erase(&point);}
 
-			// データメンバ
+			// チE��E�������チE
 		private:
 			/// Manages undo/redo of the document.
 			class UndoManager {
 			public:
 				// constructors
-				UndoManager(Document& document);
-				virtual ~UndoManager();
+				UndoManager(Document& document) throw();
+				virtual ~UndoManager() throw();
 				// attributes
 				std::size_t	getRedoBufferLength() const throw();
 				std::size_t	getUndoBufferLength() const throw();
 				bool		isStackingCompoundOperation() const throw();
 				bool		isModifiedSinceLastSave() const throw();
 				// operations
-				void	beginCompoundOperation();
-				void	clear();
+				void	beginCompoundOperation() throw();
+				void	clear() throw();
 				void	documentSaved() throw();
-				void	endCompoundOperation();
+				void	endCompoundOperation() throw();
 				template<class Operation>
 				void	pushUndoBuffer(Operation& operation);
 				bool	redo(Position& resultPosition);
 				bool	undo(Position& resultPosition);
 
 			private:
-				Document& document_;								// 対象ドキュメント
-				std::stack<internal::OperationUnit*> undoStack_;	// アンドゥスタック
-				std::stack<internal::OperationUnit*> redoStack_;	// リドゥスタック
+				Document& document_;
+				std::stack<internal::OperationUnit*> undoStack_;
+				std::stack<internal::OperationUnit*> redoStack_;
 				enum {
 					NONE, WAIT_FOR_FIRST_PUSH, WAIT_FOR_CONTINUATION
 				} compoundOperationStackingState_;
-				bool virtualOperation_;					// 仮想操作のとき真
-				internal::OperationUnit* virtualUnit_;	// 仮想操作を追加する操作単位
-				internal::OperationUnit* lastUnit_;		// 最後に追加された操作単位
-				internal::IOperation* savedOperation_;	// 保存時に末尾になっていた操作
+				bool virtualOperation_;
+				internal::OperationUnit* virtualUnit_;
+				internal::OperationUnit* lastUnit_;
+				internal::IOperation* savedOperation_;
 			};
 
 			static class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
 			public:
-				const unicode::CharacterDetector& getCharacterDetector(ContentType contentType) const throw() {return ctypes_;}
+				const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const throw() {return syntax_;}
 			private:
-				unicode::CharacterDetector ctypes_;
+				unicode::IdentifierSyntax syntax_;
 			} defaultContentTypeInformationProvider_;
 
 			class ModificationGuard {
@@ -773,45 +775,42 @@ namespace ascension {
 			private:
 				Document& document_;
 			};
-			friend ModificationGuard;
+			friend class ModificationGuard;
 
-			// データメンバ続き
 			struct DiskFile {
-				std::auto_ptr<manah::windows::io::File<true> > lockingFile;	// 現在ロックしているファイル
+				std::auto_ptr<manah::windows::io::File<true> > lockingFile;
 				WCHAR* pathName;
-				bool unsavable;												// 書き込み不能モード (ファイルへの保存ができない)
+				bool unsavable;
 				FileLockMode lockMode;
 				struct {
 					::FILETIME internal, user;
-				} lastWriteTimes;											// 最終更新日時
+				} lastWriteTimes;
 				DiskFile() throw() : pathName(0), unsavable(false) {
 					std::memset(&lastWriteTimes.internal, 0, sizeof(::FILETIME));
 					std::memset(&lastWriteTimes.user, 0, sizeof(::FILETIME));}
 				bool isLocked() const throw();
 				bool lock(const WCHAR* fileName) throw();
 				bool unlock() throw();
-			} diskFile_;		// 束縛ファイルの情報 (物理ファイルの属性等とは無関係)
+			} diskFile_;
 			texteditor::Session* session_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			IContentTypeInformationProvider* contentTypeInformationProvider_;
-			bool readOnly_;						// 読み取り専用モード (編集不能モード)
+			bool readOnly_;
 			bool modified_;
-			encodings::CodePage codePage_;		// コードページ
-			LineBreak lineBreak_;				// 改行コード (キーボード入力による改行に使用)
-			LineList lines_;					// 行
-			length_t length_;					// ドキュメント全体の長さ (UTF-16 単位。改行文字は含まない)
-			std::set<Point*> points_;	// 作成した編集点
+			encodings::CodePage codePage_;
+			LineBreak lineBreak_;
+			LineList lines_;
+			length_t length_;
+			std::set<Point*> points_;
 			std::auto_ptr<UndoManager> undoManager_;
-			bool onceUndoBufferCleared_;		// 1 度以上アンドゥバッファをクリアしたか
-			bool recordingOperations_;			// アンドゥ/リドゥのために操作を記録しているか
+			bool onceUndoBufferCleared_;
+			bool recordingOperations_;
 
-			bool virtualOperating_;	// アンドゥ/リドゥによる deleteText 、insertText
-									// メソッド呼び出しのとき true 。
-									// true の間は両メソッドでリドゥスタックをクリアしない
-			bool changing_;	// ドキュメント変更中
+			bool virtualOperating_;
+			bool changing_;
 
-			std::pair<Position, Point*>* accessibleArea_;	// アクセス可能領域 (ナローイングされていないときは null)
+			std::pair<Position, Point*>* accessibleArea_;
 
 			ascension::internal::Listeners<IDocumentListener> listeners_;
 			ascension::internal::Listeners<IDocumentListener> prenotifiedListeners_;
@@ -820,10 +819,10 @@ namespace ascension {
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 			IUnexpectedFileTimeStampDirector* timeStampDirector_;
 
-			static encodings::CodePage defaultCodePage_;	// 既定のコードページ
-			static LineBreak defaultLineBreak_;				// 既定の改行コード
+			static encodings::CodePage defaultCodePage_;
+			static LineBreak defaultLineBreak_;
 
-			friend DocumentPartitioner;
+			friend class DocumentPartitioner;
 		};
 
 		/**
@@ -853,10 +852,10 @@ namespace ascension {
 			DocumentCharacterIterator&	operator-=(signed_length_t offset) throw();
 			DocumentCharacterIterator	operator+(signed_length_t offset) const throw();
 			DocumentCharacterIterator	operator-(signed_length_t offset) const throw();
-			bool	operator<(const DocumentCharacterIterator& rhs) const;
-			bool	operator<=(const DocumentCharacterIterator& rhs) const;
-			bool	operator>(const DocumentCharacterIterator& rhs) const;
-			bool	operator>=(const DocumentCharacterIterator& rhs) const;
+			bool	operator<(const DocumentCharacterIterator& rhs) const throw();
+			bool	operator<=(const DocumentCharacterIterator& rhs) const throw();
+			bool	operator>(const DocumentCharacterIterator& rhs) const throw();
+			bool	operator>=(const DocumentCharacterIterator& rhs) const throw();
 			// attributes
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
@@ -880,7 +879,7 @@ namespace ascension {
 		length_t	getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
 		length_t	getLineBreakLength(LineBreak lineBreak);
 		const Char*	getLineBreakString(LineBreak lineBreak);
-		Position	updatePosition(const Position& p, const DocumentChange& change, Direction gravity);
+		Position	updatePosition(const Position& position, const DocumentChange& change, Direction gravity);
 
 
 // inline implementation ////////////////////////////////////////////////////
@@ -889,7 +888,7 @@ namespace ascension {
  * Returns the length of the string represents the specified line break.
  * @param lineBreak the line break
  * @return the length
- * @throw std#invalid_argument @p lineBreak is invalid
+ * @throw std#invalid_argument @a lineBreak is invalid
  * @see #getLineBreakString
  */
 inline length_t getLineBreakLength(LineBreak lineBreak) {
@@ -903,12 +902,12 @@ inline length_t getLineBreakLength(LineBreak lineBreak) {
 /**
  * Returns the string represents the specified line break.
  * @param lineBreak the line break
- * @return the string. an empty string if @p lineBreak is @c LB_AUTO
- * @throw std#invalid_argument @p lineBreak is invalid
+ * @return the string. an empty string if @a lineBreak is @c LB_AUTO
+ * @throw std#invalid_argument @a lineBreak is invalid
  * @see #getLineBreakLength
  */
 inline const Char* getLineBreakString(LineBreak lineBreak) {
-	if(lineBreak >= countof(internal::LINE_BREAK_STRINGS))
+	if(lineBreak >= static_cast<LineBreak>(countof(internal::LINE_BREAK_STRINGS)))
 		throw std::invalid_argument("Unknown line break specified.");
 	return internal::LINE_BREAK_STRINGS[lineBreak];
 }
@@ -918,10 +917,10 @@ inline Point::operator Position() throw() {return position_;}
 /// Conversion operator for convenience.
 inline Point::operator const Position() const throw() {return position_;}
 /**
- * Protected assignment operator moves the point to @p rhs.
+ * Protected assignment operator moves the point to @a rhs.
  * @see #moveTo
  */
-inline Point& Point::operator=(const Position& rhs) throw() {position_ = rhs;}
+inline Point& Point::operator=(const Position& rhs) throw() {position_ = rhs; return *this;}
 /// Equality operator.
 inline bool Point::operator==(const Point& rhs) const throw() {return getPosition() == rhs.getPosition();}
 /// Unequality operator.
@@ -940,7 +939,7 @@ inline bool Point::adaptsToDocument() const throw() {return adapting_;}
 inline void Point::adaptToDocument(bool adapt) throw() {adapting_ = adapt;}
 /// Called when the document is disposed.
 inline void Point::documentDisposed() throw() {document_ = 0;}
-/// ナローイング中のアクセス不能領域への侵入を禁止するか設定する
+/// ...
 inline void Point::excludeFromRestriction(bool exclude) {verifyDocument(); if(excludedFromRestriction_ = exclude) normalize();}
 /// Returns the column.
 inline length_t Point::getColumnNumber() const throw() {return position_.column;}
@@ -969,16 +968,16 @@ inline void Point::verifyDocument() const {if(isDocumentDisposed()) throw Dispos
 
 /**
  * Registers the document listener with the document.
- * After registration @p listener is notified about each modification of this document.
+ * After registration @a listener is notified about each modification of this document.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void Document::addListener(IDocumentListener& listener) {listeners_.add(listener);}
 
 /**
  * Registers the document partitioning listener with the document.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void Document::addPartitioningListener(IDocumentPartitioningListener& listener) {partitioningListeners_.add(listener);}
 
@@ -986,21 +985,21 @@ inline void Document::addPartitioningListener(IDocumentPartitioningListener& lis
  * Registers the document listener as one which is notified before those document listeners registered with @c #addListener are notified.
  * @internal This method is not for public use.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void Document::addPrenotifiedListener(IDocumentListener& listener) {prenotifiedListeners_.add(listener);}
 
 /**
  * Registers the sequential edit listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void Document::addSequentialEditListener(ISequentialEditListener& listener) {sequentialEditListeners_.add(listener);}
 
 /**
  * Registers the state listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void Document::addStateListener(IDocumentStateListener& listener) {stateListeners_.add(listener);}
 
@@ -1010,7 +1009,7 @@ inline void Document::clearUndoBuffer() {
 	onceUndoBufferCleared_ = true;
 }
 
-/// @see #deleteText(Region)
+/// @see #deleteText(const Region&)
 inline Position Document::deleteText(const Position& pos1, const Position& pos2) {return deleteText(Region(pos1, pos2));}
 
 /**
@@ -1075,8 +1074,9 @@ inline const WCHAR* Document::getFilePathName() const throw() {return diskFile_.
  * Returns the count of characters in the document.
  * @param lbr the method to count line breaks
  * @return the count of characters
+ * @throw std#invalid_argument @a lbr is invalid
  */
-inline length_t Document::getLength(LineBreakRepresentation lbr) const throw() {
+inline length_t Document::getLength(LineBreakRepresentation lbr) const {
 	if(lbr == LBR_DOCUMENT_DEFAULT)
 		lbr = (getLineBreak() == LB_CRLF) ? LBR_CRLF : LBR_LINE_FEED;
 	switch(lbr) {
@@ -1095,14 +1095,14 @@ inline length_t Document::getLength(LineBreakRepresentation lbr) const throw() {
 	case LBR_SKIP:
 		return length_;
 	}
-	return 0;	// 無意味
+	throw std::invalid_argument("invalid parameter.");
 }
 
 /**
  * Returns the text of the specified line.
  * @param line the line
  * @return the text
- * @throw BadPostionException @p line is outside of the document
+ * @throw BadPostionException @a line is outside of the document
  */
 inline const String& Document::getLine(length_t line) const {return getLineInfo(line).text_;}
 
@@ -1112,8 +1112,8 @@ inline LineBreak Document::getLineBreak() const throw() {return lineBreak_;}
 /**
  * Returns the information of the specified line.
  * @param line the line
- * @return the information about @p line
- * @throw BadPostionException @p line is outside of the document
+ * @return the information about @a line
+ * @throw BadPostionException @a line is outside of the document
  */
 inline const Document::Line& Document::getLineInfo(length_t line) const {
 	if(line >= lines_.getSize()) throw BadPositionException(); return *lines_[line];}
@@ -1128,8 +1128,8 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 /**
  * Returns the length of the specified line. The line break is not included.
  * @param line the line
- * @return the length of @p line
- * @throw BadLocationException @p line is outside of the document
+ * @return the length of @a line
+ * @throw BadLocationException @a line is outside of the document
  */
 inline length_t Document::getLineLength(length_t line) const {return getLine(line).length();}
 
@@ -1164,7 +1164,7 @@ inline const texteditor::Session* Document::getSession() const throw() {return s
 inline Position Document::getStartPosition(bool accessibleArea /* = true */) const throw() {
 	return (accessibleArea && accessibleArea_ != 0) ? accessibleArea_->first : Position(0, 0);}
 
-/// アンドゥ、リドゥ可能な回数を取得
+/// ...
 inline std::size_t Document::getUndoHistoryLength(bool redo /* = false */) const throw() {
 	return redo ? undoManager_->getRedoBufferLength() : undoManager_->getUndoBufferLength();}
 
@@ -1205,7 +1205,7 @@ inline bool Document::isNarrowed() const throw() {return accessibleArea_ != 0;}
 inline bool Document::isReadOnly() const throw() {return readOnly_;}
 
 /**
- * アンドゥ、リドゥのために編集操作を記録しているかを返す
+ * 
  * @see #recordOperations, #getUndoHistoryLength
  */
 inline bool Document::isRecordingOperation() const throw() {return recordingOperations_;}
@@ -1223,14 +1223,14 @@ inline void Document::partitioningChanged(const Region& changedRegion) throw() {
 /**
  * Removes the document listener from the document.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Document::removeListener(IDocumentListener& listener) {listeners_.remove(listener);}
 
 /**
  * Removes the document partitioning listener from the document.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Document::removePartitioningListener(IDocumentPartitioningListener& listener) {partitioningListeners_.remove(listener);}
 
@@ -1238,28 +1238,28 @@ inline void Document::removePartitioningListener(IDocumentPartitioningListener& 
  * Removes the pre-notified document listener from the document.
  * @internal This method is not for public use.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Document::removePrenotifiedListener(IDocumentListener& listener) {prenotifiedListeners_.remove(listener);}
 
 /**
  * Removes the sequential edit listener.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Document::removeSequentialEditListener(ISequentialEditListener& listener) {sequentialEditListeners_.remove(listener);}
 
 /**
  * Removes the state listener.
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Document::removeStateListener(IDocumentStateListener& listener) {stateListeners_.remove(listener);}
 
 /**
  * Sets the encoding of the document.
  * @param cp the code page of the encoding
- * @throw std#invalid_argument @p cp is invalid
+ * @throw std#invalid_argument @a cp is invalid
  */
 inline void Document::setCodePage(encodings::CodePage cp) {
 	cp = translateSpecialCodePage(cp);
@@ -1282,7 +1282,7 @@ inline void Document::setContentTypeInformation(IContentTypeInformationProvider*
 /**
  * Sets the line break of the document.
  * @param lineBreak the line break
- * @throw std#invalid_argument @p lineBreak is invalid
+ * @throw std#invalid_argument @a lineBreak is invalid
  */
 inline void Document::setLineBreak(LineBreak lineBreak) {
 	switch(lineBreak) {
@@ -1310,7 +1310,7 @@ inline void Document::setReadOnly(bool readOnly /* = true */) {
 	}
 }
 
-/// ドキュメントが開いているファイルが他で変更されたときの問合せ先を設定する (@c null でもよい)
+/// ...
 inline void Document::setUnexpectedFileTimeStampDirector(IUnexpectedFileTimeStampDirector* newDirector) throw() {timeStampDirector_ = newDirector;}
 
 /**
@@ -1325,7 +1325,7 @@ inline void Document::writeToStream(OutputStream& out, LineBreakRepresentation l
 /**
  * Returns the content type of the partition contains the specified position.
  * @param at the position
- * @throw BadPositionException @p position is outside of the document
+ * @throw BadPositionException @a position is outside of the document
  * @throw std#logic_error the partitioner is not connected to any document
  * @return the content type
  */
@@ -1345,7 +1345,7 @@ inline const Document* DocumentPartitioner::getDocument() const throw() {return 
  * Returns the document partition contains the specified position.
  * @param at the position
  * @param[out] partition the partition
- * @throw BadPositionException @p position is outside of the document
+ * @throw BadPositionException @a position is outside of the document
  * @throw std#logic_error the partitioner is not connected to any document
  */
 inline void DocumentPartitioner::getPartition(const Position& at, DocumentPartition& partition) const {
@@ -1456,7 +1456,7 @@ inline bool DocumentCharacterIterator::isLast() const throw() {
 /**
  * Moves to the specified position.
  * @param to the position
- * @throw BadPositionException @p to is outside of the document
+ * @throw BadPositionException @a to is outside of the document
  */
 inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
 	if(to > document_->getEndPosition(false)) throw BadPositionException(); line_ = &document_->getLine((p_ = to).line); return *this;}
@@ -1466,4 +1466,4 @@ inline const Position& DocumentCharacterIterator::tell() const throw() {return p
 
 }} // namespace ascension::text
 
-#endif /* ASCENSION_DOCUMENT_HPP */
+#endif /* !ASCENSION_DOCUMENT_HPP */

@@ -130,7 +130,7 @@ void AbstractGraphemeBreakIterator::next(ptrdiff_t amount) {
 // AbstractWordBreakIterator ////////////////////////////////////////////////
 
 namespace {
-	/// Advances @p i to the next character neither Extend nor Format.
+	/// Advances @a i to the next character neither Extend nor Format.
 	int nextBase(CharacterIterator& i) {
 		if(i.isLast())
 			return GeneralCategory::COUNT;
@@ -148,7 +148,7 @@ namespace {
 		return gc;
 	}
 
-	/// Advances @p i to the previous character neither Extend nor Format.
+	/// Advances @a i to the previous character neither Extend nor Format.
 	int previousBase(CharacterIterator& i) {
 		if(i.isFirst())
 			return GeneralCategory::of(i.current());
@@ -195,12 +195,12 @@ namespace {
 /**
  * Protected constructor.
  * @param component the word component to search
- * @param ctypes the character detector
+ * @param syntax the identifier syntax
  * @param lc the locale
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-		const CharacterDetector& ctypes, const locale& lc) throw() : BreakIterator(lc), component_(component), ctypes_(ctypes) {
+		const IdentifierSyntax& syntax, const locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
@@ -221,14 +221,14 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		return;
 	auto_ptr<CharacterIterator> prevPrev, prev, nextNext;
 	CodePoint nextCP = i.current(), prevCP = INVALID_CODE_POINT;
-	int nextClass = WordBreak::of(nextCP, ctypes_, getLocale()),
+	int nextClass = WordBreak::of(nextCP, syntax_, getLocale()),
 		prevClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
 		// 1 ‚Â‘O (B) ‚ð’²‚×‚é
 		assert(!i.isFirst());
 		if(prev.get() == 0) {prev = i.clone(); previousBase(*prev);}
 		if(prevCP == INVALID_CODE_POINT) prevCP = prev->current();
-		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, ctypes_, getLocale());
+		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, getLocale());
 		if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 			/* do nothing */;
 		else if(nextClass == WordBreak::A_LETTER && prevClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
@@ -242,12 +242,12 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			// 2 ‚ÂŽŸ (D) ‚ð’²‚×‚é
 			nextNext = i.clone();
 			nextBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNext->current(), ctypes_, getLocale());
+			nextNextClass = WordBreak::of(nextNext->current(), syntax_, getLocale());
 			if(nextNext->isLast())	// (WB14)
 				TRY_RETURN()
 			if(nextNextClass != prevClass	// (WB6, WB12)
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
-					|| ctypes_.isIdentifierCharacter(prevCP) || ctypes_.isIdentifierCharacter(nextCP)))
+					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))
 				TRY_RETURN()
 		} else if((prevClass == WordBreak::MID_LETTER && nextClass == WordBreak::A_LETTER)
 				|| (prevClass == WordBreak::MID_NUM && nextClass == WordBreak::NUMERIC)) {	// (WB7, WB11)?
@@ -261,18 +261,18 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 					prevPrev = prev->clone();
 					previousBase(*prevPrev);
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), ctypes_, getLocale());
+				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
-					|| ctypes_.isIdentifierCharacter(prevCP) || ctypes_.isIdentifierCharacter(nextCP)))	// (WB7, WB11)
+					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
 				TRY_RETURN()
-		} else if((!toBoolean(component_ & END_OF_SEGMENT) && ctypes_.isWhiteSpace(nextCP, true))
-				|| (!toBoolean(component_ & START_OF_SEGMENT) && ctypes_.isWhiteSpace(prevCP, true)))	// (+)
+		} else if((!toBoolean(component_ & END_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP))
+				|| (!toBoolean(component_ & START_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP)))	// (+)
 			/* do nothing */;
 		else if(toBoolean(component_ & ALPHA_NUMERIC)	// (0)
-				&& (!toBoolean(component_ & START_OF_SEGMENT) || !ctypes_.isIdentifierCharacter(nextCP))
-				&& (!toBoolean(component_ & END_OF_SEGMENT) || !ctypes_.isIdentifierCharacter(prevCP)))	// (+)
+				&& (!toBoolean(component_ & START_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(nextCP))
+				&& (!toBoolean(component_ & END_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(prevCP)))	// (+)
 			/* do nothing */;
 		else
 			TRY_RETURN()
@@ -292,7 +292,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			nextClass = nextNextClass;
 			nextNextClass = NOT_PROPERTY;
 		} else
-			nextClass = WordBreak::of(nextCP, ctypes_, getLocale());
+			nextClass = WordBreak::of(nextCP, syntax_, getLocale());
 	}
 #undef TRY_RETURN
 }
@@ -315,7 +315,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 		return;
 	auto_ptr<CharacterIterator> next, nextNext, prevPrev;
 	CodePoint prevCP = i.current(), nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
-	int prevClass = WordBreak::of(prevCP, ctypes_, getLocale()),
+	int prevClass = WordBreak::of(prevCP, syntax_, getLocale()),
 		nextClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
 		// 1 ‚ÂŽŸ (B) ‚ð’²‚×‚é
@@ -325,7 +325,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			previousBase(*next);
 		}
 		if(nextCP == INVALID_CODE_POINT) nextCP = next->current();
-		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, ctypes_, getLocale());
+		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, syntax_, getLocale());
 		if(prevClass == GraphemeClusterBreak::LF && nextClass == GraphemeClusterBreak::CR)	// (WB3)
 			/* do nothing */;
 		else if(prevClass == WordBreak::A_LETTER && nextClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
@@ -346,11 +346,11 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 					TRY_RETURN()
 					break;
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), ctypes_, getLocale());
+				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
-					|| ctypes_.isIdentifierCharacter(prevCP) || ctypes_.isIdentifierCharacter(nextCP)))	// (WB6, WB12)
+					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB6, WB12)
 				TRY_RETURN()
 		} else if((nextClass == WordBreak::MID_LETTER && prevClass == WordBreak::A_LETTER)
 				|| (nextClass == WordBreak::MID_NUM && prevClass == WordBreak::NUMERIC)) {	// (WB7, WB11)?
@@ -361,17 +361,17 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			}
 			nextNext = next->clone();
 			previousBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), ctypes_, getLocale());
+			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, getLocale());
 			if(nextNextClass != prevClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
-					|| ctypes_.isIdentifierCharacter(prevCP) || ctypes_.isIdentifierCharacter(nextCP)))	// (WB7, WB11)
+					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
 				TRY_RETURN()
-		} else if((!toBoolean(component_ & END_OF_SEGMENT) && ctypes_.isWhiteSpace(prevCP, true))
-				|| (!toBoolean(component_ & START_OF_SEGMENT) && ctypes_.isWhiteSpace(nextCP, true)))	// (+)
+		} else if((!toBoolean(component_ & END_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP))
+				|| (!toBoolean(component_ & START_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP)))	// (+)
 			/* do nothing */;
 		else if(toBoolean(component_ & ALPHA_NUMERIC)	// (0)
-				&& (!toBoolean(component_ & START_OF_SEGMENT) || !ctypes_.isIdentifierCharacter(prevCP))
-				&& (!toBoolean(component_ & END_OF_SEGMENT) || !ctypes_.isIdentifierCharacter(nextCP)))	// (+)
+				&& (!toBoolean(component_ & START_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(prevCP))
+				&& (!toBoolean(component_ & END_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(nextCP)))	// (+)
 			/* do nothing */;
 		else
 			TRY_RETURN()
@@ -399,13 +399,13 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 		return true;
 
 	const CodePoint nextCP = at.current();
-	const int nextClass = WordBreak::of(nextCP, ctypes_, getLocale());
+	const int nextClass = WordBreak::of(nextCP, syntax_, getLocale());
 	if(nextClass == WordBreak::OTHER)	// (WB14)
 		return true;
 	auto_ptr<CharacterIterator> i(at.clone());
 	previousBase(*i);
 	CodePoint prevCP = i->current();
-	int prevClass = WordBreak::of(prevCP, ctypes_, getLocale());
+	int prevClass = WordBreak::of(prevCP, syntax_, getLocale());
 
 	if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 		return false;
@@ -423,7 +423,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 		while(true) {
 			if(i->isLast())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), ctypes_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
 				break;
 			nextBase(*i);
 		}
@@ -437,7 +437,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 			previousBase(*i);
 			if(i->isFirst())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), ctypes_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
 				break;
 		}
 		return prevPrevClass != nextClass;	// (WB7, WB11)
@@ -541,7 +541,7 @@ namespace {
  * @param lc the locale
  */
 AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
-		const CharacterDetector& ctypes, const locale& lc) throw() : BreakIterator(lc), component_(component), ctypes_(ctypes) {
+		const IdentifierSyntax& syntax, const locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {

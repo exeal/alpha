@@ -1,8 +1,8 @@
 /**
- * @file search.cpp
+ * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006
+ * @date 2006-2007
  *
  * Implementation of text search objects.
  *
@@ -77,7 +77,7 @@ namespace {
 		 * @param last the end of the search pattern. must be greater than @a first
 		 * @param caseFolding the case folding type for case-insensitive search. can't be @c unicode#CASEFOLDING_UNICODE_FULL
 		 */
-		BMSearcher(Direction direction, const Char* first, const Char* last, CaseFoldingType caseFolding) throw() {
+		BMSearcher(Direction direction, const Char* first, const Char* last, const CaseFoldings& caseFolding) throw() {
 			compile(direction, first, last, caseFolding);
 		}
 		/**
@@ -87,7 +87,7 @@ namespace {
 		 * @param last the end of the search pattern. must be greater than @a first
 		 * @param caseFolding the case folding type for case-insensitive search. can't be @c unicode#CASEFOLDING_UNICODE_FULL
 		 */
-		void compile(Direction direction, const Char* first, const Char* last, CaseFoldingType caseFolding) throw() {
+		void compile(Direction direction, const Char* first, const Char* last, const CaseFoldings& caseFolding) throw() {
 			assert(first != 0 && last != 0 && first < last && caseFolding != CASEFOLDING_UNICODE_FULL);
 			direction_ = direction;
 			caseFolding_ = caseFolding;
@@ -108,7 +108,7 @@ namespace {
 		/// Returns the direction to search.
 		Direction getDirection() const throw() {return direction_;}
 		/// Returns the case folding type.
-		CaseFoldingType getCaseFoldingType() const throw() {return caseFolding_;}
+		const CaseFoldings& getCaseFoldingType() const throw() {return caseFolding_;}
 		/**
 		 * Searches in the specified target string.
 		 * @param first the start of the target string
@@ -154,7 +154,7 @@ namespace {
 		}
 	private:
 		Direction direction_;
-		CaseFoldingType caseFolding_;
+		CaseFoldings caseFolding_;
 		const Char* patternFirst_;
 		const Char* patternLast_;
 		ptrdiff_t lastOccurences_[65536];
@@ -166,11 +166,11 @@ namespace {
 
 namespace {
 	inline bool checkWordBoundary(const MatchTarget& target,
-			const Char* matchedFirst, const Char* matchedLast, const CharacterDetector& ctypes) {
-		CStringCharacterIterator i(target.entireFirst, target.entireLast, matchedFirst);
+			const Char* matchedFirst, const Char* matchedLast, const IdentifierSyntax& ctypes) {
+		CStringCharacterIterator i(matchedFirst, target.entireFirst, target.entireLast);
 		WordBreakIterator<CStringCharacterIterator> ii(i, AbstractWordBreakIterator::START_OF_SEGMENT, ctypes);
 		if(ii.isBoundary(i)) {
-			CStringCharacterIterator j(target.entireFirst, target.entireLast, matchedFirst);
+			CStringCharacterIterator j(matchedLast, target.entireFirst, target.entireLast);
 			WordBreakIterator<CStringCharacterIterator> jj(j, AbstractWordBreakIterator::END_OF_SEGMENT, ctypes);
 			if(jj.isBoundary(j))
 				return true;
@@ -180,10 +180,10 @@ namespace {
 
 	class LiteralMatcher : virtual public ascension::searcher::internal::IPatternMatcher {
 	public:
-		LiteralMatcher(const Char* first, const Char* last, CaseFoldingType caseFolding)
+		LiteralMatcher(const Char* first, const Char* last, const CaseFoldings& caseFolding)
 			: pattern_(first, last), engine_(new BMSearcher(FORWARD, first, last, caseFolding)) {}
 		const String& getPattern() const throw() {return pattern_;}
-		bool matches(const MatchTarget& target, const CharacterDetector* ctypes) const {
+		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
 			const length_t len = target.last - target.first;
 			if(len != pattern_.length())
 				return false;
@@ -203,8 +203,8 @@ namespace {
 			}
 			return ctypes == 0 || checkWordBoundary(target, target.first, target.last, *ctypes);
 		}
-		bool replace(const MatchTarget& target, String& replacement, const CharacterDetector* ctypes) const {return matches(target, ctypes);}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const CharacterDetector* ctypes) const {
+		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {return matches(target, ctypes);}
+		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
 			if(direction != engine_->getDirection())
 				const_cast<LiteralMatcher*>(this)->engine_.reset(
 					new BMSearcher(direction, pattern_.data(), pattern_.data() + pattern_.length(), engine_->getCaseFoldingType()));
@@ -224,7 +224,7 @@ namespace {
 
 #ifndef ASCENSION_NO_REGEX
 	auto_ptr<regex::MatchResult<const Char*> > searchRegexPattern(
-			const regex::Pattern& pattern, const MatchTarget& target, Direction direction, const CharacterDetector* ctypes) {
+			const regex::Pattern& pattern, const MatchTarget& target, Direction direction, const IdentifierSyntax* ctypes) {
 		auto_ptr<regex::MatchResult<const Char*> > result;
 		regex::Pattern::MatchOptions flags = regex::Pattern::NORMAL;
 
@@ -268,7 +268,7 @@ namespace {
 		RegexMatcher(const Char* first, const Char* last, bool ignoreCase)
 			: pattern_(first, last, ignoreCase ? regex::Pattern::CASE_INSENSITIVE : regex::Pattern::NORMAL) {}
 		const String& getPattern() const throw() {static String p; p.assign(pattern_.getPatternString()); return p;}
-		bool matches(const MatchTarget& target, const CharacterDetector* ctypes) const {
+		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
 			result_ = pattern_.matches(target.first, target.last,
 				(target.first == target.entireFirst ? 0 : regex::Pattern::TARGET_FIRST_IS_NOT_BOL)
 				|| (target.last == target.entireLast ? 0 : regex::Pattern::TARGET_LAST_IS_NOT_EOL));
@@ -277,14 +277,14 @@ namespace {
 			result_.reset(0);
 			return false;
 		}
-		bool replace(const MatchTarget& target, String& replacement, const CharacterDetector* ctypes) const {
+		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {
 			if(!matches(target, ctypes))
 				return false;
 			assert(result_.get() != 0);
 			replacement.assign(result_->replace(replacement.data(), replacement.data() + replacement.length()));
 			return true;
 		}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const CharacterDetector* ctypes) const {
+		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
 			result_ = searchRegexPattern(pattern_, target, direction, ctypes);
 			if(result_.get() == 0)
 				return false;
@@ -304,14 +304,14 @@ namespace {
 		MigemoMatcher(const Char* first, const Char* last, bool ignoreCase)
 			: pattern_(regex::MigemoPattern::create(first, last, ignoreCase)) {if(pattern_.get() == 0) throw runtime_error("Migemo is not installed.");}
 		const String& getPattern() const throw() {static String p; p.assign(pattern_->getPatternString()); return p;} 
-		bool matches(const MatchTarget& target, const CharacterDetector* ctypes) const {
+		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
 			auto_ptr<regex::MatchResult<const Char*> > result(pattern_->matches(target.first, target.last,
 				(target.first == target.entireFirst ? 0 : regex::Pattern::TARGET_FIRST_IS_NOT_BOL)
 				|| (target.last == target.entireLast ? 0 : regex::Pattern::TARGET_LAST_IS_NOT_EOL)));
 			return result.get() != 0 && (ctypes == 0 || checkWordBoundary(target, result->getStart(), result->getEnd(), *ctypes));
 		}
-		bool replace(const MatchTarget& target, String& replacement, const CharacterDetector* ctypes) const {return matches(target, ctypes);}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const CharacterDetector* ctypes) const {
+		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {return matches(target, ctypes);}
+		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
 			auto_ptr<regex::MatchResult<const Char*> > r(searchRegexPattern(*pattern_, target, direction, ctypes));
 			if(r.get() == 0)
 				return false;
@@ -513,16 +513,19 @@ void TextSearcher::compilePattern() const throw() {
 #ifndef ASCENSION_NO_REGEX
 	else if(options_.type == REGULAR_EXPRESSION)
 		self.matcher_.reset(new RegexMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			(options_.foldings.caseFolding != CASEFOLDING_UNICODE_FULL) ? options_.foldings.caseFolding : CASEFOLDING_NONE));
+			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
+				options_.foldings.caseFolding : CASEFOLDING_NONE));
 #endif /* !ASCENSION_NO_REGEX */
 #ifndef ASCENSION_NO_MIGEMO
 	else if(options_.type == MIGEMO)
 		self.matcher_.reset(new MigemoMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			(options_.foldings.caseFolding != CASEFOLDING_UNICODE_FULL) ? options_.foldings.caseFolding : CASEFOLDING_NONE));
+			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
+				options_.foldings.caseFolding : CASEFOLDING_NONE));
 #endif /* !ASCENSION_NO_MIGEMO */
 	else
 		self.matcher_.reset(new LiteralMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			(options_.foldings.caseFolding != CASEFOLDING_UNICODE_FULL) ? options_.foldings.caseFolding : CASEFOLDING_NONE));
+			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
+				options_.foldings.caseFolding : CASEFOLDING_NONE));
 }
 
 /// Returns true if Migemo is available.
@@ -541,13 +544,13 @@ bool TextSearcher::isMigemoAvailable() const throw() {
  * @return true if matched
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool TextSearcher::match(const MatchTarget& target, const CharacterDetector& ctypes) const {
+bool TextSearcher::match(const MatchTarget& target, const IdentifierSyntax& ctypes) const {
 	if(!target.isNormalized())
 		throw invalid_argument("the target is not normalized.");
 	return matcher_->matches(target, options_.wholeWord ? &ctypes : 0);
 }
 
-bool TextSearcher::replace(const MatchTarget& target, String& replaced, const CharacterDetector& ctypes) const {
+bool TextSearcher::replace(const MatchTarget& target, String& replaced, const IdentifierSyntax& ctypes) const {
 	if(!target.isNormalized())
 		throw invalid_argument("the target is not normalized.");
 	replaced.assign(replacement_);
@@ -563,7 +566,7 @@ bool TextSearcher::replace(const MatchTarget& target, String& replaced, const Ch
  * @return true if the pattern is found
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool TextSearcher::search(const MatchTarget& target, Direction direction, MatchedRange& result, const CharacterDetector& ctypes) const {
+bool TextSearcher::search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax& ctypes) const {
 	if(!target.isNormalized())
 		throw invalid_argument("the target is not normalized.");
 	compilePattern();
@@ -603,7 +606,7 @@ void TextSearcher::setPattern(const String& pattern) {
  * @param searcher 検索オブジェクト
  * @param ctypes 単語境界の検出に使う文字分類
  */
-DocumentSearcher::DocumentSearcher(const Document& document, const TextSearcher& searcher, const CharacterDetector& ctypes)
+DocumentSearcher::DocumentSearcher(const Document& document, const TextSearcher& searcher, const IdentifierSyntax& ctypes)
 	: document_(document), searcher_(searcher), ctypes_(ctypes) {}
 
 /**
@@ -640,10 +643,10 @@ bool DocumentSearcher::replace(const Region& target, String& result) const {
 /**
  * テキストのパターン検索を行う
  * @param target 検索範囲
- * @param forward 前方検索の場合 true
+ * @param direction 検索方向
  * @param[out] result マッチ範囲
  * @retval true パターンが見つかった
- * @retval false パターンが見つからなかった (@p result の内容は無意味)
+ * @retval false パターンが見つからなかった (@a result の内容は無意味)
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool DocumentSearcher::search(const Region& target, Direction direction, Region& result) const {
@@ -870,7 +873,7 @@ bool IncrementalSearcher::jumpToNextMatch(Direction direction) {
 
 /**
  * 検索直後の状態に戻す
- * @throw #NotRunningException the searcher is not running
+ * @throw NotRunningException the searcher is not running
  */
 void IncrementalSearcher::reset() {
 	if(statusHistory_.empty())
@@ -914,8 +917,8 @@ void IncrementalSearcher::start(viewers::Caret& caret,
 /**
  * Undoes the last search command.
  * @return true if matched after the undo 
- * @throw #NotRunningException the searcher is not running
- * @throw #EmptyUndoBufferException can't undo
+ * @throw NotRunningException the searcher is not running
+ * @throw EmptyUndoBufferException can't undo
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool IncrementalSearcher::undo() {
@@ -969,7 +972,7 @@ bool IncrementalSearcher::update() {
 	const Document& document = *caret_->getDocument();
 	TextSearcher::Options options = searcher_->getOptions();
 	const TextSearcher::Type originalType = options.type;
-	const CharacterDetector& ctypes = caret_->getDocument()->getContentTypeInformation().getCharacterDetector(caret_->getContentType());
+	const IdentifierSyntax& ctypes = caret_->getDocument()->getContentTypeInformation().getIdentifierSyntax(caret_->getContentType());
 	const DocumentSearcher dsearch(document, *searcher_, ctypes);
 	const Status& status = statusHistory_.top();
 

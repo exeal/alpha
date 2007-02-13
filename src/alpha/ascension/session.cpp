@@ -50,7 +50,7 @@ void ClipboardRing::add(const String& text, bool box) {
  * @param index the index
  * @param[out] text	the text content
  * @param[out] box true if the text is rectangle
- * @throw std#out_of_range @p index is out of range
+ * @throw std#out_of_range @a index is out of range
  */
 void ClipboardRing::getText(size_t index, String& text, bool& box) const {
 	if(index >= datas_.size())
@@ -64,7 +64,7 @@ void ClipboardRing::getText(size_t index, String& text, bool& box) const {
 /**
  * Removes the specified text.
  * @param index the index of the text
- * @throw std#out_of_range	@p index is invalid
+ * @throw std#out_of_range	@a index is invalid
  */
 void ClipboardRing::remove(size_t index) {
 	if(index >= datas_.size())
@@ -88,7 +88,7 @@ void ClipboardRing::removeAll() {
  *
  * If the specified capacity is less than the current one, the contents closest to the end are removed.
  * @param capacity the new capacity
- * @throw std#invalid_argument @p capacity is zero
+ * @throw std#invalid_argument @a capacity is zero
  */
 void ClipboardRing::setCapacity(size_t capacity) {
 	if(capacity == 0)
@@ -112,7 +112,7 @@ InputSequenceCheckers::~InputSequenceCheckers() {
 /**
  * Registers the sequence checker.
  * @param checker the sequence checker to be registered.
- * @throw std#invalid_argument @p checker is already registered
+ * @throw std#invalid_argument @a checker is already registered
  */
 void InputSequenceCheckers::add(auto_ptr<InputSequenceChecker> checker) {
 	if(find(strategies_.begin(), strategies_.end(), checker.get()) != strategies_.end())
@@ -176,7 +176,7 @@ Session::~Session() throw() {
 /**
  * Adds the document.
  * @param document the document to be added
- * @throw std#invalid_argument @p document is already registered
+ * @throw std#invalid_argument @a document is already registered
  */
 void Session::addDocument(text::Document& document) {
 	if(find(documents_.begin(), documents_.end(), &document) != documents_.end())
@@ -237,7 +237,7 @@ const searcher::TextSearcher& Session::getTextSearcher() const throw() {
 /**
  * Removes the document.
  * @param document the document to be removed
- * @throw std#invalid_argument @p document is not registered
+ * @throw std#invalid_argument @a document is not registered
  */
 void Session::removeDocument(text::Document& document) {
 	vector<text::Document*>::iterator i = find(documents_.begin(), documents_.end(), &document);

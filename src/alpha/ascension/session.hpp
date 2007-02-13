@@ -105,7 +105,9 @@ namespace ascension {
 			HKL keyboardLayout_;
 		};
 
-		/// @final
+		/**
+		 * @note This class is not derivable.
+		 */
 		class Session {
 		public:
 			// constructor
@@ -155,7 +157,7 @@ namespace ascension {
 		/**
 		 * Registers the listener.
 		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @p listener is already registered
+		 * @throw std#invalid_argument @a listener is already registered
 		 */
 		inline void ClipboardRing::addListener(IClipboardRingListener& listener) {listeners_.add(listener);}
 
@@ -178,14 +180,14 @@ namespace ascension {
 		/**
 		 * Removes the listener.
 		 * @param listener to be removed
-		 * @throw std#invalid_argument @p listener is not registered
+		 * @throw std#invalid_argument @a listener is not registered
 		 */
 		inline void ClipboardRing::removeListener(IClipboardRingListener& listener) {listeners_.remove(listener);}
 
 		/**
 		 * Sets the active content.
 		 * @param index the index of the content to be activated
-		 * @throw std#out_of_range	@p index is out of range
+		 * @throw std#out_of_range	@a index is out of range
 		 */
 		inline void ClipboardRing::setActiveItem(size_t index) {if(index >= datas_.size()) throw std::out_of_range("the index is out of range."); activeItem_ = index;}
 

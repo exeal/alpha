@@ -54,11 +54,11 @@ namespace ascension {
 				virtual const String& getPattern() const throw() = 0;
 				/**
 				 * Performs pattern match.
-				 * @param the target to match
+				 * @param target the target to match
 				 * @param ctypes the character detector for boundary definition or @c null if not needed
 				 * @return true if the match was succeeded
 				 */
-				virtual	bool matches(const MatchTarget& target, const unicode::CharacterDetector* ctypes) const = 0;
+				virtual	bool matches(const MatchTarget& target, const unicode::IdentifierSyntax* ctypes) const = 0;
 				/**
 				 * Searches the pattern.
 				 * @param target the target to search
@@ -68,7 +68,7 @@ namespace ascension {
 				 * @return true if the pattern was found
 				 */
 				virtual bool search(const MatchTarget& target,
-					Direction direction, MatchedRange& result, const unicode::CharacterDetector* ctypes) const = 0;
+					Direction direction, MatchedRange& result, const unicode::IdentifierSyntax* ctypes) const = 0;
 				/**
 				 *
 				 * @param target the target to match and replace
@@ -76,7 +76,7 @@ namespace ascension {
 				 * @param[in] ctypes the character detector for boundary definition or @c null if not needed
 				 * @return true if the replacement was succeeded
 				 */
-				virtual bool replace(const MatchTarget& target, String& replacement, const unicode::CharacterDetector* ctypes) const = 0;
+				virtual bool replace(const MatchTarget& target, String& replacement, const unicode::IdentifierSyntax* ctypes) const = 0;
 			};
 		} // namespace internal
 
@@ -157,10 +157,10 @@ namespace ascension {
 			void			setPattern(const String& pattern);
 			void			setReplacement(const String& replacemnt) throw();
 			// operations
-			bool	match(const MatchTarget& target, const unicode::CharacterDetector& ctypes) const;
-			bool	replace(const MatchTarget& target, String& replaced, const unicode::CharacterDetector& ctypes) const;
+			bool	match(const MatchTarget& target, const unicode::IdentifierSyntax& ctypes) const;
+			bool	replace(const MatchTarget& target, String& replaced, const unicode::IdentifierSyntax& ctypes) const;
 			bool	search(const MatchTarget& target, Direction direction,
-						MatchedRange& result, const unicode::CharacterDetector& ctypes) const;
+						MatchedRange& result, const unicode::IdentifierSyntax& ctypes) const;
 		private:
 			void	clearPatternCache();
 			void	compilePattern() const throw();
@@ -177,7 +177,7 @@ namespace ascension {
 		class DocumentSearcher {
 		public:
 			// constructor
-			DocumentSearcher(const text::Document& document, const TextSearcher& searcher, const unicode::CharacterDetector& ctypes) throw();
+			DocumentSearcher(const text::Document& document, const TextSearcher& searcher, const unicode::IdentifierSyntax& ctypes) throw();
 			// operations
 			bool	replace(const text::Region& target, String& result) const;
 			bool	search(const text::Region& target, Direction direction, text::Region& result) const;
@@ -200,13 +200,13 @@ namespace ascension {
 			};
 			const text::Document& document_;
 			const TextSearcher& searcher_;
-			const unicode::CharacterDetector& ctypes_;
+			const unicode::IdentifierSyntax& ctypes_;
 		};
 
 		/// A listener observes the state of the incremental searcher.
 		class IIncrementalSearcherListener {
 		protected:
-			/// Used by @c #incrementalSearchPatternChanged.
+			/// Used by @c IIncrementalSearcherListener#incrementalSearchPatternChanged.
 			enum Result {
 				FOUND,			///< Pattern is found (or pattern is empty).
 				NOT_FOUND,		///< Pattern is not found.
@@ -214,14 +214,14 @@ namespace ascension {
 				BAD_REGEX		///< The regular expression is invalid.
 			};
 		private:
-			/// The search is aborted. Also @c #onISearchCompleted will be called after this.
+			/// The search is aborted. Also @c #incrementalSearchCompleted will be called after this.
 			virtual void incrementalSearchAborted() = 0;
 			/// The search is completed.
 			virtual void incrementalSearchCompleted() = 0;
 			/**
-				* The search pattern is changed.
-				* @param result the result on new pattern.
-				*/
+			 * The search pattern is changed.
+			 * @param result the result on new pattern.
+			 */
 			virtual void incrementalSearchPatternChanged(Result result) = 0;
 			/// The search is started. Also @c #incrementalSearchPatternChanged will be called after this.
 			virtual void incrementalSearchStarted() = 0;

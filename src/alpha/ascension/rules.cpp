@@ -239,7 +239,7 @@ Rule::Rule(Token::ID tokenID, bool caseSensitive) throw() : id_(tokenID), caseSe
  * @param endSequence the pattern's end sequence. if empty, token will end at end of line
  * @param escapeCharacter the character which a character will be ignored
  * @param caseSensitive set false to enable caseless match
- * @throw std#invalid_argument @p startSequence is empty
+ * @throw std#invalid_argument @a startSequence is empty
  */
 RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& endSequence,
 		Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */)
@@ -284,7 +284,7 @@ auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first
  * @param first the start of the words
  * @param last the end of the words
  * @param caseSensitive set false to enable caseless match
- * @throw std#invalid_argument @p first and/or @p last are @c null
+ * @throw std#invalid_argument @a first and/or @a last are @c null
  */
 WordRule::WordRule(Token::ID id, const String* first, const String* last,
 		bool caseSensitive /* = true */) : Rule(id, caseSensitive), words_(first, last, caseSensitive) {
@@ -339,9 +339,9 @@ auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first,
 
 /**
  * Constructor.
- * @param characterDetector
+ * @param identifierSyntax
  */
-TokenScanner::TokenScanner(const CharacterDetector& characterDetector) throw() : ctypes_(characterDetector), current_() {
+TokenScanner::TokenScanner(const IdentifierSyntax& identifierSyntax) throw() : idSyntax_(identifierSyntax), current_() {
 }
 
 /// Destructor.
@@ -355,7 +355,7 @@ TokenScanner::~TokenScanner() throw() {
 /**
  * Adds the new rule to the scanner.
  * @param rule the rule to be added
- * @throw std#invalid_argument @p rule is @c null or already registered
+ * @throw std#invalid_argument @a rule is @c null or already registered
  * @throw BadScannerStateException the scanner is running
  */
 void TokenScanner::addRule(auto_ptr<const Rule> rule) {
@@ -371,7 +371,7 @@ void TokenScanner::addRule(auto_ptr<const Rule> rule) {
 /**
  * Adds the new word rule to the scanner.
  * @param rule the rule to be added
- * @throw std#invalid_argument @p rule is @c null or already registered
+ * @throw std#invalid_argument @a rule is @c null or already registered
  * @throw BadScannerStateException the scanner is running
  */
 void TokenScanner::addRule(auto_ptr<const WordRule> rule) {
@@ -414,7 +414,7 @@ auto_ptr<Token> TokenScanner::nextToken() throw() {
 			}
 		}
 		if(!wordRules_.empty()) {
-			const Char* const wordEnd = ctypes_.eatIdentifier(p, last);
+			const Char* const wordEnd = idSyntax_.eatIdentifier(p, last);
 			if(wordEnd > p) {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
 					result = (*i)->parse(*this, p, wordEnd);
@@ -433,7 +433,7 @@ auto_ptr<Token> TokenScanner::nextToken() throw() {
  * Starts the scan with the specified range.
  * @param document the document
  * @param region the region to be scanned
- * @throw text#BadPositionException @p region is outside of the document
+ * @throw text#BadPositionException @a region is outside of the document
  */
 void TokenScanner::parse(const Document& document, const Region& region) {
 	current_ = UTF16To32Iterator<DocumentCharacterIterator,
@@ -517,7 +517,7 @@ void LexicalPartitioner::clearRules() throw() {
  * Computes and constructs the partitions on the specified region.
  * @param start the start of the region to compute
  * @param minimalLast the partitioner must scan to this position at least
- * @param[out] the region whose content type was changed
+ * @param[out] changedRegion the region whose content type was changed
  */
 void LexicalPartitioner::computePartitioning(const Position& start, const Position& minimalLast, Region& changedRegion) {
 	const Position eof(getDocument()->getEndPosition(false));

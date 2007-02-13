@@ -81,7 +81,7 @@ namespace ascension {
 			virtual void textViewerIMEOpenStatusChanged() throw() = 0;
 			/// The text viewer's input language has been changed (@c WM_INPUTLANGCHANGE).
 			virtual void textViewerInputLanguageChanged() throw() = 0;
-			friend TextViewer;
+			friend class TextViewer;
 		};
 
 		/**
@@ -97,7 +97,7 @@ namespace ascension {
 			 * @see TextViewer#getFirstVisibleLine
 			 */
 			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
-			friend TextViewer;
+			friend class TextViewer;
 		};
 
 		/**
@@ -111,7 +111,7 @@ namespace ascension {
 		private:
 			CaretShapeUpdator(TextViewer& viewer) throw();
 			TextViewer& viewer_;
-			friend TextViewer;
+			friend class TextViewer;
 		};
 
 		/**
@@ -125,9 +125,8 @@ namespace ascension {
 		private:
 			/**
 			 * Returns the bitmap or the solid size defines caret shape.
-			 * @param[in] viewer the text viewer needs the caret
-			 * @param[out] bitmap the bitmap defines caret shape. if @c null, @p solidSize is used and the shape is solid
-			 * @param[out] solidSize the size of solid caret. if @p bitmap is not @c null, this parameter is ignored
+			 * @param[out] bitmap the bitmap defines caret shape. if @c null, @a solidSize is used and the shape is solid
+			 * @param[out] solidSize the size of solid caret. if @a bitmap is not @c null, this parameter is ignored
 			 * @param[out] orientation the orientation of the caret. this value is used for hot spot calculation
 			 */
 			virtual void getCaretShape(
@@ -139,8 +138,8 @@ namespace ascension {
 			virtual void install(CaretShapeUpdator& updator) throw() = 0;
 			/// Uninstalls the provider.
 			virtual void uninstall() throw() = 0;
-			friend TextViewer;
-			friend ascension::internal::StrategyPointer<ICaretShapeProvider>;
+			friend class TextViewer;
+			friend class ascension::internal::StrategyPointer<ICaretShapeProvider>;
 		};
 
 		/**
@@ -206,8 +205,8 @@ namespace ascension {
 			 * @param text the label text of the link
 			 */
 			virtual void invokeLink(const text::Region& region, const String& text) = 0;
-			friend TextViewer;
-			friend ascension::internal::StrategyPointer<IViewerLinkTextStrategy>;
+			friend class TextViewer;
+			friend class ascension::internal::StrategyPointer<IViewerLinkTextStrategy>;
 		};
 
 		/**
@@ -828,10 +827,10 @@ namespace ascension {
 				AutoScroll() throw() : scrolling(false) {}
 			} autoScroll_;
 
-			friend VisualPoint;
-			friend VirtualBox;
-			friend VerticalRulerDrawer;
-			friend CaretShapeUpdator;
+			friend class VisualPoint;
+			friend class VirtualBox;
+			friend class VerticalRulerDrawer;
+			friend class CaretShapeUpdator;
 		};
 
 		/// Extension of @c TextViewer for code editor.
@@ -854,14 +853,14 @@ namespace ascension {
 /**
  * Registers the input status listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void TextViewer::addInputStatusListener(ITextViewerInputStatusListener& listener) {inputStatusListeners_.add(listener);}
 
 /**
  * Registers the viewport listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void TextViewer::addViewportListener(IViewportListener& listener) {viewportListeners_.add(listener);}
 
@@ -1010,14 +1009,14 @@ inline void TextViewer::removeViewportListener(IViewportListener& listener) {vie
 /**
  * Sets the caret shape provider.
  * @param shaper the new caret shaper
- * @param delegateOwnership set true to transfer the ownership of @p shaper to the callee
+ * @param delegateOwnership set true to transfer the ownership of @a shaper to the callee
  */
 inline void TextViewer::setCaretShapeProvider(ICaretShapeProvider* shaper, bool delegateOwnership) {caretShape_.shaper.reset(shaper, delegateOwnership);}
 
 /**
  * Sets the link text strategy.
  * @param newStrategy the new strategy
- * @param delegateOwnership set true to transfer the ownership of @p newStrategy to the callee
+ * @param delegateOwnership set true to transfer the ownership of @a newStrategy to the callee
  */
 inline void TextViewer::setLinkTextStrategy(IViewerLinkTextStrategy* newStrategy, bool delegateOwnership) {linkTextStrategy_.reset(newStrategy, delegateOwnership);}
 

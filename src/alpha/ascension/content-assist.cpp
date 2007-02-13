@@ -156,7 +156,7 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 	assertValidAsWindow();
 
 	Caret& caret = viewer_.getCaret();
-	const unicode::CharacterDetector& ctypes = viewer_.getDocument().getContentTypeInformation().getCharacterDetector(caret.getContentType());
+	const unicode::IdentifierSyntax& syntax = viewer_.getDocument().getContentTypeInformation().getIdentifierSyntax(caret.getContentType());
 
 //	const bool rightToLeft = toBoolean(view_.getStyleEx() & WS_EX_RTLREADING);
 //	const bool rightToLeft = view_.isTextDirectionRightToLeft();
@@ -175,7 +175,7 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 	caret.getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH, precWord);
 	contextStart_.column = caret.getColumnNumber() - precWord.length();
 	contextEnd_->moveTo(caret);
-	if(ctypes.isIdentifierCharacter(contextEnd_->getCodePoint()))
+	if(syntax.isIdentifierContinueCharacter(contextEnd_->getCodePoint()))
 		contextEnd_->wordEndNext();
 	contextEnd_->adaptToDocument(true);
 	running_ = true;

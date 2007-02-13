@@ -170,7 +170,7 @@ namespace {
 /// まとめてアンドゥ/リドゥ可能な一連の操作
 class text::internal::OperationUnit : public manah::FastArenaObject<OperationUnit> {
 public:
-	virtual ~OperationUnit();
+	virtual ~OperationUnit() throw();
 	bool		execute(Document& document, Position& resultPosition);
 	void		pop();
 	void		push(InsertOperation& operation, const Document& document);
@@ -231,7 +231,7 @@ inline void text::internal::OperationUnit::push(InsertOperation& operation, cons
 	operations_.push(&operation);
 }
 
-/// 1つの操作をプッシュ (@p operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
+/// 1つの操作をプッシュ (@a operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
 inline void text::internal::OperationUnit::push(DeleteOperation& operation, const Document& document) {
 	// 直前の操作も削除であれば、範囲を拡大することで1つにまとめようとする
 	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
@@ -262,7 +262,7 @@ inline Document::UndoManager::UndoManager(Document& document) throw()
 }
 
 /// Destructor.
-inline Document::UndoManager::~UndoManager() {
+inline Document::UndoManager::~UndoManager() throw() {
 	clear();
 }
 
@@ -273,7 +273,7 @@ inline void Document::UndoManager::beginCompoundOperation() throw() {
 }
 
 /// Clears the stacks.
-inline void Document::UndoManager::clear() {
+inline void Document::UndoManager::clear() throw() {
 	compoundOperationStackingState_ = NONE;
 	lastUnit_ = 0;
 	savedOperation_ = 0;
@@ -484,7 +484,7 @@ void Bookmarker::addListener(IBookmarkListener& listener) {
 }
 
 /// Deletes all bookmarks.
-void Bookmarker::clear() {
+void Bookmarker::clear() throw() {
 	const length_t lines = document_.getNumberOfLines();
 	bool clearedOnce = false;
 	for(length_t i = 0; i < lines; ++i) {
@@ -502,8 +502,8 @@ void Bookmarker::clear() {
  * Returns the line number of the next bookmarked line.
  * @param startLine the start line number to search. this line may be the result
  * @param direction direction to search
- * @return the next bookmarked line or -1 if not found
- * @throw BadPositionException @p line is outside of the document
+ * @return the next bookmarked line or @c INVALID_INDEX if not found
+ * @throw BadPositionException @a line is outside of the document
  */
 length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
 	const length_t lines = document_.getNumberOfLines();
@@ -520,13 +520,13 @@ length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
 				return line - 1;
 		}
 	}
-	return -1;
+	return INVALID_INDEX;
 }
 
 /**
  * Returns true if the specified line is bookmarked.
  * @param line the line
- * @throw BadPositionException @p line is outside of the document
+ * @throw BadPositionException @a line is outside of the document
  */
 bool Bookmarker::isMarked(length_t line) const {
 	return document_.getLineInfo(line).bookmarked_;
@@ -536,7 +536,7 @@ bool Bookmarker::isMarked(length_t line) const {
  * Sets or clears the bookmark of the specified line.
  * @param line the line
  * @param set true to set bookmark, false to clear
- * @throw BadPositionException @p line is outside of the document
+ * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::mark(length_t line, bool set) {
 	const Document::Line& l = document_.getLineInfo(line);
@@ -549,7 +549,7 @@ void Bookmarker::mark(length_t line, bool set) {
 /**
  * Removes the listener.
  * @param listener the listener to be removed
- * @throw std#invalid_argument	@a listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 void Bookmarker::removeListener(IBookmarkListener& listener) {
 	listeners_.remove(listener);
@@ -558,7 +558,7 @@ void Bookmarker::removeListener(IBookmarkListener& listener) {
 /**
  * Toggles the bookmark of the spcified line.
  * @param line the line
- * @throw BadPositionException @p line is outside of the document
+ * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::toggle(length_t line) {
 	const Document::Line& l = document_.getLineInfo(line);
@@ -684,7 +684,7 @@ void Document::beginSequentialEdit() throw() {
 
 /**
  * Makes the specified path name real.
- * If the path is UNC, the case of @p pathName will not be fixed.
+ * If the path is UNC, the case of @a pathName will not be fixed.
  * All slashes will be replaced by backslashes.
  * @param pathName the absolute path name
  * @param[out] dest the result real path name
@@ -893,6 +893,7 @@ length_t Document::getLineOffset(length_t line, LineBreakRepresentation lbr) con
 		case LBR_CRLF:				offset += 2; break;
 		case LBR_PHYSICAL_DATA:		offset += getLineBreakLength(ln.lineBreak_); break;
 		case LBR_DOCUMENT_DEFAULT:	offset += getLineBreakLength(getLineBreak()); break;
+		case LBR_SKIP:				break;
 		}
 	}
 	return offset;
@@ -930,7 +931,7 @@ Position Document::insertFromStream(const Position& position, InputStream& in) {
  * @param last the end of the text
  * @return the result position
  * @throw ReadOnlyDocumentException the document is read only
- * @throw std#invalid_argument either @p first or @p last is @c null
+ * @throw std#invalid_argument either @a first or @a last is @c null
  */
 Position Document::insertText(const Position& position, const Char* first, const Char* last) {
 	if(changing_ || isReadOnly())
@@ -1028,7 +1029,7 @@ bool Document::isSequentialEditing() const throw() {
  * @param codePage the code page
  * @param callback the callback. can be @c null
  * @return succeeded or not. see @c #FileIOResult
- * @throw std#invalid_argument the bit combination of @p fileOpenMode is invalid
+ * @throw std#invalid_argument the bit combination of @a fileOpenMode is invalid
  */
 Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		const FileLockMode& lockMode, CodePage codePage, IFileIOListener* callback /* = 0 */) {
@@ -1087,7 +1088,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	}
 
 	// バッファ全体を文字コード変換
-	Char* firstBreak = 0;	// 最初に現れた改行文字
+//	Char* firstBreak = 0;	// 最初に現れた改行文字
 	Position last(0, 0);	// 次に文字列を追加する位置
 	if(fileSize != 0) {
 		codePage = encoderFactory.detectCodePage(nativeBuffer, min(fileSize, 4UL * 1024), codePage);
@@ -1284,8 +1285,8 @@ void Document::resetContent() {
 /**
  * Writes the content of the document to the specified file.
  * @param fileName the file name
- * @param params the options. set @p lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
- * set @p codePage member of this object to @c CPEX_AUTODETECT to use the current code page
+ * @param params the options. set @a lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
+ * set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded
  */
@@ -1554,6 +1555,7 @@ CLIENT_ABORTED:
  * 現在の変更は反映されない。本文として送信する場合は現在のドキュメントが使用される
  * @param showDialog true to show the user selection dialog
  * @return true if succeeded
+ * @deprecated 0.8
  */
 bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 	if(asAttachment && getFilePathName() == 0)
@@ -1790,8 +1792,8 @@ void Document::widen() {
  * Writes the specified region to the specified file.
  * @param fileName the file name
  * @param region the region to be written
- * @param params the options. set @p lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
- * set @p codePage member of this object to @c CPEX_AUTODETECT to use the current code page
+ * @param params the options. set @a lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
+ * set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
  * @param append true to append to the file
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded
@@ -1899,7 +1901,7 @@ void NullPartitioner::doInstall() throw() {
  * @param document the document
  * @param at the position
  * @param fromAccessibleStart
- * @throw BadPositionException @p at is outside of the document
+ * @throw BadPositionException @a at is outside of the document
  */
 length_t text::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
 	if(at > document.getEndPosition(false))
