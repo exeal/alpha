@@ -1,5 +1,5 @@
 /**
- * unicode-utils.cpp
+ * @file unicode-utils.cpp
  * @author exeal
  * @date 2005-2007
  */
@@ -450,7 +450,7 @@ namespace {
 //
 // property names are from UNIDATA/PropertyAliases.txt
 // property value names are from UNIDATA/PropertyValueAliases.txt
-// via `ruby prop-names.rb`
+// via `perl prop-names.pl`
 //
 #define PROP(shortName, longName, property)	names_[L##shortName] = names_[L##longName] = property
 #define PROP1(longName, property)			names_[L##longName] = property

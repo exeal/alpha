@@ -11,6 +11,7 @@
 #include "../../manah/object.hpp"	// manah::Noncopyable
 #include "../../manah/memory.hpp"	// manah::AutoBuffer
 #include <cassert>
+#include <stdexcept>
 #include <iterator>
 #include <set>
 #include <bitset>
@@ -1272,7 +1273,8 @@ inline int HangulSyllableType::of(CodePoint cp) throw() {
 }
 
 template<> inline bool CaseFolder::compare<CASEFOLDING_NONE>(const Char* p1, const Char* p2, length_t length) {
-	return std::wmemcmp(p1, p2, length) == 0;
+	using namespace std;
+	return wmemcmp(p1, p2, length) == 0;
 }
 
 template<> inline bool CaseFolder::compare<CASEFOLDING_ASCII>(const Char* p1, const Char* p2, length_t length) {
