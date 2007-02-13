@@ -21,7 +21,7 @@ using manah::AutoBuffer;
 /**
  * @class ascension::unicode::Normalizer unicode-utils.hpp
  * @c Nomalizer supports the standard normalization forms described in
- * <a href="http://www.unicode.org/reports/tr15/">UAX #15: Unicode Normalization Forms</a>.
+ * <a href="http://www.unicode.org/reports/tr15/">UAX #15: Unicode Normalization Forms</a> revision 27.
  *
  * This class has an interface for C++ standard bidirectional iterator and returns normalized text
  * incrementally. The following illustrates this:

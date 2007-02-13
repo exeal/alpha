@@ -742,7 +742,8 @@ namespace ascension {
 
 		/**
 		 * Scripts.
-		 * These are based on Scripts.txt obtained from UCD.
+		 * These are based on <a href="http://www.unicode.org/reports/tr24/">UAX #24: Script Names</a>
+		 * revision 9 and Scripts.txt obtained from UCD.
 		 */
 		class Script {
 		public:
