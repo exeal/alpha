@@ -166,7 +166,7 @@ namespace ascension {
 	};
 
 		template<class T> void alert(const T& t) {
-			ostringstream_t s;
+			OutputStringStream s;
 			s << t;
 			::MessageBoxW(0, s.str().c_str(), L"alert", MB_OK);
 		}

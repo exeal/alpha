@@ -316,9 +316,11 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const throw()
 	case LEGACY_POSIX:
 		return legacyctype::isword(cp);
 	case UNICODE_DEFAULT:
-	case UNICODE_ALTERNATIVE:
 		return BinaryProperty::is<BinaryProperty::ID_CONTINUE>(cp);
+	case UNICODE_ALTERNATIVE:
+		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
+	assert(false);
 	return false;	// –³ˆÓ–¡
 }
 
@@ -338,9 +340,11 @@ bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const throw() {
 	case LEGACY_POSIX:
 		return legacyctype::isalpha(cp);
 	case UNICODE_DEFAULT:
-	case UNICODE_ALTERNATIVE:
 		return BinaryProperty::is<BinaryProperty::ID_START>(cp);
+	case UNICODE_ALTERNATIVE:
+		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
+	assert(false);
 	return false;	// –³ˆÓ–¡
 }
 
@@ -362,6 +366,7 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const throw()
 	case UNICODE_ALTERNATIVE:
 		return BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
+	assert(false);
 	return false;	// –³ˆÓ–¡
 }
 
@@ -1072,14 +1077,3 @@ void SentenceBreak::buildNames() {
 }
 
 #undef PROP
-
-
-// StringFolder /////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param text the original string
- * @param options the folding options
- */
-StringFolder::StringFolder(const String& text, const FoldingOptions& options) : original_(text) {
-}

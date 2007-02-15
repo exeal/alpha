@@ -302,9 +302,9 @@ String EditPoint::getText(const Position& other, LineBreakRepresentation lbr /* 
 	if(start.line == end.line)	// 1行の場合
 		return document.getLine(end.line).substr(start.column, end.column - start.column);
 	else {	// 複数行の場合
-		OutputStringStream text;
+		StringBuffer text(ios_base::out);
 		length_t line = start.line;
-		Char eol[3];
+		Char eol[3] = L"";
 
 		switch(lbr) {
 		case LBR_LINE_FEED:
@@ -315,22 +315,22 @@ String EditPoint::getText(const Position& other, LineBreakRepresentation lbr /* 
 			wcscpy(eol, L"\x2028"); break;
 		case LBR_DOCUMENT_DEFAULT:
 			wcscpy(eol, getLineBreakString(document.getLineBreak())); break;
-		case LBR_SKIP:
-			wcscpy(eol, L""); break;
 		}
+		const streamsize eolSize = static_cast<streamsize>(wcslen(eol));
 		while(true) {
-			const Document::Line& s = document.getLineInfo(line);
+			const Document::Line& ln = document.getLineInfo(line);
+			const String& s = ln.getLine();
 			if(line == start.line)	// 先頭行
-				text << s.getLine().substr(start.column);
+				text.sputn(s.data() + start.column, static_cast<streamsize>(s.length() - start.column));
 			else if(line == end.line) {	// 最終行
-				text << s.getLine().substr(0, end.column);
+				text.sputn(s.data(), static_cast<streamsize>(end.column));
 				break;
 			} else
-				text << s.getLine();
+				text.sputn(s.data(), static_cast<streamsize>(s.length()));
 			if(lbr == LBR_PHYSICAL_DATA)
-				text << getLineBreakString(s.getLineBreak());
+				text.sputn(getLineBreakString(ln.getLineBreak()), static_cast<streamsize>(getLineBreakLength(ln.getLineBreak())));
 			else
-				text << *eol;
+				text.sputn(eol, eolSize);
 			++line;
 		}
 		return text.str();
@@ -1961,13 +1961,14 @@ String Caret::getSelectionText(LineBreakRepresentation lbr /* = LBR_PHYSICAL_DAT
 		return getTopPoint().getText(getBottomPoint(), lbr);
 
 	// 矩形選択の場合
-	OutputStringStream s;
+	StringBuffer s(ios_base::out);
 	const length_t bottomLine = getBottomPoint().getLineNumber();
 	length_t first, last;
 	for(length_t line = getTopPoint().getLineNumber(); line <= bottomLine; ++line) {
+		const Document::Line& ln = getDocument()->getLineInfo(line);
 		box_->getOverlappedSubline(line, 0, first, last);	// TODO: recognize wrap (second parameter).
-		s << getDocument()->getLine(line).substr(first, last - first)
-			<< getLineBreakString(getDocument()->getLineInfo(line).getLineBreak());
+		s.sputn(ln.getLine().data() + first, static_cast<streamsize>(last - first));
+		s.sputn(getLineBreakString(ln.getLineBreak()), static_cast<streamsize>(getLineBreakLength(ln.getLineBreak())));
 	}
 	return s.str();
 }
