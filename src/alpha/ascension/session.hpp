@@ -9,7 +9,8 @@
 #include "internal.hpp"
 #include <list>
 #include <vector>
-#include <windows.h>	// TODO: make Win32-independent.
+#include <windows.h>	// ::HKL
+// TODO: make Win32-independent.
 
 namespace ascension {
 
@@ -102,7 +103,7 @@ namespace ascension {
 			void	setKeyboardLayout(HKL keyboardLayout) throw();
 		private:
 			std::list<InputSequenceChecker*> strategies_;
-			HKL keyboardLayout_;
+			::HKL keyboardLayout_;
 		};
 
 		/**

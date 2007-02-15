@@ -935,92 +935,6 @@ namespace ascension {
 		};
 
 		/**
-		 * Bit fields for folding option.
-		 * @see UTR #30: Character Foldings (http://www.unicode.org/reports/tr30/)
-		 */
-		namespace foldingoptions {
-			enum {
-				// general
-				FOLDING_START,
-				ACCENT_REMOVAL = FOLDING_START,	///< Removes accents
-				CANONICAL_DUPLICATES,			///< Merge canonical duplicates
-				DASHES,							///< All dashes (Pd) to U+002D: Hyphen-Minus
-				GREEK_LETTERFORMS,				///< Greek letter forms to Greek nominal characters
-				HEBREW_ALTERNATES,				///< Fullwidth Hebrew alternatives to Hebrew nominal characters
-				JAMO,							///< Hangul compatibility Jamo to completions
-				MATH_SYMBOL,					///< &lt;fonts&gt; compatibility mapping
-				NATIVE_DIGIT,					///< All native digits (Nd) to ASCII digits
-				NOBREAK,						///< &lt;noBreak&gt; compatibility mapping
-				OVERLINE,						///< All overlines to U+203E: Overline
-				POSITIONAL_FORMS,				///< &lt;initial, medial, final, isolated&gt; compatibility mapping
-				SMALL_FORMS,					///< &lt;small&gt; compatibility mapping
-				SPACE,							///< All white spaces (Zs) to U+0020: Space
-				SPACING_ACCENTS,				///< All spacing accents to nonspacing accents (deprecated)
-				SUBSCRIPT,						///< &lt;sub&gt; compatibility mapping
-				SYMBOL,							///< All letter symbols to characters (deprecated)
-				UNDERLINE,						///< All underlines to U+005F: Underline
-				VERTICAL_FORMS,					///< &lt;vertical&gt; compatibility mapping
-				FOLDING_END,
-				// expansion
-				MULTIGRAPH_EXPANSION_START = FOLDING_END,
-				EXPAND_CIRCLED_SYMBOLS = MULTIGRAPH_EXPANSION_START,	///< &lt;circled&gt; compatibility mapping
-				EXPAND_DOTTED,											///< Dotted numerals (U+2488..249B)
-				EXPAND_ELLIPSIS,										///< Ellipsis (U+2024..2026)
-				EXPAND_FRACTION,										///< &lt;fraction&gt; compatibility mapping
-				EXPAND_INTEGRAL,										///< Integrals (U+222C..222D, U+222F..2230)
-				EXPAND_LIGATURE,										///< Ligatures
-				EXPAND_PARENTHESIZED,									///< Parenthesized
-				EXPAND_PRIMES,											///< Primes (U+2033..2034, U+2036..2037)
-				EXPAND_ROMAN_NUMERALS,									///< Roman numerals (U+2160..2183)
-				EXPAND_SQUARED,											///< &lt;square&gt; compatibility mapping
-				EXPAND_SQUARED_UNMARKED,								///< &lt;square&gt; compatibility mapping without marked as &lt;squared&gt;
-				EXPAND_DIGRAPH,											///< Digraphs
-				EXPAND_OTHER_MULTIGRAPHS,								///< Multi-graphs
-				MULTIGRAPH_EXPANSION_END,
-				// provisional
-				PROVISIONAL_FOLDING_START = MULTIGRAPH_EXPANSION_END,
-				DIACRITIC_REMOVAL = PROVISIONAL_FOLDING_START,	///< Diacritic removal
-				HAN_RADICAL,									///< Composes radicals to Han
-				KANA,											///< Hiragana and katakana
-				LETTER_FORMS,									///< Letter forms
-				SIMPLIFIED_HAN,									///< Simplified Chinese
-				SUPERSCRIPT,									///< &lt;sup&gt; compatibility mapping
-				SUZHOU_NUMERAL,									///< Suzhou (蘇州 (花碼)) numerals
-				WIDTH,											///< Fullwidth and halfwidth
-				PROVISIONAL_FOLDING_END,
-				// ignorance
-				CHARACTER_SKIP_START = PROVISIONAL_FOLDING_END,
-				SKIP_PUNCTUATIONS = CHARACTER_SKIP_START,	///< Punctuations
-				SKIP_SYMBOLS,								///< Symbols
-				SKIP_WHITESPACES,							///< White spaces
-				SKIP_DIACRITICS,							///< Diacritics
-				SKIP_VOWELS,								///< Vowels
-				SKIP_KASHIDA,								///< Kashida
-				SKIP_CONTROLS,								///< Control characters
-				CHARACTER_SKIP_END,
-				FO_COUNT = CHARACTER_SKIP_END
-			};
-		} // namespace foldingoptions
-
-		struct FoldingOptions {
-			CaseFoldings caseFolding;
-			std::bitset<foldingoptions::FO_COUNT> others;
-			FoldingOptions() throw() : caseFolding(CASEFOLDING_NONE) {}
-		};
-
-		/***/
-		class StringFolder {
-		public:
-			StringFolder(const String& text, const FoldingOptions& options);
-			const String&	getFolded() const throw();
-			const String&	getOriginal() const throw();
-			length_t		mapPosition(length_t position) const throw();
-		private:
-			const String original_;
-			String folded_;
-		};
-
-		/**
 		 * Legacy character classification like @c std#ctype (from <a
 		 * href="http://www.unicode.org/reports/tr18/">UTS #18: Unicode Regular Expression, Annex
 		 * C: Compatibility Property</a>.
@@ -1370,12 +1284,6 @@ inline void CaseFolder::foldSimple(const Char* first, const Char* last, Char* de
 		first += (cp < 0x010000) ? 1 : 2;
 	}
 }
-
-/// Returns the folded string.
-inline const String& StringFolder::getFolded() const throw() {return folded_;}
-
-/// Returns the original string.
-inline const String& StringFolder::getOriginal() const throw() {return folded_;}
 
 }} // namespace ascension::unicode
 

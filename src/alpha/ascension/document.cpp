@@ -793,46 +793,48 @@ Position Document::deleteText(const Region& region) {
 
 	const Position begin = isNarrowed() ? max(region.getTop(), getStartPosition()) : region.getTop();
 	const Position end = isNarrowed() ? min(region.getBottom(), getEndPosition()) : region.getBottom();
-	OutputStringStream deletedString;	// 削除した文字列 (複数行になるときは現在の改行文字が挿入される)
+	StringBuffer deletedString;	// 削除した文字列 (複数行になるときは現在の改行文字が挿入される)
 
 	if(begin.line == end.line) {	// 対象が1行以内
 		const Line&	lineInfo = getLineInfo(end.line);
 		String&	line = const_cast<String&>(getLine(end.line));
 
 		++const_cast<Line&>(lineInfo).operationHistory_;
-		deletedString << line.substr(begin.column, end.column - begin.column);
+		deletedString.sputn(line.data() + begin.column, static_cast<streamsize>(end.column - begin.column));
 		line.erase(begin.column, end.column - begin.column);
 		length_ -= end.column - begin.column;
 	} else {							// 対象が複数行
 		Line* line = lines_[begin.line];
-		String tail;
-		deletedString << line->text_.substr(begin.column);
+		auto_ptr<String> tail;
+		deletedString.sputn(line->text_.data() + begin.column, static_cast<streamsize>(line->text_.length() - begin.column));
 		length_ -= line->text_.length() - begin.column;
 		line->text_.erase(begin.column);
 
 		// 削除する部分を保存しつつ削除
 		Line& firstLine = *lines_[begin.line];
 		LineBreak lastLineBreak;
-		deletedString << getLineBreakString(lines_[begin.line]->lineBreak_);
-		for(length_t i = begin.line + 1; i < end.line + 1; ++i) {
+		deletedString.sputn(getLineBreakString(lines_[begin.line]->lineBreak_),
+			static_cast<streamsize>(getLineBreakLength(lines_[begin.line]->lineBreak_)));
+		for(length_t i = begin.line + 1; ; ++i) {
 			line = lines_[i];
-			deletedString << ((i != end.line) ? line->text_ : line->text_.substr(0, end.column));
-			if(i != end.line)
-				deletedString << getLineBreakString(line->lineBreak_);
-			if(i == end.line) {	// 削除終了行
-				tail = line->text_.substr(end.column);
-				lastLineBreak = line->lineBreak_;
-			}
+			deletedString.sputn(line->text_.data(), static_cast<streamsize>((i != end.line) ? line->text_.length() : end.column));
 			length_ -= line->text_.length();
+			if(i != end.line)
+				deletedString.sputn(getLineBreakString(line->lineBreak_), static_cast<streamsize>(getLineBreakLength(line->lineBreak_)));
+			else {	// 削除終了行
+				tail.reset(new String(line->text_.substr(end.column)));
+				lastLineBreak = line->lineBreak_;
+				break;
+			}
 		}
 		lines_.erase(begin.line + 1, end.line - begin.line);
 
 		// 削除した部分の前後を繋ぐ
 		firstLine.lineBreak_ = lastLineBreak;
 		++firstLine.operationHistory_;
-		if(!tail.empty()) {
-			firstLine.text_ += tail;
-			length_ += tail.length();
+		if(!tail->empty()) {
+			firstLine.text_ += *tail;
+			length_ += tail->length();
 		}
 	}
 
@@ -1184,7 +1186,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	clearUndoBuffer();
 	setModified(false);
 	onceUndoBufferCleared_ = false;
-	fireDocumentChanged(DocumentChange(false, Region(Position(0, 0), getEndPosition())));
+	fireDocumentChanged(DocumentChange(false, Region(Position(0, 0), getEndPosition())), false);
 	if(toBoolean(attributes & FILE_ATTRIBUTE_READONLY))
 		setReadOnly();
 
