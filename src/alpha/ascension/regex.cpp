@@ -254,7 +254,7 @@ namespace {
  * @param options the syntax options
  * @throw boost#regex_error the specified pattern is invalid
  */
-Pattern::Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxOption>& options /* = NORMAL */) : options_(options) {
+Pattern::Pattern(const Char* first, const Char* last, const SyntaxOptions& options /* = NORMAL */) : options_(options) {
 	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
 	impl_.assign(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
 		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last),
@@ -267,7 +267,7 @@ Pattern::Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxO
  * @param options the syntax options
  * @throw boost#regex_error the specified pattern is invalid
  */
-Pattern::Pattern(const String& pattern, const manah::Flags<SyntaxOption>& options /* = NORMAL */) : options_(options) {
+Pattern::Pattern(const String& pattern, const SyntaxOptions& options /* = NORMAL */) : options_(options) {
 	Pattern(pattern.data(), pattern.data() + pattern.length(), options);
 }
 

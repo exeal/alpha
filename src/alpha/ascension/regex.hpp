@@ -100,17 +100,22 @@ namespace ascension {
 			};
 			/// Options for pattern match.
 			enum MatchOption {
-				NONE = 0x00,						///< Specifies that only without any other flags.
-				MULTILINE = 0x01,					///< Specifies that the target is multiline.
-				DOTALL = 0x02,						///< Specifies that "." matches a NLF character.
-				MATCH_AT_ONLY_TARGET_FIRST = 0x04,	///< Specifies that the pattern must match the start of the target.
-				TARGET_FIRST_IS_NOT_BOL = 0x08,		///< Specifies that the start of the target is not BOL.
-				TARGET_LAST_IS_NOT_EOL = 0x10		///< Specifies that the end of the target is not EOL.
+				NONE = 0x0000,							///< Specifies that only without any other flags.
+				MULTILINE = 0x0001,						///< Specifies that the target is multiline.
+				DOTALL = 0x0002,						///< Specifies that "." matches a NLF character.
+				MATCH_AT_ONLY_TARGET_FIRST = 0x0004,	///< Specifies that the pattern must match the start of the target.
+				TARGET_FIRST_IS_NOT_BOB = 0x0008,		///< Specifies that the start of the target is not the begin of the buffer.
+				TARGET_LAST_IS_NOT_EOB = 0x0010,		///< Specifies that the end of the target is not the end of the buffer.
+				TARGET_FIRST_IS_NOT_BOL = 0x0020,		///< Specifies that the start of the target is not the begin of a line.
+				TARGET_LAST_IS_NOT_EOL = 0x0040,		///< Specifies that the end of the target is not the end of a line.
+				TARGET_FIRST_IS_NOT_BOW = 0x0080,		///< Specifies that the start of the target is not the begin of a word.
+				TARGET_LAST_IS_NOT_EOW = 0x0100			///< Specifies that the end of the target is not the end of a word.
 			};
+			typedef manah::Flags<SyntaxOption> SyntaxOptions;
 			typedef manah::Flags<MatchOption> MatchOptions;
 			// constructors
-			Pattern(const Char* first, const Char* last, const manah::Flags<SyntaxOption>& options = NORMAL);
-			Pattern(const String& pattern, const manah::Flags<SyntaxOption>& options = NORMAL);
+			Pattern(const Char* first, const Char* last, const SyntaxOptions& options = NORMAL);
+			Pattern(const String& pattern, const SyntaxOptions& options = NORMAL);
 			// attributes
 			std::locale	getLocale() const throw();
 			String		getPatternString() const throw();
@@ -129,7 +134,7 @@ namespace ascension {
 			static boost::regex_constants::match_flag_type	translateMatchOptions(const MatchOptions& flags) throw();
 		private:
 			boost::basic_regex<CodePoint, internal::RegexTraits> impl_;
-			const manah::Flags<SyntaxOption> options_;
+			const SyntaxOptions options_;
 		};
 
 #ifndef ASCENSION_NO_MIGEMO
@@ -285,8 +290,12 @@ namespace ascension {
 				(flags.has(MULTILINE) ? 0 : match_single_line)
 				| (flags.has(DOTALL) ? 0 : match_not_dot_newline)
 				| (flags.has(MATCH_AT_ONLY_TARGET_FIRST) ? match_continuous : 0)
-				| (flags.has(TARGET_FIRST_IS_NOT_BOL) ? match_not_bob | match_not_bol | match_prev_avail : 0)
-				| (flags.has(TARGET_LAST_IS_NOT_EOL) ? match_not_eob | match_not_eol : 0));
+				| (flags.has(TARGET_FIRST_IS_NOT_BOB) ? match_not_bob | match_prev_avail : 0)
+				| (flags.has(TARGET_LAST_IS_NOT_EOB) ? match_not_eob : 0)
+				| (flags.has(TARGET_FIRST_IS_NOT_BOL) ? match_not_bol | match_prev_avail : 0)
+				| (flags.has(TARGET_LAST_IS_NOT_EOL) ? match_not_eol : 0)
+				| (flags.has(TARGET_FIRST_IS_NOT_BOW) ? match_not_bow | match_prev_avail : 0)
+				| (flags.has(TARGET_LAST_IS_NOT_EOW) ? match_not_eow : 0));
 		}
 
 	}
