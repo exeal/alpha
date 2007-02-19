@@ -9,6 +9,7 @@
 #define ASCENSION_INTERNAL_HPP
 #include "common.hpp"
 #include <list>
+#include <stdexcept>
 #include <algorithm>
 #include "../../manah/object.hpp"
 
@@ -24,17 +25,12 @@ namespace ascension {
 		template<int v> struct Int2Type {enum{value = v};};
 
 		/// Generates signed numeral types.
-		template<class T> class ToSigned {
-		private:
-			template<class U> struct X;
-			template<> struct X<unsigned char> {typedef char Result;};
-			template<> struct X<unsigned short> {typedef short Result;};
-			template<> struct X<unsigned int> {typedef int Result;};
-			template<> struct X<unsigned long> {typedef long Result;};
-			template<> struct X<unsigned __int64> {typedef __int64 Result;};
-		public:
-			typedef typename X<T>::Result Result;
-		};
+		template<typename T> struct ToSigned;
+		template<> struct ToSigned<unsigned char> {typedef char Result;};
+		template<> struct ToSigned<unsigned short> {typedef short Result;};
+		template<> struct ToSigned<unsigned int> {typedef int Result;};
+		template<> struct ToSigned<unsigned long> {typedef long Result;};
+//		template<> struct ToSigned<unsigned __int64> {typedef __int64 Result;};
 
 		/**
 		 * Searches upper or lower bound.
@@ -99,39 +95,30 @@ namespace ascension {
 				listeners_.push_back(&listener);
 			}
 			void remove(Listener& listener) {
-				const std::list<Listener*>::iterator i = std::find(listeners_.begin(), listeners_.end(), &listener);
+				const Iterator i = std::find(listeners_.begin(), listeners_.end(), &listener);
 				if(i == listeners_.end()) throw std::invalid_argument("The listener is not registered.");
 				listeners_.erase(i);
 			}
 			void clear() throw() {listeners_.clear();}
 			bool isEmpty() const throw() {return listeners_.empty();}
 			void notify(void(Listener::*method)()) {std::for_each(listeners_.begin(), listeners_.end(), mem_fun(method));}
-			template<class Argument> void notify(void(Listener::*method)(Argument), Argument argument) {
-				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
-					((*i)->*method)(argument);
-			}
-			template<class Arg1, class Arg2>
+			template<typename Argument> void notify(void(Listener::*method)(Argument), Argument argument) {
+				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(argument);	}
+			template<typename Arg1, typename Arg2>
 			void notify(void(Listener::*method)(Arg1, Arg2), Arg1 arg1, Arg2 arg2) {
-				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
-					((*i)->*method)(arg1, arg2);
-			}
-			template<class Arg1, class Arg2, class Arg3>
+				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2);}
+			template<typename Arg1, typename Arg2, typename Arg3>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3) {
-				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
-					((*i)->*method)(arg1, arg2, arg3);
-			}
-			template<class Arg1, class Arg2, class Arg3, class Arg4>
+				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3);}
+			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
-				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
-					((*i)->*method)(arg1, arg2, arg3, arg4);
-			}
+				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4);}
 			template<class Arg1, class Arg2, class Arg3, class Arg4, class Arg5>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4, Arg5), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5) {
-				for(std::list<Listener*>::iterator i = listeners_.begin(); i != listeners_.end(); ++i)
-					((*i)->*method)(arg1, arg2, arg3, arg4, arg5);
-			}
+				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4, arg5);}
 		private:
 			std::list<Listener*> listeners_;
+			typedef std::list<Listener*> Iterator;
 		};
 
 #ifdef _WINDOWS_
@@ -165,10 +152,13 @@ namespace ascension {
 #define ASCENSION_END_SHARED_LIB_ENTRIES()	\
 	};
 
-		template<class T> void alert(const T& t) {
+		template<typename T> void alert(const T& t) {
 			OutputStringStream s;
 			s << t;
+#ifdef _WINDOWS_
 			::MessageBoxW(0, s.str().c_str(), L"alert", MB_OK);
+#else
+#endif
 		}
 
 	} // namespace internal
