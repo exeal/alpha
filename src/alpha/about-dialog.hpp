@@ -14,7 +14,7 @@
 namespace alpha {
 	namespace ui {
 		/// 「バージョン情報」ダイアログ
-		class AboutDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_ABOUT> {
+		class AboutDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_ABOUT> {
 			// データメンバ
 		private:
 			manah::windows::ui::LinkLabel homePageLink_;

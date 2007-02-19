@@ -36,14 +36,8 @@ HashTable::HashTable(const String* first, const String* last, bool caseSensitive
 	entries_ = new Entry*[size_];
 	fill<Entry**, Entry*>(entries_, entries_ + size_, 0);
 	while(first < last) {
-		Entry* newEntry;
-		if(caseSensitive_)
-			newEntry = new Entry(*first);
-		else {
-			manah::AutoBuffer<Char> folded = CaseFolder::foldSimple(first->data(), first->data() + first->length());
-			newEntry = new Entry(String(folded.get(), first->length()));
-		}
-		const size_t h = getHashCode(newEntry->data.data(), newEntry->data.data() + newEntry->data.length());
+		Entry* const newEntry = new Entry(caseSensitive_ ? *first : CaseFolder::fold(first->data(), first->data() + first->length()));
+		const size_t h = getHashCode(newEntry->data);
 		if(first->length() > maxLength_)
 			maxLength_ = first->length();
 		newEntry->next = (entries_[h % size_] != 0) ? entries_[h % size_] : 0;
@@ -66,37 +60,34 @@ HashTable::~HashTable() {
  * @return true if the specified string is found
  */
 bool HashTable::find(const Char* first, const Char* last) const {
-	if(static_cast<size_t>(last - first) > maxLength_)
+	if(static_cast<size_t>(last - first) > maxLength_)	// TODO: this code can't trap UCS4 and full case foldings
 		return false;
 
-	const Char* const folded = caseSensitive_ ? first : CaseFolder::foldSimple(first, last).release();
-	const size_t h = getHashCode(folded, folded + (last - first));
+	const String folded = caseSensitive_ ? first : CaseFolder::fold(first, last);
+	const size_t h = getHashCode(folded);
 	Entry* entry = entries_[h % size_];
 	bool found = false;
 
 	while(entry != 0) {
-		if(entry->data.length() == last - first && wmemcmp(entry->data.data(), folded, last - first) == 0) {
+		if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0) {
 			found = true;
 			break;
 		}
 		entry = entry->next;
 	}
-	if(!caseSensitive_)
-		delete[] folded;
 	return found;
 }
 
 /**
  * Returns the hash value of the specified string.
- * @param first the start of the string
- * @param last the end of the string
+ * @param s the string to retrieve a hash value
  * @return the hash value
  */
-inline ulong HashTable::getHashCode(const Char* first, const Char* last) {
+inline ulong HashTable::getHashCode(const String& s) {
 	ulong h = 0;
-	while(first < last) {
+	for(length_t i = 0; i < s.length(); ++i) {
 		h *= 2;
-		h += *first++;
+		h += s[i];
 	}
 	return h;
 }
@@ -455,7 +446,7 @@ void TokenScanner::parse(const Document& document, const Region& region) {
 TransitionRule::TransitionRule(ContentType contentType, ContentType destination, const String& pattern, bool caseSensitive /* = true */)
 		: contentType_(contentType), destination_(destination),
 #ifndef ASCENSION_NO_REGEX
-		pattern_(pattern.data(), pattern.data() + pattern.length(), caseSensitive ? CASEFOLDING_NONE : CASEFOLDING_UNICODE_SIMPLE) {
+		pattern_(pattern.data(), pattern.data() + pattern.length(), caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE) {
 #else
 		pattern_(pattern), caseSensitive_(caseSensitive) {
 #endif /* !ASCENSION_NO_REGEX */

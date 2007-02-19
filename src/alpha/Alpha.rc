@@ -109,118 +109,6 @@ LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 #pragma code_page(932)
 #endif //_WIN32
 
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_MENU_SEARCHOPTION MENU 
-BEGIN
-    POPUP "dummy"
-    BEGIN
-        POPUP "無視する文字種(&I)"
-        BEGIN
-            MENUITEM "区切り文字(&P)",              IDC_CHK_IGNOREPUNCTUATIONS
-
-            MENUITEM "記号(&S)",                    IDC_CHK_IGNORESYMBOLS
-            MENUITEM "空白類文字(&W)",              IDC_CHK_IGNOREWHITESPACES
-
-            MENUITEM "発音区分記号(&D)",            IDC_CHK_IGNOREDIACRITICS
-            , GRAYED
-            MENUITEM "母音字(&V)",                  IDC_CHK_IGNOREVOWELS
-            , GRAYED
-            MENUITEM "カシダ(&K)",                  IDC_CHK_IGNOREKASHIDA
-            MENUITEM "制御文字(&C)",                IDC_CHK_IGNORECONTROLS
-        END
-        POPUP "フォールディング(&F)"
-        BEGIN
-            MENUITEM "アクセント記号の除去(&A)",    IDC_CHK_ACCENTREMOVAL
-            , GRAYED
-            MENUITEM "多重登録コードポイントの統一(&C)", 
-                                                    IDC_CHK_CANONICALDUPLICATESFOLDING
-
-            MENUITEM "ダッシュの統一(&D)",          IDC_CHK_DASHESFOLDING
-            MENUITEM "ギリシャ文字記号をギリシャ文字に(&G)", 
-                                                    IDC_CHK_GREEKLETTERFORMSFOLDING
-
-            MENUITEM "全角ヘブライ代替文字をヘブライ文字に(&H)", 
-                                                    IDC_CHK_HEBREWALTERNATESFOLDING
-
-            MENUITEM "ハングル互換字母を完成形に(&J)", IDC_CHK_JAMOFOLDING
-            , GRAYED
-            MENUITEM "数学記号のフォント互換マッピング(&M)", 
-                                                    IDC_CHK_MATHSYMBOLFOLDING
-
-            MENUITEM "スクリプト固有の数字を ASCII の数字に(&N)", 
-                                                    IDC_CHK_NATIVEDIGITFOLDING
-
-            MENUITEM "改行禁止互換マッピング(&B)",  IDC_CHK_NOBREAKFOLDING
-            MENUITEM "上線を統一(&O)",              IDC_CHK_OVERLINEFOLDING
-            MENUITEM "筆記体結合形互換マッピング(&P)", 
-                                                    IDC_CHK_POSITIONALFORMSFOLDING
-            , GRAYED
-            MENUITEM "小字形互換マッピング(&S)",    IDC_CHK_SMALLFORMSFOLDING
-
-            MENUITEM "空白類文字を統一(&W)",        IDC_CHK_SPACEFOLDING
-            MENUITEM "送りありアクセント記号を送り無しアクセント記号に(非推奨)(&)", 
-                                                    IDC_CHK_SPACINGACCENTS
-            , GRAYED
-            MENUITEM "下付き文字互換マッピング(&U)", 
-                                                    IDC_CHK_SUBSCRIPTFOLDING
-            , GRAYED
-            MENUITEM "文字記号を文字に(非推奨)(&Y)", IDC_CHK_SYMBOLFOLDING
-            , GRAYED
-            MENUITEM "下線を統一(&E)",              IDC_CHK_UNDERLINEFOLDING
-            MENUITEM "縦書き互換マッピング(&V)",    IDC_CHK_VERTICALFORMSFOLDING
-            , GRAYED
-            MENUITEM SEPARATOR
-            MENUITEM "発音区分記号の除去(&R)",      IDC_CHK_DIACRITICREMOVAL
-            , GRAYED
-            MENUITEM "部首から漢字を合成(&L)",      IDC_CHK_HANRADICALFOLDING
-            , GRAYED
-            MENUITEM "平仮名/片仮名(&K)",           IDC_CHK_KANAFOLDING
-            MENUITEM "変種文字を原型に(&F)",        IDC_CHK_LETTERFORMSFOLDING
-
-            MENUITEM "簡体字/繁体字(&S)",           IDC_CHK_SIMPLIFIEDHANFOLDING
-            , GRAYED
-            MENUITEM "上付き文字互換マッピング(&T)", 
-                                                    IDC_CHK_SUPERSCRIPTFOLDING
-            , GRAYED
-            MENUITEM "蘇州(花碼)数字を漢数字に(&Z)", 
-                                                    IDC_CHK_SUZHOUNUMERALFOLDING
-            , GRAYED
-            MENUITEM "全角/半角(&)",                IDC_CHK_WIDTHFOLDING
-        END
-        POPUP "展開(&E)"
-        BEGIN
-            MENUITEM "丸付き文字(&C)",              IDC_CHK_CIRCLEDSYMBOLSEXPANSION
-            , GRAYED
-            MENUITEM "ドット付き数字(&D)",          IDC_CHK_DOTTED, GRAYED
-            MENUITEM "省略符(&E)",                  IDC_CHK_ELLIPSISEXPANSION
-            , GRAYED
-            MENUITEM "分数(&F)",                    IDC_CHK_FRACTIONEXPANSION
-            , GRAYED
-            MENUITEM "積分記号(&I)",                IDC_CHK_INTEGRALEXPANSION
-            , GRAYED
-            MENUITEM "合字(&L)",                    IDC_CHK_LIGATUREEXPANSIONMISC
-            , GRAYED
-            MENUITEM "括弧付き文字(&P)",            IDC_CHK_PARENTHESIZED
-            , GRAYED
-            MENUITEM "プライム記号(&R)",            IDC_CHK_PRIMESEXPANSION
-            , GRAYED
-            MENUITEM "ローマ数字(&O)",              IDC_CHK_ROMANNUMERALS
-            , GRAYED
-            MENUITEM "組み文字(&Q)",                IDC_CHK_SQUARED, GRAYED
-            MENUITEM "非互換形組み文字(&U)",        IDC_CHK_SQUAREDUNMARKED
-            , GRAYED
-            MENUITEM "二重字(&G)",                  IDC_CHK_DIGRAPHS, GRAYED
-            MENUITEM "多重字(&M)",                  IDC_CHK_OTHERMULTIGRAPHS
-            , GRAYED
-        END
-    END
-END
-
-
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -275,7 +163,7 @@ BEGIN
                     WS_VSCROLL | WS_TABSTOP
 END
 
-IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 130
+IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 136
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_TOOLWINDOW
@@ -283,24 +171,25 @@ CAPTION "検索と置換"
 FONT 8, "MS Shell Dlg", 400, 0, 0x80
 BEGIN
     LTEXT           "検索する文字列(&N):",IDC_STATIC,5,7,70,8
-    COMBOBOX        IDC_COMBO_FINDWHAT,73,5,217,86,CBS_DROPDOWN | 
+    COMBOBOX        IDC_COMBO_FINDWHAT,78,5,212,86,CBS_DROPDOWN | 
                     CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     LTEXT           "置換後の文字列(&P):",IDC_STATIC,5,21,70,8
-    COMBOBOX        IDC_COMBO_REPLACEWITH,73,19,217,87,CBS_DROPDOWN | 
+    COMBOBOX        IDC_COMBO_REPLACEWITH,78,19,212,87,CBS_DROPDOWN | 
                     CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     LTEXT           "方法(&T):",IDC_STATIC,12,53,29,8
     COMBOBOX        IDC_COMBO_SEARCHTYPE,45,51,140,55,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
-    LTEXT           "大文字小文字の区別(&C):",IDC_STATIC,12,67,84,8
-    COMBOBOX        IDC_COMBO_CASEFOLDING,100,66,85,67,CBS_DROPDOWNLIST | 
-                    WS_VSCROLL | WS_TABSTOP
-    CONTROL         "識別子のみ検索(&I)",IDC_STATIC,"Button",BS_AUTOCHECKBOX | 
-                    WS_DISABLED | WS_GROUP | WS_TABSTOP,12,83,81,10
-    CONTROL         "単語単位で探す(&W)",IDC_CHK_WHOLEWORD,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,94,84,10
-    CONTROL         "自動的にダイアログを閉じる(&L)",IDC_CHK_AUTOCLOSE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,105,113,10
-    GROUPBOX        "条件",IDC_STATIC,5,39,188,84,WS_GROUP
+    CONTROL         "大文字小文字を区別しない(&C)",IDC_CHK_IGNORECASE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,69,172,10
+    CONTROL         "正規等価(&Q)",IDC_CHK_CANONICALEQUIVALENTS,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,12,80,172,10
+    LTEXT           "一致境界の制限(&W):",IDC_STATIC,12,95,73,8
+    COMBOBOX        IDC_COMBO_WHOLEMATCH,87,92,97,52,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "照合の重み(&O):",IDC_STATIC,12,110,74,8,WS_DISABLED
+    COMBOBOX        IDC_COMBO_COLLATIONWEIGHT,87,107,97,70,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_DISABLED | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "条件",IDC_STATIC,5,39,188,91,WS_GROUP
     CONTROL         "置換後上へ検索(&U)",IDC_CHK_SHIFT,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,203,53,77,10
     CONTROL         "選択範囲(&S)",IDC_RADIO_SELECTION,"Button",
@@ -308,13 +197,17 @@ BEGIN
     CONTROL         "ファイル全体(&O)",IDC_RADIO_WHOLEFILE,"Button",
                     BS_AUTORADIOBUTTON,203,76,62,10
     GROUPBOX        "方向と範囲",IDC_STATIC,195,39,94,54,WS_GROUP
+    PUSHBUTTON      "拡張オプション(&E)...",IDC_BTN_BROWSE,195,99,93,14,
+                    WS_DISABLED
     DEFPUSHBUTTON   "次を検索(&F)",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
     PUSHBUTTON      "前を検索(&B)",CMD_SEARCH_FINDPREV,297,21,59,14
     PUSHBUTTON      "すべてマーク(&M)",CMD_SEARCH_BOOKMARKALL,297,40,59,14
     PUSHBUTTON      "置換(&R)",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
     PUSHBUTTON      "すべて置換(&A)",CMD_SEARCH_REPLACEALL,297,74,59,14
-    PUSHBUTTON      "閉じる",IDCANCEL,297,109,59,14
-    PUSHBUTTON      "拡張オプション(&E)...",IDC_BTN_BROWSE,195,109,93,14
+    PUSHBUTTON      "閉じる",IDCANCEL,297,99,59,14
+    CONTROL         "自動的にダイアログを閉じる(&L)",IDC_CHK_AUTOCLOSE,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,243,119,
+                    113,10
 END
 
 IDD_DLG_ABOUT DIALOGEX 0, 0, 261, 108
@@ -326,8 +219,8 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,44,64
-    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,
-                    8,SS_NOPREFIX
+    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,8,
+                    SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
     LTEXT           "Alpha Script Debugger version 0.3.0 alpha (inavailable)",
@@ -449,9 +342,8 @@ BEGIN
     LTEXT           "以下のバッファは変更が保存されていません。\n\n保存しますか?",
                     IDC_STATIC,42,7,150,25
     LTEXT           "保存するバッファ(&B):",IDC_STATIC,7,41,69,8
-    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | 
-                    LBS_MULTIPLESEL | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
-                    WS_TABSTOP
+    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     DEFPUSHBUTTON   "OK",IDOK,101,140,44,14
     PUSHBUTTON      "キャンセル",IDCANCEL,148,140,44,14
     LTEXT           "|",IDC_STATIC,119,123,8,8
@@ -577,7 +469,7 @@ BEGIN
         LEFTMARGIN, 5
         RIGHTMARGIN, 356
         TOPMARGIN, 5
-        BOTTOMMARGIN, 123
+        BOTTOMMARGIN, 129
     END
 
     IDD_DLG_ABOUT, DIALOG
@@ -624,14 +516,6 @@ BEGIN
         RIGHTMARGIN, 314
         TOPMARGIN, 7
         BOTTOMMARGIN, 124
-    END
-
-    IDD_DLG_CONFIRMUNSAVEDDOCUMENTS, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 192
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 154
     END
 
     IDD_DLG_FILENEWWITHFORMAT, DIALOG
@@ -690,7 +574,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE     RCDATA              "Resource\\code-page-name-table-ja"
+IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-ja"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1101,10 +985,8 @@ END
 
 STRINGTABLE 
 BEGIN
-    MSG_DIALOG__MATCH_CASE  "同一視しない"
-    MSG_DIALOG__IGNORE_ASCII_CASE "ASCII 文字のみ同一視"
-    MSG_DIALOG__CASE_FOLD_SIMPLE "Unicode (単純)"
-    MSG_DIALOG__CASE_FOLD_FULL "Unicode (完全)"
+    MSG_DIALOG__WHOLE_GRAPHEME_MATCH "書記素"
+    MSG_DIALOG__WHOLE_WORD_MATCH "単語"
     MSG_DIALOG__LITERAL_SEARCH "リテラル"
     MSG_DIALOG__REGEXP_SEARCH "正規表現 (Boost.Regex 1.33.0)"
     MSG_DIALOG__MIGEMO_SEARCH "Migemo (C/Migemo 1.2 expected)"
@@ -1177,6 +1059,11 @@ BEGIN
                             "このマクロを続行しますか?\n\nいいえ: 現在の繰り返しをスキップし、次の繰り返しを開始します\nキャンセル: マクロの実行を中止します"
 END
 
+STRINGTABLE 
+BEGIN
+    MSG_OTHER__NONE         "なし"
+END
+
 #endif    // 日本語 resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -1189,110 +1076,6 @@ END
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 #endif //_WIN32
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_MENU_SEARCHOPTION MENU 
-BEGIN
-    POPUP "dummy"
-    BEGIN
-        POPUP "&Ignorable Character Types"
-        BEGIN
-            MENUITEM "&Punctuations",               IDC_CHK_IGNOREPUNCTUATIONS
-
-            MENUITEM "&Symbols",                    IDC_CHK_IGNORESYMBOLS
-            MENUITEM "&White Spaces",               IDC_CHK_IGNOREWHITESPACES
-
-            MENUITEM "&Diacritics",                 IDC_CHK_IGNOREDIACRITICS
-            , GRAYED
-            MENUITEM "&Vowels",                     IDC_CHK_IGNOREVOWELS
-            , GRAYED
-            MENUITEM "&Kashida",                    IDC_CHK_IGNOREKASHIDA
-            MENUITEM "&Controls",                   IDC_CHK_IGNORECONTROLS
-        END
-        POPUP "&Foldings"
-        BEGIN
-            MENUITEM "&Accent Removal",             IDC_CHK_ACCENTREMOVAL
-            , GRAYED
-            MENUITEM "&Canonical Duplicates Folding", 
-                                                    IDC_CHK_CANONICALDUPLICATESFOLDING
-
-            MENUITEM "&Dashes Folding",             IDC_CHK_DASHESFOLDING
-            MENUITEM "&Greek Letter Forms Folding", IDC_CHK_GREEKLETTERFORMSFOLDING
-
-            MENUITEM "&Hebrew Alternates Folding",  IDC_CHK_HEBREWALTERNATESFOLDING
-
-            MENUITEM "&Jamo Folding",               IDC_CHK_JAMOFOLDING
-            , GRAYED
-            MENUITEM "&Math Symbol Folding",        IDC_CHK_MATHSYMBOLFOLDING
-
-            MENUITEM "&Native Digit Folding",       IDC_CHK_NATIVEDIGITFOLDING
-
-            MENUITEM "No-&Break Folding",           IDC_CHK_NOBREAKFOLDING
-            MENUITEM "&Overline Folding",           IDC_CHK_OVERLINEFOLDING
-            MENUITEM "&Positional Forms Folding",   IDC_CHK_POSITIONALFORMSFOLDING
-            , GRAYED
-            MENUITEM "&Small Forms Folding",        IDC_CHK_SMALLFORMSFOLDING
-
-            MENUITEM "&White Space Folding",        IDC_CHK_SPACEFOLDING
-            MENUITEM "Spacing Accents (deprecated)", IDC_CHK_SPACINGACCENTS
-            , GRAYED
-            MENUITEM "S&upscript Folding",          IDC_CHK_SUBSCRIPTFOLDING
-            , GRAYED
-            MENUITEM "S&ymbol Folding (deprecated)", IDC_CHK_SYMBOLFOLDING
-            , GRAYED
-            MENUITEM "Und&erline Folding",          IDC_CHK_UNDERLINEFOLDING
-            MENUITEM "&Vertical Forms Folding",     IDC_CHK_VERTICALFORMSFOLDING
-            , GRAYED
-            MENUITEM SEPARATOR
-            MENUITEM "Diacritic &Removal",          IDC_CHK_DIACRITICREMOVAL
-            , GRAYED
-            MENUITEM "Han Radica&l Folding",        IDC_CHK_HANRADICALFOLDING
-            , GRAYED
-            MENUITEM "&Kana Folding",               IDC_CHK_KANAFOLDING
-            MENUITEM "Letter &Forms Folding",       IDC_CHK_LETTERFORMSFOLDING
-
-            MENUITEM "&Simplified Han Folding",     IDC_CHK_SIMPLIFIEDHANFOLDING
-            , GRAYED
-            MENUITEM "Superscrip&t Folding",        IDC_CHK_SUPERSCRIPTFOLDING
-            , GRAYED
-            MENUITEM "Su&zhou Numeral Folding",     IDC_CHK_SUZHOUNUMERALFOLDING
-            , GRAYED
-            MENUITEM "Width Folding",               IDC_CHK_WIDTHFOLDING
-        END
-        POPUP "&Expansions"
-        BEGIN
-            MENUITEM "&Circled Symbols Expansion",  IDC_CHK_CIRCLEDSYMBOLSEXPANSION
-            , GRAYED
-            MENUITEM "&Dotted",                     IDC_CHK_DOTTED, GRAYED
-            MENUITEM "&Ellipsis Expansion",         IDC_CHK_ELLIPSISEXPANSION
-            , GRAYED
-            MENUITEM "&Fraction Expansion",         IDC_CHK_FRACTIONEXPANSION
-            , GRAYED
-            MENUITEM "&Integral Expansion",         IDC_CHK_INTEGRALEXPANSION
-            , GRAYED
-            MENUITEM "&Ligature Expansion Miscellaneous", 
-                                                    IDC_CHK_LIGATUREEXPANSIONMISC
-            , GRAYED
-            MENUITEM "&Parenthesized",              IDC_CHK_PARENTHESIZED
-            , GRAYED
-            MENUITEM "P&rimes Expansion",           IDC_CHK_PRIMESEXPANSION
-            , GRAYED
-            MENUITEM "R&oman Numerals",             IDC_CHK_ROMANNUMERALS
-            , GRAYED
-            MENUITEM "S&quared",                    IDC_CHK_SQUARED, GRAYED
-            MENUITEM "Sq&uared Unmarked",           IDC_CHK_SQUAREDUNMARKED
-            , GRAYED
-            MENUITEM "Di&graphs",                   IDC_CHK_DIGRAPHS, GRAYED
-            MENUITEM "Other &Multigraphs",          IDC_CHK_OTHERMULTIGRAPHS
-            , GRAYED
-        END
-    END
-END
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1326,8 +1109,8 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,45,42
-    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,
-                    8,SS_NOPREFIX
+    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,8,
+                    SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
     LTEXT           "Alpha Script Debugger version 0.3.0 alpha (inavailable)",
@@ -1383,9 +1166,8 @@ BEGIN
     LTEXT           "Following buffers are not saved.\n\nDo you want to save them?",
                     IDC_STATIC,42,7,150,25
     LTEXT           "&Buffers to save:",IDC_STATIC,7,41,55,8
-    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | 
-                    LBS_MULTIPLESEL | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
-                    WS_TABSTOP
+    LISTBOX         IDC_LIST_BUFFERS,7,51,185,69,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     DEFPUSHBUTTON   "OK",IDOK,101,140,44,14
     PUSHBUTTON      "Cancel",IDCANCEL,148,140,44,14
     LTEXT           "|",IDC_STATIC,119,123,8,8
@@ -1541,46 +1323,51 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,273,110,41,14
 END
 
-IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 130
+IDD_DLG_SEARCH DIALOGEX 0, 0, 361, 136
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "Search and Replace"
 FONT 8, "MS Shell Dlg", 400, 0, 0x80
 BEGIN
-    LTEXT           "Fi&nd what:",IDC_STATIC,5,7,56,8
-    COMBOBOX        IDC_COMBO_FINDWHAT,73,5,217,86,CBS_DROPDOWN | 
+    LTEXT           "Fi&nd What:",IDC_STATIC,5,7,54,8
+    COMBOBOX        IDC_COMBO_FINDWHAT,78,5,212,86,CBS_DROPDOWN | 
                     CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Re&place with:",IDC_STATIC,5,21,70,8
-    COMBOBOX        IDC_COMBO_REPLACEWITH,73,19,217,87,CBS_DROPDOWN | 
+    LTEXT           "Re&place With:",IDC_STATIC,5,21,54,8
+    COMBOBOX        IDC_COMBO_REPLACEWITH,78,19,212,87,CBS_DROPDOWN | 
                     CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     LTEXT           "&Type:",IDC_STATIC,12,53,29,8
     COMBOBOX        IDC_COMBO_SEARCHTYPE,45,51,140,55,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
-    LTEXT           "&Case folding:",IDC_STATIC,12,67,84,8
-    COMBOBOX        IDC_COMBO_CASEFOLDING,100,66,85,67,CBS_DROPDOWNLIST | 
-                    WS_VSCROLL | WS_TABSTOP
-    CONTROL         "Only &identifiers",IDC_STATIC,"Button",BS_AUTOCHECKBOX | 
-                    WS_DISABLED | WS_GROUP | WS_TABSTOP,12,83,81,10
-    CONTROL         "&Whole word",IDC_CHK_WHOLEWORD,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,12,94,84,10
-    CONTROL         "C&lose automatically",IDC_CHK_AUTOCLOSE,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,105,113,10
-    GROUPBOX        "Conditions",IDC_STATIC,5,39,188,84,WS_GROUP
-    CONTROL         "Replace &upward",IDC_CHK_SHIFT,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,203,53,77,10
-    CONTROL         "Only &selection",IDC_RADIO_SELECTION,"Button",
-                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,203,65,54,10
-    CONTROL         "Wh&ole file",IDC_RADIO_WHOLEFILE,"Button",
-                    BS_AUTORADIOBUTTON,203,76,62,10
-    GROUPBOX        "Direction and region",IDC_STATIC,195,39,94,54,WS_GROUP
+    CONTROL         "Ignore &Case",IDC_CHK_IGNORECASE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,69,171,10
+    CONTROL         "Canonical E&quivalents",IDC_CHK_CANONICALEQUIVALENTS,
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,12,
+                    80,172,10
+    LTEXT           "&Whole Match:",IDC_STATIC,12,95,70,8
+    COMBOBOX        IDC_COMBO_WHOLEMATCH,87,92,97,52,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "C&ollation Weight:",IDC_STATIC,12,110,74,8,WS_DISABLED
+    COMBOBOX        IDC_COMBO_COLLATIONWEIGHT,87,107,97,70,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_DISABLED | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Conditions",IDC_STATIC,5,39,188,91,WS_GROUP
+    CONTROL         "Replace &Upward",IDC_CHK_SHIFT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,203,53,80,10
+    CONTROL         "Only &Selection",IDC_RADIO_SELECTION,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,203,65,79,10
+    CONTROL         "Wh&ole File",IDC_RADIO_WHOLEFILE,"Button",
+                    BS_AUTORADIOBUTTON,203,76,80,10
+    GROUPBOX        "Direction and Region",IDC_STATIC,195,39,94,54,WS_GROUP
+    PUSHBUTTON      "&Extended Options...",IDC_BTN_BROWSE,195,99,93,14,
+                    WS_DISABLED
     DEFPUSHBUTTON   "Find &Forward",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
     PUSHBUTTON      "Find &Backward",CMD_SEARCH_FINDPREV,297,21,59,14
     PUSHBUTTON      "&Mark All",CMD_SEARCH_BOOKMARKALL,297,40,59,14
     PUSHBUTTON      "&Replace",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
     PUSHBUTTON      "Replace &All",CMD_SEARCH_REPLACEALL,297,74,59,14
-    PUSHBUTTON      "Close",IDCANCEL,297,109,59,14
-    PUSHBUTTON      "&Extended Options...",IDC_BTN_BROWSE,195,109,93,14
+    PUSHBUTTON      "Close",IDCANCEL,297,99,59,14
+    CONTROL         "C&lose automatically",IDC_CHK_AUTOCLOSE,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,275,119,81,10
 END
 
 
@@ -1620,14 +1407,6 @@ BEGIN
         RIGHTMARGIN, 230
         TOPMARGIN, 7
         BOTTOMMARGIN, 152
-    END
-
-    IDD_DLG_CONFIRMUNSAVEDDOCUMENTS, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 192
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 154
     END
 
     IDD_DLG_EXECUTECOMMAND, DIALOG
@@ -1705,7 +1484,7 @@ BEGIN
         LEFTMARGIN, 5
         RIGHTMARGIN, 356
         TOPMARGIN, 5
-        BOTTOMMARGIN, 123
+        BOTTOMMARGIN, 129
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1716,7 +1495,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE     RCDATA              "Resource\\code-page-name-table-en"
+IDR_CODEPAGE_NAME_TABLE      RCDATA                   "Resource\\code-page-name-table-en"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -2119,10 +1898,8 @@ END
 
 STRINGTABLE 
 BEGIN
-    MSG_DIALOG__MATCH_CASE  "Match cases"
-    MSG_DIALOG__IGNORE_ASCII_CASE "Ignore ASCII character cases"
-    MSG_DIALOG__CASE_FOLD_SIMPLE "Unicode (simple)"
-    MSG_DIALOG__CASE_FOLD_FULL "Unicode (full)"
+    MSG_DIALOG__WHOLE_GRAPHEME_MATCH "Grapheme Cluster"
+    MSG_DIALOG__WHOLE_WORD_MATCH "Word"
     MSG_DIALOG__LITERAL_SEARCH "Literal"
     MSG_DIALOG__REGEXP_SEARCH "Regular expression (Boost.Regex 1.33.0)"
     MSG_DIALOG__MIGEMO_SEARCH "Migemo (C/Migemo 1.2 expected)"
@@ -2192,6 +1969,11 @@ BEGIN
     MSG_OTHER__NOT_OBTAINED "(not obtained)"
     MSG_OTHER__TEMPORARY_MACRO_QUERY 
                             "Proceed the macro?\n\nNo: Skip this repetition and next\nCancel: Abort the macro"
+END
+
+STRINGTABLE 
+BEGIN
+    MSG_OTHER__NONE         "None"
 END
 
 #endif    // 英語 (米国) resources

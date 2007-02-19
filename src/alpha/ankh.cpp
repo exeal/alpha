@@ -1024,7 +1024,7 @@ bool ScriptSystem::associateEngine(const WCHAR* fileName, CLSID& clsid) const {
 		return true;
 	// それでも駄目な場合はエンドユーザに訊いてみる (対話モードの場合)
 	if(interactive_) {
-		alpha::ui::SelectLanguageDlg dialog(fileName);
+		alpha::ui::SelectLanguageDialog dialog(fileName);
 		if(IDOK == dialog.doModal(Alpha::getInstance().getMainWindow()))
 			return SUCCEEDED(::CLSIDFromProgID(dialog.getSelectedLanguage().c_str(), &clsid));
 	}

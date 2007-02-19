@@ -1914,23 +1914,22 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 
 
 /**
- * @brief キャレットの直前にある識別子を返す
- *
- * 識別子が見つからない場合や、選択がある場合、識別子が @a maxLength で指定した文字数を超えた場合は失敗する
- * @param maxLength 識別子の最大文字数
- * @param[out] identifier 識別子
- * @return 取得に成功した場合は true
+ * Returns the preceding identifier.
+ * Fails if the caret has selection or the number of scanned characters exceeded @a maxLength.
+ * @param maxLength the maximum length of the identifier to find
+ * @return the identifier or an empty string if failed
+ * @deprecated 0.8
  */
-bool Caret::getPrecedingIdentifier(length_t maxLength, String& identifier) const {
+String Caret::getPrecedingIdentifier(length_t maxLength) const {
 	verifyViewer();
 	if(!isSelectionEmpty() || isStartOfLine() || maxLength == 0)
-		return false;
+		return L"";
 
 	DocumentPartition partition;
 	getDocument()->getPartitioner().getPartition(*this, partition);
 	const length_t partitionStart = (partition.region.getTop().line == getLineNumber()) ? partition.region.getTop().column : 0;
 	if(partitionStart == getColumnNumber())	// どちらのパーティションに属するか微妙だ...
-		return false;
+		return L"";
 
 	const IdentifierSyntax& syntax = getIdentifierSyntax();
 	const String& line = getDocument()->getLine(getLineNumber());
@@ -1941,10 +1940,9 @@ bool Caret::getPrecedingIdentifier(length_t maxLength, String& identifier) const
 		if(!syntax.isIdentifierContinueCharacter(*i))
 			break;
 		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)
-			return false;
+			return L"";
 	}
-	identifier.assign(i.tell(), getColumnNumber() - (i.tell() - line.data()));
-	return true;
+	return String(i.tell(), getColumnNumber() - (i.tell() - line.data()));
 }
 
 /**

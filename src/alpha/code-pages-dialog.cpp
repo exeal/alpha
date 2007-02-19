@@ -8,7 +8,7 @@
 #include "code-pages-dialog.hpp"
 #include "application.hpp"
 #include "../manah/win32/ui/standard-controls.hpp"
-using alpha::ui::CodePagesDlg;
+using alpha::ui::CodePagesDialog;
 using namespace ascension::encodings;
 using namespace std;
 
@@ -18,11 +18,11 @@ using namespace std;
  * @param codePage 最初に選択されているコードページ
  * @param forReading ファイルを読み込むのに使うコードページを列挙する場合は true
  */
-CodePagesDlg::CodePagesDlg(CodePage codePage, bool forReading) throw() : codePage_(codePage), forReading_(forReading) {
+CodePagesDialog::CodePagesDialog(CodePage codePage, bool forReading) throw() : codePage_(codePage), forReading_(forReading) {
 }
 
 /// @see Dialog#onCommand
-bool CodePagesDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool CodePagesDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LIST_CODEPAGES && notifyCode == LBN_DBLCLK) {
 		onOK();
 		return true;
@@ -31,7 +31,7 @@ bool CodePagesDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool CodePagesDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool CodePagesDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	const EncoderFactory& encoders = EncoderFactory::getInstance();
@@ -55,8 +55,8 @@ bool CodePagesDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	return true;
 }
 
-/// @see Dialog::onOK
-void CodePagesDlg::onOK() {
+/// @see Dialog#onOK
+void CodePagesDialog::onOK() {
 	codePage_ = static_cast<CodePage>(codepageList_.getItemData(codepageList_.getCurSel()));
 	Dialog::onOK();
 }

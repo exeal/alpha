@@ -405,25 +405,23 @@ ulong FindAllCommand::execute() {
 	WaitCursor wc;
 	TextViewer& viewer = getTarget();
 	Document& document = viewer.getDocument();
-	const searcher::TextSearcher* textSearcher;
+	const searcher::TextSearcher* s;
 	if(const Session* const session = document.getSession())
-		textSearcher = &session->getTextSearcher();
+		s = &session->getTextSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
-	const searcher::DocumentSearcher s(document, *textSearcher,
-		document.getContentTypeInformation().getIdentifierSyntax(DEFAULT_CONTENT_TYPE));
 
-	ulong count = 0;	// マーク回数、置換回数
-	Region matched;		// マッチ位置
-	Region scope(		// 検索範囲
+	ulong count = 0;		// マーク回数、置換回数
+	Region matchedRegion;	// マッチ位置
+	Region scope(			// 検索範囲
 		onlySelection_ ? max<Position>(viewer.getCaret().getTopPoint(), document.getStartPosition()) : document.getStartPosition(),
 		onlySelection_ ? min<Position>(viewer.getCaret().getBottomPoint(), document.getEndPosition()) : document.getEndPosition());
 
 	if(type_ == BOOKMARK) {
 		Bookmarker& bookmarker = document.getBookmarker();
-		while(s.search(scope, FORWARD, matched)) {
-			bookmarker.mark(matched.first.line);
-			scope.first.line = matched.first.line + 1;
+		while(s->search(document, scope, FORWARD, matchedRegion)) {
+			bookmarker.mark(matchedRegion.first.line);
+			scope.first.line = matchedRegion.first.line + 1;
 			scope.first.column = 0;
 			++count;
 		}
@@ -439,10 +437,10 @@ ulong FindAllCommand::execute() {
 		scopeEnd.moveTo(scope.second);	// 検索対象は置換操作で変化する
 
 		String replacedString;
-		while(s.search(scope, FORWARD, matched)) {
-			s.replace(matched, replacedString);
-			document.deleteText(matched);
-			scope.first = document.insertText(matched.getTop(), replacedString);
+		while(s->search(document, scope, FORWARD, matchedRegion)) {
+			s->replace(document, matchedRegion, replacedString);
+			document.deleteText(matchedRegion);
+			scope.first = document.insertText(matchedRegion.getTop(), replacedString);
 			scope.second = scopeEnd;
 			++count;
 		}
@@ -472,17 +470,16 @@ ulong FindNextCommand::execute() {
 	TextViewer& viewer = getTarget();
 	const Document& document = viewer.getDocument();
 	Caret& caret = viewer.getCaret();
-	const TextSearcher* textSearcher;
+	const TextSearcher* s;
 	if(const Session* const session = document.getSession())
-		textSearcher = &session->getTextSearcher();
+		s = &session->getTextSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
-	const DocumentSearcher s(document, *textSearcher, document.getContentTypeInformation().getIdentifierSyntax(DEFAULT_CONTENT_TYPE));
 
 	// 置換処理
 	if(replace_) {
 		String replacedString;
-		if(s.replace(caret.getSelectionRegion(), replacedString)) {
+		if(s->replace(document, caret.getSelectionRegion(), replacedString)) {
 			if(direction_ == FORWARD)
 				caret.replaceSelection(replacedString);
 			else {
@@ -498,23 +495,25 @@ ulong FindNextCommand::execute() {
 	const Region scope(
 		direction_ == FORWARD ? max<Position>(caret.getBottomPoint(), document.getStartPosition()) : document.getStartPosition(),
 		direction_ == FORWARD ? document.getEndPosition() : min<Position>(caret.getTopPoint(), document.getEndPosition()));
-	Region matched;
-	bool found = s.search(scope, direction_, matched);
+	Region matchedRegion;
+	bool found = s->search(document, scope, direction_, matchedRegion);
 
 #ifndef ASCENSION_NO_REGEX
 	// ゼロ幅マッチの対処
-	if(found && matched.isEmpty()) {
-		if(direction_ == FORWARD && matched.getTop() == scope.getTop()) {
+	if(found && matchedRegion.isEmpty()) {
+		if(direction_ == FORWARD && matchedRegion.getTop() == scope.getTop()) {
 			DocumentCharacterIterator i(document, scope.getTop());
-			found = (scope.getTop() != (++i).tell()) ? s.search(Region(i.tell(), scope.getBottom()), direction_, matched) : false;
-		} else if(direction_ == BACKWARD && matched.getTop() == scope.getBottom()) {
+			found = (scope.getTop() != (++i).tell()) ?
+				s->search(document, Region(i.tell(), scope.getBottom()), direction_, matchedRegion) : false;
+		} else if(direction_ == BACKWARD && matchedRegion.getTop() == scope.getBottom()) {
 			DocumentCharacterIterator i(document, scope.getBottom());
-			found = (scope.getBottom() != (--i).tell()) ? s.search(Region(scope.getTop(), i.tell()), direction_, matched) : false;
+			found = (scope.getBottom() != (--i).tell()) ?
+				s->search(document, Region(scope.getTop(), i.tell()), direction_, matchedRegion) : false;
 		}
 	}
 #endif /* !ASCENSION_NO_REGEX */
 	if(found) {
-		caret.select(matched);
+		caret.select(matchedRegion);
 //		viewer.highlightMatchTexts();
 		return 0;
 	} else {	// 見つからなかった
@@ -532,9 +531,9 @@ ulong IncrementalSearchCommand::execute() {
 	if(Session* const session = getTarget().getDocument().getSession()) {
 		searcher::IncrementalSearcher& isearch = session->getIncrementalSearcher();
 		if(!isearch.isRunning())	// 開始
-			isearch.start(getTarget().getCaret(), session->getTextSearcher(), type_, direction_, listener_);
+			isearch.start(getTarget().getDocument(), getTarget().getCaret(), session->getTextSearcher(), type_, direction_, listener_);
 		else {	// 次の一致位置へジャンプ (検索方向のみ有効。type_ は無視される)
-			if(!isearch.jumpToNextMatch(direction_))
+			if(!isearch.next(direction_))
 				getTarget().beep();
 		}
 	}

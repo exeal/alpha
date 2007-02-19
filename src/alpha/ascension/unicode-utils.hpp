@@ -2,7 +2,7 @@
  * @file unicode-utils.hpp
  * @author exeal
  * @date 2005-2007
- * @see ascension#unicode, break-iterator.hpp
+ * @see ascension#unicode, break-iterator.hpp, collator.hpp
  */
 
 #ifndef ASCENSION_UNICODE_UTILS_HPP
@@ -33,6 +33,8 @@ namespace ascension {
 	 *   Text Boundary</a>
 	 * - @c IdentifierSyntax class implements <a href="http://www.unicode.org/reports/tr31/">UAX
 	 *   #31: Identifier and Pattern Syntax</a>
+	 * - @c Collator class implements <a href="http://www.unicode.org/reports/tr10/">UTS #10:
+	 * Unicode Collation Algorithm</a>
 	 * - @c surrogates namespace contains functions to handle UTF-16 surrogate pairs
 	 * - Unicode properties
 	 * @see ASCENSION_UNICODE_VERSION
@@ -41,7 +43,7 @@ namespace ascension {
 
 		/**
 		 * @c surrogates namespace collects low level procedures handle UTF-16 surrogate pair.
-		 * @see UTF16To32Iterator, UTF32To16Iterator, UTF16To32IteratorSafe
+		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
 		namespace surrogates {
 			/**
@@ -155,8 +157,8 @@ namespace ascension {
 			}
 		} // namespace surrogates
 
-		/// 
-		class CharacterIterator : public std::iterator<std::random_access_iterator_tag, Char> {
+		/// Abstract class defines an interface for iteration on text.
+		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, Char> {
 		public:
 			static const CodePoint END_OF_BUFFER = 0xFFFFFFFFU;
 			virtual ~CharacterIterator() throw() {}
@@ -177,6 +179,9 @@ namespace ascension {
 				increment(); ++index_; if(!isLast() && surrogates::isLowSurrogate(dereference())) increment(); ++index_;} return *this;}
 			CharacterIterator& previous() {if(!isFirst()) {
 				decrement(); --index_; if(!isFirst() && surrogates::isLowSurrogate(dereference())) decrement(); --index_;} return *this;}
+			CodePoint operator*() const {return current();}
+			CharacterIterator& operator++() {return next();}
+			CharacterIterator& operator--() {return previous();}
 			bool operator==(const CharacterIterator& rhs) const throw() {return index_ == rhs.index_;}
 			bool operator!=(const CharacterIterator& rhs) const throw() {return index_ != rhs.index_;}
 			bool operator<(const CharacterIterator& rhs) const throw() {return index_ < rhs.index_;}
@@ -184,6 +189,7 @@ namespace ascension {
 			bool operator>(const CharacterIterator& rhs) const throw() {return index_ > rhs.index_;}
 			bool operator>=(const CharacterIterator& rhs) const throw() {return index_ >= rhs.index_;}
 			std::ptrdiff_t operator-(const CharacterIterator& rhs) const throw() {return index_ - rhs.index_;}
+			enum {hasBoundary = true};
 		protected:
 			CharacterIterator(std::ptrdiff_t index) throw() : index_(index) {}
 			CharacterIterator(const CharacterIterator& rhs) throw() : index_(rhs.index_) {}
@@ -352,6 +358,11 @@ namespace ascension {
 			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> >;
 		};
 
+		/// Detects whether the given UTF-16 iterator type has the own boundary information.
+		template<typename Iterator> struct IsUTF16IteratorHasBoundary {enum {result = Iterator::hasBoundary};};
+		template<typename Type> struct IsUTF16IteratorHasBoundary<Type*> {enum {result = false};};
+		template<typename Type> struct IsUTF16IteratorHasBoundary<const Type*> {enum {result = false};};
+
 		/**
 		 * Bidirectional iterator scans UTF-32 character sequence as UTF-16.
 		 *
@@ -397,27 +408,18 @@ namespace ascension {
 			bool operator>=(const UTF32To16Iterator& rhs) const {return p_ > rhs.p_ || (p_ == rhs.p_ && (rhs.high_ || high_ == rhs.high_));}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
+			enum {hasBoundary = false};
 		private:
 			BaseIterator p_;
 			bool high_;
 		};
 
-		/**
-		 * Case folding types.
-		 * @note Currently, Ascension supports only locale/language-independent foldings.
-		 * @see CaseFolder, CaseFoldings
-		 */
-		enum CaseFolding {
-			CASEFOLDING_NONE			= 0x00,	///< Does not perform case foldings.
-			CASEFOLDING_ASCII			= 0x01,	///< Folds only ASCII alphabets.
-			CASEFOLDING_UNICODE_SIMPLE	= 0x02,	///< Unicode simple case folding.
-			CASEFOLDING_UNICODE_FULL	= 0x03,	///< Unicode full case folding (not implemented).
-			CASEFOLDING_TURKISH_I		= 0x04,	///< Performs Turkish mapping.
-			CASEFOLDING_TYPE_MASK		= 0x03	///< Mask for obtaining the folding type.
+		/// Types of decomposition mapping.
+		enum Decomposition {
+			NO_DECOMPOSITION,			/// No decomposition.
+			CANONICAL_DECOMPOSITION,	/// Canonical decomposition mapping.
+			FULL_DECOMPOSITION			/// Canonical and compatibility mapping.
 		};
-
-		/// Bit combination of @c CaseFolding.
-		typedef manah::Flags<CaseFolding> CaseFoldings;
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		class Normalizer : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
@@ -455,7 +457,7 @@ namespace ascension {
 			bool		isLast() const throw();
 			const Char*	tell() const throw();
 			// utilities
-			static int		compare(const String& s1, const String& s2, Type type, const CaseFoldings& caseFolding);
+			static int		compare(const String& s1, const String& s2, Type type, bool ignoreCase);
 			static String	normalize(const Char* first, const Char* last, Form form);
 		private:
 			static std::basic_string<CodePoint>	normalize(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i, Form form);
@@ -478,7 +480,7 @@ namespace ascension {
 			};
 			// constructors
 			IdentifierSyntax() throw();
-			explicit IdentifierSyntax(CharacterClassification type, const CaseFoldings& caseFolding = CASEFOLDING_NONE
+			explicit IdentifierSyntax(CharacterClassification type, bool ignoreCase = false
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, Normalizer::Type normalizationType = Normalizer::DONT_NORMALIZE
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -501,7 +503,7 @@ namespace ascension {
 			void	overrideIdentifierNonStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
 		private:
 			CharacterClassification type_;
-			CaseFoldings caseFolding_;
+			bool caseSensitive_;
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			Normalizer::Type normalizationType_;
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -509,21 +511,25 @@ namespace ascension {
 			std::basic_string<CodePoint> subtractedIDStartCharacters_, subtractedIDNonStartCharacters_;
 		};
 
-		/// @c CaseFolder performs case foldings.
+		/**
+		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
+		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.
+		 * @see Collator, Normalizer, searcher#LiteralPattern
+		 */
 		class CaseFolder : public manah::Noncopyable {
 		public:
-			template<CaseFolding type>
-			static bool						compare(const Char* p1, const Char* p2, length_t length);
-			static Char						foldASCII(Char ch) throw();
-			static length_t					foldFull(CodePoint cp, CodePoint* dest);
-			static manah::AutoBuffer<Char>	foldFull(const Char* first, const Char* last);
-			static length_t					foldFull(const Char* first, const Char* last, Char* dest);
-			static CodePoint				foldSimple(CodePoint cp);
-			static manah::AutoBuffer<Char>	foldSimple(const Char* first, const Char* last);
-			static void						foldSimple(const Char* first, const Char* last, Char* dest);
+			template<typename CharacterSequence1, typename CharacterSequence2>
+			static int			compare(CharacterSequence1 first1, CharacterSequence1 last1,
+									CharacterSequence2 first2, CharacterSequence2 last2, bool excludeTurkishI = false);
+			static CodePoint	fold(CodePoint c, bool excludeTurkishI = false) throw();
+			template<typename CharacterSequence>
+			static String		fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
 		private:
-			static const Char CASED_UCS2[], FOLDED_UCS2[];
-			static const CodePoint CASED_UCS4[], FOLDED_UCS4[];
+			static CodePoint	foldCommon(CodePoint c) throw();
+			static CodePoint	foldTurkishI(CodePoint c) throw();
+			static const Char COMMON_CASED[], COMMON_FOLDED[], SIMPLE_CASED[], SIMPLE_FOLDED[], FULL_CASED[];
+			static const Char* FULL_FOLDED[];
+			static const std::size_t NUMBER_OF_COMMON_CASED, NUMBER_OF_SIMPLE_CASED, NUMBER_OF_FULL_CASED;
 		};
 
 		namespace internal {
@@ -1033,15 +1039,16 @@ inline bool Normalizer::operator!=(const Normalizer& rhs) const throw() {return 
  * @param s1 the string
  * @param s2 the other string
  * @param type decomposition mapping type
+ * @param ignoreCase set true to ignore cases
  * @param caseFolding the options for case folding
  * @retval &lt;0 @a s1 is less than @a s2
  * @retval 0 the two strings are canonical or compatibiilty equivalent
  * @retval &gt;0 @a s1 is greater than @a s2
  */
-inline int Normalizer::compare(const String& s1, const String& s2, Type type, const CaseFoldings& caseFolding) {
+inline int Normalizer::compare(const String& s1, const String& s2, Type type, bool ignoreCase) {
 	const String ds1(normalize(s1.data(), s1.data() + s1.length(), (type == CANONICAL) ? FORM_D : FORM_KD));
 	const String ds2(normalize(s2.data(), s2.data() + s2.length(), (type == CANONICAL) ? FORM_D : FORM_KD));
-	return s1.compare(s2);
+	return !ignoreCase ? s1.compare(s2) : CaseFolder::compare(s1.begin(), s1.end(), s2.begin(), s2.end());
 }
 
 /// Returns true if the iterator addresses the start of the normalized text.
@@ -1085,6 +1092,80 @@ inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence firs
 		++i;
 	return i.tell();
 }
+
+/**
+ * Compares the two character sequences case-insensitive. @a CharacterSequence1 and
+ * @a CharacterSequence2 must represent UTF-16 character sequence.
+ * @param first1 the start of the character sequence
+ * @param last1 the end of the character sequence
+ * @param first2 the start of the other
+ * @param last2 the end of the other
+ * @param excludeTurkishI set true to perform "Turkish I mapping"
+ * @retval &lt;0 the first sequence is less than the second
+ * @retval 0 the both sequences are same
+ * @retval &gt;0 the first sequence is greater than the second
+ */
+template<typename CharacterSequence1, typename CharacterSequence2>
+inline int CaseFolder::compare(CharacterSequence1 first1, CharacterSequence1 last1, CharacterSequence2 first2, CharacterSequence2 last2,
+	bool excludeTurkishI /* = false */) {return fold(first1, last1, excludeTurkishI).compare(fold(first2, last2, excludeTurkishI));}
+
+/**
+ * Folds the case of the specified character. This method performs "simple case folding."
+ * @param c the code point of the character to fold
+ * @param excludeTurkishI set true to perform "Turkish I mapping"
+ * @return the case-folded character
+ */
+inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false */) throw() {
+	CodePoint result;
+	// Turkish I
+	if(excludeTurkishI && c != (result = foldTurkishI(c)))
+		return result;
+	// common mapping
+	if(c != (result = foldCommon(c)))
+		return result;
+	// simple mapping
+	const Char* const p = std::lower_bound(SIMPLE_CASED, SIMPLE_CASED + NUMBER_OF_SIMPLE_CASED, static_cast<Char>(c & 0xFFFF));
+	return (*p == c) ? SIMPLE_FOLDED[p - SIMPLE_CASED] : c;
+}
+
+/**
+ * Folds case of the specified character sequence. This method performs "full case folding."
+ * @a CharacterSequence must represents a UTF-16 character sequence.
+ * @param first the start of the character sequence
+ * @param last the end of the character sequence
+ * @return the folded string
+ */
+template<typename CharacterSequence>
+inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI /* = false */) {
+	StringBuffer s(std::ios_base::out);
+	CodePoint c, f;
+	Char buffer[2];
+	for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last); !i.isLast(); ++i) {
+		c = *i;
+		if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
+			f = foldCommon(c);
+		if(f != c || c >= 0x010000) {
+			if(surrogates::encode(f, buffer) == 1)	s.sputc(buffer[0]);
+			else									s.sputn(buffer, 2);
+		} else {
+			const Char* const p = std::lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+			if(*p == c)	s.sputn(FULL_FOLDED[p - FULL_CASED], static_cast<std::streamsize>(std::wcslen(FULL_FOLDED[p - FULL_CASED])));
+			else		s.sputc(static_cast<Char>(c & 0xFFFF));
+		}
+	}
+	return s.str();
+}
+
+inline CodePoint CaseFolder::foldCommon(CodePoint c) throw() {
+	if(c < 0x010000) {	// BMP
+		const Char* const p = std::lower_bound(COMMON_CASED, COMMON_CASED + NUMBER_OF_COMMON_CASED, static_cast<Char>(c & 0xFFFF));
+		return (*p == c) ? COMMON_FOLDED[p - COMMON_CASED] : c;
+	} else if(c > 0x010400 && c < 0x010428)	// Only Deseret is cased in out of BMP (Unicode 5.0).
+		c += 0x000028;
+	return c;
+}
+
+inline CodePoint CaseFolder::foldTurkishI(CodePoint c) throw() {if(c == 0x0049) c = 0x0131; else if(c == 0x0130) c = 0x0069; return c;}
 
 #define IMPLEMENT_FORNAME																				\
 	if(name == 0) throw std::invalid_argument("the name is null.");										\
@@ -1185,104 +1266,6 @@ inline int HangulSyllableType::of(CodePoint cp) throw() {
 		return ((cp - 0xAC00) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
 	else
 		return NOT_APPLICABLE;
-}
-
-template<> inline bool CaseFolder::compare<CASEFOLDING_NONE>(const Char* p1, const Char* p2, length_t length) {
-	using namespace std;
-	return wmemcmp(p1, p2, length) == 0;
-}
-
-template<> inline bool CaseFolder::compare<CASEFOLDING_ASCII>(const Char* p1, const Char* p2, length_t length) {
-	for(length_t i = 0; i < length; ++i) {
-		if(foldASCII(p1[i]) != foldASCII(p2[i]))
-			return false;
-	}
-	return true;
-}
-
-template<> inline bool CaseFolder::compare<CASEFOLDING_UNICODE_SIMPLE>(const Char* p1, const Char* p2, length_t length) {
-	// this does not support UCS-4
-	for(length_t i = 0; i < length; ++i) {
-		if(foldSimple(p1[i]) != foldSimple(p2[i]))
-			return false;
-	}
-	return true;
-}
-
-/**
- * Performs ASCII case folding.
- * @param ch the source character
- * @return the folded character
- */
-inline Char CaseFolder::foldASCII(Char ch) throw() {return (ch >= L'A' && ch <= L'Z') ? ch + L'a' - L'A' : ch;}
-
-/**
- * Performs full case folding.
- * @param first the start of the source text
- * @param last the end of the source text
- * @return the folded string
- * @throw std#invalid_argument any parameter is @c null
- */
-inline manah::AutoBuffer<Char> CaseFolder::foldFull(const Char* first, const Char* last) {
-	if(first == 0 || last == 0)
-		throw std::invalid_argument("any parameter is null.");
-	manah::AutoBuffer<Char> result(new Char[static_cast<std::size_t>(last - first) * CASE_FOLDING_EXPANSION_MAX_CHARS]);
-	foldFull(first, last, result.get());
-	return result;
-}
-
-/**
- * Performs full case folding.
- * @param first the start of the source text
- * @param last the end of the source text
- * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to (@a last - @a first) * 3
- * @throw std#invalid_argument any parameter is @c null
- */
-inline length_t CaseFolder::foldFull(const Char* first, const Char* last, Char* dest) {
-	if(first == 0 || last == 0 || dest == 0)
-		throw std::invalid_argument("any parameter is null.");
-	CodePoint folded[CASE_FOLDING_EXPANSION_MAX_CHARS];
-	length_t written = 0;
-	while(first < last) {
-		const CodePoint cp = surrogates::decode(first, last - first);
-		const length_t c = foldFull(cp, folded);
-		for(length_t j = 0; j < c; ++j)
-			written += surrogates::encode(folded[j], dest + written);
-		first += (cp < 0x010000) ? 1 : 2;
-	}
-	return written;
-}
-
-/**
- * Performs simple case folding.
- * @param first the start of the source text
- * @param last the end of the source text
- * @return the folded string
- * @throw std#invalid_argument any parameter is @c null
- */
-inline manah::AutoBuffer<Char> CaseFolder::foldSimple(const Char* first, const Char* last) {
-	if(first == 0 || last == 0)
-		throw std::invalid_argument("any parameter is null.");
-	manah::AutoBuffer<Char> result(new Char[static_cast<std::size_t>(last - first)]);
-	foldSimple(first, last, result.get());
-	return result;
-}
-
-/**
- * Performs simple case folding.
- * @param first the start of the source text
- * @param last the end of the source text
- * @param[out] dest the destination buffer. this buffer must have the size of greater than or equals to @a last - @a first
- * @throw std#invalid_argument any parameter is @c null
- */
-inline void CaseFolder::foldSimple(const Char* first, const Char* last, Char* dest) {
-	if(first == 0 || last == 0 || dest == 0)
-		throw std::invalid_argument("any parameter is null.");
-	while(first < last) {
-		const CodePoint cp = surrogates::decode(first, last - first);
-		dest += surrogates::encode(foldSimple(cp), dest);
-		first += (cp < 0x010000) ? 1 : 2;
-	}
 }
 
 }} // namespace ascension::unicode

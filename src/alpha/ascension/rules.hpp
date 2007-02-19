@@ -28,7 +28,7 @@ namespace ascension {
 				HashTable(const String* first, const String* last, bool caseSensitive) throw();
 				~HashTable() throw();
 				bool find(const Char* first, const Char* last) const;
-				static ulong getHashCode(const Char* first, const Char* last);
+				static ulong getHashCode(const String& s) throw();
 			private:
 				struct Entry;
 				Entry** entries_;

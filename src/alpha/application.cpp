@@ -1,7 +1,7 @@
 /**
  * @file application.hpp
  * @author exeal
- * @date 2003-2006
+ * @date 2003-2007
  */
 
 #include "stdafx.h"
@@ -160,8 +160,8 @@ Alpha::Alpha()
 	Alpha::instance_ = this;
 	scriptSystem_->AddRef();
 	commandManager_.reset(new CommandManager(*this));
-	searchDialog_.reset(new ui::SearchDlg(*this));
-	bookmarkDialog_.reset(new ui::BookmarkDlg(*this));
+	searchDialog_.reset(new ui::SearchDialog(*this));
+	bookmarkDialog_.reset(new ui::BookmarkDialog(*this));
 	registerScriptEngineAssociations();
 	onSettingChange(0, 0);	// statusFont_ の初期化
 }
@@ -611,9 +611,10 @@ void Alpha::loadINISettings() {
 			break;
 		replacesWiths.push_back(value);
 	}
-	searchDialog_->clearHistory(false);
-	searchDialog_->clearHistory(true);
-	searchDialog_->setHistory(findWhats, replacesWiths);
+	searcher::TextSearcher& s = buffers_->getEditorSession().getTextSearcher();
+	s.setMaximumNumberOfStoredStrings(16);
+	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
+	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
 
 	// その他
 	useShortKeyNames_ = toBoolean(readIntegerProfile(L"Edit", L"useShortKeyNames", 0));
@@ -858,11 +859,8 @@ void Alpha::registerScriptEngineAssociations() {
 void Alpha::replaceAll() {
 	FindAllCommand command(buffers_->getActiveView(), FindAllCommand::REPLACE,
 						toBoolean(searchDialog_->isDlgButtonChecked(IDC_RADIO_SELECTION)));
-
-	searchDialog_->updateOptions();
-	buffers_->getEditorSession().getTextSearcher().setPattern(searchDialog_->getFindText());
-	buffers_->getEditorSession().getTextSearcher().setReplacement(searchDialog_->getReplaceText());
 	ulong replacedCount = -1;
+	searchDialog_->setOptions();
 	try {
 		replacedCount = command.execute();
 	} catch(boost::regex_error& e) {
@@ -878,9 +876,6 @@ void Alpha::replaceAll() {
 	} else if(replacedCount != -1) {
 		if(showMessageBoxOnFind_)
 			messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % replacedCount);
-		// 履歴に追加
-		searchDialog_->addToHistory(searchDialog_->getFindText(), false);
-		searchDialog_->addToHistory(searchDialog_->getReplaceText(), true);
 	}
 	if(searchDialog_->isWindow()) {
 		if(searchDialog_->isDlgButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [すべて置換後ダイアログを閉じる]
@@ -897,16 +892,12 @@ void Alpha::replaceAll() {
  * このメソッドは置換ダイアログが非表示でも機能する
  */
 void Alpha::replaceAndSearchNext() {
-	searchDialog_->updateOptions();
-	buffers_->getEditorSession().getTextSearcher().setPattern(searchDialog_->getFindText());
-	buffers_->getEditorSession().getTextSearcher().setReplacement(searchDialog_->getReplaceText());
-
 	FindNextCommand command(buffers_->getActiveView(), true,
 		searchDialog_->isDlgButtonChecked(IDC_CHK_SHIFT) ? BACKWARD : FORWARD);
-	bool succeeded = false;
+	searchDialog_->setOptions();
 
 	try {
-		succeeded = command.execute() == 0;
+		command.execute();
 	} catch(boost::regex_error& e) {
 		if(showMessageBoxOnFind_)
 			showRegexSearchError(e);
@@ -914,8 +905,6 @@ void Alpha::replaceAndSearchNext() {
 		if(showMessageBoxOnFind_)
 			messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
 	}
-	if(succeeded)	// 置換
-		searchDialog_->addToHistory(searchDialog_->getReplaceText(), true);
 	if(searchDialog_->isWindowVisible()) {
 //		if(searchDialog_.isDlgButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [検索後ダイアログを閉じる]
 //			getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
@@ -927,7 +916,6 @@ void Alpha::replaceAndSearchNext() {
 /// INI ファイルに設定を保存する
 void Alpha::saveINISettings() {
 	wchar_t keyName[30];
-	unsigned short i;
 
 	// バーの可視性の保存
 	AutoZero<::REBARBANDINFOW> rbbi;
@@ -939,7 +927,7 @@ void Alpha::saveINISettings() {
 	writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isWindowVisible() ? 1 : 0);
 
 	// MRU リストの保存
-	for(i = 0; ; ++i) {
+	for(unsigned short i = 0; ; ++i) {
 		swprintf(keyName, L"pathName(%u)", i);
 		if(i == mruManager_->getCount()) {
 			writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
@@ -953,20 +941,18 @@ void Alpha::saveINISettings() {
 	}
 
 	// 検索文字列履歴の保存
-	list<wstring> findWhats, replaceWiths;
-	list<wstring>::const_iterator it;
-	searchDialog_->getHistory(findWhats, replaceWiths);
-	for(i = 0, it = findWhats.begin(); it != findWhats.end(); ++i, ++it) {
+	const searcher::TextSearcher& s = buffers_->getEditorSession().getTextSearcher();
+	for(size_t i = 0; i < s.getNumberOfStoredPatterns(); ++i) {
 		swprintf(keyName, L"findWhat(%u)", i);
-		writeStringProfile(L"Find", keyName, it->c_str());
+		writeStringProfile(L"Find", keyName, s.getPattern(i).c_str());
 	}
-	swprintf(keyName, L"findWhat(%u)", i);
+	swprintf(keyName, L"findWhat(%u)", s.getNumberOfStoredPatterns());
 	writeStringProfile(L"Find", keyName, L"");
-	for(i = 0, it = replaceWiths.begin(); it != replaceWiths.end(); ++i, ++it) {
+	for(size_t i = 0; i < s.getNumberOfStoredReplacements(); ++i) {
 		swprintf(keyName, L"replaceWith(%u)", i);
-		writeStringProfile(L"Find", keyName, it->c_str());
+		writeStringProfile(L"Find", keyName, s.getReplacement(i).c_str());
 	}
-	swprintf(keyName, L"replaceWith(%u)", i);
+	swprintf(keyName, L"replaceWith(%u)", s.getNumberOfStoredReplacements());
 	writeStringProfile(L"Find", keyName, L"");
 }
 
@@ -974,11 +960,9 @@ void Alpha::saveINISettings() {
 void Alpha::searchAndBookmarkAll() {
 	FindAllCommand command(buffers_->getActiveView(), FindAllCommand::BOOKMARK,
 						toBoolean(searchDialog_->isDlgButtonChecked(IDC_RADIO_SELECTION)));
-	searchDialog_->updateOptions();
-	buffers_->getEditorSession().getTextSearcher().setPattern(searchDialog_->getFindText());
+	searchDialog_->setOptions();
 	try {
-		if(command.execute() > 0)
-			searchDialog_->addToHistory(searchDialog_->getFindText(), false);
+		command.execute();
 	} catch(boost::regex_error& e) {
 		if(showMessageBoxOnFind_)
 			showRegexSearchError(e);
@@ -999,16 +983,11 @@ void Alpha::searchAndBookmarkAll() {
  */
 bool Alpha::searchNext(bool forward, bool messageOnFailure) {
 	FindNextCommand command(buffers_->getActiveView(), false, forward ? FORWARD : BACKWARD);
-	searchDialog_->updateOptions();
-	buffers_->getEditorSession().getTextSearcher().setPattern(searchDialog_->getFindText());
-
+	searchDialog_->setOptions();
 	try {
-		if(command.execute() == 0) {
-			if(searchDialog_->isWindow())
-				searchDialog_->checkDlg2StateButton(IDC_CHK_SHIFT, !forward);
-			searchDialog_->addToHistory(searchDialog_->getFindText(), false);
+		if(command.execute() == 0)
 			return true;
-		} else if(messageOnFailure)
+		else if(messageOnFailure)
 			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	} catch(boost::regex_error& e) {
 		if(messageOnFailure)
@@ -1056,10 +1035,20 @@ void Alpha::setFont(const ::LOGFONTW& font) {
 	}
 
 	// INI ファイルに保存
-	writeStructureProfile(L"View", L"oFont.pLogfont", lf);
+	writeStructureProfile(L"View", L"Font.default", lf);
 
 	// 等幅 <-> 可変幅で表記を変える必要がある
 	updateStatusBar(SBP_POSITION);
+}
+
+/**
+ * ステータスバーの先頭のペインのテキストを設定する
+ * @param text 設定するテキスト。@c null だと既定のテキスト
+ * @param font フォント。@c null だと既定
+ */
+void Alpha::setStatusText(const wchar_t* text, HFONT font /* = 0 */) {
+	statusBar_.setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
+	statusBar_.setFont(font);
 }
 
 /// メニューの初期化
@@ -1477,50 +1466,6 @@ void Alpha::updateTitleBar() {
 //	title += L" - " IDS_APPFULLVERSION;
 	title += L" - " IDS_APPNAME;
 	getMainWindow().setWindowText(title.c_str());
-}
-
-/// @see ascension#searcher#IIncrementalSearcherListener#incrementalSearchAborted
-void Alpha::incrementalSearchAborted() {
-}
-
-/// @see ascension#searcher#IIncrementalSearcherListener#incrementalSearchCompleted
-void Alpha::incrementalSearchCompleted() {
-	setStatusText(0);
-	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)))
-		statusBar_.setFont(0);
-}
-
-/// @see ascension#searcher#IIncrementalSearcherListener#incrementalSearchPatternChanged
-void Alpha::incrementalSearchPatternChanged(searcher::IIncrementalSearcherListener::Result result) {
-	using namespace ascension::searcher;
-	const IncrementalSearcher& isearch = buffers_->getEditorSession().getIncrementalSearcher();
-	UINT msg;
-	const bool forward = isearch.getDirection() == FORWARD;
-
-	if(isearch.getPattern().empty()) {
-		msg = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
-		setStatusText(loadString(msg).c_str());
-		return;
-	} else if(result == IIncrementalSearcherListener::FOUND)
-		msg = forward ? MSG_STATUS__ISEARCH : MSG_STATUS__RISEARCH;
-	else {
-		if(result == IIncrementalSearcherListener::NOT_FOUND)
-			msg = forward ? MSG_STATUS__ISEARCH_NOT_FOUND : MSG_STATUS__RISEARCH_NOT_FOUND;
-		else
-			msg = forward ? MSG_STATUS__ISEARCH_BAD_PATTERN : MSG_STATUS__RISEARCH_BAD_PATTERN;
-		buffers_->getActiveView().beep();
-	}
-
-	String prompt = loadString(msg, MARGS % isearch.getPattern());
-	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
-	setStatusText(prompt.c_str());
-}
-
-/// @see ascension#searcher#IIncrementalSearcherListener#incrementalSearchStarted
-void Alpha::incrementalSearchStarted() {
-	// ステータスバーのフォントをエディタのものに一致させる
-	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)))
-		statusBar_.setFont(editorFont_);
 }
 /*
 /// @see IEditViewEventListener::onInvokeURILink

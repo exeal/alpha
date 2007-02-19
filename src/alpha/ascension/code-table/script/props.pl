@@ -233,57 +233,46 @@ sub processBinaryProperties() {
 
 # generate case-folding code
 sub processCaseFolding() {
-	open(INPUT, $directory . 'CaseFolding.txt')
+	my $input = new IO::File($directory . 'CaseFolding.txt')
 		or die "Input file '${directory}CaseFolding.txt' not found.\n";
 	print 'generating case-folding table...' . "\n";
 
-	my (@cased, @folded);
-	while(<INPUT>) {
-		next unless(/([\dA-Fa-f]+)\;\s+[CS]\;\s+([\dA-Fa-f]+)/);
-		push @cased, hex($1);
-		push @folded, hex($2);
+	my (@commonCased, @commonFolded, @simpleCased, @simpleFolded, @fullCased, @fullFolded);
+	while(<$input>) {
+		next unless(/^([\dA-F]{4});\s+([CSF]);\s+([^;]+)/);
+		if($2 eq 'C') {
+			push @commonCased, $1;
+			push @commonFolded, $3;
+		} elsif($2 eq 'S') {
+			push @simpleCased, $1;
+			push @simpleFolded, $3;
+		} else {
+			push @fullCased, $1;
+			push @fullFolded, 'L"\x' . join('\x', split(' ', $3)) . '"';
+		}
 	}
+	$input->close;
 
-	my ($i, $ucs2Count);
-	print OUTPUT_TABLE 'const Char CaseFolder::CASED_UCS2[] = {' . "\n";
-	for($i = 0; $i <= $#cased; ++$i) {
-		if($cased[$i] >= 0x10000) {$ucs2Count = $i; last;}
-		printf OUTPUT_TABLE '0x%X,', $cased[$i];
-	}
-	print OUTPUT_TABLE "};\n" . 'const CodePoint CaseFolder::CASED_UCS4[] = {' . "\n";
-	for(; $i <= $#cased; ++$i) {printf OUTPUT_TABLE '0x%X,', $cased[$i];}
-	print OUTPUT_TABLE "};\n" . 'const Char CaseFolder::FOLDED_UCS2[] = {' . "\n";
-	for($i = 0; $i <= $#folded; ++$i) {
-		last if($folded[$i] >= 0x10000);
-		printf OUTPUT_TABLE '0x%X,', $folded[$i];
-	}
-	print OUTPUT_TABLE "};\n" . 'const CodePoint CaseFolder::FOLDED_UCS4[] = {' . "\n";
-	for(; $i <= $#folded; ++$i) {printf OUTPUT_TABLE '0x%X,', $folded[$i];}
-	print OUTPUT_TABLE "};\n";
-
-	print OUTPUT_IMPL <<"END_OF_CASE_FOLDING";
-inline CodePoint CaseFolder::foldSimple(CodePoint cp) {
-	if(cp < 0x10000) {
-		const Char* const p = std::lower_bound(CASED_UCS2, CASED_UCS2 + $ucs2Count, static_cast<Char>(cp));
-		return (*p == cp) ? FOLDED_UCS2[p - CASED_UCS2] : cp;
-	} else {
-		const CodePoint* const p = std::lower_bound(CASED_UCS4, CASED_UCS4 + ($#cased + 1 - $ucs2Count), cp);
-		return (*p == cp) ? FOLDED_UCS4[p - CASED_UCS4] : cp;
-	}
-}
-END_OF_CASE_FOLDING
-
-	close INPUT;
+	print OUTPUT_TABLE
+		"const Char CaseFolder::COMMON_CASED[] = {\n0x", join(',0x', @commonCased),
+		"};\nconst Char CaseFolder::COMMON_FOLDED[] = {\n0x", join(',0x', @commonFolded),
+		"};\nconst Char CaseFolder::SIMPLE_CASED[] = {\n0x", join(',0x', @simpleCased),
+		"};\nconst Char CaseFolder::SIMPLE_FOLDED[] = {\n0x", join(',0x', @simpleFolded),
+		"};\nconst Char CaseFolder::FULL_CASED[] = {\n0x", join(',0x', @fullCased),
+		"};\nconst Char* CaseFolder::FULL_FOLDED[] = {", join(',', @fullFolded),
+		"};\nconst size_t CaseFolder::NUMBER_OF_COMMON_CASED = ", $#commonCased - 1,
+		";\nconst size_t CaseFolder::NUMBER_OF_SIMPLE_CASED = ", $#simpleCased - 1,
+		";\nconst size_t CaseFolder::NUMBER_OF_FULL_CASED = ", $#fullCased - 1, ";\n";
 }
 
 # generate NFD code
 sub processNFD() {
-	open(INPUT, $directory . 'UnicodeData.txt')
+	my $input = new IO::File($directory . 'UnicodeData.txt')
 		or die "Input file '${directory}UnicodeData.txt' not found.\n";
 	print 'generating NFD table...' . "\n";
 
 	my (@src, @nfd);
-	while(<INPUT>) {
+	while(<$input>) {
 		next unless(m/^([\dA-Fa-f]+)\;[^;]+\;[^;]+\;[^;]+\;[^;]+\;([\w\s]+)\;/);
 		push @src, hex($1);
 		my @pair = split(' ', $2);
@@ -299,7 +288,7 @@ sub processNFD() {
 			push @nfd, $pair[0] << 16 | $pair[1];
 		}
 	}
-	close INPUT;
+	$input->close;
 
 	my $i;
 	print BP_TABLE_DEFINITION 'static const CodePoint NFD_SRC[];';

@@ -15,21 +15,16 @@ namespace alpha {
 
 	namespace ui {
 		/// [指定行へ移動] ダイアログ
-		class GotoLineDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_GOTOLINE> {
-			// コンストラクタ
+		class GotoLineDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_GOTOLINE> {
 		public:
-			GotoLineDlg(Alpha& app);
+			GotoLineDialog(Alpha& app);
 
-			// メッセージハンドラ
 		protected:
 			bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
 			void	onOK();												// IDOK
-
-			// データメンバ
 		private:
 			Alpha& app_;
 			manah::windows::ui::UpDownCtrl lineNumberSpin_;
-
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_SPIN_LINENUMBER, lineNumberSpin_)
 			END_CONTROL_BINDING()

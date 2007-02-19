@@ -14,6 +14,7 @@ using namespace ascension::contentassist;
 using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
+using manah::AutoBuffer;
 
 namespace {
 	const length_t COMPLETION_MAX_TRACKBACK_CCH = 100;
@@ -48,20 +49,18 @@ void CompletionWindow::complete() {
 	if(sel != LB_ERR) {
 		Caret& caret = viewer_.getCaret();
 		Document& document = viewer_.getDocument();
-		const length_t len = getTextLen(sel);
-		Char* text = new Char[len + 1];
 		caret.clearSelection();
 
-		String precWord;
-		viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH, precWord);
-		getText(sel, text);
+		const String precedingID = viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH);
+		const length_t len = getTextLen(sel);
+		AutoBuffer<Char> text(new Char[len + 1]);
+		getText(sel, text.get());
 		viewer_.freeze(true);
 		document.beginSequentialEdit();
-		document.deleteText(Position(caret.getLineNumber(), caret.getColumnNumber() - precWord.length()), caret);
-		caret.moveTo(document.insertText(caret, text, text + len));
+		document.deleteText(Position(caret.getLineNumber(), caret.getColumnNumber() - precedingID.length()), caret);
+		caret.moveTo(document.insertText(caret, text.get(), text.get() + len));
 		document.endSequentialEdit();
 		viewer_.unfreeze(true);
-		delete[] text;
 	}
 	abort();
 }
@@ -171,9 +170,8 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 	const String& line = viewer_.getDocument().getLine(caret.getLineNumber());
 	caret.clearSelection();
 	contextStart_.line = caret.getLineNumber();
-	String precWord;
-	caret.getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH, precWord);
-	contextStart_.column = caret.getColumnNumber() - precWord.length();
+	const String precedingID = caret.getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH);
+	contextStart_.column = caret.getColumnNumber() - precedingID.length();
 	contextEnd_->moveTo(caret);
 	if(syntax.isIdentifierContinueCharacter(contextEnd_->getCodePoint()))
 		contextEnd_->wordEndNext();
@@ -207,27 +205,19 @@ bool CompletionWindow::updateListCursel() {
 	if(!isRunning())
 		throw logic_error("Completion is not running.");
 
-	String precWord;
-	viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH, precWord);
-
-	if(!precWord.empty()) {
-		const int found = findString(-1, precWord.c_str());
+	const String precedingID = viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH);
+	if(!precedingID.empty()) {
+		const int found = findString(-1, precedingID.c_str());
 		setCurSel((found != LB_ERR) ? found : -1);
 		if(found != LB_ERR) {
 			if(found != 0)	// そのままだと初回だけ選択項目が不可視になるみたい
 				setCurSel(found - 1);
 			setCurSel(found);
 			if(found != getCount() - 1) {
-				const size_t comparisonLength = min<size_t>(precWord.length(), getTextLen(found + 1));
-				manah::AutoBuffer<wchar_t> prevWord = unicode::CaseFolder::foldSimple(precWord.data(), precWord.data() + comparisonLength);
-				wchar_t* nextCand = new wchar_t[getTextLen(found + 1) + 1];
-
-				getText(found + 1, nextCand);
-				manah::AutoBuffer<wchar_t> nextCandFolded = unicode::CaseFolder::foldSimple(nextCand, nextCand + comparisonLength);
-				const bool unique = wmemcmp(prevWord.get(), nextCandFolded.get(), comparisonLength) != 0;
-
-				delete[] nextCand;
-				return unique;
+				const int nextLength = getTextLen(found + 1);
+				AutoBuffer<wchar_t> next(new wchar_t[nextLength + 1]);
+				getText(found + 1, next.get());
+				return unicode::CaseFolder::compare(precedingID.begin(), precedingID.end(), next.get(), next.get() + nextLength) == 0;
 			}
 		}
 	} else

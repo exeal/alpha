@@ -8,19 +8,19 @@
 #include "select-language-dialog.hpp"
 #include "../manah/com/common.hpp"	// ComPtr
 #include <comcat.h>					// ICatInformation
-using alpha::ui::SelectLanguageDlg;
+using alpha::ui::SelectLanguageDialog;
 using namespace std;
 
 
 /**
- *	コンストラクタ
- *	@param scriptName 処理中のスクリプトファイル
+ * コンストラクタ
+ * @param scriptName 処理中のスクリプトファイル
  */
-SelectLanguageDlg::SelectLanguageDlg(const basic_string<WCHAR>& scriptName) : scriptName_(scriptName) {
+SelectLanguageDialog::SelectLanguageDialog(const basic_string<WCHAR>& scriptName) : scriptName_(scriptName) {
 }
 
 /// @see Dialog#onCommand
-bool SelectLanguageDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool SelectLanguageDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LIST_SCRIPTENGINES && notifyCode == LBN_DBLCLK) {
 		onOK();
 		return true;
@@ -29,7 +29,7 @@ bool SelectLanguageDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool SelectLanguageDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool SelectLanguageDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	using manah::com::ComPtr;
@@ -67,7 +67,7 @@ bool SelectLanguageDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 }
 
 /// @see Dialog#onOK
-void SelectLanguageDlg::onOK() {
+void SelectLanguageDialog::onOK() {
 	wchar_t* selection = 0;
 	int sel = languageListbox_.getCurSel();
 	size_t len = languageListbox_.getTextLen(sel);
