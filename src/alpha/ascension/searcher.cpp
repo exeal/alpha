@@ -3,493 +3,205 @@
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
  * @date 2006-2007
- *
- * Implementation of text search objects.
- *
- * Ascensio implements regular expression search with Boost.Regex (http://www.boost.org/libs/regex/) and 
- * implements Japanese direct search with C/Migemo (http://www.kaoriya.net/#CMigemo).
- * If you don't have these libraries, define the symbol @c ASCENSION_NO_* in config.hpp.
- *
- * <h3>Regular expression search (Boost.Regex)</h3>
- *
- * Although we use Boost.Regex to implement regular expression search, it is subject to change.
- * However, the header file (searcher.hpp) does not refer this library and the clients don't know that Ascension uses Boost.Regex.
- * All exceptions thrown by Boost.Regex do not propagate to the clients.
- *
- * <h3>Japanese direct search (C/Migemo)</h3>
- *
- * Japanese direct search is available only when the regular expression is available.
- *
- * <h3>To compile without the regular expression search features</h3>
- *
- * To disable the regular expression search, define @c ASCENSION_NO_REGEX.
- * To disable Japanese direct search, define @c ASCENSION_NO_MIGEMO.
- * Call @c TextSearcher#isRegexAvailable or @c TextSearcher#isMigemoAvailable to check if these features are availble at runtime.
- * These methods always same values in a process.
- */
-
-/*
-	実装メモ : 大文字小文字を区別しないパターンマッチとケースフォールディング (2006.12.03)
-	--
-	大文字小文字を区別しない文字列の比較を行うには、本来は両方の文字列をケースフォールドした上で
-	バイナリ比較を行うのが正しい手順であるが、単純 (CaseFolding.txt における 'S') なケースフォールディングでは
-	文字幅が変わらないため、以下のように文字同士を比較するタイミングで変換するコーディングもありうる:
-
-		extern Char c1, c2;
-		toCasefolded(c1) == toCasefolded(c2)
-
-	このようにすると unicode::StringFolder を使わずにすむので、処理が高速化でき、空間も節約できる。
-	しかし、このようなアプローチはあまり使わないほうが良いと思う。
-	そのため、高機能な TextSearcher クラスではこのアプローチは使用せず、他の軽量なパターンマッチングメカニズム
-	(例えば、正規表現を使った字句解析器) などに限って使用することにした。
-
-	大文字小文字を区別しない正規表現であれば、regex::RegexTraits クラスが実装している。
-	ただし文字幅の変わるケースフォールディングはサポートしていない。
-	これは Boost の正規表現エンジンが常に 1 文字単位の比較を行うことに起因している。
  */
 
 #include "stdafx.h"
 #include "searcher.hpp"
 #include "break-iterator.hpp"
-#include "viewer.hpp"
 #ifndef ASCENSION_NO_REGEX
 #include "regex.hpp"
 #endif /* !ASCENSION_NO_REGEX */
 
 using namespace ascension;
-using namespace ascension::rules;
 using namespace ascension::searcher;
 using namespace ascension::text;
 using namespace ascension::unicode;
 using namespace std;
 
-
-// private helpers //////////////////////////////////////////////////////////
-
-namespace {
-	/// Implementation of UTF-16 BM search.
-	class BMSearcher {
-	public:
-		/**
-		 * Constructor.
-		 * @param direction the direction to search
-		 * @param first the start of the search pattern
-		 * @param last the end of the search pattern. must be greater than @a first
-		 * @param caseFolding the case folding type for case-insensitive search. can't be @c unicode#CASEFOLDING_UNICODE_FULL
-		 */
-		BMSearcher(Direction direction, const Char* first, const Char* last, const CaseFoldings& caseFolding) throw() {
-			compile(direction, first, last, caseFolding);
-		}
-		/**
-		 * Compiles the pattern.
-		 * @param direction the direction to search
-		 * @param first the start of the search pattern
-		 * @param last the end of the search pattern. must be greater than @a first
-		 * @param caseFolding the case folding type for case-insensitive search. can't be @c unicode#CASEFOLDING_UNICODE_FULL
-		 */
-		void compile(Direction direction, const Char* first, const Char* last, const CaseFoldings& caseFolding) throw() {
-			assert(first != 0 && last != 0 && first < last && caseFolding != CASEFOLDING_UNICODE_FULL);
-			direction_ = direction;
-			caseFolding_ = caseFolding;
-			patternFirst_ = first;
-			patternLast_ = last;
-			fill(lastOccurences_, endof(lastOccurences_), last - first);
-			if(direction == FORWARD) {
-				for(const Char* p = first; p < last; ++p)
-					lastOccurences_[fold(*p)] = last - p - 1;
-			} else {
-				for(const Char* p = last - 1; ; --p) {
-					lastOccurences_[fold(*p)] = p - first;
-					if(p == first)
-						break;
-				}
-			}
-		}
-		/// Returns the direction to search.
-		Direction getDirection() const throw() {return direction_;}
-		/// Returns the case folding type.
-		const CaseFoldings& getCaseFoldingType() const throw() {return caseFolding_;}
-		/**
-		 * Searches in the specified target string.
-		 * @param first the start of the target string
-		 * @param last the end of the target string. must be greater than @a first
-		 * @return the pointer to matched position. @c null if the pattern not found
-		 */
-		template<class Iterator>
-		Iterator search(Iterator first, Iterator last) const {
-			if(direction_ == FORWARD) {
-				Iterator target(first);
-				advance(target, (patternLast_ - patternFirst_) - 1);
-				for(const Char* pattern; target < last; advance(target, max<length_t>(lastOccurences_[fold(*target)], patternLast_ - pattern))) {
-					for(pattern = patternLast_ - 1; fold(*target) == fold(*pattern); --target, --pattern) {
-						if(pattern == patternFirst_)
-							return target;
-					}
-				}
-			} else {
-				iterator_traits<Iterator>::difference_type skipLength;
-				Iterator target(last);
-				advance(target, patternFirst_ - patternLast_);
-				for(const Char* pattern; ; advance(target, -skipLength)) {
-					for(pattern = patternFirst_; fold(*target) == fold(*pattern); ++target, ++pattern) {
-						if(pattern == patternLast_ - 1) {
-							advance(target, patternFirst_ - patternLast_ + 1);
-							return target;
-						}
-					}
-					skipLength = max(lastOccurences_[fold(*target)], pattern - patternFirst_ + 1);
-					if(skipLength > distance(first, target))
-						break;
-				}
-			}
-			return 0;
-		}
-	private:
-		Char fold(Char ch) const throw() {	// TODO: handle as UCS-4.
-			switch(caseFolding_) {
-			case CASEFOLDING_ASCII:				return CaseFolder::foldASCII(ch);
-			case CASEFOLDING_UNICODE_SIMPLE:	return CaseFolder::foldSimple(ch);
-			default:							return ch;
-			}
-		}
-	private:
-		Direction direction_;
-		CaseFoldings caseFolding_;
-		const Char* patternFirst_;
-		const Char* patternLast_;
-		ptrdiff_t lastOccurences_[65536];
-	};
-} // namespace @0
+/**
+ * @namespace ascension::searcher
+ * Implementation of text search objects.
+ *
+ * @c TextSearcher class is the most fundamental interface for text search. It supports text match,
+ * search, and replacement features, and also holds the search options. @c DocumentSearcher is the
+ * variant of @c TextSearcher for search in the document.
+ *
+ * Ascension provides following text search objects:
+ *
+ * - Literal search (normal search)
+ * - Regular expression search using <a href="http://www.boost.org/libs/regex/">Boost.Regex</a>
+ * - Japanese direct search using <a href="http://www.kaoriya.net/#CMigemo">C/Migemo</a>
+ *
+ * <h3>Regular expression search (Boost.Regex)</h3>
+ *
+ * Perl-like regular expression match, search, and replacement are available unless the configuration
+ * symbol @c ASCENSION_NO_REGEX. For the details, see the description of @c regex#Pattern class.
+ *
+ * <h3>Japanese direct search (C/Migemo)</h3>
+ *
+ * Japanese direct search is available if all of the following conditions are true:
+ *
+ * - Regular expressions are available
+ * - The configuration symbol @c ASCENSION_NO_MIGEMO
+ * - Succeeded to load C/Migemo library
+ *
+ * For the detailes, see the description of @c regex#MigemoPattern class.
+ */
 
 
-// concrete pattern matchers ////////////////////////////////////////////////
+// LiteralPattern ///////////////////////////////////////////////////////////
 
-namespace {
-	inline bool checkWordBoundary(const MatchTarget& target,
-			const Char* matchedFirst, const Char* matchedLast, const IdentifierSyntax& ctypes) {
-		CStringCharacterIterator i(matchedFirst, target.entireFirst, target.entireLast);
-		WordBreakIterator<CStringCharacterIterator> ii(i, AbstractWordBreakIterator::START_OF_SEGMENT, ctypes);
-		if(ii.isBoundary(i)) {
-			CStringCharacterIterator j(matchedLast, target.entireFirst, target.entireLast);
-			WordBreakIterator<CStringCharacterIterator> jj(j, AbstractWordBreakIterator::END_OF_SEGMENT, ctypes);
-			if(jj.isBoundary(j))
-				return true;
+/**
+ * Constructor.
+ * @param first the start of the search pattern
+ * @param last the end of the search pattern
+ * @param direction the direction to search
+ * @param ignoreCase set true to perform case-insensitive search
+ * @param collator the collator or @c null if not needed
+ * @throw std#invalid_argument @a first and/or @a last are invalid
+ */
+LiteralPattern::LiteralPattern(const Char* first, const Char* last, Direction direction, bool ignoreCase /* = false */
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+		, const Collator* collator /* = 0 */
+#endif /* !ASCENSION_NO_UNICODE_COLLATION */
+) {
+	compile(first, last, direction, ignoreCase
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+		, collator
+#endif /* !ASCENSION_NO_UNICODE_COLLATION */
+	);
+}
+
+/// Destructor.
+LiteralPattern::~LiteralPattern() throw() {
+	delete[] first_;
+}
+
+/**
+ * Compiles the pattern.
+ * @param first the start of the search pattern
+ * @param last the end of the search pattern
+ * @param direction the direction to search
+ * @param ignoreCase set true to perform case-insensitive search
+ * @param collator the collator or @c null if not needed
+ * @throw std#invalid_argument @a first and/or @a last are invalid
+ */
+void LiteralPattern::compile(const Char* first, const Char* last, Direction direction, bool ignoreCase /* = false */
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+		, const Collator* collator /* = 0 */
+#endif /* !ASCENSION_NO_UNICODE_COLLATION */
+) {
+	if(first == 0 || last == 0 || first >= last)
+		throw invalid_argument("invalid pattern input.");
+	direction_ = direction;
+	caseSensitive_ = !ignoreCase;
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+	collator_ = collator;
+#endif /* !ASCENSION_NO_UNICODE_COLLATION */
+	// build pseudo collation elements
+	first_ = last_ = new int[last - first];
+	for(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last); !i.isLast(); ++i, ++last_)
+		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
+	// build BM shift table
+	fill(lastOccurences_, endof(lastOccurences_), last_ - first_);
+	if(direction == FORWARD) {
+		for(const int* e = first_; e < last_; ++e)
+			lastOccurences_[*e] = last_ - e - 1;
+	} else {
+		for(const int* e = last_ - 1; ; --e) {
+			lastOccurences_[*e] = e - first_;
+			if(e == first_)
+				break;
 		}
+	}
+}
+
+/**
+ * Returns true if the pattern matches the specified character sequence.
+ * @param first the start of the character sequence to match
+ * @param first the end of the character sequence to match
+ * @return true if matched
+ */
+bool LiteralPattern::matches(const CharacterIterator& first, const CharacterIterator& last) const {
+	if(last - first != last_ - first_)
 		return false;
+	auto_ptr<CharacterIterator> i(first.clone());
+	for(const int* e = first_; e < last_; ++e, ++*i) {
+		if(*e != (caseSensitive_ ? **i : CaseFolder::fold(**i)))
+			return false;
 	}
+	return true;
+}
 
-	class LiteralMatcher : virtual public ascension::searcher::internal::IPatternMatcher {
-	public:
-		LiteralMatcher(const Char* first, const Char* last, const CaseFoldings& caseFolding)
-			: pattern_(first, last), engine_(new BMSearcher(FORWARD, first, last, caseFolding)) {}
-		const String& getPattern() const throw() {return pattern_;}
-		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
-			const length_t len = target.last - target.first;
-			if(len != pattern_.length())
-				return false;
-			switch(engine_->getCaseFoldingType()) {
-			case CASEFOLDING_ASCII:
-				if(!CaseFolder::compare<CASEFOLDING_ASCII>(target.first, pattern_.data(), pattern_.length()))
-					return false;
-				break;
-			case CASEFOLDING_UNICODE_SIMPLE:
-				if(!CaseFolder::compare<CASEFOLDING_UNICODE_SIMPLE>(target.first, pattern_.data(), pattern_.length()))
-					return false;
-				break;
-			default:
-				if(!CaseFolder::compare<CASEFOLDING_NONE>(target.first, pattern_.data(), pattern_.length()))
-					return false;
-				break;
-			}
-			return ctypes == 0 || checkWordBoundary(target, target.first, target.last, *ctypes);
-		}
-		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {return matches(target, ctypes);}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
-			if(direction != engine_->getDirection())
-				const_cast<LiteralMatcher*>(this)->engine_.reset(
-					new BMSearcher(direction, pattern_.data(), pattern_.data() + pattern_.length(), engine_->getCaseFoldingType()));
-			const Char* p = target.first;
-			while(p < target.last && (result.first = engine_->search(p, target.last))) {
-				result.last = result.first + pattern_.length();
-				if(ctypes == 0 || checkWordBoundary(target, result.first, result.last, *ctypes))
+/**
+ * Searches in the specified target string.
+ * @param first the start of the target string
+ * @param last the end of the target string. must be greater than @a first
+ * @return true if the pattern was found
+ */
+bool LiteralPattern::search(const CharacterIterator& first, const CharacterIterator& last,
+		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
+	// TODO: this implementation is just scrath.
+	if(direction_ == FORWARD) {
+		auto_ptr<CharacterIterator> target(first.clone());
+		advance(*target, last_ - first_ - 1);
+		for(const int* pattern; *target < last;
+				advance(*target, max<length_t>(lastOccurences_[caseSensitive_ ? **target : CaseFolder::fold(**target)], last_ - pattern))) {
+			for(pattern = last_ - 1;
+				(caseSensitive_ ? **target : CaseFolder::fold(**target)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				--*target, --pattern) {
+				if(pattern == first_) {
+					matchedFirst = target;
+					matchedLast = matchedFirst->clone();
+					advance(*matchedLast, last_ - first_);
 					return true;
-				p = surrogates::next(p, target.last);
-			}
-			return false;
-		}
-	private:
-		const String pattern_;
-		std::auto_ptr<BMSearcher> engine_;
-	};
-
-#ifndef ASCENSION_NO_REGEX
-	auto_ptr<regex::MatchResult<const Char*> > searchRegexPattern(
-			const regex::Pattern& pattern, const MatchTarget& target, Direction direction, const IdentifierSyntax* ctypes) {
-		auto_ptr<regex::MatchResult<const Char*> > result;
-		regex::Pattern::MatchOptions flags = regex::Pattern::NORMAL;
-
-		if(direction == FORWARD) {	// 前方検索
-			const Char* p = target.first;	// 検索開始位置
-			if(target.first != target.entireFirst)
-				flags |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-			if(target.last != target.entireLast)
-				flags |= regex::Pattern::TARGET_LAST_IS_NOT_EOL;
-			do {
-				result = pattern.search(p, target.entireLast, flags);
-				if(result.get() == 0
-						|| ctypes == 0 || checkWordBoundary(target, result->getStart(), result->getEnd(), *ctypes))	// 単語単位で探す場合
-					break;
-				p = result->getEnd();	// 次の検索開始位置へ
-				flags |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-			} while(p < target.last);
-		} else {	// 後方検索
-			// マッチ対象先頭でのみマッチするようにする
-			flags |= regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST;
-			// 見つかるまで行頭にマッチ対象を拡大し続ける
-			for(const Char* p = surrogates::previous(target.entireFirst, target.last);
-					p >= target.first; p = surrogates::previous(target.entireFirst, p)) {
-				if(p == target.entireFirst)
-					flags |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-				result = pattern.search(p, target.entireLast, flags);
-				if(result.get() == 0) {
-					if(p <= target.first)
-						break;
-					continue;
 				}
-				if(ctypes == 0 || checkWordBoundary(target, result->getStart(), result->getEnd(), *ctypes))	// 単語単位で探す場合
-					break;
 			}
 		}
-		return result;
-	}
-
-	class RegexMatcher : virtual public ascension::searcher::internal::IPatternMatcher {
-	public:
-		RegexMatcher(const Char* first, const Char* last, bool ignoreCase)
-			: pattern_(first, last, ignoreCase ? regex::Pattern::CASE_INSENSITIVE : regex::Pattern::NORMAL) {}
-		const String& getPattern() const throw() {static String p; p.assign(pattern_.getPatternString()); return p;}
-		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
-			result_ = pattern_.matches(target.first, target.last,
-				(target.first == target.entireFirst ? 0 : regex::Pattern::TARGET_FIRST_IS_NOT_BOL)
-				|| (target.last == target.entireLast ? 0 : regex::Pattern::TARGET_LAST_IS_NOT_EOL));
-			if(result_.get() != 0 && (ctypes == 0 || checkWordBoundary(target, result_->getStart(), result_->getEnd(), *ctypes)))
-				return true;
-			result_.reset(0);
-			return false;
-		}
-		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {
-			if(!matches(target, ctypes))
-				return false;
-			assert(result_.get() != 0);
-			replacement.assign(result_->replace(replacement.data(), replacement.data() + replacement.length()));
-			return true;
-		}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
-			result_ = searchRegexPattern(pattern_, target, direction, ctypes);
-			if(result_.get() == 0)
-				return false;
-			result.first = result_->getStart();
-			result.last = result_->getEnd();
-			return true;
-		}
-	private:
-		regex::Pattern pattern_;
-		mutable auto_ptr<regex::MatchResult<const Char*> > result_;
-	};
-#endif /* !ASCENSION_NO_REGEX */
-
-#ifndef ASCENSION_NO_MIGEMO
-	class MigemoMatcher : virtual public ascension::searcher::internal::IPatternMatcher {
-	public:
-		MigemoMatcher(const Char* first, const Char* last, bool ignoreCase)
-			: pattern_(regex::MigemoPattern::create(first, last, ignoreCase)) {if(pattern_.get() == 0) throw runtime_error("Migemo is not installed.");}
-		const String& getPattern() const throw() {static String p; p.assign(pattern_->getPatternString()); return p;} 
-		bool matches(const MatchTarget& target, const IdentifierSyntax* ctypes) const {
-			auto_ptr<regex::MatchResult<const Char*> > result(pattern_->matches(target.first, target.last,
-				(target.first == target.entireFirst ? 0 : regex::Pattern::TARGET_FIRST_IS_NOT_BOL)
-				|| (target.last == target.entireLast ? 0 : regex::Pattern::TARGET_LAST_IS_NOT_EOL)));
-			return result.get() != 0 && (ctypes == 0 || checkWordBoundary(target, result->getStart(), result->getEnd(), *ctypes));
-		}
-		bool replace(const MatchTarget& target, String& replacement, const IdentifierSyntax* ctypes) const {return matches(target, ctypes);}
-		bool search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax* ctypes) const {
-			auto_ptr<regex::MatchResult<const Char*> > r(searchRegexPattern(*pattern_, target, direction, ctypes));
-			if(r.get() == 0)
-				return false;
-			result.first = r->getStart();
-			result.last = r->getEnd();
-			return true;
-		}
-	private:
-		std::auto_ptr<regex::MigemoPattern> pattern_;
-	};
-#endif /* !ASCENSION_NO_MIGEMO */
-
-} // namespace @0
-
-
-// private helpers //////////////////////////////////////////////////////////
-
-namespace {
-	/// 検索対象文字列走査イテレータ
-	class FoldedSearchTargetIterator : public iterator<bidirectional_iterator_tag, Char> {
-	public:
-	private:
-		const Document& document_;
-		length_t line_, pos_;
-		String foldedContent_;
-		vector<length_t> shortendPositions_;
-	};
-} // namespace @0
-
-namespace {	// フォルダの定義
-	const CodePoint	SKIPPED = 0xFFFFFFFF;
-	template<int> class CharFolder {
-		public:	static CodePoint fold(CodePoint cp);
-	};
-
-	const Char smallFormsFoldingTable[] = {	// for Folder<FO_SMALL_FORMS>
-		0x002C, 0x3001, 0x002E, 0x003B, 0x003A, 0x003F, 0x0021, 0x2014,
-		0x0028, 0x0029, 0x007B, 0x007D, 0x3014, 0x3015, 0x0023, 0x0026,
-		0x002A, 0x002B, 0x002D, 0x003C, 0x003E, 0x003D, 0x005C, 0x0024,
-		0x0025, 0x0040,
-	};
-
-	template<> inline CodePoint CharFolder<foldingoptions::CANONICAL_DUPLICATES>::fold(CodePoint cp) {
-		switch(cp) {
-		case 0x0374:	return 0x02B9;	// Greek Numeral Sign -> Modifier Letter Prime
-		case 0x037E:	return 0x003B;	// Greek Question Mark -> Semicolon
-		case 0x0387:	return 0x00B7;	// Greek Ano Teleia -> Middle Dot
-		case 0x1FBE:	return 0x03B9;	// Greek Prosgegrammeni -> Greek Small Letter Iota
-		case 0x1FEF:	return 0x0060;	// Greek Varia -> Grave Accent
-		case 0x1FFD:	return 0x00B4;	// Greek Oxia -> Acute Accent
-		case 0x2000:	return 0x2002;	// En Quad -> En Space
-		case 0x2001:	return 0x2003;	// Em Quad -> Em Space
-		case 0x2126:	return 0x03A9;	// Ohm Sign -> Greek Capital Letter Omega
-		case 0x212A:	return 0x004B;	// Kelvin Sign -> Latin Capital Letter K
-		case 0x212B:	return 0x00C5;	// Angstrom Sign -> Latin Capital Letter A With Ring Above
-		case 0x2329:	return 0x3008;	// Left-Pointing Angle Bracket -> Left Angle Bracket
-		case 0x232A:	return 0x3009;	// Right-Pointing Angle Bracket -> Right Angle Bracket
-		default:		return cp;
+	} else {
+		ptrdiff_t skipLength;
+		auto_ptr<CharacterIterator> target(last.clone());
+		advance(*target, first_ - last_);
+		for(const int* pattern; ; advance(*target, -skipLength)) {
+			for(pattern = first_;
+					(caseSensitive_ ? **target : CaseFolder::fold(**target)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					++*target, ++pattern) {
+				if(pattern == last_ - 1) {
+					advance(*target, first_ - last_ + 1);
+					matchedFirst = target;
+					matchedLast = matchedFirst->clone();
+					advance(*matchedLast, last_ - first_);
+					return true;
+				}
+			}
+			skipLength = max(lastOccurences_[caseSensitive_ ? **target : CaseFolder::fold(**target)], pattern - first_ + 1);
+			if(skipLength > *target - first)
+				break;
 		}
 	}
-	template<> inline CodePoint CharFolder<foldingoptions::DASHES>::fold(CodePoint cp) {
-		return GeneralCategory::of(cp) == GeneralCategory::PUNCTUATION_DASH ? 0x002D : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::GREEK_LETTERFORMS>::fold(CodePoint cp) {
-		switch(cp) {
-		case 0x03D0:	return 0x03B2;	// Greek Beta Symbol -> Greek Small Letter Beta
-		case 0x03D1:	return 0x03B8;	// Greek Theta Symbol -> Greek Small Letter Theta
-		case 0x03D2:	return 0x03A5;	// Greek Upsilon With Hook Symbol -> Greek Capital Letter Upsilon
-		case 0x03D5:	return 0x03C6;	// Greek Phi Symbol -> Greek Small Letter Phi
-		case 0x03D6:	return 0x03C0;	// Greek Pi Symbol -> Greek Small Letter Pi
-		case 0x03F0:	return 0x03BA;	// Greek Kappa Symbol -> Greek Small Letter Kappa
-		case 0x03F1:	return 0x03C1;	// Greek Rho Symbol -> Greek Small Letter Rho
-		case 0x03F2:	return 0x03C2;	// Greek Lunate Sigma Symbol -> Greek Small Letter Final Sigma
-		case 0x03F4:	return 0x0398;	// Greek Capital Theta Symbol -> Greek Capital Letter Theta
-		case 0x03F5:	return 0x03B5;	// Greek Lunate Epsilon Symbol -> Greek Small Letter Epsilon
-		default:		return cp;
-		}
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::HEBREW_ALTERNATES>::fold(CodePoint cp) {
-		if(cp >= 0xFB20 && cp <= 0xFB28) {
-			static const wchar_t hebrewAlternatives[] = {
-				0x05E2, 0x05D0, 0x05D3, 0x05D4, 0x05DB, 0x05DC, 0x05DD, 0x05E8, 0x05EA
-			};
-			return hebrewAlternatives[cp - 0xFB20];
-		}
-		return cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::OVERLINE>::fold(CodePoint cp) {
-		return (cp >= 0xFE49 && cp <= 0xFE4C) ? 0x203E : cp;
-	}
-//	template<> inline CodePoint CharFolder<foldingoptions::NATIVE_DIGIT>::fold(CodePoint cp) {
-//		return CharacterFolder::foldDigit(cp);
-//	}
-	template<> inline CodePoint CharFolder<foldingoptions::NOBREAK>::fold(CodePoint cp) {
-		switch(cp) {
-		case 0x00A0:	return 0x0020;	// No-Break Space -> Space
-		case 0x0F0C:	return 0x0F0D;	// Tibetan Mark Delimiter Tsheg Bstar -> Tibetan Mark Shad
-		case 0x2007:	return 0x0020;	// Figure Space -> Space
-		case 0x2011:	return 0x2010;	// Non-Breaking Hyphen -> Hyphen
-		case 0x202F:	return 0x0020;	// Narrow No-Break Space -> Space
-		default:		return cp;
-		}
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SPACE>::fold(CodePoint cp) {
-		return (GeneralCategory::of(cp) == GeneralCategory::SEPARATOR_SPACE) ? 0x0020 : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SMALL_FORMS>::fold(CodePoint cp) {
-		return (cp >= 0xFE50 && cp <= 0xFE6B) ? smallFormsFoldingTable[cp - 0xFE50] : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::UNDERLINE>::fold(CodePoint cp) {
-		return (cp == 0x2017 || (cp >= 0xFE4D && cp <= 0xFE4F)) ? 0x005E : cp;
-	}
-
-	template<> inline CodePoint CharFolder<foldingoptions::KANA>::fold(CodePoint cp) {
-		// 片仮名に統一
-		return ((cp >= 0x30A1 && cp <= 0x30F6) || cp == 0x30FD || cp == 0x30FE) ? cp - 0x0060 : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::LETTER_FORMS>::fold(CodePoint cp) {
-		// based on LetterformFolding.txt obtained from UTR #30
-		switch(cp) {
-		case 0x017F:	return 0x0073;	// Latin Small Letter Long S -> Latin Small Letter S
-		case 0x03D0:	return 0x03B2;	// Greek Beta Symbol -> Greek Small Letter Beta
-		case 0x03D1:	return 0x03B8;	// Greek Theta Symbol -> Greek Small Letter Theta
-		case 0x03D2:	return 0x03A5;	// Greek Upsilon With Hook Symbol -> Greek Capital Letter Upsilon
-		case 0x03D5:	return 0x03C6;	// Greek Phi Symbol -> Greek Small Letter Phi
-		case 0x03D6:	return 0x03C0;	// Greek Pi Symbol -> Greek Small Letter Pi
-		case 0x03F0:	return 0x03BA;	// Greek Kappa Symbol -> Greek Small Letter Kappa
-		case 0x03F1:	return 0x03C1;	// Greek Rho Symbol -> Greek Small Letter Rho
-		case 0x03F2:	return 0x03C2;	// Greek Lunate Sigma Symbol -> Greek Small Letter Final Sigma
-		case 0x03F4:	return 0x0398;	// Greek Capital Theta Symbol -> Greek Capital Letter Theta
-		case 0x03F5:	return 0x03B5;	// Greek Lunate Epsilon Symbol -> Greek Small Letter Epsilon
-		case 0x03F9:	return 0x03A3;	// Greek Capital Lunate Sigma Symbol -> Greek Capital Letter Sigma
-		case 0x2107:	return 0x0190;	// Euler Constant -> Latin Capital Letter Open E
-		case 0x2135:	return 0x05D0;	// Alef Symbol -> Hebrew Letter Alef
-		case 0x2136:	return 0x05D1;	// Bet Symbol -> Hebrew Letter Bet
-		case 0x2137:	return 0x05D2;	// Gimel Symbol -> Hebrew Letter Gimel
-		case 0x2138:	return 0x05D3;	// Dalet Symbol -> Hebrew Letter Dalet
-		default:		return cp;
-		}
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::WIDTH>::fold(CodePoint cp) {
-		static Char buffer[2];
-		if(cp >= 0x10000)
-			return cp;
-		if(::LCMapStringW(LOCALE_USER_DEFAULT, LCMAP_HALFWIDTH, reinterpret_cast<WCHAR*>(&cp), 1, buffer, 1) != 0)
-			return buffer[0];
-		return cp;
-		//return toHalfWidth(ch);	// 半角カナは対象外
-	}
-
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_CONTROLS>::fold(CodePoint cp) {
-		const int gc = GeneralCategory::of(cp);
-		return (gc == GeneralCategory::OTHER_CONTROL || gc == GeneralCategory::OTHER_FORMAT) ? SKIPPED : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_DIACRITICS>::fold(CodePoint cp) {
-		return BinaryProperty::is<BinaryProperty::DIACRITIC>(cp) ? SKIPPED : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_KASHIDA>::fold(CodePoint cp) {
-		// does not consider <U+FE71: Arabic Tatweel With Fathatan Above> like IE6...
-		return (cp == 0x0640) ? SKIPPED : cp;	// Arabic Tatweel
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_PUNCTUATIONS>::fold(CodePoint cp) {
-		return GeneralCategory::is<GeneralCategory::PUNCTUATION>(cp) ? SKIPPED : cp;
-	}
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_SYMBOLS>::fold(CodePoint cp) {
-		return GeneralCategory::is<GeneralCategory::SYMBOL>(cp) ? SKIPPED : cp;
-	}
-//	template<> inline CodePoint CharFolder<FoldingOptions::SKIP_VOWELS>::fold(CodePoint cp) {}
-	template<> inline CodePoint CharFolder<foldingoptions::SKIP_WHITESPACES>::fold(CodePoint cp) {
-		return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp) ? SKIPPED : cp;
-	}
-} // namespace @0
+	return false;
+}
 
 
 // TextSearcher /////////////////////////////////////////////////////////////
 
+namespace {
+	inline void setupRegexRegionalMatchOptions(const DocumentCharacterIterator& first,
+			const DocumentCharacterIterator& last, regex::Pattern::MatchOptions& options) throw() {
+		options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, first.tell() != first.getDocument()->getStartPosition(false));
+		options.set(regex::Pattern::TARGET_LAST_IS_NOT_EOB, last.tell() != last.getDocument()->getEndPosition(false));
+		options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, first.tell().column != 0);
+		options.set(regex::Pattern::TARGET_LAST_IS_NOT_EOL, last.tell().column != last.getDocument()->getLineLength(last.tell().line));
+	}
+}
+
 /// Default constructor.
-TextSearcher::TextSearcher() : changedFromLast_(false) {
+TextSearcher::TextSearcher() : 
+#ifndef ASCENSION_NO_REGEX
+		lastResult_(0),
+#endif /* !ASCENSION_NO_REGEX */
+		maximumNumberOfStoredStrings_(DEFAULT_NUMBER_OF_STORED_STRINGS) {
+	pattern_.literal = 0;
 }
 
 /// Destructor.
@@ -497,35 +209,78 @@ TextSearcher::~TextSearcher() {
 	clearPatternCache();
 }
 
+inline bool TextSearcher::checkBoundary(const DocumentCharacterIterator& first, const DocumentCharacterIterator& last) const {
+	switch(options_.wholeMatch) {
+		case SearchOptions::GRAPHEME_CLUSTER: {
+			const GraphemeBreakIterator<DocumentCharacterIterator> bi(first);
+			return bi.isBoundary(first) && bi.isBoundary(last);
+		} case SearchOptions::WORD: {
+			const Document& document = *first.getDocument();
+			const WordBreakIterator<DocumentCharacterIterator> bi1(first, AbstractWordBreakIterator::START_OF_SEGMENT,
+				document.getContentTypeInformation().getIdentifierSyntax(document.getPartitioner().getContentType(first.tell())));
+			if(!bi1.isBoundary(first))
+				return false;
+			const WordBreakIterator<DocumentCharacterIterator> bi2(last, AbstractWordBreakIterator::END_OF_SEGMENT,
+				document.getContentTypeInformation().getIdentifierSyntax(document.getPartitioner().getContentType(last.tell())));
+			return bi2.isBoundary(last);
+		}
+	}
+	return true;
+}
+
 /// Clears the cache of the search pattern.
 void TextSearcher::clearPatternCache() {
-	matcher_.reset(0);
+#ifndef ASCENSION_NO_REGEX
+	delete lastResult_;
+	lastResult_ = 0;
+#endif /* !ASCENSION_NO_REGEX */
+	switch(options_.type) {
+	case LITERAL:
+		delete pattern_.literal;
+		pattern_.literal = 0;
+		break;
+#ifndef ASCENSION_NO_REGEX
+	case REGULAR_EXPRESSION:
+#ifndef ASCENSION_NO_MIGEMO
+	case MIGEMO:
+#endif /* !ASCENSION_NO_MIGEMO */
+		delete pattern_.regex;
+		pattern_.regex = 0;
+		break;
+#endif /* !ASCENSION_NO_REGEX */
+	}
 }
 
 /**
  * Compiles the regular expression pattern.
- * @return succeeded or not
+ * @param direction the direction to search (this is used by only @c LiteralPattern)
+ * @throw std#logic_error the pattern is not specified
  */
-void TextSearcher::compilePattern() const throw() {
+void TextSearcher::compilePattern(Direction direction) const {
+	if(storedPatterns_.empty() && temporaryPattern_.empty())
+		throw logic_error("pattern is not set.");
 	TextSearcher& self = *const_cast<TextSearcher*>(this);
-	if(matcher_.get() != 0)
-		return;
+	const String& p = temporaryPattern_.empty() ? storedPatterns_.front() : temporaryPattern_;
+	switch(options_.type) {
+	case LITERAL:
+		if(self.pattern_.literal == 0)
+			self.pattern_.literal = new LiteralPattern(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
+		break;
 #ifndef ASCENSION_NO_REGEX
-	else if(options_.type == REGULAR_EXPRESSION)
-		self.matcher_.reset(new RegexMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
-				options_.foldings.caseFolding : CASEFOLDING_NONE));
-#endif /* !ASCENSION_NO_REGEX */
+	case REGULAR_EXPRESSION:
+		if(self.pattern_.regex == 0)
+			self.pattern_.regex = new regex::Pattern(p.data(), p.data() + p.length(),
+				options_.caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE);
+		break;
 #ifndef ASCENSION_NO_MIGEMO
-	else if(options_.type == MIGEMO)
-		self.matcher_.reset(new MigemoMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
-				options_.foldings.caseFolding : CASEFOLDING_NONE));
+	case MIGEMO:
+		if(self.pattern_.regex == 0)
+			self.pattern_.regex = regex::MigemoPattern::create(p.data(), p.data() + p.length(), !options_.caseSensitive).release();
 #endif /* !ASCENSION_NO_MIGEMO */
-	else
-		self.matcher_.reset(new LiteralMatcher(patternString_.data(), patternString_.data() + patternString_.length(),
-			((options_.foldings.caseFolding & CASEFOLDING_TYPE_MASK) != CASEFOLDING_UNICODE_FULL) ?
-				options_.foldings.caseFolding : CASEFOLDING_NONE));
+#endif /* !ASCENSION_NO_REGEX */
+	}
+	if(!temporaryPattern_.empty())
+		self.temporaryPattern_.erase();
 }
 
 /// Returns true if Migemo is available.
@@ -538,243 +293,238 @@ bool TextSearcher::isMigemoAvailable() const throw() {
 }
 
 /**
- * Performs the match.
- * @param target the target to be matched
- * @param ctypes the boundary definition
+ * Returns true if the pattern matches the specified text.
+ * @param document the document
+ * @param target the target to match
  * @return true if matched
+ * @throw std#logic_error the pattern is not specified
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool TextSearcher::match(const MatchTarget& target, const IdentifierSyntax& ctypes) const {
-	if(!target.isNormalized())
-		throw invalid_argument("the target is not normalized.");
-	return matcher_->matches(target, options_.wholeWord ? &ctypes : 0);
-}
-
-bool TextSearcher::replace(const MatchTarget& target, String& replaced, const IdentifierSyntax& ctypes) const {
-	if(!target.isNormalized())
-		throw invalid_argument("the target is not normalized.");
-	replaced.assign(replacement_);
-	return matcher_->replace(target, replaced, options_.wholeWord ? &ctypes : 0);
-}
-
-/**
- * Searches the pattern in the specified target string.
- * @param target 検索対象文字列。空文字列だと常に失敗する。後方検索の場合、@c first メンバが検索終了位置、@c last メンバが検索開始位置
- * @param direction the direction to search
- * @param[out] result the matched range
- * @param[in] ctypes the boundary definition
- * @return true if the pattern is found
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
- */
-bool TextSearcher::search(const MatchTarget& target, Direction direction, MatchedRange& result, const IdentifierSyntax& ctypes) const {
-	if(!target.isNormalized())
-		throw invalid_argument("the target is not normalized.");
-	compilePattern();
-	return matcher_->search(target, direction, result, options_.wholeWord ? &ctypes : 0);
-}
-
-/// 検索オプションの設定
-void TextSearcher::setOptions(const Options& options) {
-	if(options != options_) {
-		options_ = options;
-		changedFromLast_ = true;
-		clearPatternCache();
-		multilinePattern_ = 
-			(options_.type == LITERAL && patternString_.find(L'\n') != String::npos)
-			|| (options_.type == REGULAR_EXPRESSION && patternString_.find(L"\\n") != String::npos);
-	}
-}
-
-/// 検索文字列の設定
-void TextSearcher::setPattern(const String& pattern) {
-	if(pattern != patternString_) {
-		patternString_ = pattern;
-		changedFromLast_ = true;
-		clearPatternCache();
-		multilinePattern_ = 
-			(options_.type == LITERAL && patternString_.find(L'\n') != String::npos)
-			|| (options_.type == REGULAR_EXPRESSION && patternString_.find(L"\\n") != String::npos);
-	}
-}
-
-
-// DocumentSearcher /////////////////////////////////////////////////////////
-
-/**
- * コンストラクタ
- * @param document 対象ドキュメント
- * @param searcher 検索オブジェクト
- * @param ctypes 単語境界の検出に使う文字分類
- */
-DocumentSearcher::DocumentSearcher(const Document& document, const TextSearcher& searcher, const IdentifierSyntax& ctypes)
-	: document_(document), searcher_(searcher), ctypes_(ctypes) {}
-
-/**
- * 指定テキストの置換結果を計算する
- * @param target マッチ対象テキスト
- * @param[out] result 置換結果のテキスト
- * @return マッチの成否
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
- */
-bool DocumentSearcher::replace(const Region& target, String& result) const {
-	const bool multiLineSel = target.getTop().line != target.getBottom().line;
-	if(searcher_.isMultilinePattern() || !multiLineSel) {
-		MatchTarget matchTarget;
-		if(!multiLineSel) {	// マッチ対象が1行以内
-			const String& line = document_.getLine(target.first.line);
-			matchTarget.entireFirst = line.data();
-			matchTarget.entireLast = line.data() + line.length();
-			matchTarget.first = line.data() + target.getTop().column;
-			matchTarget.last = line.data() + target.getBottom().column;
-			return searcher_.replace(matchTarget, result, ctypes_);
-		} else {	// マッチ対象が複数行
-			auto_ptr<TargetDuplicate> duplicatedTarget(
-				new TargetDuplicate(document_, target.getTop().line, target.getBottom().line - target.getTop().line + 1));
-			matchTarget.entireFirst = duplicatedTarget->getBuffer();
-			matchTarget.entireLast = matchTarget.entireFirst + duplicatedTarget->getLength();
-			matchTarget.first = matchTarget.entireFirst + target.getTop().column;
-			matchTarget.last = matchTarget.entireLast - (document_.getLineLength(target.getBottom().line) - target.getBottom().column);
-			return searcher_.replace(matchTarget, result, ctypes_);
+bool TextSearcher::match(const Document& document, const Region& target) const {
+	const DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
+	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
+	switch(options_.type) {
+		case LITERAL:
+			return pattern_.literal->matches(b, e) && checkBoundary(b, e);
+#ifndef ASCENSION_NO_REGEX
+		case REGULAR_EXPRESSION:
+#ifndef ASCENSION_NO_MIGEMO
+		case MIGEMO:
+#endif /* !ASCENSION_NO_MIGEMO */
+		{
+			regex::Pattern::MatchOptions options(regex::Pattern::MULTILINE);
+			setupRegexRegionalMatchOptions(b, e, options);
+			delete lastResult_;
+			lastResult_ = pattern_.regex->matches(b, e, options).release();
+			if(lastResult_ != 0 && !checkBoundary(b, e)) {
+				delete lastResult_;
+				lastResult_ = 0;
+			}
+			return lastResult_ != 0;
 		}
+#endif /* !ASCENSION_NO_REGEX */
 	}
 	return false;
 }
 
 /**
- * テキストのパターン検索を行う
- * @param target 検索範囲
- * @param direction 検索方向
- * @param[out] result マッチ範囲
- * @retval true パターンが見つかった
- * @retval false パターンが見つからなかった (@a result の内容は無意味)
+ * Pushes the new string to the stored list.
+ * @param s the string to push
+ * @param forReplacements set true to push to the replacements list
+ */
+void TextSearcher::pushHistory(const String& s, bool forReplacements) {
+	list<String>& history = forReplacements ? storedReplacements_ : storedPatterns_;
+	const list<String>::iterator d = find(history.begin(), history.end(), s);
+	if(d != history.end())
+		history.erase(d);
+	else if(history.size() == maximumNumberOfStoredStrings_)
+		history.pop_back();
+	history.push_front(s);
+}
+
+/**
+ * Replaces the specified text with the replacement string. If the stored replacements list is
+ * empty, an empty is used as the replacement string.
+ * @param document the document
+ * @param target the region to replace
+ * @param[out] replaced the result string
+ * @return true if matched
+ * @throw std#logic_error the pattern is not specified
+ */
+bool TextSearcher::replace(const Document& document, const Region& target, String& replaced) const {
+	if(!match(document, target))
+		return false;
+	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
+	switch(options_.type) {
+	case LITERAL:
+		replaced = replacement;
+		break;
+#ifndef ASCENSION_NO_REGEX
+	case REGULAR_EXPRESSION:
+#ifndef ASCENSION_NO_MIGEMO
+	case MIGEMO:
+#endif /* !ASCENSION_NO_MIGEMO */
+		replaced = lastResult_->replace(replacement.data(), replacement.data() + replacement.length());
+		break;
+#endif /* !ASCENSION_NO_REGEX */
+	}
+	return true;
+}
+
+/**
+ * Searches the pattern in the document.
+ * @param document the document
+ * @param scope the region to search
+ * @param direction the direction to search
+ * @param[out] matchedRegion the matched region
+ * @return true if the pattern is found
+ * @throw std#logic_error the pattern is not specified
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool DocumentSearcher::search(const Region& target, Direction direction, Region& result) const {
-	// 複数行マッチの場合はパターンの行数を数えておく -> 対象文字列はこの行数だけ用意する
-	length_t patternLineCount = 1;
-	if(searcher_.isMultilinePattern()) {
-		const String& pattern = searcher_.getPattern();
-		if(searcher_.getOptions().type == TextSearcher::LITERAL)
-			patternLineCount = count(pattern.begin(), pattern.end(), L'\n');
-		else {
-			assert(searcher_.getOptions().type == TextSearcher::REGULAR_EXPRESSION);
-			for(String::size_type i = 0; ; ++i, ++patternLineCount) {
-				i = pattern.find(L"\\n", i);
-				if(i == String::npos)
-					break;
+bool TextSearcher::search(const Document& document, const Region& scope, Direction direction, Region& matchedRegion) const {
+	compilePattern(direction);
+	if(options_.type == LITERAL) {
+		if(direction != pattern_.literal->getDirection()) {	// recompile to change the direction
+			const String& p = storedPatterns_.front();
+			pattern_.literal->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
+		}
+		const DocumentCharacterIterator end(document, scope.second);
+		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
+		for(DocumentCharacterIterator i(document, scope.first); i < end; ++i) {
+			if(!pattern_.literal->search(i, end, matchedFirst, matchedLast))
+				break;
+			else if(checkBoundary(
+					static_cast<DocumentCharacterIterator&>(*matchedFirst),
+					static_cast<DocumentCharacterIterator&>(*matchedLast))) {
+				matchedRegion.first = static_cast<DocumentCharacterIterator*>(matchedFirst.get())->tell();
+				matchedRegion.second = static_cast<DocumentCharacterIterator*>(matchedLast.get())->tell();
+				return true;
 			}
 		}
-		assert(patternLineCount > 1);
 	}
+#ifndef ASCENSION_NO_REGEX
+	else if(options_.type == REGULAR_EXPRESSION
+#ifndef ASCENSION_NO_MIGEMO
+			|| options_.type == MIGEMO
+#endif /* !ASCENSION_NO_MIGEMO */
+#endif /* !ASCENSION_NO_REGEX */
+	) {
+		regex::Pattern::MatchOptions options = regex::Pattern::MULTILINE;
+		const DocumentCharacterIterator end(document, scope.second);
+		auto_ptr<regex::MatchResult<DocumentCharacterIterator> > result;
+		delete lastResult_;
+		lastResult_ = 0;
 
-	const Position& begin = (direction == FORWARD) ? target.getTop() : target.getBottom();
-	const Position& end = (direction == FORWARD) ? target.getBottom() : target.getTop();
-	for(length_t i = begin.line, column = begin.column; ; i += (direction == FORWARD) ? 1 : -1) {
-		MatchTarget searchTarget;
-		auto_ptr<TargetDuplicate> duplicatedTarget;
-
-		// 対象文字列の準備
-		patternLineCount = min(ascension::internal::distance(i, end.line) + 1, patternLineCount);
-		if(patternLineCount == 1) {	// 単一行マッチ
-			const String& line = document_.getLine(i);
-			searchTarget.entireFirst = line.data();
-			searchTarget.entireLast = line.data() + line.length();
-		} else {	// 複数行マッチ -> バッファを別に用意する
-			duplicatedTarget.reset(new TargetDuplicate(document_, (direction == FORWARD) ? i : i - patternLineCount + 1, patternLineCount));
-			searchTarget.entireFirst = duplicatedTarget->getBuffer();
-			searchTarget.entireLast = searchTarget.entireFirst + duplicatedTarget->getLength();
+		if(direction == FORWARD) {	// 前方検索
+			DocumentCharacterIterator i(document, scope.first);	// 検索開始位置
+			setupRegexRegionalMatchOptions(i, end, options);
+			do {
+				result = pattern_.regex->search(i, end, options);
+				if(result.get() == 0 || checkBoundary(result->getStart(), result->getEnd()))
+					break;
+				i = result->getEnd();	// 次の検索開始位置へ
+				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
+				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
+			} while(i < end);
+		} else {	// 後方検索
+			DocumentCharacterIterator i(document, scope.second);	// 検索開始位置
+			if(i.tell() != scope.first)
+				--i;
+			setupRegexRegionalMatchOptions(i, end, options);
+			// マッチ対象先頭でのみマッチするようにする
+			options |= regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST;
+			while(true) {
+				result = pattern_.regex->search(i, end, options);
+				if(result.get() != 0 && checkBoundary(result->getStart(), result->getEnd()))
+					break;
+				else if(i.tell() <= scope.first)
+					break;
+				--i;	// 次の検索開始位置へ
+				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, i.tell() != document.getStartPosition(false));
+				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, i.tell().column != 0);
+			}
 		}
-		if(direction == FORWARD) {
-			searchTarget.first = searchTarget.entireFirst + ((i == begin.line) ? begin.column : 0);
-			searchTarget.last = (i + patternLineCount - 1 < end.line) ?
-				searchTarget.entireLast : searchTarget.entireLast - (document_.getLineLength(end.line) - end.column);
-		} else {
-			searchTarget.first = searchTarget.entireFirst + ((i - patternLineCount + 1 > end.line) ? 0 : end.column);
-			searchTarget.last = searchTarget.entireLast - ((i == begin.line) ? document_.getLineLength(i) - begin.column : 0);
-		}
-
-		MatchedRange matchedRange;
-		if(searcher_.search(searchTarget, direction, matchedRange, ctypes_)) {	// 見つかった
-			if(patternLineCount == 1) {
-				result.first = Position(i, matchedRange.first - searchTarget.entireFirst);
-				result.second = Position(i, matchedRange.last - searchTarget.entireFirst);
-			} else
-				duplicatedTarget->getResult(matchedRange, result);
+		if(result.get() != 0) {
+			matchedRegion.first = result->getStart().tell();
+			matchedRegion.second = result->getEnd().tell();
+			lastResult_ = result.release();
 			return true;
 		}
-		if(i == end.line)	// 見つからなかった
-			break;
 	}
 	return false;
 }
 
-/// コンストラクタ
-DocumentSearcher::TargetDuplicate::TargetDuplicate(const Document& document, length_t startLine, length_t numberOfLines)
-		: numberOfLines_(numberOfLines), startLine_(startLine) {
-	// バッファの長さを計算する
-	length_ = numberOfLines_ - 1;
-	for(length_t i = startLine_; i < startLine_ + numberOfLines_; ++i)
-		length_ += document.getLineLength(i);
-	buffer_ = new Char[length_];
+#undef CREATE_BREAK_ITERATOR
 
-	// バッファを構築する (対象行を '\n' で連結する)
-	Char* p = buffer_;
-	lineHeads_ = new Char*[numberOfLines_];
-	lineHeads_[0] = buffer_;
-	for(length_t i = startLine_; ; ++i) {
-		const String& s = document.getLine(i);
-		wmemcpy(p, s.data(), s.length());
-		if(i == startLine_ + numberOfLines_ - 1)
-			break;
-		p[s.length()] = L'\n';
-		p += s.length() + 1;
-		lineHeads_[i - startLine_ + 1] = p;	// 行頭の位置を覚えとく
+/// Sets the maximum number of the stored patterns or replacement strings.
+void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) throw() {
+	number = max<size_t>(number, MINIMUM_NUMBER_OF_STORED_STRINGS);
+	if(storedPatterns_.size() > number)
+		storedPatterns_.resize(number);
+	if(storedReplacements_.size() > number)
+		storedReplacements_.resize(number);
+	maximumNumberOfStoredStrings_ = number;
+}
+
+/// Sets the new search options
+void TextSearcher::setOptions(const SearchOptions& options) throw() {
+	if(options != options_) {
+		clearPatternCache();
+		options_ = options;
 	}
 }
 
-/// デストラクタ
-DocumentSearcher::TargetDuplicate::~TargetDuplicate() {
-	delete[] buffer_;
-	delete[] lineHeads_;
+/**
+ * Sets the new pattern.
+ * @param pattern the pattern string
+ * @param dontRemember set true to not add the pattern into the stored list. in this case, the
+ * following #getPattern call will not return the pattern set by this
+ * @throw std#invalid_argument @a pattern is empty
+ */
+void TextSearcher::setPattern(const String& pattern, bool dontRemember /* = false */) {
+	if(pattern.empty())
+		throw invalid_argument("the pattern is empty.");
+	else if(storedPatterns_.empty() || pattern != storedPatterns_.front()) {
+		if(!dontRemember)
+			pushHistory(pattern, false);
+		else
+			temporaryPattern_ = pattern;
+		clearPatternCache();
+	}
 }
 
-/// 複製へのポインタをドキュメント位置に変換する
-void DocumentSearcher::TargetDuplicate::getResult(const MatchedRange& range, Region& result) const {
-	for(result.second.line = startLine_ + numberOfLines_ - 1; ; --result.second.line) {
-		const Char* const lineHead = lineHeads_[result.second.line - startLine_];
-		if(range.last >= lineHead) {
-			result.second.column = range.last - lineHead;
-			break;
-		}
-	}
-	for(result.first.line = result.second.line; ; --result.first.line) {
-		const Char* const lineHead = lineHeads_[result.first.line - startLine_];
-		if(range.first >= lineHead) {
-			result.first.column = range.first - lineHead;
-			break;
-		}
-	}
+/**
+ * Sets the new replacement string.
+ * @param replacement the replacement string
+ */
+void TextSearcher::setReplacement(const String& replacement) {
+	pushHistory(replacement, true);
 }
 
 
 // IncrementalSearcher //////////////////////////////////////////////////////
 
+/// Constructor.
+IncrementalSearcher::IncrementalSearcher() throw() {
+}
+
 /// Aborts the search.
 void IncrementalSearcher::abort() {
 	if(isRunning()) {
-		if(listener_ != 0)
-			listener_->incrementalSearchAborted();
-		caret_->select(firstStatus_->range);
+		if(listener_ != 0) {
+			while(statusHistory_.size() > 1)
+				statusHistory_.pop();
+			listener_->incrementalSearchAborted(statusHistory_.top().matchedRegion.first);
+		}
 		end();
 	}
 }
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param ch the character to be appended
+ * @param ch the character to append
  * @return true if the pattern is found
- * @throw IncrementalSearcher#NotRunningException the searcher is not running
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw NotRunningException the searcher is not running
  */
 bool IncrementalSearcher::addCharacter(Char ch) {
 	if(!isRunning())
@@ -787,17 +537,15 @@ bool IncrementalSearcher::addCharacter(Char ch) {
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param cp the character to be appended
+ * @param cp the character to append
  * @return true if the pattern is found
- * @throw IncrementalSearcher#NotRunningException the searcher is not running
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw NotRunningException the searcher is not running
  */
 bool IncrementalSearcher::addCharacter(CodePoint cp) {
 	if(!isRunning())
 		throw NotRunningException();
 	if(cp < 0x010000)
-		return addCharacter(static_cast<Char>(cp));
-
+		return addCharacter(static_cast<Char>(cp & 0xFFFF));
 	Char surrogates[2];
 	surrogates::encode(cp, surrogates);
 	return addString(surrogates, surrogates + 2);
@@ -805,12 +553,11 @@ bool IncrementalSearcher::addCharacter(CodePoint cp) {
 
 /**
  * Appends the specified string to the end of the search pattern.
- * @param first the start of the string to be appended
- * @param last the end og the string to be appended
+ * @param first the start of the string to append
+ * @param last the end og the string to append
  * @return true if the pattern is found
- * @throw IncrementalSearcher#NotRunningException the searcher is not running
+ * @throw NotRunningException the searcher is not running
  * @throw std#invalid_argument the string is empty
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool IncrementalSearcher::addString(const Char* first, const Char* last) {
 	assert(first != 0 && last != 0 && first <= last);
@@ -824,102 +571,131 @@ bool IncrementalSearcher::addString(const Char* first, const Char* last) {
 	return update();
 }
 
+/// @see text#IDocumentListener#documentAboutToBeChanged
+void IncrementalSearcher::documentAboutToBeChanged(const Document&) {
+	abort();
+}
+
+/// @see text#IDocumentListener#documentChanged
+void IncrementalSearcher::documentChanged(const Document&, const DocumentChange&) {
+}
+
 /// Ends the search.
 void IncrementalSearcher::end() {
-	while(!statusHistory_.empty())
-		statusHistory_.pop();
-	if(listener_ != 0)
-		listener_->incrementalSearchCompleted();
-	caret_ = 0;
-	searcher_ = 0;
-	listener_ = 0;
-	firstStatus_ = 0;
-	lastPattern_ = pattern_;
-	pattern_.erase();
+	if(isRunning()) {
+		document_->removeListener(*this);
+		while(!statusHistory_.empty())
+			statusHistory_.pop();
+		if(listener_ != 0)
+			listener_->incrementalSearchCompleted();
+		if(!pattern_.empty())
+			searcher_->setPattern(pattern_);	// store to reuse
+		searcher_ = 0;
+		listener_ = 0;
+		pattern_.erase();
+	}
 }
 
 /**
- * Jumps to the next matched position.
+ * Search the next match. If the pattern is empty, this method uses the last used pattern.
  * @param direction the new direction of the search
  * @return true if matched after jump
- * @throw IncrementalSearcher#NotRunningException the searcher is not running
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw NotRunningException the searcher is not running
  */
-bool IncrementalSearcher::jumpToNextMatch(Direction direction) {
+bool IncrementalSearcher::next(Direction direction) {
 	if(!isRunning())
 		throw NotRunningException();
 
 	if(pattern_.empty()) {
 		statusHistory_.top().direction = direction;
-		if(!lastPattern_.empty())
-			return addString(lastPattern_);	// 前回終了時のパターンで検索
+		if(searcher_->getNumberOfStoredPatterns() > 0)
+			return addString(searcher_->getPattern());	// use the most recent used
 		else {
 			if(listener_ != 0)
-				listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::FOUND);
+				listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
 			return true;
 		}
 	} else if(!matched_
 			&& !operationHistory_.empty()
 			&& operationHistory_.top() == JUMP
 			&& statusHistory_.top().direction == direction)
-		return false;	// マッチしていない状態でジャンプしようとした
+		return false;	// tried to next when not matched
 	else {
-		const Status status = {Region(caret_->getTopPoint(), caret_->getBottomPoint()), direction};
-		statusHistory_.push(status);
+		const Status s = {matchedRegion_, direction};
+		statusHistory_.push(s);
+		if(update())
+			return true;
+		statusHistory_.pop();
 		operationHistory_.push(JUMP);
-		return update();
+		return false;
 	}
 }
 
 /**
- * 検索直後の状態に戻す
+ * Reverts to the initial state.
  * @throw NotRunningException the searcher is not running
  */
 void IncrementalSearcher::reset() {
 	if(statusHistory_.empty())
 		throw NotRunningException();
-
 	while(!operationHistory_.empty())
 		operationHistory_.pop();
 	while(statusHistory_.size() > 1)
 		statusHistory_.pop();
 	pattern_.erase();
-	caret_->select(statusHistory_.top().range);
 	if(listener_ != 0)
-		listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::FOUND);
+		listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
 }
 
 /**
  * Starts the search.
- * @param caret the caret
+ * @param document the document to search
+ * @param from the position at which the search starts
+ * @param searcher the text search object
+ * @param direction the initial search direction
+ * @param listener the listener. can be @c null
+ */
+void IncrementalSearcher::start(Document& document, const Position& from,
+		TextSearcher& searcher, Direction direction, IIncrementalSearchListener* listener /* = 0 */) {
+	if(isRunning())
+		end();
+	const Status s = {Region(from, from), direction};
+	assert(statusHistory_.empty() && pattern_.empty());
+	statusHistory_.push(s);
+	(document_ = &document)->addListener(*this);
+	searcher_ = &searcher;
+	matchedRegion_ = statusHistory_.top().matchedRegion;
+	if(listener_ = listener) {
+		listener_->incrementalSearchStarted(document);
+		listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
+	}
+}
+
+/**
+ * Starts the search.
+ * @param document the document to search
+ * @param from the position at which the search starts
  * @param searcher the text search object
  * @param type the type of the search
  * @param direction the initial search direction
  * @param listener the listener. can be @c null
  */
-void IncrementalSearcher::start(viewers::Caret& caret,
-		TextSearcher& searcher, TextSearcher::Type type, Direction direction, IIncrementalSearcherListener* listener /* = 0 */) {
+void IncrementalSearcher::start(Document& document, const Position& from,
+		TextSearcher& searcher, SearchType type, Direction direction, IIncrementalSearchListener* listener /* = 0 */) {
 	if(isRunning())
 		end();
-
-	const Status status = {Region(caret.getTopPoint(), caret.getBottomPoint()), direction};
-	caret_ = &caret;
-	searcher_ = &searcher;
-	type_ = type;
-	statusHistory_.push(status);
-	firstStatus_ = &statusHistory_.top();
-	if(listener_ = listener) {
-		listener_->incrementalSearchStarted();
-		listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::FOUND);
-	}
+	SearchOptions options = searcher.getOptions();
+	options.type = type;
+	searcher.setOptions(options);
+	start(document, from, searcher, direction, listener);
 }
 
 /**
- * Undoes the last search command.
+ * Undoes the last search command. If the last command is typing, the end of the pattern is removed.
+ * Otherwise if researching, reverts to the last state.
  * @return true if matched after the undo 
  * @throw NotRunningException the searcher is not running
  * @throw EmptyUndoBufferException can't undo
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool IncrementalSearcher::undo() {
 	if(!isRunning())
@@ -932,25 +708,25 @@ bool IncrementalSearcher::undo() {
 	if(lastOperation == TYPE) {	// 文字の入力を元に戻す -> 検索式の末尾を削る
 		if(pattern_.length() > 1
 				&& surrogates::isHighSurrogate(pattern_[pattern_.length() - 2])
-				&& surrogates::isLowSurrogate(pattern_[pattern_.length() - 1]))
+				&& surrogates::isLowSurrogate(pattern_[pattern_.length() - 1])) {
 			pattern_.erase(pattern_.length() - 2);
-		else
+			operationHistory_.pop();
+		} else
 			pattern_.erase(pattern_.length() - 1);
 		return update();
-	} else if(lastOperation == JUMP) {	// 次のマッチ位置へのジャンプを元に戻す -> 1つ前の状態に戻る
-		const Status lastStatus = statusHistory_.top();
-		caret_->select(lastStatus.range);
+	} else if(lastOperation == JUMP) {	// 次のマッチ位置へのジャンプを元に戻す -> 1 つ前の状態に戻る
+		matchedRegion_ = statusHistory_.top().matchedRegion;
 		statusHistory_.pop();
+		assert(!statusHistory_.empty());
 		if(!matched_) {	// ジャンプを元に戻すと必ずマッチした状態になる
 			matched_ = true;
 			if(listener_ != 0)
-				listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::FOUND);
+				listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::FOUND);
 		}
 		return true;
-	} else {
-		assert(false);
-		return false;	// あり得ぬ
 	}
+	assert(false);
+	return false;	// あり得ぬ
 }
 
 /**
@@ -959,68 +735,50 @@ bool IncrementalSearcher::undo() {
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool IncrementalSearcher::update() {
-	assert(!statusHistory_.empty());
-
+	const Status& lastStatus = statusHistory_.top();
 	if(pattern_.empty()) {
-		caret_->select(firstStatus_->range);
-		matched_ = true;
+		assert(statusHistory_.size() == 1);
+		matchedRegion_ = lastStatus.matchedRegion;
 		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::FOUND);
+			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
 		return true;
 	}
 
-	const Document& document = *caret_->getDocument();
-	TextSearcher::Options options = searcher_->getOptions();
-	const TextSearcher::Type originalType = options.type;
-	const IdentifierSyntax& ctypes = caret_->getDocument()->getContentTypeInformation().getIdentifierSyntax(caret_->getContentType());
-	const DocumentSearcher dsearch(document, *searcher_, ctypes);
-	const Status& status = statusHistory_.top();
-
-	options.type = type_;
-	searcher_->setOptions(options);
-	searcher_->setPattern(pattern_);
-
-	Region matched;
-	const Region scope(
-		status.direction ? status.range.second : document.getStartPosition(),
-		status.direction ? document.getEndPosition() : status.range.first);
-	bool found;
+	searcher_->setPattern(pattern_, true);
+	Region matchedRegion;
+	Region scope(
+		(lastStatus.direction == FORWARD) ? lastStatus.matchedRegion.second : document_->getStartPosition(),
+		(lastStatus.direction == FORWARD) ? document_->getEndPosition() : lastStatus.matchedRegion.first);
+	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
+		// handle the previous zero-width match
+		if(lastStatus.direction == FORWARD) {
+			DocumentCharacterIterator temp(*document_, scope.first);
+			scope.first = (++temp).tell();
+		} else {
+			DocumentCharacterIterator temp(*document_, scope.second);
+			scope.second = (--temp).tell();
+		}
+	}
+	matched_ = false;
 #ifndef ASCENSION_NO_REGEX
 	try {
 #endif /* !ASCENSION_NO_REGEX */
-		found = dsearch.search(scope, status.direction, matched);
+		matched_ = searcher_->search(*document_, scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 	} catch(boost::regex_error&) {
 		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::BAD_REGEX);
-		// 一時的に変更したオプションを元に戻す
-		options.type = originalType;
-		searcher_->setOptions(options);
-		throw;
+			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::BAD_REGEX);
+		return false;
 	} catch(runtime_error&) {
 		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearcherListener::COMPLEX_REGEX);
-		// 一時的に変更したオプションを元に戻す
-		options.type = originalType;
-		searcher_->setOptions(options);
-		throw;
+			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::COMPLEX_REGEX);
+		return false;
 	}
 #endif /* !ASCENSION_NO_REGEX */
 
-	if(matched_ = found)
-		caret_->select(matched);
-
-	// 一時的に変更したオプションを元に戻す
-	options.type = originalType;
-	searcher_->setOptions(options);
-
+	if(matched_)
+		matchedRegion_ = matchedRegion;
 	if(listener_ != 0)
-		listener_->incrementalSearchPatternChanged(found ? IIncrementalSearcherListener::FOUND : IIncrementalSearcherListener::NOT_FOUND);
-	return found;
+		listener_->incrementalSearchPatternChanged(matched_ ? IIncrementalSearchListener::FOUND : IIncrementalSearchListener::NOT_FOUND);
+	return matched_;
 }
-
-
-// private helper ///////////////////////////////////////////////////////////
-
-#ifndef ASCENSION_NO_REGEX
-#endif /* !ASCENSION_NO_REGEX */

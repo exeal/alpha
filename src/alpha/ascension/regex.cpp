@@ -287,6 +287,10 @@ Pattern::Pattern(const Char* first, const Char* last,
 		nativeSyntax | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
 }
 
+/// Destructor.
+Pattern::~Pattern() throw() {
+}
+
 
 // internal::RegexTraits ////////////////////////////////////////////////////
 
@@ -440,7 +444,7 @@ manah::AutoBuffer<char> MigemoPattern::dictionaryPathName_;
  * @param ignoreCase set true to enable case-insensitive match
  */
 MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool ignoreCase) :
-		Pattern(first, last, ignoreCase ? CASEFOLDING_UNICODE_SIMPLE : CASEFOLDING_NONE,
+		Pattern(first, last, ignoreCase ? CASE_INSENSITIVE : NORMAL,
 			boost::regex_constants::no_char_classes | boost::regex_constants::nosubs | boost::regex_constants::perl) {
 }
 

@@ -274,7 +274,7 @@ namespace {
  * Default constructor.
  * The character classification type is initialized to @c ASCENSION_DEFAULT_CHARACTER_DETECTION_TYPE.
  */
-IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseFolding_(CASEFOLDING_NONE)
+IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, normalizationType_(Normalizer::DONT_NORMALIZE)
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -284,14 +284,15 @@ IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER
 /**
  * Constructor.
  * @param type the classification type
+ * @param ignoreCase set true to perform caseless match
  * @param caseFolding the case folding type for caseless match
  * @param normalizationType the normalization type for canonical/compatibility equivalents
  */
-IdentifierSyntax::IdentifierSyntax(CharacterClassification type, const CaseFoldings& caseFolding /* = CASEFOLDING_NONE */
+IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase /* = false */
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, Normalizer::Type normalizationType /* = Normalizer::DONT_NORMALIZE */
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
-) throw() : type_(type), caseFolding_(caseFolding)
+) throw() : type_(type), caseSensitive_(ignoreCase)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, normalizationType_(normalizationType)
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */

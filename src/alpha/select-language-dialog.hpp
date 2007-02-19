@@ -14,20 +14,15 @@
 namespace alpha {
 	namespace ui {
 		/// [言語エンジンの選択] ダイアログ
-		class SelectLanguageDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_SELECTLANGUAGE> {
+		class SelectLanguageDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_SELECTLANGUAGE> {
 		public:
-			// コンストラクタ
-			explicit SelectLanguageDlg(const std::basic_string<WCHAR>& scriptName);
-			// メソッド
+			explicit SelectLanguageDialog(const std::basic_string<WCHAR>& scriptName);
 			const std::wstring&	getSelectedLanguage() const throw();
 
-			// メッセージハンドラ
 		protected:
 			virtual bool	onCommand(WORD wID, WORD wNotifyCode, HWND hwndCtrl);	// WM_COMMAND
 			virtual bool	onInitDialog(HWND hwndFocus, LPARAM lInitParam);		// WM_INITDIALOG
 			virtual void	onOK();													// IDOK
-
-			// データメンバ
 		private:
 			std::basic_string<WCHAR> scriptName_;
 			std::wstring selectedLanguage_;
@@ -38,7 +33,7 @@ namespace alpha {
 		};
 
 		/// 選択された言語を返す
-		inline const std::wstring& SelectLanguageDlg::getSelectedLanguage() const throw() {return selectedLanguage_;}
+		inline const std::wstring& SelectLanguageDialog::getSelectedLanguage() const throw() {return selectedLanguage_;}
 	}
 }
 

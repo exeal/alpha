@@ -8,6 +8,7 @@
 #define ALPHA_BUFFER_HPP
 
 #include "ascension/viewer.hpp"
+#include "ascension/searcher.hpp"	// ascension::searcher::IIncrementalSearchListener
 #include <objbase.h>
 #include "../manah/win32/ui/splitter.hpp"
 #include "../manah/win32/ui/menu.hpp"
@@ -38,13 +39,14 @@ namespace alpha {
 	};
 
 	/// テキストエディタのビュー
-	class EditorView : public ascension::viewers::SourceViewer {
+	class EditorView : public ascension::viewers::SourceViewer, virtual public ascension::searcher::IIncrementalSearchListener {
 	public:
 		// コンストラクタ
 		EditorView(ascension::presentation::Presentation& presentation);
 		EditorView(const EditorView& rhs);
 		~EditorView();
 		// メソッド
+		void				beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
 		const wchar_t*		getCurrentPositionString() const;
 		Buffer&				getDocument() throw();
 		const Buffer&		getDocument() const throw();
@@ -52,7 +54,14 @@ namespace alpha {
 		void				setVisualColumnStartValue() throw();
 
 	private:
+		// ascension::searcher::IIncrementalSearchListener
+		void	incrementalSearchAborted(const ascension::text::Position& initialPosition);
+		void	incrementalSearchCompleted();
+		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchListener::Result result);
+		void	incrementalSearchStarted(const ascension::text::Document& document);
+		// メッセージハンドラ
 		bool	onKeyDown(UINT ch, UINT flags);
+		void	onKillFocus(HWND newWindow);
 		void	onSetFocus(HWND oldWindow);
 	private:
 		ascension::length_t visualColumnStartValue_;

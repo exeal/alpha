@@ -18,10 +18,10 @@ namespace alpha {
 
 	namespace ui {
 		///	[ブックマーク] ダイアログ
-		class BookmarkDlg : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
+		class BookmarkDialog : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
 		public:
 			// コンストラクタ
-			BookmarkDlg(Alpha& app);
+			BookmarkDialog(Alpha& app);
 			// メソッド
 			void	updateList();
 

@@ -47,6 +47,13 @@
 #define ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
 
 /**
+ * @def ASCENSION_NO_UNICODE_COLLATION
+ * Define the symbol if you do not use Unicode collation facilities.
+ * @see ascension#unicode#Collator, collator.hpp
+ */
+#define ASCENSION_NO_UNICODE_COLLATION
+
+/**
  * @def ASCENSION_NO_UNICODE_FOLDING
  * Define the symbol if you do not use Unicode character foldings (may reduce code size).
  * @note This is not supported currently.

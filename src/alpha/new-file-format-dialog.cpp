@@ -8,7 +8,7 @@
 #include "new-file-format-dialog.hpp"
 #include "application.hpp"
 #include "../manah/win32/ui/standard-controls.hpp"
-using alpha::ui::NewFileFormatDlg;
+using alpha::ui::NewFileFormatDialog;
 using manah::windows::ui::ComboBox;
 using namespace ascension::encodings;
 using namespace ascension::text;
@@ -20,11 +20,11 @@ using namespace std;
  * @param encoding エンコーディングの初期値
  * @param lineBreak 改行の初期値
  */
-NewFileFormatDlg::NewFileFormatDlg(CodePage encoding, LineBreak lineBreak) throw() : encoding_(encoding), lineBreak_(lineBreak) {
+NewFileFormatDialog::NewFileFormatDialog(CodePage encoding, LineBreak lineBreak) throw() : encoding_(encoding), lineBreak_(lineBreak) {
 }
 
 /// @see Dialog#onCommand
-bool NewFileFormatDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_CHARCODE || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
 
@@ -63,7 +63,7 @@ bool NewFileFormatDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool NewFileFormatDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool NewFileFormatDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	set<CodePage> codePages;
@@ -99,7 +99,7 @@ bool NewFileFormatDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 }
 
 /// @see Dialog#onOK
-void NewFileFormatDlg::onOK() {
+void NewFileFormatDialog::onOK() {
 	encoding_ = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
 	lineBreak_ = static_cast<ascension::text::LineBreak>(lineBreakCombobox_.getItemData(lineBreakCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();

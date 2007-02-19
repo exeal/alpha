@@ -6,6 +6,7 @@
  */
 
 #include "stdafx.h"
+#include "ascension/text-editor.hpp"	// ascension::texteditor::commands::IncrementalSearchCommand
 #include "buffer.hpp"
 #include "application.hpp"
 #include "mru-manager.hpp"
@@ -20,7 +21,9 @@
 #include <shlobj.h>					// IShellLink, ...
 #include <dlgs.h>
 using namespace alpha;
+using namespace ascension;
 using namespace ascension::text;
+using namespace ascension::searcher;
 using namespace ascension::presentation;
 using namespace ascension::encodings;
 using namespace manah::windows;
@@ -201,7 +204,7 @@ void BufferList::addNewDialog() {
 	if(format.lineBreak == LB_AUTO)
 		format.lineBreak = LB_CRLF;
 
-	ui::NewFileFormatDlg dlg(format.encoding, format.lineBreak);
+	ui::NewFileFormatDialog dlg(format.encoding, format.lineBreak);
 	if(dlg.doModal(app_.getMainWindow()) != IDOK)
 		return;
 	addNew(dlg.getEncoding(), dlg.getLineBreak());
@@ -288,7 +291,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 	}
 
 	// 複数のバッファを保存するかどうか確認ダイアログを出す
-	ui::SaveSomeBuffersDlg dlg;
+	ui::SaveSomeBuffersDialog dlg;
 	for(size_t i = 0; i < buffers_.size(); ++i) {
 		if(exceptActive && i == active)
 			continue;
@@ -736,7 +739,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		// ユーザがコードページの変更を要求していた
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
-			ui::CodePagesDlg dlg(encoding, true);
+			ui::CodePagesDialog dlg(encoding, true);
 			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
 				encoding = dlg.getCodePage();
 				continue;	// コードページを変えて再挑戦
@@ -1044,7 +1047,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 	// コードページを変更する場合はダイアログを出す
 	CodePage cp = buffer.getCodePage();
 	if(changeCodePage) {
-		ui::CodePagesDlg dlg(cp, true);
+		ui::CodePagesDialog dlg(cp, true);
 		if(dlg.doModal(app_.getMainWindow()) != IDOK)
 			return OPENRESULT_USERCANCELED;
 		cp = dlg.getCodePage();
@@ -1057,7 +1060,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 		result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), cp, &callback);
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
-			ui::CodePagesDlg dlg(cp, true);
+			ui::CodePagesDialog dlg(cp, true);
 			if(dlg.doModal(app_.getMainWindow()) != IDOK)
 				return OPENRESULT_USERCANCELED;
 			cp = dlg.getCodePage();
@@ -1180,7 +1183,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 
 		result = buffer.save(fileName, params, &callback);
 		if(callback.doesUserWantToChangeCodePage()) {
-			ui::CodePagesDlg dlg(format.encoding, false);
+			ui::CodePagesDialog dlg(format.encoding, false);
 			assert(result == Document::FIR_CALLER_ABORTED);
 			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
 				format.encoding = dlg.getCodePage();
@@ -1344,11 +1347,16 @@ EditorView::EditorView(Presentation& presentation) : SourceViewer(presentation),
 }
 
 /// コピーコンストラクタ
-EditorView::EditorView(const EditorView& rhs) : SourceViewer(rhs) {
+EditorView::EditorView(const EditorView& rhs) : SourceViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
 }
 
 /// デストラクタ
 EditorView::~EditorView() {
+}
+
+/// インクリメンタル検索を開始する
+void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
+	texteditor::commands::IncrementalSearchCommand(*this, type, direction, this).execute();
 }
 
 /// 現在位置を表す文字列を返す
@@ -1370,11 +1378,62 @@ const wchar_t* EditorView::getCurrentPositionString() const {
 	return buffer;
 }
 
+/// @see IIncrementalSearchListener#incrementalSearchAborted
+void EditorView::incrementalSearchAborted(const Position& initialPosition) {
+	incrementalSearchCompleted();
+	getCaret().moveTo(initialPosition);
+}
+
+/// @see IIncrementalSearchListener#incrementalSearchCompleted
+void EditorView::incrementalSearchCompleted() {
+	Alpha::getInstance().setStatusText(0);
+}
+
+/// @see IIncrementalSearchListener#incrementalSearchPatternChanged
+void EditorView::incrementalSearchPatternChanged(Result result) {
+	UINT messageID;
+	Alpha& app = Alpha::getInstance();
+	const IncrementalSearcher& isearch = Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher();
+	const bool forward = isearch.getDirection() == FORWARD;
+
+	if(result == IIncrementalSearchListener::EMPTY_PATTERN) {
+		getCaret().select(isearch.getMatchedRegion());
+		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
+		app.setStatusText(app.loadString(messageID).c_str(),
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
+		return;
+	} else if(result == IIncrementalSearchListener::FOUND) {
+		getCaret().select(isearch.getMatchedRegion());
+		messageID = forward ? MSG_STATUS__ISEARCH : MSG_STATUS__RISEARCH;
+	} else {
+		if(result == IIncrementalSearchListener::NOT_FOUND)
+			messageID = forward ? MSG_STATUS__ISEARCH_NOT_FOUND : MSG_STATUS__RISEARCH_NOT_FOUND;
+		else
+			messageID = forward ? MSG_STATUS__ISEARCH_BAD_PATTERN : MSG_STATUS__RISEARCH_BAD_PATTERN;
+		beep();
+	}
+
+	String prompt = app.loadString(messageID, MARGS % isearch.getPattern());
+	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
+	app.setStatusText(prompt.c_str(),
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
+}
+
+/// @see IIncrementalSearchListener#incrementalSearchStarted
+void EditorView::incrementalSearchStarted(const Document&) {
+}
+
 /// @see Window#onKeyDown
 bool EditorView::onKeyDown(UINT ch, UINT flags) {
 	// 既定のキー割り当てを全て無効にする
 //	return true;
 	return SourceViewer::onKeyDown(ch, flags);
+}
+
+/// @see Window#onKillFocus
+void EditorView::onKillFocus(HWND newWindow) {
+	SourceViewer::onKillFocus(newWindow);
+	Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher().end();
 }
 
 /// @see Window#onSetFocus

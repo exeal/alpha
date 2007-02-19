@@ -452,7 +452,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_SEARCH_REPLACEALL:		app_.replaceAll(); return true;
 	case CMD_SEARCH_BOOKMARKALL:	app_.searchAndBookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
-	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDlg(app_).doModal(app_.getMainWindow()); return true;
+	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog(app_).doModal(app_.getMainWindow()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
 	case CMD_SEARCH_NEXTBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::NEXT_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_PREVBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::PREVIOUS_BOOKMARK).execute(); return true;
@@ -471,32 +471,32 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_SEARCH_INCREMENTALSEARCH:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::LITERAL, FORWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::LITERAL, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHR:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::LITERAL, BACKWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::LITERAL, BACKWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHRF:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::REGULAR_EXPRESSION, FORWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::REGULAR_EXPRESSION, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHRR:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::REGULAR_EXPRESSION, BACKWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::REGULAR_EXPRESSION, BACKWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHMF:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::MIGEMO, FORWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::MIGEMO, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHMR:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		IncrementalSearchCommand(view, searcher::TextSearcher::MIGEMO, BACKWARD, &app_).execute();
+		view.beginIncrementalSearch(searcher::MIGEMO, BACKWARD);
 		return true;
 
 	case CMD_VIEW_TOOLBAR: {
@@ -636,7 +636,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 
 	case CMD_HELP_ABOUT:
-		ui::AboutDlg().doModal(app_.getMainWindow());
+		ui::AboutDialog().doModal(app_.getMainWindow());
 		return true;
 
 	default:

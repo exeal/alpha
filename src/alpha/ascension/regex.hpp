@@ -9,6 +9,7 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 #include "unicode-utils.hpp"	// unicode.UTF16To32Iterator
+#include "internal.hpp"			// internal.Int2Type
 #include <memory>
 #include <map>
 #include <bitset>
@@ -47,7 +48,7 @@ namespace ascension {
 				typedef std::bitset<CLASS_END> char_class_type;
 				static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
 				char_type translate(char_type c) const;
-				char_type translate_nocase(char_type c) const {return unicode::CaseFolder::foldSimple(translate(c));}
+				char_type translate_nocase(char_type c) const {return unicode::CaseFolder::fold(translate(c));}
 				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
@@ -68,7 +69,7 @@ namespace ascension {
 		} // namespace internal
 
 		/// Represents a match result.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		class MatchResult : public manah::Noncopyable {
 		public:
 			// attributes
@@ -79,10 +80,11 @@ namespace ascension {
 			std::size_t			getNumberOfGroups() const;
 			CharacterSequence	getStart() const;
 			// operation
-			String	replace(CharacterSequence first, CharacterSequence last) const;
+			String	replace(const Char* first, const Char* last) const;
 		private:
-			typedef const boost::match_results<
-				unicode::UTF16To32Iterator<CharacterSequence, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>
+			typedef const boost::match_results<unicode::UTF16To32Iterator<CharacterSequence,
+				unicode::IsUTF16IteratorHasBoundary<CharacterSequence>::result ?
+					unicode::utf16boundary::BASE_KNOWS_BOUNDARIES : unicode::utf16boundary::USE_BOUNDARY_ITERATORS>
 			> Impl;
 			explicit MatchResult(std::auto_ptr<Impl> impl) throw() : impl_(impl) {}
 			std::auto_ptr<Impl> impl_;
@@ -116,22 +118,29 @@ namespace ascension {
 			// constructors
 			Pattern(const Char* first, const Char* last, const SyntaxOptions& options = NORMAL);
 			Pattern(const String& pattern, const SyntaxOptions& options = NORMAL);
+			virtual ~Pattern() throw();
 			// attributes
 			std::locale	getLocale() const throw();
 			String		getPatternString() const throw();
 			void		setLocale(const std::locale& lc) throw();
 			// operations
-			std::auto_ptr<MatchResult<const Char*> >	matches(const Char* first, const Char* last, const MatchOptions& flags = NONE) const;
-			std::auto_ptr<MatchResult<const Char*> >	search(const Char* first, const Char* last, const MatchOptions& flags = NONE) const;
-			template<class CharacterSequence> std::auto_ptr<MatchResult<CharacterSequence> >
+			template<typename CharacterSequence> std::auto_ptr<MatchResult<CharacterSequence> >
 				matches(CharacterSequence first, CharacterSequence last, const MatchOptions& flags = NONE) const;
-			template<class CharacterSequence> std::auto_ptr<MatchResult<CharacterSequence> >
+			template<typename CharacterSequence> std::auto_ptr<MatchResult<CharacterSequence> >
 				search(CharacterSequence first, CharacterSequence last, const MatchOptions& flags = NONE) const;
 		protected:
 			Pattern(const Char* first, const Char* last,
 				const manah::Flags<SyntaxOption>& options, boost::regex_constants::syntax_option_type nativeSyntax);
 		private:
-			static boost::regex_constants::match_flag_type	translateMatchOptions(const MatchOptions& flags) throw();
+			template<typename I> std::auto_ptr<MatchResult<I> >
+				matches(I first, I last, const MatchOptions& options, ascension::internal::Int2Type<true>&) const;
+			template<typename I> std::auto_ptr<MatchResult<I> >
+				matches(I first, I last, const MatchOptions& options, ascension::internal::Int2Type<false>&) const;
+			template<typename I> std::auto_ptr<MatchResult<I> >
+				search(I first, I last, const MatchOptions& options, ascension::internal::Int2Type<true>&) const;
+			template<typename I> std::auto_ptr<MatchResult<I> >
+				search(I first, I last, const MatchOptions& options, ascension::internal::Int2Type<false>&) const;
+			static boost::regex_constants::match_flag_type	translateMatchOptions(const MatchOptions& options) throw();
 		private:
 			boost::basic_regex<CodePoint, internal::RegexTraits> impl_;
 			const SyntaxOptions options_;
@@ -182,38 +191,36 @@ namespace ascension {
 		 * @param last the end of the replacement string
 		 * @return the replaced string
 		 */
-		template<class CharacterSequence>
-		inline String MatchResult<CharacterSequence>::replace(CharacterSequence first, CharacterSequence last) const {
-#pragma warning(disable : 4244)
+		template<typename CharacterSequence>
+		inline String MatchResult<CharacterSequence>::replace(const Char* first, const Char* last) const {
 			const std::basic_string<CodePoint> temp(impl_->format(std::basic_string<CodePoint>(
-				unicode::UTF16To32Iterator<CharacterSequence, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
-				unicode::UTF16To32Iterator<CharacterSequence, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last))));
-#pragma warning(default : 4244)
+				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
+				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last))));
 			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
 		/// Returns the string of the matched sub-expression.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		inline String MatchResult<CharacterSequence>::getGroup(int group) const {
 			if(!(*impl_)[group].matched) throw std::out_of_range("the specified group is not matched.");
 			std::basic_string<CodePoint> s(impl_->str());
 			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));}
 
 		/// Returns the end of the matched sub-expression.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		inline CharacterSequence MatchResult<CharacterSequence>::getGroupEnd(int group) const {
 			if(!(*impl_)[group].matched) throw std::out_of_range("the specified group is not matched."); return (*impl_)[group].second.tell();}
 
 		/// Returns the start of the matched sub-expression.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		inline CharacterSequence MatchResult<CharacterSequence>::getGroupStart(int group) const {
 			if(!(*impl_)[group].matched) throw std::out_of_range("the specified group is not matched."); return (*impl_)[group].first.tell();}
 
 		/// Returns the number of the matched sub-expressions.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		inline std::size_t MatchResult<CharacterSequence>::getNumberOfGroups() const {return impl_->size();}
 
 		/// Returns the start of the matched substring.
-		template<class CharacterSequence>
+		template<typename CharacterSequence>
 		inline CharacterSequence MatchResult<CharacterSequence>::getStart() const {assert((*impl_)[0].matched); return (*impl_)[0].first.tell();}
 
 		/// Returns the active locale.
@@ -225,61 +232,65 @@ namespace ascension {
 			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));
 		}
 
-		/**
-		 * Determines whether the pattern matches the specified string.
-		 * @param first the start of the target string
-		 * @param last the end of the target string
-		 * @param flags the match options
-		 * @return pointer to the result or @c null if the match is failed
-		 * @throw std#runtime_error an error occured in the regular expression match (see @c boost#regex_match)
-		 */
-		inline std::auto_ptr<MatchResult<const Char*> > Pattern::matches(
-			const Char* first, const Char* last, const MatchOptions& flags /* = NONE */) const {return matches<const Char*>(first, last, flags);}
+		template<typename I16> inline std::auto_ptr<MatchResult<I16> >
+			Pattern::matches(I16 first, I16 last, const MatchOptions& options, ascension::internal::Int2Type<true>&) const {
+			typedef unicode::UTF16To32Iterator<I16, unicode::utf16boundary::BASE_KNOWS_BOUNDARIES> I32;
+			std::auto_ptr<boost::match_results<I32> > p(new boost::match_results<I32>);
+			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
+			return std::auto_ptr<MatchResult<I16> >(boost::regex_match(I32(first),
+				I32(last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
+		}
+
+		template<typename I16> inline std::auto_ptr<MatchResult<I16> >
+			Pattern::matches(I16 first, I16 last, const MatchOptions& options, ascension::internal::Int2Type<false>&) const {
+			typedef unicode::UTF16To32Iterator<I16, unicode::utf16boundary::USE_BOUNDARY_ITERATORS> I32;
+			std::auto_ptr<boost::match_results<I32> > p(new boost::match_results<I32>);
+			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
+			return std::auto_ptr<MatchResult<I16> >(boost::regex_match(I32(first, first, last),
+				I32(last, first, last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
+		}
 
 		/**
 		 * Determines whether the pattern matches the specified string.
 		 * @param first the start of the target string
 		 * @param last the end of the target string
-		 * @param flags the match options
+		 * @param options the match options
 		 * @return pointer to the result or @c null if the match is failed
 		 * @throw std#runtime_error an error occured in the regular expression match (see @c boost#regex_match)
 		 */
-		template<class CharacterSequence> inline std::auto_ptr<MatchResult<CharacterSequence> >
-		Pattern::matches(CharacterSequence first, CharacterSequence last, const MatchOptions& flags /* = NONE */) const {
-			typedef unicode::UTF16To32Iterator<CharacterSequence, unicode::utf16boundary::USE_BOUNDARY_ITERATORS> I;
-			std::auto_ptr<boost::match_results<I> > p(new boost::match_results<I>);
+		template<typename CharacterSequence> inline std::auto_ptr<MatchResult<CharacterSequence> >
+		Pattern::matches(CharacterSequence first, CharacterSequence last, const MatchOptions& options /* = NONE */) const {
+			return matches(first, last, options, ascension::internal::Int2Type<unicode::IsUTF16IteratorHasBoundary<CharacterSequence>::result>());}
+
+		template<typename I16> inline std::auto_ptr<MatchResult<I16> >
+		Pattern::search(I16 first, I16 last, const MatchOptions& options, ascension::internal::Int2Type<true>&) const {
+			typedef unicode::UTF16To32Iterator<I16, unicode::utf16boundary::BASE_KNOWS_BOUNDARIES> I32;
+			std::auto_ptr<boost::match_results<I32> > p(new boost::match_results<I32>);
 			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-			return std::auto_ptr<MatchResult<CharacterSequence> >(boost::regex_match(I(first, first, last),
-				I(last, first, last), *p, impl_, translateMatchOptions(flags)) ? new MatchResult<CharacterSequence>(p) : 0);
+			return std::auto_ptr<MatchResult<I16> >(boost::regex_search(I32(first),
+				I32(last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
+		}
+
+		template<typename I16> inline std::auto_ptr<MatchResult<I16> >
+		Pattern::search(I16 first, I16 last, const MatchOptions& options, ascension::internal::Int2Type<false>&) const {
+			typedef unicode::UTF16To32Iterator<I16, unicode::utf16boundary::USE_BOUNDARY_ITERATORS> I32;
+			std::auto_ptr<boost::match_results<I32> > p(new boost::match_results<I32>);
+			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
+			return std::auto_ptr<MatchResult<I16> >(boost::regex_search(I32(first, first, last),
+				I32(last, first, last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
 		}
 
 		/**
 		 * Searches the specified target string for the pattern.
 		 * @param first the start of the target string
 		 * @param last the end of the target string
-		 * @param flags the search options
-		 * @return pointer to the result or @c null if the search is failed
-		 * @throw std#runtime_error an error occured in the regular expression search (see @c boost#regex_search)
-		 */
-		inline std::auto_ptr<MatchResult<const Char*> > Pattern::search(
-			const Char* first, const Char* last, const MatchOptions& flags /* = NONE */) const {return search<const Char*>(first, last, flags);}
-
-		/**
-		 * Searches the specified target string for the pattern.
-		 * @param first the start of the target string
-		 * @param last the end of the target string
-		 * @param flags the search options
+		 * @param options the search options
 		 * @return pointer to the result or @c null if the search is failed
 		 * @throw std#runtime_error an error occured in the regular expression search (see @c boost#regex_search)
 		 */
 		template<class CharacterSequence> inline std::auto_ptr<MatchResult<CharacterSequence> >
-		Pattern::search(CharacterSequence first, CharacterSequence last, const MatchOptions& flags /* = NONE */) const {
-			typedef unicode::UTF16To32Iterator<CharacterSequence, unicode::utf16boundary::USE_BOUNDARY_ITERATORS> I;
-			std::auto_ptr<boost::match_results<I> > p(new boost::match_results<I>);
-			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-			return std::auto_ptr<MatchResult<CharacterSequence> >(boost::regex_search(I(first, first, last),
-				I(last, first, last), *p, impl_, translateMatchOptions(flags)) ? new MatchResult<CharacterSequence>(p) : 0);
-		}
+		Pattern::search(CharacterSequence first, CharacterSequence last, const MatchOptions& options /* = NONE */) const {
+			return search(first, last, options, ascension::internal::Int2Type<unicode::IsUTF16IteratorHasBoundary<CharacterSequence>::result>());}
 
 		/// Sets the active locale.
 		inline void Pattern::setLocale(const std::locale& lc) throw() {impl_.imbue(lc);}

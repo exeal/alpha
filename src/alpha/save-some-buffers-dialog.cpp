@@ -8,12 +8,12 @@
 #include "application.hpp"
 #include "save-some-buffers-dialog.hpp"
 using alpha::Alpha;
-using alpha::ui::SaveSomeBuffersDlg;
+using alpha::ui::SaveSomeBuffersDialog;
 using namespace std;
 
 
 /// @see Dialog#onCommand
-bool SaveSomeBuffersDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool SaveSomeBuffersDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LINK_SELECTALL)
 		bufferListbox_.selItemRange(0, bufferListbox_.getCount() - 1);
 	else if(id == IDC_LINK_CLEARALL)
@@ -22,7 +22,7 @@ bool SaveSomeBuffersDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool SaveSomeBuffersDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool SaveSomeBuffersDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	HICON icon = Alpha::loadStandardIcon(IDI_WARNING);
@@ -44,7 +44,7 @@ bool SaveSomeBuffersDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 }
 
 /// @see Dialog#onOK
-void SaveSomeBuffersDlg::onOK() {
+void SaveSomeBuffersDialog::onOK() {
 	const int c = bufferListbox_.getSelCount();
 	int* sels = new int[c];
 

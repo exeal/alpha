@@ -24,7 +24,7 @@
 // タイトルバーとかに使うアプリケーション名
 #define __WTIMESTAMP__		_T(__TIMESTAMP__)
 #define IDS_APPNAME			L"Alpha"
-#define IDS_APPVERSION		L"0.7.99.0"
+#define IDS_APPVERSION		L"0.7.90.0"
 #ifdef _DEBUG
 #	define IDS_APPVERSIONINFO	L"debug version [" __WTIMESTAMP__ L"]"
 #else
@@ -80,8 +80,8 @@ public:
 		class BuiltInCommand;
 	}
 	namespace ui {
-		class SearchDlg;
-		class BookmarkDlg;
+		class SearchDialog;
+		class BookmarkDialog;
 	}
 	namespace ambient {
 		class Application;
@@ -112,8 +112,7 @@ public:
 			virtual public IActiveBufferListener,
 			virtual public command::ITemporaryMacroListener,
 			virtual public ascension::viewers::ICaretListener,
-			virtual public ascension::texteditor::IClipboardRingListener,
-			virtual public ascension::searcher::IIncrementalSearcherListener/*,
+			virtual public ascension::texteditor::IClipboardRingListener/*,
 			virtual public IAlphaApplicationDebuggerEventListener*/ {
 	public:
 		// コンストラクタ
@@ -135,7 +134,7 @@ public:
 		static Alpha&		getInstance();
 		void				getTextEditorFont(::LOGFONTW& font) const throw();
 		void				setFont(const ::LOGFONTW& font);
-		void				setStatusText(const wchar_t* text);
+		void				setStatusText(const wchar_t* text, HFONT font = 0);
 		// 検索
 		void	replaceAll();
 		void	replaceAndSearchNext();
@@ -180,11 +179,6 @@ public:
 		// ascension::texteditor::IClipboardRingListener
 		void	clipboardRingChanged();
 		void	clipboardRingAddingDenied();
-		// ascension::searcher::IIncrementalSearcherLisetner
-		void	incrementalSearchAborted();
-		void	incrementalSearchCompleted();
-		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearcherListener::Result result);
-		void	incrementalSearchStarted();
 
 		// メッセージハンドラ
 	protected:
@@ -224,8 +218,8 @@ public:
 		manah::windows::ui::Rebar rebar_;				// レバー
 		manah::windows::ui::Toolbar toolbar_;			// 標準ツールバー
 		manah::windows::ui::StatusBar statusBar_;		// ステータスバー
-		std::auto_ptr<ui::SearchDlg> searchDialog_;		// [検索と置換]ダイアログ
-		std::auto_ptr<ui::BookmarkDlg> bookmarkDialog_;	// [ブックマーク]ダイアログ
+		std::auto_ptr<ui::SearchDialog> searchDialog_;		// [検索と置換] ダイアログ
+		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
 		// GDI オブジェクト
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
@@ -239,8 +233,8 @@ public:
 		MRUManager* mruManager_;
 		std::auto_ptr<BufferList> buffers_;
 //		std::auto_ptr<ScriptMacroManager> scriptMacroManager_;	// スクリプトマクロの管理
-		command::VirtualKey twoStroke1stKey_;			// 入力中の2ストロークシーケンスの1ストローク目のキー
-		command::KeyModifier twoStroke1stModifiers_;	// 入力中の2ストロークシーケンスの1ストローク目の修飾キー
+		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
+		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
 		std::map<ascension::encodings::CodePage, std::wstring>	codePageNameTable_;
 		// オートメーション用インターフェイス
 //		alpha::ambient::Application* automation_;
@@ -283,12 +277,6 @@ public:
 
 	/// テキストエディタに使うフォントを返す
 	inline void Alpha::getTextEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}
-
-	/**
-	 * ステータスバーの先頭のペインのテキストを設定する
-	 * @param text 設定するテキスト。@c null だと既定のテキスト
-	 */
-	inline void Alpha::setStatusText(const wchar_t* text) {statusBar_.setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);}
 
 } // namespace alpha
 

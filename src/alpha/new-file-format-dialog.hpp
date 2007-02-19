@@ -15,9 +15,9 @@
 namespace alpha {
 	namespace ui {
 		/// 「書式を指定して新規」ダイアログ
-		class NewFileFormatDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
+		class NewFileFormatDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
-			NewFileFormatDlg(ascension::encodings::CodePage encoding, ascension::text::LineBreak lineBreak) throw();
+			NewFileFormatDialog(ascension::encodings::CodePage encoding, ascension::text::LineBreak lineBreak) throw();
 			ascension::encodings::CodePage	getEncoding() const throw();
 			ascension::text::LineBreak		getLineBreak() const throw();
 		private:
@@ -35,14 +35,11 @@ namespace alpha {
 		};
 
 		/// ユーザが選択したエンコーディングを返す
-		inline ascension::encodings::CodePage NewFileFormatDlg::getEncoding() const throw() {
-			return encoding_;
-		}
+		inline ascension::encodings::CodePage NewFileFormatDialog::getEncoding() const throw() {return encoding_;}
 
 		/// ユーザが選択した改行を返す
-		inline ascension::text::LineBreak NewFileFormatDlg::getLineBreak() const throw() {
-			return lineBreak_;
-		}
+		inline ascension::text::LineBreak NewFileFormatDialog::getLineBreak() const throw() {return lineBreak_;}
+
 	} // namespace ui
 } // namespace alpha
 

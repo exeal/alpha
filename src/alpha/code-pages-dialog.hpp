@@ -15,9 +15,9 @@
 namespace alpha {
 	namespace ui {
 		/// [コードページの選択] ダイアログ
-		class CodePagesDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_CODEPAGES> {
+		class CodePagesDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_CODEPAGES> {
 		public:
-			CodePagesDlg(ascension::encodings::CodePage codePage, bool forReading) throw();
+			CodePagesDialog(ascension::encodings::CodePage codePage, bool forReading) throw();
 			ascension::encodings::CodePage	getCodePage() const throw();
 
 		private:
@@ -33,8 +33,8 @@ namespace alpha {
 		};
 
 		/// ユーザが選択したコードページを返す
-		inline ascension::encodings::CodePage CodePagesDlg::getCodePage() const throw() {return codePage_;}
+		inline ascension::encodings::CodePage CodePagesDialog::getCodePage() const throw() {return codePage_;}
 	}
 }
 
-#endif /* ALPHA_CODE_PAGES_DIALOG_HPP */
+#endif /* !ALPHA_CODE_PAGES_DIALOG_HPP */

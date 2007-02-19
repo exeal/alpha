@@ -1,12 +1,12 @@
 /**
  * @file about-dialog.cpp
  * @author exeal
- * @date 2004-2006
+ * @date 2004-2007
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "about-dialog.hpp"
-using alpha::ui::AboutDlg;
+using alpha::ui::AboutDialog;
 
 
 namespace {
@@ -15,7 +15,7 @@ namespace {
 }
 
 
-bool AboutDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool AboutDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LINK_HOMEPAGE) {
 		::ShellExecuteW(0, 0, HOME_PAGE_URL, 0, 0, SW_SHOWNORMAL);
 		return true;
@@ -27,7 +27,7 @@ bool AboutDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
-bool AboutDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool AboutDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	homePageLink_.create(*this, ::GetModuleHandle(0), IDC_LINK_HOMEPAGE);

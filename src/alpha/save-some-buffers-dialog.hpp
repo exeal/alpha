@@ -11,7 +11,6 @@
 #include "../manah/win32/ui/link-label.hpp"
 #include <vector>
 
-
 namespace alpha {
 	namespace ui {
 		/// 保存候補のファイル
@@ -22,14 +21,11 @@ namespace alpha {
 		};
 
 		/// [保存されていないバッファ] ダイアログ
-		class SaveSomeBuffersDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_SAVESOMEBUFFERS> {
-			// メッセージハンドラ
+		class SaveSomeBuffersDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_SAVESOMEBUFFERS> {
 		protected:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
 			bool	onInitDialog(HWND focusWindow, LPARAM initParam);
 			void	onOK();
-
-			// データメンバ
 		public:
 			std::vector<DirtyFile> files_;
 			manah::windows::ui::ListBox bufferListbox_;

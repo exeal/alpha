@@ -345,7 +345,7 @@ namespace ascension {
 			// text manipulation
 			bool	inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
 			// utility
-			bool	getPrecedingIdentifier(length_t maxLength, String& identifier) const;
+			String	getPrecedingIdentifier(length_t maxLength) const;
 
 		private:
 			void	checkMatchBrackets();

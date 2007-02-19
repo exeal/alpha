@@ -8,18 +8,18 @@
 #include "goto-line-dialog.hpp"
 #include "command.hpp"
 
-using alpha::ui::GotoLineDlg;
+using alpha::ui::GotoLineDialog;
 using alpha::Alpha;
 using namespace ascension;
 using namespace std;
 
 
 /// コンストラクタ
-GotoLineDlg::GotoLineDlg(Alpha& app) : app_(app) {
+GotoLineDialog::GotoLineDialog(Alpha& app) : app_(app) {
 }
 
 /// @see Dialog#onInitDialog
-bool GotoLineDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+bool GotoLineDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	const Buffer& buffer = app_.getBufferList().getActive();
@@ -44,7 +44,7 @@ bool GotoLineDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 }
 
 /// @see Dialog#onOK()
-void GotoLineDlg::onOK() {
+void GotoLineDialog::onOK() {
 	// 一時マクロ定義中は実行できない
 	if(app_.getCommandManager().getTemporaryMacro().getState() == command::TemporaryMacro::DEFINING) {
 		app_.messageBox(MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING, MB_ICONEXCLAMATION);

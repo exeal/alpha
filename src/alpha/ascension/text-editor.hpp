@@ -186,14 +186,14 @@ namespace ascension {
 			/// インクリメンタル検索
 			class IncrementalSearchCommand : public EditorCommand {
 			public:
-				IncrementalSearchCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
-					Direction direction, searcher::IIncrementalSearcherListener* listener = 0) throw()
+				IncrementalSearchCommand(viewers::TextViewer& view, searcher::SearchType type,
+					Direction direction, searcher::IIncrementalSearchListener* listener = 0) throw()
 					: EditorCommand(view), type_(type), direction_(direction), listener_(listener) {}
 				ulong execute();
 			private:
-				searcher::TextSearcher::Type type_;
+				searcher::SearchType type_;
 				Direction direction_;
-				searcher::IIncrementalSearcherListener* listener_;
+				searcher::IIncrementalSearchListener* listener_;
 			};
 			/// インデント
 			class IndentationCommand : public EditorCommand {

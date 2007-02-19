@@ -9,7 +9,7 @@
 #include "command.hpp"
 #include "../manah/win32/ui/common-controls.hpp"
 
-using alpha::ui::BookmarkDlg;
+using alpha::ui::BookmarkDialog;
 using alpha::Alpha;
 using alpha::Buffer;
 using namespace manah::windows::ui;
@@ -18,16 +18,16 @@ using namespace std;
 
 
 /// コンストラクタ
-BookmarkDlg::BookmarkDlg(Alpha& app) : app_(app) {
+BookmarkDialog::BookmarkDialog(Alpha& app) : app_(app) {
 }
 
 /**
- *	指定した位置の項目情報を得る
- *	@param index 項目の位置
- *	@param[out] buffer バッファ
- *	@param[out] line 行番号 (0ベース)
+ * 指定した位置の項目情報を得る
+ * @param index 項目の位置
+ * @param[out] buffer バッファ
+ * @param[out] line 行番号 (0ベース)
  */
-void BookmarkDlg::getItemInfo(int index, Buffer*& buffer, length_t& line) const {
+void BookmarkDialog::getItemInfo(int index, Buffer*& buffer, length_t& line) const {
 	wchar_t location[300];
 	wchar_t* delimiter = 0;
 
@@ -42,7 +42,7 @@ void BookmarkDlg::getItemInfo(int index, Buffer*& buffer, length_t& line) const 
 }
 
 /// [削除] ボタンの処理
-void BookmarkDlg::onBtnDelete() {
+void BookmarkDialog::onBtnDelete() {
 	const int sel = bookmarksList_.getSelectionMark();
 
 	if(sel == -1)	// 選択が無い
@@ -66,7 +66,7 @@ void BookmarkDlg::onBtnDelete() {
 }
 
 /// ブックマークリストの更新
-void BookmarkDlg::updateList() {
+void BookmarkDialog::updateList() {
 	const BufferList& buffers = app_.getBufferList();
 	list<length_t> lines;
 	Char location[300];
@@ -83,10 +83,9 @@ void BookmarkDlg::updateList() {
 			const length_t bottomLine = buffer.getEndPosition().line;
 			length_t line = 0;
 
-			while((line = buffer.getBookmarker().getNext(line, FORWARD)) != -1) {
+			while((line = buffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
 				if(line >= topLine && line <= bottomLine) {
 					String s = buffer.getLine(line).substr(0, 100);
-
 					++item;
 					replace_if(s.begin(), s.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 					item = bookmarksList_.insertItem(item, s.c_str());
@@ -95,6 +94,8 @@ void BookmarkDlg::updateList() {
 					bookmarksList_.setItemData(item, static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(&buffer)));
 					bufferIndices_[const_cast<Buffer*>(&buffer)] = i;
 				}
+				if(++line > bottomLine)
+					break;
 			}
 		}
 	} else {
@@ -105,10 +106,9 @@ void BookmarkDlg::updateList() {
 		const length_t bottomLine = activeBuffer.getEndPosition().line;
 		length_t line = 0;
 
-		while((line = activeBuffer.getBookmarker().getNext(line, FORWARD)) != -1) {
+		while((line = activeBuffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
 			if(line >= topLine && line <= bottomLine) {
 				String s = activeBuffer.getLine(line).substr(0, 100);
-
 				++item;
 				replace_if(s.begin(), s.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 				item = bookmarksList_.insertItem(item, s.c_str());
@@ -116,6 +116,8 @@ void BookmarkDlg::updateList() {
 				bookmarksList_.setItemText(item, 1, location);
 				bookmarksList_.setItemData(item, static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(&activeBuffer)));
 			}
+			if(++line > bottomLine)
+				break;
 		}
 		bufferIndices_[const_cast<Buffer*>(&activeBuffer)] = app_.getBufferList().getActiveIndex();
 	}
@@ -130,8 +132,8 @@ void BookmarkDlg::updateList() {
 	}
 }
 
-/// @see Dialog::onClose
-void BookmarkDlg::onClose() {
+/// @see Dialog#onClose
+void BookmarkDialog::onClose() {
 	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.autoClose",
 		(isDlgButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
 	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.allBuffers",
@@ -139,8 +141,8 @@ void BookmarkDlg::onClose() {
 	Dialog::onClose();
 }
 
-/// @see Dialog::onCommand
-bool BookmarkDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
+/// @see Dialog#onCommand
+bool BookmarkDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	switch(id) {
 	case IDC_BTN_ADD:	// [追加]
 		app_.getBufferList().getActive().getBookmarker().mark(
@@ -158,8 +160,8 @@ bool BookmarkDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
-/// @see Dialog::onInitDialog
-bool BookmarkDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
+/// @see Dialog#onInitDialog
+bool BookmarkDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	modifyStyleEx(0, WS_EX_LAYERED);
@@ -179,8 +181,8 @@ bool BookmarkDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	return true;
 }
 
-/// @see Dialog::onNotify
-bool BookmarkDlg::onNotify(int id, LPNMHDR nmhdr) {
+/// @see Dialog#onNotify
+bool BookmarkDialog::onNotify(int id, LPNMHDR nmhdr) {
 	if(id== IDC_LIST_BOOKMARKS && nmhdr->code == NM_DBLCLK) {
 		onOK();
 		return true;
@@ -188,8 +190,8 @@ bool BookmarkDlg::onNotify(int id, LPNMHDR nmhdr) {
 	return Dialog::onNotify(id, nmhdr);
 }
 
-/// @see Dialog::OnOK
-void BookmarkDlg::onOK() {
+/// @see Dialog#OnOK
+void BookmarkDialog::onOK() {
 	// 一時マクロ定義中は実行できない
 	if(app_.getCommandManager().getTemporaryMacro().getState() == command::TemporaryMacro::DEFINING) {
 		app_.messageBox(MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING, MB_ICONEXCLAMATION);

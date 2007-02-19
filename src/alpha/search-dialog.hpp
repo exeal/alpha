@@ -11,59 +11,43 @@
 #include "../manah/win32/ui/standard-controls.hpp"
 #include "../manah/win32/ui/menu.hpp"
 #include "ascension/searcher.hpp"
-#include <list>
-
 
 namespace alpha {
+
 	class Alpha;
 	class EditorView;
 
 	namespace ui {
 		/// [検索と置換] ダイアログ
-		class SearchDlg : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
+		class SearchDialog : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
 		public:
-			// コンストラクタ
-			explicit SearchDlg(Alpha& app);
-			// 属性
-			ascension::String	getFindText() const;
-			void				getHistory(
-									std::list<ascension::String>& findWhats,
-									std::list<ascension::String>& replaceWiths) const;
-			ascension::String	getReplaceText() const;
-			void				setHistory(
-									const std::list<ascension::String>& findWhats,
-									const std::list<ascension::String>& replaceWiths);
-			// 操作
-			void	addToHistory(const ascension::String& text, bool replace);
-			void	clearHistory(bool replace);
-			void	updateOptions();
-		private:
-			void	updateHistory(bool replace);
-			// メッセージハンドラ
+			explicit SearchDialog(Alpha& app);
+			std::wstring	getActivePattern() const throw();
+			std::wstring	getActiveReplacement() const throw();
+			void			setOptions();
+
 		protected:
 			void	onActivate(UINT state, HWND previousWindow, bool minimized);	// WM_ACTIVATE
 			void	onCancel();														// IDCANCEL
 			void	onClose();														// WM_CLOSE
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);				// WM_COMMAND
 			bool	onInitDialog(HWND focusWindow, LPARAM initParam);				// WM_INITDIALOG
-
-			//データメンバ
+		private:
+			void	updateOptions();
 		private:
 			Alpha& app_;
-			std::list<ascension::String> findWhats_;
-			std::list<ascension::String> replaceWiths_;
-			bool updateHistoryOnNextActivation_[2];
-			manah::windows::ui::Menu optionMenu_;
 			// コントロール
-			manah::windows::ui::ComboBox findWhatCombobox_;
-			manah::windows::ui::ComboBox replaceWithCombobox_;
+			manah::windows::ui::ComboBox patternCombobox_;
+			manah::windows::ui::ComboBox replacementCombobox_;
 			manah::windows::ui::ComboBox searchTypeCombobox_;
-			manah::windows::ui::ComboBox caseSensitivityCombobox_;
+			manah::windows::ui::ComboBox wholeMatchCombobox_;
+			manah::windows::ui::ComboBox collationWeightCombobox_;
 			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_COMBO_FINDWHAT, findWhatCombobox_)
-				BIND_CONTROL(IDC_COMBO_REPLACEWITH, replaceWithCombobox_)
+				BIND_CONTROL(IDC_COMBO_FINDWHAT, patternCombobox_)
+				BIND_CONTROL(IDC_COMBO_REPLACEWITH, replacementCombobox_)
 				BIND_CONTROL(IDC_COMBO_SEARCHTYPE, searchTypeCombobox_)
-				BIND_CONTROL(IDC_COMBO_CASEFOLDING, caseSensitivityCombobox_)
+				BIND_CONTROL(IDC_COMBO_WHOLEMATCH, wholeMatchCombobox_)
+				BIND_CONTROL(IDC_COMBO_COLLATIONWEIGHT, collationWeightCombobox_)
 			END_CONTROL_BINDING()
 		};
 
