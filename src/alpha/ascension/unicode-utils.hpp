@@ -205,7 +205,9 @@ namespace ascension {
 		class CStringCharacterIterator : public CharacterIterator {
 		public:
 			CStringCharacterIterator() throw() : CharacterIterator(0) {}
-			CStringCharacterIterator(const Char* start, const Char* first, const Char* last) throw() :
+			CStringCharacterIterator(const Char* first, const Char* last) throw() :
+				CharacterIterator(0), current_(first), first_(first), last_(last) {}
+			CStringCharacterIterator(const Char* first, const Char* last, const Char* start) throw() :
 				CharacterIterator(start - first), current_(start), first_(first), last_(last) {}
 			CStringCharacterIterator(const CStringCharacterIterator& rhs) throw() :
 				CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
@@ -322,7 +324,10 @@ namespace ascension {
 		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK>
 				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> > {
 		public:
+			/// Default constructor.
 			UTF16To32Iterator() {}
+			/// Constructor takes a position to start iteration. The ownership of the target text
+			/// will not be transferred to this.
 			UTF16To32Iterator(BaseIterator i) :
 			  UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> >(i) {}
 		private:
@@ -333,7 +338,10 @@ namespace ascension {
 		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES>
 				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> > {
 		public:
+			/// Default constructor.
 			UTF16To32Iterator() {}
+			/// Constructor takes a position to start iteration. The ownership of the target text
+			/// will not be transferred to this.
 			UTF16To32Iterator(BaseIterator i) :
 			  UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> >(i) {}
 		private:
@@ -346,9 +354,17 @@ namespace ascension {
 		private:
 			typedef UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> > Base;
 		public:
+			/// Default constructor.
 			UTF16To32Iterator() {}
-			UTF16To32Iterator(BaseIterator i, BaseIterator first, BaseIterator last) : Base(i), first_(first), last_(last) {}
+			/// Constructor takes a position to start iteration. The ownership of the target text
+			/// will not be transferred to this.
+			UTF16To32Iterator(BaseIterator first, BaseIterator last) : Base(first), first_(first), last_(last) {}
+			/// Constructor takes a position to start iteration. The ownership of the target text
+			/// will not be transferred to this.
+			UTF16To32Iterator(BaseIterator first, BaseIterator last, BaseIterator start) : Base(start), first_(first), last_(last) {}
+			/// Copy constructor.
 			UTF16To32Iterator(const UTF16To32Iterator& rhs) : Base(rhs), first_(rhs.first_), last_(rhs.last_) {}
+			/// Assignment operator.
 			UTF16To32Iterator& operator=(const UTF16To32Iterator& rhs) {Base::operator=(rhs); first_ = rhs.first_; last_ = rhs.last_; return *this;}
 		private:
 			bool doIsFirst(const BaseIterator& i) const {return i == first_;}
@@ -366,7 +382,7 @@ namespace ascension {
 		/**
 		 * Bidirectional iterator scans UTF-32 character sequence as UTF-16.
 		 *
-		 * Scanned UTF-32 sequence is given by the template parameter @a BaseIterator.
+		 * UTF-32 sequence scanned by this is given by the template parameter @a BaseIterator.
 		 *
 		 * This supports four relation operators general bidirectional iterators don't have.
 		 * These are available if @a BaseIterator have these facilities.
@@ -380,6 +396,7 @@ namespace ascension {
 			/// Default constructor.
 			UTF32To16Iterator() {}
 			/// Constructor takes a position to start iteration.
+			/// The ownership of the target text will not be transferred to this.
 			UTF32To16Iterator(BaseIterator start) : p_(start), high_(true) {}
 			/// Assignment operator.
 			UTF32To16Iterator& operator=(const UTF32To16Iterator& rhs) {p_ = rhs.p_; high_ = rhs.high_;}
@@ -1069,7 +1086,7 @@ inline const Char* Normalizer::tell() const throw() {return current_.tell();}
  */
 template<class CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first, CharacterSequence last) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
+	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
 	if(!isIdentifierStartCharacter(*i))
 		return first;
 	while(!i.isLast() && isIdentifierContinueCharacter(*i))
@@ -1087,7 +1104,7 @@ inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first
  */
 template<class CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last);
+	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
 	while(!i.isLast() && isWhiteSpace(*i, includeTab))
 		++i;
 	return i.tell();
@@ -1140,7 +1157,7 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 	StringBuffer s(std::ios_base::out);
 	CodePoint c, f;
 	Char buffer[2];
-	for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last); !i.isLast(); ++i) {
+	for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i) {
 		c = *i;
 		if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 			f = foldCommon(c);
