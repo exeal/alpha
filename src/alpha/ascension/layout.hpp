@@ -19,8 +19,8 @@ namespace ascension {
 
 	namespace viewers {
 
-		const COLORREF STANDARD_COLOR = 0xFFFFFFFF;		///< Standard color (This value introduces any fallback).
-		const COLORREF SYSTEM_COLOR_MASK = 0x80000000;	///< Used like @c (index | SYSTEM_COLOR_MASK) to represent a system color.
+		const COLORREF STANDARD_COLOR = 0xFFFFFFFFUL;		///< Standard color (This value introduces any fallback).
+		const COLORREF SYSTEM_COLOR_MASK = 0x80000000UL;	///< Used like @c (index | SYSTEM_COLOR_MASK) to represent a system color.
 
 		/// Alignment of the text layout.
 		enum Alignment {
@@ -39,17 +39,17 @@ namespace ascension {
 
 		/// Type of the border and underline.
 		enum BorderStyle {
-			BS_NONE,					///< None
-			BS_UNDERLINE_SOLID,			///< Solid underline
-			BS_UNDERLINE_BOLD,			///< Bold solid underline
-			BS_UNDERLINE_DASHED,		///< Dashed underline
-			BS_UNDERLINE_BOLD_DASHED,	///< Bold dashed underline
-			BS_UNDERLINE_DOTTED,		///< Dotted underline
-			BS_UNDERLINE_BOLD_DOTTED,	///< Bold dotted underline
-			BS_UNDERLINE_WAVED,			///< Waved underline
-			BS_BORDER_SOLID,			///< Solid border
-			BS_BORDER_DASHED,			///< Dashed border
-			BS_BORDER_DOTTED,			///< Dotted border
+			BS_NONE,					///< None.
+			BS_UNDERLINE_SOLID,			///< Solid underline.
+			BS_UNDERLINE_BOLD,			///< Bold solid underline.
+			BS_UNDERLINE_DASHED,		///< Dashed underline.
+			BS_UNDERLINE_BOLD_DASHED,	///< Bold dashed underline.
+			BS_UNDERLINE_DOTTED,		///< Dotted underline.
+			BS_UNDERLINE_BOLD_DOTTED,	///< Bold dotted underline.
+			BS_UNDERLINE_WAVED,			///< Waved underline.
+			BS_BORDER_SOLID,			///< Solid border.
+			BS_BORDER_DASHED,			///< Dashed border.
+			BS_BORDER_DOTTED,			///< Dotted border.
 		};
 
 		/// Digit shape (substitution) types.
@@ -62,8 +62,8 @@ namespace ascension {
 
 		/// Foreground color and background.
 		struct Colors {
-			COLORREF foreground;	///< Color of foreground (text)
-			COLORREF background;	///< Color of background
+			COLORREF foreground;	///< Color of foreground (text).
+			COLORREF background;	///< Color of background.
 			static const Colors STANDARD;	///< Standard color. This value introduces any fallback.
 			/**
 			 * Constructor initializes the each colors.
@@ -79,18 +79,16 @@ namespace ascension {
 		 * @see Presentation#Configurations#lineWrap
 		 */
 		struct LineWrapConfiguration {
-			/// Algorithm for wrap
+			/// Algorithm for wrap.
 			enum Alrorithm {
 				NO_WRAP,			///< Does not wrap the line.
 				GLYPH_BOUNDARIES,	///< Wraps any glyph boundaries.
-				UNICODE_UAX_14,		///< Follows Unicode UAX #14: Line Breaking Properties
-				JIS_X_4051			///< Follows JIS X 4051:2004 『日本語文書の行組版方法』
-			} algorithm;	///< The algorithm
+				UNICODE_UAX_14,		///< Follows Unicode UAX #14: Line Breaking Properties (not implemented).
+				JIS_X_4051			///< Follows JIS X 4051:2004 『日本語文書の行組版方法』(not implemented).
+			} algorithm;	///< The algorithm.
 			/**
-			 * The maximum line width.
-			 *
-			 * This value must be grater than or equal to zero.
-			 * If set to zero, the lines will be wrapped at the window edge.
+			 * The maximum line width. This value must be grater than or equal to zero. If set to
+			 * zero, the lines will be wrapped at the window edge.
 			 */
 			int width;
 			/// Default constructor.
@@ -107,8 +105,8 @@ namespace ascension {
 		class TextRenderer;
 
 		/**
-		 * @c LineLayout represents a layout of styled line text.
-		 * Provides support for drawing, cursor navigation, hit testing, text wrapping, etc.
+		 * @c LineLayout represents a layout of styled line text. Provides support for drawing,
+		 * cursor navigation, hit testing, text wrapping, etc.
 		 * @note This class is underivable.
 		 * @see TextRenderer#getLineLayout
 		 */
@@ -118,8 +116,8 @@ namespace ascension {
 		public:
 			/// Edge of a character.
 			enum Edge {
-				LEADING,	///< Leading edge of a character
-				TRAILING	///< Trailing edge of a character
+				LEADING,	///< Leading edge of a character.
+				TRAILING	///< Trailing edge of a character.
 			};
 			/// Bidirectional iterator enumerates style runs in a line.
 			class StyledSegmentIterator : public std::iterator<std::bidirectional_iterator_tag, const presentation::StyledText> {
@@ -175,6 +173,7 @@ namespace ascension {
 			void	dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */
 		private:
+			static HRESULT	buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
 			void			dispose() throw();
 			void			drawBorder(manah::windows::gdi::PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw();
 			void			expandTabsWithoutWrapping() throw();
@@ -187,7 +186,7 @@ namespace ascension {
 			void			reorder() throw();
 //			void			rewrap();
 			bool			shape() throw();
-			bool			shape(struct Run& run) throw();
+			bool			shape(Run& run) throw();
 			void			wrap() throw();
 		private:
 			const TextRenderer& renderer_;
@@ -250,7 +249,8 @@ namespace ascension {
 		};
 
 		/**
-		 * Interface for objects which are interested in getting informed about change of visual lines of @c TextRenderer.
+		 * Interface for objects which are interested in getting informed about change of visual
+		 * lines of @c TextRenderer.
 		 * @see TextRenderer#addVisualLinesListener, TextRenderer#removeVisualLinesListener
 		 */
 		class IVisualLinesListener {
@@ -346,9 +346,9 @@ namespace ascension {
 			virtual void install(TextRenderer& textRenderer) = 0;
 			/// Uninstalls the drawer.
 			virtual void uninstall() = 0;
-			friend LineLayout;
-			friend TextRenderer;
-			friend ascension::internal::StrategyPointer<ISpecialCharacterDrawer>;
+			friend class LineLayout;
+			friend class TextRenderer;
+			friend class ascension::internal::StrategyPointer<ISpecialCharacterDrawer>;
 		};
 
 		/**
@@ -358,17 +358,17 @@ namespace ascension {
 		class SpecialCharacterSubstitutionGlyphDrawer : virtual public ISpecialCharacterDrawer {
 		public:
 			struct SubstitutionGlyphs {
-				Char horizontalTab;			///< Horizontal tab (U+0009). Default value is '^' (U+005E)
-				Char generalWhiteSpace;		///< General white spaces (except U+1680: Ogham Space Mark). Default value is '_' (U+005F)
-				Char ideographicSpace;		///< Ideographic space (U+3000). Default value is '□' (U+25A1)
-				Char unixEOL;				///< LF (U+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char macintoshEOL;			///< CR (U+000D). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char windowsEOL;			///< CRLF (U+000D+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char ebcdicEOL;				///< NEL (U+0085). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char lineSeparator;			///< LS (U+2028). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char paragraphSeparator;	///< PS (U+2029). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL
-				Char lineWrappingMarker;	///< Sign indicates the line is wrapped. Default value is '<' (U+003C) for LTR or '>' (U+003E) for LTR
-//				String endOfFile;			///< End of file. Default is "[EOF]"
+				Char horizontalTab;			///< Horizontal tab (U+0009). Default value is '^' (U+005E).
+				Char generalWhiteSpace;		///< General white spaces (except U+1680: Ogham Space Mark). Default value is '_' (U+005F).
+				Char ideographicSpace;		///< Ideographic space (U+3000). Default value is '□' (U+25A1).
+				Char unixEOL;				///< LF (U+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char macintoshEOL;			///< CR (U+000D). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char windowsEOL;			///< CRLF (U+000D+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char ebcdicEOL;				///< NEL (U+0085). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char lineSeparator;			///< LS (U+2028). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char paragraphSeparator;	///< PS (U+2029). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
+				Char lineWrappingMarker;	///< Sign indicates the line is wrapped. Default value is '<' (U+003C) for LTR or '>' (U+003E) for LTR.
+//				String endOfFile;			///< End of file. Default is "[EOF]".
 			};
 		private:
 			void	drawASCIIControl(const Context& context, const ::RECT& rect, uchar ch);
@@ -383,22 +383,61 @@ namespace ascension {
 		};
 
 		/**
+		 * A @c FontSelector holds a primary font, the font metrics and a font association table
+		 * for text rendering.
+		 * @see TextRenderer
+		 */
+		class FontSelector {
+		public:
+			/// Font association table consists of pairss of a script and a font familiy name.
+			typedef std::map<int, const WCHAR*> FontAssociations;
+			// constructors
+			FontSelector();
+			virtual ~FontSelector() throw();
+			// attributes
+			void	enableFontLinking(bool enable = true) throw();
+			bool	enablesFontLinking() const throw();
+			int		getAscent() const throw();
+			int		getAverageCharacterWidth() const throw();
+			static const FontAssociations&
+					getDefaultFontAssociations() throw();
+			int		getDescent() const throw();
+			HFONT	getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
+			HFONT	getFontForShapingControls() const throw();
+			int		getLineHeight() const throw();
+			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
+		protected:
+			virtual void									fontChanged() = 0;
+			virtual std::auto_ptr<manah::windows::gdi::DC>	getDC() = 0;
+		private:
+			int ascent_, descent_, averageCharacterWidth_;
+			struct Fontset : public manah::Noncopyable {
+				WCHAR faceName[LF_FACESIZE];
+				HFONT regular, bold, italic, boldItalic;
+				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
+				~Fontset() throw() {clear(L"");}
+				void clear(const WCHAR* newName = 0) throw() {
+					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
+					regular = bold = italic = boldItalic = 0; if(newName != 0) std::wcscpy(faceName, newName);}
+			};
+			Fontset primaryFont_;
+			std::map<int, Fontset*> associations_;
+			HFONT shapingControlsFont_;			// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
+			std::list<Fontset*>* linkedFonts_;	// for the font linking feature
+			static FontAssociations defaultAssociations_;
+		};
+
+		/**
 		 * @c TextRenderer renders styled text to the display or to a printer.
 		 * @note This class is underivable.
-		 * @see LineLayout, LineLayoutBuffer, Presentation, TextViewer
+		 * @see LineLayout, LineLayoutBuffer, FontSelector, Presentation, TextViewer
 		 */
-		class TextRenderer : public LineLayoutBuffer {
+		class TextRenderer : public LineLayoutBuffer, public FontSelector {
 		public:
 			// constructors
 			explicit TextRenderer(TextViewer& viewer);
 			~TextRenderer() throw();
 			// attributes
-			int				getAscent() const throw();
-			int				getAverageCharacterWidth() const throw();
-			int				getDescent() const throw();
-			HFONT			getFont(uchar language = LANG_NEUTRAL, bool bold = false, bool italic = false) const throw();
-			HFONT			getFontForShapingControls() const throw();
-			int				getLineHeight() const throw();
 			int				getLinePitch() const throw();
 			int				getLongestLineWidth() const throw();
 			length_t		getNumberOfSublinesOfLine(length_t) const;
@@ -409,10 +448,8 @@ namespace ascension {
 			length_t		mapLogicalPositionToVisualPosition(const text::Position& position, length_t* column) const;
 			length_t		mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
 			text::Position	mapVisualPositionToLogicalPosition(const text::Position& position) const;
-			void			setFont(const WCHAR* faceName, int height, const std::map<uchar, const WCHAR*>* associations);
-			// class sttributes
-			static const std::map<uchar, const WCHAR*>&	getDefaultFontAssociations() throw();
-			static bool									supportsComplexScript() throw();
+			// class attributes
+			static bool	supportsComplexScript() throw();
 			// listeners and strategies
 			void						addVisualLinesListener(IVisualLinesListener& listener);
 			ISpecialCharacterDrawer*	getSpecialCharacterDrawer() const throw();
@@ -423,30 +460,22 @@ namespace ascension {
 			// utilities
 			void	offsetVisualLine(length_t& line, length_t& subline, signed_length_t offset) const throw();
 		private:
+			void	updateLongestLine(length_t line, int width) throw();
+			// LineLayoutBuffer
 			void	layoutDeleted(length_t first, length_t last, length_t sublines) throw();
 			void	layoutInserted(length_t first, length_t last) throw();
 			void	layoutModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool documentChanged) throw();
-			void	updateLongestLine(length_t line, int width) throw();
+			// FontSelector
+			void									fontChanged();
+			std::auto_ptr<manah::windows::gdi::DC>	getDC();
 		private:
-			int ascent_, descent_, averageCharacterWidth_, viewerWidth_, longestLineWidth_, lineWrappingMarkWidth_;
+			int viewerWidth_, longestLineWidth_, lineWrappingMarkWidth_;
 			length_t longestLine_, numberOfVisualLines_;
-			struct Fontset {
-				WCHAR faceName[LF_FACESIZE];
-				HFONT regular, bold, italic, boldItalic;
-				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
-				~Fontset() throw() {clear(L"");}
-				void clear(const WCHAR* newName) throw() {
-					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
-					regular = bold = italic = boldItalic; std::wcscpy(faceName, newName);}
-			};
-			Fontset primaryFont_;
-			std::map<uchar, Fontset*> fontAssociations_;
-			HFONT shapingControlsFont_;	// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
-			static std::map<uchar, const WCHAR*> defaultFontAssociations_;
 			ascension::internal::Listeners<IVisualLinesListener> visualLinesListeners_;
 			ascension::internal::StrategyPointer<ISpecialCharacterDrawer> specialCharacterDrawer_;
 		};
 
+		/// @internal Clients of Ascension should not touch this.
 		namespace internal {
 			/// @c SystemColor caches the system colors.
 			static class SystemColors {
@@ -592,33 +621,50 @@ inline const TextViewer& LineLayoutBuffer::getTextViewer() const throw() {return
 inline bool LineLayoutBuffer::isLineCached(length_t line) const throw() {
 	return line >= startLine_ && line < startLine_ + bufferSize_ && layouts_[line - startLine_] != 0;}
 
+/// Returns the font linking is enabled.
+inline bool FontSelector::enablesFontLinking() const throw() {return linkedFonts_ != 0;}
+
+/// Enables or disables the font linking feature for CJK.
+inline void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
+	if(enable) {
+		if(linkedFonts_ == 0)
+			linkedFonts_ = new std::list<Fontset*>;
+	} else if(linkedFonts_ != 0) {
+		delete linkedFonts_;
+		linkedFonts_ = 0;
+	}
+}
+
+/// Returns the ascent of the text.
+inline int FontSelector::getAscent() const throw() {return ascent_;}
+
+/// Returns average width of a character.
+inline int FontSelector::getAverageCharacterWidth() const throw() {return averageCharacterWidth_;}
+
+/// Returns the descent of the text.
+inline int FontSelector::getDescent() const throw() {return descent_;}
+
+/// Returns the font to render shaping control characters.
+inline HFONT FontSelector::getFontForShapingControls() const throw() {
+	if(shapingControlsFont_ == 0)
+		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
+			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
+	return shapingControlsFont_;
+}
+
+/**
+ * Returns the height of the lines.
+ * @see TextRenderer#getLinePitch
+ */
+inline int FontSelector::getLineHeight() const throw() {return ascent_ + descent_;}
+
 /**
  * Registers the visual lines listener.
  * @param listener the listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 inline void TextRenderer::addVisualLinesListener(IVisualLinesListener& listener) {visualLinesListeners_.add(listener);}
-
-/// Returns the ascent of the text.
-inline int TextRenderer::getAscent() const throw() {return ascent_;}
-
-/// Returns average width of a character.
-inline int TextRenderer::getAverageCharacterWidth() const throw() {return averageCharacterWidth_;}
-
-/// Returns the descent of the text.
-inline int TextRenderer::getDescent() const throw() {return descent_;}
-
-/// Returns the font to render shaping control characters.
-inline HFONT TextRenderer::getFontForShapingControls() const throw() {
-	if(shapingControlsFont_ == 0)
-		const_cast<TextRenderer*>(this)->shapingControlsFont_ = ::CreateFontW(
-			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
-	return shapingControlsFont_;
-}
-
-/// Returns the height of the lines.
-inline int TextRenderer::getLineHeight() const throw() {return ascent_ + descent_;}
 
 /// Returns the width of the longest line.
 inline int TextRenderer::getLongestLineWidth() const throw() {return longestLineWidth_;}

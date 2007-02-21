@@ -200,7 +200,7 @@ void Normalizer::normalizeCurrentBlock(Direction direction) {
 			break;
 	}
 	normalizedBuffer_ = normalize(
-		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(current_.tell(), current_.tell(), next.tell()), form_);
+		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(current_.tell(), next.tell()), form_);
 	indexInBuffer_ = (direction == FORWARD) ? 0 : normalizedBuffer_.length() - 1;
 }
 

@@ -118,7 +118,7 @@ namespace ascension {
 				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4, arg5);}
 		private:
 			std::list<Listener*> listeners_;
-			typedef std::list<Listener*> Iterator;
+			typedef typename std::list<Listener*>::iterator Iterator;
 		};
 
 #ifdef _WINDOWS_

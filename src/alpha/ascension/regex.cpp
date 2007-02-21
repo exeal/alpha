@@ -256,8 +256,8 @@ namespace {
  */
 Pattern::Pattern(const Char* first, const Char* last, const SyntaxOptions& options /* = NORMAL */) : options_(options) {
 	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-	impl_.assign(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
-		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last),
+	impl_.assign(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, last),
+		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>(first, last, last),
 		boost::regex_constants::perl | boost::regex_constants::collate | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
 }
 
@@ -282,8 +282,8 @@ Pattern::Pattern(const String& pattern, const SyntaxOptions& options /* = NORMAL
 Pattern::Pattern(const Char* first, const Char* last,
 		const manah::Flags<SyntaxOption>& options, boost::regex_constants::syntax_option_type nativeSyntax) : options_(options) {
 	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-	impl_.assign(UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
-			UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last),
+	impl_.assign(UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, last),
+			UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, last, last),
 		nativeSyntax | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
 }
 

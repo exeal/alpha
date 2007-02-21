@@ -194,8 +194,8 @@ namespace ascension {
 		template<typename CharacterSequence>
 		inline String MatchResult<CharacterSequence>::replace(const Char* first, const Char* last) const {
 			const std::basic_string<CodePoint> temp(impl_->format(std::basic_string<CodePoint>(
-				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, first, last),
-				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(last, first, last))));
+				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, last),
+				unicode::UTF16To32Iterator<const Char*, unicode::utf16boundary::USE_BOUNDARY_ITERATORS>(first, last, last))));
 			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
 		/// Returns the string of the matched sub-expression.
@@ -246,8 +246,8 @@ namespace ascension {
 			typedef unicode::UTF16To32Iterator<I16, unicode::utf16boundary::USE_BOUNDARY_ITERATORS> I32;
 			std::auto_ptr<boost::match_results<I32> > p(new boost::match_results<I32>);
 			internal::RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-			return std::auto_ptr<MatchResult<I16> >(boost::regex_match(I32(first, first, last),
-				I32(last, first, last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
+			return std::auto_ptr<MatchResult<I16> >(boost::regex_match(I32(first, last),
+				I32(first, last, last), *p, impl_, translateMatchOptions(options)) ? new MatchResult<I16>(p) : 0);
 		}
 
 		/**

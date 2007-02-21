@@ -100,7 +100,7 @@ void LiteralPattern::compile(const Char* first, const Char* last, Direction dire
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
 	// build pseudo collation elements
 	first_ = last_ = new int[last - first];
-	for(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, first, last); !i.isLast(); ++i, ++last_)
+	for(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i, ++last_)
 		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
 	// build BM shift table
 	fill(lastOccurences_, endof(lastOccurences_), last_ - first_);
