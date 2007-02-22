@@ -1691,9 +1691,9 @@ void Document::setModified(bool modified /* = true */) throw() {
  */
 void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) throw() {
 	partitioner_ = newPartitioner;
-	partitioningChanged(Region(getStartPosition(false), getEndPosition(false)));
 	if(partitioner_.get() != 0)
 		partitioner_->install(*this);
+	partitioningChanged(Region(getStartPosition(false), getEndPosition(false)));
 }
 
 /**
@@ -1865,6 +1865,57 @@ inline bool Document::DiskFile::unlock() throw() {
 		return true;
 	}
 	return false;
+}
+
+
+// DocumentCharacterIterator ////////////////////////////////////////////////
+
+/// Default constructor.
+DocumentCharacterIterator::DocumentCharacterIterator() throw() : document_(0), line_(0) {
+}
+
+/**
+ * Constructor. The iteration region is the accessible area of the document.
+ * @param document the document to iterate
+ * @param position the position at which the iteration starts
+ * @throw BadPositionException @a position is outside of the accessible area of the document
+ */
+DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) : document_(&document),
+		region_(document.getStartPosition(), document.getEndPosition()), line_(&document.getLine(position.line)), p_(position) {
+	if(!region_.includes(p_))
+		throw BadPositionException();
+}
+
+/**
+ * Constructor. The iteration is started at @a region.getTop().
+ * @param document the document to iterate
+ * @param region the region to iterate
+ * @throw BadPositionException @a region is outside of the document
+ */
+DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
+		document_(&document), region_(region), line_(&document.getLine(region.getTop().line)), p_(region.getTop()) {
+	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
+		throw BadPositionException();
+	region_.normalize();
+}
+
+/**
+ * Constructor.
+ * @param document the document to iterate
+ * @param region the region to iterate
+ * @param position the position at which the iteration starts
+ * @throw BadPositionException @a region is outside of the document or @a position is outside of @a region
+ */
+DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position) :
+		document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
+	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false) || !region_.includes(p_))
+		throw BadPositionException();
+	region_.normalize();
+}
+
+/// Copy-constructor.
+DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw() :
+		unicode::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
 }
 
 

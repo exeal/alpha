@@ -60,16 +60,22 @@ using namespace std;
  * @param collator the collator or @c null if not needed
  * @throw std#invalid_argument @a first and/or @a last are invalid
  */
-LiteralPattern::LiteralPattern(const Char* first, const Char* last, Direction direction, bool ignoreCase /* = false */
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-		, const Collator* collator /* = 0 */
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
-) {
-	compile(first, last, direction, ignoreCase
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-		, collator
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
-	);
+LiteralPattern::LiteralPattern(const Char* first, const Char* last,
+		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) {
+	compile(first, last, direction, ignoreCase, collator);
+}
+
+/**
+ * Constructor.
+ * @param pattern the search pattern
+ * @param direction the direction to search
+ * @param ignoreCase set true to perform case-insensitive search
+ * @param collator the collator or @c null if not needed
+ * @throw std#invalid_argument @a first and/or @a last are invalid
+ */
+LiteralPattern::LiteralPattern(const String& pattern,
+		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) {
+	compile(pattern, direction, ignoreCase, collator);
 }
 
 /// Destructor.
@@ -86,11 +92,8 @@ LiteralPattern::~LiteralPattern() throw() {
  * @param collator the collator or @c null if not needed
  * @throw std#invalid_argument @a first and/or @a last are invalid
  */
-void LiteralPattern::compile(const Char* first, const Char* last, Direction direction, bool ignoreCase /* = false */
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-		, const Collator* collator /* = 0 */
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
-) {
+void LiteralPattern::compile(const Char* first, const Char* last,
+		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) {
 	if(first == 0 || last == 0 || first >= last)
 		throw invalid_argument("invalid pattern input.");
 	direction_ = direction;
@@ -118,64 +121,69 @@ void LiteralPattern::compile(const Char* first, const Char* last, Direction dire
 
 /**
  * Returns true if the pattern matches the specified character sequence.
- * @param first the start of the character sequence to match
- * @param first the end of the character sequence to match
+ * @param target the character sequence to match
  * @return true if matched
  */
-bool LiteralPattern::matches(const CharacterIterator& first, const CharacterIterator& last) const {
-	if(last - first != last_ - first_)
-		return false;
-	auto_ptr<CharacterIterator> i(first.clone());
-	for(const int* e = first_; e < last_; ++e, ++*i) {
-		if(*e != (caseSensitive_ ? **i : CaseFolder::fold(**i)))
+bool LiteralPattern::matches(const CharacterIterator& target) const {
+	auto_ptr<CharacterIterator> i(target.clone());
+	for(const int* e = first_; e < last_ && !i->isLast(); ++e, i->next()) {
+		if(*e != (caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
 			return false;
 	}
-	return true;
+	return i->isLast();
+}
+
+namespace {
+	inline CharacterIterator& slowAdvance(CharacterIterator& i, ptrdiff_t delta) {
+		for(; delta > 0; --delta) i.next();
+		for(; delta < 0; ++delta) i.previous();
+		return i;
+	}
 }
 
 /**
- * Searches in the specified target string.
- * @param first the start of the target string
- * @param last the end of the target string. must be greater than @a first
+ * Searches in the specified character sequence.
+ * @param target the target character sequence
+ * @param[out] matchedFirst 
+ * @param[out] matchedLast 
  * @return true if the pattern was found
  */
-bool LiteralPattern::search(const CharacterIterator& first, const CharacterIterator& last,
+bool LiteralPattern::search(const CharacterIterator& target,
 		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
 	// TODO: this implementation is just scrath.
+	auto_ptr<CharacterIterator> t(target.clone());
 	if(direction_ == FORWARD) {
-		auto_ptr<CharacterIterator> target(first.clone());
-		advance(*target, last_ - first_ - 1);
-		for(const int* pattern; *target < last;
-				advance(*target, max<length_t>(lastOccurences_[caseSensitive_ ? **target : CaseFolder::fold(**target)], last_ - pattern))) {
+		slowAdvance(*t, last_ - first_ - 1);
+		for(const int* pattern; !t->isLast(); slowAdvance(*t,
+				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
 			for(pattern = last_ - 1;
-				(caseSensitive_ ? **target : CaseFolder::fold(**target)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-				--*target, --pattern) {
+				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				t->previous(), --pattern) {
 				if(pattern == first_) {
-					matchedFirst = target;
+					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(*matchedLast, last_ - first_);
+					slowAdvance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}
 		}
 	} else {
 		ptrdiff_t skipLength;
-		auto_ptr<CharacterIterator> target(last.clone());
-		advance(*target, first_ - last_);
-		for(const int* pattern; ; advance(*target, -skipLength)) {
+		slowAdvance(*t, first_ - last_);
+		for(const int* pattern; ; slowAdvance(*t, -skipLength)) {
 			for(pattern = first_;
-					(caseSensitive_ ? **target : CaseFolder::fold(**target)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-					++*target, ++pattern) {
+					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					t->next(), ++pattern) {
 				if(pattern == last_ - 1) {
-					advance(*target, first_ - last_ + 1);
-					matchedFirst = target;
+					slowAdvance(*t, first_ - last_ + 1);
+					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(*matchedLast, last_ - first_);
+					slowAdvance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}
-			skipLength = max(lastOccurences_[caseSensitive_ ? **target : CaseFolder::fold(**target)], pattern - first_ + 1);
-			if(skipLength > *target - first)
+			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - first_ + 1);
+			if(skipLength > t->getOffset() - target.getOffset())
 				break;
 		}
 	}
@@ -305,7 +313,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
-			return pattern_.literal->matches(b, e) && checkBoundary(b, e);
+			return pattern_.literal->matches(DocumentCharacterIterator(document, target)) && checkBoundary(b, e);
 #ifndef ASCENSION_NO_REGEX
 		case REGULAR_EXPRESSION:
 #ifndef ASCENSION_NO_MIGEMO
@@ -388,10 +396,11 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 			const String& p = storedPatterns_.front();
 			pattern_.literal->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
 		}
-		const DocumentCharacterIterator end(document, scope.second);
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
-		for(DocumentCharacterIterator i(document, scope.first); i < end; ++i) {
-			if(!pattern_.literal->search(i, end, matchedFirst, matchedLast))
+		for(DocumentCharacterIterator i = (direction == FORWARD) ?
+				DocumentCharacterIterator(document, scope) : DocumentCharacterIterator(document, scope, scope.second);
+				(direction == FORWARD) ? !i.isLast() : !i.isFirst(); (direction == FORWARD) ? ++i : --i) {
+			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
 				break;
 			else if(checkBoundary(
 					static_cast<DocumentCharacterIterator&>(*matchedFirst),

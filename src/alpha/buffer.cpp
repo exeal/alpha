@@ -159,6 +159,8 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 	buffers_.push_back(buffer);
 
 	// 現在のペインの数だけビューを作成する
+	::LOGFONTW font;
+	app_.getTextEditorFont(font);
 	EditorView* originalView = 0;
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
 		EditorView* view = (originalView == 0) ? new EditorView(buffer->getPresentation()) : new EditorView(*originalView);
@@ -168,12 +170,9 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 		if(originalView == 0)
 			originalView = view;
 		it.get().addView(*view);
+		view->getTextRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 	}
 
-	// フォントの設定
-//	EditorView& view = *originalView;
-//	LOGFONTW lf;
-//	app_.getTextEditorFont(lf);
 //	view.addEventListener(app_);
 	buffer->getPresentation().addTextViewerListListener(*this);
 	buffer->addStateListener(*this);

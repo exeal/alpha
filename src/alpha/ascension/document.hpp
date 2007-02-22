@@ -118,8 +118,9 @@ namespace ascension {
 		};
 
 		/**
-		 * A region consists of two positions and represents a linear range in the document.
-		 * There are no restriction about greater/less relationship between the two positions.
+		 * A region consists of two positions and represents a linear range in a document. There
+		 * are no restriction about greater/less relationship between the two positions, but the
+		 * region is called "normalized" when the first position is less than or equal to the second.
 		 * @note This class is not derivable.
 		 */
 		class Region : public std::pair<Position, Position>, public manah::FastArenaObject<Region> {
@@ -137,9 +138,13 @@ namespace ascension {
 			/// Returns the maximum position.
 			const Position& getBottom() const throw() {return (first > second) ? first : second;}
 			/// Returns true if @a p is contained by the region.
-			bool includes(const Position& p) const throw() {return p >= getTop() && p < getBottom();}
+			bool includes(const Position& p) const throw() {return p >= getTop() && p <= getBottom();}
 			/// Returns true if the region is empty.
 			bool isEmpty() const throw() {return first == second;}
+			/// Returns true if the region is normalized.
+			bool isNormalized() const throw() {return first <= second;}
+			/// Normalizes the region.
+			void normalize() throw() {if(!isNormalized()) std::swap(first, second);}
 		};
 
 		/**
@@ -836,7 +841,9 @@ namespace ascension {
 		public:
 			// constructors
 			DocumentCharacterIterator() throw();
-			DocumentCharacterIterator(const Document& document, const Position& position) throw();
+			DocumentCharacterIterator(const Document& document, const Position& position);
+			DocumentCharacterIterator(const Document& document, const Region& region);
+			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
 			// operators for bidirectional iteration
 			DocumentCharacterIterator&		operator=(const DocumentCharacterIterator& rhs) throw();
@@ -859,6 +866,7 @@ namespace ascension {
 			// attributes
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
+			const Region&	getRegion() const throw();
 			bool			isFirst() const throw();
 			bool			isLast() const throw();
 			const Position&	tell() const throw();
@@ -869,8 +877,10 @@ namespace ascension {
 			void decrement() {--*this;}
 			Char dereference() const {return **this;}
 			void increment() {++*this;}
+			using CharacterIterator::getOffset;
 		private:
 			const Document* document_;
+			Region region_;
 			const String* line_;
 			Position p_;
 		};
@@ -1368,25 +1378,9 @@ inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
 	document_->partitioningChanged(changedRegion);	// $friendly-access
 }
 
-/// Default constructor.
-inline DocumentCharacterIterator::DocumentCharacterIterator() throw() : unicode::CharacterIterator(0), document_(0), line_(0) {}
-
-/**
- * Constructor.
- * @param document the document to be iterated
- * @param position the position to start
- */
-inline DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) throw() :
-		unicode::CharacterIterator(getAbsoluteOffset(document, position, false)),
-		document_(&document), line_(&document.getLine(position.line)), p_(position) {}
-
-/// Copy-constructor.
-inline DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw()
-	: unicode::CharacterIterator(rhs), document_(rhs.document_), line_(rhs.line_), p_(rhs.p_) {}
-
 /// Assignment operator.
 inline DocumentCharacterIterator& DocumentCharacterIterator::operator=(const DocumentCharacterIterator& rhs) throw() {
-	unicode::CharacterIterator::operator=(rhs); document_ = rhs.document_; line_ = rhs.line_; p_ = rhs.p_; return *this;}
+	unicode::CharacterIterator::operator=(rhs); document_ = rhs.document_; region_ = rhs.region_; line_ = rhs.line_; p_ = rhs.p_; return *this;}
 
 /// Dereference iterator. If the iterator addresses the end of the document, the result is undefined.
 inline Char DocumentCharacterIterator::operator*() const throw() {
@@ -1394,8 +1388,9 @@ inline Char DocumentCharacterIterator::operator*() const throw() {
 
 /// Prefix increment operator.
 inline DocumentCharacterIterator& DocumentCharacterIterator::operator++() throw() {
-	if(p_.column < line_->length()) ++p_.column;
-	else if(p_.line < document_->getNumberOfLines() - 1) {line_ = &document_->getLine(++p_.line); p_.column = 0;}
+	if(isLast()) return *this;
+	else if(p_.column < line_->length()) ++p_.column;
+	else {line_ = &document_->getLine(++p_.line); p_.column = 0;}
 	return *this;
 }
 
@@ -1405,8 +1400,9 @@ DocumentCharacterIterator::operator++(int) throw() {DocumentCharacterIterator te
 
 /// Prefix decrement operator.
 inline DocumentCharacterIterator& DocumentCharacterIterator::operator--() throw() {
-	if(p_.column > 0) --p_.column;
-	else if(p_.line > 0) p_.column = (line_ = &document_->getLine(--p_.line))->length();
+	if(isFirst()) return *this;
+	else if(p_.column > 0) --p_.column;
+	else p_.column = (line_ = &document_->getLine(--p_.line))->length();
 	return *this;
 }
 
@@ -1443,23 +1439,25 @@ inline bool DocumentCharacterIterator::operator>=(const DocumentCharacterIterato
 /// Returns the document.
 inline const Document* DocumentCharacterIterator::getDocument() const throw() {return document_;}
 
+/// Returns the iteration region.
+inline const Region& DocumentCharacterIterator::getRegion() const throw() {return region_;}
+
 /// Returns the line.
 inline const String& DocumentCharacterIterator::getLine() const throw() {return *line_;}
 
 /// @see unicode#CharacterIterator#isFirst
-inline bool DocumentCharacterIterator::isFirst() const throw() {return p_.line == 0 && p_.column == 0;}
+inline bool DocumentCharacterIterator::isFirst() const throw() {return p_ == region_.first;}
 
 /// @see unicode#CharacterIterator#isLast
-inline bool DocumentCharacterIterator::isLast() const throw() {
-	return p_.line == document_->getNumberOfLines() - 1 && p_.column == line_->length();}
+inline bool DocumentCharacterIterator::isLast() const throw() {return p_ == region_.second;}
 
 /**
  * Moves to the specified position.
  * @param to the position
- * @throw BadPositionException @a to is outside of the document
+ * @throw BadPositionException @a to is outside of the iteration region
  */
 inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-	if(to > document_->getEndPosition(false)) throw BadPositionException(); line_ = &document_->getLine((p_ = to).line); return *this;}
+	if(!region_.includes(to)) throw BadPositionException(); line_ = &document_->getLine((p_ = to).line); return *this;}
 
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}

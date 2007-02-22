@@ -125,7 +125,7 @@ namespace ascension {
 	const wchar_t RP__CH = REPLACEMENT_CHARACTER;
 	const uchar N__A = 0x00;
 
-	template<class Ch> void setDefaultChar(Ch& ch);
+	template<typename Ch> void setDefaultChar(Ch& ch);
 	template<> inline void setDefaultChar(char& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
 	template<> inline void setDefaultChar(uchar& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
 	template<> inline void setDefaultChar(ushort& ch) {ch = NATIVE_DEFAULT_CHARACTER;}

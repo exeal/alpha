@@ -467,7 +467,7 @@ namespace {
 			case SentenceBreak::SEP:
 				break;
 			case SentenceBreak::LOWER:
-				while(i < *j)
+				while(i.getOffset() < j->getOffset())
 					nextBase(i);
 				return false;	// (SB8)
 			default:
@@ -597,13 +597,13 @@ bool AbstractSentenceBreakIterator::isBoundary(const CharacterIterator& at) cons
 	do {
 		switch(SentenceBreak::of(i->current())) {
 		case SentenceBreak::SEP:
-			return at - *i == 1;	// (SB4)
+			return at.getOffset() - i->getOffset() == 1;	// (SB4)
 		case SentenceBreak::A_TERM:
 			nextBase(*i);
-			return tryToExtendTerm(*i, true) && *i == at;
+			return tryToExtendTerm(*i, true) && i->getOffset() == at.getOffset();
 		case SentenceBreak::S_TERM:
 			nextBase(*i);
-			return tryToExtendTerm(*i, false) && *i == at;
+			return tryToExtendTerm(*i, false) && i->getOffset() == at.getOffset();
 		default:
 			break;
 		}
