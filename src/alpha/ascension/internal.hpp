@@ -41,7 +41,7 @@ namespace ascension {
 		 * @param comp the comparation function takes two @c Value parameters and returns a boolean
 		 * @return the bound
 		 */
-		template<class Index, class Value, class Getter, class Comparer>
+		template<typename Index, typename Value, typename Getter, typename Comparer>
 		inline Index searchBound(Index first, Index last, const Value& value, Getter get, Comparer comp) throw() {
 			assert(first <= last);
 			Index c1 = last - first, c2, mid, p = first;
@@ -63,13 +63,13 @@ namespace ascension {
 		 * @param get the function takes a @c Index parameter and returns a @c Value
 		 * @return the bound
 		 */
-		template<class Index, class Value, class Getter>
+		template<typename Index, typename Value, typename Getter>
 		inline Index searchBound(Index first, Index last, const Value& value, Getter get) throw() {
 			return searchBound(first, last, value, get, std::less_equal<Value>());
 		}
 
 		/// Returns absolute difference of two numerals.
-		template<class T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
+		template<typename T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
 
 		/// A pointer to the owned or unowned strategy.
 		template<class Strategy> class StrategyPointer : public manah::Noncopyable {
@@ -113,7 +113,7 @@ namespace ascension {
 			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
 				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4);}
-			template<class Arg1, class Arg2, class Arg3, class Arg4, class Arg5>
+			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4, Arg5), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5) {
 				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4, arg5);}
 		private:

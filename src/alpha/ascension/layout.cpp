@@ -956,8 +956,8 @@ bool LineLayout::shape(Run& run) throw() {
 		// TODO: tries about the font linking.
 		// ランの書記体系を調べる
 		int script;
-		for(CStringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); ++i) {
-			script = Script::of(*i);
+		for(CStringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
+			script = Script::of(i.current());
 			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 				break;
 		}
@@ -1459,7 +1459,8 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		defaultAssociations_[Script::GREEK] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::GUJARATI] = L"Shruti";
 		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
-		defaultAssociations_[Script::HANGUL] = L"GulimChe";
+		defaultAssociations_[Script::HAN] = L"SimSun";
+		defaultAssociations_[Script::HANGUL] = L"Gulim";
 		defaultAssociations_[Script::HEBREW] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::HIRAGANA] = L"MS P Gothic";
 		defaultAssociations_[Script::KANNADA] = L"Tunga";
@@ -1497,9 +1498,16 @@ HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = fa
 	if(script == Script::COMMON)
 		fontset = &const_cast<FontSelector*>(this)->primaryFont_;
 	HFONT& font = bold ? (italic ? fontset->boldItalic : fontset->bold) : (italic ? fontset->italic : fontset->regular);
-	if(font == 0)
+	if(font == 0) {
 		font = ::CreateFontW(ascent_ + descent_, 0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0,
 			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fontset->faceName);
+		::TEXTMETRICW tm;
+		auto_ptr<DC> dc(const_cast<FontSelector*>(this)->getDC());
+		HFONT old = dc->selectObject(font);
+		dc->getTextMetrics(tm);
+		dc->selectObject(old);
+		dout << tm.tmHeight;
+	}
 	return font;
 }
 

@@ -38,12 +38,12 @@ namespace ascension {
 		};
 
 		namespace internal {
-			template<class T> class EditorCommandBase : public EditorCommand {
+			template<typename Parameter> class EditorCommandBase : public EditorCommand {
 			public:
-				EditorCommandBase(viewers::TextViewer& view, T param) : EditorCommand(view), param_(param) {}
+				EditorCommandBase(viewers::TextViewer& view, Parameter param) : EditorCommand(view), param_(param) {}
 				virtual ~EditorCommandBase() {}
 			protected:
-				T param_;
+				Parameter param_;
 			};
 		} // namespace internal
 

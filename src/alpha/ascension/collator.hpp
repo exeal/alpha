@@ -5,7 +5,6 @@
  * @see unicode-utils.hpp
  */
 
-#ifndef ASCENSION_NO_UNICODE_COLLATION
 #ifndef ASCENSION_COLLATOR_HPP
 #define ASCENSION_COLLATOR_HPP
 #include "unicode-utils.hpp"
@@ -74,20 +73,7 @@ namespace ascension {
 			Decomposition decomposition_;
 		};
 
-		class NullCollator : public Collator {
-		public:
-			NullCollator();
-		private:
-			class Iterator : public CollationElementIterator {
-			private:
-				int current() const {}
-				void increment() {++p_;}
-				void decrement() {--p_;}
-			};
-		};
-
 	} // namespace unicode
 } // namespace ascension
 
 #endif /* !ASCENSION_COLLATOR_HPP */
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */

@@ -161,11 +161,12 @@ namespace ascension {
 		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, Char> {
 		public:
 			static const CodePoint END_OF_BUFFER = 0xFFFFFFFFU;
+			// constructor
 			virtual ~CharacterIterator() throw() {}
-			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
+			// attributes
+			std::ptrdiff_t getOffset() const throw() {return offset_;}
 			virtual bool isFirst() const = 0;
 			virtual bool isLast() const = 0;
-			std::ptrdiff_t getIndex() const throw() {return index_;}
 			CodePoint current() const {
 				if(isLast()) return END_OF_BUFFER;
 				const Char c = dereference();
@@ -175,54 +176,46 @@ namespace ascension {
 				const Char n = dereference();
 				const_cast<CharacterIterator*>(this)->previous();
 				return surrogates::decode(c, n);}
+			// operations
+			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
 			CharacterIterator& next() {if(!isLast()) {
-				increment(); ++index_; if(!isLast() && surrogates::isLowSurrogate(dereference())) increment(); ++index_;} return *this;}
+				increment(); ++offset_; if(!isLast() && surrogates::isLowSurrogate(dereference())) increment();} return *this;}
 			CharacterIterator& previous() {if(!isFirst()) {
-				decrement(); --index_; if(!isFirst() && surrogates::isLowSurrogate(dereference())) decrement(); --index_;} return *this;}
-			CodePoint operator*() const {return current();}
-			CharacterIterator& operator++() {return next();}
-			CharacterIterator& operator--() {return previous();}
-			bool operator==(const CharacterIterator& rhs) const throw() {return index_ == rhs.index_;}
-			bool operator!=(const CharacterIterator& rhs) const throw() {return index_ != rhs.index_;}
-			bool operator<(const CharacterIterator& rhs) const throw() {return index_ < rhs.index_;}
-			bool operator<=(const CharacterIterator& rhs) const throw() {return index_ <= rhs.index_;}
-			bool operator>(const CharacterIterator& rhs) const throw() {return index_ > rhs.index_;}
-			bool operator>=(const CharacterIterator& rhs) const throw() {return index_ >= rhs.index_;}
-			std::ptrdiff_t operator-(const CharacterIterator& rhs) const throw() {return index_ - rhs.index_;}
+				decrement(); --offset_; if(!isFirst() && surrogates::isLowSurrogate(dereference())) decrement();} return *this;}
 			enum {hasBoundary = true};
 		protected:
-			CharacterIterator(std::ptrdiff_t index) throw() : index_(index) {}
-			CharacterIterator(const CharacterIterator& rhs) throw() : index_(rhs.index_) {}
-			CharacterIterator& operator=(const CharacterIterator& rhs) throw() {index_ = rhs.index_; return *this;}
+			CharacterIterator() throw() : offset_(0) {}
+			CharacterIterator(const CharacterIterator& rhs) throw() : offset_(rhs.offset_) {}
+			CharacterIterator& operator=(const CharacterIterator& rhs) throw() {offset_ = rhs.offset_; return *this;}
 			virtual Char dereference() const = 0;
 			virtual void increment() = 0;
 			virtual void decrement() = 0;
 		private:
-			std::ptrdiff_t index_;
+			std::ptrdiff_t offset_;
 		};
 
-		/// 
+		/// Implementation of @c CharacterIterator for C string.
 		class CStringCharacterIterator : public CharacterIterator {
 		public:
-			CStringCharacterIterator() throw() : CharacterIterator(0) {}
-			CStringCharacterIterator(const Char* first, const Char* last) throw() :
-				CharacterIterator(0), current_(first), first_(first), last_(last) {}
-			CStringCharacterIterator(const Char* first, const Char* last, const Char* start) throw() :
-				CharacterIterator(start - first), current_(start), first_(first), last_(last) {}
+			CStringCharacterIterator() throw() {}
+			CStringCharacterIterator(const Char* first, const Char* last) :
+				current_(first), first_(first), last_(last) {if(first > last) throw std::invalid_argument("the first is greater than last.");}
+			CStringCharacterIterator(const Char* first, const Char* last, const Char* start) : current_(start),
+				first_(first), last_(last) {if(first > last || start < first || start > last) throw std::invalid_argument("invalid input.");}
 			CStringCharacterIterator(const CStringCharacterIterator& rhs) throw() :
-				CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
+				current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
 			CStringCharacterIterator& operator=(const CStringCharacterIterator& rhs) throw() {
-				CharacterIterator::operator=(rhs); current_ = rhs.current_; first_ = rhs.first_; last_ = rhs.last_; return *this;}
+				current_ = rhs.current_; first_ = rhs.first_; last_ = rhs.last_; return *this;}
 			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new CStringCharacterIterator(*this));}
-			void decrement() {--current_;}
-			Char dereference() const {return *current_;}
 			const Char* getFirst() const {return first_;}
 			const Char* getLast() const {return last_;}
-			void increment() {++current_;}
 			bool isFirst() const {return current_ == first_;}
 			bool isLast() const {return current_ == last_;}
 			const Char* tell() const throw() {return current_;}
 		private:
+			void increment() {++current_;}
+			void decrement() {--current_;}
+			Char dereference() const {return *current_;}
 			const Char* current_;
 			const Char* first_;
 			const Char* last_;
@@ -509,9 +502,9 @@ namespace ascension {
 			bool	isIdentifierContinueCharacter(CodePoint cp) const throw();
 			bool	isWhiteSpace(CodePoint cp, bool includeTab) const throw();
 			// classification for sequence
-			template<class CharacterSequence>
+			template<typename CharacterSequence>
 			CharacterSequence	eatIdentifier(CharacterSequence first, CharacterSequence last) const throw();
-			template<class CharacterSequence>
+			template<typename CharacterSequence>
 			CharacterSequence	eatWhiteSpaces(CharacterSequence, CharacterSequence last, bool includeTab) const throw();
 			// attributes
 			void	overrideIdentifierStartCharacters(const String& adding, const String& subtracting);
@@ -551,7 +544,7 @@ namespace ascension {
 
 		namespace internal {
 			// helpers for Unicode properties implementation
-			template<class Code> struct CodeRange {
+			template<typename Code> struct CodeRange {
 				Code first, last;
 				bool operator<(Code rhs) const {return first < rhs;}
 			};
@@ -560,7 +553,7 @@ namespace ascension {
 				ushort property;
 				bool operator<(CodePoint rhs) const {return first < rhs;}
 			};
-			template<class Element> static const Element* findInRange(const Element* first, const Element* last, CodePoint cp) {
+			template<typename Element> static const Element* findInRange(const Element* first, const Element* last, CodePoint cp) {
 				const Element* p = std::lower_bound(first, last, cp);
 				if(p == last) return 0;
 				else if(p->first == cp) return p;
@@ -1084,7 +1077,7 @@ inline const Char* Normalizer::tell() const throw() {return current_.tell();}
  * @param last the end of the character sequence
  * @return the end of the detected identifier or @a first if an identifier not found
  */
-template<class CharacterSequence>
+template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first, CharacterSequence last) const throw() {
 	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
 	if(!isIdentifierStartCharacter(*i))
@@ -1102,7 +1095,7 @@ inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first
  * @param includeTab set true to treat a horizontal tab as a white space
  * @return the end of the detected identifier or @a first if an identifier not found
  */
-template<class CharacterSequence>
+template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const throw() {
 	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
 	while(!i.isLast() && isWhiteSpace(*i, includeTab))

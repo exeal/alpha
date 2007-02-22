@@ -188,7 +188,7 @@ namespace ascension {
 			LexicalPartitioner() throw();
 			~LexicalPartitioner() throw();
 			// attribute
-			template<class InputIterator>
+			template<typename InputIterator>
 			void	setRules(InputIterator first, InputIterator last);
 		private:
 			void		clearRules() throw();
@@ -215,7 +215,7 @@ namespace ascension {
 		};
 
 
-		template<class InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
+		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(getDocument() != 0)
 				throw std::logic_error("The partitioner is already connected to document.");
 			clearRules();

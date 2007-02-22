@@ -8,9 +8,7 @@
 #ifndef ASCENSION_SEARCHER_HPP
 #define ASCENSION_SEARCHER_HPP
 #include "document.hpp"
-#ifndef ASCENSION_NO_UNICODE_COLLATION
 #include "collator.hpp"
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
 #include <list>
 #include <stdexcept>	// std::logic_error
 
@@ -34,24 +32,21 @@ namespace ascension {
 		class LiteralPattern {
 		public:
 			// constructor
-			LiteralPattern(const Char* first, const Char* last, Direction direction, bool ignoreCase = false
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-				, const unicode::Collator* collator = 0
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
-			);
+			LiteralPattern(const Char* first, const Char* last,
+				Direction direction, bool ignoreCase = false, const unicode::Collator* collator = 0);
+			LiteralPattern(const String& pattern, Direction direction, bool ignoreCase = false, const unicode::Collator* collator = 0);
 			~LiteralPattern() throw();
 			// attributes
 			Direction	getDirection() const throw();
 			bool		isCaseSensitive() const throw();
 			// operation
-			void	compile(const Char* first, const Char* last, Direction direction, bool ignoreCase = false
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-				, const unicode::Collator* collator = 0
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
-			);
-			bool	matches(const unicode::CharacterIterator& first, const unicode::CharacterIterator& last) const;
-			bool	search(const unicode::CharacterIterator& first, const unicode::CharacterIterator& last,
-						std::auto_ptr<unicode::CharacterIterator>& matchedFirst, std::auto_ptr<unicode::CharacterIterator>& matchedLast) const;
+			void	compile(const Char* first, const Char* last,
+						Direction direction, bool ignoreCase = false, const unicode::Collator* collator = 0);
+			void	compile(const String& pattern, Direction direction, bool ignoreCase = false, const unicode::Collator* collator = 0);
+			bool	matches(const unicode::CharacterIterator& target) const;
+			bool	search(const unicode::CharacterIterator& target,
+						std::auto_ptr<unicode::CharacterIterator>& matchedFirst,
+						std::auto_ptr<unicode::CharacterIterator>& matchedLast) const;
 		private:
 			Direction direction_;
 			bool caseSensitive_;
@@ -59,7 +54,7 @@ namespace ascension {
 			std::auto_ptr<unicode::Collator> collator_;
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
 			std::ptrdiff_t lastOccurences_[65536];
-			int* first_;
+			int* first_;	// collation elements of the pattern
 			int* last_;
 		};
 
@@ -281,6 +276,16 @@ namespace ascension {
 
 // inline ///////////////////////////////////////////////////////////////////
 
+	/**
+	 * Compiles the pattern.
+	 * @param pattern the search pattern
+	 * @param direction the direction to search
+	 * @param ignoreCase set true to perform case-insensitive search
+	 * @param collator the collator or @c null if not needed
+	 * @throw std#invalid_argument @a first and/or @a last are invalid
+	 */
+	inline void LiteralPattern::compile(const String& pattern, Direction direction, bool ignoreCase /* = false */,
+		const unicode::Collator* collator /* = 0 */) {compile(pattern.data(), pattern.data() + pattern.length(), direction, ignoreCase, collator);}
 	/// Returns the direction to search.
 	inline Direction LiteralPattern::getDirection() const throw() {return direction_;}
 	/// Returns true if the pattern performs case-sensitive match.

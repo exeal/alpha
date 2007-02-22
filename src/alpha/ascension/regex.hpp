@@ -182,8 +182,8 @@ namespace ascension {
 		}
 
 		/// Returns the end of the matched substring.
-		template<class CharacterSequence>
-		inline CharacterSequence MatchResult<CharacterSequence>::getEnd() const {assert((*impl_)[0].matched); return (*impl_)[0].second.tell();}
+		template<typename CharacterSequence> inline CharacterSequence
+			MatchResult<CharacterSequence>::getEnd() const {assert((*impl_)[0].matched); return (*impl_)[0].second.tell();}
 
 		/**
 		 * Replaces the matched range by the specified replacement pattern.
@@ -288,7 +288,7 @@ namespace ascension {
 		 * @return pointer to the result or @c null if the search is failed
 		 * @throw std#runtime_error an error occured in the regular expression search (see @c boost#regex_search)
 		 */
-		template<class CharacterSequence> inline std::auto_ptr<MatchResult<CharacterSequence> >
+		template<typename CharacterSequence> inline std::auto_ptr<MatchResult<CharacterSequence> >
 		Pattern::search(CharacterSequence first, CharacterSequence last, const MatchOptions& options /* = NONE */) const {
 			return search(first, last, options, ascension::internal::Int2Type<unicode::IsUTF16IteratorHasBoundary<CharacterSequence>::result>());}
 
