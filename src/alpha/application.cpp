@@ -501,11 +501,11 @@ bool Alpha::initInstance(int showCommand) {
 	stack<MRU> files;
 	for(uint i = 0; ; ++i) {
 		MRU file;
-		swprintf(keyName, L"strPath(%u)", i);
+		swprintf(keyName, L"pathName(%u)", i);
 		file.fileName = readStringProfile(L"MRU", keyName);
 		if(file.fileName.empty())
 			break;
-		swprintf(keyName, L"nCodePage(%u)", i);
+		swprintf(keyName, L"codePage(%u)", i);
 		file.codePage = readIntegerProfile(L"MRU", keyName, CPEX_AUTODETECT_USERLANG);
 		files.push(file);
 	}
