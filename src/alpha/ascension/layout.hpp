@@ -120,20 +120,17 @@ namespace ascension {
 				TRAILING	///< Trailing edge of a character.
 			};
 			/// Bidirectional iterator enumerates style runs in a line.
-			class StyledSegmentIterator : public std::iterator<std::bidirectional_iterator_tag, const presentation::StyledText> {
+			class StyledSegmentIterator : public BidirectionalIteratorFacade<StyledSegmentIterator, const presentation::StyledText> {
 			public:
 				// constructors
 				StyledSegmentIterator(const StyledSegmentIterator& rhs) throw();
 				// operators
 				StyledSegmentIterator&			operator=(const StyledSegmentIterator& rhs) throw();
-				const presentation::StyledText&	operator*() const throw();
-				const presentation::StyledText&	operator->() const throw();
-				StyledSegmentIterator&			operator++() throw();
-				const StyledSegmentIterator		operator++(int) throw();
-				StyledSegmentIterator&			operator--() throw();
-				const StyledSegmentIterator		operator--(int) throw();
-				bool							operator==(const StyledSegmentIterator& rhs) const throw();
-				bool							operator!=(const StyledSegmentIterator& rhs) const throw();
+			protected:
+				reference dereference() const;
+				void increment() {++p_;}
+				void decrement() {--p_;}
+				bool equals(const StyledSegmentIterator& rhs) const {return p_ == rhs.p_;}
 			private:
 				explicit StyledSegmentIterator(const Run*& start) throw();
 				const Run** p_;
@@ -585,24 +582,6 @@ inline LineLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegm
 
 /// Asignment operator.
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) throw() {p_ = rhs.p_;}
-
-/// Prefix increment operator.
-inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator++() throw() {++p_; return *this;}
-
-/// Postfix increment operator.
-inline const LineLayout::StyledSegmentIterator LineLayout::StyledSegmentIterator::operator++(int) throw() {StyledSegmentIterator temp(*this); ++*this; return temp;}
-
-/// Prefix decrement operator.
-inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator--() throw() {--p_; return *this;}
-
-/// Postfix decrement operator.
-inline const LineLayout::StyledSegmentIterator LineLayout::StyledSegmentIterator::operator--(int) throw() {StyledSegmentIterator temp(*this); --*this; return temp;}
-
-/// Equality operator.
-inline bool LineLayout::StyledSegmentIterator::operator==(const StyledSegmentIterator& rhs) const throw() {return p_ == rhs.p_;}
-
-/// Inequality operator.
-inline bool LineLayout::StyledSegmentIterator::operator!=(const StyledSegmentIterator& rhs) const throw() {return !(*this == rhs);}
 
 /// Returns the first line of the cached layouts.
 inline length_t LineLayoutBuffer::getCacheFirstLine() const throw() {return startLine_;}

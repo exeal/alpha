@@ -158,7 +158,7 @@ namespace ascension {
 		} // namespace surrogates
 
 		/// Abstract class defines an interface for iteration on text.
-		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, Char> {
+		class CharacterIterator {
 		public:
 			static const CodePoint END_OF_BUFFER = 0xFFFFFFFFU;
 			// constructor
@@ -257,7 +257,7 @@ namespace ascension {
 		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
 		template<class BaseIterator, class ConcreteIterator>
-		class UTF16To32IteratorBase : public std::iterator<std::bidirectional_iterator_tag,
+		class UTF16To32IteratorBase : public BidirectionalIteratorFacade<ConcreteIterator,
 				CodePoint, typename std::iterator_traits<BaseIterator>::difference_type, const CodePoint*, const CodePoint> {
 		protected:
 			/// Default constructor.
@@ -269,25 +269,6 @@ namespace ascension {
 		public:
 			/// Assignment operator.
 			ConcreteIterator& operator=(const UTF16To32IteratorBase& rhs) {p_ = rhs.p_; return getConcrete();}
-			/// Prefix increment operator.
-			ConcreteIterator& operator++() {if(isLast()) throw std::logic_error("The iterator is last.");
-				++p_; if(!isLast() && surrogates::isLowSurrogate(*p_)) ++p_; return getConcrete();}
-			/// Postfix increment operator.
-			const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
-			/// Prefix decrement operator.
-			ConcreteIterator& operator--() {if(isFirst()) throw std::logic_error("The iterator is first.");
-				--p_; if(!isFirst() && surrogates::isLowSurrogate(*p_)) --p_; return getConcrete();}
-			/// Postfix decrement operator.
-			const ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
-			/// Dereference operator.
-			CodePoint operator*() const {
-				if(isLast()) throw std::logic_error("The iterator is last.");
-				if(!surrogates::isHighSurrogate(*p_)) return *p_;
-				BaseIterator next(p_); if(getConcrete().doIsLast(++next)) return *p_; return surrogates::decode(*p_, *next);}
-			/// Equality operator.
-			bool operator==(const UTF16To32IteratorBase& rhs) const {return p_ == rhs.p_;}
-			/// Inequality operator.
-			bool operator!=(const UTF16To32IteratorBase& rhs) const {return p_ != rhs.p_;}
 			/// Relational operator.
 			bool operator<(const UTF16To32IteratorBase& rhs) const {return p_ < rhs.p_;}
 			/// Relational operator.
@@ -302,6 +283,15 @@ namespace ascension {
 			bool isLast() const {return getConcrete().doIsLast(p_);}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
+		protected:
+			reference dereference() const {
+				if(isLast()) throw std::logic_error("The iterator is last.");
+				if(!surrogates::isHighSurrogate(*p_)) return *p_;
+				BaseIterator next(p_); if(getConcrete().doIsLast(++next)) return *p_; return surrogates::decode(*p_, *next);}
+			void increment() {if(isLast()) throw std::logic_error("The iterator is last."); ++p_; if(!isLast() && surrogates::isLowSurrogate(*p_)) ++p_;}
+			void decrement() {if(isFirst()) throw std::logic_error("The iterator is first."); --p_; if(!isFirst() && surrogates::isLowSurrogate(*p_)) --p_;}
+			bool equals(const ConcreteIterator& rhs) const {return p_ == rhs.p_;}
+			friend class Facade;
 		private:
 			ConcreteIterator& getConcrete() throw() {return *static_cast<ConcreteIterator*>(this);}
 			const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}
@@ -383,7 +373,7 @@ namespace ascension {
 		 * @see UTF16To32Iterator
 		 */
 		template<class BaseIterator = const CodePoint*>
-		class UTF32To16Iterator : public std::iterator<std::bidirectional_iterator_tag,
+		class UTF32To16Iterator : public BidirectionalIteratorFacade<UTF32To16Iterator<BaseIterator>,
 				Char, typename std::iterator_traits<BaseIterator>::difference_type, const Char*, const Char> {
 		public:
 			/// Default constructor.
@@ -393,21 +383,6 @@ namespace ascension {
 			UTF32To16Iterator(BaseIterator start) : p_(start), high_(true) {}
 			/// Assignment operator.
 			UTF32To16Iterator& operator=(const UTF32To16Iterator& rhs) {p_ = rhs.p_; high_ = rhs.high_;}
-			/// Prefix increment operator.
-			UTF32To16Iterator& operator++() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000) ++p_; else high_ = false; return *this;}
-			/// Postfix increment operator.
-			const UTF32To16Iterator operator++(int) {UTF32To16Iterator temp(*this); ++(*this); return temp;}
-			/// Prefix decrement operator.
-			UTF32To16Iterator&	 operator--() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000;} return *this;}
-			/// Postfix decrement operator.
-			const UTF32To16Iterator operator--(int) {UTF32To16Iterator temp(*this); --(*this); return temp;}
-			/// Dereference operator.
-			Char operator*() const {if(*p_ < 0x10000) return static_cast<Char>(*p_ & 0xFFFF);
-				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
-			/// Equality operator.
-			bool operator==(const UTF32To16Iterator& rhs) const {return p_ == rhs.p_ && high_ == rhs.high_;}
-			/// Inequality operator.
-			bool operator!=(const UTF32To16Iterator& rhs) const {return p_ != rhs.p_ || high_ != rhs.high_;}
 			/// Relational operator.
 			bool operator<(const UTF32To16Iterator& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && high_ && !rhs.high_);}
 			/// Relational operator.
@@ -419,6 +394,12 @@ namespace ascension {
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
 			enum {hasBoundary = false};
+		protected:
+			reference dereference() const {if(*p_ < 0x10000) return static_cast<Char>(*p_ & 0xFFFF);
+				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
+			void increment() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000) ++p_; else high_ = false;}
+			void decrement() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000;}}
+			bool equals(const UTF32To16Iterator& rhs) const {return p_ == rhs.p_ && high_ == rhs.high_;}
 		private:
 			BaseIterator p_;
 			bool high_;
@@ -432,7 +413,7 @@ namespace ascension {
 		};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-		class Normalizer : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
+		class Normalizer : public BidirectionalIteratorFacade<Normalizer, const CodePoint> {
 		public:
 			/// Normalization forms.
 			enum Form {
@@ -453,15 +434,8 @@ namespace ascension {
 			Normalizer(const String& text, Form form);
 			Normalizer(const Normalizer& rhs);
 			~Normalizer() throw();
-			// operators
-			Normalizer&			operator=(const Normalizer& rhs);
-			CodePoint			operator*() const throw();
-			Normalizer&			operator++();
-			const Normalizer	operator++(int);
-			Normalizer&			operator--();
-			const Normalizer	operator--(int);
-			bool				operator==(const Normalizer& rhs) const throw();
-			bool				operator!=(const Normalizer& rhs) const throw();
+			// operator
+			Normalizer&	operator=(const Normalizer& rhs);
 			// attributes
 			bool		isFirst() const throw();
 			bool		isLast() const throw();
@@ -470,6 +444,11 @@ namespace ascension {
 			static int		compare(const String& s1, const String& s2, Type type, bool ignoreCase);
 			static String	normalize(const Char* first, const Char* last, Form form);
 		private:
+			reference	dereference() const;
+			void		increment();
+			void		decrement();
+			bool		equals(const Normalizer& rhs) const;
+			friend class Facade;
 			static std::basic_string<CodePoint>	normalize(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i, Form form);
 			void								normalizeCurrentBlock(Direction direction);
 			Form form_;
@@ -1005,25 +984,19 @@ namespace ascension {
 
 // inline implementations ///////////////////////////////////////////////////
 
-/// Returns the current character in the normalized text.
-inline CodePoint Normalizer::operator*() const throw() {return normalizedBuffer_[indexInBuffer_];}
+// Returns the current character in the normalized text.
+inline Normalizer::reference Normalizer::dereference() const throw() {return normalizedBuffer_[indexInBuffer_];}
 
-/// Prefix incremental operator.
-inline Normalizer& Normalizer::operator++() {
+inline void Normalizer::increment() {
 	if(isLast())
 		throw std::out_of_range("the iterator is the last.");
 	if(++indexInBuffer_ == normalizedBuffer_.length()) {
 		if(!(++current_).isLast())
 			normalizeCurrentBlock(FORWARD);
 	}
-	return *this;
 }
 
-/// Postfix increment opearator.
-inline const Normalizer Normalizer::operator++(int) {Normalizer temp(*this); ++*this; return temp;}
-
-/// Prefix decrement operator.
-inline Normalizer& Normalizer::operator--() {
+inline void Normalizer::decrement() {
 	if(isFirst())
 		throw std::out_of_range("the iterator is the first");
 	if(indexInBuffer_ == 0) {
@@ -1031,18 +1004,10 @@ inline Normalizer& Normalizer::operator--() {
 		normalizeCurrentBlock(BACKWARD);
 	} else
 		--indexInBuffer_;
-	return *this;
 }
 
-/// Postfix decrement opearator.
-inline const Normalizer Normalizer::operator--(int) {Normalizer temp(*this); --*this; return temp;}
-
-/// Equality operator returns true if both iterators address the same character in the normalized text.
-inline bool Normalizer::operator==(const Normalizer& rhs) const throw() {
-	return current_ == rhs.current_ && indexInBuffer_ == rhs.indexInBuffer_;}
-
-/// Inequality operator.
-inline bool Normalizer::operator!=(const Normalizer& rhs) const throw() {return !(*this == rhs);}
+// Returns true if both iterators address the same character in the normalized text.
+inline bool Normalizer::equals(const Normalizer& rhs) const throw() {return current_ == rhs.current_ && indexInBuffer_ == rhs.indexInBuffer_;}
 
 /**
  * Compares the two strings according to the specified decomposition mapping.

@@ -234,6 +234,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
 	const int originalX = x;
 	const int savedCookie = dc.saveDC();
 	HRESULT hr;
+	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP);
 
 	// 折り返し行ごとのループ
 	for(; subline < numberOfSublines_; ++subline) {
@@ -309,7 +310,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
 					dc.selectObject(run.font);
 					dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
 						run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
-					hr = ::ScriptTextOut(dc.get(), &run.cache, x, y, 0, 0,
+					hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 				}
 			}
@@ -326,7 +327,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
 					&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
 				dc.selectObject(run.font);
 				dc.setTextColor(selectionColor.foreground);
-				hr = ::ScriptTextOut(dc.get(), &run.cache, x, y, 0, 0,
+				hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 			}
 			x += run.getWidth();
@@ -1124,14 +1125,8 @@ void LineLayout::wrap() throw() {
 
 // LineLayout::StyledSegmentIterator ////////////////////////////////////////
 
-/// Dereference operator.
-const StyledText& LineLayout::StyledSegmentIterator::operator*() const throw() {
+LineLayout::StyledSegmentIterator::reference LineLayout::StyledSegmentIterator::dereference() const throw() {
 	return **p_;
-}
-
-/// Member-access operator.
-const StyledText& LineLayout::StyledSegmentIterator::operator->() const throw() {
-	return **this;
 }
 
 

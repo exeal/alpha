@@ -17,6 +17,7 @@
 #include "config.hpp"
 #include <string>	// std::string
 #include <sstream>	// std::basic_stringbuf, std::basic_stringstream, ...
+#include <iterator>
 
 #ifdef _DEBUG
 #include "../../manah/win32/timer.hpp"
@@ -80,6 +81,56 @@ namespace ascension {
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 */
 	void updateSystemSettings() throw();
+
+	/**
+	 * Base class for bidirectional iterator. This provides C++ standard iterator interface.
+	 * @param ConcreteIterator the derived iterator class. this class should have the following methods:
+	 * - copy constructor
+	 * - dereference(void) const : returns the addressed element of type @a Type
+	 * - increment(void) : increments the position of the iterator
+	 * - decrement(void) : decrements the position of the iterator
+	 * - equals(const ConcreteIterator&amp;) const : return true if the iterator is equal to the other
+	 * in addition, the iterator supports relational operations should have:
+	 * - isLessThan(const ConcreteIterator&amp;) const : return true if the iterator is less than the other
+	 * - isGreaterThan(const ConcreteIterator&amp;) const : return true if the iterator is greater than the other
+	 * @param Type the element type
+	 * @param Distance the distance type
+	 * @param Pointer the pointer type
+	 * @param Reference the reference type
+	 */
+	template<class ConcreteIterator, typename Type, typename Distance = std::ptrdiff_t, typename Pointer = Type*, typename Reference = Type&>
+	class BidirectionalIteratorFacade : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
+	public:
+		/// Dereference operator.
+		reference operator*() const {return getConcrete().dereference();}
+		/// Dereference operator.
+		reference operator->() const {return getConcrete().dereference();}
+		/// Pre-fix increment operator.
+		ConcreteIterator& operator++() {getConcrete().increment(); return getConcrete();}
+		/// Post-fix increment operator.
+		ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
+		/// Pre-fix decrement operator.
+		ConcreteIterator& operator--() {getConcrete().decrement(); return getConcrete();}
+		/// Post-fix decrement operator.
+		ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
+		/// Equality operator.
+		bool operator==(const ConcreteIterator& rhs) const {return getConcrete().equals(rhs);}
+		/// Inequality operator.
+		bool operator!=(const ConcreteIterator& rhs) const {return !operator==(rhs);}
+		/// Relational operator.
+		bool operator<(const ConcreteIterator& rhs) const {return getConcrete().isLessThan(rhs);}
+		/// Relational operator.
+		bool operator<=(const ConcreteIterator& rhs) const {return operator<(rhs) || operator==(rhs);}
+		/// Relational operator.
+		bool operator>(const ConcreteIterator& rhs) const {return getConcrete().isGreaterThan(rhs);}
+		/// Relational operator.
+		bool operator>=(const ConcreteIterator& rhs) const {return operator>(rhs) || operator==(rhs);}
+	protected:
+		typedef BidirectionalIteratorFacade<ConcreteIterator, Type, Distance, Pointer, Reference> Facade;
+	private:
+		ConcreteIterator& getConcrete() throw() {return *static_cast<ConcreteIterator*>(this);}
+		const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}
+	};
 
 } // namespace ascension
 
