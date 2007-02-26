@@ -1,8 +1,8 @@
 /**
- *	@file common.hpp
- *	@brief Common header file used by Ascension library.
- *	@author exeal
- *	@date 2004-2007
+ * @file common.hpp
+ * @brief Common header file used by Ascension library.
+ * @author exeal
+ * @date 2004-2007
  */
 
 #ifndef ASCENSION_COMMON_HPP
@@ -101,9 +101,9 @@ namespace ascension {
 	class BidirectionalIteratorFacade : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
 	public:
 		/// Dereference operator returns a copy of the current element, not a reference.
-		value_type operator*() const {return getConcrete().dereference();}
+		Type operator*() const {return getConcrete().dereference();}
 		/// Dereference operator.
-		reference operator->() const {return getConcrete().dereference();}
+		Reference operator->() const {return getConcrete().dereference();}
 		/// Pre-fix increment operator.
 		ConcreteIterator& operator++() {getConcrete().increment(); return getConcrete();}
 		/// Post-fix increment operator.
@@ -125,7 +125,7 @@ namespace ascension {
 		/// Relational operator.
 		bool operator>=(const ConcreteIterator& rhs) const {return !operator<(rhs);}
 	protected:
-		typedef BidirectionalIteratorFacade<ConcreteIterator, Type, Distance, Pointer, Reference> Facade;
+		typedef BidirectionalIteratorFacade<ConcreteIterator, Type, Distance, Pointer, Reference> IteratorFacade;
 	private:
 		ConcreteIterator& getConcrete() throw() {return *static_cast<ConcreteIterator*>(this);}
 		const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}

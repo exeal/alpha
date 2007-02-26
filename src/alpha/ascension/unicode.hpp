@@ -306,29 +306,25 @@ namespace ascension {
 		public:
 			/// Assignment operator.
 			ConcreteIterator& operator=(const UTF16To32IteratorBase& rhs) {p_ = rhs.p_; return getConcrete();}
-			/// Relational operator.
-			bool operator<(const UTF16To32IteratorBase& rhs) const {return p_ < rhs.p_;}
-			/// Relational operator.
-			bool operator<=(const UTF16To32IteratorBase& rhs) const {return p_ <= rhs.p_;}
-			/// Relational operator.
-			bool operator>(const UTF16To32IteratorBase& rhs) const {return p_ > rhs.p_;}
-			/// Relational operator.
-			bool operator>=(const UTF16To32IteratorBase& rhs) const {return p_ >= rhs.p_;}
+			/// Implements decrement operators.
+			void decrement() {if(isFirst()) throw std::logic_error("The iterator is first."); --p_; if(!isFirst() && surrogates::isLowSurrogate(*p_)) --p_;}
+			/// Implements dereference operator.
+			CodePoint dereference() const {
+				if(isLast()) throw std::logic_error("The iterator is last.");
+				if(!surrogates::isHighSurrogate(*p_)) return *p_;
+				BaseIterator next(p_); if(getConcrete().doIsLast(++next)) return *p_; return surrogates::decode(*p_, *next);}
+			/// Implements equality operator.
+			bool equals(const ConcreteIterator& rhs) const {return p_ == rhs.p_;}
+			/// Implements increment opearators.
+			void increment() {if(isLast()) throw std::logic_error("The iterator is last."); ++p_; if(!isLast() && surrogates::isLowSurrogate(*p_)) ++p_;}
 			/// Returns true if the iterator is first. This returns a meaningful value when the policy is not @c DONT_CEHCK.
 			bool isFirst() const {return getConcrete().doIsFirst(p_);}
 			/// Returns true if the iterator is last. This returns a meaningful value when the policy is not @c DONT_CEHCK.
 			bool isLast() const {return getConcrete().doIsLast(p_);}
+			/// Implements relational operators.
+			bool isLessThan(const ConcreteIterator& rhs) const {return p_ < rhs.p_;}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
-		protected:
-			reference dereference() const {
-				if(isLast()) throw std::logic_error("The iterator is last.");
-				if(!surrogates::isHighSurrogate(*p_)) return *p_;
-				BaseIterator next(p_); if(getConcrete().doIsLast(++next)) return *p_; return surrogates::decode(*p_, *next);}
-			void increment() {if(isLast()) throw std::logic_error("The iterator is last."); ++p_; if(!isLast() && surrogates::isLowSurrogate(*p_)) ++p_;}
-			void decrement() {if(isFirst()) throw std::logic_error("The iterator is first."); --p_; if(!isFirst() && surrogates::isLowSurrogate(*p_)) --p_;}
-			bool equals(const ConcreteIterator& rhs) const {return p_ == rhs.p_;}
-			friend class Facade;
 		private:
 			ConcreteIterator& getConcrete() throw() {return *static_cast<ConcreteIterator*>(this);}
 			const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}
@@ -420,24 +416,20 @@ namespace ascension {
 			UTF32To16Iterator(BaseIterator start) : p_(start), high_(true) {}
 			/// Assignment operator.
 			UTF32To16Iterator& operator=(const UTF32To16Iterator& rhs) {p_ = rhs.p_; high_ = rhs.high_;}
-			/// Relational operator.
-			bool operator<(const UTF32To16Iterator& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && high_ && !rhs.high_);}
-			/// Relational operator.
-			bool operator<=(const UTF32To16Iterator& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && (high_ || high_ == rhs.high_));}
-			/// Relational operator.
-			bool operator>(const UTF32To16Iterator& rhs) const {return p_ > rhs.p_ || (p_ == rhs.p_ && !high_ && rhs.high_);}
-			/// Relational operator.
-			bool operator>=(const UTF32To16Iterator& rhs) const {return p_ > rhs.p_ || (p_ == rhs.p_ && (rhs.high_ || high_ == rhs.high_));}
+		  	/// Implements decrement operators.
+			void decrement() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000;}}
+			/// Implements dereference operator.
+			Char dereference() const {if(*p_ < 0x10000) return static_cast<Char>(*p_ & 0xFFFF);
+				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
+			/// Implements equality operator.
+			bool equals(const UTF32To16Iterator& rhs) const {return p_ == rhs.p_ && high_ == rhs.high_;}
+			/// Implements increment operators.
+			void increment() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000) ++p_; else high_ = false;}
+			/// Implements relational operatora.
+			bool isLessThan(const UTF32To16Iterator<BaseIterator>& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && high_ && !rhs.high_);}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
 			enum {hasBoundary = false};
-		protected:
-			reference dereference() const {if(*p_ < 0x10000) return static_cast<Char>(*p_ & 0xFFFF);
-				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
-			void increment() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000) ++p_; else high_ = false;}
-			void decrement() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000;}}
-			bool equals(const UTF32To16Iterator& rhs) const {return p_ == rhs.p_ && high_ == rhs.high_;}
-			friend class Facade;
 		private:
 			BaseIterator p_;
 			bool high_;
@@ -483,14 +475,13 @@ namespace ascension {
 			static Form		formForName(const Char* name);
 			static String	normalize(CodePoint c, Form form);
 			static String	normalize(const CharacterIterator& text, Form form);
-		private:
-			void	nextClosure(Direction direction, bool initialize);
 			// BidirectionalIteratorFacade
-			reference	dereference() const;
+			reference	dereference() const throw();
 			void		increment();
 			void		decrement();
-			bool		equals(const Normalizer& rhs) const;
-			friend class Facade;
+			bool		equals(const Normalizer& rhs) const throw();
+		private:
+			void	nextClosure(Direction direction, bool initialize);
 		private:
 			Form form_;
 			std::auto_ptr<CharacterIterator> current_;
@@ -784,25 +775,19 @@ namespace ascension {
 
 		class CollationElementIterator : public BidirectionalIteratorFacade<CollationElementIterator, const int> {
 		public:
-			static const NULL_ORDER;
-			// operators
-			bool operator<(const CollationElementIterator& rhs) const {return position() < rhs.position();}
-			bool operator<=(const CollationElementIterator& rhs) const {return position() <= rhs.position();}
-			bool operator>(const CollationElementIterator& rhs) const {return position() > rhs.position();}
-			bool operator>=(const CollationElementIterator& rhs) const {return position() >= rhs.position();}
-			std::ptrdiff_t operator-(const CollationElementIterator& rhs) const {return position() - rhs.position();}
+			static const int NULL_ORDER;
+			// BidirectionalIteratorFacade
+			value_type dereference() const {return current();}
+			void increment() {next();}
+			void decrement() {previous();}
+			bool equals(const CollationElementIterator& rhs) const {return position() == rhs.position();}
+			bool isLessThan(const CollationElementIterator &rhs) const {return position() < rhs.position();}
 		protected:
 			CollationElementIterator() throw() {}
 			virtual int			current() const = 0;
 			virtual void		next() = 0;
 			virtual void		previous() = 0;
 			virtual std::size_t	position() const = 0;
-		private:
-			value_type dereference() const {return current();}
-			void increment() {next();}
-			void decrement() {previous();}
-			bool equals(const CollationElementIterator& rhs) const {return position() == rhs.position();}
-			friend class Facade;
 		};
 
 		class Collator {
@@ -845,6 +830,7 @@ namespace ascension {
 			class ElementIterator : public CollationElementIterator {
 			public:
 				explicit ElementIterator(std::auto_ptr<CharacterIterator> source) throw() : i_(source) {}
+				~ElementIterator() throw() {}
 				int current() const {return i_->isLast() ? NULL_ORDER : i_->current();}
 				void next() {i_->next();}
 				void previous() {i_->previous();}
@@ -984,7 +970,8 @@ inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false *
  */
 template<typename CharacterSequence>
 inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI /* = false */) {
-	StringBuffer s(std::ios_base::out);
+	using namespace std;
+	StringBuffer s(ios_base::out);
 	CodePoint c, f;
 	Char buffer[2];
 	for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i) {
@@ -995,8 +982,8 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 			if(surrogates::encode(f, buffer) == 1)	s.sputc(buffer[0]);
 			else									s.sputn(buffer, 2);
 		} else {
-			const Char* const p = std::lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
-			if(*p == c)	s.sputn(FULL_FOLDED[p - FULL_CASED], static_cast<std::streamsize>(std::wcslen(FULL_FOLDED[p - FULL_CASED])));
+			const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+			if(*p == c)	s.sputn(FULL_FOLDED[p - FULL_CASED], static_cast<streamsize>(wcslen(FULL_FOLDED[p - FULL_CASED])));
 			else		s.sputc(static_cast<Char>(c & 0xFFFF));
 		}
 	}
