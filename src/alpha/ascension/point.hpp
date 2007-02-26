@@ -7,7 +7,7 @@
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
 #include "layout.hpp"	// IVisualLineListener
-#include "unicode-utils.hpp"
+#include "unicode.hpp"
 #include "encoder.hpp"
 #include <functional>	// std::mem_fun_t
 

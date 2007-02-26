@@ -7,6 +7,7 @@
 #ifndef ASCENSION_LAYOUT_HPP
 #define ASCENSION_LAYOUT_HPP
 #include "document.hpp"
+#include "unicode-property.hpp"
 #include "../../manah/win32/dc.hpp"
 #include <usp10.h>
 

@@ -6,7 +6,6 @@
 
 #include "stdafx.h"
 #include "viewer.hpp"
-#include "break-iterator.hpp"
 #include "../../manah/win32/utility.hpp"
 
 using namespace ascension;
@@ -178,7 +177,7 @@ CodePoint EditPoint::getCodePoint(bool useLineFeed /* = false */) const {
 	const String& line = getDocument()->getLine(getLineNumber());
 	if(getColumnNumber() == line.length())
 		return (getLineNumber() == getDocument()->getNumberOfLines() - 1) ? INVALID_CODE_POINT : (useLineFeed ? LINE_FEED : LINE_SEPARATOR);
-	return surrogates::decode(line.data() + getColumnNumber(), line.length() - getColumnNumber());
+	return surrogates::decodeFirst(line.begin() + getColumnNumber(), line.end());
 }
 
 /// Returns the length of the current line.
@@ -208,20 +207,18 @@ Position EditPoint::getNextCharPos(const EditPoint& pt, length_t length, EditPoi
 
 	const length_t lines = document.getNumberOfLines();
 	const String* line = &document.getLine(pt.getLineNumber());
-	const Char* p = line->data();
 	Position pos = pt;
 	while(length-- > 0) {
 		if(pos.column == line->length()) {	// 行末なので次の行に移動
 			if(pos.line == lines - 1)	// 最終行であれば移動しない
 				return pos;
 			line = &document.getLine(++pos.line);
-			p = line->data();
 			pos.column = 0;
 		} else if(cu == CU_UTF16 || line->length() - pos.column == 1)
 			++pos.column;
 		else {
 			assert(cu == CU_UTF32);
-			pos.column += (surrogates::decode(p + pos.column, line->length() - pos.column) > 0xFFFF) ? 2 : 1;
+			pos.column += (surrogates::decodeFirst(line->begin() + pos.column, line->end()) > 0xFFFF) ? 2 : 1;
 		}
 	}
 	return pos;
@@ -246,21 +243,19 @@ Position EditPoint::getPrevCharPos(const EditPoint& pt, length_t length, EditPoi
 	}
 
 	const String* line = &document.getLine(pt.getLineNumber());
-	const Char* p = line->data();
 	Position pos = pt;
 	while(length-- > 0) {
 		if(pos.column == 0) {	// 行頭なので前の行に移動
 			if(pos.line == 0)	// 先頭行であれば移動しない
 				return pos;
 			line = &document.getLine(--pos.line);
-			p = line->data();
 			pos.column = line->length();
 		} else if(cu == CU_UTF16 || pos.column == 1)
 			--pos.column;
 		else if(cu == CU_UTF32) {
 			assert(cu == CU_GRAPHEME_CLUSTER);
-			pos.column -= (surrogates::isHighSurrogate(p[pos.column - 2])
-						&& surrogates::isLowSurrogate(p[pos.column - 1])) ? 2 : 1;
+			pos.column -= (surrogates::isHighSurrogate((*line)[pos.column - 2])
+						&& surrogates::isLowSurrogate((*line)[pos.column - 1])) ? 2 : 1;
 		}
 	}
 	return pos;

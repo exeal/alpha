@@ -6,7 +6,7 @@
  */
 
 #include "stdafx.h"
-#include "break-iterator.hpp"
+#include "../unicode-property.hpp"
 #include <memory>	// std::auto_ptr
 using namespace ascension;
 using namespace ascension::unicode;

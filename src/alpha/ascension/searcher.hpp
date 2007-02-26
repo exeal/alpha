@@ -8,7 +8,6 @@
 #ifndef ASCENSION_SEARCHER_HPP
 #define ASCENSION_SEARCHER_HPP
 #include "document.hpp"
-#include "collator.hpp"
 #include <list>
 #include <stdexcept>	// std::logic_error
 

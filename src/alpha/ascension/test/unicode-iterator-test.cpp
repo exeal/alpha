@@ -1,7 +1,7 @@
 // unicode-iterator-test.cpp
 
 #include "stdafx.h"
-#include "../unicode-utils.hpp"
+#include "../unicode.hpp"
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
 void testUnicodeIterator() {

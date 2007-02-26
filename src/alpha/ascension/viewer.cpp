@@ -3812,12 +3812,7 @@ bool SourceViewer::getNearestIdentifier(const Position& position, length_t* star
 	if(startChar != 0 || identifier != 0) {
 		const length_t partitionStart = (position.line == partition.region.getTop().line) ? partition.region.getTop().column : 0;
 		while(startColumn > partitionStart) {
-			if(surrogates::isLowSurrogate(line[startColumn - 1])
-					&& startColumn > 1
-					&& surrogates::isHighSurrogate(line[startColumn - 2]))
-				cp = surrogates::decode(line.data() + startColumn - 2, 2);
-			else
-				cp = line[startColumn - 1];
+			cp = surrogates::decodeLast(line.begin(), line.begin() + startColumn);
 			if(syntax.isIdentifierContinueCharacter(cp))
 				startColumn -= ((cp >= 0x010000) ? 2 : 1);
 			else
@@ -3830,12 +3825,7 @@ bool SourceViewer::getNearestIdentifier(const Position& position, length_t* star
 	// 終了位置を調べる
 	if(endChar != 0 || identifier != 0) {
 		while(true) {
-			if(surrogates::isHighSurrogate(line[endColumn])
-					&& endColumn < line.length() - 1
-					&& surrogates::isLowSurrogate(line[endColumn + 1]))
-				cp = surrogates::decode(line.data() + endColumn, 2);
-			else
-				cp = line[endColumn];
+			cp = surrogates::decodeFirst(line.begin() + endColumn, line.end());
 			if(syntax.isIdentifierContinueCharacter(cp))
 				endColumn += ((cp >= 0x010000) ? 2 : 1);
 			else

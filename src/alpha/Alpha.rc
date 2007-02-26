@@ -805,7 +805,7 @@ BEGIN
     CMD_VIEW_WRAPBYSPECIFIEDWIDTH 
                             "指定幅で折り返す(&E)\n行を指定した幅で折り返して表示します。"
     CMD_VIEW_WRAPBYWINDOWWIDTH 
-                            "右端で折り返す(&W)\n行をウィンドウ幅で折り返して表示します。"
+                            "ウィンドウ端で折り返す(&W)\n行をウィンドウ幅で折り返して表示します。"
     CMD_VIEW_REFRESH        "再描画(&R)\n画面を再描画します。"
     CMD_VIEW_SPLITNS        "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
     CMD_VIEW_NEXTBUFFER     "次のバッファ(&N)\n次のバッファを表示します。"

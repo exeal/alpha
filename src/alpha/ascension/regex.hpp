@@ -8,8 +8,9 @@
 #ifndef ASCENSION_NO_REGEX
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
-#include "unicode-utils.hpp"	// unicode.UTF16To32Iterator
-#include "internal.hpp"			// internal.Int2Type
+#include "unicode.hpp"	// unicode.UTF16To32Iterator
+#include "unicode-property.hpp"
+#include "internal.hpp"	// internal.Int2Type
 #include <memory>
 #include <map>
 #include <bitset>

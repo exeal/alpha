@@ -1,17 +1,14 @@
 /**
  * @file unicode.cpp
- *
- * This file defines seven UTF encoders:
- * UTF-8, UTF-16 little endian, UTF-16 big endian, UTF-32 little endian, UTF-32 big endian, UTF-7, and UTF-5
- * (the last two will be defined only if @c ASCENSION_NO_EXTENDED_ENCODINGS is not defined).
- * 
+ * This file defines seven UTF encoders. It includes: UTF-8, UTF-16 little endian, UTF-16 big
+ * endian, UTF-32 little endian, UTF-32 big endian, UTF-7, and UTF-5. The last two will be
+ * defined only if the configuration symbol @c ASCENSION_NO_EXTENDED_ENCODINGS is not defined.
  * @author exeal
  * @date 2003-2007
  */
 
 #include "stdafx.h"
 #include "../encoder.hpp"
-
 using namespace ascension;
 using namespace ascension::encodings;
 using namespace ascension::unicode;
@@ -35,32 +32,32 @@ DEFINE_DETECTOR(CPEX_UNICODE_AUTODETECT, Unicode);
 namespace {
 	/// 引数を UTF-8 オクテットとみなし、それが何バイト文字かを返す
 	inline size_t getByteLengthAsUTF8Char(const uchar* src, size_t len) throw() {
-		if(len > 5) {	// 6バイト文字
+		if(len > 5) {	// 6 バイト文字
 			// 1111 110x 10xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx 10xx xxxx
 			if((src[0] & 0xFE) == 0xFC && (src[1] & 0xC0) == 0x80 && (src[5] & 0xC0) == 0x80)
 				return 6;
 		}
-		if(len > 4) {	// 5バイト文字
+		if(len > 4) {	// 5 バイト文字
 			// 1111 10xx 10xx xxxx xxxx xxxx xxxx xxxx 10xx xxxx
 			if((src[0] & 0xFC) == 0xF8 && (src[1] & 0xC0) == 0x80 && (src[4] & 0xC0) == 0x80)
 				return 5;
 		}
-		if(len > 3) {	// 4バイト文字
+		if(len > 3) {	// 4 バイト文字
 			// 1111 0xxx 10xx xxxx xxxx xxxx 10xx xxxx
 			if((src[0] & 0xF8) == 0xF0 && (src[1] & 0xC0) == 0x80 && (src[3] & 0xC0) == 0x80)
 				return 4;
 		}
-		if(len > 2) {	// 3バイト文字
+		if(len > 2) {	// 3 バイト文字
 			// 1110 xxxx 10xx xxxx 10xx xxxx
 			if((src[0] & 0xF0) == 0xE0 && (src[1] & 0xC0) == 0x80 && (src[2] & 0xC0) == 0x80)
 				return 3;
 		}
-		if(len > 1) {	// 2バイト文字
+		if(len > 1) {	// 2 バイト文字
 			// 110x xxxx 10xx xxxx
 			if((src[0] & 0xE0) == 0xC0 && (src[1] & 0xC0) == 0x80)
 				return 2;
 		}
-		// 1バイト文字か不正
+		// 1 バイト文字か不正
 		// 0xxx xxxx
 		if((src[0] & 0x80) == 0x00)
 			return 1;
@@ -193,8 +190,7 @@ size_t Encoder_Unicode_Utf32LE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 3 < destLength; ++i) {
-		const CodePoint cp = surrogates::decode(src + i, srcLength - i);
-
+		const CodePoint cp = surrogates::decodeFirst(src + i, src + srcLength);
 		dest[j++] = BIT8_MASK((cp & 0x000000FF) >> 0);
 		dest[j++] = BIT8_MASK((cp & 0x0000FF00) >> 8);
 		dest[j++] = BIT8_MASK((cp & 0x00FF0000) >> 16);
@@ -225,7 +221,7 @@ size_t Encoder_Unicode_Utf32BE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 3 < destLength; ++i) {
-		const CodePoint cp = surrogates::decode(src + i, srcLength - i);
+		const CodePoint cp = surrogates::decodeFirst(src + i, src + srcLength);
 
 		dest[j++] = BIT8_MASK((cp & 0xFF000000) >> 24);
 		dest[j++] = BIT8_MASK((cp & 0x00FF0000) >> 16);
@@ -291,7 +287,7 @@ inline size_t encodeUnicodeCharToUTF5(uchar* dest, const wchar_t* src, size_t le
 	assert(dest != 0 && src != 0);
 #define D2C(n)	(BIT8_MASK(n) < 0x0A) ? (BIT8_MASK(n) + '0') : (BIT8_MASK(n) - 0x0A + 'A')
 
-	const CodePoint cp = surrogates::decode(src, len);
+	const CodePoint cp = surrogates::decodeFirst(src, src + len);
 
 	if(cp < 0x00000010) {
 		dest[0] = BIT8_MASK((cp & 0x0000000F) >> 0) + 'G';
@@ -587,7 +583,7 @@ inline size_t decodeUTF8CharToUnicode(CodePoint& cp, const uchar* src, size_t le
 inline size_t encodeUnicodeCharToUTF8(uchar* dest, const wchar_t* src, size_t len) {
 	assert(dest != 0 && len != 0);
 
-	const CodePoint cp = surrogates::decode(src, len);
+	const CodePoint cp = surrogates::decodeFirst(src, src + len);
 
 	if(cp <= 0x0000007F) {	// 1バイト文字
 		// 0000 0000  0zzz zzzz -> 0zzz zzzz

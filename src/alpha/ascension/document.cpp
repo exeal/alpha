@@ -1265,12 +1265,13 @@ void Document::resetContent() {
 	widen();
 
 	if(length_ != 0) {
+		const Region entire(getStartPosition(false), getEndPosition(false));
 		assert(!lines_.isEmpty());
 		fireDocumentAboutToBeChanged();
 		lines_.clear();
 		lines_.insert(lines_.begin(), new Line);
 		length_ = 0;
-		fireDocumentChanged(DocumentChange(true, Region(getStartPosition(false), getEndPosition(false))), false);
+		fireDocumentChanged(DocumentChange(true, entire), false);
 	} else if(lines_.isEmpty())
 		lines_.insert(lines_.begin(), new Line);
 

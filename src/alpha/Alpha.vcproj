@@ -343,23 +343,11 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Ascension"
+			Name="ascension"
 			Filter="">
 			<Filter
 				Name="Source Files"
 				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
-				<File
-					RelativePath=".\ascension\break-iterator.cpp">
-				</File>
-				<File
-					RelativePath=".\ascension\collator.cpp">
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
-				</File>
 				<File
 					RelativePath=".\Ascension\content-assist.cpp">
 				</File>
@@ -394,27 +382,62 @@
 					RelativePath=".\Ascension\text-editor.cpp">
 				</File>
 				<File
-					RelativePath=".\Ascension\unicode-utils.cpp">
+					RelativePath=".\ascension\unicode-property.cpp">
 				</File>
 				<File
 					RelativePath=".\Ascension\viewer.cpp">
 				</File>
+				<Filter
+					Name="encodings"
+					Filter="">
+					<File
+						RelativePath=".\Ascension\encodings\armenian.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\irish.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\iso8859.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\japanese.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\lao.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\thai.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\uncategorized.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\unicode.cpp">
+					</File>
+					<File
+						RelativePath=".\Ascension\encodings\vietnamese.cpp">
+					</File>
+				</Filter>
+				<Filter
+					Name="unicode"
+					Filter="">
+					<File
+						RelativePath=".\ascension\unicode\break-iterator.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\unicode\collator.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\unicode\identifier-syntax.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\unicode\normalizer.cpp">
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Header Files"
 				Filter="h;hpp;hxx;hm;inl">
-				<File
-					RelativePath=".\ascension\break-iterator.hpp">
-				</File>
-				<File
-					RelativePath=".\ascension\collator.hpp">
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCustomBuildTool"/>
-					</FileConfiguration>
-				</File>
 				<File
 					RelativePath=".\Ascension\common.hpp">
 				</File>
@@ -458,41 +481,13 @@
 					RelativePath=".\Ascension\text-editor.hpp">
 				</File>
 				<File
-					RelativePath=".\Ascension\unicode-utils.hpp">
+					RelativePath=".\ascension\unicode-property.hpp">
+				</File>
+				<File
+					RelativePath=".\ascension\unicode.hpp">
 				</File>
 				<File
 					RelativePath=".\Ascension\viewer.hpp">
-				</File>
-			</Filter>
-			<Filter
-				Name="Encodings"
-				Filter="">
-				<File
-					RelativePath=".\Ascension\encodings\armenian.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\irish.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\iso8859.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\japanese.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\lao.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\thai.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\uncategorized.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\unicode.cpp">
-				</File>
-				<File
-					RelativePath=".\Ascension\encodings\vietnamese.cpp">
 				</File>
 			</Filter>
 		</Filter>

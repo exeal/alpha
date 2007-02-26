@@ -7,7 +7,7 @@
 #ifndef ASCENSION_ENCODER_HPP
 #define ASCENSION_ENCODER_HPP
 
-#include "unicode-utils.hpp"
+#include "unicode.hpp"
 #include <cassert>
 #include <set>
 #include <map>
