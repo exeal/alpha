@@ -122,7 +122,7 @@ namespace ascension {
 			virtual ~Pattern() throw();
 			// attributes
 			std::locale	getLocale() const throw();
-			String		getPatternString() const throw();
+			String		getPatternString() const;
 			void		setLocale(const std::locale& lc) throw();
 			// operations
 			template<typename CharacterSequence> std::auto_ptr<MatchResult<CharacterSequence> >
@@ -170,9 +170,9 @@ namespace ascension {
 		inline int internal::RegexTraits::value(char_type c, int radix) const {
 			switch(radix) {
 			case 8:
-				return (c >= '0' && c <= '7') ? c - '0' : -1;
+				return (c >= '0' && c <= '7') ? static_cast<int>(c - '0') : -1;
 			case 10:
-				return (c >= '0' && c <= '9') ? c - '0' : -1;
+				return (c >= '0' && c <= '9') ? static_cast<int>(c - '0') : -1;
 			case 16:
 				if(c >= '0' && c <= '9')		return c - '0';
 				else if(c >= 'A' && c <= 'F')	return c - 'A' + 10;
