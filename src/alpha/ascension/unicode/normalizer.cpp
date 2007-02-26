@@ -305,6 +305,20 @@ int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity case
 	return internalCompare((nfd1.get() != 0) ? *nfd1 : s1, (nfd2.get() != 0) ? *nfd2 : s2, caseSensitivity);
 }
 
+/**
+ * Returns the normalization form with the given name.
+ * @param name the name
+ * @return the normalization form
+ * @throw std#invalid_argument @a name is invalid
+ */
+Normalizer::Form Normalizer::formForName(const Char* name) {
+if(PropertyNameComparer<Char>::compare(name, L"NFD") == 0) return FORM_D;
+	else if(PropertyNameComparer<Char>::compare(name, L"NFC") == 0) return FORM_C;
+	else if(PropertyNameComparer<Char>::compare(name, L"NFKD") == 0) return FORM_KD;
+	else if(PropertyNameComparer<Char>::compare(name, L"NFKC") == 0) return FORM_KC;
+	else throw invalid_argument("unknown normalization name.");
+}
+
 /// Normalizes the next or previous closure for the following iteration.
 void Normalizer::nextClosure(Direction direction, bool initialize) {
 	auto_ptr<CharacterIterator> next;
