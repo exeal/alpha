@@ -480,6 +480,7 @@ namespace ascension {
 			bool			isLast() const throw();
 			// class operations
 			static int		compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
+			static Form		formForName(const Char* name);
 			static String	normalize(CodePoint c, Form form);
 			static String	normalize(const CharacterIterator& text, Form form);
 		private:
