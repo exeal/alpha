@@ -476,8 +476,7 @@ namespace {
 			} else if(ucs[0] >= 0xF91D && ucs[0] < 0xFE45 + countof(UCStoJISX0213_FE45)) {
 				jis = UCStoJISX0213_FE45[ucs[0] - 0xFE45]; eaten = 1;
 			} else if(eaten > 1 && surrogates::isHighSurrogate(ucs[0]) && surrogates::isLowSurrogate(ucs[1])) {
-				const CodePoint cp = surrogates::decode(ucs, eaten);
-
+				const CodePoint cp = surrogates::decodeFirst(ucs, ucs + eaten);
 				eaten = 1;
 				if(cp >= 0x020000) {
 					const map<ushort, ulong>::const_iterator it = cjkExtBtoJis.find(BIT16_MASK(cp - 0x020000));

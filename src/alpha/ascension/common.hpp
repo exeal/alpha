@@ -92,7 +92,6 @@ namespace ascension {
 	 * - equals(const ConcreteIterator&amp;) const : return true if the iterator is equal to the other
 	 * in addition, the iterator supports relational operations should have:
 	 * - isLessThan(const ConcreteIterator&amp;) const : return true if the iterator is less than the other
-	 * - isGreaterThan(const ConcreteIterator&amp;) const : return true if the iterator is greater than the other
 	 * @param Type the element type
 	 * @param Distance the distance type
 	 * @param Pointer the pointer type
@@ -101,8 +100,8 @@ namespace ascension {
 	template<class ConcreteIterator, typename Type, typename Distance = std::ptrdiff_t, typename Pointer = Type*, typename Reference = Type&>
 	class BidirectionalIteratorFacade : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
 	public:
-		/// Dereference operator.
-		reference operator*() const {return getConcrete().dereference();}
+		/// Dereference operator returns a copy of the current element, not a reference.
+		value_type operator*() const {return getConcrete().dereference();}
 		/// Dereference operator.
 		reference operator->() const {return getConcrete().dereference();}
 		/// Pre-fix increment operator.
@@ -122,9 +121,9 @@ namespace ascension {
 		/// Relational operator.
 		bool operator<=(const ConcreteIterator& rhs) const {return operator<(rhs) || operator==(rhs);}
 		/// Relational operator.
-		bool operator>(const ConcreteIterator& rhs) const {return getConcrete().isGreaterThan(rhs);}
+		bool operator>(const ConcreteIterator& rhs) const {return !operator<=(rhs);}
 		/// Relational operator.
-		bool operator>=(const ConcreteIterator& rhs) const {return operator>(rhs) || operator==(rhs);}
+		bool operator>=(const ConcreteIterator& rhs) const {return !operator<(rhs);}
 	protected:
 		typedef BidirectionalIteratorFacade<ConcreteIterator, Type, Distance, Pointer, Reference> Facade;
 	private:

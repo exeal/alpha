@@ -7,7 +7,6 @@
 
 #include "stdafx.h"
 #include "searcher.hpp"
-#include "break-iterator.hpp"
 #ifndef ASCENSION_NO_REGEX
 #include "regex.hpp"
 #endif /* !ASCENSION_NO_REGEX */

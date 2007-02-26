@@ -957,7 +957,7 @@ bool LineLayout::shape(Run& run) throw() {
 		// TODO: tries about the font linking.
 		// ランの書記体系を調べる
 		int script;
-		for(CStringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
+		for(StringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
 			script = Script::of(i.current());
 			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 				break;
@@ -1454,7 +1454,14 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		defaultAssociations_[Script::GREEK] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::GUJARATI] = L"Shruti";
 		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
-		defaultAssociations_[Script::HAN] = L"SimSun";
+		switch(PRIMARYLANGID(getUserDefaultUILanguage())) {	// yes, this is not enough...
+		case LANG_CHINESE:
+			defaultAssociations_[Script::HAN] = L"PMingLiu"; break;
+		case LANG_JAPANESE:
+			defaultAssociations_[Script::HAN] = L"MS P Gothic"; break;
+		case LANG_KOREAN:
+			defaultAssociations_[Script::HAN] = L"Gulim"; break;
+		}
 		defaultAssociations_[Script::HANGUL] = L"Gulim";
 		defaultAssociations_[Script::HEBREW] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::HIRAGANA] = L"MS P Gothic";

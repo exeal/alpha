@@ -831,13 +831,16 @@ namespace ascension {
 		};
 
 		/**
-		 * Random access iterator scans characters in the specified document.
-		 * However, this iterator class does *not* have @c operator[].
+		 * Bidirectional iterator scans characters in the specified document.
 		 * If an iterator is at the end of line, the dereferece operator returns @c LINE_SEPARATOR.
+		 * Otherwise, if an iterator at the end of document, the dereference operator returns
+		 * @c NONCHARACTER.
 		 * @note This class is underivable.
 		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
-		class DocumentCharacterIterator : public unicode::CharacterIterator {
+		class DocumentCharacterIterator :
+				public unicode::CharacterIterator,
+				public BidirectionalIteratorFacade<DocumentCharacterIterator, const Char> {
 		public:
 			// constructors
 			DocumentCharacterIterator() throw();
@@ -845,24 +848,12 @@ namespace ascension {
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
-			// operators for bidirectional iteration
-			DocumentCharacterIterator&		operator=(const DocumentCharacterIterator& rhs) throw();
-			Char							operator*() const throw();
-			DocumentCharacterIterator&		operator++() throw();
-			const DocumentCharacterIterator	operator++(int) throw();
-			DocumentCharacterIterator&		operator--() throw();
-			const DocumentCharacterIterator	operator--(int) throw();
-			bool							operator==(const DocumentCharacterIterator& rhs) const throw();
-			bool							operator!=(const DocumentCharacterIterator& rhs) const throw();
-			// operators for random access iteration
+			// operators
+			DocumentCharacterIterator&	operator=(const DocumentCharacterIterator& rhs) throw();
 			DocumentCharacterIterator&	operator+=(signed_length_t offset) throw();
 			DocumentCharacterIterator&	operator-=(signed_length_t offset) throw();
 			DocumentCharacterIterator	operator+(signed_length_t offset) const throw();
 			DocumentCharacterIterator	operator-(signed_length_t offset) const throw();
-			bool	operator<(const DocumentCharacterIterator& rhs) const throw();
-			bool	operator<=(const DocumentCharacterIterator& rhs) const throw();
-			bool	operator>(const DocumentCharacterIterator& rhs) const throw();
-			bool	operator>=(const DocumentCharacterIterator& rhs) const throw();
 			// attributes
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
@@ -873,11 +864,20 @@ namespace ascension {
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
 		private:
+			// CharacterIterator
 			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));}
-			void decrement() {--*this;}
-			Char dereference() const {return **this;}
-			void increment() {++*this;}
+			Char doCurrent() const {return **this;}
+			void doNext() {++*this;}
+			void doPrevious() {--*this;}
+			void doReset() {seek(region_.first);}
 			using CharacterIterator::getOffset;
+			// BidirectionalIteratorFacade
+			void decrement() throw();
+			value_type dereference() const throw();
+			bool equals(const DocumentCharacterIterator& rhs) const throw();
+			void increment() throw();
+			bool isLessThan(const DocumentCharacterIterator& rhs) const throw();
+			friend class Facade;
 		private:
 			const Document* document_;
 			Region region_;
@@ -1382,40 +1382,6 @@ inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
 inline DocumentCharacterIterator& DocumentCharacterIterator::operator=(const DocumentCharacterIterator& rhs) throw() {
 	unicode::CharacterIterator::operator=(rhs); document_ = rhs.document_; region_ = rhs.region_; line_ = rhs.line_; p_ = rhs.p_; return *this;}
 
-/// Dereference iterator. If the iterator addresses the end of the document, the result is undefined.
-inline Char DocumentCharacterIterator::operator*() const throw() {
-	return (p_.column < line_->length()) ? (*line_)[p_.column] : LINE_SEPARATOR;}
-
-/// Prefix increment operator.
-inline DocumentCharacterIterator& DocumentCharacterIterator::operator++() throw() {
-	if(isLast()) return *this;
-	else if(p_.column < line_->length()) ++p_.column;
-	else {line_ = &document_->getLine(++p_.line); p_.column = 0;}
-	return *this;
-}
-
-/// Postfix increment operator.
-inline const DocumentCharacterIterator
-DocumentCharacterIterator::operator++(int) throw() {DocumentCharacterIterator temp(*this); ++*this; return temp;}
-
-/// Prefix decrement operator.
-inline DocumentCharacterIterator& DocumentCharacterIterator::operator--() throw() {
-	if(isFirst()) return *this;
-	else if(p_.column > 0) --p_.column;
-	else p_.column = (line_ = &document_->getLine(--p_.line))->length();
-	return *this;
-}
-
-/// Postfix decrement operator.
-inline const DocumentCharacterIterator
-DocumentCharacterIterator::operator--(int) throw() {DocumentCharacterIterator temp(*this); --*this; return temp;}
-
-/// Equality operator.
-inline bool DocumentCharacterIterator::operator==(const DocumentCharacterIterator& rhs) const throw() {return p_ == rhs.p_;}
-
-/// Inequality operator.
-inline bool DocumentCharacterIterator::operator!=(const DocumentCharacterIterator& rhs) const throw() {return p_ != rhs.p_;}
-
 /// Additive operator.
 inline DocumentCharacterIterator DocumentCharacterIterator::operator+(
 	signed_length_t offset) const throw() {DocumentCharacterIterator temp(*this); return temp += offset;}
@@ -1424,17 +1390,23 @@ inline DocumentCharacterIterator DocumentCharacterIterator::operator+(
 inline DocumentCharacterIterator DocumentCharacterIterator::operator-(
 	signed_length_t offset) const throw() {DocumentCharacterIterator temp(*this); return temp -= offset;}
 
-/// Relational operator.
-inline bool DocumentCharacterIterator::operator<(const DocumentCharacterIterator& rhs) const throw() {return p_ < rhs.p_;}
+inline void DocumentCharacterIterator::decrement() throw() {
+	if(isFirst()) return;
+	else if(p_.column > 0) --p_.column;
+	else p_.column = (line_ = &document_->getLine(--p_.line))->length();
+}
 
-/// Relational operator.
-inline bool DocumentCharacterIterator::operator<=(const DocumentCharacterIterator& rhs) const throw() {return p_ <= rhs.p_;}
+inline DocumentCharacterIterator::value_type DocumentCharacterIterator::dereference() const throw() {
+	if(p_.column < line_->length()) return(*line_)[p_.column];
+	else return (p_.line < document_->getNumberOfLines() - 1) ? LINE_SEPARATOR : NONCHARACTER;}
 
-/// Relational operator.
-inline bool DocumentCharacterIterator::operator>(const DocumentCharacterIterator& rhs) const throw() {return p_ > rhs.p_;}
+inline bool DocumentCharacterIterator::equals(const DocumentCharacterIterator& rhs) const throw() {return p_ == rhs.p_;}
 
-/// Relational operator.
-inline bool DocumentCharacterIterator::operator>=(const DocumentCharacterIterator& rhs) const throw() {return p_ >= rhs.p_;}
+inline void DocumentCharacterIterator::increment() throw() {
+	if(isLast()) return;
+	else if(p_.column < line_->length()) ++p_.column;
+	else {line_ = &document_->getLine(++p_.line); p_.column = 0;}
+}
 
 /// Returns the document.
 inline const Document* DocumentCharacterIterator::getDocument() const throw() {return document_;}
@@ -1450,6 +1422,8 @@ inline bool DocumentCharacterIterator::isFirst() const throw() {return p_ == reg
 
 /// @see unicode#CharacterIterator#isLast
 inline bool DocumentCharacterIterator::isLast() const throw() {return p_ == region_.second;}
+
+inline bool DocumentCharacterIterator::isLessThan(const DocumentCharacterIterator& rhs) const throw() {return p_ < rhs.p_;}
 
 /**
  * Moves to the specified position.

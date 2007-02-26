@@ -6,7 +6,6 @@
 
 #include "stdafx.h"
 #include "text-editor.hpp"
-#include "break-iterator.hpp"
 #include "content-assist.hpp"
 #include "../../manah/win32/utility.hpp"
 #include "../../manah/win32/ui/wait-cursor.hpp"
@@ -199,15 +198,10 @@ ulong CharacterCodePointConversionCommand::execute() {
 	Caret& caret = viewer.getCaret();
 	const Char* const line = document.getLine(bottom.getLineNumber()).data();
 	CodePoint cp;
+	Char buffer[7];
 
 	if(param_) {	// 文字 -> コードポイント
-		Char buffer[7];
-		if(bottom.getColumnNumber() > 1
-				&& surrogates::isHighSurrogate(line[bottom.getColumnNumber() - 2])
-				&& surrogates::isLowSurrogate(line[bottom.getColumnNumber() - 1]))
-			cp = surrogates::decode(line + bottom.getColumnNumber() - 2, 2);
-		else
-			cp = line[bottom.getColumnNumber() - 1];
+		cp = surrogates::decodeLast(line, line + bottom.getColumnNumber());
 		swprintf(buffer, L"%lX", cp);
 		viewer.freeze();
 		caret.select(Position(bottom.getLineNumber(), bottom.getColumnNumber() - ((cp > 0xFFFF) ? 2 : 1)), bottom);
@@ -216,9 +210,8 @@ ulong CharacterCodePointConversionCommand::execute() {
 	} else {	// コードポイント -> 文字
 		const length_t column = bottom.getColumnNumber();
 		length_t i = column - 1;
-		Char buffer[7];
 
-		// 変換できるのは "N" 、"U+N" および "u+N" のいずれか (N は6桁以下の16進数)
+		// 変換できるのは "N" 、"U+N" および "u+N" のいずれか (N は 6 桁以下の16進数)
 		if(toBoolean(iswxdigit(line[column - 1]))) {
 			while(i != 0) {
 				if(column - i == 7) {
@@ -303,7 +296,7 @@ ulong CharacterInputFromNextLineCommand::execute() {
 		getTarget().beep();
 		return 1;
 	}
-	return CharacterInputCommand(getTarget(), unicode::surrogates::decode(line.data() + column, line.length() - column)).execute();
+	return CharacterInputCommand(getTarget(), unicode::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
 }
 
 /**

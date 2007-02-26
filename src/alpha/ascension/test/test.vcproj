@@ -118,7 +118,10 @@
 				RelativePath=".\break-iterator-test.cpp">
 			</File>
 			<File
-				RelativePath="..\break-iterator.cpp">
+				RelativePath=".\included.cpp">
+			</File>
+			<File
+				RelativePath=".\normalizer-test.cpp">
 			</File>
 			<File
 				RelativePath=".\stdafx.cpp">
@@ -136,13 +139,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\text-buffer-test.cpp">
-			</File>
-			<File
 				RelativePath=".\unicode-iterator-test.cpp">
-			</File>
-			<File
-				RelativePath="..\unicode-utils.cpp">
 			</File>
 		</Filter>
 		<Filter
