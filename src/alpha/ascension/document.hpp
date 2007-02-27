@@ -863,6 +863,12 @@ namespace ascension {
 			const Position&	tell() const throw();
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
+			// BidirectionalIteratorFacade
+			void decrement() throw();
+			value_type dereference() const throw();
+			bool equals(const DocumentCharacterIterator& rhs) const throw();
+			void increment() throw();
+			bool isLessThan(const DocumentCharacterIterator& rhs) const throw();
 		private:
 			// CharacterIterator
 			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));}
@@ -871,13 +877,6 @@ namespace ascension {
 			void doPrevious() {--*this;}
 			void doReset() {seek(region_.first);}
 			using CharacterIterator::getOffset;
-			// BidirectionalIteratorFacade
-			void decrement() throw();
-			value_type dereference() const throw();
-			bool equals(const DocumentCharacterIterator& rhs) const throw();
-			void increment() throw();
-			bool isLessThan(const DocumentCharacterIterator& rhs) const throw();
-			friend class Facade;
 		private:
 			const Document* document_;
 			Region region_;
@@ -1390,18 +1389,22 @@ inline DocumentCharacterIterator DocumentCharacterIterator::operator+(
 inline DocumentCharacterIterator DocumentCharacterIterator::operator-(
 	signed_length_t offset) const throw() {DocumentCharacterIterator temp(*this); return temp -= offset;}
 
+/// Implements decrement operators.
 inline void DocumentCharacterIterator::decrement() throw() {
 	if(isFirst()) return;
 	else if(p_.column > 0) --p_.column;
 	else p_.column = (line_ = &document_->getLine(--p_.line))->length();
 }
 
+/// Implements dereference operator.
 inline DocumentCharacterIterator::value_type DocumentCharacterIterator::dereference() const throw() {
 	if(p_.column < line_->length()) return(*line_)[p_.column];
 	else return (p_.line < document_->getNumberOfLines() - 1) ? LINE_SEPARATOR : NONCHARACTER;}
 
+/// Implements equality operator.
 inline bool DocumentCharacterIterator::equals(const DocumentCharacterIterator& rhs) const throw() {return p_ == rhs.p_;}
 
+/// Implements increment operators.
 inline void DocumentCharacterIterator::increment() throw() {
 	if(isLast()) return;
 	else if(p_.column < line_->length()) ++p_.column;

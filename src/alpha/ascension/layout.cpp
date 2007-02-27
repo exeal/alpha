@@ -965,10 +965,9 @@ bool LineLayout::shape(Run& run) throw() {
 		HFONT fallbackFont;
 		if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 			fallbackFont = renderer_.getFont(script, run.style.bold, run.style.italic);
-		else if(runs_[0] != &run) {
-			const ptrdiff_t p = (runs_ + numberOfRuns_) - find(runs_, runs_ + numberOfRuns_, &run);
-			fallbackFont = runs_[p - 1]->font;
-		} else
+		else if(runs_[0] != &run)
+			fallbackFont = find(runs_, runs_ + numberOfRuns_, &run)[-1]->font;
+		else
 			fallbackFont = run.font;	// うーむ
 		if(fallbackFont != run.font) {
 			dc.selectObject(run.font = fallbackFont);
@@ -1500,16 +1499,9 @@ HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = fa
 	if(script == Script::COMMON)
 		fontset = &const_cast<FontSelector*>(this)->primaryFont_;
 	HFONT& font = bold ? (italic ? fontset->boldItalic : fontset->bold) : (italic ? fontset->italic : fontset->regular);
-	if(font == 0) {
+	if(font == 0)
 		font = ::CreateFontW(ascent_ + descent_, 0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0,
 			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fontset->faceName);
-		::TEXTMETRICW tm;
-		auto_ptr<DC> dc(const_cast<FontSelector*>(this)->getDC());
-		HFONT old = dc->selectObject(font);
-		dc->getTextMetrics(tm);
-		dc->selectObject(old);
-		dout << tm.tmHeight;
-	}
 	return font;
 }
 

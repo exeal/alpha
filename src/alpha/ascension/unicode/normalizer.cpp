@@ -16,13 +16,15 @@ using namespace std;
  * @class ascension::unicode::Normalizer ../unicode.hpp
  * @c Nomalizer supports the standard normalization forms described in
  * <a href="http://www.unicode.org/reports/tr15/">UAX #15: Unicode Normalization Forms</a> revision 27.
+ * One can use this to normalize text or compare two strings for canonical equivalence for sorting
+ * or searching text.
  *
  * This class has an interface for C++ standard bidirectional iterator and returns normalized text
  * incrementally. The following illustrates this:
  *
  * @code
  * String text(L"C\x0301\x0327");
- * Normalizer n(text, Normalizer::FORM_NFD);
+ * Normalizer n(StringCharacterIterator(text), Normalizer::FORM_NFD);
  * // print all normalized characters of the sequence.
  * while(!n.isLast()) {
  *   std::cout << std::dec << (n.tell() - text.data()) << " : "
@@ -31,7 +33,7 @@ using namespace std;
  * }
  * @endcode
  *
- * @c Normalizer is boundary safe. @c #isFirst and @c #isLast check the iterator is at the boundary.
+ * @c Normalizer is boundary safe. @c #isFirst and @c #isLast check itself is at the boundary.
  * If you increment or decrement the iterator over that boundary, @c std#out_of_range exception
  * will be thrown.
  *
@@ -192,8 +194,12 @@ namespace {
 		return last - destination;
 	}
 
-	/***/
-	basic_string<CodePoint> compose(const basic_string<CodePoint>& s) {
+	/**
+	 * Composes the string.
+	 * @param s the source UTF-32 string to compose
+	 * @return the precomposed string
+	 */
+	basic_string<CodePoint> internalCompose(const basic_string<CodePoint>& s) {
 		// TODO: not implemented.
 		return s;
 	}
@@ -249,6 +255,64 @@ namespace {
 	 * @return the result
 	 */
 	int internalCompare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
+#if 0
+		// this implementation is based on unormcmp.cpp of ICU 3.4 (IBM)
+		enum {RAW, CASE_FOLDING, DECOMPSITION};
+		UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS>
+			i1(s1.data(), s1.data() + s1.length()), i2(s2.data(), s2.data() + s2.length());
+		struct Data {
+			CodePoint c;
+			int phase;
+			struct Stack {
+				const Char* current;
+				const Char* first;
+				const Char* last;
+			} stack[2];
+			Char caseFolded[ASCENSION_INTERNAL_CASE_FOLDING_MAX_EXPANSION];
+			Data() : c(INVALID_CODE_POINT), phase(RAW) {}
+		} data1, data2;
+
+		while(true) {
+			if(data1.c == INVALID_CODE_POINT) {
+				// get the next character from s1
+			}
+			if(data2.c == INVALID_CODE_POINT) {
+				// get the next character from s1
+			}
+
+			if(data1.c == data2.c) {
+				if(data1.c == INVALID_CODE_POINT)
+					return 0;
+				data1.c = data2.c = INVALID_CODE_POINT;
+				continue;
+			} else if(data1.c == INVALID_CODE_POINT)	// s1 < s2
+				return -1;
+			else if(data2.c == INVALID_CODE_POINT)	// s1 > s2
+				return +1;
+
+			if(data1.phase == RAW && caseSensitivity != CASE_SENSITIVE) {
+				data1.c = INVALID_CODE_POINT;
+				continue;
+			}
+
+			if(data2.phase == RAW && caseSensitivity != CASE_SENSITIVE) {
+				data2.c = INVALID_CODE_POINT;
+				continue;
+			}
+
+			if(data1.phase != DECOMPOSITION) {
+				data1.c = INVALID_CODE_POINT;
+				continue;
+			}
+
+			if(data2.phase != DECOMPOSITION) {
+				data2.c = INVALID_CODE_POINT;
+				continue;
+			}
+
+			return static_cast<int>(data1.c) - static_cast<int>(data2.c);
+		}
+#endif
 		// TODO: not implemented.
 		return s1.compare(s2);
 	}
@@ -303,20 +367,6 @@ int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity case
 	if(nfd2.get() != 0)
 		nfd2->assign(normalize(StringCharacterIterator(s2), FORM_D));
 	return internalCompare((nfd1.get() != 0) ? *nfd1 : s1, (nfd2.get() != 0) ? *nfd2 : s2, caseSensitivity);
-}
-
-/**
- * Returns the normalization form with the given name.
- * @param name the name
- * @return the normalization form
- * @throw std#invalid_argument @a name is invalid
- */
-Normalizer::Form Normalizer::formForName(const Char* name) {
-if(PropertyNameComparer<Char>::compare(name, L"NFD") == 0) return FORM_D;
-	else if(PropertyNameComparer<Char>::compare(name, L"NFC") == 0) return FORM_C;
-	else if(PropertyNameComparer<Char>::compare(name, L"NFKD") == 0) return FORM_KD;
-	else if(PropertyNameComparer<Char>::compare(name, L"NFKC") == 0) return FORM_KC;
-	else throw invalid_argument("unknown normalization name.");
 }
 
 /// Normalizes the next or previous closure for the following iteration.
