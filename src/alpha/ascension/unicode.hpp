@@ -172,7 +172,8 @@ namespace ascension {
 		/// Abstract class defines an interface for iteration on text.
 		class CharacterIterator {
 		public:
-			static const CodePoint END_OF_BUFFER = 0xFFFFFFFFUL;
+			/// Indicates the iterator is the last.
+			static const CodePoint DONE = 0xFFFFFFFFUL;
 			/// Destructor.
 			virtual ~CharacterIterator() throw() {}
 			/// Returns the offset.
@@ -185,7 +186,7 @@ namespace ascension {
 			virtual bool isLast() const = 0;
 			/// Returns the current character.
 			CodePoint current() const {
-				if(isLast()) return END_OF_BUFFER;
+				if(isLast()) return DONE;
 				const Char c = doCurrent();
 				if(!surrogates::isHighSurrogate(c)) return c;
 				const_cast<CharacterIterator*>(this)->next();
@@ -744,14 +745,15 @@ namespace ascension {
 		 */
 		class CaseFolder : public manah::Noncopyable {
 		public:
-			template<typename CharacterSequence1, typename CharacterSequence2>
-			static int			compare(CharacterSequence1 first1, CharacterSequence1 last1,
-									CharacterSequence2 first2, CharacterSequence2 last2, bool excludeTurkishI = false);
+			static const length_t	MAXIMUM_EXPANSION_CHARACTERS;
+			static int			compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI = false);
+			static int			compare(const String& s1, const String& s2, bool excludeTurkishI = false);
 			static CodePoint	fold(CodePoint c, bool excludeTurkishI = false) throw();
 			template<typename CharacterSequence>
 			static String		fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
 		private:
 			static CodePoint	foldCommon(CodePoint c) throw();
+			static std::size_t	foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw();
 			static CodePoint	foldTurkishI(CodePoint c) throw();
 			static const Char COMMON_CASED[], COMMON_FOLDED[], SIMPLE_CASED[], SIMPLE_FOLDED[], FULL_CASED[];
 			static const Char* FULL_FOLDED[];
@@ -927,20 +929,16 @@ inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence firs
 }
 
 /**
- * Compares the two character sequences case-insensitive. @a CharacterSequence1 and
- * @a CharacterSequence2 must represent UTF-16 character sequence.
- * @param first1 the start of the character sequence
- * @param last1 the end of the character sequence
- * @param first2 the start of the other
- * @param last2 the end of the other
+ * Compares the two character sequences case-insensitively.
+ * @param s1 the character sequence
+ * @param s2 the the other
  * @param excludeTurkishI set true to perform "Turkish I mapping"
- * @retval &lt;0 the first sequence is less than the second
+ * @retval &lt;0 the first character sequence is less than the second
  * @retval 0 the both sequences are same
- * @retval &gt;0 the first sequence is greater than the second
+ * @retval &gt;0 the first character sequence is greater than the second
  */
-template<typename CharacterSequence1, typename CharacterSequence2>
-inline int CaseFolder::compare(CharacterSequence1 first1, CharacterSequence1 last1, CharacterSequence2 first2, CharacterSequence2 last2,
-	bool excludeTurkishI /* = false */) {return fold(first1, last1, excludeTurkishI).compare(fold(first2, last2, excludeTurkishI));}
+inline int CaseFolder::compare(const String& s1, const String& s2, bool excludeTurkishI /* = false */) {
+	return compare(StringCharacterIterator(s1), StringCharacterIterator(s2), excludeTurkishI);}
 
 /**
  * Folds the case of the specified character. This method performs "simple case folding."

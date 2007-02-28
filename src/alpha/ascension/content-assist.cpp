@@ -217,7 +217,9 @@ bool CompletionWindow::updateListCursel() {
 				const int nextLength = getTextLen(found + 1);
 				AutoBuffer<wchar_t> next(new wchar_t[nextLength + 1]);
 				getText(found + 1, next.get());
-				return unicode::CaseFolder::compare(precedingID.begin(), precedingID.end(), next.get(), next.get() + nextLength) == 0;
+				return unicode::CaseFolder::compare(
+					unicode::StringCharacterIterator(precedingID),
+					unicode::StringCharacterIterator(next.get(), next.get() + nextLength)) == 0;
 			}
 		}
 	} else
