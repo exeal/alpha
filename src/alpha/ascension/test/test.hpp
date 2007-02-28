@@ -28,6 +28,7 @@ inline ContainerInitializer<Container> initializeContainer(Container& c) {
 }
 
 void testUnicodeIterator();
+void testCaseFolder();
 void testNormalizer();
 void testGraphemeBreakIterator();
 void testWordBreakIterator();
@@ -37,6 +38,7 @@ void testSentenceBreakIterator();
 inline boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
 	boost::unit_test::test_suite* p = BOOST_TEST_SUITE("ascension test suite.");
 	p->add(BOOST_TEST_CASE(&testUnicodeIterator));
+	p->add(BOOST_TEST_CASE(&testCaseFolder));
 	p->add(BOOST_TEST_CASE(&testNormalizer));
 	p->add(BOOST_TEST_CASE(&testGraphemeBreakIterator));
 	p->add(BOOST_TEST_CASE(&testWordBreakIterator));

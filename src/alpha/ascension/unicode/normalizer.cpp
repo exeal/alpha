@@ -5,12 +5,97 @@
  */
 
 #include "stdafx.h"
-#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include "../unicode-property.hpp"
+#include "../unicode.hpp"
 using namespace ascension;
 using namespace ascension::unicode;
 using namespace std;
 
+
+// CaseFolder ///////////////////////////////////////////////////////////////
+
+/// The maximum number of characters folded from one character.
+const length_t CaseFolder::MAXIMUM_EXPANSION_CHARACTERS = 3;
+
+/**
+ * Compares the two character sequences case-insensitively.
+ * @param s1 the character sequence
+ * @param s2 the the other
+ * @param excludeTurkishI set true to perform "Turkish I mapping"
+ * @retval &lt;0 the first character sequence is less than the second
+ * @retval 0 the both sequences are same
+ * @retval &gt;0 the first character sequence is greater than the second
+ */
+int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI /* = false */) {
+	auto_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
+	CodePoint c1 = CharacterIterator::DONE, c2 = CharacterIterator::DONE;
+	CodePoint folded1[MAXIMUM_EXPANSION_CHARACTERS], folded2[MAXIMUM_EXPANSION_CHARACTERS];
+	const CodePoint* p1 = folded1;
+	const CodePoint* p2 = folded2;
+	const CodePoint* last1 = p1;
+	const CodePoint* last2 = p2;
+
+	while(true) {
+		if(c1 == CharacterIterator::DONE) {
+			if(p1 < last1)
+				c1 = *p1++;
+			else if(CharacterIterator::DONE != (c1 = i1->current()))
+				i1->next();
+		}
+		if(c2 == CharacterIterator::DONE) {
+			if(p2 < last2)
+				c2 = *p2++;
+			else if(CharacterIterator::DONE != (c2 = i2->current()))
+				i2->next();
+		}
+
+		if(c1 == c2) {
+			if(c1 == CharacterIterator::DONE)
+				return 0;
+			c1 = c2 = CharacterIterator::DONE;
+			continue;
+		} else if(c1 == CharacterIterator::DONE)
+			return -1;
+		else if(c2 == CharacterIterator::DONE)
+			return +1;
+
+		// fold c1
+		if(p1 == last1) {
+			p1 = folded1;
+			last1 = p1 + foldFull(c1, excludeTurkishI, folded1);
+			c1 = CharacterIterator::DONE;
+			continue;
+		}
+		// fold c2
+		if(p2 == last2) {
+			p2 = folded2;
+			last2 = p2 + foldFull(c2, excludeTurkishI, folded2);
+			c2 = CharacterIterator::DONE;
+			continue;
+		}
+
+		return static_cast<int>(c1) - static_cast<int>(c2);
+	}
+}
+
+inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw() {
+	if(!excludeTurkishI || c == (*dest = foldTurkishI(c)))
+		*dest = foldCommon(c);
+	if(*dest != c || c >= 0x010000)
+		return 1;
+	else {
+		const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+		const size_t len = wcslen(FULL_FOLDED[p - FULL_CASED]);
+		for(size_t i = 0; i < len; ++i)
+			dest[i] = FULL_FOLDED[p - FULL_CASED][i];
+		return len;
+	}
+}
+
+
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+#include "../unicode-property.hpp"
+
+// Normalizer ///////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::unicode::Normalizer ../unicode.hpp
@@ -245,7 +330,7 @@ namespace {
 		basic_string<CodePoint> decomposed(buffer.str());
 		reorderCombiningMarks(decomposed);
 		// compose if needed
-		return (form == Normalizer::FORM_C || form == Normalizer::FORM_KC) ? compose(decomposed) : decomposed;
+		return (form == Normalizer::FORM_C || form == Normalizer::FORM_KC) ? internalCompose(decomposed) : decomposed;
 	}
 
 	/**

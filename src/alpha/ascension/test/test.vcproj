@@ -118,6 +118,9 @@
 				RelativePath=".\break-iterator-test.cpp">
 			</File>
 			<File
+				RelativePath=".\case-folder-test.cpp">
+			</File>
+			<File
 				RelativePath=".\included.cpp">
 			</File>
 			<File
