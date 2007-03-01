@@ -21,7 +21,6 @@
 
 #ifdef _DEBUG
 #include "../../manah/win32/timer.hpp"
-using manah::windows::dout;
 using manah::windows::Timer;
 #endif /* _DEBUG */
 

@@ -12,9 +12,9 @@
 #include <stdexcept>
 #include <algorithm>
 #include "../../manah/object.hpp"
-#ifdef _WIN32_
+#ifdef _WIN32
 #include <windows.h>
-#endif /* _WIN32_ */
+#endif /* _WIN32 */
 
 namespace ascension {
 

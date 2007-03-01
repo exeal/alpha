@@ -29,23 +29,27 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 	auto_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
 	CodePoint c1 = CharacterIterator::DONE, c2 = CharacterIterator::DONE;
 	CodePoint folded1[MAXIMUM_EXPANSION_CHARACTERS], folded2[MAXIMUM_EXPANSION_CHARACTERS];
-	const CodePoint* p1 = folded1;
-	const CodePoint* p2 = folded2;
+	const CodePoint* p1 = folded1 - 1;
+	const CodePoint* p2 = folded2 - 1;
 	const CodePoint* last1 = p1;
 	const CodePoint* last2 = p2;
 
 	while(true) {
 		if(c1 == CharacterIterator::DONE) {
-			if(p1 < last1)
+			if(p1 >= folded1 && p1 < last1)
 				c1 = *p1++;
-			else if(CharacterIterator::DONE != (c1 = i1->current()))
+			else if(CharacterIterator::DONE != (c1 = i1->current())) {
 				i1->next();
+				p1 = folded1 - 1;
+			}
 		}
 		if(c2 == CharacterIterator::DONE) {
-			if(p2 < last2)
+			if(p2 >= folded2 && p2 < last2)
 				c2 = *p2++;
-			else if(CharacterIterator::DONE != (c2 = i2->current()))
+			else if(CharacterIterator::DONE != (c2 = i2->current())) {
 				i2->next();
+				p2 = folded2 - 1;
+			}
 		}
 
 		if(c1 == c2) {
@@ -59,14 +63,14 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 			return +1;
 
 		// fold c1
-		if(p1 == last1) {
+		if(p1 == folded1 - 1) {
 			p1 = folded1;
 			last1 = p1 + foldFull(c1, excludeTurkishI, folded1);
 			c1 = CharacterIterator::DONE;
 			continue;
 		}
 		// fold c2
-		if(p2 == last2) {
+		if(p2 == folded2 - 1) {
 			p2 = folded2;
 			last2 = p2 + foldFull(c2, excludeTurkishI, folded2);
 			c2 = CharacterIterator::DONE;
@@ -84,6 +88,8 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 		return 1;
 	else {
 		const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+		if(*p != c)
+			return 1;
 		const size_t len = wcslen(FULL_FOLDED[p - FULL_CASED]);
 		for(size_t i = 0; i < len; ++i)
 			dest[i] = FULL_FOLDED[p - FULL_CASED][i];

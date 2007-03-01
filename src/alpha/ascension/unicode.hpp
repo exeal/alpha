@@ -751,6 +751,7 @@ namespace ascension {
 			static CodePoint	fold(CodePoint c, bool excludeTurkishI = false) throw();
 			template<typename CharacterSequence>
 			static String		fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
+			static String		fold(const String& text, bool excludeTurkishI = false);
 		private:
 			static CodePoint	foldCommon(CodePoint c) throw();
 			static std::size_t	foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw();
@@ -988,11 +989,19 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 	return s.str();
 }
 
+/**
+ * Folds case of the specified character sequence. This method performs "full case folding."
+ * @param text the character sequence
+ * @return the folded string
+ */
+inline String CaseFolder::fold(const String& text, bool excludeTurkishI /* = false */) {
+	return fold(text.data(), text.data() + text.length(), excludeTurkishI);}
+
 inline CodePoint CaseFolder::foldCommon(CodePoint c) throw() {
 	if(c < 0x010000) {	// BMP
 		const Char* const p = std::lower_bound(COMMON_CASED, COMMON_CASED + NUMBER_OF_COMMON_CASED, static_cast<Char>(c & 0xFFFF));
 		return (*p == c) ? COMMON_FOLDED[p - COMMON_CASED] : c;
-	} else if(c > 0x010400 && c < 0x010428)	// Only Deseret is cased in out of BMP (Unicode 5.0).
+	} else if(c >= 0x010400 && c < 0x010428)	// Only Deseret is cased in out of BMP (Unicode 5.0).
 		c += 0x000028;
 	return c;
 }
