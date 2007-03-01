@@ -1,6 +1,6 @@
 // unicode-iterator-test.cpp
 
-#include "stdafx.h"
+#include "test.hpp"
 #include "../unicode.hpp"
 
 using namespace ascension;

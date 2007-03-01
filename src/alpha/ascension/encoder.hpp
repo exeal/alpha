@@ -23,7 +23,6 @@ namespace ascension {
 	/// Windows code page.
 	typedef uint CodePage;
 
-	//	Windows コードページに無い、或いは自分で実装する文字コード
 	const CodePage
 		CPEX_UNICODE_UTF16LE		= 1200,		///< UTF-16
 		CPEX_UNICODE_UTF16BE		= 1201,		///< UTF-16 big endian
@@ -77,43 +76,42 @@ namespace ascension {
 		CPEX_TAMIL_TSCII	= 70112,	///< Tamil (TSCII 1.7)
 		CPEX_HINDI_MACINTOSH	= 70115,	///< Hindi (Macintosh, Devanagari)
 		CPEX_GUJARATI_MACINTOSH	= 70116,	///< Gujarati (Macintosh)
-		CPEX_PANJABI_MACINTOSH	= 70117,	///< Punjabi (Macintosh, グルムキー文字)
+		CPEX_PANJABI_MACINTOSH	= 70117,	///< Punjabi (Macintosh, Gurumkhi)
 		CPEX_CYRILLIC_MACINTOSH							= 10007,	///< Cyrillic (Macintosh)
 		CPEX_CYRILLIC_KOI8R								= 20866,	///< Russian (KOI8-R)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (DOS 3 ロシア語サポート)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (DOS 4 アカデミックロシア語サポート)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (DOS 4 非アカデミックロシア語サポート)
-		CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (ソビエト KOI-8 基本)
-		CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (ソビエト KOI-8 代替)
-		CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (ソビエト KOI-7)
+		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (Russian Support for DOS Version 3)
+		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (Russian Support for DOS Version 4 Academic)
+		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (Russian support for DOS Version 4 Non-Academic)
+		CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (Soviet KOI-8 Basic)
+		CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (Soviet KOI-8 Alternative)
+		CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (Soviet KOI-7)
 		CPEX_CYRILLIC_ECMA								= 70126,	///< Cyrillic (ISO-IR-111, ECMA)
 		CPEX_CYRILLIC_KOI8RU							= 70127,	///< Cyrillic (KOI8-RU)
-		CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 統合)
-		CPEX_ISO8859_1	= 28591,	///< 西ヨーロッパ (ISO-8859-1)
-		CPEX_ISO8859_2	= 28592,	///< 中央ヨーロッパ (ISO-8859-2)
-		CPEX_ISO8859_3	= 28593,	///< 南ヨーロッパ (ISO-8859-3)
+		CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 Unified)
+		CPEX_ISO8859_1	= 28591,	///< Western European (ISO-8859-1)
+		CPEX_ISO8859_2	= 28592,	///< Central European (ISO-8859-2)
+		CPEX_ISO8859_3	= 28593,	///< Southern European (ISO-8859-3)
 		CPEX_ISO8859_4	= 28594,	///< Baltic (ISO-8859-4)
 		CPEX_ISO8859_5	= 28595,	///< Cyrillic (ISO-8859-5)
 		CPEX_ISO8859_6	= 28596,	///< Arabic (ISO-8859-6)
 		CPEX_ISO8859_7	= 28597,	///< Greek (ISO-8859-7)
 		CPEX_ISO8859_8	= 28598,	///< Hebrew (ISO-8859-8)
 		CPEX_ISO8859_9	= 28599,	///< Turkish (ISO-8859-9)
-		CPEX_ISO8859_10	= 28600,	///< 北欧 (ISO-8859-10)
+		CPEX_ISO8859_10	= 28600,	///< Northern European (ISO-8859-10)
 		CPEX_ISO8859_11	= 28601,	///< Thai (ISO-8859-11)
 		CPEX_ISO8859_13	= 28603,	///< Baltic (ISO-8859-13)
 		CPEX_ISO8859_14	= 28604,	///< Keltic (ISO-8859-14)
-		CPEX_ISO8859_15	= 28605,	///< 西ヨーロッパ (ISO-8859-15)
-		CPEX_ISO8859_16	= 28606;	///< 中央ヨーロッパ (ISO-8859-16)
+		CPEX_ISO8859_15	= 28605,	///< Western European (ISO-8859-15)
+		CPEX_ISO8859_16	= 28606;	///< Central European (ISO-8859-16)
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-	// バイトオーダーマーク
-	const uchar	UTF16LE_BOM[] = "\xFF\xFE";			///< BOM of UTF-16 little endian
-	const uchar	UTF16BE_BOM[] = "\xFE\xFF";			///< BOM of UTF-16 big endian
+	const uchar	UTF16LE_BOM[] = "\xFF\xFE";			///< BOM of UTF-16 little endian.
+	const uchar	UTF16BE_BOM[] = "\xFE\xFF";			///< BOM of UTF-16 big endian.
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	const uchar	UTF32LE_BOM[] = "\xFF\xFF\x00\x00";	///< BOM of UTF-16 little endian
-	const uchar	UTF32BE_BOM[] = "\xFE\xFF\x00\x00";	///< BOM of UTF-16 big endian
+	const uchar	UTF32LE_BOM[] = "\xFF\xFF\x00\x00";	///< BOM of UTF-16 little endian.
+	const uchar	UTF32BE_BOM[] = "\xFE\xFF\x00\x00";	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8
+	const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8.
 
 
 	// Encoder //////////////////////////////////////////////////////////////
@@ -194,8 +192,8 @@ namespace ascension {
 		 * または保存時にネイティブコードに変換できない文字が見つかったときに呼び出される。
 		 * 戻り値によりその文字をどう扱うを決める。
 		 * このメソッドは1度の処理で1度しか呼び出されない
-		 * @retval true 変換できない文字を既定の文字に変換して処理を続行する
-		 * @retval false 読み込み/保存を直ちに中止する (変換メソッドは 0 を返す)
+		 * @retval true the encoder should replace the unconvertable character with default character and continue
+		 * @retval false the encoder should stop (変換メソッドは 0 を返す)
 		 */
 		virtual bool unconvertableCharacterFound() = 0;
 	};
@@ -214,27 +212,27 @@ namespace ascension {
 		// メソッド
 	public:
 		/**
-		 * UTF-16 から変換
-		 * @param[out] dest 変換先
-		 * @param[in] destLength 変換先の長さ
-		 * @param[in] src 変換元
-		 * @param[in] srcLength 変換元の文字列長
-		 * @param[in] callback 変換できない文字を処理するためのコールバック。@c null でもよい
-		 * @return 変換後の文字数
+		 * Converts the given string from UTF-16 into native encode.
+		 * @param[out] dest the destination buffer
+		 * @param[in] destLength the size of @a dest
+		 * @param[in] src the source string
+		 * @param[in] srcLength the length of @a src
+		 * @param[in] callback the callback object handles unconvertable characters. can be @c null if not needed
+		 * @return the number of bytes written to @a dest
 		 */
 		virtual std::size_t fromUnicode(uchar* dest, std::size_t destLength,
 			const wchar_t* src, std::size_t srcLength = -1, IUnconvertableCharCallback* callback = 0) = 0;
 		/**
-		 * UTF-16 に変換
-		 * @param[out] dest 変換先
-		 * @param[in] destLength 変換先の文字列長
-		 * @param[in] src 変換元
-		 * @param[in] srcLength 変換元の文字列長
-		 * @param[in] callBack 変換できない文字を処理するためのコールバック。@c null でもよい
-		 * @return 変換後の文字数
+		 * Converts the given string into UTF-16.
+		 * @param[out] dest the destination buffer
+		 * @param[in] destLength the size of @a dest
+		 * @param[in] src the source string
+		 * @param[in] srcLength the length of @a src
+		 * @param[in] callback the callback object handles unconvertable characters. can be @c null if not needed
+		 * @return the number of characters written to @a dest
 		 */
 		virtual std::size_t toUnicode(wchar_t* dest, std::size_t destLength,
-			const uchar* src, std::size_t srcLength = -1, IUnconvertableCharCallback* callBack = 0) = 0;
+			const uchar* src, std::size_t srcLength = -1, IUnconvertableCharCallback* callback = 0) = 0;
 		/// UCS 1 文字をネイティブ文字に変換するのに必要な最大バイト長を返す
 		virtual uchar getMaxNativeCharLength() const = 0;
 		/// ネイティブ文字 1 バイトを UCS 文字に変換するのに必要な最大長さを返す (UTF-16 単位)
@@ -245,10 +243,9 @@ namespace ascension {
 	/// Factory of encoders.
 	class EncoderFactory {
 	public:
-		// データ型
 		typedef std::auto_ptr<Encoder>(*EncoderProducer)();
 		typedef void(*CodePageDetector)(const uchar*, std::size_t, CodePage&, std::size_t&);
-		// メソッド
+	public:
 		std::auto_ptr<Encoder>	createEncoder(CodePage cp);
 		CodePage				detectCodePage(const uchar* src, std::size_t length, CodePage cp);
 		void					enumCodePages(std::set<CodePage>& codePages) const;
@@ -257,7 +254,6 @@ namespace ascension {
 		bool					isCodePageForAutoDetection(CodePage cp) const;
 		bool					isCodePageForReadOnly(CodePage cp) const;
 		bool					isValidCodePage(CodePage cp) const;
-
 		bool	registerCodePageForReadOnly(CodePage cp);
 		bool	registerDetector(CodePage cp, CodePageDetector factoryMethod);
 		bool	registerEncoder(CodePage cp, EncoderProducer factoryMethod);
@@ -308,7 +304,7 @@ namespace ascension {
 		const bool res##cp = EncoderFactory::getInstance().registerCodePageForReadOnly(cp)
 
 
-	// Windows 変換テーブルをそのまま使用するエンコーダ
+	/// Encoder uses Windows NLS.
 	class WindowsEncoder : public Encoder {
 	private:
 		WindowsEncoder(CodePage cp) : codePage_(cp) {

@@ -557,6 +557,8 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	renderer_->addVisualLinesListener(*this);
 	initializeWindow(originalView_ != this);
 
+#ifdef _DEBUG
+	// partitioning test
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
 	vrc.indicatorMargin.visible = true;
@@ -619,6 +621,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	Orz* orz = new Orz(getPresentation());
 	getDocument().addPartitioningListener(*orz);
 	getPresentation().setLineStyleDirector(orz, true);
+#endif /* _DEBUG */
 
 	// 位置決めと表示
 	moveWindow(rect, false);

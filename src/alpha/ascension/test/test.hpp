@@ -2,6 +2,7 @@
 
 #ifndef ASCENSION_TEST_HPP
 #define ASCENSION_TEST_HPP
+#include <boost/test/unit_test.hpp>
 
 template<class Container>
 class ContainerInitializeContext {
