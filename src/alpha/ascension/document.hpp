@@ -12,16 +12,14 @@
 #include <set>
 #include "session.hpp"
 #include "encoder.hpp"
-#include "../../manah/memory.hpp"		// manah::FastArenaObject
-#include "../../manah/gap-buffer.hpp"	// manah::GapBuffer
+#include "../../manah/memory.hpp"		// manah.FastArenaObject
+#include "../../manah/gap-buffer.hpp"	// manah.GapBuffer
 #include "../../manah/win32/file.hpp"
 
 
 namespace ascension {
 
-	namespace presentation {
-		class Presentation;
-	}
+	namespace presentation {class Presentation;}
 
 	namespace text {
 
@@ -74,46 +72,45 @@ namespace ascension {
 		};
 
 		/**
-		 * Representation of a line break.
-		 * Defines how an interpreter treats line breaks.
-		 * For example, @c Document#getLength method which calculates the length of the document refers this setting.
-		 * Some methods can select prefer setting to <> its efficiency.
+		 * Representation of a line break. Defines how an interpreter treats line breaks. For
+		 * example, @c Document#getLength method which calculates the length of the document refers
+		 * this setting. Some methods can select prefer setting to <> its efficiency.
 		 * @see Document#getLength, Document#getLineIndex, Document#writeToStream,
-		 * Document#CharacterIterator, EditPoint#getText, Selection#getText
+		 * EditPoint#getText, viewers#Selection#getText
 		 */
 		enum LineBreakRepresentation {
-			LBR_LINE_FEED,			///< represents any NLF as LF (U+000D)
-			LBR_CRLF,				///< represents any NLF as CRLF (U+000D+000A)
-			LBR_LINE_SEPARATOR,		///< represents any NLF as LS (U+2028)
-			LBR_PHYSICAL_DATA,		///< represents any NLF as the actual newline of the line (@c Document#Line#getLineBreak())
-			LBR_DOCUMENT_DEFAULT,	///< represents any NLF as the document default newline
-			LBR_SKIP,				///< skips any NLF
+			LBR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
+			LBR_CRLF,				///< Represents any NLF as CRLF (U+000D+000A).
+			LBR_LINE_SEPARATOR,		///< Represents any NLF as LS (U+2028).
+			LBR_PHYSICAL_DATA,		///< Represents any NLF as the actual newline of the line (@c Document#Line#getLineBreak()).
+			LBR_DOCUMENT_DEFAULT,	///< Represents any NLF as the document default newline.
+			LBR_SKIP,				///< Skips any NLF.
 		};
 
 		/**
 		 * @c Position represents a position in the document by a line number and distance from start of line.
 		 * @note This class is not derivable.
-		 * @see text#Point, text#EditPoint, viewers#VisualPoint, viewers#Caret
+		 * @see Point, EditPoint, viewers#VisualPoint, viewers#Caret
 		 */
 		class Position : public manah::FastArenaObject<Position> {
 		public:
-			length_t line;		///< Line number
-			length_t column;	///< Position in the line
+			length_t line;		///< Line number.
+			length_t column;	///< Position in the line.
 			static const Position INVALID_POSITION;	///< Unused or invalid position
 		public:
-			/// Constructor
+			/// Constructor.
 			explicit Position(length_t lineNumber = 0, length_t columnNumber = 0) throw() : line(lineNumber), column(columnNumber) {}
-			/// Equality operator
+			/// Equality operator.
 			bool operator==(const Position& rhs) const throw() {return line == rhs.line && column == rhs.column;}
-			/// Unequality operator
+			/// Unequality operator.
 			bool operator!=(const Position& rhs) const throw() {return line != rhs.line || column != rhs.column;}
-			/// Relational operator
+			/// Relational operator.
 			bool operator<(const Position& rhs) const throw() {return line < rhs.line || (line == rhs.line && column < rhs.column);}
-			/// Relational operator
+			/// Relational operator.
 			bool operator<=(const Position& rhs) const throw() {return *this < rhs || *this == rhs;}
-			/// Relational operator
+			/// Relational operator.
 			bool operator>(const Position& rhs) const throw() {return line > rhs.line || (line == rhs.line && column > rhs.column);}
-			/// Relational operator
+			/// Relational operator.
 			bool operator>=(const Position& rhs) const throw() {return *this > rhs || *this == rhs;}
 		};
 
@@ -152,8 +149,8 @@ namespace ascension {
 		 * @see DocumentPartitioner#getPartition
 		 */
 		struct DocumentPartition {
-			ContentType contentType;	///< content type of the partition
-			Region region;				///< region of the partition
+			ContentType contentType;	///< Content type of the partition.
+			Region region;				///< Region of the partition.
 			/// Default constructor.
 			DocumentPartition() throw() {}
 			/// Constructor.
@@ -191,23 +188,27 @@ namespace ascension {
 		/**
 		 * A point represents a document position and adapts to the document change.
 		 *
-		 * When the document changed occured, @c Point moves automatically as follows
-		 * ("forward" means "to the end of the document"):
-		 * <ul>
-		 *   <li>çï¿½ãÂ®å‰E½E½Â«ãƒE½E½ãï¿½ãƒE½Â‚Â’æE½åï¿½ã—ãŸå ´åE½Â‚ï¿½ÂE¿½E½ãï¿½ãƒE½Â‚Â’å‰ï¿½E½ÂE—ãŸå ´åE½Â¯ã€Ã£ÂE¿½E½ãï¿½ãƒE½Â®éï¿½ÂE•ãÂ ãE½»å‹Â•ã™ã‚E/li>
-		 *   <li>çï¿½ãÂ®äÂ½E½½®ãÂ«ãƒE½E½ãï¿½ãƒE½Â‚Â’æE½åï¿½ã—ãŸå ´åE½Â¯ã€Ã£ÂE¿½E½ãï¿½ãƒE½Â®éï¿½ÂE•ãÂ ãE½E½E½Â«ç§»å‹•ã™ã‚‹ã€E½ÂEŸãÂ ã—ãE½ãï¿½ãƒ“ãE¿½E½ãE
-		 *   @c PositionUpdator#BACKWARD ãÂ«è¨­å®šã•ã‚E½Â¦ãE½Â‚Â‹å ´åE½Â¯ç§»å‹•ã—ãÂªãE/li>
-		 *   <li>çï¿½ãÂ®åÂ¾E½E½Â§ãƒE½E½ãï¿½ãƒE½Â‚Â’æE½åï¿½ãï¿½å‰E½E½ÂE—ãŸå ´åE½Â¯ã€Ã§§»åÂ‹Â•ã—ãÂªãE/li>
-		 *   <li>çï¿½ã‚’åE½Â‚Â€çÂ¯E½E½Â‚Â’å‰ï¿½E½ÂE—ãŸå ´åE½Â€Ã§¯E½E½Â®å…E½ ­ãÂ«ç§»å‹•ã™ã‚E/li>
-		 * </ul>
-		 * For details of gravity, see description of @c updatePosition function.
+		 * When the document change occured, @c Point moves automatically as follows ("forward"
+		 * means "to the end of the document"):
 		 *
-		 * When the document was reset (by @c Document#resetContent), the point moves to the start of the document.
+		 * - If the text was inserted or deleted in front of the point, the point will not move.
+		 * - If the text was inserted at the back of the point, the point will move foward.
+		 * - If the text was deleted at the back of the point, the point will move backward.
+		 * - If the region includes the point was deleted, the point will move to the start (= end)
+		 *   of the region.
+		 * - If the text was inserted at the point, the point will or will not move according to
+		 *   the gravity.
 		 *
-		 * Almost all methods of this or derived classes will throw @c DisposedDocumentException if the document is already disposed.
-		 * Call @c #isDocumentDisposed to check if the document is exist or not.
+		 * For details of gravity, see the description of @c updatePosition function.
 		 *
-		 * @see Position, Document, EditPoint, VisualPoint, Caret
+		 * When the document was reset (by @c Document#resetContent), the all points move to the
+		 * start of the document.
+		 *
+		 * Almost all methods of this or derived classes will throw @c DisposedDocumentException if
+		 * the document is already disposed. Call @c #isDocumentDisposed to check if the document
+		 * is exist or not.
+		 *
+		 * @see Position, Document, EditPoint, viewers#VisualPoint, viewers#Caret
 		 */
 		class Point : public manah::Unassignable {
 		public:
@@ -344,59 +345,60 @@ namespace ascension {
 			friend class Document;
 		};
 
-		/// ãƒ•ãE½ãï¿½ãï¿½ãE½¤–éE½ãÂ§åÂ¤E½E½ÂE•ã‚ï¿½ÂEŸãÂ¨ãE½Â®å¯¾åï¿½
+		/// Interface for objects which should handle the unexpected time stamp of the file.
 		class IUnexpectedFileTimeStampDirector {
 		public:
 			/// Context.
 			enum Context {
-				FIRST_MODIFICATION,	///< æœªæï¿½E½E½æ…‹ã‹ã‚E½ÂˆÂã‚Ã£Â¦ç·¨é›E½ÂE—ã‚ï¿½ÂE¿½Â¨ã—ãÂ¦ãE½Â‚ÂE
-				OVERWRITE_FILE,		///< æï¿½­˜ãÂ®ãƒ•ãE½ãï¿½ãï¿½ãÂ«äÂ¸E½E½ÂE¿½ÂE—ã‚ï¿½ÂE¿½Â¨ã—ãÂ¦ãE½Â‚ÂE
-				CLIENT_INVOCATION	///< @c Document#checkTimeStamp åï¿½Â³åï¿½ã—ãÂ«ã‚E½Â‚ÂE
+				FIRST_MODIFICATION,	///< The call is for the first modification of the document.
+				OVERWRITE_FILE,		///< The call is for overwriting the file.
+				CLIENT_INVOCATION	///< The call was invoked by @c Document#checkTimeStamp.
 			};
 		private:
 			/**
-			 * ãƒ•ãE½ãï¿½ãï¿½ãE½¤–éE½ãÂ§åÂ¤E½E½ÂE•ã‚ï¿½Â¦ãE½Â‚Â‹ãÂ®ã‚E½ºèªE½ÂE—ãŸãÂ¨ãE½Â«åï¿½Â³åï¿½ã•ã‚ï¿½Â‚ÂE
-			 * @param document ãƒ•ãE½ãï¿½ãï¿½ã‚’é–‹ãE½Â¦ãE½Â‚Â‹ãE¿½E½ãï¿½ãï¿½ãï¿½ãƒE
-			 * @param context çï¿½æ³E
-			 * @retval true	å†E½E½çšE½Â«ç®¡çE½ÂE—ãÂ¦ãE½Â‚Â‹ãE½ãï¿½ãï¿½ãï¿½ãï¿½ãï¿½ãƒ—ã‚ï¿½ÂŸéš›ãÂ®å€¤ãÂ§æï¿½E½ÂE—ã€@p context ãÂ®åï¿½çE½Â‚ï¿½E½E½ÂE™ã‚‹å ´åE
-			 * @retval false åï¿½ãE½E½ãï¿½ãï¿½ãï¿½ãï¿½ãï¿½ãƒ—ã‚ï¿½­æŒÃ£ÂE—ã€@p context ãÂ®åï¿½çE½Â‚ï¿½­Âæï¿½ÂE™ã‚‹å ´åE
+			 * Handles.
+			 * @param document the document
+			 * @param context the context
+			 * @retval true	the process will be continued and the internal time stamp will be updated
+			 * @retval false the process will be aborted
 			 */
 			virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) throw() = 0;
 			friend class Document;
 		};
 
-		/// ãƒE½E½ãï¿½ãï¿½ãï¿½ãƒE½Â®ä¿å­˜ã€Ã¨ª­ãÂ¿è¾¼ãÂ¿ãÂ®é€²æ—ã‚’å—ã‘å–ã‚‹ (æœªãï¿½ãƒãE½ãƒE
+		/// Interface for objects which are interested in getting informed about progression of file IO.
 		class IFileIOProgressListener {
 		public:
 			enum ProcessType {};
 		private:
 			/**
-			 * é€²æ—ãÂ®é€šçŸ¥
-			 * @param type åï¿½çE½ÂE¿½®Â¹ (ãƒE½E½ãï¿½é‡E½Â®åÂ®E½©ÂãÂ¯åï¿½çE½ÂE¿½®¹ãÂ«ã‚E½Â‚ÂE
-			 * @param processedAmount æï¿½Â«åï¿½çE½ÂE—ãŸãƒE½E½ãï¿½é‡E
-			 * @param totalAmount åï¿½çE½ÂE™ãÂ¹ãE½E½ãƒE½E½ãï¿½é‡E
+			 * This method will be called when 
+			 * @param type the type of the precess
+			 * @param processedAmount the amount of the data had processed
+			 * @param totalAmount the total amount of the data to process
 			 */
 			virtual void onProgress(ProcessType type, ULONGLONG processedAmount, ULONGLONG totalAmount) = 0;
-			/// é€²æ—ã‚’é€šçŸ¥ã™ã‚‹é–“éš”ã‚E½E½E½Â§è¿”ã™
+			/// Returns the internal number of lines.
 			virtual length_t queryIntervalLineCount() const = 0;
-			/// ç ´æ£E
+			/// Releases the object.
 			virtual void release() = 0;
 			friend class Document;
 		};
 
-		/// @c Document#load ã€@c Document#save ãÂ§ä½¿ãE½E½ãï¿½ãï¿½ãƒãE¿½E½
+		/// Used in @c Document#load and @c Document#save methods.
 		class IFileIOListener : virtual public encodings::IUnconvertableCharCallback {
 		protected:
-			/// ãƒE½E½ãƒE½E½ãï¿½ãï¿½
+			/// Destructor.
 			virtual ~IFileIOListener() throw() {}
 		private:
-			/// åï¿½çE½Â®é€²æ—ã‚’å—ã‘å–ã‚‹ @c IFileIOProgressCallback ãï¿½ãï¿½ãï¿½ãï¿½ãï¿½ãï¿½ã‚E½Â”ã™ã€Ec null ã‚E½Â”ã—ãÂ¦ã‚E½Â‚ï¿½ÂEE
+			/// Returns an @c IFileIOProgressCallback object or @c null if not needed.
 			virtual IFileIOProgressListener* queryProgressCallback() = 0;
 			friend class Document;
 		};
 
 		/**
-		 * Interface for objects which are interested in getting informed about changes of a document's sequential edit.
+		 * Interface for objects which are interested in getting informed about changes of a
+		 * document's sequential edit.
 		 * @see Document#EditSequence, Document#undo, Document#redo
 		 */
 		class ISequentialEditListener {
@@ -457,7 +459,8 @@ namespace ascension {
 
 		/**
 		 * A document partitioner devides a document into disjoint text partitions.
-		 * @see ContentType, Document, DocumentPartition, Document#getDocumentPartitioner, Document#setDocumentPartitioner, NullPartitioner
+		 * @see ContentType, Document, DocumentPartition, Document#getDocumentPartitioner,
+		 * Document#setDocumentPartitioner, NullPartitioner
 		 */
 		class DocumentPartitioner {
 		public:
@@ -508,34 +511,6 @@ namespace ascension {
 			DocumentPartition p_;
 		};
 
-		/**
-		 * A document manages a text content and supports text manipulations.
-		 *
-		 * All text content is represented in UTF-16. To treat this as UTF-32, use
-		 * @c DocumentCharacterIterator.
-		 *
-		 * A document manages also its operation history, encoding, and line-breaks
-		 * and writes to or reads the content from files or streams.
-		 *
-		 * @c #insertText inserts a text string into any position.
-		 * @c #deleteText deletes any text region.
-		 * Other classes also provide text manipulation for the document.
-		 *
-		 *	èÂ¤E½E½Â®æ“E½½œãÂ‚ÂE1 å›ãÂ§ãï¿½ãï¿½ãƒE½E½ãï¿½ãï¿½ãƒE½E½ãÂ§ãE½Â‚Â‹ã‚ï¿½ÂE¿½Â«ã™ã‚‹ãÂ«ãÂ¯<strong>é€£çÂ¶E½¨é›ÂE/strong>ã‚E½¿ãE½Â€ÂE
-		 *	@c beginSequentialEdit åï¿½Â³åï¿½ã—ãÂ¦ã‹ã‚‰ @c #endSequentialEdit
-		 *	ã‚’åE½Â³åï¿½ã™ãÂ¾ãÂ§ãÂ«èÂ¡E½Â‚ï¿½Â‚ï¿½ÂEŸæ“ï¿½½œãÂ¯ã€Ã¥Âï¿½Â€ãÂ®ç·¨é›E½E½ãï¿½ãï¿½ãƒ—ãÂ«ãÂ¾ãÂ¨ã‚Ã£Â‚ï¿½Â‚ï¿½Â‚Â‹ã€E½¾‹ãÂE¿½Â°
-		 *	@c Viewer#inputCharacter ãÂ¯èÂ¤E½E½Â®æ–E½­—ãÂ®åï¿½åŠ›ã‚’ãÂ¾ãÂ¨ã‚Ã£Â‚Â‹ãŸã‚Ã£Â«ã€Ã£ÂE“ãÂ®æ©ŸèE½ã‚E½¿ÂãÂ£ãÂ¦ãE½Â‚ÂE
-		 *
-		 *	ãƒE½E½ãï¿½ãï¿½ãï¿½ãƒE½Â®åÂ¤E½E½Â‚Â’çE½¦–ãÂE™ã‚‹ãŸã‚Ã£Â®ãï¿½ãï¿½ãƒE½ÂE¿½ÂE¿½ÂE¿½Â¤ã‹ãE¿½Â‚ÂE
-		 *
-		 * A document can be devides into a sequence of semantic segments called partition.
-		 * Document partitioners expressed by @c DocumentPartitioner class define these
-		 * partitioning. Each partitions have its content type and region (see @c DocumentPartition).
-		 * To set the new partitioner, use @c #setPartitioner method. The partitioner's ownership
-		 * will be transferred to the document.
-		 *
-		 * @see Viewer, IDocumentPartitioner, Point, EditPoint
-		 */
 		class Document : public manah::Noncopyable,
 				virtual public internal::IPointCollection<Point>, virtual public texteditor::internal::ISessionElement {
 		public:
@@ -574,21 +549,21 @@ namespace ascension {
 				encodings::CodePage codePage;	///< The code page
 				LineBreak lineBreak;			///< The line break
 				enum Option {
-					WRITE_UNICODE_BOM	= 0x01,	///< UTF-8ã€E6ã€E2 ãÂ§ä¿å­˜ã™ã‚‹ãÂ¨ãE½Â« BOM ã‚’æE½ÂE¿½¾¼ãÂ‚Â€
-					BY_COPYING			= 0x02,	///< ãƒ•ãE½ãï¿½ãï¿½ã‚’ãE½ãƒ”ãE½ã™ã‚‹ã“ãÂ¨ãÂ§æï¿½ÂE¿½¾¼ãÂ‚Â€
-					CREATE_BACKUP		= 0x04	///< ä¿å­˜å‰ï¿½Â®ãƒ•ãE½ãï¿½ãï¿½ãÂ®ãƒãE¿½E½ãï¿½ãƒE½ÂƒÂ—ã‚’ã”ãÂ¿ç®±ãÂ«ä½œæEã™ã‚‹
+					WRITE_UNICODE_BOM	= 0x01,	///< Writes a UTF byte order mark.
+					BY_COPYING			= 0x02,	///< Not implemented.
+					CREATE_BACKUP		= 0x04	///< Creates backup files.
 				};
 				manah::Flags<Option> options;	///< Miscellaneous options
 			};
 
-			/// ãƒ•ãE½ãï¿½ãï¿½ãÂ®ãï¿½ãƒE½E½æï¿½¼E
+			/// Lock modes for opened file.
 			struct FileLockMode {
 				enum {
-					LOCK_TYPE_NONE		= 0x00,	///< ãï¿½ãƒE½E½çï¿½ãE
-					LOCK_TYPE_SHARED	= 0x01,	///< åï¿½æœE½E½ãƒE½E½
-					LOCK_TYPE_EXCLUSIVE	= 0x02	///< æE½Â–ãE½ãƒE½E½
+					LOCK_TYPE_NONE		= 0x00,	///< Does not lock.
+					LOCK_TYPE_SHARED	= 0x01,	///< Uses shared lock.
+					LOCK_TYPE_EXCLUSIVE	= 0x02	///< Uses exclusive lock.
 				} type;
-				bool onlyAsEditing;	///< ç·¨é›E½¸­ãÂ®ãÂ¿ãï¿½ãƒE½E½
+				bool onlyAsEditing;	///< If true, the lock will not be performed unless modification occurs.
 			};
 
 			/// Content of a line.
@@ -606,10 +581,10 @@ namespace ascension {
 				Line() throw() : operationHistory_(0), lineBreak_(LB_AUTO), bookmarked_(false) {}
 				explicit Line(String& text, LineBreak lineBreak = LB_AUTO, bool modified = false)
 					: text_(text), operationHistory_(modified ? 1 : 0), lineBreak_(lineBreak), bookmarked_(false) {}
-				String text_;					// è¡E
-				ulong operationHistory_ : 28;	// ãï¿½ãï¿½ãƒE½E½ãï¿½ãï¿½ãï¿½ãï¿½ (0 ãÂ§åÂ¤E½E½E½ã—ãÂ®çï¿½æ…E
-				LineBreak lineBreak_ : 3;		// æï¿½¡E½Â®ç¨®é¡E
-				mutable bool bookmarked_ : 1;	// ãƒ–ãE¿½E½ãƒãE½ãï¿½ã•ã‚ï¿½ÂEŸèÂ¡E½ÂEE
+				String text_;
+				ulong operationHistory_ : 28;
+				LineBreak lineBreak_ : 3;
+				mutable bool bookmarked_ : 1;	// true if the line is bookmarked
 #if (3 < 2 << LB_COUNT)
 #error "lineBreak_ member is not allocated efficient buffer."
 #endif
@@ -618,7 +593,6 @@ namespace ascension {
 			};
 			typedef manah::GapBuffer<Line*,
 				manah::GapBuffer_DeletePointer<Line*> >	LineList;	///< List of lines
-//			typedef LineList::ConstIterator	LineIterator;			///< èÂ¡E½Â®åE½¾©å­E
 
 			// constructors
 			Document();
@@ -668,7 +642,6 @@ namespace ascension {
 			length_t		getLength(LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
 			const String&	getLine(length_t line) const;
 			const Line&		getLineInfo(length_t line) const;
-//			LineIterator	getLineIterator(length_t line) const;
 			length_t		getLineLength(length_t line) const;
 			length_t		getLineOffset(length_t line, LineBreakRepresentation lbr) const;
 			length_t		getNumberOfLines() const throw();
@@ -730,7 +703,6 @@ namespace ascension {
 			void	addNewPoint(Point& point) {points_.insert(&point);}
 			void	removePoint(Point& point) {points_.erase(&point);}
 
-			// ãƒE½E½ãï¿½ãï¿½ãï¿½ãƒE
 		private:
 			/// Manages undo/redo of the document.
 			class UndoManager {
@@ -783,7 +755,7 @@ namespace ascension {
 			friend class ModificationGuard;
 
 			struct DiskFile {
-				std::auto_ptr<manah::windows::io::File<true> > lockingFile;
+				std::auto_ptr<manah::win32::io::File<true> > lockingFile;
 				WCHAR* pathName;
 				bool unsavable;
 				FileLockMode lockMode;
@@ -831,11 +803,10 @@ namespace ascension {
 		};
 
 		/**
-		 * Bidirectional iterator scans characters in the specified document.
-		 * If an iterator is at the end of line, the dereferece operator returns @c LINE_SEPARATOR.
-		 * Otherwise, if an iterator at the end of document, the dereference operator returns
-		 * @c NONCHARACTER.
-		 * @note This class is underivable.
+		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
+		 * the end of line, the dereferece operator returns @c LINE_SEPARATOR. Otherwise, if an
+		 * iterator at the end of document, the dereference operator returns @c NONCHARACTER.
+		 * @note This class is not intended to subclass.
 		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
 		class DocumentCharacterIterator :
@@ -873,9 +844,13 @@ namespace ascension {
 			// CharacterIterator
 			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));}
 			Char doCurrent() const {return **this;}
+			bool doEquals(const CharacterIterator& rhs) const {return p_ == static_cast<const DocumentCharacterIterator&>(rhs).p_;}
+			void doFirst() {seek(region_.first);}
+			void doLast() {seek(region_.second);}
+			bool doLess(const CharacterIterator& rhs) const {return p_ < static_cast<const DocumentCharacterIterator&>(rhs).p_;}
+			void doMove(const CharacterIterator& to) {seek(static_cast<const DocumentCharacterIterator&>(to).p_);}
 			void doNext() {++*this;}
 			void doPrevious() {--*this;}
-			void doReset() {seek(region_.first);}
 			using CharacterIterator::getOffset;
 		private:
 			const Document* document_;
@@ -902,9 +877,12 @@ namespace ascension {
  */
 inline length_t getLineBreakLength(LineBreak lineBreak) {
 	switch(lineBreak) {
-	case LB_CRLF:													return 2;
-	case LB_LF: case LB_CR: case LB_NEL: case LB_LS: case LB_PS:	return 1;
-	default:														throw std::invalid_argument("Unknown line break specified.");
+	case LB_CRLF:
+		return 2;
+	case LB_LF: case LB_CR: case LB_NEL: case LB_LS: case LB_PS:
+		return 1;
+	default:
+		throw std::invalid_argument("Unknown line break specified.");
 	}
 }
 
@@ -1178,7 +1156,7 @@ inline std::size_t Document::getUndoHistoryLength(bool redo /* = false */) const
 	return redo ? undoManager_->getRedoBufferLength() : undoManager_->getUndoBufferLength();}
 
 /**
- * Inserts the text into the specified position.
+ * Inserts the text at the specified position.
  *
  * The modification flag is set when this method is called. However, if the position is inaccessible area
  * of the document, the insertion is not performed and the modification flag is not changed.
@@ -1439,6 +1417,6 @@ inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}
 
-}} // namespace ascension::text
+}} // namespace ascension.text
 
 #endif /* !ASCENSION_DOCUMENT_HPP */

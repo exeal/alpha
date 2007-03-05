@@ -6,7 +6,7 @@
 #include "windows.hpp"
 
 namespace manah {
-namespace windows {
+namespace win32 {
 
 class Timer {
 	// コンストラクタ
@@ -17,6 +17,7 @@ public:
 		reset();
 	}
 	~Timer() throw() {
+		DumpContext dout;
 		if(name_ != 0)
 			dout << name_;
 		else
@@ -36,6 +37,6 @@ private:
 	DWORD count_;
 };
 
-}} // namespace manah::windows
+}} // namespace manah::win32
 
-#endif	/* MANAH_TIMER_HPP */
+#endif	/* !MANAH_TIMER_HPP */

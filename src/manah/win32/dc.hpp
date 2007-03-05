@@ -4,119 +4,110 @@
 #ifndef MANAH_DC_HPP
 #define MANAH_DC_HPP
 #include "windows.hpp"
-
-namespace {
-	struct WindowRelatedDCHolder {
-		HWND window_;
-		HDC dc_;
-		ulong c_;
-		WindowRelatedDCHolder(HWND window, HDC dc) : window_(window), dc_(dc), c_(1) {assert(dc != 0);}
-		~WindowRelatedDCHolder() {assert(c_ == 0); ::ReleaseDC(window_, dc_);}
-	};
-}
+#include <memory>	// std.auto_ptr
 
 namespace manah {
-	namespace windows {
+	namespace win32 {
 
 		namespace ui {class Window;}
 
 		namespace gdi {
 
-class DC : public HandleHolder<HDC> {
+class DC : public Handle<HDC, ::DeleteDC> {
 public:
-	// コンストラクタ
-	DC() : HandleHolder<HDC>(0) {}
+	// constructors
+	DC() : Handle<HDC, ::DeleteDC>(0) {}
 	virtual ~DC() {}
-	// 作成
+	// current objects
 	HBITMAP		getCurrentBitmap() const;
 	HBRUSH		getCurrentBrush() const;
 	HFONT		getCurrentFont() const;
 	HPALETTE	getCurrentPalette() const;
 	HPEN		getCurrentPen() const;
 	HWND		getWindow() const;
-	// デバイスコンテキスト
-	int				getDeviceCaps(int index) const;
-	HDC				getSafeHdc() const;
-	virtual bool	restoreDC(int savedDC);
-	virtual int		saveDC();
-	// 描画ツール
-	int		enumObjects(int objectType, GOBJENUMPROC proc, LPARAM data);
-	POINT	getBrushOrg() const;
-	POINT	setBrushOrg(int x, int y);
-	POINT	setBrushOrg(const POINT& pt);
-	// 選択
+	// device context
+	std::auto_ptr<DC>	createCompatibleDC() const;
+	int					getDeviceCaps(int index) const;
+	virtual bool		restore(int savedDC);
+	virtual int			save();
+	// drawing tools
+	int		enumObjects(int objectType, ::GOBJENUMPROC proc, LPARAM data);
+	::POINT	getBrushOrg() const;
+	::POINT	setBrushOrg(int x, int y);
+	::POINT	setBrushOrg(const ::POINT& pt);
+	// selection
 	HBITMAP			selectObject(HBITMAP bitmap);
 	HBRUSH			selectObject(HBRUSH brush);
 	virtual HFONT	selectObject(HFONT font);
 	HPEN			selectObject(HPEN pen);
 	HGDIOBJ			selectStockObject(int object);
-	// 色とパレット
+	// color and palette
 	COLORREF	getNearestColor(COLORREF color) const;
 	UINT		realizePalette();
 	HPALETTE	selectPalette(HPALETTE palette, bool forceBackground);
 	void		updateColors();
-	// 属性
+	// attributes
 	COLORREF	getBkColor() const;
 	int			getBkMode() const;
-	bool		getColorAdjustment(COLORADJUSTMENT& colorAdjust) const;
+	bool		getColorAdjustment(::COLORADJUSTMENT& colorAdjust) const;
 	int			getPolyFillMode() const;
 	int			getROP2() const;
 	int			getStretchBltMode() const;
 	COLORREF	getTextColor() const;
 	COLORREF	setBkColor(COLORREF color);
 	int			setBkMode(int mode);
-	bool		setColorAdjustment(const COLORADJUSTMENT& colorAdjust);
+	bool		setColorAdjustment(const ::COLORADJUSTMENT& colorAdjust);
 	int			setPolyFillMode(int mode);
 	int			setROP2(int mode);
 	int			setStretchBltMode(int mode);
 	COLORREF	setTextColor(COLORREF color);
-	// 領域
+	// regions
 	bool	fillRgn(HRGN region, HBRUSH brush);
 	bool	frameRgn(HRGN region, HBRUSH brush, int width, int height);
 	bool	invertRgn(HRGN region);
 	bool	paintRgn(HRGN region);
-	// クリッピング
+	// clipping
 	int		excludeClipRect(int x1, int y1, int x2, int y2);
-	int		excludeClipRect(const RECT& rect);
+	int		excludeClipRect(const ::RECT& rect);
 	int		excludeUpdateRgn(HWND window);
-	UINT	getBoundsRect(RECT& rect, UINT flags);
-	int		getClipBox(RECT& rect) const;
+	UINT	getBoundsRect(::RECT& rect, UINT flags);
+	int		getClipBox(::RECT& rect) const;
 	int		intersectClipRect(int x1, int y1, int x2, int y2);
-	int		intersectClipRect(const RECT& rect);
+	int		intersectClipRect(const ::RECT& rect);
 	int		offsetClipRgn(int x, int y);
-	int		offsetClipRgn(const SIZE& size);
+	int		offsetClipRgn(const ::SIZE& size);
 	bool	ptVisible(int x, int y) const;
-	bool	ptVisible(const POINT& pt) const;
-	bool	rectVisible(const RECT& rect) const;
+	bool	ptVisible(const ::POINT& pt) const;
+	bool	rectVisible(const ::RECT& rect) const;
 	int		selectClipRgn(HRGN region);
 	int		selectClipRgn(HRGN region, int mode);
-	UINT	setBoundsRect(const RECT& rect, UINT flags);
-	// 線出力
+	UINT	setBoundsRect(const ::RECT& rect, UINT flags);
+	// lines
 	bool	angleArc(int x, int y, int radius, float startAngle, float sweepAngle);
 	bool	arc(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
-	bool	arc(const RECT& rect, const POINT& start, const POINT& end);
+	bool	arc(const ::RECT& rect, const ::POINT& start, const ::POINT& end);
 	bool	arcTo(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
-	bool	arcTo(const RECT& rect, const POINT& start, const POINT& end);
+	bool	arcTo(const ::RECT& rect, const ::POINT& start, const ::POINT& end);
 	int		getArcDirection() const;
-	POINT	getCurrentPosition() const;
+	::POINT	getCurrentPosition() const;
 	bool	lineTo(int x, int y);
-	bool	lineTo(const POINT& pt);
-	POINT	moveTo(int x, int y);
-	POINT	moveTo(const POINT& pt);
-	bool	polyBezier(const POINT* points, int count);
-	bool	polyBezierTo(const POINT* points, int count);
-	bool	polyDraw(const POINT* points, const BYTE* types, int count);
-	bool	polyline(LPPOINT points, int count);
-	bool	polylineTo(const POINT* points, int count);
-	bool	polyPolyline(const POINT* points, const DWORD* polyPoints, int count);
+	bool	lineTo(const ::POINT& pt);
+	::POINT	moveTo(int x, int y);
+	::POINT	moveTo(const ::POINT& pt);
+	bool	polyBezier(const ::POINT* points, int count);
+	bool	polyBezierTo(const ::POINT* points, int count);
+	bool	polyDraw(const ::POINT* points, const ::BYTE* types, int count);
+	bool	polyline(::LPPOINT points, int count);
+	bool	polylineTo(const ::POINT* points, int count);
+	bool	polyPolyline(const ::POINT* points, const DWORD* polyPoints, int count);
 	int		setArcDirection(int direction);
-	// 単純描画
-//	void	draw3dRect(const RECT* rect, COLORREF topLeftColor, COLORREF rightBottomColor);
+	// simple
+//	void	draw3dRect(const ::RECT* rect, COLORREF topLeftColor, COLORREF rightBottomColor);
 //	void	draw3dRect(int x, int y, int cx, int cy, COLORREF topLeftColor, COLORREF rightBottomColor);
-//	void	drawDragIcon(const RECT* rect, SIZE size,
-//				const RECT* lastRect, SIZE sizeLast, HBRUSH brush, HBRUSH lastBrush);
-	bool	drawEdge(const RECT& rect, UINT edge, UINT flags);
-	bool	drawFrameControl(const RECT& rect, UINT type, UINT state);
+//	void	drawDragIcon(const ::RECT* rect, ::SIZE size,
+//				const ::RECT* lastRect, ::SIZE sizeLast, HBRUSH brush, HBRUSH lastBrush);
+	bool	drawEdge(const ::RECT& rect, UINT edge, UINT flags);
+	bool	drawFrameControl(const ::RECT& rect, UINT type, UINT state);
 	bool	drawIcon(int x, int y, HICON icon);
 	bool	drawIcon(const POINT& pt, HICON icon);
 	bool	drawIconEx(int x, int y, HICON icon, int cx, int cy, UINT animationCursorStep, HBRUSH flicker, UINT flags);
@@ -128,42 +119,42 @@ public:
 	void	fillSolidRect(int x, int y, int cx, int cy, COLORREF color);
 	void	frameRect(const RECT& rect, HBRUSH brush);
 	void	invertRect(const RECT& rect);
-	// 楕円と多角形
+	// ovals and polygons
 	bool	chord(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
-	bool	chord(const RECT& rect, const POINT& start, const POINT& end);
-	void	drawFocusRect(const RECT& rect);
+	bool	chord(const ::RECT& rect, const ::POINT& start, const ::POINT& end);
+	void	drawFocusRect(const ::RECT& rect);
 	bool	ellipse(int x1, int y1, int x2, int y2);
-	bool	ellipse(const RECT& rect);
+	bool	ellipse(const ::RECT& rect);
 	bool	pie(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
-	bool	pie(const RECT& rect, const POINT& start, const POINT& end);
-	bool	polygon(const POINT* points, int count);
-	bool	polyPolygon(const POINT* points, const int* lpPolyCounts, int count);
+	bool	pie(const ::RECT& rect, const ::POINT& start, const ::POINT& end);
+	bool	polygon(const ::POINT* points, int count);
+	bool	polyPolygon(const ::POINT* points, const int* lpPolyCounts, int count);
 	bool	rectangle(int x1, int y1, int x2, int y2);
-	bool	rectangle(const RECT& rect);
+	bool	rectangle(const ::RECT& rect);
 	bool	roundRect(int x1, int y1, int x2, int y2, int x3, int y3);
-	bool	roundRect(const RECT& rect, const POINT& pt);
-	// ビットマップ
+	bool	roundRect(const ::RECT& rect, const ::POINT& pt);
+	// bitmaps
 	bool		bitBlt(int x, int y, int width, int height, HDC srcDC, int xSrc, int ySrc, DWORD rop);
 	bool		extFloodFill(int x, int y, COLORREF color, UINT fillType);
 	bool		floodFill(int x, int y, COLORREF color);
 	COLORREF	getPixel(int x, int y) const;
-	COLORREF	getPixel(const POINT& pt) const;
+	COLORREF	getPixel(const ::POINT& pt) const;
 	bool		maskBlt(int x, int y, int width, int height,
 					HDC dc, int xSrc, int ySrc, HBITMAP bitmap, int xMask, int yMask, DWORD rop);
 	bool		patBlt(int x, int y, int width, int height, DWORD rop);
-	bool		patBlt(const RECT& rect, DWORD rop);
-	bool		plgBlt(const POINT* point, HDC dc,
+	bool		patBlt(const ::RECT& rect, DWORD rop);
+	bool		plgBlt(const ::POINT* point, HDC dc,
 					int xSrc, int ySrc, int width, int height, HBITMAP bitmap, int xMask, int yMask);
 	COLORREF	setPixel(int x, int y, COLORREF color);
-	COLORREF	setPixel(const POINT& pt, COLORREF color);
+	COLORREF	setPixel(const ::POINT& pt, COLORREF color);
 	bool		setPixelV(int x, int y, COLORREF color);
-	bool		setPixelV(const POINT& pt, COLORREF color);
+	bool		setPixelV(const ::POINT& pt, COLORREF color);
 	bool		stretchBlt(int x, int y, int width, int height,
 					HDC srcDC, int xSrc, int ySrc, int srcWidth, int srcHeight, DWORD rop);
-	// テキスト
-	virtual int		drawText(const TCHAR* text, int length, const RECT& rect, UINT format);
-	virtual bool	extTextOut(int x, int y, UINT options, const RECT* rect, const TCHAR* text, UINT length, const int* dxWidths);
-	SIZE			getCharacterPlacement(const TCHAR* text, int length, int maxExtent, GCP_RESULTS& results, DWORD flags) const;
+	// textual
+	virtual int		drawText(const TCHAR* text, int length, const ::RECT& rect, UINT format);
+	virtual bool	extTextOut(int x, int y, UINT options, const ::RECT* rect, const TCHAR* text, UINT length, const int* dxWidths);
+	SIZE			getCharacterPlacement(const TCHAR* text, int length, int maxExtent, ::GCP_RESULTS& results, DWORD flags) const;
 	SIZE			getTabbedTextExtent(const TCHAR* text, int length, int tabCount, int* tabStopPositions) const;
 	UINT			getTextAlign() const;
 	int				getTextCharacterExtra() const;
@@ -172,123 +163,93 @@ public:
 	bool			getTextExtentExPointI(LPWORD glyphs, int count, int maxExtent, LPINT fit, LPINT dx, LPSIZE size) const;
 	bool			getTextExtentPointI(LPWORD glyphs, int count, LPSIZE size) const;
 	int				getTextFace(int faceNameCount, TCHAR* faceName) const;
-	bool			getTextMetrics(TEXTMETRIC& metrics) const;
-	virtual bool	grayString(HBRUSH brush, GRAYSTRINGPROC outputProc, LPARAM data, int length, int x, int y, int width, int height);
-	bool			polyTextOut(const POLYTEXT* texts, int count);
+	bool			getTextMetrics(::TEXTMETRIC& metrics) const;
+	virtual bool	grayString(HBRUSH brush, ::GRAYSTRINGPROC outputProc, LPARAM data, int length, int x, int y, int width, int height);
+	bool			polyTextOut(const ::POLYTEXT* texts, int count);
 	UINT			setTextAlign(UINT flags);
 	int				setTextCharacterExtra(int charExtra);
 	int				setTextJustification(int breakExtra, int breakCount);
-	virtual SIZE	tabbedTextOut(int x, int y, const TCHAR* text, int length, int tabCount, int* tabStopPositions, int tabOrigin);
+	virtual ::SIZE	tabbedTextOut(int x, int y, const TCHAR* text, int length, int tabCount, int* tabStopPositions, int tabOrigin);
 	virtual bool	textOut(int x, int y, const TCHAR* text, int length);
-	// フォント
-	int		enumFontFamilies(const TCHAR* name, FONTENUMPROC proc, LPARAM param = 0UL) const;
-	int		enumFontFamilies(const LOGFONT& condition, FONTENUMPROC proc, LPARAM param = 0UL) const;
-	bool	getAspectRatioFilterEx(SIZE& size) const;
-	bool	getCharABCWidths(UINT firstChar, UINT lastChar, ABC buffer[]) const;
-	bool	getCharABCWidths(UINT firstChar, UINT lastChar, ABCFLOAT buffer[]) const;
+	// fonts
+	int		enumFontFamilies(const TCHAR* name, ::FONTENUMPROC proc, LPARAM param = 0UL) const;
+	int		enumFontFamilies(const ::LOGFONT& condition, ::FONTENUMPROC proc, LPARAM param = 0UL) const;
+	bool	getAspectRatioFilterEx(::SIZE& size) const;
+	bool	getCharABCWidths(UINT firstChar, UINT lastChar, ::ABC buffer[]) const;
+	bool	getCharABCWidths(UINT firstChar, UINT lastChar, ::ABCFLOAT buffer[]) const;
 	bool	getCharWidth(UINT firstChar, UINT lastChar, int* buffer) const;
 	bool	getCharWidth(UINT firstChar, UINT lastChar, float* buffer) const;
 	DWORD	getFontData(DWORD table, DWORD offset, LPVOID data, DWORD bytes) const;
 	DWORD	getFontLanguageInfo() const;
 #if(_WIN32_WINNT >= 0x0500)
-	DWORD	getFontUnicodeRanges(GLYPHSET& glyphSet) const;
+	DWORD	getFontUnicodeRanges(::GLYPHSET& glyphSet) const;
 	DWORD	getGlyphIndices(const TCHAR* text, int length, WORD* indices, DWORD flags) const;
 #endif /* _WIN32_WINNT >= 0x0500 */
-	DWORD	getGlyphOutline(UINT ch, UINT format, LPGLYPHMETRICS gm, DWORD bufferSize, LPVOID data, const MAT2* mat2) const;
-	DWORD	getKerningPairs(DWORD pairs, LPKERNINGPAIR kerningPair) const;
-	UINT	getOutlineTextMetrics(UINT dataSize, LPOUTLINETEXTMETRIC otm) const;
-	bool	getRasterizerCaps(RASTERIZER_STATUS& status, UINT cb) const;
+	DWORD	getGlyphOutline(UINT ch, UINT format, ::LPGLYPHMETRICS gm, DWORD bufferSize, LPVOID data, const MAT2* mat2) const;
+	DWORD	getKerningPairs(DWORD pairs, ::LPKERNINGPAIR kerningPair) const;
+	UINT	getOutlineTextMetrics(UINT dataSize, ::LPOUTLINETEXTMETRIC otm) const;
+	bool	getRasterizerCaps(::RASTERIZER_STATUS& status, UINT cb) const;
 	DWORD	setMapperFlags(DWORD flag);
-	// スクロール
-	bool	scrollDC(int dx, int dy, const RECT& scrollRect, const RECT& clipRect, HRGN updateRegion, RECT* updateRect);
+	// scroll
+	bool	scroll(int dx, int dy, const ::RECT& scrollRect, const ::RECT& clipRect, HRGN updateRegion, ::RECT* updateRect);
 protected:
-	DC(const DC& rhs) : HandleHolder<HDC>(rhs) {}
+	explicit DC(HDC handle) : Handle<HDC, ::DeleteDC>(handle) {}
 	void	assertValidAsDC() const;
 };
 
-
-class AutoDC : public DC {
-public:
-	AutoDC(HDC handle = 0) {if(handle != 0) attach(handle);}
-	AutoDC(const AutoDC& rhs) {if(rhs.get() != 0) attach(rhs.get());}
-	virtual ~AutoDC() {if(get() != 0 && !isAttached()) ::DeleteDC(detach());}
-	bool createCompatibleDC(HDC dc) {
-		assert(get() == 0);
-		setHandle(::CreateCompatibleDC(dc));
-		return get() != 0;
-	}
-	bool deleteDC() {
-		if(get() == 0)
-			return false;
-		return toBoolean(::DeleteDC(detach()));
-	}
-};
-
+namespace internal {
+	class WindowRelatedDC : public DC {
+	protected:
+		WindowRelatedDC(HWND window, HDC handle) : window_(window), refCount_(new ulong) {
+			assert(window_ == 0 || toBoolean(::IsWindow(window_))); *refCount_ = 1; attach(handle); assert(get() != 0);}
+		WindowRelatedDC(const WindowRelatedDC& rhs) : DC(rhs), window_(rhs.window_), refCount_(rhs.refCount_) {++*refCount_;}
+		virtual ~WindowRelatedDC() {HDC handle = detach(); if(--*refCount_ == 0) {::ReleaseDC(window_, handle); delete refCount_;}}
+	private:
+		HWND window_;
+		ulong* refCount_;
+	};
+}
 
 class PaintDC : public DC {
 public:
-	PaintDC(HWND window) : window_(window), createdByWindow_(false) {
-		assert(toBoolean(::IsWindow(window)));
-		setHandle(::BeginPaint(window, &paint_));
-		assert(get() != 0);
-	}
-	PaintDC(const PaintDC& rhs) :
-		DC(rhs), window_(rhs.window_), createdByWindow_(rhs.createdByWindow_) {const_cast<PaintDC&>(rhs).window_ = 0;}
+	PaintDC(HWND window) : data_(new Data) {assert(toBoolean(::IsWindow(window)));
+		attach(::BeginPaint(data_->window = window, &data_->paint)); data_->refCount = 1; data_->createdByWindow = false; assert(get() != 0);}
+	PaintDC(const PaintDC& rhs) : DC(rhs), data_(rhs.data_) {++data_->refCount;}
+	~PaintDC() {if(--data_->refCount == 0) {if(!data_->createdByWindow) ::EndPaint(data_->window, &data_->paint); delete data_;}}
+	const ::PAINTSTRUCT& getPaintStruct() const {return data_->paint;}
 private:
-	PaintDC(HWND window, PAINTSTRUCT& paint) : window_(window), paint_(paint), createdByWindow_(true) {
-		setHandle(paint_.hdc);
-		assert(::IsWindow(window_));
-		assert(get() != 0);
-	}
-public:
-	~PaintDC() {if(!createdByWindow_) ::EndPaint(window_, &paint_);}
-private:
-	operator HDC() const;
-public:
-	const PAINTSTRUCT& getPaintStruct() const {return paint_;}
-private:
-	HWND		window_;
-	PAINTSTRUCT	paint_;
-	bool		createdByWindow_;
-	friend class ui::Window;	// for Window::beginPaint
+	PaintDC(HWND window, ::PAINTSTRUCT& paint) : data_(new Data) {assert(toBoolean(::IsWindow(window)));
+		data_->window = window; attach((data_->paint = paint).hdc); data_->refCount = 1; data_->createdByWindow = true; assert(get() != 0);}
+	struct Data {
+		HWND window;
+		::PAINTSTRUCT paint;
+		ulong refCount;
+		bool createdByWindow;
+	}* data_;
+	friend class ui::Window;
 };
 
-
-class ClientDC : public DC {
+class ClientDC : public internal::WindowRelatedDC {
+public:
+	ClientDC(const ClientDC& rhs) : internal::WindowRelatedDC(rhs) {}
+	virtual ~ClientDC() {}
 protected:
-	ClientDC(HWND window) : holder_(new WindowRelatedDCHolder(window, ::GetDC(window))) {setHandle(holder_->dc_);}
-	ClientDC(HWND window, HRGN clipRegion, DWORD flags) :
-		holder_(new WindowRelatedDCHolder(window, ::GetDCEx(window, clipRegion, flags))) {setHandle(holder_->dc_);}
-public:
-	ClientDC(const ClientDC& rhs) : DC(rhs), holder_(rhs.holder_) {++holder_->c_; setHandle(rhs.get());}
-	virtual ~ClientDC() {if(--holder_->c_ == 0) delete holder_;}
-private:
-	operator HDC() const;
-private:
-	WindowRelatedDCHolder* holder_;
-	friend class ui::Window;	// for Window::getDC
+	ClientDC(HWND window) : internal::WindowRelatedDC(window, ::GetDC(window)) {}
+	ClientDC(HWND window, HRGN clipRegion, DWORD flags) : internal::WindowRelatedDC(window, ::GetDCEx(window, clipRegion, flags)) {}
+	friend class ui::Window;
 };
 
-
-class WindowDC : public DC {
-protected:
-	WindowDC(HWND window) : holder_(new WindowRelatedDCHolder(window, ::GetWindowDC(window))) {setHandle(holder_->dc_);}
+class WindowDC : public internal::WindowRelatedDC {
 public:
-	WindowDC(const WindowDC& rhs) : DC(rhs), holder_(rhs.holder_) {++holder_->c_; setHandle(rhs.get());}
-	virtual ~WindowDC() {if(--holder_->c_ == 0) delete holder_;}
+	WindowDC(const WindowDC& rhs) : internal::WindowRelatedDC(rhs) {}
 private:
-	operator HDC() const;
-private:
-	WindowRelatedDCHolder* holder_;
-	friend class ui::Window;	// for Window::getWindowDC
+	WindowDC(HWND window) : internal::WindowRelatedDC(window, ::GetWindowDC(window)) {}
+	friend class ui::Window;
 };
-
 
 class ScreenDC : public ClientDC {
 public:
 	ScreenDC() : ClientDC(0) {}
-private:
-	operator HDC() const;
 };
 
 
@@ -319,6 +280,8 @@ inline bool DC::chord(int x1, int y1, int x2, int y2, int x3, int y3, int x4, in
 
 inline bool DC::chord(const RECT& rect, const POINT& start, const POINT& end) {
 	return chord(rect.left, rect.top, rect.right, rect.bottom, start.x, start.y, end.x, end.y);}
+
+inline std::auto_ptr<DC> DC::createCompatibleDC() const {assertValidAsDC(); return std::auto_ptr<DC>(new DC(::CreateCompatibleDC(get())));}
 
 inline bool DC::drawEdge(const RECT& rect, UINT edge, UINT flags) {
 	assertValidAsDC(); return toBoolean(::DrawEdge(get(), const_cast<RECT*>(&rect), edge, flags));}
@@ -489,8 +452,6 @@ inline bool DC::getRasterizerCaps(RASTERIZER_STATUS& status, UINT cb) const {ass
 
 inline int DC::getROP2() const {assertValidAsDC(); return ::GetROP2(get());}
 
-inline HDC DC::getSafeHdc() const {return (this == 0) ? 0 : get();}
-
 inline int DC::getStretchBltMode() const {assertValidAsDC(); return ::GetStretchBltMode(get());}
 
 inline SIZE DC::getTabbedTextExtent(const TCHAR* text, int length, int tabCount, int* tabStopPositions) const {
@@ -612,16 +573,16 @@ inline bool DC::rectangle(const RECT& rect) {return rectangle(rect.left, rect.to
 
 inline bool DC::rectVisible(const RECT& rect) const {assertValidAsDC(); return toBoolean(::RectVisible(get(), &rect));}
 
-inline bool DC::restoreDC(int savedDC) {assertValidAsDC(); return toBoolean(::RestoreDC(get(), savedDC));}
+inline bool DC::restore(int savedDC) {assertValidAsDC(); return toBoolean(::RestoreDC(get(), savedDC));}
 
 inline bool DC::roundRect(int x1, int y1, int x2, int y2, int x3, int y3) {
 	assertValidAsDC(); return toBoolean(::RoundRect(get(), x1, y1, x2, y2, x3, y3));}
 
 inline bool DC::roundRect(const RECT& rect, const POINT& pt) {return roundRect(rect.left, rect.top, rect.right, rect.bottom, pt.x, pt.y);}
 
-inline int DC::saveDC() {assertValidAsDC(); return ::SaveDC(get());}
+inline int DC::save() {assertValidAsDC(); return ::SaveDC(get());}
 
-inline bool DC::scrollDC(int dx, int dy, const RECT& scrollRect, const RECT& clipRect, HRGN updateRegion, RECT* updateRect) {
+inline bool DC::scroll(int dx, int dy, const RECT& scrollRect, const RECT& clipRect, HRGN updateRegion, RECT* updateRect) {
 	assertValidAsDC(); return toBoolean(::ScrollDC(get(), dx, dy, &scrollRect, &clipRect, updateRegion, updateRect));}
 
 inline int DC::selectClipRgn(HRGN region) {assertValidAsDC(); return ::SelectClipRgn(get(), region);}
@@ -701,6 +662,6 @@ inline bool DC::textOut(int x, int y, const TCHAR* text, int length) {
 
 inline void DC::updateColors() {assertValidAsDC(); ::UpdateColors(get());}
 
-}}} // namespace manah::windows::gdi
+}}} // namespace manah::win32::gdi
 
 #endif /* MANAH_DC_HPP */

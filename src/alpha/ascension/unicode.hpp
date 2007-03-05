@@ -169,57 +169,50 @@ namespace ascension {
 			}
 		} // namespace surrogates
 
-		/// Abstract class defines an interface for iteration on text.
 		class CharacterIterator {
 		public:
+			enum {hasBoundary = true};
 			/// Indicates the iterator is the last.
 			static const CodePoint DONE = 0xFFFFFFFFUL;
-			/// Destructor.
-			virtual ~CharacterIterator() throw() {}
-			/// Returns the offset.
-			std::ptrdiff_t getOffset() const throw() {return offset_;}
-			/// Returns true if the iterator is a clone of @a other.
-			bool isCloneOf(const CharacterIterator& other) const {return original_ == other.original_;}
+			/// Creates a copy of the iterator. Tthis must be implemented by copy-constructor of @c CharacterIterator.
+			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
 			/// Returns true if the iterator is first.
 			virtual bool isFirst() const = 0;
 			/// Returns true if the iterator is last.
 			virtual bool isLast() const = 0;
-			/// Returns the current character.
-			CodePoint current() const {
-				if(isLast()) return DONE;
-				const Char c = doCurrent();
-				if(!surrogates::isHighSurrogate(c)) return c;
-				const_cast<CharacterIterator*>(this)->next();
-				if(isLast()) {const_cast<CharacterIterator*>(this)->previous(); return c;}
-				const Char n = doCurrent();
-				const_cast<CharacterIterator*>(this)->previous();
-				return surrogates::decode(c, n);}
-			/// Creates a copy of the iterator (this must be implemented by copy-constructor of @c CharacterIterator).
-			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
-			/// Moves to the next character.
-			CharacterIterator& next() {if(!isLast()) {
-				doNext(); ++offset_; if(!isLast() && surrogates::isLowSurrogate(doCurrent())) {doNext(); ++offset_;}} return *this;}
-			/// Moves to the previous character.
-			CharacterIterator& previous() {if(!isFirst()) {
-				doPrevious(); --offset_; if(!isFirst() && surrogates::isLowSurrogate(doCurrent())) {doPrevious(); --offset_;}} return *this;}
-			/// Moves to the start position.
-			CharacterIterator& reset() {doReset(); offset_ = 0; return *this;}
-			enum {hasBoundary = true};
+		public:
+			virtual				~CharacterIterator() throw();
+			CodePoint			current() const;
+			bool				equals(const CharacterIterator& rhs) const;
+			CharacterIterator&	first();
+			std::ptrdiff_t		getOffset() const throw();
+			bool				isCloneOf(const CharacterIterator& other) const throw();
+			CharacterIterator&	last();
+			bool				less(const CharacterIterator& rhs) const;
+			CharacterIterator&	move(const CharacterIterator& to);
+			CharacterIterator&	next();
+			CharacterIterator&	previous();
 		protected:
-			/// Constructor.
-			CharacterIterator() throw() : offset_(0) {original_ = this;}
-			/// Copy-constructor.
-			CharacterIterator(const CharacterIterator& rhs) throw() : offset_(rhs.offset_), original_(rhs.original_) {}
-			/// Assignment operator.
-			CharacterIterator& operator=(const CharacterIterator& rhs) throw() {offset_ = rhs.offset_; return *this;}
+			CharacterIterator() throw();
+			CharacterIterator(const CharacterIterator& rhs) throw();
+			CharacterIterator& operator=(const CharacterIterator& rhs) throw();
+		protected:
 			/// Returns the current code unit value.
 			virtual Char doCurrent() const = 0;
+			/// Returns true if the iterator equals @a rhs.
+			virtual bool doEquals(const CharacterIterator& rhs) const = 0;
+			/// Moves to the start of the character sequence.
+			virtual void doFirst() = 0;
+			/// Moves to the end of the character sequence.
+			virtual void doLast() = 0;
+			/// Returns true if the iterator is less than @a rhs.
+			virtual bool doLess(const CharacterIterator& rhs) const = 0;
+			/// Moves to the specified position.
+			virtual void doMove(const CharacterIterator& to) = 0;
 			/// Moves to the previous code unit.
 			virtual void doNext() = 0;
 			/// Moves to the next code unit.
 			virtual void doPrevious() = 0;
-			/// Moves to the start position.
-			virtual void doReset() = 0;
 		private:
 			std::ptrdiff_t offset_;
 			const CharacterIterator* original_;
@@ -250,10 +243,14 @@ namespace ascension {
 			bool isLast() const {return current_ == last_;}
 			const Char* tell() const throw() {return current_;}
 		private:
+			Char doCurrent() const {return *current_;}
+			bool doEquals(const CharacterIterator& rhs) const {return current_ == static_cast<const StringCharacterIterator&>(rhs).current_;}
+			void doFirst() {current_ = first_;}
+			void doLast() {current_ = last_;}
+			bool doLess(const CharacterIterator& rhs) const {return current_ < static_cast<const StringCharacterIterator&>(rhs).current_;}
+			void doMove(const CharacterIterator& rhs) {current_ = static_cast<const StringCharacterIterator&>(rhs).current_;}
 			void doNext() {++current_;}
 			void doPrevious() {--current_;}
-			Char doCurrent() const {return *current_;}
-			void doReset() {current_ = first_;}
 			const Char* current_;
 			const Char* first_;
 			const Char* last_;
@@ -851,6 +848,60 @@ namespace ascension {
 
 
 // inline implementations ///////////////////////////////////////////////////
+
+/// Constructor.
+inline CharacterIterator::CharacterIterator() throw() : offset_(0) {original_ = this;}
+
+/// Copy-constructor.
+inline CharacterIterator::CharacterIterator(const CharacterIterator& rhs) throw() : offset_(rhs.offset_), original_(rhs.original_) {}
+
+/// Destructor.
+inline CharacterIterator::~CharacterIterator() throw() {}
+
+/// Assignment operator.
+inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) throw() {offset_ = rhs.offset_; return *this;}
+
+/// Returns the current character or @c DONE if the iterator is last.
+inline CodePoint CharacterIterator::current() const {
+	if(isLast()) return DONE;
+	const Char c = doCurrent();
+	if(!surrogates::isHighSurrogate(c)) return c;
+	const_cast<CharacterIterator*>(this)->next();
+	if(isLast()) {const_cast<CharacterIterator*>(this)->previous(); return c;}
+	const Char n = doCurrent();
+	const_cast<CharacterIterator*>(this)->previous();
+	return surrogates::decode(c, n);}
+
+/// Returns true if the iterator equals @a rhs.
+inline bool CharacterIterator::equals(const CharacterIterator& rhs) const {
+	if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this."); return doEquals(rhs);}
+
+/// Moves to the start of the character sequence.
+inline CharacterIterator& CharacterIterator::first() {doFirst(); offset_ = 0; return *this;}
+
+/// Returns the position in the character sequence.
+inline std::ptrdiff_t CharacterIterator::getOffset() const throw() {return offset_;}
+
+/// Returns true if the iterator is a clone of @a other.
+inline bool CharacterIterator::isCloneOf(const CharacterIterator& other) const throw() {return original_ == other.original_;}
+
+/// Moves to the end of the character sequence.
+inline CharacterIterator& CharacterIterator::last() {doLast(); offset_ = 0; return *this;}
+
+/// Returns true if the iterator is less than @a rhs.
+inline bool CharacterIterator::less(const CharacterIterator& rhs) const {
+	if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this."); return doLess(rhs);}
+
+/// Moves to the position @a to addresses.
+inline CharacterIterator& CharacterIterator::move(const CharacterIterator& to) {doMove(to); offset_ = to.offset_; return *this;}
+
+/// Moves to the next character.
+inline CharacterIterator& CharacterIterator::next() {if(!isLast()) {
+	doNext(); ++offset_; if(!isLast() && surrogates::isLowSurrogate(doCurrent())) {doNext(); ++offset_;}} return *this;}
+
+/// Moves to the previous character.
+inline CharacterIterator& CharacterIterator::previous() {if(!isFirst()) {
+	doPrevious(); --offset_; if(!isFirst() && surrogates::isLowSurrogate(doCurrent())) {doPrevious(); --offset_;}} return *this;}
 
 inline void Normalizer::decrement() {
 	if(isFirst())

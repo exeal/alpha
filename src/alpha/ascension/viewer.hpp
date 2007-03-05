@@ -11,7 +11,7 @@
 
 #include "point.hpp"
 #include "presentation.hpp"
-#include "../../manah/win32/dc.hpp"	// manah::windows::gdi::DC
+#include "../../manah/win32/dc.hpp"	// manah::win32::gdi::DC
 #include "../../manah/win32/gdi-object.hpp"
 #include "../../manah/com/text-data-object.hpp"
 #include <set>
@@ -130,7 +130,7 @@ namespace ascension {
 			 * @param[out] orientation the orientation of the caret. this value is used for hot spot calculation
 			 */
 			virtual void getCaretShape(
-				std::auto_ptr<manah::windows::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() = 0;
+				std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() = 0;
 			/**
 			 * Installs the provider.
 			 * @param updator the caret updator which notifies the text viewer to update the caret
@@ -150,7 +150,7 @@ namespace ascension {
 		public:
 			DefaultCaretShaper() throw();
 		private:
-			void	getCaretShape(std::auto_ptr<manah::windows::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
+			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
 			void	install(CaretShapeUpdator& updator) throw();
 			void	uninstall() throw();
 		private:
@@ -166,7 +166,7 @@ namespace ascension {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
 		private:
-			void	getCaretShape(std::auto_ptr<manah::windows::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
+			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
 			void	install(CaretShapeUpdator& updator) throw();
 			void	uninstall() throw();
 			// ICaretListener
@@ -209,65 +209,8 @@ namespace ascension {
 			friend class ascension::internal::StrategyPointer<IViewerLinkTextStrategy>;
 		};
 
-		/**
-		 * @c TextViewer is the view of Ascension framework.
-		 *
-		 * @c TextViewer displays the content of the document, manipulates the document with the caret and selection,
-		 * and provides other visual presentations.
-		 *
-		 * <h3>双方向テキスト関連のウィンドウスタイル</h3>
-		 *
-		 * テキストを右寄せで表示するための @c WS_EX_RIGHT 、右から左に表示するための @c WS_EX_RTLREADING
-		 * はいずれも無視される。これらの設定には代わりに @c LayoutSettings の該当メンバを使用しなければならない
-		 *
-		 * また @c WS_EX_LAYOUTRTL も使用できない。このスタイルを設定した場合の動作は未定義である
-		 *
-		 * 垂直スクロールバーを左側に表示するにはクライアントが @c WS_EX_LEFTSCROLLBAR を設定しなければならない
-		 *
-		 * これらの設定を一括して変更する場合 @c #setTextDirection を使うことができる
-		 *
-		 * 垂直ルーラ (インジケータマージンと行番号) の位置はテキストが左寄せであれば左端、
-		 * 右寄せであれば右端になる
-		 *
-		 * <h3>コピーコンストラクタによる複製について (派生クラスを書く人向けの話)</h3>
-		 *
-		 * @c Viewer の祖先クラスは全てコピーコンストラクタを実装しており、
-		 * このクラスでもコピーコンストラクタを使ってビューを複製することが出来る (
-		 * ただし祖先クラスと同様、ウィンドウは作成されない)。データメンバが非常に多いため
-		 * このクラスは一部のメンバを複製元と複製先で共有する
-		 *
-		 * 共有データメンバにはレイアウト関連の設定が大量に含まれている。
-		 * これはコピー間で異なるレイアウトを設定できないということも意味している
-		 *
-		 * 複製元は共有データメンバの<strong>所有権</strong>を持つ。
-		 * 所有権を持たないビューが削除されても共有データは破棄されないが、
-		 * 所有権を持つビューが削除されると、所有権はこのビューから複製された他のビューに移る。
-		 * こうして最後に残ったビューが削除されたとき、共有データは破壊される。
-		 * このためコピーコンストラクタでは複製元のビューが複製先を、
-		 * 複製先のビューがオリジナルのビューを記憶する。また、
-		 * 複製先ビューは自分が破壊されたときにオリジナルに通知して、クローンリストから自分を取り除く
-		 *
-		 * また、所有権を保持するビューは自分に対する設定の更新を他のビューに通知するという役目も持つ。
-		 * クライアントがフォントや行間隔、アプリケーション定義行といった設定の変更をビューに対して行うと、
-		 * 所有権を持つビューに処理が伝播され、所有権を持つビューと全ての複製先に設定が反映されるので、
-		 * クライアントはいちいち関連する全てのビューを設定する必要は無い
-		 *
-		 * <strong>コピーコンストラクタによって複製されたビューは、
-		 * 常にここで述べたような複製先、複製元の関係を持つ</strong>ということに注意しなければならない。
-		 * この関係は @c #isCloneOf メソッドで調べることができる
-		 *
-		 * @c TextViewer provides two methods #freeze and #unfreeze to freeze of the screen of the window.
-		 * While the viewer is frozen, the window does not redraw the content.
-		 * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
-		 *
-		 * If you want to enable OLE drag-and-drop feature, call Win32 @c OleInitialize in your thread.
-		 *
-		 * If you want to enable tooltips, call Win32 @c InitCommonControlsEx.
-		 *
-		 * @see presentation#Presentation, Caret
-		 */
 		class TextViewer :
-				public manah::windows::ui::CustomControl<TextViewer>,
+				public manah::win32::ui::CustomControl<TextViewer>,
 				virtual public text::IDocumentListener,
 				virtual public text::IDocumentStateListener,
 				virtual public text::ISequentialEditListener,
@@ -275,7 +218,7 @@ namespace ascension {
 				virtual public ICaretListener,
 				virtual public ascension::text::internal::IPointCollection<VisualPoint>,
 				virtual public IDropSource, virtual public IDropTarget {
-			typedef manah::windows::ui::CustomControl<TextViewer> BaseControl;
+			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
 			DEFINE_WINDOW_CLASS() {
 				name = L"ascension:text-viewer";
 				style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
@@ -522,7 +465,7 @@ namespace ascension {
 		protected:
 			virtual OVERRIDE_DISPATCH_EVENT(TextViewer);
 			virtual void	doBeep() throw();
-			virtual void	drawIndicatorMargin(length_t line, manah::windows::gdi::DC& dc, const ::RECT& rect);
+			virtual void	drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
 			bool			handleKeyDown(UINT key, bool controlPressed, bool shiftPressed) throw();
 
 			// helpers
@@ -544,17 +487,24 @@ namespace ascension {
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			void	updateScrollBars();
 
-			// 非公開インターフェイス
+			// protected interfaces
+		protected:
+			// IDocumentStateListener (overridable)
+			virtual void	documentAccessibleRegionChanged(text::Document& document);
+			virtual void	documentEncodingChanged(text::Document& document);
+			virtual void	documentFileNameChanged(text::Document& document);
+			virtual void	documentModificationSignChanged(text::Document& document);
+			virtual void	documentReadOnlySignChanged(text::Document& document);
+			// ICaretListener (overridable)
+			virtual void	caretMoved(const Caret& self, const text::Region& oldRegion);
+			virtual void	matchBracketsChanged(const Caret& self,
+								const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
+			virtual void	overtypeModeChanged(const Caret& self);
+			virtual void	selectionShapeChanged(const Caret& self);
 		private:
 			// IDocumentListener
 			void	documentAboutToBeChanged(const text::Document& document);
 			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
-			// IDocumentStateListener
-			void	documentAccessibleRegionChanged(text::Document& document);
-			void	documentEncodingChanged(text::Document& document);
-			void	documentFileNameChanged(text::Document& document);
-			void	documentModificationSignChanged(text::Document& document);
-			void	documentReadOnlySignChanged(text::Document& document);
 			// ISequentialEditListener
 			void	documentSequentialEditStarted(text::Document& document);
 			void	documentSequentialEditStopped(text::Document& document);
@@ -566,11 +516,6 @@ namespace ascension {
 			void	visualLinesInserted(length_t first, length_t last) throw();
 			void	visualLinesModified(length_t first, length_t last,
 						signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
-			// ICaretListener
-			void	caretMoved(const Caret& self, const text::Region& oldRegion);
-			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
-			void	overtypeModeChanged(const Caret& self);
-			void	selectionShapeChanged(const Caret& self);
 			// internal::IPointCollection<VisualPoint>
 			void	addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void	removePoint(VisualPoint& point) {points_.erase(&point);}
@@ -595,7 +540,7 @@ namespace ascension {
 			virtual void	onMouseMove(UINT flags, const ::POINT& pt);					// WM_MOUSEMOVE
 			virtual bool	onMouseWheel(UINT flags, short zDelta, const ::POINT& pt);	// WM_MOUSEWHEEL
 			virtual bool	onNotify(int id, ::LPNMHDR nmhdr);							// WM_NOTIFY
-			virtual void	onPaint(manah::windows::gdi::PaintDC& dc);					// WM_PAINT
+			virtual void	onPaint(manah::win32::gdi::PaintDC& dc);					// WM_PAINT
 			virtual void	onRButtonDown(UINT flags, const ::POINT& pt);				// WM_RBUTTONDOWN
 			virtual bool	onSetCursor(HWND window, UINT hitTest, UINT message);		// WM_SETCURSOR
 			virtual void	onSetFocus(HWND oldWindow);									// WM_SETFOCUS
@@ -619,7 +564,7 @@ namespace ascension {
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 			/// 自動スクロールの開始点に表示する丸いウィンドウ
 			class AutoScrollOriginMark :
-					public manah::windows::ui::Layered<manah::windows::ui::CustomControl<AutoScrollOriginMark> > {
+					public manah::win32::ui::Layered<manah::win32::ui::CustomControl<AutoScrollOriginMark> > {
 				DEFINE_WINDOW_CLASS() {
 					name = L"AutoScrollOriginMark";
 					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
@@ -629,7 +574,7 @@ namespace ascension {
 			public:
 				bool	create(const TextViewer& view);
 			protected:
-				void	onPaint(manah::windows::gdi::PaintDC& dc);
+				void	onPaint(manah::win32::gdi::PaintDC& dc);
 			private:
 				static const long WINDOW_WIDTH;
 			};
@@ -637,7 +582,7 @@ namespace ascension {
 			class VerticalRulerDrawer : public manah::Noncopyable {
 			public:
 				explicit VerticalRulerDrawer(TextViewer& viewer) throw();
-				void								draw(manah::windows::gdi::PaintDC& dc);
+				void								draw(manah::win32::gdi::PaintDC& dc);
 				const VerticalRulerConfiguration&	getConfiguration() const throw();
 				int									getWidth() const throw();
 				void								setConfiguration(const VerticalRulerConfiguration& configuration);
@@ -650,8 +595,8 @@ namespace ascension {
 				VerticalRulerConfiguration configuration_;
 				int width_;
 				uchar lineNumberDigitsCache_;
-				manah::windows::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
-				manah::windows::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
+				manah::win32::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
+				manah::win32::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
 			};
 
 			// 列挙
@@ -801,9 +746,9 @@ namespace ascension {
 	
 			// 行描画キャンバス
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
-			manah::windows::gdi::AutoDC	memDC_;			// メモリデバイスコンテキスト
-			manah::windows::gdi::Bitmap	lineBitmap_;	// memDC_ に結び付けられている1行描画用ビットマップ
-			manah::windows::gdi::Bitmap	oldLineBitmap_;
+			std::auto_ptr<manah::win32::gdi::DC> memDC_;	// メモリデバイスコンテキスト
+			manah::win32::gdi::Bitmap lineBitmap_;			// memDC_ に結び付けられている 1 行描画用ビットマップ
+			manah::win32::gdi::Bitmap oldLineBitmap_;
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 			// キャレットのビットマップ
@@ -811,7 +756,7 @@ namespace ascension {
 				ascension::internal::StrategyPointer<ICaretShapeProvider> shaper;
 				Orientation orientation;
 				int width;
-				std::auto_ptr<manah::windows::gdi::Bitmap> bitmap;
+				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
 				CaretShape() throw() : orientation(LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 

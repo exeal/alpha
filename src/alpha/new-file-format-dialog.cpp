@@ -9,7 +9,7 @@
 #include "application.hpp"
 #include "../manah/win32/ui/standard-controls.hpp"
 using alpha::ui::NewFileFormatDialog;
-using manah::windows::ui::ComboBox;
+using manah::win32::ui::ComboBox;
 using namespace ascension::encodings;
 using namespace ascension::text;
 using namespace std;

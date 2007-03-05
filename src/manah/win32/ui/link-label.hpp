@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 // 前は色々機能があったけどメンドいんでやーめた
@@ -19,20 +19,14 @@ class LinkLabel : public CustomControl<LinkLabel>, public Noncopyable {
 		cursor = MAKEINTRESOURCE(32649);	// IDC_HAND
 	}
 
-	// コンストラクタ
 public:
 	LinkLabel();
 	virtual ~LinkLabel();
-
-	// メソッド
 public:
 	bool			create(HWND parent, HINSTANCE hinstance, int id = 0);
 	const TCHAR*	getTipText() const;
 	void			setTipText(const TCHAR* text);
-private:
-	HFONT	getFont();
 
-	// メッセージハンドラ
 protected:
 	virtual OVERRIDE_DISPATCH_EVENT(LinkLabel);
 	virtual void	onKillFocus(HWND newWindow);							// WM_KILLFOCUS
@@ -42,9 +36,8 @@ protected:
 	virtual bool	onSetCursor(HWND window, UINT hitTest, UINT message);	// WM_SETCURSOR
 	virtual void	onSetFocus(HWND oldWindow);								// WM_SETFOCUS
 	virtual void	onSetText(const TCHAR* text);							// WM_SETTEXT
-
-	// データメンバ
 private:
+	HFONT	getFont();
 	TCHAR* tipText_;
 };
 
@@ -77,9 +70,9 @@ inline LRESULT LinkLabel::dispatchEvent(UINT message, WPARAM wParam, LPARAM lPar
 	case WM_KEYDOWN:
 		if(!toBoolean(getStyle() & WS_DISABLED) && wParam == VK_RETURN)
 #ifdef _WIN64
-			getParent().sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(get()));
+			getParent()->sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(get()));
 #else
-			getParent().sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(get()));
+			getParent()->sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(get()));
 #endif /* _WIN64 */
 		break;
 	case WM_SETTEXT:
@@ -91,8 +84,8 @@ inline LRESULT LinkLabel::dispatchEvent(UINT message, WPARAM wParam, LPARAM lPar
 }
 
 inline HFONT LinkLabel::getFont() {
-	LOGFONT lf;
-	::GetObject(getParent().getFont(), sizeof(LOGFONT), &lf);
+	::LOGFONT lf;
+	::GetObject(getParent()->getFont(), sizeof(::LOGFONT), &lf);
 	lf.lfUnderline = true;
 	return ::CreateFontIndirect(&lf);	// may return null...
 }
@@ -119,7 +112,7 @@ inline void LinkLabel::onLButtonDown(UINT, const POINT&) {setFocus();}
 inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
 	if(toBoolean(getStyle() & WS_DISABLED))
 		return;
-	getParent().sendMessage(WM_COMMAND,
+	getParent()->sendMessage(WM_COMMAND,
 #ifdef _WIN64
 		getWindowLongPtr(GWLP_ID),
 #else
@@ -132,8 +125,7 @@ inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
 #ifndef COLOR_HOTLIGHT
 	const int COLOR_HOTLIGHT = 26;
 #endif /* !COLOR_HOTLIGHT */
-	const std::size_t len = getWindowTextLength();
-
+	const std::size_t len = getTextLength();
 	if(len == 0)
 		return;
 
@@ -141,11 +133,11 @@ inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
 	HFONT oldFont = dc.selectObject(getFont());
 	RECT rect;
 
-	getWindowText(caption, static_cast<int>(len + 1));
+	getText(caption, static_cast<int>(len + 1));
 	dc.setTextColor(::GetSysColor(toBoolean(getStyle() & WS_DISABLED) ? COLOR_GRAYTEXT : COLOR_HOTLIGHT));
 	dc.setBkMode(TRANSPARENT);
 
-	getWindowRect(rect);
+	getRect(rect);
 	::OffsetRect(&rect, -rect.left, -rect.top);
 	::InflateRect(&rect, -1, -1);
 
@@ -177,9 +169,9 @@ inline void LinkLabel::onSetText(const TCHAR* text) {
 	::DeleteObject(dc.selectObject(oldFont));
 	rect.right += 2;
 	rect.bottom += 2;
-	setWindowPos(0, rect, SWP_NOMOVE | SWP_NOZORDER);
+	setPosition(0, rect, SWP_NOMOVE | SWP_NOZORDER);
 }
 
-}}} // namespace manah::windows::ui
+}}} // namespace manah.win32.ui
 
 #endif /* !MANAH_LINK_LABEL_HPP */

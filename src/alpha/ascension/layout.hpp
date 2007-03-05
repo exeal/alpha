@@ -166,14 +166,14 @@ namespace ascension {
 			StyledSegmentIterator			getLastStyledSegment() const throw();
 			const presentation::StyledText&	getStyledSegment(length_t column) const;
 			// operations
-			void	draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
+			void	draw(manah::win32::gdi::PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
 #ifdef _DEBUG
 			void	dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */
 		private:
 			static HRESULT	buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
 			void			dispose() throw();
-			void			drawBorder(manah::windows::gdi::PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw();
+			void			drawBorder(manah::win32::gdi::PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw();
 			void			expandTabsWithoutWrapping() throw();
 			std::size_t		findRunForPosition(length_t column) const throw();
 			int				getNextTabStop(int x, Direction direction) const throw();
@@ -293,11 +293,11 @@ namespace ascension {
 		protected:
 			/// Context of the rendering.
 			struct Context {
-				mutable manah::windows::gdi::PaintDC& dc;	///< the device context
+				mutable manah::win32::gdi::PaintDC& dc;	///< the device context
 				Colors color;								///< the color
 				Orientation orientation;					///< the orientation of the character
 				/// Constructor.
-				explicit Context(manah::windows::gdi::PaintDC& deviceContext) : dc(deviceContext) {}
+				explicit Context(manah::win32::gdi::PaintDC& deviceContext) : dc(deviceContext) {}
 			};
 			/// Destructor.
 			virtual ~ISpecialCharacterDrawer() throw() {}
@@ -406,7 +406,7 @@ namespace ascension {
 			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
 		protected:
 			virtual void									fontChanged() = 0;
-			virtual std::auto_ptr<manah::windows::gdi::DC>	getDC() = 0;
+			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() = 0;
 		private:
 			int ascent_, descent_, averageCharacterWidth_;
 			struct Fontset : public manah::Noncopyable {
@@ -465,7 +465,7 @@ namespace ascension {
 			void	layoutModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool documentChanged) throw();
 			// FontSelector
 			void									fontChanged();
-			std::auto_ptr<manah::windows::gdi::DC>	getDC();
+			std::auto_ptr<manah::win32::gdi::DC>	getDC();
 		private:
 			int viewerWidth_, longestLineWidth_, lineWrappingMarkWidth_;
 			length_t longestLine_, numberOfVisualLines_;

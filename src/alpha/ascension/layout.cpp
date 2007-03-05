@@ -14,7 +14,7 @@ using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
-using namespace manah::windows::gdi;
+using namespace manah::win32::gdi;
 using namespace std;
 
 //#define TRACE_LAYOUT_CACHES
@@ -198,7 +198,7 @@ inline HRESULT LineLayout::buildGlyphs(HDC dc, const wchar_t* line, Run& run, si
  * @param clipRect the clipping region
  * @param selectionColor the color of the selection
  */
-void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw() {
+void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw() {
 	// TODO: call ISpecialCharacterDrawer.
 
 	// クリッピングによるマスキングを利用した選択テキストの描画は以下の記事を参照
@@ -232,7 +232,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
 	y += static_cast<int>(linePitch * subline);
 
 	const int originalX = x;
-	const int savedCookie = dc.saveDC();
+	const int savedCookie = dc.save();
 	HRESULT hr;
 	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP);
 
@@ -337,7 +337,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
 		if((y += linePitch) >= paintRect.bottom)
 			break;
 	}
-	dc.restoreDC(savedCookie);
+	dc.restore(savedCookie);
 }
 
 /**
@@ -347,7 +347,7 @@ void LineLayout::draw(manah::windows::gdi::PaintDC& dc, int x, int y, const ::RE
  * @param style the style of the border
  * @param color the color of the border
  */
-void LineLayout::drawBorder(manah::windows::gdi::PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw() {
+void LineLayout::drawBorder(PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw() {
 	if(style == BS_NONE)
 		return;
 	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
@@ -781,8 +781,8 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	const Presentation& presentation = renderer_.getTextViewer().getPresentation();
 	::SCRIPT_ITEM* items = new ::SCRIPT_ITEM[text.length() + 1];
 	int numberOfItems;
-	manah::windows::AutoZero<::SCRIPT_CONTROL> control;
-	manah::windows::AutoZero<::SCRIPT_STATE> initialState;
+	manah::win32::AutoZero<::SCRIPT_CONTROL> control;
+	manah::win32::AutoZero<::SCRIPT_STATE> initialState;
 	initialState.uBidiLevel = (c.orientation == RIGHT_TO_LEFT) ? 1 : 0;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
 	initialState.fDisplayZWG = c.displaysShapingControls;
@@ -924,7 +924,7 @@ bool LineLayout::shape(Run& run) throw() {
 	assert(run.glyphs == 0);
 	HRESULT hr;
 	const String& line = getText();
-	manah::windows::gdi::ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
+	ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
 	run.clusters = new WORD[run.length];
 	if(renderer_.getTextViewer().getConfiguration().inhibitsShaping)
 		run.analysis.eScript = SCRIPT_UNDEFINED;
@@ -996,8 +996,8 @@ void LineLayout::wrap() throw() {
 	const String& text = getText();
 	vector<length_t> sublineFirstRuns;
 	sublineFirstRuns.push_back(0);
-	manah::windows::gdi::ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
-	const int cookie = dc.saveDC();
+	ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
+	const int cookie = dc.save();
 	const int wrapWidth = renderer_.getWrapWidth();
 	int cx = 0;
 	vector<Run*> newRuns;
@@ -1108,7 +1108,7 @@ void LineLayout::wrap() throw() {
 		cx += widthInThisRun;
 	}
 //dout << L"...broke the all lines.\n";
-	dc.restoreDC(cookie);
+	dc.restore(cookie);
 	if(newRuns.empty())
 		newRuns.push_back(0);
 	delete[] runs_;

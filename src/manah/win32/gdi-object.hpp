@@ -8,18 +8,18 @@
 #include <commctrl.h>	// COLORMAP
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace gdi {
 
 
-class GDIObject : public HandleHolder<HGDIOBJ>, public Noncopyable {
+class GDIObject : public Handle<HGDIOBJ, ::DeleteObject>, public Noncopyable {
 public:
 	// constructors
-	explicit GDIObject(HGDIOBJ handle = 0) : HandleHolder<HGDIOBJ>(handle), stockObject_(false) {}
+	explicit GDIObject(HGDIOBJ handle = 0) : Handle<HGDIOBJ, ::DeleteObject>(handle), stockObject_(false) {}
 	virtual ~GDIObject() {deleteObject();}
 	// methods
 	virtual bool createStockObject(int index) = 0;
-	bool deleteObject() {if(get() != 0 && !stockObject_) return toBoolean(::DeleteObject(detach())); return false;}
+	bool deleteObject() {if(!stockObject_ && toBoolean(::DeleteObject(get()))) {release(); return true;} return false;}
 	bool unrealizeObject() {return toBoolean(::UnrealizeObject(get()));}
 
 	// data members
@@ -163,9 +163,9 @@ protected:
 };
 
 #define CREATE_NATIVE_OBJECT(expression)	\
-	if(get() != 0)					\
+	if(get() != 0)							\
 		return false;						\
-	setHandle(expression);					\
+	reset(expression);						\
 	return get() != 0
 
 
@@ -228,7 +228,7 @@ inline bool Brush::createSolidBrush(COLORREF color) {CREATE_NATIVE_OBJECT(::Crea
 inline bool Brush::createStockObject(int index) {
 	if(get() != 0 || index > HOLLOW_BRUSH)
 		return false;
-	setHandle(::GetStockObject(index));
+	reset(::GetStockObject(index));
 	if(get() != 0) {
 		stockObject_ = true;
 		return true;
@@ -258,7 +258,7 @@ inline bool Font::createFontIndirect(const LOGFONT& logfont) {CREATE_NATIVE_OBJE
 inline bool Font::createStockObject(int index) {
 	if(get() != 0 || index < ANSI_FIXED_FONT || index > DEFAULT_GUI_FONT)
 		return false;
-	setHandle(::GetStockObject(index));
+	reset(::GetStockObject(index));
 	if(get() != 0) {
 		stockObject_ = true;
 		return true;
@@ -282,7 +282,7 @@ inline bool Palette::createPalette(const LOGPALETTE& logpalette) {CREATE_NATIVE_
 inline bool Palette::createStockObject(int index) {
 	if(get() != 0 || index != DEFAULT_PALETTE)
 		return false;
-	setHandle(::GetStockObject(index));
+	reset(::GetStockObject(index));
 	return get() != 0;
 }
 
@@ -311,7 +311,7 @@ inline bool Pen::createPenIndirect(const LOGPEN& logpen) {CREATE_NATIVE_OBJECT(:
 inline bool Pen::createStockObject(int index) {
 	if(get() != 0 || index < BLACK_PEN || index > WHITE_PEN)
 		return false;
-	setHandle(::GetStockObject(index));
+	reset(::GetStockObject(index));
 	return get() != 0;
 }
 
@@ -377,6 +377,6 @@ inline bool Rgn::setRectRgn(const RECT& rect) {return toBoolean(::SetRectRgn(get
 
 #undef CREATE_NATIVE_OBJECT
 
-}}} // namespace manah::windows::gdi
+}}} // namespace manah.win32.gdi
 
-#endif /* MANAH_GDI_OBJECT_HPP */
+#endif /* !MANAH_GDI_OBJECT_HPP */

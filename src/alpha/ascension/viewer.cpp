@@ -25,8 +25,8 @@ using namespace ascension;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::text;
-using namespace manah::windows;
-using namespace manah::windows::gdi;
+using namespace manah::win32;
+using namespace manah::win32::gdi;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 using namespace manah::com;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
@@ -284,6 +284,54 @@ namespace {
 
 // TextViewer ///////////////////////////////////////////////////////////////
 
+/**
+ * @class ascension::viewers::TextViewer The view of Ascension framework.
+ *
+ * @c TextViewer displays the content of the document, manipulates the document with the caret and
+ * selection, and provides other visual presentations.
+ *
+ * <h3>双方向テキスト関連のウィンドウスタイル</h3>
+ *
+ * テキストを右寄せで表示するための @c WS_EX_RIGHT 、右から左に表示するための @c WS_EX_RTLREADING
+ * はいずれも無視される。これらの設定には代わりに @c LayoutSettings の該当メンバを使用しなければならない
+ *
+ * また @c WS_EX_LAYOUTRTL も使用できない。このスタイルを設定した場合の動作は未定義である
+ *
+ * 垂直スクロールバーを左側に表示するにはクライアントが @c WS_EX_LEFTSCROLLBAR を設定しなければならない
+ *
+ * これらの設定を一括して変更する場合 @c #setTextDirection を使うことができる
+ *
+ * 垂直ルーラ (インジケータマージンと行番号) の位置はテキストが左寄せであれば左端、
+ * 右寄せであれば右端になる
+ *
+ * @c TextViewer provides two methods #freeze and #unfreeze to freeze of the screen of the window.
+ * While the viewer is frozen, the window does not redraw the content.
+ * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
+ *
+ * <h3>Subclassing</h3>
+ *
+ * @c TextViewer and @c SourceViewer are intended to be subclassed. You can override the virtual
+ * member functions in your derived class. Note that @c TextViewer implements interfaces defined
+ * in Ascension by virtual functions. These are also overridable but you must call base
+ * implementation. For example, you are overriding @c documentChanged:
+ *
+ * @code
+ * void YourViewer::documentChanged(const Document& document, const DocumentChange& change) {
+ *   // ...your own code
+ *   TextViewer::documentChanged(document, change);
+ * }
+ * @endcode
+ *
+ * <h3>Windows specific features</h3>
+ *
+ * @c TextViewer supports OLE drag-and-drop. If you want to enable this feature, call Win32
+ * @c OleInitialize in your thread.
+ *
+ * If you want to enable tooltips, call Win32 @c InitCommonControlsEx.
+ *
+ * @see presentation#Presentation, Caret
+ */
+
 #define EXTEND_SELECTION()																			\
 	const Position dest = getCharacterForClientXY(pt, true);										\
 	if(leftDownMode_ == LDM_SELECTION_LINE || leftDownMode_ == LDM_SELECTION_WORD) {				\
@@ -375,8 +423,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 }
 
 /// Copy-constructor.
-TextViewer::TextViewer(const TextViewer& rhs) :
-		manah::windows::ui::CustomControl<TextViewer>(rhs), presentation_(rhs.presentation_), tipText_(0)
+TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(rhs), presentation_(rhs.presentation_), tipText_(0)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		, accessibleProxy_(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
@@ -452,11 +499,11 @@ void TextViewer::beginAutoScroll() {
 
 	::RECT rect;
 	::POINT pt;
-	autoScrollOriginMark_->getWindowRect(rect);
+	autoScrollOriginMark_->getRect(rect);
 	::GetCursorPos(&pt);
 	autoScroll_.indicatorPosition = pt;
 	screenToClient(autoScroll_.indicatorPosition);
-	autoScrollOriginMark_->setWindowPos(HWND_TOP,
+	autoScrollOriginMark_->setPosition(HWND_TOP,
 		pt.x - (rect.right - rect.left) / 2, pt.y - (rect.bottom - rect.top) / 2,
 		0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_SHOWWINDOW);
 	autoScroll_.scrolling = true;
@@ -480,7 +527,7 @@ String TextViewer::calculateSpacesReachingVirtualPoint(length_t line, ulong virt
 
 /// @see ICaretListener#caretMoved
 void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
-	if(!isWindowVisible())
+	if(!isVisible())
 		return;
 	const Region newRegion = self.getSelectionRegion();
 	bool changed = false;
@@ -503,7 +550,7 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 			if(newRegion.isEmpty()) {	// 選択を解除した
 				redrawLines(oldRegion.getTop().line, oldRegion.getBottom().line);
 				if(!isFrozen())
-					updateWindow();
+					update();
 			} else if(oldRegion.getTop() == newRegion.getTop()) {	// 始点固定
 				const length_t i[2] = {oldRegion.getBottom().line, newRegion.getBottom().line};
 				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
@@ -520,7 +567,7 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 				} else {
 					redrawLines(oldRegion.getTop().line, oldRegion.getBottom().line);
 					if(!isFrozen())
-						updateWindow();
+						update();
 					redrawLines(newRegion.getTop().line, newRegion.getBottom().line);
 				}
 			}
@@ -529,7 +576,7 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	}
 
 	if(changed && !isFrozen())
-		updateWindow();
+		update();
 
 	// IME で入力中の場合は編集ウィンドウの位置を修正
 	if(imeCompositionActivated_)
@@ -551,7 +598,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 
 	const bool visible = toBoolean(style & WS_VISIBLE);
 	style &= ~WS_VISIBLE;	// 後で足す
-	if(!manah::windows::ui::CustomControl<TextViewer>::create(parent, rect, 0, style, exStyle))
+	if(!ui::CustomControl<TextViewer>::create(parent, rect, 0, style, exStyle))
 		return false;
 	renderer_.reset(new TextRenderer(*this));
 	renderer_->addVisualLinesListener(*this);
@@ -624,11 +671,11 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 #endif /* _DEBUG */
 
 	// 位置決めと表示
-	moveWindow(rect, false);
+	move(rect, false);
 	if(originalView_ != this)
 		scrollTo(originalView_->scrollInfo_.horizontal.position, originalView_->scrollInfo_.horizontal.position, false);
 	if(visible)
-		showWindow(SW_SHOW);
+		show(SW_SHOW);
 
 	return true;
 }
@@ -925,7 +972,7 @@ STDMETHODIMP TextViewer::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect
 			|| leftDownMode_ == LDM_DRAGANDDROPBOXSELF)) {	// ドロップ可能な場合以外は何もしない
 		::POINT caretPoint = {pt.x, pt.y};
 		screenToClient(caretPoint);
-		setCaretPos(getClientXYForCharacter(getCharacterForClientXY(caretPoint, true), LineLayout::LEADING));
+		setCaretPosition(getClientXYForCharacter(getCharacterForClientXY(caretPoint, true), LineLayout::LEADING));
 		if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000) && toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
 			*pdwEffect = DROPEFFECT_NONE;
 		else if(leftDownMode_ != LDM_DRAGANDDROP)
@@ -1092,7 +1139,7 @@ bool TextViewer::endAutoScroll() {
 	if(autoScroll_.scrolling) {
 		killTimer(TIMERID_AUTOSCROLL);
 		autoScroll_.scrolling = false;
-		autoScrollOriginMark_->showWindow(SW_HIDE);
+		autoScrollOriginMark_->show(SW_HIDE);
 		releaseCapture();
 		return true;
 	}
@@ -1216,7 +1263,7 @@ int TextViewer::getDisplayXOffset() const throw() {
 bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) const {
 	assertValidAsWindow();
 	const Document& document = getDocument();
-	const Position pos = getCharacterForClientXY(getCursorPos(), false);	// カーソル位置に最も近い文字位置
+	const Position pos = getCharacterForClientXY(getCursorPosition(), false);	// カーソル位置に最も近い文字位置
 
 	if(pos.column == document.getLineLength(pos.line))	// 指定位置に文字が無い
 		return false;
@@ -1482,7 +1529,7 @@ void TextViewer::initializeWindow(bool copyConstructing) {
 
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
 	// メモリデバイスコンテキストの用意
-	memDC_.createCompatibleDC(getDC().getSafeHdc());
+	memDC_ = getDC().createCompatibleDC();
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 //	if(copyConstructing)
@@ -1530,7 +1577,7 @@ void TextViewer::internalUnfreeze() {
 	freezeInfo_.invalidLines.first = freezeInfo_.invalidLines.second = INVALID_INDEX;
 
 	caretMoved(getCaret(), getCaret().getSelectionRegion());
-	updateWindow();
+	update();
 }
 
 /**
@@ -1601,17 +1648,17 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 		assert(newPair.second != Position::INVALID_POSITION);
 		redrawLine(newPair.first.line);
 		if(!isFrozen())
-			updateWindow();
+			update();
 		if(newPair.second.line != newPair.first.line) {
 			redrawLine(newPair.second.line);
 			if(!isFrozen())
-				updateWindow();
+				update();
 		}
 		if(oldPair.first != Position::INVALID_POSITION	// 前回分を削除
 				&& oldPair.first.line != newPair.first.line && oldPair.first.line != newPair.second.line) {
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
-				updateWindow();
+				update();
 		}
 		if(oldPair.second != Position::INVALID_POSITION && oldPair.second.line != newPair.first.line
 				&& oldPair.second.line != newPair.second.line && oldPair.second.line != oldPair.first.line)
@@ -1621,7 +1668,7 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 			assert(oldPair.second != Position::INVALID_POSITION);
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
-				updateWindow();
+				update();
 			if(oldPair.second.line != oldPair.first.line)
 				redrawLine(oldPair.second.line);
 		}
@@ -1732,7 +1779,7 @@ bool TextViewer::onCommand(WORD id, WORD notifyCode, HWND control) {
 		ReconversionCommand(*this).execute();
 		break;
 	default:
-		::SendMessageW(getParent(), WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
 	}
 
 	return BaseControl::onCommand(id, notifyCode, control);
@@ -1740,7 +1787,7 @@ bool TextViewer::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Window#onContextMenu
 bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
-	using manah::windows::ui::Menu;
+	using manah::win32::ui::Menu;
 
 	if(mouseOperationDisabledCount_ != 0)	// マウス操作とは限らないが...
 		return true;
@@ -1765,7 +1812,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	const bool readOnly = document.isReadOnly();
 	const bool japanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
 
-	static Menu menu;
+	static ui::PopupMenu menu;
 	static const WCHAR* captions[] = {
 		L"&Undo",								L"\x5143\x306B\x623B\x3059(&U)",
 		L"&Redo",								L"\x3084\x308A\x76F4\x3057(&R)",
@@ -1784,7 +1831,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	};																	
 #define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
 
-	if(menu.getItemCount() == 0) {	// 初期化
+	if(menu.getNumberOfItems() == 0) {	// 初期化
 		menu << Menu::StringItem(WM_UNDO, GET_CAPTION(0))
 			<< Menu::StringItem(WM_REDO, GET_CAPTION(1))
 			<< Menu::SeparatorItem()
@@ -1801,7 +1848,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 			<< Menu::StringItem(0, GET_CAPTION(13));
 
 		// [Unicode 制御文字の挿入] 以下
-		Menu* subMenu = new Menu;
+		Menu* subMenu = new ui::PopupMenu;
 		*subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
 			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
 			<< Menu::StringItem(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner")
@@ -1827,7 +1874,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 		menu.setChildPopup<Menu::BY_POSITION>(12, *subMenu);
 
 		// [Unicode 空白文字の挿入] 以下
-		subMenu = new Menu;
+		subMenu = new ui::PopupMenu;
 		*subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
 			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
 			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
@@ -1855,24 +1902,24 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 
 		// bidi サポートがあるか?
 		if(!renderer_->supportsComplexScript()) {
-			menu.enableMenuItem<Menu::BY_COMMAND>(ID_RTLREADING, false);
-			menu.enableMenuItem<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
-			menu.enableMenuItem<Menu::BY_POSITION>(12, false);
-			menu.enableMenuItem<Menu::BY_POSITION>(13, false);
+			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
+			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
+			menu.enable<Menu::BY_POSITION>(12, false);
+			menu.enable<Menu::BY_POSITION>(13, false);
 		}
 	}
 #undef GET_CAPTION
 
 	// メニュー項目の修正
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_UNDO, !readOnly && document.getUndoHistoryLength(false) != 0);
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_REDO, !readOnly && document.getUndoHistoryLength(true) != 0);
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_COPY, hasSelection);
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste());
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
-	menu.enableMenuItem<Menu::BY_COMMAND>(WM_SELECTALL, document.getNumberOfLines() > 1 || document.getLineLength(0) > 0);
-	menu.checkMenuItem<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
-	menu.checkMenuItem<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
+	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && document.getUndoHistoryLength(false) != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && document.getUndoHistoryLength(true) != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste());
+	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, document.getNumberOfLines() > 1 || document.getLineLength(0) > 0);
+	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
+	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
 
 	// IME 関連
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
@@ -1900,12 +1947,12 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 
 		::ImmReleaseContext(get(), imc);
 	}
-	menu.trackPopupMenu(TPM_LEFTALIGN, pt.x, pt.y, *this);
+	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, get());
 
 	// 消しとく
-	int c = menu.getItemCount();
+	int c = menu.getNumberOfItems();
 	while(c > 13)
-		menu.deleteMenuItem<Menu::BY_POSITION>(c--);
+		menu.erase<Menu::BY_POSITION>(c--);
 
 	return true;
 }
@@ -1920,10 +1967,10 @@ void TextViewer::onDestroy() {
 	// 従属ウィンドウを削除
 	::DestroyWindow(toolTip_);
 	if(autoScrollOriginMark_.get() != 0)
-		autoScrollOriginMark_->destroyWindow();
+		autoScrollOriginMark_->destroy();
 	
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	memDC_.selectObject(oldLineBitmap_);
+	memDC_->selectObject(oldLineBitmap_);
 	::DeleteObject(lineBitmap_);
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
@@ -1955,7 +2002,7 @@ void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
 		scrollTo((sbCode == SB_LEFT) ? left : right, -1, true); break;
 	}
 	case SB_THUMBTRACK:	// ドラッグ or ホイール
-		scrollTo(getScrollTrackPos(SB_HORZ), -1, false); break;	// 32ビット値を使う
+		scrollTo(getScrollTrackPosition(SB_HORZ), -1, false); break;	// 32ビット値を使う
 	}
 }
 
@@ -2096,7 +2143,7 @@ void TextViewer::onKillFocus(HWND newWindow) {
 		::DestroyCaret();
 	}
 	redrawLines(getCaret().getTopPoint().getLineNumber(), getCaret().getBottomPoint().getLineNumber());
-	updateWindow();
+	update();
 }
 
 /**
@@ -2121,9 +2168,9 @@ void TextViewer::onLButtonDblClk(UINT, const ::POINT& pt) {
  *	@see Window#onLButtonDown
  */
 void TextViewer::onLButtonDown(UINT flags, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
 	if(mouseOperationDisabledCount_ != 0)
 		return;
-	RESTORE_HIDDEN_CURSOR();
 	if(endAutoScroll())
 		return;
 
@@ -2217,9 +2264,9 @@ void TextViewer::onLButtonUp(UINT, const ::POINT& pt) {
 
 /// @see Window#onMouseMove
 void TextViewer::onMouseMove(UINT, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
 	if(mouseOperationDisabledCount_ != 0)
 		return;
-	RESTORE_HIDDEN_CURSOR();
 
 	Position pos;	// カーソル位置から求まる行と列
 
@@ -2248,7 +2295,7 @@ void TextViewer::onMouseMove(UINT, const ::POINT& pt) {
 				killTimer(TIMERID_DRAGSCROLL);
 				leftDownMode_ = LDM_NONE;	// onLButtonUp は呼ばれない
 				lastPoint.x = lastPoint.y = -1;
-				if(isWindowVisible())
+				if(isVisible())
 					setFocus();
 			}
 		}
@@ -2283,9 +2330,9 @@ void TextViewer::onMouseMove(UINT, const ::POINT& pt) {
 
 /// @see Window#onMouseWheel
 bool TextViewer::onMouseWheel(UINT, short zDelta, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
 	if(mouseOperationDisabledCount_ != 0)
 		return true;
-	RESTORE_HIDDEN_CURSOR();
 	
 	if(endAutoScroll())
 		return true;
@@ -2358,6 +2405,7 @@ void TextViewer::onPaint(PaintDC& dc) {
 	int y = mapLineToClientY(line, true);
 	if(line < lineCount) {
 #ifdef _DEBUG
+		DumpContext dout;
 		if(DIAGNOSE_INHERENT_DRAWING)
 			dout << L"lines : ";
 #endif /* _DEBUG */
@@ -2390,16 +2438,16 @@ void TextViewer::onPaint(PaintDC& dc) {
 
 /// @see Window#onRButtonDown
 void TextViewer::onRButtonDown(UINT, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
 	if(mouseOperationDisabledCount_ != 0)
 		return;
-	RESTORE_HIDDEN_CURSOR();
 	endAutoScroll();
 }
 
 /// @see Window#onSetCursor
 bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 	static length_t detectedUriLineLast = INVALID_INDEX;
-	::POINT pt = getCursorPos();	// カーソル位置
+	::POINT pt = getCursorPosition();	// カーソル位置
 	bool cursorChanged = false;
 
 	RESTORE_HIDDEN_CURSOR();
@@ -2454,13 +2502,13 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 	BaseControl::onSetFocus(oldWindow);
 
 	// スクロール位置を元に戻す
-	setScrollPos(SB_HORZ, scrollInfo_.horizontal.position, false);
-	setScrollPos(SB_VERT, scrollInfo_.vertical.position, true);
+	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
+	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
 
 	// 選択範囲を再描画 (フォーカスの有無で強調属性が変化するため)
 	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
 		redrawLines(getCaret().getTopPoint().getLineNumber(), getCaret().getBottomPoint().getLineNumber());
-		updateWindow();
+		update();
 	}
 
 	if(oldWindow != get()) {
@@ -2628,7 +2676,7 @@ void TextViewer::onUniChar(UINT ch, UINT) {
 			// カーソルが同一スレッドのウィンドウ上に無いと駄目
 			::POINT pt;
 			::GetCursorPos(&pt);
-			if(::GetWindowThreadProcessId(::WindowFromPoint(pt), 0) == getWindowThreadID()) {
+			if(::GetWindowThreadProcessId(::WindowFromPoint(pt), 0) == getThreadID()) {
 				modeState_.cursorVanished = true;
 				::ShowCursor(false);
 				setCapture();
@@ -2657,7 +2705,7 @@ void TextViewer::onVScroll(UINT sbCode, UINT pos, HWND) {
 		scrollTo(-1, (sbCode == SB_TOP) ? top : bottom, true); break;
 	}
 	case SB_THUMBTRACK:	// ドラッグ or ホイール
-		scrollTo(-1, getScrollTrackPos(SB_VERT), true); break;	// 32ビット値を使う
+		scrollTo(-1, getScrollTrackPosition(SB_VERT), true); break;	// 32ビット値を使う
 	}
 }
 
@@ -2745,7 +2793,7 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		dout << L"inv : " << static_cast<ulong>(first) << L".." << static_cast<ulong>(last) << L"\n";
+		DumpContext() << L"inv : " << static_cast<ulong>(first) << L".." << static_cast<ulong>(last) << L"\n";
 #endif /* _DEBUG */
 
 	::RECT rect;
@@ -2804,7 +2852,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		if(dx != 0) {
 			scrollInfo_.horizontal.position += dx;
 			if(!isFrozen())
-				setScrollPos(SB_HORZ, scrollInfo_.horizontal.position, true);
+				setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, true);
 		}
 	}
 	if(dy != 0) {
@@ -2814,7 +2862,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 			scrollInfo_.vertical.position += dy;
 			renderer_->offsetVisualLine(scrollInfo_.firstVisibleLine, scrollInfo_.firstVisibleSubline, dy);
 			if(!isFrozen())
-				setScrollPos(SB_VERT, scrollInfo_.vertical.position, true);
+				setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
 		}
 	}
 	if(dx == 0 && dy == 0)
@@ -2836,7 +2884,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	if(static_cast<uint>(abs(dy)) >= getNumberOfVisibleLines())
 		invalidateRect(&clipRect, false);	// スクロール量が 1 ページ以上であれば全体を再描画
 	else if(dx == 0)	// 垂直方向のみ
-		scrollWindowEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+		scrollEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 	else {	// 先行マージンと編集領域を分けて処理する
 		// 編集領域のスクロール
 		clipRect.left += margins.left;
@@ -2844,7 +2892,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		if(static_cast<uint>(abs(dx)) >= getNumberOfVisibleColumns())
 			invalidateRect(&clipRect, false);	// スクロール量が 1 ページ以上であれば全体を再描画
 		else
-			scrollWindowEx(-dx * getScrollRate(true) * renderer_->getAverageCharacterWidth(),
+			scrollEx(-dx * getScrollRate(true) * renderer_->getAverageCharacterWidth(),
 				-dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		// 垂直ルーラのスクロール
 		if(dy != 0) {
@@ -2855,7 +2903,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 				clipRect.right = clientRect.right;
 				clipRect.left = clipRect.right - verticalRulerDrawer_->getWidth();
 			}
-			scrollWindowEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+			scrollEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		}
 	}
 
@@ -2864,7 +2912,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	if(imeCompositionActivated_)
 		updateIMECompositionWindowPosition();
 	if(redraw)
-		updateWindow();
+		update();
 	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, dx != 0, dy != 0);
 }
 
@@ -3028,10 +3076,10 @@ void TextViewer::updateMemoryDeviceContext() {
 		needRecreate = true;
 
 	if(needRecreate) {
-		memDC_.selectObject(oldLineBitmap_);
+		memDC_->selectObject(oldLineBitmap_);
 		lineBitmap_.deleteObject();
 		lineBitmap_.createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch());	// 少し大きめに...
-		memDC_.selectObject(lineBitmap_);
+		memDC_->selectObject(lineBitmap_);
 	}
 }
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
@@ -3053,7 +3101,7 @@ void TextViewer::updateCaretPosition() {
 	else if(caretShape_.orientation == RIGHT_TO_LEFT
 			|| renderer_->getLineLayout(caret_->getLineNumber()).getBidiEmbeddingLevel(caret_->getColumnNumber()) % 2 == 1)
 		pt.x -= caretShape_.width;
-	setCaretPos(pt);
+	setCaretPosition(pt);
 }
 
 /// Moves the IME form to valid position.
@@ -3100,7 +3148,7 @@ void TextViewer::updateScrollBars() {
 		scroll.nMax = configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum;
 		scroll.nPage = scrollInfo_.horizontal.pageSize;
 		scroll.nPos = scrollInfo_.horizontal.position;
-		setScrollInfo(SB_HORZ, scroll, true);
+		setScrollInformation(SB_HORZ, scroll, true);
 	}
 
 	// 垂直スクロールバー
@@ -3123,7 +3171,7 @@ void TextViewer::updateScrollBars() {
 		scroll.nMax = scrollInfo_.vertical.maximum;
 		scroll.nPage = scrollInfo_.vertical.pageSize;
 		scroll.nPos = scrollInfo_.vertical.position;
-		setScrollInfo(SB_VERT, scroll, true);
+		setScrollInformation(SB_VERT, scroll, true);
 	}
 
 	scrollInfo_.changed = isFrozen();
@@ -3222,7 +3270,7 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
  */
 TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& view) throw() : view_(view), available_(true) {
 	assert(accLib.isAvailable());
-	accLib.createStdAccessibleObject(view, OBJID_CLIENT, IID_IAccessible, &defaultServer_);
+	accLib.createStdAccessibleObject(view.get(), OBJID_CLIENT, IID_IAccessible, &defaultServer_);
 }
 
 /// @see IAccessible#accDoDefaultAction
@@ -3296,7 +3344,7 @@ void TextViewer::AccessibleProxy::documentAboutToBeChanged(const Document&) {
 /// @see Document#IListener#documentChanged
 void TextViewer::AccessibleProxy::documentChanged(const Document&, const DocumentChange&) {
 	assert(accLib.isAvailable());
-	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_, OBJID_CLIENT, CHILDID_SELF);
+	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_.get(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
@@ -3372,7 +3420,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
-		return accLib.accessibleObjectFromWindow(view_, OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
+		return accLib.accessibleObjectFromWindow(view_.get(), OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
 	return defaultServer_->get_accParent(ppdispParent);
 }
 
@@ -3402,9 +3450,9 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 		return E_INVALIDARG;
 	pvarState->vt = VT_I4;
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
-	if(!view_.isWindowVisible())
+	if(!view_.isVisible())
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(view_.getTopWindow() == ::GetActiveWindow())
+	if(view_.getTop()->get() == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
 	if(view_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
@@ -3460,15 +3508,15 @@ bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
 	HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(get(), GWLP_HINSTANCE)));
 	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
 
-	if(!ui::CustomControl<AutoScrollOriginMark>::create(view,
+	if(!ui::CustomControl<AutoScrollOriginMark>::create(view.get(),
 			rc, 0, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW))
 		return false;
 	modifyStyleEx(0, WS_EX_LAYERED);	// いきなり CreateWindowEx(WS_EX_LAYERED) とすると NT 4.0 で失敗する
 
 	HRGN rgn = ::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1);
-	setWindowRgn(rgn, false);
+	setRegion(rgn, false);
 	::DeleteObject(rgn);
-	setLayeredWindowAttributes(::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
+	setLayeredAttributes(::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 
 	return true;
 }
@@ -3541,10 +3589,10 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		dout << L"ruler rect : " << paintRect.top << L" ... " << paintRect.bottom << L"\n";
+		DumpContext() << L"ruler rect : " << paintRect.top << L" ... " << paintRect.bottom << L"\n";
 #endif /* _DEBUG */
 
-	const int savedCookie = dc.saveDC();
+	const int savedCookie = dc.save();
 	const int imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
 
 	// まず、描画領域全体を描いておく
@@ -3637,7 +3685,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		}
 		y += static_cast<int>(renderer.getLineLayout(line++).getNumberOfSublines() * renderer.getLinePitch());
 	}
-	dc.restoreDC(savedCookie);
+	dc.restore(savedCookie);
 }
 
 /// ドキュメントの現在の最終行番号が10進数で何文字になるかを返す
@@ -4116,9 +4164,9 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 	solidSize.cy = updator_->getTextViewer().getTextRenderer().getLineHeight();
 	orientation = LEFT_TO_RIGHT;
 
-	HIMC imc = ::ImmGetContext(updator_->getTextViewer());
+	HIMC imc = ::ImmGetContext(updator_->getTextViewer().get());
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
-	::ImmReleaseContext(updator_->getTextViewer(), imc);
+	::ImmReleaseContext(updator_->getTextViewer().get(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const ::RGBQUAD red = {0xFF, 0xFF, 0x80, 0x00};
 		bitmap.reset(new Bitmap);

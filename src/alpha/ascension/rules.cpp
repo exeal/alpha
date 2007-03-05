@@ -651,6 +651,7 @@ void LexicalPartitioner::doInstall() throw() {
 
 void LexicalPartitioner::dump() const {
 #ifdef _DEBUG
+	win32::DumpContext dout;
 	dout << "LexicalPartitioner dump start:\n";
 	for(size_t i = 0; i < partitions_.getSize(); ++i) {
 		const Partition& p = *partitions_[i];

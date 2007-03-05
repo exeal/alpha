@@ -18,8 +18,8 @@
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::encodings;
-using namespace manah::windows;
-using namespace manah::windows::io;
+using namespace manah::win32;
+using namespace manah::win32::io;
 using namespace manah::com;
 using namespace std;
 
@@ -231,7 +231,7 @@ inline void text::internal::OperationUnit::push(InsertOperation& operation, cons
 	operations_.push(&operation);
 }
 
-/// 1つの操作をプッシュ (@a operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
+/// 1 つの操作をプッシュ (@a operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
 inline void text::internal::OperationUnit::push(DeleteOperation& operation, const Document& document) {
 	// 直前の操作も削除であれば、範囲を拡大することで1つにまとめようとする
 	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
@@ -302,7 +302,7 @@ inline size_t Document::UndoManager::getRedoBufferLength() const throw() {
 	return redoStack_.size();
 }
 
-/// アンドゥ可能な回数を返す
+/// Returns the number of the undoable operations.
 inline size_t Document::UndoManager::getUndoBufferLength() const throw() {
 	return undoStack_.size();
 }
@@ -348,7 +348,7 @@ template<class Operation> inline void Document::UndoManager::pushUndoBuffer(Oper
 	}
 }
 
-/// リドゥを1回行う
+/// Redoes one operation.
 inline bool Document::UndoManager::redo(Position& resultPosition) {
 	if(redoStack_.empty())
 		return false;
@@ -367,7 +367,7 @@ inline bool Document::UndoManager::redo(Position& resultPosition) {
 	return succeeded;
 }
 
-/// アンドゥを1回行う
+/// Undoes one operation.
 inline bool Document::UndoManager::undo(Position& resultPosition) {
 	if(undoStack_.empty())
 		return false;
@@ -580,6 +580,29 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
 
 // Document //////////////////////////////////////////////////////////////////
 
+/**
+ * @class ascension::text::Document
+ * A document manages a text content and supports text manipulations.
+ *
+ * All text content is represented in UTF-16. To treat this as UTF-32, use
+ * @c DocumentCharacterIterator.
+ *
+ * A document manages also its operation history, encoding, and line-breaks
+ * and writes to or reads the content from files or streams.
+ *
+ * @c #insertText inserts a text string into any position.
+ * @c #deleteText deletes any text region.
+ * Other classes also provide text manipulation for the document.
+ *
+ * A document can be devides into a sequence of semantic segments called partition.
+ * Document partitioners expressed by @c DocumentPartitioner class define these
+ * partitioning. Each partitions have its content type and region (see @c DocumentPartition).
+ * To set the new partitioner, use @c #setPartitioner method. The partitioner's ownership
+ * will be transferred to the document.
+ *
+ * @see Viewer, IDocumentPartitioner, Point, EditPoint
+ */
+
 #define CHECK_FIRST_MODIFICATION()																\
 	if(!isModified() && timeStampDirector_ != 0) {												\
 		::FILETIME realTimeStamp;																\
@@ -683,9 +706,8 @@ void Document::beginSequentialEdit() throw() {
 }
 
 /**
- * Makes the specified path name real.
- * If the path is UNC, the case of @a pathName will not be fixed.
- * All slashes will be replaced by backslashes.
+ * Makes the specified path name real. If the path is UNC, the case of @a pathName will not be
+ * fixed. All slashes will be replaced by backslashes.
  * @param pathName the absolute path name
  * @param[out] dest the result real path name
  * @return false if @a pathName is not exist or invalid
@@ -738,8 +760,9 @@ bool Document::canonicalizePathName(const WCHAR* pathName, WCHAR* dest) throw() 
 }
 
 /**
- * Checks the last modified date/time of the bound file and verifies if the other modified the file.
- * If the file is modified, the listener's @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
+ * Checks the last modified date/time of the bound file and verifies if the other modified the
+ * file. If the file is modified, the listener's
+ * @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
  * @return the value which the listener returned or true if the listener is not set
  */
 bool Document::checkTimeStamp() {

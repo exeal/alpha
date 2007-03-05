@@ -17,7 +17,7 @@ namespace alpha {
 
 	namespace ui {
 		///	[コマンドの実行] ダイアログ
-		class ExecuteCommandDlg : public manah::windows::ui::FixedIDDialog<IDD_DLG_EXECUTECOMMAND> {
+		class ExecuteCommandDlg : public manah::win32::ui::FixedIDDialog<IDD_DLG_EXECUTECOMMAND> {
 			// コンストラクタ
 		public:
 			ExecuteCommandDlg(Alpha& app, HFONT ioFont);
@@ -47,9 +47,9 @@ namespace alpha {
 			bool executing_;	// コマンド実行中
 			bool interrupted_;
 
-			manah::windows::ui::ComboBox commandCombobox_;
-			manah::windows::ui::Edit outputTextbox_;
-			manah::windows::ui::Edit inputTextbox_;
+			manah::win32::ui::ComboBox commandCombobox_;
+			manah::win32::ui::Edit outputTextbox_;
+			manah::win32::ui::Edit inputTextbox_;
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_COMBO_COMMAND, commandCombobox_)
 				BIND_CONTROL(IDC_EDIT_OUTPUT, outputTextbox_)

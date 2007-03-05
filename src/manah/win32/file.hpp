@@ -6,7 +6,7 @@
 #include "windows.hpp"
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace io {
 
 template<bool autoClose> class KernelHandle : public Noncopyable {
@@ -38,8 +38,8 @@ public:
 		DWORD flagsAndAttributes, ::SECURITY_ATTRIBUTES* securityAttributes = 0, HANDLE templateFile = 0);
 	virtual ~File();
 	// 演算子 (単純型以外では使ってはならない)
-	template<class T> File&	operator <<(const T& buffer) {write<T>(buffer); return *this;}
-	template<class T> File&	operator >>(T& buffer) {read<T>(buffer); return *this;}
+	template<class T> File&	operator<<(const T& buffer) {write<T>(buffer); return *this;}
+	template<class T> File&	operator>>(T& buffer) {read<T>(buffer); return *this;}
 	// 構築
 	virtual void				abort();
 	virtual std::auto_ptr<File>	duplicate() const;
@@ -373,6 +373,6 @@ inline std::auto_ptr<typename MemoryMappedFile<DataType, noThrow>::View> MemoryM
 	}
 }
 
-}}} // namespace manah::windows::io
+}}} // namespace manah.win32.io
 
-#endif /* MANAH_FILE_HPP */
+#endif /* !MANAH_FILE_HPP */

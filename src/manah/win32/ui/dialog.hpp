@@ -8,7 +8,7 @@
 #include <map>
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 class BaseDialog {
@@ -17,63 +17,63 @@ protected:
 };
 
 class Dialog : public Window, public BaseDialog, public Noncopyable {
-	// コンストラクタ
 public:
+	// constructors
 	Dialog();
 	Dialog(HINSTANCE hinstance, const ResourceID& id);
 	virtual ~Dialog();
-	
-	// メソッド
-public:
-	bool	addToolTip(HWND control, const TCHAR* text = LPSTR_TEXTCALLBACK);
-	bool	addToolTip(UINT controlID, const TCHAR* text = LPSTR_TEXTCALLBACK);
-	bool	checkDlg2StateButton(int buttonID, bool check = true);
-	bool	checkDlgButton(int buttonID, UINT check);
-	bool	checkRadioButton(int firstButtonID, int lastButtonID, int buttonID);
-	void	create(HINSTANCE instance, const ResourceID& id);
+	void	initialize(HINSTANCE instance, const ResourceID& id);
+	// open/close
 	INT_PTR	doModal(HWND parent);
 	bool	doModeless(HWND parent, bool show = true);
-	void	endDialog(int result);
+	void	end(int result);
+	// control attributes
+	bool	addToolTip(HWND control, const TCHAR* text = LPSTR_TEXTCALLBACK);
+	bool	addToolTip(UINT controlID, const TCHAR* text = LPSTR_TEXTCALLBACK);
+	bool	check2StateButton(int buttonID, bool check = true);
+	bool	checkButton(int buttonID, UINT check);
+	bool	checkRadioButton(int firstButtonID, int lastButtonID, int buttonID);
 	int		getCheckedRadioButton(int firstButtonID, int lastButtonID) const;
-	DWORD	getDefID() const;
-	HWND	getDlgItem(int itemID) const;
-	int		getDlgItemInt(int itemID, bool* translated = 0, bool isSigned = true) const;
-	int		getDlgItemText(int itemID, TCHAR* text, int maxLength) const;
-	HWND	getNextDlgGroupItem(HWND control, bool previous = false) const;
-	HWND	getNextDlgGroupItem(int itemID, bool previous = false) const;
-	HWND	getNextDlgTabItem(HWND control, bool previous = false) const;
-	HWND	getNextDlgTabItem(int itemID, bool previous = false) const;
-	bool	isDialogMessage(const MSG& msg);
-	UINT	isDlgButtonChecked(int buttonID) const;
-	void	nextDlgCtrl() const;
-	void	prevDlgCtrl() const;
-	LRESULT	sendDlgItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam);
-	void	setDefID(UINT id);
-	void	setDlgItemInt(int itemID, UINT value, bool isSigned = true);
-	void	setDlgItemText(int itemID, const TCHAR* text);
+	DWORD	getDefaultID() const;
+	HWND	getItem(int itemID) const;
+	int		getItemInt(int itemID, bool* translated = 0, bool isSigned = true) const;
+	int		getItemText(int itemID, TCHAR* text, int maxLength) const;
+	UINT	isButtonChecked(int buttonID) const;
+	LRESULT	sendItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam);
+	void	setDefaultID(UINT id);
+	void	setItemInt(int itemID, UINT value, bool isSigned = true);
+	void	setItemText(int itemID, const TCHAR* text);
+	// control iteration
+	HWND	getNextGroupItem(HWND control, bool previous = false) const;
+	HWND	getNextGroupItem(int itemID, bool previous = false) const;
+	HWND	getNextTabItem(HWND control, bool previous = false) const;
+	HWND	getNextTabItem(int itemID, bool previous = false) const;
+	void	nextControl() const;
+	void	previousControl() const;
+	// miscellaneous
+	bool	isDialogMessage(const ::MSG& msg);
 protected:
 	virtual LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
 private:
 	static INT_PTR CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK	dummyProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {return false;}
 
-	// メッセージハンドラ
 protected:
 	/* ? need to any implement ? */
-	virtual void	onClose() {toolTips_.destroyWindow(); endDialog(IDCLOSE);}			// WM_CLOSE
+	virtual void	onClose() {toolTips_.destroy(); end(IDCLOSE);}						// WM_CLOSE
 	virtual bool	onCommand(WORD id, WORD notifyCode, HWND control);					// WM_COMMAND
 	virtual bool	onInitDialog(HWND focusedWindow, LPARAM initParam) {return true;}	// WM_INITDIALOG
-	virtual void	onOK() {endDialog(IDOK);}											// IDOK
-	virtual void	onCancel() {endDialog(IDCANCEL);}									// IDCANCEL
+	virtual void	onOK() {end(IDOK);}													// IDOK
+	virtual void	onCancel() {end(IDCANCEL);}											// IDCANCEL
 	/* ? noneed to implement ? */
 	virtual void	onActivate(UINT state, HWND previousWindow, bool minimized) {}		// WM_ACTIVATE
 
-	// データメンバ
 private:
-	HINSTANCE		hinstance_;
-	const TCHAR*	templateName_;
-	bool			modeless_;
-	ToolTipCtrl		toolTips_;
+	using Window::create;
+	HINSTANCE hinstance_;
+	const TCHAR* templateName_;
+	bool modeless_;
+	ToolTipCtrl toolTips_;
 };
 
 
@@ -90,7 +90,7 @@ private:
 
 #define BEGIN_CONTROL_BINDING()	private: void bindControls() {
 
-#define BIND_CONTROL(id, name)	name.attach(getDlgItem(id));
+#define BIND_CONTROL(id, name)	name.attach(getItem(id));
 
 #define END_CONTROL_BINDING()	}
 
@@ -101,7 +101,7 @@ inline Dialog::Dialog() : hinstance_(0), templateName_(0), modeless_(false) {}
 
 inline Dialog::Dialog(HINSTANCE hinstance, const ResourceID& id) : hinstance_(hinstance), templateName_(id.name), modeless_(false) {}
 
-inline Dialog::~Dialog() {if(isWindow()) destroyWindow(); setHandle(0);}
+inline Dialog::~Dialog() {if(isWindow()) destroy();}
 
 inline bool Dialog::addToolTip(HWND control, const TCHAR* text /* = LPSTR_TEXTCALLBACK */) {
 	assertValidAsWindow();
@@ -111,21 +111,14 @@ inline bool Dialog::addToolTip(HWND control, const TCHAR* text /* = LPSTR_TEXTCA
 }
 
 inline bool Dialog::addToolTip(UINT controlID, const TCHAR* text /* = LPSTR_TEXTCALLBACK */) {
-	assertValidAsWindow(); return addToolTip(getDlgItem(controlID), text);}
+	assertValidAsWindow(); return addToolTip(getItem(controlID), text);}
 
-inline bool Dialog::checkDlg2StateButton(int buttonID, bool check /* = true */) {
-	return checkDlgButton(buttonID, check ? BST_CHECKED : BST_UNCHECKED);}
+inline bool Dialog::check2StateButton(int buttonID, bool check /* = true */) {return checkButton(buttonID, check ? BST_CHECKED : BST_UNCHECKED);}
 
-inline bool Dialog::checkDlgButton(int buttonID, UINT check) {
-	assertValidAsWindow(); return toBoolean(::CheckDlgButton(get(), buttonID, check));}
+inline bool Dialog::checkButton(int buttonID, UINT check) {assertValidAsWindow(); return toBoolean(::CheckDlgButton(get(), buttonID, check));}
 
 inline bool Dialog::checkRadioButton(int firstButtonID, int lastButtonID, int buttonID) {
 	assertValidAsWindow(); return toBoolean(::CheckRadioButton(get(), firstButtonID, lastButtonID, buttonID));}
-
-inline void Dialog::create(HINSTANCE hinstance, const ResourceID& id) {
-	hinstance_ = hinstance;
-	templateName_ = id.name;
-}
 
 inline LRESULT Dialog::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
 	if(preTranslateMessage(message, wParam, lParam))
@@ -141,18 +134,18 @@ inline LRESULT Dialog::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		return onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
 	case WM_CONTEXTMENU: {
-			POINT pt;
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			if(onContextMenu(reinterpret_cast<HWND>(wParam), pt))
-				return true;
-		}
+		::POINT p;
+		p.x = LOWORD(lParam);
+		p.y = HIWORD(lParam);
+		if(onContextMenu(reinterpret_cast<HWND>(wParam), p))
+			return true;
 		break;
+	}
 	case WM_DESTROY:
 		onDestroy();
 		return true;
 	case WM_DRAWITEM:
-		onDrawItem(static_cast<UINT>(wParam), reinterpret_cast<LPDRAWITEMSTRUCT>(lParam));
+		onDrawItem(static_cast<UINT>(wParam), reinterpret_cast<::DRAWITEMSTRUCT&>(lParam));
 		break;
 	case WM_INITDIALOG:
 		return onInitDialog(reinterpret_cast<HWND>(wParam), lParam);
@@ -160,36 +153,36 @@ inline LRESULT Dialog::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 		onKillFocus(reinterpret_cast<HWND>(wParam));
 		return true;
 	case WM_LBUTTONDOWN: {
-			POINT pt;
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			onLButtonDown(static_cast<UINT>(wParam), pt);
-		}
+		::POINT p;
+		p.x = LOWORD(lParam);
+		p.y = HIWORD(lParam);
+		onLButtonDown(static_cast<UINT>(wParam), p);
 		break;
+	}
 	case WM_LBUTTONDBLCLK: {
-			POINT pt;
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			onLButtonDblClk(static_cast<UINT>(wParam), pt);
-		}
+		::POINT p;
+		p.x = LOWORD(lParam);
+		p.y = HIWORD(lParam);
+		onLButtonDblClk(static_cast<UINT>(wParam), p);
 		break;
+	}
 	case WM_LBUTTONUP: {
-			POINT pt;
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			onLButtonUp(static_cast<UINT>(wParam), pt);
-		}
+		::POINT p;
+		p.x = LOWORD(lParam);
+		p.y = HIWORD(lParam);
+		onLButtonUp(static_cast<UINT>(wParam), p);
 		break;
+	}
 	case WM_MEASUREITEM:
-		onMeasureItem(static_cast<UINT>(wParam), reinterpret_cast<LPMEASUREITEMSTRUCT>(lParam));
+		onMeasureItem(static_cast<UINT>(wParam), reinterpret_cast<::MEASUREITEMSTRUCT&>(lParam));
 		break;
 	case WM_MOUSEMOVE: {
-			POINT pt;
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			onMouseMove(static_cast<UINT>(wParam), pt);
-		}
+		::POINT p;
+		p.x = LOWORD(lParam);
+		p.y = HIWORD(lParam);
+		onMouseMove(static_cast<UINT>(wParam), p);
 		break;
+	}
 	case WM_NOTIFY:
 		return onNotify(static_cast<UINT>(wParam), reinterpret_cast<LPNMHDR>(lParam));
 	case WM_SETCURSOR:
@@ -218,82 +211,81 @@ inline LRESULT Dialog::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 inline INT_PTR Dialog::doModal(HWND parent) {
-	modeless_ = false;
-	return ::DialogBoxParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));
-}
+	modeless_ = false; return ::DialogBoxParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));}
 
 inline bool Dialog::doModeless(HWND parent, bool show /* = true */) {
 	if(HWND handle = ::CreateDialogParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this))) {
 		modeless_ = true;
 		if(show)
-			showWindow(SW_SHOW);
+			Window::show(SW_SHOW);
 		return true;
 	}
 	return false;
 }
 
-inline void Dialog::endDialog(int result) {
+inline void Dialog::end(int result) {
 	assertValidAsWindow();
 	::EndDialog(get(), result);
 	if(modeless_)
-		destroyWindow();
+		destroy();
 }
 
 inline int Dialog::getCheckedRadioButton(int firstButtonID, int lastButtonID) const {
 	assertValidAsWindow();
 	for(int id = firstButtonID; id <= lastButtonID; ++id) {
-		if(isDlgButtonChecked(id) == BST_CHECKED)
+		if(isButtonChecked(id) == BST_CHECKED)
 			return id;
 	}
 	return 0;
 }
 
-inline DWORD Dialog::getDefID() const {return static_cast<DWORD>(const_cast<Dialog*>(this)->sendMessage(DM_GETDEFID));}
+inline DWORD Dialog::getDefaultID() const {return static_cast<DWORD>(const_cast<Dialog*>(this)->sendMessage(DM_GETDEFID));}
 
-inline HWND Dialog::getDlgItem(int itemID) const {assertValidAsWindow(); return ::GetDlgItem(get(), itemID);}
+inline HWND Dialog::getItem(int itemID) const {assertValidAsWindow(); return ::GetDlgItem(get(), itemID);}
 
-inline int Dialog::getDlgItemInt(int itemID, bool* translated /* = 0 */, bool isSigned /* = true */) const {
+inline int Dialog::getItemInt(int itemID, bool* translated /* = 0 */, bool isSigned /* = true */) const {
 	assertValidAsWindow(); return ::GetDlgItemInt(get(), itemID, reinterpret_cast<BOOL*>(translated), isSigned);}
 
-inline int Dialog::getDlgItemText(int itemID, TCHAR* text, int maxLength) const {
+inline int Dialog::getItemText(int itemID, TCHAR* text, int maxLength) const {
 	assertValidAsWindow(); return ::GetDlgItemText(get(), itemID, text, maxLength);}
 
-inline HWND Dialog::getNextDlgGroupItem(HWND control, bool previous /* = false */) const {
+inline HWND Dialog::getNextGroupItem(HWND control, bool previous /* = false */) const {
 	assertValidAsWindow(); return ::GetNextDlgGroupItem(get(), control, previous);}
 
-inline HWND Dialog::getNextDlgGroupItem(int itemID, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgGroupItem(get(), getDlgItem(itemID), previous);
+inline HWND Dialog::getNextGroupItem(int itemID, bool previous /* = false */) const {
+	assertValidAsWindow(); return ::GetNextDlgGroupItem(get(), getItem(itemID), previous);
 }
 
-inline HWND Dialog::getNextDlgTabItem(HWND control, bool previous /* = false */) const {
+inline HWND Dialog::getNextTabItem(HWND control, bool previous /* = false */) const {
 	assertValidAsWindow(); return ::GetNextDlgTabItem(get(), control, previous);}
 
-inline HWND Dialog::getNextDlgTabItem(int itemID, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgTabItem(get(), getDlgItem(itemID), previous);}
+inline HWND Dialog::getNextTabItem(int itemID, bool previous /* = false */) const {
+	assertValidAsWindow(); return ::GetNextDlgTabItem(get(), getItem(itemID), previous);}
 
-inline bool Dialog::isDialogMessage(const MSG& msg) {
-	assertValidAsWindow(); return toBoolean(::IsDialogMessage(get(), const_cast<MSG*>(&msg)));}
+inline void Dialog::initialize(HINSTANCE hinstance, const ResourceID& id) {hinstance_ = hinstance; templateName_ = id.name;}
 
-inline UINT Dialog::isDlgButtonChecked(int buttonID) const {assertValidAsWindow(); return ::IsDlgButtonChecked(get(), buttonID);}
+inline bool Dialog::isDialogMessage(const ::MSG& msg) {assertValidAsWindow(); return toBoolean(::IsDialogMessage(get(), const_cast<MSG*>(&msg)));}
 
-inline void Dialog::nextDlgCtrl() const {assertValidAsWindow(); ::SetFocus(getNextDlgTabItem(getFocus(), false));}
+inline UINT Dialog::isButtonChecked(int buttonID) const {assertValidAsWindow(); return ::IsDlgButtonChecked(get(), buttonID);}
 
-inline void Dialog::prevDlgCtrl() const {assertValidAsWindow(); ::SetFocus(getNextDlgTabItem(getFocus(), true));}
+inline void Dialog::nextControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus()->get(), false));}
 
-inline LRESULT Dialog::sendDlgItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam) {
+inline void Dialog::previousControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus()->get(), true));}
+
+inline LRESULT Dialog::sendItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam) {
 	assertValidAsWindow(); return ::SendDlgItemMessage(get(), itemID, message, wParam, lParam);}
 
-inline void Dialog::setDefID(UINT id) {assertValidAsWindow(); sendMessage(DM_SETDEFID, id);}
+inline void Dialog::setDefaultID(UINT id) {assertValidAsWindow(); sendMessage(DM_SETDEFID, id);}
 
-inline void Dialog::setDlgItemInt(int itemID, UINT value, bool isSigned /* = true */) {
+inline void Dialog::setItemInt(int itemID, UINT value, bool isSigned /* = true */) {
 	assertValidAsWindow(); ::SetDlgItemInt(get(), itemID, value, isSigned);}
 
-inline void Dialog::setDlgItemText(int itemID, const TCHAR* text) {assertValidAsWindow(); ::SetDlgItemText(get(), itemID, text);}
+inline void Dialog::setItemText(int itemID, const TCHAR* text) {assertValidAsWindow(); ::SetDlgItemText(get(), itemID, text);}
 
 inline INT_PTR CALLBACK Dialog::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	if(message == WM_INITDIALOG) {
 		Dialog* instance = reinterpret_cast<Dialog*>(lParam);
-		instance->setHandle(window);
+		instance->reset(window);
 #ifdef _WIN64
 		::SetWindowLongPtr(instance->get(), DWLP_USER, reinterpret_cast<LONG_PTR>(instance));
 #else
@@ -321,6 +313,6 @@ inline bool Dialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	}
 }
 
-}}} // namespace manah::windows::ui
+}}} // namespace manah.win32.ui
 
-#endif /* MANAH_DIALOG_HPP */
+#endif /* !MANAH_DIALOG_HPP */

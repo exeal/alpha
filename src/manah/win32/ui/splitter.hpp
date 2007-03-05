@@ -6,7 +6,7 @@
 #include "window.hpp"
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 class AbstractPane {
@@ -94,19 +94,21 @@ public:
 			minimumPaneWidth_(::GetSystemMetrics(SM_CXMIN)), minimumPaneHeight_(::GetSystemMetrics(SM_CYMIN)),
 			draggingSplitter_(0) {}
 public:
-	void		activateNextPane() {doActivateNextPane(true);}
-	void		activatePreviousPane() {doActivateNextPane(false);}
-	void		adjustPanes() throw();
-	bool		create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle, Pane& initialPane) throw();
+	// attributes
 	Iterator	enumeratePanes() const throw() {return Iterator(root_);}
 	Pane&		getActivePane() const;
 	uint		getSplitterSize(uint& width, uint& height) const throw() {width = splitterWidth_; height = splitterHeight_;}
 	bool		isSplit(const Pane& pane) const;
-	void		removeActivePane() {unsplit(getActivePane());}
-	void		removeInactivePanes();
 	void		setDefaultActivePane(Pane& pane);
 	void		setPaneMinimumSize(uint width, uint height) throw() {minimumPaneWidth_ = width; minimumPaneHeight_ = height;}
 	void		setSplitterSize(uint width, uint height);
+	// operations
+	void		activateNextPane() {doActivateNextPane(true);}
+	void		activatePreviousPane() {doActivateNextPane(false);}
+	void		adjustPanes() throw();
+	bool		create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle, Pane& initialPane) throw();
+	void		removeActivePane() {unsplit(getActivePane());}
+	void		removeInactivePanes();
 	void		splitNS(Pane& pane, Pane& clone) {split(pane, clone, true);}
 	void		splitWE(Pane& pane, Pane& clone) {split(pane, clone, false);}
 	void		unsplit(Pane& pane);
@@ -143,7 +145,7 @@ private:
 template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::adjustPanes() throw() {
 	::RECT rect;
-	getWindowRect(rect);
+	getRect(rect);
 	::OffsetRect(&rect, -rect.left, -rect.top);
 	root_.adjustPanes(rect, frameWidth_, frameHeight_);
 	invalidateRect(0);
@@ -185,7 +187,7 @@ template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::drawSizingSplitterXorBar() {
 	::RECT rect;
 	const ::RECT& splitterRect = draggingSplitter_->rect_;
-	manah::windows::gdi::WindowDC dc = getWindowDC();
+	manah::win32::gdi::WindowDC dc = getWindowDC();
 
 	// create half tone brush (from MFC)
 	ushort grayPattern[8];
@@ -367,7 +369,7 @@ inline void Splitter<Pane, cdp>::onMouseMove(UINT, const ::POINT& pt) {
 template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline bool Splitter<Pane, cdp>::onSetCursor(HWND window, UINT hitTest, UINT) {
 	if(window == get() && hitTest == HTCLIENT) {
-		const ::POINT pt = getCursorPos();
+		const ::POINT pt = getCursorPosition();
 		if(SplitterItem* splitter = root_.hitTest(pt)) {
 			if(splitter->direction_ != NO_SPLIT) {
 				::SetCursor(::LoadCursor(0, (splitter->direction_ == NS) ? IDC_SIZENS : IDC_SIZEWE));
@@ -763,6 +765,6 @@ inline void internal::SplitterItem<Pane, cdp>::sendMessageToChildren(UINT messag
 		rightBottom.body.splitter->sendMessageToChildren(message);
 }
 
-}}} // namespace manah::windows::ui
+}}} // namespace manah::win32::ui
 
-#endif /* MANAH_SPLITTER_HPP */
+#endif /* !MANAH_SPLITTER_HPP */

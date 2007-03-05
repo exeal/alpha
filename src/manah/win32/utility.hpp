@@ -6,7 +6,7 @@
 #include "dc.hpp"
 
 namespace manah {
-namespace windows {
+namespace win32 {
 
 // this header contains following classes:
 class Point;
@@ -15,12 +15,12 @@ class Rect;
 class FileFind;
 
 
-class Point : public tagPOINT {
+class Point : public ::tagPOINT {
 public:
 	// constructors
 	Point() throw() {}
 	Point(int xValue, int yValue) throw() {x = xValue, y = yValue;}
-	Point(const POINT& pt) throw() {x = pt.x; y = pt.y;}
+	Point(const ::POINT& pt) throw() {x = pt.x; y = pt.y;}
 	Point(const SIZE& size) throw() {x = size.cx; y = size.cy;}
 	Point(DWORD dwPoint) throw() {x = LOWORD(dwPoint); y = HIWORD(dwPoint);}
 	// methods
@@ -30,27 +30,27 @@ public:
 };
 
 
-class Size : public tagSIZE {
+class Size : public ::tagSIZE {
 public:
 	// constructors
 	Size() throw() {}
 	Size(int cxValue, int cyValue) throw() {cx = cxValue; cy = cyValue;}
-	Size(const SIZE& size) throw() {cx = size.cx; cy = size.cy;}
+	Size(const ::SIZE& size) throw() {cx = size.cx; cy = size.cy;}
 	Size(DWORD size) throw() {cx = LOWORD(size); cy = HIWORD(size);}
 };
 
 
-class Rect : public tagRECT {
+class Rect : public ::tagRECT {
 public:
 	// constructors
 	Rect() throw() {}
 	Rect(int l, int t, int r, int b) throw() {setRect(l, t, r, b);}
-	Rect(const RECT& rect) throw() {copyRect(rect);}
-	Rect(const POINT& pt, const SIZE& size) throw() {setRect(pt.x, pt.y, pt.x + size.cx, pt.y + size.cy);}
-	Rect(const POINT& leftTop, const POINT& rightBottom) throw() {setRect(leftTop.x, leftTop.y, rightBottom.x, rightBottom.y);}
+	Rect(const ::RECT& rect) throw() {copyRect(rect);}
+	Rect(const ::POINT& pt, const ::SIZE& size) throw() {setRect(pt.x, pt.y, pt.x + size.cx, pt.y + size.cy);}
+	Rect(const ::POINT& leftTop, const ::POINT& rightBottom) throw() {setRect(leftTop.x, leftTop.y, rightBottom.x, rightBottom.y);}
 	// attributes
-	void	copyRect(const RECT& other) {*this = other;}
-	bool	equalRect(const RECT& other) const throw() {return toBoolean(::EqualRect(this, &other));}
+	void	copyRect(const ::RECT& other) {*this = other;}
+	bool	equalRect(const ::RECT& other) const throw() {return toBoolean(::EqualRect(this, &other));}
 	Point	getCenter() const throw() {return Point(getWidth() / 2, getHeight() / 2);}
 	long	getHeight() const throw() {return bottom - top;}
 	Point	getLeftTop() const throw() {return Point(left, top);}
@@ -59,25 +59,25 @@ public:
 	long	getWidth() const throw() {return right - left;}
 	bool	isRectEmpty() const throw() {return toBoolean(::IsRectEmpty(this));}
 	bool	isRectNull() const throw() {return left == 0 && top == 0 && right == 0 && bottom == 0;}
-	bool	ptInRect(const POINT& pt) const throw() {return toBoolean(::PtInRect(this, pt));}
+	bool	ptInRect(const ::POINT& pt) const throw() {return toBoolean(::PtInRect(this, pt));}
 	void	setRect(int l, int t, int r, int b) throw() {::SetRect(this, l, t, r, b);}
 	void	setRectEmpty() throw() {::SetRectEmpty(this);}
 	// operations
 	void	deflateRect(int x, int y) throw() {inflateRect(-x, -y);}
-	void	deflateRect(const SIZE& size) throw() {inflateRect(-size.cx, -size.cy);}
-	void	deflateRect(const RECT& rect) throw() {setRect(left + rect.left, top + rect.top, right - rect.right, bottom - rect.bottom);}
+	void	deflateRect(const ::SIZE& size) throw() {inflateRect(-size.cx, -size.cy);}
+	void	deflateRect(const ::RECT& rect) throw() {setRect(left + rect.left, top + rect.top, right - rect.right, bottom - rect.bottom);}
 	void	deflateRect(int l, int t, int r, int b) throw() {setRect(left + l, top + t, right - r, bottom - b);}
 	void	inflateRect(int x, int y) throw() {::InflateRect(this, x, y);}
-	void	inflateRect(const SIZE& size) throw() {inflateRect(size.cx, size.cy);}
-	void	inflateRect(const RECT& rect) throw() {setRect(left - rect.left, top - rect.top, right + rect.right, bottom + rect.bottom);}
+	void	inflateRect(const ::SIZE& size) throw() {inflateRect(size.cx, size.cy);}
+	void	inflateRect(const ::RECT& rect) throw() {setRect(left - rect.left, top - rect.top, right + rect.right, bottom + rect.bottom);}
 	void	inflateRect(int l, int t, int r, int b) throw() {setRect(left - l, top - t, right + r, bottom + b);}
-	bool	intersectRect(const RECT& rect1, const RECT& rect2) throw() {toBoolean(::IntersectRect(this, &rect1, &rect2));}
+	bool	intersectRect(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::IntersectRect(this, &rect1, &rect2));}
 	void	normalizeRect() throw() {if(top > bottom) std::swap(top, bottom); if(left > right) std::swap(left, right);}
 	void	offsetRect(int x, int y) throw() {::OffsetRect(this, x, y);}
-	void	offsetRect(const POINT& pt) throw() {offsetRect(pt.x, pt.y);}
-	void	offsetRect(const SIZE& size) throw() {offsetRect(size.cx, size.cy);}
-	bool	subtractRect(const RECT& rect1, const RECT& rect2) throw() {return toBoolean(::SubtractRect(this, &rect1, &rect2));}
-	bool	unionRect(const RECT& rect1, const RECT& rect2) throw() {toBoolean(::UnionRect(this, &rect1, &rect2));}
+	void	offsetRect(const ::POINT& pt) throw() {offsetRect(pt.x, pt.y);}
+	void	offsetRect(const ::SIZE& size) throw() {offsetRect(size.cx, size.cy);}
+	bool	subtractRect(const ::RECT& rect1, const ::RECT& rect2) throw() {return toBoolean(::SubtractRect(this, &rect1, &rect2));}
+	bool	unionRect(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::UnionRect(this, &rect1, &rect2));}
 };
 
 
@@ -87,14 +87,14 @@ public:
 	FileFind() : find_(0), found_(false) {}
 	~FileFind() {close();}
 	// attributes
-	void						getCreationTime(FILETIME& timeStamp) const throw();
+	void						getCreationTime(::FILETIME& timeStamp) const throw();
 	std::basic_string<TCHAR>	getFileName() const throw();
 	std::basic_string<TCHAR>	getFilePath() const;
 	ULONGLONG					getFileSize() const throw();
 	std::basic_string<TCHAR>	getFileTitle() const;
 	std::basic_string<TCHAR>	getFileUrl() const;
-	void						getLastAccessTime(FILETIME& timeStamp) const throw();
-	void						getLastWriteTime(FILETIME& timeStamp) const throw();
+	void						getLastAccessTime(::FILETIME& timeStamp) const throw();
+	void						getLastWriteTime(::FILETIME& timeStamp) const throw();
 	std::basic_string<TCHAR>	getRoot() const throw();
 	bool						isArchived() const throw();
 	bool						isCompressed() const throw();
@@ -113,7 +113,7 @@ public:
 
 private:
 	HANDLE find_;
-	WIN32_FIND_DATA wfd_;
+	::WIN32_FIND_DATA wfd_;
 	bool found_;
 };
 
@@ -161,7 +161,7 @@ inline std::basic_string<TCHAR> FileFind::getFilePath() const throw() {
 
 inline ULONGLONG FileFind::getFileSize() const throw() {
 	assert(found_);
-	ULARGE_INTEGER size = {0};
+	::ULARGE_INTEGER size = {0};
 	size.HighPart = wfd_.nFileSizeHigh;
 	size.LowPart = wfd_.nFileSizeLow;
 	return size.QuadPart;
@@ -215,6 +215,6 @@ inline bool FileFind::isTemporary() const throw() {return matchesMask(FILE_ATTRI
 
 inline bool FileFind::matchesMask(DWORD mask) const throw() {assert(found_); return toBoolean(wfd_.dwFileAttributes & mask);}
 
-}} // namespace manah::windows
+}} // namespace manah.win32
 
 #endif /* !MANAH_UTILITY_HPP */

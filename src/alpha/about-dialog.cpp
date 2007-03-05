@@ -14,7 +14,7 @@ namespace {
 	const wchar_t PROJECT_PAGE_URL[] = L"http://sourceforge.jp/projects/alpha/";
 }
 
-
+/// @see Dialog#onCommand
 bool AboutDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LINK_HOMEPAGE) {
 		::ShellExecuteW(0, 0, HOME_PAGE_URL, 0, 0, SW_SHOWNORMAL);
@@ -27,18 +27,19 @@ bool AboutDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
+/// @see Dialog#onInitDialog
 bool AboutDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
-	homePageLink_.create(*this, ::GetModuleHandle(0), IDC_LINK_HOMEPAGE);
-	homePageLink_.setWindowText(HOME_PAGE_URL);
-	homePageLink_.setWindowPos(0, 88, 98, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
-	sourceForgeLink_.create(*this, ::GetModuleHandle(0), IDC_LINK_SOURCEFORGE);
-	sourceForgeLink_.setWindowText(PROJECT_PAGE_URL);
-	sourceForgeLink_.setWindowPos(0, 88, 114, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
+	homePageLink_.create(get(), ::GetModuleHandle(0), IDC_LINK_HOMEPAGE);
+	homePageLink_.setText(HOME_PAGE_URL);
+	homePageLink_.setPosition(0, 88, 98, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
+	sourceForgeLink_.create(get(), ::GetModuleHandle(0), IDC_LINK_SOURCEFORGE);
+	sourceForgeLink_.setText(PROJECT_PAGE_URL);
+	sourceForgeLink_.setPosition(0, 88, 114, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 
-	addToolTip(homePageLink_, L"Home page");
-	addToolTip(sourceForgeLink_, L"Project page");
+	addToolTip(homePageLink_.get(), L"Home page");
+	addToolTip(sourceForgeLink_.get(), L"Project page");
 
 	return true;
 }

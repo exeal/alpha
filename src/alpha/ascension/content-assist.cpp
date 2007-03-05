@@ -39,7 +39,7 @@ void CompletionWindow::abort() {
 	if(isRunning()) {
 		running_ = false;
 		contextEnd_->adaptToDocument(false);
-		showWindow(SW_HIDE);
+		show(SW_HIDE);
 	}
 }
 
@@ -70,14 +70,14 @@ void CompletionWindow::complete() {
  * @return succeeded or not
  */
 bool CompletionWindow::create() {
-	using namespace manah::windows::ui;
+	using namespace manah::win32::ui;
 
-	if(ListBox::create(viewer_, DefaultWindowRect(), 0, 0,
+	if(ListBox::create(viewer_.get(), DefaultWindowRect(), 0, 0,
 			WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | LBS_SORT,
 			WS_EX_DLGMODALFRAME | WS_EX_NOPARENTNOTIFY | WS_EX_TOOLWINDOW)
-			&& subclassWindow()) {
+			&& subclass()) {
 		updateDefaultFont();
-		setWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+		setPosition(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 #if 0
 		// 影を付けてみたりする...
@@ -106,9 +106,9 @@ LRESULT CompletionWindow::dispatchEvent(UINT message, WPARAM wParam, LPARAM lPar
 		complete();
 		return true;
 	case WM_LBUTTONDOWN: {	// 何で私が実装しなきゃならんのだ
-			::POINT		pt = {LOWORD(lParam), HIWORD(lParam)};
-			bool		outside;
-			const int	sel = itemFromPoint(pt, outside);
+			::POINT pt = {LOWORD(lParam), HIWORD(lParam)};
+			bool outside;
+			const int sel = itemFromPoint(pt, outside);
 			if(!outside)
 				setCurSel(sel);
 		}
@@ -182,7 +182,7 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 
 /// Updates the default font with system parameter.
 void CompletionWindow::updateDefaultFont() {
-	manah::windows::AutoZeroCB<::NONCLIENTMETRICSW> ncm;
+	manah::win32::AutoZeroCB<::NONCLIENTMETRICSW> ncm;
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
 	if(defaultFont_ != 0 && isWindow() && getFont() == defaultFont_) {

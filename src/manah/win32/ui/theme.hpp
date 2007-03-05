@@ -6,10 +6,10 @@
 #include <uxtheme.h>
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
-	class Theme : public HandleHolder<HTHEME> {
+	class Theme : public Handle<HTHEME, ::CloseThemeData> {
 	public:
 		// constructors
 		explicit Theme(HTHEME handle = 0) throw();
@@ -46,41 +46,41 @@ namespace ui {
 	};
 
 
-	Theme::Theme(HTHEME handle /* = 0 */) throw() : HandleHolder<HTHEME>(handle) {}
+	Theme::Theme(HTHEME handle /* = 0 */) throw() : HandleHolder<HTHEME, ::CloseThemeData>(handle) {}
 
 	HRESULT Theme::close() {
-		HRESULT hr = ::CloseThemeData(getHandle());
+		HRESULT hr = ::CloseThemeData(get());
 		if(SUCCEEDED(hr))
-			setHandle(0);
+			release();
 		return hr;
 	}
 
 	HRESULT Theme::drawBackground(HDC dc, int partID, int stateID, const ::RECT& rect, const ::RECT* clipRect /* = 0 */) {
-		assert(!isNull()); return ::DrawBackground(getHandle(), dc, partID, stateID, &rect, clipRect);}
+		assert(get() != 0); return ::DrawBackground(get(), dc, partID, stateID, &rect, clipRect);}
 
 	HRESULT Theme::drawBackground(HDC dc, int partID, int stateID, const ::RECT& rect, const ::DTBGOPTS* options /* = 0 */) {
-		assert(!isNull()); return ::DrawBackgroundEx(getHandle(), dc, partID, stateID, &rect, options);}
+		assert(get() != 0); return ::DrawBackgroundEx(get(), dc, partID, stateID, &rect, options);}
 
 	HRESULT Theme::drawEdge(HDC dc, int partID, int stateID, const ::RECT& destRect, UINT edge, UINT flags, ::RECT* contentRect /* = 0 */) {
-		assert(!isNull()); return ::DrawThemeEdge(getHandle(), dc, partID, stateID, &destRect, edge, flags, contentRect);}
+		assert(get() != 0); return ::DrawThemeEdge(get(), dc, partID, stateID, &destRect, edge, flags, contentRect);}
 
 	HRESULT Theme::drawIcon(HDC dc, int partID, int stateID, const ::RECT& rect, HIMAGELIST imageList, int index) {
-		assert(!isNull()); return ::DrawThemeIcon(getHandle(), dc, partID, stateID, &rect, imageList, index);}
+		assert(get() != 0); return ::DrawThemeIcon(get(), dc, partID, stateID, &rect, imageList, index);}
 
 	HRESULT	Theme::drawText(HDC dc, int partID, int stateID, const WCHAR* text, int charCount, DWORD flags, DWORD flags2, const ::RECT& rect) {
-		assert(!isNull()); return ::DrawThemeText(getHandle(), dc, partID, stateID, text, charCount, flags, flags2, &rect);}
+		assert(get() != 0); return ::DrawThemeText(get(), dc, partID, stateID, text, charCount, flags, flags2, &rect);}
 
 	HRESULT Theme::getBackgroundContentRect(HDC dc, int partID, int stateID, const ::RECT& bounding, ::RECT& contentRect) const {
-		assert(!isNull()); return ::GetThemeBackgroundContentRect(getHandle(), dc, partID, stateID, &bounding, &contentRect);}
+		assert(get() != 0); return ::GetThemeBackgroundContentRect(get(), dc, partID, stateID, &bounding, &contentRect);}
 
 	HRESULT Theme::getBackgroundExtent(HDC dc, int partID, int stateID, const ::RECT& contentRect, ::RECT& extentRect) const {
-		assert(!isNull()); return ::GetThemeBackgroundExtent(getHandle(), dc, partID, stateID, &contentRect, &extentRect);}
+		assert(get() != 0); return ::GetThemeBackgroundExtent(get(), dc, partID, stateID, &contentRect, &extentRect);}
 
 	HRESULT Theme::getBackgroundRegion(HDC dc, int partID, int stateID, const ::RECT& rect, HRGN& region) const {
-		assert(!isNull()); return ::GetThemeBackgroundRegion(getHandle(), dc, partID, stateID, &rect, &region);}
+		assert(get() != 0); return ::GetThemeBackgroundRegion(get(), dc, partID, stateID, &rect, &region);}
 
 	HRESULT Theme::getBool(int partID, int stateID, int propertyID, bool& value) const {
-		assert(!isNull());
+		assert(get() != 0);
 		BOOL temp;
 		const HRESULT hr = ::GetThemeBool(partID, stateID, propertyID, &value);
 		value = toBoolean(temp);
@@ -88,50 +88,50 @@ namespace ui {
 	}
 
 	HRESULT Theme::getColor(int partID, int stateID, int propertyID, COLORREF& color) const {
-		assert(!isNull()); return ::GetThemeColor(getHandle(), partID, stateID, propertyID, &color);}
+		assert(get() != 0); return ::GetThemeColor(get(), partID, stateID, propertyID, &color);}
 
 	HRESULT Theme::getEnumValue(int partID, int stateID, int propertyID, int& value) const {
-		assert(!isNull()); return ::GetThemeEnumValue(getHandle(), partID, stateID, propertyID, &value);}
+		assert(get() != 0); return ::GetThemeEnumValue(get(), partID, stateID, propertyID, &value);}
 
 	HRESULT Theme::getInt(int partID, int stateID, int propertyID, int& value) const {
-		assert(!isNull()); return ::GetThemeInt(getHandle(), partID, stateID, propertyID, &color);}
+		assert(get() != 0); return ::GetThemeInt(get(), partID, stateID, propertyID, &color);}
 
 	HRESULT Theme::getMetric(HDC dc, int partID, int stateID, int propertyID, int& value) const {
-		assert(!isNull()); return ::GetThemeMetric(getHandle(), dc, partID, stateID, propertyID, &value);}
+		assert(get() != 0); return ::GetThemeMetric(get(), dc, partID, stateID, propertyID, &value);}
 
 	HRESULT Theme::getPartSize(HDC dc, int partID, int stateID, ::RECT* rect, ::THEMESIZE type, ::SIZE& size) const {
-		assert(!isNull()); return ::GetThemePartSize(getHandle(), dc, partID, stateID, rect, type, &size);}
+		assert(get() != 0); return ::GetThemePartSize(get(), dc, partID, stateID, rect, type, &size);}
 
 	HRESULT Theme::getPosition(int partID, int stateID, int propertyID, ::POINT& pt) const {
-		assert(!isNull()); return ::GetThemePosition(getHandle(), partID, stateID, propertyID, &pt);}
+		assert(get() != 0); return ::GetThemePosition(get(), partID, stateID, propertyID, &pt);}
 
 	HRESULT Theme::getString(int partID, int stateID, int propertyID, WCHAR* buffer, int maxBufferChars) const {
-		assert(!isNull()); return ::GetThemeString(getHandle(), partID, stateID, propertyID, buffer, maxBufferChars);}
+		assert(get() != 0); return ::GetThemeString(get(), partID, stateID, propertyID, buffer, maxBufferChars);}
 
 	HRESULT Theme::getTextExtent(HDC dc, int partID, int stateID,
 			const WCHAR* text, int charCount, DWORD flags, const ::RECT* bounding, ::RECT& extentRect) const {
-		assert(!isNull()); return ::GetThemeTextExtent(dc, partID, stateID, text, charCount, flags, bounding, &extentRect);}
+		assert(get() != 0); return ::GetThemeTextExtent(dc, partID, stateID, text, charCount, flags, bounding, &extentRect);}
 
 	HRESULT Theme::getTextMetrics(HDC dc, int partID, int stateID, ::TEXTMETRICW& textMetric) const {
 #ifdef UNICODE
-		assert(!isNull()); return ::GetThemeTextMetrics(getHandle(), dc, partID, stateID, &textMetric);
+		assert(get() != 0); return ::GetThemeTextMetrics(get(), dc, partID, stateID, &textMetric);
 #else
-		assert(!isNull()); return ::GetThemeTextMetrics(getHandle(), dc, partID, stateID, reinterpret_cast<::TEXTMETRIC>(&textMetric));
+		assert(get() != 0); return ::GetThemeTextMetrics(get(), dc, partID, stateID, reinterpret_cast<::TEXTMETRIC>(&textMetric));
 #endif
 	}
 
 	HRESULT Theme::hitTestBackground(HDC dc, int partID, int stateID,
 			DWORD options, const ::RECT& rect, HRGN region, ::POINT pt, WORD& result) const {
-		assert(!isNull()); return HitTestThemeBackground(getHandle(), dc, partID, stateID, options, &rect, region, pt, &result);}
+		assert(get() != 0); return HitTestThemeBackground(get(), dc, partID, stateID, options, &rect, region, pt, &result);}
 
 	bool Theme::isBackgroundPartiallyTransparent(int partID, int stateID) const {
-		assert(!isNull()); return toBoolean(::IsThemeBackgroundPartiallyTransparent(getHandle(), partID, stateID));}
+		assert(get() != 0); return toBoolean(::IsThemeBackgroundPartiallyTransparent(get(), partID, stateID));}
 
 	bool Theme::isPartDefined(int partID, int stateID) const {
-		assert(!isNull()); return toBoolean(::IsThemePartDefined(getHandle(), partID, stateID));}
+		assert(get() != 0); return toBoolean(::IsThemePartDefined(get(), partID, stateID));}
 
 	bool Theme::open(HWND window, const WCHAR* classList) {
-		if(!isNull())
+		if(get() != 0)
 			return false;
 		else if(HTHEME handle = ::OpenThemeData(window, classList)) {
 			setHandle(handle);
@@ -140,6 +140,6 @@ namespace ui {
 		return false;
 	}
 
-}}}	// namespace manah::windows::ui
+}}}	// namespace manah.win32.ui
 
 #endif /* !MANAH_THEME_HPP */

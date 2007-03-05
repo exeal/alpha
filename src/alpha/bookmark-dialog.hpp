@@ -18,7 +18,7 @@ namespace alpha {
 
 	namespace ui {
 		///	[ブックマーク] ダイアログ
-		class BookmarkDialog : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
+		class BookmarkDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
 		public:
 			// コンストラクタ
 			BookmarkDialog(Alpha& app);
@@ -41,7 +41,7 @@ namespace alpha {
 		private:
 			Alpha& app_;
 			std::map<Buffer*, std::size_t> bufferIndices_;	// バッファ -> バッファ番号
-			manah::windows::ui::ListCtrl bookmarksList_;
+			manah::win32::ui::ListCtrl bookmarksList_;
 
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_LIST_BOOKMARKS, bookmarksList_)

@@ -16,10 +16,10 @@
 using namespace alpha;
 using namespace alpha::command;
 using namespace std;
-using namespace manah::windows::io;
+using namespace manah::win32::io;
 
 namespace {
-	using namespace manah::windows::ui;
+	using namespace manah::win32::ui;
 
 	// 一時マクロを記録した XML ファイルを読み込む
 	class TemporaryMacroFileReader : virtual public MSXML2::ISAXContentHandler, virtual public MSXML2::ISAXErrorHandler {
@@ -138,24 +138,24 @@ namespace {
 		const wchar_t* getFileName() const {return fileName_;}
 	protected:
 		bool onCommand(WORD id, WORD notifyCode, HWND control) {
-			if(id == IDC_LIST_MACROS && notifyCode == LBN_DBLCLK
-					&& sendDlgItemMessage(IDC_LIST_MACROS, LB_GETCURSEL, 0, 0L) != LB_ERR)
+			if(id == IDC_LIST_MACROS && notifyCode == LBN_DBLCLK && sendItemMessage(IDC_LIST_MACROS, LB_GETCURSEL, 0, 0L) != LB_ERR)
 				sendMessage(WM_COMMAND, MAKEWPARAM(IDOK, 0), 0);
 			return Dialog::onCommand(id, notifyCode, control);
 		}
 		bool onInitDialog(HWND focusWindow, LPARAM initParam) {
 			Dialog::onInitDialog(focusWindow, initParam);
-			ListBox macros(getDlgItem(IDC_LIST_MACROS));
-			fillTemporaryMacroList(macros, true);
+			ListBox macros;
+			macros.attach(getItem(IDC_LIST_MACROS));
+			fillTemporaryMacroList(macros.get(), true);
 			if(macros.getCount() == 0) {
-				::EnableWindow(getDlgItem(IDOK), false);
-				::EnableWindow(getDlgItem(IDC_BTN_EXECUTE), false);
+				::EnableWindow(getItem(IDOK), false);
+				::EnableWindow(getItem(IDC_BTN_EXECUTE), false);
 			} else
 				macros.setCurSel(0);
 			return true;
 		}
 		void onOK() {
-			ListBox macros(getDlgItem(IDC_LIST_MACROS));
+			ListBox macros(getItem(IDC_LIST_MACROS));
 			const int i = macros.getCurSel();
 
 			if(i != LB_ERR) {
@@ -179,24 +179,24 @@ namespace {
 		bool onCommand(WORD id, WORD notifyCode, HWND control) {
 			if(id == IDC_COMBO_MACROS) {
 				if(notifyCode == CBN_SELCHANGE)
-					::EnableWindow(getDlgItem(IDOK), sendDlgItemMessage(IDC_COMBO_MACROS, CB_GETCURSEL, 0, 0L) != CB_ERR);
+					::EnableWindow(getItem(IDOK), sendItemMessage(IDC_COMBO_MACROS, CB_GETCURSEL, 0, 0L) != CB_ERR);
 				else if(notifyCode == CBN_EDITCHANGE)
-					::EnableWindow(getDlgItem(IDOK), ::GetWindowTextLength(getDlgItem(IDC_COMBO_MACROS)) != 0);
-				else if(notifyCode == CBN_DBLCLK && sendDlgItemMessage(IDC_COMBO_MACROS, CB_GETCURSEL, 0, 0L) != CB_ERR)
+					::EnableWindow(getItem(IDOK), ::GetWindowTextLength(getItem(IDC_COMBO_MACROS)) != 0);
+				else if(notifyCode == CBN_DBLCLK && sendItemMessage(IDC_COMBO_MACROS, CB_GETCURSEL, 0, 0L) != CB_ERR)
 					sendMessage(WM_COMMAND, MAKEWPARAM(IDOK, 0), 0);
 			}
 			return Dialog::onCommand(id, notifyCode, control);
 		}
 		bool onInitDialog(HWND focusWindow, LPARAM initParam) {
 			Dialog::onInitDialog(focusWindow, initParam);
-			fillTemporaryMacroList(ComboBox(getDlgItem(IDC_COMBO_MACROS)), false);
+			fillTemporaryMacroList(getItem(IDC_COMBO_MACROS), false);
 			return true;
 		}
 		void onOK() {
 			::GetModuleFileName(0, fileName_, MAX_PATH);
 			wchar_t* p = ::PathFindFileNameW(fileName_);
 			wcscpy(p, L"tmp-macros\\");
-			getDlgItemText(IDC_COMBO_MACROS, p + 11, MAX_PATH);
+			getItemText(IDC_COMBO_MACROS, p + 11, MAX_PATH);
 			wcscat(p + 11, L".xml");
 			Dialog::onOK();
 		}
@@ -205,6 +205,11 @@ namespace {
 	};
 } // namespace @0
 
+/// Constructor.
+TemporaryMacro::TemporaryMacro() throw() : state_(NEUTRAL), errorHandlingPolicy_(IGNORE_AND_CONTINUE),
+		definingIcon_(static_cast<HICON>(Alpha::getInstance().loadImage(IDR_ICON_TEMPMACRODEFINING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))),
+		pausingIcon_(static_cast<HICON>(Alpha::getInstance().loadImage(IDR_ICON_TEMPMACROPAUSING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))) {
+}
 
 /**
  * 記録されているマクロを実行し、その末尾に追加記録を開始
@@ -222,6 +227,47 @@ void TemporaryMacro::appendDefinition() {
 	definingDefinition_.queryPoints = definition_.queryPoints;
 	startDefinition();
 }
+
+/**
+ * 状態を変える
+ * @param newState 新しい状態
+ */
+void TemporaryMacro::changeState(State newState) throw() {
+	state_ = newState;
+	Alpha& app = Alpha::getInstance();
+
+	// prohibit mouse
+	if(state_ == NEUTRAL || state_ == DEFINING) {
+		using ascension::presentation::Presentation;
+		BufferList& buffers = app.getBufferList();
+		for(size_t i = 0; i < buffers.getCount(); ++i) {
+			Presentation& p = buffers.getAt(i).getPresentation();
+			for(Presentation::TextViewerIterator it = p.getFirstTextViewer(); it != p.getLastTextViewer(); ++it)
+				(*it)->enableMouseOperation(!isDefining());
+		}
+	}
+
+	// update the status bar
+	StatusBar& statusBar = app.getStatusBar();
+	switch(getState()) {
+	case TemporaryMacro::DEFINING:
+		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
+		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
+		statusBar.setIcon(2, definingIcon_.get());
+		break;
+	case TemporaryMacro::PAUSING:
+		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
+		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
+		statusBar.setIcon(2, pausingIcon_.get());
+		break;
+	default:
+		statusBar.setText(2, L"");
+		statusBar.setTipText(2, L"");
+		statusBar.setIcon(2, 0);
+		break;
+	}
+}
+
 
 /// 記録済み、定義中のコマンドリストをクリア
 void TemporaryMacro::clearCommandList(bool definingCommands) {
@@ -382,13 +428,13 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 /// 一時マクロを読み込むためのダイアログを表示する
 void TemporaryMacro::showLoadDialog() {
 	LoadTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow()) == IDOK)
+	if(dlg.doModal(Alpha::getInstance().getMainWindow().get()) == IDOK)
 		load(dlg.getFileName());
 }
 
 /// 一時マクロを保存するためのダイアログを表示する
 void TemporaryMacro::showSaveDialog() {
 	SaveTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow()) == IDOK)
+	if(dlg.doModal(Alpha::getInstance().getMainWindow().get()) == IDOK)
 		save(dlg.getFileName());
 }

@@ -22,6 +22,8 @@ KeyboardMap::KeyboardMap() {
 	}
 	clear();
 	dirty_ = false;
+	assign(BuiltInCommand(CMD_FILE_NEW), KeyCombination('N', KM_CTRL));
+	assign(BuiltInCommand(CMD_VIEW_BUFFERLIST_START), KeyCombination('A', KM_CTRL | KM_SHIFT));
 }
 
 /// デストラクタ
@@ -115,18 +117,17 @@ void KeyboardMap::clear() {
 /**
  * 組み込みコマンドに割り当てられているキーの文字列表現を取得
  * @param id コマンド識別値
- * @param shortName 短い文字列を得る場合 true
  * @return "Ctrl+N" などの文字列表現。登録されていなければ空文字列
  */
-wstring KeyboardMap::getKeyString(CommandID id, bool shortName) const {
+wstring KeyboardMap::getKeyString(CommandID id) const {
 	wstring result;
 	for(KeyModifier firstModifiers = 0; firstModifiers < 8; ++firstModifiers) {
 		for(VirtualKey firstKey = 0; firstKey < 0x0100; ++firstKey) {
 			const FirstKeyMap& firstKeyMap = firstKeyMaps_[firstModifiers][firstKey];
 			if(firstKeyMap.command != 0
 					&& firstKeyMap.command->isBuiltIn()
-					&& firstKeyMap.command->getID() == id) {	// 1ストローク
-				const wstring buffer = getStrokeString(KeyCombination(firstKey, firstModifiers), shortName);
+					&& firstKeyMap.command->getID() == id) {	// 1 ストローク
+				const wstring buffer = getStrokeString(KeyCombination(firstKey, firstModifiers));
 				if(result.empty() || buffer.length() < result.length())
 					result.assign(buffer);
 			} else if(firstKeyMap.secondKeyMap != 0) {
@@ -136,9 +137,9 @@ wstring KeyboardMap::getKeyString(CommandID id, bool shortName) const {
 					for(VirtualKey secondKey = 0; secondKey < 0x0100; ++secondKey) {
 						if(firstKeyMap.secondKeyMap[secondModifiers][secondKey] != 0
 								&& firstKeyMap.secondKeyMap[secondModifiers][secondKey]->isBuiltIn()
-								&& firstKeyMap.secondKeyMap[secondModifiers][secondKey]->getID() == id) {	// 2ストローク
+								&& firstKeyMap.secondKeyMap[secondModifiers][secondKey]->getID() == id) {	// 2 ストローク
 							const wstring buffer = getStrokeString(
-								KeyCombination(firstKey, firstModifiers), KeyCombination(secondKey, secondModifiers), shortName);
+								KeyCombination(firstKey, firstModifiers), KeyCombination(secondKey, secondModifiers));
 							if(result.empty() || buffer.length() < result.length())
 								result.assign(buffer);
 						}
@@ -158,7 +159,7 @@ wstring KeyboardMap::getKeyString(CommandID id, bool shortName) const {
 bool KeyboardMap::load(const WCHAR* fileName) {
 	assert(fileName != 0);
 
-	using namespace manah::windows::io;
+	using namespace manah::win32::io;
 
 	clear();
 
@@ -208,7 +209,7 @@ bool KeyboardMap::load(const WCHAR* fileName) {
 bool KeyboardMap::save(const WCHAR* fileName) {
 	assert(fileName != 0);
 
-	using namespace manah::windows::io;
+	using namespace manah::win32::io;
 
 	try {
 		File<false> file(fileName, GENERIC_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);

@@ -12,7 +12,7 @@
 using alpha::ui::BookmarkDialog;
 using alpha::Alpha;
 using alpha::Buffer;
-using namespace manah::windows::ui;
+using namespace manah::win32::ui;
 using namespace ascension;
 using namespace std;
 
@@ -60,8 +60,8 @@ void BookmarkDialog::onBtnDelete() {
 	if(bookmarksList_.getItemCount() != 0) {
 		bookmarksList_.setItemState(0, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
 	} else {
-		::EnableWindow(getDlgItem(IDOK), false);
-		::EnableWindow(getDlgItem(IDC_BTN_DELETE), false);
+		::EnableWindow(getItem(IDOK), false);
+		::EnableWindow(getItem(IDC_BTN_DELETE), false);
 	}
 }
 
@@ -75,7 +75,7 @@ void BookmarkDialog::updateList() {
 	bufferIndices_.clear();
 	bookmarksList_.deleteAllItems();
 
-	if(isDlgButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) {	// 全てのドキュメントを扱う場合
+	if(isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) {	// 全てのドキュメントを扱う場合
 		for(size_t i = 0; i < buffers.getCount(); ++i) {
 			const Buffer& buffer = buffers.getAt(i);
 			const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
@@ -124,20 +124,20 @@ void BookmarkDialog::updateList() {
 
 	if(bookmarksList_.getItemCount() != 0) {
 		bookmarksList_.setItemState(0, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
-		::EnableWindow(getDlgItem(IDOK), true);
-		::EnableWindow(getDlgItem(IDC_BTN_DELETE), true);
+		::EnableWindow(getItem(IDOK), true);
+		::EnableWindow(getItem(IDC_BTN_DELETE), true);
 	} else {
-		::EnableWindow(getDlgItem(IDOK), false);
-		::EnableWindow(getDlgItem(IDC_BTN_DELETE), false);
+		::EnableWindow(getItem(IDOK), false);
+		::EnableWindow(getItem(IDC_BTN_DELETE), false);
 	}
 }
 
 /// @see Dialog#onClose
 void BookmarkDialog::onClose() {
 	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.autoClose",
-		(isDlgButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
+		(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
 	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.allBuffers",
-		(isDlgButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) ? 1 : 0);
+		(isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) ? 1 : 0);
 	Dialog::onClose();
 }
 
@@ -165,7 +165,7 @@ bool BookmarkDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	Dialog::onInitDialog(focusWindow, initParam);
 
 	modifyStyleEx(0, WS_EX_LAYERED);
-	setLayeredWindowAttributes(0, 220, LWA_ALPHA);
+	setLayeredAttributes(0, 220, LWA_ALPHA);
 
 	bookmarksList_.modifyStyleEx(WS_EX_NOPARENTNOTIFY, 0);
 	bookmarksList_.setExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP);
@@ -174,9 +174,9 @@ bool BookmarkDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	updateList();
 
 	if(app_.readIntegerProfile(L"Search", L"BookmarkDialog.autoClose", 0) == 1)
-		checkDlgButton(IDC_CHK_AUTOCLOSE, BST_CHECKED);
+		checkButton(IDC_CHK_AUTOCLOSE, BST_CHECKED);
 	if(app_.readIntegerProfile(L"Search", L"BookmarkDialog.allBuffers", 0) == 1)
-		checkDlgButton(IDC_CHK_SHOWALLFILES, BST_CHECKED);
+		checkButton(IDC_CHK_SHOWALLFILES, BST_CHECKED);
 
 	return true;
 }
@@ -211,8 +211,8 @@ void BookmarkDialog::onOK() {
 
 	app_.getBufferList().getActiveView().getCaret().moveTo(text::Position(line, 0));
 	app_.getBufferList().setActive(bufferIndices_[buffer]);
-	getParent().setActiveWindow();
+	getParent()->setActive();
 
-	if(isDlgButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [自動的に閉じる]
+	if(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [自動的に閉じる]
 		Dialog::onOK();
 }

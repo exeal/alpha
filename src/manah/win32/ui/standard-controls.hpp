@@ -7,23 +7,23 @@
 #include <commctrl.h>
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 class Button : public StandardControl<Button> {
 	DEFINE_CLASS_NAME(_T("BUTTON"))
 public:
-	// コンストラクタ
+	// constructor
 	explicit Button(HWND handle = 0) : StandardControl<Button>(handle) {}
-	// 属性
+	// attributes
 	HBITMAP	getBitmap() const;
 	UINT	getButtonStyle() const;
 	int		getCheck() const;
 	HCURSOR	getCursor() const;
 	HICON	getIcon() const;
-	bool	getIdealSize(SIZE& size) const;
+	bool	getIdealSize(::SIZE& size) const;
 	UINT	getState() const;
-	bool	getTextMargin(RECT& margin) const;
+	bool	getTextMargin(::RECT& margin) const;
 	HBITMAP	setBitmap(HBITMAP bitmap);
 	void	setButtonStyle(UINT style, bool redraw = true);
 	void	setCheck(int check);
@@ -32,21 +32,21 @@ public:
 	void	setState(bool highlight);
 	bool	setTextMargin(const RECT& margin);
 #ifdef BCM_FIRST
-	bool	getImageList(BUTTON_IMAGELIST& bi) const;
-	bool	setImageList(const BUTTON_IMAGELIST& bi);
+	bool	getImageList(::BUTTON_IMAGELIST& bi) const;
+	bool	setImageList(const ::BUTTON_IMAGELIST& bi);
 #endif /* BCM_FIRST */
-	// 操作
+	// operation
 	void	click();
 };
 
 class ComboBox : public StandardControl<ComboBox> {
 	DEFINE_CLASS_NAME(_T("COMBOBOX"))
 public:
-	// コンストラクタ
+	// constructor
 	explicit ComboBox(HWND handle = 0) : StandardControl<ComboBox>(handle) {}
-	// 作成
+	// initialize
 	int		initStorage(int itemCount, UINT bytes);
-	// 属性
+	// attributes
 	int		getCount() const;
 	int		getCurSel() const;
 	void	getDroppedControlRect(RECT& rect) const;
@@ -75,9 +75,9 @@ public:
 	bool	setMinVisible(int minVisible);
 	int		setTopIndex(int index);
 #ifdef CB_GETCOMBOBOXINFO
-	bool	getComboBoxInfo(COMBOBOXINFO& cbi) const;
+	bool	getComboBoxInformation(::COMBOBOXINFO& cbi) const;
 #endif
-	// 操作
+	// operations
 	int		addString(const TCHAR* text);
 	int		deleteString(UINT index);
 	int		dir(UINT attributes, const TCHAR* fileSpec);
@@ -88,7 +88,7 @@ public:
 	void	resetContent();
 	int		selectString(int startAfter, const TCHAR* text);
 	void	showDropDown(bool show = true);
-	// クリップボード操作
+	// clipboard
 	void	clear();
 	void	copy();
 	void	cut();
@@ -98,11 +98,12 @@ public:
 class Edit : public StandardControl<Edit> {
 	DEFINE_CLASS_NAME(_T("EDIT"))
 public:
-	// コンストラクタ
+	// constructor
 	explicit Edit(HWND handle = 0) : StandardControl<Edit>(handle) {}
-	// 属性
+	// attributes
 	bool				canUndo() const;
-	int					charFromPos(const POINT& pt) const;
+	int					charFromPos(const ::POINT& pt) const;
+	void				getEditRect(::RECT& rect) const;
 	int					getFirstVisibleLine() const;
 	HLOCAL				getBufferHandle() const;
 	UINT				getLimitText() const;
@@ -111,12 +112,11 @@ public:
 	int					getLineCount() const;
 	DWORD				getMargins() const;
 	bool				getModify() const;
-	void				getRect(RECT& rect) const;
 	DWORD				getSel() const;
 	void				getSel(int& startChar, int& endChar) const;
 	int					getThumb() const;
 	TCHAR				getPasswordChar() const;
-	EDITWORDBREAKPROC	getWordBreakProc() const;
+	::EDITWORDBREAKPROC	getWordBreakProc() const;
 	int					lineFromChar(int index = -1) const;
 	int					lineIndex(int index = -1) const;
 	int					lineLength(int line = -1) const;
@@ -127,17 +127,17 @@ public:
 	void				setModify(bool modified = true);
 	void				setPasswordChar(TCHAR ch);
 	void				setReadOnly(bool readOnly = true);
-	void				setRect(const RECT& rect);
-	void				setRectNP(const RECT& rect);
+	void				setRect(const ::RECT& rect);
+	void				setRectNP(const ::RECT& rect);
 	void				setTabStops();
 	bool				setTabStops(uint cxEachStop);
 	bool				setTabStops(int count, uint tabStops[]);
-	void				setWordBreakProc(EDITWORDBREAKPROC proc);
+	void				setWordBreakProc(::EDITWORDBREAKPROC proc);
 #ifdef EM_GETIMESTATUS
 	DWORD				getImeStatus(DWORD type) const;
 	DWORD				setImeStatus(DWORD type, DWORD data);
 #endif /* EM_GETIMESTATUS */
-	// 操作
+	// operations
 	void	emptyUndoBuffer();
 	bool	fmtLines(bool addEol);
 	void	limitText(int maxLength = 0);
@@ -150,18 +150,18 @@ public:
 	bool	getCueBanner(WCHAR* text, int maxLength) const;
 	bool	hideBalloonTip();
 	bool	setCueBanner(const WCHAR* text);
-	bool	showBalloonTip(const EDITBALLOONTIP& ebt);
+	bool	showBalloonTip(const ::EDITBALLOONTIP& ebt);
 #endif /* EM_GETCUEBANNER */
 };
 
 class ListBox : public StandardControl<ListBox> {
 	DEFINE_CLASS_NAME(_T("LISTBOX"))
 public:
-	// コンストラクタ
+	// constructor
 	explicit ListBox(HWND handle = 0) : StandardControl<ListBox>(handle) {}
-	// 作成
+	// initialize
 	int		initStorage(int itemCount, UINT bytes);
-	// 属性
+	// attributes
 	int		getAnchorIndex() const;
 	int		getCaretIndex() const;
 	int		getCount() const;
@@ -169,16 +169,16 @@ public:
 	int		getHorizontalExtent() const;
 	DWORD	getItemData(int index) const;
 	void*	getItemDataPtr(int index) const;
-	int		getItemRect(int index, RECT& rect) const;
+	int		getItemRect(int index, ::RECT& rect) const;
 	int		getItemHeight(int index) const;
 	LCID	getLocale() const;
 	int		getSel(int index) const;
 	int		getSelCount() const;
-	int		getSelItems(int maxItems, INT* indices) const;
+	int		getSelItems(int maxItems, ::INT* indices) const;
 	int		getText(int index, TCHAR* buffer) const;
 	int		getTextLen(int index) const;
 	int		getTopIndex() const;
-	UINT	itemFromPoint(const POINT& pt, bool& outSide) const;
+	UINT	itemFromPoint(const ::POINT& pt, bool& outSide) const;
 	void	setAnchorIndex(int index);
 	int		setCaretIndex(int index, bool scroll = true);
 	void	setColumnWidth(int width);
@@ -192,9 +192,9 @@ public:
 	int		setSel(int index, bool select = true);
 	void	setTabStops();
 	bool	setTabStops(int cxEachStop);
-	bool	setTabStops(int count, INT* tabStops);
+	bool	setTabStops(int count, ::INT* tabStops);
 	int		setTopIndex(int index);
-	// 操作
+	// operations
 	int		addString(const TCHAR* text);
 	int		deleteString(UINT index);
 	int		dir(UINT attr, const TCHAR* wildCard);
@@ -208,20 +208,20 @@ public:
 class ScrollBar : public StandardControl<ScrollBar> {
 	DEFINE_CLASS_NAME(_T("SCROLLBAR"))
 public:
-	// コンストラクタ
+	// constructor
 	explicit ScrollBar(HWND handle = 0) : StandardControl<ScrollBar>(handle) {}
-	// 属性
-	bool	getScrollInfo(SCROLLINFO& scrollInfo) const;
+	// attributes
+	bool	getScrollInformation(::SCROLLINFO& scrollInfo) const;
 	int		getScrollLimit() const;
-	int		getScrollPos() const;
+	int		getScrollPosition() const;
 	void	getScrollRange(int* minPos, int* maxPos) const;
-	int		setScrollInfo(const SCROLLINFO& scrollInfo, bool redraw = true);
-	int		setScrollPos(int pos, bool redraw = true);
+	int		setScrollInformation(const ::SCROLLINFO& scrollInfo, bool redraw = true);
+	int		setScrollPosition(int pos, bool redraw = true);
 	void	setScrollRange(int min, int max, bool redraw = true);
 #if(WINVER >= 0x0500)
-	bool	getScrollBarInfo(SCROLLBARINFO& scrollInfo) const;
+	bool	getScrollBarInformation(::SCROLLBARINFO& scrollInfo) const;
 #endif /* WINVER >= 0x0500 */
-	// 操作
+	// operations
 	bool	enableScrollBar(UINT arrowFlags = ESB_ENABLE_BOTH);
 	void	showScrollBar(bool show = true);
 };
@@ -229,9 +229,9 @@ public:
 class Static : public StandardControl<Static> {
 	DEFINE_CLASS_NAME(_T("STATIC"))
 public:
-	// コンストラクタ
+	// constructors
 	explicit Static(HWND handle = 0) : StandardControl<Static>(handle) {}
-	// メソッド
+	// methods
 	HBITMAP			getBitmap() const;
 	HCURSOR			getCursor() const;
 	HENHMETAFILE	getEnhMetaFile() const;
@@ -244,17 +244,17 @@ public:
 
 class DragListBox : public ListBox {
 public:
-	// コンストラクタ
+	// constructor
 	explicit DragListBox(HWND handle) : ListBox(handle) {}
-	// メソッド
+	// methods
 	void		drawInsert(int index);
 	static UINT	getDragListMessage();
 	int			lbItemFromPtr(const POINT& pt, bool autoScroll = true);
 	bool		makeDragList();
 };
 
-}}} // namespace manah::windows::controls
+}}} // namespace manah.win32.controls
 
 #include "standard-controls.inl"
 
-#endif /* MANAH_STANDARD_CONTROLS_HPP */
+#endif /* !MANAH_STANDARD_CONTROLS_HPP */
