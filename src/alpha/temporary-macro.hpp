@@ -19,17 +19,6 @@ namespace alpha {
 		class SerializableCommand;
 
 		/**
-		 * 一時マクロのリスナ
-		 * @see TemporaryMacro
-		 */
-		class ITemporaryMacroListener {
-		private:
-			/// 一時マクロの状態が変化した
-			virtual void temporaryMacroStateChanged() = 0;
-			friend class TemporaryMacro;
-		};
-
-		/**
 		 * @brief 一時マクロ (キーボードマクロ) の管理
 		 *
 		 * @c TemporaryMacro は一時マクロの記録、実行、保存、読み込みをサポートする。
@@ -58,7 +47,6 @@ namespace alpha {
 			// コンストラクタ
 			TemporaryMacro() throw();
 			// 属性
-			void							addListener(ITemporaryMacroListener& listener);
 			ErrorHandlingPolicy				getErrorHandlingPolicy() const throw();
 			const std::basic_string<WCHAR>&	getFileName() const throw();
 			State							getState() const throw();
@@ -66,7 +54,6 @@ namespace alpha {
 			bool							isEmpty() const throw();
 			bool							isExecuting() const throw();
 			void							setErrorHandlingPolicy(ErrorHandlingPolicy policy) throw();
-			void							removeListener(ITemporaryMacroListener& listener);
 			// 操作
 			void	appendDefinition();
 			void	cancelDefinition();
@@ -97,38 +84,19 @@ namespace alpha {
 			Definition definition_;				// 記録した定義
 			ErrorHandlingPolicy errorHandlingPolicy_;
 			std::basic_string<WCHAR> fileName_;	// 関連付けられているファイル名
-			std::list<ITemporaryMacroListener*> listeners_;
+			manah::win32::Handle<HICON, ::DestroyIcon> definingIcon_, pausingIcon_;
 		};
 
 
-		/// コンストラクタ
-		inline TemporaryMacro::TemporaryMacro() throw() : state_(NEUTRAL), errorHandlingPolicy_(IGNORE_AND_CONTINUE) {}
-
-		/**
-		 * リスナを追加する
-		 * @param listener 追加するリスナ
-		 * @throw std::invalid_argument @p listener が既に登録されていればスロー
-		 */
-		inline void TemporaryMacro::addListener(ITemporaryMacroListener& listener) {listeners_.push_back(&listener);}
-
 		/**
 		 * 記録を中止する
-		 * @throw std::logic_error 記録中でなければスロー
+		 * @throw std#logic_error 記録中でなければスロー
 		 */
 		inline void TemporaryMacro::cancelDefinition() {
 			if(!isDefining())
 				throw std::logic_error("Temporary macro is not in recording.");
 			clearCommandList(true);
 			changeState(NEUTRAL);
-		}
-
-		/**
-		 * 状態を変える
-		 * @param newState 新しい状態
-		 */
-		inline void TemporaryMacro::changeState(State newState) throw() {
-			state_ = newState;
-			std::for_each(listeners_.begin(), listeners_.end(), std::mem_fun(ITemporaryMacroListener::temporaryMacroStateChanged));
 		}
 
 		/**

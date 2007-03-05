@@ -14,7 +14,7 @@
 namespace alpha {
 	namespace ui {
 		/// [言語エンジンの選択] ダイアログ
-		class SelectLanguageDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_SELECTLANGUAGE> {
+		class SelectLanguageDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SELECTLANGUAGE> {
 		public:
 			explicit SelectLanguageDialog(const std::basic_string<WCHAR>& scriptName);
 			const std::wstring&	getSelectedLanguage() const throw();
@@ -26,7 +26,7 @@ namespace alpha {
 		private:
 			std::basic_string<WCHAR> scriptName_;
 			std::wstring selectedLanguage_;
-			manah::windows::ui::ListBox languageListbox_;
+			manah::win32::ui::ListBox languageListbox_;
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_LIST_SCRIPTENGINES, languageListbox_)
 			END_CONTROL_BINDING()

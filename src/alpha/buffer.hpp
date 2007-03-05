@@ -39,7 +39,10 @@ namespace alpha {
 	};
 
 	/// テキストエディタのビュー
-	class EditorView : public ascension::viewers::SourceViewer, virtual public ascension::searcher::IIncrementalSearchListener {
+	class EditorView : public ascension::viewers::SourceViewer,
+		virtual public ascension::text::IDocumentStateListener,
+		virtual public ascension::viewers::ICaretListener,
+		virtual public ascension::searcher::IIncrementalSearchListener {
 	public:
 		// コンストラクタ
 		EditorView(ascension::presentation::Presentation& presentation);
@@ -54,6 +57,22 @@ namespace alpha {
 		void				setVisualColumnStartValue() throw();
 
 	private:
+		void	updateCurrentPositionOnStatusBar();
+		void	updateNarrowingOnStatusBar();
+		void	updateOvertypeModeOnStatusBar();
+		void	updateTitleBar();
+		// ascension::text::IDocumentStateListener (overrides)
+		void	documentAccessibleRegionChanged(ascension::text::Document& document);
+		void	documentEncodingChanged(ascension::text::Document& document);
+		void	documentFileNameChanged(ascension::text::Document& document);
+		void	documentModificationSignChanged(ascension::text::Document& document);
+		void	documentReadOnlySignChanged(ascension::text::Document& document);
+		// ascension::viewers::ICaretListener (overrides)
+		void	caretMoved(const ascension::viewers::Caret& self, const ascension::text::Region& oldRegion);
+		void	matchBracketsChanged(const ascension::viewers::Caret& self,
+					const std::pair<ascension::text::Position, ascension::text::Position>& oldPair, bool outsideOfView);
+		void	overtypeModeChanged(const ascension::viewers::Caret& self);
+		void	selectionShapeChanged(const ascension::viewers::Caret& self);
 		// ascension::searcher::IIncrementalSearchListener
 		void	incrementalSearchAborted(const ascension::text::Position& initialPosition);
 		void	incrementalSearchCompleted();
@@ -65,10 +84,11 @@ namespace alpha {
 		void	onSetFocus(HWND oldWindow);
 	private:
 		ascension::length_t visualColumnStartValue_;
+		static manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
 	};
 
 	/// テキストエディタのペイン
-	class EditorPane : virtual public manah::windows::ui::AbstractPane, public manah::Unassignable {
+	class EditorPane : virtual public manah::win32::ui::AbstractPane, public manah::Unassignable {
 	public:
 		// コンストラクタ
 		EditorPane(EditorView* initialView = 0);
@@ -95,20 +115,7 @@ namespace alpha {
 	};
 
 	/// 分割可能なエディタウィンドウ
-	typedef manah::windows::ui::Splitter<EditorPane> EditorWindow;
-
-	/**
-	 * アクティブなバッファに関する変更を受け取る
-	 * @see BufferList
-	 */
-	class IActiveBufferListener {
-	private:
-		/// アクティブなバッファが切り替わった
-		virtual void activeBufferSwitched() = 0;
-		/// アクティブなバッファのプロパティが変化した
-		virtual void activeBufferPropertyChanged() = 0;
-		friend BufferList;
-	};
+	typedef manah::win32::ui::Splitter<EditorPane> EditorWindow;
 
 	/**
 	 * @brief バッファリストの管理
@@ -142,7 +149,7 @@ namespace alpha {
 		ascension::texteditor::Session&			getEditorSession() throw();
 		const ascension::texteditor::Session&	getEditorSession() const throw();
 		EditorWindow&							getEditorWindow() const throw();
-		const manah::windows::ui::Menu&			getListMenu() const throw();
+		const manah::win32::ui::Menu&			getListMenu() const throw();
 		void									setActive(std::size_t index);
 		void									setActive(const Buffer& buffer);
 		// 操作
@@ -152,7 +159,7 @@ namespace alpha {
 		void		addNewDialog();
 		bool		close(std::size_t index, bool queryUser);
 		bool		closeAll(bool queryUser, bool exceptActive = false);
-		bool		createBar(manah::windows::ui::Rebar& rebar);
+		bool		createBar(manah::win32::ui::Rebar& rebar);
 		std::size_t	find(const Buffer& buffer) const;
 		std::size_t	find(const std::basic_string<WCHAR>& fileName) const;
 		LRESULT		handleBufferBarNotification(::NMTOOLBAR& nmhdr);
@@ -192,11 +199,10 @@ namespace alpha {
 		ascension::texteditor::Session editorSession_;
 		std::vector<Buffer*> buffers_;
 		EditorWindow editorWindow_;
-		manah::windows::ui::Toolbar bufferBar_;
-		manah::windows::ui::PagerCtrl bufferBarPager_;
-		manah::windows::ui::ImageList icons_;
-		manah::windows::ui::Menu listMenu_;
-		manah::windows::ui::Menu contextMenu_;
+		manah::win32::ui::Toolbar bufferBar_;
+		manah::win32::ui::PagerCtrl bufferBarPager_;
+		manah::win32::ui::ImageList icons_;
+		manah::win32::ui::PopupMenu listMenu_, contextMenu_;
 		static const std::wstring READ_ONLY_SIGNATURE_;
 	};
 
@@ -206,7 +212,7 @@ namespace alpha {
 	inline std::size_t EditorPane::getCount() const throw() {return views_.size();}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getSafeHwnd() : 0;}
+	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->get() : 0;}
 
 	/// 表示されているバッファを返す
 	inline Buffer& EditorPane::getVisibleBuffer() const {return getVisibleView().getDocument();}
@@ -243,7 +249,7 @@ namespace alpha {
 	inline EditorWindow& BufferList::getEditorWindow() const throw() {return const_cast<BufferList*>(this)->editorWindow_;}
 
 	/// バッファリストのメニューを返す
-	inline const manah::windows::ui::Menu& BufferList::getListMenu() const throw() {return listMenu_;}
+	inline const manah::win32::ui::Menu& BufferList::getListMenu() const throw() {return listMenu_;}
 
 	/// @see ascension#viewers#TextViewer#getDocument
 	inline Buffer& EditorView::getDocument() throw() {return reinterpret_cast<Buffer&>(ascension::viewers::SourceViewer::getDocument());}

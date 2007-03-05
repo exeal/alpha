@@ -11,9 +11,9 @@
 
 
 namespace manah {
-	namespace windows {
+	namespace win32 {
 
-		class Module : public HandleHolder<HMODULE> {
+		class Module : public Handle<HMODULE, 0> {
 		public:
 			// メッセージ引数
 			class MessageArguments : public Noncopyable {
@@ -63,7 +63,7 @@ namespace manah {
 			HACCEL accelerators_;
 		};
 
-#define MARGS manah::windows::Module::MessageArguments()
+#define MARGS manah::win32::Module::MessageArguments()
 
 
 template<class TopWindow = ui::Window> class Application : public Module {
@@ -112,7 +112,7 @@ private:
 
 // Module ///////////////////////////////////////////////////////////////////
 
-inline Module::Module(HMODULE handle) : HandleHolder<HMODULE>(handle), accelerators_(0) {
+inline Module::Module(HMODULE handle) : Handle<HMODULE, 0>(handle), accelerators_(0) {
 	assert(handle != 0); ::GetModuleFileName(handle, fileName_, MAX_PATH);}
 
 inline HRSRC Module::findResource(const ResourceID& id, const TCHAR* type) {return ::FindResource(get(), id.name, type);}
@@ -369,6 +369,6 @@ template<class TopWindow>
 inline bool ProfilableApplication<TopWindow>::writeStringProfile(const TCHAR* section, const TCHAR* key, const TCHAR* value) {
 	return toBoolean(::WritePrivateProfileString(section, key, value, iniFileName_));}
 
-}} // namespace manah::windows
+}} // namespace manah.win32
 
-#endif /* MANAH_MODULE_HPP */
+#endif /* !MANAH_MODULE_HPP */

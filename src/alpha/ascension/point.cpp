@@ -14,7 +14,7 @@ using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
 //using namespace ascension::internal;
-using namespace manah::windows;
+using namespace manah::win32;
 using namespace std;
 
 
@@ -601,7 +601,7 @@ void VisualPoint::charRight(length_t offset /* = 1 */) {
 void VisualPoint::copy(signed_length_t length) {
 	verifyViewer();
 	const String text = getText(length);	
-	Clipboard(*viewer_).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
 }
 
 /**
@@ -611,7 +611,7 @@ void VisualPoint::copy(signed_length_t length) {
 void VisualPoint::copy(const Position& other) {
 	verifyViewer();
 	const String text = getText(other);
-	Clipboard(*viewer_).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
 }
 
 /**
@@ -623,7 +623,7 @@ void VisualPoint::cut(signed_length_t length) {
 	if(getDocument()->isReadOnly())
 		return;
 	const String text = getText(length);
-	Clipboard(*viewer_).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
 	erase(length);
 }
 
@@ -636,7 +636,7 @@ void VisualPoint::cut(const Position& other) {
 	if(getDocument()->isReadOnly())
 		return;
 	const String text = getText(other);
-	Clipboard(*viewer_).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
 	erase(other);
 }
 
@@ -1024,7 +1024,7 @@ void VisualPoint::paste(const Position& other) {
 		if(other != getPosition())
 			erase(other);
 
-		Clipboard clipboard(*viewer_);
+		Clipboard clipboard(viewer_->get());
 		if(Clipboard::Text text = clipboard.read()) {
 			const Char* const data = text.getData();
 			if(availableClipFormat == ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))
@@ -1086,7 +1086,7 @@ bool VisualPoint::show(const Position& other) {
 		visualLine_ += visualSubline_;
 	}
 	si.fMask = SIF_POS;
-	viewer_->getScrollInfo(SB_VERT, si);
+	viewer_->getScrollInformation(SB_VERT, si);
 	if(visualLine_ < si.nPos * viewer_->getScrollRate(false))	// 画面より上
 		to.y = static_cast<long>(visualLine_ * viewer_->getScrollRate(false));
 	else if(visualLine_ - si.nPos * viewer_->getScrollRate(false) > visibleLines - 1)	// 画面より下
@@ -1098,7 +1098,7 @@ bool VisualPoint::show(const Position& other) {
 	if(!viewer_->getConfiguration().lineWrap.wrapsAtWindowEdge()) {
 		const length_t visibleColumns = viewer_->getNumberOfVisibleColumns();
 		const ulong x = getLayout().getLocation(getColumnNumber(), LineLayout::LEADING).x;
-		viewer_->getScrollInfo(SB_HORZ, si);
+		viewer_->getScrollInformation(SB_HORZ, si);
 		const ulong scrollOffset = si.nPos * viewer_->getScrollRate(true) * renderer.getAverageCharacterWidth();
 		if(x <= scrollOffset)	// 画面より左
 			to.x = x / renderer.getAverageCharacterWidth() - visibleColumns / 4;
@@ -1663,7 +1663,7 @@ void Caret::copySelection(bool alsoSendToClipboardRing) {
 	if(isSelectionEmpty())
 		return;
 	const String s = getSelectionText(LBR_PHYSICAL_DATA);
-	Clipboard(getTextViewer()).write(s, isSelectionRectangle());
+	Clipboard(getTextViewer().get()).write(s, isSelectionRectangle());
 	if(alsoSendToClipboardRing) {	// クリップボードリングにも転送
 		if(texteditor::Session* session = getDocument()->getSession())
 			session->getClipboardRing().add(s, isSelectionRectangle());

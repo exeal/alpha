@@ -14,7 +14,6 @@
 #include "ascension/session.hpp"
 #include "ascension/searcher.hpp"
 #include "../manah/win32/module.hpp"
-#include "../manah/win32/ui/menu.hpp"
 #include "../manah/win32/ui/common-controls.hpp"
 #include <map>
 #include <sstream>
@@ -90,30 +89,8 @@ public:
 		class ScriptSystem;
 	}
 
-	/// ステータスバーのペイン。@c Application#updateStatusBar で使用
-	typedef ushort StatusBarPane;
-	const StatusBarPane
-		SBP_MESSAGE			= 0x0001,	///< メッセージ
-		SBP_POSITION		= 0x0002,	///< エディタのキャレット位置
-		SBP_DOCUMENTTYPE	= 0x0004,	///< 文書タイプ
-		SBP_ENCODING		= 0x0008,	///< エンコーディング
-		SBP_TEMPORARYMACRO	= 0x0010,	///< 一時マクロ (アイコン)
-		SBP_DEBUGMODE		= 0x0020,	///< デバッグモード (アイコン)
-		SBP_OVERTYPEMODE	= 0x0040,	///< 上書き/挿入モード (固定幅)
-		SBP_NARROWING		= 0x0080,	///< ナローイング (アイコン)
-		SBP_DUMMY			= 0x0100,
-		SBP_ALL				= 0xFFFF;	///< 全て
-
-
 	/// Alpha のアプリケーションクラス
-	class Alpha :
-			public manah::windows::ProfilableApplication<>,
-//			public ascension::EditViewEventAdapter,
-			virtual public IActiveBufferListener,
-			virtual public command::ITemporaryMacroListener,
-			virtual public ascension::viewers::ICaretListener,
-			virtual public ascension::texteditor::IClipboardRingListener/*,
-			virtual public IAlphaApplicationDebuggerEventListener*/ {
+	class Alpha : public manah::win32::ProfilableApplication<> {
 	public:
 		// コンストラクタ
 		Alpha();
@@ -129,6 +106,7 @@ public:
 		const MRUManager&				getMRUManager() const throw();
 		void							getScriptSystem(ankh::ScriptSystem*& scriptSystem) throw();
 		void							getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
+		manah::win32::ui::StatusBar&	getStatusBar() throw();
 		// 属性
 		const std::wstring*	getCodePageName(ascension::encodings::CodePage cp) const;
 		static Alpha&		getInstance();
@@ -143,13 +121,12 @@ public:
 		void	showSearchDialog();
 		// 操作
 		void	loadKeyBinds(const std::wstring& schemeName);
-		int		messageBox(DWORD id, UINT type, manah::windows::Module::MessageArguments& args = MARGS);
+		int		messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
 		void	parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
 
 	private:
 		void			changeFont();
 		LRESULT			dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-		const wchar_t*	getMenuLabel(command::CommandID id) const;
 		bool			handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool			initInstance(int showCommand);
 		void			loadINISettings();
@@ -163,22 +140,8 @@ public:
 		void			setupMenus();
 		void			setupToolbar();
 		void			showRegexSearchError(const boost::regex_error& e);
-		void			updateStatusBar(StatusBarPane panes);
+		void			updateStatusBarPaneSize();
 		void			updateTitleBar();
-		// IActiveBufferListener
-		void	activeBufferSwitched();
-		void	activeBufferPropertyChanged();
-		// command::ITemporaryMacroListener
-		void	temporaryMacroStateChanged();
-		// ascension::viewers::ICaretListener
-		void	caretMoved(const ascension::viewers::Caret& self, const ascension::text::Region& oldRegion);
-		void	matchBracketsChanged(const ascension::viewers::Caret& self,
-					const std::pair<ascension::text::Position, ascension::text::Position>& oldPair, bool outsideOfView);
-		void	overtypeModeChanged(const ascension::viewers::Caret& self);
-		void	selectionShapeChanged(const ascension::viewers::Caret& self);
-		// ascension::texteditor::IClipboardRingListener
-		void	clipboardRingChanged();
-		void	clipboardRingAddingDenied();
 
 		// メッセージハンドラ
 	protected:
@@ -194,7 +157,7 @@ public:
 		void	onExitMenuLoop(bool isTrackPopup);									// WM_EXITMENULOOP
 		void	onInitMenuPopup(HMENU menu, UINT index, bool sysMenu);				// WM_INITMENUPOPUP
 		void	onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);						// WM_MEASUREITEM
-		LRESULT	onMenuChar(wchar_t ch, UINT flags, manah::windows::ui::Menu& menu);	// WM_MENUCHAR
+		LRESULT	onMenuChar(wchar_t ch, UINT flags, manah::win32::ui::Menu& menu);	// WM_MENUCHAR
 		void	onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);				// WM_MENUSELECT
 		bool	onNotify(int id, NMHDR& nmhdr);										// WM_NOTIFY
 		bool	onSetCursor(HWND window, UINT hitTest, UINT message);				// WM_SETCURSOR
@@ -210,22 +173,16 @@ public:
 		static LRESULT CALLBACK appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
-		static Alpha* instance_;	// ただ1つのインスタンス
+		static Alpha* instance_;	// ただ 1 つのインスタンス
 		// ウィンドウ
-		manah::windows::ui::Menu* menu_;				// メインメニュー
-		manah::windows::ui::Menu* newDocTypeMenu_;	// 新規ドキュメントタイプポップアップメニュー
-		manah::windows::ui::Menu* appDocTypeMenu_;	// 適用ドキュメントタイプポップアップメニュー
-		manah::windows::ui::Rebar rebar_;				// レバー
-		manah::windows::ui::Toolbar toolbar_;			// 標準ツールバー
-		manah::windows::ui::StatusBar statusBar_;		// ステータスバー
+		manah::win32::ui::Rebar rebar_;				// レバー
+		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
+		manah::win32::ui::StatusBar statusBar_;		// ステータスバー
 		std::auto_ptr<ui::SearchDialog> searchDialog_;		// [検索と置換] ダイアログ
 		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
 		// GDI オブジェクト
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
-		HICON temporaryMacroDefiningIcon_;
-		HICON temporaryMacroPausingIcon_;
-		HICON narrowingIcon_;
 		// 機能とコマンド
 		ankh::ScriptSystem* scriptSystem_;
 		std::auto_ptr<command::CommandManager> commandManager_;
@@ -239,12 +196,11 @@ public:
 		// オートメーション用インターフェイス
 //		alpha::ambient::Application* automation_;
 		// オプション
-		bool useShortKeyNames_;				// 短い形式のキーの名前を使う
 		bool showMessageBoxOnFind_;			// 検索処理でメッセージボックスを表示する
 		bool initializeFindTextFromEditor_;	// [検索と置換] ダイアログを開いたときに
 											// 検索テキストをエディタから初期化する
-		friend command::CommandManager;
-		friend command::BuiltInCommand;
+		friend class command::CommandManager;
+		friend class command::BuiltInCommand;
 	};
 
 
@@ -274,6 +230,9 @@ public:
 
 	/// MRU 管理オブジェクトを返す
 	inline const MRUManager& Alpha::getMRUManager() const throw() {return *mruManager_;}
+
+	/// Returns the status bar.
+	inline manah::win32::ui::StatusBar& Alpha::getStatusBar() throw() {return statusBar_;}
 
 	/// テキストエディタに使うフォントを返す
 	inline void Alpha::getTextEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}

@@ -9,25 +9,23 @@
 #include "application.hpp"
 using namespace alpha;
 using namespace std;
-using manah::windows::ui::Menu;
+using manah::win32::ui::Menu;
 using ascension::encodings::CodePage;
 
 
 /**
- * コンストラクタ
+ * Constructor.
  * @param limit
  * @param startID
- * @param ownerDrawMenu
  */
-MRUManager::MRUManager(size_t limit, int startID, bool ownerDrawMenu /* = false */)
-		: limitCount_(limit), startID_(startID), ownerDraw_(ownerDrawMenu) {
+MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCount_(limit) {
 	updateMenu();
 }
 
 /**
- * 項目を追加する。既に同じものがあればそれを先頭に出す
- * @param fileName 新しく追加するファイルパス
- * @param cp コードページ
+ * Adds the new file. If there is already in the list, moves to the top.
+ * @param fileName the name of the file to add
+ * @param cp the code page
  */
 void MRUManager::add(const basic_string<WCHAR>& fileName, CodePage cp) {
 	list<MRU>::iterator it = fileNames_.begin();
@@ -58,7 +56,7 @@ void MRUManager::add(const basic_string<WCHAR>& fileName, CodePage cp) {
 	updateMenu();
 }
 
-/// 指定した位置のファイルパスを返す
+/// Returns the item.
 const MRU& MRUManager::getFileInfoAt(size_t index) const {
 	if(index >= fileNames_.size())
 		throw out_of_range("First argument is out of range!");
@@ -68,7 +66,7 @@ const MRU& MRUManager::getFileInfoAt(size_t index) const {
 	return *it;
 }
 
-/// 項目の削除
+/// Removes the specified item.
 void MRUManager::remove(size_t index) {
 	if(index >= fileNames_.size())
 		throw out_of_range("First argument is out of range!");
@@ -79,7 +77,7 @@ void MRUManager::remove(size_t index) {
 	updateMenu();
 }
 
-/// 項目数の上限値の設定
+/// Sets the maximum number of items.
 void MRUManager::setLimit(size_t newLimit) {
 	if(newLimit < 4)
 		newLimit = 4;
@@ -91,29 +89,26 @@ void MRUManager::setLimit(size_t newLimit) {
 	if(fileNames_.size() > newLimit) {
 		fileNames_.resize(newLimit);
 		for(size_t i = fileNames_.size() - 1; i > newLimit; --i)
-			popupMenu_.removeMenuItem<Menu::BY_POSITION>(static_cast<UINT>(i));
+			popupMenu_.remove<Menu::BY_POSITION>(static_cast<UINT>(i));
 	}
 }
 
-/// @c fileNames_ からメニューを再構成する
+/// Reconstructs the menu according to the content of @c fileNames_.
 void MRUManager::updateMenu() {
 	size_t item = 0;
 	list<MRU>::const_iterator it = fileNames_.begin();
 	wchar_t caption[MAX_PATH + 100];
 
-	while(popupMenu_.getItemCount() > 0)
-		popupMenu_.deleteMenuItem<Menu::BY_POSITION>(0);
+	while(popupMenu_.getNumberOfItems() > 0)
+		popupMenu_.erase<Menu::BY_POSITION>(0);
 	if(fileNames_.empty()) {	// 履歴が空の場合
 		const wstring s = Alpha::getInstance().loadString(MSG_OTHER__EMPTY_MENU_CAPTION);
-		popupMenu_.appendMenuItem(0, s.c_str(), MFS_GRAYED);
+		popupMenu_.append(0, s.c_str(), MFS_GRAYED);
 		return;
 	}
 	while(it != fileNames_.end()) {
 		swprintf(caption, L"&%x  %s", item, it->fileName.c_str());
-		if(ownerDraw_)
-			popupMenu_.appendMenuItem(static_cast<UINT>(startID_ + item), 0U);
-		else
-			popupMenu_.appendMenuItem(static_cast<UINT>(startID_ + item), caption);
+		popupMenu_.append(static_cast<UINT>(startID_ + item), caption);
 		++it;
 		++item;
 	}

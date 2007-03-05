@@ -6,9 +6,8 @@
 #include "../windows.hpp"
 
 namespace manah {
-	namespace windows {
+	namespace win32 {
 		namespace ui {
-
 			class WaitCursor {
 			public:
 				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursor(0, IDC_WAIT));}
@@ -16,9 +15,8 @@ namespace manah {
 			private:
 				HCURSOR	originalCursor_;
 			};
-
 		}
 	}
-}
+} // namespace manah.win32.ui
 
 #endif /* !MANAH_WAIT_CURSOR_HPP */

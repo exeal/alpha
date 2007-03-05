@@ -21,14 +21,14 @@ using namespace alpha;
 using namespace alpha::command;
 using namespace ascension;
 using namespace ascension::texteditor::commands;
-using namespace manah::windows::ui;
+using namespace manah::win32::ui;
 using namespace std;
 
 
 #define CHECK_REBAR_BAND_VISIBILITY(index)				\
-	manah::windows::AutoZeroCB<::REBARBANDINFOW> rbbi;	\
+	manah::win32::AutoZeroCB<::REBARBANDINFOW> rbbi;	\
 	rbbi.fMask = RBBIM_STYLE;							\
-	app_.rebar_.getBandInfo(index, rbbi);				\
+	app.rebar_.getBandInfo(index, rbbi);				\
 	const bool visible = !toBoolean(rbbi.fStyle & RBBS_HIDDEN);
 
 namespace {	// アイコンビットマップを編集する連中
@@ -122,24 +122,14 @@ namespace {	// アイコンビットマップを編集する連中
 
 // CommandManager ///////////////////////////////////////////////////////////
 
-/**
- * コンストラクタ
- * @param app アプリケーション
- */
-CommandManager::CommandManager(Alpha& app) throw() : app_(app), lastCommandID_(0) {
-}
-
-/// デストラクタ
-CommandManager::~CommandManager() throw() {
-	icons_[ICONSTATE_NORMAL].destroy();
-	icons_[ICONSTATE_DISABLED].destroy();
-	icons_[ICONSTATE_HOT].destroy();
+/// Constructor.
+CommandManager::CommandManager() throw() : lastCommandID_(0) {
 }
 
 /**
- * アイコンをロードしてイメージリストを作成する。以前のイメージリストは破棄される
- * @param directory アイコンが保存されているディレクトリ
- * @return 成否
+ * Recreates the image list by load icons from the specified directory.
+ * @param directory the directory name
+ * @return true if succeeded
  */
 bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 	icons_[ICONSTATE_NORMAL].destroy();
@@ -152,7 +142,7 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 	icons_[ICONSTATE_HOT].create(16, 16, ILC_COLOR32 | ILC_MASK, 0, 0);
 
 	WCHAR path[MAX_PATH];
-	WIN32_FIND_DATAW wfd;
+	::WIN32_FIND_DATAW wfd;
 	HANDLE find;
 
 	wcscpy(path, directory.c_str());
@@ -189,29 +179,30 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 		HICON icon = 0;
 
 		// イメージを読み込む
+		Alpha& app = Alpha::getInstance();
 		if(imageIsBmp)
-			bitmap = static_cast<HBITMAP>(app_.loadImage(fileTitle, IMAGE_BITMAP, 16, 16, LR_CREATEDIBSECTION | LR_LOADFROMFILE));
+			bitmap = static_cast<HBITMAP>(app.loadImage(fileTitle, IMAGE_BITMAP, 16, 16, LR_CREATEDIBSECTION | LR_LOADFROMFILE));
 		else {
-			ICONINFO iconInfo;
-			icon = static_cast<HICON>(app_.loadImage(fileTitle, IMAGE_ICON, 16, 16, LR_CREATEDIBSECTION | LR_LOADFROMFILE));
+			::ICONINFO iconInfo;
+			icon = static_cast<HICON>(app.loadImage(fileTitle, IMAGE_ICON, 16, 16, LR_CREATEDIBSECTION | LR_LOADFROMFILE));
 			::GetIconInfo(icon, &iconInfo);
 			bitmap = iconInfo.hbmColor;
 		}
 
 		// フィルタを適用してイメージリストに追加する
 		if(bitmap != 0 || icon != 0) {
-			BITMAP bmp;
+			::BITMAP bmp;
 
-			iconIndices_.insert(make_pair(id, icons_[ICONSTATE_NORMAL].getImageCount()));
+			iconIndices_.insert(make_pair(id, icons_[ICONSTATE_NORMAL].getNumberOfImages()));
 			::GetObject(bitmap, sizeof(BITMAP), &bmp);
 			if(bmp.bmBitsPixel == 32 || bmp.bmBitsPixel == 24) {
 				HDC dc = ::GetDC(0);
 				BITMAPINFO* pbi;
 				HBITMAP disabledBmp = 0, hotBmp = 0;
 
-				pbi = get_temporary_buffer<BITMAPINFO>(sizeof(BITMAPINFOHEADER) + (bmp.bmBitsPixel / 8 + 1) * 16 * 16).first;
-				memset(&pbi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
-				pbi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+				pbi = get_temporary_buffer<BITMAPINFO>(sizeof(::BITMAPINFOHEADER) + (bmp.bmBitsPixel / 8 + 1) * 16 * 16).first;
+				memset(&pbi->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
+				pbi->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
 				::GetDIBits(dc, bitmap, 0, bmp.bmHeight, 0, pbi, DIB_RGB_COLORS);
 				::GetDIBits(dc, bitmap, 0, bmp.bmHeight, pbi->bmiColors, pbi, DIB_RGB_COLORS);
 
@@ -236,7 +227,7 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 					}
 				} else {
 					// 24ビットアイコンの場合、背景の処理は: アイコンのマスク
-					ICONINFO iconInfo;
+					::ICONINFO iconInfo;
 
 					::GetIconInfo(icon, &iconInfo);
 					icons_[ICONSTATE_NORMAL].add(icon);
@@ -257,7 +248,7 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 			} else {	// 24ビット未満
 				HDC dc = ::GetDC(0);
 				pair<HBITMAP, COLORREF> result = createFilteredBitmap(dc, bitmap, sepiaFilter);
-				ICONINFO iconInfo;
+				::ICONINFO iconInfo;
 
 				if(imageIsBmp) {
 					icons_[ICONSTATE_NORMAL].add(bitmap, result.second);
@@ -301,16 +292,17 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 }
 
 /**
- * コマンドを実行する
- * @param id コマンド ID
- * @param userContext コマンドのコンテキスト
- * @return コマンド実行の成否
+ * Executes the specified command.
+ * @param id th identifier of the command to execute
+ * @param userContext set true if an end user executes. in this case, the command may not be executed
+ * @return the result of the command
  */
 bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	if(!isEnabled(id, userContext))
 		return false;
 
-	EditorView& view = app_.getBufferList().getActiveView();
+	Alpha& app = Alpha::getInstance();
+	EditorView& view = app.getBufferList().getActiveView();
 	Buffer& buffer = view.getDocument();
 
 	// 一時マクロ記録中
@@ -320,25 +312,25 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	lastCommandID_ = id;
 
 	switch(id) {
-	case CMD_FILE_NEW:				app_.getBufferList().addNew(); return true;
-	case CMD_FILE_NEWWITHFORMAT:	app_.getBufferList().addNewDialog(); return true;
-	case CMD_FILE_OPEN:				return app_.getBufferList().openDialog() == BufferList::OPENRESULT_SUCCEEDED;
-	case CMD_FILE_CLOSE:			return app_.getBufferList().close(app_.getBufferList().getActiveIndex(), true);
-	case CMD_FILE_CLOSEALL:			return app_.getBufferList().closeAll(true, false);
-	case CMD_FILE_SAVE:				return app_.getBufferList().save(app_.getBufferList().getActiveIndex());
+	case CMD_FILE_NEW:				app.getBufferList().addNew(); return true;
+	case CMD_FILE_NEWWITHFORMAT:	app.getBufferList().addNewDialog(); return true;
+	case CMD_FILE_OPEN:				return app.getBufferList().openDialog() == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_CLOSE:			return app.getBufferList().close(app.getBufferList().getActiveIndex(), true);
+	case CMD_FILE_CLOSEALL:			return app.getBufferList().closeAll(true, false);
+	case CMD_FILE_SAVE:				return app.getBufferList().save(app.getBufferList().getActiveIndex());
 	case CMD_FILE_SAVEAS:
-		if(app_.getBufferList().save(app_.getBufferList().getActiveIndex(), false)) {
+		if(app.getBufferList().save(app.getBufferList().getActiveIndex(), false)) {
 			// TODO: call mode-application.
-//			app_.applyDocumentType(app_.getBufferList().getActive());
+//			app.applyDocumentType(app.getBufferList().getActive());
 			return true;
 		}
 		return false;
-	case CMD_FILE_SAVEALL:				return app_.getBufferList().saveAll();
-	case CMD_FILE_REOPEN:				return app_.getBufferList().reopen(app_.getBufferList().getActiveIndex(), false) == BufferList::OPENRESULT_SUCCEEDED;
-	case CMD_FILE_REOPENWITHCODEPAGE:	return app_.getBufferList().reopen(app_.getBufferList().getActiveIndex(), true) == BufferList::OPENRESULT_SUCCEEDED;
-	case CMD_FILE_EXIT:					app_.getMainWindow().postMessage(WM_CLOSE); return true;
-	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app_.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
-	case CMD_FILE_CLOSEOTHERS:			return app_.getBufferList().closeAll(true, true);
+	case CMD_FILE_SAVEALL:				return app.getBufferList().saveAll();
+	case CMD_FILE_REOPEN:				return app.getBufferList().reopen(app.getBufferList().getActiveIndex(), false) == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_REOPENWITHCODEPAGE:	return app.getBufferList().reopen(app.getBufferList().getActiveIndex(), true) == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_EXIT:					app.getMainWindow().postMessage(WM_CLOSE); return true;
+	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
+	case CMD_FILE_CLOSEOTHERS:			return app.getBufferList().closeAll(true, true);
 
 	case CMD_EDIT_DELETE:			return DeletionCommand(view, DeletionCommand::NEXT_CHARACTER).execute() == 0;
 	case CMD_EDIT_BACKSPACE:		return DeletionCommand(view, DeletionCommand::PREVIOUS_CHARACTER).execute() == 0;
@@ -362,7 +354,6 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_EDIT_RECOMPOSE:	return ReconversionCommand(view).execute() == 0;
 	case CMD_EDIT_TOGGLEOVERTYPEMODE:
 		InputStatusToggleCommand(view, InputStatusToggleCommand::OVERTYPE_MODE).execute();
-		app_.updateStatusBar(SBP_OVERTYPEMODE);
 		return true;
 	case CMD_EDIT_OPENCANDIDATEWINDOW:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
@@ -433,38 +424,36 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_EDIT_TRANSPOSECHARS:		return TranspositionCommand(view, TranspositionCommand::CHARACTERS).execute() == 0;
 	case CMD_EDIT_TRANSPOSEWORDS:		return TranspositionCommand(view, TranspositionCommand::WORDS).execute() == 0;
 //	case CMD_EDIT_SHOWABBREVIATIONDLG:	{
-//		AbbreviationsDlg().doModal(app_.getMainWindow());
+//		AbbreviationsDlg().doModal(app.getMainWindow());
 //		return true;
 //	}
 	case CMD_EDIT_NARROWTOSELECTION:
 		buffer.narrow(view.getCaret().getSelectionRegion());
-		app_.updateStatusBar(SBP_NARROWING);
 		return true;
 	case CMD_EDIT_WIDEN:
 		buffer.widen();
-		app_.updateStatusBar(SBP_NARROWING);
 		return true;
 
-	case CMD_SEARCH_FIND:			app_.showSearchDialog(); return true;
-	case CMD_SEARCH_FINDNEXT:		return app_.searchNext(true, app_.showMessageBoxOnFind_);
-	case CMD_SEARCH_FINDPREV:		return app_.searchNext(false, app_.showMessageBoxOnFind_);
-	case CMD_SEARCH_REPLACEANDNEXT:	app_.replaceAndSearchNext(); return true;
-	case CMD_SEARCH_REPLACEALL:		app_.replaceAll(); return true;
-	case CMD_SEARCH_BOOKMARKALL:	app_.searchAndBookmarkAll(); return true;
+	case CMD_SEARCH_FIND:			app.showSearchDialog(); return true;
+	case CMD_SEARCH_FINDNEXT:		return app.searchNext(true, app.showMessageBoxOnFind_);
+	case CMD_SEARCH_FINDPREV:		return app.searchNext(false, app.showMessageBoxOnFind_);
+	case CMD_SEARCH_REPLACEANDNEXT:	app.replaceAndSearchNext(); return true;
+	case CMD_SEARCH_REPLACEALL:		app.replaceAll(); return true;
+	case CMD_SEARCH_BOOKMARKALL:	app.searchAndBookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
-	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog(app_).doModal(app_.getMainWindow()); return true;
+	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog(app).doModal(app.getMainWindow().get()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
 	case CMD_SEARCH_NEXTBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::NEXT_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_PREVBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::PREVIOUS_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_CLEARBOOKMARKS:		BookmarkCommand(view, BookmarkCommand::CLEAR_ALL).execute(); return true;
 	case CMD_SEARCH_MANAGEBOOKMARKS:
-		if(!app_.bookmarkDialog_->isWindow()) {
-			app_.bookmarkDialog_->doModeless(app_.getMainWindow());
-			app_.pushModelessDialog(*app_.bookmarkDialog_);
-			if(toBoolean(app_.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)))
-				app_.bookmarkDialog_->sendDlgItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(app_.editorFont_), true);
+		if(!app.bookmarkDialog_->isWindow()) {
+			app.bookmarkDialog_->doModeless(app.getMainWindow().get());
+			app.pushModelessDialog(app.bookmarkDialog_->get());
+			if(toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)))
+				app.bookmarkDialog_->sendItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(app.editorFont_), true);
 		} else
-			app_.bookmarkDialog_->setActiveWindow();
+			app.bookmarkDialog_->setActive();
 		return true;
 	case CMD_SEARCH_GOTOMATCHBRACKET:		return CaretMovementCommand(view, CaretMovementCommand::MATCH_BRACKET, false).execute() == 0;
 	case CMD_SEARCH_EXTENDTOMATCHBRACKET:	return CaretMovementCommand(view, CaretMovementCommand::MATCH_BRACKET, true).execute() == 0;
@@ -501,16 +490,16 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 
 	case CMD_VIEW_TOOLBAR: {
 		CHECK_REBAR_BAND_VISIBILITY(0);
-		app_.rebar_.showBand(0, !visible);
+		app.rebar_.showBand(0, !visible);
 		return true;
 	}
 	case CMD_VIEW_STATUSBAR:
-		app_.statusBar_.showWindow(app_.statusBar_.isWindowVisible() ? SW_HIDE : SW_SHOW);
-		app_.onSize(SIZE_RESTORED, -1, -1);
+		app.statusBar_.show(app.statusBar_.isVisible() ? SW_HIDE : SW_SHOW);
+		app.onSize(SIZE_RESTORED, -1, -1);
 		return true;
 	case CMD_VIEW_BUFFERBAR: {
 		CHECK_REBAR_BAND_VISIBILITY(1);
-		app_.rebar_.showBand(1, !visible);
+		app.rebar_.showBand(1, !visible);
 		return true;
 	}
 	case CMD_VIEW_WRAPNO: {
@@ -538,36 +527,36 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	}
 	case CMD_VIEW_REFRESH:	view.invalidateRect(0); return true;
 	case CMD_VIEW_SPLITNS: {
-		EditorPane& activePane = app_.getBufferList().getEditorWindow().getActivePane();
-		app_.getBufferList().getEditorWindow().splitNS(activePane, *(new EditorPane(activePane)));
+		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
+		app.getBufferList().getEditorWindow().splitNS(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
 	case CMD_VIEW_SPLITWE: {
-		EditorPane& activePane = app_.getBufferList().getEditorWindow().getActivePane();
-		app_.getBufferList().getEditorWindow().splitWE(activePane, *(new EditorPane(activePane)));
+		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
+		app.getBufferList().getEditorWindow().splitWE(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
-	case CMD_VIEW_UNSPLITOTHERS:	app_.getBufferList().getEditorWindow().removeInactivePanes();	break;
-	case CMD_VIEW_UNSPLITACTIVE:	app_.getBufferList().getEditorWindow().removeActivePane();		break;
-	case CMD_VIEW_NEXTPANE:			app_.getBufferList().getEditorWindow().activateNextPane();		break;
-	case CMD_VIEW_PREVPANE:			app_.getBufferList().getEditorWindow().activatePreviousPane();	break;
+	case CMD_VIEW_UNSPLITOTHERS:	app.getBufferList().getEditorWindow().removeInactivePanes();	break;
+	case CMD_VIEW_UNSPLITACTIVE:	app.getBufferList().getEditorWindow().removeActivePane();		break;
+	case CMD_VIEW_NEXTPANE:			app.getBufferList().getEditorWindow().activateNextPane();		break;
+	case CMD_VIEW_PREVPANE:			app.getBufferList().getEditorWindow().activatePreviousPane();	break;
 	case CMD_VIEW_NEXTBUFFER:
-		if(app_.getBufferList().getCount() > 1) {
-			size_t i = app_.getBufferList().getActiveIndex();
-			i = (i + 1 != app_.getBufferList().getCount()) ? i + 1 : 0;
-			app_.getBufferList().setActive(i);
+		if(app.getBufferList().getCount() > 1) {
+			size_t i = app.getBufferList().getActiveIndex();
+			i = (i + 1 != app.getBufferList().getCount()) ? i + 1 : 0;
+			app.getBufferList().setActive(i);
 		}
 		return true;
 	case CMD_VIEW_PREVBUFFER:
-		if(app_.getBufferList().getCount() > 1) {
-			size_t i = app_.getBufferList().getActiveIndex();
-			i = (i != 0) ? i - 1 : app_.getBufferList().getCount() - 1;
-			app_.getBufferList().setActive(i);
+		if(app.getBufferList().getCount() > 1) {
+			size_t i = app.getBufferList().getActiveIndex();
+			i = (i != 0) ? i - 1 : app.getBufferList().getCount() - 1;
+			app.getBufferList().setActive(i);
 		}
 		return true;
 	case CMD_VIEW_TOPMOSTALWAYS:
-		app_.getMainWindow().setWindowPos(
-			toBoolean(app_.getMainWindow().getExStyle() & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST,
+		app.getMainWindow().setPosition(
+			toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST,
 			0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 		return true;
 
@@ -627,88 +616,138 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 
 	case CMD_TOOL_COMMONOPTION:		return false;	// not (never) implemented
 	case CMD_TOOL_DOCTYPEOPTION:	return false;	// not (never) implemented
-	case CMD_TOOL_FONT:				app_.changeFont(); return true;
-//	case CMD_TOOL_EXECUTE:			app_.onToolExecute(); return true;
+	case CMD_TOOL_FONT:				app.changeFont(); return true;
+//	case CMD_TOOL_EXECUTE:			app.onToolExecute(); return true;
 	case CMD_TOOL_EXECUTECOMMAND:
-		ui::ExecuteCommandDlg(app_,
-			toBoolean(app_.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ?
-				app_.editorFont_ : 0).doModal(app_.getMainWindow());
+		ui::ExecuteCommandDlg(app,
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ?
+				app.editorFont_ : 0).doModal(app.getMainWindow().get());
 		return true;
 
 	case CMD_HELP_ABOUT:
-		ui::AboutDialog().doModal(app_.getMainWindow());
+		ui::AboutDialog().doModal(app.getMainWindow().get());
 		return true;
 
 	default:
 		if(id >= CMD_FILE_MRULIST_START && id < CMD_FILE_MRULIST_END) {	// [最近使ったファイル]
-			const MRU& file = app_.mruManager_->getFileInfoAt(id - CMD_FILE_MRULIST_START);
-			if(app_.getBufferList().open(file.fileName, file.codePage) == BufferList::OPENRESULT_FAILED) {
-				app_.mruManager_->remove(id - CMD_FILE_MRULIST_START);
+			const MRU& file = app.mruManager_->getFileInfoAt(id - CMD_FILE_MRULIST_START);
+			if(app.getBufferList().open(file.fileName, file.codePage) == BufferList::OPENRESULT_FAILED) {
+				app.mruManager_->remove(id - CMD_FILE_MRULIST_START);
 				return false;
 			}
 		} else if(id >= CMD_FILE_DOCTYPELIST_START && id < CMD_FILE_DOCTYPELIST_END) {	// [新規]
-			app_.getBufferList().addNew();
+			app.getBufferList().addNew();
 			// TODO: class mode-application.
-//			app_.applyDocumentType(app_.getBufferList().getActive(),
-//				app_.getBufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
+//			app.applyDocumentType(app.getBufferList().getActive(),
+//				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
 		} else if(id >= CMD_TOOL_DOCTYPELIST_START && id < CMD_TOOL_DOCTYPELIST_END)	// [適用文書タイプ]
 			// TODO: class mode-application.
-//			app_.applyDocumentType(app_.getBufferList().getActive(),
-//				app_.getBufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
+//			app.applyDocumentType(app.getBufferList().getActive(),
+//				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
 /*		else if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {	// [スクリプト]
 			try {
-				app_.scriptMacroManager_->execute(id - CMD_EDIT_PLUGINLIST_START);
+				app.scriptMacroManager_->execute(id - CMD_EDIT_PLUGINLIST_START);
 				return true;
 			} catch(out_of_range&) {
 				// 無視
 			} catch(ScriptMacroManager::ScriptOpenFailureException& e) {
-				app_.messageBox(MSG_SCRIPT__FAILED_TO_OPEN_MACRO_SCRIPT, MB_ICONHAND, MARGS % e.fileName_);
+				app.messageBox(MSG_SCRIPT__FAILED_TO_OPEN_MACRO_SCRIPT, MB_ICONHAND, MARGS % e.fileName_);
 			} catch(ScriptMacroManager::InvalidLanguageException& e) {
-				app_.messageBox(MSG_SCRIPT__INVALID_LANGUAGE_NAME, MB_ICONEXCLAMATION, MARGS % e.language_);
+				app.messageBox(MSG_SCRIPT__INVALID_LANGUAGE_NAME, MB_ICONEXCLAMATION, MARGS % e.language_);
 			}
-//			app_.getDocumentManager().getActiveDocument()->refreshWindow();
+//			app.getDocumentManager().getActiveDocument()->refreshWindow();
 			return false;
 		}
 */		lastCommandID_ = 0;	// 取り敢えず無効に...
-//		app_.bufferBar_.redrawWindow();
+//		app.bufferBar_.redrawWindow();
 		return true;
 	}
 	return false;
 }
 
 /**
- * コマンドの名前を返す
- * @param id コマンド ID
- * @return 可読性の高い名前
+ * Returns the name of the specified command
+ * @param id the identifier of the command
+ * @return the human-readable name
  */
 wstring CommandManager::getCaption(CommandID id) const {
-	wchar_t	buffer[100];
-	app_.loadString(id, buffer, countof(buffer));
+	wchar_t	buffer[256];
+	Alpha::getInstance().loadString(id, buffer, countof(buffer));
 	if(wchar_t* p = wcschr(buffer, L'\n'))
 		*p = 0;
 	return buffer;
 }
 
 /**
- * コマンドの説明を返す
- * @param id コマンド ID
- * @return 説明
+ * Returns the description of the specified command.
+ * @param id the identifier of the command
+ * @return the description text
  */
 wstring CommandManager::getDescription(CommandID id) const {
-	wchar_t	buffer[200];
-	app_.loadString(id, buffer, countof(buffer));
+	if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END) {
+		const Buffer& buffer = Alpha::getInstance().getBufferList().getAt(id - CMD_VIEW_BUFFERLIST_START);
+		return buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED);
+	}
+	wchar_t	buffer[256];
+	Alpha::getInstance().loadString(id, buffer, countof(buffer));
 	const wchar_t* p = wcschr(buffer, L'\n');
 	return (p != 0) ? p + 1 : L"";
 }
 
 /**
- * コマンドの名前を返す
- * @param id コマンド ID
- * @return 名前
+ * Returns the text of the command to display as a menu item.
+ * @param id the identifier of the command
+ */
+wstring CommandManager::getMenuName(CommandID id) const {
+	static wchar_t buffer[MAX_PATH * 2];
+
+	// [マクロ]
+/*	if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {
+		if(scriptMacroManager_->getCount() != 0) {
+			wcscpy(buffer, scriptMacroManager_->getName(id - CMD_EDIT_PLUGINLIST_START).c_str());
+			wcscat(buffer, L"\t");
+			wcscat(buffer, keyboardMap_.getKeyString(id, useShortKeyNames_).c_str());
+		} else
+			wcscpy(buffer, loadString(MSG_ERROR__FAILED_TO_LOAD_SOMETHING).c_str());
+		return buffer;
+	}
+	
+	else*/ if(id >= CMD_FILE_MRULIST_START && id < CMD_FILE_MRULIST_END) {
+		const MRU& file = Alpha::getInstance().getMRUManager().getFileInfoAt(id - CMD_FILE_MRULIST_START);
+		swprintf(buffer, L"&%X  %s", id - CMD_FILE_MRULIST_START, file.fileName.c_str());
+		return buffer;
+	}
+	
+	else if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END) {
+		const Buffer& document = Alpha::getInstance().getBufferList().getAt(id - CMD_VIEW_BUFFERLIST_START);
+		if(id - CMD_VIEW_BUFFERLIST_START < 0x10)
+			swprintf(buffer, L"&%X  ", id - CMD_VIEW_BUFFERLIST_START);
+		else
+			buffer[0] = 0;
+		wcscat(buffer, document.isBoundToFile() ? document.getFileName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED).c_str());
+		return buffer;
+	}
+
+	Alpha::getInstance().loadString(id, buffer, countof(buffer));
+	wchar_t* const delimiter = wcschr(buffer, L'\n');
+	if(delimiter != 0)
+		*delimiter = 0;
+	const wstring keys = Alpha::getInstance().getKeyboardMap().getKeyString(id);
+	if(!keys.empty()) {
+		wcscat(buffer, L"\t");
+		wcscat(buffer, keys.c_str());
+	}
+	return buffer;
+}
+
+/**
+ * Returns the name of the specified command.
+ * @param id the identifier of the command
+ * @return the human-readable name
  */
 wstring CommandManager::getName(CommandID id) const {
-	wchar_t buffer[100];
-	app_.loadString(id, buffer, countof(buffer));
+	wchar_t buffer[256];
+	Alpha::getInstance().loadString(id, buffer, countof(buffer));
 	if(wchar_t* lf = wcschr(buffer, L'\n')) {
 		*lf = 0;
 		// CJK アクセスキー
@@ -726,19 +765,20 @@ wstring CommandManager::getName(CommandID id) const {
 }
 
 /**
- * コマンドがチェック状態にあるかを返す
- * @param id コマンド ID
- * @return チェックされていれば true
+ * Returns true if the command is checked.
+ * @param id the identifier of the command
+ * @return true if checked
  */
 bool CommandManager::isChecked(CommandID id) const {
+	Alpha& app = Alpha::getInstance();
 	if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END)
-		return id - CMD_VIEW_BUFFERLIST_START == app_.getBufferList().getActiveIndex();
+		return id - CMD_VIEW_BUFFERLIST_START == app.getBufferList().getActiveIndex();
 
 	switch(id) {
 	case CMD_SEARCH_FIND:
-		return app_.searchDialog_->isWindowVisible();
+		return app.searchDialog_->isVisible();
 	case CMD_SEARCH_MANAGEBOOKMARKS:
-		return app_.bookmarkDialog_->isWindowVisible();
+		return app.bookmarkDialog_->isVisible();
 
 	case CMD_VIEW_TOOLBAR: {
 		CHECK_REBAR_BAND_VISIBILITY(0);
@@ -749,15 +789,15 @@ bool CommandManager::isChecked(CommandID id) const {
 		return visible;
 	}
 	case CMD_VIEW_STATUSBAR:
-		return app_.statusBar_.isWindowVisible();
+		return app.statusBar_.isVisible();
 	case CMD_VIEW_WRAPNO:
-		return app_.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm == viewers::LineWrapConfiguration::NO_WRAP;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm == viewers::LineWrapConfiguration::NO_WRAP;
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
-//		return app_.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
+//		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
-		return app_.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm != viewers::LineWrapConfiguration::NO_WRAP;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm != viewers::LineWrapConfiguration::NO_WRAP;
 	case CMD_VIEW_TOPMOSTALWAYS:
-		return toBoolean(app_.getMainWindow().getExStyle() & WS_EX_TOPMOST);
+		return toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST);
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();
@@ -769,20 +809,21 @@ bool CommandManager::isChecked(CommandID id) const {
 }
 
 /**
- * コマンドが有効 (使用可能) かを返す
- * @param id コマンド ID
- * @param userContext コマンドのコンテキスト
- * @return 有効であれば true
+ * Returns true if the command is executable.
+ * @param id the identifier of the command
+ * @param userContext set true if an end user tries
+ * @return true if enabled
  */
 bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	// 一時マクロに記録できない操作は最初から実行しない
 	if(temporaryMacro_.isDefining() && !isRecordable(id) && (id < CMD_MACRO_DEFINE || id > CMD_MACRO_LOAD))
 		return false;
-//	if(app_.scriptMacroManager_->isExecuting()
+//	if(app.scriptMacroManager_->isExecuting()
 //			&& (userContext || (id >= CMD_MACRO_DEFINE && id < CMD_MACRO_DEFINE + 1000)))
 //		return false;
 
-	const EditorView& view = app_.getBufferList().getActiveView();
+	Alpha& app = Alpha::getInstance();
+	const EditorView& view = app.getBufferList().getActiveView();
 	const Buffer& buffer = view.getDocument();
 	const bool modified = buffer.isModified();
 	const bool readOnly = buffer.isReadOnly();
@@ -793,8 +834,8 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_FILE_SAVE:
 		return modified && !readOnly;
 	case CMD_FILE_SAVEALL:
-		for(size_t i = 0; i < app_.getBufferList().getCount(); ++i) {
-			if(app_.getBufferList().getAt(i).isModified())
+		for(size_t i = 0; i < app.getBufferList().getCount(); ++i) {
+			if(app.getBufferList().getAt(i).isModified())
 				return true;
 		}
 		return false;
@@ -803,9 +844,9 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		return buffer.isBoundToFile();
 	case CMD_FILE_SENDMAIL:
 		return buffer.isBoundToFile()
-			|| !toBoolean(app_.readIntegerProfile(L"File", L"sendMailAsAttachment", 1));
+			|| !toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1));
 	case CMD_FILE_CLOSEOTHERS:
-		return app_.getBufferList().getCount() > 1;
+		return app.getBufferList().getCount() > 1;
 
 		// 編集
 	case CMD_EDIT_DELETE:
@@ -827,7 +868,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_EDIT_PASTE:
 		return !readOnly && view.getCaret().canPaste() != 0;
 	case CMD_EDIT_PASTEFROMCLIPBOARDRING:
-		return !readOnly && app_.getBufferList().getEditorSession().getClipboardRing().getCount() != 0;
+		return !readOnly && app.getBufferList().getEditorSession().getClipboardRing().getCount() != 0;
 	case CMD_EDIT_INSERTTAB:
 	case CMD_EDIT_DELETETAB:
 		return !readOnly;
@@ -851,13 +892,13 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		// 検索
 	case CMD_SEARCH_FINDNEXT:
 	case CMD_SEARCH_FINDPREV:
-		return app_.getBufferList().getEditorSession().getIncrementalSearcher().isRunning()
-			|| (app_.searchDialog_->isWindow() &&
-				::GetWindowTextLengthW(app_.searchDialog_->getDlgItem(IDC_COMBO_FINDWHAT)) != 0);
+		return app.getBufferList().getEditorSession().getIncrementalSearcher().isRunning()
+			|| (app.searchDialog_->isWindow() &&
+				::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);
 	case CMD_SEARCH_REPLACEANDNEXT:
 	case CMD_SEARCH_REPLACEALL:
-		return !readOnly && app_.searchDialog_->isWindow() &&
-			(::GetWindowTextLengthW(app_.searchDialog_->getDlgItem(IDC_COMBO_FINDWHAT)) != 0);
+		return !readOnly && app.searchDialog_->isWindow() &&
+			(::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);
 	case CMD_SEARCH_REVOKEMARK:
 		return false;
 	case CMD_SEARCH_INCREMENTALSEARCHRF:
@@ -868,17 +909,19 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 
 		// 表示
 	case CMD_VIEW_WRAPNO:
+		return true;
 	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
+		return false;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
 		return true;
 	case CMD_VIEW_NEXTBUFFER:
 	case CMD_VIEW_PREVBUFFER:
-		return app_.getBufferList().getCount() > 1;
+		return app.getBufferList().getCount() > 1;
 	case CMD_VIEW_UNSPLITACTIVE:
 	case CMD_VIEW_UNSPLITOTHERS:
 	case CMD_VIEW_NEXTPANE:
 	case CMD_VIEW_PREVPANE:
-		return app_.getBufferList().getEditorWindow().isSplit(app_.getBufferList().getEditorWindow().getActivePane());
+		return app.getBufferList().getEditorWindow().isSplit(app.getBufferList().getEditorWindow().getActivePane());
 
 		// マクロ
 	case CMD_MACRO_DEFINE:			return !temporaryMacro_.isExecuting();
@@ -902,9 +945,9 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 }
 
 /**
- * コマンドが一時マクロに記録可能かを返す
- * @param id コマンド ID
- * @return 記録可能であれば true
+ * Returns true if the command is recordable to the temporary macro.
+ * @param id the identifier of the command
+ * @return true if recordable
  */
 bool CommandManager::isRecordable(CommandID id) const {
 	switch(id) {

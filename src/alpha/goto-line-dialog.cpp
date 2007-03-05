@@ -28,16 +28,16 @@ bool GotoLineDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 								% static_cast<ulong>(buffer.getStartPosition().line + lineOffset)
 								% static_cast<ulong>(buffer.getEndPosition().line + lineOffset));
 
-	setDlgItemText(IDC_STATIC_1, s.c_str());
+	setItemText(IDC_STATIC_1, s.c_str());
 	lineNumberSpin_.setRange(
 		static_cast<int>(buffer.getStartPosition().line + lineOffset),
 		static_cast<int>(buffer.getEndPosition().line + lineOffset));
-	lineNumberSpin_.setPos(static_cast<int>(app_.getBufferList().getActiveView().getCaret().getLineNumber() + lineOffset));
+	lineNumberSpin_.setPosition(static_cast<int>(app_.getBufferList().getActiveView().getCaret().getLineNumber() + lineOffset));
 	lineNumberSpin_.invalidateRect(0);
 
 	checkRadioButton(IDC_RADIO_LOGICALLINE,
 		IDC_RADIO_PHYSICALLINE, /*lineUnit_ ?*/ IDC_RADIO_LOGICALLINE /*: IDC_RADIO_PHYSICALLINE*/);
-	checkDlgButton(IDC_CHK_SAVESELECTION,
+	checkButton(IDC_CHK_SAVESELECTION,
 		app_.readIntegerProfile(L"Search", L"GotoLineDialog.extendSelection", 0) == 1 ? BST_CHECKED : BST_UNCHECKED);
 
 	return true;
@@ -52,15 +52,15 @@ void GotoLineDialog::onOK() {
 	}
 
 	EditorView& activeView = app_.getBufferList().getActiveView();
-	length_t line = lineNumberSpin_.getPos();
+	length_t line = lineNumberSpin_.getPosition();
 
 	// ï®óùçsÇ©ÇÁò_óùçsÇ…ïœä∑
 	line -= activeView.getVerticalRulerConfiguration().lineNumbers.startValue;
-	if(isDlgButtonChecked(IDC_RADIO_PHYSICALLINE) == BST_CHECKED)
+	if(isButtonChecked(IDC_RADIO_PHYSICALLINE) == BST_CHECKED)
 		line = activeView.getTextRenderer().mapVisualLineToLogicalLine(line, 0);
 
 	// à⁄ìÆÇ∑ÇÈ
-	if(isDlgButtonChecked(IDC_CHK_SAVESELECTION) == BST_CHECKED) {
+	if(isButtonChecked(IDC_CHK_SAVESELECTION) == BST_CHECKED) {
 		activeView.getCaret().extendSelection(text::Position(line, 0));
 		app_.writeIntegerProfile(L"Search", L"GotoLineDialog.extendSelection", 1);
 	} else {

@@ -14,7 +14,7 @@
 #include "../manah/win32/ui/common-controls.hpp"
 #include <map>
 #define _COM_NO_STANDARD_GUIDS_
-#include "msxml3.tlh"	// for MSXML2::ISAXAttributes
+#include "msxml3.tlh"	// MSXML2.ISAXAttributes
 
 
 namespace alpha {
@@ -22,72 +22,75 @@ namespace alpha {
 
 	namespace command {
 
-		/// Alpha の全コマンドを管理
+		/// Manages all commands in Alpha.
 		class CommandManager {
 		public:
-			// 列挙
+			// enumeration
 			enum IconState {ICONSTATE_NORMAL, ICONSTATE_DISABLED, ICONSTATE_HOT};
-			// コンストラクタ
-			explicit CommandManager(Alpha& app) throw();
-			~CommandManager() throw();
-			// メソッド
-			bool									createImageList(const std::wstring& directory);
-			bool									executeCommand(CommandID id, bool userContext);
-			std::wstring							getCaption(CommandID id) const;
-			std::wstring							getDescription(CommandID id) const;
-			std::size_t								getIconIndex(CommandID id) const throw();
-			const manah::windows::ui::ImageList&	getImageList(IconState state) const throw();
-			CommandID								getLastCommand() const throw();
-			std::wstring							getName(CommandID id) const;
-			const TemporaryMacro&					getTemporaryMacro() const throw();
-			bool									isChecked(CommandID id) const;
-			bool									isEnabled(CommandID id, bool userContext) const;
-			bool									isRecordable(CommandID id) const;
+			// constructor
+			CommandManager() throw();
+			// display names
+			std::wstring	getCaption(CommandID id) const;
+			std::wstring	getDescription(CommandID id) const;
+			std::wstring	getMenuName(command::CommandID id) const;
+			std::wstring	getName(CommandID id) const;
+			// icons
+			bool								createImageList(const std::wstring& directory);
+			std::size_t							getIconIndex(CommandID id) const throw();
+			const manah::win32::ui::ImageList&	getImageList(IconState state) const throw();
+			// states
+			bool		isChecked(CommandID id) const;
+			bool		isEnabled(CommandID id, bool userContext) const;
+			bool		isRecordable(CommandID id) const;
+			CommandID	getLastCommand() const throw();
+			// attribute
+			const TemporaryMacro&	getTemporaryMacro() const throw();
+			// operation
+			bool	executeCommand(CommandID id, bool userContext);
 
 		private:
-			Alpha& app_;
 			TemporaryMacro temporaryMacro_;
-			manah::windows::ui::ImageList icons_[3];
+			manah::win32::ui::ImageList icons_[3];
 			std::map<CommandID, std::size_t> iconIndices_;
 			CommandID lastCommandID_;
 			static const COLORREF ICON_MASK_COLOR = RGB(0xFF, 0x00, 0xFF);
 		};
 
-		/// Alpha のコマンド
+		/// A command.
 		class Command : manah::Noncopyable {
 		public:
-			/// デストラクタ
+			/// Destructor.
 			virtual ~Command() throw() {}
-			/// コマンドを実行する
+			/// Executes the command.
 			virtual bool execute() = 0;
-			/// 組み込みコマンドの識別子を返す
-			/// @throw std::logic_error	組みコマンドでない場合スロー
+			/// Returns the identifier of the built-in command.
+			/// @throw std#logic_error the command is not built-in
 			virtual CommandID getID() const = 0;
-			/// 組み込みコマンドかを調べる
+			/// Returns true of the command is built-in.
 			virtual bool isBuiltIn() const = 0;
 		};
 
-		/// キー割り当て可能コマンド
+		/// A command can assign to a key combination.
 		class KeyAssignableCommand : virtual public Command {
 		public:
-			/// デストラクタ
+			/// Destructor.
 			virtual ~KeyAssignableCommand() throw() {}
-			/// 複製
+			/// Duplicates the object.
 			virtual  void copy(KeyAssignableCommand*& p) const = 0;
 		};
 
-		/// 永続記憶可能コマンド
+		/// A command can save.
 		class SerializableCommand : virtual public Command {
 		public:
-			/// デストラクタ
+			/// Destructor.
 			virtual ~SerializableCommand() throw() {}
-			/// 複製
+			/// Duplicates the object.
 			virtual void copy(SerializableCommand*& p) const = 0;
-			/// XML に保存する場合のテキスト片を返す
+			/// Returns the XML string to persist.
 			virtual void getXMLOutput(std::wostringstream& os) const = 0;
 		};
 
-		/// 組み込みコマンド
+		/// A built-in command.
 		class BuiltInCommand : virtual public KeyAssignableCommand, virtual public SerializableCommand {
 		public:
 			explicit BuiltInCommand(CommandID id) : id_(id) {}
@@ -112,7 +115,7 @@ namespace alpha {
 			CommandID id_;
 		};
 
-		/// スクリプトコマンド
+		/// A script command.
 		class ScriptletCommand : virtual public KeyAssignableCommand {
 		public:
 			explicit ScriptletCommand(IDispatch& function) : function_(function) {function.AddRef();}
@@ -125,7 +128,7 @@ namespace alpha {
 			IDispatch& function_;
 		};
 
-		/// 文字入力コマンド
+		/// A character input command.
 		class CharacterInputCommand : virtual public SerializableCommand {
 		public:
 			explicit CharacterInputCommand(ascension::CodePoint cp) : cp_(cp) {}
@@ -149,7 +152,7 @@ namespace alpha {
 			ascension::CodePoint cp_;
 		};
 
-		/// テキスト入力コマンド
+		/// A string input command.
 		class TextInputCommand : virtual public SerializableCommand {
 		public:
 			TextInputCommand(const ascension::String& text, bool asRectangle) : text_(text), asRectangle_(asRectangle) {}
@@ -188,9 +191,9 @@ namespace alpha {
 		};
 
 		/**
-		 * コマンドに対応するアイコンのイメージリスト中の位置を返す
-		 * @param id コマンド ID
-		 * @return インデックス。アイコンが無い場合は -1
+		 * Returns the index of the icon assoicated with the specified command.
+		 * @param id the identifier of the command
+		 * @return the index or -1 if not found
 		 */
 		inline std::size_t CommandManager::getIconIndex(CommandID id) const throw() {
 			std::map<CommandID, std::size_t>::const_iterator it;
@@ -198,19 +201,19 @@ namespace alpha {
 		}
 
 		/**
-		 * イメージリストを返す
-		 * @param state アイコンの状態
-		 * @return イメージリスト
+		 * Returns the icons.
+		 * @param state the state of the icons to retrieve
+		 * @return the image list contains icons
 		 */
-		inline const manah::windows::ui::ImageList& CommandManager::getImageList(CommandManager::IconState state) const throw() {return icons_[state];}
+		inline const manah::win32::ui::ImageList& CommandManager::getImageList(CommandManager::IconState state) const throw() {return icons_[state];}
 
-		/// キーボードマクロオブジェクトを返す
+		/// Returns the temporary macro manager.
 		inline const TemporaryMacro& CommandManager::getTemporaryMacro() const throw() {return temporaryMacro_;}
 
-		/// 最後に実行したコマンドの識別値を返す
+		/// Returns the identifier of the command most recently used.
 		inline CommandID CommandManager::getLastCommand() const throw() {return lastCommandID_;}
 
 	} // namespace command
 } // namespace alpha
 
-#endif /* COMMAND_HPP_ */
+#endif /* !ALPHA_COMMAND_HPP */

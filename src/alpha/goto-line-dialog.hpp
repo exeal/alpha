@@ -15,7 +15,7 @@ namespace alpha {
 
 	namespace ui {
 		/// [指定行へ移動] ダイアログ
-		class GotoLineDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_GOTOLINE> {
+		class GotoLineDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_GOTOLINE> {
 		public:
 			GotoLineDialog(Alpha& app);
 
@@ -24,7 +24,7 @@ namespace alpha {
 			void	onOK();												// IDOK
 		private:
 			Alpha& app_;
-			manah::windows::ui::UpDownCtrl lineNumberSpin_;
+			manah::win32::ui::UpDownCtrl lineNumberSpin_;
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_SPIN_LINENUMBER, lineNumberSpin_)
 			END_CONTROL_BINDING()

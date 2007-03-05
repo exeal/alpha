@@ -3,7 +3,7 @@
 
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 
@@ -30,10 +30,10 @@ inline COLORREF DateTimePickerCtrl::getMonthCalendarColor(int colorType) const {
 
 inline HFONT DateTimePickerCtrl::getMonthCalendarFont() const {return reinterpret_cast<HFONT>(sendMessageC<LRESULT>(DTM_GETMCFONT));}
 
-inline DWORD DateTimePickerCtrl::getRange(SYSTEMTIME times[]) const {
+inline DWORD DateTimePickerCtrl::getRange(::SYSTEMTIME times[]) const {
 	return sendMessageC<DWORD>(DTM_GETRANGE, 0, reinterpret_cast<LPARAM>(times));}
 
-inline DWORD DateTimePickerCtrl::getSystemTime(SYSTEMTIME& time) const {
+inline DWORD DateTimePickerCtrl::getSystemTime(::SYSTEMTIME& time) const {
 	return sendMessageC<DWORD>(DTM_GETSYSTEMTIME, 0, reinterpret_cast<LPARAM>(&time));}
 
 inline bool DateTimePickerCtrl::setFormat(const TCHAR* format) {return sendMessageR<bool>(DTM_SETFORMAT, 0, reinterpret_cast<LPARAM>(format));}
@@ -44,10 +44,10 @@ inline COLORREF DateTimePickerCtrl::setMonthCalendarColor(int colorType, COLORRE
 inline void DateTimePickerCtrl::setMonthCalendarFont(HFONT font, bool redraw /* = true */) {
 	sendMessage(DTM_SETMCFONT, reinterpret_cast<WPARAM>(font), MAKELPARAM(redraw, 0));}
 
-inline bool DateTimePickerCtrl::setRange(DWORD flags, const SYSTEMTIME times[]) {
+inline bool DateTimePickerCtrl::setRange(DWORD flags, const ::SYSTEMTIME times[]) {
 	return sendMessageR<bool>(DTM_SETRANGE, flags, reinterpret_cast<LPARAM>(times));}
 
-inline bool DateTimePickerCtrl::setSystemTime(DWORD flags, const SYSTEMTIME& time) {
+inline bool DateTimePickerCtrl::setSystemTime(DWORD flags, const ::SYSTEMTIME& time) {
 	return sendMessageR<bool>(DTM_SETSYSTEMTIME, flags, reinterpret_cast<LPARAM>(&time));}
 
 
@@ -114,14 +114,14 @@ inline bool ImageList::copy(int dest, HIMAGELIST imageList, int src, UINT flags 
 inline bool ImageList::create(int cx, int cy, UINT flags, int initial, int grow) {
 	if(isImageList())
 		return false;
-	setHandle(::ImageList_Create(cx, cy, flags, initial, grow));
+	reset(::ImageList_Create(cx, cy, flags, initial, grow));
 	return get() != 0;
 }
 
 inline bool ImageList::create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor) {
 	if(isImageList())
 		return false;
-	setHandle(ImageList_LoadBitmap(hinstance, bitmapName.name, cx, grow, maskColor));
+	reset(ImageList_LoadBitmap(hinstance, bitmapName.name, cx, grow, maskColor));
 	return get() != 0;
 }
 
@@ -129,50 +129,47 @@ inline bool ImageList::createFromImage(HINSTANCE hinstance, const ResourceID& im
 		int cx, int grow, COLORREF maskColor, UINT type, UINT flags /* = LR_DEFAULTCOLOR | LR_DEFAULTSIZE */) {
 	if(isImageList())
 		return false;
-	setHandle(::ImageList_LoadImage(hinstance, imageName.name, cx, grow, maskColor, type, flags));
+	reset(::ImageList_LoadImage(hinstance, imageName.name, cx, grow, maskColor, type, flags));
 	return get() != 0;
 }
 
-inline std::auto_ptr<ImageList> ImageList::createManagedObject(HIMAGELIST imageList) {
-	std::auto_ptr<ImageList> p(new ImageList); p->setHandle(imageList); return p;}
-
 inline bool ImageList::destroy() {
 	if(isImageList() && toBoolean(::ImageList_Destroy(get()))) {
-		setHandle(0);
+		release();
 		return true;
 	}
 	return false;
 }
 
-inline bool ImageList::dragEnter(HWND lockWindow, const POINT& pt) {return dragEnter(lockWindow, pt.x, pt.y);}
+inline bool ImageList::dragEnter(HWND lockWindow, const ::POINT& pt) {return dragEnter(lockWindow, pt.x, pt.y);}
 
 inline bool ImageList::dragEnter(HWND lockWindow, int x, int y) {return toBoolean(::ImageList_DragEnter(lockWindow, x, y));}
 
 inline bool ImageList::dragLeave(HWND lockWindow) {return toBoolean(::ImageList_DragLeave(lockWindow));}
 
-inline bool ImageList::dragMove(const POINT& pt) {return dragMove(pt.x, pt.y);}
+inline bool ImageList::dragMove(const ::POINT& pt) {return dragMove(pt.x, pt.y);}
 
 inline bool ImageList::dragMove(int x, int y) {return toBoolean(::ImageList_DragMove(x, y));}
 
 inline bool ImageList::dragShowNolock(bool show /* = true */) {return toBoolean(::ImageList_DragShowNolock(show));}
 
-inline bool ImageList::draw(HDC dc, int index, const POINT& pt, UINT style) const {return draw(dc, index, pt.x, pt.y, style);}
+inline bool ImageList::draw(HDC dc, int index, const ::POINT& pt, UINT style) const {return draw(dc, index, pt.x, pt.y, style);}
 
 inline bool ImageList::draw(HDC dc, int index, int x, int y, UINT style) const {
 	assertValidAsImageList(); return toBoolean(::ImageList_Draw(get(), index, dc, x, y, style));}
 
-inline bool ImageList::drawEx(HDC dc, int index, const RECT& rect, COLORREF bgColor, COLORREF fgColor, UINT style) const {
+inline bool ImageList::drawEx(HDC dc, int index, const ::RECT& rect, COLORREF bgColor, COLORREF fgColor, UINT style) const {
 	return drawEx(dc, index, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, bgColor, fgColor, style);}
 
 inline bool ImageList::drawEx(HDC dc, int index, int x, int y, int dx, int dy, COLORREF bgColor, COLORREF fgColor, UINT style) const {
 	assertValidAsImageList(); return toBoolean(::ImageList_DrawEx(get(), index, dc, x, y, dx, dy, bgColor, fgColor, style));}
 
-inline bool ImageList::drawIndirect(const IMAGELISTDRAWPARAMS& params) const {
+inline bool ImageList::drawIndirect(const ::IMAGELISTDRAWPARAMS& params) const {
 	assertValidAsImageList(); return toBoolean(::ImageList_DrawIndirect(const_cast<IMAGELISTDRAWPARAMS*>(&params)));}
 
 inline std::auto_ptr<ImageList> ImageList::duplicate() const {return duplicate(get());}
 
-inline std::auto_ptr<ImageList> ImageList::duplicate(HIMAGELIST imageList) {return createManagedObject(::ImageList_Duplicate(imageList));}
+inline std::auto_ptr<ImageList> ImageList::duplicate(HIMAGELIST imageList) {return std::auto_ptr<ImageList>(new ImageList(::ImageList_Duplicate(imageList)));}
 
 inline void ImageList::endDrag() {::ImageList_EndDrag();}
 
@@ -180,7 +177,7 @@ inline HICON ImageList::extractIcon(int index) const {assertValidAsImageList(); 
 
 inline COLORREF ImageList::getBkColor() const {assertValidAsImageList(); return ::ImageList_GetBkColor(get());}
 
-inline std::auto_ptr<ImageList> ImageList::getDragImage(POINT* pt, POINT* hotSpot) {
+inline std::auto_ptr<ImageList> ImageList::getDragImage(::POINT* pt, ::POINT* hotSpot) {
 	return std::auto_ptr<ImageList>(new ImageList(::ImageList_GetDragImage(pt, hotSpot)));}
 
 inline HICON ImageList::getIcon(int index, UINT flags /* = ILD_NORMAL */) const {
@@ -189,25 +186,25 @@ inline HICON ImageList::getIcon(int index, UINT flags /* = ILD_NORMAL */) const 
 inline bool ImageList::getIconSize(SIZE& size) const {return getIconSize(size.cx, size.cy);}
 
 inline bool ImageList::getIconSize(long& cx, long& cy) const {
-	assertValidAsImageList(); toBoolean(::ImageList_GetIconSize(get(), reinterpret_cast<int*>(&cx), reinterpret_cast<int*>(&cy)));}
+	assertValidAsImageList(); return toBoolean(::ImageList_GetIconSize(get(), reinterpret_cast<int*>(&cx), reinterpret_cast<int*>(&cy)));}
 
-inline int ImageList::getImageCount() const {assertValidAsImageList(); return ::ImageList_GetImageCount(get());}
-
-inline bool ImageList::getImageInfo(int index, IMAGEINFO& imageInfo) const {
+inline bool ImageList::getImageInformation(int index, ::IMAGEINFO& imageInfo) const {
 	assertValidAsImageList(); return toBoolean(::ImageList_GetImageInfo(get(), index, &imageInfo));}
+
+inline int ImageList::getNumberOfImages() const {assertValidAsImageList(); return ::ImageList_GetImageCount(get());}
 
 inline bool ImageList::merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy) {
 	if(get() != 0)
 		return false;
-	setHandle(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy));
+	reset(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy));
 	return get() != 0;
 }
 
 #if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
-inline std::auto_ptr<ImageList> ImageList::readFromStream(IStream& stream) {return createManagedObject(::ImageList_Read(&stream));}
+inline std::auto_ptr<ImageList> ImageList::readFromStream(::IStream& stream) {return std::auto_ptr<ImageList>(new ImageList(::ImageList_Read(&stream)));}
 
 #if(_WIN32_WINNT >= 0x0501)
-inline HRESULT ImageList::readFromStream(IStream& stream, REFIID riid, void*& pv, DWORD flags) {
+inline HRESULT ImageList::readFromStream(::IStream& stream, ::REFIID riid, void*& pv, DWORD flags) {
 	return ::ImageList_ReadEx(flags, &stream, riid, &pv);}
 #endif /* _WIN32_WINNT >= 0x0501 */
 #endif /* __IStream_INTERFACE_DEFINED__ */
@@ -226,48 +223,48 @@ inline COLORREF ImageList::setBkColor(COLORREF color) {assertValidAsImageList();
 inline bool ImageList::setDragCursorImage(int index, int xHotSpot, int yHotSpot) {
 	assertValidAsImageList(); return toBoolean(::ImageList_SetDragCursorImage(get(), index, xHotSpot, yHotSpot));}
 
-inline bool ImageList::setDragCursorImage(int index, const POINT& hotSpot) {return setDragCursorImage(index, hotSpot.x, hotSpot.y);}
+inline bool ImageList::setDragCursorImage(int index, const ::POINT& hotSpot) {return setDragCursorImage(index, hotSpot.x, hotSpot.y);}
 
-inline bool ImageList::setIconSize(const SIZE& size) {return setIconSize(size.cx, size.cy);}
+inline bool ImageList::setIconSize(const ::SIZE& size) {return setIconSize(size.cx, size.cy);}
 
 inline bool ImageList::setIconSize(long cx, long cy) {assertValidAsImageList(); return toBoolean(::ImageList_SetIconSize(get(), cx, cy));}
-
-inline bool ImageList::setImageCount(UINT newCount) {
-	assertValidAsImageList(); return toBoolean(::ImageList_SetImageCount(get(), newCount));}
 
 inline bool ImageList::setOverlayImage(int index, int overlayIndex) {
 	assertValidAsImageList(); return toBoolean(::ImageList_SetOverlayImage(get(), index, overlayIndex));}
 
-#if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
-inline bool ImageList::writeToStream(IStream& stream) {assertValidAsImageList(); return toBoolean(::ImageList_Write(get(), &stream));}
+inline bool ImageList::setNumberOfImages(UINT newCount) {
+	assertValidAsImageList(); return toBoolean(::ImageList_SetImageCount(get(), newCount));}
 
-inline HRESULT ImageList::writeToStream(IStream& stream, DWORD flags) {
+#if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
+inline bool ImageList::writeToStream(::IStream& stream) {assertValidAsImageList(); return toBoolean(::ImageList_Write(get(), &stream));}
+
+inline HRESULT ImageList::writeToStream(::IStream& stream, DWORD flags) {
 	assertValidAsImageList(); return ::ImageList_WriteEx(get(), flags, &stream);}
 #endif /* __IStream_INTERFACE_DEFINED__ */
 
 
-// IpAddressCtrl ////////////////////////////////////////////////////////////
+// IPAddressCtrl ////////////////////////////////////////////////////////////
 
-inline void IpAddressCtrl::clearAddress() {sendMessage(IPM_CLEARADDRESS);}
+inline void IPAddressCtrl::clearAddress() {sendMessage(IPM_CLEARADDRESS);}
 
-inline int IpAddressCtrl::getAddress(DWORD& address) const {return sendMessageC<int>(IPM_GETADDRESS, 0, reinterpret_cast<LPARAM>(&address));}
+inline int IPAddressCtrl::getAddress(DWORD& address) const {return sendMessageC<int>(IPM_GETADDRESS, 0, reinterpret_cast<LPARAM>(&address));}
 
-inline bool IpAddressCtrl::isBlank() const {return sendMessageC<bool>(IPM_ISBLANK);}
+inline bool IPAddressCtrl::isBlank() const {return sendMessageC<bool>(IPM_ISBLANK);}
 
-inline void IpAddressCtrl::setAddress(DWORD address) {sendMessage(IPM_SETADDRESS, 0, address);}
+inline void IPAddressCtrl::setAddress(DWORD address) {sendMessage(IPM_SETADDRESS, 0, address);}
 
-inline void IpAddressCtrl::setFocus(int field) {sendMessage(IPM_SETFOCUS, field);}
+inline void IPAddressCtrl::setFocus(int field) {sendMessage(IPM_SETFOCUS, field);}
 
-inline void IpAddressCtrl::setRange(int field, ushort range) {sendMessage(IPM_SETRANGE, field, range);}
+inline void IPAddressCtrl::setRange(int field, ushort range) {sendMessage(IPM_SETRANGE, field, range);}
 
-inline void IpAddressCtrl::setRange(int field, uchar min, uchar max) {sendMessage(IPM_SETRANGE, field, MAKEIPRANGE(min, max));}
+inline void IPAddressCtrl::setRange(int field, uchar min, uchar max) {sendMessage(IPM_SETRANGE, field, MAKEIPRANGE(min, max));}
 
 
 // ListCtrl /////////////////////////////////////////////////////////////////
 
 inline SIZE ListCtrl::approximateViewRect(const SIZE& size, int count /* = -1 */) const {
 	assertValidAsWindow();
-	SIZE s;
+	::SIZE s;
 	DWORD temp = sendMessageC<DWORD>(LVM_APPROXIMATEVIEWRECT, count, MAKELONG(size.cx, size.cy));
 	s.cx = LOWORD(temp);
 	s.cy = HIWORD(temp);
@@ -276,7 +273,7 @@ inline SIZE ListCtrl::approximateViewRect(const SIZE& size, int count /* = -1 */
 
 inline bool ListCtrl::arrange(UINT code) {return sendMessageR<bool>(LVM_ARRANGE, code);}
 
-inline HIMAGELIST ListCtrl::createDragImage(int index, LPPOINT point) {
+inline HIMAGELIST ListCtrl::createDragImage(int index, ::POINT* point) {
 	return reinterpret_cast<HIMAGELIST>(sendMessage(LVM_CREATEDRAGIMAGE, index, reinterpret_cast<LPARAM>(point)));}
 
 inline bool ListCtrl::deleteAllItems() {return sendMessageR<bool>(LVM_DELETEALLITEMS);}
@@ -289,12 +286,12 @@ inline HWND ListCtrl::editLabel(int index) {return reinterpret_cast<HWND>(sendMe
 
 inline bool ListCtrl::ensureVisible(int index, bool partialOK) {return sendMessageR<bool>(LVM_ENSUREVISIBLE, index, partialOK);}
 
-inline int ListCtrl::findItem(LVFINDINFO& findInfo, int start /* = -1 */) const {
+inline int ListCtrl::findItem(::LVFINDINFO& findInfo, int start /* = -1 */) const {
 	return sendMessageC<int>(LVM_FINDITEM, start, reinterpret_cast<LPARAM>(&findInfo));}
 
 inline COLORREF ListCtrl::getBkColor() const {return sendMessageC<COLORREF>(LVM_GETBKCOLOR);}
 
-inline bool ListCtrl::getBkImage(LVBKIMAGE& image) const {return sendMessageC<bool>(LVM_GETBKIMAGE, 0, reinterpret_cast<LPARAM>(&image));}
+inline bool ListCtrl::getBkImage(::LVBKIMAGE& image) const {return sendMessageC<bool>(LVM_GETBKIMAGE, 0, reinterpret_cast<LPARAM>(&image));}
 
 inline UINT ListCtrl::getCallbackMask() const {return sendMessageC<UINT>(LVM_GETCALLBACKMASK);}
 
@@ -328,12 +325,12 @@ inline DWORD ListCtrl::getHoverTime() const {return sendMessageC<DWORD>(LVM_GETH
 inline HIMAGELIST ListCtrl::getImageList(int imageListType) const {
 	return reinterpret_cast<HIMAGELIST>(sendMessageC<LRESULT>(LVM_GETIMAGELIST, imageListType));}
 
-inline bool ListCtrl::getItem(LVITEM& item) const {return sendMessageC<bool>(LVM_GETITEM, 0, reinterpret_cast<LPARAM>(&item));}
+inline bool ListCtrl::getItem(::LVITEM& item) const {return sendMessageC<bool>(LVM_GETITEM, 0, reinterpret_cast<LPARAM>(&item));}
 
 inline int ListCtrl::getItemCount() const {return sendMessageC<int>(LVM_GETITEMCOUNT);}
 
 inline LPARAM ListCtrl::getItemData(int index) const {
-	LVITEM item;
+	::LVITEM item;
 	item.mask = LVIF_PARAM;
 	item.iItem = index;
 	item.iSubItem = 0;
@@ -341,10 +338,10 @@ inline LPARAM ListCtrl::getItemData(int index) const {
 	return item.lParam;
 }
 
-inline bool ListCtrl::getItemPosition(int index, POINT& point) const {
+inline bool ListCtrl::getItemPosition(int index, ::POINT& point) const {
 	return sendMessageC<bool>(LVM_GETITEMPOSITION, index, reinterpret_cast<LPARAM>(&point));}
 
-inline bool ListCtrl::getItemRect(int index, RECT& rect, UINT code) const {
+inline bool ListCtrl::getItemRect(int index, ::RECT& rect, UINT code) const {
 	rect.left = code;
 	return sendMessageC<bool>(LVM_GETITEMRECT, index, reinterpret_cast<LPARAM>(&rect));
 }
@@ -352,7 +349,7 @@ inline bool ListCtrl::getItemRect(int index, RECT& rect, UINT code) const {
 inline UINT ListCtrl::getItemState(int index, UINT mask) const {return sendMessageC<UINT>(LVM_GETITEMSTATE, index, mask);}
 
 inline int ListCtrl::getItemText(int index, int subItem, TCHAR* text, int maxLength) const {
-	LVITEM item;
+	::LVITEM item;
 	item.iSubItem = subItem;
 	item.pszText = text;
 	item.cchTextMax = maxLength;
@@ -376,7 +373,7 @@ inline std::basic_string<TCHAR> ListCtrl::getItemText(int index, int subItem) co
 
 inline int ListCtrl::getNextItem(int index, int flag) const {return sendMessageC<int>(LVM_GETNEXTITEM, index, flag);}
 
-inline bool ListCtrl::getOrigin(POINT& point) const {return sendMessageC<bool>(LVM_GETORIGIN, 0, reinterpret_cast<LPARAM>(&point));}
+inline bool ListCtrl::getOrigin(::POINT& point) const {return sendMessageC<bool>(LVM_GETORIGIN, 0, reinterpret_cast<LPARAM>(&point));}
 
 inline UINT ListCtrl::getSelectedCount() const {return sendMessageC<UINT>(LVM_GETSELECTEDCOUNT);}
 
@@ -572,7 +569,7 @@ inline bool ListCtrl::update(int index) {return toBoolean(sendMessage(LVM_UPDATE
 
 inline COLORREF MonthCalendarCtrl::getColor(int colorType) const {return sendMessageC<COLORREF>(MCM_GETCOLOR, colorType);}
 
-inline bool MonthCalendarCtrl::getCurSel(SYSTEMTIME& time) const {return sendMessageC<bool>(MCM_GETCURSEL, 0, reinterpret_cast<LPARAM>(&time));}
+inline bool MonthCalendarCtrl::getCurSel(::SYSTEMTIME& time) const {return sendMessageC<bool>(MCM_GETCURSEL, 0, reinterpret_cast<LPARAM>(&time));}
 
 inline int MonthCalendarCtrl::getFirstDayOfWeek(bool* localeVal /* = 0 */) const {
 	const DWORD temp = sendMessageC<DWORD>(MCM_GETFIRSTDAYOFWEEK);
@@ -585,28 +582,28 @@ inline int MonthCalendarCtrl::getMaxSelCount() const {return sendMessageC<int>(M
 
 inline int MonthCalendarCtrl::getMaxTodayWidth() const {return sendMessageC<int>(MCM_GETMAXTODAYWIDTH);}
 
-inline bool MonthCalendarCtrl::getMinReqRect(RECT& rect) const {return sendMessageC<bool>(MCM_GETMINREQRECT, 0, reinterpret_cast<LPARAM>(&rect));}
+inline bool MonthCalendarCtrl::getMinReqRect(::RECT& rect) const {return sendMessageC<bool>(MCM_GETMINREQRECT, 0, reinterpret_cast<LPARAM>(&rect));}
 
 inline int MonthCalendarCtrl::getMonthDelta() const {return sendMessageC<int>(MCM_GETMONTHDELTA);}
 
-inline int MonthCalendarCtrl::getMonthRange(DWORD flags, SYSTEMTIME times[]) const {
+inline int MonthCalendarCtrl::getMonthRange(DWORD flags, ::SYSTEMTIME times[]) const {
 	return sendMessageC<int>(MCM_GETMONTHRANGE, flags, reinterpret_cast<LPARAM>(times));}
 
-inline DWORD MonthCalendarCtrl::getRange(SYSTEMTIME times[]) const {return sendMessageC<DWORD>(MCM_GETRANGE, 0, reinterpret_cast<LPARAM>(times));}
+inline DWORD MonthCalendarCtrl::getRange(::SYSTEMTIME times[]) const {return sendMessageC<DWORD>(MCM_GETRANGE, 0, reinterpret_cast<LPARAM>(times));}
 
-inline bool MonthCalendarCtrl::getSelRange(SYSTEMTIME times[]) const {return sendMessageC<bool>(MCM_GETSELRANGE, 0, reinterpret_cast<LPARAM>(times));}
+inline bool MonthCalendarCtrl::getSelRange(::SYSTEMTIME times[]) const {return sendMessageC<bool>(MCM_GETSELRANGE, 0, reinterpret_cast<LPARAM>(times));}
 
-inline bool MonthCalendarCtrl::getToday(SYSTEMTIME& time) const {return sendMessageC<bool>(MCM_GETTODAY, 0, reinterpret_cast<LPARAM>(&time));}
+inline bool MonthCalendarCtrl::getToday(::SYSTEMTIME& time) const {return sendMessageC<bool>(MCM_GETTODAY, 0, reinterpret_cast<LPARAM>(&time));}
 
 inline bool MonthCalendarCtrl::getUnicodeFormat() const {return sendMessageC<bool>(MCM_GETUNICODEFORMAT);}
 
-inline DWORD MonthCalendarCtrl::hitTest(MCHITTESTINFO& hitTest) {return sendMessageR<DWORD>(MCM_HITTEST, 0, reinterpret_cast<LPARAM>(&hitTest));}
+inline DWORD MonthCalendarCtrl::hitTest(::MCHITTESTINFO& hitTest) {return sendMessageR<DWORD>(MCM_HITTEST, 0, reinterpret_cast<LPARAM>(&hitTest));}
 
 inline COLORREF MonthCalendarCtrl::setColor(int colorType, COLORREF color) {return sendMessageR<COLORREF>(MCM_SETCOLOR, colorType, color);}
 
 inline bool MonthCalendarCtrl::setCurSel(const SYSTEMTIME& time) {return sendMessageR<bool>(MCM_SETCURSEL, 0, reinterpret_cast<LPARAM>(&time));}
 
-inline bool MonthCalendarCtrl::setDayState(int count, const MONTHDAYSTATE dayStates[]) {
+inline bool MonthCalendarCtrl::setDayState(int count, const ::MONTHDAYSTATE dayStates[]) {
 	return sendMessageR<bool>(MCM_SETDAYSTATE, count, reinterpret_cast<LPARAM>(dayStates));}
 
 inline int MonthCalendarCtrl::setFirstDayOfWeek(int day, bool* localeVal /* = 0 */) {
@@ -643,10 +640,10 @@ inline int PagerCtrl::getButtonSize() const {return sendMessageC<int>(PGM_GETBUT
 
 inline DWORD PagerCtrl::getButtonState(int button) const {return sendMessageC<DWORD>(PGM_GETBUTTONSTATE, 0, button);}
 
-inline void PagerCtrl::getDropTarget(IDropTarget*& dropTarget) const {
+inline void PagerCtrl::getDropTarget(::IDropTarget*& dropTarget) const {
 	sendMessageC<int>(PGM_GETDROPTARGET, 0, reinterpret_cast<LPARAM>(&dropTarget));}
 
-inline int PagerCtrl::getPos() const {return sendMessageC<int>(PGM_GETPOS);}
+inline int PagerCtrl::getPosition() const {return sendMessageC<int>(PGM_GETPOS);}
 
 inline void PagerCtrl::recalcSize() {sendMessage(PGM_RECALCSIZE);}
 
@@ -658,7 +655,7 @@ inline int PagerCtrl::setButtonSize(int buttonSize) {return sendMessageR<int>(PG
 
 inline void PagerCtrl::setChild(HWND child) {sendMessage(PGM_SETCHILD, 0, reinterpret_cast<LPARAM>(child));}
 
-inline int PagerCtrl::setPos(int pos) {return sendMessageR<int>(PGM_SETPOS, 0, pos);}
+inline int PagerCtrl::setPosition(int pos) {return sendMessageR<int>(PGM_SETPOS, 0, pos);}
 
 
 // ProgressBarCtrl //////////////////////////////////////////////////////////
@@ -667,7 +664,7 @@ inline int ProgressBarCtrl::getHighLimit() const {return sendMessageC<int>(PBM_G
 
 inline int ProgressBarCtrl::getLowLimit() const {return sendMessageC<int>(PBM_GETRANGE, true);}
 
-inline UINT ProgressBarCtrl::getPos() const {return sendMessageC<UINT>(PBM_GETPOS);}
+inline UINT ProgressBarCtrl::getPosition() const {return sendMessageC<UINT>(PBM_GETPOS);}
 
 inline void ProgressBarCtrl::getRange(PBRANGE& range) const {sendMessageC<LRESULT>(PBM_GETRANGE, true, reinterpret_cast<LPARAM>(&range));}
 
@@ -678,7 +675,7 @@ inline void ProgressBarCtrl::getRange(int* lower, int* upper) const {
 	if(upper != 0)	*upper = range.iHigh;
 }
 
-inline int ProgressBarCtrl::offsetPos(int pos) {return sendMessageR<int>(PBM_DELTAPOS, pos);}
+inline int ProgressBarCtrl::offsetPosition(int pos) {return sendMessageR<int>(PBM_DELTAPOS, pos);}
 
 inline COLORREF ProgressBarCtrl::setBarColor(COLORREF color) {return sendMessageR<COLORREF>(PBM_SETBARCOLOR, 0, static_cast<LPARAM>(color));}
 
@@ -688,7 +685,7 @@ inline COLORREF ProgressBarCtrl::setBkColor(COLORREF color) {return sendMessageR
 inline bool ProgressBarCtrl::setMarquee(bool marquee, UINT updateTime /* = 0 */) {sendMessageR<bool>(PBM_SETMARQUEE, marquee, updateTime);}
 #endif /* PBM_SETMARQUEE */
 
-inline int ProgressBarCtrl::setPos(int pos) {return sendMessageR<int>(PBM_SETPOS, pos);}
+inline int ProgressBarCtrl::setPosition(int pos) {return sendMessageR<int>(PBM_SETPOS, pos);}
 
 inline DWORD ProgressBarCtrl::setRange(const PBRANGE& range) {return setRange(range.iLow, range.iHigh);}
 
@@ -852,7 +849,7 @@ inline HICON StatusBar::getIcon(int pane) const {return reinterpret_cast<HICON>(
 inline int StatusBar::getParts(int count, int parts[]) const {
 	assert(parts != 0); return sendMessageC<int>(SB_GETPARTS, count, reinterpret_cast<LPARAM>(parts));}
 
-inline bool StatusBar::getRect(int pane, RECT& rect) const {return sendMessageC<bool>(SB_GETRECT, pane, reinterpret_cast<LPARAM>(&rect));}
+inline bool StatusBar::getRect(int pane, ::RECT& rect) const {return sendMessageC<bool>(SB_GETRECT, pane, reinterpret_cast<LPARAM>(&rect));}
 
 inline int StatusBar::getText(int pane, TCHAR* text, int* type /* = 0 */) const {
 	const DWORD temp = sendMessageC<DWORD>(SB_GETTEXT, pane, reinterpret_cast<LPARAM>(text));
@@ -875,6 +872,15 @@ inline bool StatusBar::getUnicodeFormat() const {return sendMessageC<bool>(SB_GE
 
 inline bool StatusBar::isSimple() const {return sendMessageC<bool>(SB_ISSIMPLE);}
 
+inline void StatusBar::restoreTemporaryText() {
+	if(originalText_.get() != 0) {
+		::KillTimer(0, reinterpret_cast<UINT_PTR>(this));
+		int type;
+		getTextLength(0, &type);
+		setText(0, originalText_.release(), type);
+	}
+}
+
 inline COLORREF StatusBar::setBkColor(COLORREF color) {return sendMessageR<COLORREF>(SB_SETBKCOLOR, color);}
 
 inline bool StatusBar::setIcon(int pane, HICON icon) {return sendMessageR<bool>(SB_SETICON, pane, reinterpret_cast<LPARAM>(icon));}
@@ -883,14 +889,38 @@ inline void StatusBar::setMinHeight(int height) {sendMessage(SB_SETMINHEIGHT, he
 
 inline bool StatusBar::setParts(int count, int parts[]) {return sendMessageR<bool>(SB_SETPARTS, count, reinterpret_cast<LPARAM>(parts));}
 
-inline bool StatusBar::setSimple(bool simple /* = true */) {return sendMessageR<bool>(SB_SIMPLE, simple);}
+inline bool StatusBar::setSimple(bool simple /* = true */) {restoreTemporaryText(); return sendMessageR<bool>(SB_SIMPLE, simple);}
 
 inline bool StatusBar::setText(int pane, const TCHAR* text, int type /* = 0 */) {
-	return sendMessageR<bool>(SB_SETTEXT, pane | type, reinterpret_cast<LPARAM>(text));}
+	if(pane == 0) restoreTemporaryText(); return sendMessageR<bool>(SB_SETTEXT, pane | type, reinterpret_cast<LPARAM>(text));}
 
 inline void StatusBar::setTipText(int pane, const TCHAR* text) {sendMessage(SB_SETTIPTEXT, pane, reinterpret_cast<LPARAM>(text));}
 
 inline bool StatusBar::setUnicodeFormat(bool unicode /* = true */) {return sendMessageR<bool>(SB_SETUNICODEFORMAT, unicode);}
+
+inline bool StatusBar::showTemporaryText(const TCHAR* text, UINT duration) {
+	int type;
+	const int len = getTextLength(0, &type);
+	setText(0, text, type);
+	originalText_.reset(new TCHAR[len + 1]);
+	getText(0, originalText_.get());
+	::SetTimer(0, reinterpret_cast<UINT_PTR>(this), duration, timeElapsed);
+}
+
+inline void CALLBACK StatusBar::timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD) {reinterpret_cast<StatusBar*>(eventID)->restoreTemporaryText();}
+
+inline void StatusBar::onSize(UINT type, int cx, int cy) {
+	::RECT oldRect;
+	getRect(oldRect);
+	const int numberOfParts = getParts(0, 0);
+	AutoBuffer<int> parts(new int[numberOfParts]);
+	getParts(numberOfParts, parts.get());
+	for(int i = 0; i < numberOfParts; ++i) {
+		if(parts[i] != -1)
+			parts[i] += cy - (oldRect.right - oldRect.left);
+	}
+	setParts(numberOfParts, parts.get());
+}
 
 
 // TabCtrl //////////////////////////////////////////////////////////////////
@@ -1281,7 +1311,7 @@ inline bool ToolTipCtrl::create(HWND parent, const RECT& rect /* = DefaultWindow
 	if(CommonControl<ToolTipCtrl,
 			AdditiveWindowStyles<WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, WS_EX_TOOLWINDOW> >::create(
 			parent, rect, windowName, id, style, exStyle)) {
-		setWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);	// make top explicitly
+		setPosition(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);	// make top explicitly
 		return true;
 	}
 	return false;
@@ -1741,7 +1771,7 @@ inline UINT UpDownCtrl::getBase() const {return sendMessageC<UINT>(UDM_GETBASE);
 
 inline Window UpDownCtrl::getBuddy() const {return Window(reinterpret_cast<HWND>(sendMessageC<LRESULT>(UDM_GETBUDDY)));}
 
-inline int UpDownCtrl::getPos(bool* error /* = 0 */) const {return sendMessageC<int>(UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(error));}
+inline int UpDownCtrl::getPosition(bool* error /* = 0 */) const {return sendMessageC<int>(UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(error));}
 
 inline void UpDownCtrl::getRange(int& lower, int& upper) const {
 	sendMessageC<LRESULT>(UDM_GETRANGE32, reinterpret_cast<WPARAM>(&lower), reinterpret_cast<LPARAM>(&upper));}
@@ -1756,11 +1786,11 @@ inline int UpDownCtrl::setBase(int base) {return sendMessageR<int>(UDM_SETBASE, 
 inline Window UpDownCtrl::setBuddy(HWND buddy) {
 	return Window(reinterpret_cast<HWND>(sendMessageR<LRESULT>(UDM_GETBUDDY, reinterpret_cast<WPARAM>(buddy))));}
 
-inline int UpDownCtrl::setPos(int pos) {return sendMessageR<int>(UDM_SETPOS32, 0, static_cast<LPARAM>(pos));}
+inline int UpDownCtrl::setPosition(int pos) {return sendMessageR<int>(UDM_SETPOS32, 0, static_cast<LPARAM>(pos));}
 
 inline void UpDownCtrl::setRange(int lower, int upper) {sendMessage(UDM_SETRANGE32, lower, upper);}
 
 inline bool UpDownCtrl::setUnicodeFormat(bool unicode /* = true */) {return sendMessageR<bool>(UDM_SETUNICODEFORMAT, unicode);}
 
 
-}}} // namespace manah::windows::ui
+}}} // namespace manah.win32.ui

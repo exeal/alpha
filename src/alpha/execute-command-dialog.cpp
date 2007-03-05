@@ -32,7 +32,7 @@ void ExecuteCommandDlg::appendOutput(const char* first, const char* last) {
 	ostringstream output;
 	const char* p = first;
 	while(p < last) {
-		p = find(first, last, '\n');
+		p = std::find(first, last, '\n');
 		if(p == last) {
 			output.write(first, static_cast<streamsize>(p - first));
 			break;
@@ -84,7 +84,7 @@ bool ExecuteCommandDlg::execute(const wstring& commandLine, bool consoleProgram)
 	}
 
 	bool startupFailed = true;
-	windows::AutoZero<PROCESS_INFORMATION> pi;
+	win32::AutoZero<::PROCESS_INFORMATION> pi;
 
 	if(!consoleProgram) {	// GUI プログラム
 		if(toBoolean(::CreateProcessW(0,
@@ -115,7 +115,7 @@ bool ExecuteCommandDlg::execute(const wstring& commandLine, bool consoleProgram)
 			} else if(storedBytes == 0) {	// 出力が空であれば入力の機会を与える
 				if(processEnded)
 					break;
-				if(!inputTextbox_.isWindowEnabled()) {
+				if(!inputTextbox_.isEnabled()) {
 					switchControls(INPUT_IDLE);
 					inputTextbox_.setFocus();
 					inputTextbox_.setSel(0, -1);
@@ -157,13 +157,13 @@ inline bool ExecuteCommandDlg::rescueUser() {
 
 /// いくつかのコントロールの有効/無効を切り替える
 void ExecuteCommandDlg::switchControls(ControlState state) {
-	commandCombobox_.enableWindow(state == WAIT_FOR_NEW_COMMAND);
-	inputTextbox_.enableWindow(state == INPUT_IDLE);
+	commandCombobox_.enable(state == WAIT_FOR_NEW_COMMAND);
+	inputTextbox_.enable(state == INPUT_IDLE);
 	inputTextbox_.setReadOnly(state != INPUT_IDLE);
-	::EnableWindow(getDlgItem(IDC_BTN_SENDEOS), state == INPUT_IDLE);
-	::EnableWindow(getDlgItem(IDOK), state != EXECUTING);
-	::EnableWindow(getDlgItem(IDC_CHK_GETCONSOLE), state == WAIT_FOR_NEW_COMMAND);
-	::EnableWindow(getDlgItem(IDC_CHK_USEUNICODEFORINPUT), state == WAIT_FOR_NEW_COMMAND);
+	::EnableWindow(getItem(IDC_BTN_SENDEOS), state == INPUT_IDLE);
+	::EnableWindow(getItem(IDOK), state != EXECUTING);
+	::EnableWindow(getItem(IDC_CHK_GETCONSOLE), state == WAIT_FOR_NEW_COMMAND);
+	::EnableWindow(getItem(IDC_CHK_USEUNICODEFORINPUT), state == WAIT_FOR_NEW_COMMAND);
 }
 
 /// @see Dialog::onCancel
@@ -189,9 +189,9 @@ void ExecuteCommandDlg::onClose() {
 		delete[] buffer;
 	}
 	app_.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram",
-		(isDlgButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED) ? 1 : 0);
+		(isButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED) ? 1 : 0);
 	app_.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput",
-		(isDlgButtonChecked(IDC_CHK_USEUNICODEFORINPUT) == BST_CHECKED) ? 1 : 0);
+		(isButtonChecked(IDC_CHK_USEUNICODEFORINPUT) == BST_CHECKED) ? 1 : 0);
 
 	Dialog::onClose();
 }
@@ -201,7 +201,7 @@ bool ExecuteCommandDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 	switch(id) {
 	case IDC_COMBO_COMMAND:	// [コマンド]
 		if(notifyCode == CBN_EDITCHANGE)
-			::EnableWindow(getDlgItem(IDOK), commandCombobox_.getWindowTextLength() != 0);
+			::EnableWindow(getItem(IDOK), commandCombobox_.getTextLength() != 0);
 		break;
 	case IDC_BTN_CLEAR:	// [クリア]
 		outputTextbox_.setSel(0, -1);
@@ -212,7 +212,7 @@ bool ExecuteCommandDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 		inputTextbox_.replaceSel(L"\x001A");
 		break;
 	case IDC_CHK_GETCONSOLE:	// [コンソールプログラム]
-		::EnableWindow(getDlgItem(IDC_CHK_USEUNICODEFORINPUT), isDlgButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED);
+		::EnableWindow(getItem(IDC_CHK_USEUNICODEFORINPUT), isButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED);
 		break;
 	}
 
@@ -239,9 +239,9 @@ bool ExecuteCommandDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 		else
 			break;
 	}
-	checkDlg2StateButton(IDC_CHK_GETCONSOLE,
+	check2StateButton(IDC_CHK_GETCONSOLE,
 		app_.readIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram", 0) != 0);
-	checkDlg2StateButton(IDC_CHK_USEUNICODEFORINPUT,
+	check2StateButton(IDC_CHK_USEUNICODEFORINPUT,
 		app_.readIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput", 0) != 0);
 	onCommand(IDC_COMBO_COMMAND, CBN_EDITCHANGE, 0);
 	onCommand(IDC_CHK_GETCONSOLE, 0, 0);
@@ -251,12 +251,12 @@ bool ExecuteCommandDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 /// @see Dialog::onOK
 void ExecuteCommandDlg::onOK() {
 	if(!executing_) {	// [実行]
-		const int len = commandCombobox_.getWindowTextLength();
+		const int len = commandCombobox_.getTextLength();
 		wchar_t* rawCmdLine = new wchar_t[len + 1];
 		const basic_string<WCHAR> filePath = (app_.getBufferList().getActive().getFilePathName() != 0) ?
 			basic_string<WCHAR>(L"\"") + app_.getBufferList().getActive().getFilePathName() + L"\"" : L"";
 
-		commandCombobox_.getWindowText(rawCmdLine, len + 1);
+		commandCombobox_.getText(rawCmdLine, len + 1);
 
 		// "$F" をファイルパスに変換する
 		wstring cmdLine = rawCmdLine;
@@ -271,22 +271,22 @@ void ExecuteCommandDlg::onOK() {
 		delete[] rawCmdLine;
 
 		// [コンソールを取り込む] 場合はウィンドウを用意する
-		if(isDlgButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED) {
-			HWND splitStatic = getDlgItem(IDC_STATIC_PROMPT);
+		if(isButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED) {
+			HWND splitStatic = getItem(IDC_STATIC_PROMPT);
 			RECT rect;
 
 			switchControls(EXECUTING);
-			getWindowRect(rect);
+			getRect(rect);
 			rect.bottom = rect.top + 460;
-			moveWindow(rect, true);
+			move(rect, true);
 			::MoveWindow(splitStatic, 10, 122, 492, 2, false);
-			inputTextbox_.moveWindow(10, 130, 466, 18, false);
-			outputTextbox_.moveWindow(10, 150, 492, 270, false);
-			::MoveWindow(getDlgItem(IDC_BTN_SENDEOS), 480, 130, 22, 18, false);
+			inputTextbox_.move(10, 130, 466, 18, false);
+			outputTextbox_.move(10, 150, 492, 270, false);
+			::MoveWindow(getItem(IDC_BTN_SENDEOS), 480, 130, 22, 18, false);
 			::ShowWindow(splitStatic, SW_SHOW);
-			inputTextbox_.showWindow(SW_SHOW);
-			outputTextbox_.showWindow(SW_SHOW);
-			::ShowWindow(getDlgItem(IDC_BTN_SENDEOS), SW_SHOW);
+			inputTextbox_.show(SW_SHOW);
+			outputTextbox_.show(SW_SHOW);
+			::ShowWindow(getItem(IDC_BTN_SENDEOS), SW_SHOW);
 
 			executing_ = true;
 			execute(cmdLine, true);
@@ -297,11 +297,11 @@ void ExecuteCommandDlg::onOK() {
 			commandCombobox_.setEditSel(0, -1);
 		} else
 			execute(cmdLine, false);
-	} else if(const int inputLength = inputTextbox_.getWindowTextLength()) {
+	} else if(const int inputLength = inputTextbox_.getTextLength()) {
 		wchar_t* const input = new wchar_t[inputLength + 1];
 
-		inputTextbox_.getWindowText(input, inputLength + 1);
-		if(isDlgButtonChecked(IDC_CHK_USEUNICODEFORINPUT) == BST_CHECKED)	// [標準入力に Unicode を使用する]
+		inputTextbox_.getText(input, inputLength + 1);
+		if(isButtonChecked(IDC_CHK_USEUNICODEFORINPUT) == BST_CHECKED)	// [標準入力に Unicode を使用する]
 			appendInput(reinterpret_cast<char*>(input), reinterpret_cast<char*>(input + inputLength));
 		else {
 			const int cb = ::WideCharToMultiByte(CP_ACP, 0, input, inputLength, 0, 0, 0, 0);
@@ -315,5 +315,3 @@ void ExecuteCommandDlg::onOK() {
 
 //	Dialog::onOK();
 }
-
-/* [EOF] */

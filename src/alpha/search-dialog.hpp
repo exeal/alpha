@@ -19,7 +19,7 @@ namespace alpha {
 
 	namespace ui {
 		/// [検索と置換] ダイアログ
-		class SearchDialog : public manah::windows::ui::Layered<manah::windows::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
+		class SearchDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
 		public:
 			explicit SearchDialog(Alpha& app);
 			std::wstring	getActivePattern() const throw();
@@ -37,11 +37,11 @@ namespace alpha {
 		private:
 			Alpha& app_;
 			// コントロール
-			manah::windows::ui::ComboBox patternCombobox_;
-			manah::windows::ui::ComboBox replacementCombobox_;
-			manah::windows::ui::ComboBox searchTypeCombobox_;
-			manah::windows::ui::ComboBox wholeMatchCombobox_;
-			manah::windows::ui::ComboBox collationWeightCombobox_;
+			manah::win32::ui::ComboBox patternCombobox_;
+			manah::win32::ui::ComboBox replacementCombobox_;
+			manah::win32::ui::ComboBox searchTypeCombobox_;
+			manah::win32::ui::ComboBox wholeMatchCombobox_;
+			manah::win32::ui::ComboBox collationWeightCombobox_;
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_COMBO_FINDWHAT, patternCombobox_)
 				BIND_CONTROL(IDC_COMBO_REPLACEWITH, replacementCombobox_)

@@ -13,23 +13,23 @@
 
 
 namespace alpha {
-	/// 最近使ったファイルの情報
+	/// A most recently used file.
 	struct MRU {
-		std::basic_string<WCHAR> fileName;			///< ファイル名
-		ascension::encodings::CodePage codePage;	///< コードページ
+		std::basic_string<WCHAR> fileName;			///< The file name.
+		ascension::encodings::CodePage codePage;	///< The code page.
 	};
 
-	/// 最近使ったファイルの管理
+	/// Most recently used files.
 	class MRUManager : public manah::Noncopyable {
 	public:
-		// コンストラクタ
-		MRUManager(std::size_t limit, int startID, bool ownerDrawMenu = false);
-		// 属性
+		// constructor
+		MRUManager(std::size_t limit, int startID);
+		// attributes
 		std::size_t						getCount() const throw();
 		const MRU&						getFileInfoAt(std::size_t index) const;
-		const manah::windows::ui::Menu&	getPopupMenu() const throw();
+		const manah::win32::ui::Menu&	getPopupMenu() const throw();
 		void							setLimit(std::size_t newLimit);
-		// 操作
+		// operations
 		void	add(const std::basic_string<WCHAR>& fileName, ascension::encodings::CodePage cp);
 		void	clear();
 		void	remove(std::size_t index);
@@ -37,22 +37,21 @@ namespace alpha {
 		void	updateMenu();
 
 	private:
-		const int startID_;							// メニュー ID の先頭の値
-		std::list<MRU> fileNames_;					// フルパスのリスト
-		manah::windows::ui::Menu	popupMenu_;		// ポップアップメニュー
-		std::size_t limitCount_;					// 項目数の上限 (4以上16以下)
-		bool ownerDraw_;							// メニューをオーナードローにするか
+		const int startID_;						// メニュー ID の先頭の値
+		std::list<MRU> fileNames_;				// フルパスのリスト
+		manah::win32::ui::PopupMenu	popupMenu_;	// ポップアップメニュー
+		std::size_t limitCount_;				// 項目数の上限 (4以上16以下)
 	};
 
 
-	/// 項目を全て削除する
+	/// Removes all items.
 	inline void MRUManager::clear() {fileNames_.clear(); updateMenu();}
 
-	/// リストの項目数を返す
+	/// Returns the number of files.
 	inline size_t MRUManager::getCount() const throw() {return fileNames_.size();}
 
-	/// ポップアップメニューを返す
-	inline const manah::windows::ui::Menu& MRUManager::getPopupMenu() const throw() {return popupMenu_;}
+	/// Returns the popup menu.
+	inline const manah::win32::ui::Menu& MRUManager::getPopupMenu() const throw() {return popupMenu_;}
 
 }
 

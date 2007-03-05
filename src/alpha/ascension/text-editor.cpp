@@ -16,9 +16,9 @@ using namespace ascension::texteditor::isc;
 using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace manah;
-using namespace manah::windows;
+using namespace manah::win32;
 using namespace std;
-using manah::windows::ui::WaitCursor;
+using manah::win32::ui::WaitCursor;
 
 
 // commands::* //////////////////////////////////////////////////////////////
@@ -565,22 +565,22 @@ ulong IndentationCommand::execute() {
 ulong InputStatusToggleCommand::execute() {
 	if(type_ == IME_STATUS) {
 		assert(getTarget().isWindow());
-		HIMC imc = ::ImmGetContext(getTarget());
+		HIMC imc = ::ImmGetContext(getTarget().get());
 		::ImmSetOpenStatus(imc, !toBoolean(::ImmGetOpenStatus(imc)));
-		::ImmReleaseContext(getTarget(), imc);
+		::ImmReleaseContext(getTarget().get(), imc);
 	} else if(type_ == OVERTYPE_MODE) {
 		Caret& caret = getTarget().getCaret();
 		caret.setOvertypeMode(!caret.isOvertypeMode());
 		CLOSE_COMPLETION_WINDOW();
 	} else if(type_ == SOFT_KEYBOARD) {
 		assert(getTarget().isWindow());
-		HIMC imc = ::ImmGetContext(getTarget());
+		HIMC imc = ::ImmGetContext(getTarget().get());
 		DWORD conversionMode, sentenceMode;
 		::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode);
 		conversionMode = toBoolean(conversionMode & IME_CMODE_SOFTKBD) ?
 			(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
 		::ImmSetConversionStatus(imc, conversionMode, sentenceMode);
-		::ImmReleaseContext(getTarget(), imc);
+		::ImmReleaseContext(getTarget().get(), imc);
 	} else
 		assert(false);
 	return 0;
@@ -671,7 +671,7 @@ ulong ReconversionCommand::execute() {
 
 	TextViewer& viewer = getTarget();
 	const String selection = viewer.getCaret().getSelectionText();
-	HIMC imc = ::ImmGetContext(viewer);
+	HIMC imc = ::ImmGetContext(viewer.get());
 
 	if(!toBoolean(::ImmGetOpenStatus(imc)))	// 明示的に ON にしないと無視される場合がある
 		::ImmSetOpenStatus(imc, true);
@@ -682,7 +682,7 @@ ulong ReconversionCommand::execute() {
 		::ImmNotifyIME(imc, NI_OPENCANDIDATE, 0, 0);
 	else
 		viewer.beep();
-	::ImmReleaseContext(viewer, imc);
+	::ImmReleaseContext(viewer.get(), imc);
 
 	CLOSE_COMPLETION_WINDOW();
 	return 0;

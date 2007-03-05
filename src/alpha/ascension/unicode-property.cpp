@@ -11,6 +11,69 @@ using namespace ascension::unicode;
 using namespace ascension::unicode::internal;
 using namespace std;
 
+
+/**
+ * @class ascension::unicode::CharacterIterator
+ * Abstract class defines an interface for iteration on text.
+ *
+ * Following example prints all code points of the text.
+ *
+ * @code
+ * void printAllCharacters(CharacterIterator& i) {
+ *   for(i.first(); !i.isLast(); i.next())
+ *     print(i.current());
+ * }
+ * @endcode
+ *
+ * Relational operations must be applied to the clones.
+ *
+ * @code
+ * StringCharacterIterator i1 = ...;
+ * auto_ptr<CharacterIterator> i2 = i1.clone(); // i2 is a clone of i1
+ * StringCharacterIterator i3 = ...;            // i3 is not a clone of i1
+ *
+ * i1.equals(*i2); // ok
+ * i2->less(i1);   // ok
+ * i1.equals(i3);  // error! (std::invalid_argument exception)
+ * @endcode
+ *
+ * <h3>Offsets</h3>
+ *
+ * A @c CharacterIterator has a position in the character sequence (offset). Initial offset value
+ * is 0, and will be decremented or incremented when the iterator moves.
+ *
+ * The offset will be reset to 0 also when @c first or @c last is called.
+ *
+ * @code
+ * CharacterIterator i = ...;
+ * i.first();    // offset == 0
+ * i.next();     // offset == 1 (or 2 if the first character is not in BMP)
+ * i.last();     // offset == 0
+ * i.previous(); // offset == -1 (or -2)
+ * @endcode
+ *
+ * <h3>Implementation of @c CharacterIterator</h3>
+ *
+ * A concrete iterator class must implement the following protected methods:
+ *
+ * - @c doCurrent for dereference.
+ * - @c doNext, @c doPrevious, @c doFirst, @c doLast, and @c doMove for movement.
+ * - @c isFirst and @c isLast for detecting the boundaries.
+ * - @c doEquals and @c doLess for relational operations.
+ *
+ * These methods behave as a UTF-16 character iterator. So @c current should returns a UTF-16 code
+ * unit value (not a code point). @c CharacterIterator behaves as a UTF-32 character iterator by
+ * using these implementations.
+ *
+ * For relational operations, it is guaranteed that the right argument is a clone of @c this. So
+ * to implement by using down-cast is safe.
+ *
+ * bool MyIterator::equals(const CharacterIterator& rhs) const {
+ *   const MyIterator& concrete = static_cast<const MyIterator&>(rhs);
+ *   // compare this and concrete...
+ * }
+ */
+
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
 	bool isNU(CodePoint cp, int gc) throw() {

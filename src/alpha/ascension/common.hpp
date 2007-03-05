@@ -21,7 +21,7 @@
 
 #ifdef _DEBUG
 #include "../../manah/win32/timer.hpp"
-using manah::windows::Timer;
+using manah::win32::Timer;
 #endif /* _DEBUG */
 
 namespace ascension {

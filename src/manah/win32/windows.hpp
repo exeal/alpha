@@ -14,7 +14,7 @@
 #include <stdexcept>
 
 namespace manah {
-	namespace windows {
+	namespace win32 {
 
 		// Win32 structure initializement
 		template<class Base> struct AutoZero : public Base {AutoZero() {std::memset(this, 0, sizeof(Base));}};
@@ -35,40 +35,27 @@ namespace manah {
 		};
 
 		// base class for handle-wrapper classes
-		template<class Handle> class HandleHolder : public Unassignable {
+		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
+		class Handle : public Unassignable {
 		public:
-			struct InvalidHandleException : public std::invalid_argument {
-				InvalidHandleException() : std::invalid_argument("invalid handle value.") {}
-			};
-		protected:
-			HandleHolder(Handle handle = 0) : handle_(0), attached_(false) {if(handle != 0) attach(handle);}
-			HandleHolder(const HandleHolder& rhs) : handle_(0), attached_(false) {if(rhs.handle_ != 0) attach(rhs.handle_);}
-			virtual ~HandleHolder() {detach();}
-		public:
-			bool operator!() const throw() {return isNull();}
-			virtual bool attach(Handle handle) {	// subclass can throw InvalidHandleException
-				if(!attached_) {
-					handle_ = handle;
-					attached_ = true;
-					return true;
-				}
-				return false;
-			}
-			virtual Handle detach() throw() {
-				if(attached_) {
-					Handle old = handle_;
-					handle_ = 0;
-					attached_ = false;
-					return old;
-				}
-				return 0;
-			}
-			Handle get() const throw() {return handle_;}
-		protected:
+			Handle(HandleType handle = 0) : handle_(handle), attached_(false) {}
+			virtual ~Handle() {release();}
+			bool operator!() const throw() {return handle_ == 0;}
+			HandleType attach(HandleType handle) {HandleType old = release(); handle_ = handle; attached_ = true; return old;}
+			HandleType detach() {if(!attached_) throw std::logic_error("not attched."); return release();}
+			HandleType get() const {return handle_;}
 			bool isAttached() const throw() {return attached_;}
-			void setHandle(Handle newHandle) throw() {detach(); handle_ = newHandle; attached_ = false;}
+			HandleType release() {HandleType old = handle_; handle_ = 0; attached_ = false; return old;}
+			void reset(HandleType newHandle = 0) {
+				if(handle_ != 0 && newHandle != handle_ && !attached_ && deleter != 0)
+					(*deleter)(handle_);
+				handle_ = newHandle;
+				attached_ = false;
+			}
+		protected:
+			Handle(const Handle<HandleType, deleter>& rhs) : handle_(0), attached_(false) {if(rhs.handle_ != 0) attach(rhs.handle_);}
 		private:
-			Handle handle_;
+			HandleType handle_;
 			bool attached_;
 		};
 
@@ -112,10 +99,6 @@ namespace manah {
 		private:
 			TCHAR* fileName_;	// error log
 		};
-
-		namespace {
-			DumpContext	dout;
-		}
 
 		inline DumpContext::DumpContext(const TCHAR* fileName /* = 0 */) {
 			if(fileName != 0)

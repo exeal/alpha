@@ -2,7 +2,7 @@
 // (c) 2002-2007 exeal
 
 namespace manah {
-namespace windows {
+namespace win32 {
 namespace ui {
 
 
@@ -20,7 +20,7 @@ inline HCURSOR Button::getCursor() const {return reinterpret_cast<HCURSOR>(sendM
 
 inline HICON Button::getIcon() const {return reinterpret_cast<HICON>(sendMessageC<LRESULT>(BM_GETIMAGE, IMAGE_ICON));}
 
-inline bool Button::getIdealSize(SIZE& size) const {
+inline bool Button::getIdealSize(::SIZE& size) const {
 #ifndef BCM_GETIDEALSIZE
 	const UINT BCM_GETIDEALSIZE = 0x1601;
 #endif/* !BCM_GETIDEALSIZE */
@@ -29,7 +29,7 @@ inline bool Button::getIdealSize(SIZE& size) const {
 
 inline UINT Button::getState() const {return sendMessageC<UINT>(BM_GETSTATE);}
 
-inline bool Button::getTextMargin(RECT& margin) const {
+inline bool Button::getTextMargin(::RECT& margin) const {
 #ifndef BCM_GETTEXTMARGIN
 	const UINT BCM_GETTEXTMARGIN = 0x1605;
 #endif /* !BCM_GETTEXTMARGIN */
@@ -49,7 +49,7 @@ inline HICON Button::setIcon(HICON icon) {return reinterpret_cast<HICON>(sendMes
 
 inline void Button::setState(bool highlight) {sendMessage(BM_SETSTATE, highlight);}
 
-inline bool Button::setTextMargin(const RECT& margin) {
+inline bool Button::setTextMargin(const ::RECT& margin) {
 #ifndef BCM_SETTEXTMARGIN
 	const UINT BCM_SETTEXTMARGIN = 0x1604;
 #endif /* !BCM_SETTEXTMARGIN */
@@ -57,9 +57,9 @@ inline bool Button::setTextMargin(const RECT& margin) {
 }
 
 #ifdef BCM_FIRST
-inline bool Button::getImageList(BUTTON_IMAGELIST& bi) const {return sendMessageC<bool>(BCM_GETIMAGELIST, 0, reinterpret_cast<LPARAM>(&bi));}
+inline bool Button::getImageList(::BUTTON_IMAGELIST& bi) const {return sendMessageC<bool>(BCM_GETIMAGELIST, 0, reinterpret_cast<LPARAM>(&bi));}
 
-inline bool Button::setImageList(const BUTTON_IMAGELIST& bi) {return sendMessageR<bool>(BCM_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(&bi));}
+inline bool Button::setImageList(const ::BUTTON_IMAGELIST& bi) {return sendMessageR<bool>(BCM_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(&bi));}
 #endif /* BCM_FIRST */
 
 
@@ -82,14 +82,15 @@ inline int ComboBox::findString(int startAfter, const TCHAR* text) const {return
 inline int ComboBox::findStringExact(int start, const TCHAR* text) const {return sendMessageC<int>(CB_FINDSTRINGEXACT, start, reinterpret_cast<LPARAM>(text));}
 
 #ifdef CB_GETCOMBOBOXINFO
-inline bool ComboBox::getComboBoxInfo(COMBOBOXINFO& cbi) const {return sendMessageC<bool>(CB_GETCOMBOBOXINFO, 0, reinterpret_cast<LPARAM>(&cbi));}
+inline bool ComboBox::getComboBoxInformation(::COMBOBOXINFO& cbi) const {
+	return sendMessageC<bool>(CB_GETCOMBOBOXINFO, 0, reinterpret_cast<LPARAM>(&cbi));}
 #endif /* !CB_GETCOMBOBOXINFO */
 
 inline int ComboBox::getCount() const {return sendMessageC<int>(CB_GETCOUNT);}
 
 inline int ComboBox::getCurSel() const {return sendMessageC<int>(CB_GETCURSEL);}
 
-inline void ComboBox::getDroppedControlRect(RECT& rect) const {sendMessageC<int>(CB_GETDROPPEDCONTROLRECT, 0, reinterpret_cast<LPARAM>(&rect));}
+inline void ComboBox::getDroppedControlRect(::RECT& rect) const {sendMessageC<int>(CB_GETDROPPEDCONTROLRECT, 0, reinterpret_cast<LPARAM>(&rect));}
 
 inline bool ComboBox::getDroppedState() const {return sendMessageC<bool>(CB_GETDROPPEDSTATE);}
 
@@ -171,7 +172,7 @@ inline void ComboBox::showDropDown(bool show /* = true */) {sendMessage(CB_SHOWD
 
 // DragListBox //////////////////////////////////////////////////////////////
 
-inline void DragListBox::drawInsert(int index) {assertValidAsWindow(); ::DrawInsert(getParent(), get(), index);}
+inline void DragListBox::drawInsert(int index) {assertValidAsWindow(); ::DrawInsert(getParent()->get(), get(), index);}
 
 inline UINT DragListBox::getDragListMessage() {
 	static UINT	message;
@@ -180,7 +181,7 @@ inline UINT DragListBox::getDragListMessage() {
 	return message;
 }
 
-inline int DragListBox::lbItemFromPtr(const POINT& pt, bool autoScroll /* = true */) {assertValidAsWindow(); ::LBItemFromPt(get(), pt, autoScroll);}
+inline int DragListBox::lbItemFromPtr(const ::POINT& pt, bool autoScroll /* = true */) {assertValidAsWindow(); ::LBItemFromPt(get(), pt, autoScroll);}
 
 inline bool DragListBox::makeDragList() {
 	assertValidAsWindow();
@@ -194,6 +195,8 @@ inline bool DragListBox::makeDragList() {
 
 inline bool Edit::canUndo() const {return sendMessageC<bool>(EM_CANUNDO);}
 
+inline void Edit::getEditRect(::RECT& rect) const {sendMessageC<int>(EM_GETRECT, 0, reinterpret_cast<LPARAM>(&rect));}
+
 inline int Edit::getLineCount() const {return sendMessageC<int>(EM_GETLINECOUNT);}
 
 inline bool Edit::getModify() const {return sendMessageC<bool>(EM_GETMODIFY);}
@@ -201,8 +204,6 @@ inline bool Edit::getModify() const {return sendMessageC<bool>(EM_GETMODIFY);}
 inline void Edit::setModify(bool modified /* = true */) {sendMessage(EM_SETMODIFY, modified);}
 
 inline int Edit::getThumb() const {return sendMessageC<int>(EM_GETTHUMB);}
-
-inline void Edit::getRect(RECT& rect) const {sendMessageC<int>(EM_GETRECT, 0, reinterpret_cast<LPARAM>(&rect));}
 
 inline DWORD Edit::getSel() const {return sendMessageC<DWORD>(EM_GETSEL);}
 
@@ -222,13 +223,13 @@ inline UINT Edit::getLimitText() const {return sendMessageC<UINT>(EM_GETLIMITTEX
 
 inline POINT Edit::posFromChar(UINT charPos) const {
 	const DWORD dw = sendMessageC<DWORD>(EM_POSFROMCHAR, charPos);
-	POINT point;
+	::POINT point;
 	point.x = LOWORD(dw);
 	point.y = HIWORD(dw);
 	return point;
 }
 
-inline int Edit::charFromPos(const POINT& pt) const {return sendMessageC<int>(EM_CHARFROMPOS, 0, MAKELPARAM(pt.x, pt.y));}
+inline int Edit::charFromPos(const ::POINT& pt) const {return sendMessageC<int>(EM_CHARFROMPOS, 0, MAKELPARAM(pt.x, pt.y));}
 
 inline int Edit::getLine(int index, TCHAR* buffer) const {return sendMessageC<int>(EM_GETLINE, index, reinterpret_cast<LPARAM>(buffer));}
 
@@ -259,9 +260,9 @@ inline void Edit::replaceSel(const TCHAR* newText, bool canUndo /* = false */) {
 
 inline void Edit::setPasswordChar(TCHAR ch) {sendMessage(EM_SETPASSWORDCHAR, ch);}
 
-inline void Edit::setRect(const RECT& rect) {sendMessage(EM_SETRECT, 0, reinterpret_cast<LPARAM>(&rect));}
+inline void Edit::setRect(const ::RECT& rect) {sendMessage(EM_SETRECT, 0, reinterpret_cast<LPARAM>(&rect));}
 
-inline void Edit::setRectNP(const RECT& rect) {sendMessage(EM_SETRECTNP, 0, reinterpret_cast<LPARAM>(&rect));}
+inline void Edit::setRectNP(const ::RECT& rect) {sendMessage(EM_SETRECTNP, 0, reinterpret_cast<LPARAM>(&rect));}
 
 inline void Edit::setSel(DWORD selection, bool noScroll /* = false */) {setSel(LOWORD(selection), HIWORD(selection), noScroll);}
 
@@ -278,9 +279,9 @@ inline void Edit::setReadOnly(bool readOnly /* = true */) {sendMessage(EM_SETREA
 
 inline bool Edit::scrollCaret() {return toBoolean(sendMessage(EM_SCROLLCARET));}
 
-inline EDITWORDBREAKPROC Edit::getWordBreakProc() const {return reinterpret_cast<EDITWORDBREAKPROC>(sendMessageC<LRESULT>(EM_GETWORDBREAKPROC));}
+inline ::EDITWORDBREAKPROC Edit::getWordBreakProc() const {return reinterpret_cast<EDITWORDBREAKPROC>(sendMessageC<LRESULT>(EM_GETWORDBREAKPROC));}
 
-inline void Edit::setWordBreakProc(EDITWORDBREAKPROC proc) {sendMessage(EM_SETWORDBREAKPROC, 0, reinterpret_cast<LPARAM>(proc));}
+inline void Edit::setWordBreakProc(::EDITWORDBREAKPROC proc) {sendMessage(EM_SETWORDBREAKPROC, 0, reinterpret_cast<LPARAM>(proc));}
 
 #ifdef EM_GETIMESTATUS
 inline DWORD Edit::getImeStatus(DWORD type) const {return sendMessageC<DWORD>(EM_GETIMESTATUS, type);}
@@ -295,7 +296,7 @@ inline bool Edit::getCueBanner(WCHAR* text, int maxLength) const {
 
 inline bool Edit::setCueBanner(const WCHAR* text) {return sendMessageR<bool>(EM_SETCUEBANNER, 0, reinterpret_cast<LPARAM>(text));}
 
-inline bool Edit::showBalloonTip(const EDITBALLOONTIP& ebt) {return sendMessageR<bool>(EM_SHOWBALLOONTIP, 0, reinterpret_cast<LPARAM>(&ebt));}
+inline bool Edit::showBalloonTip(const ::EDITBALLOONTIP& ebt) {return sendMessageR<bool>(EM_SHOWBALLOONTIP, 0, reinterpret_cast<LPARAM>(&ebt));}
 
 inline bool Edit::hideBalloonTip() {return sendMessageR<bool>(EM_HIDEBALLOONTIP);}
 #endif /* EM_GETCUEBANNER */
@@ -323,9 +324,9 @@ inline int ListBox::setItemData(int index, DWORD itemData) {return sendMessageR<
 
 inline int ListBox::setItemDataPtr(int index, void* data) {return sendMessageR<int>(LB_SETITEMDATA, index, reinterpret_cast<LPARAM>(data));}
 
-inline int ListBox::getItemRect(int index, RECT& rect) const {return sendMessageC<int>(LB_GETITEMRECT, index, reinterpret_cast<LPARAM>(&rect));}
+inline int ListBox::getItemRect(int index, ::RECT& rect) const {return sendMessageC<int>(LB_GETITEMRECT, index, reinterpret_cast<LPARAM>(&rect));}
 
-inline UINT ListBox::itemFromPoint(const POINT& pt, bool& outSide) const {
+inline UINT ListBox::itemFromPoint(const ::POINT& pt, bool& outSide) const {
 	const UINT result = sendMessageC<UINT>(LB_ITEMFROMPOINT, 0, MAKELPARAM(pt.x, pt.y));
 	outSide = toBoolean(HIWORD(result));
 	return result;
@@ -347,7 +348,7 @@ inline void ListBox::setTabStops() {sendMessage(LB_SETTABSTOPS);}
 
 inline bool ListBox::setTabStops(int cxEachTabStop) {return sendMessageR<bool>(LB_GETSEL, 1, reinterpret_cast<LPARAM>(&cxEachTabStop));}
 
-inline bool ListBox::setTabStops(int count, INT* tabStops) {return toBoolean(sendMessage(LB_GETSEL, count, reinterpret_cast<LPARAM>(tabStops)));}
+inline bool ListBox::setTabStops(int count, ::INT* tabStops) {return toBoolean(sendMessage(LB_GETSEL, count, reinterpret_cast<LPARAM>(tabStops)));}
 
 inline LCID ListBox::getLocale() const {return sendMessageC<LCID>(LB_GETLOCALE);}
 
@@ -365,7 +366,7 @@ inline int ListBox::setCaretIndex(int index, bool scroll /* = true */) {return s
 
 inline int ListBox::getSelCount() const {return sendMessageC<int>(LB_GETSELCOUNT);}
 
-inline int ListBox::getSelItems(int maxItems, INT* indices) const {return sendMessageC<int>(LB_GETCURSEL, maxItems, reinterpret_cast<LPARAM>(indices));}
+inline int ListBox::getSelItems(int maxItems, ::INT* indices) const {return sendMessageC<int>(LB_GETCURSEL, maxItems, reinterpret_cast<LPARAM>(indices));}
 
 inline int ListBox::selItemRange(int firstItem, int lastItem, bool select /* = true */) {return sendMessageR<int>(LB_GETCURSEL, select, MAKELPARAM(firstItem, lastItem));}
 
@@ -396,7 +397,7 @@ inline bool ScrollBar::enableScrollBar(UINT arrowFlags /* = ESB_ENABLE_BOTH */) 
 	assertValidAsWindow(); return toBoolean(::EnableScrollBar(get(), SB_CTL, arrowFlags));}
 
 #if(WINVER >= 0x0500)
-inline bool ScrollBar::getScrollBarInfo(SCROLLBARINFO& scrollInfo) const {
+inline bool ScrollBar::getScrollBarInformation(::SCROLLBARINFO& scrollInfo) const {
 #ifdef SBM_GETSCROLLBARINFO
 	return sendMessageC<bool>(SBM_GETSCROLLBARINFO, 0, reinterpret_cast<LPARAM>(&scrollInfo));
 #else
@@ -406,29 +407,29 @@ inline bool ScrollBar::getScrollBarInfo(SCROLLBARINFO& scrollInfo) const {
 }
 #endif /* WINVER >= 0x0500 */
 
-inline bool ScrollBar::getScrollInfo(SCROLLINFO& scrollInfo) const {
+inline bool ScrollBar::getScrollInformation(::SCROLLINFO& scrollInfo) const {
 	assertValidAsWindow(); return toBoolean(::GetScrollInfo(get(), SB_CTL, &scrollInfo));}
 
 inline int ScrollBar::getScrollLimit() const {
-	AutoZeroCB<SCROLLINFO> scrollInfo;
+	AutoZeroCB<::SCROLLINFO> scrollInfo;
 	int minPos = 0, maxPos = 0;
 
 	getScrollRange(&minPos, &maxPos);
 	scrollInfo.fMask = SIF_PAGE;
-	if(getScrollInfo(scrollInfo))
+	if(getScrollInformation(scrollInfo))
 		maxPos -= (scrollInfo.nPage - 1 > 0) ? scrollInfo.nPage - 1 : 0;
 	return maxPos;
 }
 
-inline int ScrollBar::getScrollPos() const {assertValidAsWindow(); return ::GetScrollPos(get(), SB_CTL);}
+inline int ScrollBar::getScrollPosition() const {assertValidAsWindow(); return ::GetScrollPos(get(), SB_CTL);}
 
 inline void ScrollBar::getScrollRange(int* minPos, int* maxPos) const {
 	assertValidAsWindow(); ::GetScrollRange(get(), SB_CTL, minPos, maxPos);}
 
-inline int ScrollBar::setScrollInfo(const SCROLLINFO& scrollInfo, bool redraw /* = true */) {
+inline int ScrollBar::setScrollInformation(const ::SCROLLINFO& scrollInfo, bool redraw /* = true */) {
 	assertValidAsWindow(); return ::SetScrollInfo(get(), SB_CTL, &scrollInfo, redraw);}
 
-inline int ScrollBar::setScrollPos(int pos, bool redraw /* = true */) {
+inline int ScrollBar::setScrollPosition(int pos, bool redraw /* = true */) {
 	assertValidAsWindow(); return ::SetScrollPos(get(), SB_CTL, pos, redraw);}
 
 inline void ScrollBar::setScrollRange(int minPos, int maxPos, bool redraw /* = true */) {
@@ -458,5 +459,4 @@ inline HENHMETAFILE Static::setEnhMetaFile(HENHMETAFILE metaFile) {
 
 inline HICON Static::setIcon(HICON icon) {return reinterpret_cast<HICON>(sendMessageC<LRESULT>(STM_SETICON, reinterpret_cast<WPARAM>(icon)));}
 
-
-}}} // namespace manah::windows::ui
+}}} // namespace manah.win32.ui

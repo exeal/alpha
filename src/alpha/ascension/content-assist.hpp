@@ -22,7 +22,7 @@ namespace ascension {
 	namespace contentassist {
 
 		/// A completion window.
-		class CompletionWindow : public manah::windows::ui::ListBox {
+		class CompletionWindow : public manah::win32::ui::ListBox {
 		public:
 			// constructors
 			explicit CompletionWindow(viewers::SourceViewer& viewer);

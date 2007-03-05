@@ -9,6 +9,7 @@
 #include "ascension/text-editor.hpp"	// ascension::texteditor::commands::IncrementalSearchCommand
 #include "buffer.hpp"
 #include "application.hpp"
+#include "command.hpp"
 #include "mru-manager.hpp"
 #include "new-file-format-dialog.hpp"
 #include "save-some-buffers-dialog.hpp"
@@ -26,8 +27,9 @@ using namespace ascension::text;
 using namespace ascension::searcher;
 using namespace ascension::presentation;
 using namespace ascension::encodings;
-using namespace manah::windows;
-using namespace manah::windows::ui;
+using namespace ascension::viewers;
+using namespace manah::win32;
+using namespace manah::win32::ui;
 using namespace std;
 
 namespace {
@@ -64,12 +66,12 @@ namespace {
 
 // Buffer ///////////////////////////////////////////////////////////////////
 
-/// コンストラクタ
+/// Constructor.
 Buffer::Buffer() {
 	presentation_.reset(new Presentation(*this));
 }
 
-/// デストラクタ
+/// Destructor.
 Buffer::~Buffer() {
 }
 
@@ -80,12 +82,12 @@ const WCHAR* Buffer::getFileName() const throw() {
 	return (buffer != 0) ? buffer : untitled.c_str();
 }
 
-///
+/// Returns the presentation object of Ascension.
 Presentation& Buffer::getPresentation() throw() {
 	return *presentation_;
 }
 
-///
+/// Returns the presentation object of Ascension.
 const Presentation& Buffer::getPresentation() const throw() {
 	return *presentation_;
 }
@@ -102,7 +104,7 @@ const wstring BufferList::READ_ONLY_SIGNATURE_;
 BufferList::BufferList(Alpha& app) : app_(app) {
 	// エディタウィンドウの作成
 	// (WS_CLIPCHILDREN を付けると分割ウィンドウのサイズ変更枠が不可視になる...)
-	editorWindow_.create(app_.getMainWindow(), DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorPane));
+	editorWindow_.create(app_.getMainWindow().get(), DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorPane));
 	assert(editorWindow_.isWindow());
 
 	// 右クリックメニューの作成
@@ -112,7 +114,7 @@ BufferList::BufferList(Alpha& app) : app_(app) {
 		const_cast<wstring&>(READ_ONLY_SIGNATURE_).assign(app_.loadString(MSG_STATUS__READ_ONLY_CAPTION));
 }
 
-/// デストラクタ
+/// Destructor.
 BufferList::~BufferList() {
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next())
 		it.get().removeAll();
@@ -121,7 +123,7 @@ BufferList::~BufferList() {
 		delete buffers_[i];
 	}
 	if(icons_.isImageList()) {
-		const int c = icons_.getImageCount();
+		const int c = icons_.getNumberOfImages();
 		for(int i = 0; i < c; ++i)
 			::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
 		icons_.destroy();
@@ -129,9 +131,9 @@ BufferList::~BufferList() {
 }
 
 /**
- * 空の新規バッファを開く
- * @param encoding コードページ。省略すると既定のコードページ
- * @param lineBreak 改行コード。省略すると既定の改行コード
+ * Opens the new empty buffer.
+ * @param encoding the encoding (code page)
+ * @param lineBreak the line break
  */
 void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak lineBreak /* = LB_AUTO */) {
 /*	if(::GetCurrentThreadId() != app_.getMainWindow().getWindowThreadID()) {
@@ -164,7 +166,7 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 	EditorView* originalView = 0;
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
 		EditorView* view = (originalView == 0) ? new EditorView(buffer->getPresentation()) : new EditorView(*originalView);
-		view->create(editorWindow_, DefaultWindowRect(),
+		view->create(editorWindow_.get(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(view->isWindow());
 		if(originalView == 0)
@@ -204,17 +206,17 @@ void BufferList::addNewDialog() {
 		format.lineBreak = LB_CRLF;
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.lineBreak);
-	if(dlg.doModal(app_.getMainWindow()) != IDOK)
+	if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
 		return;
 	addNew(dlg.getEncoding(), dlg.getLineBreak());
 }
 
 /**
- * バッファを閉じる
- * @param index バッファのインデクス
- * @param queryUser 未保存のバッファの場合、ユーザに確認するか
- * @return バッファを実際に閉じた場合 true
- * @throw std::out_of_range @a index が不正なときスロー
+ * Closes the specified buffer.
+ * @param index the index of the buffer to close
+ * @param queryUser set true to query user if the buffer is modified
+ * @return true if the buffer was closed successfully
+ * @throw std#out_of_range @a index is invalid
  */
 bool BufferList::close(size_t index, bool queryUser) {
 	Buffer& buffer = getAt(index);
@@ -260,7 +262,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 	const size_t active = getActiveIndex();
 
-	app_.getMainWindow().lockWindowUpdate();
+	app_.getMainWindow().lockUpdate();
 
 	// 先に保存の必要の無いバッファを全部閉じる
 	for(size_t i = buffers_.size(); i != 0; --i) {
@@ -270,7 +272,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 			close(i - 1, false);
 	}
 
-	app_.getMainWindow().unlockWindowUpdate();
+	app_.getMainWindow().unlockUpdate();
 
 	// 未保存のバッファが無ければ終了
 	if(buffers_.size() == 1) {
@@ -300,7 +302,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 		df.save = true;
 		dlg.files_.push_back(df);
 	}
-	if(IDOK != dlg.doModal(app_.getMainWindow()))
+	if(IDOK != dlg.doModal(app_.getMainWindow().get()))
 		return false;
 
 	// 保存する
@@ -317,32 +319,32 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 }
 
 /**
- * バッファバーを (再) 作成する
- * @param rebar バッファバーを乗せるレバー
- * @return 成否
+ * Reconstructs the buffer bar.
+ * @param rebar the rebar on which the buffer bar set
+ * @return success or not
  */
 bool BufferList::createBar(Rebar& rebar) {
 	if(bufferBarPager_.isWindow()) {
 		rebar.deleteBand(rebar.idToIndex(IDC_BUFFERBARPAGER));
-		bufferBar_.destroyWindow();
-		bufferBarPager_.destroyWindow();
+		bufferBar_.destroy();
+		bufferBarPager_.destroy();
 	}
 
 	// バッファバーとページャを作成する
-	if(!bufferBarPager_.create(rebar, DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
+	if(!bufferBarPager_.create(rebar.get(), DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_NORESIZE | PGS_HORZ))
 		return false;
-	if(!bufferBar_.create(bufferBarPager_, DefaultWindowRect(), 0, IDC_BUFFERBAR,
+	if(!bufferBar_.create(bufferBarPager_.get(), DefaultWindowRect(), 0, IDC_BUFFERBAR,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE
 			| CCS_NODIVIDER | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_TOP
 			| TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_REGISTERDROP | TBSTYLE_TOOLTIPS | TBSTYLE_TRANSPARENT, WS_EX_TOOLWINDOW)) {
-		bufferBarPager_.destroyWindow();
+		bufferBarPager_.destroy();
 		return false;
 	}
 	HWND toolTips = bufferBar_.getToolTips();
 	bufferBar_.setButtonStructSize();
 	::SetWindowLongPtrW(toolTips, GWL_STYLE, ::GetWindowLongPtrW(toolTips, GWL_STYLE) | TTS_NOPREFIX);
-	bufferBarPager_.setChild(bufferBar_);
+	bufferBarPager_.setChild(bufferBar_.get());
 
 	// レバーに乗せる
 	AutoZeroCB<::REBARBANDINFOW> rbbi;
@@ -353,19 +355,19 @@ bool BufferList::createBar(Rebar& rebar) {
 	rbbi.cyMinChild = 22;
 	rbbi.wID = IDC_BUFFERBAR;
 	rbbi.lpText = const_cast<wchar_t*>(caption.c_str());
-	rbbi.hwndChild = bufferBarPager_;
+	rbbi.hwndChild = bufferBarPager_.get();
 	if(!rebar.insertBand(rebar.getBandCount(), rbbi)) {
-		bufferBar_.destroyWindow();
-		bufferBarPager_.destroyWindow();
+		bufferBar_.destroy();
+		bufferBarPager_.destroy();
 		return false;
 	}
 	return true;
 }
 
 /**
- * 指定したバッファのインデクスを返す
- * @param buffer バッファ
- * @return バッファの位置。見つからない場合は -1
+ * Finds the buffer in the list.
+ * @param buffer the buffer to find
+ * @return the index of the buffer or -1 if not found
  */
 size_t BufferList::find(const Buffer& buffer) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
@@ -376,9 +378,9 @@ size_t BufferList::find(const Buffer& buffer) const {
 }
 
 /**
- * 指定したファイル名を持つバッファのインデクスを返す
- * @param fileName 完全ファイル名
- * @return バッファの位置。見つからない場合は -1
+ * Finds the buffer in the list.
+ * @param fileName the name of the buffer to find
+ * @return the index of the buffer or -1 if not found
  */
 size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
@@ -402,24 +404,23 @@ void BufferList::fireActiveBufferSwitched() {
 	}
 
 	// アクティブなバッファのボタンが隠れていたらスクロールする
-	if(bufferBarPager_.isWindowVisible()) {
-		const int pagerPos = bufferBarPager_.getPos();
+	if(bufferBarPager_.isVisible()) {
+		const int pagerPos = bufferBarPager_.getPosition();
 		RECT buttonRect, pagerRect;
 		bufferBar_.getItemRect(static_cast<int>(activeBuffer), buttonRect);
 		bufferBarPager_.getClientRect(pagerRect);
 		if(buttonRect.left < pagerPos)
-			bufferBarPager_.setPos(buttonRect.left);
+			bufferBarPager_.setPosition(buttonRect.left);
 		else if(buttonRect.right > pagerPos + pagerRect.right)
-			bufferBarPager_.setPos(buttonRect.right - pagerRect.right);
+			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
 	}
-	static_cast<IActiveBufferListener&>(app_).activeBufferSwitched();
 }
 
 /**
- * 抽象ドキュメントを Buffer に変換する
- * @document 変換するドキュメント
- * @throw std::invalid_argument @a document がリストに含まれていなければスロー
- * @see BufferList::find
+ * Translates the abstract document into a @c Buffer.
+ * @document the document
+ * @throw std#invalid_argument @a document is not found
+ * @see BufferList#find
  */
 Buffer& BufferList::getConcreteDocument(Document& document) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
@@ -431,8 +432,8 @@ Buffer& BufferList::getConcreteDocument(Document& document) const {
 
 /**
  * タイトルバーやバッファバーに表示するバッファの名前を返す
- * @param buffer バッファ
- * @return 名前
+ * @param buffer the buffer
+ * @return the name
  */
 wstring BufferList::getDisplayName(const Buffer& buffer) {
 	const std::wstring str = buffer.getFileName();
@@ -442,7 +443,7 @@ wstring BufferList::getDisplayName(const Buffer& buffer) {
 		return buffer.isReadOnly() ? str + L" " + READ_ONLY_SIGNATURE_ : str;
 }
 
-/// バッファバーから送られてきた WM_NOTIFY を処理する
+/// Handles @c WM_NOTIFY message from the buffer bar.
 LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 	if(nmhdr.hdr.code == NM_RCLICK) {	// 右クリック
 		const NMMOUSE& mouse = *reinterpret_cast<::NMMOUSE*>(&nmhdr.hdr);
@@ -450,7 +451,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 			::POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
 			setActive(mouse.dwItemSpec - CMD_VIEW_BUFFERLIST_START);
-			contextMenu_.trackPopupMenu(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow());
+			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow().get());
 			return true;
 		}
 	}
@@ -490,7 +491,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 		return 0;
 	}
 
-	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.getSafeHwnd() == ::GetCapture()) {
+	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.get() == ::GetCapture()) {
 		::NMTBHOTITEM& hotItem = *reinterpret_cast<::NMTBHOTITEM*>(&nmhdr.hdr);
 		if(toBoolean(hotItem.dwFlags & HICF_MOUSE)) {	// ボタンをドラッグ中
 			::TBINSERTMARK mark;
@@ -509,7 +510,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 	return false;
 }
 
-/// バッファバーのページャから送られてきた @c WM_NOTIFY を処理する
+/// Handles @c WM_NOTIFY message from the pager of the buffer bar.
 LRESULT BufferList::handleBufferBarPagerNotification(NMHDR& nmhdr) {
 	if(nmhdr.code == PGN_CALCSIZE) {	// ページャサイズの計算
 		LPNMPGCALCSIZE p = reinterpret_cast<LPNMPGCALCSIZE>(&nmhdr);
@@ -610,8 +611,6 @@ void BufferList::documentModificationSignChanged(Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
-	if(&buffer == &getActive())
-		static_cast<IActiveBufferListener&>(app_).activeBufferPropertyChanged();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentFileNameChanged
@@ -621,20 +620,14 @@ void BufferList::documentFileNameChanged(Document& document) {
 	resetResources();
 	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
 	bufferBarPager_.recalcSize();
-	if(&buffer == &getActive())
-		static_cast<IActiveBufferListener&>(app_).activeBufferPropertyChanged();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
 void BufferList::documentAccessibleRegionChanged(Document& document) {
-	if(&getConcreteDocument(document) == &getActive())
-		static_cast<IActiveBufferListener&>(app_).activeBufferPropertyChanged();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentEncodingChanged
 void BufferList::documentEncodingChanged(Document& document) {
-	if(&getConcreteDocument(document) == &getActive())
-		static_cast<IActiveBufferListener&>(app_).activeBufferPropertyChanged();
 }
 
 /// @see ascension#text#IDocumentStateListenerdocumentReadOnlySignChanged
@@ -642,21 +635,16 @@ void BufferList::documentReadOnlySignChanged(Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
-	if(&buffer == &getActive())
-		static_cast<IActiveBufferListener&>(app_).activeBufferPropertyChanged();
 }
 
 /**
- * @brief テキストファイルを開く
- *
- * ファイルをテキストエディタで新しいビューに開き、そのビューをアクティブにする
- *
- * このメソッドはファイルオープンの結果を示すダイアログを表示することがある
- * @param fileName ファイル名
- * @param encoding ファイルのコードページ。省略すると自動判別
- * @param asReadOnly 読み取り専用として開くか
- * @param addToMRU 開いたファイルを最近使ったファイルに追加するか
- * @return 成否など
+ * Opens the specified file.
+ * This method may show a dialog to indicate the result.
+ * @param fileName the name of the file to open
+ * @param encoding the encoding (code page). auto-detect if omitted
+ * @param asReadOnly set true to open as read only
+ * @param addToMRU set true to add the file to MRU
+ * @return the result. see the description of @c BufferList#OpenResult
  */
 BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		CodePage encoding /* = CPEX_AUTOSELECT */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
@@ -728,18 +716,18 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		FileIOCallback callback(app_, true, resolvedName, encoding);
 
 		app_.setStatusText(s.c_str());
-		app_.getMainWindow().lockWindowUpdate();
+		app_.getMainWindow().lockUpdate();
 
 		// 準備ができたのでファイルを開く
 		result = buffer->load(resolvedName, lockMode, encoding, &callback);
 		app_.setStatusText(0);
-		app_.getMainWindow().unlockWindowUpdate();
+		app_.getMainWindow().unlockUpdate();
 
 		// ユーザがコードページの変更を要求していた
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
 			ui::CodePagesDialog dlg(encoding, true);
-			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
+			if(dlg.doModal(app_.getMainWindow().get()) == IDOK) {
 				encoding = dlg.getCodePage();
 				continue;	// コードページを変えて再挑戦
 			}
@@ -747,7 +735,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		break;
 	} while(true);
 
-	app_.getMainWindow().showWindow(app_.getMainWindow().isWindowVisible() ? SW_SHOW : SW_RESTORE);
+	app_.getMainWindow().show(app_.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
 	if(handleFileIOError(resolvedName, true, result)) {
 		if(asReadOnly)
@@ -760,11 +748,10 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 }
 
 /**
- *	[開く] ダイアログを表示してファイルを開く
- *	@param initialDirectory	ダイアログで最初に表示されるフォルダ。
-							null だとアクティブなバッファのディレクトリ。
-							アクティブなバッファがファイルに結び付けられていなければシステム既定の処理
- *	@return					成否など
+ * Shows "Open" dialog box and opens file(s).
+ * @param initialDirectory the directory name to show in the dialog first. if @c null, the directory
+ * of the active buffer. if the active buffer is not bound to a file, the system default
+ * @return the result. see the description of @c BufferList::OpenResult
  */
 BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* = 0 */) {
 	wstring filterSource = app_.readStringProfile(L"File", L"filter", app_.loadString(MSG_DIALOG__DEFAULT_OPENFILE_FILTER).c_str());
@@ -797,7 +784,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	AutoZeroLS<::OPENFILENAMEW> newOfn;
 	AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
-	ofn.hwndOwner = app_.getMainWindow().getSafeHwnd();
+	ofn.hwndOwner = app_.getMainWindow().get();
 	ofn.hInstance = ::GetModuleHandle(0);
 	ofn.lpstrFilter = filter;
 	ofn.lpstrFile = fileName;
@@ -837,7 +824,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		return OPENRESULT_FAILED;
 }
 
-/// GetOpenFileNameW 、GetSaveFileNameW のためのフックプロシジャ
+/// Hook procedure for @c GetOpenFileNameW and @c GetSaveFileNameW.
 UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch(message) {
 	case WM_COMMAND:
@@ -897,24 +884,24 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		// ラベル
 		::GetWindowRect(::GetDlgItem(dialog, stc2), &rect);
 		long x = rect.left;
-		codePageLabel.getWindowRect(rect);
-		codePageLabel.setWindowPos(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		codePageLabel.getRect(rect);
+		codePageLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		codePageLabel.setFont(guiFont);
 		if(breakCodeLabel.isWindow()) {
-			breakCodeLabel.getWindowRect(rect);
-			breakCodeLabel.setWindowPos(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			breakCodeLabel.getRect(rect);
+			breakCodeLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			breakCodeLabel.setFont(guiFont);
 		}
 
 		// コンボボックス
 		::GetWindowRect(::GetDlgItem(dialog, cmb1), &rect);
 		x = rect.left;
-		codePageCombobox.getWindowRect(rect);
-		codePageCombobox.setWindowPos(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		codePageCombobox.getRect(rect);
+		codePageCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		codePageCombobox.setFont(guiFont);
 		if(breakCodeCombobox.isWindow()) {
-			breakCodeCombobox.getWindowRect(rect);
-			breakCodeCombobox.setWindowPos(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			breakCodeCombobox.getRect(rect);
+			breakCodeCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			breakCodeCombobox.setFont(guiFont);
 		}
 
@@ -1009,15 +996,15 @@ bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 	return false;
 }
 
-/// バッファバーの長さを調整する
+/// Recalculates the size of the buffer bar.
 void BufferList::recalculateBufferBarSize() {
 	bufferBarPager_.recalcSize();
 
 	// バッファバーの理想長さの再計算
-	if(bufferBar_.isWindowVisible()) {
+	if(bufferBar_.isVisible()) {
 		AutoZero<::REBARBANDINFOW> rbbi;
-		Rebar rebar(bufferBarPager_.getParent());
-		RECT rect;
+		Rebar rebar(bufferBarPager_.getParent()->get());
+		::RECT rect;
 		rbbi.fMask = RBBIM_IDEALSIZE;
 		bufferBar_.getItemRect(bufferBar_.getButtonCount() - 1, rect);
 		rbbi.cxIdeal = rect.right;
@@ -1026,11 +1013,11 @@ void BufferList::recalculateBufferBarSize() {
 }
 
 /**
- * バッファを開き直す
- * @param index バッファの位置
- * @param changeCodePage コードページを変更するか
- * @return 成否など
- * @throw std::out_of_range @a index が不正なときスロー
+ * Reopens the specified buffer.
+ * @param index the index of the buffer to reopen
+ * @param changeCodePage set true to change the encoding
+ * @return the result. see the description of @c BufferList#OpenResult
+ * @throw std#out_of_range @a index is invalid
  */
 BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 	Buffer& buffer = getAt(index);
@@ -1047,7 +1034,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 	CodePage cp = buffer.getCodePage();
 	if(changeCodePage) {
 		ui::CodePagesDialog dlg(cp, true);
-		if(dlg.doModal(app_.getMainWindow()) != IDOK)
+		if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
 			return OPENRESULT_USERCANCELED;
 		cp = dlg.getCodePage();
 	}
@@ -1060,7 +1047,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
 			ui::CodePagesDialog dlg(cp, true);
-			if(dlg.doModal(app_.getMainWindow()) != IDOK)
+			if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
 				return OPENRESULT_USERCANCELED;
 			cp = dlg.getCodePage();
 			continue;
@@ -1075,10 +1062,10 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 		return (result != Document::FIR_CALLER_ABORTED) ? OPENRESULT_FAILED : OPENRESULT_USERCANCELED;
 }
 
-/// バッファのリストに基づいてイメージリストを (再) 作成、メニューを再構成する
+/// Reconstructs the image list and the menu according to the current buffer list.
 void BufferList::resetResources() {
 	if(icons_.isImageList()) {
-		const int c = icons_.getImageCount();
+		const int c = icons_.getNumberOfImages();
 		for(int i = 0; i < c; ++i)
 			::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
 		icons_.destroy();
@@ -1087,8 +1074,8 @@ void BufferList::resetResources() {
 		return;
 	icons_.create(::GetSystemMetrics(SM_CXSMICON),
 		::GetSystemMetrics(SM_CYSMICON), ILC_COLOR32 | ILC_MASK, 0, static_cast<int>(buffers_.size()));
-	while(listMenu_.getItemCount() != 0)
-		listMenu_.deleteMenuItem<Menu::BY_POSITION>(0);
+	while(listMenu_.getNumberOfItems() != 0)
+		listMenu_.erase<Menu::BY_POSITION>(0);
 
 	::SHFILEINFOW sfi;
 	for(size_t i = 0; i < buffers_.size(); ++i) {
@@ -1096,20 +1083,20 @@ void BufferList::resetResources() {
 			(buffers_[i]->getFilePathName() != 0) ? buffers_[i]->getFilePathName() : L"",
 			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
-		listMenu_.appendMenuItem(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START, 0U);
+		listMenu_.append(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START, 0U);
 	}
 	bufferBar_.setImageList(icons_.get());
-	if(bufferBar_.isWindowVisible())
+	if(bufferBar_.isVisible())
 		bufferBar_.invalidateRect(0);
 }
 
 /**
- * バッファを上書き保存する
- * @param index バッファの位置
- * @param overwrite 上書き保存する場合 true。false を指定したり上書きできない場合はダイアログを表示する
- * @param addToMRU ファイルを最近使ったファイルに追加するか。ファイルが存在しない場合や名前を変更した場合のみ有効
- * @return 成否 (保存する必要が無い場合も true)
- * @throw std::out_of_range @a index が不正なときスロー
+ * Saves (overwrites) the specified buffer.
+ * @param index the index of the buffer to save
+ * @param overwrite set false to save with another name (a file dialog will be shown)
+ * @param addToMRU set true to add the file to MRU. this is effective only if the file was not exist or renamed
+ * @retval true saved successfully or not needed to
+ * @throw std#out_of_range @a index is invalid
  */
 bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /* = true */) {
 	Buffer& buffer = getAt(index);
@@ -1137,7 +1124,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		AutoZeroLS<::OPENFILENAMEW> newOfn;
 		AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 		::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
-		ofn.hwndOwner = app_.getMainWindow().getSafeHwnd();
+		ofn.hwndOwner = app_.getMainWindow().get();
 		ofn.hInstance = ::GetModuleHandle(0);
 		ofn.lpstrFilter = filter;
 		ofn.lpstrFile = fileName;
@@ -1184,7 +1171,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		if(callback.doesUserWantToChangeCodePage()) {
 			ui::CodePagesDialog dlg(format.encoding, false);
 			assert(result == Document::FIR_CALLER_ABORTED);
-			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
+			if(dlg.doModal(app_.getMainWindow().get()) == IDOK) {
 				format.encoding = dlg.getCodePage();
 				continue;
 			}
@@ -1199,9 +1186,9 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 }
 
 /**
- * バッファを全て保存
- * @param addToMRU ファイルを最近使ったファイルに追加するか。ファイルが存在しない場合や名前を変更した場合のみ有効
- * @return 途中で中断されなければ true
+ * Saves all buffers.
+ * @param addToMRU set true to add the files to MRU.
+ * @return true if all buffers were saved successfully
  */
 bool BufferList::saveAll(bool addToMRU /* = true */) {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
@@ -1212,9 +1199,9 @@ bool BufferList::saveAll(bool addToMRU /* = true */) {
 }
 
 /**
- * アクティブなペインでバッファをアクティブにする
- * @param index バッファ
- * @throw std::out_of_range @a index が不正なときスロー
+ * Activates the specified buffer in the active pane.
+ * @param index the index of the buffer to activate
+ * @throw std#out_of_range @a index is invalid
  */
 void BufferList::setActive(size_t index) {
 	editorWindow_.getActivePane().showBuffer(getAt(index));
@@ -1222,38 +1209,39 @@ void BufferList::setActive(size_t index) {
 }
 
 /**
- * アクティブなペインでバッファをアクティブにする
- * @param buffer バッファ
- * @throw std::invalid_argument @a buffer が不正なときスロー
+ * Activates the specified buffer in the active pane.
+ * @param buffer the buffer to activate
+ * @throw std#invalid_argument @a buffer is not exist
  */
 void BufferList::setActive(const Buffer& buffer) {
 	editorWindow_.getActivePane().showBuffer(buffer);
 	fireActiveBufferSwitched();
 }
 
-/// コンテキストメニューを作り直す
+/// Reconstructs the context menu.
 void BufferList::updateContextMenu() {
-	while(contextMenu_.getItemCount() > 0)
-		contextMenu_.deleteMenuItem<Menu::BY_POSITION>(0);
-	contextMenu_ << Menu::OwnerDrawnItem(CMD_FILE_CLOSE) << Menu::OwnerDrawnItem(CMD_FILE_CLOSEOTHERS);
-	contextMenu_.setDefaultMenuItem<Menu::BY_COMMAND>(CMD_FILE_CLOSE);
+	while(contextMenu_.getNumberOfItems() > 0)
+		contextMenu_.erase<Menu::BY_POSITION>(0);
+	contextMenu_ << Menu::StringItem(CMD_FILE_CLOSE, app_.getCommandManager().getMenuName(CMD_FILE_CLOSE).c_str())
+		<< Menu::StringItem(CMD_FILE_CLOSEOTHERS, app_.getCommandManager().getMenuName(CMD_FILE_CLOSEOTHERS).c_str());
+	contextMenu_.setDefault<Menu::BY_COMMAND>(CMD_FILE_CLOSE);
 }
 
 
 // EditorPane ///////////////////////////////////////////////////////////////
 
-/// コンストラクタ
+/// Constructor.
 EditorPane::EditorPane(EditorView* initialView /* = 0 */) : visibleView_(initialView), lastVisibleView_(0) {
 	if(initialView != 0)
 		addView(*initialView);
 }
 
-/// コピーコンストラクタ
+/// Copy-constructor.
 EditorPane::EditorPane(const EditorPane& rhs) {
 	for(set<EditorView*>::const_iterator it = rhs.views_.begin(); it != rhs.views_.end(); ++it) {
 		EditorView* view = new EditorView(*(*it));
 		view->detach();	// <-- 重要
-		const bool succeeded = view->create((*it)->getParent(), DefaultWindowRect(),
+		const bool succeeded = view->create((*it)->getParent()->get(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		views_.insert(view);
@@ -1264,14 +1252,14 @@ EditorPane::EditorPane(const EditorPane& rhs) {
 	}
 }
 
-/// デストラクタ
+/// Destructor.
 EditorPane::~EditorPane() {
 	removeAll();
 }
 
 /**
- * ビューを追加する
- * @param view 追加するビュー
+ * Adds the new viewer
+ * @param view the viewer to add
  */
 void EditorPane::addView(EditorView& view) {
 	views_.insert(&view);
@@ -1279,7 +1267,7 @@ void EditorPane::addView(EditorView& view) {
 		showBuffer(view.getDocument());
 }
 
-/// 全てのビューを削除する
+/// Removes all viewers.
 void EditorPane::removeAll() {
 	for(set<EditorView*>::iterator it = views_.begin(); it != views_.end(); ++it)
 		delete *it;
@@ -1288,8 +1276,8 @@ void EditorPane::removeAll() {
 }
 
 /**
- * 指定したバッファのビューを削除する
- * @param buffer バッファ
+ * Removes the viewer belongs to the specified buffer.
+ * @param buffer the buffer has the viewer to remove
  */
 void EditorPane::removeBuffer(const Buffer& buffer) {
 	for(set<EditorView*>::iterator it = views_.begin(); it != views_.end(); ++it) {
@@ -1314,9 +1302,9 @@ void EditorPane::removeBuffer(const Buffer& buffer) {
 }
 
 /**
- * 指定したバッファのビューを表示する
- * @param buffer 表示するバッファ
- * @throw std::invalid_argument @a buffer が存在しない場合スロー
+ * Shows the specified buffer in the pane.
+ * @param buffer the buffer to show
+ * @throw std#invalid_argument @a buffer is not exist
  */
 void EditorPane::showBuffer(const Buffer& buffer) {
 	if(visibleView_ != 0 && &visibleView_->getDocument() == &buffer)
@@ -1327,9 +1315,9 @@ void EditorPane::showBuffer(const Buffer& buffer) {
 			lastVisibleView_ = visibleView_;
 			visibleView_ = *it;
 			Alpha::getInstance().getBufferList().getEditorWindow().adjustPanes();
-			visibleView_->showWindow(SW_SHOW);
+			visibleView_->show(SW_SHOW);
 			if(lastVisibleView_ != 0)
-				lastVisibleView_->showWindow(SW_HIDE);
+				lastVisibleView_->show(SW_HIDE);
 			if(hadFocus)
 				visibleView_->setFocus();
 			return;
@@ -1341,40 +1329,58 @@ void EditorPane::showBuffer(const Buffer& buffer) {
 
 // EditorView ///////////////////////////////////////////////////////////////
 
-/// コンストラクタ
+Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
+
+/// Constructor.
 EditorView::EditorView(Presentation& presentation) : SourceViewer(presentation), visualColumnStartValue_(1) {
 }
 
-/// コピーコンストラクタ
+/// Copy-constructor.
 EditorView::EditorView(const EditorView& rhs) : SourceViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
 }
 
-/// デストラクタ
+/// Destructor.
 EditorView::~EditorView() {
 }
 
-/// インクリメンタル検索を開始する
+/// Begins incremental search.
 void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
 	texteditor::commands::IncrementalSearchCommand(*this, type, direction, this).execute();
 }
 
-/// 現在位置を表す文字列を返す
-const wchar_t* EditorView::getCurrentPositionString() const {
-	static wchar_t format[100] = {0};
+/// @see ICaretListener#caretMoved
+void EditorView::caretMoved(const Caret& self, const Region& oldRegion) {
+	SourceViewer::caretMoved(self, oldRegion);
+	updateCurrentPositionOnStatusBar();
+}
 
-	if(format[0] == 0)
-		Alpha::getInstance().loadString(MSG_STATUS__CARET_POSITION, format, countof(format));
+/// @see IDocumentStateListener#documentAccessibleRegionChanged
+void EditorView::documentAccessibleRegionChanged(Document& document) {
+	SourceViewer::documentAccessibleRegionChanged(document);
+	updateNarrowingOnStatusBar();
+}
 
-	static wchar_t buffer[countof(format)];
-	AutoZeroCB<::SCROLLINFO> si;
+/// @see IDocumentStateListener#documentEncodingChanged
+void EditorView::documentEncodingChanged(Document& document) {
+	SourceViewer::documentEncodingChanged(document);
+}
 
-	const ascension::viewers::Caret& caret = getCaret();
-	getScrollInfo(SB_VERT, si, SIF_POS | SIF_RANGE);
-	swprintf(buffer, format,
-		caret.getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue,
-		caret.getVisualColumnNumber() + visualColumnStartValue_,
-		caret.getColumnNumber() + visualColumnStartValue_);
-	return buffer;
+/// @see IDocumentStateListener#documentFileNameChanged
+void EditorView::documentFileNameChanged(Document& document) {
+	SourceViewer::documentFileNameChanged(document);
+	updateTitleBar();
+}
+
+/// @see IDocumentStateListener#documentModificationSignChanged
+void EditorView::documentModificationSignChanged(Document& document) {
+	SourceViewer::documentModificationSignChanged(document);
+	updateTitleBar();
+}
+
+/// @see IDocumentStateListener#documentReadOnlySignChanged
+void EditorView::documentReadOnlySignChanged(Document& document) {
+	SourceViewer::documentReadOnlySignChanged(document);
+	updateTitleBar();
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchAborted
@@ -1422,6 +1428,11 @@ void EditorView::incrementalSearchPatternChanged(Result result) {
 void EditorView::incrementalSearchStarted(const Document&) {
 }
 
+/// @see ICaretListener#matchBracketsChanged
+void EditorView::matchBracketsChanged(const Caret& self, const pair<Position, Position>& oldPair, bool outsideOfView) {
+	// TODO: indicate if the pair is outside of the viewer.
+}
+
 /// @see Window#onKeyDown
 bool EditorView::onKeyDown(UINT ch, UINT flags) {
 	// 既定のキー割り当てを全て無効にする
@@ -1438,6 +1449,69 @@ void EditorView::onKillFocus(HWND newWindow) {
 /// @see Window#onSetFocus
 void EditorView::onSetFocus(HWND oldWindow) {
 	SourceViewer::onSetFocus(oldWindow);
-	// バッファマネージャに自分がアクティブになったことを通知する
-	Alpha::getInstance().getBufferList().setActive(getDocument());
+	updateTitleBar();
+	updateCurrentPositionOnStatusBar();
+	updateNarrowingOnStatusBar();
+	updateOvertypeModeOnStatusBar();
+}
+
+/// @see ICaretListener#overtypeModeChanged
+void EditorView::overtypeModeChanged(const Caret&) {
+	updateOvertypeModeOnStatusBar();
+}
+
+/// @see ICaretListener#selectionShapeChanged
+void EditorView::selectionShapeChanged(const Caret&) {
+}
+
+void EditorView::updateCurrentPositionOnStatusBar() {
+	if(hasFocus()) {
+		// build the current position indication string
+		static wchar_t format[256] = {0};
+		if(format[0] == 0)
+			Alpha::getInstance().loadString(MSG_STATUS__CARET_POSITION, format, countof(format));
+		wchar_t text[countof(format)];
+		AutoZero<::SCROLLINFO> si;
+		getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
+		swprintf(text, format,
+			getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue,
+			getCaret().getVisualColumnNumber() + visualColumnStartValue_,
+			getCaret().getColumnNumber() + visualColumnStartValue_);
+		// show in the status bar
+		Alpha::getInstance().getStatusBar().setText(1, text);
+	}
+}
+
+void EditorView::updateNarrowingOnStatusBar() {
+	if(hasFocus()) {
+		const bool narrow = getDocument().isNarrowed();
+		Alpha& app = Alpha::getInstance();
+		if(narrowingIcon_.get() == 0)
+			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
+		StatusBar& statusBar = app.getStatusBar();
+		statusBar.setText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
+		statusBar.setTipText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
+		statusBar.setIcon(4, narrow ? narrowingIcon_.get() : 0);
+	}
+}
+
+void EditorView::updateOvertypeModeOnStatusBar() {
+	if(hasFocus())
+		Alpha::getInstance().getStatusBar().setText(3,
+			Alpha::getInstance().loadString(getCaret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
+}
+
+/// Updates the title bar text according to the current state.
+void EditorView::updateTitleBar() {
+	static wstring titleCache;
+	Window& mainWindow = Alpha::getInstance().getMainWindow();
+	if(!mainWindow.isWindow())
+		return;
+	wstring title = BufferList::getDisplayName(getDocument());
+	if(title != titleCache) {
+		titleCache = title;
+//		title += L" - " IDS_APPFULLVERSION;
+		title += L" - " IDS_APPNAME;
+		mainWindow.setText(title.c_str());
+	}
 }

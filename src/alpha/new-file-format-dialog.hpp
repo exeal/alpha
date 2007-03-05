@@ -15,7 +15,7 @@
 namespace alpha {
 	namespace ui {
 		/// 「書式を指定して新規」ダイアログ
-		class NewFileFormatDialog : public manah::windows::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
+		class NewFileFormatDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
 			NewFileFormatDialog(ascension::encodings::CodePage encoding, ascension::text::LineBreak lineBreak) throw();
 			ascension::encodings::CodePage	getEncoding() const throw();
@@ -26,8 +26,8 @@ namespace alpha {
 			void	onOK();
 			ascension::encodings::CodePage encoding_;
 			ascension::text::LineBreak lineBreak_;
-			manah::windows::ui::ComboBox codePageCombobox_;
-			manah::windows::ui::ComboBox lineBreakCombobox_;
+			manah::win32::ui::ComboBox codePageCombobox_;
+			manah::win32::ui::ComboBox lineBreakCombobox_;
 			BEGIN_CONTROL_BINDING()
 				BIND_CONTROL(IDC_COMBO_CHARCODE, codePageCombobox_)
 				BIND_CONTROL(IDC_COMBO_BREAKCODE, lineBreakCombobox_)

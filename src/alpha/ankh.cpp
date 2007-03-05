@@ -13,7 +13,7 @@
 #include "../manah/com/ole-type-wrapper.hpp"	// ComBSTR
 #include <sstream>
 using namespace alpha::ankh;
-using namespace manah::windows;
+using namespace manah::win32;
 using namespace manah::com;
 using namespace std;
 
@@ -1025,7 +1025,7 @@ bool ScriptSystem::associateEngine(const WCHAR* fileName, CLSID& clsid) const {
 	// それでも駄目な場合はエンドユーザに訊いてみる (対話モードの場合)
 	if(interactive_) {
 		alpha::ui::SelectLanguageDialog dialog(fileName);
-		if(IDOK == dialog.doModal(Alpha::getInstance().getMainWindow()))
+		if(IDOK == dialog.doModal(Alpha::getInstance().getMainWindow().get()))
 			return SUCCEEDED(::CLSIDFromProgID(dialog.getSelectedLanguage().c_str(), &clsid));
 	}
 	return false;
@@ -1217,7 +1217,7 @@ HRESULT ScriptSystem::launchNewEngine(const CLSID& engineID, ComPtr<ScriptHost>&
 	ComPtr<IActiveScript> newEngine;
 	if(FAILED(hr = newEngine.createInstance(engineID, 0, CLSCTX_INPROC)))
 		return hr;
-	if(ScriptHost* host = new(nothrow) ScriptHost(*this, *newEngine, Alpha::getInstance().getMainWindow())) {
+	if(ScriptHost* host = new(nothrow) ScriptHost(*this, *newEngine, Alpha::getInstance().getMainWindow().get())) {
 		host->AddRef();
 		newHost.reset(host);
 		// 管理リストに含める

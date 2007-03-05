@@ -59,7 +59,7 @@ bool SelectLanguageDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	}
 
 	if(languageListbox_.getCount() == 0)
-		::EnableWindow(getDlgItem(IDOK), false);
+		::EnableWindow(getItem(IDOK), false);
 	else
 		languageListbox_.setCurSel(0);
 
