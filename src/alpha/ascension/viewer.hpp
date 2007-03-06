@@ -101,22 +101,22 @@ namespace ascension {
 		};
 
 		/**
-		 * @c CaretShapeUpdator updates the caret of the text viewer.
+		 * @c CaretShapeUpdater updates the caret of the text viewer.
 		 * @see TextViewer, ICaretShapeProvider
 		 */
-		class CaretShapeUpdator {
+		class CaretShapeUpdater {
 		public:
 			TextViewer&	getTextViewer() throw();
 			void		update() throw();
 		private:
-			CaretShapeUpdator(TextViewer& viewer) throw();
+			CaretShapeUpdater(TextViewer& viewer) throw();
 			TextViewer& viewer_;
 			friend class TextViewer;
 		};
 
 		/**
 		 * Interface for objects which define the shape of the text viewer's caret.
-		 * @see TextViewer#setCaretShapeProvider, CaretShapeUpdator, DefaultCaretShaper, LocaleSensitiveCaretShaper
+		 * @see TextViewer#setCaretShapeProvider, CaretShapeUpdater, DefaultCaretShaper, LocaleSensitiveCaretShaper
 		 */
 		class ICaretShapeProvider {
 		protected:
@@ -133,9 +133,9 @@ namespace ascension {
 				std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() = 0;
 			/**
 			 * Installs the provider.
-			 * @param updator the caret updator which notifies the text viewer to update the caret
+			 * @param updater the caret updator which notifies the text viewer to update the caret
 			 */
-			virtual void install(CaretShapeUpdator& updator) throw() = 0;
+			virtual void install(CaretShapeUpdater& updater) throw() = 0;
 			/// Uninstalls the provider.
 			virtual void uninstall() throw() = 0;
 			friend class TextViewer;
@@ -151,7 +151,7 @@ namespace ascension {
 			DefaultCaretShaper() throw();
 		private:
 			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
-			void	install(CaretShapeUpdator& updator) throw();
+			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
 		private:
 			const TextViewer* viewer_;
@@ -167,7 +167,7 @@ namespace ascension {
 			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
 		private:
 			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
-			void	install(CaretShapeUpdator& updator) throw();
+			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
 			// ICaretListener
 			void	caretMoved(const class Caret& self, const text::Region& oldRegion);
@@ -178,8 +178,70 @@ namespace ascension {
 			void	textViewerIMEOpenStatusChanged() throw();
 			void	textViewerInputLanguageChanged() throw();
 		private:
-			CaretShapeUpdator* updator_;
+			CaretShapeUpdater* updater_;
 			bool bold_;
+		};
+
+		/**
+		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
+		 * @see TextViewer#setMouseInputStrategy
+		 */
+		class IMouseInputStrategy {
+		protected:
+			/// Buttons of the mouse.
+			enum Button {
+				LEFT_BUTTON,	///< The left button of the mouse.
+				MIDDLE_BUTTON,	///< The middle button of the mouse.
+				RIGHT_BUTTON	///< The right button of the mouse.
+			};
+			/// Actions of the mouse input.
+			enum Action {
+				PRESSED,		///< The button was pressed (down).
+				RELEASED,		///< The button was released (up).
+				CLICKED,		///< The button was clicked.
+				DOUBLE_CLICKED	///< The button was double-clicked.
+			};
+		private:
+			/**
+			 * Installs the strategy.
+			 * @see viewer the text viewer uses the strategy
+			 */
+			virtual void install(TextViewer& viewer) = 0;
+			/**
+			 * The mouse input was occured and the viewer had focus.
+			 * @param button the button of the mouse input
+			 * @param action the action of the input
+			 */
+			virtual bool mouseButtonInput(Button button, Action action) = 0;
+			/**
+			 * The mouse was moved and the viewer had focus.
+			 * @return true if the strategy processed
+			 */
+			virtual bool mouseMoved() = 0;
+			/**
+			 * The mouse wheel was rolated and the viewer had focus.
+			 * @param delta the distance the wheel was rotated
+			 * @return true if the strategy processed
+			 */
+			virtual bool mouseWheelRotated(short delta) = 0;
+			friend class TextViewer;
+		};
+
+		/**
+		 * Default implementation of @c IMouseOperationStrategy interface.
+		 */
+		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy {
+		public:
+			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
+		private:
+			void					install(TextViewer& viewer);
+			virtual bool			mouseButtonInput(Button button, Action action);
+			virtual bool			mouseMoved();
+			virtual bool			mouseWheelRotated(short delta);
+			static void CALLBACK	timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
+		private:
+			TextViewer* viewer_;
+			const bool oleDragAndDropEnabled_;
 		};
 
 		/**
@@ -775,7 +837,7 @@ namespace ascension {
 			friend class VisualPoint;
 			friend class VirtualBox;
 			friend class VerticalRulerDrawer;
-			friend class CaretShapeUpdator;
+			friend class CaretShapeUpdater;
 		};
 
 		/// Extension of @c TextViewer for code editor.

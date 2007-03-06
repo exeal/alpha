@@ -2739,7 +2739,7 @@ void TextViewer::recreateCaret() {
 		caretShape_.shaper->getCaretShape(caretShape_.bitmap, solidSize, caretShape_.orientation);
 	else {
 		DefaultCaretShaper s;
-		CaretShapeUpdator u(*this);
+		CaretShapeUpdater u(*this);
 		static_cast<ICaretShapeProvider&>(s).install(u);
 		static_cast<ICaretShapeProvider&>(s).getCaretShape(caretShape_.bitmap, solidSize, caretShape_.orientation);
 		static_cast<ICaretShapeProvider&>(s).uninstall();
@@ -3997,22 +3997,22 @@ void VirtualBox::update(const Region& region) throw() {
 }
 
 
-// CaretShapeUpdator ////////////////////////////////////////////////////////
+// CaretShapeUpdater ////////////////////////////////////////////////////////
 
 /**
  * Private constructor.
  * @param viewer the text viewer
  */
-CaretShapeUpdator::CaretShapeUpdator(TextViewer& viewer) throw() : viewer_(viewer) {
+CaretShapeUpdater::CaretShapeUpdater(TextViewer& viewer) throw() : viewer_(viewer) {
 }
 
 /// Returns the text viewer.
-TextViewer& CaretShapeUpdator::getTextViewer() throw() {
+TextViewer& CaretShapeUpdater::getTextViewer() throw() {
 	return viewer_;
 }
 
 /// Notifies the text viewer to update the shape of the caret.
-void CaretShapeUpdator::update() throw() {
+void CaretShapeUpdater::update() throw() {
 	viewer_.recreateCaret();	// $friendly access$
 }
 
@@ -4034,8 +4034,8 @@ void DefaultCaretShaper::getCaretShape(auto_ptr<Bitmap>&, ::SIZE& solidSize, Ori
 }
 
 /// @see ICaretShapeProvider#install
-void DefaultCaretShaper::install(CaretShapeUpdator& updator) throw() {
-	viewer_ = &updator.getTextViewer();
+void DefaultCaretShaper::install(CaretShapeUpdater& updater) throw() {
+	viewer_ = &updater.getTextViewer();
 }
 
 /// @see ICaretShapeProvider#uninstall
@@ -4141,12 +4141,12 @@ namespace {
 /// @see ICaretListener#caretMoved
 void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 	if(self.isOvertypeMode())
-		updator_->update();
+		updater_->update();
 }
 
 /// @see ICaretShapeProvider#getCaretShape
 void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() {
-	const Caret& caret = updator_->getTextViewer().getCaret();
+	const Caret& caret = updater_->getTextViewer().getCaret();
 	const bool overtype = caret.isOvertypeMode() && caret.isSelectionEmpty();
 
 	if(!overtype)
@@ -4161,12 +4161,12 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 			solidSize.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
 		}
 	}
-	solidSize.cy = updator_->getTextViewer().getTextRenderer().getLineHeight();
+	solidSize.cy = updater_->getTextViewer().getTextRenderer().getLineHeight();
 	orientation = LEFT_TO_RIGHT;
 
-	HIMC imc = ::ImmGetContext(updator_->getTextViewer().get());
+	HIMC imc = ::ImmGetContext(updater_->getTextViewer().get());
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
-	::ImmReleaseContext(updator_->getTextViewer().get(), imc);
+	::ImmReleaseContext(updater_->getTextViewer().get(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const ::RGBQUAD red = {0xFF, 0xFF, 0x80, 0x00};
 		bitmap.reset(new Bitmap);
@@ -4195,10 +4195,10 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 
 /// @see ITextViewerInputStatusListener#textViewerIMEOpenStatusChanged
 void LocaleSensitiveCaretShaper::textViewerIMEOpenStatusChanged() throw() {
-	updator_->update();
+	updater_->update();
 }
 
 /// @see ITextViewerInputStatusListener#textViewerInputLanguageChanged
 void LocaleSensitiveCaretShaper::textViewerInputLanguageChanged() throw() {
-	updator_->update();
+	updater_->update();
 }
