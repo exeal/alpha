@@ -52,14 +52,14 @@ using namespace std;
  * i.previous(); // offset == -1 (or -2)
  * @endcode
  *
- * <h3>Implementation of @c CharacterIterator</h3>
+ * <h3>Implementation of @c CharacterIterator </h3>
  *
  * A concrete iterator class must implement the following protected methods:
  *
- * - @c doCurrent for dereference.
- * - @c doNext, @c doPrevious, @c doFirst, @c doLast, and @c doMove for movement.
- * - @c isFirst and @c isLast for detecting the boundaries.
- * - @c doEquals and @c doLess for relational operations.
+ * - @c #doCurrent for dereference.
+ * - @c #doNext, @c #doPrevious, @c #doFirst, @c #doLast, and @c #doMove for movement.
+ * - @c #isFirst and @c #isLast for detecting boundaries.
+ * - @c #doEquals and @c #doLess for relational operations.
  *
  * These methods behave as a UTF-16 character iterator. So @c current should returns a UTF-16 code
  * unit value (not a code point). @c CharacterIterator behaves as a UTF-32 character iterator by
@@ -68,10 +68,12 @@ using namespace std;
  * For relational operations, it is guaranteed that the right argument is a clone of @c this. So
  * to implement by using down-cast is safe.
  *
+ * @code
  * bool MyIterator::equals(const CharacterIterator& rhs) const {
  *   const MyIterator& concrete = static_cast<const MyIterator&>(rhs);
  *   // compare this and concrete...
  * }
+ * @endcode
  */
 
 namespace {

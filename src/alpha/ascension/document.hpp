@@ -188,16 +188,14 @@ namespace ascension {
 		/**
 		 * A point represents a document position and adapts to the document change.
 		 *
-		 * When the document change occured, @c Point moves automatically as follows ("forward"
-		 * means "to the end of the document"):
+		 * When the document change occured, @c Point moves automatically as follows:
 		 *
-		 * - If the text was inserted or deleted in front of the point, the point will not move.
-		 * - If the text was inserted at the back of the point, the point will move foward.
-		 * - If the text was deleted at the back of the point, the point will move backward.
-		 * - If the region includes the point was deleted, the point will move to the start (= end)
-		 *   of the region.
-		 * - If the text was inserted at the point, the point will or will not move according to
-		 *   the gravity.
+		 * - If text was inserted or deleted before the point, the point will move accordingly.
+		 * - If text was inserted or deleted after the point, the point will not move.
+		 * - If region includes the point was deleted, the point will move to the start (= end) of
+		 *   the region.
+		 * - If text was inserted at the point, the point will or will not move according to the
+		 *   gravity.
 		 *
 		 * For details of gravity, see the description of @c updatePosition function.
 		 *
