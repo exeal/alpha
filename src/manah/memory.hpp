@@ -20,24 +20,26 @@ namespace manah {
 	// AutoBuffer ///////////////////////////////////////////////////////////
 
 	// std::auto_ptr for arrays
-	template<class T> /* final */ class AutoBuffer {
+	template<typename T> /* final */ class AutoBuffer {
 	public:
 		// type
 		typedef T ElementType;
 		// constructors
-		explicit AutoBuffer(T* p = 0) throw() : buffer_(p) {}
-		AutoBuffer(AutoBuffer<T>& rhs) throw() : buffer_(rhs.release()) {}
+		explicit AutoBuffer(ElementType* p = 0) throw() : buffer_(p) {}
+		AutoBuffer(AutoBuffer& rhs) throw() : buffer_(rhs.release()) {}
+		template<typename Other> AutoBuffer(AutoBuffer<Other>& rhs) throw() : buffer_(rhs.release()) {}
 		~AutoBuffer() throw() {delete[] buffer_;}
 		// operators
-		AutoBuffer<T>& operator=(AutoBuffer<T>& rhs) throw() {if(rhs.buffer_ != buffer_) {delete[] buffer_; buffer_ = rhs.release();} return *this;}
-		T& operator[](int i) const throw() {return buffer_[i];}
-		T& operator[](std::size_t i) const throw() {return buffer_[i];}
+		AutoBuffer<ElementType>& operator=(AutoBuffer& rhs) throw() {reset(rhs.release()); return *this;}
+		template<typename Other> AutoBuffer<ElementType>& operator=(AutoBuffer<Other>& rhs) throw() {reset(rhs.release()); return *this;}
+		ElementType& operator[](int i) const throw() {return buffer_[i];}
+		ElementType& operator[](std::size_t i) const throw() {return buffer_[i];}
 		// methods
-		T* get() const throw() {return buffer_;}
-		T* release() throw() {T* const temp = buffer_; buffer_ = 0; return temp;}
-		void reset(T* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
+		ElementType* get() const throw() {return buffer_;}
+		ElementType* release() throw() {T* const temp = buffer_; buffer_ = 0; return temp;}
+		void reset(ElementType* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
 	private:
-		T* buffer_;
+		ElementType* buffer_;
 	};
 
 
