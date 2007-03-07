@@ -48,16 +48,17 @@ int NullCollator::compare(const CharacterIterator& s1, const CharacterIterator& 
 }
 
 /// @see Collator#createCollationElementIterator
-std::auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
+auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
 	return auto_ptr<CollationElementIterator>(new ElementIterator(source.clone()));
 }
 
 /// @see Collator#getCollationKey
-std::auto_ptr<CollationKey> NullCollator::getCollationKey(const String& s) const {
+auto_ptr<CollationKey> NullCollator::getCollationKey(const String& s) const {
 	const size_t len = s.length() * sizeof(Char) / sizeof(uchar);
 	AutoBuffer<uchar> temp(new uchar[len]);
 	memcpy(temp.get(), s.data(), len);
-	return auto_ptr<CollationKey>(new CollationKey(AutoBuffer<const uchar>(temp.release()), len));
+	AutoBuffer<const uchar> temp2(temp);
+	return auto_ptr<CollationKey>(new CollationKey(temp2, len));
 }
 
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
