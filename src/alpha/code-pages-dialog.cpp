@@ -14,9 +14,9 @@ using namespace std;
 
 
 /**
- * コンストラクタ
- * @param codePage 最初に選択されているコードページ
- * @param forReading ファイルを読み込むのに使うコードページを列挙する場合は true
+ * Constructor.
+ * @param codePage the encoding initially selected
+ * @param forReading set true to enumelate encodings for read files
  */
 CodePagesDialog::CodePagesDialog(CodePage codePage, bool forReading) throw() : codePage_(codePage), forReading_(forReading) {
 }
@@ -24,16 +24,14 @@ CodePagesDialog::CodePagesDialog(CodePage codePage, bool forReading) throw() : c
 /// @see Dialog#onCommand
 bool CodePagesDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LIST_CODEPAGES && notifyCode == LBN_DBLCLK) {
-		onOK();
+		postMessage(WM_COMMAND, IDOK);
 		return true;
 	}
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
 /// @see Dialog#onInitDialog
-bool CodePagesDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void CodePagesDialog::onInitDialog(HWND focusWindow, bool&) {
 	const EncoderFactory& encoders = EncoderFactory::getInstance();
 	set<CodePage> codePages;
 
@@ -51,12 +49,9 @@ bool CodePagesDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 			break;
 		}
 	}
-
-	return true;
 }
 
 /// @see Dialog#onOK
-void CodePagesDialog::onOK() {
+void CodePagesDialog::onOK(bool&) {
 	codePage_ = static_cast<CodePage>(codepageList_.getItemData(codepageList_.getCurSel()));
-	Dialog::onOK();
 }

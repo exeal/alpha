@@ -24,18 +24,18 @@ namespace alpha {
 		class SaveSomeBuffersDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SAVESOMEBUFFERS> {
 		protected:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);
-			void	onOK();
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);
+			void	onOK(bool& continueDialog);
 		public:
 			std::vector<DirtyFile> files_;
 			manah::win32::ui::ListBox bufferListbox_;
 			manah::win32::ui::LinkLabel selectAllLink_;
 			manah::win32::ui::LinkLabel clearAllLink_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_LIST_BUFFERS, bufferListbox_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_LIST_BUFFERS, bufferListbox_)
+			MANAH_END_CONTROL_BINDING()
 		};
 	}
 }
 
-#endif /* !MANAH_SAVE_SOME_BUFFERS_DIALOG_HPP */
+#endif /* !ALPHA_SAVE_SOME_BUFFERS_DIALOG_HPP */

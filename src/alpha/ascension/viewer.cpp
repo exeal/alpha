@@ -43,8 +43,6 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 
 
 namespace {
-	// 選択作成後にタイマーで監視する時間間隔
-	const uint SELECTION_OBSERVATION_INTERVAL = 100;
 	// すぐ下で使う
 	BOOL CALLBACK enumResLangProc(HMODULE, const WCHAR*, const WCHAR* name, WORD langID, LONG_PTR param) {
 		if(name == 0)
@@ -332,20 +330,6 @@ namespace {
  * @see presentation#Presentation, Caret
  */
 
-#define EXTEND_SELECTION()																			\
-	const Position dest = getCharacterForClientXY(pt, true);										\
-	if(leftDownMode_ == LDM_SELECTION_LINE || leftDownMode_ == LDM_SELECTION_WORD) {				\
-		const HitTestResult htr = hitTest(pt);														\
-		if(leftDownMode_ == LDM_SELECTION_LINE && htr != INDICATOR_MARGIN && htr != LINE_NUMBERS) {	\
-			killTimer(TIMERID_EXPANDLINESELECTION);													\
-			setTimer(TIMERID_EXPANDSELECTION, 50, 0);												\
-			leftDownMode_ = LDM_SELECTION_CHARACTER;												\
-			getCaret().restoreSelectionMode();														\
-		}																							\
-	} else																							\
-		assert(leftDownMode_ == LDM_SELECTION_CHARACTER);											\
-	getCaret().extendSelection(dest)
-
 #define RESTORE_HIDDEN_CURSOR()				\
 	if(modeState_.cursorVanished) {			\
 		modeState_.cursorVanished = false;	\
@@ -395,6 +379,59 @@ namespace {
 	}
 } // namespace @0
 
+MANAH_BEGIN_WINDOW_MESSAGE_MAP(TextViewer, BaseControl)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_CAPTURECHANGED)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_CHAR)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_COMMAND)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_CONTEXTMENU)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_DESTROY)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_ERASEBKGND)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_GETFONT)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_HSCROLL)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_IME_COMPOSITION)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_IME_ENDCOMPOSITION)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_IME_NOTIFY)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_IME_REQUEST)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_IME_STARTCOMPOSITION)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_KEYDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_KILLFOCUS)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONUP)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MBUTTONUP)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MOUSEMOVE)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MOUSEWHEEL)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_NOTIFY)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_RBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_RBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_RBUTTONUP)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETCURSOR)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SIZE)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SIZING)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_STYLECHANGED)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_STYLECHANGING)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SYSCHAR)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SYSCOLORCHANGE)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SYSKEYDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SYSKEYUP)
+#ifdef WM_THEMECHANGED
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_THEMECHANGED)
+#endif /* WM_THEMECHANGED */
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_TIMER)
+#ifdef WM_UNICHAR
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_UNICHAR)
+#endif /* WM_UNICHAR */
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_VSCROLL)
+#ifdef WM_XBUTTONDBLCLK
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_XBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_XBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_XBUTTONUP)
+#endif /* WM_XBUTTONDBLCLK */
+MANAH_END_WINDOW_MESSAGE_MAP()
+
 /**
  * Constructor.
  * @param presentation the presentation
@@ -407,11 +444,10 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
 		lineBitmap_(0), oldLineBitmap_(0),
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-		leftDownMode_(LDM_NONE), mouseOperationDisabledCount_(0) {
+		mouseInputDisabledCount_(0) {
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	originalView_ = this;
-	dragging_ = new TextDataObject(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
@@ -419,7 +455,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	getDocument().addStateListener(*this);
 	getDocument().addSequentialEditListener(*this);
 
-	// renderer_ はウィンドウ作成時に構築する (コピコンも同様)
+	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
 }
 
 /// Copy-constructor.
@@ -434,7 +470,6 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(rh
 	// 非共有メンバは自分で作成。共有メンバはコピー
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
-	dragging_ = new TextDataObject(*this);
 
 	originalView_ = rhs.originalView_;
 	originalView_->clones_->insert(this);
@@ -443,8 +478,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(rh
 	modeState_ = rhs.modeState_;
 
 	imeCompositionActivated_ = false;
-	leftDownMode_ = LDM_NONE;
-	mouseOperationDisabledCount_ = 0;
+	mouseInputDisabledCount_ = 0;
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
 	getDocument().addListener(*this);
 	getDocument().addStateListener(*this);
@@ -509,20 +543,6 @@ void TextViewer::beginAutoScroll() {
 	autoScroll_.scrolling = true;
 	setCapture();
 	setTimer(TIMERID_AUTOSCROLL, 0, 0);
-}
-
-/**
- *	@brief 指定した仮想ポイントに達するのに行の末尾に追加する必要のある空白文字列を返す
- *
- *	行の終端がすでに仮想ポイントを超えている場合は空文字列を返す。
- *	矩形貼り付けやフリーカーソルの実装に使用
- *	@param line		行番号 (表示行)
- *	@param virtualX	行の左端からの位置
- *	@return			必要な空白文字列。水平タブ (U+0009) と半角空白 (U+0020) のみで構成される
- */
-String TextViewer::calculateSpacesReachingVirtualPoint(length_t line, ulong virtualX) const {
-	assertValidAsWindow();
-	return L"";	// TODO: not implemented (or no-need?)
 }
 
 /// @see ICaretListener#caretMoved
@@ -680,158 +700,6 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	return true;
 }
 
-/// @see Window#dispatchEvent
-LRESULT TextViewer::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
-#ifndef WM_THEMECHANGED
-	static const UINT WM_THEMECHANGED = 0x031A;
-#endif /* !WM_THEMECHANGED */
-#ifndef WM_UNICHAR
-	static const UINT WM_UNICHAR = 0x0109;
-#endif /* !WM_UNICHAR */
-
-	using namespace ascension::texteditor::commands;
-
-	switch(message) {
-	case WM_CAPTURECHANGED:
-		onCaptureChanged(reinterpret_cast<HWND>(lParam));
-		break;
-	case WM_CHAR:
-		onChar(static_cast<UINT>(wParam), static_cast<UINT>(lParam));
-		return 0L;
-	case WM_CLEAR:
-		if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
-			ClipboardCommand(*this, ClipboardCommand::CUT, true).execute();
-		else
-			DeletionCommand(*this, DeletionCommand::NEXT_CHARACTER).execute();
-		return 0L;
-	case WM_COPY:
-		ClipboardCommand(*this, ClipboardCommand::COPY, true).execute();
-		return 0L;
-	case WM_CUT:
-		ClipboardCommand(*this, ClipboardCommand::CUT, true).execute();
-		return 0L;
-	case WM_ERASEBKGND:
-//		invalidateRect(0, false);
-		return true;
-	case WM_GETFONT:
-		return reinterpret_cast<LRESULT>(renderer_->getFont());
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	case WM_GETOBJECT:
-		if(lParam == OBJID_CLIENT) {
-			ComPtr<IAccessible> acc;
-			if(SUCCEEDED(getAccessibleObject(*&acc)) && accLib.isAvailable())
-				return accLib.lresultFromObject(IID_IAccessible, wParam, acc);
-		} else if(lParam == OBJID_WINDOW) {
-		}
-		return 0;
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-	case WM_GETTEXT: {
-		OutputStringStream s;
-		getDocument().writeToStream(s, LBR_CRLF);
-		return reinterpret_cast<LRESULT>(s.str().c_str());
-	}
-	case WM_GETTEXTLENGTH:
-		// ウィンドウ関係だし改行は CRLF でいいか。LBR_PHYSICAL_DATA だと遅いし
-		return getDocument().getLength(LBR_CRLF);
-	case WM_HSCROLL:
-		onHScroll(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
-		return 0L;
-	case WM_IME_COMPOSITION:
-		if(onIMEComposition(wParam, lParam))
-			return false;
-		break;
-	case WM_IME_ENDCOMPOSITION:
-		onIMEEndComposition();
-		break;
-	case WM_IME_NOTIFY:
-		if(wParam == IMN_SETOPENSTATUS)
-			inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
-		break;
-	case WM_IME_REQUEST:
-		return onIMERequest(wParam, lParam);
-	case WM_IME_STARTCOMPOSITION:
-		onIMEStartComposition();
-		break;
-	case WM_INPUTLANGCHANGE:
-		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
-		if(hasFocus()) {
-			if(texteditor::Session* session = getDocument().getSession())
-				session->getInputSequenceCheckers()->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
-		}
-		break;
-	case WM_KEYDOWN:
-		endAutoScroll();
-		if(onKeyDown(static_cast<UINT>(wParam), static_cast<UINT>(lParam)))
-			return false;
-		break;
-	case WM_MBUTTONDOWN:
-		if(mouseOperationDisabledCount_ == 0) {
-			if(modeState_.cursorVanished) {	
-				modeState_.cursorVanished = false;
-				::ShowCursor(true);
-				releaseCapture();
-			}
-			endAutoScroll();
-			setFocus();
-			beginAutoScroll();
-		}
-		return 0L;
-	case WM_MOUSEWHEEL: {
-		::POINT pt = {LOWORD(lParam), HIWORD(lParam)};
-		onMouseWheel(GET_KEYSTATE_WPARAM(wParam), GET_WHEEL_DELTA_WPARAM(wParam), pt);
-		return 0L;
-	}
-	case WM_PASTE:
-		ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
-		return 0L;
-	case WM_RBUTTONDOWN: {
-		::POINT pt = {LOWORD(lParam), LOWORD(lParam)};
-		onRButtonDown(static_cast<UINT>(wParam), pt);
-		return 0L;
-	}
-	case WM_SETTEXT:
-		SelectionCreationCommand(*this, SelectionCreationCommand::ALL).execute();
-		getCaret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
-		return 0L;
-	case WM_SIZING:
-		onSizing(static_cast<UINT>(wParam), *reinterpret_cast<::RECT*>(lParam));
-		return true;
-	case WM_STYLECHANGED:
-		onStyleChanged(static_cast<int>(wParam), *reinterpret_cast<::STYLESTRUCT*>(lParam));
-		return true;
-	case WM_STYLECHANGING:
-		onStyleChanging(static_cast<int>(wParam), *reinterpret_cast<::STYLESTRUCT*>(lParam));
-		return true;
-	case WM_SYSCHAR:
-		if(onSysChar(static_cast<UINT>(wParam), static_cast<UINT>(lParam)))
-			return true;
-		break;
-	case WM_SYSCOLORCHANGE:
-	case WM_THEMECHANGED:
-		onSysColorChange();
-		return 0L;
-	case WM_SYSKEYDOWN:
-		if(onSysKeyDown(static_cast<UINT>(wParam), static_cast<UINT>(lParam)))
-			return true;
-		break;
-	case WM_SYSKEYUP:
-		if(onSysKeyUp(static_cast<UINT>(wParam), static_cast<UINT>(lParam)))
-			return true;
-		break;
-	case WM_UNDO:
-		UndoCommand(*this, true).execute();
-		return 0L;
-	case WM_UNICHAR:
-		onUniChar(static_cast<UINT>(wParam), static_cast<UINT>(lParam));
-		return 0L;
-	case WM_VSCROLL:
-		onVScroll(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
-		return 0L;
-	}
-
-	return BaseControl::dispatchEvent(message, wParam, lParam);
-}
-
 /// Implementation of #beep method. The subclasses can override to customize the behavior.
 void TextViewer::doBeep() throw() {
 	::MessageBeep(MB_OK);
@@ -922,211 +790,13 @@ void TextViewer::documentUndoSequenceStopped(Document& document, const Position&
 	}
 }
 
-/// @see IDropTarget#DragEnter
-STDMETHODIMP TextViewer::DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-	if(pDataObj == 0)
-		return E_INVALIDARG;
-	VERIFY_POINTER(pdwEffect);
-
-	if(mouseOperationDisabledCount_ != 0) {
-		*pdwEffect = DROPEFFECT_NONE;
-		return S_OK;
-	}
-
-	FORMATETC fe = {CF_TEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-
-	if(leftDownMode_ == LDM_NONE)
-		leftDownMode_ = LDM_DRAGANDDROP;
-	setFocus();
-
-	// ドラッグされてきたデータが有効かどうか調べる
-	if(!getDocument().isReadOnly()
-			&& (leftDownMode_ == LDM_DRAGANDDROPSELF
-			|| pDataObj->QueryGetData(&fe) == S_OK
-			|| (fe.cfFormat = CF_UNICODETEXT, pDataObj->QueryGetData(&fe) == S_OK))) {
-		setTimer(TIMERID_DRAGSCROLL, 50, 0);
-		return DragOver(grfKeyState, pt, pdwEffect);
-	}
-	leftDownMode_ = LDM_NONE;
-	*pdwEffect = DROPEFFECT_NONE;
-	return S_OK;
-}
-
-/// @see IDropTarget#DragLeave
-STDMETHODIMP TextViewer::DragLeave() {
-	::SetFocus(0);
-	killTimer(TIMERID_DRAGSCROLL);
-	if(leftDownMode_ != LDM_DRAGANDDROPSELF
-			&& leftDownMode_ != LDM_DRAGANDDROPBOXSELF)
-		leftDownMode_ = LDM_NONE;
-	return S_OK;
-}
-
-/// @see IDropTarget#DragOver
-STDMETHODIMP TextViewer::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-	VERIFY_POINTER(pdwEffect);
-
-	if(mouseOperationDisabledCount_ == 0
-			&& (leftDownMode_ == LDM_DRAGANDDROP
-			|| leftDownMode_ == LDM_DRAGANDDROPSELF
-			|| leftDownMode_ == LDM_DRAGANDDROPBOXSELF)) {	// ドロップ可能な場合以外は何もしない
-		::POINT caretPoint = {pt.x, pt.y};
-		screenToClient(caretPoint);
-		setCaretPosition(getClientXYForCharacter(getCharacterForClientXY(caretPoint, true), LineLayout::LEADING));
-		if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000) && toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
-			*pdwEffect = DROPEFFECT_NONE;
-		else if(leftDownMode_ != LDM_DRAGANDDROP)
-			*pdwEffect = toBoolean(::GetKeyState(VK_CONTROL) & 0x8000) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-		else
-			*pdwEffect = DROPEFFECT_COPY;
-	} else
-		*pdwEffect = DROPEFFECT_NONE;
-	return S_OK;
-}
-
 /**
- *	垂直ルーラのインジケータマージン描画後に呼び出される
- *	@param line	論理行
- *	@param dc	デバイスコンテキスト
- *	@param rect	描画範囲
+ * Additionally draws the indicator margin on the vertical ruler.
+ * @param line the line number
+ * @param dc the device context
+ * @param rect the rectangle to draw
  */
 void TextViewer::drawIndicatorMargin(length_t line, DC& dc, const ::RECT& rect) {
-}
-/*
-namespace {
-	class TokenIndexer : public unary_function<size_t, length_t> {
-	public:
-		explicit TokenIndexer(const Tokens& tokens) throw() : tokens_(tokens) {}
-		length_t operator()(size_t i) throw() {return tokens_.array[i].getIndex();}
-	private:
-		const Tokens& tokens_;
-	};
-} // namespace @0
-*/
-/// @see IDropTarget#Drop
-STDMETHODIMP TextViewer::Drop(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-	if(pDataObj == 0)
-		return E_INVALIDARG;
-	VERIFY_POINTER(pdwEffect);
-
-	*pdwEffect = DROPEFFECT_NONE;
-	if(mouseOperationDisabledCount_ != 0)
-		return S_OK;
-
-	Document& document = getDocument();
-
-	if(leftDownMode_ == LDM_DRAGANDDROP) {	// 他コントローラからのデータ
-		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-		::STGMEDIUM stm = {TYMED_HGLOBAL, 0};
-		::POINT caretPoint = {pt.x, pt.y};
-
-		killTimer(TIMERID_DRAGSCROLL);
-		screenToClient(caretPoint);
-		const Position pos = getCharacterForClientXY(caretPoint, true);
-		caret_->moveTo(pos);
-		const UINT boxClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
-
-		if(pDataObj->QueryGetData(&fe) == S_OK) {	// CF_UNICODETEXT サポート
-			if(SUCCEEDED(pDataObj->GetData(&fe, &stm))) {
-				const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal));
-
-				document.endSequentialEdit();
-				freeze();
-				if(fe.cfFormat = boxClipFormat, pDataObj->QueryGetData(&fe) == S_OK) {	// 矩形ドロップ
-					document.beginSequentialEdit();
-					caret_->insertBox(buffer);
-					document.endSequentialEdit();
-					caret_->beginBoxSelection();
-				} else
-					caret_->insert(buffer);
-				caret_->select(pos, *caret_);
-				unfreeze();
-				::GlobalUnlock(stm.hGlobal);
-				::ReleaseStgMedium(&stm);
-				*pdwEffect = DROPEFFECT_COPY;
-			}
-		} else if(fe.cfFormat = CF_TEXT, pDataObj->QueryGetData(&fe) == S_OK) {	// CF_TEXT サポート
-			if(SUCCEEDED(pDataObj->GetData(&fe, &stm))) {
-				const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal));
-				const length_t len = min<length_t>(strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char));
-				Char* buffer = new Char[len];
-
-				::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, nativeBuffer, -1, buffer, static_cast<int>(len));
-				freeze();
-				if(fe.cfFormat = boxClipFormat, pDataObj->QueryGetData(&fe) == S_OK) {	// 矩形ドロップ
-					document.beginSequentialEdit();
-					caret_->insertBox(String(buffer, len));
-					document.endSequentialEdit();
-					caret_->beginBoxSelection();
-				} else
-					caret_->insert(String(buffer, len));
-				caret_->select(pos, *caret_);
-				unfreeze();
-				delete[] buffer;
-				::GlobalUnlock(stm.hGlobal);
-				::ReleaseStgMedium(&stm);
-				*pdwEffect = DROPEFFECT_COPY;
-			}
-		}
-	} else if(leftDownMode_ == LDM_DRAGANDDROPSELF
-			|| leftDownMode_ == LDM_DRAGANDDROPBOXSELF) {	// 自プロセスからのデータ (pDataObj を使わない簡単な処理)
-		String text = caret_->getSelectionText(LBR_PHYSICAL_DATA);
-		::POINT caretPoint = {pt.x, pt.y};
-
-		screenToClient(caretPoint);
-		const Position pos = getCharacterForClientXY(caretPoint, true);
-
-		// 自プロセスのデータは選択範囲上にドロップ不可
-		if(getCaret().isPointOverSelection(caretPoint)) {
-			*pdwEffect = DROPEFFECT_NONE;
-			leftDownMode_ = LDM_NONE;
-			caret_->moveTo(pos);
-			return S_OK;
-		}
-
-		document.beginSequentialEdit();
-		freeze();
-		if(toBoolean(grfKeyState & MK_CONTROL)) {	// 複写
-			redrawLines(caret_->getTopPoint().getLineNumber(), caret_->getBottomPoint().getLineNumber());
-			caret_->enableAutoShow(false);
-			caret_->moveTo(pos);
-			if(leftDownMode_ == LDM_DRAGANDDROPBOXSELF)	// 矩形複写
-				caret_->insertBox(text);
-			else	// 線形複写
-				caret_->insert(text);
-			caret_->enableAutoShow(true);
-			caret_->select(pos, *caret_);
-			*pdwEffect = DROPEFFECT_COPY;
-		} else if(leftDownMode_ == LDM_DRAGANDDROPBOXSELF) {	// 矩形移動
-			text::Point p(document);
-			p.moveTo(pos);
-			caret_->eraseSelection();
-			p.adaptToDocument(false);
-			caret_->enableAutoShow(false);
-			caret_->extendSelection(p);
-			caret_->insertBox(text);
-			caret_->enableAutoShow(true);
-			caret_->select(p, *caret_);
-			*pdwEffect = DROPEFFECT_MOVE;
-		} else {	// 移動
-			VisualPoint activePointOrg(*this);
-			const Position anchorPointOrg = caret_->getAnchor();
-			activePointOrg.moveTo(getCaret());
-			caret_->enableAutoShow(false);
-			caret_->moveTo(pos);
-			activePointOrg.erase(anchorPointOrg);
-			const Position temp = *caret_;
-			caret_->endBoxSelection();
-			caret_->insert(text);
-			caret_->enableAutoShow(true);
-			caret_->select(temp, *caret_);
-			*pdwEffect = DROPEFFECT_MOVE;
-		}
-		unfreeze();
-		document.endSequentialEdit();
-	}
-	leftDownMode_ = LDM_NONE;
-	return S_OK;
 }
 
 /**
@@ -1333,9 +1003,25 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 	return margins;
 }
 
-/// @see IDropSource#GiveFeedback
-STDMETHODIMP TextViewer::GiveFeedback(DWORD) {
-	return DRAGDROP_S_USEDEFAULTCURSORS;	// システムのデフォルトのカーソルを使う 
+/// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
+void TextViewer::handleGUICharacterInput(CodePoint c) {
+	// GUI ユーザが文字の入力を開始したらカーソルを消す
+	if(texteditor::commands::CharacterInputCommand(*this, c).execute() != 0
+			&& !modeState_.cursorVanished
+			&& configuration_.vanishesCursor
+			&& hasFocus()) {
+		// カーソルが同一スレッドのウィンドウ上に無いと駄目
+		::POINT pt;
+		::GetCursorPos(&pt);
+		auto_ptr<Window> pointedWindow(Window::fromPoint(pt));
+		if(pointedWindow.get() != 0 && pointedWindow->getThreadID() == getThreadID()) {
+			modeState_.cursorVanished = true;
+			::ShowCursor(false);
+			setCapture();
+		}
+	}
+	if(imeCompositionActivated_)
+		updateIMECompositionWindowPosition();
 }
 
 /**
@@ -1544,14 +1230,13 @@ void TextViewer::initializeWindow(bool copyConstructing) {
 	if(toolTip_ != 0) {
 		AutoZeroCB<::TOOLINFOW> ti;
 		::RECT margins = {1, 1, 1, 1};
-
 		ti.hwnd = get();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
 		ti.uFlags = TTF_SUBCLASS;
 		ti.uId = 1;
 		::SetRect(&ti.rect, 0, 0, 0, 0);
 		::SendMessageW(toolTip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
-		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);	// 30秒間表示されるように
+		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);	// 30 秒間 (根拠なし) 表示されるように
 //		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
 		::SendMessageW(toolTip_, TTM_SETMARGIN, 0, reinterpret_cast<LPARAM>(&margins));
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
@@ -1560,9 +1245,8 @@ void TextViewer::initializeWindow(bool copyConstructing) {
 	// 自動スクロールの原点ウィンドウの作成
 	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
 	autoScrollOriginMark_->create(*this);
-	
-	// ドロップ対象に登録
-	registerDragDrop(*this);
+
+	setMouseInputStrategy(0, true);
 }
 
 /// Revokes the frozen state of the viewer actually.
@@ -1675,21 +1359,16 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 	}
 }
 
-/// @see Window#onCaptureChanged
+/// @see WM_CAPTURECHANGED
 void TextViewer::onCaptureChanged(HWND) {
-	leftDownMode_ = LDM_NONE;
-	killTimer(TIMERID_EXPANDSELECTION);
-	killTimer(TIMERID_EXPANDLINESELECTION);
 	killTimer(TIMERID_AUTOSCROLL);
-	caret_->restoreSelectionMode();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->captureChanged();
 }
 
-/**
- * This method can't be overriden (override @c #onUniChar instead).
- * @see Window#onChar
- */
+/// @see WM_CHAR
 void TextViewer::onChar(UINT ch, UINT flags) {
-	onUniChar(ch, flags);
+	handleGUICharacterInput(ch);
 }
 
 /// @see Window#onCommand
@@ -1779,24 +1458,25 @@ bool TextViewer::onCommand(WORD id, WORD notifyCode, HWND control) {
 		ReconversionCommand(*this).execute();
 		break;
 	default:
-		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+//		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+		return true;
 	}
 
-	return BaseControl::onCommand(id, notifyCode, control);
+	return false;
 }
 
-/// @see Window#onContextMenu
+/// @see WM_CONTEXTMENU
 bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	using manah::win32::ui::Menu;
 
-	if(mouseOperationDisabledCount_ != 0)	// マウス操作とは限らないが...
+	if(!allowsMouseInput())	// マウス操作とは限らないが...
 		return true;
 //	caret_->endAutoCompletion();
 	abortIncrementalSearch(*this);
 
 	// キーボードによる場合
-	if(pt.x == 65535 && pt.y == 65535) {
-		const_cast<::POINT&>(pt).x = const_cast<POINT&>(pt).y = 1;	// 適当に...
+	if(pt.x == 0xFFFF && pt.y == 0xFFFF) {
+		const_cast<::POINT&>(pt).x = const_cast<::POINT&>(pt).y = 1;	// 適当に...
 		clientToScreen(const_cast<::POINT&>(pt));
 	}
 
@@ -1957,12 +1637,13 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	return true;
 }
 
-/// @see Window#onDestroy
+/// @see WM_DESTROY
 void TextViewer::onDestroy() {
 	endAutoScroll();
-
-	// D&D 解除
-	revokeDragDrop();
+	if(mouseInputStrategy_.get() != 0) {
+		mouseInputStrategy_->uninstall();
+		mouseInputStrategy_.reset();
+	}
 
 	// 従属ウィンドウを削除
 	::DestroyWindow(toolTip_);
@@ -1980,20 +1661,28 @@ void TextViewer::onDestroy() {
 //	if(accLib.isAvailable())
 //		accLib.notifyWinEvent(EVENT_OBJECT_DESTROY, *this, OBJID_CLIENT, CHILDID_SELF);
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-
-	Window::onDestroy();
 }
 
-/// @see Window#onHScroll
+/// @see WM_ERASEGKGND
+bool TextViewer::onEraseBkgnd(HDC) {
+	return false;
+}
+
+/// @see WM_GETFONT
+HFONT TextViewer::onGetFont() {
+	return renderer_->getFont();
+}
+
+/// @see WM_HSCROLL
 void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
 	switch(sbCode) {
-	case SB_LINELEFT:	// 1列分左
+	case SB_LINELEFT:	// 1 列分左
 		scroll(-1, 0, true); break;
-	case SB_LINERIGHT:	// 1列分右
+	case SB_LINERIGHT:	// 1 列分右
 		scroll(+1, 0, true); break;
-	case SB_PAGELEFT:	// 1ページ左
+	case SB_PAGELEFT:	// 1 ページ左
 		scroll(-static_cast<int>(getNumberOfVisibleColumns()), 0, true); break;
-	case SB_PAGERIGHT:	// 1ページ右
+	case SB_PAGERIGHT:	// 1 ページ右
 		scroll(+static_cast<int>(getNumberOfVisibleColumns()), 0, true); break;
 	case SB_LEFT:		// 左端
 	case SB_RIGHT: {	// 右端
@@ -2001,28 +1690,27 @@ void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
 		getScrollRange(SB_HORZ, left, right);
 		scrollTo((sbCode == SB_LEFT) ? left : right, -1, true); break;
 	}
-	case SB_THUMBTRACK:	// ドラッグ or ホイール
-		scrollTo(getScrollTrackPosition(SB_HORZ), -1, false); break;	// 32ビット値を使う
+	case SB_THUMBTRACK:	// by drag or wheel
+		scrollTo(getScrollTrackPosition(SB_HORZ), -1, false); break;	// use 32-bit value
 	}
 }
 
 /// @see WM_IME_COMPOSITION
-bool TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam) {
-	if(lParam == 0 || toBoolean(lParam & GCS_RESULTSTR)) {	// 確定
+void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam) {
+	if(lParam == 0 || toBoolean(lParam & GCS_RESULTSTR)) {	// completed
 		if(HIMC	imc = ::ImmGetContext(get())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
-				// キャンセルされなかった場合入力
+				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
 				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
 				text[len] = 0;
 				texteditor::commands::TextInputCommand(*this, text.get()).execute();
+				::ImmSetCompositionStringW(imc, SCS_SETSTR, L"", 0, L"", 0);	// prevent to be send WM_CHARs
 			}
 			updateIMECompositionWindowPosition();
 			::ImmReleaseContext(get(), imc);
 		}
-		return true;
 	}
-	return false;
 }
 
 /// @see WM_IME_ENDCOMPOSITION
@@ -2031,11 +1719,18 @@ void TextViewer::onIMEEndComposition() {
 	imeCompositionActivated_ = false;
 }
 
+/// @see WM_IME_NOTIFY
+LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
+	if(command == IMN_SETOPENSTATUS)
+		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
+	return 0L;
+}
+
 /// @see WM_IME_REQUEST
-LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam) {
+LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	const Document& document = getDocument();
 
-	// 再変換を行うときにまずこのコマンドが2回飛んでくる
+	// 再変換を行うときにまずこのコマンドが 2 回飛んでくる
 	if(command == IMR_RECONVERTSTRING) {
 		if(document.isReadOnly())
 			beep();
@@ -2060,6 +1755,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam) {
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * selection.length();
 		}
+		handled = true;
 		return 0L;
 	}
 
@@ -2092,6 +1788,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam) {
 				Position(caret_->getLineNumber(), prcs->dwCompStrOffset / sizeof(Char)),
 				Position(caret_->getLineNumber(), prcs->dwCompStrOffset / sizeof(Char) + prcs->dwCompStrLen));
 		}
+		handled = true;
 		return true;
 	}
 
@@ -2116,12 +1813,13 @@ void TextViewer::onIMEStartComposition() {
 //	caret_->endAutoCompletion();
 }
 
-/// @see Window#onKeyDown
-bool TextViewer::onKeyDown(UINT ch, UINT flags) {
-	return handleKeyDown(ch, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000));
+/// @see WM_KEYDOWN
+void TextViewer::onKeyDown(UINT ch, UINT flags, bool& handled) {
+	endAutoScroll();
+	handled = handleKeyDown(ch, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000));
 }
 
-/// @see Window#onKillFocus
+/// @see WM_KILLFOCUS
 void TextViewer::onKillFocus(HWND newWindow) {
 	RESTORE_HIDDEN_CURSOR();
 	endAutoScroll();
@@ -2146,219 +1844,72 @@ void TextViewer::onKillFocus(HWND newWindow) {
 	update();
 }
 
-/**
- *	ダブルクリックへのコマンド割り当てのためにこのメソッドをオーバーライドすべきではない
- *	@see Window#onLButtonBblClk
- */
-void TextViewer::onLButtonDblClk(UINT, const ::POINT& pt) {
-	if(mouseOperationDisabledCount_ == 0) {
-		abortIncrementalSearch(*this);
-		const HitTestResult htr = hitTest(pt);
-		if(htr == LEADING_MARGIN || htr == TOP_MARGIN || htr == TEXT_AREA) {
-			leftDownMode_ = LDM_SELECTION_WORD;
-			caret_->beginWordSelection();
-			setCapture();
-			setTimer(TIMERID_EXPANDSELECTION, SELECTION_OBSERVATION_INTERVAL, 0);
-		}
-	}
+/// @see WM_LBUTTONDBLCLK
+void TextViewer::onLButtonDblClk(UINT keyState, const ::POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
 }
 
-/**
- *	マウス左ボタンへのコマンド割り当てのためにこのメソッドをオーバーライドすべきではない
- *	@see Window#onLButtonDown
- */
-void TextViewer::onLButtonDown(UINT flags, const ::POINT& pt) {
+/// @see WM_LBUTTONDOWN
+void TextViewer::onLButtonDown(UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
-	if(mouseOperationDisabledCount_ != 0)
-		return;
-	if(endAutoScroll())
-		return;
-
-	bool boxDragging = false;
-	AutoBuffer<Char> uri;
-	const HitTestResult htr = hitTest(pt);
-
-//	caret_->endAutoCompletion();
-	endIncrementalSearch(*this);
-
-	// 行選択
-	if(htr == INDICATOR_MARGIN || htr == LINE_NUMBERS) {
-		if(toBoolean(flags & MK_CONTROL))	// 全行選択
-			texteditor::commands::SelectionCreationCommand(*this, texteditor::commands::SelectionCreationCommand::ALL).execute();
-		else {
-			leftDownMode_ = LDM_SELECTION_LINE;
-			caret_->moveTo(getCharacterForClientXY(pt, false));
-			caret_->beginLineSelection();
-		}
-		setCapture();
-		setTimer(TIMERID_EXPANDLINESELECTION, SELECTION_OBSERVATION_INTERVAL, 0);
-	}
-
-	// OLE ドラッグ開始?
-	else if(configuration_.enablesOLEDragAndDrop && !caret_->isSelectionEmpty() && caret_->isPointOverSelection(pt)) {
-		::GetCursorPos(&modeState_.lastMouseDownPoint);
-		screenToClient(modeState_.lastMouseDownPoint);
-		if(caret_->isSelectionRectangle())
-			boxDragging = true;
-	}
-
-	// リンクの起動
-//	else if(toBoolean(flags & MK_CONTROL) && linkTextStrategy_ != 0 && isOverInvokableLink(pt, uri))
-//		linkTextStrategy_->invokeLink(..., uri.get());
-
-	// 矩形選択開始
-	else if(!toBoolean(flags & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
-		leftDownMode_ = LDM_SELECTION_CHARACTER;
-		caret_->beginBoxSelection();
-		caret_->moveTo(getCharacterForClientXY(pt, true));
-		setCapture();
-		setTimer(TIMERID_EXPANDSELECTION, SELECTION_OBSERVATION_INTERVAL, 0);
-	}
-
-	// その他。線形選択開始、キャレット移動
-	else {
-		leftDownMode_ = LDM_SELECTION_CHARACTER;
-		const Position pos = getCharacterForClientXY(pt, true);
-		if(toBoolean(flags & MK_CONTROL)) {	// Ctrl -> 現在の単語を選択
-			leftDownMode_ = LDM_SELECTION_WORD;
-			caret_->moveTo(pos);
-			caret_->beginWordSelection();
-		} else if(toBoolean(flags & MK_SHIFT)) {	// Shift -> カーソル位置まで選択
-			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {	// Shift+Alt -> カーソル位置まで矩形選択
-				leftDownMode_ = LDM_SELECTION_CHARACTER;
-				caret_->beginBoxSelection();
-			}
-			caret_->extendSelection(pos);
-		} else {
-			caret_->moveTo(pos);
-			caret_->endBoxSelection();
-		}
-		setCapture();
-		setTimer(TIMERID_EXPANDSELECTION, SELECTION_OBSERVATION_INTERVAL, 0);
-	}
-
-	if(!caret_->isSelectionRectangle() && !boxDragging)
-		redrawLine(caret_->getLineNumber());
-	setFocus();
-
-#undef SELECTION_EXPANSION_INTERVAL
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
 }
 
-/// @see Window#onLButtonUp
-void TextViewer::onLButtonUp(UINT, const ::POINT& pt) {
-	if(mouseOperationDisabledCount_ != 0)
-		return;
-	const LeftDownMode original = leftDownMode_;
-
-	if(modeState_.lastMouseDownPoint.x != -1) {	// OLE ドラッグ開始か -> キャンセル
-		modeState_.lastMouseDownPoint.x = modeState_.lastMouseDownPoint.y = -1;
-		caret_->moveTo(getCharacterForClientXY(pt, true));
-		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
-	}
-	releaseCapture();
-
-	// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがあるので
-	if(original != LDM_NONE)
-		caret_->show();
-}
-
-/// @see Window#onMouseMove
-void TextViewer::onMouseMove(UINT, const ::POINT& pt) {
+/// @see WM_LBUTTONUP
+void TextViewer::onLButtonUp(UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
-	if(mouseOperationDisabledCount_ != 0)
-		return;
-
-	Position pos;	// カーソル位置から求まる行と列
-
-	if(modeState_.lastMouseDownPoint.x != -1) {	// OLE ドラッグ開始?
-		POINT& lastPoint = modeState_.lastMouseDownPoint;
-		if(!configuration_.enablesOLEDragAndDrop || getCaret().isSelectionEmpty())
-			lastPoint.x = lastPoint.y = -1;
-		else {
-			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
-			const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
-			if((pt.x > lastPoint.x + cxDragBox / 2) || (pt.x < lastPoint.x - cxDragBox / 2)
-					|| (pt.y > lastPoint.y + cyDragBox / 2) || (pt.y < lastPoint.y - cyDragBox / 2)) {
-				const bool box = getCaret().isSelectionRectangle();
-				const String selection = getCaret().getSelectionText(LBR_PHYSICAL_DATA);
-
-				if(box) {
-					set<CLIPFORMAT>	clipFormats;
-					clipFormats.insert(CF_UNICODETEXT);
-					clipFormats.insert(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-					dragging_->setAvailableFormatSet(clipFormats);
-				}
-				dragging_->setTextData(selection.c_str());
-				leftDownMode_ = box ? LDM_DRAGANDDROPBOXSELF : LDM_DRAGANDDROPSELF;
-				setTimer(TIMERID_DRAGSCROLL, box ? 100 : 50, 0);
-				dragging_->doDragDrop(DROPEFFECT_COPY | DROPEFFECT_MOVE);
-				killTimer(TIMERID_DRAGSCROLL);
-				leftDownMode_ = LDM_NONE;	// onLButtonUp は呼ばれない
-				lastPoint.x = lastPoint.y = -1;
-				if(isVisible())
-					setFocus();
-			}
-		}
-		return;
-	}
-
-	if(toBoolean(pt.x & 0x8000))
-		const_cast<::POINT&>(pt).x = 0;
-	if(toBoolean(pt.y & 0x8000))
-		const_cast<::POINT&>(pt).y = 0;
-
-	if(leftDownMode_ != LDM_NONE) {	// スクロール
-/*		const long marginWidth = layoutManager.getVerticalRulerWidth() + layout.leadMargin;
-		if(pt.y < static_cast<long>(layout.topMargin + layoutManager.getLineHeight() / 2))
-			onVScroll(SB_LINEUP, 0, 0);
-		else if(pt.y > static_cast<long>(layout.topMargin + layoutManager.getLineHeight() * getVisibleLineCount()))
-			onVScroll(SB_LINEDOWN, 0, 0);
-		if(!layout.rightAlign) {
-			if(pt.x < marginWidth)
-				onHScroll(SB_SETPOS, scrollInfo_.position.x - layout.tabWidth, 0);
-//			else if(pt.x >)
-		} else {
-		}
-*/	}
-	if(leftDownMode_ == LDM_SELECTION_CHARACTER
-			|| leftDownMode_ == LDM_SELECTION_LINE
-			|| leftDownMode_ == LDM_SELECTION_WORD) {	// 選択の拡大/縮小
-		EXTEND_SELECTION();
-	} else if(leftDownMode_ == LDM_DRAGANDDROP) {	// 選択内容をドラッグ中
-	}
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
 }
 
-/// @see Window#onMouseWheel
-bool TextViewer::onMouseWheel(UINT, short zDelta, const ::POINT& pt) {
+/// @see WM_MBUTTONDBLCLK
+void TextViewer::onMButtonDblClk(UINT keyState, const ::POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+}
+
+/// @see WM_MBUTTONDOWN
+void TextViewer::onMButtonDown(UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
-	if(mouseOperationDisabledCount_ != 0)
-		return true;
-	
-	if(endAutoScroll())
-		return true;
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+}
 
-	// システムで設定されている量を使う
-	UINT scrollLineCount;	// スクロールする行数
-	if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &scrollLineCount, 0)))
-		scrollLineCount = 3;
-	zDelta *= (scrollLineCount != WHEEL_PAGESCROLL) ? scrollLineCount : static_cast<UINT>(getNumberOfVisibleLines());
-	scroll(0, -zDelta / WHEEL_DELTA, true);
+/// @see WM_MBUTTONUP
+void TextViewer::onMButtonUp(UINT keyState, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+}
 
+/// @see WM_MOUSEMOVE
+void TextViewer::onMouseMove(UINT keyState, const ::POINT& position) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseMoved(position, keyState);
+}
+
+/// @see WM_MOUSEWHEEL
+void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseWheelRotated(delta, pt, keyState);
+}
+
+/// @see WM_NOTIFY
+bool TextViewer::onNotify(int, ::NMHDR& nmhdr) {
+	// ツールチップのテキスト
+	if(nmhdr.hwndFrom == toolTip_ && nmhdr.code == TTN_GETDISPINFO) {
+		::SendMessageW(toolTip_, TTM_SETMAXTIPWIDTH, 0, 1000);	// 改行を有効にする
+		reinterpret_cast<::LPNMTTDISPINFOW>(&nmhdr)->lpszText = tipText_;
+		return false;
+	}
 	return true;
 }
 
-/// @see Window#onNotify
-bool TextViewer::onNotify(int, LPNMHDR nmhdr) {
-	// ツールチップのテキスト
-	if(nmhdr->hwndFrom == toolTip_ && nmhdr->code == TTN_GETDISPINFO) {
-		::SendMessageW(toolTip_, TTM_SETMAXTIPWIDTH, 0, 1000);	// 改行を有効にする
-		reinterpret_cast<LPNMTTDISPINFOW>(nmhdr)->lpszText = tipText_;
-		return true;
-	}
-	return false;
-}
-
-/// @see Window#onPaint
+/// @see CustomControl#onPaint
 void TextViewer::onPaint(PaintDC& dc) {
 	if(isFrozen())	// 凍結中は無視
 		return;
@@ -2372,7 +1923,7 @@ void TextViewer::onPaint(PaintDC& dc) {
 //	Timer tm(L"onPaint");
 
 	const length_t lineCount = document.getNumberOfLines();		// 総論理行数
-	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;	// 描画の必要な矩形
+	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;		// 描画の必要な矩形
 	const int linePitch = renderer_->getLinePitch();
 
 	// 垂直ルーラの描画
@@ -2415,7 +1966,7 @@ void TextViewer::onPaint(PaintDC& dc) {
 			if(DIAGNOSE_INHERENT_DRAWING)
 				dout << static_cast<ulong>(line) << ",";
 #endif /* _DEBUG */
-			renderer_->getLineLayout(line).draw(dc, -getDisplayXOffset(), y - static_cast<int>(subline * linePitch), lineRect, selectionColor);
+			renderer_->getLineLayout(line).draw(dc, -getDisplayXOffset(), y, lineRect, selectionColor);
 			y += linePitch * static_cast<int>(renderer_->getNumberOfSublinesOfLine(line++));
 			subline = 0;
 		}
@@ -2436,15 +1987,29 @@ void TextViewer::onPaint(PaintDC& dc) {
 			clientRect.right - clientRect.left - margins.left - margins.right, margins.top, marginColor);
 }
 
-/// @see Window#onRButtonDown
-void TextViewer::onRButtonDown(UINT, const ::POINT& pt) {
-	RESTORE_HIDDEN_CURSOR();
-	if(mouseOperationDisabledCount_ != 0)
-		return;
-	endAutoScroll();
+/// @see WM_RBUTTONDBLCLK
+void TextViewer::onRButtonDblClk(UINT keyState, const ::POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
 }
 
-/// @see Window#onSetCursor
+/// @see WM_RBUTTONDOWN
+void TextViewer::onRButtonDown(UINT keyState, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+}
+
+/// @see WM_RBUTTONUP
+void TextViewer::onRButtonUp(UINT keyState, const ::POINT& pt) {
+	if(allowsMouseInput()) {
+		RESTORE_HIDDEN_CURSOR();
+		if(mouseInputStrategy_.get() != 0)
+			mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	}
+}
+
+/// @see WM_SETCURSOR
 bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 	static length_t detectedUriLineLast = INVALID_INDEX;
 	::POINT pt = getCursorPosition();	// カーソル位置
@@ -2452,23 +2017,9 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 
 	RESTORE_HIDDEN_CURSOR();
 
-	// 垂直ルーラ上か
-	const HitTestResult htr = hitTest(pt);
-	if(htr == INDICATOR_MARGIN || htr == LINE_NUMBERS) {
-		::SetCursor(::LoadCursor(0, IDC_ARROW));
-		return true;
-	}
-
-	// 選択範囲 (ドラッグ可能かどうか)
-	if(configuration_.enablesOLEDragAndDrop && !getCaret().isSelectionEmpty()) {
-		if(getCaret().isPointOverSelection(pt)) {
-			::SetCursor(::LoadCursor(0, IDC_ARROW));
-			cursorChanged = true;
-		}
-	}
-
 	// リンクのポップアップやカーソルを変える場合
-	if(!autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
+	const HitTestResult htr = hitTest(pt);
+	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
 		Region region;
 		AutoBuffer<Char> uri;
 		if(getPointedLinkText(region, uri)) {	// URI
@@ -2494,13 +2045,14 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 		}
 	}
 
+	if(!cursorChanged && mouseInputStrategy_.get() != 0)
+		cursorChanged = mouseInputStrategy_->showCursor(pt);
+
 	return cursorChanged;
 }
 
-/// @see Window#onSetFocus
+/// @see WM_SETFOCUS
 void TextViewer::onSetFocus(HWND oldWindow) {
-	BaseControl::onSetFocus(oldWindow);
-
 	// スクロール位置を元に戻す
 	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
 	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
@@ -2522,7 +2074,7 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 	}
 }
 
-/// @see Window#onSize
+/// @see WM_SIZE
 void TextViewer::onSize(UINT type, int cx, int cy) {
 //	caret_->endAutoCompletion();
 
@@ -2578,63 +2130,39 @@ void TextViewer::onStyleChanging(int type, ::STYLESTRUCT& style) {
 		style.styleNew &= ~WS_EX_LAYOUTRTL;	// このウィンドウの DC のレイアウトは常に LTR でなければならぬ
 }
 
-/// @see Window#onSysChar
-bool TextViewer::onSysChar(UINT, UINT) {
+/// @see WM_SYSCHAR
+void TextViewer::onSysChar(UINT, UINT) {
 	RESTORE_HIDDEN_CURSOR();
-	return false;
 }
 
-/// @see Window#onSysColorChange
+/// @see WM_SYSCOLORCHANGE
 void TextViewer::onSysColorChange() {
 //	if(this == originalView_)
 //		presentation_.updateSystemColors();
 }
 
-/// @see Window#onSysKeyDown
+/// @see WM_SYSKEYDOWN
 bool TextViewer::onSysKeyDown(UINT, UINT) {
 	endAutoScroll();
 	return false;
 }
 
-/// @see Window#onSysKeyUp
+/// @see WM_SYSKEYUP
 bool TextViewer::onSysKeyUp(UINT, UINT) {
 	RESTORE_HIDDEN_CURSOR();
 	return false;
 }
 
-/// @see Window#onTimer
-void TextViewer::onTimer(UINT eventID) {
-	if(eventID == TIMERID_EXPANDSELECTION
-			|| eventID == TIMERID_EXPANDLINESELECTION) {	// 選択中の自動スクロール
-		::POINT pt;
-		::GetCursorPos(&pt);
-		screenToClient(pt);
-		const HitTestResult htr = hitTest(pt);
-		if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && htr != OUT_OF_VIEW)
-			return;
-		EXTEND_SELECTION();
-	} else if(eventID == TIMERID_DRAGSCROLL) {	// ドラッグ中の自動スクロール
-		::POINT pt;
-		::GetCursorPos(&pt);
-		screenToClient(pt);
-		::RECT clientRect;
-		getClientRect(clientRect);
-		::RECT margins = getTextAreaMargins();
-		margins.left = max<long>(renderer_->getAverageCharacterWidth(), margins.left);
-		margins.top = max<long>(renderer_->getLinePitch() / 2, margins.top);
-		margins.right = max<long>(renderer_->getAverageCharacterWidth(), margins.right);
-		margins.bottom = max<long>(renderer_->getLinePitch() / 2, margins.bottom);
+#ifdef WM_THEMECHANGED
+/// @see WM_THEMECHANGED
+void TextViewer::onThemeChanged() {
+	// see onSysColorChange()
+}
+#endif /* WM_THEMECHANGED */
 
-		// 以下のスクロール量には根拠は無い
-		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
-			scroll(0, -1, true);
-		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
-			scroll(0, +1, true);
-		else if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
-			scroll(-3/*getVisibleColumnCount()*/, 0, true);
-		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
-			scroll(+3/*getVisibleColumnCount()*/, 0, true);
-	} else if(eventID == TIMERID_LINEPARSE) {	// 未解析の行を先読みする
+/// @see WM_TIMER
+void TextViewer::onTimer(UINT_PTR eventID, ::TIMERPROC) {
+	if(eventID == TIMERID_LINEPARSE) {	// 未解析の行を先読みする
 		// ...
 	} else if(eventID == TIMERID_CALLTIP) {	// ツールチップを表示
 		killTimer(TIMERID_CALLTIP);
@@ -2662,41 +2190,24 @@ void TextViewer::onTimer(UINT eventID) {
 	}
 }
 
+#ifdef WM_UNICHAR
 /// @see WM_UNICHAR
 void TextViewer::onUniChar(UINT ch, UINT) {
-#ifndef UNICODE_NOCHAR
-	const UINT UNICODE_NOCHAR = 0xFFFF;
-#endif /* !UNICODE_NOCHAR */
-	if(ch != UNICODE_NOCHAR) {
-		// GUI ユーザが文字の入力を開始したらカーソルを消す
-		if(texteditor::commands::CharacterInputCommand(*this, ch).execute() != 0
-				&& !modeState_.cursorVanished
-				&& configuration_.vanishesCursor
-				&& hasFocus()) {
-			// カーソルが同一スレッドのウィンドウ上に無いと駄目
-			::POINT pt;
-			::GetCursorPos(&pt);
-			if(::GetWindowThreadProcessId(::WindowFromPoint(pt), 0) == getThreadID()) {
-				modeState_.cursorVanished = true;
-				::ShowCursor(false);
-				setCapture();
-			}
-		}
-		if(imeCompositionActivated_)
-			updateIMECompositionWindowPosition();
-	}
+	if(ch != UNICODE_NOCHAR)
+		handleGUICharacterInput(ch);
 }
+#endif /* WM_UNICHAR */
 
 /// @see Window#onVScroll
 void TextViewer::onVScroll(UINT sbCode, UINT pos, HWND) {
 	switch(sbCode) {
-	case SB_LINEUP:		// 1行上
+	case SB_LINEUP:		// 1 行上
 		scroll(0, -1, true); break;
-	case SB_LINEDOWN:	// 1行下
+	case SB_LINEDOWN:	// 1 行下
 		scroll(0, +1, true); break;
-	case SB_PAGEUP:		// 1ページ上
+	case SB_PAGEUP:		// 1 ページ上
 		scroll(0, -static_cast<int>(getNumberOfVisibleLines()), true); break;
-	case SB_PAGEDOWN:	// 1ページ下
+	case SB_PAGEDOWN:	// 1 ページ下
 		scroll(0, +static_cast<int>(getNumberOfVisibleLines()), true); break;
 	case SB_TOP:		// 上端
 	case SB_BOTTOM: {	// 下端
@@ -2704,22 +2215,110 @@ void TextViewer::onVScroll(UINT sbCode, UINT pos, HWND) {
 		getScrollRange(SB_VERT, top, bottom);
 		scrollTo(-1, (sbCode == SB_TOP) ? top : bottom, true); break;
 	}
-	case SB_THUMBTRACK:	// ドラッグ or ホイール
-		scrollTo(-1, getScrollTrackPosition(SB_VERT), true); break;	// 32ビット値を使う
+	case SB_THUMBTRACK:	// by drag or wheel
+		scrollTo(-1, getScrollTrackPosition(SB_VERT), true); break;	// use 32-bit value
 	}
+}
+
+/// @see WM_XBUTTONDBLCLK
+bool TextViewer::onXButtonDblClk(WORD xButton, WORD keyState, const ::POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+	return false;
+}
+
+/// @see WM_XBUTTONDOWN
+bool TextViewer::onXButtonDown(WORD xButton, WORD keyState, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+	return false;
+}
+
+/// @see WM_XBUTTONUP
+bool TextViewer::onXButtonUp(WORD xButton, WORD keyState, const ::POINT& pt) {
+	RESTORE_HIDDEN_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	return false;
 }
 
 /// @see ICaretListener#overtypeModeChanged
 void TextViewer::overtypeModeChanged(const Caret&) {
 }
 
-/// @see IDropSource#QueryContinueDrag
-STDMETHODIMP TextViewer::QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState) {
-	if(fEscapePressed || toBoolean(grfKeyState & MK_RBUTTON))	// キャンセル
-		return DRAGDROP_S_CANCEL;
-	if(!toBoolean(grfKeyState & MK_LBUTTON))	// ドロップ
-		return DRAGDROP_S_DROP;
-	return S_OK;
+/// @see Window#preTranslateMessage
+LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
+	using namespace ascension::texteditor::commands;
+
+	switch(message) {
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+	case WM_CLEAR:
+		if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
+			ClipboardCommand(*this, ClipboardCommand::CUT, true).execute();
+		else
+			DeletionCommand(*this, DeletionCommand::NEXT_CHARACTER).execute();
+		handled = true;
+		return 0L;
+	case WM_COPY:
+		ClipboardCommand(*this, ClipboardCommand::COPY, true).execute();
+		handled = true;
+		return 0L;
+	case WM_CUT:
+		ClipboardCommand(*this, ClipboardCommand::CUT, true).execute();
+		handled = true;
+		return 0L;
+#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+	case WM_GETOBJECT:
+		if(lParam == OBJID_CLIENT) {
+			ComPtr<IAccessible> acc;
+			if(SUCCEEDED(getAccessibleObject(*&acc)) && accLib.isAvailable())
+				return accLib.lresultFromObject(IID_IAccessible, wParam, acc);
+		} else if(lParam == OBJID_WINDOW) {
+		}
+		return 0;
+#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+	case WM_GETTEXT: {
+		OutputStringStream s;
+		getDocument().writeToStream(s, LBR_CRLF);
+		handled = true;
+		return reinterpret_cast<LRESULT>(s.str().c_str());
+	}
+	case WM_GETTEXTLENGTH:
+		// ウィンドウ関係だし改行は CRLF でいいか。LBR_PHYSICAL_DATA だと遅いし
+		handled = true;
+		return getDocument().getLength(LBR_CRLF);
+	case WM_INPUTLANGCHANGE:
+		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
+		if(hasFocus()) {
+			if(texteditor::Session* session = getDocument().getSession())
+				session->getInputSequenceCheckers()->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+		}
+		break;
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+	case WM_PASTE:
+		ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
+		handled = true;
+		return 0L;
+#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+	case WM_SETTEXT:
+		SelectionCreationCommand(*this, SelectionCreationCommand::ALL).execute();
+		getCaret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
+		handled = true;
+		return 0L;
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+	case WM_UNDO:
+		UndoCommand(*this, true).execute();
+		handled = true;
+		return 0L;
+#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+	}
+
+	return BaseControl::preTranslateWindowMessage(message, wParam, lParam, handled);
 }
 
 /// Recreates and shows the caret. If the viewer does not have focus, nothing heppen.
@@ -2999,6 +2598,25 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 			rightAlign ? WS_EX_LEFTSCROLLBAR : WS_EX_RIGHTSCROLLBAR);
 	}
 	invalidateRect(0, false);
+}
+
+/**
+ * Sets the mouse input strategy. An instance of @c TextViewer has the default strategy implemented
+ * by @c DefaultMouseInputStrategy class as the construction.
+ * @param newStrategy the new strategy
+ * @param delegateOwnership set true to transfer the ownership of @a newStrategy to the callee
+ * @throw std#logic_error the window is not created yet
+ */
+void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
+	if(!isWindow())
+		throw logic_error("The window is not created yet.");
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->uninstall();
+	if(newStrategy != 0)
+		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
+	else
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), 0);
+	mouseInputStrategy_->install(*this);
 }
 
 /**
@@ -3617,7 +3235,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 			HPEN oldPen = dc.selectObject(lineNumbersPen_);
 			const int x = ((configuration_.alignment == ALIGN_LEFT) ?
 				clientRect.left + getWidth() : clientRect.right - getWidth() + 1) - configuration_.lineNumbers.borderWidth;
-			dc.moveTo(x, paintRect.top);
+			dc.moveTo(x, 0/*paintRect.top*/);
 			dc.lineTo(x, paintRect.bottom);
 			dc.selectObject(oldPen);
 		}
@@ -3659,36 +3277,44 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		}
 	}
 
-	// 1行ずつ細かい描画
-//	const int scrollOffset = viewer_.getScrollPos(SB_VERT) * viewer_.getScrollRate(false);
+	// 1 行ずつ細かい描画
 	length_t line, visualSublineOffset;
 	const length_t lines = viewer_.getDocument().getNumberOfLines();
 	viewer_.mapClientYToLine(paintRect.top, &line, &visualSublineOffset);	// $friendly-access
-	int y = paintRect.top - (paintRect.top - viewer_.getConfiguration().topMargin) % renderer.getLinePitch();
 	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
-		y += static_cast<int>(renderer.getLineLayout(line++).getNumberOfSublines() - visualSublineOffset) * renderer.getLinePitch();
-	while(y < paintRect.bottom && line < lines) {
-		// 派生クラスにインジケータマージンの描画機会を与える
-		if(configuration_.indicatorMargin.visible) {
-			::RECT rect = {
-				(configuration_.alignment == ALIGN_LEFT) ? clientRect.left : clientRect.right - configuration_.indicatorMargin.width,
-				y, (configuration_.alignment == ALIGN_LEFT) ? clientRect.left + configuration_.indicatorMargin.width : clientRect.right,
-				y + renderer.getLinePitch()};
-			viewer_.drawIndicatorMargin(line, dc, rect);
-		}
+		++line;
+	int y = viewer_.mapLineToClientY(line, false);
+	if(y != 32767 && y != -32768) {
+		while(y < paintRect.bottom && line < lines) {
+			const LineLayout& layout = renderer.getLineLayout(line);
+			const int nextY = y + static_cast<int>(layout.getNumberOfSublines() * renderer.getLinePitch());
+			if(nextY >= paintRect.top) {
+				// 派生クラスにインジケータマージンの描画機会を与える
+				if(configuration_.indicatorMargin.visible) {
+					::RECT rect = {
+						(configuration_.alignment == ALIGN_LEFT) ?
+							clientRect.left : clientRect.right - configuration_.indicatorMargin.width,
+						y, (configuration_.alignment == ALIGN_LEFT) ?
+							clientRect.left + configuration_.indicatorMargin.width : clientRect.right,
+						y + renderer.getLinePitch()};
+					viewer_.drawIndicatorMargin(line, dc, rect);
+				}
 
-		// 行番号の描画
-		if(configuration_.lineNumbers.visible) {
-			wchar_t buffer[32];
-			swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
-			dc.textOut(lineNumbersX, y, buffer, static_cast<int>(wcslen(buffer)));
+				// 行番号の描画
+				if(configuration_.lineNumbers.visible) {
+					wchar_t buffer[32];
+					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
+					dc.textOut(lineNumbersX, y, buffer, static_cast<int>(wcslen(buffer)));
+				}
+			}
+			++line;
+			y = nextY;
 		}
-		y += static_cast<int>(renderer.getLineLayout(line++).getNumberOfSublines() * renderer.getLinePitch());
 	}
 	dc.restore(savedCookie);
 }
 
-/// ドキュメントの現在の最終行番号が10進数で何文字になるかを返す
+/// ドキュメントの現在の最終行番号が 10 進数で何文字になるかを返す
 uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const throw() {
 	uint n = 1;
 	length_t lines = viewer_.getDocument().getNumberOfLines() + configuration_.lineNumbers.startValue - 1;
@@ -3785,7 +3411,6 @@ void TextViewer::VerticalRulerDrawer::updateGDIObjects() throw() {
 	}
 }
 
-#undef EXTEND_SELECTION
 #undef RESTORE_HIDDEN_CURSOR
 
 
@@ -3994,6 +3619,526 @@ void VirtualBox::update(const Region& region) throw() {
 	location = r.getLineLayout(points_[1].line = region.second.line).getLocation(region.second.column);
 	points_[1].x = location.x;
 	points_[1].subline = location.y / r.getLinePitch();
+}
+
+
+// DefaultMouseInputStrategy ////////////////////////////////////////////////
+
+namespace {
+	inline AutoBuffer<wchar_t> a2u(const char* src, size_t length, size_t* resultLength = 0) {
+		const int c = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), 0, 0);
+		if(c == 0)
+			throw invalid_argument("Unconvertable character sequence.");
+		AutoBuffer<wchar_t> buffer(new wchar_t[c]);
+		if(0 == ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), buffer.get(), c))
+			throw invalid_argument("Unconvertable character sequence.");
+		if(resultLength != 0)
+			*resultLength = c;
+		return buffer;
+	}
+	auto_ptr<String> getTextData(IDataObject& data, bool* rectangle = 0) {
+		auto_ptr<String> result;
+		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+		::STGMEDIUM stm = {TYMED_HGLOBAL, 0};
+		if(data.QueryGetData(&fe) == S_OK) {	// the data suppports CF_UNICODETEXT ?
+			if(SUCCEEDED(data.GetData(&fe, &stm))) {
+				if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
+					result.reset(new String(buffer));
+					::GlobalUnlock(stm.hGlobal);
+					::ReleaseStgMedium(&stm);
+				}
+			}
+		}
+
+		if(result.get() == 0) {
+			fe.cfFormat = CF_TEXT;
+			if(data.QueryGetData(&fe) == S_OK) {	// the data supports CF_TEXT ?
+				if(SUCCEEDED(data.GetData(&fe, &stm))) {
+					if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
+						const length_t nativeLength = min<length_t>(strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
+						length_t len;
+						AutoBuffer<Char> buffer = a2u(nativeBuffer, nativeLength, &len);
+						::GlobalUnlock(stm.hGlobal);
+						::ReleaseStgMedium(&stm);
+						result.reset(new String(buffer.get(), len));
+					}
+				}
+			}
+		}
+
+		if(result.get() != 0 && rectangle != 0) {
+			fe.cfFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+			*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
+		}
+
+		return result;
+	}
+} // namespace @0
+
+map<UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
+const UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
+const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
+
+/**
+ * Constructor.
+ * @param enableOLEDragAndDrop set true to enable OLE Drag-and-Drop feature.
+ */
+DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop)
+		: oleDragAndDropEnabled_(enableOLEDragAndDrop), leftButtonPressed_(false), oleDragging_(false) {
+	lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+}
+
+/// 
+void DefaultMouseInputStrategy::beginTimer(UINT interval) {
+	endTimer();
+	if(const UINT_PTR id = ::SetTimer(0, 0, interval, timeElapsed))
+		timerTable_[id] = this;
+}
+
+/// @see IMouseInputStrategy#captureChanged
+void DefaultMouseInputStrategy::captureChanged() {
+	endTimer();
+	viewer_->getCaret().restoreSelectionMode();
+	leftButtonPressed_ = false;
+}
+
+/// @see IDropTarget#DragEnter
+STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, ::POINTL pt, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly()
+			|| !viewer_->allowsMouseInput() || viewer_->getConfiguration().alignment != ALIGN_LEFT)
+		return S_OK;
+
+	// validate the dragged data if can drop
+	::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	if(data->QueryGetData(&fe) != S_OK) {
+		fe.cfFormat = CF_TEXT;
+		if(data->QueryGetData(&fe) != S_OK)
+			return S_OK;	// can't accept
+	}
+
+	// retrieve number of lines if text is rectangle
+	numberOfDraggedRectangleLines_ = 0;
+	fe.cfFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+	if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+		auto_ptr<String> s = getTextData(*data);
+		if(s.get() != 0)
+			numberOfDraggedRectangleLines_ = getNumberOfLines(*s) - 1;
+	}
+	DumpContext() << numberOfDraggedRectangleLines_ << L"\n";
+
+	oleDragging_ = true;
+	viewer_->setFocus();
+	beginTimer(OLE_DRAGGING_TRACK_INTERVAL);
+	return DragOver(keyState, pt, effect);
+}
+
+/// @see IDropTarget#DragLeave
+STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
+	::SetFocus(0);
+	endTimer();
+	oleDragging_ = false;
+	return S_OK;
+}
+
+/// @see IDropTarget#DragOver
+STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DWORD* effect) {
+	VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+
+	::POINT caretPoint = {pt.x, pt.y};
+	viewer_->screenToClient(caretPoint);
+	const Position p(viewer_->getCharacterForClientXY(caretPoint, true));
+	viewer_->setCaretPosition(viewer_->getClientXYForCharacter(p, LineLayout::LEADING));
+
+	// drop rectangle text into bidirectional line is not supported...
+	const length_t lines = min(viewer_->getDocument().getNumberOfLines(), p.line + numberOfDraggedRectangleLines_);
+	for(length_t line = p.line; line < lines; ++line) {
+		if(viewer_->getTextRenderer().getLineLayout(line).isBidirectional()) {
+			*effect = DROPEFFECT_NONE;
+			return S_OK;
+		}
+	}
+
+	if(toBoolean(keyState & MK_CONTROL & MK_SHIFT))
+		*effect = DROPEFFECT_NONE;
+	else
+		*effect = (!leftButtonPressed_ || toBoolean(keyState & MK_CONTROL)) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+	return S_OK;
+}
+
+/// @see IDropTarget#Drop
+STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	Document& document = viewer_->getDocument();
+	if(!oleDragAndDropEnabled_ || document.isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+	Caret& caret = viewer_->getCaret();
+
+	if(!leftButtonPressed_) {	// dropped from the other widget
+		::POINT caretPoint = {pt.x, pt.y};
+		endTimer();
+		viewer_->screenToClient(caretPoint);
+		const Position pos = viewer_->getCharacterForClientXY(caretPoint, true);
+		caret.moveTo(pos);
+
+		bool rectangle;
+		auto_ptr<String> text = getTextData(*data, &rectangle);
+		if(text.get() != 0) {
+			document.endSequentialEdit();
+			viewer_->freeze();
+			if(rectangle) {
+				document.beginSequentialEdit();
+				caret.insertBox(*text);
+				document.endSequentialEdit();
+				caret.beginBoxSelection();
+			} else
+				caret.insert(*text);
+			caret.select(pos, caret);
+			viewer_->unfreeze();
+			*effect = DROPEFFECT_COPY;
+		}
+	} else {	// drop from the same widget
+		String text = caret.getSelectionText(LBR_PHYSICAL_DATA);
+		::POINT caretPoint = {pt.x, pt.y};
+
+		viewer_->screenToClient(caretPoint);
+		const Position pos = viewer_->getCharacterForClientXY(caretPoint, true);
+
+		// can't drop into the selection
+		if(caret.isPointOverSelection(caretPoint)) {
+			caret.moveTo(pos);
+			oleDragging_ = false;
+			return S_OK;
+		}
+
+		const bool rectangle = caret.isSelectionRectangle();
+		document.beginSequentialEdit();
+		viewer_->freeze();
+		if(toBoolean(keyState & MK_CONTROL)) {	// copy
+//			viewer_->redrawLines(caret.getTopPoint().getLineNumber(), caret.getBottomPoint().getLineNumber());
+			caret.enableAutoShow(false);
+			caret.moveTo(pos);
+			if(rectangle)	// copy as a rectangle
+				caret.insertBox(text);
+			else	// copy as linear
+				caret.insert(text);
+			caret.enableAutoShow(true);
+			caret.select(pos, caret);
+			*effect = DROPEFFECT_COPY;
+		} else if(rectangle) {	// move as a rectangle
+			text::Point p(document);
+			p.moveTo(pos);
+			caret.eraseSelection();
+			p.adaptToDocument(false);
+			caret.enableAutoShow(false);
+			caret.extendSelection(p);
+			caret.insertBox(text);
+			caret.enableAutoShow(true);
+			caret.select(p, caret);
+			*effect = DROPEFFECT_MOVE;
+		} else {	// move as linear
+			VisualPoint activePointOrg(*viewer_);
+			const Position anchorPointOrg = caret.getAnchor();
+			activePointOrg.moveTo(caret);
+			caret.enableAutoShow(false);
+			caret.moveTo(pos);
+			activePointOrg.erase(anchorPointOrg);
+			const Position temp = caret;
+			caret.endBoxSelection();
+			caret.insert(text);
+			caret.enableAutoShow(true);
+			caret.select(temp, caret);
+			*effect = DROPEFFECT_MOVE;
+		}
+		viewer_->unfreeze();
+		document.endSequentialEdit();
+	}
+	oleDragging_ = false;
+	return S_OK;
+}
+
+///
+void DefaultMouseInputStrategy::endTimer() {
+	for(map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.begin(); i != timerTable_.end(); ++i) {
+		if(i->second == this) {
+			::KillTimer(0, i->first);
+			timerTable_.erase(i);
+			return;
+		}
+	}
+}
+
+/// Extends the selection to the current cursor position.
+void DefaultMouseInputStrategy::extendSelection() {
+	::RECT rc;
+	const ::RECT margins = viewer_->getTextAreaMargins();
+	viewer_->getClientRect(rc);
+	::POINT p = viewer_->getCursorPosition();
+	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
+	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
+	const Position dest = viewer_->getCharacterForClientXY(p, true);
+	Caret& caret = viewer_->getCaret();
+	if(caret.getSelectionMode() == Caret::LINE || caret.getSelectionMode() == Caret::WORD) {
+		const TextViewer::HitTestResult htr = viewer_->hitTest(p);
+		if(caret.getSelectionMode() == Caret::LINE && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
+			caret.restoreSelectionMode();
+	}
+	caret.extendSelection(dest);
+}
+
+/// @see IDropSource#GiveFeedback
+STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
+	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
+}
+
+/// Handles @c WM_LBUTTONDOWN.
+void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position, uint keyState) {
+	bool boxDragging = false;
+//	AutoBuffer<Char> uri;
+	Caret& caret = viewer_->getCaret();
+	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
+
+//	caret.endAutoCompletion();
+	endIncrementalSearch(*viewer_);
+	leftButtonPressed_ = true;
+
+	// 行選択
+	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
+		if(toBoolean(keyState & MK_CONTROL))	// 全行選択
+			texteditor::commands::SelectionCreationCommand(*viewer_, texteditor::commands::SelectionCreationCommand::ALL).execute();
+		else {
+			caret.moveTo(viewer_->getCharacterForClientXY(position, false));
+			caret.beginLineSelection();
+		}
+		viewer_->setCapture();
+		beginTimer(SELECTION_EXPANSION_INTERVAL);
+	}
+
+	// OLE ドラッグ開始?
+	else if(oleDragAndDropEnabled_ && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
+		lastLeftButtonPressedPoint_ = position;
+		if(caret.isSelectionRectangle())
+			boxDragging = true;
+	}
+
+	// リンクの起動
+//	else if(toBoolean(keyState & MK_CONTROL) && linkTextStrategy_ != 0 && isOverInvokableLink(position, uri))
+//		linkTextStrategy_->invokeLink(..., uri.get());
+
+	// 矩形選択開始
+	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
+		caret.beginBoxSelection();
+		caret.moveTo(viewer_->getCharacterForClientXY(position, true));
+		viewer_->setCapture();
+		beginTimer(SELECTION_EXPANSION_INTERVAL);
+	}
+
+	// その他。線形選択開始、キャレット移動
+	else {
+		const Position p = viewer_->getCharacterForClientXY(position, true);
+		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
+			caret.moveTo(p);
+			caret.beginWordSelection();
+		} else if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
+			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// Shift+Alt -> select to the cursor (rectangle)
+				caret.beginBoxSelection();
+			caret.extendSelection(p);
+		} else {
+			caret.moveTo(p);
+			caret.endBoxSelection();
+		}
+		viewer_->setCapture();
+		beginTimer(SELECTION_EXPANSION_INTERVAL);
+	}
+
+//	if(!caret.isSelectionRectangle() && !boxDragging)
+//		viewer_->redrawLine(caret.getLineNumber());
+	viewer_->setFocus();
+}
+
+/// Handles @c WM_LBUTTONUP.
+void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position, uint) {
+	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
+		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+		viewer_->getCaret().moveTo(viewer_->getCharacterForClientXY(position, true));
+		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
+	}
+	endTimer();
+	leftButtonPressed_ = false;
+	viewer_->releaseCapture();
+
+	// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
+	viewer_->getCaret().show();
+}
+
+/// @see IMouseInputStrategy#install
+void DefaultMouseInputStrategy::install(TextViewer& viewer) {
+	(viewer_ = &viewer)->registerDragDrop(*this);
+}
+
+/// @see IMouseInputStrategy#mouseButtonInput
+bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState) {
+	if(action != RELEASED)
+		viewer_->endAutoScroll();
+	if(button == LEFT_BUTTON) {
+		if(action == PRESSED)
+			handleLeftButtonPressed(position, keyState);
+		else if(action == RELEASED)
+			handleLeftButtonReleased(position, keyState);
+		else if(action == DOUBLE_CLICKED) {
+			abortIncrementalSearch(*viewer_);
+			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->getCursorPosition());
+			if(htr == TextViewer::LEADING_MARGIN || htr == TextViewer::TOP_MARGIN || htr == TextViewer::TEXT_AREA) {
+//			leftDownMode_ = LDM_SELECTION_WORD;
+				viewer_->getCaret().beginWordSelection();
+				viewer_->setCapture();
+				beginTimer(SELECTION_EXPANSION_INTERVAL);
+			}
+		}
+	} else if(button == MIDDLE_BUTTON) {
+		if(action == PRESSED) {
+			viewer_->setFocus();
+			viewer_->beginAutoScroll();
+			return true;
+		}
+	}
+	return false;
+}
+
+/// @see IMouseInputStrategy#mouseMoved
+void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint keyState) {
+	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始?
+		if(!oleDragAndDropEnabled_ || viewer_->getCaret().isSelectionEmpty())
+			lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+		else {
+			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
+			const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
+			if((position.x > lastLeftButtonPressedPoint_.x + cxDragBox / 2)
+					|| (position.x < lastLeftButtonPressedPoint_.x - cxDragBox / 2)
+					|| (position.y > lastLeftButtonPressedPoint_.y + cyDragBox / 2)
+					|| (position.y < lastLeftButtonPressedPoint_.y - cyDragBox / 2)) {
+				const bool box = viewer_->getCaret().isSelectionRectangle();
+				const String selection = viewer_->getCaret().getSelectionText(LBR_CRLF);
+				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
+
+				if(box) {
+					set<::CLIPFORMAT> clipFormats;
+					clipFormats.insert(CF_UNICODETEXT);
+					clipFormats.insert(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+					draggingText->setAvailableFormatSet(clipFormats);
+				}
+				draggingText->setTextData(selection.c_str());
+				assert(leftButtonPressed_);
+				beginTimer(box ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+				draggingText->doDragDrop(DROPEFFECT_COPY | DROPEFFECT_MOVE);
+				endTimer();
+				leftButtonPressed_ = false;
+				lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+				oleDragging_ = false;
+				if(viewer_->isVisible())
+					viewer_->setFocus();
+			}
+		}
+	} else if(leftButtonPressed_)
+		extendSelection();
+}
+
+/// @see IMouseInputStrategy#mouseWheelRotated
+void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, uint) {
+	if(!viewer_->endAutoScroll()) {
+		// システムで設定されている量を使う
+		UINT scrollLineCount;	// スクロールする行数
+		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &scrollLineCount, 0)))
+			scrollLineCount = 3;
+		delta *= (scrollLineCount != WHEEL_PAGESCROLL) ? scrollLineCount : static_cast<UINT>(viewer_->getNumberOfVisibleLines());
+		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
+	}
+}
+
+/// @see IDropSource#QueryContinueDrag
+STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+	if(toBoolean(escapePressed) || toBoolean(keyState & MK_RBUTTON))	// cancel
+		return DRAGDROP_S_CANCEL;
+	if(!toBoolean(keyState & MK_LBUTTON))	// drop
+		return DRAGDROP_S_DROP;
+	return S_OK;
+}
+
+/// @see IMouseInputStrategy#showCursor
+bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
+	// on the vertical ruler?
+	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
+	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
+		::SetCursor(::LoadCursor(0, IDC_ARROW));
+	// on a draggable text selection?
+	else if(oleDragAndDropEnabled_ && !viewer_->getCaret().isSelectionEmpty() && viewer_->getCaret().isPointOverSelection(position))
+		::SetCursor(::LoadCursor(0, IDC_ARROW));
+	else
+		return false;
+	return true;
+}
+
+///
+void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD) {
+	map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.find(eventID);
+	if(i == timerTable_.end())
+		return;
+	DefaultMouseInputStrategy& self = *i->second;
+	if(self.oleDragging_) {	// scroll automatically during OLE dragging
+		const ::POINT pt = self.viewer_->getCursorPosition();
+		::RECT clientRect;
+		self.viewer_->getClientRect(clientRect);
+		::RECT margins = self.viewer_->getTextAreaMargins();
+		const TextRenderer& renderer = self.viewer_->getTextRenderer();
+		margins.left = max<long>(renderer.getAverageCharacterWidth(), margins.left);
+		margins.top = max<long>(renderer.getLinePitch() / 2, margins.top);
+		margins.right = max<long>(renderer.getAverageCharacterWidth(), margins.right);
+		margins.bottom = max<long>(renderer.getLinePitch() / 2, margins.bottom);
+
+		// 以下のスクロール量には根拠は無い
+		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
+			self.viewer_->scroll(0, -1, true);
+		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
+			self.viewer_->scroll(0, +1, true);
+		else if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
+			self.viewer_->scroll(-3/*viewer_->getVisibleColumnCount()*/, 0, true);
+		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
+			self.viewer_->scroll(+3/*viewer_->getVisibleColumnCount()*/, 0, true);
+	} else if(self.leftButtonPressed_) {	// scroll automatically during extending the selection
+		const ::POINT pt = self.viewer_->getCursorPosition();
+		::RECT rc;
+		const ::RECT margins = self.viewer_->getTextAreaMargins();
+		self.viewer_->getClientRect(rc);
+		// 以下のスクロール量には根拠は無い
+		if(pt.y < rc.top + margins.top)
+			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->getTextRenderer().getLinePitch() - 1, true);
+		else if(pt.y >= rc.bottom - margins.bottom)
+			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->getTextRenderer().getLinePitch() + 1, true);
+		else if(pt.x < rc.left + margins.left)
+			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->getTextRenderer().getAverageCharacterWidth() - 1, 0, true);
+		else if(pt.x >= rc.right - margins.right)
+			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->getTextRenderer().getAverageCharacterWidth() + 1, 0, true);
+		self.extendSelection();
+	}
+}
+
+/// @see IMouseInputStrategy#uninstall
+void DefaultMouseInputStrategy::uninstall() {
+	endTimer();
+	viewer_->revokeDragDrop();
+	viewer_ = 0;
 }
 
 

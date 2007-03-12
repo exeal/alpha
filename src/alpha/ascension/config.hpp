@@ -130,6 +130,13 @@
 // #define ASCENSION_NO_DOUBLE_BUFFERING
 
 /**
+ * @def ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+ * Define the symbol if the text editor window should handle window messages related to the
+ * standard EDIT control. These messages include: @c WM_CLEAR, @c WM_CUT
+ */
+#define ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+
+/**
  * @def ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
  * Define the symbol if you do not use Microsoft Active Input Method Manager (Global IME). You can
  * also disable AIM at runtime. This effects only on Win32 platform.

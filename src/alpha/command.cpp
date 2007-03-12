@@ -441,7 +441,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_SEARCH_REPLACEALL:		app.replaceAll(); return true;
 	case CMD_SEARCH_BOOKMARKALL:	app.searchAndBookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
-	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog(app).doModal(app.getMainWindow().get()); return true;
+	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog().doModal(app.getMainWindow().get()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
 	case CMD_SEARCH_NEXTBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::NEXT_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_PREVBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::PREVIOUS_BOOKMARK).execute(); return true;
@@ -619,7 +619,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_TOOL_FONT:				app.changeFont(); return true;
 //	case CMD_TOOL_EXECUTE:			app.onToolExecute(); return true;
 	case CMD_TOOL_EXECUTECOMMAND:
-		ui::ExecuteCommandDlg(app,
+		ui::ExecuteCommandDlg(
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ?
 				app.editorFont_ : 0).doModal(app.getMainWindow().get());
 		return true;

@@ -446,6 +446,19 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
 }
 
 /**
+ * Returns the space string added to the end of the specified line to reach the specified virtual
+ * point. If the end of the line is over @a virtualX, the result is an empty string.
+ * @param x the x-coordinate of the virtual point
+ * @return the space string consists of only white spaces (U+0020) and horizontal tabs (U+0009)
+ * @throw text#BadPositionException @a line is outside of the document
+ * @deprecated 0.8
+ * @note This does not support line wrapping and bidirectional context.
+ */
+String LineLayout::fillToX(int x) const {
+	return L"";	// TODO: not implemented.
+}
+
+/**
  * Returns the index of run containing the specified column.
  * @param column the column
  * @return the index of the run
@@ -762,7 +775,7 @@ bool LineLayout::isBidirectional() const throw() {
 	if(renderer_.getTextViewer().getConfiguration().orientation == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(runs_[i]->analysis.s.uBidiLevel > 0)
+		if(runs_[i]->analysis.s.uBidiLevel % 2 == 1)
 			return true;
 	}
 	return false;
@@ -1862,12 +1875,16 @@ void TextRenderer::updateLongestLine(length_t line, int width) throw() {
 
 /// Informs about the change of the viewer's size.
 void TextRenderer::updateViewerSize() throw() {
-	if(getTextViewer().isWindow() && !getTextViewer().isIconic()) {
+	const TextViewer& viewer = getTextViewer();
+	if(!viewer.isWindow())
+		return;
+	::RECT viewerRect;
+	getTextViewer().getClientRect(viewerRect);
+	if(viewerRect.right - viewerRect.left > getAverageCharacterWidth()) {
 		const ::RECT margins = getTextViewer().getTextAreaMargins();
-		::RECT r;
-		getTextViewer().getClientRect(r);
-		const int newWidth = r.right - r.left - margins.left - margins.right;
+		const int newWidth = viewerRect.right - viewerRect.left - margins.left - margins.right;
 		if(newWidth != viewerWidth_) {
+			viewerWidth_ = newWidth;
 			// ウィンドウ幅で折り返す場合は再計算
 			if(getTextViewer().getConfiguration().lineWrap.wrapsAtWindowEdge()) {
 				for(length_t i = getCacheFirstLine(); i < getCacheLastLine(); ++i) {
@@ -1879,7 +1896,6 @@ void TextRenderer::updateViewerSize() throw() {
 						invalidate(i, i + 1);
 				}
 			}
-			viewerWidth_ = newWidth;
 		}
 	}
 }

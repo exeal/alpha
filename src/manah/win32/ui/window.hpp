@@ -79,6 +79,7 @@ public:
 	// operator
 	bool operator==(const Window& rhs) const {return get() == rhs.get();}
 	// constructions
+	void	close();
 	bool	create(const TCHAR* className, HWND parentOrHInstance,
 				const ::RECT& rect = DefaultWindowRect(), const TCHAR* windowName = 0,
 				DWORD style = 0UL, DWORD exStyle = 0UL, HMENU menu = 0, void* param = 0);
@@ -256,32 +257,18 @@ public:
 	// process and thread
 	DWORD	getProcessID() const;
 	DWORD	getThreadID() const;
-	// overridable message handlers
-protected:
-	virtual void onActivate(UINT state, HWND previousWindow, bool minimized) {}				// WM_ACTIVATE
-	virtual void onClose() {destroy();}														// WM_CLOSE
-	virtual bool onCommand(WORD id, WORD notifyCode, HWND controlWindow) {return false;}	// WM_COMMAND
-	virtual bool onContextMenu(HWND window, const ::POINT& pt) {return false;}				// WM_CONTEXTMENU
-	virtual int	 onCreate(const ::CREATESTRUCT& cs) {return 0;}								// WM_CREATE
-	virtual void onDestroy() {}																// WM_DESTROY
-	virtual void onDrawItem(UINT controlID, ::DRAWITEMSTRUCT& drawItem) {}					// WM_DRAWITEM
-	virtual void onKillFocus(HWND newWindow) {}												// WM_KILLFOCUS
-	virtual void onLButtonDown(UINT flags, const ::POINT& pt) {}							// WM_LBUTTONDOWN
-	virtual void onLButtonDblClk(UINT flags, const ::POINT& pt) {}							// WM_LBUTTONDBLCLK
-	virtual void onLButtonUp(UINT flags, const ::POINT& pt) {}								// WM_LBUTTONUP
-	virtual void onMeasureItem(UINT controlID, ::MEASUREITEMSTRUCT& mis) {}					// WM_MEASUREITEM
-	virtual void onMouseMove(UINT flags, const ::POINT& pt) {}								// WM_MOUSEMOVE
-	virtual bool onNotify(int controlID, ::NMHDR* nmhdr) {return false;}					// WM_NOTIFY
-	virtual bool onSetCursor(HWND window, UINT hitTest, UINT message) {return false;}		// WM_SETCURSOR
-	virtual void onSetFocus(HWND oldWindow) {}												// WM_SETFOCUS
-	virtual void onShowWindow(bool show, UINT status) {}									// WM_SHOWWINDOW
-	virtual void onSize(UINT type, int cx, int cy) {}										// WM_SIZE
-	virtual void onSysColorChange() {}														// WM_SYSCOLORCHANGE
-	virtual void onTimer(UINT eventID) {}													// WM_TIMER
 
 protected:
-	virtual LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
-	virtual bool	preTranslateMessage(UINT message, WPARAM wParam, LPARAM lParam);	// called by only DE
+	// Do not override this directly. Use MANAH_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
+	virtual bool processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {return false;}
+	// Call the implementation of the base class if override this.
+	virtual LRESULT preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {return 1;}
+	LRESULT fireProcessWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
+		LRESULT result = 1;
+		if(!processWindowMessage(message, wParam, lParam, result))
+			result = ::CallWindowProc(::DefWindowProc, get(), message, wParam, lParam);
+		return result;
+	}
 
 	// デバッグ
 protected:
@@ -293,14 +280,173 @@ protected:
 
 private:
 	static std::auto_ptr<Window> createAttached(HWND handle) {std::auto_ptr<Window> p(new Window); p->attach(handle); return p;}
-
 	friend class Subclassable;
 };
 
+namespace internal {
+	template<UINT message> struct Msg2Type {};
+	template<typename WindowClass> struct MessageDispatcher {
+#define DEFINE_DISPATCH(msg) static LRESULT dispatch(WindowClass& w, const Msg2Type<msg>, WPARAM wp, LPARAM lp, bool& handled)
+		// WM_ACTIVATE -> void onActivate(UINT state, HWND otherWindow, bool minimized)
+		DEFINE_DISPATCH(WM_ACTIVATE) {w.onActivate(LOWORD(wp), reinterpret_cast<HWND>(lp), toBoolean(HIWORD(wp))); return 1;}
+		// WM_CAPTURECHANGED -> void onCapturChanged(HWND newWindow)
+		DEFINE_DISPATCH(WM_CAPTURECHANGED) {w.onCaptureChanged(reinterpret_cast<HWND>(lp)); return 1;}
+		// WM_CHAR -> void onChar(UINT code, UINT flags)
+		DEFINE_DISPATCH(WM_CHAR) {w.onChar(static_cast<UINT>(wp), static_cast<UINT>(lp)); return 1;}
+		// WM_CLOSE -> void onClose(void)
+		DEFINE_DISPATCH(WM_CLOSE) {w.onClose(); return 1;}
+		// WM_COMMAND -> bool onCommand(WORD id, WORD notifyCode, HWND control)
+		DEFINE_DISPATCH(WM_COMMAND) {handled = w.onCommand(LOWORD(wp), HIWORD(wp), reinterpret_cast<HWND>(lp)); return 1;}
+		// WM_CONTEXTMENU -> void onContextMenu(HWND window, const ::POINT& position)
+		DEFINE_DISPATCH(WM_CONTEXTMENU) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onContextMenu(reinterpret_cast<HWND>(wp), p); return 1;}
+		// WM_CREATE -> LRESULT onCreate(const ::CREATESTRUCT&)
+		DEFINE_DISPATCH(WM_CREATE) {return w.onCreate(*reinterpret_cast<const ::CREATESTRUCT*>(lp));}
+		// WM_DEADCHAR -> void onDeadChar(UINT code, UINT flags)
+		DEFINE_DISPATCH(WM_DEADCHAR) {w.onDeadChar(static_cast<UINT>(wp), static_cast<UINT>(lp)); return 1;}
+		// WM_DESTROY -> void onDestroy(void)
+		DEFINE_DISPATCH(WM_DESTROY) {w.onDestroy(); return 1;}
+		// WM_ENTERSIZEMOVE -> void onEnterSizeMove(void)
+		DEFINE_DISPATCH(WM_ENTERSIZEMOVE) {w.onEnterSizeMove(); return 1;}
+		// WM_ERASEBKGND -> bool onEraseBkgnd(HDC dc)
+		DEFINE_DISPATCH(WM_ERASEBKGND) {return w.onEraseBkgnd(reinterpret_cast<HDC>(wp));}
+		// WM_EXITSIZEMOVE -> void onExitSizeMove(void)
+		DEFINE_DISPATCH(WM_EXITSIZEMOVE) {w.onExitSizeMove(); return 1;}
+		// WM_FONTCHANGE -> void onFontChange(void)
+		DEFINE_DISPATCH(WM_FONTCHANGE) {w.onFontChange(); return 1;}
+		// WM_GETDLGCODE -> UINT onGetDlgCode(void)
+		DEFINE_DISPATCH(WM_GETDLGCODE) {handled = true; return w.onGetDlgCode();}
+		// WM_GETFONT -> HFONT onGetFont(void)
+		DEFINE_DISPATCH(WM_GETFONT) {handled = true; return reinterpret_cast<LRESULT>(w.onGetFont());}
+		// WM_GETMINMAXINFO -> void onGetMinMaxInfo(::MINMAXINFO&)
+		DEFINE_DISPATCH(WM_GETMINMAXINFO) {handled = true; w.onGetMinMaxInfo(*reinterpret_cast<::MINMAXINFO*>(lp)); return 0;}
+		// WM_GETTEXTLENGTH -> int onGetText(int maximumLength, TCHAR* text)
+		DEFINE_DISPATCH(WM_GETTEXT) {handled = true; return w.onGetText(static_cast<int>(wp), reinterpret_cast<TCHAR*>(lp));}
+		// WM_GETTEXTLENGTH -> int onGetTextLength(void)
+		DEFINE_DISPATCH(WM_GETTEXTLENGTH) {handled = true; return w.onGetTextLength();}
+		// WM_HSCROLL -> void onHScroll(UINT sbCode, UINT position, HWND scrollBar)
+		DEFINE_DISPATCH(WM_HSCROLL) {w.onHScroll(LOWORD(wp), HIWORD(wp), reinterpret_cast<HWND>(lp)); return 1;}
+		// WM_IME_COMPOSITION -> void onIMEComposition(WPARAM wParam, LPARAM lParam)
+		DEFINE_DISPATCH(WM_IME_COMPOSITION) {w.onIMEComposition(wp, lp); return 0;}
+		// WM_IME_ENDCOMPOSITION -> void onIMEEndComposition(void)
+		DEFINE_DISPATCH(WM_IME_ENDCOMPOSITION) {w.onIMEEndComposition(); return 0;}
+		// WM_IME_NOTIFY -> LRESULT onIMENotify(WPARAM command, LPARAM lParam, bool& handled)
+		DEFINE_DISPATCH(WM_IME_NOTIFY) {return w.onIMENotify(wp, lp, handled);}
+		// WM_IME_REQUEST -> LRESULT onIMERequest(WPARAM command, LPARAM lParam, bool& handled)
+		DEFINE_DISPATCH(WM_IME_REQUEST) {return w.onIMERequest(wp, lp, handled);}
+		// WM_IME_STARTCOMPOSITION -> void onIMEStartComposition(void)
+		DEFINE_DISPATCH(WM_IME_STARTCOMPOSITION) {handled = true; w.onIMEStartComposition(); return 0;}
+		// WM_KEYDOWN -> void onKeyDown(UINT vkey, UINT flags, bool& handled)
+		DEFINE_DISPATCH(WM_KEYDOWN) {w.onKeyDown(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return 1;}
+		// WM_KEYUP -> void onKeyUp(UINT vkey, UINT flags, bool& handled)
+		DEFINE_DISPATCH(WM_KEYUP) {w.onKeyUp(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return 1;}
+		// WM_KILLFOCUS -> void onKillFocus(HWND newWindow)
+		DEFINE_DISPATCH(WM_KILLFOCUS) {w.onKillFocus(reinterpret_cast<HWND>(wp)); return 1;}
+		// WM_LBUTTONDBLCLK -> void onLButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_LBUTTONDBLCLK) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDblClk(static_cast<UINT>(wp), p); return 1;}
+		// WM_LBUTTONDOWN -> void onLButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_LBUTTONDOWN) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDown(static_cast<UINT>(wp), p); return 1;}
+		// WM_LBUTTONUP -> void onLButtonUp(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_LBUTTONUP) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonUp(static_cast<UINT>(wp), p); return 1;}
+		// WM_MBUTTONDBLCLK -> void onMButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_MBUTTONDBLCLK) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDblClk(static_cast<UINT>(wp), p); return 1;}
+		// WM_MBUTTONDOWN -> void onMButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_MBUTTONDOWN) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDown(static_cast<UINT>(wp), p); return 1;}
+		// WM_MBUTTONUP -> void onMButtonUp(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_MBUTTONUP) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonUp(static_cast<UINT>(wp), p); return 1;}
+		// WM_MOUSEACTIVATE -> int onMouseActivate(HWND desktop, UINT hitTest, UINT message)
+		DEFINE_DISPATCH(WM_MOUSEACTIVATE) {return w.onMouseActivate(reinterpret_cast<HWND>(wp), LOWORD(lp), HIWORD(lp));}
+		// WM_MOUSEMOVE -> void onMouseMove(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_MOUSEMOVE) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMouseMove(static_cast<UINT>(wp), p); return 1;}
+#ifdef WM_MOUSEWHEEL
+		// WM_MOUSEWHEEL -> void onMouseWheel(UINT flags, short delta, const ::POINT& position)
+		DEFINE_DISPATCH(WM_MOUSEWHEEL) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMouseWheel(GET_KEYSTATE_WPARAM(wp), GET_WHEEL_DELTA_WPARAM(wp), p); return 1;}
+#endif /* WM_MOUSEWHEEL */
+		// WM_MOVE -> void onMove(int x, int y)
+		DEFINE_DISPATCH(WM_MOVE) {w.onMove(LOWORD(lp), HIWORD(lp)); return 1;}
+		// WM_MOVING -> void onMoving(const ::RECT& rect)
+		DEFINE_DISPATCH(WM_MOVING) {w.onMoving(*reinterpret_cast<const ::RECT*>(lp)); return 1;}
+		// WM_NOTIFY -> bool onNotify(int id, ::NMHDR& nmhdr)
+		DEFINE_DISPATCH(WM_NOTIFY) {handled = w.onNotify(static_cast<int>(wp), *reinterpret_cast<::NMHDR*>(lp)); return 1;}
+//		// WM_PAINT -> bool onPaint(void)
+//		DEFINE_DISPATCH(WM_PAINT) {return w.onPaint();}
+		// WM_RBUTTONDBLCLK -> void onRButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_RBUTTONDBLCLK) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDblClk(static_cast<UINT>(wp), p); return 1;}
+		// WM_RBUTTONDOWN -> void onRButtonDblClk(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_RBUTTONDOWN) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDown(static_cast<UINT>(wp), p); return 1;}
+		// WM_RBUTTONUP -> void onRButtonUp(UINT flags, const ::POINT& position)
+		DEFINE_DISPATCH(WM_RBUTTONUP) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonUp(static_cast<UINT>(wp), p); return 1;}
+		// WM_SETCURSOR -> bool onSetCursor(HWND window, UINT hitTest, UINT message)
+		DEFINE_DISPATCH(WM_SETCURSOR) {return handled = w.onSetCursor(reinterpret_cast<HWND>(wp), LOWORD(lp), HIWORD(lp));}
+		// WM_SETFOCUS -> void onSetFocus(HWND oldWindow)
+		DEFINE_DISPATCH(WM_SETFOCUS) {w.onSetFocus(reinterpret_cast<HWND>(wp)); return 1;}
+		// WM_SETFONT -> void onSetFont(HFONT font, bool redraw)
+		DEFINE_DISPATCH(WM_SETFONT) {handled = true; w.onSetFont(reinterpret_cast<HFONT>(wp), toBoolean(LOWORD(lp))); return 0;}
+		// WM_SETTEXT -> bool onSetText(const TCHAR* text)
+		DEFINE_DISPATCH(WM_SETTEXT) {handled = w.onSetText(reinterpret_cast<const TCHAR*>(lp)); return 0;}
+		// WM_SETTINGCHANGE -> void onSettingChange(UINT flags, const TCHAR* sectionName)
+		DEFINE_DISPATCH(WM_SETTINGCHANGE) {w.onSettingChange(static_cast<UINT>(wp), reinterpret_cast<const TCHAR*>(lp)); return 1;}
+		// WM_SIZE -> void onSize(UINT type, int cx, int cy)
+		DEFINE_DISPATCH(WM_SIZE) {w.onSize(static_cast<UINT>(wp), LOWORD(lp), HIWORD(lp)); return 1;}
+		// WM_SIZING -> void onSizing(UINT side, const ::RECT& rect)
+		DEFINE_DISPATCH(WM_SIZING) {w.onSizing(static_cast<UINT>(wp), *reinterpret_cast<::RECT*>(lp)); return 1;}
+		// WM_STYLECHANGED -> void onStyleChanged(int type, const ::STYLESTRUCT& style)
+		DEFINE_DISPATCH(WM_STYLECHANGED) {w.onStyleChanged(static_cast<int>(wp), *reinterpret_cast<const ::STYLESTRUCT*>(lp)); return 1;}
+		// WM_STYLECHANGING -> void onStyleChanging(int type, ::STYLESTRUCT& style)
+		DEFINE_DISPATCH(WM_STYLECHANGING) {w.onStyleChanging(static_cast<int>(wp), *reinterpret_cast<::STYLESTRUCT*>(lp)); return 1;}
+		// WM_SYSCHAR -> void onSysChar(UINT code, UINT flags)
+		DEFINE_DISPATCH(WM_SYSCHAR) {w.onSysChar(static_cast<UINT>(wp), static_cast<UINT>(lp)); return 1;}
+		// WM_SYSCOLORCHANGE -> void onSysColorChange(void)
+		DEFINE_DISPATCH(WM_SYSCOLORCHANGE) {w.onSysColorChange(); return 1;}
+		// WM_SYSDEADCHAR -> void onSysDeadChar(UINT code, UINT flags)
+		DEFINE_DISPATCH(WM_SYSDEADCHAR) {w.onSysDeadChar(static_cast<UINT>(wp), static_cast<UINT>(lp)); return 1;}
+		// WM_SYSKEYDOWN -> bool onSysKeyDown(UINT vkey, UINT flags)
+		DEFINE_DISPATCH(WM_SYSKEYDOWN) {return w.onSysKeyDown(static_cast<UINT>(wp), static_cast<UINT>(lp));}
+		// WM_SYSKEYUP -> bool onSysKeyUp(UINT vkey, UINT flags)
+		DEFINE_DISPATCH(WM_SYSKEYUP) {return w.onSysKeyUp(static_cast<UINT>(wp), static_cast<UINT>(lp));}
+#ifdef WM_THEMECHANGED
+		// WM_THEMECHANGED -> void onThemeChanged(void)
+		DEFINE_DISPATCH(WM_THEMECHANGED) {w.onThemeChanged(); return 1;}
+#endif /* WM_THEMECHANGED */
+		// WM_TIMER -> void onTimer(UINT_PTR eventID, ::TIMERPROC)
+		DEFINE_DISPATCH(WM_TIMER) {w.onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<::TIMERPROC>(lp)); return 1;}
+#ifdef WM_UNICHAR
+		// WM_UNICHAR -> void onUniChar(UINT code, UINT flags)
+		DEFINE_DISPATCH(WM_UNICHAR) {w.onUniChar(static_cast<UINT>(wp), static_cast<UINT>(lp)); return 1;}
+#endif /* WM_UNICHAR */
+		// WM_VSCROLL -> void onVScroll(UINT sbCode, UINT position, HWND scrollBar)
+		DEFINE_DISPATCH(WM_VSCROLL) {w.onVScroll(LOWORD(wp), HIWORD(wp), reinterpret_cast<HWND>(lp)); return 1;}
+#ifdef WM_XBUTTONDBLCLK
+		// WM_XBUTTONDBLCLK -> bool onXButtonDblClk(WORD xButton, WORD keyState, const ::POINT& position)
+		DEFINE_DISPATCH(WM_XBUTTONDBLCLK) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; return w.onXButtonDblClk(GET_XBUTTON_WPARAM(wp), GET_KEYSTATE_WPARAM(wp), p);}
+		// WM_XBUTTONDOWN -> bool onXButtonDblClk(WORD xButton, WORD keyState, const ::POINT& position)
+		DEFINE_DISPATCH(WM_XBUTTONDOWN) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; return w.onXButtonDown(GET_XBUTTON_WPARAM(wp), GET_KEYSTATE_WPARAM(wp), p);}
+		// WM_XBUTTONUP -> bool onXButtonUp(WORD xButton, WORD keyState, const ::POINT& position)
+		DEFINE_DISPATCH(WM_XBUTTONUP) {const ::POINT p = {LOWORD(lp), HIWORD(lp)}; return w.onXButtonUp(GET_XBUTTON_WPARAM(wp), GET_KEYSTATE_WPARAM(wp), p);}
+#endif /* WM_XBUTTONDBLCLK */
+#undef DEFINE_DISPATCH
+	};
+}
 
-#ifdef SubclassWindow
-#undef SubclassWindow
-#endif /* SubclassWindow */
+#define MANAH_DECLEAR_WINDOW_MESSAGE_MAP(WindowClass)							\
+protected:																		\
+	virtual bool processWindowMessage(UINT message, WPARAM, LPARAM, LRESULT&);	\
+	friend struct manah::win32::ui::internal::MessageDispatcher<WindowClass>
+
+#define MANAH_BEGIN_WINDOW_MESSAGE_MAP(WindowClass, BaseClass)												\
+	bool WindowClass::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {	\
+		typedef WindowClass Klass; typedef BaseClass BaseKlass; bool handled = false;						\
+		switch(message) {
+
+#define MANAH_WINDOW_MESSAGE_ENTRY(msg)														\
+		case msg: result = manah::win32::ui::internal::MessageDispatcher<Klass>::dispatch(	\
+			*this, manah::win32::ui::internal::Msg2Type<msg>(), wParam, lParam, handled);	\
+			if(handled) return true; break;
+
+#define MANAH_END_WINDOW_MESSAGE_MAP()												\
+		}																			\
+		return BaseKlass::processWindowMessage(message, wParam, lParam, result);	\
+	}
+
 
 template<class ConcreteWindow = Window> class Subclassable : public ConcreteWindow, public Noncopyable {
 public:
@@ -311,14 +457,14 @@ public:
 //	bool			attach(HWND handle, bool subclass);
 	virtual LRESULT	defWindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 //	virtual HWND	detach();
-	virtual LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
 	bool			isSubclassed() const {return originalProcedure_ != 0;}
 	bool			subclass();
 	bool			unsubclass();
 protected:
-	virtual void	onDestroy();
+	virtual bool	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result);
 	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 private:
+	using ConcreteWindow::fireProcessWindowMessage;
 	::WNDPROC originalProcedure_;
 };
 
@@ -376,7 +522,7 @@ public:
 	explicit StandardControl(HWND handle = 0) : SubclassableWindow(handle) {}
 	virtual ~StandardControl() {}
 public:
-	virtual bool create(HWND parent, const RECT& rect = DefaultWindowRect(),
+	virtual bool create(HWND parent, const ::RECT& rect = DefaultWindowRect(),
 			const TCHAR* windowName = 0, INT_PTR id = 0, DWORD style = 0, DWORD exStyle = 0) {
 		return Window::create(Control::getClassName(), parent, rect, windowName,
 			DefaultStyles::getStyle(style), DefaultStyles::getExStyle(exStyle), reinterpret_cast<HMENU>(id));
@@ -384,13 +530,13 @@ public:
 	enum {DefaultStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS};
 protected:
 	// implementation helpers
-	template<class ReturnType>
+	template<typename ReturnType>
 	ReturnType sendMessageR(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) {
 #pragma warning(disable : 4800)	// non-boolean to boolean conversion
 		return static_cast<ReturnType>(sendMessage(message, wParam, lParam));
 #pragma warning(default : 4800)
 	}
-	template<class ReturnType>
+	template<typename ReturnType>
 	ReturnType sendMessageC(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const {
 		return const_cast<StandardControl*>(this)->sendMessageR<ReturnType>(message, wParam, lParam);
 	}
@@ -403,26 +549,20 @@ protected:
 	HINSTANCE& instance, UINT& style, manah::win32::BrushHandleOrColor& bgColor,	\
 	manah::win32::CursorHandleOrID& cursor,	HICON& icon, HICON& smallIcon, int& clsExtraBytes, int& wndExtraBytes
 #define DEFINE_WINDOW_CLASS()	public: static void getClass(GET_CLASS_PARAM_LIST)
-template<class Control, class BaseWindow = Window> class CustomControl : public BaseWindow {
+template<class Control, class BaseWindow = Window>
+class CustomControl : public BaseWindow {
 public:
 	explicit CustomControl(HWND handle = 0) : BaseWindow(handle) {}
 	CustomControl(const CustomControl<Control, BaseWindow>& rhs) : BaseWindow(rhs) {}
 	virtual ~CustomControl();
-	bool	create(HWND parent, const RECT& rect = DefaultWindowRect(),
+	bool	create(HWND parent, const ::RECT& rect = DefaultWindowRect(),
 				const TCHAR* windowName = 0, DWORD style = 0UL, DWORD exStyle = 0UL);
 protected:
 	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 	virtual void	onPaint(gdi::PaintDC& dc) = 0;	// WM_PAINT
+private:
+	using BaseWindow::fireProcessWindowMessage;
 };
-
-
-// write one of these in your class definition if override DispatchEvent.
-#define OVERRIDE_DISPATCH_EVENT(Control)								\
-	LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);	\
-	friend class manah::win32::ui::CustomControl<Control>
-#define OVERRIDE_DISPATCH_EVENT_(Control, BaseWindow)					\
-	LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);	\
-	friend class manah::win32::ui::CustomControl<Control, BaseWindow>
 
 
 // Window ///////////////////////////////////////////////////////////////////
@@ -479,6 +619,8 @@ inline void Window::clientToScreen(::RECT& rect) const {
 
 inline void Window::clientToScreen(::POINT& pt) const {assertValidAsWindow(); ::ClientToScreen(get(), &pt);}
 
+inline void Window::close() {assertValidAsWindow(); ::CloseWindow(get());}
+
 inline bool Window::create(const TCHAR* className, HWND parentOrHInstance,
 		const ::RECT& rect /* = DefaultWindowRect() */, const TCHAR* windowName /* = 0 */,
 		DWORD style /* = 0UL */, DWORD exStyle /* = 0UL */, HMENU menu /* = 0 */, void* param /* = 0 */) {
@@ -511,97 +653,6 @@ inline bool Window::createSolidCaret(int width, int height) {return createCaret(
 inline LRESULT Window::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {assertValidAsWindow(); return ::DefWindowProc(get(), message, wParam, lParam);}
 
 inline bool Window::destroy() {if(toBoolean(::DestroyWindow(get()))) {release(); return true;} return false;}
-
-inline LRESULT Window::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
-	if(preTranslateMessage(message, wParam, lParam))
-		return false;
-	switch(message) {
-	case WM_ACTIVATE:
-		onActivate(LOWORD(wParam), reinterpret_cast<HWND>(lParam), toBoolean(HIWORD(wParam)));
-		break;
-	case WM_CLOSE:
-		onClose();
-		return 0L;
-	case WM_COMMAND:
-		return onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
-	case WM_CONTEXTMENU: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		if(onContextMenu(reinterpret_cast<HWND>(wParam), p))
-			return 0L;
-		break;
-	}
-	case WM_CREATE:
-		return onCreate(*reinterpret_cast<::CREATESTRUCT*>(lParam));
-	case WM_DESTROY:
-		onDestroy();
-		return 0L;
-	case WM_DRAWITEM:
-		onDrawItem(static_cast<UINT>(wParam), reinterpret_cast<::DRAWITEMSTRUCT&>(lParam));
-		break;
-	case WM_KILLFOCUS:
-		onKillFocus(reinterpret_cast<HWND>(wParam));
-		return 0L;
-	case WM_LBUTTONDOWN: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonDown(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_LBUTTONDBLCLK: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonDblClk(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_LBUTTONUP: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonUp(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_MEASUREITEM:
-		onMeasureItem(static_cast<UINT>(wParam), reinterpret_cast<::MEASUREITEMSTRUCT&>(lParam));
-		break;
-	case WM_MOUSEMOVE: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onMouseMove(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_NOTIFY:
-		return onNotify(static_cast<UINT>(wParam), reinterpret_cast<LPNMHDR>(lParam));
-	case WM_SETCURSOR:
-		if(onSetCursor(reinterpret_cast<HWND>(wParam),
-			static_cast<UINT>(LOWORD(lParam)), static_cast<UINT>(HIWORD(lParam))))
-			return false;
-		break;
-	case WM_SETFOCUS:
-		onSetFocus(reinterpret_cast<HWND>(wParam));
-		return 0L;
-	case WM_SHOWWINDOW:
-		onShowWindow(toBoolean(wParam), static_cast<UINT>(lParam));
-		return 0L;
-	case WM_SIZE:
-		onSize(static_cast<UINT>(wParam), LOWORD(lParam), HIWORD(lParam));
-		break;
-	case WM_SYSCOLORCHANGE:
-		onSysColorChange();
-		break;
-	case WM_TIMER:
-		onTimer(static_cast<UINT>(wParam));
-		break;
-	default:
-		break;
-	}
-
-	return defWindowProc(message, wParam, lParam);
-}
 
 inline void Window::dragAcceptFiles(bool accept /* = true */) {assertValidAsWindow(); ::DragAcceptFiles(get(), accept);}
 
@@ -828,8 +879,6 @@ inline void Window::printClient(HDC dc, DWORD flags) const {::SendMessage(get(),
 inline LRESULT Window::postMessage(UINT message, WPARAM wParam /* = 0 */, LPARAM lParam /* = 0L */) {
 	assertValidAsWindow(); return ::PostMessage(get(), message, wParam, lParam);}
 
-inline bool Window::preTranslateMessage(UINT message, WPARAM wParam, LPARAM lParam) {return false;}
-
 inline bool Window::redraw(::RECT* updateRect /* = 0 */, HRGN clipRegion/* = 0 */,
 		UINT flags /* = RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE */) {
 	assertValidAsWindow(); return toBoolean(::RedrawWindow(get(), updateRect, clipRegion, flags));}
@@ -995,15 +1044,14 @@ template<class ConcreteWindow> inline HWND Subclassable<ConcreteWindow>::detach(
 	return ConcreteWindow::detach();
 }
 */
-template<class ConcreteWindow> inline LRESULT Subclassable<ConcreteWindow>::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
+template<class ConcreteWindow>
+inline bool Subclassable<ConcreteWindow>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {
 	if(message == WM_NCDESTROY) {
 		unsubclass();
-		return 0L;
+		return false;
 	}
-	return ConcreteWindow::dispatchEvent(message, wParam, lParam);
+	return ConcreteWindow::processWindowMessage(message, wParam, lParam, result);
 }
-
-template<class ConcreteWindow> inline void Subclassable<ConcreteWindow>::onDestroy() {unsubclass();}
 
 template<class ConcreteWindow> inline bool Subclassable<ConcreteWindow>::subclass() {
 	assertValidAsWindow();
@@ -1047,7 +1095,7 @@ inline LRESULT CALLBACK Subclassable<ConcreteWindow>::windowProcedure(HWND windo
 	if(Subclassable<ConcreteWindow>* instance =
 		reinterpret_cast<Subclassable<Window>*>(static_cast<LONG_PTR>(::GetWindowLong(window, GWL_USERDATA))))
 #endif /* _WIN64 */
-		return instance->dispatchEvent(message, wParam, lParam);
+		return instance->fireProcessWindowMessage(message, wParam, lParam);
 	return false;
 }
 
@@ -1126,30 +1174,36 @@ inline bool CustomControl<Control, BaseWindow>::create(HWND parent, const ::RECT
 
 template<class Control, class BaseWindow>
 inline LRESULT CALLBACK CustomControl<Control, BaseWindow>::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-	typedef CustomControl<Control, BaseWindow>	SelfType;
+	typedef CustomControl<Control, BaseWindow> C;
 	if(message == WM_CREATE) {
-		SelfType* instance = reinterpret_cast<SelfType*>(reinterpret_cast<::CREATESTRUCT*>(lParam)->lpCreateParams);
-		assert(instance != 0);
-		instance->reset(window);	// ... the handle will be reset by BaseWindow::create (no problem)
+		C* const p = reinterpret_cast<C*>(reinterpret_cast<::CREATESTRUCT*>(lParam)->lpCreateParams);
+		assert(p != 0);
+		p->reset(window);	// ... the handle will be reset by BaseWindow::create (no problem)
 #ifdef _WIN64
-		instance->setWindowLongPtr(GWLP_USERDATA, reinterpret_cast<LONG_PTR>(instance));
+		p->setWindowLongPtr(GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p));
 #else
-		instance->setWindowLong(GWL_USERDATA, static_cast<long>(reinterpret_cast<LONG_PTR>(instance)));
+		p->setWindowLong(GWL_USERDATA, static_cast<long>(reinterpret_cast<LONG_PTR>(p)));
 #endif /* _WIN64 */
 
-		return instance->dispatchEvent(message, wParam, lParam);
+		return p->fireProcessWindowMessage(message, wParam, lParam);
 	} else {
+		C* const p = reinterpret_cast<C*>(
 #ifdef _WIN64
-		SelfType* instance = reinterpret_cast<SelfType*>(::GetWindowLongPtr(window, GWLP_USERDATA));
+			::GetWindowLongPtr(window, GWLP_USERDATA));
 #else
-		SelfType* instance = reinterpret_cast<SelfType*>(static_cast<LONG_PTR>(::GetWindowLong(window, GWL_USERDATA)));
+			static_cast<LONG_PTR>(::GetWindowLong(window, GWL_USERDATA)));
 #endif /* _WIN64 */
-		if(message == WM_PAINT && instance != 0) {
-			instance->onPaint(gdi::PaintDC(instance->get()));
-			return true;
-		} else
-			return (instance != 0) ?
-				instance->dispatchEvent(message, wParam, lParam) : ::DefWindowProc(window, message, wParam, lParam);
+		if(p == 0)
+			return 1;
+		bool handled = false;
+		const LRESULT r = p->preTranslateWindowMessage(message, wParam, lParam, handled);
+		if(handled)
+			return r;
+		else if(message == WM_PAINT) {
+			p->onPaint(gdi::PaintDC(p->get()));
+			return 0;
+		}
+		return p->fireProcessWindowMessage(message, wParam, lParam);
 	}
 }
 

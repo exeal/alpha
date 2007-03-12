@@ -157,8 +157,8 @@ Alpha::Alpha() : editorFont_(0), scriptSystem_(new ankh::ScriptSystem), mruManag
 	Alpha::instance_ = this;
 	scriptSystem_->AddRef();
 	commandManager_.reset(new CommandManager);
-	searchDialog_.reset(new ui::SearchDialog(*this));
-	bookmarkDialog_.reset(new ui::BookmarkDialog(*this));
+	searchDialog_.reset(new ui::SearchDialog);
+	bookmarkDialog_.reset(new ui::BookmarkDialog);
 	registerScriptEngineAssociations();
 	onSettingChange(0, 0);	// statusFont_ ‚Ì‰Šú‰»
 }

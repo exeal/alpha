@@ -16,9 +16,9 @@ using namespace std;
 
 
 /**
- * コンストラクタ
- * @param encoding エンコーディングの初期値
- * @param lineBreak 改行の初期値
+ * Constructor.
+ * @param encoding the encoding initially selected
+ * @param lineBreak the line break initially selected
  */
 NewFileFormatDialog::NewFileFormatDialog(CodePage encoding, LineBreak lineBreak) throw() : encoding_(encoding), lineBreak_(lineBreak) {
 }
@@ -63,9 +63,7 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool NewFileFormatDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	set<CodePage> codePages;
 
 	// [コードページ]
@@ -94,15 +92,11 @@ bool NewFileFormatDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 //	for(list<wstring>::const_iterator it = documentTypes_.begin(); it != documentTypes_.end(); ++it)
 //		documentTypeCombobox_.addString(it->c_str());
 //	documentTypeCombobox_.setCurSel(static_cast<int>(documentType_));
-
-	return true;
 }
 
 /// @see Dialog#onOK
-void NewFileFormatDialog::onOK() {
+void NewFileFormatDialog::onOK(bool&) {
 	encoding_ = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
 	lineBreak_ = static_cast<ascension::text::LineBreak>(lineBreakCombobox_.getItemData(lineBreakCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
-
-	Dialog::onOK();
 }

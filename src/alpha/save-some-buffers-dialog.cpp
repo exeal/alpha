@@ -22,9 +22,7 @@ bool SaveSomeBuffersDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool SaveSomeBuffersDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void SaveSomeBuffersDialog::onInitDialog(HWND, bool&) {
 	HICON icon = Alpha::loadStandardIcon(IDI_WARNING);
 	sendItemMessage(IDC_STATIC_1, STM_SETICON, reinterpret_cast<WPARAM>(icon), 0);
 	::DestroyIcon(icon);
@@ -39,12 +37,10 @@ bool SaveSomeBuffersDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 		bufferListbox_.addString(it->fileName.c_str());
 	bufferListbox_.selItemRange(0, bufferListbox_.getCount() - 1);
 	::MessageBeep(MB_ICONEXCLAMATION);
-
-	return true;
 }
 
 /// @see Dialog#onOK
-void SaveSomeBuffersDialog::onOK() {
+void SaveSomeBuffersDialog::onOK(bool&) {
 	const int c = bufferListbox_.getSelCount();
 	int* sels = new int[c];
 
@@ -54,6 +50,4 @@ void SaveSomeBuffersDialog::onOK() {
 	for(int i = 0; i < c; ++i)
 		files_[i].save = true;
 	delete[] sels;
-
-	Dialog::onOK();
 }

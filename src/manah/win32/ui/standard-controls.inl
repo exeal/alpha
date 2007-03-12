@@ -366,9 +366,9 @@ inline int ListBox::setCaretIndex(int index, bool scroll /* = true */) {return s
 
 inline int ListBox::getSelCount() const {return sendMessageC<int>(LB_GETSELCOUNT);}
 
-inline int ListBox::getSelItems(int maxItems, ::INT* indices) const {return sendMessageC<int>(LB_GETCURSEL, maxItems, reinterpret_cast<LPARAM>(indices));}
+inline int ListBox::getSelItems(int maxItems, ::INT* indices) const {return sendMessageC<int>(LB_GETSELITEMS, maxItems, reinterpret_cast<LPARAM>(indices));}
 
-inline int ListBox::selItemRange(int firstItem, int lastItem, bool select /* = true */) {return sendMessageR<int>(LB_GETCURSEL, select, MAKELPARAM(firstItem, lastItem));}
+inline int ListBox::selItemRange(int firstItem, int lastItem, bool select /* = true */) {return sendMessageR<int>(LB_SELITEMRANGE, select, MAKELPARAM(firstItem, lastItem));}
 
 inline void ListBox::setAnchorIndex(int index) {sendMessage(LB_SETANCHORINDEX, index);}
 

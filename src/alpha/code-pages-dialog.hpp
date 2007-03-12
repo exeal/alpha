@@ -14,7 +14,7 @@
 
 namespace alpha {
 	namespace ui {
-		/// [コードページの選択] ダイアログ
+		/// "Select Code Page" dialog box.
 		class CodePagesDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_CODEPAGES> {
 		public:
 			CodePagesDialog(ascension::encodings::CodePage codePage, bool forReading) throw();
@@ -24,12 +24,12 @@ namespace alpha {
 			ascension::encodings::CodePage codePage_;
 			const bool forReading_;
 			manah::win32::ui::ListBox codepageList_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_LIST_CODEPAGES, codepageList_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_LIST_CODEPAGES, codepageList_)
+			MANAH_END_CONTROL_BINDING()
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
-			void	onOK();												// IDOK
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
+			void	onOK(bool& continueDialog);							// IDOK
 		};
 
 		/// ユーザが選択したコードページを返す

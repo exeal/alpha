@@ -84,6 +84,7 @@ namespace ascension {
 			Strategy* operator->() const throw() {assert(p_ != 0); return p_;}
 			Strategy* get() const throw() {return p_;}
 			void reset(Strategy* s, bool delegateOwnership) throw() {if(hasOwnership_) delete p_; p_ = s; hasOwnership_ = delegateOwnership;}
+			void reset() throw() {reset(0, false);}
 		private:
 			Strategy* p_;
 			bool hasOwnership_;

@@ -18,8 +18,8 @@ using namespace std;
 const uint MAX_HISTORY_LENGTH = 16;
 
 
-/// コンストラクタ
-ExecuteCommandDlg::ExecuteCommandDlg(Alpha& app, HFONT ioFont) : app_(app), ioFont_(ioFont), executing_(false), interrupted_(false) {
+/// Constructor.
+ExecuteCommandDlg::ExecuteCommandDlg(HFONT ioFont) : ioFont_(ioFont), executing_(false), interrupted_(false) {
 }
 
 /// 入力キューに追加
@@ -166,18 +166,19 @@ void ExecuteCommandDlg::switchControls(ControlState state) {
 	::EnableWindow(getItem(IDC_CHK_USEUNICODEFORINPUT), state == WAIT_FOR_NEW_COMMAND);
 }
 
-/// @see Dialog::onCancel
-void ExecuteCommandDlg::onCancel() {
-	if(executing_)	// [中止] ボタン
+/// @see Dialog#onCancel
+void ExecuteCommandDlg::onCancel(bool& continueDialog) {
+	if(executing_) {	// [中止] ボタン
 		interrupted_ = true;
-	else
-		Dialog::onCancel();
+		continueDialog = true;
+	}
 }
 
 /// @see Dialog::onClose
-void ExecuteCommandDlg::onClose() {
+void ExecuteCommandDlg::onClose(bool&) {
 	wchar_t keyName[35];
 
+	Alpha& app = Alpha::getInstance();
 	interrupted_ = true;
 
 	// 履歴と設定を保存
@@ -185,18 +186,16 @@ void ExecuteCommandDlg::onClose() {
 		wchar_t* const buffer = new wchar_t[commandCombobox_.getLBTextLen(i) + 1];
 		commandCombobox_.getLBText(i, buffer);
 		swprintf(keyName, L"CommandExecutionDialog.command(%u)", i);
-		app_.writeStringProfile(L"Tool", keyName, buffer);
+		app.writeStringProfile(L"Tool", keyName, buffer);
 		delete[] buffer;
 	}
-	app_.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram",
+	app.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram",
 		(isButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED) ? 1 : 0);
-	app_.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput",
+	app.writeIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput",
 		(isButtonChecked(IDC_CHK_USEUNICODEFORINPUT) == BST_CHECKED) ? 1 : 0);
-
-	Dialog::onClose();
 }
 
-/// @see Dialog::onCommand
+/// @see Dialog#onCommand
 bool ExecuteCommandDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 	switch(id) {
 	case IDC_COMBO_COMMAND:	// [コマンド]
@@ -215,14 +214,11 @@ bool ExecuteCommandDlg::onCommand(WORD id, WORD notifyCode, HWND control) {
 		::EnableWindow(getItem(IDC_CHK_USEUNICODEFORINPUT), isButtonChecked(IDC_CHK_GETCONSOLE) == BST_CHECKED);
 		break;
 	}
-
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
-/// @see Dialog::onInitDialog
-bool ExecuteCommandDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+/// @see Dialog#onInitDialog
+void ExecuteCommandDlg::onInitDialog(HWND focusWindow, bool&) {
 	if(ioFont_) {
 		commandCombobox_.setFont(ioFont_);
 		inputTextbox_.setFont(ioFont_);
@@ -230,31 +226,32 @@ bool ExecuteCommandDlg::onInitDialog(HWND focusWindow, LPARAM initParam) {
 	}
 
 	// 履歴と設定を読み込む
+	Alpha& app = Alpha::getInstance();
 	wchar_t keyName[35];
 	for(uint i = 0; i < MAX_HISTORY_LENGTH; ++i) {
 		swprintf(keyName, L"CommandExecutionDialog.command(%u)", i);
-		const wstring command = app_.readStringProfile(L"Tool", keyName);
+		const wstring command = app.readStringProfile(L"Tool", keyName);
 		if(command.empty())
 			commandCombobox_.addString(command.c_str());
 		else
 			break;
 	}
 	check2StateButton(IDC_CHK_GETCONSOLE,
-		app_.readIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram", 0) != 0);
+		app.readIntegerProfile(L"Tool", L"CommandExecutionDialog.consoleProgram", 0) != 0);
 	check2StateButton(IDC_CHK_USEUNICODEFORINPUT,
-		app_.readIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput", 0) != 0);
+		app.readIntegerProfile(L"Tool", L"CommandExecutionDialog.unicodeInput", 0) != 0);
 	onCommand(IDC_COMBO_COMMAND, CBN_EDITCHANGE, 0);
 	onCommand(IDC_CHK_GETCONSOLE, 0, 0);
-	return true;
 }
 
-/// @see Dialog::onOK
-void ExecuteCommandDlg::onOK() {
+/// @see Dialog#onOK
+void ExecuteCommandDlg::onOK(bool& continueDialog) {
+	continueDialog = true;
 	if(!executing_) {	// [実行]
 		const int len = commandCombobox_.getTextLength();
 		wchar_t* rawCmdLine = new wchar_t[len + 1];
-		const basic_string<WCHAR> filePath = (app_.getBufferList().getActive().getFilePathName() != 0) ?
-			basic_string<WCHAR>(L"\"") + app_.getBufferList().getActive().getFilePathName() + L"\"" : L"";
+		const basic_string<WCHAR> filePath = (Alpha::getInstance().getBufferList().getActive().getFilePathName() != 0) ?
+			basic_string<WCHAR>(L"\"") + Alpha::getInstance().getBufferList().getActive().getFilePathName() + L"\"" : L"";
 
 		commandCombobox_.getText(rawCmdLine, len + 1);
 
@@ -312,6 +309,4 @@ void ExecuteCommandDlg::onOK() {
 		}
 		delete[] input;
 	}
-
-//	Dialog::onOK();
 }

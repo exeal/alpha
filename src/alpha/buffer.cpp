@@ -485,9 +485,11 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 	// ドラッグ -> アクティブなバッファを切り替える
 	else if(nmhdr.hdr.code == TBN_GETOBJECT) {
 		::NMOBJECTNOTIFY& n = *reinterpret_cast<::NMOBJECTNOTIFY*>(&nmhdr.hdr);
-		setActive(bufferBar_.commandToIndex(n.iItem));	// n.iItem は ID
-		n.pObject = 0;
-		n.hResult = E_NOINTERFACE;
+		if(n.iItem != -1) {
+			setActive(bufferBar_.commandToIndex(n.iItem));	// n.iItem は ID
+			n.pObject = 0;
+			n.hResult = E_NOINTERFACE;
+		}
 		return 0;
 	}
 
@@ -1329,6 +1331,12 @@ void EditorPane::showBuffer(const Buffer& buffer) {
 
 // EditorView ///////////////////////////////////////////////////////////////
 
+MANAH_BEGIN_WINDOW_MESSAGE_MAP(EditorView, TextViewer)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_KEYDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_KILLFOCUS)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
+MANAH_END_WINDOW_MESSAGE_MAP()
+
 Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
@@ -1434,10 +1442,10 @@ void EditorView::matchBracketsChanged(const Caret& self, const pair<Position, Po
 }
 
 /// @see Window#onKeyDown
-bool EditorView::onKeyDown(UINT ch, UINT flags) {
+void EditorView::onKeyDown(UINT vkey, UINT flags, bool& handled) {
 	// 既定のキー割り当てを全て無効にする
-//	return true;
-	return SourceViewer::onKeyDown(ch, flags);
+//	handled = true;
+	return SourceViewer::onKeyDown(vkey, flags, handled);
 }
 
 /// @see Window#onKillFocus

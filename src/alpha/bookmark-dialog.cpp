@@ -17,15 +17,11 @@ using namespace ascension;
 using namespace std;
 
 
-/// コンストラクタ
-BookmarkDialog::BookmarkDialog(Alpha& app) : app_(app) {
-}
-
 /**
- * 指定した位置の項目情報を得る
- * @param index 項目の位置
- * @param[out] buffer バッファ
- * @param[out] line 行番号 (0ベース)
+ * Returns the information of the specified item.
+ * @param[in] index the index of the item
+ * @param[out] buffer the buffer
+ * @param[out] line the line number
  */
 void BookmarkDialog::getItemInfo(int index, Buffer*& buffer, length_t& line) const {
 	wchar_t location[300];
@@ -67,7 +63,7 @@ void BookmarkDialog::onBtnDelete() {
 
 /// ブックマークリストの更新
 void BookmarkDialog::updateList() {
-	const BufferList& buffers = app_.getBufferList();
+	const BufferList& buffers = Alpha::getInstance().getBufferList();
 	list<length_t> lines;
 	Char location[300];
 	int item = 0;
@@ -100,8 +96,8 @@ void BookmarkDialog::updateList() {
 		}
 	} else {
 		// アクティブなドキュメントだけを対象にする場合
-		const Buffer& activeBuffer = app_.getBufferList().getActive();
-		const length_t lineOffset = app_.getBufferList().getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
+		const Buffer& activeBuffer = buffers.getActive();
+		const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
 		const length_t topLine = activeBuffer.getStartPosition().line;
 		const length_t bottomLine = activeBuffer.getEndPosition().line;
 		length_t line = 0;
@@ -119,7 +115,7 @@ void BookmarkDialog::updateList() {
 			if(++line > bottomLine)
 				break;
 		}
-		bufferIndices_[const_cast<Buffer*>(&activeBuffer)] = app_.getBufferList().getActiveIndex();
+		bufferIndices_[const_cast<Buffer*>(&activeBuffer)] = buffers.getActiveIndex();
 	}
 
 	if(bookmarksList_.getItemCount() != 0) {
@@ -133,22 +129,21 @@ void BookmarkDialog::updateList() {
 }
 
 /// @see Dialog#onClose
-void BookmarkDialog::onClose() {
-	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.autoClose",
-		(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
-	app_.writeIntegerProfile(L"Search", L"BookmarkDialog.allBuffers",
-		(isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) ? 1 : 0);
-	Dialog::onClose();
+void BookmarkDialog::onClose(bool&) {
+	Alpha& app = Alpha::getInstance();
+	app.writeIntegerProfile(L"Search", L"BookmarkDialog.autoClose", (isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
+	app.writeIntegerProfile(L"Search", L"BookmarkDialog.allBuffers", (isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) ? 1 : 0);
 }
 
 /// @see Dialog#onCommand
 bool BookmarkDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	switch(id) {
-	case IDC_BTN_ADD:	// [追加]
-		app_.getBufferList().getActive().getBookmarker().mark(
-			app_.getBufferList().getActiveView().getCaret().getLineNumber(), true);
+	case IDC_BTN_ADD: {	// [追加]
+		const BufferList& buffers = Alpha::getInstance().getBufferList();
+		buffers.getActive().getBookmarker().mark(buffers.getActiveView().getCaret().getLineNumber(), true);
 		updateList();
 		break;
+	}
 	case IDC_BTN_DELETE:	// [削除]
 		onBtnDelete();
 		break;
@@ -161,58 +156,58 @@ bool BookmarkDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool BookmarkDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void BookmarkDialog::onInitDialog(HWND focusWindow, bool&) {
 	modifyStyleEx(0, WS_EX_LAYERED);
 	setLayeredAttributes(0, 220, LWA_ALPHA);
 
+	Alpha& app = Alpha::getInstance();
 	bookmarksList_.modifyStyleEx(WS_EX_NOPARENTNOTIFY, 0);
 	bookmarksList_.setExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP);
-	bookmarksList_.insertColumn(0, app_.loadString(MSG_DIALOG__BOOKMARKED_LINE).c_str(), LVCFMT_LEFT, 279, -1);
-	bookmarksList_.insertColumn(1, app_.loadString(MSG_DIALOG__BOOKMARKED_POSITION).c_str(), LVCFMT_LEFT, 100, -1);
+	bookmarksList_.insertColumn(0, app.loadString(MSG_DIALOG__BOOKMARKED_LINE).c_str(), LVCFMT_LEFT, 279, -1);
+	bookmarksList_.insertColumn(1, app.loadString(MSG_DIALOG__BOOKMARKED_POSITION).c_str(), LVCFMT_LEFT, 100, -1);
 	updateList();
 
-	if(app_.readIntegerProfile(L"Search", L"BookmarkDialog.autoClose", 0) == 1)
+	if(app.readIntegerProfile(L"Search", L"BookmarkDialog.autoClose", 0) == 1)
 		checkButton(IDC_CHK_AUTOCLOSE, BST_CHECKED);
-	if(app_.readIntegerProfile(L"Search", L"BookmarkDialog.allBuffers", 0) == 1)
+	if(app.readIntegerProfile(L"Search", L"BookmarkDialog.allBuffers", 0) == 1)
 		checkButton(IDC_CHK_SHOWALLFILES, BST_CHECKED);
-
-	return true;
 }
 
 /// @see Dialog#onNotify
-bool BookmarkDialog::onNotify(int id, LPNMHDR nmhdr) {
-	if(id== IDC_LIST_BOOKMARKS && nmhdr->code == NM_DBLCLK) {
-		onOK();
+bool BookmarkDialog::onNotify(int id, ::NMHDR& nmhdr) {
+	if(id== IDC_LIST_BOOKMARKS && nmhdr.code == NM_DBLCLK) {
+		postMessage(WM_COMMAND, IDOK);
 		return true;
 	}
-	return Dialog::onNotify(id, nmhdr);
+	return false;
 }
 
 /// @see Dialog#OnOK
-void BookmarkDialog::onOK() {
+void BookmarkDialog::onOK(bool& continueDialog) {
 	// 一時マクロ定義中は実行できない
-	if(app_.getCommandManager().getTemporaryMacro().getState() == command::TemporaryMacro::DEFINING) {
-		app_.messageBox(MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING, MB_ICONEXCLAMATION);
+	Alpha& app = Alpha::getInstance();
+	if(app.getCommandManager().getTemporaryMacro().getState() == command::TemporaryMacro::DEFINING) {
+		app.messageBox(MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING, MB_ICONEXCLAMATION);
+		continueDialog = true;
 		return;
 	}
 
 	const int sel = bookmarksList_.getSelectionMark();
-
 	if(sel == -1)	// 選択が無い
 		return;
 
 	Buffer* buffer;
 	length_t line;
 	getItemInfo(sel, buffer, line);
-	if(bufferIndices_.find(buffer) == bufferIndices_.end())
+	if(bufferIndices_.find(buffer) == bufferIndices_.end()) {
+		continueDialog = true;
 		return;
+	}
 
-	app_.getBufferList().getActiveView().getCaret().moveTo(text::Position(line, 0));
-	app_.getBufferList().setActive(bufferIndices_[buffer]);
+	app.getBufferList().getActiveView().getCaret().moveTo(text::Position(line, 0));
+	app.getBufferList().setActive(bufferIndices_[buffer]);
 	getParent()->setActive();
 
-	if(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [自動的に閉じる]
-		Dialog::onOK();
+	if(isButtonChecked(IDC_CHK_AUTOCLOSE) != BST_CHECKED)	// [自動的に閉じる]
+		continueDialog = true;
 }

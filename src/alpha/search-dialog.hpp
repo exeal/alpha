@@ -13,42 +13,38 @@
 #include "ascension/searcher.hpp"
 
 namespace alpha {
-
-	class Alpha;
 	class EditorView;
 
 	namespace ui {
-		/// [検索と置換] ダイアログ
+		/// "Search and Replace" dialog box.
 		class SearchDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
 		public:
-			explicit SearchDialog(Alpha& app);
 			std::wstring	getActivePattern() const throw();
 			std::wstring	getActiveReplacement() const throw();
 			void			setOptions();
 
-		protected:
-			void	onActivate(UINT state, HWND previousWindow, bool minimized);	// WM_ACTIVATE
-			void	onCancel();														// IDCANCEL
-			void	onClose();														// WM_CLOSE
-			bool	onCommand(WORD id, WORD notifyCode, HWND control);				// WM_COMMAND
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);				// WM_INITDIALOG
 		private:
+			INT_PTR	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam);
 			void	updateOptions();
 		private:
-			Alpha& app_;
+			void	onCancel(bool& continueDialog);									// IDCANCEL
+			void	onClose(bool& continueDialog);									// WM_CLOSE
+			bool	onCommand(WORD id, WORD notifyCode, HWND control);				// WM_COMMAND
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);				// WM_INITDIALOG
+		private:
 			// コントロール
 			manah::win32::ui::ComboBox patternCombobox_;
 			manah::win32::ui::ComboBox replacementCombobox_;
 			manah::win32::ui::ComboBox searchTypeCombobox_;
 			manah::win32::ui::ComboBox wholeMatchCombobox_;
 			manah::win32::ui::ComboBox collationWeightCombobox_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_COMBO_FINDWHAT, patternCombobox_)
-				BIND_CONTROL(IDC_COMBO_REPLACEWITH, replacementCombobox_)
-				BIND_CONTROL(IDC_COMBO_SEARCHTYPE, searchTypeCombobox_)
-				BIND_CONTROL(IDC_COMBO_WHOLEMATCH, wholeMatchCombobox_)
-				BIND_CONTROL(IDC_COMBO_COLLATIONWEIGHT, collationWeightCombobox_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_COMBO_FINDWHAT, patternCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_REPLACEWITH, replacementCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_SEARCHTYPE, searchTypeCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_WHOLEMATCH, wholeMatchCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_COLLATIONWEIGHT, collationWeightCombobox_)
+			MANAH_END_CONTROL_BINDING()
 		};
 
 	}

@@ -53,23 +53,24 @@ public:
 	// miscellaneous
 	bool	isDialogMessage(const ::MSG& msg);
 protected:
-	virtual LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
+	virtual INT_PTR	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {return false;}
+	void			setMessageResult(LRESULT result);
 private:
+	using Window::create;
+	using Window::destroy;
+	using Window::processWindowMessage;
+	using Window::preTranslateWindowMessage;
 	static INT_PTR CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-	static LRESULT CALLBACK	dummyProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {return false;}
 
 protected:
 	/* ? need to any implement ? */
-	virtual void	onClose() {toolTips_.destroy(); end(IDCLOSE);}						// WM_CLOSE
-	virtual bool	onCommand(WORD id, WORD notifyCode, HWND control);					// WM_COMMAND
-	virtual bool	onInitDialog(HWND focusedWindow, LPARAM initParam) {return true;}	// WM_INITDIALOG
-	virtual void	onOK() {end(IDOK);}													// IDOK
-	virtual void	onCancel() {end(IDCANCEL);}											// IDCANCEL
-	/* ? noneed to implement ? */
-	virtual void	onActivate(UINT state, HWND previousWindow, bool minimized) {}		// WM_ACTIVATE
+	virtual void onClose(bool& continueDialog) {}									// WM_CLOSE
+	virtual bool onCommand(WORD id, WORD notifyCode, HWND control) {return true;}	// WM_COMMAND
+	virtual void onInitDialog(HWND focusedWindow, bool& focusDefault) {}			// WM_INITDIALOG
+	virtual void onOK(bool& continueDialog) {}										// IDOK
+	virtual void onCancel(bool& continueDialog) {}									// IDCANCEL
 
 private:
-	using Window::create;
 	HINSTANCE hinstance_;
 	const TCHAR* templateName_;
 	bool modeless_;
@@ -82,17 +83,17 @@ template<int id> class FixedIDDialog : public Dialog {
 public:
 	FixedIDDialog() : Dialog(::GetModuleHandle(0), id) {}
 private:
-	bool	create();
+	using Dialog::initialize;
 };
 
 
 // Control binding macros ///////////////////////////////////////////////////
 
-#define BEGIN_CONTROL_BINDING()	private: void bindControls() {
+#define MANAH_BEGIN_CONTROL_BINDING()	private: void bindControls() {
 
-#define BIND_CONTROL(id, name)	name.attach(getItem(id));
+#define MANAH_BIND_CONTROL(id, name)	name.attach(getItem(id));
 
-#define END_CONTROL_BINDING()	}
+#define MANAH_END_CONTROL_BINDING()	}
 
 
 // Dialog ///////////////////////////////////////////////////////////////////
@@ -119,96 +120,6 @@ inline bool Dialog::checkButton(int buttonID, UINT check) {assertValidAsWindow()
 
 inline bool Dialog::checkRadioButton(int firstButtonID, int lastButtonID, int buttonID) {
 	assertValidAsWindow(); return toBoolean(::CheckRadioButton(get(), firstButtonID, lastButtonID, buttonID));}
-
-inline LRESULT Dialog::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
-	if(preTranslateMessage(message, wParam, lParam))
-		return true;
-
-	switch(message) {
-	case WM_ACTIVATE:
-		onActivate(LOWORD(wParam), reinterpret_cast<HWND>(lParam), toBoolean(HIWORD(wParam)));
-		break;
-	case WM_CLOSE:
-		onClose();
-		return true;
-	case WM_COMMAND:
-		return onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
-	case WM_CONTEXTMENU: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		if(onContextMenu(reinterpret_cast<HWND>(wParam), p))
-			return true;
-		break;
-	}
-	case WM_DESTROY:
-		onDestroy();
-		return true;
-	case WM_DRAWITEM:
-		onDrawItem(static_cast<UINT>(wParam), reinterpret_cast<::DRAWITEMSTRUCT&>(lParam));
-		break;
-	case WM_INITDIALOG:
-		return onInitDialog(reinterpret_cast<HWND>(wParam), lParam);
-	case WM_KILLFOCUS:
-		onKillFocus(reinterpret_cast<HWND>(wParam));
-		return true;
-	case WM_LBUTTONDOWN: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonDown(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_LBUTTONDBLCLK: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonDblClk(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_LBUTTONUP: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onLButtonUp(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_MEASUREITEM:
-		onMeasureItem(static_cast<UINT>(wParam), reinterpret_cast<::MEASUREITEMSTRUCT&>(lParam));
-		break;
-	case WM_MOUSEMOVE: {
-		::POINT p;
-		p.x = LOWORD(lParam);
-		p.y = HIWORD(lParam);
-		onMouseMove(static_cast<UINT>(wParam), p);
-		break;
-	}
-	case WM_NOTIFY:
-		return onNotify(static_cast<UINT>(wParam), reinterpret_cast<LPNMHDR>(lParam));
-	case WM_SETCURSOR:
-		if(onSetCursor(reinterpret_cast<HWND>(wParam),
-			static_cast<UINT>(LOWORD(lParam)), static_cast<UINT>(HIWORD(lParam))))
-			return false;
-		break;
-	case WM_SETFOCUS:
-		onSetFocus(reinterpret_cast<HWND>(wParam));
-		return true;
-	case WM_SHOWWINDOW:
-		onShowWindow(toBoolean(wParam), static_cast<UINT>(lParam));
-		break;
-	case WM_SIZE:
-		onSize(static_cast<UINT>(wParam), LOWORD(lParam), HIWORD(lParam));
-		break;
-	case WM_SYSCOLORCHANGE:
-		onSysColorChange();
-		break;
-	case WM_TIMER:
-		onTimer(static_cast<UINT>(wParam));
-		break;
-	}
-
-	return false;
-}
 
 inline INT_PTR Dialog::doModal(HWND parent) {
 	modeless_ = false; return ::DialogBoxParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));}
@@ -282,34 +193,56 @@ inline void Dialog::setItemInt(int itemID, UINT value, bool isSigned /* = true *
 
 inline void Dialog::setItemText(int itemID, const TCHAR* text) {assertValidAsWindow(); ::SetDlgItemText(get(), itemID, text);}
 
-inline INT_PTR CALLBACK Dialog::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-	if(message == WM_INITDIALOG) {
-		Dialog* instance = reinterpret_cast<Dialog*>(lParam);
-		instance->reset(window);
+inline void Dialog::setMessageResult(LRESULT result) {
 #ifdef _WIN64
-		::SetWindowLongPtr(instance->get(), DWLP_USER, reinterpret_cast<LONG_PTR>(instance));
+	setWindowLongPtr(DWLP_MSGRESULT, result);
 #else
-		::SetWindowLong(instance->get(), DWL_USER, static_cast<long>(reinterpret_cast<LONG_PTR>(instance)));
+	setWindowLong(DWL_MSGRESULT, static_cast<long>(result));
 #endif /* _WIN64 */
-		instance->bindControls();
-		instance->toolTips_.create(window);
-		instance->toolTips_.activate(true);
-		return instance->dispatchEvent(message, wParam, lParam);
-	} else {
-#ifdef _WIN64
-		Dialog* instance = reinterpret_cast<Dialog*>(::GetWindowLongPtr(window, DWLP_USER));
-#else
-		Dialog* instance = reinterpret_cast<Dialog*>(static_cast<LONG_PTR>(::GetWindowLong(window, DWL_USER)));
-#endif /* _WIN64 */
-		return (instance != 0) ? instance->dispatchEvent(message, wParam, lParam) : false;
-	}
 }
 
-inline bool Dialog::onCommand(WORD id, WORD notifyCode, HWND control) {
-	switch(id) {
-	case IDOK:		onOK();		return true;
-	case IDCANCEL:	onCancel();	return true;
-	default:					return false;
+inline INT_PTR CALLBACK Dialog::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+	if(message == WM_INITDIALOG) {
+		Dialog* p = reinterpret_cast<Dialog*>(lParam);
+		p->reset(window);
+#ifdef _WIN64
+		::SetWindowLongPtr(p->get(), DWLP_USER, reinterpret_cast<LONG_PTR>(p));
+#else
+		::SetWindowLong(p->get(), DWL_USER, static_cast<long>(reinterpret_cast<LONG_PTR>(p)));
+#endif /* _WIN64 */
+		p->bindControls();
+		p->toolTips_.create(window);
+		p->toolTips_.activate(true);
+		bool defaultFocus = true;
+		p->onInitDialog(reinterpret_cast<HWND>(wParam), defaultFocus);
+		return defaultFocus;
+	} else {
+#ifdef _WIN64
+		Dialog* p = reinterpret_cast<Dialog*>(::GetWindowLongPtr(window, DWLP_USER));
+#else
+		Dialog* p = reinterpret_cast<Dialog*>(static_cast<LONG_PTR>(::GetWindowLong(window, DWL_USER)));
+#endif /* _WIN64 */
+		if(p == 0)
+			return false;
+		if(message == WM_CLOSE) {
+			bool continueDialog = false;
+			p->onClose(continueDialog);
+			if(!continueDialog) {
+				p->toolTips_.destroy();
+				p->end(IDCANCEL);
+			}
+			return true;
+		} else if(message == WM_COMMAND) {
+			bool continueDialog = false;
+			switch(LOWORD(wParam)) {
+			case IDOK:
+				p->onOK(continueDialog); if(!continueDialog) p->end(IDOK); return true;
+			case IDCANCEL:
+				p->onCancel(continueDialog); if(!continueDialog) p->end(IDCANCEL); return true;
+			default: return p->onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
+			}
+		} else
+			return p->processWindowMessage(message, wParam, lParam);
 	}
 }
 

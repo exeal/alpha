@@ -1990,12 +1990,32 @@ length_t text::getAbsoluteOffset(const Document& document, const Position& at, b
 			offset += at.column;
 			break;
 		} else {
-			offset += document.getLineLength(line) + 1;	// +1 は改行分
+			offset += document.getLineLength(line) + 1;	// +1 is for a line break
 			if(line == start.line)
 				offset -= start.column;
 		}
 	}
 	return offset;
+}
+
+/**
+ * Returns the number of lines in the specified text string.
+ * @param first the start of the text string
+ * @param last the end of the text string
+ * @return the number of lines
+ */
+length_t text::getNumberOfLines(const Char* first, const Char* last) throw() {
+	if(first == last)
+		return 0;
+	length_t lines = 1;
+	while(true) {
+		first = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+		if(first == last)
+			break;
+		++lines;
+		first += (*first == CARRIAGE_RETURN && first < last - 1 && first[1] == LINE_FEED) ? 2 : 1;
+	}
+	return lines;
 }
 
 /**
@@ -2007,7 +2027,7 @@ length_t text::getAbsoluteOffset(const Document& document, const Position& at, b
  * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
  * @return the result position
  */
-Position ascension::text::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
+Position text::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
 	Position newPosition(position);
 	if(!change.isDeletion()) {	// 挿入操作の場合
 		if(position < change.getRegion().first)	// 現在位置より後方
