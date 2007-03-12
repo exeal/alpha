@@ -13,17 +13,14 @@
 
 namespace alpha {
 	namespace ui {
-		/// 「バージョン情報」ダイアログ
+		/// "About" dialog box.
 		class AboutDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_ABOUT> {
-			// データメンバ
 		private:
 			manah::win32::ui::LinkLabel homePageLink_;
 			manah::win32::ui::LinkLabel sourceForgeLink_;
-
-			// メッセージハンドラ
 		protected:
-			virtual bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
-			virtual bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
+			virtual bool	onCommand(WORD id, WORD notifyCode, HWND control);
+			virtual void	onInitDialog(HWND focusWindow, bool& focusDefault);
 		};
 	}
 }

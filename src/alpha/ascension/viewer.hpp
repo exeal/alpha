@@ -183,6 +183,7 @@ namespace ascension {
 		};
 
 		/**
+		 * Interface of objects which define how the text editors react to the users' mouse input.
 		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
 		 * @see TextViewer#setMouseInputStrategy
 		 */
@@ -192,56 +193,102 @@ namespace ascension {
 			enum Button {
 				LEFT_BUTTON,	///< The left button of the mouse.
 				MIDDLE_BUTTON,	///< The middle button of the mouse.
-				RIGHT_BUTTON	///< The right button of the mouse.
+				RIGHT_BUTTON,	///< The right button of the mouse.
+				X1_BUTTON,		///< The first X button of the mouse.
+				X2_BUTTON		///< The second X button of the mouse.
 			};
 			/// Actions of the mouse input.
 			enum Action {
 				PRESSED,		///< The button was pressed (down).
 				RELEASED,		///< The button was released (up).
-				CLICKED,		///< The button was clicked.
 				DOUBLE_CLICKED	///< The button was double-clicked.
 			};
 		private:
+			/// The viewer lost the mouse capture.
+			virtual void captureChanged() = 0;
 			/**
 			 * Installs the strategy.
-			 * @see viewer the text viewer uses the strategy
+			 * @see viewer the text viewer uses the strategy. the window had been created at this time
 			 */
 			virtual void install(TextViewer& viewer) = 0;
 			/**
 			 * The mouse input was occured and the viewer had focus.
 			 * @param button the button of the mouse input
 			 * @param action the action of the input
-			 */
-			virtual bool mouseButtonInput(Button button, Action action) = 0;
-			/**
-			 * The mouse was moved and the viewer had focus.
+			 * @param position the mouse position (client coordinates)
+			 * @param keyState indicates whether various key are pressed. this value is same as Win32 WM_*BUTTON*
 			 * @return true if the strategy processed
 			 */
-			virtual bool mouseMoved() = 0;
+			virtual bool mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState) = 0;
+			/**
+			 * The mouse was moved and the viewer had focus.
+			 * @param position the mouse position (client coordinates)
+			 * @param keyState indicates whether various key are pressed. this value is same as Win32 @c WM_MOSEMOVE
+			 * @return true if the strategy processed
+			 */
+			virtual void mouseMoved(const ::POINT& position, uint keyState) = 0;
 			/**
 			 * The mouse wheel was rolated and the viewer had focus.
 			 * @param delta the distance the wheel was rotated
-			 * @return true if the strategy processed
+			 * @param position the mouse position (client coordinates)
+			 * @param keyState indicates whether various key are pressed. this value is same as Win32 WM_*BUTTON*
 			 */
-			virtual bool mouseWheelRotated(short delta) = 0;
+			virtual void mouseWheelRotated(short delta, const ::POINT& position, uint keyState) = 0;
+			/**
+			 * Shows a cursor on the viewer.
+			 * @param position the cursor position (client coordinates)
+			 * @retval true if the callee showed a cursor
+			 * @retval false if the callee did not know the appropriate cursor
+			 */
+			virtual bool showCursor(const ::POINT& position) = 0;
+			/// Uninstalls the strategy. The window is not destroyed yet at this time.
+			virtual void uninstall() = 0;
 			friend class TextViewer;
 		};
 
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy {
+		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy, virtual public IDropSource, virtual public IDropTarget {
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
+			// IUnknown
+			IMPLEMENT_UNKNOWN_SINGLE_THREADED()
+			BEGIN_INTERFACE_TABLE()
+				IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
+				IMPLEMENTS_INTERFACE(IDropTarget)
+			END_INTERFACE_TABLE()
+			// IDropSource
+			STDMETHODIMP	QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
+			STDMETHODIMP	GiveFeedback(DWORD dwEffect);
+			// IDropTarget
+			STDMETHODIMP	DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+			STDMETHODIMP	DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+			STDMETHODIMP	DragLeave();
+			STDMETHODIMP	Drop(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
 		private:
-			void					install(TextViewer& viewer);
-			virtual bool			mouseButtonInput(Button button, Action action);
-			virtual bool			mouseMoved();
-			virtual bool			mouseWheelRotated(short delta);
+			void					beginTimer(UINT interval);
+			void					endTimer();
+			void					extendSelection();
+			void					handleLeftButtonPressed(const ::POINT& position, uint keyState);
+			void					handleLeftButtonReleased(const ::POINT& position, uint keyState);
 			static void CALLBACK	timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
+			// IMouseInputStrategy
+			void					captureChanged();
+			void					install(TextViewer& viewer);
+			virtual bool			mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState);
+			virtual void			mouseMoved(const ::POINT& position, uint keyState);
+			virtual void			mouseWheelRotated(short delta, const ::POINT& position, uint keyState);
+			virtual bool			showCursor(const ::POINT& position);
+			void					uninstall();
 		private:
 			TextViewer* viewer_;
 			const bool oleDragAndDropEnabled_;
+			bool leftButtonPressed_, oleDragging_;
+			::POINT lastLeftButtonPressedPoint_;
+			length_t numberOfDraggedRectangleLines_;
+			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
+			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
 		};
 
 		/**
@@ -278,8 +325,7 @@ namespace ascension {
 				virtual public text::ISequentialEditListener,
 				virtual public IVisualLinesListener,
 				virtual public ICaretListener,
-				virtual public ascension::text::internal::IPointCollection<VisualPoint>,
-				virtual public IDropSource, virtual public IDropTarget {
+				virtual public ascension::text::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
 			DEFINE_WINDOW_CLASS() {
 				name = L"ascension:text-viewer";
@@ -328,8 +374,6 @@ namespace ascension {
 				Alignment alignment;
 				/// Line wrap configuration.
 				LineWrapConfiguration lineWrap;
-				/// Set true to enable OLE drag-and-drop. Default value is true (enabled).
-				bool enablesOLEDragAndDrop;
 				/// Set true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
 				/// Set true to inhibit any shaping. Default value is false.
@@ -345,7 +389,7 @@ namespace ascension {
 				/// Constructor.
 				Configuration() throw() : tabWidth(8), lineSpacing(0), leadingMargin(5), topMargin(1),
 						orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
-						enablesOLEDragAndDrop(true), inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
+						inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
 						digitSubstitutionType(DST_USER_DEFAULT), disablesDeprecatedFormatCharacters(false) {
 					BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
@@ -444,6 +488,7 @@ namespace ascension {
 			void	removeViewportListener(IViewportListener& listener);
 			void	setCaretShapeProvider(ICaretShapeProvider* shaper, bool delegateOwnership) throw();
 			void	setLinkTextStrategy(IViewerLinkTextStrategy* newStrategy, bool delegateOwnership) throw();
+			void	setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
 			const Configuration&				getConfiguration() const throw();
 			text::Document&						getDocument();
@@ -485,8 +530,9 @@ namespace ascension {
 			void	freeze(bool forAllClones = true);
 			bool	isFrozen() const throw();
 			void	unfreeze(bool forAllClones = true);
-			// mouse operation
-			void	enableMouseOperation(bool enable);
+			// mouse input
+			bool	allowsMouseInput() const throw();
+			void	enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
 			text::Position	getCharacterForClientXY(const ::POINT& pt, bool nearestLeading) const throw();
 			::POINT			getClientXYForCharacter(const text::Position& position, LineLayout::Edge edge = LineLayout::LEADING) const;
@@ -497,43 +543,16 @@ namespace ascension {
 			bool			getPointedLinkText(text::Region& region, manah::AutoBuffer<Char>& text) const;
 			::RECT			getTextAreaMargins() const throw();
 			HitTestResult	hitTest(const ::POINT& pt) const;
-			// IUnknown
-			IMPLEMENT_UNKNOWN_NO_REF_COUNT()
-			BEGIN_INTERFACE_TABLE()
-				IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
-				IMPLEMENTS_INTERFACE(IDropTarget)
-//				IMPLEMENTS_INTERFACE(IDispatch)
-//				IMPLEMENTS_INTERFACE(IViewObjectEx)
-//				IMPLEMENTS_INTERFACE(IViewObject2)
-//				IMPLEMENTS_INTERFACE(IViewObject)
-//				IMPLEMENTS_INTERFACE(IOleInPlaceObjectWindowless)
-//				IMPLEMENTS_INTERFACE(IOleInPlaceObject)
-//				IMPLEMENTS_INTERFACE(IOleWindow, IOleInPlaceObjectWindowless)
-//				IMPLEMENTS_INTERFACE(IOleInPlaceActiveObject)
-//				IMPLEMENTS_INTERFACE(IOleControl)
-//				IMPLEMENTS_INTERFACE(IOleObject)
-//				IMPLEMENTS_INTERFACE(IPersistStreamInit)
-//				IMPLEMENTS_INTERFACE(ISupportErrorInfo)
-			END_INTERFACE_TABLE()
-			// IDropSource
-			STDMETHODIMP	QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
-			STDMETHODIMP	GiveFeedback(DWORD dwEffect);
-			// IDropTarget
-			STDMETHODIMP	DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
-			STDMETHODIMP	DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
-			STDMETHODIMP	DragLeave();
-			STDMETHODIMP	Drop(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
 
 		protected:
-			virtual OVERRIDE_DISPATCH_EVENT(TextViewer);
 			virtual void	doBeep() throw();
 			virtual void	drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
 			bool			handleKeyDown(UINT key, bool controlPressed, bool shiftPressed) throw();
 
 			// helpers
 		private:
-			String	calculateSpacesReachingVirtualPoint(length_t line, ulong virtualX) const;
 			int		getDisplayXOffset() const throw();
+			void	handleGUICharacterInput(CodePoint c);
 			void	initializeWindow(bool copyConstructing);
 			void	internalUnfreeze();
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
@@ -583,40 +602,62 @@ namespace ascension {
 			void	removePoint(VisualPoint& point) {points_.erase(&point);}
 
 			// メッセージハンドラ
+			MANAH_DECLEAR_WINDOW_MESSAGE_MAP(TextViewer);
 		protected:
-			virtual void	onCaptureChanged(HWND newWindow);							// WM_CAPTURECHANGED
-			void			onChar(UINT ch, UINT flags);								// WM_CHAR
-			virtual bool	onCommand(WORD id, WORD notifyCode, HWND control);			// WM_COMMAND
-			virtual bool	onContextMenu(HWND window, const ::POINT& pt);				// WM_CONTEXTMENU
-			virtual void	onDestroy();												// WM_DESTROY
-			virtual void	onHScroll(UINT sbCode, UINT pos, HWND scrollBar);			// WM_HSCROLL
-			virtual bool	onIMEComposition(WPARAM wParam, LPARAM lParam);				// WM_IME_COMPOSITION
-			virtual void	onIMEEndComposition();										// WM_IME_ENDCOMPOSITION
-			virtual LRESULT	onIMERequest(WPARAM command, LPARAM lParam);				// WM_IME_REQUEST
-			virtual void	onIMEStartComposition();									// WM_IME_STARTCOMPOSITION
-			virtual bool	onKeyDown(UINT ch, UINT flags);								// WM_KEYDOWN
-			virtual void	onKillFocus(HWND newWindow);								// WM_KILLFOCUS
-			virtual void	onLButtonDblClk(UINT flags, const ::POINT& pt);				// WM_LBUTTONDBLCLK
-			virtual void	onLButtonDown(UINT flags, const ::POINT& pt);				// WM_LBUTTONDOWN
-			virtual void	onLButtonUp(UINT flags, const ::POINT& pt);					// WM_LBUTTONUP
-			virtual void	onMouseMove(UINT flags, const ::POINT& pt);					// WM_MOUSEMOVE
-			virtual bool	onMouseWheel(UINT flags, short zDelta, const ::POINT& pt);	// WM_MOUSEWHEEL
-			virtual bool	onNotify(int id, ::LPNMHDR nmhdr);							// WM_NOTIFY
-			virtual void	onPaint(manah::win32::gdi::PaintDC& dc);					// WM_PAINT
-			virtual void	onRButtonDown(UINT flags, const ::POINT& pt);				// WM_RBUTTONDOWN
-			virtual bool	onSetCursor(HWND window, UINT hitTest, UINT message);		// WM_SETCURSOR
-			virtual void	onSetFocus(HWND oldWindow);									// WM_SETFOCUS
-			virtual void	onSize(UINT type, int cx, int cy);							// WM_SIZE
-			virtual void	onSizing(UINT side, ::RECT& rect);							// WM_SIZING
-			virtual void	onStyleChanged(int type, const ::STYLESTRUCT& style);		// WM_STYLECHANGED
-			virtual void	onStyleChanging(int type, ::STYLESTRUCT& style);			// WM_STYLECHANGING
-			virtual bool	onSysChar(UINT ch, UINT flags);								// WM_SYSCHAR
-			virtual void	onSysColorChange();											// WM_SYSCOLORCHANGE
-			virtual	bool	onSysKeyDown(UINT ch, UINT flags);							// WM_SYSKEYDOWN
-			virtual	bool	onSysKeyUp(UINT ch, UINT flags);							// WM_SYSKEYUP
-			virtual void	onTimer(UINT eventId);										// WM_TIMER
-			virtual void	onUniChar(UINT ch, UINT flags);								// WM_UNICHAR
-			virtual void	onVScroll(UINT sbCode, UINT pos, HWND scrollBar);			// WM_VSCROLL
+			virtual LRESULT	preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
+			void	onCaptureChanged(HWND newWindow);
+			void	onChar(UINT ch, UINT flags);
+			bool	onCommand(WORD id, WORD notifyCode, HWND control);
+			bool	onContextMenu(HWND window, const ::POINT& pt);
+			void	onDestroy();
+			bool	onEraseBkgnd(HDC dc);
+			HFONT	onGetFont();
+			void	onHScroll(UINT sbCode, UINT pos, HWND scrollBar);
+			void	onIMEComposition(WPARAM wParam, LPARAM lParam);
+			void	onIMEEndComposition();
+			LRESULT	onIMENotify(WPARAM command, LPARAM lParam, bool& handled);
+			LRESULT	onIMERequest(WPARAM command, LPARAM lParam, bool& handled);
+			void	onIMEStartComposition();
+			void	onKeyDown(UINT ch, UINT flags, bool& handled);
+			void	onKillFocus(HWND newWindow);
+			void	onLButtonDblClk(UINT keyState, const ::POINT& pt);
+			void	onLButtonDown(UINT keyState, const ::POINT& pt);
+			void	onLButtonUp(UINT keyState, const ::POINT& pt);
+			void	onMButtonDblClk(UINT keyState, const ::POINT& pt);
+			void	onMButtonDown(UINT keyState, const ::POINT& pt);
+			void	onMButtonUp(UINT keyState, const ::POINT& pt);
+			void	onMouseMove(UINT keyState, const ::POINT& pt);
+#ifdef WM_MOUSEWHEEL
+			void	onMouseWheel(UINT flags, short zDelta, const ::POINT& pt);
+#endif /* WM_MOUSEWHEEL */
+			bool	onNotify(int id, ::NMHDR& nmhdr);
+			void	onPaint(manah::win32::gdi::PaintDC& dc);
+			void	onRButtonDblClk(UINT keyState, const ::POINT& pt);
+			void	onRButtonDown(UINT keyState, const ::POINT& pt);
+			void	onRButtonUp(UINT keyState, const ::POINT& pt);
+			bool	onSetCursor(HWND window, UINT hitTest, UINT message);
+			void	onSetFocus(HWND oldWindow);
+			void	onSize(UINT type, int cx, int cy);
+			void	onSizing(UINT side, ::RECT& rect);
+			void	onStyleChanged(int type, const ::STYLESTRUCT& style);
+			void	onStyleChanging(int type, ::STYLESTRUCT& style);
+			void	onSysChar(UINT ch, UINT flags);
+			void	onSysColorChange();
+			bool	onSysKeyDown(UINT ch, UINT flags);
+			bool	onSysKeyUp(UINT ch, UINT flags);
+#ifdef WM_THEMECHANGED
+			void	onThemeChanged();
+#endif /* WM_THEMECHANGED */
+			void	onTimer(UINT_PTR eventId, ::TIMERPROC timerProc);
+#ifdef WM_UNICHAR
+			void	onUniChar(UINT ch, UINT flags);
+#endif /* WM_UNICHAR */
+			void	onVScroll(UINT sbCode, UINT pos, HWND scrollBar);
+#ifdef WM_XBUTTONDBLCLK
+			bool	onXButtonDblClk(WORD xButton, WORD keyState, const ::POINT& pt);
+			bool	onXButtonDown(WORD xButton, WORD keyState, const ::POINT& pt);
+			bool	onXButtonUp(WORD xButton, WORD keyState, const ::POINT& pt);
+#endif /* WM_XBUTTONDBLCLK */
 
 			// 内部クラス
 		private:
@@ -663,25 +704,11 @@ namespace ascension {
 
 			// 列挙
 		private:
-			/// 左ボタンがどのような目的で押されているかを表す内部列挙
-			enum LeftDownMode {
-				LDM_NONE,				// 押されていない
-				LDM_SELECTION_CHARACTER,// 文字選択
-				LDM_SELECTION_LINE,		// 行選択
-				LDM_SELECTION_WORD,		// 単語選択
-				LDM_DRAGANDDROP,		// 他プロセスからのドラッグアンドドロップ
-				LDM_DRAGANDDROPSELF,	// 自プロセスからのドラッグアンドドロップ
-				LDM_DRAGANDDROPBOXSELF	// 自プロセスからのドラッグアンドドロップ (矩形)
-			};
-
 			/// タイマ ID
 			enum {
-				TIMERID_EXPANDSELECTION		= 0,	///< マウスドラッグで選択範囲を変更中
-				TIMERID_EXPANDLINESELECTION	= 1,	///< マウスドラッグで選択行を変更中
-				TIMERID_DRAGSCROLL			= 2,	///< OLE ドラッグ中
-				TIMERID_CALLTIP				= 3,	///< ツールチップの待ち時間
-				TIMERID_AUTOSCROLL			= 4,	///< 自動スクロール中
-				TIMERID_LINEPARSE			= 5,	///< 先行行解析
+				TIMERID_CALLTIP,	///< ツールチップの待ち時間
+				TIMERID_AUTOSCROLL,	///< 自動スクロール中
+				TIMERID_LINEPARSE	///< 先行行解析
 			};
 
 			/// コンテキストメニューなどの ID
@@ -751,7 +778,7 @@ namespace ascension {
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;	// ツールチップ
 			Char* tipText_;	// ツールチップのテキスト
-			manah::com::ComPtr<manah::com::ole::TextDataObject> dragging_;	// OLE D&D オブジェクト
+			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
 			ascension::internal::StrategyPointer<IViewerLinkTextStrategy> linkTextStrategy_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
@@ -767,7 +794,6 @@ namespace ascension {
 
 			// モード
 			struct ModeState {
-				::POINT lastMouseDownPoint;	// 最後にマウスボタンを押下した位置。OLE ドラッグ開始条件に使用
 				bool cursorVanished;		// ユーザが文字の入力を開始したのでカーソルが非表示
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 				bool activeInputMethodEnabled;	// Global IME を使うか
@@ -777,7 +803,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 					, activeInputMethodEnabled(true)
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
-				{lastMouseDownPoint.x = lastMouseDownPoint.y = -1;}
+				{}
 			} modeState_;
 
 			// スクロール情報
@@ -824,8 +850,7 @@ namespace ascension {
 
 			// 状態
 			bool imeCompositionActivated_;	// IME で入力中か
-			LeftDownMode leftDownMode_;		// LeftDownMode 定義参照
-			ulong mouseOperationDisabledCount_;
+			ulong mouseInputDisabledCount_;
 
 			// 自動スクロール
 			struct AutoScroll {
@@ -871,6 +896,12 @@ inline void TextViewer::addInputStatusListener(ITextViewerInputStatusListener& l
  */
 inline void TextViewer::addViewportListener(IViewportListener& listener) {viewportListeners_.add(listener);}
 
+/**
+ * Returns true if the viewer allows the mouse operations.
+ * @see #enableMouseInput
+ */
+inline bool TextViewer::allowsMouseInput() const throw() {return mouseInputDisabledCount_ == 0;} 
+
 /// Informs the end user of <strong>safe</strong> error.
 inline void TextViewer::beep() throw() {doBeep();}
 
@@ -887,18 +918,15 @@ inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) throw(
 /**
  * Enables/disables the mouse operations.
  *
- * ビューは「マウス操作無効カウント」を保持しており、この値が0でなければあらゆるマウス操作が弾かれる。
- * このメソッドでそのカウントを増減させることにより、マウス操作の許可/不許可を設定することができる
+ * A @c TextViewer has a disabled count for the mouse input. If this value is not zero, any mouse
+ * inputs are not allowed.
  *
- * No way to detect the count directly.
- *
- * マウスによるスクロールバーの操作は抑止できない
- *
- * 他プロセス、他ウィンドウからの OLE ドラッグアンドドロップも抑止される
- * @param enable 無効カウントを減少させる場合は true、増加させる場合は false
+ * These is no way to disable the scroll bars.
+ * @param enable set false to increment the disabled count, true to decrement
+ * @see #allowMouseInput
  */
-inline void TextViewer::enableMouseOperation(bool enable) {
-	if(mouseOperationDisabledCount_ != 0 || !enable) mouseOperationDisabledCount_ += !enable ? 1 : -1;}
+inline void TextViewer::enableMouseInput(bool enable) {
+	if(mouseInputDisabledCount_ != 0 || !enable) mouseInputDisabledCount_ += !enable ? 1 : -1;}
 
 /// Returns the caret.
 inline Caret& TextViewer::getCaret() throw() {return *caret_;}

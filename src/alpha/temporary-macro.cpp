@@ -142,8 +142,7 @@ namespace {
 				sendMessage(WM_COMMAND, MAKEWPARAM(IDOK, 0), 0);
 			return Dialog::onCommand(id, notifyCode, control);
 		}
-		bool onInitDialog(HWND focusWindow, LPARAM initParam) {
-			Dialog::onInitDialog(focusWindow, initParam);
+		void onInitDialog(HWND, bool&) {
 			ListBox macros;
 			macros.attach(getItem(IDC_LIST_MACROS));
 			fillTemporaryMacroList(macros.get(), true);
@@ -152,12 +151,10 @@ namespace {
 				::EnableWindow(getItem(IDC_BTN_EXECUTE), false);
 			} else
 				macros.setCurSel(0);
-			return true;
 		}
-		void onOK() {
+		void onOK(bool&) {
 			ListBox macros(getItem(IDC_LIST_MACROS));
 			const int i = macros.getCurSel();
-
 			if(i != LB_ERR) {
 				::GetModuleFileName(0, fileName_, MAX_PATH);
 				wchar_t* p = ::PathFindFileNameW(fileName_);
@@ -165,7 +162,6 @@ namespace {
 				macros.getText(i, p + 11);
 				wcscat(p + 11, L".xml");
 			}
-			Dialog::onOK();
 		}
 	private:
 		wchar_t	fileName_[MAX_PATH];
@@ -187,18 +183,15 @@ namespace {
 			}
 			return Dialog::onCommand(id, notifyCode, control);
 		}
-		bool onInitDialog(HWND focusWindow, LPARAM initParam) {
-			Dialog::onInitDialog(focusWindow, initParam);
+		void onInitDialog(HWND, bool&) {
 			fillTemporaryMacroList(getItem(IDC_COMBO_MACROS), false);
-			return true;
 		}
-		void onOK() {
+		void onOK(bool&) {
 			::GetModuleFileName(0, fileName_, MAX_PATH);
 			wchar_t* p = ::PathFindFileNameW(fileName_);
 			wcscpy(p, L"tmp-macros\\");
 			getItemText(IDC_COMBO_MACROS, p + 11, MAX_PATH);
 			wcscat(p + 11, L".xml");
-			Dialog::onOK();
 		}
 	private:
 		wchar_t	fileName_[MAX_PATH];
@@ -243,7 +236,7 @@ void TemporaryMacro::changeState(State newState) throw() {
 		for(size_t i = 0; i < buffers.getCount(); ++i) {
 			Presentation& p = buffers.getAt(i).getPresentation();
 			for(Presentation::TextViewerIterator it = p.getFirstTextViewer(); it != p.getLastTextViewer(); ++it)
-				(*it)->enableMouseOperation(!isDefining());
+				(*it)->enableMouseInput(!isDefining());
 		}
 	}
 

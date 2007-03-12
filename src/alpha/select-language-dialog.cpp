@@ -13,8 +13,8 @@ using namespace std;
 
 
 /**
- * コンストラクタ
- * @param scriptName 処理中のスクリプトファイル
+ * Constructor.
+ * @param scriptName the script file name in processing
  */
 SelectLanguageDialog::SelectLanguageDialog(const basic_string<WCHAR>& scriptName) : scriptName_(scriptName) {
 }
@@ -22,16 +22,14 @@ SelectLanguageDialog::SelectLanguageDialog(const basic_string<WCHAR>& scriptName
 /// @see Dialog#onCommand
 bool SelectLanguageDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id == IDC_LIST_SCRIPTENGINES && notifyCode == LBN_DBLCLK) {
-		onOK();
+		postMessage(WM_COMMAND, IDOK);
 		return true;
 	}
 	return Dialog::onCommand(id, notifyCode, control);
 }
 
 /// @see Dialog#onInitDialog
-bool SelectLanguageDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void SelectLanguageDialog::onInitDialog(HWND focusWindow, bool&) {
 	using manah::com::ComPtr;
 
 	ComPtr<ICatInformation> catInfo;
@@ -62,12 +60,10 @@ bool SelectLanguageDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
 		::EnableWindow(getItem(IDOK), false);
 	else
 		languageListbox_.setCurSel(0);
-
-	return true;
 }
 
 /// @see Dialog#onOK
-void SelectLanguageDialog::onOK() {
+void SelectLanguageDialog::onOK(bool&) {
 	wchar_t* selection = 0;
 	int sel = languageListbox_.getCurSel();
 	size_t len = languageListbox_.getTextLen(sel);
@@ -76,6 +72,4 @@ void SelectLanguageDialog::onOK() {
 	languageListbox_.getText(sel, selection);
 	selectedLanguage_.assign(selection);
 	delete[] selection;
-
-	Dialog::onOK();
 }

@@ -20,19 +20,19 @@ namespace alpha {
 			const std::wstring&	getSelectedLanguage() const throw();
 
 		protected:
-			virtual bool	onCommand(WORD wID, WORD wNotifyCode, HWND hwndCtrl);	// WM_COMMAND
-			virtual bool	onInitDialog(HWND hwndFocus, LPARAM lInitParam);		// WM_INITDIALOG
-			virtual void	onOK();													// IDOK
+			bool	onCommand(WORD wID, WORD wNotifyCode, HWND hwndCtrl);	// WM_COMMAND
+			void	onInitDialog(HWND hwndFocus, bool& focusDefault);		// WM_INITDIALOG
+			void	onOK(bool& continueDialog);								// IDOK
 		private:
 			std::basic_string<WCHAR> scriptName_;
 			std::wstring selectedLanguage_;
 			manah::win32::ui::ListBox languageListbox_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_LIST_SCRIPTENGINES, languageListbox_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_LIST_SCRIPTENGINES, languageListbox_)
+			MANAH_END_CONTROL_BINDING()
 		};
 
-		/// ‘I‘ð‚³‚ê‚½Œ¾Œê‚ð•Ô‚·
+		/// Returns the language the user selected.
 		inline const std::wstring& SelectLanguageDialog::getSelectedLanguage() const throw() {return selectedLanguage_;}
 	}
 }

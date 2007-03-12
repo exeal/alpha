@@ -40,7 +40,7 @@ namespace ascension {
 			bool	updateListCursel();
 
 		protected:
-			virtual LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
+			virtual LRESULT	preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
 		private:
 			void	updateDefaultFont();
 

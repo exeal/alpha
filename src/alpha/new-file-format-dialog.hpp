@@ -14,7 +14,7 @@
 
 namespace alpha {
 	namespace ui {
-		/// 「書式を指定して新規」ダイアログ
+		/// "New with Format" dialog box.
 		class NewFileFormatDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
 			NewFileFormatDialog(ascension::encodings::CodePage encoding, ascension::text::LineBreak lineBreak) throw();
@@ -22,22 +22,22 @@ namespace alpha {
 			ascension::text::LineBreak		getLineBreak() const throw();
 		private:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);
-			void	onOK();
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);
+			void	onOK(bool& continueDialog);
 			ascension::encodings::CodePage encoding_;
 			ascension::text::LineBreak lineBreak_;
 			manah::win32::ui::ComboBox codePageCombobox_;
 			manah::win32::ui::ComboBox lineBreakCombobox_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_COMBO_CHARCODE, codePageCombobox_)
-				BIND_CONTROL(IDC_COMBO_BREAKCODE, lineBreakCombobox_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_COMBO_CHARCODE, codePageCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_BREAKCODE, lineBreakCombobox_)
+			MANAH_END_CONTROL_BINDING()
 		};
 
-		/// ユーザが選択したエンコーディングを返す
+		/// Returns the encoding the user selected.
 		inline ascension::encodings::CodePage NewFileFormatDialog::getEncoding() const throw() {return encoding_;}
 
-		/// ユーザが選択した改行を返す
+		/// Returns the line break the user selected.
 		inline ascension::text::LineBreak NewFileFormatDialog::getLineBreak() const throw() {return lineBreak_;}
 
 	} // namespace ui

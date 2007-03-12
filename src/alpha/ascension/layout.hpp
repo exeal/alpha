@@ -167,6 +167,7 @@ namespace ascension {
 			const presentation::StyledText&	getStyledSegment(length_t column) const;
 			// operations
 			void	draw(manah::win32::gdi::PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
+			String	fillToX(int x) const;
 #ifdef _DEBUG
 			void	dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */

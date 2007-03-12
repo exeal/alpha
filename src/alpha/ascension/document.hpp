@@ -861,6 +861,8 @@ namespace ascension {
 		length_t	getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
 		length_t	getLineBreakLength(LineBreak lineBreak);
 		const Char*	getLineBreakString(LineBreak lineBreak);
+		length_t	getNumberOfLines(const Char* first, const Char* last) throw();
+		length_t	getNumberOfLines(const String& text) throw();
 		Position	updatePosition(const Position& position, const DocumentChange& change, Direction gravity);
 
 
@@ -896,6 +898,13 @@ inline const Char* getLineBreakString(LineBreak lineBreak) {
 		throw std::invalid_argument("Unknown line break specified.");
 	return internal::LINE_BREAK_STRINGS[lineBreak];
 }
+
+/**
+ * Returns the number of lines in the specified text.
+ * @param text the text string
+ * @return the number of lines
+ */
+inline length_t getNumberOfLines(const String& text) throw() {return getNumberOfLines(text.data(), text.data() + text.length());}
 
 /// Conversion operator for convenience.
 inline Point::operator Position() throw() {return position_;}

@@ -113,7 +113,7 @@ public:
 	void		splitWE(Pane& pane, Pane& clone) {split(pane, clone, false);}
 	void		unsplit(Pane& pane);
 protected:
-	LRESULT	dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam);
+	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(Splitter);
 	void	onCaptureChanged(HWND newWindow);
 	void	onDestroy();
 	void	onLButtonDown(UINT, const ::POINT& pt);
@@ -139,6 +139,21 @@ private:
 	uint sizingFirstPaneSize_;	// first pane size of m_pDraggingSplitter (-1 when full dragging is enabled)
 };
 
+template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline bool Splitter<Pane, cdp>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {
+	typedef Splitter Klass; typedef CustomControl<Splitter> BaseKlass; bool handled = false;
+	switch(message) {
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_CAPTURECHANGED)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_DESTROY)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONUP)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_MOUSEMOVE)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETCURSOR)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SIZE)
+MANAH_END_WINDOW_MESSAGE_MAP()
+
 
 // implementation ///////////////////////////////////////////////////////////
 
@@ -160,13 +175,6 @@ inline bool Splitter<Pane, cdp>::create(HWND parent, const RECT& rect, DWORD sty
 	root_.children_[LEFT].type = SplitterItem::PANETYPE_SINGLE;
 	root_.children_[LEFT].body.pane = defaultActivePane_ = &initialPane;
 	return true;
-}
-
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline LRESULT Splitter<Pane, cdp>::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
-	if(message == WM_CAPTURECHANGED)
-		onCaptureChanged(reinterpret_cast<HWND>(lParam));
-	return CustomControl<Splitter<Pane, cdp> >::dispatchEvent(message, wParam, lParam);
 }
 
 template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>

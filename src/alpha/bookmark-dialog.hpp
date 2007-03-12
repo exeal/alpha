@@ -13,39 +13,32 @@
 
 
 namespace alpha {
-	class Alpha;
 	class Buffer;
 
 	namespace ui {
-		///	[ブックマーク] ダイアログ
+		///	"Bookmarks" dialog box.
 		class BookmarkDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
 		public:
-			// コンストラクタ
-			BookmarkDialog(Alpha& app);
-			// メソッド
 			void	updateList();
 
 		private:
 			void	getItemInfo(int index, Buffer*& buffer, ascension::length_t& line) const;
 			void	onBtnDelete();
-
-			// メッセージハンドラ
 		protected:
-			void	onClose();											// WM_CLOSE
+			void	onClose(bool& continueDialog);						// WM_CLOSE
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
-			bool	onNotify(int id, LPNMHDR nmhdr);					// WM_NOTIFY
-			void	onOK();												// IDOK
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
+			bool	onNotify(int id, ::NMHDR& nmhdr);					// WM_NOTIFY
+			void	onOK(bool& continueDialog);							// IDOK
 
 			// データメンバ
 		private:
-			Alpha& app_;
 			std::map<Buffer*, std::size_t> bufferIndices_;	// バッファ -> バッファ番号
 			manah::win32::ui::ListCtrl bookmarksList_;
 
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_LIST_BOOKMARKS, bookmarksList_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_LIST_BOOKMARKS, bookmarksList_)
+			MANAH_END_CONTROL_BINDING()
 		};
 	}
 }

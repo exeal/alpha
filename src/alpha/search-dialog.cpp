@@ -16,14 +16,7 @@ using namespace ascension::searcher;
 using namespace std;
 
 
-/**
- * コンストラクタ
- * @param app アプリケーション
- */
-SearchDialog::SearchDialog(Alpha& app) : app_(app) {
-}
-
-/// アクティブな検索文字列を返す
+/// Returns the active pattern string.
 wstring SearchDialog::getActivePattern() const throw() {
 	if(const int len = patternCombobox_.getTextLength()) {
 		manah::AutoBuffer<wchar_t> s(new wchar_t[len + 1]);
@@ -33,7 +26,7 @@ wstring SearchDialog::getActivePattern() const throw() {
 	return L"";
 }
 
-/// アクティブな置換文字列を返す
+/// Returns the active replacement string.
 wstring SearchDialog::getActiveReplacement() const throw() {
 	if(const int len = replacementCombobox_.getTextLength()) {
 		manah::AutoBuffer<wchar_t> s(new wchar_t[len + 1]);
@@ -43,23 +36,16 @@ wstring SearchDialog::getActiveReplacement() const throw() {
 	return L"";
 }
 
-/// @see Dialog#onActivate
-void SearchDialog::onActivate(UINT state, HWND previousWindow, bool minimize) {
-	if(state == WA_INACTIVE)
-		setOptions();
-	else
-		updateOptions();
-}
-
-/// @see Dialog#OnCancel
-void SearchDialog::onCancel() {
-	onClose();
-}
-
-/// @see Dialog#OnClose
-void SearchDialog::onClose() {
+/// @see Dialog#onCancel
+void SearchDialog::onCancel(bool& continueDialog) {
 	show(SW_HIDE);
-//	Dialog::onClose();
+	continueDialog = true;
+}
+
+/// @see Dialog#onClose
+void SearchDialog::onClose(bool& continueDialog) {
+	show(SW_HIDE);
+	continueDialog = true;
 }
 
 /// @see Dialog#onCommand
@@ -81,7 +67,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 			enableCommandsAsOnlySelection = ::GetWindowTextLength(getItem(IDC_COMBO_FINDWHAT)) != 0;
 		::EnableWindow(getItem(CMD_SEARCH_BOOKMARKALL), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_REPLACEALL),
-			enableCommandsAsOnlySelection && !app_.getBufferList().getActive().isReadOnly());
+			enableCommandsAsOnlySelection && !Alpha::getInstance().getBufferList().getActive().isReadOnly());
 		/* fall-through */
 	case IDC_RADIO_WHOLEFILE:	// [ファイル全体]
 	case IDC_RADIO_SELECTION:	// [選択範囲]
@@ -90,7 +76,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		::EnableWindow(getItem(CMD_SEARCH_FINDNEXT), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_FINDPREV), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_REPLACEANDNEXT),
-			enableCommandsAsOnlySelection && !app_.getBufferList().getActive().isReadOnly());
+			enableCommandsAsOnlySelection && !Alpha::getInstance().getBufferList().getActive().isReadOnly());
 		break;
 	case IDC_BTN_BROWSE: {	// [拡張オプション]
 //			RECT rect;
@@ -103,34 +89,31 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see Dialog#onInitDialog
-bool SearchDialog::onInitDialog(HWND focusWindow, LPARAM initParam) {
-	Dialog::onInitDialog(focusWindow, initParam);
-
+void SearchDialog::onInitDialog(HWND, bool&) {
 	// 半透明化
 	modifyStyleEx(0, WS_EX_LAYERED);
 	setLayeredAttributes(0, 220, LWA_ALPHA);
 
-	searchTypeCombobox_.addString(app_.loadString(MSG_DIALOG__LITERAL_SEARCH).c_str());
+	Alpha& app = Alpha::getInstance();
+	searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__LITERAL_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
-		searchTypeCombobox_.addString(app_.loadString(MSG_DIALOG__REGEXP_SEARCH).c_str());
+		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__REGEXP_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
-		searchTypeCombobox_.addString(app_.loadString(MSG_DIALOG__MIGEMO_SEARCH).c_str());
+		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__MIGEMO_SEARCH).c_str());
 
-	wholeMatchCombobox_.addString(app_.loadString(MSG_OTHER__NONE).c_str());
-	wholeMatchCombobox_.addString(app_.loadString(MSG_DIALOG__WHOLE_GRAPHEME_MATCH).c_str());
-	wholeMatchCombobox_.addString(app_.loadString(MSG_DIALOG__WHOLE_WORD_MATCH).c_str());
+	wholeMatchCombobox_.addString(app.loadString(MSG_OTHER__NONE).c_str());
+	wholeMatchCombobox_.addString(app.loadString(MSG_DIALOG__WHOLE_GRAPHEME_MATCH).c_str());
+	wholeMatchCombobox_.addString(app.loadString(MSG_DIALOG__WHOLE_WORD_MATCH).c_str());
 	checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);
 
 	onCommand(IDC_COMBO_FINDWHAT, CBN_EDITCHANGE, getItem(IDC_COMBO_FINDWHAT));
-
-	return true;
 }
 
 /// GUI 上のオプションを検索オブジェクトに設定する
 void SearchDialog::setOptions() {
 	assertValidAsWindow();
 
-	TextSearcher& searcher = app_.getBufferList().getEditorSession().getTextSearcher();
+	TextSearcher& searcher = Alpha::getInstance().getBufferList().getEditorSession().getTextSearcher();
 	SearchOptions options = searcher.getOptions();
 
 	switch(searchTypeCombobox_.getCurSel()) {
@@ -152,9 +135,21 @@ void SearchDialog::setOptions() {
 	searcher.setReplacement(getActiveReplacement());
 }
 
+/// @see Dialog#processWindowMessage
+INT_PTR SearchDialog::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
+	if(message == WM_ACTIVATE) {
+		if(LOWORD(wParam) == WA_INACTIVE)
+			setOptions();
+		else
+			updateOptions();
+	}
+	return Dialog::processWindowMessage(message, wParam, lParam);
+}
+
 /// 検索オブジェクトの設定を GUI に反映する
 void SearchDialog::updateOptions() {
-	TextSearcher& s = app_.getBufferList().getEditorSession().getTextSearcher();
+	const BufferList& buffers = Alpha::getInstance().getBufferList();
+	const TextSearcher& s = buffers.getEditorSession().getTextSearcher();
 	const SearchOptions& options = s.getOptions();
 
 	const String currentPattern = getActivePattern(), currentReplacement = getActiveReplacement();
@@ -181,8 +176,8 @@ void SearchDialog::updateOptions() {
 	}
 
 	const bool patternIsEmpty = patternCombobox_.getTextLength() == 0;
-	const bool hasSelection = !app_.getBufferList().getActiveView().getCaret().isSelectionEmpty();
-	const bool readOnly = app_.getBufferList().getActiveView().getDocument().isReadOnly();
+	const bool hasSelection = !buffers.getActiveView().getCaret().isSelectionEmpty();
+	const bool readOnly = buffers.getActiveView().getDocument().isReadOnly();
 	const bool onlySelection = isButtonChecked(IDC_RADIO_SELECTION) == BST_CHECKED;
 	if(!hasSelection)
 		checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);

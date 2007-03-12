@@ -79,7 +79,8 @@ namespace alpha {
 		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchListener::Result result);
 		void	incrementalSearchStarted(const ascension::text::Document& document);
 		// メッセージハンドラ
-		bool	onKeyDown(UINT ch, UINT flags);
+		MANAH_DECLEAR_WINDOW_MESSAGE_MAP(EditorView);
+		void	onKeyDown(UINT vkey, UINT flags, bool& handled);
 		void	onKillFocus(HWND newWindow);
 		void	onSetFocus(HWND oldWindow);
 	private:

@@ -93,8 +93,18 @@ bool CompletionWindow::create() {
 	return false;
 }
 
-/// @see ListBox#dispatchEvent
-LRESULT CompletionWindow::dispatchEvent(UINT message, WPARAM wParam, LPARAM lParam) {
+/**
+ * Returns the region for the completion. if the caret goes outside of this, the completion will be aborted
+ * @throw std#logic_error the completion is not running
+ */
+Region CompletionWindow::getContextRegion() const {
+	if(!isRunning())
+		throw logic_error("Completion is not running.");
+	return Region(contextStart_, contextEnd_->getPosition());
+}
+
+/// @see ListBox#preTranslateWindowMessage
+LRESULT CompletionWindow::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
 	switch(message) {
 	case WM_DESTROY:
 		::DeleteObject(defaultFont_);
@@ -122,17 +132,7 @@ LRESULT CompletionWindow::dispatchEvent(UINT message, WPARAM wParam, LPARAM lPar
 		break;
 	}
 
-	return ListBox::dispatchEvent(message, wParam, lParam);
-}
-
-/**
- * Returns the region for the completion. if the caret goes outside of this, the completion will be aborted
- * @throw std#logic_error the completion is not running
- */
-Region CompletionWindow::getContextRegion() const {
-	if(!isRunning())
-		throw logic_error("Completion is not running.");
-	return Region(contextStart_, contextEnd_->getPosition());
+	return ListBox::preTranslateWindowMessage(message, wParam, lParam, handled);
 }
 
 /**

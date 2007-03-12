@@ -14,20 +14,16 @@ namespace alpha {
 	class Alpha;
 
 	namespace ui {
-		/// [指定行へ移動] ダイアログ
+		/// "Go to Line" Dialog.
 		class GotoLineDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_GOTOLINE> {
-		public:
-			GotoLineDialog(Alpha& app);
-
 		protected:
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
-			void	onOK();												// IDOK
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
+			void	onOK(bool& continueDialog);							// IDOK
 		private:
-			Alpha& app_;
 			manah::win32::ui::UpDownCtrl lineNumberSpin_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_SPIN_LINENUMBER, lineNumberSpin_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_SPIN_LINENUMBER, lineNumberSpin_)
+			MANAH_END_CONTROL_BINDING()
 		};
 	}
 }

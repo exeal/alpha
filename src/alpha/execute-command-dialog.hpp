@@ -16,19 +16,22 @@ namespace alpha {
 	class Alpha;
 
 	namespace ui {
-		///	[コマンドの実行] ダイアログ
+		/**
+		 * "Execute Command" dialog box.
+		 * @deprecated
+		 */
 		class ExecuteCommandDlg : public manah::win32::ui::FixedIDDialog<IDD_DLG_EXECUTECOMMAND> {
 			// コンストラクタ
 		public:
-			ExecuteCommandDlg(Alpha& app, HFONT ioFont);
+			explicit ExecuteCommandDlg(HFONT ioFont);
 
 			// メッセージハンドラ
 		protected:
-			void	onClose();											// WM_CLOSE
+			void	onClose(bool& continueDialog);						// WM_CLOSE
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
-			bool	onInitDialog(HWND focusWindow, LPARAM initParam);	// WM_INITDIALOG
-			void	onCancel();											// IDCANCEL
-			void	onOK();												// IDOK
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
+			void	onCancel(bool& continueDialog);						// IDCANCEL
+			void	onOK(bool& continueDialog);							// IDOK
 
 		private:
 			enum ControlState {WAIT_FOR_NEW_COMMAND, EXECUTING, INPUT_IDLE};
@@ -40,7 +43,6 @@ namespace alpha {
 
 			// データメンバ
 		private:
-			Alpha& app_;
 			HFONT ioFont_;
 			std::wstring cmdLine_;
 			std::queue<std::string> inputQueue_;
@@ -50,11 +52,11 @@ namespace alpha {
 			manah::win32::ui::ComboBox commandCombobox_;
 			manah::win32::ui::Edit outputTextbox_;
 			manah::win32::ui::Edit inputTextbox_;
-			BEGIN_CONTROL_BINDING()
-				BIND_CONTROL(IDC_COMBO_COMMAND, commandCombobox_)
-				BIND_CONTROL(IDC_EDIT_OUTPUT, outputTextbox_)
-				BIND_CONTROL(IDC_EDIT_INPUT, inputTextbox_)
-			END_CONTROL_BINDING()
+			MANAH_BEGIN_CONTROL_BINDING()
+				MANAH_BIND_CONTROL(IDC_COMBO_COMMAND, commandCombobox_)
+				MANAH_BIND_CONTROL(IDC_EDIT_OUTPUT, outputTextbox_)
+				MANAH_BIND_CONTROL(IDC_EDIT_INPUT, inputTextbox_)
+			MANAH_END_CONTROL_BINDING()
 		};
 	}
 }
