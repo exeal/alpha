@@ -116,6 +116,51 @@ struct LineLayout::Run : public StyledText {
 	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
 };
 
+// helpers for LineLayout::draw
+namespace {
+	inline HPEN createPen(COLORREF color, int width, int style) {
+		::LOGBRUSH brush;
+		brush.lbColor = color;
+		brush.lbStyle = BS_SOLID;
+		switch(style) {
+		case 1:	// solid
+			return (width == 1) ? ::CreatePen(PS_SOLID, 1, color) : ::ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+		case 2:	// dashed
+			return ::ExtCreatePen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+		case 3:	// dotted
+			return ::ExtCreatePen(PS_GEOMETRIC | PS_DOT | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+		}
+		throw invalid_argument("Unknown style value.");
+	}
+	inline void drawUnderline(PaintDC& dc, int x, int y, int width, COLORREF color, UnderlineStyle style) {
+		if(style == NO_UNDERLINE)
+			return;
+
+		// get underline metrics of TrueType font
+		const UINT c = dc.getOutlineTextMetrics(0, 0);
+		if(c == 0)
+			return;
+		::OUTLINETEXTMETRIC* otm = reinterpret_cast<::OUTLINETEXTMETRIC*>(new char[c]);
+		dc.getOutlineTextMetrics(c, otm);
+
+		// draw
+		HPEN oldPen = dc.selectObject(createPen(color, otm->otmsUnderscoreSize, style));
+		y += otm->otmTextMetrics.tmAscent - otm->otmsUnderscorePosition + otm->otmsUnderscoreSize / 2;
+		dc.moveTo(x, y);
+		dc.lineTo(x + width, y);
+		::DeleteObject(dc.selectObject(oldPen));
+	}
+	inline void drawBorder(PaintDC& dc, int x, int y, int width, int height, COLORREF color, BorderStyle style) {
+		if(style == NO_BORDER)
+			return;
+		HPEN oldPen = dc.selectObject(createPen(color, 1, style));
+		HBRUSH oldBrush = dc.selectObject(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)));
+		dc.rectangle(x, y, x + width, y + height);
+		::DeleteObject(dc.selectObject(oldPen));
+		dc.selectObject(oldBrush);
+	}
+} // namespace @0
+
 /**
  * Private constructor.
  * @param textRenderer the text renderer
@@ -250,7 +295,8 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 				paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
 
 		// 背景を先に塗って、描画が必要なランを調べて、選択領域をマスキングする
-		size_t firstRun = sublineFirstRuns_[subline], lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+		size_t firstRun = sublineFirstRuns_[subline];
+		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		x = originalX + getSublineIndent(subline);
 		// 左余白を塗る
 		if(x > originalX && x > paintRect.left) {
@@ -317,7 +363,7 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 			x += run.getWidth();
 		}
 
-		// 選択範囲内のテキストを描画
+		// 選択範囲内のテキストを描画 (下線と境界線もついでに)
 		x = startX;
 		clipRegion.setRectRgn(clipRect);
 		dc.selectClipRgn(clipRegion, RGN_XOR);
@@ -330,6 +376,8 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 				hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 			}
+			drawUnderline(dc, x, y, run.getWidth(), run.style.underlineColor, run.style.underlineStyle);
+			drawBorder(dc, x, y, run.getWidth(), linePitch, run.style.borderColor, run.style.borderStyle);
 			x += run.getWidth();
 		}
 
@@ -338,61 +386,6 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 			break;
 	}
 	dc.restore(savedCookie);
-}
-
-/**
- * Draws the border of the specified run bounds.
- * @param dc the device context
- * @param bounds the bounds of the border
- * @param style the style of the border
- * @param color the color of the border
- */
-void LineLayout::drawBorder(PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw() {
-	if(style == BS_NONE)
-		return;
-	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
-	const long left = max<long>(bounds.left, paintRect.left);
-	const long right = min<long>(bounds.right, paintRect.right);
-	if(left >= right)
-		return;
-
-	HPEN pen, oldPen;
-	if(style != BS_UNDERLINE_WAVED) {
-		::LOGBRUSH brush;
-		if(style == BS_UNDERLINE_SOLID || style == BS_UNDERLINE_BOLD || style == BS_BORDER_SOLID)
-			pen = ::CreatePen(PS_SOLID, 1, color);
-		else if(style == BS_UNDERLINE_DASHED || style == BS_UNDERLINE_BOLD_DASHED || style == BS_BORDER_DASHED) {
-			brush.lbColor = color;
-			brush.lbStyle = BS_SOLID;
-			pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DASH, (style != BS_UNDERLINE_BOLD_DASHED) ? 1 : 2, &brush, 0, 0);
-		} else if(style == BS_UNDERLINE_DOTTED || style == BS_UNDERLINE_BOLD_DOTTED || style == BS_BORDER_DOTTED) {
-			brush.lbColor = color;
-			brush.lbStyle = BS_SOLID;
-			pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DOT, (style != BS_UNDERLINE_BOLD_DOTTED) ? 1 : 2, &brush, 0, 0);
-		} else
-			assert(false);
-		oldPen = dc.selectObject(pen);
-		if(style < BS_UNDERLINE_WAVED)	// 下線
-			dc.moveTo(left, bounds.bottom - 1), dc.lineTo(right, bounds.bottom - 1);
-		else {	// 枠線
-			dc.moveTo(left, bounds.top), dc.lineTo(right, bounds.top);
-			dc.moveTo(left, bounds.bottom - 1), dc.lineTo(right, bounds.bottom - 1);
-			if(bounds.left == left)
-				dc.moveTo(left, bounds.top), dc.lineTo(left, bounds.bottom);
-			if(bounds.right == right)
-				dc.moveTo(right - 1, bounds.top), dc.lineTo(right - 1, bounds.bottom);
-		}
-		dc.selectObject(oldPen);
-	} else {	// 波線の下線
-		pen = ::CreatePen(PS_SOLID, 1, color);
-		oldPen = dc.selectObject(pen);
-		for(int i = 0; bounds.left + i * 2 <= right; ++i) {
-			dc.moveTo(bounds.left + i * 2, bounds.bottom - ((i % 2 == 0) ? 1 : 2));
-			dc.lineTo(bounds.left + i * 2 + 2, bounds.bottom - ((i % 2 == 0) ? 1 : 2));
-		}
-		dc.selectObject(oldPen);
-	}
-	::DeleteObject(pen);
 }
 
 #ifdef _DEBUG
