@@ -20,8 +20,10 @@ namespace ascension {
 
 	namespace viewers {
 
-		const COLORREF STANDARD_COLOR = 0xFFFFFFFFUL;		///< Standard color (This value introduces any fallback).
-		const COLORREF SYSTEM_COLOR_MASK = 0x80000000UL;	///< Used like @c (index | SYSTEM_COLOR_MASK) to represent a system color.
+		/// Standard color (This value introduces any fallback).
+		const COLORREF STANDARD_COLOR = 0xFFFFFFFFUL;
+		/// Used like @c (index | SYSTEM_COLOR_MASK) to represent a system color.
+		const COLORREF SYSTEM_COLOR_MASK = 0x80000000UL;
 
 		/// Alignment of the text layout.
 		enum Alignment {
@@ -38,19 +40,20 @@ namespace ascension {
 			RIGHT_TO_LEFT	///< The text is right-to-left.
 		};
 
+		/// Style of the underline.
+		enum UnderlineStyle {
+			NO_UNDERLINE,		///< Does not display underline.
+			SOLID_UNDERLINE,	///< Solid underline.
+			DASHED_UNDERLINE,	///< Dashed underline.
+			DOTTED_UNDERLINE	///< Dotted underline.
+		};
+
 		/// Type of the border and underline.
 		enum BorderStyle {
-			BS_NONE,					///< None.
-			BS_UNDERLINE_SOLID,			///< Solid underline.
-			BS_UNDERLINE_BOLD,			///< Bold solid underline.
-			BS_UNDERLINE_DASHED,		///< Dashed underline.
-			BS_UNDERLINE_BOLD_DASHED,	///< Bold dashed underline.
-			BS_UNDERLINE_DOTTED,		///< Dotted underline.
-			BS_UNDERLINE_BOLD_DOTTED,	///< Bold dotted underline.
-			BS_UNDERLINE_WAVED,			///< Waved underline.
-			BS_BORDER_SOLID,			///< Solid border.
-			BS_BORDER_DASHED,			///< Dashed border.
-			BS_BORDER_DOTTED,			///< Dotted border.
+			NO_BORDER,			///< Does not display border.
+			SOLID_BORDER_SOLID,	///< Solid border.
+			DASHED_BORDER,		///< Dashed border.
+			DOTTED_BORDER,		///< Dotted border.
 		};
 
 		/// Digit shape (substitution) types.
@@ -174,7 +177,6 @@ namespace ascension {
 		private:
 			static HRESULT	buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
 			void			dispose() throw();
-			void			drawBorder(manah::win32::gdi::PaintDC& dc, const ::RECT& bounds, BorderStyle style, COLORREF color) const throw();
 			void			expandTabsWithoutWrapping() throw();
 			std::size_t		findRunForPosition(length_t column) const throw();
 			int				getNextTabStop(int x, Direction direction) const throw();

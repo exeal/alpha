@@ -2,7 +2,7 @@
  * @file presentation.hpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006
+ * @date 2006-2007
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -36,22 +36,26 @@ namespace ascension {
 				LAST_ITEM = 22;
 		}
 */
-		/// Display attributes of the text.
+		/// Visual attributes of a text segment.
 		struct TextStyle : public manah::FastArenaObject<TextStyle> {
 			viewers::Colors color;				///< Color of the text.
 			bool bold;							///< True if the font is bold.
 			bool italic;						///< True if the font is italic.
 			bool strikeout;						///< True if the font is strokeout.
-			COLORREF borderColor;				///< Color of the border or underline. @c STANDARD_COLOR indicates @c color.background.
-			viewers::BorderStyle borderStyle;	///< Type of the border or underline.
-			/// Constructor
-			explicit TextStyle(const viewers::Colors& textColor = viewers::Colors(), bool boldFont = false,
-				bool italicFont = false, bool strikeoutFont = false, COLORREF colorOfBorder = viewers::STANDARD_COLOR,
-				viewers::BorderStyle styleOfBorder = viewers::BS_NONE) throw() : color(textColor), bold(boldFont), italic(italicFont),
-				strikeout(strikeoutFont), borderColor(colorOfBorder), borderStyle(styleOfBorder) {}
+			viewers::UnderlineStyle underlineStyle;	///< Style of the underline.
+			COLORREF underlineColor;				///< Color of the underline. @c STANDARD_COLOR indicates @c color.background.
+			viewers::BorderStyle borderStyle;		///< Style of the border.
+			COLORREF borderColor;					///< Color of the border. @c STANDARD_COLOR indicates @c color.background.
+			/// Constructor.
+			explicit TextStyle(const viewers::Colors& textColor = viewers::Colors(),
+				bool boldFont = false, bool italicFont = false, bool strikeoutFont = false,
+				viewers::UnderlineStyle styleOfUnderline = viewers::NO_UNDERLINE, COLORREF colorOfUnderline = viewers::STANDARD_COLOR,
+				viewers::BorderStyle styleOfBorder = viewers::NO_BORDER, COLORREF colorOfBorder = viewers::STANDARD_COLOR) throw()
+				: color(textColor), bold(boldFont), italic(italicFont), strikeout(strikeoutFont),
+				underlineStyle(styleOfUnderline), underlineColor(colorOfUnderline), borderStyle(styleOfBorder), borderColor(colorOfBorder) {}
 		};
 
-		/// A styled text.
+		/// A styled text segment.
 		struct StyledText {
 			length_t column;	///< Column number from which the text starts.
 			TextStyle style;	///< Style of the text.
