@@ -448,7 +448,37 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
  * @note This does not support line wrapping and bidirectional context.
  */
 String LineLayout::fillToX(int x) const {
-	return L"";	// TODO: not implemented.
+	int cx = getWidth();
+	if(cx >= x)
+		return L"";
+
+	size_t numberOfTabs = 0;
+	while(true) {
+		const int next = getNextTabStopBasedLeftEdge(cx, true);
+		if(next > x)
+			break;
+		++numberOfTabs;
+		cx = next;
+	}
+
+	if(cx == x)
+		return String(numberOfTabs, L'\t');
+
+	ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
+	HFONT oldFont = dc.selectObject(renderer_.getFont(Script::COMMON));
+	int spaceWidth;
+	dc.getCharWidth(L' ', L' ', &spaceWidth);
+	size_t numberOfSpaces = 0;
+	while(true) {
+		if(cx + spaceWidth > x)
+			break;
+		++numberOfSpaces;
+		cx += spaceWidth;
+	}
+
+	String result(numberOfTabs + numberOfSpaces, L' ');
+	result.replace(0, numberOfTabs, numberOfTabs, L'\t');
+	return result;
 }
 
 /**
