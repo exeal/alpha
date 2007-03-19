@@ -211,7 +211,7 @@ namespace ascension {
 		class Point : public manah::Unassignable {
 		public:
 			// constructors
-			explicit Point(Document& document) throw();
+			explicit Point(Document& document, const Position& position = Position());
 			Point(const Point& rhs);
 			virtual ~Point() throw();
 			// operators
@@ -680,9 +680,6 @@ namespace ascension {
 			bool	checkTimeStamp();
 			bool	renameFile(const WCHAR* newName);
 			bool	sendFile(bool asAttachment, bool showDialog = true);
-			// utilities
-			static bool	areSamePathNames(const WCHAR* s1, const WCHAR* s2) throw();
-			static bool	canonicalizePathName(const WCHAR* pathName, WCHAR* dest) throw();
 
 		protected:
 			static LineBreak	eatLineBreak(const Char* first, const Char* last);
@@ -857,13 +854,16 @@ namespace ascension {
 			Position p_;
 		};
 
-		// free functions
+		// free functions related document
 		length_t	getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
 		length_t	getLineBreakLength(LineBreak lineBreak);
 		const Char*	getLineBreakString(LineBreak lineBreak);
 		length_t	getNumberOfLines(const Char* first, const Char* last) throw();
 		length_t	getNumberOfLines(const String& text) throw();
 		Position	updatePosition(const Position& position, const DocumentChange& change, Direction gravity);
+		// free functions related file path name
+		std::wstring	canonicalizePathName(const wchar_t* pathName);
+		bool			comparePathNames(const wchar_t* s1, const wchar_t* s2);
 
 
 // inline implementation ////////////////////////////////////////////////////

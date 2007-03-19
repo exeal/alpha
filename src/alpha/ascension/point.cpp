@@ -89,6 +89,27 @@ namespace {
 // EditPoint ////////////////////////////////////////////////////////////////
 
 /**
+ * Constructor.
+ * @param document the document
+ * @param position the initial position of the point
+ * @param listener the listener. can be @c null if not needed
+ * @throw std#invalid_argument @a position is outside of the document
+ */
+EditPoint::EditPoint(Document& document, const Position& position /* = Position() */, IPointListener* listener /* = 0 */)
+	: Point(document, position), listener_(listener), characterUnit_(CU_GRAPHEME_CLUSTER) {
+}
+
+/// Copy-constructor.
+EditPoint::EditPoint(const EditPoint& rhs) throw() : Point(rhs), listener_(rhs.listener_), characterUnit_(rhs.characterUnit_) {
+}
+
+/// Destructor.
+EditPoint::~EditPoint() throw() {
+	if(listener_ != 0)
+		listener_->pointDestroyed();
+}
+
+/**
  * Moves to the next character.
  * @param offset the offset of the movement
  */
@@ -154,8 +175,8 @@ void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit
 }
 
 /**
- * 指定位置までのテキストを削除
- * @param other もう1つの位置
+ * Erase the region between the point and the other specified point.
+ * @param other the other point
  */
 void EditPoint::erase(const Position& other) {
 	verifyDocument();
@@ -537,12 +558,14 @@ void EditPoint::newLine() {
 /**
  * Constructor.
  * @param viewer the viewer
+ * @param position the initial position of the point
  * @param listener the listener. can be @c null
+ * @throw std#invalid_argument @a position is outside of the document
  */
-VisualPoint::VisualPoint(TextViewer& viewer, IPointListener* listener /* = 0 */) throw()
-		: EditPoint(viewer.getDocument(), listener), LineLayoutBuffer(viewer, ASCENSION_VISUAL_POINT_CACHE_LINES, false),
+VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */)
+		: EditPoint(viewer.getDocument(), position, listener), LineLayoutBuffer(viewer, ASCENSION_VISUAL_POINT_CACHE_LINES, false),
 		viewer_(&viewer), clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(-1), visualSubline_(0) {
-			static_cast<text::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
+	static_cast<text::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 }
 
 /// Copy-constructor.
@@ -785,7 +808,10 @@ length_t VisualPoint::getVisualColumnNumber() const {
 }
 
 /**
- * Inserts the spcified text as a rectangle at the current position.
+ * Inserts the spcified text as a rectangle at the current position. This method has two
+ * restrictions as the follows:
+ * - If the text viewer is line wrap mode, this method inserts text as linear not rectangle.
+ * - If the destination line is bidirectional, the insertion may be performed incorrectly.
  * @param first the start of the text
  * @param last the end of the text
  * @see text#EditPoint#insert
@@ -793,46 +819,37 @@ length_t VisualPoint::getVisualColumnNumber() const {
 void VisualPoint::insertBox(const Char* first, const Char* last) {
 	verifyViewer();
 
-	Document& document = *getDocument();
+	// HACK: 
+	if(getTextViewer().getConfiguration().lineWrap.wraps())
+		return insert(first, last);
 
+	Document& document = *getDocument();
 	if(document.isReadOnly() || first == last)
 		return;
 
-	const length_t lineCount = document.getNumberOfLines();
+	const length_t numberOfLines = document.getNumberOfLines();
+	length_t line = getLineNumber();
+	const int x = getLayout().getLocation(getColumnNumber()).x;
+	const TextRenderer& renderer = getTextViewer().getTextRenderer();
 	const String breakString = getLineBreakString(document.getLineBreak());
-	list<const Char*>	lines;
+	for(const Char* bol = first; ; ++line) {
+		// find the next EOL
+		const Char* const eol = find_first_of(bol, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
 
-	// 行頭位置のリストを作る
-	lines.push_back(first);
-	for(const Char* p = first; p != last; ) {
-		p = find_first_of(p, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
-		p += (*p == CARRIAGE_RETURN && p < last - 1 && *(p + 1) == LINE_FEED) ? 2 : 1;
-		lines.push_back(p);
-	}
-
-	length_t i = getLineNumber();	// 挿入行
-	String line;					// 挿入行となる部分文字列
-	const int xFirstLineInsert =	// 挿入先頭行の挿入位置
-		getLayout().getLocation(getColumnNumber()).x;	// TODO: recognize wrap.
-	for(list<const Char*>::const_iterator it = lines.begin(); it != lines.end(); ++it, ++i) {
-		if(*it == lines.back())	// 最終行
-			line.assign(*it, last);
-		else {
-			++it;
-			length_t lineLength = *it - first - ((*(*it - 1) == LINE_FEED && *(*it - 2) == CARRIAGE_RETURN) ? 2 : 1);
-			lineLength -= *(--it) - first;
-			line.assign(*it, lineLength);
+		// insert text if the source line is not empty
+		if(eol > bol) {
+			const LineLayout& layout = renderer.getLineLayout(line);
+			const length_t column = layout.getOffset(x, 0);
+			String s = layout.fillToX(x);
+			s.append(bol, eol);
+			if(line >= numberOfLines - 1)
+				s.append(breakString);
+			document.insertText(Position(line, column), s);
 		}
-		if(i >= lineCount - 1 && *it != lines.back())	// 挿入位置に行が存在しない場合は作成する
-			line += breakString;
 
-		// TODO: not implemented.
-		if(!line.empty()) {
-/*			const Position visualOffsets = viewer_->getPresentation().mapLogicalPositionToVisualOffsetsInLine(*this);
-			moveTo(document.insertText(Position(i,
-				viewer_->getPresentation().getCharacterForX(i, visualOffsets.line, xFirstLineInsert, true)),
-					viewer_->calculateSpacesReachingVirtualPoint(i, xFirstLineInsert) + line));
-*/		}
+		if(eol == last)
+			break;
+		bol = eol + ((eol[0] == CARRIAGE_RETURN && eol < last - 1 && eol[1] == LINE_FEED) ? 2 : 1);
 	}
 }
 
@@ -1450,8 +1467,10 @@ void VisualPoint::wordRight(length_t offset /* = 1 */) {
 /**
  * Constructor.
  * @param viewer the viewer
+ * @param position the initial position of the point
+ * @throw std#invalid_argument @a position is outside of the document
  */
-Caret::Caret(TextViewer& viewer) throw() : VisualPoint(viewer, 0),
+Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) throw() : VisualPoint(viewer, position, 0),
 		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), pastingFromClipboardRing_(false),
 		leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0), matchBracketsTrackingMode_(DONT_TRACK),
 		overtypeMode_(false), editingByThis_(false), othersEditedFromLastInputChar_(false),
@@ -1732,20 +1751,43 @@ void Caret::eraseSelection() {
 	Document& document = *getDocument();
 	if(document.isReadOnly() || isSelectionEmpty())
 		return;
-	else if(!isSelectionRectangle())	// 線形
+	else if(!isSelectionRectangle())	// the selection is linear
 		moveTo(document.deleteText(*anchor_, *this));
-	else {	// 矩形
-		const length_t topLine = getTopPoint().getLineNumber();
-		const length_t bottomLine = getBottomPoint().getLineNumber();
-		length_t first, last;
-		Position resultPosition;
+	else {	// the selection is rectangle
+		const Position resultPosition = getTopPoint();
 		const bool adapts = adaptsToDocument();
-
 		adaptToDocument(false);
-		for(length_t line = topLine; line <= bottomLine; ++line) {
-			box_->getOverlappedSubline(line, 0, first, last);	// TODO: recognize wrap (second parameter).
-			resultPosition = document.deleteText(Position(line, first), Position(line, last));
+		const length_t firstLine = getTopPoint().getLineNumber(), lastLine = getBottomPoint().getLineNumber();
+		pair<length_t, length_t> rangeInLine;;
+
+		if(getTextViewer().getConfiguration().lineWrap.wraps()) {	// ...and the lines are wrapped
+			// hmmm..., this is heavy work
+			vector<Point*> points;
+			vector<length_t> sizes;
+			points.reserve((lastLine - firstLine) * 2);
+			sizes.reserve((lastLine - firstLine) * 2);
+			const TextRenderer& renderer = getTextViewer().getTextRenderer();
+			for(length_t line = resultPosition.line; line <= lastLine; ++line) {
+				const LineLayout& layout = renderer.getLineLayout(line);
+				for(length_t subline = 0; subline < layout.getNumberOfSublines(); ++subline) {
+					box_->getOverlappedSubline(line, subline, rangeInLine.first, rangeInLine.second);
+					points.push_back(new Point(document, Position(line, rangeInLine.first)));
+					sizes.push_back(rangeInLine.second - rangeInLine.first);
+				}
+			}
+			const size_t sublines = points.size();
+			for(size_t i = 0; i < sublines; ++i) {
+				document.deleteText(Position(points[i]->getLineNumber(), points[i]->getColumnNumber()),
+					Position(points[i]->getLineNumber(), points[i]->getColumnNumber() + sizes[i]));
+				delete points[i];
+			}
+		} else {
+			for(length_t line = resultPosition.line; line <= lastLine; ++line) {
+				box_->getOverlappedSubline(line, 0, rangeInLine.first, rangeInLine.second);
+				document.deleteText(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
+			}
 		}
+
 		endBoxSelection();
 		adaptToDocument(adapts);
 		moveTo(resultPosition);
@@ -1753,7 +1795,7 @@ void Caret::eraseSelection() {
 }
 
 /**
- * アンカーを移動させずにキャレットを移動させる
+ * Moves to the specified position without the anchor adapting.
  * @param to the destination position
  */
 void Caret::extendSelection(const Position& to) {

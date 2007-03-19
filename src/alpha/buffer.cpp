@@ -384,7 +384,7 @@ size_t BufferList::find(const Buffer& buffer) const {
  */
 size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
-		if(buffers_[i]->isBoundToFile() && Document::areSamePathNames(buffers_[i]->getFilePathName(), fileName.c_str()))
+		if(buffers_[i]->isBoundToFile() && comparePathNames(buffers_[i]->getFilePathName(), fileName.c_str()))
 			return i;
 	}
 	return -1;
@@ -676,8 +676,8 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 			app_.messageBox(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MB_ICONHAND, MARGS % fileName);
 			return OPENRESULT_FAILED;
 		}
-	} else if(!Document::canonicalizePathName(fileName.c_str(), resolvedName))
-		wcscpy(resolvedName, fileName.c_str());
+	} else
+		wcscpy(resolvedName, canonicalizePathName(fileName.c_str()).c_str());
 
 	// (テキストエディタで) 既に開かれているか調べる
 	const size_t oldBuffer = find(resolvedName);

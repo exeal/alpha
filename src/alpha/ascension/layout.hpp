@@ -175,20 +175,22 @@ namespace ascension {
 			void	dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */
 		private:
-			static HRESULT	buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
-			void			dispose() throw();
-			void			expandTabsWithoutWrapping() throw();
-			std::size_t		findRunForPosition(length_t column) const throw();
-			int				getNextTabStop(int x, Direction direction) const throw();
-			int				getNextTabStopBasedLeftEdge(int x, bool right) const throw();
-			const String&	getText() const throw();
-			void			itemize(length_t lineNumber) throw();
-			void			merge(const ::SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
-			void			reorder() throw();
-//			void			rewrap();
-			bool			shape() throw();
-			bool			shape(Run& run) throw();
-			void			wrap() throw();
+			static HRESULT			buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
+			void					dispose() throw();
+			void					expandTabsWithoutWrapping() throw();
+			std::size_t				findRunForPosition(length_t column) const throw();
+			int						getNextTabStop(int x, Direction direction) const throw();
+			int						getNextTabStopBasedLeftEdge(int x, bool right) const throw();
+			const String&			getText() const throw();
+			void					itemize(length_t lineNumber) throw();
+//			void					justify() throw();
+			void					merge(const ::SCRIPT_ITEM items[],
+										std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
+			void					reorder() throw();
+//			void					rewrap();
+			bool					shape() throw();
+			std::vector<length_t>*	shape(Run& run) throw();
+			void					wrap() throw();
 		private:
 			const TextRenderer& renderer_;
 			length_t lineNumber_;
@@ -199,7 +201,7 @@ namespace ascension {
 			length_t numberOfSublines_;
 			int width_;
 			friend class LineLayoutBuffer;
-			friend StyledSegmentIterator;
+			friend class StyledSegmentIterator;
 		};
 
 		/**
@@ -386,6 +388,9 @@ namespace ascension {
 		/**
 		 * A @c FontSelector holds a primary font, the font metrics and a font association table
 		 * for text rendering.
+		 * 
+		 * This class supports Font Linking (limited) mechanism for CJK end users. And also supports
+		 * Font Fallback mechanism for multilingual text display.
 		 * @see TextRenderer
 		 */
 		class FontSelector {
@@ -395,23 +400,30 @@ namespace ascension {
 			// constructors
 			FontSelector();
 			virtual ~FontSelector() throw();
-			// attributes
-			void	enableFontLinking(bool enable = true) throw();
-			bool	enablesFontLinking() const throw();
-			int		getAscent() const throw();
-			int		getAverageCharacterWidth() const throw();
+			// metrics
+			int	getAscent() const throw();
+			int	getAverageCharacterWidth() const throw();
+			int	getDescent() const throw();
+			int	getLineHeight() const throw();
+			// primary font and alternatives
 			static const FontAssociations&
 					getDefaultFontAssociations() throw();
-			int		getDescent() const throw();
 			HFONT	getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
 			HFONT	getFontForShapingControls() const throw();
-			int		getLineHeight() const throw();
 			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
+			// font linking
+			void		enableFontLinking(bool enable = true) throw();
+			bool		enablesFontLinking() const throw();
+			HFONT		getLinkedFont(std::size_t index, bool bold = false, bool italic = false) const;
+			std::size_t	getNumberOfLinkedFonts() const throw();
 		protected:
 			virtual void									fontChanged() = 0;
-			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() = 0;
+			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() const = 0;
 		private:
-			int ascent_, descent_, averageCharacterWidth_;
+			struct Fontset;
+			HFONT	getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
+			void	linkPrimaryFont() throw();
+			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
 			struct Fontset : public manah::Noncopyable {
 				WCHAR faceName[LF_FACESIZE];
 				HFONT regular, bold, italic, boldItalic;
@@ -423,8 +435,8 @@ namespace ascension {
 			};
 			Fontset primaryFont_;
 			std::map<int, Fontset*> associations_;
-			HFONT shapingControlsFont_;			// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
-			std::list<Fontset*>* linkedFonts_;	// for the font linking feature
+			HFONT shapingControlsFont_;				// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
+			std::vector<Fontset*>* linkedFonts_;	// for the font linking feature
 			static FontAssociations defaultAssociations_;
 		};
 
@@ -468,7 +480,7 @@ namespace ascension {
 			void	layoutModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool documentChanged) throw();
 			// FontSelector
 			void									fontChanged();
-			std::auto_ptr<manah::win32::gdi::DC>	getDC();
+			std::auto_ptr<manah::win32::gdi::DC>	getDC() const;
 		private:
 			int viewerWidth_, longestLineWidth_, lineWrappingMarkWidth_;
 			length_t longestLine_, numberOfVisualLines_;
@@ -607,17 +619,6 @@ inline bool LineLayoutBuffer::isLineCached(length_t line) const throw() {
 /// Returns the font linking is enabled.
 inline bool FontSelector::enablesFontLinking() const throw() {return linkedFonts_ != 0;}
 
-/// Enables or disables the font linking feature for CJK.
-inline void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
-	if(enable) {
-		if(linkedFonts_ == 0)
-			linkedFonts_ = new std::list<Fontset*>;
-	} else if(linkedFonts_ != 0) {
-		delete linkedFonts_;
-		linkedFonts_ = 0;
-	}
-}
-
 /// Returns the ascent of the text.
 inline int FontSelector::getAscent() const throw() {return ascent_;}
 
@@ -641,6 +642,9 @@ inline HFONT FontSelector::getFontForShapingControls() const throw() {
  * @see TextRenderer#getLinePitch
  */
 inline int FontSelector::getLineHeight() const throw() {return ascent_ + descent_;}
+
+/// Returns the number of the linked fonts.
+inline std::size_t FontSelector::getNumberOfLinkedFonts() const throw() {return (linkedFonts_ != 0) ? linkedFonts_->size() : 0;}
 
 /**
  * Registers the visual lines listener.
