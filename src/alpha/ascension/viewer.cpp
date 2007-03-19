@@ -3561,7 +3561,7 @@ VirtualBox::VirtualBox(const TextViewer& view, const Region& region) throw() : v
  * @param subline the visual subline
  * @param[out] first the start of range
  * @param[out] last the end of range
- * return true if the box and the visual line overlap
+ * @return true if the box and the visual line overlap
  */
 bool VirtualBox::getOverlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw() {
 	assert(view_.isWindow());

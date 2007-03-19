@@ -29,15 +29,11 @@ MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCoun
  */
 void MRUManager::add(const basic_string<WCHAR>& fileName, CodePage cp) {
 	list<MRU>::iterator it = fileNames_.begin();
-	WCHAR realName[MAX_PATH + 1];
+	const basic_string<WCHAR> realName = ascension::text::canonicalizePathName(fileName.c_str());
 
 	// “¯‚¶‚à‚Ì‚ª‚ ‚é‚©’T‚·
-	if(!ascension::text::Document::canonicalizePathName(fileName.c_str(), realName)) {
-		wcscpy(realName, fileName.c_str());
-		::CharLowerW(realName);
-	}
 	while(it != fileNames_.end()) {
-		if(ascension::text::Document::areSamePathNames(realName, it->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
+		if(ascension::text::comparePathNames(realName.c_str(), it->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
 			MRU item = *it;
 			item.codePage = cp;
 			fileNames_.erase(it);

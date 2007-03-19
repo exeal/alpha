@@ -42,9 +42,9 @@ public:
 	virtual ~IOperation() throw() {}
 	/// Returns the operation is executable.
 	virtual bool canExecute(Document& document) const = 0;
-	/// 操作を @a postOperation に結合できるかを返す (後続の操作は挿入)
+	/// Returns true if the operation can be appended to insertion @a postOperation.
 	virtual bool isConcatenatable(InsertOperation& postOperation, const Document& document) const = 0;
-	/// 操作を @a postOperation に結合できるかを返す (後続の操作は削除)
+	/// Returns true if the operation can be appended to deletion @a postOperation.
 	virtual bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const = 0;
 	/// Executes the operation.
 	virtual Position execute(Document& document) = 0;
@@ -287,7 +287,7 @@ inline void Document::UndoManager::clear() throw() {
 	}
 }
 
-/// 文書が保存されたことを通知
+/// The document was saved.
 inline void Document::UndoManager::documentSaved() throw() {
 	savedOperation_ = !undoStack_.empty() ? &undoStack_.top()->top() : 0;
 }
@@ -297,7 +297,7 @@ inline void Document::UndoManager::endCompoundOperation() throw() {
 	compoundOperationStackingState_ = NONE;
 }
 
-/// リドゥ可能な回数を返す
+/// Returns the number of the redoable operations.
 inline size_t Document::UndoManager::getRedoBufferLength() const throw() {
 	return redoStack_.size();
 }
@@ -392,8 +392,13 @@ inline bool Document::UndoManager::undo(Position& resultPosition) {
 /**
  * Constructor.
  * @param document the document to which the point attaches
+ * @param position the initial position of the point
+ * @throw std#invalid_argument @a position is outside of the document
  */
-Point::Point(Document& document) throw() : document_(&document), adapting_(true), excludedFromRestriction_(false), gravity_(FORWARD) {
+Point::Point(Document& document, const Position& position /* = Position() */) :
+		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(FORWARD) {
+	if(position > document.getEndPosition(false))
+		throw invalid_argument("The specified initial position is outside of the document.");
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
 
@@ -435,7 +440,7 @@ void Point::moveTo(const Position& to) {
 }
 
 /**
- * Normalize the position of the point.
+ * Normalizes the position of the point.
  * This method does <strong>not</strong> inform to the listeners about any movement.
  */
 void Point::normalize() const {
@@ -450,7 +455,7 @@ void Point::normalize() const {
 }
 
 /**
- * Called when the document is changed.
+ * Called when the document was changed.
  * @param change the content of the document change
  */
 void Point::update(const DocumentChange& change) {
@@ -643,58 +648,6 @@ Document::~Document() {
 }
 
 /**
- * Compares the two path names.
- * @param s1 the path name
- * @param s2 the path name
- * @return true if the path names are same
- * @see #canonicalizePathName
- */
-bool Document::areSamePathNames(const WCHAR* s1, const WCHAR* s2) throw() {
-	assert(s1 != 0 && s2 != 0);
-
-	// 最も簡単な方法
-	if(toBoolean(::PathMatchSpecW(s1, s2)))
-		return true;
-
-	// ボリューム情報を使う
-	File<true> f1(s1, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(!f1.isOpened())
-		f1.open(s1, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(f1.isOpened()) {
-		File<true> f2(s2, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-		if(!f2.isOpened())
-			f2.open(s2, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-		if(f2.isOpened()) {
-			::BY_HANDLE_FILE_INFORMATION fi1;
-			if(toBoolean(::GetFileInformationByHandle(f1.get(), &fi1))) {
-				::BY_HANDLE_FILE_INFORMATION fi2;
-				if(toBoolean(::GetFileInformationByHandle(f2.get(), &fi2))
-						&& fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
-						&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
-						&& fi1.nFileIndexLow == fi2.nFileIndexLow)
-					return true;
-			}
-		}
-	}
-
-	// NFC に変換 (多分)
-	const int cch1 = ::FoldStringW(MAP_PRECOMPOSED, s1, -1, 0, 0);
-	WCHAR* nfc1 = new WCHAR[cch1];
-	::FoldStringW(MAP_PRECOMPOSED, s1, -1, nfc1, cch1);
-	replace_if(nfc1, nfc1 + cch1, bind2nd(equal_to<WCHAR>(), L'/'), L'\\');
-	const int cch2 = ::FoldStringW(MAP_PRECOMPOSED, s2, -1, 0, 0);
-	WCHAR* nfc2 = new WCHAR[cch2];
-	::FoldStringW(MAP_PRECOMPOSED, s2, -1, nfc2, cch2);
-	replace_if(nfc2, nfc2 + cch2, bind2nd(equal_to<WCHAR>(), L'/'), L'\\');
-	// 大文字小文字を区別せずに比較
-	const int res = ::CompareStringW(
-		MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT), NORM_IGNORECASE, nfc1, cch1, nfc2, cch2);
-	delete[] nfc1;
-	delete[] nfc2;
-	return res == CSTR_EQUAL;
-}
-
-/**
  * Starts the sequential edit. Restarts if the sequential edit is already running.
  * @see #endSequentialEdit, #isSequentialEditing
  */
@@ -703,60 +656,6 @@ void Document::beginSequentialEdit() throw() {
 		endSequentialEdit();
 	undoManager_->beginCompoundOperation();
 	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStarted, *this);
-}
-
-/**
- * Makes the specified path name real. If the path is UNC, the case of @a pathName will not be
- * fixed. All slashes will be replaced by backslashes.
- * @param pathName the absolute path name
- * @param[out] dest the result real path name
- * @return false if @a pathName is not exist or invalid
- * @see #areSamePathNames
- */
-bool Document::canonicalizePathName(const WCHAR* pathName, WCHAR* dest) throw() {
-	resolveRelativePathName(pathName, dest);
-	::WIN32_FIND_DATAW wfd;
-	const WCHAR* p = pathName;
-	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
-			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// ドライブレター
-		wcsncpy(dest, p, 3);
-		dest[0] = towupper(dest[0]);	// 大文字で統一する...
-		dest[3] = 0;
-		p += 3;
-	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
-		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// サーバ名
-			return false;
-		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// 共有名
-			return false;
-		wcsncpy(dest, pathName, ++p - pathName);
-		dest[p - pathName] = 0;
-	} else	// 絶対パスでない
-		return false;
-	WCHAR* next;
-	HANDLE h;
-	while(true) {
-		if(next = wcspbrk(p, L"\\/")) {
-			const WCHAR c = *next;
-			*next = 0;
-			h = ::FindFirstFileW(pathName, &wfd);
-			*next = c;
-			if(h == INVALID_HANDLE_VALUE)
-				return false;
-			wcscat(dest, wfd.cFileName);
-			wcsncat(dest, L"\\", 1);
-			++next;
-			::FindClose(h);
-			p = next;
-		} else {
-			h = ::FindFirstFileW(pathName, &wfd);
-			if(h == INVALID_HANDLE_VALUE)
-				return false;
-			wcscat(dest, wfd.cFileName);
-			::FindClose(h);
-			return true;
-		}
-	}
-	return true;
 }
 
 /**
@@ -1067,8 +966,6 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	EncoderFactory& encoderFactory = EncoderFactory::getInstance();
 	if(!encoderFactory.isValidCodePage(codePage))
 		return FIR_INVALID_CODE_PAGE;
-	WCHAR realName[MAX_PATH];
-	canonicalizePathName(fileName.c_str(), realName);
 	ui::WaitCursor wc;
 
 	// ファイルを開く
@@ -1152,7 +1049,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 #undef CLOSE_AND_ABORT
 
 		ucsBuffer[destLength] = 0;
-		setFilePathName(realName);
+		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 		fireDocumentAboutToBeChanged();
 
 		// 改行ごとに区切り、リストに追加していく
@@ -1195,7 +1092,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
 	} else {	// 空のファイル
 		codePage = ::GetACP();
-		setFilePathName(realName);
+		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 	}
 
 	if(lineBreak_ == LB_AUTO)
@@ -1331,10 +1228,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 		}
 	}
 
-	WCHAR realName[MAX_PATH];
-	if(!canonicalizePathName(fileName.c_str(), realName))
-		resolveRelativePathName(fileName.c_str(), realName);
-
+	const wstring realName = canonicalizePathName(fileName.c_str());
 	EncoderFactory& encoderFactory = EncoderFactory::getInstance();
 	if(!encoderFactory.isValidCodePage(params.codePage)					// コードページがインストールされているか
 			|| encoderFactory.isCodePageForReadOnly(params.codePage))	// 読み取り専用のコードページか
@@ -1510,17 +1404,17 @@ CLIENT_ABORTED:
 		tempFile.close();
 		FREE_TEMPORARY_BUFFER();
 		diskFile_.unlock();
-		const DWORD attrs = ::GetFileAttributesW(realName);
+		const DWORD attrs = ::GetFileAttributesW(realName.c_str());
 		if(attrs != INVALID_FILE_ATTRIBUTES) {
 			::SetFileAttributesW(tempName, attrs);
 			// 上書きの場合は古いファイルを消す
-			if(!toBoolean(::DeleteFileW(realName)) && ::GetLastError() != ERROR_FILE_NOT_FOUND) {
+			if(!toBoolean(::DeleteFileW(realName.c_str())) && ::GetLastError() != ERROR_FILE_NOT_FOUND) {
 				const DWORD e = ::GetLastError();
 				::DeleteFileW(tempName);
 				// 自分が開いていたファイルだった場合はロックし直す
 				if(diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE
 						&& isBoundToFile() && (!diskFile_.lockMode.onlyAsEditing || isModified())
-						&& areSamePathNames(realName, getFilePathName()))
+						&& comparePathNames(realName.c_str(), getFilePathName()))
 					diskFile_.lock(getFilePathName());
 				::SetLastError(e);
 				return FIR_STANDARD_WIN32_ERROR;
@@ -1528,12 +1422,12 @@ CLIENT_ABORTED:
 			deletedOldFile = true;
 		}
 		// 名前を変更
-		const bool moved = toBoolean(::MoveFileW(tempName, realName));
+		const bool moved = toBoolean(::MoveFileW(tempName, realName.c_str()));
 		if(!moved && deletedOldFile)	// 最悪のケース
 			return FIR_LOST_DISK_FILE;
 		// ロックし直す
 		if(!deletedOldFile && diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE && !diskFile_.lockMode.onlyAsEditing)
-			diskFile_.lock(realName);
+			diskFile_.lock(realName.c_str());
 		if(!moved) {
 			const DWORD e = ::GetLastError();
 			::DeleteFileW(tempName);
@@ -1559,7 +1453,7 @@ CLIENT_ABORTED:
 	setModified(false);
 	setReadOnly(false);
 	setCodePage(cp);
-	setFilePathName(realName);
+	setFilePathName(realName.c_str());
 
 	// 最終更新日時の更新
 	::WIN32_FIND_DATAW wfd;
@@ -1693,7 +1587,7 @@ void Document::setFilePathName(const TCHAR* pathName) {
  * Sets the modification flag of the document.
  * Derived classes can hook changes of the flag by overriding this method.
  * @param modified set true to make the document modfied
- * @see #isModified, #IStateListener#onDocumentModificationSignChanged
+ * @see #isModified, #IStateListener#documentModificationSignChanged
  */
 void Document::setModified(bool modified /* = true */) throw() {
 	const bool was = modified_;
@@ -1972,6 +1866,120 @@ void NullPartitioner::doInstall() throw() {
 
 
 // free functions ///////////////////////////////////////////////////////////
+
+/**
+ * Makes the specified path name real. If the path is UNC, the case of @a pathName will not be
+ * fixed. All slashes will be replaced by backslashes.
+ * @param pathName the absolute path name
+ * @param[out] dest the result real path name
+ * @return false if @a pathName is not exist or invalid
+ * @throw std#invalid_argument @a pathName is not exist
+ * @see comparePathNames
+ */
+wstring text::canonicalizePathName(const wchar_t* pathName) {
+	wchar_t path[MAX_PATH];
+	resolveRelativePathName(pathName, path);
+
+	// from Ftruename implementation in xyzzy
+
+	wstring result;
+	result.reserve(MAX_PATH);
+	const wchar_t* p = path;
+	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
+			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// ドライブレター
+		result.append(path, 3);
+		result[0] = towupper(path[0]);	// 大文字で統一する...
+		p += 3;
+	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
+		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// サーバ名
+			return false;
+		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// 共有名
+			return false;
+		result.append(path, ++p - path);
+	} else	// 絶対パスでない
+		return pathName;
+
+	::WIN32_FIND_DATAW wfd;
+	while(true) {
+		if(wchar_t* next = wcspbrk(p, L"\\/")) {
+			const wchar_t c = *next;
+			*next = 0;
+			HANDLE h = ::FindFirstFileW(path, &wfd);
+			*next = c;
+			if(h != INVALID_HANDLE_VALUE) {
+				::FindClose(h);
+				result += wfd.cFileName;
+			} else
+				result += p;
+			result += L'\\';
+			p = next + 1;
+		} else {
+			HANDLE h = ::FindFirstFileW(path, &wfd);
+			if(h != INVALID_HANDLE_VALUE) {
+				::FindClose(h);
+				result += wfd.cFileName;
+			} else
+				result += p;
+			break;
+		}
+	}
+	return result;
+}
+
+/**
+ * Returns true if the specified two file path names are equivalent.
+ * @param s1 the first path name
+ * @param s2 the second path name
+ * @return true if @a s1 and @a s2 are equivalent
+ * @throw std#invalid_argument either file is not exist
+ * @see canonicalizePathName
+ */
+bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
+	if(s1 == 0 || s2 == 0)
+		throw invalid_argument("either file name is null.");
+
+//	// 最も簡単な方法
+//	if(toBoolean(::PathMatchSpecW(s1, s2)))
+//		return true;
+
+	// from pathname_equal and same_file_p implementation in xyzzy
+
+	// ファイル名の文字列比較
+	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
+	const int fc1 = ::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s1, c1, 0, 0);
+	const int fc2 = ::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s2, c2, 0, 0);
+	if(fc1 == fc2) {
+		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
+		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
+		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0) {
+			if(!toBoolean(::PathFileExists(s1)))
+				throw invalid_argument("the specified file is not exist.");
+			return true;
+		}
+	}
+
+	// ボリューム情報を使う
+	File<true> f1(s1, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+	if(!f1.isOpened())
+		f1.open(s1, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+	if(!f1.isOpened())
+		throw invalid_argument("the specified file is not exist.");
+	File<true> f2(s2, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+	if(!f2.isOpened())
+		f2.open(s2, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+	if(!f2.isOpened())
+		throw invalid_argument("the specified file is not exist.");
+	::BY_HANDLE_FILE_INFORMATION fi1;
+	if(toBoolean(::GetFileInformationByHandle(f1.get(), &fi1))) {
+		::BY_HANDLE_FILE_INFORMATION fi2;
+		if(toBoolean(::GetFileInformationByHandle(f2.get(), &fi2)))
+			return fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
+				&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
+				&& fi1.nFileIndexLow == fi2.nFileIndexLow;
+	}
+	return false;
+}
 
 /**
  * Returns absolute character offset of the specified position from the start of the document.

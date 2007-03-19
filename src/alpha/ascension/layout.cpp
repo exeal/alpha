@@ -132,32 +132,45 @@ namespace {
 		}
 		throw invalid_argument("Unknown style value.");
 	}
-	inline void drawUnderline(PaintDC& dc, int x, int y, int width, COLORREF color, UnderlineStyle style) {
-		if(style == NO_UNDERLINE)
-			return;
+	inline void drawDecorationLines(PaintDC& dc, const TextStyle& style, int x, int y, int width, int height) {
+		::OUTLINETEXTMETRICW* otm = 0;
+		::TEXTMETRICW tm;
+		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
+			if(const UINT c = dc.getOutlineTextMetrics(0, 0)) {
+				otm = reinterpret_cast<::OUTLINETEXTMETRICW*>(new char[c]);
+				dc.getOutlineTextMetrics(c, otm);
+			} else
+				dc.getTextMetrics(tm);
+		}
 
-		// get underline metrics of TrueType font
-		const UINT c = dc.getOutlineTextMetrics(0, 0);
-		if(c == 0)
-			return;
-		::OUTLINETEXTMETRIC* otm = reinterpret_cast<::OUTLINETEXTMETRIC*>(new char[c]);
-		dc.getOutlineTextMetrics(c, otm);
+		// draw underline
+		if(style.underlineStyle != NO_UNDERLINE) {
+			HPEN oldPen = dc.selectObject(createPen(style.underlineColor, (otm != 0) ? otm->otmsUnderscoreSize : 1, style.underlineStyle));
+			const int underlineY = y + ((otm != 0) ?
+				otm->otmTextMetrics.tmAscent - otm->otmsUnderscorePosition + otm->otmsUnderscoreSize / 2 : tm.tmAscent);
+			dc.moveTo(x, underlineY);
+			dc.lineTo(x + width, underlineY);
+			::DeleteObject(dc.selectObject(oldPen));
+		}
 
-		// draw
-		HPEN oldPen = dc.selectObject(createPen(color, otm->otmsUnderscoreSize, style));
-		y += otm->otmTextMetrics.tmAscent - otm->otmsUnderscorePosition + otm->otmsUnderscoreSize / 2;
-		dc.moveTo(x, y);
-		dc.lineTo(x + width, y);
-		::DeleteObject(dc.selectObject(oldPen));
-	}
-	inline void drawBorder(PaintDC& dc, int x, int y, int width, int height, COLORREF color, BorderStyle style) {
-		if(style == NO_BORDER)
-			return;
-		HPEN oldPen = dc.selectObject(createPen(color, 1, style));
-		HBRUSH oldBrush = dc.selectObject(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)));
-		dc.rectangle(x, y, x + width, y + height);
-		::DeleteObject(dc.selectObject(oldPen));
-		dc.selectObject(oldBrush);
+		// draw strikeout line
+		if(style.strikeout) {
+			HPEN oldPen = dc.selectObject(createPen(style.color.foreground, (otm != 0) ? otm->otmsStrikeoutSize : 1, 1));
+			const int strikeoutY = y + ((otm != 0) ?
+				otm->otmTextMetrics.tmAscent - otm->otmsStrikeoutPosition + otm->otmsStrikeoutSize / 2 : tm.tmAscent / 3);
+			dc.moveTo(x, strikeoutY);
+			dc.lineTo(x + width, strikeoutY);
+			::DeleteObject(dc.selectObject(oldPen));
+		}
+
+		// draw border
+		if(style.borderStyle != NO_BORDER) {
+			HPEN oldPen = dc.selectObject(createPen(style.borderColor, 1, style.borderStyle));
+			HBRUSH oldBrush = dc.selectObject(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)));
+			dc.rectangle(x, y, x + width, y + height);
+			::DeleteObject(dc.selectObject(oldPen));
+			dc.selectObject(oldBrush);
+		}
 	}
 } // namespace @0
 
@@ -376,8 +389,7 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 				hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 			}
-			drawUnderline(dc, x, y, run.getWidth(), run.style.underlineColor, run.style.underlineStyle);
-			drawBorder(dc, x, y, run.getWidth(), linePitch, run.style.borderColor, run.style.borderStyle);
+			drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
 			x += run.getWidth();
 		}
 
@@ -949,12 +961,26 @@ inline bool LineLayout::shape() throw() {
 	return true;
 }
 
+namespace {
+	inline bool searchMissingGlyph(const ClientDC& dc, ::SCRIPT_CACHE& cache, WORD* glyphs, size_t numberOfGlyphs) throw() {
+		::SCRIPT_FONTPROPERTIES fp;
+		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
+		if(FAILED(ScriptGetFontProperties(dc.get(), &cache, &fp)))
+			return false;
+//		replace(glyphs, glyphs + numberOfGlyphs, fp.wgInvalid, fp.wgDefault);
+		return find(glyphs, glyphs + numberOfGlyphs, fp.wgDefault) != glyphs + numberOfGlyphs;
+	}
+} // namespace @0
+
 /**
- * Shapes the text.
+ * Shapes the text. If the process was failed, the run should be devided into multiple smaller runs
+ * to shape correctly. In this case, this returns the information about new sub-runs.
+ * smaller runs to shape correctly,
  * @param run the run to be performed
- * @return succeeded or not
+ * @return null if the process was succeeded. otherwise, the array of the positions new sub-runs
+ * start in the line
  */
-bool LineLayout::shape(Run& run) throw() {
+vector<length_t>* LineLayout::shape(Run& run) throw() {
 	// TODO: call ISpecialCharacterDrawer.
 
 	assert(run.glyphs == 0);
@@ -965,63 +991,96 @@ bool LineLayout::shape(Run& run) throw() {
 	if(renderer_.getTextViewer().getConfiguration().inhibitsShaping)
 		run.analysis.eScript = SCRIPT_UNDEFINED;
 
-	// フォントを選択する
-	if(run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0)
-		run.font = renderer_.getFontForShapingControls();
-	else
-		run.font = renderer_.getFont(Script::COMMON, run.style.bold, run.style.italic);
-	HFONT oldFont = dc.selectObject(run.font);
+	// select the primary (default) font
+	HFONT primaryFont = (run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0) ?
+		renderer_.getFontForShapingControls() : renderer_.getFont(Script::COMMON, run.style.bold, run.style.italic);
+	HFONT oldFont = dc.selectObject(run.font = primaryFont);
 
-	// 1 回目のシェーピング
+/*	// check if the primary font supports ALL characters in this run
 	size_t expectedNumberOfGlyphs = run.length * 3 / 2 + 16;
 	run.glyphs = new WORD[expectedNumberOfGlyphs];
 	run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
-	hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
-
-	// 既定のグリフが返った場合は欠損 (判定が厳しすぎると思うが...)
-	if(SUCCEEDED(hr)) {
+	hr = ::ScriptGetCMap(dc.get(), &run.cache, line.data() + run.column, static_cast<int>(run.length), 0, run.glyphs);
+	if(hr != S_FALSE)
+		hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);	// shaping should success
+	else {
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
-		if(SUCCEEDED(ScriptGetFontProperties(dc.get(), &run.cache, &fp))
-				&& find(run.glyphs, run.glyphs + run.numberOfGlyphs, fp.wgDefault) != run.glyphs + run.numberOfGlyphs)
-			hr = USP_E_SCRIPT_NOT_IN_FONT;
+		::ScriptGetFontProperties(dc.get(), &run.cache, &fp);
+		const WORD* p = run.glyphs;
+		vector<length_t>* v = new vector<length_t>;
+		while(true) {
+			if(*p != fp.wgDefault)
+				p = find<const WORD*>(p, run.glyphs + run.length, fp.wgDefault);
+			else
+				p = find_if<const WORD*>(p, run.glyphs + run.length, not1(bind1st(equal_to<WORD>(), fp.wgDefault)));
+			if(p == run.glyphs + run.length)
+				break;
+			v->push_back(p - run.glyphs);
+		}
+		if(!v->empty())
+			return v;
 	}
+*/
+	// first shaping
+	hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
+	// check missing glyphs (it seems to be too strict...)
+	if(SUCCEEDED(hr) && searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
+		hr = USP_E_SCRIPT_NOT_IN_FONT;
 
-	// 欠損グリフがある場合はフォールバックする
+	// fallback if missing glyphs were found
 	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 		::ScriptFreeCache(&run.cache);
-		// TODO: tries about the font linking.
-		// ランの書記体系を調べる
-		int script;
-		for(StringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
-			script = Script::of(i.current());
+
+		// try linked fonts
+		for(size_t i = 0; i < renderer_.getNumberOfLinkedFonts(); ++i) {
+			dc.selectObject(run.font = renderer_.getLinkedFont(i, run.style.bold, run.style.italic));
+			if(SUCCEEDED(hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs))) {
+				if(searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
+					hr = USP_E_SCRIPT_NOT_IN_FONT;
+				if(SUCCEEDED(hr))
+					break;
+			}
+		}
+
+		if(FAILED(hr)) {
+			// try fallback fonts based on the script
+			::ScriptFreeCache(&run.cache);
+			int script;
+			for(StringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
+				script = Script::of(i.current());
+				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+					break;
+			}
+			HFONT fallbackFont;
 			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-				break;
-		}
-		HFONT fallbackFont;
-		if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-			fallbackFont = renderer_.getFont(script, run.style.bold, run.style.italic);
-		else if(runs_[0] != &run)
-			fallbackFont = find(runs_, runs_ + numberOfRuns_, &run)[-1]->font;
-		else
-			fallbackFont = run.font;	// うーむ
-		if(fallbackFont != run.font) {
-			dc.selectObject(run.font = fallbackFont);
-			hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
-		}
-		if(FAILED(hr)) {	// シェーピング無し
-			run.analysis.eScript = SCRIPT_UNDEFINED;
-			hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
+				fallbackFont = renderer_.getFont(script, run.style.bold, run.style.italic);
+			else if(runs_[0] != &run)
+				fallbackFont = find(runs_, runs_ + numberOfRuns_, &run)[-1]->font;
+			else
+				fallbackFont = run.font;	// sigh...
+			if(fallbackFont != run.font) {
+				dc.selectObject(run.font = fallbackFont);
+				if(SUCCEEDED(hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs))
+						&& searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
+					hr = USP_E_SCRIPT_NOT_IN_FONT;
+			}
+			if(FAILED(hr)) {	// no shaping
+				::ScriptFreeCache(&run.cache);
+				run.analysis.eScript = SCRIPT_UNDEFINED;
+				dc.selectObject(run.font = primaryFont);
+				hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
+			}
 		}
 		if(FAILED(hr))
-			return false;
+			return 0;
 	}
 	run.advances = new int[run.numberOfGlyphs];
 	run.glyphOffsets = new ::GOFFSET[run.numberOfGlyphs];
 	hr = ::ScriptPlace(dc.get(), &run.cache, run.glyphs, run.numberOfGlyphs,
 			run.visualAttributes, &run.analysis, run.advances, run.glyphOffsets, &run.width);
 	dc.selectObject(oldFont);
-	return true;
+	return 0;
 }
 
 /// Locates the wrap points and resolves tab expansions.
@@ -1462,7 +1521,7 @@ inline void LineLayoutBuffer::verifyLayoutCaches() const throw() {
 FontSelector::FontAssociations FontSelector::defaultAssociations_;
 
 /// Constructor.
-FontSelector::FontSelector() : primaryFont_(L""), shapingControlsFont_(0), linkedFonts_(0) {
+FontSelector::FontSelector() : primaryFont_(L""), shapingControlsFont_(0), linkedFonts_(0) {linkedFonts_ = new std::vector<Fontset*>;
 }
 
 /// Destructor.
@@ -1471,15 +1530,32 @@ FontSelector::~FontSelector() throw() {
 	for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
 		delete i->second;
 	if(linkedFonts_ != 0) {
-		for(list<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
+		for(vector<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
 			delete *i;
 		delete linkedFonts_;
+	}
+}
+
+/**
+ * Enables or disables the font linking feature for CJK. When this method is called, #fontChanged
+ * method of the derived class will be called.
+ * @param enable set true to enable
+ */
+void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
+	if(enable) {
+		if(linkedFonts_ == 0)
+			linkedFonts_ = new std::vector<Fontset*>;
+		linkPrimaryFont();
+	} else if(linkedFonts_ != 0) {
+		delete linkedFonts_;
+		linkedFonts_ = 0;
 	}
 }
 
 /// Returns the default font association (fallback) map.
 const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations() throw() {
 	if(defaultAssociations_.empty()) {
+		const LANGID uiLang = getUserDefaultUILanguage();
 		defaultAssociations_[Script::ARABIC] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::ARMENIAN] = L"Sylfaen";
 		defaultAssociations_[Script::BENGALI] = L"Vrinda";
@@ -1489,9 +1565,11 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		defaultAssociations_[Script::GREEK] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::GUJARATI] = L"Shruti";
 		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
-		switch(PRIMARYLANGID(getUserDefaultUILanguage())) {	// yes, this is not enough...
+		switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
 		case LANG_CHINESE:
-			defaultAssociations_[Script::HAN] = L"PMingLiu"; break;
+			defaultAssociations_[Script::HAN] =
+				(SUBLANGID(uiLang) != SUBLANG_CHINESE_TRADITIONAL && SUBLANGID(uiLang) != SUBLANG_CHINESE_HONGKONG) ?
+				L"PMingLiu" : L"SimSun"; break;
 		case LANG_JAPANESE:
 			defaultAssociations_[Script::HAN] = L"MS P Gothic"; break;
 		case LANG_KOREAN:
@@ -1519,12 +1597,13 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @param italic true to get the italic variant
  * @return the font or a fallbacked font if the association was failed
  * @throw std#invalid_argument @a script is invalid
+ * @see #getLinkedFont, #setFont
  */
 HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
 	if(script <= Script::UNKNOWN || script == Script::INHERITED
 			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::COUNT)
 		throw invalid_argument("invalid script value.");
-	Fontset* fontset;
+	const Fontset* fontset;
 	if(script != Script::COMMON) {
 		map<int, Fontset*>::iterator i = const_cast<FontSelector*>(this)->associations_.find(script);
 		if(i == associations_.end())	// フォールバック
@@ -1534,11 +1613,91 @@ HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = fa
 	}
 	if(script == Script::COMMON)
 		fontset = &const_cast<FontSelector*>(this)->primaryFont_;
-	HFONT& font = bold ? (italic ? fontset->boldItalic : fontset->bold) : (italic ? fontset->italic : fontset->regular);
-	if(font == 0)
-		font = ::CreateFontW(ascent_ + descent_, 0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fontset->faceName);
+	return getFontInFontset(*fontset, bold, italic);
+}
+
+/**
+ * 
+ * @param fontset
+ * @param bold
+ * @param italic
+ * @return the font
+ */
+HFONT FontSelector::getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw() {
+	Fontset& fs = const_cast<Fontset&>(fontset);
+	HFONT& font = bold ? (italic ? fs.boldItalic : fs.bold) : (italic ? fs.italic : fs.regular);
+	if(font == 0) {
+		font = ::CreateFontW(-(ascent_ + descent_),
+			0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
+			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
+		auto_ptr<DC> dc = getDC();
+		HFONT oldFont = dc->selectObject(font);
+		::TEXTMETRICW tm;
+		dc->getTextMetrics(tm);
+		dc->selectObject(oldFont);
+		// adjust to the primary ascent and descent
+		if(tm.tmAscent > ascent_ || tm.tmDescent > descent_) {
+			::DeleteObject(font);
+			double ratio = (tm.tmAscent - ascent_ > tm.tmDescent - descent_) ?
+				static_cast<double>(ascent_) / static_cast<double>(tm.tmAscent)
+				: static_cast<double>(descent_) / static_cast<double>(tm.tmDescent);
+			font = ::CreateFontW(static_cast<int>(-static_cast<double>(ascent_ + descent_) * ratio),
+				0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
+				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
+		}
+	}
 	return font;
+}
+
+/**
+ * Returns the font linking to the primary font.
+ * @param index the index in the link fonts chain
+ * @param bold true to get the bold variant
+ * @param italic true to get the italic variant
+ * @return the font
+ * @throw std#out_of_range @a index is invalid
+ * @see #getFont, #getNumberOfLinkedFonts
+ */
+HFONT FontSelector::getLinkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
+	if(linkedFonts_ == 0)
+		throw out_of_range("the specified index is invalid.");
+	Fontset& fontset = *linkedFonts_->at(index);
+	return getFontInFontset(fontset, bold, italic);
+}
+
+///
+void FontSelector::linkPrimaryFont() throw() {
+	assert(linkedFonts_ != 0);
+	for(vector<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
+		delete *i;
+	linkedFonts_->clear();
+
+	// レジストリからフォントリンクの設定を読み込む
+	::HKEY key;
+	long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
+		L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
+	if(e != ERROR_SUCCESS)
+		e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
+	if(e == ERROR_SUCCESS) {
+		DWORD type, bytes;
+		if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_.faceName, 0, &type, 0, &bytes)) {
+			manah::AutoBuffer<::BYTE> data(new ::BYTE[bytes]);
+			if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_.faceName, 0, &type, data.get(), &bytes)) {
+				const wchar_t* p = reinterpret_cast<wchar_t*>(data.get());
+				const wchar_t* const last = p + bytes / sizeof(wchar_t);
+				while(true) {
+					p = find(p, last, L',');
+					if(p == last)
+						break;
+					linkedFonts_->push_back(new Fontset(++p));
+					p = find(p, last, 0);
+				}
+			}
+		}
+		::RegCloseKey(key);
+	}
+	fontChanged();
 }
 
 /**
@@ -1589,6 +1748,8 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 	dc->getTextMetrics(tm);
 	ascent_ = tm.tmAscent;
 	descent_ = tm.tmDescent;
+	internalLeading_ = tm.tmInternalLeading;
+	externalLeading_ = tm.tmExternalLeading;
 	averageCharacterWidth_ = tm.tmAveCharWidth;
 	dc->selectObject(oldFont);
 	// フォントリンクのために実際の名前が必要
@@ -1603,37 +1764,10 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 		::DeleteObject(shapingControlsFont_);
 		shapingControlsFont_ = 0;
 	}
-	if(linkedFonts_ != 0) {
-		for(list<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
-			delete *i;
-		linkedFonts_->clear();
-		// レジストリからフォントリンクの設定を読み込む
-		::HKEY key;
-		long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
-			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
-		if(e != ERROR_SUCCESS)
-			e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-				L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
-		if(e == ERROR_SUCCESS) {
-			DWORD type, bytes;
-			if(ERROR_SUCCESS != ::RegQueryValueExW(key, primaryFont_.faceName, 0, &type, 0, &bytes)) {
-				manah::AutoBuffer<::BYTE> data(new ::BYTE[bytes]);
-				if(ERROR_SUCCESS != ::RegQueryValueExW(key, L"Tahoma", 0, &type, data.get(), &bytes)) {
-					const wchar_t* p = reinterpret_cast<wchar_t*>(data.get());
-					const wchar_t* const last = p + bytes / sizeof(wchar_t);
-					while(true) {
-						p = find(p, last, L',');
-						if(p == last)
-							break;
-						linkedFonts_->push_back(new Fontset(++p));
-						p = find(p, last, 0);
-					}
-				}
-			}
-			::RegCloseKey(key);
-		}
-	}
-	fontChanged();
+	if(linkedFonts_ != 0)
+		linkPrimaryFont();	// this calls fontChanged()
+	else
+		fontChanged();
 }
 
 
@@ -1673,8 +1807,8 @@ void TextRenderer::fontChanged() {
 }
 
 /// @see FontSelector#getDC
-auto_ptr<DC> TextRenderer::getDC() {
-	return auto_ptr<DC>(getTextViewer().isWindow() ? new ClientDC(getTextViewer().getDC()) : new ScreenDC());
+auto_ptr<DC> TextRenderer::getDC() const {
+	return auto_ptr<DC>(getTextViewer().isWindow() ? new ClientDC(const_cast<TextViewer&>(getTextViewer()).getDC()) : new ScreenDC());
 }
 
 /**
