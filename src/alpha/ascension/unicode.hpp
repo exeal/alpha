@@ -720,7 +720,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param base the base iterator
 			 * @param component the component of sentence to search
-			 * @param ctypes the character detector to detect alphabets
+			 * @param syntax the identifier syntax to detect alphabets
 			 * @param lc the locale
 			 */
 			SentenceBreakIterator(BaseIterator base, Component component, const IdentifierSyntax& syntax,
@@ -1016,6 +1016,7 @@ inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false *
  * @a CharacterSequence must represents a UTF-16 character sequence.
  * @param first the start of the character sequence
  * @param last the end of the character sequence
+ * @param excludeTurkishI set true to perform "Turkish I mapping"
  * @return the folded string
  */
 template<typename CharacterSequence>
@@ -1043,6 +1044,7 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 /**
  * Folds case of the specified character sequence. This method performs "full case folding."
  * @param text the character sequence
+ * @param excludeTurkishI set true to perform "Turkish I mapping"
  * @return the folded string
  */
 inline String CaseFolder::fold(const String& text, bool excludeTurkishI /* = false */) {

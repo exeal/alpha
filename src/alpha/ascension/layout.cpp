@@ -12,6 +12,7 @@
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::viewers;
+using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
 using namespace manah::win32::gdi;
@@ -62,23 +63,7 @@ namespace {
 	} userSettings;
 } // namespace @0
 
-void dumpRuns(const LineLayout& layout) {
-#ifdef _DEBUG
-	ostringstream s;
-	layout.dumpRuns(s);
-	::OutputDebugStringA(s.str().c_str());
-#endif /* _DEBUG */
-}
-
-void ascension::updateSystemSettings() throw() {
-	viewers::internal::systemColors.update();
-	userSettings.update();
-}
-
-
-// LineLayout ///////////////////////////////////////////////////////////////
-
-struct LineLayout::Run : public StyledText {
+struct viewers::internal::Run : public StyledText {
 	::SCRIPT_ANALYSIS analysis;
 	::SCRIPT_CACHE cache;
 	HFONT font;			// ランを描画するフォント
@@ -115,6 +100,22 @@ struct LineLayout::Run : public StyledText {
 	}
 	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
 };
+
+void dumpRuns(const LineLayout& layout) {
+#ifdef _DEBUG
+	ostringstream s;
+	layout.dumpRuns(s);
+	::OutputDebugStringA(s.str().c_str());
+#endif /* _DEBUG */
+}
+
+void ascension::updateSystemSettings() throw() {
+	viewers::internal::systemColors.update();
+	userSettings.update();
+}
+
+
+// LineLayout ///////////////////////////////////////////////////////////////
 
 // helpers for LineLayout::draw
 namespace {
@@ -185,8 +186,8 @@ LineLayout::LineLayout(const TextRenderer& textRenderer, length_t line) :
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), width_(-1) {
 	if(!getText().empty()) {
 		itemize(line);
-		if(!shape())
-			dispose();
+		for(size_t i = 0; i < numberOfRuns_; ++i)
+			shape(*runs_[i]);
 		if(numberOfRuns_ == 0 || !renderer_.getTextViewer().getConfiguration().lineWrap.wraps()) {
 			numberOfSublines_ = 1;
 			sublineFirstRuns_ = new size_t[1];
@@ -220,30 +221,6 @@ inline void LineLayout::dispose() throw() {
 	delete[] sublineFirstRuns_;
 	sublineFirstRuns_ = 0;
 	numberOfSublines_ = 0;
-}
-
-/**
- * Builds glyphs into the run structure.
- * @param dc the device context
- * @param line the line text
- * @param run the run to shape
- * @param[in,out] expectedNumberOfGlyphs the length of @a run.glyphs
- * @return the result of @c ScriptShape call
- */
-inline HRESULT LineLayout::buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) {
-	while(true) {
-		// グリフを格納するのに十分な run.glyphs が得られるまで繰り返す
-		HRESULT hr = ::ScriptShape(dc, &run.cache, line + run.column, static_cast<int>(run.length),
-			static_cast<int>(expectedNumberOfGlyphs), &run.analysis, run.glyphs, run.clusters,
-			run.visualAttributes, &run.numberOfGlyphs);
-		if(hr != E_OUTOFMEMORY)
-			return hr;
-		delete[] run.glyphs;
-		delete[] run.visualAttributes;
-		expectedNumberOfGlyphs *= 2;
-		run.glyphs = new WORD[expectedNumberOfGlyphs];
-		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
-	}
 }
 
 /**
@@ -827,11 +804,12 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	HRESULT hr;
 	const TextViewer::Configuration& c = renderer_.getTextViewer().getConfiguration();
 	const Presentation& presentation = renderer_.getTextViewer().getPresentation();
-	::SCRIPT_ITEM* items = new ::SCRIPT_ITEM[text.length() + 1];
-	int numberOfItems;
+
+	// configure
 	manah::win32::AutoZero<::SCRIPT_CONTROL> control;
 	manah::win32::AutoZero<::SCRIPT_STATE> initialState;
 	initialState.uBidiLevel = (c.orientation == RIGHT_TO_LEFT) ? 1 : 0;
+//	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
 	initialState.fDisplayZWG = c.displaysShapingControls;
 	switch(c.digitSubstitutionType) {
@@ -851,8 +829,20 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 		hr = ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &control, &initialState);
 		break;
 	}
-	hr = ::ScriptItemize(text.data(), static_cast<int>(text.length()),
-		static_cast<int>(text.length() + 1), &control, &initialState, items, &numberOfItems);
+
+	// itemize
+	int expectedNumberOfRuns = max(min(static_cast<int>(text.length()), 8), 2);
+	::SCRIPT_ITEM* items;
+	int numberOfItems;
+	while(true) {
+		items = new ::SCRIPT_ITEM[expectedNumberOfRuns];
+		hr = ::ScriptItemize(text.data(), static_cast<int>(text.length()),
+			expectedNumberOfRuns, &control, &initialState, items, &numberOfItems);
+		if(hr != E_OUTOFMEMORY)	// expectedNumberOfRuns was enough...
+			break;
+		delete[] items;
+		expectedNumberOfRuns *= 2;
+	}
 	if(c.disablesDeprecatedFormatCharacters) {
 		for(int i = 0; i < numberOfItems; ++i) {
 			items[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
@@ -860,6 +850,7 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 		}
 	}
 
+	// style
 	bool mustDelete;
 	const LineStyle& styles = presentation.getLineStyle(lineNumber, mustDelete);
 	if(&styles != &LineStyle::NULL_STYLE) {
@@ -947,140 +938,158 @@ inline void LineLayout::reorder() throw() {
 	delete[] temp;
 }
 
-/**
- * Shapes all runs.
- * @return succeeded or not
- */
-inline bool LineLayout::shape() throw() {
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(!shape(*runs_[i])) {
-			dispose();
-			return false;
+namespace {
+	/**
+	 * Builds glyphs into the run structure.
+	 * @param dc the device context
+	 * @param text to generate glyphs
+	 * @param run the run to shape
+	 * @param[in,out] expectedNumberOfGlyphs the length of @a run.glyphs
+	 * @return the result of @c ScriptShape call
+	 */
+	HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) {
+		while(true) {
+			// グリフを格納するのに十分な run.glyphs が得られるまで繰り返す
+			HRESULT hr = ::ScriptShape(dc.get(), &run.cache, text, static_cast<int>(run.length),
+				static_cast<int>(expectedNumberOfGlyphs), &run.analysis, run.glyphs, run.clusters,
+				run.visualAttributes, &run.numberOfGlyphs);
+			if(hr != E_OUTOFMEMORY)
+				return hr;
+			delete[] run.glyphs;
+			delete[] run.visualAttributes;
+			expectedNumberOfGlyphs *= 2;
+			run.glyphs = new WORD[expectedNumberOfGlyphs];
+			run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
 		}
 	}
-	return true;
-}
-
-namespace {
-	inline bool searchMissingGlyph(const ClientDC& dc, ::SCRIPT_CACHE& cache, WORD* glyphs, size_t numberOfGlyphs) throw() {
+	inline bool includesMissingGlyphs(const DC& dc, Run& run) throw() {
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
-		if(FAILED(ScriptGetFontProperties(dc.get(), &cache, &fp)))
+		if(FAILED(ScriptGetFontProperties(dc.get(), &run.cache, &fp)))
 			return false;
-//		replace(glyphs, glyphs + numberOfGlyphs, fp.wgInvalid, fp.wgDefault);
-		return find(glyphs, glyphs + numberOfGlyphs, fp.wgDefault) != glyphs + numberOfGlyphs;
+		// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
+		for(int i = 0; i < run.numberOfGlyphs; ++i) {
+			const WORD glyph = run.glyphs[i];
+			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
+				return true;
+			else if(run.visualAttributes[i].fZeroWidth == 1 && scriptProperties.get(run.analysis.eScript).fComplex == 0)
+				return true;
+		}
+		return false;
+	}
+	inline HRESULT generateGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs, bool checkMissingGlyphs) {
+		HRESULT hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs);
+		if(SUCCEEDED(hr) && checkMissingGlyphs && includesMissingGlyphs(dc, run))
+			hr = S_FALSE;
+		return hr;
 	}
 } // namespace @0
 
 /**
- * Shapes the text. If the process was failed, the run should be devided into multiple smaller runs
- * to shape correctly. In this case, this returns the information about new sub-runs.
- * smaller runs to shape correctly,
- * @param run the run to be performed
- * @return null if the process was succeeded. otherwise, the array of the positions new sub-runs
- * start in the line
+ * Generates the glyphs for the text.
+ * @param run the run to generate glyphs
  */
-vector<length_t>* LineLayout::shape(Run& run) throw() {
+void LineLayout::shape(Run& run) throw() {
 	// TODO: call ISpecialCharacterDrawer.
 
 	assert(run.glyphs == 0);
 	HRESULT hr;
-	const String& line = getText();
+	const Char* const text = getText().data() + run.column;
 	ClientDC dc = const_cast<TextRenderer&>(renderer_).getTextViewer().getDC();
 	run.clusters = new WORD[run.length];
 	if(renderer_.getTextViewer().getConfiguration().inhibitsShaping)
 		run.analysis.eScript = SCRIPT_UNDEFINED;
 
-	// select the primary (default) font
-	HFONT primaryFont = (run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0) ?
-		renderer_.getFontForShapingControls() : renderer_.getFont(Script::COMMON, run.style.bold, run.style.italic);
-	HFONT oldFont = dc.selectObject(run.font = primaryFont);
+	HFONT oldFont;
+	size_t expectedNumberOfGlyphs;
+	if(run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0) {
+		// bidirectional format controls
+		expectedNumberOfGlyphs = run.length;
+		run.glyphs = new WORD[expectedNumberOfGlyphs];
+		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
+		oldFont = dc.selectObject(run.font = renderer_.getFontForShapingControls());
+		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs))) {
+			assert(run.analysis.eScript != SCRIPT_UNDEFINED);
+			run.analysis.eScript = SCRIPT_UNDEFINED;	// hmm...
+			hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs);
+			assert(SUCCEEDED(hr));
+		}
+		dc.selectObject(oldFont);
+	} else {
+		// we try candidate fonts in following order:
+		//
+		// 1. the primary font
+		// 2. the linked fonts
+		// 3. the fallback font
+		// 4. the primary font without shaping
+		// 5. the linked fonts without shaping
+		// 6. the fallback font without shaping
+		expectedNumberOfGlyphs = run.length * 3 / 2 + 16;
+		run.glyphs = new WORD[expectedNumberOfGlyphs];
+		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
+		int script = NOT_PROPERTY;	// script of the run for fallback
 
-/*	// check if the primary font supports ALL characters in this run
-	size_t expectedNumberOfGlyphs = run.length * 3 / 2 + 16;
-	run.glyphs = new WORD[expectedNumberOfGlyphs];
-	run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
-	hr = ::ScriptGetCMap(dc.get(), &run.cache, line.data() + run.column, static_cast<int>(run.length), 0, run.glyphs);
-	if(hr != S_FALSE)
-		hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);	// shaping should success
-	else {
-		::SCRIPT_FONTPROPERTIES fp;
-		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
-		::ScriptGetFontProperties(dc.get(), &run.cache, &fp);
-		const WORD* p = run.glyphs;
-		vector<length_t>* v = new vector<length_t>;
 		while(true) {
-			if(*p != fp.wgDefault)
-				p = find<const WORD*>(p, run.glyphs + run.length, fp.wgDefault);
-			else
-				p = find_if<const WORD*>(p, run.glyphs + run.length, not1(bind1st(equal_to<WORD>(), fp.wgDefault)));
-			if(p == run.glyphs + run.length)
+			// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
+			// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
+			manah::AutoBuffer<Char> safeText;
+			const bool textIsDanger = run.analysis.eScript == SCRIPT_UNDEFINED
+				&& find_if(text, text + run.length, surrogates::isSurrogate) != text + run.length;
+			if(textIsDanger) {
+				safeText.reset(new Char[run.length]);
+				wmemcpy(safeText.get(), text, run.length);
+				replace_if(safeText.get(), safeText.get() + run.length, surrogates::isSurrogate, REPLACEMENT_CHARACTER);
+			}
+			const Char* p = !textIsDanger ? text : safeText.get();
+			// 1/4. the primary font
+			oldFont = dc.selectObject(run.font = renderer_.getFont(Script::COMMON, run.style.bold, run.style.italic));
+			if(S_OK == (hr = generateGlyphs(dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 				break;
-			v->push_back(p - run.glyphs);
-		}
-		if(!v->empty())
-			return v;
-	}
-*/
-	// first shaping
-	hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
-	// check missing glyphs (it seems to be too strict...)
-	if(SUCCEEDED(hr) && searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
-		hr = USP_E_SCRIPT_NOT_IN_FONT;
-
-	// fallback if missing glyphs were found
-	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-		::ScriptFreeCache(&run.cache);
-
-		// try linked fonts
-		for(size_t i = 0; i < renderer_.getNumberOfLinkedFonts(); ++i) {
-			dc.selectObject(run.font = renderer_.getLinkedFont(i, run.style.bold, run.style.italic));
-			if(SUCCEEDED(hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs))) {
-				if(searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
-					hr = USP_E_SCRIPT_NOT_IN_FONT;
-				if(SUCCEEDED(hr))
-					break;
-			}
-		}
-
-		if(FAILED(hr)) {
-			// try fallback fonts based on the script
 			::ScriptFreeCache(&run.cache);
-			int script;
-			for(StringCharacterIterator i(line.data() + run.column, line.data() + run.column + run.length); !i.isLast(); i.next()) {
-				script = Script::of(i.current());
-				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+
+			// 2/5. the linked fonts
+			for(size_t i = 0; i < renderer_.getNumberOfLinkedFonts(); ++i) {
+				dc.selectObject(run.font = renderer_.getLinkedFont(i));
+				if(S_OK == (hr = generateGlyphs(dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 					break;
-			}
-			HFONT fallbackFont;
-			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-				fallbackFont = renderer_.getFont(script, run.style.bold, run.style.italic);
-			else if(runs_[0] != &run)
-				fallbackFont = find(runs_, runs_ + numberOfRuns_, &run)[-1]->font;
-			else
-				fallbackFont = run.font;	// sigh...
-			if(fallbackFont != run.font) {
-				dc.selectObject(run.font = fallbackFont);
-				if(SUCCEEDED(hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs))
-						&& searchMissingGlyph(dc, run.cache, run.glyphs, run.numberOfGlyphs))
-					hr = USP_E_SCRIPT_NOT_IN_FONT;
-			}
-			if(FAILED(hr)) {	// no shaping
 				::ScriptFreeCache(&run.cache);
-				run.analysis.eScript = SCRIPT_UNDEFINED;
-				dc.selectObject(run.font = primaryFont);
-				hr = buildGlyphs(dc.get(), line.data(), run, expectedNumberOfGlyphs);
 			}
+			if(hr == S_OK)
+				break;
+
+			// 3/6. the fallback font
+			if(script == NOT_PROPERTY) {
+				for(StringCharacterIterator i(text, text + run.length); !i.isLast(); i.next()) {
+					script = Script::of(i.current());
+					if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+						break;
+				}
+			}
+			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+				dc.selectObject(run.font = renderer_.getFont(script, run.style.bold, run.style.italic));
+			else if(runs_[0] != &run) {
+				// use the previous run setting (but this will copy the style of the font...)
+				const Run& previous = *find(runs_, runs_ + numberOfRuns_, &run)[-1];
+				run.analysis.eScript = previous.analysis.eScript;
+				dc.selectObject(run.font = previous.font);
+			} else
+				run.font = 0;
+			if(run.font != 0 && S_OK == (hr = generateGlyphs(dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
+				break;
+			::ScriptFreeCache(&run.cache);
+
+			if(run.analysis.eScript != SCRIPT_UNDEFINED)
+				run.analysis.eScript = SCRIPT_UNDEFINED;	// disable shaping
+			else
+				assert(false);	// giveup...orz
 		}
-		if(FAILED(hr))
-			return 0;
 	}
+
 	run.advances = new int[run.numberOfGlyphs];
 	run.glyphOffsets = new ::GOFFSET[run.numberOfGlyphs];
 	hr = ::ScriptPlace(dc.get(), &run.cache, run.glyphs, run.numberOfGlyphs,
 			run.visualAttributes, &run.analysis, run.advances, run.glyphOffsets, &run.width);
 	dc.selectObject(oldFont);
-	return 0;
 }
 
 /// Locates the wrap points and resolves tab expansions.
@@ -1218,6 +1227,17 @@ void LineLayout::wrap() throw() {
 
 
 // LineLayout::StyledSegmentIterator ////////////////////////////////////////
+
+/**
+ * Private constructor.
+ * @param start
+ */
+LineLayout::StyledSegmentIterator::StyledSegmentIterator(const Run*& start) throw() : p_(&start) {
+}
+
+/// Copy-constructor.
+LineLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) throw() : p_(rhs.p_) {
+}
 
 LineLayout::StyledSegmentIterator::reference LineLayout::StyledSegmentIterator::dereference() const throw() {
 	return **p_;
@@ -1401,7 +1421,7 @@ inline void LineLayoutBuffer::invalidateLineLayout(length_t line) throw() {
 }
 
 /**
- * @fn void LineLayoutBuffer#layoutDeleted(length_t first, length_t last, length_t sublines)
+ * @fn void ascension::viewers::LineLayoutBuffer::layoutDeleted(length_t, length_t, length_t)
  * The layouts of lines were deleted.
  * @param first the start of lines to be deleted
  * @param last the end of lines (exclusive) to be deleted
@@ -1409,14 +1429,14 @@ inline void LineLayoutBuffer::invalidateLineLayout(length_t line) throw() {
  */
 
 /**
- * @fn void LineLayoutBuffer#layoutInserted(length_t first, length_t last)
+ * @fn void ascension::viewers::LineLayoutBuffer::layoutInserted(length_t, length_t)
  * The new layouts of lines were inserted.
  * @param first the start of lines to be inserted
  * @param last the end of lines (exclusive) to be inserted
  */
 
 /**
- * @fn void LineLayoutBuffer#layoutModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool documentChanged)
+ * @fn void ascension::viewers::LineLayoutBuffer::layoutModified(length_t, length_t, length_t, length_t, bool)
  * The layouts of lines were modified.
  * @param first the start of the lines to be modified
  * @param last the end of the lines (exclusive) to be modified
@@ -1636,11 +1656,9 @@ HFONT FontSelector::getFontInFontset(const Fontset& fontset, bool bold, bool ita
 		dc->getTextMetrics(tm);
 		dc->selectObject(oldFont);
 		// adjust to the primary ascent and descent
-		if(tm.tmAscent > ascent_ || tm.tmDescent > descent_) {
+		if(tm.tmAscent > ascent_ && tm.tmAscent > 0) {	// we don't consider the descents...
 			::DeleteObject(font);
-			double ratio = (tm.tmAscent - ascent_ > tm.tmDescent - descent_) ?
-				static_cast<double>(ascent_) / static_cast<double>(tm.tmAscent)
-				: static_cast<double>(descent_) / static_cast<double>(tm.tmDescent);
+			const double ratio = static_cast<double>(ascent_) / static_cast<double>(tm.tmAscent);
 			font = ::CreateFontW(static_cast<int>(-static_cast<double>(ascent_ + descent_) * ratio),
 				0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
 				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);

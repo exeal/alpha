@@ -33,6 +33,9 @@ namespace alpha {
 		void	add(const std::basic_string<WCHAR>& fileName, ascension::encodings::CodePage cp);
 		void	clear();
 		void	remove(std::size_t index);
+		// persistent
+		void	load();
+		void	save();
 	private:
 		void	updateMenu();
 
@@ -40,7 +43,7 @@ namespace alpha {
 		const int startID_;						// メニュー ID の先頭の値
 		std::list<MRU> fileNames_;				// フルパスのリスト
 		manah::win32::ui::PopupMenu	popupMenu_;	// ポップアップメニュー
-		std::size_t limitCount_;				// 項目数の上限 (4以上16以下)
+		std::size_t limitCount_;				// 項目数の上限 (4 以上 16 以下)
 	};
 
 

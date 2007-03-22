@@ -62,6 +62,24 @@ const MRU& MRUManager::getFileInfoAt(size_t index) const {
 	return *it;
 }
 
+/// Loads the list from INI file.
+void MRUManager::load() {
+	Alpha& app = Alpha::getInstance();
+	wchar_t keyName[30];
+	fileNames_.clear();
+	for(uint i = 0; i < limitCount_; ++i) {
+		MRU file;
+		swprintf(keyName, L"pathName(%u)", i);
+		file.fileName = app.readStringProfile(L"MRU", keyName);
+		if(file.fileName.empty())
+			break;
+		swprintf(keyName, L"codePage(%u)", i);
+		file.codePage = app.readIntegerProfile(L"MRU", keyName, ascension::encodings::CPEX_AUTODETECT_USERLANG);
+		fileNames_.push_back(file);
+	}
+	updateMenu();
+}
+
 /// Removes the specified item.
 void MRUManager::remove(size_t index) {
 	if(index >= fileNames_.size())
@@ -71,6 +89,20 @@ void MRUManager::remove(size_t index) {
 		++it;
 	fileNames_.erase(it);
 	updateMenu();
+}
+
+/// Write the list to INI file.
+void MRUManager::save() {
+	Alpha& app = Alpha::getInstance();
+	wchar_t keyName[30];
+	list<MRU>::const_iterator it(fileNames_.begin());
+	for(size_t i = 0; it != fileNames_.end(); ++i, ++it) {
+		swprintf(keyName, L"pathName(%u)", i);
+		app.writeStringProfile(L"MRU", keyName, it->fileName.c_str());
+		swprintf(keyName, L"codePage(%u)", i);
+		app.writeIntegerProfile(L"MRU", keyName, it->codePage);
+	}
+	app.writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
 }
 
 /// Sets the maximum number of items.

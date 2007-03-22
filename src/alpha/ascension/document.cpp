@@ -684,7 +684,7 @@ bool Document::checkTimeStamp() {
  * Deletes the specified region of the document.
  *
  * This method sets the modification flag and calls the listeners'
- * @c #IListener#documentAboutToBeChanged and @c #IListener#documentChanged.
+ * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
  *
  * If the specified region intersects the inaccessible region, the union is not deleted.
  * @param region the region to be deleted
@@ -848,7 +848,7 @@ Position Document::insertFromStream(const Position& position, InputStream& in) {
  * Inserts the text into the specified position. For detail, see two-parameter version of this method.
  *
  * This method sets the modification flag and calls the listeners'
- * @c #IListener#documentAboutToBeChanged and @c #IListener#documentChanged.
+ * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
 
  * @param position the position
  * @param first the start of the text
@@ -1136,7 +1136,7 @@ void Document::narrow(const Region& region) {
  *
  * 既定では記録状態になっている。設定を変更すると記録中の内容は破棄される
  * @param record 記録する場合 true
- * @see #isRecordingOperations, #undo, #redo
+ * @see #isRecordingOperation, #undo, #redo
  */
 void Document::recordOperations(bool record) {
 	if(!(recordingOperations_ = record))
@@ -1587,7 +1587,7 @@ void Document::setFilePathName(const TCHAR* pathName) {
  * Sets the modification flag of the document.
  * Derived classes can hook changes of the flag by overriding this method.
  * @param modified set true to make the document modfied
- * @see #isModified, #IStateListener#documentModificationSignChanged
+ * @see #isModified, IDocumentStateListener#documentModificationSignChanged
  */
 void Document::setModified(bool modified /* = true */) throw() {
 	const bool was = modified_;
@@ -1869,14 +1869,13 @@ void NullPartitioner::doInstall() throw() {
 
 /**
  * Makes the specified path name real. If the path is UNC, the case of @a pathName will not be
- * fixed. All slashes will be replaced by backslashes.
+ * fixed. All slashes will be replaced by backslashes. Even if the path name is not exist, this
+ * method will not fail.
  * @param pathName the absolute path name
- * @param[out] dest the result real path name
- * @return false if @a pathName is not exist or invalid
- * @throw std#invalid_argument @a pathName is not exist
+ * @return the result real path name
  * @see comparePathNames
  */
-wstring text::canonicalizePathName(const wchar_t* pathName) {
+wstring text::canonicalizePathName(const wchar_t* pathName) throw() {
 	wchar_t path[MAX_PATH];
 	resolveRelativePathName(pathName, path);
 
@@ -1931,7 +1930,7 @@ wstring text::canonicalizePathName(const wchar_t* pathName) {
  * @param s1 the first path name
  * @param s2 the second path name
  * @return true if @a s1 and @a s2 are equivalent
- * @throw std#invalid_argument either file is not exist
+ * @throw std#invalid_argument either file name is null
  * @see canonicalizePathName
  */
 bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
@@ -1952,11 +1951,8 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
 		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
-		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0) {
-			if(!toBoolean(::PathFileExists(s1)))
-				throw invalid_argument("the specified file is not exist.");
-			return true;
-		}
+		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
+			return toBoolean(::PathFileExists(s1));
 	}
 
 	// ボリューム情報を使う
@@ -1964,12 +1960,12 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 	if(!f1.isOpened())
 		f1.open(s1, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
 	if(!f1.isOpened())
-		throw invalid_argument("the specified file is not exist.");
+		return false;
 	File<true> f2(s2, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
 	if(!f2.isOpened())
 		f2.open(s2, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
 	if(!f2.isOpened())
-		throw invalid_argument("the specified file is not exist.");
+		return false;
 	::BY_HANDLE_FILE_INFORMATION fi1;
 	if(toBoolean(::GetFileInformationByHandle(f1.get(), &fi1))) {
 		::BY_HANDLE_FILE_INFORMATION fi2;
