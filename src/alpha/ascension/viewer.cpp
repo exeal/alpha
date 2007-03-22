@@ -104,27 +104,6 @@ const Colors Colors::STANDARD;
 const LineStyle LineStyle::NULL_STYLE = {0, 0};
 
 
-// TextViewer::CloneIterator ////////////////////////////////////////////////
-
-class TextViewer::CloneIterator {
-public:
-	explicit CloneIterator(TextViewer& view) throw() :
-		original_(view.originalView_), it_(view.originalView_->clones_->begin()), isHead_(true) {}
-	TextViewer& get() const throw() {assert(!isEnd()); return isHead_ ? *original_ : **it_;}
-	bool isEnd() const throw() {return !isHead_ && it_ == original_->clones_->end();}
-	void next() {
-		if(isHead_) isHead_ = false;
-		else if(it_ != original_->clones_->end()) ++it_;
-	}
-	TextViewer& operator*() const throw() {return get();}
-	TextViewer* operator->() throw() {return &get();}
-private:
-	TextViewer* original_;
-	std::set<TextViewer*>::iterator it_;
-	bool isHead_;
-};
-
-
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 // TextViewer::AccessibleProxy //////////////////////////////////////////////
@@ -283,17 +262,21 @@ namespace {
 // TextViewer ///////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::viewers::TextViewer The view of Ascension framework.
+ * @class ascension::viewers::TextViewer
  *
- * @c TextViewer displays the content of the document, manipulates the document with the caret and
- * selection, and provides other visual presentations.
+ * The view of Ascension framework. @c TextViewer displays the content of the document, manipulates
+ * the document with the caret and selection, and provides other visual presentations.
  *
- * <h3>双方向テキスト関連のウィンドウスタイル</h3>
+ * @c TextViewer provides two methods #freeze and #unfreeze to freeze of the screen of the window.
+ * While the viewer is frozen, the window does not redraw the content.
+ * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
+ *
+ * <h3>Window styles related to bidirectional</h3>
  *
  * テキストを右寄せで表示するための @c WS_EX_RIGHT 、右から左に表示するための @c WS_EX_RTLREADING
  * はいずれも無視される。これらの設定には代わりに @c LayoutSettings の該当メンバを使用しなければならない
  *
- * また @c WS_EX_LAYOUTRTL も使用できない。このスタイルを設定した場合の動作は未定義である
+ * @c WS_EX_LAYOUTRTL is also not supported. The result is undefined if you used.
  *
  * 垂直スクロールバーを左側に表示するにはクライアントが @c WS_EX_LEFTSCROLLBAR を設定しなければならない
  *
@@ -301,10 +284,6 @@ namespace {
  *
  * 垂直ルーラ (インジケータマージンと行番号) の位置はテキストが左寄せであれば左端、
  * 右寄せであれば右端になる
- *
- * @c TextViewer provides two methods #freeze and #unfreeze to freeze of the screen of the window.
- * While the viewer is frozen, the window does not redraw the content.
- * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
  *
  * <h3>Subclassing</h3>
  *
@@ -339,6 +318,24 @@ namespace {
 
 // local helpers
 namespace {
+	class TextViewerCloneIterator {
+	public:
+		explicit TextViewerCloneIterator(TextViewer& original, set<TextViewer*>& clones) throw() :
+			original_(original), clones_(clones), current_(clones_.begin()), isHead_(true) {}
+		TextViewer& get() const throw() {assert(!isEnd()); return isHead_ ? original_ : **current_;}
+		bool isEnd() const throw() {return !isHead_ && current_ == clones_.end();}
+		void next() {
+			if(isHead_) isHead_ = false;
+			else if(current_ != clones_.end()) ++current_;
+		}
+		TextViewer& operator*() const throw() {return get();}
+		TextViewer* operator->() throw() {return &get();}
+	private:
+		TextViewer& original_;
+		std::set<TextViewer*>& clones_;
+		std::set<TextViewer*>::iterator current_;
+		bool isHead_;
+	};
 	inline void abortIncrementalSearch(TextViewer& viewer) throw() {
 		if(texteditor::Session* session = viewer.getDocument().getSession()) {
 			if(session->getIncrementalSearcher().isRunning())
@@ -624,7 +621,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	renderer_->addVisualLinesListener(*this);
 	initializeWindow(originalView_ != this);
 
-#ifdef _DEBUG
+#if 0
 	// partitioning test
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
@@ -818,7 +815,7 @@ bool TextViewer::endAutoScroll() {
 
 /**
  * Freezes the drawing of the viewer.
- * @param forAllClones true to freeze also all clones of the viewer
+ * @param forAllClones set true to freeze also all clones of the viewer
  * @see #isFrozen, #unfreeze
  */
 void TextViewer::freeze(bool forAllClones /* = true */) {
@@ -826,7 +823,7 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 	if(!forAllClones)
 		++freezeInfo_.count;
 	else {
-		for(CloneIterator i(*this); !i.isEnd(); i.next())
+		for(TextViewerCloneIterator i(*this, *clones_); !i.isEnd(); i.next())
 			++i.get().freezeInfo_.count;
 	}
 }
@@ -883,13 +880,17 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 /**
  * Returns the point nearest from the specified document position.
  * @param position the document position. can be outside of the window
+ * @param fullSearchY if this is false, this method stops at top or bottom of the client area.
+ * otherwise, the calculation of y-coordinate is performed completely. but in this case, may be
+ * very slow. see the description of return value
  * @param edge the edge of the character
- * @return the client coordinates of the point. about the y-coordinate of the point,
- * if @a position.line is outside of the client area, the result is 32767 (upward) or -32768 (downward)
+ * @return the client coordinates of the point. about the y-coordinate of the point, if
+ * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
+ * (for upward) or -32768 (for downward)
  * @throw BadPositionException @a position is outside of the document
  * @see #getCharacterForClientXY, #hitTest, LineLayout#getLocation
  */
-::POINT TextViewer::getClientXYForCharacter(const Position& position, LineLayout::Edge edge) const {
+::POINT TextViewer::getClientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();
 	::POINT pt;
 	if(renderer_->isLineCached(position.line))
@@ -899,7 +900,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 		pt = layout->getLocation(position.column, edge);
 	}
 	pt.x -= getDisplayXOffset();
-	const int y = mapLineToClientY(position.line, false);
+	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
 		pt.y = y;
 	else
@@ -1316,10 +1317,13 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 	} else if(!fullSearch)
 		return -32768;
 	else {
-		const int lineSpan = renderer_->getLinePitch();
-		int y = margins.top - static_cast<int>(lineSpan * scrollInfo_.firstVisibleSubline);
-		for(length_t i = scrollInfo_.firstVisibleLine - 1; i >= line; --i)
-			y -= static_cast<int>(renderer_->getNumberOfSublinesOfLine(i) * lineSpan);
+		const int linePitch = renderer_->getLinePitch();
+		int y = margins.top - static_cast<int>(linePitch * scrollInfo_.firstVisibleSubline);
+		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
+			y -= static_cast<int>(renderer_->getNumberOfSublinesOfLine(i) * linePitch);
+			if(i == line)
+				break;
+		}
 		return y;
 	}
 
@@ -2168,20 +2172,16 @@ void TextViewer::onTimer(UINT_PTR eventID, ::TIMERPROC) {
 		killTimer(TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 	} else if(eventID == TIMERID_AUTOSCROLL) {	// 自動スクロール
-		::POINT pt;
-
 		killTimer(TIMERID_AUTOSCROLL);
-		::GetCursorPos(&pt);
-		screenToClient(pt);
-
-		const long	yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->getLinePitch();
-//		const long	xScrollDegree = (pt.x - autoScroll_.indicatorPosition.x) / presentation_.getLineHeight();
-//		const long	scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
+		const ::POINT pt = getCursorPosition();
+		const long yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->getLinePitch();
+//		const long xScrollDegree = (pt.x - autoScroll_.indicatorPosition.x) / presentation_.getLineHeight();
+//		const long scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
 		if(yScrollDegree != 0 /*&& abs(yScrollDegree) >= abs(xScrollDegree)*/)
-			onVScroll((yScrollDegree > 0) ? SB_LINEDOWN : SB_LINEUP, 0, 0);
+			scroll(0, yScrollDegree > 0 ? +1 : -1, true);
 //		else if(xScrollDegree != 0)
-//			onHScroll((xScrollDegree > 0) ? SB_RIGHT : SB_LEFT, 0, 0);
+//			scroll(xScrollDegree > 0 ? +1 : -1, 0, true);
 
 		if(yScrollDegree != 0)
 			setTimer(TIMERID_AUTOSCROLL, 500 / static_cast<uint>((pow(2, abs(yScrollDegree) / 2))), 0);
@@ -2665,7 +2665,7 @@ void TextViewer::unfreeze(bool forAllClones /* = true */) {
 		if(freezeInfo_.count > 0 && --freezeInfo_.count == 0)
 			internalUnfreeze();
 	} else {
-		for(CloneIterator i(*this); !i.isEnd(); i.next()) {
+		for(TextViewerCloneIterator i(*this, *clones_); !i.isEnd(); i.next()) {
 			if(i->freezeInfo_.count > 0 && --i->freezeInfo_.count == 0)
 				i->internalUnfreeze();
 		}
@@ -2707,7 +2707,7 @@ void TextViewer::updateCaretPosition() {
 	if(!hasFocus() || isFrozen())
 		return;
 
-	::POINT pt = getClientXYForCharacter(getCaret(), LineLayout::LEADING);
+	::POINT pt = getClientXYForCharacter(getCaret(), true, LineLayout::LEADING);
 	const ::RECT margins = getTextAreaMargins();
 	::RECT textArea;
 	getClientRect(textArea);
@@ -2731,9 +2731,15 @@ void TextViewer::updateIMECompositionWindowPosition() {
 	::COMPOSITIONFORM cf;
 	if(HIMC imc = ::ImmGetContext(get())) {
 		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), LineLayout::LEADING);
+		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), false, LineLayout::LEADING);
 //		cf.ptCurrentPos.x -= 1;
-		cf.ptCurrentPos.y -= 1;
+		if(cf.ptCurrentPos.y != 32767 && cf.ptCurrentPos.y != -32768)
+			cf.ptCurrentPos.y -= 1;
+		else {
+			::RECT clientRect;
+			getClientRect(clientRect);
+			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? clientRect.top : clientRect.bottom;
+		}
 		::ImmSetCompositionWindow(imc, &cf);
 		::ImmReleaseContext(get(), imc);
 	}
@@ -3729,7 +3735,6 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 		if(s.get() != 0)
 			numberOfDraggedRectangleLines_ = getNumberOfLines(*s) - 1;
 	}
-	DumpContext() << numberOfDraggedRectangleLines_ << L"\n";
 
 	oleDragging_ = true;
 	viewer_->setFocus();
@@ -3756,7 +3761,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DW
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
 	const Position p(viewer_->getCharacterForClientXY(caretPoint, true));
-	viewer_->setCaretPosition(viewer_->getClientXYForCharacter(p, LineLayout::LEADING));
+	viewer_->setCaretPosition(viewer_->getClientXYForCharacter(p, true, LineLayout::LEADING));
 
 	// drop rectangle text into bidirectional line is not supported...
 	const length_t lines = min(viewer_->getDocument().getNumberOfLines(), p.line + numberOfDraggedRectangleLines_);

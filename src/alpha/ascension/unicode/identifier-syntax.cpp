@@ -90,7 +90,6 @@ IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER
  * Constructor.
  * @param type the classification type
  * @param ignoreCase set true to perform caseless match
- * @param caseFolding the case folding type for caseless match
  * @param equivalenceType the decomposition type for canonical/compatibility equivalents
  */
 IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase /* = false */

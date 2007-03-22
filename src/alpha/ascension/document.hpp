@@ -1182,7 +1182,7 @@ inline bool Document::isBoundToFile() const throw() {return getFilePathName() !=
 
 /**
  * Returns true if the document has been modified.
- * @see #setModified, #IStateListener#documentModificationSignChanged
+ * @see #setModified, IDocumentStateListener#documentModificationSignChanged
  */
 inline bool Document::isModified() const throw() {return modified_;}
 

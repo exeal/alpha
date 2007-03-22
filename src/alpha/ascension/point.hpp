@@ -264,7 +264,7 @@ namespace ascension {
 		 *
 		 * 行選択および単語選択は、選択の作成および拡張時にアンカーとキャレットを行境界や単語境界に束縛する機能で、
 		 * @c #extendSelection メソッドで実際にこれらの点が移動する位置を制限する。
-		 * また、この場合 @c #expandSelection を呼び出すとアンカーが自動的に移動する。
+		 * また、この場合 @c #extendSelection を呼び出すとアンカーが自動的に移動する。
 		 * @c #beginLineSelection 、@c #beginWordSelection でこれらのモードに入ることができ、
 		 * @c #restoreSelectionMode で通常状態に戻ることができる。
 		 * また、これらのモードで @c #moveTo か @c #select を使っても通常状態に戻る

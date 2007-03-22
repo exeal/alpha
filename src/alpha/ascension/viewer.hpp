@@ -535,7 +535,8 @@ namespace ascension {
 			void	enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
 			text::Position	getCharacterForClientXY(const ::POINT& pt, bool nearestLeading) const throw();
-			::POINT			getClientXYForCharacter(const text::Position& position, LineLayout::Edge edge = LineLayout::LEADING) const;
+			::POINT			getClientXYForCharacter(const text::Position& position,
+								bool fullSearchY, LineLayout::Edge edge = LineLayout::LEADING) const;
 			// utilities
 			void			getFirstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw();
 			length_t		getNumberOfVisibleLines() const throw();
@@ -661,7 +662,6 @@ namespace ascension {
 
 			// 内部クラス
 		private:
-			class CloneIterator;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			class AccessibleProxy;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */

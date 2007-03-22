@@ -420,22 +420,7 @@ bool Alpha::initInstance(int showCommand) {
 
 	// MRU リストの作成
 	mruManager_ = new MRUManager(readIntegerProfile(L"File", L"mruLimit", 8), CMD_FILE_MRULIST_START);
-	wchar_t keyName[30];
-	stack<MRU> files;
-	for(uint i = 0; ; ++i) {
-		MRU file;
-		swprintf(keyName, L"pathName(%u)", i);
-		file.fileName = readStringProfile(L"MRU", keyName);
-		if(file.fileName.empty())
-			break;
-		swprintf(keyName, L"codePage(%u)", i);
-		file.codePage = readIntegerProfile(L"MRU", keyName, CPEX_AUTODETECT_USERLANG);
-		files.push(file);
-	}
-	while(!files.empty()) {
-		mruManager_->add(files.top().fileName, files.top().codePage);
-		files.pop();
-	}
+	mruManager_->load();
 
 	// ステータスバーの作成
 	statusBar_.create(applicationWindow.get(), DefaultWindowRect(), 0, IDC_STATUSBAR,
@@ -598,8 +583,8 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 /// @see manah#windows#Alpha#preTranslateMessage
 bool Alpha::preTranslateMessage(const MSG& msg) {
 	// コマンドに割り当てられているキー組み合わせをここで捕捉する
-	if(msg.hwnd == buffers_->getActiveView().get()) {
-		if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
+	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
+		if(msg.hwnd == buffers_->getActiveView().get()) {
 			KeyModifier modifiers = 0;
 			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))
 				modifiers |= KM_CTRL;
@@ -608,7 +593,9 @@ bool Alpha::preTranslateMessage(const MSG& msg) {
 			if(msg.message == WM_SYSKEYDOWN || toBoolean(::GetKeyState(VK_MENU) & 0x8000))
 				modifiers |= KM_ALT;
 			return handleKeyDown(static_cast<VirtualKey>(msg.wParam), modifiers);
-		} else if(msg.message == WM_SYSCHAR) {
+		}
+	} else if(msg.message == WM_SYSCHAR) {
+		if(msg.hwnd == buffers_->getActiveView().get()) {
 			// キー組み合わせがキーボードスキームに登録されているか調べる。
 			// 登録されていれば既定の処理 (メニューのアクティベーション) を妨害
 			const VirtualKey key = LOBYTE(::VkKeyScanExW(static_cast<WCHAR>(msg.wParam), ::GetKeyboardLayout(0)));
@@ -772,18 +759,7 @@ void Alpha::saveINISettings() {
 	writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
 
 	// MRU リストの保存
-	for(unsigned short i = 0; ; ++i) {
-		swprintf(keyName, L"pathName(%u)", i);
-		if(i == mruManager_->getCount()) {
-			writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
-			break;
-		} else {
-			const MRU& file = mruManager_->getFileInfoAt(i);
-			writeStringProfile(L"MRU", keyName, file.fileName.c_str());
-			swprintf(keyName, L"codePage(%u)", i);
-			writeIntegerProfile(L"MRU", keyName, file.codePage);
-		}
-	}
+	mruManager_->save();
 
 	// 検索文字列履歴の保存
 	const searcher::TextSearcher& s = buffers_->getEditorSession().getTextSearcher();
@@ -1301,7 +1277,8 @@ void Alpha::onInitMenuPopup(HMENU menu, UINT, bool sysMenu) {
 			CMD_TOOL_DOCTYPELIST_START + static_cast<UINT>(types.find(activeBuffer.getDocumentType())));
 	}
 */	else {
-		Menu popup(menu);
+		Menu popup;
+		popup.attach(menu);
 		const int c = popup.getNumberOfItems();
 		for(int i = 0; i < c; ++i) {
 			const CommandID id = popup.getID(i);

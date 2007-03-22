@@ -108,6 +108,8 @@ namespace ascension {
 		class TextViewer;
 		class TextRenderer;
 
+		namespace internal {struct Run;}
+
 		/**
 		 * @c LineLayout represents a layout of styled line text. Provides support for drawing,
 		 * cursor navigation, hit testing, text wrapping, etc.
@@ -115,8 +117,6 @@ namespace ascension {
 		 * @see TextRenderer#getLineLayout
 		 */
 		class LineLayout : public manah::Noncopyable {
-		private:
-			struct Run;
 		public:
 			/// Edge of a character.
 			enum Edge {
@@ -136,8 +136,8 @@ namespace ascension {
 				void decrement() {--p_;}
 				bool equals(const StyledSegmentIterator& rhs) const {return p_ == rhs.p_;}
 			private:
-				explicit StyledSegmentIterator(const Run*& start) throw();
-				const Run** p_;
+				explicit StyledSegmentIterator(const internal::Run*& start) throw();
+				const internal::Run** p_;
 				friend class LineLayout;
 			};
 
@@ -175,26 +175,23 @@ namespace ascension {
 			void	dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */
 		private:
-			static HRESULT			buildGlyphs(HDC dc, const wchar_t* line, Run& run, size_t& expectedNumberOfGlyphs) throw();
-			void					dispose() throw();
-			void					expandTabsWithoutWrapping() throw();
-			std::size_t				findRunForPosition(length_t column) const throw();
-			int						getNextTabStop(int x, Direction direction) const throw();
-			int						getNextTabStopBasedLeftEdge(int x, bool right) const throw();
-			const String&			getText() const throw();
-			void					itemize(length_t lineNumber) throw();
-//			void					justify() throw();
-			void					merge(const ::SCRIPT_ITEM items[],
-										std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
-			void					reorder() throw();
-//			void					rewrap();
-			bool					shape() throw();
-			std::vector<length_t>*	shape(Run& run) throw();
-			void					wrap() throw();
+			void			dispose() throw();
+			void			expandTabsWithoutWrapping() throw();
+			std::size_t		findRunForPosition(length_t column) const throw();
+			int				getNextTabStop(int x, Direction direction) const throw();
+			int				getNextTabStopBasedLeftEdge(int x, bool right) const throw();
+			const String&	getText() const throw();
+			void			itemize(length_t lineNumber) throw();
+//			void			justify() throw();
+			void			merge(const ::SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
+			void			reorder() throw();
+//			void			rewrap();
+			void			shape(internal::Run& run) throw();
+			void			wrap() throw();
 		private:
 			const TextRenderer& renderer_;
 			length_t lineNumber_;
-			Run** runs_;
+			internal::Run** runs_;
 			std::size_t numberOfRuns_;
 			length_t* sublineOffsets_;		// size is numberOfSublines_
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
@@ -586,15 +583,6 @@ inline const length_t* LineLayout::getSublineOffsets() const throw() {return sub
 
 /// Returns if the layout has been disposed.
 inline bool LineLayout::isDisposed() const throw() {return runs_ == 0;}
-
-/**
- * Private constructor.
- * @param start
- */
-inline LineLayout::StyledSegmentIterator::StyledSegmentIterator(const Run*& start) throw() : p_(&start) {}
-
-/// Copy-constructor.
-inline LineLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) throw() : p_(rhs.p_) {}
 
 /// Asignment operator.
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) throw() {p_ = rhs.p_;}
