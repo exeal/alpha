@@ -213,7 +213,7 @@ namespace alpha {
 	inline std::size_t EditorPane::getCount() const throw() {return views_.size();}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->get() : 0;}
+	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getHandle() : 0;}
 
 	/// 表示されているバッファを返す
 	inline Buffer& EditorPane::getVisibleBuffer() const {return getVisibleView().getDocument();}

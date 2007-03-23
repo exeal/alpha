@@ -184,11 +184,11 @@ void Alpha::changeFont() {
 	AutoZeroLS<::CHOOSEFONTW> cf;
 
 	getTextEditorFont(font);
-	cf.hwndOwner = getMainWindow().get();
+	cf.hwndOwner = getMainWindow().getHandle();
 	cf.lpLogFont = &font;
 	cf.lpfnHook = chooseFontHookProc;
 	cf.Flags = CF_APPLY | CF_ENABLEHOOK | CF_INITTOLOGFONTSTRUCT | CF_NOVERTFONTS | CF_SCREENFONTS;
-	cf.hInstance = get();
+	cf.hInstance = getHandle();
 
 	if(toBoolean(::ChooseFontW(&cf))) {
 		font.lfItalic = false;
@@ -298,7 +298,7 @@ void Alpha::getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw
  */
 bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
 	if(key == VK_MENU && modifiers == 0) {	// [Alt] のみ -> メニューをアクティブにする
-		getMainWindow().sendMessage(WM_INITMENU, reinterpret_cast<WPARAM>(getMainWindow().getMenu()->get()));
+		getMainWindow().sendMessage(WM_INITMENU, reinterpret_cast<WPARAM>(getMainWindow().getMenu().getHandle()));
 		return true;
 	} else if(key == VK_CONTROL || key == VK_MENU || key == VK_SHIFT)	// 修飾キーが単独で押された -> 無視
 		return false;
@@ -341,7 +341,7 @@ bool Alpha::initInstance(int showCommand) {
 	wc.lpfnWndProc = Alpha::appWndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = get();
+	wc.hInstance = getHandle();
 	wc.hIcon = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
 	wc.hIconSm = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR));
 	wc.hCursor = loadStandardCursor(IDC_ARROW);
@@ -388,14 +388,14 @@ bool Alpha::initInstance(int showCommand) {
 	}
 
 	// トップレベルウィンドウ
-	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(get()),
+	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(getHandle()),
 			DefaultWindowRect(), 0, /*WS_VISIBLE |*/ WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW))
 		return false;
 	setMainWindow(applicationWindow);
 
 	// レバーの作成
 	::REBARINFO rbi = {sizeof(::REBARINFO), 0, 0};
-	rebar_.create(applicationWindow.get(), DefaultWindowRect(), 0, 0,
+	rebar_.create(applicationWindow.getHandle(), DefaultWindowRect(), 0, 0,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
 		WS_EX_TOOLWINDOW);
 	rebar_.setBarInfo(rbi);
@@ -423,7 +423,7 @@ bool Alpha::initInstance(int showCommand) {
 	mruManager_->load();
 
 	// ステータスバーの作成
-	statusBar_.create(applicationWindow.get(), DefaultWindowRect(), 0, IDC_STATUSBAR,
+	statusBar_.create(applicationWindow.getHandle(), DefaultWindowRect(), 0, IDC_STATUSBAR,
 		WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_BOTTOM | CCS_NODIVIDER | SBARS_SIZEGRIP | SBT_TOOLTIPS);
 	updateStatusBarPaneSize();
 
@@ -460,8 +460,8 @@ bool Alpha::initInstance(int showCommand) {
 //	outputWindow.writeLine(OTT_GENERAL, IDS_APPFULLVERSION);
 
 	// ツールダイアログの作成
-	searchDialog_->doModeless(applicationWindow.get(), false);
-	pushModelessDialog(searchDialog_->get());
+	searchDialog_->doModeless(applicationWindow.getHandle(), false);
+	pushModelessDialog(searchDialog_->getHandle());
 	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1))) {
 		searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
 		searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
@@ -584,7 +584,7 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 bool Alpha::preTranslateMessage(const MSG& msg) {
 	// コマンドに割り当てられているキー組み合わせをここで捕捉する
 	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
-		if(msg.hwnd == buffers_->getActiveView().get()) {
+		if(msg.hwnd == buffers_->getActiveView().getHandle()) {
 			KeyModifier modifiers = 0;
 			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))
 				modifiers |= KM_CTRL;
@@ -595,7 +595,7 @@ bool Alpha::preTranslateMessage(const MSG& msg) {
 			return handleKeyDown(static_cast<VirtualKey>(msg.wParam), modifiers);
 		}
 	} else if(msg.message == WM_SYSCHAR) {
-		if(msg.hwnd == buffers_->getActiveView().get()) {
+		if(msg.hwnd == buffers_->getActiveView().getHandle()) {
 			// キー組み合わせがキーボードスキームに登録されているか調べる。
 			// 登録されていれば既定の処理 (メニューのアクティベーション) を妨害
 			const VirtualKey key = LOBYTE(::VkKeyScanExW(static_cast<WCHAR>(msg.wParam), ::GetKeyboardLayout(0)));
@@ -870,12 +870,12 @@ void Alpha::setStatusText(const wchar_t* text, HFONT font /* = 0 */) {
 
 /// メニューの初期化
 void Alpha::setupMenus() {
-	auto_ptr<Menu> menuBar = getMainWindow().getMenu();
+	Menu menuBar(getMainWindow().getMenu());
 	while(true) {
-		const UINT c = menuBar->getNumberOfItems();
+		const UINT c = menuBar.getNumberOfItems();
 		if(c == 0 || c == -1)
 			break;
-		menuBar->remove<Menu::BY_POSITION>(0);
+		menuBar.remove<Menu::BY_POSITION>(0);
 	}
 
 	const Menu::SeparatorItem sep;
@@ -883,7 +883,7 @@ void Alpha::setupMenus() {
 #define ITEM(id) Menu::StringItem(id, commandManager_->getMenuName(id).c_str())
 
 	// メニューバー
-	*menuBar << Menu::StringItem(CMD_FILE_TOP, loadString(CMD_FILE_TOP).c_str())
+	menuBar << Menu::StringItem(CMD_FILE_TOP, loadString(CMD_FILE_TOP).c_str())
 		<< Menu::StringItem(CMD_EDIT_TOP, loadString(CMD_EDIT_TOP).c_str())
 		<< Menu::StringItem(CMD_SEARCH_TOP, loadString(CMD_SEARCH_TOP).c_str())
 		<< Menu::StringItem(CMD_VIEW_TOP, loadString(CMD_VIEW_TOP).c_str())
@@ -899,7 +899,7 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_FILE_SAVE) << ITEM(CMD_FILE_SAVEAS) << ITEM(CMD_FILE_SAVEALL) << sep
 		<< ITEM(CMD_FILE_SENDMAIL) << sep << ITEM(CMD_FILE_EXIT);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_MRU, mruManager_->getPopupMenu());
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_FILE_TOP, popup);
 
 	// [編集]
 	popup.reset(new PopupMenu);
@@ -911,7 +911,7 @@ void Alpha::setupMenus() {
 	*advMenu << ITEM(CMD_EDIT_CHARTOCODEPOINT) << ITEM(CMD_EDIT_CODEPOINTTOCHAR) << sep
 		<< ITEM(CMD_EDIT_NARROWTOSELECTION) << ITEM(CMD_EDIT_WIDEN);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_EDIT_ADVANCED, advMenu);
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_EDIT_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_EDIT_TOP, popup);
 
 	// [検索]
 	popup.reset(new PopupMenu);
@@ -923,7 +923,7 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_SEARCH_TOGGLEBOOKMARK) << ITEM(CMD_SEARCH_NEXTBOOKMARK) << ITEM(CMD_SEARCH_PREVBOOKMARK)
 		<< ITEM(CMD_SEARCH_CLEARBOOKMARKS) << ITEM(CMD_SEARCH_MANAGEBOOKMARKS) << sep
 		<< ITEM(CMD_SEARCH_GOTOMATCHBRACKET) << ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET);
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_TOP, popup);
 
 	// [表示]
 	popup.reset(new PopupMenu);
@@ -934,14 +934,14 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_VIEW_WRAPNO) << ITEM(CMD_VIEW_WRAPBYSPECIFIEDWIDTH) << ITEM(CMD_VIEW_WRAPBYWINDOWWIDTH)
 		<< sep << ITEM(CMD_VIEW_TOPMOSTALWAYS) << ITEM(CMD_VIEW_REFRESH);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS, buffers_->getListMenu());
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP, popup);
 
 	// [マクロ]
 	popup.reset(new PopupMenu);
 	*popup << ITEM(CMD_MACRO_EXECUTE) << ITEM(CMD_MACRO_DEFINE) << ITEM(CMD_MACRO_APPEND)
 		<< ITEM(CMD_MACRO_PAUSERESTART) << ITEM(CMD_MACRO_INSERTQUERY) << ITEM(CMD_MACRO_ABORT)
 		<< ITEM(CMD_MACRO_SAVEAS) << ITEM(CMD_MACRO_LOAD) << sep << ITEM(CMD_MACRO_SCRIPTS);
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_MACRO_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_MACRO_TOP, popup);
 
 	// [マクロ]-[スクリプト] (暫定)
 /*	popup.reset(new PopupMenu);
@@ -960,7 +960,7 @@ void Alpha::setupMenus() {
 	*popup << ITEM(CMD_TOOL_EXECUTE) << ITEM(CMD_TOOL_EXECUTECOMMAND) << sep
 		<< ITEM(CMD_TOOL_APPDOCTYPES) << ITEM(CMD_TOOL_DOCTYPEOPTION)
 		<< ITEM(CMD_TOOL_COMMONOPTION) << ITEM(CMD_TOOL_FONT);
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_TOP, popup);
 //	delete appDocTypeMenu_;
 //	appDocTypeMenu_ = new Menu();	// [適用文書タイプ]
 //	popup->setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_APPDOCTYPES, *appDocTypeMenu_, false);
@@ -968,7 +968,7 @@ void Alpha::setupMenus() {
 	// [ヘルプ]
 	popup.reset(new PopupMenu);
 	*popup << ITEM(CMD_HELP_ABOUT);
-	menuBar->setChildPopup<Menu::BY_COMMAND>(CMD_HELP_TOP, popup);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_HELP_TOP, popup);
 
 #undef ITEM
 
@@ -1047,7 +1047,7 @@ void Alpha::setupToolbar() {
 	}
 
 	if(!toolbar_.isWindow()) {
-		toolbar_.create(rebar_.get(), DefaultWindowRect(), L"", IDC_TOOLBAR,
+		toolbar_.create(rebar_.getHandle(), DefaultWindowRect(), L"", IDC_TOOLBAR,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE
 			| CCS_NODIVIDER | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_TOP
 			| TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_TOOLTIPS | TBSTYLE_TRANSPARENT, WS_EX_TOOLWINDOW);
@@ -1062,9 +1062,9 @@ void Alpha::setupToolbar() {
 			toolbar_.deleteButton(0);
 	}
 	toolbar_.addButtons(static_cast<int>(buttonCount), buttons);
-	toolbar_.setImageList(commandManager_->getImageList(CommandManager::ICONSTATE_NORMAL).get());
-	toolbar_.setDisabledImageList(commandManager_->getImageList(CommandManager::ICONSTATE_DISABLED).get());
-	toolbar_.setHotImageList(commandManager_->getImageList(CommandManager::ICONSTATE_HOT).get());
+	toolbar_.setImageList(commandManager_->getImageList(CommandManager::ICONSTATE_NORMAL).getHandle());
+	toolbar_.setDisabledImageList(commandManager_->getImageList(CommandManager::ICONSTATE_DISABLED).getHandle());
+	toolbar_.setHotImageList(commandManager_->getImageList(CommandManager::ICONSTATE_HOT).getHandle());
 //	toolbar_.setPadding(6, 6);
 
 	for(size_t i = 0; i < buttonCount; ++i) {
@@ -1086,7 +1086,7 @@ void Alpha::setupToolbar() {
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE;
 	rbbi.fStyle = RBBS_GRIPPERALWAYS | RBBS_USECHEVRON;
 	rbbi.wID = IDC_TOOLBAR;
-	rbbi.hwndChild = toolbar_.get();
+	rbbi.hwndChild = toolbar_.getHandle();
 	rbbi.cxMinChild = 0;
 	rbbi.cyMinChild = 22;
 	rebar_.insertBand(0, rbbi);
@@ -1365,7 +1365,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			newDocTypeMenu_->trackPopupMenu(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow());
 */			return true;
 		case CMD_FILE_OPEN:
-			mruManager_->getPopupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().get());
+			mruManager_->getPopupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
 			return true;
 		}
 		break;
@@ -1378,8 +1378,8 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			return toBoolean(buffers_->handleBufferBarNotification(*reinterpret_cast<NMTOOLBARW*>(&nmhdr)));
 		else {
 			static wchar_t tipText[500];
-			NMTTDISPINFOW& nmttdi = *reinterpret_cast<NMTTDISPINFOW*>(&nmhdr);
-			nmttdi.hinst = get();
+			::NMTTDISPINFOW& nmttdi = *reinterpret_cast<NMTTDISPINFOW*>(&nmhdr);
+			nmttdi.hinst = getHandle();
 			wstring name = commandManager_->getName(static_cast<CommandID>(nmhdr.idFrom));
 			const wstring key = keyboardMap_.getKeyString(static_cast<CommandID>(nmhdr.idFrom));
 			if(!key.empty()) {
@@ -1454,12 +1454,12 @@ void Alpha::onRebarChevronPushed(const NMREBARCHEVRON& chevron) {
 		}
 	}
 	rebar_.clientToScreen(pt);
-	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().get());
+	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
 }
 
-/// @see Window::onSetCursor
+/// @see WM_SETCURSOR
 bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
-	POINT pt;		// カーソル位置
+	POINT pt;	// カーソル位置
 	RECT clientRect, statusBarRect;
 
 	getMainWindow().getClientRect(clientRect);

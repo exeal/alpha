@@ -25,7 +25,9 @@ public:
 	void	initialize(HINSTANCE instance, const ResourceID& id);
 	// open/close
 	INT_PTR	doModal(HWND parent);
+	INT_PTR	doModal(Window& parent) {return doModal(parent.getHandle());}
 	bool	doModeless(HWND parent, bool show = true);
+	bool	doModeless(Window& parent, bool show = true) {return doModeless(parent.getHandle(), show);}
 	void	end(int result);
 	// control attributes
 	bool	addToolTip(HWND control, const TCHAR* text = LPSTR_TEXTCALLBACK);
@@ -106,7 +108,7 @@ inline Dialog::~Dialog() {if(isWindow()) destroy();}
 
 inline bool Dialog::addToolTip(HWND control, const TCHAR* text /* = LPSTR_TEXTCALLBACK */) {
 	assertValidAsWindow();
-	if(get() != ::GetParent(control))
+	if(getHandle() != ::GetParent(control))
 		return false;
 	return toolTips_.addTool(control, TTF_SUBCLASS, text);
 }
@@ -116,10 +118,10 @@ inline bool Dialog::addToolTip(UINT controlID, const TCHAR* text /* = LPSTR_TEXT
 
 inline bool Dialog::check2StateButton(int buttonID, bool check /* = true */) {return checkButton(buttonID, check ? BST_CHECKED : BST_UNCHECKED);}
 
-inline bool Dialog::checkButton(int buttonID, UINT check) {assertValidAsWindow(); return toBoolean(::CheckDlgButton(get(), buttonID, check));}
+inline bool Dialog::checkButton(int buttonID, UINT check) {assertValidAsWindow(); return toBoolean(::CheckDlgButton(getHandle(), buttonID, check));}
 
 inline bool Dialog::checkRadioButton(int firstButtonID, int lastButtonID, int buttonID) {
-	assertValidAsWindow(); return toBoolean(::CheckRadioButton(get(), firstButtonID, lastButtonID, buttonID));}
+	assertValidAsWindow(); return toBoolean(::CheckRadioButton(getHandle(), firstButtonID, lastButtonID, buttonID));}
 
 inline INT_PTR Dialog::doModal(HWND parent) {
 	modeless_ = false; return ::DialogBoxParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));}
@@ -136,7 +138,7 @@ inline bool Dialog::doModeless(HWND parent, bool show /* = true */) {
 
 inline void Dialog::end(int result) {
 	assertValidAsWindow();
-	::EndDialog(get(), result);
+	::EndDialog(getHandle(), result);
 	if(modeless_)
 		destroy();
 }
@@ -152,46 +154,46 @@ inline int Dialog::getCheckedRadioButton(int firstButtonID, int lastButtonID) co
 
 inline DWORD Dialog::getDefaultID() const {return static_cast<DWORD>(const_cast<Dialog*>(this)->sendMessage(DM_GETDEFID));}
 
-inline HWND Dialog::getItem(int itemID) const {assertValidAsWindow(); return ::GetDlgItem(get(), itemID);}
+inline HWND Dialog::getItem(int itemID) const {assertValidAsWindow(); return ::GetDlgItem(getHandle(), itemID);}
 
 inline int Dialog::getItemInt(int itemID, bool* translated /* = 0 */, bool isSigned /* = true */) const {
-	assertValidAsWindow(); return ::GetDlgItemInt(get(), itemID, reinterpret_cast<BOOL*>(translated), isSigned);}
+	assertValidAsWindow(); return ::GetDlgItemInt(getHandle(), itemID, reinterpret_cast<BOOL*>(translated), isSigned);}
 
 inline int Dialog::getItemText(int itemID, TCHAR* text, int maxLength) const {
-	assertValidAsWindow(); return ::GetDlgItemText(get(), itemID, text, maxLength);}
+	assertValidAsWindow(); return ::GetDlgItemText(getHandle(), itemID, text, maxLength);}
 
 inline HWND Dialog::getNextGroupItem(HWND control, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgGroupItem(get(), control, previous);}
+	assertValidAsWindow(); return ::GetNextDlgGroupItem(getHandle(), control, previous);}
 
 inline HWND Dialog::getNextGroupItem(int itemID, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgGroupItem(get(), getItem(itemID), previous);
+	assertValidAsWindow(); return ::GetNextDlgGroupItem(getHandle(), getItem(itemID), previous);
 }
 
 inline HWND Dialog::getNextTabItem(HWND control, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgTabItem(get(), control, previous);}
+	assertValidAsWindow(); return ::GetNextDlgTabItem(getHandle(), control, previous);}
 
 inline HWND Dialog::getNextTabItem(int itemID, bool previous /* = false */) const {
-	assertValidAsWindow(); return ::GetNextDlgTabItem(get(), getItem(itemID), previous);}
+	assertValidAsWindow(); return ::GetNextDlgTabItem(getHandle(), getItem(itemID), previous);}
 
 inline void Dialog::initialize(HINSTANCE hinstance, const ResourceID& id) {hinstance_ = hinstance; templateName_ = id.name;}
 
-inline bool Dialog::isDialogMessage(const ::MSG& msg) {assertValidAsWindow(); return toBoolean(::IsDialogMessage(get(), const_cast<MSG*>(&msg)));}
+inline bool Dialog::isDialogMessage(const ::MSG& msg) {assertValidAsWindow(); return toBoolean(::IsDialogMessage(getHandle(), const_cast<MSG*>(&msg)));}
 
-inline UINT Dialog::isButtonChecked(int buttonID) const {assertValidAsWindow(); return ::IsDlgButtonChecked(get(), buttonID);}
+inline UINT Dialog::isButtonChecked(int buttonID) const {assertValidAsWindow(); return ::IsDlgButtonChecked(getHandle(), buttonID);}
 
-inline void Dialog::nextControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus()->get(), false));}
+inline void Dialog::nextControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus().getHandle(), false));}
 
-inline void Dialog::previousControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus()->get(), true));}
+inline void Dialog::previousControl() const {assertValidAsWindow(); ::SetFocus(getNextTabItem(getFocus().getHandle(), true));}
 
 inline LRESULT Dialog::sendItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam) {
-	assertValidAsWindow(); return ::SendDlgItemMessage(get(), itemID, message, wParam, lParam);}
+	assertValidAsWindow(); return ::SendDlgItemMessage(getHandle(), itemID, message, wParam, lParam);}
 
 inline void Dialog::setDefaultID(UINT id) {assertValidAsWindow(); sendMessage(DM_SETDEFID, id);}
 
 inline void Dialog::setItemInt(int itemID, UINT value, bool isSigned /* = true */) {
-	assertValidAsWindow(); ::SetDlgItemInt(get(), itemID, value, isSigned);}
+	assertValidAsWindow(); ::SetDlgItemInt(getHandle(), itemID, value, isSigned);}
 
-inline void Dialog::setItemText(int itemID, const TCHAR* text) {assertValidAsWindow(); ::SetDlgItemText(get(), itemID, text);}
+inline void Dialog::setItemText(int itemID, const TCHAR* text) {assertValidAsWindow(); ::SetDlgItemText(getHandle(), itemID, text);}
 
 inline void Dialog::setMessageResult(LRESULT result) {
 #ifdef _WIN64
@@ -206,9 +208,9 @@ inline INT_PTR CALLBACK Dialog::windowProcedure(HWND window, UINT message, WPARA
 		Dialog* p = reinterpret_cast<Dialog*>(lParam);
 		p->reset(window);
 #ifdef _WIN64
-		::SetWindowLongPtr(p->get(), DWLP_USER, reinterpret_cast<LONG_PTR>(p));
+		::SetWindowLongPtr(p->getHandle(), DWLP_USER, reinterpret_cast<LONG_PTR>(p));
 #else
-		::SetWindowLong(p->get(), DWL_USER, static_cast<long>(reinterpret_cast<LONG_PTR>(p)));
+		::SetWindowLong(p->getHandle(), DWL_USER, static_cast<long>(reinterpret_cast<LONG_PTR>(p)));
 #endif /* _WIN64 */
 		p->bindControls();
 		p->toolTips_.create(window);

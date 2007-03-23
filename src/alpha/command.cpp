@@ -441,15 +441,15 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_SEARCH_REPLACEALL:		app.replaceAll(); return true;
 	case CMD_SEARCH_BOOKMARKALL:	app.searchAndBookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
-	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog().doModal(app.getMainWindow().get()); return true;
+	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog().doModal(app.getMainWindow()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
 	case CMD_SEARCH_NEXTBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::NEXT_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_PREVBOOKMARK:		CaretMovementCommand(view, CaretMovementCommand::PREVIOUS_BOOKMARK).execute(); return true;
 	case CMD_SEARCH_CLEARBOOKMARKS:		BookmarkCommand(view, BookmarkCommand::CLEAR_ALL).execute(); return true;
 	case CMD_SEARCH_MANAGEBOOKMARKS:
 		if(!app.bookmarkDialog_->isWindow()) {
-			app.bookmarkDialog_->doModeless(app.getMainWindow().get());
-			app.pushModelessDialog(app.bookmarkDialog_->get());
+			app.bookmarkDialog_->doModeless(app.getMainWindow());
+			app.pushModelessDialog(app.bookmarkDialog_->getHandle());
 			if(toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)))
 				app.bookmarkDialog_->sendItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(app.editorFont_), true);
 		} else
@@ -621,11 +621,11 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_TOOL_EXECUTECOMMAND:
 		ui::ExecuteCommandDlg(
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ?
-				app.editorFont_ : 0).doModal(app.getMainWindow().get());
+				app.editorFont_ : 0).doModal(app.getMainWindow());
 		return true;
 
 	case CMD_HELP_ABOUT:
-		ui::AboutDialog().doModal(app.getMainWindow().get());
+		ui::AboutDialog().doModal(app.getMainWindow());
 		return true;
 
 	default:

@@ -17,7 +17,7 @@ namespace alpha {
 
 	namespace ui {
 		///	"Bookmarks" dialog box.
-		class BookmarkDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> > {
+		class BookmarkDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_BOOKMARKS> {
 		public:
 			void	updateList();
 

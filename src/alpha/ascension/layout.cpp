@@ -277,9 +277,9 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 		const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
 
 		// 行間を塗る
-		Rgn clipRegion;
-		clipRegion.createRectRgn(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom));
-		dc.selectClipRgn(clipRegion);
+		auto_ptr<Rgn> clipRegion(Rgn::createRect(
+			clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
+		dc.selectClipRgn(clipRegion->getHandle());
 		if(linePitch - lineHeight > 0)
 			dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
 				paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
@@ -346,7 +346,7 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 					dc.selectObject(run.font);
 					dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
 						run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
-					hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
+					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 				}
 			}
@@ -355,15 +355,15 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 
 		// 選択範囲内のテキストを描画 (下線と境界線もついでに)
 		x = startX;
-		clipRegion.setRectRgn(clipRect);
-		dc.selectClipRgn(clipRegion, RGN_XOR);
+		clipRegion->setRect(clipRect);
+		dc.selectClipRgn(clipRegion->getHandle(), RGN_XOR);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
 			if(sel && getText()[run.column] != L'\t'
 					&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
 				dc.selectObject(run.font);
 				dc.setTextColor(selectionColor.foreground);
-				hr = ::ScriptTextOut(dc.get(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
+				hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
 			}
 			drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
@@ -950,7 +950,7 @@ namespace {
 	HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) {
 		while(true) {
 			// グリフを格納するのに十分な run.glyphs が得られるまで繰り返す
-			HRESULT hr = ::ScriptShape(dc.get(), &run.cache, text, static_cast<int>(run.length),
+			HRESULT hr = ::ScriptShape(dc.getHandle(), &run.cache, text, static_cast<int>(run.length),
 				static_cast<int>(expectedNumberOfGlyphs), &run.analysis, run.glyphs, run.clusters,
 				run.visualAttributes, &run.numberOfGlyphs);
 			if(hr != E_OUTOFMEMORY)
@@ -965,7 +965,7 @@ namespace {
 	inline bool includesMissingGlyphs(const DC& dc, Run& run) throw() {
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
-		if(FAILED(ScriptGetFontProperties(dc.get(), &run.cache, &fp)))
+		if(FAILED(ScriptGetFontProperties(dc.getHandle(), &run.cache, &fp)))
 			return false;
 		// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 		for(int i = 0; i < run.numberOfGlyphs; ++i) {
@@ -1087,7 +1087,7 @@ void LineLayout::shape(Run& run) throw() {
 
 	run.advances = new int[run.numberOfGlyphs];
 	run.glyphOffsets = new ::GOFFSET[run.numberOfGlyphs];
-	hr = ::ScriptPlace(dc.get(), &run.cache, run.glyphs, run.numberOfGlyphs,
+	hr = ::ScriptPlace(dc.getHandle(), &run.cache, run.glyphs, run.numberOfGlyphs,
 			run.visualAttributes, &run.analysis, run.advances, run.glyphOffsets, &run.width);
 	dc.selectObject(oldFont);
 }

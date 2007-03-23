@@ -104,7 +104,8 @@ const wstring BufferList::READ_ONLY_SIGNATURE_;
 BufferList::BufferList(Alpha& app) : app_(app) {
 	// エディタウィンドウの作成
 	// (WS_CLIPCHILDREN を付けると分割ウィンドウのサイズ変更枠が不可視になる...)
-	editorWindow_.create(app_.getMainWindow().get(), DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorPane));
+	editorWindow_.create(app_.getMainWindow().getHandle(),
+		DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorPane));
 	assert(editorWindow_.isWindow());
 
 	// 右クリックメニューの作成
@@ -166,7 +167,7 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 	EditorView* originalView = 0;
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
 		EditorView* view = (originalView == 0) ? new EditorView(buffer->getPresentation()) : new EditorView(*originalView);
-		view->create(editorWindow_.get(), DefaultWindowRect(),
+		view->create(editorWindow_.getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(view->isWindow());
 		if(originalView == 0)
@@ -206,7 +207,7 @@ void BufferList::addNewDialog() {
 		format.lineBreak = LB_CRLF;
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.lineBreak);
-	if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
+	if(dlg.doModal(app_.getMainWindow()) != IDOK)
 		return;
 	addNew(dlg.getEncoding(), dlg.getLineBreak());
 }
@@ -302,7 +303,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 		df.save = true;
 		dlg.files_.push_back(df);
 	}
-	if(IDOK != dlg.doModal(app_.getMainWindow().get()))
+	if(IDOK != dlg.doModal(app_.getMainWindow()))
 		return false;
 
 	// 保存する
@@ -331,10 +332,10 @@ bool BufferList::createBar(Rebar& rebar) {
 	}
 
 	// バッファバーとページャを作成する
-	if(!bufferBarPager_.create(rebar.get(), DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
+	if(!bufferBarPager_.create(rebar.getHandle(), DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_NORESIZE | PGS_HORZ))
 		return false;
-	if(!bufferBar_.create(bufferBarPager_.get(), DefaultWindowRect(), 0, IDC_BUFFERBAR,
+	if(!bufferBar_.create(bufferBarPager_.getHandle(), DefaultWindowRect(), 0, IDC_BUFFERBAR,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE
 			| CCS_NODIVIDER | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_TOP
 			| TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_REGISTERDROP | TBSTYLE_TOOLTIPS | TBSTYLE_TRANSPARENT, WS_EX_TOOLWINDOW)) {
@@ -344,7 +345,7 @@ bool BufferList::createBar(Rebar& rebar) {
 	HWND toolTips = bufferBar_.getToolTips();
 	bufferBar_.setButtonStructSize();
 	::SetWindowLongPtrW(toolTips, GWL_STYLE, ::GetWindowLongPtrW(toolTips, GWL_STYLE) | TTS_NOPREFIX);
-	bufferBarPager_.setChild(bufferBar_.get());
+	bufferBarPager_.setChild(bufferBar_.getHandle());
 
 	// レバーに乗せる
 	AutoZeroCB<::REBARBANDINFOW> rbbi;
@@ -355,7 +356,7 @@ bool BufferList::createBar(Rebar& rebar) {
 	rbbi.cyMinChild = 22;
 	rbbi.wID = IDC_BUFFERBAR;
 	rbbi.lpText = const_cast<wchar_t*>(caption.c_str());
-	rbbi.hwndChild = bufferBarPager_.get();
+	rbbi.hwndChild = bufferBarPager_.getHandle();
 	if(!rebar.insertBand(rebar.getBandCount(), rbbi)) {
 		bufferBar_.destroy();
 		bufferBarPager_.destroy();
@@ -451,7 +452,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 			::POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
 			setActive(mouse.dwItemSpec - CMD_VIEW_BUFFERLIST_START);
-			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow().get());
+			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow().getHandle());
 			return true;
 		}
 	}
@@ -493,7 +494,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 		return 0;
 	}
 
-	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.get() == ::GetCapture()) {
+	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.getHandle() == ::GetCapture()) {
 		::NMTBHOTITEM& hotItem = *reinterpret_cast<::NMTBHOTITEM*>(&nmhdr.hdr);
 		if(toBoolean(hotItem.dwFlags & HICF_MOUSE)) {	// ボタンをドラッグ中
 			::TBINSERTMARK mark;
@@ -729,7 +730,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
 			ui::CodePagesDialog dlg(encoding, true);
-			if(dlg.doModal(app_.getMainWindow().get()) == IDOK) {
+			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
 				encoding = dlg.getCodePage();
 				continue;	// コードページを変えて再挑戦
 			}
@@ -786,7 +787,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	AutoZeroLS<::OPENFILENAMEW> newOfn;
 	AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
-	ofn.hwndOwner = app_.getMainWindow().get();
+	ofn.hwndOwner = app_.getMainWindow().getHandle();
 	ofn.hInstance = ::GetModuleHandle(0);
 	ofn.lpstrFilter = filter;
 	ofn.lpstrFile = fileName;
@@ -1005,7 +1006,7 @@ void BufferList::recalculateBufferBarSize() {
 	// バッファバーの理想長さの再計算
 	if(bufferBar_.isVisible()) {
 		AutoZero<::REBARBANDINFOW> rbbi;
-		Rebar rebar(bufferBarPager_.getParent()->get());
+		Rebar rebar(bufferBarPager_.getParent().getHandle());
 		::RECT rect;
 		rbbi.fMask = RBBIM_IDEALSIZE;
 		bufferBar_.getItemRect(bufferBar_.getButtonCount() - 1, rect);
@@ -1036,7 +1037,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 	CodePage cp = buffer.getCodePage();
 	if(changeCodePage) {
 		ui::CodePagesDialog dlg(cp, true);
-		if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
+		if(dlg.doModal(app_.getMainWindow()) != IDOK)
 			return OPENRESULT_USERCANCELED;
 		cp = dlg.getCodePage();
 	}
@@ -1049,7 +1050,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 		if(callback.doesUserWantToChangeCodePage()) {
 			assert(result == Document::FIR_CALLER_ABORTED);
 			ui::CodePagesDialog dlg(cp, true);
-			if(dlg.doModal(app_.getMainWindow().get()) != IDOK)
+			if(dlg.doModal(app_.getMainWindow()) != IDOK)
 				return OPENRESULT_USERCANCELED;
 			cp = dlg.getCodePage();
 			continue;
@@ -1087,7 +1088,7 @@ void BufferList::resetResources() {
 		icons_.add(sfi.hIcon);
 		listMenu_.append(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START, 0U);
 	}
-	bufferBar_.setImageList(icons_.get());
+	bufferBar_.setImageList(icons_.getHandle());
 	if(bufferBar_.isVisible())
 		bufferBar_.invalidateRect(0);
 }
@@ -1126,7 +1127,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		AutoZeroLS<::OPENFILENAMEW> newOfn;
 		AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 		::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
-		ofn.hwndOwner = app_.getMainWindow().get();
+		ofn.hwndOwner = app_.getMainWindow().getHandle();
 		ofn.hInstance = ::GetModuleHandle(0);
 		ofn.lpstrFilter = filter;
 		ofn.lpstrFile = fileName;
@@ -1173,7 +1174,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		if(callback.doesUserWantToChangeCodePage()) {
 			ui::CodePagesDialog dlg(format.encoding, false);
 			assert(result == Document::FIR_CALLER_ABORTED);
-			if(dlg.doModal(app_.getMainWindow().get()) == IDOK) {
+			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
 				format.encoding = dlg.getCodePage();
 				continue;
 			}
@@ -1243,7 +1244,7 @@ EditorPane::EditorPane(const EditorPane& rhs) {
 	for(set<EditorView*>::const_iterator it = rhs.views_.begin(); it != rhs.views_.end(); ++it) {
 		EditorView* view = new EditorView(*(*it));
 		view->detach();	// <-- 重要
-		const bool succeeded = view->create((*it)->getParent()->get(), DefaultWindowRect(),
+		const bool succeeded = view->create((*it)->getParent().getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		views_.insert(view);
@@ -1494,12 +1495,12 @@ void EditorView::updateNarrowingOnStatusBar() {
 	if(hasFocus()) {
 		const bool narrow = getDocument().isNarrowed();
 		Alpha& app = Alpha::getInstance();
-		if(narrowingIcon_.get() == 0)
+		if(narrowingIcon_.getHandle() == 0)
 			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
 		StatusBar& statusBar = app.getStatusBar();
 		statusBar.setText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setTipText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
-		statusBar.setIcon(4, narrow ? narrowingIcon_.get() : 0);
+		statusBar.setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
 	}
 }
 

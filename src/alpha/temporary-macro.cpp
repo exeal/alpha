@@ -145,7 +145,7 @@ namespace {
 		void onInitDialog(HWND, bool&) {
 			ListBox macros;
 			macros.attach(getItem(IDC_LIST_MACROS));
-			fillTemporaryMacroList(macros.get(), true);
+			fillTemporaryMacroList(macros.getHandle(), true);
 			if(macros.getCount() == 0) {
 				::EnableWindow(getItem(IDOK), false);
 				::EnableWindow(getItem(IDC_BTN_EXECUTE), false);
@@ -246,12 +246,12 @@ void TemporaryMacro::changeState(State newState) throw() {
 	case TemporaryMacro::DEFINING:
 		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
 		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
-		statusBar.setIcon(2, definingIcon_.get());
+		statusBar.setIcon(2, definingIcon_.getHandle());
 		break;
 	case TemporaryMacro::PAUSING:
 		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
 		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
-		statusBar.setIcon(2, pausingIcon_.get());
+		statusBar.setIcon(2, pausingIcon_.getHandle());
 		break;
 	default:
 		statusBar.setText(2, L"");
@@ -421,13 +421,13 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 /// 一時マクロを読み込むためのダイアログを表示する
 void TemporaryMacro::showLoadDialog() {
 	LoadTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow().get()) == IDOK)
+	if(dlg.doModal(Alpha::getInstance().getMainWindow().getHandle()) == IDOK)
 		load(dlg.getFileName());
 }
 
 /// 一時マクロを保存するためのダイアログを表示する
 void TemporaryMacro::showSaveDialog() {
 	SaveTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow().get()) == IDOK)
+	if(dlg.doModal(Alpha::getInstance().getMainWindow().getHandle()) == IDOK)
 		save(dlg.getFileName());
 }

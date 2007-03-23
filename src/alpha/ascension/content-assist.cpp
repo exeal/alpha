@@ -72,7 +72,7 @@ void CompletionWindow::complete() {
 bool CompletionWindow::create() {
 	using namespace manah::win32::ui;
 
-	if(ListBox::create(viewer_.get(), DefaultWindowRect(), 0, 0,
+	if(ListBox::create(viewer_.getHandle(), DefaultWindowRect(), 0, 0,
 			WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | LBS_SORT,
 			WS_EX_DLGMODALFRAME | WS_EX_NOPARENTNOTIFY | WS_EX_TOOLWINDOW)
 			&& subclass()) {
@@ -145,9 +145,7 @@ void CompletionWindow::setFont(const HFONT font) {
 }
 
 /**
- * Starts the completion.
- *
- * This method does not display and/or places the window.
+ * Starts the completion. This method does not display and/or places the window.
  * @param candidateWords the candidate list
  * @return succeeded or not
  */

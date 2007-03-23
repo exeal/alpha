@@ -96,7 +96,7 @@ public:
 	bool		getIconSize(long& cx, long& cy) const;
 	bool		getImageInformation(int index, ::IMAGEINFO& info) const;
 	int			getNumberOfImages() const;
-	bool		isImageList() const {return get() != 0;}
+	bool		isImageList() const {return getHandle() != 0;}
 	COLORREF	setBkColor(COLORREF color);
 	bool		setIconSize(const ::SIZE& size);
 	bool		setIconSize(long cx, long cy);
@@ -134,7 +134,7 @@ public:
 	bool		setDragCursorImage(int index, int xHotSpot, int yHotSpot);
 
 private:
-	void assertValidAsImageList() const {assert(get() != 0);}
+	void assertValidAsImageList() const {assert(getHandle() != 0);}
 };
 
 class IPAddressCtrl : public CommonControl<IPAddressCtrl> {

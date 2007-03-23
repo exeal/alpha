@@ -115,24 +115,24 @@ private:
 inline Module::Module(HMODULE handle) : Handle<HMODULE, 0>(handle), accelerators_(0) {
 	assert(handle != 0); ::GetModuleFileName(handle, fileName_, MAX_PATH);}
 
-inline HRSRC Module::findResource(const ResourceID& id, const TCHAR* type) {return ::FindResource(get(), id.name, type);}
+inline HRSRC Module::findResource(const ResourceID& id, const TCHAR* type) {return ::FindResource(getHandle(), id.name, type);}
 
-inline HRSRC Module::findResource(const ResourceID& id, const TCHAR* type, WORD language) {return ::FindResourceEx(get(), id.name, type, language);}
+inline HRSRC Module::findResource(const ResourceID& id, const TCHAR* type, WORD language) {return ::FindResourceEx(getHandle(), id.name, type, language);}
 
 inline const TCHAR* Module::getModuleFileName() const {return fileName_;}
 
-inline bool Module::loadAccelerators(const ResourceID& id) {return (accelerators_ = ::LoadAccelerators(get(), id.name)) != 0;}
+inline bool Module::loadAccelerators(const ResourceID& id) {return (accelerators_ = ::LoadAccelerators(getHandle(), id.name)) != 0;}
 
-inline HBITMAP Module::loadBitmap(const ResourceID& id) const {return ::LoadBitmap(get(), id.name);}
+inline HBITMAP Module::loadBitmap(const ResourceID& id) const {return ::LoadBitmap(getHandle(), id.name);}
 
-inline HCURSOR Module::loadCursor(const ResourceID& id) const {return ::LoadCursor(get(), id.name);}
+inline HCURSOR Module::loadCursor(const ResourceID& id) const {return ::LoadCursor(getHandle(), id.name);}
 
-inline HICON Module::loadIcon(const ResourceID& id) const {return ::LoadIcon(get(), id.name);}
+inline HICON Module::loadIcon(const ResourceID& id) const {return ::LoadIcon(getHandle(), id.name);}
 
 inline HANDLE Module::loadImage(const ResourceID& id, UINT type, int desiredWidth, int desiredHeight, UINT options) const {
-	return ::LoadImage(get(), id.name, type, desiredWidth, desiredHeight, options);}
+	return ::LoadImage(getHandle(), id.name, type, desiredWidth, desiredHeight, options);}
 
-inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenu(get(), id.name);}
+inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenu(getHandle(), id.name);}
 
 inline std::basic_string<TCHAR> Module::loadMessage(DWORD id, const MessageArguments& args /* = MessageArguments() */) const {
 	void* p = 0;
@@ -143,7 +143,7 @@ inline std::basic_string<TCHAR> Module::loadMessage(DWORD id, const MessageArgum
 	for(it = args.args_.begin(), i = 0; it != args.args_.end(); ++it, ++i)
 		pp[i] = const_cast<TCHAR*>(it->c_str());
 	::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE
-		| FORMAT_MESSAGE_ARGUMENT_ARRAY, get(), id, LANG_USER_DEFAULT,
+		| FORMAT_MESSAGE_ARGUMENT_ARRAY, getHandle(), id, LANG_USER_DEFAULT,
 		reinterpret_cast<TCHAR*>(&p), 0, reinterpret_cast<va_list*>(pp));
 	delete[] pp;
 	if(p != 0) {
@@ -158,13 +158,13 @@ inline std::basic_string<TCHAR> Module::loadMessage(DWORD id, const MessageArgum
 		return _T("");
 }
 
-inline HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(get(), resource);}
+inline HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(getHandle(), resource);}
 
 inline HCURSOR Module::loadStandardCursor(const ResourceID& id) {return ::LoadCursor(0, id.name);}
 
 inline HICON Module::loadStandardIcon(const ResourceID& id) {return ::LoadIcon(0, id.name);}
 
-inline int Module::loadString(UINT id, TCHAR* buffer, int maxLength) const {return ::LoadString(get(), id, buffer, maxLength);}
+inline int Module::loadString(UINT id, TCHAR* buffer, int maxLength) const {return ::LoadString(getHandle(), id, buffer, maxLength);}
 
 inline std::basic_string<TCHAR> Module::loadString(UINT id, const MessageArguments& args /* = MessageArguments() */) const {
 	TCHAR buffer[1024];
@@ -189,7 +189,7 @@ inline std::basic_string<TCHAR> Module::loadString(UINT id, const MessageArgumen
 	return temp;
 }
 
-inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(get(), resource);}
+inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(getHandle(), resource);}
 
 
 // Application //////////////////////////////////////////////////////////////

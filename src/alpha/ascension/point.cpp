@@ -624,7 +624,7 @@ void VisualPoint::charRight(length_t offset /* = 1 */) {
 void VisualPoint::copy(signed_length_t length) {
 	verifyViewer();
 	const String text = getText(length);	
-	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->getHandle()).write(text.data(), text.data() + text.length());
 }
 
 /**
@@ -634,7 +634,7 @@ void VisualPoint::copy(signed_length_t length) {
 void VisualPoint::copy(const Position& other) {
 	verifyViewer();
 	const String text = getText(other);
-	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->getHandle()).write(text.data(), text.data() + text.length());
 }
 
 /**
@@ -646,7 +646,7 @@ void VisualPoint::cut(signed_length_t length) {
 	if(getDocument()->isReadOnly())
 		return;
 	const String text = getText(length);
-	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->getHandle()).write(text.data(), text.data() + text.length());
 	erase(length);
 }
 
@@ -659,7 +659,7 @@ void VisualPoint::cut(const Position& other) {
 	if(getDocument()->isReadOnly())
 		return;
 	const String text = getText(other);
-	Clipboard(viewer_->get()).write(text.data(), text.data() + text.length());
+	Clipboard(viewer_->getHandle()).write(text.data(), text.data() + text.length());
 	erase(other);
 }
 
@@ -1041,7 +1041,7 @@ void VisualPoint::paste(const Position& other) {
 		if(other != getPosition())
 			erase(other);
 
-		Clipboard clipboard(viewer_->get());
+		Clipboard clipboard(viewer_->getHandle());
 		if(Clipboard::Text text = clipboard.read()) {
 			const Char* const data = text.getData();
 			if(availableClipFormat == ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))
@@ -1682,7 +1682,7 @@ void Caret::copySelection(bool alsoSendToClipboardRing) {
 	if(isSelectionEmpty())
 		return;
 	const String s = getSelectionText(LBR_PHYSICAL_DATA);
-	Clipboard(getTextViewer().get()).write(s, isSelectionRectangle());
+	Clipboard(getTextViewer().getHandle()).write(s, isSelectionRectangle());
 	if(alsoSendToClipboardRing) {	// クリップボードリングにも転送
 		if(texteditor::Session* session = getDocument()->getSession())
 			session->getClipboardRing().add(s, isSelectionRectangle());

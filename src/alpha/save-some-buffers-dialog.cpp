@@ -26,10 +26,10 @@ void SaveSomeBuffersDialog::onInitDialog(HWND, bool&) {
 	HICON icon = Alpha::loadStandardIcon(IDI_WARNING);
 	sendItemMessage(IDC_STATIC_1, STM_SETICON, reinterpret_cast<WPARAM>(icon), 0);
 	::DestroyIcon(icon);
-	selectAllLink_.create(get(), ::GetModuleHandle(0), IDC_LINK_SELECTALL);
+	selectAllLink_.create(getHandle(), ::GetModuleHandle(0), IDC_LINK_SELECTALL);
 	selectAllLink_.move(106, 200, 0, 0);
 	selectAllLink_.setText(Alpha::getInstance().loadString(MSG_DIALOG__SELECT_ALL).c_str());
-	clearAllLink_.create(get(), ::GetModuleHandle(0), IDC_LINK_CLEARALL);
+	clearAllLink_.create(getHandle(), ::GetModuleHandle(0), IDC_LINK_CLEARALL);
 	clearAllLink_.move(186, 200, 0, 0);
 	clearAllLink_.setText(Alpha::getInstance().loadString(MSG_DIALOG__UNSELECT_ALL).c_str());
 

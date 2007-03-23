@@ -1567,7 +1567,7 @@ void Document::setDefaultCode(CodePage cp, LineBreak lineBreak) {
  * ドキュメントのファイル名を変更する
  * @param pathName 完全ファイル名
  */
-void Document::setFilePathName(const TCHAR* pathName) {
+void Document::setFilePathName(const WCHAR* pathName) {
 	if(pathName != 0) {
 		if(diskFile_.pathName != 0 && wcscmp(pathName, diskFile_.pathName) == 0)
 			return;
