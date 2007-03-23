@@ -58,7 +58,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	case CMD_SEARCH_BOOKMARKALL:	// [すべてマーク]
 	case CMD_SEARCH_REPLACEALL:		// [すべて置換]
 	case CMD_SEARCH_REPLACEANDNEXT:	// [置換]
-		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+		getParent().sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
 		return true;
 	case IDC_COMBO_FINDWHAT:	// [検索する文字列]
 		if(notifyCode != CBN_EDITCHANGE && notifyCode != CBN_SELCHANGE)

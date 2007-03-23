@@ -206,7 +206,7 @@ void BookmarkDialog::onOK(bool& continueDialog) {
 
 	app.getBufferList().getActiveView().getCaret().moveTo(text::Position(line, 0));
 	app.getBufferList().setActive(bufferIndices_[buffer]);
-	getParent()->setActive();
+	getParent().setActive();
 
 	if(isButtonChecked(IDC_CHK_AUTOCLOSE) != BST_CHECKED)	// [Ž©“®“I‚É•Â‚¶‚é]
 		continueDialog = true;

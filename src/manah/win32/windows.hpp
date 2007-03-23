@@ -38,12 +38,13 @@ namespace manah {
 		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
 		class Handle : public Unassignable {
 		public:
-			Handle(HandleType handle = 0) : handle_(handle), attached_(false) {}
-			virtual ~Handle() {release();}
-			bool operator!() const throw() {return handle_ == 0;}
-			HandleType attach(HandleType handle) {HandleType old = release(); handle_ = handle; attached_ = true; return old;}
+			Handle(HandleType handle = 0) : handle_(handle), attached_(handle != 0) {}
+			virtual ~Handle() {reset();}
+			bool operator!() const {return handle_ == 0;}
+			HandleType attach(HandleType handle) {if(handle == 0) throw std::invalid_argument("null handle.");
+				HandleType old = release(); handle_ = handle; attached_ = true; return old;}
 			HandleType detach() {if(!attached_) throw std::logic_error("not attched."); return release();}
-			HandleType get() const {return handle_;}
+			HandleType getHandle() const {return handle_;}
 			bool isAttached() const throw() {return attached_;}
 			HandleType release() {HandleType old = handle_; handle_ = 0; attached_ = false; return old;}
 			void reset(HandleType newHandle = 0) {

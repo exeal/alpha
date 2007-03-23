@@ -666,8 +666,7 @@ namespace ascension {
 			class AccessibleProxy;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 			/// 自動スクロールの開始点に表示する丸いウィンドウ
-			class AutoScrollOriginMark :
-					public manah::win32::ui::Layered<manah::win32::ui::CustomControl<AutoScrollOriginMark> > {
+			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
 				DEFINE_WINDOW_CLASS() {
 					name = L"AutoScrollOriginMark";
 					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;

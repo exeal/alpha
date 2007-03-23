@@ -172,7 +172,7 @@ inline void ComboBox::showDropDown(bool show /* = true */) {sendMessage(CB_SHOWD
 
 // DragListBox //////////////////////////////////////////////////////////////
 
-inline void DragListBox::drawInsert(int index) {assertValidAsWindow(); ::DrawInsert(getParent()->get(), get(), index);}
+inline void DragListBox::drawInsert(int index) {assertValidAsWindow(); ::DrawInsert(getParent().getHandle(), getHandle(), index);}
 
 inline UINT DragListBox::getDragListMessage() {
 	static UINT	message;
@@ -181,13 +181,13 @@ inline UINT DragListBox::getDragListMessage() {
 	return message;
 }
 
-inline int DragListBox::lbItemFromPtr(const ::POINT& pt, bool autoScroll /* = true */) {assertValidAsWindow(); ::LBItemFromPt(get(), pt, autoScroll);}
+inline int DragListBox::lbItemFromPtr(const ::POINT& pt, bool autoScroll /* = true */) {assertValidAsWindow(); ::LBItemFromPt(getHandle(), pt, autoScroll);}
 
 inline bool DragListBox::makeDragList() {
 	assertValidAsWindow();
 	if(!toBoolean(getStyle() & (LBS_MULTIPLESEL | LBS_EXTENDEDSEL)))
 		return false;
-	return toBoolean(::MakeDragList(get()));
+	return toBoolean(::MakeDragList(getHandle()));
 }
 
 
@@ -291,7 +291,7 @@ inline DWORD Edit::setImeStatus(DWORD type, DWORD data) {return sendMessageR<DWO
 
 #ifdef EM_GETCUEBANNER
 inline bool Edit::getCueBanner(WCHAR* text, int maxLength) const {
-	return toBoolean(Edit_GetCueBannerText(get(), text, maxLength));	// parameters confused in document?
+	return toBoolean(Edit_GetCueBannerText(getHandle(), text, maxLength));	// parameters confused in document?
 }
 
 inline bool Edit::setCueBanner(const WCHAR* text) {return sendMessageR<bool>(EM_SETCUEBANNER, 0, reinterpret_cast<LPARAM>(text));}
@@ -394,7 +394,7 @@ inline int ListBox::selectString(int startAfter, const TCHAR* text) {return send
 // ScrollBar ////////////////////////////////////////////////////////////////
 
 inline bool ScrollBar::enableScrollBar(UINT arrowFlags /* = ESB_ENABLE_BOTH */) {
-	assertValidAsWindow(); return toBoolean(::EnableScrollBar(get(), SB_CTL, arrowFlags));}
+	assertValidAsWindow(); return toBoolean(::EnableScrollBar(getHandle(), SB_CTL, arrowFlags));}
 
 #if(WINVER >= 0x0500)
 inline bool ScrollBar::getScrollBarInformation(::SCROLLBARINFO& scrollInfo) const {
@@ -402,13 +402,13 @@ inline bool ScrollBar::getScrollBarInformation(::SCROLLBARINFO& scrollInfo) cons
 	return sendMessageC<bool>(SBM_GETSCROLLBARINFO, 0, reinterpret_cast<LPARAM>(&scrollInfo));
 #else
 	assertValidAsWindow();
-	return toBoolean(::GetScrollBarInfo(get(), OBJID_CLIENT, &scrollInfo);
+	return toBoolean(::GetScrollBarInfo(getHandle(), OBJID_CLIENT, &scrollInfo);
 #endif /* !SBM_GETSCROLLBARINFO */
 }
 #endif /* WINVER >= 0x0500 */
 
 inline bool ScrollBar::getScrollInformation(::SCROLLINFO& scrollInfo) const {
-	assertValidAsWindow(); return toBoolean(::GetScrollInfo(get(), SB_CTL, &scrollInfo));}
+	assertValidAsWindow(); return toBoolean(::GetScrollInfo(getHandle(), SB_CTL, &scrollInfo));}
 
 inline int ScrollBar::getScrollLimit() const {
 	AutoZeroCB<::SCROLLINFO> scrollInfo;
@@ -421,21 +421,21 @@ inline int ScrollBar::getScrollLimit() const {
 	return maxPos;
 }
 
-inline int ScrollBar::getScrollPosition() const {assertValidAsWindow(); return ::GetScrollPos(get(), SB_CTL);}
+inline int ScrollBar::getScrollPosition() const {assertValidAsWindow(); return ::GetScrollPos(getHandle(), SB_CTL);}
 
 inline void ScrollBar::getScrollRange(int* minPos, int* maxPos) const {
-	assertValidAsWindow(); ::GetScrollRange(get(), SB_CTL, minPos, maxPos);}
+	assertValidAsWindow(); ::GetScrollRange(getHandle(), SB_CTL, minPos, maxPos);}
 
 inline int ScrollBar::setScrollInformation(const ::SCROLLINFO& scrollInfo, bool redraw /* = true */) {
-	assertValidAsWindow(); return ::SetScrollInfo(get(), SB_CTL, &scrollInfo, redraw);}
+	assertValidAsWindow(); return ::SetScrollInfo(getHandle(), SB_CTL, &scrollInfo, redraw);}
 
 inline int ScrollBar::setScrollPosition(int pos, bool redraw /* = true */) {
-	assertValidAsWindow(); return ::SetScrollPos(get(), SB_CTL, pos, redraw);}
+	assertValidAsWindow(); return ::SetScrollPos(getHandle(), SB_CTL, pos, redraw);}
 
 inline void ScrollBar::setScrollRange(int minPos, int maxPos, bool redraw /* = true */) {
-	assertValidAsWindow(); ::SetScrollRange(get(), SB_CTL, minPos, maxPos, redraw);}
+	assertValidAsWindow(); ::SetScrollRange(getHandle(), SB_CTL, minPos, maxPos, redraw);}
 
-inline void ScrollBar::showScrollBar(bool show /* = true */) {assertValidAsWindow(); ::ShowScrollBar(get(), SB_CTL, show);}
+inline void ScrollBar::showScrollBar(bool show /* = true */) {assertValidAsWindow(); ::ShowScrollBar(getHandle(), SB_CTL, show);}
 
 
 // Static ///////////////////////////////////////////////////////////////////

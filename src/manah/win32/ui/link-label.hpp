@@ -91,9 +91,9 @@ inline HFONT LinkLabel::onGetFont() {return font_;}
 inline void LinkLabel::onKeyDown(UINT vkey, UINT flags, bool&) {
 	if(!toBoolean(getStyle() & WS_DISABLED) && vkey == VK_RETURN)
 #ifdef _WIN64
-		getParent()->sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(get()));
+		getParent().sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(getHandle()));
 #else
-		getParent()->sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(get()));
+		getParent().sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(getHandle()));
 #endif /* _WIN64 */
 }
 
@@ -110,13 +110,13 @@ inline void LinkLabel::onLButtonDown(UINT, const POINT&) {setFocus();}
 inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
 	if(toBoolean(getStyle() & WS_DISABLED))
 		return;
-	getParent()->sendMessage(WM_COMMAND,
+	getParent().sendMessage(WM_COMMAND,
 #ifdef _WIN64
 		getWindowLongPtr(GWLP_ID),
 #else
 		getWindowLong(GWL_ID),
 #endif /* _WIN64 */
-		reinterpret_cast<LPARAM>(get()));
+		reinterpret_cast<LPARAM>(getHandle()));
 }
 
 inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
@@ -175,7 +175,7 @@ inline void LinkLabel::onSettingChange(UINT, const TCHAR*) {recreateFont();}
 
 inline void LinkLabel::recreateFont() {
 	::DeleteObject(font_);
-	font_ = getParent()->getFont();
+	font_ = getParent().getFont();
 	::LOGFONT lf;
 	if(font_ != 0)
 		::GetObject(font_, sizeof(::LOGFONT), &lf);

@@ -17,7 +17,7 @@ namespace alpha {
 
 	namespace ui {
 		/// "Search and Replace" dialog box.
-		class SearchDialog : public manah::win32::ui::Layered<manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> > {
+		class SearchDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> {
 		public:
 			std::wstring	getActivePattern() const throw();
 			std::wstring	getActiveReplacement() const throw();

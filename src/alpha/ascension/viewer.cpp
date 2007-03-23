@@ -1014,8 +1014,8 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 		// カーソルが同一スレッドのウィンドウ上に無いと駄目
 		::POINT pt;
 		::GetCursorPos(&pt);
-		auto_ptr<Window> pointedWindow(Window::fromPoint(pt));
-		if(pointedWindow.get() != 0 && pointedWindow->getThreadID() == getThreadID()) {
+		Window pointedWindow(Window::fromPoint(pt));
+		if(pointedWindow.getHandle() != 0 && pointedWindow.getThreadID() == getThreadID()) {
 			modeState_.cursorVanished = true;
 			::ShowCursor(false);
 			setCapture();
@@ -1226,12 +1226,12 @@ void TextViewer::initializeWindow(bool copyConstructing) {
 	toolTip_ = ::CreateWindowExW(
 		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0,
 		WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, get(), 0,
-		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(get(), GWLP_HINSTANCE))), 0);
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
+		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE))), 0);
 	if(toolTip_ != 0) {
 		AutoZeroCB<::TOOLINFOW> ti;
 		::RECT margins = {1, 1, 1, 1};
-		ti.hwnd = get();
+		ti.hwnd = getHandle();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
 		ti.uFlags = TTF_SUBCLASS;
 		ti.uId = 1;
@@ -1610,7 +1610,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
 		const bool isJapanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
-		HIMC imc = ::ImmGetContext(get());
+		HIMC imc = ::ImmGetContext(getHandle());
 		WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
 		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
 		WCHAR* openSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x958B\x304F(&E)" : L"Op&en soft keyboard";
@@ -1629,9 +1629,9 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_COMPSTR))
 			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
 
-		::ImmReleaseContext(get(), imc);
+		::ImmReleaseContext(getHandle(), imc);
 	}
-	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, get());
+	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, getHandle());
 
 	// 消しとく
 	int c = menu.getNumberOfItems();
@@ -1655,8 +1655,8 @@ void TextViewer::onDestroy() {
 		autoScrollOriginMark_->destroy();
 	
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	memDC_->selectObject(oldLineBitmap_);
-	::DeleteObject(lineBitmap_);
+	memDC_->selectObject(oldLineBitmap_.getHandle());
+	lineBitmap_.reset(0);
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -1702,7 +1702,7 @@ void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
 /// @see WM_IME_COMPOSITION
 void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam) {
 	if(lParam == 0 || toBoolean(lParam & GCS_RESULTSTR)) {	// completed
-		if(HIMC	imc = ::ImmGetContext(get())) {
+		if(HIMC	imc = ::ImmGetContext(getHandle())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
@@ -1712,7 +1712,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam) {
 				::ImmSetCompositionStringW(imc, SCS_SETSTR, L"", 0, L"", 0);	// prevent to be send WM_CHARs
 			}
 			updateIMECompositionWindowPosition();
-			::ImmReleaseContext(get(), imc);
+			::ImmReleaseContext(getHandle(), imc);
 		}
 	}
 }
@@ -1805,12 +1805,12 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 
 /// @see WM_IME_STARTCOMPOSITION
 void TextViewer::onIMEStartComposition() {
-	if(HIMC imc = ::ImmGetContext(get())) {
+	if(HIMC imc = ::ImmGetContext(getHandle())) {
 		::LOGFONTW font;
 		::GetObject(renderer_->getFont(), sizeof(::LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// IME の設定によっては反映されるだろう
 		hideCaret();
-		::ImmReleaseContext(get(), imc);
+		::ImmReleaseContext(getHandle(), imc);
 	}
 	imeCompositionActivated_ = true;
 	updateIMECompositionWindowPosition();
@@ -1836,11 +1836,11 @@ void TextViewer::onKillFocus(HWND newWindow) {
 		closeCompletionWindow();
 */	abortIncrementalSearch(*this);
 	if(imeCompositionActivated_) {	// IME で入力中であればやめさせる
-		HIMC imc = ::ImmGetContext(get());
+		HIMC imc = ::ImmGetContext(getHandle());
 		::ImmNotifyIME(imc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-		::ImmReleaseContext(get(), imc);
+		::ImmReleaseContext(getHandle(), imc);
 	}
-	if(newWindow != get()) {
+	if(newWindow != getHandle()) {
 		hideCaret();
 		::DestroyCaret();
 	}
@@ -2067,7 +2067,7 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 		update();
 	}
 
-	if(oldWindow != get()) {
+	if(oldWindow != getHandle()) {
 		// キャレットを復活させる
 		recreateCaret();
 		updateCaretPosition();
@@ -2089,7 +2089,7 @@ void TextViewer::onSize(UINT type, int cx, int cy) {
 	AutoZeroCB<::TOOLINFOW> ti;
 	::RECT viewRect;
 	getClientRect(viewRect);
-	ti.hwnd = get();
+	ti.hwnd = getHandle();
 	ti.uId = 1;
 	ti.rect = viewRect;
 	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
@@ -2328,10 +2328,7 @@ void TextViewer::recreateCaret() {
 	if(!hasFocus())
 		return;
 	::DestroyCaret();
-	if(caretShape_.bitmap.get() != 0) {	// 古いものを破棄 (あれば)
-		caretShape_.bitmap->deleteObject();
-		caretShape_.bitmap.release();
-	}
+	caretShape_.bitmap.reset();
 
 	::SIZE solidSize = {0, 0};
 	if(caretShape_.shaper.get() != 0)
@@ -2344,10 +2341,10 @@ void TextViewer::recreateCaret() {
 		static_cast<ICaretShapeProvider&>(s).uninstall();
 	}
 
-	if(caretShape_.bitmap.get() != 0 && caretShape_.bitmap->get() != 0) {
-		createCaret(*caretShape_.bitmap, 0, 0);
+	if(caretShape_.bitmap.get() != 0 && caretShape_.bitmap->getHandle() != 0) {
+		createCaret(caretShape_.bitmap->getHandle(), 0, 0);
 		::BITMAP bmp;
-		::GetObject(*caretShape_.bitmap, sizeof(::BITMAP), &bmp);
+		caretShape_.bitmap->getBitmap(bmp);
 		caretShape_.width = bmp.bmWidth;
 	} else
 		createSolidCaret(caretShape_.width = solidSize.cx, solidSize.cy);
@@ -2683,7 +2680,7 @@ void TextViewer::updateMemoryDeviceContext() {
 	::RECT rect;
 
 	getClientRect(rect);
-	if(::GetObject(lineBitmap_, sizeof(::BITMAP), &bitmap) != 0) {
+	if(lineBitmap_.getBitmap(bitmap) != 0) {
 		if(bitmap.bmWidth < rect.right - rect.left	// 既存のビットマップが小さい場合
 				|| bitmap.bmHeight < renderer_->getLinePitch())
 			needRecreate = true;
@@ -2694,10 +2691,10 @@ void TextViewer::updateMemoryDeviceContext() {
 		needRecreate = true;
 
 	if(needRecreate) {
-		memDC_->selectObject(oldLineBitmap_);
-		lineBitmap_.deleteObject();
-		lineBitmap_.createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch());	// 少し大きめに...
-		memDC_->selectObject(lineBitmap_);
+		memDC_->selectObject(oldLineBitmap_.getHandle());
+		// 少し大きめに...
+		lineBitmap_.reset(Bitmap::createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch()).release());
+		memDC_->selectObject(lineBitmap_.getHandle());
 	}
 }
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
@@ -2729,7 +2726,7 @@ void TextViewer::updateIMECompositionWindowPosition() {
 		return;
 
 	::COMPOSITIONFORM cf;
-	if(HIMC imc = ::ImmGetContext(get())) {
+	if(HIMC imc = ::ImmGetContext(getHandle())) {
 		cf.dwStyle = CFS_POINT;
 		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), false, LineLayout::LEADING);
 //		cf.ptCurrentPos.x -= 1;
@@ -2741,7 +2738,7 @@ void TextViewer::updateIMECompositionWindowPosition() {
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? clientRect.top : clientRect.bottom;
 		}
 		::ImmSetCompositionWindow(imc, &cf);
-		::ImmReleaseContext(get(), imc);
+		::ImmReleaseContext(getHandle(), imc);
 	}
 }
 
@@ -2894,7 +2891,7 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
  */
 TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& view) throw() : view_(view), available_(true) {
 	assert(accLib.isAvailable());
-	accLib.createStdAccessibleObject(view.get(), OBJID_CLIENT, IID_IAccessible, &defaultServer_);
+	accLib.createStdAccessibleObject(view.getHandle(), OBJID_CLIENT, IID_IAccessible, &defaultServer_);
 }
 
 /// @see IAccessible#accDoDefaultAction
@@ -2968,7 +2965,7 @@ void TextViewer::AccessibleProxy::documentAboutToBeChanged(const Document&) {
 /// @see Document#IListener#documentChanged
 void TextViewer::AccessibleProxy::documentChanged(const Document&, const DocumentChange&) {
 	assert(accLib.isAvailable());
-	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_.get(), OBJID_CLIENT, CHILDID_SELF);
+	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_.getHandle(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
@@ -3044,7 +3041,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
-		return accLib.accessibleObjectFromWindow(view_.get(), OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
+		return accLib.accessibleObjectFromWindow(view_.getHandle(), OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
 	return defaultServer_->get_accParent(ppdispParent);
 }
 
@@ -3076,7 +3073,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
 	if(!view_.isVisible())
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(view_.getTop()->get() == ::GetActiveWindow())
+	if(view_.getTop().getHandle() == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
 	if(view_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
@@ -3129,10 +3126,10 @@ const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
  * @see Window#create
  */
 bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
-	HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(get(), GWLP_HINSTANCE)));
+	HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE)));
 	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
 
-	if(!ui::CustomControl<AutoScrollOriginMark>::create(view.get(),
+	if(!ui::CustomControl<AutoScrollOriginMark>::create(view.getHandle(),
 			rc, 0, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW))
 		return false;
 	modifyStyleEx(0, WS_EX_LAYERED);	// いきなり CreateWindowEx(WS_EX_LAYERED) とすると NT 4.0 で失敗する
@@ -3222,8 +3219,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	// まず、描画領域全体を描いておく
 	if(configuration_.indicatorMargin.visible) {
 		// インジケータマージンの境界線と内側
-		HPEN oldPen = dc.selectObject(indicatorMarginPen_);
-		HBRUSH oldBrush = dc.selectObject(indicatorMarginBrush_);
+		HPEN oldPen = dc.selectObject(indicatorMarginPen_.getHandle());
+		HBRUSH oldBrush = dc.selectObject(indicatorMarginBrush_.getHandle());
 		dc.patBlt((configuration_.alignment == ALIGN_LEFT) ?
 			clientRect.left : clientRect.right - imWidth, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
 		dc.moveTo((configuration_.alignment == ALIGN_LEFT) ? clientRect.left + imWidth - 1 : clientRect.right - imWidth, paintRect.top);
@@ -3233,12 +3230,12 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 	if(configuration_.lineNumbers.visible) {
 		// 行番号の背景
-		HBRUSH oldBrush = dc.selectObject(lineNumbersBrush_);
+		HBRUSH oldBrush = dc.selectObject(lineNumbersBrush_.getHandle());
 		dc.patBlt((configuration_.alignment == ALIGN_LEFT) ?
 			clientRect.left + imWidth : clientRect.right - getWidth(), paintRect.top, getWidth() - imWidth, paintRect.bottom, PATCOPY);
 		// 行番号の境界線
 		if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
-			HPEN oldPen = dc.selectObject(lineNumbersPen_);
+			HPEN oldPen = dc.selectObject(lineNumbersPen_.getHandle());
 			const int x = ((configuration_.alignment == ALIGN_LEFT) ?
 				clientRect.left + getWidth() : clientRect.right - getWidth() + 1) - configuration_.lineNumbers.borderWidth;
 			dc.moveTo(x, 0/*paintRect.top*/);
@@ -3387,33 +3384,36 @@ void TextViewer::VerticalRulerDrawer::update() throw() {
 void TextViewer::VerticalRulerDrawer::updateGDIObjects() throw() {
 	using internal::systemColors;
 
-	indicatorMarginPen_.deleteObject();
-	indicatorMarginBrush_.deleteObject();
+	indicatorMarginPen_.reset();
+	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {
-		indicatorMarginPen_.createPen(PS_SOLID, 1,
-			systemColors.getReal(configuration_.indicatorMargin.borderColor, SYSTEM_COLOR_MASK | COLOR_3DSHADOW));
-		indicatorMarginBrush_.createSolidBrush(systemColors.getReal(configuration_.indicatorMargin.color, SYSTEM_COLOR_MASK | COLOR_3DFACE));
+		indicatorMarginPen_.reset(Pen::create(PS_SOLID, 1,
+			systemColors.getReal(configuration_.indicatorMargin.borderColor, SYSTEM_COLOR_MASK | COLOR_3DSHADOW)).release());
+		indicatorMarginBrush_.reset(Brush::create(
+			systemColors.getReal(configuration_.indicatorMargin.color, SYSTEM_COLOR_MASK | COLOR_3DFACE)).release());
 	}
 
-	lineNumbersPen_.deleteObject();
-	lineNumbersBrush_.deleteObject();
+	lineNumbersPen_.reset();
+	lineNumbersBrush_.reset();
 	if(configuration_.lineNumbers.visible) {
 		if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::SOLID)	// 実線
-			lineNumbersPen_.createPen(PS_SOLID, configuration_.lineNumbers.borderWidth,
-				systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT));
+			lineNumbersPen_.reset(Pen::create(PS_SOLID, configuration_.lineNumbers.borderWidth,
+				systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT)).release());
 		else if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
 			::LOGBRUSH brush;
 			brush.lbColor = systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT);
 			brush.lbStyle = BS_SOLID;
 			if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED)	// 破線
-				lineNumbersPen_.createPen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(Pen::create(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED_ROUNDED)	// 丸破線
-				lineNumbersPen_.createPen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(Pen::create(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DOTTED)	// 点線
-				lineNumbersPen_.createPen(PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(Pen::create(PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
 		}
-		lineNumbersBrush_.createSolidBrush(systemColors.getReal(
-			configuration_.lineNumbers.textColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW));
+		lineNumbersBrush_.reset(Brush::create(systemColors.getReal(
+			configuration_.lineNumbers.textColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW)).release());
 	}
 }
 
@@ -4314,9 +4314,9 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 	solidSize.cy = updater_->getTextViewer().getTextRenderer().getLineHeight();
 	orientation = LEFT_TO_RIGHT;
 
-	HIMC imc = ::ImmGetContext(updater_->getTextViewer().get());
+	HIMC imc = ::ImmGetContext(updater_->getTextViewer().getHandle());
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
-	::ImmReleaseContext(updater_->getTextViewer().get(), imc);
+	::ImmReleaseContext(updater_->getTextViewer().getHandle(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const ::RGBQUAD red = {0xFF, 0xFF, 0x80, 0x00};
 		bitmap.reset(new Bitmap);
