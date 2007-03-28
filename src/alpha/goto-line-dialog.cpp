@@ -30,8 +30,6 @@ void GotoLineDialog::onInitDialog(HWND, bool&) {
 	lineNumberSpin_.setPosition(static_cast<int>(app.getBufferList().getActiveView().getCaret().getLineNumber() + lineOffset));
 	lineNumberSpin_.invalidateRect(0);
 
-	checkRadioButton(IDC_RADIO_LOGICALLINE,
-		IDC_RADIO_PHYSICALLINE, /*lineUnit_ ?*/ IDC_RADIO_LOGICALLINE /*: IDC_RADIO_PHYSICALLINE*/);
 	checkButton(IDC_CHK_SAVESELECTION,
 		app.readIntegerProfile(L"Search", L"GotoLineDialog.extendSelection", 0) == 1 ? BST_CHECKED : BST_UNCHECKED);
 }
@@ -48,11 +46,7 @@ void GotoLineDialog::onOK(bool& continueDialog) {
 
 	EditorView& activeView = app.getBufferList().getActiveView();
 	length_t line = lineNumberSpin_.getPosition();
-
-	// ï®óùçsÇ©ÇÁò_óùçsÇ…ïœä∑
 	line -= activeView.getVerticalRulerConfiguration().lineNumbers.startValue;
-	if(isButtonChecked(IDC_RADIO_PHYSICALLINE) == BST_CHECKED)
-		line = activeView.getTextRenderer().mapVisualLineToLogicalLine(line, 0);
 
 	// à⁄ìÆÇ∑ÇÈ
 	if(isButtonChecked(IDC_CHK_SAVESELECTION) == BST_CHECKED) {

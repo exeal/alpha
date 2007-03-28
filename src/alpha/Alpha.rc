@@ -52,8 +52,8 @@ IDB_BMP_LOGO            BITMAP                  "Resource\\logo.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,7,90,0
- PRODUCTVERSION 0,7,90,0
+ FILEVERSION 0,7,90,1
+ PRODUCTVERSION 0,7,90,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,12 +70,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "exeal"
             VALUE "FileDescription", "Alpha"
-            VALUE "FileVersion", "0.7.90.0"
+            VALUE "FileVersion", "0.7.90.1"
             VALUE "InternalName", "abigail"
-            VALUE "LegalCopyright", "built by exeal, 2003-2006"
+            VALUE "LegalCopyright", "built by exeal, 2003-2007"
             VALUE "OriginalFilename", "Alpha.exe"
             VALUE "ProductName", "Alpha"
-            VALUE "ProductVersion", "0.7.90.0"
+            VALUE "ProductVersion", "0.7.90.1"
         END
     END
     BLOCK "VarFileInfo"
@@ -219,7 +219,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,44,64
-    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.90.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -244,7 +244,7 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,180,138,50,14
 END
 
-IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 90
+IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 55
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_CAPTION | WS_SYSMENU
 CAPTION "指定行へ移動"
@@ -258,11 +258,6 @@ BEGIN
                     UDS_ARROWKEYS,92,21,11,14
     CONTROL         "選択を保持する(&X)",IDC_CHK_SAVESELECTION,"Button",
                     BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,39,74,10
-    CONTROL         "論理行(&L)",IDC_RADIO_LOGICALLINE,"Button",
-                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,69,45,10
-    CONTROL         "表示行(&P)",IDC_RADIO_PHYSICALLINE,"Button",
-                    BS_AUTORADIOBUTTON | WS_DISABLED,74,69,45,10
-    GROUPBOX        "行単位",IDC_STATIC,7,55,133,30,WS_GROUP
     DEFPUSHBUTTON   "移動(&J)",IDOK,99,7,41,14,WS_GROUP
 END
 
@@ -491,7 +486,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 140
         TOPMARGIN, 7
-        BOTTOMMARGIN, 84
+        BOTTOMMARGIN, 49
     END
 
     IDD_DLG_EXECUTECOMMAND, DIALOG
@@ -574,7 +569,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-ja"
+IDR_CODEPAGE_NAME_TABLE      RCDATA                   "Resource\\code-page-name-table-ja"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1109,7 +1104,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,45,42
-    LTEXT           "Alpha version 0.7.90.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.90.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -1223,7 +1218,7 @@ BEGIN
     GROUPBOX        "Format",IDC_STATIC,7,7,269,68
 END
 
-IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 90
+IDD_DLG_GOTOLINE DIALOGEX 0, 0, 147, 55
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_CAPTION | WS_SYSMENU
 CAPTION "Go to Line"
@@ -1237,11 +1232,6 @@ BEGIN
                     UDS_ARROWKEYS,92,21,11,14
     CONTROL         "E&xtend selection",IDC_CHK_SAVESELECTION,"Button",
                     BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,39,74,10
-    CONTROL         "&Logical",IDC_RADIO_LOGICALLINE,"Button",
-                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,69,45,10
-    CONTROL         "&Physical",IDC_RADIO_PHYSICALLINE,"Button",
-                    BS_AUTORADIOBUTTON | WS_DISABLED,74,69,45,10
-    GROUPBOX        "Unit for line number",IDC_STATIC,7,55,133,30,WS_GROUP
     DEFPUSHBUTTON   "&Jump",IDOK,99,7,41,14,WS_GROUP
 END
 
@@ -1430,7 +1420,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 140
         TOPMARGIN, 7
-        BOTTOMMARGIN, 84
+        BOTTOMMARGIN, 49
     END
 
     IDD_DLG_LOADTEMPMACRO, DIALOG
@@ -1495,7 +1485,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE      RCDATA                   "Resource\\code-page-name-table-en"
+IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-en"
 
 /////////////////////////////////////////////////////////////////////////////
 //

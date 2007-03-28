@@ -36,10 +36,13 @@ namespace manah {
 
 		// base class for handle-wrapper classes
 		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
-		class Handle : public Unassignable {
+		class Handle {
 		public:
 			Handle(HandleType handle = 0) : handle_(handle), attached_(handle != 0) {}
+			Handle(const Handle& rhs) : handle_(rhs.handle_), attached_(rhs.attached_) {const_cast<Handle&>(rhs).attached_ = true;}
 			virtual ~Handle() {reset();}
+			Handle& operator=(const Handle& rhs) {reset();
+				handle_ = rhs.handle_; attached_ = rhs.attached_; const_cast<Handle&>(rhs).attached_ = true; return *this;}
 			bool operator!() const {return handle_ == 0;}
 			HandleType attach(HandleType handle) {if(handle == 0) throw std::invalid_argument("null handle.");
 				HandleType old = release(); handle_ = handle; attached_ = true; return old;}
@@ -53,8 +56,6 @@ namespace manah {
 				handle_ = newHandle;
 				attached_ = false;
 			}
-		protected:
-			Handle(const Handle<HandleType, deleter>& rhs) : handle_(0), attached_(false) {if(rhs.handle_ != 0) attach(rhs.handle_);}
 		private:
 			HandleType handle_;
 			bool attached_;

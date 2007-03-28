@@ -243,6 +243,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 			bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + i), getDisplayName(*buffers_[i]).c_str());
 		resetResources();
 		recalculateBufferBarSize();
+		fireActiveBufferSwitched();
 	} else {	// 最後の1つの場合
 		if(!buffer.isBoundToFile()) {
 			buffer.resetContent();			// 新規バッファの場合、resetContent() でもファイル名が変わらないため
@@ -1086,7 +1087,7 @@ void BufferList::resetResources() {
 			(buffers_[i]->getFilePathName() != 0) ? buffers_[i]->getFilePathName() : L"",
 			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
-		listMenu_.append(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START, 0U);
+		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START);
 	}
 	bufferBar_.setImageList(icons_.getHandle());
 	if(bufferBar_.isVisible())
@@ -1498,7 +1499,7 @@ void EditorView::updateNarrowingOnStatusBar() {
 		if(narrowingIcon_.getHandle() == 0)
 			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
 		StatusBar& statusBar = app.getStatusBar();
-		statusBar.setText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
+//		statusBar.setText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setTipText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
 	}

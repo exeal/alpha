@@ -12,12 +12,13 @@ namespace win32 {
 namespace gdi {
 
 
-class GDIObject : public Handle<HGDIOBJ, ::DeleteObject>, public Noncopyable {
+class GDIObject : public Handle<HGDIOBJ, ::DeleteObject> {
 public:
 	// constructors
 	explicit GDIObject(HGDIOBJ handle = 0) : Handle<HGDIOBJ, ::DeleteObject>(handle) {}
 	GDIObject(const GDIObject& rhs) : Handle<HGDIOBJ, ::DeleteObject>(rhs) {}
 	virtual ~GDIObject() throw() {}
+	GDIObject& operator=(const GDIObject& rhs) {return static_cast<GDIObject&>(Handle<HGDIOBJ, ::DeleteObject>::operator=(rhs));}
 	// methods
 	bool unrealize() {return toBoolean(::UnrealizeObject(getHandle()));}
 };
@@ -26,16 +27,16 @@ class Bitmap : public GDIObject {
 public:
 	// constructor
 	explicit Bitmap(HBITMAP handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Bitmap>	create(int width, int height, uint planes, uint bitCount, const void* bits);
-	static std::auto_ptr<Bitmap>	create(const ::BITMAP& bitmap);
-	static std::auto_ptr<Bitmap>	createCompatibleBitmap(const DC& dc, int width, int height);
-	static std::auto_ptr<Bitmap>	createDIBitmap(const DC& dc, const ::BITMAPINFOHEADER& header,
-										DWORD options, const void* data, const ::BITMAPINFO& bitmapInfo, UINT usage);
-	static std::auto_ptr<Bitmap>	createDiscardableBitmap(const DC& dc, int width, int height);
-	Bitmap							createStockObject(int index);
-	static std::auto_ptr<Bitmap>	load(const ResourceID& id);
-	static std::auto_ptr<Bitmap>	loadOEMBitmap(uint id);
-	static std::auto_ptr<Bitmap>	loadMappedBitmap(uint id, uint flags = 0, ::LPCOLORMAP colorMap = 0, int mapSize = 0);
+	static Bitmap	create(int width, int height, uint planes, uint bitCount, const void* bits);
+	static Bitmap	create(const ::BITMAP& bitmap);
+	static Bitmap	createCompatibleBitmap(const DC& dc, int width, int height);
+	static Bitmap	createDIBitmap(const DC& dc, const ::BITMAPINFOHEADER& header,
+						DWORD options, const void* data, const ::BITMAPINFO& bitmapInfo, UINT usage);
+	static Bitmap	createDiscardableBitmap(const DC& dc, int width, int height);
+	Bitmap			createStockObject(int index);
+	static Bitmap	load(const ResourceID& id);
+	static Bitmap	loadOEMBitmap(uint id);
+	static Bitmap	loadMappedBitmap(uint id, uint flags = 0, ::LPCOLORMAP colorMap = 0, int mapSize = 0);
 	// methods
 	bool	getBitmap(::BITMAP& bitmap) const;
 	DWORD	getBits(DWORD count, void* bits) const;
@@ -49,14 +50,14 @@ class Brush : public GDIObject {
 public:
 	// constructors
 	explicit Brush(HBRUSH handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Brush>	create(COLORREF color);
-	static std::auto_ptr<Brush>	create(const ::LOGBRUSH& logbrush);
-	static std::auto_ptr<Brush>	createHatchBrush(int index, COLORREF color);
-	static std::auto_ptr<Brush>	createPatternBrush(const Bitmap& bitmap);
-	static std::auto_ptr<Brush>	createDIBPatternBrush(HGLOBAL data, uint usage);
-	static std::auto_ptr<Brush>	createDIBPatternBrush(const void* packedDIB, uint usage);
-	static Brush				getStockObject(int index);
-	static Brush				getSystemColorBrush(int index);
+	static Brush	create(COLORREF color);
+	static Brush	create(const ::LOGBRUSH& logbrush);
+	static Brush	createHatchBrush(int index, COLORREF color);
+	static Brush	createPatternBrush(const Bitmap& bitmap);
+	static Brush	createDIBPatternBrush(HGLOBAL data, uint usage);
+	static Brush	createDIBPatternBrush(const void* packedDIB, uint usage);
+	static Brush	getStockObject(int index);
+	static Brush	getSystemColorBrush(int index);
 	// methods
 	HBRUSH	getHandle() const throw() {return static_cast<HBRUSH>(GDIObject::getHandle());}
 	bool	getLogBrush(::LOGBRUSH& logbrush) const;
@@ -66,11 +67,11 @@ class Font : public GDIObject {
 public:
 	// constructor
 	Font(HFONT handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Font>	create(int width, int height, int escapement, int orientation, int weight,
-									bool italic, bool underlined, bool strikeOut, BYTE charset, BYTE outPrecision,
-									BYTE clipPrecision, BYTE quality, BYTE pitchAndFamily, const TCHAR* faceName);
-	static std::auto_ptr<Font>	create(const ::LOGFONT& logfont);
-	static Font					getStockObject(int index);
+	static Font	create(int width, int height, int escapement, int orientation, int weight,
+					bool italic, bool underlined, bool strikeOut, BYTE charset, BYTE outPrecision,
+					BYTE clipPrecision, BYTE quality, BYTE pitchAndFamily, const TCHAR* faceName);
+	static Font	create(const ::LOGFONT& logfont);
+	static Font	getStockObject(int index);
 	// methods
 	HFONT	getHandle() const {return static_cast<HFONT>(GDIObject::getHandle());}
 	bool	getLogFont(::LOGFONT& logfont) const;
@@ -80,9 +81,9 @@ class Palette : public GDIObject {
 public:
 	// constructor
 	Palette(HPALETTE handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Palette>	create(const ::LOGPALETTE& logpalette);
-	static std::auto_ptr<Palette>	createHalftonePalette(DC& dc);
-	static Palette					getStockObject(int index);
+	static Palette	create(const ::LOGPALETTE& logpalette);
+	static Palette	createHalftonePalette(DC& dc);
+	static Palette	getStockObject(int index);
 	// methods
 	void		animate(uint start, uint count, const ::PALETTEENTRY paletteColors[]);
 	int			getEntryCount() const;
@@ -97,10 +98,10 @@ class Pen : public GDIObject {
 public:
 	// constructors
 	explicit Pen(HPEN handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Pen>	create(int penStyle, int width, COLORREF color);
-	static std::auto_ptr<Pen>	create(int penStyle, int width, const ::LOGBRUSH& logbrush, int styleCount = 0, const DWORD styles[] = 0);
-	static std::auto_ptr<Pen>	create(const ::LOGPEN& logpen);
-	static Pen					getStockObject(int index);
+	static Pen	create(int penStyle, int width, COLORREF color);
+	static Pen	create(int penStyle, int width, const ::LOGBRUSH& logbrush, int styleCount = 0, const DWORD styles[] = 0);
+	static Pen	create(const ::LOGPEN& logpen);
+	static Pen	getStockObject(int index);
 	// methods
 	HPEN	getHandle() const {return static_cast<HPEN>(GDIObject::getHandle());}
 	bool	getLogPen(::LOGPEN& logpen) const;
@@ -111,15 +112,15 @@ class Rgn : public GDIObject {
 public:
 	// constructor
 	explicit Rgn(HRGN handle = 0) : GDIObject(handle) {}
-	static std::auto_ptr<Rgn>	createRect(int left, int top, int right, int bottom);
-	static std::auto_ptr<Rgn>	createRect(const ::RECT& rect);
-	static std::auto_ptr<Rgn>	createElliptic(int left, int top, int right, int bottom);
-	static std::auto_ptr<Rgn>	createElliptic(const ::RECT& rect);
-	static std::auto_ptr<Rgn>	createPolygon(const ::POINT points[], int count, int polyFillMode);
-	static std::auto_ptr<Rgn>	createPolyPolygon(const ::POINT points[], const int* polyCount, int count, int polyFillMode);
-	static std::auto_ptr<Rgn>	createRoundRect(int x1, int y1, int x2, int y2, int x3, int y3);
-	static std::auto_ptr<Rgn>	fromData(const ::XFORM* xForm, int count, const ::RGNDATA rgnData[]);
-	static std::auto_ptr<Rgn>	fromPath(const DC& dc);
+	static Rgn	createRect(int left, int top, int right, int bottom);
+	static Rgn	createRect(const ::RECT& rect);
+	static Rgn	createElliptic(int left, int top, int right, int bottom);
+	static Rgn	createElliptic(const ::RECT& rect);
+	static Rgn	createPolygon(const ::POINT points[], int count, int polyFillMode);
+	static Rgn	createPolyPolygon(const ::POINT points[], const int* polyCount, int count, int polyFillMode);
+	static Rgn	createRoundRect(int x1, int y1, int x2, int y2, int x3, int y3);
+	static Rgn	fromData(const ::XFORM* xForm, int count, const ::RGNDATA rgnData[]);
+	static Rgn	fromPath(const DC& dc);
 	// methods
 	int		combine(const Rgn& rgn1, const Rgn& rgn2, int combineMode);
 	int		copy(const Rgn& other);
@@ -136,25 +137,23 @@ public:
 	bool	setRect(const ::RECT& rect);
 };
 
-#define CREATE_NATIVE_OBJECT(type, expression)	\
-	std::auto_ptr<type> p(new type); p->reset(expression); return p
+#define CREATE_NATIVE_OBJECT(type, expression)	type temp; temp.reset(expression); return temp
 
 
 // Bitmap ///////////////////////////////////////////////////////////////////
 
-inline std::auto_ptr<Bitmap> Bitmap::create(int width, int height, uint planes, uint bitCount, const void* bits) {
+inline Bitmap Bitmap::create(int width, int height, uint planes, uint bitCount, const void* bits) {
 	CREATE_NATIVE_OBJECT(Bitmap, ::CreateBitmap(width, height, planes, bitCount, bits));}
 
-inline std::auto_ptr<Bitmap> Bitmap::create(const ::BITMAP& bitmap) {
-	CREATE_NATIVE_OBJECT(Bitmap, ::CreateBitmapIndirect(&(const_cast<::BITMAP&>(bitmap))));}
+inline Bitmap Bitmap::create(const ::BITMAP& bitmap) {CREATE_NATIVE_OBJECT(Bitmap, ::CreateBitmapIndirect(&(const_cast<::BITMAP&>(bitmap))));}
 
-inline std::auto_ptr<Bitmap> Bitmap::createCompatibleBitmap(const DC& dc, int width, int height) {
+inline Bitmap Bitmap::createCompatibleBitmap(const DC& dc, int width, int height) {
 	CREATE_NATIVE_OBJECT(Bitmap, ::CreateCompatibleBitmap(dc.getHandle(), width, height));}
 
-inline std::auto_ptr<Bitmap> Bitmap::createDIBitmap(const DC& dc, const ::BITMAPINFOHEADER& header, DWORD options, const void* data,
+inline Bitmap Bitmap::createDIBitmap(const DC& dc, const ::BITMAPINFOHEADER& header, DWORD options, const void* data,
 	const ::BITMAPINFO& bitmapInfo, UINT usage) {CREATE_NATIVE_OBJECT(Bitmap, ::CreateDIBitmap(dc.getHandle(), &header, options, data, &bitmapInfo, usage));}
 
-inline std::auto_ptr<Bitmap> Bitmap::createDiscardableBitmap(const DC& dc, int width, int height) {
+inline Bitmap Bitmap::createDiscardableBitmap(const DC& dc, int width, int height) {
 	CREATE_NATIVE_OBJECT(Bitmap, ::CreateDiscardableBitmap(dc.getHandle(), width, height));}
 
 inline bool Bitmap::getBitmap(::BITMAP& bitmap) const {return ::GetObject(getHandle(), sizeof(HBITMAP), &bitmap) != 0;}
@@ -163,12 +162,12 @@ inline DWORD Bitmap::getBits(DWORD count, void* bits) const {return ::GetBitmapB
 
 inline Size Bitmap::getDimension() const {::SIZE size; ::GetBitmapDimensionEx(getHandle(), &size); return size;}
 
-inline std::auto_ptr<Bitmap> Bitmap::load(const ResourceID& id) {CREATE_NATIVE_OBJECT(Bitmap, ::LoadBitmap(::GetModuleHandle(0), id.name));}
+inline Bitmap Bitmap::load(const ResourceID& id) {CREATE_NATIVE_OBJECT(Bitmap, ::LoadBitmap(::GetModuleHandle(0), id.name));}
 
-inline std::auto_ptr<Bitmap> Bitmap::loadMappedBitmap(uint id, uint flags /* = 0 */, ::LPCOLORMAP colorMap /* = 0 */, int mapSize /* = 0 */) {
+inline Bitmap Bitmap::loadMappedBitmap(uint id, uint flags /* = 0 */, ::LPCOLORMAP colorMap /* = 0 */, int mapSize /* = 0 */) {
 	CREATE_NATIVE_OBJECT(Bitmap, ::CreateMappedBitmap(::GetModuleHandle(0), id, flags, colorMap, mapSize));}
 
-inline std::auto_ptr<Bitmap> Bitmap::loadOEMBitmap(uint id) {CREATE_NATIVE_OBJECT(Bitmap, ::LoadBitmap(0, MAKEINTRESOURCE(id)));}
+inline Bitmap Bitmap::loadOEMBitmap(uint id) {CREATE_NATIVE_OBJECT(Bitmap, ::LoadBitmap(0, MAKEINTRESOURCE(id)));}
 
 inline DWORD Bitmap::setBits(DWORD count, const void* bits) {return ::SetBitmapBits(getHandle(), count, bits);}
 
@@ -177,17 +176,17 @@ inline Size Bitmap::setDimension(int width, int height) {::SIZE size; ::SetBitma
 
 // Brush ////////////////////////////////////////////////////////////////////
 
-inline std::auto_ptr<Brush> Brush::create(COLORREF color) {CREATE_NATIVE_OBJECT(Brush, ::CreateSolidBrush(color));}
+inline Brush Brush::create(COLORREF color) {CREATE_NATIVE_OBJECT(Brush, ::CreateSolidBrush(color));}
 
-inline std::auto_ptr<Brush> Brush::create(const ::LOGBRUSH& logbrush) {CREATE_NATIVE_OBJECT(Brush, ::CreateBrushIndirect(&logbrush));}
+inline Brush Brush::create(const ::LOGBRUSH& logbrush) {CREATE_NATIVE_OBJECT(Brush, ::CreateBrushIndirect(&logbrush));}
 
-inline std::auto_ptr<Brush> Brush::createDIBPatternBrush(HGLOBAL data, uint usage) {CREATE_NATIVE_OBJECT(Brush, ::CreateDIBPatternBrush(data, usage));}
+inline Brush Brush::createDIBPatternBrush(HGLOBAL data, uint usage) {CREATE_NATIVE_OBJECT(Brush, ::CreateDIBPatternBrush(data, usage));}
 
-inline std::auto_ptr<Brush> Brush::createDIBPatternBrush(const void* packedDIB, uint usage) {CREATE_NATIVE_OBJECT(Brush, ::CreateDIBPatternBrushPt(packedDIB, usage));}
+inline Brush Brush::createDIBPatternBrush(const void* packedDIB, uint usage) {CREATE_NATIVE_OBJECT(Brush, ::CreateDIBPatternBrushPt(packedDIB, usage));}
 
-inline std::auto_ptr<Brush> Brush::createHatchBrush(int index, COLORREF color) {CREATE_NATIVE_OBJECT(Brush, ::CreateHatchBrush(index, color));}
+inline Brush Brush::createHatchBrush(int index, COLORREF color) {CREATE_NATIVE_OBJECT(Brush, ::CreateHatchBrush(index, color));}
 
-inline std::auto_ptr<Brush> Brush::createPatternBrush(const Bitmap& bitmap) {CREATE_NATIVE_OBJECT(Brush, ::CreatePatternBrush(bitmap.getHandle()));}
+inline Brush Brush::createPatternBrush(const Bitmap& bitmap) {CREATE_NATIVE_OBJECT(Brush, ::CreatePatternBrush(bitmap.getHandle()));}
 
 inline bool Brush::getLogBrush(::LOGBRUSH& logbrush) const {return ::GetObject(getHandle(), sizeof(HBRUSH), &logbrush) != 0;}
 
@@ -198,14 +197,14 @@ inline Brush Brush::getSystemColorBrush(int index) {return Brush(::GetSysColorBr
 
 // Font /////////////////////////////////////////////////////////////////////
 
-inline std::auto_ptr<Font> Font::create(int width, int height, int escapement, int orientation, int weight,
+inline Font Font::create(int width, int height, int escapement, int orientation, int weight,
 		bool italic, bool underlined, bool strikeOut, BYTE charset, BYTE outPrecision, BYTE clipPrecision,
 		BYTE quality, BYTE pitchAndFamily, const TCHAR* faceName) {
 	CREATE_NATIVE_OBJECT(Font, ::CreateFont(width, height, escapement, orientation, weight,
 		italic, underlined, strikeOut, charset, outPrecision, clipPrecision, quality, pitchAndFamily, faceName));
 }
 
-inline std::auto_ptr<Font> Font::create(const ::LOGFONT& logfont) {CREATE_NATIVE_OBJECT(Font, ::CreateFontIndirect(&logfont));}
+inline Font Font::create(const ::LOGFONT& logfont) {CREATE_NATIVE_OBJECT(Font, ::CreateFontIndirect(&logfont));}
 
 inline bool Font::getLogFont(::LOGFONT& logfont) const {return ::GetObject(getHandle(), sizeof(LOGFONT), &logfont) != 0;}
 
@@ -216,9 +215,9 @@ inline Font Font::getStockObject(int index) {return Font(static_cast<HFONT>(::Ge
 
 inline void Palette::animate(uint start, uint count, const ::PALETTEENTRY paletteColors[]) {::AnimatePalette(getHandle(), start, count, paletteColors);}
 
-inline std::auto_ptr<Palette> Palette::create(const ::LOGPALETTE& logpalette) {CREATE_NATIVE_OBJECT(Palette, ::CreatePalette(&logpalette));}
+inline Palette Palette::create(const ::LOGPALETTE& logpalette) {CREATE_NATIVE_OBJECT(Palette, ::CreatePalette(&logpalette));}
 
-inline std::auto_ptr<Palette> Palette::createHalftonePalette(DC& dc) {CREATE_NATIVE_OBJECT(Palette, ::CreateHalftonePalette(dc.getHandle()));}
+inline Palette Palette::createHalftonePalette(DC& dc) {CREATE_NATIVE_OBJECT(Palette, ::CreateHalftonePalette(dc.getHandle()));}
 
 inline uint Palette::getEntries(uint start, uint count, ::PALETTEENTRY paletteColors[]) const {return ::GetPaletteEntries(getHandle(), start, count, paletteColors);}
 
@@ -235,12 +234,12 @@ inline uint Palette::setEntries(uint start, uint count, const ::PALETTEENTRY pal
 
 // Pen //////////////////////////////////////////////////////////////////////
 
-inline std::auto_ptr<Pen> Pen::create(int penStyle, int width, COLORREF color) {CREATE_NATIVE_OBJECT(Pen, ::CreatePen(penStyle, width, color));}
+inline Pen Pen::create(int penStyle, int width, COLORREF color) {CREATE_NATIVE_OBJECT(Pen, ::CreatePen(penStyle, width, color));}
 
-inline std::auto_ptr<Pen> Pen::create(int penStyle, int width, const ::LOGBRUSH& logbrush, int styleCount /* = 0 */,
+inline Pen Pen::create(int penStyle, int width, const ::LOGBRUSH& logbrush, int styleCount /* = 0 */,
 	const DWORD styles[] /* = 0*/) {CREATE_NATIVE_OBJECT(Pen, ::ExtCreatePen(penStyle, width, &logbrush, styleCount, styles));}
 
-inline std::auto_ptr<Pen> Pen::create(const ::LOGPEN& logpen) {CREATE_NATIVE_OBJECT(Pen, ::CreatePenIndirect(&logpen));}
+inline Pen Pen::create(const ::LOGPEN& logpen) {CREATE_NATIVE_OBJECT(Pen, ::CreatePenIndirect(&logpen));}
 
 inline bool Pen::getExtLogPen(::EXTLOGPEN& extlogpen) const {return toBoolean(::GetObject(getHandle(), sizeof(::EXTLOGPEN), &extlogpen));}
 
@@ -254,27 +253,27 @@ inline Pen Pen::getStockObject(int index) {return Pen(static_cast<HPEN>(::GetSto
 inline int Rgn::combine(const Rgn& rgn1, const Rgn& rgn2, int combineMode) {
 	if(getHandle() != 0) return false; return ::CombineRgn(getHandle(), rgn1.getHandle(), rgn2.getHandle(), combineMode);}
 
-inline std::auto_ptr<Rgn> Rgn::createElliptic(int left, int top, int right, int bottom) {CREATE_NATIVE_OBJECT(Rgn, ::CreateEllipticRgn(left, top, right, bottom));}
+inline Rgn Rgn::createElliptic(int left, int top, int right, int bottom) {CREATE_NATIVE_OBJECT(Rgn, ::CreateEllipticRgn(left, top, right, bottom));}
 
-inline std::auto_ptr<Rgn> Rgn::createElliptic(const ::RECT& rect) {CREATE_NATIVE_OBJECT(Rgn, ::CreateEllipticRgnIndirect(&rect));}
+inline Rgn Rgn::createElliptic(const ::RECT& rect) {CREATE_NATIVE_OBJECT(Rgn, ::CreateEllipticRgnIndirect(&rect));}
 
-inline std::auto_ptr<Rgn> Rgn::createPolygon(const ::POINT points[], int count, int polyFillMode) {
+inline Rgn Rgn::createPolygon(const ::POINT points[], int count, int polyFillMode) {
 	CREATE_NATIVE_OBJECT(Rgn, ::CreatePolygonRgn(points, count, polyFillMode));}
 
-inline std::auto_ptr<Rgn> Rgn::createPolyPolygon(const ::POINT points[], const int* polyCount, int count, int polyFillMode) {
+inline Rgn Rgn::createPolyPolygon(const ::POINT points[], const int* polyCount, int count, int polyFillMode) {
 	CREATE_NATIVE_OBJECT(Rgn, ::CreatePolyPolygonRgn(points, polyCount, count, polyFillMode));}
 
-inline std::auto_ptr<Rgn> Rgn::createRect(int left, int top, int right, int bottom) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRectRgn(left, top, right, bottom));}
+inline Rgn Rgn::createRect(int left, int top, int right, int bottom) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRectRgn(left, top, right, bottom));}
 
-inline std::auto_ptr<Rgn> Rgn::createRect(const ::RECT& rect) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRectRgnIndirect(&rect));}
+inline Rgn Rgn::createRect(const ::RECT& rect) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRectRgnIndirect(&rect));}
 
-inline std::auto_ptr<Rgn> Rgn::createRoundRect(int x1, int y1, int x2, int y2, int x3, int y3) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRoundRectRgn(x1, y1, x2, y2, x3, y3));}
+inline Rgn Rgn::createRoundRect(int x1, int y1, int x2, int y2, int x3, int y3) {CREATE_NATIVE_OBJECT(Rgn, ::CreateRoundRectRgn(x1, y1, x2, y2, x3, y3));}
 
 inline bool Rgn::equals(const Rgn& other) const {return toBoolean(::EqualRgn(getHandle(), other.getHandle()));}
 
-inline std::auto_ptr<Rgn> Rgn::fromData(const ::XFORM* xForm, int count, const ::RGNDATA rgnData[]) {CREATE_NATIVE_OBJECT(Rgn, ::ExtCreateRegion(xForm, count, rgnData));}
+inline Rgn Rgn::fromData(const ::XFORM* xForm, int count, const ::RGNDATA rgnData[]) {CREATE_NATIVE_OBJECT(Rgn, ::ExtCreateRegion(xForm, count, rgnData));}
 
-inline std::auto_ptr<Rgn> Rgn::fromPath(const DC& dc) {CREATE_NATIVE_OBJECT(Rgn, ::PathToRegion(dc.getHandle()));}
+inline Rgn Rgn::fromPath(const DC& dc) {CREATE_NATIVE_OBJECT(Rgn, ::PathToRegion(dc.getHandle()));}
 
 inline int Rgn::getBox(RECT& rect) const {return ::GetRgnBox(getHandle(), &rect);}
 

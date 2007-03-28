@@ -435,38 +435,73 @@ void TokenScanner::parse(const Document& document, const Region& region) {
 // TransitionRule ///////////////////////////////////////////////////////////
 
 /**
- * Constructor.
+ * Protected constructor.
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
- * @param pattern the pattern string to introduce the transition.
- * if empty string is specified, the transition will be occured at the end of line
- * @param caseSensitive set false to enable caseless match
- * @throw boost#regex_error the specified pattern is invalid (if @c ASCENSION_NO_REGEX is not defined)
  */
-TransitionRule::TransitionRule(ContentType contentType, ContentType destination, const String& pattern, bool caseSensitive /* = true */)
-		: contentType_(contentType), destination_(destination),
-#ifndef ASCENSION_NO_REGEX
-		pattern_(pattern.data(), pattern.data() + pattern.length(), caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE) {
-#else
-		pattern_(pattern), caseSensitive_(caseSensitive) {
-#endif /* !ASCENSION_NO_REGEX */
+TransitionRule::TransitionRule(ContentType contentType, ContentType destination) throw() : contentType_(contentType), destination_(destination) {
 }
 
-/// Returns the content type.
-ContentType TransitionRule::getContentType() const throw() {return contentType_;}
-
-/// Returns the content type of the transition destination.
-ContentType TransitionRule::getDestination() const throw() {return destination_;}
+/// Destructor.
+TransitionRule::~TransitionRule() throw() {
+}
 
 /**
+ * @fn TransitionRule::matches
  * Returns true if the rule matches the specified text.
  * @param line the target line text
  * @param column
  * @return the length of the matched pattern. if and only if the match failed, returns 0.
  * if matched zero width text, returns 1
  */
-length_t TransitionRule::matches(const String& line, length_t column) const {
+
+
+// LiteralTransitionRule ////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param contentType the content type of the transition source
+ * @param destination the content type of the transition destination
+ * @param pattern the pattern string to introduce the transition.
+ * if empty string is specified, the transition will be occured at the end of line
+ * @param caseSensitive set false to enable caseless match
+ */
+LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
+		bool caseSensitive /* = true */) : TransitionRule(contentType, destination), pattern_(pattern), caseSensitive_(caseSensitive) {
+}
+
+/// @see TransitionRule#matches
+length_t LiteralTransitionRule::matches(const String& line, length_t column) const {
+	if(pattern_.empty() && column == line.length())	// matches EOL
+		return 1;
+	else if(line.length() - column < pattern_.length())
+		return 0;
+	else if(caseSensitive_)
+		return (wmemcmp(pattern_.data(), line.data() + column, pattern_.length()) == 0) ? pattern_.length() : 0;
+	return (CaseFolder::compare(StringCharacterIterator(pattern_),
+		StringCharacterIterator(line, line.begin() + column)) == 0) ? pattern_.length() : 0;
+}
+
+
 #ifndef ASCENSION_NO_REGEX
+
+// RegexTransitionRule //////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param contentType the content type of the transition source
+ * @param destination the content type of the transition destination
+ * @param pattern the pattern string to introduce the transition. can't be empty
+ * @param caseSensitive set false to enable caseless match
+ * @throw boost#regex_error @a pattern is invalid
+ */
+RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
+		bool caseSensitive /* = true */) : TransitionRule(contentType, destination), 
+		pattern_(pattern.data(), pattern.data() + pattern.length(), caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE) {
+}
+
+/// @see TransitionRule#matches
+length_t RegexTransitionRule::matches(const String& line, length_t column) const {
 	try {
 		using namespace regex;
 		Pattern::MatchOptions flags = Pattern::MATCH_AT_ONLY_TARGET_FIRST;
@@ -477,13 +512,9 @@ length_t TransitionRule::matches(const String& line, length_t column) const {
 	} catch(runtime_error&) {
 		return 0;
 	}
-#else
-	// TODO: not implemented.
-	if(last - first < pattern_.length())
-		return false;
-	return ;
-#endif /* !ASCENSION_NO_REGEX */
 }
+
+#endif /* !ASCENSION_NO_REGEX */
 
 
 // LexicalPartitioner ///////////////////////////////////////////////////////

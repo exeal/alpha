@@ -68,8 +68,6 @@
 #define IDC_CHK_SHIFT                   1208
 #define IDC_RADIO_SELECTION             1301
 #define IDC_RADIO_WHOLEFILE             1302
-#define IDC_RADIO_LOGICALLINE           1303
-#define IDC_RADIO_PHYSICALLINE          1304
 #define IDC_LINK_HOMEPAGE               1401
 #define IDC_LINK_SELECTALL              1402
 #define IDC_LINK_CLEARALL               1403

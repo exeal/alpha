@@ -277,9 +277,8 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 		const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
 
 		// 行間を塗る
-		auto_ptr<Rgn> clipRegion(Rgn::createRect(
-			clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
-		dc.selectClipRgn(clipRegion->getHandle());
+		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
+		dc.selectClipRgn(clipRegion.getHandle());
 		if(linePitch - lineHeight > 0)
 			dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
 				paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
@@ -355,8 +354,8 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 
 		// 選択範囲内のテキストを描画 (下線と境界線もついでに)
 		x = startX;
-		clipRegion->setRect(clipRect);
-		dc.selectClipRgn(clipRegion->getHandle(), RGN_XOR);
+		clipRegion.setRect(clipRect);
+		dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
 			if(sel && getText()[run.column] != L'\t'
@@ -1249,58 +1248,78 @@ LineLayout::StyledSegmentIterator::reference LineLayout::StyledSegmentIterator::
 /**
  * Constructor.
  * @param viewer the text viewer
- * @param bufferSize the size of the buffer for caches in lines
+ * @param bufferSize the maximum number of lines cached
  * @param autoRepair true to repair disposed layout automatically if the line number of its line was not changed
  * @throw std#invalid_argument @a bufferSize is zero
  */
 LineLayoutBuffer::LineLayoutBuffer(TextViewer& viewer, length_t bufferSize, bool autoRepair) :
-		viewer_(viewer), layouts_(new LineLayout*[bufferSize]), bufferSize_(bufferSize),
-		startLine_(0), autoRepair_(autoRepair), documentChangePhase_(NONE) {
+		viewer_(viewer), bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE) {
 	pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
-	if(bufferSize == 0) {
-		delete[] layouts_;
+	if(bufferSize == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
-	}
-	fill(layouts_, layouts_ + bufferSize_, static_cast<LineLayout*>(0));
 	viewer.getDocument().addPrenotifiedListener(*this);
 }
 
 /// Destructor.
 LineLayoutBuffer::~LineLayoutBuffer() throw() {
 //	clearCaches(startLine_, startLine_ + bufferSize_, false);
-	for(size_t i = 0; i < bufferSize_; ++i)
-		delete layouts_[i];
-	delete[] layouts_;
+	for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
+		delete *i;
 	viewer_.getDocument().removePrenotifiedListener(*this);
 }
 
 /**
- * Clears the layout caches of the specified lines.
- * This method calls @c #layoutModified.
+ * Clears the layout caches of the specified lines. This method calls @c #layoutModified.
  * @param first the start of lines
  * @param last the end of lines (exclusive. this line will not be cleared)
- * @param repair true to recreate layouts for the lines
+ * @param repair set true to recreate layouts for the lines. if true, this method calls
+ * @c #layoutModified. otherwise calls @c #layoutDeleted
+ * @throw std#invalid_argument @a first and/or @a last are invalid
  */
 void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
+	if(first > last /*|| last > viewer_.getDocument().getNumberOfLines()*/)
+		throw invalid_argument("either line number is invalid.");
 	if(documentChangePhase_ == ABOUT_CHANGE) {
 		pendingCacheClearance_.first = (pendingCacheClearance_.first == INVALID_INDEX) ? first : min(first, pendingCacheClearance_.first);
 		pendingCacheClearance_.last = (pendingCacheClearance_.last == INVALID_INDEX) ? last : max(last, pendingCacheClearance_.last);
 		return;
 	}
-	first = min(max(first, startLine_), startLine_ + bufferSize_);
-	last = min(max(last, startLine_), startLine_ + bufferSize_);
 	if(first == last)
 		return;
-	length_t oldSublines = 0, newSublines = 0;
-	for(length_t i = first; i < last; ++i) {
-		LineLayout*& layout = layouts_[i - startLine_];
-		oldSublines += (layout != 0) ? layout->getNumberOfSublines() : 1;
-		delete layout;
-		layout = (repair && layout != 0) ? new LineLayout(viewer_.getTextRenderer(), i) : 0;
-		newSublines += (layout != 0) ? layout->getNumberOfSublines() : 1;
+
+	const size_t originalSize = layouts_.size();
+	length_t oldSublines = 0, cachedLines = 0;
+	if(repair) {
+		length_t newSublines = 0, actualFirst = last, actualLast = first;
+		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
+			LineLayout*& layout = *i;
+			const length_t lineNumber = layout->getLineNumber();
+			if(lineNumber >= first && lineNumber < last) {
+				oldSublines += layout->getNumberOfSublines();
+				delete layout;
+				layout = new LineLayout(viewer_.getTextRenderer(), lineNumber);
+				newSublines += layout->getNumberOfSublines();
+				++cachedLines;
+				actualFirst = min(actualFirst, lineNumber);
+				actualLast = max(actualLast, lineNumber);
+			}
+		}
+		if(actualFirst == last)	// no lines cleared
+			return;
+		++actualLast;
+		layoutModified(actualFirst, actualLast, newSublines += actualLast - actualFirst - cachedLines,
+			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
+	} else {
+		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
+			if((*i)->getLineNumber() >= first && (*i)->getLineNumber() < last) {
+				oldSublines += (*i)->getNumberOfSublines();
+				delete *i;
+				i = layouts_.erase(i);
+				++cachedLines;
+			}
+		}
+		layoutDeleted(first, last, oldSublines += last - first - cachedLines);
 	}
-//	last = min(last, viewer_.getDocument().getNumberOfLines());
-	layoutModified(first, last, newSublines, oldSublines, documentChangePhase_ == CHANGING);
 }
 
 /// @see text#IDocumentListener#documentAboutToBeChanged
@@ -1312,35 +1331,27 @@ void LineLayoutBuffer::documentAboutToBeChanged(const text::Document&) {
 void LineLayoutBuffer::documentChanged(const text::Document&, const text::DocumentChange& change) {
 	const length_t top = change.getRegion().getTop().line, bottom = change.getRegion().getBottom().line;
 	documentChangePhase_ = CHANGING;
-	invalidateLineLayout(top);
+	invalidate(top);
 	if(top != bottom) {
 		if(change.isDeletion()) {	// 改行を含む範囲の削除
-			// 削除される行の表示行数を数える (キャッシュ窓の内部と前後)
-			length_t sublines = 0;
-			if(top + 1 < startLine_)
-				sublines += min(startLine_, bottom + 1) - (top + 1);
-			for(length_t i = max(top + 1, startLine_); i < min(bottom + 1, startLine_ + bufferSize_); ++i)
-				sublines += (layouts_[i - startLine_] != 0) ? layouts_[i - startLine_]->getNumberOfSublines() : 1;
-			if(bottom > startLine_ + bufferSize_ - 1)
-				sublines += bottom - (startLine_ + bufferSize_ - 1);
-			slideCaches(top + 1, static_cast<signed_length_t>(top) - static_cast<signed_length_t>(bottom), false);
-			layoutDeleted(top + 1, bottom + 1, sublines);
+			clearCaches(top + 1, bottom + 1, false);
+			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+				if((*i)->getLineNumber() > top)
+					(*i)->lineNumber_ -= bottom - top;	// $friendly-access
+			}
 		} else {	// 改行を含む範囲の挿入
-			slideCaches(top + 1, static_cast<signed_length_t>(bottom - top), true);
+			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+				if((*i)->getLineNumber() > top)
+					(*i)->lineNumber_ += bottom - top;	// $friendly-access
+			}
 			layoutInserted(top + 1, bottom + 1);
 		}
 	}
-	verifyLayoutCaches();
 	documentChangePhase_ = NONE;
 	if(pendingCacheClearance_.first != INVALID_INDEX) {
 		clearCaches(pendingCacheClearance_.first, pendingCacheClearance_.last, autoRepair_);
 		pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
 	}
-}
-
-/// Returns the last line of the cached layouts.
-length_t LineLayoutBuffer::getCacheLastLine() const throw() {
-	return min(startLine_ + bufferSize_, viewer_.getDocument().getNumberOfLines());
 }
 
 /**
@@ -1353,39 +1364,48 @@ const LineLayout& LineLayoutBuffer::getLineLayout(length_t line) const {
 #ifdef TRACE_LAYOUT_CACHES
 	dout << "finding layout for line " << line;
 #endif
-	verifyLayoutCaches();
-	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
 	if(line > viewer_.getDocument().getNumberOfLines())
 		throw text::BadPositionException();
-	else if(line < startLine_) {
-#ifdef TRACE_LAYOUT_CACHES
-		dout << "... cache not found\n";
-#endif
-		self.updateCacheStartLine(line);
-	} else if(line >= startLine_ + bufferSize_) {
-#ifdef TRACE_LAYOUT_CACHES
-		dout << "... cache not found\n";
-#endif
-		self.updateCacheStartLine(line - bufferSize_ + 1);
-	} else {
+	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
+	list<LineLayout*>::iterator i(self.layouts_.begin());
+	for(const list<LineLayout*>::iterator e(self.layouts_.end()); i != e; ++i) {
+		if((*i)->lineNumber_ == line)
+			break;
+	}
+
+	if(i != layouts_.end()) {
 #ifdef TRACE_LAYOUT_CACHES
 		dout << "... cache found\n";
 #endif
-	}
-	if(layouts_[line - startLine_] == 0) {
-		layouts_[line - startLine_] = new LineLayout(viewer_.getTextRenderer(), line);
-		self.layoutModified(line, line + 1, layouts_[line - startLine_]->getNumberOfSublines(), 1, documentChangePhase_ == CHANGING);
-	}
-	verifyLayoutCaches();
+		LineLayout* layout = *i;
+		if(layout != layouts_.front()) {
+			// bring to the top
+			self.layouts_.erase(i);
+			self.layouts_.push_front(layout);
+		}
+		return *layout;
+	} else {
 #ifdef TRACE_LAYOUT_CACHES
-		dout << "  ok. line " << line << " was returned.\n";
+		dout << "... cache not found\n";
 #endif
-	return *layouts_[line - startLine_];
+		if(layouts_.size() == bufferSize_) {
+			// delete the last
+			LineLayout* p = layouts_.back();
+			self.layouts_.pop_back();
+			self.layoutModified(p->getLineNumber(), p->getLineNumber() + 1,
+				1, p->getNumberOfSublines(), documentChangePhase_ == CHANGING);
+			delete p;
+		}
+		LineLayout* const layout = new LineLayout(viewer_.getTextRenderer(), line);
+		self.layouts_.push_front(layout);
+		self.layoutModified(line, line + 1, layout->getNumberOfSublines(), 1, documentChangePhase_ == CHANGING);
+		return *layout;
+	}
 }
 
 /// Invalidates all layouts.
 void LineLayoutBuffer::invalidate() {
-	clearCaches(startLine_, startLine_ + bufferSize_, autoRepair_);
+	clearCaches(0, viewer_.getDocument().getNumberOfLines(), autoRepair_);
 }
 
 /**
@@ -1401,21 +1421,23 @@ void LineLayoutBuffer::invalidate(length_t first, length_t last) {
 }
 
 /**
- * Resets the layout cache of the specified line, and repairs if necessary.
- * @param line the logical line number
+ * Resets the cached layout of the specified line and repairs if necessary.
+ * @param line the line to invalidate layout
  */
-inline void LineLayoutBuffer::invalidateLineLayout(length_t line) throw() {
-	if(line >= startLine_ && line < startLine_ + bufferSize_) {
-		if(LineLayout*& layout = layouts_[line - startLine_]) {
-			const length_t oldSublines = layout->getNumberOfSublines();
-			delete layout;
+inline void LineLayoutBuffer::invalidate(length_t line) throw() {
+	for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+		LineLayout*& p = *i;
+		if(p->getLineNumber() == line) {
+			const length_t oldSublines = p->getNumberOfSublines();
+			delete p;
 			if(autoRepair_) {
-				layout = new LineLayout(viewer_.getTextRenderer(), line);
-				layoutModified(line, line + 1, layout->getNumberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
+				p = new LineLayout(viewer_.getTextRenderer(), line);
+				layoutModified(line, line + 1, p->getNumberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
-				layout = 0;
+				layouts_.erase(i);
 				layoutModified(line, line + 1, 1, oldSublines, documentChangePhase_ == CHANGING);
 			}
+			break;
 		}
 	}
 }
@@ -1445,94 +1467,98 @@ inline void LineLayoutBuffer::invalidateLineLayout(length_t line) throw() {
  * @param documentChanged true if the modification was occured by the document change
  */
 
+/**
+ * Returns the first visual line number of the specified logical line.
+ * @param line the logical line
+ * @return the first visual line of @a line
+ * @throw text#BadPositionException @a line is outside of the document
+ * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
+ */
+length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
+	if(line >= getTextViewer().getDocument().getNumberOfLines())
+		throw text::BadPositionException();
+	else if(!getTextViewer().getConfiguration().lineWrap.wraps())
+		return line;
+	length_t result = 0, cachedLines = 0;
+	for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+		if((*i)->getLineNumber() < line) {
+			result += (*i)->getNumberOfSublines();
+			++cachedLines;
+		}
+	}
+	return result + line - cachedLines;
+}
+
+/**
+ * Returns the visual line number and the visual column number of the specified logical position.
+ * @param position the logical coordinates of the position to be mapped
+ * @param[out] column the visual column of @a position. can be @c null if not needed
+ * @return the visual line of @a position
+ * @throw text#BadPositionException @a position is outside of the document
+ * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
+ */
+length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
+	if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
+		if(column != 0)
+			*column = position.column;
+		return position.line;
+	}
+	const LineLayout& layout = getLineLayout(position.line);
+	const length_t subline = layout.getSubline(position.column);
+	if(column != 0)
+		*column = position.column - layout.getSublineOffset(subline);
+	return mapLogicalLineToVisualLine(position.line) + subline;
+}
+
+#if 0
+/**
+ * Returns the logical line number and the visual subline number of the specified visual line.
+ * @param line the visual line
+ * @param[out] subline the visual subline of @a line. can be @c null if not needed
+ * @return the logical line
+ * @throw text#BadPositionException @a line is outside of the document
+ * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
+ */
+length_t LineLayoutBuffer::mapVisualLineToLogicalLine(length_t line, length_t* subline) const {
+	if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
+		if(subline != 0)
+			*subline = 0;
+		return line;
+	}
+	length_t c = getCacheFirstLine();
+	for(length_t i = getCacheFirstLine(); ; ++i) {
+		if(c + getNumberOfSublinesOfLine(i) > line) {
+			if(subline != 0)
+				*subline = line - c;
+			return i;
+		}
+		c += getNumberOfSublinesOfLine(i);
+	}
+	assert(false);
+	return getCacheLastLine();	// ここには来ない
+}
+
+/**
+ * Returns the logical line number and the logical column number of the specified visual position.
+ * @param position the visual coordinates of the position to be mapped
+ * @return the logical coordinates of @a position
+ * @throw text#BadPositionException @a position is outside of the document
+ * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
+ */
+Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& position) const {
+	if(!getTextViewer().getConfiguration().lineWrap.wraps())
+		return position;
+	Position result;
+	length_t subline;
+	result.line = mapVisualLineToLogicalLine(position.line, &subline);
+	result.column = getLineLayout(result.line).getSublineOffset(subline) + position.column;
+	return result;
+}
+#endif /* 0 */
+
 /// @see presentation#IPresentationStylistListener
 void LineLayoutBuffer::presentationStylistChanged() {
 	invalidate();
-}
-
-/**
- * Slides cached layouts. This method does not change @c startLine_ member.
- * @param first the first line of range to slide
- * @param offset the amount to slide
- * @param callModified set true to invoke the concrete's #layoutModified method
- */
-void LineLayoutBuffer::slideCaches(length_t first, signed_length_t offset, bool callModified) throw() {
-	if(offset == 0 || first >= startLine_ + bufferSize_)
-		return;
-	length_t clearedFirst, clearedLast, clearedSublines = 0;
-	first = max(startLine_, first) - startLine_;	// layouts_ 内の相対位置に変換
-	if(offset > 0) {
-		const length_t clearedLines = min(static_cast<length_t>(offset), bufferSize_ - first);
-		for(length_t i = bufferSize_ - 1; ; --i) {
-			if(i >= bufferSize_ - clearedLines) {
-				if(layouts_[i] != 0) {
-					clearedSublines += layouts_[i]->getNumberOfSublines();
-					delete layouts_[i];
-				} else
-					++clearedSublines;
-			}
-			const signed_length_t src = static_cast<signed_length_t>(i) - offset;
-			if((layouts_[i] = (src >= 0 && static_cast<length_t>(src) >= first) ? layouts_[src] : 0) != 0)
-				layouts_[i]->lineNumber_ += offset;
-			if(i == first)
-				break;
-		}
-		clearedLast = startLine_ + bufferSize_;
-		clearedFirst = clearedLast - clearedLines;
-	} else {	// offset < 0
-		const length_t clearedLines = min(static_cast<length_t>(-offset), bufferSize_ - first);
-		for(length_t i = first; i < bufferSize_; ++i) {
-			if(i < first + clearedLines) {
-				if(layouts_[i] != 0) {
-					clearedSublines += layouts_[i]->getNumberOfSublines();
-					delete layouts_[i];
-				} else
-					++clearedSublines;
-			}
-			const signed_length_t src = static_cast<signed_length_t>(i) - offset;
-			if((layouts_[i] = (src >= 0 && static_cast<length_t>(src) < bufferSize_) ? layouts_[src] : 0) != 0)
-				layouts_[i]->lineNumber_ += offset;
-		}
-		clearedFirst = first + startLine_;
-		clearedLast = clearedFirst + clearedLines;
-	}
-	if(clearedFirst < viewer_.getDocument().getNumberOfLines()) {
-//		clearedLast = min(clearedLast, viewer_.getDocument().getNumberOfLines());
-		if(callModified && clearedFirst != clearedLast)
-			layoutModified(clearedFirst, clearedLast, clearedLast - clearedFirst, clearedSublines, documentChangePhase_ == CHANGING);
-	}
-}
-
-/**
- * @param line the line to set new start of the caches.
- */
-inline void LineLayoutBuffer::updateCacheStartLine(length_t line) throw() {
-//	if(line + bufferSize_ > viewer_.getDocument().getNumberOfLines())
-//		line -= min(line + bufferSize_ - viewer_.getDocument().getNumberOfLines(), line);
-	if(line == startLine_)
-		return;
-	verifyLayoutCaches();
-	slideCaches(startLine_, static_cast<signed_length_t>(startLine_) - static_cast<signed_length_t>(line), true);
-	startLine_ = line;
-	for(length_t i = 0; i < bufferSize_; ++i) {	// すぐ上で設定したばかりなんだが...
-		if(layouts_[i] != 0)
-			layouts_[i]->lineNumber_ = i + startLine_;
-	}
-	verifyLayoutCaches();
-#ifdef TRACE_LAYOUT_CACHES
-	dout << "cache window moved. new window is " << startLine_ << ".." << startLine_ + bufferSize_ << "\n";
-#endif
-}
-
-/// Verifies whether the layout caches connect corresponding lines. This method does nothing in release mode.
-inline void LineLayoutBuffer::verifyLayoutCaches() const throw() {
-#ifdef _DEBUG
-	const size_t last = min(startLine_ + bufferSize_, viewer_.getDocument().getNumberOfLines());
-	for(size_t i = startLine_; i < last; ++i) {
-		if(layouts_[i - startLine_] != 0 && layouts_[i - startLine_]->lineNumber_ != i)
-			::DebugBreak();
-	}
-#endif /* _DEBUG */
 }
 
 
@@ -1797,10 +1823,10 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
  * @throw std#invalid_argument @a viewer is not a window
  */
 TextRenderer::TextRenderer(TextViewer& viewer)
-		: LineLayoutBuffer(viewer, ASCENSION_TEXT_RENDERER_CACHE_LINES, true),
+		: LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
-	if(!viewer.isWindow())
-		throw invalid_argument("The specified viewer is not a window.");
+//	if(!viewer.isWindow())
+//		throw invalid_argument("The specified viewer is not a window.");
 	::LOGFONTW lf;
 	HFONT f = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
 	::GetObject(f, sizeof(::LOGFONTW), &lf);
@@ -1879,13 +1905,11 @@ void TextRenderer::layoutModified(length_t first, length_t last, length_t newSub
 	} else {
 		length_t newLongestLine = longestLine_;
 		int newLongestLineWidth = longestLineWidth_;
-		for(length_t i = first; i < last; ++i) {
-			if(isLineCached(i)) {
-				const LineLayout& layout = getLineLayout(i);
-				if(layout.getWidth() > newLongestLineWidth) {
-					newLongestLine = i;
-					newLongestLineWidth = layout.getWidth();
-				}
+		for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+			const LineLayout& layout = **i;
+			if(layout.getWidth() > newLongestLineWidth) {
+				newLongestLine = (*i)->getLineNumber();
+				newLongestLineWidth = layout.getWidth();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -1896,95 +1920,6 @@ void TextRenderer::layoutModified(length_t first, length_t last, length_t newSub
 		IVisualLinesListener::visualLinesModified, first, last,
 		static_cast<signed_length_t>(newSublines) - static_cast<signed_length_t>(oldSublines), documentChanged, longestLineChanged);
 
-}
-
-/**
- * Returns the first visual line number of the specified logical line.
- * @param line the logical line
- * @return the first visual line of @a line
- * @throw text#BadPositionException @a line is outside of the document
- * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
- */
-length_t TextRenderer::mapLogicalLineToVisualLine(length_t line) const {
-	if(line >= getTextViewer().getDocument().getNumberOfLines())
-		throw text::BadPositionException();
-	else if(!getTextViewer().getConfiguration().lineWrap.wraps() || line < getCacheFirstLine())
-		return line;
-	else if(line >= getCacheLastLine())
-		return line + numberOfVisualLines_ - getTextViewer().getDocument().getNumberOfLines();
-	length_t result = getCacheFirstLine();
-	for(length_t i = getCacheFirstLine(); i < line; ++i)
-		result += getNumberOfSublinesOfLine(i);
-	return result;
-}
-
-/**
- * Returns the visual line number and the visual column number of the specified logical position.
- * @param position the logical coordinates of the position to be mapped
- * @param[out] column the visual column of @a position. can be @c null if not needed
- * @return the visual line of @a position
- * @throw text#BadPositionException @a position is outside of the document
- * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
- */
-length_t TextRenderer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
-	if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
-		if(column != 0)
-			*column = position.column;
-		return position.line;
-	}
-	const LineLayout& layout = getLineLayout(position.line);
-	const length_t subline = layout.getSubline(position.column);
-	if(column != 0)
-		*column = position.column - layout.getSublineOffset(subline);
-	return mapLogicalLineToVisualLine(position.line) + subline;
-}
-
-/**
- * Returns the logical line number and the visual subline number of the specified visual line.
- * @param line the visual line
- * @param[out] subline the visual subline of @a line. can be @c null if not needed
- * @return the logical line
- * @throw text#BadPositionException @a line is outside of the document
- * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
- */
-length_t TextRenderer::mapVisualLineToLogicalLine(length_t line, length_t* subline) const {
-	if(!getTextViewer().getConfiguration().lineWrap.wraps() || line < getCacheFirstLine()) {
-		if(subline != 0)
-			*subline = 0;
-		return line;
-	} else if(line >= getCacheLastLine() + numberOfVisualLines_ - getTextViewer().getDocument().getNumberOfLines()) {
-		if(subline != 0)
-			*subline = 0;
-		return line + numberOfVisualLines_ - getTextViewer().getDocument().getNumberOfLines();
-	}
-	length_t c = getCacheFirstLine();
-	for(length_t i = getCacheFirstLine(); ; ++i) {
-		if(c + getNumberOfSublinesOfLine(i) > line) {
-			if(subline != 0)
-				*subline = line - c;
-			return i;
-		}
-		c += getNumberOfSublinesOfLine(i);
-	}
-	assert(false);
-	return getCacheLastLine();	// ここには来ない
-}
-
-/**
- * Returns the logical line number and the logical column number of the specified visual position.
- * @param position the visual coordinates of the position to be mapped
- * @return the logical coordinates of @a position
- * @throw text#BadPositionException @a position is outside of the document
- * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
- */
-Position TextRenderer::mapVisualPositionToLogicalPosition(const Position& position) const {
-	if(!getTextViewer().getConfiguration().lineWrap.wraps())
-		return position;
-	Position result;
-	length_t subline;
-	result.line = mapVisualLineToLogicalLine(position.line, &subline);
-	result.column = getLineLayout(result.line).getSublineOffset(subline) + position.column;
-	return result;
 }
 
 /**
@@ -2036,13 +1971,10 @@ void TextRenderer::updateLongestLine(length_t line, int width) throw() {
 	} else {
 		longestLine_ = -1;
 		longestLineWidth_ = 0;
-		for(size_t i = getCacheFirstLine(); i < getCacheLastLine(); ++i) {
-			if(isLineCached(i)) {
-				const LineLayout& layout = getLineLayout(i);
-				if(layout.getWidth() > longestLineWidth_) {
-					longestLine_ = i;
-					longestLineWidth_ = layout.getWidth();
-				}
+		for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+			if((*i)->getWidth() > longestLineWidth_) {
+				longestLine_ = (*i)->getLineNumber();
+				longestLineWidth_ = (*i)->getWidth();
 			}
 		}
 	}
@@ -2062,13 +1994,11 @@ void TextRenderer::updateViewerSize() throw() {
 			viewerWidth_ = newWidth;
 			// ウィンドウ幅で折り返す場合は再計算
 			if(getTextViewer().getConfiguration().lineWrap.wrapsAtWindowEdge()) {
-				for(length_t i = getCacheFirstLine(); i < getCacheLastLine(); ++i) {
-					if(!isLineCached(i))
-						continue;
-					const LineLayout& layout = getLineLayout(i);
+				for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+					const LineLayout& layout = **i;
 					if(layout.getNumberOfSublines() != 1 || layout.getWidth() > newWidth)
 //						layout.rewrap();
-						invalidate(i, i + 1);
+						invalidate(layout.getLineNumber(), layout.getLineNumber() + 1);
 				}
 			}
 		}

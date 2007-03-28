@@ -50,7 +50,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	}
 
 #ifdef _DEBUG
-	::_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_EVERY_1024_DF);
+	::_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF
+//		| _CRTDBG_CHECK_CRT_DF
+//		| _CRTDBG_DELAY_FREE_MEM_DF
+		| _CRTDBG_CHECK_EVERY_1024_DF);
+//		| _CRTDBG_CHECK_ALWAYS_DF);
 	long cccc = -1;
 	if(cccc != -1)
 		::_CrtSetBreakAlloc(cccc);
@@ -930,8 +934,9 @@ void Alpha::setupMenus() {
 	*popup << ITEM(CMD_VIEW_TOOLBAR) << ITEM(CMD_VIEW_STATUSBAR) << ITEM(CMD_VIEW_BUFFERBAR)
 		<< sep << ITEM(CMD_VIEW_BUFFERS) << ITEM(CMD_VIEW_NEXTBUFFER) << ITEM(CMD_VIEW_PREVBUFFER)
 		<< sep << ITEM(CMD_VIEW_SPLITNS) << ITEM(CMD_VIEW_SPLITWE) << ITEM(CMD_VIEW_UNSPLITOTHERS)
-		<< ITEM(CMD_VIEW_UNSPLITACTIVE) << ITEM(CMD_VIEW_NEXTPANE) << ITEM(CMD_VIEW_PREVPANE) << sep
-		<< ITEM(CMD_VIEW_WRAPNO) << ITEM(CMD_VIEW_WRAPBYSPECIFIEDWIDTH) << ITEM(CMD_VIEW_WRAPBYWINDOWWIDTH)
+		<< ITEM(CMD_VIEW_UNSPLITACTIVE) << ITEM(CMD_VIEW_NEXTPANE) << ITEM(CMD_VIEW_PREVPANE) << sep << ITEM(CMD_VIEW_WRAPNO)
+		<< Menu::StringItem(CMD_VIEW_WRAPBYSPECIFIEDWIDTH, commandManager_->getMenuName(CMD_VIEW_WRAPBYSPECIFIEDWIDTH).c_str(), MFS_ENABLED, true)
+		<< Menu::StringItem(CMD_VIEW_WRAPBYWINDOWWIDTH, commandManager_->getMenuName(CMD_VIEW_WRAPBYWINDOWWIDTH).c_str(), MFS_ENABLED, true)
 		<< sep << ITEM(CMD_VIEW_TOPMOSTALWAYS) << ITEM(CMD_VIEW_REFRESH);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS, buffers_->getListMenu());
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP, popup);
@@ -994,8 +999,7 @@ void Alpha::setupToolbar() {
 		for(i = 0, it = buttonIDs.begin(); it != buttonIDs.end(); ++i, ++it)
 			commands[i] = static_cast<CommandID>(wcstoul(it->c_str(), 0, 10));
 	} else {	// デフォルトの設定を使う
-		buttonCount = 19;
-		commands = new CommandID[buttonCount];
+		commands = new CommandID[buttonCount = 19];
 		commands[0] = CMD_FILE_NEW;			commands[1] = CMD_FILE_OPEN;
 		commands[2] = CMD_FILE_SAVE;		commands[3] = CMD_FILE_SAVEAS;
 		commands[4] = CMD_FILE_SAVEALL;		commands[5] = 0;
@@ -1061,6 +1065,8 @@ void Alpha::setupToolbar() {
 		while(toolbar_.getButtonCount() != 0)
 			toolbar_.deleteButton(0);
 	}
+	toolbar_.setBitmapSize(16, 16);
+	toolbar_.setButtonSize(22, 22);
 	toolbar_.addButtons(static_cast<int>(buttonCount), buttons);
 	toolbar_.setImageList(commandManager_->getImageList(CommandManager::ICONSTATE_NORMAL).getHandle());
 	toolbar_.setDisabledImageList(commandManager_->getImageList(CommandManager::ICONSTATE_DISABLED).getHandle());
@@ -1069,13 +1075,13 @@ void Alpha::setupToolbar() {
 
 	for(size_t i = 0; i < buttonCount; ++i) {
 		delete[] reinterpret_cast<wchar_t*>(buttons[i].iString);
-		if(buttons[i].fsStyle != BTNS_SEP
-				&& buttons[i].iBitmap != I_IMAGENONE) {	// アイコン付きボタンの幅をここで固定する
-			AutoZeroCB<TBBUTTONINFOW> tbi;
-			tbi.dwMask = TBIF_SIZE;
-			tbi.cx = (buttons[i].idCommand != CMD_FILE_NEW && buttons[i].idCommand != CMD_FILE_OPEN) ? 22 : 38;
-			toolbar_.setButtonInfo(buttons[i].idCommand, tbi);
-		}
+//		if(buttons[i].fsStyle != BTNS_SEP
+//				&& buttons[i].iBitmap != I_IMAGENONE) {	// アイコン付きボタンの幅をここで固定する
+//			AutoZeroCB<TBBUTTONINFOW> tbi;
+//			tbi.dwMask = TBIF_SIZE;
+//			tbi.cx = (buttons[i].idCommand != CMD_FILE_NEW && buttons[i].idCommand != CMD_FILE_OPEN) ? 22 : 38;
+//			toolbar_.setButtonInfo(buttons[i].idCommand, tbi);
+//		}
 	}
 	delete[] commands;
 	delete[] buttons;
@@ -1143,6 +1149,8 @@ void Alpha::updateStatusBarPaneSize() {
 	HFONT oldFont = static_cast<HFONT>(dc.selectObject(statusFont_));
 
 	parts[4] = rc.right - rc.left;
+	if(!getMainWindow().isZoomed())
+		parts[4] -= 20;
 	// ナローイング
 	parts[3] = parts[4] - ICON_WIDTH - padding;
 	// 上書き/挿入モード
@@ -1433,25 +1441,18 @@ void Alpha::onRebarChevronPushed(const NMREBARCHEVRON& chevron) {
 	}
 
 	// 非表示のボタンをメニュー項目に変換
-	Menu popup;
+	PopupMenu popup;
 	::POINT pt = {chevron.rc.left, chevron.rc.bottom};
 	AutoZeroCB<::TBBUTTONINFOW> tbbi;
-	Menu::ItemInfo item;
-
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
-	item.fMask = MIIM_DATA | MIIM_FTYPE | MIIM_ID | MIIM_STATE;
 	for(; i < buttonCount; ++i) {
 		::SendMessage(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
 		if(toBoolean(tbbi.fsStyle & TBSTYLE_SEP))
-			popup.appendSeparator(MFT_OWNERDRAW);
-		else {
-			item.fType = MFT_OWNERDRAW;
-			item.fState = commandManager_->isEnabled(tbbi.idCommand, true) ? MFS_ENABLED : MFS_DISABLED;
-			item.fState |= (commandManager_->isChecked(tbbi.idCommand)) ? MFS_CHECKED : 0;
-			item.wID = tbbi.idCommand;
-			item.dwItemData = 0/*reinterpret_cast<DWORD>(getControls::MenuLabel(tbbi.idCommand))*/;
-			popup.insert<Menu::BY_POSITION>(popup.getNumberOfItems(), item);
-		}
+			popup << Menu::SeparatorItem();
+		else
+			popup << Menu::StringItem(tbbi.idCommand, commandManager_->getMenuName(tbbi.idCommand).c_str(),
+				(commandManager_->isEnabled(tbbi.idCommand, true) ? MFS_ENABLED : MFS_DISABLED)
+				| ((commandManager_->isChecked(tbbi.idCommand)) ? MFS_CHECKED : 0));
 	}
 	rebar_.clientToScreen(pt);
 	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());

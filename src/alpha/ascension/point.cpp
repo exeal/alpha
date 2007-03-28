@@ -562,24 +562,28 @@ void EditPoint::newLine() {
  * @param listener the listener. can be @c null
  * @throw std#invalid_argument @a position is outside of the document
  */
-VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */)
-		: EditPoint(viewer.getDocument(), position, listener), LineLayoutBuffer(viewer, ASCENSION_VISUAL_POINT_CACHE_LINES, false),
-		viewer_(&viewer), clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(-1), visualSubline_(0) {
+VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
+		EditPoint(viewer.getDocument(), position, listener),viewer_(&viewer),
+		clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(-1), visualSubline_(0) {
 	static_cast<text::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
+	viewer_->getTextRenderer().addVisualLinesListener(*this);
 }
 
 /// Copy-constructor.
-VisualPoint::VisualPoint(const VisualPoint& rhs) : EditPoint(rhs), LineLayoutBuffer(*rhs.viewer_, ASCENSION_VISUAL_POINT_CACHE_LINES, false),
-		viewer_(rhs.viewer_), lastX_(rhs.lastX_), crossingLines_(false), visualLine_(rhs.visualLine_), visualSubline_(rhs.visualSubline_) {
+VisualPoint::VisualPoint(const VisualPoint& rhs) : EditPoint(rhs), viewer_(rhs.viewer_),
+		lastX_(rhs.lastX_), crossingLines_(false), visualLine_(rhs.visualLine_), visualSubline_(rhs.visualSubline_) {
 	if(viewer_ == 0)
 		throw DisposedViewerException();
 	static_cast<text::internal::IPointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
+	viewer_->getTextRenderer().addVisualLinesListener(*this);
 }
 
 /// Destructor.
 VisualPoint::~VisualPoint() throw() {
-	if(viewer_ != 0)
+	if(viewer_ != 0) {
 		static_cast<text::internal::IPointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
+		viewer_->getTextRenderer().removeVisualLinesListener(*this);
+	}
 }
 
 /**
@@ -668,7 +672,8 @@ void VisualPoint::doMoveTo(const Position& to) {
 	verifyViewer();
 	if(getLineNumber() == to.line && visualLine_ != INVALID_INDEX) {
 		visualLine_ -= visualSubline_;
-		visualSubline_ = (viewer_->getTextRenderer().getNumberOfSublinesOfLine(to.line) > 1) ? getLayout(to.line).getSubline(to.column) : 0;
+		const LineLayout* layout = viewer_->getTextRenderer().getLineLayoutIfCached(to.line);
+		visualSubline_ = (layout != 0) ? layout->getSubline(to.column) : 0;
 		visualLine_ += visualSubline_;
 	} else
 		visualLine_ = INVALID_INDEX;
@@ -781,30 +786,16 @@ inline const IdentifierSyntax& VisualPoint::getIdentifierSyntax() const {
 	return getDocument()->getContentTypeInformation().getIdentifierSyntax(getContentType());
 }
 
-/**
- * Returns the layout of the specified line.
- * @param line the line number or -1 to get for the current line
- * @return the layout
- */
-const LineLayout& VisualPoint::getLayout(length_t line /* = -1 */) const {
-	verifyViewer();
-	if(line == -1)
-		line = getLineNumber();
-	if(isLineCached(line))
-		return getLineLayout(line);
-	const TextRenderer& renderer = viewer_->getTextRenderer();
-	return renderer.isLineCached(line) ? renderer.getLineLayout(line) : getLineLayout(line);
-}
-
 /// Returns the visual column of the point.
 length_t VisualPoint::getVisualColumnNumber() const {
 	if(lastX_ == -1)
 		const_cast<VisualPoint*>(this)->updateLastX();
 	const TextViewer::Configuration& c = viewer_->getConfiguration();
+	const TextRenderer& renderer = viewer_->getTextRenderer();
 	if(c.alignment == ALIGN_LEFT || (c.alignment != ALIGN_RIGHT && c.orientation == LEFT_TO_RIGHT))
-		return lastX_ / viewer_->getTextRenderer().getAverageCharacterWidth();
+		return lastX_ / renderer.getAverageCharacterWidth();
 	else
-		return (getLayout().getWidth() - lastX_) / viewer_->getTextRenderer().getAverageCharacterWidth();
+		return (renderer.getLineLayout(getLineNumber()).getWidth() - lastX_) / renderer.getAverageCharacterWidth();
 }
 
 /**
@@ -829,8 +820,8 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 
 	const length_t numberOfLines = document.getNumberOfLines();
 	length_t line = getLineNumber();
-	const int x = getLayout().getLocation(getColumnNumber()).x;
 	const TextRenderer& renderer = getTextViewer().getTextRenderer();
+	const int x = renderer.getLineLayout(line).getLocation(getColumnNumber()).x;
 	const String breakString = getLineBreakString(document.getLineBreak());
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
@@ -861,7 +852,7 @@ bool VisualPoint::isEndOfVisualLine() const {
 	verifyViewer();
 	if(isEndOfLine())
 		return true;
-	const LineLayout& layout = getLayout();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
 	const length_t subline = layout.getSubline(getColumnNumber());
 	return getColumnNumber() == layout.getSublineOffset(subline) + layout.getSublineLength(subline);
 }
@@ -896,36 +887,8 @@ bool VisualPoint::isStartOfVisualLine() const {
 	verifyViewer();
 	if(isStartOfLine())
 		return true;
-	const LineLayout& layout = getLayout();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
 	return getColumnNumber() == layout.getSublineOffset(layout.getSubline(getColumnNumber()));
-}
-
-/// @see LineLayoutBuffer#layoutDeleted
-void VisualPoint::layoutDeleted(length_t first, length_t last, length_t sublines) throw() {
-	if(!adaptsToDocument() && getLineNumber() >= first && getLineNumber() < last)
-		visualLine_ = INVALID_INDEX;
-}
-
-/// @see LineLayoutBuffer#layoutInserted
-void VisualPoint::layoutInserted(length_t first, length_t last) throw() {
-	if(!adaptsToDocument() && getLineNumber() >= first && getLineNumber() < last)
-		visualLine_ = INVALID_INDEX;
-}
-
-/// @see LineLayoutBuffer#layoutModified
-void VisualPoint::layoutModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool) throw() {
-	if(visualLine_ != INVALID_INDEX) {
-		// 折り返しの変化に従って、visualLine_ と visualSubine_ を調整する
-		if(last <= getLineNumber()) {
-			visualLine_ += newSublines;
-			visualLine_ -= oldSublines;
-		} else if(first == getLineNumber()) {
-			visualLine_ -= visualSubline_;
-			visualSubline_ = getLayout().getSubline(getColumnNumber());
-			visualLine_ += visualSubline_;
-		} else if(first < getLineNumber())
-			visualLine_ = INVALID_INDEX;
-	}
 }
 
 /**
@@ -934,7 +897,7 @@ void VisualPoint::layoutModified(length_t first, length_t last, length_t newSubl
  */
 void VisualPoint::moveToEndOfVisualLine() {
 	verifyViewer();
-	const LineLayout& layout = getLayout();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
 	const length_t subline = layout.getSubline(getColumnNumber());
 	moveTo(Position(getLineNumber(), (subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : getLineLength()));
 }
@@ -970,7 +933,7 @@ void VisualPoint::moveToLastCharOfLine() {
  */
 void VisualPoint::moveToStartOfVisualLine() {
 	verifyViewer();
-	const LineLayout& layout = getLayout();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
 	moveTo(Position(getLineNumber(), layout.getSublineOffset(layout.getSubline(getLineNumber()))));
 }
 
@@ -1073,6 +1036,10 @@ bool VisualPoint::recenter(const Position& other) {
 	return true;
 }
 
+/// @see IVisualLinesListener#rendererFontChanged
+void VisualPoint::rendererFontChanged() throw() {
+}
+
 /**
  * 指定範囲が可視になるようにビューをスクロールする
  * @param length 範囲を構成するもう一方の点までの文字数
@@ -1099,7 +1066,7 @@ bool VisualPoint::show(const Position& other) {
 	// 垂直方向
 	if(visualLine_ == INVALID_INDEX) {
 		visualLine_ = viewer_->getTextRenderer().mapLogicalLineToVisualLine(getLineNumber());
-		visualSubline_ = getLayout().getSubline(getColumnNumber());
+		visualSubline_ = renderer.getLineLayout(getLineNumber()).getSubline(getColumnNumber());
 		visualLine_ += visualSubline_;
 	}
 	si.fMask = SIF_POS;
@@ -1114,7 +1081,7 @@ bool VisualPoint::show(const Position& other) {
 	// 水平方向
 	if(!viewer_->getConfiguration().lineWrap.wrapsAtWindowEdge()) {
 		const length_t visibleColumns = viewer_->getNumberOfVisibleColumns();
-		const ulong x = getLayout().getLocation(getColumnNumber(), LineLayout::LEADING).x;
+		const ulong x = renderer.getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x;
 		viewer_->getScrollInformation(SB_HORZ, si);
 		const ulong scrollOffset = si.nPos * viewer_->getScrollRate(true) * renderer.getAverageCharacterWidth();
 		if(x <= scrollOffset)	// 画面より左
@@ -1336,7 +1303,7 @@ inline void VisualPoint::updateLastX() {
 	assert(!crossingLines_);
 	verifyViewer();
 	if(!isDocumentDisposed())
-		lastX_ = getLayout().getLocation(getColumnNumber(), LineLayout::LEADING).x;
+		lastX_ = getTextViewer().getTextRenderer().getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x;
 }
 
 /**
@@ -1347,13 +1314,40 @@ void VisualPoint::visualLineDown(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	const TextRenderer& renderer = viewer_->getTextRenderer();
-	length_t line = getLineNumber(), subline = getLayout().getSubline(getColumnNumber());
+	length_t line = getLineNumber(), subline = renderer.getLineLayout(getLineNumber()).getSubline(getColumnNumber());
 	if(lastX_ == -1)
 		updateLastX();
 	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
 	crossingLines_ = true;
-	moveTo(Position(line, getLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
+	moveTo(Position(line, renderer.getLineLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
 	crossingLines_ = false;
+}
+
+/// @see IVisualLinesListener#visualLinesDeleted
+void VisualPoint::visualLinesDeleted(length_t first, length_t last, length_t, bool) throw() {
+	if(!adaptsToDocument() && getLineNumber() >= first && getLineNumber() < last)
+		visualLine_ = INVALID_INDEX;
+}
+
+/// @see IVisualLinesListener#visualLinesInserted
+void VisualPoint::visualLinesInserted(length_t first, length_t last) throw() {
+	if(!adaptsToDocument() && getLineNumber() >= first && getLineNumber() < last)
+		visualLine_ = INVALID_INDEX;
+}
+
+/// @see IVisualLinesListener#visualLinesModified
+void VisualPoint::visualLinesModified(length_t first, length_t last, signed_length_t sublineDifference, bool, bool) throw() {
+	if(visualLine_ != INVALID_INDEX) {
+		// 折り返しの変化に従って、visualLine_ と visualSubine_ を調整する
+		if(last <= getLineNumber())
+			visualLine_ += sublineDifference;
+		else if(first == getLineNumber()) {
+			visualLine_ -= visualSubline_;
+			visualSubline_ = getTextViewer().getTextRenderer().getLineLayout(getLineNumber()).getSubline(getColumnNumber());
+			visualLine_ += visualSubline_;
+		} else if(first < getLineNumber())
+			visualLine_ = INVALID_INDEX;
+	}
 }
 
 /**
@@ -1364,12 +1358,12 @@ void VisualPoint::visualLineUp(length_t offset /* = 1 */) {
 	verifyViewer();
 	normalize();
 	const TextRenderer& renderer = viewer_->getTextRenderer();
-	length_t line = getLineNumber(), subline = getLayout().getSubline(getColumnNumber());
+	length_t line = getLineNumber(), subline = renderer.getLineLayout(line).getSubline(getColumnNumber());
 	if(lastX_ == -1)
 		updateLastX();
 	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
 	crossingLines_ = true;
-	moveTo(Position(line, getLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
+	moveTo(Position(line, renderer.getLineLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
 	crossingLines_ = false;
 }
 
@@ -1940,7 +1934,7 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 	if(!isSelectionRectangle()) {
 		if(!getSelectedRangeOnLine(line, first, last))
 			return false;
-		const LineLayout& layout = getLayout(line);
+		const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(line);
 		const length_t sublineOffset = layout.getSublineOffset(subline);
 		first = max(first, sublineOffset);
 		last = min(last, sublineOffset + layout.getSublineLength(subline));

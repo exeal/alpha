@@ -203,6 +203,8 @@ namespace ascension {
 				RELEASED,		///< The button was released (up).
 				DOUBLE_CLICKED	///< The button was double-clicked.
 			};
+			/// Destructor.
+			virtual ~IMouseInputStrategy() throw() {}
 		private:
 			/// The viewer lost the mouse capture.
 			virtual void captureChanged() = 0;
@@ -244,6 +246,7 @@ namespace ascension {
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 			friend class TextViewer;
+			friend class ascension::internal::StrategyPointer<IMouseInputStrategy>;
 		};
 
 		/**
@@ -253,7 +256,7 @@ namespace ascension {
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
 			// IUnknown
-			IMPLEMENT_UNKNOWN_SINGLE_THREADED()
+			IMPLEMENT_UNKNOWN_NO_REF_COUNT()
 			BEGIN_INTERFACE_TABLE()
 				IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
 				IMPLEMENTS_INTERFACE(IDropTarget)
@@ -317,6 +320,10 @@ namespace ascension {
 			friend class TextViewer;
 			friend class ascension::internal::StrategyPointer<IViewerLinkTextStrategy>;
 		};
+
+#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		namespace internal {class TextViewerAccessibleProxy;}
+#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 
 		class TextViewer :
 				public manah::win32::ui::CustomControl<TextViewer>,
@@ -662,9 +669,6 @@ namespace ascension {
 
 			// 内部クラス
 		private:
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			class AccessibleProxy;
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 			/// 自動スクロールの開始点に表示する丸いウィンドウ
 			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
 				DEFINE_WINDOW_CLASS() {
@@ -784,7 +788,7 @@ namespace ascension {
 			std::auto_ptr<AutoScrollOriginMark> autoScrollOriginMark_;
 			std::auto_ptr<VerticalRulerDrawer> verticalRulerDrawer_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			AccessibleProxy* accessibleProxy_;
+			internal::TextViewerAccessibleProxy* accessibleProxy_;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 
 			// 所有権、複製体の管理 (クラスの説明を参照)
@@ -952,18 +956,10 @@ inline const text::Document& TextViewer::getDocument() const {return presentatio
  * @param[out] visualSubline the offset of @a visualLine from the first line in @a logicalLine. can be @c null if not needed
  */
 inline void TextViewer::getFirstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw() {
-#if 1
 	if(logicalLine != 0)
 		*logicalLine = scrollInfo_.firstVisibleLine;
 	if(visualSubline != 0)
 		*visualSubline = scrollInfo_.firstVisibleSubline;
-#else
-	if(logicalLine != 0 || visualSubline != 0) {
-		const length_t line = renderer_->mapVisualLineToLogicalLine(scrollInfo_.getY(), visualSubline);
-		if(logicalLine != 0)
-			*logicalLine = line;
-	}
-#endif
 	if(visualLine != 0)
 		*visualLine = scrollInfo_.getY();
 }

@@ -148,6 +148,7 @@ namespace ascension {
 			uchar			getBidiEmbeddingLevel(length_t column) const;
 			::SIZE			getBounds() const throw();
 			::RECT			getBounds(length_t first, length_t last) const;
+			length_t		getLineNumber() const throw();
 			::POINT			getLocation(length_t column, Edge edge = LEADING) const;
 			length_t		getNumberOfSublines() const throw();
 			length_t		getOffset(int x, int y, Edge edge = LEADING) const throw();
@@ -210,19 +211,25 @@ namespace ascension {
 		public:
 			// attributes
 			const LineLayout&	getLineLayout(length_t line) const;
+			const LineLayout*	getLineLayoutIfCached(length_t line) const throw();
 			TextViewer&			getTextViewer() throw();
 			const TextViewer&	getTextViewer() const throw();
-			bool				isLineCached(length_t line) const;
+			// position translations
+			length_t		mapLogicalLineToVisualLine(length_t line) const;
+			length_t		mapLogicalPositionToVisualPosition(const text::Position& position, length_t* column) const;
+//			length_t		mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
+//			text::Position	mapVisualPositionToLogicalPosition(const text::Position& position) const;
 			// operations
 			void	invalidate() throw();
 			void	invalidate(length_t first, length_t last);
 		protected:
 			LineLayoutBuffer(TextViewer& viewer, length_t bufferSize, bool autoRepair);
 			virtual ~LineLayoutBuffer() throw();
-			void			documentAboutToBeChanged(const text::Document& document);
-			void			documentChanged(const text::Document& document, const text::DocumentChange& change);
-			length_t		getCacheFirstLine() const throw();
-			length_t		getCacheLastLine() const throw();
+			void				invalidate(length_t line);
+			// enumeration
+			std::list<LineLayout*>::const_iterator	getFirstCachedLine() const throw();
+			std::list<LineLayout*>::const_iterator	getLastCachedLine() const throw();
+			// observation
 			virtual void	layoutDeleted(length_t first, length_t last, length_t sublines) throw() = 0;
 			virtual void	layoutInserted(length_t first, length_t last) throw() = 0;
 			virtual void	layoutModified(length_t first, length_t last,
@@ -231,16 +238,18 @@ namespace ascension {
 			void	clearCaches(length_t first, length_t last, bool repair);
 			void	createLineLayout(length_t line) throw();
 			void	deleteLineLayout(length_t line, LineLayout* newLayout = 0) throw();
-			void	invalidateLineLayout(length_t line) throw();
 			void	presentationStylistChanged();
-			void	slideCaches(length_t first, signed_length_t offset, bool callModified) throw();
-			void	updateCacheStartLine(length_t line) throw();
-			void	verifyLayoutCaches() const throw();
+			// IDocumentListener
+			void	documentAboutToBeChanged(const text::Document& document);
+			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
 		private:
+			struct CachedLineComparer {
+				bool operator()(const LineLayout*& lhs, length_t rhs) const throw() {return lhs->getLineNumber() < rhs;}
+				bool operator()(length_t lhs, const LineLayout*& rhs) const throw() {return lhs < rhs->getLineNumber();}
+			};
 			TextViewer& viewer_;
-			LineLayout** layouts_;
-			const length_t bufferSize_;	// layouts_ の要素数
-			length_t startLine_;		// layouts_[0] が何行目のデータか
+			std::list<LineLayout*> layouts_;
+			const std::size_t bufferSize_;
 			const bool autoRepair_;
 			enum {ABOUT_CHANGE, CHANGING, NONE} documentChangePhase_;
 			struct {
@@ -284,7 +293,7 @@ namespace ascension {
 			 */
 			virtual void visualLinesModified(length_t first, length_t last,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw() = 0;
-			friend TextRenderer;
+			friend class TextRenderer;
 		};
 
 		/**
@@ -454,10 +463,6 @@ namespace ascension {
 			length_t		getNumberOfVisualLines() const throw();
 			int				getWidth() const throw();
 			int				getWrapWidth() const throw();
-			length_t		mapLogicalLineToVisualLine(length_t line) const;
-			length_t		mapLogicalPositionToVisualPosition(const text::Position& position, length_t* column) const;
-			length_t		mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
-			text::Position	mapVisualPositionToLogicalPosition(const text::Position& position) const;
 			// class attributes
 			static bool	supportsComplexScript() throw();
 			// listeners and strategies
@@ -504,6 +509,9 @@ namespace ascension {
 
 
 // inlines //////////////////////////////////////////////////////////////////
+
+/// Returns the line number.
+inline length_t LineLayout::getLineNumber() const throw() {return lineNumber_;}
 
 /// Returns the number of the wrapped lines.
 inline length_t LineLayout::getNumberOfSublines() const throw() {return numberOfSublines_;}
@@ -587,22 +595,30 @@ inline bool LineLayout::isDisposed() const throw() {return runs_ == 0;}
 /// Asignment operator.
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) throw() {p_ = rhs.p_;}
 
-/// Returns the first line of the cached layouts.
-inline length_t LineLayoutBuffer::getCacheFirstLine() const throw() {return startLine_;}
+/// Returns the first cached line layout.
+inline std::list<LineLayout*>::const_iterator LineLayoutBuffer::getFirstCachedLine() const throw() {return layouts_.begin();}
+
+/// Returns the last cached line layout.
+inline std::list<LineLayout*>::const_iterator LineLayoutBuffer::getLastCachedLine() const throw() {return layouts_.end();}
+
+/**
+ * Returns the layout of the specified line.
+ * @param line the line
+ * @return the layout or @c null if the layout is not cached
+ */
+inline const LineLayout* LineLayoutBuffer::getLineLayoutIfCached(length_t line) const throw() {
+	for(std::list<LineLayout*>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+		if((*i)->lineNumber_ == line)
+			return *i;
+	}
+	return 0;
+}
 
 /// Returns the text viewer.
 inline TextViewer& LineLayoutBuffer::getTextViewer() throw() {return viewer_;}
 
 /// Returns the text viewer.
 inline const TextViewer& LineLayoutBuffer::getTextViewer() const throw() {return viewer_;}
-
-/**
- * Returns true if the layout of the specified line is cached.
- * @param line the line
- * @return true if @a line is cached
- */
-inline bool LineLayoutBuffer::isLineCached(length_t line) const throw() {
-	return line >= startLine_ && line < startLine_ + bufferSize_ && layouts_[line - startLine_] != 0;}
 
 /// Returns the font linking is enabled.
 inline bool FontSelector::enablesFontLinking() const throw() {return linkedFonts_ != 0;}
@@ -652,7 +668,8 @@ inline int TextRenderer::getLongestLineWidth() const throw() {return longestLine
  * @throw BadPositionException @a line is outside of the document
  * @see #getLineLayout, LineLayout#getNumberOfSublines
  */
-inline length_t TextRenderer::getNumberOfSublinesOfLine(length_t line) const {return isLineCached(line) ? getLineLayout(line).getNumberOfSublines() : 1;}
+inline length_t TextRenderer::getNumberOfSublinesOfLine(length_t line) const {
+	const LineLayout* layout = getLineLayoutIfCached(line); return (layout != 0) ? layout->getNumberOfSublines() : 1;}
 
 /// Returns the number of the visual lines.
 inline length_t TextRenderer::getNumberOfVisualLines() const throw() {return numberOfVisualLines_;}
