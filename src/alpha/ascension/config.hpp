@@ -105,23 +105,11 @@
 #define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::viewers::ALIGN_LEFT
 
 /**
- * @def ASCENSION_TEXT_RENDERER_CACHE_LINES
- * Length of array @c ascension#viewers#TextRenderer#layouts_.
+ * @def ASCENSION_LINE_LAYOUT_CACHE_SIZE
+ * Default size of cache buffer of @c ascension#viewers#LineLayoutBuffer. This value is used by
+ * @c ascension#viewers#LineLayoutBuffer class.
  */
-#define ASCENSION_TEXT_RENDERER_CACHE_LINES 128
-
-/**
- * @def ASCENSION_VISUAL_POINT_CACHE_LINES
- * Length of array @c ascension#viewers#VisualPoint#layouts_.
- */
-#define ASCENSION_VISUAL_POINT_CACHE_LINES 8
-
-/**
- * @def ASCENSION_TEXT_RENDERER_SPARSE_CACHE_LINES
- * Length of array @c ascension#viewers#TextRenderer#sparseLayoutsCache_.
- * @note This is not used currently.
- */
-#define ASCENSION_TEXT_RENDERER_SPARSE_CACHE_LINES 32
+#define ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE 256
 
 /**
  * @def ASCENSION_NO_DOUBLE_BUFFERING

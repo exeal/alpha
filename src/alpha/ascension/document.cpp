@@ -1180,9 +1180,9 @@ bool Document::renameFile(const WCHAR* newName) {
 /// Resets and initializes the content of the document.
 void Document::resetContent() {
 	diskFile_.unlock();
+	widen();
 	for(set<Point*>::iterator it = points_.begin(); it != points_.end(); ++it)
 		(*it)->moveTo(0, 0);
-	widen();
 
 	if(length_ != 0) {
 		const Region entire(getStartPosition(false), getEndPosition(false));
@@ -1904,12 +1904,12 @@ wstring text::canonicalizePathName(const wchar_t* pathName) throw() {
 			const wchar_t c = *next;
 			*next = 0;
 			HANDLE h = ::FindFirstFileW(path, &wfd);
-			*next = c;
 			if(h != INVALID_HANDLE_VALUE) {
 				::FindClose(h);
 				result += wfd.cFileName;
 			} else
 				result += p;
+			*next = c;
 			result += L'\\';
 			p = next + 1;
 		} else {

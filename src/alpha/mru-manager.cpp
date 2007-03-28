@@ -131,12 +131,12 @@ void MRUManager::updateMenu() {
 		popupMenu_.erase<Menu::BY_POSITION>(0);
 	if(fileNames_.empty()) {	// —š—ğ‚ª‹ó‚Ìê‡
 		const wstring s = Alpha::getInstance().loadString(MSG_OTHER__EMPTY_MENU_CAPTION);
-		popupMenu_.append(0, s.c_str(), MFS_GRAYED);
+		popupMenu_ << Menu::StringItem(0, s.c_str(), MFS_GRAYED);
 		return;
 	}
 	while(it != fileNames_.end()) {
 		swprintf(caption, L"&%x  %s", item, it->fileName.c_str());
-		popupMenu_.append(static_cast<UINT>(startID_ + item), caption);
+		popupMenu_ << Menu::StringItem(static_cast<UINT>(startID_ + item), caption);
 		++it;
 		++item;
 	}

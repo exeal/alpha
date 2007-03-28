@@ -126,11 +126,9 @@ namespace ascension {
 
 		/**
 		 * Extension of @c EditPoint for viewer and layout.
-		 * @note Inherited @c LineLayoutBuffer#getLineLayout and @c LineLayoutBuffer#invalidate
-		 * methods are protected in this class for internal semantics.
 		 * @see text#EditPoint, text#IPointListener, text#DisposedViewException
 		 */
-		class VisualPoint : public text::EditPoint, public LineLayoutBuffer {
+		class VisualPoint : public text::EditPoint, virtual public IVisualLinesListener {
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
@@ -191,21 +189,20 @@ namespace ascension {
 			bool			transposeWords();
 
 		protected:
-			using LineLayoutBuffer::getLineLayout;	// 限定公開
-			using LineLayoutBuffer::invalidate;		// 限定公開
 			virtual void						doMoveTo(const text::Position& to);
 			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
-			const LineLayout&					getLayout(length_t line = -1) const;
 			void								verifyViewer() const;
 		private:
 			using text::EditPoint::newLine;	// 明示的な隠蔽
 			text::Position	doIndent(const text::Position& other, Char character, bool box, long level);
-			void			layoutDeleted(length_t first, length_t last, length_t sublines) throw();
-			void			layoutInserted(length_t first, length_t last) throw();
-			void			layoutModified(length_t first, length_t last,
-								length_t newSublines, length_t oldSublines, bool documentChanged) throw();
 			void			updateLastX();
 			void			viewerDisposed() throw();
+			// IVisualLinesListener
+			void	rendererFontChanged() throw();
+			void	visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
+			void	visualLinesInserted(length_t first, length_t last) throw();
+			void	visualLinesModified(length_t first, length_t last,
+						signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
 
 		private:
 			TextViewer* viewer_;

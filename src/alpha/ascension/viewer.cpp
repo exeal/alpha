@@ -23,6 +23,7 @@
 
 using namespace ascension;
 using namespace ascension::viewers;
+using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace manah::win32;
@@ -106,13 +107,13 @@ const LineStyle LineStyle::NULL_STYLE = {0, 0};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
-// TextViewer::AccessibleProxy //////////////////////////////////////////////
+// TextViewerAccessibleProxy ////////////////////////////////////////////////
 
 /**
- * @c TextViewer#AccessibleProxy is proxy object for @c IAccessible interface of @c TextViewer instance.
+ * @c TextViewerAccessibleProxy is proxy object for @c IAccessible interface of @c TextViewer instance.
  * @see TextViewer#getAccessibleObject, ASCENSION_NO_ACTIVE_ACCESSIBILITY
  */
-class TextViewer::AccessibleProxy :
+class viewers::internal::TextViewerAccessibleProxy :
 		virtual public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
 			IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&LIBID_Accessibility, &IID_IAccessible>
@@ -128,7 +129,7 @@ class TextViewer::AccessibleProxy :
 	//   (http://www.gotdotnet.com/workspaces/workspace.aspx?id=4b5530a0-c900-421b-8ed6-7407997fa979)
 public:
 	// コンストラクタ
-	AccessibleProxy(TextViewer& view);
+	TextViewerAccessibleProxy(TextViewer& view);
 	// メソッド
 	void	dispose();
 	// IUnknown
@@ -442,6 +443,8 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 		lineBitmap_(0), oldLineBitmap_(0),
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 		mouseInputDisabledCount_(0) {
+	renderer_.reset(new TextRenderer(*this));
+	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	originalView_ = this;
@@ -465,6 +468,8 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(rh
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 {
 	// 非共有メンバは自分で作成。共有メンバはコピー
+	renderer_.reset(new TextRenderer(*this));
+	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 
@@ -617,11 +622,9 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	style &= ~WS_VISIBLE;	// 後で足す
 	if(!ui::CustomControl<TextViewer>::create(parent, rect, 0, style, exStyle))
 		return false;
-	renderer_.reset(new TextRenderer(*this));
-	renderer_->addVisualLinesListener(*this);
 	initializeWindow(originalView_ != this);
 
-#if 0
+#ifdef _DEBUG
 	// partitioning test
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
@@ -633,15 +636,15 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	setConfiguration(0, &vrc);
 
 	using namespace rules;
-	TransitionRule* rules[8];
-	rules[0] = new TransitionRule(DEFAULT_CONTENT_TYPE, 42, L"\\/\\*");
-	rules[1] = new TransitionRule(42, DEFAULT_CONTENT_TYPE, L"\\*\\/");
-	rules[2] = new TransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");
-	rules[3] = new TransitionRule(43, DEFAULT_CONTENT_TYPE, L"$");
-	rules[4] = new TransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
-	rules[5] = new TransitionRule(44, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\"|$)");
-	rules[6] = new TransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
-	rules[7] = new TransitionRule(45, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\'|$)");
+	TransitionRule* rules[4];
+	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");
+	rules[1] = new LiteralTransitionRule(42, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");
+	rules[3] = new LiteralTransitionRule(43, DEFAULT_CONTENT_TYPE, L"");
+//	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
+//	rules[5] = new RegexTransitionRule(44, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\"|$)");
+//	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
+//	rules[7] = new RegexTransitionRule(45, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\'|$)");
 	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
 	p->setRules(rules, endof(rules));
 	getDocument().setPartitioner(p);
@@ -834,7 +837,7 @@ HRESULT TextViewer::getAccessibleObject(IAccessible*& acc) const throw() {
 	TextViewer& self = *const_cast<TextViewer*>(this);
 	acc = 0;
 	if(accessibleProxy_ == 0 && isWindow() && accLib.isAvailable()) {
-		if(self.accessibleProxy_ = new AccessibleProxy(self)) {
+		if(self.accessibleProxy_ = new TextViewerAccessibleProxy(self)) {
 			self.accessibleProxy_->AddRef();
 //			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
 		} else
@@ -892,13 +895,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  */
 ::POINT TextViewer::getClientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();
-	::POINT pt;
-	if(renderer_->isLineCached(position.line))
-		pt = renderer_->getLineLayout(position.line).getLocation(position.column, edge);
-	else {
-		auto_ptr<LineLayout> layout(new LineLayout(*renderer_, position.line));
-		pt = layout->getLocation(position.column, edge);
-	}
+	::POINT pt = renderer_->getLineLayout(position.line).getLocation(position.column, edge);
 	pt.x -= getDisplayXOffset();
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
@@ -1656,7 +1653,7 @@ void TextViewer::onDestroy() {
 	
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
 	memDC_->selectObject(oldLineBitmap_.getHandle());
-	lineBitmap_.reset(0);
+	lineBitmap_.reset();
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -2612,7 +2609,7 @@ void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool de
 	if(newStrategy != 0)
 		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), 0);
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), true);
 	mouseInputStrategy_->install(*this);
 }
 
@@ -2693,7 +2690,7 @@ void TextViewer::updateMemoryDeviceContext() {
 	if(needRecreate) {
 		memDC_->selectObject(oldLineBitmap_.getHandle());
 		// 少し大きめに...
-		lineBitmap_.reset(Bitmap::createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch()).release());
+		lineBitmap_ = Bitmap::createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch());
 		memDC_->selectObject(lineBitmap_.getHandle());
 	}
 }
@@ -2889,19 +2886,19 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
  * Constructor.
  * @param view the viewer
  */
-TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& view) throw() : view_(view), available_(true) {
+TextViewerAccessibleProxy::TextViewerAccessibleProxy(TextViewer& view) throw() : view_(view), available_(true) {
 	assert(accLib.isAvailable());
 	accLib.createStdAccessibleObject(view.getHandle(), OBJID_CLIENT, IID_IAccessible, &defaultServer_);
 }
 
 /// @see IAccessible#accDoDefaultAction
-STDMETHODIMP TextViewer::AccessibleProxy::accDoDefaultAction(VARIANT) {
+STDMETHODIMP TextViewerAccessibleProxy::accDoDefaultAction(VARIANT) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#accHitTest
-STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
+STDMETHODIMP TextViewerAccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
 	VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
 	VERIFY_POINTER(pvarChild);
@@ -2920,7 +2917,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARI
 }
 
 /// @see IAccessible#accLocation
-STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
+STDMETHODIMP TextViewerAccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pxLeft);
 	VERIFY_POINTER(pyTop);
@@ -2939,37 +2936,37 @@ STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop,
 }
 
 /// @see IAccessible#accNavigate
-STDMETHODIMP TextViewer::AccessibleProxy::accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt) {
+STDMETHODIMP TextViewerAccessibleProxy::accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt) {
 	VERIFY_AVAILABILITY();
 	return defaultServer_->accNavigate(navDir, varStart, pvarEndUpAt);
 }
 
 /// @see IAccessible#accSelect
-STDMETHODIMP TextViewer::AccessibleProxy::accSelect(long flagsSelect, VARIANT varChild) {
+STDMETHODIMP TextViewerAccessibleProxy::accSelect(long flagsSelect, VARIANT varChild) {
 	VERIFY_AVAILABILITY();
 	return (varChild.vt == VT_I4 && varChild.lVal == CHILDID_SELF) ?
 		defaultServer_->accSelect(flagsSelect, varChild) : E_INVALIDARG;
 }
 
 /// Informs that the viewer is inavailable to the proxy.
-void TextViewer::AccessibleProxy::dispose() {
+void TextViewerAccessibleProxy::dispose() {
 	if(!available_)
 		throw logic_error("This proxy is already disposed.");
 	available_ = false;
 }
 
 /// @see Document#IListener#documentAboutToBeChanged
-void TextViewer::AccessibleProxy::documentAboutToBeChanged(const Document&) {
+void TextViewerAccessibleProxy::documentAboutToBeChanged(const Document&) {
 }
 
 /// @see Document#IListener#documentChanged
-void TextViewer::AccessibleProxy::documentChanged(const Document&, const DocumentChange&) {
+void TextViewerAccessibleProxy::documentChanged(const Document&, const DocumentChange&) {
 	assert(accLib.isAvailable());
 	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_.getHandle(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
-STDMETHODIMP TextViewer::AccessibleProxy::get_accChild(VARIANT varChild, IDispatch** ppdispChild) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT varChild, IDispatch** ppdispChild) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(ppdispChild);
 	*ppdispChild = 0;
@@ -2977,7 +2974,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accChild(VARIANT varChild, IDispat
 }
 
 /// @see IAccessible#get_accChildCount
-STDMETHODIMP TextViewer::AccessibleProxy::get_accChildCount(long* pcountChildren) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accChildCount(long* pcountChildren) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pcountChildren);
 	*pcountChildren = 0;
@@ -2985,19 +2982,19 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accChildCount(long* pcountChildren
 }
 
 /// @see IAccessible#get_accDefaultAction
-STDMETHODIMP TextViewer::AccessibleProxy::get_accDefaultAction(VARIANT, BSTR*) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accDefaultAction(VARIANT, BSTR*) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accDescription
-STDMETHODIMP TextViewer::AccessibleProxy::get_accDescription(VARIANT, BSTR*) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accDescription(VARIANT, BSTR*) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accFocus
-STDMETHODIMP TextViewer::AccessibleProxy::get_accFocus(VARIANT* pvarChild) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pvarChild);
 	pvarChild->vt = VT_I4;
@@ -3006,19 +3003,19 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 }
 
 /// @see IAccessible#get_accHelp
-STDMETHODIMP TextViewer::AccessibleProxy::get_accHelp(VARIANT, BSTR*) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accHelp(VARIANT, BSTR*) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accHelpTopic
-STDMETHODIMP TextViewer::AccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accKeyboardShortcut
-STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pszKeyboardShortcut);
 	*pszKeyboardShortcut = 0;
@@ -3028,7 +3025,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChi
 }
 
 /// @see IAccessible#get_accName
-STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pszName);
 	*pszName = 0;
@@ -3038,7 +3035,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 }
 
 /// @see IAccessible#get_accParent
-STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
 		return accLib.accessibleObjectFromWindow(view_.getHandle(), OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
@@ -3046,7 +3043,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent
 }
 
 /// @see IAccessible#get_accRole
-STDMETHODIMP TextViewer::AccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pvarRole);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -3057,7 +3054,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accRole(VARIANT varChild, VARIANT*
 }
 
 /// @see IAccessible#get_accSelection
-STDMETHODIMP TextViewer::AccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pvarChildren);
 	pvarChildren->vt = VT_EMPTY;
@@ -3065,7 +3062,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accSelection(VARIANT* pvarChildren
 }
 
 /// @see IAccessible#get_accState
-STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT* pvarState) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* pvarState) {
 	VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -3083,7 +3080,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 }
 
 /// @see IAccessible#get_accValue
-STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(pszValue);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -3095,13 +3092,13 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 }
 
 /// @see IAccessible#put_accName
-STDMETHODIMP TextViewer::AccessibleProxy::put_accName(VARIANT, BSTR) {
+STDMETHODIMP TextViewerAccessibleProxy::put_accName(VARIANT, BSTR) {
 	VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#put_accValue
-STDMETHODIMP TextViewer::AccessibleProxy::put_accValue(VARIANT varChild, BSTR szValue) {
+STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szValue) {
 	VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -3387,33 +3384,32 @@ void TextViewer::VerticalRulerDrawer::updateGDIObjects() throw() {
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {
-		indicatorMarginPen_.reset(Pen::create(PS_SOLID, 1,
-			systemColors.getReal(configuration_.indicatorMargin.borderColor, SYSTEM_COLOR_MASK | COLOR_3DSHADOW)).release());
-		indicatorMarginBrush_.reset(Brush::create(
-			systemColors.getReal(configuration_.indicatorMargin.color, SYSTEM_COLOR_MASK | COLOR_3DFACE)).release());
+		indicatorMarginPen_ = Pen::create(PS_SOLID, 1,
+			systemColors.getReal(configuration_.indicatorMargin.borderColor, SYSTEM_COLOR_MASK | COLOR_3DSHADOW));
+		indicatorMarginBrush_ = Brush::create(systemColors.getReal(configuration_.indicatorMargin.color, SYSTEM_COLOR_MASK | COLOR_3DFACE));
 	}
 
 	lineNumbersPen_.reset();
 	lineNumbersBrush_.reset();
 	if(configuration_.lineNumbers.visible) {
 		if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::SOLID)	// 実線
-			lineNumbersPen_.reset(Pen::create(PS_SOLID, configuration_.lineNumbers.borderWidth,
-				systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT)).release());
+			lineNumbersPen_ = Pen::create(PS_SOLID, configuration_.lineNumbers.borderWidth,
+				systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT));
 		else if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
 			::LOGBRUSH brush;
 			brush.lbColor = systemColors.getReal(configuration_.lineNumbers.borderColor, SYSTEM_COLOR_MASK | COLOR_WINDOWTEXT);
 			brush.lbStyle = BS_SOLID;
 			if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED)	// 破線
-				lineNumbersPen_.reset(Pen::create(
-					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
+				lineNumbersPen_ = Pen::create(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED_ROUNDED)	// 丸破線
-				lineNumbersPen_.reset(Pen::create(
-					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
+				lineNumbersPen_ = Pen::create(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, brush, 0, 0);
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DOTTED)	// 点線
-				lineNumbersPen_.reset(Pen::create(PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, brush, 0, 0).release());
+				lineNumbersPen_ = Pen::create(PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
 		}
-		lineNumbersBrush_.reset(Brush::create(systemColors.getReal(
-			configuration_.lineNumbers.textColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW)).release());
+		lineNumbersBrush_ = Brush::create(systemColors.getReal(
+			configuration_.lineNumbers.textColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW));
 	}
 }
 

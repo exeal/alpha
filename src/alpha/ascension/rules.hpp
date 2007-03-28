@@ -163,19 +163,38 @@ namespace ascension {
 		 */
 		class TransitionRule {
 		public:
-			TransitionRule(text::ContentType contentType, text::ContentType destination, const String& pattern, bool caseSensitive = true);
+			virtual ~TransitionRule() throw();
 			text::ContentType	getContentType() const throw();
 			text::ContentType	getDestination() const throw();
-			length_t			matches(const String& line, length_t column) const;
+			virtual length_t	matches(const String& line, length_t column) const = 0;
+		protected:
+			TransitionRule(text::ContentType contentType, text::ContentType destination) throw();
 		private:
 			const text::ContentType contentType_, destination_;
-#ifndef ASCENSION_NO_REGEX
-			const regex::Pattern pattern_;
-#else
+		};
+
+		/// Implementation of @c TransitionRule uses literal string match.
+		class LiteralTransitionRule : public TransitionRule {
+		public:
+			LiteralTransitionRule(text::ContentType contentType,
+				text::ContentType destination, const String& pattern, bool caseSensitive = true);
+			length_t	matches(const String& line, length_t column) const;
+		private:
 			const String pattern_;
 			const bool caseSensitive_;
-#endif /* !ASCENSION_NO_REGEX */
 		};
+		
+#ifndef ASCENSION_NO_REGEX
+		/// Implementation of @c TransitionRule uses regular expression match.
+		class RegexTransitionRule : public TransitionRule {
+		public:
+			RegexTransitionRule(text::ContentType contentType,
+				text::ContentType destination, const String& pattern, bool caseSensitive = true);
+			length_t	matches(const String& line, length_t column) const;
+		private:
+			const regex::Pattern pattern_;
+		};
+#endif /* !ASCENSION_NO_REGEX */
 
 		/**
 		 * @c LexicalPartitioner makes document partitions by using the specified lexical rules.
@@ -214,6 +233,12 @@ namespace ascension {
 			text::Position eofBeforeDocumentChange_;	// ドキュメント変更前の終端位置 (documentAboutToBeChanged で記憶)
 		};
 
+
+		/// Returns the content type.
+		inline text::ContentType TransitionRule::getContentType() const throw() {return contentType_;}
+
+		/// Returns the content type of the transition destination.
+		inline text::ContentType TransitionRule::getDestination() const throw() {return destination_;}
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(getDocument() != 0)
