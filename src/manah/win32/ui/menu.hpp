@@ -27,8 +27,8 @@ public:
 	enum ItemIdentificationPolicy {BY_COMMAND, BY_POSITION};
 	struct StringItem : public ItemInfo {
 		StringItem(UINT id, const TCHAR* text, UINT state = MFS_ENABLED, bool radioCheck = false, ULONG_PTR data = 0) {
-			fMask = MIIM_DATA | MIIM_ID | MIIM_STATE | MIIM_STRING | MIIM_TYPE;
-			fType = MFT_STRING | (radioCheck ? MFT_RADIOCHECK : 0);
+			fMask = MIIM_DATA | MIIM_FTYPE | MIIM_ID | MIIM_STATE | MIIM_STRING;
+			fType = radioCheck ? MFT_RADIOCHECK : 0;
 			fState = state;
 			wID = id;
 			dwItemData = data;
@@ -37,7 +37,7 @@ public:
 	};
 	struct BitmapItem : public ItemInfo {
 		BitmapItem(UINT id, HBITMAP bitmap, UINT state = MFS_ENABLED, ULONG_PTR data = 0) {
-			fMask = MIIM_BITMAP | MIIM_DATA | MIIM_ID | MIIM_STATE | MIIM_TYPE;
+			fMask = MIIM_BITMAP | MIIM_DATA | MIIM_FTYPE | MIIM_ID | MIIM_STATE;
 			fType = MFT_BITMAP;
 			fState = state;
 			wID = id;
@@ -47,7 +47,7 @@ public:
 	};
 	struct OwnerDrawnItem : public ItemInfo {
 		explicit OwnerDrawnItem(UINT id, UINT state = MFS_ENABLED, UINT_PTR data = 0) {
-			fMask = MIIM_DATA | MIIM_ID | MIIM_STATE | MIIM_TYPE;
+			fMask = MIIM_DATA | MIIM_FTYPE | MIIM_ID | MIIM_STATE;
 			fType = MFT_OWNERDRAW;
 			fState = state;
 			wID = id;
