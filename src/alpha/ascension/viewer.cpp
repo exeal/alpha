@@ -272,6 +272,15 @@ namespace {
  * While the viewer is frozen, the window does not redraw the content.
  * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
  *
+ * <h3>Duplication</h3>
+ *
+ * Unlike @c manah#win32#ui#Window class, the copy-constructor does not copy the window handle of
+ * the original (attachement is not performed). This semantics is derived from
+ * @c manah#win32#ui#CustomControl super class.
+ *
+ * So an object just created by copy-constructor does not have valid window handle. Call @c #create
+ * method to construct as a window.
+ *
  * <h3>Window styles related to bidirectional</h3>
  *
  * テキストを右寄せで表示するための @c WS_EX_RIGHT 、右から左に表示するための @c WS_EX_RTLREADING
@@ -458,8 +467,11 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
 }
 
-/// Copy-constructor.
-TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(rhs), presentation_(rhs.presentation_), tipText_(0)
+/**
+ * Copy-constructor. Unlike @c manah#win32#Handle class, this does not copy the window handle. For
+ * more details, see the description of @c TextViewer.
+ */
+TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0), presentation_(rhs.presentation_), tipText_(0)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		, accessibleProxy_(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */

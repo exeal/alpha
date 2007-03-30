@@ -31,6 +31,7 @@ public:
 	Window(const Window& rhs);
 	virtual ~Window();
 	// operator
+	Window& operator=(const Window& rhs) {Handle<HWND, ::DestroyWindow>::operator=(rhs); return *this;}
 	bool operator==(const Window& rhs) const {return getHandle() == rhs.getHandle();}
 	// constructions
 	void	close();
@@ -56,7 +57,7 @@ public:
 	LONG_PTR	setWindowLongPtr(int index, LONG_PTR newLong);
 #endif /* _WIN64 */
 	// state
-	bool							enable(bool enable = true);
+	bool			enable(bool enable = true);
 	static Window	getActive();
 	static Window	getCapture();
 	static Window	getDesktop();
@@ -481,24 +482,26 @@ protected:
 
 
 // Control must define one static method:
-// void GetClass(GET_CLASS_PARAM_LIST)
+// void getClass(GET_CLASS_PARAM_LIST)
 #define GET_CLASS_PARAM_LIST	const TCHAR*& name,									\
 	HINSTANCE& instance, UINT& style, manah::win32::BrushHandleOrColor& bgColor,	\
 	manah::win32::CursorHandleOrID& cursor,	HICON& icon, HICON& smallIcon, int& clsExtraBytes, int& wndExtraBytes
 #define DEFINE_WINDOW_CLASS()	public: static void getClass(GET_CLASS_PARAM_LIST)
 template<class Control, class BaseWindow = Window>
-class CustomControl : public BaseWindow {
+class CustomControl : public BaseWindow, public Unassignable {
 public:
 	explicit CustomControl(HWND handle = 0) : BaseWindow(handle) {}
-	CustomControl(const CustomControl<Control, BaseWindow>& rhs) : BaseWindow(rhs) {}
 	virtual ~CustomControl();
 	bool	create(HWND parent, const ::RECT& rect = DefaultWindowRect(),
 				const TCHAR* windowName = 0, DWORD style = 0UL, DWORD exStyle = 0UL);
 protected:
+	CustomControl(const CustomControl<Control, BaseWindow>& rhs) : BaseWindow() {}
 	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 	virtual void	onPaint(gdi::PaintDC& dc) = 0;	// WM_PAINT
 private:
 	using BaseWindow::fireProcessWindowMessage;
+	using BaseWindow::attach;
+	using BaseWindow::detach;
 };
 
 

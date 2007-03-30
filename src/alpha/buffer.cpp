@@ -1244,7 +1244,6 @@ EditorPane::EditorPane(EditorView* initialView /* = 0 */) : visibleView_(initial
 EditorPane::EditorPane(const EditorPane& rhs) {
 	for(set<EditorView*>::const_iterator it = rhs.views_.begin(); it != rhs.views_.end(); ++it) {
 		EditorView* view = new EditorView(*(*it));
-		view->detach();	// <-- d—v
 		const bool succeeded = view->create((*it)->getParent().getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
