@@ -484,8 +484,8 @@ namespace ascension {
 
 			// constructors
 			explicit TextViewer(presentation::Presentation& presentation);
-			virtual ~TextViewer();
 			TextViewer(const TextViewer& rhs);
+			virtual ~TextViewer();
 			// window creation
 			virtual bool	create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle);
 			// listeners and strategies
@@ -871,11 +871,11 @@ namespace ascension {
 		/// Extension of @c TextViewer for code editor.
 		class SourceViewer : public TextViewer {
 		public:
-			// コンストラクタ
+			// constructors
 			explicit SourceViewer(presentation::Presentation& presentation) throw();
-			// 属性
-			// 操作
-			// ユーティリティ
+			// attributes
+			// operations
+			// utility
 			bool	getPointedIdentifier(text::Position* startPosition, text::Position* endPosition, String* identifier) const;
 		protected:
 			bool	getNearestIdentifier(const text::Position& position, length_t* startChar, length_t* endChar, String* identifier) const;
@@ -1016,7 +1016,10 @@ inline const TextViewer::VerticalRulerConfiguration& TextViewer::getVerticalRule
 inline bool TextViewer::isActiveInputMethodEnabled() const throw() {return modeState_.activeInputMethodEnabled;}
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
 
-/// Returns true if @a rhs is clone of the viewer.
+/**
+ * Returns true if @a rhs is clone of the viewer.
+ * @see #clone
+ */
 inline bool TextViewer::isCloneOf(const TextViewer& rhs) const throw() {return originalView_ == rhs.originalView_;}
 
 /// Returns true if the viewer is frozen.
