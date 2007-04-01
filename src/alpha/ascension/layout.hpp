@@ -399,13 +399,10 @@ namespace ascension {
 		 * Font Fallback mechanism for multilingual text display.
 		 * @see TextRenderer
 		 */
-		class FontSelector {
+		class FontSelector : public manah::Unassignable {
 		public:
 			/// Font association table consists of pairss of a script and a font familiy name.
 			typedef std::map<int, const WCHAR*> FontAssociations;
-			// constructors
-			FontSelector();
-			virtual ~FontSelector() throw();
 			// metrics
 			int	getAscent() const throw();
 			int	getAverageCharacterWidth() const throw();
@@ -423,17 +420,22 @@ namespace ascension {
 			HFONT		getLinkedFont(std::size_t index, bool bold = false, bool italic = false) const;
 			std::size_t	getNumberOfLinkedFonts() const throw();
 		protected:
+			FontSelector();
+			FontSelector(const FontSelector& rhs);
+			virtual ~FontSelector() throw();
 			virtual void									fontChanged() = 0;
 			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() const = 0;
 		private:
 			struct Fontset;
 			HFONT	getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
 			void	linkPrimaryFont() throw();
+			void	resetPrimaryFont(manah::win32::gdi::DC& dc, HFONT font);
 			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
 			struct Fontset : public manah::Noncopyable {
 				WCHAR faceName[LF_FACESIZE];
 				HFONT regular, bold, italic, boldItalic;
 				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
+				Fontset(const Fontset& rhs) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, rhs.faceName);}
 				~Fontset() throw() {clear(L"");}
 				void clear(const WCHAR* newName = 0) throw() {
 					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
@@ -455,6 +457,7 @@ namespace ascension {
 		public:
 			// constructors
 			explicit TextRenderer(TextViewer& viewer);
+			TextRenderer(TextViewer& viewer, const TextRenderer& source);
 			~TextRenderer() throw();
 			// attributes
 			int				getLinePitch() const throw();
@@ -631,15 +634,6 @@ inline int FontSelector::getAverageCharacterWidth() const throw() {return averag
 
 /// Returns the descent of the text.
 inline int FontSelector::getDescent() const throw() {return descent_;}
-
-/// Returns the font to render shaping control characters.
-inline HFONT FontSelector::getFontForShapingControls() const throw() {
-	if(shapingControlsFont_ == 0)
-		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
-			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
-	return shapingControlsFont_;
-}
 
 /**
  * Returns the height of the lines.

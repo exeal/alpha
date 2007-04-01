@@ -487,7 +487,7 @@ namespace ascension {
 			TextViewer(const TextViewer& rhs);
 			virtual ~TextViewer();
 			// window creation
-			virtual bool	create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle);
+			virtual bool	create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle);
 			// listeners and strategies
 			void	addInputStatusListener(ITextViewerInputStatusListener& listener);
 			void	addViewportListener(IViewportListener& listener);
@@ -561,7 +561,6 @@ namespace ascension {
 		private:
 			int		getDisplayXOffset() const throw();
 			void	handleGUICharacterInput(CodePoint c);
-			void	initializeWindow(bool copyConstructing);
 			void	internalUnfreeze();
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
 			int		mapLineToClientY(length_t line, bool fullSearch) const;
@@ -609,7 +608,7 @@ namespace ascension {
 			void	addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void	removePoint(VisualPoint& point) {points_.erase(&point);}
 
-			// メッセージハンドラ
+			// message handlers
 			MANAH_DECLEAR_WINDOW_MESSAGE_MAP(TextViewer);
 		protected:
 			virtual LRESULT	preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
@@ -669,7 +668,7 @@ namespace ascension {
 
 			// 内部クラス
 		private:
-			/// 自動スクロールの開始点に表示する丸いウィンドウ
+			/// Circled window displayed at which the auto scroll started.
 			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
 				DEFINE_WINDOW_CLASS() {
 					name = L"AutoScrollOriginMark";
@@ -707,22 +706,22 @@ namespace ascension {
 
 			// 列挙
 		private:
-			/// タイマ ID
+			// timer identifiers
 			enum {
-				TIMERID_CALLTIP,	///< ツールチップの待ち時間
-				TIMERID_AUTOSCROLL,	///< 自動スクロール中
-				TIMERID_LINEPARSE	///< 先行行解析
+				TIMERID_CALLTIP,	// interval for tooltip
+				TIMERID_AUTOSCROLL,	// the viewer is auto scrolling
+//				TIMERID_LINEPARSE
 			};
 
-			/// コンテキストメニューなどの ID
+			// identifiers of GUI commands
 			enum {
-				WM_REDO	= WM_APP + 1,		// 元に戻す
-				WM_SELECTALL,				// 全て選択
-				ID_DISPLAYSHAPINGCONTROLS,	// Unicode 制御文字の表示
-				ID_RTLREADING,				// 右から左に読む
-				ID_TOGGLEIMESTATUS,			// IME を開く/閉じる
-				ID_TOGGLESOFTKEYBOARD,		// ソフトキーボードを開く/閉じる
-				ID_RECONVERT,				// 再変換
+				WM_REDO	= WM_APP + 1,		// Undo
+				WM_SELECTALL,				// Select All
+				ID_DISPLAYSHAPINGCONTROLS,	// Show Unicode control characters
+				ID_RTLREADING,				// Right to left Reading order
+				ID_TOGGLEIMESTATUS,			// Open/Close IME
+				ID_TOGGLESOFTKEYBOARD,		// Open/Close soft keyboard
+				ID_RECONVERT,				// Reconvert
 
 				ID_INSERT_LRM,		// LRM (Left-to-right mark)
 				ID_INSERT_RLM,		// RLM (Right-to-left mark)
@@ -734,7 +733,7 @@ namespace ascension {
 				ID_INSERT_RLO,		// RLO (Right-to-left override)
 				ID_INSERT_PDF,		// PDF (Pop directional formatting)
 				ID_INSERT_WJ,		// WJ (Word Joiner)
-				ID_INSERT_NADS,		// NADS (National digit shapes)	<- 以下6つは非推奨コードポイント (Unicode 4.0)
+				ID_INSERT_NADS,		// NADS (National digit shapes)	<- the following six are deprecated code points (Unicode 4.0)
 				ID_INSERT_NODS,		// NODS (Nominal digit shapes)
 				ID_INSERT_ASS,		// ASS (Activate symmetric swapping)
 				ID_INSERT_ISS,		// ISS (Inhibit symmetric swapping)
@@ -791,10 +790,6 @@ namespace ascension {
 			internal::TextViewerAccessibleProxy* accessibleProxy_;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 
-			// 所有権、複製体の管理 (クラスの説明を参照)
-			TextViewer* originalView_;		// 複製元 (this であれば自分が複製元)
-			std::set<TextViewer*>* clones_;	// 自分の複製 (自分が複製元でなければ null)
-
 			// モード
 			struct ModeState {
 				bool cursorVanished;		// ユーザが文字の入力を開始したのでカーソルが非表示
@@ -826,6 +821,7 @@ namespace ascension {
 				ulong getX() const throw() {return horizontal.position/* * horizontal.rate*/;}
 				ulong getY() const throw() {return vertical.position/* * vertical.rate*/;}
 				void resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) throw();
+				void updateVertical(const TextViewer& viewer) throw();
 			} scrollInfo_;
 
 			// 凍結
@@ -835,10 +831,10 @@ namespace ascension {
 				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = -1;}
 			} freezeInfo_;
 	
-			// 行描画キャンバス
+			// canvas for double buffering
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
-			std::auto_ptr<manah::win32::gdi::DC> memDC_;	// メモリデバイスコンテキスト
-			manah::win32::gdi::Bitmap lineBitmap_;			// memDC_ に結び付けられている 1 行描画用ビットマップ
+			std::auto_ptr<manah::win32::gdi::DC> memDC_;	// memory device context
+			manah::win32::gdi::Bitmap lineBitmap_;			// a bitmap to draw one line bound to memDC_
 			manah::win32::gdi::Bitmap oldLineBitmap_;
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
@@ -852,13 +848,13 @@ namespace ascension {
 			} caretShape_;
 
 			// 状態
-			bool imeCompositionActivated_;	// IME で入力中か
+			bool imeCompositionActivated_;	// true if the user is inputing by using IME
 			ulong mouseInputDisabledCount_;
 
 			// 自動スクロール
 			struct AutoScroll {
-				::POINT	indicatorPosition;	// インジケータの位置 (クライアント座標)
-				bool	scrolling;			// スクロール中か
+				::POINT	indicatorPosition;	// position of the indicator margin (in client coodinates)
+				bool	scrolling;			// true if the viewer is scrolling
 				AutoScroll() throw() : scrolling(false) {}
 			} autoScroll_;
 
@@ -1015,12 +1011,6 @@ inline const TextViewer::VerticalRulerConfiguration& TextViewer::getVerticalRule
 /// Returns true if Global IME is enabled.
 inline bool TextViewer::isActiveInputMethodEnabled() const throw() {return modeState_.activeInputMethodEnabled;}
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
-
-/**
- * Returns true if @a rhs is clone of the viewer.
- * @see #clone
- */
-inline bool TextViewer::isCloneOf(const TextViewer& rhs) const throw() {return originalView_ == rhs.originalView_;}
 
 /// Returns true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const throw() {return freezeInfo_.count != 0;}
