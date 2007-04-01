@@ -447,7 +447,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(0),
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-		clones_(new set<TextViewer*>), imeCompositionActivated_(false),
+		imeCompositionActivated_(false),
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
 		lineBitmap_(0), oldLineBitmap_(0),
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
@@ -456,7 +456,6 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
-	originalView_ = this;
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
@@ -479,14 +478,10 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 		, lineBitmap_(0), oldLineBitmap_(0)
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 {
-	// 非共有メンバは自分で作成。共有メンバはコピー
-	renderer_.reset(new TextRenderer(*this));
+	renderer_.reset(new TextRenderer(*this, *rhs.renderer_));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
-
-	originalView_ = rhs.originalView_;
-	originalView_->clones_->insert(this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
 	modeState_ = rhs.modeState_;
@@ -517,26 +512,6 @@ TextViewer::~TextViewer() {
 	if(accessibleProxy_ != 0)
 		accessibleProxy_->Release();
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-
-	// 所有権
-	if(originalView_ == this) {	// 自分が複製元
-		if(clones_->empty())	// 自分が最後
-			delete clones_;		// クローンのリストも破壊
-		else {	// 自分の複製がまだ残っている
-			TextViewer* newOriginal = *clones_->begin();	// 新しい複製元
-			clones_->erase(clones_->begin());
-			newOriginal->originalView_ = newOriginal;
-			newOriginal->clones_ = clones_;
-			for(set<TextViewer*>::iterator it = newOriginal->clones_->begin(); it != newOriginal->clones_->end(); ++it) {
-				if(*it != newOriginal)
-					(*it)->originalView_ = newOriginal;
-			}
-		}
-	} else {	// オリジナルに死亡通知
-		set<TextViewer*>::iterator it = originalView_->clones_->find(this);
-		assert(it != originalView_->clones_->end());
-		originalView_->clones_->erase(it);
-	}
 }
 
 /// Starts the auto scroll.
@@ -626,7 +601,7 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
  * @return true if succeeded
  * @see manah#windows#controls#Window#create
  */
-bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle) {
+bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle) {
 	if(isWindow())
 		return false;
 
@@ -634,9 +609,42 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	style &= ~WS_VISIBLE;	// 後で足す
 	if(!ui::CustomControl<TextViewer>::create(parent, rect, 0, style, exStyle))
 		return false;
-	initializeWindow(originalView_ != this);
 
-#ifdef _DEBUG
+	scrollInfo_.updateVertical(*this);
+	updateScrollBars();
+
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	// メモリデバイスコンテキストの用意
+	memDC_ = getDC().createCompatibleDC();
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
+
+	// ツールチップの作成
+	toolTip_ = ::CreateWindowExW(
+		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
+		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE))), 0);
+	if(toolTip_ != 0) {
+		AutoZeroCB<::TOOLINFOW> ti;
+		::RECT margins = {1, 1, 1, 1};
+		ti.hwnd = getHandle();
+		ti.lpszText = LPSTR_TEXTCALLBACKW;
+		ti.uFlags = TTF_SUBCLASS;
+		ti.uId = 1;
+		::SetRect(&ti.rect, 0, 0, 0, 0);
+		::SendMessageW(toolTip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);	// 30 秒間 (根拠なし) 表示されるように
+//		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
+		::SendMessageW(toolTip_, TTM_SETMARGIN, 0, reinterpret_cast<LPARAM>(&margins));
+		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
+	}
+
+	// 自動スクロールの原点ウィンドウの作成
+	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
+	autoScrollOriginMark_->create(*this);
+
+	setMouseInputStrategy(0, true);
+
+#if 0
 	// partitioning test
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
@@ -704,8 +712,6 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 
 	// 位置決めと表示
 	move(rect, false);
-	if(originalView_ != this)
-		scrollTo(originalView_->scrollInfo_.horizontal.position, originalView_->scrollInfo_.horizontal.position, false);
 	if(visible)
 		show(SW_SHOW);
 
@@ -838,8 +844,8 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 	if(!forAllClones)
 		++freezeInfo_.count;
 	else {
-		for(TextViewerCloneIterator i(*this, *clones_); !i.isEnd(); i.next())
-			++i.get().freezeInfo_.count;
+		for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()), e(presentation_.getLastTextViewer()); i != e; ++i)
+			(*i)->freezeInfo_.count;
 	}
 }
 
@@ -1213,54 +1219,8 @@ TextViewer::HitTestResult TextViewer::hitTest(const ::POINT& pt) const {
 		return TEXT_AREA;
 }
 
-/**
- * Initializes the window.
- * @param copyConstructing true if called by the clone
- */
-void TextViewer::initializeWindow(bool copyConstructing) {
-	assertValidAsWindow();
-
-	if(copyConstructing)	// 他のビューから複製する場合
-		setConfiguration(&getConfiguration(), 0);
-
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	// メモリデバイスコンテキストの用意
-	memDC_ = getDC().createCompatibleDC();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-
-//	if(copyConstructing)
-//		recalcLeftTabWidth();
-
-	// ツールチップの作成
-	toolTip_ = ::CreateWindowExW(
-		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0,
-		WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
-		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE))), 0);
-	if(toolTip_ != 0) {
-		AutoZeroCB<::TOOLINFOW> ti;
-		::RECT margins = {1, 1, 1, 1};
-		ti.hwnd = getHandle();
-		ti.lpszText = LPSTR_TEXTCALLBACKW;
-		ti.uFlags = TTF_SUBCLASS;
-		ti.uId = 1;
-		::SetRect(&ti.rect, 0, 0, 0, 0);
-		::SendMessageW(toolTip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
-		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);	// 30 秒間 (根拠なし) 表示されるように
-//		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
-		::SendMessageW(toolTip_, TTM_SETMARGIN, 0, reinterpret_cast<LPARAM>(&margins));
-		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
-	}
-
-	// 自動スクロールの原点ウィンドウの作成
-	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
-	autoScrollOriginMark_->create(*this);
-
-	setMouseInputStrategy(0, true);
-}
-
 /// Revokes the frozen state of the viewer actually.
-void TextViewer::internalUnfreeze() {
+inline void TextViewer::internalUnfreeze() {
 	assertValidAsWindow();
 
 	if(scrollInfo_.changed) {
@@ -2175,9 +2135,7 @@ void TextViewer::onThemeChanged() {
 
 /// @see WM_TIMER
 void TextViewer::onTimer(UINT_PTR eventID, ::TIMERPROC) {
-	if(eventID == TIMERID_LINEPARSE) {	// 未解析の行を先読みする
-		// ...
-	} else if(eventID == TIMERID_CALLTIP) {	// ツールチップを表示
+	if(eventID == TIMERID_CALLTIP) {	// ツールチップを表示
 		killTimer(TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 	} else if(eventID == TIMERID_AUTOSCROLL) {	// 自動スクロール
@@ -2671,9 +2629,9 @@ void TextViewer::unfreeze(bool forAllClones /* = true */) {
 		if(freezeInfo_.count > 0 && --freezeInfo_.count == 0)
 			internalUnfreeze();
 	} else {
-		for(TextViewerCloneIterator i(*this, *clones_); !i.isEnd(); i.next()) {
-			if(i->freezeInfo_.count > 0 && --i->freezeInfo_.count == 0)
-				i->internalUnfreeze();
+		for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()), e(presentation_.getLastTextViewer()); i != e; ++i) {
+			if((*i)->freezeInfo_.count > 0 && --(*i)->freezeInfo_.count == 0)
+				(*i)->internalUnfreeze();
 		}
 	}
 }
@@ -2809,14 +2767,6 @@ void TextViewer::updateScrollBars() {
 #undef GET_SCROLL_MINIMUM
 }
 
-#define RECALC_VERTICAL_SCROLL()																						\
-	scrollInfo_.vertical.maximum = static_cast<int>(renderer_->getNumberOfVisualLines());								\
-	scrollInfo_.firstVisibleLine = min(scrollInfo_.firstVisibleLine, getDocument().getNumberOfLines() - 1);				\
-	scrollInfo_.firstVisibleSubline =																					\
-		min(renderer_->getNumberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - 1, scrollInfo_.firstVisibleSubline);	\
-	scrollInfo_.vertical.position =																						\
-		static_cast<int>(renderer_->mapLogicalLineToVisualLine(scrollInfo_.firstVisibleLine) + scrollInfo_.firstVisibleSubline)
-
 /// @see IVisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw() {
 	scrollInfo_.changed = true;
@@ -2831,7 +2781,7 @@ void TextViewer::visualLinesDeleted(length_t first, length_t last, length_t subl
 		redrawLine(first, true);
 	} else {	// 可視先頭行を含む範囲が削除された
 		scrollInfo_.firstVisibleLine = first;
-		RECALC_VERTICAL_SCROLL();
+		scrollInfo_.updateVertical(*this);
 		redrawLine(first, true);
 	}
 	if(longestLineChanged)
@@ -2852,7 +2802,7 @@ void TextViewer::visualLinesInserted(length_t first, length_t last) throw() {
 		redrawLine(first, true);
 	} else {	// 可視先頭行の前後に挿入された
 		scrollInfo_.firstVisibleLine += last - first;
-		RECALC_VERTICAL_SCROLL();
+		scrollInfo_.updateVertical(*this);
 		redrawLine(first, true);
 	}
 }
@@ -2873,7 +2823,7 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
 			scrollInfo_.vertical.maximum += sublinesDifference;
 			redrawLine(first, true);
 		} else {	// 可視先頭行を含む範囲が変更された
-			RECALC_VERTICAL_SCROLL();
+			scrollInfo_.updateVertical(*this);
 			redrawLine(first, true);
 		}
 	}
@@ -2884,8 +2834,6 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
 	if(!documentChanged && scrollInfo_.changed)
 		updateScrollBars();
 }
-
-#undef RECALC_VERTICAL_SCROLL
 
 
 // Viewer::AccessibleProxy ////////////////////////////////////////////////
@@ -3467,6 +3415,13 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 		if(pageSizeChanged)
 			vertical.pageSize = static_cast<UINT>(viewer.getNumberOfVisibleLines());
 	}
+}
+
+void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) throw() {
+	vertical.maximum = static_cast<int>(viewer.getTextRenderer().getNumberOfVisualLines());
+	firstVisibleLine = min(firstVisibleLine, viewer.getDocument().getNumberOfLines() - 1);
+	firstVisibleSubline = min(viewer.getTextRenderer().getNumberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
+	vertical.position = static_cast<int>(viewer.getTextRenderer().mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
 }
 
 

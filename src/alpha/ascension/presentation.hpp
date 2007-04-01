@@ -150,6 +150,7 @@ namespace ascension {
 			TextViewerConstIterator	getFirstTextViewer() const throw();
 			TextViewerIterator		getLastTextViewer() throw();
 			TextViewerConstIterator	getLastTextViewer() const throw();
+			std::size_t				getNumberOfTextViewers() const throw();
 		private:
 			// IDocumentListener
 			void	documentAboutToBeChanged(const text::Document& document);
@@ -180,6 +181,9 @@ namespace ascension {
 		 * @throw std#invalid_argument @a listener is already registered
 		 */
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
+
+		/// Returns the number of text viewers.
+		inline std::size_t Presentation::getNumberOfTextViewers() const throw() {return textViewers_.size();}
 
 		/**
 		 * Removes the text viewer list listener.

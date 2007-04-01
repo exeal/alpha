@@ -174,6 +174,8 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 			originalView = view;
 		it.get().addView(*view);
 		view->getTextRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
+		if(originalView != view)
+		view->setConfiguration(&originalView->getConfiguration(), 0);
 	}
 
 //	view.addEventListener(app_);

@@ -1564,10 +1564,26 @@ void LineLayoutBuffer::presentationStylistChanged() {
 
 // FontSelector /////////////////////////////////////////////////////////////
 
+namespace {
+	inline HFONT copyFont(HFONT src) throw() {
+		::LOGFONTW lf;
+		::GetObject(src, sizeof(::LOGFONTW), &lf);
+		return ::CreateFontIndirectW(&lf);
+	}
+}
+
 FontSelector::FontAssociations FontSelector::defaultAssociations_;
 
 /// Constructor.
-FontSelector::FontSelector() : primaryFont_(L""), shapingControlsFont_(0), linkedFonts_(0) {linkedFonts_ = new std::vector<Fontset*>;
+FontSelector::FontSelector() : primaryFont_(L""), shapingControlsFont_(0), linkedFonts_(0) {
+	resetPrimaryFont(ScreenDC(), copyFont(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT))));
+}
+
+/// Copy-constructor.
+FontSelector::FontSelector(const FontSelector& rhs) : primaryFont_(L""), shapingControlsFont_(0), linkedFonts_(0) {
+	resetPrimaryFont(ScreenDC(), copyFont(rhs.primaryFont_.regular));
+	for(map<int, Fontset*>::const_iterator i(rhs.associations_.begin()), e(rhs.associations_.end()); i != e; ++i)
+		associations_.insert(make_pair(i->first, new Fontset(i->second->faceName)));
 }
 
 /// Destructor.
@@ -1662,6 +1678,15 @@ HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = fa
 	return getFontInFontset(*fontset, bold, italic);
 }
 
+/// Returns the font to render shaping control characters.
+HFONT FontSelector::getFontForShapingControls() const throw() {
+	if(shapingControlsFont_ == 0)
+		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
+			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
+	return shapingControlsFont_;
+}
+
 /**
  * 
  * @param fontset
@@ -1744,10 +1769,29 @@ void FontSelector::linkPrimaryFont() throw() {
 	fontChanged();
 }
 
+void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
+	assert(font != 0);
+	::TEXTMETRICW tm;
+	HFONT oldFont = dc.selectObject(primaryFont_.regular = font);
+	dc.getTextMetrics(tm);
+	ascent_ = tm.tmAscent;
+	descent_ = tm.tmDescent;
+	internalLeading_ = tm.tmInternalLeading;
+	externalLeading_ = tm.tmExternalLeading;
+	averageCharacterWidth_ = tm.tmAveCharWidth;
+	dc.selectObject(oldFont);
+	// real name is needed for font linking
+	::LOGFONTW lf;
+	::GetObject(primaryFont_.regular, sizeof(::LOGFONTW), &lf);
+	wcscpy(primaryFont_.faceName, lf.lfFaceName);
+}
+
 /**
  * Sets the primary font and the association table.
- * @param faceName the typeface name of the font
- * @param height the height of the font in logical units
+ * @param faceName the typeface name of the primary font. if this is @c null, the primary font
+ * will not change
+ * @param height the height of the font in logical units. if @a faceName is @c null, this value
+ * will be ignored
  * @param associations the association table. script values @c Script#COMMON, @c Script#UNKNOWN,
  * @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set. if this value is @c null,
  * the current associations will not be changed
@@ -1757,10 +1801,8 @@ void FontSelector::linkPrimaryFont() throw() {
  * exceeds @c LF_FACESIZE
  */
 void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociations* associations) {
-	// 引数をチェック
-	if(faceName == 0)
-		throw invalid_argument("the primary typeface name is null.");
-	else if(wcslen(faceName) >= LF_FACESIZE)
+	// check the arguments
+	if(faceName != 0 && wcslen(faceName) >= LF_FACESIZE)
 		throw length_error("the primary typeface name is too long.");
 	else if(associations != 0) {
 		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i) {
@@ -1773,44 +1815,34 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 				throw length_error("the association font name is too long.");
 		}
 	}
-	// 古いのを破棄
-	primaryFont_.clear(faceName);
+	// reset the association table
 	if(associations != 0) {
 		for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
 			delete i->second;
 		associations_.clear();
-	} else {
-		for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
-			i->second->clear();
-	}
-	// 第一位のフォントを取得して、メトリクスを初期化
-	primaryFont_.regular = ::CreateFontW(height, 0, 0, 0, FW_REGULAR, false, false, false,
-		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, faceName);
-	::TEXTMETRICW tm;
-	auto_ptr<DC> dc(getDC());
-	HFONT oldFont = dc->selectObject(primaryFont_.regular);
-	dc->getTextMetrics(tm);
-	ascent_ = tm.tmAscent;
-	descent_ = tm.tmDescent;
-	internalLeading_ = tm.tmInternalLeading;
-	externalLeading_ = tm.tmExternalLeading;
-	averageCharacterWidth_ = tm.tmAveCharWidth;
-	dc->selectObject(oldFont);
-	// フォントリンクのために実際の名前が必要
-	::LOGFONTW lf;
-	::GetObject(primaryFont_.regular, sizeof(::LOGFONTW), &lf);
-	wcscpy(primaryFont_.faceName, lf.lfFaceName);
-	if(associations != 0) {
 		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i)
 			associations_.insert(make_pair(i->first, new Fontset(i->second)));
 	}
-	if(shapingControlsFont_ != 0) {
-		::DeleteObject(shapingControlsFont_);
-		shapingControlsFont_ = 0;
+	// reset the primary font
+	bool notified = false;
+	if(faceName != 0) {
+		primaryFont_.clear(faceName);
+		for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
+			i->second->clear();
+		// create the primary font and reset the text metrics
+		resetPrimaryFont(*getDC(), ::CreateFontW(height, 0, 0, 0, FW_REGULAR, false, false, false,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, faceName));
+		// reset the fontset for rendering shaping control characters
+		if(shapingControlsFont_ != 0) {
+			::DeleteObject(shapingControlsFont_);
+			shapingControlsFont_ = 0;
+		}
+		if(linkedFonts_ != 0) {
+			linkPrimaryFont();	// this calls fontChanged()
+			notified = true;
+		}
 	}
-	if(linkedFonts_ != 0)
-		linkPrimaryFont();	// this calls fontChanged()
-	else
+	if(!notified)
 		fontChanged();
 }
 
@@ -1822,16 +1854,25 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
  * @param viewer the text viewer
  * @throw std#invalid_argument @a viewer is not a window
  */
-TextRenderer::TextRenderer(TextViewer& viewer)
-		: LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+TextRenderer::TextRenderer(TextViewer& viewer) :
+		LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
 //	if(!viewer.isWindow())
 //		throw invalid_argument("The specified viewer is not a window.");
-	::LOGFONTW lf;
-	HFONT f = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
-	::GetObject(f, sizeof(::LOGFONTW), &lf);
-	setFont(lf.lfFaceName, lf.lfHeight, &getDefaultFontAssociations());
 	updateViewerSize();
+	const length_t logicalLines = viewer.getDocument().getNumberOfLines();
+	if(logicalLines > 1)
+		layoutInserted(1, logicalLines);
+}
+
+/// Constructor.
+TextRenderer::TextRenderer(TextViewer& viewer, const TextRenderer& source) :
+		LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+		FontSelector(source), longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
+	updateViewerSize();
+	const length_t logicalLines = getTextViewer().getDocument().getNumberOfLines();
+	if(logicalLines > 1)
+		layoutInserted(1, logicalLines);
 }
 
 /// Destructor.
