@@ -175,7 +175,7 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 		it.get().addView(*view);
 		view->getTextRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 		if(originalView != view)
-		view->setConfiguration(&originalView->getConfiguration(), 0);
+			view->setConfiguration(&originalView->getConfiguration(), 0);
 	}
 
 //	view.addEventListener(app_);
@@ -1244,15 +1244,17 @@ EditorPane::EditorPane(EditorView* initialView /* = 0 */) : visibleView_(initial
 
 /// Copy-constructor.
 EditorPane::EditorPane(const EditorPane& rhs) {
-	for(set<EditorView*>::const_iterator it = rhs.views_.begin(); it != rhs.views_.end(); ++it) {
-		EditorView* view = new EditorView(*(*it));
-		const bool succeeded = view->create((*it)->getParent().getHandle(), DefaultWindowRect(),
+	for(set<EditorView*>::const_iterator i(rhs.views_.begin()), e(rhs.views_.end()); i != e; ++i) {
+		EditorView* view = new EditorView(**i);
+		const bool succeeded = view->create((*i)->getParent().getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
+		view->setConfiguration(&(*i)->getConfiguration(), 0);
+		view->scrollTo((*i)->getScrollPosition(SB_HORZ), (*i)->getScrollPosition(SB_VERT), false);
 		views_.insert(view);
-		if(*it == rhs.visibleView_)
+		if(*i == rhs.visibleView_)
 			visibleView_ = view;
-		if(*it == rhs.lastVisibleView_)
+		if(*i == rhs.lastVisibleView_)
 			lastVisibleView_ = view;
 	}
 }
