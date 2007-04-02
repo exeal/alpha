@@ -1852,13 +1852,11 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 /**
  * Constructor.
  * @param viewer the text viewer
- * @throw std#invalid_argument @a viewer is not a window
  */
 TextRenderer::TextRenderer(TextViewer& viewer) :
 		LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
-//	if(!viewer.isWindow())
-//		throw invalid_argument("The specified viewer is not a window.");
+	setFont(0, 0, &getDefaultFontAssociations());
 	updateViewerSize();
 	const length_t logicalLines = viewer.getDocument().getNumberOfLines();
 	if(logicalLines > 1)
