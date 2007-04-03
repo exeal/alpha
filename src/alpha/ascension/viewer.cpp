@@ -1804,7 +1804,7 @@ void TextViewer::onKillFocus(HWND newWindow) {
 	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 		closeCompletionWindow();
 */	abortIncrementalSearch(*this);
-	if(imeCompositionActivated_) {	// IME で入力中であればやめさせる
+	if(imeCompositionActivated_) {	// stop IME input
 		HIMC imc = ::ImmGetContext(getHandle());
 		::ImmNotifyIME(imc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
 		::ImmReleaseContext(getHandle(), imc);
@@ -1873,9 +1873,9 @@ void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
 
 /// @see WM_NOTIFY
 bool TextViewer::onNotify(int, ::NMHDR& nmhdr) {
-	// ツールチップのテキスト
+	// tooltip text
 	if(nmhdr.hwndFrom == toolTip_ && nmhdr.code == TTN_GETDISPINFO) {
-		::SendMessageW(toolTip_, TTM_SETMAXTIPWIDTH, 0, 1000);	// 改行を有効にする
+		::SendMessageW(toolTip_, TTM_SETMAXTIPWIDTH, 0, 1000);	// make line breaks effective
 		reinterpret_cast<::LPNMTTDISPINFOW>(&nmhdr)->lpszText = tipText_;
 		return false;
 	}
@@ -1884,9 +1884,9 @@ bool TextViewer::onNotify(int, ::NMHDR& nmhdr) {
 
 /// @see CustomControl#onPaint
 void TextViewer::onPaint(PaintDC& dc) {
-	if(isFrozen())	// 凍結中は無視
+	if(isFrozen())	// skip if frozen
 		return;
-	else if(toBoolean(::IsRectEmpty(&dc.getPaintStruct().rcPaint)))	// 描画の必要な領域が空であれば終了
+	else if(toBoolean(::IsRectEmpty(&dc.getPaintStruct().rcPaint)))	// skip if the region to paint is empty
 		return;
 
 	const Document& document = getDocument();
@@ -1895,28 +1895,26 @@ void TextViewer::onPaint(PaintDC& dc) {
 
 //	Timer tm(L"onPaint");
 
-	const length_t lineCount = document.getNumberOfLines();		// 総論理行数
-	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;		// 描画の必要な矩形
+	const length_t lines = document.getNumberOfLines();
+	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
 	const int linePitch = renderer_->getLinePitch();
 
-	// 垂直ルーラの描画
+	// draw the vertical ruler
 	verticalRulerDrawer_->draw(dc);
 
-#undef CLIENT_Y_TO_DISPLAY_LINE
-
-	// 行頭・行末余白の描画
+	// draw horizontal margins
 	const ::RECT margins = getTextAreaMargins();
 	const COLORREF marginColor = internal::systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
 	if(margins.left > 0) {
 		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->getWidth() : 0;
-		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
+		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth + 1, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
 		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_RIGHT) ? verticalRulerDrawer_->getWidth() : 0;
-		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
+		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth + 1, paintRect.bottom - paintRect.top, marginColor);
 	}
 
-	// 描画開始行から最終可視行または文末まで行の本体を描画
+	// draw lines
 	const Colors selectionColor(
 		internal::systemColors.getReal(configuration_.selectionColor.foreground,
 		SYSTEM_COLOR_MASK | (hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
@@ -1927,14 +1925,14 @@ void TextViewer::onPaint(PaintDC& dc) {
 	length_t line, subline;
 	mapClientYToLine(paintRect.top, &line, &subline);
 	int y = mapLineToClientY(line, true);
-	if(line < lineCount) {
+	if(line < lines) {
 #ifdef _DEBUG
 		DumpContext dout;
 		if(DIAGNOSE_INHERENT_DRAWING)
 			dout << L"lines : ";
 #endif /* _DEBUG */
-		while(y < paintRect.bottom && line < lineCount) {
-			// 論理行を1行描画
+		while(y < paintRect.bottom && line < lines) {
+			// draw a logical line
 #ifdef _DEBUG
 			if(DIAGNOSE_INHERENT_DRAWING)
 				dout << static_cast<ulong>(line) << ",";
@@ -1949,12 +1947,12 @@ void TextViewer::onPaint(PaintDC& dc) {
 #endif /* _DEBUG */
 	}
 
-	// 最終行より後ろ
+	// paint behind the last
 	if(paintRect.bottom > y && y > margins.top + linePitch - 1)
 		dc.fillSolidRect(clientRect.left + margins.left, y,
 			clientRect.right - clientRect.left - margins.left - margins.right, paintRect.bottom - y, marginColor);
 
-	// 上余白の描画
+	// draw top margin
 	if(margins.top > 0)
 		dc.fillSolidRect(clientRect.left + margins.left, clientRect.top,
 			clientRect.right - clientRect.left - margins.left - margins.right, margins.top, marginColor);
@@ -3944,11 +3942,13 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
 	}
 	endTimer();
-	leftButtonPressed_ = false;
+	if(leftButtonPressed_) {
+		leftButtonPressed_ = false;
+		// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
+		viewer_->getCaret().show();
+	}
 	viewer_->releaseCapture();
 
-	// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
-	viewer_->getCaret().show();
 }
 
 /// @see IMouseInputStrategy#install
@@ -3958,9 +3958,10 @@ void DefaultMouseInputStrategy::install(TextViewer& viewer) {
 
 /// @see IMouseInputStrategy#mouseButtonInput
 bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState) {
-	if(action != RELEASED)
+	if(action != RELEASED && viewer_->isAutoScrolling()) {
 		viewer_->endAutoScroll();
-	if(button == LEFT_BUTTON) {
+		return true;
+	} else if(button == LEFT_BUTTON) {
 		if(action == PRESSED)
 			handleLeftButtonPressed(position, keyState);
 		else if(action == RELEASED)
@@ -3987,7 +3988,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 
 /// @see IMouseInputStrategy#mouseMoved
 void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint keyState) {
-	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始?
+	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE dragging starts?
 		if(!oleDragAndDropEnabled_ || viewer_->getCaret().isSelectionEmpty())
 			lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
 		else {
@@ -4026,11 +4027,11 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint keyStat
 /// @see IMouseInputStrategy#mouseWheelRotated
 void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, uint) {
 	if(!viewer_->endAutoScroll()) {
-		// システムで設定されている量を使う
-		UINT scrollLineCount;	// スクロールする行数
-		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &scrollLineCount, 0)))
-			scrollLineCount = 3;
-		delta *= (scrollLineCount != WHEEL_PAGESCROLL) ? scrollLineCount : static_cast<UINT>(viewer_->getNumberOfVisibleLines());
+		// use system settings
+		UINT lines;	// the number of lines to scroll
+		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
+			lines = 3;
+		delta *= (lines != WHEEL_PAGESCROLL) ? lines : static_cast<UINT>(viewer_->getNumberOfVisibleLines());
 		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
 	}
 }
@@ -4126,7 +4127,7 @@ TextViewer& CaretShapeUpdater::getTextViewer() throw() {
 
 /// Notifies the text viewer to update the shape of the caret.
 void CaretShapeUpdater::update() throw() {
-	viewer_.recreateCaret();	// $friendly access$
+	viewer_.recreateCaret();	// $friendly-access
 }
 
 
@@ -4140,10 +4141,10 @@ DefaultCaretShaper::DefaultCaretShaper() throw() : viewer_(0) {
 void DefaultCaretShaper::getCaretShape(auto_ptr<Bitmap>&, ::SIZE& solidSize, Orientation& orientation) throw() {
 	DWORD width;
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
-		width = 1;	// NT4 は SPI_GETCARETWIDTH が使えない
+		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	solidSize.cx = width;
 	solidSize.cy = viewer_->getTextRenderer().getLineHeight();
-	orientation = LEFT_TO_RIGHT;	// どっちでもいい
+	orientation = LEFT_TO_RIGHT;	// no matter
 }
 
 /// @see ICaretShapeProvider#install

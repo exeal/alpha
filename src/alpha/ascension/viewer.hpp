@@ -506,12 +506,12 @@ namespace ascension {
 			TextRenderer&						getTextRenderer() throw();
 			const TextRenderer&					getTextRenderer() const throw();
 			const VerticalRulerConfiguration&	getVerticalRulerConfiguration() const throw();
-			bool								isCloneOf(const TextViewer& rhs) const throw();
 			void								setConfiguration(const Configuration* general,
 													const VerticalRulerConfiguration* verticalRuler);
 			// auto scroll
 			void	beginAutoScroll();
 			bool	endAutoScroll();
+			bool	isAutoScrolling() const throw();
 			// caret
 			Caret&			getCaret() throw();
 			const Caret&	getCaret() const throw();
@@ -1011,6 +1011,9 @@ inline const TextViewer::VerticalRulerConfiguration& TextViewer::getVerticalRule
 /// Returns true if Global IME is enabled.
 inline bool TextViewer::isActiveInputMethodEnabled() const throw() {return modeState_.activeInputMethodEnabled;}
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+
+/// Returns true if the viewer is auto-scrolling.
+inline bool TextViewer::isAutoScrolling() const throw() {return autoScroll_.scrolling;}
 
 /// Returns true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const throw() {return freezeInfo_.count != 0;}
