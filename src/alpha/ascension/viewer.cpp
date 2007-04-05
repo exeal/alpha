@@ -884,7 +884,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 	mapClientYToLine(pt.y, &line, &subline);
 	const LineLayout& layout = renderer_->getLineLayout(line);
 	// 文字の確定
-	const long x = pt.x + getDisplayXOffset();
+	const long x = pt.x - getDisplayXOffset(layout);
 	length_t column;
 	if(!nearestLeading)
 		column = layout.getOffset(x, static_cast<int>(renderer_->getLinePitch() * subline));
@@ -913,8 +913,9 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  */
 ::POINT TextViewer::getClientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();
-	::POINT pt = renderer_->getLineLayout(position.line).getLocation(position.column, edge);
-	pt.x -= getDisplayXOffset();
+	const LineLayout& layout = renderer_->getLineLayout(position.line);
+	::POINT pt = layout.getLocation(position.column, edge);
+	pt.x += getDisplayXOffset(layout);
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
 		pt.y = y;
@@ -923,16 +924,24 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 	return pt;
 }
 
-///
-int TextViewer::getDisplayXOffset() const throw() {
+/**
+ * Returns the x-coordinate display offset for the specified line.
+ * @param line the layout of the line
+ * @return the offset
+ */
+int TextViewer::getDisplayXOffset(const LineLayout& line) const throw() {
+	const ::RECT margins = getTextAreaMargins();
 	if(configuration_.alignment == ALIGN_LEFT)
-		return scrollInfo_.getX() * renderer_->getAverageCharacterWidth() - getTextAreaMargins().left;
+		return margins.left - scrollInfo_.getX() * renderer_->getAverageCharacterWidth();
 	else if(configuration_.alignment == ALIGN_RIGHT) {
-		const ::RECT margins = getTextAreaMargins();
-		::RECT clientRect;
-		getClientRect(clientRect);
-		return scrollInfo_.getX() * renderer_->getAverageCharacterWidth() - getTextAreaMargins().left
-			- (clientRect.right - clientRect.left - margins.left - margins.right) % renderer_->getAverageCharacterWidth() - 1;
+		int canvasWidth;
+		if(scrollInfo_.horizontal.maximum <= scrollInfo_.horizontal.pageSize) {
+			::RECT r;
+			getClientRect(r);
+			canvasWidth = r.right - r.left;
+		} else
+			canvasWidth = scrollInfo_.horizontal.maximum * renderer_->getAverageCharacterWidth();
+		return -margins.right - scrollInfo_.getX() * renderer_->getAverageCharacterWidth() /*+ canvasWidth - line.getSublineWidth(0)*/;
 	} else if(configuration_.alignment == ALIGN_CENTER) {
 		// TODO: not implemented.
 	}
@@ -1937,7 +1946,8 @@ void TextViewer::onPaint(PaintDC& dc) {
 			if(DIAGNOSE_INHERENT_DRAWING)
 				dout << static_cast<ulong>(line) << ",";
 #endif /* _DEBUG */
-			renderer_->getLineLayout(line).draw(dc, -getDisplayXOffset(), y, lineRect, selectionColor);
+			const LineLayout& layout = renderer_->getLineLayout(line);
+			layout.draw(dc, getDisplayXOffset(layout), y, lineRect, selectionColor);
 			y += linePitch * static_cast<int>(renderer_->getNumberOfSublinesOfLine(line++));
 			subline = 0;
 		}
@@ -2260,8 +2270,10 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 	case WM_INPUTLANGCHANGE:
 		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
-			if(texteditor::Session* session = getDocument().getSession())
-				session->getInputSequenceCheckers()->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+			if(texteditor::Session* session = getDocument().getSession()) {
+				if(texteditor::InputSequenceCheckers* isc = session->getInputSequenceCheckers())
+					isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+			}
 		}
 		break;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES

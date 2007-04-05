@@ -22,8 +22,6 @@ KeyboardMap::KeyboardMap() {
 	}
 	clear();
 	dirty_ = false;
-	assign(BuiltInCommand(CMD_FILE_NEW), KeyCombination('N', KM_CTRL));
-	assign(BuiltInCommand(CMD_VIEW_BUFFERLIST_START), KeyCombination('A', KM_CTRL | KM_SHIFT));
 }
 
 /// デストラクタ

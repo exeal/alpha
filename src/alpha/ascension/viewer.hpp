@@ -559,7 +559,7 @@ namespace ascension {
 
 			// helpers
 		private:
-			int		getDisplayXOffset() const throw();
+			int		getDisplayXOffset(const LineLayout& line) const throw();
 			void	handleGUICharacterInput(CodePoint c);
 			void	internalUnfreeze();
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
