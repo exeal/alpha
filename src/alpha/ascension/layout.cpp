@@ -1584,6 +1584,11 @@ FontSelector::FontSelector(const FontSelector& rhs) : primaryFont_(L""), shaping
 	resetPrimaryFont(ScreenDC(), copyFont(rhs.primaryFont_.regular));
 	for(map<int, Fontset*>::const_iterator i(rhs.associations_.begin()), e(rhs.associations_.end()); i != e; ++i)
 		associations_.insert(make_pair(i->first, new Fontset(i->second->faceName)));
+	if(rhs.linkedFonts_ != 0) {
+		linkedFonts_ = new vector<Fontset*>;
+		for(vector<Fontset*>::const_iterator i(rhs.linkedFonts_->begin()), e(rhs.linkedFonts_->end()); i != e; ++i)
+			linkedFonts_->push_back(new Fontset(**i));
+	}
 }
 
 /// Destructor.
@@ -1857,6 +1862,13 @@ TextRenderer::TextRenderer(TextViewer& viewer) :
 		LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
 	setFont(0, 0, &getDefaultFontAssociations());
+	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
+	case LANG_CHINESE:
+	case LANG_JAPANESE:
+	case LANG_KOREAN:
+		enableFontLinking();
+		break;
+	}
 	updateViewerSize();
 	const length_t logicalLines = viewer.getDocument().getNumberOfLines();
 	if(logicalLines > 1)

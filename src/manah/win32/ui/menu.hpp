@@ -280,8 +280,8 @@ inline LRESULT Menu::drawItem(const ::DRAWITEMSTRUCT& di, const TCHAR* text,
 	return true;
 }
 
-template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::enable(UINT item, bool enable /* = true */) {
-	assertValidAsMenu(); return toBoolean(::EnableMenuItem(getHandle(), item, (idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (enable ? MFS_ENABLED : MFS_GRAYED)));}
+template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::enable(UINT item, bool enable /* = true */) {assertValidAsMenu();
+	return toBoolean(::EnableMenuItem(getHandle(), item, (idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (enable ? MF_ENABLED : MF_GRAYED)));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::erase(UINT item) {
 	assertValidAsMenu(); return toBoolean(::DeleteMenu(getHandle(), item, (idPolicy == BY_COMMAND) ? MF_BYCOMMAND : MF_BYPOSITION));}
@@ -314,7 +314,7 @@ inline UINT Menu::getSizeOfMENUITEMINFO() {
 }
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline UINT Menu::getState(UINT item) const {
-	ItemInfo mi; getItemInformation<idPolicy>(item, mi); return mi.fState;}
+	ItemInfo mi; mi.fMask = MIIM_STATE; getItemInformation<idPolicy>(item, mi); return mi.fState;}
 
 inline Menu Menu::getSubMenu(UINT index) const {
 	assertValidAsMenu();
