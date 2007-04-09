@@ -30,14 +30,15 @@ namespace {
 		ASCENSION_SHARED_LIB_ENTRY(3, "ScriptShape", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, const WCHAR*, int, int, ::SCRIPT_ANALYSIS*, WORD*, WORD*, ::SCRIPT_VISATTR*, int*))
 		ASCENSION_SHARED_LIB_ENTRY(4, "ScriptPlace", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, const WORD*, int, const ::SCRIPT_VISATTR*, ::SCRIPT_ANALYSIS*, int*, ::GOFFSET*, ::ABC*))
 		ASCENSION_SHARED_LIB_ENTRY(5, "ScriptTextOut", HRESULT(WINAPI *signature)(const HDC, ::SCRIPT_CACHE*, int, int, UINT, const ::RECT*, const ::SCRIPT_ANALYSIS*, const WCHAR*, int, const WORD*, int, const int*, const int*, const ::GOFFSET*))
-		ASCENSION_SHARED_LIB_ENTRY(6, "ScriptBreak", HRESULT(WINAPI *signature)(const WCHAR*, int, const ::SCRIPT_ANALYSIS*, ::SCRIPT_LOGATTR*))
-		ASCENSION_SHARED_LIB_ENTRY(7, "ScriptCPtoX", HRESULT(WINAPI *signature)(int, BOOL, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(8, "ScriptXtoCP", HRESULT(WINAPI *signature)(int, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(9, "ScriptGetLogicalWidths", HRESULT(WINAPI *signature)(const ::SCRIPT_ANALYSIS*, int, int, const int*, const WORD*, const ::SCRIPT_VISATTR*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(10, "ScriptGetProperties", HRESULT(WINAPI *signature)(const ::SCRIPT_PROPERTIES***, int*))
-		ASCENSION_SHARED_LIB_ENTRY(11, "ScriptGetFontProperties", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, ::SCRIPT_FONTPROPERTIES*))
-		ASCENSION_SHARED_LIB_ENTRY(12, "ScriptRecordDigitSubstitution", HRESULT(WINAPI *signature)(::LCID, ::SCRIPT_DIGITSUBSTITUTE*))
-		ASCENSION_SHARED_LIB_ENTRY(13, "ScriptApplyDigitSubstitution", HRESULT(WINAPI *signature)(const ::SCRIPT_DIGITSUBSTITUTE*, ::SCRIPT_CONTROL*, SCRIPT_STATE*))
+		ASCENSION_SHARED_LIB_ENTRY(6, "ScriptJustify", HRESULT(WINAPI *signature)(const ::SCRIPT_VISATTR*, const int*, int, int, int, int*))
+		ASCENSION_SHARED_LIB_ENTRY(7, "ScriptBreak", HRESULT(WINAPI *signature)(const WCHAR*, int, const ::SCRIPT_ANALYSIS*, ::SCRIPT_LOGATTR*))
+		ASCENSION_SHARED_LIB_ENTRY(8, "ScriptCPtoX", HRESULT(WINAPI *signature)(int, BOOL, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*))
+		ASCENSION_SHARED_LIB_ENTRY(9, "ScriptXtoCP", HRESULT(WINAPI *signature)(int, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*, int*))
+		ASCENSION_SHARED_LIB_ENTRY(10, "ScriptGetLogicalWidths", HRESULT(WINAPI *signature)(const ::SCRIPT_ANALYSIS*, int, int, const int*, const WORD*, const ::SCRIPT_VISATTR*, int*))
+		ASCENSION_SHARED_LIB_ENTRY(11, "ScriptGetProperties", HRESULT(WINAPI *signature)(const ::SCRIPT_PROPERTIES***, int*))
+		ASCENSION_SHARED_LIB_ENTRY(12, "ScriptGetFontProperties", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, ::SCRIPT_FONTPROPERTIES*))
+		ASCENSION_SHARED_LIB_ENTRY(13, "ScriptRecordDigitSubstitution", HRESULT(WINAPI *signature)(::LCID, ::SCRIPT_DIGITSUBSTITUTE*))
+		ASCENSION_SHARED_LIB_ENTRY(14, "ScriptApplyDigitSubstitution", HRESULT(WINAPI *signature)(const ::SCRIPT_DIGITSUBSTITUTE*, ::SCRIPT_CONTROL*, SCRIPT_STATE*))
 	ASCENSION_END_SHARED_LIB_ENTRIES()
 
 	auto_ptr<ascension::internal::SharedLibrary<USPEntries> > uspLib;
@@ -66,17 +67,18 @@ namespace {
 struct viewers::internal::Run : public StyledText {
 	::SCRIPT_ANALYSIS analysis;
 	::SCRIPT_CACHE cache;
-	HFONT font;			// ランを描画するフォント
+	HFONT font;			// the font to draw the run
 	WORD* glyphs;
-	length_t length;	// ランの文字数
-	int numberOfGlyphs;	// glyphs の要素数
+	length_t length;	// the number of characters of the run
+	int numberOfGlyphs;	// the number of glyphs of the run
 	WORD* clusters;
 	::SCRIPT_VISATTR* visualAttributes;
 	int* advances;
+	int* justifiedAdvances;
 	::GOFFSET* glyphOffsets;
 	::ABC width;
 	Run(const TextStyle& textStyle) throw() :
-			cache(0), font(0), glyphs(0), clusters(0), visualAttributes(0), advances(0), glyphOffsets(0) {
+			cache(0), font(0), glyphs(0), clusters(0), visualAttributes(0), advances(0), justifiedAdvances(0), glyphOffsets(0) {
 		style = textStyle;
 	}
 	~Run() throw() {dispose();}
@@ -87,6 +89,7 @@ struct viewers::internal::Run : public StyledText {
 		delete[] clusters; clusters = 0;
 		delete[] visualAttributes; visualAttributes = 0;
 		delete[] advances; advances = 0;
+		delete[] justifiedAdvances; justifiedAdvances = 0;
 		delete[] glyphOffsets; glyphOffsets = 0;
 	}
 	HRESULT getLogicalWidths(int widths[]) const throw() {
@@ -95,8 +98,8 @@ struct viewers::internal::Run : public StyledText {
 	}
 	int getWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
 	HRESULT getX(size_t offset, bool trailing, int& x) const throw() {
-		return ::ScriptCPtoX(static_cast<int>(offset), trailing,
-			static_cast<int>(length), numberOfGlyphs, clusters, visualAttributes, advances, &analysis, &x);
+		return ::ScriptCPtoX(static_cast<int>(offset), trailing, static_cast<int>(length),
+			numberOfGlyphs, clusters, visualAttributes, (justifiedAdvances == 0) ? advances : justifiedAdvances, &analysis, &x);
 	}
 	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
 };
@@ -133,7 +136,7 @@ namespace {
 		}
 		throw invalid_argument("Unknown style value.");
 	}
-	inline void drawDecorationLines(PaintDC& dc, const TextStyle& style, int x, int y, int width, int height) {
+	inline void drawDecorationLines(DC& dc, const TextStyle& style, int x, int y, int width, int height) {
 		::OUTLINETEXTMETRICW* otm = 0;
 		::TEXTMETRICW tm;
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
@@ -183,7 +186,7 @@ namespace {
  */
 LineLayout::LineLayout(const TextRenderer& textRenderer, length_t line) :
 		renderer_(textRenderer), lineNumber_(line),
-		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), width_(-1) {
+		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1) {
 	if(!getText().empty()) {
 		itemize(line);
 		for(size_t i = 0; i < numberOfRuns_; ++i)
@@ -197,11 +200,13 @@ LineLayout::LineLayout(const TextRenderer& textRenderer, length_t line) :
 		} else {
 			wrap();
 			reorder();
+			if(renderer_.getTextViewer().getConfiguration().justifiesLines)
+				justify();
 		}
 	} else {	// 空行の場合
 		numberOfRuns_ = 0;
 		numberOfSublines_ = 1;
-		width_ = 0;
+		longestSublineWidth_ = 0;
 	}
 }
 
@@ -224,23 +229,69 @@ inline void LineLayout::dispose() throw() {
 }
 
 /**
- * Draws the layout to the output device.
- * @a selectionColor and @a marginColor must be actual color.
- * do not use @c presentation#STANDARD_COLOR or any system color using @c presentation#SYSTEM_COLOR_MASK
+ * Draws the layout to the output device. @a selectionColor and @a marginColor must be actual
+ * color. Do not use @c presentation#STANDARD_COLOR or any system color using
+ * @c presentation#SYSTEM_COLOR_MASK.
  * @param dc the device context
  * @param x the x-coordinate of the position to draw
  * @param y the y-coordinate of the position to draw
+ * @param paintRect the region to draw
  * @param clipRect the clipping region
  * @param selectionColor the color of the selection
  */
-void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw() {
+void LineLayout::draw(DC& dc, int x, int y, const ::RECT& paintRect, const ::RECT& clipRect, const Colors& selectionColor) const throw() {
+	const int linePitch = renderer_.getLinePitch();
+
+	// empty line
+	if(isDisposed()) {
+		::RECT r;
+		r.left = max(paintRect.left, clipRect.left);
+		r.top = max(clipRect.top, max<long>(paintRect.top, y));
+		r.right = min(paintRect.right, clipRect.right);
+		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + linePitch));
+		const Colors lineColor = renderer_.getTextViewer().getPresentation().getLineColor(lineNumber_);
+		dc.fillSolidRect(r, internal::systemColors.getReal((lineColor.background == STANDARD_COLOR) ?
+			renderer_.getTextViewer().getConfiguration().color.background : lineColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW));
+		return;
+	}
+
+	// skip to the subline needs to draw
+	length_t subline = (y + linePitch >= paintRect.top) ? 0 : (paintRect.top - (y + linePitch)) / linePitch;
+	if(subline >= numberOfSublines_)
+		return;	// this logical line does not need to draw
+	y += static_cast<int>(linePitch * subline);
+
+	for(; subline < numberOfSublines_; ++subline) {
+		draw(subline, dc, x, y, paintRect, clipRect, selectionColor);
+		if((y += linePitch) >= paintRect.bottom)	// to next subline
+			break;
+	}
+}
+
+/**
+ * Draws the specified subline layout to the output device. @a selectionColor and @a marginColor
+ * must be actual color. Do not use @c presentation#STANDARD_COLOR or any system color using
+ * @c presentation#SYSTEM_COLOR_MASK.
+ * @param subline the visual subline
+ * @param dc the device context
+ * @param x the x-coordinate of the position to draw
+ * @param y the y-coordinate of the position to draw
+ * @param paintRect the region to draw
+ * @param clipRect the clipping region
+ * @param selectionColor the color of the selection
+ * @throw text#BadPositionException @a subline is invalid
+ */
+void LineLayout::draw(length_t subline, DC& dc,
+		int x, int y, const ::RECT& paintRect, const ::RECT& clipRect, const Colors& selectionColor) const {
 	// TODO: call ISpecialCharacterDrawer.
+
+	if(subline >= numberOfSublines_)
+		throw BadPositionException();
 
 	// クリッピングによるマスキングを利用した選択テキストの描画は以下の記事を参照
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
-	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
 	const int linePitch = renderer_.getLinePitch();
 	const int lineHeight = renderer_.getLineHeight();
 	const Colors lineColor = renderer_.getTextViewer().getPresentation().getLineColor(lineNumber_);
@@ -249,7 +300,7 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 	ISpecialCharacterDrawer::Context context(dc);
 	ISpecialCharacterDrawer* specialCharacterDrawer = renderer_.getSpecialCharacterDrawer();
 
-	// 空行などの場合
+	// empty line
 	if(isDisposed()) {
 		::RECT r;
 		r.left = max(paintRect.left, clipRect.left);
@@ -260,118 +311,107 @@ void LineLayout::draw(PaintDC& dc, int x, int y, const ::RECT& clipRect, const C
 		return;
 	}
 
-	// 描画が必要な折り返し行までスキップ
-	length_t subline = (y + linePitch >= paintRect.top) ? 0 : (paintRect.top - (y + linePitch)) / linePitch;
-	if(subline >= numberOfSublines_)
-		return;	// 描画の必要なし
-	y += static_cast<int>(linePitch * subline);
-
 	const int originalX = x;
 	const int savedCookie = dc.save();
 	HRESULT hr;
 	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP);
 
-	// 折り返し行ごとのループ
-	for(; subline < numberOfSublines_; ++subline) {
-		length_t selStart, selEnd;
-		const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
+	length_t selStart, selEnd;
+	const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
 
-		// 行間を塗る
-		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
-		dc.selectClipRgn(clipRegion.getHandle());
-		if(linePitch - lineHeight > 0)
-			dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
-				paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
+	// paint between sublines
+	Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
+//	dc.selectClipRgn(clipRegion.getHandle());
+	if(linePitch - lineHeight > 0)
+		dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
+			paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
 
-		// 背景を先に塗って、描画が必要なランを調べて、選択領域をマスキングする
-		size_t firstRun = sublineFirstRuns_[subline];
-		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		x = originalX + getSublineIndent(subline);
-		// 左余白を塗る
-		if(x > originalX && x > paintRect.left) {
-			const int left = max<int>(originalX, paintRect.left);
-			dc.fillSolidRect(left, y, x - left, lineHeight, marginColor);
-		}
-		// ランの背景を塗る
-		int startX = x;
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			Run& run = *runs_[i];
-			if(x + static_cast<int>(run.width.abcB) + run.width.abcA < paintRect.left) {	// 描画不要
-				++firstRun;
-				startX = x + run.getWidth();
-			} else {
-				const COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
-					internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
-				if(!sel || run.column >= selEnd || run.column + run.length <= selStart)	// 選択がランに突入していない
-					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, bgColor);
-				else if(sel && run.column >= selStart && run.column + run.length <= selEnd) {	// ランが丸ごと選択されている
-					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, selectionColor.background);
-					dc.excludeClipRect(x, y, x + run.getWidth(), y + lineHeight);
-				} else {	// 部分的に選択されている
-					int left, right;
-					hr = run.getX(max(selStart, run.column) - run.column, false, left);
-					hr = run.getX(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
-					if(left > right)
-						swap(left, right);
-					left += x;
-					right += x;
-					if(left > x/* && left > paintRect.left*/)
-						dc.fillSolidRect(x, y, left - x, lineHeight, bgColor);
-					if(right > left) {
-						dc.fillSolidRect(left, y, right - left, lineHeight, selectionColor.background);
-						dc.excludeClipRect(left, y, right, y + lineHeight);
-					}
-					if(right < x + run.getWidth())
-						dc.fillSolidRect(right, y, run.getWidth() - (left - x), lineHeight, bgColor);
+	// 1. paint background of the runs
+	// 2. determine the first and the last runs need to draw
+	// 3. mask selected region
+	size_t firstRun = sublineFirstRuns_[subline];
+	size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+	x = originalX + getSublineIndent(subline);	// x is left edge of the subline
+	// paint the left margin
+	if(x > originalX && x > paintRect.left) {
+		const int left = min<int>(originalX, paintRect.left);
+		dc.fillSolidRect(left, y, x - left, lineHeight, marginColor);
+	}
+	// paint background of the runs
+	int startX = x;
+	for(size_t i = firstRun; i < lastRun; ++i) {
+		Run& run = *runs_[i];
+		if(x + run.getWidth() < paintRect.left) {	// this run does not need to draw
+			++firstRun;
+			startX = x + run.getWidth();
+		} else {
+			const COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
+				internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
+			if(!sel || run.column >= selEnd || run.column + run.length <= selStart)	// no selection in this run
+				dc.fillSolidRect(x, y, run.getWidth(), lineHeight, bgColor);
+			else if(sel && run.column >= selStart && run.column + run.length <= selEnd) {	// this run is selected entirely
+				dc.fillSolidRect(x, y, run.getWidth(), lineHeight, selectionColor.background);
+				dc.excludeClipRect(x, y, x + run.getWidth(), y + lineHeight);
+			} else {	// selected partially
+				int left, right;
+				hr = run.getX(max(selStart, run.column) - run.column, false, left);
+				hr = run.getX(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
+				if(left > right)
+					swap(left, right);
+				left += x;
+				right += x;
+				if(left > x/* && left > paintRect.left*/)
+					dc.fillSolidRect(x, y, left - x, lineHeight, bgColor);
+				if(right > left) {
+					dc.fillSolidRect(left, y, right - left, lineHeight, selectionColor.background);
+					dc.excludeClipRect(left, y, right, y + lineHeight);
 				}
-			}
-			x += run.getWidth();
-			if(x >= paintRect.right) {
-				lastRun = i + 1;
-				break;
+				if(right < x + run.getWidth())
+					dc.fillSolidRect(right, y, run.getWidth() - (left - x), lineHeight, bgColor);
 			}
 		}
-		// 右余白を塗る
-		if(x < paintRect.right)
-			dc.fillSolidRect(x, y, paintRect.right - x, linePitch, marginColor);
-
-		// 選択範囲外のテキストを描画
-		x = startX;
-		dc.setBkMode(TRANSPARENT);
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			Run& run = *runs_[i];
-			if(getText()[run.column] != L'\t') {
-				if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
-					dc.selectObject(run.font);
-					dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
-						run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
-					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
-						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
-				}
-			}
-			x += run.getWidth();
-		}
-
-		// 選択範囲内のテキストを描画 (下線と境界線もついでに)
-		x = startX;
-		clipRegion.setRect(clipRect);
-		dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			Run& run = *runs_[i];
-			if(sel && getText()[run.column] != L'\t'
-					&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
-				dc.selectObject(run.font);
-				dc.setTextColor(selectionColor.foreground);
-				hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
-					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, 0, run.glyphOffsets);
-			}
-			drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
-			x += run.getWidth();
-		}
-
-		// 次の折り返し行へ進む
-		if((y += linePitch) >= paintRect.bottom)
+		x += run.getWidth();
+		if(x >= paintRect.right) {
+			lastRun = i + 1;
 			break;
+		}
+	}
+	// paint the right margin
+	if(x < paintRect.right)
+		dc.fillSolidRect(x, y, paintRect.right - x, linePitch, marginColor);
+
+	// draw outside of the selection
+	x = startX;
+	dc.setBkMode(TRANSPARENT);
+	for(size_t i = firstRun; i < lastRun; ++i) {
+		Run& run = *runs_[i];
+		if(getText()[run.column] != L'\t') {
+			if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
+				dc.selectObject(run.font);
+				dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
+					run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
+				hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
+					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
+			}
+		}
+		x += run.getWidth();
+	}
+
+	// draw selected text segment (also underline and border)
+	x = startX;
+	clipRegion.setRect(clipRect);
+	dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
+	for(size_t i = firstRun; i < lastRun; ++i) {
+		Run& run = *runs_[i];
+		if(sel && getText()[run.column] != L'\t'
+				&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
+			dc.selectObject(run.font);
+			dc.setTextColor(selectionColor.foreground);
+			hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, 0,
+				&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
+		}
+		drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
+		x += run.getWidth();
 	}
 	dc.restore(savedCookie);
 }
@@ -402,7 +442,7 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
 	const String& text = getText();
 	int x = 0;
 	Run* run;
-	if(!rtl) {	// 左端からタブを展開する
+	if(!rtl) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
 			run = runs_[i];
 			if(run->length == 1 && text[run->column] == L'\t') {
@@ -412,7 +452,7 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
 			}
 			x += run->getWidth();
 		}
-	} else {	// 右端からタブを展開する
+	} else {	// expand from the right most
 		for(size_t i = numberOfRuns_; i > 0; --i) {
 			run = runs_[i - 1];
 			if(run->length == 1 && text[run->column] == L'\t') {
@@ -423,7 +463,7 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
 			x += run->getWidth();
 		}
 	}
-	width_ = x;
+	longestSublineWidth_ = x;
 }
 
 /**
@@ -436,7 +476,7 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
  * @note This does not support line wrapping and bidirectional context.
  */
 String LineLayout::fillToX(int x) const {
-	int cx = getWidth();
+	int cx = getLongestSublineWidth();
 	if(cx >= x)
 		return L"";
 
@@ -510,7 +550,7 @@ uchar LineLayout::getBidiEmbeddingLevel(length_t column) const {
  */
 ::SIZE LineLayout::getBounds() const throw() {
 	::SIZE s;
-	s.cx = getWidth();
+	s.cx = getLongestSublineWidth();
 	s.cy = static_cast<long>(renderer_.getLinePitch() * numberOfSublines_);
 	return s;
 }
@@ -620,6 +660,17 @@ LineLayout::StyledSegmentIterator LineLayout::getLastStyledSegment() const throw
 	return location;
 }
 
+/// Returns the width of the longest subline.
+int LineLayout::getLongestSublineWidth() const throw() {
+	if(longestSublineWidth_ == -1) {
+		int width = 0;
+		for(length_t subline = 0; subline < numberOfSublines_; ++subline)
+			width = max<long>(getSublineWidth(subline), width);
+		const_cast<LineLayout*>(this)->longestSublineWidth_ = width;
+	}
+	return longestSublineWidth_;
+}
+
 /**
  * Returns the next tab stop position.
  * @param x the distance from leading edge of the line (can not be negative)
@@ -651,7 +702,7 @@ int LineLayout::getNextTabStopBasedLeftEdge(int x, bool right) const throw() {
 	if(!rtl)
 		return getNextTabStop(x, right ? FORWARD : BACKWARD);
 	else
-		return right ? x + (x - getWidth()) % tabWidth : x - (tabWidth - (x - getWidth()) % tabWidth);
+		return right ? x + (x - getLongestSublineWidth()) % tabWidth : x - (tabWidth - (x - getLongestSublineWidth()) % tabWidth);
 }
 
 /**
@@ -687,8 +738,8 @@ length_t LineLayout::getOffset(int x, int y, length_t& trailing) const throw() {
 		const Run& run = *runs_[i];
 		if(x >= cx && x <= cx + run.getWidth()) {
 			int cp, t;
-			::ScriptXtoCP(x - cx, static_cast<int>(run.length),
-				static_cast<int>(run.numberOfGlyphs), run.clusters, run.visualAttributes, run.advances, &run.analysis, &cp, &t);
+			::ScriptXtoCP(x - cx, static_cast<int>(run.length), static_cast<int>(run.numberOfGlyphs), run.clusters,
+				run.visualAttributes, (run.justifiedAdvances == 0) ? run.advances : run.justifiedAdvances, &run.analysis, &cp, &t);
 			trailing = static_cast<length_t>(t);
 			return run.column + static_cast<length_t>(cp);
 		}
@@ -735,15 +786,17 @@ const StyledText& LineLayout::getStyledSegment(length_t column) const {
  */
 int LineLayout::getSublineIndent(length_t subline) const {
 	const TextViewer::Configuration& c = renderer_.getTextViewer().getConfiguration();
-	const int width = c.lineWrap.wraps() ? renderer_.getWrapWidth() : renderer_.getWidth();
-	switch(c.alignment) {
-	case ALIGN_LEFT:	return 0;
-	case ALIGN_RIGHT:	return width - getSublineWidth(subline);
-	case ALIGN_CENTER:	return (width - getSublineWidth(subline)) / 2;
-//	case JUSTIFY:		return 0;
-	default:			assert(false);
+	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
+		return 0;
+	else {
+		int width = c.lineWrap.wraps() ? renderer_.getWrapWidth() : renderer_.getWidth();
+		if(c.alignment == ALIGN_RIGHT)
+			return width - getSublineWidth(subline);
+		else if(c.alignment == ALIGN_CENTER)
+			return (width - getSublineWidth(subline)) / 2;
+		else
+			throw runtime_error("");	// 無意味
 	}
-	return 0;	// 無意味
 }
 
 /**
@@ -755,14 +808,17 @@ int LineLayout::getSublineIndent(length_t subline) const {
 int LineLayout::getSublineWidth(length_t subline) const {
 	if(subline >= numberOfSublines_)
 		throw text::BadPositionException();
-	if(runs_ != 0) {
+	else if(isDisposed())
+		return 0;
+	else if(numberOfSublines_ == 1 && longestSublineWidth_ != -1)
+		return longestSublineWidth_;
+	else {
 		const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		int cx = 0;
 		for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i)
 			cx += runs_[i]->getWidth();
 		return cx;
-	} else
-		return 0;
+	}
 }
 
 /// Returns the text of the line.
@@ -770,23 +826,12 @@ inline const String& LineLayout::getText() const throw() {
 	return renderer_.getTextViewer().getDocument().getLine(lineNumber_);
 }
 
-/// Returns the width of the line (maximum width of sublines).
-int LineLayout::getWidth() const throw() {
-	if(width_ == -1) {
-		int& width = const_cast<LineLayout*>(this)->width_;
-		width = 0;
-		for(length_t subline = 0; subline < numberOfSublines_; ++subline)
-			width = max<long>(getSublineWidth(subline), width);
-	}
-	return width_;
-}
-
 /// Returns if the line contains right-to-left run.
 bool LineLayout::isBidirectional() const throw() {
 	if(renderer_.getTextViewer().getConfiguration().orientation == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(runs_[i]->analysis.s.uBidiLevel % 2 == 1)
+		if((runs_[i]->analysis.s.uBidiLevel & 0x01) == 1)
 			return true;
 	}
 	return false;
@@ -830,7 +875,7 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	}
 
 	// itemize
-	int expectedNumberOfRuns = max(min(static_cast<int>(text.length()), 8), 2);
+	int expectedNumberOfRuns = max(static_cast<int>(text.length()) / 8, 2);
 	::SCRIPT_ITEM* items;
 	int numberOfItems;
 	while(true) {
@@ -867,6 +912,25 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 		merge(items, numberOfItems, simpleStyle);
 	}
 	delete[] items;
+}
+
+/// Justifies the wrapped visual lines.
+inline void LineLayout::justify() throw() {
+	const int wrapWidth = renderer_.getWrapWidth();
+	for(length_t subline = 0; subline < numberOfSublines_; ++subline) {
+		const int lineWidth = getSublineWidth(subline);
+		const size_t last = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+		for(size_t i = sublineFirstRuns_[subline]; i < last; ++i) {
+			Run& run = *runs_[i];
+			const int newRunWidth = run.getWidth() * wrapWidth / lineWidth;	// TODO: there is more precise way.
+			if(newRunWidth != run.getWidth()) {
+				run.justifiedAdvances = new int[run.numberOfGlyphs];
+				::ScriptJustify(run.visualAttributes, run.advances,
+					run.numberOfGlyphs, newRunWidth - run.getWidth(), 2, run.justifiedAdvances);
+				run.width.abcB += newRunWidth - run.getWidth();
+			}
+		}
+	}
 }
 
 /**
@@ -1105,11 +1169,11 @@ void LineLayout::wrap() throw() {
 	int cx = 0;
 	vector<Run*> newRuns;
 	newRuns.reserve(numberOfRuns_ * 3 / 2);
-	// ランごとのループ (この時点では runs_ は論理順になっている)
+	// for each runs... (at this time, runs_ is in logical order)
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		Run& run = *runs_[i];
 
-		// タブの場合は展開して幅を算出する
+		// if the run is a tab, expand and calculate actual width
 		if(text[run.column] == L'\t') {
 			assert(run.length == 1);
 			if(cx == wrapWidth) {
@@ -1127,7 +1191,7 @@ void LineLayout::wrap() throw() {
 			continue;
 		}
 
-		// ランの全文字について論理幅と論理属性を求め、折り返し位置を決める
+		// obtain logical widths and attributes for all characters in this run to determine line break positions
 		int* logicalWidths = new int[run.length];
 		::SCRIPT_LOGATTR* logicalAttributes = new ::SCRIPT_LOGATTR[run.length];
 		dc.selectObject(run.font);
@@ -1137,10 +1201,10 @@ void LineLayout::wrap() throw() {
 		int widthInThisRun = 0;
 		length_t lastBreakable = run.column, lastGlyphEnd = run.column;
 		int lastBreakableCx = cx, lastGlyphEndCx = cx;
-		// ラン内の文字ごとのループ
-		for(length_t j = run.column; j < run.column + run.length; ) {	// j は論理行頭からの位置
+		// for each characters in the run...
+		for(length_t j = run.column; j < run.column + run.length; ) {	// j is position in the LOGICAL line
 			const int x = cx + widthInThisRun;
-			// この位置で折り返し可能か覚えておく
+			// remember this opportunity
 			if(logicalAttributes[j - originalRunPosition].fCharStop != 0) {
 				lastGlyphEnd = j;
 				lastGlyphEndCx = x;
@@ -1149,13 +1213,13 @@ void LineLayout::wrap() throw() {
 					lastBreakableCx = x;
 //				}
 			}
-			// 物理行の幅が折り返し幅を超えたら折り返す
+			// break if the width of the visual line overs the wrap width
 			if(x + logicalWidths[j - originalRunPosition] > wrapWidth) {
-				// 折り返し可能な位置がランの先頭の場合
+				// the opportunity is the start of this run
 				if(lastBreakable == run.column) {
-					// 折り返し可能な位置が無い場合は最後のグリフ境界で折り返す
+					// break at the last glyph boundary if no opportunities
 					if(sublineFirstRuns.empty() || sublineFirstRuns.back() == newRuns.size()) {
-						if(lastGlyphEnd == run.column) {	// グリフ境界も見つからない場合はここで折り返す
+						if(lastGlyphEnd == run.column) {	// break here if no glyph boundaries
 							lastBreakable = j;
 							lastBreakableCx = x;
 						} else {
@@ -1165,13 +1229,13 @@ void LineLayout::wrap() throw() {
 					}
 				}
 
-				// ランの先頭で折り返す場合
+				// case 1: break at the start of the run
 				if(lastBreakable == run.column) {
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
 //dout << L"broke the line at " << lastBreakable << L" where the run start.\n";
 				}
-				// ランの終端で折り返す場合
+				// case 2: break at the end of the run
 				else if(lastBreakable == run.column + run.length) {
 					if(lastBreakable < text.length()) {
 						assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
@@ -1180,7 +1244,7 @@ void LineLayout::wrap() throw() {
 					}
 					break;
 				}
-				// ランの途中で折り返す場合はランを分割する (run -> newRun + run)
+				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
 					run.dispose();
 					auto_ptr<Run> newRun(new Run(run));
@@ -1189,7 +1253,7 @@ void LineLayout::wrap() throw() {
 					assert(newRun->length != 0);
 					run.length -= newRun->length;
 					assert(run.length != 0);
-//					newRun->analysis.fLinkAfter = run.analysis.fLinkBefore = 0;	// グリフの結合を切る
+//					newRun->analysis.fLinkAfter = run.analysis.fLinkBefore = 0;	// break link of glyphs
 					newRuns.push_back(newRun.get());
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
@@ -1480,7 +1544,7 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
 	else if(!getTextViewer().getConfiguration().lineWrap.wraps())
 		return line;
 	length_t result = 0, cachedLines = 0;
-	for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+	for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
 		if((*i)->getLineNumber() < line) {
 			result += (*i)->getNumberOfSublines();
 			++cachedLines;
@@ -1567,7 +1631,7 @@ void LineLayoutBuffer::presentationStylistChanged() {
 namespace {
 	inline HFONT copyFont(HFONT src) throw() {
 		::LOGFONTW lf;
-		::GetObject(src, sizeof(::LOGFONTW), &lf);
+		::GetObjectW(src, sizeof(::LOGFONTW), &lf);
 		return ::CreateFontIndirectW(&lf);
 	}
 }
@@ -1787,7 +1851,7 @@ void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
 	dc.selectObject(oldFont);
 	// real name is needed for font linking
 	::LOGFONTW lf;
-	::GetObject(primaryFont_.regular, sizeof(::LOGFONTW), &lf);
+	::GetObjectW(primaryFont_.regular, sizeof(::LOGFONTW), &lf);
 	wcscpy(primaryFont_.faceName, lf.lfFaceName);
 }
 
@@ -1854,6 +1918,15 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 
 // TextRenderer /////////////////////////////////////////////////////////////
 
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+namespace {
+	inline int calculateMemoryBitmapSize(int src) throw() {
+		const int UNIT = 32;
+		return (src % UNIT != 0) ? src + UNIT - src % UNIT : src;
+	}
+}
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
+
 /**
  * Constructor.
  * @param viewer the text viewer
@@ -1869,24 +1942,27 @@ TextRenderer::TextRenderer(TextViewer& viewer) :
 		enableFontLinking();
 		break;
 	}
-	updateViewerSize();
+//	updateViewerSize(); ???
 	const length_t logicalLines = viewer.getDocument().getNumberOfLines();
 	if(logicalLines > 1)
 		layoutInserted(1, logicalLines);
+	viewer.addDisplaySizeListener(*this);
 }
 
 /// Constructor.
 TextRenderer::TextRenderer(TextViewer& viewer, const TextRenderer& source) :
 		LineLayoutBuffer(viewer, ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		FontSelector(source), longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
-	updateViewerSize();
+//	updateViewerSize(); ???
 	const length_t logicalLines = getTextViewer().getDocument().getNumberOfLines();
 	if(logicalLines > 1)
 		layoutInserted(1, logicalLines);
+	viewer.addDisplaySizeListener(*this);
 }
 
 /// Destructor.
 TextRenderer::~TextRenderer() throw() {
+//	getTextViewer().removeDisplaySizeListener(*this);
 }
 
 /// @see FontSelector#fontChanged
@@ -1899,6 +1975,15 @@ void TextRenderer::fontChanged() {
 		lineWrappingMarkWidth_ = 0;
 	invalidate();
 	visualLinesListeners_.notify(IVisualLinesListener::rendererFontChanged);
+
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	if(memoryBitmap_.getHandle() != 0) {
+		::BITMAP b;
+		memoryBitmap_.getBitmap(b);
+		if(b.bmHeight != calculateMemoryBitmapSize(getLinePitch()))
+			memoryBitmap_.reset();
+	}
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 }
 
 /// @see FontSelector#getDC
@@ -1915,13 +2000,27 @@ int TextRenderer::getLinePitch() const throw() {
 }
 
 /**
- * Returns the actual wrap width, or the result of @c std#numeric_limits<int>#max() if wrapping is not occured
+ * Returns the width of the rendering area.
  * @see #getWrapWidth
+ */
+int TextRenderer::getWidth() const throw() {
+	if(canvasWidth_ > longestLineWidth_)
+		return canvasWidth_;
+	manah::win32::AutoZeroCB<::SCROLLINFO> si;
+	si.fMask = SIF_RANGE;
+	getTextViewer().getScrollInformation(SB_HORZ, si);
+	return (si.nMax + 1) * getAverageCharacterWidth();
+}
+
+/**
+ * Returns the actual wrap width, or the result of @c std#numeric_limits<int>#max() if wrapping is
+ * not occured.
+ * @see #getWidth
  */
 int TextRenderer::getWrapWidth() const throw() {
 	const LineWrapConfiguration& c = getTextViewer().getConfiguration().lineWrap;
 	if(c.wrapsAtWindowEdge())
-		return viewerWidth_ - lineWrappingMarkWidth_;
+		return canvasWidth_ - lineWrappingMarkWidth_;
 	else if(c.wraps())
 		return c.width;
 	else
@@ -1956,11 +2055,11 @@ void TextRenderer::layoutModified(length_t first, length_t last, length_t newSub
 	} else {
 		length_t newLongestLine = longestLine_;
 		int newLongestLineWidth = longestLineWidth_;
-		for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
 			const LineLayout& layout = **i;
-			if(layout.getWidth() > newLongestLineWidth) {
+			if(layout.getLongestSublineWidth() > newLongestLineWidth) {
 				newLongestLine = (*i)->getLineNumber();
-				newLongestLineWidth = layout.getWidth();
+				newLongestLineWidth = layout.getLongestSublineWidth();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -2004,6 +2103,53 @@ void TextRenderer::offsetVisualLine(length_t& line, length_t& subline, signed_le
 	}
 }
 
+/**
+ * Renders the specified logical line to the output device. @a selectionColor and @a marginColor
+ * must be actual color. Do not use @c presentation#STANDARD_COLOR or any system color using
+ * @c presentation#SYSTEM_COLOR_MASK.
+ * @param line the line number
+ * @param dc the device context
+ * @param x the x-coordinate of the position to draw
+ * @param y the y-coordinate of the position to draw
+ * @param clipRect the clipping region
+ * @param selectionColor the color of the selection
+ */
+void TextRenderer::renderLine(length_t line, PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw() {
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	const LineLayout& layout = getLineLayout(line);
+	const int dy = getLinePitch();
+	manah::win32::Rect paintRect(dc.getPaintStruct().rcPaint);
+
+	// skip to the subline needs to draw
+	const int top = max(paintRect.top, clipRect.top);
+	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
+	if(subline >= layout.getNumberOfSublines())
+		return;	// this logical line does not need to draw
+	y += static_cast<int>(dy * subline);
+
+	TextRenderer& self = *const_cast<TextRenderer*>(this);
+	if(memoryDC_.get() == 0)		
+		self.memoryDC_ = self.getTextViewer().getDC().createCompatibleDC();
+	if(memoryBitmap_.getHandle() == 0)
+		self.memoryBitmap_ = Bitmap::createCompatibleBitmap(
+			self.getTextViewer().getDC(), calculateMemoryBitmapSize(canvasWidth_), calculateMemoryBitmapSize(dy));
+	memoryDC_->selectObject(memoryBitmap_.getHandle());
+
+	const long left = max(paintRect.left, clipRect.left), right = min(paintRect.right, clipRect.right);
+	x -= left;
+	manah::win32::Rect offsetedClipRect(clipRect);
+	paintRect.offset(-left, -y);
+	offsetedClipRect.offset(-left, -y);
+	for(; subline < layout.getNumberOfSublines() && paintRect.bottom >= 0;
+			++subline, y += dy, paintRect.offset(0, -dy), offsetedClipRect.offset(0, -dy)) {
+		layout.draw(subline, *memoryDC_, x, 0, paintRect, offsetedClipRect, selectionColor);
+		dc.bitBlt(left, y, right - left, dy, memoryDC_->getHandle(), 0, 0, SRCCOPY);
+	}
+#else
+	getLineLayout(line).draw(dc, x, y, dc.getPaintStruct().rcPaint, clipRect, selectionColor);
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
+}
+
 /// Returns if the complex script features supported.
 bool TextRenderer::supportsComplexScript() throw() {
 //	return uspLib.isAvailable();
@@ -2022,17 +2168,17 @@ void TextRenderer::updateLongestLine(length_t line, int width) throw() {
 	} else {
 		longestLine_ = -1;
 		longestLineWidth_ = 0;
-		for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
-			if((*i)->getWidth() > longestLineWidth_) {
+		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+			if((*i)->getLongestSublineWidth() > longestLineWidth_) {
 				longestLine_ = (*i)->getLineNumber();
-				longestLineWidth_ = (*i)->getWidth();
+				longestLineWidth_ = (*i)->getLongestSublineWidth();
 			}
 		}
 	}
 }
 
 /// Informs about the change of the viewer's size.
-void TextRenderer::updateViewerSize() throw() {
+void TextRenderer::viewerDisplaySizeChanged() throw() {
 	const TextViewer& viewer = getTextViewer();
 	if(!viewer.isWindow())
 		return;
@@ -2041,13 +2187,23 @@ void TextRenderer::updateViewerSize() throw() {
 	if(viewerRect.right - viewerRect.left > getAverageCharacterWidth()) {
 		const ::RECT margins = getTextViewer().getTextAreaMargins();
 		const int newWidth = viewerRect.right - viewerRect.left - margins.left - margins.right;
-		if(newWidth != viewerWidth_) {
-			viewerWidth_ = newWidth;
+		if(newWidth != canvasWidth_) {
+			canvasWidth_ = newWidth;
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+			if(memoryBitmap_.getHandle() != 0) {
+				::BITMAP b;
+				memoryBitmap_.getBitmap(b);
+				if(b.bmWidth != calculateMemoryBitmapSize(canvasWidth_))
+					memoryBitmap_.reset();
+			}
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			// ウィンドウ幅で折り返す場合は再計算
 			if(getTextViewer().getConfiguration().lineWrap.wrapsAtWindowEdge()) {
-				for(list<LineLayout*>::const_iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+				for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ) {
 					const LineLayout& layout = **i;
-					if(layout.getNumberOfSublines() != 1 || layout.getWidth() > newWidth)
+					++i;	// invalidate() may break iterator
+					if(layout.getNumberOfSublines() != 1
+							|| getTextViewer().getConfiguration().justifiesLines || layout.getLongestSublineWidth() > newWidth)
 //						layout.rewrap();
 						invalidate(layout.getLineNumber(), layout.getLineNumber() + 1);
 				}

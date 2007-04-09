@@ -368,8 +368,8 @@ namespace {
 			viewer.modifyStyleEx(WS_EX_LEFT | WS_EX_LTRREADING, WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
 //				AutoZeroCB<::SCROLLINFO> scroll;
-//				viewer.getScrollInfo(SB_HORZ, scroll);
-//				viewer.setScrollInfo(SB_HORZ, scroll);
+//				viewer.getScrollInformation(SB_HORZ, scroll);
+//				viewer.setScrollInformation(SB_HORZ, scroll);
 //			}
 		} else {
 			vrc.alignment = ALIGN_LEFT;
@@ -379,8 +379,8 @@ namespace {
 			viewer.modifyStyleEx(WS_EX_RIGHT | WS_EX_RTLREADING, WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
 //				AutoZeroCB<::SCROLLINFO> scroll;
-//				viewer.getScrollInfo(SB_HORZ, scroll);
-//				viewer.setScrollInfo(SB_HORZ, scroll);
+//				viewer.getScrollInformation(SB_HORZ, scroll);
+//				viewer.setScrollInformation(SB_HORZ, scroll);
 //			}
 		}
 	}
@@ -447,11 +447,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(0),
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-		imeCompositionActivated_(false),
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-		lineBitmap_(0), oldLineBitmap_(0),
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-		mouseInputDisabledCount_(0) {
+		imeCompositionActivated_(false), mouseInputDisabledCount_(0) {
 	renderer_.reset(new TextRenderer(*this));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
@@ -474,9 +470,6 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		, accessibleProxy_(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-		, lineBitmap_(0), oldLineBitmap_(0)
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 {
 	renderer_.reset(new TextRenderer(*this, *rhs.renderer_));
 	renderer_->addVisualLinesListener(*this);
@@ -612,11 +605,6 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 
 	scrollInfo_.updateVertical(*this);
 	updateScrollBars();
-
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	// メモリデバイスコンテキストの用意
-	memDC_ = getDC().createCompatibleDC();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 	// ツールチップの作成
 	toolTip_ = ::CreateWindowExW(
@@ -884,7 +872,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 	mapClientYToLine(pt.y, &line, &subline);
 	const LineLayout& layout = renderer_->getLineLayout(line);
 	// 文字の確定
-	const long x = pt.x - getDisplayXOffset(layout);
+	const long x = pt.x - getDisplayXOffset();
 	length_t column;
 	if(!nearestLeading)
 		column = layout.getOffset(x, static_cast<int>(renderer_->getLinePitch() * subline));
@@ -915,7 +903,7 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 	assertValidAsWindow();
 	const LineLayout& layout = renderer_->getLineLayout(position.line);
 	::POINT pt = layout.getLocation(position.column, edge);
-	pt.x += getDisplayXOffset(layout);
+	pt.x += getDisplayXOffset();
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
 		pt.y = y;
@@ -925,23 +913,20 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 }
 
 /**
- * Returns the x-coordinate display offset for the specified line.
- * @param line the layout of the line
+ * Returns the x-coordinate display offset.
  * @return the offset
  */
-int TextViewer::getDisplayXOffset(const LineLayout& line) const throw() {
+int TextViewer::getDisplayXOffset() const throw() {
 	const ::RECT margins = getTextAreaMargins();
 	if(configuration_.alignment == ALIGN_LEFT)
 		return margins.left - scrollInfo_.getX() * renderer_->getAverageCharacterWidth();
 	else if(configuration_.alignment == ALIGN_RIGHT) {
-		int canvasWidth;
-		if(scrollInfo_.horizontal.maximum <= scrollInfo_.horizontal.pageSize) {
-			::RECT r;
-			getClientRect(r);
-			canvasWidth = r.right - r.left;
-		} else
-			canvasWidth = scrollInfo_.horizontal.maximum * renderer_->getAverageCharacterWidth();
-		return -margins.right - scrollInfo_.getX() * renderer_->getAverageCharacterWidth() /*+ canvasWidth - line.getSublineWidth(0)*/;
+		int offset = -static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
+		Rect clientRect;
+		getClientRect(clientRect);
+		if(renderer_->getLongestLineWidth() > clientRect.getWidth() - margins.left - margins.right)
+			offset += (clientRect.getWidth() - margins.left - margins.right) % renderer_->getAverageCharacterWidth();
+		return offset;
 	} else if(configuration_.alignment == ALIGN_CENTER) {
 		// TODO: not implemented.
 	}
@@ -954,6 +939,7 @@ int TextViewer::getDisplayXOffset(const LineLayout& line) const throw() {
  * @param[out] region the region of the link
  * @param[out] text the text of the link. if the link is mail address, "mailto:" will be added to the head
  * @return true if the cursor is on link
+ * @deprecated 0.8
  */
 bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) const {
 	assertValidAsWindow();
@@ -1631,11 +1617,6 @@ void TextViewer::onDestroy() {
 	::DestroyWindow(toolTip_);
 	if(autoScrollOriginMark_.get() != 0)
 		autoScrollOriginMark_->destroy();
-	
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	memDC_->selectObject(oldLineBitmap_.getHandle());
-	lineBitmap_.reset();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	if(accessibleProxy_ != 0)
@@ -1785,7 +1766,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 void TextViewer::onIMEStartComposition() {
 	if(HIMC imc = ::ImmGetContext(getHandle())) {
 		::LOGFONTW font;
-		::GetObject(renderer_->getFont(), sizeof(::LOGFONTW), &font);
+		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// IME の設定によっては反映されるだろう
 		hideCaret();
 		::ImmReleaseContext(getHandle(), imc);
@@ -1916,11 +1897,11 @@ void TextViewer::onPaint(PaintDC& dc) {
 	const COLORREF marginColor = internal::systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
 	if(margins.left > 0) {
 		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->getWidth() : 0;
-		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth + 1, paintRect.bottom - paintRect.top, marginColor);
+		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
 		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_RIGHT) ? verticalRulerDrawer_->getWidth() : 0;
-		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth + 1, paintRect.bottom - paintRect.top, marginColor);
+		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 
 	// draw lines
@@ -1946,8 +1927,7 @@ void TextViewer::onPaint(PaintDC& dc) {
 			if(DIAGNOSE_INHERENT_DRAWING)
 				dout << static_cast<ulong>(line) << ",";
 #endif /* _DEBUG */
-			const LineLayout& layout = renderer_->getLineLayout(line);
-			layout.draw(dc, getDisplayXOffset(layout), y, lineRect, selectionColor);
+			renderer_->renderLine(line, dc, getDisplayXOffset(), y, lineRect, selectionColor);
 			y += linePitch * static_cast<int>(renderer_->getNumberOfSublinesOfLine(line++));
 			subline = 0;
 		}
@@ -2074,12 +2054,7 @@ void TextViewer::onSize(UINT type, int cx, int cy) {
 	if(renderer_.get() == 0)
 		return;
 
-	// 描画用ビットマップのサイズも変更する
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	updateMemoryDeviceContext();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-
-	renderer_->updateViewerSize();
+	displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
 	if(verticalRulerDrawer_->getConfiguration().alignment != ALIGN_LEFT) {
@@ -2553,14 +2528,16 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 		verticalRulerDrawer_->setConfiguration(*verticalRuler);
 	}
 	if(general != 0) {
+		const Alignment oldAlignment = configuration_.alignment;
 		configuration_ = *general;
-		renderer_->updateViewerSize();
+		displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
 		renderer_->invalidate();
+		if((oldAlignment == ALIGN_LEFT && configuration_.alignment == ALIGN_RIGHT)
+				|| (oldAlignment == ALIGN_RIGHT && configuration_.alignment == ALIGN_LEFT))
+			scrollInfo_.horizontal.position = scrollInfo_.horizontal.maximum
+				- scrollInfo_.horizontal.pageSize - scrollInfo_.horizontal.position + 1;
 		scrollInfo_.resetBars(*this, SB_BOTH, false);
 		updateScrollBars();
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-		updateMemoryDeviceContext();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 		if(!isFrozen() && (hasFocus() /*|| getHandle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
 			recreateCaret();
@@ -2645,36 +2622,6 @@ void TextViewer::unfreeze(bool forAllClones /* = true */) {
 		}
 	}
 }
-
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-/// Updates the compatible device context used by double buffering.
-void TextViewer::updateMemoryDeviceContext() {
-	if(memDC_.get() == 0)	// まだ準備ができてない...
-		return;
-
-	::BITMAP bitmap;
-	bool needRecreate = false;
-	::RECT rect;
-
-	getClientRect(rect);
-	if(lineBitmap_.getBitmap(bitmap) != 0) {
-		if(bitmap.bmWidth < rect.right - rect.left	// 既存のビットマップが小さい場合
-				|| bitmap.bmHeight < renderer_->getLinePitch())
-			needRecreate = true;
-		else if(bitmap.bmWidth / 2 > rect.right - rect.left	// 既存のビットマップが大きすぎる場合
-				|| bitmap.bmHeight / 2 > renderer_->getLinePitch())
-			needRecreate = true;
-	} else
-		needRecreate = true;
-
-	if(needRecreate) {
-		memDC_->selectObject(oldLineBitmap_.getHandle());
-		// 少し大きめに...
-		lineBitmap_ = Bitmap::createCompatibleBitmap(getDC(), rect.right - rect.left + 20, renderer_->getLinePitch());
-		memDC_->selectObject(lineBitmap_.getHandle());
-	}
-}
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 /// Moves the caret to valid position with current position, scroll context, and the fonts.
 void TextViewer::updateCaretPosition() {
@@ -3181,41 +3128,54 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 #endif /* _DEBUG */
 
 	const int savedCookie = dc.save();
+	const bool alignLeft = configuration_.alignment == ALIGN_LEFT;
 	const int imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
+
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	if(memoryDC_.get() == 0)
+		memoryDC_ = viewer_.getDC().createCompatibleDC();
+	if(memoryBitmap_.getHandle() == 0)
+		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc, imWidth, clientRect.bottom - clientRect.top);
+	memoryDC_->selectObject(memoryBitmap_.getHandle());
+	DC& dcex = *memoryDC_;
+	const int left = 0;
+#else
+	DC& dcex = dc;
+	const int left = alignLeft ? clientRect.left : clientRect.right - getWidth();
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
+	const int right = left + getWidth();
 
 	// まず、描画領域全体を描いておく
 	if(configuration_.indicatorMargin.visible) {
 		// インジケータマージンの境界線と内側
-		HPEN oldPen = dc.selectObject(indicatorMarginPen_.getHandle());
-		HBRUSH oldBrush = dc.selectObject(indicatorMarginBrush_.getHandle());
-		dc.patBlt((configuration_.alignment == ALIGN_LEFT) ?
-			clientRect.left : clientRect.right - imWidth, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
-		dc.moveTo((configuration_.alignment == ALIGN_LEFT) ? clientRect.left + imWidth - 1 : clientRect.right - imWidth, paintRect.top);
-		dc.lineTo((configuration_.alignment == ALIGN_LEFT) ? clientRect.left + imWidth - 1 : clientRect.right - imWidth, paintRect.bottom);
-		dc.selectObject(oldPen);
-		dc.selectObject(oldBrush);
+		const int borderX = alignLeft ? left + imWidth - 1 : right - imWidth;
+		HPEN oldPen = dcex.selectObject(indicatorMarginPen_.getHandle());
+		HBRUSH oldBrush = dcex.selectObject(indicatorMarginBrush_.getHandle());
+		dcex.patBlt(alignLeft ? left : borderX + 1, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
+		dcex.moveTo(borderX, paintRect.top);
+		dcex.lineTo(borderX, paintRect.bottom);
+		dcex.selectObject(oldPen);
+		dcex.selectObject(oldBrush);
 	}
 	if(configuration_.lineNumbers.visible) {
 		// 行番号の背景
-		HBRUSH oldBrush = dc.selectObject(lineNumbersBrush_.getHandle());
-		dc.patBlt((configuration_.alignment == ALIGN_LEFT) ?
-			clientRect.left + imWidth : clientRect.right - getWidth(), paintRect.top, getWidth() - imWidth, paintRect.bottom, PATCOPY);
+		HBRUSH oldBrush = dcex.selectObject(lineNumbersBrush_.getHandle());
+		dcex.patBlt(alignLeft ? left + imWidth : left, paintRect.top, right - imWidth, paintRect.bottom, PATCOPY);
 		// 行番号の境界線
 		if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
-			HPEN oldPen = dc.selectObject(lineNumbersPen_.getHandle());
-			const int x = ((configuration_.alignment == ALIGN_LEFT) ?
-				clientRect.left + getWidth() : clientRect.right - getWidth() + 1) - configuration_.lineNumbers.borderWidth;
-			dc.moveTo(x, 0/*paintRect.top*/);
-			dc.lineTo(x, paintRect.bottom);
-			dc.selectObject(oldPen);
+			HPEN oldPen = dcex.selectObject(lineNumbersPen_.getHandle());
+			const int x = (alignLeft ? right : left + 1) - configuration_.lineNumbers.borderWidth;
+			dcex.moveTo(x, 0/*paintRect.top*/);
+			dcex.lineTo(x, paintRect.bottom);
+			dcex.selectObject(oldPen);
 		}
-		dc.selectObject(oldBrush);
+		dcex.selectObject(oldBrush);
 
 		// 次の準備...
-		dc.setBkMode(TRANSPARENT);
-		dc.setTextColor(configuration_.lineNumbers.textColor.foreground);
-		dc.setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
-		dc.selectObject(viewer_.getTextRenderer().getFont());
+		dcex.setBkMode(TRANSPARENT);
+		dcex.setTextColor(configuration_.lineNumbers.textColor.foreground);
+		dcex.setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
+		dcex.selectObject(viewer_.getTextRenderer().getFont());
 	}
 
 	// 行番号描画の準備
@@ -3224,25 +3184,23 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(configuration_.lineNumbers.visible) {
 		lineNumbersAlignment = configuration_.lineNumbers.alignment;
 		if(lineNumbersAlignment == ALIGN_AUTO)
-			lineNumbersAlignment = (configuration_.alignment == ALIGN_LEFT) ? ALIGN_RIGHT : ALIGN_LEFT;
+			lineNumbersAlignment = alignLeft ? ALIGN_RIGHT : ALIGN_LEFT;
 		switch(lineNumbersAlignment) {
 		case ALIGN_LEFT:
-			lineNumbersX = (configuration_.alignment == ALIGN_LEFT) ?
-				clientRect.left + imWidth + configuration_.lineNumbers.leadingMargin
-				: clientRect.right - getWidth() + configuration_.lineNumbers.trailingMargin + 1;
-			dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
+			lineNumbersX = alignLeft ?
+				left + imWidth + configuration_.lineNumbers.leadingMargin : left + configuration_.lineNumbers.trailingMargin + 1;
+			dcex.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_RIGHT:
-			lineNumbersX = ((configuration_.alignment == ALIGN_LEFT) ?
-				clientRect.left + getWidth() - configuration_.lineNumbers.trailingMargin
-				: clientRect.right - imWidth - configuration_.lineNumbers.leadingMargin);
-			dc.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
+			lineNumbersX = (alignLeft ?
+				right - configuration_.lineNumbers.trailingMargin : right - imWidth - configuration_.lineNumbers.leadingMargin);
+			dcex.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_CENTER:	// 中央揃えなんて誰も使わんと思うけど...
-			lineNumbersX = (configuration_.alignment == ALIGN_LEFT) ?
-				clientRect.left + (imWidth + configuration_.lineNumbers.leadingMargin + getWidth() - configuration_.lineNumbers.trailingMargin) / 2
-				: clientRect.right - (getWidth() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
-			dc.setTextAlign(TA_CENTER | TA_TOP | TA_NOUPDATECP);
+			lineNumbersX = alignLeft ?
+				left + (imWidth + configuration_.lineNumbers.leadingMargin + getWidth() - configuration_.lineNumbers.trailingMargin) / 2
+				: right - (getWidth() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
+			dcex.setTextAlign(TA_CENTER | TA_TOP | TA_NOUPDATECP);
 			break;
 		}
 	}
@@ -3262,25 +3220,28 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				// 派生クラスにインジケータマージンの描画機会を与える
 				if(configuration_.indicatorMargin.visible) {
 					::RECT rect = {
-						(configuration_.alignment == ALIGN_LEFT) ?
-							clientRect.left : clientRect.right - configuration_.indicatorMargin.width,
-						y, (configuration_.alignment == ALIGN_LEFT) ?
-							clientRect.left + configuration_.indicatorMargin.width : clientRect.right,
+						alignLeft ? left : right - configuration_.indicatorMargin.width,
+						y, alignLeft ? left + configuration_.indicatorMargin.width : right,
 						y + renderer.getLinePitch()};
-					viewer_.drawIndicatorMargin(line, dc, rect);
+					viewer_.drawIndicatorMargin(line, dcex, rect);
 				}
 
 				// 行番号の描画
 				if(configuration_.lineNumbers.visible) {
 					wchar_t buffer[32];
 					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
-					dc.textOut(lineNumbersX, y, buffer, static_cast<int>(wcslen(buffer)));
+					dcex.textOut(lineNumbersX, y, buffer, static_cast<int>(wcslen(buffer)));
 				}
 			}
 			++line;
 			y = nextY;
 		}
 	}
+
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - getWidth(), paintRect.top, right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, 0, SRCCOPY);
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
+
 	dc.restore(savedCookie);
 }
 
@@ -3345,6 +3306,10 @@ void TextViewer::VerticalRulerDrawer::update() throw() {
 	lineNumberDigitsCache_ = 0;
 	recalculateWidth();
 	updateGDIObjects();
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+	if(memoryBitmap_.getHandle() != 0)
+		memoryBitmap_.reset();
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 }
 
 ///
@@ -3404,15 +3369,17 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 		if(alignment == ALIGN_RIGHT)
 			horizontal.position += horizontal.maximum - oldMaximum;
 		else if(alignment == ALIGN_CENTER)
-			horizontal.position += (horizontal.maximum - oldMaximum) / 2;
+//			horizontal.position += (horizontal.maximum - oldMaximum) / 2;
+			horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
 		horizontal.position = max(horizontal.position, 0);
 		if(pageSizeChanged) {
 			const UINT oldPageSize = horizontal.pageSize;
 			horizontal.pageSize = static_cast<UINT>(viewer.getNumberOfVisibleColumns());
 			if(alignment == ALIGN_RIGHT)
-				horizontal.position += horizontal.pageSize - oldPageSize;
+				horizontal.position -= horizontal.pageSize - oldPageSize;
 			else if(alignment == ALIGN_CENTER)
-				horizontal.position += (horizontal.pageSize - oldPageSize) / 2;
+//				horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
+				horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
 			horizontal.position = max(horizontal.position, 0);
 		}
 	}
@@ -3864,15 +3831,15 @@ void DefaultMouseInputStrategy::extendSelection() {
 	const ::RECT margins = viewer_->getTextAreaMargins();
 	viewer_->getClientRect(rc);
 	::POINT p = viewer_->getCursorPosition();
-	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
-	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
-	const Position dest = viewer_->getCharacterForClientXY(p, true);
 	Caret& caret = viewer_->getCaret();
 	if(caret.getSelectionMode() == Caret::LINE || caret.getSelectionMode() == Caret::WORD) {
 		const TextViewer::HitTestResult htr = viewer_->hitTest(p);
 		if(caret.getSelectionMode() == Caret::LINE && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
 			caret.restoreSelectionMode();
 	}
+	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
+	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
+	const Position dest = viewer_->getCharacterForClientXY(p, true);
 	caret.extendSelection(dest);
 }
 

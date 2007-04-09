@@ -1808,12 +1808,12 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  * Constructor. The iteration is started at @a region.getTop().
  * @param document the document to iterate
  * @param region the region to iterate
- * @throw BadPositionException @a region is outside of the document
+ * @throw BadRegionException @a region intersects outside of the document
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
 		document_(&document), region_(region), line_(&document.getLine(region.getTop().line)), p_(region.getTop()) {
 	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
-		throw BadPositionException();
+		throw BadRegionException();
 	region_.normalize();
 }
 
@@ -1822,11 +1822,14 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  * @param document the document to iterate
  * @param region the region to iterate
  * @param position the position at which the iteration starts
- * @throw BadPositionException @a region is outside of the document or @a position is outside of @a region
+ * @throw BadRegionException @a region intersects outside of the document
+ * @throw BadPositionException @a position is outside of @a region
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position) :
 		document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
-	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false) || !region_.includes(p_))
+	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
+		throw BadRegionException();
+	else if(!region_.includes(p_))
 		throw BadPositionException();
 	region_.normalize();
 }

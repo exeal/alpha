@@ -11,8 +11,6 @@
 
 #include "point.hpp"
 #include "presentation.hpp"
-#include "../../manah/win32/dc.hpp"	// manah::win32::gdi::DC
-#include "../../manah/win32/gdi-object.hpp"
 #include "../../manah/com/text-data-object.hpp"
 #include <set>
 #include <algorithm>
@@ -91,7 +89,7 @@ namespace ascension {
 		class IViewportListener {
 		private:
 			/**
-			 * The scroll positions of the viewer.
+			 * The scroll positions of the viewer were changed.
 			 * @param horizontal true if the vertical scroll position is changed
 			 * @param vertical true if the vertical scroll position is changed
 			 * @see TextViewer#getFirstVisibleLine
@@ -383,6 +381,8 @@ namespace ascension {
 				LineWrapConfiguration lineWrap;
 				/// Set true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
+				/// Set true to justify the lines if wrapped. Default value is false.
+				bool justifiesLines;
 				/// Set true to inhibit any shaping. Default value is false.
 				bool inhibitsShaping;
 				/// If set to true, zero width control characters are shaped as representative glyphs. Default is false.
@@ -396,7 +396,7 @@ namespace ascension {
 				/// Constructor.
 				Configuration() throw() : tabWidth(8), lineSpacing(0), leadingMargin(5), topMargin(1),
 						orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
-						inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
+						justifiesLines(false), inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
 						digitSubstitutionType(DST_USER_DEFAULT), disablesDeprecatedFormatCharacters(false) {
 					BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
@@ -489,8 +489,10 @@ namespace ascension {
 			// window creation
 			virtual bool	create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle);
 			// listeners and strategies
+			void	addDisplaySizeListener(IDisplaySizeListener& listener);
 			void	addInputStatusListener(ITextViewerInputStatusListener& listener);
 			void	addViewportListener(IViewportListener& listener);
+			void	removeDisplaySizeListener(IDisplaySizeListener& listener);
 			void	removeInputStatusListener(ITextViewerInputStatusListener& listener);
 			void	removeViewportListener(IViewportListener& listener);
 			void	setCaretShapeProvider(ICaretShapeProvider* shaper, bool delegateOwnership) throw();
@@ -559,7 +561,7 @@ namespace ascension {
 
 			// helpers
 		private:
-			int		getDisplayXOffset(const LineLayout& line) const throw();
+			int		getDisplayXOffset() const throw();
 			void	handleGUICharacterInput(CodePoint c);
 			void	internalUnfreeze();
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
@@ -570,9 +572,6 @@ namespace ascension {
 			void	redrawVerticalRuler();
 			void	updateCaretPosition();
 			void	updateIMECompositionWindowPosition();
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-			void	updateMemoryDeviceContext();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			void	updateScrollBars();
 
 			// protected interfaces
@@ -702,6 +701,10 @@ namespace ascension {
 				uchar lineNumberDigitsCache_;
 				manah::win32::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
 				manah::win32::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+				std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
+				manah::win32::gdi::Bitmap memoryBitmap_;
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			};
 
 			// 列挙
@@ -782,6 +785,7 @@ namespace ascension {
 			Char* tipText_;	// ツールチップのテキスト
 			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
 			ascension::internal::StrategyPointer<IViewerLinkTextStrategy> linkTextStrategy_;
+			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
 			std::auto_ptr<AutoScrollOriginMark> autoScrollOriginMark_;
@@ -830,13 +834,6 @@ namespace ascension {
 				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
 				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = -1;}
 			} freezeInfo_;
-	
-			// canvas for double buffering
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-			std::auto_ptr<manah::win32::gdi::DC> memDC_;	// memory device context
-			manah::win32::gdi::Bitmap lineBitmap_;			// a bitmap to draw one line bound to memDC_
-			manah::win32::gdi::Bitmap oldLineBitmap_;
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 			// キャレットのビットマップ
 			struct CaretShape {
@@ -880,6 +877,13 @@ namespace ascension {
 
 
 // inlines //////////////////////////////////////////////////////////////////
+
+/**
+ * Registers the display size listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+inline void TextViewer::addDisplaySizeListener(IDisplaySizeListener& listener) {displaySizeListeners_.add(listener);}
 
 /**
  * Registers the input status listener.
@@ -1017,6 +1021,13 @@ inline bool TextViewer::isAutoScrolling() const throw() {return autoScroll_.scro
 
 /// Returns true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const throw() {return freezeInfo_.count != 0;}
+
+/**
+ * Removes the display size listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+inline void TextViewer::removeDisplaySizeListener(IDisplaySizeListener& listener) {displaySizeListeners_.remove(listener);}
 
 /**
  * Removes the input status listener.

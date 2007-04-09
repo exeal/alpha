@@ -44,40 +44,40 @@ class Rect : public ::tagRECT {
 public:
 	// constructors
 	Rect() throw() {}
-	Rect(int l, int t, int r, int b) throw() {setRect(l, t, r, b);}
-	Rect(const ::RECT& rect) throw() {copyRect(rect);}
-	Rect(const ::POINT& pt, const ::SIZE& size) throw() {setRect(pt.x, pt.y, pt.x + size.cx, pt.y + size.cy);}
-	Rect(const ::POINT& leftTop, const ::POINT& rightBottom) throw() {setRect(leftTop.x, leftTop.y, rightBottom.x, rightBottom.y);}
+	Rect(int l, int t, int r, int b) throw() {set(l, t, r, b);}
+	Rect(const ::RECT& rect) throw() {copy(rect);}
+	Rect(const ::POINT& pt, const ::SIZE& size) throw() {set(pt.x, pt.y, pt.x + size.cx, pt.y + size.cy);}
+	Rect(const ::POINT& leftTop, const ::POINT& rightBottom) throw() {set(leftTop.x, leftTop.y, rightBottom.x, rightBottom.y);}
 	// attributes
-	void	copyRect(const ::RECT& other) {*this = other;}
-	bool	equalRect(const ::RECT& other) const throw() {return toBoolean(::EqualRect(this, &other));}
+	void	copy(const ::RECT& other) {static_cast<::RECT&>(*this) = other;}
+	bool	equals(const ::RECT& other) const throw() {return toBoolean(::EqualRect(this, &other));}
 	Point	getCenter() const throw() {return Point(getWidth() / 2, getHeight() / 2);}
 	long	getHeight() const throw() {return bottom - top;}
 	Point	getLeftTop() const throw() {return Point(left, top);}
 	Point	getRightBottom() const throw() {return Point(right, bottom);}
 	Size	getSize() const throw() {return Size(getWidth(), getHeight());}
 	long	getWidth() const throw() {return right - left;}
-	bool	isRectEmpty() const throw() {return toBoolean(::IsRectEmpty(this));}
-	bool	isRectNull() const throw() {return left == 0 && top == 0 && right == 0 && bottom == 0;}
-	bool	ptInRect(const ::POINT& pt) const throw() {return toBoolean(::PtInRect(this, pt));}
-	void	setRect(int l, int t, int r, int b) throw() {::SetRect(this, l, t, r, b);}
-	void	setRectEmpty() throw() {::SetRectEmpty(this);}
+	bool	includes(const ::POINT& pt) const throw() {return toBoolean(::PtInRect(this, pt));}
+	bool	isEmpty() const throw() {return toBoolean(::IsRectEmpty(this));}
+	bool	isNull() const throw() {return left == 0 && top == 0 && right == 0 && bottom == 0;}
+	void	set(int l, int t, int r, int b) throw() {::SetRect(this, l, t, r, b);}
+	void	setEmpty() throw() {::SetRectEmpty(this);}
 	// operations
-	void	deflateRect(int x, int y) throw() {inflateRect(-x, -y);}
-	void	deflateRect(const ::SIZE& size) throw() {inflateRect(-size.cx, -size.cy);}
-	void	deflateRect(const ::RECT& rect) throw() {setRect(left + rect.left, top + rect.top, right - rect.right, bottom - rect.bottom);}
-	void	deflateRect(int l, int t, int r, int b) throw() {setRect(left + l, top + t, right - r, bottom - b);}
-	void	inflateRect(int x, int y) throw() {::InflateRect(this, x, y);}
-	void	inflateRect(const ::SIZE& size) throw() {inflateRect(size.cx, size.cy);}
-	void	inflateRect(const ::RECT& rect) throw() {setRect(left - rect.left, top - rect.top, right + rect.right, bottom + rect.bottom);}
-	void	inflateRect(int l, int t, int r, int b) throw() {setRect(left - l, top - t, right + r, bottom + b);}
-	bool	intersectRect(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::IntersectRect(this, &rect1, &rect2));}
-	void	normalizeRect() throw() {if(top > bottom) std::swap(top, bottom); if(left > right) std::swap(left, right);}
-	void	offsetRect(int x, int y) throw() {::OffsetRect(this, x, y);}
-	void	offsetRect(const ::POINT& pt) throw() {offsetRect(pt.x, pt.y);}
-	void	offsetRect(const ::SIZE& size) throw() {offsetRect(size.cx, size.cy);}
-	bool	subtractRect(const ::RECT& rect1, const ::RECT& rect2) throw() {return toBoolean(::SubtractRect(this, &rect1, &rect2));}
-	bool	unionRect(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::UnionRect(this, &rect1, &rect2));}
+	void	deflate(int x, int y) throw() {inflate(-x, -y);}
+	void	deflate(const ::SIZE& size) throw() {inflate(-size.cx, -size.cy);}
+	void	deflate(const ::RECT& rect) throw() {set(left + rect.left, top + rect.top, right - rect.right, bottom - rect.bottom);}
+	void	deflate(int l, int t, int r, int b) throw() {set(left + l, top + t, right - r, bottom - b);}
+	bool	getUnion(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::UnionRect(this, &rect1, &rect2));}
+	void	inflate(int x, int y) throw() {::InflateRect(this, x, y);}
+	void	inflate(const ::SIZE& size) throw() {inflate(size.cx, size.cy);}
+	void	inflate(const ::RECT& rect) throw() {set(left - rect.left, top - rect.top, right + rect.right, bottom + rect.bottom);}
+	void	inflate(int l, int t, int r, int b) throw() {set(left - l, top - t, right + r, bottom + b);}
+	bool	intersects(const ::RECT& rect1, const ::RECT& rect2) throw() {toBoolean(::IntersectRect(this, &rect1, &rect2));}
+	void	normalize() throw() {if(top > bottom) std::swap(top, bottom); if(left > right) std::swap(left, right);}
+	void	offset(int x, int y) throw() {::OffsetRect(this, x, y);}
+	void	offset(const ::POINT& pt) throw() {offset(pt.x, pt.y);}
+	void	offset(const ::SIZE& size) throw() {offset(size.cx, size.cy);}
+	bool	subtract(const ::RECT& rect1, const ::RECT& rect2) throw() {return toBoolean(::SubtractRect(this, &rect1, &rect2));}
 };
 
 
