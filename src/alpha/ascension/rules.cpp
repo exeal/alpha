@@ -424,7 +424,7 @@ auto_ptr<Token> TokenScanner::nextToken() throw() {
  * Starts the scan with the specified range.
  * @param document the document
  * @param region the region to be scanned
- * @throw text#BadPositionException @a region is outside of the document
+ * @throw text#BadRegionException @a region intersects outside of the document
  */
 void TokenScanner::parse(const Document& document, const Region& region) {
 	current_ = UTF16To32Iterator<DocumentCharacterIterator,

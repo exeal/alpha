@@ -262,16 +262,25 @@ namespace ascension {
 		/// Thrown when the read only document is about to be modified.
 		class ReadOnlyDocumentException : public std::logic_error {
 		public:
-			/// Constructor
+			/// Constructor.
 			ReadOnlyDocumentException() : std::logic_error("The document is readonly. Any edit process is denied.") {}
 		};
 
-		/// Thrown when the specified line or character position is outside of the document.
+		/**
+		 * Thrown when the specified line or character position is outside of the document.
+		 * @see BadRegionException
+		 */
 		class BadPositionException : public std::invalid_argument {
 		public:
-			/// Constructor
+			/// Constructor.
 			BadPositionException() : std::invalid_argument("The position is outside of the document.") {}
 		};
+
+		/**
+		 * Thrown when the specified region intersects outside of the document.
+		 * @see BadPositionException
+		 */
+		class BadRegionException : public BadPositionException {};
 
 		/**
 		 * Interface for objects which are interested in getting informed about change of bookmarks of the document.

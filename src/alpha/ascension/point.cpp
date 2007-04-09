@@ -795,7 +795,7 @@ length_t VisualPoint::getVisualColumnNumber() const {
 	if(c.alignment == ALIGN_LEFT || (c.alignment != ALIGN_RIGHT && c.orientation == LEFT_TO_RIGHT))
 		return lastX_ / renderer.getAverageCharacterWidth();
 	else
-		return (renderer.getLineLayout(getLineNumber()).getWidth() - lastX_) / renderer.getAverageCharacterWidth();
+		return (renderer.getWidth() - lastX_) / renderer.getAverageCharacterWidth();
 }
 
 /**

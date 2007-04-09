@@ -113,7 +113,7 @@
 
 /**
  * @def ASCENSION_NO_DOUBLE_BUFFERING
- * Define the symbol if you do not use double-buffering for drawing.
+ * Define the symbol if you do not use double-buffering for non-flicker drawing.
  */
 // #define ASCENSION_NO_DOUBLE_BUFFERING
 

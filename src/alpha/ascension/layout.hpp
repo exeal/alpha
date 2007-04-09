@@ -9,6 +9,7 @@
 #include "document.hpp"
 #include "unicode-property.hpp"
 #include "../../manah/win32/dc.hpp"
+#include "../../manah/win32/gdi-object.hpp"
 #include <usp10.h>
 
 namespace ascension {
@@ -31,7 +32,6 @@ namespace ascension {
 			ALIGN_LEFT,		///< The text is aligned to left.
 			ALIGN_RIGHT,	///< The text is aligned to right.
 			ALIGN_CENTER,	///< The text is aligned to center. Some methods don't accept this value.
-//			JUSTIFY			///< The text is justified. Some methods don't accept this value.
 		};
 
 		/// Orientation of the text layout.
@@ -150,6 +150,7 @@ namespace ascension {
 			::RECT			getBounds(length_t first, length_t last) const;
 			length_t		getLineNumber() const throw();
 			::POINT			getLocation(length_t column, Edge edge = LEADING) const;
+			int				getLongestSublineWidth() const throw();
 			length_t		getNumberOfSublines() const throw();
 			length_t		getOffset(int x, int y, Edge edge = LEADING) const throw();
 			length_t		getOffset(int x, int y, length_t& trailing) const throw();
@@ -162,7 +163,6 @@ namespace ascension {
 			length_t		getSublineOffset(length_t subline) const;
 			const length_t*	getSublineOffsets() const throw();
 			int				getSublineWidth(length_t subline) const;
-			int				getWidth() const throw();
 			bool			isBidirectional() const throw();
 			bool			isDisposed() const throw();
 			// styled segments
@@ -170,7 +170,10 @@ namespace ascension {
 			StyledSegmentIterator			getLastStyledSegment() const throw();
 			const presentation::StyledText&	getStyledSegment(length_t column) const;
 			// operations
-			void	draw(manah::win32::gdi::PaintDC& dc, int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
+			void	draw(manah::win32::gdi::DC& dc, int x, int y,
+						const ::RECT& paintRect, const ::RECT& clipRect, const Colors& selectionColor) const throw();
+			void	draw(length_t subline, manah::win32::gdi::DC& dc, int x, int y,
+						const ::RECT& paintRect, const ::RECT& clipRect, const Colors& selectionColor) const;
 			String	fillToX(int x) const;
 #ifdef _DEBUG
 			void	dumpRuns(std::ostream& out) const;
@@ -183,7 +186,7 @@ namespace ascension {
 			int				getNextTabStopBasedLeftEdge(int x, bool right) const throw();
 			const String&	getText() const throw();
 			void			itemize(length_t lineNumber) throw();
-//			void			justify() throw();
+			void			justify() throw();
 			void			merge(const ::SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
 			void			reorder() throw();
 //			void			rewrap();
@@ -197,7 +200,7 @@ namespace ascension {
 			length_t* sublineOffsets_;		// size is numberOfSublines_
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
 			length_t numberOfSublines_;
-			int width_;
+			int longestSublineWidth_;
 			friend class LineLayoutBuffer;
 			friend class StyledSegmentIterator;
 		};
@@ -225,10 +228,11 @@ namespace ascension {
 		protected:
 			LineLayoutBuffer(TextViewer& viewer, length_t bufferSize, bool autoRepair);
 			virtual ~LineLayoutBuffer() throw();
-			void				invalidate(length_t line);
+			void	invalidate(length_t line);
 			// enumeration
-			std::list<LineLayout*>::const_iterator	getFirstCachedLine() const throw();
-			std::list<LineLayout*>::const_iterator	getLastCachedLine() const throw();
+			typedef std::list<LineLayout*>::const_iterator Iterator;
+			Iterator	getFirstCachedLine() const throw();
+			Iterator	getLastCachedLine() const throw();
 			// observation
 			virtual void	layoutDeleted(length_t first, length_t last, length_t sublines) throw() = 0;
 			virtual void	layoutInserted(length_t first, length_t last) throw() = 0;
@@ -304,11 +308,11 @@ namespace ascension {
 		protected:
 			/// Context of the rendering.
 			struct Context {
-				mutable manah::win32::gdi::PaintDC& dc;	///< the device context
-				Colors color;								///< the color
-				Orientation orientation;					///< the orientation of the character
+				mutable manah::win32::gdi::DC& dc;	///< the device context
+				Colors color;						///< the color
+				Orientation orientation;			///< the orientation of the character
 				/// Constructor.
-				explicit Context(manah::win32::gdi::PaintDC& deviceContext) : dc(deviceContext) {}
+				explicit Context(manah::win32::gdi::DC& deviceContext) : dc(deviceContext) {}
 			};
 			/// Destructor.
 			virtual ~ISpecialCharacterDrawer() throw() {}
@@ -449,11 +453,22 @@ namespace ascension {
 		};
 
 		/**
+		 * Interface for objects which are interested in change of size of a @c TextViewer.
+		 * @see TextViewer#addDisplaySizeListener, TextViewer#removeDisplaySizeListener
+		 */
+		class IDisplaySizeListener {
+		private:
+			/// The size of the viewer was changed.
+			virtual void viewerDisplaySizeChanged() = 0;
+			friend class TextViewer;
+		};
+
+		/**
 		 * @c TextRenderer renders styled text to the display or to a printer.
 		 * @note This class is underivable.
 		 * @see LineLayout, LineLayoutBuffer, FontSelector, Presentation, TextViewer
 		 */
-		class TextRenderer : public LineLayoutBuffer, public FontSelector {
+		class TextRenderer : public LineLayoutBuffer, public FontSelector, virtual public IDisplaySizeListener {
 		public:
 			// constructors
 			explicit TextRenderer(TextViewer& viewer);
@@ -473,8 +488,9 @@ namespace ascension {
 			ISpecialCharacterDrawer*	getSpecialCharacterDrawer() const throw();
 			void						removeVisualLinesListener(IVisualLinesListener& listener);
 			void						setSpecialCharacterDrawer(ISpecialCharacterDrawer* newDrawer, bool delegateOwnership) throw();
-			// operations
-			void	updateViewerSize() throw();
+			// operation
+			void	renderLine(length_t line, manah::win32::gdi::PaintDC& dc,
+						int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
 			// utilities
 			void	offsetVisualLine(length_t& line, length_t& subline, signed_length_t offset) const throw();
 		private:
@@ -486,9 +502,15 @@ namespace ascension {
 			// FontSelector
 			void									fontChanged();
 			std::auto_ptr<manah::win32::gdi::DC>	getDC() const;
+			// IDisplaySizeListener
+			void	viewerDisplaySizeChanged();
 		private:
-			int viewerWidth_, longestLineWidth_, lineWrappingMarkWidth_;
+			int canvasWidth_, longestLineWidth_, lineWrappingMarkWidth_;
 			length_t longestLine_, numberOfVisualLines_;
+#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+			std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
+			manah::win32::gdi::Bitmap memoryBitmap_;
+#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			ascension::internal::Listeners<IVisualLinesListener> visualLinesListeners_;
 			ascension::internal::StrategyPointer<ISpecialCharacterDrawer> specialCharacterDrawer_;
 		};
@@ -599,10 +621,10 @@ inline bool LineLayout::isDisposed() const throw() {return runs_ == 0;}
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) throw() {p_ = rhs.p_;}
 
 /// Returns the first cached line layout.
-inline std::list<LineLayout*>::const_iterator LineLayoutBuffer::getFirstCachedLine() const throw() {return layouts_.begin();}
+inline LineLayoutBuffer::Iterator LineLayoutBuffer::getFirstCachedLine() const throw() {return layouts_.begin();}
 
 /// Returns the last cached line layout.
-inline std::list<LineLayout*>::const_iterator LineLayoutBuffer::getLastCachedLine() const throw() {return layouts_.end();}
+inline LineLayoutBuffer::Iterator LineLayoutBuffer::getLastCachedLine() const throw() {return layouts_.end();}
 
 /**
  * Returns the layout of the specified line.
@@ -671,9 +693,6 @@ inline length_t TextRenderer::getNumberOfVisualLines() const throw() {return num
 /// Returns the special character drawer.
 inline ISpecialCharacterDrawer* TextRenderer::getSpecialCharacterDrawer() const throw() {
 	return const_cast<TextRenderer*>(this)->specialCharacterDrawer_.get();}
-
-/// Returns the width of the rendering area.
-inline int TextRenderer::getWidth() const throw() {return std::max(longestLineWidth_, viewerWidth_);}
 
 /**
  * Removes the visual lines listener.
