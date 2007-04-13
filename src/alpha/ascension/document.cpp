@@ -60,7 +60,7 @@ namespace {
 				|| (position_ >= document.getStartPosition() && position_ <= document.getEndPosition());}
 		bool isConcatenatable(InsertOperation& postOperation, const Document& document) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {return false;}
-		Position execute(Document& document) {return document.insertText(position_, text_);}
+		Position execute(Document& document) {return document.insert(position_, text_);}
 	private:
 		Position position_;	// 挿入位置
 		String text_;		// 挿入文字列
@@ -78,7 +78,7 @@ namespace {
 			if(bottom.column == 0 || bottom != postOperation.region_.getTop()) return false;
 			else {const_cast<DeleteOperation*>(this)->region_.getBottom() = postOperation.region_.getBottom(); return true;}
 		}
-		Position execute(Document& document) {return document.deleteText(region_);}
+		Position execute(Document& document) {return document.erase(region_);}
 	private:
 		Region region_;
 	};
@@ -595,8 +595,7 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
  * A document manages also its operation history, encoding, and line-breaks
  * and writes to or reads the content from files or streams.
  *
- * @c #insertText inserts a text string into any position.
- * @c #deleteText deletes any text region.
+ * @c #insert inserts a text string into any position. @c #erase deletes any text region.
  * Other classes also provide text manipulation for the document.
  *
  * A document can be devides into a sequence of semantic segments called partition.
@@ -681,6 +680,15 @@ bool Document::checkTimeStamp() {
 }
 
 /**
+ * Ends the active sequential edit.
+ * @see #beginSequentialEdit, #isSequentialEditing
+ */
+void Document::endSequentialEdit() throw() {
+	undoManager_->endCompoundOperation();
+	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStopped, *this);
+}
+
+/**
  * Deletes the specified region of the document.
  *
  * This method sets the modification flag and calls the listeners'
@@ -691,7 +699,7 @@ bool Document::checkTimeStamp() {
  * @return the position where the point which deletes the text will move to
  * @throw ReadOnlyDocumentException the document is read only
  */
-Position Document::deleteText(const Region& region) {
+Position Document::erase(const Region& region) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(region.isEmpty())	// 空 -> 無視
@@ -768,15 +776,6 @@ Position Document::deleteText(const Region& region) {
 	setModified();
 
 	return begin;
-}
-
-/**
- * Ends the active sequential edit.
- * @see #beginSequentialEdit, #isSequentialEditing
- */
-void Document::endSequentialEdit() throw() {
-	undoManager_->endCompoundOperation();
-	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStopped, *this);
 }
 
 /// Invokes the listeners' @c IDocumentListener#documentAboutToBeChanged.
@@ -857,7 +856,7 @@ Position Document::insertFromStream(const Position& position, InputStream& in) {
  * @throw ReadOnlyDocumentException the document is read only
  * @throw std#invalid_argument either @a first or @a last is @c null
  */
-Position Document::insertText(const Position& position, const Char* first, const Char* last) {
+Position Document::insert(const Position& position, const Char* first, const Char* last) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(first == 0 || last == 0 || first > last)

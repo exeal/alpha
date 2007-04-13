@@ -657,10 +657,10 @@ namespace ascension {
 			IContentTypeInformationProvider&	getContentTypeInformation() const throw();
 			void								setContentTypeInformation(IContentTypeInformationProvider* newProvider) throw();
 			// manipulations
-			Position	deleteText(const Region& region);
-			Position	deleteText(const Position& pos1, const Position& pos2);
-			Position	insertText(const Position& position, const String& text);
-			Position	insertText(const Position& position, const Char* first, const Char* last);
+			Position	erase(const Region& region);
+			Position	erase(const Position& pos1, const Position& pos2);
+			Position	insert(const Position& position, const String& text);
+			Position	insert(const Position& position, const Char* first, const Char* last);
 			// undo/redo
 			void	clearUndoBuffer();
 			bool	isRecordingOperation() const throw();
@@ -1012,9 +1012,6 @@ inline void Document::clearUndoBuffer() {
 	onceUndoBufferCleared_ = true;
 }
 
-/// @see #deleteText(const Region&)
-inline Position Document::deleteText(const Position& pos1, const Position& pos2) {return deleteText(Region(pos1, pos2));}
-
 /**
  * Returns the line break at the start of the specified buffer.
  * @param first the start of the buffer
@@ -1032,6 +1029,9 @@ inline LineBreak Document::eatLineBreak(const Char* first, const Char* last) {
 	default:					return LB_AUTO;
 	}
 }
+
+/// @see #erase(const Region&)
+inline Position Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
 
 /// Returns the bookmarker of the document.
 inline Bookmarker& Document::getBookmarker() throw() {return *bookmarker_;}
@@ -1183,8 +1183,8 @@ inline std::size_t Document::getUndoHistoryLength(bool redo /* = false */) const
  * @return the position to where the caret will move
  * @throw ReadOnlyDocumentException the document is read only
  */
-inline Position Document::insertText(const Position& position, const String& text) {
-	return insertText(position, text.data(), text.data() + text.length());}
+inline Position Document::insert(const Position& position, const String& text) {
+	return insert(position, text.data(), text.data() + text.length());}
 
 /// Returns true if the document is bound to any file.
 inline bool Document::isBoundToFile() const throw() {return getFilePathName() != 0;}

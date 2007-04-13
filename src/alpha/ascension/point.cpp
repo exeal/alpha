@@ -145,8 +145,8 @@ void EditPoint::destructiveInsert(const Char* first, const Char* last) {
 	if(p != *this) {
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
-		document.deleteText(Region(*this, p));
-		moveTo(document.insertText(*this, first, last));
+		document.erase(Region(*this, p));
+		moveTo(document.insert(*this, first, last));
 		adaptToDocument(adapts);
 	}
 }
@@ -182,10 +182,7 @@ void EditPoint::erase(const Position& other) {
 	verifyDocument();
 	if(getDocument()->isReadOnly() || other == getPosition())
 		return;
-	const bool adapts = adaptsToDocument();
-	adaptToDocument(false);
-	moveTo(getDocument()->deleteText(Region(*this, other)));
-	adaptToDocument(adapts);
+	getDocument()->erase(Region(*this, other));
 }
 
 /**
@@ -365,7 +362,7 @@ void EditPoint::insert(const Char* first, const Char* last) {
 		return;
 	const bool adapts = adaptsToDocument();
 	adaptToDocument(false);
-	moveTo(getDocument()->insertText(*this, first, last));
+	moveTo(getDocument()->insert(*this, first, last));
 	adaptToDocument(adapts);
 }
 
@@ -702,8 +699,8 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 	const Region region(*this, other);
 
 	if(region.getTop().line == region.getBottom().line) {	// 選択が1行以内 -> 単純な文字挿入
-		document.deleteText(region);
-		document.insertText(region.getTop(), indent);
+		document.erase(region);
+		document.insert(region.getTop(), indent);
 		return getPosition();
 	}
 
@@ -716,7 +713,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 
 	// 最初の行を (逆) インデント
 	if(level > 0) {
-		document.insertText(Position(line, box ? region.getTop().column : 0), indent);
+		document.insert(Position(line, box ? region.getTop().column : 0), indent);
 		if(line == otherResult.line && otherResult.column != 0)
 			otherResult.column += level;
 		if(line == getLineNumber() && getColumnNumber() != 0)
@@ -731,7 +728,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 		}
 		if(indentLength > 0) {
 			const length_t deleteLength = min<length_t>(-level, indentLength);
-			document.deleteText(Position(line, 0), Position(line, deleteLength));
+			document.erase(Position(line, 0), Position(line, deleteLength));
 			if(line == otherResult.line && otherResult.column != 0)
 				otherResult.column -= deleteLength;
 			if(line == getLineNumber() && getColumnNumber() != 0)
@@ -748,7 +745,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 					length_t dummy;
 					viewer_->getCaret().getBoxForRectangleSelection().getOverlappedSubline(line, 0, insertPosition, dummy);	// TODO: recognize wrap (second parameter).
 				}
-				document.insertText(Position(line, insertPosition), indent);
+				document.insert(Position(line, insertPosition), indent);
 				if(line == otherResult.line && otherResult.column != 0)
 					otherResult.column += level;
 				if(line == getLineNumber() && getColumnNumber() != 0)
@@ -766,7 +763,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 			}
 			if(indentLength > 0) {
 				const length_t deleteLength = min<length_t>(-level, indentLength);
-				document.deleteText(Position(line, 0), Position(line, deleteLength));
+				document.erase(Position(line, 0), Position(line, deleteLength));
 				if(line == otherResult.line && otherResult.column != 0)
 					otherResult.column -= deleteLength;
 				if(line == getLineNumber() && getColumnNumber() != 0)
@@ -835,7 +832,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 			s.append(bol, eol);
 			if(line >= numberOfLines - 1)
 				s.append(breakString);
-			document.insertText(Position(line, column), s);
+			document.insert(Position(line, column), s);
 		}
 
 		if(eol == last)
@@ -1746,7 +1743,7 @@ void Caret::eraseSelection() {
 	if(document.isReadOnly() || isSelectionEmpty())
 		return;
 	else if(!isSelectionRectangle())	// the selection is linear
-		moveTo(document.deleteText(*anchor_, *this));
+		moveTo(document.erase(*anchor_, *this));
 	else {	// the selection is rectangle
 		const Position resultPosition = getTopPoint();
 		const bool adapts = adaptsToDocument();
@@ -1771,14 +1768,14 @@ void Caret::eraseSelection() {
 			}
 			const size_t sublines = points.size();
 			for(size_t i = 0; i < sublines; ++i) {
-				document.deleteText(Position(points[i]->getLineNumber(), points[i]->getColumnNumber()),
+				document.erase(Position(points[i]->getLineNumber(), points[i]->getColumnNumber()),
 					Position(points[i]->getLineNumber(), points[i]->getColumnNumber() + sizes[i]));
 				delete points[i];
 			}
 		} else {
 			for(length_t line = resultPosition.line; line <= lastLine; ++line) {
 				box_->getOverlappedSubline(line, 0, rangeInLine.first, rangeInLine.second);
-				document.deleteText(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
+				document.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
 			}
 		}
 

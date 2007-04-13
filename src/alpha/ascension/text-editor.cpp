@@ -359,7 +359,7 @@ ulong DeletionCommand::execute() {
 		if(to.base().tell() != from) {
 			viewer.freeze();
 			document.beginSequentialEdit();
-			caret.moveTo(document.deleteText(from, to.base().tell()));
+			caret.moveTo(document.erase(from, to.base().tell()));
 			document.endSequentialEdit();
 			viewer.unfreeze();
 		}
@@ -380,7 +380,7 @@ ulong DeletionCommand::execute() {
 		document.endSequentialEdit();
 		if(line != document.getNumberOfLines() - 1)	// 最終行でない場合
 			caret.lineDown();
-		document.deleteText(Position(line, 0), Position(line, INVALID_INDEX));
+		document.erase(Position(line, 0), Position(line, INVALID_INDEX));
 	} else
 		assert(false);
 	return 0;
@@ -432,8 +432,8 @@ ulong FindAllCommand::execute() {
 		String replacedString;
 		while(s->search(document, scope, FORWARD, matchedRegion)) {
 			s->replace(document, matchedRegion, replacedString);
-			document.deleteText(matchedRegion);
-			scope.first = document.insertText(matchedRegion.getTop(), replacedString);
+			document.erase(matchedRegion);
+			scope.first = document.insert(matchedRegion.getTop(), replacedString);
 			scope.second = scopeEnd;
 			++count;
 		}
