@@ -57,8 +57,8 @@ void CompletionWindow::complete() {
 		getText(sel, text.get());
 		viewer_.freeze(true);
 		document.beginSequentialEdit();
-		document.deleteText(Position(caret.getLineNumber(), caret.getColumnNumber() - precedingID.length()), caret);
-		caret.moveTo(document.insertText(caret, text.get(), text.get() + len));
+		document.erase(Position(caret.getLineNumber(), caret.getColumnNumber() - precedingID.length()), caret);
+		caret.moveTo(document.insert(caret, text.get(), text.get() + len));
 		document.endSequentialEdit();
 		viewer_.unfreeze(true);
 	}
