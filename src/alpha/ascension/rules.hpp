@@ -177,10 +177,11 @@ namespace ascension {
 		class LiteralTransitionRule : public TransitionRule {
 		public:
 			LiteralTransitionRule(text::ContentType contentType,
-				text::ContentType destination, const String& pattern, bool caseSensitive = true);
+				text::ContentType destination, const String& pattern, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
 			length_t	matches(const String& line, length_t column) const;
 		private:
 			const String pattern_;
+			const Char escapeCharacter_;
 			const bool caseSensitive_;
 		};
 		
@@ -214,6 +215,8 @@ namespace ascension {
 			void		computePartitioning(const text::Position& start, const text::Position& minimalLast, text::Region& changedRegion);
 			void		dump() const;
 			std::size_t	findClosestPartitionIndex(const text::Position& at) const throw();
+			length_t	tryTransition(const String& line, length_t column,
+							text::ContentType contentType, text::ContentType& destination) const throw();
 			// DocumentPartitioner
 			void	documentAboutToBeChanged() throw();
 			void	documentChanged(const text::DocumentChange& change) throw();
@@ -222,9 +225,11 @@ namespace ascension {
 		private:
 			struct Partition {
 				text::ContentType contentType;
-				text::Position start, introducerEnd;
-				Partition(text::ContentType type, const text::Position& p,
-					const text::Position& introEnd) throw() : contentType(type), start(p), introducerEnd(introEnd) {}
+				text::Position start, tokenStart;
+				length_t tokenLength;
+				Partition(text::ContentType type, const text::Position& p, const text::Position& startOfToken, length_t lengthOfToken) throw()
+					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
+				text::Position getTokenEnd() const throw() {return text::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
 			const text::Position& getPartitionStart(size_t partition) const throw() {return partitions_[partition]->start;}
 			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;

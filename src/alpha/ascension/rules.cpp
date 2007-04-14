@@ -450,7 +450,7 @@ TransitionRule::~TransitionRule() throw() {
  * @fn TransitionRule::matches
  * Returns true if the rule matches the specified text.
  * @param line the target line text
- * @param column
+ * @param column the column number at which match starts
  * @return the length of the matched pattern. if and only if the match failed, returns 0.
  * if matched zero width text, returns 1
  */
@@ -464,15 +464,20 @@ TransitionRule::~TransitionRule() throw() {
  * @param destination the content type of the transition destination
  * @param pattern the pattern string to introduce the transition.
  * if empty string is specified, the transition will be occured at the end of line
+ * @param escapeCharacter the character which a character will be ignored. if @c NONCHARACTER is
+ * specified, the escape character will be not set. this is always case-sensitive
  * @param caseSensitive set false to enable caseless match
  */
-LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
-		bool caseSensitive /* = true */) : TransitionRule(contentType, destination), pattern_(pattern), caseSensitive_(caseSensitive) {
+LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination,
+		const String& pattern, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
+		TransitionRule(contentType, destination), pattern_(pattern), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 }
 
 /// @see TransitionRule#matches
 length_t LiteralTransitionRule::matches(const String& line, length_t column) const {
-	if(pattern_.empty() && column == line.length())	// matches EOL
+	if(escapeCharacter_ != NONCHARACTER && column > 0 && line[column - 1] == escapeCharacter_)
+		return 0;
+	else if(pattern_.empty() && column == line.length())	// matches EOL
 		return 1;
 	else if(line.length() - column < pattern_.length())
 		return 0;
@@ -542,15 +547,15 @@ void LexicalPartitioner::clearRules() throw() {
  * @param[out] changedRegion the region whose content type was changed
  */
 void LexicalPartitioner::computePartitioning(const Position& start, const Position& minimalLast, Region& changedRegion) {
+	// TODO: see LexicalPartitioner.documentChanged.
+#if 0
 	const Position eof(getDocument()->getEndPosition(false));
 	if(start == eof) {
 		changedRegion.first = changedRegion.second = Position::INVALID_POSITION;
 		return;
 	}
 	assert(start < eof);
-	Position p(start);
 	const String* line = &getDocument()->getLine(start.line);
-	const TransitionRules::const_iterator lastRule(rules_.end());
 	size_t currentPartition = findClosestPartitionIndex(start);
 	assert(currentPartition < partitions_.getSize());
 	ContentType contentType = partitions_[currentPartition]->contentType;
@@ -560,18 +565,12 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 		const Position s(i.tell());
 		// 順番に規則のマッチを試みる
 		ContentType destination = UNDETERMINED_CONTENT_TYPE;
-		for(TransitionRules::const_iterator rule(rules_.begin()); rule != lastRule; ++rule) {
-			if((*rule)->getContentType() == contentType) {
-				if(const length_t c = (*rule)->matches(*line, i.tell().column)) {
-					if(i.tell().column > line->length())
-						i.seek(Position(i.tell().line + 1, 0));
-					else
-						i.seek(Position(i.tell().line, i.tell().column + c));
-					destination = (*rule)->getDestination();
-					transitionOccured = true;
-					break;
-				}
-			}
+		if(const length_t c = tryTransition(*line, i.tell().column, contentType, destination)) {
+			if(i.tell().column + c > line->length())
+				i.seek(Position(i.tell().line + 1, 0));
+			else
+				i.seek(Position(i.tell().line, i.tell().column + c));
+			transitionOccured = true;
 		}
 		if(destination == UNDETERMINED_CONTENT_TYPE) {	// 1 つもマッチしなかった
 			// 次の古いパーティションに到達した -> 貫通
@@ -591,13 +590,15 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 			// 次の古いパーティションと同じ位置でマッチした?
 			if(currentPartition + 1 < partitions_.getSize() && partitionStart == partitions_[currentPartition + 1]->start) {
 				// 同じパーティションだった -> 終了
-				if(destination == partitions_[currentPartition + 1]->contentType && p > minimalLast) {
+				if(destination == partitions_[currentPartition + 1]->contentType && s > minimalLast) {
 					changedRegion.second = s;
 					return;
 				}
 				partitions_[++currentPartition]->contentType = contentType = destination;
-			} else {	// 次の古いパーティションの前でマッチした
-				partitions_.insert(++currentPartition, new Partition(destination, partitionStart, i.tell()));
+			} else if(partitionStart == Position(0, 0) && !partitions_.isEmpty() && partitionStart == partitions_[0]->start)
+				partitions_[currentPartition++]->contentType = contentType = destination;
+			else {	// 次の古いパーティションの前でマッチした
+				partitions_.insert(++currentPartition, new Partition(destination, partitionStart, s, i.tell().column - s.column));
 				contentType = destination;
 			}
 			if(changedRegion.first == Position::INVALID_POSITION)
@@ -605,6 +606,7 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 		}
 	}
 	changedRegion.second = (changedRegion.first != Position::INVALID_POSITION) ? eof : Position::INVALID_POSITION;
+#endif /* 0 */
 }
 
 /// @see text#DocumentPartitioner#documentAboutToBeChanged
@@ -614,7 +616,7 @@ void LexicalPartitioner::documentAboutToBeChanged() throw() {
 
 /// @see text#DocumentPartitioner#documentChanged
 void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
-	// 削除の場合、削除範囲に完全に含まれていたパーティションを削除する
+	// delete the partitions encompassed by the deleted region
 	if(change.isDeletion()) {
 		size_t deletedFirst = findClosestPartitionIndex(change.getRegion().getTop());
 		if(change.getRegion().getTop() != partitions_[deletedFirst]->start)
@@ -625,42 +627,99 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 		if(deletedLast > deletedFirst)
 			partitions_.erase(deletedFirst, deletedLast - deletedFirst);
 	}
-	// ドキュメントの変更に合わせて、全てのパーティションを移動する
+	// move the partitions adapting to the document change
 	size_t numberOfPartitions = partitions_.getSize();
 	for(size_t i = 0; i < numberOfPartitions; ++i) {
 		partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
-		partitions_[i]->introducerEnd = updatePosition(partitions_[i]->introducerEnd, change, FORWARD);
+		partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
 	}
-	// ドキュメント先頭を含むパーティションが無くなった -> 既定のパーティションを詰める
-	if(numberOfPartitions == 0 || partitions_[0]->start != getDocument()->getStartPosition(false)) {
+	// push a default partition if the partition includes the start of the document
+	const Document& document = *getDocument();
+	if(numberOfPartitions == 0 || partitions_[0]->start != document.getStartPosition(false)) {
 		if(numberOfPartitions == 0 || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
-			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0)));
+			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
 			++numberOfPartitions;
-		} else
-			partitions_[0]->start = partitions_[0]->introducerEnd = getDocument()->getStartPosition(false);
+		} else {
+			partitions_[0]->start = partitions_[0]->tokenStart = document.getStartPosition(false);
+			partitions_[0]->tokenLength = 0;
+		}
 	}
-	// ドキュメント終端が始点のパーティション -> 削除する
-	if(numberOfPartitions > 1 && partitions_[numberOfPartitions - 1]->start == getDocument()->getEndPosition(false))
+	// delete the partition whose start position is the end of the document
+	if(numberOfPartitions > 1 && partitions_[numberOfPartitions - 1]->start == document.getEndPosition(false))
 		partitions_.erase(numberOfPartitions - 1);
-	// 影響を受けた部分を再構築
+	// reconstruct partitions in the affected region
+	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
+#if 1
+	const Position& changedBottom = change.getRegion().getBottom();
+	const length_t lines = document.getNumberOfLines();
+	DocumentCharacterIterator p(document, Position(change.getRegion().getTop().line, 0));
+	// for each affected lines...
+	while(true) {
+		const String& text = p.getLine();
+		const ContentType eolContentType = partitions_[findClosestPartitionIndex(Position(p.tell().line, text.length()))]->contentType;
+		// first, delete partitions in the line
+		size_t firstPartition = findClosestPartitionIndex(p.tell());
+		if(partitions_[firstPartition]->start != p.tell())
+			++firstPartition;
+		ContentType contentType = (firstPartition > 0) ? partitions_[firstPartition - 1]->contentType : DEFAULT_CONTENT_TYPE;
+		length_t i = firstPartition;
+		for(; i < partitions_.getSize(); ++i) {
+			Partition* q = partitions_[i];
+			if(q->start.line > p.tell().line)
+				break;
+//			delete q;
+		}
+		partitions_.erase(firstPartition, i - firstPartition);
+		// scan the line and tokenize into partitions
+		while(true) {
+			const bool eol = p.tell().column == text.length();
+			ContentType destination;
+			if(length_t tokenLength = tryTransition(text, p.tell().column, contentType, destination)) {
+				if(eol)
+					tokenLength = 0;	// a terminator is zero-length...
+				const Position tokenEnd = Position(p.tell().line, p.tell().column + tokenLength);
+				partitions_.insert(firstPartition++,
+					new Partition(destination, (destination > contentType) ? p.tell() : tokenEnd, p.tell(), tokenLength));
+				contentType = destination;
+				if(eol)
+					break;
+				p.seek(tokenEnd);
+			} else if(eol)
+				break;
+			else
+				++p;
+		}
+		if(p.tell().line == 0 && (partitions_.isEmpty() || partitions_[0]->start != Position(0, 0)))
+			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
+		// if new content type of the end of line is same before partitioning, we are done
+		if((change.isDeletion() || p.tell().line >= changedBottom.line) && contentType == eolContentType)
+			break;
+		else if(p.tell().line + 1 == lines)	// EOF
+			break;
+		p.seek(Position(p.tell().line + 1, 0));
+	}
+	notifyDocument(Region(Position(change.getRegion().getTop().line, 0), p.tell()));
+#else
 	const Position& changedStart = change.getRegion().getTop();
 	const size_t closestPartitionIndex = findClosestPartitionIndex(changedStart);
 	Position reparseStart;
-	if(closestPartitionIndex == 0 || changedStart >= partitions_[closestPartitionIndex]->introducerEnd)
-		reparseStart = max(partitions_[closestPartitionIndex]->introducerEnd, Position(changedStart.line, 0));
-	else {
-		reparseStart = partitions_[closestPartitionIndex - 1]->introducerEnd;
+	if(closestPartitionIndex == 0 || changedStart >= partitions_[closestPartitionIndex]->getTokenEnd()) {
+		reparseStart = max(partitions_[closestPartitionIndex]->getTokenEnd(), Position(changedStart.line, 0));
+		reparseStart = min(reparseStart, Position(reparseStart.line, document.getLineLength(reparseStart.line)));
+	} else {
+		reparseStart = partitions_[closestPartitionIndex - 1]->getTokenEnd();
+		reparseStart = min(reparseStart, Position(reparseStart.line, document.getLineLength(reparseStart.line)));
 		const Position m = (changedStart.line == 0 || partitions_[closestPartitionIndex]->start.column > 0) ?
-			Position(changedStart.line, 0) : Position(changedStart.line - 1, getDocument()->getLineLength(changedStart.line - 1));
+			Position(changedStart.line, 0) : Position(changedStart.line - 1, document.getLineLength(changedStart.line - 1));
 		reparseStart = max(reparseStart, m);
 	}
 	if(change.isDeletion())
-		reparseStart = (--DocumentCharacterIterator(*getDocument(), reparseStart)).tell();
+		reparseStart = (--DocumentCharacterIterator(document, reparseStart)).tell();
 	Region changedRegion;
 	computePartitioning(reparseStart, change.isDeletion() ? changedStart : change.getRegion().getBottom(), changedRegion);
 	if(!changedRegion.isEmpty())
 		notifyDocument(changedRegion);
-//	dump();
+#endif
 }
 
 /// @see text#DocumentPartitioner#doGetPartition
@@ -675,7 +734,7 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 /// @see text#DocumentPartitioner#doInstall
 void LexicalPartitioner::doInstall() throw() {
 	partitions_.clear();
-	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0)));
+	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
 	Region dummy;
 	computePartitioning(getDocument()->getStartPosition(false), getDocument()->getEndPosition(false), dummy);
 }
@@ -693,6 +752,29 @@ void LexicalPartitioner::dump() const {
 }
 
 inline size_t LexicalPartitioner::findClosestPartitionIndex(const Position& at) const throw() {
-	return ascension::internal::searchBound(
+	size_t result = ascension::internal::searchBound(
 		static_cast<size_t>(0), partitions_.getSize(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
+	return (partitions_[result]->tokenStart == at && result > 0 && at.column == getDocument()->getLineLength(at.line)) ? result - 1 : result;
+}
+
+/**
+ *
+ * @param line the scanning line text
+ * @param column the column number at which match starts
+ * @param contentType the current content type
+ * @param[out] destination the type of the transition destination content
+ * @return the length of the pattern matched or 0 if the all rules did not matched
+ */
+inline length_t LexicalPartitioner::tryTransition(
+		const String& line, length_t column, ContentType contentType, ContentType& destination) const throw() {
+	for(TransitionRules::const_iterator rule(rules_.begin()), e(rules_.end()); rule != e; ++rule) {
+		if((*rule)->getContentType() == contentType) {
+			if(const length_t c = (*rule)->matches(line, column)) {
+				destination = (*rule)->getDestination();
+				return c;
+			}
+		}
+	}
+	destination = UNDETERMINED_CONTENT_TYPE;
+	return 0;
 }

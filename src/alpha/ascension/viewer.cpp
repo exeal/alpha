@@ -631,9 +631,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	autoScrollOriginMark_->create(*this);
 
 	setMouseInputStrategy(0, true);
-
-#if 0
-	// partitioning test
+/*
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
 	vrc.indicatorMargin.visible = true;
@@ -642,13 +640,15 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	vrc.lineNumbers.borderStyle = VerticalRulerConfiguration::LineNumbers::DOTTED;
 	vrc.lineNumbers.borderWidth = 1;
 	setConfiguration(0, &vrc);
-
+*/
+#if 1
+	// partitioning test
 	using namespace rules;
 	TransitionRule* rules[4];
-	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");
-	rules[1] = new LiteralTransitionRule(42, DEFAULT_CONTENT_TYPE, L"*/");
-	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");
-	rules[3] = new LiteralTransitionRule(43, DEFAULT_CONTENT_TYPE, L"");
+	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");		// C++ multi-line comment open
+	rules[1] = new LiteralTransitionRule(42, DEFAULT_CONTENT_TYPE, L"*/");		// C++ multi-line comment close
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");		// C++ single-line comment open
+	rules[3] = new LiteralTransitionRule(43, DEFAULT_CONTENT_TYPE, L"", L'\\');	// C++ single-line comment close
 //	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
 //	rules[5] = new RegexTransitionRule(44, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\"|$)");
 //	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
@@ -687,6 +687,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 				StyledText& st = styles->array[i];
 				st.column = ps[i].region.getTop().column;
 				st.style.color.foreground = (ps[i].contentType != DEFAULT_CONTENT_TYPE) ? RGB(0x00, 0x66, 0x00) : STANDARD_COLOR;
+				st.style.color.background = (ps[i].contentType != DEFAULT_CONTENT_TYPE) ? RGB(0xCC, 0xFF, 0xCC) : STANDARD_COLOR;
 			}
 			return *styles;
 		}
