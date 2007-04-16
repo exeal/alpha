@@ -30,107 +30,34 @@ DEFINE_DETECTOR(CPEX_UNICODE_AUTODETECT, Unicode);
 
 
 namespace {
-	/// 引数を UTF-8 オクテットとみなし、それが何バイト文字かを返す
-	inline size_t getByteLengthAsUTF8Char(const uchar* src, size_t len) throw() {
-		if(len > 5) {	// 6 バイト文字
-			// 1111 110x 10xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx 10xx xxxx
-			if((src[0] & 0xFE) == 0xFC && (src[1] & 0xC0) == 0x80 && (src[5] & 0xC0) == 0x80)
-				return 6;
-		}
-		if(len > 4) {	// 5 バイト文字
-			// 1111 10xx 10xx xxxx xxxx xxxx xxxx xxxx 10xx xxxx
-			if((src[0] & 0xFC) == 0xF8 && (src[1] & 0xC0) == 0x80 && (src[4] & 0xC0) == 0x80)
-				return 5;
-		}
-		if(len > 3) {	// 4 バイト文字
-			// 1111 0xxx 10xx xxxx xxxx xxxx 10xx xxxx
-			if((src[0] & 0xF8) == 0xF0 && (src[1] & 0xC0) == 0x80 && (src[3] & 0xC0) == 0x80)
-				return 4;
-		}
-		if(len > 2) {	// 3 バイト文字
-			// 1110 xxxx 10xx xxxx 10xx xxxx
-			if((src[0] & 0xF0) == 0xE0 && (src[1] & 0xC0) == 0x80 && (src[2] & 0xC0) == 0x80)
-				return 3;
-		}
-		if(len > 1) {	// 2 バイト文字
-			// 110x xxxx 10xx xxxx
-			if((src[0] & 0xE0) == 0xC0 && (src[1] & 0xC0) == 0x80)
-				return 2;
-		}
-		// 1 バイト文字か不正
-		// 0xxx xxxx
-		if((src[0] & 0x80) == 0x00)
-			return 1;
-
-		return 0;
-	}
-
-	/**
-	 *	文字列の先頭に UTF-16 の BOM があるか調べる
-	 *	@retval 1	リトルエンディアン
-	 *	@retval 2	ビッグエンディアン
-	 *	@retval 0	無い
-	 */
-	inline size_t hasBOMOfUTF16(const uchar* src, size_t len) throw() {
-		if(len < 2)
-			return 0;
-		if(memcmp(src, UTF16LE_BOM, 2) == 0)		return 1;
-		else if(memcmp(src, UTF16BE_BOM, 2) == 0)	return 2;
-		else										return 0;
-	}
-
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	/**
-	 *	文字列の先頭に UTF-32 の BOM があるか調べる
-	 *	@retval 1	リトルエンディアン
-	 *	@retval 2	ビッグエンディアン
-	 *	@retval 0	無い
-	 */
-	inline size_t hasBOMOfUTF32(const uchar* src, size_t len) throw() {
-		if(len < 4)
-			return 0;
-		if(memcmp(src, UTF32LE_BOM, 4) == 0)		return 1;
-		else if(memcmp(src, UTF32BE_BOM, 4) == 0)	return 2;
-		else										return 0;
-	}
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-
-	/// 文字列の先頭に UTF-8 の BOM があるかどうかを返す
-	inline bool hasBOMOfUTF8(const uchar* src, size_t len) throw() {
-		return len >= 3 && memcmp(src, UTF8_BOM, 3) == 0;
-	}
-
-	/// 引数が UTF-8 文字列として何文字有効かを返す
-	inline size_t isUTF8String(const uchar* src, size_t len) throw() {
-		size_t i = 0;
-		if(hasBOMOfUTF8(src, len))
-			return len;
-		while(true) {
-			if(i >= len)
+	inline const uchar* maybeUTF8(const uchar* first, const uchar* last) throw() {
+		while(first < last) {
+			if(*first == 0xC0 || *first == 0xC1 || *first >= 0xF5)
 				break;
-			const size_t j = getByteLengthAsUTF8Char(src + i, len - i);
-			if(j == 0)
-				break;
-			i += j;
+			++first;
 		}
-		return i;
+		return first;
 	}
 
 	void detectCodePage_Unicode(const uchar* src, size_t len, CodePage& result, size_t& convertableLength) {
 		result = 0;
 		convertableLength = len;
-		if(hasBOMOfUTF8(src, len))
+		if(len >= 3 && memcmp(src, UTF8_BOM, 3) == 0)
 			result = CP_UTF8;
-		else if(size_t n = hasBOMOfUTF16(src, len))
-			result = (n == 1) ? CPEX_UNICODE_UTF16LE : CPEX_UNICODE_UTF16BE;
+		else if(len >= 2) {
+			if(memcmp(src, UTF16LE_BOM, 2) == 0) result = CPEX_UNICODE_UTF16LE;
+			else if(memcmp(src, UTF16BE_BOM, 2) == 0) result = CPEX_UNICODE_UTF16BE;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		else if(size_t n = hasBOMOfUTF32(src, len))
-			result = (n == 1) ? CPEX_UNICODE_UTF32LE : CPEX_UNICODE_UTF32BE;
+			if(len >= 4) {
+				if(memcmp(src, UTF32LE_BOM, 4) == 0) result = CPEX_UNICODE_UTF32LE;
+				else if(memcmp(src, UTF32BE_BOM, 4) == 0) result = CPEX_UNICODE_UTF32BE;
+			}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+		}
 		if(result != 0)
 			return;
 		result = CP_UTF8;
-		convertableLength = isUTF8String(src, len);
+		convertableLength = maybeUTF8(src, src + len) - src;
 	}
 }
 
@@ -248,110 +175,108 @@ size_t Encoder_Unicode_Utf32BE::toUnicode(CTU_ARGLIST) {
 
 // UTF-5 ////////////////////////////////////////////////////////////////////
 
-/**
- *	UTF-5 文字を UTF-16 に変換
- *	@param cp	変換後のコードポイント
- *	@param src	変換する文字へのポインタ
- *	@param len	変換する文字のバイト長さ
- *	@return		変換に使った文字のバイト長さ。0だと失敗
- */
-inline size_t decodeUTF5CharToUnicode(CodePoint* cp, const uchar* src, size_t len) {
-	assert(cp != 0 && src != 0);
-
-	if(src[0] < 'G' || src[0] > 'V')
-		return 0;
-
-	size_t i = 1;
-	*cp = src[0] - 'G';
-	for(; i < len; ++i) {
-		if(src[i] >= '0' && src[i] <= '9') {
-			*cp <<= 4;
-			*cp |= src[i] - '0';
-		} else if(src[i] >= 'A' && src[i] <= 'F'){
-			*cp <<= 4;
-			*cp |= src[i] - 'A' + 0x0A;
-		} else
-			break;
+namespace {
+	/**
+	 * Transcodes the given UTF-5 sequence into a Unicode character.
+	 * @param src the source buffer
+	 * @param len the length of the source buffer
+	 * @param[out] the code point of the decoded character
+	 * @return the number of bytes of decoded source buffer or 0 if failed
+	 */
+	inline size_t decodeUTF5Character(const uchar* src, size_t len, CodePoint& cp) throw() {
+		assert(src != 0 && len > 0);
+		if(src[0] < 'G' || src[0] > 'V')
+			return 0;
+		size_t i = 1;
+		cp = src[0] - 'G';
+		for(; i < len; ++i) {
+			if(src[i] >= '0' && src[i] <= '9') {
+				cp <<= 4;
+				cp |= src[i] - '0';
+			} else if(src[i] >= 'A' && src[i] <= 'F'){
+				cp <<= 4;
+				cp |= src[i] - 'A' + 0x0A;
+			} else
+				break;
+		}
+		return i;
 	}
-	return i;
-}
 
-/**
- *	UTF-16 文字を UTF-5 に変換
- *	@param dest	変換後の文字へのポインタ
- *	@param src	変換する文字へのポインタ
- *	@param len	変換する文字のバイト長さ
- *	@return		変換後の文字のバイト長さ。0だと失敗
- */
-inline size_t encodeUnicodeCharToUTF5(uchar* dest, const wchar_t* src, size_t len) {
-	assert(dest != 0 && src != 0);
+	/**
+	 * Transcodes the given Unicode character into UTF-5.
+	 * @param src the source buffer
+	 * @param len the length of the source buffer
+	 * @param[out] dest the destination UTF-16 buffer
+	 * @return the number of bytes written to @a dest, or 0 if failed
+	 */
+	inline size_t encodeUTF5Character(const wchar_t* src, size_t len, uchar* dest) {
+		assert(dest != 0 && src != 0);
 #define D2C(n)	(BIT8_MASK(n) < 0x0A) ? (BIT8_MASK(n) + '0') : (BIT8_MASK(n) - 0x0A + 'A')
 
-	const CodePoint cp = surrogates::decodeFirst(src, src + len);
-
-	if(cp < 0x00000010) {
-		dest[0] = BIT8_MASK((cp & 0x0000000F) >> 0) + 'G';
-		return 1;
-	} else if(cp < 0x00000100) {
-		dest[0] = BIT8_MASK((cp & 0x000000F0) >> 4) + 'G';
-		dest[1] = D2C((cp & 0x0000000F) >> 0);
-		return 2;
-	} else if(cp < 0x00001000) {
-		dest[0] = BIT8_MASK((cp & 0x00000F00) >> 8) + 'G';
-		dest[1] = D2C((cp & 0x000000F0) >> 4);
-		dest[2] = D2C((cp & 0x0000000F) >> 0);
-		return 3;
-	} else if(cp < 0x00010000) {
-		dest[0] = BIT8_MASK((cp & 0x0000F000) >> 12) + 'G';
-		dest[1] = D2C((cp & 0x00000F00) >> 8);
-		dest[2] = D2C((cp & 0x000000F0) >> 4);
-		dest[3] = D2C((cp & 0x0000000F) >> 0);
-		return 4;
-	} else if(cp < 0x00100000) {
-		dest[0] = BIT8_MASK((cp & 0x000F0000) >> 16) + 'G';
-		dest[1] = D2C((cp & 0x0000F000) >> 12);
-		dest[2] = D2C((cp & 0x00000F00) >> 8);
-		dest[3] = D2C((cp & 0x000000F0) >> 4);
-		dest[4] = D2C((cp & 0x0000000F) >> 0);
-		return 5;
-	} else if(cp < 0x01000000) {
-		dest[0] = BIT8_MASK((cp & 0x00F00000) >> 20) + 'G';
-		dest[1] = D2C((cp & 0x000F0000) >> 16);
-		dest[2] = D2C((cp & 0x0000F000) >> 12);
-		dest[3] = D2C((cp & 0x00000F00) >> 8);
-		dest[4] = D2C((cp & 0x000000F0) >> 4);
-		dest[5] = D2C((cp & 0x0000000F) >> 0);
-		return 6;
-	} else if(cp < 0x10000000) {
-		dest[0] = BIT8_MASK((cp & 0x0F000000) >> 24) + 'G';
-		dest[1] = D2C((cp & 0x00F00000) >> 20);
-		dest[2] = D2C((cp & 0x000F0000) >> 16);
-		dest[3] = D2C((cp & 0x0000F000) >> 12);
-		dest[4] = D2C((cp & 0x00000F00) >> 8);
-		dest[5] = D2C((cp & 0x000000F0) >> 4);
-		dest[6] = D2C((cp & 0x0000000F) >> 0);
-		return 7;
-	} else if(cp < 0x80000000) {
-		dest[0] = BIT8_MASK((cp & 0xF0000000) >> 28) + 'G';
-		dest[1] = D2C((cp & 0x0F000000) >> 24);
-		dest[2] = D2C((cp & 0x00F00000) >> 20);
-		dest[3] = D2C((cp & 0x000F0000) >> 16);
-		dest[4] = D2C((cp & 0x0000F000) >> 12);
-		dest[5] = D2C((cp & 0x00000F00) >> 8);
-		dest[6] = D2C((cp & 0x000000F0) >> 4);
-		dest[7] = D2C((cp & 0x0000000F) >> 0);
-		return 8;
-	} else
-		return 0;
+		const CodePoint cp = surrogates::decodeFirst(src, src + len);
+		if(cp < 0x00000010) {
+			dest[0] = BIT8_MASK((cp & 0x0000000F) >> 0) + 'G';
+			return 1;
+		} else if(cp < 0x00000100) {
+			dest[0] = BIT8_MASK((cp & 0x000000F0) >> 4) + 'G';
+			dest[1] = D2C((cp & 0x0000000F) >> 0);
+			return 2;
+		} else if(cp < 0x00001000) {
+			dest[0] = BIT8_MASK((cp & 0x00000F00) >> 8) + 'G';
+			dest[1] = D2C((cp & 0x000000F0) >> 4);
+			dest[2] = D2C((cp & 0x0000000F) >> 0);
+			return 3;
+		} else if(cp < 0x00010000) {
+			dest[0] = BIT8_MASK((cp & 0x0000F000) >> 12) + 'G';
+			dest[1] = D2C((cp & 0x00000F00) >> 8);
+			dest[2] = D2C((cp & 0x000000F0) >> 4);
+			dest[3] = D2C((cp & 0x0000000F) >> 0);
+			return 4;
+		} else if(cp < 0x00100000) {
+			dest[0] = BIT8_MASK((cp & 0x000F0000) >> 16) + 'G';
+			dest[1] = D2C((cp & 0x0000F000) >> 12);
+			dest[2] = D2C((cp & 0x00000F00) >> 8);
+			dest[3] = D2C((cp & 0x000000F0) >> 4);
+			dest[4] = D2C((cp & 0x0000000F) >> 0);
+			return 5;
+		} else if(cp < 0x01000000) {
+			dest[0] = BIT8_MASK((cp & 0x00F00000) >> 20) + 'G';
+			dest[1] = D2C((cp & 0x000F0000) >> 16);
+			dest[2] = D2C((cp & 0x0000F000) >> 12);
+			dest[3] = D2C((cp & 0x00000F00) >> 8);
+			dest[4] = D2C((cp & 0x000000F0) >> 4);
+			dest[5] = D2C((cp & 0x0000000F) >> 0);
+			return 6;
+		} else if(cp < 0x10000000) {
+			dest[0] = BIT8_MASK((cp & 0x0F000000) >> 24) + 'G';
+			dest[1] = D2C((cp & 0x00F00000) >> 20);
+			dest[2] = D2C((cp & 0x000F0000) >> 16);
+			dest[3] = D2C((cp & 0x0000F000) >> 12);
+			dest[4] = D2C((cp & 0x00000F00) >> 8);
+			dest[5] = D2C((cp & 0x000000F0) >> 4);
+			dest[6] = D2C((cp & 0x0000000F) >> 0);
+			return 7;
+		} else if(cp < 0x80000000) {
+			dest[0] = BIT8_MASK((cp & 0xF0000000) >> 28) + 'G';
+			dest[1] = D2C((cp & 0x0F000000) >> 24);
+			dest[2] = D2C((cp & 0x00F00000) >> 20);
+			dest[3] = D2C((cp & 0x000F0000) >> 16);
+			dest[4] = D2C((cp & 0x0000F000) >> 12);
+			dest[5] = D2C((cp & 0x00000F00) >> 8);
+			dest[6] = D2C((cp & 0x000000F0) >> 4);
+			dest[7] = D2C((cp & 0x0000000F) >> 0);
+			return 8;
+		} else
+			return 0;
 #undef D2C
+	}
 }
 
 size_t Encoder_Unicode_Utf5::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
-
 	size_t j = 0, converted = 0;
 	for(size_t i = 0; i < srcLength && j < destLength; ++i) {
-		converted = encodeUnicodeCharToUTF5(dest + j, src + i, srcLength - i);
+		converted = encodeUTF5Character(src + i, srcLength - i, dest + j);
 		if(converted == 0)
 			dest[j++] = BIT8_MASK(src[i]);
 		else
@@ -362,13 +287,12 @@ size_t Encoder_Unicode_Utf5::fromUnicode(CFU_ARGLIST) {
 
 size_t Encoder_Unicode_Utf5::toUnicode(CTU_ARGLIST) {
 	CTU_CHECKARGS();
-
 	size_t j = 0, decoded;
 	CodePoint cp;
 	for(size_t i = 0; i < srcLength && j < destLength; ) {
-		decoded = decodeUTF5CharToUnicode(&cp, src + i, srcLength- i);
+		decoded = decodeUTF5Character(src + i, srcLength - i, cp);
 		if(decoded == 0) {
-			dest[j] = src[i];
+			CONFIRM_ILLEGAL_CHAR(dest[i]);
 			++j;
 			decoded = 1;
 		} else {
@@ -383,19 +307,21 @@ size_t Encoder_Unicode_Utf5::toUnicode(CTU_ARGLIST) {
 
 // UTF-7 ////////////////////////////////////////////////////////////////////
 
-/// UTF-7 の集合 B (修正 BASE64 エンコードに使う) の文字かを返す
-inline bool isUTF7SetB(uchar ch) {
-	return toBoolean(isalnum(ch)) || ch == '+' || ch == '/';
-}
+namespace {
+	/// Returns true if the given character is in UTF-7 set B.
+	inline bool isUTF7SetB(uchar c) throw() {
+		return toBoolean(isalnum(c)) || c == '+' || c == '/';
+	}
 
-/// UTF-7 の集合 D (そのままコピーできる) の文字かを返す
-inline bool isUTF7SetD(wchar_t ch) {
-	if(ch > L'z')
-		return false;
-	return toBoolean(isalpha(BIT8_MASK(ch)))
-			|| (ch >= L',' && ch <= L':')
-			|| (ch >= L'\'' && ch <= L')')
-			|| ch == L'\?' || ch == L'\t' || ch == L' ' || ch == L'\r' || ch == L'\n';
+	/// Returns true if the given character is in UTF-7 set D.
+	inline bool isUTF7SetD(wchar_t c) throw() {
+		if(c > L'z')
+			return false;
+		return toBoolean(isalpha(BIT8_MASK(c)))
+				|| (c >= L',' && c <= L':')
+				|| (c >= L'\'' && c <= L')')
+				|| c == L'\?' || c == L'\t' || c == L' ' || c == L'\r' || c == L'\n';
+	}
 }
 
 size_t Encoder_Unicode_Utf7::fromUnicode(CFU_ARGLIST) {
@@ -529,111 +455,127 @@ size_t Encoder_Unicode_Utf7::toUnicode(CTU_ARGLIST) {
 
 // UTF-8 ////////////////////////////////////////////////////////////////////
 
-/**
- *	UTF-8 文字を UTF-16 に変換 (代替: @c MultiByteToWideChar)
- *	@param cp	[out] 変換後のコードポイント
- *	@param src	変換する文字へのポインタ
- *	@param len	変換する文字のバイト長さ
- *	@return		変換に使った文字のバイト長さ。0だと失敗
- */
-inline size_t decodeUTF8CharToUnicode(CodePoint& cp, const uchar* src, size_t len) {
-	assert(src != 0);
+namespace {
+	/*
+		well-formed UTF-8 first byte distribution (based on Unicode 5.0 Table 3.7)
+		value  1st-byte   code points       byte count
+		----------------------------------------------
+		10     00..7F     U+0000..007F      1
+		21     C2..DF     U+0080..07FF      2
+		32     E0         U+0800..0FFF      3
+		33     E1..EC     U+1000..CFFF      3
+		34     ED         U+D000..D7FF      3
+		35     EE..EF     U+E000..FFFF      3
+		46     F0         U+10000..3FFFF    4
+		47     F1..F3     U+40000..FFFFF    4
+		48     F4         U+100000..10FFFF  4
+		09     otherwise  ill-formed        (0)
+	 */
+	const uchar UTF8_WELL_FORMED_FIRST_BYTES[] = {
+		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x80
+		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x90
+		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0xA0
+		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0xB0
+		0x09, 0x09, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21,	// 0xC0
+		0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21, 0x21,	// 0xD0
+		0x32, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x34, 0x35, 0x35,	// 0xE0
+		0x46, 0x47, 0x47, 0x47, 0x48, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09	// 0xF0
+	};
 
-	const size_t bytes = getByteLengthAsUTF8Char(src, len);
-
-	switch(bytes) {
-/*	case 6:	// 6バイト文字
-		// 1111 110u  10vv vvvv  ...  10zz zzzz -> 0uvv vvvv wwww wwxx xxxx yyyy yyzz zzzz
-		cp = ((src[0] & 0x01) << 30) | ((src[1] & 0x3F) << 24) | ((src[2] & 0x3F) << 18)
-				| ((src[3] & 0x3F) << 12) | ((src[4] & 0x3F) << 6) | ((src[5] & 0x3F) << 0);
-		break;
-	case 5:	// 5バイト文字
-		// 1111 10vv  10ww wwww  ...  10zz zzzz -> 0000 00vv wwww wwxx xxxx yyyy yyzz zzzz
-		cp = ((src[0] & 0x03) << 24) | ((src[1] & 0x3F) << 18)
-				| ((src[2] & 0x3F) << 12) | ((src[3] & 0x3F) << 6) | ((src[4] & 0x3F) << 0);
-		break;
-*/	case 4:	// 4バイト文字
-		// 1111 0www  10xx xxxx  10yy yyyy  10zz zzzz -> 0000 0000 000w wwxx xxxx yyyy yyzz zzzz
-		cp = ((src[0] & 0x07) << 18) | ((src[1] & 0x3F) << 12) | ((src[2] & 0x3F) << 6) | ((src[3] & 0x3F) << 0);
-		break;
-	case 3:	// 3バイト文字
-		// 1110 xxxx  10yy yyyy  10zz zzzz -> xxxx yyyy yyzz zzzz
-		cp = ((src[0] & 0x0F) << 12) | ((src[1] & 0x3F) << 6) | ((src[2] & 0x3F) << 0);
-		break;
-	case 2:	// 2バイト文字
-		// 110y yyyy  10zz zzzz -> 0000 0yyy yyzz zzzz
-		cp = ((src[0] & 0x1F) << 6) | ((src[1] & 0x3F) << 0);
-		break;
-	case 1:	// 1バイト文字
-		// 0zzz zzzz -> 0000 0000 0zzz zzzz
-		cp = src[0];
-		break;
+	/**
+	 * Transcodes the given UTF-8 sequence into a Unicode character.
+	 * @param src the source buffer
+	 * @param len the length of the source buffer
+	 * @param[out] cp the code point of the decoded character
+	 * @return the number of bytes decoded, or 0 if @a src is ill-formed
+	 */
+	inline size_t decodeUTF8Character(const uchar* src, size_t len, CodePoint& cp) throw() {
+		assert(src != 0 && len > 0);
+		if((src[0] & 0x80) == 0)
+			return (cp = src[0]), 1;
+		const uchar v = UTF8_WELL_FORMED_FIRST_BYTES[src[0] - 0x80];
+		// check the source buffer length
+		const size_t c = (v >> 4);
+		if(len < c)
+			return 0;
+		// check the second byte
+		switch(v & 0x0F) {
+		case 1: case 3: case 5: case 7:
+			if(src[1] < 0x80 || src[1] > 0xBF) return 0; break;
+		case 2:	if(src[1] < 0xA0 || src[1] > 0xBF) return 0; break;
+		case 4: if(src[1] < 0x80 || src[1] > 0x9F) return 0; break;
+		case 6: if(src[1] < 0x90 || src[1] > 0xBF) return 0; break;
+		case 8: if(src[1] < 0x80 || src[1] > 0x8F) return 0; break;
+		}
+		// check the third byte
+		if(c >= 3 && (src[2] < 0x80 || src[2] > 0xBF)) return 0;
+		// check the forth byte
+		if(c >= 4 && (src[3] < 0x80 || src[3] > 0xBF)) return 0;
+		// decode
+		switch(c) {
+		case 2:	// 110y yyyy  10zz zzzz -> 0000 0yyy yyzz zzzz
+			cp = ((src[0] & 0x1F) << 6) | ((src[1] & 0x3F) << 0); break;
+		case 3:	// 1110 xxxx  10yy yyyy  10zz zzzz -> xxxx yyyy yyzz zzzz
+			cp = ((src[0] & 0x0F) << 12) | ((src[1] & 0x3F) << 6) | ((src[2] & 0x3F) << 0); break;
+		case 4:	// 1111 0www  10xx xxxx  10yy yyyy  10zz zzzz -> 0000 0000 000w wwxx xxxx yyyy yyzz zzzz
+			cp = ((src[0] & 0x07) << 18) | ((src[1] & 0x3F) << 12) | ((src[2] & 0x3F) << 6) | ((src[3] & 0x3F) << 0); break;
+		}
+		return c;
 	}
 
-	return bytes;
-}
-
-/**
- *	UTF-16 文字を UTF-8 に変換 (代替: @c WideCharToMultiByte)
- *	@param dest	変換後の文字へのポインタ
- *	@param src	変換する文字へのポインタ
- *	@param len	変換する文字のバイト長さ
- *	@return		変換後の文字のバイト長さ。0だと失敗
- */
-inline size_t encodeUnicodeCharToUTF8(uchar* dest, const wchar_t* src, size_t len) {
-	assert(dest != 0 && len != 0);
-
-	const CodePoint cp = surrogates::decodeFirst(src, src + len);
-
-	if(cp <= 0x0000007F) {	// 1バイト文字
-		// 0000 0000  0zzz zzzz -> 0zzz zzzz
-		dest[0] = BIT8_MASK(cp);
-		return 1;
-	} else if(cp <= 0x000007FF) {	// 2バイト文字
-		// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
-		dest[0] = 0xC0 | BIT8_MASK(cp >> 6);
-		dest[1] = 0x80 | BIT8_MASK(cp & 0x003F);
-		return 2;
-	} else if(cp <= 0x0000FFFF) {	// 3バイト文字
-		// xxxx yyyy  yyzz zzzz -> 1110 xxxx  10yy yyyy  10zz zzzz
-		dest[0] = 0xE0 | BIT8_MASK((cp & 0xF000) >> 12);
-		dest[1] = 0x80 | BIT8_MASK((cp & 0x0FC0) >> 6);
-		dest[2] = 0x80 | BIT8_MASK((cp & 0x003F) >> 0);
-		return 3;
-	} else if(cp <= 0x0010FFFF) {	// 4バイト文字
-		// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
-		dest[0] = 0xF0 | BIT8_MASK((cp & 0x001C0000) >> 18);
-		dest[1] = 0x80 | BIT8_MASK((cp & 0x0003F000) >> 12);
-		dest[2] = 0x80 | BIT8_MASK((cp & 0x00000FC0) >> 6);
-		dest[3] = 0x80 | BIT8_MASK((cp & 0x0000003F) >> 0);
-		return 4;
-/*	} else if(cp <= 0x03FFFFFF) {	// 5バイト文字
-		// 0000 00vv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 10vv  10ww wwww  ...  10zz zzzz
-		dest[0] = 0xF8 | BIT8_MASK((cp & 0x03000000) >> 24);
-		dest[1] = 0x80 | BIT8_MASK((cp & 0x00FC0000) >> 18);
-		dest[2] = 0x80 | BIT8_MASK((cp & 0x0003F000) >> 12);
-		dest[3] = 0x80 | BIT8_MASK((cp & 0x00000FC0) >> 6);
-		dest[4] = 0x80 | BIT8_MASK((cp & 0x0000003F) >> 0);
-		return 5;
-	} else if(cp <= 0x7FFFFFFF) {	// 6バイト文字
-		// 0uvv vvvv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 110u  10vv vvvv  ...  10zz zzzz
-		dest[0] = 0xFC | BIT8_MASK((cp & 0x40000000) >> 30);
-		dest[1] = 0x80 | BIT8_MASK((cp & 0x3F000000) >> 24);
-		dest[2] = 0x80 | BIT8_MASK((cp & 0x00FC0000) >> 18);
-		dest[3] = 0x80 | BIT8_MASK((cp & 0x3F03F000) >> 12);
-		dest[4] = 0x80 | BIT8_MASK((cp & 0x3F000FC0) >> 6);
-		dest[5] = 0x80 | BIT8_MASK((cp & 0x3F00003F) >> 0);
-		return 6;
-*/	} else	// 不正
-		return 0;
+	/**
+	 * Transcodes the given Unicode character into UTF-8.
+	 * @param src the source buffer
+	 * @param len the length of the source buffer
+	 * @param[out] dest the destination UTF-8 buffer
+	 * @return the number of bytes written to @a dest, or 0 if @a src is invalid
+	 */
+	inline size_t encodeUTF8Character(const wchar_t* src, size_t len, uchar* dest) throw() {
+		assert(dest != 0 && len > 0);
+		const CodePoint cp = surrogates::decodeFirst(src, src + len);
+		if(cp <= 0x007F) {	// 0000 0000  0zzz zzzz -> 0zzz zzzz
+			dest[0] = BIT8_MASK(cp);
+			return 1;
+		} else if(cp <= 0x07FF) {	// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
+			dest[0] = 0xC0 | BIT8_MASK(cp >> 6);
+			dest[1] = 0x80 | BIT8_MASK(cp & 0x003F);
+			return 2;
+		} else if(cp <= 0xFFFF) {	// xxxx yyyy  yyzz zzzz -> 1110 xxxx  10yy yyyy  10zz zzzz
+			dest[0] = 0xE0 | BIT8_MASK((cp & 0xF000) >> 12);
+			dest[1] = 0x80 | BIT8_MASK((cp & 0x0FC0) >> 6);
+			dest[2] = 0x80 | BIT8_MASK((cp & 0x003F) >> 0);
+			return 3;
+		} else if(cp <= 0x10FFFF) {	// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
+			dest[0] = 0xF0 | BIT8_MASK((cp & 0x001C0000) >> 18);
+			dest[1] = 0x80 | BIT8_MASK((cp & 0x0003F000) >> 12);
+			dest[2] = 0x80 | BIT8_MASK((cp & 0x00000FC0) >> 6);
+			dest[3] = 0x80 | BIT8_MASK((cp & 0x0000003F) >> 0);
+			return 4;
+/*		} else if(cp <= 0x03FFFFFF) {	// 0000 00vv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 10vv  10ww wwww  ...  10zz zzzz
+			dest[0] = 0xF8 | BIT8_MASK((cp & 0x03000000) >> 24);
+			dest[1] = 0x80 | BIT8_MASK((cp & 0x00FC0000) >> 18);
+			dest[2] = 0x80 | BIT8_MASK((cp & 0x0003F000) >> 12);
+			dest[3] = 0x80 | BIT8_MASK((cp & 0x00000FC0) >> 6);
+			dest[4] = 0x80 | BIT8_MASK((cp & 0x0000003F) >> 0);
+			return 5;
+		} else if(cp <= 0x7FFFFFFF) {	// 0uvv vvvv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 110u  10vv vvvv  ...  10zz zzzz
+			dest[0] = 0xFC | BIT8_MASK((cp & 0x40000000) >> 30);
+			dest[1] = 0x80 | BIT8_MASK((cp & 0x3F000000) >> 24);
+			dest[2] = 0x80 | BIT8_MASK((cp & 0x00FC0000) >> 18);
+			dest[3] = 0x80 | BIT8_MASK((cp & 0x3F03F000) >> 12);
+			dest[4] = 0x80 | BIT8_MASK((cp & 0x3F000FC0) >> 6);
+			dest[5] = 0x80 | BIT8_MASK((cp & 0x3F00003F) >> 0);
+			return 6;
+*/		} else	// illegal
+			return 0;
+	}
 }
 
 size_t Encoder_Unicode_Utf8::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
-
 	size_t j = 0, converted;
 	for(size_t i = 0; i < srcLength; ++i) {
-		converted = encodeUnicodeCharToUTF8(dest + j, src + i, srcLength - i);
+		converted = encodeUTF8Character(src + i, srcLength - i, dest + j);
 		if(converted == 0)
 			dest[j++] = BIT8_MASK(src[i]);
 		else {
@@ -651,9 +593,9 @@ size_t Encoder_Unicode_Utf8::toUnicode(CTU_ARGLIST) {
 	size_t j = 0, decoded;
 	CodePoint cp;
 	for(size_t i = (srcLength > 2 && memcmp(src, UTF8_BOM, 3) == 0) ? 3 : 0; i < srcLength && j < destLength; i += decoded) {
-		decoded = decodeUTF8CharToUnicode(cp, reinterpret_cast<const uchar*>(src + i), srcLength - i);
+		decoded = decodeUTF8Character(reinterpret_cast<const uchar*>(src + i), srcLength - i, cp);
 		if(decoded == 0) {
-			dest[j] = src[i];
+			CONFIRM_ILLEGAL_CHAR(dest[i]);
 			++j;
 			decoded = 1;
 		} else {

@@ -24,6 +24,7 @@ using namespace manah::com;
 using namespace std;
 
 
+const Position Position::ZERO_POSITION(0, 0);
 const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
 
 namespace {
@@ -1105,7 +1106,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	clearUndoBuffer();
 	setModified(false);
 	onceUndoBufferCleared_ = false;
-	fireDocumentChanged(DocumentChange(false, Region(Position(0, 0), getEndPosition())), false);
+	fireDocumentChanged(DocumentChange(false, Region(Position::ZERO_POSITION, getEndPosition())), false);
 	if(toBoolean(attributes & FILE_ATTRIBUTE_READONLY))
 		setReadOnly();
 
@@ -1842,7 +1843,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIter
 // NullPartitioner //////////////////////////////////////////////////////////
 
 /// Constructor.
-NullPartitioner::NullPartitioner() throw() : p_(DEFAULT_CONTENT_TYPE, Region(Position(0, 0), Position::INVALID_POSITION)) {
+NullPartitioner::NullPartitioner() throw() : p_(DEFAULT_CONTENT_TYPE, Region(Position::ZERO_POSITION, Position::INVALID_POSITION)) {
 }
 
 /// @see DocumentPartitioner#documentAboutToBeChanged
