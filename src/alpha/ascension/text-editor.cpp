@@ -627,7 +627,7 @@ ulong LineBreakCommand::execute() {
 		if(caret.getTopPoint().getLineNumber() != 0)
 			caret.moveTo(Position(caret.getTopPoint().getLineNumber() - 1, INVALID_INDEX));
 		else
-			caret.moveTo(Position(0, 0));
+			caret.moveTo(Position::ZERO_POSITION);
 		caret.enableAutoShow(true);
 	}
 

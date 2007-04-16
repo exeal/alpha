@@ -390,7 +390,7 @@ bool EditPoint::isEndOfLine() const {
 bool EditPoint::isStartOfDocument() const {
 	verifyDocument();
 	normalize();
-	return isExcludedFromRestriction() ? getPosition() == getDocument()->getStartPosition() : getPosition() == Position(0, 0);
+	return isExcludedFromRestriction() ? getPosition() == getDocument()->getStartPosition() : getPosition() == Position::ZERO_POSITION;
 }
 
 /// Returns true if the point is the start of the line.
@@ -530,7 +530,7 @@ bool EditPoint::moveToPrevBookmark() {
 
 /// Moves to the start of the document.
 void EditPoint::moveToStartOfDocument() {
-	moveTo(Position(0, 0));
+	moveTo(Position::ZERO_POSITION);
 }
 
 /// Moves to the start of the line.

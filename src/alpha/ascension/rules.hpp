@@ -33,7 +33,7 @@ namespace ascension {
 				struct Entry;
 				Entry** entries_;
 				const std::size_t size_;
-				std::size_t maxLength_;	// 最長キーワード長さ
+				std::size_t maxLength_;	// the length of the longest keyword
 				const bool caseSensitive_;
 			};
 		} // namespace internal
@@ -211,12 +211,14 @@ namespace ascension {
 			template<typename InputIterator>
 			void	setRules(InputIterator first, InputIterator last);
 		private:
-			void		clearRules() throw();
-			void		computePartitioning(const text::Position& start, const text::Position& minimalLast, text::Region& changedRegion);
-			void		dump() const;
-			std::size_t	findClosestPartitionIndex(const text::Position& at) const throw();
-			length_t	tryTransition(const String& line, length_t column,
-							text::ContentType contentType, text::ContentType& destination) const throw();
+			void				clearRules() throw();
+			void				computePartitioning(const text::Position& start,
+									const text::Position& minimalLast, text::Region& changedRegion);
+			void				dump() const;
+			std::size_t			findClosestPartition(const text::Position& at) const throw();
+			text::ContentType	getTransitionStateAt(const text::Position& at) const throw();
+			length_t			tryTransition(const String& line, length_t column,
+									text::ContentType contentType, text::ContentType& destination) const throw();
 			// DocumentPartitioner
 			void	documentAboutToBeChanged() throw();
 			void	documentChanged(const text::DocumentChange& change) throw();

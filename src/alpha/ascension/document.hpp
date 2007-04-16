@@ -90,13 +90,14 @@ namespace ascension {
 		/**
 		 * @c Position represents a position in the document by a line number and distance from start of line.
 		 * @note This class is not derivable.
-		 * @see Point, EditPoint, viewers#VisualPoint, viewers#Caret
+		 * @see Region, Point, EditPoint, viewers#VisualPoint, viewers#Caret
 		 */
 		class Position : public manah::FastArenaObject<Position> {
 		public:
 			length_t line;		///< Line number.
 			length_t column;	///< Position in the line.
-			static const Position INVALID_POSITION;	///< Unused or invalid position
+			static const Position ZERO_POSITION;	///< A position whose line and column number are zero.
+			static const Position INVALID_POSITION;	///< Unused or invalid position.
 		public:
 			/// Constructor.
 			explicit Position(length_t lineNumber = 0, length_t columnNumber = 0) throw() : line(lineNumber), column(columnNumber) {}
@@ -1165,7 +1166,7 @@ inline const texteditor::Session* Document::getSession() const throw() {return s
  * @see #getEndPosition
  */
 inline Position Document::getStartPosition(bool accessibleArea /* = true */) const throw() {
-	return (accessibleArea && accessibleArea_ != 0) ? accessibleArea_->first : Position(0, 0);}
+	return (accessibleArea && accessibleArea_ != 0) ? accessibleArea_->first : Position::ZERO_POSITION;}
 
 /// ...
 inline std::size_t Document::getUndoHistoryLength(bool redo /* = false */) const throw() {
@@ -1322,7 +1323,7 @@ inline void Document::setUnexpectedFileTimeStampDirector(IUnexpectedFileTimeStam
  * @param lbr the line break to be used
  */
 inline void Document::writeToStream(OutputStream& out, LineBreakRepresentation lbr /* = LBP_PHYSICAL_DATA */) const {
-	writeToStream(out, Region(Position(0, 0), Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1))), lbr);}
+	writeToStream(out, Region(Position::ZERO_POSITION, Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1))), lbr);}
 
 
 /**
