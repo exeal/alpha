@@ -631,7 +631,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	autoScrollOriginMark_->create(*this);
 
 	setMouseInputStrategy(0, true);
-/*
+
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
 	vrc.indicatorMargin.visible = true;
@@ -640,19 +640,21 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	vrc.lineNumbers.borderStyle = VerticalRulerConfiguration::LineNumbers::DOTTED;
 	vrc.lineNumbers.borderWidth = 1;
 	setConfiguration(0, &vrc);
-*/
+
 #if 1
 	// partitioning test
 	using namespace rules;
-	TransitionRule* rules[4];
+	TransitionRule* rules[10];
 	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");		// C++ multi-line comment open
 	rules[1] = new LiteralTransitionRule(42, DEFAULT_CONTENT_TYPE, L"*/");		// C++ multi-line comment close
 	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");		// C++ single-line comment open
 	rules[3] = new LiteralTransitionRule(43, DEFAULT_CONTENT_TYPE, L"", L'\\');	// C++ single-line comment close
-//	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
-//	rules[5] = new RegexTransitionRule(44, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\"|$)");
-//	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
-//	rules[7] = new RegexTransitionRule(45, DEFAULT_CONTENT_TYPE, L"((?<!\\\\)\'|$)");
+	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
+	rules[5] = new LiteralTransitionRule(44, DEFAULT_CONTENT_TYPE, L"\"", L'\\');
+	rules[6] = new LiteralTransitionRule(44, DEFAULT_CONTENT_TYPE, L"");
+	rules[7] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
+	rules[8] = new LiteralTransitionRule(45, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
+	rules[9] = new LiteralTransitionRule(45, DEFAULT_CONTENT_TYPE, L"");
 	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
 	p->setRules(rules, endof(rules));
 	getDocument().setPartitioner(p);
@@ -686,8 +688,22 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 			for(size_t i = 0; i < styles->count; ++i) {
 				StyledText& st = styles->array[i];
 				st.column = ps[i].region.getTop().column;
-				st.style.color.foreground = (ps[i].contentType != DEFAULT_CONTENT_TYPE) ? RGB(0x00, 0x66, 0x00) : STANDARD_COLOR;
-				st.style.color.background = (ps[i].contentType != DEFAULT_CONTENT_TYPE) ? RGB(0xCC, 0xFF, 0xCC) : STANDARD_COLOR;
+				switch(ps[i].contentType) {
+				case 42:
+				case 43:
+					st.style.color.foreground = RGB(0x00, 0x66, 0x00);
+					st.style.color.background = RGB(0xEE, 0xFF, 0xEE);
+					break;
+				case 44:
+				case 45:
+					st.style.color.foreground = RGB(0x00, 0x00, 0x66);
+					st.style.color.background = RGB(0xEE, 0xEE, 0xFF);
+					break;
+				default:
+					st.style.color.foreground = STANDARD_COLOR;
+					st.style.color.background = STANDARD_COLOR;
+					break;
+				}
 			}
 			return *styles;
 		}
@@ -712,18 +728,18 @@ void TextViewer::doBeep() throw() {
 	::MessageBeep(MB_OK);
 }
 
-/// @see Document#IStateListener#documentAccessibleRegionChanged
+/// @see text#IDocumentStateListener#documentAccessibleRegionChanged
 void TextViewer::documentAccessibleRegionChanged(Document& document) {
 	if(getDocument().isNarrowed())
 		scrollTo(-1, -1, false);
 	invalidateRect(0, false);
 }
 
-/// @see Document#IListener#documentAboutToBeChanged
+/// @see text#IDocumentListener#documentAboutToBeChanged
 void TextViewer::documentAboutToBeChanged(const Document&) {
 }
 
-/// @see Document#IListener#documentChanged
+/// @see text#IDocumentListener#documentChanged
 void TextViewer::documentChanged(const Document& document, const DocumentChange& change) {
 	// インクリメンタル検索中であればやめさせる
 	if(texteditor::Session* session = getDocument().getSession()) {
@@ -759,36 +775,36 @@ void TextViewer::documentChanged(const Document& document, const DocumentChange&
 		updateScrollBars();
 }
 
-/// @see text#Document#IDocumentStateListener#documentEncodingChanged
+/// @see text#IDocumentStateListener#documentEncodingChanged
 void TextViewer::documentEncodingChanged(Document& document) {
 }
 
-/// @see text#Document#IDocumentStateListener#documentFileNameChanged
+/// @see text#IDocumentStateListener#documentFileNameChanged
 void TextViewer::documentFileNameChanged(Document& document) {
 }
 
-/// @see text#Document#IDocumentStateListener#documentModificationSignChanged
+/// @see text#IDocumentStateListener#documentModificationSignChanged
 void TextViewer::documentModificationSignChanged(Document& document) {
 }
 
-/// @see text#Document#IDocumentStateListener#documentReadOnlySignChanged
+/// @see text#IDocumentStateListener#documentReadOnlySignChanged
 void TextViewer::documentReadOnlySignChanged(Document& document) {
 }
 
-/// @see text#Document#ISequentialEditListener#documentSequentialEditStarted
+/// @see text#ISequentialEditListener#documentSequentialEditStarted
 void TextViewer::documentSequentialEditStarted(Document& document) {
 }
 
-/// @see text#Document#ISequentialEditListener#documentSequentialEditStopped
+/// @see text#ISequentialEditListener#documentSequentialEditStopped
 void TextViewer::documentSequentialEditStopped(Document& document) {
 }
 
-/// @see text#Document#ISequentialEditListener#documentUndoSequenceStarted
+/// @see text#ISequentialEditListener#documentUndoSequenceStarted
 void TextViewer::documentUndoSequenceStarted(Document& document) {
 	freeze(false);
 }
 
-/// @see text#Document#ISequentialEditListener#documentUndoSequenceStopped
+/// @see text#ISequentialEditListener#documentUndoSequenceStopped
 void TextViewer::documentUndoSequenceStopped(Document& document, const Position& resultPosition) {
 	unfreeze(false);
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
@@ -3136,7 +3152,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(memoryDC_.get() == 0)
 		memoryDC_ = viewer_.getDC().createCompatibleDC();
 	if(memoryBitmap_.getHandle() == 0)
-		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc, imWidth, clientRect.bottom - clientRect.top);
+		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc, getWidth(), clientRect.bottom - clientRect.top);
 	memoryDC_->selectObject(memoryBitmap_.getHandle());
 	DC& dcex = *memoryDC_;
 	const int left = 0;
@@ -3193,8 +3209,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 			dcex.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_RIGHT:
-			lineNumbersX = (alignLeft ?
-				right - configuration_.lineNumbers.trailingMargin : right - imWidth - configuration_.lineNumbers.leadingMargin);
+			lineNumbersX = alignLeft ?
+				right - configuration_.lineNumbers.trailingMargin : right - imWidth - configuration_.lineNumbers.leadingMargin;
 			dcex.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_CENTER:	// 中央揃えなんて誰も使わんと思うけど...
@@ -3240,7 +3256,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - getWidth(), paintRect.top, right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, 0, SRCCOPY);
+	dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - getWidth(), paintRect.top,
+		right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, paintRect.top, SRCCOPY);
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 
 	dc.restore(savedCookie);

@@ -237,7 +237,6 @@ namespace ascension {
 			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
-			text::Position eofBeforeDocumentChange_;	// ドキュメント変更前の終端位置 (documentAboutToBeChanged で記憶)
 		};
 
 

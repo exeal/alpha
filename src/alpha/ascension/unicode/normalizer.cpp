@@ -251,7 +251,7 @@ namespace {
 	 * @return the length of the decomposition
 	 */
 	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
-		Char* last = destination + surrogates::encode(c, destination);
+		Char* last = destination + (surrogates::encode(c, destination) < 2 ? 1 : 2);
 		length_t len;
 		CodePoint current;
 		Char decomposedHangul[4];

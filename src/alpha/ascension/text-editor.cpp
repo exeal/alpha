@@ -224,14 +224,14 @@ ulong CharacterCodePointConversionCommand::execute() {
 			wcsncpy(buffer, line + i, column - i);
 			buffer[column - i] = 0;
 			cp = wcstoul(buffer, 0, 16);
-			if(cp < 0x110000) {
+			if(isValidCodePoint(cp)) {
 				buffer[1] = buffer[2] = 0;
 				surrogates::encode(cp, buffer);
 				if(i >= 2 && line[i - 1] == L'+' && (line[i - 2] == L'U' || line[i - 2] == L'u'))
 					i -= 2;
 				viewer.freeze();
 				caret.select(Position(bottom.getLineNumber(), i), bottom);
-				caret.replaceSelection(buffer, buffer + (cp < 0x10000 ? 1 : 2), false);
+				caret.replaceSelection(buffer, buffer + (cp < 0x10000U ? 1 : 2), false);
 				viewer.unfreeze();
 				return 0;
 			}
