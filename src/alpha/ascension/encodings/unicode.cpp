@@ -69,8 +69,8 @@ size_t Encoder_Unicode_Utf16LE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 1 < destLength; ++i) {
-		dest[j++] = (src[i] & 0x00FF) >> 0;
-		dest[j++] = (src[i] & 0xFF00) >> 8;
+		dest[j++] = (src[i] & 0x00FFU) >> 0;
+		dest[j++] = (src[i] & 0xFF00U) >> 8;
 	}
 	return j;
 }
@@ -92,8 +92,8 @@ size_t Encoder_Unicode_Utf16BE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 1 < destLength; ++i) {
-		dest[j++] = (src[i] & 0xFF00) >> 8;
-		dest[j++] = (src[i] & 0x00FF) >> 0;
+		dest[j++] = (src[i] & 0xFF00U) >> 8;
+		dest[j++] = (src[i] & 0x00FFU) >> 0;
 	}
 	return j;
 }
@@ -118,10 +118,10 @@ size_t Encoder_Unicode_Utf32LE::fromUnicode(CFU_ARGLIST) {
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 3 < destLength; ++i) {
 		const CodePoint cp = surrogates::decodeFirst(src + i, src + srcLength);
-		dest[j++] = BIT8_MASK((cp & 0x000000FF) >> 0);
-		dest[j++] = BIT8_MASK((cp & 0x0000FF00) >> 8);
-		dest[j++] = BIT8_MASK((cp & 0x00FF0000) >> 16);
-		dest[j++] = BIT8_MASK((cp & 0xFF000000) >> 24);
+		dest[j++] = BIT8_MASK((cp & 0x000000FFU) >> 0);
+		dest[j++] = BIT8_MASK((cp & 0x0000FF00U) >> 8);
+		dest[j++] = BIT8_MASK((cp & 0x00FF0000U) >> 16);
+		dest[j++] = BIT8_MASK((cp & 0xFF000000U) >> 24);
 
 		if(cp > 0xFFFF)
 			++i;
@@ -135,6 +135,8 @@ size_t Encoder_Unicode_Utf32LE::toUnicode(CTU_ARGLIST) {
 	size_t j = 0;
 	for(size_t i = 0; i + 3 < srcLength && j < destLength; i += 4) {
 		const CodePoint cp = src[i] + (src[i + 1] << 8) + (src[i + 2] << 16) + (src[i + 3] << 24);
+		if(!isValidCodePoint(cp))
+			CONFIRM_ILLEGAL_CHAR(dest[j]);
 		j += surrogates::encode(cp, dest + j);
 	}
 	return j;
@@ -150,10 +152,10 @@ size_t Encoder_Unicode_Utf32BE::fromUnicode(CFU_ARGLIST) {
 	for(size_t i = 0; i < srcLength && j + 3 < destLength; ++i) {
 		const CodePoint cp = surrogates::decodeFirst(src + i, src + srcLength);
 
-		dest[j++] = BIT8_MASK((cp & 0xFF000000) >> 24);
-		dest[j++] = BIT8_MASK((cp & 0x00FF0000) >> 16);
-		dest[j++] = BIT8_MASK((cp & 0x0000FF00) >> 8);
-		dest[j++] = BIT8_MASK((cp & 0x000000FF) >> 0);
+		dest[j++] = BIT8_MASK((cp & 0xFF000000U) >> 24);
+		dest[j++] = BIT8_MASK((cp & 0x00FF0000U) >> 16);
+		dest[j++] = BIT8_MASK((cp & 0x0000FF00U) >> 8);
+		dest[j++] = BIT8_MASK((cp & 0x000000FFU) >> 0);
 
 		if(cp > 0xFFFF)
 			++i;
@@ -167,6 +169,8 @@ size_t Encoder_Unicode_Utf32BE::toUnicode(CTU_ARGLIST) {
 	size_t j = 0;
 	for(size_t i = 0; i + 3 < srcLength && j < destLength; i += 4) {
 		const CodePoint cp = src[i + 3] + (src[i + 2] << 8) + (src[i + 1] << 16) + (src[i] << 24);
+		if(!isValidCodePoint(cp))
+			CONFIRM_ILLEGAL_CHAR(dest[j]);
 		j += surrogates::encode(cp, dest + j);
 	}
 	return j;

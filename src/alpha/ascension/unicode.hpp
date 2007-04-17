@@ -32,15 +32,15 @@ namespace ascension {
 	/**
 	 * Provides stuffs implement some of the Unicode standard. This includes:
 	 * - @c Normalizer class implements <a href="http://www.unicode.org/reports/tr15/">UAX #15:
-	 *   Unicode Normalization Forms</a>
+	 *   Unicode Normalization Forms</a>.
 	 * - @c BreakIterator class implements <a href="http://www.unicode.org/reports/tr29/">UAX #29:
-	 *   Text Boundary</a>
+	 *   Text Boundary</a>.
 	 * - @c IdentifierSyntax class implements <a href="http://www.unicode.org/reports/tr31/">UAX
-	 *   #31: Identifier and Pattern Syntax</a>
+	 *   #31: Identifier and Pattern Syntax</a>.
 	 * - @c Collator class implements <a href="http://www.unicode.org/reports/tr10/">UTS #10:
-	 * Unicode Collation Algorithm</a>
-	 * - @c surrogates namespace contains functions to handle UTF-16 surrogate pairs
-	 * - Unicode properties
+	 * Unicode Collation Algorithm</a>.
+	 * - @c surrogates namespace provides functions to handle UTF-16 surrogate pairs.
+	 * - Unicode properties.
 	 * @see ASCENSION_UNICODE_VERSION
 	 */
 	namespace unicode {
@@ -52,22 +52,22 @@ namespace ascension {
 		namespace surrogates {
 			/**
 			 * Returns if the specified code unit is high (leading)-surrogate.
-			 * @param ch the code unit
-			 * @return true if @a ch is high-surrogate
+			 * @param cp the code point
+			 * @return true if @a cp is high-surrogate
 			 */
-			inline bool isHighSurrogate(Char ch) throw() {return (ch & 0xFC00U) == 0xD800U;}
+			inline bool isHighSurrogate(CodePoint cp) throw() {return (cp & 0xFFFFFC00U) == 0xD800U;}
 			/**
 			 * Returns if the specified code unit is low (trailing)-surrogate.
-			 * @param ch the code unit
-			 * @return true if @a ch is low-surrogate
+			 * @param cp the code point
+			 * @return true if @a cp is low-surrogate
 			 */
-			inline bool isLowSurrogate(Char ch) throw() {return (ch & 0xFC00U) == 0xDC00U;}
+			inline bool isLowSurrogate(CodePoint cp) throw() {return (cp & 0xFFFFFC00U) == 0xDC00U;}
 			/**
 			 * Returns if the specified code unit is surrogate.
-			 * @param ch the code unit
-			 * @return true if @a ch is surrogate
+			 * @param cp the code point
+			 * @return true if @a cp is surrogate
 			 */
-			inline bool isSurrogate(Char ch) throw() {return (ch & 0xF800U) == 0xD800U;}
+			inline bool isSurrogate(CodePoint cp) throw() {return (cp & 0xFFFFF800U) == 0xD800U;}
 			/**
 			 * Returns high (leading)-surrogate for the specified code point.
 			 * @note If @a cp is in BMP, the behavior is undefined.
@@ -81,7 +81,7 @@ namespace ascension {
 			 * @param cp the code point
 			 * @return the low-surrogate code unit for @a cp
 			 */
-			inline Char getLowSurrogate(CodePoint cp) throw() {return static_cast<Char>(cp & 0x03FF) | 0xDC00U;}
+			inline Char getLowSurrogate(CodePoint cp) throw() {return static_cast<Char>(cp & 0x03FFU) | 0xDC00U;}
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
 			 * @param high the high-surrogate
@@ -89,7 +89,7 @@ namespace ascension {
 			 * @return the code point or the value of @a high if the pair is not valid
 			 */
 			inline CodePoint decode(Char high, Char low) throw() {
-				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000 + (high - 0xD800) * 0x400 + low - 0xDC00 : high;}
+				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000U + (high - 0xD800U) * 0x0400U + low - 0xDC00U : high;}
 			/**
 			 * Converts the first surrogate pair in the given character sequence to the corresponding code point.
 			 * @param first the start of the UTF-16 character sequence
@@ -112,16 +112,17 @@ namespace ascension {
 			 * Converts the specified code point to a corresponding surrogate pair.
 			 * @param cp the code point
 			 * @param[out] dest the surrogate pair
+			 * @retval 0 @a cp is a surrogate. in this case, @a dest[0] will be @a cp
 			 * @retval 1 @a cp is in BMP
 			 * @retval 2 @a cp is out of BMP
 			 * @throw std#invalid_argument @a cp can't be expressed by UTF-16
 			 */
 			template<typename OutputIterator>
 			inline length_t encode(CodePoint cp, OutputIterator dest) {
-				if(cp < 0x00010000) {
-					*dest = static_cast<Char>(cp & 0xFFFF);
-					return 1;
-				} else if(cp <= 0x0010FFFF) {
+				if(cp < 0x00010000U) {
+					*dest = static_cast<Char>(cp & 0xFFFFU);
+					return !isSurrogate(cp) ? 1 : 0;
+				} else if(cp <= 0x0010FFFFU) {
 					*dest = getHighSurrogate(cp);
 					*++dest = getLowSurrogate(cp);
 					return 2;
@@ -168,6 +169,12 @@ namespace ascension {
 				return first;
 			}
 		} // namespace surrogates
+
+		/// Returns true if the specified code point is in Unicode codespace (0..10FFFF).
+		inline bool isValidCodePoint(CodePoint cp) throw() {return cp <= 0x10FFFFU;}
+
+		/// Returns true if the specified code point is Unicode scalar value.
+		inline bool isScalarValue(CodePoint cp) throw() {return isValidCodePoint(cp) && !surrogates::isSurrogate(cp);}
 
 		class CharacterIterator {
 		public:
@@ -415,14 +422,14 @@ namespace ascension {
 			/// Assignment operator.
 			UTF32To16Iterator& operator=(const UTF32To16Iterator& rhs) {p_ = rhs.p_; high_ = rhs.high_;}
 		  	/// Implements decrement operators.
-			void decrement() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000;}}
+			void decrement() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000U;}}
 			/// Implements dereference operator.
-			Char dereference() const {if(*p_ < 0x10000) return static_cast<Char>(*p_ & 0xFFFF);
+			Char dereference() const {if(*p_ < 0x10000U) return static_cast<Char>(*p_ & 0xFFFFU);
 				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
 			/// Implements equality operator.
 			bool equals(const UTF32To16Iterator& rhs) const {return p_ == rhs.p_ && high_ == rhs.high_;}
 			/// Implements increment operators.
-			void increment() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000) ++p_; else high_ = false;}
+			void increment() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000U) ++p_; else high_ = false;}
 			/// Implements relational operatora.
 			bool isLessThan(const UTF32To16Iterator<BaseIterator>& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && high_ && !rhs.high_);}
 			/// Returns the current position.
@@ -435,16 +442,16 @@ namespace ascension {
 
 		/// Case sensitivities for caseless-match.
 		enum CaseSensitivity {
-			CASE_SENSITIVE,							/// Case-sensitive.
-			CASE_INSENSITIVE,						/// Case-insensitive.
-			CASE_INSENSITIVE_EXCLUDING_TURKISH_I	/// Case-insensitive and excludes Turkish I.
+			CASE_SENSITIVE,							///< Case-sensitive.
+			CASE_INSENSITIVE,						///< Case-insensitive.
+			CASE_INSENSITIVE_EXCLUDING_TURKISH_I	///< Case-insensitive and excludes Turkish I.
 		};
 
 		/// Types of decomposition mapping.
 		enum Decomposition {
-			NO_DECOMPOSITION,			/// No decomposition.
-			CANONICAL_DECOMPOSITION,	/// Canonical decomposition mapping.
-			FULL_DECOMPOSITION			/// Canonical and compatibility mapping.
+			NO_DECOMPOSITION,			///< No decomposition.
+			CANONICAL_DECOMPOSITION,	///< Canonical decomposition mapping.
+			FULL_DECOMPOSITION			///< Canonical and compatibility mapping.
 		};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -1029,13 +1036,13 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 		c = *i;
 		if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 			f = foldCommon(c);
-		if(f != c || c >= 0x010000) {
-			if(surrogates::encode(f, buffer) == 1)	s.sputc(buffer[0]);
+		if(f != c || c >= 0x010000U) {
+			if(surrogates::encode(f, buffer) < 2)	s.sputc(buffer[0]);
 			else									s.sputn(buffer, 2);
 		} else {
-			const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+			const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFFU));
 			if(*p == c)	s.sputn(FULL_FOLDED[p - FULL_CASED], static_cast<streamsize>(wcslen(FULL_FOLDED[p - FULL_CASED])));
-			else		s.sputc(static_cast<Char>(c & 0xFFFF));
+			else		s.sputc(static_cast<Char>(c & 0xFFFFU));
 		}
 	}
 	return s.str();
@@ -1051,15 +1058,15 @@ inline String CaseFolder::fold(const String& text, bool excludeTurkishI /* = fal
 	return fold(text.data(), text.data() + text.length(), excludeTurkishI);}
 
 inline CodePoint CaseFolder::foldCommon(CodePoint c) throw() {
-	if(c < 0x010000) {	// BMP
-		const Char* const p = std::lower_bound(COMMON_CASED, COMMON_CASED + NUMBER_OF_COMMON_CASED, static_cast<Char>(c & 0xFFFF));
+	if(c < 0x010000U) {	// BMP
+		const Char* const p = std::lower_bound(COMMON_CASED, COMMON_CASED + NUMBER_OF_COMMON_CASED, static_cast<Char>(c & 0xFFFFU));
 		return (*p == c) ? COMMON_FOLDED[p - COMMON_CASED] : c;
-	} else if(c >= 0x010400 && c < 0x010428)	// Only Deseret is cased in out of BMP (Unicode 5.0).
-		c += 0x000028;
+	} else if(c >= 0x010400U && c < 0x010428U)	// Only Deseret is cased in out of BMP (Unicode 5.0).
+		c += 0x000028U;
 	return c;
 }
 
-inline CodePoint CaseFolder::foldTurkishI(CodePoint c) throw() {if(c == 0x0049) c = 0x0131; else if(c == 0x0130) c = 0x0069; return c;}
+inline CodePoint CaseFolder::foldTurkishI(CodePoint c) throw() {if(c == 0x0049U) c = 0x0131U; else if(c == 0x0130U) c = 0x0069U; return c;}
 
 }} // namespace ascension.unicode
 

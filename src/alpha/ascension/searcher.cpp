@@ -552,8 +552,8 @@ bool IncrementalSearcher::addCharacter(Char ch) {
 bool IncrementalSearcher::addCharacter(CodePoint cp) {
 	if(!isRunning())
 		throw NotRunningException();
-	if(cp < 0x010000)
-		return addCharacter(static_cast<Char>(cp & 0xFFFF));
+	if(cp < 0x010000U)
+		return addCharacter(static_cast<Char>(cp & 0xFFFFU));
 	Char surrogates[2];
 	surrogates::encode(cp, surrogates);
 	return addString(surrogates, surrogates + 2);

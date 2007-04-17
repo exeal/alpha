@@ -552,7 +552,6 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 
 /// @see text#DocumentPartitioner#documentAboutToBeChanged
 void LexicalPartitioner::documentAboutToBeChanged() throw() {
-	eofBeforeDocumentChange_ = getDocument()->getEndPosition(false);
 }
 
 /// @see text#DocumentPartitioner#documentChanged
@@ -574,10 +573,12 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	// locate the last partition to delete
 	const Position& e = change.isDeletion() ? affectedEnd : change.getRegion().getTop();
 	size_t predeletedLast = findClosestPartition(e) + 1;	// exclusive
-	if(partitions_[predeletedLast - 1]->start == affectedEnd)
-		--predeletedLast;
-	else if(predeletedLast < partitions_.getSize() && partitions_[predeletedLast]->tokenStart < affectedEnd)
+	if(predeletedLast < partitions_.getSize() && partitions_[predeletedLast]->tokenStart < affectedEnd)
 		++predeletedLast;
+//	else if(partitions_[predeletedLast - 1]->start == affectedEnd)
+//		--predeletedLast;
+	ContentType affectedEndContentType =
+		getTransitionStateAt((predeletedLast < partitions_.getSize()) ? partitions_[predeletedLast]->start : eof);
 	if(predeletedLast > predeletedFirst)
 		partitions_.erase(predeletedFirst, predeletedLast - predeletedFirst);
 
@@ -615,7 +616,6 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	const String* line = &document.getLine(p.tell().line);
 	size_t partition = findClosestPartition(p.tell());
 	ContentType contentType = partitions_[partition]->contentType, destination;
-	ContentType affectedEndContentType = getTransitionStateAt(affectedEnd);
 	while(true) {	// scan and tokenize into partitions...
 		// if reached the end of the affected region and content types are same, we are done
 		if(p.tell() == eof || (p.tell() == affectedEnd && contentType == affectedEndContentType))
@@ -642,21 +642,17 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 		if(tokenLength == 0 && (++p).tell().column == 0)
 			line = &document.getLine(p.tell().line);
 		// if over the end of the affect region, erase overriden and update affectedEnd
-		if(partition < partitions_.getSize() - 1 && p.tell() > partitions_[partition]->tokenStart) {
+		if(partition < partitions_.getSize() - 1 && p.tell() > partitions_[partition + 1]->tokenStart) {
 			size_t deletedLast = findClosestPartition(p.tell()) + 1;	// exclusive
 			if(p.tell() == partitions_[deletedLast - 1]->start)
 				--deletedLast;
 			else if(deletedLast < partitions_.getSize() && partitions_[deletedLast]->tokenStart < p.tell())
 				++deletedLast;
 			if(deletedLast > partition + 1) {
+				// obtain information at the affected end before delete
+				affectedEnd = (deletedLast < partitions_.getSize()) ? partitions_[deletedLast]->start : eof;
+				affectedEndContentType = getTransitionStateAt(affectedEnd);
 				partitions_.erase(partition + 1, deletedLast - partition - 1);
-				if(partition + 1 < partitions_.getSize()) {
-					affectedEnd = partitions_[partition + 1]->start;
-					affectedEndContentType = partitions_[partition]->contentType;
-				} else {
-					affectedEnd = eof;
-					affectedEndContentType = partitions_[partitions_.getSize() - 1]->contentType;	// unused...
-				}
 			}
 		}
 	}
