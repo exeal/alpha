@@ -110,12 +110,6 @@ namespace ascension {
 
 		namespace internal {struct Run;}
 
-		/**
-		 * @c LineLayout represents a layout of styled line text. Provides support for drawing,
-		 * cursor navigation, hit testing, text wrapping, etc.
-		 * @note This class is underivable.
-		 * @see TextRenderer#getLineLayout
-		 */
 		class LineLayout : public manah::Noncopyable {
 		public:
 			/// Edge of a character.
@@ -300,58 +294,67 @@ namespace ascension {
 			friend class TextRenderer;
 		};
 
-		/**
-		 * Interface for objects which draw special characters.
-		 * @see TextRenderer, TextRenderer#setSpecialCharacterDrawer
-		 */
-		class ISpecialCharacterDrawer {
+		class ISpecialCharacterRenderer {
 		protected:
-			/// Context of the rendering.
-			struct Context {
-				mutable manah::win32::gdi::DC& dc;	///< the device context
-				Colors color;						///< the color
-				Orientation orientation;			///< the orientation of the character
+			/// Context of the layout.
+			struct LayoutContext {
+				mutable manah::win32::gdi::DC& dc;	///< the device context.
+				Orientation orientation;			///< the orientation of the character.
 				/// Constructor.
-				explicit Context(manah::win32::gdi::DC& deviceContext) : dc(deviceContext) {}
+				explicit LayoutContext(manah::win32::gdi::DC& deviceContext) throw() : dc(deviceContext) {}
+			};
+			/// Context of the drawing.
+			struct DrawingContext : public LayoutContext {
+				::RECT rect;	///< the bounding box to draw.
+				/// Constructor.
+				DrawingContext(manah::win32::gdi::DC& deviceContext) throw() : LayoutContext(deviceContext) {}
 			};
 			/// Destructor.
-			virtual ~ISpecialCharacterDrawer() throw() {}
+			virtual ~ISpecialCharacterRenderer() throw() {}
 		private:
 			/**
-			 * Draws an ASCII control character.
+			 * Draws the specified C0 or C1 control character.
 			 * @param context the context
-			 * @param rect the rectangle to be drawn
-			 * @param ch the ASCII control character to be drawn
+			 * @param c the code point of the character to draw
 			 */
-			virtual void drawASCIIControl(const Context& context, const ::RECT& rect, uchar ch) = 0;
+			virtual void drawControlCharacter(const DrawingContext& context, CodePoint c) const = 0;
 			/**
-			 * Draws a line terminator symbol.
+			 * Draws the specified line break indicator.
 			 * @param context the context
-			 * @param x the x-coordinate of the position
-			 * @param y the y-coordinate of the position
-			 * @param lineBreak the line break to be drawn
+			 * @param lineBreak the line break to draw
 			 */
-			virtual void drawLineTerminator(const Context& context, int x, int y, text::LineBreak lineBreak) = 0;
+			virtual void drawLineTerminatorWidth(const DrawingContext& context, text::LineBreak lineBreak) const = 0;
 			/**
-			 * Draws a line terminator symbol.
+			 * Draws the width of a line wrapping mark.
 			 * @param context the context
-			 * @param x the x-coordinate of the position
-			 * @param y the y-coordinate of the position
 			 */
-			virtual void drawLineWrappingMark(const Context& context, int x, int y) = 0;
+			virtual void drawLineWrappingMarkWidth(const DrawingContext& context) const = 0;
 			/**
-			 * Draws a substitution glyph for the specified white space character.
+			 * Draws the specified white space character.
 			 * @param context the context
-			 * @param rect the rectangle to be drawn
-			 * @param cp the code point of the white space character to be drawn
+			 * @param c the code point of the character to draw
 			 */
-			virtual void drawWhiteSpace(const Context& context, const ::RECT& rect, CodePoint cp) = 0;
+			virtual void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const = 0;
+			/**
+			 * Returns the width of the specified C0 or C1 control character.
+			 * @param context the context
+			 * @param c the code point of the character to layout
+			 * @return the width or 0 if does not render the character
+			 */
+			virtual int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const = 0;
+			/**
+			 * Returns the width of the specified line break indicator.
+			 * @param context the context
+			 * @param lineBreak the line break to layout
+			 * @return the width or 0 if does not render the indicator
+			 */
+			virtual int getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const = 0;
 			/**
 			 * Returns the width of a line wrapping mark.
-			 * @param orientation the orientation
-			 * @return the width
+			 * @param context the context
+			 * @return the width or 0 if does not render the mark
 			 */
-			virtual int getLineWrappingMarkWidth(Orientation orientation) const throw() = 0;
+			virtual int getLineWrappingMarkWidth(const LayoutContext& context) const = 0;
 			/**
 			 * Installs the drawer.
 			 * @param textRenderer the text renderer
@@ -361,14 +364,14 @@ namespace ascension {
 			virtual void uninstall() = 0;
 			friend class LineLayout;
 			friend class TextRenderer;
-			friend class ascension::internal::StrategyPointer<ISpecialCharacterDrawer>;
+			friend class ascension::internal::StrategyPointer<ISpecialCharacterRenderer>;
 		};
 
 		/**
-		 * Default implementation of @c ISpecialCharacterDrawer interface.
-		 * @c SpecialCharacterSubstitutionGlyphDrawer uses the glyphs of the specified character and renderer's primary font.
+		 * Default implementation of @c ISpecialCharacterRenderer interface.
+		 * @c RuleBasedSpecialCharacterRenderer uses the glyphs of the specified character and renderer's primary font.
 		 */
-		class SpecialCharacterSubstitutionGlyphDrawer : virtual public ISpecialCharacterDrawer {
+		class RuleBasedSpecialCharacterRenderer : virtual public ISpecialCharacterRenderer {
 		public:
 			struct SubstitutionGlyphs {
 				Char horizontalTab;			///< Horizontal tab (U+0009). Default value is '^' (U+005E).
@@ -383,16 +386,21 @@ namespace ascension {
 				Char lineWrappingMarker;	///< Sign indicates the line is wrapped. Default value is '<' (U+003C) for LTR or '>' (U+003E) for LTR.
 //				String endOfFile;			///< End of file. Default is "[EOF]".
 			};
+			RuleBasedSpecialCharacterRenderer() throw();
+			RuleBasedSpecialCharacterRenderer(const SubstitutionGlyphs& ltrGlyphs, const SubstitutionGlyphs& rtlGlyphs) throw();
 		private:
-			void	drawASCIIControl(const Context& context, const ::RECT& rect, uchar ch);
-			void	drawLineTerminator(const Context& context, int x, int y, text::LineBreak lineBreak);
-			void	drawLineWrappingMark(const Context& context, int x, int y);
-			void	drawWhiteSpace(const Context& context, const ::RECT& rect, CodePoint cp);
-			int		getLineWrappingMarkWidth(Orientation orientation) const throw();
+			void	drawControlCharacter(const DrawingContext& context, CodePoint c) const;
+			void	drawLineTerminatorWidth(const DrawingContext& context, text::LineBreak lineBreak) const;
+			void	drawLineWrappingMarkWidth(const DrawingContext& context) const;
+			void	drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
+			int		getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
+			int		getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const;
+			int		getLineWrappingMarkWidth(const LayoutContext& context) const;
 			void	install(TextRenderer& textRenderer);
 			void	uninstall();
 		private:
-			SubstitutionGlyphs glyphsForLTR_, glyphsForRTL_;
+			const TextRenderer* renderer_;
+			SubstitutionGlyphs glyphs_[2];	// [0] for LTR, [1] for RTL
 		};
 
 		/**
@@ -485,9 +493,9 @@ namespace ascension {
 			static bool	supportsComplexScript() throw();
 			// listeners and strategies
 			void						addVisualLinesListener(IVisualLinesListener& listener);
-			ISpecialCharacterDrawer*	getSpecialCharacterDrawer() const throw();
+			ISpecialCharacterRenderer*	getSpecialCharacterRenderer() const throw();
 			void						removeVisualLinesListener(IVisualLinesListener& listener);
-			void						setSpecialCharacterDrawer(ISpecialCharacterDrawer* newDrawer, bool delegateOwnership) throw();
+			void						setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 			// operation
 			void	renderLine(length_t line, manah::win32::gdi::PaintDC& dc,
 						int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
@@ -512,7 +520,7 @@ namespace ascension {
 			manah::win32::gdi::Bitmap memoryBitmap_;
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			ascension::internal::Listeners<IVisualLinesListener> visualLinesListeners_;
-			ascension::internal::StrategyPointer<ISpecialCharacterDrawer> specialCharacterDrawer_;
+			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 		};
 
 		/// @internal Clients of Ascension should not touch this.
@@ -690,9 +698,9 @@ inline length_t TextRenderer::getNumberOfSublinesOfLine(length_t line) const {
 /// Returns the number of the visual lines.
 inline length_t TextRenderer::getNumberOfVisualLines() const throw() {return numberOfVisualLines_;}
 
-/// Returns the special character drawer.
-inline ISpecialCharacterDrawer* TextRenderer::getSpecialCharacterDrawer() const throw() {
-	return const_cast<TextRenderer*>(this)->specialCharacterDrawer_.get();}
+/// Returns the special character renderer.
+inline ISpecialCharacterRenderer* TextRenderer::getSpecialCharacterRenderer() const throw() {
+	return const_cast<TextRenderer*>(this)->specialCharacterRenderer_.get();}
 
 /**
  * Removes the visual lines listener.
@@ -700,13 +708,6 @@ inline ISpecialCharacterDrawer* TextRenderer::getSpecialCharacterDrawer() const 
  * @throw std#invalid_argument @a listener is not registered
  */
 inline void TextRenderer::removeVisualLinesListener(IVisualLinesListener& listener) {visualLinesListeners_.remove(listener);}
-
-/**
- * Sets the special character drawer.
- * @param newDrawer the new drawer or @c null
- * @param delegateOwnership set true to transfer the ownership to the callee
- */
-inline void TextRenderer::setSpecialCharacterDrawer(ISpecialCharacterDrawer* newDrawer, bool delegateOwnership) throw() {specialCharacterDrawer_.reset(newDrawer, delegateOwnership);}
 
 }} // namespace ascension::viewers
 

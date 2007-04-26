@@ -9,6 +9,7 @@
 #include "command.hpp"
 #include "application.hpp"
 #include "mru-manager.hpp"
+#include "print.hpp"
 #include "about-dialog.hpp"
 #include "bookmark-dialog.hpp"
 #include "execute-command-dialog.hpp"
@@ -331,6 +332,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_FILE_EXIT:					app.getMainWindow().postMessage(WM_CLOSE); return true;
 	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
 	case CMD_FILE_CLOSEOTHERS:			return app.getBufferList().closeAll(true, true);
+	case CMD_FILE_PRINT:				printBuffer(buffer); return true;
 
 	case CMD_EDIT_DELETE:			return DeletionCommand(view, DeletionCommand::NEXT_CHARACTER).execute() == 0;
 	case CMD_EDIT_BACKSPACE:		return DeletionCommand(view, DeletionCommand::PREVIOUS_CHARACTER).execute() == 0;

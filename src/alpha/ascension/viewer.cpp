@@ -417,7 +417,6 @@ MANAH_BEGIN_WINDOW_MESSAGE_MAP(TextViewer, BaseControl)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETCURSOR)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SIZE)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_SIZING)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_STYLECHANGED)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_STYLECHANGING)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SYSCHAR)
@@ -2081,10 +2080,6 @@ void TextViewer::onSize(UINT type, int cx, int cy) {
 	}
 }
 
-/// @see WM_SIZING
-void TextViewer::onSizing(UINT side, ::RECT& rect) {
-}
-
 /// @see WM_STYLECHANGED
 void TextViewer::onStyleChanged(int type, const ::STYLESTRUCT& style) {
 	if(type == GWL_EXSTYLE
@@ -3106,13 +3101,7 @@ void TextViewer::AutoScrollOriginMark::onPaint(PaintDC& dc) {
 
 // TextViewer::VerticalRulerDrawer //////////////////////////////////////////
 
-namespace {
-	struct ABCComparer : binary_function<bool, ::ABC, ::ABC> {
-		bool operator()(const ::ABC& lhs, const ::ABC& rhs) const throw() {
-			return lhs.abcA + lhs.abcB + lhs.abcC < rhs.abcA + rhs.abcB + rhs.abcC;
-		}
-	};
-} // namespace @0
+// some methods are defined in layout.cpp
 
 /**
  * Constructor.
@@ -3122,148 +3111,7 @@ TextViewer::VerticalRulerDrawer::VerticalRulerDrawer(TextViewer& viewer) : viewe
 	recalculateWidth();
 }
 
-/**
- * Draws the vertical ruler.
- * @param dc the device context
- */
-void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
-	if(getWidth() == 0)
-		return;
-
-	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
-	const Presentation& presentation = viewer_.getPresentation();
-	const TextRenderer& renderer = viewer_.getTextRenderer();
-	::RECT clientRect;
-	viewer_.getClientRect(clientRect);
-	if((configuration_.alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + getWidth())
-			|| (configuration_.alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - getWidth()))
-		return;
-
-#ifdef _DEBUG
-	if(DIAGNOSE_INHERENT_DRAWING)
-		DumpContext() << L"ruler rect : " << paintRect.top << L" ... " << paintRect.bottom << L"\n";
-#endif /* _DEBUG */
-
-	const int savedCookie = dc.save();
-	const bool alignLeft = configuration_.alignment == ALIGN_LEFT;
-	const int imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
-
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	if(memoryDC_.get() == 0)
-		memoryDC_ = viewer_.getDC().createCompatibleDC();
-	if(memoryBitmap_.getHandle() == 0)
-		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc, getWidth(), clientRect.bottom - clientRect.top);
-	memoryDC_->selectObject(memoryBitmap_.getHandle());
-	DC& dcex = *memoryDC_;
-	const int left = 0;
-#else
-	DC& dcex = dc;
-	const int left = alignLeft ? clientRect.left : clientRect.right - getWidth();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-	const int right = left + getWidth();
-
-	// まず、描画領域全体を描いておく
-	if(configuration_.indicatorMargin.visible) {
-		// インジケータマージンの境界線と内側
-		const int borderX = alignLeft ? left + imWidth - 1 : right - imWidth;
-		HPEN oldPen = dcex.selectObject(indicatorMarginPen_.getHandle());
-		HBRUSH oldBrush = dcex.selectObject(indicatorMarginBrush_.getHandle());
-		dcex.patBlt(alignLeft ? left : borderX + 1, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
-		dcex.moveTo(borderX, paintRect.top);
-		dcex.lineTo(borderX, paintRect.bottom);
-		dcex.selectObject(oldPen);
-		dcex.selectObject(oldBrush);
-	}
-	if(configuration_.lineNumbers.visible) {
-		// 行番号の背景
-		HBRUSH oldBrush = dcex.selectObject(lineNumbersBrush_.getHandle());
-		dcex.patBlt(alignLeft ? left + imWidth : left, paintRect.top, right - imWidth, paintRect.bottom, PATCOPY);
-		// 行番号の境界線
-		if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
-			HPEN oldPen = dcex.selectObject(lineNumbersPen_.getHandle());
-			const int x = (alignLeft ? right : left + 1) - configuration_.lineNumbers.borderWidth;
-			dcex.moveTo(x, 0/*paintRect.top*/);
-			dcex.lineTo(x, paintRect.bottom);
-			dcex.selectObject(oldPen);
-		}
-		dcex.selectObject(oldBrush);
-
-		// 次の準備...
-		dcex.setBkMode(TRANSPARENT);
-		dcex.setTextColor(configuration_.lineNumbers.textColor.foreground);
-		dcex.setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
-		dcex.selectObject(viewer_.getTextRenderer().getFont());
-	}
-
-	// 行番号描画の準備
-	Alignment lineNumbersAlignment;
-	int lineNumbersX;
-	if(configuration_.lineNumbers.visible) {
-		lineNumbersAlignment = configuration_.lineNumbers.alignment;
-		if(lineNumbersAlignment == ALIGN_AUTO)
-			lineNumbersAlignment = alignLeft ? ALIGN_RIGHT : ALIGN_LEFT;
-		switch(lineNumbersAlignment) {
-		case ALIGN_LEFT:
-			lineNumbersX = alignLeft ?
-				left + imWidth + configuration_.lineNumbers.leadingMargin : left + configuration_.lineNumbers.trailingMargin + 1;
-			dcex.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
-			break;
-		case ALIGN_RIGHT:
-			lineNumbersX = alignLeft ?
-				right - configuration_.lineNumbers.trailingMargin : right - imWidth - configuration_.lineNumbers.leadingMargin;
-			dcex.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
-			break;
-		case ALIGN_CENTER:	// 中央揃えなんて誰も使わんと思うけど...
-			lineNumbersX = alignLeft ?
-				left + (imWidth + configuration_.lineNumbers.leadingMargin + getWidth() - configuration_.lineNumbers.trailingMargin) / 2
-				: right - (getWidth() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
-			dcex.setTextAlign(TA_CENTER | TA_TOP | TA_NOUPDATECP);
-			break;
-		}
-	}
-
-	// 1 行ずつ細かい描画
-	length_t line, visualSublineOffset;
-	const length_t lines = viewer_.getDocument().getNumberOfLines();
-	viewer_.mapClientYToLine(paintRect.top, &line, &visualSublineOffset);	// $friendly-access
-	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
-		++line;
-	int y = viewer_.mapLineToClientY(line, false);
-	if(y != 32767 && y != -32768) {
-		while(y < paintRect.bottom && line < lines) {
-			const LineLayout& layout = renderer.getLineLayout(line);
-			const int nextY = y + static_cast<int>(layout.getNumberOfSublines() * renderer.getLinePitch());
-			if(nextY >= paintRect.top) {
-				// 派生クラスにインジケータマージンの描画機会を与える
-				if(configuration_.indicatorMargin.visible) {
-					::RECT rect = {
-						alignLeft ? left : right - configuration_.indicatorMargin.width,
-						y, alignLeft ? left + configuration_.indicatorMargin.width : right,
-						y + renderer.getLinePitch()};
-					viewer_.drawIndicatorMargin(line, dcex, rect);
-				}
-
-				// 行番号の描画
-				if(configuration_.lineNumbers.visible) {
-					wchar_t buffer[32];
-					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
-					dcex.textOut(lineNumbersX, y, buffer, static_cast<int>(wcslen(buffer)));
-				}
-			}
-			++line;
-			y = nextY;
-		}
-	}
-
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - getWidth(), paintRect.top,
-		right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, paintRect.top, SRCCOPY);
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
-
-	dc.restore(savedCookie);
-}
-
-/// ドキュメントの現在の最終行番号が 10 進数で何文字になるかを返す
+/// Returns the maximum number of digits of line numbers.
 uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const throw() {
 	uint n = 1;
 	length_t lines = viewer_.getDocument().getNumberOfLines() + configuration_.lineNumbers.startValue - 1;
@@ -3272,45 +3120,6 @@ uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const throw() {
 		++n;
 	}
 	return n;
-}
-
-void TextViewer::VerticalRulerDrawer::recalculateWidth() throw() {
-	int newWidth = 0;	// 新しい幅
-	if(configuration_.lineNumbers.visible) {
-		const uchar newLineNumberDigits = getLineNumberMaxDigits();
-		if(newLineNumberDigits != lineNumberDigitsCache_) {
-			// 行番号表示領域の幅は '0' から '9' で最大幅を持つグリフで決める
-			// (設定によってはネイティブの代替グリフが選択され、意外に幅を食う場合がある)
-			ClientDC dc = viewer_.getDC();
-			int maxGlyphWidth = 0;
-			int glyphWidths[10];
-			HFONT oldFont = dc.selectObject(viewer_.getTextRenderer().getFont());
-			if(dc.getCharWidth(L'0', L'9', glyphWidths))
-				maxGlyphWidth = *max_element(glyphWidths, endof(glyphWidths));
-			else {
-				::ABC glyphABCWidths[10];
-				if(dc.getCharABCWidths(L'0', L'9', glyphABCWidths)) {
-					const ::ABC* const p = max_element(glyphABCWidths, endof(glyphABCWidths), ABCComparer());
-					maxGlyphWidth = p->abcA + p->abcB + p->abcC;
-				}
-			}
-			dc.selectObject(oldFont);
-			lineNumberDigitsCache_ = newLineNumberDigits;
-			if(maxGlyphWidth != 0) {
-				newWidth += max<uchar>(newLineNumberDigits, configuration_.lineNumbers.minimumDigits) * maxGlyphWidth;
-				newWidth += configuration_.lineNumbers.leadingMargin + configuration_.lineNumbers.trailingMargin;
-				if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE)
-					newWidth += configuration_.lineNumbers.borderWidth;
-			}
-		}
-	}
-	if(configuration_.indicatorMargin.visible)
-		newWidth += configuration_.indicatorMargin.width;
-	if(newWidth != width_) {
-		width_ = newWidth;
-		viewer_.invalidateRect(0, false);
-		viewer_.updateCaretPosition();
-	}
 }
 
 void TextViewer::VerticalRulerDrawer::setConfiguration(const VerticalRulerConfiguration& configuration) {

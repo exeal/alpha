@@ -206,6 +206,9 @@
 				RelativePath=".\new-file-format-dialog.cpp">
 			</File>
 			<File
+				RelativePath=".\print.cpp">
+			</File>
+			<File
 				RelativePath=".\save-some-buffers-dialog.cpp">
 			</File>
 			<File
@@ -277,6 +280,9 @@
 			</File>
 			<File
 				RelativePath=".\new-file-format-dialog.hpp">
+			</File>
+			<File
+				RelativePath=".\print.hpp">
 			</File>
 			<File
 				RelativePath="resource.h">

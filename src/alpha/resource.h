@@ -48,6 +48,9 @@
 #define CMD_FILE_EXIT                   1010
 #define CMD_FILE_SENDMAIL               1016
 #define CMD_FILE_CLOSEOTHERS            1017
+#define CMD_FILE_PRINT					1018
+#define CMD_FILE_PRINTSETUP				1019
+#define CMD_FILE_PRINTPREVIEW			1020
 #define IDC_COMBO_CHARCODE              1101
 #define IDC_COMBO_BREAKCODE             1102
 #define IDC_COMBO_FINDWHAT              1103

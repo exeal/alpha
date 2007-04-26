@@ -442,15 +442,12 @@ namespace ascension {
 						DASHED_ROUNDED,	///< Dashed and rounded line.
 						DOTTED			///< Dotted line.
 					} borderStyle;
-					/// Digit substitution type. Default value is @c SYSTEM_DEFAULT.
-					enum {
-						NO_SUBSTITUTION,	///< Substitutions are not occured.
-						SYSTEM_DEFAULT,		///< Use system settings.
-						USER_LOCALE			///< Use user locale glyphs.
-					} digitSubstitution;
+					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
+					DigitSubstitutionType digitSubstitution;
 					/// Constructor.
-					LineNumbers() throw() : visible(false), alignment(ALIGN_AUTO), startValue(1), minimumDigits(4),
-						leadingMargin(6), trailingMargin(1), borderColor(STANDARD_COLOR), borderWidth(1), borderStyle(SOLID) {}
+					LineNumbers() throw() : visible(false), alignment(ALIGN_AUTO), startValue(1),
+						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(STANDARD_COLOR),
+						borderWidth(1), borderStyle(SOLID), digitSubstitution(DST_USER_DEFAULT) {}
 					/// Returns true if the all members are valid.
 					bool verify() const throw() {return leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
@@ -644,7 +641,6 @@ namespace ascension {
 			bool	onSetCursor(HWND window, UINT hitTest, UINT message);
 			void	onSetFocus(HWND oldWindow);
 			void	onSize(UINT type, int cx, int cy);
-			void	onSizing(UINT side, ::RECT& rect);
 			void	onStyleChanged(int type, const ::STYLESTRUCT& style);
 			void	onStyleChanging(int type, ::STYLESTRUCT& style);
 			void	onSysChar(UINT ch, UINT flags);
