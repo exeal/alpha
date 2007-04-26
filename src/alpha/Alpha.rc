@@ -52,8 +52,8 @@ IDB_BMP_LOGO            BITMAP                  "Resource\\logo.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,7,90,1
- PRODUCTVERSION 0,7,90,1
+ FILEVERSION 0,7,91,0
+ PRODUCTVERSION 0,7,91,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,12 +70,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "exeal"
             VALUE "FileDescription", "Alpha"
-            VALUE "FileVersion", "0.7.90.1"
+            VALUE "FileVersion", "0.7.91.0"
             VALUE "InternalName", "abigail"
             VALUE "LegalCopyright", "built by exeal, 2003-2007"
             VALUE "OriginalFilename", "Alpha.exe"
             VALUE "ProductName", "Alpha"
-            VALUE "ProductVersion", "0.7.90.1"
+            VALUE "ProductVersion", "0.7.91.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -219,7 +219,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,44,64
-    LTEXT           "Alpha version 0.7.90.1",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.91.0",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -569,7 +569,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE      RCDATA                   "Resource\\code-page-name-table-ja"
+IDR_CODEPAGE_NAME_TABLE      RCDATA                    "Resource\\code-page-name-table-ja"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -585,7 +585,7 @@ BEGIN
     CMD_FILE_CLOSEALL       "すべて閉じる(&Q)\nすべての文書を閉じます。"
     CMD_FILE_SAVE           "上書き保存(&S)\n現在の文書を保存します。"
     CMD_FILE_SAVEAS         "名前を付けて保存(&A)...\n現在の文書を新しい名前で保存します。"
-    CMD_FILE_SAVEALL        "すべて保存(&V)\nすべての文書を保存します。"
+    CMD_FILE_SAVEALL        "すべて保存(&E)\nすべての文書を保存します。"
 END
 
 STRINGTABLE 
@@ -603,6 +603,9 @@ BEGIN
     CMD_FILE_EXIT           "Alphaの終了(&X)\n文書の保存を確認し、Alpha を終了します。"
     CMD_FILE_SENDMAIL       "送信(&D)...\n電子メールでこの文書を送信します。"
     CMD_FILE_CLOSEOTHERS    "他を閉じる(&H)\nアクティブでない文書を全て閉じます。"
+    CMD_FILE_PRINT          "印刷(&P)...\n現在の文書を印刷します。"
+    CMD_FILE_PRINTSETUP     "ページ設定(&U)...\nページ レイアウトの設定を変更します。"
+    CMD_FILE_PRINTPREVIEW   "印刷プレビュー(&V)...\nページ全体を表示します。"
 END
 
 STRINGTABLE 
@@ -1104,7 +1107,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,45,42
-    LTEXT           "Alpha version 0.7.90.1",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.91.0",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -1501,7 +1504,7 @@ BEGIN
     CMD_FILE_CLOSEALL       "Cl&ose All\nClose all documents."
     CMD_FILE_SAVE           "&Save\nSave the document."
     CMD_FILE_SAVEAS         "Save &As...\nSave the document under a different name."
-    CMD_FILE_SAVEALL        "Sa&ve All\nSave all documents."
+    CMD_FILE_SAVEALL        "Sav&e All\nSave all documents."
 END
 
 STRINGTABLE 
@@ -1519,6 +1522,9 @@ BEGIN
     CMD_FILE_EXIT           "E&xit Alpha\nClose all documents and exit."
     CMD_FILE_SENDMAIL       "Sen&d...\nSend the file."
     CMD_FILE_CLOSEOTHERS    "Close Ot&hers\nClose all inactive documents."
+    CMD_FILE_PRINT          "&Print...\nPrint the document."
+    CMD_FILE_PRINTSETUP     "Set&up Page...\nSetup page layout."
+    CMD_FILE_PRINTPREVIEW   "Pre&view Page...\nPreview the entire page."
 END
 
 STRINGTABLE 

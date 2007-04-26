@@ -901,6 +901,7 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_FILE_REOPEN) << ITEM(CMD_FILE_REOPENWITHCODEPAGE) << ITEM(CMD_FILE_MRU) << sep
 		<< ITEM(CMD_FILE_CLOSE) << ITEM(CMD_FILE_CLOSEALL) << ITEM(CMD_FILE_CLOSEOTHERS) << sep
 		<< ITEM(CMD_FILE_SAVE) << ITEM(CMD_FILE_SAVEAS) << ITEM(CMD_FILE_SAVEALL) << sep
+		<< ITEM(CMD_FILE_PRINT) << ITEM(CMD_FILE_PRINTPREVIEW) << ITEM(CMD_FILE_PRINTSETUP) << sep
 		<< ITEM(CMD_FILE_SENDMAIL) << sep << ITEM(CMD_FILE_EXIT);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_MRU, mruManager_->getPopupMenu());
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_FILE_TOP, popup);
@@ -1481,7 +1482,7 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 /// @see WM_SETTINGCHNAGE
 void Alpha::onSettingChange(UINT, const wchar_t*) {
 	AutoZeroCB<NONCLIENTMETRICSW> ncm;
-
+	ascension::updateSystemSettings();
 	::DeleteObject(statusFont_);
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 	statusFont_ = ::CreateFontIndirectW(&ncm.lfStatusFont);
