@@ -98,6 +98,7 @@ struct viewers::internal::Run : public StyledText {
 		return ::ScriptGetLogicalWidths(&analysis,
 			static_cast<int>(length), static_cast<int>(numberOfGlyphs), advances, clusters, visualAttributes, widths);
 	}
+	Orientation getOrientation() const throw() {return ((analysis.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	int getWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
 	HRESULT getX(size_t offset, bool trailing, int& x) const throw() {
 		return ::ScriptCPtoX(static_cast<int>(offset), trailing, static_cast<int>(length),
@@ -665,20 +666,38 @@ LineLayout::StyledSegmentIterator LineLayout::getLastStyledSegment() const throw
 		location.y = 0;
 	} else {
 		const length_t subline = getSubline(column);
+		const length_t firstRun = sublineFirstRuns_[subline];
 		const length_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		location.x = 0;
-		for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
-			const Run& run = *runs_[i];
-			if(run.column >= column || run.column + run.length < column) {
+		// about x
+		if(renderer_.getTextViewer().getConfiguration().orientation == LEFT_TO_RIGHT) {	// LTR
+			location.x = 0;
+			for(size_t i = firstRun; i < lastRun; ++i) {
+				const Run& run = *runs_[i];
+				if(column >= run.column && column <= run.column + run.length) {
+					int offset;
+					run.getX(column - run.column, edge == TRAILING, offset);
+					location.x += offset;
+					break;
+				}
 				location.x += run.getWidth();
-				continue;
 			}
-			int offset;
-			run.getX(column - run.column, edge == TRAILING, offset);
-			location.x += offset;
-			break;
+		} else {	// RTL
+			location.x = getSublineWidth(subline);
+			for(size_t i = lastRun - 1; ; --i) {
+				const Run& run = *runs_[i];
+				location.x -= run.getWidth();
+				if(column >= run.column && column <= run.column + run.length) {
+					int offset;
+					run.getX(column - run.column, edge == TRAILING, offset);
+					location.x += offset;
+					break;
+				}
+				if(i == firstRun)
+					break;
+			}
 		}
 		location.x += getSublineIndent(subline);
+		// about y
 		location.y = static_cast<long>(subline * renderer_.getLinePitch());
 	}
 	return location;
@@ -855,7 +874,7 @@ bool LineLayout::isBidirectional() const throw() {
 	if(renderer_.getTextViewer().getConfiguration().orientation == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if((runs_[i]->analysis.s.uBidiLevel & 0x01) == 1)
+		if(runs_[i]->getOrientation() == RIGHT_TO_LEFT)
 			return true;
 	}
 	return false;
@@ -1145,8 +1164,6 @@ namespace {
  * @param run the run to generate glyphs
  */
 void LineLayout::shape(Run& run) throw() {
-	// TODO: call ISpecialCharacterDrawer.
-
 	assert(run.glyphs == 0);
 	HRESULT hr;
 	const Char* const text = getText().data() + run.column;
@@ -1257,6 +1274,19 @@ void LineLayout::shape(Run& run) throw() {
 	hr = ::ScriptPlace(dc.getHandle(), &run.cache, run.glyphs, run.numberOfGlyphs,
 			run.visualAttributes, &run.analysis, run.advances, run.glyphOffsets, &run.width);
 	dc.selectObject(oldFont);
+
+	// query widths of C0 and C1 controls in this logical line
+	if(ISpecialCharacterRenderer* scr = renderer_.getSpecialCharacterRenderer()) {
+		ISpecialCharacterRenderer::LayoutContext context(dc);
+		context.orientation = run.getOrientation();
+		for(length_t i = 0; i < run.column; ++i) {
+			const CodePoint c = text[i];
+			if(c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0)) {
+				if(const int width = scr->getControlCharacterWidth(context, c))
+					run.advances[i] = width;
+			}
+		}
+	}
 }
 
 /// Locates the wrap points and resolves tab expansions.
@@ -1784,6 +1814,13 @@ void LineLayoutBuffer::presentationStylistChanged() {
 
 
 // RuleBasedSpecialCharacterRenderer ////////////////////////////////////////
+
+namespace {
+	inline void getControlPresentationString(CodePoint c, Char* buffer) {
+		buffer[0] = L'^';
+		buffer[1] = (c != 0x7F) ? static_cast<Char>(c) + 0x40 : L'?';
+	}
+}
 
 /// Default constructor.
 RuleBasedSpecialCharacterRenderer::RuleBasedSpecialCharacterRenderer() throw() : renderer_(0) {
