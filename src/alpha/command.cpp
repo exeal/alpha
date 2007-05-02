@@ -528,20 +528,6 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 	}
 	case CMD_VIEW_REFRESH:	view.invalidateRect(0); return true;
-	case CMD_VIEW_SPLITNS: {
-		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
-		app.getBufferList().getEditorWindow().splitNS(activePane, *(new EditorPane(activePane)));
-		return true;
-	}
-	case CMD_VIEW_SPLITWE: {
-		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
-		app.getBufferList().getEditorWindow().splitWE(activePane, *(new EditorPane(activePane)));
-		return true;
-	}
-	case CMD_VIEW_UNSPLITOTHERS:	app.getBufferList().getEditorWindow().removeInactivePanes();	break;
-	case CMD_VIEW_UNSPLITACTIVE:	app.getBufferList().getEditorWindow().removeActivePane();		break;
-	case CMD_VIEW_NEXTPANE:			app.getBufferList().getEditorWindow().activateNextPane();		break;
-	case CMD_VIEW_PREVPANE:			app.getBufferList().getEditorWindow().activatePreviousPane();	break;
 	case CMD_VIEW_NEXTBUFFER:
 		if(app.getBufferList().getCount() > 1) {
 			size_t i = app.getBufferList().getActiveIndex();
@@ -555,11 +541,6 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 			i = (i != 0) ? i - 1 : app.getBufferList().getCount() - 1;
 			app.getBufferList().setActive(i);
 		}
-		return true;
-	case CMD_VIEW_TOPMOSTALWAYS:
-		app.getMainWindow().setPosition(
-			toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST,
-			0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 		return true;
 
 	case CMD_MACRO_DEFINE:
@@ -624,6 +605,26 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		ui::ExecuteCommandDlg(
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ?
 				app.editorFont_ : 0).doModal(app.getMainWindow());
+		return true;
+		
+	case CMD_WINDOW_SPLITNS: {
+		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
+		app.getBufferList().getEditorWindow().splitNS(activePane, *(new EditorPane(activePane)));
+		return true;
+	}
+	case CMD_WINDOW_SPLITWE: {
+		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
+		app.getBufferList().getEditorWindow().splitWE(activePane, *(new EditorPane(activePane)));
+		return true;
+	}
+	case CMD_WINDOW_UNSPLITOTHERS:	app.getBufferList().getEditorWindow().removeInactivePanes();	break;
+	case CMD_WINDOW_UNSPLITACTIVE:	app.getBufferList().getEditorWindow().removeActivePane();		break;
+	case CMD_WINDOW_NEXTPANE:			app.getBufferList().getEditorWindow().activateNextPane();		break;
+	case CMD_WINDOW_PREVPANE:			app.getBufferList().getEditorWindow().activatePreviousPane();	break;
+	case CMD_WINDOW_TOPMOSTALWAYS:
+		app.getMainWindow().setPosition(
+			toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST,
+			0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 		return true;
 
 	case CMD_HELP_ABOUT:
@@ -798,12 +799,13 @@ bool CommandManager::isChecked(CommandID id) const {
 //		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
 		return app.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm != viewers::LineWrapConfiguration::NO_WRAP;
-	case CMD_VIEW_TOPMOSTALWAYS:
-		return toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST);
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();
 	case CMD_MACRO_PAUSERESTART:	return temporaryMacro_.getState() == TemporaryMacro::PAUSING;
+
+	case CMD_WINDOW_TOPMOSTALWAYS:
+		return toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST);
 
 	default:
 		return false;
@@ -919,11 +921,6 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_VIEW_NEXTBUFFER:
 	case CMD_VIEW_PREVBUFFER:
 		return app.getBufferList().getCount() > 1;
-	case CMD_VIEW_UNSPLITACTIVE:
-	case CMD_VIEW_UNSPLITOTHERS:
-	case CMD_VIEW_NEXTPANE:
-	case CMD_VIEW_PREVPANE:
-		return app.getBufferList().getEditorWindow().isSplit(app.getBufferList().getEditorWindow().getActivePane());
 
 		// マクロ
 	case CMD_MACRO_DEFINE:			return !temporaryMacro_.isExecuting();
@@ -940,6 +937,13 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_TOOL_COMMONOPTION:
 	case CMD_TOOL_DOCTYPEOPTION:
 		return false;
+
+		// ウィンドウ
+	case CMD_WINDOW_UNSPLITACTIVE:
+	case CMD_WINDOW_UNSPLITOTHERS:
+	case CMD_WINDOW_NEXTPANE:
+	case CMD_WINDOW_PREVPANE:
+		return app.getBufferList().getEditorWindow().isSplit(app.getBufferList().getEditorWindow().getActivePane());
 
 	default:
 		return true;
@@ -963,13 +967,15 @@ bool CommandManager::isRecordable(CommandID id) const {
 	case CMD_SEARCH_INCREMENTALSEARCHMF: case CMD_SEARCH_INCREMENTALSEARCHMR:
 
 	case CMD_VIEW_TOOLBAR: case CMD_VIEW_STATUSBAR: case CMD_VIEW_REFRESH:
-	case CMD_VIEW_BUFFERBAR: case CMD_VIEW_TOPMOSTALWAYS:
+	case CMD_VIEW_BUFFERBAR:
 
 	case CMD_MACRO_DEFINE: case CMD_MACRO_EXECUTE: case CMD_MACRO_APPEND:
 	case CMD_MACRO_PAUSERESTART: case CMD_MACRO_INSERTQUERY: case CMD_MACRO_ABORT:
 	case CMD_MACRO_SAVEAS: case CMD_MACRO_LOAD:
 
 	case CMD_TOOL_FONT: case CMD_TOOL_EXECUTE: case CMD_TOOL_EXECUTECOMMAND:
+	
+	case CMD_WINDOW_TOPMOSTALWAYS:
 
 	case CMD_HELP_ABOUT:
 		return false;

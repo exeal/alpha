@@ -885,6 +885,7 @@ void Alpha::setupMenus() {
 	const Menu::SeparatorItem sep;
 
 #define ITEM(id) Menu::StringItem(id, commandManager_->getMenuName(id).c_str())
+#define RADIO_ITEM(id) Menu::StringItem(id, commandManager_->getMenuName(id).c_str(), MFS_ENABLED, true)
 
 	// メニューバー
 	menuBar << Menu::StringItem(CMD_FILE_TOP, loadString(CMD_FILE_TOP).c_str())
@@ -893,6 +894,7 @@ void Alpha::setupMenus() {
 		<< Menu::StringItem(CMD_VIEW_TOP, loadString(CMD_VIEW_TOP).c_str())
 		<< Menu::StringItem(CMD_MACRO_TOP, loadString(CMD_MACRO_TOP).c_str())
 		<< Menu::StringItem(CMD_TOOL_TOP, loadString(CMD_TOOL_TOP).c_str())
+		<< Menu::StringItem(CMD_WINDOW_TOP, loadString(CMD_WINDOW_TOP).c_str())
 		<< Menu::StringItem(CMD_HELP_TOP, loadString(CMD_HELP_TOP).c_str());
 
 	// [ファイル]
@@ -924,21 +926,22 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_SEARCH_INCREMENTALSEARCH) << ITEM(CMD_SEARCH_INCREMENTALSEARCHR)
 		<< ITEM(CMD_SEARCH_INCREMENTALSEARCHRF) << ITEM(CMD_SEARCH_INCREMENTALSEARCHRR)
 		<< ITEM(CMD_SEARCH_INCREMENTALSEARCHMF) << ITEM(CMD_SEARCH_INCREMENTALSEARCHMR)
-		<< ITEM(CMD_SEARCH_REVOKEMARK) << sep << ITEM(CMD_SEARCH_GOTOLINE) << sep
-		<< ITEM(CMD_SEARCH_TOGGLEBOOKMARK) << ITEM(CMD_SEARCH_NEXTBOOKMARK) << ITEM(CMD_SEARCH_PREVBOOKMARK)
-		<< ITEM(CMD_SEARCH_CLEARBOOKMARKS) << ITEM(CMD_SEARCH_MANAGEBOOKMARKS) << sep
-		<< ITEM(CMD_SEARCH_GOTOMATCHBRACKET) << ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET);
+		<< ITEM(CMD_SEARCH_REVOKEMARK) << sep << ITEM(CMD_SEARCH_GOTOLINE) << ITEM(CMD_SEARCH_BOOKMARKS)
+		<< sep << ITEM(CMD_SEARCH_GOTOMATCHBRACKET) << ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET);
+	// [検索]-[ブックマーク]
+	auto_ptr<PopupMenu> bookmarksMenu(new PopupMenu);
+	*bookmarksMenu << ITEM(CMD_SEARCH_TOGGLEBOOKMARK) << ITEM(CMD_SEARCH_NEXTBOOKMARK)
+		<< ITEM(CMD_SEARCH_PREVBOOKMARK) << ITEM(CMD_SEARCH_CLEARBOOKMARKS) << ITEM(CMD_SEARCH_MANAGEBOOKMARKS);
+	popup->setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_BOOKMARKS, bookmarksMenu);
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_TOP, popup);
+
 
 	// [表示]
 	popup.reset(new PopupMenu);
 	*popup << ITEM(CMD_VIEW_TOOLBAR) << ITEM(CMD_VIEW_STATUSBAR) << ITEM(CMD_VIEW_BUFFERBAR)
 		<< sep << ITEM(CMD_VIEW_BUFFERS) << ITEM(CMD_VIEW_NEXTBUFFER) << ITEM(CMD_VIEW_PREVBUFFER)
-		<< sep << ITEM(CMD_VIEW_SPLITNS) << ITEM(CMD_VIEW_SPLITWE) << ITEM(CMD_VIEW_UNSPLITOTHERS)
-		<< ITEM(CMD_VIEW_UNSPLITACTIVE) << ITEM(CMD_VIEW_NEXTPANE) << ITEM(CMD_VIEW_PREVPANE) << sep << ITEM(CMD_VIEW_WRAPNO)
-		<< Menu::StringItem(CMD_VIEW_WRAPBYSPECIFIEDWIDTH, commandManager_->getMenuName(CMD_VIEW_WRAPBYSPECIFIEDWIDTH).c_str(), MFS_ENABLED, true)
-		<< Menu::StringItem(CMD_VIEW_WRAPBYWINDOWWIDTH, commandManager_->getMenuName(CMD_VIEW_WRAPBYWINDOWWIDTH).c_str(), MFS_ENABLED, true)
-		<< sep << ITEM(CMD_VIEW_TOPMOSTALWAYS) << ITEM(CMD_VIEW_REFRESH);
+		<< sep << RADIO_ITEM(CMD_VIEW_WRAPNO) << RADIO_ITEM(CMD_VIEW_WRAPBYSPECIFIEDWIDTH)
+		<< RADIO_ITEM(CMD_VIEW_WRAPBYWINDOWWIDTH) << sep << ITEM(CMD_VIEW_REFRESH);
 	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS, buffers_->getListMenu());
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP, popup);
 
@@ -971,12 +974,20 @@ void Alpha::setupMenus() {
 //	appDocTypeMenu_ = new Menu();	// [適用文書タイプ]
 //	popup->setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_APPDOCTYPES, *appDocTypeMenu_, false);
 
+	// [ウィンドウ]
+	popup.reset(new PopupMenu);
+	*popup << ITEM(CMD_WINDOW_SPLITNS) << ITEM(CMD_WINDOW_SPLITWE) << ITEM(CMD_WINDOW_UNSPLITOTHERS)
+		<< ITEM(CMD_WINDOW_UNSPLITACTIVE) << ITEM(CMD_WINDOW_NEXTPANE) << ITEM(CMD_WINDOW_PREVPANE)
+		<< sep << ITEM(CMD_WINDOW_TOPMOSTALWAYS);
+	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_WINDOW_TOP, popup);
+
 	// [ヘルプ]
 	popup.reset(new PopupMenu);
 	*popup << ITEM(CMD_HELP_ABOUT);
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_HELP_TOP, popup);
 
 #undef ITEM
+#undef RADIO_ITEM
 
 	getMainWindow().drawMenuBar();
 }
@@ -1000,17 +1011,16 @@ void Alpha::setupToolbar() {
 		for(i = 0, it = buttonIDs.begin(); it != buttonIDs.end(); ++i, ++it)
 			commands[i] = static_cast<CommandID>(wcstoul(it->c_str(), 0, 10));
 	} else {	// デフォルトの設定を使う
-		commands = new CommandID[buttonCount = 19];
+		commands = new CommandID[buttonCount = 17];
 		commands[0] = CMD_FILE_NEW;			commands[1] = CMD_FILE_OPEN;
-		commands[2] = CMD_FILE_SAVE;		commands[3] = CMD_FILE_SAVEAS;
-		commands[4] = CMD_FILE_SAVEALL;		commands[5] = 0;
-		commands[6] = CMD_EDIT_CUT;			commands[7] = CMD_EDIT_COPY;
-		commands[8] = CMD_EDIT_PASTE;		commands[9] = 0;
-		commands[10] = CMD_EDIT_UNDO;		commands[11] = CMD_EDIT_REDO;
-		commands[12] = 0;					commands[13] = CMD_SEARCH_FIND;
-		commands[14] = CMD_SEARCH_FINDNEXT;	commands[15] = CMD_SEARCH_FINDPREV;
-		commands[16] = 0;					commands[17] = CMD_VIEW_WRAPNO;
-		commands[18] = CMD_VIEW_WRAPBYWINDOWWIDTH;
+		commands[2] = CMD_FILE_SAVE;		commands[3] = 0;
+		commands[4] = CMD_EDIT_CUT;			commands[5] = CMD_EDIT_COPY;
+		commands[6] = CMD_EDIT_PASTE;		commands[7] = 0;
+		commands[8] = CMD_EDIT_UNDO;		commands[9] = CMD_EDIT_REDO;
+		commands[10] = 0;					commands[11] = CMD_SEARCH_FIND;
+		commands[12] = CMD_SEARCH_FINDNEXT;	commands[13] = CMD_SEARCH_FINDPREV;
+		commands[14] = 0;					commands[15] = CMD_VIEW_WRAPNO;
+		commands[16] = CMD_VIEW_WRAPBYWINDOWWIDTH;
 	}
 
 	// イメージリストを作成する

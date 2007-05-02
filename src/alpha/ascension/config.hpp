@@ -9,6 +9,14 @@
 #define ASCENSION_CONFIG_HPP
 
 
+/**
+ * @def ASCENSION_SHARED_POINTER
+ * Reference-counted smart pointer template class. Default is @c manah#SharedPointer. You can use
+ * other class such as @c boost#shared_ptr.
+ */
+#define ASCENSION_SHARED_POINTER manah::SharedPointer
+
+
 // about ascension.text /////////////////////////////////////////////////////
 
 /**

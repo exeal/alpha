@@ -746,6 +746,7 @@ END
 STRINGTABLE 
 BEGIN
     CMD_SEARCH_TOP          "検索(&S)"
+	CMD_SEARCH_BOOKMARKS    "ブックマーク(&B)"
 END
 
 STRINGTABLE 
@@ -793,6 +794,7 @@ STRINGTABLE
 BEGIN
     CMD_VIEW_TOP            "表示(&V)"
     CMD_VIEW_BUFFERS        "バッファ(&F)"
+	CMD_WINDOW_TOP          "ウィンドウ(&W)"
 END
 
 STRINGTABLE 
@@ -805,16 +807,16 @@ BEGIN
     CMD_VIEW_WRAPBYWINDOWWIDTH 
                             "ウィンドウ端で折り返す(&W)\n行をウィンドウ幅で折り返して表示します。"
     CMD_VIEW_REFRESH        "再描画(&R)\n画面を再描画します。"
-    CMD_VIEW_SPLITNS        "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
+    CMD_WINDOW_SPLITNS      "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
     CMD_VIEW_NEXTBUFFER     "次のバッファ(&N)\n次のバッファを表示します。"
     CMD_VIEW_PREVBUFFER     "前のバッファ(&P)\n前のバッファを表示します。"
     CMD_VIEW_BUFFERBAR      "バッファバー(&B)\nバッファバーの表示/非表示を切り替えます。"
-    CMD_VIEW_TOPMOSTALWAYS  "常に最前面に表示(&A)\nウィンドウを常に最前面に表示します。"
-    CMD_VIEW_SPLITWE        "ウィンドウの左右分割(&D)\nエディタウィンドウを左右に分割します。"
-    CMD_VIEW_UNSPLITACTIVE  "現在のウィンドウを閉じる(&C)\nアクティブなエディタウィンドウを閉じ、分割を解除します。"
-    CMD_VIEW_UNSPLITOTHERS  "他のウィンドウを閉じる(&H)\nアクティブなエディタウィンドウを残し、すべてのウィンドウを閉じます。"
-    CMD_VIEW_NEXTPANE       "次のウィンドウ(&X)\n次のエディタウィンドウをアクティブにします。"
-    CMD_VIEW_PREVPANE       "前のウィンドウ(&V)\n前のエディタウィンドウをアクティブにします。"
+    CMD_WINDOW_TOPMOSTALWAYS "常に最前面に表示(&A)\nウィンドウを常に最前面に表示します。"
+    CMD_WINDOW_SPLITWE        "ウィンドウの左右分割(&D)\nエディタウィンドウを左右に分割します。"
+    CMD_WINDOW_UNSPLITACTIVE  "現在のウィンドウを閉じる(&C)\nアクティブなエディタウィンドウを閉じ、分割を解除します。"
+    CMD_WINDOW_UNSPLITOTHERS  "他のウィンドウを閉じる(&H)\nアクティブなエディタウィンドウを残し、すべてのウィンドウを閉じます。"
+    CMD_WINDOW_NEXTPANE       "次のウィンドウ(&X)\n次のエディタウィンドウをアクティブにします。"
+    CMD_WINDOW_PREVPANE       "前のウィンドウ(&V)\n前のエディタウィンドウをアクティブにします。"
 END
 
 STRINGTABLE 
@@ -1661,6 +1663,7 @@ END
 STRINGTABLE 
 BEGIN
     CMD_SEARCH_TOP          "&Search"
+	CMD_SEARCH_BOOKMARKS    "&Bookmarks"
 END
 
 STRINGTABLE 
@@ -1706,6 +1709,7 @@ STRINGTABLE
 BEGIN
     CMD_VIEW_TOP            "&View"
     CMD_VIEW_BUFFERS        "Bu&ffers"
+	CMD_WINDOW_TOP          "&Window"
 END
 
 STRINGTABLE 
@@ -1718,16 +1722,16 @@ BEGIN
     CMD_VIEW_WRAPBYWINDOWWIDTH 
                             "Wrap by &Window\nWrap lines at the end of window."
     CMD_VIEW_REFRESH        "&Refresh\nRefresh the window."
-    CMD_VIEW_SPLITNS        "Sp&lit Window\nSplit the window into up and bottom."
+    CMD_WINDOW_SPLITNS        "Sp&lit Window\nSplit the window into up and bottom."
     CMD_VIEW_NEXTBUFFER     "&Next Buffer\nShow next buffer."
     CMD_VIEW_PREVBUFFER     "&Previous Buffer\nShow previous buffer."
     CMD_VIEW_BUFFERBAR      "&Buffer Bar\nShow or hide the buffer bar."
-    CMD_VIEW_TOPMOSTALWAYS  "&Always in Foreground\nShow the application window foreground always."
-    CMD_VIEW_SPLITWE        "Split Window Si&de-by-Side\nSplit the window into side-by-side."
-    CMD_VIEW_UNSPLITACTIVE  "&Close Window\nClose active window."
-    CMD_VIEW_UNSPLITOTHERS  "Close Ot&her Windows\nClose all inactive windows."
-    CMD_VIEW_NEXTPANE       "Ne&xt Pane\nActivate next window."
-    CMD_VIEW_PREVPANE       "Pre&vious Pane\nActivate previous window."
+    CMD_WINDOW_TOPMOSTALWAYS  "&Always in Foreground\nShow the application window foreground always."
+    CMD_WINDOW_SPLITWE        "Split Window Si&de-by-Side\nSplit the window into side-by-side."
+    CMD_WINDOW_UNSPLITACTIVE  "&Close Window\nClose active window."
+    CMD_WINDOW_UNSPLITOTHERS  "Close Ot&her Windows\nClose all inactive windows."
+    CMD_WINDOW_NEXTPANE       "Ne&xt Pane\nActivate next window."
+    CMD_WINDOW_PREVPANE       "Pre&vious Pane\nActivate previous window."
 END
 
 STRINGTABLE 

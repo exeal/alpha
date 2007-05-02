@@ -64,48 +64,60 @@ namespace {
 		LANGID langID_;
 		::SCRIPT_DIGITSUBSTITUTE digitSubstitution_;
 	} userSettings;
+
+	inline bool isC0orC1Control(CodePoint c) throw() {return c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0);}
+	inline Orientation getLineTerminatorOrientation(const TextViewer::Configuration& c) throw() {
+		switch(c.alignment) {
+		case ALIGN_LEFT:	return LEFT_TO_RIGHT;
+		case ALIGN_RIGHT:	return RIGHT_TO_LEFT;
+		case ALIGN_CENTER:
+		default:			return c.orientation;
+		}
+	}
 } // namespace @0
 
-struct viewers::internal::Run : public StyledText {
-	::SCRIPT_ANALYSIS analysis;
-	::SCRIPT_CACHE cache;
-	HFONT font;			// the font to draw the run
-	WORD* glyphs;
-	length_t length;	// the number of characters of the run
-	int numberOfGlyphs;	// the number of glyphs of the run
-	WORD* clusters;
-	::SCRIPT_VISATTR* visualAttributes;
-	int* advances;
-	int* justifiedAdvances;
-	::GOFFSET* glyphOffsets;
-	::ABC width;
-	Run(const TextStyle& textStyle) throw() :
-			cache(0), font(0), glyphs(0), clusters(0), visualAttributes(0), advances(0), justifiedAdvances(0), glyphOffsets(0) {
-		style = textStyle;
-	}
-	~Run() throw() {dispose();}
-	void dispose() throw() {
-		if(cache != 0) {::ScriptFreeCache(&cache); cache = 0;}
-		font = 0;
-		delete[] glyphs; glyphs = 0;
-		delete[] clusters; clusters = 0;
-		delete[] visualAttributes; visualAttributes = 0;
-		delete[] advances; advances = 0;
-		delete[] justifiedAdvances; justifiedAdvances = 0;
-		delete[] glyphOffsets; glyphOffsets = 0;
-	}
-	HRESULT getLogicalWidths(int widths[]) const throw() {
-		return ::ScriptGetLogicalWidths(&analysis,
-			static_cast<int>(length), static_cast<int>(numberOfGlyphs), advances, clusters, visualAttributes, widths);
-	}
-	Orientation getOrientation() const throw() {return ((analysis.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
-	int getWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
-	HRESULT getX(size_t offset, bool trailing, int& x) const throw() {
-		return ::ScriptCPtoX(static_cast<int>(offset), trailing, static_cast<int>(length),
-			numberOfGlyphs, clusters, visualAttributes, (justifiedAdvances == 0) ? advances : justifiedAdvances, &analysis, &x);
-	}
-	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
-};
+namespace ascension { namespace viewers { namespace internal {	// verbose notation for VC71 class viewer's confusion
+	struct Run : public StyledText {
+		::SCRIPT_ANALYSIS analysis;
+		::SCRIPT_CACHE cache;
+		HFONT font;			// the font to draw the run
+		WORD* glyphs;
+		length_t length;	// the number of characters of the run
+		int numberOfGlyphs;	// the number of glyphs of the run
+		WORD* clusters;
+		::SCRIPT_VISATTR* visualAttributes;
+		int* advances;
+		int* justifiedAdvances;
+		::GOFFSET* glyphOffsets;
+		::ABC width;
+		Run(const TextStyle& textStyle) throw() :
+				cache(0), font(0), glyphs(0), clusters(0), visualAttributes(0), advances(0), justifiedAdvances(0), glyphOffsets(0) {
+			style = textStyle;
+		}
+		~Run() throw() {dispose();}
+		void dispose() throw() {
+			if(cache != 0) {::ScriptFreeCache(&cache); cache = 0;}
+			font = 0;
+			delete[] glyphs; glyphs = 0;
+			delete[] clusters; clusters = 0;
+			delete[] visualAttributes; visualAttributes = 0;
+			delete[] advances; advances = 0;
+			delete[] justifiedAdvances; justifiedAdvances = 0;
+			delete[] glyphOffsets; glyphOffsets = 0;
+		}
+		HRESULT getLogicalWidths(int widths[]) const throw() {
+			return ::ScriptGetLogicalWidths(&analysis,
+				static_cast<int>(length), static_cast<int>(numberOfGlyphs), advances, clusters, visualAttributes, widths);
+		}
+		Orientation getOrientation() const throw() {return ((analysis.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
+		int getWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
+		HRESULT getX(size_t offset, bool trailing, int& x) const throw() {
+			return ::ScriptCPtoX(static_cast<int>(offset), trailing, static_cast<int>(length),
+				numberOfGlyphs, clusters, visualAttributes, (justifiedAdvances == 0) ? advances : justifiedAdvances, &analysis, &x);
+		}
+		bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
+	};
+}}}	// namespace ascension.viewers.internal
 
 void dumpRuns(const LineLayout& layout) {
 #ifdef _DEBUG
@@ -317,127 +329,202 @@ void LineLayout::draw(length_t subline, DC& dc,
 	ISpecialCharacterRenderer::DrawingContext context(dc);
 	ISpecialCharacterRenderer* specialCharacterRenderer = renderer_.getSpecialCharacterRenderer();
 
-	// empty line
-	if(isDisposed()) {
+	if(specialCharacterRenderer != 0) {
+		context.rect.top = y;
+		context.rect.bottom = y + lineHeight;
+	}
+
+	const int savedCookie = dc.save();
+	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP);
+	if(isDisposed()) {	// empty line
 		::RECT r;
 		r.left = max(paintRect.left, clipRect.left);
 		r.top = max(clipRect.top, max<long>(paintRect.top, y));
 		r.right = min(paintRect.right, clipRect.right);
 		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + linePitch));
 		dc.fillSolidRect(r, marginColor);
-		return;
-	}
+		if(getLineTerminatorOrientation(renderer_.getTextViewer().getConfiguration()) == RIGHT_TO_LEFT)
+			x += getSublineIndent(subline);
+	} else {
+		const String& text = getText();
+		const int originalX = x;
+		HRESULT hr;
+		length_t selStart, selEnd;
+		const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
 
-	const int originalX = x;
-	const int savedCookie = dc.save();
-	HRESULT hr;
-	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP|TA_RTLREADING);
+		// paint between sublines
+		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
+//		dc.selectClipRgn(clipRegion.getHandle());
+		if(linePitch - lineHeight > 0)
+			dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
+				paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
 
-	length_t selStart, selEnd;
-	const bool sel = renderer_.getTextViewer().getCaret().getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd);
-
-	// paint between sublines
-	Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
-//	dc.selectClipRgn(clipRegion.getHandle());
-	if(linePitch - lineHeight > 0)
-		dc.fillSolidRect(paintRect.left, y + renderer_.getLineHeight(),
-			paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
-
-	// 1. paint background of the runs
-	// 2. determine the first and the last runs need to draw
-	// 3. mask selected region
-	size_t firstRun = sublineFirstRuns_[subline];
-	size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-	x = originalX + getSublineIndent(subline);	// x is left edge of the subline
-	// paint the left margin
-	if(x > originalX && x > paintRect.left) {
-		const int left = min<int>(originalX, paintRect.left);
-		dc.fillSolidRect(left, y, x - left, lineHeight, marginColor);
-	}
-	// paint background of the runs
-	int startX = x;
-	for(size_t i = firstRun; i < lastRun; ++i) {
-		Run& run = *runs_[i];
-		if(x + run.getWidth() < paintRect.left) {	// this run does not need to draw
-			++firstRun;
-			startX = x + run.getWidth();
-		} else {
-			const COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
-				internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
-			if(!sel || run.column >= selEnd || run.column + run.length <= selStart)	// no selection in this run
-				dc.fillSolidRect(x, y, run.getWidth(), lineHeight, bgColor);
-			else if(sel && run.column >= selStart && run.column + run.length <= selEnd) {	// this run is selected entirely
-				dc.fillSolidRect(x, y, run.getWidth(), lineHeight, selectionColor.background);
-				dc.excludeClipRect(x, y, x + run.getWidth(), y + lineHeight);
-			} else {	// selected partially
-				int left, right;
-				hr = run.getX(max(selStart, run.column) - run.column, false, left);
-				hr = run.getX(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
-				if(left > right)
-					swap(left, right);
-				left += x;
-				right += x;
-				if(left > x/* && left > paintRect.left*/)
-					dc.fillSolidRect(x, y, left - x, lineHeight, bgColor);
-				if(right > left) {
-					dc.fillSolidRect(left, y, right - left, lineHeight, selectionColor.background);
-					dc.excludeClipRect(left, y, right, y + lineHeight);
+		// 1. paint background of the runs
+		// 2. determine the first and the last runs need to draw
+		// 3. mask selected region
+		size_t firstRun = sublineFirstRuns_[subline];
+		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+		x = originalX + getSublineIndent(subline);	// x is left edge of the subline
+		// paint the left margin
+		if(x > originalX && x > paintRect.left) {
+			const int left = min<int>(originalX, paintRect.left);
+			dc.fillSolidRect(left, y, x - left, lineHeight, marginColor);
+		}
+		// paint background of the runs
+		int startX = x;
+		for(size_t i = firstRun; i < lastRun; ++i) {
+			Run& run = *runs_[i];
+			if(x + run.getWidth() < paintRect.left) {	// this run does not need to draw
+				++firstRun;
+				startX = x + run.getWidth();
+			} else {
+				const COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
+					internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
+				if(!sel || run.column >= selEnd || run.column + run.length <= selStart)	// no selection in this run
+					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, bgColor);
+				else if(sel && run.column >= selStart && run.column + run.length <= selEnd) {	// this run is selected entirely
+					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, selectionColor.background);
+					dc.excludeClipRect(x, y, x + run.getWidth(), y + lineHeight);
+				} else {	// selected partially
+					int left, right;
+					hr = run.getX(max(selStart, run.column) - run.column, false, left);
+					hr = run.getX(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
+					if(left > right)
+						swap(left, right);
+					left += x;
+					right += x;
+					if(left > x/* && left > paintRect.left*/)
+						dc.fillSolidRect(x, y, left - x, lineHeight, bgColor);
+					if(right > left) {
+						dc.fillSolidRect(left, y, right - left, lineHeight, selectionColor.background);
+						dc.excludeClipRect(left, y, right, y + lineHeight);
+					}
+					if(right < x + run.getWidth())
+						dc.fillSolidRect(right, y, run.getWidth() - (left - x), lineHeight, bgColor);
 				}
-				if(right < x + run.getWidth())
-					dc.fillSolidRect(right, y, run.getWidth() - (left - x), lineHeight, bgColor);
+			}
+			x += run.getWidth();
+			if(x >= paintRect.right) {
+				lastRun = i + 1;
+				break;
 			}
 		}
-		x += run.getWidth();
-		if(x >= paintRect.right) {
-			lastRun = i + 1;
-			break;
-		}
-	}
-	// paint the right margin
-	if(x < paintRect.right)
-		dc.fillSolidRect(x, y, paintRect.right - x, linePitch, marginColor);
+		// paint the right margin
+		if(x < paintRect.right)
+			dc.fillSolidRect(x, y, paintRect.right - x, linePitch, marginColor);
 
-	// draw outside of the selection
-	::RECT runRect;
-	runRect.top = y;
-	runRect.bottom = y + linePitch;
-	runRect.left = x = startX;
-	dc.setBkMode(TRANSPARENT);
-	for(size_t i = firstRun; i < lastRun; ++i) {
-		Run& run = *runs_[i];
-		if(getText()[run.column] != L'\t') {
-			if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
+		// draw outside of the selection
+		::RECT runRect;
+		runRect.top = y;
+		runRect.bottom = y + linePitch;
+		runRect.left = x = startX;
+		dc.setBkMode(TRANSPARENT);
+		for(size_t i = firstRun; i < lastRun; ++i) {
+			Run& run = *runs_[i];
+			if(text[run.column] != L'\t') {
+				if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
+					dc.selectObject(run.font);
+					dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
+						run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
+					runRect.left = x;
+					runRect.right = runRect.left + run.getWidth();
+					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, &runRect,
+						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
+				}
+			}
+			x += run.getWidth();
+			runRect.left = x;
+		}
+
+		// draw selected text segment (also underline and border)
+		x = startX;
+		clipRegion.setRect(clipRect);
+		dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
+		for(size_t i = firstRun; i < lastRun; ++i) {
+			Run& run = *runs_[i];
+			// text
+			if(sel && text[run.column] != L'\t'
+					&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
 				dc.selectObject(run.font);
-				dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
-					run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
+				dc.setTextColor(selectionColor.foreground);
 				runRect.left = x;
 				runRect.right = runRect.left + run.getWidth();
 				hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, &runRect,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
 			}
+			// decoration (underline and border)
+			drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
+			x += run.getWidth();
 		}
-		x += run.getWidth();
-		runRect.left = x;
+
+		// special character substitution
+		if(specialCharacterRenderer != 0) {
+			// white spaces and C0/C1 control characters
+			dc.selectClipRgn(clipRegion.getHandle());
+			x = startX;
+			int dx;
+			for(size_t i = firstRun; i < lastRun; ++i) {
+				Run& run = *runs_[i];
+				context.orientation = run.getOrientation();
+				for(length_t j = run.column; j < run.column + run.length; ++j) {
+					if(BinaryProperty::is(text[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
+						run.getX(j - run.column, false, dx);
+						context.rect.left = x + dx;
+						run.getX(j - run.column, true, dx);
+						context.rect.right = x + dx;
+						if(context.rect.left > context.rect.right)
+							swap(context.rect.left, context.rect.right);
+						specialCharacterRenderer->drawWhiteSpaceCharacter(context, text[j]);
+					} else if(isC0orC1Control(text[j])) {
+						run.getX(j - run.column, false, dx);
+						context.rect.left = x + dx;
+						run.getX(j - run.column, true, dx);
+						context.rect.right = x + dx;
+						if(context.rect.left > context.rect.right)
+							swap(context.rect.left, context.rect.right);
+						specialCharacterRenderer->drawControlCharacter(context, text[j]);
+					}
+				}
+				x += run.getWidth();
+			}
+		}
+		if(getLineTerminatorOrientation(renderer_.getTextViewer().getConfiguration()) == RIGHT_TO_LEFT)
+			x = originalX + getSublineIndent(subline);
+	} // end of nonempty line case
+	
+	// line terminator and line wrapping mark
+	const Document& document = renderer_.getTextViewer().getDocument();
+	if(specialCharacterRenderer != 0) {
+		context.orientation = getLineTerminatorOrientation(renderer_.getTextViewer().getConfiguration());
+		if(subline < numberOfSublines_ - 1) {	// line wrapping mark
+			const int markWidth = specialCharacterRenderer->getLineWrappingMarkWidth(context);
+			if(context.orientation == LEFT_TO_RIGHT) {
+				context.rect.right = renderer_.getWidth();
+				context.rect.left = context.rect.right - markWidth;
+			} else {
+				context.rect.left = 0;
+				context.rect.right = markWidth;
+			}
+			specialCharacterRenderer->drawLineWrappingMark(context);
+		} else if(lineNumber_ < document.getNumberOfLines() - 1) {	// line teminator
+			const LineBreak nlf = document.getLineInfo(lineNumber_).getLineBreak();
+			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
+			if(context.orientation == LEFT_TO_RIGHT) {
+				context.rect.left = x;
+				context.rect.right = x + nlfWidth;
+			} else {
+				context.rect.left = x - nlfWidth;
+				context.rect.right = x;
+			}
+			const Caret& caret = renderer_.getTextViewer().getCaret();
+			const Position eol(lineNumber_, document.getLineLength(lineNumber_));
+			if(caret.getTopPoint().getPosition() <= eol && caret.getBottomPoint().getPosition() > eol)
+				dc.fillSolidRect(x, y, nlfWidth, linePitch, selectionColor.background);
+			dc.setBkMode(TRANSPARENT);
+			specialCharacterRenderer->drawLineTerminator(context, nlf);
+		}
 	}
 
-	// draw selected text segment (also underline and border)
-	x = startX;
-	clipRegion.setRect(clipRect);
-	dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
-	for(size_t i = firstRun; i < lastRun; ++i) {
-		Run& run = *runs_[i];
-		if(sel && getText()[run.column] != L'\t'
-				&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
-			dc.selectObject(run.font);
-			dc.setTextColor(selectionColor.foreground);
-			runRect.left = x;
-			runRect.right = runRect.left + run.getWidth();
-			hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, &runRect,
-				&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
-		}
-		drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
-		x += run.getWidth();
-	}
 	dc.restore(savedCookie);
 }
 
@@ -458,12 +545,7 @@ void LineLayout::dumpRuns(ostream& out) const {
 
 /// Expands the all tabs and resolves each width.
 inline void LineLayout::expandTabsWithoutWrapping() throw() {
-	bool rtl;
-	switch(renderer_.getTextViewer().getConfiguration().alignment) {
-	case ALIGN_LEFT:	rtl = false; break;
-	case ALIGN_RIGHT:	rtl = true; break;
-	default:			rtl = renderer_.getTextViewer().getConfiguration().orientation == RIGHT_TO_LEFT;
-	}
+	const bool rtl = getLineTerminatorOrientation(renderer_.getTextViewer().getConfiguration()) == RIGHT_TO_LEFT;
 	const String& text = getText();
 	int x = 0;
 	Run* run;
@@ -736,13 +818,7 @@ int LineLayout::getNextTabStopBasedLeftEdge(int x, bool right) const throw() {
 	assert(x >= 0);
 	const TextViewer::Configuration& c = renderer_.getTextViewer().getConfiguration();
 	const int tabWidth = renderer_.getAverageCharacterWidth() * c.tabWidth;
-	bool rtl;
-	switch(c.alignment) {
-	case ALIGN_LEFT:	rtl = false; break;
-	case ALIGN_RIGHT:	rtl = true; break;
-	default:			rtl = c.orientation == RIGHT_TO_LEFT; break;
-	}
-	if(!rtl)
+	if(getLineTerminatorOrientation(c) == LEFT_TO_RIGHT)
 		return getNextTabStop(x, right ? FORWARD : BACKWARD);
 	else
 		return right ? x + (x - getLongestSublineWidth()) % tabWidth : x - (tabWidth - (x - getLongestSublineWidth()) % tabWidth);
@@ -832,7 +908,17 @@ int LineLayout::getSublineIndent(length_t subline) const {
 	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
 		return 0;
 	else {
-		int width = c.lineWrap.wraps() ? renderer_.getWrapWidth() : renderer_.getWidth();
+		int width;
+		if(c.lineWrap.wraps()) {
+			if(const ISpecialCharacterRenderer* scr = renderer_.getSpecialCharacterRenderer()) {
+				ScreenDC dc;
+				ISpecialCharacterRenderer::LayoutContext context(dc);
+				context.orientation = getLineTerminatorOrientation(c);
+				width = renderer_.getWrapWidth() + scr->getLineWrappingMarkWidth(context);
+			} else
+				width = renderer_.getWrapWidth();
+		} else
+			width = renderer_.getWidth();
 		if(c.alignment == ALIGN_RIGHT)
 			return width - getSublineWidth(subline);
 		else if(c.alignment == ALIGN_CENTER)
@@ -1273,20 +1359,29 @@ void LineLayout::shape(Run& run) throw() {
 	run.glyphOffsets = new ::GOFFSET[run.numberOfGlyphs];
 	hr = ::ScriptPlace(dc.getHandle(), &run.cache, run.glyphs, run.numberOfGlyphs,
 			run.visualAttributes, &run.analysis, run.advances, run.glyphOffsets, &run.width);
-	dc.selectObject(oldFont);
 
 	// query widths of C0 and C1 controls in this logical line
 	if(ISpecialCharacterRenderer* scr = renderer_.getSpecialCharacterRenderer()) {
 		ISpecialCharacterRenderer::LayoutContext context(dc);
 		context.orientation = run.getOrientation();
-		for(length_t i = 0; i < run.column; ++i) {
-			const CodePoint c = text[i];
-			if(c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0)) {
-				if(const int width = scr->getControlCharacterWidth(context, c))
+		::SCRIPT_FONTPROPERTIES fp;
+		fp.cBytes = 0;
+		for(length_t i = 0; i < run.length; ++i) {
+			if(isC0orC1Control(text[i])) {
+				if(const int width = scr->getControlCharacterWidth(context, text[i])) {
+					// substitute the glyph
+					run.width.abcB += width - run.advances[i];
 					run.advances[i] = width;
+					if(fp.cBytes == 0) {
+						fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
+						::ScriptGetFontProperties(dc.getHandle(), &run.cache, &fp);
+					}
+					run.glyphs[i] = fp.wgBlank;
+				}
 			}
 		}
 	}
+	dc.selectObject(oldFont);
 }
 
 /// Locates the wrap points and resolves tab expansions.
@@ -1813,7 +1908,7 @@ void LineLayoutBuffer::presentationStylistChanged() {
  */
 
 
-// RuleBasedSpecialCharacterRenderer ////////////////////////////////////////
+// DefaultSpecialCharacterRenderer //////////////////////////////////////////
 
 namespace {
 	inline void getControlPresentationString(CodePoint c, Char* buffer) {
@@ -1822,71 +1917,166 @@ namespace {
 	}
 }
 
+/**
+ * @class ascension::viewers::DefaultSpecialCharacterRenderer
+ *
+ * Default implementation of @c ISpecialCharacterRenderer interface. This renders special
+ * characters with the glyphs provided by the standard international font "Lucida Sans Unicode".
+ * The mapping special characters to characters provide glyphs are as follows:
+ * - Horizontal tab (LTR) : U+2192 Rightwards Arrow (&#x2192)
+ * - Horizontal tab (RTL) : U+2190 Leftwards Arrow (&#x2190)
+ * - Line terminator : U+2193 Downwards Arrow (&#x2193)
+ * - Line wrapping mark (LTR) : U+21A9 Leftwards Arrow With Hook (&#x21A9)
+ * - Line wrapping mark (RTL) : U+21AA Rightwards Arrow With Hook (&#x21AA)
+ * - White space : U+00B7 Middle Dot (&#x00B7)
+ *
+ * Default foreground colors of glyphs are as follows:
+ * - Control characters : RGB(0x80, 0x80, 0x00)
+ * - Line terminators : RGB(0x00, 0x80, 0x80)
+ * - Line wrapping markers: RGB(0x00, 0x80, 0x80)
+ * - White space characters : RGB(0x00, 0x80, 0x80)
+ */
+
 /// Default constructor.
-RuleBasedSpecialCharacterRenderer::RuleBasedSpecialCharacterRenderer() throw() : renderer_(0) {
-	glyphs_[0].horizontalTab = glyphs_[1].horizontalTab = 0x005E;
-	glyphs_[0].horizontalTab = glyphs_[1].generalWhiteSpace = 0x005F;
-	glyphs_[0].horizontalTab = glyphs_[1].ideographicSpace = 0x25A1;
-	glyphs_[0].unixEOL = glyphs_[0].macintoshEOL = glyphs_[0].windowsEOL
-		= glyphs_[0].ebcdicEOL = glyphs_[0].lineSeparator = glyphs_[0].paragraphSeparator = 0x002E;
-	glyphs_[1].unixEOL = glyphs_[1].macintoshEOL = glyphs_[1].windowsEOL
-		= glyphs_[1].ebcdicEOL = glyphs_[1].lineSeparator = glyphs_[1].paragraphSeparator = 0x005C;
-	glyphs_[0].lineWrappingMarker = 0x003C;
-	glyphs_[1].lineWrappingMarker = 0x003E;
+DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() throw() : renderer_(0),
+		controlColor_(RGB(0x80, 0x80, 0x00)), eolColor_(RGB(0x00, 0x80, 0x80)), wrapMarkColor_(RGB(0x00, 0x80, 0x80)),
+		whiteSpaceColor_(RGB(0x00, 0x80, 0x80)), showsEOLs_(true), showsWhiteSpaces_(true), font_(0) {
 }
 
-/**
- * Constructor.
- * @param glyphsForLTR the glyph definition for LTR context
- * @param glyphsForRTL the glyph definition for RTL context
- */
-RuleBasedSpecialCharacterRenderer::RuleBasedSpecialCharacterRenderer(
-		const SubstitutionGlyphs& glyphsForLTR, const SubstitutionGlyphs& glyphsForRTL) throw() : renderer_(0) {
-	glyphs_[0] = glyphsForLTR;
-	glyphs_[1] = glyphsForRTL;
+/// Destructor.
+DefaultSpecialCharacterRenderer::~DefaultSpecialCharacterRenderer() throw() {
+	::DeleteObject(font_);
+	font_ = 0;
 }
 
 /// @see ISpecialCharacterRenderer#drawControlCharacter
-void RuleBasedSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
+void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
+	HFONT oldFont = context.dc.selectObject(renderer_->getFont());
+	context.dc.setTextColor(controlColor_);
+	Char buffer[2];
+	getControlPresentationString(c, buffer);
+	context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->getAscent(), 0, 0, buffer, 2, 0);
+	context.dc.selectObject(oldFont);
 }
 
-/// @see ISpecialCharacterRenderer#drawLineTerminatorWidth
-void RuleBasedSpecialCharacterRenderer::drawLineTerminatorWidth(const DrawingContext& context, text::LineBreak lineBreak) const {
+/// @see ISpecialCharacterRenderer#drawLineTerminator
+void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, text::LineBreak) const {
+	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xFFFF) {
+		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000) ? font_ : renderer_->getFont());
+		context.dc.setTextColor(eolColor_);
+		context.dc.extTextOut(context.rect.left,
+			context.rect.top + renderer_->getAscent(), ETO_GLYPH_INDEX, 0, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
+		context.dc.selectObject(oldFont);
+	}
 }
 
-/// @see ISpecialCharacterRenderer#drawLineWrappingMarkWidth
-void RuleBasedSpecialCharacterRenderer::drawLineWrappingMarkWidth(const DrawingContext& context) const {
+/// @see ISpecialCharacterRenderer#drawLineWrappingMark
+void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext& context) const {
+	const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
+	const ::WCHAR glyph = glyphs_[id];
+	if(glyph != 0xFFFF) {
+		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->getFont());
+		context.dc.setTextColor(wrapMarkColor_);
+		context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->getAscent(), ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
+		context.dc.selectObject(oldFont);
+	}
 }
 
 /// @see ISpecialCharacterRenderer#drawWhiteSpaceCharacter
-void RuleBasedSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const {
+void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const {
+	if(!showsWhiteSpaces_)
+		return;
+	else if(c == 0x0009) {
+		const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
+		const ::WCHAR glyph = glyphs_[id];
+		if(glyph != 0xFFFF) {
+			HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->getFont());
+			const int glyphWidth = glyphWidths_[id] & 0x7FFFFFFF;
+			const int x =
+				((context.orientation == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
+					|| (context.orientation == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
+				context.rect.left : context.rect.right - glyphWidth;
+			context.dc.setTextColor(whiteSpaceColor_);
+			context.dc.extTextOut(x, context.rect.top + renderer_->getAscent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect, &glyph, 1, 0);
+			context.dc.selectObject(oldFont);
+		}
+	} else if(glyphs_[WHITE_SPACE] != 0xFFFF) {
+		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000) ? font_ : renderer_->getFont());
+		context.dc.setTextColor(whiteSpaceColor_);
+		context.dc.extTextOut((context.rect.left + context.rect.right - (glyphWidths_[WHITE_SPACE] & 0x7FFFFFFF)) / 2,
+			context.rect.top + renderer_->getAscent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect,
+			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
+		context.dc.selectObject(oldFont);
+	}
+}
+
+/// @see IFontSelectorListener#fontChanged
+void DefaultSpecialCharacterRenderer::fontChanged() {
+	static const Char codes[] = {0x2192, 0x2190, 0x2193, 0x21A9, 0x21AA, 0x00B7};
+
+	// using the primary font
+	ScreenDC dc;
+	HFONT oldFont = dc.selectObject(renderer_->getFont());
+	dc.getGlyphIndices(codes, countof(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
+	dc.getCharWidthI(glyphs_, countof(codes), glyphWidths_);
+
+	// using the fallback font
+	::DeleteObject(font_);
+	font_ = 0;
+	if(find(glyphs_, endof(glyphs_), 0xFFFF) != endof(glyphs_)) {
+		::LOGFONTW lf;
+		::GetObject(renderer_->getFont(), sizeof(::LOGFONTW), &lf);
+		lf.lfWeight = FW_REGULAR;
+		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
+		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");
+		dc.selectObject(font_ = ::CreateFontIndirectW(&lf));
+		::WORD g[countof(glyphs_)];
+		int w[countof(glyphWidths_)];
+		dc.getGlyphIndices(codes, countof(codes), g, GGI_MARK_NONEXISTING_GLYPHS);
+		dc.getCharWidthI(g, countof(codes), w);
+		for(int i = 0; i < countof(glyphs_); ++i) {
+			if(glyphs_[i] == 0xFFFF) {
+				if(g[i] != 0xFFFF) {
+					glyphs_[i] = g[i];
+					glyphWidths_[i] = w[i] | 0x80000000;
+				} else
+					glyphWidths_[i] = 0;	// missing
+			}
+		}
+	}
+
+	dc.selectObject(oldFont);
 }
 
 /// @see ISpecialCharacterRenderer#getControlCharacterWidth
-int RuleBasedSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
-	return 0;
-}
-
-/// @see ISpecialCharacterRenderer#getLineTerminatorWidth
-int RuleBasedSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const {
-	return 0;
-}
-
-/// @see ISpecialCharacterRenderer#getLineWrappingMarkWidth
-int RuleBasedSpecialCharacterRenderer::getLineWrappingMarkWidth(const LayoutContext& context) const {
+int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
+	Char buffer[2];
+	getControlPresentationString(c, buffer);
 	HFONT oldFont = context.dc.selectObject(renderer_->getFont());
-	const int result = context.dc.getTextExtent(&glyphs_[context.orientation == LEFT_TO_RIGHT ? 0 : 1].lineWrappingMarker, 1).cx;
+	const int result = context.dc.getTextExtent(buffer, 2).cx;
 	context.dc.selectObject(oldFont);
 	return result;
 }
 
+/// @see ISpecialCharacterRenderer#getLineTerminatorWidth
+int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, text::LineBreak) const {
+	return showsEOLs_ ? (glyphWidths_[LINE_TERMINATOR] & 0x7FFFFFFF) : 0;
+}
+
+/// @see ISpecialCharacterRenderer#getLineWrappingMarkWidth
+int DefaultSpecialCharacterRenderer::getLineWrappingMarkWidth(const LayoutContext& context) const {
+	return glyphWidths_[(context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK] & 0x7FFFFFFF;
+}
+
 /// @see ISpecialCharacterRenderer#install
-void RuleBasedSpecialCharacterRenderer::install(TextRenderer& renderer) {
-	renderer_ = &renderer;
+void DefaultSpecialCharacterRenderer::install(TextRenderer& renderer) {
+	(renderer_ = &renderer)->addFontListener(*this);
+	fontChanged();
 }
 
 /// @see ISpecialCharacterRenderer#uninstall
-void RuleBasedSpecialCharacterRenderer::uninstall() {
+void DefaultSpecialCharacterRenderer::uninstall() {
+	renderer_->removeFontListener(*this);
 	renderer_ = 0;
 }
 
@@ -1946,6 +2136,11 @@ void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
 		delete linkedFonts_;
 		linkedFonts_ = 0;
 	}
+}
+
+inline void FontSelector::fireFontChanged() {
+	fontChanged();
+	listeners_.notify(IFontSelectorListener::fontChanged);
 }
 
 /// Returns the default font association (fallback) map.
@@ -2100,7 +2295,7 @@ void FontSelector::linkPrimaryFont() throw() {
 		}
 		::RegCloseKey(key);
 	}
-	fontChanged();
+	fireFontChanged();
 }
 
 void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
@@ -2172,12 +2367,12 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 			shapingControlsFont_ = 0;
 		}
 		if(linkedFonts_ != 0) {
-			linkPrimaryFont();	// this calls fontChanged()
+			linkPrimaryFont();	// this calls fireFontChanged()
 			notified = true;
 		}
 	}
 	if(!notified)
-		fontChanged();
+		fireFontChanged();
 }
 
 
@@ -2213,9 +2408,9 @@ TextRenderer::TextRenderer(TextViewer& viewer) :
 		layoutInserted(1, logicalLines);
 	viewer.addDisplaySizeListener(*this);
 
-#if 0
-	ISpecialCharacterDrawer* ppp = new SpecialCharacterSubstitutionGlyphDrawer();
-	specialCharacterDrawer_.reset(ppp, true);
+#if 1
+	specialCharacterRenderer_.reset(new DefaultSpecialCharacterRenderer);
+	specialCharacterRenderer_->install(*this);
 #endif
 }
 
@@ -2238,14 +2433,6 @@ TextRenderer::~TextRenderer() throw() {
 /// @see FontSelector#fontChanged
 void TextRenderer::fontChanged() {
 	const TextViewer::Configuration& c = getTextViewer().getConfiguration();
-	if(c.lineWrap.wraps() && specialCharacterRenderer_.get() != 0) {
-		ClientDC dc = getTextViewer().getDC();
-		ISpecialCharacterRenderer::LayoutContext ctx(dc);
-		ctx.orientation = (c.alignment == ALIGN_LEFT
-			|| (c.alignment == ALIGN_CENTER && c.orientation == LEFT_TO_RIGHT)) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
-		lineWrappingMarkWidth_ = specialCharacterRenderer_->getLineWrappingMarkWidth(ctx);
-	} else
-		lineWrappingMarkWidth_ = 0;
 	invalidate();
 	visualLinesListeners_.notify(IVisualLinesListener::rendererFontChanged);
 
@@ -2292,9 +2479,12 @@ int TextRenderer::getWidth() const throw() {
  */
 int TextRenderer::getWrapWidth() const throw() {
 	const LineWrapConfiguration& c = getTextViewer().getConfiguration().lineWrap;
-	if(c.wrapsAtWindowEdge())
-		return canvasWidth_ - lineWrappingMarkWidth_;
-	else if(c.wraps())
+	if(c.wrapsAtWindowEdge()) {
+		auto_ptr<DC> dc(getDC());
+		ISpecialCharacterRenderer::LayoutContext context(*dc);
+		context.orientation = getLineTerminatorOrientation(getTextViewer().getConfiguration());
+		return canvasWidth_ - ((specialCharacterRenderer_.get() != 0) ? specialCharacterRenderer_->getLineWrappingMarkWidth(context) : 0);
+	} else if(c.wraps())
 		return c.width;
 	else
 		return numeric_limits<int>::max();
@@ -2426,20 +2616,21 @@ void TextRenderer::renderLine(length_t line, PaintDC& dc, int x, int y, const ::
 /**
  * Sets the special character renderer.
  * @param newRenderer the new renderer or @c null
- * @param delegateOwnership set true to transfer the ownership to the callee
  * @throw std#invalid_argument @a newRenderer is already registered
  */
-void TextRenderer::setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership) {
-	if(newRenderer != 0 && newRenderer == specialCharacterRenderer_.get())
+void TextRenderer::setSpecialCharacterRenderer(ASCENSION_SHARED_POINTER<ISpecialCharacterRenderer> newRenderer) {
+	if(newRenderer.get() != 0 && newRenderer.get() == specialCharacterRenderer_.get())
 		throw invalid_argument("the specified renderer is already registered.");
-	specialCharacterRenderer_.reset(newRenderer, delegateOwnership);
+	if(specialCharacterRenderer_.get() != 0)
+		specialCharacterRenderer_->uninstall();
+	specialCharacterRenderer_ = newRenderer;
+	newRenderer->install(*this);
 	invalidate();
 }
 
-/// Returns if the complex script features supported.
-bool TextRenderer::supportsComplexScript() throw() {
-//	return uspLib.isAvailable();
-	return true;
+/// Returns if OpenType features are supported.
+bool TextRenderer::supportsOpenTypeFeatures() throw() {
+	return false;
 }
 
 /**
@@ -2531,7 +2722,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(memoryDC_.get() == 0)
 		memoryDC_ = viewer_.getDC().createCompatibleDC();
 	if(memoryBitmap_.getHandle() == 0)
-		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc, getWidth(), clientRect.bottom - clientRect.top);
+		memoryBitmap_ = Bitmap::createCompatibleBitmap(dc,
+			getWidth(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
 	memoryDC_->selectObject(memoryBitmap_.getHandle());
 	DC& dcex = *memoryDC_;
 	const int left = 0;

@@ -117,7 +117,7 @@ namespace ascension {
 		 * @see TextViewer#setCaretShapeProvider, CaretShapeUpdater, DefaultCaretShaper, LocaleSensitiveCaretShaper
 		 */
 		class ICaretShapeProvider {
-		protected:
+		public:
 			/// Destructor.
 			virtual ~ICaretShapeProvider() throw() {}
 		private:
@@ -137,7 +137,6 @@ namespace ascension {
 			/// Uninstalls the provider.
 			virtual void uninstall() throw() = 0;
 			friend class TextViewer;
-			friend class ascension::internal::StrategyPointer<ICaretShapeProvider>;
 		};
 
 		/**
@@ -186,6 +185,9 @@ namespace ascension {
 		 * @see TextViewer#setMouseInputStrategy
 		 */
 		class IMouseInputStrategy {
+		public:
+			/// Destructor.
+			virtual ~IMouseInputStrategy() throw() {}
 		protected:
 			/// Buttons of the mouse.
 			enum Button {
@@ -201,8 +203,6 @@ namespace ascension {
 				RELEASED,		///< The button was released (up).
 				DOUBLE_CLICKED	///< The button was double-clicked.
 			};
-			/// Destructor.
-			virtual ~IMouseInputStrategy() throw() {}
 		private:
 			/// The viewer lost the mouse capture.
 			virtual void captureChanged() = 0;
@@ -244,7 +244,6 @@ namespace ascension {
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 			friend class TextViewer;
-			friend class ascension::internal::StrategyPointer<IMouseInputStrategy>;
 		};
 
 		/**
@@ -296,7 +295,7 @@ namespace ascension {
 		 * @see TextViewer#setLinkTextStrategy
 		 */
 		class IViewerLinkTextStrategy {
-		protected:
+		public:
 			/// Destructor.
 			virtual ~IViewerLinkTextStrategy() throw() {}
 		private:
@@ -316,7 +315,7 @@ namespace ascension {
 			 */
 			virtual void invokeLink(const text::Region& region, const String& text) = 0;
 			friend class TextViewer;
-			friend class ascension::internal::StrategyPointer<IViewerLinkTextStrategy>;
+			friend class ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy>;
 		};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -492,9 +491,9 @@ namespace ascension {
 			void	removeDisplaySizeListener(IDisplaySizeListener& listener);
 			void	removeInputStatusListener(ITextViewerInputStatusListener& listener);
 			void	removeViewportListener(IViewportListener& listener);
-			void	setCaretShapeProvider(ICaretShapeProvider* shaper, bool delegateOwnership) throw();
-			void	setLinkTextStrategy(IViewerLinkTextStrategy* newStrategy, bool delegateOwnership) throw();
-			void	setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
+			void	setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) throw();
+			void	setLinkTextStrategy(ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> newStrategy) throw();
+			void	setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy> newStrategy);
 			// attributes
 			const Configuration&				getConfiguration() const throw();
 			text::Document&						getDocument();
@@ -532,6 +531,9 @@ namespace ascension {
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT	startTextServices();
 #endif /* !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK */
+			// redraw
+			void	redrawLine(length_t line, bool following = false);
+			void	redrawLines(length_t first, length_t last);
 			// freeze
 			void	freeze(bool forAllClones = true);
 			bool	isFrozen() const throw();
@@ -564,8 +566,6 @@ namespace ascension {
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
 			int		mapLineToClientY(length_t line, bool fullSearch) const;
 			void	recreateCaret();
-			void	redrawLine(length_t line, bool following = false);
-			void	redrawLines(length_t first, length_t last);
 			void	redrawVerticalRuler();
 			void	updateCaretPosition();
 			void	updateIMECompositionWindowPosition();
@@ -779,8 +779,8 @@ namespace ascension {
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;	// ツールチップ
 			Char* tipText_;	// ツールチップのテキスト
-			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
-			ascension::internal::StrategyPointer<IViewerLinkTextStrategy> linkTextStrategy_;
+			ASCENSION_SHARED_POINTER<IMouseInputStrategy> mouseInputStrategy_;
+			ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> linkTextStrategy_;
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
@@ -833,7 +833,7 @@ namespace ascension {
 
 			// キャレットのビットマップ
 			struct CaretShape {
-				ascension::internal::StrategyPointer<ICaretShapeProvider> shaper;
+				ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper;
 				Orientation orientation;
 				int width;
 				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
@@ -869,6 +869,30 @@ namespace ascension {
 		protected:
 			bool	getNearestIdentifier(const text::Position& position, length_t* startChar, length_t* endChar, String* identifier) const;
 		private:
+		};
+
+		class CurrentLineHighlighter : public manah::Noncopyable,
+			virtual public presentation::ILineColorDirector, virtual public ICaretListener {
+		public:
+			// constant
+			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
+			// constructors
+			CurrentLineHighlighter(Caret& caret, const Colors& color = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK));
+			~CurrentLineHighlighter() throw();
+			// attributes
+			const Colors&	getColor() const throw();
+			void			setColor(const Colors& color) throw();
+		private:
+			// ILineColorDirector
+			ILineColorDirector::Priority	queryLineColor(length_t line, Colors& color) const;
+			// ICaretListener
+			void	caretMoved(const Caret& self, const text::Region& oldRegion);
+			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
+			void	overtypeModeChanged(const Caret& self);
+			void	selectionShapeChanged(const Caret& self);
+		private:
+			Caret& caret_;
+			Colors color_;
 		};
 
 
@@ -1042,16 +1066,14 @@ inline void TextViewer::removeViewportListener(IViewportListener& listener) {vie
 /**
  * Sets the caret shape provider.
  * @param shaper the new caret shaper
- * @param delegateOwnership set true to transfer the ownership of @a shaper to the callee
  */
-inline void TextViewer::setCaretShapeProvider(ICaretShapeProvider* shaper, bool delegateOwnership) {caretShape_.shaper.reset(shaper, delegateOwnership);}
+inline void TextViewer::setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
 
 /**
  * Sets the link text strategy.
- * @param newStrategy the new strategy
- * @param delegateOwnership set true to transfer the ownership of @a newStrategy to the callee
+ * @param newStrategy the new strategy or @c null
  */
-inline void TextViewer::setLinkTextStrategy(IViewerLinkTextStrategy* newStrategy, bool delegateOwnership) {linkTextStrategy_.reset(newStrategy, delegateOwnership);}
+inline void TextViewer::setLinkTextStrategy(ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> newStrategy) {linkTextStrategy_ = newStrategy;}
 
 /// Returns the vertical ruler's configurations.
 inline const TextViewer::VerticalRulerConfiguration& TextViewer::VerticalRulerDrawer::getConfiguration() const throw() {return configuration_;}

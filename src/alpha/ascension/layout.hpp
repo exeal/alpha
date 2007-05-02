@@ -294,7 +294,83 @@ namespace ascension {
 			friend class TextRenderer;
 		};
 
+		/*
+		 * Interface for objects which are interested in change of a @c FontSelector.
+		 * @see FontSelector#addFontListener, FontSelector#removeFontListener
+		 */
+		class IFontSelectorListener {
+		private:
+			/// The font settings was changed.
+			virtual void fontChanged() = 0;
+			friend class FontSelector;
+		};
+
+		/**
+		 * A @c FontSelector holds a primary font, the font metrics and a font association table
+		 * for text rendering.
+		 * 
+		 * This class supports Font Linking (limited) mechanism for CJK end users. And also supports
+		 * Font Fallback mechanism for multilingual text display.
+		 * @see TextRenderer
+		 */
+		class FontSelector : public manah::Unassignable {
+		public:
+			/// Font association table consists of pairss of a script and a font familiy name.
+			typedef std::map<int, const WCHAR*> FontAssociations;
+			// metrics
+			int	getAscent() const throw();
+			int	getAverageCharacterWidth() const throw();
+			int	getDescent() const throw();
+			int	getLineHeight() const throw();
+			// primary font and alternatives
+			static const FontAssociations&
+					getDefaultFontAssociations() throw();
+			HFONT	getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
+			HFONT	getFontForShapingControls() const throw();
+			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
+			// font linking
+			void		enableFontLinking(bool enable = true) throw();
+			bool		enablesFontLinking() const throw();
+			HFONT		getLinkedFont(std::size_t index, bool bold = false, bool italic = false) const;
+			std::size_t	getNumberOfLinkedFonts() const throw();
+			// listener
+			void	addFontListener(IFontSelectorListener& listener);
+			void	removeFontListener(IFontSelectorListener& listener);
+		protected:
+			FontSelector();
+			FontSelector(const FontSelector& rhs);
+			virtual ~FontSelector() throw();
+			virtual void									fontChanged() = 0;
+			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() const = 0;
+		private:
+			struct Fontset;
+			void	fireFontChanged();
+			HFONT	getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
+			void	linkPrimaryFont() throw();
+			void	resetPrimaryFont(manah::win32::gdi::DC& dc, HFONT font);
+			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
+			struct Fontset : public manah::Noncopyable {
+				WCHAR faceName[LF_FACESIZE];
+				HFONT regular, bold, italic, boldItalic;
+				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
+				Fontset(const Fontset& rhs) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, rhs.faceName);}
+				~Fontset() throw() {clear(L"");}
+				void clear(const WCHAR* newName = 0) throw() {
+					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
+					regular = bold = italic = boldItalic = 0; if(newName != 0) std::wcscpy(faceName, newName);}
+			};
+			Fontset primaryFont_;
+			std::map<int, Fontset*> associations_;
+			HFONT shapingControlsFont_;				// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
+			std::vector<Fontset*>* linkedFonts_;	// for the font linking feature
+			ascension::internal::Listeners<IFontSelectorListener> listeners_;
+			static FontAssociations defaultAssociations_;
+		};
+
 		class ISpecialCharacterRenderer {
+		public:
+			/// Destructor.
+			virtual ~ISpecialCharacterRenderer() throw() {}
 		protected:
 			/// Context of the layout.
 			struct LayoutContext {
@@ -309,8 +385,6 @@ namespace ascension {
 				/// Constructor.
 				DrawingContext(manah::win32::gdi::DC& deviceContext) throw() : LayoutContext(deviceContext) {}
 			};
-			/// Destructor.
-			virtual ~ISpecialCharacterRenderer() throw() {}
 		private:
 			/**
 			 * Draws the specified C0 or C1 control character.
@@ -323,12 +397,12 @@ namespace ascension {
 			 * @param context the context
 			 * @param lineBreak the line break to draw
 			 */
-			virtual void drawLineTerminatorWidth(const DrawingContext& context, text::LineBreak lineBreak) const = 0;
+			virtual void drawLineTerminator(const DrawingContext& context, text::LineBreak lineBreak) const = 0;
 			/**
 			 * Draws the width of a line wrapping mark.
 			 * @param context the context
 			 */
-			virtual void drawLineWrappingMarkWidth(const DrawingContext& context) const = 0;
+			virtual void drawLineWrappingMark(const DrawingContext& context) const = 0;
 			/**
 			 * Draws the specified white space character.
 			 * @param context the context
@@ -364,100 +438,47 @@ namespace ascension {
 			virtual void uninstall() = 0;
 			friend class LineLayout;
 			friend class TextRenderer;
-			friend class ascension::internal::StrategyPointer<ISpecialCharacterRenderer>;
 		};
 
-		/**
-		 * Default implementation of @c ISpecialCharacterRenderer interface.
-		 * @c RuleBasedSpecialCharacterRenderer uses the glyphs of the specified character and renderer's primary font.
-		 */
-		class RuleBasedSpecialCharacterRenderer : virtual public ISpecialCharacterRenderer {
+		class DefaultSpecialCharacterRenderer : virtual public ISpecialCharacterRenderer, virtual public IFontSelectorListener {
 		public:
-			struct SubstitutionGlyphs {
-				Char horizontalTab;			///< Horizontal tab (U+0009). Default value is '^' (U+005E).
-				Char generalWhiteSpace;		///< General white spaces (except U+1680: Ogham Space Mark). Default value is '_' (U+005F).
-				Char ideographicSpace;		///< Ideographic space (U+3000). Default value is '□' (U+25A1).
-				Char unixEOL;				///< LF (U+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char macintoshEOL;			///< CR (U+000D). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char windowsEOL;			///< CRLF (U+000D+000A). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char ebcdicEOL;				///< NEL (U+0085). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char lineSeparator;			///< LS (U+2028). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char paragraphSeparator;	///< PS (U+2029). Default value is '/' (U+002F) for LTR or '\' (U+005C) for RTL.
-				Char lineWrappingMarker;	///< Sign indicates the line is wrapped. Default value is '<' (U+003C) for LTR or '>' (U+003E) for LTR.
-//				String endOfFile;			///< End of file. Default is "[EOF]".
-			};
-			RuleBasedSpecialCharacterRenderer() throw();
-			RuleBasedSpecialCharacterRenderer(const SubstitutionGlyphs& ltrGlyphs, const SubstitutionGlyphs& rtlGlyphs) throw();
+			// constructors
+			DefaultSpecialCharacterRenderer() throw();
+			~DefaultSpecialCharacterRenderer() throw();
+			// attributes
+			COLORREF	getControlCharacterColor() const throw();
+			COLORREF	getLineTerminatorColor() const throw();
+			COLORREF	getLineWrappingMarkColor() const throw();
+			COLORREF	getWhiteSpaceColor() const throw();
+			void		setControlCharacterColor(COLORREF color) throw();
+			void		setLineTerminatorColor(COLORREF color) throw();
+			void		setLineWrappingMarkColor(COLORREF color) throw();
+			void		setWhiteSpaceColor(COLORREF color) throw();
+			void		showLineTerminators(bool show) throw();
+			void		showWhiteSpaces(bool show) throw();
+			bool		showsLineTerminators() const throw();
+			bool		showsWhiteSpaces() const throw();
 		private:
+			// ISpecialCharacterRenderer
 			void	drawControlCharacter(const DrawingContext& context, CodePoint c) const;
-			void	drawLineTerminatorWidth(const DrawingContext& context, text::LineBreak lineBreak) const;
-			void	drawLineWrappingMarkWidth(const DrawingContext& context) const;
+			void	drawLineTerminator(const DrawingContext& context, text::LineBreak lineBreak) const;
+			void	drawLineWrappingMark(const DrawingContext& context) const;
 			void	drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
 			int		getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
 			int		getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const;
 			int		getLineWrappingMarkWidth(const LayoutContext& context) const;
 			void	install(TextRenderer& textRenderer);
 			void	uninstall();
+			// IFontSelectorListener
+			void	fontChanged();
 		private:
-			const TextRenderer* renderer_;
-			SubstitutionGlyphs glyphs_[2];	// [0] for LTR, [1] for RTL
-		};
-
-		/**
-		 * A @c FontSelector holds a primary font, the font metrics and a font association table
-		 * for text rendering.
-		 * 
-		 * This class supports Font Linking (limited) mechanism for CJK end users. And also supports
-		 * Font Fallback mechanism for multilingual text display.
-		 * @see TextRenderer
-		 */
-		class FontSelector : public manah::Unassignable {
-		public:
-			/// Font association table consists of pairss of a script and a font familiy name.
-			typedef std::map<int, const WCHAR*> FontAssociations;
-			// metrics
-			int	getAscent() const throw();
-			int	getAverageCharacterWidth() const throw();
-			int	getDescent() const throw();
-			int	getLineHeight() const throw();
-			// primary font and alternatives
-			static const FontAssociations&
-					getDefaultFontAssociations() throw();
-			HFONT	getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
-			HFONT	getFontForShapingControls() const throw();
-			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
-			// font linking
-			void		enableFontLinking(bool enable = true) throw();
-			bool		enablesFontLinking() const throw();
-			HFONT		getLinkedFont(std::size_t index, bool bold = false, bool italic = false) const;
-			std::size_t	getNumberOfLinkedFonts() const throw();
-		protected:
-			FontSelector();
-			FontSelector(const FontSelector& rhs);
-			virtual ~FontSelector() throw();
-			virtual void									fontChanged() = 0;
-			virtual std::auto_ptr<manah::win32::gdi::DC>	getDC() const = 0;
-		private:
-			struct Fontset;
-			HFONT	getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
-			void	linkPrimaryFont() throw();
-			void	resetPrimaryFont(manah::win32::gdi::DC& dc, HFONT font);
-			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
-			struct Fontset : public manah::Noncopyable {
-				WCHAR faceName[LF_FACESIZE];
-				HFONT regular, bold, italic, boldItalic;
-				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
-				Fontset(const Fontset& rhs) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, rhs.faceName);}
-				~Fontset() throw() {clear(L"");}
-				void clear(const WCHAR* newName = 0) throw() {
-					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
-					regular = bold = italic = boldItalic = 0; if(newName != 0) std::wcscpy(faceName, newName);}
-			};
-			Fontset primaryFont_;
-			std::map<int, Fontset*> associations_;
-			HFONT shapingControlsFont_;				// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
-			std::vector<Fontset*>* linkedFonts_;	// for the font linking feature
-			static FontAssociations defaultAssociations_;
+			TextRenderer* renderer_;
+			COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
+			bool showsEOLs_, showsWhiteSpaces_;
+			HFONT font_;	// provides substitution glyphs
+			enum {LTR_HORIZONTAL_TAB, RTL_HORIZONTAL_TAB, LINE_TERMINATOR, LTR_WRAPPING_MARK, RTL_WRAPPING_MARK, WHITE_SPACE};
+			::WORD glyphs_[6];
+			int glyphWidths_[6];
 		};
 
 		/**
@@ -483,19 +504,19 @@ namespace ascension {
 			TextRenderer(TextViewer& viewer, const TextRenderer& source);
 			~TextRenderer() throw();
 			// attributes
-			int				getLinePitch() const throw();
-			int				getLongestLineWidth() const throw();
-			length_t		getNumberOfSublinesOfLine(length_t) const;
-			length_t		getNumberOfVisualLines() const throw();
-			int				getWidth() const throw();
-			int				getWrapWidth() const throw();
+			int			getLinePitch() const throw();
+			int			getLongestLineWidth() const throw();
+			length_t	getNumberOfSublinesOfLine(length_t) const;
+			length_t	getNumberOfVisualLines() const throw();
+			int			getWidth() const throw();
+			int			getWrapWidth() const throw();
 			// class attributes
-			static bool	supportsComplexScript() throw();
+			static bool	supportsOpenTypeFeatures() throw();
 			// listeners and strategies
 			void						addVisualLinesListener(IVisualLinesListener& listener);
 			ISpecialCharacterRenderer*	getSpecialCharacterRenderer() const throw();
 			void						removeVisualLinesListener(IVisualLinesListener& listener);
-			void						setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+			void						setSpecialCharacterRenderer(ASCENSION_SHARED_POINTER<ISpecialCharacterRenderer> newRenderer);
 			// operation
 			void	renderLine(length_t line, manah::win32::gdi::PaintDC& dc,
 						int x, int y, const ::RECT& clipRect, const Colors& selectionColor) const throw();
@@ -513,14 +534,14 @@ namespace ascension {
 			// IDisplaySizeListener
 			void	viewerDisplaySizeChanged();
 		private:
-			int canvasWidth_, longestLineWidth_, lineWrappingMarkWidth_;
+			int canvasWidth_, longestLineWidth_;
 			length_t longestLine_, numberOfVisualLines_;
 #ifndef ASCENSION_NO_DOUBLE_BUFFERING
 			std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
 			manah::win32::gdi::Bitmap memoryBitmap_;
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			ascension::internal::Listeners<IVisualLinesListener> visualLinesListeners_;
-			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
+			ASCENSION_SHARED_POINTER<ISpecialCharacterRenderer> specialCharacterRenderer_;
 		};
 
 		/// @internal Clients of Ascension should not touch this.
@@ -653,6 +674,67 @@ inline TextViewer& LineLayoutBuffer::getTextViewer() throw() {return viewer_;}
 /// Returns the text viewer.
 inline const TextViewer& LineLayoutBuffer::getTextViewer() const throw() {return viewer_;}
 
+/// Returns the color of glyphs for control characters.
+inline COLORREF DefaultSpecialCharacterRenderer::getControlCharacterColor() const throw() {return controlColor_;}
+
+/// Returns the color of line terminators.
+inline COLORREF DefaultSpecialCharacterRenderer::getLineTerminatorColor() const throw() {return eolColor_;}
+
+/// Returns the color of line wrapping marks.
+inline COLORREF DefaultSpecialCharacterRenderer::getLineWrappingMarkColor() const throw() {return wrapMarkColor_;}
+
+/// Returns the color of glyphs for white space characters.
+inline COLORREF DefaultSpecialCharacterRenderer::getWhiteSpaceColor() const throw() {return whiteSpaceColor_;}
+
+/**
+ * Sets the color of glyphs for control characters.
+ * @param color the new color
+ */
+inline void DefaultSpecialCharacterRenderer::setControlCharacterColor(COLORREF color) throw() {controlColor_ = color;}
+
+/**
+ * Sets the color of line terminators.
+ * @param color the new color
+ */
+inline void DefaultSpecialCharacterRenderer::setLineTerminatorColor(COLORREF color) throw() {eolColor_ = color;}
+
+/**
+ * Sets the color of line wrapping marks.
+ * @param color the new color
+ */
+inline void DefaultSpecialCharacterRenderer::setLineWrappingMarkColor(COLORREF color) throw() {wrapMarkColor_ = color;}
+
+/**
+ * Sets the color of glyphs for white space characters.
+ * @param color the new color
+ */
+inline void DefaultSpecialCharacterRenderer::setWhiteSpaceColor(COLORREF color) throw() {whiteSpaceColor_ = color;}
+
+/**
+ * Sets the appearances of line terminators.
+ * @param show set true to show
+ */
+inline void DefaultSpecialCharacterRenderer::showLineTerminators(bool show) throw() {showsEOLs_ = show;}
+
+/**
+ * Sets the appearances of white space characters.
+ * @param show set true to show
+ */
+inline void DefaultSpecialCharacterRenderer::showWhiteSpaces(bool show) throw() {showsWhiteSpaces_ = show;}
+
+/// Returns true if line terminators are visible.
+inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const throw() {return showsEOLs_;}
+
+/// Returns true if white space characters are visible.
+inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const throw() {return showsWhiteSpaces_;}
+
+/**
+ * Registers the font selector listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+inline void FontSelector::addFontListener(IFontSelectorListener& listener) {listeners_.add(listener);}
+
 /// Returns the font linking is enabled.
 inline bool FontSelector::enablesFontLinking() const throw() {return linkedFonts_ != 0;}
 
@@ -673,6 +755,13 @@ inline int FontSelector::getLineHeight() const throw() {return ascent_ + descent
 
 /// Returns the number of the linked fonts.
 inline std::size_t FontSelector::getNumberOfLinkedFonts() const throw() {return (linkedFonts_ != 0) ? linkedFonts_->size() : 0;}
+
+/**
+ * Removes the font selector listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+inline void FontSelector::removeFontListener(IFontSelectorListener& listener) {listeners_.remove(listener);}
 
 /**
  * Registers the visual lines listener.

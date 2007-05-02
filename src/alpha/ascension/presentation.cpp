@@ -6,6 +6,7 @@
  */
 
 #include "StdAfx.h"
+#include "presentation.hpp"
 #include "viewer.hpp"
 using namespace ascension;
 using namespace ascension::presentation;
@@ -79,7 +80,17 @@ set<TextViewer*>::const_iterator Presentation::getLastTextViewer() const throw()
 Colors Presentation::getLineColor(length_t line) const {
 	if(line >= document_.getNumberOfLines())
 		throw BadPositionException();
-	return (lineColorDirector_.get() != 0) ? lineColorDirector_->queryLineColor(line) : Colors::STANDARD;
+	ILineColorDirector::Priority highestPriority = 0, p;
+	Colors result = Colors::STANDARD, c;
+	for(list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::const_iterator
+			i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
+		p = (*i)->queryLineColor(line, c);
+		if(p > highestPriority) {
+			highestPriority = p;
+			result = c;
+		}
+	}
+	return result;
 }
 
 /**
