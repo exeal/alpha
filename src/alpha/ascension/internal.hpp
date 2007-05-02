@@ -74,22 +74,6 @@ namespace ascension {
 		/// Returns absolute difference of two numerals.
 		template<typename T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
 
-		/// A pointer to the owned or unowned strategy.
-		template<class Strategy> class StrategyPointer : public manah::Noncopyable {
-		public:
-			StrategyPointer() throw() : p_(0), hasOwnership_(false) {}
-			StrategyPointer(Strategy* s, bool delegateOwnership) throw() : p_(s), hasOwnership_(delegateOwnership) {}
-			~StrategyPointer() throw() {if(hasOwnership_) delete p_;}
-			Strategy& operator*() const throw() {assert(p_ != 0); return *p_;}
-			Strategy* operator->() const throw() {assert(p_ != 0); return p_;}
-			Strategy* get() const throw() {return p_;}
-			void reset(Strategy* s, bool delegateOwnership) throw() {if(hasOwnership_) delete p_; p_ = s; hasOwnership_ = delegateOwnership;}
-			void reset() throw() {reset(0, false);}
-		private:
-			Strategy* p_;
-			bool hasOwnership_;
-		};
-
 		/// Manages the listeners.
 		template<class Listener> class Listeners : public manah::Noncopyable {
 		public:

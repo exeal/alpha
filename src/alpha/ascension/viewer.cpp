@@ -629,7 +629,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
 	autoScrollOriginMark_->create(*this);
 
-	setMouseInputStrategy(0, true);
+	setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy>());
 
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
@@ -711,7 +711,8 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	};
 	Orz* orz = new Orz(getPresentation());
 	getDocument().addPartitioningListener(*orz);
-	getPresentation().setLineStyleDirector(orz, true);
+	getPresentation().setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(orz));
+	new CurrentLineHighlighter(*caret_);
 #endif /* _DEBUG */
 
 	// 位置決めと表示
@@ -1512,7 +1513,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 			<< Menu::StringItem(0, GET_CAPTION(13));
 
 		// [Unicode 制御文字の挿入] 以下
-		Menu* subMenu = new ui::PopupMenu;
+		auto_ptr<Menu> subMenu(new ui::PopupMenu);
 		*subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
 			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
 			<< Menu::StringItem(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner")
@@ -1535,10 +1536,10 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 			<< Menu::StringItem(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor")
 			<< Menu::StringItem(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator")
 			<< Menu::StringItem(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator");
-		menu.setChildPopup<Menu::BY_POSITION>(12, *subMenu);
+		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
 
 		// [Unicode 空白文字の挿入] 以下
-		subMenu = new ui::PopupMenu;
+		subMenu.reset(new ui::PopupMenu);
 		*subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
 			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
 			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
@@ -1562,10 +1563,10 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 			<< Menu::StringItem(ID_INSERT_NEL, L"NEL\tNext Line")
 			<< Menu::StringItem(ID_INSERT_LS, L"LS\tLine Separator")
 			<< Menu::StringItem(ID_INSERT_PS, L"PS\tParagraph Separator");
-		menu.setChildPopup<Menu::BY_POSITION>(13, *subMenu);
+		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
 
 		// bidi サポートがあるか?
-		if(!renderer_->supportsComplexScript()) {
+		if(false/*!renderer_->supportsComplexScript()*/) {
 			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
 			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
 			menu.enable<Menu::BY_POSITION>(12, false);
@@ -2566,19 +2567,18 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 /**
  * Sets the mouse input strategy. An instance of @c TextViewer has the default strategy implemented
  * by @c DefaultMouseInputStrategy class as the construction.
- * @param newStrategy the new strategy
- * @param delegateOwnership set true to transfer the ownership of @a newStrategy to the callee
+ * @param newStrategy the new strategy or @c null
  * @throw std#logic_error the window is not created yet
  */
-void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
+void TextViewer::setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy> newStrategy) {
 	if(!isWindow())
 		throw logic_error("The window is not created yet.");
 	if(mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->uninstall();
-	if(newStrategy != 0)
-		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
+	if(newStrategy.get() != 0)
+		mouseInputStrategy_ = newStrategy;
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), true);
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true));
 	mouseInputStrategy_->install(*this);
 }
 
@@ -4121,4 +4121,90 @@ void LocaleSensitiveCaretShaper::textViewerIMEOpenStatusChanged() throw() {
 /// @see ITextViewerInputStatusListener#textViewerInputLanguageChanged
 void LocaleSensitiveCaretShaper::textViewerInputLanguageChanged() throw() {
 	updater_->update();
+}
+
+
+// CurrentLineHighlighter ///////////////////////////////////////////////////
+
+/**
+ * @class ascension::presentation::CurrentLineHighlighter
+ *
+ * Usual usage is as follows.
+ *
+ * @code
+ * Presentation& p = ...;
+ * Caret& caret = ...;
+ * p.addLineColorDirector(
+ *   ASCENSION_SHARED_POINTER<ILineColorDirector>(new CurrentLineHighlighter(caret, ...));
+ * @endcode
+ */
+
+/// The priority value this class returns.
+const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
+
+/**
+ * Constructor.
+ * @param caret the caret
+ * @param color the initial color
+ */
+CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
+		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(caret), color_(color) {
+	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
+	caret_.getTextViewer().getPresentation().addLineColorDirector(temp);
+	caret_.addListener(*this);
+}
+
+/// Destructor.
+CurrentLineHighlighter::~CurrentLineHighlighter() throw() {
+	// oops, the caret will already be deleted
+//	caret_.removeListener(*this);
+//	caret_.getTextViewer().getPresentation().removeLineColorDirector(*this);
+}
+
+/// @see ICaretListener#caretMoved
+void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
+	if(oldRegion.isEmpty()) {
+		if(!caret_.isSelectionEmpty() || caret_.getLineNumber() != oldRegion.first.line)
+			caret_.getTextViewer().redrawLine(oldRegion.first.line, false);
+	}
+	if(caret_.isSelectionEmpty()) {
+		if(!oldRegion.isEmpty() || caret_.getLineNumber() != oldRegion.first.line)
+			caret_.getTextViewer().redrawLine(caret_.getLineNumber(), false);
+	}
+}
+
+/// Returns the color.
+const Colors& CurrentLineHighlighter::getColor() const throw() {
+	return color_;
+}
+
+/// @see ICaretListener#matchBracketsChanged
+void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const pair<Position, Position>&, bool) {
+}
+
+/// @see ICaretListener#overtypeModeChanged
+void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
+}
+
+/// @see ILineColorDirector#queryLineColor
+ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t line, Colors& color) const {
+	if(caret_.isSelectionEmpty() && caret_.getLineNumber() == line) {
+		color = color_;
+		return LINE_COLOR_PRIORITY;
+	} else {
+		color = Colors::STANDARD;
+		return 0;
+	}
+}
+
+/// @see ICaretListener#selectionShapeChanged
+void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
+}
+
+/**
+ * Sets the color and redraws the window.
+ * @param color the color
+ */
+void CurrentLineHighlighter::setColor(const Colors& color) throw() {
+	color_ = color;
 }

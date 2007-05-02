@@ -6,6 +6,7 @@
 
 // This file contains following classes
 //	AutoBuffer
+//	SharedPointer
 //	MemoryPool
 //	FastArenaObject
 
@@ -30,13 +31,13 @@ namespace manah {
 		template<typename Other> AutoBuffer(AutoBuffer<Other>& rhs) throw() : buffer_(rhs.release()) {}
 		~AutoBuffer() throw() {delete[] buffer_;}
 		// operators
-		AutoBuffer<ElementType>& operator=(AutoBuffer& rhs) throw() {reset(rhs.release()); return *this;}
-		template<typename Other> AutoBuffer<ElementType>& operator=(AutoBuffer<Other>& rhs) throw() {reset(rhs.release()); return *this;}
+		AutoBuffer& operator=(AutoBuffer& rhs) throw() {reset(rhs.release()); return *this;}
+		template<typename Other> AutoBuffer& operator=(AutoBuffer<Other>& rhs) throw() {reset(rhs.release()); return *this;}
 		ElementType& operator[](int i) const throw() {return buffer_[i];}
 		ElementType& operator[](std::size_t i) const throw() {return buffer_[i];}
 		// methods
 		ElementType* get() const throw() {return buffer_;}
-		ElementType* release() throw() {T* const temp = buffer_; buffer_ = 0; return temp;}
+		ElementType* release() throw() {ElementType* const temp = buffer_; buffer_ = 0; return temp;}
 		void reset(ElementType* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
 	private:
 		ElementType* buffer_;
@@ -108,7 +109,7 @@ namespace manah {
 
 	// FastArenaObject //////////////////////////////////////////////////////
 
-	template<class T> /* final */ class FastArenaObject {
+	template<typename T> /* final */ class FastArenaObject {
 	public:
 		static void* operator new(std::size_t bytes) {
 			if(pool_.get() == 0) {
@@ -130,7 +131,50 @@ namespace manah {
 		static std::auto_ptr<MemoryPool> pool_;
 	};
 
-	template<class T> std::auto_ptr<MemoryPool> FastArenaObject<T>::pool_;
+	template<typename T> std::auto_ptr<MemoryPool> FastArenaObject<T>::pool_;
+
+
+	// SharedPointer ////////////////////////////////////////////////////////
+
+	// reference-counted smart pointer (from boost.shared_ptr)
+	template<typename T> /* final */ class SharedPointer {
+	public:
+		//types
+		typedef T ValueType;
+		typedef T* Pointer;
+		typedef T& Reference;
+		// constructors
+		explicit SharedPointer(Pointer p = 0) : data_((p != 0) ? new Data(*p) : 0) {}
+		~SharedPointer() {reset();}
+		SharedPointer(const SharedPointer& rhs) : data_(rhs.data_) {if(data_ != 0) data_->addReference();}
+		// operators
+		SharedPointer& operator=(const SharedPointer& rhs) {reset(); data_ = rhs.data_; if(data_ != 0) data_->addReference(); return *this;}
+		Reference operator*() const {const Pointer p(get()); assert(p != 0); return *p;}
+		Pointer operator->() const {const Pointer p(get()); assert(p != 0); return p;}
+		// methods
+		Pointer get() const throw() {return (data_ != 0) ? data_->get() : 0;}
+		void reset(Pointer p = 0) {
+			if(p == get())
+				return;
+			if(data_ != 0) {
+				data_->release();
+				if(data_->get() == 0)
+					delete data_;
+			}
+			data_ = (p != 0) ? new Data(*p) : 0;
+		}
+	private:
+		class Data : public FastArenaObject<Data> {
+		public:
+			Data(Reference p) throw() : p_(&p), c_(1) {}
+			void addReference() throw() {++c_;}
+			Pointer get() const throw() {return p_;}
+			void release() {if(--c_ == 0) {delete p_; p_ = 0;}}
+		private:
+			Pointer p_;
+			long c_;
+		} * data_;
+	};
 
 } // namespace manah
 

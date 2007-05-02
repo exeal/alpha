@@ -25,25 +25,29 @@ typedef unsigned long	ulong;
 
 namespace manah {
 
-	// unassignable object's base class
-	class Unassignable {
-	protected:
-		Unassignable() throw() {}
-		Unassignable(const Unassignable& rhs) throw() {}
-		~Unassignable() throw() {}
-	private:
-		const Unassignable& operator =(const Unassignable&);
-	};
+	namespace able_ {
+		// unassignable object's base class
+		class Unassignable {
+		protected:
+			Unassignable() throw() {}
+			Unassignable(const Unassignable& rhs) throw() {}
+			~Unassignable() throw() {}
+		private:
+			const Unassignable& operator =(const Unassignable&);
+		};
 
-	// noncopyable object's base class (from Boost.Noncopyable)
-	class Noncopyable {
-	protected:
-		Noncopyable() throw() {}
-		~Noncopyable() throw() {}
-	private:
-		Noncopyable(const Noncopyable&);
-		const Noncopyable& operator =(const Noncopyable&);
-	};
+		// noncopyable object's base class (from Boost.Noncopyable)
+		class Noncopyable {
+		protected:
+			Noncopyable() throw() {}
+			~Noncopyable() throw() {}
+		private:
+			Noncopyable(const Noncopyable&);
+			const Noncopyable& operator =(const Noncopyable&);
+		};
+	}
+	typedef able_::Unassignable Unassignable;
+	typedef able_::Noncopyable Noncopyable;
 
 	// OR-combinations of enum values (from Qt.QFlags)
 	template<typename Enum> class Flags {

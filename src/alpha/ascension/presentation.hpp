@@ -73,7 +73,7 @@ namespace ascension {
 		 * @see Presentation#setLineStyleDirector
 		 */
 		class ILineStyleDirector {
-		protected:
+		public:
 			/// Destructor.
 			virtual ~ILineStyleDirector() throw() {}
 		private:
@@ -85,26 +85,27 @@ namespace ascension {
 			 */
 			virtual const LineStyle& queryLineStyle(length_t line, bool& delegatedOwnership) const = 0;
 			friend class Presentation;
-			friend class ascension::internal::StrategyPointer<ILineStyleDirector>;
 		};
 
 		/**
 		 * Interface for objects which direct color of a line.
-		 * @see Presentation#setLineColorDirector
+		 * @see Presentation#addLineColorDirector
 		 */
 		class ILineColorDirector {
-		protected:
+		public:
+			/// Priority.
+			typedef uchar Priority;
 			/// Destructor.
 			virtual ~ILineColorDirector() throw() {}
 		private:
 			/**
 			 * Queries the color of the line.
 			 * @param line the line to be queried
-			 * @return the color of the line or @c Colors#STANDARD
+			 * @param[out] the color of the line or @c Colors#STANDARD
+			 * @return the priority
 			 */
-			virtual viewers::Colors queryLineColor(length_t line) const = 0;
+			virtual Priority queryLineColor(length_t line, viewers::Colors& color) const = 0;
 			friend class Presentation;
-			friend class ascension::internal::StrategyPointer<ILineColorDirector>;
 		};
 
 		/***/
@@ -137,14 +138,15 @@ namespace ascension {
 			// constructors
 			explicit Presentation(text::Document& document) throw();
 			// attributes
+			void					addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
 			void					addTextViewerListListener(ITextViewerListListener& listener);
 			text::Document&			getDocument() throw();
 			const text::Document&	getDocument() const throw();
 			viewers::Colors			getLineColor(length_t line) const;
 			const LineStyle&		getLineStyle(length_t line, bool& delegatedOwnership) const;
+			void					removeLineColorDirector(ILineColorDirector& director) throw();
 			void					removeTextViewerListListener(ITextViewerListListener& listener);
-			void					setLineColorDirector(ILineColorDirector* newDirector, bool delegateOwnership) throw();
-			void					setLineStyleDirector(ILineStyleDirector* newDirector, bool delegateOwnership) throw();
+			void					setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
 			// enumeration
 			TextViewerIterator		getFirstTextViewer() throw();
 			TextViewerConstIterator	getFirstTextViewer() const throw();
@@ -161,19 +163,20 @@ namespace ascension {
 		private:
 			text::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
-			ascension::internal::StrategyPointer<ILineStyleDirector> lineStyleDirector_;
-			ascension::internal::StrategyPointer<ILineColorDirector> lineColorDirector_;
+			ASCENSION_SHARED_POINTER<ILineStyleDirector> lineStyleDirector_;
+			std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
 		};
 
-		///
-		class StaticTextPresentation : virtual public ILineStyleDirector {
-		};
 
-		///
-		class OndemandTextPresentation : virtual public ILineStyleDirector {
-		};
-
+		/**
+		 * Registers the line color director.
+		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
+		 * @param director the director to register
+		 * @throw std#invalid_argument @a director is @c null
+		 */
+		inline void Presentation::addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director) {
+			if(director.get() == 0) throw std::invalid_argument("the director is null."); lineColorDirectors_.push_back(director);}
 
 		/**
 		 * Registers the text viewer list listener.
@@ -186,6 +189,17 @@ namespace ascension {
 		inline std::size_t Presentation::getNumberOfTextViewers() const throw() {return textViewers_.size();}
 
 		/**
+		 * Removes the specified line color director.
+		 * @param director the director to remove
+		 */
+		inline void Presentation::removeLineColorDirector(ILineColorDirector& director) throw() {
+			for(std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::iterator
+					i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
+				if(i->get() == &director) {lineColorDirectors_.erase(i); return;}
+			}
+		}
+
+		/**
 		 * Removes the text viewer list listener.
 		 * @param listener the listener to be removed
 		 * @throw std#invalid_argument @a listener is not registered
@@ -193,22 +207,13 @@ namespace ascension {
 		inline void Presentation::removeTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.remove(listener);}
 
 		/**
-		 * Sets the line color director.
-		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
-		 * @param newDirector the director. @c null to unregister
-		 * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
-		 */
-		inline void Presentation::setLineColorDirector(ILineColorDirector* newDirector,
-			bool delegateOwnership) throw() {lineColorDirector_.reset(newDirector, delegateOwnership);}
-
-		/**
 		 * Sets the line style director.
 		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
 		 * @param newDirector the director. @c null to unregister
 		 * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
 		 */
-		inline void Presentation::setLineStyleDirector(ILineStyleDirector* newDirector,
-			bool delegateOwnership) throw() {lineStyleDirector_.reset(newDirector, delegateOwnership);}
+		inline void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector)
+			throw() {lineStyleDirector_ = newDirector;}
 
 }} // namespace ascension::presentation
 
