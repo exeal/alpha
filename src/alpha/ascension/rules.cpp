@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "rules.hpp"
 using namespace ascension;
+using namespace ascension::presentation;
 using namespace ascension::rules;
 using namespace ascension::text;
 using namespace ascension::unicode;
@@ -16,14 +17,43 @@ using namespace manah;
 using rules::internal::HashTable;
 
 
+namespace {
+	template<typename T>
+	struct InRange : unary_function<T, bool> {
+		InRange(T first, T last) : f(first), l(last) {}
+		bool operator()(T v) const throw() {return v >= f && v <= l;}
+		const T f, l;
+	};
+}
+
 // internal::HashTable //////////////////////////////////////////////////////
 
-struct HashTable::Entry {
-	String data;
-	Entry* next;
-	explicit Entry(const String& str) throw() : data(str) {}
-	~Entry() throw() {delete next;}
-};
+namespace ascension {
+	namespace rules {
+		namespace internal {
+			class HashTable {
+			public:
+				template<typename StringSequence>
+				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
+				~HashTable() throw();
+				bool find(const Char* first, const Char* last) const;
+				template<typename CharacterSequence>
+				static ulong getHashCode(CharacterSequence first, CharacterSequence last);
+			private:
+				struct Entry {
+					String data;
+					Entry* next;
+					explicit Entry(const String& str) throw() : data(str) {}
+					~Entry() throw() {delete next;}
+				};
+				Entry** entries_;
+				std::size_t numberOfEntries_;
+				std::size_t maxLength_;	// the length of the longest keyword
+				const bool caseSensitive_;
+			};
+		}
+	}
+} // namespace ascension.rules.internal
 
 /**
  * Constructor.
@@ -31,24 +61,26 @@ struct HashTable::Entry {
  * @param last the end of the strings
  * @param caseSensitive set true to enable case sensitive match
  */
-HashTable::HashTable(const String* first, const String* last, bool caseSensitive)
-		: size_(last - first), maxLength_(0), caseSensitive_(caseSensitive) {
-	entries_ = new Entry*[size_];
-	fill<Entry**, Entry*>(entries_, entries_ + size_, 0);
-	while(first < last) {
-		Entry* const newEntry = new Entry(caseSensitive_ ? *first : CaseFolder::fold(first->data(), first->data() + first->length()));
-		const size_t h = getHashCode(newEntry->data);
-		if(first->length() > maxLength_)
-			maxLength_ = first->length();
-		newEntry->next = (entries_[h % size_] != 0) ? entries_[h % size_] : 0;
-		entries_[h % size_] = newEntry;
+template<typename StringSequence>
+HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensitive)
+		: numberOfEntries_(distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
+	entries_ = new Entry*[numberOfEntries_];
+	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(0));
+	while(first != last) {
+		const String folded(CaseFolder::fold(*first));
+		const size_t h = getHashCode(folded.begin(), folded.end());
+		Entry* const newEntry = new Entry(folded);
+		if(folded.length() > maxLength_)
+			maxLength_ = folded.length();
+		newEntry->next = (entries_[h % numberOfEntries_] != 0) ? entries_[h % numberOfEntries_] : 0;
+		entries_[h % numberOfEntries_] = newEntry;
 		++first;
 	}
 }
 
 /// Destructor.
 HashTable::~HashTable() {
-	for(size_t i = 0; i < size_; ++i)
+	for(size_t i = 0; i < numberOfEntries_; ++i)
 		delete entries_[i];
 	delete[] entries_;
 }
@@ -60,34 +92,40 @@ HashTable::~HashTable() {
  * @return true if the specified string is found
  */
 bool HashTable::find(const Char* first, const Char* last) const {
-	if(static_cast<size_t>(last - first) > maxLength_)	// TODO: this code can't trap UCS4 and full case foldings
-		return false;
-
-	const String folded = caseSensitive_ ? first : CaseFolder::fold(first, last);
-	const size_t h = getHashCode(folded);
-	Entry* entry = entries_[h % size_];
-	bool found = false;
-
-	while(entry != 0) {
-		if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0) {
-			found = true;
-			break;
+	if(caseSensitive_) {
+		if(static_cast<size_t>(last - first) > maxLength_)
+			return false;
+		const size_t h = getHashCode(first, last);
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+			if(entry->data.length() == last - first && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
+				return true;
 		}
-		entry = entry->next;
+	} else {
+		const String folded(CaseFolder::fold(String(first, last)));
+		const size_t h = getHashCode(folded.begin(), folded.end());
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+			if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
+				return true;
+		}
 	}
-	return found;
+	return false;
 }
 
 /**
- * Returns the hash value of the specified string.
- * @param s the string to retrieve a hash value
+ * Returns the hash value of the specified string. @a CharacterSequence must represent UTF-16
+ * character sequence.
+ * @param first the start of the character sequence
+ * @param last the end of the character sequence
  * @return the hash value
  */
-inline ulong HashTable::getHashCode(const String& s) {
+template<typename CharacterSequence>
+inline ulong HashTable::getHashCode(CharacterSequence first, CharacterSequence last) {
+	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
 	ulong h = 0;
-	for(length_t i = 0; i < s.length(); ++i) {
+	while(first < last) {
 		h *= 2;
-		h += s[i];
+		h += *first;
+		++first;
 	}
 	return h;
 }
@@ -113,11 +151,11 @@ const Char* URIDetector::eatMailAddress(const Char* first, const Char* last, boo
 	if(last - first < 5)
 		return first;
 
-	// 1文字目
+	// 1 文字目
 	if(!IS_ALNUM(*first))
 		return first;
 
-	// 2文字目から '@'
+	// 2 文字目から '@'
 	const Char* const originalFirst = first++;
 	for(; first < last - 3; ++first) {
 		if(!IS_ALNUMBAR(*first) && *first != L'.')
@@ -205,9 +243,8 @@ const Char* URIDetector::eatURL(const Char* first, const Char* last, bool) {
 
 // Token ////////////////////////////////////////////////////////////////////
 
-const Token::ID Token::NULL_ID = 0;
+const Token::ID Token::DEFAULT_TOKEN = 0;
 const Token::ID Token::UNCALCULATED = -1;
-const Token Token::END_OF_SCOPE;
 
 
 // Rule /////////////////////////////////////////////////////////////////////
@@ -240,15 +277,15 @@ RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& 
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const throw() {
-	// 開始シーケンスのマッチ
+auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+	// match the start sequence
 	if(first[0] != startSequence_[0]
 			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
 			|| (startSequence_.length() > 1 && wmemcmp(first + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
 		return auto_ptr<Token>(0);
 	const Char* end = last;
 	if(!endSequence_.empty()) {
-		// 終了シーケンスの検索
+		// search the end sequence
 		for(const Char* p = first + startSequence_.length(); p <= last - endSequence_.length(); ++p) {
 			if(escapeCharacter_ != NONCHARACTER && *p == escapeCharacter_)
 				++p;
@@ -267,6 +304,78 @@ auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first
 }
 
 
+// NumberRule ///////////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param id the identifier of the token which will be returned by the rule
+ */
+NumberRule::NumberRule(Token::ID id) throw() : Rule(id, true) {
+}
+
+/// @see Rule#parse
+auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+	assert(first < last);
+	/*
+		This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
+		expression match:
+			/(0|[1-9][0-9]*)(\.[0-9]+)?([e|E][\+\-]?[0-9]+)?/ for DecimalLiteral (case 1)
+			/\.[0-9]+([e|E][\+\-]?[0-9]+)?/ for DecimalLiteral (case 2)
+			/0[x|X][0-9A-Fa-f]+/ for HexIntegerLiteral
+		Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
+	*/
+	const Char* e;
+	if(last - first > 2 && first[0] == L'0' && (first[1] == L'x' || first[1] == L'X')) {	// HexIntegerLiteral?
+		for(e = first + 2; e < last; ++e) {
+			if((*e >= L'0' && *e <= L'9') || (*e >= L'A' && *e <= L'F') || (*e >= L'a' && *e <= L'f'))
+				continue;
+			break;
+		}
+		if(e == first + 2)
+			return auto_ptr<Token>(0);
+	} else {	// DecimalLiteral?
+		bool foundDecimalIntegerLiteral = false, foundDot = false;
+		if(first[0] >= L'0' && first[0] <= L'9') {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+			e = first + 1;
+			foundDecimalIntegerLiteral = true;
+			if(first[0] != L'0')
+				e = find_if(e, last, not1(InRange<Char>(L'0', L'9')));
+		} else
+			e = first;
+		if(e < last && *e == L'.') {	// . DecimalDigits ::= /\.[0-9]+/
+			foundDot = true;
+			e = find_if(++e, last, not1(InRange<Char>(L'0', L'9')));
+			if(e[-1] == L'.')
+				return auto_ptr<Token>(0);
+		}
+		if(!foundDecimalIntegerLiteral && !foundDot)
+			return auto_ptr<Token>(0);
+		if(e < last && (*e == L'e' || *e == L'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
+			if(++e == last)
+				return auto_ptr<Token>(0);
+			if(*e == L'+' || *e == L'-') {
+				if(++e == last)
+					return auto_ptr<Token>(0);
+			}
+			e = find_if(++e, last, not1(InRange<Char>(L'0', L'9')));
+		}
+	}
+
+	// e points the end of the found token
+	assert(e > first);
+	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
+	if(e < last && ((*e >= L'0' && *e <= L'9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
+		return auto_ptr<Token>(0);
+
+	auto_ptr<Token> temp(new Token);
+	temp->id = getTokenID();
+	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
+	temp->region.first.column = scanner.getPosition().column;
+	temp->region.second.column = temp->region.first.column + e - first;
+	return temp;
+}
+
+
 // WordRule /////////////////////////////////////////////////////////////////
 
 /**
@@ -277,13 +386,47 @@ auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first
  * @param caseSensitive set false to enable caseless match
  * @throw std#invalid_argument @a first and/or @a last are @c null
  */
-WordRule::WordRule(Token::ID id, const String* first, const String* last,
-		bool caseSensitive /* = true */) : Rule(id, caseSensitive), words_(first, last, caseSensitive) {
+WordRule::WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id, caseSensitive) {
+	if(first == 0 || last == 0 || first >= last)
+		throw invalid_argument("the input string list is invalid.");
+	words_ = new HashTable(first, last, caseSensitive);
 }
 
-/// @see SingleLineRule#parse
-auto_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
-	if(!words_.find(first, last))
+/**
+ * Constructor.
+ * @param id the identifier of the token which will be returned by the rule
+ * @param first the start of the string
+ * @param last the end of the string
+ * @param separator the separator character in the string
+ * @param caseSensitive set false to enable caseless match
+ * @throw std#invalid_argument @a first and/or @a last are @c null. or @a separator is a surrogate
+ */
+WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id, caseSensitive) {
+	if(first == 0 || last == 0 || first >= last)
+		throw invalid_argument("the input string list is invalid.");
+	else if(surrogates::isSurrogate(separator))
+		throw invalid_argument("the separator is a surrogate character.");
+	list<String> words;
+	first = find_if(first, last, not1(bind1st(equal_to<Char>(), separator)));
+	for(const Char* p = first; p < last; first = ++p) {
+		p = find(first, last, separator);
+		if(p == first)
+			continue;
+		words.push_back(String(first, p));
+	}
+	if(words.empty())
+		throw invalid_argument("the input string includes no words.");
+	words_ = new HashTable(words.begin(), words.end(), caseSensitive);
+}
+
+/// Destructor.
+WordRule::~WordRule() throw() {
+	delete words_;
+}
+
+/// @see Rule#parse
+auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
+	if(!words_->find(first, last))
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> result(new Token);
 	result->id = getTokenID();
@@ -309,9 +452,10 @@ RegexRule::RegexRule(Token::ID id, const String& pattern, bool caseSensitive /* 
 		: Rule(id, caseSensitive), pattern_(pattern.data(), pattern.data() + pattern.length()) {
 }
 
-/// @see SingleLineRule#parse
-auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
-	auto_ptr<regex::MatchResult<const Char*> > r(pattern_.search(first, last,
+/// @see Rule#parse
+auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
+	const UTF16To32Iterator<const Char*> f(first, last), l(first, last, last);
+	auto_ptr<regex::MatchResult<UTF16To32Iterator<const Char*> > > r(pattern_.search(f, l,
 		regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST | (scanner.getPosition().column != 0 ? regex::Pattern::TARGET_FIRST_IS_NOT_BOL : 0)));
 	if(r.get() == 0)
 		return auto_ptr<Token>(0);
@@ -319,28 +463,60 @@ auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first,
 	result->id = getTokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
 	result->region.first.column = scanner.getPosition().column;
-	result->region.second.column = result->region.first.column + (r->getEnd() - r->getStart());
+	result->region.second.column = result->region.first.column + (r->getEnd().tell() - r->getStart().tell());
 	return result;
 }
 
 #endif /* !ASCENSION_NO_REGEX */
 
 
-// TokenScanner /////////////////////////////////////////////////////////////
+// NullTokenScanner /////////////////////////////////////////////////////////
+
+/// @see ITokenScanner#getIdentifierSyntax
+const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const throw() {
+	return IdentifierSyntax::getDefaultInstance();
+}
+
+/// @see ITokenScanner#getPosition
+Position NullTokenScanner::getPosition() const throw() {
+	return Position::INVALID_POSITION;
+}
+
+/// @see ITokenScanner#isDone
+bool NullTokenScanner::isDone() const throw() {
+	return true;
+}
+
+/// @see ITokenScanner#nextToken
+auto_ptr<Token> NullTokenScanner::nextToken() {
+	return auto_ptr<Token>(0);
+}
+
+/// @see ITokenScanner#parse
+void NullTokenScanner::parse(const Document&, const Region&) {
+}
+
+
+// LexicalTokenScanner //////////////////////////////////////////////////////
 
 /**
  * Constructor.
  * @param identifierSyntax
  */
-TokenScanner::TokenScanner(const IdentifierSyntax& identifierSyntax) throw() : idSyntax_(identifierSyntax), current_() {
+LexicalTokenScanner::LexicalTokenScanner(const IdentifierSyntax& identifierSyntax) throw() : idSyntax_(identifierSyntax), current_() {
 }
 
 /// Destructor.
-TokenScanner::~TokenScanner() throw() {
+LexicalTokenScanner::~LexicalTokenScanner() throw() {
 	for(list<const Rule*>::iterator i = rules_.begin(); i != rules_.end(); ++i)
 		delete *i;
 	for(list<const WordRule*>::iterator i = wordRules_.begin(); i != wordRules_.end(); ++i)
 		delete *i;
+}
+
+/// @see ITokenScanner#getIdentifierSyntax
+const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const throw() {
+	return idSyntax_;
 }
 
 /**
@@ -349,7 +525,7 @@ TokenScanner::~TokenScanner() throw() {
  * @throw std#invalid_argument @a rule is @c null or already registered
  * @throw BadScannerStateException the scanner is running
  */
-void TokenScanner::addRule(auto_ptr<const Rule> rule) {
+void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 	if(rule.get() == 0)
 		throw invalid_argument("the rule is null.");
 	else if(!isDone())
@@ -365,7 +541,7 @@ void TokenScanner::addRule(auto_ptr<const Rule> rule) {
  * @throw std#invalid_argument @a rule is @c null or already registered
  * @throw BadScannerStateException the scanner is running
  */
-void TokenScanner::addRule(auto_ptr<const WordRule> rule) {
+void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 	if(rule.get() == 0)
 		throw invalid_argument("the rule is null.");
 	else if(!isDone())
@@ -375,60 +551,57 @@ void TokenScanner::addRule(auto_ptr<const WordRule> rule) {
 	wordRules_.push_back(rule.release());
 }
 
-/// Returns the current scanning position.
-const Position& TokenScanner::getPosition() const {
-	return current_.tell().tell();
+/// @see ITokenScanner#getPosition
+Position LexicalTokenScanner::getPosition() const throw() {
+	return current_.tell();
 }
 
-/// Returns true if the scanning is done.
-bool TokenScanner::isDone() const throw() {
+/// @see ITokenScanner#isDone
+bool LexicalTokenScanner::isDone() const throw() {
 	return current_.isLast();
 }
 
-/**
- * Moves to the next token and returns it.
- * @return the found token or @c null if the scan is done
- */
-auto_ptr<Token> TokenScanner::nextToken() throw() {
+/// @see ITokenScanner#nextToken
+auto_ptr<Token> LexicalTokenScanner::nextToken() {
 	auto_ptr<Token> result;
-	const String* line = &current_.tell().getLine();
-	for(; !current_.isLast(); ++current_) {
-		if(*current_ == LINE_SEPARATOR)
-			line = &(++current_).tell().getLine();
-		const Char* const p = line->data() + current_.tell().tell().column;
+	const String* line = &current_.getLine();
+	while(!current_.isLast()) {
+		if(*current_ == LINE_SEPARATOR) {
+			++current_;
+			line = &current_.getLine();
+			if(current_.isLast())
+				break;
+		}
+		const Char* const p = line->data() + current_.tell().column;
 		const Char* const last = line->data() + line->length();
 		for(list<const Rule*>::const_iterator i = rules_.begin(); i != rules_.end(); ++i) {
 			result = (*i)->parse(*this, p, last);
 			if(result.get() != 0) {
-				current_.tell().seek(result->region.getBottom());
+				current_.seek(result->region.getBottom());
 				return result;
 			}
 		}
-		if(!wordRules_.empty()) {
-			const Char* const wordEnd = idSyntax_.eatIdentifier(p, last);
-			if(wordEnd > p) {
+		const Char* const wordEnd = idSyntax_.eatIdentifier(p, last);
+		if(wordEnd > p) {
+			if(!wordRules_.empty()) {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
 					result = (*i)->parse(*this, p, wordEnd);
 					if(result.get() != 0) {
-						current_.tell().seek(result->region.getBottom());
+						current_.seek(result->region.getBottom());
 						return result;
 					}
 				}
 			}
-		}
+			current_.seek(Position(current_.tell().line, wordEnd - line->data()));
+		} else
+			++current_;
 	}
 	return result;
 }
 
-/**
- * Starts the scan with the specified range.
- * @param document the document
- * @param region the region to be scanned
- * @throw text#BadRegionException @a region intersects outside of the document
- */
-void TokenScanner::parse(const Document& document, const Region& region) {
-	current_ = UTF16To32Iterator<DocumentCharacterIterator,
-		utf16boundary::BASE_KNOWS_BOUNDARIES>(DocumentCharacterIterator(document, region.getTop()));
+/// @see ITokenScanner#parse
+void LexicalTokenScanner::parse(const Document& document, const Region& region) {
+	current_ = DocumentCharacterIterator(document, region);
 }
 
 
@@ -512,8 +685,10 @@ length_t RegexTransitionRule::matches(const String& line, length_t column) const
 		Pattern::MatchOptions flags = Pattern::MATCH_AT_ONLY_TARGET_FIRST;
 		if(column != 0)
 			flags |= Pattern::TARGET_FIRST_IS_NOT_BOL;
-		auto_ptr<MatchResult<const Char*> > result(pattern_.search(line.data() + column, line.data() + line.length(), flags));
-		return (result.get() != 0) ? max(result->getEnd() - result->getStart(), 1) : 0;
+		const Char* const p = line.data();
+		const UTF16To32Iterator<const Char*> first(p, p + line.length(), p + column), last(p, p + line.length(), p + line.length());
+		auto_ptr<MatchResult<UTF16To32Iterator<const Char*> > > result(pattern_.search(first, last, flags));
+		return (result.get() != 0) ? max(result->getEnd().tell() - result->getStart().tell(), 1) : 0;
 	} catch(runtime_error&) {
 		return 0;
 	}
@@ -639,7 +814,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 				p.seek(tokenEnd);
 		}
 		// go to the next character if no transition occured
-		if(tokenLength == 0 && (++p).tell().column == 0)
+		if(tokenLength == 0 && static_cast<DocumentCharacterIterator&>(++p).tell().column == 0)
 			line = &document.getLine(p.tell().line);
 		// if over the end of the affect region, erase overriden and update affectedEnd
 		if(partition < partitions_.getSize() - 1 && p.tell() > partitions_[partition + 1]->tokenStart) {
@@ -731,4 +906,57 @@ inline length_t LexicalPartitioner::tryTransition(
 	}
 	destination = UNDETERMINED_CONTENT_TYPE;
 	return 0;
+}
+
+
+// LexicalPartitionPresentationReconstructor ////////////////////////////////
+
+/**
+ * Constructor.
+ * @param document the document
+ * @param tokenScanner the token scanner to use for tokenization
+ * @param styles token identifier to its text style map. this must include a element has identifier
+ * of @c Token#DEFAULT_TOKEN.
+ * @throw std#invalid_argument @a styles does not include @c Token#DEFAULT_TOKEN
+ */
+LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
+		const Document& document, auto_ptr<ITokenScanner> tokenScanner, const map<Token::ID, const TextStyle>& styles)
+		: document_(document), tokenScanner_(tokenScanner), styles_(styles) {
+	if(styles.find(Token::DEFAULT_TOKEN) == styles.end())
+		throw invalid_argument("the given style map does not include Token.DEFAULT_TOKEN.");
+}
+
+/// @see presentation#IPartitionPresentationReconstructor#getPresentation
+auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
+	list<StyledText> result;
+	Position lastTokenEnd = region.getTop();	// the end of the last token
+	tokenScanner_->parse(document_, region);
+	while(!tokenScanner_->isDone()) {
+		auto_ptr<Token> token(tokenScanner_->nextToken());
+		if(token.get() == 0)
+			break;
+		map<Token::ID, const TextStyle>::const_iterator style(styles_.find(token->id));
+		if(style != styles_.end()) {
+			if(lastTokenEnd != token->region.getTop()) {
+				// fill a default style segment between the two tokens
+				result.push_back(StyledText());
+				result.back().column = lastTokenEnd.column;
+				result.back().style = styles_.find(Token::DEFAULT_TOKEN)->second;
+			}
+			result.push_back(StyledText());
+			result.back().column = token->region.first.column;
+			result.back().style = style->second;
+		}
+		lastTokenEnd = token->region.getBottom();
+	}
+	if(lastTokenEnd != region.getBottom()) {
+		// fill a default style segment at the end of the region
+		result.push_back(StyledText());
+		result.back().column = lastTokenEnd.column;
+		result.back().style = styles_.find(Token::DEFAULT_TOKEN)->second;
+	}
+	auto_ptr<LineStyle> temp(new LineStyle);
+	temp->array = new StyledText[temp->count = result.size()];
+	copy(result.begin(), result.end(), temp->array);
+	return temp;
 }

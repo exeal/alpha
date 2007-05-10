@@ -86,6 +86,16 @@ IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER
 {
 }
 
+/// Copy-constructor.
+IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) throw() : type_(rhs.type_), caseSensitive_(rhs.caseSensitive_),
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+		equivalenceType_(rhs.equivalenceType_),
+#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+		addedIDStartCharacters_(rhs.addedIDStartCharacters_), addedIDNonStartCharacters_(rhs.addedIDNonStartCharacters_),
+		subtractedIDStartCharacters_(rhs.subtractedIDStartCharacters_), subtractedIDNonStartCharacters_(rhs.subtractedIDNonStartCharacters_)
+{
+}
+
 /**
  * Constructor.
  * @param type the classification type
@@ -101,6 +111,15 @@ IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase
 		, equivalenceType_(equivalenceType)
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
 {
+}
+
+/**
+ * Returns the default @c IdentifierSyntax singleton instance. This instance has
+ * @c UNICODE_DEFAULT character classification type.
+ */
+const IdentifierSyntax& IdentifierSyntax::getDefaultInstance() throw() {
+	static const IdentifierSyntax defaultInstance(UNICODE_DEFAULT);
+	return defaultInstance;
 }
 
 /**
@@ -179,13 +198,14 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const throw()
  * Overrides default identifier start character set.
  * @param adding the set of characters to add to the default ID_Start characters
  * @param subtracting the set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both @a adding and @a subtracting
+ * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
+ * @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32Iterator<String::const_iterator, utf16boundary::DONT_CHECK> I;
+	typedef UTF16To32IteratorUnsafe<String::const_iterator> I;
 	implementOverrides(I(adding.begin()), I(adding.end()),
 		I(subtracting.begin()), I(subtracting.end()), addedIDStartCharacters_, subtractedIDStartCharacters_);
 }
@@ -194,7 +214,8 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
  * Overrides default identifier start character set.
  * @param adding the set of characters to add to the default ID_Start characters
  * @param subtracting the set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both @a adding and @a subtracting
+ * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
+ * @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
 	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))
@@ -208,13 +229,14 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& a
  * Overrides standard identifier only continue character set.
  * @param adding the set of characters to add to standard ID_Continue characters
  * @param subtracting the set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both @a adding and @a subtracting
+ * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
+ * @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32Iterator<String::const_iterator, utf16boundary::DONT_CHECK> I;
+	typedef UTF16To32IteratorUnsafe<String::const_iterator> I;
 	implementOverrides(I(adding.begin()), I(adding.end()),
 		I(subtracting.begin()), I(subtracting.end()), addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 }
@@ -223,7 +245,8 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
  * Overrides standard identifier only continue character set.
  * @param adding the set of characters to add to standard ID_Continue characters
  * @param subtracting the set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both @a adding and @a subtracting
+ * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
+ * @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
 	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))

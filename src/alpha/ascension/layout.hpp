@@ -511,6 +511,7 @@ namespace ascension {
 			int			getWidth() const throw();
 			int			getWrapWidth() const throw();
 			// class attributes
+			static bool	supportsComplexScripts() throw();
 			static bool	supportsOpenTypeFeatures() throw();
 			// listeners and strategies
 			void						addVisualLinesListener(IVisualLinesListener& listener);

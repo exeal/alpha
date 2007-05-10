@@ -37,9 +37,9 @@ int NullCollator::compare(const CharacterIterator& s1, const CharacterIterator& 
 //		return CaseFolder::compare(s1, s2);
 	auto_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
 	while(!i1->isLast() && !i2->isLast()) {
-		if(i1->current() < i2->current())
+		if(**i1 < **i2)
 			return -1;
-		else if(i1->current() > i2->current())
+		else if(**i1 > **i2)
 			return +1;
 	}
 	if(!i2->isLast()) return -1;
@@ -48,17 +48,16 @@ int NullCollator::compare(const CharacterIterator& s1, const CharacterIterator& 
 }
 
 /// @see Collator#createCollationElementIterator
-auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
+std::auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
 	return auto_ptr<CollationElementIterator>(new ElementIterator(source.clone()));
 }
 
 /// @see Collator#getCollationKey
-auto_ptr<CollationKey> NullCollator::getCollationKey(const String& s) const {
+std::auto_ptr<CollationKey> NullCollator::getCollationKey(const String& s) const {
 	const size_t len = s.length() * sizeof(Char) / sizeof(uchar);
 	AutoBuffer<uchar> temp(new uchar[len]);
 	memcpy(temp.get(), s.data(), len);
-	AutoBuffer<const uchar> temp2(temp);
-	return auto_ptr<CollationKey>(new CollationKey(temp2, len));
+	return auto_ptr<CollationKey>(new CollationKey(AutoBuffer<const uchar>(temp.release()), len));
 }
 
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */

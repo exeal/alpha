@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_RULES_HPP
 #define ASCENSION_RULES_HPP
-#include "document.hpp"
+#include "presentation.hpp"
 #include "regex.hpp"
 #include <set>
 #include <list>
@@ -17,26 +17,7 @@ namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
 
-		namespace internal {
-			class TokenListReconstructor {
-			public:
-				void	reconstruct(const text::Region& scope);
-			private:
-			};
-			class HashTable {
-			public:
-				HashTable(const String* first, const String* last, bool caseSensitive) throw();
-				~HashTable() throw();
-				bool find(const Char* first, const Char* last) const;
-				static ulong getHashCode(const String& s) throw();
-			private:
-				struct Entry;
-				Entry** entries_;
-				const std::size_t size_;
-				std::size_t maxLength_;	// the length of the longest keyword
-				const bool caseSensitive_;
-			};
-		} // namespace internal
+		namespace internal {class HashTable;}
 
 		/**
 		 * @c URIDetector detects and searches URI.
@@ -58,24 +39,19 @@ namespace ascension {
 			BadScannerStateException() : std::logic_error("The scanner can't accept the requested operation in this state.") {}
 		};
 
+		/// A token is a text segment with identifier.
 		struct Token : public manah::FastArenaObject<Token> {
 			typedef ushort ID;
-			static const ID NULL_ID, UNCALCULATED;
-			static const Token END_OF_SCOPE;
+			static const ID DEFAULT_TOKEN, UNCALCULATED;
 			ID id;
 			text::Region region;
 		};
 
-		struct TokenList {
-			std::size_t count;
-			Token* array;
-		};
-
-		class TokenScanner;
+		class ITokenScanner;
 
 		/**
 		 * Base class for concrete rule classes.
-		 * @see RegionRule, WordRule, RegexRule
+		 * @see LexicalTokenScanner, RegionRule, NumberRule, WordRule, RegexRule
 		 */
 		class Rule {
 		public:
@@ -84,8 +60,13 @@ namespace ascension {
 			/// Returns true if the match is case sensitive.
 			bool isCaseSensitive() const throw() {return caseSensitive_;}
 			/**
+			 * 
+			 * @param scanner the scanner
+			 * @param first the start of the text to parse
+			 * @param last the end of the text to parse
+			 * @return the found token or @c null
 			 */
-			virtual std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const throw() = 0;
+			virtual std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() = 0;
 		protected:
 			explicit Rule(Token::ID tokenID, bool caseSensitive) throw();
 		private:
@@ -98,62 +79,108 @@ namespace ascension {
 		public:
 			RegionRule(Token::ID id, const String& startSequence,
 				const String& endSequence, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<Token>	parse(const TokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
 		};
 
-		/***/
+		/// A concrete rule detects numeric tokens.
+		class NumberRule : public Rule {
+		public:
+			NumberRule(Token::ID id) throw();
+			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+		};
+
+		/// A concrete rule detects the registered words.
 		class WordRule : protected Rule {
 		public:
 			WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive = true);
-			std::auto_ptr<Token>	parse(const TokenScanner& scanner, const Char* first, const Char* last) const throw();
+			WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
+			~WordRule() throw();
+			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
-			internal::HashTable words_;
+			internal::HashTable* words_;
 		};
 
 #ifndef ASCENSION_NO_REGEX
-		/***/
+		/// A concrete rule detects tokens using regular expression match.
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::ID id, const String& pattern, bool caseSensitive = true);
-			std::auto_ptr<Token>	parse(const TokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
 			const regex::Pattern pattern_;
 		};
 #endif /* !ASCENSION_NO_REGEX */
 
 		/**
-		 * @c TokenScanner scans a range of document and returns the tokens it finds.
-		 *
-		 * This scanner is programable with a sequence of rules. The rules must be registered
-		 * before start of scanning. Otherwise @c RunningScannerException will be thrown.
-		 *
-		 * The tokens this scanner returns are only single-line. Multi-line tokens are not
-		 * supported by this class.
-		 *
-		 * To start scanning, call @c #parse method with a target region. And then call
+		 * @c ITokenScanner scans a range of document and returns the tokens it finds. To start
+		 * scanning, call @c #parse method with a target document region. And then call
 		 * @c #nextToken method repeatedly to get tokens. When reached the end of the scanning
-		 * region, the scanning is end.
+		 * region, the scanning is end and @c #isDone will return true.
 		 */
-		class TokenScanner : public manah::Noncopyable {
+		class ITokenScanner {
+		public:
+			/// Destructor.
+			virtual ~ITokenScanner() throw() {}
+			/// Returns the identifier syntax.
+			virtual const unicode::IdentifierSyntax& getIdentifierSyntax() const throw() = 0;
+			/// Returns the current position.
+			virtual text::Position getPosition() const throw() = 0;
+			/// Returns true if the scanning is done.
+			virtual bool isDone() const throw() = 0;
+			/**
+			 * Moves to the next token and returns it.
+			 * @return the token or @c null if the scanning was done.
+			 */
+			virtual std::auto_ptr<Token> nextToken() = 0;
+			/**
+			 * Starts the scan with the specified range. The current position of the scanner will
+			 * be the top of the specified region.
+			 * @param document the document
+			 * @param region the region to be scanned
+			 * @throw text#BadRegionException @a region intersects outside of the document
+			 */
+			virtual void parse(const text::Document& document, const text::Region& region) = 0;
+		};
+
+		/// @c NullTokenScanner returns no tokens. @c #isDone returns always true.
+		class NullTokenScanner : virtual public ITokenScanner {
+		public:
+			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
+			text::Position						getPosition() const throw();
+			bool								isDone() const throw();
+			std::auto_ptr<Token>				nextToken();
+			void								parse(const text::Document& document, const text::Region& region);
+		};
+
+		/**
+		 * A generic scanner which is programable with a sequence of rules. The rules must be
+		 * registered before start of scanning. Otherwise @c RunningScannerException will be thrown.
+		 * Note that the tokens this scanner returns are only single-line. Multi-line tokens are
+		 * not supported by this class.
+		 * @note This class is not intended to be subclassed.
+		 */
+		class LexicalTokenScanner : virtual public ITokenScanner, public manah::Noncopyable {
 		public:
 			// constructors
-			explicit TokenScanner(const unicode::IdentifierSyntax& identifierSyntax) throw();
+			explicit LexicalTokenScanner(const unicode::IdentifierSyntax& identifierSyntax) throw();
+			~LexicalTokenScanner() throw();
 			// attributes
-			void					addRule(std::auto_ptr<const Rule> rule);
-			void					addRule(std::auto_ptr<const WordRule> rule);
-			const text::Position&	getPosition() const throw();
-			bool					isDone() const throw();
-			// operations
-			std::auto_ptr<Token>	nextToken() throw();
-			void					parse(const text::Document& document, const text::Region& region);
+			void	addRule(std::auto_ptr<const Rule> rule);
+			void	addWordRule(std::auto_ptr<const WordRule> rule);
+			// ITokenScanner
+			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
+			text::Position						getPosition() const throw();
+			bool								isDone() const throw();
+			std::auto_ptr<Token>				nextToken();
+			void								parse(const text::Document& document, const text::Region& region);
 		private:
-			const unicode::IdentifierSyntax& idSyntax_;
+			const unicode::IdentifierSyntax idSyntax_;
 			std::list<const Rule*> rules_;
 			std::list<const WordRule*> wordRules_;
-			unicode::UTF16To32Iterator<text::DocumentCharacterIterator, unicode::utf16boundary::BASE_KNOWS_BOUNDARIES> current_;
+			text::DocumentCharacterIterator current_;
 		};
 
 		/**
@@ -237,6 +264,24 @@ namespace ascension {
 			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
+		};
+
+		/**
+		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor. This
+		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
+		 * @note This class is not intended to be subclassed.
+		 */
+		class LexicalPartitionPresentationReconstructor : virtual public presentation::IPartitionPresentationReconstructor {
+		public:
+			explicit LexicalPartitionPresentationReconstructor(const text::Document& document,
+				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);
+		private:
+			// IPartitionPresentationReconstructor
+			std::auto_ptr<presentation::LineStyle>	getPresentation(const text::Region& region) const throw();
+		private:
+			const text::Document& document_;
+			std::auto_ptr<ITokenScanner> tokenScanner_;
+			const std::map<Token::ID, const presentation::TextStyle> styles_;
 		};
 
 

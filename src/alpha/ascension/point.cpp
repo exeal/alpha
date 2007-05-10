@@ -1962,9 +1962,8 @@ String Caret::getPrecedingIdentifier(length_t maxLength) const {
 	const IdentifierSyntax& syntax = getIdentifierSyntax();
 	const String& line = getDocument()->getLine(getLineNumber());
 	assert(getColumnNumber() > 0);
-	UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(
-		line.data() + partitionStart, line.data() + line.length(), line.data() + getColumnNumber());
-	for(--i; !i.isFirst(); --i) {
+	UTF16To32Iterator<> i(line.data() + partitionStart, line.data() + line.length(), line.data() + getColumnNumber());
+	for(--i; i.hasNext(); --i) {
 		if(!syntax.isIdentifierContinueCharacter(*i))
 			break;
 		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)

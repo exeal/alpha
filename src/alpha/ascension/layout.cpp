@@ -1027,6 +1027,11 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	bool mustDelete;
 	const LineStyle& styles = presentation.getLineStyle(lineNumber, mustDelete);
 	if(&styles != &LineStyle::NULL_STYLE) {
+#ifdef _DEBUG
+		// verify the given styles
+		for(size_t i = 0; i < styles.count - 1; ++i)
+			assert(styles.array[i].column < styles.array[i + 1].column);
+#endif /* _DEBUG */
 		merge(items, numberOfItems, styles);
 		if(mustDelete) {
 			delete[] styles.array;
@@ -1329,8 +1334,8 @@ void LineLayout::shape(Run& run) throw() {
 
 			// 4/7. the fallback font
 			if(script == NOT_PROPERTY) {
-				for(StringCharacterIterator i(text, text + run.length); !i.isLast(); i.next()) {
-					script = Script::of(i.current());
+				for(StringCharacterIterator i(text, text + run.length); !i.isLast(); ++i) {
+					script = Script::of(*i);
 					if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 						break;
 				}
@@ -2628,7 +2633,12 @@ void TextRenderer::setSpecialCharacterRenderer(ASCENSION_SHARED_POINTER<ISpecial
 	invalidate();
 }
 
-/// Returns if OpenType features are supported.
+/// Returns true if complex scripts are supported.
+bool TextRenderer::supportsComplexScripts() throw() {
+	return true;
+}
+
+/// Returns true if OpenType features are supported.
 bool TextRenderer::supportsOpenTypeFeatures() throw() {
 	return false;
 }

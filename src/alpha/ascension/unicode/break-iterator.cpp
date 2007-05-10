@@ -18,6 +18,89 @@ using namespace std;
 #endif
 
 
+// StringCharacterIterator //////////////////////////////////////////////////
+
+/// Default constructor.
+StringCharacterIterator::StringCharacterIterator() throw() {
+}
+
+StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last) : current_(first), first_(first), last_(last) {
+	if(first_ > last_)
+		throw invalid_argument("the first is greater than last.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last, const Char* start) : current_(start), first_(first), last_(last) {
+	if(first_ > last_ || current_ < first_ || current_ > last_)
+		throw invalid_argument("invalid input.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const String& s) : current_(s.data()), first_(s.data()), last_(s.data() + s.length()) {
+	if(first_ > last_)
+		throw invalid_argument("the first is greater than last.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const String& s, String::const_iterator start) :
+		current_(s.data() + (start - s.begin())), first_(s.data()), last_(s.data() + s.length()) {
+	if(first_ > last_ || current_ < first_ || current_ > last_)
+		throw invalid_argument("invalid input.");
+}
+
+/// Copy-constructor.
+StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& rhs) throw() :
+	CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
+
+/// @see CharacterIterator#assign
+void StringCharacterIterator::assign(const CharacterIterator& rhs) {
+	current_ = static_cast<const StringCharacterIterator&>(rhs).current_;
+	first_ = static_cast<const StringCharacterIterator&>(rhs).first_;
+	last_ = static_cast<const StringCharacterIterator&>(rhs).last_;
+}
+
+/// @see CharacterIterator#clone
+auto_ptr<CharacterIterator> StringCharacterIterator::clone() const {
+	return auto_ptr<CharacterIterator>(new StringCharacterIterator(*this));
+}
+
+/// @see CharacterIterator#current
+CodePoint StringCharacterIterator::current() const throw() {
+	return (current_ != last_) ? surrogates::decodeFirst(current_, last_) : DONE;
+}
+
+/// @see CharacterIterator#doFirst
+void StringCharacterIterator::doFirst() {
+	current_ = first_;
+}
+
+/// @see CharacterIterator#doLast
+void StringCharacterIterator::doLast() {
+	current_ = last_;
+}
+
+/// @see CharacterIterator#equals
+bool StringCharacterIterator::equals(const CharacterIterator& rhs) const {
+	return current_ == static_cast<const StringCharacterIterator&>(rhs).current_;
+}
+
+/// @see CharacterIterator#less
+bool StringCharacterIterator::less(const CharacterIterator& rhs) const {
+	return current_ < static_cast<const StringCharacterIterator&>(rhs).current_;
+}
+
+/// @see CharacterIterator#next
+void StringCharacterIterator::next() {
+	if(current_ == last_)
+		throw logic_error("the iterator is the last.");
+	current_ = surrogates::next(current_, last_);
+}
+
+/// @see CharacterIterator#previous
+void StringCharacterIterator::previous() {
+	if(current_ == last_)
+		throw logic_error("the iterator is the first.");
+	current_ = surrogates::previous(first_, current_);
+}
+
+
 // AbstractGraphemeBreakIterator ////////////////////////////////////////////
 
 /**
@@ -32,12 +115,12 @@ void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
 	CharacterIterator& i = getCharacterIterator();
 	if(i.isLast())	// (GB2)
 		return;
-	CodePoint prevCP, cp = i.current();
+	CodePoint prevCP, cp = *i;
 	int prev, current = GraphemeClusterBreak::of(cp);
-	while(amount > 0 && !i.next().isLast()) {	// (GB2)
+	while(amount > 0 && !(++i).isLast()) {	// (GB2)
 		prevCP = cp;
 		prev = current;
-		current = GraphemeClusterBreak::of(cp = i.current());
+		current = GraphemeClusterBreak::of(cp = *i);
 		if(prev == GraphemeClusterBreak::CR) {	// (GB3, GB4)
 			if(current != GraphemeClusterBreak::LF)
 				--amount;
@@ -62,14 +145,14 @@ void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
 void AbstractGraphemeBreakIterator::doPrevious(ptrdiff_t amount) {
 	assert(amount > 0);
 	CharacterIterator& i = getCharacterIterator();
-	if(i.isFirst() || i.previous().isFirst())	// (GB1)
+	if(i.isFirst() || (--i).isFirst())	// (GB1)
 		return;
-	CodePoint prevCP, cp = i.current();
+	CodePoint prevCP, cp = *i;
 	int prev, current = GraphemeClusterBreak::of(cp);
 	do {
 		prevCP = cp;
 		prev = current;
-		current = GraphemeClusterBreak::of(cp = i.previous().current());
+		current = GraphemeClusterBreak::of(cp = *--i);
 		if(prev == GraphemeClusterBreak::LF) {	// (GB3, GB5)
 			if(current != GraphemeClusterBreak::CR)
 				--amount;
@@ -89,7 +172,7 @@ void AbstractGraphemeBreakIterator::doPrevious(ptrdiff_t amount) {
 		} else if(prev != GraphemeClusterBreak::EXTEND)	// (GB9)
 			--amount;
 		if(amount == 0) {
-			i.next();
+			++i;
 			return;
 		}
 	} while(!i.isFirst());	// (GB1)
@@ -99,12 +182,12 @@ void AbstractGraphemeBreakIterator::doPrevious(ptrdiff_t amount) {
 bool AbstractGraphemeBreakIterator::isBoundary(const CharacterIterator& at) const {
 	if(at.isFirst() || at.isLast())	// (GB1, GB2)
 		return true;
-	const int p = GraphemeClusterBreak::of(at.current());
+	const int p = GraphemeClusterBreak::of(*at);
 	if(p == GraphemeClusterBreak::CR || p == GraphemeClusterBreak::CONTROL)	// (GB5)
 		return true;
 	auto_ptr<CharacterIterator> i(at.clone());
-	i->previous();
-	const int prev = GraphemeClusterBreak::of(i->current());
+	--*i;
+	const int prev = GraphemeClusterBreak::of(**i);
 	if(prev == GraphemeClusterBreak::CR)
 		return p != GraphemeClusterBreak::LF;	// (GB3, GB4)
 	else if(prev == GraphemeClusterBreak::LF || prev == GraphemeClusterBreak::CONTROL || p == GraphemeClusterBreak::LF)	// (GB4, GB5)
@@ -134,14 +217,14 @@ namespace {
 	int nextBase(CharacterIterator& i) {
 		if(i.isLast())
 			return GeneralCategory::COUNT;
-		CodePoint cp = i.current();
+		CodePoint cp = *i;
 		if(cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR) {	// !Sep
-			i.next();
+			++i;
 			return GeneralCategory::COUNT;
 		}
 		int gc = GeneralCategory::COUNT;
-		while(!i.next().isLast()) {
-			gc = GeneralCategory::of(cp = i.current());
+		while(!(++i).isLast()) {
+			gc = GeneralCategory::of(cp = *i);
 			if(gc != GeneralCategory::OTHER_FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 				break;
 		}
@@ -151,14 +234,14 @@ namespace {
 	/// Advances @a i to the previous character neither Extend nor Format.
 	int previousBase(CharacterIterator& i) {
 		if(i.isFirst())
-			return GeneralCategory::of(i.current());
+			return GeneralCategory::of(*i);
 		int gc = GeneralCategory::COUNT;
 		CodePoint cp;
 		do {
-			cp = i.previous().current();
+			cp = *--i;
 			if(gc != GeneralCategory::COUNT
 					&& (cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR)) {	// !Sep
-				i.next();
+				++i;
 				break;
 			}
 					gc = GeneralCategory::of(cp);
@@ -220,14 +303,14 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	if(i.isLast())	// (WB2)
 		return;
 	auto_ptr<CharacterIterator> prevPrev, prev, nextNext;
-	CodePoint nextCP = i.current(), prevCP = INVALID_CODE_POINT;
+	CodePoint nextCP = *i, prevCP = INVALID_CODE_POINT;
 	int nextClass = WordBreak::of(nextCP, syntax_, getLocale()),
 		prevClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
 		// 1 ‚Â‘O (B) ‚ð’²‚×‚é
 		assert(!i.isFirst());
 		if(prev.get() == 0) {prev = i.clone(); previousBase(*prev);}
-		if(prevCP == INVALID_CODE_POINT) prevCP = prev->current();
+		if(prevCP == INVALID_CODE_POINT) prevCP = **prev;
 		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, getLocale());
 		if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 			/* do nothing */;
@@ -242,7 +325,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			// 2 ‚ÂŽŸ (D) ‚ð’²‚×‚é
 			nextNext = i.clone();
 			nextBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNext->current(), syntax_, getLocale());
+			nextNextClass = WordBreak::of(**nextNext, syntax_, getLocale());
 			if(nextNext->isLast())	// (WB14)
 				TRY_RETURN()
 			if(nextNextClass != prevClass	// (WB6, WB12)
@@ -261,7 +344,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 					prevPrev = prev->clone();
 					previousBase(*prevPrev);
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
+				prevPrevClass = WordBreak::of(**prevPrev, syntax_, getLocale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
@@ -285,7 +368,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		if(i.isLast())	// (WB2)
 			return;
 		prevCP = nextCP;
-		nextCP = i.current();
+		nextCP = *i;
 		prevPrevClass = prevClass;
 		prevClass = nextClass;
 		if(nextNextClass != NOT_PROPERTY) {
@@ -314,7 +397,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 	if(i.isFirst())	// (WB1)
 		return;
 	auto_ptr<CharacterIterator> next, nextNext, prevPrev;
-	CodePoint prevCP = i.current(), nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
+	CodePoint prevCP = *i, nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
 	int prevClass = WordBreak::of(prevCP, syntax_, getLocale()),
 		nextClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
@@ -324,7 +407,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			next = i.clone();
 			previousBase(*next);
 		}
-		if(nextCP == INVALID_CODE_POINT) nextCP = next->current();
+		if(nextCP == INVALID_CODE_POINT) nextCP = **next;
 		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, syntax_, getLocale());
 		if(prevClass == GraphemeClusterBreak::LF && nextClass == GraphemeClusterBreak::CR)	// (WB3)
 			/* do nothing */;
@@ -346,7 +429,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 					TRY_RETURN()
 					break;
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
+				prevPrevClass = WordBreak::of(**prevPrev, syntax_, getLocale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
@@ -361,7 +444,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			}
 			nextNext = next->clone();
 			previousBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, getLocale());
+			nextNextClass = WordBreak::of(nextNextCP = **nextNext, syntax_, getLocale());
 			if(nextNextClass != prevClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
@@ -383,7 +466,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			TRY_RETURN()
 		next = nextNext;
 		nextNext.reset(0);
-		prevCP = i.current();
+		prevCP = *i;
 		nextCP = nextNextCP;
 		nextNextCP = INVALID_CODE_POINT;
 		prevPrevClass = prevClass;
@@ -398,13 +481,13 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 	if(at.isFirst() || at.isLast())	// (WB1, WB2)
 		return true;
 
-	const CodePoint nextCP = at.current();
+	const CodePoint nextCP = *at;
 	const int nextClass = WordBreak::of(nextCP, syntax_, getLocale());
 	if(nextClass == WordBreak::OTHER)	// (WB14)
 		return true;
 	auto_ptr<CharacterIterator> i(at.clone());
 	previousBase(*i);
-	CodePoint prevCP = i->current();
+	CodePoint prevCP = **i;
 	int prevClass = WordBreak::of(prevCP, syntax_, getLocale());
 
 	if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
@@ -423,7 +506,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 		while(true) {
 			if(i->isLast())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(**i, syntax_, getLocale())))	// (WB4)
 				break;
 			nextBase(*i);
 		}
@@ -437,7 +520,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 			previousBase(*i);
 			if(i->isFirst())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(**i, syntax_, getLocale())))	// (WB4)
 				break;
 		}
 		return prevPrevClass != nextClass;	// (WB7, WB11)
@@ -461,7 +544,7 @@ namespace {
 	bool trySB8(CharacterIterator& i) throw() {
 		auto_ptr<CharacterIterator> j(i.clone());
 		for(; j->isLast(); nextBase(*j)) {
-			switch(SentenceBreak::of(j->current())) {
+			switch(SentenceBreak::of(**j)) {
 			case SentenceBreak::O_LETTER:
 			case SentenceBreak::UPPER:
 			case SentenceBreak::SEP:
@@ -485,7 +568,7 @@ namespace {
 		bool closeOccured = false;	// true if (STerm|ATerm) Close+
 		bool spOccured = false;		// true if (STerm|ATerm) Sp+ or (STerm|ATerm) Close+ Sp+
 		while(!i.isLast()) {
-			switch(SentenceBreak::of(i.current())) {
+			switch(SentenceBreak::of(*i)) {
 			case SentenceBreak::SEP:
 				nextBase(i);
 				return true;	// (SB4)
@@ -505,7 +588,7 @@ namespace {
 					if(temp->isFirst())
 						return true;	// (SB12)
 					previousBase(*temp);
-					return SentenceBreak::of(temp->current()) != SentenceBreak::UPPER;
+					return SentenceBreak::of(**temp) != SentenceBreak::UPPER;
 				}
 			case SentenceBreak::O_LETTER:
 				return true;	// (SB12)
@@ -547,17 +630,17 @@ AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
 	CharacterIterator& i = getCharacterIterator();
 	while(!i.isLast()) {
-		if(i.current() == CARRIAGE_RETURN) {
-			i.next();
+		if(*i == CARRIAGE_RETURN) {
+			++i;
 			if(i.isLast())
 				return;	// (SB2)
-			if(i.current() == LINE_FEED)
-				i.next();	// (SB3)
+			if(*i == LINE_FEED)
+				++i;	// (SB3)
 			return;	// (SB4)
 		}
-		switch(SentenceBreak::of(i.current())) {
+		switch(SentenceBreak::of(*i)) {
 		case SentenceBreak::SEP:
-			i.next();
+			++i;
 			return;	// (SB4)
 		case SentenceBreak::A_TERM:
 			nextBase(i);
@@ -584,18 +667,18 @@ bool AbstractSentenceBreakIterator::isBoundary(const CharacterIterator& at) cons
 	if(at.isFirst() || at.isLast())
 		return true;	// (SB1, SB2)
 	auto_ptr<CharacterIterator> i(at.clone());
-	if(at.current() == LINE_FEED) {
-		if(i->previous().current() == CARRIAGE_RETURN)
+	if(*at == LINE_FEED) {
+		if(*--*i == CARRIAGE_RETURN)
 			return false;	// (SB3)
 		else if(i->isFirst())
 			return true;	// (SB12)
-		const int p = SentenceBreak::of(i->current());
+		const int p = SentenceBreak::of(**i);
 		if(p == GraphemeClusterBreak::EXTEND || p == SentenceBreak::FORMAT)
 			previousBase(*i);	// (SB5)
 	} else
 		previousBase(*i);	// (SB5)
 	do {
-		switch(SentenceBreak::of(i->current())) {
+		switch(SentenceBreak::of(**i)) {
 		case SentenceBreak::SEP:
 			return at.getOffset() - i->getOffset() == 1;	// (SB4)
 		case SentenceBreak::A_TERM:

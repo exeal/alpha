@@ -160,8 +160,10 @@ public:
 	int				getTextCharacterExtra() const;
 	SIZE			getTextExtent(const TCHAR* text, int length) const;
 	bool			getTextExtentExPoint(const TCHAR* text, int length, int maxExtent, LPINT fit, LPINT dx, LPSIZE size) const;
+#if(_WIN32_WINNT >= 0x0500)
 	bool			getTextExtentExPointI(LPWORD glyphs, int count, int maxExtent, LPINT fit, LPINT dx, LPSIZE size) const;
 	bool			getTextExtentPointI(LPWORD glyphs, int count, LPSIZE size) const;
+#endif /* _WIN32_WINNT >= 0x0500 */
 	int				getTextFace(int faceNameCount, TCHAR* faceName) const;
 	bool			getTextMetrics(::TEXTMETRIC& metrics) const;
 	virtual bool	grayString(HBRUSH brush, ::GRAYSTRINGPROC outputProc, LPARAM data, int length, int x, int y, int width, int height);
@@ -179,6 +181,12 @@ public:
 	bool	getCharABCWidths(UINT firstChar, UINT lastChar, ::ABCFLOAT buffer[]) const;
 	bool	getCharWidth(UINT firstChar, UINT lastChar, int* buffer) const;
 	bool	getCharWidth(UINT firstChar, UINT lastChar, float* buffer) const;
+#if(_WIN32_WINNT >= 0x0500)
+	bool	getCharWidthI(UINT firstGlyph, UINT numberOfGlyphs, int buffer[]) const;
+	bool	getCharWidthI(WORD* glyphs, UINT numberOfGlyphs, int buffer[]) const;
+	bool	getCharABCWidthsI(UINT firstGlyph, UINT numberOfGlyphs, ::ABC buffer[]) const;
+	bool	getCharABCWidthsI(const WORD glyphs[], UINT numberOfGlyphs, ::ABC buffer[]) const;
+#endif /* _WIN32_WINNT >= 0x0500 */
 	DWORD	getFontData(DWORD table, DWORD offset, LPVOID data, DWORD bytes) const;
 	DWORD	getFontLanguageInfo() const;
 #if(_WIN32_WINNT >= 0x0500)
@@ -387,11 +395,27 @@ inline bool DC::getCharABCWidths(UINT firstChar, UINT lastChar, ABC buffer[]) co
 inline bool DC::getCharABCWidths(UINT firstChar, UINT lastChar, ABCFLOAT buffer[]) const {
 	assertValidAsDC(); return toBoolean(::GetCharABCWidthsFloat(getHandle(), firstChar, lastChar, buffer));}
 
+#if(_WIN32_WINNT >= 0x0500)
+inline bool DC::getCharABCWidthsI(UINT firstGlyph, UINT numberOfGlyphs, ::ABC buffer[]) const {
+	assertValidAsDC(); return toBoolean(::GetCharABCWidthsI(getHandle(), firstGlyph, numberOfGlyphs, 0, buffer));}
+
+inline bool DC::getCharABCWidthsI(const WORD glyphs[], UINT numberOfGlyphs, ::ABC buffer[]) const {
+	assertValidAsDC(); return toBoolean(::GetCharABCWidthsI(getHandle(), 0, numberOfGlyphs, const_cast<WORD*>(glyphs), buffer));}
+#endif /* _WIN32_WINNT >= 0x0500 */
+
 inline bool DC::getCharWidth(UINT firstChar, UINT lastChar, int* buffer) const {
 	assertValidAsDC(); return toBoolean(::GetCharWidth32(getHandle(), firstChar, lastChar, buffer));}
 
 inline bool DC::getCharWidth(UINT firstChar, UINT lastChar, float* buffer) const {
 	assertValidAsDC(); return toBoolean(::GetCharWidthFloat(getHandle(), firstChar, lastChar, buffer));}
+
+#if(_WIN32_WINNT >= 0x0500)
+inline bool DC::getCharWidthI(UINT firstGlyph, UINT numberOfGlyphs, int buffer[]) const {
+	assertValidAsDC(); return toBoolean(::GetCharWidthI(getHandle(), firstGlyph, numberOfGlyphs, 0, buffer));}
+
+inline bool DC::getCharWidthI(WORD* glyphs, UINT numberOfGlyphs, int buffer[]) const {
+	assertValidAsDC(); return toBoolean(::GetCharWidthI(getHandle(), 0, numberOfGlyphs, const_cast<WORD*>(glyphs), buffer));}
+#endif /* _WIN32_WINNT >= 0x0500 */
 
 inline int DC::getClipBox(RECT& rect) const {assertValidAsDC(); return ::GetClipBox(getHandle(), &rect);}
 

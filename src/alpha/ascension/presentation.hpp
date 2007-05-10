@@ -17,25 +17,6 @@ namespace ascension {
 
 	namespace presentation {
 
-/*		/// 特殊な定義済みトークン
-		namespace specialtokens {
-			const rules::Token::ID
-				NORMAL_TEXT = 10,					///< 通常のテキスト
-				SELECTION = 11,						///< 選択領域 (強調設定は色のみ有効)
-				INACTIVE_SELECTION = 12,			///< 非アクティブ選択領域 (強調設定は色のみ有効)
-				NUMERAL = 13,						///< 数字
-				NUMBER = 14,						///< 数値
-				MATCH_BRACKETS = 15,				///< 括弧の一致
-				END_OF_LINE = 16,					///< 行の終端
-				END_OF_FILE = 17,					///< ファイルの終端
-				MATCH_TEXT = 18,					///< 検索パターンに一致するテキスト
-				INACCESSIBLE_REGION = 19,			///< ナローイング中のアクセス不能領域 (強調設定は色のみ有効)
-				WHITE_SPACE_ALTERNATIVE = 20,		///< 空白類文字の代替表示
-				ASCII_CONTROL_ALTERNATIVE = 21,		///< ASCII 制御文字の代替表示
-				UNICODE_CONTROL_ALTERNATIVE = 22,	///< Unicode 制御文字の代替表示
-				LAST_ITEM = 22;
-		}
-*/
 		/// Visual attributes of a text segment.
 		struct TextStyle : public manah::FastArenaObject<TextStyle> {
 			viewers::Colors color;				///< Color of the text.
@@ -166,6 +147,57 @@ namespace ascension {
 			ASCENSION_SHARED_POINTER<ILineStyleDirector> lineStyleDirector_;
 			std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
+		};
+
+		/**
+		 * Creates (reconstructs) styles of the document region. This is used by
+		 * @c PresentationReconstructor class to manage the styles in the specified content type.
+		 * @see PresentationReconstructor#setPartitionReconstructor
+		 */
+		class IPartitionPresentationReconstructor {
+		public:
+			/// Destructor.
+			virtual ~IPartitionPresentationReconstructor() throw() {}
+		private:
+			/**
+			 * Returns the styled text segments for the specified document region.
+			 * @param region the region to reconstruct the new presentation
+			 * @return the presentation. the ownership will be transferred to the caller
+			 */
+			virtual std::auto_ptr<LineStyle> getPresentation(const text::Region& region) const throw() = 0;
+			friend class PresentationReconstructor;
+		};
+
+		/// Reconstructs document presentation with single text style.
+		class SingleStyledPartitionPresentationReconstructor : virtual public IPartitionPresentationReconstructor {
+		public:
+			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw();
+		private:
+			// IPartitionPresentationReconstructor
+			std::auto_ptr<LineStyle>	getPresentation(const text::Region& region) const throw();
+		private:
+			const TextStyle style_;
+		};
+
+		/**
+		 * 
+		 */
+		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public text::IDocumentPartitioningListener {
+		public:
+			// constructors
+			explicit PresentationReconstructor(Presentation& presentation) throw();
+			~PresentationReconstructor() throw();
+			// attribute
+			void	setPartitionReconstructor(text::ContentType contentType,
+						std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
+		private:
+			// ILineStyleDirector
+		const LineStyle&	queryLineStyle(length_t line, bool& delegates) const;
+			// IDocumentPartitioningListener
+			void	documentPartitioningChanged(const text::Region& changedRegion);
+		private:
+			Presentation& presentation_;
+			std::map<text::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
 		};
 
 

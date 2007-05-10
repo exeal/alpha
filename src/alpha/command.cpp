@@ -910,6 +910,10 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_SEARCH_INCREMENTALSEARCHMF:
 	case CMD_SEARCH_INCREMENTALSEARCHMR:
 		return searcher::TextSearcher::isRegexAvailable();
+	case CMD_SEARCH_FINDFILES:
+	case CMD_SEARCH_SEARCHMULTIPLEFILES:
+	case CMD_SEARCH_REPLACEMULTIPLEFILES:
+		return false;
 
 		// •\Ž¦
 	case CMD_VIEW_WRAPNO:

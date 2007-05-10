@@ -18,6 +18,7 @@
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::encodings;
+using namespace ascension::unicode;
 using namespace manah::win32;
 using namespace manah::win32::io;
 using namespace manah::com;
@@ -1837,6 +1838,71 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 /// Copy-constructor.
 DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw() :
 		unicode::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
+}
+
+/// @see unicode#CharacterIterator#assign
+void DocumentCharacterIterator::assign(const CharacterIterator& rhs) {
+	const DocumentCharacterIterator& r = static_cast<const DocumentCharacterIterator&>(rhs);
+	document_ = r.document_;
+	line_ = r.line_;
+	p_ = r.p_;
+	region_ = r.region_;
+}
+
+/// @see unicode#CharacterIterator#clone
+auto_ptr<CharacterIterator> DocumentCharacterIterator::clone() const {
+	return auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
+}
+
+/// @see unicode#CharacterIterator#current
+CodePoint DocumentCharacterIterator::current() const throw() {
+	if(p_.column == line_->length())
+		return LINE_SEPARATOR;
+	return (surrogates::isHighSurrogate((*line_)[p_.column])
+		&& p_.column + 1 < line_->length() && surrogates::isLowSurrogate((*line_)[p_.column + 1])) ?
+		surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
+}
+
+/// @see unicode#CharacterIterator#doFirst
+void DocumentCharacterIterator::doFirst() {
+	seek(region_.first);
+}
+
+/// @see unicode#CharacterIterator#doLast
+void DocumentCharacterIterator::doLast() {
+	seek(region_.second);
+}
+
+/// @see unicode#CharacterIterator#equals
+bool DocumentCharacterIterator::equals(const CharacterIterator& rhs) const {
+	return p_ == static_cast<const DocumentCharacterIterator&>(rhs).p_;
+}
+
+/// @see unicode#CharacterIterator#less
+bool DocumentCharacterIterator::less(const CharacterIterator& rhs) const {
+	return p_ < static_cast<const DocumentCharacterIterator&>(rhs).p_;
+}
+
+/// @see unicode#CharacterIterator#next
+void DocumentCharacterIterator::next() {
+	if(isLast())
+		throw logic_error("the iterator is at the last.");
+	else if(p_.column == line_->length()) {
+		line_ = &document_->getLine(++p_.line);
+		p_.column = 0;
+	} else if(++p_.column < line_->length()
+			&& surrogates::isLowSurrogate((*line_)[p_.column]) && surrogates::isHighSurrogate((*line_)[p_.column - 1]))
+		++p_.column;
+}
+
+/// @see unicode#CharacterIterator#previous
+void DocumentCharacterIterator::previous() {
+	if(isFirst())
+		throw logic_error("the iterator is at the first.");
+	else if(p_.column == 0)
+		p_.column = (line_ = &document_->getLine(--p_.line))->length();
+	else if(--p_.column > 0 && surrogates::isLowSurrogate((*line_)[p_.column]) && surrogates::isHighSurrogate((*line_)[p_.column - 1]))
+		--p_.column;
 }
 
 

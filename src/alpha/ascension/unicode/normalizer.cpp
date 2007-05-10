@@ -38,16 +38,16 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 		if(c1 == CharacterIterator::DONE) {
 			if(p1 >= folded1 && p1 < last1)
 				c1 = *p1++;
-			else if(CharacterIterator::DONE != (c1 = i1->current())) {
-				i1->next();
+			else if(CharacterIterator::DONE != (c1 = **i1)) {
+				++*i1;
 				p1 = folded1 - 1;
 			}
 		}
 		if(c2 == CharacterIterator::DONE) {
 			if(p2 >= folded2 && p2 < last2)
 				c2 = *p2++;
-			else if(CharacterIterator::DONE != (c2 = i2->current())) {
-				i2->next();
+			else if(CharacterIterator::DONE != (c2 = **i2)) {
+				++*i2;
 				p2 = folded2 - 1;
 			}
 		}
@@ -170,14 +170,14 @@ namespace {
 		return (t != T_BASE) ? ((*destination = t), 3) : 2;
 	}
 
-	basic_string<CodePoint> composeHangul(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i) {
+	basic_string<CodePoint> composeHangul(UTF16To32Iterator<const Char*> i) {
 		// from The Unicode Standard 5.0 pp.1356~1357
-		if(i.isLast())
+		if(!i.hasNext())
 			return basic_string<CodePoint>();
 		basic_stringbuf<CodePoint> result;
 		CodePoint last = *i;
 
-		while(!(++i).isLast()) {
+		while((++i).hasNext()) {
 			const CodePoint c = *i;
 
 			// 1. check to see if two current characters are L and V
@@ -256,7 +256,7 @@ namespace {
 		CodePoint current;
 		Char decomposedHangul[4];
 		const CodePoint* src;
-		for(UTF16To32Iterator<Char*, utf16boundary::DONT_CHECK> i(destination); i.tell() < last; ) {
+		for(UTF16To32IteratorUnsafe<Char*> i(destination); i.tell() < last; ) {
 			current = *i;
 			if(current < 0x010000 && (0 != (len = decomposeHangul(static_cast<Char>(current & 0xFFFF), decomposedHangul)))) {
 				splice(i.tell(), last, 1, decomposedHangul, len);
@@ -302,10 +302,11 @@ namespace {
 	 * @return true if the sequence is in FCD.
 	 */
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
+		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 		Char buffer[32];
 		length_t len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
-		for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i) {
+		for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
 			len = internalDecompose(*i, false, buffer);
 			ccc = CanonicalCombiningClass::of(surrogates::decodeFirst(buffer, buffer + len));
 			if(ccc != CanonicalCombiningClass::NOT_REORDERED && ccc < previous)
@@ -327,9 +328,9 @@ namespace {
 		length_t len;	// length of room
 		// decompose
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
-		for(auto_ptr<CharacterIterator> i(first.clone()); i->getOffset() < last.getOffset(); i->next()) {
-			len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
-			for(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> j(room, room + len); !j.isLast(); ++j)
+		for(auto_ptr<CharacterIterator> i(first.clone()); i->getOffset() < last.getOffset(); ++*i) {
+			len = internalDecompose(**i, form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
+			for(UTF16To32Iterator<const Char*> j(room, room + len); j.hasNext(); ++j)
 				buffer.sputc(*j);
 		}
 		// reorder combining marks
@@ -466,7 +467,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 	if(direction == FORWARD) {
 		if(!initialize) {
 			do {
-				current_->next();
+				++*current_;
 			} while(current_->getOffset() < nextOffset_);
 		}
 		if(current_->isLast()) {
@@ -476,18 +477,18 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 		}
 		// locate the next starter
 		next = current_->clone();
-		for(next->next(); !next->isLast(); next->next()) {
-			if(CanonicalCombiningClass::of(next->current()) == CanonicalCombiningClass::NOT_REORDERED)
+		for(++*next; !next->isLast(); ++*next) {
+			if(CanonicalCombiningClass::of(**next) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
 		nextOffset_ = next->getOffset();
 	} else {
 		next = current_->clone();
 		nextOffset_ = current_->getOffset();
-		current_->previous();
+		--*current_;
 		// locate the previous starter
 		while(!current_->isFirst()) {
-			if(CanonicalCombiningClass::of(current_->current()) == CanonicalCombiningClass::NOT_REORDERED)
+			if(CanonicalCombiningClass::of(**current_) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
 	}

@@ -102,7 +102,7 @@ void LiteralPattern::compile(const Char* first, const Char* last,
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
 	// build pseudo collation elements
 	first_ = last_ = new int[last - first];
-	for(UTF16To32Iterator<const Char*, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i, ++last_)
+	for(UTF16To32Iterator<const Char*> i(first, last); i.hasNext(); ++i, ++last_)
 		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
 	// build BM shift table
 	fill(lastOccurences_, endof(lastOccurences_), last_ - first_);
@@ -125,8 +125,8 @@ void LiteralPattern::compile(const Char* first, const Char* last,
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
 	auto_ptr<CharacterIterator> i(target.clone());
-	for(const int* e = first_; e < last_ && !i->isLast(); ++e, i->next()) {
-		if(*e != (caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
+	for(const int* e = first_; e < last_ && !i->isLast(); ++e, ++*i) {
+		if(*e != (caseSensitive_ ? **i : CaseFolder::fold(**i)))
 			return false;
 	}
 	return i->isLast();
@@ -134,8 +134,8 @@ bool LiteralPattern::matches(const CharacterIterator& target) const {
 
 namespace {
 	inline CharacterIterator& slowAdvance(CharacterIterator& i, ptrdiff_t delta) {
-		for(; delta > 0; --delta) i.next();
-		for(; delta < 0; ++delta) i.previous();
+		for(; delta > 0; --delta) ++i;
+		for(; delta < 0; ++delta) --i;
 		return i;
 	}
 }
@@ -154,10 +154,10 @@ bool LiteralPattern::search(const CharacterIterator& target,
 	if(direction_ == FORWARD) {
 		slowAdvance(*t, last_ - first_ - 1);
 		for(const int* pattern; !t->isLast(); slowAdvance(*t,
-				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
+				max<length_t>(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], last_ - pattern))) {
 			for(pattern = last_ - 1;
-				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-				t->previous(), --pattern) {
+				(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				--*t, --pattern) {
 				if(pattern == first_) {
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
@@ -171,8 +171,8 @@ bool LiteralPattern::search(const CharacterIterator& target,
 		slowAdvance(*t, first_ - last_);
 		for(const int* pattern; ; slowAdvance(*t, -skipLength)) {
 			for(pattern = first_;
-					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-					t->next(), ++pattern) {
+					(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					++*t, ++pattern) {
 				if(pattern == last_ - 1) {
 					slowAdvance(*t, first_ - last_ + 1);
 					matchedFirst = t;
@@ -181,7 +181,7 @@ bool LiteralPattern::search(const CharacterIterator& target,
 					return true;
 				}
 			}
-			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - first_ + 1);
+			skipLength = max(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], pattern - first_ + 1);
 			if(skipLength > t->getOffset() - target.getOffset())
 				break;
 		}
@@ -761,10 +761,12 @@ bool IncrementalSearcher::update() {
 		// handle the previous zero-width match
 		if(lastStatus.direction == FORWARD) {
 			DocumentCharacterIterator temp(*document_, scope.first);
-			scope.first = (++temp).tell();
+			++temp;
+			scope.first = temp.tell();
 		} else {
 			DocumentCharacterIterator temp(*document_, scope.second);
-			scope.second = (--temp).tell();
+			--temp;
+			scope.second = temp.tell();
 		}
 	}
 	matched_ = false;

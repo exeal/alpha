@@ -21,6 +21,20 @@ namespace ascension {
 
 	namespace contentassist {
 
+		class ICompletionListener {};
+
+		class ICompletionProposal {};
+
+		class IContentAssistant {};
+
+		class IContentAssistProcessor {};
+
+		class IContextInformation {};
+
+		class IContextInformationPresenter {};
+
+		class IContextInformationValidator {};
+
 		/// A completion window.
 		class CompletionWindow : public manah::win32::ui::ListBox {
 		public:
