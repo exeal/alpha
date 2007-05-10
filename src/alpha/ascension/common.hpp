@@ -130,6 +130,13 @@ namespace ascension {
 		const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}
 	};
 
+	// static assertion
+	template<std::size_t> struct StaticAssertTest {};
+	template<int> struct StaticAssertionFailureAtLine;
+	template<> struct StaticAssertionFailureAtLine<-1> {};
+	#define ASCENSION_STATIC_ASSERT(expression)	\
+		typedef StaticAssertTest<sizeof(StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)> oh_static_assertion_shippaidayo_orz
+
 } // namespace ascension
 
 #endif /* !ASCENSION_COMMON_HPP */

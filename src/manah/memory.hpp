@@ -148,7 +148,15 @@ namespace manah {
 		~SharedPointer() {reset();}
 		SharedPointer(const SharedPointer& rhs) : data_(rhs.data_) {if(data_ != 0) data_->addReference();}
 		// operators
-		SharedPointer& operator=(const SharedPointer& rhs) {reset(); data_ = rhs.data_; if(data_ != 0) data_->addReference(); return *this;}
+		SharedPointer& operator=(const SharedPointer& rhs) {
+			if(data_ != rhs.data_) {
+				reset();
+				data_ = rhs.data_;
+				if(data_ != 0)
+					data_->addReference();
+			}
+			return *this;
+		}
 		Reference operator*() const {const Pointer p(get()); assert(p != 0); return *p;}
 		Pointer operator->() const {const Pointer p(get()); assert(p != 0); return p;}
 		// methods

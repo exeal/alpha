@@ -291,7 +291,7 @@ inline DWORD Menu::getContextHelpID() const {assertValidAsMenu(); return ::GetMe
 inline UINT Menu::getDefault(UINT flags) const {assertValidAsMenu(); return ::GetMenuDefaultItem(getHandle(), false, flags);}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::getCaption(UINT item, TCHAR* caption, int maxLength) const {
-	ItemInfo mi; mi.fMask = MIIM_STRING; mi.dwTypeData = caption; return getItemInformation<idPolicy>(item, mi);}
+	ItemInfo mi; mi.fMask = MIIM_STRING; mi.dwTypeData = caption; mi.cch = maxLength; return getItemInformation<idPolicy>(item, mi);}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline int Menu::getCaptionLength(UINT item) const {
 	ItemInfo mi; mi.fMask = MIIM_STRING; getItemInformation<idPolicy>(item, mi); return mi.cch;}
@@ -339,14 +339,15 @@ inline LRESULT Menu::handleMenuChar(TCHAR charCode, UINT flag) {
 	for(i = /*(activeItem != c) ? activeItem + 1 :*/ 0; i < c; ++i) {
 		const int len = getCaptionLength<BY_POSITION>(i);
 		AutoBuffer<TCHAR> caption(new TCHAR[len + 1]);
-		getCaption<BY_POSITION>(i, caption.get(), len + 1);
-		// search '&'
-		const TCHAR* p = caption.get();
-		while(*p != 0 && *p != _T('&'))
-			::CharNext(caption.get());
-		if(*p != 0) {
-			if(charCode == static_cast<TCHAR>(LOWORD(::CharLower(reinterpret_cast<TCHAR*>(p[1])))))
-				break;
+		if(getCaption<BY_POSITION>(i, caption.get(), len + 1)) {
+			// search '&'
+			const TCHAR* p = caption.get();
+			while(*p != 0 && *p != _T('&'))
+				p = ::CharNext(p);
+			if(*p != 0) {
+				if(charCode == static_cast<TCHAR>(LOWORD(::CharLower(reinterpret_cast<TCHAR*>(p[1])))))
+					break;
+			}
 		}
 	}
 	return (i != c) ? MAKELONG(i, MNC_EXECUTE) : MAKELONG(0, MNC_IGNORE);

@@ -5,7 +5,7 @@
  * @date 2006
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "presentation.hpp"
 #include "viewer.hpp"
 using namespace ascension;
@@ -113,4 +113,120 @@ const LineStyle& Presentation::getLineStyle(length_t line, bool& delegatedOwners
 /// @see internal#ITextViewerCollection#removeTextViewer
 void Presentation::removeTextViewer(TextViewer& textViewer) throw() {
 	textViewers_.erase(&textViewer);
+}
+
+
+// SingleStyledPartitionPresentationReconstructor ///////////////////////////
+
+/**
+ * Constructor.
+ * @param style the style
+ */
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw() : style_(style) {
+}
+
+/// @see IPartitionPresentationReconstructor#getPresentation
+auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
+	auto_ptr<LineStyle> result(new LineStyle);
+	result->array = new StyledText[result->count = 1];
+	result->array[0].column = region.getTop().column;
+	result->array[0].style = style_;
+	return result;
+}
+
+
+// PresentationReconstructor ////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param presentation the presentation
+ */
+PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
+	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(this));
+	presentation_.getDocument().addPartitioningListener(*this);
+}
+
+/// Destructor.
+PresentationReconstructor::~PresentationReconstructor() throw() {
+//	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(0));
+	presentation_.getDocument().removePartitioningListener(*this);
+	for(map<ContentType, IPartitionPresentationReconstructor*>::iterator i(reconstructors_.begin()); i != reconstructors_.end(); ++i)
+		delete i->second;
+}
+
+/// @see text#IDocumentPartitioningListener#documentPartitioningChanged
+void PresentationReconstructor::documentPartitioningChanged(const Region& changedRegion) {
+	for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()); i != presentation_.getLastTextViewer(); ++i)
+		(*i)->getTextRenderer().invalidate(changedRegion.getTop().line, changedRegion.getBottom().line + 1);
+}
+
+/// @see ILineStyleDirector#queryLineStyle
+const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& delegates) const {
+	const length_t lineLength = presentation_.getDocument().getLineLength(line);
+	if(lineLength == 0) {	// empty line
+		delegates = false;
+		return LineStyle::NULL_STYLE;
+	}
+
+	// get partitions in this line
+	vector<DocumentPartition> partitions;
+	const DocumentPartitioner& partitioner = presentation_.getDocument().getPartitioner();
+	delegates = true;
+	for(length_t column = 0; column < lineLength; ) {
+		DocumentPartition temp;
+		partitioner.getPartition(Position(line, column), temp);
+		partitions.push_back(temp);
+		if(temp.region.getBottom().line != line)
+			break;
+		column = temp.region.getBottom().column;
+	}
+	partitions.front().region.first = max(Position(line, 0), partitions.front().region.first);
+	partitions.back().region.second = min(Position(line, lineLength), partitions.back().region.second);
+
+	// get styles of each partitions
+	manah::AutoBuffer<auto_ptr<LineStyle> > partitionStyles(new auto_ptr<LineStyle>[partitions.size()]);
+	for(size_t i = 0; i < partitions.size(); ++i) {
+		map<ContentType, IPartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(partitions[i].contentType));
+		if(r != reconstructors_.end())
+			partitionStyles[i] = r->second->getPresentation(partitions[i].region);
+	}
+
+	// build the result
+	auto_ptr<LineStyle> result(new LineStyle);
+	result->count = 0;
+	for(size_t i = 0; i < partitions.size(); ++i)
+		result->count += (partitionStyles[i].get() != 0) ? partitionStyles[i]->count : 0;
+	if(result->count == 0) {
+		delegates = false;
+		return LineStyle::NULL_STYLE;
+	}
+	result->array = new StyledText[result->count];
+	for(size_t i = 0, c = 0; i < partitions.size(); ++i) {
+		if(partitionStyles[i].get() != 0) {
+			copy(partitionStyles[i]->array, partitionStyles[i]->array + partitionStyles[i]->count, result->array + c);
+			c += partitionStyles[i]->count;
+			delete[] partitionStyles[i]->array;
+		}
+	}
+	return *result.release();
+}
+
+/**
+ * Sets the partition presentation reconstructor for the specified content type.
+ * @param contentType the content type. if a reconstructor for this content type was already be
+ * set, the old will be deleted
+ * @param reconstructor the partition presentation reconstructor to set. can't be @c null. the
+ * ownership will be transferred to the callee
+ * @throw std#invalid_argument @a reconstructor is @c null
+ */
+void PresentationReconstructor::setPartitionReconstructor(
+		ContentType contentType, auto_ptr<IPartitionPresentationReconstructor> reconstructor) {
+	if(reconstructor.get() == 0)
+		throw invalid_argument("the specified reconstructor is null.");
+	const map<ContentType, IPartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));
+	if(old != reconstructors_.end()) {
+		delete old->second;
+		reconstructors_.erase(old);
+	}
+	reconstructors_.insert(make_pair(contentType, reconstructor.release()));
 }

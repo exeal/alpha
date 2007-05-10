@@ -745,6 +745,9 @@ END
 
 STRINGTABLE 
 BEGIN
+	CMD_SEARCH_FINDFILES    "ファイルの検索...\nファイルを検索します。"
+	CMD_SEARCH_SEARCHMULTIPLEFILES "ファイルから検索...\n複数のファイルから検索を行います。"
+	CMD_SEARCH_REPLACEMULTIPLEFILES "ファイルから置換...\n複数のファイルで置換を行います。"
     CMD_SEARCH_TOP          "検索(&S)"
 	CMD_SEARCH_BOOKMARKS    "ブックマーク(&B)"
 END
@@ -1662,6 +1665,9 @@ END
 
 STRINGTABLE 
 BEGIN
+	CMD_SEARCH_FINDFILES    "Find Files...\nFind files with the given pattern."
+	CMD_SEARCH_SEARCHMULTIPLEFILES "Search in Files...\nSearch pattern in multiple files."
+	CMD_SEARCH_REPLACEMULTIPLEFILES "Replace in Files...\nReplace text in multiple files."
     CMD_SEARCH_TOP          "&Search"
 	CMD_SEARCH_BOOKMARKS    "&Bookmarks"
 END

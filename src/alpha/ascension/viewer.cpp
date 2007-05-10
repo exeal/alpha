@@ -658,60 +658,28 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	p->setRules(rules, endof(rules));
 	getDocument().setPartitioner(p);
 
-	class Orz : virtual public presentation::ILineStyleDirector, virtual public IDocumentPartitioningListener {
-	public:
-		Orz(Presentation& p) : p_(p) {}
-		void documentPartitioningChanged(const Region& changedRegion) {
-			for(Presentation::TextViewerIterator i(p_.getFirstTextViewer()); i != p_.getLastTextViewer(); ++i)
-				(*i)->getTextRenderer().invalidate(changedRegion.getTop().line, changedRegion.getBottom().line + 1);
-		}
-		const LineStyle& queryLineStyle(length_t line, bool& delegates) const {
-			delegates = true;
-			vector<DocumentPartition> ps;
-			const DocumentPartitioner& partitioner = p_.getDocument().getPartitioner();
-			for(length_t column = 0; column < p_.getDocument().getLineLength(line); ) {
-				DocumentPartition temp;
-				partitioner.getPartition(Position(line, column), temp);
-				ps.push_back(temp);
-				if(temp.region.getBottom().line != line)
-					break;
-				column = temp.region.getBottom().column;
-			}
-			if(ps.empty()) {
-				delegates = false;
-				return LineStyle::NULL_STYLE;
-			}
-			LineStyle* styles = new LineStyle;
-			styles->count = ps.size();
-			styles->array = new StyledText[ps.size()];
-			for(size_t i = 0; i < styles->count; ++i) {
-				StyledText& st = styles->array[i];
-				st.column = ps[i].region.getTop().column;
-				switch(ps[i].contentType) {
-				case 42:
-				case 43:
-					st.style.color.foreground = RGB(0x00, 0x66, 0x00);
-					st.style.color.background = RGB(0xEE, 0xFF, 0xEE);
-					break;
-				case 44:
-				case 45:
-					st.style.color.foreground = RGB(0x00, 0x00, 0x66);
-					st.style.color.background = RGB(0xEE, 0xEE, 0xFF);
-					break;
-				default:
-					st.style.color.foreground = STANDARD_COLOR;
-					st.style.color.background = STANDARD_COLOR;
-					break;
-				}
-			}
-			return *styles;
-		}
-	private:
-		Presentation& p_;
-	};
-	Orz* orz = new Orz(getPresentation());
-	getDocument().addPartitioningListener(*orz);
-	getPresentation().setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(orz));
+	// syntax highlight test
+	const Char JS_KEYWORDS[] = L"if else for function var return";
+	presentation::PresentationReconstructor* r = new presentation::PresentationReconstructor(getPresentation());
+	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
+	auto_ptr<LexicalTokenScanner> jsScanner(new LexicalTokenScanner(unicode::IdentifierSyntax()));
+	jsScanner->addWordRule(jsKeywords);
+	jsScanner->addRule(auto_ptr<Rule>(new NumberRule(222)));
+	map<Token::ID, const TextStyle> styles;
+	styles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
+	styles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
+	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
+	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(new LexicalPartitionPresentationReconstructor(getDocument(), jsScanner, styles));
+	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
+	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE, ppr);
+	pr->setPartitionReconstructor(42, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(43, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(44, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
+	pr->setPartitionReconstructor(45, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_);
 #endif /* _DEBUG */
 
@@ -1566,7 +1534,7 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
 
 		// bidi サポートがあるか?
-		if(false/*!renderer_->supportsComplexScript()*/) {
+		if(!renderer_->supportsComplexScripts()) {
 			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
 			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
 			menu.enable<Menu::BY_POSITION>(12, false);

@@ -176,51 +176,65 @@ namespace ascension {
 		/// Returns true if the specified code point is Unicode scalar value.
 		inline bool isScalarValue(CodePoint cp) throw() {return isValidCodePoint(cp) && !surrogates::isSurrogate(cp);}
 
-		class CharacterIterator {
+		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
 		public:
 			enum {hasBoundary = true};
 			/// Indicates the iterator is the last.
 			static const CodePoint DONE = 0xFFFFFFFFUL;
-			/// Creates a copy of the iterator. Tthis must be implemented by copy-constructor of @c CharacterIterator.
+
+		public:
+			// standard C++ iterator interface
+			virtual ~CharacterIterator() throw();
+			CharacterIterator&	operator=(const CharacterIterator& rhs);
+			CodePoint			operator*() const throw();
+			CharacterIterator&	operator++();
+			CharacterIterator&	operator--();
+			bool				operator==(const CharacterIterator& rhs) const;
+			bool				operator!=(const CharacterIterator& rhs) const;
+			bool				operator<(const CharacterIterator& rhs) const;
+			bool				operator<=(const CharacterIterator& rhs) const;
+			bool				operator>(const CharacterIterator& rhs) const;
+			bool				operator>=(const CharacterIterator& rhs) const;
+			// attributes
+			std::ptrdiff_t	getOffset() const throw();
+			bool			isCloneOf(const CharacterIterator& other) const throw();
+			// movement
+			CharacterIterator&	first();
+			CharacterIterator&	last();
+
+			// public pure virtual methods the concrete class should implement
+			/// Creates a copy of the iterator. This must be implemented by copy-constructor of @c CharacterIterator.
 			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
 			/// Returns true if the iterator is first.
 			virtual bool isFirst() const = 0;
 			/// Returns true if the iterator is last.
 			virtual bool isLast() const = 0;
-		public:
-			virtual				~CharacterIterator() throw();
-			CodePoint			current() const;
-			bool				equals(const CharacterIterator& rhs) const;
-			CharacterIterator&	first();
-			std::ptrdiff_t		getOffset() const throw();
-			bool				isCloneOf(const CharacterIterator& other) const throw();
-			CharacterIterator&	last();
-			bool				less(const CharacterIterator& rhs) const;
-			CharacterIterator&	move(const CharacterIterator& to);
-			CharacterIterator&	next();
-			CharacterIterator&	previous();
+
+			// protected pure virtual methods the concrete class should implement
 		protected:
-			CharacterIterator() throw();
-			CharacterIterator(const CharacterIterator& rhs) throw();
-			CharacterIterator& operator=(const CharacterIterator& rhs) throw();
-		protected:
-			/// Returns the current code unit value.
-			virtual Char doCurrent() const = 0;
-			/// Returns true if the iterator equals @a rhs.
-			virtual bool doEquals(const CharacterIterator& rhs) const = 0;
+			/// Assigns the other iterator.
+			virtual void assign(const CharacterIterator& rhs) = 0;
+			/// Returns the current code point value.
+			virtual CodePoint current() const throw() = 0;
 			/// Moves to the start of the character sequence.
 			virtual void doFirst() = 0;
 			/// Moves to the end of the character sequence.
 			virtual void doLast() = 0;
+			/// Returns true if the iterator equals @a rhs.
+			virtual bool equals(const CharacterIterator& rhs) const = 0;
 			/// Returns true if the iterator is less than @a rhs.
-			virtual bool doLess(const CharacterIterator& rhs) const = 0;
-			/// Moves to the specified position.
-			virtual void doMove(const CharacterIterator& to) = 0;
+			virtual bool less(const CharacterIterator& rhs) const = 0;
 			/// Moves to the previous code unit.
-			virtual void doNext() = 0;
+			virtual void next() = 0;
 			/// Moves to the next code unit.
-			virtual void doPrevious() = 0;
+			virtual void previous() = 0;
+
+		protected:
+			CharacterIterator() throw();
+			CharacterIterator(const CharacterIterator& rhs) throw();
 		private:
+			void verifyRHS(const CharacterIterator& rhs) const {
+				if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this.");}
 			std::ptrdiff_t offset_;
 			const CharacterIterator* original_;
 		};
@@ -228,36 +242,27 @@ namespace ascension {
 		/// Implementation of @c CharacterIterator for C string or @c String.
 		class StringCharacterIterator : public CharacterIterator {
 		public:
-			/// Default constructor.
-			StringCharacterIterator() throw() {}
-			StringCharacterIterator(const Char* first, const Char* last) : current_(first),
-				first_(first), last_(last) {if(first_ > last_) throw std::invalid_argument("the first is greater than last.");}
-			StringCharacterIterator(const Char* first, const Char* last, const Char* start) : current_(start), first_(first), last_(last) {
-				if(first_ > last_ || current_ < first_ || current_ > last_) throw std::invalid_argument("invalid input.");}
-			StringCharacterIterator(const String& s) : current_(s.data()), first_(s.data()),
-				last_(s.data() + s.length()) {if(first_ > last_) throw std::invalid_argument("the first is greater than last.");}
-			StringCharacterIterator(const String& s, String::const_iterator start) :
-				current_(s.data() + (start - s.begin())), first_(s.data()), last_(s.data() + s.length()) {
-					if(first_ > last_ || current_ < first_ || current_ > last_) throw std::invalid_argument("invalid input.");}
-			StringCharacterIterator(const StringCharacterIterator& rhs) throw() :
-				CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
-			StringCharacterIterator& operator=(const StringCharacterIterator& rhs) throw() {
-				current_ = rhs.current_; first_ = rhs.first_; last_ = rhs.last_; return *this;}
-			std::auto_ptr<CharacterIterator> clone() const {return std::auto_ptr<CharacterIterator>(new StringCharacterIterator(*this));}
-			const Char* getFirst() const {return first_;}
-			const Char* getLast() const {return last_;}
-			bool isFirst() const {return current_ == first_;}
-			bool isLast() const {return current_ == last_;}
-			const Char* tell() const throw() {return current_;}
+			StringCharacterIterator() throw();
+			StringCharacterIterator(const Char* first, const Char* last);
+			StringCharacterIterator(const Char* first, const Char* last, const Char* start);
+			StringCharacterIterator(const String& s);
+			StringCharacterIterator(const String& s, String::const_iterator start);
+			StringCharacterIterator(const StringCharacterIterator& rhs) throw();
+			const Char*	getFirst() const throw();
+			const Char*	getLast() const throw();
+			bool		isFirst() const;
+			bool		isLast() const;
+			const Char*	tell() const throw();
 		private:
-			Char doCurrent() const {return *current_;}
-			bool doEquals(const CharacterIterator& rhs) const {return current_ == static_cast<const StringCharacterIterator&>(rhs).current_;}
-			void doFirst() {current_ = first_;}
-			void doLast() {current_ = last_;}
-			bool doLess(const CharacterIterator& rhs) const {return current_ < static_cast<const StringCharacterIterator&>(rhs).current_;}
-			void doMove(const CharacterIterator& rhs) {current_ = static_cast<const StringCharacterIterator&>(rhs).current_;}
-			void doNext() {++current_;}
-			void doPrevious() {--current_;}
+			void 								assign(const CharacterIterator& rhs);
+			std::auto_ptr<CharacterIterator>	clone() const;
+			CodePoint							current() const throw();
+			void 								doFirst();
+			void 								doLast();
+			bool 								equals(const CharacterIterator& rhs) const;
+			bool 								less(const CharacterIterator& rhs) const;
+			void 								next();
+			void 								previous();
 			const Char* current_;
 			const Char* first_;
 			const Char* last_;
@@ -296,9 +301,9 @@ namespace ascension {
 		 * These are available if @a BaseIterator have these facilities.
 		 * @param BaseIterator the base bidirectional iterator presents UTF-16 character sequence
 		 * @param ConcreteIterator set to @c UTF16To32Iterator template class
-		 * @see UTF16To32Iterator, UTF32To16Iterator
+		 * @see UTF16To32Iterator, UTF16To32IteratorUnsafe, UTF32To16Iterator, ToUTF32Sequence
 		 */
-		template<class BaseIterator, class ConcreteIterator>
+		template<typename BaseIterator, typename ConcreteIterator>
 		class UTF16To32IteratorBase : public BidirectionalIteratorFacade<ConcreteIterator,
 				CodePoint, typename std::iterator_traits<BaseIterator>::difference_type, const CodePoint*, const CodePoint> {
 		protected:
@@ -312,20 +317,21 @@ namespace ascension {
 			/// Assignment operator.
 			ConcreteIterator& operator=(const UTF16To32IteratorBase& rhs) {p_ = rhs.p_; return getConcrete();}
 			/// Implements decrement operators.
-			void decrement() {if(isFirst()) throw std::logic_error("The iterator is first."); --p_; if(!isFirst() && surrogates::isLowSurrogate(*p_)) --p_;}
+			void decrement() {if(!getConcrete().hasPrevious()) throw std::logic_error("The iterator is first.");
+				--p_; if(getConcrete().hasPrevious() && surrogates::isLowSurrogate(*p_)) --p_;}
 			/// Implements dereference operator.
 			CodePoint dereference() const {
-				if(isLast()) throw std::logic_error("The iterator is last.");
+				if(!getConcrete().hasNext()) throw std::logic_error("The iterator is last.");
 				if(!surrogates::isHighSurrogate(*p_)) return *p_;
-				BaseIterator next(p_); if(getConcrete().doIsLast(++next)) return *p_; return surrogates::decode(*p_, *next);}
+				++const_cast<UTF16To32IteratorBase*>(this)->p_;
+				const CodePoint next = getConcrete().hasNext() ? *p_ : INVALID_CODE_POINT;
+				--const_cast<UTF16To32IteratorBase*>(this)->p_;
+				return (next != INVALID_CODE_POINT) ? surrogates::decode(*p_, static_cast<Char>(next & 0xFFFF)) : *p_;}
 			/// Implements equality operator.
 			bool equals(const ConcreteIterator& rhs) const {return p_ == rhs.p_;}
 			/// Implements increment opearators.
-			void increment() {if(isLast()) throw std::logic_error("The iterator is last."); ++p_; if(!isLast() && surrogates::isLowSurrogate(*p_)) ++p_;}
-			/// Returns true if the iterator is first. This returns a meaningful value when the policy is not @c DONT_CEHCK.
-			bool isFirst() const {return getConcrete().doIsFirst(p_);}
-			/// Returns true if the iterator is last. This returns a meaningful value when the policy is not @c DONT_CEHCK.
-			bool isLast() const {return getConcrete().doIsLast(p_);}
+			void increment() {if(!getConcrete().hasNext()) throw std::logic_error("The iterator is last.");
+				++p_; if(getConcrete().hasNext() && surrogates::isLowSurrogate(*p_)) ++p_;}
 			/// Implements relational operators.
 			bool isLessThan(const ConcreteIterator& rhs) const {return p_ < rhs.p_;}
 			/// Returns the current position.
@@ -336,44 +342,26 @@ namespace ascension {
 			BaseIterator p_;
 		};
 
-		/**
-		 * Concrete class derived from @c UTF16To32IteratorBase.
-		 * @param BaseIterator the base bidirectional iterator presents UTF-16 character sequence
-		 * @param boundarySafePolicy one of the values defined in @c utf16boundary namespace
-		 */
-		template<class BaseIterator = const Char*, int boundarySafePolicy = utf16boundary::DONT_CHECK> class UTF16To32Iterator;
-		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK>
-				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> > {
+		/// Concrete class derived from @c UTF16To32IteratorBase does not check boundary at all.
+		template<typename BaseIterator = const Char*>
+		class UTF16To32IteratorUnsafe : public UTF16To32IteratorBase<BaseIterator, UTF16To32IteratorUnsafe<BaseIterator> > {
 		public:
 			/// Default constructor.
-			UTF16To32Iterator() {}
+			UTF16To32IteratorUnsafe() {}
 			/// Constructor takes a position to start iteration. The ownership of the target text
 			/// will not be transferred to this.
-			UTF16To32Iterator(BaseIterator i) :
-			  UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> >(i) {}
-		private:
-			bool doIsFirst(const BaseIterator&) const throw() {return false;}
-			bool doIsLast(const BaseIterator&) const throw() {return false;}
-			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::DONT_CHECK> >;
+			UTF16To32IteratorUnsafe(BaseIterator i) : UTF16To32IteratorBase<BaseIterator, UTF16To32IteratorUnsafe<BaseIterator> >(i) {}
+			/// Returns true.
+			bool hasNext() const throw() {return true;}
+			/// Returns true.
+			bool hasPrevious() const throw() {return true;}
 		};
-		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES>
-				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> > {
-		public:
-			/// Default constructor.
-			UTF16To32Iterator() {}
-			/// Constructor takes a position to start iteration. The ownership of the target text
-			/// will not be transferred to this.
-			UTF16To32Iterator(BaseIterator i) :
-			  UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> >(i) {}
+
+		/// Concrete class derived from @c UTF16To32IteratorBase.
+		template<typename BaseIterator = const Char*>
+		class UTF16To32Iterator : public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator> > {
 		private:
-			bool doIsFirst(const BaseIterator& i) const {return i.isFirst();}
-			bool doIsLast(const BaseIterator& i) const {return i.isLast();}
-			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::BASE_KNOWS_BOUNDARIES> >;
-		};
-		template<class BaseIterator> class UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS>
-				: public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> > {
-		private:
-			typedef UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> > Base;
+			typedef UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator> > Base;
 		public:
 			/// Default constructor.
 			UTF16To32Iterator() {}
@@ -387,18 +375,28 @@ namespace ascension {
 			UTF16To32Iterator(const UTF16To32Iterator& rhs) : Base(rhs), first_(rhs.first_), last_(rhs.last_) {}
 			/// Assignment operator.
 			UTF16To32Iterator& operator=(const UTF16To32Iterator& rhs) {Base::operator=(rhs); first_ = rhs.first_; last_ = rhs.last_; return *this;}
-		private:
-			bool doIsFirst(const BaseIterator& i) const {return i == first_;}
-			bool doIsLast(const BaseIterator& i) const {return i == last_;}
+			/// Returns true if the iterator is not at the last.
+			bool hasNext() const {return tell() != last_;}
+			/// Returns true if the iterator is not at the first.
+			bool hasPrevious() const {return tell() != first_;}
 		private:
 			BaseIterator first_, last_;
-			friend class UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator, utf16boundary::USE_BOUNDARY_ITERATORS> >;
 		};
 
-		/// Detects whether the given UTF-16 iterator type has the own boundary information.
-		template<typename Iterator> struct IsUTF16IteratorHasBoundary {enum {result = Iterator::hasBoundary};};
-		template<typename Type> struct IsUTF16IteratorHasBoundary<Type*> {enum {result = false};};
-		template<typename Type> struct IsUTF16IteratorHasBoundary<const Type*> {enum {result = false};};
+		/// Returns the size of a code unit of the specified code unit sequence in bytes.
+		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
+			enum {result = sizeof(std::iterator_traits<CodeUnitSequence>::value_type)};
+		};
+
+		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
+		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator> class ToUTF32Sequence {
+		private:
+			template<std::size_t> struct R;
+			template<> struct R<4> {typedef CodeUnitSequence T;};
+			template<> struct R<2> {typedef AdaptionIterator<CodeUnitSequence> T;};
+		public:
+			typedef typename R<CodeUnitSizeOf<CodeUnitSequence>::result>::T Result;
+		};
 
 		/**
 		 * Bidirectional iterator scans UTF-32 character sequence as UTF-16.
@@ -473,8 +471,8 @@ namespace ascension {
 			Normalizer&	operator=(const Normalizer& rhs);
 			// attributes
 			std::ptrdiff_t	getOffset() const throw();
-			bool			isFirst() const throw();
-			bool			isLast() const throw();
+			bool			hasNext() const throw();
+			bool			hasPrevious() const throw();
 			// class operations
 			static int		compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
 			static Form		formForName(const Char* name);
@@ -514,6 +512,8 @@ namespace ascension {
 			) throw();
 			IdentifierSyntax(const IdentifierSyntax& rhs) throw();
 			IdentifierSyntax&	operator=(const IdentifierSyntax& rhs) throw();
+			// singleton
+			static const IdentifierSyntax&	getDefaultInstance() throw();
 			// classification for character
 			bool	isIdentifierStartCharacter(CodePoint cp) const throw();
 			bool	isIdentifierContinueCharacter(CodePoint cp) const throw();
@@ -838,9 +838,9 @@ namespace ascension {
 			public:
 				explicit ElementIterator(std::auto_ptr<CharacterIterator> source) throw() : i_(source) {}
 				~ElementIterator() throw() {}
-				int current() const {return i_->isLast() ? NULL_ORDER : i_->current();}
-				void next() {i_->next();}
-				void previous() {i_->previous();}
+				int current() const {return i_->isLast() ? NULL_ORDER : **i_;}
+				void next() {++*i_;}
+				void previous() {--*i_;}
 				std::size_t position() const {return i_->getOffset();}
 			private:
 				std::auto_ptr<CharacterIterator> i_;
@@ -866,22 +866,34 @@ inline CharacterIterator::CharacterIterator(const CharacterIterator& rhs) throw(
 inline CharacterIterator::~CharacterIterator() throw() {}
 
 /// Assignment operator.
-inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) throw() {offset_ = rhs.offset_; return *this;}
+inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) throw() {assign(rhs); offset_ = rhs.offset_; return *this;}
 
-/// Returns the current character or @c DONE if the iterator is last.
-inline CodePoint CharacterIterator::current() const {
-	if(isLast()) return DONE;
-	const Char c = doCurrent();
-	if(!surrogates::isHighSurrogate(c)) return c;
-	const_cast<CharacterIterator*>(this)->next();
-	if(isLast()) {const_cast<CharacterIterator*>(this)->previous(); return c;}
-	const Char n = doCurrent();
-	const_cast<CharacterIterator*>(this)->previous();
-	return surrogates::decode(c, n);}
+/// Dereference operator returns the code point of the pointed character.
+inline CodePoint CharacterIterator::operator*() const throw() {return current();}
 
-/// Returns true if the iterator equals @a rhs.
-inline bool CharacterIterator::equals(const CharacterIterator& rhs) const {
-	if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this."); return doEquals(rhs);}
+/// Pre-fix increment operator.
+inline CharacterIterator& CharacterIterator::operator++() {next(); ++offset_; return *this;}
+
+/// Pre-fix decrement operator.
+inline CharacterIterator& CharacterIterator::operator--() {previous(); --offset_; return *this;}
+
+/// Equality operator.
+inline bool CharacterIterator::operator==(const CharacterIterator& rhs) const {verifyRHS(rhs); return equals(rhs);}
+
+/// Inequality operator.
+inline bool CharacterIterator::operator!=(const CharacterIterator& rhs) const {verifyRHS(rhs); return !equals(rhs);}
+
+/// Relational operator.
+inline bool CharacterIterator::operator<(const CharacterIterator& rhs) const {verifyRHS(rhs); return less(rhs);}
+
+/// Relational operator.
+inline bool CharacterIterator::operator<=(const CharacterIterator& rhs) const {verifyRHS(rhs); return less(rhs) || equals(rhs);}
+
+/// Relational operator.
+inline bool CharacterIterator::operator>(const CharacterIterator& rhs) const {verifyRHS(rhs); return !less(rhs) && !equals(rhs);}
+
+/// Relational operator.
+inline bool CharacterIterator::operator>=(const CharacterIterator& rhs) const {verifyRHS(rhs); return !less(rhs);}
 
 /// Moves to the start of the character sequence.
 inline CharacterIterator& CharacterIterator::first() {doFirst(); offset_ = 0; return *this;}
@@ -895,23 +907,23 @@ inline bool CharacterIterator::isCloneOf(const CharacterIterator& other) const t
 /// Moves to the end of the character sequence.
 inline CharacterIterator& CharacterIterator::last() {doLast(); offset_ = 0; return *this;}
 
-/// Returns true if the iterator is less than @a rhs.
-inline bool CharacterIterator::less(const CharacterIterator& rhs) const {
-	if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this."); return doLess(rhs);}
+/// Returns the first position.
+inline const Char* StringCharacterIterator::getFirst() const throw() {return first_;}
 
-/// Moves to the position @a to addresses.
-inline CharacterIterator& CharacterIterator::move(const CharacterIterator& to) {doMove(to); offset_ = to.offset_; return *this;}
+/// Returns the last position.
+inline const Char* StringCharacterIterator::getLast() const throw() {return last_;}
 
-/// Moves to the next character.
-inline CharacterIterator& CharacterIterator::next() {if(!isLast()) {
-	doNext(); ++offset_; if(!isLast() && surrogates::isLowSurrogate(doCurrent())) {doNext(); ++offset_;}} return *this;}
+/// @see CharacterIterator#isFirst
+inline bool StringCharacterIterator::isFirst() const {return current_ == first_;}
 
-/// Moves to the previous character.
-inline CharacterIterator& CharacterIterator::previous() {if(!isFirst()) {
-	doPrevious(); --offset_; if(!isFirst() && surrogates::isLowSurrogate(doCurrent())) {doPrevious(); --offset_;}} return *this;}
+/// @see CharacterIterator#isLast
+inline bool StringCharacterIterator::isLast() const {return current_ == last_;}
+
+/// Returns the current position.
+inline const Char* StringCharacterIterator::tell() const throw() {return current_;}
 
 inline void Normalizer::decrement() {
-	if(isFirst())
+	if(!hasPrevious())
 		throw std::out_of_range("the iterator is the first");
 	else if(indexInBuffer_ == 0)
 		nextClosure(BACKWARD, false);
@@ -930,17 +942,17 @@ inline bool Normalizer::equals(const Normalizer& rhs) const throw() {
 inline std::ptrdiff_t Normalizer::getOffset() const throw() {return current_->getOffset();}
 
 inline void Normalizer::increment() {
-	if(isLast())
+	if(!hasNext())
 		throw std::out_of_range("the iterator is the last.");
 	else if(++indexInBuffer_ == normalizedBuffer_.length())
 		nextClosure(FORWARD, false);
 }
 
-/// Returns true if the iterator addresses the start of the normalized text.
-inline bool Normalizer::isFirst() const throw() {return current_->isFirst() && indexInBuffer_ == 0;}
+/// Returns false if the iterator addresses the end of the normalized text.
+inline bool Normalizer::hasNext() const throw() {return current_->isLast();}
 
-/// Returns true if the iterator addresses the end of the normalized text.
-inline bool Normalizer::isLast() const throw() {return current_->isLast();}
+/// Returns false if the iterator addresses the start of the normalized text.
+inline bool Normalizer::hasPrevious() const throw() {return current_->isFirst() && indexInBuffer_ == 0;}
 
 /// Returns the word component to search.
 inline AbstractWordBreakIterator::Component AbstractWordBreakIterator::getComponent() const throw() {return component_;}
@@ -963,10 +975,11 @@ inline void AbstractSentenceBreakIterator::setComponent(Component component) thr
  */
 template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first, CharacterSequence last) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
-	if(!isIdentifierStartCharacter(*i))
+	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+	UTF16To32Iterator<CharacterSequence> i(first, last);
+	if(!i.hasNext() || !isIdentifierStartCharacter(*i))
 		return first;
-	while(!i.isLast() && isIdentifierContinueCharacter(*i))
+	while(i.hasNext() && isIdentifierContinueCharacter(*i))
 		++i;
 	return i.tell();
 }
@@ -981,8 +994,9 @@ inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first
  */
 template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const throw() {
-	UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last);
-	while(!i.isLast() && isWhiteSpace(*i, includeTab))
+	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+	UTF16To32Iterator<CharacterSequence> i(first, last);
+	while(i.hasNext() && isWhiteSpace(*i, includeTab))
 		++i;
 	return i.tell();
 }
@@ -1028,11 +1042,12 @@ inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false *
  */
 template<typename CharacterSequence>
 inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI /* = false */) {
+	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 	using namespace std;
 	StringBuffer s(ios_base::out);
 	CodePoint c, f;
 	Char buffer[2];
-	for(UTF16To32Iterator<CharacterSequence, utf16boundary::USE_BOUNDARY_ITERATORS> i(first, last); !i.isLast(); ++i) {
+	for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
 		c = *i;
 		if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 			f = foldCommon(c);
