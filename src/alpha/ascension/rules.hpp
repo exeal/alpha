@@ -246,6 +246,7 @@ namespace ascension {
 			text::ContentType	getTransitionStateAt(const text::Position& at) const throw();
 			length_t			tryTransition(const String& line, length_t column,
 									text::ContentType contentType, text::ContentType& destination) const throw();
+			void				verify() const;
 			// DocumentPartitioner
 			void	documentAboutToBeChanged() throw();
 			void	documentChanged(const text::DocumentChange& change) throw();

@@ -117,14 +117,14 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
  * String text(L"C\x0301\x0327");
  * Normalizer n(StringCharacterIterator(text), Normalizer::FORM_NFD);
  * // print all normalized characters of the sequence.
- * while(!n.isLast()) {
+ * while(n.hasNext()) {
  *   std::cout << std::dec << (n.tell() - text.data()) << " : "
  *             << std::hex << *n << std::endl;
  *   ++n;
  * }
  * @endcode
  *
- * @c Normalizer is boundary safe. @c #isFirst and @c #isLast check itself is at the boundary.
+ * @c Normalizer is boundary safe. @c #hasNext and @c #hasPreviouscheck itself is at the boundary.
  * If you increment or decrement the iterator over that boundary, @c std#out_of_range exception
  * will be thrown.
  *
@@ -470,14 +470,14 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 				++*current_;
 			} while(current_->getOffset() < nextOffset_);
 		}
-		if(current_->isLast()) {
+		if(!current_->hasNext()) {
 			// reached the end of the source character sequence
 			indexInBuffer_ = 0;
 			return;
 		}
 		// locate the next starter
 		next = current_->clone();
-		for(++*next; !next->isLast(); ++*next) {
+		for(++*next; next->hasNext(); ++*next) {
 			if(CanonicalCombiningClass::of(**next) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
@@ -487,7 +487,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 		nextOffset_ = current_->getOffset();
 		--*current_;
 		// locate the previous starter
-		while(!current_->isFirst()) {
+		while(current_->hasPrevious()) {
 			if(CanonicalCombiningClass::of(**current_) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
@@ -507,7 +507,7 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	StringBuffer buffer(ios_base::out);
 	CodePoint c;
 	Char surrogate[2];
-	for(Normalizer n(text, form); !n.isLast(); ++n) {
+	for(Normalizer n(text, form); n.hasNext(); ++n) {
 		c = *n;
 		if(c < 0x010000)
 			buffer.sputc(static_cast<Char>(c & 0xFFFF));

@@ -1334,7 +1334,7 @@ void LineLayout::shape(Run& run) throw() {
 
 			// 4/7. the fallback font
 			if(script == NOT_PROPERTY) {
-				for(StringCharacterIterator i(text, text + run.length); !i.isLast(); ++i) {
+				for(StringCharacterIterator i(text, text + run.length); i.hasNext(); ++i) {
 					script = Script::of(*i);
 					if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 						break;

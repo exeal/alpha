@@ -834,8 +834,8 @@ namespace ascension {
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
 			const Region&	getRegion() const throw();
-			bool			isFirst() const throw();
-			bool			isLast() const throw();
+			bool			hasNext() const throw();
+			bool			hasPrevious() const throw();
 			const Position&	tell() const throw();
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
@@ -1394,11 +1394,11 @@ inline const Region& DocumentCharacterIterator::getRegion() const throw() {retur
 /// Returns the line.
 inline const String& DocumentCharacterIterator::getLine() const throw() {return *line_;}
 
-/// @see unicode#CharacterIterator#isFirst
-inline bool DocumentCharacterIterator::isFirst() const throw() {return p_ == region_.first;}
+/// @see unicode#CharacterIterator#hasNext
+inline bool DocumentCharacterIterator::hasNext() const throw() {return p_ != region_.second;}
 
-/// @see unicode#CharacterIterator#isLast
-inline bool DocumentCharacterIterator::isLast() const throw() {return p_ == region_.second;}
+/// @see unicode#CharacterIterator#hasPrevious
+inline bool DocumentCharacterIterator::hasPrevious() const throw() {return p_ != region_.first;}
 
 /**
  * Moves to the specified position.

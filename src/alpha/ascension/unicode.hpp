@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_UNICODE_HPP
 #define ASCENSION_UNICODE_HPP
-#include "common.hpp"
+#include "internal.hpp"
 #include "../../manah/object.hpp"	// manah.Noncopyable
 #include "../../manah/memory.hpp"	// manah.AutoBuffer
 #include <cassert>
@@ -205,10 +205,10 @@ namespace ascension {
 			// public pure virtual methods the concrete class should implement
 			/// Creates a copy of the iterator. This must be implemented by copy-constructor of @c CharacterIterator.
 			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
-			/// Returns true if the iterator is first.
-			virtual bool isFirst() const = 0;
-			/// Returns true if the iterator is last.
-			virtual bool isLast() const = 0;
+			/// Returns true if the iterator is not last.
+			virtual bool hasNext() const = 0;
+			/// Returns true if the iterator is not first.
+			virtual bool hasPrevious() const = 0;
 
 			// protected pure virtual methods the concrete class should implement
 		protected:
@@ -250,8 +250,8 @@ namespace ascension {
 			StringCharacterIterator(const StringCharacterIterator& rhs) throw();
 			const Char*	getFirst() const throw();
 			const Char*	getLast() const throw();
-			bool		isFirst() const;
-			bool		isLast() const;
+			bool		hasNext() const;
+			bool		hasPrevious() const;
 			const Char*	tell() const throw();
 		private:
 			void 								assign(const CharacterIterator& rhs);
@@ -267,29 +267,6 @@ namespace ascension {
 			const Char* first_;
 			const Char* last_;
 		};
-
-		/**
-		 * Provides constants represent policies on handling ill-formed UTF-16 sequences.
-		 * These values are used as the second template parameter of @c UTF16To32Iterator class.
-		 */
-		namespace utf16boundary {
-			enum {
-				/// Does not check boundary at all.
-				DONT_CHECK,
-				/**
-				 * The base iterator (the first template parameter of @c UTF16To32Iterator) has
-				 * own boundaries. The base iterator must have two method @c isFirst and @c isLast.
-				 * take no parameter and return no value.
-				 */
-				BASE_KNOWS_BOUNDARIES,
-				/**
-				 * @c UTF16To32Iterator constructor takes additional two iterators represent the
-				 * boundaries of the character sequence. The iterator checks whether the current
-				 * position is the boundary using these iterators.
-				 */
-				USE_BOUNDARY_ITERATORS
-			};
-		}
 
 		/**
 		 * Base class for @c UTF16To32Iterator bidirectional iterator scans a UTF-16 character
@@ -376,26 +353,24 @@ namespace ascension {
 			/// Assignment operator.
 			UTF16To32Iterator& operator=(const UTF16To32Iterator& rhs) {Base::operator=(rhs); first_ = rhs.first_; last_ = rhs.last_; return *this;}
 			/// Returns true if the iterator is not at the last.
-			bool hasNext() const {return tell() != last_;}
+			bool hasNext() const {return Base::tell() != last_;}
 			/// Returns true if the iterator is not at the first.
-			bool hasPrevious() const {return tell() != first_;}
+			bool hasPrevious() const {return Base::tell() != first_;}
 		private:
 			BaseIterator first_, last_;
 		};
 
 		/// Returns the size of a code unit of the specified code unit sequence in bytes.
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			enum {result = sizeof(std::iterator_traits<CodeUnitSequence>::value_type)};
+			enum {result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)};
 		};
 
 		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
-		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator> class ToUTF32Sequence {
-		private:
-			template<std::size_t> struct R;
-			template<> struct R<4> {typedef CodeUnitSequence T;};
-			template<> struct R<2> {typedef AdaptionIterator<CodeUnitSequence> T;};
-		public:
-			typedef typename R<CodeUnitSizeOf<CodeUnitSequence>::result>::T Result;
+		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator>
+		struct ToUTF32Sequence {
+			typedef ascension::internal::Select<
+				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
+				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> > Result;
 		};
 
 		/**
@@ -838,7 +813,7 @@ namespace ascension {
 			public:
 				explicit ElementIterator(std::auto_ptr<CharacterIterator> source) throw() : i_(source) {}
 				~ElementIterator() throw() {}
-				int current() const {return i_->isLast() ? NULL_ORDER : **i_;}
+				int current() const {return i_->hasNext() ? **i_ : NULL_ORDER;}
 				void next() {++*i_;}
 				void previous() {--*i_;}
 				std::size_t position() const {return i_->getOffset();}
@@ -866,7 +841,8 @@ inline CharacterIterator::CharacterIterator(const CharacterIterator& rhs) throw(
 inline CharacterIterator::~CharacterIterator() throw() {}
 
 /// Assignment operator.
-inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) throw() {assign(rhs); offset_ = rhs.offset_; return *this;}
+inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) {
+	assign(rhs); original_ = rhs.original_; offset_ = rhs.offset_; return *this;}
 
 /// Dereference operator returns the code point of the pointed character.
 inline CodePoint CharacterIterator::operator*() const throw() {return current();}
@@ -913,11 +889,11 @@ inline const Char* StringCharacterIterator::getFirst() const throw() {return fir
 /// Returns the last position.
 inline const Char* StringCharacterIterator::getLast() const throw() {return last_;}
 
-/// @see CharacterIterator#isFirst
-inline bool StringCharacterIterator::isFirst() const {return current_ == first_;}
+/// @see CharacterIterator#hasNext
+inline bool StringCharacterIterator::hasNext() const {return current_ != last_;}
 
-/// @see CharacterIterator#isLast
-inline bool StringCharacterIterator::isLast() const {return current_ == last_;}
+/// @see CharacterIterator#hasPrevious
+inline bool StringCharacterIterator::hasPrevious() const {return current_ != first_;}
 
 /// Returns the current position.
 inline const Char* StringCharacterIterator::tell() const throw() {return current_;}
@@ -949,10 +925,10 @@ inline void Normalizer::increment() {
 }
 
 /// Returns false if the iterator addresses the end of the normalized text.
-inline bool Normalizer::hasNext() const throw() {return current_->isLast();}
+inline bool Normalizer::hasNext() const throw() {return current_->hasNext();}
 
 /// Returns false if the iterator addresses the start of the normalized text.
-inline bool Normalizer::hasPrevious() const throw() {return current_->isFirst() && indexInBuffer_ == 0;}
+inline bool Normalizer::hasPrevious() const throw() {return current_->hasPrevious() || indexInBuffer_ != 0;}
 
 /// Returns the word component to search.
 inline AbstractWordBreakIterator::Component AbstractWordBreakIterator::getComponent() const throw() {return component_;}
