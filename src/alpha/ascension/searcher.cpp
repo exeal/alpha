@@ -125,11 +125,11 @@ void LiteralPattern::compile(const Char* first, const Char* last,
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
 	auto_ptr<CharacterIterator> i(target.clone());
-	for(const int* e = first_; e < last_ && !i->isLast(); ++e, ++*i) {
+	for(const int* e = first_; e < last_ && i->hasNext(); ++e, ++*i) {
 		if(*e != (caseSensitive_ ? **i : CaseFolder::fold(**i)))
 			return false;
 	}
-	return i->isLast();
+	return !i->hasNext();
 }
 
 namespace {
@@ -153,7 +153,7 @@ bool LiteralPattern::search(const CharacterIterator& target,
 	auto_ptr<CharacterIterator> t(target.clone());
 	if(direction_ == FORWARD) {
 		slowAdvance(*t, last_ - first_ - 1);
-		for(const int* pattern; !t->isLast(); slowAdvance(*t,
+		for(const int* pattern; t->hasNext(); advance(*t,
 				max<length_t>(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], last_ - pattern))) {
 			for(pattern = last_ - 1;
 				(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
@@ -398,7 +398,7 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
 		for(DocumentCharacterIterator i = (direction == FORWARD) ?
 				DocumentCharacterIterator(document, scope) : DocumentCharacterIterator(document, scope, scope.second);
-				(direction == FORWARD) ? !i.isLast() : !i.isFirst(); (direction == FORWARD) ? ++i : --i) {
+				(direction == FORWARD) ? i.hasNext() : i.hasPrevious(); (direction == FORWARD) ? ++i : --i) {
 			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
 				break;
 			else if(checkBoundary(
@@ -423,23 +423,24 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 		delete lastResult_;
 		lastResult_ = 0;
 
-		if(direction == FORWARD) {	// 前方検索
-			DocumentCharacterIterator i(document, scope.first);	// 検索開始位置
+		if(direction == FORWARD) {
+			DocumentCharacterIterator i(end);	// position to start search
+			i.seek(scope.first);
 			setupRegexRegionalMatchOptions(i, end, options);
 			do {
 				result = pattern_.regex->search(i, end, options);
 				if(result.get() == 0 || checkBoundary(result->getStart(), result->getEnd()))
 					break;
-				i = result->getEnd();	// 次の検索開始位置へ
+				i.seek(result->getEnd().tell());	// move to the next search start
 				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
 				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
 			} while(i < end);
-		} else {	// 後方検索
-			DocumentCharacterIterator i(document, scope.second);	// 検索開始位置
+		} else {
+			DocumentCharacterIterator i(end);	// position to start search
+			i.seek(scope.second);
 			if(i.tell() != scope.first)
 				--i;
 			setupRegexRegionalMatchOptions(i, end, options);
-			// マッチ対象先頭でのみマッチするようにする
 			options |= regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST;
 			while(true) {
 				result = pattern_.regex->search(i, end, options);
@@ -447,7 +448,7 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 					break;
 				else if(i.tell() <= scope.first)
 					break;
-				--i;	// 次の検索開始位置へ
+				--i;	// move to the next search start
 				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, i.tell() != document.getStartPosition(false));
 				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, i.tell().column != 0);
 			}

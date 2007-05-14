@@ -16,25 +16,37 @@ using namespace std;
  * @class ascension::unicode::CharacterIterator
  * Abstract class defines an interface for iteration on text.
  *
+ * @c CharacterIterator has all operators defined by C++ standard bidirectional operators, except
+ * for post-fix increment/decrement operators. But these two operators may be supported by derived
+ * classes (for example, both @c StringCharacterIterator and @c text#DocumentCharacterIterator
+ * define them).
+ *
+ * <h3>Code point-based interface</h3>
+ *
+ * The operations perform using code point (not code unit). @c operator* returns a code point (not
+ * code unit value) of the character the iterator adresses, and @c operator++ skips a legal low
+ * surrogate code unit.
+ *
  * Following example prints all code points of the text.
  *
  * @code
  * void printAllCharacters(CharacterIterator& i) {
- *   for(i.first(); !i.isLast(); i.next())
- *     print(i.current());
+ *   for(i.first(); i.hasNext(); ++i)
+ *     print(*i);
  * }
  * @endcode
  *
- * Relational operations must be applied to the clones.
+ * Relational operations (@c &lt;, @c &lt;=, @c &gt;, @c &gt;=, @c ==, and @c !=) must be applied
+ * to the clones.
  *
  * @code
  * StringCharacterIterator i1 = ...;
  * auto_ptr<CharacterIterator> i2 = i1.clone(); // i2 is a clone of i1
  * StringCharacterIterator i3 = ...;            // i3 is not a clone of i1
  *
- * i1.equals(*i2); // ok
- * i2->less(i1);   // ok
- * i1.equals(i3);  // error! (std::invalid_argument exception)
+ * i1 == *i2; // ok
+ * i2 < i1;   // ok
+ * i1 == i3;  // error! (std::invalid_argument exception)
  * @endcode
  *
  * <h3>Offsets</h3>
@@ -46,34 +58,45 @@ using namespace std;
  *
  * @code
  * CharacterIterator i = ...;
- * i.first();    // offset == 0
- * i.next();     // offset == 1 (or 2 if the first character is not in BMP)
- * i.last();     // offset == 0
- * i.previous(); // offset == -1 (or -2)
+ * i.first(); // offset == 0
+ * ++i;       // offset == 1 (or 2 if the first character is not in BMP)
+ * i.last();  // offset == 0
+ * --i;       // offset == -1 (or -2)
  * @endcode
  *
- * <h3>Implementation of @c CharacterIterator </h3>
+ * <h3>Implementation of @c CharacterIterator class</h3>
  *
  * A concrete iterator class must implement the following protected methods:
  *
- * - @c #doCurrent for dereference.
- * - @c #doNext, @c #doPrevious, @c #doFirst, @c #doLast, and @c #doMove for movement.
- * - @c #isFirst and @c #isLast for detecting boundaries.
- * - @c #doEquals and @c #doLess for relational operations.
+ * - @c #assign for @c #operator=.
+ * - @c #current for @c #operator*.
+ * - @c #doFirst and @c #doLast for @c #first and @c #last.
+ * - @c #equals and @c #less for the relational operators.
+ * - @c #getTypeID. See the next section "Type-safety".
+ * - @c #next and @c #previous for pre-fix @c #operator++ and @c #operator--.
  *
- * These methods behave as a UTF-16 character iterator. So @c current should returns a UTF-16 code
- * unit value (not a code point). @c CharacterIterator behaves as a UTF-32 character iterator by
- * using these implementations.
+ * And also must implement the following public methods: @c #clone, @c #hasNext, @c #hasPrevious.
+ *
+ * <h3>Type-safety</h3>
+ *
+ * @c CharacterIterator is an abstract type and actual types of two concrete instances may be
+ * different. This makes comparison of iterators difficult.
+ *
+ * @c CharacterIterator uses poor RTTI by @c #getTypeID virtual method returns an identifier
+ * describing its actual type.
  *
  * For relational operations, it is guaranteed that the right argument is a clone of @c this. So
  * to implement by using down-cast is safe.
  *
  * @code
  * bool MyIterator::equals(const CharacterIterator& rhs) const {
+ *   // rhs actually refers a MyIterator.
  *   const MyIterator& concrete = static_cast<const MyIterator&>(rhs);
  *   // compare this and concrete...
  * }
  * @endcode
+ *
+ * For assignment operation (in @c #assign method), the above is not guarenteed.
  */
 
 namespace {

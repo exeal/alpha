@@ -1885,8 +1885,8 @@ bool DocumentCharacterIterator::less(const CharacterIterator& rhs) const {
 
 /// @see unicode#CharacterIterator#next
 void DocumentCharacterIterator::next() {
-	if(isLast())
-		throw logic_error("the iterator is at the last.");
+	if(!hasNext())
+		throw out_of_range("the iterator is at the last.");
 	else if(p_.column == line_->length()) {
 		line_ = &document_->getLine(++p_.line);
 		p_.column = 0;
@@ -1897,8 +1897,8 @@ void DocumentCharacterIterator::next() {
 
 /// @see unicode#CharacterIterator#previous
 void DocumentCharacterIterator::previous() {
-	if(isFirst())
-		throw logic_error("the iterator is at the first.");
+	if(!hasPrevious())
+		throw out_of_range("the iterator is at the first.");
 	else if(p_.column == 0)
 		p_.column = (line_ = &document_->getLine(--p_.line))->length();
 	else if(--p_.column > 0 && surrogates::isLowSurrogate((*line_)[p_.column]) && surrogates::isHighSurrogate((*line_)[p_.column - 1]))

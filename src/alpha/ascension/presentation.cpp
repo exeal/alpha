@@ -175,10 +175,13 @@ const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& 
 	for(length_t column = 0; column < lineLength; ) {
 		DocumentPartition temp;
 		partitioner.getPartition(Position(line, column), temp);
-		partitions.push_back(temp);
-		if(temp.region.getBottom().line != line)
-			break;
-		column = temp.region.getBottom().column;
+		if(!temp.region.isEmpty()) {	// skip an empty partition
+			partitions.push_back(temp);
+			if(temp.region.getBottom().line != line)
+				break;
+			column = temp.region.getBottom().column;
+		} else
+			++column;
 	}
 	partitions.front().region.first = max(Position(line, 0), partitions.front().region.first);
 	partitions.back().region.second = min(Position(line, lineLength), partitions.back().region.second);

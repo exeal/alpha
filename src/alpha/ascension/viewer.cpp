@@ -677,7 +677,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	pr->setPartitionReconstructor(43, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x80, 0x00))))));
 	pr->setPartitionReconstructor(44, auto_ptr<IPartitionPresentationReconstructor>(
-		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80)), true))));
 	pr->setPartitionReconstructor(45, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_);

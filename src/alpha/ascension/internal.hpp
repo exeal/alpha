@@ -24,8 +24,12 @@ namespace ascension {
 	 */
 	namespace internal {
 
-		/// Integer constant to type mapping trick from Loki.
-		template<int v> struct Int2Type {enum{value = v};};
+		/// Integer constant to type mapping trick from Loki.Int2Type.
+		template<int v> struct Int2Type {enum {value = v};};
+
+		/// Type selector from Loki.Select.
+		template<bool expression, typename T, typename U> struct Select {typedef T Result;};
+		template<typename T, typename U> struct Select<false, T, U> {typedef U Result;};
 
 		/// Generates signed numeral types.
 		template<typename T> struct ToSigned;
