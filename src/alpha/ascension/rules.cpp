@@ -731,65 +731,26 @@ void LexicalPartitioner::documentAboutToBeChanged() throw() {
 
 /// @see text#DocumentPartitioner#documentChanged
 void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
+	assert(!change.getRegion().isEmpty());
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& document = *getDocument();
 	const Position eof(document.getEndPosition(false));
 
-	// move the partitions adapting to the document change (for insertion)
-//	if(!change.isDeletion()) {
-		size_t numberOfPartitions = partitions_.getSize();
-		for(size_t i = 0; i < numberOfPartitions; ++i) {
-			partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
-			partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
-		}
-//	}
+	// delete the partitions encompassed by the deleted region
+	if(change.isDeletion())
+		erasePartitions(change.getRegion().getTop(), change.getRegion().getBottom());
+
+	// move the partitions adapting to the document change
+	for(size_t i = 0, c = partitions_.getSize(); i < c; ++i) {
+		partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
+		partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
+	}
 
 	// delete the partitions start at the deleted region
 	DocumentCharacterIterator p(document, Position(change.getRegion().getTop().line, 0));
-	assert(!change.getRegion().isEmpty());
-	// locate the first partition to delete
-	size_t predeletedFirst = findClosestPartition(p.tell());
-	if(p.tell() >= partitions_[predeletedFirst]->getTokenEnd())
-		++predeletedFirst;	// do not delete this partition
-//	else if(predeletedFirst < partitions_.getSize() - 1 && partitions_[predeletedFirst + 1]->tokenStart < change.getRegion().getBottom())
-//		++predeletedFirst;	// delete from the next partition
-	// locate the last partition to delete
 	Position eol(change.isDeletion() ? change.getRegion().getTop() : change.getRegion().getBottom());
 	eol.column = document.getLineLength(eol.line);
-	size_t predeletedLast = findClosestPartition(eol) + 1;	// exclusive
-	if(predeletedLast < partitions_.getSize() && partitions_[predeletedLast]->tokenStart < change.getRegion().getBottom())
-		++predeletedLast;
-//	else if(partitions_[predeletedLast - 1]->start == change.getRegion().getBottom())
-//		--predeletedLast;
-	if(predeletedLast > predeletedFirst) {
-		if(predeletedFirst > 0 && predeletedLast < partitions_.getSize()
-				&& partitions_[predeletedFirst - 1]->contentType == partitions_[predeletedLast]->contentType)
-			++predeletedLast;	// combine
-		partitions_.erase(predeletedFirst, predeletedLast - predeletedFirst);
-	}
-#if 0
-	// move the partitions adapting to the document change (for deletion)
-	if(change.isDeletion()) {
-		size_t numberOfPartitions = partitions_.getSize();
-		for(size_t i = 0; i < numberOfPartitions; ++i) {
-			partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
-			partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
-		}
-	}
-#endif
-	// push a default partition if the partition includes the start of the document
-	if(partitions_.isEmpty() || partitions_[0]->start != document.getStartPosition(false)) {
-		if(partitions_.isEmpty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
-			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
-		} else {
-			partitions_[0]->start = partitions_[0]->tokenStart = document.getStartPosition(false);
-			partitions_[0]->tokenLength = 0;
-		}
-	}
-
-	// delete the partition whose start position is the end of the document
-	if(partitions_.getSize() > 1 && partitions_.back()->start == document.getEndPosition(false))
-		partitions_.erase(partitions_.getSize() - 1);
+	erasePartitions(p.tell(), eol);
 
 	// reconstruct partitions in the affected region
 	const String* line = &document.getLine(p.tell().line);
@@ -869,6 +830,43 @@ void LexicalPartitioner::dump() const {
 #endif /* _DEBUG */
 }
 
+/***/
+void LexicalPartitioner::erasePartitions(const Position& first, const Position& last) {
+	// locate the first partition to delete
+	size_t deletedFirst = findClosestPartition(first);
+	if(first >= partitions_[deletedFirst]->getTokenEnd())
+		++deletedFirst;	// do not delete this partition
+//	else if(deletedFirst < partitions_.getSize() - 1 && partitions_[deletedFirst + 1]->tokenStart < change.getRegion().getBottom())
+//		++deletedFirst;	// delete from the next partition
+	// locate the last partition to delete
+	size_t deletedLast = findClosestPartition(last) + 1;	// exclusive
+	if(deletedLast < partitions_.getSize() && partitions_[deletedLast]->tokenStart < last)
+		++deletedLast;
+//	else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
+//		--deletedLast;
+	if(deletedLast > deletedFirst) {
+		if(deletedFirst > 0 && deletedLast < partitions_.getSize()
+				&& partitions_[deletedFirst - 1]->contentType == partitions_[deletedLast]->contentType)
+			++deletedLast;	// combine
+		partitions_.erase(deletedFirst, deletedLast - deletedFirst);
+	}
+
+	// push a default partition if no partition includes the start of the document
+	const Document& document = *getDocument();
+	if(partitions_.isEmpty() || partitions_[0]->start != document.getStartPosition(false)) {
+		if(partitions_.isEmpty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
+			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
+		} else {
+			partitions_[0]->start = partitions_[0]->tokenStart = document.getStartPosition(false);
+			partitions_[0]->tokenLength = 0;
+		}
+	}
+
+	// delete the partition whose start position is the end of the document
+	if(partitions_.getSize() > 1 && partitions_.back()->start == document.getEndPosition(false))
+		partitions_.erase(partitions_.getSize() - 1);
+}
+
 /**
  * Returns a partition closest to the given position.
  * @param at the position
@@ -928,7 +926,8 @@ inline void LexicalPartitioner::verify() const {
 	for(size_t i = 0, e = partitions_.getSize(); i < e - 1; ++i) {
 		assert(partitions_[i]->contentType != partitions_[i + 1]->contentType);
 		if(partitions_[i]->start == partitions_[i + 1]->start) {
-			assert(!previousWasEmpty);
+			if(previousWasEmpty)
+				throw runtime_error("");
 			previousWasEmpty = true;
 		} else {
 			assert(partitions_[i]->start < partitions_[i + 1]->start);

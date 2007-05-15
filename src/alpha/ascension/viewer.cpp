@@ -641,7 +641,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	setConfiguration(0, &vrc);
 
 #if 1
-	// partitioning test
+	// this is JavaScript partitioning and lexing settings for test
 	using namespace rules;
 	TransitionRule* rules[10];
 	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");		// C++ multi-line comment open
@@ -659,16 +659,22 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	getDocument().setPartitioner(p);
 
 	// syntax highlight test
-	const Char JS_KEYWORDS[] = L"if else for function var return";
+	const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
+		L"if in instanceof new null return switch this throw true try typeof undefined var void while with";
+	const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float"
+		L"goto implements int interface long native package private protected public short static super synchronized throws transient volatile";
 	presentation::PresentationReconstructor* r = new presentation::PresentationReconstructor(getPresentation());
 	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
+	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> jsScanner(new LexicalTokenScanner(unicode::IdentifierSyntax()));
 	jsScanner->addWordRule(jsKeywords);
-	jsScanner->addRule(auto_ptr<Rule>(new NumberRule(222)));
+	jsScanner->addWordRule(jsFutureKeywords);
+	jsScanner->addRule(auto_ptr<Rule>(new NumberRule(223)));
 	map<Token::ID, const TextStyle> styles;
 	styles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
 	styles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
-	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
+	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
+	styles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
 	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(new LexicalPartitionPresentationReconstructor(getDocument(), jsScanner, styles));
 	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
 	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE, ppr);

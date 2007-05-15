@@ -242,6 +242,7 @@ namespace ascension {
 			void				computePartitioning(const text::Position& start,
 									const text::Position& minimalLast, text::Region& changedRegion);
 			void				dump() const;
+			void				erasePartitions(const text::Position& first, const text::Position& last);
 			std::size_t			findClosestPartition(const text::Position& at) const throw();
 			text::ContentType	getTransitionStateAt(const text::Position& at) const throw();
 			length_t			tryTransition(const String& line, length_t column,
