@@ -2006,6 +2006,10 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 	if(s1 == 0 || s2 == 0)
 		throw invalid_argument("either file name is null.");
 
+WCHAR buf[1024];
+swprintf(buf, L"ascension.text.comparePathNames received:\n%s\n%s", s1, s2);
+ALERT(buf);
+
 //	// 最も簡単な方法
 //	if(toBoolean(::PathMatchSpecW(s1, s2)))
 //		return true;
@@ -2020,6 +2024,8 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
 		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_INVARIANT, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+swprintf(buf, L"folded strings are:\n%s\n%s", fs1.get(), fs2.get());
+ALERT(buf);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
 			return toBoolean(::PathFileExists(s1));
 	}

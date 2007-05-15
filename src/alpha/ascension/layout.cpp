@@ -152,7 +152,7 @@ namespace {
 		}
 		throw invalid_argument("Unknown style value.");
 	}
-	inline void drawDecorationLines(DC& dc, const TextStyle& style, int x, int y, int width, int height) {
+	inline void drawDecorationLines(DC& dc, const TextStyle& style, COLORREF foregroundColor, int x, int y, int width, int height) {
 		::OUTLINETEXTMETRICW* otm = 0;
 		::TEXTMETRICW tm;
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
@@ -165,7 +165,8 @@ namespace {
 
 		// draw underline
 		if(style.underlineStyle != NO_UNDERLINE) {
-			HPEN oldPen = dc.selectObject(createPen(style.underlineColor, (otm != 0) ? otm->otmsUnderscoreSize : 1, style.underlineStyle));
+			HPEN oldPen = dc.selectObject(createPen((style.underlineColor != STANDARD_COLOR) ?
+				style.underlineColor : foregroundColor, (otm != 0) ? otm->otmsUnderscoreSize : 1, style.underlineStyle));
 			const int underlineY = y + ((otm != 0) ?
 				otm->otmTextMetrics.tmAscent - otm->otmsUnderscorePosition + otm->otmsUnderscoreSize / 2 : tm.tmAscent);
 			dc.moveTo(x, underlineY);
@@ -175,7 +176,7 @@ namespace {
 
 		// draw strikeout line
 		if(style.strikeout) {
-			HPEN oldPen = dc.selectObject(createPen(style.color.foreground, (otm != 0) ? otm->otmsStrikeoutSize : 1, 1));
+			HPEN oldPen = dc.selectObject(createPen(foregroundColor, (otm != 0) ? otm->otmsStrikeoutSize : 1, 1));
 			const int strikeoutY = y + ((otm != 0) ?
 				otm->otmTextMetrics.tmAscent - otm->otmsStrikeoutPosition + otm->otmsStrikeoutSize / 2 : tm.tmAscent / 3);
 			dc.moveTo(x, strikeoutY);
@@ -191,6 +192,9 @@ namespace {
 			::DeleteObject(dc.selectObject(oldPen));
 			dc.selectObject(oldBrush);
 		}
+
+		if(otm != 0)
+			delete[] reinterpret_cast<char*>(otm);
 	}
 } // namespace @0
 
@@ -421,17 +425,21 @@ void LineLayout::draw(length_t subline, DC& dc,
 		dc.setBkMode(TRANSPARENT);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
+			const COLORREF foregroundColor =
+				internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
+					run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK);
 			if(text[run.column] != L'\t') {
 				if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
 					dc.selectObject(run.font);
-					dc.setTextColor(internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
-						run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK));
+					dc.setTextColor(foregroundColor);
 					runRect.left = x;
 					runRect.right = runRect.left + run.getWidth();
 					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + renderer_.getAscent(), 0, &runRect,
 						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
 				}
 			}
+			// decoration (underline and border)
+			drawDecorationLines(dc, run.style, foregroundColor, x, y, run.getWidth(), linePitch);
 			x += run.getWidth();
 			runRect.left = x;
 		}
@@ -453,7 +461,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 					&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
 			}
 			// decoration (underline and border)
-			drawDecorationLines(dc, run.style, x, y, run.getWidth(), linePitch);
+			drawDecorationLines(dc, run.style, selectionColor.foreground, x, y, run.getWidth(), linePitch);
 			x += run.getWidth();
 		}
 
