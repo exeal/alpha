@@ -31,7 +31,7 @@ namespace ascension {
 			ALIGN_AUTO,		///< The alignment is automatically determined. Some methods don't accept this value.
 			ALIGN_LEFT,		///< The text is aligned to left.
 			ALIGN_RIGHT,	///< The text is aligned to right.
-			ALIGN_CENTER,	///< The text is aligned to center. Some methods don't accept this value.
+			ALIGN_CENTER	///< The text is aligned to center. Some methods don't accept this value.
 		};
 
 		/// Orientation of the text layout.
@@ -50,10 +50,10 @@ namespace ascension {
 
 		/// Type of the border and underline.
 		enum BorderStyle {
-			NO_BORDER,			///< Does not display border.
-			SOLID_BORDER_SOLID,	///< Solid border.
-			DASHED_BORDER,		///< Dashed border.
-			DOTTED_BORDER,		///< Dotted border.
+			NO_BORDER,		///< Does not display border.
+			SOLID_BORDER,	///< Solid border.
+			DASHED_BORDER,	///< Dashed border.
+			DOTTED_BORDER	///< Dotted border.
 		};
 
 		/// Digit shape (substitution) types.

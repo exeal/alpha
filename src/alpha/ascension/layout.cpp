@@ -157,7 +157,7 @@ namespace {
 		::TEXTMETRICW tm;
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
 			if(const UINT c = dc.getOutlineTextMetrics(0, 0)) {
-				otm = reinterpret_cast<::OUTLINETEXTMETRICW*>(new char[c]);
+				otm = static_cast<::OUTLINETEXTMETRICW*>(operator new(c));
 				dc.getOutlineTextMetrics(c, otm);
 			} else
 				dc.getTextMetrics(tm);
@@ -186,15 +186,15 @@ namespace {
 
 		// draw border
 		if(style.borderStyle != NO_BORDER) {
-			HPEN oldPen = dc.selectObject(createPen(style.borderColor, 1, style.borderStyle));
+			HPEN oldPen = dc.selectObject(createPen((style.borderColor != STANDARD_COLOR) ?
+				style.borderColor : foregroundColor, 1, style.borderStyle));
 			HBRUSH oldBrush = dc.selectObject(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)));
 			dc.rectangle(x, y, x + width, y + height);
 			::DeleteObject(dc.selectObject(oldPen));
 			dc.selectObject(oldBrush);
 		}
 
-		if(otm != 0)
-			delete[] reinterpret_cast<char*>(otm);
+		delete[] otm;
 	}
 } // namespace @0
 

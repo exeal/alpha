@@ -673,7 +673,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	map<Token::ID, const TextStyle> styles;
 	styles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
 	styles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
-	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
+	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, NO_UNDERLINE, 0, SOLID_BORDER)));
 	styles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
 	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(new LexicalPartitionPresentationReconstructor(getDocument(), jsScanner, styles));
 	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
@@ -3947,17 +3947,20 @@ namespace {
 	}
 	/// Returns true if the specified language is Thai or Lao.
 	inline bool isTISLanguage(LANGID id) throw() {
-		return id == LANG_THAI /*|| id == LANG_LAO*/;
+#ifndef LANG_LAO
+		const LANGID LANG_LAO = 0x54;
+#endif /* !LANG_LAO */
+		return id == LANG_THAI || id == LANG_LAO;
 	}
 	/**
 	 * Returns the bitmap has specified size.
 	 * @param dc the device context
 	 * @param width the width of the bitmap
 	 * @param height the height of the bitmap
-	 * @return the bitmap. this value is allocated via @c std::get_temporary_buffer
+	 * @return the bitmap. this value is allocated via the global @c operator @c new
 	 */
 	inline ::BITMAPINFO* prepareCaretBitmap(const DC& dc, ushort width, ushort height) {
-		::BITMAPINFO* info = get_temporary_buffer<::BITMAPINFO>(sizeof(::BITMAPINFOHEADER) + sizeof(::RGBQUAD) * width * height).first;
+		::BITMAPINFO* info = static_cast<::BITMAPINFO*>(operator new(sizeof(::BITMAPINFOHEADER) + sizeof(::RGBQUAD) * width * height));
 		::BITMAPINFOHEADER& header = info->bmiHeader;
 		memset(&header, 0, sizeof(::BITMAPINFOHEADER));
 		header.biSize = sizeof(::BITMAPINFOHEADER);
@@ -3969,24 +3972,24 @@ namespace {
 	}
 	/**
 	 * Creates the bitmap for solid caret.
-	 * @param[in,out] bitmap
-	 * @param width
-	 * @param height
-	 * @param color
+	 * @param[in,out] bitmap the bitmap
+	 * @param width the width of the rectangle in pixels
+	 * @param height the height of the rectangle in pixels
+	 * @param color the color
 	 */
 	inline void createSolidCaretBitmap(Bitmap& bitmap, ushort width, ushort height, const ::RGBQUAD& color) {
 		ScreenDC dc;
 		::BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
 		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, color);
 		bitmap.createDIBitmap(dc, info->bmiHeader, CBM_INIT, info->bmiColors, *info, DIB_RGB_COLORS);
-		return_temporary_buffer<::BITMAPINFO>(info);
+		operator delete(info);
 	}
 	/**
 	 * Creates the bitmap for RTL caret.
-	 * @param[in,out] bitmap
-	 * @param height
-	 * @param bold
-	 * @param color
+	 * @param[in,out] bitmap the bitmap
+	 * @param height the height of the image in pixels
+	 * @param bold set true to create a bold shape
+	 * @param color the color
 	 */
 	inline void createRTLCaretBitmap(Bitmap& bitmap, ushort height, bool bold, const ::RGBQUAD& color) {
 		ScreenDC dc;
@@ -4002,14 +4005,14 @@ namespace {
 				info->bmiColors[i * 5 + 4] = color;
 		}
 		bitmap.createDIBitmap(dc, info->bmiHeader, CBM_INIT, info->bmiColors, *info, DIB_RGB_COLORS);
-		return_temporary_buffer<::BITMAPINFO>(info);
+		operator delete(info);
 	}
 	/**
 	 * Creates the bitmap for Thai or Lao caret.
-	 * @param[in,out] bitmap
-	 * @param height
-	 * @param bold
-	 * @param color
+	 * @param[in,out] bitmap the bitmap
+	 * @param height the height of the image in pixels
+	 * @param bold set true to create a bold shape
+	 * @param color the color
 	 */
 	inline void createTISCaretBitmap(Bitmap& bitmap, ushort height, bool bold, const ::RGBQUAD& color) {
 		ScreenDC dc;
@@ -4028,7 +4031,7 @@ namespace {
 		for(ushort x = 0; x < width; ++x)
 			info->bmiColors[width * (height - 1) + x] = color;
 		bitmap.createDIBitmap(dc, info->bmiHeader, CBM_INIT, info->bmiColors, *info, DIB_RGB_COLORS);
-		return_temporary_buffer<::BITMAPINFO>(info);
+		operator delete(info);
 	}
 } // namespace @0
 
@@ -4102,15 +4105,17 @@ void LocaleSensitiveCaretShaper::textViewerInputLanguageChanged() throw() {
 
 /**
  * @class ascension::presentation::CurrentLineHighlighter
+ * Highlights a line the caret is on with the specified background color.
  *
- * Usual usage is as follows.
+ * Because an instance automatically registers itself as a line color director, you should not call
+ * @c Presentation#addLineColorDirector method. Usual usage is as follows.
  *
  * @code
- * Presentation& p = ...;
  * Caret& caret = ...;
- * p.addLineColorDirector(
- *   ASCENSION_SHARED_POINTER<ILineColorDirector>(new CurrentLineHighlighter(caret, ...));
+ * new CurrentLineHighlighter(caret);
  * @endcode
+ *
+ * When the caret has a selection, highlight is canceled.
  */
 
 /// The priority value this class returns.
