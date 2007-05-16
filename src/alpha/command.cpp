@@ -44,9 +44,9 @@ namespace {	// アイコンビットマップを編集する連中
 				const long i = y * bi.bmiHeader.biWidth + x;
 				const int offset = i * bi.bmiHeader.biBitCount / 8;
 
-				if(bi.bmiHeader.biBitCount == 32)	// 32ビット: BITMAPINFO::bmiColors は RGBQUAD[]
+				if(bi.bmiHeader.biBitCount == 32)	// 32 ビット: BITMAPINFO::bmiColors は RGBQUAD[]
 					*reinterpret_cast<::RGBQUAD*>(&destPixels[offset]) = (*filterFunction)(bi.bmiColors[i]);
-				else {	// 24ビット: BITMAPINFO::bmiColors は 24ビットが1ピクセルの色情報配列
+				else {	// 24 ビット: BITMAPINFO::bmiColors は 24 ビットが 1 ピクセルの色情報配列
 					if(memcmp(srcPixels + offset, srcPixels + 16 * 15 * 3, 3) == 0)
 						memcpy(destPixels + offset, srcPixels + offset, 3);
 					else {
@@ -192,90 +192,49 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 
 		// フィルタを適用してイメージリストに追加する
 		if(bitmap != 0 || icon != 0) {
+			HDC dc = ::GetDC(0);
 			::BITMAP bmp;
-
 			iconIndices_.insert(make_pair(id, icons_[ICONSTATE_NORMAL].getNumberOfImages()));
-			::GetObject(bitmap, sizeof(BITMAP), &bmp);
-			if(bmp.bmBitsPixel == 32 || bmp.bmBitsPixel == 24) {
-				HDC dc = ::GetDC(0);
-				BITMAPINFO* pbi;
-				HBITMAP disabledBmp = 0, hotBmp = 0;
+			::GetObject(bitmap, sizeof(::BITMAP), &bmp);
 
-				pbi = get_temporary_buffer<BITMAPINFO>(sizeof(::BITMAPINFOHEADER) + (bmp.bmBitsPixel / 8 + 1) * 16 * 16).first;
-				memset(&pbi->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
-				pbi->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
-				::GetDIBits(dc, bitmap, 0, bmp.bmHeight, 0, pbi, DIB_RGB_COLORS);
-				::GetDIBits(dc, bitmap, 0, bmp.bmHeight, pbi->bmiColors, pbi, DIB_RGB_COLORS);
+			// 色情報を取得
+			::BITMAPINFO* pbi = static_cast<::BITMAPINFO*>(::operator new(
+				sizeof(::BITMAPINFOHEADER) + (bmp.bmBitsPixel / 8 + 1) * 16 * 16));
+			memset(&pbi->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
+			pbi->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
+			::GetDIBits(dc, bitmap, 0, bmp.bmHeight, 0, pbi, DIB_RGB_COLORS);
+			::GetDIBits(dc, bitmap, 0, bmp.bmHeight, pbi->bmiColors, pbi, DIB_RGB_COLORS);
 
-				if(imageIsBmp || bmp.bmBitsPixel == 32) {
-					// ビットマップか 32ビットアイコンの場合、背景の処理は:
-					// 32ビット -> アルファチャンネル、24ビット -> 左上の色が透明色
-
-					if(bmp.bmBitsPixel == 32) {
-						icons_[ICONSTATE_NORMAL].add(bitmap);
-						disabledBmp = createFilteredBitmap(dc, *pbi, sepiaFilter);
-						icons_[ICONSTATE_DISABLED].add(disabledBmp);
-						hotBmp = createFilteredBitmap(dc, *pbi, saturationFilter);
-						icons_[ICONSTATE_HOT].add(hotBmp);
-					} else {
-						const COLORREF maskColor =
-							RGB(pbi->bmiColors[0].rgbRed, pbi->bmiColors[0].rgbGreen, pbi->bmiColors[0].rgbBlue);
-						icons_[ICONSTATE_NORMAL].add(bitmap, maskColor);
-						disabledBmp = createFilteredBitmap(dc, *pbi, sepiaFilter);
-						icons_[ICONSTATE_DISABLED].add(disabledBmp, maskColor);
-						hotBmp = createFilteredBitmap(dc, *pbi, saturationFilter);
-						icons_[ICONSTATE_HOT].add(hotBmp, maskColor);
-					}
-				} else {
-					// 24ビットアイコンの場合、背景の処理は: アイコンのマスク
-					::ICONINFO iconInfo;
-
-					::GetIconInfo(icon, &iconInfo);
-					icons_[ICONSTATE_NORMAL].add(icon);
-					disabledBmp = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, sepiaFilter);
-					HICON disabledIcon = ::CreateIconIndirect(&iconInfo);
-					icons_[ICONSTATE_DISABLED].add(disabledIcon);
-					hotBmp = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, saturationFilter);
-					HICON hotIcon = ::CreateIconIndirect(&iconInfo);
-					icons_[ICONSTATE_HOT].add(hotIcon);
-					::DestroyIcon(disabledIcon);
-					::DestroyIcon(hotIcon);
-				}
-
-				::DeleteObject(disabledBmp);
-				::DeleteObject(hotBmp);
-				return_temporary_buffer(pbi);
-				::ReleaseDC(0, dc);
-			} else {	// 24ビット未満
-				HDC dc = ::GetDC(0);
-				pair<HBITMAP, COLORREF> result = createFilteredBitmap(dc, bitmap, sepiaFilter);
+			HBITMAP grayBitmap, hotBitmap;
+			if(!imageIsBmp) {	// アイコン
 				::ICONINFO iconInfo;
-
-				if(imageIsBmp) {
-					icons_[ICONSTATE_NORMAL].add(bitmap, result.second);
-					icons_[ICONSTATE_DISABLED].add(result.first, result.second);
-				} else {
-					::GetIconInfo(icon, &iconInfo);
-					iconInfo.hbmColor = result.first;
-					icons_[ICONSTATE_NORMAL].add(icon);
-					HICON disabledIcon = ::CreateIconIndirect(&iconInfo);
-					icons_[ICONSTATE_DISABLED].add(disabledIcon);
-					::DestroyIcon(disabledIcon);
+				::GetIconInfo(icon, &iconInfo);
+				icons_[ICONSTATE_NORMAL].add(icon);
+				grayBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, sepiaFilter);
+				HICON grayIcon = ::CreateIconIndirect(&iconInfo);
+				icons_[ICONSTATE_DISABLED].add(grayIcon);
+				hotBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, saturationFilter);
+				HICON hotIcon = ::CreateIconIndirect(&iconInfo);
+				icons_[ICONSTATE_HOT].add(hotIcon);
+				::DestroyIcon(grayIcon);
+				::DestroyIcon(hotIcon);
+			} else {	// ビットマップ
+				if(bmp.bmBitsPixel == 32) {	// 32 ビット -> アルファチャンネルを使用
+					icons_[ICONSTATE_NORMAL].add(bitmap);
+					icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, sepiaFilter));
+					icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, saturationFilter));
+				} else {	// 24 ビット以下 -> 左上の色が透明色
+					const COLORREF maskColor = RGB(pbi->bmiColors[0].rgbRed, pbi->bmiColors[0].rgbGreen, pbi->bmiColors[0].rgbBlue);
+					icons_[ICONSTATE_NORMAL].add(bitmap, maskColor);
+					icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, sepiaFilter), maskColor);
+					icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, saturationFilter), maskColor);
 				}
-				::DeleteObject(result.first);
-				result = createFilteredBitmap(dc, bitmap, saturationFilter);
-				if(imageIsBmp)
-					icons_[ICONSTATE_HOT].add(result.first, result.second);
-				else {
-					iconInfo.hbmColor = result.first;
-					HICON hotIcon = ::CreateIconIndirect(&iconInfo);
-					icons_[ICONSTATE_HOT].add(hotIcon);
-					::DestroyIcon(hotIcon);
-				}
-
-				::DeleteObject(result.first);
-				::ReleaseDC(0, dc);
 			}
+
+			::DeleteObject(grayBitmap);
+			::DeleteObject(hotBitmap);
+			delete[] pbi;
+			::ReleaseDC(0, dc);
 
 			if(imageIsBmp)
 				::DeleteObject(bitmap);
