@@ -673,7 +673,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	map<Token::ID, const TextStyle> styles;
 	styles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
 	styles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
-	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, NO_UNDERLINE, 0, SOLID_BORDER)));
+	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
 	styles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
 	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(new LexicalPartitionPresentationReconstructor(getDocument(), jsScanner, styles));
 	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());

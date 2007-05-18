@@ -64,8 +64,8 @@ namespace {
 		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {return false;}
 		Position execute(Document& document) {return document.insert(position_, text_);}
 	private:
-		Position position_;	// the position at which text inserted
-		String text_;		// the inserted text
+		Position position_;	// 挿入位置
+		String text_;		// 挿入文字列
 	};
 
 	/// An deletion operation.
@@ -156,8 +156,8 @@ namespace {
 			wcscpy(dest, fileName);
 	}
 
+	// Document::length_ メンバ診断用
 #ifdef _DEBUG
-	/// Diagnoses @c Document#length_ member.
 	length_t calculateDocumentLength(const Document& document) {
 		length_t c = 0;
 		const length_t lines = document.getNumberOfLines();
@@ -235,7 +235,7 @@ inline void text::internal::OperationUnit::push(InsertOperation& operation, cons
 
 /// 1 つの操作をプッシュ (@a operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
 inline void text::internal::OperationUnit::push(DeleteOperation& operation, const Document& document) {
-	// 直前の操作も削除であれば、範囲を拡大することで 1 つにまとめようとする
+	// 直前の操作も削除であれば、範囲を拡大することで1つにまとめようとする
 	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
 		delete &operation;
 		return;
@@ -2006,25 +2006,25 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 	if(s1 == 0 || s2 == 0)
 		throw invalid_argument("either file name is null.");
 
-//	// the easiest way
+//	// 最も簡単な方法
 //	if(toBoolean(::PathMatchSpecW(s1, s2)))
 //		return true;
 
 	// from pathname_equal and same_file_p implementation in xyzzy
 
-	// by file name comparison
+	// ファイル名の文字列比較
 	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
 	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
 	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
 		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
-    ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);	// Win 2000 does not support LOCALE_INVARIANT
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
 			return toBoolean(::PathFileExists(s1));
 	}
 
-	// by volume information
+	// ボリューム情報を使う
 	File<true> f1(s1, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
 	if(!f1.isOpened())
 		f1.open(s1, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);

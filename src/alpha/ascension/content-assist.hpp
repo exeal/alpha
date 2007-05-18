@@ -23,11 +23,34 @@ namespace ascension {
 
 		class ICompletionListener {};
 
-		class ICompletionProposal {};
-
-		class IContentAssistant {};
+		class ICompletionProposal {
+		public:
+			virtual String getDisplayString() const throw() = 0;
+			virtual HICON getIcon() const throw() = 0;
+			virtual text::Region getSelection(const text::Document& document) const throw() = 0;
+			virtual void replace(text::Document& document) = 0;
+		};
 
 		class IContentAssistProcessor {};
+
+		/**
+		 */
+		class ContentAssistant {
+		public:
+			// attributes
+			void							enableAutoInsert(bool enable);
+			void							enablePrefixCompletion(bool enable);
+			const IContentAssistProcessor*	getContentAssistProcessor(text::ContentType contentType) const throw();
+			void							setAutoActivationDelay(ulong milliseconds);
+			void							setContentAssistProcessor(text::ContentType contentType, IContentAssistProcessor* processor);
+			// listeners
+			void	addCompletionListener(ICompletionListener& listener);
+			void	removeCompletionListener(ICompletionListener& listener);
+			// operation
+			void	showPossibleCompletions();
+		private:
+			ascension::internal::Listeners<ICompletionListener> completionListeners_;
+		};
 
 		class IContextInformation {};
 
