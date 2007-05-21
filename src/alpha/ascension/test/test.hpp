@@ -4,6 +4,8 @@
 #define ASCENSION_TEST_HPP
 #include <boost/test/unit_test.hpp>
 
+boost::unit_test::test_suite* init_unit_test_suite(int, char*[]);
+
 template<class Container>
 class ContainerInitializeContext {
 public:

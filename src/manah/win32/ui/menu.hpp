@@ -268,8 +268,7 @@ inline LRESULT Menu::drawItem(const ::DRAWITEMSTRUCT& di, const TCHAR* text,
 	}
 
 	// draw text
-	dc.setTextColor(::GetSysColor(
-		toBoolean(di.itemState & (ODS_DISABLED | ODS_GRAYED)) ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
+	dc.setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
 	dc.setBkMode(TRANSPARENT);
 	::RECT rc = di.rcItem;
 	rc.left += rc.bottom - rc.top + 4;
@@ -324,7 +323,7 @@ inline Menu Menu::getSubMenu(UINT index) const {
 	return Menu(handle);
 }
 
-inline LRESULT Menu::handleMenuChar(TCHAR charCode, UINT flag) {
+inline LRESULT Menu::handleMenuChar(TCHAR charCode, UINT /*flag*/) {
 	assertValidAsMenu();
 	const UINT c = getNumberOfItems();
 //	// search selected item

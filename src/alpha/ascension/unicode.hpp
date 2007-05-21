@@ -22,7 +22,7 @@
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 /// Tracking revision number of UAX #14 ("Line Breaking Properties")
-#define ASCENSION_UAX14_REVISION_NUMBER	17	// 2005-08-29
+#define ASCENSION_UAX14_REVISION_NUMBER	19	// 2006-05-23
 /// Tracking revision number of UAX #29 ("Text Boundary")
 #define ASCENSION_UAX29_REVISION_NUMBER	11	// 2006-10-12
 #define CASE_FOLDING_EXPANSION_MAX_CHARS 3
@@ -33,7 +33,8 @@ namespace ascension {
 	 * Provides stuffs implement some of the Unicode standard. This includes:
 	 * - @c Normalizer class implements <a href="http://www.unicode.org/reports/tr15/">UAX #15:
 	 *   Unicode Normalization Forms</a>.
-	 * - @c BreakIterator class implements <a href="http://www.unicode.org/reports/tr29/">UAX #29:
+	 * - @c BreakIterator class implements <a href="http://www.unicode.org/reports/tr14/">UAX #14:
+	 *   Line Breaking Properties</a> and <a href="http://www.unicode.org/reports/tr29/">UAX #29:
 	 *   Text Boundary</a>.
 	 * - @c IdentifierSyntax class implements <a href="http://www.unicode.org/reports/tr31/">UAX
 	 *   #31: Identifier and Pattern Syntax</a>.
@@ -348,6 +349,12 @@ namespace ascension {
 			/// Constructor takes a position to start iteration. The ownership of the target text
 			/// will not be transferred to this.
 			UTF16To32Iterator(BaseIterator first, BaseIterator last, BaseIterator start) : Base(start), first_(first), last_(last) {}
+			/// Constructor takes a C++ standard container.
+			template<typename Container>
+			UTF16To32Iterator(const Container& c) : Base(c.begin()), first_(c.begin()), last_(c.end()) {}
+			/// Constructor takes a C++ standard container.
+			template<typename Container>
+			UTF16To32Iterator(const Container& c, BaseIterator start) : Base(start), first_(c.begin()), last_(c.end()) {}
 			/// Copy constructor.
 			UTF16To32Iterator(const UTF16To32Iterator& rhs) : Base(rhs), first_(rhs.first_), last_(rhs.last_) {}
 			/// Assignment operator.
@@ -521,7 +528,7 @@ namespace ascension {
 		 *
 		 * This class does not have an interface for standard C++ iterator.
 		 */
-		class BreakIterator {
+		class BreakIterator : private manah::Unassignable {
 		public:
 			/// Destructor.
 			virtual ~BreakIterator() throw() {}
@@ -744,12 +751,14 @@ namespace ascension {
 		public:
 			CollationKey() throw() : length_(0) {}
 			CollationKey(manah::AutoBuffer<const uchar> keyValues, std::size_t length) : keyValues_(keyValues), length_(length) {}
-			bool	operator==(const CollationKey& rhs) const throw();
-			bool	operator!=(const CollationKey& rhs) const throw();
-			bool	operator<(const CollationKey& rhs) const throw();
-			bool	operator<=(const CollationKey& rhs) const throw();
-			bool	operator>(const CollationKey& rhs) const throw();
-			bool	operator>=(const CollationKey& rhs) const throw();
+			CollationKey(const CollationKey& rhs);
+			CollationKey&	operator=(const CollationKey& rhs);
+			bool			operator==(const CollationKey& rhs) const throw();
+			bool			operator!=(const CollationKey& rhs) const throw();
+			bool			operator<(const CollationKey& rhs) const throw();
+			bool			operator<=(const CollationKey& rhs) const throw();
+			bool			operator>(const CollationKey& rhs) const throw();
+			bool			operator>=(const CollationKey& rhs) const throw();
 		private:
 			const manah::AutoBuffer<const uchar> keyValues_;
 			const std::size_t length_;

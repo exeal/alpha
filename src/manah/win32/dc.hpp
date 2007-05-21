@@ -669,7 +669,7 @@ inline int DC::setTextCharacterExtra(int charExtra) {assertValidAsDC(); return :
 inline COLORREF DC::setTextColor(COLORREF color) {assertValidAsDC(); return ::SetTextColor(getHandle(), color);}
 
 inline int DC::setTextJustification(int breakExtra, int breakCount) {
-	assertValidAsDC(); return ::SetTextJustification(getHandle(), breakExtra, breakExtra);}
+	assertValidAsDC(); return ::SetTextJustification(getHandle(), breakExtra, breakCount);}
 
 inline bool DC::stretchBlt(int x, int y, int width, int height, HDC srcDC, int xSrc, int ySrc, int srcWidth, int srcHeight, DWORD rop) {
 	assertValidAsDC(); return toBoolean(::StretchBlt(getHandle(), x, y, width, height, srcDC, xSrc, ySrc, srcWidth, srcHeight, rop));}

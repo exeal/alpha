@@ -33,21 +33,34 @@ using namespace std;
 	const bool visible = !toBoolean(rbbi.fStyle & RBBS_HIDDEN);
 
 namespace {	// アイコンビットマップを編集する連中
-	HBITMAP createFilteredBitmap(HDC dc, const ::BITMAPINFO& bi, ::RGBQUAD(*filterFunction)(const ::RGBQUAD&)) throw() {
+	HBITMAP createFilteredBitmap(HDC dc, const ::BITMAPINFO& bi,
+			const ::BITMAPINFO* mask, ::RGBQUAD(*filterFunction)(const ::RGBQUAD&)) throw() {
 		assert(bi.bmiHeader.biBitCount == 32 || bi.bmiHeader.biBitCount == 24);
+		assert(mask == 0 || mask->bmiHeader.biBitCount == 1);
+
+		const long cx = bi.bmiHeader.biWidth, cy = bi.bmiHeader.biHeight;
+		assert(mask == 0 || (cx == mask->bmiHeader.biWidth && cy == mask->bmiHeader.biHeight));
+
+		uchar maskEntry;
+		if(mask != 0)
+			maskEntry = (mask->bmiColors[0].rgbRed == 0 && mask->bmiColors[0].rgbGreen == 0 && mask->bmiColors[0].rgbBlue == 0) ? 0 : 1;
 
 		const uchar* srcPixels = reinterpret_cast<const uchar*>(bi.bmiColors);
 		uchar* destPixels;
 		HBITMAP bitmap = ::CreateDIBSection(dc, &bi, DIB_RGB_COLORS, reinterpret_cast<void**>(&destPixels), 0, 0);
-		for(long y = 0; y < bi.bmiHeader.biHeight; ++y) {
-			for(long x = 0; x < bi.bmiHeader.biWidth; ++x) {
-				const long i = y * bi.bmiHeader.biWidth + x;
-				const int offset = i * bi.bmiHeader.biBitCount / 8;
 
-				if(bi.bmiHeader.biBitCount == 32)	// 32 ビット: BITMAPINFO::bmiColors は RGBQUAD[]
-					*reinterpret_cast<::RGBQUAD*>(&destPixels[offset]) = (*filterFunction)(bi.bmiColors[i]);
-				else {	// 24 ビット: BITMAPINFO::bmiColors は 24 ビットが 1 ピクセルの色情報配列
-					if(memcmp(srcPixels + offset, srcPixels + 16 * 15 * 3, 3) == 0)
+		ptrdiff_t offset = 0;								// unit is byte
+		ptrdiff_t maskOffset = sizeof(::RGBQUAD) * 2 * 8;	// unit is bit
+		for(long y = 0; y < cy; ++y, maskOffset += sizeof(::LONG) * 8 - maskOffset % (sizeof(::LONG) * 8)) {
+			for(long x = 0; x < cx; ++x, offset += bi.bmiHeader.biBitCount / 8, ++maskOffset) {
+				const bool transparent = mask != 0
+					&& toBoolean(reinterpret_cast<const uchar*>(mask->bmiColors)[maskOffset / 8] & (1 << maskOffset % 8) & maskEntry);
+
+				if(bi.bmiHeader.biBitCount == 32) {	// 32 ビット: BITMAPINFO::bmiColors は RGBQUAD[]
+					const ptrdiff_t i = offset / sizeof(::RGBQUAD);
+					*reinterpret_cast<::RGBQUAD*>(&destPixels[offset]) = transparent ? bi.bmiColors[i] : (*filterFunction)(bi.bmiColors[i]);
+				} else {	// 24 ビット: BITMAPINFO::bmiColors は 24 ビットが 1 ピクセルの色情報配列
+					if(transparent || memcmp(srcPixels + offset, srcPixels + bi.bmiHeader.biWidth * (bi.bmiHeader.biHeight - 1) * 3, 3) == 0)
 						memcpy(destPixels + offset, srcPixels + offset, 3);
 					else {
 						const ::RGBQUAD src = {srcPixels[offset + 0],
@@ -197,43 +210,60 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 			iconIndices_.insert(make_pair(id, icons_[ICONSTATE_NORMAL].getNumberOfImages()));
 			::GetObject(bitmap, sizeof(::BITMAP), &bmp);
 
-			// 色情報を取得
-			::BITMAPINFO* pbi = static_cast<::BITMAPINFO*>(::operator new(
-				sizeof(::BITMAPINFOHEADER) + (bmp.bmBitsPixel / 8 + 1) * 16 * 16));
-			memset(&pbi->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
-			pbi->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
-			::GetDIBits(dc, bitmap, 0, bmp.bmHeight, 0, pbi, DIB_RGB_COLORS);
-			::GetDIBits(dc, bitmap, 0, bmp.bmHeight, pbi->bmiColors, pbi, DIB_RGB_COLORS);
+			if(bmp.bmBitsPixel >= 24) {
+				// 色情報を取得
+				::BITMAPINFO* pbi = static_cast<::BITMAPINFO*>(::operator new(
+					sizeof(::BITMAPINFOHEADER) + bmp.bmWidth * bmp.bmHeight * bmp.bmBitsPixel / 8));
+				memset(&pbi->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
+				pbi->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
+				::GetDIBits(dc, bitmap, 0, bmp.bmHeight, 0, pbi, DIB_RGB_COLORS);
+				pbi->bmiHeader.biCompression = BI_RGB;
+				::GetDIBits(dc, bitmap, 0, pbi->bmiHeader.biHeight, pbi->bmiColors, pbi, DIB_RGB_COLORS);
 
-			HBITMAP grayBitmap, hotBitmap;
-			if(!imageIsBmp) {	// アイコン
-				::ICONINFO iconInfo;
-				::GetIconInfo(icon, &iconInfo);
-				icons_[ICONSTATE_NORMAL].add(icon);
-				grayBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, sepiaFilter);
-				HICON grayIcon = ::CreateIconIndirect(&iconInfo);
-				icons_[ICONSTATE_DISABLED].add(grayIcon);
-				hotBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, saturationFilter);
-				HICON hotIcon = ::CreateIconIndirect(&iconInfo);
-				icons_[ICONSTATE_HOT].add(hotIcon);
-				::DestroyIcon(grayIcon);
-				::DestroyIcon(hotIcon);
-			} else {	// ビットマップ
-				if(bmp.bmBitsPixel == 32) {	// 32 ビット -> アルファチャンネルを使用
-					icons_[ICONSTATE_NORMAL].add(bitmap);
-					icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, sepiaFilter));
-					icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, saturationFilter));
-				} else {	// 24 ビット以下 -> 左上の色が透明色
-					const COLORREF maskColor = RGB(pbi->bmiColors[0].rgbRed, pbi->bmiColors[0].rgbGreen, pbi->bmiColors[0].rgbBlue);
-					icons_[ICONSTATE_NORMAL].add(bitmap, maskColor);
-					icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, sepiaFilter), maskColor);
-					icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, saturationFilter), maskColor);
+				HBITMAP grayBitmap, hotBitmap;
+				if(!imageIsBmp) {	// アイコン
+					::ICONINFO iconInfo;
+					::GetIconInfo(icon, &iconInfo);
+					::BITMAP maskBitmap;
+					::GetObject(iconInfo.hbmMask, sizeof(::BITMAP), &maskBitmap);
+					assert(maskBitmap.bmBitsPixel == 1);
+
+					::BITMAPINFO* mask = static_cast<::BITMAPINFO*>(::operator new(
+						sizeof(::BITMAPINFOHEADER) + sizeof(::RGBQUAD) * 2 + maskBitmap.bmWidth * maskBitmap.bmHeight / 4));
+					memset(&mask->bmiHeader, 0, sizeof(::BITMAPINFOHEADER));
+					mask->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
+					::GetDIBits(dc, iconInfo.hbmMask, 0, maskBitmap.bmHeight, 0, mask, DIB_RGB_COLORS);
+					mask->bmiHeader.biCompression = BI_RGB;
+					::GetDIBits(dc, iconInfo.hbmMask, 0, mask->bmiHeader.biHeight, mask->bmiColors, mask, DIB_RGB_COLORS);
+
+					icons_[ICONSTATE_NORMAL].add(icon);
+					grayBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, sepiaFilter);
+					HICON grayIcon = ::CreateIconIndirect(&iconInfo);
+					icons_[ICONSTATE_DISABLED].add(grayIcon);
+					hotBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, saturationFilter);
+					HICON hotIcon = ::CreateIconIndirect(&iconInfo);
+					icons_[ICONSTATE_HOT].add(hotIcon);
+					::DestroyIcon(grayIcon);
+					::DestroyIcon(hotIcon);
+
+					::operator delete(mask);
+				} else {	// ビットマップ
+					if(bmp.bmBitsPixel == 32) {	// 32 ビット -> アルファチャンネルを使用
+						icons_[ICONSTATE_NORMAL].add(bitmap);
+						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, sepiaFilter));
+						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, saturationFilter));
+					} else {	// 24 ビット以下 -> 左上の色が透明色
+						const COLORREF maskColor = RGB(pbi->bmiColors[0].rgbRed, pbi->bmiColors[0].rgbGreen, pbi->bmiColors[0].rgbBlue);
+						icons_[ICONSTATE_NORMAL].add(bitmap, maskColor);
+						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, sepiaFilter), maskColor);
+						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, saturationFilter), maskColor);
+					}
 				}
-			}
 
-			::DeleteObject(grayBitmap);
-			::DeleteObject(hotBitmap);
-			delete[] pbi;
+				::DeleteObject(grayBitmap);
+				::DeleteObject(hotBitmap);
+				delete[] pbi;
+			}
 			::ReleaseDC(0, dc);
 
 			if(imageIsBmp)
@@ -466,10 +496,10 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_VIEW_WRAPNO: {
 		presentation::Presentation& p = buffer.getPresentation();
 		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.algorithm == viewers::LineWrapConfiguration::NO_WRAP)
+			if((*i)->getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NONE)
 				continue;
 			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
-			c.lineWrap.algorithm = viewers::LineWrapConfiguration::NO_WRAP;
+			c.lineWrap.mode = viewers::LineWrapConfiguration::NONE;
 			(*i)->setConfiguration(&c, 0);
 		}
 		return true;
@@ -478,10 +508,10 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_VIEW_WRAPBYWINDOWWIDTH: {
 		presentation::Presentation& p = buffer.getPresentation();
 		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.algorithm == viewers::LineWrapConfiguration::UNICODE_UAX_14)
+			if((*i)->getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NORMAL)
 				continue;
 			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
-			c.lineWrap.algorithm = viewers::LineWrapConfiguration::UNICODE_UAX_14;
+			c.lineWrap.mode = viewers::LineWrapConfiguration::NORMAL;
 			(*i)->setConfiguration(&c, 0);
 		}
 		return true;
@@ -753,11 +783,11 @@ bool CommandManager::isChecked(CommandID id) const {
 	case CMD_VIEW_STATUSBAR:
 		return app.statusBar_.isVisible();
 	case CMD_VIEW_WRAPNO:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm == viewers::LineWrapConfiguration::NO_WRAP;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NONE;
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
 //		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.algorithm != viewers::LineWrapConfiguration::NO_WRAP;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode != viewers::LineWrapConfiguration::NONE;
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();

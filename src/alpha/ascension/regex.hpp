@@ -58,7 +58,7 @@ namespace ascension {
 				int value(char_type c, int radix) const;
 				locale_type imbue(locale_type l) {locale_type temp = locale_; collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l); return temp;}
 				locale_type getloc() const {return locale_;}
-				std::string error_string(boost::regex_constants::error_type n) const {return "Unknown error";}
+				std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
 			private:
 				static std::size_t findPropertyValue(const String& expression);
 			private:

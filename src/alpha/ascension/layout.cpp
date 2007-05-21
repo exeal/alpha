@@ -515,7 +515,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			}
 			specialCharacterRenderer->drawLineWrappingMark(context);
 		} else if(lineNumber_ < document.getNumberOfLines() - 1) {	// line teminator
-			const LineBreak nlf = document.getLineInfo(lineNumber_).getLineBreak();
+			const text::LineBreak nlf = document.getLineInfo(lineNumber_).getLineBreak();
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
 			if(context.orientation == LEFT_TO_RIGHT) {
 				context.rect.left = x;

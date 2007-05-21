@@ -26,11 +26,11 @@ void testNormalizer() {
 	BOOST_CHECK_EQUAL(*n, 0x0073);
 	BOOST_CHECK_EQUAL(*++n, 0x0323);
 	BOOST_CHECK_EQUAL(*++n, 0x0307);
-	BOOST_CHECK((++n).isLast());
+	BOOST_CHECK(!(++n).hasNext());
 	BOOST_CHECK_EQUAL(*--n, 0x0307);
 	BOOST_CHECK_EQUAL(*--n, 0x0323);
 	BOOST_CHECK_EQUAL(*--n, 0x0073);
-	BOOST_CHECK(n.isFirst());
+	BOOST_CHECK(!n.hasPrevious());
 
 	const String source2(L"s\x0307\x0323");
 	Normalizer n2(StringCharacterIterator(source2), Normalizer::FORM_D);

@@ -28,7 +28,7 @@ void testUnicodeIterator() {
 	v.push_back(0x10000U - 1);
 
 	typedef ascension::unicode::UTF32To16Iterator<std::vector<ascension::CodePoint>::const_iterator> U32to16;
-	typedef ascension::unicode::UTF16To32Iterator<std::vector<ascension::Char>::const_iterator> U16to32;
+	typedef ascension::unicode::UTF16To32IteratorUnsafe<std::vector<ascension::Char>::const_iterator> U16to32;
 	std::vector<ascension::Char> v16(U32to16(v.begin()), U32to16(v.end()));
 	BOOST_CHECK_EQUAL(std::distance(U32to16(v.begin()), U32to16(v.end())), v16.size());
 	std::vector<ascension::CodePoint> v32(U16to32(v16.begin()), U16to32(v16.end()));

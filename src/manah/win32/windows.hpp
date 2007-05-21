@@ -28,7 +28,7 @@ namespace manah {
 		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, DWORD, &Base::lStructSize> {};
 #endif
 
-		struct ResourceID {
+		struct ResourceID : public Noncopyable {
 			ResourceID(const TCHAR* nameString) throw() : name(nameString) {}
 			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCE(id)) {}
 			const TCHAR* const name;

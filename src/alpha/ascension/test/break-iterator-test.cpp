@@ -12,11 +12,11 @@ namespace {
 		for(std::vector<std::size_t>::const_iterator j = indices.begin(); j != indices.end(); ++j)
 			BOOST_CHECK_EQUAL((i++).base().tell(), p + *j);
 		// backward iteration
-		BOOST_REQUIRE(i.base().isLast());
+		BOOST_REQUIRE(!i.base().hasNext());
 		for(std::vector<std::size_t>::const_reverse_iterator j = indices.rbegin(); j != indices.rend(); ++j)
 			BOOST_CHECK_EQUAL((i--).base().tell(), p + *j);
 		// random check
-		BOOST_REQUIRE(i.base().isFirst());
+		BOOST_REQUIRE(!i.base().hasPrevious());
 		for(std::vector<std::size_t>::const_iterator j = indices.begin(); j != indices.end(); ++j)
 			BOOST_CHECK(i.isBoundary(ascension::unicode::StringCharacterIterator(p, i.base().getLast(), p + *j)));
 	}

@@ -202,7 +202,7 @@ namespace ascension {
 	 * An abstract encoder.
 	 * @note This class will be rewritten in future.
 	 */
-	class Encoder : public manah::Noncopyable {
+	class Encoder : private manah::Noncopyable {
 		// コンストラクタ
 	protected:
 		Encoder() {}
@@ -328,7 +328,8 @@ namespace ascension {
 				::MultiByteToWideChar(codePage_, 0,
 					reinterpret_cast<const char*>(src), static_cast<int>(srcLength), dest, static_cast<int>(destLength)) : 0;
 		}
-		uchar getMaxNativeCharLength() const {CPINFO cpi; return toBoolean(::GetCPInfo(codePage_, &cpi)) ? cpi.MaxCharSize : 0;}
+		uchar getMaxNativeCharLength() const {
+			::CPINFO cpi; return toBoolean(::GetCPInfo(codePage_, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 0;}
 		uchar getMaxUCSCharLength() const {return 1;}
 		friend class EncoderFactory;
 	private:

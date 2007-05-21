@@ -11,42 +11,41 @@ namespace manah {
 namespace com {
 namespace ole {
 
-/// テキストデータのドラッグアンドドロップに使用する IDataObject 実装。ANSI 、Unicode の両方に対応
-class TextDataObject : public virtual IDataObject {
+/// @c IDataObject implementation for OLE text drag and drop. This supports both ANSI and Unicode format strings.
+class TextDataObject : public virtual ::IDataObject {
 public:
-	// コンストラクタ
-	TextDataObject(IDropSource& dropSource);
+	// constructor
+	TextDataObject(::IDropSource& dropSource);
 	virtual ~TextDataObject();
-	// メソッド
+	// methods
 	DWORD	doDragDrop(DWORD effect);
 	void	setTextData(const char* text);
 	void	setTextData(const wchar_t* text);
-	void	setAvailableFormatSet(const std::set<CLIPFORMAT>& formats);
+	template<typename InputIterator>
+	void	setAvailableFormatSet(InputIterator first, InputIterator last);
 	// IUnknown
 	IMPLEMENT_UNKNOWN_SINGLE_THREADED()
 	BEGIN_INTERFACE_TABLE()
 		IMPLEMENTS_LEFTMOST_INTERFACE(IDataObject)
 	END_INTERFACE_TABLE()
 	// IDataObject
-	STDMETHODIMP	GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium);
-	STDMETHODIMP	GetDataHere(LPFORMATETC pformatetc, LPSTGMEDIUM pmedium);
-	STDMETHODIMP	QueryGetData(LPFORMATETC pformatetc);
-	STDMETHODIMP	GetCanonicalFormatEtc(LPFORMATETC pformatectIn, LPFORMATETC pformatetcOut);
-	STDMETHODIMP	SetData(LPFORMATETC pformatetc, LPSTGMEDIUM pmedium, BOOL fRelease);
-	STDMETHODIMP	EnumFormatEtc(DWORD dwDirection, LPENUMFORMATETC* ppenumFormatEtc);
-	STDMETHODIMP	DAdvise(LPFORMATETC pformatetc, DWORD advf, LPADVISESINK pAdvSink, LPDWORD pdwConnection);
+	STDMETHODIMP	GetData(::LPFORMATETC pformatetcIn, ::LPSTGMEDIUM pmedium);
+	STDMETHODIMP	GetDataHere(::LPFORMATETC pformatetc, ::LPSTGMEDIUM pmedium);
+	STDMETHODIMP	QueryGetData(::LPFORMATETC pformatetc);
+	STDMETHODIMP	GetCanonicalFormatEtc(::LPFORMATETC pformatectIn, ::LPFORMATETC pformatetcOut);
+	STDMETHODIMP	SetData(::LPFORMATETC pformatetc, ::LPSTGMEDIUM pmedium, BOOL fRelease);
+	STDMETHODIMP	EnumFormatEtc(DWORD dwDirection, ::LPENUMFORMATETC* ppenumFormatEtc);
+	STDMETHODIMP	DAdvise(::LPFORMATETC pformatetc, DWORD advf, ::LPADVISESINK pAdvSink, LPDWORD pdwConnection);
 	STDMETHODIMP	DUnadvise(DWORD dwConnection);
-	STDMETHODIMP	EnumDAdvise(LPENUMSTATDATA* ppenumAdvise);
+	STDMETHODIMP	EnumDAdvise(::LPENUMSTATDATA* ppenumAdvise);
 private:
-	ComPtr<IDropSource>		dropSource_;
-	std::set<CLIPFORMAT>	clipFormats_;
-	HGLOBAL					ansiData_;
-	HGLOBAL					unicodeData_;
+	ComPtr<::IDropSource> dropSource_;
+	std::set<::CLIPFORMAT> clipFormats_;
+	HGLOBAL ansiData_, unicodeData_;
 
-	/// IDataObject::EnumFormatEtc の戻り値
+	/// Returned value of @c IDataObject#EnumFormatEtc.
 	class AvailableFormatsEnumerator : virtual public IEnumFORMATETC {
 	public:
-		// コンストラクタ
 		AvailableFormatsEnumerator(const std::set<CLIPFORMAT>& formats);
 		// IUnknown
 		IMPLEMENT_UNKNOWN_SINGLE_THREADED()
@@ -54,41 +53,43 @@ private:
 			IMPLEMENTS_LEFTMOST_INTERFACE(IEnumFORMATETC)
 		END_INTERFACE_TABLE()
 		// IEnumFORMATETC
-        STDMETHODIMP	Next(ULONG celt, FORMATETC* rgelt, ULONG* pceltFetched);
+		STDMETHODIMP	Next(ULONG celt, ::FORMATETC* rgelt, ULONG* pceltFetched);
         STDMETHODIMP	Skip(ULONG celt);
         STDMETHODIMP	Reset();
-        STDMETHODIMP	Clone(IEnumFORMATETC** ppenum);
+		STDMETHODIMP	Clone(::IEnumFORMATETC** ppenum);
 	private:
-		const std::set<CLIPFORMAT>* clipFormats_;
-		std::set<CLIPFORMAT>::const_iterator it_;
+		const std::set<::CLIPFORMAT>* clipFormats_;
+		std::set<::CLIPFORMAT>::const_iterator current_;
 	};
 };
 
 
-// TextDataObject class implementation
-/////////////////////////////////////////////////////////////////////////////
+// TextDataObject ///////////////////////////////////////////////////////////
 
 /**
- *	コンストラクタ
- *	@param dropSource ドラッグ元
+ * Constructor.
+ * @param dropSource the source of drop.
  */
-inline TextDataObject::TextDataObject(IDropSource& dropSource) : dropSource_(&dropSource), ansiData_(0), unicodeData_(0) {}
-
-/// デストラクタ
-inline TextDataObject::~TextDataObject() {
-	if(ansiData_ != 0)		::GlobalFree(ansiData_);
-	if(unicodeData_ != 0)	::GlobalFree(unicodeData_);
+inline TextDataObject::TextDataObject(IDropSource& dropSource) : dropSource_(&dropSource), ansiData_(0), unicodeData_(0) {
 }
 
-/// @see	IDataObject::DAdvise
-inline STDMETHODIMP TextDataObject::DAdvise(LPFORMATETC pformatetc, DWORD advf, LPADVISESINK pAdvSink, LPDWORD pdwConnection) {
+/// Destructor.
+inline TextDataObject::~TextDataObject() {
+	if(ansiData_ != 0)
+		::GlobalFree(ansiData_);
+	if(unicodeData_ != 0)
+		::GlobalFree(unicodeData_);
+}
+
+/// @see IDataObject#DAdvise
+inline STDMETHODIMP TextDataObject::DAdvise(::LPFORMATETC, DWORD, ::LPADVISESINK, LPDWORD) {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
 /**
- *	ドラッグアンドドロップを開始する
- *	@param effect	DoDragDrop 参照
- *	@return			結果
+ * Begins OLE drag-and-drop.
+ * @param effect same as Win32 @c DoDragDrop function
+ * @return the result
  */
 inline DWORD TextDataObject::doDragDrop(DWORD effect) {
 	DWORD			effectOwn;
@@ -96,17 +97,17 @@ inline DWORD TextDataObject::doDragDrop(DWORD effect) {
 	return SUCCEEDED(hr) ? effectOwn : DROPEFFECT_NONE;
 }
 
-/// @see	IDataObject::DUnadvise
-inline STDMETHODIMP TextDataObject::DUnadvise(DWORD dwConnection) {
+/// @see IDataObject#DUnadvise
+inline STDMETHODIMP TextDataObject::DUnadvise(DWORD) {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
-/// @see	IDataObject::EnumDAdvise
-inline STDMETHODIMP TextDataObject::EnumDAdvise(LPENUMSTATDATA* ppenumAdvise) {
+/// @see IDataObject#EnumDAdvise
+inline STDMETHODIMP TextDataObject::EnumDAdvise(::LPENUMSTATDATA*) {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
-/// @see	IDataObject::EnumFormatEtc
+/// @see IDataObject#EnumFormatEtc
 inline STDMETHODIMP TextDataObject::EnumFormatEtc(DWORD dwDirection, LPENUMFORMATETC* ppenumFormatEtc) {
 	if(dwDirection == DATADIR_SET)
 		return E_NOTIMPL;
@@ -120,12 +121,12 @@ inline STDMETHODIMP TextDataObject::EnumFormatEtc(DWORD dwDirection, LPENUMFORMA
 	return S_OK;
 }
 
-/// @see	IDataObject::GetCanonicalFormatEtc
-inline STDMETHODIMP TextDataObject::GetCanonicalFormatEtc(LPFORMATETC pformatectIn, LPFORMATETC pformatetcOut) {
+/// @see IDataObject#GetCanonicalFormatEtc
+inline STDMETHODIMP TextDataObject::GetCanonicalFormatEtc(::LPFORMATETC, ::LPFORMATETC) {
 	return DATA_S_SAMEFORMATETC;
 }
 
-/// @see	IDataObject::GetData
+/// @see IDataObject#GetData
 inline STDMETHODIMP TextDataObject::GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium) {
 	if(pformatetcIn == 0 || pmedium == 0)
 		return E_INVALIDARG;
@@ -137,7 +138,7 @@ inline STDMETHODIMP TextDataObject::GetData(LPFORMATETC pformatetcIn, LPSTGMEDIU
 			|| !toBoolean(pformatetcIn->tymed & TYMED_HGLOBAL))
 		return DV_E_FORMATETC;
 
-	// 要求された形式のデータがまだ無い場合
+	// Create data if there is not a data has the requested format
 	if(pformatetcIn->cfFormat == CF_TEXT && ansiData_ == 0) {
 		const wchar_t*	pwsz = static_cast<const wchar_t*>(::GlobalLock(unicodeData_));
 		const int		cch = ::WideCharToMultiByte(CP_ACP, 0, pwsz, -1, 0, 0, 0, 0);
@@ -159,13 +160,13 @@ inline STDMETHODIMP TextDataObject::GetData(LPFORMATETC pformatetcIn, LPSTGMEDIU
 	return S_OK;
 }
 
-/// @see	IDataObject::GetDataHere
-inline STDMETHODIMP TextDataObject::GetDataHere(LPFORMATETC pformatetc, LPSTGMEDIUM pmedium) {
+/// @see IDataObject#GetDataHere
+inline STDMETHODIMP TextDataObject::GetDataHere(::LPFORMATETC, ::LPSTGMEDIUM) {
 	return E_NOTIMPL;
 }
 
-/// @see	IDataObject::QueryGetData
-inline STDMETHODIMP TextDataObject::QueryGetData(LPFORMATETC pformatetc) {
+/// @see IDataObject#QueryGetData
+inline STDMETHODIMP TextDataObject::QueryGetData(::LPFORMATETC pformatetc) {
 	if(pformatetc == 0)
 		return E_INVALIDARG;
 	if(clipFormats_.find(pformatetc->cfFormat) == clipFormats_.end())
@@ -183,17 +184,25 @@ inline STDMETHODIMP TextDataObject::QueryGetData(LPFORMATETC pformatetc) {
 }
 
 /**
- *	現在セットされている文字列を取得するのに利用可能なクリップボード形式の設定
- *	@param formats	クリップボード形式の集合
+ * Sets the clipboard formats available for obtaining the text. @p InputIterator should points
+ * @c CLIPFORMAT.
+ * @param first the first of the formats
+ * @param last the last of the formats
  */
-inline void TextDataObject::setAvailableFormatSet(const std::set<CLIPFORMAT>& formats) throw() {clipFormats_ = formats;}
+template<typename InputIterator>
+inline void TextDataObject::setAvailableFormatSet(InputIterator first, InputIterator last) throw() {
+	clipFormats_.clear();
+	clipFormats_.insert(first, last);
+}
 
-/// @see	IDataObject::SetData
-inline STDMETHODIMP TextDataObject::SetData(LPFORMATETC pformatetc, LPSTGMEDIUM pmedium, BOOL fRelease) {return E_NOTIMPL;}
+/// @see IDataObject#SetData
+inline STDMETHODIMP TextDataObject::SetData(::LPFORMATETC, ::LPSTGMEDIUM, BOOL) {
+	return E_NOTIMPL;
+}
 
 /**
- *	ANSI 文字列を設定
- *	@param lpszText	セット設定するテキスト
+ * Sets the text as ANSI format.
+ * @param text the text to set
  */
 inline void TextDataObject::setTextData(const char* text) {
 	assert(text != 0);
@@ -215,8 +224,8 @@ inline void TextDataObject::setTextData(const char* text) {
 }
 
 /**
- *	Unicode 文字列を設定
- *	@param text	設定するテキスト
+ * Sets the text as Unicode format.
+ * @param text the text to set
  */
 inline void TextDataObject::setTextData(const wchar_t* text) {
 	assert(text != 0);
@@ -238,30 +247,35 @@ inline void TextDataObject::setTextData(const wchar_t* text) {
 }
 
 
-// AvailableFormatsEnumerator class implementation
-/////////////////////////////////////////////////////////////////////////////
+// AvailableFormatsEnumerator ///////////////////////////////////////////////
 
-/// コンストラクタ
-inline TextDataObject::AvailableFormatsEnumerator::AvailableFormatsEnumerator(
-		const std::set<CLIPFORMAT>& formats) : clipFormats_(&formats) {Reset();}
+/// Constructor.
+inline TextDataObject::AvailableFormatsEnumerator::AvailableFormatsEnumerator(const std::set<::CLIPFORMAT>& formats) : clipFormats_(&formats) {
+	Reset();
+}
 
-/// @see	IEnumFORMATETC::Clone
-inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Clone(IEnumFORMATETC** ppenum) {return E_NOTIMPL;}
+/// @see IEnumFORMATETC#Clone
+inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Clone(::IEnumFORMATETC** ppenum) {
+	VERIFY_POINTER(ppenum);
+	if(*ppenum = new(std::nothrow) AvailableFormatsEnumerator(*clipFormats_))
+		return (*ppenum)->AddRef(), S_OK;
+	return E_OUTOFMEMORY;
+}
 
-/// @see	IEnumFORMATETC::Next
-inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Next(ULONG celt, FORMATETC* rgelt, ULONG* pceltFetched) {
+/// @see IEnumFORMATETC#Next
+inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Next(ULONG celt, ::FORMATETC* rgelt, ULONG* pceltFetched) {
 	if(celt > 1 && pceltFetched == 0)
 		return E_INVALIDARG;
 
 	ULONG fetched = 0;
-	while(fetched < celt && it_ != clipFormats_->end()) {
-		rgelt[fetched].cfFormat = *it_;
+	while(fetched < celt && current_ != clipFormats_->end()) {
+		rgelt[fetched].cfFormat = *current_;
 		rgelt[fetched].ptd = 0;
 		rgelt[fetched].dwAspect = DVASPECT_CONTENT;
 		rgelt[fetched].lindex = -1;
 		rgelt[fetched].tymed = TYMED_HGLOBAL;
 		++fetched;
-		++it_;
+		++current_;
 	}
 	if(pceltFetched != 0)
 		*pceltFetched = fetched;
@@ -269,13 +283,16 @@ inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Next(ULONG celt,
 	return (fetched == celt) ? S_OK : S_FALSE;
 }
 
-/// @see	IEnumFORMATETC::Reset
-inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Reset() {it_ = clipFormats_->begin(); return S_OK;}
+/// @see IEnumFORMATETC#Reset
+inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Reset() {
+	current_ = clipFormats_->begin();
+	return S_OK;
+}
 
-/// @see	IEnumFORMATETC::Skip
+/// @see IEnumFORMATETC#Skip
 inline STDMETHODIMP TextDataObject::AvailableFormatsEnumerator::Skip(ULONG celt) {
-	while(celt != 0 && it_ != clipFormats_->end())
-		--celt, ++it_;
+	while(celt != 0 && current_ != clipFormats_->end())
+		--celt, ++current_;
 	return (celt == 0) ? S_OK : S_FALSE;
 }
 

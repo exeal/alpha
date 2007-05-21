@@ -225,9 +225,9 @@ public:
 
 protected:
 	// Do not override this directly. Use MANAH_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
-	virtual bool processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {return false;}
+	virtual bool processWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, LRESULT& /* result */) {return false;}
 	// Call the implementation of the base class if override this.
-	virtual LRESULT preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {return 1;}
+	virtual LRESULT preTranslateWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, bool& /* handled */) {return 1;}
 	LRESULT fireProcessWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		LRESULT result = 1;
 		if(!processWindowMessage(message, wParam, lParam, result))
@@ -910,7 +910,7 @@ inline int Window::setHotKey(WORD virtualKeyCode, WORD modifiers) {
 	assertValidAsWindow(); return static_cast<int>(sendMessage(WM_SETHOTKEY, MAKEWPARAM(virtualKeyCode, modifiers)));}
 
 inline HICON Window::setIcon(HICON icon, bool bigIcon /* = true */) {
-	return reinterpret_cast<HICON>(sendMessage(WM_SETICON, bigIcon ? ICON_BIG : ICON_SMALL));}
+	return reinterpret_cast<HICON>(sendMessage(WM_SETICON, bigIcon ? ICON_BIG : ICON_SMALL, reinterpret_cast<LPARAM>(icon)));}
 
 #if(_WIN32_WINNT >= 0x0500)
 inline bool Window::setLayeredAttributes(COLORREF keyColor, ::BYTE alpha, DWORD flags) {

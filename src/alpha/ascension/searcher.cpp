@@ -674,7 +674,7 @@ void IncrementalSearcher::start(Document& document, const Position& from,
 	(document_ = &document)->addListener(*this);
 	searcher_ = &searcher;
 	matchedRegion_ = statusHistory_.top().matchedRegion;
-	if(listener_ = listener) {
+	if(0 != (listener_ = listener)) {
 		listener_->incrementalSearchStarted(document);
 		listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
 	}

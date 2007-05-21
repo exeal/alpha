@@ -112,7 +112,9 @@ namespace {
 	// UCS 側で 0x0000-0xFFFF はそのまま UCS-2、0x10000-0x10FFFF は UCS-4、0xFFFFFFF 以上は UCS-2 2文字を表す
 	// JIS 側では
 
-	const uchar	 ESC = '\x1B';
+	const uchar ESC = '\x1B';
+	const uchar SS2 = static_cast<uchar>(0x8E);
+	const uchar SS3 = static_cast<uchar>(0x8F);
 	const wchar_t ZWNJ = L'\x200C';	// Zero Width Non-Joiner (U+200C)
 	const wchar_t JISX0208toUCS_2121[] = {	// 0x2121-0x2840
 		#include "Jis\JISX0208toUCS_2121"
@@ -605,7 +607,7 @@ namespace {
 					const uchar ansi = src[i] | 0x80;
 					if(g2 == ISO_8859_1) {	// ISO-8859-1
 						if(iso88591Encoder.get() == 0)
-							iso88591Encoder = encoders.createEncoder(CPEX_ISO8859_1);
+							iso88591Encoder.reset(encoders.createEncoder(CPEX_ISO8859_1).release());
 						const size_t converted = iso88591Encoder->toUnicode(
 							dest + j, destLength - j, reinterpret_cast<const uchar*>(&ansi), 1, callback);
 						if(converted == 0)
@@ -614,7 +616,7 @@ namespace {
 						j += converted;
 					} else if(g2 == ISO_8859_7) {	// ISO-8859-7
 						if(iso88597Encoder.get() == 0)
-							iso88597Encoder = encoders.createEncoder(CPEX_ISO8859_7);
+							iso88597Encoder.reset(encoders.createEncoder(CPEX_ISO8859_7).release());
 						const size_t converted = iso88597Encoder->toUnicode(
 							dest + j, destLength - j, reinterpret_cast<const uchar*>(&ansi), 1, callback);
 						if(converted == 0)
@@ -727,8 +729,8 @@ namespace {
 		auto_ptr<Encoder>	iso88597Encoder;
 
 		if(cp == CPEX_JAPANESE_ISO2022JP2) {
-			iso88591Encoder = EncoderFactory::getInstance().createEncoder(CPEX_ISO8859_1);
-			iso88597Encoder = EncoderFactory::getInstance().createEncoder(CPEX_ISO8859_7);
+			iso88591Encoder.reset(EncoderFactory::getInstance().createEncoder(CPEX_ISO8859_1).release());
+			iso88597Encoder.reset(EncoderFactory::getInstance().createEncoder(CPEX_ISO8859_7).release());
 		}
 
 		while(i < srcLength && j < destLength) {
@@ -741,7 +743,7 @@ namespace {
 				mbcs[0] = BIT8_MASK(ucs);
 				mbcs[1] = 0;
 				charset = ASCII;
-			} else if(jis = ucsToJISX0201Roman(ucs) && jis < 0x80)
+			} else if(0 != (jis = ucsToJISX0201Roman(ucs)) && jis < 0x80)
 				charset = /*(jis < 0x80) ?*/ JIS_X_0201_ROMAN /*: JIS_X_0201_KANA*/;
 			else if(IS_ISO2022JP3(cp) || IS_ISO2022JP2004(cp)) {
 				bool isPlane2;
@@ -767,7 +769,7 @@ namespace {
 					CONFIRM_ILLEGAL_CHAR(jis);
 					charset = ASCII;
 				}
-			} else if(jis = ucsToJISX0208(ucs))
+			} else if(0 != (jis = ucsToJISX0208(ucs)))
 				charset = JIS_X_0208;
 			else if((cp == CPEX_JAPANESE_ISO2022JP1 || cp == CPEX_JAPANESE_ISO2022JP2)
 					&& toBoolean(jis = ucsToJISX0212(ucs)))
@@ -873,8 +875,8 @@ namespace {
 	// JIS X 0208 or JIS X 0213 <-> シフト JIS 2バイト文字の変換
 	inline void convertX0208ToShiftJISDBCS(ushort jis, uchar* dbcs) {
 		assert(dbcs != 0);
-		const uchar jk = (jis - 0x2020) >> 8;		// 区
-		const uchar jt = (jis - 0x2020) & 0x00FF;	// 点
+		const uchar jk = static_cast<uchar>((jis - 0x2020) >> 8);		// 区
+		const uchar jt = static_cast<uchar>((jis - 0x2020) & 0x00FF);	// 点
 
 		assert(jk >= 1 && jk <= 94 && jt >= 1 && jt <= 94);
 		dbcs[0] = (jk - 1) / 2 + ((jk <= 62) ? 0x81 : 0xC1);
@@ -976,12 +978,12 @@ namespace {
 				return i;
 			else if(ch < 0x80)	// ASCII
 				continue;
-			else if(ch == 0x8E) {	// SS2 -> JIS X 0201 仮名
+			else if(ch == SS2) {	// SS2 -> JIS X 0201 仮名
 				if(i + 1 >= len || src[i + 1] < 0xA0 || src[i + 1] > 0xE0)
 					return i;
 				foundKana = true;
 				++i;
-			} else if(ch == 0x8F) {	// SS3 -> JIS X 0212 or JIS X 0213 plane2
+			} else if(ch == SS3) {	// SS3 -> JIS X 0212 or JIS X 0213 plane2
 				if(i + 2 >= len)
 					return i;
 				ushort jis = src[i + 1] << 8 | src[i + 2];
@@ -1291,7 +1293,7 @@ size_t Encoder_Japanese_EUCJP::fromUnicode(CFU_ARGLIST) {
 				// JIS X 0201 Kana
 				if(destLength - j < 2)
 					return j;
-				dest[j++] = '\x8E';	// SS2
+				dest[j++] = SS2;	// SS2
 				dest[j++] = kana;
 				continue;
 			} else {	// unconvertable
@@ -1309,7 +1311,7 @@ size_t Encoder_Japanese_EUCJP::fromUnicode(CFU_ARGLIST) {
 		} else if(destLength - j < 3)
 			return j;
 		else {	// JIS X 0212
-			dest[j++] = '\x8F';	// SS3
+			dest[j++] = static_cast<uchar>('\x8F');	// SS3
 			dest[j++] = BIT8_MASK(jis >> 8);
 			dest[j++] = BIT8_MASK(jis);
 		}
@@ -1324,7 +1326,7 @@ size_t Encoder_Japanese_EUCJP::toUnicode(CTU_ARGLIST) {
 	for(size_t i = 0; i < srcLength && j < destLength; ++j) {
 		const uchar firstByte = src[i];
 
-		if(firstByte == 0x8E) {	// SS2 -> JIS X 0201 Kana
+		if(firstByte == SS2) {	// SS2 -> JIS X 0201 Kana
 			if(i + 2 > srcLength)
 				return j;
 			wchar_t ucs = jisX0201KanaToUCS(src[i + 1]);
@@ -1333,7 +1335,7 @@ size_t Encoder_Japanese_EUCJP::toUnicode(CTU_ARGLIST) {
 				CONFIRM_ILLEGAL_CHAR(ucs);
 			dest[j] = ucs;
 			i += 2;
-		} else if(firstByte == 0x8F) {	// SS3 -> JIS X 0212
+		} else if(firstByte == SS3) {	// SS3 -> JIS X 0212
 			if(i + 3 > srcLength)
 				return j;
 			const ushort jis = ((src[i + 1] << 8) | src[i + 2]) - 0x8080;
@@ -1367,7 +1369,7 @@ size_t Encoder_Japanese_EUCJIS2004::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	ushort utf16Length;
-	bool plane2;
+	bool plane2 = false;
 	for(size_t i = 0; i < srcLength && j < destLength; i += utf16Length) {
 		utf16Length = (src[i] >= 0x80) ? static_cast<ushort>(srcLength - i) : 1;
 		ushort jis = (src[i] >= 0x80) ? ucsToJISX0213(src + i, utf16Length, plane2) : src[i];
@@ -1376,7 +1378,7 @@ size_t Encoder_Japanese_EUCJIS2004::fromUnicode(CFU_ARGLIST) {
 			if((jis = ucsToJISX0201Kana(src[i])) != N__A) {
 				if(destLength - j < 2)
 					return j;
-				dest[j++] = '\x8E';
+				dest[j++] = SS2;
 			} else
 				CONFIRM_ILLEGAL_CHAR(jis);
 		}
@@ -1386,13 +1388,13 @@ size_t Encoder_Japanese_EUCJIS2004::fromUnicode(CFU_ARGLIST) {
 			return j;
 		else {
 			jis += 0x8080;	// jis -> euc-jp
-			if(!plane2) {	// 1面
+			if(!plane2) {	// 1 面
 				dest[j++] = BIT8_MASK(jis >> 8);
 				dest[j++] = BIT8_MASK(jis >> 0);
 			} else if(destLength - j < 3)
 				return j;
-			else {	// 2面
-				dest[j++] = '\x8F';	// SS3
+			else {	// 2 面
+				dest[j++] = SS3;
 				dest[j++] = BIT8_MASK(jis >> 8);
 				dest[j++] = BIT8_MASK(jis >> 0);
 			}
@@ -1408,7 +1410,7 @@ size_t Encoder_Japanese_EUCJIS2004::toUnicode(CTU_ARGLIST) {
 	while(i < srcLength && j < destLength) {
 		const uchar firstByte = src[i];
 
-		if(firstByte == 0x8E) {	// SS2 -> JIS X 0201 Kana
+		if(firstByte == SS2) {	// SS2 -> JIS X 0201 Kana
 			if(i + 2 > srcLength)
 				return j;
 			wchar_t ucs = jisX0201KanaToUCS(src[i + 1]);
@@ -1417,7 +1419,7 @@ size_t Encoder_Japanese_EUCJIS2004::toUnicode(CTU_ARGLIST) {
 				CONFIRM_ILLEGAL_CHAR(ucs);
 			dest[j++] = ucs;
 			i += 2;
-		} else if(firstByte == 0x8F) {	// SS3 -> plane-2
+		} else if(firstByte == SS3) {	// SS3 -> plane-2
 			if(i + 3 > srcLength)
 				return j;
 			const ushort jis = ((src[i + 1] << 8) | src[i + 2]) - 0x8080;
@@ -1615,11 +1617,11 @@ size_t Encoder_Japanese_EUCJPWindows::fromUnicode(CFU_ARGLIST) {
 
 		// cp932 -> cp51932
 		if(convertedBytes == 1 && dbcs[0] >= 0xA1 && dbcs[0] <= 0xDF) {	// 半角カナ
-			dest[j++] = '\x8E';
+			dest[j++] = SS2;
 			dest[j++] = dbcs[0];
 		} else if(convertedBytes == 2
 				&& ((dbcs[0] >= 0x81 && dbcs[0] <= 0x9F) || (dbcs[0] >= 0xE0 && dbcs[0] <= 0xFC))
-				&& (dbcs[1] >= 0x40 && dbcs[1] <= 0xFC) && dbcs[1] != 0x7F) {	// 2バイト文字
+				&& (dbcs[1] >= 0x40 && dbcs[1] <= 0xFC) && dbcs[1] != 0x7F) {	// 2 バイト文字
 			const ushort jis = convertShiftJISDBCSToX0208(dbcs);
 			dest[j++] = BIT8_MASK((jis | 0x8000) >> 8);
 			dest[j++] = BIT8_MASK((jis | 0x0080) >> 0);
@@ -1636,7 +1638,7 @@ size_t Encoder_Japanese_EUCJPWindows::toUnicode(CTU_ARGLIST) {
 	uchar dbcs[2];
 	for(size_t i = 0; i < srcLength && j < destLength; ++j) {
 		// cp51932 -> cp932
-		if(src[i] == 0x8E) {	// 半角カナ
+		if(src[i] == SS2) {	// 半角カナ
 			if(i + 1 >= srcLength)
 				break;
 			dbcs[0] = src[i + 1];

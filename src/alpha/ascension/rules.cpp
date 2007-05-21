@@ -195,7 +195,7 @@ const Char* URIDetector::eatMailAddress(const Char* first, const Char* last, boo
  */
 const Char* URIDetector::eatURL(const Char* first, const Char* last, bool) {
 #define STARTS_WITH(prefix, len)	\
-	(len < last - first && wmemcmp(first, prefix, len) == 0 && (urlLength = len - 1))
+	(len < last - first && wmemcmp(first, prefix, len) == 0 && (0 != (urlLength = len - 1)))
 
 	static const bool urlChars[] = {	// URI 構成文字か
 		false,	false,	false,	false,	false,	false,	false,	false,	// 0x00

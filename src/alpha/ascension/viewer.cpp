@@ -117,7 +117,8 @@ class viewers::internal::TextViewerAccessibleProxy :
 		virtual public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
 			IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&LIBID_Accessibility, &IID_IAccessible>
-		> {
+		>,
+		private manah::Unassignable {
 	// IAccessible の実装については以下を参考にした:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
 	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
@@ -328,7 +329,7 @@ namespace {
 
 // local helpers
 namespace {
-	class TextViewerCloneIterator {
+	class TextViewerCloneIterator : private manah::Unassignable {
 	public:
 		explicit TextViewerCloneIterator(TextViewer& original, set<TextViewer*>& clones) throw() :
 			original_(original), clones_(clones), current_(clones_.begin()), isHead_(true) {}
@@ -660,10 +661,10 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 
 	// syntax highlight test
 	const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
-		L"if in instanceof new null return switch this throw true try typeof undefined var void while with";
+		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
 	const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float"
-		L"goto implements int interface long native package private protected public short static super synchronized throws transient volatile";
-	presentation::PresentationReconstructor* r = new presentation::PresentationReconstructor(getPresentation());
+		L" goto implements int interface long native package private protected public short static super synchronized throws transient volatile";
+//	presentation::PresentationReconstructor* r = new presentation::PresentationReconstructor(getPresentation());
 	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
 	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> jsScanner(new LexicalTokenScanner(unicode::IdentifierSyntax()));
@@ -703,7 +704,7 @@ void TextViewer::doBeep() throw() {
 }
 
 /// @see text#IDocumentStateListener#documentAccessibleRegionChanged
-void TextViewer::documentAccessibleRegionChanged(Document& document) {
+void TextViewer::documentAccessibleRegionChanged(Document&) {
 	if(getDocument().isNarrowed())
 		scrollTo(-1, -1, false);
 	invalidateRect(0, false);
@@ -714,7 +715,7 @@ void TextViewer::documentAboutToBeChanged(const Document&) {
 }
 
 /// @see text#IDocumentListener#documentChanged
-void TextViewer::documentChanged(const Document& document, const DocumentChange& change) {
+void TextViewer::documentChanged(const Document&, const DocumentChange& change) {
 	// インクリメンタル検索中であればやめさせる
 	if(texteditor::Session* session = getDocument().getSession()) {
 		if(session->getIncrementalSearcher().isRunning())
@@ -750,36 +751,36 @@ void TextViewer::documentChanged(const Document& document, const DocumentChange&
 }
 
 /// @see text#IDocumentStateListener#documentEncodingChanged
-void TextViewer::documentEncodingChanged(Document& document) {
+void TextViewer::documentEncodingChanged(Document&) {
 }
 
 /// @see text#IDocumentStateListener#documentFileNameChanged
-void TextViewer::documentFileNameChanged(Document& document) {
+void TextViewer::documentFileNameChanged(Document&) {
 }
 
 /// @see text#IDocumentStateListener#documentModificationSignChanged
-void TextViewer::documentModificationSignChanged(Document& document) {
+void TextViewer::documentModificationSignChanged(Document&) {
 }
 
 /// @see text#IDocumentStateListener#documentReadOnlySignChanged
-void TextViewer::documentReadOnlySignChanged(Document& document) {
+void TextViewer::documentReadOnlySignChanged(Document&) {
 }
 
 /// @see text#ISequentialEditListener#documentSequentialEditStarted
-void TextViewer::documentSequentialEditStarted(Document& document) {
+void TextViewer::documentSequentialEditStarted(Document&) {
 }
 
 /// @see text#ISequentialEditListener#documentSequentialEditStopped
-void TextViewer::documentSequentialEditStopped(Document& document) {
+void TextViewer::documentSequentialEditStopped(Document&) {
 }
 
 /// @see text#ISequentialEditListener#documentUndoSequenceStarted
-void TextViewer::documentUndoSequenceStarted(Document& document) {
+void TextViewer::documentUndoSequenceStarted(Document&) {
 	freeze(false);
 }
 
 /// @see text#ISequentialEditListener#documentUndoSequenceStopped
-void TextViewer::documentUndoSequenceStopped(Document& document, const Position& resultPosition) {
+void TextViewer::documentUndoSequenceStopped(Document&, const Position& resultPosition) {
 	unfreeze(false);
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
 //		caret_->endAutoCompletion();
@@ -793,7 +794,7 @@ void TextViewer::documentUndoSequenceStopped(Document& document, const Position&
  * @param dc the device context
  * @param rect the rectangle to draw
  */
-void TextViewer::drawIndicatorMargin(length_t line, DC& dc, const ::RECT& rect) {
+void TextViewer::drawIndicatorMargin(length_t /* line */, DC& /* dc */, const ::RECT& /* rect */) {
 }
 
 /**
@@ -1326,12 +1327,12 @@ void TextViewer::onCaptureChanged(HWND) {
 }
 
 /// @see WM_CHAR
-void TextViewer::onChar(UINT ch, UINT flags) {
+void TextViewer::onChar(UINT ch, UINT) {
 	handleGUICharacterInput(ch);
 }
 
 /// @see Window#onCommand
-bool TextViewer::onCommand(WORD id, WORD notifyCode, HWND control) {
+bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	using namespace ascension::texteditor::commands;
 	switch(id) {
 	case WM_UNDO:	// [元に戻す]
@@ -1425,7 +1426,7 @@ bool TextViewer::onCommand(WORD id, WORD notifyCode, HWND control) {
 }
 
 /// @see WM_CONTEXTMENU
-bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
+bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 	using manah::win32::ui::Menu;
 
 	if(!allowsMouseInput())	// マウス操作とは限らないが...
@@ -1564,7 +1565,6 @@ bool TextViewer::onContextMenu(HWND window, const ::POINT& pt) {
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		const bool isJapanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
 		HIMC imc = ::ImmGetContext(getHandle());
 		WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
 		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
@@ -1628,7 +1628,7 @@ HFONT TextViewer::onGetFont() {
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
+void TextViewer::onHScroll(UINT sbCode, UINT, HWND) {
 	switch(sbCode) {
 	case SB_LINELEFT:	// 1 列分左
 		scroll(-1, 0, true); break;
@@ -1650,7 +1650,7 @@ void TextViewer::onHScroll(UINT sbCode, UINT pos, HWND) {
 }
 
 /// @see WM_IME_COMPOSITION
-void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam) {
+void TextViewer::onIMEComposition(WPARAM, LPARAM lParam) {
 	if(lParam == 0 || toBoolean(lParam & GCS_RESULTSTR)) {	// completed
 		if(HIMC	imc = ::ImmGetContext(getHandle())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
@@ -1768,7 +1768,7 @@ void TextViewer::onIMEStartComposition() {
 }
 
 /// @see WM_KEYDOWN
-void TextViewer::onKeyDown(UINT ch, UINT flags, bool& handled) {
+void TextViewer::onKeyDown(UINT ch, UINT, bool& handled) {
 	endAutoScroll();
 	handled = handleKeyDown(ch, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000));
 }
@@ -2027,7 +2027,7 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 }
 
 /// @see WM_SIZE
-void TextViewer::onSize(UINT type, int cx, int cy) {
+void TextViewer::onSize(UINT type, int, int) {
 //	caret_->endAutoCompletion();
 
 	if(type == SIZE_MINIMIZED)
@@ -2136,7 +2136,7 @@ void TextViewer::onUniChar(UINT ch, UINT) {
 #endif /* WM_UNICHAR */
 
 /// @see Window#onVScroll
-void TextViewer::onVScroll(UINT sbCode, UINT pos, HWND) {
+void TextViewer::onVScroll(UINT sbCode, UINT, HWND) {
 	switch(sbCode) {
 	case SB_LINEUP:		// 1 行上
 		scroll(0, -1, true); break;
@@ -2238,6 +2238,8 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 			}
 		}
 		break;
+//	case WM_NCPAINT:
+//		return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_PASTE:
 		ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
@@ -2869,7 +2871,7 @@ void TextViewerAccessibleProxy::documentChanged(const Document&, const DocumentC
 }
 
 /// @see IAccessible#get_accChild
-STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT varChild, IDispatch** ppdispChild) {
+STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
 	VERIFY_AVAILABILITY();
 	VERIFY_POINTER(ppdispChild);
 	*ppdispChild = 0;
@@ -3026,8 +3028,7 @@ const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
  * @see Window#create
  */
 bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
-	HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE)));
-	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
+	::RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
 
 	if(!ui::CustomControl<AutoScrollOriginMark>::create(view.getHandle(),
 			rc, 0, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW))
@@ -3093,7 +3094,7 @@ uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const throw() {
 		lines /= 10;
 		++n;
 	}
-	return n;
+	return static_cast<uchar>(n);	// hmm...
 }
 
 void TextViewer::VerticalRulerDrawer::setConfiguration(const VerticalRulerConfiguration& configuration) {
@@ -3404,7 +3405,7 @@ namespace {
 					if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
 						const length_t nativeLength = min<length_t>(strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
 						length_t len;
-						AutoBuffer<Char> buffer = a2u(nativeBuffer, nativeLength, &len);
+						AutoBuffer<Char> buffer(a2u(nativeBuffer, nativeLength, &len));
 						::GlobalUnlock(stm.hGlobal);
 						::ReleaseStgMedium(&stm);
 						result.reset(new String(buffer.get(), len));
@@ -3414,7 +3415,7 @@ namespace {
 		}
 
 		if(result.get() != 0 && rectangle != 0) {
-			fe.cfFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+			fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 			*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
 		}
 
@@ -3470,7 +3471,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 
 	// retrieve number of lines if text is rectangle
 	numberOfDraggedRectangleLines_ = 0;
-	fe.cfFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+	fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 	if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
 		auto_ptr<String> s = getTextData(*data);
 		if(s.get() != 0)
@@ -3767,7 +3768,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 }
 
 /// @see IMouseInputStrategy#mouseMoved
-void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint keyState) {
+void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE dragging starts?
 		if(!oleDragAndDropEnabled_ || viewer_->getCaret().isSelectionEmpty())
 			lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
@@ -3785,8 +3786,8 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint keyStat
 				if(box) {
 					set<::CLIPFORMAT> clipFormats;
 					clipFormats.insert(CF_UNICODETEXT);
-					clipFormats.insert(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-					draggingText->setAvailableFormatSet(clipFormats);
+					clipFormats.insert(static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT)));
+					draggingText->setAvailableFormatSet(clipFormats.begin(), clipFormats.end());
 				}
 				draggingText->setTextData(selection.c_str());
 				assert(leftButtonPressed_);
@@ -3811,7 +3812,7 @@ void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, u
 		UINT lines;	// the number of lines to scroll
 		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
 			lines = 3;
-		delta *= (lines != WHEEL_PAGESCROLL) ? lines : static_cast<UINT>(viewer_->getNumberOfVisibleLines());
+		delta *= static_cast<short>((lines != WHEEL_PAGESCROLL) ? lines : static_cast<UINT>(viewer_->getNumberOfVisibleLines()));
 		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
 	}
 }
@@ -3967,7 +3968,7 @@ namespace {
 		header.biWidth = width;
 		header.biHeight = -height;
 		header.biBitCount = sizeof(::RGBQUAD) * 8;//::GetDeviceCaps(hDC, BITSPIXEL);
-		header.biPlanes = dc.getDeviceCaps(PLANES);
+		header.biPlanes = static_cast<::WORD>(dc.getDeviceCaps(PLANES));
 		return info;
 	}
 	/**
@@ -4017,7 +4018,7 @@ namespace {
 	inline void createTISCaretBitmap(Bitmap& bitmap, ushort height, bool bold, const ::RGBQUAD& color) {
 		ScreenDC dc;
 		const ::RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
-		const ushort width = max(height / 8, 3);
+		const ushort width = max<ushort>(height / 8, 3);
 		::BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
 		assert(height > 3);
 		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, white);
