@@ -60,8 +60,8 @@ namespace {
 		bool canExecute(Document& document) const throw() {
 			return !document.isNarrowed()
 				|| (position_ >= document.getStartPosition() && position_ <= document.getEndPosition());}
-		bool isConcatenatable(InsertOperation& postOperation, const Document& document) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {return false;}
+		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
+		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
 		Position execute(Document& document) {return document.insert(position_, text_);}
 	private:
 		Position position_;	// 挿入位置
@@ -74,7 +74,7 @@ namespace {
 		DeleteOperation(const Region& region) throw() : region_(region) {}
 		bool canExecute(Document& document) const throw() {
 			return !document.isNarrowed() || (region_.getTop() >= document.getStartPosition() && region_.getBottom() <= document.getEndPosition());}
-		bool isConcatenatable(InsertOperation& postOperation, const Document& document) const throw() {return false;}
+		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {
 			const Position& bottom = region_.getBottom();
 			if(bottom.column == 0 || bottom != postOperation.region_.getTop()) return false;
@@ -1265,7 +1265,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 
 	// BOM
 	if(params.options.has(SaveParameters::WRITE_UNICODE_BOM)) {
-		size_t signatureSize;
+		size_t signatureSize = 0;
 		switch(cp) {
 		case CP_UTF8:
 			signatureSize = countof(encodings::UTF8_BOM) - 1;
@@ -1922,7 +1922,7 @@ void NullPartitioner::documentChanged(const text::DocumentChange& change) {
 }
 
 /// @see DocumentPartitioner#doGetPartition
-void NullPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const throw() {
+void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const throw() {
 	if(p_.region.second.line == INVALID_INDEX)
 		const_cast<NullPartitioner*>(this)->p_.region.second = getDocument()->getEndPosition(false);
 	partition = p_;

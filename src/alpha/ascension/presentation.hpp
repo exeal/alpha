@@ -169,7 +169,8 @@ namespace ascension {
 		};
 
 		/// Reconstructs document presentation with single text style.
-		class SingleStyledPartitionPresentationReconstructor : virtual public IPartitionPresentationReconstructor {
+		class SingleStyledPartitionPresentationReconstructor :
+			virtual public IPartitionPresentationReconstructor, private manah::Unassignable {
 		public:
 			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw();
 		private:
@@ -182,7 +183,8 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public text::IDocumentPartitioningListener {
+		class PresentationReconstructor : virtual public ILineStyleDirector,
+			virtual public text::IDocumentPartitioningListener, private manah::Unassignable {
 		public:
 			// constructors
 			explicit PresentationReconstructor(Presentation& presentation) throw();

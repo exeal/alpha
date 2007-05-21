@@ -83,24 +83,43 @@ namespace ascension {
 		 * @see Presentation#Configurations#lineWrap
 		 */
 		struct LineWrapConfiguration {
-			/// Algorithm for wrap.
-			enum Alrorithm {
-				NO_WRAP,			///< Does not wrap the line.
-				GLYPH_BOUNDARIES,	///< Wraps any glyph boundaries.
-				UNICODE_UAX_14,		///< Follows Unicode UAX #14: Line Breaking Properties (not implemented).
-				JIS_X_4051			///< Follows JIS X 4051:2004 『日本語文書の行組版方法』(not implemented).
-			} algorithm;	///< The algorithm.
+			/**
+			 * Modes for text wrapping. These values are based on "text-wrap" property in
+			 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
+			 * working draft of W3C Cascading Style Sheet.
+			 */
+			enum Mode {
+				NONE,			///< Lines may not break.
+				NORMAL,			///< Lines may break at allowed points as determined by UAX #14.
+				UNRESTRICTED,	///< Lines may break between any two grapheme clusters.
+				SUPPRESS		///< Line breaking is suppressed within the run.
+			} mode;	///< The mode. Default value is @c NONE.
+#if 0
+			/**
+			 * Specifies what set of line breaking restrictions are in effect within the run. These
+			 * values are based on "word-break" property in
+			 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
+			 * working draft of W3C Cascading Style Sheet.
+			 */
+			enum WordBreak {
+				NORMAL,			///< Same as 'normal'.
+				KEEP_ALL,		///< Same as 'keep-all'.
+				LOOSE,			///< Same as 'loose'.
+				BREAK_STRICT,	///< Same as 'break-strict'.
+				BREAK_ALL		///< Same as 'break-all'
+			} wordBreak;
+#endif
 			/**
 			 * The maximum line width. This value must be grater than or equal to zero. If set to
 			 * zero, the lines will be wrapped at the window edge.
 			 */
 			int width;
 			/// Default constructor.
-			LineWrapConfiguration() throw() : algorithm(NO_WRAP), width(0) {};
+			LineWrapConfiguration() throw() : mode(NONE), width(0) {};
 			/// Returns true if the all members are valid.
 			bool verify() const throw() {return width >= 0;}
-			/// Returns true if @c algorithm is not @c NO_WRAP.
-			bool wraps() const throw() {return algorithm != NO_WRAP;}
+			/// Returns true if @c mode is not @c NONE.
+			bool wraps() const throw() {return mode != NONE;}
 			/// Returns true if @c algorithm is not @c NO_WRAP and @c width is zero.
 			bool wrapsAtWindowEdge() const throw() {return wraps() && width == 0;}
 		};
@@ -203,7 +222,7 @@ namespace ascension {
 		 * Manages a continuous caches of layout (@c LineLayout).
 		 * @see LineLayout, TextRenderer
 		 */
-		class LineLayoutBuffer : public manah::Noncopyable,
+		class LineLayoutBuffer : private manah::Noncopyable,
 				virtual public text::IDocumentListener/*, virtual public presentation::IPresentationStylistListener*/ {
 		public:
 			// attributes
@@ -373,7 +392,7 @@ namespace ascension {
 			virtual ~ISpecialCharacterRenderer() throw() {}
 		protected:
 			/// Context of the layout.
-			struct LayoutContext {
+			struct LayoutContext : private manah::Unassignable {
 				mutable manah::win32::gdi::DC& dc;	///< the device context.
 				Orientation orientation;			///< the orientation of the character.
 				/// Constructor.

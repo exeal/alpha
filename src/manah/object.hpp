@@ -30,7 +30,7 @@ namespace manah {
 		class Unassignable {
 		protected:
 			Unassignable() throw() {}
-			Unassignable(const Unassignable& rhs) throw() {}
+			Unassignable(const Unassignable&) throw() {}
 			~Unassignable() throw() {}
 		private:
 			const Unassignable& operator =(const Unassignable&);

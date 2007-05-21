@@ -69,8 +69,8 @@ size_t Encoder_Unicode_Utf16LE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 1 < destLength; ++i) {
-		dest[j++] = (src[i] & 0x00FFU) >> 0;
-		dest[j++] = (src[i] & 0xFF00U) >> 8;
+		dest[j++] = static_cast<uchar>((src[i] & 0x00FFU) >> 0);
+		dest[j++] = static_cast<uchar>((src[i] & 0xFF00U) >> 8);
 	}
 	return j;
 }
@@ -92,8 +92,8 @@ size_t Encoder_Unicode_Utf16BE::fromUnicode(CFU_ARGLIST) {
 
 	size_t j = 0;
 	for(size_t i = 0; i < srcLength && j + 1 < destLength; ++i) {
-		dest[j++] = (src[i] & 0xFF00U) >> 8;
-		dest[j++] = (src[i] & 0x00FFU) >> 0;
+		dest[j++] = static_cast<uchar>((src[i] & 0xFF00U) >> 8);
+		dest[j++] = static_cast<uchar>((src[i] & 0x00FFU) >> 0);
 	}
 	return j;
 }

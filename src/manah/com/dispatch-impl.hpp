@@ -117,12 +117,12 @@ class IDispatchImpl : virtual public DI {
 public:
 	/// @see IDispatch::GetIDsOfNames
 	STDMETHOD(GetIDsOfNames)(REFIID riid,
-			OLECHAR** rgszNames, unsigned int cNames, LCID lcid, DISPID* rgDispId) {
+			OLECHAR** rgszNames, unsigned int cNames, LCID, DISPID* rgDispId) {
 		assert(riid == IID_NULL);
 		return ::DispGetIDsOfNames(typeInfoHolder_.getTypeInfo(), rgszNames, cNames, rgDispId);
 	}
 	/// @see IDispatch::GetTypeInfo
-	STDMETHOD(GetTypeInfo)(unsigned int iTypeInfo, LCID lcid, ITypeInfo** ppTypeInfo) {
+	STDMETHOD(GetTypeInfo)(unsigned int iTypeInfo, LCID, ITypeInfo** ppTypeInfo) {
 		VERIFY_POINTER(ppTypeInfo);
 		if(iTypeInfo != 0)
 			return DISP_E_BADINDEX;

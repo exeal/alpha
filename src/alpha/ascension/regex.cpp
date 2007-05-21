@@ -58,7 +58,7 @@ namespace {
 			MigemoEntries::Procedure<6>::signature migemoSetOperator;
 			if((migemoOpen = get<0>()) && (migemoQuery_ = get<2>())
 					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>()) && (migemoSetOperator = get<6>())) {
-				if(instance_ = migemoOpen(0)) {
+				if(0 != (instance_ = migemoOpen(0))) {
 					// load dictionaries
 					size_t directoryLength = dictionaryPathName.length();
 					if(dictionaryPathName[directoryLength - 1] != '/' && dictionaryPathName[directoryLength - 1] != '\\')

@@ -48,7 +48,7 @@ namespace ascension {
 		 * @note This feature is not fully available on bidirectional texts.
 		 * @see Caret#getBoxForRectangleSelection
 		 */
-		class VirtualBox {
+		class VirtualBox : private manah::Unassignable {
 		public:
 			VirtualBox(const TextViewer& view, const text::Region& region) throw();
 			bool	getOverlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw();
@@ -102,7 +102,7 @@ namespace ascension {
 		 * @c CaretShapeUpdater updates the caret of the text viewer.
 		 * @see TextViewer, ICaretShapeProvider
 		 */
-		class CaretShapeUpdater {
+		class CaretShapeUpdater : private manah::Unassignable {
 		public:
 			TextViewer&	getTextViewer() throw();
 			void		update() throw();
@@ -249,7 +249,8 @@ namespace ascension {
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy, virtual public IDropSource, virtual public IDropTarget {
+		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy,
+			virtual public ::IDropSource, virtual public ::IDropTarget, private manah::Unassignable {
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
 			// IUnknown
@@ -664,7 +665,7 @@ namespace ascension {
 			// 内部クラス
 		private:
 			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
+			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark>, private manah::Noncopyable {
 				DEFINE_WINDOW_CLASS() {
 					name = L"AutoScrollOriginMark";
 					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
@@ -826,9 +827,9 @@ namespace ascension {
 
 			// 凍結
 			struct FreezeInfo {
-				ulong count;								// 凍結カウンタ。0 以外であれば描画凍結中
+				ulong count;								// zero for not frozen
 				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
-				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = -1;}
+				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
 			} freezeInfo_;
 
 			// キャレットのビットマップ

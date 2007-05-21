@@ -4,7 +4,9 @@
  * @date 2007
  */
 
+//#ifndef ASCENSION_TEST_NO_STDAFX
 #include "stdafx.h"
+//#endif
 #include "../unicode-property.hpp"
 #include <vector>
 using namespace ascension;

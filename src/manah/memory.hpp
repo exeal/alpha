@@ -48,7 +48,7 @@ namespace manah {
 
 	// efficient memory pool implementation (from MemoryPool of Efficient C++).
 	// template paramater of Allocator always bound to char
-	class MemoryPool {
+	class MemoryPool : private Noncopyable {
 	public:
 		MemoryPool(std::size_t chunkSize) : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {expandChunks();}
 		~MemoryPool() throw() {release();}

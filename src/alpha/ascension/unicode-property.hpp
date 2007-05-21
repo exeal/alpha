@@ -359,11 +359,43 @@ namespace ascension {
 		template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
 			return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || is<OTHER_UPPERCASE>(cp);}
 
+#ifndef ASCENSION_NO_UAX14
+		/// Line_Break property. These values are based on UAX #14.
+		class LineBreak {
+		public:
+			enum {
+				// non-tailorable line breaking classes
+				MANDATORY_BREAK = BinaryProperty::COUNT, CARRIAGE_RETURN, LINE_FEED, COMBINING_MARK,
+				NEXT_LINE, SURROGATE, WORD_JOINER, ZW_SPACE, GLUE, SPACE,
+				// break opportunities
+				BREAK_BOTH, BREAK_AFTER, BREAK_BEFORE, HYPHEN, CONTINGENT_BREAK,
+				// characters prohibiting certain breaks
+				CLOSE_PUNCTUATION, EXCLAMATION, INSEPARABLE, NONSTARTER, OPEN_PUNCTUATION, QUOTATION,
+				// numeric context
+				INFIX_NUMERIC, NUMERIC, POSTFIX_NUMERIC, PREFIX_NUMERIC, BREAK_SYMBOLS,
+				// other characters
+				AMBIGUOUS, ALPHABETIC, H2, H3, IDEOGRAPHIC, JL, JV, JT, COMPLEX_CONTEXT, UNKNOWN,
+				COUNT
+			};
+			static const Char LONG_NAME[], SHORT_NAME[];
+			static int	forName(const Char* name);
+			static int	of(CodePoint cp) throw();
+		private:
+			static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
+			static void buildNames();
+		};
+#endif /* !ASCENSION_NO_UAX14 */
+
 		/// Grapheme_Cluster_Break property. These values are based on UAX #29.
 		class GraphemeClusterBreak {
 		public:
 			enum {
-				CR = BinaryProperty::COUNT, LF, CONTROL, EXTEND, L, V, T, LV, LVT, OTHER, COUNT
+#ifndef ASCENSION_NO_UAX14
+				CR = LineBreak::COUNT,
+#else
+				CR = BinaryProperty::COUNT,
+#endif /* !ASCENSION_NO_UAX14 */
+				LF, CONTROL, EXTEND, L, V, T, LV, LVT, OTHER, COUNT
 			};
 			static const Char LONG_NAME[], SHORT_NAME[];
 			static int	forName(const Char* name);

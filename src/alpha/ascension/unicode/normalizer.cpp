@@ -4,7 +4,9 @@
  * @date 2007
  */
 
+//#ifndef ASCENSION_TEST_NO_STDAFX
 #include "stdafx.h"
+//#endif
 #include "../unicode.hpp"
 using namespace ascension;
 using namespace ascension::unicode;
@@ -435,7 +437,7 @@ Normalizer::~Normalizer() throw() {
 /// Assignment operator.
 Normalizer& Normalizer::operator=(const Normalizer& rhs) {
 	normalizedBuffer_ = rhs.normalizedBuffer_;
-	current_ = rhs.current_->clone();
+	current_.reset(rhs.current_->clone().release());
 	form_ = rhs.form_;
 	indexInBuffer_ = rhs.indexInBuffer_;
 	return *this;
@@ -476,14 +478,14 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 			return;
 		}
 		// locate the next starter
-		next = current_->clone();
+		next.reset(current_->clone().release());
 		for(++*next; next->hasNext(); ++*next) {
 			if(CanonicalCombiningClass::of(**next) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
 		nextOffset_ = next->getOffset();
 	} else {
-		next = current_->clone();
+		next.reset(current_->clone().release());
 		nextOffset_ = current_->getOffset();
 		--*current_;
 		// locate the previous starter

@@ -209,7 +209,7 @@ namespace ascension {
 		 *
 		 * @see Position, Document, EditPoint, viewers#VisualPoint, viewers#Caret
 		 */
-		class Point : public manah::Unassignable {
+		class Point : private manah::Unassignable {
 		public:
 			// constructors
 			explicit Point(Document& document, const Position& position = Position());
@@ -745,7 +745,7 @@ namespace ascension {
 
 			static class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
 			public:
-				const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const throw() {return syntax_;}
+				const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType) const throw() {return syntax_;}
 			private:
 				unicode::IdentifierSyntax syntax_;
 			} defaultContentTypeInformationProvider_;

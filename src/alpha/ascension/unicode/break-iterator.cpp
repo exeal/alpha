@@ -5,7 +5,9 @@
  * @author exeal
  */
 
+//#ifndef ASCENSION_TEST_NO_STDAFX
 #include "stdafx.h"
+//#endif
 #include "../unicode-property.hpp"
 #include <memory>	// std::auto_ptr
 using namespace ascension;
@@ -95,7 +97,7 @@ void StringCharacterIterator::next() {
 
 /// @see CharacterIterator#previous
 void StringCharacterIterator::previous() {
-	if(current_ == last_)
+	if(current_ == first_)
 		throw logic_error("the iterator is the first.");
 	current_ = surrogates::previous(first_, current_);
 }
@@ -309,7 +311,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	while(true) {
 		// 1 つ前 (B) を調べる
 		assert(i.hasPrevious());
-		if(prev.get() == 0) {prev = i.clone(); previousBase(*prev);}
+		if(prev.get() == 0) {prev.reset(i.clone().release()); previousBase(*prev);}
 		if(prevCP == INVALID_CODE_POINT) prevCP = **prev;
 		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, getLocale());
 		if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
@@ -323,7 +325,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		else if((prevClass == WordBreak::A_LETTER && nextClass == WordBreak::MID_LETTER)
 				|| (prevClass == WordBreak::NUMERIC && nextClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 			// 2 つ次 (D) を調べる
-			nextNext = i.clone();
+			nextNext.reset(i.clone().release());
 			nextBase(*nextNext);
 			nextNextClass = WordBreak::of(**nextNext, syntax_, getLocale());
 			if(!nextNext->hasNext())	// (WB14)
@@ -341,7 +343,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			}
 			if(prevPrevClass == NOT_PROPERTY) {
 				if(prevPrev.get() == 0) {
-					prevPrev = prev->clone();
+					prevPrev.reset(prev->clone().release());
 					previousBase(*prevPrev);
 				}
 				prevPrevClass = WordBreak::of(**prevPrev, syntax_, getLocale());
@@ -362,7 +364,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 
 		// 次に進む
 		prevPrev = prev;
-		prev = i.clone();
+		prev.reset(i.clone().release());
 		nextBase(i);
 		nextNext.reset(0);
 		if(!i.hasNext())	// (WB2)
@@ -404,7 +406,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 		// 1 つ次 (B) を調べる
 		assert(i.hasPrevious());
 		if(next.get() == 0) {
-			next = i.clone();
+			next.reset(i.clone().release());
 			previousBase(*next);
 		}
 		if(nextCP == INVALID_CODE_POINT) nextCP = **next;
@@ -422,7 +424,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			// 2 つ前 (D) を調べる
 			if(prevPrevClass == NOT_PROPERTY) {
 				if(prevPrev.get() == 0) {
-					prevPrev = i.clone();
+					prevPrev.reset(i.clone().release());
 					nextBase(*prevPrev);
 				}
 				if(!prevPrev->hasNext()) {	// (WB14)
@@ -442,7 +444,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 				TRY_RETURN()
 				break;
 			}
-			nextNext = next->clone();
+			nextNext.reset(next->clone().release());
 			previousBase(*nextNext);
 			nextNextClass = WordBreak::of(nextNextCP = **nextNext, syntax_, getLocale());
 			if(nextNextClass != prevClass
@@ -460,7 +462,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			TRY_RETURN()
 
 		// 次に進む
-		prevPrev = i.clone();
+		prevPrev.reset(i.clone().release());
 		previousBase(i);
 		if(!i.hasPrevious())	// (WB1)
 			TRY_RETURN()
@@ -501,7 +503,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 			|| (prevClass == WordBreak::NUMERIC && nextClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 		// 2 つ次を調べる
 		int nextNextClass;
-		i = at.clone();
+		i.reset(at.clone().release());
 		nextBase(*i);
 		while(true) {
 			if(!i->hasNext())	// (WB14)
@@ -628,6 +630,7 @@ AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component
 }
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
+	// TODO: not implemented.
 	CharacterIterator& i = getCharacterIterator();
 	while(i.hasNext()) {
 		if(*i == CARRIAGE_RETURN) {
@@ -660,6 +663,7 @@ void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
 }
 
 void AbstractSentenceBreakIterator::doPrevious(ptrdiff_t amount) {
+	// TODO: not implemented.
 }
 
 /// @see BreakIterator#isBoundary

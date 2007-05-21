@@ -9,7 +9,7 @@ namespace manah {
 namespace win32 {
 namespace io {
 
-template<bool autoClose> class KernelHandle : public Noncopyable {
+template<bool autoClose> class KernelHandle : private Noncopyable {
 public:
 	explicit KernelHandle(HANDLE handle = 0) throw() : handle_(handle) {}
 	virtual ~KernelHandle() throw() {if(autoClose) close();}

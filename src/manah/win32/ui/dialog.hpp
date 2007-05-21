@@ -55,7 +55,7 @@ public:
 	// miscellaneous
 	bool	isDialogMessage(const ::MSG& msg);
 protected:
-	virtual INT_PTR	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {return false;}
+	virtual INT_PTR	processWindowMessage(UINT, WPARAM, LPARAM) {return false;}
 	void			setMessageResult(LRESULT result);
 private:
 	using Window::create;
@@ -66,11 +66,11 @@ private:
 
 protected:
 	/* ? need to any implement ? */
-	virtual void onClose(bool& continueDialog) {}									// WM_CLOSE
-	virtual bool onCommand(WORD id, WORD notifyCode, HWND control) {return true;}	// WM_COMMAND
-	virtual void onInitDialog(HWND focusedWindow, bool& focusDefault) {}			// WM_INITDIALOG
-	virtual void onOK(bool& continueDialog) {}										// IDOK
-	virtual void onCancel(bool& continueDialog) {}									// IDCANCEL
+	virtual void onClose(bool& /* continueDialog */) {}												// WM_CLOSE
+	virtual bool onCommand(WORD /* id */, WORD /* notifyCode */, HWND /* control */) {return true;}	// WM_COMMAND
+	virtual void onInitDialog(HWND /* focusedWindow */, bool& /* focusDefault */) {}				// WM_INITDIALOG
+	virtual void onOK(bool& /* continueDialog */) {}												// IDOK
+	virtual void onCancel(bool& /* continueDialog */) {}											// IDCANCEL
 
 private:
 	HINSTANCE hinstance_;

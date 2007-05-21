@@ -909,7 +909,7 @@ inline bool StatusBar::showTemporaryText(const TCHAR* text, UINT duration) {
 
 inline void CALLBACK StatusBar::timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD) {reinterpret_cast<StatusBar*>(eventID)->restoreTemporaryText();}
 
-inline void StatusBar::onSize(UINT type, int cx, int cy) {
+inline void StatusBar::onSize(UINT type, int, int cy) {
 	::RECT oldRect;
 	getRect(oldRect);
 	const int numberOfParts = getParts(0, 0);
