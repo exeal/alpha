@@ -15,10 +15,15 @@
 namespace ascension {
 
 	namespace viewers {
+		class TextViewer;
 		class SourceViewer;
 		class VisualPoint;
 	}
 
+	/**
+	 * Provides a content assist feature for a @c viewers#TextViewer. Content assist supports the
+	 * user in writing by proposing completions at a given document position.
+	 */
 	namespace contentassist {
 
 		class ICompletionListener {};
@@ -31,10 +36,29 @@ namespace ascension {
 			virtual void replace(text::Document& document) = 0;
 		};
 
-		class IContentAssistProcessor {};
-
 		/**
+		 * A content assist processor proposes completions for a particular content type.
+		 * @see ContentAssistant#getContentAssistProcessor, ContentAssistant#setContentAssistProcessor
 		 */
+		class IContentAssistProcessor {
+		public:
+			/**
+			 * Returns a list of completion proposals.
+			 * @param viewer the viewer whose document is used to compute the proposals
+			 * @param position the document position where the completion is active
+			 * @param[out] proposals the result
+			 */
+			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
+				const text::Position& position, std::vector<ICompletionProposal*>& proposals) const = 0;
+			/**
+			 * Returns the characters which when entered by the user should automatically activate
+			 * the completion.
+			 * @return the characters
+			 */
+			virtual String getCompletionProposalAutoActivationCharacters() const throw() = 0;
+		};
+
+		/// An content assistant provides support on interactive content completion.
 		class ContentAssistant {
 		public:
 			// attributes
@@ -49,15 +73,16 @@ namespace ascension {
 			// operation
 			void	showPossibleCompletions();
 		private:
+			std::map<text::ContentType, IContentAssistProcessor*> processors_;
 			ascension::internal::Listeners<ICompletionListener> completionListeners_;
 		};
-
+/*
 		class IContextInformation {};
 
 		class IContextInformationPresenter {};
 
 		class IContextInformationValidator {};
-
+*/
 		/// A completion window.
 		class CompletionWindow : public manah::win32::ui::ListBox {
 		public:
@@ -93,6 +118,6 @@ namespace ascension {
 		/// Returns if the completion is running.
 		inline bool CompletionWindow::isRunning() const throw() {return running_;}
 
-}} // namespace ascension::contentassist
+}} // namespace ascension.contentassist
 
 #endif /* ASCENSION_CONTENT_ASSIST_HPP */
