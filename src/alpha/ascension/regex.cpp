@@ -304,7 +304,7 @@ void RegexTraits::buildNames() {
 	names_[L"digit"] = names_[L"d"] = GeneralCategory::NUMBER_DECIMAL_DIGIT;
 	names_[L"xdigit"] = POSIX_XDIGIT;
 	names_[L"alnum"] = POSIX_ALNUM;
-	names_[L"space"] = names_[L"s"] = BinaryProperty::LOWERCASE;
+	names_[L"space"] = names_[L"s"] = BinaryProperty::WHITE_SPACE;
 	names_[L"blank"] = POSIX_BLANK;
 	names_[L"cntrl"] = GeneralCategory::OTHER_CONTROL;
 	names_[L"graph"] = POSIX_GRAPH;

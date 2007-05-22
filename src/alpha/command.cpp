@@ -34,8 +34,9 @@ using namespace std;
 
 namespace {	// アイコンビットマップを編集する連中
 	HBITMAP createFilteredBitmap(HDC dc, const ::BITMAPINFO& bi,
-			const ::BITMAPINFO* mask, ::RGBQUAD(*filterFunction)(const ::RGBQUAD&)) throw() {
+			const ::BITMAPINFO* mask, const COLORREF* maskColor, ::RGBQUAD(*filterFunction)(const ::RGBQUAD&)) throw() {
 		assert(bi.bmiHeader.biBitCount == 32 || bi.bmiHeader.biBitCount == 24);
+		assert(mask == 0 || maskColor == 0);
 		assert(mask == 0 || mask->bmiHeader.biBitCount == 1);
 
 		const long cx = bi.bmiHeader.biWidth, cy = bi.bmiHeader.biHeight;
@@ -53,14 +54,21 @@ namespace {	// アイコンビットマップを編集する連中
 		ptrdiff_t maskOffset = sizeof(::RGBQUAD) * 2 * 8;	// unit is bit
 		for(long y = 0; y < cy; ++y, maskOffset += sizeof(::LONG) * 8 - maskOffset % (sizeof(::LONG) * 8)) {
 			for(long x = 0; x < cx; ++x, offset += bi.bmiHeader.biBitCount / 8, ++maskOffset) {
-				const bool transparent = mask != 0
-					&& toBoolean(reinterpret_cast<const uchar*>(mask->bmiColors)[maskOffset / 8] & (1 << maskOffset % 8) & maskEntry);
+				bool transparent = false;
+				if(mask != 0)
+					transparent = ((reinterpret_cast<const uchar*>(mask->bmiColors)[maskOffset / 8] >> (7 - maskOffset % 8)) & 0x01) != maskEntry;
 
 				if(bi.bmiHeader.biBitCount == 32) {	// 32 ビット: BITMAPINFO::bmiColors は RGBQUAD[]
-					const ptrdiff_t i = offset / sizeof(::RGBQUAD);
-					*reinterpret_cast<::RGBQUAD*>(&destPixels[offset]) = transparent ? bi.bmiColors[i] : (*filterFunction)(bi.bmiColors[i]);
+					const ::RGBQUAD& src = bi.bmiColors[offset / sizeof(::RGBQUAD)];
+					if(maskColor != 0)
+						transparent = (*maskColor & 0xFF) == src.rgbRed
+							&& ((*maskColor >> 8) & 0xFF) == src.rgbGreen && ((*maskColor >> 16) & 0xFF) == src.rgbBlue;
+					*reinterpret_cast<::RGBQUAD*>(&destPixels[offset]) = transparent ? src : (*filterFunction)(src);
 				} else {	// 24 ビット: BITMAPINFO::bmiColors は 24 ビットが 1 ピクセルの色情報配列
-					if(transparent || memcmp(srcPixels + offset, srcPixels + bi.bmiHeader.biWidth * (bi.bmiHeader.biHeight - 1) * 3, 3) == 0)
+					if(maskColor != 0)
+						transparent = ((*maskColor >> 16) & 0xFF) == srcPixels[offset]
+							&& ((*maskColor >> 8) & 0xFF) == srcPixels[offset + 1] && (*maskColor & 0xFF) == srcPixels[offset + 2];
+					if(transparent)
 						memcpy(destPixels + offset, srcPixels + offset, 3);
 					else {
 						const ::RGBQUAD src = {srcPixels[offset + 0],
@@ -234,13 +242,13 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 					mask->bmiHeader.biSize = sizeof(::BITMAPINFOHEADER);
 					::GetDIBits(dc, iconInfo.hbmMask, 0, maskBitmap.bmHeight, 0, mask, DIB_RGB_COLORS);
 					mask->bmiHeader.biCompression = BI_RGB;
-					::GetDIBits(dc, iconInfo.hbmMask, 0, mask->bmiHeader.biHeight, mask->bmiColors, mask, DIB_RGB_COLORS);
+					::GetDIBits(dc, iconInfo.hbmMask, 0, mask->bmiHeader.biHeight, mask->bmiColors + 2, mask, DIB_RGB_COLORS);
 
 					icons_[ICONSTATE_NORMAL].add(icon);
-					grayBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, sepiaFilter);
+					grayBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, 0, sepiaFilter);
 					HICON grayIcon = ::CreateIconIndirect(&iconInfo);
 					icons_[ICONSTATE_DISABLED].add(grayIcon);
-					hotBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, saturationFilter);
+					hotBitmap = iconInfo.hbmColor = createFilteredBitmap(dc, *pbi, mask, 0, saturationFilter);
 					HICON hotIcon = ::CreateIconIndirect(&iconInfo);
 					icons_[ICONSTATE_HOT].add(hotIcon);
 					::DestroyIcon(grayIcon);
@@ -250,13 +258,13 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 				} else {	// ビットマップ
 					if(bmp.bmBitsPixel == 32) {	// 32 ビット -> アルファチャンネルを使用
 						icons_[ICONSTATE_NORMAL].add(bitmap);
-						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, sepiaFilter));
-						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, saturationFilter));
+						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, 0, sepiaFilter));
+						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, 0, saturationFilter));
 					} else {	// 24 ビット以下 -> 左上の色が透明色
 						const COLORREF maskColor = RGB(pbi->bmiColors[0].rgbRed, pbi->bmiColors[0].rgbGreen, pbi->bmiColors[0].rgbBlue);
 						icons_[ICONSTATE_NORMAL].add(bitmap, maskColor);
-						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, sepiaFilter), maskColor);
-						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, saturationFilter), maskColor);
+						icons_[ICONSTATE_DISABLED].add(grayBitmap = createFilteredBitmap(dc, *pbi, 0, &maskColor, sepiaFilter), maskColor);
+						icons_[ICONSTATE_HOT].add(hotBitmap = createFilteredBitmap(dc, *pbi, 0, &maskColor, saturationFilter), maskColor);
 					}
 				}
 

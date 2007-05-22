@@ -91,14 +91,16 @@ bool StringCharacterIterator::less(const CharacterIterator& rhs) const {
 /// @see CharacterIterator#next
 void StringCharacterIterator::next() {
 	if(current_ == last_)
-		throw logic_error("the iterator is the last.");
+//		throw out_of_range("the iterator is the last.");
+		return;
 	current_ = surrogates::next(current_, last_);
 }
 
 /// @see CharacterIterator#previous
 void StringCharacterIterator::previous() {
 	if(current_ == first_)
-		throw logic_error("the iterator is the first.");
+//		throw out_of_range("the iterator is the first.");
+		return;
 	current_ = surrogates::previous(first_, current_);
 }
 
