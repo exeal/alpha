@@ -1875,7 +1875,7 @@ void LineLayoutBuffer::presentationStylistChanged() {
 
 /**
  * @class ascension::viewers::ISpecialCharacterRenderer
- * Interface for objects which draw special characters.
+ * Interface for objects which draw special (normally unprintable) characters.
  *
  * @c ISpecialCharacterRenderer hooks shaping and drawing processes of @c LineLayout about some
  * special characters. These include:
@@ -1899,8 +1899,8 @@ void LineLayoutBuffer::presentationStylistChanged() {
  * <em>White space characters</em> include all Unicode white spaces and horizontal tab (U+0009). An
  * instance of @c ISpecialCharacterRenderer can't set the width of these glyphs.
  *
- * <em>Line wrapping marks</em> indicate a logical is wrapped visually. Note that this is not an
- * actual character.
+ * A <em>line wrapping mark</em> indicates a logical line is wrapped visually. Note that this is
+ * not an actual character.
  *
  * <h2>Process</h2>
  *
@@ -2477,7 +2477,7 @@ int TextRenderer::getLinePitch() const throw() {
  * @see #getWrapWidth
  */
 int TextRenderer::getWidth() const throw() {
-	if(canvasWidth_ > longestLineWidth_)
+	if(canvasWidth_ > longestLineWidth_ || getTextViewer().getConfiguration().lineWrap.wrapsAtWindowEdge())
 		return canvasWidth_;
 	manah::win32::AutoZeroCB<::SCROLLINFO> si;
 	si.fMask = SIF_RANGE;
