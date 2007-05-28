@@ -857,6 +857,19 @@ namespace ascension {
 			Position p_;
 		};
 
+		/// @c std#basic_streambuf implementation for @c Document.
+		class DocumentBuffer : public std::basic_streambuf<Char> {
+		private:
+			int_type	overflow(int_type meta);
+			int_type	pbackfail(int_type meta);
+			int_type	uflow();
+			int_type	underflow();
+			pos_type	seekoff(off_type offset, std::ios_base::seekdir direction, std::ios_base::openmode);
+			pos_type	seekpos(off_type position, std::ios_base::openmode);
+		private:
+			Position current_;
+		};
+
 		// free functions related to document
 		length_t	getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
 		length_t	getLineBreakLength(LineBreak lineBreak);

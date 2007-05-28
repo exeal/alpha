@@ -825,7 +825,7 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 		++freezeInfo_.count;
 	else {
 		for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()), e(presentation_.getLastTextViewer()); i != e; ++i)
-			(*i)->freezeInfo_.count;
+			++(*i)->freezeInfo_.count;
 	}
 }
 
@@ -1581,7 +1581,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, toBoolean(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
 		}
 
-		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_COMPSTR))
+		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
 			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
 
 		::ImmReleaseContext(getHandle(), imc);
@@ -1684,71 +1684,87 @@ LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
 LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	const Document& document = getDocument();
 
-	// 再変換を行うときにまずこのコマンドが 2 回飛んでくる
+	// this command will be sent two times when reconversion is invoked
 	if(command == IMR_RECONVERTSTRING) {
-		if(document.isReadOnly())
+		if(document.isReadOnly() || getCaret().isSelectionRectangle()) {
 			beep();
-		else if(caret_->isSelectionEmpty()) {	// 選択が無い場合は IME に再変換範囲を決めてもらう
+			return 0L;
+		}
+		handled = true;
+		if(caret_->isSelectionEmpty()) {	// IME selects the composition target automatically if no selection
 			const VisualPoint& caret = getCaret();
-			if(::RECONVERTSTRING* const prcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-				const String&	line = document.getLine(caret.getLineNumber());
-				prcs->dwStrLen = static_cast<DWORD>(line.length());
-				prcs->dwStrOffset = sizeof(::RECONVERTSTRING);
-				prcs->dwTargetStrOffset = prcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret.getColumnNumber());
-				prcs->dwTargetStrLen = prcs->dwCompStrLen = 0;
-				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(prcs) + prcs->dwStrOffset), prcs->dwStrLen);
+			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
+				const String& line = document.getLine(caret.getLineNumber());
+				rcs->dwStrLen = static_cast<DWORD>(line.length());
+				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * getCaret().getColumnNumber());
+				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
+				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret.getLineNumber());
-		} else if(!getCaret().isSelectionRectangle()) {
+		} else {
 			const String selection = getCaret().getSelectionText(LBR_PHYSICAL_DATA);
-			if(::RECONVERTSTRING* const prcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-				prcs->dwStrLen = prcs->dwTargetStrLen = prcs->dwCompStrLen = static_cast<DWORD>(selection.length());
-				prcs->dwStrOffset = sizeof(::RECONVERTSTRING);
-				prcs->dwTargetStrOffset = prcs->dwCompStrOffset = 0;
-				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(prcs) + prcs->dwStrOffset), prcs->dwStrLen);
+			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
+				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = 0;
+				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * selection.length();
 		}
-		handled = true;
-		return 0L;
 	}
 
-	// 再変換の直前。RECONVERTSTRING に再変換の範囲が設定されている
+	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
-		::RECONVERTSTRING* const prcs = reinterpret_cast<::RECONVERTSTRING*>(lParam);
-		const Position start = document.getStartPosition();
-		const Position end = document.getEndPosition();
-		if(!caret_->isSelectionEmpty()) {
-			// 既に選択がある場合は選択範囲を再変換する。
-			// 選択は複数行になっている可能性がある
-			if(prcs->dwCompStrLen < prcs->dwStrLen)	// 再変換範囲が狭められてる (長過ぎた)
-				prcs->dwCompStrLen = prcs->dwStrLen;	// こうすると IME から警告が出て再変換は行われない。
-														// 選択を狭めるのがメモ帳互換の動作だが...
-		} else {
-			// 選択が無い場合は IME が示唆してきた範囲を再変換する (選択も作成しておく)。
-			// この場合は複数行の再変換は発生しない (prcs->dwStrXxx は現在行全体)
-			if(document.isNarrowed() && caret_->getLineNumber() == start.line) {	// ナローイング
-				if(prcs->dwCompStrOffset / sizeof(Char) < start.column) {
-					prcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * start.column - prcs->dwCompStrOffset);
-					prcs->dwTargetStrLen = prcs->dwCompStrOffset;
-					prcs->dwCompStrOffset = prcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * start.column);
-				} else if(prcs->dwCompStrOffset / sizeof(Char) > end.column) {
-					prcs->dwCompStrOffset -= prcs->dwCompStrOffset - sizeof(Char) * end.column;
-					prcs->dwTargetStrOffset = prcs->dwCompStrOffset;
-					prcs->dwCompStrLen = prcs->dwTargetStrLen = static_cast<DWORD>(sizeof(Char) * end.column - prcs->dwCompStrOffset);
+		if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
+			const Position start = document.getStartPosition();
+			const Position end = document.getEndPosition();
+			if(!getCaret().isSelectionEmpty()) {
+				// reconvert the selected region. the selection may be multi-line
+				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
+					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
+														// (however, NotePad narrows the selection...)
+			} else {
+				// reconvert the region IME passed if no selection (and create the new selection).
+				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
+				if(document.isNarrowed() && caret_->getLineNumber() == start.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < start.column) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * start.column - rcs->dwCompStrOffset);
+						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * start.column);
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > end.column) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * end.column;
+						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
+						rcs->dwCompStrLen = rcs->dwTargetStrLen = static_cast<DWORD>(sizeof(Char) * end.column - rcs->dwCompStrOffset);
+					}
 				}
+				getCaret().select(
+					Position(caret_->getLineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
+					Position(caret_->getLineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
-			caret_->select(
-				Position(caret_->getLineNumber(), prcs->dwCompStrOffset / sizeof(Char)),
-				Position(caret_->getLineNumber(), prcs->dwCompStrOffset / sizeof(Char) + prcs->dwCompStrLen));
+			handled = true;
+			return true;
 		}
-		handled = true;
-		return true;
 	}
 
-	// 変換ウィンドウの位置決めが必要なときに実行される
+	// queried position of the composition window
 	else if(command == IMR_QUERYCHARPOSITION)
-		return false;	// updateIMECompositionWindowPosition で何とかする...
+		return false;	// handled by updateIMECompositionWindowPosition...
+
+	// queried document content for higher conversion accuracy
+	else if(command == IMR_DOCUMENTFEED) {
+		handled = true;
+		if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
+			rcs->dwStrLen = static_cast<DWORD>(document.getLineLength(caret_->getLineNumber()));
+			rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
+			rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
+			rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getColumnNumber());
+			caret_->getSelectionText().copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+		} else if(caret_->getLineNumber() == caret_->getAnchor().getLineNumber())
+			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret_->getLineNumber());
+		else
+			handled = false;
+	}
 
 	return 0L;
 }
@@ -1758,7 +1774,7 @@ void TextViewer::onIMEStartComposition() {
 	if(HIMC imc = ::ImmGetContext(getHandle())) {
 		::LOGFONTW font;
 		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
-		::ImmSetCompositionFontW(imc, &font);	// IME の設定によっては反映されるだろう
+		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
 		hideCaret();
 		::ImmReleaseContext(getHandle(), imc);
 	}

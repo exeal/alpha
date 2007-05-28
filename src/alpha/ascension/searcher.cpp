@@ -44,7 +44,7 @@ using namespace std;
  * - The configuration symbol @c ASCENSION_NO_MIGEMO
  * - Succeeded to load C/Migemo library
  *
- * For the detailes, see the description of @c regex#MigemoPattern class.
+ * For the details, see the description of @c regex#MigemoPattern class.
  */
 
 
@@ -132,14 +132,6 @@ bool LiteralPattern::matches(const CharacterIterator& target) const {
 	return !i->hasNext();
 }
 
-namespace {
-	inline CharacterIterator& slowAdvance(CharacterIterator& i, ptrdiff_t delta) {
-		for(; delta > 0; --delta) ++i;
-		for(; delta < 0; ++delta) --i;
-		return i;
-	}
-}
-
 /**
  * Searches in the specified character sequence.
  * @param target the target character sequence
@@ -152,7 +144,7 @@ bool LiteralPattern::search(const CharacterIterator& target,
 	// TODO: this implementation is just scrath.
 	auto_ptr<CharacterIterator> t(target.clone());
 	if(direction_ == FORWARD) {
-		slowAdvance(*t, last_ - first_ - 1);
+		advance(*t, last_ - first_ - 1);
 		for(const int* pattern; t->hasNext(); advance(*t,
 				max<length_t>(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], last_ - pattern))) {
 			for(pattern = last_ - 1;
@@ -161,23 +153,23 @@ bool LiteralPattern::search(const CharacterIterator& target,
 				if(pattern == first_) {
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					slowAdvance(*matchedLast, last_ - first_);
+					advance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}
 		}
 	} else {
 		ptrdiff_t skipLength;
-		slowAdvance(*t, first_ - last_);
-		for(const int* pattern; ; slowAdvance(*t, -skipLength)) {
+		advance(*t, first_ - last_);
+		for(const int* pattern; ; advance(*t, -skipLength)) {
 			for(pattern = first_;
 					(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
 					++*t, ++pattern) {
 				if(pattern == last_ - 1) {
-					slowAdvance(*t, first_ - last_ + 1);
+					advance(*t, first_ - last_ + 1);
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					slowAdvance(*matchedLast, last_ - first_);
+					advance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}

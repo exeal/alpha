@@ -670,18 +670,42 @@ ulong ReconversionCommand::execute() {
 //	CHECK_GUI_EDITABILITY(1);
 
 	TextViewer& viewer = getTarget();
-	const String selection = viewer.getCaret().getSelectionText();
-	HIMC imc = ::ImmGetContext(viewer.getHandle());
-
-	if(!toBoolean(::ImmGetOpenStatus(imc)))	// 明示的に ON にしないと無視される場合がある
-		::ImmSetOpenStatus(imc, true);
-	::ImmSetCompositionStringW(imc, SCS_SETSTR,
-		const_cast<Char*>(selection.data()), static_cast<DWORD>(sizeof(Char) * selection.length()), 0, 0);
-	// 変換文字列が長過ぎて切り詰められていないか
-	if(::ImmGetCompositionStringW(imc, GCS_COMPSTR, 0, 0) / sizeof(WCHAR) == selection.length())
-		::ImmNotifyIME(imc, NI_OPENCANDIDATE, 0, 0);
-	else
+	Caret& caret = viewer.getCaret();
+	if(caret.isSelectionRectangle()) {
 		viewer.beep();
+		return 1;
+	}
+	HIMC imc = ::ImmGetContext(viewer.getHandle());
+	if(!toBoolean(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
+		::ImmSetOpenStatus(imc, true);
+
+	// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
+	const bool multilineSelection = caret.getLineNumber() != caret.getAnchor().getLineNumber();
+	const String s = multilineSelection ? caret.getSelectionText() : viewer.getDocument().getLine(caret.getLineNumber());
+	const DWORD bytes = static_cast<DWORD>(sizeof(::RECONVERTSTRING) + sizeof(Char) * s.length());
+	::RECONVERTSTRING* const rcs = static_cast<::RECONVERTSTRING*>(::operator new(bytes));
+	rcs->dwSize = bytes;
+	rcs->dwVersion = 0;
+	rcs->dwStrLen = static_cast<DWORD>(s.length());
+	rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
+	rcs->dwCompStrLen = rcs->dwTargetStrLen = static_cast<DWORD>(multilineSelection ? s.length() :
+		(caret.getBottomPoint().getColumnNumber() - caret.getTopPoint().getColumnNumber()));
+	rcs->dwCompStrOffset = rcs->dwTargetStrOffset =
+		multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * caret.getTopPoint().getColumnNumber());
+	s.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), s.length());
+	if(caret.isSelectionEmpty()) {
+		// IME selects the composition target automatically if no selection
+		if(0 == ::ImmSetCompositionStringW(imc, SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, 0, 0)) {
+			::operator delete(rcs);
+			viewer.beep();
+			return 1;
+		}
+		caret.select(
+			Position(caret.getLineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
+			Position(caret.getLineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+	}
+	::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, 0, 0);
+	::operator delete(rcs);
 	::ImmReleaseContext(viewer.getHandle(), imc);
 
 	CLOSE_COMPLETION_WINDOW();
@@ -778,7 +802,7 @@ ulong TextInputCommand::execute() {
 
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
-	getTarget().getCaret().insert(param_);
+	getTarget().getCaret().replaceSelection(param_);
 	return 0;
 }
 

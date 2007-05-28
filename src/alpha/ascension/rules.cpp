@@ -324,6 +324,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 			/0[x|X][0-9A-Fa-f]+/ for HexIntegerLiteral
 		Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
 	*/
+	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
 	const Char* e;
 	if(last - first > 2 && first[0] == L'0' && (first[1] == L'x' || first[1] == L'X')) {	// HexIntegerLiteral?
 		for(e = first + 2; e < last; ++e) {
