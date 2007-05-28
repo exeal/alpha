@@ -1898,7 +1898,7 @@ void Caret::extendSelection(mem_fun1_t<void, VisualPoint, length_t>& algorithm, 
  * This method returns a logical range, and does not support rectangular selection.
  * @param line the logical line
  * @param[out] first the start of the range
- * @param[out] last the end of the range
+ * @param[out] last the end of the range. this can include the end of the line
  * @return true if there is selected range on the line
  * @throw text#BadPositionException @a line is outside of the document
  * @see #getSelectedRangeOnVisualLine
@@ -1912,7 +1912,7 @@ bool Caret::getSelectedRangeOnLine(length_t line, length_t& first, length_t& las
 	if(bottom.line < line)
 		return false;
 	first = (line == top.line) ? top.column : 0;
-	last = (line == bottom.line) ? bottom.column : getDocument()->getLineLength(line);
+	last = (line == bottom.line) ? bottom.column : getDocument()->getLineLength(line) + 1;
 	return true;
 }
 
@@ -1921,7 +1921,7 @@ bool Caret::getSelectedRangeOnLine(length_t line, length_t& first, length_t& las
  * @param line the logical line
  * @param subline the visual subline
  * @param[out] first the start of the range
- * @param[out] last the end of the range
+ * @param[out] last the end of the range. this can include the logical end of the line
  * @return true if there is selected range on the line
  * @throw text#BadPositionException @a line or @a subline is outside of the document
  * @see #getSelectedRangeOnLine
@@ -1934,7 +1934,7 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 		const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(line);
 		const length_t sublineOffset = layout.getSublineOffset(subline);
 		first = max(first, sublineOffset);
-		last = min(last, sublineOffset + layout.getSublineLength(subline));
+		last = min(last, sublineOffset + layout.getSublineLength(subline) + ((subline < layout.getNumberOfSublines() - 1) ? 0 : 1));
 		return first != last;
 	} else
 		return box_->getOverlappedSubline(line, subline, first, last);
@@ -2006,7 +2006,7 @@ String Caret::getSelectionText(LineBreakRepresentation lbr /* = LBR_PHYSICAL_DAT
  * @param validateSequence true to perform input sequence check using the active ISC
  * @param blockControls true to refuse any ASCII control characters except HT (U+0009), RS (U+001E) and US (U+001F)
  * @return false if the input was refused
- * @see #isOvertypeMode, #setOvertypeMode, StandardCommand#TextInputCommand
+ * @see #isOvertypeMode, #setOvertypeMode, texteditor#commands#TextInputCommand
  */
 bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, bool blockControls /* = true */) {
 	verifyViewer();

@@ -52,8 +52,8 @@ IDB_BMP_LOGO            BITMAP                  "Resource\\logo.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,7,91,0
- PRODUCTVERSION 0,7,91,0
+ FILEVERSION 0,7,91,1
+ PRODUCTVERSION 0,7,91,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,12 +70,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "exeal"
             VALUE "FileDescription", "Alpha"
-            VALUE "FileVersion", "0.7.91.0"
+            VALUE "FileVersion", "0.7.91.1"
             VALUE "InternalName", "abigail"
             VALUE "LegalCopyright", "built by exeal, 2003-2007"
             VALUE "OriginalFilename", "Alpha.exe"
             VALUE "ProductName", "Alpha"
-            VALUE "ProductVersion", "0.7.91.0"
+            VALUE "ProductVersion", "0.7.91.1"
         END
     END
     BLOCK "VarFileInfo"
@@ -219,7 +219,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,44,64
-    LTEXT           "Alpha version 0.7.91.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.91.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -1112,7 +1112,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,45,42
-    LTEXT           "Alpha version 0.7.91.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.91.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED

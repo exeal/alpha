@@ -334,19 +334,19 @@ namespace ascension {
 		 */
 		class FontSelector : public manah::Unassignable {
 		public:
-			/// Font association table consists of pairss of a script and a font familiy name.
-			typedef std::map<int, const WCHAR*> FontAssociations;
+			/// Font association table consists of pairs of a script and a font familiy name.
+			typedef std::map<int, std::basic_string<WCHAR> > FontAssociations;
 			// metrics
 			int	getAscent() const throw();
 			int	getAverageCharacterWidth() const throw();
 			int	getDescent() const throw();
 			int	getLineHeight() const throw();
 			// primary font and alternatives
-			static const FontAssociations&
-					getDefaultFontAssociations() throw();
-			HFONT	getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
-			HFONT	getFontForShapingControls() const throw();
-			void	setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
+			HFONT		getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
+			HFONT		getFontForShapingControls() const throw();
+			void		setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
+			// default settings
+			static const FontAssociations&	getDefaultFontAssociations() throw();
 			// font linking
 			void		enableFontLinking(bool enable = true) throw();
 			bool		enablesFontLinking() const throw();
@@ -368,17 +368,7 @@ namespace ascension {
 			void	linkPrimaryFont() throw();
 			void	resetPrimaryFont(manah::win32::gdi::DC& dc, HFONT font);
 			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
-			struct Fontset : public manah::Noncopyable {
-				WCHAR faceName[LF_FACESIZE];
-				HFONT regular, bold, italic, boldItalic;
-				explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, name);}
-				Fontset(const Fontset& rhs) throw() : regular(0), bold(0), italic(0), boldItalic(0) {std::wcscpy(faceName, rhs.faceName);}
-				~Fontset() throw() {clear(L"");}
-				void clear(const WCHAR* newName = 0) throw() {
-					::DeleteObject(regular); ::DeleteObject(bold); ::DeleteObject(italic); ::DeleteObject(boldItalic);
-					regular = bold = italic = boldItalic = 0; if(newName != 0) std::wcscpy(faceName, newName);}
-			};
-			Fontset primaryFont_;
+			Fontset* primaryFont_;
 			std::map<int, Fontset*> associations_;
 			HFONT shapingControlsFont_;				// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
 			std::vector<Fontset*>* linkedFonts_;	// for the font linking feature
