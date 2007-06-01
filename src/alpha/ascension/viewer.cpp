@@ -1054,7 +1054,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed)
 		}
 		break;
 	case VK_RETURN:	// [Enter]
-		LineBreakCommand(*this, controlPressed).execute();
+		NewlineCommand(*this, controlPressed).execute();
 		return true;
 	case VK_SHIFT:	// [Shift]
 		if(controlPressed
@@ -1133,7 +1133,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed)
 	case 'J':	// ^J -> New Line
 	case 'M':	// ^M -> New Line
 		if(controlPressed)
-			return LineBreakCommand(*this, false).execute(), true;
+			return NewlineCommand(*this, false).execute(), true;
 		break;
 	case 'V':	// ^V -> Paste
 		if(controlPressed)
@@ -1703,7 +1703,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret.getLineNumber());
 		} else {
-			const String selection = getCaret().getSelectionText(LBR_PHYSICAL_DATA);
+			const String selection = getCaret().getSelectionText(NLR_PHYSICAL_DATA);
 			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
 				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
@@ -2237,14 +2237,14 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 	case WM_GETTEXT: {
 		OutputStringStream s;
-		getDocument().writeToStream(s, LBR_CRLF);
+		getDocument().writeToStream(s, NLR_CRLF);
 		handled = true;
 		return reinterpret_cast<LRESULT>(s.str().c_str());
 	}
 	case WM_GETTEXTLENGTH:
-		// ウィンドウ関係だし改行は CRLF でいいか。LBR_PHYSICAL_DATA だと遅いし
+		// ウィンドウ関係だし改行は CRLF でいいか。NLR_PHYSICAL_DATA だと遅いし
 		handled = true;
-		return getDocument().getLength(LBR_CRLF);
+		return getDocument().getLength(NLR_CRLF);
 	case WM_INPUTLANGCHANGE:
 		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
@@ -3573,7 +3573,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			*effect = DROPEFFECT_COPY;
 		}
 	} else {	// drop from the same widget
-		String text = caret.getSelectionText(LBR_PHYSICAL_DATA);
+		String text = caret.getSelectionText(NLR_PHYSICAL_DATA);
 		::POINT caretPoint = {pt.x, pt.y};
 
 		viewer_->screenToClient(caretPoint);
@@ -3796,7 +3796,7 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 					|| (position.y > lastLeftButtonPressedPoint_.y + cyDragBox / 2)
 					|| (position.y < lastLeftButtonPressedPoint_.y - cyDragBox / 2)) {
 				const bool box = viewer_->getCaret().isSelectionRectangle();
-				const String selection = viewer_->getCaret().getSelectionText(LBR_CRLF);
+				const String selection = viewer_->getCaret().getSelectionText(NLR_CRLF);
 				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
 
 				if(box) {

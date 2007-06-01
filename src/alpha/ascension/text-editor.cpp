@@ -587,7 +587,7 @@ ulong InputStatusToggleCommand::execute() {
 }
 
 /**
- * Breaks the line, or exits a mode.
+ * Inserts a newline, or exits a mode.
  *
  * If the incremental search is active, exits the search.
  *
@@ -595,7 +595,7 @@ ulong InputStatusToggleCommand::execute() {
  * @retval 0 the command succeeded
  * @retval 1 the command failed
  */
-ulong LineBreakCommand::execute() {
+ulong NewlineCommand::execute() {
 	TextViewer& viewer = getTarget();
 /*	CompletionWindow& completionWindow = getCompletionWindow();
 

@@ -15,6 +15,7 @@ using namespace ascension::viewers;
 using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
+using namespace ascension::unicode::ucd;
 using namespace manah::win32;
 using namespace manah::win32::gdi;
 using namespace std;
@@ -513,7 +514,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			}
 			specialCharacterRenderer->drawLineWrappingMark(context);
 		} else if(lineNumber_ < document.getNumberOfLines() - 1) {	// line teminator
-			const text::LineBreak nlf = document.getLineInfo(lineNumber_).getLineBreak();
+			const text::Newline nlf = document.getLineInfo(lineNumber_).getNewline();
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
 			if(context.orientation == LEFT_TO_RIGHT) {
 				context.rect.left = x;
@@ -1921,7 +1922,7 @@ void LineLayoutBuffer::presentationStylistChanged() {
  * <em>C1 controls</em> include characters whose code point is U+0080..009F. But only U+0085 is
  * excluded. This is one of "End of line" character.
  *
- * <em>End of line</em> includes any NLFs in Unicode. Identified by @c text#LineBreak enumeration.
+ * <em>End of line</em> includes any NLFs in Unicode. Identified by @c text#Newline enumeration.
  *
  * <em>White space characters</em> include all Unicode white spaces and horizontal tab (U+0009). An
  * instance of @c ISpecialCharacterRenderer can't set the width of these glyphs.
@@ -2000,7 +2001,7 @@ void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext&
 }
 
 /// @see ISpecialCharacterRenderer#drawLineTerminator
-void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, text::LineBreak) const {
+void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, text::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xFFFF) {
 		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000) ? font_ : renderer_->getFont());
 		context.dc.setTextColor(eolColor_);
@@ -2099,7 +2100,7 @@ int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContex
 }
 
 /// @see ISpecialCharacterRenderer#getLineTerminatorWidth
-int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, text::LineBreak) const {
+int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, text::Newline) const {
 	return showsEOLs_ ? (glyphWidths_[LINE_TERMINATOR] & 0x7FFFFFFF) : 0;
 }
 

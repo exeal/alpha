@@ -724,6 +724,39 @@ namespace ascension {
 			BaseIterator p_;
 		};
 
+#ifndef ASCENSION_NO_UAX14
+		/// Base class of @c LineBreakIterator.
+		class AbstractLineBreakIterator : public BreakIterator {
+		public:
+			bool	isBoundary(const CharacterIterator& at) const;
+			void	next(std::ptrdiff_t amount);
+		protected:
+			AbstractLineBreakIterator(const std::locale& lc) throw();
+			virtual CharacterIterator& getCharacterIterator() throw() = 0;
+			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
+		};
+
+		/// @c LineBreakIterator locates line break opportunities in text.
+		template<class BaseIterator> class LineBreakIterator :
+			public AbstractLineBreakIterator, public internal::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
+		public:
+			/**
+			 * Constructor.
+			 * @param base the base iterator
+			 * @param lc the locale
+			 */
+			LineBreakIterator(BaseIterator base, const std::locale& lc = std::locale::classic()) : AbstractLineBreakIterator(lc), p_(base) {}
+			/// Returns the base iterator.
+			BaseIterator& base() throw() {return p_;}
+			/// Returns the base iterator.
+			const BaseIterator& base() const throw() {return p_;}
+		private:
+			CharacterIterator& getCharacterIterator() {return static_cast<CharacterIterator&>(p_);}
+			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
+			BaseIterator p_;
+		};
+#endif /* !ASCENSION_NO_UAX14 */
+
 		/**
 		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
 		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.

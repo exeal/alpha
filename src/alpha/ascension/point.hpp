@@ -76,8 +76,8 @@ namespace ascension {
 			CharacterUnit	getCharacterUnit() const throw();
 			CodePoint		getCodePoint(bool useLineFeed = false) const;
 			length_t		getLineLength() const throw();
-			String			getText(signed_length_t length, LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
-			String			getText(const Position& other, LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
+			String			getText(signed_length_t length, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			String			getText(const Position& other, NewlineRepresentation lbr = NLR_PHYSICAL_DATA) const;
 			bool			isEndOfDocument() const;
 			bool			isEndOfLine() const;
 			bool			isStartOfDocument() const;
@@ -309,7 +309,7 @@ namespace ascension {
 			bool				getSelectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
 			SelectionMode		getSelectionMode() const throw();
 			text::Region		getSelectionRegion() const throw();
-			String				getSelectionText(text::LineBreakRepresentation lbr = text::LBR_PHYSICAL_DATA) const;
+			String				getSelectionText(text::NewlineRepresentation nlr = text::NLR_PHYSICAL_DATA) const;
 			bool				isPointOverSelection(const ::POINT& pt) const;
 			bool				isSelectionEmpty() const throw();
 			bool				isSelectionRectangle() const throw();
