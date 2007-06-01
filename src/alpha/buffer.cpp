@@ -35,7 +35,7 @@ using namespace std;
 namespace {
 	struct TextFileFormat {
 		CodePage encoding;
-		LineBreak lineBreak;
+		Newline newline;
 	};
 	class FileIOCallback : virtual public IFileIOListener {
 	public:
@@ -134,9 +134,9 @@ BufferList::~BufferList() {
 /**
  * Opens the new empty buffer.
  * @param encoding the encoding (code page)
- * @param lineBreak the line break
+ * @param newline the newline
  */
-void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak lineBreak /* = LB_AUTO */) {
+void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, Newline newline /* = NLF_AUTO */) {
 /*	if(::GetCurrentThreadId() != app_.getMainWindow().getWindowThreadID()) {
 		// ウィンドウの作成をメインスレッドに委譲
 		struct X : virtual public ICallable {
@@ -157,8 +157,8 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, LineBreak 
 
 	if(cp != CPEX_AUTODETECT_USERLANG)
 		buffer->setCodePage(cp);
-	if(lineBreak != LB_AUTO)
-		buffer->setLineBreak(lineBreak);
+	if(newline != NLF_AUTO)
+		buffer->setNewline(newline);
 	buffers_.push_back(buffer);
 
 	// 現在のペインの数だけビューを作成する
@@ -204,14 +204,14 @@ void BufferList::addNewDialog() {
 	format.encoding = app_.readIntegerProfile(L"File", L"defaultCodePage", ::GetACP());
 	if(format.encoding == CP_ACP)
 		format.encoding = ::GetACP();
-	format.lineBreak = static_cast<LineBreak>(app_.readIntegerProfile(L"file", L"defaultBreakType", LB_AUTO));
-	if(format.lineBreak == LB_AUTO)
-		format.lineBreak = LB_CRLF;
+	format.newline= static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_AUTO));
+	if(format.newline == NLF_AUTO)
+		format.newline = NLF_CRLF;
 
-	ui::NewFileFormatDialog dlg(format.encoding, format.lineBreak);
+	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
 	if(dlg.doModal(app_.getMainWindow()) != IDOK)
 		return;
-	addNew(dlg.getEncoding(), dlg.getLineBreak());
+	addNew(dlg.getEncoding(), dlg.getNewline());
 }
 
 /**
@@ -568,8 +568,8 @@ bool BufferList::handleFileIOError(const WCHAR* fileName, bool forLoading, Docum
 	} else if(result != Document::FIR_CALLER_ABORTED) {
 		DWORD messageID;
 		switch(result) {
-		case Document::FIR_INVALID_CODE_PAGE:				messageID = MSG_IO__INVALID_ENCODE; break;
-		case Document::FIR_INVALID_LINE_BREAK:				messageID = MSG_IO__INVALID_LINE_BREAK; break;
+		case Document::FIR_INVALID_CODE_PAGE:				messageID = MSG_IO__INVALID_ENCODING; break;
+		case Document::FIR_INVALID_NEWLINE:					messageID = MSG_IO__INVALID_NEWLINE; break;
 		case Document::FIR_OUT_OF_MEMORY:					messageID = MSG_ERROR__OUT_OF_MEMORY; break;
 		case Document::FIR_HUGE_FILE:						messageID = MSG_IO__HUGE_FILE; break;
 		case Document::FIR_READ_ONLY_MODE:					messageID = MSG_IO__FAILED_TO_WRITE_FOR_READONLY; break;
@@ -786,7 +786,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		}
 	}
 
-	TextFileFormat format = {CPEX_AUTODETECT_USERLANG, LB_AUTO};
+	TextFileFormat format = {CPEX_AUTODETECT_USERLANG, NLF_AUTO};
 	AutoZeroLS<::OPENFILENAMEW> newOfn;
 	AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
@@ -835,54 +835,54 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 	switch(message) {
 	case WM_COMMAND:
 		// [コードページ] が変更された
-		if(LOWORD(wParam) == IDC_COMBO_CHARCODE && HIWORD(wParam) == CBN_SELCHANGE) {
-			ComboBox breakCodeCombobox(::GetDlgItem(window, IDC_COMBO_BREAKCODE));
-			if(!breakCodeCombobox.isWindow())
+		if(LOWORD(wParam) == IDC_COMBO_ENCODING && HIWORD(wParam) == CBN_SELCHANGE) {
+			ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
+			if(!newlineCombobox.isWindow())
 				break;
-			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_CHARCODE));
+			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 
-			const wstring unchange = Alpha::getInstance().loadString(MSG_DIALOG__UNCHANGE_LINE_BREAK);
+			const wstring keepNLF = Alpha::getInstance().loadString(MSG_DIALOG__KEEP_NEWLINE);
 			const CodePage cp = codePageCombobox.getItemData(codePageCombobox.getCurSel());
-			const int breakCode = (breakCodeCombobox.getCount() != 0) ? breakCodeCombobox.getCurSel() : 0;
+			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
 			if(cp == CPEX_UNICODE_UTF5 || cp == CP_UTF7 || cp == CP_UTF8
 					|| cp == CPEX_UNICODE_UTF16LE || cp == CPEX_UNICODE_UTF16BE
 					|| cp == CPEX_UNICODE_UTF32LE || cp == CPEX_UNICODE_UTF32BE) {
-				if(breakCodeCombobox.getCount() != 7) {
-					breakCodeCombobox.resetContent();
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(unchange.c_str()), LB_AUTO);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_CRLF), LB_CRLF);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_LF), LB_LF);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_CR), LB_CR);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_NEL), LB_NEL);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_LS), LB_LS);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_PS), LB_PS);
-					breakCodeCombobox.setCurSel(breakCode);
+				if(newlineCombobox.getCount() != 7) {
+					newlineCombobox.resetContent();
+					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CRLF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CR);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_NEL), NLF_NEL);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LS), NLF_LS);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_PS), NLF_PS);
+					newlineCombobox.setCurSel(newline);
 				}
 			} else {
-				if(breakCodeCombobox.getCount() != 4) {
-					breakCodeCombobox.resetContent();
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(unchange.c_str()), LB_AUTO);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_CRLF), LB_CRLF);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_LF), LB_LF);
-					breakCodeCombobox.setItemData(breakCodeCombobox.addString(IDS_BREAK_CR), LB_CR);
-					breakCodeCombobox.setCurSel((breakCode < 4) ? breakCode : 0);
+				if(newlineCombobox.getCount() != 4) {
+					newlineCombobox.resetContent();
+					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CRLF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CR);
+					newlineCombobox.setCurSel((newline < 4) ? newline : 0);
 				}
 			}
 		}
 		break;
 	case WM_INITDIALOG: {
-		OPENFILENAMEW& ofn = *reinterpret_cast<OPENFILENAMEW*>(lParam);
+		::OPENFILENAMEW& ofn = *reinterpret_cast<::OPENFILENAMEW*>(lParam);
 		HWND dialog = ::GetParent(window);
-		ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_CHARCODE));
+		ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 		Static codePageLabel(::GetDlgItem(window, IDC_STATIC_1));
-		ComboBox breakCodeCombobox(::GetDlgItem(window, IDC_COMBO_BREAKCODE));
-		Static breakCodeLabel(::GetDlgItem(window, IDC_STATIC_2));
+		ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
+		Static newlineLabel(::GetDlgItem(window, IDC_STATIC_2));
 		HFONT guiFont = reinterpret_cast<HFONT>(::SendMessage(dialog, WM_GETFONT, 0, 0L));
 
 		// ダイアログテンプレートのコントロールの位置合わせなど
-		POINT pt;
-		RECT rect;
+		::POINT pt;
+		::RECT rect;
 		::GetWindowRect(window, &rect);
 		pt.x = rect.left;
 		pt.y = rect.top;
@@ -893,10 +893,10 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		codePageLabel.getRect(rect);
 		codePageLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		codePageLabel.setFont(guiFont);
-		if(breakCodeLabel.isWindow()) {
-			breakCodeLabel.getRect(rect);
-			breakCodeLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-			breakCodeLabel.setFont(guiFont);
+		if(newlineLabel.isWindow()) {
+			newlineLabel.getRect(rect);
+			newlineLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			newlineLabel.setFont(guiFont);
 		}
 
 		// コンボボックス
@@ -905,17 +905,17 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		codePageCombobox.getRect(rect);
 		codePageCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		codePageCombobox.setFont(guiFont);
-		if(breakCodeCombobox.isWindow()) {
-			breakCodeCombobox.getRect(rect);
-			breakCodeCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-			breakCodeCombobox.setFont(guiFont);
+		if(newlineCombobox.isWindow()) {
+			newlineCombobox.getRect(rect);
+			newlineCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			newlineCombobox.setFont(guiFont);
 		}
 
 		const EncoderFactory& encoders = EncoderFactory::getInstance();
 		set<CodePage> codePages;
 		encoders.enumCodePages(codePages);
 		for(set<CodePage>::const_iterator it = codePages.begin(); it != codePages.end(); ++it) {
-			if(breakCodeCombobox.isWindow()
+			if(newlineCombobox.isWindow()
 					&& (encoders.isCodePageForAutoDetection(*it) || encoders.isCodePageForAutoDetection(*it)))
 				continue;
 			else if(const wstring* name = Alpha::getInstance().getCodePageName(*it))
@@ -931,38 +931,38 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			}
 		}
 
-		if(breakCodeCombobox.isWindow()) {
-			switch(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->lineBreak) {
-			case LB_AUTO:	breakCodeCombobox.setCurSel(0);	break;
-			case LB_CRLF:	breakCodeCombobox.setCurSel(1);	break;
-			case LB_LF:		breakCodeCombobox.setCurSel(2);	break;
-			case LB_CR:		breakCodeCombobox.setCurSel(3);	break;
-			case LB_NEL:	breakCodeCombobox.setCurSel(4);	break;
-			case LB_LS:		breakCodeCombobox.setCurSel(5);	break;
-			case LB_PS:		breakCodeCombobox.setCurSel(6);	break;
+		if(newlineCombobox.isWindow()) {
+			switch(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->newline) {
+			case NLF_AUTO:	newlineCombobox.setCurSel(0);	break;
+			case NLF_CRLF:	newlineCombobox.setCurSel(1);	break;
+			case NLF_LF:	newlineCombobox.setCurSel(2);	break;
+			case NLF_CR:	newlineCombobox.setCurSel(3);	break;
+			case NLF_NEL:	newlineCombobox.setCurSel(4);	break;
+			case NLF_LS:	newlineCombobox.setCurSel(5);	break;
+			case NLF_PS:	newlineCombobox.setCurSel(6);	break;
 			}
-			::SendMessageW(window, WM_COMMAND, MAKEWPARAM(IDC_COMBO_CHARCODE, CBN_SELCHANGE), 0);
+			::SendMessageW(window, WM_COMMAND, MAKEWPARAM(IDC_COMBO_ENCODING, CBN_SELCHANGE), 0);
 		}
 	}
 		break;
 	case WM_NOTIFY: {
-		OFNOTIFYW& ofn = *reinterpret_cast<OFNOTIFYW*>(lParam);
+		::OFNOTIFYW& ofn = *reinterpret_cast<OFNOTIFYW*>(lParam);
 		if(ofn.hdr.code == CDN_FILEOK) {	// [開く]/[保存]
-			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_CHARCODE));
-			ComboBox breakCodeCombobox(::GetDlgItem(window, IDC_COMBO_BREAKCODE));
+			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
+			ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
 			Button readOnlyCheckbox(::GetDlgItem(::GetParent(window), chx1));
 			TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lpOFN->lCustData);
 
 			format.encoding = codePageCombobox.getItemData(codePageCombobox.getCurSel());
-			if(breakCodeCombobox.isWindow()) {
-				switch(breakCodeCombobox.getCurSel()) {
-				case 0:	format.lineBreak = LB_AUTO;	break;
-				case 1:	format.lineBreak = LB_CRLF;	break;
-				case 2:	format.lineBreak = LB_LF;	break;
-				case 3:	format.lineBreak = LB_CR;	break;
-				case 4:	format.lineBreak = LB_NEL;	break;
-				case 5:	format.lineBreak = LB_LS;	break;
-				case 6:	format.lineBreak = LB_PS;	break;
+			if(newlineCombobox.isWindow()) {
+				switch(newlineCombobox.getCurSel()) {
+				case 0:	format.newline = NLF_AUTO;	break;
+				case 1:	format.newline = NLF_CRLF;	break;
+				case 2:	format.newline = NLF_LF;	break;
+				case 3:	format.newline = NLF_CR;	break;
+				case 4:	format.newline = NLF_NEL;	break;
+				case 5:	format.newline = NLF_LS;	break;
+				case 6:	format.newline = NLF_PS;	break;
 				}
 			}
 			if(readOnlyCheckbox.isWindow()) {
@@ -1112,7 +1112,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		return true;
 
 	WCHAR fileName[MAX_PATH + 1];
-	TextFileFormat format = {buffer.getCodePage(), LB_AUTO};
+	TextFileFormat format = {buffer.getCodePage(), NLF_AUTO};
 	bool newName = false;
 
 	// 別名で保存 or ファイルが存在しない
@@ -1169,7 +1169,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		FileIOCallback callback(app_, false, fileName, format.encoding);
 		Document::SaveParameters params;
 		params.codePage = format.encoding;
-		params.lineBreak = format.lineBreak;
+		params.newline = format.newline;
 		if(writeBOM)
 			params.options = Document::SaveParameters::WRITE_UNICODE_BOM;
 

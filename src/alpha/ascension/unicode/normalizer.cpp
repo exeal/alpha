@@ -7,10 +7,11 @@
 //#ifndef ASCENSION_TEST_NO_STDAFX
 #include "stdafx.h"
 //#endif
-#include "../unicode.hpp"
+#include "../unicode-property.hpp"
 using namespace ascension;
 using namespace ascension::unicode;
 using namespace std;
+using unicode::ucd::CanonicalCombiningClass;
 
 
 // CaseFolder ///////////////////////////////////////////////////////////////

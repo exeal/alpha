@@ -13,6 +13,7 @@
 using namespace ascension;
 using namespace ascension::unicode;
 using namespace ascension::unicode::internal;
+using namespace ascension::unicode::ucd;
 using namespace std;
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
@@ -708,3 +709,26 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
 	else if(amount < 0)
 		doPrevious(-amount);
 }
+
+
+#ifndef ASCENSION_NO_UAX14
+
+// AbstractLineBreakIterator ////////////////////////////////////////////////
+
+/**
+ * Protected constructor.
+ * @param lc the locale
+ */
+AbstractLineBreakIterator::AbstractLineBreakIterator(const locale& lc) throw() : BreakIterator(lc) {
+}
+
+/// @see BreakIterator#next
+void AbstractLineBreakIterator::next(ptrdiff_t amount) {
+}
+
+/// @see BreakIterator#isBoundary
+bool AbstractLineBreakIterator::isBoundary(const CharacterIterator& at) const {
+	return true;
+}
+
+#endif /* !ASCENSION_NO_UAX14 */

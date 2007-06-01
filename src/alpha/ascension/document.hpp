@@ -38,7 +38,7 @@ namespace ascension {
 				virtual void removePoint(PointType& point) = 0;
 				friend typename PointType;
 			};
-			const Char LINE_BREAK_STRINGS[][7] = {
+			const Char NEWLINE_STRINGS[][7] = {
 				L"", {LINE_FEED, 0}, {CARRIAGE_RETURN, 0}, {CARRIAGE_RETURN, LINE_FEED, 0},
 				{NEXT_LINE, 0}, {LINE_SEPARATOR, 0}, {PARAGRAPH_SEPARATOR, 0}
 			};
@@ -57,18 +57,18 @@ namespace ascension {
 			UNDETERMINED_CONTENT_TYPE = 0xFFFFFFFEUL;	///< Type of Undetermined (not calculated) content.
 
 		/**
-		 * Line break codes.
-		 * @see getLineBreakLength, getLineBreakString, Document
+		 * Newlines in document.
+		 * @see getNewlineStringLength, getNewlineString, Document
 		 */
-		enum LineBreak {
-			LB_AUTO,	///< Indicates no-conversion or unspecified.
-			LB_LF,		///< Line feed. Standard of Unix (Lf, U+000A)
-			LB_CR,		///< Carriage return. Old standard of Macintosh (Cr, U+000D)
-			LB_CRLF,	///< CR+LF. Standard of Windows (CrLf, U+000D U+000A)
-			LB_NEL,		///< New line (U+0085)
-			LB_LS,		///< Line separator (U+2028)
-			LB_PS,		///< Paragraph separator (U+2029)
-			LB_COUNT
+		enum Newline {
+			NLF_AUTO,	///< Indicates no-conversion or unspecified.
+			NLF_LF,		///< Line feed. Standard of Unix (Lf, U+000A).
+			NLF_CR,		///< Carriage return. Old standard of Macintosh (Cr, U+000D).
+			NLF_CRLF,	///< CR+LF. Standard of Windows (CrLf, U+000D U+000A).
+			NLF_NEL,	///< Next line. Standard of EBCDIC-based OS (U+0085).
+			NLF_LS,		///< Line separator (U+2028).
+			NLF_PS,		///< Paragraph separator (U+2029).
+			NLF_COUNT
 		};
 
 		/**
@@ -78,13 +78,13 @@ namespace ascension {
 		 * @see Document#getLength, Document#getLineIndex, Document#writeToStream,
 		 * EditPoint#getText, viewers#Selection#getText
 		 */
-		enum LineBreakRepresentation {
-			LBR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
-			LBR_CRLF,				///< Represents any NLF as CRLF (U+000D+000A).
-			LBR_LINE_SEPARATOR,		///< Represents any NLF as LS (U+2028).
-			LBR_PHYSICAL_DATA,		///< Represents any NLF as the actual newline of the line (@c Document#Line#getLineBreak()).
-			LBR_DOCUMENT_DEFAULT,	///< Represents any NLF as the document default newline.
-			LBR_SKIP,				///< Skips any NLF.
+		enum NewlineRepresentation {
+			NLR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
+			NLR_CRLF,				///< Represents any NLF as CRLF (U+000D+000A).
+			NLR_LINE_SEPARATOR,		///< Represents any NLF as LS (U+2028).
+			NLR_PHYSICAL_DATA,		///< Represents any NLF as the actual newline of the line (@c Document#Line#getNewline()).
+			NLR_DOCUMENT_DEFAULT,	///< Represents any NLF as the document default newline.
+			NLR_SKIP,				///< Skips any NLF.
 		};
 
 		/**
@@ -528,8 +528,8 @@ namespace ascension {
 				FIR_OK,
 				/// The specified encoding is invalid.
 				FIR_INVALID_CODE_PAGE,
-				/// The specified line break is based on Unicode but the encoding is not Unicode.
-				FIR_INVALID_LINE_BREAK,
+				/// The specified newline is based on Unicode but the encoding is not Unicode.
+				FIR_INVALID_NEWLINE,
 				/**
 				 * The caller aborted (ex. unconvertable character found).
 				 * @see Document#IFileIOListener
@@ -554,14 +554,14 @@ namespace ascension {
 
 			/// Option flags for @c Document#save.
 			struct SaveParameters {
-				encodings::CodePage codePage;	///< The code page
-				LineBreak lineBreak;			///< The line break
+				encodings::CodePage codePage;	///< The code page.
+				Newline newline;				///< The newline.
 				enum Option {
 					WRITE_UNICODE_BOM	= 0x01,	///< Writes a UTF byte order mark.
 					BY_COPYING			= 0x02,	///< Not implemented.
 					CREATE_BACKUP		= 0x04	///< Creates backup files.
 				};
-				manah::Flags<Option> options;	///< Miscellaneous options
+				manah::Flags<Option> options;	///< Miscellaneous options.
 			};
 
 			/// Lock modes for opened file.
@@ -579,22 +579,22 @@ namespace ascension {
 			public:
 				/// Returns the text of the line.
 				const String& getLine() const throw() {return text_;}
-				/// Returns the line break of the line.
-				LineBreak getLineBreak() const throw() {return lineBreak_;}
+				/// Returns the newline of the line.
+				Newline getNewline() const throw() {return newline_;}
 				/// Returns true if the line is bookmarked.
 				bool isBookmarked() const throw() {return bookmarked_;}
 				/// Returns true if the line has been changed.
 				bool isModified() const throw() {return operationHistory_ != 0;}
 			private:
-				Line() throw() : operationHistory_(0), lineBreak_(LB_AUTO), bookmarked_(false) {}
-				explicit Line(String& text, LineBreak lineBreak = LB_AUTO, bool modified = false)
-					: text_(text), operationHistory_(modified ? 1 : 0), lineBreak_(lineBreak), bookmarked_(false) {}
+				Line() throw() : operationHistory_(0), newline_(NLF_AUTO), bookmarked_(false) {}
+				explicit Line(String& text, Newline newline = NLF_AUTO, bool modified = false)
+					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline), bookmarked_(false) {}
 				String text_;
 				ulong operationHistory_ : 28;
-				LineBreak lineBreak_ : 3;
+				Newline newline_ : 3;
 				mutable bool bookmarked_ : 1;	// true if the line is bookmarked
-#if (3 < 2 << LB_COUNT)
-#error "lineBreak_ member is not allocated efficient buffer."
+#if (3 < 2 << NLF_COUNT)
+#error "newline_ member is not allocated efficient buffer."
 #endif
 				friend class Document;
 				friend class Bookmarker;
@@ -621,10 +621,10 @@ namespace ascension {
 			void	setUnexpectedFileTimeStampDirector(IUnexpectedFileTimeStampDirector* newDirector) throw();
 			// encodings
 			encodings::CodePage	getCodePage() const throw();
-			LineBreak			getLineBreak() const throw();
+			Newline				getNewline() const throw();
 			void				setCodePage(encodings::CodePage cp);
-			static void			setDefaultCode(encodings::CodePage cp, LineBreak lineBreak);
-			void				setLineBreak(LineBreak lineBreak);
+			static void			setDefaultCode(encodings::CodePage cp, Newline newline);
+			void				setNewline(Newline newline);
 			// bound file name
 			const WCHAR*	getFileExtensionName() const throw();
 			const WCHAR*	getFileName() const throw();
@@ -647,11 +647,11 @@ namespace ascension {
 			void						setReadOnly(bool readOnly = true);
 			// contents
 			Position		getEndPosition(bool accessibleRegion = true) const throw();
-			length_t		getLength(LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
+			length_t		getLength(NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
 			const String&	getLine(length_t line) const;
 			const Line&		getLineInfo(length_t line) const;
 			length_t		getLineLength(length_t line) const;
-			length_t		getLineOffset(length_t line, LineBreakRepresentation lbr) const;
+			length_t		getLineOffset(length_t line, NewlineRepresentation nlr) const;
 			length_t		getNumberOfLines() const throw();
 			Position		getStartPosition(bool accessibleRegion = true) const throw();
 			// content type information
@@ -684,15 +684,13 @@ namespace ascension {
 								const Region& region, const SaveParameters& params, bool append, IFileIOListener* callback = 0);
 			// streams
 			Position	insertFromStream(const Position& position, InputStream& in);
-			void		writeToStream(OutputStream& out, LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
-			void		writeToStream(OutputStream& out, const Region& region, LineBreakRepresentation lbr = LBR_PHYSICAL_DATA) const;
+			void		writeToStream(OutputStream& out, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			void		writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
 			// operations
 			bool	checkTimeStamp();
 			bool	renameFile(const WCHAR* newName);
 			bool	sendFile(bool asAttachment, bool showDialog = true);
 
-		protected:
-			static LineBreak	eatLineBreak(const Char* first, const Char* last);
 		private:
 			void						doSetModified(bool modified) throw();
 			void						fireDocumentAboutToBeChanged() throw();
@@ -781,7 +779,7 @@ namespace ascension {
 			bool readOnly_;
 			bool modified_;
 			encodings::CodePage codePage_;
-			LineBreak lineBreak_;
+			Newline newline_;
 			LineList lines_;
 			length_t length_;
 			std::set<Point*> points_;
@@ -802,7 +800,7 @@ namespace ascension {
 			IUnexpectedFileTimeStampDirector* timeStampDirector_;
 
 			static encodings::CodePage defaultCodePage_;
-			static LineBreak defaultLineBreak_;
+			static Newline defaultNewline_;
 
 			friend class DocumentPartitioner;
 		};
@@ -871,9 +869,10 @@ namespace ascension {
 		};
 
 		// free functions related to document
+		Newline		eatNewline(const Char* first, const Char* last);
 		length_t	getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
-		length_t	getLineBreakLength(LineBreak lineBreak);
-		const Char*	getLineBreakString(LineBreak lineBreak);
+		const Char*	getNewlineString(Newline newline);
+		length_t	getNewlineStringLength(Newline newline);
 		length_t	getNumberOfLines(const Char* first, const Char* last) throw();
 		length_t	getNumberOfLines(const String& text) throw();
 		Position	updatePosition(const Position& position, const DocumentChange& change, Direction gravity);
@@ -885,34 +884,52 @@ namespace ascension {
 // inline implementation ////////////////////////////////////////////////////
 
 /**
- * Returns the length of the string represents the specified line break.
- * @param lineBreak the line break
- * @return the length
- * @throw std#invalid_argument @a lineBreak is invalid
- * @see #getLineBreakString
+ * Returns the newline at the start of the specified buffer.
+ * @param first the start of the buffer
+ * @param last the end of the buffer
+ * @return the newline or @c NLF_AUTO if the start of the buffer is not line break
  */
-inline length_t getLineBreakLength(LineBreak lineBreak) {
-	switch(lineBreak) {
-	case LB_CRLF:
-		return 2;
-	case LB_LF: case LB_CR: case LB_NEL: case LB_LS: case LB_PS:
-		return 1;
-	default:
-		throw std::invalid_argument("Unknown line break specified.");
+inline Newline eatNewline(const Char* first, const Char* last) {
+	assert(first != 0 && last != 0 && first <= last);
+	switch(*first) {
+	case LINE_FEED:				return NLF_LF;
+	case CARRIAGE_RETURN:		return (last - first > 1 && first[1] == LINE_FEED) ? NLF_CRLF : NLF_CR;
+	case NEXT_LINE:				return NLF_NEL;
+	case LINE_SEPARATOR:		return NLF_LS;
+	case PARAGRAPH_SEPARATOR:	return NLF_PS;
+	default:					return NLF_AUTO;
 	}
 }
 
 /**
- * Returns the string represents the specified line break.
- * @param lineBreak the line break
- * @return the string. an empty string if @a lineBreak is @c LB_AUTO
- * @throw std#invalid_argument @a lineBreak is invalid
- * @see #getLineBreakLength
+ * Returns the string represents the specified newline.
+ * @param newline the newline
+ * @return the string. an empty string if @a newline is @c NLF_AUTO
+ * @throw std#invalid_argument @a newline is invalid
+ * @see #getNewlineStringLength
  */
-inline const Char* getLineBreakString(LineBreak lineBreak) {
-	if(lineBreak >= static_cast<LineBreak>(countof(internal::LINE_BREAK_STRINGS)))
-		throw std::invalid_argument("Unknown line break specified.");
-	return internal::LINE_BREAK_STRINGS[lineBreak];
+inline const Char* getNewlineString(Newline newline) {
+	if(newline >= static_cast<Newline>(countof(internal::NEWLINE_STRINGS)))
+		throw std::invalid_argument("Unknown newline specified.");
+	return internal::NEWLINE_STRINGS[newline];
+}
+
+/**
+ * Returns the length of the string represents the specified newline.
+ * @param newline the newline
+ * @return the length
+ * @throw std#invalid_argument @a newline is invalid
+ * @see #getNewlineString
+ */
+inline length_t getNewlineStringLength(Newline newline) {
+	switch(newline) {
+	case NLF_CRLF:
+		return 2;
+	case NLF_LF: case NLF_CR: case NLF_NEL: case NLF_LS: case NLF_PS:
+		return 1;
+	default:
+		throw std::invalid_argument("Unknown newline specified.");
+	}
 }
 
 /**
@@ -1019,24 +1036,6 @@ inline void Document::clearUndoBuffer() {
 	onceUndoBufferCleared_ = true;
 }
 
-/**
- * Returns the line break at the start of the specified buffer.
- * @param first the start of the buffer
- * @param last the end of the buffer
- * @return the line break or @c LB_AUTO if the start of the buffer is not line break
- */
-inline LineBreak Document::eatLineBreak(const Char* first, const Char* last) {
-	assert(first != 0 && last != 0 && first <= last);
-	switch(*first) {
-	case LINE_FEED:				return LB_LF;
-	case CARRIAGE_RETURN:		return (last - first > 1 && first[1] == LINE_FEED) ? LB_CRLF : LB_CR;
-	case NEXT_LINE:				return LB_NEL;
-	case LINE_SEPARATOR:		return LB_LS;
-	case PARAGRAPH_SEPARATOR:	return LB_PS;
-	default:					return LB_AUTO;
-	}
-}
-
 /// @see #erase(const Region&)
 inline Position Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
 
@@ -1082,27 +1081,27 @@ inline const WCHAR* Document::getFilePathName() const throw() {return diskFile_.
 
 /**
  * Returns the count of characters in the document.
- * @param lbr the method to count line breaks
+ * @param nlr the method to count newlines
  * @return the count of characters
- * @throw std#invalid_argument @a lbr is invalid
+ * @throw std#invalid_argument @a nlr is invalid
  */
-inline length_t Document::getLength(LineBreakRepresentation lbr) const {
-	if(lbr == LBR_DOCUMENT_DEFAULT)
-		lbr = (getLineBreak() == LB_CRLF) ? LBR_CRLF : LBR_LINE_FEED;
-	switch(lbr) {
-	case LBR_LINE_FEED:
-	case LBR_LINE_SEPARATOR:
+inline length_t Document::getLength(NewlineRepresentation nlr) const {
+	if(nlr == NLR_DOCUMENT_DEFAULT)
+		nlr = (getNewline() == NLF_CRLF) ? NLR_CRLF : NLR_LINE_FEED;
+	switch(nlr) {
+	case NLR_LINE_FEED:
+	case NLR_LINE_SEPARATOR:
 		return length_ + getNumberOfLines() - 1;
-	case LBR_CRLF:
+	case NLR_CRLF:
 		return length_ + getNumberOfLines() * 2 - 1;
-	case LBR_PHYSICAL_DATA: {
+	case NLR_PHYSICAL_DATA: {
 		length_t len = length_;
 		const length_t lines = getNumberOfLines();
 		for(length_t i = 0; i < lines; ++i)
-			len += getLineBreakLength(lines_[i]->lineBreak_);
+			len += getNewlineStringLength(lines_[i]->newline_);
 		return len;
 	}
-	case LBR_SKIP:
+	case NLR_SKIP:
 		return length_;
 	}
 	throw std::invalid_argument("invalid parameter.");
@@ -1116,8 +1115,8 @@ inline length_t Document::getLength(LineBreakRepresentation lbr) const {
  */
 inline const String& Document::getLine(length_t line) const {return getLineInfo(line).text_;}
 
-/// Returns the line break of the document.
-inline LineBreak Document::getLineBreak() const throw() {return lineBreak_;}
+/// Returns the default newline of the document.
+inline Newline Document::getNewline() const throw() {return newline_;}
 
 /**
  * Returns the information of the specified line.
@@ -1290,22 +1289,22 @@ inline void Document::setContentTypeInformation(IContentTypeInformationProvider*
 	contentTypeInformationProvider_ = (newProvider != 0) ? newProvider : &defaultContentTypeInformationProvider_;}
 
 /**
- * Sets the line break of the document.
- * @param lineBreak the line break
- * @throw std#invalid_argument @a lineBreak is invalid
+ * Sets the default newline of the document.
+ * @param newline the newline
+ * @throw std#invalid_argument @a newline is invalid
  */
-inline void Document::setLineBreak(LineBreak lineBreak) {
-	switch(lineBreak) {
-	case LB_LF:		case LB_CR:
-	case LB_CRLF:	case LB_NEL:
-	case LB_LS:		case LB_PS:
-		if(lineBreak != lineBreak_) {
-			lineBreak_ = lineBreak;
+inline void Document::setNewline(Newline newline) {
+	switch(newline) {
+	case NLF_LF:	case NLF_CR:
+	case NLF_CRLF:	case NLF_NEL:
+	case NLF_LS:	case NLF_PS:
+		if(newline != newline_) {
+			newline_ = newline;
 			stateListeners_.notify<Document&>(IDocumentStateListener::documentEncodingChanged, *this);
 		}
 		break;
 	default:
-		throw std::invalid_argument("Unknown line break specified.");
+		throw std::invalid_argument("Unknown newline specified.");
 	}
 }
 
@@ -1326,10 +1325,10 @@ inline void Document::setUnexpectedFileTimeStampDirector(IUnexpectedFileTimeStam
 /**
  * Writes the content of the document to the specified output stream.
  * @param out the output stream
- * @param lbr the line break to be used
+ * @param nlr the newline to be used
  */
-inline void Document::writeToStream(OutputStream& out, LineBreakRepresentation lbr /* = LBP_PHYSICAL_DATA */) const {
-	writeToStream(out, Region(Position::ZERO_POSITION, Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1))), lbr);}
+inline void Document::writeToStream(OutputStream& out, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
+	writeToStream(out, Region(Position::ZERO_POSITION, Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1))), nlr);}
 
 
 /**

@@ -20,10 +20,10 @@
 // about ascension.text /////////////////////////////////////////////////////
 
 /**
- * @def ASCENSION_DEFAULT_LINE_BREAK
- * Default line break. This must be one of @c ascension#text#LineBreak enumeration.
+ * @def ASCENSION_DEFAULT_NEWLINE
+ * Default newline. This must be one of @c ascension#text#Newline enumerations.
  */
-#define ASCENSION_DEFAULT_LINE_BREAK ascension::text::LB_CRLF
+#define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_CRLF
 
 
 // about ascension.unicode //////////////////////////////////////////////////

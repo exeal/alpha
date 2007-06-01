@@ -11,6 +11,7 @@
 #include <vector>
 using namespace ascension;
 using namespace ascension::unicode;
+using namespace ascension::unicode::ucd;
 using namespace std;
 
 

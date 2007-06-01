@@ -13,6 +13,7 @@ using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
+using namespace ascension::unicode::ucd;
 //using namespace ascension::internal;
 using namespace manah::win32;
 using namespace std;
@@ -282,22 +283,22 @@ Position EditPoint::getPrevCharPos(const EditPoint& pt, length_t length, EditPoi
 /**
  * 範囲内のテキストを返す
  * @param length もう1つの位置までの文字数 (負でもよい)
- * @param lbr 改行文字の扱い (@a length の数え方には影響しないので注意)
+ * @param nlr 改行文字の扱い (@a length の数え方には影響しないので注意)
  */
-String EditPoint::getText(signed_length_t length, LineBreakRepresentation lbr /* = LBR_PHYSICAL_DATA */) const {
+String EditPoint::getText(signed_length_t length, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	verifyDocument();
 	normalize();
 	if(length == 0)
 		return L"";
-	return getText((length > 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length), lbr);
+	return getText((length > 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length), nlr);
 }
 
 /**
  * 範囲内のテキストを返す
  * @param other もう1つの位置
- * @param lbr 改行文字の扱い
+ * @param nlr 改行文字の扱い
  */
-String EditPoint::getText(const Position& other, LineBreakRepresentation lbr /* = LBR_PHYSICAL_DATA */) const {
+String EditPoint::getText(const Position& other, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	// TODO: this code can be rewritten via Document#writeToStream
 	verifyDocument();
 
@@ -319,15 +320,15 @@ String EditPoint::getText(const Position& other, LineBreakRepresentation lbr /* 
 		length_t line = start.line;
 		Char eol[3] = L"";
 
-		switch(lbr) {
-		case LBR_LINE_FEED:
+		switch(nlr) {
+		case NLR_LINE_FEED:
 			wcscpy(eol, L"\n"); break;
-		case LBR_CRLF:
+		case NLR_CRLF:
 			wcscpy(eol, L"\r\n"); break;
-		case LBR_LINE_SEPARATOR:
+		case NLR_LINE_SEPARATOR:
 			wcscpy(eol, L"\x2028"); break;
-		case LBR_DOCUMENT_DEFAULT:
-			wcscpy(eol, getLineBreakString(document.getLineBreak())); break;
+		case NLR_DOCUMENT_DEFAULT:
+			wcscpy(eol, getNewlineString(document.getNewline())); break;
 		}
 		const streamsize eolSize = static_cast<streamsize>(wcslen(eol));
 		while(true) {
@@ -340,8 +341,8 @@ String EditPoint::getText(const Position& other, LineBreakRepresentation lbr /* 
 				break;
 			} else
 				text.sputn(s.data(), static_cast<streamsize>(s.length()));
-			if(lbr == LBR_PHYSICAL_DATA)
-				text.sputn(getLineBreakString(ln.getLineBreak()), static_cast<streamsize>(getLineBreakLength(ln.getLineBreak())));
+			if(nlr == NLR_PHYSICAL_DATA)
+				text.sputn(getNewlineString(ln.getNewline()), static_cast<streamsize>(getNewlineStringLength(ln.getNewline())));
 			else
 				text.sputn(eol, eolSize);
 			++line;
@@ -546,7 +547,7 @@ void EditPoint::newLine() {
 	verifyDocument();
 	if(getDocument()->isReadOnly())
 		return;
-	insert(getLineBreakString(getDocument()->getLineBreak()));
+	insert(getNewlineString(getDocument()->getNewline()));
 }
 
 
@@ -819,7 +820,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 	length_t line = getLineNumber();
 	const TextRenderer& renderer = getTextViewer().getTextRenderer();
 	const int x = renderer.getLineLayout(line).getLocation(getColumnNumber()).x;
-	const String breakString = getLineBreakString(document.getLineBreak());
+	const String breakString = getNewlineString(document.getNewline());
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
 		const Char* const eol = find_first_of(bol, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
@@ -944,7 +945,7 @@ void VisualPoint::newLine(bool inheritIndent) {
 	if(getDocument()->isReadOnly())
 		return;
 
-	String breakString = getLineBreakString(getDocument()->getLineBreak());
+	String breakString = getNewlineString(getDocument()->getNewline());
 
 	if(inheritIndent) {	// 自動インデント
 		const String& currentLine = getDocument()->getLine(getLineNumber());
@@ -1672,7 +1673,7 @@ void Caret::copySelection(bool alsoSendToClipboardRing) {
 	verifyViewer();
 	if(isSelectionEmpty())
 		return;
-	const String s = getSelectionText(LBR_PHYSICAL_DATA);
+	const String s = getSelectionText(NLR_PHYSICAL_DATA);
 	Clipboard(getTextViewer().getHandle()).write(s, isSelectionRectangle());
 	if(alsoSendToClipboardRing) {	// クリップボードリングにも転送
 		if(texteditor::Session* session = getDocument()->getSession())
@@ -1974,16 +1975,16 @@ String Caret::getPrecedingIdentifier(length_t maxLength) const {
 
 /**
  * Returns the selected text.
- * @param lbr 改行の扱い。矩形選択の場合はドキュメントの既定の改行が使われる
+ * @param nlr 改行の扱い。矩形選択の場合はドキュメントの既定の改行が使われる
  * @return the text
  */
-String Caret::getSelectionText(LineBreakRepresentation lbr /* = LBR_PHYSICAL_DATA */) const {
+String Caret::getSelectionText(NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	verifyViewer();
 
 	if(isSelectionEmpty())
 		return L"";
 	else if(!isSelectionRectangle())	// 矩形選択でない場合
-		return getTopPoint().getText(getBottomPoint(), lbr);
+		return getTopPoint().getText(getBottomPoint(), nlr);
 
 	// 矩形選択の場合
 	StringBuffer s(ios_base::out);
@@ -1993,7 +1994,7 @@ String Caret::getSelectionText(LineBreakRepresentation lbr /* = LBR_PHYSICAL_DAT
 		const Document::Line& ln = getDocument()->getLineInfo(line);
 		box_->getOverlappedSubline(line, 0, first, last);	// TODO: recognize wrap (second parameter).
 		s.sputn(ln.getLine().data() + first, static_cast<streamsize>(last - first));
-		s.sputn(getLineBreakString(ln.getLineBreak()), static_cast<streamsize>(getLineBreakLength(ln.getLineBreak())));
+		s.sputn(getNewlineString(ln.getNewline()), static_cast<streamsize>(getNewlineStringLength(ln.getNewline())));
 	}
 	return s.str();
 }

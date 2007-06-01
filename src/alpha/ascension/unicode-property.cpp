@@ -10,7 +10,8 @@
 #include "unicode-property.hpp"
 using namespace ascension;
 using namespace ascension::unicode;
-using namespace ascension::unicode::internal;
+using namespace ascension::unicode::ucd;
+using namespace ascension::unicode::ucd::internal;
 using namespace std;
 
 

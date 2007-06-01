@@ -18,14 +18,14 @@ using namespace std;
 /**
  * Constructor.
  * @param encoding the encoding initially selected
- * @param lineBreak the line break initially selected
+ * @param newline the newline initially selected
  */
-NewFileFormatDialog::NewFileFormatDialog(CodePage encoding, LineBreak lineBreak) throw() : encoding_(encoding), lineBreak_(lineBreak) {
+NewFileFormatDialog::NewFileFormatDialog(CodePage encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
 }
 
 /// @see Dialog#onCommand
 bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
-	if(id != IDC_COMBO_CHARCODE || notifyCode != CBN_SELCHANGE)
+	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
 
 	const CodePage cp = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
@@ -33,30 +33,28 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(cp == CPEX_UNICODE_UTF5 || cp == CP_UTF7 || cp == CP_UTF8
 			|| cp == CPEX_UNICODE_UTF16LE || cp == CPEX_UNICODE_UTF16BE
 			|| cp == CPEX_UNICODE_UTF32LE || cp == CPEX_UNICODE_UTF32BE) {
-		if(lineBreakCombobox_.getCount() != 6) {
-			const int org = (lineBreakCombobox_.getCount() != 0) ? lineBreakCombobox_.getCurSel() : 0;
-
-			lineBreakCombobox_.resetContent();
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), LB_CRLF);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), LB_LF);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), LB_CR);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_NEL) ? IDS_BREAK_NEL L" *" : IDS_BREAK_NEL), LB_NEL);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_LS) ? IDS_BREAK_LS L" *" : IDS_BREAK_LS), LB_LS);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString((lineBreak_ == LB_PS) ? IDS_BREAK_PS L" *" : IDS_BREAK_PS), LB_PS);
-			lineBreakCombobox_.setCurSel(org);
+		if(newlineCombobox_.getCount() != 6) {
+			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
+			newlineCombobox_.resetContent();
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_NEL) ? IDS_BREAK_NEL L" *" : IDS_BREAK_NEL), NLF_NEL);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LS) ? IDS_BREAK_LS L" *" : IDS_BREAK_LS), NLF_LS);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_PS) ? IDS_BREAK_PS L" *" : IDS_BREAK_PS), NLF_PS);
+			newlineCombobox_.setCurSel(org);
 		}
 	} else {
-		if(lineBreakCombobox_.getCount() != 3) {
-			const int org = (lineBreakCombobox_.getCount() != 0) ? lineBreakCombobox_.getCurSel() : 0;
-
-			lineBreakCombobox_.resetContent();
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString(
-				(lineBreak_ == LB_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), LB_CRLF);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString(
-				(lineBreak_ == LB_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), LB_LF);
-			lineBreakCombobox_.setItemData(lineBreakCombobox_.addString(
-				(lineBreak_ == LB_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), LB_CR);
-			lineBreakCombobox_.setCurSel((org < lineBreakCombobox_.getCount()) ? org : 0);
+		if(newlineCombobox_.getCount() != 3) {
+			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
+			newlineCombobox_.resetContent();
+			newlineCombobox_.setItemData(newlineCombobox_.addString(
+				(newline_ == NLF_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(
+				(newline_ == NLF_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(
+				(newline_ == NLF_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
+			newlineCombobox_.setCurSel((org < newlineCombobox_.getCount()) ? org : 0);
 		}
 	}
 	return true;
@@ -80,10 +78,10 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	}
 
 	// [改行コード]
-	onCommand(IDC_COMBO_CHARCODE, CBN_SELCHANGE, 0);
+	onCommand(IDC_COMBO_ENCODING, CBN_SELCHANGE, 0);
 	for(int i = 0; i < 6; ++i) {
-		if(lineBreak_ == static_cast<LineBreak>(lineBreakCombobox_.getItemData(i))) {
-			lineBreakCombobox_.setCurSel(i);
+		if(newline_ == static_cast<Newline>(newlineCombobox_.getItemData(i))) {
+			newlineCombobox_.setCurSel(i);
 			break;
 		}
 	}
@@ -97,6 +95,6 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
 	encoding_ = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
-	lineBreak_ = static_cast<ascension::text::LineBreak>(lineBreakCombobox_.getItemData(lineBreakCombobox_.getCurSel()));
+	newline_ = static_cast<Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
 }

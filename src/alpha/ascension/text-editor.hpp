@@ -220,9 +220,9 @@ namespace ascension {
 				Type type_;
 			};
 			/// 改行
-			class LineBreakCommand : public internal::EditorCommandBase<bool> {
+			class NewlineCommand : public internal::EditorCommandBase<bool> {
 			public:
-				LineBreakCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
+				NewlineCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
 				ulong execute();
 			};
 			/// 補完ウィンドウを開く

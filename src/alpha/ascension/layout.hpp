@@ -342,7 +342,7 @@ namespace ascension {
 			int	getDescent() const throw();
 			int	getLineHeight() const throw();
 			// primary font and alternatives
-			HFONT		getFont(int script = unicode::Script::COMMON, bool bold = false, bool italic = false) const;
+			HFONT		getFont(int script = unicode::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
 			HFONT		getFontForShapingControls() const throw();
 			void		setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
 			// default settings
@@ -404,9 +404,9 @@ namespace ascension {
 			/**
 			 * Draws the specified line break indicator.
 			 * @param context the context
-			 * @param lineBreak the line break to draw
+			 * @param newline the newline to draw
 			 */
-			virtual void drawLineTerminator(const DrawingContext& context, text::LineBreak lineBreak) const = 0;
+			virtual void drawLineTerminator(const DrawingContext& context, text::Newline newline) const = 0;
 			/**
 			 * Draws the width of a line wrapping mark.
 			 * @param context the context
@@ -428,10 +428,10 @@ namespace ascension {
 			/**
 			 * Returns the width of the specified line break indicator.
 			 * @param context the context
-			 * @param lineBreak the line break to layout
+			 * @param newline the newline to layout
 			 * @return the width or 0 if does not render the indicator
 			 */
-			virtual int getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const = 0;
+			virtual int getLineTerminatorWidth(const LayoutContext& context, text::Newline newline) const = 0;
 			/**
 			 * Returns the width of a line wrapping mark.
 			 * @param context the context
@@ -470,11 +470,11 @@ namespace ascension {
 		private:
 			// ISpecialCharacterRenderer
 			void	drawControlCharacter(const DrawingContext& context, CodePoint c) const;
-			void	drawLineTerminator(const DrawingContext& context, text::LineBreak lineBreak) const;
+			void	drawLineTerminator(const DrawingContext& context, text::Newline newline) const;
 			void	drawLineWrappingMark(const DrawingContext& context) const;
 			void	drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
 			int		getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
-			int		getLineTerminatorWidth(const LayoutContext& context, text::LineBreak lineBreak) const;
+			int		getLineTerminatorWidth(const LayoutContext& context, text::Newline newline) const;
 			int		getLineWrappingMarkWidth(const LayoutContext& context) const;
 			void	install(TextRenderer& textRenderer);
 			void	uninstall();

@@ -20,6 +20,7 @@
 using namespace ascension;
 using namespace ascension::regex;
 using namespace ascension::unicode;
+using namespace ascension::unicode::ucd;
 using namespace std;
 using regex::internal::RegexTraits;
 

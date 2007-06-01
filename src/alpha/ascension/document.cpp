@@ -622,12 +622,12 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
 
 Document::DefaultContentTypeInformationProvider Document::defaultContentTypeInformationProvider_;
 CodePage Document::defaultCodePage_ = ::GetACP();
-LineBreak Document::defaultLineBreak_ = ASCENSION_DEFAULT_LINE_BREAK;
+Newline Document::defaultNewline_ = ASCENSION_DEFAULT_NEWLINE;
 
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(&defaultContentTypeInformationProvider_),
-		readOnly_(false), modified_(false), codePage_(defaultCodePage_), lineBreak_(defaultLineBreak_),
+		readOnly_(false), modified_(false), codePage_(defaultCodePage_), newline_(defaultNewline_),
 		length_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false), changing_(false),
 		accessibleArea_(0), timeStampDirector_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
@@ -744,25 +744,25 @@ Position Document::erase(const Region& region) {
 
 		// 削除する部分を保存しつつ削除
 		Line& firstLine = *lines_[begin.line];
-		LineBreak lastLineBreak;
-		deletedString.sputn(getLineBreakString(lines_[begin.line]->lineBreak_),
-			static_cast<streamsize>(getLineBreakLength(lines_[begin.line]->lineBreak_)));
+		Newline lastNewline;
+		deletedString.sputn(getNewlineString(lines_[begin.line]->newline_),
+			static_cast<streamsize>(getNewlineStringLength(lines_[begin.line]->newline_)));
 		for(length_t i = begin.line + 1; ; ++i) {
 			line = lines_[i];
 			deletedString.sputn(line->text_.data(), static_cast<streamsize>((i != end.line) ? line->text_.length() : end.column));
 			length_ -= line->text_.length();
 			if(i != end.line)
-				deletedString.sputn(getLineBreakString(line->lineBreak_), static_cast<streamsize>(getLineBreakLength(line->lineBreak_)));
+				deletedString.sputn(getNewlineString(line->newline_), static_cast<streamsize>(getNewlineStringLength(line->newline_)));
 			else {	// 削除終了行
 				tail.reset(new String(line->text_.substr(end.column)));
-				lastLineBreak = line->lineBreak_;
+				lastNewline = line->newline_;
 				break;
 			}
 		}
 		lines_.erase(begin.line + 1, end.line - begin.line);
 
 		// 削除した部分の前後を繋ぐ
-		firstLine.lineBreak_ = lastLineBreak;
+		firstLine.newline_ = lastNewline;
 		++firstLine.operationHistory_;
 		if(!tail->empty()) {
 			firstLine.text_ += *tail;
@@ -801,10 +801,10 @@ inline void Document::fireDocumentChanged(const DocumentChange& c, bool updateAl
 /**
  * Returns the offset of the line.
  * @param line the line
- * @param lbr the line representation policy for character counting
+ * @param nlr the line representation policy for character counting
  * @throw BadPostionException @a line is outside of the document
  */
-length_t Document::getLineOffset(length_t line, LineBreakRepresentation lbr) const {
+length_t Document::getLineOffset(length_t line, NewlineRepresentation nlr) const {
 	if(line >= lines_.getSize())
 		throw BadPositionException();
 
@@ -812,13 +812,13 @@ length_t Document::getLineOffset(length_t line, LineBreakRepresentation lbr) con
 	for(length_t i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
-		switch(lbr) {
-		case LBR_LINE_FEED:
-		case LBR_LINE_SEPARATOR:	offset += 1; break;
-		case LBR_CRLF:				offset += 2; break;
-		case LBR_PHYSICAL_DATA:		offset += getLineBreakLength(ln.lineBreak_); break;
-		case LBR_DOCUMENT_DEFAULT:	offset += getLineBreakLength(getLineBreak()); break;
-		case LBR_SKIP:				break;
+		switch(nlr) {
+		case NLR_LINE_FEED:
+		case NLR_LINE_SEPARATOR:	offset += 1; break;
+		case NLR_CRLF:				offset += 2; break;
+		case NLR_PHYSICAL_DATA:		offset += getNewlineStringLength(ln.newline_); break;
+		case NLR_DOCUMENT_DEFAULT:	offset += getNewlineStringLength(getNewline()); break;
+		case NLR_SKIP:				break;
 		}
 	}
 	return offset;
@@ -886,7 +886,7 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 		length_t line = position.line;
 		Line& firstLine = *lines_[line];
 		const Char* lastBreak;
-		const LineBreak firstLineBreak = firstLine.lineBreak_;	// 先頭行の改行文字 (挿入後、一番後ろに付けられる)
+		const Newline firstNewline = firstLine.newline_;	// 先頭行の改行文字 (挿入後、一番後ろに付けられる)
 
 		// 最後の改行位置を探し、resultPosition の文字位置も決定する
 		for(lastBreak = last - 1; ; --lastBreak) {
@@ -901,8 +901,8 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 		const String firstLineRest = firstLine.text_.substr(position.column, firstLine.text_.length() - position.column);
 		length_ += breakPoint - first - firstLineRest.length();
 		firstLine.text_.replace(position.column, firstLineRest.length(), first, static_cast<String::size_type>(breakPoint - first));
-		firstLine.lineBreak_ = eatLineBreak(breakPoint, last);
-		breakPoint += (firstLine.lineBreak_ != LB_CRLF) ? 1 : 2;
+		firstLine.newline_ = eatNewline(breakPoint, last);
+		breakPoint += (firstLine.newline_ != NLF_CRLF) ? 1 : 2;
 		++firstLine.operationHistory_;
 		++line;
 		++resultPosition.line;
@@ -913,16 +913,16 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 				const Char* const nextBreak =
 					find_first_of(breakPoint, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
 				assert(nextBreak != last);
-				const LineBreak lineBreak = eatLineBreak(nextBreak, last);
+				const Newline newline = eatNewline(nextBreak, last);
 
 				length_ += nextBreak - breakPoint;
-				lines_.insert(line, new Line(String(breakPoint, nextBreak), lineBreak, true));
+				lines_.insert(line, new Line(String(breakPoint, nextBreak), newline, true));
 				++line;
 				++resultPosition.line;
-				breakPoint = nextBreak + ((lineBreak != LB_CRLF) ? 1 : 2);
+				breakPoint = nextBreak + ((newline != NLF_CRLF) ? 1 : 2);
 			} else {	// 最終行
 				length_ += last - breakPoint + firstLineRest.length();
-				lines_.insert(line, new Line(String(breakPoint, last) + firstLineRest, firstLineBreak, true));
+				lines_.insert(line, new Line(String(breakPoint, last) + firstLineRest, firstNewline, true));
 				break;
 			}
 		}
@@ -1055,9 +1055,9 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 
 		// 改行ごとに区切り、リストに追加していく
 		length_t nextBreak, lastBreak = 0;
-		LineBreak lineBreak;
+		Newline newline;
 		lines_.clear();
-		lineBreak_ = LB_AUTO;
+		newline_ = NLF_AUTO;
 		while(true) {
 			for(size_t i = lastBreak; ; ++i) {	// 改行文字を探す
 				if(i == destLength) {
@@ -1071,19 +1071,19 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 			if(nextBreak != -1) {
 				// 改行文字の判定
 				switch(ucsBuffer[nextBreak]) {
-				case LINE_FEED:	lineBreak = LB_LF;	break;
+				case LINE_FEED:	newline = NLF_LF;	break;
 				case CARRIAGE_RETURN:
-					lineBreak = (nextBreak + 1 < destLength && ucsBuffer[nextBreak + 1] == LINE_FEED) ? LB_CRLF : LB_CR;
+					newline = (nextBreak + 1 < destLength && ucsBuffer[nextBreak + 1] == LINE_FEED) ? NLF_CRLF : NLF_CR;
 					break;
-				case NEXT_LINE:	lineBreak = LB_NEL;	break;
-				case LINE_SEPARATOR:		lineBreak = LB_LS;	break;
-				case PARAGRAPH_SEPARATOR:	lineBreak = LB_PS;	break;
+				case NEXT_LINE:	newline = NLF_NEL;	break;
+				case LINE_SEPARATOR:		newline = NLF_LS;	break;
+				case PARAGRAPH_SEPARATOR:	newline = NLF_PS;	break;
 				}
-				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, nextBreak - lastBreak), lineBreak));
+				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, nextBreak - lastBreak), newline));
 				length_ += nextBreak - lastBreak;
-				lastBreak = nextBreak + ((lineBreak != LB_CRLF) ? 1 : 2);
-				if(lineBreak_ == LB_AUTO)	// 最初に現れた改行文字を既定の改行文字とする
-					setLineBreak(lineBreak);
+				lastBreak = nextBreak + ((newline != NLF_CRLF) ? 1 : 2);
+				if(newline_ == NLF_AUTO)	// 最初に現れた改行文字を既定の改行文字とする
+					setNewline(newline);
 			} else {	// 最終行
 				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, destLength - lastBreak)));
 				length_ += destLength - lastBreak;
@@ -1096,8 +1096,8 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 	}
 
-	if(lineBreak_ == LB_AUTO)
-		setLineBreak(Document::defaultLineBreak_);
+	if(newline_ == NLF_AUTO)
+		setNewline(Document::defaultNewline_);
 	diskFile_.lockingFile->getFileTime(0, 0, &diskFile_.lastWriteTimes.internal);
 	diskFile_.lastWriteTimes.user = diskFile_.lastWriteTimes.internal;
 	if(diskFile_.lockMode.type == FileLockMode::LOCK_TYPE_NONE)
@@ -1198,7 +1198,7 @@ void Document::resetContent() {
 
 	setReadOnly(false);
 	setCodePage(Document::defaultCodePage_);
-	setLineBreak(Document::defaultLineBreak_);
+	setNewline(Document::defaultNewline_);
 	setFilePathName(0);
 	setModified(false);
 	clearUndoBuffer();
@@ -1209,7 +1209,7 @@ void Document::resetContent() {
 /**
  * Writes the content of the document to the specified file.
  * @param fileName the file name
- * @param params the options. set @a lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
+ * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the line breaks.
  * set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded
@@ -1237,11 +1237,11 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	const CodePage cp = encoderFactory.isCodePageForAutoDetection(params.codePage) ? codePage_ : params.codePage;
 
 	// Unicode コードページでしか使えない改行コード
-	if((params.lineBreak == LB_NEL || params.lineBreak == LB_LS || params.lineBreak == LB_PS)
+	if((params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS)
 			&& cp != CPEX_UNICODE_UTF5 && cp != CP_UTF7 && cp != CP_UTF8
 			&& cp != CPEX_UNICODE_UTF16LE && cp != CPEX_UNICODE_UTF16BE
 			&& cp != CPEX_UNICODE_UTF32LE && cp != CPEX_UNICODE_UTF32BE)
-		return FIR_INVALID_LINE_BREAK;
+		return FIR_INVALID_NEWLINE;
 
 	ui::WaitCursor wc;
 	FileIOResult result = FIR_OK;
@@ -1254,7 +1254,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	auto_ptr<Encoder> encoder(encoderFactory.createEncoder(cp));
 	UnconvertableCharCallback* internalCallback = (callback != 0) ? new UnconvertableCharCallback(callback) : 0;
 	const length_t lineCount = getNumberOfLines();	// 総行数
-	const size_t nativeBufferBytes = (getLength(LBR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
+	const size_t nativeBufferBytes = (getLength(NLR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
 	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
 	size_t offset = 0;	// バイト単位
 
@@ -1308,9 +1308,9 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 			offset += convertedBytes;
 		}
 		if(i != lineCount - 1) {
-			const String breakString = getLineBreakString((params.lineBreak != LB_AUTO) ? params.lineBreak : line.lineBreak_);
+			const String nlf(getNewlineString((params.newline != NLF_AUTO) ? params.newline : line.newline_));
 			convertedBytes = encoder->fromUnicode(nativeBuffer + offset,
-				nativeBufferBytes - offset, breakString.data(), breakString.length(),
+				nativeBufferBytes - offset, nlf.data(), nlf.length(),
 				(internalCallback != 0 && !internalCallback->isCalledOnce()) ? internalCallback : 0);
 			if(convertedBytes == 0)
 				goto CLIENT_ABORTED;
@@ -1439,12 +1439,12 @@ CLIENT_ABORTED:
 
 #undef FREE_TEMPORARY_BUFFER
 
-	if(params.lineBreak != LB_AUTO) {
-		setLineBreak(params.lineBreak);	// 改行コードの決定
+	if(params.newline != NLF_AUTO) {
+		setNewline(params.newline);	// 改行コードの決定
 		for(length_t i = 0; i < lines_.getSize(); ++i) {
 			Line& line = *lines_[i];
-			line.operationHistory_ = 0;			// 操作履歴を消す
-			line.lineBreak_ = params.lineBreak;	// 改行コードを上書きする
+			line.operationHistory_ = 0;		// 操作履歴を消す
+			line.newline_ = params.newline;	// 改行コードを上書きする
 		}
 	} else {
 		for(length_t i = 0; i < lines_.getSize(); ++i)
@@ -1520,8 +1520,8 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 			wmemcpy(content + offset, line.text_.data(), line.text_.length());
 			offset += line.text_.length();
 			if(i != lines_.getSize() - 1) {
-				wcscpy(content + offset, getLineBreakString(line.lineBreak_));
-				offset += getLineBreakLength(line.lineBreak_);
+				wcscpy(content + offset, getNewlineString(line.newline_));
+				offset += getNewlineStringLength(line.newline_);
 			} else
 				break;
 		}
@@ -1545,23 +1545,23 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 /**
  * 既定のコードページと改行コードの設定
  * @param cp コードページ
- * @param lineBreak 改行コード
+ * @param newline 改行コード
  * throw std::invalid_argument コードページ、改行コードが正しくないときスロー
  */
-void Document::setDefaultCode(CodePage cp, LineBreak lineBreak) {
+void Document::setDefaultCode(CodePage cp, Newline newline) {
 	cp = translateSpecialCodePage(cp);
 	if(!EncoderFactory::getInstance().isValidCodePage(cp)
 			|| EncoderFactory::getInstance().isCodePageForAutoDetection(cp))
 		throw invalid_argument("Specified code page is not available.");
-	switch(lineBreak) {
-	case LB_LF:		case LB_CR:		case LB_CRLF:
-	case LB_NEL:	case LB_LS:		case LB_PS:
+	switch(newline) {
+	case NLF_LF:	case NLF_CR:	case NLF_CRLF:
+	case NLF_NEL:	case NLF_LS:	case NLF_PS:
 		break;
 	default:
-		throw invalid_argument("Specified line break type is invalid.");
+		throw invalid_argument("Specified newline is invalid.");
 	}
 	defaultCodePage_ = cp;
-	defaultLineBreak_ = lineBreak;
+	defaultNewline_ = newline;
 }
 
 /**
@@ -1713,8 +1713,8 @@ void Document::widen() {
  * Writes the specified region to the specified file.
  * @param fileName the file name
  * @param region the region to be written
- * @param params the options. set @a lineBreak member of this object to @c LB_AUTO not to unify the line breaks.
- * set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
+ * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
+ * newlines. set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
  * @param append true to append to the file
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded
@@ -1731,7 +1731,7 @@ Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName
  * @param region the region to be written (this region is not restricted with narrowing)
  * @param lbr the line break to be used
  */
-void Document::writeToStream(OutputStream& out, const Region& region, LineBreakRepresentation lbr /* = LBR_PHYSICAL_DATA */) const {
+void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	const Position& start = region.getTop();
 	const Position end = max(region.getBottom(), Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1)));
 	for(length_t i = start.line; ; ++i) {
@@ -1741,13 +1741,13 @@ void Document::writeToStream(OutputStream& out, const Region& region, LineBreakR
 		out.write(line.text_.data() + first, static_cast<streamsize>(last - first));
 		if(i == end.line)
 			return;
-		switch(lbr) {
-		case LBR_LINE_FEED:			out << L"\n"; break;
-		case LBR_CRLF:				out << L"\r\n"; break;
-		case LBR_LINE_SEPARATOR:	out << L"\x2028"; break;
-		case LBR_PHYSICAL_DATA:		out << getLineBreakString(line.lineBreak_); break;
-		case LBR_DOCUMENT_DEFAULT:	out << getLineBreakString(getLineBreak()); break;
-		case LBR_SKIP:				break;
+		switch(nlr) {
+		case NLR_LINE_FEED:			out << L"\n"; break;
+		case NLR_CRLF:				out << L"\r\n"; break;
+		case NLR_LINE_SEPARATOR:	out << L"\x2028"; break;
+		case NLR_PHYSICAL_DATA:		out << getNewlineString(line.newline_); break;
+		case NLR_DOCUMENT_DEFAULT:	out << getNewlineString(getNewline()); break;
+		case NLR_SKIP:				break;
 		}
 	}
 }
