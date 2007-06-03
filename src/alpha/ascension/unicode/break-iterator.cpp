@@ -221,13 +221,13 @@ namespace {
 	/// Advances @a i to the next character neither Extend nor Format.
 	int nextBase(CharacterIterator& i) {
 		if(!i.hasNext())
-			return GeneralCategory::COUNT;
+			return GeneralCategory::LAST_VALUE;
 		CodePoint cp = *i;
 		if(cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR) {	// !Sep
 			++i;
-			return GeneralCategory::COUNT;
+			return GeneralCategory::LAST_VALUE;
 		}
-		int gc = GeneralCategory::COUNT;
+		int gc = GeneralCategory::LAST_VALUE;
 		while((++i).hasNext()) {
 			gc = GeneralCategory::of(cp = *i);
 			if(gc != GeneralCategory::OTHER_FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
@@ -240,11 +240,11 @@ namespace {
 	int previousBase(CharacterIterator& i) {
 		if(!i.hasPrevious())
 			return GeneralCategory::of(*i);
-		int gc = GeneralCategory::COUNT;
+		int gc = GeneralCategory::LAST_VALUE;
 		CodePoint cp;
 		do {
 			cp = *--i;
-			if(gc != GeneralCategory::COUNT
+			if(gc != GeneralCategory::LAST_VALUE
 					&& (cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR)) {	// !Sep
 				++i;
 				break;
@@ -711,8 +711,6 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
 }
 
 
-#ifndef ASCENSION_NO_UAX14
-
 // AbstractLineBreakIterator ////////////////////////////////////////////////
 
 /**
@@ -730,5 +728,3 @@ void AbstractLineBreakIterator::next(ptrdiff_t amount) {
 bool AbstractLineBreakIterator::isBoundary(const CharacterIterator& at) const {
 	return true;
 }
-
-#endif /* !ASCENSION_NO_UAX14 */

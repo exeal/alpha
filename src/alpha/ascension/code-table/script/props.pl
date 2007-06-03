@@ -6,13 +6,15 @@
 # - uprops-implementation
 # - uprops-table
 # - uprops-binary-property-table-definition
-# for ascension::unicode::* Unicode property classes. This uses the folowing public files
+# for ascension.unicode.ucd.* Unicode property classes. This uses the folowing public files
 # obtained from Unicode.org:
 # - UnicodeData.txt
 # - Blocks.txt
 # - Scripts.txt
 # - PropList.txt
 # - CaseFolding.txt
+# - EastAsianWidth.txt
+# - LineBreak.txt
 
 use strict;
 use warnings;
@@ -27,6 +29,20 @@ my %categoryMap = (
 	Sm => 19, Sc => 20, Sk => 21, So => 22,
 	Zs => 23, Zl => 24, Zp => 25,
 	Cc => 26, Cf => 27, Cs => 28, Co => 29, Cn => 30
+);
+
+my %eastAsianWidthMap = (
+	F => 318, H => 319, W => 320, Na => 321, A => 322, N => 323
+);
+
+my %lineBreakMap = (
+	# normative
+	BK => 324, CR => 325, LF => 326, CM => 327, SG => 329, GL => 332, CB => 338, SP => 333, ZW => 331,
+	NL => 328, WJ => 330, JL => 355, JV => 356, JT => 357, H2 => 352, H3 => 353,
+	# informative
+	XX => 359, OP => 343, CL => 339, QU => 344, NS => 342, EX => 340, SY => 349,
+	IS => 345, PR => 348, PO => 347, NU => 346, AL => 351, ID => 354, IN => 341, HY => 337,
+	BB => 336, BA => 335, SA => 358, AI => 350, B2 => 334
 );
 
 # process input files' directory
@@ -54,11 +70,11 @@ sub cp2str(@) {
 	return 'L"' . $result . '"';
 }
 
-# generate general categories code
+# generate General_Category code
 sub processGeneralCategories() {
 	open(INPUT, $directory . 'UnicodeData.txt')
 		or die "Input file '${directory}UnicodeData.txt' not found.\n";
-	print 'generating general categories table...' . "\n";
+	print 'generating General_Category table...' . "\n";
 	print OUTPUT_TABLE 'const PropertyRange GeneralCategory::ranges_[] = {' . "\n";
 
 	my ($first, $last) = (0, -1);
@@ -93,11 +109,11 @@ sub processGeneralCategories() {
 	close INPUT;
 }
 
-# generate blocks code
+# generate Block code
 sub processCodeBlocks() {
 	open(INPUT, $directory . 'Blocks.txt')
 		or die "Input file '${directory}Blocks.txt' not found.\n";
-	print 'generating blocks table...' . "\n";
+	print 'generating Block table...' . "\n";
 	print OUTPUT_TABLE 'const PropertyRange CodeBlock::ranges_[] = {' . "\n";
 
 	my $blockNumber = 40;	# CodeBlock::BASIC_LATIN
@@ -113,7 +129,7 @@ sub processCodeBlocks() {
 # generate two arrays table for Canonical_Combining_Class
 sub processCanonicalCombiningClasses() {
 	my $input = new IO::File($directory . 'UnicodeData.txt') or die "Can't open '${directory}UnicodeData.txt'.\n";
-	print "generating ccc table...\n";
+	print "generating CanonicalCombining_Class table...\n";
 
 	my (@cp, @ccc);
 	while(<$input>) {
@@ -141,11 +157,11 @@ sub processCanonicalCombiningClasses() {
 	$input->close;
 }
 
-# generate scripts code
+# generate Script code
 sub processScripts() {
 	open(INPUT, $directory . 'Scripts.txt')
 		or die "Input file '${directory}Scripts.txt' not found.\n";
-	print 'generating scripts table...' . "\n";
+	print 'generating Script table...' . "\n";
 	print OUTPUT_TABLE 'const PropertyRange Script::ranges_[] = {' . "\n";
 
 	my @ranges;
@@ -319,6 +335,60 @@ sub processDecompositionMappings() {
 	$output->close;
 }
 
+# generate East_Asian_Width code
+sub processEastAsianWidths() {
+	my $input = new IO::File($directory . 'EastAsianWidth.txt')
+		or die "Input file '${directory}EastAsianWidth.txt' not found.\n";
+	my ($first, $last, $ea) = (0, -1, 'ZZ');
+	my $isRange = 0;
+
+	print 'generating East_Asian_Width table...' . "\n";
+	print OUTPUT_TABLE 'const PropertyRange EastAsianWidth::ranges_[] = {' . "\n";
+	while(<$input>) {
+		if(m/^([\dA-F]{4,6});([A-Z]{1,2})/ or (($isRange = 1) and m/^([\dA-F]{4,6})\.\.([\dA-F]{4,6});([A-Z]{2})/)) {
+			my ($cp, $prop) = (hex($1), $isRange ? $3 : $2);
+			if($prop ne $ea or $cp != $last + 1) {
+				if($last != -1) {
+					printf OUTPUT_TABLE '{0x%X,0x%X,%d},', $first, $last, $eastAsianWidthMap{$ea};
+				}
+				($first, $ea) = ($cp, $prop);
+			}
+			$last = $isRange ? hex($2) : $cp;
+		}
+		$isRange = 0;
+	}
+	printf OUTPUT_TABLE '{0x%X,0x%X,%d}};', $first, $last, $eastAsianWidthMap{$ea};
+	print OUTPUT_TABLE "\nconst size_t EastAsianWidth::count_ = countof(EastAsianWidth::ranges_);\n";
+	$input->close;
+}
+
+# generate Line_Break code
+sub processLineBreaks() {
+	my $input = new IO::File($directory . 'LineBreak.txt')
+		or die "Input file '${directory}LineBreak.txt' not found.\n";
+	my ($first, $last, $lb) = (0, -1, 'ZZ');
+	my $isRange = 0;
+
+	print 'generating Line_Break table...' . "\n";
+	print OUTPUT_TABLE 'const PropertyRange LineBreak::ranges_[] = {' . "\n";
+	while(<$input>) {
+		if(m/^([\dA-F]{4,6});([A-Z]{2})/ or (($isRange = 1) and m/^([\dA-F]{4,6})\.\.([\dA-F]{4,6});([A-Z]{2})/)) {
+			my ($cp, $prop) = (hex($1), $isRange ? $3 : $2);
+			if($prop ne $lb or $cp != $last + 1) {
+				if($last != -1) {
+					printf OUTPUT_TABLE '{0x%X,0x%X,%d},', $first, $last, $lineBreakMap{$lb};
+				}
+				($first, $lb) = ($cp, $prop);
+			}
+			$last = $isRange ? hex($2) : $cp;
+		}
+		$isRange = 0;
+	}
+	printf OUTPUT_TABLE '{0x%X,0x%X,%d}};', $first, $last, $lineBreakMap{$lb};
+	print OUTPUT_TABLE "\nconst size_t LineBreak::count_ = countof(LineBreak::ranges_);\n";
+	$input->close;
+}
+
 
 # open output files
 die "Cannot open output file '../uprops-table'.\n" unless(open OUTPUT_TABLE, '>..\\uprops-table');
@@ -341,6 +411,8 @@ processScripts();
 processBinaryProperties();
 processCaseFolding();
 processDecompositionMappings();
+processEastAsianWidths();
+processLineBreaks();
 print "done.\n";
 
 close OUTPUT_TABLE;

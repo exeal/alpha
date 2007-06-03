@@ -55,43 +55,61 @@ namespace ascension {
 				static int	compare(const CharType* p1, const CharType* p2);
 			};
 
+			/// An invalid property value.
 			const int NOT_PROPERTY = 0;
 
+			/// Base type for all property classes.
+			template<typename ConcreteProperty> class PropertyBase {
+			public:
+				static int forName(const Char* name);
+			protected:
+				struct Names {
+					const Char* const shortName;
+					const Char* const longName;
+				};
+			private:
+				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
+			};
+
+			template<typename ConcreteProperty>
+			std::map<const Char*, int, PropertyNameComparer<Char> > PropertyBase<ConcreteProperty>::names_;
+
 			/// General categories. These values are based on Unicode standard 5.0.0 "4.5 General Category".
-			class GeneralCategory {
+			class GeneralCategory : public PropertyBase<GeneralCategory> {
 			public:
 				enum {
+					FIRST_VALUE = NOT_PROPERTY + 1,
 					// sub-categories
-					LETTER_UPPERCASE = 1,		///< Lu = Letter, uppercase
-					LETTER_LOWERCASE,			///< Ll = Letter, lowercase
-					LETTER_TITLECASE,			///< Lt = Letter, titlecase
-					LETTER_MODIFIER,			///< Lm = Letter, modifier
-					LETTER_OTHER,				///< Lo = Letter, other
-					MARK_NONSPACING,			///< Mn = Mark, nonspacing
-					MARK_SPACING_COMBINING,		///< Mc = Mark, spacing combining
-					MARK_ENCLOSING,				///< Me = Mark, enclosing
-					NUMBER_DECIMAL_DIGIT,		///< Nd = Number, decimal digit
-					NUMBER_LETTER,				///< Nl = Number, letter
-					NUMBER_OTHER,				///< No = Number, other
-					PUNCTUATION_CONNECTOR,		///< Pc = Punctuation, connector
-					PUNCTUATION_DASH,			///< Pd = Punctuation, dash
-					PUNCTUATION_OPEN,			///< Ps = Punctuation, open
-					PUNCTUATION_CLOSE,			///< Pe = Punctuation, close
-					PUNCTUATION_INITIAL_QUOTE,	///< Pi = Punctuation, initial quote
-					PUNCTUATION_FINAL_QUOTE,	///< Pf = Punctuation, final quote
-					PUNCTUATION_OTHER,			///< Po = Punctuation, other
-					SYMBOL_MATH,				///< Sm = Symbol, math
-					SYMBOL_CURRENCY,			///< Sc = Symbol, currency
-					SYMBOL_MODIFIER,			///< Sk = Symbol, modifier
-					SYMBOL_OTHER,				///< So = Symbol, other
-					SEPARATOR_SPACE,			///< Zs = Separator, space
-					SEPARATOR_LINE,				///< Zl = Separator, line
-					SEPARATOR_PARAGRAPH,		///< Zp = Separator, paragraph
-					OTHER_CONTROL,				///< Cc = Other, control
-					OTHER_FORMAT,				///< Cf = Other, format
-					OTHER_SURROGATE,			///< Cs = Other, surrogate
-					OTHER_PRIVATE_USE,			///< Co = Other, private use
-					OTHER_UNASSIGNED,			///< Cn = Other, not assigned
+					LETTER_UPPERCASE = FIRST_VALUE,	///< Lu = Letter, uppercase
+					LETTER_LOWERCASE,				///< Ll = Letter, lowercase
+					LETTER_TITLECASE,				///< Lt = Letter, titlecase
+					LETTER_MODIFIER,				///< Lm = Letter, modifier
+					LETTER_OTHER,					///< Lo = Letter, other
+					MARK_NONSPACING,				///< Mn = Mark, nonspacing
+					MARK_SPACING_COMBINING,			///< Mc = Mark, spacing combining
+					MARK_ENCLOSING,					///< Me = Mark, enclosing
+					NUMBER_DECIMAL_DIGIT,			///< Nd = Number, decimal digit
+					NUMBER_LETTER,					///< Nl = Number, letter
+					NUMBER_OTHER,					///< No = Number, other
+					PUNCTUATION_CONNECTOR,			///< Pc = Punctuation, connector
+					PUNCTUATION_DASH,				///< Pd = Punctuation, dash
+					PUNCTUATION_OPEN,				///< Ps = Punctuation, open
+					PUNCTUATION_CLOSE,				///< Pe = Punctuation, close
+					PUNCTUATION_INITIAL_QUOTE,		///< Pi = Punctuation, initial quote
+					PUNCTUATION_FINAL_QUOTE,		///< Pf = Punctuation, final quote
+					PUNCTUATION_OTHER,				///< Po = Punctuation, other
+					SYMBOL_MATH,					///< Sm = Symbol, math
+					SYMBOL_CURRENCY,				///< Sc = Symbol, currency
+					SYMBOL_MODIFIER,				///< Sk = Symbol, modifier
+					SYMBOL_OTHER,					///< So = Symbol, other
+					SEPARATOR_SPACE,				///< Zs = Separator, space
+					SEPARATOR_LINE,					///< Zl = Separator, line
+					SEPARATOR_PARAGRAPH,			///< Zp = Separator, paragraph
+					OTHER_CONTROL,					///< Cc = Other, control
+					OTHER_FORMAT,					///< Cf = Other, format
+					OTHER_SURROGATE,				///< Cs = Other, surrogate
+					OTHER_PRIVATE_USE,				///< Co = Other, private use
+					OTHER_UNASSIGNED,				///< Cn = Other, not assigned
 					// super-categories
 					LETTER,			///< L = Letter
 					LETTER_CASED,	///< Lc = Letter, cased
@@ -101,18 +119,17 @@ namespace ascension {
 					SYMBOL,			///< S = Symbol
 					SEPARATOR,		///< Z = Separator
 					OTHER,			///< C = Other
-					COUNT
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				template<int superCategory>
 				static bool	is(int subCategory);
 				static int	of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<GeneralCategory>;
 			};
 			
 			/// Returns true if the specified character is a letter.
@@ -133,10 +150,11 @@ namespace ascension {
 			template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {return gc >= OTHER_CONTROL && gc <= OTHER_UNASSIGNED;}
 		
 			/// Code blocks. These values are based on Blocks.txt obtained from UCD.
-			class CodeBlock {
+			class CodeBlock : public PropertyBase<CodeBlock> {
 			public:
 				enum {
-					NO_BLOCK = GeneralCategory::COUNT,
+					FIRST_VALUE = GeneralCategory::LAST_VALUE,
+					NO_BLOCK = FIRST_VALUE,
 					BASIC_LATIN, LATIN_1_SUPPLEMENT, LATIN_EXTENDED_A, LATIN_EXTENDED_B, IPA_EXTENSIONS,
 					SPACING_MODIFIER_LETTERS, COMBINING_DIACRITICAL_MARKS, GREEK_AND_COPTIC, CYRILLIC,
 					CYRILLIC_SUPPLEMENT, ARMENIAN, HEBREW, ARABIC, SYRIAC, ARABIC_SUPPLEMENT, THAANA,
@@ -171,16 +189,15 @@ namespace ascension {
 					MUSICAL_SYMBOLS, ANCIENT_GREEK_MUSICAL_NOTATION, TAI_XUAN_JING_SYMBOLS,
 					COUNTING_ROD_NUMERALS, MATHEMATICAL_ALPHANUMERIC_SYMBOLS, CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B,
 					CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT, TAGS, VARIATION_SELECTORS_SUPPLEMENT,
-					SUPPLEMENTARY_PRIVATE_USE_AREA_A, SUPPLEMENTARY_PRIVATE_USE_AREA_B, COUNT
+					SUPPLEMENTARY_PRIVATE_USE_AREA_A, SUPPLEMENTARY_PRIVATE_USE_AREA_B, LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<CodeBlock>;
 			};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -234,10 +251,10 @@ namespace ascension {
 			 * <a href="http://www.unicode.org/reports/tr24/">UAX #24: Script Names</a> revision 9
 			 * and Scripts.txt obtained from UCD.
 			 */
-			class Script {
+			class Script : public PropertyBase<Script> {
 			public:
 				enum {
-					UNKNOWN = CodeBlock::COUNT, COMMON,
+					FIRST_VALUE = CodeBlock::LAST_VALUE, UNKNOWN = FIRST_VALUE, COMMON,
 					// Unicode 4.0
 					LATIN, GREEK, CYRILLIC, ARMENIAN, HEBREW, ARABIC, SYRIAC, THAANA,
 					DEVANAGARI, BENGALI, GURMUKHI, GUJARATI, ORIYA, TAMIL, TELUGU, KANNADA,
@@ -253,47 +270,46 @@ namespace ascension {
 					BALINESE, CUNEIFORM, PHOENICIAN, PHAGS_PA, NKO,
 					// derived
 					KATAKANA_OR_HIRAGANA,
-					COUNT
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<Script>;
 			};
 
 			/// Hangul syllable types. These values are based on HangulSyllableType.txt obtained from UCD.
-			class HangulSyllableType {
+			class HangulSyllableType : public PropertyBase<HangulSyllableType> {
 			public:
 				enum {
-					NOT_APPLICABLE = Script::COUNT,	///< NA = Not_Applicable
+					FIRST_VALUE = Script::LAST_VALUE,
+					NOT_APPLICABLE = FIRST_VALUE,	///< NA = Not_Applicable
 					LEADING_JAMO,					///< L = Leading_Jamo
 					VOWEL_JAMO,						///< V = Vowel_Jamo
 					TRAILING_JAMO,					///< T = Trailing_Jamo
 					LV_SYLLABLE,					///< LV = LV_Syllable
 					LVT_SYLLABLE,					///< LVT = LVT_Syllable
-					COUNT
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<HangulSyllableType>;
 			};
 			
 			/**
-			 * Binary properties These values are based on UCD.html and PropList.txt obtained from
-			 * UCD.
+			 * Binary properties These values are based on UCD.html and PropList.txt obtained from UCD.
 			 * @note Some values are not implemented.
 			 */
-			class BinaryProperty {
+			class BinaryProperty : public PropertyBase<BinaryProperty> {
 			public:
 				enum {
-					ALPHABETIC = HangulSyllableType::COUNT, ASCII_HEX_DIGIT, BIDI_CONTROL, BIDI_MIRRORED,
+					FIRST_VALUE = HangulSyllableType::LAST_VALUE,
+					ALPHABETIC = FIRST_VALUE, ASCII_HEX_DIGIT, BIDI_CONTROL, BIDI_MIRRORED,
 					COMPOSITION_EXCLUSION, DASH, DEFAULT_IGNORABLE_CODE_POINT, DEPRECATED, DIACRITIC,
 					EXPANDS_ON_NFC, EXPANDS_ON_NFD, EXPANDS_ON_NFKC, EXPANDS_ON_NFKD, EXTENDER,
 					FULL_COMPOSITION_EXCLUSION, GRAPHEME_BASE, GRAPHEME_EXTEND, HEX_DIGIT, HYPHEN,
@@ -303,15 +319,14 @@ namespace ascension {
 					OTHER_ID_CONTINUE, OTHER_ID_START, OTHER_LOWERCASE, OTHER_MATH, OTHER_UPPERCASE,
 					PATTERN_SYNTAX, PATTERN_WHITE_SPACE, QUOTATION_MARK, RADICAL, SOFT_DOTTED, STERM,
 					TERMINAL_PUNCTUATION, UNIFIED_IDEOGRAPH, UPPERCASE, VARIATION_SELECTOR, WHITE_SPACE,
-					XID_CONTINUE, XID_START, COUNT
+					XID_CONTINUE, XID_START, LAST_VALUE
 				};
-				static int	forName(const Char* first, const Char* last);
 				static bool	is(CodePoint cp, int property);
 				template<int property>
 				static bool	is(CodePoint cp) throw();
 			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<BinaryProperty>;
 #include "code-table/uprops-binary-property-table-definition"
 			};
 
@@ -367,113 +382,134 @@ namespace ascension {
 			template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
 				return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || is<OTHER_UPPERCASE>(cp);}
 
-#ifndef ASCENSION_NO_UAX14
-			/// Line_Break property. These values are based on UAX #14.
-			class LineBreak {
+			/// East_Asian_Width property. These values are based on UAX #11.
+			class EastAsianWidth : public PropertyBase<EastAsianWidth> {
 			public:
-				// these identifier are based on PropertyValueAliases.txt. there are some variations
 				enum {
-					// non-tailorable line breaking classes
-					MANDATORY_BREAK = BinaryProperty::COUNT,	///< Mandatory Break (BK).
-					CARRIAGE_RETURN,							///< Carriage Return (CR).
-					LINE_FEED,									///< Line Feed (LF).
-					COMBINING_MARK,								///< Attached Characters and Combining Marks (CM).
-					NEXT_LINE,									///< Next Line (NL).
-					SURROGATE,									///< Surrogates (SG).
-					WORD_JOINER,								///< Word Joiner (WJ).
-					ZW_SPACE,									///< Zero Width Space (ZW).
-					GLUE,										///< Non-breaking ("Glue") (GL).
-					SPACE,										///< Space (SP).
-					// break opportunities
-					BREAK_BOTH,									///< Break Opportunity Before and After (B2).
-					BREAK_AFTER,								///< Break Opportunity After (BA).
-					BREAK_BEFORE,								///< Break Opportunity Before (BB).
-					HYPHEN,										///< Hyphen (HY).
-					CONTINGENT_BREAK,							///< Contigent Break Opportunity (CB).
-					// characters prohibiting certain breaks
-					CLOSE_PUNCTUATION,							///< Closing Punctuation (CL).
-					EXCLAMATION,								///< Exclamation/Interrogation (EX).
-					INSEPARABLE,								///< Inseparable (IN).
-					NONSTARTER,									///< Nonstarter (NS).
-					OPEN_PUNCTUATION,							///< Opening Punctuation (OP).
-					QUOTATION,									///< Ambiguous Quotation (QU).
-					// numeric context
-					INFIX_NUMERIC,								///< Infix Separator (Numeric) (IS).
-					NUMERIC,									///< Numeric (NU).
-					POSTFIX_NUMERIC,							///< Postfix (Numeric) (PO).
-					PREFIX_NUMERIC,								///< Prefix (Numeric) (PR).
-					BREAK_SYMBOLS,								///< Symbols Allowing Break After (SY).
-					// other characters
-					AMBIGUOUS,									///< Ambiguous (Alphabetic or Ideographic) (AI).
-					ALPHABETIC,									///< Ordinary Alphabetic and Symbol Characters (AL).
-					H2,											///< Hangul LV Syllable (H2).
-					H3,											///< Hangul LVT Syllable (H3).
-					IDEOGRAPHIC,								///< Ideographic (ID).
-					JL,											///< Hangul L Jamo (JL).
-					JV,											///< Hangul V Jamo (JV).
-					JT,											///< Hangul T Jamo (JT).
-					COMPLEX_CONTEXT,							///< Complex Context Dependent (South East Asian) (SA).
-					UNKNOWN,									///< Unknown (XX).
-					COUNT
+					FIRST_VALUE = BinaryProperty::LAST_VALUE,
+					FULLWIDTH = FIRST_VALUE,	///< Fullwidth (F).
+					HALFWIDTH,					///< Halfwidth (H).
+					WIDE,						///< Wide (W).
+					NARROW,						///< Narrow (Na).
+					AMBIGUOUS,					///< Ambiguous (A).
+					NEUTRAL,					///< Neutral (Not East Asian) (N).
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<EastAsianWidth>;
 			};
-#endif /* !ASCENSION_NO_UAX14 */
 
-			/// Grapheme_Cluster_Break property. These values are based on UAX #29.
-			class GraphemeClusterBreak {
+			/**
+			 * Line_Break property. These values are based on UAX #14.
+			 * @see AbstractLineBreakIterator, LineBreakIterator
+			 */
+			class LineBreak : public PropertyBase<LineBreak> {
 			public:
+				// these identifier are based on PropertyValueAliases.txt. there are some variations
 				enum {
-#ifndef ASCENSION_NO_UAX14
-					CR = LineBreak::COUNT,
-#else
-					CR = BinaryProperty::COUNT,
-#endif /* !ASCENSION_NO_UAX14 */
-					LF, CONTROL, EXTEND, L, V, T, LV, LVT, OTHER, COUNT
+					FIRST_VALUE = EastAsianWidth::LAST_VALUE,
+					// non-tailorable line breaking classes
+					MANDATORY_BREAK = FIRST_VALUE,	///< Mandatory Break (BK).
+					CARRIAGE_RETURN,				///< Carriage Return (CR).
+					LINE_FEED,						///< Line Feed (LF).
+					COMBINING_MARK,					///< Attached Characters and Combining Marks (CM).
+					NEXT_LINE,						///< Next Line (NL).
+					SURROGATE,						///< Surrogates (SG).
+					WORD_JOINER,					///< Word Joiner (WJ).
+					ZW_SPACE,						///< Zero Width Space (ZW).
+					GLUE,							///< Non-breaking ("Glue") (GL).
+					SPACE,							///< Space (SP).
+					// break opportunities
+					BREAK_BOTH,						///< Break Opportunity Before and After (B2).
+					BREAK_AFTER,					///< Break Opportunity After (BA).
+					BREAK_BEFORE,					///< Break Opportunity Before (BB).
+					HYPHEN,							///< Hyphen (HY).
+					CONTINGENT_BREAK,				///< Contigent Break Opportunity (CB).
+					// characters prohibiting certain breaks
+					CLOSE_PUNCTUATION,				///< Closing Punctuation (CL).
+					EXCLAMATION,					///< Exclamation/Interrogation (EX).
+					INSEPARABLE,					///< Inseparable (IN).
+					NONSTARTER,						///< Nonstarter (NS).
+					OPEN_PUNCTUATION,				///< Opening Punctuation (OP).
+					QUOTATION,						///< Ambiguous Quotation (QU).
+					// numeric context
+					INFIX_NUMERIC,					///< Infix Separator (Numeric) (IS).
+					NUMERIC,						///< Numeric (NU).
+					POSTFIX_NUMERIC,				///< Postfix (Numeric) (PO).
+					PREFIX_NUMERIC,					///< Prefix (Numeric) (PR).
+					BREAK_SYMBOLS,					///< Symbols Allowing Break After (SY).
+					// other characters
+					AMBIGUOUS,						///< Ambiguous (Alphabetic or Ideographic) (AI).
+					ALPHABETIC,						///< Ordinary Alphabetic and Symbol Characters (AL).
+					H2,								///< Hangul LV Syllable (H2).
+					H3,								///< Hangul LVT Syllable (H3).
+					IDEOGRAPHIC,					///< Ideographic (ID).
+					JL,								///< Hangul L Jamo (JL).
+					JV,								///< Hangul V Jamo (JV).
+					JT,								///< Hangul T Jamo (JT).
+					COMPLEX_CONTEXT,				///< Complex Context Dependent (South East Asian) (SA).
+					UNKNOWN,						///< Unknown (XX).
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const internal::PropertyRange ranges_[];
+				static const std::size_t count_;
+				static const Names names_[];
+				friend class PropertyBase<LineBreak>;
+			};
+
+			/// Grapheme_Cluster_Break property. These values are based on UAX #29.
+			class GraphemeClusterBreak : public PropertyBase<GraphemeClusterBreak> {
+			public:
+				enum {
+					FIRST_VALUE = LineBreak::LAST_VALUE,
+					CR = FIRST_VALUE, LF, CONTROL, EXTEND, L, V, T, LV, LVT, OTHER,
+					LAST_VALUE
+				};
+				static const Char LONG_NAME[], SHORT_NAME[];
+				static int	of(CodePoint cp) throw();
+			private:
+				static const Names names_[];
+				friend class PropertyBase<GraphemeClusterBreak>;
 			};
 
 			/// Word_Break property. These values are based on UAX #29.
-			class WordBreak {
+			class WordBreak : public PropertyBase<WordBreak> {
 			public:
 				enum {
-					FORMAT = GraphemeClusterBreak::COUNT, KATAKANA, A_LETTER, MID_LETTER, MID_NUM, NUMERIC, EXTEND_NUM_LET, OTHER, COUNT
+					FIRST_VALUE = GraphemeClusterBreak::LAST_VALUE,
+					FORMAT = FIRST_VALUE, KATAKANA, A_LETTER, MID_LETTER, MID_NUM, NUMERIC, EXTEND_NUM_LET, OTHER,
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp,
 								const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 								const std::locale& lc = std::locale::classic()) throw();
 			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<WordBreak>;
 			};
 
 			/// Sentence_Break property. These values are based on UAX #29.
-			class SentenceBreak {
+			class SentenceBreak : public PropertyBase<SentenceBreak> {
 			public:
 				enum {
-					SEP = WordBreak::COUNT, FORMAT, SP, LOWER, UPPER, O_LETTER, NUMERIC, A_TERM, S_TERM, CLOSE, OTHER, COUNT
+					FIRST_VALUE = WordBreak::LAST_VALUE,
+					SEP = FIRST_VALUE, FORMAT, SP, LOWER, UPPER, O_LETTER, NUMERIC, A_TERM, S_TERM, CLOSE, OTHER,
+					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
 				static int	of(CodePoint cp) throw();
 			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const Names names_[];
+				friend class PropertyBase<SentenceBreak>;
 			};
 
 			/**
@@ -563,14 +599,21 @@ inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const Cha
 	return *p1 - *p2;
 }
 
-#define IMPLEMENT_FORNAME																				\
-	if(name == 0) throw std::invalid_argument("the name is null.");										\
-	else if(names_.empty()) buildNames();																\
-	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));	\
+/// Returns the property with the given name.
+template<typename ConcreteProperty>
+inline int PropertyBase<ConcreteProperty>::forName(const Char* name) {
+	if(name == 0)
+		throw std::invalid_argument("the name is null.");
+	if(names_.empty()) {
+		for(int v = ConcreteProperty::FIRST_VALUE; v < ConcreteProperty::LAST_VALUE; ++v) {
+			names_[ConcreteProperty::names_[v - ConcreteProperty::FIRST_VALUE].longName] = v;
+			if(const Char* const shortName = ConcreteProperty::names_[v - ConcreteProperty::FIRST_VALUE].shortName)
+				names_[shortName] = v;
+		}
+	}
+	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));
 	return (i != names_.end()) ? i->second : NOT_PROPERTY;
-
-/// Returns the General_Category with the given name.
-inline int GeneralCategory::forName(const Char* name) {IMPLEMENT_FORNAME}
+}
 
 /// Returns General_Category value of the specified character.
 inline int GeneralCategory::of(CodePoint cp) throw() {
@@ -578,9 +621,6 @@ inline int GeneralCategory::of(CodePoint cp) throw() {
 		return p->property;
 	return OTHER_UNASSIGNED;
 }
-
-/// Returns the Block with the given name.
-inline int CodeBlock::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns Block value of the specified character.
 inline int CodeBlock::of(CodePoint cp) throw() {
@@ -591,7 +631,14 @@ inline int CodeBlock::of(CodePoint cp) throw() {
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 /// Returns the Canonical_Combining_Class with the given name.
-inline int CanonicalCombiningClass::forName(const Char* name) {IMPLEMENT_FORNAME}
+inline int CanonicalCombiningClass::forName(const Char* name) {
+	if(name == 0)
+		throw std::invalid_argument("the name is null.");
+	else if(names_.empty())
+		buildNames();
+	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));
+	return (i != names_.end()) ? i->second : NOT_PROPERTY;
+}
 
 /// Returns the Canonical_Combining_Class of the specified character.
 inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
@@ -605,18 +652,12 @@ inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
 }
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
 
-/// Returns the Script with the given name.
-inline int Script::forName(const Char* name) {IMPLEMENT_FORNAME}
-
 /// Returns Script value of the specified character.
 inline int Script::of(CodePoint cp) throw() {
 	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
 		return p->property;
 	return UNKNOWN;
 }
-
-/// Returns the Hangul_Syllable_Type with the given name.
-inline int HangulSyllableType::forName(const Char* name) {IMPLEMENT_FORNAME}
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint cp) throw() {
@@ -632,9 +673,12 @@ inline int HangulSyllableType::of(CodePoint cp) throw() {
 		return NOT_APPLICABLE;
 }
 
-#ifndef ASCENSION_NO_UAX14
-/// Returns the Line_Break with the given name.
-inline int LineBreak::forName(const Char* name) {IMPLEMENT_FORNAME}
+/// Returns the East_Asian_Width property value of @a cp.
+inline int EastAsianWidth::of(CodePoint cp) throw() {
+	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
+		return p->property;
+	return NEUTRAL;
+}
 
 /// Returns the Line_Break property value of @a cp.
 inline int LineBreak::of(CodePoint cp) throw() {
@@ -642,7 +686,6 @@ inline int LineBreak::of(CodePoint cp) throw() {
 		return p->property;
 	return UNKNOWN;
 }
-#endif /* !ASCENSION_NO_UAX14 */
 
 #undef IMPLEMENT_FORNAME
 

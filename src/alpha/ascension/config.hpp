@@ -68,14 +68,6 @@
  */
 //#define ASCENSION_NO_UNICODE_FOLDING
 
-/**
- * @def ASCENSION_NO_UAX14
- * Define the symbol if you do not use Line_Break property and the related features. If defined,
- * @c ascension#unicode#LineBreak, @c ascension#unicode#LineBreakIterator, and
- * @c ascension#unicode#AbstractLineBreakIterator classes will not be defined.
- */
-//#define ASCENSION_NO_UAX14
-
 
 // about ascension.encodings ////////////////////////////////////////////////
 

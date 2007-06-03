@@ -2064,6 +2064,7 @@ void TextViewer::onSize(UINT type, int, int) {
 	displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
+	verticalRulerDrawer_->update();
 	if(verticalRulerDrawer_->getConfiguration().alignment != ALIGN_LEFT) {
 		recreateCaret();
 //		redrawVerticalRuler();

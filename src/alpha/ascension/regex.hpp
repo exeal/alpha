@@ -32,7 +32,7 @@ namespace ascension {
 			private:
 				enum {
 					// POSIX compatible not in Unicode property
-					POSIX_ALNUM = unicode::ucd::BinaryProperty::COUNT, POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
+					POSIX_ALNUM = unicode::ucd::SentenceBreak::LAST_VALUE, POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
 					// regex specific general category
 					GC_ANY, GC_ASSIGNED, GC_ASCII,
 					CLASS_END

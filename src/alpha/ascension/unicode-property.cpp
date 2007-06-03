@@ -140,48 +140,46 @@ namespace {
 const Char GeneralCategory::LONG_NAME[] = L"General_Category";
 /// The short name of the property.
 const Char GeneralCategory::SHORT_NAME[] = L"gc";
-map<const Char*, int, PropertyNameComparer<Char> > GeneralCategory::names_;
-
-void GeneralCategory::buildNames() {
-	PROP("C&",	"Other",					OTHER);
-	PROP("Cc",	"Control",					OTHER_CONTROL);
-	PROP("Cf",	"Format",					OTHER_FORMAT);
-	PROP("Cn",	"Unassigned",				OTHER_UNASSIGNED);
-	PROP("Co",	"Private_Use",				OTHER_PRIVATE_USE);
-	PROP("Cs",	"Surrogate",				OTHER_SURROGATE);
-	PROP("L&",	"Letter",					LETTER);
-	PROP("LC",	"Cased_Letter",				LETTER_CASED);
-	PROP("Ll",	"Lowercase_Letter",			LETTER_LOWERCASE);
-	PROP("Lm",	"Modifier_Letter",			LETTER_MODIFIER);
-	PROP("Lo",	"Other_Letter",				LETTER_OTHER);
-	PROP("Lt",	"Titlecase_Letter",			LETTER_TITLECASE);
-	PROP("Lu",	"Uppercase_Letter",			LETTER_UPPERCASE);
-	PROP("M&",	"Mark",						MARK);
-	PROP("Mc",	"Spacing_Mark",				MARK_SPACING_COMBINING);
-	PROP("Me",	"Enclosing_Mark",			MARK_ENCLOSING);
-	PROP("Mn",	"Nonspacing_Mark",			MARK_NONSPACING);
-	PROP("N&",	"Number",					NUMBER);
-	PROP("Nd",	"Decimal_Number",			NUMBER_DECIMAL_DIGIT);
-	PROP("Nl",	"Letter_Number",			NUMBER_LETTER);
-	PROP("No",	"Other_Number",				NUMBER_OTHER);
-	PROP("P&",	"Punctuation",				PUNCTUATION);
-	PROP("Pc",	"Connector_Punctuation",	PUNCTUATION_CONNECTOR);
-	PROP("Pd",	"Dash_Punctuation",			PUNCTUATION_DASH);
-	PROP("Pe",	"Close_Punctuation",		PUNCTUATION_CLOSE);
-	PROP("Pf",	"Final_Punctuation",		PUNCTUATION_FINAL_QUOTE);
-	PROP("Pi",	"Initial_Punctuation",		PUNCTUATION_INITIAL_QUOTE);
-	PROP("Po",	"Other_Punctuation",		PUNCTUATION_OTHER);
-	PROP("Ps",	"Open_Punctuation",			PUNCTUATION_OPEN);
-	PROP("S&",	"Symbol",					SYMBOL);
-	PROP("Sc",	"Currency_Symbol",			SYMBOL_CURRENCY);
-	PROP("Sk",	"Modifier_Symbol",			SYMBOL_MODIFIER);
-	PROP("Sm",	"Math_Symbol",				SYMBOL_MATH);
-	PROP("So",	"Other_Symbol",				SYMBOL_OTHER);
-	PROP("Z&",	"Separator",				SEPARATOR);
-	PROP("Zl",	"Line_Separator",			SEPARATOR_LINE);
-	PROP("Zp",	"Paragraph_Separator",		SEPARATOR_PARAGRAPH);
-	PROP("Zs",	"Space_Separator",			SEPARATOR_SPACE);
-}
+const PropertyBase<GeneralCategory>::Names GeneralCategory::names_[GeneralCategory::LAST_VALUE - GeneralCategory::FIRST_VALUE] = {
+	{L"Ll",	L"Lowercase_Letter"},
+	{L"Lu",	L"Uppercase_Letter"},
+	{L"Lt",	L"Titlecase_Letter"},
+	{L"Lm",	L"Modifier_Letter"},
+	{L"Lo",	L"Other_Letter"},
+	{L"Mn",	L"Nonspacing_Mark"},
+	{L"Mc",	L"Spacing_Mark"},
+	{L"Me",	L"Enclosing_Mark"},
+	{L"Nd",	L"Decimal_Number"},
+	{L"Nl",	L"Letter_Number"},
+	{L"No",	L"Other_Number"},
+	{L"Pc",	L"Connector_Punctuation"},
+	{L"Pd",	L"Dash_Punctuation"},
+	{L"Ps",	L"Open_Punctuation"},
+	{L"Pe",	L"Close_Punctuation"},
+	{L"Pi",	L"Initial_Punctuation"},
+	{L"Pf",	L"Final_Punctuation"},
+	{L"Po",	L"Other_Punctuation"},
+	{L"Sm",	L"Math_Symbol"},
+	{L"Sc",	L"Currency_Symbol"},
+	{L"Sk",	L"Modifier_Symbol"},
+	{L"So",	L"Other_Symbol"},
+	{L"Zs",	L"Space_Separator"},
+	{L"Zl",	L"Line_Separator"},
+	{L"Zp",	L"Paragraph_Separator"},
+	{L"Cc",	L"Control"},
+	{L"Cf",	L"Format"},
+	{L"Cs",	L"Surrogate"},
+	{L"Co",	L"Private_Use"},
+	{L"Cn",	L"Unassigned"},
+	{L"L&",	L"Letter"},
+	{L"Lc",	L"Cased_Letter"},
+	{L"M&",	L"Mark"},
+	{L"N&",	L"Number"},
+	{L"P&",	L"Punctuation"},
+	{L"S&",	L"Symbol"},
+	{L"Z&",	L"Separator"},
+	{L"C&",	L"Other"}
+};
 
 
 // CodeBlock ////////////////////////////////////////////////////////////////
@@ -190,165 +188,163 @@ void GeneralCategory::buildNames() {
 const Char CodeBlock::LONG_NAME[] = L"Block";
 /// The short name of the property.
 const Char CodeBlock::SHORT_NAME[] = L"blk";
-map<const Char*, int, PropertyNameComparer<Char> > CodeBlock::names_;
-
-void CodeBlock::buildNames() {
-	names_[L"Aegean_Numbers"] = AEGEAN_NUMBERS;
-	names_[L"Alphabetic_Presentation_Forms"] = ALPHABETIC_PRESENTATION_FORMS;
-	names_[L"Ancient_Greek_Musical_Notation"] = ANCIENT_GREEK_MUSICAL_NOTATION;
-	names_[L"Ancient_Greek_Numbers"] = ANCIENT_GREEK_NUMBERS;
-	names_[L"Arabic"] = ARABIC;
-	names_[L"Arabic_Presentation_Forms-A"] = ARABIC_PRESENTATION_FORMS_A;
-	names_[L"Arabic_Presentation_Forms-B"] = ARABIC_PRESENTATION_FORMS_B;
-	names_[L"Arabic_Supplement"] = ARABIC_SUPPLEMENT;
-	names_[L"Armenian"] = ARMENIAN;
-	names_[L"Arrows"] = ARROWS;
-	names_[L"Balinese"] = BALINESE;
-	names_[L"Basic_Latin"] = BASIC_LATIN;
-	names_[L"Bengali"] = BENGALI;
-	names_[L"Block_Elements"] = BLOCK_ELEMENTS;
-	names_[L"Bopomofo"] = BOPOMOFO;
-	names_[L"Bopomofo_Extended"] = BOPOMOFO_EXTENDED;
-	names_[L"Box_Drawing"] = BOX_DRAWING;
-	names_[L"Braille_Patterns"] = BRAILLE_PATTERNS;
-	names_[L"Buginese"] = BUGINESE;
-	names_[L"Buhid"] = BUHID;
-	names_[L"Byzantine_Musical_Symbols"] = BYZANTINE_MUSICAL_SYMBOLS;
-	names_[L"Cherokee"] = CHEROKEE;
-	names_[L"CJK_Compatibility"] = CJK_COMPATIBILITY;
-	names_[L"CJK_Compatibility_Forms"] = CJK_COMPATIBILITY_FORMS;
-	names_[L"CJK_Compatibility_Ideographs"] = CJK_COMPATIBILITY_IDEOGRAPHS;
-	names_[L"CJK_Compatibility_Ideographs_Supplement"] = CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT;
-	names_[L"CJK_Radicals_Supplement"] = CJK_RADICALS_SUPPLEMENT;
-	names_[L"CJK_Strokes"] = CJK_STROKES;
-	names_[L"CJK_Symbols_and_Punctuation"] = CJK_SYMBOLS_AND_PUNCTUATION;
-	names_[L"CJK_Unified_Ideographs"] = CJK_UNIFIED_IDEOGRAPHS;
-	names_[L"CJK_Unified_Ideographs_Extension_A"] = CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A;
-	names_[L"CJK_Unified_Ideographs_Extension_B"] = CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B;
-	names_[L"Combining_Diacritical_Marks"] = COMBINING_DIACRITICAL_MARKS;
-	names_[L"Combining_Diacritical_Marks_for_Symbols"] = COMBINING_DIACRITICAL_MARKS_FOR_SYMBOLS;
-	names_[L"Combining_Diacritical_Marks_Supplement"] = COMBINING_DIACRITICAL_MARKS_SUPPLEMENT;
-	names_[L"Combining_Half_Marks"] = COMBINING_HALF_MARKS;
-	names_[L"Control_Pictures"] = CONTROL_PICTURES;
-	names_[L"Coptic"] = COPTIC;
-	names_[L"Counting_Rod_Numerals"] = COUNTING_ROD_NUMERALS;
-	names_[L"Cuneiform"] = CUNEIFORM;
-	names_[L"Cuneiform_Numbers_and_Punctuation"] = CUNEIFORM_NUMBERS_AND_PUNCTUATION;
-	names_[L"Currency_Symbols"] = CURRENCY_SYMBOLS;
-	names_[L"Cypriot_Syllabary"] = CYPRIOT_SYLLABARY;
-	names_[L"Cyrillic"] = CYRILLIC;
-	names_[L"Cyrillic_Supplement"] = names_[L"Cyrillic_Supplementary"] = CYRILLIC_SUPPLEMENT;
-	names_[L"Deseret"] = DESERET;
-	names_[L"Devanagari"] = DEVANAGARI;
-	names_[L"Dingbats"] = DINGBATS;
-	names_[L"Enclosed_Alphanumerics"] = ENCLOSED_ALPHANUMERICS;
-	names_[L"Enclosed_CJK_Letters_and_Months"] = ENCLOSED_CJK_LETTERS_AND_MONTHS;
-	names_[L"Ethiopic"] = ETHIOPIC;
-	names_[L"Ethiopic_Extended"] = ETHIOPIC_EXTENDED;
-	names_[L"Ethiopic_Supplement"] = ETHIOPIC_SUPPLEMENT;
-	names_[L"General_Punctuation"] = GENERAL_PUNCTUATION;
-	names_[L"Geometric_Shapes"] = GEOMETRIC_SHAPES;
-	names_[L"Georgian"] = GEORGIAN;
-	names_[L"Georgian_Supplement"] = GEORGIAN_SUPPLEMENT;
-	names_[L"Glagolitic"] = GLAGOLITIC;
-	names_[L"Gothic"] = GOTHIC;
-	names_[L"Greek_and_Coptic"] = GREEK_AND_COPTIC;
-	names_[L"Greek_Extended"] = GREEK_EXTENDED;
-	names_[L"Gujarati"] = GUJARATI;
-	names_[L"Gurmukhi"] = GURMUKHI;
-	names_[L"Halfwidth_and_Fullwidth_Forms"] = HALFWIDTH_AND_FULLWIDTH_FORMS;
-	names_[L"Hangul_Compatibility_Jamo"] = HANGUL_COMPATIBILITY_JAMO;
-	names_[L"Hangul_Jamo"] = HANGUL_JAMO;
-	names_[L"Hangul_Syllables"] = HANGUL_SYLLABLES;
-	names_[L"Hanunoo"] = HANUNOO;
-	names_[L"Hebrew"] = HEBREW;
-	names_[L"High_Private_Use_Surrogates"] = HIGH_PRIVATE_USE_SURROGATES;
-	names_[L"High_Surrogates"] = HIGH_SURROGATES;
-	names_[L"Hiragana"] = HIRAGANA;
-	names_[L"Ideographic_Description_Characters"] = IDEOGRAPHIC_DESCRIPTION_CHARACTERS;
-	names_[L"IPA_Extensions"] = IPA_EXTENSIONS;
-	names_[L"Kanbun"] = KANBUN;
-	names_[L"Kangxi_Radicals"] = KANGXI_RADICALS;
-	names_[L"Kannada"] = KANNADA;
-	names_[L"Katakana"] = KATAKANA;
-	names_[L"Katakana_Phonetic_Extensions"] = KATAKANA_PHONETIC_EXTENSIONS;
-	names_[L"Kharoshthi"] = KHAROSHTHI;
-	names_[L"Khmer"] = KHMER;
-	names_[L"Khmer_Symbols"] = KHMER_SYMBOLS;
-	names_[L"Lao"] = LAO;
-	names_[L"Latin-1_Supplement"] = LATIN_1_SUPPLEMENT;
-	names_[L"Latin_Extended-A"] = LATIN_EXTENDED_A;
-	names_[L"Latin_Extended-B"] = LATIN_EXTENDED_B;
-	names_[L"Latin_Extended-C"] = LATIN_EXTENDED_C;
-	names_[L"Latin_Extended-D"] = LATIN_EXTENDED_D;
-	names_[L"Latin_Extended_Additional"] = LATIN_EXTENDED_ADDITIONAL;
-	names_[L"Letterlike_Symbols"] = LETTERLIKE_SYMBOLS;
-	names_[L"Limbu"] = LIMBU;
-	names_[L"Linear_B_Ideograms"] = LINEAR_B_IDEOGRAMS;
-	names_[L"Linear_B_Syllabary"] = LINEAR_B_SYLLABARY;
-	names_[L"Low_Surrogates"] = LOW_SURROGATES;
-	names_[L"Malayalam"] = MALAYALAM;
-	names_[L"Mathematical_Alphanumeric_Symbols"] = MATHEMATICAL_ALPHANUMERIC_SYMBOLS;
-	names_[L"Mathematical_Operators"] = MATHEMATICAL_OPERATORS;
-	names_[L"Miscellaneous_Mathematical_Symbols-A"] = MISCELLANEOUS_MATHEMATICAL_SYMBOLS_A;
-	names_[L"Miscellaneous_Mathematical_Symbols-B"] = MISCELLANEOUS_MATHEMATICAL_SYMBOLS_B;
-	names_[L"Miscellaneous_Symbols"] = MISCELLANEOUS_SYMBOLS;
-	names_[L"Miscellaneous_Symbols_and_Arrows"] = MISCELLANEOUS_SYMBOLS_AND_ARROWS;
-	names_[L"Miscellaneous_Technical"] = MISCELLANEOUS_TECHNICAL;
-	names_[L"Modifier_Tone_Letters"] = MODIFIER_TONE_LETTERS;
-	names_[L"Mongolian"] = MONGOLIAN;
-	names_[L"Musical_Symbols"] = MUSICAL_SYMBOLS;
-	names_[L"Myanmar"] = MYANMAR;
-	names_[L"New_Tai_Lue"] = NEW_TAI_LUE;
-	names_[L"NKo"] = NKO;
-	names_[L"No_Block"] = NO_BLOCK;
-	names_[L"Number_Forms"] = NUMBER_FORMS;
-	names_[L"Ogham"] = OGHAM;
-	names_[L"Old_Italic"] = OLD_ITALIC;
-	names_[L"Old_Persian"] = OLD_PERSIAN;
-	names_[L"Optical_Character_Recognition"] = OPTICAL_CHARACTER_RECOGNITION;
-	names_[L"Oriya"] = ORIYA;
-	names_[L"Osmanya"] = OSMANYA;
-	names_[L"Phags-pa"] = PHAGS_PA;
-	names_[L"Phoenician"] = PHOENICIAN;
-	names_[L"Phonetic_Extensions"] = PHONETIC_EXTENSIONS;
-	names_[L"Phonetic_Extensions_Supplement"] = PHONETIC_EXTENSIONS_SUPPLEMENT;
-	names_[L"Private_Use_Area"] = PRIVATE_USE_AREA;
-	names_[L"Runic"] = RUNIC;
-	names_[L"Shavian"] = SHAVIAN;
-	names_[L"Sinhala"] = SINHALA;
-	names_[L"Small_Form_Variants"] = SMALL_FORM_VARIANTS;
-	names_[L"Spacing_Modifier_Letters"] = SPACING_MODIFIER_LETTERS;
-	names_[L"Specials"] = SPECIALS;
-	names_[L"Superscripts_and_Subscripts"] = SUPERSCRIPTS_AND_SUBSCRIPTS;
-	names_[L"Supplemental_Arrows-A"] = SUPPLEMENTAL_ARROWS_A;
-	names_[L"Supplemental_Arrows-B"] = SUPPLEMENTAL_ARROWS_B;
-	names_[L"Supplemental_Mathematical_Operators"] = SUPPLEMENTAL_MATHEMATICAL_OPERATORS;
-	names_[L"Supplemental_Punctuation"] = SUPPLEMENTAL_PUNCTUATION;
-	names_[L"Supplementary_Private_Use_Area-A"] = SUPPLEMENTARY_PRIVATE_USE_AREA_A;
-	names_[L"Supplementary_Private_Use_Area-B"] = SUPPLEMENTARY_PRIVATE_USE_AREA_B;
-	names_[L"Syloti_Nagri"] = SYLOTI_NAGRI;
-	names_[L"Syriac"] = SYRIAC;
-	names_[L"Tagalog"] = TAGALOG;
-	names_[L"Tagbanwa"] = TAGBANWA;
-	names_[L"Tags"] = TAGS;
-	names_[L"Tai_Le"] = TAI_LE;
-	names_[L"Tai_Xuan_Jing_Symbols"] = TAI_XUAN_JING_SYMBOLS;
-	names_[L"Tamil"] = TAMIL;
-	names_[L"Telugu"] = TELUGU;
-	names_[L"Thaana"] = THAANA;
-	names_[L"Thai"] = THAI;
-	names_[L"Tibetan"] = TIBETAN;
-	names_[L"Tifinagh"] = TIFINAGH;
-	names_[L"Ugaritic"] = UGARITIC;
-	names_[L"Unified_Canadian_Aboriginal_Syllabics"] = UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS;
-	names_[L"Variation_Selectors"] = VARIATION_SELECTORS;
-	names_[L"Variation_Selectors_Supplement"] = VARIATION_SELECTORS_SUPPLEMENT;
-	names_[L"Vertical_Forms"] = VERTICAL_FORMS;
-	names_[L"Yi_Radicals"] = YI_RADICALS;
-	names_[L"Yi_Syllables"] = YI_SYLLABLES;
-	names_[L"Yijing_Hexagram_Symbols"] = YIJING_HEXAGRAM_SYMBOLS;
-}
+const CodeBlock::Names CodeBlock::names_[CodeBlock::LAST_VALUE - CodeBlock::FIRST_VALUE] = {
+	{0, L"No_Block"},
+	{0, L"Basic_Latin"},
+	{0, L"Latin-1_Supplement"},
+	{0, L"Latin_Extended-A"},
+	{0, L"Latin_Extended-B"},
+	{0, L"IPA_Extensions"},
+	{0, L"Spacing_Modifier_Letters"},
+	{0, L"Combining_Diacritical_Marks"},
+	{0, L"Greek_and_Coptic"},
+	{0, L"Cyrillic"},
+	{0, L"Cyrillic_Supplement"},
+	{0, L"Armenian"},
+	{0, L"Hebrew"},
+	{0, L"Arabic"},
+	{0, L"Syriac"},
+	{0, L"Arabic_Supplement"},
+	{0, L"Thaana"},
+	{0, L"NKo"},
+	{0, L"Devanagari"},
+	{0, L"Bengali"},
+	{0, L"Gurmukhi"},
+	{0, L"Gujarati"},
+	{0, L"Oriya"},
+	{0, L"Tamil"},
+	{0, L"Telugu"},
+	{0, L"Kannada"},
+	{0, L"Malayalam"},
+	{0, L"Sinhala"},
+	{0, L"Thai"},
+	{0, L"Lao"},
+	{0, L"Tibetan"},
+	{0, L"Myanmar"},
+	{0, L"Georgian"},
+	{0, L"Hangul_Jamo"},
+	{0, L"Ethiopic"},
+	{0, L"Ethiopic_Supplement"},
+	{0, L"Cherokee"},
+	{0, L"Unified_Canadian_Aboriginal_Syllabics"},
+	{0, L"Ogham"},
+	{0, L"Runic"},
+	{0, L"Tagalog"},
+	{0, L"Hanunoo"},
+	{0, L"Buhid"},
+	{0, L"Tagbanwa"},
+	{0, L"Khmer"},
+	{0, L"Mongolian"},
+	{0, L"Libmu"},
+	{0, L"Tai_Le"},
+	{0, L"New_Tai_Lue"},
+	{0, L"Khmer_Symbols"},
+	{0, L"Buginese"},
+	{0, L"Balinese"},
+	{0, L"Phonetic_Extensions"},
+	{0, L"Phonetic_Extensions_Supplement"},
+	{0, L"Combining_Diacritical_Marks_Supplement"},
+	{0, L"Latin_Extended_Additional"},
+	{0, L"Greek_Extended"},
+	{0, L"General_Punctuation"},
+	{0, L"Superscripts_and_Subscripts"},
+	{0, L"Currency_Symbols"},
+	{0, L"Combining_Diacritical_Marks_for_Symbols"},
+	{0, L"Letterlike_Symbols"},
+	{0, L"Number_Forms"},
+	{0, L"Arrows"},
+	{0, L"Mathematical_Operators"},
+	{0, L"Miscellaneous_Technical"},
+	{0, L"Control_Pictures"},
+	{0, L"Optical_Character_Recognition"},
+	{0, L"Enclosed_Alphanumerics"},
+	{0, L"Box_Drawing"},
+	{0, L"Block_Elements"},
+	{0, L"Geometric_Shapes"},
+	{0, L"Miscellaneous_Symbols"},
+	{0, L"Dingbats"},
+	{0, L"Miscellaneous_Mathematical_Symbols-A"},
+	{0, L"Supplemental_Arrows-A"},
+	{0, L"Braille_Patterns"},
+	{0, L"Supplemental_Arrows-B"},
+	{0, L"Miscellaneous_Mathematical_Symbols-B"},
+	{0, L"Supplemental_Mathematical_Operators"},
+	{0, L"Miscellaneous_Symbols_and_Arrows"},
+	{0, L"Glagolitic"},
+	{0, L"Latin_Extended-C"},
+	{0, L"Coptic"},
+	{0, L"Georgian_Supplement"},
+	{0, L"Tifinagh"},
+	{0, L"Ethiopic_Extended"},
+	{0, L"Supplemental_Punctuation"},
+	{0, L"CJK_Radicals_Supplement"},
+	{0, L"Kangxi_Radicals"},
+	{0, L"Ideographic_Description_Characters"},
+	{0, L"CJK_Symbols_and_Punctuation"},
+	{0, L"Hiragana"},
+	{0, L"Katakana"},
+	{0, L"Bopomofo"},
+	{0, L"Hangul_Compatibility_Jamo"},
+	{0, L"Kanbun"},
+	{0, L"Bopomofo_Extended"},
+	{0, L"CJK_Strokes"},
+	{0, L"Katakana_Phonetic_Extensions"},
+	{0, L"Enclosed_CJK_Letters_and_Months"},
+	{0, L"CJK_Compatibility"},
+	{0, L"CJK_Unified_Ideographs_Extension_A"},
+	{0, L"Yijing_Hexagram_Symbols"},
+	{0, L"CJK_Unified_Ideographs"},
+	{0, L"Yi_Syllables"},
+	{0, L"Yi_Radicals"},
+	{0, L"Modifier_Tone_Letters"},
+	{0, L"Latin_Extended-D"},
+	{0, L"Syloti_Nagri"},
+	{0, L"Phags-pa"},
+	{0, L"Hangul_Syllables"},
+	{0, L"High_Surrogates"},
+	{0, L"High_Private_Use_Surrogates"},
+	{0, L"Low_Surrogates"},
+	{0, L"Private_Use_Area"},
+	{0, L"CJK_Compatibility_Ideographs"},
+	{0, L"Alphabetic_Presentation_Forms"},
+	{0, L"Arabic_Presentation_Forms-A"},
+	{0, L"Variation_Selectors"},
+	{0, L"Vertical_Forms"},
+	{0, L"Combining_Half_Marks"},
+	{0, L"CJK_Compatibility_Forms"},
+	{0, L"Small_Form_Variants"},
+	{0, L"Arabic_Presentation_Forms-B"},
+	{0, L"Halfwidth_and_Fullwidth_Forms"},
+	{0, L"Specials"},
+	{0, L"Linear_B_Syllabary"},
+	{0, L"Linear_B_Ideograms"},
+	{0, L"Aegean_Numbers"},
+	{0, L"Ancient_Greek_Numbers"},
+	{0, L"Old_Italic"},
+	{0, L"Gothic"},
+	{0, L"Ugaritic"},
+	{0, L"Old_Persian"},
+	{0, L"Deseret"},
+	{0, L"Shavian"},
+	{0, L"Osmanya"},
+	{0, L"Cypriot_Syllabary"},
+	{0, L"Phoenician"},
+	{0, L"Kharoshthi"},
+	{0, L"Cuneiform"},
+	{0, L"Cuneiform_Numbers_and_Punctuation"},
+	{0, L"Byzantine_Musical_Symbols"},
+	{0, L"Musical_Symbols"},
+	{0, L"Ancient_Greek_Musical_Notation"},
+	{0, L"Tai_Xuan_Jing_Symbols"},
+	{0, L"Counting_Rod_Numerals"},
+	{0, L"Mathematical_Alphanumeric_Symbols"},
+	{0, L"CJK_Unified_Ideographs_Extension_B"},
+	{0, L"CJK_Compatibility_Ideographs_Supplement"},
+	{0, L"Tags"},
+	{0, L"Variation_Selectors_Supplement"},
+	{0, L"Supplementary_Private_Use_Area-A"},
+	{0, L"Supplementary_Private_Use_Area-B"},
+};
 
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -387,78 +383,76 @@ void CanonicalCombiningClass::buildNames() {
 const Char Script::LONG_NAME[] = L"Script";
 /// The short name of the property.
 const Char Script::SHORT_NAME[] = L"sc";
-map<const Char*, int, PropertyNameComparer<Char> > Script::names_;
-
-void Script::buildNames() {
-	names_[L"Arab"] = names_[L"Arabic"] = ARABIC;
-	names_[L"Armn"] = names_[L"Armenian"] = ARMENIAN;
-	names_[L"Bali"] = names_[L"Balinese"] = BALINESE;
-	names_[L"Beng"] = names_[L"Bengali"] = BENGALI;
-	names_[L"Bopo"] = names_[L"Bopomofo"] = BOPOMOFO;
-	names_[L"Brai"] = names_[L"Braille"] = BRAILLE;
-	names_[L"Bugi"] = names_[L"Buginese"] = BUGINESE;
-	names_[L"Buhd"] = names_[L"Buhid"] = BUHID;
-	names_[L"Cans"] = names_[L"Canadian_Aboriginal"] = CANADIAN_ABORIGINAL;
-	names_[L"Cher"] = names_[L"Cherokee"] = CHEROKEE;
-	names_[L"Copt"] = names_[L"Coptic"] = names_[L"Qaac"] = COPTIC;
-	names_[L"Cprt"] = names_[L"Cypriot"] = CYPRIOT;
-	names_[L"Cyrl"] = names_[L"Cyrillic"] = CYRILLIC;
-	names_[L"Deva"] = names_[L"Devanagari"] = DEVANAGARI;
-	names_[L"Dsrt"] = names_[L"Deseret"] = DESERET;
-	names_[L"Ethi"] = names_[L"Ethiopic"] = ETHIOPIC;
-	names_[L"Geor"] = names_[L"Georgian"] = GEORGIAN;
-	names_[L"Glag"] = names_[L"Glagolitic"] = GLAGOLITIC;
-	names_[L"Goth"] = names_[L"Gothic"] = GOTHIC;
-	names_[L"Grek"] = names_[L"Greek"] = GREEK;
-	names_[L"Gujr"] = names_[L"Gujarati"] = GUJARATI;
-	names_[L"Guru"] = names_[L"Gurmukhi"] = GURMUKHI;
-	names_[L"Hang"] = names_[L"Hangul"] = HANGUL;
-	names_[L"Hani"] = names_[L"Han"] = HAN;
-	names_[L"Hano"] = names_[L"Hanunoo"] = HANUNOO;
-	names_[L"Hebr"] = names_[L"Hebrew"] = HEBREW;
-	names_[L"Hira"] = names_[L"Hiragana"] = HIRAGANA;
-	names_[L"Hrkt"] = names_[L"Katakana_Or_Hiragana"] = KATAKANA_OR_HIRAGANA;
-	names_[L"Ital"] = names_[L"Old_Italic"] = OLD_ITALIC;
-	names_[L"Kana"] = names_[L"Katakana"] = KATAKANA;
-	names_[L"Khar"] = names_[L"Kharoshthi"] = KHAROSHTHI;
-	names_[L"Khmr"] = names_[L"Khmer"] = KHMER;
-	names_[L"Knda"] = names_[L"Kannada"] = KANNADA;
-	names_[L"Laoo"] = names_[L"Lao"] = LAO;
-	names_[L"Latn"] = names_[L"Latin"] = LATIN;
-	names_[L"Limb"] = names_[L"Limbu"] = LIMBU;
-	names_[L"Linb"] = names_[L"Linear_B"] = LINEAR_B;
-	names_[L"Mlym"] = names_[L"Malayalam"] = MALAYALAM;
-	names_[L"Mong"] = names_[L"Mongolian"] = MONGOLIAN;
-	names_[L"Mymr"] = names_[L"Myanmar"] = MYANMAR;
-	names_[L"Nkoo"] = names_[L"Nko"] = NKO;
-	names_[L"Ogam"] = names_[L"Ogham"] = OGHAM;
-	names_[L"Orya"] = names_[L"Oriya"] = ORIYA;
-	names_[L"Osma"] = names_[L"Osmanya"] = OSMANYA;
-	names_[L"Phag"] = names_[L"Phags_Pa"] = PHAGS_PA;
-	names_[L"Phnx"] = names_[L"Phoenician"] = PHOENICIAN;
-	names_[L"Qaai"] = names_[L"Inherited"] = INHERITED;
-	names_[L"Runr"] = names_[L"Runic"] = RUNIC;
-	names_[L"Shaw"] = names_[L"Shavian"] = SHAVIAN;
-	names_[L"Sinh"] = names_[L"Sinhala"] = SINHALA;
-	names_[L"Sylo"] = names_[L"Syloti_Nagri"] = SYLOTI_NAGRI;
-	names_[L"Syrc"] = names_[L"Syriac"] = SYRIAC;
-	names_[L"Tagb"] = names_[L"Tagbanwa"] = TAGBANWA;
-	names_[L"Tale"] = names_[L"Tai_Le"] = TAI_LE;
-	names_[L"Talu"] = names_[L"New_Tai_Lue"] = NEW_TAI_LUE;
-	names_[L"Taml"] = names_[L"Tamil"] = TAMIL;
-	names_[L"Telu"] = names_[L"Telugu"] = TELUGU;
-	names_[L"Tfng"] = names_[L"Tifinagh"] = TIFINAGH;
-	names_[L"Tglg"] = names_[L"Tagalog"] = TAGALOG;
-	names_[L"Thaa"] = names_[L"Thaana"] = THAANA;
-	names_[L"Thai"] = THAI;
-	names_[L"Tibt"] = names_[L"Tibetan"] = TIBETAN;
-	names_[L"Ugar"] = names_[L"Ugaritic"] = UGARITIC;
-	names_[L"Xpeo"] = names_[L"Old_Persian"] = OLD_PERSIAN;
-	names_[L"Xsux"] = names_[L"Cuneiform"] = CUNEIFORM;
-	names_[L"Yiii"] = names_[L"Yi"] = YI;
-	names_[L"Zyyy"] = names_[L"Common"] = COMMON;
-	names_[L"Zzzz"] = names_[L"Unknown"] = UNKNOWN;
-}
+const Script::Names Script::names_[Script::LAST_VALUE - Script::FIRST_VALUE] = {
+	{L"Zzzz",	L"Unknown"},
+	{L"Zyyy",	L"Common"},
+	{L"Latn",	L"Latin"},
+	{L"Grek",	L"Greek"},
+	{L"Cyrl",	L"Cyrillic"},
+	{L"Armn",	L"Armenian"},
+	{L"Hebr",	L"Hebrew"},
+	{L"Arab",	L"Arabic"},
+	{L"Syrc",	L"Syriac"},
+	{L"Thaa",	L"Thaana"},
+	{L"Deva",	L"Devanagari"},
+	{L"Beng",	L"Bengali"},
+	{L"Guru",	L"Gurmukhi"},
+	{L"Gujr",	L"Gujarati"},
+	{L"Orya",	L"Oriya"},
+	{L"Taml",	L"Tamil"},
+	{L"Telu",	L"Telugu"},
+	{L"Knda",	L"Kannada"},
+	{L"Mlym",	L"Malayalam"},
+	{L"Sinh",	L"Sinhala"},
+	{0,			L"Thai"},
+	{L"Laoo",	L"Laoo"},
+	{L"Tibt",	L"Tibetan"},
+	{L"Mymr",	L"Myanmar"},
+	{L"Geor",	L"Georgian"},
+	{L"Hang",	L"Hangul"},
+	{L"Ethi",	L"Ethiopic"},
+	{L"Cher",	L"Cherokee"},
+	{L"Cans",	L"Canadian_Aboriginal"},
+	{L"Ogam",	L"Ogham"},
+	{L"Runr",	L"Runic"},
+	{L"Khmr",	L"Khmer"},
+	{L"Mong",	L"Mongolian"},
+	{L"Hira",	L"Hiragana"},
+	{L"Kana",	L"Katakana"},
+	{L"Bopo",	L"Bopomofo"},
+	{L"Hani",	L"Han"},
+	{L"Yiii",	L"Yi"},
+	{L"Ital",	L"Old_Italic"},
+	{L"Goth",	L"Gothic"},
+	{L"Dsrt",	L"Deseret"},
+	{L"Qaai",	L"Inherited"},
+	{L"Tglg",	L"Tagalog"},
+	{L"Hano",	L"Hanunoo"},
+	{L"Buhd",	L"Buhid"},
+	{L"Tagb",	L"Tagbanwa"},
+	{L"Limb",	L"Limbu"},
+	{L"Tale",	L"Tai_Le"},
+	{L"Linb",	L"Linear_B"},
+	{L"Ugar",	L"Ugaritic"},
+	{L"Shaw",	L"Shavian"},
+	{L"Osma",	L"Osmanya"},
+	{L"Cprt",	L"Cypriot"},
+	{L"Brai",	L"Braille"},
+	{L"Bugi",	L"Buginese"},
+	{L"Copt",	L"Coptic"},
+	{L"Talu",	L"New_Tai_Lue"},
+	{L"Glag",	L"Glagolitic"},
+	{L"Tfng",	L"Tifinagh"},
+	{L"Sylo",	L"Syloti_Nagri"},
+	{L"Xpeo",	L"Old_Persian"},
+	{L"Khar",	L"Kharoshthi"},
+	{L"Bali",	L"Balinese"},
+	{L"Xsux",	L"Cuneiform"},
+	{L"Phnx",	L"Phoenician"},
+	{L"Phag",	L"Phags_Pa"},
+	{L"Nkoo",	L"NKO"},
+	{L"Hrkt",	L"Katakana_Or_Hiragana"},
+};
 
 
 // HangulSyllableType ///////////////////////////////////////////////////////
@@ -467,23 +461,72 @@ void Script::buildNames() {
 const Char HangulSyllableType::LONG_NAME[] = L"Hangul_Syllable_Type";
 /// The short name of the property.
 const Char HangulSyllableType::SHORT_NAME[] = L"hst";
-map<const Char*, int, PropertyNameComparer<Char> > HangulSyllableType::names_;
-
-void HangulSyllableType::buildNames() {
-	PROP("L",	"Leading_Jamo",		LEADING_JAMO);
-	PROP("LV",	"LV_Syllable",		LV_SYLLABLE);
-	PROP("LVT",	"LVT_Syllable",		LVT_SYLLABLE);
-	PROP("NA",	"Not_Applicable",	NOT_APPLICABLE);
-	PROP("T",	"Trailing_Jamo",	TRAILING_JAMO);
-	PROP("V",	"Vowel_Jamo",		VOWEL_JAMO);
-}
+const HangulSyllableType::Names HangulSyllableType::names_[HangulSyllableType::LAST_VALUE - HangulSyllableType::FIRST_VALUE] = {
+	{L"NA",		L"Not_Applicable"},
+	{L"L",		L"Leading_Jamo"},
+	{L"V",		L"Vowel_Jamo"},
+	{L"T",		L"Trailing_Jamo"},
+	{L"LV",		L"LV_Syllable"},
+	{L"LVT",	L"LVT_Syllable"}
+};
 
 
 // BinaryProperty ///////////////////////////////////////////////////////////
 
 #include "code-table/uprops-table"
 
-//map<const Char*, int, PropertyNameComparer<Char> > BinaryProperty::names_;
+const BinaryProperty::Names BinaryProperty::names_[BinaryProperty::LAST_VALUE - BinaryProperty::FIRST_VALUE] = {
+	{L"Alpha",		L"Alphabetic"},
+	{L"AHex",		L"ASCII_Hex_Digit"},
+	{L"Bidi_C",		L"Bidi_Control"},
+	{L"Bidi_M",		L"Bidi_Mirrored"},
+	{L"CE",			L"Composition_Exclusion"},
+	{0,				L"Dash"},
+	{L"DI",			L"Default_Ignorable_Code_Point"},
+	{L"Dep",		L"Deprecated"},
+	{L"Dia",		L"Diacritic"},
+	{L"XO_NFC",		L"Expands_On_NFC"},
+	{L"XO_NFD",		L"Expands_On_NFD"},
+	{L"XO_NFKC",	L"Expands_On_NFKC"},
+	{L"XO_NFKD",	L"Expands_On_NFKD"},
+	{L"Ext",		L"Extender"},
+	{L"Comp_Ex",	L"Full_Composition_Exclusion"},
+	{L"Gr_Base",	L"Grapheme_Base"},
+	{L"Gr_Ext",		L"Grapheme_Extend"},
+	{L"Hex",		L"Hex_Digit"},
+	{0,				L"Hyphen"},
+	{L"IDC",		L"ID_Continue"},
+	{L"IDS",		L"ID_Start"},
+	{L"Ideo",		L"Ideographic"},
+	{L"IDSB",		L"IDS_Binary_Operator"},
+	{L"IDST",		L"IDS_Trinary_Operator"},
+	{L"Join_C",		L"Join_Control"},
+	{L"LOE",		L"Logical_Order_Exception"},
+	{L"Lower",		L"Lowercase"},
+	{0,				L"Math"},
+	{L"NChar",		L"Noncharacter_Code_Point"},
+	{L"OAlpha",		L"Other_Alphabetic"},
+	{L"ODI",		L"Other_Default_Ignorable_Code_Point"},
+	{L"OGr_Ext",	L"Other_Grapheme_Extend"},
+	{L"OIDC",		L"Other_ID_Continue"},
+	{L"OIDS",		L"Other_ID_Start"},
+	{L"OLower",		L"Other_Lowercase"},
+	{L"OMath",		L"Other_Math"},
+	{L"OUpper",		L"Other_Uppercase"},
+	{L"Pat_Syn",	L"Pattern_Syntax"},
+	{L"Pat_WS",		L"Pattern_White_Space"},
+	{L"QMark",		L"Quotation_Mark"},
+	{0,				L"Radical"},
+	{L"SD",			L"Soft_Dotted"},
+	{0,				L"STerm"},
+	{L"Term",		L"Terminal_Punctuation"},
+	{L"UIdeo",		L"Unified_Ideograph"},
+	{L"Upper",		L"Uppercase"},
+	{L"VS",			L"Variation_Selector"},
+	{L"WSpace",		L"White_Space"},
+	{L"XIDC",		L"XID_Continue"},
+	{L"XIDS",		L"XID_Start"}
+};
 
 /**
  * Returns true if the specified character has the binary property.
@@ -548,13 +591,86 @@ bool BinaryProperty::is(CodePoint cp, int property) {
 }
 
 
+// EastAsianWidth ///////////////////////////////////////////////////////////
+
+/// The long name of the property.
+const Char EastAsianWidth::LONG_NAME[] = L"East_Asian_Width";
+/// The short name of the property.
+const Char EastAsianWidth::SHORT_NAME[] = L"ea";
+const EastAsianWidth::Names EastAsianWidth::names_[EastAsianWidth::LAST_VALUE - EastAsianWidth::FIRST_VALUE] = {
+	{L"F",	L"Fullwidth"},
+	{L"H",	L"Halfwidth"},
+	{L"W",	L"Wide"},
+	{L"Na",	L"Narrow"},
+	{L"A",	L"Ambiguous"},
+	{L"N",	L"Neutral"}
+};
+
+
+// LineBreak ////////////////////////////////////////////////////////////////
+
+/// The long name of the property.
+const Char LineBreak::LONG_NAME[] = L"Line_Break";
+/// The short name of the property.
+const Char LineBreak::SHORT_NAME[] = L"lb";
+const LineBreak::Names LineBreak::names_[LineBreak::LAST_VALUE - LineBreak::FIRST_VALUE] = {
+	{L"BK",	L"Mandatory_Break"},
+	{L"CR",	L"Carriage_Return"},
+	{L"LF",	L"Line_Feed"},
+	{L"CM",	L"Combining_Mark"},
+	{L"NL",	L"Next_Line"},
+	{L"SG",	L"Surrogate"},
+	{L"WJ",	L"Word_Joiner"},
+	{L"ZW",	L"ZWSpace"},
+	{L"GL",	L"Glue"},
+	{L"SP",	L"Space"},
+	{L"B2",	L"Break_Both"},
+	{L"BA",	L"Break_After"},
+	{L"BB",	L"Break_Before"},
+	{L"HY",	L"Hyphen"},
+	{L"CB",	L"Contingent_Break"},
+	{L"CL",	L"Close_Punctuation"},
+	{L"EX",	L"Exclamation"},
+	{L"IN",	L"Inseparable"},
+	{L"NS",	L"Nonstarter"},
+	{L"OP",	L"Open_Punctuation"},
+	{L"QU",	L"Quotation"},
+	{L"IS",	L"Infix_Numeric"},
+	{L"NU",	L"Numeric"},
+	{L"PO",	L"Postfix_Numeric"},
+	{L"PR",	L"Prefix_Numeric"},
+	{L"SY",	L"Break_Symbols"},
+	{L"AI",	L"Ambiguous"},
+	{L"AL",	L"Alphabetic"},
+	{0,	L"H2"},
+	{0,	L"H3"},
+	{L"ID",	L"Ideographic"},
+	{0,	L"JL"},
+	{0,	L"JV"},
+	{0,	L"JT"},
+	{L"SA",	L"Complex_Context"},
+	{L"XX",	L"Unknown"}
+};
+
+
 // GraphemeClusterBreak /////////////////////////////////////////////////////
 
 /// The long name of the property.
 const Char GraphemeClusterBreak::LONG_NAME[] = L"Grapheme_Cluster_Break";
 /// The short name of the property.
 const Char GraphemeClusterBreak::SHORT_NAME[] = L"GCB";
-map<const Char*, int, PropertyNameComparer<Char> > GraphemeClusterBreak::names_;
+const GraphemeClusterBreak::Names GraphemeClusterBreak::names_[GraphemeClusterBreak::LAST_VALUE - GraphemeClusterBreak::FIRST_VALUE] = {
+	{0,		L"CR"},
+	{0,		L"LF"},
+	{L"CN",	L"Control"},
+	{L"EX",	L"Extend"},
+	{0,		L"L"},
+	{0,		L"V"},
+	{0,		L"T"},
+	{0,		L"LV"},
+	{0,		L"LVT"},
+	{L"XX",	L"Other"}
+};
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
 int GraphemeClusterBreak::of(CodePoint cp) throw() {
@@ -582,19 +698,6 @@ int GraphemeClusterBreak::of(CodePoint cp) throw() {
 	}
 }
 
-void GraphemeClusterBreak::buildNames() {
-	PROP("CN",	"Control",	CONTROL);
-	PROP1("CR",				CR);
-	PROP("EX",	"Extend",	EXTEND);
-	PROP1("L",				L);
-	PROP1("LF",				LF);
-	PROP1("LV",				LV);
-	PROP1("LVT",			LVT);
-	PROP1("T",				T);
-	PROP1("V",				V);
-	PROP("XX",	"OTHER",	OTHER);
-}
-
 
 // WordBreak ////////////////////////////////////////////////////////////////
 
@@ -602,7 +705,16 @@ void GraphemeClusterBreak::buildNames() {
 const Char WordBreak::LONG_NAME[] = L"Word_Break";
 /// The short name of the property.
 const Char WordBreak::SHORT_NAME[] = L"WB";
-map<const Char*, int, PropertyNameComparer<Char> > WordBreak::names_;
+const WordBreak::Names WordBreak::names_[WordBreak::LAST_VALUE - WordBreak::FIRST_VALUE] = {
+	{L"FO",	L"Format"},
+	{L"KA",	L"Katakana"},
+	{L"LE",	L"ALetter"},
+	{L"ML",	L"MidLetter"},
+	{L"MN",	L"MidNum"},
+	{L"NU",	L"Numeric"},
+	{L"EX",	L"ExtendNumLet"},
+	{L"XX",	L"Other"}
+};
 
 /**
  * Returns Word_Break value of the specified character.
@@ -686,17 +798,6 @@ int WordBreak::of(CodePoint cp,
 		return OTHER;
 }
 
-void WordBreak::buildNames() {
-	PROP("EX",	"ExtendNumLet",	EXTEND_NUM_LET);
-	PROP("FO",	"Format",		FORMAT);
-	PROP("KA",	"Katakana",		KATAKANA);
-	PROP("LE",	"ALetter",		A_LETTER);
-	PROP("ML",	"MidLetter",	MID_LETTER);
-	PROP("MN",	"MidNum",		MID_NUM);
-	PROP("NU",	"Numeric",		NUMERIC);
-	PROP("XX",	"Other",		OTHER);
-}
-
 
 // SentenceBreak ////////////////////////////////////////////////////////////
 
@@ -704,7 +805,19 @@ void WordBreak::buildNames() {
 const Char SentenceBreak::LONG_NAME[] = L"Sentence_Break";
 /// The short name of the property.
 const Char SentenceBreak::SHORT_NAME[] = L"SB";
-map<const Char*, int, PropertyNameComparer<Char> > SentenceBreak::names_;
+const SentenceBreak::Names SentenceBreak::names_[SentenceBreak::LAST_VALUE - SentenceBreak::FIRST_VALUE] = {
+	{L"SE",	L"Sep"},
+	{L"FO",	L"Format"},
+	{0,		L"SP"},
+	{L"LO",	L"Lower"},
+	{L"UP",	L"Upper"},
+	{L"LE",	L"OLetter"},
+	{L"NU",	L"Numeric"},
+	{L"AT",	L"ATerm"},
+	{L"ST",	L"STerm"},
+	{L"CL",	L"Close"},
+	{L"XX",	L"Other"}
+};
 
 /// Returns Sentence_Break value of the specified character.
 int SentenceBreak::of(CodePoint cp) throw() {
@@ -733,20 +846,6 @@ int SentenceBreak::of(CodePoint cp) throw() {
 	else if(gc == GeneralCategory::PUNCTUATION_OPEN || gc == GeneralCategory::PUNCTUATION_CLOSE || isQU(cp, gc))
 		return CLOSE;
 	return OTHER;
-}
-
-void SentenceBreak::buildNames() {
-	PROP("AT",	"ATerm",	A_TERM);
-	PROP("CL",	"Close",	CLOSE);
-	PROP("FO",	"Format",	FORMAT);
-	PROP("LE",	"OLetter",	O_LETTER);
-	PROP("LO",	"Lower",	LOWER);
-	PROP("NU",	"Numeric",	NUMERIC);
-	PROP("SE",	"Sep",		SEP);
-	PROP1("SP",				SP);
-	PROP("ST",	"STerm",	S_TERM);
-	PROP("UP",	"Upper",	UPPER);
-	PROP("XX",	"Other",	OTHER);
 }
 
 #undef PROP
