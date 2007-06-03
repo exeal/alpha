@@ -145,8 +145,8 @@ STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE |
     WS_CLIPSIBLINGS
 FONT 9, "MS UI Gothic", 0, 0, 0x0
 BEGIN
-    LTEXT           "コードページ(&C):",IDC_STATIC_1,7,2,49,9
-    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,67,CBS_DROPDOWNLIST | 
+    LTEXT           "エンコード(&E):",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_ENCODING,66,0,185,67,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
 END
 
@@ -155,11 +155,11 @@ STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE |
     WS_CLIPSIBLINGS
 FONT 9, "MS UI Gothic", 0, 0, 0x0
 BEGIN
-    LTEXT           "コードページ(&C):",IDC_STATIC_1,7,2,49,9
-    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,80,CBS_DROPDOWNLIST | 
+    LTEXT           "エンコード(&E):",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_ENCODING,66,0,185,80,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "改行コード(&B):",IDC_STATIC_2,7,18,42,9
-    COMBOBOX        IDC_COMBO_BREAKCODE,66,15,70,80,CBS_DROPDOWNLIST | 
+    LTEXT           "行終端(&L):",IDC_STATIC_2,7,18,42,9
+    COMBOBOX        IDC_COMBO_NEWLINE,66,15,70,80,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
 END
 
@@ -351,11 +351,11 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP |
 CAPTION "書式を指定して新規"
 FONT 8, "MS Shell Dlg", 400, 0, 0x80
 BEGIN
-    LTEXT           "コードページ(&C):",IDC_STATIC,14,23,51,8
-    COMBOBOX        IDC_COMBO_CHARCODE,67,21,202,210,CBS_DROPDOWNLIST | 
+    LTEXT           "エンコード(&C):",IDC_STATIC,14,23,51,8
+    COMBOBOX        IDC_COMBO_ENCODING,67,21,202,210,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "改行コード(&B):",IDC_STATIC,14,37,46,8
-    COMBOBOX        IDC_COMBO_BREAKCODE,67,35,202,125,CBS_DROPDOWNLIST | 
+    LTEXT           "行終端(&L):",IDC_STATIC,14,37,46,8
+    COMBOBOX        IDC_COMBO_NEWLINE,67,35,202,125,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
     LTEXT           "文書タイプ(&D):",IDC_STATIC,14,52,46,8
     COMBOBOX        IDC_COMBO_DOCTYPENAMES,67,51,202,123,CBS_DROPDOWNLIST | 
@@ -956,8 +956,8 @@ STRINGTABLE
 BEGIN
     MSG_IO__FAILED_TO_DETECT_ENCODE 
                             "%1%n%nコードページを判別できませんでした。システム既定のコードページを使用します。"
-    MSG_IO__INVALID_ENCODE  "%1%n%n指定されたコードページは正しくありません。ファイルを開くことはできません。"
-    MSG_IO__INVALID_LINE_BREAK 
+    MSG_IO__INVALID_ENCODING "%1%n%n指定されたコードページは正しくありません。ファイルを開くことはできません。"
+    MSG_IO__INVALID_NEWLINE 
                             "%1%n%n指定された改行コードは正しくありません。ファイルを開くことはできません。"
     MSG_IO__UNCONVERTABLE_UCS_CHAR 
                             "%1%nエンコード%2%n%nこの文書は指定したエンコードで変換できない文字を含んでいます。%nこのまま続行するとそれらの文字は正しく保存されません。%nコードページを変更しますか?"
@@ -1024,7 +1024,7 @@ BEGIN
     MSG_DIALOG__RENAME_FILE "名前の変更"
     MSG_DIALOG__COPY_FILE   "コピー"
     MSG_DIALOG__MOVE_FILE   "移動"
-    MSG_DIALOG__UNCHANGE_LINE_BREAK "統一しない"
+    MSG_DIALOG__KEEP_NEWLINE "統一しない"
     MSG_DIALOG__SAVE_FILE_FILTER "すべてのファイル"
 END
 
@@ -1212,11 +1212,11 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP |
 CAPTION "New with Format"
 FONT 8, "MS Shell Dlg", 400, 0, 0x80
 BEGIN
-    LTEXT           "&Code Page:",IDC_STATIC,14,23,51,8
-    COMBOBOX        IDC_COMBO_CHARCODE,67,21,202,210,CBS_DROPDOWNLIST | 
+    LTEXT           "&Encoding:",IDC_STATIC,14,23,51,8
+    COMBOBOX        IDC_COMBO_ENCODING,67,21,202,210,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Line &Break:",IDC_STATIC,14,37,46,8
-    COMBOBOX        IDC_COMBO_BREAKCODE,67,35,202,125,CBS_DROPDOWNLIST | 
+    LTEXT           "New&line:",IDC_STATIC,14,37,46,8
+    COMBOBOX        IDC_COMBO_NEWLINE,67,35,202,125,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
     LTEXT           "&Document Type:",IDC_STATIC,14,52,54,8
     COMBOBOX        IDC_COMBO_DOCTYPENAMES,67,51,202,123,CBS_DROPDOWNLIST | 
@@ -1273,23 +1273,23 @@ END
 IDD_DLG_OPENFILE DIALOGEX 0, 0, 365, 19
 STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
     WS_CLIPSIBLINGS
-FONT 9, "MS UI Gothic", 0, 0, 0x0
+FONT 9, "Microsoft Sans Serif", 0, 0, 0x0
 BEGIN
     LTEXT           "&Code Page:",IDC_STATIC_1,7,2,49,9
-    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,67,CBS_DROPDOWNLIST | 
+    COMBOBOX        IDC_COMBO_ENCODING,66,0,185,67,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
 END
 
 IDD_DLG_SAVEFILE DIALOGEX 0, 0, 365, 35
 STYLE DS_SETFONT | DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | 
     WS_CLIPSIBLINGS
-FONT 9, "MS UI Gothic", 0, 0, 0x0
+FONT 9, "Microsoft Sans Serif", 0, 0, 0x0
 BEGIN
-    LTEXT           "&Code Page:",IDC_STATIC_1,7,2,49,9
-    COMBOBOX        IDC_COMBO_CHARCODE,66,0,185,80,CBS_DROPDOWNLIST | 
+    LTEXT           "&Encoding:",IDC_STATIC_1,7,2,49,9
+    COMBOBOX        IDC_COMBO_ENCODING,66,0,185,80,CBS_DROPDOWNLIST | 
                     CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Line &Break",IDC_STATIC_2,7,18,42,9
-    COMBOBOX        IDC_COMBO_BREAKCODE,66,15,70,80,CBS_DROPDOWNLIST | 
+    LTEXT           "New&line",IDC_STATIC_2,7,18,42,9
+    COMBOBOX        IDC_COMBO_NEWLINE,66,15,70,80,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
 END
 
@@ -1872,9 +1872,9 @@ STRINGTABLE
 BEGIN
     MSG_IO__FAILED_TO_DETECT_ENCODE 
                             "%1%n%nFailed to detect code page of the file. Used system-default code page."
-    MSG_IO__INVALID_ENCODE  "%1%n%nSpecified code page is invalid. Cannot open the file."
-    MSG_IO__INVALID_LINE_BREAK 
-                            "%1%n%nSpecified line break is invalid. Cannot open the file."
+    MSG_IO__INVALID_ENCODING "%1%n%nSpecified code page is invalid. Cannot open the file."
+    MSG_IO__INVALID_NEWLINE 
+                            "%1%n%nSpecified newline is invalid. Cannot open the file."
     MSG_IO__UNCONVERTABLE_UCS_CHAR 
                             "%1%nEncoding: %2%n%nThe document contains unconvertable characters under specified encoding.%nThese characters will be written incorrectly.%nDo you want to change code page?"
     MSG_IO__UNCONVERTABLE_NATIVE_CHAR 
@@ -1939,7 +1939,7 @@ BEGIN
     MSG_DIALOG__RENAME_FILE "Rename"
     MSG_DIALOG__COPY_FILE   "Copy"
     MSG_DIALOG__MOVE_FILE   "Move"
-    MSG_DIALOG__UNCHANGE_LINE_BREAK "No Change"
+    MSG_DIALOG__KEEP_NEWLINE "No Change"
     MSG_DIALOG__SAVE_FILE_FILTER "All Files"
 END
 

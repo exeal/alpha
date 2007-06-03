@@ -855,17 +855,32 @@ namespace ascension {
 			Position p_;
 		};
 
-		/// @c std#basic_streambuf implementation for @c Document.
+		/**
+		 * @c std#basic_streambuf implementation for @c Document. This supports both input and
+		 * output streams.
+		 * @note This class is not intended to be subclassed.
+		 */
 		class DocumentBuffer : public std::basic_streambuf<Char> {
+		public:
+			explicit DocumentBuffer(Document& document,
+				const Position& initialPosition = Position(0, 0), std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 		private:
-			int_type	overflow(int_type meta);
-			int_type	pbackfail(int_type meta);
-			int_type	uflow();
-			int_type	underflow();
-			pos_type	seekoff(off_type offset, std::ios_base::seekdir direction, std::ios_base::openmode);
-			pos_type	seekpos(off_type position, std::ios_base::openmode);
+			int_type					overflow(int_type c);
+			int_type					pbackfail(int_type c);
+			pos_type					seekoff(off_type offset, std::ios_base::seekdir direction, std::ios_base::openmode);
+			pos_type					seekpos(off_type position, std::ios_base::openmode);
+			std::basic_streambuf<Char>*	setbuf(char_type* buffer, std::streamsize size);
+			std::streamsize				showmanyc();
+			int							sync();
+			int_type					uflow();
+			int_type					underflow();
+			std::streamsize				xsgetn(char_type* buffer, std::streamsize size);
+			std::streamsize				xsputn(const char_type* buffer, std::streamsize size);
 		private:
+			Document& document_;
+			const std::ios_base::openmode mode_;
 			Position current_;
+			char_type buffer_[8192];
 		};
 
 		// free functions related to document

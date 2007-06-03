@@ -336,7 +336,7 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 			|| (f[POSIX_XDIGIT] && legacyctype::isxdigit(c)))
 		return true;
 
-	// 一般上位分類
+	// higher general category
 	const int gc = GeneralCategory::of(c);
 	if((f[GeneralCategory::LETTER] && GeneralCategory::is<GeneralCategory::LETTER>(gc))
 			|| (f[GeneralCategory::LETTER_CASED] && GeneralCategory::is<GeneralCategory::LETTER_CASED>(gc))
@@ -351,7 +351,7 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 			|| (f[GC_ASCII] && c < 0x0080))
 		return true;
 
-	// 一般分類、ブロック、スクリプト
+	// lower general category, block, and script
 	if(f[gc] || f[CodeBlock::of(c)])
 		return true;
 	const int script = Script::of(c);
@@ -366,12 +366,12 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 				|| (f[BinaryProperty::NONCHARACTER_CODE_POINT] && BinaryProperty::is<BinaryProperty::NONCHARACTER_CODE_POINT>(c))
 				|| (f[BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT] && BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(c));
 	} else {
-		// 2 値プロパティ
-		for(int i = BinaryProperty::ALPHABETIC; i < BinaryProperty::COUNT; ++i) {
+		// binary properties
+		for(int i = BinaryProperty::FIRST_VALUE; i < BinaryProperty::LAST_VALUE; ++i) {
 			if(f[i] && BinaryProperty::is(c, i))
 				return true;
 		}
-		// その他のプロパティ
+		// others
 		if(f[HangulSyllableType::of(c)]
 				|| f[GraphemeClusterBreak::of(c)]
 				|| f[WordBreak::of(c)]
@@ -413,18 +413,16 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 			klass.set(i->second);
 		else {
 			int p = GeneralCategory::forName(expression.c_str());
-			if(p != NOT_PROPERTY)
-				klass.set(p);
-			else {
+			if(p == NOT_PROPERTY) {
 				p = CodeBlock::forName(expression.c_str());
-				if(p != NOT_PROPERTY)
-					klass.set(p);
-				else {
+				if(p == NOT_PROPERTY) {
 					p = Script::forName(expression.c_str());
-					if(p != NOT_PROPERTY)
-						klass.set(p);
+					if(p == NOT_PROPERTY)
+						p = BinaryProperty::forName(expression.c_str());
 				}
 			}
+			if(p != NOT_PROPERTY)
+				klass.set(p);
 		}
 	}
 	return klass;

@@ -2287,8 +2287,8 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @see #getLinkedFont, #setFont
  */
 HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
-	if(script <= Script::UNKNOWN || script == Script::INHERITED
-			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::COUNT)
+	if(script <= Script::FIRST_VALUE || script == Script::INHERITED
+			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
 		throw invalid_argument("invalid script value.");
 	if(script == Script::COMMON)
 		return getFontInFontset(*const_cast<FontSelector*>(this)->primaryFont_, bold, italic);

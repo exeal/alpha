@@ -724,7 +724,6 @@ namespace ascension {
 			BaseIterator p_;
 		};
 
-#ifndef ASCENSION_NO_UAX14
 		/// Base class of @c LineBreakIterator.
 		class AbstractLineBreakIterator : public BreakIterator {
 		public:
@@ -755,7 +754,6 @@ namespace ascension {
 			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
 			BaseIterator p_;
 		};
-#endif /* !ASCENSION_NO_UAX14 */
 
 		/**
 		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
