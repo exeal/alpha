@@ -857,27 +857,28 @@ namespace ascension {
 
 		/**
 		 * @c std#basic_streambuf implementation for @c Document. This supports both input and
-		 * output streams.
+		 * output streams. Seeking is not supported. Virtual methods this class overrides are:
+		 * - @c overflow
+		 * - @c sync
+		 * - @c uflow
+		 * - @c underflow
+		 * Destructor automatically flushes the internal buffer.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DocumentBuffer : public std::basic_streambuf<Char> {
 		public:
-			explicit DocumentBuffer(Document& document,
-				const Position& initialPosition = Position(0, 0), std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+			explicit DocumentBuffer(Document& document, const Position& initialPosition = Position::ZERO_POSITION,
+				NewlineRepresentation nlr = NLR_PHYSICAL_DATA, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+			~DocumentBuffer() throw();
+			const Position&	tell() const throw();
 		private:
-			int_type					overflow(int_type c);
-			int_type					pbackfail(int_type c);
-			pos_type					seekoff(off_type offset, std::ios_base::seekdir direction, std::ios_base::openmode);
-			pos_type					seekpos(off_type position, std::ios_base::openmode);
-			std::basic_streambuf<Char>*	setbuf(char_type* buffer, std::streamsize size);
-			std::streamsize				showmanyc();
-			int							sync();
-			int_type					uflow();
-			int_type					underflow();
-			std::streamsize				xsgetn(char_type* buffer, std::streamsize size);
-			std::streamsize				xsputn(const char_type* buffer, std::streamsize size);
+			int_type	overflow(int_type c);
+			int			sync();
+			int_type	uflow();
+			int_type	underflow();
 		private:
 			Document& document_;
+			const NewlineRepresentation nlr_;
 			const std::ios_base::openmode mode_;
 			Position current_;
 			char_type buffer_[8192];

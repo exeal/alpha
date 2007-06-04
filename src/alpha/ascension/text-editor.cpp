@@ -78,18 +78,21 @@ ulong CaretMovementCommand::execute() {
 
 	Caret& caret = getTarget().getCaret();
 
-	if(!caret.isSelectionEmpty() && !extend_) {	// 選択を解除するだけ
-		const bool rtl = getTarget().getConfiguration().orientation == RIGHT_TO_LEFT;
-		if(type_ == NEXT_CHARACTER
-				|| (type_ == RIGHT_CHARACTER && !rtl)
-				|| (type_ == LEFT_CHARACTER && rtl)) {
-			caret.moveTo(caret.getBottomPoint());
-			return 0;
-		} else if(type_ == PREVIOUS_CHARACTER
-				|| (type_ == LEFT_CHARACTER && !rtl)
-				|| (type_ == RIGHT_CHARACTER && rtl)) {
-			caret.moveTo(caret.getTopPoint());
-			return 0;
+	if(!extend_) {
+		caret.endBoxSelection();
+		if(!caret.isSelectionEmpty()) {	// just clear the selection
+			const bool rtl = getTarget().getConfiguration().orientation == RIGHT_TO_LEFT;
+			if(type_ == NEXT_CHARACTER
+					|| (type_ == RIGHT_CHARACTER && !rtl)
+					|| (type_ == LEFT_CHARACTER && rtl)) {
+				caret.moveTo(caret.getBottomPoint());
+				return 0;
+			} else if(type_ == PREVIOUS_CHARACTER
+					|| (type_ == LEFT_CHARACTER && !rtl)
+					|| (type_ == RIGHT_CHARACTER && rtl)) {
+				caret.moveTo(caret.getTopPoint());
+				return 0;
+			}
 		}
 	}
 
@@ -736,6 +739,8 @@ ulong RowSelectionExtensionCommand::execute() {
 		RIGHT_WORDEND, CaretMovementCommand::RIGHT_WORDEND,
 		NEXT_LINE, CaretMovementCommand::NEXT_LINE,
 		PREVIOUS_LINE, CaretMovementCommand::PREVIOUS_LINE,
+		VISUAL_NEXT_LINE, CaretMovementCommand::VISUAL_NEXT_LINE,
+		VISUAL_PREVIOUS_LINE, CaretMovementCommand::VISUAL_PREVIOUS_LINE,
 		START_OF_LINE, CaretMovementCommand::START_OF_LINE,
 		END_OF_LINE, CaretMovementCommand::END_OF_LINE,
 		FIRST_CHAR_OF_LINE, CaretMovementCommand::FIRST_CHAR_OF_LINE,

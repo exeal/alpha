@@ -1914,63 +1914,39 @@ void DocumentCharacterIterator::previous() {
  * Constructor.
  * @param document the document
  * @param initialPosition the initial position of streams
- * @param mode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
+ * @param nlr the newline representation
+ * @param streamMode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
  * @throw std#invalid_argument @p mode is invalid
  */
-DocumentBuffer::DocumentBuffer(Document& document,
-		const Position& initialPosition /* = Position(0, 0) */, ios_base::openmode mode /* = ios_base::in | ios_base::out */) :
-		document_(document), mode_(mode), current_(initialPosition) {
-	if((mode & ~(ios_base::in | ios_base::out)) != 0)
+DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
+		NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
+		document_(document), nlr_(nlr), mode_(streamMode), current_(initialPosition) {
+	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
 		throw invalid_argument("the given mode is invalid.");
+	setp(buffer_, endof(buffer_) - 1);
+}
+
+/// Destructor.
+DocumentBuffer::~DocumentBuffer() throw() {
+	sync();
+}
+
+/// Returns the current position in the document.
+const Position& DocumentBuffer::tell() const throw() {
+	return current_;
 }
 
 /// @see std#basic_streambuf#overflow
 DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
-	if(!traits_type::eq_int_type(c, traits_type::eof())) {
-		if((mode_ & ios_base::out) == 0)
-			return traits_type::eof();
-		char_type* p = pptr();
+	if((mode_ & ios_base::out) == 0)
+		return traits_type::eof();
+	char_type* p = pptr();
+	if(!traits_type::eq_int_type(c, traits_type::eof()))
 		*p++ = traits_type::to_char_type(c);
-		setp(buffer_, endof(buffer_) - 1);
+	setp(buffer_, endof(buffer_) - 1);
+	if(buffer_ < p)
 		current_ = document_.insert(current_, buffer_, p);
-	}
 	return traits_type::not_eof(c);
-}
-
-/// @see std#basic_streambuf#pbackfail
-DocumentBuffer::int_type DocumentBuffer::pbackfail(int_type c) {
-	if((mode_ & ios_base::in) == 0 || gptr() == eback())
-		return traits_type::eof();
-	else if(traits_type::eq_int_type(c, traits_type::eof()))
-		return traits_type::not_eof(c);
-	else if(traits_type::eq(traits_type::to_char_type(c), gptr()[-1])) {
-		gbump(-1);
-		return c;
-	} else if((mode_ & ios_base::out) != 0) {
-		gbump(-1);
-		return *gptr() = c;
-	} else
-		return traits_type::eof();
-}
-
-/// @see std#basic_streambuf#seekoff
-DocumentBuffer::pos_type DocumentBuffer::seekoff(off_type offset, ios_base::seekdir direction, ios_base::openmode mode) {
-	return static_cast<pos_type>(-1);
-}
-
-/// @see std#basic_streambuf#seekpos
-DocumentBuffer::pos_type DocumentBuffer::seekpos(off_type position, ios_base::openmode mode) {
-	return static_cast<pos_type>(-1);
-}
-
-/// @see std#basic_streambuf#setbuf
-basic_streambuf<Char>* DocumentBuffer::setbuf(char_type* buffer, streamsize size) {
-	return 0;
-}
-
-/// @see std#basic_streambuf#showmanyc
-streamsize DocumentBuffer::showmanyc() {
-	return ((mode_ & ios_base::out) != 0) ? -1 : static_cast<streamsize>(egptr() - gptr());
 }
 
 /// @see std#basic_streambuf#sync
@@ -1994,16 +1970,6 @@ DocumentBuffer::int_type DocumentBuffer::uflow() {
 /// @see std#basic_streambuf#underflow
 DocumentBuffer::int_type DocumentBuffer::underflow() {
 	return (gptr() != egptr()) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
-}
-
-/// @see std#basic_streambuf#xsgetn
-streamsize DocumentBuffer::xsgetn(char_type* buffer, streamsize size) {
-	return basic_streambuf<Char>::xsgetn(buffer, size);
-}
-
-/// @see std#basic_streambuf#xsputn
-streamsize DocumentBuffer::xsputn(const char_type* buffer, streamsize size) {
-	return basic_streambuf<Char>::xsputn(buffer, size);
 }
 
 
