@@ -1038,10 +1038,15 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
  * @param key the virtual-keycode of the key
  * @param controlPressed true if CTRL key is pressed
  * @param shiftPressed true if SHIFT key is pressed
+ * @param altPressed true if ALT key is pressed
  * @return true if the key down was handled
  */
-bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed) throw() {
+bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) throw() {
 	using namespace ascension::texteditor::commands;
+	if(altPressed) {
+		if(!shiftPressed || (key != VK_LEFT && key != VK_UP && key != VK_RIGHT && key != VK_DOWN))
+			return false;
+	}
 	switch(key) {
 	case VK_BACK:	// [BackSpace]
 	case VK_F16:	// [F16]
@@ -1084,26 +1089,45 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed)
 			CaretMovementCommand::END_OF_DOCUMENT : CaretMovementCommand::END_OF_LINE, shiftPressed).execute();
 		return true;
 	case VK_LEFT:	// [Left]
-		CaretMovementCommand(*this, controlPressed ?
-			CaretMovementCommand::LEFT_WORD : CaretMovementCommand::LEFT_CHARACTER, shiftPressed).execute();
+		if(altPressed && shiftPressed)
+			RowSelectionExtensionCommand(*this, controlPressed ?
+				RowSelectionExtensionCommand::LEFT_WORD : RowSelectionExtensionCommand::LEFT_CHARACTER).execute();
+		else
+			CaretMovementCommand(*this, controlPressed ?
+				CaretMovementCommand::LEFT_WORD : CaretMovementCommand::LEFT_CHARACTER, shiftPressed).execute();
 		return true;
 	case VK_UP:		// [Up]
-		if(controlPressed && !shiftPressed)	onVScroll(SB_LINEUP, 0, 0);
-		else								CaretMovementCommand(*this, CaretMovementCommand::VISUAL_PREVIOUS_LINE, shiftPressed).execute();
+		if(altPressed && shiftPressed && !controlPressed)
+			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::VISUAL_PREVIOUS_LINE).execute();
+		else if(controlPressed && !shiftPressed)
+			scroll(0, -1, true);
+		else
+			CaretMovementCommand(*this, CaretMovementCommand::VISUAL_PREVIOUS_LINE, shiftPressed).execute();
 		return true;
 	case VK_RIGHT:	// [Right]
-		CaretMovementCommand(*this, controlPressed ?
-			CaretMovementCommand::RIGHT_WORD : CaretMovementCommand::RIGHT_CHARACTER, shiftPressed).execute();
+		if(altPressed && shiftPressed)
+			RowSelectionExtensionCommand(*this, controlPressed ?
+				RowSelectionExtensionCommand::RIGHT_WORD : RowSelectionExtensionCommand::RIGHT_CHARACTER).execute();
+		else
+			CaretMovementCommand(*this, controlPressed ?
+				CaretMovementCommand::RIGHT_WORD : CaretMovementCommand::RIGHT_CHARACTER, shiftPressed).execute();
 		return true;
 	case VK_DOWN:	// [Down]
-		if(controlPressed && !shiftPressed)	onVScroll(SB_LINEDOWN, 0, 0);
-		else								CaretMovementCommand(*this, CaretMovementCommand::VISUAL_NEXT_LINE, shiftPressed).execute();
+		if(altPressed && shiftPressed && !controlPressed)
+			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::VISUAL_NEXT_LINE).execute();
+		else if(controlPressed && !shiftPressed)
+			onVScroll(SB_LINEDOWN, 0, 0);
+		else
+			CaretMovementCommand(*this, CaretMovementCommand::VISUAL_NEXT_LINE, shiftPressed).execute();
 		return true;
 	case VK_INSERT:	// [Insert]
-		if(!shiftPressed) {
-			if(controlPressed)		ClipboardCommand(*this, ClipboardCommand::COPY, true).execute();
-			else					InputStatusToggleCommand(*this, InputStatusToggleCommand::OVERTYPE_MODE).execute();
-		} else if(controlPressed)	ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
+		if(altPressed)
+			break;
+		else if(!shiftPressed) {
+			if(controlPressed)	ClipboardCommand(*this, ClipboardCommand::COPY, true).execute();
+			else				InputStatusToggleCommand(*this, InputStatusToggleCommand::OVERTYPE_MODE).execute();
+		} else if(controlPressed)
+			ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
 		else						break;
 		return true;
 	case VK_DELETE:	// [Delete]
@@ -1784,9 +1808,9 @@ void TextViewer::onIMEStartComposition() {
 }
 
 /// @see WM_KEYDOWN
-void TextViewer::onKeyDown(UINT ch, UINT, bool& handled) {
+void TextViewer::onKeyDown(UINT vkey, UINT, bool& handled) {
 	endAutoScroll();
-	handled = handleKeyDown(ch, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000));
+	handled = handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), false);
 }
 
 /// @see WM_KILLFOCUS
@@ -2102,9 +2126,12 @@ void TextViewer::onSysColorChange() {
 }
 
 /// @see WM_SYSKEYDOWN
-bool TextViewer::onSysKeyDown(UINT, UINT) {
+bool TextViewer::onSysKeyDown(UINT vkey, UINT) {/*
+	DocumentBuffer db(getDocument());
+	wostream s(&db);
+	s << L"aiueo";*/
 	endAutoScroll();
-	return false;
+	return handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), true);;
 }
 
 /// @see WM_SYSKEYUP

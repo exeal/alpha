@@ -22,9 +22,9 @@ namespace ascension {
 		 */
 		class EditorCommand {
 		public:
-			/// Constructor
+			/// Constructor.
 			EditorCommand(viewers::TextViewer& view) throw() : view_(&view) {}
-			/// Destructor
+			/// Destructor.
 			virtual ~EditorCommand() throw() {}
 			/// Executes the command and returns the command-specific result value.
 			virtual ulong execute() = 0;
@@ -37,6 +37,7 @@ namespace ascension {
 			viewers::TextViewer* view_;
 		};
 
+		/// @internal
 		namespace internal {
 			template<typename Parameter> class EditorCommandBase : public EditorCommand {
 			public:
@@ -49,57 +50,57 @@ namespace ascension {
 
 		/// Implementations of the standard commands.
 		namespace commands {
-			/// ブックマーク操作
+			/// Bookmark operations.
 			class BookmarkCommand : public EditorCommand {
 			public:
 				enum Type {
-					CLEAR_ALL,			///< 全て削除
-					TOGGLE_CURRENT_LINE	///< 現在行のブックマークのトグル
+					CLEAR_ALL,			///< Removes all bookmarks.
+					TOGGLE_CURRENT_LINE	///< Toggles the current bookmark.
 				};
 				BookmarkCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// 選択の解除、インクリメンタル検索の中止
+			/// Clears the selection or cancels incremental search.
 			class CancelCommand : public EditorCommand {
 			public:
 				explicit CancelCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
 				ulong execute();
 			};
-			/// キャレットの移動
+			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public EditorCommand {
 			public:
 				enum Type {
-					NEXT_CHARACTER,		///< 次の文字
-					PREVIOUS_CHARACTER,	///< 前の文字
-					LEFT_CHARACTER,		///< 左の文字
-					RIGHT_CHARACTER,	///< 右の文字
-					NEXT_WORD,		///< 次の単語の先頭
-					PREVIOUS_WORD,	///< 前の単語の先頭
-					LEFT_WORD,		///< 左の単語の先頭
-					RIGHT_WORD,		///< 右の単語の先頭
-					NEXT_WORDEND,		///< 次の単語の終端
-					PREVIOUS_WORDEND,	///< 前の単語の終端
-					LEFT_WORDEND,		///< 左の単語の終端
-					RIGHT_WORDEND,		///< 右の単語の終端
-					NEXT_LINE,		///< 次の行
-					PREVIOUS_LINE,	///< 前の行
-					VISUAL_NEXT_LINE,		///< 次の表示行
-					VISUAL_PREVIOUS_LINE,	///< 前の表示行
-					NEXT_PAGE,		///< 次のページ
-					PREVIOUS_PAGE,	///< 前のページ
-					START_OF_LINE,			///< 行頭
-					END_OF_LINE,			///< 行末
-					FIRST_CHAR_OF_LINE,		///< 行の最初の文字
-					LAST_CHAR_OF_LINE,		///< 行の最後の文字
-					START_OR_FIRST_OF_LINE,	///< 現在位置により、行頭か行の最初の文字
-					END_OR_LAST_OF_LINE,	///< 現在位置により、行末か行の最後の文字
-					START_OF_DOCUMENT,	///< ドキュメントの先頭
-					END_OF_DOCUMENT,	///< ドキュメントの終端
-					NEXT_BOOKMARK,		///< 次のブックマーク (移動量は常に1)
-					PREVIOUS_BOOKMARK,	///< 前のブックマーク (移動量は常に1)
-					MATCH_BRACKET,		///< 対括弧
+					NEXT_CHARACTER,			///< Moves or extends to the next character.
+					PREVIOUS_CHARACTER,		///< Moves or extends to the previous character.
+					LEFT_CHARACTER,			///< Moves or extends to the left character.
+					RIGHT_CHARACTER,		///< Moves or extends to the right character.
+					NEXT_WORD,				///< Moves or extends to the start of the next word.
+					PREVIOUS_WORD,			///< Moves or extends to the start of the previous word.
+					LEFT_WORD,				///< Moves or extends to the start of the left word.
+					RIGHT_WORD,				///< Moves or extends to the start of the right word.
+					NEXT_WORDEND,			///< Moves or extends to the end of the next word.
+					PREVIOUS_WORDEND,		///< Moves or extends to the end of the previous word.
+					LEFT_WORDEND,			///< Moves or extends to the end of the left word.
+					RIGHT_WORDEND,			///< Moves or extends to the end of the right word.
+					NEXT_LINE,				///< Moves or extends to the next logical line.
+					PREVIOUS_LINE,			///< Moves or extends to the previous logical line.
+					VISUAL_NEXT_LINE,		///< Moves or extends to the next visual line.
+					VISUAL_PREVIOUS_LINE,	///< Moves or extends to the previous visual line.
+					NEXT_PAGE,				///< Moves or extends to the next page.
+					PREVIOUS_PAGE,			///< Moves or extends to the previous page.
+					START_OF_LINE,			///< Moves or extends to the start of the line.
+					END_OF_LINE,			///< Moves or extends to the end of the line.
+					FIRST_CHAR_OF_LINE,		///< Moves or extends to the first character in the line.
+					LAST_CHAR_OF_LINE,		///< Moves or extends to the last character in the line.
+					START_OR_FIRST_OF_LINE,	///< Moves or extends to the start of the line or the first character in the line by context.
+					END_OR_LAST_OF_LINE,	///< Moves or extends to the end of the line or the last character in the line by context.
+					START_OF_DOCUMENT,		///< Moves or extends to the start of the document.
+					END_OF_DOCUMENT,		///< Moves or extends to the end of the document.
+					NEXT_BOOKMARK,			///< Moves or extends to the next bookmark.
+					PREVIOUS_BOOKMARK,		///< Moves or extends to the previous bookmark.
+					MATCH_BRACKET,			///< Moves or extends to the match bracket.
 				};
 				CaretMovementCommand(viewers::TextViewer& view, Type type, bool extend = false, length_t offset = 1) throw()
 						: EditorCommand(view), type_(type), extend_(extend), offset_(offset) {}
@@ -109,33 +110,33 @@ namespace ascension {
 				bool		extend_;
 				length_t	offset_;
 			};
-			/// 文字とコードポイントの変換
+			/// Exchanges a character and a text represents a code value.
 			class CharacterCodePointConversionCommand : public internal::EditorCommandBase<bool> {
 			public:
 				CharacterCodePointConversionCommand(viewers::TextViewer& view, bool charToCp) throw() :
 					internal::EditorCommandBase<bool>(view, charToCp) {}
 				ulong execute();
 			};
-			/// 1文字の入力
+			/// Inputs a character.
 			class CharacterInputCommand : public internal::EditorCommandBase<CodePoint> {
 			public:
 				CharacterInputCommand(viewers::TextViewer& view, CodePoint cp) throw() : internal::EditorCommandBase<CodePoint>(view, cp) {}
 				ulong execute();
 			};
-			/// 隣接行の同じ位置の文字を入力
+			/// Inputs a character is at same position in the next/previous line.
 			class CharacterInputFromNextLineCommand : internal::EditorCommandBase<bool> {
 			public:
 				CharacterInputFromNextLineCommand(viewers::TextViewer& view, bool fromNextLine) throw() :
 					internal::EditorCommandBase<bool>(view, fromNextLine) {}
 				ulong execute();
 			};
-			/// クリップボード関連のコマンド
+			/// Operates the clipboard.
 			class ClipboardCommand : public EditorCommand {
 			public:
 				enum Type {
-					COPY,	///< コピー
-					CUT,	///< 切り取り
-					PASTE	///< 貼り付け
+					COPY,	///< Copy the selection into the clipboard.
+					CUT,	///< Cuts the selection and copys.
+					PASTE	///< Pastes the content of the clipboard at the caret.
 				};
 				ClipboardCommand(viewers::TextViewer& view, Type type, bool performClipboardRing) throw()
 					: EditorCommand(view), type_(type), performClipboardRing_(performClipboardRing) {}
@@ -144,27 +145,27 @@ namespace ascension {
 				Type type_;
 				bool performClipboardRing_;
 			};
-			/// テキストの削除
+			/// Erases the text in the document.
 			class DeletionCommand : public EditorCommand {
 			public:
 				enum Type {
-					NEXT_CHARACTER,		///< 次の1文字。インクリメンタル検索中の場合、検索開始時の状態にリセット
-					PREVIOUS_CHARACTER,	///< 前の1文字。インクリメンタル検索中の場合、最後の変更を元に戻す
-					NEXT_WORD,			///< 次の単語の先頭まで
-					PREVIOUS_WORD,		///< 前の単語の先頭まで
-					WHOLE_LINE			///< 行全体
+					NEXT_CHARACTER,		///< Erases the next character. Or resets the pattern in incremental search.
+					PREVIOUS_CHARACTER,	///< Erases the previous character. Or undos the last operation in incremental search.
+					NEXT_WORD,			///< Erases to the start of the next word.
+					PREVIOUS_WORD,		///< Erases to the start of the previous word.
+					WHOLE_LINE			///< Erases the whole line.
 				};
 				DeletionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// 全検索
+			/// Searches all.
 			class FindAllCommand : public EditorCommand {
 			public:
 				enum Type {
-					BOOKMARK,	///< ブックマークを設定
-					REPLACE		///< 置換
+					BOOKMARK,	///< Sets bookmarks at the all matched lines.
+					REPLACE		///< Replaces the all matched texts.
 				};
 				FindAllCommand(viewers::TextViewer& view, Type type, bool onlySelection) throw()
 					: EditorCommand(view), type_(type), onlySelection_(onlySelection) {}
@@ -173,7 +174,7 @@ namespace ascension {
 				Type type_;
 				bool onlySelection_;
 			};
-			/// 次を検索
+			/// Searches the next or the previous.
 			class FindNextCommand : public EditorCommand {
 			public:
 				FindNextCommand(viewers::TextViewer& view, bool replace, Direction direction) throw() :
@@ -183,7 +184,7 @@ namespace ascension {
 				bool replace_;
 				Direction direction_;
 			};
-			/// インクリメンタル検索
+			/// Begins the incremental search.
 			class IncrementalSearchCommand : public EditorCommand {
 			public:
 				IncrementalSearchCommand(viewers::TextViewer& view, searcher::SearchType type,
@@ -195,7 +196,7 @@ namespace ascension {
 				Direction direction_;
 				searcher::IIncrementalSearchListener* listener_;
 			};
-			/// インデント
+			/// Makes/Deletes indents.
 			class IndentationCommand : public EditorCommand {
 			public:
 				IndentationCommand(viewers::TextViewer& view, bool indent, bool tabIndent, ushort level) throw()
@@ -206,107 +207,109 @@ namespace ascension {
 				bool tabIndent_;
 				ushort level_;
 			};
-			/// 入力状態のトグル
+			/// Toggles the input status.
 			class InputStatusToggleCommand : public EditorCommand {
 			public:
 				enum Type {
-					IME_STATUS,		///< IME
-					OVERTYPE_MODE,	///< 挿入/上書きモード
-					SOFT_KEYBOARD	///< ソフトキーボード
+					IME_STATUS,		///< About IME.
+					OVERTYPE_MODE,	///< About insertion/overtype mode.
+					SOFT_KEYBOARD	///< About soft keyboard.
 				};
 				InputStatusToggleCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// 改行
+			/// Inserts a newline.
 			class NewlineCommand : public internal::EditorCommandBase<bool> {
 			public:
 				NewlineCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
 				ulong execute();
 			};
-			/// 補完ウィンドウを開く
+			/// Begins completion.
 			class OpenCompletionWindowCommand : public EditorCommand {
 			public:
 				explicit OpenCompletionWindowCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
 				ulong execute();
 			};
-			/// 再変換
+			/// Reconverts by using IME.
 			class ReconversionCommand : public EditorCommand {
 			public:
 				explicit ReconversionCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
 				ulong execute();
 			};
-			/// 選択を拡張し、矩形選択を開始
+			/// Extends the selection and begins rectangular selection.
 			class RowSelectionExtensionCommand : public EditorCommand {
 			public:
 				enum Type {
-					NEXT_CHARACTER,		///< 次の文字
-					PREVIOUS_CHARACTER,	///< 前の文字
-					LEFT_CHARACTER,		///< 左の文字
-					RIGHT_CHARACTER,	///< 右の文字
-					NEXT_WORD,		///< 次の単語の先頭
-					PREVIOUS_WORD,	///< 前の単語の先頭
-					LEFT_WORD,		///< 左の単語の先頭
-					RIGHT_WORD,		///< 右の単語の先頭
-					NEXT_WORDEND,		///< 次の単語の終端
-					PREVIOUS_WORDEND,	///< 前の単語の終端
-					LEFT_WORDEND,		///< 左の単語の終端
-					RIGHT_WORDEND,		///< 右の単語の終端
-					NEXT_LINE,		///< 次の行
-					PREVIOUS_LINE,	///< 前の行
-					START_OF_LINE,			///< 行頭
-					END_OF_LINE,			///< 行末
-					FIRST_CHAR_OF_LINE,		///< 行の最初の文字
-					LAST_CHAR_OF_LINE,		///< 行の最後の文字
-					START_OR_FIRST_OF_LINE,	///< 現在位置により、行頭か行の最初の文字
-					END_OR_LAST_OF_LINE,	///< 現在位置により、行末か行の最後の文字
+					NEXT_CHARACTER,			///< Extends to the next character.
+					PREVIOUS_CHARACTER,		///< Extends to the previous character.
+					LEFT_CHARACTER,			///< Extends to the left character.
+					RIGHT_CHARACTER,		///< Extends to the right character.
+					NEXT_WORD,				///< Extends to the start of the next word.
+					PREVIOUS_WORD,			///< Extends to the start of the previous word.
+					LEFT_WORD,				///< Extends to the start of the left word.
+					RIGHT_WORD,				///< Extends to the start of the right word.
+					NEXT_WORDEND,			///< Extends to the end of the next word.
+					PREVIOUS_WORDEND,		///< Extends to the end of the previous word.
+					LEFT_WORDEND,			///< Extends to the end of the left word.
+					RIGHT_WORDEND,			///< Extends to the end of the right word.
+					NEXT_LINE,				///< Extends to the next logical line.
+					PREVIOUS_LINE,			///< Extends to the previous logical line.
+					VISUAL_NEXT_LINE,		///< Extends to the next visual line.
+					VISUAL_PREVIOUS_LINE,	///< Extends to the previous visual line.
+					START_OF_LINE,			///< Extends to the start of the line.
+					END_OF_LINE,			///< Extends to the end of the line.
+					FIRST_CHAR_OF_LINE,		///< Extends to the first character in the line.
+					LAST_CHAR_OF_LINE,		///< Extends to the last character in the line.
+					START_OR_FIRST_OF_LINE,	///< Extends to the start of the line or first character in the line by context.
+					END_OR_LAST_OF_LINE,	///< Extends to the end of the line or last character in the line by context.
 				};
 				RowSelectionExtensionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// 選択の作成
+			/// Creates the selection.
 			class SelectionCreationCommand : public EditorCommand {
 			public:
 				enum Type {
-					ALL,			///< 全テキスト
-					CURRENT_WORD	///< 現在の単語
+					ALL,			///< Selects the all of the document.
+					CURRENT_WORD	///< Selects the current word.
 				};
 				SelectionCreationCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// タブと空白の変換
+			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public internal::EditorCommandBase<bool> {
 			public:
 				TabifyCommand(viewers::TextViewer& view, bool tabify) throw() : internal::EditorCommandBase<bool>(view, tabify) {}
 				ulong execute();
 			};
-			/// テキストの入力
+			/// Inputs a text.
 			class TextInputCommand : public internal::EditorCommandBase<String> {
 			public:
 				TextInputCommand(viewers::TextViewer& view, const String& text) throw() : internal::EditorCommandBase<String>(view, text) {}
 				ulong execute();
 			};
-			/// テキストの入れ替え
+			/// Transposes (swaps) the two text elements.
 			class TranspositionCommand : public EditorCommand {
 			public:
 				enum Type {
-					CHARACTERS,	///< 文字
-					LINES,		///< 行
-					WORDS,		///< 単語
-	//				SENTENCES,	///< 文
-	//				PARAGRAPHS	///< 段落
+					CHARACTERS,	///< Transposes the characters.
+					LINES,		///< Transposes the lines.
+					WORDS,		///< Transposes the words.
+//					SENTENCES,	///< Transposes the sentences.
+//					PARAGRAPHS	///< Transposes the paragraphs.
 				};
 				TranspositionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();
 			private:
 				Type type_;
 			};
-			/// 元に戻す/やり直し
+			/// Performs undo or redo.
 			class UndoCommand : public internal::EditorCommandBase<bool> {
 			public:
 				UndoCommand(viewers::TextViewer& view, bool undo) throw() : internal::EditorCommandBase<bool>(view, undo) {}
@@ -329,7 +332,7 @@ namespace ascension {
 				bool	check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
 			private:
 				enum CharacterClass {
-					CTRL, NON, CONS,	// タイ文字ブロックの未定義文字は制御文字として扱う
+					CTRL, NON, CONS,	// treat unassigned characters in Thai block as controls
 					LV, FV1, FV2, FV3, BV1, BV2,
 					BD, TONE, AD1, AD2, AD3,
 					AV1, AV2, AV3,

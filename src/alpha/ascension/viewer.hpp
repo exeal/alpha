@@ -557,7 +557,7 @@ namespace ascension {
 		protected:
 			virtual void	doBeep() throw();
 			virtual void	drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
-			bool			handleKeyDown(UINT key, bool controlPressed, bool shiftPressed) throw();
+			bool			handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) throw();
 
 			// helpers
 		private:

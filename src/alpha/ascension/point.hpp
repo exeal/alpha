@@ -77,7 +77,7 @@ namespace ascension {
 			CodePoint		getCodePoint(bool useLineFeed = false) const;
 			length_t		getLineLength() const throw();
 			String			getText(signed_length_t length, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
-			String			getText(const Position& other, NewlineRepresentation lbr = NLR_PHYSICAL_DATA) const;
+			String			getText(const Position& other, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
 			bool			isEndOfDocument() const;
 			bool			isEndOfLine() const;
 			bool			isStartOfDocument() const;

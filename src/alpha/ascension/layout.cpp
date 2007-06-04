@@ -526,7 +526,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			const Caret& caret = renderer_.getTextViewer().getCaret();
 			const Position eol(lineNumber_, document.getLineLength(lineNumber_));
 			if(!caret.isSelectionRectangle() && caret.getTopPoint().getPosition() <= eol && caret.getBottomPoint().getPosition() > eol)
-				dc.fillSolidRect(x, y, nlfWidth, linePitch, selectionColor.background);
+				dc.fillSolidRect(x - (context.orientation == RIGHT_TO_LEFT ? nlfWidth : 0), y, nlfWidth, linePitch, selectionColor.background);
 			dc.setBkMode(TRANSPARENT);
 			specialCharacterRenderer->drawLineTerminator(context, nlf);
 		}
@@ -649,8 +649,12 @@ inline size_t LineLayout::findRunForPosition(length_t column) const throw() {
  * @throw text#BadPositionException @a column is greater than the length of the line
  */
 uchar LineLayout::getBidiEmbeddingLevel(length_t column) const {
-	if(numberOfRuns_ == 0 && column == 0)	// use the default level
+	if(numberOfRuns_ == 0) {
+		if(column != 0)
+			throw text::BadPositionException();
+		// use the default level
 		return (renderer_.getTextViewer().getConfiguration().orientation == RIGHT_TO_LEFT) ? 1 : 0;
+	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
 		throw text::BadPositionException();
