@@ -644,48 +644,69 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 #if 1
 	// this is JavaScript partitioning and lexing settings for test
 	using namespace rules;
-	TransitionRule* rules[10];
-	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 42, L"/*");		// C++ multi-line comment open
-	rules[1] = new LiteralTransitionRule(42, DEFAULT_CONTENT_TYPE, L"*/");		// C++ multi-line comment close
-	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 43, L"//");		// C++ single-line comment open
-	rules[3] = new LiteralTransitionRule(43, DEFAULT_CONTENT_TYPE, L"", L'\\');	// C++ single-line comment close
-	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 44, L"\"");
-	rules[5] = new LiteralTransitionRule(44, DEFAULT_CONTENT_TYPE, L"\"", L'\\');
-	rules[6] = new LiteralTransitionRule(44, DEFAULT_CONTENT_TYPE, L"");
-	rules[7] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, 45, L"\'");
-	rules[8] = new LiteralTransitionRule(45, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
-	rules[9] = new LiteralTransitionRule(45, DEFAULT_CONTENT_TYPE, L"");
+	const ContentType JS_MULTILINE_DOC_COMMENT = 40,
+		JS_MULTILINE_COMMENT = 42, JS_SINGLELINE_COMMENT = 43, JS_DQ_STRING = 44, JS_SQ_STRING = 45;
+	TransitionRule* rules[12];
+	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
+	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/*");
+	rules[3] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SINGLELINE_COMMENT, L"//");
+	rules[5] = new LiteralTransitionRule(JS_SINGLELINE_COMMENT, DEFAULT_CONTENT_TYPE, L"", L'\\');
+	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_DQ_STRING, L"\"");
+	rules[7] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"\"", L'\\');
+	rules[8] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"");
+	rules[9] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SQ_STRING, L"\'");
+	rules[10] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
+	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
 	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
 	p->setRules(rules, endof(rules));
 	getDocument().setPartitioner(p);
 
-	// syntax highlight test
+	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
+
+	// JSDoc syntax highlight test
+	const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
+		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
+	unicode::IdentifierSyntax jsdocIDSyntax;
+	jsdocIDSyntax.overrideIdentifierStartCharacters(L"$@", L"");
+	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
+	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(jsdocIDSyntax));
+	scanner->addWordRule(jsdocAttributes);
+	map<Token::ID, const TextStyle> jsdocStyles;
+	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
+	jsdocStyles.insert(make_pair(220, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), true)));
+	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(
+		new LexicalPartitionPresentationReconstructor(getDocument(), scanner, jsdocStyles));
+	pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
+
+	// JavaScript syntax highlight test
 	const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
 		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
-	const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float"
-		L" goto implements int interface long native package private protected public short static super synchronized throws transient volatile";
-//	presentation::PresentationReconstructor* r = new presentation::PresentationReconstructor(getPresentation());
+	const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
+		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
 	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
 	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
-	auto_ptr<LexicalTokenScanner> jsScanner(new LexicalTokenScanner(unicode::IdentifierSyntax()));
-	jsScanner->addWordRule(jsKeywords);
-	jsScanner->addWordRule(jsFutureKeywords);
-	jsScanner->addRule(auto_ptr<Rule>(new NumberRule(223)));
-	map<Token::ID, const TextStyle> styles;
-	styles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
-	styles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
-	styles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
-	styles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
-	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(new LexicalPartitionPresentationReconstructor(getDocument(), jsScanner, styles));
-	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
-	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE, ppr);
-	pr->setPartitionReconstructor(42, auto_ptr<IPartitionPresentationReconstructor>(
+	scanner.reset(new LexicalTokenScanner(unicode::IdentifierSyntax()));
+	scanner->addWordRule(jsKeywords);
+	scanner->addWordRule(jsFutureKeywords);
+	scanner->addRule(auto_ptr<Rule>(new NumberRule(223)));
+	map<Token::ID, const TextStyle> jsStyles;
+	jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
+	jsStyles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
+	jsStyles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
+	jsStyles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
+	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
+		auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(getDocument(), scanner, jsStyles)));
+
+	// other contents
+	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x80, 0x00))))));
-	pr->setPartitionReconstructor(43, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_SINGLELINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x80, 0x00))))));
-	pr->setPartitionReconstructor(44, auto_ptr<IPartitionPresentationReconstructor>(
-		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80)), true))));
-	pr->setPartitionReconstructor(45, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_DQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
+	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_);
 #endif /* _DEBUG */
