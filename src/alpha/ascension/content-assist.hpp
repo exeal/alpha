@@ -26,14 +26,74 @@ namespace ascension {
 	 */
 	namespace contentassist {
 
-		class ICompletionListener {};
-
+		/**
+		 * A completion proposal contains a string and an icon to display itself in the proposal
+		 * list, and insert the completion into the given document.
+		 * @see CompletionProposal
+		 */
 		class ICompletionProposal {
 		public:
+			/// Returns the string to be display in the completion proposal list.
 			virtual String getDisplayString() const throw() = 0;
+			/**
+			 * Returns the icon to be display in the completion proposal list. The icon would be
+			 * shown to the leading of the display string.
+			 * @return the icon or @c null if no image is desired
+			 */
 			virtual HICON getIcon() const throw() = 0;
-			virtual text::Region getSelection(const text::Document& document) const throw() = 0;
+			/**
+			 * Returns true if the proposal may be automatically inserted if the proposal is the
+			 * only one. In this case, completion proposals will not displayed but the single
+			 * proposal will be inserted if auto insertion is enabled.
+			 */
+			virtual bool isAutoInsertable() const throw() = 0;
+			/**
+			 * Inserts the proposed completion into the given document.
+			 * @param document the document
+			 */
 			virtual void replace(text::Document& document) = 0;
+			/// The proposal was selected.
+			virtual void selected() {}
+			/// The proposal was unselected.
+			virtual void unselected() {}
+		};
+
+		/// Default implementation of @c ICompletionalProposal.
+		class CompletionProposal : virtual public ICompletionPropsal {
+		public:
+			CompletionProposal(const String& replacementString,
+				const Region& replacementRegion, HICON icon = 0, bool autoInsertable = true);
+			CompletionProposal(const String& replacementString,
+				const Region& replacementRegion, const String& displayString, HICON icon = 0, bool autoInsertable = true);
+		public:
+			String	getDisplayString() const throw();
+			HICON	getIcon() const throw();
+			bool	isAutoInsertable() const throw();
+			void	replace(text::Document& document);
+		private:
+			const String displayString_, replacementString_;
+			HICON icon_;
+			const text::Region replacementRegion_;
+			const bool autoInsertable_;
+		};
+
+		/**
+		 * @see ContentAssistant#addCompletionListener, ContentAssistant#removeCompletionListener
+		 */
+		class ICompletionListener {
+		public:
+			/**
+			 * Content assist was ended.
+			 * @param true if the content assist was aborted. false if completed
+			 */
+			virtual void completionSessionEnded(bool aborted) = 0;
+			/// Invoked content assist.
+			virtual void completionSessionStarted() = 0;
+			/**
+			 * The selection in the proposal list was changed.
+			 * @param proposal the newly selected proposal or @c null
+			 */
+			virtual void completionSelectionChanged(const ICompletionProposal* proposal) = 0;
 		};
 
 		/**

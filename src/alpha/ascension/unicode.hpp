@@ -158,7 +158,7 @@ namespace ascension {
 			 */
 			template<typename CharacterSequence>
 			inline CharacterSequence searchIsolatedSurrogate(CharacterSequence first, CharacterSequence last) throw() {
-				assert(first < last);
+				assert(first <= last);
 				while(first < last) {
 					if(isLowSurrogate(*first)) break;
 					else if(isHighSurrogate(*first)) {
@@ -179,7 +179,6 @@ namespace ascension {
 
 		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
 		public:
-			enum {hasBoundary = true};
 			/// Indicates the iterator is the last.
 			static const CodePoint DONE = 0xFFFFFFFFUL;
 
@@ -414,7 +413,6 @@ namespace ascension {
 			bool isLessThan(const UTF32To16Iterator<BaseIterator>& rhs) const {return p_ < rhs.p_ || (p_ == rhs.p_ && high_ && !rhs.high_);}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
-			enum {hasBoundary = false};
 		private:
 			BaseIterator p_;
 			bool high_;
