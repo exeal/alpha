@@ -11,6 +11,7 @@
 
 #include "point.hpp"
 #include "presentation.hpp"
+#include "content-assist.hpp"
 #include "../../manah/com/text-data-object.hpp"
 #include <set>
 #include <algorithm>
@@ -864,12 +865,16 @@ namespace ascension {
 			// constructors
 			explicit SourceViewer(presentation::Presentation& presentation) throw();
 			// attributes
+			contentassist::IContentAssistant*	getContentAssistant() const throw();
+			void								setContentAssistant(
+													std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw();
 			// operations
 			// utility
 			bool	getPointedIdentifier(text::Position* startPosition, text::Position* endPosition, String* identifier) const;
 		protected:
 			bool	getNearestIdentifier(const text::Position& position, length_t* startChar, length_t* endChar, String* identifier) const;
 		private:
+			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 		};
 
 		class CurrentLineHighlighter : public manah::Noncopyable,

@@ -3356,6 +3356,16 @@ bool SourceViewer::getPointedIdentifier(Position* startPosition, Position* endPo
 	return false;
 }
 
+/**
+ * Sets the new content assistant.
+ * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
+ */
+void SourceViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw() {
+	if(contentAssistant_.get() != 0)
+		contentAssistant_->uninstall();	// $friendly-access
+	(contentAssistant_ = newContentAssistant)->install(*this);	// $friendly-access
+}
+
 
 // VirtualBox ///////////////////////////////////////////////////////////////
 
