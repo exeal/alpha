@@ -8,20 +8,16 @@
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
 #include "document.hpp"
-#include "../../manah/win32/ui/standard-controls.hpp"	// manah::windows::ui::ListBox
+#include "../../manah/win32/ui/standard-controls.hpp"	// manah.windows.ui.ListBox
 #include <set>
 
 
 namespace ascension {
 
-	namespace viewers {
-		class TextViewer;
-		class SourceViewer;
-		class VisualPoint;
-	}
+	namespace viewers {class SourceViewer;}
 
 	/**
-	 * Provides a content assist feature for a @c viewers#TextViewer. Content assist supports the
+	 * Provides a content assist feature for a @c viewers#SourceViewer. Content assist supports the
 	 * user in writing by proposing completions at a given document position.
 	 */
 	namespace contentassist {
@@ -59,12 +55,12 @@ namespace ascension {
 		};
 
 		/// Default implementation of @c ICompletionalProposal.
-		class CompletionProposal : virtual public ICompletionPropsal {
+		class CompletionProposal : virtual public ICompletionProposal {
 		public:
 			CompletionProposal(const String& replacementString,
-				const Region& replacementRegion, HICON icon = 0, bool autoInsertable = true);
+				const text::Region& replacementRegion, HICON icon = 0, bool autoInsertable = true);
 			CompletionProposal(const String& replacementString,
-				const Region& replacementRegion, const String& displayString, HICON icon = 0, bool autoInsertable = true);
+				const text::Region& replacementRegion, const String& displayString, HICON icon = 0, bool autoInsertable = true);
 		public:
 			String	getDisplayString() const throw();
 			HICON	getIcon() const throw();
@@ -78,7 +74,7 @@ namespace ascension {
 		};
 
 		/**
-		 * @see ContentAssistant#addCompletionListener, ContentAssistant#removeCompletionListener
+		 * @see IContentAssistant#addCompletionListener, IContentAssistant#removeCompletionListener
 		 */
 		class ICompletionListener {
 		public:
@@ -104,12 +100,12 @@ namespace ascension {
 		public:
 			/**
 			 * Returns a list of completion proposals.
-			 * @param viewer the viewer whose document is used to compute the proposals
+			 * @param viewer the source viewer whose document is used to compute the proposals
 			 * @param position the document position where the completion is active
 			 * @param[out] proposals the result
 			 */
-			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
-				const text::Position& position, std::vector<ICompletionProposal*>& proposals) const = 0;
+			virtual void computeCompletionProposals(const viewers::SourceViewer& viewer,
+				const text::Position& position, std::set<ICompletionProposal*>& proposals) const = 0;
 			/**
 			 * Returns the characters which when entered by the user should automatically activate
 			 * the completion.
@@ -118,23 +114,61 @@ namespace ascension {
 			virtual String getCompletionProposalAutoActivationCharacters() const throw() = 0;
 		};
 
-		/// An content assistant provides support on interactive content completion.
-		class ContentAssistant {
+		/**
+		 * An content assistant provides support on interactive content completion.
+		 * @see SourceViewer#getContentAssistant, SourceViewer#setContentAssistant
+		 */
+		class IContentAssistant {
 		public:
+			/// Adds the new completion listener.
+			virtual void addCompletionListener(ICompletionListener& listener) = 0;
+			/**
+			 * Returns the content assist processor to be used for the specified content type.
+			 * @param contentType the content type
+			 * @return the content assist processor or @c null if none corresponds to @p contentType
+			 */
+			virtual const IContentAssistProcessor* getContentAssistProcessor(text::ContentType contentType) const throw() = 0;
+			/// Removes the given completion listener.
+			virtual void removeCompletionListener(ICompletionListener& listener) = 0;
+			/// Shows all possible completions on the current context.
+			virtual void showPossibleCompletions() = 0;
+		protected:
+			/// Installs the content assistant on the specified source viewer.
+			virtual void install(viewers::SourceViewer& viewer) = 0;
+			/// Uninstalls the content assistant from the text viewer.
+			virtual void uninstall() = 0;
+			friend class viewers::SourceViewer;
+		};
+
+		/**
+		 * Default implementation of @c IContentAssistant.
+		 * @note This class is not intended to be subclassed.
+		 */
+		class ContentAssistant : virtual public IContentAssistant {
+		public:
+			// constructors
+			ContentAssistant() throw();
+			~ContentAssistant() throw();
 			// attributes
-			void							enableAutoInsert(bool enable);
 			void							enablePrefixCompletion(bool enable);
 			const IContentAssistProcessor*	getContentAssistProcessor(text::ContentType contentType) const throw();
 			void							setAutoActivationDelay(ulong milliseconds);
-			void							setContentAssistProcessor(text::ContentType contentType, IContentAssistProcessor* processor);
+			void							setContentAssistProcessor(text::ContentType contentType,
+												std::auto_ptr<IContentAssistProcessor> processor);
 			// listeners
 			void	addCompletionListener(ICompletionListener& listener);
 			void	removeCompletionListener(ICompletionListener& listener);
 			// operation
 			void	showPossibleCompletions();
 		private:
+			void	install(viewers::SourceViewer& viewer);
+			void	uninstall();
+		private:
+			viewers::SourceViewer* sourceViewer_;
 			std::map<text::ContentType, IContentAssistProcessor*> processors_;
 			ascension::internal::Listeners<ICompletionListener> completionListeners_;
+			class CompletionProposalPopup;
+			CompletionProposalPopup* proposalPopup_;
 		};
 /*
 		class IContextInformation {};
@@ -143,41 +177,6 @@ namespace ascension {
 
 		class IContextInformationValidator {};
 */
-		/// A completion window.
-		class CompletionWindow : public manah::win32::ui::ListBox {
-		public:
-			// constructors
-			explicit CompletionWindow(viewers::SourceViewer& viewer);
-			virtual ~CompletionWindow();
-			// construction
-			bool	create();
-			// attributes
-			text::Region	getContextRegion() const;
-			bool			isRunning() const throw();
-			void			setFont(const HFONT font);
-			// operations
-			void	abort();
-			void	complete();
-			bool	start(const std::set<String>& candidateWords);
-			bool	updateListCursel();
-
-		protected:
-			virtual LRESULT	preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
-		private:
-			void	updateDefaultFont();
-
-		private:
-			viewers::SourceViewer& viewer_;
-			HFONT defaultFont_;
-			bool running_;
-			text::Position contextStart_;		// 補完開始位置の前方の単語先頭
-			viewers::VisualPoint* contextEnd_;	// 補完開始位置の後方の単語終端
-		};
-
-
-		/// Returns if the completion is running.
-		inline bool CompletionWindow::isRunning() const throw() {return running_;}
-
 }} // namespace ascension.contentassist
 
 #endif /* ASCENSION_CONTENT_ASSIST_HPP */

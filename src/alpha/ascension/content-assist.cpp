@@ -8,7 +8,6 @@
 #include "stdafx.h"
 #include "content-assist.hpp"
 #include "viewer.hpp"	// SourceViewer
-
 using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::text;
@@ -16,26 +15,115 @@ using namespace ascension::viewers;
 using namespace std;
 using manah::AutoBuffer;
 
+
+// CompletionProposal ///////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param replacementString the actual string to be inserted into the document
+ * @param replacementRegion the region to be replaced
+ * @param icon the icon to display for the proposal
+ * @param autoInsertable set true to enable auto insertion for the proposal
+ */
+CompletionProposal::CompletionProposal(const String& replacementString,
+		const Region& replacementRegion, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
+		replacementRegion_(replacementRegion), autoInsertable_(autoInsertable) {
+}
+
+/**
+ * Constructor.
+ * @param replacementString the actual string to be inserted into the document
+ * @param replacementRegion the region to be replaced
+ * @param displayString the string to display for the proposal
+ * @param icon the icon to display for the proposal
+ * @param autoInsertable set true to enable auto insertion for the proposal
+ */
+CompletionProposal::CompletionProposal(const String& replacementString,
+		const Region& replacementRegion, const String& displayString, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		displayString_(displayString), replacementString_(replacementString), icon_(icon),
+		replacementRegion_(replacementRegion), autoInsertable_(autoInsertable) {
+}
+
+/// @see ICompletionProposal#getDisplayString
+String CompletionProposal::getDisplayString() const throw() {
+	return displayString_;
+}
+
+/// @see ICompletionProposal#getIcon
+HICON CompletionProposal::getIcon() const throw() {
+	return icon_;
+}
+
+/// @see ICompletionProposal#isAutoInsertable
+bool CompletionProposal::isAutoInsertable() const throw() {
+	return autoInsertable_;
+}
+
+/// @see ICompletionProposal#replace
+void CompletionProposal::replace(Document& document) {
+	document.beginSequentialEdit();
+	document.erase(replacementRegion_);
+	document.insert(replacementRegion_.getTop(), replacementString_);
+	document.endSequentialEdit();
+}
+
+
+// ContentAssistant.CompletionProposalPopup /////////////////////////////////
+
+/// A completion window.
+class ContentAssistant::CompletionProposalPopup : public manah::win32::ui::ListBox {
+public:
+	// constructors
+	explicit CompletionProposalPopup(viewers::SourceViewer& viewer);
+	virtual ~CompletionProposalPopup();
+	// construction
+	bool	create();
+	// attributes
+	text::Region	getContextRegion() const;
+	bool			isRunning() const throw();
+	void			setFont(const HFONT font);
+	// operations
+	void	abort();
+	void	complete();
+	bool	start(const std::set<ICompletionProposal*>& proposals);
+	bool	updateListCursel();
+
+protected:
+	virtual LRESULT	preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
+private:
+	void	disposeProposals();
+	void	updateDefaultFont();
+
+private:
+	SourceViewer& viewer_;
+	set<ICompletionProposal*> proposals_;
+	HFONT defaultFont_;
+	bool running_;
+	Position contextStart_;		// 補完開始位置の前方の単語先頭
+	VisualPoint* contextEnd_;	// 補完開始位置の後方の単語終端
+};
+
 namespace {
 	const length_t COMPLETION_MAX_TRACKBACK_CCH = 100;
 }
-
 
 /**
  * Constructor.
  * @param viewer the target source viewer
  */
-CompletionWindow::CompletionWindow(SourceViewer& viewer) :
+ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(SourceViewer& viewer) :
 		viewer_(viewer), defaultFont_(0), running_(false), contextEnd_(new VisualPoint(viewer)) {
 }
 
 /// Destructor.
-CompletionWindow::~CompletionWindow() {
+ContentAssistant::CompletionProposalPopup::~CompletionProposalPopup() {
+	disposeProposals();
 	delete contextEnd_;
 }
 
 /// Aborts the running completion.
-void CompletionWindow::abort() {
+void ContentAssistant::CompletionProposalPopup::abort() {
 	if(isRunning()) {
 		running_ = false;
 		contextEnd_->adaptToDocument(false);
@@ -44,7 +132,7 @@ void CompletionWindow::abort() {
 }
 
 /// Completes (or aborts if no candidates completely match).
-void CompletionWindow::complete() {
+void ContentAssistant::CompletionProposalPopup::complete() {
 	const int sel = getCurSel();
 	if(sel != LB_ERR) {
 		Caret& caret = viewer_.getCaret();
@@ -69,7 +157,7 @@ void CompletionWindow::complete() {
  * Creates the list window.
  * @return succeeded or not
  */
-bool CompletionWindow::create() {
+bool ContentAssistant::CompletionProposalPopup::create() {
 	using namespace manah::win32::ui;
 
 	if(ListBox::create(viewer_.getHandle(), DefaultWindowRect(), 0, 0,
@@ -93,18 +181,23 @@ bool CompletionWindow::create() {
 	return false;
 }
 
+inline void ContentAssistant::CompletionProposalPopup::disposeProposals() {
+	for(set<ICompletionProposal*>::iterator i(proposals_.begin()), e(proposals_.end()); i != e; ++i)
+		delete *i;
+}
+
 /**
  * Returns the region for the completion. if the caret goes outside of this, the completion will be aborted
  * @throw std#logic_error the completion is not running
  */
-Region CompletionWindow::getContextRegion() const {
+inline Region ContentAssistant::CompletionProposalPopup::getContextRegion() const {
 	if(!isRunning())
 		throw logic_error("Completion is not running.");
 	return Region(contextStart_, contextEnd_->getPosition());
 }
 
 /// @see ListBox#preTranslateWindowMessage
-LRESULT CompletionWindow::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
+LRESULT ContentAssistant::CompletionProposalPopup::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
 	switch(message) {
 	case WM_DESTROY:
 		::DeleteObject(defaultFont_);
@@ -139,17 +232,17 @@ LRESULT CompletionWindow::preTranslateWindowMessage(UINT message, WPARAM wParam,
  * Sets the new font.
  * @param font the font to be set. if set to @c null, default font will be selected
  */
-void CompletionWindow::setFont(const HFONT font) {
+void ContentAssistant::CompletionProposalPopup::setFont(const HFONT font) {
 	assertValidAsWindow();
 	ListBox::setFont((font != 0) ? font : defaultFont_);
 }
 
 /**
  * Starts the completion. This method does not display and/or places the window.
- * @param candidateWords the candidate list
+ * @param proposals the completion proposals
  * @return succeeded or not
  */
-bool CompletionWindow::start(const set<String>& candidateWords) {
+bool ContentAssistant::CompletionProposalPopup::start(const set<ICompletionProposal*>& proposals) {
 	assertValidAsWindow();
 
 	Caret& caret = viewer_.getCaret();
@@ -160,9 +253,11 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 
 	resetContent();
 //	modifyStyleEx(rightToLeft ? 0: WS_EX_LAYOUTRTL, rightToLeft ? WS_EX_LAYOUTRTL : 0);
-	for(set<String>::const_iterator it = candidateWords.begin(); it != candidateWords.end(); ++it) {
-		if(!it->empty())
-			addString(it->c_str());
+	for(set<ICompletionProposal*>::const_iterator i(proposals.begin()), e(proposals.end()); i != e; ++i) {
+		// TODO: display icons.
+		const String s((*i)->getDisplayString());
+		if(!s.empty())
+			addString(s.c_str());
 	}
 
 	const String& line = viewer_.getDocument().getLine(caret.getLineNumber());
@@ -179,7 +274,7 @@ bool CompletionWindow::start(const set<String>& candidateWords) {
 }
 
 /// Updates the default font with system parameter.
-void CompletionWindow::updateDefaultFont() {
+void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
 	manah::win32::AutoZeroCB<::NONCLIENTMETRICSW> ncm;
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
@@ -197,7 +292,7 @@ void CompletionWindow::updateDefaultFont() {
  * @return true if only one candidate matched
  * @throw std#logic_error the completion is not running
  */
-bool CompletionWindow::updateListCursel() {
+bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 	assertValidAsWindow();
 
 	if(!isRunning())
@@ -223,4 +318,87 @@ bool CompletionWindow::updateListCursel() {
 	} else
 		setCurSel(-1);
 	return false;
+}
+
+
+// ContentAssistant /////////////////////////////////////////////////////////
+
+/// Constructor.
+ContentAssistant::ContentAssistant() throw() : sourceViewer_(0), proposalPopup_(0) {
+}
+
+/// Destructor.
+ContentAssistant::~ContentAssistant() throw() {
+	for(map<ContentType, IContentAssistProcessor*>::iterator i(processors_.begin()), e(processors_.end()); i != e; ++i)
+		delete i->second;
+	delete proposalPopup_;
+}
+
+/// @see IContentAssistant#addCompletionListener
+void ContentAssistant::addCompletionListener(ICompletionListener& listener) {
+	completionListeners_.add(listener);
+}
+
+/// @see IContentAssistant#getContentAssistProcessor
+const IContentAssistProcessor* ContentAssistant::getContentAssistProcessor(ContentType contentType) const throw() {
+	map<ContentType, IContentAssistProcessor*>::const_iterator i(processors_.find(contentType));
+	return (i != processors_.end()) ? i->second : 0;
+}
+
+/// @see IContentAssistant#install
+void ContentAssistant::install(SourceViewer& viewer) {
+	sourceViewer_ = &viewer;
+}
+
+/// @see IContentAssistant#removeCompletionListener
+void ContentAssistant::removeCompletionListener(ICompletionListener& listener) {
+	completionListeners_.remove(listener);
+}
+
+/**
+ * Registers the given content assist processor for the specified content type. If there is already
+ * a processor registered for the content type, the old processor is unregistered.
+ * @param contentType the content type
+ * @param processor the new content assist processor to register or @c null to unregister
+ */
+void ContentAssistant::setContentAssistProcessor(ContentType contentType, auto_ptr<IContentAssistProcessor> processor) {
+	map<ContentType, IContentAssistProcessor*>::iterator i(processors_.find(contentType));
+	if(i != processors_.end()) {
+		delete i->second;
+		processors_.erase(i);
+	}
+	if(processor.get() != 0)
+		processors_.insert(make_pair(contentType, processor.release()));
+}
+
+/// @see IContentAssistant#showPossibleCompletions
+void ContentAssistant::showPossibleCompletions() {
+	assert(sourceViewer_ != 0);
+	const Caret& caret = sourceViewer_->getCaret();
+	if(caret.isSelectionEmpty()) {
+		if(const IContentAssistProcessor* const processor = getContentAssistProcessor(caret.getContentType())) {
+			set<ICompletionProposal*> proposals;
+			processor->computeCompletionProposals(*sourceViewer_, caret.getPosition(), proposals);
+			if(!proposals.empty()) {
+				if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
+					(*proposals.begin())->replace(sourceViewer_->getDocument());
+					delete *proposals.begin();
+				} else {
+					if(proposalPopup_ == 0) {
+						proposalPopup_ = new CompletionProposalPopup(*sourceViewer_);
+						proposalPopup_->create();
+					}
+					proposalPopup_->start(proposals);
+					completionListeners_.notify(ICompletionListener::completionSessionStarted);
+				}
+				return;	// succeeded
+			}
+		}
+	}
+	sourceViewer_->beep();
+}
+
+/// @see IContentAssistant#uninstall
+void ContentAssistant::uninstall() {
+	sourceViewer_ = 0;
 }
