@@ -336,8 +336,8 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_EDIT_DELETETONEXTWORD:	return DeletionCommand(view, DeletionCommand::NEXT_WORD).execute() == 0;
 	case CMD_EDIT_DELETETOPREVWORD:	return DeletionCommand(view, DeletionCommand::PREVIOUS_WORD).execute() == 0;
 	case CMD_EDIT_DELETELINE:		return DeletionCommand(view, DeletionCommand::WHOLE_LINE).execute() == 0;
-	case CMD_EDIT_INSERTPREVLINE:	return LineBreakCommand(view, true).execute() == 0;
-	case CMD_EDIT_BREAK:			return LineBreakCommand(view, false).execute() == 0;
+	case CMD_EDIT_INSERTPREVLINE:	return NewlineCommand(view, true).execute() == 0;
+	case CMD_EDIT_BREAK:			return NewlineCommand(view, false).execute() == 0;
 	case CMD_EDIT_UNDO:	return UndoCommand(view, true).execute() == 0;
 	case CMD_EDIT_REDO:	return UndoCommand(view, false).execute() == 0;
 	case CMD_EDIT_CUT:						return ClipboardCommand(view, ClipboardCommand::CUT, true).execute() == 0;
@@ -357,7 +357,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_EDIT_OPENCANDIDATEWINDOW:
 		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
 			return false;
-		return OpenCompletionWindowCommand(view).execute() == 0;
+		return CompletionProposalPopupCommand(view).execute() == 0;
 	case CMD_EDIT_HOME:			CaretMovementCommand(view, CaretMovementCommand::START_OF_DOCUMENT, false).execute(); return true;
 	case CMD_EDIT_END:			CaretMovementCommand(view, CaretMovementCommand::END_OF_DOCUMENT, false).execute(); return true;
 	case CMD_EDIT_LINEHOME:		CaretMovementCommand(view, CaretMovementCommand::START_OF_LINE, false).execute(); return true;

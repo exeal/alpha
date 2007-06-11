@@ -214,17 +214,32 @@ namespace ascension {
 		};
 
 		/**
-		 * Interface for objects which are interested in getting informed about changes of a caret.
-		 * @see IPointListener, Caret, Caret#addListener, Caret#removeListener
+		 * Interface for objects which are interested in character input by a caret.
+		 * @see Caret#addCharacterInputListener, Caret#removeCharacterInputListener
 		 */
-		class ICaretListener {
+		class ICharacterInputListener {
+		private:
+			/**
+			 * A character was inputted by the caret.
+			 * @param self the caret
+			 * @param c the code point of the inputted character
+			 */
+			virtual void characterInputted(const class Caret& self, CodePoint c) = 0;
+			friend class Caret;
+		};
+
+		/**
+		 * Interface for objects which are interested in getting informed about changes of a caret.
+		 * @see IPointListener, Caret#addStateListener, Caret#removeStateListener
+		 */
+		class ICaretStateListener {
 		private:
 			/**
 			 * The caret was moved.
 			 * @param self the caret
 			 * @param oldRegion the region which the caret had before. @c first is the anchor, and @c second is the caret
 			 */
-			virtual void caretMoved(const class Caret& self, const text::Region& oldRegion) = 0;
+			virtual void caretMoved(const Caret& self, const text::Region& oldRegion) = 0;
 			/**
 			 * The matched brackets are changed.
 			 * @param self the caret
@@ -295,8 +310,10 @@ namespace ascension {
 			explicit Caret(TextViewer& viewer, const text::Position& position = text::Position());
 			~Caret();
 			// listeners
-			void	addListener(ICaretListener& listener);
-			void	removeListener(ICaretListener& listener);
+			void	addCharacterInputListener(ICharacterInputListener& listener);
+			void	addStateListener(ICaretStateListener& listener);
+			void	removeCharacterInputListener(ICharacterInputListener& listener);
+			void	removeStateListener(ICaretStateListener& listener);
 			// attributes : the anchor and the caret
 			void				enableAutoShow(bool enable = true) throw();
 			const VisualPoint&	getAnchor() const throw();
@@ -372,12 +389,13 @@ namespace ascension {
 			SelectionMode selectionMode_;
 			length_t modeInitialAnchorLine_;	// 選択モードに入ったときのアンカーの行
 			length_t wordSelectionChars_[2];	// 単語選択モードで最初に選択されていた単語の前後の文字位置
-			ascension::internal::Listeners<ICaretListener> listeners_;
+			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
+			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
 			bool pastingFromClipboardRing_;		// クリップボードリングから貼り付けた直後でリング循環のため待機中
-			bool leaveAnchorNext_;				// 次の移動時にアンカーを放置
+			bool leaveAnchorNext_;				// true if should leave the anchor at the next movement
 			bool leadingAnchor_;				// anchor_->moveTo 呼び出し中なので pointMoved を無視
-			bool autoShow_;						// 移動時に自動的に可視化する
-			VirtualBox* box_;					// 矩形選択の実装に使う。線形選択時は null
+			bool autoShow_;						// true if show itself when movements
+			VirtualBox* box_;					// for rectangular selection. null when the selection is linear
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			bool overtypeMode_;
 			bool editingByThis_;				// このインスタンスが編集操作中
@@ -428,11 +446,17 @@ inline void viewers::VisualPoint::verifyViewer() const {verifyDocument(); if(vie
 /// Called when the text viewer is disposed.
 inline void viewers::VisualPoint::viewerDisposed() throw() {viewer_ = 0;}
 /**
- * Registers the listener.
+ * Registers the character input listener.
  * @param listener the listener to be registered
  * @throw std#invalid_argument @p listener is already registered
  */
-inline void viewers::Caret::addListener(ICaretListener& listener) {listeners_.add(listener);}
+inline void viewers::Caret::addCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.add(listener);}
+/**
+ * Registers the state listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @p listener is already registered
+ */
+inline void viewers::Caret::addStateListener(ICaretStateListener& listener) {stateListeners_.add(listener);}
 /**
  * Sets the new auto-show mode.
  * @param enable set true to enable the mode
@@ -471,11 +495,17 @@ inline bool viewers::Caret::isSelectionRectangle() const throw() {return box_ !=
 /// Returns the matched braces tracking mode.
 inline viewers::Caret::MatchBracketsTrackingMode viewers::Caret::getMatchBracketsTrackingMode() const throw() {return matchBracketsTrackingMode_;}
 /**
- * Removes the listener
+ * Removes the character input listener
  * @param listener the listener to be removed
  * @throw std#invalid_argument @p listener is not registered
  */
-inline void Caret::removeListener(ICaretListener& listener) {listeners_.remove(listener);}
+inline void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.remove(listener);}
+/**
+ * Removes the state listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @p listener is not registered
+ */
+inline void Caret::removeStateListener(ICaretStateListener& listener) {stateListeners_.remove(listener);}
 /**
  * Replaces the selected region with the specified text.
  * @param text the text

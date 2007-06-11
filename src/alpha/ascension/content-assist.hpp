@@ -7,17 +7,16 @@
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
-#include "document.hpp"
-#include "../../manah/win32/ui/standard-controls.hpp"	// manah.windows.ui.ListBox
+#include "point.hpp"
 #include <set>
 
 
 namespace ascension {
 
-	namespace viewers {class SourceViewer;}
+	namespace viewers {class TextViewer;}
 
 	/**
-	 * Provides a content assist feature for a @c viewers#SourceViewer. Content assist supports the
+	 * Provides a content assist feature for a @c viewers#TextViewer. Content assist supports the
 	 * user in writing by proposing completions at a given document position.
 	 */
 	namespace contentassist {
@@ -29,6 +28,8 @@ namespace ascension {
 		 */
 		class ICompletionProposal {
 		public:
+			/// Destructor.
+			virtual ~ICompletionProposal() throw() {}
 			/// Returns the string to be display in the completion proposal list.
 			virtual String getDisplayString() const throw() = 0;
 			/**
@@ -98,13 +99,15 @@ namespace ascension {
 		 */
 		class IContentAssistProcessor {
 		public:
+			/// Destructor.
+			virtual ~IContentAssistProcessor() throw() {}
 			/**
 			 * Returns a list of completion proposals.
-			 * @param viewer the source viewer whose document is used to compute the proposals
+			 * @param viewer the text viewer whose document is used to compute the proposals
 			 * @param position the document position where the completion is active
 			 * @param[out] proposals the result
 			 */
-			virtual void computeCompletionProposals(const viewers::SourceViewer& viewer,
+			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
 				const text::Position& position, std::set<ICompletionProposal*>& proposals) const = 0;
 			/**
 			 * Returns the characters which when entered by the user should automatically activate
@@ -115,13 +118,49 @@ namespace ascension {
 		};
 
 		/**
+		 * An abstract implementation of @c IContentAssistProcessor builds completion proposals by
+		 * collecting identifiers in the document.
+		 */
+		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
+		public:
+			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
+			virtual ~IdentifiersProposalProcessor() throw();
+			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
+				const text::Position& position, std::set<ICompletionProposal*>& proposals) const;
+		private:
+			const unicode::IdentifierSyntax& syntax_;
+		};
+
+		/**
 		 * An content assistant provides support on interactive content completion.
-		 * @see SourceViewer#getContentAssistant, SourceViewer#setContentAssistant
+		 * @see TextViewer#getContentAssistant, TextViewer#setContentAssistant
 		 */
 		class IContentAssistant {
 		public:
+			/**
+			 * Represents an user interface of a completion proposal list.
+			 * @see IContentAssistant#getCompletionProposalsUI
+			 */
+			class ICompletionProposalsUI {
+			public:
+				/// Closes the list without completion.
+				virtual void close() = 0;
+				/// Completes and closes. Returns true if the completion was succeeded.
+				virtual bool complete() = 0;
+				/// Selects the proposal in the next/previous page.
+				virtual void nextPage(int pages) = 0;
+				/// Selects the next/previous proposal.
+				virtual void nextProposal(int proposals) = 0;
+			protected:
+				/// Destructor.
+				virtual ~ICompletionProposalsUI() throw() {}
+			};
+			/// Destructor.
+			virtual ~IContentAssistant() throw() {}
 			/// Adds the new completion listener.
 			virtual void addCompletionListener(ICompletionListener& listener) = 0;
+			/// Returns the user interface of the completion proposal list or @c null.
+			virtual ICompletionProposalsUI* getCompletionProposalsUI() const throw() = 0;
 			/**
 			 * Returns the content assist processor to be used for the specified content type.
 			 * @param contentType the content type
@@ -133,42 +172,49 @@ namespace ascension {
 			/// Shows all possible completions on the current context.
 			virtual void showPossibleCompletions() = 0;
 		protected:
-			/// Installs the content assistant on the specified source viewer.
-			virtual void install(viewers::SourceViewer& viewer) = 0;
+			/// Installs the content assistant on the specified text viewer.
+			virtual void install(viewers::TextViewer& viewer) = 0;
 			/// Uninstalls the content assistant from the text viewer.
 			virtual void uninstall() = 0;
-			friend class viewers::SourceViewer;
+			friend class viewers::TextViewer;
 		};
 
 		/**
 		 * Default implementation of @c IContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class ContentAssistant : virtual public IContentAssistant {
+		class ContentAssistant : virtual public IContentAssistant, virtual public viewers::ICharacterInputListener {
 		public:
 			// constructors
 			ContentAssistant() throw();
 			~ContentAssistant() throw();
 			// attributes
-			void							enablePrefixCompletion(bool enable);
-			const IContentAssistProcessor*	getContentAssistProcessor(text::ContentType contentType) const throw();
-			void							setAutoActivationDelay(ulong milliseconds);
-			void							setContentAssistProcessor(text::ContentType contentType,
-												std::auto_ptr<IContentAssistProcessor> processor);
+			void	enablePrefixCompletion(bool enable);
+			ulong	getAutoActivationDelay() const throw();
+			void	setAutoActivationDelay(ulong milliseconds);
+			void	setContentAssistProcessor(text::ContentType contentType, std::auto_ptr<IContentAssistProcessor> processor);
 			// listeners
-			void	addCompletionListener(ICompletionListener& listener);
-			void	removeCompletionListener(ICompletionListener& listener);
 			// operation
 			void	showPossibleCompletions();
 		private:
-			void	install(viewers::SourceViewer& viewer);
-			void	uninstall();
+			static void CALLBACK	timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD);
+			// IContentAssistant
+			void							addCompletionListener(ICompletionListener& listener);
+			ICompletionProposalsUI*			getCompletionProposalsUI() const throw();
+			const IContentAssistProcessor*	getContentAssistProcessor(text::ContentType contentType) const throw();
+			void							install(viewers::TextViewer& viewer);
+			void							removeCompletionListener(ICompletionListener& listener);
+			void							uninstall();
+			// ICharacterInputListener
+			void	characterInputted(const viewers::Caret& self, CodePoint c);
 		private:
-			viewers::SourceViewer* sourceViewer_;
+			viewers::TextViewer* textViewer_;
 			std::map<text::ContentType, IContentAssistProcessor*> processors_;
 			ascension::internal::Listeners<ICompletionListener> completionListeners_;
 			class CompletionProposalPopup;
 			CompletionProposalPopup* proposalPopup_;
+			ulong autoActivationDelay_;
+			static std::map<ContentAssistant*, ::UINT_PTR> timerIDs_;
 		};
 /*
 		class IContextInformation {};

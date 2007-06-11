@@ -140,8 +140,8 @@ private:
 };
 
 template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline bool Splitter<Pane, cdp>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {
-	typedef Splitter Klass; typedef CustomControl<Splitter> BaseKlass; bool handled = false;
+inline LRESULT Splitter<Pane, cdp>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
+	typedef Splitter Klass; typedef CustomControl<Splitter> BaseKlass; LRESULT result;
 	switch(message) {
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_CAPTURECHANGED)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_DESTROY)
