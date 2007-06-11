@@ -145,6 +145,12 @@ namespace ascension {
 				Type type_;
 				bool performClipboardRing_;
 			};
+			/// Shows completion proposals.
+			class CompletionProposalPopupCommand : public EditorCommand {
+			public:
+				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
+				ulong execute();
+			};
 			/// Erases the text in the document.
 			class DeletionCommand : public EditorCommand {
 			public:
@@ -225,14 +231,7 @@ namespace ascension {
 			public:
 				NewlineCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
 				ulong execute();
-			};
-			/// Begins completion.
-			class OpenCompletionWindowCommand : public EditorCommand {
-			public:
-				explicit OpenCompletionWindowCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
-				ulong execute();
-			};
-			/// Reconverts by using IME.
+			};			/// Reconverts by using IME.
 			class ReconversionCommand : public EditorCommand {
 			public:
 				explicit ReconversionCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}

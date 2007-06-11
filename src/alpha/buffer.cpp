@@ -1345,11 +1345,11 @@ MANAH_END_WINDOW_MESSAGE_MAP()
 Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
-EditorView::EditorView(Presentation& presentation) : SourceViewer(presentation), visualColumnStartValue_(1) {
+EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
 }
 
 /// Copy-constructor.
-EditorView::EditorView(const EditorView& rhs) : SourceViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
+EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
 }
 
 /// Destructor.
@@ -1363,36 +1363,36 @@ void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
 
 /// @see ICaretListener#caretMoved
 void EditorView::caretMoved(const Caret& self, const Region& oldRegion) {
-	SourceViewer::caretMoved(self, oldRegion);
+	TextViewer::caretMoved(self, oldRegion);
 	updateCurrentPositionOnStatusBar();
 }
 
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
 void EditorView::documentAccessibleRegionChanged(Document& document) {
-	SourceViewer::documentAccessibleRegionChanged(document);
+	TextViewer::documentAccessibleRegionChanged(document);
 	updateNarrowingOnStatusBar();
 }
 
 /// @see IDocumentStateListener#documentEncodingChanged
 void EditorView::documentEncodingChanged(Document& document) {
-	SourceViewer::documentEncodingChanged(document);
+	TextViewer::documentEncodingChanged(document);
 }
 
 /// @see IDocumentStateListener#documentFileNameChanged
 void EditorView::documentFileNameChanged(Document& document) {
-	SourceViewer::documentFileNameChanged(document);
+	TextViewer::documentFileNameChanged(document);
 	updateTitleBar();
 }
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void EditorView::documentModificationSignChanged(Document& document) {
-	SourceViewer::documentModificationSignChanged(document);
+	TextViewer::documentModificationSignChanged(document);
 	updateTitleBar();
 }
 
 /// @see IDocumentStateListener#documentReadOnlySignChanged
 void EditorView::documentReadOnlySignChanged(Document& document) {
-	SourceViewer::documentReadOnlySignChanged(document);
+	TextViewer::documentReadOnlySignChanged(document);
 	updateTitleBar();
 }
 
@@ -1450,18 +1450,18 @@ void EditorView::matchBracketsChanged(const Caret& self, const pair<Position, Po
 void EditorView::onKeyDown(UINT vkey, UINT flags, bool& handled) {
 	// Šù’è‚ÌƒL[Š„‚è“–‚Ä‚ð‘S‚Ä–³Œø‚É‚·‚é
 //	handled = true;
-	return SourceViewer::onKeyDown(vkey, flags, handled);
+	return TextViewer::onKeyDown(vkey, flags, handled);
 }
 
 /// @see Window#onKillFocus
 void EditorView::onKillFocus(HWND newWindow) {
-	SourceViewer::onKillFocus(newWindow);
+	TextViewer::onKillFocus(newWindow);
 	Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher().end();
 }
 
 /// @see Window#onSetFocus
 void EditorView::onSetFocus(HWND oldWindow) {
-	SourceViewer::onSetFocus(oldWindow);
+	TextViewer::onSetFocus(oldWindow);
 	updateTitleBar();
 	updateCurrentPositionOnStatusBar();
 	updateNarrowingOnStatusBar();

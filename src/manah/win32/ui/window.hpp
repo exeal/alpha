@@ -225,12 +225,13 @@ public:
 
 protected:
 	// Do not override this directly. Use MANAH_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
-	virtual bool processWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, LRESULT& /* result */) {return false;}
+	virtual LRESULT processWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, bool& handled) {return 1;}
 	// Call the implementation of the base class if override this.
 	virtual LRESULT preTranslateWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, bool& /* handled */) {return 1;}
 	LRESULT fireProcessWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
-		LRESULT result = 1;
-		if(!processWindowMessage(message, wParam, lParam, result))
+		bool handled = false;
+		LRESULT result = processWindowMessage(message, wParam, lParam, handled);
+		if(!handled)
 			result = ::CallWindowProc(::DefWindowProc, getHandle(), message, wParam, lParam);
 		return result;
 	}
@@ -300,9 +301,9 @@ namespace internal {
 		// WM_IME_STARTCOMPOSITION -> void onIMEStartComposition(void)
 		DEFINE_DISPATCH(WM_IME_STARTCOMPOSITION) {handled = true; w.onIMEStartComposition(); return 0;}
 		// WM_KEYDOWN -> void onKeyDown(UINT vkey, UINT flags, bool& handled)
-		DEFINE_DISPATCH(WM_KEYDOWN) {w.onKeyDown(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return 1;}
+		DEFINE_DISPATCH(WM_KEYDOWN) {w.onKeyDown(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return !handled;}
 		// WM_KEYUP -> void onKeyUp(UINT vkey, UINT flags, bool& handled)
-		DEFINE_DISPATCH(WM_KEYUP) {w.onKeyUp(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return 1;}
+		DEFINE_DISPATCH(WM_KEYUP) {w.onKeyUp(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return !handled;}
 		// WM_KILLFOCUS -> void onKillFocus(HWND newWindow)
 		DEFINE_DISPATCH(WM_KILLFOCUS) {w.onKillFocus(reinterpret_cast<HWND>(wp)); return 1;}
 		// WM_LBUTTONDBLCLK -> void onLButtonDblClk(UINT flags, const ::POINT& position)
@@ -349,6 +350,8 @@ namespace internal {
 		DEFINE_DISPATCH(WM_SETTEXT) {handled = w.onSetText(reinterpret_cast<const TCHAR*>(lp)); return 0;}
 		// WM_SETTINGCHANGE -> void onSettingChange(UINT flags, const TCHAR* sectionName)
 		DEFINE_DISPATCH(WM_SETTINGCHANGE) {w.onSettingChange(static_cast<UINT>(wp), reinterpret_cast<const TCHAR*>(lp)); return 1;}
+		// WM_SHOWWINDOW -> void onShowWindow(bool showing, UINT status)
+		DEFINE_DISPATCH(WM_SHOWWINDOW) {w.onShowWindow(toBoolean(wp), static_cast<UINT>(lp)); return 1;}
 		// WM_SIZE -> void onSize(UINT type, int cx, int cy)
 		DEFINE_DISPATCH(WM_SIZE) {w.onSize(static_cast<UINT>(wp), LOWORD(lp), HIWORD(lp)); return 1;}
 		// WM_SIZING -> void onSizing(UINT side, const ::RECT& rect)
@@ -393,22 +396,22 @@ namespace internal {
 
 #define MANAH_DECLEAR_WINDOW_MESSAGE_MAP(WindowClass)							\
 protected:																		\
-	virtual bool processWindowMessage(UINT message, WPARAM, LPARAM, LRESULT&);	\
+	virtual LRESULT processWindowMessage(UINT message, WPARAM, LPARAM, bool&);	\
 	friend struct manah::win32::ui::internal::MessageDispatcher<WindowClass>
 
 #define MANAH_BEGIN_WINDOW_MESSAGE_MAP(WindowClass, BaseClass)												\
-	bool WindowClass::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {	\
-		typedef WindowClass Klass; typedef BaseClass BaseKlass; bool handled = false;						\
+	LRESULT WindowClass::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {	\
+		typedef WindowClass Klass; typedef BaseClass BaseKlass; LRESULT result;								\
 		switch(message) {
 
 #define MANAH_WINDOW_MESSAGE_ENTRY(msg)														\
 		case msg: result = manah::win32::ui::internal::MessageDispatcher<Klass>::dispatch(	\
 			*this, manah::win32::ui::internal::Msg2Type<msg>(), wParam, lParam, handled);	\
-			if(handled) return true; break;
+			if(handled) return result; break;
 
 #define MANAH_END_WINDOW_MESSAGE_MAP()												\
 		}																			\
-		return BaseKlass::processWindowMessage(message, wParam, lParam, result);	\
+		return BaseKlass::processWindowMessage(message, wParam, lParam, handled);	\
 	}
 
 
@@ -425,7 +428,7 @@ public:
 	bool			subclass();
 	bool			unsubclass();
 protected:
-	virtual bool	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result);
+	virtual LRESULT	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
 	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 private:
 	using ConcreteWindow::fireProcessWindowMessage;
@@ -1015,12 +1018,11 @@ template<class ConcreteWindow> inline HWND Subclassable<ConcreteWindow>::detach(
 }
 */
 template<class ConcreteWindow>
-inline bool Subclassable<ConcreteWindow>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result) {
-	if(message == WM_NCDESTROY) {
+inline LRESULT Subclassable<ConcreteWindow>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
+	if(message == WM_NCDESTROY)
 		unsubclass();
-		return false;
-	}
-	return ConcreteWindow::processWindowMessage(message, wParam, lParam, result);
+	handled = true;
+	return ::CallWindowProc(originalProcedure_, getHandle(), message, wParam, lParam);
 }
 
 template<class ConcreteWindow> inline bool Subclassable<ConcreteWindow>::subclass() {

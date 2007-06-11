@@ -8,7 +8,7 @@
 #define ALPHA_BUFFER_HPP
 
 #include "ascension/viewer.hpp"
-#include "ascension/searcher.hpp"	// ascension::searcher::IIncrementalSearchListener
+#include "ascension/searcher.hpp"	// ascension.searcher.IIncrementalSearchListener
 #include <objbase.h>
 #include "../manah/win32/ui/splitter.hpp"
 #include "../manah/win32/ui/menu.hpp"
@@ -23,13 +23,13 @@ namespace alpha {
 		class Buffer;
 	}
 
-	/// バッファ
+	/// A buffer.
 	class Buffer : public ascension::text::Document {
 	public:
-		// コンストラクタ
+		// constructors
 		Buffer() throw();
 		~Buffer() throw();
-		// メソッド
+		// methods
 		const TCHAR*									getFileName() const;
 		ascension::presentation::Presentation&			getPresentation() throw();
 		const ascension::presentation::Presentation&	getPresentation() const throw();
@@ -38,17 +38,15 @@ namespace alpha {
 		std::auto_ptr<ascension::presentation::Presentation> presentation_;
 	};
 
-	/// テキストエディタのビュー
-	class EditorView : public ascension::viewers::SourceViewer,
-		virtual public ascension::text::IDocumentStateListener,
-		virtual public ascension::viewers::ICaretListener,
+	/// A view of a text editor.
+	class EditorView : public ascension::viewers::TextViewer,
 		virtual public ascension::searcher::IIncrementalSearchListener {
 	public:
-		// コンストラクタ
+		// constructors
 		EditorView(ascension::presentation::Presentation& presentation);
 		EditorView(const EditorView& rhs);
 		~EditorView();
-		// メソッド
+		// methods
 		void				beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
 		const wchar_t*		getCurrentPositionString() const;
 		Buffer&				getDocument() throw();
@@ -69,6 +67,7 @@ namespace alpha {
 		void	documentReadOnlySignChanged(ascension::text::Document& document);
 		// ascension::viewers::ICaretListener (overrides)
 		void	caretMoved(const ascension::viewers::Caret& self, const ascension::text::Region& oldRegion);
+		void	characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
 		void	matchBracketsChanged(const ascension::viewers::Caret& self,
 					const std::pair<ascension::text::Position, ascension::text::Position>& oldPair, bool outsideOfView);
 		void	overtypeModeChanged(const ascension::viewers::Caret& self);
@@ -78,7 +77,7 @@ namespace alpha {
 		void	incrementalSearchCompleted();
 		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchListener::Result result);
 		void	incrementalSearchStarted(const ascension::text::Document& document);
-		// メッセージハンドラ
+		// message handlers
 		MANAH_DECLEAR_WINDOW_MESSAGE_MAP(EditorView);
 		void	onKeyDown(UINT vkey, UINT flags, bool& handled);
 		void	onKillFocus(HWND newWindow);
@@ -88,39 +87,34 @@ namespace alpha {
 		static manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
 	};
 
-	/// テキストエディタのペイン
+	/// A pane for a text editor.
 	class EditorPane : virtual public manah::win32::ui::AbstractPane, public manah::Unassignable {
 	public:
-		// コンストラクタ
+		// constructor
 		EditorPane(EditorView* initialView = 0);
 		EditorPane(const EditorPane& rhs);
 		~EditorPane();
-
-		// 属性
+		// attributes
 		std::size_t	getCount() const throw();
 		HWND		getWindow() const throw();
 		Buffer&		getVisibleBuffer() const;
 		EditorView&	getVisibleView() const;
-
-		// 操作
+		// operations
 		void	addView(EditorView& view);
 		void	removeAll();
 		void	removeBuffer(const Buffer& buffer);
 		void	showBuffer(const Buffer& buffer);
-
-		// データメンバ
 	private:
 		std::set<EditorView*> views_;
 		EditorView* visibleView_;
 		EditorView* lastVisibleView_;
 	};
 
-	/// 分割可能なエディタウィンドウ
+	/// A splittable editor window.
 	typedef manah::win32::ui::Splitter<EditorPane> EditorWindow;
 
 	/**
-	 * @brief バッファリストの管理
-	 *
+	 * Manages a list of buffers.
 	 * リストに追加されたバッファはこのオブジェクトが破壊する。
 	 * またこのクラスはバッファバーに使うアイコンも提供する
 	 */
@@ -129,17 +123,17 @@ namespace alpha {
 			virtual public ascension::text::IUnexpectedFileTimeStampDirector,
 			virtual public ascension::presentation::ITextViewerListListener {
 	public:
-		/// @c #open 、@c #reopen の結果
+		/// Results of @c #open and @c #reopen methods.
 		enum OpenResult {
-			OPENRESULT_SUCCEEDED,		///< 成功
-			OPENRESULT_FAILED,			///< 失敗
-			OPENRESULT_USERCANCELED,	///< ユーザがキャンセルした
+			OPENRESULT_SUCCEEDED,		///< Succeeded.
+			OPENRESULT_FAILED,			///< Failed.
+			OPENRESULT_USERCANCELED,	///< Canceled by user.
 		};
 
-		// コンストラクタ
+		// constructors
 		BufferList(Alpha& app);
 		~BufferList();
-		// 属性
+		// attributes
 		Buffer&									getActive() const;
 		std::size_t								getActiveIndex() const;
 		EditorView&								getActiveView() const;
@@ -153,10 +147,10 @@ namespace alpha {
 		const manah::win32::ui::Menu&			getListMenu() const throw();
 		void									setActive(std::size_t index);
 		void									setActive(const Buffer& buffer);
-		// 操作
+		// operations
 		void		addNew(
 						ascension::encodings::CodePage encoding = ascension::encodings::CPEX_AUTODETECT_USERLANG,
-						ascension::text::LineBreak lineBreak = ascension::text::LB_AUTO);
+						ascension::text::Newline newline = ascension::text::NLF_AUTO);
 		void		addNewDialog();
 		bool		close(std::size_t index, bool queryUser);
 		bool		closeAll(bool queryUser, bool exceptActive = false);
@@ -193,8 +187,6 @@ namespace alpha {
 		static UINT_PTR CALLBACK	openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 		void						recalculateBufferBarSize();
 		void						resetResources();
-
-		// データメンバ
 	private:
 		Alpha& app_;
 		ascension::texteditor::Session editorSession_;
@@ -209,55 +201,54 @@ namespace alpha {
 
 
 
-	/// ビューの総数を返す
+	/// Returns the number of the viewers.
 	inline std::size_t EditorPane::getCount() const throw() {return views_.size();}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
 	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getHandle() : 0;}
 
-	/// 表示されているバッファを返す
+	/// Returns the visible buffer.
 	inline Buffer& EditorPane::getVisibleBuffer() const {return getVisibleView().getDocument();}
 
-	/// 表示されているビューを返す
+	/// Returns the visible viewer.
 	inline EditorView& EditorPane::getVisibleView() const {if(visibleView_ == 0) throw std::logic_error("There no views."); return *visibleView_;}
 
-	/// アクティブなバッファを返す
+	/// Returns the active buffer.
 	inline Buffer& BufferList::getActive() const {return editorWindow_.getActivePane().getVisibleBuffer();}
 
-	/// アクティブなバッファの位置を返す
+	/// Returns the index of the active buffer.
 	inline std::size_t BufferList::getActiveIndex() const {return find(getActive());}
 
-	/// アクティブなビューを返す
+	/// Returns the active viewer.
 	inline EditorView& BufferList::getActiveView() const {return editorWindow_.getActivePane().getVisibleView();}
 
-	/// 指定位置のバッファを返す
+	/// Returns the viewer has the given index.
 	inline Buffer& BufferList::getAt(std::size_t index) const {return *buffers_.at(index);}
 
-	/// ドキュメントの数を返す
+	/// Returns the number of the buffers.
 	inline std::size_t BufferList::getCount() const throw() {return buffers_.size();}
 
-	/// バッファのアイコンを返す
+	/// Returns the icon of the specified buffer.
 	inline HICON BufferList::getBufferIcon(std::size_t index) const {
 		if(index >= getCount()) throw std::out_of_range("Index is invalid."); return icons_.getIcon(static_cast<int>(index));}
 
-	/// テキストエディタのセッションを返す
+	/// Returns the session of the text editor framework.
 	inline ascension::texteditor::Session& BufferList::getEditorSession() throw() {return editorSession_;}
 
-	/// テキストエディタのセッションを返す
+	/// Returns the session of the text editor framework.
 	inline const ascension::texteditor::Session& BufferList::getEditorSession() const throw() {return editorSession_;}
 
-	/// エディタウィンドウを返す
+	/// Returns the text editor window.
 	inline EditorWindow& BufferList::getEditorWindow() const throw() {return const_cast<BufferList*>(this)->editorWindow_;}
 
-	/// バッファリストのメニューを返す
+	/// Returns the menu for the buffer bar.
 	inline const manah::win32::ui::Menu& BufferList::getListMenu() const throw() {return listMenu_;}
 
 	/// @see ascension#viewers#TextViewer#getDocument
-	inline Buffer& EditorView::getDocument() throw() {return reinterpret_cast<Buffer&>(ascension::viewers::SourceViewer::getDocument());}
+	inline Buffer& EditorView::getDocument() throw() {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::getDocument());}
 
 	/// @see ascension#viewers#TextViewer#getDocument
-	inline const Buffer& EditorView::getDocument() const throw() {return reinterpret_cast<const Buffer&>(ascension::viewers::SourceViewer::getDocument());}
-
+	inline const Buffer& EditorView::getDocument() const throw() {return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::getDocument());}
 }
 
 #endif /* !ALPHA_BUFFER_HPP */

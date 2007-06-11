@@ -353,6 +353,12 @@ namespace {
 				session->getIncrementalSearcher().abort();
 		}
 	}
+	inline void closeCompletionProposalsPopup(TextViewer& viewer) throw() {
+		if(contentassist::IContentAssistant* ca = viewer.getContentAssistant()) {
+			if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI())
+				cpui->close();
+		}
+	}
 	inline void endIncrementalSearch(TextViewer& viewer) throw() {
 		if(texteditor::Session* session = viewer.getDocument().getSession()) {
 			if(session->getIncrementalSearcher().isRunning())
@@ -451,7 +457,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	renderer_.reset(new TextRenderer(*this));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
-	caret_->addListener(*this);
+	caret_->addStateListener(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
@@ -474,7 +480,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 	renderer_.reset(new TextRenderer(*this, *rhs.renderer_));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
-	caret_->addListener(*this);
+	caret_->addStateListener(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
 	modeState_ = rhs.modeState_;
@@ -494,7 +500,7 @@ TextViewer::~TextViewer() {
 	getDocument().removeStateListener(*this);
 	getDocument().removeSequentialEditListener(*this);
 	renderer_->removeVisualLinesListener(*this);
-	caret_->removeListener(*this);
+	caret_->removeStateListener(*this);
 	for(set<VisualPoint*>::iterator it = points_.begin(); it != points_.end(); ++it)
 		(*it)->viewerDisposed();
 
@@ -527,7 +533,7 @@ void TextViewer::beginAutoScroll() {
 	setTimer(TIMERID_AUTOSCROLL, 0, 0);
 }
 
-/// @see ICaretListener#caretMoved
+/// @see ICaretStateListener#caretMoved
 void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	if(!isVisible())
 		return;
@@ -643,7 +649,9 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 
 #if 1
 	// this is JavaScript partitioning and lexing settings for test
+	using namespace contentassist;
 	using namespace rules;
+	using namespace unicode;
 	const ContentType JS_MULTILINE_DOC_COMMENT = 40,
 		JS_MULTILINE_COMMENT = 42, JS_SINGLELINE_COMMENT = 43, JS_DQ_STRING = 44, JS_SQ_STRING = 45;
 	TransitionRule* rules[12];
@@ -709,6 +717,34 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_);
+
+	// content assist test
+	class JSDocProposals : public IdentifiersProposalProcessor {
+	public:
+		JSDocProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
+		void computeCompletionProposals(const TextViewer&, const Position& position, set<ICompletionProposal*>& proposals) const {
+			const Region r(position, position);
+			proposals.insert(new CompletionProposal(L"@addon", r));
+			proposals.insert(new CompletionProposal(L"@argument", r));
+			proposals.insert(new CompletionProposal(L"@author", r));
+		}
+		String getCompletionProposalAutoActivationCharacters() const {return L"@";}
+	};
+	class JSProposals : public IdentifiersProposalProcessor {
+	public:
+		JSProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
+		void computeCompletionProposals(const TextViewer&, const Position& position, set<ICompletionProposal*>& proposals) const {
+			const Region r(position, position);
+			proposals.insert(new CompletionProposal(L"break", r));
+			proposals.insert(new CompletionProposal(L"case", r));
+			proposals.insert(new CompletionProposal(L"catch", r));
+		}
+		String getCompletionProposalAutoActivationCharacters() const {return L".";}
+	};
+	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
+	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals));
+	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals));
+	setContentAssistant(ca);
 #endif /* _DEBUG */
 
 	// 位置決めと表示
@@ -804,7 +840,7 @@ void TextViewer::documentUndoSequenceStarted(Document&) {
 void TextViewer::documentUndoSequenceStopped(Document&, const Position& resultPosition) {
 	unfreeze(false);
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
-//		caret_->endAutoCompletion();
+		closeCompletionProposalsPopup(*this);
 		caret_->moveTo(resultPosition);
 	}
 }
@@ -1093,6 +1129,12 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 	case VK_ESCAPE:	// [Esc]
 		CancelCommand(*this).execute();
 		return true;
+	case VK_SPACE:	// [Space]
+		if(controlPressed) {
+			CompletionProposalPopupCommand(*this).execute();
+			return true;
+		}
+		break;
 	case VK_PRIOR:	// [PageUp]
 		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
 		else				CaretMovementCommand(*this, CaretMovementCommand::PREVIOUS_PAGE, shiftPressed).execute();
@@ -1330,7 +1372,7 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 
 }
 
-/// @see ICaretListener#matchBracketsChanged
+/// @see ICaretStateListener#matchBracketsChanged
 void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Position>& oldPair, bool outsideOfView) {
 	const pair<Position, Position>& newPair = self.getMatchBrackets();
 	if(newPair.first != Position::INVALID_POSITION) {
@@ -1476,7 +1518,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 
 	if(!allowsMouseInput())	// マウス操作とは限らないが...
 		return true;
-//	caret_->endAutoCompletion();
+	closeCompletionProposalsPopup(*this);
 	abortIncrementalSearch(*this);
 
 	// キーボードによる場合
@@ -1825,7 +1867,7 @@ void TextViewer::onIMEStartComposition() {
 	}
 	imeCompositionActivated_ = true;
 	updateIMECompositionWindowPosition();
-//	caret_->endAutoCompletion();
+	closeCompletionProposalsPopup(*this);
 }
 
 /// @see WM_KEYDOWN
@@ -1844,7 +1886,7 @@ void TextViewer::onKillFocus(HWND newWindow) {
 			(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
 	}
 	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
-		closeCompletionWindow();
+		closeCompletionProposalsPopup(*this);
 */	abortIncrementalSearch(*this);
 	if(imeCompositionActivated_) {	// stop IME input
 		HIMC imc = ::ImmGetContext(getHandle());
@@ -2089,8 +2131,7 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 
 /// @see WM_SIZE
 void TextViewer::onSize(UINT type, int, int) {
-//	caret_->endAutoCompletion();
-
+	closeCompletionProposalsPopup(*this);
 	if(type == SIZE_MINIMIZED)
 		return;
 
@@ -2248,7 +2289,7 @@ bool TextViewer::onXButtonUp(WORD xButton, WORD keyState, const ::POINT& pt) {
 	return false;
 }
 
-/// @see ICaretListener#overtypeModeChanged
+/// @see ICaretStateListener#overtypeModeChanged
 void TextViewer::overtypeModeChanged(const Caret&) {
 }
 
@@ -2473,7 +2514,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		scrollInfo_.changed = true;
 		return;
 	}
-//	caret_->endAutoCompletion();
+	closeCompletionProposalsPopup(*this);
 	hideToolTip();
 
 	// 編集領域のスクロール:
@@ -2563,7 +2604,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, true, true);
 }
 
-/// @see ICaretListener#selectionShapeChanged
+/// @see ICaretStateListener#selectionShapeChanged
 void TextViewer::selectionShapeChanged(const Caret& self) {
 	if(!isFrozen() && !self.isSelectionEmpty())
 		redrawLines(self.getTopPoint().getLineNumber(), self.getBottomPoint().getLineNumber());
@@ -2603,6 +2644,16 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 			rightAlign ? WS_EX_LEFTSCROLLBAR : WS_EX_RIGHTSCROLLBAR);
 	}
 	invalidateRect(0, false);
+}
+
+/**
+ * Sets the new content assistant.
+ * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
+ */
+void TextViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw() {
+	if(contentAssistant_.get() != 0)
+		contentAssistant_->uninstall();	// $friendly-access
+	(contentAssistant_ = newContentAssistant)->install(*this);	// $friendly-access
 }
 
 /**
@@ -2846,7 +2897,7 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
 }
 
 
-// Viewer::AccessibleProxy ////////////////////////////////////////////////
+// TextViewerAccessibleProxy ////////////////////////////////////////////////
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 #define VERIFY_AVAILABILITY()	\
@@ -3269,104 +3320,6 @@ void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) throw() {
 }
 
 
-// SourceViewer /////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param presentation the presentation
- */
-SourceViewer::SourceViewer(Presentation& presentation) throw() : TextViewer(presentation) {
-}
-
-/**
- * Returns the identifier near the specified position
- * @param position the position
- * @param[out] startChar the start of the identifier. can be @c null if not needed
- * @param[out] endChar the end of the identifier. can be @c null if not needed
- * @param[out] identifier the string of the found identifier. can be @c null if not needed
- * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
- * @see #getPointedIdentifier, Caret#getPrecedingIdentifier
- */
-bool SourceViewer::getNearestIdentifier(const Position& position, length_t* startChar, length_t* endChar, String* identifier) const {
-	using namespace unicode;
-
-	DocumentPartition partition;
-	getDocument().getPartitioner().getPartition(position, partition);
-	const IdentifierSyntax& syntax = getDocument().getContentTypeInformation().getIdentifierSyntax(partition.contentType);
-	length_t startColumn = position.column, endColumn = position.column;
-	const String& line = getDocument().getLine(position.line);
-	CodePoint cp;
-
-	// 開始位置を調べる
-	if(startChar != 0 || identifier != 0) {
-		const length_t partitionStart = (position.line == partition.region.getTop().line) ? partition.region.getTop().column : 0;
-		while(startColumn > partitionStart) {
-			cp = surrogates::decodeLast(line.begin(), line.begin() + startColumn);
-			if(syntax.isIdentifierContinueCharacter(cp))
-				startColumn -= ((cp >= 0x010000) ? 2 : 1);
-			else
-				break;
-		}
-		if(startChar!= 0)
-			*startChar = startColumn;
-	}
-
-	// 終了位置を調べる
-	if(endChar != 0 || identifier != 0) {
-		while(true) {
-			cp = surrogates::decodeFirst(line.begin() + endColumn, line.end());
-			if(syntax.isIdentifierContinueCharacter(cp))
-				endColumn += ((cp >= 0x010000) ? 2 : 1);
-			else
-				break;
-		}
-		if(endChar != 0)
-			*endChar = endColumn;
-	}
-
-	if(identifier != 0)
-		identifier->assign(line.substr(startColumn, endColumn - startColumn));
-	return true;
-}
-
-/**
- * Returns the identifier near the cursor.
- * @param[out] startPosition the start of the identifier. can be @c null if not needed
- * @param[out] endPosition the end of the identifier. can be @c null if not needed
- * @param[out] identifier the string of the found identifier. can be @c null if not needed
- * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
- * @see #getNearestIdentifier, Caret#getPrecedingIdentifier
- */
-bool SourceViewer::getPointedIdentifier(Position* startPosition, Position* endPosition, String* identifier) const {
-	assertValidAsWindow();
-
-	::POINT cursorPoint;
-	::GetCursorPos(&cursorPoint);
-	screenToClient(cursorPoint);
-	const Position cursor = getCharacterForClientXY(cursorPoint, false);
-
-	if(getNearestIdentifier(cursor,
-			(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0, identifier)) {
-		if(startPosition != 0)
-			startPosition->line = cursor.line;
-		if(endPosition != 0)
-			endPosition->line = cursor.line;
-		return true;
-	}
-	return false;
-}
-
-/**
- * Sets the new content assistant.
- * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
- */
-void SourceViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw() {
-	if(contentAssistant_.get() != 0)
-		contentAssistant_->uninstall();	// $friendly-access
-	(contentAssistant_ = newContentAssistant)->install(*this);	// $friendly-access
-}
-
-
 // VirtualBox ///////////////////////////////////////////////////////////////
 
 /**
@@ -3732,7 +3685,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	Caret& caret = viewer_->getCaret();
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 
-//	caret.endAutoCompletion();
+	closeCompletionProposalsPopup(*viewer_);
 	endIncrementalSearch(*viewer_);
 	leftButtonPressed_ = true;
 
@@ -4111,7 +4064,7 @@ namespace {
 	}
 } // namespace @0
 
-/// @see ICaretListener#caretMoved
+/// @see ICaretStateListener#caretMoved
 void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 	if(self.isOvertypeMode())
 		updater_->update();
@@ -4206,7 +4159,7 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(caret), color_(color) {
 	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
 	caret_.getTextViewer().getPresentation().addLineColorDirector(temp);
-	caret_.addListener(*this);
+	caret_.addStateListener(*this);
 }
 
 /// Destructor.
@@ -4216,7 +4169,7 @@ CurrentLineHighlighter::~CurrentLineHighlighter() throw() {
 //	caret_.getTextViewer().getPresentation().removeLineColorDirector(*this);
 }
 
-/// @see ICaretListener#caretMoved
+/// @see ICaretStateListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
 		if(!caret_.isSelectionEmpty() || caret_.getLineNumber() != oldRegion.first.line)
@@ -4233,11 +4186,11 @@ const Colors& CurrentLineHighlighter::getColor() const throw() {
 	return color_;
 }
 
-/// @see ICaretListener#matchBracketsChanged
+/// @see ICaretStateListener#matchBracketsChanged
 void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const pair<Position, Position>&, bool) {
 }
 
-/// @see ICaretListener#overtypeModeChanged
+/// @see ICaretStateListener#overtypeModeChanged
 void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
 }
 
@@ -4252,7 +4205,7 @@ ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t lin
 	}
 }
 
-/// @see ICaretListener#selectionShapeChanged
+/// @see ICaretStateListener#selectionShapeChanged
 void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
 }
 
@@ -4262,4 +4215,88 @@ void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
  */
 void CurrentLineHighlighter::setColor(const Colors& color) throw() {
 	color_ = color;
+}
+
+
+// ascension.source free functions //////////////////////////////////////////
+
+/**
+ * Returns the identifier near the specified position in the document.
+ * @param document the document
+ * @param position the position
+ * @param[out] startChar the start of the identifier. can be @c null if not needed
+ * @param[out] endChar the end of the identifier. can be @c null if not needed
+ * @param[out] identifier the string of the found identifier. can be @c null if not needed
+ * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
+ * @see #getPointedIdentifier, Caret#getPrecedingIdentifier
+ */
+bool source::getNearestIdentifier(const Document& document,
+		const Position& position, length_t* startChar, length_t* endChar, String* identifier) {
+	using namespace unicode;
+
+	DocumentPartition partition;
+	document.getPartitioner().getPartition(position, partition);
+	const IdentifierSyntax& syntax = document.getContentTypeInformation().getIdentifierSyntax(partition.contentType);
+	length_t startColumn = position.column, endColumn = position.column;
+	const String& line = document.getLine(position.line);
+	CodePoint cp;
+
+	// 開始位置を調べる
+	if(startChar != 0 || identifier != 0) {
+		const length_t partitionStart = (position.line == partition.region.getTop().line) ? partition.region.getTop().column : 0;
+		while(startColumn > partitionStart) {
+			cp = surrogates::decodeLast(line.begin(), line.begin() + startColumn);
+			if(syntax.isIdentifierContinueCharacter(cp))
+				startColumn -= ((cp >= 0x010000) ? 2 : 1);
+			else
+				break;
+		}
+		if(startChar!= 0)
+			*startChar = startColumn;
+	}
+
+	// 終了位置を調べる
+	if(endChar != 0 || identifier != 0) {
+		while(true) {
+			cp = surrogates::decodeFirst(line.begin() + endColumn, line.end());
+			if(syntax.isIdentifierContinueCharacter(cp))
+				endColumn += ((cp >= 0x010000) ? 2 : 1);
+			else
+				break;
+		}
+		if(endChar != 0)
+			*endChar = endColumn;
+	}
+
+	if(identifier != 0)
+		identifier->assign(line.substr(startColumn, endColumn - startColumn));
+	return true;
+}
+
+/**
+ * Returns the identifier near the cursor.
+ * @param viewer the text viewer
+ * @param[out] startPosition the start of the identifier. can be @c null if not needed
+ * @param[out] endPosition the end of the identifier. can be @c null if not needed
+ * @param[out] identifier the string of the found identifier. can be @c null if not needed
+ * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
+ * @see #getNearestIdentifier, Caret#getPrecedingIdentifier
+ */
+bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosition, Position* endPosition, String* identifier) {
+	if(viewer.isWindow()) {
+		::POINT cursorPoint;
+		::GetCursorPos(&cursorPoint);
+		viewer.screenToClient(cursorPoint);
+		const Position cursor = viewer.getCharacterForClientXY(cursorPoint, false);
+
+		if(source::getNearestIdentifier(viewer.getDocument(), cursor,
+				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0, identifier)) {
+			if(startPosition != 0)
+				startPosition->line = cursor.line;
+			if(endPosition != 0)
+				endPosition->line = cursor.line;
+			return true;
+		}
+	}
+	return false;
 }

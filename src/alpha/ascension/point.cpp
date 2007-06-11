@@ -1598,7 +1598,7 @@ void Caret::beginBoxSelection() {
 	verifyViewer();
 	if(box_ == 0) {
 		box_ = new VirtualBox(getTextViewer(), getSelectionRegion());
-		listeners_.notify<const Caret&>(ICaretListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(ICaretStateListener::selectionShapeChanged, *this);
 	}
 }
 
@@ -1654,7 +1654,8 @@ void Caret::checkMatchBrackets() {
 		matchBrackets_.first = matchBrackets_.second = Position::INVALID_POSITION;
 */	// TODO: check if the pair is out of view.
 	if(matchBrackets_ != oldPair)
-		listeners_.notify<const Caret&, const pair<Position, Position>&, bool>(ICaretListener::matchBracketsChanged, *this, oldPair, false);
+		stateListeners_.notify<const Caret&, const pair<Position,
+			Position>&, bool>(ICaretStateListener::matchBracketsChanged, *this, oldPair, false);
 }
 
 /// Clears the selection.
@@ -1715,7 +1716,7 @@ void Caret::doMoveTo(const Position& to) {
 	if(isSelectionRectangle())
 		box_->update(getSelectionRegion());
 	if((oldRegion.first != getPosition() || oldRegion.second != getPosition()))
-		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
+		stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, oldRegion);
 	if(autoShow_)
 		show();
 	checkMatchBrackets();
@@ -1730,7 +1731,7 @@ void Caret::endBoxSelection() {
 	if(box_ != 0) {
 		delete box_;
 		box_ = 0;
-		listeners_.notify<const Caret&>(ICaretListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(ICaretStateListener::selectionShapeChanged, *this);
 	}
 }
 
@@ -2018,7 +2019,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 	else if(blockControls && cp <= 0xFF && cp != 0x09 && cp != 0x1E && cp != 0x1F && toBoolean(iscntrl(static_cast<int>(cp))))
 		return false;
 
-	// 入力シーケンスのチェック
+	// check the input sequence
 	if(validateSequence) {
 		if(const texteditor::Session* session = document.getSession()) {
 			if(const texteditor::InputSequenceCheckers* checker = session->getInputSequenceCheckers()) {
@@ -2033,9 +2034,9 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 
 	Char buffer[2];
 	surrogates::encode(cp, buffer);
-	if(!isSelectionEmpty())	// 選択がある場合 -> 置換するだけ
+	if(!isSelectionEmpty())	// just replace if the selection is not empty
 		replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
-	else if(overtypeMode_) {	// 上書きモード
+	else if(overtypeMode_) {
 		if(!document.isSequentialEditing())
 			document.beginSequentialEdit();
 		getTextViewer().freeze(true);
@@ -2045,11 +2046,11 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 		const IdentifierSyntax& ctypes = getIdentifierSyntax();
 		const bool alpha = ctypes.isIdentifierContinueCharacter(cp);
 
-//		// 識別子文字以外なら補完終了
+//		// exit the completion mode if the character is not ID_Start or ID_Continue
 //		if(!alpha && completionWindow_.isRunning())
 //			completionWindow_.complete();
 
-		// 後続の入力を1つの連続編集にまとめる準備
+		// prepare a packing the following multiple inputs
 		if(othersEditedFromLastInputChar_ || !alpha)
 			document.endSequentialEdit();
 		if(alpha && !document.isSequentialEditing()) {
@@ -2061,6 +2062,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 		insert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		editingByThis_ = false;
 	}
+	characterInputListeners_.notify<const Caret&, CodePoint>(ICharacterInputListener::characterInputted, *this, cp);
 
 	return true;
 }
@@ -2150,7 +2152,7 @@ void Caret::pointMoved(const EditPoint& self, const Position& oldPosition) {
 		return;
 	if((oldPosition == getPosition()) != isSelectionEmpty())
 		checkMatchBrackets();
-	listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, Region(oldPosition, getPosition()));
+	stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, Region(oldPosition, getPosition()));
 }
 
 /**
@@ -2211,7 +2213,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 			box_->update(getSelectionRegion());
 		if(autoShow_)
 			show();
-		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
+		stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, oldRegion);
 	}
 	checkMatchBrackets();
 }
@@ -2245,7 +2247,7 @@ void Caret::selectWord() {
 void Caret::setOvertypeMode(bool overtype) throw() {
 	if(overtype != overtypeMode_) {
 		overtypeMode_ = overtype;
-		listeners_.notify<const Caret&>(ICaretListener::overtypeModeChanged, *this);
+		stateListeners_.notify<const Caret&>(ICaretStateListener::overtypeModeChanged, *this);
 	}
 }
 

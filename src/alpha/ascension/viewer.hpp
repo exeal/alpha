@@ -40,9 +40,17 @@ namespace ascension {
 
 	namespace texteditor {class EditorCommand;}
 
-	namespace viewers {
+	namespace viewers {class TextViewer;}
 
-		class TextViewer;
+	/// Provides stuffs for source code editors.
+	namespace source {
+		bool	getPointedIdentifier(const viewers::TextViewer& viewer,
+					text::Position* startPosition, text::Position* endPosition, String* identifier);
+		bool	getNearestIdentifier(const text::Document& document,
+					const text::Position& position, length_t* startChar, length_t* endChar, String* identifier);
+	}
+
+	namespace viewers {
 
 		/**
 		 * A virtual rectangle placed in the viewer.
@@ -57,9 +65,9 @@ namespace ascension {
 			void	update(const text::Region& region) throw();
 		private:
 			struct Point {
-				length_t line;		// 論理行
+				length_t line;		// logical line number
 				length_t subline;	// line 行内の折り返し行オフセット
-				int x;				// テキスト左端からの位置
+				int x;				// distance from left side of layout
 			} points_[2];
 			const TextViewer& view_;
 			const Point& getBottom() const throw() {return points_[(&getTop() == &points_[0]) ? 1 : 0];}
@@ -160,14 +168,14 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 */
 		class LocaleSensitiveCaretShaper : virtual public ICaretShapeProvider,
-				virtual public ICaretListener, virtual public ITextViewerInputStatusListener {
+				virtual public ICaretStateListener, virtual public ITextViewerInputStatusListener {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
 		private:
 			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
 			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
-			// ICaretListener
+			// ICaretStateListener
 			void	caretMoved(const class Caret& self, const text::Region& oldRegion);
 			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			void	overtypeModeChanged(const Caret& self);
@@ -330,7 +338,7 @@ namespace ascension {
 				virtual public text::IDocumentStateListener,
 				virtual public text::ISequentialEditListener,
 				virtual public IVisualLinesListener,
-				virtual public ICaretListener,
+				virtual public ICaretStateListener,
 				virtual public ascension::text::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
 			DEFINE_WINDOW_CLASS() {
@@ -533,6 +541,10 @@ namespace ascension {
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT	startTextServices();
 #endif /* !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK */
+			// content assist
+			contentassist::IContentAssistant*	getContentAssistant() const throw();
+			void								setContentAssistant(
+													std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw();
 			// redraw
 			void	redrawLine(length_t line, bool following = false);
 			void	redrawLines(length_t first, length_t last);
@@ -581,7 +593,7 @@ namespace ascension {
 			virtual void	documentFileNameChanged(text::Document& document);
 			virtual void	documentModificationSignChanged(text::Document& document);
 			virtual void	documentReadOnlySignChanged(text::Document& document);
-			// ICaretListener (overridable)
+			// ICaretStateListener (overridable)
 			virtual void	caretMoved(const Caret& self, const text::Region& oldRegion);
 			virtual void	matchBracketsChanged(const Caret& self,
 								const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
@@ -663,7 +675,7 @@ namespace ascension {
 			bool	onXButtonUp(WORD xButton, WORD keyState, const ::POINT& pt);
 #endif /* WM_XBUTTONDBLCLK */
 
-			// 内部クラス
+			// internal classes
 		private:
 			/// Circled window displayed at which the auto scroll started.
 			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark>, private manah::Noncopyable {
@@ -705,7 +717,7 @@ namespace ascension {
 #endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			};
 
-			// 列挙
+			// enumerations
 		private:
 			// timer identifiers
 			enum {
@@ -770,8 +782,7 @@ namespace ascension {
 				ID_INSERT_PS,		// PS (Paragraph Separator)
 			};
 
-
-			// データメンバ
+			// data members
 		private:
 			// 大物
 			presentation::Presentation& presentation_;
@@ -779,8 +790,8 @@ namespace ascension {
 			std::auto_ptr<TextRenderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
-			HWND toolTip_;	// ツールチップ
-			Char* tipText_;	// ツールチップのテキスト
+			HWND toolTip_;
+			Char* tipText_;
 			ASCENSION_SHARED_POINTER<IMouseInputStrategy> mouseInputStrategy_;
 			ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> linkTextStrategy_;
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
@@ -788,15 +799,16 @@ namespace ascension {
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
 			std::auto_ptr<AutoScrollOriginMark> autoScrollOriginMark_;
 			std::auto_ptr<VerticalRulerDrawer> verticalRulerDrawer_;
+			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			internal::TextViewerAccessibleProxy* accessibleProxy_;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 
-			// モード
+			// modes
 			struct ModeState {
-				bool cursorVanished;		// ユーザが文字の入力を開始したのでカーソルが非表示
+				bool cursorVanished;			// the cursor is vanished for user is inputting
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-				bool activeInputMethodEnabled;	// Global IME を使うか
+				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
 
 				ModeState() throw() : cursorVanished(false)
@@ -806,7 +818,7 @@ namespace ascension {
 				{}
 			} modeState_;
 
-			// スクロール情報
+			// scroll information
 			struct ScrollInfo {
 				struct {
 					int position;	// SCROLLINFO.nPos
@@ -826,14 +838,14 @@ namespace ascension {
 				void updateVertical(const TextViewer& viewer) throw();
 			} scrollInfo_;
 
-			// 凍結
+			// freeze information
 			struct FreezeInfo {
 				ulong count;								// zero for not frozen
 				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
 				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
 			} freezeInfo_;
 
-			// キャレットのビットマップ
+			// a bitmap for caret presentation
 			struct CaretShape {
 				ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper;
 				Orientation orientation;
@@ -842,11 +854,11 @@ namespace ascension {
 				CaretShape() throw() : orientation(LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 
-			// 状態
+			// input state
 			bool imeCompositionActivated_;	// true if the user is inputing by using IME
 			ulong mouseInputDisabledCount_;
 
-			// 自動スクロール
+			// automatic scroll
 			struct AutoScroll {
 				::POINT	indicatorPosition;	// position of the indicator margin (in client coodinates)
 				bool	scrolling;			// true if the viewer is scrolling
@@ -859,26 +871,9 @@ namespace ascension {
 			friend class CaretShapeUpdater;
 		};
 
-		/// Extension of @c TextViewer for code editor.
-		class SourceViewer : public TextViewer {
-		public:
-			// constructors
-			explicit SourceViewer(presentation::Presentation& presentation) throw();
-			// attributes
-			contentassist::IContentAssistant*	getContentAssistant() const throw();
-			void								setContentAssistant(
-													std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw();
-			// operations
-			// utility
-			bool	getPointedIdentifier(text::Position* startPosition, text::Position* endPosition, String* identifier) const;
-		protected:
-			bool	getNearestIdentifier(const text::Position& position, length_t* startChar, length_t* endChar, String* identifier) const;
-		private:
-			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
-		};
-
+		/// Highlights the line on which the caret is put.
 		class CurrentLineHighlighter : public manah::Noncopyable,
-			virtual public presentation::ILineColorDirector, virtual public ICaretListener {
+			virtual public presentation::ILineColorDirector, virtual public ICaretStateListener {
 		public:
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
@@ -891,7 +886,7 @@ namespace ascension {
 		private:
 			// ILineColorDirector
 			ILineColorDirector::Priority	queryLineColor(length_t line, Colors& color) const;
-			// ICaretListener
+			// ICaretStateListener
 			void	caretMoved(const Caret& self, const text::Region& oldRegion);
 			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			void	overtypeModeChanged(const Caret& self);
@@ -937,9 +932,8 @@ inline void TextViewer::beep() throw() {doBeep();}
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 /**
  * Enables Global IME.
- *
- * This setting effects under only Windows NT 4.0.
- * Under other platforms, Ascension does not use Global IME.
+ * This setting effects under only Windows NT 4.0. Otherwise, Ascension does not use Global IME.
+ * @deprecated 0.8
  */
 inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) throw() {modeState_.activeInputMethodEnabled = enable;}
 #endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
@@ -968,6 +962,9 @@ inline const Caret& TextViewer::getCaret() const throw() {return *caret_;}
  * @see #getVerticalRulerConfiguration, #setConfiguration
  */
 inline const TextViewer::Configuration& TextViewer::getConfiguration() const throw() {return configuration_;}
+
+/// Returns the content assistant or @c null if not registered.
+inline contentassist::IContentAssistant* TextViewer::getContentAssistant() const throw() {return contentAssistant_.get();}
 
 /// Returns the document.
 inline text::Document& TextViewer::getDocument() {return presentation_.getDocument();}
@@ -1087,6 +1084,6 @@ inline const TextViewer::VerticalRulerConfiguration& TextViewer::VerticalRulerDr
 /// Returns the width of the vertical ruler.
 inline int TextViewer::VerticalRulerDrawer::getWidth() const throw() {return width_;}
 
-}} // namespace ascension::viewers
+}} // namespace ascension.viewers
 
 #endif /* ASCENSION_VIEWER_HPP */

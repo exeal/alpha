@@ -37,9 +37,13 @@ using manah::win32::ui::WaitCursor;
 #define CHECK_DOCUMENT_READONLY(retval)			\
 	if(getTarget().getDocument().isReadOnly())	\
 		return retval
-#define CLOSE_COMPLETION_WINDOW()	/*getTarget().getCaret().endAutoCompletion()*/
-#define ABORT_MODES()			\
-	CLOSE_COMPLETION_WINDOW();	\
+#define CLOSE_COMPLETION_PROPOSAL_POPUP()																	\
+	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {							\
+		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI())	\
+			cpui->close();																					\
+	}
+#define ABORT_MODES()					\
+	CLOSE_COMPLETION_PROPOSAL_POPUP();	\
 	ABORT_ISEARCH()
 
 /**
@@ -75,10 +79,25 @@ ulong CancelCommand::execute() {
  */
 ulong CaretMovementCommand::execute() {
 	END_ISEARCH();
-
 	Caret& caret = getTarget().getCaret();
 
 	if(!extend_) {
+		if(type_ == NEXT_LINE || type_ == VISUAL_NEXT_LINE || type_ == PREVIOUS_LINE
+				|| type_ == VISUAL_PREVIOUS_LINE || type_ == NEXT_PAGE || type_ == PREVIOUS_PAGE) {
+			if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
+				if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
+					switch(type_) {
+					case NEXT_LINE:
+					case VISUAL_NEXT_LINE:		cpui->nextProposal(+1); break;
+					case PREVIOUS_LINE:
+					case VISUAL_PREVIOUS_LINE:	cpui->nextProposal(-1); break;
+					case NEXT_PAGE:				cpui->nextPage(+1); break;
+					case PREVIOUS_PAGE:			cpui->nextPage(-1); break;
+					}
+					return 0;
+				}
+			}
+		}
 		caret.endBoxSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
 			const bool rtl = getTarget().getConfiguration().orientation == RIGHT_TO_LEFT;
@@ -255,7 +274,7 @@ ulong CharacterInputCommand::execute() {
 	// インクリメンタル検索中 -> 検索式に追加
 	if(Session* session = getTarget().getDocument().getSession()) {
 		if(session->getIncrementalSearcher().isRunning()) {
-			CLOSE_COMPLETION_WINDOW();
+			CLOSE_COMPLETION_PROPOSAL_POPUP();
 			if(param_ == 0x0009 || !toBoolean(iswcntrl(static_cast<wint_t>(param_))))
 				session->getIncrementalSearcher().addCharacter(param_);
 			return 0;
@@ -311,7 +330,7 @@ ulong ClipboardCommand::execute() {
 	if(type_ == CUT || type_ == PASTE) {
 		ASSERT_IFISWINDOW();
 		CHECK_DOCUMENT_READONLY(1);
-		CLOSE_COMPLETION_WINDOW();
+		CLOSE_COMPLETION_PROPOSAL_POPUP();
 		if(type_ == CUT)
 			ABORT_ISEARCH();
 	}
@@ -322,6 +341,24 @@ ulong ClipboardCommand::execute() {
 	else if(type_ == PASTE)
 		getTarget().getCaret().pasteToSelection(performClipboardRing_);
 	return 0;
+}
+
+/**
+ * Show the completion proposal popup.
+ * @retval 0 succeeded
+ * @retval 1 failed
+ */
+ulong CompletionProposalPopupCommand::execute() {
+	CHECK_DOCUMENT_READONLY(1);
+//	CHECK_GUI_EDITABILITY(1);
+	ABORT_ISEARCH();
+	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
+		ca->showPossibleCompletions();
+		return 0;
+	} else {
+		getTarget().beep();
+		return 1;
+	}
 }
 
 /**
@@ -337,7 +374,7 @@ ulong DeletionCommand::execute() {
 	TextViewer& viewer = getTarget();
 	Caret& caret = viewer.getCaret();
 	if(/*caret.isAutoCompletionRunning() &&*/ type_ != PREVIOUS_CHARACTER)
-		CLOSE_COMPLETION_WINDOW();
+		CLOSE_COMPLETION_PROPOSAL_POPUP();
 
 	Document& document = viewer.getDocument();
 	searcher::IncrementalSearcher* isearch = 0;
@@ -458,7 +495,7 @@ ulong FindNextCommand::execute() {
 //		CHECK_GUI_EDITABILITY(1);
 	}
 	END_ISEARCH();
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
 	using namespace ascension::searcher;
 
@@ -523,7 +560,7 @@ ulong FindNextCommand::execute() {
  * @return 0
  */
 ulong IncrementalSearchCommand::execute() {
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	if(Session* const session = getTarget().getDocument().getSession()) {
 		searcher::IncrementalSearcher& isearch = session->getIncrementalSearcher();
 		if(!isearch.isRunning())	// 開始
@@ -545,7 +582,7 @@ ulong IndentationCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	END_ISEARCH();
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
 	TextViewer& viewer = getTarget();
 	Caret& caret = viewer.getCaret();
@@ -574,7 +611,7 @@ ulong InputStatusToggleCommand::execute() {
 	} else if(type_ == OVERTYPE_MODE) {
 		Caret& caret = getTarget().getCaret();
 		caret.setOvertypeMode(!caret.isOvertypeMode());
-		CLOSE_COMPLETION_WINDOW();
+		CLOSE_COMPLETION_PROPOSAL_POPUP();
 	} else if(type_ == SOFT_KEYBOARD) {
 		assert(getTarget().isWindow());
 		HIMC imc = ::ImmGetContext(getTarget().getHandle());
@@ -600,19 +637,14 @@ ulong InputStatusToggleCommand::execute() {
  */
 ulong NewlineCommand::execute() {
 	TextViewer& viewer = getTarget();
-/*	CompletionWindow& completionWindow = getCompletionWindow();
 
-	if(viewer.getIncrementalSearcher().isRunning()) {
-		viewer.getIncrementalSearcher().end();
-		return 0;
-	} else if(completionWindow.isRunning()) {
-		if(completionWindow.getCurSel() != LB_ERR) {	// 完全に一致する候補があれば補完する
-			completionWindow.complete();
-			return 0;
+	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
+		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
+			if(cpui->complete())
+				return 0;
 		}
-		completionWindow.abort();
 	}
-*/
+
 	if(Session* const session = viewer.getDocument().getSession()) {
 		if(session->getIncrementalSearcher().isRunning()) {
 			session->getIncrementalSearcher().end();
@@ -645,19 +677,6 @@ ulong NewlineCommand::execute() {
 	}
 	caret.moveTo(caret.getAnchor());
 	viewer.unfreeze();
-	return 0;
-}
-
-/**
- * Starts auto completion.
- * @retval 0 succeeded
- * @retval 1 failed
- */
-ulong OpenCompletionWindowCommand::execute() {
-	CHECK_DOCUMENT_READONLY(1);
-//	CHECK_GUI_EDITABILITY(1);
-	ABORT_ISEARCH();
-//	getTarget().openCompletionWindow();
 	return 0;
 }
 
@@ -711,7 +730,7 @@ ulong ReconversionCommand::execute() {
 	::operator delete(rcs);
 	::ImmReleaseContext(viewer.getHandle(), imc);
 
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	return 0;
 }
 
@@ -720,7 +739,7 @@ ulong ReconversionCommand::execute() {
  * @return 0
  */
 ulong RowSelectionExtensionCommand::execute() {
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	END_ISEARCH();
 
 	Caret& caret = getTarget().getCaret();
@@ -822,7 +841,7 @@ ulong TranspositionCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	END_ISEARCH();
-	CLOSE_COMPLETION_WINDOW();
+	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
 	TextViewer& viewer = getTarget();
 	Caret& caret = viewer.getCaret();
