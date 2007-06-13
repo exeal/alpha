@@ -1716,7 +1716,7 @@ void Caret::doMoveTo(const Position& to) {
 	if(isSelectionRectangle())
 		box_->update(getSelectionRegion());
 	if((oldRegion.first != getPosition() || oldRegion.second != getPosition()))
-		stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, oldRegion);
+		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
 	if(autoShow_)
 		show();
 	checkMatchBrackets();
@@ -2152,7 +2152,7 @@ void Caret::pointMoved(const EditPoint& self, const Position& oldPosition) {
 		return;
 	if((oldPosition == getPosition()) != isSelectionEmpty())
 		checkMatchBrackets();
-	stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, Region(oldPosition, getPosition()));
+	listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, Region(oldPosition, getPosition()));
 }
 
 /**
@@ -2213,7 +2213,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 			box_->update(getSelectionRegion());
 		if(autoShow_)
 			show();
-		stateListeners_.notify<const Caret&, const Region&>(ICaretStateListener::caretMoved, *this, oldRegion);
+		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
 	}
 	checkMatchBrackets();
 }

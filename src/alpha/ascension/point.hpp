@@ -214,6 +214,21 @@ namespace ascension {
 		};
 
 		/**
+		 * Interface for objects which are interested in getting informed about caret movement.
+		 * @see Caret#addListener, Caret#removeListener
+		 */
+		class ICaretListener {
+		private:
+			/**
+			 * The caret was moved.
+			 * @param self the caret
+			 * @param oldRegion the region which the caret had before. @c first is the anchor, and @c second is the caret
+			 */
+			virtual void caretMoved(const class Caret& self, const text::Region& oldRegion) = 0;
+			friend class Caret;
+		};
+
+		/**
 		 * Interface for objects which are interested in character input by a caret.
 		 * @see Caret#addCharacterInputListener, Caret#removeCharacterInputListener
 		 */
@@ -224,7 +239,7 @@ namespace ascension {
 			 * @param self the caret
 			 * @param c the code point of the inputted character
 			 */
-			virtual void characterInputted(const class Caret& self, CodePoint c) = 0;
+			virtual void characterInputted(const Caret& self, CodePoint c) = 0;
 			friend class Caret;
 		};
 
@@ -234,12 +249,6 @@ namespace ascension {
 		 */
 		class ICaretStateListener {
 		private:
-			/**
-			 * The caret was moved.
-			 * @param self the caret
-			 * @param oldRegion the region which the caret had before. @c first is the anchor, and @c second is the caret
-			 */
-			virtual void caretMoved(const Caret& self, const text::Region& oldRegion) = 0;
 			/**
 			 * The matched brackets are changed.
 			 * @param self the caret
@@ -310,8 +319,10 @@ namespace ascension {
 			explicit Caret(TextViewer& viewer, const text::Position& position = text::Position());
 			~Caret();
 			// listeners
+			void	addListener(ICaretListener& listener);
 			void	addCharacterInputListener(ICharacterInputListener& listener);
 			void	addStateListener(ICaretStateListener& listener);
+			void	removeListener(ICaretListener& listener);
 			void	removeCharacterInputListener(ICharacterInputListener& listener);
 			void	removeStateListener(ICaretStateListener& listener);
 			// attributes : the anchor and the caret
@@ -389,6 +400,7 @@ namespace ascension {
 			SelectionMode selectionMode_;
 			length_t modeInitialAnchorLine_;	// 選択モードに入ったときのアンカーの行
 			length_t wordSelectionChars_[2];	// 単語選択モードで最初に選択されていた単語の前後の文字位置
+			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
 			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
 			bool pastingFromClipboardRing_;		// クリップボードリングから貼り付けた直後でリング循環のため待機中
@@ -400,7 +412,7 @@ namespace ascension {
 			bool overtypeMode_;
 			bool editingByThis_;				// このインスタンスが編集操作中
 			bool othersEditedFromLastInputChar_;	// このインスタンスが文字を入力して以降他の編集操作が行われたか?
-			std::pair<text::Position, text::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position::INVALID_POSITION)
+			std::pair<text::Position, text::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
 		};
 
 	} // namespace viewers
@@ -445,6 +457,12 @@ inline void viewers::VisualPoint::insertBox(const String& text) {insertBox(text.
 inline void viewers::VisualPoint::verifyViewer() const {verifyDocument(); if(viewer_ == 0) throw DisposedViewerException();}
 /// Called when the text viewer is disposed.
 inline void viewers::VisualPoint::viewerDisposed() throw() {viewer_ = 0;}
+/**
+ * Registers the listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @p listener is already registered
+ */
+inline void viewers::Caret::addListener(ICaretListener& listener) {listeners_.add(listener);}
 /**
  * Registers the character input listener.
  * @param listener the listener to be registered
@@ -494,6 +512,12 @@ inline bool viewers::Caret::isSelectionEmpty() const throw() {return anchor_->ge
 inline bool viewers::Caret::isSelectionRectangle() const throw() {return box_ != 0;}
 /// Returns the matched braces tracking mode.
 inline viewers::Caret::MatchBracketsTrackingMode viewers::Caret::getMatchBracketsTrackingMode() const throw() {return matchBracketsTrackingMode_;}
+/**
+ * Removes the listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @p listener is not registered
+ */
+inline void Caret::removeListener(ICaretListener& listener) {listeners_.remove(listener);}
 /**
  * Removes the character input listener
  * @param listener the listener to be removed
