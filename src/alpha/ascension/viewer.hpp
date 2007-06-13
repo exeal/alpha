@@ -150,7 +150,7 @@ namespace ascension {
 
 		/**
 		 * Default implementation of @c ICaretShapeProvider.
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultCaretShaper : virtual public ICaretShapeProvider {
 		public:
@@ -165,18 +165,19 @@ namespace ascension {
 
 		/**
 		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
 		 */
 		class LocaleSensitiveCaretShaper : virtual public ICaretShapeProvider,
-				virtual public ICaretStateListener, virtual public ITextViewerInputStatusListener {
+			virtual public ICaretListener, virtual public ICaretStateListener, virtual public ITextViewerInputStatusListener {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
 		private:
 			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
 			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
-			// ICaretStateListener
+			// ICaretListener
 			void	caretMoved(const class Caret& self, const text::Region& oldRegion);
+			// ICaretStateListener
 			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			void	overtypeModeChanged(const Caret& self);
 			void	selectionShapeChanged(const Caret& self);
@@ -873,7 +874,7 @@ namespace ascension {
 
 		/// Highlights the line on which the caret is put.
 		class CurrentLineHighlighter : public manah::Noncopyable,
-			virtual public presentation::ILineColorDirector, virtual public ICaretStateListener {
+			virtual public presentation::ILineColorDirector, virtual public ICaretListener, virtual public ICaretStateListener {
 		public:
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
@@ -886,8 +887,9 @@ namespace ascension {
 		private:
 			// ILineColorDirector
 			ILineColorDirector::Priority	queryLineColor(length_t line, Colors& color) const;
-			// ICaretStateListener
+			// ICaretListener
 			void	caretMoved(const Caret& self, const text::Region& oldRegion);
+			// ICaretStateListener
 			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			void	overtypeModeChanged(const Caret& self);
 			void	selectionShapeChanged(const Caret& self);

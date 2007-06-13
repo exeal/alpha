@@ -2238,9 +2238,11 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 //		defaultAssociations_[Script::KATAKANA] = L"MS P Gothic";
 		defaultAssociations_[Script::LATIN] = L"Tahoma";
 		defaultAssociations_[Script::MALAYALAM] = L"Kartika";
+    defaultAssociations_[Script::SYRIAC] = L"Estrangelo Edessa";
 		defaultAssociations_[Script::TAMIL] = L"Latha";
 		defaultAssociations_[Script::TELUGU] = L"Gautami";
 		defaultAssociations_[Script::THAI] = L"Tahoma";
+    defaultAssociations_[Script::THAANA] = L"MV Boli";
 		const LANGID uiLang = getUserDefaultUILanguage();
 		switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
 		case LANG_CHINESE:

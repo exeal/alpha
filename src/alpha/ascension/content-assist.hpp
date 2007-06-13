@@ -13,7 +13,7 @@
 
 namespace ascension {
 
-	namespace viewers {class TextViewer;}
+//	namespace viewers {class TextViewer;}
 
 	/**
 	 * Provides a content assist feature for a @c viewers#TextViewer. Content assist supports the
@@ -30,6 +30,8 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~ICompletionProposal() throw() {}
+			/// Returns the string to provide a description of the proposal. May be empty.
+			virtual String getDescription() const throw() = 0;
 			/// Returns the string to be display in the completion proposal list.
 			virtual String getDisplayString() const throw() = 0;
 			/**
@@ -47,8 +49,9 @@ namespace ascension {
 			/**
 			 * Inserts the proposed completion into the given document.
 			 * @param document the document
+			 * @param replacementRegion the region to be replaced by the proposal
 			 */
-			virtual void replace(text::Document& document) = 0;
+			virtual void replace(text::Document& document, const text::Region& replacementRegion) = 0;
 			/// The proposal was selected.
 			virtual void selected() {}
 			/// The proposal was unselected.
@@ -59,18 +62,18 @@ namespace ascension {
 		class CompletionProposal : virtual public ICompletionProposal {
 		public:
 			CompletionProposal(const String& replacementString,
-				const text::Region& replacementRegion, HICON icon = 0, bool autoInsertable = true);
-			CompletionProposal(const String& replacementString,
-				const text::Region& replacementRegion, const String& displayString, HICON icon = 0, bool autoInsertable = true);
+				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
+			CompletionProposal(const String& replacementString, const String& displayString,
+				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
 		public:
+			String	getDescription() const throw();
 			String	getDisplayString() const throw();
 			HICON	getIcon() const throw();
 			bool	isAutoInsertable() const throw();
-			void	replace(text::Document& document);
+			void	replace(text::Document& document, const text::Region& replacementRegion);
 		private:
-			const String displayString_, replacementString_;
+			const String displayString_, replacementString_, descriptionString_;
 			HICON icon_;
-			const text::Region replacementRegion_;
 			const bool autoInsertable_;
 		};
 
@@ -103,18 +106,22 @@ namespace ascension {
 			virtual ~IContentAssistProcessor() throw() {}
 			/**
 			 * Returns a list of completion proposals.
-			 * @param viewer the text viewer whose document is used to compute the proposals
-			 * @param position the document position where the completion is active
-			 * @param[out] proposals the result
+			 * @param caret the caret whose document is used to compute the proposals and has
+			 * position where the completion is active
+			 * @param[out] replacementRegion the region to be replaced by the completion
+			 * @param[out] proposals the result. if empty, the completion does not activate
 			 */
-			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
-				const text::Position& position, std::set<ICompletionProposal*>& proposals) const = 0;
+			virtual void computeCompletionProposals(const viewers::Caret& caret,
+				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
 			/**
 			 * Returns the characters which when entered by the user should automatically activate
 			 * the completion.
 			 * @return the characters
 			 */
 			virtual String getCompletionProposalAutoActivationCharacters() const throw() = 0;
+			/**
+			 */
+///			virtual ??? recomputeCompletionProposals(const text::Region& replacementRegion) const = 0;
 		};
 
 		/**
@@ -125,8 +132,8 @@ namespace ascension {
 		public:
 			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
-			virtual void computeCompletionProposals(const viewers::TextViewer& viewer,
-				const text::Position& position, std::set<ICompletionProposal*>& proposals) const;
+			virtual void computeCompletionProposals(const viewers::Caret& caret,
+				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
 		private:
 			const unicode::IdentifierSyntax& syntax_;
 		};
@@ -183,7 +190,8 @@ namespace ascension {
 		 * Default implementation of @c IContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class ContentAssistant : virtual public IContentAssistant, virtual public viewers::ICharacterInputListener {
+		class ContentAssistant : virtual public IContentAssistant,
+			virtual public viewers::ICaretListener, virtual public viewers::ICharacterInputListener {
 		public:
 			// constructors
 			ContentAssistant() throw();
@@ -205,6 +213,8 @@ namespace ascension {
 			void							install(viewers::TextViewer& viewer);
 			void							removeCompletionListener(ICompletionListener& listener);
 			void							uninstall();
+			// ICaretListener
+			void	caretMoved(const viewers::Caret& self, const text::Region& oldRegion);
 			// ICharacterInputListener
 			void	characterInputted(const viewers::Caret& self, CodePoint c);
 		private:

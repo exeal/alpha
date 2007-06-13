@@ -127,6 +127,11 @@ namespace ascension {
 			Region() throw() {}
 			/// Constructor.
 			Region(const Position& one, const Position& other) throw() : std::pair<Position, Position>(one, other) {}
+			/// Constructor creates a region in a line.
+			Region(length_t line, const std::pair<length_t, length_t>& columns) throw()
+				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
+			/// Constructor creates an empty region.
+			explicit Region(const Position& p) throw() : std::pair<Position, Position>(p, p) {}
 			/// Returns the minimum position.
 			Position& getTop() throw() {return (first < second) ? first : second;}
 			/// Returns the minimum position.

@@ -457,6 +457,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	renderer_.reset(new TextRenderer(*this));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
+	caret_->addListener(*this);
 	caret_->addStateListener(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
@@ -480,6 +481,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 	renderer_.reset(new TextRenderer(*this, *rhs.renderer_));
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
+	caret_->addListener(*this);
 	caret_->addStateListener(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
 
@@ -500,6 +502,7 @@ TextViewer::~TextViewer() {
 	getDocument().removeStateListener(*this);
 	getDocument().removeSequentialEditListener(*this);
 	renderer_->removeVisualLinesListener(*this);
+	caret_->removeListener(*this);
 	caret_->removeStateListener(*this);
 	for(set<VisualPoint*>::iterator it = points_.begin(); it != points_.end(); ++it)
 		(*it)->viewerDisposed();
@@ -533,7 +536,7 @@ void TextViewer::beginAutoScroll() {
 	setTimer(TIMERID_AUTOSCROLL, 0, 0);
 }
 
-/// @see ICaretStateListener#caretMoved
+/// @see ICaretListener#caretMoved
 void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	if(!isVisible())
 		return;
@@ -4064,7 +4067,11 @@ namespace {
 	}
 } // namespace @0
 
-/// @see ICaretStateListener#caretMoved
+/// Constructor.
+LocaleSensitiveCaretShaper::LocaleSensitiveCaretShaper(bool bold /* = false */) throw() : updator_(0), bold_(bold) {
+}
+
+/// @see ICaretListener#caretMoved
 void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 	if(self.isOvertypeMode())
 		updater_->update();
@@ -4159,6 +4166,7 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(caret), color_(color) {
 	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
 	caret_.getTextViewer().getPresentation().addLineColorDirector(temp);
+	caret_.addListener(*this);
 	caret_.addStateListener(*this);
 }
 
@@ -4166,10 +4174,11 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 CurrentLineHighlighter::~CurrentLineHighlighter() throw() {
 	// oops, the caret will already be deleted
 //	caret_.removeListener(*this);
+//	caret_.removeStateListener(*this);
 //	caret_.getTextViewer().getPresentation().removeLineColorDirector(*this);
 }
 
-/// @see ICaretStateListener#caretMoved
+/// @see ICaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
 		if(!caret_.isSelectionEmpty() || caret_.getLineNumber() != oldRegion.first.line)

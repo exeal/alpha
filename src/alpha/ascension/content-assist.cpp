@@ -23,28 +23,28 @@ using manah::AutoBuffer;
 /**
  * Constructor.
  * @param replacementString the actual string to be inserted into the document
- * @param replacementRegion the region to be replaced
+ * @param description the description of the proposal
  * @param icon the icon to display for the proposal
  * @param autoInsertable set true to enable auto insertion for the proposal
  */
 CompletionProposal::CompletionProposal(const String& replacementString,
-		const Region& replacementRegion, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		const String& description /* = L"" */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
 		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
-		replacementRegion_(replacementRegion), autoInsertable_(autoInsertable) {
+		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
 /**
  * Constructor.
  * @param replacementString the actual string to be inserted into the document
- * @param replacementRegion the region to be replaced
  * @param displayString the string to display for the proposal
+ * @param description the description of the proposal
  * @param icon the icon to display for the proposal
  * @param autoInsertable set true to enable auto insertion for the proposal
  */
 CompletionProposal::CompletionProposal(const String& replacementString,
-		const Region& replacementRegion, const String& displayString, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		const String& displayString, const String& description /* = L"" */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
 		displayString_(displayString), replacementString_(replacementString), icon_(icon),
-		replacementRegion_(replacementRegion), autoInsertable_(autoInsertable) {
+		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
 /// @see ICompletionProposal#getDisplayString
@@ -63,10 +63,10 @@ bool CompletionProposal::isAutoInsertable() const throw() {
 }
 
 /// @see ICompletionProposal#replace
-void CompletionProposal::replace(Document& document) {
+void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
 	document.beginSequentialEdit();
-	document.erase(replacementRegion_);
-	document.insert(replacementRegion_.getTop(), replacementString_);
+	document.erase(replacementRegion);
+	document.insert(replacementRegion.getTop(), replacementString_);
 	document.endSequentialEdit();
 }
 
@@ -86,7 +86,7 @@ IdentifiersProposalProcessor::~IdentifiersProposalProcessor() throw() {
 
 /// @see IContentAssistProcessor#computCompletionProposals
 void IdentifiersProposalProcessor::computeCompletionProposals(
-		const TextViewer& viewer, const Position& position, set<ICompletionProposal*>& proposals) const {
+		const Caret& caret, const Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
 	// TODO: not implemented.
 }
 
@@ -98,7 +98,7 @@ class ContentAssistant::CompletionProposalPopup :
 	public manah::win32::ui::ListBox, virtual public IContentAssistant::ICompletionProposalsUI {
 public:
 	// constructors
-	explicit CompletionProposalPopup(viewers::TextViewer& viewer);
+	CompletionProposalPopup(viewers::TextViewer& viewer, const Region& replacementRegion);
 	virtual ~CompletionProposalPopup();
 	// construction
 	bool	create();
@@ -127,6 +127,7 @@ private:
 
 private:
 	TextViewer& viewer_;
+	const Region replacementRegion_;
 	set<ICompletionProposal*> proposals_;
 	HFONT defaultFont_;
 	bool running_;
@@ -151,9 +152,10 @@ namespace {
 /**
  * Constructor.
  * @param viewer the target text viewer
+ * @param replacementRegion the region to be replaced by the completion
  */
-ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(TextViewer& viewer) :
-		viewer_(viewer), defaultFont_(0), running_(false), contextEnd_(new VisualPoint(viewer)) {
+ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(TextViewer& viewer, const Region& replacementRegion) :
+		viewer_(viewer), replacementRegion_(replacementRegion), defaultFont_(0), running_(false), contextEnd_(new VisualPoint(viewer)) {
 }
 
 /// Destructor.
@@ -179,7 +181,7 @@ bool ContentAssistant::CompletionProposalPopup::complete() {
 		if(ICompletionProposal* p = static_cast<ICompletionProposal*>(getItemDataPtr(sel))) {
 			Document& document = viewer_.getDocument();
 			document.beginSequentialEdit();
-			p->replace(document);
+			p->replace(document, replacementRegion_);
 			document.endSequentialEdit();
 			close();
 			return true;
@@ -331,7 +333,7 @@ bool ContentAssistant::CompletionProposalPopup::start(const set<ICompletionPropo
 	const ::POINT pt = viewer_.getClientXYForCharacter(caret, false, LineLayout::LEADING);
 	int x = !rtl ? pt.x : (pt.x - cx - 1);
 	if(x + cx > viewerRect.right) {
-		if()
+//		if()
 	}
 	int y = pt.y + viewer_.getTextRenderer().getLineHeight();
 	if(y + cy > viewerRect.bottom) {
@@ -499,15 +501,16 @@ void ContentAssistant::showPossibleCompletions() {
 	const Caret& caret = textViewer_->getCaret();
 	if(caret.isSelectionEmpty()) {
 		if(const IContentAssistProcessor* const processor = getContentAssistProcessor(caret.getContentType())) {
+			Region replacementRegion;
 			set<ICompletionProposal*> proposals;
-			processor->computeCompletionProposals(*textViewer_, caret.getPosition(), proposals);
+			processor->computeCompletionProposals(caret, replacementRegion, proposals);
 			if(!proposals.empty()) {
 				if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
-					(*proposals.begin())->replace(textViewer_->getDocument());
+					(*proposals.begin())->replace(textViewer_->getDocument(), replacementRegion);
 					delete *proposals.begin();
 				} else {
 					if(proposalPopup_ == 0) {
-						proposalPopup_ = new CompletionProposalPopup(*textViewer_);
+						proposalPopup_ = new CompletionProposalPopup(*textViewer_, replacementRegion);
 						proposalPopup_->create();
 					}
 					proposalPopup_->start(proposals);
