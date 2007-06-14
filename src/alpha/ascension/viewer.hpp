@@ -339,6 +339,7 @@ namespace ascension {
 				virtual public text::IDocumentStateListener,
 				virtual public text::ISequentialEditListener,
 				virtual public IVisualLinesListener,
+				virtual public ICaretListener,
 				virtual public ICaretStateListener,
 				virtual public ascension::text::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
@@ -594,8 +595,9 @@ namespace ascension {
 			virtual void	documentFileNameChanged(text::Document& document);
 			virtual void	documentModificationSignChanged(text::Document& document);
 			virtual void	documentReadOnlySignChanged(text::Document& document);
-			// ICaretStateListener (overridable)
+			// ICaretListener (overridable)
 			virtual void	caretMoved(const Caret& self, const text::Region& oldRegion);
+			// ICaretStateListener (overridable)
 			virtual void	matchBracketsChanged(const Caret& self,
 								const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			virtual void	overtypeModeChanged(const Caret& self);

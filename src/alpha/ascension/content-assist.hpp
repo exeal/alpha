@@ -61,7 +61,7 @@ namespace ascension {
 		/// Default implementation of @c ICompletionalProposal.
 		class CompletionProposal : virtual public ICompletionProposal {
 		public:
-			CompletionProposal(const String& replacementString,
+			explicit CompletionProposal(const String& replacementString,
 				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
 			CompletionProposal(const String& replacementString, const String& displayString,
 				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
@@ -104,24 +104,42 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~IContentAssistProcessor() throw() {}
+			/// The completion session was closed.
+			virtual void completionSessionClosed() throw() {};
 			/**
 			 * Returns a list of completion proposals.
 			 * @param caret the caret whose document is used to compute the proposals and has
 			 * position where the completion is active
+			 * @param[out] incremental true if the content assistant should start an incremental
+			 * completion. false, otherwise
 			 * @param[out] replacementRegion the region to be replaced by the completion
 			 * @param[out] proposals the result. if empty, the completion does not activate
+			 * @see #recomputeIncrementalCompletionProposals
 			 */
-			virtual void computeCompletionProposals(const viewers::Caret& caret,
+			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
+			/**
+			 * Returns true if the given character automatically activates the completion when the
+			 * user entered.
+			 * @param c the code point of the character
+			 * @return true if @p c automatically activates the completion
+			 */
+			virtual bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() = 0;
+			/**
+			 * Returns true if the given character automatically terminates (completes) the active
+			 * incremental completion session.
+			 * @param c the code point of the character
+			 * @return true if @p c automatically terminates the incremental completion
+			 */
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() = 0;
+			/**
+			 * Returns a list of the running incremental completion proposals.
+			 * @param replacementRegion the region to be replaced by the completion
+			 * @param[out] proposals the result. if empty, the current list will be kept
+			 * @see #computeCompletionProposals
+			 */
+			virtual void recomputeIncrementalCompletionProposals(
 				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
-			/**
-			 * Returns the characters which when entered by the user should automatically activate
-			 * the completion.
-			 * @return the characters
-			 */
-			virtual String getCompletionProposalAutoActivationCharacters() const throw() = 0;
-			/**
-			 */
-///			virtual ??? recomputeCompletionProposals(const text::Region& replacementRegion) const = 0;
 		};
 
 		/**
@@ -132,7 +150,9 @@ namespace ascension {
 		public:
 			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
-			virtual void computeCompletionProposals(const viewers::Caret& caret,
+			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
+			virtual void recomputeIncrementalCompletionProposals(
 				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
 		private:
 			const unicode::IdentifierSyntax& syntax_;
@@ -154,6 +174,8 @@ namespace ascension {
 				virtual void close() = 0;
 				/// Completes and closes. Returns true if the completion was succeeded.
 				virtual bool complete() = 0;
+				/// Returns true if the list has a selection.
+				virtual bool hasSelection() const throw() = 0;
 				/// Selects the proposal in the next/previous page.
 				virtual void nextPage(int pages) = 0;
 				/// Selects the next/previous proposal.
@@ -190,8 +212,12 @@ namespace ascension {
 		 * Default implementation of @c IContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class ContentAssistant : virtual public IContentAssistant,
-			virtual public viewers::ICaretListener, virtual public viewers::ICharacterInputListener {
+		class ContentAssistant :
+			virtual public IContentAssistant,
+			virtual public text::IDocumentListener,
+			virtual public viewers::ICaretListener,
+			virtual public viewers::ICharacterInputListener,
+			virtual private IContentAssistant::ICompletionProposalsUI {
 		public:
 			// constructors
 			ContentAssistant() throw();
@@ -205,6 +231,7 @@ namespace ascension {
 			// operation
 			void	showPossibleCompletions();
 		private:
+			void					startPopup();
 			static void CALLBACK	timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD);
 			// IContentAssistant
 			void							addCompletionListener(ICompletionListener& listener);
@@ -213,10 +240,19 @@ namespace ascension {
 			void							install(viewers::TextViewer& viewer);
 			void							removeCompletionListener(ICompletionListener& listener);
 			void							uninstall();
+			// IDocumentListener
+			void	documentAboutToBeChanged(const text::Document& document);
+			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
 			// ICaretListener
 			void	caretMoved(const viewers::Caret& self, const text::Region& oldRegion);
 			// ICharacterInputListener
 			void	characterInputted(const viewers::Caret& self, CodePoint c);
+			// IContentAssistant.ICompletionProposalsUI
+			void	close();
+			bool	complete();
+			bool	hasSelection() const throw();
+			void	nextPage(int pages);
+			void	nextProposal(int proposals);
 		private:
 			viewers::TextViewer* textViewer_;
 			std::map<text::ContentType, IContentAssistProcessor*> processors_;
@@ -225,6 +261,14 @@ namespace ascension {
 			CompletionProposalPopup* proposalPopup_;
 			ulong autoActivationDelay_;
 			static std::map<ContentAssistant*, ::UINT_PTR> timerIDs_;
+			struct CompletionSession {
+				bool incremental;
+				text::Region replacementRegion;
+				std::set<ICompletionProposal*> proposals;
+				~CompletionSession() {
+					for(std::set<ICompletionProposal*>::iterator i(proposals.begin()), e(proposals.end()); i != e; ++i) delete *i;}
+			};
+			std::auto_ptr<CompletionSession> completionSession_;
 		};
 /*
 		class IContextInformation {};

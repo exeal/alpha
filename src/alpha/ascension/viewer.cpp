@@ -10,7 +10,7 @@
 #include "rules.hpp"
 #include "text-editor.hpp"
 #include "../../manah/win32/ui/menu.hpp"
-#include <limits>	// std::numeric_limit
+#include <limits>	// std.numeric_limit
 #include <zmouse.h>
 #include <msctf.h>
 #include "../../manah/win32/ui/wait-cursor.hpp"
@@ -725,24 +725,32 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	class JSDocProposals : public IdentifiersProposalProcessor {
 	public:
 		JSDocProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
-		void computeCompletionProposals(const TextViewer&, const Position& position, set<ICompletionProposal*>& proposals) const {
-			const Region r(position, position);
-			proposals.insert(new CompletionProposal(L"@addon", r));
-			proposals.insert(new CompletionProposal(L"@argument", r));
-			proposals.insert(new CompletionProposal(L"@author", r));
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			incremental = true;
+			replacementRegion.first = replacementRegion.second = caret;
+			proposals.insert(new CompletionProposal(L"@addon"));
+			proposals.insert(new CompletionProposal(L"@argument"));
+			proposals.insert(new CompletionProposal(L"@author"));
 		}
-		String getCompletionProposalAutoActivationCharacters() const {return L"@";}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'@';}
+		bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
+			return !isalnum(static_cast<wchar_t>(c & 0xFFFF), locale::classic());}
 	};
 	class JSProposals : public IdentifiersProposalProcessor {
 	public:
 		JSProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
-		void computeCompletionProposals(const TextViewer&, const Position& position, set<ICompletionProposal*>& proposals) const {
-			const Region r(position, position);
-			proposals.insert(new CompletionProposal(L"break", r));
-			proposals.insert(new CompletionProposal(L"case", r));
-			proposals.insert(new CompletionProposal(L"catch", r));
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			incremental = true;
+			replacementRegion.first = replacementRegion.second = caret;
+			proposals.insert(new CompletionProposal(L"break"));
+			proposals.insert(new CompletionProposal(L"case"));
+			proposals.insert(new CompletionProposal(L"catch"));
 		}
-		String getCompletionProposalAutoActivationCharacters() const {return L".";}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'.';}
+		bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
+			return !IdentifierSyntax().isIdentifierContinueCharacter(c);}
 	};
 	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
 	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals));
@@ -4068,7 +4076,7 @@ namespace {
 } // namespace @0
 
 /// Constructor.
-LocaleSensitiveCaretShaper::LocaleSensitiveCaretShaper(bool bold /* = false */) throw() : updator_(0), bold_(bold) {
+LocaleSensitiveCaretShaper::LocaleSensitiveCaretShaper(bool bold /* = false */) throw() : updater_(0), bold_(bold) {
 }
 
 /// @see ICaretListener#caretMoved
@@ -4120,6 +4128,11 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 
 /// @see ICaretShapeProvider#matchBracketsChanged
 void LocaleSensitiveCaretShaper::matchBracketsChanged(const Caret&, const std::pair<Position, Position>&, bool) {
+}
+
+/// @see ICaretStateListener#overtypeModeChanged
+void LocaleSensitiveCaretShaper::overtypeModeChanged(const Caret&) {
+	updater_->update();
 }
 
 /// @see ICaretShapeProvider#selectionShapeChanged
