@@ -1942,38 +1942,6 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 		return box_->getOverlappedSubline(line, subline, first, last);
 }
 
-
-/**
- * Returns the preceding identifier.
- * Fails if the caret has selection or the number of scanned characters exceeded @a maxLength.
- * @param maxLength the maximum length of the identifier to find
- * @return the identifier or an empty string if failed
- * @deprecated 0.8
- */
-String Caret::getPrecedingIdentifier(length_t maxLength) const {
-	verifyViewer();
-	if(!isSelectionEmpty() || isStartOfLine() || maxLength == 0)
-		return L"";
-
-	DocumentPartition partition;
-	getDocument()->getPartitioner().getPartition(*this, partition);
-	const length_t partitionStart = (partition.region.getTop().line == getLineNumber()) ? partition.region.getTop().column : 0;
-	if(partitionStart == getColumnNumber())	// どちらのパーティションに属するか微妙だ...
-		return L"";
-
-	const IdentifierSyntax& syntax = getIdentifierSyntax();
-	const String& line = getDocument()->getLine(getLineNumber());
-	assert(getColumnNumber() > 0);
-	UTF16To32Iterator<> i(line.data() + partitionStart, line.data() + line.length(), line.data() + getColumnNumber());
-	for(--i; i.hasNext(); --i) {
-		if(!syntax.isIdentifierContinueCharacter(*i))
-			break;
-		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)
-			return L"";
-	}
-	return String(i.tell(), getColumnNumber() - (i.tell() - line.data()));
-}
-
 /**
  * Returns the selected text.
  * @param nlr 改行の扱い。矩形選択の場合はドキュメントの既定の改行が使われる

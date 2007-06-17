@@ -117,6 +117,22 @@ namespace ascension {
 
 	namespace viewers {
 
+		/**
+		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
+		 * @see TextViewer#addViewportListener, TextViewer#removeViewportListener
+		 */
+		class IViewportListener {
+		private:
+			/**
+			 * The scroll positions of the viewer were changed.
+			 * @param horizontal true if the vertical scroll position is changed
+			 * @param vertical true if the vertical scroll position is changed
+			 * @see TextViewer#getFirstVisibleLine
+			 */
+			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
+			friend class TextViewer;
+		};
+
 		/// Target @a TextViewer of @c VisualPoint has been disposed.
 		class DisposedViewerException : public std::runtime_error {
 		public:
@@ -371,8 +387,6 @@ namespace ascension {
 			void	selectWord();
 			// text manipulation
 			bool	inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
-			// utility
-			String	getPrecedingIdentifier(length_t maxLength) const;
 
 		private:
 			void	checkMatchBrackets();

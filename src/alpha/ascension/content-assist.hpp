@@ -114,10 +114,12 @@ namespace ascension {
 			 * completion. false, otherwise
 			 * @param[out] replacementRegion the region to be replaced by the completion
 			 * @param[out] proposals the result. if empty, the completion does not activate
+			 * @param[out] firstProposal the proposal initially selected in the list. if @c null,
+			 * no proposal will be selected
 			 * @see #recomputeIncrementalCompletionProposals
 			 */
 			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
-				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
+				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const = 0;
 			/**
 			 * Returns true if the given character automatically activates the completion when the
 			 * user entered.
@@ -134,12 +136,16 @@ namespace ascension {
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() = 0;
 			/**
 			 * Returns a list of the running incremental completion proposals.
+			 * @param textViewer the text viewer
 			 * @param replacementRegion the region to be replaced by the completion
 			 * @param[out] proposals the result. if empty, the current list will be kept
+			 * @param[out] firstProposal the proposal newly selected in the list. if @c null, no
+			 * proposal will be selected
 			 * @see #computeCompletionProposals
 			 */
 			virtual void recomputeIncrementalCompletionProposals(
-				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
+				const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
+				std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const = 0;
 		};
 
 		/**
@@ -147,15 +153,25 @@ namespace ascension {
 		 * collecting identifiers in the document.
 		 */
 		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
-		public:
-			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
+		protected:
+			// constructors
+			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax* syntax = 0) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
-			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
-				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
-			virtual void recomputeIncrementalCompletionProposals(
-				const text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
+			// attributes
+			const unicode::IdentifierSyntax*	getIdentifierSyntax() const throw();
+			void								setIdentifierSyntax(const unicode::IdentifierSyntax& syntax) throw();
+			// IContentAssistProcessor
+			virtual void	computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+								text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals,
+								ICompletionProposal*& firstProposal) const;
+			virtual bool	isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw();
+			virtual void	recomputeIncrementalCompletionProposals(
+								const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
+								std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const;
 		private:
-			const unicode::IdentifierSyntax& syntax_;
+			void	collectIdentifiers(const text::Document& document, const text::Position& caretPosition,
+						std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const;
+			ASCENSION_SHARED_POINTER<const unicode::IdentifierSyntax> syntax_;
 		};
 
 		/**
@@ -217,6 +233,7 @@ namespace ascension {
 			virtual public text::IDocumentListener,
 			virtual public viewers::ICaretListener,
 			virtual public viewers::ICharacterInputListener,
+			virtual public viewers::IViewportListener,
 			virtual private IContentAssistant::ICompletionProposalsUI {
 		public:
 			// constructors
@@ -233,6 +250,7 @@ namespace ascension {
 		private:
 			void					startPopup();
 			static void CALLBACK	timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD);
+			void					updatePopupPositions();
 			// IContentAssistant
 			void							addCompletionListener(ICompletionListener& listener);
 			ICompletionProposalsUI*			getCompletionProposalsUI() const throw();
@@ -247,6 +265,8 @@ namespace ascension {
 			void	caretMoved(const viewers::Caret& self, const text::Region& oldRegion);
 			// ICharacterInputListener
 			void	characterInputted(const viewers::Caret& self, CodePoint c);
+			// IViewportListener
+			void	viewportChanged(bool horizontal, bool vertical);
 			// IContentAssistant.ICompletionProposalsUI
 			void	close();
 			bool	complete();
@@ -260,8 +280,9 @@ namespace ascension {
 			class CompletionProposalPopup;
 			CompletionProposalPopup* proposalPopup_;
 			ulong autoActivationDelay_;
-			static std::map<ContentAssistant*, ::UINT_PTR> timerIDs_;
+			static std::map<::UINT_PTR, ContentAssistant*> timerIDs_;
 			struct CompletionSession {
+				const IContentAssistProcessor* processor;
 				bool incremental;
 				text::Region replacementRegion;
 				std::set<ICompletionProposal*> proposals;
