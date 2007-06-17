@@ -92,22 +92,6 @@ namespace ascension {
 		};
 
 		/**
-		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
-		 * @see TextViewer#addViewportListener, TextViewer#removeViewportListener
-		 */
-		class IViewportListener {
-		private:
-			/**
-			 * The scroll positions of the viewer were changed.
-			 * @param horizontal true if the vertical scroll position is changed
-			 * @param vertical true if the vertical scroll position is changed
-			 * @see TextViewer#getFirstVisibleLine
-			 */
-			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
-			friend class TextViewer;
-		};
-
-		/**
 		 * @c CaretShapeUpdater updates the caret of the text viewer.
 		 * @see TextViewer, ICaretShapeProvider
 		 */

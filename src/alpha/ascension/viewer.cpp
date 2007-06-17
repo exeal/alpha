@@ -329,24 +329,6 @@ namespace {
 
 // local helpers
 namespace {
-	class TextViewerCloneIterator : private manah::Unassignable {
-	public:
-		explicit TextViewerCloneIterator(TextViewer& original, set<TextViewer*>& clones) throw() :
-			original_(original), clones_(clones), current_(clones_.begin()), isHead_(true) {}
-		TextViewer& get() const throw() {assert(!isEnd()); return isHead_ ? original_ : **current_;}
-		bool isEnd() const throw() {return !isHead_ && current_ == clones_.end();}
-		void next() {
-			if(isHead_) isHead_ = false;
-			else if(current_ != clones_.end()) ++current_;
-		}
-		TextViewer& operator*() const throw() {return get();}
-		TextViewer* operator->() throw() {return &get();}
-	private:
-		TextViewer& original_;
-		std::set<TextViewer*>& clones_;
-		std::set<TextViewer*>::iterator current_;
-		bool isHead_;
-	};
 	inline void abortIncrementalSearch(TextViewer& viewer) throw() {
 		if(texteditor::Session* session = viewer.getDocument().getSession()) {
 			if(session->getIncrementalSearcher().isRunning())
@@ -677,7 +659,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
 
 	// JSDoc syntax highlight test
-	const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
+	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
 		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
 	unicode::IdentifierSyntax jsdocIDSyntax;
 	jsdocIDSyntax.overrideIdentifierStartCharacters(L"$@", L"");
@@ -692,9 +674,9 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
 
 	// JavaScript syntax highlight test
-	const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
+	static const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
 		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
-	const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
+	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
 		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
 	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
 	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
@@ -724,33 +706,35 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// content assist test
 	class JSDocProposals : public IdentifiersProposalProcessor {
 	public:
-		JSDocProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
+		JSDocProposals() : IdentifiersProposalProcessor() {
+			auto_ptr<IdentifierSyntax> ids(new IdentifierSyntax);
+			ids->overrideIdentifierStartCharacters(L"$@", L"");
+			setIdentifierSyntax(*ids.release());
+		}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
-				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
-			incremental = true;
-			replacementRegion.first = replacementRegion.second = caret;
-			proposals.insert(new CompletionProposal(L"@addon"));
-			proposals.insert(new CompletionProposal(L"@argument"));
-			proposals.insert(new CompletionProposal(L"@author"));
+				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
+			StringBuffer sb(JSDOC_ATTRIBUTES);
+			wistream s(&sb);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
 		}
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'@';}
-		bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
-			return !isalnum(static_cast<wchar_t>(c & 0xFFFF), locale::classic());}
 	};
 	class JSProposals : public IdentifiersProposalProcessor {
 	public:
-		JSProposals() : IdentifiersProposalProcessor(IdentifierSyntax()) {}
+		JSProposals() : IdentifiersProposalProcessor(new IdentifierSyntax) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
-				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
-			incremental = true;
-			replacementRegion.first = replacementRegion.second = caret;
-			proposals.insert(new CompletionProposal(L"break"));
-			proposals.insert(new CompletionProposal(L"case"));
-			proposals.insert(new CompletionProposal(L"catch"));
+				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
+			StringBuffer sb(JS_KEYWORDS);
+			wistream s(&sb);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
 		}
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'.';}
-		bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
-			return !IdentifierSyntax().isIdentifierContinueCharacter(c);}
 	};
 	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
 	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals));
@@ -2525,7 +2509,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		scrollInfo_.changed = true;
 		return;
 	}
-	closeCompletionProposalsPopup(*this);
+//	closeCompletionProposalsPopup(*this);
 	hideToolTip();
 
 	// 編集領域のスクロール:
@@ -4126,6 +4110,11 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 	}
 }
 
+/// @see ICaretShapeProvider#install
+void LocaleSensitiveCaretShaper::install(CaretShapeUpdater& updater) {
+	updater_ = &updater;
+}
+
 /// @see ICaretShapeProvider#matchBracketsChanged
 void LocaleSensitiveCaretShaper::matchBracketsChanged(const Caret&, const std::pair<Position, Position>&, bool) {
 }
@@ -4147,6 +4136,11 @@ void LocaleSensitiveCaretShaper::textViewerIMEOpenStatusChanged() throw() {
 /// @see ITextViewerInputStatusListener#textViewerInputLanguageChanged
 void LocaleSensitiveCaretShaper::textViewerInputLanguageChanged() throw() {
 	updater_->update();
+}
+
+/// @see ICaretShapeProvider#uninstall
+void LocaleSensitiveCaretShaper::uninstall() {
+	updater_ = 0;
 }
 
 
@@ -4250,7 +4244,7 @@ void CurrentLineHighlighter::setColor(const Colors& color) throw() {
  * @param[out] endChar the end of the identifier. can be @c null if not needed
  * @param[out] identifier the string of the found identifier. can be @c null if not needed
  * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
- * @see #getPointedIdentifier, Caret#getPrecedingIdentifier
+ * @see #getPointedIdentifier
  */
 bool source::getNearestIdentifier(const Document& document,
 		const Position& position, length_t* startChar, length_t* endChar, String* identifier) {
@@ -4302,7 +4296,7 @@ bool source::getNearestIdentifier(const Document& document,
  * @param[out] endPosition the end of the identifier. can be @c null if not needed
  * @param[out] identifier the string of the found identifier. can be @c null if not needed
  * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
- * @see #getNearestIdentifier, Caret#getPrecedingIdentifier
+ * @see #getNearestIdentifier
  */
 bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosition, Position* endPosition, String* identifier) {
 	if(viewer.isWindow()) {
@@ -4322,3 +4316,36 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 	}
 	return false;
 }
+
+#if 0
+/**
+ * Returns the preceding identifier.
+ * Fails if the caret has selection or the number of scanned characters exceeded @a maxLength.
+ * @param maxLength the maximum length of the identifier to find
+ * @return the identifier or an empty string if failed
+ * @deprecated 0.8
+ */
+String source::getPrecedingIdentifier(const Position& where, length_t maxLength) const {
+	verifyViewer();
+	if(!isSelectionEmpty() || isStartOfLine() || maxLength == 0)
+		return L"";
+
+	DocumentPartition partition;
+	getDocument()->getPartitioner().getPartition(*this, partition);
+	const length_t partitionStart = (partition.region.getTop().line == getLineNumber()) ? partition.region.getTop().column : 0;
+	if(partitionStart == getColumnNumber())	// どちらのパーティションに属するか微妙だ...
+		return L"";
+
+	const IdentifierSyntax& syntax = getIdentifierSyntax();
+	const String& line = getDocument()->getLine(getLineNumber());
+	assert(getColumnNumber() > 0);
+	UTF16To32Iterator<> i(line.data() + partitionStart, line.data() + line.length(), line.data() + getColumnNumber());
+	for(--i; i.hasPrevious(); --i) {
+		if(!syntax.isIdentifierContinueCharacter(*i))
+			break;
+		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)
+			return L"";
+	}
+	return String(i.tell(), getColumnNumber() - (i.tell() - line.data()));
+}
+#endif

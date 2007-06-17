@@ -132,6 +132,12 @@ namespace ascension {
 				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
 			/// Constructor creates an empty region.
 			explicit Region(const Position& p) throw() : std::pair<Position, Position>(p, p) {}
+			/// Returns an intersection of the two regions. Same as @c #getIntersection.
+			Region operator&(const Region& rhs) const throw() {return getIntersection(rhs);}
+			/// Returns a union of the two regions. Same as @c #getUnion.
+			Region operator|(const Region& rhs) const {return getUnion(rhs);}
+			/// Returns true if the region encompasses the other region.
+			bool encompasses(const Region& other) const throw() {return getTop() <= other.getTop() && getBottom() >= other.getBottom();}
 			/// Returns the minimum position.
 			Position& getTop() throw() {return (first < second) ? first : second;}
 			/// Returns the minimum position.
@@ -140,8 +146,16 @@ namespace ascension {
 			Position& getBottom() throw() {return (first > second) ? first : second;}
 			/// Returns the maximum position.
 			const Position& getBottom() const throw() {return (first > second) ? first : second;}
+			/// Returns an intersection of the two regions. If the regions don't intersect, returns @c Region().
+			Region getIntersection(const Region& other) const throw() {
+				return intersectsWith(other) ? Region(std::max(getTop(), other.getTop()), std::min(getBottom(), other.getBottom())) : Region();}
+			/// Returns a union of the two regions. If the two regions don't intersect, throws @c std#invalid_argument.
+			Region getUnion(const Region& other) const {
+				if(!intersectsWith(other)) throw std::invalid_argument("can't make a union."); return Region(getTop(), other.getBottom());}
 			/// Returns true if @a p is contained by the region.
 			bool includes(const Position& p) const throw() {return p >= getTop() && p <= getBottom();}
+			/// Returns true if the region intersects with the other region.
+			bool intersectsWith(const Region& other) const throw() {return includes(other.first) || includes(other.second);}
 			/// Returns true if the region is empty.
 			bool isEmpty() const throw() {return first == second;}
 			/// Returns true if the region is normalized.

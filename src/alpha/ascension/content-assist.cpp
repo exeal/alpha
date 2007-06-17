@@ -82,23 +82,74 @@ void CompletionProposal::replace(Document& document, const Region& replacementRe
  * Constructor.
  * @param syntax the identifier syntax to detect identifiers
  */
-IdentifiersProposalProcessor::IdentifiersProposalProcessor(const IdentifierSyntax& syntax) throw() : syntax_(syntax) {
+IdentifiersProposalProcessor::IdentifiersProposalProcessor(const IdentifierSyntax* syntax /* = 0 */) throw() : syntax_(syntax) {
 }
 
 /// Destructor.
 IdentifiersProposalProcessor::~IdentifiersProposalProcessor() throw() {
 }
 
-/// @see IContentAssistProcessor#computCompletionProposals
-void IdentifiersProposalProcessor::computeCompletionProposals(
-		const Caret& caret, bool& incremental, Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+/**
+ * @param document
+ * @param caretPosition
+ * @param[out] proposals
+ * @param[out] firstProposal
+ */
+void IdentifiersProposalProcessor::collectIdentifiers(const Document& document,
+		const Position& caretPosition, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
 	// TODO: not implemented.
 }
 
+/// @see IContentAssistProcessor#computCompletionProposals
+void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret, bool& incremental,
+		Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
+	replacementRegion.second = caret;
+	firstProposal = 0;
+
+	// find the preceding identifier
+	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
+	if(!incremental || caret.isStartOfLine() || syntax_.get() == 0)
+		replacementRegion.first = caret;
+	else {
+		DocumentCharacterIterator i(*caret.getDocument(), Region(caret.getLineNumber(), make_pair(0, caret.getColumnNumber())), caret);
+		do {
+			--i;
+			if(!syntax_->isIdentifierContinueCharacter(*i)) {
+				replacementRegion.first = (++i).tell();
+				break;
+			} else if(caret.getColumnNumber() - i.tell().column > MAXIMUM_IDENTIFIER_LENGTH) {	// too long identifier
+				replacementRegion.first = caret;
+				break;
+			}
+		} while(i.hasPrevious());
+		if(!i.hasPrevious())
+			replacementRegion.first = i.tell();
+	}
+
+	// select matched or partially matched proposal
+	if(!replacementRegion.isEmpty())
+		collectIdentifiers(*caret.getDocument(), caret, proposals, firstProposal);
+}
+
+/// Returns the identifier syntax the processor uses or @c null.
+const IdentifierSyntax* IdentifiersProposalProcessor::getIdentifierSyntax() const throw() {
+	return syntax_.get();
+}
+
+/// @see IContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
+bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
+	return (syntax_.get() != 0) ? !syntax_->isIdentifierContinueCharacter(c) : false;
+}
+
 /// @see IContentAssistProcessor#recomputIncrementalCompletionProposals
-void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
-		const Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
-	// TODO: not implemented.
+void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const TextViewer& textViewer,
+		const Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
+	collectIdentifiers(textViewer.getDocument(), replacementRegion.getBottom(), proposals, firstProposal);
+}
+
+/// Sets the new identifier syntax.
+void IdentifiersProposalProcessor::setIdentifierSyntax(const IdentifierSyntax& syntax) throw() {
+	syntax_.reset(&syntax);
 }
 
 
@@ -121,8 +172,9 @@ private:
 	void	updateDefaultFont();
 private:
 	void	onDestroy();
-	void	onKillFocus(HWND);
 	void	onLButtonDblClk(UINT, const ::POINT&);
+	void	onLButtonDown(UINT, const ::POINT&);
+	void	onSetFocus(HWND);
 	void	onSettingChange(UINT, const WCHAR*);
 
 private:
@@ -133,14 +185,11 @@ private:
 
 MANAH_BEGIN_WINDOW_MESSAGE_MAP(ContentAssistant::CompletionProposalPopup, manah::win32::ui::ListBox)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_DESTROY)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_KILLFOCUS)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDBLCLK)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDOWN)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETTINGCHANGE)
 MANAH_END_WINDOW_MESSAGE_MAP()
-
-namespace {
-	const length_t COMPLETION_MAX_TRACKBACK_CCH = 100;
-}
 
 /**
  * Constructor.
@@ -188,9 +237,16 @@ void ContentAssistant::CompletionProposalPopup::onLButtonDblClk(UINT, const ::PO
 	ui_.complete();
 }
 
-/// @see WM_KILLFOCUS
-void ContentAssistant::CompletionProposalPopup::onKillFocus(HWND) {
-	ui_.close();
+/// @see WM_LBUTTONDOWN
+void ContentAssistant::CompletionProposalPopup::onLButtonDown(UINT, const ::POINT& pt) {
+	bool outside;
+	const int index = itemFromPoint(pt, outside);
+	setCurSel(outside ? -1 : index);
+}
+
+/// @see WM_SETFOCUS
+void ContentAssistant::CompletionProposalPopup::onSetFocus(HWND) {
+	getParent().setFocus();
 }
 
 /// @see WM_SETTINGCHANGE
@@ -258,7 +314,33 @@ bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 
 // ContentAssistant /////////////////////////////////////////////////////////
 
-map<ContentAssistant*, ::UINT_PTR> ContentAssistant::timerIDs_;
+namespace {
+	void setupPopupContent(manah::win32::ui::ListBox& listbox, const set<ICompletionProposal*>& proposals) {
+		listbox.resetContent();
+		for(set<ICompletionProposal*>::const_iterator p(proposals.begin()), e(proposals.end()); p!= e; ++p) {
+			// TODO: display icons.
+			const String s((*p)->getDisplayString());
+			if(!s.empty()) {
+				const int index = listbox.addString(s.c_str());
+				if(index != LB_ERR && index != LB_ERRSPACE)
+					listbox.setItemDataPtr(index, *p);
+			}
+		}
+	}
+	void selectProposal(manah::win32::ui::ListBox& listbox, ICompletionProposal* selection) {
+		listbox.setCurSel(-1);
+		if(selection != 0) {
+			for(int i = 0, c = listbox.getCount(); i < c; ++i) {
+				if(listbox.getItemDataPtr(i) == selection) {
+					listbox.setCurSel(i);
+					return;
+				}
+			}
+		}
+	}
+}
+
+map<::UINT_PTR, ContentAssistant*> ContentAssistant::timerIDs_;
 
 /// Constructor.
 ContentAssistant::ContentAssistant() throw() : textViewer_(0), proposalPopup_(0), autoActivationDelay_(500) {
@@ -277,24 +359,37 @@ void ContentAssistant::addCompletionListener(ICompletionListener& listener) {
 }
 
 /// @see viewers#ICaretListener
-void ContentAssistant::caretMoved(const Caret&self, const Region& oldRegion) {
-	// TODO: not implemented.
+void ContentAssistant::caretMoved(const Caret& self, const Region&) {
+	if(completionSession_.get() != 0) {
+		// non-incremental mode: close when the caret moved
+		if(!completionSession_->incremental)
+			close();
+		// incremental mode: close if the caret gone out of the replacement region
+		else if(self.getPosition() < completionSession_->replacementRegion.getTop()
+				|| self.getPosition() > completionSession_->replacementRegion.getBottom())
+			close();
+	}
 }
 
 /// @see viewers#ICharacterInputListener#characterInputted
 void ContentAssistant::characterInputted(const Caret& self, CodePoint c) {
 	if(textViewer_ != 0) {
-		if(proposalPopup_ != 0 && proposalPopup_->isVisible()) {
-			// TODO: exit the session if the character does not consist an identifier.
-		} else if(const IContentAssistProcessor* const p = getContentAssistProcessor(self.getContentType())) {
+		if(completionSession_.get() != 0) {
+			if(!completionSession_->incremental)
+				close();
+			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c))
+				complete();
+		} else {
 			// activate automatically
-			if(p->isCompletionProposalAutoActivationCharacter(c)) {
-				if(autoActivationDelay_ == 0)
-					showPossibleCompletions();
-				else if(const ::UINT_PTR timerID = ::SetTimer(0, reinterpret_cast<::UINT_PTR>(this), autoActivationDelay_, timeElapsed))
-					timerIDs_.insert(make_pair(this, timerID));
-				else
-					textViewer_->beep();
+			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->getCaret().getContentType())) {
+				if(cap->isCompletionProposalAutoActivationCharacter(c)) {
+					if(autoActivationDelay_ == 0)
+						showPossibleCompletions();
+					else if(const ::UINT_PTR timerID = ::SetTimer(0, reinterpret_cast<::UINT_PTR>(this), autoActivationDelay_, timeElapsed))
+						timerIDs_.insert(make_pair(timerID, this));
+//					else
+//						textViewer_->beep();
+				}
 			}
 		}
 	}
@@ -303,11 +398,13 @@ void ContentAssistant::characterInputted(const Caret& self, CodePoint c) {
 /// @see ICompletionProposalsUI#close
 void ContentAssistant::close() {
 	if(completionSession_.get() != 0) {
+		textViewer_->removeViewportListener(*this);
+		textViewer_->getCaret().removeListener(*this);
+		if(completionSession_->incremental)
+			textViewer_->getDocument().removeListener(*this);
 		completionSession_.reset();
-		textViewer_->getDocument().removeListener(*this);
 		proposalPopup_->show(SW_HIDE);
 		proposalPopup_->resetContent();
-		textViewer_->setFocus();
 	}
 }
 
@@ -339,9 +436,25 @@ void ContentAssistant::documentAboutToBeChanged(const Document&) {
 /// @see text#IDocumentListener#documentChanged
 void ContentAssistant::documentChanged(const Document& document, const DocumentChange& change) {
 	if(completionSession_.get() != 0) {
+		// exit or update the replacement region
 		if(!completionSession_->incremental || change.getRegion().first.line != change.getRegion().second.line)
 			close();
-		// TODO: not implemented.
+		const Region& replacementRegion = completionSession_->replacementRegion;
+		if(change.isDeletion() && !replacementRegion.encompasses(change.getRegion()))
+			close();
+		completionSession_->replacementRegion.second = updatePosition(completionSession_->replacementRegion.second, change, FORWARD);
+		if(!change.isDeletion() && !replacementRegion.encompasses(change.getRegion()))
+			close();
+
+		// rebuild proposals
+		set<ICompletionProposal*> newProposals;
+		ICompletionProposal* firstProposal = 0;
+		completionSession_->processor->recomputeIncrementalCompletionProposals(
+			*textViewer_, completionSession_->replacementRegion, newProposals, firstProposal);
+		if(!newProposals.empty()) {
+			setupPopupContent(*proposalPopup_, completionSession_->proposals);
+			selectProposal(*proposalPopup_, firstProposal);
+		}
 	}
 }
 
@@ -352,7 +465,7 @@ ulong ContentAssistant::getAutoActivationDelay() const throw() {
 
 /// @see IContentAssistant#getCompletionProposalsUI
 IContentAssistant::ICompletionProposalsUI* ContentAssistant::getCompletionProposalsUI() const throw() {
-	return const_cast<ContentAssistant*>(this);
+	return (completionSession_.get() != 0) ? const_cast<ContentAssistant*>(this) : 0;
 }
 
 /// @see IContentAssistant#getContentAssistProcessor
@@ -430,16 +543,18 @@ void ContentAssistant::showPossibleCompletions() {
 	if(textViewer_ == 0 || completionSession_.get() != 0)
 		return;
 	const Caret& caret = textViewer_->getCaret();
-	if(const IContentAssistProcessor* const processor = getContentAssistProcessor(caret.getContentType())) {
+	if(const IContentAssistProcessor* const cap = getContentAssistProcessor(caret.getContentType())) {
+		ICompletionProposal* firstProposal = 0;
 		completionSession_.reset(new CompletionSession);
-		processor->computeCompletionProposals(caret,
-			completionSession_->incremental, completionSession_->replacementRegion, completionSession_->proposals);
+		(completionSession_->processor = cap)->computeCompletionProposals(caret,
+			completionSession_->incremental, completionSession_->replacementRegion, completionSession_->proposals, firstProposal);
 		if(!completionSession_->proposals.empty()) {
 			if(completionSession_->proposals.size() == 1 && (*completionSession_->proposals.begin())->isAutoInsertable()) {
 				(*completionSession_->proposals.begin())->replace(textViewer_->getDocument(), completionSession_->replacementRegion);
 				completionSession_.reset();
 			} else {
 				startPopup();
+				selectProposal(*proposalPopup_, firstProposal);
 				completionListeners_.notify(ICompletionListener::completionSessionStarted);
 			}
 			return;	// succeeded
@@ -460,47 +575,22 @@ void ContentAssistant::startPopup() {
 	// determine the horizontal orientation of the window
 	const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
 	proposalPopup_->modifyStyleEx(rtl ? 0: WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
-	for(set<ICompletionProposal*>::const_iterator
-			p(completionSession_->proposals.begin()), e(completionSession_->proposals.end()); p!= e; ++p) {
-		// TODO: display icons.
-		const String s((*p)->getDisplayString());
-		if(!s.empty()) {
-			const int index = proposalPopup_->addString(s.c_str());
-			if(index != LB_ERR && index != LB_ERRSPACE)
-				proposalPopup_->setItemDataPtr(index, *p);
-		}
-	}
+	setupPopupContent(*proposalPopup_, completionSession_->proposals);
 
-	// placement
-	Caret& caret = textViewer_->getCaret();
-	int cx = 200, cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->proposals.size()), 10);
-	::RECT viewerRect;
-	textViewer_->getClientRect(viewerRect);
-	const ::POINT pt = textViewer_->getClientXYForCharacter(caret, false, LineLayout::LEADING);
-	int x = !rtl ? pt.x : (pt.x - cx - 1);
-	if(x + cx > viewerRect.right) {
-//		if()
-	}
-	int y = pt.y + textViewer_->getTextRenderer().getLineHeight();
-	if(y + cy > viewerRect.bottom) {
-		if(pt.y - 1 - viewerRect.top < viewerRect.bottom - y)
-			cy = viewerRect.bottom - y;
-		else {
-			cy = min<int>(cy, pt.y - viewerRect.top);
-			y = pt.y - cy - 1;
-		}
-	}
-	proposalPopup_->setPosition(0, x, y, cx, cy, SWP_NOZORDER | SWP_SHOWWINDOW);
+	updatePopupPositions();
+	textViewer_->addViewportListener(*this);
+	textViewer_->getCaret().addListener(*this);
+	if(completionSession_->incremental)
+		textViewer_->getDocument().addListener(*this);
 }
 
 void CALLBACK ContentAssistant::timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD) {
-	if(ContentAssistant* ca = reinterpret_cast<ContentAssistant*>(eventID)) {
-		map<ContentAssistant*, ::UINT_PTR>::iterator i(timerIDs_.find(ca));
-		if(i != timerIDs_.end()) {
-			::KillTimer(0, i->second);
-			timerIDs_.erase(i);
-			ca->showPossibleCompletions();
-		}
+	map<::UINT_PTR, ContentAssistant*>::iterator i(timerIDs_.find(eventID));
+	if(i != timerIDs_.end()) {
+		ContentAssistant& ca = *i->second;
+		::KillTimer(0, eventID);
+		timerIDs_.erase(i);
+		ca.showPossibleCompletions();
 	}
 }
 
@@ -510,4 +600,35 @@ void ContentAssistant::uninstall() {
 		textViewer_->getCaret().removeCharacterInputListener(*this);
 		textViewer_ = 0;
 	}
+}
+
+void ContentAssistant::updatePopupPositions() {
+	if(proposalPopup_ != 0 && proposalPopup_->isWindow()) {
+		::RECT viewerRect;
+		textViewer_->getClientRect(viewerRect);
+		Caret& caret = textViewer_->getCaret();
+		int cx = (viewerRect.right - viewerRect.left) / 4;
+		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->proposals.size()), 10) + 6;
+		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.getTop(), false, LineLayout::LEADING);
+		const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
+		int x = !rtl ? pt.x : (pt.x - cx - 1);
+		if(x + cx > viewerRect.right) {
+//			if()
+		}
+		int y = pt.y + textViewer_->getTextRenderer().getLineHeight();
+		if(y + cy > viewerRect.bottom) {
+			if(pt.y - 1 - viewerRect.top < viewerRect.bottom - y)
+				cy = viewerRect.bottom - y;
+			else {
+				cy = min<int>(cy, pt.y - viewerRect.top);
+				y = pt.y - cy - 1;
+			}
+		}
+		proposalPopup_->setPosition(0, x, y, cx, cy, SWP_NOZORDER | SWP_SHOWWINDOW);
+	}
+}
+
+/// @see viewers#IViewportListener#viewportChanged
+void ContentAssistant::viewportChanged(bool, bool) {
+	updatePopupPositions();
 }

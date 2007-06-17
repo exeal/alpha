@@ -93,21 +93,22 @@ namespace ascension {
 			}
 			void clear() throw() {listeners_.clear();}
 			bool isEmpty() const throw() {return listeners_.empty();}
-			void notify(void(Listener::*method)()) {std::for_each(listeners_.begin(), listeners_.end(), mem_fun(method));}
+			void notify(void(Listener::*method)()) {
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {next = i; ++next; ((*i)->*method)();}}
 			template<typename Argument> void notify(void(Listener::*method)(Argument), Argument argument) {
-				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(argument);	}
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {next = i; ++next; ((*i)->*method)(argument);}}
 			template<typename Arg1, typename Arg2>
 			void notify(void(Listener::*method)(Arg1, Arg2), Arg1 arg1, Arg2 arg2) {
-				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2);}
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {next = i; ++next;  ((*i)->*method)(arg1, arg2);}}
 			template<typename Arg1, typename Arg2, typename Arg3>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3) {
-				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3);}
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next)  {next = i; ++next; ((*i)->*method)(arg1, arg2, arg3);}}
 			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
-				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4);}
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next)  {next = i; ++next; ((*i)->*method)(arg1, arg2, arg3, arg4);}}
 			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4, Arg5), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5) {
-				for(Iterator i = listeners_.begin(); i != listeners_.end(); ++i) ((*i)->*method)(arg1, arg2, arg3, arg4, arg5);}
+				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {next = i; ++next;  ((*i)->*method)(arg1, arg2, arg3, arg4, arg5);}}
 		private:
 			std::list<Listener*> listeners_;
 			typedef typename std::list<Listener*>::iterator Iterator;
