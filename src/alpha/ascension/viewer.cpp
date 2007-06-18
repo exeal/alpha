@@ -4240,52 +4240,54 @@ void CurrentLineHighlighter::setColor(const Colors& color) throw() {
  * Returns the identifier near the specified position in the document.
  * @param document the document
  * @param position the position
- * @param[out] startChar the start of the identifier. can be @c null if not needed
- * @param[out] endChar the end of the identifier. can be @c null if not needed
- * @param[out] identifier the string of the found identifier. can be @c null if not needed
+ * @param[out] startColumn the start of the identifier. can be @c null if not needed
+ * @param[out] endColumn the end of the identifier. can be @c null if not needed
  * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
  * @see #getPointedIdentifier
  */
-bool source::getNearestIdentifier(const Document& document,
-		const Position& position, length_t* startChar, length_t* endChar, String* identifier) {
+bool source::getNearestIdentifier(const Document& document, const Position& position, length_t* startColumn, length_t* endColumn) {
 	using namespace unicode;
+	static const length_t MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
 
 	DocumentPartition partition;
 	document.getPartitioner().getPartition(position, partition);
 	const IdentifierSyntax& syntax = document.getContentTypeInformation().getIdentifierSyntax(partition.contentType);
-	length_t startColumn = position.column, endColumn = position.column;
-	const String& line = document.getLine(position.line);
-	CodePoint cp;
+	length_t start = position.column, end = position.column;
 
-	// 開始位置を調べる
-	if(startChar != 0 || identifier != 0) {
-		const length_t partitionStart = (position.line == partition.region.getTop().line) ? partition.region.getTop().column : 0;
-		while(startColumn > partitionStart) {
-			cp = surrogates::decodeLast(line.begin(), line.begin() + startColumn);
-			if(syntax.isIdentifierContinueCharacter(cp))
-				startColumn -= ((cp >= 0x010000) ? 2 : 1);
-			else
+	// find the start of the identifier
+	if(startColumn != 0) {
+		DocumentCharacterIterator i(document, Region(max(partition.region.getTop(), Position(position.line, 0)), position), position);
+		do {
+			--i;
+			if(!syntax.isIdentifierContinueCharacter(*i)) {
+				start = (++i).tell().column;
 				break;
-		}
-		if(startChar!= 0)
-			*startChar = startColumn;
+			} else if(position.column - i.tell().column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+				return false;
+		} while(i.hasPrevious());
+		if(!i.hasPrevious())
+			start = i.tell().column;
+		if(startColumn!= 0)
+			*startColumn = start;
 	}
 
-	// 終了位置を調べる
-	if(endChar != 0 || identifier != 0) {
-		while(true) {
-			cp = surrogates::decodeFirst(line.begin() + endColumn, line.end());
-			if(syntax.isIdentifierContinueCharacter(cp))
-				endColumn += ((cp >= 0x010000) ? 2 : 1);
-			else
+	// find the end of the identifier
+	if(endColumn != 0) {
+		DocumentCharacterIterator i(document, Region(position,
+			min(partition.region.getBottom(), Position(position.line, document.getLineLength(position.line)))), position);
+		while(i.hasNext()) {
+			if(!syntax.isIdentifierContinueCharacter(*i)) {
+				end = i.tell().column;
 				break;
+			} else if((++i).tell().column - position.column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+				return false;
 		}
-		if(endChar != 0)
-			*endChar = endColumn;
+		if(!i.hasNext())
+			end = i.tell().column;
+		if(endColumn != 0)
+			*endColumn = end;
 	}
 
-	if(identifier != 0)
-		identifier->assign(line.substr(startColumn, endColumn - startColumn));
 	return true;
 }
 
@@ -4294,11 +4296,10 @@ bool source::getNearestIdentifier(const Document& document,
  * @param viewer the text viewer
  * @param[out] startPosition the start of the identifier. can be @c null if not needed
  * @param[out] endPosition the end of the identifier. can be @c null if not needed
- * @param[out] identifier the string of the found identifier. can be @c null if not needed
  * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
  * @see #getNearestIdentifier
  */
-bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosition, Position* endPosition, String* identifier) {
+bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosition, Position* endPosition) {
 	if(viewer.isWindow()) {
 		::POINT cursorPoint;
 		::GetCursorPos(&cursorPoint);
@@ -4306,7 +4307,7 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 		const Position cursor = viewer.getCharacterForClientXY(cursorPoint, false);
 
 		if(source::getNearestIdentifier(viewer.getDocument(), cursor,
-				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0, identifier)) {
+				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)
 				startPosition->line = cursor.line;
 			if(endPosition != 0)
@@ -4316,36 +4317,3 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 	}
 	return false;
 }
-
-#if 0
-/**
- * Returns the preceding identifier.
- * Fails if the caret has selection or the number of scanned characters exceeded @a maxLength.
- * @param maxLength the maximum length of the identifier to find
- * @return the identifier or an empty string if failed
- * @deprecated 0.8
- */
-String source::getPrecedingIdentifier(const Position& where, length_t maxLength) const {
-	verifyViewer();
-	if(!isSelectionEmpty() || isStartOfLine() || maxLength == 0)
-		return L"";
-
-	DocumentPartition partition;
-	getDocument()->getPartitioner().getPartition(*this, partition);
-	const length_t partitionStart = (partition.region.getTop().line == getLineNumber()) ? partition.region.getTop().column : 0;
-	if(partitionStart == getColumnNumber())	// どちらのパーティションに属するか微妙だ...
-		return L"";
-
-	const IdentifierSyntax& syntax = getIdentifierSyntax();
-	const String& line = getDocument()->getLine(getLineNumber());
-	assert(getColumnNumber() > 0);
-	UTF16To32Iterator<> i(line.data() + partitionStart, line.data() + line.length(), line.data() + getColumnNumber());
-	for(--i; i.hasPrevious(); --i) {
-		if(!syntax.isIdentifierContinueCharacter(*i))
-			break;
-		else if(getColumnNumber() - (i.tell() - line.data()) > maxLength)
-			return L"";
-	}
-	return String(i.tell(), getColumnNumber() - (i.tell() - line.data()));
-}
-#endif

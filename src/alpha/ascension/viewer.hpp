@@ -45,9 +45,9 @@ namespace ascension {
 	/// Provides stuffs for source code editors.
 	namespace source {
 		bool	getPointedIdentifier(const viewers::TextViewer& viewer,
-					text::Position* startPosition, text::Position* endPosition, String* identifier);
+					text::Position* startPosition, text::Position* endPosition);
 		bool	getNearestIdentifier(const text::Document& document,
-					const text::Position& position, length_t* startChar, length_t* endChar, String* identifier);
+					const text::Position& position, length_t* startColumn, length_t* endColumn);
 	}
 
 	namespace viewers {

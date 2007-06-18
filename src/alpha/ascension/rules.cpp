@@ -67,7 +67,7 @@ HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensiti
 	entries_ = new Entry*[numberOfEntries_];
 	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(0));
 	while(first != last) {
-		const String folded(CaseFolder::fold(*first));
+		const String folded(caseSensitive_ ? *first : CaseFolder::fold(*first));
 		const size_t h = getHashCode(folded.begin(), folded.end());
 		Entry* const newEntry = new Entry(folded);
 		if(folded.length() > maxLength_)
