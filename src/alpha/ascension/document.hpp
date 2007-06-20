@@ -675,7 +675,7 @@ namespace ascension {
 			Position		getStartPosition(bool accessibleRegion = true) const throw();
 			// content type information
 			IContentTypeInformationProvider&	getContentTypeInformation() const throw();
-			void								setContentTypeInformation(IContentTypeInformationProvider* newProvider) throw();
+			void								setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw();
 			// manipulations
 			Position	erase(const Region& region);
 			Position	erase(const Position& pos1, const Position& pos2);
@@ -760,12 +760,12 @@ namespace ascension {
 				internal::IOperation* savedOperation_;
 			};
 
-			static class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
+			class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
 			public:
 				const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType) const throw() {return syntax_;}
 			private:
 				unicode::IdentifierSyntax syntax_;
-			} defaultContentTypeInformationProvider_;
+			};
 
 			class ModificationGuard {
 			public:
@@ -794,7 +794,7 @@ namespace ascension {
 			texteditor::Session* session_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
-			IContentTypeInformationProvider* contentTypeInformationProvider_;
+			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
 			bool modified_;
 			encodings::CodePage codePage_;
@@ -1318,10 +1318,11 @@ inline void Document::setCodePage(encodings::CodePage cp) {
 
 /**
  * Sets the content type information provider.
- * @param newProvider the new content type information provider
+ * @param newProvider the new content type information provider. the ownership will be transferred
+ * to the callee. can be @c null
  */
-inline void Document::setContentTypeInformation(IContentTypeInformationProvider* newProvider) throw() {
-	contentTypeInformationProvider_ = (newProvider != 0) ? newProvider : &defaultContentTypeInformationProvider_;}
+inline void Document::setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw() {
+	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
 /**
  * Sets the default newline of the document.

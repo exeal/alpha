@@ -479,7 +479,7 @@ namespace ascension {
 			/// Types of character classification used by @c IdentifierSyntax.
 			enum CharacterClassification {
 				ASCII,				///< Uses only 7-bit ASCII characters.
-				LEGACY_POSIX,		///< Classifies using @c unicode#legacyctype namespace functions.
+				LEGACY_POSIX,		///< Classifies using @c unicode#ucd#legacyctype namespace functions.
 				UNICODE_DEFAULT,	///< Conforms to the default identifier syntax of UAX #31.
 				UNICODE_ALTERNATIVE	///< Conforms to the alternative identifier syntax of UAX #31.
 			};

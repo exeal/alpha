@@ -637,8 +637,21 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	using namespace contentassist;
 	using namespace rules;
 	using namespace unicode;
-	const ContentType JS_MULTILINE_DOC_COMMENT = 40,
+
+	static const ContentType JS_MULTILINE_DOC_COMMENT = 40,
 		JS_MULTILINE_COMMENT = 42, JS_SINGLELINE_COMMENT = 43, JS_DQ_STRING = 44, JS_SQ_STRING = 45;
+
+	class JSContentTypeInformation : virtual public IContentTypeInformationProvider {
+	public:
+		JSContentTypeInformation()  {
+			jsIDs_.overrideIdentifierStartCharacters(L"_", L""); jsdocIDs_.overrideIdentifierStartCharacters(L"$@", L"");}
+		const IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const {
+			return (contentType != JS_MULTILINE_DOC_COMMENT) ? jsIDs_ : jsdocIDs_;}
+	private:
+		IdentifierSyntax jsIDs_, jsdocIDs_;
+	};
+	JSContentTypeInformation* cti = new JSContentTypeInformation;
+
 	TransitionRule* rules[12];
 	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
 	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
@@ -661,10 +674,8 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// JSDoc syntax highlight test
 	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
 		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
-	unicode::IdentifierSyntax jsdocIDSyntax;
-	jsdocIDSyntax.overrideIdentifierStartCharacters(L"$@", L"");
 	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
-	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(jsdocIDSyntax));
+	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
 	map<Token::ID, const TextStyle> jsdocStyles;
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
@@ -680,7 +691,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
 	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
 	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
-	scanner.reset(new LexicalTokenScanner(unicode::IdentifierSyntax()));
+	scanner.reset(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
 	scanner->addWordRule(jsKeywords);
 	scanner->addWordRule(jsFutureKeywords);
 	scanner->addRule(auto_ptr<Rule>(new NumberRule(223)));
@@ -706,11 +717,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// content assist test
 	class JSDocProposals : public IdentifiersProposalProcessor {
 	public:
-		JSDocProposals() : IdentifiersProposalProcessor() {
-			auto_ptr<IdentifierSyntax> ids(new IdentifierSyntax);
-			ids->overrideIdentifierStartCharacters(L"$@", L"");
-			setIdentifierSyntax(*ids.release());
-		}
+		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
 				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
 			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
@@ -724,7 +731,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	};
 	class JSProposals : public IdentifiersProposalProcessor {
 	public:
-		JSProposals() : IdentifiersProposalProcessor(new IdentifierSyntax) {}
+		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
 				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
 			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
@@ -737,9 +744,10 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'.';}
 	};
 	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
-	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals));
-	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals));
+	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
+	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
 	setContentAssistant(ca);
+	getDocument().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif /* _DEBUG */
 
 	// 位置決めと表示

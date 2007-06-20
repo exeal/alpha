@@ -143,11 +143,10 @@ namespace ascension {
 		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
 		protected:
 			// constructors
-			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax* syntax = 0) throw();
+			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
 			// attributes
-			const unicode::IdentifierSyntax*	getIdentifierSyntax() const throw();
-			void								setIdentifierSyntax(const unicode::IdentifierSyntax& syntax) throw();
+			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
 			// IContentAssistProcessor
 			virtual void	computeCompletionProposals(const viewers::Caret& caret,
 								bool& incremental, text::Region& replacementRegion,
@@ -160,7 +159,7 @@ namespace ascension {
 		private:
 			void	collectIdentifiers(const text::Document& document, const text::Position& caretPosition,
 						std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const;
-			ASCENSION_SHARED_POINTER<const unicode::IdentifierSyntax> syntax_;
+			const unicode::IdentifierSyntax& syntax_;
 		};
 
 		/**

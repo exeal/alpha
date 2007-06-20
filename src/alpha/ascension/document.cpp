@@ -620,13 +620,12 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
 		}																						\
 	}
 
-Document::DefaultContentTypeInformationProvider Document::defaultContentTypeInformationProvider_;
 CodePage Document::defaultCodePage_ = ::GetACP();
 Newline Document::defaultNewline_ = ASCENSION_DEFAULT_NEWLINE;
 
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
-		contentTypeInformationProvider_(&defaultContentTypeInformationProvider_),
+		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), modified_(false), codePage_(defaultCodePage_), newline_(defaultNewline_),
 		length_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false), changing_(false),
 		accessibleArea_(0), timeStampDirector_(0) {
