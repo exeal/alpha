@@ -142,7 +142,8 @@ auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentat
  * @param presentation the presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(this));
+	ASCENSION_SHARED_POINTER<ILineStyleDirector> temp(this);
+	presentation_.setLineStyleDirector(temp);
 	presentation_.getDocument().addPartitioningListener(*this);
 }
 

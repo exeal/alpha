@@ -165,7 +165,7 @@ namespace ascension {
 		class LexicalTokenScanner : virtual public ITokenScanner, public manah::Noncopyable {
 		public:
 			// constructors
-			explicit LexicalTokenScanner(const unicode::IdentifierSyntax& identifierSyntax) throw();
+			explicit LexicalTokenScanner(text::ContentType contentType) throw();
 			~LexicalTokenScanner() throw();
 			// attributes
 			void	addRule(std::auto_ptr<const Rule> rule);
@@ -177,7 +177,7 @@ namespace ascension {
 			std::auto_ptr<Token>				nextToken();
 			void								parse(const text::Document& document, const text::Region& region);
 		private:
-			const unicode::IdentifierSyntax idSyntax_;
+			text::ContentType contentType_;
 			std::list<const Rule*> rules_;
 			std::list<const WordRule*> wordRules_;
 			text::DocumentCharacterIterator current_;

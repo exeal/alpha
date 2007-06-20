@@ -10,10 +10,11 @@
 //	MemoryPool
 //	FastArenaObject
 
-#include <algorithm>	// std::max
-#include <new>			// new[], delete[], std::bad_alloc, std::nothrow
-#include <cstddef>		// std::size_t
-#include <memory>		// std::auto_ptr
+#include "object.hpp"	// manah.Noncopyable
+#include <algorithm>	// std.max
+#include <new>			// new[], delete[], std.bad_alloc, std.nothrow
+#include <cstddef>		// std.size_t
+#include <memory>		// std.auto_ptr
 
 
 namespace manah {
@@ -136,6 +137,18 @@ namespace manah {
 
 	// SharedPointer ////////////////////////////////////////////////////////
 
+	namespace internal {
+		class SharedPointerRC : private Noncopyable, public FastArenaObject<SharedPointerRC> {
+		public:
+			SharedPointerRC() throw() : c_(1) {}
+			~SharedPointerRC() throw() {assert(c_ == 0);}
+			void addReference() {++c_;}
+			ulong release() throw() {return --c_;}
+		private:
+			ulong c_;
+		};
+	}
+
 	// reference-counted smart pointer (from boost.shared_ptr)
 	template<typename T> /* final */ class SharedPointer {
 	public:
@@ -144,44 +157,32 @@ namespace manah {
 		typedef T* Pointer;
 		typedef T& Reference;
 		// constructors
-		explicit SharedPointer(Pointer p = 0) : data_((p != 0) ? new Data(*p) : 0) {}
-		~SharedPointer() {reset();}
-		SharedPointer(const SharedPointer& rhs) : data_(rhs.data_) {if(data_ != 0) data_->addReference();}
+		SharedPointer() throw() : pointee_(0), rc_(0) {}
+		template<typename U> explicit SharedPointer(U* p) : pointee_(p), rc_((p != 0) ? new internal::SharedPointerRC : 0) {}
+		SharedPointer(const SharedPointer& rhs) : pointee_(rhs.pointee_), rc_(rhs.rc_) {if(rc_ != 0) rc_->addReference();}
+		template<typename U> SharedPointer(const SharedPointer<U>& rhs) : pointee_(rhs.pointee_), rc_(rhs.rc_) {if(rc_ != 0) rc_->addReference();}
+		~SharedPointer() {if(rc_ != 0 && rc_->release() == 0) {delete pointee_; delete rc_;}}
 		// operators
-		SharedPointer& operator=(const SharedPointer& rhs) {
-			if(data_ != rhs.data_) {
+		template<typename U> SharedPointer& operator=(const SharedPointer<U>& rhs) {
+			if(pointee_ != rhs.pointee_) {
 				reset();
-				data_ = rhs.data_;
-				if(data_ != 0)
-					data_->addReference();
+				pointee_ = rhs.pointee_;
+				if((rc_ = rhs.rc_) != 0)
+					rc_->addReference();
 			}
 			return *this;
 		}
-		Reference operator*() const {const Pointer p(get()); assert(p != 0); return *p;}
-		Pointer operator->() const {const Pointer p(get()); assert(p != 0); return p;}
+		Reference operator*() const {assert(pointee_ != 0); return *pointee_;}
+		Pointer operator->() const {assert(pointee_ != 0); return pointee_;}
 		// methods
-		Pointer get() const throw() {return (data_ != 0) ? data_->get() : 0;}
-		void reset(Pointer p = 0) {
-			if(p == get())
-				return;
-			if(data_ != 0) {
-				data_->release();
-				if(data_->get() == 0)
-					delete data_;
-			}
-			data_ = (p != 0) ? new Data(*p) : 0;
-		}
+		Pointer get() const throw() {return pointee_;}
+		void reset() throw() {SharedPointer().swap(*this);}
+		template<typename U> void reset(U* p) {SharedPointer(p).swap(*this);}
+		void swap(SharedPointer& rhs) throw() {std::swap(pointee_, rhs.pointee_); std::swap(rc_, rhs.rc_);}
 	private:
-		class Data : public FastArenaObject<Data> {
-		public:
-			Data(Reference p) throw() : p_(&p), c_(1) {}
-			void addReference() throw() {++c_;}
-			Pointer get() const throw() {return p_;}
-			void release() {if(--c_ == 0) {delete p_; p_ = 0;}}
-		private:
-			Pointer p_;
-			long c_;
-		} * data_;
+		T* pointee_;
+		internal::SharedPointerRC* rc_;
+		template<typename U> friend class SharedPointer;
 	};
 
 } // namespace manah

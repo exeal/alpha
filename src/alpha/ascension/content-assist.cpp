@@ -92,7 +92,7 @@ namespace {
  * Constructor.
  * @param syntax the identifier syntax to detect identifiers
  */
-IdentifiersProposalProcessor::IdentifiersProposalProcessor(const IdentifierSyntax* syntax /* = 0 */) throw() : syntax_(syntax) {
+IdentifiersProposalProcessor::IdentifiersProposalProcessor(const IdentifierSyntax& syntax) throw() : syntax_(syntax) {
 }
 
 /// Destructor.
@@ -118,7 +118,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 
 	// find the preceding identifier
 	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
-	if(!incremental || caret.isStartOfLine() || syntax_.get() == 0)
+	if(!incremental || caret.isStartOfLine())
 		replacementRegion.first = caret;
 	else if(source::getNearestIdentifier(*caret.getDocument(), caret, &replacementRegion.first.column, 0))
 		replacementRegion.first.line = caret.getLineNumber();
@@ -131,13 +131,13 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 }
 
 /// Returns the identifier syntax the processor uses or @c null.
-const IdentifierSyntax* IdentifiersProposalProcessor::getIdentifierSyntax() const throw() {
-	return syntax_.get();
+const IdentifierSyntax& IdentifiersProposalProcessor::getIdentifierSyntax() const throw() {
+	return syntax_;
 }
 
 /// @see IContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
 bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() {
-	return (syntax_.get() != 0) ? !syntax_->isIdentifierContinueCharacter(c) : false;
+	return !syntax_.isIdentifierContinueCharacter(c);
 }
 
 /// @see IContentAssistProcessor#recomputIncrementalCompletionProposals
@@ -146,17 +146,14 @@ void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const
 		size_t numberOfCurrentProposals, set<ICompletionProposal*>&, const ICompletionProposal*& activeProposal) const {
 	if(replacementRegion.first.line != replacementRegion.second.line)
 		return;
+	// select the partially matched proposal
 	String precedingIdentifier(textViewer.getDocument().getLine(replacementRegion.first.line).substr(
 		replacementRegion.getTop().column, replacementRegion.getBottom().column - replacementRegion.getTop().column));
 	activeProposal = *lower_bound(currentProposals,
 		currentProposals + numberOfCurrentProposals, precedingIdentifier, CompletionProposalDisplayStringComparer());
-	if(CaseFolder::compare(activeProposal->getDisplayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
+	if(activeProposal == currentProposals[numberOfCurrentProposals]
+			|| CaseFolder::compare(activeProposal->getDisplayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
 		activeProposal = 0;
-}
-
-/// Sets the new identifier syntax.
-void IdentifiersProposalProcessor::setIdentifierSyntax(const IdentifierSyntax& syntax) throw() {
-	syntax_.reset(&syntax);
 }
 
 

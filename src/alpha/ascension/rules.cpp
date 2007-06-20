@@ -502,9 +502,9 @@ void NullTokenScanner::parse(const Document&, const Region&) {
 
 /**
  * Constructor.
- * @param identifierSyntax
+ * @param contentType the content the scanner parses
  */
-LexicalTokenScanner::LexicalTokenScanner(const IdentifierSyntax& identifierSyntax) throw() : idSyntax_(identifierSyntax), current_() {
+LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) throw() : contentType_(contentType), current_() {
 }
 
 /// Destructor.
@@ -517,7 +517,7 @@ LexicalTokenScanner::~LexicalTokenScanner() throw() {
 
 /// @see ITokenScanner#getIdentifierSyntax
 const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const throw() {
-	return idSyntax_;
+	return current_.getDocument()->getContentTypeInformation().getIdentifierSyntax(contentType_);
 }
 
 /**
@@ -564,6 +564,7 @@ bool LexicalTokenScanner::isDone() const throw() {
 
 /// @see ITokenScanner#nextToken
 auto_ptr<Token> LexicalTokenScanner::nextToken() {
+	const IdentifierSyntax& idSyntax = getIdentifierSyntax();
 	auto_ptr<Token> result;
 	const String* line = &current_.getLine();
 	while(current_.hasNext()) {
@@ -582,7 +583,7 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 				return result;
 			}
 		}
-		const Char* const wordEnd = idSyntax_.eatIdentifier(p, last);
+		const Char* const wordEnd = idSyntax.eatIdentifier(p, last);
 		if(wordEnd > p) {
 			if(!wordRules_.empty()) {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
