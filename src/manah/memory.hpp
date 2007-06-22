@@ -172,6 +172,7 @@ namespace manah {
 			}
 			return *this;
 		}
+		SharedPointer& operator=(const SharedPointer& rhs) {return operator=<ValueType>(rhs);}
 		Reference operator*() const {assert(pointee_ != 0); return *pointee_;}
 		Pointer operator->() const {assert(pointee_ != 0); return pointee_;}
 		// methods
