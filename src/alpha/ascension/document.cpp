@@ -791,9 +791,9 @@ inline void Document::fireDocumentAboutToBeChanged() throw() {
 inline void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) throw() {
 	if(partitioner_.get() != 0)
 		partitioner_->documentChanged(c);
+	prenotifiedListeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 	if(updateAllPoints)
 		updatePoints(c);
-	prenotifiedListeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 	listeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 }
 

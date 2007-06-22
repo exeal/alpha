@@ -1103,10 +1103,10 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
  */
 bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) throw() {
 	using namespace ascension::texteditor::commands;
-	if(altPressed) {
-		if(!shiftPressed || (key != VK_LEFT && key != VK_UP && key != VK_RIGHT && key != VK_DOWN))
-			return false;
-	}
+//	if(altPressed) {
+//		if(!shiftPressed || (key != VK_LEFT && key != VK_UP && key != VK_RIGHT && key != VK_DOWN))
+//			return false;
+//	}
 	switch(key) {
 	case VK_BACK:	// [BackSpace]
 	case VK_F16:	// [F16]
@@ -1132,12 +1132,6 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 	case VK_ESCAPE:	// [Esc]
 		CancelCommand(*this).execute();
 		return true;
-	case VK_SPACE:	// [Space]
-		if(controlPressed) {
-			CompletionProposalPopupCommand(*this).execute();
-			return true;
-		}
-		break;
 	case VK_PRIOR:	// [PageUp]
 		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
 		else				CaretMovementCommand(*this, CaretMovementCommand::PREVIOUS_PAGE, shiftPressed).execute();
@@ -1171,10 +1165,13 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 			CaretMovementCommand(*this, CaretMovementCommand::VISUAL_PREVIOUS_LINE, shiftPressed).execute();
 		return true;
 	case VK_RIGHT:	// [Right]
-		if(altPressed && shiftPressed)
-			RowSelectionExtensionCommand(*this, controlPressed ?
-				RowSelectionExtensionCommand::RIGHT_WORD : RowSelectionExtensionCommand::RIGHT_CHARACTER).execute();
-		else
+		if(altPressed) {
+			if(shiftPressed)
+				RowSelectionExtensionCommand(*this, controlPressed ?
+					RowSelectionExtensionCommand::RIGHT_WORD : RowSelectionExtensionCommand::RIGHT_CHARACTER).execute();
+			else
+				CompletionProposalPopupCommand(*this).execute();
+		} else
 			CaretMovementCommand(*this, controlPressed ?
 				CaretMovementCommand::RIGHT_WORD : CaretMovementCommand::RIGHT_CHARACTER, shiftPressed).execute();
 		return true;

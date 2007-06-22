@@ -623,7 +623,7 @@ void ContentAssistant::updatePopupPositions() {
 		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
 		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.getTop(), false, LineLayout::LEADING);
 		const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
-		int x = !rtl ? pt.x : (pt.x - cx - 1);
+		int x = !rtl ? (pt.x - 3) : (pt.x - cx - 1 + 3);
 		if(x + cx > viewerRect.right) {
 //			if()
 		}
