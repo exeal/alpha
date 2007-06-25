@@ -671,6 +671,8 @@ inline LineLayoutBuffer::Iterator LineLayoutBuffer::getLastCachedLine() const th
  * @return the layout or @c null if the layout is not cached
  */
 inline const LineLayout* LineLayoutBuffer::getLineLayoutIfCached(length_t line) const throw() {
+	if(pendingCacheClearance_.first != INVALID_INDEX && line >= pendingCacheClearance_.first && line < pendingCacheClearance_.last)
+		return 0;
 	for(std::list<LineLayout*>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		if((*i)->lineNumber_ == line)
 			return *i;

@@ -1358,7 +1358,11 @@ EditorView::~EditorView() {
 
 /// Begins incremental search.
 void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
-	texteditor::commands::IncrementalSearchCommand(*this, type, direction, this).execute();
+	TextSearcher& searcher = Alpha::getInstance().getBufferList().getEditorSession().getTextSearcher();
+	SearchOptions options = searcher.getOptions();
+	options.type = type;
+	searcher.setOptions(options);
+	texteditor::commands::IncrementalSearchCommand(*this, direction, this).execute();
 }
 
 /// @see ICaretListener#caretMoved
@@ -1408,23 +1412,23 @@ void EditorView::incrementalSearchCompleted() {
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchPatternChanged
-void EditorView::incrementalSearchPatternChanged(Result result) {
+void EditorView::incrementalSearchPatternChanged(Result result, const manah::Flags<WrappingStatus>&) {
 	UINT messageID;
 	Alpha& app = Alpha::getInstance();
 	const IncrementalSearcher& isearch = Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher();
 	const bool forward = isearch.getDirection() == FORWARD;
 
-	if(result == IIncrementalSearchListener::EMPTY_PATTERN) {
+	if(result == IIncrementalSearchCallback::EMPTY_PATTERN) {
 		getCaret().select(isearch.getMatchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
 		app.setStatusText(app.loadString(messageID).c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
 		return;
-	} else if(result == IIncrementalSearchListener::FOUND) {
+	} else if(result == IIncrementalSearchCallback::FOUND) {
 		getCaret().select(isearch.getMatchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH : MSG_STATUS__RISEARCH;
 	} else {
-		if(result == IIncrementalSearchListener::NOT_FOUND)
+		if(result == IIncrementalSearchCallback::NOT_FOUND)
 			messageID = forward ? MSG_STATUS__ISEARCH_NOT_FOUND : MSG_STATUS__RISEARCH_NOT_FOUND;
 		else
 			messageID = forward ? MSG_STATUS__ISEARCH_BAD_PATTERN : MSG_STATUS__RISEARCH_BAD_PATTERN;

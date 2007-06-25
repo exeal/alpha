@@ -193,14 +193,13 @@ namespace ascension {
 			/// Begins the incremental search.
 			class IncrementalSearchCommand : public EditorCommand {
 			public:
-				IncrementalSearchCommand(viewers::TextViewer& view, searcher::SearchType type,
-					Direction direction, searcher::IIncrementalSearchListener* listener = 0) throw()
-					: EditorCommand(view), type_(type), direction_(direction), listener_(listener) {}
+				IncrementalSearchCommand(viewers::TextViewer& view,
+					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) throw()
+					: EditorCommand(view), direction_(direction), callback_(callback) {}
 				ulong execute();
 			private:
-				searcher::SearchType type_;
 				Direction direction_;
-				searcher::IIncrementalSearchListener* listener_;
+				searcher::IIncrementalSearchCallback* callback_;
 			};
 			/// Makes/Deletes indents.
 			class IndentationCommand : public EditorCommand {

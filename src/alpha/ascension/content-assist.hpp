@@ -95,13 +95,22 @@ namespace ascension {
 			 * completion. false, otherwise
 			 * @param[out] replacementRegion the region to be replaced by the completion
 			 * @param[out] proposals the result. if empty, the completion does not activate
-			 * @param[out] firstProposal the proposal initially selected in the list. if @c null,
-			 * no proposal will be selected
 			 * @see #recomputeIncrementalCompletionProposals
 			 */
 			virtual void computeCompletionProposals(const viewers::Caret& caret,
-				bool& incremental, text::Region& replacementRegion,
-				std::set<ICompletionProposal*>& proposals, ICompletionProposal*& activeProposal) const = 0;
+				bool& incremental, text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
+			/**
+			 * Returns the proposal initially selected in the list.
+			 * @param textViewer the text viewer
+			 * @param replacementRegion the region to be replaced by the completion
+			 * @param proposals the completion proposals listed currently. this list is sorted
+			 * alphabetically
+			 * @param numberOfProposals the number of the current proposals
+			 * @return the proposal or @c null if no proposal should be selected
+			 */
+			virtual const ICompletionProposal* getActiveCompletionProposal(
+				const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
+				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const throw() = 0;
 			/**
 			 * Returns true if the given character automatically activates the completion when the
 			 * user entered.
@@ -125,15 +134,11 @@ namespace ascension {
 			 * @param numberOfCurrentProposals the number of the current proposals
 			 * @param[out] newProposals the proposals should be newly. if empty, the current
 			 * proposals will be kept
-			 * @param[out] activeProposal the proposal newly selected in the list. this should
-			 * address an element of @p currentProposal or @p newProposal. if @c null, no proposal
-			 * will be selected
 			 * @see #computeCompletionProposals
 			 */
-			virtual void recomputeIncrementalCompletionProposals(
-				const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
-				ICompletionProposal* const currentProposals[], std::size_t numberOfCurrentProposals,
-				std::set<ICompletionProposal*>& newProposals, const ICompletionProposal*& activeProposal) const = 0;
+			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
+				const text::Region& replacementRegion, ICompletionProposal* const currentProposals[],
+				std::size_t numberOfCurrentProposals, std::set<ICompletionProposal*>& newProposals) const = 0;
 		};
 
 		/**
@@ -143,22 +148,23 @@ namespace ascension {
 		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
 		protected:
 			// constructors
-			explicit IdentifiersProposalProcessor(const unicode::IdentifierSyntax& syntax) throw();
+			IdentifiersProposalProcessor(text::ContentType contentType, const unicode::IdentifierSyntax& syntax) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
 			// attributes
-			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
+			text::ContentType getContentType() const throw();
+			const unicode::IdentifierSyntax& getIdentifierSyntax() const throw();
 			// IContentAssistProcessor
-			virtual void	computeCompletionProposals(const viewers::Caret& caret,
-								bool& incremental, text::Region& replacementRegion,
-								std::set<ICompletionProposal*>& proposals, ICompletionProposal*& activeProposal) const;
-			virtual bool	isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw();
-			virtual void	recomputeIncrementalCompletionProposals(
-								const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
-								ICompletionProposal* const currentProposals[], std::size_t numberOfCurrentProposals,
-								std::set<ICompletionProposal*>& newProposals, const ICompletionProposal*& activeProposal) const;
+			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+				text::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
+			virtual const ICompletionProposal* getActiveCompletionProposal(
+				const viewers::TextViewer& textViewer, const text::Region& replacementRegion,
+				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const throw();
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw();
+			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
+				const text::Region& replacementRegion, ICompletionProposal* const currentProposals[],
+				std::size_t numberOfCurrentProposals, std::set<ICompletionProposal*>& newProposals) const;
 		private:
-			void	collectIdentifiers(const text::Document& document, const text::Position& caretPosition,
-						std::set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const;
+			const text::ContentType contentType_;
 			const unicode::IdentifierSyntax& syntax_;
 		};
 

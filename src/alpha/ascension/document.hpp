@@ -681,6 +681,7 @@ namespace ascension {
 			Position	erase(const Position& pos1, const Position& pos2);
 			Position	insert(const Position& position, const String& text);
 			Position	insert(const Position& position, const Char* first, const Char* last);
+			bool		isChanging() const throw();
 			// undo/redo
 			void	clearUndoBuffer();
 			bool	isRecordingOperation() const throw();
@@ -1230,6 +1231,9 @@ inline Position Document::insert(const Position& position, const String& text) {
 /// Returns true if the document is bound to any file.
 inline bool Document::isBoundToFile() const throw() {return getFilePathName() != 0;}
 
+/// Returns true if the document is in changing.
+inline bool Document::isChanging() const throw() {return changing_;}
+
 /**
  * Returns true if the document has been modified.
  * @see #setModified, IDocumentStateListener#documentModificationSignChanged
@@ -1450,11 +1454,10 @@ inline bool DocumentCharacterIterator::hasPrevious() const throw() {return p_ !=
 
 /**
  * Moves to the specified position.
- * @param to the position
- * @throw BadPositionException @a to is outside of the iteration region
+ * @param to the position. if this is outside of the iteration region, the start/end of the region will be used
  */
 inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-	if(!region_.includes(to)) throw BadPositionException(); line_ = &document_->getLine((p_ = to).line); return *this;}
+	line_ = &document_->getLine((p_ = std::max(std::min(to, region_.second), region_.first)).line); return *this;}
 
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}

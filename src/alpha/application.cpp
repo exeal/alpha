@@ -382,11 +382,11 @@ bool Alpha::initInstance(int showCommand) {
 
 	// 既定の書式を読み込む
 	try {
-		text::LineBreak lineBreak =
-			static_cast<text::LineBreak>(readIntegerProfile(L"File", L"defaultBreakType", text::LB_CRLF));
-		if(lineBreak == text::LB_AUTO)
-			lineBreak = text::LB_CRLF;
-		text::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), lineBreak);
+		text::Newline newline =
+			static_cast<text::Newline>(readIntegerProfile(L"File", L"defaultNewline", text::NLF_CRLF));
+		if(newline == text::NLF_AUTO)
+			newline = text::NLF_CRLF;
+		text::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
 	} catch(invalid_argument&) {
 		// TODO: 設定が間違っていることをユーザに通知
 	}
@@ -923,12 +923,10 @@ void Alpha::setupMenus() {
 	// [検索]
 	popup.reset(new PopupMenu);
 	*popup << ITEM(CMD_SEARCH_FIND) << ITEM(CMD_SEARCH_FINDNEXT) << ITEM(CMD_SEARCH_FINDPREV)
-		<< ITEM(CMD_SEARCH_INCREMENTALSEARCH) << ITEM(CMD_SEARCH_INCREMENTALSEARCHR)
-		<< ITEM(CMD_SEARCH_INCREMENTALSEARCHRF) << ITEM(CMD_SEARCH_INCREMENTALSEARCHRR)
-		<< ITEM(CMD_SEARCH_INCREMENTALSEARCHMF) << ITEM(CMD_SEARCH_INCREMENTALSEARCHMR)
-		<< ITEM(CMD_SEARCH_REVOKEMARK) << sep << ITEM(CMD_SEARCH_GOTOLINE) << ITEM(CMD_SEARCH_BOOKMARKS)
-		<< sep << ITEM(CMD_SEARCH_GOTOMATCHBRACKET) << ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET) << sep
-		<< ITEM(CMD_SEARCH_FINDFILES) << ITEM(CMD_SEARCH_SEARCHMULTIPLEFILES) << ITEM(CMD_SEARCH_REPLACEMULTIPLEFILES);
+		<< ITEM(CMD_SEARCH_INCREMENTALSEARCH) << ITEM(CMD_SEARCH_REVOKEMARK) << sep
+		<< ITEM(CMD_SEARCH_GOTOLINE) << ITEM(CMD_SEARCH_BOOKMARKS) << sep << ITEM(CMD_SEARCH_GOTOMATCHBRACKET)
+		<< ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET) << sep << ITEM(CMD_SEARCH_FINDFILES)
+		<< ITEM(CMD_SEARCH_SEARCHMULTIPLEFILES) << ITEM(CMD_SEARCH_REPLACEMULTIPLEFILES);
 	// [検索]-[ブックマーク]
 	auto_ptr<PopupMenu> bookmarksMenu(new PopupMenu);
 	*bookmarksMenu << ITEM(CMD_SEARCH_TOGGLEBOOKMARK) << ITEM(CMD_SEARCH_NEXTBOOKMARK)

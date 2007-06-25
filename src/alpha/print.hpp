@@ -6,12 +6,27 @@
 
 #ifndef ALPHA_PRINT_HPP
 #define ALPHA_PRINT_HPP
+#include "../manah/object.hpp"
+#include <windows.h>
 
 namespace alpha {
 
 	class Buffer;
 
-	void printBuffer(const Buffer& buffer);
+	class Printing : private manah::Noncopyable {
+	public:
+		static Printing&	instance() throw();
+		bool				print(const Buffer& buffer);
+		bool				setupPages();
+	private:
+		Printing();
+		~Printing() throw();
+	private:
+		::HGLOBAL devmode_;
+		::HGLOBAL devnames_;
+		::SIZE paperSize_;
+		::RECT margins_;
+	};
 
 }
 

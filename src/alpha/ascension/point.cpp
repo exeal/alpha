@@ -448,7 +448,7 @@ void EditPoint::moveToAbsoluteCharOffset(length_t offset) {
 	}
 	readCount += document.getLineLength(start.line) + 1 - start.column;
 	for(length_t line = start.line + 1; line <= end.line; ++line) {
-		const length_t lineLength = document.getLineLength(line) + 1;	// +1 は改行分
+		const length_t lineLength = document.getLineLength(line) + 1;	// +1 is for a newline
 		if(readCount + lineLength >= offset) {
 			moveTo(Position(line, readCount + lineLength - offset));
 			return;
@@ -480,7 +480,7 @@ bool EditPoint::moveToNextBookmark() {
 	length_t line;
 	const length_t endLine = getDocument()->getEndPosition().line;
 
-	// 探す
+	// search...
 	for(line = getLineNumber() + 1; line <= endLine; ++line) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
@@ -488,7 +488,7 @@ bool EditPoint::moveToNextBookmark() {
 		}
 	}
 
-	// 見つからなければ折り返す
+	// wrap around if not found
 	for(line = getDocument()->getStartPosition().line; line < getLineNumber(); ++line) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
@@ -510,7 +510,7 @@ bool EditPoint::moveToPrevBookmark() {
 	length_t line = getLineNumber();
 	const length_t startLine = getDocument()->getStartPosition().line;
 
-	// 探す
+	// search...
 	while(line-- != startLine) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
@@ -518,7 +518,7 @@ bool EditPoint::moveToPrevBookmark() {
 		}
 	}
 
-	// 見つからなければ折り返す
+	// wrap around if not found
 	for(line = getDocument()->getEndPosition().line; line > getLineNumber(); --line) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
@@ -562,7 +562,7 @@ void EditPoint::newLine() {
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
 		EditPoint(viewer.getDocument(), position, listener),viewer_(&viewer),
-		clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(-1), visualSubline_(0) {
+		clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
 	static_cast<text::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->getTextRenderer().addVisualLinesListener(*this);
 }
@@ -620,7 +620,7 @@ void VisualPoint::charRight(length_t offset /* = 1 */) {
 }
 
 /**
- * 指定位置までのテキストをクリップボードにコピー
+ * Writes the specified region into the clipboard.
  * @param length コピーする文字数 (負でもよい)
  */
 void VisualPoint::copy(signed_length_t length) {
@@ -630,7 +630,7 @@ void VisualPoint::copy(signed_length_t length) {
 }
 
 /**
- * 指定位置までのテキストをクリップボードにコピー
+ * Writes the specified region into the clipboard.
  * @param other もう1つの位置
  */
 void VisualPoint::copy(const Position& other) {
@@ -640,7 +640,7 @@ void VisualPoint::copy(const Position& other) {
 }
 
 /**
- * 指定位置までのテキストを削除してクリップボードにコピー
+ * Erases the specified region and writes into the clipboard.
  * @param length 削除する文字数 (負でもよい)
  */
 void VisualPoint::cut(signed_length_t length) {
@@ -653,7 +653,7 @@ void VisualPoint::cut(signed_length_t length) {
 }
 
 /**
- * 指定位置までのテキストを削除してクリップボードにコピー
+ * Erases the specified region and writes into the clipboard.
  * @param other もう1つの位置
  */
 void VisualPoint::cut(const Position& other) {
@@ -977,7 +977,7 @@ void VisualPoint::pageUp(length_t offset /* = 1 */) {
 }
 
 /**
- * 範囲内のテキストをクリップボードの内容で置換
+ * Replaces the specified region by the content of the clipboard.
  * @param length もう1つの位置までの文字数 (負でもよい)
  */
 void VisualPoint::paste(signed_length_t length /* = 0 */) {
@@ -990,7 +990,7 @@ void VisualPoint::paste(signed_length_t length /* = 0 */) {
 }
 
 /**
- * 範囲内のテキストをクリップボードの内容で置換
+ * Replaces the specified region by the content of the clipboard.
  * @param other もう1つの位置
  */
 void VisualPoint::paste(const Position& other) {
@@ -1061,7 +1061,7 @@ bool VisualPoint::show(const Position& other) {
 	AutoZeroCB<::SCROLLINFO> si;
 	::POINT to = {-1, -1};
 
-	// 垂直方向
+	// for vertical direction
 	if(visualLine_ == INVALID_INDEX) {
 		visualLine_ = viewer_->getTextRenderer().mapLogicalLineToVisualLine(getLineNumber());
 		visualSubline_ = renderer.getLineLayout(getLineNumber()).getSubline(getColumnNumber());
@@ -1076,7 +1076,7 @@ bool VisualPoint::show(const Position& other) {
 	if(to.y < -1)
 		to.y = 0;
 
-	// 水平方向
+	// for horizontal direction
 	if(!viewer_->getConfiguration().lineWrap.wrapsAtWindowEdge()) {
 		const length_t visibleColumns = viewer_->getNumberOfVisibleColumns();
 		const ulong x = renderer.getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x;
@@ -1096,7 +1096,7 @@ bool VisualPoint::show(const Position& other) {
 }
 
 /**
- * 範囲内のテキストをスペースインデント
+ * Indents the specified region by using horizontal tabs.
  * @param other もう1つの位置
  * @param box 矩形インデントか (インデントレベルが負であれば無視される)
  * @param level インデントレベル
@@ -1108,7 +1108,7 @@ Position VisualPoint::spaceIndent(const Position& other, bool box, long level /*
 }
 
 /**
- * 範囲内のテキストをタブインデント
+ * Indents the specified region by using horizontal tabs.
  * @param other もう1つの位置
  * @param box 矩形インデントか (インデントレベルが負であれば無視される)
  * @param level インデントレベル
@@ -1145,9 +1145,9 @@ bool VisualPoint::transposeChars() {
 	const Position top = getDocument()->getStartPosition();
 	const Position bottom = getDocument()->getEndPosition();
 
-	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(getCodePoint()))	// クラスタの先頭でない
+	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(getCodePoint()))	// not the start of a grapheme
 		return false;
-	else if(IS_RESTRICTION(getPosition()))	// アクセス不能領域
+	else if(IS_RESTRICTION(getPosition()))	// inaccessible
 		return false;
 
 	if(getColumnNumber() == 0 || getPosition() == top) {
@@ -1204,7 +1204,7 @@ bool VisualPoint::transposeLines() {
 	const Position top = getDocument()->getStartPosition();
 	const Position bottom = getDocument()->getEndPosition();
 
-	if(top.line == bottom.line)	// 1行しか無い
+	if(top.line == bottom.line)	// there is just one line
 		return false;
 
 	if(getLineNumber() == top.line)
@@ -1215,7 +1215,7 @@ bool VisualPoint::transposeLines() {
 	const String str2 = (getLineNumber() == bottom.line) ?
 		getDocument()->getLine(getLineNumber()).substr(0, bottom.column) : getDocument()->getLine(getLineNumber());
 
-	// 2行とも空にする
+	// make the two lines empty
 	if(!str2.empty()) {
 		moveToStartOfLine();
 		erase(static_cast<signed_length_t>(str2.length()), CU_UTF16);
@@ -1226,7 +1226,7 @@ bool VisualPoint::transposeLines() {
 		moveTo(getLineNumber() + 1, getColumnNumber());
 	}
 
-	// 行に書き込む
+	// insert into the two lines
 	if(!str1.empty()) {
 		moveToStartOfLine();
 		insert(str1);
@@ -1266,24 +1266,24 @@ bool VisualPoint::transposeWords() {
 		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, getIdentifierSyntax());
 	Position pos[4];
 
-	// まず前方の単語 (1st-word-*) を探す
+	// find the backward word (1st-word-*)...
 	pos[0] = (--i).base().tell();
 	i.setComponent(AbstractWordBreakIterator::END_OF_ALPHANUMERICS);
 	pos[1] = (++i).base().tell();
-	if(pos[1] == pos[0])	// 単語が空
+	if(pos[1] == pos[0])	// the word is empty
 		return false;
 
-	// 次に後方の単語 (2nd-word-*) を探す
+	// ...and then backward one (2nd-word-*)
 	i.base().seek(*this);
 	i.setComponent(AbstractWordBreakIterator::START_OF_ALPHANUMERICS);
 	pos[2] = (++i).base().tell();
 	if(pos[2] == getPosition())
 		return false;
 	pos[3] = (++i).base().tell();
-	if(pos[2] == pos[3])	// 単語が空
+	if(pos[2] == pos[3])	// the word is empty
 		return false;
 
-	// 置換する
+	// replace
 	moveTo(pos[2]);
 	String str = getText(pos[3]);
 	moveTo(pos[1]);
@@ -1336,12 +1336,13 @@ void VisualPoint::visualLinesInserted(length_t first, length_t last) throw() {
 /// @see IVisualLinesListener#visualLinesModified
 void VisualPoint::visualLinesModified(length_t first, length_t last, signed_length_t sublineDifference, bool, bool) throw() {
 	if(visualLine_ != INVALID_INDEX) {
-		// 折り返しの変化に従って、visualLine_ と visualSubine_ を調整する
+		// adjust visualLine_ and visualSubine_ according to the visual lines modification
 		if(last <= getLineNumber())
 			visualLine_ += sublineDifference;
 		else if(first == getLineNumber()) {
 			visualLine_ -= visualSubline_;
-			visualSubline_ = getTextViewer().getTextRenderer().getLineLayout(getLineNumber()).getSubline(getColumnNumber());
+			visualSubline_ = getTextViewer().getTextRenderer().getLineLayout(
+				getLineNumber()).getSubline(min(getColumnNumber(), getDocument()->getLineLength(getLineNumber())));
 			visualLine_ += visualSubline_;
 		} else if(first < getLineNumber())
 			visualLine_ = INVALID_INDEX;
@@ -1466,129 +1467,20 @@ Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) th
 		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), pastingFromClipboardRing_(false),
 		leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0), matchBracketsTrackingMode_(DONT_TRACK),
 		overtypeMode_(false), editingByThis_(false), othersEditedFromLastInputChar_(false),
+		regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
+	getDocument()->addListener(*this);
 	excludeFromRestriction(true);
 	anchor_->excludeFromRestriction(true);
 }
 
 /// Destructor.
 Caret::~Caret() throw() {
+	if(Document* document = getDocument())
+		document->removeListener(*this);
 	delete anchor_;
 	delete box_;
 }
-
-#if 0
-/**
- * Starts the auto completion.
- * This method will fail in the following situations:
- * <ul>
- *  <li>the document is read only</li>
- *  <li>the selection is not empty (in this case, just the selection will be cleared)</li>
- *  <li>there are no candidates</li>
- * </ul>
- * @return succeeded or not
- */
-bool Caret::beginAutoCompletion() {
-	verifyViewer();
-	if(!isSelectionEmpty()) {
-		clearSelection();
-		return false;
-	} else if(getDocument()->isReadOnly())
-		return false;
-
-	// TODO: implement Caret#beginAutoCompletion
-#if 0
-	// <<実験的な動作>>
-	// 周辺の行から識別子を収集してみる
-	set<String> candidateWords;
-	const length_t RECOG_LINES = 100;	// 直前の何行を考慮するか
-	for(length_t i = (getCaret().getLineNumber() > RECOG_LINES) ?
-			getCaret().getLineNumber() - RECOG_LINES : 0;i < getCaret().getLineNumber(); ++i) {
-		const Tokens& tokens = sharedData_->layoutManager.getLine(i).getTokens();
-		const String& line = getDocument().getLine(i);
-		for(size_t j = 0; j < tokens.count; ++j) {
-			const Token& token = tokens.array[j];
-			if(token.getType() == Token::IDENTIFIER) {
-				if(j < tokens.count - 1)
-					candidateWords.insert(line.substr(token.getIndex(),
-						tokens.array[j + 1].getIndex() - token.getIndex()));
-				else /* if(j == tokens.count - j) */ {
-					candidateWords.insert(line.substr(token.getIndex()));
-					break;
-				}
-			}
-		}
-	}
-	// キーワードからも収集 -> やーめた
-/*	const KeywordsMap& keywords = getLexer().getKeywords();
-	for(KeywordsMap::const_iterator it = keywords.begin(); it != keywords.end(); ++it) {
-		for(KeywordSet::const_iterator word = it->second.begin(); word != it->second.end(); ++word)
-			candidateWords.insert(*word);
-	}
-*/
-	// 候補が1つも無ければ終了
-	if(candidateWords.empty()) {
-		beep();
-		return;
-	}
-
-	// 開始
-	if(!completionWindow_->isWindow())
-		completionWindow_->create();
-	completionWindow_->start(candidateWords);
-
-	if(completionWindow_->updateListCursel())	// 候補が絞られた -> 候補ウィンドウを出さずに補完
-		completionWindow_->complete();
-	else {
-		// 位置決め (まだ不完全)
-		POINT caretPoint;	// キャレット位置
-		Rect clientRect;	// クライアント矩形
-		RECT listRect;		// 補完ウィンドウの矩形
-
-		getClientRect(clientRect);
-		::GetCaretPos(&caretPoint);
-
-		const int IDEAL_WIDTH = 170;						// 根拠の無い値
-		const int idealHeight = clientRect.getHeight() / 3;	// 適当な値
-		const bool rtl = isTextDirectionRTL();
-
-		// 水平位置と幅
-		(rtl ? listRect.right : listRect.left) = caretPoint.x;
-		(rtl ? listRect.left : listRect.right) = rtl ? (listRect.right - IDEAL_WIDTH) : (listRect.left + IDEAL_WIDTH);
-		if(!rtl && listRect.right > clientRect.right) {
-			listRect.left = max(listRect.left - (listRect.right - clientRect.right), clientRect.left);
-			listRect.right = clientRect.right;
-		} else if(rtl && listRect.left < clientRect.left) {
-			listRect.right = min(listRect.right - (listRect.left - clientRect.left), clientRect.right);
-			listRect.left = clientRect.left;
-		}
-
-		// 垂直位置と高さ
-		if(clientRect.bottom - (caretPoint.y + sharedData_->layoutManager.getLineHeight()) >= idealHeight) {	// キャレットの下に表示
-			listRect.top = caretPoint.y + sharedData_->layoutManager.getLineHeight();
-			listRect.bottom = listRect.top + idealHeight;
-		} else if(caretPoint.y - clientRect.top >= idealHeight) {	// キャレットの上に表示
-			listRect.top = caretPoint.y - idealHeight;
-			listRect.bottom = caretPoint.y;
-		} else if(clientRect.bottom - (caretPoint.y + sharedData_->layoutManager.getLineHeight()) >= caretPoint.y - clientRect.top) {
-			listRect.top = caretPoint.y + sharedData_->layoutManager.getLineHeight();
-			listRect.bottom = clientRect.bottom;
-		} else {
-			listRect.top = clientRect.top;
-			listRect.bottom = caretPoint.y;
-		}
-
-		completionWindow_->modifyStyleEx(rtl ? 0 : WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
-		completionWindow_->moveWindow(listRect, false);
-		completionWindow_->setFont(
-			sharedData_->options.appearance[USE_EDITOR_FONT_FOR_COMPLETION] ?
-				sharedData_->layoutManager.getRegularFont() : 0);
-		completionWindow_->showWindow(SW_SHOW);
-	}
-#endif
-	return false;
-}
-#endif
 
 /**
  * Starts rectangular selection.
@@ -1698,9 +1590,20 @@ void Caret::cutSelection(bool alsoSendToClipboardRing) {
 	getTextViewer().unfreeze(true);
 }
 
+/// @see text#IDocumentListener#documentAboutToBeChanged
+void Caret::documentAboutToBeChanged(const Document&) {
+	// do nothing
+}
+
+/// @see text#IDocumentListener#documentChanged
+void Caret::documentChanged(const Document&, const DocumentChange&) {
+	if(regionBeforeMoved_.first != Position::INVALID_POSITION)
+		updateVisualAttributes();
+}
+
 /// @see VisualPoint#doMoveTo
 void Caret::doMoveTo(const Position& to) {
-	const Region oldRegion(anchor_->isInternalUpdating() ?
+	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
 		anchor_->getPositionBeforeInternalUpdate() : anchor_->getPosition(), getPosition());
 	restoreSelectionMode();
 	if(!editingByThis_)
@@ -1713,13 +1616,8 @@ void Caret::doMoveTo(const Position& to) {
 		leadingAnchor_ = false;
 	}
 	VisualPoint::doMoveTo(to);
-	if(isSelectionRectangle())
-		box_->update(getSelectionRegion());
-	if((oldRegion.first != getPosition() || oldRegion.second != getPosition()))
-		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
-	if(autoShow_)
-		show();
-	checkMatchBrackets();
+	if(!getDocument()->isChanging())
+		updateVisualAttributes();
 }
 
 /**
@@ -1826,7 +1724,7 @@ void Caret::extendSelection(const Position& to) {
 }
 
 /**
- * アンカーを移動させずにキャレットを移動させる
+ * Moves the caret without the anchor movement.
  * @param algorithm the movement algorithm
  */
 void Caret::extendSelection(mem_fun_t<void, EditPoint>& algorithm) {
@@ -1843,7 +1741,7 @@ void Caret::extendSelection(mem_fun_t<void, EditPoint>& algorithm) {
 }
 
 /**
- * アンカーを移動させずにキャレットを移動させる
+ * Moves the caret without the anchor movement.
  * @param algorithm the movement algorithm
  */
 void Caret::extendSelection(mem_fun_t<void, VisualPoint>& algorithm) {
@@ -1860,7 +1758,7 @@ void Caret::extendSelection(mem_fun_t<void, VisualPoint>& algorithm) {
 }
 
 /**
- * アンカーを移動させずにキャレットを移動させる
+ * Moves the caret without the anchor movement.
  * @param algorithm the movement algorithm
  * @param offset the number to apply the algorithm
  */
@@ -1878,7 +1776,7 @@ void Caret::extendSelection(mem_fun1_t<void, EditPoint, length_t>& algorithm, le
 }
 
 /**
- * アンカーを移動させずにキャレットを移動させる
+ * Moves the caret without the anchor movement.
  * @param algorithm the movement algorithm
  * @param offset the number to apply the algorithm
  */
@@ -1944,7 +1842,8 @@ bool Caret::getSelectedRangeOnVisualLine(length_t line, length_t subline, length
 
 /**
  * Returns the selected text.
- * @param nlr 改行の扱い。矩形選択の場合はドキュメントの既定の改行が使われる
+ * @param nlr the newline representation for multiline selection. if the selection is rectangular,
+ * this value is ignored and the document's newline is used instead
  * @return the text
  */
 String Caret::getSelectionText(NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
@@ -1952,10 +1851,10 @@ String Caret::getSelectionText(NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA 
 
 	if(isSelectionEmpty())
 		return L"";
-	else if(!isSelectionRectangle())	// 矩形選択でない場合
+	else if(!isSelectionRectangle())
 		return getTopPoint().getText(getBottomPoint(), nlr);
 
-	// 矩形選択の場合
+	// rectangular selection
 	StringBuffer s(ios_base::out);
 	const length_t bottomLine = getBottomPoint().getLineNumber();
 	length_t first, last;
@@ -2047,7 +1946,7 @@ bool Caret::isPointOverSelection(const ::POINT& pt) const {
 	else if(isSelectionRectangle())
 		return box_->isPointOver(pt);
 	else {
-		if(getTextViewer().hitTest(pt) != TextViewer::TEXT_AREA)	// マージン上であれば無視
+		if(getTextViewer().hitTest(pt) != TextViewer::TEXT_AREA)	// ignore if on the margin
 			return false;
 		::RECT rect;
 		getTextViewer().getClientRect(rect);
@@ -2194,11 +2093,11 @@ void Caret::selectWord() {
 		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getIdentifierSyntax());
 	endBoxSelection();
 	if(isEndOfLine()) {
-		if(isStartOfLine())	// 0 文字行
+		if(isStartOfLine())	// an empty line
 			moveTo(*this);
-		else	// 行末
+		else	// eol
 			select((--i).base().tell(), *this);
-	} else if(isStartOfLine())	// 行頭
+	} else if(isStartOfLine())	// bol
 		select(*this, (++i).base().tell());
 	else {
 		const Position p = (++i).base().tell();
@@ -2221,11 +2120,21 @@ void Caret::setOvertypeMode(bool overtype) throw() {
 
 /// @see Point#update
 void Caret::update(const DocumentChange& change) {
-	// ドキュメントが変更されたときに、
-	// アンカーとキャレットの移動を同時に (一度に) 通知するための細工
+	// notify the movement of the anchor and the caret concurrently when the document was changed
 	leaveAnchorNext_ = leadingAnchor_ = true;
 	anchor_->beginInternalUpdate(change);
 	Point::update(change);
 	anchor_->endInternalUpdate();
 	leaveAnchorNext_ = leadingAnchor_ = false;
+}
+
+inline void Caret::updateVisualAttributes() {
+	if(isSelectionRectangle())
+		box_->update(getSelectionRegion());
+	if((regionBeforeMoved_.first != getPosition() || regionBeforeMoved_.second != getPosition()))
+		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, regionBeforeMoved_);
+	if(autoShow_)
+		show();
+	checkMatchBrackets();
+	regionBeforeMoved_.first = regionBeforeMoved_.second = Position::INVALID_POSITION;
 }

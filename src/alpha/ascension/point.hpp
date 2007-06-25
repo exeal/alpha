@@ -111,7 +111,7 @@ namespace ascension {
 			static Position	getPrevCharPos(const EditPoint& pt, length_t length, CharacterUnit cu = CU_DEFAULT);
 		private:
 			IPointListener* listener_;
-			CharacterUnit characterUnit_;	// 文字数の計算方法 (型定義参照)
+			CharacterUnit characterUnit_;
 		};
 	}
 
@@ -317,7 +317,7 @@ namespace ascension {
 		 *
 		 * @note This class is not intended to subclass.
 		 */
-		class Caret : public VisualPoint, virtual public text::IPointListener {
+		class Caret : public VisualPoint, virtual public text::IPointListener, virtual public text::IDocumentListener {
 		public:
 			/// Mode of selection.
 			enum SelectionMode {
@@ -390,11 +390,17 @@ namespace ascension {
 
 		private:
 			void	checkMatchBrackets();
-			void	doMoveTo(const text::Position& position);
 			void	internalExtendSelection(void (*algorithm)(void));
+			void	update(const text::DocumentChange& change);
+			void	updateVisualAttributes();
+			// VisualPoint
+			void	doMoveTo(const text::Position& position);
+			// text.IPointListener
 			void	pointDestroyed();
 			void	pointMoved(const text::EditPoint& self, const text::Position& oldPosition);
-			void	update(const text::DocumentChange& change);
+			// text.IDocumentListener
+			void	documentAboutToBeChanged(const text::Document& document);
+			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
 			using text::EditPoint::getListener;
 		private:
 			class SelectionAnchor : public VisualPoint {
@@ -426,6 +432,7 @@ namespace ascension {
 			bool overtypeMode_;
 			bool editingByThis_;				// このインスタンスが編集操作中
 			bool othersEditedFromLastInputChar_;	// このインスタンスが文字を入力して以降他の編集操作が行われたか?
+			text::Region regionBeforeMoved_;
 			std::pair<text::Position, text::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
 		};
 

@@ -564,7 +564,7 @@ ulong IncrementalSearchCommand::execute() {
 	if(Session* const session = getTarget().getDocument().getSession()) {
 		searcher::IncrementalSearcher& isearch = session->getIncrementalSearcher();
 		if(!isearch.isRunning())	// 開始
-			isearch.start(getTarget().getDocument(), getTarget().getCaret(), session->getTextSearcher(), type_, direction_, listener_);
+			isearch.start(getTarget().getDocument(), getTarget().getCaret(), session->getTextSearcher(), direction_, callback_);
 		else {	// 次の一致位置へジャンプ (検索方向のみ有効。type_ は無視される)
 			if(!isearch.next(direction_))
 				getTarget().beep();

@@ -83,6 +83,7 @@ namespace ascension {
 			int collationWeight;		///< Collation weight level (not implemented).
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
 			WholeMatch wholeMatch;		///< Whole match constraint.
+			bool wrapAround;			///< Wrap around when the scanning was reached the end/start of the target region.
 			/// Constructor.
 			SearchOptions() throw() : type(LITERAL), caseSensitive(true), canonicalEquivalents(false), wholeMatch(NONE) {}
 			/// Equality operator.
@@ -93,7 +94,8 @@ namespace ascension {
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 					&& collationWeight == rhs.collationWeight
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */
-					&& wholeMatch == rhs.wholeMatch;
+					&& wholeMatch == rhs.wholeMatch
+					&& wrapAround == rhs.wrapAround;
 			}
 			/// Unequality operator.
 			bool operator!=(const SearchOptions& rhs) const throw() {return !operator==(rhs);}
@@ -161,12 +163,12 @@ namespace ascension {
 		};
 
 		/**
-		 * A listener observes the state of the incremental searcher.
+		 * Represents a callback object observes the state of the incremental searcher.
 		 * @see IncrementalSearcher
 		 */
-		class IIncrementalSearchListener {
+		class IIncrementalSearchCallback {
 		protected:
-			/// Used by @c IIncrementalSearchListener#incrementalSearchPatternChanged.
+			/// Temporary result of an incremental search.
 			enum Result {
 				EMPTY_PATTERN,	///< The pattern is empty.
 				FOUND,			///< The pattern is found.
@@ -174,19 +176,25 @@ namespace ascension {
 				COMPLEX_REGEX,	///< The regular expression is too complex.
 				BAD_REGEX		///< The regular expression is invalid.
 			};
+			/// Wrapping status of an incremental search.
+			enum WrappingStatus {
+				NO_WRAPPED,		///< A wrapping is not happened.
+				WRAPPED_AROUND,	///< The scanning was over the end/start of the target region.
+				OVERWRAPPED		///< The scanning reached the position where the search started.
+			};
 		private:
 			/**
-			 * The search is aborted.
+			 * The search was aborted.
 			 * @param initialPosition the position at which the search started.
 			 */
 			virtual void incrementalSearchAborted(const text::Position& initialPosition) = 0;
-			/// The search is completed successfully.
+			/// The search was completed successfully.
 			virtual void incrementalSearchCompleted() = 0;
 			/**
 			 * The search pattern was changed.
 			 * @param result the result on new pattern.
 			 */
-			virtual void incrementalSearchPatternChanged(Result result) = 0;
+			virtual void incrementalSearchPatternChanged(Result result, const manah::Flags<WrappingStatus>& wrappingStatus) = 0;
 			/**
 			 * The search was started. @c incrementalSearchPatternChanged is also called with
 			 * @c EMPTY_PATTERN after this.
@@ -237,39 +245,36 @@ namespace ascension {
 			bool				isRunning() const throw();
 			// operations
 			void	abort();
-			bool	addCharacter(Char ch);
-			bool	addCharacter(CodePoint cp);
+			bool	addCharacter(Char c);
+			bool	addCharacter(CodePoint c);
 			bool	addString(const Char* first, const Char* last);
 			bool	addString(const String& text);
 			void	end();
 			bool	next(Direction direction);
 			void	reset();
 			void	start(text::Document& document, const text::Position& from,
-						TextSearcher& searcher, Direction direction, IIncrementalSearchListener* listener = 0);
-			void	start(text::Document& document, const text::Position& from,
-						TextSearcher& searcher, SearchType type, Direction direction, IIncrementalSearchListener* listener = 0);
+						TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
 			bool	undo();
 		private:
 			bool	update();
-			// text::IDocumentListener
+			// text.IDocumentListener
 			void	documentAboutToBeChanged(const text::Document& document);
 			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
-			
-			// データメンバ
+
 		private:
 			enum Operation {TYPE, JUMP};
 			struct Status {
-				text::Region matchedRegion;	// マッチ位置
-				Direction direction;		// そのときの検索方向
+				text::Region matchedRegion;
+				Direction direction;
 			};
 			text::Document* document_;
 			TextSearcher* searcher_;
-			IIncrementalSearchListener* listener_;
+			IIncrementalSearchCallback* callback_;
 			text::Region matchedRegion_;
-			std::stack<Operation> operationHistory_;	// 操作履歴
-			std::stack<Status> statusHistory_;			// 状態履歴
-			String pattern_;							// 検索式
-			bool matched_;								// 最後の update 呼び出しで一致テキストが見つかったか
+			std::stack<Operation> operationHistory_;
+			std::stack<Status> statusHistory_;
+			String pattern_;
+			bool matched_;	// true if matched in the last update() call
 		};
 
 

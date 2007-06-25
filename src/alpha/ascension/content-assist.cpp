@@ -90,31 +90,21 @@ namespace {
 
 /**
  * Constructor.
+ * @param contentType the content type
  * @param syntax the identifier syntax to detect identifiers
  */
-IdentifiersProposalProcessor::IdentifiersProposalProcessor(const IdentifierSyntax& syntax) throw() : syntax_(syntax) {
+IdentifiersProposalProcessor::IdentifiersProposalProcessor(ContentType contentType,
+		const IdentifierSyntax& syntax) throw() : contentType_(contentType), syntax_(syntax) {
 }
 
 /// Destructor.
 IdentifiersProposalProcessor::~IdentifiersProposalProcessor() throw() {
 }
 
-/**
- * @param document
- * @param caretPosition
- * @param[out] proposals
- * @param[out] activeProposal
- */
-void IdentifiersProposalProcessor::collectIdentifiers(const Document& document,
-		const Position& caretPosition, set<ICompletionProposal*>& proposals, ICompletionProposal*& activeProposal) const {
-	// TODO: not implemented.
-}
-
 /// @see IContentAssistProcessor#computCompletionProposals
-void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret, bool& incremental,
-		Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& activeProposal) const {
+void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret,
+		bool& incremental, Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
 	replacementRegion.second = caret;
-	activeProposal = 0;
 
 	// find the preceding identifier
 	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
@@ -125,9 +115,61 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	else
 		replacementRegion.first = caret;
 
-	// select matched or partially matched proposal
-	if(!replacementRegion.isEmpty())
-		collectIdentifiers(*caret.getDocument(), caret, proposals, activeProposal);
+	// collect identifiers in the document
+	static const length_t MAXIMUM_BACKTRACKING_LINES = 500;
+	const Document& document = *caret.getDocument();
+	DocumentCharacterIterator i(document, Region(Position(
+		(caret.getLineNumber() > MAXIMUM_BACKTRACKING_LINES) ?
+			caret.getLineNumber() - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
+	DocumentPartition currentPartition;
+	set<String> identifiers;
+	bool followingNIDs = false;
+	document.getPartitioner().getPartition(i.tell(), currentPartition);
+	while(i.hasNext()) {
+		if(currentPartition.contentType != contentType_)
+			i.seek(currentPartition.region.getBottom());
+		if(i.tell() >= currentPartition.region.getBottom()) {
+			if(i.tell().column == i.getLine().length())
+				++i;
+			document.getPartitioner().getPartition(i.tell(), currentPartition);
+			continue;
+		}
+		if(!followingNIDs) {
+			const Char* const bol = i.getLine().data();
+			const Char* const s = bol + i.tell().column;
+			const Char* e = syntax_.eatIdentifier(s, bol + i.getLine().length());
+			if(e > s) {
+				identifiers.insert(String(s, e));	// automatically merged
+				i.seek(Position(i.tell().line, e - bol));
+			} else {
+				if(syntax_.isIdentifierContinueCharacter(*i))
+					followingNIDs = true;
+				++i;
+			}
+		} else {
+			if(!syntax_.isIdentifierContinueCharacter(*i))
+				followingNIDs = false;
+			++i;
+		}
+	}
+	for(set<String>::const_iterator i(identifiers.begin()), e(identifiers.end()); i != e; ++i)
+		proposals.insert(new CompletionProposal(*i));
+}
+
+/// @see IContentAssistProcessor#getActiveCompletionProposal
+const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProposal(const TextViewer& textViewer,
+		const Region& replacementRegion, ICompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const throw() {
+	// select the partially matched proposal
+	String precedingIdentifier(textViewer.getDocument().getLine(replacementRegion.first.line).substr(
+		replacementRegion.getTop().column, replacementRegion.getBottom().column - replacementRegion.getTop().column));
+	if(precedingIdentifier.empty())
+		return 0;
+	const ICompletionProposal* activeProposal = *lower_bound(currentProposals,
+		currentProposals + numberOfCurrentProposals, precedingIdentifier, CompletionProposalDisplayStringComparer());
+	if(activeProposal == currentProposals[numberOfCurrentProposals]
+			|| CaseFolder::compare(activeProposal->getDisplayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
+		return 0;
+	return activeProposal;
 }
 
 /// Returns the identifier syntax the processor uses or @c null.
@@ -141,19 +183,9 @@ bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharact
 }
 
 /// @see IContentAssistProcessor#recomputIncrementalCompletionProposals
-void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const TextViewer& textViewer,
-		const Region& replacementRegion, ICompletionProposal* const currentProposals[],
-		size_t numberOfCurrentProposals, set<ICompletionProposal*>&, const ICompletionProposal*& activeProposal) const {
-	if(replacementRegion.first.line != replacementRegion.second.line)
-		return;
-	// select the partially matched proposal
-	String precedingIdentifier(textViewer.getDocument().getLine(replacementRegion.first.line).substr(
-		replacementRegion.getTop().column, replacementRegion.getBottom().column - replacementRegion.getTop().column));
-	activeProposal = *lower_bound(currentProposals,
-		currentProposals + numberOfCurrentProposals, precedingIdentifier, CompletionProposalDisplayStringComparer());
-	if(activeProposal == currentProposals[numberOfCurrentProposals]
-			|| CaseFolder::compare(activeProposal->getDisplayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
-		activeProposal = 0;
+void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
+		const TextViewer&, const Region&, ICompletionProposal* const[], size_t, set<ICompletionProposal*>&) const {
+	// do nothing
 }
 
 
@@ -319,7 +351,7 @@ bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 // ContentAssistant /////////////////////////////////////////////////////////
 
 namespace {
-	void setupPopupContent(manah::win32::ui::ListBox& listbox, ICompletionProposal* proposals[], size_t numberOfProposals) {
+	void setupPopupContent(manah::win32::ui::ListBox& listbox, ICompletionProposal* const proposals[], size_t numberOfProposals) {
 		listbox.resetContent();
 		for(size_t i = 0; i < numberOfProposals; ++i) {
 			// TODO: display icons.
@@ -331,7 +363,7 @@ namespace {
 			}
 		}
 	}
-	void selectProposal(manah::win32::ui::ListBox& listbox, ICompletionProposal* selection) {
+	void selectProposal(manah::win32::ui::ListBox& listbox, const ICompletionProposal* selection) {
 		listbox.setCurSel(-1);
 		if(selection != 0) {
 			for(int i = 0, c = listbox.getCount(); i < c; ++i) {
@@ -376,8 +408,12 @@ void ContentAssistant::characterInputted(const Caret& self, CodePoint c) {
 		if(completionSession_.get() != 0) {
 			if(!completionSession_->incremental)
 				close();
-			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c))
+			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
+				textViewer_->getDocument().beginSequentialEdit();
+				textViewer_->getCaret().erase(-1, EditPoint::CU_UTF32);
+				textViewer_->getDocument().endSequentialEdit();
 				complete();
+			}
 		} else {
 			// activate automatically
 			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->getCaret().getContentType())) {
@@ -415,9 +451,11 @@ bool ContentAssistant::complete() {
 			if(ICompletionProposal* p = static_cast<ICompletionProposal*>(proposalPopup_->getItemDataPtr(sel))) {
 				auto_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
 				Document& document = textViewer_->getDocument();
-				document.beginSequentialEdit();
-				p->replace(document, temp->replacementRegion);
-				document.endSequentialEdit();
+				if(!document.isReadOnly()) {
+					document.beginSequentialEdit();
+					p->replace(document, temp->replacementRegion);
+					document.endSequentialEdit();
+				}
 				completionSession_ = temp;
 				close();
 				return true;
@@ -447,10 +485,9 @@ void ContentAssistant::documentChanged(const Document& document, const DocumentC
 
 		// rebuild proposals
 		set<ICompletionProposal*> newProposals;
-		ICompletionProposal* activeProposal = 0;
 		completionSession_->processor->recomputeIncrementalCompletionProposals(
 			*textViewer_, completionSession_->replacementRegion,
-			completionSession_->proposals.get(), completionSession_->numberOfProposals, newProposals, activeProposal);
+			completionSession_->proposals.get(), completionSession_->numberOfProposals, newProposals);
 		if(!newProposals.empty()) {
 			for(size_t i = 0; i < completionSession_->numberOfProposals; ++i)
 				delete completionSession_->proposals[i];
@@ -465,7 +502,10 @@ void ContentAssistant::documentChanged(const Document& document, const DocumentC
 				completionSession_->proposals.get() + newProposals.size(), CompletionProposalDisplayStringComparer());
 			setupPopupContent(*proposalPopup_, completionSession_->proposals.get(), completionSession_->numberOfProposals);
 		}
-		selectProposal(*proposalPopup_, activeProposal);
+
+		// select the most preferred
+		selectProposal(*proposalPopup_, completionSession_->processor->getActiveCompletionProposal(
+			*textViewer_, completionSession_->replacementRegion, completionSession_->proposals.get(), completionSession_->numberOfProposals));
 	}
 }
 
@@ -546,15 +586,14 @@ void ContentAssistant::setContentAssistProcessor(ContentType contentType, auto_p
 
 /// @see IContentAssistant#showPossibleCompletions
 void ContentAssistant::showPossibleCompletions() {
-	if(textViewer_ == 0 || completionSession_.get() != 0)
-		return;
+	if(textViewer_ == 0 || completionSession_.get() != 0 || textViewer_->getDocument().isReadOnly())
+		return textViewer_->beep();
 	const Caret& caret = textViewer_->getCaret();
 	if(const IContentAssistProcessor* const cap = getContentAssistProcessor(caret.getContentType())) {
 		set<ICompletionProposal*> proposals;
-		ICompletionProposal* activeProposal = 0;
 		completionSession_.reset(new CompletionSession);
 		(completionSession_->processor = cap)->computeCompletionProposals(caret,
-			completionSession_->incremental, completionSession_->replacementRegion, proposals, activeProposal);
+			completionSession_->incremental, completionSession_->replacementRegion, proposals);
 		if(!proposals.empty()) {
 			if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
 				(*proposals.begin())->replace(textViewer_->getDocument(), completionSession_->replacementRegion);
@@ -567,7 +606,9 @@ void ContentAssistant::showPossibleCompletions() {
 				sort(completionSession_->proposals.get(),
 					completionSession_->proposals.get() + completionSession_->numberOfProposals, CompletionProposalDisplayStringComparer());
 				startPopup();
-				selectProposal(*proposalPopup_, activeProposal);
+				selectProposal(*proposalPopup_, cap->getActiveCompletionProposal(
+					*textViewer_, completionSession_->replacementRegion,
+					completionSession_->proposals.get(), completionSession_->numberOfProposals));
 			}
 			return;	// succeeded
 		}

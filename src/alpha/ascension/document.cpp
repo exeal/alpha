@@ -791,9 +791,9 @@ inline void Document::fireDocumentAboutToBeChanged() throw() {
 inline void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) throw() {
 	if(partitioner_.get() != 0)
 		partitioner_->documentChanged(c);
-	prenotifiedListeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 	if(updateAllPoints)
 		updatePoints(c);
+	prenotifiedListeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 	listeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
 }
 
@@ -1855,11 +1855,14 @@ auto_ptr<CharacterIterator> DocumentCharacterIterator::clone() const {
 
 /// @see unicode#CharacterIterator#current
 CodePoint DocumentCharacterIterator::current() const throw() {
-	if(p_.column == line_->length())
+	if(p_ == region_.second)
+		return DONE;
+	else if(p_.column == line_->length())
 		return LINE_SEPARATOR;
-	return (surrogates::isHighSurrogate((*line_)[p_.column])
-		&& p_.column + 1 < line_->length() && surrogates::isLowSurrogate((*line_)[p_.column + 1])) ?
-		surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
+	else
+		return (surrogates::isHighSurrogate((*line_)[p_.column])
+			&& p_.column + 1 < line_->length() && surrogates::isLowSurrogate((*line_)[p_.column + 1])) ?
+			surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
 }
 
 /// @see unicode#CharacterIterator#doFirst
