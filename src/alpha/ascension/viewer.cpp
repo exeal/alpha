@@ -58,7 +58,7 @@ LANGID ascension::getUserDefaultUILanguage() throw() {
 	// 参考 (いずれも Global Dev)
 	// Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
 	// Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
-	static LANGID id = 0;
+	static ::LANGID id = 0;
 	if(id != 0)
 		return id;
 	id = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
@@ -81,7 +81,7 @@ LANGID ascension::getUserDefaultUILanguage() throw() {
 		::EnumResourceLanguagesW(dll, RT_VERSION, MAKEINTRESOURCE(1), enumResLangProc, reinterpret_cast<LONG_PTR>(&id));
 		::FreeLibrary(dll);
 		if(id == MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) {	// special cases
-			const UINT cp = ::GetACP();
+			const ::UINT cp = ::GetACP();
 			if(cp == 874)	// Thai
 				id = MAKELANGID(LANG_THAI, SUBLANG_DEFAULT);
 			else if(cp == 1255)	// Hebrew
@@ -116,7 +116,7 @@ const LineStyle LineStyle::NULL_STYLE = {0, 0};
 class viewers::internal::TextViewerAccessibleProxy :
 		virtual public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
-			IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&LIBID_Accessibility, &IID_IAccessible>
+			::IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&::LIBID_Accessibility, &::IID_IAccessible>
 		>,
 		private manah::Unassignable {
 	// IAccessible の実装については以下を参考にした:
@@ -717,29 +717,29 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// content assist test
 	class JSDocProposals : public IdentifiersProposalProcessor {
 	public:
-		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(ids) {}
+		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(JS_MULTILINE_DOC_COMMENT, ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
 				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
-			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
 			StringBuffer sb(JSDOC_ATTRIBUTES);
 			wistream s(&sb);
 			String p;
 			while(s >> p)
 				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
 		}
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'@';}
 	};
 	class JSProposals : public IdentifiersProposalProcessor {
 	public:
-		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(ids) {}
+		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(DEFAULT_CONTENT_TYPE, ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
-				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
-			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals, firstProposal);
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
 			StringBuffer sb(JS_KEYWORDS);
 			wistream s(&sb);
 			String p;
 			while(s >> p)
 				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
 		}
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() {return c == L'.';}
 	};
@@ -2188,10 +2188,7 @@ void TextViewer::onSysColorChange() {
 }
 
 /// @see WM_SYSKEYDOWN
-bool TextViewer::onSysKeyDown(UINT vkey, UINT) {/*
-	DocumentBuffer db(getDocument());
-	wostream s(&db);
-	s << L"aiueo";*/
+bool TextViewer::onSysKeyDown(UINT vkey, UINT) {
 	endAutoScroll();
 	return handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), true);;
 }

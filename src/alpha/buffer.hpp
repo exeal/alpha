@@ -40,7 +40,7 @@ namespace alpha {
 
 	/// A view of a text editor.
 	class EditorView : public ascension::viewers::TextViewer,
-		virtual public ascension::searcher::IIncrementalSearchListener {
+		virtual public ascension::searcher::IIncrementalSearchCallback {
 	public:
 		// constructors
 		EditorView(ascension::presentation::Presentation& presentation);
@@ -59,23 +59,24 @@ namespace alpha {
 		void	updateNarrowingOnStatusBar();
 		void	updateOvertypeModeOnStatusBar();
 		void	updateTitleBar();
-		// ascension::text::IDocumentStateListener (overrides)
+		// ascension.text.IDocumentStateListener (overrides)
 		void	documentAccessibleRegionChanged(ascension::text::Document& document);
 		void	documentEncodingChanged(ascension::text::Document& document);
 		void	documentFileNameChanged(ascension::text::Document& document);
 		void	documentModificationSignChanged(ascension::text::Document& document);
 		void	documentReadOnlySignChanged(ascension::text::Document& document);
-		// ascension::viewers::ICaretListener (overrides)
+		// ascension.viewers.ICaretListener (overrides)
 		void	caretMoved(const ascension::viewers::Caret& self, const ascension::text::Region& oldRegion);
 		void	characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
 		void	matchBracketsChanged(const ascension::viewers::Caret& self,
 					const std::pair<ascension::text::Position, ascension::text::Position>& oldPair, bool outsideOfView);
 		void	overtypeModeChanged(const ascension::viewers::Caret& self);
 		void	selectionShapeChanged(const ascension::viewers::Caret& self);
-		// ascension::searcher::IIncrementalSearchListener
+		// ascension.searcher.IIncrementalSearchCallback
 		void	incrementalSearchAborted(const ascension::text::Position& initialPosition);
 		void	incrementalSearchCompleted();
-		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchListener::Result result);
+		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchCallback::Result result,
+					const manah::Flags<ascension::searcher::IIncrementalSearchCallback::WrappingStatus>& wrappingStatus);
 		void	incrementalSearchStarted(const ascension::text::Document& document);
 		// message handlers
 		MANAH_DECLEAR_WINDOW_MESSAGE_MAP(EditorView);
@@ -118,7 +119,7 @@ namespace alpha {
 	 * リストに追加されたバッファはこのオブジェクトが破壊する。
 	 * またこのクラスはバッファバーに使うアイコンも提供する
 	 */
-	class BufferList : public manah::Noncopyable,
+	class BufferList : private manah::Noncopyable,
 			virtual public ascension::text::IDocumentStateListener,
 			virtual public ascension::text::IUnexpectedFileTimeStampDirector,
 			virtual public ascension::presentation::ITextViewerListListener {

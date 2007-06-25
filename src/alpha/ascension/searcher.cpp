@@ -512,10 +512,10 @@ IncrementalSearcher::IncrementalSearcher() throw() {
 /// Aborts the search.
 void IncrementalSearcher::abort() {
 	if(isRunning()) {
-		if(listener_ != 0) {
+		if(callback_ != 0) {
 			while(statusHistory_.size() > 1)
 				statusHistory_.pop();
-			listener_->incrementalSearchAborted(statusHistory_.top().matchedRegion.first);
+			callback_->incrementalSearchAborted(statusHistory_.top().matchedRegion.first);
 		}
 		end();
 	}
@@ -523,14 +523,14 @@ void IncrementalSearcher::abort() {
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param ch the character to append
+ * @param c the character to append
  * @return true if the pattern is found
  * @throw NotRunningException the searcher is not running
  */
-bool IncrementalSearcher::addCharacter(Char ch) {
+bool IncrementalSearcher::addCharacter(Char c) {
 	if(!isRunning())
 		throw NotRunningException();
-	pattern_ += ch;
+	pattern_ += c;
 	operationHistory_.push(TYPE);
 	return update();
 }
@@ -538,17 +538,17 @@ bool IncrementalSearcher::addCharacter(Char ch) {
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param cp the character to append
+ * @param c the character to append
  * @return true if the pattern is found
  * @throw NotRunningException the searcher is not running
  */
-bool IncrementalSearcher::addCharacter(CodePoint cp) {
+bool IncrementalSearcher::addCharacter(CodePoint c) {
 	if(!isRunning())
 		throw NotRunningException();
-	if(cp < 0x010000U)
-		return addCharacter(static_cast<Char>(cp & 0xFFFFU));
+	if(c < 0x010000U)
+		return addCharacter(static_cast<Char>(c & 0xFFFFU));
 	Char surrogates[2];
-	surrogates::encode(cp, surrogates);
+	surrogates::encode(c, surrogates);
 	return addString(surrogates, surrogates + 2);
 }
 
@@ -587,12 +587,12 @@ void IncrementalSearcher::end() {
 		document_->removeListener(*this);
 		while(!statusHistory_.empty())
 			statusHistory_.pop();
-		if(listener_ != 0)
-			listener_->incrementalSearchCompleted();
+		if(callback_ != 0)
+			callback_->incrementalSearchCompleted();
 		if(!pattern_.empty())
 			searcher_->setPattern(pattern_);	// store to reuse
 		searcher_ = 0;
-		listener_ = 0;
+		callback_ = 0;
 		pattern_.erase();
 	}
 }
@@ -612,8 +612,8 @@ bool IncrementalSearcher::next(Direction direction) {
 		if(searcher_->getNumberOfStoredPatterns() > 0)
 			return addString(searcher_->getPattern());	// use the most recent used
 		else {
-			if(listener_ != 0)
-				listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
+			if(callback_ != 0)
+				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
 			return true;
 		}
 	} else if(!matched_
@@ -644,8 +644,8 @@ void IncrementalSearcher::reset() {
 	while(statusHistory_.size() > 1)
 		statusHistory_.pop();
 	pattern_.erase();
-	if(listener_ != 0)
-		listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
+	if(callback_ != 0)
+		callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
 }
 
 /**
@@ -654,10 +654,10 @@ void IncrementalSearcher::reset() {
  * @param from the position at which the search starts
  * @param searcher the text search object
  * @param direction the initial search direction
- * @param listener the listener. can be @c null
+ * @param callback the callback object. can be @c null
  */
 void IncrementalSearcher::start(Document& document, const Position& from,
-		TextSearcher& searcher, Direction direction, IIncrementalSearchListener* listener /* = 0 */) {
+		TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback /* = 0 */) {
 	if(isRunning())
 		end();
 	const Status s = {Region(from, from), direction};
@@ -666,29 +666,10 @@ void IncrementalSearcher::start(Document& document, const Position& from,
 	(document_ = &document)->addListener(*this);
 	searcher_ = &searcher;
 	matchedRegion_ = statusHistory_.top().matchedRegion;
-	if(0 != (listener_ = listener)) {
-		listener_->incrementalSearchStarted(document);
-		listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
+	if(0 != (callback_ = callback)) {
+		callback_->incrementalSearchStarted(document);
+		callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
 	}
-}
-
-/**
- * Starts the search.
- * @param document the document to search
- * @param from the position at which the search starts
- * @param searcher the text search object
- * @param type the type of the search
- * @param direction the initial search direction
- * @param listener the listener. can be @c null
- */
-void IncrementalSearcher::start(Document& document, const Position& from,
-		TextSearcher& searcher, SearchType type, Direction direction, IIncrementalSearchListener* listener /* = 0 */) {
-	if(isRunning())
-		end();
-	SearchOptions options = searcher.getOptions();
-	options.type = type;
-	searcher.setOptions(options);
-	start(document, from, searcher, direction, listener);
 }
 
 /**
@@ -721,8 +702,8 @@ bool IncrementalSearcher::undo() {
 		assert(!statusHistory_.empty());
 		if(!matched_) {	// ジャンプを元に戻すと必ずマッチした状態になる
 			matched_ = true;
-			if(listener_ != 0)
-				listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::FOUND);
+			if(callback_ != 0)
+				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::FOUND, IIncrementalSearchCallback::NO_WRAPPED);
 		}
 		return true;
 	}
@@ -740,8 +721,8 @@ bool IncrementalSearcher::update() {
 	if(pattern_.empty()) {
 		assert(statusHistory_.size() == 1);
 		matchedRegion_ = lastStatus.matchedRegion;
-		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::EMPTY_PATTERN);
+		if(callback_ != 0)
+			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
 		return true;
 	}
 
@@ -769,19 +750,20 @@ bool IncrementalSearcher::update() {
 		matched_ = searcher_->search(*document_, scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 	} catch(boost::regex_error&) {
-		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::BAD_REGEX);
+		if(callback_ != 0)
+			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::BAD_REGEX, IIncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	} catch(runtime_error&) {
-		if(listener_ != 0)
-			listener_->incrementalSearchPatternChanged(IIncrementalSearchListener::COMPLEX_REGEX);
+		if(callback_ != 0)
+			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::COMPLEX_REGEX, IIncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	}
 #endif /* !ASCENSION_NO_REGEX */
 
 	if(matched_)
 		matchedRegion_ = matchedRegion;
-	if(listener_ != 0)
-		listener_->incrementalSearchPatternChanged(matched_ ? IIncrementalSearchListener::FOUND : IIncrementalSearchListener::NOT_FOUND);
+	if(callback_ != 0)
+		callback_->incrementalSearchPatternChanged(matched_ ?
+			IIncrementalSearchCallback::FOUND : IIncrementalSearchCallback::NOT_FOUND, IIncrementalSearchCallback::NO_WRAPPED);
 	return matched_;
 }
