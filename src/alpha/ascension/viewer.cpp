@@ -719,7 +719,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	public:
 		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(JS_MULTILINE_DOC_COMMENT, ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
-				Region& replacementRegion, set<ICompletionProposal*>& proposals, ICompletionProposal*& firstProposal) const {
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
 			StringBuffer sb(JSDOC_ATTRIBUTES);
 			wistream s(&sb);
 			String p;
