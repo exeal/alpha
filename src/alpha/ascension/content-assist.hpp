@@ -115,14 +115,14 @@ namespace ascension {
 			 * Returns true if the given character automatically activates the completion when the
 			 * user entered.
 			 * @param c the code point of the character
-			 * @return true if @p c automatically activates the completion
+			 * @return true if @a c automatically activates the completion
 			 */
 			virtual bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() = 0;
 			/**
 			 * Returns true if the given character automatically terminates (completes) the active
 			 * incremental completion session.
 			 * @param c the code point of the character
-			 * @return true if @p c automatically terminates the incremental completion
+			 * @return true if @a c automatically terminates the incremental completion
 			 */
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() = 0;
 			/**
@@ -201,7 +201,7 @@ namespace ascension {
 			/**
 			 * Returns the content assist processor to be used for the specified content type.
 			 * @param contentType the content type
-			 * @return the content assist processor or @c null if none corresponds to @p contentType
+			 * @return the content assist processor or @c null if none corresponds to @a contentType
 			 */
 			virtual const IContentAssistProcessor* getContentAssistProcessor(text::ContentType contentType) const throw() = 0;
 			/// Shows all possible completions on the current context.

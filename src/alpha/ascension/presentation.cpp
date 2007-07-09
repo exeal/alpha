@@ -14,6 +14,7 @@ using namespace ascension::rules;
 using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
+using ascension::layout::Colors;
 
 
 // Presentation /////////////////////////////////////////////////////////////

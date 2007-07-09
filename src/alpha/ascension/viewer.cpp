@@ -25,6 +25,7 @@ using namespace ascension;
 using namespace ascension::viewers;
 using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
+using namespace ascension::layout;
 using namespace ascension::text;
 using namespace manah::win32;
 using namespace manah::win32::gdi;
@@ -436,12 +437,13 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 		accessibleProxy_(0),
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 		imeCompositionActivated_(false), mouseInputDisabledCount_(0) {
-	renderer_.reset(new TextRenderer(*this));
+	renderer_.reset(new Renderer(*this));
+	renderer_->addFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
-	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
+	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this, true));
 
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
 	getDocument().addListener(*this);
@@ -460,12 +462,13 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 		, accessibleProxy_(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 {
-	renderer_.reset(new TextRenderer(*this, *rhs.renderer_));
+	renderer_.reset(new Renderer(*rhs.renderer_));
+	renderer_->addFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
-	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this));
+	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this, true));
 
 	modeState_ = rhs.modeState_;
 
@@ -483,6 +486,7 @@ TextViewer::~TextViewer() {
 	getDocument().removeListener(*this);
 	getDocument().removeStateListener(*this);
 	getDocument().removeSequentialEditListener(*this);
+	renderer_->removeFontListener(*this);
 	renderer_->removeVisualLinesListener(*this);
 	caret_->removeListener(*this);
 	caret_->removeStateListener(*this);
@@ -863,7 +867,6 @@ void TextViewer::drawIndicatorMargin(length_t /* line */, DC& /* dc */, const ::
  */
 bool TextViewer::endAutoScroll() {
 	assertValidAsWindow();
-
 	if(autoScroll_.scrolling) {
 		killTimer(TIMERID_AUTOSCROLL);
 		autoScroll_.scrolling = false;
@@ -872,6 +875,15 @@ bool TextViewer::endAutoScroll() {
 		return true;
 	}
 	return false;
+}
+
+/// @see IFontSelectorListener#fontChanged
+void TextViewer::fontChanged() throw() {
+	verticalRulerDrawer_->update();
+	scrollInfo_.resetBars(*this, SB_BOTH, true);
+	updateScrollBars();
+	recreateCaret();
+	redrawLine(0, true);
 }
 
 /**
@@ -919,12 +931,12 @@ HRESULT TextViewer::getAccessibleObject(IAccessible*& acc) const throw() {
 Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLeading) const {
 	assertValidAsWindow();
 
-	// 論理行の特定
+	// determine the logical line
 	length_t line, subline;
 	mapClientYToLine(pt.y, &line, &subline);
 	const LineLayout& layout = renderer_->getLineLayout(line);
-	// 文字の確定
-	const long x = pt.x - getDisplayXOffset();
+	// determine the column
+	const long x = pt.x - getDisplayXOffset(line);
 	length_t column;
 	if(!nearestLeading)
 		column = layout.getOffset(x, static_cast<int>(renderer_->getLinePitch() * subline));
@@ -949,13 +961,13 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
  * (for upward) or -32768 (for downward)
  * @throw BadPositionException @a position is outside of the document
- * @see #getCharacterForClientXY, #hitTest, LineLayout#getLocation
+ * @see #getCharacterForClientXY, #hitTest, layout#LineLayout#getLocation
  */
 ::POINT TextViewer::getClientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();
 	const LineLayout& layout = renderer_->getLineLayout(position.line);
 	::POINT pt = layout.getLocation(position.column, edge);
-	pt.x += getDisplayXOffset();
+	pt.x += getDisplayXOffset(position.line);
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
 		pt.y = y;
@@ -965,26 +977,41 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
 }
 
 /**
- * Returns the x-coordinate display offset.
+ * Returns the horizontal display offset from @c LineLayout coordinates to client coordinates.
+ * @param line the line number
  * @return the offset
  */
-int TextViewer::getDisplayXOffset() const throw() {
+int TextViewer::getDisplayXOffset(length_t line) const {
 	const ::RECT margins = getTextAreaMargins();
-	if(configuration_.alignment == ALIGN_LEFT)
+	if(configuration_.alignment == ALIGN_LEFT || configuration_.justifiesLines)
 		return margins.left - scrollInfo_.getX() * renderer_->getAverageCharacterWidth();
-	else if(configuration_.alignment == ALIGN_RIGHT) {
+
+	int indent;
+	Rect clientRect;
+	getClientRect(clientRect);
+	if(configuration_.lineWrap.wrapsAtWindowEdge())
+		indent = clientRect.getWidth() - margins.right;
+	else if(renderer_->getLongestLineWidth() + margins.left + margins.right > clientRect.getWidth())
+		indent = renderer_->getLongestLineWidth() - renderer_->getLineLayout(line).getSublineWidth(0) + margins.left;
+	else
+		indent = clientRect.getWidth() - renderer_->getLineLayout(line).getSublineWidth(0) - margins.right;
+	if(configuration_.alignment == ALIGN_CENTER)
+		indent /= 2;
+	else
+		assert(configuration_.alignment == ALIGN_RIGHT);
+	return indent - static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
+/*	else if(configuration_.alignment == ALIGN_RIGHT) {
 		int offset = -static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
-		Rect clientRect;
-		getClientRect(clientRect);
 		if(renderer_->getLongestLineWidth() > clientRect.getWidth() - margins.left - margins.right)
 			offset += (clientRect.getWidth() - margins.left - margins.right) % renderer_->getAverageCharacterWidth();
+		offset += renderer_->getWidth() - renderer_->getLineLayout(line).getSublineWidth(0) - margins.right;
 		return offset;
 	} else if(configuration_.alignment == ALIGN_CENTER) {
 		// TODO: not implemented.
 	}
 	assert(false);
 	return 0;	// 無意味
-}
+*/}
 
 /**
  * Returns the text and the region of a link near the cursor.
@@ -1628,7 +1655,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
 
 		// bidi サポートがあるか?
-		if(!renderer_->supportsComplexScripts()) {
+		if(!supportsComplexScripts()) {
 			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
 			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
 			menu.enable<Menu::BY_POSITION>(12, false);
@@ -1987,8 +2014,9 @@ void TextViewer::onPaint(PaintDC& dc) {
 	verticalRulerDrawer_->draw(dc);
 
 	// draw horizontal margins
+	using layout::internal::systemColors;
 	const ::RECT margins = getTextAreaMargins();
-	const COLORREF marginColor = internal::systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
+	const COLORREF marginColor = systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
 	if(margins.left > 0) {
 		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->getWidth() : 0;
 		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
@@ -2000,10 +2028,10 @@ void TextViewer::onPaint(PaintDC& dc) {
 
 	// draw lines
 	const Colors selectionColor(
-		internal::systemColors.getReal(configuration_.selectionColor.foreground,
-		SYSTEM_COLOR_MASK | (hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
-		internal::systemColors.getReal(configuration_.selectionColor.background,
-		SYSTEM_COLOR_MASK | (hasFocus() ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
+		systemColors.getReal(configuration_.selectionColor.foreground,
+			SYSTEM_COLOR_MASK | (hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
+		systemColors.getReal(configuration_.selectionColor.background,
+			SYSTEM_COLOR_MASK | (hasFocus() ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
 	::RECT lineRect = clientRect;
 	lineRect.left += margins.left; lineRect.top += margins.top; lineRect.right -= margins.right; lineRect.bottom -= margins.bottom;
 	length_t line, subline;
@@ -2021,7 +2049,8 @@ void TextViewer::onPaint(PaintDC& dc) {
 			if(DIAGNOSE_INHERENT_DRAWING)
 				dout << static_cast<ulong>(line) << ",";
 #endif /* _DEBUG */
-			renderer_->renderLine(line, dc, getDisplayXOffset(), y, lineRect, selectionColor);
+			LineLayout::Selection selection(*caret_, selectionColor);
+			renderer_->renderLine(line, dc, getDisplayXOffset(line), y, dc.getPaintStruct().rcPaint, lineRect, &selection);
 			y += linePitch * static_cast<int>(renderer_->getNumberOfSublinesOfLine(line++));
 			subline = 0;
 		}
@@ -2147,6 +2176,8 @@ void TextViewer::onSize(UINT type, int, int) {
 	if(renderer_.get() == 0)
 		return;
 
+	if(configuration_.lineWrap.wrapsAtWindowEdge())
+		renderer_->invalidate();
 	displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
@@ -2465,15 +2496,6 @@ void TextViewer::redrawVerticalRuler() {
 	else
 		r.left = r.right - verticalRulerDrawer_->getWidth();
 	invalidateRect(&r, false);
-}
-
-/// @see IVisualLinesListener#rendererFontChanged
-void TextViewer::rendererFontChanged() throw() {
-	verticalRulerDrawer_->update();
-	scrollInfo_.resetBars(*this, SB_BOTH, true);
-	updateScrollBars();
-	recreateCaret();
-	redrawLine(0, true);
 }
 
 /**
@@ -3130,7 +3152,58 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 
 
-// TextViewer::AutoScrollOriginMark /////////////////////////////////////////
+// TextViewer.Renderer //////////////////////////////////////////////////////
+
+/// Constructor.
+TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.getPresentation(), true), viewer_(viewer) {
+}
+
+/// @see layout#FontSelector#doGetDeviceContext
+auto_ptr<DC> TextViewer::Renderer::doGetDeviceContext() const {
+	return auto_ptr<DC>(viewer_.isWindow() ? new ClientDC(const_cast<TextViewer&>(viewer_).getDC()) : new ScreenDC());
+}
+
+/// @see layout#ILayoutInformationProvider#getLayoutSettings
+const LayoutSettings& TextViewer::Renderer::getLayoutSettings() const throw() {
+	return viewer_.getConfiguration();
+}
+
+/// @see layout#ILayoutInformationProvider#getWidth
+int TextViewer::Renderer::getWidth() const throw() {
+	const LineWrapConfiguration& lwc = viewer_.getConfiguration().lineWrap;
+	if(!lwc.wraps()) {
+		AutoZeroCB<::SCROLLINFO> si;
+		si.fMask = SIF_RANGE;
+		viewer_.getScrollInformation(SB_HORZ, si);
+		return (si.nMax + 1) * viewer_.getTextRenderer().getAverageCharacterWidth();
+	} else if(lwc.wrapsAtWindowEdge()) {
+		::RECT rc;
+		viewer_.getClientRect(rc);
+		return rc.right - rc.left - viewer_.verticalRulerDrawer_->getWidth();	// $friendly-access
+	} else
+		return lwc.width;
+}
+
+/// Rewraps the visual lines at the window's edge.
+void TextViewer::Renderer::rewrapAtWindowEdge() {
+	if(viewer_.getConfiguration().lineWrap.wrapsAtWindowEdge()) {
+		Rect clientRect;
+		viewer_.getClientRect(clientRect);
+		::RECT margins = viewer_.getTextAreaMargins();
+		const int newWidth = clientRect.getWidth() - margins.left - margins.right;
+		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ) {
+			const LineLayout& layout = **i;
+			++i;	// invalidate() may break iterator
+			if(layout.getNumberOfSublines() != 1
+					|| viewer_.getConfiguration().justifiesLines || layout.getLongestSublineWidth() > newWidth)
+//				layout.rewrap();
+				invalidate(layout.getLineNumber(), layout.getLineNumber() + 1);
+		}
+	}
+}
+
+
+// TextViewer.AutoScrollOriginMark //////////////////////////////////////////
 
 const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
 
@@ -3187,15 +3260,17 @@ void TextViewer::AutoScrollOriginMark::onPaint(PaintDC& dc) {
 }
 
 
-// TextViewer::VerticalRulerDrawer //////////////////////////////////////////
+// TextViewer.VerticalRulerDrawer ///////////////////////////////////////////
 
 // some methods are defined in layout.cpp
 
 /**
  * Constructor.
  * @param viewer the viewer
+ * @param enableDoubleBuffering set true to use double-buffering for non-flicker drawing
  */
-TextViewer::VerticalRulerDrawer::VerticalRulerDrawer(TextViewer& viewer) : viewer_(viewer), width_(0), lineNumberDigitsCache_(0) {
+TextViewer::VerticalRulerDrawer::VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering)
+		: viewer_(viewer), width_(0), lineNumberDigitsCache_(0), enablesDoubleBuffering_(enableDoubleBuffering) {
 	recalculateWidth();
 }
 
@@ -3221,15 +3296,13 @@ void TextViewer::VerticalRulerDrawer::update() throw() {
 	lineNumberDigitsCache_ = 0;
 	recalculateWidth();
 	updateGDIObjects();
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
-	if(memoryBitmap_.getHandle() != 0)
+	if(enablesDoubleBuffering_ && memoryBitmap_.getHandle() != 0)
 		memoryBitmap_.reset();
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 }
 
 ///
 void TextViewer::VerticalRulerDrawer::updateGDIObjects() throw() {
-	using internal::systemColors;
+	using layout::internal::systemColors;
 
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
@@ -3266,7 +3339,7 @@ void TextViewer::VerticalRulerDrawer::updateGDIObjects() throw() {
 #undef RESTORE_HIDDEN_CURSOR
 
 
-// TextViewer::ScrollInfo ///////////////////////////////////////////////////
+// TextViewer.ScrollInfo ////////////////////////////////////////////////////
 
 void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) throw() {
 	// 水平方向
@@ -3386,11 +3459,13 @@ bool VirtualBox::isPointOver(const ::POINT& pt) const throw() {
  */
 void VirtualBox::update(const Region& region) throw() {
 	const TextRenderer& r = view_.getTextRenderer();
-	::POINT location = r.getLineLayout(points_[0].line = region.first.line).getLocation(region.first.column);
-	points_[0].x = location.x;
+	const LineLayout* layout = &r.getLineLayout(points_[0].line = region.first.line);
+	::POINT location = layout->getLocation(region.first.column);
+	points_[0].x = location.x + r.getLineIndent(points_[0].line, layout->getSubline(region.first.column));
 	points_[0].subline = location.y / r.getLinePitch();
-	location = r.getLineLayout(points_[1].line = region.second.line).getLocation(region.second.column);
-	points_[1].x = location.x;
+	layout = &r.getLineLayout(points_[1].line = region.second.line);
+	location = layout->getLocation(region.second.column);
+	points_[1].x = location.x + r.getLineIndent(points_[1].line, layout->getSubline(region.second.column));
 	points_[1].subline = location.y / r.getLinePitch();
 }
 

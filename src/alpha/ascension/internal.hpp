@@ -78,6 +78,23 @@ namespace ascension {
 		/// Returns absolute difference of two numerals.
 		template<typename T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
 
+		/// Manages a strategy object.
+		template<typename Strategy> class StrategyPointer : private manah::Noncopyable {
+		public:
+			StrategyPointer() throw() : pointee_(0), manages_(false) {}
+			StrategyPointer(Strategy* pointee, bool manage) throw() : pointee_(pointee), manages_(manage) {}
+			~StrategyPointer() {if(manages_) delete pointee_;}
+			Strategy& operator*() const throw() {return *pointee_;}
+			Strategy* operator->() const throw() {return get();}
+			Strategy* get() const throw() {return pointee_;}
+			void reset(Strategy* newValue, bool manage) {
+				if(manages_ && newValue != pointee_) delete pointee_; pointee_ = newValue; manages_ = manage;}
+			void reset() {reset(0, false);}
+		private:
+			Strategy* pointee_;
+			bool manages_;
+		};
+
 		/// Manages the listeners.
 		template<class Listener> class Listeners : public manah::Noncopyable {
 		public:

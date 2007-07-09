@@ -121,7 +121,7 @@ namespace ascension {
 			 * @param[out] orientation the orientation of the caret. this value is used for hot spot calculation
 			 */
 			virtual void getCaretShape(
-				std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() = 0;
+				std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, layout::Orientation& orientation) throw() = 0;
 			/**
 			 * Installs the provider.
 			 * @param updater the caret updator which notifies the text viewer to update the caret
@@ -140,7 +140,8 @@ namespace ascension {
 		public:
 			DefaultCaretShaper() throw();
 		private:
-			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
+			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
+						::SIZE& solidSize, layout::Orientation& orientation) throw();
 			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
 		private:
@@ -156,7 +157,8 @@ namespace ascension {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
 		private:
-			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw();
+			void	getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
+						::SIZE& solidSize, layout::Orientation& orientation) throw();
 			void	install(CaretShapeUpdater& updater) throw();
 			void	uninstall() throw();
 			// ICaretListener
@@ -287,6 +289,17 @@ namespace ascension {
 		};
 
 		/**
+		 * Interface for objects which are interested in change of size of a @c TextViewer.
+		 * @see TextViewer#addDisplaySizeListener, TextViewer#removeDisplaySizeListener
+		 */
+		class IDisplaySizeListener {
+		private:
+			/// The size of the viewer was changed.
+			virtual void viewerDisplaySizeChanged() = 0;
+			friend class TextViewer;
+		};
+
+		/**
 		 * @see TextViewer#setLinkTextStrategy
 		 */
 		class IViewerLinkTextStrategy {
@@ -322,7 +335,8 @@ namespace ascension {
 				virtual public text::IDocumentListener,
 				virtual public text::IDocumentStateListener,
 				virtual public text::ISequentialEditListener,
-				virtual public IVisualLinesListener,
+				virtual public layout::IFontSelectorListener,
+				virtual public layout::IVisualLinesListener,
 				virtual public ICaretListener,
 				virtual public ICaretStateListener,
 				virtual public ascension::text::internal::IPointCollection<VisualPoint> {
@@ -349,56 +363,25 @@ namespace ascension {
 			 * A general configuration of the viewer.
 			 * @see TextViewer#getConfigurations, TextViewer#setConfigurations
 			 */
-			struct Configuration {
-				/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
-				Colors color;
+			struct Configuration : public layout::LayoutSettings {
 				/// Color of active selected text. Standard setting is {@c COLOR_HIGHLIGHTTEXT, @c COLOR_HIGHLIGHT}.
-				Colors selectionColor;
+				layout::Colors selectionColor;
 				/// Color of inactive selected text. Standard setting is {@c COLOR_INACTIVECAPTIONTEXT, @c COLOR_INACTIVECAPTION}.
-				Colors inactiveSelectionColor;
+				layout::Colors inactiveSelectionColor;
 				/// Color of the inaccessible area. Standard setting is {@c COLOR_GRAYTEXT, @c color.background}.
-				Colors restrictionColor;
-				/// Color of invisible controls. Standard setting is not provided.
-				Colors invisibleControlColor;
-				/// Character count of a tab expansion. Default value is 8.
-				int tabWidth;
-				/// Line spacing in pixel. default value is 1.
-				int lineSpacing;
+				layout::Colors restrictionColor;
 				/// The amount of the leading margin in pixels. Default value is 5. This member will be ignored if the text is center-aligned.
 				int leadingMargin;
 				/// The amount of the top margin in pixels. Default value is 1.
 				int topMargin;
-				/// Orientation ("paragraph direction") of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
-				Orientation orientation;
-				/// Alignment of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ALIGNMENT.
-				Alignment alignment;
-				/// Line wrap configuration.
-				LineWrapConfiguration lineWrap;
 				/// Set true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
-				/// Set true to justify the lines if wrapped. Default value is false.
-				bool justifiesLines;
-				/// Set true to inhibit any shaping. Default value is false.
-				bool inhibitsShaping;
-				/// If set to true, zero width control characters are shaped as representative glyphs. Default is false.
-				bool displaysShapingControls;
-				/// Set true to inhibit from generating mirrored glyphs. Default value is false.
-				bool inhibitsSymmetricSwapping;
-				/// Set true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is false.
-				bool disablesDeprecatedFormatCharacters;
-				/// Digits substitution type. Default value is @c DST_USER_DEFAULT.
-				DigitSubstitutionType digitSubstitutionType;
 				/// Constructor.
-				Configuration() throw() : tabWidth(8), lineSpacing(0), leadingMargin(5), topMargin(1),
-						orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
-						justifiesLines(false), inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
-						digitSubstitutionType(DST_USER_DEFAULT), disablesDeprecatedFormatCharacters(false) {
+				Configuration() throw() : leadingMargin(5), topMargin(1) {
 					BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
 					vanishesCursor = toBoolean(b);
 				}
-				/// Returns true if the all mwmbers are valid.
-				bool verify() const throw() {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 			};
 
 			/**
@@ -412,7 +395,7 @@ namespace ascension {
 					bool visible;
 					/// Alignment of the digits. Default value is @c presentation#ALIGN_AUTO.
 					/// If @c presentation#ALIGN_AUTO is set, the digits are aligned to the leading edge.
-					Alignment alignment;
+					layout::Alignment alignment;
 					/// Start value of the line number. Default value is 1.
 					length_t startValue;
 					/// Minimum number of digits. Default value is 4.
@@ -423,7 +406,7 @@ namespace ascension {
 					int trailingMargin;
 					/// Color of the text. Default value is @c presentation#Colors#STANDARD.
 					/// @c presentation#Colors#STANDARD is fallbacked to the color of the system normal text.
-					Colors textColor;
+					layout::Colors textColor;
 					/// Color of the border. Default value is @c presentation#STANDARD_COLOR.
 					/// @c presentation#STANDARD_COLOR is fallbacked to the color of the system normal text.
 					COLORREF borderColor;
@@ -438,11 +421,11 @@ namespace ascension {
 						DOTTED			///< Dotted line.
 					} borderStyle;
 					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
-					DigitSubstitutionType digitSubstitution;
+					layout::DigitSubstitutionType digitSubstitution;
 					/// Constructor.
-					LineNumbers() throw() : visible(false), alignment(ALIGN_AUTO), startValue(1),
-						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(STANDARD_COLOR),
-						borderWidth(1), borderStyle(SOLID), digitSubstitution(DST_USER_DEFAULT) {}
+					LineNumbers() throw() : visible(false), alignment(layout::ALIGN_AUTO), startValue(1),
+						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(layout::STANDARD_COLOR),
+						borderWidth(1), borderStyle(SOLID), digitSubstitution(layout::DST_USER_DEFAULT) {}
 					/// Returns true if the all members are valid.
 					bool verify() const throw() {return leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
@@ -459,19 +442,19 @@ namespace ascension {
 					/// @c presentation#STANDARD_COLOR is fallbacked to the system color @c COLOR_3DSHADOW.
 					COLORREF borderColor;
 					/// Constructor.
-					IndicatorMargin() throw() : visible(false), width(15), color(STANDARD_COLOR), borderColor(STANDARD_COLOR) {}
+					IndicatorMargin() throw() : visible(false), width(15), color(layout::STANDARD_COLOR), borderColor(layout::STANDARD_COLOR) {}
 					/// Returns true if the all members are valid.
 					bool verify() const throw() {return width >= 0;}
 				} indicatorMargin;	/// Configuration about the indicator margin.
-				/// Alignment of the vertical ruler. Can be either @c presentation#ALIGN_LEFT or
-				/// @c presentation#ALIGN_RIGHT. Default value is determined based on @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
-				Alignment alignment;
+				/// Alignment of the vertical ruler. Can be either @c layout#ALIGN_LEFT or
+				/// @c layout#ALIGN_RIGHT. Default value is determined based on @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
+				layout::Alignment alignment;
 				/// Constructor.
 				VerticalRulerConfiguration() throw() :
-					alignment(ASCENSION_DEFAULT_TEXT_ORIENTATION == LEFT_TO_RIGHT ? ALIGN_LEFT : ALIGN_RIGHT) {}
+					alignment(ASCENSION_DEFAULT_TEXT_ORIENTATION == layout::LEFT_TO_RIGHT ? layout::ALIGN_LEFT : layout::ALIGN_RIGHT) {}
 				/// Returns true if the all members are valid.
-				bool verify() const throw() {
-					return lineNumbers.verify() && indicatorMargin.verify() && (alignment == ALIGN_LEFT || alignment == ALIGN_RIGHT);}
+				bool verify() const throw() {return lineNumbers.verify()
+					&& indicatorMargin.verify() && (alignment == layout::ALIGN_LEFT || alignment == layout::ALIGN_RIGHT);}
 			};
 
 			// constructors
@@ -497,8 +480,8 @@ namespace ascension {
 			presentation::Presentation&			getPresentation() throw();
 			const presentation::Presentation&	getPresentation() const throw();
 			ulong								getScrollRate(bool horizontal) const throw();
-			TextRenderer&						getTextRenderer() throw();
-			const TextRenderer&					getTextRenderer() const throw();
+			layout::TextRenderer&				getTextRenderer() throw();
+			const layout::TextRenderer&			getTextRenderer() const throw();
 			const VerticalRulerConfiguration&	getVerticalRulerConfiguration() const throw();
 			void								setConfiguration(const Configuration* general,
 													const VerticalRulerConfiguration* verticalRuler);
@@ -544,7 +527,7 @@ namespace ascension {
 			// client coordinates vs. character position mappings
 			text::Position	getCharacterForClientXY(const ::POINT& pt, bool nearestLeading) const throw();
 			::POINT			getClientXYForCharacter(const text::Position& position,
-								bool fullSearchY, LineLayout::Edge edge = LineLayout::LEADING) const;
+								bool fullSearchY, layout::LineLayout::Edge edge = layout::LineLayout::LEADING) const;
 			// utilities
 			void			getFirstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw();
 			length_t		getNumberOfVisibleLines() const throw();
@@ -560,7 +543,7 @@ namespace ascension {
 
 			// helpers
 		private:
-			int		getDisplayXOffset() const throw();
+			int		getDisplayXOffset(length_t line) const;
 			void	handleGUICharacterInput(CodePoint c);
 			void	internalUnfreeze();
 			void	mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw();
@@ -573,7 +556,7 @@ namespace ascension {
 
 			// protected interfaces
 		protected:
-			// IDocumentStateListener (overridable)
+			// text.IDocumentStateListener (overridable)
 			virtual void	documentAccessibleRegionChanged(text::Document& document);
 			virtual void	documentEncodingChanged(text::Document& document);
 			virtual void	documentFileNameChanged(text::Document& document);
@@ -587,21 +570,22 @@ namespace ascension {
 			virtual void	overtypeModeChanged(const Caret& self);
 			virtual void	selectionShapeChanged(const Caret& self);
 		private:
-			// IDocumentListener
+			// text.IDocumentListener
 			void	documentAboutToBeChanged(const text::Document& document);
 			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
-			// ISequentialEditListener
+			// text.ISequentialEditListener
 			void	documentSequentialEditStarted(text::Document& document);
 			void	documentSequentialEditStopped(text::Document& document);
 			void	documentUndoSequenceStarted(text::Document& document);
 			void	documentUndoSequenceStopped(text::Document& document, const text::Position& resultPosition);
-			// IVisualLinesListener
-			void	rendererFontChanged() throw();
+			// layout.IFontSelectorListener
+			void	fontChanged() throw();
+			// layout.IVisualLinesListener
 			void	visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
 			void	visualLinesInserted(length_t first, length_t last) throw();
 			void	visualLinesModified(length_t first, length_t last,
 						signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
-			// internal::IPointCollection<VisualPoint>
+			// internal.IPointCollection<VisualPoint>
 			void	addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void	removePoint(VisualPoint& point) {points_.erase(&point);}
 
@@ -664,6 +648,20 @@ namespace ascension {
 
 			// internal classes
 		private:
+			/// Internal extension of @c layout#TextRenderer.
+			class Renderer : public layout::TextRenderer {
+			public:
+				explicit Renderer(TextViewer& viewer);
+				void	rewrapAtWindowEdge();
+			private:
+				// FontSelector
+				std::auto_ptr<manah::win32::gdi::DC>	doGetDeviceContext() const;
+				// ILayoutInformationProvider
+				const layout::LayoutSettings&	getLayoutSettings() const throw();
+				int								getWidth() const throw();
+			private:
+				TextViewer& viewer_;
+			};
 			/// Circled window displayed at which the auto scroll started.
 			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark>, private manah::Noncopyable {
 				DEFINE_WINDOW_CLASS() {
@@ -682,7 +680,7 @@ namespace ascension {
 			/// @c VerticalRulerDrawer draws the vertical ruler of the @c TextViewer.
 			class VerticalRulerDrawer : public manah::Noncopyable {
 			public:
-				explicit VerticalRulerDrawer(TextViewer& viewer) throw();
+				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) throw();
 				void								draw(manah::win32::gdi::PaintDC& dc);
 				const VerticalRulerConfiguration&	getConfiguration() const throw();
 				int									getWidth() const throw();
@@ -698,10 +696,9 @@ namespace ascension {
 				uchar lineNumberDigitsCache_;
 				manah::win32::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
 				manah::win32::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
-#ifndef ASCENSION_NO_DOUBLE_BUFFERING
+				const bool enablesDoubleBuffering_;
 				std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
 				manah::win32::gdi::Bitmap memoryBitmap_;
-#endif /* !ASCENSION_NO_DOUBLE_BUFFERING */
 			};
 
 			// enumerations
@@ -774,7 +771,7 @@ namespace ascension {
 			// 大物
 			presentation::Presentation& presentation_;
 			std::auto_ptr<Caret> caret_;
-			std::auto_ptr<TextRenderer> renderer_;
+			std::auto_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;
@@ -835,10 +832,10 @@ namespace ascension {
 			// a bitmap for caret presentation
 			struct CaretShape {
 				ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper;
-				Orientation orientation;
+				layout::Orientation orientation;
 				int width;
 				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
-				CaretShape() throw() : orientation(LEFT_TO_RIGHT), width(0) {}
+				CaretShape() throw() : orientation(layout::LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 
 			// input state
@@ -856,6 +853,7 @@ namespace ascension {
 			friend class VirtualBox;
 			friend class VerticalRulerDrawer;
 			friend class CaretShapeUpdater;
+			friend class Renderer;
 		};
 
 		/// Highlights the line on which the caret is put.
@@ -865,14 +863,15 @@ namespace ascension {
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
-			CurrentLineHighlighter(Caret& caret, const Colors& color = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK));
+			CurrentLineHighlighter(Caret& caret,
+				const layout::Colors& color = layout::Colors(layout::STANDARD_COLOR, COLOR_INFOBK | layout::SYSTEM_COLOR_MASK));
 			~CurrentLineHighlighter() throw();
 			// attributes
-			const Colors&	getColor() const throw();
-			void			setColor(const Colors& color) throw();
+			const layout::Colors&	getColor() const throw();
+			void					setColor(const layout::Colors& color) throw();
 		private:
 			// ILineColorDirector
-			ILineColorDirector::Priority	queryLineColor(length_t line, Colors& color) const;
+			ILineColorDirector::Priority	queryLineColor(length_t line, layout::Colors& color) const;
 			// ICaretListener
 			void	caretMoved(const Caret& self, const text::Region& oldRegion);
 			// ICaretStateListener
@@ -881,7 +880,7 @@ namespace ascension {
 			void	selectionShapeChanged(const Caret& self);
 		private:
 			Caret& caret_;
-			Colors color_;
+			layout::Colors color_;
 		};
 
 
@@ -1011,10 +1010,10 @@ inline ulong TextViewer::getScrollRate(bool horizontal) const throw() {
 	assertValidAsWindow(); return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
 
 /// Returns the text renderer.
-inline TextRenderer& TextViewer::getTextRenderer() throw() {return *renderer_;}
+inline layout::TextRenderer& TextViewer::getTextRenderer() throw() {return *renderer_;}
 
 /// Returns the text renderer.
-inline const TextRenderer& TextViewer::getTextRenderer() const throw() {return *renderer_;}
+inline const layout::TextRenderer& TextViewer::getTextRenderer() const throw() {return *renderer_;}
 
 /**
  * Returns the vertical ruler's configuration.

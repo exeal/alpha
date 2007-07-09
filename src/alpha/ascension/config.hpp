@@ -97,33 +97,30 @@
 // #define ASCENSION_NO_MIGEMO
 
 
-// about ascension.viewers //////////////////////////////////////////////////
+// about ascension.layout ///////////////////////////////////////////////////
 
 /**
  * @def ASCENSION_DEFAULT_TEXT_ORIENTATION
- * Default text orientation for rendering. This must be one of @c ascension#viewers#Orientation
+ * Default text orientation for rendering. This must be one of @c ascension#layout#Orientation
  * enumeration.
  */
-#define ASCENSION_DEFAULT_TEXT_ORIENTATION ascension::viewers::LEFT_TO_RIGHT
+#define ASCENSION_DEFAULT_TEXT_ORIENTATION ascension::layout::LEFT_TO_RIGHT
 
 /**
  * @def ASCENSION_DEFAULT_TEXT_ALIGNMENT
- * Default text alignment for rendering. This must be one of @c ascension#viewers#Alignment enumeration.
+ * Default text alignment for rendering. This must be one of @c ascension#layout#Alignment enumeration.
  */
-#define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::viewers::ALIGN_LEFT
+#define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::layout::ALIGN_LEFT
 
 /**
  * @def ASCENSION_LINE_LAYOUT_CACHE_SIZE
- * Default size of cache buffer of @c ascension#viewers#LineLayoutBuffer. This value is used by
- * @c ascension#viewers#LineLayoutBuffer class.
+ * Default size of cache buffer of @c ascension#layout#LineLayoutBuffer. This value is used by
+ * @c ascension#layout#LineLayoutBuffer class.
  */
 #define ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE 256
 
-/**
- * @def ASCENSION_NO_DOUBLE_BUFFERING
- * Define the symbol if you do not use double-buffering for non-flicker drawing.
- */
-// #define ASCENSION_NO_DOUBLE_BUFFERING
+
+// about ascension.viewers //////////////////////////////////////////////////
 
 /**
  * @def ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES

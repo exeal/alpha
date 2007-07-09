@@ -100,7 +100,7 @@ ulong CaretMovementCommand::execute() {
 		}
 		caret.endBoxSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
-			const bool rtl = getTarget().getConfiguration().orientation == RIGHT_TO_LEFT;
+			const bool rtl = getTarget().getConfiguration().orientation == layout::RIGHT_TO_LEFT;
 			if(type_ == NEXT_CHARACTER
 					|| (type_ == RIGHT_CHARACTER && !rtl)
 					|| (type_ == LEFT_CHARACTER && rtl)) {
