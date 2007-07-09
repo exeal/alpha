@@ -13,6 +13,7 @@ using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::text;
 using namespace ascension::unicode;
+using namespace ascension::layout;
 using namespace ascension::viewers;
 using namespace std;
 using manah::AutoBuffer;

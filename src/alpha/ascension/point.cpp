@@ -10,6 +10,7 @@
 
 using namespace ascension;
 using namespace ascension::text;
+using namespace ascension::layout;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::unicode;
@@ -1034,10 +1035,6 @@ bool VisualPoint::recenter(const Position& other) {
 	return true;
 }
 
-/// @see IVisualLinesListener#rendererFontChanged
-void VisualPoint::rendererFontChanged() throw() {
-}
-
 /**
  * 指定範囲が可視になるようにビューをスクロールする
  * @param length 範囲を構成するもう一方の点までの文字数
@@ -1300,8 +1297,11 @@ bool VisualPoint::transposeWords() {
 inline void VisualPoint::updateLastX() {
 	assert(!crossingLines_);
 	verifyViewer();
-	if(!isDocumentDisposed())
-		lastX_ = getTextViewer().getTextRenderer().getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x;
+	if(!isDocumentDisposed()) {
+		const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
+		lastX_ = layout.getLocation(getColumnNumber(), LineLayout::LEADING).x;
+		lastX_ += getTextViewer().getTextRenderer().getLineIndent(getLineNumber(), layout.getSubline(getColumnNumber()));
+	}
 }
 
 /**

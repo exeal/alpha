@@ -1918,7 +1918,7 @@ void DocumentCharacterIterator::previous() {
  * @param initialPosition the initial position of streams
  * @param nlr the newline representation
  * @param streamMode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
- * @throw std#invalid_argument @p mode is invalid
+ * @throw std#invalid_argument @a mode is invalid
  */
 DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
 		NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :

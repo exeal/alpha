@@ -6,7 +6,7 @@
 
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
-#include "layout.hpp"	// viewers.IVisualLineListener
+#include "layout.hpp"	// layout.IVisualLinesListener
 #include "unicode.hpp"
 #include "encoder.hpp"
 #include <functional>	// std.mem_fun_t
@@ -144,7 +144,7 @@ namespace ascension {
 		 * Extension of @c EditPoint for viewer and layout.
 		 * @see text#EditPoint, text#IPointListener, text#DisposedViewException
 		 */
-		class VisualPoint : public text::EditPoint, virtual public IVisualLinesListener {
+		class VisualPoint : public text::EditPoint, virtual public layout::IVisualLinesListener {
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
@@ -213,8 +213,7 @@ namespace ascension {
 			text::Position	doIndent(const text::Position& other, Char character, bool box, long level);
 			void			updateLastX();
 			void			viewerDisposed() throw();
-			// IVisualLinesListener
-			void	rendererFontChanged() throw();
+			// layout.IVisualLinesListener
 			void	visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
 			void	visualLinesInserted(length_t first, length_t last) throw();
 			void	visualLinesModified(length_t first, length_t last,
@@ -481,19 +480,19 @@ inline void viewers::VisualPoint::viewerDisposed() throw() {viewer_ = 0;}
 /**
  * Registers the listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void viewers::Caret::addListener(ICaretListener& listener) {listeners_.add(listener);}
 /**
  * Registers the character input listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void viewers::Caret::addCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.add(listener);}
 /**
  * Registers the state listener.
  * @param listener the listener to be registered
- * @throw std#invalid_argument @p listener is already registered
+ * @throw std#invalid_argument @a listener is already registered
  */
 inline void viewers::Caret::addStateListener(ICaretStateListener& listener) {stateListeners_.add(listener);}
 /**
@@ -536,31 +535,31 @@ inline viewers::Caret::MatchBracketsTrackingMode viewers::Caret::getMatchBracket
 /**
  * Removes the listener
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Caret::removeListener(ICaretListener& listener) {listeners_.remove(listener);}
 /**
  * Removes the character input listener
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.remove(listener);}
 /**
  * Removes the state listener
  * @param listener the listener to be removed
- * @throw std#invalid_argument @p listener is not registered
+ * @throw std#invalid_argument @a listener is not registered
  */
 inline void Caret::removeStateListener(ICaretStateListener& listener) {stateListeners_.remove(listener);}
 /**
  * Replaces the selected region with the specified text.
  * @param text the text
- * @param rectangleInsertion if set to true, @p text is inserted as rectangle
+ * @param rectangleInsertion if set to true, @a text is inserted as rectangle
  */
 inline void viewers::Caret::replaceSelection(const String& text, bool rectangleInsertion /* = false */) {
 	replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);}
 /**
  * Selects the specified region.
- * @param region the region. @p pos1 member is the anchor, @p pos2 member is the caret
+ * @param region the region. @a pos1 member is the anchor, @a pos2 member is the caret
  */
 inline void viewers::Caret::select(const text::Region& region) {select(region.first, region.second);}
 /**
@@ -570,6 +569,6 @@ inline void viewers::Caret::select(const text::Region& region) {select(region.fi
 inline void viewers::Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) throw() {
 	if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();}}
 
-}} // namespace ascension::viewers
+}} // namespace ascension.viewers
 
 #endif /* !ASCENSION_POINT_HPP */

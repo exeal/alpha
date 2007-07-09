@@ -19,19 +19,19 @@ namespace ascension {
 
 		/// Visual attributes of a text segment.
 		struct TextStyle : public manah::FastArenaObject<TextStyle> {
-			viewers::Colors color;				///< Color of the text.
+			layout::Colors color;				///< Color of the text.
 			bool bold;							///< True if the font is bold.
 			bool italic;						///< True if the font is italic.
 			bool strikeout;						///< True if the font is strokeout.
-			viewers::UnderlineStyle underlineStyle;	///< Style of the underline.
+			layout::UnderlineStyle underlineStyle;	///< Style of the underline.
 			COLORREF underlineColor;				///< Color of the underline. @c STANDARD_COLOR indicates @c color.background.
-			viewers::BorderStyle borderStyle;		///< Style of the border.
+			layout::BorderStyle borderStyle;		///< Style of the border.
 			COLORREF borderColor;					///< Color of the border. @c STANDARD_COLOR indicates @c color.background.
 			/// Constructor.
-			explicit TextStyle(const viewers::Colors& textColor = viewers::Colors(),
+			explicit TextStyle(const layout::Colors& textColor = layout::Colors(),
 				bool boldFont = false, bool italicFont = false, bool strikeoutFont = false,
-				viewers::UnderlineStyle styleOfUnderline = viewers::NO_UNDERLINE, COLORREF colorOfUnderline = viewers::STANDARD_COLOR,
-				viewers::BorderStyle styleOfBorder = viewers::NO_BORDER, COLORREF colorOfBorder = viewers::STANDARD_COLOR) throw()
+				layout::UnderlineStyle styleOfUnderline = layout::NO_UNDERLINE, COLORREF colorOfUnderline = layout::STANDARD_COLOR,
+				layout::BorderStyle styleOfBorder = layout::NO_BORDER, COLORREF colorOfBorder = layout::STANDARD_COLOR) throw()
 				: color(textColor), bold(boldFont), italic(italicFont), strikeout(strikeoutFont),
 				underlineStyle(styleOfUnderline), underlineColor(colorOfUnderline), borderStyle(styleOfBorder), borderColor(colorOfBorder) {}
 		};
@@ -85,7 +85,7 @@ namespace ascension {
 			 * @param[out] the color of the line or @c Colors#STANDARD
 			 * @return the priority
 			 */
-			virtual Priority queryLineColor(length_t line, viewers::Colors& color) const = 0;
+			virtual Priority queryLineColor(length_t line, layout::Colors& color) const = 0;
 			friend class Presentation;
 		};
 
@@ -123,7 +123,7 @@ namespace ascension {
 			void					addTextViewerListListener(ITextViewerListListener& listener);
 			text::Document&			getDocument() throw();
 			const text::Document&	getDocument() const throw();
-			viewers::Colors			getLineColor(length_t line) const;
+			layout::Colors			getLineColor(length_t line) const;
 			const LineStyle&		getLineStyle(length_t line, bool& delegatedOwnership) const;
 			void					removeLineColorDirector(ILineColorDirector& director) throw();
 			void					removeTextViewerListListener(ITextViewerListListener& listener);
