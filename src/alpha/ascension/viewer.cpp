@@ -3156,6 +3156,10 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 
 /// Constructor.
 TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.getPresentation(), true), viewer_(viewer) {
+#if 1
+	// for test
+	setSpecialCharacterRenderer(new DefaultSpecialCharacterRenderer, true);
+#endif
 }
 
 /// @see layout#FontSelector#doGetDeviceContext

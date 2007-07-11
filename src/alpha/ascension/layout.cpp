@@ -2594,12 +2594,6 @@ TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBufferin
 		break;
 	}
 //	updateViewerSize(); ???
-
-#if 1
-	// for test
-	specialCharacterRenderer_.reset(new DefaultSpecialCharacterRenderer, true);
-	specialCharacterRenderer_->install(*this);
-#endif
 }
 
 /// Copy-constructor.

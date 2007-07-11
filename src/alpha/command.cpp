@@ -505,10 +505,10 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_VIEW_WRAPNO: {
 		presentation::Presentation& p = buffer.getPresentation();
 		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NONE)
+			if((*i)->getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NONE)
 				continue;
 			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
-			c.lineWrap.mode = viewers::LineWrapConfiguration::NONE;
+			c.lineWrap.mode = layout::LineWrapConfiguration::NONE;
 			(*i)->setConfiguration(&c, 0);
 		}
 		return true;
@@ -517,10 +517,10 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_VIEW_WRAPBYWINDOWWIDTH: {
 		presentation::Presentation& p = buffer.getPresentation();
 		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NORMAL)
+			if((*i)->getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NORMAL)
 				continue;
 			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
-			c.lineWrap.mode = viewers::LineWrapConfiguration::NORMAL;
+			c.lineWrap.mode = layout::LineWrapConfiguration::NORMAL;
 			(*i)->setConfiguration(&c, 0);
 		}
 		return true;
@@ -792,11 +792,11 @@ bool CommandManager::isChecked(CommandID id) const {
 	case CMD_VIEW_STATUSBAR:
 		return app.statusBar_.isVisible();
 	case CMD_VIEW_WRAPNO:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode == viewers::LineWrapConfiguration::NONE;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NONE;
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
 //		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode != viewers::LineWrapConfiguration::NONE;
+		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode != layout::LineWrapConfiguration::NONE;
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();
