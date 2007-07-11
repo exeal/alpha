@@ -6,7 +6,7 @@
 
 #ifndef ALPHA_PRINT_HPP
 #define ALPHA_PRINT_HPP
-#include "../manah/object.hpp"
+#include "../manah/win32/dc.hpp"
 #include <windows.h>
 
 namespace alpha {
@@ -21,6 +21,9 @@ namespace alpha {
 	private:
 		Printing();
 		~Printing() throw();
+		bool	doSetupPages(bool returnDefault);
+		void	prepareDeviceContext();
+		DWORD	showDialog(bool returnDefault);
 	private:
 		::HGLOBAL devmode_;
 		::HGLOBAL devnames_;
