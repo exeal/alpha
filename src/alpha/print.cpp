@@ -180,6 +180,13 @@ bool Printing::print(const Buffer& buffer) {
 		buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED).c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
 
+	// create a pen draws separators
+	int separatorThickness;
+	if(!ascension::layout::getDecorationLineMetrics(dc.getHandle(), 0, 0, &separatorThickness, 0, 0))
+		separatorThickness = 1;
+	HPEN separatorPen = ::CreatePen(PS_SOLID, separatorThickness, RGB(0x00, 0x00, 0x00));
+	dc.selectObject(oldFont);
+
 	// start printing
 	::DOCINFOW di;
 	memset(&di, 0, sizeof(::DOCINFOW));
@@ -206,8 +213,10 @@ bool Printing::print(const Buffer& buffer) {
 				swprintf(pageNumber, L"%lu", page);
 				dc.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.right, rc.top, pageNumber, static_cast<int>(wcslen(pageNumber)));
-				dc.moveTo(rc.left, rc.top + linePitch);
-				dc.lineTo(rc.right, rc.top + linePitch);
+				HPEN oldPen = dc.selectObject(separatorPen);
+				dc.moveTo(rc.left, rc.top + linePitch + separatorThickness / 2);
+				dc.lineTo(rc.right, rc.top + linePitch + separatorThickness / 2);
+				dc.selectObject(oldPen);
 				rc.top += linePitch * 2;
 			}
 //			rc.bottom = rc.top + linePitch;
@@ -219,6 +228,7 @@ bool Printing::print(const Buffer& buffer) {
 #undef MM100_TO_PIXELS_X
 #undef MM100_TO_PIXELS_Y
 
+	::DeleteObject(separatorPen);
 	::EndPage(pdex.hDC);
 	::EndDoc(pdex.hDC);
 

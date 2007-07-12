@@ -131,6 +131,41 @@ void ascension::updateSystemSettings() throw() {
 	userSettings.update();
 }
 
+/**
+ * Returns metrics of underline and/or strikethrough for the currently selected font.
+ * @param dc the device context
+ * @param[out] baselineOffset the baseline position relative to the top in pixels
+ * @param[out] underlineOffset the underline position relative to the baseline in pixels
+ * @param[out] underlineThickness the thickness of underline in pixels
+ * @param[out] strikethroughOffset the linethrough position relative to the baseline in pixels
+ * @param[out] strikethroughThickness the thickness of linethrough in pixels
+ * @return succeeded or not
+ */
+bool layout::getDecorationLineMetrics(HDC dc, int* baselineOffset,
+		int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) throw() {
+	::OUTLINETEXTMETRICW* otm = 0;
+	::TEXTMETRICW tm;
+	if(const ::UINT c = ::GetOutlineTextMetricsW(dc, 0, 0)) {
+		otm = static_cast<::OUTLINETEXTMETRICW*>(::operator new(c));
+		if(!toBoolean(::GetOutlineTextMetricsW(dc, c, otm)))
+			return false;
+	} else if(!toBoolean(::GetTextMetricsW(dc, &tm)))
+		return false;
+	const int baseline = (otm != 0) ? otm->otmAscent : tm.tmAscent;
+	if(baselineOffset != 0)
+		*baselineOffset = baseline;
+	if(underlineOffset != 0)
+		*underlineOffset = (otm != 0) ? otm->otmsUnderscorePosition : baseline;
+	if(underlineThickness != 0)
+		*underlineThickness = (otm != 0) ? otm->otmsUnderscoreSize : 1;
+	if(strikethroughOffset != 0)
+		*strikethroughOffset = (otm != 0) ? otm->otmsStrikeoutPosition : (baseline / 3);
+	if(strikethroughThickness != 0)
+		*strikethroughThickness = (otm != 0) ? otm->otmsStrikeoutSize : 1;
+	::operator delete(otm);
+	return true;
+}
+
 /// Returns true if complex scripts are supported.
 bool layout::supportsComplexScripts() throw() {
 	return true;
@@ -162,35 +197,27 @@ namespace {
 		throw invalid_argument("Unknown style value.");
 	}
 	inline void drawDecorationLines(DC& dc, const TextStyle& style, COLORREF foregroundColor, int x, int y, int width, int height) {
-		::OUTLINETEXTMETRICW* otm = 0;
-		::TEXTMETRICW tm;
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
-			if(const UINT c = dc.getOutlineTextMetrics(0, 0)) {
-				otm = static_cast<::OUTLINETEXTMETRICW*>(operator new(c));
-				dc.getOutlineTextMetrics(c, otm);
-			} else
-				dc.getTextMetrics(tm);
-		}
-
-		// draw underline
-		if(style.underlineStyle != NO_UNDERLINE) {
-			HPEN oldPen = dc.selectObject(createPen((style.underlineColor != STANDARD_COLOR) ?
-				style.underlineColor : foregroundColor, (otm != 0) ? otm->otmsUnderscoreSize : 1, style.underlineStyle));
-			const int underlineY = y + ((otm != 0) ?
-				otm->otmTextMetrics.tmAscent - otm->otmsUnderscorePosition + otm->otmsUnderscoreSize / 2 : tm.tmAscent);
-			dc.moveTo(x, underlineY);
-			dc.lineTo(x + width, underlineY);
-			::DeleteObject(dc.selectObject(oldPen));
-		}
-
-		// draw strikeout line
-		if(style.strikeout) {
-			HPEN oldPen = dc.selectObject(createPen(foregroundColor, (otm != 0) ? otm->otmsStrikeoutSize : 1, 1));
-			const int strikeoutY = y + ((otm != 0) ?
-				otm->otmTextMetrics.tmAscent - otm->otmsStrikeoutPosition + otm->otmsStrikeoutSize / 2 : tm.tmAscent / 3);
-			dc.moveTo(x, strikeoutY);
-			dc.lineTo(x + width, strikeoutY);
-			::DeleteObject(dc.selectObject(oldPen));
+			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
+			if(getDecorationLineMetrics(dc.getHandle(), &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
+				// draw underline
+				if(style.underlineStyle != NO_UNDERLINE) {
+					HPEN oldPen = dc.selectObject(createPen((style.underlineColor != STANDARD_COLOR) ?
+						style.underlineColor : foregroundColor, underlineThickness, style.underlineStyle));
+					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
+					dc.moveTo(x, underlineY);
+					dc.lineTo(x + width, underlineY);
+					::DeleteObject(dc.selectObject(oldPen));
+				}
+				// draw strikeout line
+				if(style.strikeout) {
+					HPEN oldPen = dc.selectObject(createPen(foregroundColor, linethroughThickness, 1));
+					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
+					dc.moveTo(x, strikeoutY);
+					dc.lineTo(x + width, strikeoutY);
+					::DeleteObject(dc.selectObject(oldPen));
+				}
+			}
 		}
 
 		// draw border
@@ -202,8 +229,6 @@ namespace {
 			::DeleteObject(dc.selectObject(oldPen));
 			dc.selectObject(oldBrush);
 		}
-
-		delete[] otm;
 	}
 } // namespace @0
 
@@ -226,9 +251,19 @@ namespace {
  * @param line the line
  * @throw text#BadPositionException @a line is invalid
  */
-LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation),
-		lineNumber_(line), runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0),
-		longestSublineWidth_(-1), wrapWidth_(layoutInformation.getLayoutSettings().lineWrap.wraps() ? layoutInformation.getWidth() : -1) {
+LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation), lineNumber_(line),
+		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
+	// calculate the wrapping width
+	if(layoutInformation.getLayoutSettings().lineWrap.wraps()) {
+		wrapWidth_ = layoutInformation.getWidth();
+		if(ISpecialCharacterRenderer* scr = lip_.getSpecialCharacterRenderer()) {
+			auto_ptr<DC> dc(lip_.getFontSelector().getDeviceContext());
+			ISpecialCharacterRenderer::LayoutContext context(*dc);
+			context.orientation = lip_.getLayoutSettings().orientation;
+			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
+		}
+	}
+	// construct the layout
 	if(!getText().empty()) {
 		itemize(line);
 		for(size_t i = 0; i < numberOfRuns_; ++i)

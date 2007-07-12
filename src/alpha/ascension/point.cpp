@@ -1076,7 +1076,7 @@ bool VisualPoint::show(const Position& other) {
 	// for horizontal direction
 	if(!viewer_->getConfiguration().lineWrap.wrapsAtWindowEdge()) {
 		const length_t visibleColumns = viewer_->getNumberOfVisibleColumns();
-		const ulong x = renderer.getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x;
+		const ulong x = renderer.getLineLayout(getLineNumber()).getLocation(getColumnNumber(), LineLayout::LEADING).x + renderer.getLineIndent(getLineNumber(), 0);
 		viewer_->getScrollInformation(SB_HORZ, si);
 		const ulong scrollOffset = si.nPos * viewer_->getScrollRate(true) * renderer.getAverageCharacterWidth();
 		if(x <= scrollOffset)	// 画面より左
