@@ -989,29 +989,17 @@ int TextViewer::getDisplayXOffset(length_t line) const {
 	int indent;
 	Rect clientRect;
 	getClientRect(clientRect);
-	if(configuration_.lineWrap.wrapsAtWindowEdge())
-		indent = clientRect.getWidth() - margins.right;
-	else if(renderer_->getLongestLineWidth() + margins.left + margins.right > clientRect.getWidth())
+	if(renderer_->getLongestLineWidth() + margins.left + margins.right > clientRect.getWidth()) {
 		indent = renderer_->getLongestLineWidth() - renderer_->getLineLayout(line).getSublineWidth(0) + margins.left;
-	else
+		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->getAverageCharacterWidth();
+	} else
 		indent = clientRect.getWidth() - renderer_->getLineLayout(line).getSublineWidth(0) - margins.right;
 	if(configuration_.alignment == ALIGN_CENTER)
 		indent /= 2;
 	else
 		assert(configuration_.alignment == ALIGN_RIGHT);
 	return indent - static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
-/*	else if(configuration_.alignment == ALIGN_RIGHT) {
-		int offset = -static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
-		if(renderer_->getLongestLineWidth() > clientRect.getWidth() - margins.left - margins.right)
-			offset += (clientRect.getWidth() - margins.left - margins.right) % renderer_->getAverageCharacterWidth();
-		offset += renderer_->getWidth() - renderer_->getLineLayout(line).getSublineWidth(0) - margins.right;
-		return offset;
-	} else if(configuration_.alignment == ALIGN_CENTER) {
-		// TODO: not implemented.
-	}
-	assert(false);
-	return 0;	// 無意味
-*/}
+}
 
 /**
  * Returns the text and the region of a link near the cursor.
@@ -3181,9 +3169,9 @@ int TextViewer::Renderer::getWidth() const throw() {
 		viewer_.getScrollInformation(SB_HORZ, si);
 		return (si.nMax + 1) * viewer_.getTextRenderer().getAverageCharacterWidth();
 	} else if(lwc.wrapsAtWindowEdge()) {
-		::RECT rc;
+		::RECT rc, margins = viewer_.getTextAreaMargins();
 		viewer_.getClientRect(rc);
-		return rc.right - rc.left - viewer_.verticalRulerDrawer_->getWidth();	// $friendly-access
+		return rc.right - rc.left - margins.left - margins.right;	// $friendly-access
 	} else
 		return lwc.width;
 }

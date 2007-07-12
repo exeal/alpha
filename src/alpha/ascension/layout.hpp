@@ -24,6 +24,8 @@ namespace ascension {
 	namespace layout {
 
 		// free functions
+		bool	getDecorationLineMetrics(HDC dc, int* baselineOffset,
+					int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) throw();
 		bool	supportsComplexScripts() throw();
 		bool	supportsOpenTypeFeatures() throw();
 
@@ -472,7 +474,7 @@ namespace ascension {
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
 			length_t numberOfSublines_;
 			int longestSublineWidth_;
-			const int wrapWidth_;	// -1 if should not wrap
+			int wrapWidth_;	// -1 if should not wrap
 			friend class LineLayoutBuffer;
 			friend class StyledSegmentIterator;
 		};
