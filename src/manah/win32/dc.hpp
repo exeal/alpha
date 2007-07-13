@@ -61,6 +61,39 @@ public:
 	int			setROP2(int mode);
 	int			setStretchBltMode(int mode);
 	COLORREF	setTextColor(COLORREF color);
+	// mapping
+	int		getMapMode() const;
+	::SIZE	getViewportExt() const;
+	::POINT	getViewportOrg() const;
+	::SIZE	getWindowExt() const;
+	::POINT	getWindowOrg() const;
+	bool	offsetViewportOrg(int dx, int dy, ::POINT* original = 0);
+	bool	offsetWindowOrg(int dx, int dy, ::POINT* original = 0);
+	bool	scaleViewportExt(int xNum, int xDenom, int yNum, int yDenom, ::SIZE* original = 0);
+	bool	scaleWindowExt(int xNum, int xDenom, int yNum, int yDenom, ::SIZE* original = 0);
+	int		setMapMode(int newMode);
+	bool	setViewportExt(int cx, int cy, ::SIZE* original = 0);
+	bool	setViewportExt(const ::SIZE& size, ::SIZE* original = 0);
+	bool	setViewportOrg(int x, int y, ::POINT* original = 0);
+	bool	setViewportOrg(const ::POINT& p, ::POINT* original = 0);
+	bool	setWindowExt(int cx, int cy, ::SIZE* original = 0);
+	bool	setWindowExt(const ::SIZE& size, ::SIZE* original = 0);
+	bool	setWindowOrg(int x, int y, ::POINT* original = 0);
+	bool	setWindowOrg(const ::POINT& p, ::POINT* original = 0);
+#ifdef LAYOUT_RTL
+	// layout
+	DWORD	getLayout() const;
+	DWORD	setLayout(DWORD layout);
+#endif /* LAYOUT_RTL */
+	// coordinates
+	bool	dpToLP(::POINT ps[], int c) const;
+	bool	dpToLP(::POINT& p) const;
+	bool	dpToLP(::SIZE& s) const;
+	bool	dpToLP(::RECT& rc) const;
+	bool	lpToDP(::POINT ps[], int c) const;
+	bool	lpToDP(::POINT& p) const;
+	bool	lpToDP(::SIZE& s) const;
+	bool	lpToDP(::RECT& rc) const;
 	// regions
 	bool	fillRgn(HRGN region, HBRUSH brush);
 	bool	frameRgn(HRGN region, HBRUSH brush, int width, int height);
@@ -198,6 +231,15 @@ public:
 	UINT	getOutlineTextMetrics(UINT dataSize, ::LPOUTLINETEXTMETRIC otm) const;
 	bool	getRasterizerCaps(::RASTERIZER_STATUS& status, UINT cb) const;
 	DWORD	setMapperFlags(DWORD flag);
+	// printer escapement
+	int	abortDoc();
+	int	drawEscape(int escape, int bytes, const char input[]);
+	int	endDoc();
+	int	endPage();
+	int	escape(int escape, int bytes, const char input[], void* output);
+	int	setAbortProc(::ABORTPROC procedure);
+	int	startDoc(const ::DOCINFO& docInfo);
+	int	startPage();
 	// scroll
 	bool	scroll(int dx, int dy, const ::RECT& scrollRect, const ::RECT& clipRect, HRGN updateRegion, ::RECT* updateRect);
 protected:
@@ -263,6 +305,8 @@ public:
 
 // DC ///////////////////////////////////////////////////////////////////////
 
+inline int DC::abortDoc() {assertValidAsDC(); return ::AbortDoc(getHandle());}
+
 inline bool DC::angleArc(int x, int y, int radius, float startAngle, float sweepAngle) {
 	assertValidAsDC(); return toBoolean(::AngleArc(getHandle(), x, y, radius, startAngle, sweepAngle));}
 
@@ -291,8 +335,18 @@ inline bool DC::chord(const RECT& rect, const POINT& start, const POINT& end) {
 
 inline std::auto_ptr<DC> DC::createCompatibleDC() const {assertValidAsDC(); return std::auto_ptr<DC>(new DC(::CreateCompatibleDC(getHandle())));}
 
+inline bool DC::dpToLP(::POINT ps[], int c) const {assertValidAsDC(); return toBoolean(::DPtoLP(getHandle(), ps, c));}
+
+inline bool DC::dpToLP(::POINT& p) const {return dpToLP(&p, 1);}
+
+inline bool DC::dpToLP(::SIZE& s) const {return dpToLP(reinterpret_cast<::POINT*>(&s), 2);}
+
+inline bool DC::dpToLP(::RECT& rc) const {return dpToLP(reinterpret_cast<::POINT*>(&rc), 4);}
+
 inline bool DC::drawEdge(const RECT& rect, UINT edge, UINT flags) {
 	assertValidAsDC(); return toBoolean(::DrawEdge(getHandle(), const_cast<RECT*>(&rect), edge, flags));}
+
+inline int DC::drawEscape(int escape, int bytes, const char input[]) {assertValidAsDC(); return ::DrawEscape(getHandle(), escape, bytes, input);}
 
 inline void DC::drawFocusRect(const RECT& rect) {assertValidAsDC(); ::DrawFocusRect(getHandle(), &rect);}
 
@@ -322,6 +376,10 @@ inline bool DC::ellipse(int x1, int y1, int x2, int y2) {assertValidAsDC(); retu
 
 inline bool DC::ellipse(const RECT& rect) {return ellipse(rect.left, rect.top, rect.right, rect.bottom);}
 
+inline int DC::endDoc() {assertValidAsDC(); return ::EndDoc(getHandle());}
+
+inline int DC::endPage() {assertValidAsDC(); return ::EndPage(getHandle());}
+
 inline int DC::enumFontFamilies(const TCHAR* name, FONTENUMPROC proc, LPARAM param /* = 0UL */) const {
 	assertValidAsDC(); return ::EnumFontFamilies(getHandle(), name, proc, param);}
 
@@ -330,6 +388,8 @@ inline int DC::enumFontFamilies(const LOGFONT& condition, FONTENUMPROC proc, LPA
 
 inline int DC::enumObjects(int objectType, GOBJENUMPROC proc, LPARAM data) {
 	assertValidAsDC(); return ::EnumObjects(getHandle(), objectType, proc, data);}
+
+inline int DC::escape(int escape, int bytes, const char input[], void* output) {assertValidAsDC(); return ::Escape(getHandle(), escape, bytes, input, output);}
 
 inline int DC::excludeClipRect(int x1, int y1, int x2, int y2) {assertValidAsDC(); return ::ExcludeClipRect(getHandle(), x1, y1, x2, y2);}
 
@@ -461,6 +521,12 @@ inline DWORD DC::getGlyphOutline(UINT ch, UINT format, LPGLYPHMETRICS gm, DWORD 
 inline DWORD DC::getKerningPairs(DWORD count, LPKERNINGPAIR kerningPairs) const {
 	assertValidAsDC(); return ::GetKerningPairs(getHandle(), count, kerningPairs);}
 
+#ifdef LAYOUT_RTL
+inline DWORD DC::getLayout() const {assertValidAsDC(); return ::GetLayout(getHandle());}
+#endif /* LAYOUT_RTL */
+
+inline int DC::getMapMode() const {assertValidAsDC(); return ::GetMapMode(getHandle());}
+
 inline COLORREF DC::getNearestColor(COLORREF color) const {assertValidAsDC(); return ::GetNearestColor(getHandle(), color);}
 
 inline UINT DC::getOutlineTextMetrics(UINT bytes, LPOUTLINETEXTMETRIC otm) const {
@@ -515,7 +581,15 @@ inline int DC::getTextFace(int maxLength, TCHAR* faceName) const {assertValidAsD
 
 inline bool DC::getTextMetrics(TEXTMETRIC& metrics) const {assertValidAsDC(); return toBoolean(::GetTextMetrics(getHandle(), &metrics));}
 
+inline ::SIZE DC::getViewportExt() const {assertValidAsDC(); ::SIZE s; ::GetViewportExtEx(getHandle(), &s); return s;}
+
+inline ::POINT DC::getViewportOrg() const {assertValidAsDC(); ::POINT p; ::GetViewportOrgEx(getHandle(), &p); return p;}
+
 inline HWND DC::getWindow() const {assertValidAsDC(); return ::WindowFromDC(getHandle());}
+
+inline ::SIZE DC::getWindowExt() const {assertValidAsDC(); ::SIZE s; ::GetWindowExtEx(getHandle(), &s); return s;}
+
+inline ::POINT DC::getWindowOrg() const {assertValidAsDC(); ::POINT p; ::GetWindowOrgEx(getHandle(), &p); return p;}
 
 inline bool DC::grayString(HBRUSH brush, GRAYSTRINGPROC outputProc, LPARAM data, int length, int x, int y, int width, int height) {
 	assertValidAsDC(); return toBoolean(::GrayString(getHandle(), brush, outputProc, data, length, x, y, width, height));}
@@ -532,6 +606,14 @@ inline bool DC::lineTo(int x, int y) {assertValidAsDC(); return toBoolean(::Line
 
 inline bool DC::lineTo(const POINT& pt) {return lineTo(pt.x, pt.y);}
 
+inline bool DC::lpToDP(::POINT ps[], int c) const {assertValidAsDC(); return toBoolean(::LPtoDP(getHandle(), ps, c));}
+
+inline bool DC::lpToDP(::POINT& p) const {return lpToDP(&p, 1);}
+
+inline bool DC::lpToDP(::SIZE& s) const {return lpToDP(reinterpret_cast<::POINT*>(&s), 2);}
+
+inline bool DC::lpToDP(::RECT& rc) const {return lpToDP(reinterpret_cast<::POINT*>(&rc), 4);}
+
 inline bool DC::maskBlt(int x, int y, int width, int height, HDC dc, int xSrc, int ySrc, HBITMAP bitmap, int xMask, int yMask, DWORD rop) {
 	assertValidAsDC(); return toBoolean(::MaskBlt(getHandle(), x, y, width, height, dc, xSrc, ySrc, bitmap, xMask, yMask, rop));}
 
@@ -547,6 +629,12 @@ inline POINT DC::moveTo(const POINT& pt) {return moveTo(pt.x, pt.y);}
 inline int DC::offsetClipRgn(int x, int y) {assertValidAsDC(); return ::OffsetClipRgn(getHandle(), x, y);}
 
 inline int DC::offsetClipRgn(const SIZE& size) {return offsetClipRgn(size.cx, size.cy);}
+
+inline bool DC::offsetViewportOrg(int dx, int dy, ::POINT* original /* = 0 */) {
+	assertValidAsDC(); return toBoolean(::OffsetViewportOrgEx(getHandle(), dx, dy, original));}
+
+inline bool DC::offsetWindowOrg(int dx, int dy, ::POINT* original /* = 0 */) {
+	assertValidAsDC(); return toBoolean(::OffsetWindowOrgEx(getHandle(), dx, dy, original));}
 
 inline bool DC::paintRgn(HRGN region) {assertValidAsDC(); return toBoolean(::PaintRgn(getHandle(), region));}
 
@@ -606,6 +694,12 @@ inline bool DC::roundRect(const RECT& rect, const POINT& pt) {return roundRect(r
 
 inline int DC::save() {assertValidAsDC(); return ::SaveDC(getHandle());}
 
+inline bool DC::scaleViewportExt(int xNum, int xDenom, int yNum, int yDenom, ::SIZE* original /* = 0 */) {
+	assertValidAsDC(); return toBoolean(::ScaleViewportExtEx(getHandle(), xNum, xDenom, yNum, yDenom, original));}
+
+inline bool DC::scaleWindowExt(int xNum, int xDenom, int yNum, int yDenom, ::SIZE* original /* = 0 */) {
+	assertValidAsDC(); return toBoolean(::ScaleWindowExtEx(getHandle(), xNum, xDenom, yNum, yDenom, original));}
+
 inline bool DC::scroll(int dx, int dy, const RECT& scrollRect, const RECT& clipRect, HRGN updateRegion, RECT* updateRect) {
 	assertValidAsDC(); return toBoolean(::ScrollDC(getHandle(), dx, dy, &scrollRect, &clipRect, updateRegion, updateRect));}
 
@@ -626,6 +720,8 @@ inline HPALETTE DC::selectPalette(HPALETTE palette, bool forceBackground) {
 
 inline HGDIOBJ DC::selectStockObject(int object) {assertValidAsDC(); return ::SelectObject(getHandle(), ::GetStockObject(object));}
 
+inline int DC::setAbortProc(::ABORTPROC procedure) {assertValidAsDC(); return ::SetAbortProc(getHandle(), procedure);}
+
 inline int DC::setArcDirection(int direction) {assertValidAsDC(); return ::SetArcDirection(getHandle(), direction);}
 
 inline COLORREF DC::setBkColor(COLORREF color) {assertValidAsDC(); return ::SetBkColor(getHandle(), color);}
@@ -645,6 +741,12 @@ inline POINT DC::setBrushOrg(const POINT& pt) {return setBrushOrg(pt.x, pt.y);}
 
 inline bool DC::setColorAdjustment(const COLORADJUSTMENT& colorAdjust) {
 	assertValidAsDC(); return toBoolean(::SetColorAdjustment(getHandle(), &colorAdjust));}
+
+#ifdef LAYOUT_RTL
+inline DWORD DC::setLayout(DWORD layout) {assertValidAsDC(); return ::SetLayout(getHandle(), layout);}
+#endif /* LAYOUT_RTL */
+
+inline int DC::setMapMode(int newMode) {assertValidAsDC(); return ::SetMapMode(getHandle(), newMode);}
 
 inline DWORD DC::setMapperFlags(DWORD flag) {assertValidAsDC(); return ::SetMapperFlags(getHandle(), flag);}
 
@@ -670,6 +772,26 @@ inline COLORREF DC::setTextColor(COLORREF color) {assertValidAsDC(); return ::Se
 
 inline int DC::setTextJustification(int breakExtra, int breakCount) {
 	assertValidAsDC(); return ::SetTextJustification(getHandle(), breakExtra, breakCount);}
+
+inline bool DC::setViewportExt(int cx, int cy, ::SIZE* original /* = 0 */) {assertValidAsDC(); return toBoolean(::SetViewportExtEx(getHandle(), cx, cy, original));}
+
+inline bool DC::setViewportExt(const ::SIZE& size, ::SIZE* original /* = 0 */) {return setViewportExt(size.cx, size.cy, original);}
+
+inline bool DC::setViewportOrg(int x, int y, ::POINT* original /* = 0 */) {assertValidAsDC(); return toBoolean(::SetViewportOrgEx(getHandle(), x, y, original));}
+
+inline bool DC::setViewportOrg(const ::POINT& p, ::POINT* original /* = 0 */) {return setViewportOrg(p.x, p.y, original);}
+
+inline bool DC::setWindowExt(int cx, int cy, ::SIZE* original /* = 0 */) {assertValidAsDC(); return toBoolean(::SetWindowExtEx(getHandle(), cx, cy, original));}
+
+inline bool DC::setWindowExt(const ::SIZE& size, ::SIZE* original /* = 0 */) {return setWindowExt(size.cx, size.cy, original);}
+
+inline bool DC::setWindowOrg(int x, int y, ::POINT* original /* = 0 */) {assertValidAsDC(); return toBoolean(::SetWindowOrgEx(getHandle(), x, y, original));}
+
+inline bool DC::setWindowOrg(const ::POINT& p, ::POINT* original /* = 0 */) {return setWindowOrg(p.x, p.y, original);}
+
+inline int DC::startDoc(const ::DOCINFO& docInfo) {assertValidAsDC(); return ::StartDoc(getHandle(), &docInfo);}
+
+inline int DC::startPage() {assertValidAsDC(); return ::StartPage(getHandle());}
 
 inline bool DC::stretchBlt(int x, int y, int width, int height, HDC srcDC, int xSrc, int ySrc, int srcWidth, int srcHeight, DWORD rop) {
 	assertValidAsDC(); return toBoolean(::StretchBlt(getHandle(), x, y, width, height, srcDC, xSrc, ySrc, srcWidth, srcHeight, rop));}

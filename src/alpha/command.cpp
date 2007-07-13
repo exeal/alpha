@@ -329,7 +329,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_FILE_EXIT:					app.getMainWindow().postMessage(WM_CLOSE); return true;
 	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
 	case CMD_FILE_CLOSEOTHERS:			return app.getBufferList().closeAll(true, true);
-	case CMD_FILE_PRINT:				Printing::instance().print(buffer); return true;
+	case CMD_FILE_PRINT:				Printing::instance().print(buffer, true); return true;
 	case CMD_FILE_PRINTSETUP:			Printing::instance().setupPages(); return true;
 
 	case CMD_EDIT_DELETE:			return DeletionCommand(view, DeletionCommand::NEXT_CHARACTER).execute() == 0;

@@ -90,38 +90,12 @@ Printing& Printing::instance() throw() {
 	return singleton;
 }
 
-/// Prepares the device context for the current printer.
-void Printing::prepareDeviceContext() {
-	assert(devnames_ != 0);
-	const ::DEVNAMES& devnames = *static_cast<::DEVNAMES*>(::GlobalLock(devnames_));
-	const ::DEVMODEW* devmode = static_cast<::DEVMODE*>(::GlobalLock(devmode_));
-	HDC newDC = ::CreateDCW(
-		reinterpret_cast<const ::WCHAR*>(&devnames) + devnames.wDriverOffset,
-		reinterpret_cast<const ::WCHAR*>(&devnames) + devnames.wDeviceOffset,
-		reinterpret_cast<const ::WCHAR*>(&devnames) + devnames.wOutputOffset, devmode);
-	if(newDC != 0) {
-		::ResetDCW(newDC, devmode);
-/*		deviceContext_.reset(newDC);
-//		deviceContext_.setMapMode(MM_HIMETRIC);
-		::SetMapMode(deviceContext_.getHandle(), MM_HIMETRIC);
-		static const int MM100_PER_INCH = 2540;
-		const int xdpi = deviceContext_.getDeviceCaps(LOGPIXELSX);	// this unit is px/in...
-		const int ydpi = deviceContext_.getDeviceCaps(LOGPIXELSY);
-		paperSize_.cx = ::MulDiv(deviceContext_.getDeviceCaps(PHYSICALWIDTH), MM100_PER_INCH, xdpi);
-		paperSize_.cy = ::MulDiv(deviceContext_.getDeviceCaps(PHYSICALHEIGHT), MM100_PER_INCH, ydpi);
-		margins_.left = ::MulDiv(deviceContext_.getDeviceCaps(PHYSICALOFFSETX), MM100_PER_INCH, xdpi);
-		margins_.top = ::MulDiv(deviceContext_.getDeviceCaps(PHYSICALOFFSETY), MM100_PER_INCH, ydpi);
-		margins_.right = paperSize_.cx - ::MulDiv(deviceContext_.getDeviceCaps(HORZRES), MM100_PER_INCH, xdpi) - margins_.left;
-		margins_.bottom = paperSize_.cy - ::MulDiv(deviceContext_.getDeviceCaps(VERTRES), MM100_PER_INCH, ydpi) - margins_.right;
-*/	}
-	::GlobalUnlock(devnames_);
-	::GlobalUnlock(devmode_);
-}
-
 /**
+ * Prints the specified buffer.
  * @param buffer the buffer to print
+ * @param showDialog
  */
-bool Printing::print(const Buffer& buffer) {
+bool Printing::print(const Buffer& buffer, bool showDialog) {
 	// display "Print" dialog box
 	::PRINTDLGEXW pdex;
 	memset(&pdex, 0, sizeof(::PRINTDLGEXW));
@@ -129,7 +103,7 @@ bool Printing::print(const Buffer& buffer) {
 	pdex.hwndOwner = Alpha::getInstance().getMainWindow().getHandle();
 	pdex.hDevMode = devmode_;
 	pdex.hDevNames = devnames_;
-	pdex.Flags = PD_COLLATE | PD_NOCURRENTPAGE | PD_NOPAGENUMS | PD_NOSELECTION | PD_RETURNDC;
+	pdex.Flags = (showDialog ? (PD_COLLATE | PD_NOCURRENTPAGE | PD_NOPAGENUMS | PD_NOSELECTION) : PD_RETURNDEFAULT) | PD_RETURNDC;
 	pdex.nStartPage = START_PAGE_GENERAL;
 	if(S_OK != ::PrintDlgEx(&pdex))
 		return false;
@@ -147,13 +121,16 @@ bool Printing::print(const Buffer& buffer) {
 	// update metrics
 	manah::win32::gdi::DC dc;
 	dc.attach(pdex.hDC);
-	static const int MM100_PER_INCH = 2541;			// 1 in = 2.541 mm
-	const int xdpi = dc.getDeviceCaps(LOGPIXELSX);	// this unit is px/in...
+	static const int MM100_PER_INCH = 2540;			// 1 in = 2.540 mm
+	const int xdpi = dc.getDeviceCaps(LOGPIXELSX);	// resolutions in px/in
 	const int ydpi = dc.getDeviceCaps(LOGPIXELSY);
+	const ::POINT physicalOffset = {
+		::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETX), MM100_PER_INCH, xdpi),
+		::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETY), MM100_PER_INCH, ydpi)};	// physical offsets in mm
 	paperSize_.cx = ::MulDiv(dc.getDeviceCaps(PHYSICALWIDTH), MM100_PER_INCH, xdpi);
 	paperSize_.cy = ::MulDiv(dc.getDeviceCaps(PHYSICALHEIGHT), MM100_PER_INCH, ydpi);
-	margins_.left = max<long>(margins_.left, ::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETX), MM100_PER_INCH, xdpi));
-	margins_.top = max<long>(margins_.top, ::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETY), MM100_PER_INCH, ydpi));
+	margins_.left = max<long>(margins_.left, physicalOffset.x);
+	margins_.top = max<long>(margins_.top, physicalOffset.y);
 	margins_.right = max<long>(margins_.right,
 		paperSize_.cx - ::MulDiv(dc.getDeviceCaps(HORZRES), MM100_PER_INCH, xdpi) - margins_.left);
 	margins_.bottom = max<long>(margins_.bottom,
@@ -161,6 +138,9 @@ bool Printing::print(const Buffer& buffer) {
 
 #define MM100_TO_PIXELS_X(mm100)	::MulDiv(mm100, xdpi, MM100_PER_INCH)
 #define MM100_TO_PIXELS_Y(mm100)	::MulDiv(mm100, ydpi, MM100_PER_INCH)
+
+	// reset viewport
+	dc.setViewportOrg(-MM100_TO_PIXELS_X(physicalOffset.x), -MM100_TO_PIXELS_Y(physicalOffset.y), 0);
 
 	// reset fonts
 	PrintingRenderer renderer(const_cast<ascension::presentation::Presentation&>(buffer.getPresentation()),
@@ -173,7 +153,7 @@ bool Printing::print(const Buffer& buffer) {
 
 	// calculate compacted path name
 	::RECT rc = {MM100_TO_PIXELS_X(margins_.left), 0,
-		MM100_TO_PIXELS_X(paperSize_.cx - margins_.right), MM100_TO_PIXELS_Y(paperSize_.cy - margins_.bottom)};
+		MM100_TO_PIXELS_X(paperSize_.cx - margins_.right), MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
 	HFONT oldFont = dc.selectObject(renderer.getFont());
 	WCHAR compactedPathName[MAX_PATH];
 	wcscpy(compactedPathName, buffer.isBoundToFile() ?
@@ -191,35 +171,35 @@ bool Printing::print(const Buffer& buffer) {
 	::DOCINFOW di;
 	memset(&di, 0, sizeof(::DOCINFOW));
 	di.lpszDocName = buffer.getFilePathName();
-	::StartDocW(pdex.hDC, &di);
+	dc.startDoc(di);
 
 	// print lines on pages
 	ulong page = 0;
 	WCHAR pageNumber[128];
 	const int linePitch = renderer.getLinePitch();
-	rc.top= rc.bottom;
+	rc.top = rc.bottom;
 	for(ascension::length_t line = 0, lines = buffer.getNumberOfLines(); line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.getLineLayout(line);
 		for(ascension::length_t subline = 0; subline < layout.getNumberOfSublines(); ++subline) {
 			if(rc.top + linePitch > rc.bottom) {
 				// go to the next page
 				if(++page > 1)
-					::EndPage(pdex.hDC);
-				::StartPage(pdex.hDC);
-				rc.top = MM100_TO_PIXELS_Y(margins_.top);
+					dc.endPage();
+				dc.startPage();
 				// print a header
+				HFONT oldFont = dc.selectObject(renderer.getFont());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
-				dc.textOut(rc.left, rc.top, compactedPathName, static_cast<int>(wcslen(compactedPathName)));
+				dc.textOut(rc.left, rc.top = MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
 				swprintf(pageNumber, L"%lu", page);
 				dc.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.right, rc.top, pageNumber, static_cast<int>(wcslen(pageNumber)));
+				dc.selectObject(oldFont);
 				HPEN oldPen = dc.selectObject(separatorPen);
 				dc.moveTo(rc.left, rc.top + linePitch + separatorThickness / 2);
 				dc.lineTo(rc.right, rc.top + linePitch + separatorThickness / 2);
 				dc.selectObject(oldPen);
 				rc.top += linePitch * 2;
 			}
-//			rc.bottom = rc.top + linePitch;
 			layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
 			rc.top += linePitch;
 		}
@@ -229,8 +209,8 @@ bool Printing::print(const Buffer& buffer) {
 #undef MM100_TO_PIXELS_Y
 
 	::DeleteObject(separatorPen);
-	::EndPage(pdex.hDC);
-	::EndDoc(pdex.hDC);
+	dc.endPage();
+	dc.endDoc();
 
 	return true;
 }
