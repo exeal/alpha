@@ -16,19 +16,17 @@ namespace alpha {
 	class Printing : private manah::Noncopyable {
 	public:
 		static Printing&	instance() throw();
-		bool				print(const Buffer& buffer);
+		bool				print(const Buffer& buffer, bool showDialog);
 		bool				setupPages();
 	private:
 		Printing();
 		~Printing() throw();
 		bool	doSetupPages(bool returnDefault);
-		void	prepareDeviceContext();
-		DWORD	showDialog(bool returnDefault);
 	private:
 		::HGLOBAL devmode_;
 		::HGLOBAL devnames_;
-		::SIZE paperSize_;
-		::RECT margins_;
+		::SIZE paperSize_;	// width and height of papers in mm
+		::RECT margins_;	// margin widths in mm
 	};
 
 }
