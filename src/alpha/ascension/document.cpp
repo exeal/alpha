@@ -13,7 +13,7 @@
 #include "../../manah/win32/ui/wait-cursor.hpp"
 #include "../../manah/com/common.hpp"
 #include <algorithm>
-#include <limits>	// std::numeric_limits
+#include <limits>	// std.numeric_limits
 
 using namespace ascension;
 using namespace ascension::text;
@@ -64,8 +64,8 @@ namespace {
 		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
 		Position execute(Document& document) {return document.insert(position_, text_);}
 	private:
-		Position position_;	// 挿入位置
-		String text_;		// 挿入文字列
+		Position position_;
+		String text_;
 	};
 
 	/// An deletion operation.
@@ -233,9 +233,9 @@ inline void text::internal::OperationUnit::push(InsertOperation& operation, cons
 	operations_.push(&operation);
 }
 
-/// 1 つの操作をプッシュ (@a operation はこのメソッドが破壊する可能性があるので呼出し後はアクセス禁止)
+/// Pushes an operation (@a operation will be inavailble after this call).
 inline void text::internal::OperationUnit::push(DeleteOperation& operation, const Document& document) {
-	// 直前の操作も削除であれば、範囲を拡大することで1つにまとめようとする
+	// if also the previous operation is deletion, extend the region to concatenate the operations
 	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
 		delete &operation;
 		return;
@@ -326,7 +326,7 @@ inline bool Document::UndoManager::isStackingCompoundOperation() const throw() {
  * @param operation the operation to be pushed
  */
 template<class Operation> inline void Document::UndoManager::pushUndoBuffer(Operation& operation) {
-	// リドゥスタックを空にする
+	// make the redo stack empty
 	if(!virtualOperation_) {
 		while(!redoStack_.empty()) {
 			delete redoStack_.top();
@@ -862,9 +862,9 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 		throw ReadOnlyDocumentException();
 	else if(first == 0 || last == 0 || first > last)
 		throw invalid_argument("Argument begin or end is invalid.");
-	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// アクセス可能範囲外 -> 無視
+	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// ignore the insertion position is out of the accessible region
 		return position;
-	else if(first == last)	// 空文字列 -> 無視
+	else if(first == last)	// ignore if the input is empty
 		return position;
 	else
 		CHECK_FIRST_MODIFICATION()
@@ -875,13 +875,13 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 	Position resultPosition(position.line, 0);
 	const Char* breakPoint = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
 
-	if(breakPoint == last) {	// 入力に改行が無い場合
+	if(breakPoint == last) {	// single-line
 		Line& line = const_cast<Line&>(getLineInfo(position.line));
 		line.text_.insert(position.column, first, static_cast<String::size_type>(last - first));
 		length_ += static_cast<length_t>(last - first);
 		++line.operationHistory_;
 		resultPosition.column = position.column + (last - first);
-	} else {	// 入力が複数行の場合
+	} else {	// multiline
 		length_t line = position.line;
 		Line& firstLine = *lines_[line];
 		const Char* lastBreak;
@@ -1542,10 +1542,10 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 }
 
 /**
- * 既定のコードページと改行コードの設定
- * @param cp コードページ
- * @param newline 改行コード
- * throw std::invalid_argument コードページ、改行コードが正しくないときスロー
+ * Sets the default encoding and newline.
+ * @param cp the code page of the encoding
+ * @param newline the newline
+ * @throw std#invalid_argument @a cp and/or @a newline are invalid
  */
 void Document::setDefaultCode(CodePage cp, Newline newline) {
 	cp = translateSpecialCodePage(cp);
@@ -1564,8 +1564,8 @@ void Document::setDefaultCode(CodePage cp, Newline newline) {
 }
 
 /**
- * ドキュメントのファイル名を変更する
- * @param pathName 完全ファイル名
+ * Renames (or move) the bound file.
+ * @param pathName the fill name
  */
 void Document::setFilePathName(const WCHAR* pathName) {
 	if(pathName != 0) {
@@ -1674,8 +1674,8 @@ inline void Document::updatePoints(const DocumentChange& change) throw() {
 }
 
 /**
- * ファイルの最終更新日時を調べる
- * @param internal @c diskFile_.lastWriteTimes.internal を調べる場合 true。@c user を調べる場合 false
+ * Returns last modified time.
+ * @param internal set true for @c diskFile_.lastWriteTimes.internal, false for @c user
  * @param[out] newTimeStamp ファイルの実際の更新日時
  * @return 自分で書き込んだ日時と一致しなければ false
  */
@@ -1733,6 +1733,18 @@ Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName
 void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	const Position& start = region.getTop();
 	const Position end = max(region.getBottom(), Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1)));
+	if(start.line == end.line) {	// shortcut for single-line
+		out << getLine(end.line).substr(start.column, end.column - start.column);
+		return;
+	}
+	Char eol[3] = L"";
+	switch(nlr) {
+	case NLR_LINE_FEED:			wcscpy(eol, L"\n"); break;
+	case NLR_CRLF:				wcscpy(eol, L"\r\n"); break;
+	case NLR_LINE_SEPARATOR:	wcscpy(eol, L"\x2028"); break;
+	case NLR_DOCUMENT_DEFAULT:	wcscpy(eol, getNewlineString(getNewline())); break;
+	}
+	const streamsize eolSize = static_cast<streamsize>(wcslen(eol));
 	for(length_t i = start.line; ; ++i) {
 		const Line& line = *lines_[i];
 		const length_t first = (i == start.line) ? start.column : 0;
@@ -1740,19 +1752,15 @@ void Document::writeToStream(OutputStream& out, const Region& region, NewlineRep
 		out.write(line.text_.data() + first, static_cast<streamsize>(last - first));
 		if(i == end.line)
 			return;
-		switch(nlr) {
-		case NLR_LINE_FEED:			out << L"\n"; break;
-		case NLR_CRLF:				out << L"\r\n"; break;
-		case NLR_LINE_SEPARATOR:	out << L"\x2028"; break;
-		case NLR_PHYSICAL_DATA:		out << getNewlineString(line.newline_); break;
-		case NLR_DOCUMENT_DEFAULT:	out << getNewlineString(getNewline()); break;
-		case NLR_SKIP:				break;
-		}
+		if(nlr == NLR_PHYSICAL_DATA)
+			out << getNewlineString(line.newline_);
+		else if(nlr != NLR_SKIP)
+			out.write(eol, eolSize);
 	}
 }
 
 
-// Document::DiskFile ////////////////////////////////////////////////////////
+// Document.DiskFile /////////////////////////////////////////////////////////
 
 /// Returns the file is locked.
 inline bool Document::DiskFile::isLocked() const throw() {
@@ -2023,17 +2031,17 @@ wstring text::canonicalizePathName(const wchar_t* pathName) throw() {
 	result.reserve(MAX_PATH);
 	const wchar_t* p = path;
 	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
-			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// ドライブレター
+			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// drive letter
 		result.append(path, 3);
-		result[0] = towupper(path[0]);	// 大文字で統一する...
+		result[0] = towupper(path[0]);	// unify with uppercase letters...
 		p += 3;
 	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
-		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// サーバ名
+		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// server name
 			return false;
-		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// 共有名
+		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// shared name
 			return false;
 		result.append(path, ++p - path);
-	} else	// 絶対パスでない
+	} else	// not absolute name
 		return pathName;
 
 	::WIN32_FIND_DATAW wfd;

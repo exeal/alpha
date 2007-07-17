@@ -290,8 +290,8 @@ namespace internal {
 		DEFINE_DISPATCH(WM_GETTEXTLENGTH) {handled = true; return w.onGetTextLength();}
 		// WM_HSCROLL -> void onHScroll(UINT sbCode, UINT position, HWND scrollBar)
 		DEFINE_DISPATCH(WM_HSCROLL) {w.onHScroll(LOWORD(wp), HIWORD(wp), reinterpret_cast<HWND>(lp)); return 1;}
-		// WM_IME_COMPOSITION -> void onIMEComposition(WPARAM wParam, LPARAM lParam)
-		DEFINE_DISPATCH(WM_IME_COMPOSITION) {w.onIMEComposition(wp, lp); return 0;}
+		// WM_IME_COMPOSITION -> void onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled)
+		DEFINE_DISPATCH(WM_IME_COMPOSITION) {w.onIMEComposition(wp, lp, handled); return 0;}
 		// WM_IME_ENDCOMPOSITION -> void onIMEEndComposition(void)
 		DEFINE_DISPATCH(WM_IME_ENDCOMPOSITION) {w.onIMEEndComposition(); return 0;}
 		// WM_IME_NOTIFY -> LRESULT onIMENotify(WPARAM command, LPARAM lParam, bool& handled)

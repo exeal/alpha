@@ -62,11 +62,11 @@ namespace ascension {
 		public:
 			/// Character unit defines what is one character.
 			enum CharacterUnit {
-				CU_UTF16,				///< UTF-16 code unit.
-				CU_UTF32,				///< UTF-32 code unit. A surrogate pair is treated as one character.
-				CU_GRAPHEME_CLUSTER,	///< A grapheme cluster is a character.
-				CU_GLYPH_CLUSTER,		///< A glyph is a character. (not implemented).
-				CU_DEFAULT,				///< Default behavior (used by only @c EditPoint#erase method).
+				UTF16_CODE_UNIT,	///< UTF-16 code unit.
+				UTF32_CODE_UNIT,	///< UTF-32 code unit. A surrogate pair is treated as one character.
+				GRAPHEME_CLUSTER,	///< A grapheme cluster is a character.
+				GLYPH_CLUSTER,		///< A glyph is a character. (not implemented).
+				DEFAULT_UNIT,		///< Default behavior (used by only @c EditPoint#erase method).
 			};
 			// constructors
 			explicit EditPoint(Document& document, const Position& position = Position(), IPointListener* listener = 0);
@@ -75,30 +75,27 @@ namespace ascension {
 			// attributes
 			CharacterUnit	getCharacterUnit() const throw();
 			CodePoint		getCodePoint(bool useLineFeed = false) const;
-			length_t		getLineLength() const throw();
-			String			getText(signed_length_t length, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
-			String			getText(const Position& other, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			bool			isBeginningOfDocument() const;
+			bool			isBeginningOfLine() const;
 			bool			isEndOfDocument() const;
 			bool			isEndOfLine() const;
-			bool			isStartOfDocument() const;
-			bool			isStartOfLine() const;
 			void			setCharacterUnit(CharacterUnit unit) throw();
 			// movement
-			void	charNext(length_t offset = 1);
-			void	charPrev(length_t offset = 1);
-			void	lineDown(length_t offset = 1);
-			void	lineUp(length_t offset = 1);
-			void	moveToAbsoluteCharOffset(length_t offset);
-			void	moveToEndOfDocument();
-			void	moveToEndOfLine();
-			bool	moveToNextBookmark();
-			bool	moveToPrevBookmark();
-			void	moveToStartOfDocument();
-			void	moveToStartOfLine();
+			void	backwardCharacter(length_t offset = 1);
+			void	beginningOfDocument();
+			void	beginningOfLine();
+			void	endOfDocument();
+			void	endOfLine();
+			void	forwardCharacter(length_t offset = 1);
+			void	moveToAbsoluteCharacterOffset(length_t offset);
+			bool	nextBookmark();
+			void	nextLine(length_t offset = 1);
+			bool	previousBookmark();
+			void	previousLine(length_t offset = 1);
 			// text manipulations
 			void			destructiveInsert(const String& text);
 			void			destructiveInsert(const Char* first, const Char* last);
-			void			erase(signed_length_t length = 1, CharacterUnit cu = CU_DEFAULT);
+			void			erase(signed_length_t length = 1, CharacterUnit cu = DEFAULT_UNIT);
 			void			erase(const Position& other);
 			void			insert(const String& text);
 			void			insert(const Char* first, const Char* last);
@@ -107,8 +104,8 @@ namespace ascension {
 		protected:
 			virtual void	doMoveTo(const Position& to);
 			IPointListener*	getListener() const throw();
-			static Position	getNextCharPos(const EditPoint& pt, length_t length, CharacterUnit cu = CU_DEFAULT);
-			static Position	getPrevCharPos(const EditPoint& pt, length_t length, CharacterUnit cu = CU_DEFAULT);
+			String			getText(signed_length_t length, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			String			getText(const Position& other, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
 		private:
 			IPointListener* listener_;
 			CharacterUnit characterUnit_;
@@ -158,29 +155,33 @@ namespace ascension {
 			const TextViewer&	getTextViewer() const;
 			length_t			getVisualColumnNumber() const;
 			bool				isEndOfVisualLine() const;
-			bool				isFirstCharOfLine() const;
-			bool				isLastCharOfLine() const;
-			bool				isStartOfVisualLine() const;
+			bool				isFirstPrintableCharacterOfLine() const;
+			bool				isFirstPrintableCharacterOfVisualLine() const;
+			bool				isLastPrintableCharacterOfLine() const;
+			bool				isLastPrintableCharacterOfVisualLine() const;
+			bool				isBeginningOfVisualLine() const;
 			void				setClipboardNativeEncoding(encodings::CodePage cp);
 			// movement
-			void	charLeft(length_t offset = 1);
-			void	charRight(length_t offset = 1);
-			void	moveToEndOfVisualLine();
-			void	moveToFirstCharOfLine();
-			void	moveToLastCharOfLine();
-			void	moveToStartOfVisualLine();
-			void	pageDown(length_t offset = 1);
-			void	pageUp(length_t offset = 1);
-			void	visualLineDown(length_t offset = 1);
-			void	visualLineUp(length_t offset = 1);
-			void	wordEndLeft(length_t offset = 1);
-			void	wordEndNext(length_t offset = 1);
-			void	wordEndPrev(length_t offset = 1);
-			void	wordEndRight(length_t offset = 1);
-			void	wordNext(length_t offset = 1);
-			void	wordPrev(length_t offset = 1);
-			void	wordLeft(length_t offset = 1);
-			void	wordRight(length_t offset = 1);
+			void	beginningOfVisualLine();
+			void	endOfVisualLine();
+			void	firstPrintableCharacterOfLine();
+			void	firstPrintableCharacterOfVisualLine();
+			void	lastPrintableCharacterOfLine();
+			void	lastPrintableCharacterOfVisualLine();
+			void	leftCharacter(length_t offset = 1);
+			void	leftWord(length_t offset = 1);
+			void	leftWordEnd(length_t offset = 1);
+			void	nextPage(length_t offset = 1);
+			void	nextVisualLine(length_t offset = 1);
+			void	nextWord(length_t offset = 1);
+			void	nextWordEnd(length_t offset = 1);
+			void	previousPage(length_t offset = 1);
+			void	previousVisualLine(length_t offset = 1);
+			void	previousWord(length_t offset = 1);
+			void	previousWordEnd(length_t offset = 1);
+			void	rightCharacter(length_t offset = 1);
+			void	rightWord(length_t offset = 1);
+			void	rightWordEnd(length_t offset = 1);
 			// scroll
 			bool	recenter(signed_length_t length = 0);
 			bool	recenter(const text::Position& other);
@@ -198,7 +199,7 @@ namespace ascension {
 			void			paste(const text::Position& other);
 			text::Position	spaceIndent(const text::Position& other, bool box, long level = 1);
 			text::Position	tabIndent(const text::Position& other, bool box, long level = 1);
-			bool			transposeChars();
+			bool			transposeCharacters();
 			bool			transposeLines();
 //			bool			transposeParagraphs();
 //			bool			transposeSentences();
@@ -457,7 +458,7 @@ inline IPointListener* EditPoint::getListener() const throw() {return const_cast
  */
 inline void EditPoint::insert(const String& text) {insert(text.data(), text.data() + text.length());}
 /// Sets the new character unit.
-inline void EditPoint::setCharacterUnit(EditPoint::CharacterUnit unit) throw() {assert(unit != CU_DEFAULT); characterUnit_ = unit;}
+inline void EditPoint::setCharacterUnit(EditPoint::CharacterUnit unit) throw() {assert(unit != DEFAULT_UNIT); characterUnit_ = unit;}
 
 } // namespace text
 

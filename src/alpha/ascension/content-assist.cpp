@@ -109,7 +109,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 
 	// find the preceding identifier
 	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
-	if(!incremental || caret.isStartOfLine())
+	if(!incremental || caret.isBeginningOfLine())
 		replacementRegion.first = caret;
 	else if(source::getNearestIdentifier(*caret.getDocument(), caret, &replacementRegion.first.column, 0))
 		replacementRegion.first.line = caret.getLineNumber();
@@ -411,7 +411,7 @@ void ContentAssistant::characterInputted(const Caret& self, CodePoint c) {
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
 				textViewer_->getDocument().beginSequentialEdit();
-				textViewer_->getCaret().erase(-1, EditPoint::CU_UTF32);
+				textViewer_->getCaret().erase(-1, EditPoint::UTF32_CODE_UNIT);
 				textViewer_->getDocument().endSequentialEdit();
 				complete();
 			}

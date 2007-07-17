@@ -32,6 +32,8 @@ using namespace manah::win32;
 using namespace manah::win32::ui;
 using namespace std;
 
+#pragma comment(lib, "msimg32.lib")
+
 namespace {
 	struct TextFileFormat {
 		CodePage encoding;
@@ -1346,14 +1348,17 @@ Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
+	getDocument().getBookmarker().addListener(*this);
 }
 
 /// Copy-constructor.
 EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
+	getDocument().getBookmarker().addListener(*this);
 }
 
 /// Destructor.
 EditorView::~EditorView() {
+	getDocument().getBookmarker().removeListener(*this);
 }
 
 /// Begins incremental search.
@@ -1363,6 +1368,16 @@ void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
 	options.type = type;
 	searcher.setOptions(options);
 	texteditor::commands::IncrementalSearchCommand(*this, direction, this).execute();
+}
+
+/// @see IBookmarkListener#bookmarkChanged
+void EditorView::bookmarkChanged(length_t line) {
+	redrawLine(line);
+}
+
+/// @see IBookmarkListener#bookmarkCleared
+void EditorView::bookmarkCleared() {
+	invalidate();
 }
 
 /// @see ICaretListener#caretMoved
@@ -1398,6 +1413,33 @@ void EditorView::documentModificationSignChanged(Document& document) {
 void EditorView::documentReadOnlySignChanged(Document& document) {
 	TextViewer::documentReadOnlySignChanged(document);
 	updateTitleBar();
+}
+
+/// @see TextViewer#drawIndicatorMargin
+void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect) {
+	if(getDocument().getBookmarker().isMarked(line)) {
+		// draw a bookmark indication mark
+		const COLORREF selColor = ::GetSysColor(COLOR_HIGHLIGHT);
+		const COLORREF selTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+//		dc.fillSolidRect(rect, selectionColor);
+		::TRIVERTEX vertex[2];
+		vertex[0].x = rect.left + 2;
+		vertex[0].y = (rect.top * 2 + rect.bottom) / 3;
+		vertex[0].Red = static_cast<::COLOR16>((selColor >> 0) & 0xFF) << 8;
+		vertex[0].Green = static_cast<::COLOR16>((selColor >> 8) & 0xFF) << 8;
+		vertex[0].Blue = static_cast<::COLOR16>((selColor >> 16) & 0xFF) << 8;
+		vertex[0].Alpha = 0x0000;
+		vertex[1].x = rect.right - 2;
+		vertex[1].y = (rect.top + rect.bottom * 2) / 3;
+		vertex[1].Red = static_cast<::COLOR16>((selTextColor >> 0) & 0xFF) << 8;
+		vertex[1].Green = static_cast<::COLOR16>((selTextColor >> 8) & 0xFF) << 8;
+		vertex[1].Blue = static_cast<::COLOR16>((selTextColor >> 16) & 0xFF) << 8;
+		vertex[1].Alpha = 0x0000;
+		::GRADIENT_RECT mesh;
+		mesh.UpperLeft = 0;
+		mesh.LowerRight = 1;
+		::GradientFill(dc.getHandle(), vertex, countof(vertex), &mesh, 1, GRADIENT_FILL_RECT_H);
+	}
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchAborted

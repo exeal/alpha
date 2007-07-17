@@ -374,6 +374,18 @@ namespace {
 //			}
 		}
 	}
+	inline void getCurrentCharacterSize(const TextViewer& viewer, ::SIZE& result) {
+		const Caret& caret = viewer.getCaret();
+		if(caret.isEndOfLine())	// EOL
+			result.cx = viewer.getTextRenderer().getAverageCharacterWidth();
+		else {
+			const LineLayout& layout = viewer.getTextRenderer().getLineLayout(caret.getLineNumber());
+			const int leading = layout.getLocation(caret.getColumnNumber(), LineLayout::LEADING).x;
+			const int trailing = layout.getLocation(caret.getColumnNumber(), LineLayout::TRAILING).x;
+			result.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
+		}
+		result.cy = viewer.getTextRenderer().getLineHeight();
+	}
 } // namespace @0
 
 MANAH_BEGIN_WINDOW_MESSAGE_MAP(TextViewer, BaseControl)
@@ -436,7 +448,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(0),
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-		imeCompositionActivated_(false), mouseInputDisabledCount_(0) {
+		imeCompositionActivated_(false), imeComposingCharacter_(false), mouseInputDisabledCount_(0) {
 	renderer_.reset(new Renderer(*this));
 	renderer_->addFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
@@ -472,7 +484,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 
 	modeState_ = rhs.modeState_;
 
-	imeCompositionActivated_ = false;
+	imeCompositionActivated_ = imeComposingCharacter_ = false;
 	mouseInputDisabledCount_ = 0;
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
 	getDocument().addListener(*this);
@@ -1157,11 +1169,11 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_HOME:	// [Home]
 		CaretMovementCommand(*this, controlPressed ?
-			CaretMovementCommand::START_OF_DOCUMENT : CaretMovementCommand::START_OF_LINE, shiftPressed).execute();
+			CaretMovementCommand::BEGINNING_OF_DOCUMENT : CaretMovementCommand::BEGINNING_OF_VISUAL_LINE, shiftPressed).execute();
 		return true;
 	case VK_END:	// [End]
 		CaretMovementCommand(*this, controlPressed ?
-			CaretMovementCommand::END_OF_DOCUMENT : CaretMovementCommand::END_OF_LINE, shiftPressed).execute();
+			CaretMovementCommand::END_OF_DOCUMENT : CaretMovementCommand::END_OF_VISUAL_LINE, shiftPressed).execute();
 		return true;
 	case VK_LEFT:	// [Left]
 		if(altPressed && shiftPressed)
@@ -1173,11 +1185,11 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_UP:		// [Up]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::VISUAL_PREVIOUS_LINE).execute();
+			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::PREVIOUS_VISUAL_LINE).execute();
 		else if(controlPressed && !shiftPressed)
 			scroll(0, -1, true);
 		else
-			CaretMovementCommand(*this, CaretMovementCommand::VISUAL_PREVIOUS_LINE, shiftPressed).execute();
+			CaretMovementCommand(*this, CaretMovementCommand::PREVIOUS_VISUAL_LINE, shiftPressed).execute();
 		return true;
 	case VK_RIGHT:	// [Right]
 		if(altPressed) {
@@ -1192,11 +1204,11 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_DOWN:	// [Down]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::VISUAL_NEXT_LINE).execute();
+			RowSelectionExtensionCommand(*this, RowSelectionExtensionCommand::NEXT_VISUAL_LINE).execute();
 		else if(controlPressed && !shiftPressed)
 			onVScroll(SB_LINEDOWN, 0, 0);
 		else
-			CaretMovementCommand(*this, CaretMovementCommand::VISUAL_NEXT_LINE, shiftPressed).execute();
+			CaretMovementCommand(*this, CaretMovementCommand::NEXT_VISUAL_LINE, shiftPressed).execute();
 		return true;
 	case VK_INSERT:	// [Insert]
 		if(altPressed)
@@ -1752,27 +1764,50 @@ void TextViewer::onHScroll(UINT sbCode, UINT, HWND) {
 }
 
 /// @see WM_IME_COMPOSITION
-void TextViewer::onIMEComposition(WPARAM, LPARAM lParam) {
-	if(lParam == 0 || toBoolean(lParam & GCS_RESULTSTR)) {	// completed
+void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
+	if(/*lParam == 0 ||*/ toBoolean(lParam & GCS_RESULTSTR)) {	// completed
 		if(HIMC	imc = ::ImmGetContext(getHandle())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
 				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
 				text[len] = 0;
-				texteditor::commands::TextInputCommand(*this, text.get()).execute();
-				::ImmSetCompositionStringW(imc, SCS_SETSTR, L"", 0, L"", 0);	// prevent to be send WM_CHARs
+				if(!imeComposingCharacter_)
+					texteditor::commands::TextInputCommand(*this, text.get()).execute();
+				else {
+					Document& document = getDocument();
+					document.erase(*caret_, (++DocumentCharacterIterator(document, *caret_)).tell());
+					document.insert(*caret_, String(1, static_cast<Char>(wParam)));
+					document.endSequentialEdit();
+					imeComposingCharacter_ = false;
+					recreateCaret();
+				}
 			}
 			updateIMECompositionWindowPosition();
 			::ImmReleaseContext(getHandle(), imc);
+			handled = true;	// prevent to be send WM_CHARs
+		}
+	} else if(toBoolean(GCS_COMPSTR & lParam)) {
+		if(toBoolean(lParam & CS_INSERTCHAR)) {
+			Document& document = getDocument();
+			if(imeComposingCharacter_)
+				document.erase(*caret_, (++DocumentCharacterIterator(document, *caret_)).tell());
+			else
+				getDocument().beginSequentialEdit();			
+			document.insert(*caret_, String(1, static_cast<Char>(wParam)));	
+			imeComposingCharacter_ = true;
+			handled = true;
+			if(toBoolean(lParam & CS_NOMOVECARET))
+				caret_->backwardCharacter();
+			recreateCaret();
 		}
 	}
 }
 
 /// @see WM_IME_ENDCOMPOSITION
 void TextViewer::onIMEEndComposition() {
-	showCaret();
 	imeCompositionActivated_ = false;
+	recreateCaret();
 }
 
 /// @see WM_IME_NOTIFY
@@ -1877,10 +1912,9 @@ void TextViewer::onIMEStartComposition() {
 		::LOGFONTW font;
 		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
-		hideCaret();
 		::ImmReleaseContext(getHandle(), imc);
 	}
-	imeCompositionActivated_ = true;
+	imeCompositionActivated_ = true;	// this may be combined with COMPOSING_CHARACTER later (see TextViewer.onIMEComposition)
 	updateIMECompositionWindowPosition();
 	closeCompletionProposalsPopup(*this);
 }
@@ -2394,7 +2428,11 @@ void TextViewer::recreateCaret() {
 	caretShape_.bitmap.reset();
 
 	::SIZE solidSize = {0, 0};
-	if(caretShape_.shaper.get() != 0)
+	if(imeComposingCharacter_)
+		getCurrentCharacterSize(*this, solidSize);
+	else if(imeCompositionActivated_)
+		solidSize.cx = solidSize.cy = 1;
+	else if(caretShape_.shaper.get() != 0)
 		caretShape_.shaper->getCaretShape(caretShape_.bitmap, solidSize, caretShape_.orientation);
 	else {
 		DefaultCaretShaper s;
@@ -2759,20 +2797,21 @@ void TextViewer::updateIMECompositionWindowPosition() {
 	assertValidAsWindow();
 	if(!imeCompositionActivated_)
 		return;
-
-	::COMPOSITIONFORM cf;
-	if(HIMC imc = ::ImmGetContext(getHandle())) {
+	else if(HIMC imc = ::ImmGetContext(getHandle())) {
+		::COMPOSITIONFORM cf;
+		getClientRect(cf.rcArea);
 		cf.dwStyle = CFS_POINT;
 		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), false, LineLayout::LEADING);
-//		cf.ptCurrentPos.x -= 1;
-		if(cf.ptCurrentPos.y != 32767 && cf.ptCurrentPos.y != -32768)
-			cf.ptCurrentPos.y -= 1;
-		else {
-			::RECT clientRect;
-			getClientRect(clientRect);
-			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? clientRect.top : clientRect.bottom;
-		}
+		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
+			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? cf.rcArea.top : cf.rcArea.bottom;
 		::ImmSetCompositionWindow(imc, &cf);
+//		if(PRIMARYLANGID(LOWORD(::GetKeyboardLayout(0))) != LANG_KOREAN) {
+			cf.dwStyle = CFS_RECT;	// ATOK seems to require the following code
+			cf.rcArea.left = cf.ptCurrentPos.x;
+			cf.rcArea.top = cf.ptCurrentPos.y;
+//			cf.rcArea.bottom = cf.rcArea.top + renderer_->getLinePitch();
+			::ImmSetCompositionWindow(imc, &cf);
+//		}
 		::ImmReleaseContext(getHandle(), imc);
 	}
 }
@@ -3405,14 +3444,14 @@ bool VirtualBox::getOverlappedSubline(length_t line, length_t subline, length_t&
 	assert(view_.isWindow());
 	const Point& top = getTop();
 	const Point& bottom = getBottom();
-	if(line < top.line || (line == top.line && subline < top.subline)	// 範囲外
+	if(line < top.line || (line == top.line && subline < top.subline)	// out of the region
 			|| line > bottom.line || (line == bottom.line && subline > bottom.subline))
 		return false;
 	else {
 		const TextRenderer& renderer = view_.getTextRenderer();
 		const LineLayout& layout = renderer.getLineLayout(line);
-		first = layout.getOffset(points_[0].x, static_cast<int>(renderer.getLinePitch() * subline));
-		last = layout.getOffset(points_[1].x, static_cast<int>(renderer.getLinePitch() * subline));
+		first = layout.getOffset(points_[0].x - renderer.getLineIndent(line, 0), static_cast<int>(renderer.getLinePitch() * subline));
+		last = layout.getOffset(points_[1].x - renderer.getLineIndent(line, 0), static_cast<int>(renderer.getLinePitch() * subline));
 		if(first > last)
 			swap(first, last);
 		return first != last;
@@ -3426,13 +3465,13 @@ bool VirtualBox::getOverlappedSubline(length_t line, length_t subline, length_t&
  */
 bool VirtualBox::isPointOver(const ::POINT& pt) const throw() {
 	assert(view_.isWindow());
-	if(view_.hitTest(pt) != TextViewer::TEXT_AREA)	// テキスト表示領域でなければ無視
+	if(view_.hitTest(pt) != TextViewer::TEXT_AREA)	// ignore if not in text area
 		return false;
 	const int leftMargin = view_.getTextAreaMargins().left;
-	if(pt.x < getLeft() + leftMargin || pt.x >= getRight() + leftMargin)	// x 方向
+	if(pt.x < getLeft() + leftMargin || pt.x >= getRight() + leftMargin)	// about x-coordinate
 		return false;
 
-	// y 方向
+	// about y-coordinate
 	const Point& top = getTop();
 	const Point& bottom = getBottom();
 	length_t line, subline;
@@ -3453,11 +3492,11 @@ void VirtualBox::update(const Region& region) throw() {
 	const TextRenderer& r = view_.getTextRenderer();
 	const LineLayout* layout = &r.getLineLayout(points_[0].line = region.first.line);
 	::POINT location = layout->getLocation(region.first.column);
-	points_[0].x = location.x + r.getLineIndent(points_[0].line, layout->getSubline(region.first.column));
+	points_[0].x = location.x + r.getLineIndent(points_[0].line, 0);
 	points_[0].subline = location.y / r.getLinePitch();
 	layout = &r.getLineLayout(points_[1].line = region.second.line);
 	location = layout->getLocation(region.second.column);
-	points_[1].x = location.x + r.getLineIndent(points_[1].line, layout->getSubline(region.second.column));
+	points_[1].x = location.x + r.getLineIndent(points_[1].line, 0);
 	points_[1].subline = location.y / r.getLinePitch();
 }
 
@@ -4143,19 +4182,11 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 	const Caret& caret = updater_->getTextViewer().getCaret();
 	const bool overtype = caret.isOvertypeMode() && caret.isSelectionEmpty();
 
-	if(!overtype)
+	if(!overtype) {
 		solidSize.cx = bold_ ? 2 : 1;	// 本当はシステムの設定値を使わなければならない
-	else {	// 上書きモードのときはキャレットを次のグリフと同じ幅にする
-		if(caret.isEndOfLine())	// 行末
-			solidSize.cx = caret.getTextViewer().getTextRenderer().getAverageCharacterWidth();
-		else {
-			const LineLayout& layout = caret.getTextViewer().getTextRenderer().getLineLayout(caret.getLineNumber());
-			const int leading = layout.getLocation(caret.getColumnNumber(), LineLayout::LEADING).x;
-			const int trailing = layout.getLocation(caret.getColumnNumber(), LineLayout::TRAILING).x;
-			solidSize.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
-		}
-	}
-	solidSize.cy = updater_->getTextViewer().getTextRenderer().getLineHeight();
+		solidSize.cy = updater_->getTextViewer().getTextRenderer().getLineHeight();
+	} else	// 上書きモードのときはキャレットを次のグリフと同じ幅にする
+		getCurrentCharacterSize(updater_->getTextViewer(), solidSize);
 	orientation = LEFT_TO_RIGHT;
 
 	HIMC imc = ::ImmGetContext(updater_->getTextViewer().getHandle());

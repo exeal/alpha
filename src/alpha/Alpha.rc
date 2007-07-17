@@ -436,6 +436,17 @@ BEGIN
     PUSHBUTTON      "キャンセル",IDCANCEL,140,24,54,14
 END
 
+IDD_DLG_PAGESETUPTEMPLATE DIALOGEX 0, 0, 269, 47
+STYLE DS_SETFONT | DS_3DLOOK | WS_CHILD | WS_CLIPSIBLINGS
+FONT 9, "MS UI Gothic", 0, 0, 0x0
+BEGIN
+    GROUPBOX        "その他",IDC_STATIC,7,7,255,33
+    CONTROL         "行番号(&N)",IDC_CHK_LINENUMBERS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,14,22,50,10
+    CONTROL         "ヘッダ(&H)",IDC_CHK_HEADER,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,101,22,44,10
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -560,6 +571,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 116
     END
+
+    IDD_DLG_PAGESETUPTEMPLATE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 262
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 40
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -569,7 +588,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE      RCDATA                    "Resource\\code-page-name-table-ja"
+IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-ja"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -745,27 +764,6 @@ END
 
 STRINGTABLE 
 BEGIN
-	CMD_SEARCH_FINDFILES    "ファイルの検索...\nファイルを検索します。"
-	CMD_SEARCH_SEARCHMULTIPLEFILES "ファイルから検索...\n複数のファイルから検索を行います。"
-	CMD_SEARCH_REPLACEMULTIPLEFILES "ファイルから置換...\n複数のファイルで置換を行います。"
-    CMD_SEARCH_TOP          "検索(&S)"
-	CMD_SEARCH_BOOKMARKS    "ブックマーク(&B)"
-END
-
-STRINGTABLE 
-BEGIN
-    CMD_SEARCH_FIND         "検索と置換(&F)...\n[検索と置換] ダイアログを表示します。"
-    CMD_SEARCH_FINDNEXT     "次を検索(&N)\n検索条件に適合する次の文字列を選択します。"
-    CMD_SEARCH_FINDPREV     "前を検索(&P)\n検索条件に適合する前の文字列を選択します。"
-    CMD_SEARCH_REPLACEANDNEXT 
-                            "置換して次に\n選択文字列を置換し次を検索します。"
-    CMD_SEARCH_REPLACEALL   "すべて置換\n検索条件に適合するすべての文字列を置換します。"
-    CMD_SEARCH_BOOKMARKALL  "すべてマーク\n検索条件に適合する文字列が存在するすべての行にブックマークを設定します。"
-    CMD_SEARCH_REVOKEMARK   "検索マークの解除(&K)\n検索条件に適合する文字列の強調表示を解除します。"
-END
-
-STRINGTABLE 
-BEGIN
     CMD_SEARCH_GOTOLINE     "指定行へ移動(&G)...\n指定した行へ移動します。"
     CMD_SEARCH_TOGGLEBOOKMARK 
                             "ブックマークの設定/解除(&O)\n現在行にブックマークを追加/削除します。"
@@ -791,13 +789,44 @@ BEGIN
                             "Migemo インクリメンタル検索(&M)\nMigemo インクリメンタル検索を行います。"
     CMD_SEARCH_INCREMENTALSEARCHMR 
                             "逆方向 Migemo インクリメンタル検索(&O)\n逆方向 Migemo インクリメンタル検索を行います。"
+    CMD_SEARCH_FINDFILES    "ファイルの検索...\nファイルを検索します。"
+    CMD_SEARCH_SEARCHMULTIPLEFILES 
+                            "ファイルから検索...\n複数のファイルから検索を行います。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_REPLACEMULTIPLEFILES 
+                            "ファイルから置換...\n複数のファイルで置換を行います。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_TOP          "検索(&S)"
+    CMD_SEARCH_BOOKMARKS    "ブックマーク(&B)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_FIND         "検索と置換(&F)...\n[検索と置換] ダイアログを表示します。"
+    CMD_SEARCH_FINDNEXT     "次を検索(&N)\n検索条件に適合する次の文字列を選択します。"
+    CMD_SEARCH_FINDPREV     "前を検索(&P)\n検索条件に適合する前の文字列を選択します。"
+    CMD_SEARCH_REPLACEANDNEXT 
+                            "置換して次に\n選択文字列を置換し次を検索します。"
+    CMD_SEARCH_REPLACEALL   "すべて置換\n検索条件に適合するすべての文字列を置換します。"
+    CMD_SEARCH_BOOKMARKALL  "すべてマーク\n検索条件に適合する文字列が存在するすべての行にブックマークを設定します。"
+    CMD_SEARCH_REVOKEMARK   "検索マークの解除(&K)\n検索条件に適合する文字列の強調表示を解除します。"
 END
 
 STRINGTABLE 
 BEGIN
     CMD_VIEW_TOP            "表示(&V)"
     CMD_VIEW_BUFFERS        "バッファ(&F)"
-	CMD_WINDOW_TOP          "ウィンドウ(&W)"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_WINDOW_TOP          "ウィンドウ(&W)"
 END
 
 STRINGTABLE 
@@ -810,16 +839,23 @@ BEGIN
     CMD_VIEW_WRAPBYWINDOWWIDTH 
                             "ウィンドウ端で折り返す(&W)\n行をウィンドウ幅で折り返して表示します。"
     CMD_VIEW_REFRESH        "再描画(&R)\n画面を再描画します。"
-    CMD_WINDOW_SPLITNS      "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
     CMD_VIEW_NEXTBUFFER     "次のバッファ(&N)\n次のバッファを表示します。"
     CMD_VIEW_PREVBUFFER     "前のバッファ(&P)\n前のバッファを表示します。"
     CMD_VIEW_BUFFERBAR      "バッファバー(&B)\nバッファバーの表示/非表示を切り替えます。"
-    CMD_WINDOW_TOPMOSTALWAYS "常に最前面に表示(&A)\nウィンドウを常に最前面に表示します。"
-    CMD_WINDOW_SPLITWE        "ウィンドウの左右分割(&D)\nエディタウィンドウを左右に分割します。"
-    CMD_WINDOW_UNSPLITACTIVE  "現在のウィンドウを閉じる(&C)\nアクティブなエディタウィンドウを閉じ、分割を解除します。"
-    CMD_WINDOW_UNSPLITOTHERS  "他のウィンドウを閉じる(&H)\nアクティブなエディタウィンドウを残し、すべてのウィンドウを閉じます。"
-    CMD_WINDOW_NEXTPANE       "次のウィンドウ(&X)\n次のエディタウィンドウをアクティブにします。"
-    CMD_WINDOW_PREVPANE       "前のウィンドウ(&V)\n前のエディタウィンドウをアクティブにします。"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_WINDOW_SPLITNS      "ウィンドウの上下分割(&L)\nエディタウィンドウを上下に分割します。"
+    CMD_WINDOW_SPLITWE      "ウィンドウの左右分割(&D)\nエディタウィンドウを左右に分割します。"
+    CMD_WINDOW_UNSPLITACTIVE 
+                            "現在のウィンドウを閉じる(&C)\nアクティブなエディタウィンドウを閉じ、分割を解除します。"
+    CMD_WINDOW_UNSPLITOTHERS 
+                            "他のウィンドウを閉じる(&H)\nアクティブなエディタウィンドウを残し、すべてのウィンドウを閉じます。"
+    CMD_WINDOW_NEXTPANE     "次のウィンドウ(&X)\n次のエディタウィンドウをアクティブにします。"
+    CMD_WINDOW_PREVPANE     "前のウィンドウ(&V)\n前のエディタウィンドウをアクティブにします。"
+    CMD_WINDOW_TOPMOSTALWAYS 
+                            "常に最前面に表示(&A)\nウィンドウを常に最前面に表示します。"
 END
 
 STRINGTABLE 
@@ -956,9 +992,9 @@ STRINGTABLE
 BEGIN
     MSG_IO__FAILED_TO_DETECT_ENCODE 
                             "%1%n%nコードページを判別できませんでした。システム既定のコードページを使用します。"
-    MSG_IO__INVALID_ENCODING "%1%n%n指定されたコードページは正しくありません。ファイルを開くことはできません。"
-    MSG_IO__INVALID_NEWLINE 
-                            "%1%n%n指定された改行コードは正しくありません。ファイルを開くことはできません。"
+    MSG_IO__INVALID_ENCODING 
+                            "%1%n%n指定されたコードページは正しくありません。ファイルを開くことはできません。"
+    MSG_IO__INVALID_NEWLINE "%1%n%n指定された改行コードは正しくありません。ファイルを開くことはできません。"
     MSG_IO__UNCONVERTABLE_UCS_CHAR 
                             "%1%nエンコード%2%n%nこの文書は指定したエンコードで変換できない文字を含んでいます。%nこのまま続行するとそれらの文字は正しく保存されません。%nコードページを変更しますか?"
     MSG_IO__UNCONVERTABLE_NATIVE_CHAR 
@@ -1493,7 +1529,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-en"
+IDR_CODEPAGE_NAME_TABLE      RCDATA                   "Resource\\code-page-name-table-en"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1665,27 +1701,6 @@ END
 
 STRINGTABLE 
 BEGIN
-	CMD_SEARCH_FINDFILES    "Find Files...\nFind files with the given pattern."
-	CMD_SEARCH_SEARCHMULTIPLEFILES "Search in Files...\nSearch pattern in multiple files."
-	CMD_SEARCH_REPLACEMULTIPLEFILES "Replace in Files...\nReplace text in multiple files."
-    CMD_SEARCH_TOP          "&Search"
-	CMD_SEARCH_BOOKMARKS    "&Bookmarks"
-END
-
-STRINGTABLE 
-BEGIN
-    CMD_SEARCH_FIND         "&Find...\nShow [Search and Replace] dialog."
-    CMD_SEARCH_FINDNEXT     "Find &Next\nSearch next match."
-    CMD_SEARCH_FINDPREV     "Find &Previous\nSearch previous match."
-    CMD_SEARCH_REPLACEANDNEXT 
-                            "Replace and Next\nReplace the selection and search next."
-    CMD_SEARCH_REPLACEALL   "Replace All\nReplace all matches."
-    CMD_SEARCH_BOOKMARKALL  "Mark All\nSet bookmarks on all matched lines."
-    CMD_SEARCH_REVOKEMARK   "Revo&ke Highlight\nRevoke match highlight."
-END
-
-STRINGTABLE 
-BEGIN
     CMD_SEARCH_GOTOLINE     "&Go to Line...\nGo to specified line."
     CMD_SEARCH_TOGGLEBOOKMARK 
                             "T&oggle Bookmark\nSet or remove a bookmark on current line."
@@ -1709,13 +1724,44 @@ BEGIN
                             "&Migemo Incremental Search\nStart Migemo incremental search."
     CMD_SEARCH_INCREMENTALSEARCHMR 
                             "Reverse Migem&o Incremental Search\nStart reverse Migemo incremental search."
+    CMD_SEARCH_FINDFILES    "Find Files...\nFind files with the given pattern."
+    CMD_SEARCH_SEARCHMULTIPLEFILES 
+                            "Search in Files...\nSearch pattern in multiple files."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_REPLACEMULTIPLEFILES 
+                            "Replace in Files...\nReplace text in multiple files."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_TOP          "&Search"
+    CMD_SEARCH_BOOKMARKS    "&Bookmarks"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_SEARCH_FIND         "&Find...\nShow [Search and Replace] dialog."
+    CMD_SEARCH_FINDNEXT     "Find &Next\nSearch next match."
+    CMD_SEARCH_FINDPREV     "Find &Previous\nSearch previous match."
+    CMD_SEARCH_REPLACEANDNEXT 
+                            "Replace and Next\nReplace the selection and search next."
+    CMD_SEARCH_REPLACEALL   "Replace All\nReplace all matches."
+    CMD_SEARCH_BOOKMARKALL  "Mark All\nSet bookmarks on all matched lines."
+    CMD_SEARCH_REVOKEMARK   "Revo&ke Highlight\nRevoke match highlight."
 END
 
 STRINGTABLE 
 BEGIN
     CMD_VIEW_TOP            "&View"
     CMD_VIEW_BUFFERS        "Bu&ffers"
-	CMD_WINDOW_TOP          "&Window"
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_WINDOW_TOP          "&Window"
 END
 
 STRINGTABLE 
@@ -1728,16 +1774,22 @@ BEGIN
     CMD_VIEW_WRAPBYWINDOWWIDTH 
                             "Wrap by &Window\nWrap lines at the end of window."
     CMD_VIEW_REFRESH        "&Refresh\nRefresh the window."
-    CMD_WINDOW_SPLITNS        "Sp&lit Window\nSplit the window into up and bottom."
     CMD_VIEW_NEXTBUFFER     "&Next Buffer\nShow next buffer."
     CMD_VIEW_PREVBUFFER     "&Previous Buffer\nShow previous buffer."
     CMD_VIEW_BUFFERBAR      "&Buffer Bar\nShow or hide the buffer bar."
-    CMD_WINDOW_TOPMOSTALWAYS  "&Always in Foreground\nShow the application window foreground always."
-    CMD_WINDOW_SPLITWE        "Split Window Si&de-by-Side\nSplit the window into side-by-side."
-    CMD_WINDOW_UNSPLITACTIVE  "&Close Window\nClose active window."
-    CMD_WINDOW_UNSPLITOTHERS  "Close Ot&her Windows\nClose all inactive windows."
-    CMD_WINDOW_NEXTPANE       "Ne&xt Pane\nActivate next window."
-    CMD_WINDOW_PREVPANE       "Pre&vious Pane\nActivate previous window."
+END
+
+STRINGTABLE 
+BEGIN
+    CMD_WINDOW_SPLITNS      "Sp&lit Window\nSplit the window into up and bottom."
+    CMD_WINDOW_SPLITWE      "Split Window Si&de-by-Side\nSplit the window into side-by-side."
+    CMD_WINDOW_UNSPLITACTIVE "&Close Window\nClose active window."
+    CMD_WINDOW_UNSPLITOTHERS 
+                            "Close Ot&her Windows\nClose all inactive windows."
+    CMD_WINDOW_NEXTPANE     "Ne&xt Pane\nActivate next window."
+    CMD_WINDOW_PREVPANE     "Pre&vious Pane\nActivate previous window."
+    CMD_WINDOW_TOPMOSTALWAYS 
+                            "&Always in Foreground\nShow the application window foreground always."
 END
 
 STRINGTABLE 
@@ -1872,9 +1924,9 @@ STRINGTABLE
 BEGIN
     MSG_IO__FAILED_TO_DETECT_ENCODE 
                             "%1%n%nFailed to detect code page of the file. Used system-default code page."
-    MSG_IO__INVALID_ENCODING "%1%n%nSpecified code page is invalid. Cannot open the file."
-    MSG_IO__INVALID_NEWLINE 
-                            "%1%n%nSpecified newline is invalid. Cannot open the file."
+    MSG_IO__INVALID_ENCODING 
+                            "%1%n%nSpecified code page is invalid. Cannot open the file."
+    MSG_IO__INVALID_NEWLINE "%1%n%nSpecified newline is invalid. Cannot open the file."
     MSG_IO__UNCONVERTABLE_UCS_CHAR 
                             "%1%nEncoding: %2%n%nThe document contains unconvertable characters under specified encoding.%nThese characters will be written incorrectly.%nDo you want to change code page?"
     MSG_IO__UNCONVERTABLE_NATIVE_CHAR 

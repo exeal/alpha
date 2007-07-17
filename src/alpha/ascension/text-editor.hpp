@@ -71,44 +71,51 @@ namespace ascension {
 			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public EditorCommand {
 			public:
+				/// Types of movement.
 				enum Type {
-					NEXT_CHARACTER,			///< Moves or extends to the next character.
-					PREVIOUS_CHARACTER,		///< Moves or extends to the previous character.
-					LEFT_CHARACTER,			///< Moves or extends to the left character.
-					RIGHT_CHARACTER,		///< Moves or extends to the right character.
-					NEXT_WORD,				///< Moves or extends to the start of the next word.
-					PREVIOUS_WORD,			///< Moves or extends to the start of the previous word.
-					LEFT_WORD,				///< Moves or extends to the start of the left word.
-					RIGHT_WORD,				///< Moves or extends to the start of the right word.
-					NEXT_WORDEND,			///< Moves or extends to the end of the next word.
-					PREVIOUS_WORDEND,		///< Moves or extends to the end of the previous word.
-					LEFT_WORDEND,			///< Moves or extends to the end of the left word.
-					RIGHT_WORDEND,			///< Moves or extends to the end of the right word.
-					NEXT_LINE,				///< Moves or extends to the next logical line.
-					PREVIOUS_LINE,			///< Moves or extends to the previous logical line.
-					VISUAL_NEXT_LINE,		///< Moves or extends to the next visual line.
-					VISUAL_PREVIOUS_LINE,	///< Moves or extends to the previous visual line.
-					NEXT_PAGE,				///< Moves or extends to the next page.
-					PREVIOUS_PAGE,			///< Moves or extends to the previous page.
-					START_OF_LINE,			///< Moves or extends to the start of the line.
-					END_OF_LINE,			///< Moves or extends to the end of the line.
-					FIRST_CHAR_OF_LINE,		///< Moves or extends to the first character in the line.
-					LAST_CHAR_OF_LINE,		///< Moves or extends to the last character in the line.
-					START_OR_FIRST_OF_LINE,	///< Moves or extends to the start of the line or the first character in the line by context.
-					END_OR_LAST_OF_LINE,	///< Moves or extends to the end of the line or the last character in the line by context.
-					START_OF_DOCUMENT,		///< Moves or extends to the start of the document.
-					END_OF_DOCUMENT,		///< Moves or extends to the end of the document.
-					NEXT_BOOKMARK,			///< Moves or extends to the next bookmark.
-					PREVIOUS_BOOKMARK,		///< Moves or extends to the previous bookmark.
-					MATCH_BRACKET,			///< Moves or extends to the match bracket.
+					FORWARD_CHARACTER,							///< Moves or extends to the next (forward) character.
+					BACKWARD_CHARACTER,							///< Moves or extends to the previous (backward) character.
+					LEFT_CHARACTER,								///< Moves or extends to the left character.
+					RIGHT_CHARACTER,							///< Moves or extends to the right character.
+					NEXT_WORD,									///< Moves or extends to the start of the next word.
+					PREVIOUS_WORD,								///< Moves or extends to the start of the previous word.
+					LEFT_WORD,									///< Moves or extends to the start of the left word.
+					RIGHT_WORD,									///< Moves or extends to the start of the right word.
+					NEXT_WORDEND,								///< Moves or extends to the end of the next word.
+					PREVIOUS_WORDEND,							///< Moves or extends to the end of the previous word.
+					LEFT_WORDEND,								///< Moves or extends to the end of the left word.
+					RIGHT_WORDEND,								///< Moves or extends to the end of the right word.
+					NEXT_LINE,									///< Moves or extends to the next logical line.
+					PREVIOUS_LINE,								///< Moves or extends to the previous logical line.
+					NEXT_VISUAL_LINE,							///< Moves or extends to the next visual line.
+					PREVIOUS_VISUAL_LINE,						///< Moves or extends to the previous visual line.
+					NEXT_PAGE,									///< Moves or extends to the next page.
+					PREVIOUS_PAGE,								///< Moves or extends to the previous page.
+					BEGINNING_OF_LINE,							///< Moves or extends to the beginning of the logical line.
+					END_OF_LINE,								///< Moves or extends to the end of the logical line.
+					FIRST_PRINTABLE_CHARACTER_OF_LINE,			///< Moves or extends to the first printable character in the logical line.
+					LAST_PRINTABLE_CHARACTER_OF_LINE,			///< Moves or extends to the last printable character in the logical line.
+					CONTEXTUAL_BEGINNING_OF_LINE,				///< Moves or extends to the beginning of the line or the first printable character in the logical line by context.
+					CONTEXTUAL_END_OF_LINE,						///< Moves or extends to the end of the line or the last printable character in the logical line by context.
+					BEGINNING_OF_VISUAL_LINE,					///< Moves or extends to the start of the visual line.
+					END_OF_VISUAL_LINE,							///< Moves or extends to the end of the visual line.
+					FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Moves or extends to the first printable character in the visual line.
+					LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Moves or extends to the last printable character in the visual line.
+					CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,		///< Moves or extends to the beginning of the line or the first printable character in the visual line by context.
+					CONTEXTUAL_END_OF_VISUAL_LINE,				///< Moves or extends to the end of the line or the last printable character in the visual line by context.
+					BEGINNING_OF_DOCUMENT,						///< Moves or extends to the beginning of the document.
+					END_OF_DOCUMENT,							///< Moves or extends to the end of the document.
+					NEXT_BOOKMARK,								///< Moves or extends to the next bookmark.
+					PREVIOUS_BOOKMARK,							///< Moves or extends to the previous bookmark.
+					MATCH_BRACKET,								///< Moves or extends to the match bracket.
 				};
 				CaretMovementCommand(viewers::TextViewer& view, Type type, bool extend = false, length_t offset = 1) throw()
 						: EditorCommand(view), type_(type), extend_(extend), offset_(offset) {}
 				ulong execute();
 			private:
-				Type		type_;
-				bool		extend_;
-				length_t	offset_;
+				Type type_;
+				bool extend_;
+				length_t offset_;
 			};
 			/// Exchanges a character and a text represents a code value.
 			class CharacterCodePointConversionCommand : public internal::EditorCommandBase<bool> {
@@ -240,28 +247,34 @@ namespace ascension {
 			class RowSelectionExtensionCommand : public EditorCommand {
 			public:
 				enum Type {
-					NEXT_CHARACTER,			///< Extends to the next character.
-					PREVIOUS_CHARACTER,		///< Extends to the previous character.
-					LEFT_CHARACTER,			///< Extends to the left character.
-					RIGHT_CHARACTER,		///< Extends to the right character.
-					NEXT_WORD,				///< Extends to the start of the next word.
-					PREVIOUS_WORD,			///< Extends to the start of the previous word.
-					LEFT_WORD,				///< Extends to the start of the left word.
-					RIGHT_WORD,				///< Extends to the start of the right word.
-					NEXT_WORDEND,			///< Extends to the end of the next word.
-					PREVIOUS_WORDEND,		///< Extends to the end of the previous word.
-					LEFT_WORDEND,			///< Extends to the end of the left word.
-					RIGHT_WORDEND,			///< Extends to the end of the right word.
-					NEXT_LINE,				///< Extends to the next logical line.
-					PREVIOUS_LINE,			///< Extends to the previous logical line.
-					VISUAL_NEXT_LINE,		///< Extends to the next visual line.
-					VISUAL_PREVIOUS_LINE,	///< Extends to the previous visual line.
-					START_OF_LINE,			///< Extends to the start of the line.
-					END_OF_LINE,			///< Extends to the end of the line.
-					FIRST_CHAR_OF_LINE,		///< Extends to the first character in the line.
-					LAST_CHAR_OF_LINE,		///< Extends to the last character in the line.
-					START_OR_FIRST_OF_LINE,	///< Extends to the start of the line or first character in the line by context.
-					END_OR_LAST_OF_LINE,	///< Extends to the end of the line or last character in the line by context.
+					FORWARD_CHARACTER,							///< Extends to the next (forward) character.
+					BACKWARD_CHARACTER,							///< Extends to the previous (backward) character.
+					LEFT_CHARACTER,								///< Extends to the left character.
+					RIGHT_CHARACTER,							///< Extends to the right character.
+					NEXT_WORD,									///< Extends to the start of the next word.
+					PREVIOUS_WORD,								///< Extends to the start of the previous word.
+					LEFT_WORD,									///< Extends to the start of the left word.
+					RIGHT_WORD,									///< Extends to the start of the right word.
+					NEXT_WORDEND,								///< Extends to the end of the next word.
+					PREVIOUS_WORDEND,							///< Extends to the end of the previous word.
+					LEFT_WORDEND,								///< Extends to the end of the left word.
+					RIGHT_WORDEND,								///< Extends to the end of the right word.
+					NEXT_LINE,									///< Extends to the next logical line.
+					PREVIOUS_LINE,								///< Extends to the previous logical line.
+					NEXT_VISUAL_LINE,							///< Extends to the next visual line.
+					PREVIOUS_VISUAL_LINE,						///< Extends to the previous visual line.
+					BEGINNING_OF_LINE,							///< Extends to the beginning of the line.
+					END_OF_LINE,								///< Extends to the end of the line.
+					FIRST_PRINTABLE_CHARACTER_OF_LINE,			///< Extends to the first printable character in the line.
+					LAST_PRINTABLE_CHARACTER_OF_LINE,			///< Extends to the last printable character in the line.
+					CONTEXTUAL_BEGINNING_OF_LINE,				///< Extends to the beginning of the line or first printable character in the line by context.
+					CONTEXTUAL_END_OF_LINE,						///< Extends to the end of the line or last printable character in the line by context.
+					BEGINNING_OF_VISUAL_LINE,					///< Extends to the beginning of the visual line.
+					END_OF_VISUAL_LINE,							///< Extends to the end of the visual line.
+					FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Extends to the first printable character in the visual line.
+					LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Extends to the last printable character in the visual line.
+					CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,		///< Extends to the beginning of the visual line or first printable character in the visual line by context.
+					CONTEXTUAL_END_OF_VISUAL_LINE,				///< Extends to the end of the visual line or last printable character in the visual line by context.
 				};
 				RowSelectionExtensionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
 				ulong execute();

@@ -21,7 +21,7 @@ using namespace std;
 
 
 namespace {
-	/// The clipboard
+	/// The clipboard.
 	class Clipboard : public manah::Noncopyable {
 	public:
 		class Text : public manah::Unassignable {
@@ -84,7 +84,54 @@ namespace {
 			}
 		}
 	}
+} // namespace @0
 
+namespace {
+	Position getForwardCharacterPosition(const Document& document, const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
+		if(offset == 0)
+			return position;
+		else if(cu == EditPoint::UTF16_CODE_UNIT) {
+			UTF32To16Iterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			while(offset-- > 0)
+				++i;
+			return i.tell().tell();
+		} else if(cu == EditPoint::UTF32_CODE_UNIT) {
+			DocumentCharacterIterator i(document, position);
+			while(offset-- > 0)
+				++i;
+			return i.tell();
+		} else if(cu == EditPoint::GRAPHEME_CLUSTER) {
+			GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			i.next(offset);
+			return i.base().tell();
+		} else if(cu == EditPoint::GLYPH_CLUSTER) {
+			// TODO: not implemented.
+		}
+		throw invalid_argument("unknown character unit.");
+	}
+	Position getBackwardCharacterPosition(const Document& document, const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
+		assert(cu != EditPoint::DEFAULT_UNIT);
+		if(offset == 0)
+			return position;
+		else if(cu == EditPoint::UTF16_CODE_UNIT) {
+			UTF32To16Iterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			while(offset-- > 0)
+				--i;
+			return i.tell().tell();
+		} else if(cu == EditPoint::UTF32_CODE_UNIT) {
+			DocumentCharacterIterator i(document, position);
+			while(offset-- > 0)
+				--i;
+			return i.tell();
+		} else if(cu == EditPoint::GRAPHEME_CLUSTER) {
+			GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			i.next(-static_cast<signed_length_t>(offset));
+			return i.base().tell();
+		} else if(cu == EditPoint::GLYPH_CLUSTER) {
+			// TODO: not implemented.
+		}
+		throw invalid_argument("unknown character unit.");
+	}
 } // namespace @0
 
 
@@ -98,7 +145,7 @@ namespace {
  * @throw std#invalid_argument @a position is outside of the document
  */
 EditPoint::EditPoint(Document& document, const Position& position /* = Position() */, IPointListener* listener /* = 0 */)
-	: Point(document, position), listener_(listener), characterUnit_(CU_GRAPHEME_CLUSTER) {
+	: Point(document, position), listener_(listener), characterUnit_(GRAPHEME_CLUSTER) {
 }
 
 /// Copy-constructor.
@@ -112,23 +159,23 @@ EditPoint::~EditPoint() throw() {
 }
 
 /**
- * Moves to the next character.
+ * Moves to the previous (backward) character.
  * @param offset the offset of the movement
  */
-void EditPoint::charNext(length_t offset /* = 1 */) {
+void EditPoint::backwardCharacter(length_t offset /* = 1 */) {
 	verifyDocument();
 	normalize();
-	moveTo(getNextCharPos(*this, offset));
+	moveTo(getBackwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), offset));
 }
 
-/**
- * Moves to the previous character.
- * @param offset the offset of the movement
- */
-void EditPoint::charPrev(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	moveTo(getPrevCharPos(*this, offset));
+/// Moves to the beginning of the document.
+void EditPoint::beginningOfDocument() {
+	moveTo(Position::ZERO_POSITION);
+}
+
+/// Moves to the beginning of the line.
+void EditPoint::beginningOfLine() {
+	moveTo(Position(min(getLineNumber(), getDocument()->getNumberOfLines() - 1), 0));
 }
 
 /**
@@ -143,7 +190,7 @@ void EditPoint::destructiveInsert(const Char* first, const Char* last) {
 	EditPoint p = EditPoint(*this);
 	p.adaptToDocument(false);
 	Document& document = *getDocument();
-	p.charNext();
+	p.forwardCharacter();
 	if(p != *this) {
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
@@ -164,16 +211,28 @@ void EditPoint::doMoveTo(const Position& to) {
 	}
 }
 
+/// Moves to the end of the document.
+void EditPoint::endOfDocument() {
+	const length_t lines = getDocument()->getNumberOfLines();
+	moveTo(Position(lines - 1, getDocument()->getLineLength(lines - 1)));
+}
+
+/// Moves to the end of the line.
+void EditPoint::endOfLine() {
+	moveTo(Position(min(getLineNumber(), getDocument()->getNumberOfLines() - 1), getDocument()->getLineLength(getLineNumber())));
+}
+
 /**
  * 指定位置までのテキストを削除
  * @param length もう1つの位置までの文字数 (負でもよい)
- * @param cu 文字数の計算方法。@c CU_DEFAULT を指定すると現在の設定が使用される
+ * @param cu 文字数の計算方法。@c DEFAULT_UNIT を指定すると現在の設定が使用される
  */
-void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit cu /* = CU_DEFAULT */) {
+void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit cu /* = DEFAULT_UNIT */) {
 	verifyDocument();
 	if(getDocument()->isReadOnly() || length == 0)
 		return;
-	erase((length > 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length, CU_UTF16));
+	erase((length > 0) ?
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length) : getBackwardCharacterPosition(*getDocument(), *this, UTF16_CODE_UNIT, -length));
 }
 
 /**
@@ -185,6 +244,16 @@ void EditPoint::erase(const Position& other) {
 	if(getDocument()->isReadOnly() || other == getPosition())
 		return;
 	getDocument()->erase(Region(*this, other));
+}
+
+/**
+ * Moves to the next (forward) character.
+ * @param offset the offset of the movement
+ */
+void EditPoint::forwardCharacter(length_t offset /* = 1 */) {
+	verifyDocument();
+	normalize();
+	moveTo(getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), offset));
 }
 
 /**
@@ -200,156 +269,16 @@ CodePoint EditPoint::getCodePoint(bool useLineFeed /* = false */) const {
 	return surrogates::decodeFirst(line.begin() + getColumnNumber(), line.end());
 }
 
-/// Returns the length of the current line.
-length_t EditPoint::getLineLength() const {
-	verifyDocument();
-	normalize();
-	return getDocument()->getLineLength(getLineNumber());
+inline String EditPoint::getText(signed_length_t length, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
+	return getText((length >= 0) ?
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length)
+		: getBackwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length), nlr);
 }
 
-/**
- * 与えられた位置から指定文字数分進んだ位置を返す
- * @param pt 基準位置
- * @param length 文字数
- * @param cu 文字数計算方法。省略すると @a pt の設定値
- */
-Position EditPoint::getNextCharPos(const EditPoint& pt, length_t length, EditPoint::CharacterUnit cu /* = CU_DEFAULT */) {
-	if(length == 0)
-		return pt;
-	const Document& document = *pt.getDocument();
-	if(cu == CU_DEFAULT)
-		cu = pt.characterUnit_;
-	if(cu == CU_GRAPHEME_CLUSTER) {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, pt));
-		i.next(length);
-		return i.base().tell();
-	}
-
-	const length_t lines = document.getNumberOfLines();
-	const String* line = &document.getLine(pt.getLineNumber());
-	Position pos = pt;
-	while(length-- > 0) {
-		if(pos.column == line->length()) {	// 行末なので次の行に移動
-			if(pos.line == lines - 1)	// 最終行であれば移動しない
-				return pos;
-			line = &document.getLine(++pos.line);
-			pos.column = 0;
-		} else if(cu == CU_UTF16 || line->length() - pos.column == 1)
-			++pos.column;
-		else {
-			assert(cu == CU_UTF32);
-			pos.column += (surrogates::decodeFirst(line->begin() + pos.column, line->end()) > 0xFFFF) ? 2 : 1;
-		}
-	}
-	return pos;
-}
-
-/**
- * 与えられた位置から指定文字数分戻った位置を返す
- * @param pt 基準位置
- * @param length 文字数
- * @param cu 文字数計算方法。省略すると @a pt の設定値
- */
-Position EditPoint::getPrevCharPos(const EditPoint& pt, length_t length, EditPoint::CharacterUnit cu /* = CU_DEFAULT */) {
-	if(length == 0)
-		return pt;
-	const Document& document = *pt.getDocument();
-	if(cu == CU_DEFAULT)
-		cu = pt.characterUnit_;
-	if(cu == CU_GRAPHEME_CLUSTER) {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, pt));
-		i.next(-static_cast<signed_length_t>(length));
-		return i.base().tell();
-	}
-
-	const String* line = &document.getLine(pt.getLineNumber());
-	Position pos = pt;
-	while(length-- > 0) {
-		if(pos.column == 0) {	// 行頭なので前の行に移動
-			if(pos.line == 0)	// 先頭行であれば移動しない
-				return pos;
-			line = &document.getLine(--pos.line);
-			pos.column = line->length();
-		} else if(cu == CU_UTF16 || pos.column == 1)
-			--pos.column;
-		else if(cu == CU_UTF32) {
-			assert(cu == CU_GRAPHEME_CLUSTER);
-			pos.column -= (surrogates::isHighSurrogate((*line)[pos.column - 2])
-						&& surrogates::isLowSurrogate((*line)[pos.column - 1])) ? 2 : 1;
-		}
-	}
-	return pos;
-}
-
-/**
- * 範囲内のテキストを返す
- * @param length もう1つの位置までの文字数 (負でもよい)
- * @param nlr 改行文字の扱い (@a length の数え方には影響しないので注意)
- */
-String EditPoint::getText(signed_length_t length, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	verifyDocument();
-	normalize();
-	if(length == 0)
-		return L"";
-	return getText((length > 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length), nlr);
-}
-
-/**
- * 範囲内のテキストを返す
- * @param other もう1つの位置
- * @param nlr 改行文字の扱い
- */
-String EditPoint::getText(const Position& other, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	// TODO: this code can be rewritten via Document#writeToStream
-	verifyDocument();
-
-	Position position = other;
-	const Document& document = *getDocument();
-	
-	position.line = min(other.line, document.getNumberOfLines() - 1);
-	normalize();
-	if(other == getPosition())
-		return L"";
-
-	const Position& start = min(getPosition(), position);
-	const Position& end = max(getPosition(), position);
-
-	if(start.line == end.line)	// 1行の場合
-		return document.getLine(end.line).substr(start.column, end.column - start.column);
-	else {	// 複数行の場合
-		StringBuffer text(ios_base::out);
-		length_t line = start.line;
-		Char eol[3] = L"";
-
-		switch(nlr) {
-		case NLR_LINE_FEED:
-			wcscpy(eol, L"\n"); break;
-		case NLR_CRLF:
-			wcscpy(eol, L"\r\n"); break;
-		case NLR_LINE_SEPARATOR:
-			wcscpy(eol, L"\x2028"); break;
-		case NLR_DOCUMENT_DEFAULT:
-			wcscpy(eol, getNewlineString(document.getNewline())); break;
-		}
-		const streamsize eolSize = static_cast<streamsize>(wcslen(eol));
-		while(true) {
-			const Document::Line& ln = document.getLineInfo(line);
-			const String& s = ln.getLine();
-			if(line == start.line)	// 先頭行
-				text.sputn(s.data() + start.column, static_cast<streamsize>(s.length() - start.column));
-			else if(line == end.line) {	// 最終行
-				text.sputn(s.data(), static_cast<streamsize>(end.column));
-				break;
-			} else
-				text.sputn(s.data(), static_cast<streamsize>(s.length()));
-			if(nlr == NLR_PHYSICAL_DATA)
-				text.sputn(getNewlineString(ln.getNewline()), static_cast<streamsize>(getNewlineStringLength(ln.getNewline())));
-			else
-				text.sputn(eol, eolSize);
-			++line;
-		}
-		return text.str();
-	}
+inline String EditPoint::getText(const Position& other, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
+	OutputStringStream s;
+	getDocument()->writeToStream(s, Region(*this, other), nlr);
+	return s.str();
 }
 
 /**
@@ -366,6 +295,24 @@ void EditPoint::insert(const Char* first, const Char* last) {
 	adaptToDocument(false);
 	moveTo(getDocument()->insert(*this, first, last));
 	adaptToDocument(adapts);
+}
+
+/// Returns true if the point is the beginning of the document.
+bool EditPoint::isBeginningOfDocument() const {
+	verifyDocument();
+	normalize();
+	return isExcludedFromRestriction() ? getPosition() == getDocument()->getStartPosition() : getPosition() == Position::ZERO_POSITION;
+}
+
+/// Returns true if the point is the beginning of the line.
+bool EditPoint::isBeginningOfLine() const {
+	verifyDocument();
+	normalize();
+	if(isExcludedFromRestriction()) {
+		const Position start = getDocument()->getStartPosition();
+		return (start.line == getLineNumber()) ? start.column == getColumnNumber() : getColumnNumber() == 0;
+	} else
+		return getColumnNumber() == 0;
 }
 
 /// Returns true if the point is the end of the document.
@@ -388,54 +335,12 @@ bool EditPoint::isEndOfLine() const {
 		return getColumnNumber() == getDocument()->getLineLength(getLineNumber());
 }
 
-/// Returns true if the point is the start of the document.
-bool EditPoint::isStartOfDocument() const {
-	verifyDocument();
-	normalize();
-	return isExcludedFromRestriction() ? getPosition() == getDocument()->getStartPosition() : getPosition() == Position::ZERO_POSITION;
-}
-
-/// Returns true if the point is the start of the line.
-bool EditPoint::isStartOfLine() const {
-	verifyDocument();
-	normalize();
-	if(isExcludedFromRestriction()) {
-		const Position start = getDocument()->getStartPosition();
-		return (start.line == getLineNumber()) ? start.column == getColumnNumber() : getColumnNumber() == 0;
-	} else
-		return getColumnNumber() == 0;
-}
-
-/**
- * Moves to the next line.
- * @param offset the offset of the movement
- */
-void EditPoint::lineDown(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	const length_t newLine = min(getLineNumber() + offset, getDocument()->getEndPosition(isExcludedFromRestriction()).line);
-	if(newLine != getLineNumber())
-		moveTo(Position(newLine, getColumnNumber()));
-}
-
-/**
- * Moves to the previous line.
- * @param offset the offset of the movement
- */
-void EditPoint::lineUp(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	const length_t newLine = (getLineNumber() > offset) ?
-		max(getLineNumber() - offset, getDocument()->getStartPosition(isExcludedFromRestriction()).line) : 0;
-	if(newLine != getLineNumber())
-		moveTo(Position(newLine, getColumnNumber()));
-}
-
 /**
  * Moves to the specified offset.
  * @param offset the offset from the start of the document.
+ * @deprecated 0.8
  */
-void EditPoint::moveToAbsoluteCharOffset(length_t offset) {
+void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 	verifyDocument();
 
 	const Document& document = *getDocument();
@@ -459,22 +364,22 @@ void EditPoint::moveToAbsoluteCharOffset(length_t offset) {
 	moveTo(Position(end.line, document.getLineLength(end.line)));
 }
 
-/// Moves to the end of the document.
-void EditPoint::moveToEndOfDocument() {
-	const length_t lines = getDocument()->getNumberOfLines();
-	moveTo(Position(lines - 1, getDocument()->getLineLength(lines - 1)));
-}
-
-/// Moves to the end of the line.
-void EditPoint::moveToEndOfLine() {
-	moveTo(Position(min(getLineNumber(), getDocument()->getNumberOfLines() - 1), getDocument()->getLineLength(getLineNumber())));
+/**
+ * Breaks the line.
+ * @note This method is hidden by @c VisualPoint#newLine (C++ rule).
+ */
+void EditPoint::newLine() {
+	verifyDocument();
+	if(getDocument()->isReadOnly())
+		return;
+	insert(getNewlineString(getDocument()->getNewline()));
 }
 
 /**
- * Moves to the start of the next bookmarked line.
+ * Moves to the beginning of the next bookmarked line.
  * @return false if the bookmark is not found
  */
-bool EditPoint::moveToNextBookmark() {
+bool EditPoint::nextBookmark() {
 	verifyDocument();
 
 	const Bookmarker& bookmarker = getDocument()->getBookmarker();
@@ -501,10 +406,22 @@ bool EditPoint::moveToNextBookmark() {
 }
 
 /**
- * Moves to the start of the previous bookmarked line.
+ * Moves to the next line.
+ * @param offset the offset of the movement
+ */
+void EditPoint::nextLine(length_t offset /* = 1 */) {
+	verifyDocument();
+	normalize();
+	const length_t newLine = min(getLineNumber() + offset, getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	if(newLine != getLineNumber())
+		moveTo(Position(newLine, getColumnNumber()));
+}
+
+/**
+ * Moves to the beginning of the previous bookmarked line.
  * @return false if the bookmark is not found
  */
-bool EditPoint::moveToPrevBookmark() {
+bool EditPoint::previousBookmark() {
 	verifyDocument();
 
 	const Bookmarker& bookmarker = getDocument()->getBookmarker();
@@ -530,25 +447,17 @@ bool EditPoint::moveToPrevBookmark() {
 	return false;
 }
 
-/// Moves to the start of the document.
-void EditPoint::moveToStartOfDocument() {
-	moveTo(Position::ZERO_POSITION);
-}
-
-/// Moves to the start of the line.
-void EditPoint::moveToStartOfLine() {
-	moveTo(Position(min(getLineNumber(), getDocument()->getNumberOfLines() - 1), 0));
-}
-
 /**
- * Breaks the line.
- * @note This method is hidden by @c VisualPoint#newLine (C++ rule).
+ * Moves to the previous line.
+ * @param offset the offset of the movement
  */
-void EditPoint::newLine() {
+void EditPoint::previousLine(length_t offset /* = 1 */) {
 	verifyDocument();
-	if(getDocument()->isReadOnly())
-		return;
-	insert(getNewlineString(getDocument()->getNewline()));
+	normalize();
+	const length_t newLine = (getLineNumber() > offset) ?
+		max(getLineNumber() - offset, getDocument()->getStartPosition(isExcludedFromRestriction()).line) : 0;
+	if(newLine != getLineNumber())
+		moveTo(Position(newLine, getColumnNumber()));
 }
 
 
@@ -586,6 +495,16 @@ VisualPoint::~VisualPoint() throw() {
 }
 
 /**
+ * Moves to the beginning of the visual line.
+ * @see EditPoint#beginningOfLine
+ */
+void VisualPoint::beginningOfVisualLine() {
+	verifyViewer();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
+	moveTo(Position(getLineNumber(), layout.getSublineOffset(layout.getSubline(getColumnNumber()))));
+}
+
+/**
  * Returns if a paste operation can be performed.
  * @return the pastable clipboard format or 0
  */
@@ -601,28 +520,8 @@ UINT VisualPoint::canPaste() {
 }
 
 /**
- * Moves to left character.
- * @param offset the offset of the movement
- */
-void VisualPoint::charLeft(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	moveTo((viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? getPrevCharPos(*this, offset) : getNextCharPos(*this, offset));
-}
-
-/**
- * Moves to the right character.
- * @param offset the offset of the movement
- */
-void VisualPoint::charRight(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	moveTo((viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? getNextCharPos(*this, offset) : getPrevCharPos(*this, offset));
-}
-
-/**
  * Writes the specified region into the clipboard.
- * @param length コピーする文字数 (負でもよい)
+ * @param length the number of the characters to copy. can be negative
  */
 void VisualPoint::copy(signed_length_t length) {
 	verifyViewer();
@@ -642,7 +541,7 @@ void VisualPoint::copy(const Position& other) {
 
 /**
  * Erases the specified region and writes into the clipboard.
- * @param length 削除する文字数 (負でもよい)
+ * @param length the number of the characters to delete
  */
 void VisualPoint::cut(signed_length_t length) {
 	verifyViewer();
@@ -664,21 +563,6 @@ void VisualPoint::cut(const Position& other) {
 	const String text = getText(other);
 	Clipboard(viewer_->getHandle()).write(text.data(), text.data() + text.length());
 	erase(other);
-}
-
-/// @see EditPoint#doMoveTo
-void VisualPoint::doMoveTo(const Position& to) {
-	verifyViewer();
-	if(getLineNumber() == to.line && visualLine_ != INVALID_INDEX) {
-		visualLine_ -= visualSubline_;
-		const LineLayout* layout = viewer_->getTextRenderer().getLineLayoutIfCached(to.line);
-		visualSubline_ = (layout != 0) ? layout->getSubline(to.column) : 0;
-		visualLine_ += visualSubline_;
-	} else
-		visualLine_ = INVALID_INDEX;
-	EditPoint::doMoveTo(to);
-	if(!crossingLines_)
-		lastX_ = -1;
 }
 
 /**
@@ -780,6 +664,56 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 	return otherResult;
 }
 
+/// @see EditPoint#doMoveTo
+void VisualPoint::doMoveTo(const Position& to) {
+	verifyViewer();
+	if(getLineNumber() == to.line && visualLine_ != INVALID_INDEX) {
+		visualLine_ -= visualSubline_;
+		const LineLayout* layout = viewer_->getTextRenderer().getLineLayoutIfCached(to.line);
+		visualSubline_ = (layout != 0) ? layout->getSubline(to.column) : 0;
+		visualLine_ += visualSubline_;
+	} else
+		visualLine_ = INVALID_INDEX;
+	EditPoint::doMoveTo(to);
+	if(!crossingLines_)
+		lastX_ = -1;
+}
+
+/**
+ * Moves to the end of the visual line.
+ * @see EditPoint#endOfLine
+ */
+void VisualPoint::endOfVisualLine() {
+	verifyViewer();
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
+	const length_t subline = layout.getSubline(getColumnNumber());
+	Position newPosition(getLineNumber(), (subline < layout.getNumberOfSublines() - 1) ?
+		layout.getSublineOffset(subline + 1) : getDocument()->getLineLength(getLineNumber()));
+	if(layout.getSubline(newPosition.column) != subline)
+		newPosition = getBackwardCharacterPosition(*getDocument(), newPosition, getCharacterUnit());
+	moveTo(newPosition);
+}
+
+/// Moves to the first printable character in the line.
+void VisualPoint::firstPrintableCharacterOfLine() {
+	verifyViewer();
+	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const Char* const p = getDocument()->getLine(line).data();
+	moveTo(Position(line, getIdentifierSyntax().eatWhiteSpaces(p, p + getDocument()->getLineLength(line), true) - p));
+}
+
+/// Moves to the first printable character in the visual line.
+void VisualPoint::firstPrintableCharacterOfVisualLine() {
+	verifyViewer();
+	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const String& s = getDocument()->getLine(line);
+	const LineLayout& layout = viewer_->getTextRenderer().getLineLayout(line);
+	const length_t subline = layout.getSubline(getColumnNumber());
+	moveTo(Position(line,
+		getIdentifierSyntax().eatWhiteSpaces(s.begin() + layout.getSublineOffset(subline),
+			s.begin() + ((subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : s.length()), true) - s.begin()));
+}
+
 /// 
 inline const IdentifierSyntax& VisualPoint::getIdentifierSyntax() const {
 	return getDocument()->getContentTypeInformation().getIdentifierSyntax(getContentType());
@@ -820,7 +754,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 	const length_t numberOfLines = document.getNumberOfLines();
 	length_t line = getLineNumber();
 	const TextRenderer& renderer = getTextViewer().getTextRenderer();
-	const int x = renderer.getLineLayout(line).getLocation(getColumnNumber()).x;
+	const int x = renderer.getLineLayout(line).getLocation(getColumnNumber()).x + renderer.getLineIndent(line, 0);
 	const String breakString = getNewlineString(document.getNewline());
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
@@ -829,7 +763,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 		// insert text if the source line is not empty
 		if(eol > bol) {
 			const LineLayout& layout = renderer.getLineLayout(line);
-			const length_t column = layout.getOffset(x, 0);
+			const length_t column = layout.getOffset(x - renderer.getLineIndent(line), 0);
 			String s = layout.fillToX(x);
 			s.append(bol, eol);
 			if(line >= numberOfLines - 1)
@@ -841,6 +775,18 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 			break;
 		bol = eol + ((eol[0] == CARRIAGE_RETURN && eol < last - 1 && eol[1] == LINE_FEED) ? 2 : 1);
 	}
+}
+
+/**
+ * Returns true if the point is the beginning of the visual line.
+ * @see EditPoint#isBeginningOfLine
+ */
+bool VisualPoint::isBeginningOfVisualLine() const {
+	verifyViewer();
+	if(isBeginningOfLine())
+		return true;
+	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
+	return getColumnNumber() == layout.getSublineOffset(layout.getSubline(getColumnNumber()));
 }
 
 /**
@@ -856,8 +802,8 @@ bool VisualPoint::isEndOfVisualLine() const {
 	return getColumnNumber() == layout.getSublineOffset(subline) + layout.getSublineLength(subline);
 }
 
-/// Returns true if the current position is the first non-white space character in the line.
-bool VisualPoint::isFirstCharOfLine() const {
+/// Returns true if the current position is the first printable character in the line.
+bool VisualPoint::isFirstPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
 	const Position start = getDocument()->getStartPosition(isExcludedFromRestriction());
@@ -867,8 +813,14 @@ bool VisualPoint::isFirstCharOfLine() const {
 		== getIdentifierSyntax().eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
 }
 
-/// Returns true if the current position is the last non-white space character in the line.
-bool VisualPoint::isLastCharOfLine() const {
+/// Returns true if the current position is the first printable character in the visual line.
+bool VisualPoint::isFirstPrintableCharacterOfVisualLine() const {
+	// TODO: not implemented.
+	return false;
+}
+
+/// Returns true if the current position is the last printable character in the line.
+bool VisualPoint::isLastPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
 	const Position end = getDocument()->getEndPosition(isExcludedFromRestriction());
@@ -878,39 +830,14 @@ bool VisualPoint::isLastCharOfLine() const {
 		== getIdentifierSyntax().eatWhiteSpaces(line.data() + getColumnNumber(), line.data() + lineLength, true);
 }
 
-/**
- * Returns true if the point is the start of the visual line.
- * @see EditPoint#isStartOfLine
- */
-bool VisualPoint::isStartOfVisualLine() const {
-	verifyViewer();
-	if(isStartOfLine())
-		return true;
-	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
-	return getColumnNumber() == layout.getSublineOffset(layout.getSubline(getColumnNumber()));
+/// Returns true if the current position is the last printable character in the visual line.
+bool VisualPoint::isLastPrintableCharacterOfVisualLine() const {
+	// TODO: not implemented.
+	return false;
 }
 
-/**
- * Moves to the end of the visual line.
- * @see EditPoint#moveToEndOfLine
- */
-void VisualPoint::moveToEndOfVisualLine() {
-	verifyViewer();
-	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
-	const length_t subline = layout.getSubline(getColumnNumber());
-	moveTo(Position(getLineNumber(), (subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : getLineLength()));
-}
-
-/// Moves to the first non-white space character.
-void VisualPoint::moveToFirstCharOfLine() {
-	verifyViewer();
-	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
-	const Char* const p = getDocument()->getLine(line).data();
-	moveTo(Position(line, getIdentifierSyntax().eatWhiteSpaces(p, p + getDocument()->getLineLength(line), true) - p));
-}
-
-/// Moves to the last non-white space character.
-void VisualPoint::moveToLastCharOfLine() {
+/// Moves to the last printable character in the line.
+void VisualPoint::lastPrintableCharacterOfLine() {
 	verifyViewer();
 	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
 	const length_t lineLength = getDocument()->getLineLength(line);
@@ -926,14 +853,36 @@ void VisualPoint::moveToLastCharOfLine() {
 	moveTo(Position(line, lineLength));
 }
 
+/// Moves to the last printable character in the visual line.
+void VisualPoint::lastPrintableCharacterOfVisualLine() {
+	// TODO: not implemented.
+}
+
 /**
- * Moves to the start of the visual line.
- * @see EditPoint#moveToStartOfLine
+ * Moves to left character.
+ * @param offset the offset of the movement
  */
-void VisualPoint::moveToStartOfVisualLine() {
+void VisualPoint::leftCharacter(length_t offset /* = 1 */) {
 	verifyViewer();
-	const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
-	moveTo(Position(getLineNumber(), layout.getSublineOffset(layout.getSubline(getLineNumber()))));
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? backwardCharacter(offset) : forwardCharacter(offset);
+}
+
+/**
+ * Moves to the beginning of the left word.
+ * @param offset the number of words
+ */
+void VisualPoint::leftWord(length_t offset /* = 1 */) {
+	verifyViewer();
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? previousWord(offset) : nextWord(offset);
+}
+
+/**
+ * Moves to the end of the left word.
+ * @param offset the number of words
+ */
+void VisualPoint::leftWordEnd(length_t offset /* = 1 */) {
+	verifyViewer();
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? previousWordEnd(offset) : nextWordEnd(offset);
 }
 
 /**
@@ -961,25 +910,65 @@ void VisualPoint::newLine(bool inheritIndent) {
  * Moves to the next page.
  * @param offset the offset of the movement
  */
-void VisualPoint::pageDown(length_t offset /* = 1 */) {
+void VisualPoint::nextPage(length_t offset /* = 1 */) {
 	verifyViewer();
-	// TODO: calculate exact number of visual line.
-	visualLineDown(viewer_->getNumberOfVisibleLines() * offset);
+	// TODO: calculate exact number of visual lines.
+	nextVisualLine(viewer_->getNumberOfVisibleLines() * offset);
 }
 
 /**
- * Moves to the previous page.
+ * Moves to the next visual line.
  * @param offset the offset of the movement
  */
-void VisualPoint::pageUp(length_t offset /* = 1 */) {
+void VisualPoint::nextVisualLine(length_t offset /* = 1 */) {
 	verifyViewer();
-	// TODO: calculate exact number of visual line.
-	visualLineUp(viewer_->getNumberOfVisibleLines() * offset);
+	normalize();
+	const TextRenderer& renderer = viewer_->getTextRenderer();
+	const LineLayout* layout = &renderer.getLineLayout(getLineNumber());
+	length_t line = getLineNumber(), subline = layout->getSubline(getColumnNumber());
+	if(line == getDocument()->getNumberOfLines() - 1 && subline == layout->getNumberOfSublines() - 1)
+		return;
+	if(lastX_ == -1)
+		updateLastX();
+	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
+	layout = &renderer.getLineLayout(line);
+	Position newPosition(line, layout->getOffset(lastX_ - renderer.getLineIndent(line), renderer.getLinePitch() * static_cast<long>(subline)));
+	if(layout->getSubline(newPosition.column) != subline)
+		newPosition = getBackwardCharacterPosition(*getDocument(), newPosition, getCharacterUnit());
+	crossingLines_ = true;
+	moveTo(newPosition);
+	crossingLines_ = false;
+}
+
+/**
+ * Moves to the beginning of the next word.
+ * @param offset the number of words
+ */
+void VisualPoint::nextWord(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
+	i += offset;
+	moveTo(i.base().tell());
+}
+
+/**
+ * Moves to the end of the next word.
+ * @param offset the number of words
+ */
+void VisualPoint::nextWordEnd(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
+	i += offset;
+	moveTo(i.base().tell());
 }
 
 /**
  * Replaces the specified region by the content of the clipboard.
- * @param length もう1つの位置までの文字数 (負でもよい)
+ * @param length the number of characters to be replaced
  */
 void VisualPoint::paste(signed_length_t length /* = 0 */) {
 	verifyViewer();
@@ -987,7 +976,8 @@ void VisualPoint::paste(signed_length_t length /* = 0 */) {
 		paste(getPosition());
 		return;
 	}
-	paste((length > 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length, CU_UTF16));
+	paste((length > 0) ?
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length) : getBackwardCharacterPosition(*getDocument(), *this, UTF16_CODE_UNIT, -length));
 }
 
 /**
@@ -1015,13 +1005,74 @@ void VisualPoint::paste(const Position& other) {
 }
 
 /**
+ * Moves to the previous page.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::previousPage(length_t offset /* = 1 */) {
+	verifyViewer();
+	// TODO: calculate exact number of visual lines.
+	previousVisualLine(viewer_->getNumberOfVisibleLines() * offset);
+}
+
+/**
+ * Moves to the previous visual line.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::previousVisualLine(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	const TextRenderer& renderer = viewer_->getTextRenderer();
+	length_t line = getLineNumber(), subline = renderer.getLineLayout(line).getSubline(getColumnNumber());
+	if(line == 0 && subline == 0)
+		return;
+	if(lastX_ == -1)
+		updateLastX();
+	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
+	const LineLayout& layout = renderer.getLineLayout(line);
+	Position newPosition(line, layout.getOffset(lastX_ - renderer.getLineIndent(line), renderer.getLinePitch() * static_cast<long>(subline)));
+	if(layout.getSubline(newPosition.column) != subline)
+		newPosition = getBackwardCharacterPosition(*getDocument(), newPosition, getCharacterUnit());
+	crossingLines_ = true;
+	moveTo(newPosition);
+	crossingLines_ = false;
+}
+
+/**
+ * Moves to the beginning of the previous word.
+ * @param offset the number of words
+ */
+void VisualPoint::previousWord(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
+	i -= offset;
+	moveTo(i.base().tell());
+}
+
+/**
+ * Moves to the end of the previous word.
+ * @param offset the number of words
+ */
+void VisualPoint::previousWordEnd(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
+	i -= offset;
+	moveTo(i.base().tell());
+}
+
+/**
  * 指定範囲がビューの中央になるようにスクロールする。ただし既に可視なら何もしない
  * @param length 範囲を構成するもう一方の点までの文字数
  * @return 範囲がビューに納まる場合は true を返す
  */
 bool VisualPoint::recenter(signed_length_t length /* = 0 */) {
 	verifyViewer();
-	return recenter((length >= 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length));
+	return recenter((length >= 0) ?
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length)
+		: getBackwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), -length));
 }
 
 /**
@@ -1036,13 +1087,42 @@ bool VisualPoint::recenter(const Position& other) {
 }
 
 /**
+ * Moves to the right character.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::rightCharacter(length_t offset /* = 1 */) {
+	verifyViewer();
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? forwardCharacter(offset) : backwardCharacter(offset);
+}
+
+/**
+ * Moves to the beginning of the right word.
+ * @param offset the number of words
+ */
+void VisualPoint::rightWord(length_t offset /* = 1 */) {
+	verifyViewer();
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? nextWord(offset) : previousWord(offset);
+}
+
+/**
+ * Moves to the end of the right word.
+ * @param offset the number of words
+ */
+void VisualPoint::rightWordEnd(length_t offset /* = 1 */) {
+	verifyViewer();
+	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? nextWordEnd(offset) : previousWordEnd(offset);
+}
+
+/**
  * 指定範囲が可視になるようにビューをスクロールする
  * @param length 範囲を構成するもう一方の点までの文字数
  * @return 範囲がビューに納まる場合は true を返す (未実装につき常に true)
  */
 bool VisualPoint::show(signed_length_t length /* = 0 */) {
 	verifyDocument();
-	return show((length >= 0) ? getNextCharPos(*this, length) : getPrevCharPos(*this, -length));
+	return show((length >= 0) ?
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length)
+		: getBackwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), -length));
 }
 
 /**
@@ -1122,7 +1202,7 @@ Position VisualPoint::tabIndent(const Position& other, bool box, long level /* =
  * If the transposing target is not in the current line, this method fails.
  * @return false if failed
  */
-bool VisualPoint::transposeChars() {
+bool VisualPoint::transposeCharacters() {
 	verifyViewer();
 
 #define IS_RESTRICTION(position) (position < top || position > bottom)
@@ -1214,18 +1294,18 @@ bool VisualPoint::transposeLines() {
 
 	// make the two lines empty
 	if(!str2.empty()) {
-		moveToStartOfLine();
-		erase(static_cast<signed_length_t>(str2.length()), CU_UTF16);
+		beginningOfLine();
+		erase(static_cast<signed_length_t>(str2.length()), UTF16_CODE_UNIT);
 	}
 	if(!str1.empty()) {
 		moveTo(getLineNumber() - 1, (getLineNumber() == top.line) ? top.column : 0);
-		erase(static_cast<signed_length_t>(str1.length()), CU_UTF16);
+		erase(static_cast<signed_length_t>(str1.length()), UTF16_CODE_UNIT);
 		moveTo(getLineNumber() + 1, getColumnNumber());
 	}
 
 	// insert into the two lines
 	if(!str1.empty()) {
-		moveToStartOfLine();
+		beginningOfLine();
 		insert(str1);
 	}
 	moveTo(getLineNumber() - 1, getColumnNumber());
@@ -1300,25 +1380,8 @@ inline void VisualPoint::updateLastX() {
 	if(!isDocumentDisposed()) {
 		const LineLayout& layout = getTextViewer().getTextRenderer().getLineLayout(getLineNumber());
 		lastX_ = layout.getLocation(getColumnNumber(), LineLayout::LEADING).x;
-		lastX_ += getTextViewer().getTextRenderer().getLineIndent(getLineNumber(), layout.getSubline(getColumnNumber()));
+		lastX_ += getTextViewer().getTextRenderer().getLineIndent(getLineNumber(), 0);
 	}
-}
-
-/**
- * Moves to the next visual line.
- * @param offset the offset of the movement
- */
-void VisualPoint::visualLineDown(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	const TextRenderer& renderer = viewer_->getTextRenderer();
-	length_t line = getLineNumber(), subline = renderer.getLineLayout(getLineNumber()).getSubline(getColumnNumber());
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
-	crossingLines_ = true;
-	moveTo(Position(line, renderer.getLineLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
-	crossingLines_ = false;
 }
 
 /// @see IVisualLinesListener#visualLinesDeleted
@@ -1348,112 +1411,6 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 			visualLine_ = INVALID_INDEX;
 	}
 }
-
-/**
- * Moves to the previous visual line.
- * @param offset the offset of the movement
- */
-void VisualPoint::visualLineUp(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	const TextRenderer& renderer = viewer_->getTextRenderer();
-	length_t line = getLineNumber(), subline = renderer.getLineLayout(line).getSubline(getColumnNumber());
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
-	crossingLines_ = true;
-	moveTo(Position(line, renderer.getLineLayout(line).getOffset(lastX_, renderer.getLinePitch() * static_cast<long>(subline))));
-	crossingLines_ = false;
-}
-
-/**
- * Moves to the end of the left word.
- * @param offset the number of words
- */
-void VisualPoint::wordEndLeft(length_t offset /* = 1 */) {
-	verifyViewer();
-	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? wordEndPrev(offset) : wordEndNext(offset);
-}
-
-/**
- * Moves to the end of the next word.
- * @param offset the number of words
- */
-void VisualPoint::wordEndNext(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the end of the previous word.
- * @param offset the number of words
- */
-void VisualPoint::wordEndPrev(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, getIdentifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the end of the right word.
- * @param offset the number of words
- */
-void VisualPoint::wordEndRight(length_t offset /* = 1 */) {
-	verifyViewer();
-	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? wordEndNext(offset) : wordEndPrev(offset);
-}
-
-/**
- * Moves to the start of the left word.
- * @param offset the number of words
- */
-void VisualPoint::wordLeft(length_t offset /* = 1 */) {
-	verifyViewer();
-	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? wordPrev(offset) : wordNext(offset);
-}
-
-/**
- * Moves to the start of the next word.
- * @param offset the number of words
- */
-void VisualPoint::wordNext(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the start of the previous word.
- * @param offset the number of words
- */
-void VisualPoint::wordPrev(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, getIdentifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the start of the right word.
- * @param offset the number of words
- */
-void VisualPoint::wordRight(length_t offset /* = 1 */) {
-	verifyViewer();
-	(viewer_->getConfiguration().orientation == LEFT_TO_RIGHT) ? wordNext(offset) : wordPrev(offset);
-}
-
 
 // Caret ////////////////////////////////////////////////////////////////////
 
@@ -1852,7 +1809,7 @@ String Caret::getSelectionText(NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA 
 	if(isSelectionEmpty())
 		return L"";
 	else if(!isSelectionRectangle())
-		return getTopPoint().getText(getBottomPoint(), nlr);
+		return getText(*anchor_, nlr);
 
 	// rectangular selection
 	StringBuffer s(ios_base::out);
@@ -2093,11 +2050,11 @@ void Caret::selectWord() {
 		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, getIdentifierSyntax());
 	endBoxSelection();
 	if(isEndOfLine()) {
-		if(isStartOfLine())	// an empty line
+		if(isBeginningOfLine())	// an empty line
 			moveTo(*this);
 		else	// eol
 			select((--i).base().tell(), *this);
-	} else if(isStartOfLine())	// bol
+	} else if(isBeginningOfLine())	// bol
 		select(*this, (++i).base().tell());
 	else {
 		const Position p = (++i).base().tell();

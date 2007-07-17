@@ -40,7 +40,7 @@ namespace alpha {
 
 	/// A view of a text editor.
 	class EditorView : public ascension::viewers::TextViewer,
-		virtual public ascension::searcher::IIncrementalSearchCallback {
+		virtual public ascension::text::IBookmarkListener, virtual public ascension::searcher::IIncrementalSearchCallback {
 	public:
 		// constructors
 		EditorView(ascension::presentation::Presentation& presentation);
@@ -59,6 +59,8 @@ namespace alpha {
 		void	updateNarrowingOnStatusBar();
 		void	updateOvertypeModeOnStatusBar();
 		void	updateTitleBar();
+		// ascension.viewers.TextViewer (overrides)
+		void	drawIndicatorMargin(ascension::length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
 		// ascension.text.IDocumentStateListener (overrides)
 		void	documentAccessibleRegionChanged(ascension::text::Document& document);
 		void	documentEncodingChanged(ascension::text::Document& document);
@@ -78,6 +80,9 @@ namespace alpha {
 		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchCallback::Result result,
 					const manah::Flags<ascension::searcher::IIncrementalSearchCallback::WrappingStatus>& wrappingStatus);
 		void	incrementalSearchStarted(const ascension::text::Document& document);
+		// ascension.text.IBookmarkListener
+		void	bookmarkChanged(ascension::length_t line);
+		void	bookmarkCleared();
 		// message handlers
 		MANAH_DECLEAR_WINDOW_MESSAGE_MAP(EditorView);
 		void	onKeyDown(UINT vkey, UINT flags, bool& handled);
