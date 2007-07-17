@@ -21,12 +21,14 @@ namespace alpha {
 	private:
 		Printing();
 		~Printing() throw();
-		bool	doSetupPages(bool returnDefault);
+		bool						doSetupPages(bool returnDefault);
+		static ::UINT_PTR CALLBACK	pageSetupHook(HWND dialog, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 	private:
 		::HGLOBAL devmode_;
 		::HGLOBAL devnames_;
 		::SIZE paperSize_;	// width and height of papers in mm
 		::RECT margins_;	// margin widths in mm
+		bool printsLineNumbers_, printsHeader_;
 	};
 
 }

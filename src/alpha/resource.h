@@ -30,6 +30,7 @@
 #define IDD_DLG_BUFFERLIST              515
 #define IDD_DLG_LOADTEMPMACRO           516
 #define IDD_DLG_SAVETEMPMACRO           517
+#define IDD_DLG_PAGESETUPTEMPLATE       518
 #define COMMAND_START                   1000
 #define CMD_FILE_NEW                    1000
 #define IDC_TAB_VIEWS                   1001
@@ -48,9 +49,9 @@
 #define CMD_FILE_EXIT                   1010
 #define CMD_FILE_SENDMAIL               1016
 #define CMD_FILE_CLOSEOTHERS            1017
-#define CMD_FILE_PRINT					1018
-#define CMD_FILE_PRINTSETUP				1019
-#define CMD_FILE_PRINTPREVIEW			1020
+#define CMD_FILE_PRINT                  1018
+#define CMD_FILE_PRINTSETUP             1019
+#define CMD_FILE_PRINTPREVIEW           1020
 #define IDC_COMBO_ENCODING              1101
 #define IDC_COMBO_NEWLINE               1102
 #define IDC_COMBO_FINDWHAT              1103
@@ -69,8 +70,11 @@
 #define IDC_CHK_USEUNICODEFORINPUT      1206
 #define IDC_CHK_SHOWALLFILES            1207
 #define IDC_CHK_SHIFT                   1208
+#define IDC_CHK_LINENUMBERS             1209
+#define IDC_CHK_HEADER                  1210
 #define IDC_RADIO_SELECTION             1301
 #define IDC_RADIO_WHOLEFILE             1302
+#define IDC_CHECK2                      1317
 #define IDC_LINK_HOMEPAGE               1401
 #define IDC_LINK_SELECTALL              1402
 #define IDC_LINK_CLEARALL               1403
@@ -220,11 +224,11 @@
 #define CMD_SEARCH_INCREMENTALSEARCHRR  3019
 #define CMD_SEARCH_INCREMENTALSEARCHMF  3020
 #define CMD_SEARCH_INCREMENTALSEARCHMR  3021
-#define CMD_SEARCH_FINDFILES			3022
-#define CMD_SEARCH_SEARCHMULTIPLEFILES	3023
-#define CMD_SEARCH_REPLACEMULTIPLEFILES	3024
+#define CMD_SEARCH_FINDFILES            3022
+#define CMD_SEARCH_SEARCHMULTIPLEFILES  3023
+#define CMD_SEARCH_REPLACEMULTIPLEFILES 3024
 #define CMD_SEARCH_TOP                  3900
-#define CMD_SEARCH_BOOKMARKS			3901
+#define CMD_SEARCH_BOOKMARKS            3901
 #define CMD_VIEW_TOOLBAR                4000
 #define CMD_VIEW_STATUSBAR              4001
 #define CMD_VIEW_WRAPNO                 4002
@@ -262,7 +266,7 @@
 #define CMD_WINDOW_NEXTPANE             7004
 #define CMD_WINDOW_PREVPANE             7005
 #define CMD_WINDOW_TOPMOSTALWAYS        7006
-#define CMD_WINDOW_TOP					7900
+#define CMD_WINDOW_TOP                  7900
 #define CMD_HELP_ABOUT                  8000
 #define CMD_HELP_TOP                    8900
 #define CMD_SPECIAL_ILLEGAL2STROKE      9000
@@ -279,7 +283,7 @@
 #define CMD_EDIT_PLUGINLIST_END         11500
 #define GENERAL_MESSAGE_START           20000
 #define MSG_DIALOG__WHOLE_GRAPHEME_MATCH 20000
-#define MSG_DIALOG__WHOLE_WORD_MATCH   20001
+#define MSG_DIALOG__WHOLE_WORD_MATCH    20001
 #define MSG_DIALOG__LITERAL_SEARCH      20004
 #define MSG_DIALOG__REGEXP_SEARCH       20005
 #define MSG_DIALOG__MIGEMO_SEARCH       20006
@@ -365,16 +369,16 @@
 #define MSG_OTHER__UNKNOWN              20701
 #define MSG_OTHER__NOT_OBTAINED         20702
 #define MSG_OTHER__TEMPORARY_MACRO_QUERY 20703
-#define MSG_OTHER__NONE					20704
+#define MSG_OTHER__NONE                 20704
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        173
+#define _APS_NEXT_RESOURCE_VALUE        174
 #define _APS_NEXT_COMMAND_VALUE         40048
-#define _APS_NEXT_CONTROL_VALUE         1316
+#define _APS_NEXT_CONTROL_VALUE         1318
 #define _APS_NEXT_SYMED_VALUE           105
 #endif
 #endif

@@ -812,7 +812,7 @@ inline int LineLayout::getLinePitch() const throw() {
 		const length_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		// about x
 		if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
-			location.x = 0;
+			location.x = getSublineIndent(subline);
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				const Run& run = *runs_[i];
 				if(column >= run.column && column <= run.column + run.length) {
@@ -824,7 +824,7 @@ inline int LineLayout::getLinePitch() const throw() {
 				location.x += run.getWidth();
 			}
 		} else {	// RTL
-			location.x = getSublineWidth(subline);
+			location.x = getSublineIndent(subline) + getSublineWidth(subline);
 			for(size_t i = lastRun - 1; ; --i) {
 				const Run& run = *runs_[i];
 				location.x -= run.getWidth();
@@ -885,8 +885,8 @@ int LineLayout::getNextTabStopBasedLeftEdge(int x, bool right) const throw() {
 
 /**
  * Returns the character column (offset) for the specified point.
- * @param x the x coordinate of the point. distance from the left edge of the renderer (not of the line)
- * @param y the y coordinate of the point
+ * @param x the x coordinate of the point. distance from the left edge of the first subline
+ * @param y the y coordinate of the point. distance from the top edge of the first subline
  * @param[out] trailing the trailing buffer
  * @return the character offset
  * @see #getLocation
@@ -905,13 +905,12 @@ length_t LineLayout::getOffset(int x, int y, length_t& trailing) const throw() {
 	// determine the column
 	assert(numberOfRuns_ > 0);
 	const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-	int cx = 0;
+	int cx = getSublineIndent(subline);
 	if(x <= cx) {	// on the left margin
 		trailing = 0;
 		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
 		return firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length);
 	}
-	x = max(cx, x);
 	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
 		const Run& run = *runs_[i];
 		if(x >= cx && x <= cx + run.getWidth()) {
@@ -1703,13 +1702,14 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 		fireVisualLinesModified(actualFirst, actualLast, newSublines += actualLast - actualFirst - cachedLines,
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
-		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
+		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ) {
 			if((*i)->getLineNumber() >= first && (*i)->getLineNumber() < last) {
 				oldSublines += (*i)->getNumberOfSublines();
 				delete *i;
 				i = layouts_.erase(i);
 				++cachedLines;
-			}
+			} else
+				++i;
 		}
 		fireVisualLinesDeleted(first, last, oldSublines += last - first - cachedLines);
 	}
@@ -1725,13 +1725,13 @@ void LineLayoutBuffer::documentChanged(const text::Document&, const text::Docume
 	const length_t top = change.getRegion().getTop().line, bottom = change.getRegion().getBottom().line;
 	documentChangePhase_ = CHANGING;
 	if(top != bottom) {
-		if(change.isDeletion()) {	// 改行を含む範囲の削除
+		if(change.isDeletion()) {	// deleted region includes newline(s)
 			clearCaches(top + 1, bottom + 1, false);
 			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 				if((*i)->getLineNumber() > top)
 					(*i)->lineNumber_ -= bottom - top;	// $friendly-access
 			}
-		} else {	// 改行を含む範囲の挿入
+		} else {	// inserted text is multiline
 			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 				if((*i)->getLineNumber() > top)
 					(*i)->lineNumber_ += bottom - top;	// $friendly-access

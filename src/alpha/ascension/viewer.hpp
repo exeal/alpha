@@ -601,7 +601,7 @@ namespace ascension {
 			bool	onEraseBkgnd(HDC dc);
 			HFONT	onGetFont();
 			void	onHScroll(UINT sbCode, UINT pos, HWND scrollBar);
-			void	onIMEComposition(WPARAM wParam, LPARAM lParam);
+			void	onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled);
 			void	onIMEEndComposition();
 			LRESULT	onIMENotify(WPARAM command, LPARAM lParam, bool& handled);
 			LRESULT	onIMERequest(WPARAM command, LPARAM lParam, bool& handled);
@@ -839,13 +839,13 @@ namespace ascension {
 			} caretShape_;
 
 			// input state
-			bool imeCompositionActivated_;	// true if the user is inputing by using IME
+			bool imeCompositionActivated_, imeComposingCharacter_;
 			ulong mouseInputDisabledCount_;
 
 			// automatic scroll
 			struct AutoScroll {
-				::POINT	indicatorPosition;	// position of the indicator margin (in client coodinates)
-				bool	scrolling;			// true if the viewer is scrolling
+				::POINT indicatorPosition;	// position of the indicator margin (in client coodinates)
+				bool scrolling;				// true if the viewer is scrolling
 				AutoScroll() throw() : scrolling(false) {}
 			} autoScroll_;
 

@@ -44,7 +44,9 @@ private:
 // Printing /////////////////////////////////////////////////////////////////
 
 /// Private constructor.
-Printing::Printing() throw() : devmode_(0), devnames_(0) {
+Printing::Printing() throw() : devmode_(0), devnames_(0),
+		printsLineNumbers_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsLineNumbers", 1)),
+		printsHeader_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsHeader", 1)) {
 	doSetupPages(true);
 }
 
@@ -66,10 +68,13 @@ bool Printing::doSetupPages(bool returnDefault) {
 	if(returnDefault)
 		psd.Flags |= PSD_RETURNDEFAULT;
 	else {
-		psd.Flags |= PSD_MARGINS;
+		psd.Flags |= PSD_ENABLEPAGESETUPHOOK /*| PSD_ENABLEPAGESETUPTEMPLATE*/ | PSD_MARGINS;
 		psd.ptPaperSize.x = paperSize_.cx;
 		psd.ptPaperSize.y = paperSize_.cy;
 		psd.rtMargin = margins_;
+		psd.hInstance = Alpha::getInstance().getHandle();
+		psd.lpfnPageSetupHook = pageSetupHook;
+		psd.lpPageSetupTemplateName = MAKEINTRESOURCE(IDD_DLG_PAGESETUPTEMPLATE);
 	}
 	if(!toBoolean(::PageSetupDlgW(&psd)))
 		return false;
@@ -88,6 +93,11 @@ bool Printing::doSetupPages(bool returnDefault) {
 Printing& Printing::instance() throw() {
 	static Printing singleton;
 	return singleton;
+}
+
+///
+::UINT_PTR CALLBACK Printing::pageSetupHook(HWND dialog, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
+	return 0;
 }
 
 /**
@@ -139,9 +149,6 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 #define MM100_TO_PIXELS_X(mm100)	::MulDiv(mm100, xdpi, MM100_PER_INCH)
 #define MM100_TO_PIXELS_Y(mm100)	::MulDiv(mm100, ydpi, MM100_PER_INCH)
 
-	// reset viewport
-	dc.setViewportOrg(-MM100_TO_PIXELS_X(physicalOffset.x), -MM100_TO_PIXELS_Y(physicalOffset.y), 0);
-
 	// reset fonts
 	PrintingRenderer renderer(const_cast<ascension::presentation::Presentation&>(buffer.getPresentation()),
 		dc.getHandle(), (*buffer.getPresentation().getFirstTextViewer())->getConfiguration(),
@@ -150,6 +157,13 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	::GetObject((*buffer.getPresentation().getFirstTextViewer())->getTextRenderer().getFont(), sizeof(::LOGFONTW), &lf);
 	manah::win32::gdi::ScreenDC screenDC;
 	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
+
+	// start printing
+	::DOCINFOW di;
+	memset(&di, 0, sizeof(::DOCINFOW));
+	di.lpszDocName = buffer.getFilePathName();
+	if(dc.startDoc(di) == SP_ERROR)
+		return false;
 
 	// calculate compacted path name
 	::RECT rc = {MM100_TO_PIXELS_X(margins_.left), 0,
@@ -167,25 +181,30 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	HPEN separatorPen = ::CreatePen(PS_SOLID, separatorThickness, RGB(0x00, 0x00, 0x00));
 	dc.selectObject(oldFont);
 
-	// start printing
-	::DOCINFOW di;
-	memset(&di, 0, sizeof(::DOCINFOW));
-	di.lpszDocName = buffer.getFilePathName();
-	dc.startDoc(di);
-
 	// print lines on pages
 	ulong page = 0;
 	WCHAR pageNumber[128];
 	const int linePitch = renderer.getLinePitch();
+	const ascension::layout::Alignment alignment = (*buffer.getPresentation().getFirstTextViewer())->getConfiguration().alignment;
 	rc.top = rc.bottom;
 	for(ascension::length_t line = 0, lines = buffer.getNumberOfLines(); line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.getLineLayout(line);
 		for(ascension::length_t subline = 0; subline < layout.getNumberOfSublines(); ++subline) {
 			if(rc.top + linePitch > rc.bottom) {
 				// go to the next page
-				if(++page > 1)
-					dc.endPage();
-				dc.startPage();
+				if(++page > 1) {
+					if(dc.endPage() == SP_ERROR) {
+						dc.abortDoc();
+						::DeleteObject(separatorPen);
+						return false;
+					}
+				}
+				if(dc.startPage() == SP_ERROR) {
+					dc.abortDoc();
+					::DeleteObject(separatorPen);
+					return false;
+				}
+				dc.setViewportOrg(-MM100_TO_PIXELS_X(physicalOffset.x), -MM100_TO_PIXELS_Y(physicalOffset.y));
 				// print a header
 				HFONT oldFont = dc.selectObject(renderer.getFont());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
@@ -200,7 +219,17 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				dc.selectObject(oldPen);
 				rc.top += linePitch * 2;
 			}
-			layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
+			switch(alignment) {
+			case ascension::layout::ALIGN_LEFT:
+				layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
+				break;
+			case ascension::layout::ALIGN_RIGHT:
+				layout.draw(subline, dc, rc.right - layout.getSublineWidth(0), rc.top, rc, rc, 0);
+				break;
+			case ascension::layout::ALIGN_CENTER:
+				layout.draw(subline, dc, (rc.right - layout.getSublineWidth(0)) / 2, rc.top, rc, rc, 0);
+				break;
+			}
 			rc.top += linePitch;
 		}
 	}

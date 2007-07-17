@@ -358,6 +358,9 @@
 					RelativePath=".\Ascension\content-assist.cpp">
 				</File>
 				<File
+					RelativePath=".\ascension\dfa.cpp">
+				</File>
+				<File
 					RelativePath=".\Ascension\document.cpp">
 				</File>
 				<File

@@ -82,15 +82,15 @@ ulong CaretMovementCommand::execute() {
 	Caret& caret = getTarget().getCaret();
 
 	if(!extend_) {
-		if(type_ == NEXT_LINE || type_ == VISUAL_NEXT_LINE || type_ == PREVIOUS_LINE
-				|| type_ == VISUAL_PREVIOUS_LINE || type_ == NEXT_PAGE || type_ == PREVIOUS_PAGE) {
+		if(type_ == NEXT_LINE || type_ == NEXT_VISUAL_LINE || type_ == PREVIOUS_LINE
+				|| type_ == PREVIOUS_VISUAL_LINE || type_ == NEXT_PAGE || type_ == PREVIOUS_PAGE) {
 			if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
 				if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
 					switch(type_) {
 					case NEXT_LINE:
-					case VISUAL_NEXT_LINE:		cpui->nextProposal(+1); break;
+					case NEXT_VISUAL_LINE:		cpui->nextProposal(+1); break;
 					case PREVIOUS_LINE:
-					case VISUAL_PREVIOUS_LINE:	cpui->nextProposal(-1); break;
+					case PREVIOUS_VISUAL_LINE:	cpui->nextProposal(-1); break;
 					case NEXT_PAGE:				cpui->nextPage(+1); break;
 					case PREVIOUS_PAGE:			cpui->nextPage(-1); break;
 					}
@@ -101,12 +101,12 @@ ulong CaretMovementCommand::execute() {
 		caret.endBoxSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
 			const bool rtl = getTarget().getConfiguration().orientation == layout::RIGHT_TO_LEFT;
-			if(type_ == NEXT_CHARACTER
+			if(type_ == FORWARD_CHARACTER
 					|| (type_ == RIGHT_CHARACTER && !rtl)
 					|| (type_ == LEFT_CHARACTER && rtl)) {
 				caret.moveTo(caret.getBottomPoint());
 				return 0;
-			} else if(type_ == PREVIOUS_CHARACTER
+			} else if(type_ == BACKWARD_CHARACTER
 					|| (type_ == LEFT_CHARACTER && !rtl)
 					|| (type_ == RIGHT_CHARACTER && rtl)) {
 				caret.moveTo(caret.getTopPoint());
@@ -119,7 +119,7 @@ ulong CaretMovementCommand::execute() {
 		Position foundPosition = caret.getMatchBrackets().first;
 
 		if(foundPosition == Position::INVALID_POSITION) {
-			getTarget().beep();	// 見つからない
+			getTarget().beep();	// not found
 			return 1;
 		}
 		if(!extend_)
@@ -130,67 +130,61 @@ ulong CaretMovementCommand::execute() {
 			caret.select(Position(caret.getLineNumber(), caret.getColumnNumber() + 1), foundPosition);
 	} else {
 		int type = type_;
-		if(type == START_OR_FIRST_OF_LINE)
-			type = caret.isFirstCharOfLine() ? START_OF_LINE : FIRST_CHAR_OF_LINE;
-		else if(type == END_OR_LAST_OF_LINE)
-			type = caret.isLastCharOfLine() ? END_OF_LINE : LAST_CHAR_OF_LINE;
 		switch(type) {
-		case NEXT_CHARACTER:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::charNext), offset_) : caret.charNext(offset_); break;
-		case PREVIOUS_CHARACTER:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::charPrev), offset_) : caret.charPrev(offset_); break;
-		case LEFT_CHARACTER:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::charLeft), offset_) : caret.charLeft(offset_); break;
-		case RIGHT_CHARACTER:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::charRight), offset_) : caret.charRight(offset_); break;
-		case NEXT_WORD:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordNext), offset_) : caret.wordNext(offset_); break;
-		case PREVIOUS_WORD:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordPrev), offset_) : caret.wordPrev(offset_); break;
-		case LEFT_WORD:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordLeft), offset_) : caret.wordLeft(offset_); break;
-		case RIGHT_WORD:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordRight), offset_) : caret.wordRight(offset_); break;
-		case NEXT_WORDEND:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordEndNext), offset_) : caret.wordEndNext(offset_); break;
-		case PREVIOUS_WORDEND:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordEndPrev), offset_) : caret.wordEndPrev(offset_); break;
-		case LEFT_WORDEND:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordEndLeft), offset_) : caret.wordEndLeft(offset_); break;
-		case RIGHT_WORDEND:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::wordEndRight), offset_) : caret.wordEndRight(offset_); break;
-		case NEXT_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::lineDown), offset_) : caret.lineDown(offset_); break;
-		case PREVIOUS_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::lineUp), offset_) : caret.lineUp(offset_); break;
-		case VISUAL_NEXT_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::visualLineDown), offset_) : caret.visualLineDown(offset_); break;
-		case VISUAL_PREVIOUS_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::visualLineUp), offset_) : caret.visualLineUp(offset_); break;
+		case CONTEXTUAL_BEGINNING_OF_LINE:
+			type = caret.isFirstPrintableCharacterOfLine() ? BEGINNING_OF_LINE : FIRST_PRINTABLE_CHARACTER_OF_LINE; break;
+		case CONTEXTUAL_END_OF_LINE:
+			type = caret.isLastPrintableCharacterOfLine() ? END_OF_LINE : LAST_PRINTABLE_CHARACTER_OF_LINE; break;
+		case CONTEXTUAL_BEGINNING_OF_VISUAL_LINE:
+			type = caret.isFirstPrintableCharacterOfVisualLine() ? BEGINNING_OF_VISUAL_LINE : FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE; break;
+		case CONTEXTUAL_END_OF_VISUAL_LINE:
+			type = caret.isLastPrintableCharacterOfVisualLine() ? END_OF_VISUAL_LINE : LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE; break;
+		}
+		switch(type) {
+#define ASCENSION_HANDLE_CARET_MOVEMENT(commandType, className, methodName)	\
+	case commandType: extend_ ? caret.extendSelection(mem_fun(className::methodName), offset_) : caret.methodName(offset_); break
+			ASCENSION_HANDLE_CARET_MOVEMENT(FORWARD_CHARACTER, EditPoint, forwardCharacter);
+			ASCENSION_HANDLE_CARET_MOVEMENT(BACKWARD_CHARACTER, EditPoint, backwardCharacter);
+			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_CHARACTER, VisualPoint, leftCharacter);
+			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_CHARACTER, VisualPoint, rightCharacter);
+			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_WORD, VisualPoint, nextWord);
+			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_WORD, VisualPoint, previousWord);
+			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_WORD, VisualPoint, leftWord);
+			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_WORD, VisualPoint, rightWord);
+			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_WORDEND, VisualPoint, nextWordEnd);
+			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_WORDEND, VisualPoint, previousWordEnd);
+			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_WORDEND, VisualPoint, leftWordEnd);
+			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_WORDEND, VisualPoint, rightWordEnd);
+			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_LINE, VisualPoint, nextLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_LINE, VisualPoint, previousLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_VISUAL_LINE, VisualPoint, nextVisualLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_VISUAL_LINE, VisualPoint, previousVisualLine);
+#undef ASCENSION_HANDLE_CARET_MOVEMENT
 		case NEXT_PAGE:
 			getTarget().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::pageDown), offset_) : caret.pageDown(offset_);
+			extend_ ? caret.extendSelection(mem_fun(VisualPoint::nextPage), offset_) : caret.nextPage(offset_);
 			break;
 		case PREVIOUS_PAGE:
 			getTarget().sendMessage(WM_VSCROLL, SB_PAGEUP);
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::pageUp), offset_) : caret.pageUp(offset_);
+			extend_ ? caret.extendSelection(mem_fun(VisualPoint::previousPage), offset_) : caret.previousPage(offset_);
 			break;
-		case START_OF_LINE:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::moveToStartOfLine)) : caret.moveToStartOfLine(); break;
-		case END_OF_LINE:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::moveToEndOfLine)) : caret.moveToEndOfLine(); break;
-		case FIRST_CHAR_OF_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::moveToFirstCharOfLine)) : caret.moveToFirstCharOfLine(); break;
-		case LAST_CHAR_OF_LINE:
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::moveToLastCharOfLine)) : caret.moveToLastCharOfLine(); break;
-		case START_OF_DOCUMENT:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::moveToStartOfDocument)) : caret.moveToStartOfDocument(); break;
-		case END_OF_DOCUMENT:
-			extend_ ? caret.extendSelection(mem_fun(EditPoint::moveToEndOfDocument)) : caret.moveToEndOfDocument(); break;
+#define ASCENSION_HANDLE_CARET_MOVEMENT(commandType, className, methodName)	\
+	case commandType: extend_ ? caret.extendSelection(mem_fun(className::methodName)) : caret.methodName(); break
+			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_LINE, EditPoint, beginningOfLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_LINE, EditPoint, endOfLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(FIRST_PRINTABLE_CHARACTER_OF_LINE, VisualPoint, firstPrintableCharacterOfLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(LAST_PRINTABLE_CHARACTER_OF_LINE, VisualPoint, lastPrintableCharacterOfLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_VISUAL_LINE, VisualPoint, beginningOfVisualLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_VISUAL_LINE, VisualPoint, endOfVisualLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, VisualPoint, firstPrintableCharacterOfVisualLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, VisualPoint, lastPrintableCharacterOfVisualLine);
+			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_DOCUMENT, EditPoint, beginningOfDocument);
+			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_DOCUMENT, EditPoint ,endOfDocument);
+#undef ASCENSION_HANDLE_CARET_MOVEMENT
 		case NEXT_BOOKMARK:
-			return caret.moveToNextBookmark() ? 0 : 1;
+			return caret.nextBookmark() ? 0 : 1;
 		case PREVIOUS_BOOKMARK:
-			return caret.moveToPrevBookmark() ? 0 : 1;
+			return caret.previousBookmark() ? 0 : 1;
 		}
 	}
 	return 0;
@@ -211,7 +205,7 @@ ulong CharacterCodePointConversionCommand::execute() {
 	const Document& document = viewer.getDocument();
 	const EditPoint& bottom = viewer.getCaret().getBottomPoint();
 
-	if(bottom.isStartOfLine()
+	if(bottom.isBeginningOfLine()
 			|| (document.isNarrowed() && bottom.getPosition() == document.getStartPosition())) {	// 行頭以外でなければならぬ
 		viewer.beep();
 		return 1;
@@ -308,9 +302,9 @@ ulong CharacterInputFromNextLineCommand::execute() {
 	VisualPoint p(caret);
 	p.adaptToDocument(false);
 	if(fromPrevious)
-		p.visualLineUp();
+		p.previousVisualLine();
 	else
-		p.visualLineDown();
+		p.nextVisualLine();
 
 	const length_t column = p.getColumnNumber();
 	const String& line = document.getLine(caret.getLineNumber() + (fromPrevious ? -1 : 1));
@@ -419,7 +413,7 @@ ulong DeletionCommand::execute() {
 		const length_t line = caret.getLineNumber();
 		document.endSequentialEdit();
 		if(line != document.getNumberOfLines() - 1)	// 最終行でない場合
-			caret.lineDown();
+			caret.nextLine();
 		document.erase(Position(line, 0), Position(line, INVALID_INDEX));
 	} else
 		assert(false);
@@ -744,8 +738,8 @@ ulong RowSelectionExtensionCommand::execute() {
 
 	Caret& caret = getTarget().getCaret();
 	static const int commandMap[] = {
-		NEXT_CHARACTER, CaretMovementCommand::NEXT_CHARACTER,
-		PREVIOUS_CHARACTER, CaretMovementCommand::PREVIOUS_CHARACTER,
+		FORWARD_CHARACTER, CaretMovementCommand::FORWARD_CHARACTER,
+		BACKWARD_CHARACTER, CaretMovementCommand::BACKWARD_CHARACTER,
 		LEFT_CHARACTER, CaretMovementCommand::LEFT_CHARACTER,
 		RIGHT_CHARACTER, CaretMovementCommand::RIGHT_CHARACTER,
 		NEXT_WORD, CaretMovementCommand::NEXT_WORD,
@@ -758,14 +752,20 @@ ulong RowSelectionExtensionCommand::execute() {
 		RIGHT_WORDEND, CaretMovementCommand::RIGHT_WORDEND,
 		NEXT_LINE, CaretMovementCommand::NEXT_LINE,
 		PREVIOUS_LINE, CaretMovementCommand::PREVIOUS_LINE,
-		VISUAL_NEXT_LINE, CaretMovementCommand::VISUAL_NEXT_LINE,
-		VISUAL_PREVIOUS_LINE, CaretMovementCommand::VISUAL_PREVIOUS_LINE,
-		START_OF_LINE, CaretMovementCommand::START_OF_LINE,
+		NEXT_VISUAL_LINE, CaretMovementCommand::NEXT_VISUAL_LINE,
+		PREVIOUS_VISUAL_LINE, CaretMovementCommand::PREVIOUS_VISUAL_LINE,
+		BEGINNING_OF_LINE, CaretMovementCommand::BEGINNING_OF_LINE,
 		END_OF_LINE, CaretMovementCommand::END_OF_LINE,
-		FIRST_CHAR_OF_LINE, CaretMovementCommand::FIRST_CHAR_OF_LINE,
-		LAST_CHAR_OF_LINE, CaretMovementCommand::LAST_CHAR_OF_LINE,
-		START_OR_FIRST_OF_LINE, CaretMovementCommand::START_OR_FIRST_OF_LINE,
-		END_OR_LAST_OF_LINE, CaretMovementCommand::END_OR_LAST_OF_LINE
+		FIRST_PRINTABLE_CHARACTER_OF_LINE, CaretMovementCommand::FIRST_PRINTABLE_CHARACTER_OF_LINE,
+		LAST_PRINTABLE_CHARACTER_OF_LINE, CaretMovementCommand::LAST_PRINTABLE_CHARACTER_OF_LINE,
+		CONTEXTUAL_BEGINNING_OF_LINE, CaretMovementCommand::CONTEXTUAL_BEGINNING_OF_LINE,
+		CONTEXTUAL_END_OF_LINE, CaretMovementCommand::CONTEXTUAL_END_OF_LINE,
+		BEGINNING_OF_VISUAL_LINE, CaretMovementCommand::BEGINNING_OF_VISUAL_LINE,
+		END_OF_VISUAL_LINE, CaretMovementCommand::END_OF_VISUAL_LINE,
+		FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, CaretMovementCommand::FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,
+		LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, CaretMovementCommand::LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,
+		CONTEXTUAL_BEGINNING_OF_VISUAL_LINE, CaretMovementCommand::CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,
+		CONTEXTUAL_END_OF_VISUAL_LINE, CaretMovementCommand::CONTEXTUAL_END_OF_VISUAL_LINE
 	};
 
 	if(caret.isSelectionEmpty() && !caret.isSelectionRectangle())
@@ -849,7 +849,7 @@ ulong TranspositionCommand::execute() {
 	viewer.freeze();
 	viewer.getDocument().beginSequentialEdit();
 	switch(type_) {
-	case CHARACTERS:	succeeded = caret.transposeChars();			break;
+	case CHARACTERS:	succeeded = caret.transposeCharacters();	break;
 	case WORDS:			succeeded = caret.transposeWords();			break;
 	case LINES:			succeeded = caret.transposeLines();			break;
 //	case SENTENCES:		succeeded = caret.transposeSentences();		break;
