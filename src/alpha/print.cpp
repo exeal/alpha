@@ -7,38 +7,62 @@
 #include "stdafx.h"
 #include "print.hpp"
 #include "application.hpp"
+#include "../manah/win32/ui/dialog.hpp"
 #include <commdlg.h>	// PrintDlgExW, SetupPageDlgW, ...
 #include <shlwapi.h>	// PathCompactPathW
 using namespace alpha;
 using namespace std;
 
 
-class PrintingRenderer : public ascension::layout::TextRenderer {
-public:
-	PrintingRenderer(ascension::presentation::Presentation& presentation, HDC deviceContext,
-			const ascension::layout::LayoutSettings& layoutSettings, int width)
-			: TextRenderer(presentation, false), dc_(deviceContext), layoutSettings_(layoutSettings), width_(width) {
-		layoutSettings_.lineWrap.mode = ascension::layout::LineWrapConfiguration::NORMAL;
-	}
-private:
-	// FontSelector
-	auto_ptr<manah::win32::gdi::DC> doGetDeviceContext() const {
-		auto_ptr<manah::win32::gdi::DC> temp(new manah::win32::gdi::DC());
-		temp->attach(dc_);
-		return temp;
-	}
-	// ILayoutInformationProvider
-	const ascension::layout::LayoutSettings& getLayoutSettings() const throw() {
-		return layoutSettings_;
-	}
-	int getWidth() const throw() {
-		return width_;
-	}
-private:
-	HDC dc_;
-	ascension::layout::LayoutSettings layoutSettings_;
-	int width_;
-};
+namespace {
+	class PrintingRenderer : public ascension::layout::TextRenderer {
+	public:
+		PrintingRenderer(ascension::presentation::Presentation& presentation, HDC deviceContext,
+				const ascension::layout::LayoutSettings& layoutSettings, int width)
+				: TextRenderer(presentation, false), dc_(deviceContext), layoutSettings_(layoutSettings), width_(width) {
+			layoutSettings_.lineWrap.mode = ascension::layout::LineWrapConfiguration::NORMAL;
+		}
+	private:
+		// FontSelector
+		auto_ptr<manah::win32::gdi::DC> doGetDeviceContext() const {
+			auto_ptr<manah::win32::gdi::DC> temp(new manah::win32::gdi::DC());
+			temp->attach(dc_);
+			return temp;
+		}
+		// ILayoutInformationProvider
+		const ascension::layout::LayoutSettings& getLayoutSettings() const throw() {
+			return layoutSettings_;
+		}
+		int getWidth() const throw() {
+			return width_;
+		}
+	private:
+		HDC dc_;
+		ascension::layout::LayoutSettings layoutSettings_;
+		int width_;
+	};
+
+	class PrintingPrompt : public manah::win32::ui::FixedIDDialog<IDD_DLG_PRINTING> {
+	public:
+		explicit PrintingPrompt(const basic_string<::WCHAR>& bufferName) : bufferName_(bufferName) {}
+		void setPageNumber(ulong page) {
+			::WCHAR s[32];
+			swprintf(s, L"%lu", page);
+			setItemText(IDC_STATIC_2, s);
+		}
+	private:
+		void onCancel(bool& continueDialog) {
+			Printing::instance().abort();
+			continueDialog = false;
+		}
+		void onInitDialog(HWND /* focusedWindow */, bool& /* focusDefault */) {
+			setItemText(IDC_STATIC_1, bufferName_.c_str());
+			setItemText(IDC_STATIC_2, L"0");
+		}
+	private:
+		const basic_string<::WCHAR> bufferName_;
+	};
+} // namespace @0
 
 
 // Printing /////////////////////////////////////////////////////////////////
@@ -46,7 +70,8 @@ private:
 /// Private constructor.
 Printing::Printing() throw() : devmode_(0), devnames_(0),
 		printsLineNumbers_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsLineNumbers", 1)),
-		printsHeader_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsHeader", 1)) {
+		printsHeader_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsHeader", 1)),
+		printing_(false), userAborted_(false) {
 	doSetupPages(true);
 }
 
@@ -54,6 +79,28 @@ Printing::Printing() throw() : devmode_(0), devnames_(0),
 Printing::~Printing() throw() {
 	::GlobalFree(devmode_);
 	::GlobalFree(devnames_);
+}
+
+/// Aborts the active printing.
+void Printing::abort() {
+	if(printing_)
+		userAborted_ = true;
+}
+
+/// A callback procedure for @c SetAbortDoc.
+BOOL CALLBACK Printing::abortProcedure(HDC dc, int error) {
+	if(error != 0 && error != SP_OUTOFDISK)
+		return false;
+	::MSG message;
+	while(!Printing::instance().userAborted_ && ::PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
+		if(message.message == WM_QUIT) {
+			::PostQuitMessage(0);
+			return false;
+		}
+		::TranslateMessage(&message);
+		::DispatchMessage(&message);
+	}
+	return !Printing::instance().userAborted_;
 }
 
 /// Displays "Page Setup" dialog box.
@@ -106,6 +153,10 @@ Printing& Printing::instance() throw() {
  * @param showDialog
  */
 bool Printing::print(const Buffer& buffer, bool showDialog) {
+	if(printing_)
+		return false;
+	printing_ = true;
+
 	// display "Print" dialog box
 	::PRINTDLGEXW pdex;
 	memset(&pdex, 0, sizeof(::PRINTDLGEXW));
@@ -134,9 +185,9 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	static const int MM100_PER_INCH = 2540;			// 1 in = 2.540 mm
 	const int xdpi = dc.getDeviceCaps(LOGPIXELSX);	// resolutions in px/in
 	const int ydpi = dc.getDeviceCaps(LOGPIXELSY);
-	const ::POINT physicalOffset = {
-		::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETX), MM100_PER_INCH, xdpi),
-		::MulDiv(dc.getDeviceCaps(PHYSICALOFFSETY), MM100_PER_INCH, ydpi)};	// physical offsets in mm
+	const ::POINT physicalOffsetInMM = {dc.getDeviceCaps(PHYSICALOFFSETX), dc.getDeviceCaps(PHYSICALOFFSETY)};
+	const ::POINT physicalOffset = {	// physical offsets in mm
+		::MulDiv(physicalOffsetInMM.x, MM100_PER_INCH, xdpi), ::MulDiv(physicalOffsetInMM.y, MM100_PER_INCH, ydpi)};
 	paperSize_.cx = ::MulDiv(dc.getDeviceCaps(PHYSICALWIDTH), MM100_PER_INCH, xdpi);
 	paperSize_.cy = ::MulDiv(dc.getDeviceCaps(PHYSICALHEIGHT), MM100_PER_INCH, ydpi);
 	margins_.left = max<long>(margins_.left, physicalOffset.x);
@@ -159,19 +210,25 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
 
 	// start printing
+	dc.setAbortProc(abortProcedure);
 	::DOCINFOW di;
 	memset(&di, 0, sizeof(::DOCINFOW));
 	di.lpszDocName = buffer.getFilePathName();
-	if(dc.startDoc(di) == SP_ERROR)
+	if(dc.startDoc(di) == SP_ERROR) {
+		printing_ = false;
 		return false;
+	}
+	const basic_string<::WCHAR> bufferName(buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED));
+	PrintingPrompt prompt(bufferName);
+	Alpha::getInstance().getMainWindow().enable(false);
+	prompt.doModeless(Alpha::getInstance().getMainWindow());
 
 	// calculate compacted path name
 	::RECT rc = {MM100_TO_PIXELS_X(margins_.left), 0,
 		MM100_TO_PIXELS_X(paperSize_.cx - margins_.right), MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
 	HFONT oldFont = dc.selectObject(renderer.getFont());
 	WCHAR compactedPathName[MAX_PATH];
-	wcscpy(compactedPathName, buffer.isBoundToFile() ?
-		buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED).c_str());
+	wcscpy(compactedPathName, bufferName.c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
 
 	// create a pen draws separators
@@ -182,29 +239,29 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	dc.selectObject(oldFont);
 
 	// print lines on pages
+	bool error = false;
 	ulong page = 0;
 	WCHAR pageNumber[128];
 	const int linePitch = renderer.getLinePitch();
 	const ascension::layout::Alignment alignment = (*buffer.getPresentation().getFirstTextViewer())->getConfiguration().alignment;
 	rc.top = rc.bottom;
-	for(ascension::length_t line = 0, lines = buffer.getNumberOfLines(); line < lines; ++line) {
+	for(ascension::length_t line = 0, lines = buffer.getNumberOfLines(); !error && line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.getLineLayout(line);
-		for(ascension::length_t subline = 0; subline < layout.getNumberOfSublines(); ++subline) {
+		for(ascension::length_t subline = 0; !error && subline < layout.getNumberOfSublines(); ++subline) {
 			if(rc.top + linePitch > rc.bottom) {
 				// go to the next page
 				if(++page > 1) {
 					if(dc.endPage() == SP_ERROR) {
-						dc.abortDoc();
-						::DeleteObject(separatorPen);
-						return false;
+						error = true;
+						break;
 					}
 				}
-				if(dc.startPage() == SP_ERROR) {
-					dc.abortDoc();
-					::DeleteObject(separatorPen);
-					return false;
+				if(!toBoolean(abortProcedure(dc.getHandle(), 0)) || dc.startPage() == SP_ERROR) {
+					error = true;
+					break;
 				}
-				dc.setViewportOrg(-MM100_TO_PIXELS_X(physicalOffset.x), -MM100_TO_PIXELS_Y(physicalOffset.y));
+				prompt.setPageNumber(page);
+				dc.setViewportOrg(-physicalOffsetInMM.x, -physicalOffsetInMM.y);
 				// print a header
 				HFONT oldFont = dc.selectObject(renderer.getFont());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
@@ -237,11 +294,17 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 #undef MM100_TO_PIXELS_X
 #undef MM100_TO_PIXELS_Y
 
+	if(!error && !userAborted_) {
+		dc.endPage();
+		dc.endDoc();
+		prompt.end(IDOK);
+	} else
+		dc.abortDoc();
 	::DeleteObject(separatorPen);
-	dc.endPage();
-	dc.endDoc();
+	Alpha::getInstance().getMainWindow().enable(true);
 
-	return true;
+	printing_ = userAborted_ = false;
+	return !error;
 }
 
 /// Displays "Page Setup" dialog box.

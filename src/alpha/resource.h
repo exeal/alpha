@@ -10,6 +10,7 @@
 #define IDR_ICON_TEMPMACRODEFINING      155
 #define IDR_ICON_TEMPMACROPAUSING       156
 #define IDR_CODEPAGE_NAME_TABLE         172
+#define IDD_DIALOG1                     174
 #define IDC_STATUSBAR                   201
 #define IDC_TOOLBAR                     202
 #define IDC_BUFFERBAR                   204
@@ -31,6 +32,7 @@
 #define IDD_DLG_LOADTEMPMACRO           516
 #define IDD_DLG_SAVETEMPMACRO           517
 #define IDD_DLG_PAGESETUPTEMPLATE       518
+#define IDD_DLG_PRINTING                519
 #define COMMAND_START                   1000
 #define CMD_FILE_NEW                    1000
 #define IDC_TAB_VIEWS                   1001
@@ -376,7 +378,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        174
+#define _APS_NEXT_RESOURCE_VALUE        175
 #define _APS_NEXT_COMMAND_VALUE         40048
 #define _APS_NEXT_CONTROL_VALUE         1318
 #define _APS_NEXT_SYMED_VALUE           105
