@@ -15,12 +15,14 @@ namespace alpha {
 
 	class Printing : private manah::Noncopyable {
 	public:
+		void				abort();
 		static Printing&	instance() throw();
 		bool				print(const Buffer& buffer, bool showDialog);
 		bool				setupPages();
 	private:
 		Printing();
 		~Printing() throw();
+		static BOOL CALLBACK		abortProcedure(HDC dc, int error);
 		bool						doSetupPages(bool returnDefault);
 		static ::UINT_PTR CALLBACK	pageSetupHook(HWND dialog, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 	private:
@@ -29,6 +31,7 @@ namespace alpha {
 		::SIZE paperSize_;	// width and height of papers in mm
 		::RECT margins_;	// margin widths in mm
 		bool printsLineNumbers_, printsHeader_;
+		bool printing_, userAborted_;
 	};
 
 }
