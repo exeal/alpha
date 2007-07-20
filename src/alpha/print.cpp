@@ -115,13 +115,10 @@ bool Printing::doSetupPages(bool returnDefault) {
 	if(returnDefault)
 		psd.Flags |= PSD_RETURNDEFAULT;
 	else {
-		psd.Flags |= PSD_ENABLEPAGESETUPHOOK /*| PSD_ENABLEPAGESETUPTEMPLATE*/ | PSD_MARGINS;
+		psd.Flags |= PSD_MARGINS;
 		psd.ptPaperSize.x = paperSize_.cx;
 		psd.ptPaperSize.y = paperSize_.cy;
 		psd.rtMargin = margins_;
-		psd.hInstance = Alpha::getInstance().getHandle();
-		psd.lpfnPageSetupHook = pageSetupHook;
-		psd.lpPageSetupTemplateName = MAKEINTRESOURCE(IDD_DLG_PAGESETUPTEMPLATE);
 	}
 	if(!toBoolean(::PageSetupDlgW(&psd)))
 		return false;
@@ -140,11 +137,6 @@ bool Printing::doSetupPages(bool returnDefault) {
 Printing& Printing::instance() throw() {
 	static Printing singleton;
 	return singleton;
-}
-
-///
-::UINT_PTR CALLBACK Printing::pageSetupHook(HWND dialog, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
-	return 0;
 }
 
 /**

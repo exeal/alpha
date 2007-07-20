@@ -52,8 +52,8 @@ IDB_BMP_LOGO            BITMAP                  "Resource\\logo.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,7,93,0
- PRODUCTVERSION 0,7,93,0
+ FILEVERSION 0,7,93,1
+ PRODUCTVERSION 0,7,93,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,12 +70,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "exeal"
             VALUE "FileDescription", "Alpha"
-            VALUE "FileVersion", "0.7.93.0"
+            VALUE "FileVersion", "0.7.93.1"
             VALUE "InternalName", "abigail"
             VALUE "LegalCopyright", "built by exeal, 2003-2007"
             VALUE "OriginalFilename", "Alpha.exe"
             VALUE "ProductName", "Alpha"
-            VALUE "ProductVersion", "0.7.93.0"
+            VALUE "ProductVersion", "0.7.93.1"
         END
     END
     BLOCK "VarFileInfo"
@@ -219,7 +219,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,44,64
-    LTEXT           "Alpha version 0.7.93.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.93.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -436,17 +436,6 @@ BEGIN
     PUSHBUTTON      "キャンセル",IDCANCEL,140,24,54,14
 END
 
-IDD_DLG_PAGESETUPTEMPLATE DIALOGEX 0, 0, 269, 47
-STYLE DS_SETFONT | DS_3DLOOK | WS_CHILD | WS_CLIPSIBLINGS
-FONT 9, "MS UI Gothic", 0, 0, 0x0
-BEGIN
-    GROUPBOX        "その他",IDC_STATIC,7,7,255,33
-    CONTROL         "行番号(&N)",IDC_CHK_LINENUMBERS,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,14,22,50,10
-    CONTROL         "ヘッダ(&H)",IDC_CHK_HEADER,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,101,22,44,10
-END
-
 IDD_DLG_PRINTING DIALOGEX 0, 0, 250, 57
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
     WS_SYSMENU
@@ -456,7 +445,7 @@ BEGIN
     PUSHBUTTON      "キャンセル",IDCANCEL,193,36,50,14
     LTEXT           "バッファ:",IDC_STATIC,7,7,27,8
     LTEXT           "ページ:",IDC_STATIC,7,20,24,8
-    LTEXT           "スタティック",IDC_STATIC_1,41,7,202,8
+    LTEXT           "スタティック",IDC_STATIC_1,41,7,202,8,SS_PATHELLIPSIS
     LTEXT           "スタティック",IDC_STATIC_2,41,20,202,8
 END
 
@@ -1169,7 +1158,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,51,108
     CONTROL         153,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,3,
                     10,45,42
-    LTEXT           "Alpha version 0.7.93.0",IDC_STATIC,59,7,122,8,
+    LTEXT           "Alpha version 0.7.93.1",IDC_STATIC,59,7,122,8,
                     SS_NOPREFIX
     LTEXT           "Alpha Script Host version 0.6.6.3 alpha",IDC_STATIC,59,
                     16,127,8,SS_NOPREFIX | WS_DISABLED
@@ -1434,7 +1423,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,193,36,50,14
     LTEXT           "Buffer:",IDC_STATIC,7,7,27,8
     LTEXT           "Page:",IDC_STATIC,7,20,24,8
-    LTEXT           "Static",IDC_STATIC_1,41,7,202,8
+    LTEXT           "Static",IDC_STATIC_1,41,7,202,8,SS_PATHELLIPSIS
     LTEXT           "Static",IDC_STATIC_2,41,20,202,8
 END
 
