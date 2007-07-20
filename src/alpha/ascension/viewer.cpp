@@ -1890,17 +1890,17 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 
 	// queried document content for higher conversion accuracy
 	else if(command == IMR_DOCUMENTFEED) {
-		handled = true;
-		if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-			rcs->dwStrLen = static_cast<DWORD>(document.getLineLength(caret_->getLineNumber()));
-			rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
-			rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-			rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getColumnNumber());
-			caret_->getSelectionText().copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
-		} else if(caret_->getLineNumber() == caret_->getAnchor().getLineNumber())
+		if(caret_->getLineNumber() == caret_->getAnchor().getLineNumber()) {
+			handled = true;
+			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = static_cast<DWORD>(document.getLineLength(caret_->getLineNumber()));
+				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
+				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getColumnNumber());
+				getDocument().getLine(caret_->getLineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret_->getLineNumber());
-		else
-			handled = false;
+		}
 	}
 
 	return 0L;
@@ -1908,13 +1908,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 
 /// @see WM_IME_STARTCOMPOSITION
 void TextViewer::onIMEStartComposition() {
-	if(HIMC imc = ::ImmGetContext(getHandle())) {
-		::LOGFONTW font;
-		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
-		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
-		::ImmReleaseContext(getHandle(), imc);
-	}
-	imeCompositionActivated_ = true;	// this may be combined with COMPOSING_CHARACTER later (see TextViewer.onIMEComposition)
+	imeCompositionActivated_ = true;
 	updateIMECompositionWindowPosition();
 	closeCompletionProposalsPopup(*this);
 }
@@ -2784,7 +2778,7 @@ void TextViewer::updateCaretPosition() {
 	textArea.left += margins.left; textArea.top += margins.top;
 	textArea.right -= margins.right - 1; textArea.bottom -= margins.bottom;
 
-	if(!toBoolean(::PtInRect(&textArea, pt)))	// キャレットを「隠す」
+	if(!toBoolean(::PtInRect(&textArea, pt)))	// "hide" the caret
 		pt.y = -renderer_->getLinePitch();
 	else if(caretShape_.orientation == RIGHT_TO_LEFT
 			|| renderer_->getLineLayout(caret_->getLineNumber()).getBidiEmbeddingLevel(caret_->getColumnNumber()) % 2 == 1)
@@ -2805,13 +2799,16 @@ void TextViewer::updateIMECompositionWindowPosition() {
 		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? cf.rcArea.top : cf.rcArea.bottom;
 		::ImmSetCompositionWindow(imc, &cf);
-//		if(PRIMARYLANGID(LOWORD(::GetKeyboardLayout(0))) != LANG_KOREAN) {
-			cf.dwStyle = CFS_RECT;	// ATOK seems to require the following code
-			cf.rcArea.left = cf.ptCurrentPos.x;
-			cf.rcArea.top = cf.ptCurrentPos.y;
-//			cf.rcArea.bottom = cf.rcArea.top + renderer_->getLinePitch();
-			::ImmSetCompositionWindow(imc, &cf);
-//		}
+		cf.dwStyle = CFS_RECT;
+		cf.rcArea.left = cf.ptCurrentPos.x;
+		cf.rcArea.top = cf.ptCurrentPos.y;
+		::ImmSetCompositionWindow(imc, &cf);
+
+		// ATOK seems to require the following code
+		::LOGFONTW font;
+		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
+		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
+		
 		::ImmReleaseContext(getHandle(), imc);
 	}
 }
@@ -2824,9 +2821,9 @@ void TextViewer::updateScrollBars() {
 
 #define GET_SCROLL_MINIMUM(s)	(s.maximum/* * s.rate*/ - s.pageSize + 1)
 
-	// 水平スクロールバー
+	// about horizontal scroll bar
 	bool wasNeededScrollbar = GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0;
-	// スクロールバーが無くなる前に左端 (右端) にスクロールさせる
+	// scroll to leftmost/rightmost before the scroll bar vanishes
 	long minimum = GET_SCROLL_MINIMUM(scrollInfo_.horizontal);
 	if(wasNeededScrollbar && minimum <= 0) {
 		scrollInfo_.horizontal.position = 0;
@@ -2846,10 +2843,10 @@ void TextViewer::updateScrollBars() {
 		setScrollInformation(SB_HORZ, scroll, true);
 	}
 
-	// 垂直スクロールバー
+	// about vertical scroll bar
 	wasNeededScrollbar = GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0;
 	minimum = GET_SCROLL_MINIMUM(scrollInfo_.vertical);
-	// 変なスクロール位置にならないようにする
+	// validate scroll position
 	if(minimum <= 0) {
 		scrollInfo_.vertical.position = 0;
 		scrollInfo_.firstVisibleLine = scrollInfo_.firstVisibleSubline = 0;

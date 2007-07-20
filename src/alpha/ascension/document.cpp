@@ -1732,7 +1732,7 @@ Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName
  */
 void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	const Position& start = region.getTop();
-	const Position end = max(region.getBottom(), Position(getNumberOfLines() - 1, getLineLength(getNumberOfLines() - 1)));
+	const Position end = min(region.getBottom(), getEndPosition(false));
 	if(start.line == end.line) {	// shortcut for single-line
 		out << getLine(end.line).substr(start.column, end.column - start.column);
 		return;

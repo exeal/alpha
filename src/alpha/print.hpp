@@ -22,9 +22,8 @@ namespace alpha {
 	private:
 		Printing();
 		~Printing() throw();
-		static BOOL CALLBACK		abortProcedure(HDC dc, int error);
-		bool						doSetupPages(bool returnDefault);
-		static ::UINT_PTR CALLBACK	pageSetupHook(HWND dialog, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
+		static BOOL CALLBACK	abortProcedure(HDC dc, int error);
+		bool					doSetupPages(bool returnDefault);
 	private:
 		::HGLOBAL devmode_;
 		::HGLOBAL devnames_;

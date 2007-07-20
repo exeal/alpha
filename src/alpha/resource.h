@@ -31,8 +31,7 @@
 #define IDD_DLG_BUFFERLIST              515
 #define IDD_DLG_LOADTEMPMACRO           516
 #define IDD_DLG_SAVETEMPMACRO           517
-#define IDD_DLG_PAGESETUPTEMPLATE       518
-#define IDD_DLG_PRINTING                519
+#define IDD_DLG_PRINTING                518
 #define COMMAND_START                   1000
 #define CMD_FILE_NEW                    1000
 #define IDC_TAB_VIEWS                   1001
@@ -72,11 +71,8 @@
 #define IDC_CHK_USEUNICODEFORINPUT      1206
 #define IDC_CHK_SHOWALLFILES            1207
 #define IDC_CHK_SHIFT                   1208
-#define IDC_CHK_LINENUMBERS             1209
-#define IDC_CHK_HEADER                  1210
 #define IDC_RADIO_SELECTION             1301
 #define IDC_RADIO_WHOLEFILE             1302
-#define IDC_CHECK2                      1317
 #define IDC_LINK_HOMEPAGE               1401
 #define IDC_LINK_SELECTALL              1402
 #define IDC_LINK_CLEARALL               1403
