@@ -1896,7 +1896,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 				rcs->dwStrLen = static_cast<DWORD>(document.getLineLength(caret_->getLineNumber()));
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
 				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getColumnNumber());
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getTopPoint().getColumnNumber());
 				getDocument().getLine(caret_->getLineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret_->getLineNumber());
