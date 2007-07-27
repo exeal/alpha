@@ -1,16 +1,16 @@
 /**
- * @file ankh.cpp
+ * @file core.cpp
  * @author exeal
  * @date 2006-2007
  */
 
 #include "stdafx.h"
-#include "ankh.hpp"
-#include "ankh-idl_i.c"
-#include "application.hpp"
-#include "select-language-dialog.hpp"
-#include "ascension/encoder.hpp"
-#include "../manah/com/ole-type-wrapper.hpp"	// ComBSTR
+#include "core.hpp"
+#include "ankh_i.c"
+#include "../application.hpp"
+#include "../select-language-dialog.hpp"
+#include "../ascension/encoder.hpp"
+#include "../../manah/com/ole-type-wrapper.hpp"	// manah.com.ComBSTR
 #include <sstream>
 using namespace alpha::ankh;
 using namespace manah::win32;
@@ -18,23 +18,16 @@ using namespace manah::com;
 using namespace std;
 
 namespace {
-	/// トップレベルオブジェクトの識別子
+	/// The identifier of the top level object.
 	const OLECHAR TOP_LEVEL_OBJECT_NAME[] = OLESTR("Ankh");
-	/// スクリプトホストオブジェクトの識別子
+	/// The identifier of the script host object.
 	const OLECHAR HOST_OBJECT_NAME[] = OLESTR("WScript");
-	/// スクリプトホストオブジェクトの識別子 (短縮形)
+	/// An abbreviation for @c HOST_OBJECT_NAME.
 	const OLECHAR HOST_OBJECT_SHORT_NAME[] = OLESTR("WSH");
 	/// 「オートメーションオブジェクトを作成できません」
 	const HRESULT ANKH_E_CANNOTCREATEAUTOMATION = 0x800A01AD;
 	/// 「クラスはオートメーションをサポートしていません」
 	const HRESULT ANKH_E_AUTOMATIONUNCOMPATIBLECLASS = 0x800A01AE;
-
-	/// オートメーション識別子の比較
-	inline int compareAutomationName(const OLECHAR* lhs, size_t cchLhs, const OLECHAR* rhs, size_t cchRhs) {
-		return ::CompareStringW(LOCALE_NEUTRAL,
-				NORM_IGNORECASE | NORM_IGNOREKANATYPE | NORM_IGNORENONSPACE | NORM_IGNOREWIDTH,
-				lhs, static_cast<DWORD>(cchLhs), rhs, static_cast<DWORD>(cchRhs));
-	}
 
 	/// イベントシンク
 	class AdhocEventSinkBase : virtual public IDispatchEx {
@@ -79,23 +72,21 @@ namespace {
 	};
 } // namespace @0
 
-/// WScript 式イベント接続を実装するのに使うアドホックなイベントシンクオブジェクト
+/// An adhoc event sink object to implement WScript-style event connections.
 class ScriptHost::LegacyAdhocEventSink : public AdhocEventSinkBase {
 public:
-	// コンストラクタ
 	LegacyAdhocEventSink(IActiveScript& scriptEngine, const IID& eventIID, const std::wstring& prefix);
 protected:
 	HRESULT	fireEvent(const OLECHAR* name, LCID locale, WORD flags,
 		DISPPARAMS* params, VARIANT* result, EXCEPINFO* exception, IServiceProvider* serviceProvider);
 private:
 	ComPtr<IActiveScript>		scriptEngine_;
-	const basic_string<OLECHAR>	prefix_;	// イベントハンドラ名の接頭辞
+	const basic_string<OLECHAR>	prefix_;	// prefix of event names
 };
 
-/// @c ScriptHost#ConnectObjectEx を実装するのに使うイベントシンクオブジェクト
+/// An event sink object to implement @c ScriptHost#ConnectObjectEx method.
 class ScriptHost::AdhocEventSink : public AdhocEventSinkBase {
 public:
-	// コンストラクタ
 	AdhocEventSink(IDispatch& eventSink, const IID& eventIID);
 protected:
 	HRESULT	fireEvent(const OLECHAR* name, LCID locale, WORD flags,
@@ -150,7 +141,7 @@ namespace {
 
 // Arguments ////////////////////////////////////////////////////////////////
 
-/// コンストラクタ
+/// Constructor.
 Arguments::Arguments(const vector<wstring>& arguments) : arguments_(arguments) {
 }
 
@@ -217,11 +208,10 @@ const unsigned short ScriptHost::MINOR_VERSION = 7;
 const unsigned short ScriptHost::BUILD_NUMBER = 0;
 
 /**
- *	コンストラクタ
- *	@param scriptSystem		スクリプトシステム
- *	@param scriptEngine		ホストするスクリプトエンジン
- *	@param engineLanguage	@a scriptEngine の言語
- *	@param ownerWindow		アプリケーションウィンドウ
+ * Constructor.
+ * @param scriptSystem the script system
+ * @param scriptEngine the script engine to host
+ * @param ownerWindow the application window
  */
 ScriptHost::ScriptHost(ScriptSystem& scriptSystem, IActiveScript& scriptEngine, HWND ownerWindow /* = 0 */)
 		: scriptSystem_(scriptSystem), scriptEngine_(scriptEngine), ownerWindow_(ownerWindow), lastScriptCookie_(0), timeout_(-1) {
@@ -245,7 +235,7 @@ ScriptHost::ScriptHost(ScriptSystem& scriptSystem, IActiveScript& scriptEngine, 
 	scriptEngine_.AddNamedItem(HOST_OBJECT_SHORT_NAME, SCRIPTITEM_ISVISIBLE);
 }
 
-/// デストラクタ
+/// Destructor,
 ScriptHost::~ScriptHost() {
 	for(LegacyEventConnections::iterator i = legacyEventConnections_.begin(); i != legacyEventConnections_.end(); ++i)
 		delete i->second;
@@ -255,7 +245,7 @@ ScriptHost::~ScriptHost() {
 	scriptEngine_.Release();
 }
 
-/// スクリプトエンジンの @c IActiveScript#Close を呼び出す
+/// Invokes @c IActiveScript#Close of the script engine explicitly.
 HRESULT ScriptHost::closeEngine() throw() {
 	return scriptEngine_.Close();
 }
@@ -274,11 +264,11 @@ STDMETHODIMP ScriptHost::ConnectObject(IDispatch* eventSource, BSTR prefix) {
 }
 
 /**
- * WScript 式のイベント接続を行う
- * @param source イベントソース
- * @param prefix イベント処理するプロシジャ名の接頭辞
- * @param coclassID イベントインターフェイスの特定に使う coclass の GUID
- * @return 結果
+ * Performs a WScript-style event connection.
+ * @param source the event source
+ * @param prefix the prefix of event procedures
+ * @param coclassID GUID of coclass to determine the event interface
+ * @return the result
  */
 HRESULT ScriptHost::connectObject(IDispatch& source, const BSTR prefix, const CLSID& coclassID /* = CLSID_NULL */) {
 	if(isEmptyBSTR(prefix))
@@ -306,11 +296,11 @@ HRESULT ScriptHost::connectObject(IDispatch& source, const BSTR prefix, const CL
 }
 
 /**
- * イベント接続を行う
- * @param source イベントソース
- * @param sink イベントシンク
- * @param coclassID イベントインターフェイスの特定に使う coclass の GUID
- * @return 結果
+ * Connects the specified event sink object to the source.
+ * @param source the event source
+ * @param sink the event sink
+ * @param coclassID GUID of coclass to determine the event interface
+ * @return the result
  */
 HRESULT ScriptHost::connectObject(IDispatch& source, IDispatch& sink, const CLSID& coclassID /* = CLSID_NULL */) {
 	HRESULT hr;
@@ -573,8 +563,7 @@ STDMETHODIMP ScriptHost::GetItemInfo(LPCOLESTR pstrName, DWORD dwReturnMask, IUn
 		return E_INVALIDARG;
 
 	ComPtr<IDispatch> object;
-	if(compareAutomationName(pstrName, wcslen(pstrName), HOST_OBJECT_NAME, countof(HOST_OBJECT_NAME) - 1) == CSTR_EQUAL
-			|| compareAutomationName(pstrName, wcslen(pstrName), HOST_OBJECT_SHORT_NAME, countof(HOST_OBJECT_SHORT_NAME) - 1) == CSTR_EQUAL)
+	if(compareAutomationNames(pstrName, HOST_OBJECT_NAME) == CSTR_EQUAL || compareAutomationNames(pstrName, HOST_OBJECT_SHORT_NAME) == CSTR_EQUAL)
 		object = this;
 	else if(!scriptSystem_.getTopLevelObject(pstrName, object)) {
 		if(toBoolean(dwReturnMask & SCRIPTINFO_IUNKNOWN)) {
@@ -690,7 +679,7 @@ STDMETHODIMP ScriptHost::GetObject(BSTR pathName, BSTR progID, BSTR prefix, IDis
 	return S_OK;
 }
 
-/// スクリプトエンジンを返す
+/// Returns the script engine.
 ComPtr<IActiveScript> ScriptHost::getScriptEngine() const throw() {
 	return ComPtr<IActiveScript>(&scriptEngine_);
 }
@@ -703,14 +692,14 @@ STDMETHODIMP ScriptHost::GetWindow(HWND* phwnd) {
 }
 
 /**
- * スクリプトの最上位オブジェクトに対して呼び出しをかける
- * @param name 名前
- * @param type 呼び出しタイプ。@c IDispatch#Invoke と同じ
- * @param locale ロケール識別子
- * @param[in,out] params 引数。不要な場合は @c null
- * @param[out] result 戻り値。不要な場合は @c null
- * @param[out] exception 例外。不要な場合は @c null
- * @return 成否など
+ * Calls the top level object of the script.
+ * @param name the name
+ * @param type the call type. same as @c IDispatch#Invoke
+ * @param locale the locale identifier
+ * @param[in,out] params the parameters. can be @c null
+ * @param[out] result the return value. can be @c null
+ * @param[out] exception the exception. can be @c null
+ * @return the result
  */
 HRESULT ScriptHost::invokeTopLevelEntity(const OLECHAR* name, WORD type,
 		LCID locale /* = LOCALE_USER_DEFAULT */, DISPPARAMS* params /* = 0 */, VARIANT* result /* = 0 */, EXCEPINFO* exception /* = 0 */) {
@@ -729,9 +718,9 @@ HRESULT ScriptHost::invokeTopLevelEntity(const OLECHAR* name, WORD type,
 }
 
 /**
- * スクリプトをファイルから読み込んで評価する
- * @param fileName ファイル名。既に読み込まれている場合は何もしない
- * @return 成否
+ * Loads the specified script file and evaluates.
+ * @param fileName the file name. if this file has been already loaded, nothing performed
+ * @return the result
  */
 bool ScriptHost::loadScript(const WCHAR* fileName) {
 	assert(fileName != 0);
@@ -879,8 +868,8 @@ STDMETHODIMP ScriptHost::Sleep(long time) {
 
 /**
  * ActiveX オブジェクトの作成が可能かホストに問い合わせる
- * @param clsid 作成しようとしているオブジェクトの CLSID
- * @return ポリシー
+ * @param clsid the CLSID of the object to create
+ * @return the policy value
  */
 DWORD ScriptHost::verifyObjectCreation(const CLSID& clsid) {
 	ComQIPtr<IObjectSafety> safety;
@@ -902,9 +891,9 @@ DWORD ScriptHost::verifyObjectCreation(const CLSID& clsid) {
 
 /**
  * ActiveX オブジェクトの作成が可能かホストに問い合わせる
- * @param object オブジェクト
- * @param clsid オブジェクトの CLSID
- * @return ポリシー
+ * @param object the object
+ * @param clsid the CLSID of the object to create
+ * @return the policy value
  */
 DWORD ScriptHost::verifyObjectRunning(IDispatch& object, const CLSID& clsid) {
 	ComQIPtr<IObjectSafety> safety;
@@ -969,12 +958,12 @@ STDMETHODIMP FileBoundScriptHost::Quit(int) {
 
 // ScriptSystem /////////////////////////////////////////////////////////////
 
-/// コンストラクタ
+/// Constructor.
 ScriptSystem::ScriptSystem() : globalNamespace_(0/*new Namespace(L"", 0)*/),
 		interactive_(true), securityLevel_(0), crossEngineTopLevelAccessesEnabled_(false) {
 }
 
-/// デストラクタ
+/// Destructor.
 ScriptSystem::~ScriptSystem() {
 	shutdown();
 	for(EngineAssociationMap::const_iterator i = engineAssociations_.begin(); i != engineAssociations_.end(); ++i)
@@ -991,10 +980,10 @@ void ScriptSystem::addEngineScriptNameAssociation(const WCHAR* filePattern, cons
 }
 
 /**
- * 最上位オブジェクトの追加
- * @param name オブジェクトの名前
- * @param object オブジェクト
- * @throw std::invalid_argument 既に同名のオブジェクトが存在した場合スロー
+ * Registers the new top level object.
+ * @param name the name of the object
+ * @param object the object
+ * @throw std#invalid_argument 既に同名のオブジェクトが存在した場合スロー
  */
 void ScriptSystem::addTopLevelObject(const OLECHAR* name, IDispatch& object) {
 	assert(name != 0);
@@ -1082,13 +1071,13 @@ bool ScriptSystem::associateEngineFromRegistry(const WCHAR* fileName, CLSID& cls
 }
 
 /**
- * 無名関数を呼び出す
- * @param function 関数
- * @param locale ロケール識別子
- * @param[in,out] params 実引数。不要な場合は @c null
- * @param[out] result 戻り値。不要な場合は @c null
- * @param[out] exception 例外。不要な場合は @c null
- * @return @c IDispatch#Invoke の戻り値
+ * Calls the specified anonymous function.
+ * @param function the function
+ * @param locale the locale identifier
+ * @param[in,out] params the parameters. can be @c null
+ * @param[out] result the return value. can be @c null
+ * @param[out] exception the exception. can be @c null
+ * @return the return value of @c IDispatch#Invoke
  */
 HRESULT ScriptSystem::callAnonymousFunction(IDispatch& function, LCID locale /* = LOCALE_USER_DEFAULT */,
 		DISPPARAMS* params /* = 0 */, VARIANT* result /* = 0 */, EXCEPINFO* exception /* = 0 */) {
@@ -1126,7 +1115,7 @@ STDMETHODIMP ScriptSystem::get_SecurityLevel(short* level) {
 	return S_OK;
 }
 
-/// グローバルな名前空間を返す
+/// Returns the global namespace.
 Namespace& ScriptSystem::getGlobalNamespace() const {
 	return *globalNamespace_;
 }
@@ -1139,14 +1128,14 @@ STDMETHODIMP ScriptSystem::GetSecurityId(BYTE* pbSecurityId, DWORD* pcbSecurityI
 }
 
 /**
- * 最上位オブジェクトの取得
- * @param name オブジェクトの名前
- * @param[out] object オブジェクト
- * @return 見つかった場合 true
+ * Returns the top level object has the given name.
+ * @param name the name of the object
+ * @param[out] object the found object
+ * @return true if found
  */
 bool ScriptSystem::getTopLevelObject(const OLECHAR* name, ComPtr<IDispatch>& object) const throw() {
 	assert(name != 0);
-	if(compareAutomationName(name, wcslen(name), TOP_LEVEL_OBJECT_NAME, countof(TOP_LEVEL_OBJECT_NAME) - 1) == CSTR_EQUAL)
+	if(compareAutomationNames(name, TOP_LEVEL_OBJECT_NAME) == CSTR_EQUAL)
 		return (object = const_cast<ScriptSystem*>(this)), true;
 	MemberTable::iterator i = const_cast<ScriptSystem*>(this)->topLevelObjects_.find(name);
 	return (i != topLevelObjects_.end()) ? (object = i->second), true : false;
@@ -1206,11 +1195,11 @@ STDMETHODIMP ScriptSystem::IsScriptFileLoaded(BSTR fileName, VARIANT_BOOL* loade
 }
 
 /**
- * 新しいスクリプトエンジンを起動する
- * @param engineID スクリプトエンジンの CLSID
- * @param[out] newHost 起動したエンジンのホスト
- * @param addToList スクリプトホストを管理リストに含めるか
- * @return 成否
+ * Launches the new script engine.
+ * @param engineID the CLSID of the script engine
+ * @param[out] newHost the script host of the newly created engine
+ * @param addToList set true to register the script host
+ * @return succeeded or not
  */
 HRESULT ScriptSystem::launchNewEngine(const CLSID& engineID, ComPtr<ScriptHost>& newHost, bool addToList) {
 	HRESULT hr;
@@ -1267,9 +1256,9 @@ STDMETHODIMP ScriptSystem::LoadConstants(VARIANT* libraryNameOrObject, BSTR item
 }
 
 /**
- * 型ライブラリから列挙 (定数) を読み込む
- * @param typeLibrary 型ライブラリ
- * @param guid 読み込む列挙の @c GUID。省略するとライブラリの全ての列挙を読み込む
+ * Loads enumerations (constants) from the specified type library.
+ * @param typeLibrary the type library
+ * @param guid the GUID of the enumeration to load. if this is @c GUID_NULL, all enumerations in the library will be loaded
  * @return 成否
  */
 bool ScriptSystem::loadConstants(ITypeLib& typeLibrary, const GUID& guid /* = GUID_NULL */) {
@@ -1447,7 +1436,7 @@ STDMETHODIMP ScriptSystem::QueryCustomPolicy(REFGUID guidKey,
 	return S_OK;
 }
 
-/// @c #addTopLevelObject で追加した最上位オブジェクトを全て取り除く
+/// Releases the all top level objects registered by @c #addTopLevelObject
 void ScriptSystem::releaseTopLevelObjects() {
 	for(MemberTable::iterator it = topLevelObjects_.begin(); it != topLevelObjects_.end(); ++it)
 		it->second->Release();
@@ -1579,21 +1568,21 @@ void Namespace::unlock(long cookie) {
 // AdhocEventSinkBase ///////////////////////////////////////////////////////
 
 /**
- * コンストラクタ
- * @param eventIID イベントインターフェイスの IID
+ * Constructor.
+ * @param eventIID the IID of the event interface
  */
 AdhocEventSinkBase::AdhocEventSinkBase(const IID& eventIID) throw() : eventIID_(eventIID) {
 }
 
-/// デストラクタ
+/// Destructor.
 AdhocEventSinkBase::~AdhocEventSinkBase() throw() {
 	disconnect();
 }
 
 /**
- * イベントシンクとして接続する
- * @param eventSource 接続ポイント
- * @return @c IConnectionPoint#Advise と同じ
+ * Connects as an event sink to the specified connection point.
+ * @param eventSource the connection point
+ * @return same as @c IConnectionPoint#Advise
  */
 HRESULT AdhocEventSinkBase::connect(IConnectionPoint& eventSource) {
 	if(!eventSource_.isNull())
@@ -1654,8 +1643,8 @@ STDMETHODIMP AdhocEventSinkBase::DeleteMemberByName(BSTR bstrName, DWORD grfdex)
 }
 
 /**
- * 接続を切断する
- * @return @c IConnecttionPoint#Unadvise と同じ
+ * Disconnects the active connection.
+ * @return same as @c IConnecttionPoint#Unadvise
  */
 HRESULT AdhocEventSinkBase::disconnect() throw() {
 	HRESULT hr = S_OK;
@@ -1667,9 +1656,9 @@ HRESULT AdhocEventSinkBase::disconnect() throw() {
 }
 
 /**
- * イベントソースオブジェクトから接続ポイントを検索する
- * @param source イベントソース
- * @param[out] eventIID 接続ポイント
+ * Searches a connection point from the given event source object.
+ * @param source the event source
+ * @param[out] eventIID the connection point
  * @param[in] coclassID イベントインターフェイスの特定に使う coclass の GUID
  * @return 成否など
  */
@@ -1819,13 +1808,13 @@ STDMETHODIMP AdhocEventSinkBase::QueryInterface(REFIID riid, void** ppv) {
 }
 
 
-// ScriptHost::AdhocEventSink ///////////////////////////////////////////////
+// ScriptHost.AdhocEventSink ////////////////////////////////////////////////
 
 /**
- * コンストラクタ
- * @param scriptEngine 言語エンジン
- * @param eventIID イベントインターフェイスの IID
- * @param prefix イベントハンドラの接頭辞
+ * Constructor.
+ * @param scriptEngine the script engine
+ * @param eventIID the IID of the event interface
+ * @param prefix the prefix of the event procedures' name
  */
 ScriptHost::LegacyAdhocEventSink::LegacyAdhocEventSink(IActiveScript& scriptEngine, const IID& eventIID, const wstring& prefix)
 		: AdhocEventSinkBase(eventIID), scriptEngine_(&scriptEngine), prefix_(prefix) {
@@ -1856,12 +1845,12 @@ HRESULT ScriptHost::LegacyAdhocEventSink::fireEvent(const OLECHAR* name,
 }
 
 
-// ScriptHost::AdhocEventSink ///////////////////////////////////////////////
+// ScriptHost.AdhocEventSink ////////////////////////////////////////////////
 
 /**
- *	コンストラクタ
- *	@param eventSink	イベントシンクとなる OLE オブジェクト
- *	@param eventIID		イベントインターフェイスの IID
+ * Constructor.
+ *	@param eventSink the OLE object as an event sink
+ * @param eventIID the IID of the event interface
  */
 ScriptHost::AdhocEventSink::AdhocEventSink(IDispatch& eventSink, const IID& eventIID) : AdhocEventSinkBase(eventIID), sink_(&eventSink) {
 }
@@ -1886,15 +1875,15 @@ HRESULT ScriptHost::AdhocEventSink::fireEvent(const OLECHAR* name,
 
 // AutomationEnumeration ////////////////////////////////////////////////////
 
-/// コンストラクタ
+/// Constructor.
 AutomationEnumeration::AutomationEnumeration() : nextID_(INITIAL_ID) {
 }
 
 /**
- * プロパティを追加する
- * @param mame プロパティ名
- * @param value 値
- * @throw std::invalid_argument 既に同名のプロパティが存在するときスロー
+ * Adds the new property.
+ * @param mame the name of the property
+ * @param value the value of the property
+ * @throw std#invalid_argument 既に同名のプロパティが存在するときスロー
  */
 void AutomationEnumeration::addProperty(const OLECHAR* name, long value) {
 	assert(name != 0);

@@ -1,8 +1,8 @@
-// AnkhIdl.idl
-// (c) 2006 exeal
+// ankh.idl
+// (c) 2006-2007 exeal
 
-#ifndef ANKH_IDL_
-#define ANKH_IDL_
+#ifndef ANKH_IDL
+#define ANKH_IDL
 
 import "oaidl.idl";
 import "ocidl.idl";
@@ -22,6 +22,8 @@ library Ankh {
 	// introduces standard definitions
 	importlib("stdole32.tlb");
 	importlib("stdole2.tlb");
+
+	// core members /////////////////////////////////////////////////////////
 
 	[
 		uuid(AFF456A8-8042-46aa-ADCC-E3A32D64690C), object, dual, pointer_default(unique),

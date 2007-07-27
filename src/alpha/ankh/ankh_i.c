@@ -6,10 +6,10 @@
 
 
  /* File created by MIDL compiler version 6.00.0361 */
-/* at Sun Apr 16 01:24:49 2006
+/* at Wed Jul 25 23:09:28 2007
  */
-/* Compiler settings for .\AnkhIdl.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run)
+/* Compiler settings for .\ankh\ankh.idl:
+    Oicf, W4, Zp8, env=Win32 (32b run)
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 

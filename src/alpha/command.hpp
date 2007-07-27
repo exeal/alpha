@@ -8,7 +8,7 @@
 #define ALPHA_COMMAND_HPP
 
 #include "application.hpp"
-#include "ankh.hpp"
+#include "ankh/core.hpp"
 #include "temporary-macro.hpp"
 #include "../manah/win32/file.hpp"
 #include "../manah/win32/ui/common-controls.hpp"
