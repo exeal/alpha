@@ -6,7 +6,7 @@
 
 #include "stdafx.h"
 #include "application.hpp"
-#include "ankh.hpp"
+#include "ankh/core.hpp"
 #include "command.hpp"
 #include "mru-manager.hpp"
 #include "search-dialog.hpp"

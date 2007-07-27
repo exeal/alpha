@@ -164,18 +164,6 @@
 				RelativePath=".\about-dialog.cpp">
 			</File>
 			<File
-				RelativePath=".\ankh-idl.idl">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCMIDLTool"
-						TypeLibraryName=".\Debug/ankh.tlb"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\ankh.cpp">
-			</File>
-			<File
 				RelativePath=".\application.cpp">
 			</File>
 			<File
@@ -247,9 +235,6 @@
 			Filter="h;hpp;hxx;hm;inl">
 			<File
 				RelativePath=".\about-dialog.hpp">
-			</File>
-			<File
-				RelativePath=".\ankh.hpp">
 			</File>
 			<File
 				RelativePath=".\application.hpp">
@@ -361,6 +346,12 @@
 					RelativePath=".\ascension\dfa.cpp">
 					<FileConfiguration
 						Name="Release|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
 						ExcludedFromBuild="TRUE">
 						<Tool
 							Name="VCCLCompilerTool"/>
@@ -503,6 +494,37 @@
 				</File>
 				<File
 					RelativePath=".\Ascension\viewer.hpp">
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="ankh"
+			Filter="">
+			<Filter
+				Name="Source Files"
+				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+				<File
+					RelativePath=".\ankh\ankh.idl">
+					<FileConfiguration
+						Name="Debug|Win32">
+						<Tool
+							Name="VCMIDLTool"
+							WarningLevel="4"
+							TypeLibraryName="$(TargetDir)$(InputName).tlb"
+							OutputDirectory=""
+							HeaderFileName="$(InputDir)$(InputName).h"
+							DLLDataFileName="$(InputDir)dlldata.c"/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath=".\ankh\core.cpp">
+				</File>
+			</Filter>
+			<Filter
+				Name="Header Files"
+				Filter="h;hpp;hxx;hm;inl">
+				<File
+					RelativePath=".\ankh\core.hpp">
 				</File>
 			</Filter>
 		</Filter>
