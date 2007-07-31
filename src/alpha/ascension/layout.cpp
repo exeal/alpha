@@ -58,11 +58,11 @@ namespace {
 	class UserSettings {
 	public:
 		UserSettings() throw() {update();}
-		LANGID getDefaultLanguage() const throw() {return langID_;}
+		::LANGID getDefaultLanguage() const throw() {return langID_;}
 		const ::SCRIPT_DIGITSUBSTITUTE& getDigitSubstitution() const throw() {return digitSubstitution_;}
 		void update() throw() {langID_ = ::GetUserDefaultLangID(); ::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);}
 	private:
-		LANGID langID_;
+		::LANGID langID_;
 		::SCRIPT_DIGITSUBSTITUTE digitSubstitution_;
 	} userSettings;
 
@@ -74,6 +74,26 @@ namespace {
 		case ALIGN_CENTER:
 		default:			return c.orientation;
 		}
+	}
+	::LANGID getUserCJKLanguage() throw() {
+		// this code is preliminary...
+		static const ::WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
+		::LANGID result = getUserDefaultUILanguage();
+		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+			return result;
+		result = ::GetUserDefaultLangID();
+		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+			return result;
+		result = ::GetSystemDefaultLangID();
+		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+			return result;
+		switch(::GetACP()) {
+		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
+		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
+		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
+		}
+		return result;
 	}
 } // namespace @0
 
@@ -2376,7 +2396,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		defaultAssociations_[Script::TELUGU] = L"Gautami";
 		defaultAssociations_[Script::THAI] = L"Tahoma";
     defaultAssociations_[Script::THAANA] = L"MV Boli";
-		const LANGID uiLang = getUserDefaultUILanguage();
+		const LANGID uiLang = getUserCJKLanguage();
 		switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
 		case LANG_CHINESE:
 			defaultAssociations_[Script::HAN] = (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
