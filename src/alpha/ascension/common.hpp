@@ -82,52 +82,81 @@ namespace ascension {
 	void updateSystemSettings() throw();
 
 	/**
-	 * Base class for bidirectional iterator. This provides C++ standard iterator interface.
-	 * @param ConcreteIterator the derived iterator class. this class should have the following methods:
-	 * - copy constructor
-	 * - dereference(void) const : returns the addressed element of type @a Type
-	 * - increment(void) : increments the position of the iterator
-	 * - decrement(void) : decrements the position of the iterator
-	 * - equals(const ConcreteIterator&amp;) const : return true if the iterator is equal to the other
-	 * in addition, the iterator supports relational operations should have:
-	 * - isLessThan(const ConcreteIterator&amp;) const : return true if the iterator is less than the other
+	 * @c BidirectionalIteratorFacade template class converts an iterator class into the
+	 * corresponding C++ standard-compliant bidirectional iterator.
+	 * @param Iterator the iterator class converted. see the next section
 	 * @param Type the element type
 	 * @param Distance the distance type
 	 * @param Pointer the pointer type
 	 * @param Reference the reference type
+	 * @note This class is not intended to be subclassed.
+	 *
+	 * Iterator classes Ascension provides don't have C++ standard iterator interface (operator
+	 * overloadings). By using this class, you can write the following:
+	 *
+	 * @code
+	 * // find the first LF in the document
+	 * const Document& = ...;
+	 * std::find(
+	 *   DocumentCharacterIterator(document, document.getStartPosition()),
+	 *   DocumentCharacterIterator(document, document.getEndPosition()),
+	 *   LINE_SEPARATOR  // DocumentCharacterIterator returns LINE_SEPARATOR at EOL
+	 * );
+	 * @endcode
+	 *
+	 * <h3>Concept -- @c Iterator requirements</h3>
+	 * @c Iterator template parameter must satisfy some of the following requirements:
+	 * <table border="1">
+	 *   <tr><th>Expression</th><th>Return type</th><th>Assertion / Note / Pre- / Post-condition</th></tr>
+	 *   <tr><td>Iterator i</td><td>@a Iterator</td><td>Default constructor for the default constructor.</td></tr>
+	 *   <tr><td>Iterator i(i1)</td><td>@a Iterator</td><td>Copy constructor for the copy constructor.</td></tr>
+	 *   <tr><td>i1 = i2</td><td>@a Iterator</td><td>Assignment operator for the assignment operator.</td></tr>
+	 *   <tr><td>i.current()</td><td>@a Type</td><td>Returns the current value for @c #operator= and @c #operator-&gt;.</td></tr>
+	 *   <tr><td>i.next()</td><td>not used</td><td>Moves the iterator to the next position for @c #operator++ and @c #operator++(int).</td></tr>
+	 *   <tr><td>i.previous()</td><td>not used</td><td>Moves the iterator to the previous position for @c #operator-- and @c #operator--(int).</td></tr>
+	 *   <tr><td>i1.equals(i2)</td><td>bool</td><td>true if @c i1 equals @c i2. For @c #operator==, @c #operator!=, ...</td></tr>
+	 *   <tr><td>i1.less(i2)</td><td>bool</td><td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td></tr>
+	 * </table>
 	 */
-	template<class ConcreteIterator, typename Type, typename Distance = std::ptrdiff_t, typename Pointer = Type*, typename Reference = Type&>
+	template<class Iterator, typename Type, typename Distance = std::ptrdiff_t, typename Pointer = Type*, typename Reference = Type&>
 	class BidirectionalIteratorFacade : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
 	public:
-		/// Dereference operator returns a copy of the current element, not a reference.
-		Type operator*() const {return getConcrete().dereference();}
+		/// Default constructor.
+		BidirectionalIteratorFacade() {}
+		/// Constructor.
+		BidirectionalIteratorFacade(const Iterator& base) : impl_(base) {}
+		/// Copy constructor.
+		BidirectionalIteratorFacade(const BidirectionalIteratorFacade& rhs) : impl_(rhs.base()) {}
+		/// Assignment operator.
+		BidirectionalIteratorFacade& operator=(const BidirectionalIteratorFacade& rhs) {impl_ = rhs.base();}
 		/// Dereference operator.
-		Reference operator->() const {return getConcrete().dereference();}
+		Reference operator*() const {return impl_.current();}
+		/// Dereference operator.
+		Reference operator->() const {return impl_.current();}
 		/// Pre-fix increment operator.
-		ConcreteIterator& operator++() {getConcrete().increment(); return getConcrete();}
+		BidirectionalIteratorFacade& operator++() {impl_.next(); return *this;}
 		/// Post-fix increment operator.
-		ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
+		const BidirectionalIteratorFacade operator++(int) {BidirectionalIteratorFacade temp(*this); ++*this; return temp;}
 		/// Pre-fix decrement operator.
-		ConcreteIterator& operator--() {getConcrete().decrement(); return getConcrete();}
+		BidirectionalIteratorFacade& operator--() {impl_.previous(); return *this;}
 		/// Post-fix decrement operator.
-		ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
+		const BidirectionalIteratorFacade operator--(int) {BidirectionalIteratorFacade temp(*this); --*this; return temp;}
 		/// Equality operator.
-		bool operator==(const ConcreteIterator& rhs) const {return getConcrete().equals(rhs);}
+		bool operator==(const BidirectionalIteratorFacade& rhs) const {return impl_.equals(rhs.base());}
 		/// Inequality operator.
-		bool operator!=(const ConcreteIterator& rhs) const {return !operator==(rhs);}
+		bool operator!=(const BidirectionalIteratorFacade& rhs) const {return !operator==(rhs);}
 		/// Relational operator.
-		bool operator<(const ConcreteIterator& rhs) const {return getConcrete().isLessThan(rhs);}
+		bool operator<(const BidirectionalIteratorFacade& rhs) const {return impl_.less(rhs.base());}
 		/// Relational operator.
-		bool operator<=(const ConcreteIterator& rhs) const {return operator<(rhs) || operator==(rhs);}
+		bool operator<=(const BidirectionalIteratorFacade& rhs) const {return operator<(rhs) || operator==(rhs);}
 		/// Relational operator.
-		bool operator>(const ConcreteIterator& rhs) const {return !operator<=(rhs);}
+		bool operator>(const BidirectionalIteratorFacade& rhs) const {return !operator<=(rhs);}
 		/// Relational operator.
-		bool operator>=(const ConcreteIterator& rhs) const {return !operator<(rhs);}
-	protected:
-		typedef BidirectionalIteratorFacade<ConcreteIterator, Type, Distance, Pointer, Reference> IteratorFacade;
+		bool operator>=(const BidirectionalIteratorFacade& rhs) const {return !operator<(rhs);}
+		/// Returns the base iterator.
+		const Iterator& base() const throw() {return impl_;}
 	private:
-		ConcreteIterator& getConcrete() throw() {return *static_cast<ConcreteIterator*>(this);}
-		const ConcreteIterator& getConcrete() const throw() {return *static_cast<const ConcreteIterator*>(this);}
+		Iterator impl_;
 	};
 
 	// static assertion

@@ -299,32 +299,79 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-		/**
-		 * @see TextViewer#setLinkTextStrategy
-		 */
-		class IViewerLinkTextStrategy {
-		public:
-			/// Destructor.
-			virtual ~IViewerLinkTextStrategy() throw() {}
-		private:
+		/// Provides support for detecting hyperlinks in @c{TextViewer}s.
+		namespace hyperlink {
+			/// Represents a hyperlink.
+			class IHyperlink {
+			public:
+				/// Destructor.
+				virtual ~IHyperlink() throw() {}
+				/// Returns the descriptive text.
+				virtual String getDescription() const throw() = 0;
+				/// Returns the region covered by the hyperlink.
+				virtual text::Region getRegion() const throw() = 0;
+				/// Opens the hyperlink.
+				virtual void open() = 0;
+			};
+
+			/// A @c HyperlinkDetector finds the hyperlinks in the document.
+			class IHyperlinkDetector {
+			public:
+				/// Destructor.
+				virtual ~IHyperlinkDetector() throw() {}
+				/**
+				 * Returns the hyperlink at the given document position.
+				 * @param at the position
+				 * @return the found hyperlink or @c null
+				 */
+				virtual std::auto_ptr<IHyperlink> detectHyperlink(const text::Position& at) const throw() = 0;
+				/**
+				 * Returns the hyperlinks in the given document region.
+				 * @param region the region
+				 * @param[out] numberOfHyperlinks the number of the found hyperlinks
+				 * @return the array of the found hyperlinks. may be @c null. the caller must delete the elements and the array
+				 */
+				virtual IHyperlink** detectHyperlinks(const text::Region& region, std::size_t& numberOfHyperlinks) const throw() = 0;
+			private:
+				/// Installs the detector.
+				virtual void install(TextViewer& textViewer) = 0;
+				/// Uninstalls the detector.
+				virtual void uninstall() = 0;
+				friend class TextViewer;
+				friend class ASCENSION_SHARED_POINTER<IHyperlinkDetector>;
+			};
+
 			/**
-			 * Returns the description of the link and provides the hover cursor.
-			 * @param[in] region the region of the link
-			 * @param[in] text the label text of the link
-			 * @param[out] description the text of the popup message
-			 * @param[out] hoverCursor the hover cursor. the callee should manage life cycle of the cursor
-			 * @return true to provide the link information. if false, nothing will be happened
+			 * URL hyperlink detector.
+			 * @note This class is not intended to be subclassed.
 			 */
-			virtual bool getLinkInformation(const text::Region& region, const String& text, String& description, HCURSOR& hoverCursor) = 0;
-			/**
-			 * Invokes the link.
-			 * @param region the region of the link
-			 * @param text the label text of the link
-			 */
-			virtual void invokeLink(const text::Region& region, const String& text) = 0;
-			friend class TextViewer;
-			friend class ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy>;
-		};
+			class URLHyperlinkDetector : virtual public IHyperlinkDetector, virtual public text::IDocumentListener {
+			public:
+				URLHyperlinkDetector() throw();
+				~URLHyperlinkDetector() throw();
+				std::auto_ptr<IHyperlink>	detectHyperlink(const text::Position& at) const throw();
+				IHyperlink**				detectHyperlinks(const text::Region& region, std::size_t& numberOfHyperlinks) const throw();
+			private:
+				// IHyperlinkDetector
+				void	install(TextViewer& textViewer);
+				void	uninstall();
+				// text.IDocumentListener
+				void	documentAboutToBeChanged(const text::Document& document);
+				void	documentChanged(const text::Document& document, const text::DocumentChange& change);
+			private:
+				class Hyperlink : virtual public IHyperlink {
+				public:
+					Hyperlink(const String& uri, const text::Region& region) throw();
+					String			getDescription() const throw();
+					text::Region	getRegion() const throw();
+					void			open();
+				private:
+					const String uri_;
+					const text::Region region_;
+				};
+				TextViewer* textViewer_;
+			};
+		}
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		namespace internal {class TextViewerAccessibleProxy;}
@@ -471,20 +518,21 @@ namespace ascension {
 			void	removeInputStatusListener(ITextViewerInputStatusListener& listener);
 			void	removeViewportListener(IViewportListener& listener);
 			void	setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) throw();
-			void	setLinkTextStrategy(ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> newStrategy) throw();
-			void	setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy> newStrategy);
+			void	setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) throw();
+			void	setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
-			const Configuration&				getConfiguration() const throw();
-			text::Document&						getDocument();
-			const text::Document&				getDocument() const;
-			presentation::Presentation&			getPresentation() throw();
-			const presentation::Presentation&	getPresentation() const throw();
-			ulong								getScrollRate(bool horizontal) const throw();
-			layout::TextRenderer&				getTextRenderer() throw();
-			const layout::TextRenderer&			getTextRenderer() const throw();
-			const VerticalRulerConfiguration&	getVerticalRulerConfiguration() const throw();
-			void								setConfiguration(const Configuration* general,
-													const VerticalRulerConfiguration* verticalRuler);
+			const Configuration&					getConfiguration() const throw();
+			text::Document&							getDocument();
+			const text::Document&					getDocument() const;
+			const hyperlink::IHyperlinkDetector*	getHyperlinkDetector() const throw();
+			presentation::Presentation&				getPresentation() throw();
+			const presentation::Presentation&		getPresentation() const throw();
+			ulong									getScrollRate(bool horizontal) const throw();
+			layout::TextRenderer&					getTextRenderer() throw();
+			const layout::TextRenderer&				getTextRenderer() const throw();
+			const VerticalRulerConfiguration&		getVerticalRulerConfiguration() const throw();
+			void									setConfiguration(const Configuration* general,
+														const VerticalRulerConfiguration* verticalRuler);
 			// auto scroll
 			void	beginAutoScroll();
 			bool	endAutoScroll();
@@ -532,7 +580,6 @@ namespace ascension {
 			void			getFirstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw();
 			length_t		getNumberOfVisibleLines() const throw();
 			length_t		getNumberOfVisibleColumns() const throw();
-			bool			getPointedLinkText(text::Region& region, manah::AutoBuffer<Char>& text) const;
 			::RECT			getTextAreaMargins() const throw();
 			HitTestResult	hitTest(const ::POINT& pt) const;
 
@@ -776,8 +823,8 @@ namespace ascension {
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;
 			Char* tipText_;
-			ASCENSION_SHARED_POINTER<IMouseInputStrategy> mouseInputStrategy_;
-			ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> linkTextStrategy_;
+			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
+			ascension::internal::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
@@ -974,6 +1021,9 @@ inline void TextViewer::getFirstVisibleLine(length_t* logicalLine, length_t* vis
 		*visualLine = scrollInfo_.getY();
 }
 
+/// Returns the hyperlink detector. May return @c null.
+inline const hyperlink::IHyperlinkDetector* TextViewer::getHyperlinkDetector() const throw() {return hyperlinkDetector_.get();}
+
 /**
  * Returns the number of the drawable columns in the window.
  * @return the number of columns
@@ -1060,10 +1110,11 @@ inline void TextViewer::removeViewportListener(IViewportListener& listener) {vie
 inline void TextViewer::setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
 
 /**
- * Sets the link text strategy.
- * @param newStrategy the new strategy or @c null
+ * Sets the hyperlink detector.
+ * @param newDetector the new detector or @c null
+ * @param delegateOwnership set true to transfer the ownership into the callee
  */
-inline void TextViewer::setLinkTextStrategy(ASCENSION_SHARED_POINTER<IViewerLinkTextStrategy> newStrategy) {linkTextStrategy_ = newStrategy;}
+inline void TextViewer::setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) {hyperlinkDetector_.reset(newDetector, delegateOwnership);}
 
 /// Returns the vertical ruler's configurations.
 inline const TextViewer::VerticalRulerConfiguration& TextViewer::VerticalRulerDrawer::getConfiguration() const throw() {return configuration_;}

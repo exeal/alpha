@@ -1883,18 +1883,18 @@ void DocumentCharacterIterator::doLast() {
 	seek(region_.second);
 }
 
-/// @see unicode#CharacterIterator#equals
-bool DocumentCharacterIterator::equals(const CharacterIterator& rhs) const {
+/// @see unicode#CharacterIterator#doEquals
+bool DocumentCharacterIterator::doEquals(const CharacterIterator& rhs) const {
 	return p_ == static_cast<const DocumentCharacterIterator&>(rhs).p_;
 }
 
-/// @see unicode#CharacterIterator#less
-bool DocumentCharacterIterator::less(const CharacterIterator& rhs) const {
+/// @see unicode#CharacterIterator#doLess
+bool DocumentCharacterIterator::doLess(const CharacterIterator& rhs) const {
 	return p_ < static_cast<const DocumentCharacterIterator&>(rhs).p_;
 }
 
-/// @see unicode#CharacterIterator#next
-void DocumentCharacterIterator::next() {
+/// @see unicode#CharacterIterator#doNext
+void DocumentCharacterIterator::doNext() {
 	if(!hasNext())
 //		throw out_of_range("the iterator is at the last.");
 		return;
@@ -1906,8 +1906,8 @@ void DocumentCharacterIterator::next() {
 		++p_.column;
 }
 
-/// @see unicode#CharacterIterator#previous
-void DocumentCharacterIterator::previous() {
+/// @see unicode#CharacterIterator#doPrevious
+void DocumentCharacterIterator::doPrevious() {
 	if(!hasPrevious())
 //		throw out_of_range("the iterator is at the first.");
 		return;

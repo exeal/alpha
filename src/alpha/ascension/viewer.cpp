@@ -637,7 +637,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
 	autoScrollOriginMark_->create(*this);
 
-	setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy>());
+	setMouseInputStrategy(0, true);
 
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
@@ -1013,6 +1013,7 @@ int TextViewer::getDisplayXOffset(length_t line) const {
 	return indent - static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
 }
 
+#if 0
 /**
  * Returns the text and the region of a link near the cursor.
  * @param[out] region the region of the link
@@ -1074,6 +1075,7 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 	}
 	return false;
 }
+#endif
 
 /**
  * Returns the margins of text area.
@@ -2119,7 +2121,7 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 
 	// リンクのポップアップやカーソルを変える場合
 	const HitTestResult htr = hitTest(pt);
-	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
+/*	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
 		Region region;
 		AutoBuffer<Char> uri;
 		if(getPointedLinkText(region, uri)) {	// URI
@@ -2144,7 +2146,7 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 			hideToolTip();
 		}
 	}
-
+*/
 	if(!cursorChanged && mouseInputStrategy_.get() != 0)
 		cursorChanged = mouseInputStrategy_->showCursor(pt);
 
@@ -2699,17 +2701,18 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> 
  * Sets the mouse input strategy. An instance of @c TextViewer has the default strategy implemented
  * by @c DefaultMouseInputStrategy class as the construction.
  * @param newStrategy the new strategy or @c null
+ * @param delegateOwnership set true to transfer the ownership into the callee
  * @throw std#logic_error the window is not created yet
  */
-void TextViewer::setMouseInputStrategy(ASCENSION_SHARED_POINTER<IMouseInputStrategy> newStrategy) {
+void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
 	if(!isWindow())
 		throw logic_error("The window is not created yet.");
 	if(mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->uninstall();
-	if(newStrategy.get() != 0)
-		mouseInputStrategy_ = newStrategy;
+	if(newStrategy != 0)
+		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true));
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), true);
 	mouseInputStrategy_->install(*this);
 }
 
@@ -4413,4 +4416,87 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 		}
 	}
 	return false;
+}
+
+
+// hyperlink.URLHyperlinkDetector ///////////////////////////////////////////
+
+/// Constructor.
+hyperlink::URLHyperlinkDetector::URLHyperlinkDetector() throw() : textViewer_(0) {
+}
+
+/// Destructor.
+hyperlink::URLHyperlinkDetector::~URLHyperlinkDetector() throw() {
+}
+
+/// @see IHyperlinkDetector#detectHyperlink
+auto_ptr<hyperlink::IHyperlink> hyperlink::URLHyperlinkDetector::detectHyperlink(const Position& at) const {
+	return auto_ptr<hyperlink::IHyperlink>(0);
+}
+
+/// @see IHyperlinkDetector#detectHyperlinks
+hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const Region& region, size_t& numberOfHyperlinks) const {
+	list<IHyperlink*> eaten;
+	DocumentCharacterIterator i(textViewer_->getDocument(), region);
+	while(i.hasNext()) {
+		const Char* const bol = i.getLine().data();
+		const Char* const e = rules::URIDetector::eatURL(bol + i.tell().column, i.getLine().data() + i.getLine().length(), true);
+		if(e == bol + i.tell().column)
+			++i;
+		else {
+			const Position next(i.tell().line, e - bol);
+			eaten.push_back(new Hyperlink(String(bol + i.tell().column, e), Region(i.tell(), next)));
+			i.seek(Position(next));
+		}
+	}
+	if(0 == (numberOfHyperlinks = eaten.size()))
+		return 0;
+	IHyperlink** result = new IHyperlink*[numberOfHyperlinks];
+	copy(eaten.begin(), eaten.end(), result);
+	return result;
+}
+
+/// @see IDocumentListener#documentAboutToBeChanged
+void hyperlink::URLHyperlinkDetector::documentAboutToBeChanged(const Document& document) {
+}
+
+/// @see IDocumentListener#documentChanged
+void hyperlink::URLHyperlinkDetector::documentChanged(const Document& document, const DocumentChange& change) {
+}
+
+/// @see IHyperlinkDetector#install
+void hyperlink::URLHyperlinkDetector::install(TextViewer& textViewer) {
+	(textViewer_ = &textViewer)->getDocument().addListener(*this);
+}
+
+/// @see IHyperlinkDetector#uninstall
+void hyperlink::URLHyperlinkDetector::uninstall() {
+	textViewer_->getDocument().removeListener(*this);
+	textViewer_ = 0;
+}
+
+
+// hyperlink.URLHyperlinkDetector.Hyperlink /////////////////////////////////
+
+/**
+ * Constructor.
+ * @param uri the URI string of the hyperlink
+ * @param region the region covers the hyperlink
+ */
+hyperlink::URLHyperlinkDetector::Hyperlink::Hyperlink(const String& uri, const Region& region) throw() : uri_(uri), region_(region) {
+}
+
+/// @see IHyperlink#getDescription
+String hyperlink::URLHyperlinkDetector::Hyperlink::getDescription() const throw() {
+	return uri_;
+}
+
+/// @see IHyperlink#getRegion
+Region hyperlink::URLHyperlinkDetector::Hyperlink::getRegion() const throw() {
+	return region_;
+}
+
+/// @see IHyperlink#open
+void hyperlink::URLHyperlinkDetector::Hyperlink::open() {
+	::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
 }

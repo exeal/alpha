@@ -396,17 +396,17 @@ namespace ascension {
 				const Colors color;				///< Color to render.
 			};
 			/// Bidirectional iterator enumerates style runs in a line.
-			class StyledSegmentIterator : public BidirectionalIteratorFacade<StyledSegmentIterator, const presentation::StyledText> {
+			class StyledSegmentIterator {
 			public:
 				// constructors
 				StyledSegmentIterator(const StyledSegmentIterator& rhs) throw();
 				// operators
 				StyledSegmentIterator&	operator=(const StyledSegmentIterator& rhs) throw();
-			protected:
-				reference dereference() const;
-				void increment() {++p_;}
-				void decrement() {--p_;}
-				bool equals(const StyledSegmentIterator& rhs) const {return p_ == rhs.p_;}
+				// methods
+				const presentation::StyledText&	current() const throw();
+				bool							equals(const StyledSegmentIterator& rhs) const throw();
+				StyledSegmentIterator&			next() throw();
+				StyledSegmentIterator&			previous() throw();
 			private:
 				explicit StyledSegmentIterator(const internal::Run*& start) throw();
 				const internal::Run** p_;
@@ -726,6 +726,15 @@ inline bool LineLayout::isDisposed() const throw() {return runs_ == 0;}
 
 /// Asignment operator.
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) throw() {p_ = rhs.p_;}
+
+/// Returns true if the two iterators address the same segment.
+inline bool LineLayout::StyledSegmentIterator::equals(const StyledSegmentIterator& rhs) const throw() {return p_ == rhs.p_;}
+
+/// Moves to the next.
+inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::next() throw() {++p_; return *this;}
+
+/// Moves to the previous.
+inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::previous() throw() {--p_; return *this;}
 
 /// Returns the document.
 inline const text::Document& LineLayoutBuffer::getDocument() const throw() {return document_;}

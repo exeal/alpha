@@ -21,9 +21,9 @@
 
 
 // タイトルバーとかに使うアプリケーション名
-#define __WTIMESTAMP__		_T(__TIMESTAMP__)
-#define IDS_APPNAME			L"Alpha"
-#define IDS_APPVERSION		L"0.7.90.0"
+#define __WTIMESTAMP__	_T(__TIMESTAMP__)
+#define IDS_APPNAME		L"Alpha"
+#define IDS_APPVERSION	L"0.7.94.0"
 #ifdef _DEBUG
 #	define IDS_APPVERSIONINFO	L"debug version [" __WTIMESTAMP__ L"]"
 #else
@@ -92,7 +92,7 @@ public:
 	/// Alpha のアプリケーションクラス
 	class Alpha : public manah::win32::ProfilableApplication<> {
 	public:
-		// コンストラクタ
+		// constructors
 		Alpha();
 		~Alpha() throw();
 		// 下位オブジェクト
@@ -107,43 +107,41 @@ public:
 		void							getScriptSystem(ankh::ScriptSystem*& scriptSystem) throw();
 		void							getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
 		manah::win32::ui::StatusBar&	getStatusBar() throw();
-		// 属性
+		// attributes
 		const std::wstring*	getCodePageName(ascension::encodings::CodePage cp) const;
 		static Alpha&		getInstance();
 		void				getTextEditorFont(::LOGFONTW& font) const throw();
 		void				setFont(const ::LOGFONTW& font);
 		void				setStatusText(const wchar_t* text, HFONT font = 0);
-		// 検索
+		// searchs
 		void	replaceAll();
 		void	replaceAndSearchNext();
 		void	searchAndBookmarkAll();
 		bool	searchNext(bool forward, bool messageOnFailure);
 		void	showSearchDialog();
-		// 操作
+		// operations
 		void	loadKeyBinds(const std::wstring& schemeName);
 		int		messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
 		void	parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
 
 	private:
-		void			changeFont();
-		LRESULT			dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-		bool			handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
-		bool			initInstance(int showCommand);
-		void			loadINISettings();
-		bool			preTranslateMessage(const ::MSG& msg);
-		void			readProfileList(const wchar_t* section, const wchar_t* key,
-							std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void			readProfileSet(const wchar_t* section, const wchar_t* key,
-							std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void			registerScriptEngineAssociations();
-		void			saveINISettings();
-		void			setupMenus();
-		void			setupToolbar();
-		void			showRegexSearchError(const boost::regex_error& e);
-		void			updateStatusBarPaneSize();
-		void			updateTitleBar();
+		void	changeFont();
+		LRESULT	dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
+		bool	initInstance(int showCommand);
+		void	loadINISettings();
+		bool	preTranslateMessage(const ::MSG& msg);
+		void	readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
+		void	readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
+		void	registerScriptEngineAssociations();
+		void	saveINISettings();
+		void	setupMenus();
+		void	setupToolbar();
+		void	showRegexSearchError(const boost::regex_error& e);
+		void	updateStatusBarPaneSize();
+		void	updateTitleBar();
 
-		// メッセージハンドラ
+		// message handlers
 	protected:
 		void	onToolExecuteCommand();
 	protected:
@@ -174,16 +172,16 @@ public:
 
 	private:
 		static Alpha* instance_;	// ただ 1 つのインスタンス
-		// ウィンドウ
+		// child windows
 		manah::win32::ui::Rebar rebar_;				// レバー
 		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
 		manah::win32::ui::StatusBar statusBar_;		// ステータスバー
 		std::auto_ptr<ui::SearchDialog> searchDialog_;		// [検索と置換] ダイアログ
 		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
-		// GDI オブジェクト
+		// GDI objects
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
-		// 機能とコマンド
+		// features and commands
 		ankh::ScriptSystem* scriptSystem_;
 		std::auto_ptr<command::CommandManager> commandManager_;
 		command::KeyboardMap keyboardMap_;			// 使用中のキーボードマップ
@@ -204,37 +202,37 @@ public:
 	};
 
 
-	/// バッファリストを返す
+	/// Returns the buffer list.
 	inline BufferList& Alpha::getBufferList() throw() {return *buffers_;}
 
-	/// バッファリストを返す
+	/// Returns the buffer list.
 	inline const BufferList& Alpha::getBufferList() const throw() {return *buffers_;}
 
-	/// コマンド管理オブジェクトを返す
+	/// Returns the command manager.
 	inline command::CommandManager& Alpha::getCommandManager() throw() {return *commandManager_;}
 
-	/// コマンド管理オブジェクトを返す
+	/// Returns the command manager.
 	inline const command::CommandManager& Alpha::getCommandManager() const throw() {return *commandManager_;}
 
-	/// 唯一のアプリケーションオブジェクトを返す
+	/// Returns the singleton application object.
 	inline Alpha& Alpha::getInstance() {assert(instance_ != 0); return *instance_;}
 
-	/// キー割り当てオブジェクトを返す
+	/// Returns the keyboard map.
 	inline command::KeyboardMap& Alpha::getKeyboardMap() throw() {return keyboardMap_;}
 
-	/// キー割り当てオブジェクトを返す
+	/// Returns the keyboard map.
 	inline const command::KeyboardMap& Alpha::getKeyboardMap() const throw() {return keyboardMap_;}
 
-	/// MRU 管理オブジェクトを返す
+	/// Returns the MRU manager.
 	inline MRUManager& Alpha::getMRUManager() throw() {return *mruManager_;}
 
-	/// MRU 管理オブジェクトを返す
+	/// Returns the MRU manager.
 	inline const MRUManager& Alpha::getMRUManager() const throw() {return *mruManager_;}
 
 	/// Returns the status bar.
 	inline manah::win32::ui::StatusBar& Alpha::getStatusBar() throw() {return statusBar_;}
 
-	/// テキストエディタに使うフォントを返す
+	/// Returns the font for text editors.
 	inline void Alpha::getTextEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}
 
 } // namespace alpha
