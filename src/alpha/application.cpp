@@ -14,6 +14,7 @@
 //#include "DebugDlg.h"
 #include "ascension/text-editor.hpp"
 #include "ascension/regex.hpp"
+#include "ankh/startup-handler.hpp"
 #include "../manah/win32/dc.hpp"
 #include "../manah/win32/gdi-object.hpp"
 #include "../manah/win32/ui/wait-cursor.hpp"
@@ -165,6 +166,14 @@ Alpha::Alpha() : editorFont_(0), scriptSystem_(new ankh::ScriptSystem), mruManag
 	bookmarkDialog_.reset(new ui::BookmarkDialog);
 	registerScriptEngineAssociations();
 	onSettingChange(0, 0);	// statusFont_ の初期化
+
+	// load startup.xml
+	::WCHAR fileName[MAX_PATH];
+	wcscpy(fileName, getModuleFileName());
+	::WCHAR* const separator = wcsrchr(fileName, _T('\\'));
+	assert(separator != 0);
+	wcscpy(separator + 1, L"startup.xml");
+	ankh::StartupHandler sh(*scriptSystem_, fileName);
 }
 
 /// デストラクタ

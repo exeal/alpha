@@ -92,6 +92,13 @@ namespace ascension {
 			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		};
 
+		/// A concrete rule detects URI strings.
+		class URIRule : public Rule {
+		public:
+			URIRule(Token::ID id) throw();
+			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+		};
+
 		/// A concrete rule detects the registered words.
 		class WordRule : protected Rule {
 		public:

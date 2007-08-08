@@ -827,8 +827,8 @@ namespace ascension {
 
 		/**
 		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
-		 * the end of line, the dereferece operator returns @c LINE_SEPARATOR. Otherwise, if an
-		 * iterator at the end of document, the dereference operator returns @c NONCHARACTER.
+		 * the end of line, @c #current method returns @c LINE_SEPARATOR. Otherwise, if an
+		 * iterator at the end of document, returns @c CharacterIterator#DONE.
 		 * @note This class is not intended to subclass.
 		 */
 		class DocumentCharacterIterator : public unicode::CharacterIterator {
@@ -839,35 +839,27 @@ namespace ascension {
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
-			// operators
-			DocumentCharacterIterator&		operator++();
-			DocumentCharacterIterator&		operator--();
-			const DocumentCharacterIterator	operator++(int);
-			const DocumentCharacterIterator	operator--(int);
-			DocumentCharacterIterator&		operator+=(signed_length_t offset) throw();
-			DocumentCharacterIterator&		operator-=(signed_length_t offset) throw();
-			DocumentCharacterIterator		operator+(signed_length_t offset) const throw();
-			DocumentCharacterIterator		operator-(signed_length_t offset) const throw();
 			// attributes
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
 			const Region&	getRegion() const throw();
-			bool			hasNext() const throw();
-			bool			hasPrevious() const throw();
 			const Position&	tell() const throw();
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
-		private:
+
 			// CharacterIterator
+			CodePoint	current() const throw();
+			bool		hasNext() const throw();
+			bool		hasPrevious() const throw();
+		private:
 			void								assign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	clone() const;
-			CodePoint							current() const throw();
 			void								doFirst();
 			void								doLast();
-			bool								equals(const CharacterIterator& rhs) const;
-			bool								less(const CharacterIterator& rhs) const;
-			void								next();
-			void								previous();
+			bool								doEquals(const CharacterIterator& rhs) const;
+			bool								doLess(const CharacterIterator& rhs) const;
+			void								doNext();
+			void								doPrevious();
 		private:
 			const Document* document_;
 			Region region_;
@@ -1416,26 +1408,6 @@ inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
 		throw std::logic_error("the partitioner is not connected any document.");
 	document_->partitioningChanged(changedRegion);	// $friendly-access
 }
-
-/// Pre-fix increment operator.
-inline DocumentCharacterIterator& DocumentCharacterIterator::operator++() {unicode::CharacterIterator::operator++(); return *this;}
-
-/// Pre-fix decrement operator.
-inline DocumentCharacterIterator& DocumentCharacterIterator::operator--() {unicode::CharacterIterator::operator--(); return *this;}
-
-/// Post-fix increment operator.
-inline const DocumentCharacterIterator DocumentCharacterIterator::operator++(int) {DocumentCharacterIterator temp(*this); ++*this; return temp;}
-
-/// Post-fix decrement operator.
-inline const DocumentCharacterIterator DocumentCharacterIterator::operator--(int) {DocumentCharacterIterator temp(*this); --*this; return temp;}
-
-/// Additive operator.
-inline DocumentCharacterIterator DocumentCharacterIterator::operator+(
-	signed_length_t offset) const throw() {DocumentCharacterIterator temp(*this); return temp += offset;}
-
-/// Additive operator.
-inline DocumentCharacterIterator DocumentCharacterIterator::operator-(
-	signed_length_t offset) const throw() {DocumentCharacterIterator temp(*this); return temp -= offset;}
 
 /// Returns the document.
 inline const Document* DocumentCharacterIterator::getDocument() const throw() {return document_;}

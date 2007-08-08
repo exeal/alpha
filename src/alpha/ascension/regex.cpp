@@ -7,14 +7,14 @@
 #ifndef ASCENSION_NO_REGEX
 #include "stdafx.h"
 #include "regex.hpp"
-#include "internal.hpp"	// internal::SharedLibrary
+#include "internal.hpp"	// internal.SharedLibrary
 #include "encoder.hpp"
 #ifndef ASCENSION_NO_MIGEMO
 #endif /* !ASCENSION_NO_MIGEMO */
 #ifdef _DEBUG
-#	pragma comment(lib, "libboost_regex-vc71-sgd-1_33.lib")
+#	pragma comment(lib, "libboost_regex-vc71-sgd-1_34_1.lib")
 #else
-#	pragma comment(lib, "libboost_regex-vc71-s-1_33.lib")
+#	pragma comment(lib, "libboost_regex-vc71-s-1_34_1.lib")
 #endif /* _DEBUG */
 
 using namespace ascension;

@@ -26,7 +26,7 @@ namespace {
 	};
 }
 
-// internal::HashTable //////////////////////////////////////////////////////
+// internal.HashTable ///////////////////////////////////////////////////////
 
 namespace ascension {
 	namespace rules {
@@ -140,7 +140,21 @@ inline ulong HashTable::getHashCode(CharacterSequence first, CharacterSequence l
  * @return メールアドレスの終端
  */
 const Char* URIDetector::eatMailAddress(const Char* first, const Char* last, bool) {
-	// このメソッドは "/[\w\d][\w\d\.\-_]*@[\w\d\-_]+(\.[\w\d\-_]+)+/" のようなパターンマッチを行う
+//	p.matches(first, last);
+/*
+	namespace xp = boost::xpressive;
+	static const xp::wcregex pattern = xp::bos
+		>> xp::set[xp::_w | xp::_d]
+		>> *xp::set[xp::_w | xp::_d | '.' | '-' | '_']
+		>> '@'
+		>> +xp::set[xp::_w | xp::_d | '-' | '_']
+		>> +('.' >> +xp::set[xp::_w | xp::_d | '-' | '_']);
+	xp::match_results<const Char*> m;
+	if(!xp::regex_search(first, last, m, pattern))
+		return first;
+	return first + m.length();
+*/
+	// このメソッドは "/[\w\d][\w\d\.\-_]*@[\w\d\-_]+(?:\.[\w\d\-_]+)+/" のようなパターンマッチを行う
 #define IS_ALNUM(ch)					\
 	(((ch) >= L'A' && (ch) <= L'Z')		\
 	|| ((ch) >= L'a' && (ch) <= L'z')	\
@@ -368,6 +382,30 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 	if(e < last && ((*e >= L'0' && *e <= L'9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
 		return auto_ptr<Token>(0);
 
+	auto_ptr<Token> temp(new Token);
+	temp->id = getTokenID();
+	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
+	temp->region.first.column = scanner.getPosition().column;
+	temp->region.second.column = temp->region.first.column + e - first;
+	return temp;
+}
+
+
+// URIRule //////////////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param id the identifier of the token which will be returned by the rule
+ */
+URIRule::URIRule(Token::ID id) throw() : Rule(id, true) {
+}
+
+/// @see Rule#parse
+auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+	assert(first < last);
+	const Char* const e = URIDetector::eatURL(first, last, true);
+	if(e == first)
+		return auto_ptr<Token>(0);
 	auto_ptr<Token> temp(new Token);
 	temp->id = getTokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;

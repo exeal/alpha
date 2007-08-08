@@ -1637,7 +1637,8 @@ LineLayout::StyledSegmentIterator::StyledSegmentIterator(const Run*& start) thro
 LineLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) throw() : p_(rhs.p_) {
 }
 
-LineLayout::StyledSegmentIterator::reference LineLayout::StyledSegmentIterator::dereference() const throw() {
+/// Returns the current segment.
+const StyledText& LineLayout::StyledSegmentIterator::current() const throw() {
 	return **p_;
 }
 

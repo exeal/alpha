@@ -350,12 +350,6 @@
 						<Tool
 							Name="VCCLCompilerTool"/>
 					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\Ascension\document.cpp">
@@ -454,6 +448,9 @@
 					RelativePath=".\Ascension\content-assist.hpp">
 				</File>
 				<File
+					RelativePath=".\ascension\dfa.hpp">
+				</File>
+				<File
 					RelativePath=".\Ascension\document.hpp">
 				</File>
 				<File
@@ -519,12 +516,18 @@
 				<File
 					RelativePath=".\ankh\core.cpp">
 				</File>
+				<File
+					RelativePath=".\ankh\startup-handler.cpp">
+				</File>
 			</Filter>
 			<Filter
 				Name="Header Files"
 				Filter="h;hpp;hxx;hm;inl">
 				<File
 					RelativePath=".\ankh\core.hpp">
+				</File>
+				<File
+					RelativePath=".\ankh\startup-handler.hpp">
 				</File>
 			</Filter>
 		</Filter>

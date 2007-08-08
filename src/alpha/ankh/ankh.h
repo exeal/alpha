@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 6.00.0361 */
-/* at Wed Jul 25 23:12:40 2007
+/* at Sat Aug 04 18:57:22 2007
  */
 /* Compiler settings for .\ankh\ankh.idl:
     Oicf, W4, Zp8, env=Win32 (32b run)
