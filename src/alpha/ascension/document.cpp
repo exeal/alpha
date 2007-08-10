@@ -1856,11 +1856,6 @@ void DocumentCharacterIterator::assign(const CharacterIterator& rhs) {
 	region_ = r.region_;
 }
 
-/// @see unicode#CharacterIterator#clone
-auto_ptr<CharacterIterator> DocumentCharacterIterator::clone() const {
-	return auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
-}
-
 /// @see unicode#CharacterIterator#current
 CodePoint DocumentCharacterIterator::current() const throw() {
 	if(p_ == region_.second)
@@ -1871,6 +1866,11 @@ CodePoint DocumentCharacterIterator::current() const throw() {
 		return (surrogates::isHighSurrogate((*line_)[p_.column])
 			&& p_.column + 1 < line_->length() && surrogates::isLowSurrogate((*line_)[p_.column + 1])) ?
 			surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
+}
+
+/// @see unicode#CharacterIterator#doClone
+auto_ptr<CharacterIterator> DocumentCharacterIterator::doClone() const {
+	return auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
 }
 
 /// @see unicode#CharacterIterator#doFirst

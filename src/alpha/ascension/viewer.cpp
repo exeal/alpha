@@ -1778,7 +1778,8 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 					texteditor::commands::TextInputCommand(*this, text.get()).execute();
 				else {
 					Document& document = getDocument();
-					document.erase(*caret_, (++DocumentCharacterIterator(document, *caret_)).tell());
+					document.erase(*caret_,
+						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document, *caret_).next()).tell());
 					document.insert(*caret_, String(1, static_cast<Char>(wParam)));
 					document.endSequentialEdit();
 					imeComposingCharacter_ = false;
@@ -1793,7 +1794,8 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 		if(toBoolean(lParam & CS_INSERTCHAR)) {
 			Document& document = getDocument();
 			if(imeComposingCharacter_)
-				document.erase(*caret_, (++DocumentCharacterIterator(document, *caret_)).tell());
+				document.erase(*caret_,
+					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document, *caret_).next()).tell());
 			else
 				getDocument().beginSequentialEdit();			
 			document.insert(*caret_, String(1, static_cast<Char>(wParam)));	
@@ -4358,9 +4360,10 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 	if(startColumn != 0) {
 		DocumentCharacterIterator i(document, Region(max(partition.region.getTop(), Position(position.line, 0)), position), position);
 		do {
-			--i;
-			if(!syntax.isIdentifierContinueCharacter(*i)) {
-				start = (++i).tell().column;
+			i.previous();
+			if(!syntax.isIdentifierContinueCharacter(i.current())) {
+				i.next();
+				start = i.tell().column;
 				break;
 			} else if(position.column - i.tell().column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 				return false;
@@ -4376,10 +4379,12 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 		DocumentCharacterIterator i(document, Region(position,
 			min(partition.region.getBottom(), Position(position.line, document.getLineLength(position.line)))), position);
 		while(i.hasNext()) {
-			if(!syntax.isIdentifierContinueCharacter(*i)) {
+			if(!syntax.isIdentifierContinueCharacter(i.current())) {
 				end = i.tell().column;
 				break;
-			} else if((++i).tell().column - position.column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+			}
+			i.next();
+			if(i.tell().column - position.column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 				return false;
 		}
 		if(!i.hasNext())
@@ -4442,7 +4447,7 @@ hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const 
 		const Char* const bol = i.getLine().data();
 		const Char* const e = rules::URIDetector::eatURL(bol + i.tell().column, i.getLine().data() + i.getLine().length(), true);
 		if(e == bol + i.tell().column)
-			++i;
+			i.next();
 		else {
 			const Position next(i.tell().line, e - bol);
 			eaten.push_back(new Hyperlink(String(bol + i.tell().column, e), Region(i.tell(), next)));
