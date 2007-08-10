@@ -853,7 +853,7 @@ namespace ascension {
 			bool		hasPrevious() const throw();
 		private:
 			void								assign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	clone() const;
+			std::auto_ptr<CharacterIterator>	doClone() const;
 			void								doFirst();
 			void								doLast();
 			bool								doEquals(const CharacterIterator& rhs) const;

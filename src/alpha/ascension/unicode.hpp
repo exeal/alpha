@@ -190,10 +190,11 @@ namespace ascension {
 			bool			isCloneOf(const CharacterIterator& other) const throw();
 			bool			less(const CharacterIterator& rhs) const;
 			// operations
-			CharacterIterator&	first();
-			CharacterIterator&	last();
-			CharacterIterator&	next();
-			CharacterIterator&	previous();
+			std::auto_ptr<CharacterIterator>	clone() const;
+			CharacterIterator&					first();
+			CharacterIterator&					last();
+			CharacterIterator&					next();
+			CharacterIterator&					previous();
 
 			// virtual methods the concrete class should implement
 		public:
@@ -206,8 +207,8 @@ namespace ascension {
 		protected:
 			/// Assigns the other iterator.
 			virtual void assign(const CharacterIterator& rhs) = 0;
-			/// Creates a copy of the iterator. This must be implemented by copy-constructor of @c CharacterIterator.
-			virtual std::auto_ptr<CharacterIterator> clone() const = 0;
+			/// Called by @c #clone method.
+			virtual std::auto_ptr<CharacterIterator> doClone() const = 0;
 			/// Called by @c #equals method.
 			virtual bool doEquals(const CharacterIterator& rhs) const = 0;
 			/// Called by @c #first method.
@@ -249,7 +250,7 @@ namespace ascension {
 			bool		hasPrevious() const;
 		private:
 			void 								assign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	clone() const;
+			std::auto_ptr<CharacterIterator>	doClone() const;
 			void								doFirst();
 			bool 								doEquals(const CharacterIterator& rhs) const;
 			void								doLast();
@@ -292,12 +293,12 @@ namespace ascension {
 			CodePoint operator->() const {return operator*();}
 			/// Pre-fix increment operator.
 			ConcreteIterator& operator++() {if(!getConcrete().hasNext()) throw std::logic_error("The iterator is last.");
-				++p_; if(getConcrete().hasNext() && surrogates::isLowSurrogate(*p_)) ++p_;}
+				++p_; if(getConcrete().hasNext() && surrogates::isLowSurrogate(*p_)) ++p_; return getConcrete();}
 			/// Post-fix increment operator.
 			const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
 			/// Pre-fix decrement operator.
 			ConcreteIterator& operator--() {if(!getConcrete().hasPrevious()) throw std::logic_error("The iterator is first.");
-				--p_; if(getConcrete().hasPrevious() && surrogates::isLowSurrogate(*p_)) --p_;}
+				--p_; if(getConcrete().hasPrevious() && surrogates::isLowSurrogate(*p_)) --p_; return getConcrete();}
 			/// Post-fix decrement operator.
 			const ConcreteIterator operator--(int) {ConcreteIterator temp(*this); --*this; return temp;}
 			/// Equality operator.
@@ -398,7 +399,7 @@ namespace ascension {
 		 * @see UTF16To32Iterator
 		 */
 		template<class BaseIterator = const CodePoint*>
-		class UTF32To16Iterator : public BidirectionalIteratorFacade<UTF32To16Iterator<BaseIterator>,
+		class UTF32To16Iterator : public std::iterator<std::bidirectional_iterator_tag,
 				Char, typename std::iterator_traits<BaseIterator>::difference_type, const Char*, const Char> {
 		public:
 			/// Default constructor.
@@ -414,11 +415,11 @@ namespace ascension {
 			/// Dereference operator.
 			Char operator->() const {return operator*();}
 			/// Pre-fix increment operator.
-			UTF32To16Iterator& operator++() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000U) ++p_; else high_ = false;}
+			UTF32To16Iterator& operator++() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000U) ++p_; else high_ = false; return *this;}
 			/// Post-fix increment operator.
 			const UTF32To16Iterator operator++(int) {UTF32To16Iterator temp(*this); ++*this; return temp;}
 		  	/// Pre-fix decrement operator.
-			UTF32To16Iterator& operator--() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000U;}}
+			UTF32To16Iterator& operator--() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000U;} return *this;}
 			/// Post-fix decrement operator.
 			const UTF32To16Iterator operator--(int) {UTF32To16Iterator temp(*this); --*this; return temp;}
 			/// Equality operator.
@@ -901,6 +902,10 @@ inline CharacterIterator::~CharacterIterator() throw() {}
 /// Assignment operator.
 inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) {
 	assign(rhs); original_ = rhs.original_; offset_ = rhs.offset_; return *this;}
+
+/// Creates a copy of the iterator.
+inline std::auto_ptr<CharacterIterator> CharacterIterator::clone() const {
+	std::auto_ptr<CharacterIterator> p(doClone()); if(p.get() != 0) {p->offset_ = offset_; p->original_ = original_;} return p;}
 
 /// Returns true if the iterator equals @a rhs.
 inline bool CharacterIterator::equals(const CharacterIterator& rhs) const {verifyRHS(rhs); return doEquals(rhs);}

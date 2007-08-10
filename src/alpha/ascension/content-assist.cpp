@@ -131,7 +131,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 			i.seek(currentPartition.region.getBottom());
 		if(i.tell() >= currentPartition.region.getBottom()) {
 			if(i.tell().column == i.getLine().length())
-				++i;
+				i.next();
 			document.getPartitioner().getPartition(i.tell(), currentPartition);
 			continue;
 		}
@@ -143,14 +143,14 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 				identifiers.insert(String(s, e));	// automatically merged
 				i.seek(Position(i.tell().line, e - bol));
 			} else {
-				if(syntax_.isIdentifierContinueCharacter(*i))
+				if(syntax_.isIdentifierContinueCharacter(i.current()))
 					followingNIDs = true;
-				++i;
+				i.next();
 			}
 		} else {
-			if(!syntax_.isIdentifierContinueCharacter(*i))
+			if(!syntax_.isIdentifierContinueCharacter(i.current()))
 				followingNIDs = false;
-			++i;
+			i.next();
 		}
 	}
 	for(set<String>::const_iterator i(identifiers.begin()), e(identifiers.end()); i != e; ++i)

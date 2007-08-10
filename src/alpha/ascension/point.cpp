@@ -91,14 +91,16 @@ namespace {
 		if(offset == 0)
 			return position;
 		else if(cu == EditPoint::UTF16_CODE_UNIT) {
-			UTF32To16Iterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			UTF32To16Iterator<
+				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>
+			> i(DocumentCharacterIterator(document, position));
 			while(offset-- > 0)
 				++i;
-			return i.tell().tell();
+			return i.tell().base().tell();
 		} else if(cu == EditPoint::UTF32_CODE_UNIT) {
 			DocumentCharacterIterator i(document, position);
 			while(offset-- > 0)
-				++i;
+				i.next();
 			return i.tell();
 		} else if(cu == EditPoint::GRAPHEME_CLUSTER) {
 			GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
@@ -114,14 +116,16 @@ namespace {
 		if(offset == 0)
 			return position;
 		else if(cu == EditPoint::UTF16_CODE_UNIT) {
-			UTF32To16Iterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
+			UTF32To16Iterator<
+				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>
+			> i(DocumentCharacterIterator(document, position));
 			while(offset-- > 0)
 				--i;
-			return i.tell().tell();
+			return i.tell().base().tell();
 		} else if(cu == EditPoint::UTF32_CODE_UNIT) {
 			DocumentCharacterIterator i(document, position);
 			while(offset-- > 0)
-				--i;
+				i.previous();
 			return i.tell();
 		} else if(cu == EditPoint::GRAPHEME_CLUSTER) {
 			GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));

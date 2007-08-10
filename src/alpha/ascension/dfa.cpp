@@ -549,7 +549,8 @@ Pattern::Pattern(const String& pattern, const SyntaxOptions& options /* = NORMAL
 	if(pattern.empty())
 		throw invalid_argument("");
 	manah::AutoBuffer<CodePoint> temp(new CodePoint[pattern.length()]);
-	copy(StringCharacterIterator(pattern), StringCharacterIterator(pattern, pattern.end()), temp.get());
+	copy(BidirectionalIteratorFacade<StringCharacterIterator, CodePoint, CodePoint>(StringCharacterIterator(pattern)),
+		BidirectionalIteratorFacade<StringCharacterIterator, CodePoint, CodePoint>(StringCharacterIterator(pattern, pattern.end())), temp.get());
 	impl_ = new DFA(temp.get(), pattern.length());
 }
 

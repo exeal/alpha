@@ -153,7 +153,9 @@ namespace ascension {
 #endif /* !ASCENSION_NO_REGEX */
 			} pattern_;
 #ifndef ASCENSION_NO_REGEX
-			mutable regex::MatchResult<text::DocumentCharacterIterator>* lastResult_;
+			mutable regex::MatchResult<
+				BidirectionalIteratorFacade<text::DocumentCharacterIterator, CodePoint, CodePoint>
+			>* lastResult_;
 #endif /* !ASCENSION_NO_REGEX */
 			SearchOptions options_;
 			String temporaryPattern_;

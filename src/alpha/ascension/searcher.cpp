@@ -125,8 +125,8 @@ void LiteralPattern::compile(const Char* first, const Char* last,
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
 	auto_ptr<CharacterIterator> i(target.clone());
-	for(const int* e = first_; e < last_ && i->hasNext(); ++e, ++*i) {
-		if(*e != (caseSensitive_ ? **i : CaseFolder::fold(**i)))
+	for(const int* e = first_; e < last_ && i->hasNext(); ++e, i->next()) {
+		if(*e != (caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
 			return false;
 	}
 	return !i->hasNext();
@@ -143,37 +143,38 @@ bool LiteralPattern::search(const CharacterIterator& target,
 		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
 	// TODO: this implementation is just scrath.
 	auto_ptr<CharacterIterator> t(target.clone());
+	BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint> i(*t);
 	if(direction_ == FORWARD) {
-		advance(*t, last_ - first_ - 1);
-		for(const int* pattern; t->hasNext(); advance(*t,
-				max<length_t>(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], last_ - pattern))) {
+		advance(i, last_ - first_ - 1);
+		for(const int* pattern; t->hasNext(); advance(i,
+				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
 			for(pattern = last_ - 1;
-				(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-				--*t, --pattern) {
+				(caseSensitive_ ? *i : CaseFolder::fold(*i)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				--i, --pattern) {
 				if(pattern == first_) {
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(*matchedLast, last_ - first_);
+					advance(BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint>(*matchedLast), last_ - first_);
 					return true;
 				}
 			}
 		}
 	} else {
 		ptrdiff_t skipLength;
-		advance(*t, first_ - last_);
-		for(const int* pattern; ; advance(*t, -skipLength)) {
+		advance(i, first_ - last_);
+		for(const int* pattern; ; advance(i, -skipLength)) {
 			for(pattern = first_;
-					(caseSensitive_ ? **t : CaseFolder::fold(**t)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-					++*t, ++pattern) {
+					(caseSensitive_ ? *i : CaseFolder::fold(*i)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					++i, ++pattern) {
 				if(pattern == last_ - 1) {
-					advance(*t, first_ - last_ + 1);
+					advance(i, first_ - last_ + 1);
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(*matchedLast, last_ - first_);
+					advance(BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint>(*matchedLast), last_ - first_);
 					return true;
 				}
 			}
-			skipLength = max(lastOccurences_[caseSensitive_ ? **t : CaseFolder::fold(**t)], pattern - first_ + 1);
+			skipLength = max(lastOccurences_[caseSensitive_ ? *i : CaseFolder::fold(*i)], pattern - first_ + 1);
 			if(skipLength > t->getOffset() - target.getOffset())
 				break;
 		}
@@ -300,7 +301,7 @@ bool TextSearcher::isMigemoAvailable() const throw() {
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
-	const DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
+	DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
 	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
@@ -314,7 +315,9 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 			regex::Pattern::MatchOptions options(regex::Pattern::MULTILINE);
 			setupRegexRegionalMatchOptions(b, e, options);
 			delete lastResult_;
-			lastResult_ = pattern_.regex->matches(b, e, options).release();
+			lastResult_ = pattern_.regex->matches(
+				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>(b),
+				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>(e), options).release();
 			if(lastResult_ != 0 && !checkBoundary(b, e)) {
 				delete lastResult_;
 				lastResult_ = 0;
@@ -390,7 +393,7 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
 		for(DocumentCharacterIterator i = (direction == FORWARD) ?
 				DocumentCharacterIterator(document, scope) : DocumentCharacterIterator(document, scope, scope.second);
-				(direction == FORWARD) ? i.hasNext() : i.hasPrevious(); (direction == FORWARD) ? ++i : --i) {
+				(direction == FORWARD) ? i.hasNext() : i.hasPrevious(); (direction == FORWARD) ? i.next() : i.previous()) {
 			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
 				break;
 			else if(checkBoundary(
@@ -426,12 +429,12 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 				i.seek(result->getEnd().tell());	// move to the next search start
 				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
 				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-			} while(i < end);
+			} while(i.less(end));
 		} else {
 			DocumentCharacterIterator i(end);	// position to start search
 			i.seek(scope.second);
 			if(i.tell() != scope.first)
-				--i;
+				i.previous();
 			setupRegexRegionalMatchOptions(i, end, options);
 			options |= regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST;
 			while(true) {
@@ -440,7 +443,7 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 					break;
 				else if(i.tell() <= scope.first)
 					break;
-				--i;	// move to the next search start
+				i.previous();	// move to the next search start
 				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, i.tell() != document.getStartPosition(false));
 				options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, i.tell().column != 0);
 			}
@@ -735,11 +738,11 @@ bool IncrementalSearcher::update() {
 		// handle the previous zero-width match
 		if(lastStatus.direction == FORWARD) {
 			DocumentCharacterIterator temp(*document_, scope.first);
-			++temp;
+			temp.next();
 			scope.first = temp.tell();
 		} else {
 			DocumentCharacterIterator temp(*document_, scope.second);
-			--temp;
+			temp.previous();
 			scope.second = temp.tell();
 		}
 	}

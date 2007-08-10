@@ -86,9 +86,9 @@ namespace ascension {
 	 * corresponding C++ standard-compliant bidirectional iterator.
 	 * @param Iterator the iterator class converted. see the next section
 	 * @param Type the element type
-	 * @param Distance the distance type
-	 * @param Pointer the pointer type
 	 * @param Reference the reference type
+	 * @param Pointer the pointer type
+	 * @param Distance the distance type
 	 * @note This class is not intended to be subclassed.
 	 *
 	 * Iterator classes Ascension provides don't have C++ standard iterator interface (operator
@@ -118,35 +118,35 @@ namespace ascension {
 	 *   <tr><td>i1.less(i2)</td><td>bool</td><td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td></tr>
 	 * </table>
 	 */
-	template<class Iterator, typename Type, typename Distance = std::ptrdiff_t, typename Pointer = Type*, typename Reference = Type&>
+	template<class Iterator, typename Type, typename Reference = Type&, typename Pointer = Type*, typename Distance = std::ptrdiff_t>
 	class BidirectionalIteratorFacade : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
 	public:
 		/// Default constructor.
-		BidirectionalIteratorFacade() {}
-		/// Constructor.
-		BidirectionalIteratorFacade(const Iterator& base) : impl_(base) {}
+		BidirectionalIteratorFacade() throw() : base_(0) {}
+		/// Constructor. Does not make a copy of @a base.
+		BidirectionalIteratorFacade(Iterator& base) : base_(&base) {}
 		/// Copy constructor.
-		BidirectionalIteratorFacade(const BidirectionalIteratorFacade& rhs) : impl_(rhs.base()) {}
+		BidirectionalIteratorFacade(const BidirectionalIteratorFacade& rhs) : base_(rhs.base_) {}
 		/// Assignment operator.
-		BidirectionalIteratorFacade& operator=(const BidirectionalIteratorFacade& rhs) {impl_ = rhs.base();}
+		BidirectionalIteratorFacade& operator=(const BidirectionalIteratorFacade& rhs) {base_ = rhs.base_;}
 		/// Dereference operator.
-		Reference operator*() const {return impl_.current();}
+		Reference operator*() const {return base_->current();}
 		/// Dereference operator.
-		Reference operator->() const {return impl_.current();}
+		Reference operator->() const {return base_->current();}
 		/// Pre-fix increment operator.
-		BidirectionalIteratorFacade& operator++() {impl_.next(); return *this;}
+		BidirectionalIteratorFacade& operator++() {base_->next(); return *this;}
 		/// Post-fix increment operator.
 		const BidirectionalIteratorFacade operator++(int) {BidirectionalIteratorFacade temp(*this); ++*this; return temp;}
 		/// Pre-fix decrement operator.
-		BidirectionalIteratorFacade& operator--() {impl_.previous(); return *this;}
+		BidirectionalIteratorFacade& operator--() {base_->previous(); return *this;}
 		/// Post-fix decrement operator.
 		const BidirectionalIteratorFacade operator--(int) {BidirectionalIteratorFacade temp(*this); --*this; return temp;}
 		/// Equality operator.
-		bool operator==(const BidirectionalIteratorFacade& rhs) const {return impl_.equals(rhs.base());}
+		bool operator==(const BidirectionalIteratorFacade& rhs) const {return base_->equals(rhs.base());}
 		/// Inequality operator.
 		bool operator!=(const BidirectionalIteratorFacade& rhs) const {return !operator==(rhs);}
 		/// Relational operator.
-		bool operator<(const BidirectionalIteratorFacade& rhs) const {return impl_.less(rhs.base());}
+		bool operator<(const BidirectionalIteratorFacade& rhs) const {return base_->less(rhs.base());}
 		/// Relational operator.
 		bool operator<=(const BidirectionalIteratorFacade& rhs) const {return operator<(rhs) || operator==(rhs);}
 		/// Relational operator.
@@ -154,9 +154,11 @@ namespace ascension {
 		/// Relational operator.
 		bool operator>=(const BidirectionalIteratorFacade& rhs) const {return !operator<(rhs);}
 		/// Returns the base iterator.
-		const Iterator& base() const throw() {return impl_;}
+		Iterator& base() throw() {return *base_;}
+		/// Returns the base iterator.
+		const Iterator& base() const throw() {return *base_;}
 	private:
-		Iterator impl_;
+		Iterator* base_;
 	};
 
 	// static assertion

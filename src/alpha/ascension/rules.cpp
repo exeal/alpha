@@ -606,8 +606,8 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 	auto_ptr<Token> result;
 	const String* line = &current_.getLine();
 	while(current_.hasNext()) {
-		if(*current_ == LINE_SEPARATOR) {
-			++current_;
+		if(current_.current() == LINE_SEPARATOR) {
+			current_.next();
 			line = &current_.getLine();
 			if(!current_.hasNext())
 				break;
@@ -634,7 +634,7 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 			}
 			current_.seek(Position(current_.tell().line, wordEnd - line->data()));
 		} else
-			++current_;
+			current_.next();
 	}
 	return result;
 }
@@ -826,7 +826,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 			break;
 		// go to the next character if no transition occured
 		if(tokenLength == 0) {
-			++p;
+			p.next();
 			if(p.tell().column == 0) {	// entered the next line
 				line = &document.getLine(p.tell().line);
 				if(p.tell().line > eol.line) {
