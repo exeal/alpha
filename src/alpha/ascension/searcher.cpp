@@ -132,6 +132,14 @@ bool LiteralPattern::matches(const CharacterIterator& target) const {
 	return !i->hasNext();
 }
 
+namespace {
+	template<typename Distance>
+	inline void orzAdvance(CharacterIterator& i, Distance offset) {
+		while(offset > 0) {i.next(); --offset;}
+		while(offset < 0) {i.previous(); ++offset;}
+	}
+}
+
 /**
  * Searches in the specified character sequence.
  * @param target the target character sequence
@@ -143,38 +151,37 @@ bool LiteralPattern::search(const CharacterIterator& target,
 		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
 	// TODO: this implementation is just scrath.
 	auto_ptr<CharacterIterator> t(target.clone());
-	BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint> i(*t);
 	if(direction_ == FORWARD) {
-		advance(i, last_ - first_ - 1);
-		for(const int* pattern; t->hasNext(); advance(i,
+		orzAdvance(*t, last_ - first_ - 1);
+		for(const int* pattern; t->hasNext(); orzAdvance(*t,
 				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
 			for(pattern = last_ - 1;
-				(caseSensitive_ ? *i : CaseFolder::fold(*i)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-				--i, --pattern) {
+				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				t->previous(), --pattern) {
 				if(pattern == first_) {
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint>(*matchedLast), last_ - first_);
+					orzAdvance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}
 		}
 	} else {
 		ptrdiff_t skipLength;
-		advance(i, first_ - last_);
-		for(const int* pattern; ; advance(i, -skipLength)) {
+		orzAdvance(*t, first_ - last_);
+		for(const int* pattern; ; orzAdvance(*t, -skipLength)) {
 			for(pattern = first_;
-					(caseSensitive_ ? *i : CaseFolder::fold(*i)) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
-					++i, ++pattern) {
+					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					t->next(), ++pattern) {
 				if(pattern == last_ - 1) {
-					advance(i, first_ - last_ + 1);
+					orzAdvance(*t, first_ - last_ + 1);
 					matchedFirst = t;
 					matchedLast = matchedFirst->clone();
-					advance(BidirectionalIteratorFacade<CharacterIterator, CodePoint, CodePoint>(*matchedLast), last_ - first_);
+					orzAdvance(*matchedLast, last_ - first_);
 					return true;
 				}
 			}
-			skipLength = max(lastOccurences_[caseSensitive_ ? *i : CaseFolder::fold(*i)], pattern - first_ + 1);
+			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - first_ + 1);
 			if(skipLength > t->getOffset() - target.getOffset())
 				break;
 		}
@@ -301,7 +308,7 @@ bool TextSearcher::isMigemoAvailable() const throw() {
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
-	DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
+	const DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
 	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
@@ -315,9 +322,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 			regex::Pattern::MatchOptions options(regex::Pattern::MULTILINE);
 			setupRegexRegionalMatchOptions(b, e, options);
 			delete lastResult_;
-			lastResult_ = pattern_.regex->matches(
-				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>(b),
-				BidirectionalIteratorFacade<DocumentCharacterIterator, CodePoint, CodePoint>(e), options).release();
+			lastResult_ = pattern_.regex->matches(b, e, options).release();
 			if(lastResult_ != 0 && !checkBoundary(b, e)) {
 				delete lastResult_;
 				lastResult_ = 0;

@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 6.00.0361 */
-/* at Sat Aug 04 18:57:22 2007
+/* at Sun Aug 12 22:48:28 2007
  */
 /* Compiler settings for .\ankh\ankh.idl:
     Oicf, W4, Zp8, env=Win32 (32b run)
@@ -63,6 +63,18 @@ typedef interface IArguments IArguments;
 #define __IScriptHost_FWD_DEFINED__
 typedef interface IScriptHost IScriptHost;
 #endif 	/* __IScriptHost_FWD_DEFINED__ */
+
+
+#ifndef __INamespace_FWD_DEFINED__
+#define __INamespace_FWD_DEFINED__
+typedef interface INamespace INamespace;
+#endif 	/* __INamespace_FWD_DEFINED__ */
+
+
+#ifndef __INamespaceWatcher_FWD_DEFINED__
+#define __INamespaceWatcher_FWD_DEFINED__
+typedef interface INamespaceWatcher INamespaceWatcher;
+#endif 	/* __INamespaceWatcher_FWD_DEFINED__ */
 
 
 #ifndef __IScriptSystem_FWD_DEFINED__
@@ -1480,6 +1492,684 @@ void __RPC_STUB IScriptHost_Sleep_Stub(
 #endif 	/* __IScriptHost_INTERFACE_DEFINED__ */
 
 
+#ifndef __INamespace_INTERFACE_DEFINED__
+#define __INamespace_INTERFACE_DEFINED__
+
+/* interface INamespace */
+/* [helpstring][unique][dual][object][uuid] */ 
+
+
+EXTERN_C const IID IID_INamespace;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("A1E2E6F3-DEF6-4949-9D4D-D509DD0EFF14")
+    INamespace : public IDispatch
+    {
+    public:
+        virtual /* [restricted][hidden][propget][id] */ HRESULT STDMETHODCALLTYPE get__NewEnum( 
+            /* [retval][out] */ IUnknown **enumerator) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Child( 
+            /* [in] */ BSTR name,
+            /* [retval][out] */ INamespace **namespaceObject) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Defines( 
+            /* [in] */ BSTR name,
+            /* [retval][out] */ VARIANT_BOOL *defined) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Empty( 
+            /* [retval][out] */ VARIANT_BOOL *empty) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Locked( 
+            /* [retval][out] */ VARIANT_BOOL *locked) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Member( 
+            /* [in] */ BSTR name,
+            /* [retval][out] */ VARIANT **memberObject) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Name( 
+            /* [retval][out] */ BSTR *name) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_NumberOfChildren( 
+            /* [retval][out] */ long *number) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_NumberOfMembers( 
+            /* [retval][out] */ long *number) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Parent( 
+            /* [retval][out] */ INamespace **parent) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE AddChild( 
+            /* [in] */ BSTR name,
+            /* [retval][out] */ INamespace **newNamespace) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE AddMember( 
+            /* [in] */ BSTR name,
+            /* [in] */ VARIANT *entity) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE Clear( void) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE Lock( 
+            /* [retval][out] */ long *cookie) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE RemoveChild( 
+            /* [in] */ BSTR name) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE RemoveMember( 
+            /* [in] */ BSTR name) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE Unlock( 
+            /* [in] */ long cookie) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE Unwatch( 
+            /* [in] */ IDispatch *watcher) = 0;
+        
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE Watch( 
+            /* [in] */ BSTR memberName,
+            /* [in] */ IDispatch *watcher) = 0;
+        
+    };
+    
+#else 	/* C style interface */
+
+    typedef struct INamespaceVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            INamespace * This,
+            /* [in] */ REFIID riid,
+            /* [iid_is][out] */ void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            INamespace * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            INamespace * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfoCount )( 
+            INamespace * This,
+            /* [out] */ UINT *pctinfo);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfo )( 
+            INamespace * This,
+            /* [in] */ UINT iTInfo,
+            /* [in] */ LCID lcid,
+            /* [out] */ ITypeInfo **ppTInfo);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetIDsOfNames )( 
+            INamespace * This,
+            /* [in] */ REFIID riid,
+            /* [size_is][in] */ LPOLESTR *rgszNames,
+            /* [in] */ UINT cNames,
+            /* [in] */ LCID lcid,
+            /* [size_is][out] */ DISPID *rgDispId);
+        
+        /* [local] */ HRESULT ( STDMETHODCALLTYPE *Invoke )( 
+            INamespace * This,
+            /* [in] */ DISPID dispIdMember,
+            /* [in] */ REFIID riid,
+            /* [in] */ LCID lcid,
+            /* [in] */ WORD wFlags,
+            /* [out][in] */ DISPPARAMS *pDispParams,
+            /* [out] */ VARIANT *pVarResult,
+            /* [out] */ EXCEPINFO *pExcepInfo,
+            /* [out] */ UINT *puArgErr);
+        
+        /* [restricted][hidden][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get__NewEnum )( 
+            INamespace * This,
+            /* [retval][out] */ IUnknown **enumerator);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Child )( 
+            INamespace * This,
+            /* [in] */ BSTR name,
+            /* [retval][out] */ INamespace **namespaceObject);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Defines )( 
+            INamespace * This,
+            /* [in] */ BSTR name,
+            /* [retval][out] */ VARIANT_BOOL *defined);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Empty )( 
+            INamespace * This,
+            /* [retval][out] */ VARIANT_BOOL *empty);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Locked )( 
+            INamespace * This,
+            /* [retval][out] */ VARIANT_BOOL *locked);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Member )( 
+            INamespace * This,
+            /* [in] */ BSTR name,
+            /* [retval][out] */ VARIANT **memberObject);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Name )( 
+            INamespace * This,
+            /* [retval][out] */ BSTR *name);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_NumberOfChildren )( 
+            INamespace * This,
+            /* [retval][out] */ long *number);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_NumberOfMembers )( 
+            INamespace * This,
+            /* [retval][out] */ long *number);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Parent )( 
+            INamespace * This,
+            /* [retval][out] */ INamespace **parent);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *AddChild )( 
+            INamespace * This,
+            /* [in] */ BSTR name,
+            /* [retval][out] */ INamespace **newNamespace);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *AddMember )( 
+            INamespace * This,
+            /* [in] */ BSTR name,
+            /* [in] */ VARIANT *entity);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *Clear )( 
+            INamespace * This);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *Lock )( 
+            INamespace * This,
+            /* [retval][out] */ long *cookie);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *RemoveChild )( 
+            INamespace * This,
+            /* [in] */ BSTR name);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *RemoveMember )( 
+            INamespace * This,
+            /* [in] */ BSTR name);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *Unlock )( 
+            INamespace * This,
+            /* [in] */ long cookie);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *Unwatch )( 
+            INamespace * This,
+            /* [in] */ IDispatch *watcher);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *Watch )( 
+            INamespace * This,
+            /* [in] */ BSTR memberName,
+            /* [in] */ IDispatch *watcher);
+        
+        END_INTERFACE
+    } INamespaceVtbl;
+
+    interface INamespace
+    {
+        CONST_VTBL struct INamespaceVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define INamespace_QueryInterface(This,riid,ppvObject)	\
+    (This)->lpVtbl -> QueryInterface(This,riid,ppvObject)
+
+#define INamespace_AddRef(This)	\
+    (This)->lpVtbl -> AddRef(This)
+
+#define INamespace_Release(This)	\
+    (This)->lpVtbl -> Release(This)
+
+
+#define INamespace_GetTypeInfoCount(This,pctinfo)	\
+    (This)->lpVtbl -> GetTypeInfoCount(This,pctinfo)
+
+#define INamespace_GetTypeInfo(This,iTInfo,lcid,ppTInfo)	\
+    (This)->lpVtbl -> GetTypeInfo(This,iTInfo,lcid,ppTInfo)
+
+#define INamespace_GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)	\
+    (This)->lpVtbl -> GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)
+
+#define INamespace_Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)	\
+    (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)
+
+
+#define INamespace_get__NewEnum(This,enumerator)	\
+    (This)->lpVtbl -> get__NewEnum(This,enumerator)
+
+#define INamespace_get_Child(This,name,namespaceObject)	\
+    (This)->lpVtbl -> get_Child(This,name,namespaceObject)
+
+#define INamespace_get_Defines(This,name,defined)	\
+    (This)->lpVtbl -> get_Defines(This,name,defined)
+
+#define INamespace_get_Empty(This,empty)	\
+    (This)->lpVtbl -> get_Empty(This,empty)
+
+#define INamespace_get_Locked(This,locked)	\
+    (This)->lpVtbl -> get_Locked(This,locked)
+
+#define INamespace_get_Member(This,name,memberObject)	\
+    (This)->lpVtbl -> get_Member(This,name,memberObject)
+
+#define INamespace_get_Name(This,name)	\
+    (This)->lpVtbl -> get_Name(This,name)
+
+#define INamespace_get_NumberOfChildren(This,number)	\
+    (This)->lpVtbl -> get_NumberOfChildren(This,number)
+
+#define INamespace_get_NumberOfMembers(This,number)	\
+    (This)->lpVtbl -> get_NumberOfMembers(This,number)
+
+#define INamespace_get_Parent(This,parent)	\
+    (This)->lpVtbl -> get_Parent(This,parent)
+
+#define INamespace_AddChild(This,name,newNamespace)	\
+    (This)->lpVtbl -> AddChild(This,name,newNamespace)
+
+#define INamespace_AddMember(This,name,entity)	\
+    (This)->lpVtbl -> AddMember(This,name,entity)
+
+#define INamespace_Clear(This)	\
+    (This)->lpVtbl -> Clear(This)
+
+#define INamespace_Lock(This,cookie)	\
+    (This)->lpVtbl -> Lock(This,cookie)
+
+#define INamespace_RemoveChild(This,name)	\
+    (This)->lpVtbl -> RemoveChild(This,name)
+
+#define INamespace_RemoveMember(This,name)	\
+    (This)->lpVtbl -> RemoveMember(This,name)
+
+#define INamespace_Unlock(This,cookie)	\
+    (This)->lpVtbl -> Unlock(This,cookie)
+
+#define INamespace_Unwatch(This,watcher)	\
+    (This)->lpVtbl -> Unwatch(This,watcher)
+
+#define INamespace_Watch(This,memberName,watcher)	\
+    (This)->lpVtbl -> Watch(This,memberName,watcher)
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+/* [restricted][hidden][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get__NewEnum_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ IUnknown **enumerator);
+
+
+void __RPC_STUB INamespace_get__NewEnum_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Child_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name,
+    /* [retval][out] */ INamespace **namespaceObject);
+
+
+void __RPC_STUB INamespace_get_Child_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Defines_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name,
+    /* [retval][out] */ VARIANT_BOOL *defined);
+
+
+void __RPC_STUB INamespace_get_Defines_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Empty_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ VARIANT_BOOL *empty);
+
+
+void __RPC_STUB INamespace_get_Empty_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Locked_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ VARIANT_BOOL *locked);
+
+
+void __RPC_STUB INamespace_get_Locked_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Member_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name,
+    /* [retval][out] */ VARIANT **memberObject);
+
+
+void __RPC_STUB INamespace_get_Member_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Name_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ BSTR *name);
+
+
+void __RPC_STUB INamespace_get_Name_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_NumberOfChildren_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ long *number);
+
+
+void __RPC_STUB INamespace_get_NumberOfChildren_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_NumberOfMembers_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ long *number);
+
+
+void __RPC_STUB INamespace_get_NumberOfMembers_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE INamespace_get_Parent_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ INamespace **parent);
+
+
+void __RPC_STUB INamespace_get_Parent_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_AddChild_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name,
+    /* [retval][out] */ INamespace **newNamespace);
+
+
+void __RPC_STUB INamespace_AddChild_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_AddMember_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name,
+    /* [in] */ VARIANT *entity);
+
+
+void __RPC_STUB INamespace_AddMember_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_Clear_Proxy( 
+    INamespace * This);
+
+
+void __RPC_STUB INamespace_Clear_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_Lock_Proxy( 
+    INamespace * This,
+    /* [retval][out] */ long *cookie);
+
+
+void __RPC_STUB INamespace_Lock_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_RemoveChild_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name);
+
+
+void __RPC_STUB INamespace_RemoveChild_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_RemoveMember_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR name);
+
+
+void __RPC_STUB INamespace_RemoveMember_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_Unlock_Proxy( 
+    INamespace * This,
+    /* [in] */ long cookie);
+
+
+void __RPC_STUB INamespace_Unlock_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_Unwatch_Proxy( 
+    INamespace * This,
+    /* [in] */ IDispatch *watcher);
+
+
+void __RPC_STUB INamespace_Unwatch_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespace_Watch_Proxy( 
+    INamespace * This,
+    /* [in] */ BSTR memberName,
+    /* [in] */ IDispatch *watcher);
+
+
+void __RPC_STUB INamespace_Watch_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+
+#endif 	/* __INamespace_INTERFACE_DEFINED__ */
+
+
+#ifndef __INamespaceWatcher_INTERFACE_DEFINED__
+#define __INamespaceWatcher_INTERFACE_DEFINED__
+
+/* interface INamespaceWatcher */
+/* [helpstring][unique][dual][object][uuid] */ 
+
+
+EXTERN_C const IID IID_INamespaceWatcher;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("A1611576-63EA-4c7c-BD44-22BE0D4608C2")
+    INamespaceWatcher : public IDispatch
+    {
+    public:
+        virtual /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE NamespaceChanged( 
+            /* [in] */ INamespace *namespaceObject,
+            /* [in] */ BSTR memberName) = 0;
+        
+    };
+    
+#else 	/* C style interface */
+
+    typedef struct INamespaceWatcherVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            INamespaceWatcher * This,
+            /* [in] */ REFIID riid,
+            /* [iid_is][out] */ void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            INamespaceWatcher * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            INamespaceWatcher * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfoCount )( 
+            INamespaceWatcher * This,
+            /* [out] */ UINT *pctinfo);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfo )( 
+            INamespaceWatcher * This,
+            /* [in] */ UINT iTInfo,
+            /* [in] */ LCID lcid,
+            /* [out] */ ITypeInfo **ppTInfo);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetIDsOfNames )( 
+            INamespaceWatcher * This,
+            /* [in] */ REFIID riid,
+            /* [size_is][in] */ LPOLESTR *rgszNames,
+            /* [in] */ UINT cNames,
+            /* [in] */ LCID lcid,
+            /* [size_is][out] */ DISPID *rgDispId);
+        
+        /* [local] */ HRESULT ( STDMETHODCALLTYPE *Invoke )( 
+            INamespaceWatcher * This,
+            /* [in] */ DISPID dispIdMember,
+            /* [in] */ REFIID riid,
+            /* [in] */ LCID lcid,
+            /* [in] */ WORD wFlags,
+            /* [out][in] */ DISPPARAMS *pDispParams,
+            /* [out] */ VARIANT *pVarResult,
+            /* [out] */ EXCEPINFO *pExcepInfo,
+            /* [out] */ UINT *puArgErr);
+        
+        /* [helpstring][id] */ HRESULT ( STDMETHODCALLTYPE *NamespaceChanged )( 
+            INamespaceWatcher * This,
+            /* [in] */ INamespace *namespaceObject,
+            /* [in] */ BSTR memberName);
+        
+        END_INTERFACE
+    } INamespaceWatcherVtbl;
+
+    interface INamespaceWatcher
+    {
+        CONST_VTBL struct INamespaceWatcherVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define INamespaceWatcher_QueryInterface(This,riid,ppvObject)	\
+    (This)->lpVtbl -> QueryInterface(This,riid,ppvObject)
+
+#define INamespaceWatcher_AddRef(This)	\
+    (This)->lpVtbl -> AddRef(This)
+
+#define INamespaceWatcher_Release(This)	\
+    (This)->lpVtbl -> Release(This)
+
+
+#define INamespaceWatcher_GetTypeInfoCount(This,pctinfo)	\
+    (This)->lpVtbl -> GetTypeInfoCount(This,pctinfo)
+
+#define INamespaceWatcher_GetTypeInfo(This,iTInfo,lcid,ppTInfo)	\
+    (This)->lpVtbl -> GetTypeInfo(This,iTInfo,lcid,ppTInfo)
+
+#define INamespaceWatcher_GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)	\
+    (This)->lpVtbl -> GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)
+
+#define INamespaceWatcher_Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)	\
+    (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)
+
+
+#define INamespaceWatcher_NamespaceChanged(This,namespaceObject,memberName)	\
+    (This)->lpVtbl -> NamespaceChanged(This,namespaceObject,memberName)
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+/* [helpstring][id] */ HRESULT STDMETHODCALLTYPE INamespaceWatcher_NamespaceChanged_Proxy( 
+    INamespaceWatcher * This,
+    /* [in] */ INamespace *namespaceObject,
+    /* [in] */ BSTR memberName);
+
+
+void __RPC_STUB INamespaceWatcher_NamespaceChanged_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+
+#endif 	/* __INamespaceWatcher_INTERFACE_DEFINED__ */
+
+
 #ifndef __IScriptSystem_INTERFACE_DEFINED__
 #define __IScriptSystem_INTERFACE_DEFINED__
 
@@ -1495,6 +2185,9 @@ EXTERN_C const IID IID_IScriptSystem;
     IScriptSystem : public IDispatch
     {
     public:
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Gns( 
+            /* [retval][out] */ INamespace **namespaceObject) = 0;
+        
         virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_SecurityLevel( 
             /* [retval][out] */ short *level) = 0;
         
@@ -1563,6 +2256,10 @@ EXTERN_C const IID IID_IScriptSystem;
             /* [out] */ EXCEPINFO *pExcepInfo,
             /* [out] */ UINT *puArgErr);
         
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Gns )( 
+            IScriptSystem * This,
+            /* [retval][out] */ INamespace **namespaceObject);
+        
         /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_SecurityLevel )( 
             IScriptSystem * This,
             /* [retval][out] */ short *level);
@@ -1625,6 +2322,9 @@ EXTERN_C const IID IID_IScriptSystem;
     (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)
 
 
+#define IScriptSystem_get_Gns(This,namespaceObject)	\
+    (This)->lpVtbl -> get_Gns(This,namespaceObject)
+
 #define IScriptSystem_get_SecurityLevel(This,level)	\
     (This)->lpVtbl -> get_SecurityLevel(This,level)
 
@@ -1648,6 +2348,18 @@ EXTERN_C const IID IID_IScriptSystem;
 
 #endif 	/* C style interface */
 
+
+
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IScriptSystem_get_Gns_Proxy( 
+    IScriptSystem * This,
+    /* [retval][out] */ INamespace **namespaceObject);
+
+
+void __RPC_STUB IScriptSystem_get_Gns_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
 
 
 /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IScriptSystem_get_SecurityLevel_Proxy( 

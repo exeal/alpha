@@ -959,8 +959,8 @@ STDMETHODIMP FileBoundScriptHost::Quit(int) {
 // ScriptSystem /////////////////////////////////////////////////////////////
 
 /// Constructor.
-ScriptSystem::ScriptSystem() : globalNamespace_(0/*new Namespace(L"", 0)*/),
-		interactive_(true), securityLevel_(0), crossEngineTopLevelAccessesEnabled_(false) {
+ScriptSystem::ScriptSystem() : interactive_(true), securityLevel_(0),
+		crossEngineTopLevelAccessesEnabled_(false), globalNamespace_(new Namespace(L"", 0)) {
 }
 
 /// Destructor.
@@ -1108,16 +1108,18 @@ STDMETHODIMP ScriptSystem::ExecuteScript(BSTR fileName) {
 	return SUCCEEDED(hr) ? (scriptHost->loadScript(filePath) ? S_OK : E_FAIL) : hr;
 }
 
+/// @see IScriptSystem#get_Gns
+STDMETHODIMP ScriptSystem::get_Gns(INamespace** namespaceObject) {
+	VERIFY_POINTER(namespaceObject);
+	(*namespaceObject = globalNamespace_.get())->AddRef();
+	return S_OK;
+}
+
 /// @see IScriptSystem#get_SecurityLevel
 STDMETHODIMP ScriptSystem::get_SecurityLevel(short* level) {
 	VERIFY_POINTER(level);
 	*level = 0;
 	return S_OK;
-}
-
-/// Returns the global namespace.
-Namespace& ScriptSystem::getGlobalNamespace() const {
-	return *globalNamespace_;
 }
 
 /// @see IInternetHostSecurityManager#GetSecurityId
@@ -1476,92 +1478,202 @@ void ScriptSystem::shutdown() {
 
 // Namespace ////////////////////////////////////////////////////////////////
 
+/**
+ * Constructor.
+ * @param name the name
+ * @param parent the parent namespace
+ */
 Namespace::Namespace(const wchar_t* name, Namespace* parent) : name_(name), parent_(parent) {
 }
 
+/// Destructor.
 Namespace::~Namespace() {
-	clear();
+	Clear();
 }
 
-bool Namespace::addObject(const wchar_t* name, IDispatch& object) {
-	assert(name != 0);
-	if(isLocked() || children_.find(name) != children_.end() || isDefined(name))
-		return false;
-	objects_.insert(make_pair(name, &object));
-	object.AddRef();
-	return true;
-}
-
-void Namespace::clear() {
-	if(isLocked())
-		return;
-	for(std::map<std::wstring, IDispatch*, AutomationNameComparison>::iterator i = objects_.begin(); i != objects_.end(); ++i)
-		i->second->Release();
-	for(std::map<std::wstring, Namespace*, AutomationNameComparison>::iterator i = children_.begin(); i != children_.end(); ++i)
-		delete i->second;
-}
-
-Namespace* Namespace::createNamespace(const wchar_t* name) {
-	assert(name != 0);
-	if(isLocked() || children_.find(name) != children_.end() || isDefined(name))
-		return 0;
-	if(Namespace* newNamespace = new Namespace(name, this)) {
-//		newNamespace->AddRef();
-		children_.insert(make_pair(name, newNamespace));
-		return newNamespace;
+/// @see INamespace#AddChild
+STDMETHODIMP Namespace::AddChild(::BSTR name, INamespace** newNamespace) {
+	if(lockingCookie_ > 0)
+		return E_UNEXPECTED;
+	else if(isEmptyBSTR(name) || children_.find(name) != children_.end() || members_.find(name) != members_.end())
+		return E_INVALIDARG;
+	if(Namespace* p = new(nothrow) Namespace(name, this)) {
+		p->AddRef();
+		children_.insert(make_pair(name, p));
+		(*newNamespace = p)->AddRef();
+		return S_OK;
 	}
-	return 0;
+	return E_OUTOFMEMORY;
 }
 
-Namespace* Namespace::getChild(const wchar_t* name) const {
-	assert(name != 0);
-	const map<std::basic_string<wchar_t>, Namespace*, AutomationNameComparison>::iterator i = const_cast<Namespace*>(this)->children_.find(name);
-	return (i != children_.end()) ? i->second : 0;
+/// @see INamespace#AddMember
+STDMETHODIMP Namespace::AddMember(::BSTR name, ::VARIANT* entity) {
+	if(lockingCookie_ > 0)
+		return E_UNEXPECTED;
+	else if(isEmptyBSTR(name) || children_.find(name) != children_.end() || members_.find(name) != members_.end() || entity == 0)
+		return E_INVALIDARG;
+	if(entity->vt == VT_UNKNOWN) {
+		ComQIPtr<INamespace> temp;
+		if(S_OK == entity->punkVal->QueryInterface(IID_INamespace, &temp))
+			return E_INVALIDARG;
+	} else if(entity->vt == VT_DISPATCH) {
+		ComQIPtr<INamespace> temp;
+		if(S_OK == entity->pdispVal->QueryInterface(IID_INamespace, &temp))
+			return E_INVALIDARG;
+	}
+	ComPtr<INamespace> temp;
+	members_.insert(make_pair(name, ::VARIANT()));
+	::VARIANT& newEntity = members_.find(name)->second;
+	::VariantInit(&newEntity);
+	return ::VariantCopy(&newEntity, entity);
 }
 
-size_t Namespace::getChildCount() const {
-	return children_.size();
+/// @see INamespace#Clear
+STDMETHODIMP Namespace::Clear() {
+	if(lockingCookie_ > 0)
+		return E_UNEXPECTED;
+	for(map<wstring, VARIANT, AutomationNameComparison>::iterator i = members_.begin(); i != members_.end(); ++i)
+		::VariantClear(&i->second);
+	for(map<wstring, Namespace*, AutomationNameComparison>::iterator i = children_.begin(); i != children_.end(); ++i)
+		i->second->Release();
+	return S_OK;
 }
 
-const wchar_t* Namespace::getName() const {
-	return name_.c_str();
+/// @see INamespace#get__NewEnum
+STDMETHODIMP Namespace::get__NewEnum(IUnknown** enumerator) {
+	return E_NOTIMPL;
 }
 
-IDispatch* Namespace::getObject(const wchar_t* name) const {
-	assert(name != 0);
-	const map<std::basic_string<wchar_t>, IDispatch*, AutomationNameComparison>::iterator i = const_cast<Namespace*>(this)->objects_.find(name);
-	if(i != objects_.end())
-		return (i->second->AddRef()), i->second;
-	else
-		return 0;
+/// @see INamespace#get_Child
+STDMETHODIMP Namespace::get_Child(::BSTR name, INamespace** namespaceObject) {
+	VERIFY_POINTER(namespaceObject);
+	*namespaceObject = 0;
+	if(isEmptyBSTR(name))
+		return E_INVALIDARG;
+	const map<wstring, Namespace*, AutomationNameComparison>::iterator i = children_.find(name);
+	if(i != children_.end()) {
+		(*namespaceObject = i->second)->AddRef();
+		return S_OK;
+	}
+	return DISP_E_UNKNOWNNAME;
 }
 
-size_t Namespace::getObjectCount() const {
-	return objects_.size();
+/// @see INamespace#get_Defines
+STDMETHODIMP Namespace::get_Defines(::BSTR name, VARIANT_BOOL* defined) {
+	VERIFY_POINTER(defined);
+	*defined = toVariantBoolean(members_.find(name) != members_.end());
+	return S_OK;
 }
 
-Namespace* Namespace::getParent() const {
-	return parent_;
+/// @see INamespace#get_Empty
+STDMETHODIMP Namespace::get_Empty(VARIANT_BOOL* empty) {
+	VERIFY_POINTER(empty);
+	*empty = toVariantBoolean(children_.empty() && members_.empty());
+	return S_OK;
 }
 
-bool Namespace::isDefined(const wchar_t* name) const {
-	return objects_.find(name) != objects_.end();
+/// @see INamespace#get_Locked
+STDMETHODIMP Namespace::get_Locked(VARIANT_BOOL* locked) {
+	VERIFY_POINTER(locked);
+	*locked = toVariantBoolean(lockingCookie_ > 0);
+	return S_OK;
 }
 
-bool Namespace::isEmpty() const {
-	return getChildCount() == 0 && getObjectCount() == 0;
+/// @see INamespace#get_Member
+STDMETHODIMP Namespace::get_Member(::BSTR name, ::VARIANT** member) {
+	VERIFY_POINTER(member);
+	*member = 0;
+	if(isEmptyBSTR(name))
+		return E_INVALIDARG;
+	const map<wstring, ::VARIANT, AutomationNameComparison>::iterator i(members_.find(name));
+	if(i == members_.end())
+		return DISP_E_UNKNOWNNAME;
+	if(0 != (*member = static_cast<::VARIANT*>(::CoTaskMemAlloc(sizeof(::VARIANT))))) {
+		::VariantInit(*member);
+		::VariantCopy(*member, &i->second);
+		return S_OK;
+	}
+	return E_OUTOFMEMORY;
 }
 
-bool Namespace::isLocked() const {
-	return lockingCookie_ > 0;
+/// @see INamespace#get_Name
+STDMETHODIMP Namespace::get_Name(::BSTR* name) {
+	VERIFY_POINTER(name);
+	return (0 != (*name = ::SysAllocString(name_.c_str()))) ? S_OK : E_OUTOFMEMORY;
 }
 
-long Namespace::lock() {
-	return isLocked() ? 0 : ++lockingCookie_;
+/// @see INamespace#get_NumberOfChildren
+STDMETHODIMP Namespace::get_NumberOfChildren(long* number) {
+	VERIFY_POINTER(number);
+	*number = static_cast<long>(children_.size());
+	return S_OK;
 }
 
-void Namespace::unlock(long cookie) {
+/// @see INamespace#get_NumberOfMembers
+STDMETHODIMP Namespace::get_NumberOfMembers(long* number) {
+	VERIFY_POINTER(number);
+	*number = static_cast<long>(members_.size());
+	return S_OK;
+}
+
+/// @see INamespace#get_Parent
+STDMETHODIMP Namespace::get_Parent(INamespace** parent) {
+	VERIFY_POINTER(parent);
+	(*parent = parent_)->AddRef();
+	return S_OK;
+}
+
+/// @see INamespace#Lock
+STDMETHODIMP Namespace::Lock(long* cookie) {
+	VERIFY_POINTER(cookie);
+	*cookie = (lockingCookie_ > 0) ? 0 : ++lockingCookie_;
+	return S_OK;
+}
+
+/// @see INamespace#RemoveChild
+STDMETHODIMP Namespace::RemoveChild(::BSTR name) {
+	if(lockingCookie_ > 0)
+		return E_UNEXPECTED;
+	else if(isEmptyBSTR(name))
+		return E_INVALIDARG;
+	map<wstring, Namespace*, AutomationNameComparison>::iterator i(children_.find(name));
+	if(i == children_.end())
+		return DISP_E_UNKNOWNNAME;
+	i->second->Release();
+	children_.erase(i);
+	return S_OK;
+}
+
+/// @see INamespace#RemoveMember
+STDMETHODIMP Namespace::RemoveMember(::BSTR name) {
+	if(lockingCookie_ > 0)
+		return E_UNEXPECTED;
+	else if(isEmptyBSTR(name))
+		return E_INVALIDARG;
+	map<wstring, ::VARIANT, AutomationNameComparison>::iterator i(members_.find(name));
+	if(i != members_.end())
+		return DISP_E_UNKNOWNNAME;
+	::VariantClear(&i->second);
+	members_.erase(i);
+	return S_OK;
+}
+
+/// @see INamespace#Unlock
+STDMETHODIMP Namespace::Unlock(long cookie) {
+	if(cookie != lockingCookie_)
+		return E_INVALIDARG;
 	lockingCookie_ = 0;
+	return S_OK;
+}
+
+/// @see INamespace#Unwatch
+STDMETHODIMP Namespace::Unwatch(IDispatch* watcher) {
+	return E_NOTIMPL;
+}
+
+/// @see INamespace#Watch
+STDMETHODIMP Namespace::Watch(::BSTR memberName, IDispatch* watcher) {
+	return E_NOTIMPL;
 }
 
 

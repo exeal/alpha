@@ -213,7 +213,7 @@ namespace alpha {
 			std::basic_string<WCHAR> fileName_;
 		};
 
-		/// A script system central.
+		/// A script system central implements @c IScriptSystem.
 		class ScriptSystem :
 				public AnkhUnsafeObjectBase(IScriptSystem),
 				virtual public IInternetHostSecurityManager {
@@ -222,9 +222,8 @@ namespace alpha {
 			ScriptSystem();
 			~ScriptSystem();
 			// attributes
-			void		addEngineScriptNameAssociation(const WCHAR* filePattern, const CLSID& engineID);
-			void		enableCrossEngineTopLevelAccesses(bool enable = true);
-			Namespace&	getGlobalNamespace() const;
+			void	addEngineScriptNameAssociation(const WCHAR* filePattern, const CLSID& engineID);
+			void	enableCrossEngineTopLevelAccesses(bool enable = true);
 			// operations
 			void			addTopLevelObject(const OLECHAR* name, IDispatch& object);
 			bool			associateEngine(const WCHAR* fileName, CLSID& clsid) const;
@@ -253,6 +252,7 @@ namespace alpha {
 			STDMETHODIMP	QueryCustomPolicy(REFGUID guidKey, BYTE** ppPolicy,
 								DWORD* pcbPolicy, BYTE* pContext, DWORD cbContext, DWORD dwReserved);
 			// IScriptSystem
+			STDMETHODIMP	get_Gns(INamespace** namespaceObject);
 			STDMETHODIMP	get_SecurityLevel(short* level);
 			STDMETHODIMP	put_SecurityLevel(short level);
 			STDMETHODIMP	ExecuteScript(BSTR fileName);
@@ -274,42 +274,51 @@ namespace alpha {
 			ScriptHosts scriptHosts_;
 			typedef std::map<std::basic_string<OLECHAR>, IDispatch*, AutomationNameComparison> MemberTable;
 			MemberTable topLevelObjects_;
-			Namespace* globalNamespace_;
 			bool interactive_;
 			unsigned short securityLevel_;
 			bool crossEngineTopLevelAccessesEnabled_;
+			manah::com::ComPtr<INamespace> globalNamespace_;
 		};
 
-		/// A namespace available in scripts.
-		class Namespace {
+		/// A namespace implements @c INamespace.
+		class Namespace : public AnkhSafeObjectBase(INamespace) {
 		public:
 			// constructors
 			Namespace(const wchar_t* name, Namespace* parent);
 			~Namespace();
-			// attributes
-			std::size_t		getChildCount() const;
-			const wchar_t*	getName() const;
-			std::size_t		getObjectCount() const;
-			Namespace*		getParent() const;
-			bool			isDefined(const wchar_t* name) const;
-			bool			isEmpty() const;
-			bool			isLocked() const;
-			// operations
-			bool		addObject(const wchar_t* name, IDispatch& object);
-			void		clear();
-			Namespace*	createNamespace(const wchar_t* name);
-			Namespace*	getChild(const wchar_t* name) const;
-			IDispatch*	getObject(const wchar_t* name) const;
-			long		lock();
-			bool		removeChild(const wchar_t* name);
-			bool		removeObject(const wchar_t* name);
-			void		unlock(long cookie);
+			// IUnknown
+			IMPLEMENT_UNKNOWN_MULTI_THREADED()
+			BEGIN_INTERFACE_TABLE()
+				IMPLEMENTS_LEFTMOST_INTERFACE(INamespace)
+				IMPLEMENTS_INTERFACE(IDispatch)
+			END_INTERFACE_TABLE()
+			// INamespace
+			STDMETHODIMP	get__NewEnum(IUnknown** enumerator);
+			STDMETHODIMP	get_Child(BSTR name, INamespace** namespaceObject);
+			STDMETHODIMP	get_Defines(BSTR name, VARIANT_BOOL *defined);
+			STDMETHODIMP	get_Empty(VARIANT_BOOL* empty);
+			STDMETHODIMP	get_Locked(VARIANT_BOOL* locked);
+			STDMETHODIMP	get_Member(BSTR name, VARIANT** memberObject);
+			STDMETHODIMP	get_Name(BSTR* name);
+			STDMETHODIMP	get_NumberOfChildren(long* number);
+			STDMETHODIMP	get_NumberOfMembers(long* number);
+			STDMETHODIMP	get_Parent(INamespace** parent);
+			STDMETHODIMP	AddChild(BSTR name, INamespace** newNamespace);
+			STDMETHODIMP	AddMember(BSTR name, VARIANT* entity);
+			STDMETHODIMP	Clear();
+			STDMETHODIMP	Lock(long* cookie);
+			STDMETHODIMP	RemoveChild(BSTR name);
+			STDMETHODIMP	RemoveMember(BSTR name);
+			STDMETHODIMP	Unlock(long cookie);
+			STDMETHODIMP	Unwatch(IDispatch* watcher);
+			STDMETHODIMP	Watch(BSTR memberName, IDispatch *watcher);
 		private:
 			const std::wstring name_;
-			Namespace* parent_;
+			Namespace* parent_;	// weak reference
 			std::map<std::wstring, Namespace*, AutomationNameComparison> children_;
-			std::map<std::wstring, IDispatch*, AutomationNameComparison> objects_;
+			std::map<std::wstring, ::VARIANT, AutomationNameComparison> members_;
 			long lockingCookie_;
+			std::set<std::pair<IDispatch*, ::DISPID> > watchers_;
 		};
 
 
