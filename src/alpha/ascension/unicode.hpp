@@ -177,7 +177,7 @@ namespace ascension {
 		/// Returns true if the specified code point is Unicode scalar value.
 		inline bool isScalarValue(CodePoint cp) throw() {return isValidCodePoint(cp) && !surrogates::isSurrogate(cp);}
 
-		class CharacterIterator : public std::iterator<std::bidirectional_iterator_tag, CodePoint> {
+		class CharacterIterator {
 		public:
 			/// Indicates the iterator is the last.
 			static const CodePoint DONE = 0xFFFFFFFFUL;
@@ -232,8 +232,12 @@ namespace ascension {
 			const CharacterIterator* original_;
 		};
 
-		/// Implementation of @c CharacterIterator for C string or @c String.
-		class StringCharacterIterator : public CharacterIterator {
+		/**
+		 * Implementation of @c CharacterIterator for C string or @c String.
+		 * @note This class is not intended to be subclassed.
+		 */
+		class StringCharacterIterator : public CharacterIterator,
+			public StandardBidirectionalIteratorAdapter<StringCharacterIterator, CodePoint, CodePoint> {
 		public:
 			StringCharacterIterator() throw();
 			StringCharacterIterator(const Char* first, const Char* last);
@@ -456,7 +460,7 @@ namespace ascension {
 		};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-		class Normalizer {
+		class Normalizer : public StandardBidirectionalIteratorAdapter<Normalizer, CodePoint, const CodePoint&> {
 		public:
 			/// Normalization forms.
 			enum Form {
@@ -962,6 +966,7 @@ inline Normalizer& Normalizer::next() {
 		throw std::out_of_range("the iterator is the last.");
 	else if(++indexInBuffer_ == normalizedBuffer_.length())
 		nextClosure(FORWARD, false);
+	return *this;
 }
 
 /// Returns false if the iterator addresses the end of the normalized text.
@@ -987,6 +992,7 @@ inline Normalizer& Normalizer::previous() {
 		nextClosure(BACKWARD, false);
 	else
 		--indexInBuffer_;
+	return *this;
 }
 
 /// Sets the sentence component to search.

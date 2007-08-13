@@ -829,9 +829,10 @@ namespace ascension {
 		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
 		 * the end of line, @c #current method returns @c LINE_SEPARATOR. Otherwise, if an
 		 * iterator at the end of document, returns @c CharacterIterator#DONE.
-		 * @note This class is not intended to subclass.
+		 * @note This class is not intended to be subclassed.
 		 */
-		class DocumentCharacterIterator : public unicode::CharacterIterator {
+		class DocumentCharacterIterator : public unicode::CharacterIterator,
+			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
 		public:
 			// constructors
 			DocumentCharacterIterator() throw();
