@@ -824,27 +824,6 @@ length_t Document::getLineOffset(length_t line, NewlineRepresentation nlr) const
 }
 
 /**
- * Inserts the text into the specified position from the input stream.
- * @param position the position
- * @param in the input stream
- * @return the result position
- * @throw ReadOnlyDocumentException the document is read only
- */
-Position Document::insertFromStream(const Position& position, InputStream& in) {
-	if(isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// アクセス可能範囲外 -> 無視
-		return position;
-	else if(in.eof())
-		return position;
-	else
-		CHECK_FIRST_MODIFICATION()
-
-	// TODO: not implemented.
-	return position;
-}
-
-/**
  * Inserts the text into the specified position. For detail, see two-parameter version of this method.
  *
  * This method sets the modification flag and calls the listeners'
@@ -861,7 +840,7 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(first == 0 || last == 0 || first > last)
-		throw invalid_argument("Argument begin or end is invalid.");
+		throw invalid_argument("Argument first or last is invalid.");
 	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// ignore the insertion position is out of the accessible region
 		return position;
 	else if(first == last)	// ignore if the input is empty
@@ -939,6 +918,27 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 }
 
 /**
+ * Inserts the text into the specified position from the input stream.
+ * @param position the position
+ * @param in the input stream
+ * @return the result position
+ * @throw ReadOnlyDocumentException the document is read only
+ */
+Position Document::insertFromStream(const Position& position, InputStream& in) {
+	if(isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// アクセス可能範囲外 -> 無視
+		return position;
+	else if(in.eof())
+		return position;
+	else
+		CHECK_FIRST_MODIFICATION()
+
+	// TODO: not implemented.
+	return position;
+}
+
+/**
  * Returns true if the document is sequential editing.
  * @see #beginSequentialEdit, #endSequentialEdit
  */
@@ -959,7 +959,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		const FileLockMode& lockMode, CodePage codePage, IFileIOListener* callback /* = 0 */) {
 //	Timer tm(L"load");	// 2.86s / 1MB
 	const DWORD attributes = ::GetFileAttributesW(fileName.c_str());
-	if(attributes == INVALID_FILE_ATTRIBUTES)	// ファイルが見つからない
+	if(attributes == INVALID_FILE_ATTRIBUTES)	// file not found
 		return FIR_STANDARD_WIN32_ERROR;
 
 	auto_ptr<File<true> > newFile(new File<true>);
@@ -968,20 +968,20 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		return FIR_INVALID_CODE_PAGE;
 	ui::WaitCursor wc;
 
-	// ファイルを開く
+	// open the file
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 	if(lockMode.type != FileLockMode::LOCK_TYPE_NONE && !lockMode.onlyAsEditing)
 		shareMode = (lockMode.type == FileLockMode::LOCK_TYPE_SHARED) ? FILE_SHARE_READ : 0;
 	if(!newFile->open(fileName.c_str(), GENERIC_READ, shareMode, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN))
-		return FIR_STANDARD_WIN32_ERROR;	// ERROR_SHARING_VIOLATION など
+		return FIR_STANDARD_WIN32_ERROR;	// ERROR_SHARING_VIOLATION, ...
 
-	// ファイルが大きすぎたら失敗
+	// abort if the file is too large
 	if(newFile->getLength() > numeric_limits<ulong>::max()) {
 		newFile->close();
 		return FIR_HUGE_FILE;
 	}
 
-	// 新しいファイルを確定
+	// bind to the new file
 	resetContent();
 	diskFile_.lockingFile.reset(newFile.release());
 	diskFile_.lockMode = lockMode;
@@ -1009,8 +1009,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		nativeBuffer = fileView->getData();
 	}
 
-	// バッファ全体を文字コード変換
-//	Char* firstBreak = 0;	// 最初に現れた改行文字
+	// convert the whole buffer
 	Position last(0, 0);	// 次に文字列を追加する位置
 	if(fileSize != 0) {
 		codePage = encoderFactory.detectCodePage(nativeBuffer, min(fileSize, 4UL * 1024), codePage);
@@ -1041,7 +1040,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		else
 			destLength = encoder->toUnicode(ucsBuffer, destLength, nativeBuffer, fileSize, callback);
 
-		if(destLength == 0) {	// 変換できない文字があったため、クライアントが処理を中止することに決めた
+		if(destLength == 0) {	// encounted an unconvertable character and the client aborted
 			::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
 			CLOSE_AND_ABORT(FIR_CALLER_ABORTED);
 		}
@@ -1052,13 +1051,13 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 		fireDocumentAboutToBeChanged();
 
-		// 改行ごとに区切り、リストに追加していく
+		// break the buffer into lines by newlines
 		length_t nextBreak, lastBreak = 0;
 		Newline newline;
 		lines_.clear();
 		newline_ = NLF_AUTO;
 		while(true) {
-			for(size_t i = lastBreak; ; ++i) {	// 改行文字を探す
+			for(size_t i = lastBreak; ; ++i) {	// search the next new line
 				if(i == destLength) {
 					nextBreak = -1;
 					break;
@@ -1083,14 +1082,14 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 				lastBreak = nextBreak + ((newline != NLF_CRLF) ? 1 : 2);
 				if(newline_ == NLF_AUTO)	// 最初に現れた改行文字を既定の改行文字とする
 					setNewline(newline);
-			} else {	// 最終行
+			} else {	// the last line
 				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, destLength - lastBreak)));
 				length_ += destLength - lastBreak;
 				break;
 			}
 		}
 		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
-	} else {	// 空のファイル
+	} else {	// an empty file
 		codePage = ::GetACP();
 		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 	}
@@ -1132,10 +1131,10 @@ void Document::narrow(const Region& region) {
 }
 
 /**
- * @brief アンドゥ、リドゥのために編集操作を記録するかどうか設定する
+ * Sets whether the document records or not the operations for undo/redo.
  *
- * 既定では記録状態になっている。設定を変更すると記録中の内容は破棄される
- * @param record 記録する場合 true
+ * The default is true. If change the setting, recorded contents will be disposed.
+ * @param record set true to record
  * @see #isRecordingOperation, #undo, #redo
  */
 void Document::recordOperations(bool record) {
@@ -1245,7 +1244,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	ui::WaitCursor wc;
 	FileIOResult result = FIR_OK;
 
-	// 進捗コールバック
+	// query progression callback
 	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
 	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
 
@@ -1255,7 +1254,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	const length_t lineCount = getNumberOfLines();	// 総行数
 	const size_t nativeBufferBytes = (getLength(NLR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
 	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
-	size_t offset = 0;	// バイト単位
+	size_t offset = 0;	// offset in bytes
 
 	if(nativeBuffer == 0) {
 		delete internalCallback;
@@ -1292,7 +1291,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 
 	for(length_t i = 0; i < lineCount; ++i) {
 		const Line& line = *lines_[i];
-		if(i == lineCount - 1) {	// 最終行
+		if(i == lineCount - 1) {	// the last line
 			if(line.text_.empty())
 				break;
 		}
@@ -1329,7 +1328,7 @@ CLIENT_ABORTED:
 		if(toBoolean(::PathFileExistsW(fileName.c_str())))
 			byCopying = false;
 		else {
-			// 保存先が外部メディアの場合はコピーしない
+			// don't copy if the destination is removal
 			const int driveNumber = ::PathGetDriveNumberW(fileName.c_str());
 			if(driveNumber != -1) {
 				WCHAR drive[4];
@@ -1344,7 +1343,7 @@ CLIENT_ABORTED:
 		}
 	}
 
-	// 一時ファイルの用意
+	// prepare temporary file
 	WCHAR tempName[MAX_PATH + 1];
 	{
 		WCHAR path[MAX_PATH + 1];
@@ -1421,11 +1420,11 @@ CLIENT_ABORTED:
 			}
 			deletedOldFile = true;
 		}
-		// 名前を変更
+		// rename the file
 		const bool moved = toBoolean(::MoveFileW(tempName, realName.c_str()));
-		if(!moved && deletedOldFile)	// 最悪のケース
+		if(!moved && deletedOldFile)	// worst case (lost)
 			return FIR_LOST_DISK_FILE;
-		// ロックし直す
+		// relock the file
 		if(!deletedOldFile && diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE && !diskFile_.lockMode.onlyAsEditing)
 			diskFile_.lock(realName.c_str());
 		if(!moved) {
@@ -1439,11 +1438,11 @@ CLIENT_ABORTED:
 #undef FREE_TEMPORARY_BUFFER
 
 	if(params.newline != NLF_AUTO) {
-		setNewline(params.newline);	// 改行コードの決定
+		setNewline(params.newline);	// determine the newlines
 		for(length_t i = 0; i < lines_.getSize(); ++i) {
 			Line& line = *lines_[i];
-			line.operationHistory_ = 0;		// 操作履歴を消す
-			line.newline_ = params.newline;	// 改行コードを上書きする
+			line.operationHistory_ = 0;		// erase the operation history
+			line.newline_ = params.newline;	// overwrite the newline
 		}
 	} else {
 		for(length_t i = 0; i < lines_.getSize(); ++i)
@@ -1455,7 +1454,7 @@ CLIENT_ABORTED:
 	setCodePage(cp);
 	setFilePathName(realName.c_str());
 
-	// 最終更新日時の更新
+	// update the internal time stamp
 	::WIN32_FIND_DATAW wfd;
 	HANDLE find = ::FindFirstFileW(getFilePathName(), &wfd);
 	if(find != INVALID_HANDLE_VALUE) {
