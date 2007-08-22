@@ -438,14 +438,14 @@ ulong FindAllCommand::execute() {
 	else
 		return 0;	// TODO: prepares a default text searcher.
 
-	ulong count = 0;		// マーク回数、置換回数
-	Region matchedRegion;	// マッチ位置
-	Region scope(			// 検索範囲
+	ulong count = 0;
+	Region scope(
 		onlySelection_ ? max<Position>(viewer.getCaret().getTopPoint(), document.getStartPosition()) : document.getStartPosition(),
 		onlySelection_ ? min<Position>(viewer.getCaret().getBottomPoint(), document.getEndPosition()) : document.getEndPosition());
 
 	if(type_ == BOOKMARK) {
 		Bookmarker& bookmarker = document.getBookmarker();
+		Region matchedRegion;
 		while(s->search(document, scope, FORWARD, matchedRegion)) {
 			bookmarker.mark(matchedRegion.first.line);
 			scope.first.line = matchedRegion.first.line + 1;
@@ -456,24 +456,14 @@ ulong FindAllCommand::execute() {
 		viewer.freeze();
 		document.beginSequentialEdit();
 
-		text::Point anchorOrg(document);	// 後で元に戻すために選択を憶えとく
-		anchorOrg.moveTo(viewer.getCaret().getAnchor());
-		text::Point caretOrg(document);
-		caretOrg.moveTo(viewer.getCaret());
-		text::Point scopeEnd(document);
-		scopeEnd.moveTo(scope.second);	// 検索対象は置換操作で変化する
+		// mark to restore the selection later
+		text::Point oldAnchor(document, viewer.getCaret().getAnchor());
+		text::Point oldCaret(document, viewer.getCaret());
 
-		String replacedString;
-		while(s->search(document, scope, FORWARD, matchedRegion)) {
-			s->replace(document, matchedRegion, replacedString);
-			document.erase(matchedRegion);
-			scope.first = document.insert(matchedRegion.getTop(), replacedString);
-			scope.second = scopeEnd;
-			++count;
-		}
+		count = static_cast<ulong>(s->replaceAll(document, scope));
 		document.endSequentialEdit();
 		if(count != 0)
-			viewer.getCaret().select(anchorOrg, caretOrg);
+			viewer.getCaret().select(oldAnchor, oldCaret);
 		viewer.unfreeze();
 	}
 	return count;
@@ -495,7 +485,7 @@ ulong FindNextCommand::execute() {
 
 	WaitCursor wc;
 	TextViewer& viewer = getTarget();
-	const Document& document = viewer.getDocument();
+	Document& document = viewer.getDocument();
 	Caret& caret = viewer.getCaret();
 	const TextSearcher* s;
 	if(const Session* const session = document.getSession())
@@ -505,17 +495,18 @@ ulong FindNextCommand::execute() {
 
 	// 置換処理
 	if(replace_) {
-		String replacedString;
-		if(s->replace(document, caret.getSelectionRegion(), replacedString)) {
-			if(direction_ == FORWARD)
-				caret.replaceSelection(replacedString);
-			else {
-				const length_t orgStartColumn = caret.getTopPoint().getColumnNumber();
-				caret.replaceSelection(replacedString);
-				caret.moveTo(Position(caret.getLineNumber(), orgStartColumn));
-			}
-		} else
-			caret.moveTo(caret.getBottomPoint());
+		document.beginSequentialEdit();
+		viewer.freeze();
+		bool replaced = false;
+		if(direction_ == FORWARD) {
+			Position next;
+			if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
+				caret.moveTo(next);
+		} else {
+			Position next(caret.getTopPoint());
+			if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
+				caret.moveTo(next);
+		}
 	}
 
 	// 検索処理
