@@ -844,6 +844,7 @@ namespace ascension {
 			const Document*	getDocument() const throw();
 			const String&	getLine() const throw();
 			const Region&	getRegion() const throw();
+			void			setRegion(const Region& newRegion);
 			const Position&	tell() const throw();
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
@@ -1431,6 +1432,18 @@ inline bool DocumentCharacterIterator::hasPrevious() const throw() {return p_ !=
  */
 inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
 	line_ = &document_->getLine((p_ = std::max(std::min(to, region_.second), region_.first)).line); return *this;}
+
+/**
+ * Sets the region of the iterator. The current position will adjusted.
+ * @param newRegion the new region to set
+ * @throw BadRegionException @a newRegion intersects outside of the document
+ */
+inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
+	if(newRegion.first > document_->getEndPosition(false) || newRegion.second > document_->getEndPosition(false))
+		throw BadRegionException();
+	if(!(region_ = newRegion).includes(p_))
+		seek(p_);
+}
 
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}

@@ -308,7 +308,9 @@ bool TextSearcher::isMigemoAvailable() const throw() {
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
-	const DocumentCharacterIterator b(document, target.getTop()), e(document, target.getBottom());
+	const DocumentCharacterIterator b(document, target.getTop());
+	DocumentCharacterIterator e(b);	// e must be a clone of b because of the operator==
+	e.seek(target.getBottom());
 	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
@@ -350,32 +352,148 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 }
 
 /**
- * Replaces the specified text with the replacement string. If the stored replacements list is
- * empty, an empty is used as the replacement string.
+ * Replaces the specified region with the replacement string.
+ * <p>If the current search pattern does not match @a target, this method will fail and return false.<p>
+ * <p>If the stored replacements list is empty, an empty is used as the replacement string.</p>
+ * <p>This method does not begin and terminate an edit collection.</p>
  * @param document the document
  * @param target the region to replace
- * @param[out] replaced the result string
- * @return true if matched
+ * @param[out] endOfReplacement the end of the region covers the replacement. can be @c null
+ * @return true if replaced
  * @throw std#logic_error the pattern is not specified
  */
-bool TextSearcher::replace(const Document& document, const Region& target, String& replaced) const {
+bool TextSearcher::replace(Document& document, const Region& target, Position* endOfReplacement) const {
 	if(!match(document, target))
 		return false;
-	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
-	switch(options_.type) {
-	case LITERAL:
-		replaced = replacement;
-		break;
+	String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
+	if(!target.isEmpty())
+		document.erase(target);
+	if(replacement.empty()) {
+		if(endOfReplacement != 0)
+			*endOfReplacement = target.getTop();
+	} else {
+		switch(options_.type) {
+		case LITERAL:
+			break;
 #ifndef ASCENSION_NO_REGEX
-	case REGULAR_EXPRESSION:
+		case REGULAR_EXPRESSION:
 #ifndef ASCENSION_NO_MIGEMO
-	case MIGEMO:
+		case MIGEMO:
 #endif /* !ASCENSION_NO_MIGEMO */
-		replaced = lastResult_->replace(replacement.data(), replacement.data() + replacement.length());
-		break;
+			replacement.assign(lastResult_->replace(replacement.data(), replacement.data() + replacement.length()));
+			break;
 #endif /* !ASCENSION_NO_REGEX */
+		}
+		if(!replacement.empty()) {
+			const Position p = document.insert(target.getTop(), replacement);
+			if(endOfReplacement != 0)
+				*endOfReplacement = p;
+		} else if(endOfReplacement != 0)
+			*endOfReplacement = target.getTop();
 	}
 	return true;
+}
+
+/**
+ * Searches and replaces all occurences in the specified region.
+ * <p>If the stored replacements list is empty, an empty is used as the replacement string.</p>
+ * <p>This method does not begin and terminate an edit collection.</p>
+ * @param document the document
+ * @param scope the region to search and replace
+ * @return the number of replacement
+ * @throw std#logic_error the pattern is not specified
+ */
+size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
+	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
+	size_t c = 0;
+	compilePattern(FORWARD);
+
+	if(options_.type == LITERAL) {
+		if(pattern_.literal->getDirection() != FORWARD) {	// recompile to change the direction
+			const String& p = storedPatterns_.front();
+			pattern_.literal->compile(p.data(), p.data() + p.length(), FORWARD, !options_.caseSensitive);
+		}
+		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
+		Point endOfScope(document, scope.getBottom());
+		for(DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
+			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
+				break;
+			else if(!checkBoundary(
+					static_cast<DocumentCharacterIterator&>(*matchedFirst),
+					static_cast<DocumentCharacterIterator&>(*matchedLast))) {
+				i.next();
+				continue;
+			}
+			// matched -> replace
+			const Region matchedRegion(
+				static_cast<DocumentCharacterIterator&>(*matchedFirst).tell(),
+				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
+			if(!matchedRegion.isEmpty())
+				i.seek(document.erase(matchedRegion));
+			if(!replacement.empty())
+				i.seek(document.insert(matchedRegion.first, replacement));
+			if(!matchedRegion.isEmpty() || !replacement.empty())
+				i.setRegion(Region(scope.getTop(), endOfScope));
+			++c;
+		}
+	}
+
+#ifndef ASCENSION_NO_REGEX
+	if(options_.type == REGULAR_EXPRESSION
+#ifndef ASCENSION_NO_MIGEMO
+			|| options_.type == MIGEMO
+#endif /* !ASCENSION_NO_MIGEMO */
+	) {
+		regex::Pattern::MatchOptions options = regex::Pattern::MULTILINE;
+		const Point endOfScope(document, scope.getBottom());
+		Position lastEOS(endOfScope);
+		DocumentCharacterIterator e(document, endOfScope);
+		delete lastResult_;
+		lastResult_ = 0;
+
+		DocumentCharacterIterator i(e);	// position to start search
+		i.seek(scope.getTop());
+		setupRegexRegionalMatchOptions(i, e, options);
+		while(true) {
+			auto_ptr<regex::MatchResult<DocumentCharacterIterator> > result(pattern_.regex->search(i, e, options));
+			if(result.get() == 0)
+				break;
+			else if(!checkBoundary(result->getStart(), result->getEnd()))
+				i.next();
+			else {
+				// matched -> replace
+				const Region matchedRegion(result->getStart().tell(), result->getEnd().tell());
+				if(!matchedRegion.isEmpty())
+					i.seek(document.erase(matchedRegion));
+				if(!replacement.empty()) {
+					const String r(result->replace(replacement.data(), replacement.data() + replacement.length()));
+					if(!r.empty())
+						i.seek(document.insert(matchedRegion.getTop(), r));
+				}
+				++c;
+				if(matchedRegion.second == e.tell()) {	// reached the end of the scope
+					lastResult_ = result.release();
+					break;
+				}
+				if(endOfScope.getPosition() != lastEOS) {
+					e.setRegion(Region(scope.getTop(), endOfScope));
+					e.seek(endOfScope);
+					i.setRegion(Region(scope.getTop(), endOfScope));
+					lastEOS = endOfScope;
+				}
+				if(matchedRegion.isEmpty()) {
+					if(i.tell() <= matchedRegion.first)
+						i.seek(matchedRegion.first);
+					assert(i.tell() == matchedRegion.first);
+					i.next();
+				}
+			}
+			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
+			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
+		}
+	}
+#endif /* !ASCENSION_NO_REGEX */
+	return c;
 }
 
 /**

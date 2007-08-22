@@ -134,12 +134,13 @@ namespace ascension {
 			void					setPattern(const String& pattern, bool dontRemember = false);
 			void					setReplacement(const String& replacement);
 			// operations
-			bool	match(const text::Document& document, const text::Region& target) const;
-			bool	replace(const text::Document& document, const text::Region& target, String& replaced) const;
-			bool	search(const text::Document& document,
-						const text::Region& scope, Direction direction, text::Region& matchedRegion) const;
+			bool		match(const text::Document& document, const text::Region& target) const;
+			bool		replace(text::Document& document, const text::Region& target, text::Position* endOfReplacement) const;
+			std::size_t	replaceAll(text::Document& document, const text::Region& scope) const;
+			bool		search(const text::Document& document,
+							const text::Region& scope, Direction direction, text::Region& matchedRegion) const;
 			template<typename InputIterator>
-			void	setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
+			void		setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
 		private:
 			bool	checkBoundary(const text::DocumentCharacterIterator& first, const text::DocumentCharacterIterator& last) const;
 			void	clearPatternCache();

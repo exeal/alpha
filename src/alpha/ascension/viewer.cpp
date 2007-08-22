@@ -2797,19 +2797,25 @@ void TextViewer::updateIMECompositionWindowPosition() {
 	if(!imeCompositionActivated_)
 		return;
 	else if(HIMC imc = ::ImmGetContext(getHandle())) {
+		// composition window placement
 		::COMPOSITIONFORM cf;
 		getClientRect(cf.rcArea);
+		::RECT margins = getTextAreaMargins();
+		cf.rcArea.left += margins.left;
+		cf.rcArea.top += margins.top;
+		cf.rcArea.right -= margins.right;
+		cf.rcArea.bottom -= margins.bottom;
 		cf.dwStyle = CFS_POINT;
 		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), false, LineLayout::LEADING);
 		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? cf.rcArea.top : cf.rcArea.bottom;
+		else
+			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
 		::ImmSetCompositionWindow(imc, &cf);
 		cf.dwStyle = CFS_RECT;
-		cf.rcArea.left = cf.ptCurrentPos.x;
-		cf.rcArea.top = cf.ptCurrentPos.y;
 		::ImmSetCompositionWindow(imc, &cf);
 
-		// ATOK seems to require the following code
+		// composition font
 		::LOGFONTW font;
 		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
