@@ -106,6 +106,9 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	wholeMatchCombobox_.addString(app.loadString(MSG_DIALOG__WHOLE_WORD_MATCH).c_str());
 	checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);
 
+	collationWeightCombobox_.addString(L"15..IDENTICAL");
+	collationWeightCombobox_.setCurSel(0);
+
 	onCommand(IDC_COMBO_FINDWHAT, CBN_EDITCHANGE, getItem(IDC_COMBO_FINDWHAT));
 }
 

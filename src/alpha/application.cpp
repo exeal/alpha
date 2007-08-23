@@ -742,7 +742,8 @@ void Alpha::replaceAndSearchNext() {
 	searchDialog_->setOptions();
 
 	try {
-		command.execute();
+		if(command.execute() != 0 && showMessageBoxOnFind_)
+			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	} catch(boost::regex_error& e) {
 		if(showMessageBoxOnFind_)
 			showRegexSearchError(e);
@@ -818,9 +819,10 @@ void Alpha::searchAndBookmarkAll() {
 bool Alpha::searchNext(bool forward, bool messageOnFailure) {
 	FindNextCommand command(buffers_->getActiveView(), false, forward ? FORWARD : BACKWARD);
 	searchDialog_->setOptions();
+	bool found = false;
 	try {
 		if(command.execute() == 0)
-			return true;
+			found = true;
 		else if(messageOnFailure)
 			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	} catch(boost::regex_error& e) {
@@ -836,7 +838,7 @@ bool Alpha::searchNext(bool forward, bool messageOnFailure) {
 		else
 			::SetFocus(searchDialog_->getItem(IDC_COMBO_FINDWHAT));
 	}
-	return false;
+	return found;
 }
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
