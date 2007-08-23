@@ -460,7 +460,15 @@ ulong FindAllCommand::execute() {
 		text::Point oldAnchor(document, viewer.getCaret().getAnchor());
 		text::Point oldCaret(document, viewer.getCaret());
 
-		count = static_cast<ulong>(s->replaceAll(document, scope));
+		try {
+			count = static_cast<ulong>(s->replaceAll(document, scope));
+		} catch(...) {
+			document.endSequentialEdit();
+			if(count != 0)
+				viewer.getCaret().select(oldAnchor, oldCaret);
+			viewer.unfreeze();
+			throw;
+		}
 		document.endSequentialEdit();
 		if(count != 0)
 			viewer.getCaret().select(oldAnchor, oldCaret);
@@ -498,15 +506,23 @@ ulong FindNextCommand::execute() {
 		document.beginSequentialEdit();
 		viewer.freeze();
 		bool replaced = false;
-		if(direction_ == FORWARD) {
-			Position next;
-			if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
-				caret.moveTo(next);
-		} else {
-			Position next(caret.getTopPoint());
-			if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
-				caret.moveTo(next);
+		try {
+			if(direction_ == FORWARD) {
+				Position next;
+				if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
+					caret.moveTo(next);
+			} else {
+				Position next(caret.getTopPoint());
+				if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
+					caret.moveTo(next);
+			}
+		} catch(...) {
+			viewer.unfreeze();
+			document.endSequentialEdit();
+			throw;
 		}
+		viewer.unfreeze();
+		document.endSequentialEdit();
 	}
 
 	// 検索処理

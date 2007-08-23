@@ -299,7 +299,7 @@ namespace internal {
 		// WM_IME_REQUEST -> LRESULT onIMERequest(WPARAM command, LPARAM lParam, bool& handled)
 		DEFINE_DISPATCH(WM_IME_REQUEST) {return w.onIMERequest(wp, lp, handled);}
 		// WM_IME_STARTCOMPOSITION -> void onIMEStartComposition(void)
-		DEFINE_DISPATCH(WM_IME_STARTCOMPOSITION) {handled = true; w.onIMEStartComposition(); return 0;}
+		DEFINE_DISPATCH(WM_IME_STARTCOMPOSITION) {w.onIMEStartComposition(); return 0;}
 		// WM_KEYDOWN -> void onKeyDown(UINT vkey, UINT flags, bool& handled)
 		DEFINE_DISPATCH(WM_KEYDOWN) {w.onKeyDown(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return !handled;}
 		// WM_KEYUP -> void onKeyUp(UINT vkey, UINT flags, bool& handled)

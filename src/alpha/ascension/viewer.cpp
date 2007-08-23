@@ -2595,8 +2595,6 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 
 	// 後処理
 	updateCaretPosition();
-	if(imeCompositionActivated_)
-		updateIMECompositionWindowPosition();
 	if(redraw)
 		update();
 	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, dx != 0, dy != 0);
@@ -2789,14 +2787,15 @@ void TextViewer::updateCaretPosition() {
 			|| renderer_->getLineLayout(caret_->getLineNumber()).getBidiEmbeddingLevel(caret_->getColumnNumber()) % 2 == 1)
 		pt.x -= caretShape_.width;
 	setCaretPosition(pt);
+	updateIMECompositionWindowPosition();
 }
 
 /// Moves the IME form to valid position.
 void TextViewer::updateIMECompositionWindowPosition() {
 	assertValidAsWindow();
-	if(!imeCompositionActivated_)
+/*	if(!imeCompositionActivated_)
 		return;
-	else if(HIMC imc = ::ImmGetContext(getHandle())) {
+	else*/ if(HIMC imc = ::ImmGetContext(getHandle())) {
 		// composition window placement
 		::COMPOSITIONFORM cf;
 		getClientRect(cf.rcArea);

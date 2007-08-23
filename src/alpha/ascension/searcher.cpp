@@ -484,8 +484,8 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 				if(matchedRegion.isEmpty()) {
 					if(i.tell() <= matchedRegion.first)
 						i.seek(matchedRegion.first);
-					assert(i.tell() == matchedRegion.first);
-					i.next();
+//					if(i.tell() == matchedRegion.first)
+						i.next();
 				}
 			}
 			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
