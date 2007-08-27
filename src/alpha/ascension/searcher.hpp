@@ -127,6 +127,7 @@ namespace ascension {
 			const SearchOptions&	getOptions() const throw();
 			const String&			getPattern(std::size_t index = 0) const;
 			const String&			getReplacement(std::size_t index = 0) const;
+			bool					isLastPatternMatched() const throw();
 			bool					isMigemoAvailable() const throw();
 			static bool				isRegexAvailable() throw();
 			void					setMaximumNumberOfStoredStrings(std::size_t number) throw();
@@ -153,9 +154,26 @@ namespace ascension {
 				regex::Pattern* regex;
 #endif /* !ASCENSION_NO_REGEX */
 			} pattern_;
+			mutable struct LastResult {
+				const text::Document* document;
+				text::Region matchedRegion;
+				ulong documentRevisionNumber;
 #ifndef ASCENSION_NO_REGEX
-			mutable regex::MatchResult<text::DocumentCharacterIterator>* lastResult_;
+				regex::MatchResult<text::DocumentCharacterIterator>* regexResult;
 #endif /* !ASCENSION_NO_REGEX */
+				LastResult() throw() : document(0), matchedRegion(text::Position::INVALID_POSITION)
+#ifndef ASCENSION_NO_REGEX
+					, regexResult(0)
+#endif /* !ASCENSION_NO_REGEX */
+				{}
+				~LastResult() throw() {reset();}
+				bool checkDocumentRevision(const text::Document& current) const throw() {
+					return document == &current && documentRevisionNumber == current.getRevisionNumber();}
+				bool matched() const throw() {return matchedRegion.first != text::Position::INVALID_POSITION;}
+				void reset() throw();
+				void updateDocumentRevision(const text::Document& document) throw() {
+					this->document = &document; documentRevisionNumber = document.getRevisionNumber();}
+			} lastResult_;
 			SearchOptions options_;
 			String temporaryPattern_;
 			std::list<String> storedPatterns_, storedReplacements_;

@@ -1141,13 +1141,11 @@ void Alpha::showSearchDialog() {
 		if(initializeFindTextFromEditor_) {	// アクティブなエディタから検索パターンを取り出す
 			Caret& caret = buffers_->getActiveView().getCaret();
 			if(caret.isSelectionEmpty()) {
-				String s;
-				// TODO: obtain the word nearest from the caret position.
+//				String s;
+//				// TODO: obtain the word nearest from the caret position.
 //				caret.getNearestWordFromCaret(0, 0, &s);
-				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
-			} else if(caret.getAnchor().getLineNumber() != caret.getLineNumber())
-				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, L"");
-			else
+//				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
+			} else if(caret.getAnchor().getLineNumber() == caret.getLineNumber())
 				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, caret.getSelectionText().c_str());
 		}
 		searchDialog_->show(SW_SHOW);

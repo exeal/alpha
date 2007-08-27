@@ -532,25 +532,11 @@ ulong FindNextCommand::execute() {
 	Region matchedRegion;
 	bool found = s->search(document, scope, direction_, matchedRegion);
 
-#ifndef ASCENSION_NO_REGEX
-	// ゼロ幅マッチの対処
-	if(found && matchedRegion.isEmpty()) {
-		if(direction_ == FORWARD && matchedRegion.getTop() == scope.getTop()) {
-			DocumentCharacterIterator i(document, scope.getTop());
-			found = (scope.getTop() != (++i).tell()) ?
-				s->search(document, Region(i.tell(), scope.getBottom()), direction_, matchedRegion) : false;
-		} else if(direction_ == BACKWARD && matchedRegion.getTop() == scope.getBottom()) {
-			DocumentCharacterIterator i(document, scope.getBottom());
-			found = (scope.getBottom() != (--i).tell()) ?
-				s->search(document, Region(scope.getTop(), i.tell()), direction_, matchedRegion) : false;
-		}
-	}
-#endif /* !ASCENSION_NO_REGEX */
 	if(found) {
 		caret.select(matchedRegion);
 //		viewer.highlightMatchTexts();
 		return 0;
-	} else {	// 見つからなかった
+	} else {
 //		viewer.highlightMatchTexts(false);
 		return 1;
 	}

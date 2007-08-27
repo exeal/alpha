@@ -130,7 +130,7 @@ SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentatio
 auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
 	auto_ptr<LineStyle> result(new LineStyle);
 	result->array = new StyledText[result->count = 1];
-	result->array[0].column = region.getTop().column;
+	result->array[0].column = region.beginning().column;
 	result->array[0].style = style_;
 	return result;
 }
@@ -158,7 +158,7 @@ PresentationReconstructor::~PresentationReconstructor() throw() {
 /// @see text#IDocumentPartitioningListener#documentPartitioningChanged
 void PresentationReconstructor::documentPartitioningChanged(const Region& changedRegion) {
 	for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()); i != presentation_.getLastTextViewer(); ++i)
-		(*i)->getTextRenderer().invalidate(changedRegion.getTop().line, changedRegion.getBottom().line + 1);
+		(*i)->getTextRenderer().invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
 }
 
 /// @see ILineStyleDirector#queryLineStyle
@@ -178,9 +178,9 @@ const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& 
 		partitioner.getPartition(Position(line, column), temp);
 		if(!temp.region.isEmpty()) {	// skip an empty partition
 			partitions.push_back(temp);
-			if(temp.region.getBottom().line != line)
+			if(temp.region.end().line != line)
 				break;
-			column = temp.region.getBottom().column;
+			column = temp.region.end().column;
 		} else
 			++column;
 	}

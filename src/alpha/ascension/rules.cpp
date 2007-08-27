@@ -617,7 +617,7 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 		for(list<const Rule*>::const_iterator i = rules_.begin(); i != rules_.end(); ++i) {
 			result = (*i)->parse(*this, p, last);
 			if(result.get() != 0) {
-				current_.seek(result->region.getBottom());
+				current_.seek(result->region.end());
 				return result;
 			}
 		}
@@ -627,7 +627,7 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
 					result = (*i)->parse(*this, p, wordEnd);
 					if(result.get() != 0) {
-						current_.seek(result->region.getBottom());
+						current_.seek(result->region.end());
 						return result;
 					}
 				}
@@ -778,7 +778,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 
 	// delete the partitions encompassed by the deleted region
 	if(change.isDeletion())
-		erasePartitions(change.getRegion().getTop(), change.getRegion().getBottom());
+		erasePartitions(change.getRegion().beginning(), change.getRegion().end());
 
 	// move the partitions adapting to the document change
 	for(size_t i = 0, c = partitions_.getSize(); i < c; ++i) {
@@ -787,8 +787,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	}
 
 	// delete the partitions start at the deleted region
-	DocumentCharacterIterator p(document, Position(change.getRegion().getTop().line, 0));
-	Position eol(change.isDeletion() ? change.getRegion().getTop() : change.getRegion().getBottom());
+	DocumentCharacterIterator p(document, Position(change.getRegion().beginning().line, 0));
+	Position eol(change.isDeletion() ? change.getRegion().beginning() : change.getRegion().end());
 	eol.column = document.getLineLength(eol.line);
 	erasePartitions(p.tell(), eol);
 
@@ -837,7 +837,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 		}
 	}
 	verify();
-	notifyDocument(Region(Position(change.getRegion().getTop().line, 0), p.tell()));
+	notifyDocument(Region(Position(change.getRegion().beginning().line, 0), p.tell()));
 }
 
 /// @see text#DocumentPartitioner#doGetPartition
@@ -999,7 +999,7 @@ LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstru
 /// @see presentation#IPartitionPresentationReconstructor#getPresentation
 auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
 	list<StyledText> result;
-	Position lastTokenEnd = region.getTop();	// the end of the last token
+	Position lastTokenEnd = region.beginning();	// the end of the last token
 	tokenScanner_->parse(document_, region);
 	while(!tokenScanner_->isDone()) {
 		auto_ptr<Token> token(tokenScanner_->nextToken());
@@ -1007,7 +1007,7 @@ auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(c
 			break;
 		map<Token::ID, const TextStyle>::const_iterator style(styles_.find(token->id));
 		if(style != styles_.end()) {
-			if(lastTokenEnd != token->region.getTop()) {
+			if(lastTokenEnd != token->region.beginning()) {
 				// fill a default style segment between the two tokens
 				result.push_back(StyledText());
 				result.back().column = lastTokenEnd.column;
@@ -1017,9 +1017,9 @@ auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(c
 			result.back().column = token->region.first.column;
 			result.back().style = style->second;
 		}
-		lastTokenEnd = token->region.getBottom();
+		lastTokenEnd = token->region.end();
 	}
-	if(lastTokenEnd != region.getBottom()) {
+	if(lastTokenEnd != region.end()) {
 		// fill a default style segment at the end of the region
 		result.push_back(StyledText());
 		result.back().column = lastTokenEnd.column;

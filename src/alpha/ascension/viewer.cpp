@@ -450,8 +450,8 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 		imeCompositionActivated_(false), imeComposingCharacter_(false), mouseInputDisabledCount_(0) {
 	renderer_.reset(new Renderer(*this));
-	renderer_->addFontListener(*this);
-	renderer_->addVisualLinesListener(*this);
+//	renderer_->addFontListener(*this);
+//	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
@@ -475,8 +475,8 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 {
 	renderer_.reset(new Renderer(*rhs.renderer_));
-	renderer_->addFontListener(*this);
-	renderer_->addVisualLinesListener(*this);
+//	renderer_->addFontListener(*this);
+//	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
@@ -548,36 +548,36 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	// 選択の強調表示の再描画
 	if(self.isSelectionRectangle()) {	// 矩形選択の場合
 		if(!oldRegion.isEmpty())
-			redrawLines(oldRegion.getTop().line, oldRegion.getBottom().line);
+			redrawLines(oldRegion.beginning().line, oldRegion.end().line);
 		if(!newRegion.isEmpty())
-			redrawLines(newRegion.getTop().line, newRegion.getBottom().line);
+			redrawLines(newRegion.beginning().line, newRegion.end().line);
 	} else if(newRegion != oldRegion) {	// 本当に範囲が変化した
 		if(oldRegion.isEmpty()) {	// 元々選択が空だった場合
 			if(!newRegion.isEmpty())	// 選択を作成した
-				redrawLines(newRegion.getTop().line, newRegion.getBottom().line);
+				redrawLines(newRegion.beginning().line, newRegion.end().line);
 		} else {	// 元々選択があった場合
 			if(newRegion.isEmpty()) {	// 選択を解除した
-				redrawLines(oldRegion.getTop().line, oldRegion.getBottom().line);
+				redrawLines(oldRegion.beginning().line, oldRegion.end().line);
 				if(!isFrozen())
 					update();
-			} else if(oldRegion.getTop() == newRegion.getTop()) {	// 始点固定
-				const length_t i[2] = {oldRegion.getBottom().line, newRegion.getBottom().line};
+			} else if(oldRegion.beginning() == newRegion.beginning()) {	// 始点固定
+				const length_t i[2] = {oldRegion.end().line, newRegion.end().line};
 				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
-			} else if(oldRegion.getBottom() == newRegion.getBottom()) {	// 終点固定
-				const length_t i[2] = {oldRegion.getTop().line, newRegion.getTop().line};
+			} else if(oldRegion.end() == newRegion.end()) {	// 終点固定
+				const length_t i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
 				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
 			} else {	// いずれも変化
-				if((oldRegion.getTop().line >= newRegion.getTop().line && oldRegion.getTop().line <= newRegion.getBottom().line)
-						|| (oldRegion.getBottom().line >= newRegion.getTop().line && oldRegion.getBottom().line <= newRegion.getBottom().line)) {
+				if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
+						|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
 					const length_t i[2] = {
-						min(oldRegion.getTop().line, newRegion.getTop().line), max(oldRegion.getBottom().line, newRegion.getBottom().line)
+						min(oldRegion.beginning().line, newRegion.beginning().line), max(oldRegion.end().line, newRegion.end().line)
 					};
 					redrawLines(min(i[0], i[1]), max(i[0], i[1]));
 				} else {
-					redrawLines(oldRegion.getTop().line, oldRegion.getBottom().line);
+					redrawLines(oldRegion.beginning().line, oldRegion.end().line);
 					if(!isFrozen())
 						update();
-					redrawLines(newRegion.getTop().line, newRegion.getBottom().line);
+					redrawLines(newRegion.beginning().line, newRegion.end().line);
 				}
 			}
 		}
@@ -586,10 +586,6 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 
 	if(changed && !isFrozen())
 		update();
-
-	// IME で入力中の場合は編集ウィンドウの位置を修正
-	if(imeCompositionActivated_)
-		updateIMECompositionWindowPosition();
 }
 
 /**
@@ -765,6 +761,9 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	setContentAssistant(ca);
 	getDocument().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif /* _DEBUG */
+	
+	renderer_->addFontListener(*this);
+	renderer_->addVisualLinesListener(*this);
 
 	// 位置決めと表示
 	move(rect, false);
@@ -799,10 +798,10 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 	}
 
 	const Region& region = change.getRegion();
-	const bool multiLine = region.getTop().line != region.getBottom().line;
+	const bool multiLine = region.beginning().line != region.end().line;
 	if(isFrozen() && multiLine && freezeInfo_.invalidLines.first != INVALID_INDEX) {
 		// 凍結中の描画待ち行のずらす
-		const length_t first = region.getTop().line + 1, last = region.getBottom().line;
+		const length_t first = region.beginning().line + 1, last = region.end().line;
 		if(change.isDeletion()) {
 			if(freezeInfo_.invalidLines.first > last)
 				freezeInfo_.invalidLines.first -= last - first + 1;
@@ -821,7 +820,7 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 				freezeInfo_.invalidLines.second += last - first + 1;
 		}
 	}
-//	invalidateLines(region.getTop().line, !multiLine ? region.getBottom().line : INVALID_INDEX);
+//	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 	if(scrollInfo_.changed)
 		updateScrollBars();
 }
@@ -1112,8 +1111,6 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 			setCapture();
 		}
 	}
-	if(imeCompositionActivated_)
-		updateIMECompositionWindowPosition();
 }
 
 /**
@@ -1786,7 +1783,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 					recreateCaret();
 				}
 			}
-			updateIMECompositionWindowPosition();
+//			updateIMECompositionWindowPosition();
 			::ImmReleaseContext(getHandle(), imc);
 			handled = true;	// prevent to be send WM_CHARs
 		}
@@ -2793,9 +2790,9 @@ void TextViewer::updateCaretPosition() {
 /// Moves the IME form to valid position.
 void TextViewer::updateIMECompositionWindowPosition() {
 	assertValidAsWindow();
-/*	if(!imeCompositionActivated_)
+	if(!imeCompositionActivated_)
 		return;
-	else*/ if(HIMC imc = ::ImmGetContext(getHandle())) {
+	else if(HIMC imc = ::ImmGetContext(getHandle())) {
 		// composition window placement
 		::COMPOSITIONFORM cf;
 		getClientRect(cf.rcArea);
@@ -3449,8 +3446,8 @@ VirtualBox::VirtualBox(const TextViewer& view, const Region& region) throw() : v
  */
 bool VirtualBox::getOverlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw() {
 	assert(view_.isWindow());
-	const Point& top = getTop();
-	const Point& bottom = getBottom();
+	const Point& top = beginning();
+	const Point& bottom = end();
 	if(line < top.line || (line == top.line && subline < top.subline)	// out of the region
 			|| line > bottom.line || (line == bottom.line && subline > bottom.subline))
 		return false;
@@ -3475,12 +3472,12 @@ bool VirtualBox::isPointOver(const ::POINT& pt) const throw() {
 	if(view_.hitTest(pt) != TextViewer::TEXT_AREA)	// ignore if not in text area
 		return false;
 	const int leftMargin = view_.getTextAreaMargins().left;
-	if(pt.x < getLeft() + leftMargin || pt.x >= getRight() + leftMargin)	// about x-coordinate
+	if(pt.x < left() + leftMargin || pt.x >= right() + leftMargin)	// about x-coordinate
 		return false;
 
 	// about y-coordinate
-	const Point& top = getTop();
-	const Point& bottom = getBottom();
+	const Point& top = beginning();
+	const Point& bottom = end();
 	length_t line, subline;
 	view_.mapClientYToLine(pt.y, &line, &subline);	// $friendly-access
 	if(line < top.line || (line == top.line && subline < top.subline))
@@ -4363,7 +4360,7 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 
 	// find the start of the identifier
 	if(startColumn != 0) {
-		DocumentCharacterIterator i(document, Region(max(partition.region.getTop(), Position(position.line, 0)), position), position);
+		DocumentCharacterIterator i(document, Region(max(partition.region.beginning(), Position(position.line, 0)), position), position);
 		do {
 			i.previous();
 			if(!syntax.isIdentifierContinueCharacter(i.current())) {
@@ -4382,7 +4379,7 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 	// find the end of the identifier
 	if(endColumn != 0) {
 		DocumentCharacterIterator i(document, Region(position,
-			min(partition.region.getBottom(), Position(position.line, document.getLineLength(position.line)))), position);
+			min(partition.region.end(), Position(position.line, document.getLineLength(position.line)))), position);
 		while(i.hasNext()) {
 			if(!syntax.isIdentifierContinueCharacter(i.current())) {
 				end = i.tell().column;
