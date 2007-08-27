@@ -1743,7 +1743,7 @@ void LineLayoutBuffer::documentAboutToBeChanged(const text::Document&) {
 
 /// @see text#IDocumentListener#documentChanged
 void LineLayoutBuffer::documentChanged(const text::Document&, const text::DocumentChange& change) {
-	const length_t top = change.getRegion().getTop().line, bottom = change.getRegion().getBottom().line;
+	const length_t top = change.getRegion().beginning().line, bottom = change.getRegion().end().line;
 	documentChangePhase_ = CHANGING;
 	if(top != bottom) {
 		if(change.isDeletion()) {	// deleted region includes newline(s)
@@ -2654,7 +2654,7 @@ TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBufferin
 
 /// Copy-constructor.
 TextRenderer::TextRenderer(const TextRenderer& rhs) : FontSelector(rhs),
-		LineLayoutBuffer(presentation_.getDocument(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+		LineLayoutBuffer(rhs.presentation_.getDocument(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(rhs.presentation_), enablesDoubleBuffering_(rhs.enablesDoubleBuffering_) {
 	setLayoutInformation(this, false);
 //	updateViewerSize(); ???

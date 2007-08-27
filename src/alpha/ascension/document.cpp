@@ -73,12 +73,12 @@ namespace {
 	public:
 		DeleteOperation(const Region& region) throw() : region_(region) {}
 		bool canExecute(Document& document) const throw() {
-			return !document.isNarrowed() || (region_.getTop() >= document.getStartPosition() && region_.getBottom() <= document.getEndPosition());}
+			return !document.isNarrowed() || (region_.beginning() >= document.getStartPosition() && region_.end() <= document.getEndPosition());}
 		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {
-			const Position& bottom = region_.getBottom();
-			if(bottom.column == 0 || bottom != postOperation.region_.getTop()) return false;
-			else {const_cast<DeleteOperation*>(this)->region_.getBottom() = postOperation.region_.getBottom(); return true;}
+			const Position& bottom = region_.end();
+			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
+			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
 		}
 		Position execute(Document& document) {return document.erase(region_);}
 	private:
@@ -600,6 +600,11 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
  * @c #insert inserts a text string into any position. @c #erase deletes any text region.
  * Other classes also provide text manipulation for the document.
  *
+ * A document manages a revision number indicates how many times the document was changed. This
+ * value is initially zero and incremented by @c #insert, @c #insertFromStream, and @c #erase
+ * methods. @c #resetContent resets this to zero. The current revision number can be obtained by
+ * @c #getRevisionNumber.
+ *
  * A document can be devides into a sequence of semantic segments called partition.
  * Document partitioners expressed by @c DocumentPartitioner class define these
  * partitioning. Each partitions have its content type and region (see @c DocumentPartition).
@@ -627,8 +632,8 @@ Newline Document::defaultNewline_ = ASCENSION_DEFAULT_NEWLINE;
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), modified_(false), codePage_(defaultCodePage_), newline_(defaultNewline_),
-		length_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false), changing_(false),
-		accessibleArea_(0), timeStampDirector_(0) {
+		length_(0), revisionNumber_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false),
+		changing_(false), accessibleArea_(0), timeStampDirector_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_.reset(new UndoManager(*this));
 	resetContent();
@@ -704,17 +709,17 @@ Position Document::erase(const Region& region) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(region.isEmpty())	// 空 -> 無視
-		return region.getTop();
+		return region.beginning();
 	else if(isNarrowed()) {
-		if(region.getBottom() <= getStartPosition())
-			return region.getBottom();
-		else if(region.getTop() >= getEndPosition())
-			return region.getTop();
+		if(region.end() <= getStartPosition())
+			return region.end();
+		else if(region.beginning() >= getEndPosition())
+			return region.beginning();
 	} else if(!isModified() && timeStampDirector_ != 0) {
 		::FILETIME realTimeStamp;
 		if(!verifyTimeStamp(true, realTimeStamp)) {	// 他で上書きされとる
 			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(*this, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
-				return region.getTop();
+				return region.beginning();
 			diskFile_.lastWriteTimes.internal = diskFile_.lastWriteTimes.user = realTimeStamp;
 		}
 	}
@@ -722,8 +727,8 @@ Position Document::erase(const Region& region) {
 	ModificationGuard guard(*this);
 	fireDocumentAboutToBeChanged();
 
-	const Position begin = isNarrowed() ? max(region.getTop(), getStartPosition()) : region.getTop();
-	const Position end = isNarrowed() ? min(region.getBottom(), getEndPosition()) : region.getBottom();
+	const Position begin = isNarrowed() ? max(region.beginning(), getStartPosition()) : region.beginning();
+	const Position end = isNarrowed() ? min(region.end(), getEndPosition()) : region.end();
 	StringBuffer deletedString;	// 削除した文字列 (複数行になるときは現在の改行文字が挿入される)
 
 	if(begin.line == end.line) {	// 対象が1行以内
@@ -772,7 +777,8 @@ Position Document::erase(const Region& region) {
 	if(recordingOperations_)
 		undoManager_->pushUndoBuffer(*(new InsertOperation(begin, deletedString.str())));
 
-	// 変更を通知
+	// notify the change
+	++revisionNumber_;
 	fireDocumentChanged(DocumentChange(true, Region(begin, end)));
 	setModified();
 
@@ -909,7 +915,8 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 	if(recordingOperations_)
 		undoManager_->pushUndoBuffer(*(new DeleteOperation(Region(position, resultPosition))));
 
-	// 変更を通知
+	// notify the change
+	++revisionNumber_;
 	fireDocumentChanged(DocumentChange(false, Region(position, resultPosition)));
 	setModified();
 //	assert(length_ == calculateDocumentLength(*this));	// length_ メンバの診断
@@ -1120,9 +1127,9 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 void Document::narrow(const Region& region) {
 	if(accessibleArea_ == 0)
 		accessibleArea_ = new pair<Position, Point*>;
-	accessibleArea_->first = region.getTop();
+	accessibleArea_->first = region.beginning();
 	accessibleArea_->second = new Point(*this);
-	accessibleArea_->second->moveTo(region.getBottom());
+	accessibleArea_->second->moveTo(region.end());
 	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
 		if((*i)->isExcludedFromRestriction())
 			(*i)->normalize();
@@ -1193,6 +1200,7 @@ void Document::resetContent() {
 		fireDocumentChanged(DocumentChange(true, entire), false);
 	} else if(lines_.isEmpty())
 		lines_.insert(lines_.begin(), new Line);
+	revisionNumber_ = 0;
 
 	setReadOnly(false);
 	setCodePage(Document::defaultCodePage_);
@@ -1730,8 +1738,8 @@ Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName
  * @param lbr the line break to be used
  */
 void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	const Position& start = region.getTop();
-	const Position end = min(region.getBottom(), getEndPosition(false));
+	const Position& start = region.beginning();
+	const Position end = min(region.end(), getEndPosition(false));
 	if(start.line == end.line) {	// shortcut for single-line
 		out << getLine(end.line).substr(start.column, end.column - start.column);
 		return;
@@ -1812,13 +1820,13 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 }
 
 /**
- * Constructor. The iteration is started at @a region.getTop().
+ * Constructor. The iteration is started at @a region.beginning().
  * @param document the document to iterate
  * @param region the region to iterate
  * @throw BadRegionException @a region intersects outside of the document
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
-		document_(&document), region_(region), line_(&document.getLine(region.getTop().line)), p_(region.getTop()) {
+		document_(&document), region_(region), line_(&document.getLine(region.beginning().line)), p_(region.beginning()) {
 	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
 		throw BadRegionException();
 	region_.normalize();

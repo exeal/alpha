@@ -70,12 +70,12 @@ namespace ascension {
 				int x;				// distance from left side of layout
 			} points_[2];
 			const TextViewer& view_;
-			const Point& getBottom() const throw() {return points_[(&getTop() == &points_[0]) ? 1 : 0];}
-			int getLeft() const throw() {return std::min(points_[0].x, points_[1].x);}
-			int getRight() const throw() {return std::max(points_[0].x, points_[1].x);}
-			const Point& getTop() const throw() {
+			const Point& beginning() const throw() {
 				return points_[(points_[0].line < points_[1].line
 					|| (points_[0].line == points_[1].line && points_[0].subline <= points_[1].subline)) ? 0 : 1];}
+			const Point& end() const throw() {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
+			int left() const throw() {return std::min(points_[0].x, points_[1].x);}
+			int right() const throw() {return std::max(points_[0].x, points_[1].x);}
 		};
 
 		/**

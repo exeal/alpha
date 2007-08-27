@@ -136,24 +136,24 @@ namespace ascension {
 			Region operator&(const Region& rhs) const throw() {return getIntersection(rhs);}
 			/// Returns a union of the two regions. Same as @c #getUnion.
 			Region operator|(const Region& rhs) const {return getUnion(rhs);}
+			/// Returns the beginning of the region.
+			Position& beginning() throw() {return (first < second) ? first : second;}
+			/// Returns the beginning of the region.
+			const Position& beginning() const throw() {return (first < second) ? first : second;}
 			/// Returns true if the region encompasses the other region.
-			bool encompasses(const Region& other) const throw() {return getTop() <= other.getTop() && getBottom() >= other.getBottom();}
-			/// Returns the minimum position.
-			Position& getTop() throw() {return (first < second) ? first : second;}
-			/// Returns the minimum position.
-			const Position& getTop() const throw() {return (first < second) ? first : second;}
-			/// Returns the maximum position.
-			Position& getBottom() throw() {return (first > second) ? first : second;}
-			/// Returns the maximum position.
-			const Position& getBottom() const throw() {return (first > second) ? first : second;}
+			bool encompasses(const Region& other) const throw() {return beginning() <= other.beginning() && end() >= other.end();}
+			/// Returns the end of the region.
+			Position& end() throw() {return (first > second) ? first : second;}
+			/// Returns the end of the region.
+			const Position& end() const throw() {return (first > second) ? first : second;}
 			/// Returns an intersection of the two regions. If the regions don't intersect, returns @c Region().
 			Region getIntersection(const Region& other) const throw() {
-				return intersectsWith(other) ? Region(std::max(getTop(), other.getTop()), std::min(getBottom(), other.getBottom())) : Region();}
+				return intersectsWith(other) ? Region(std::max(beginning(), other.beginning()), std::min(end(), other.end())) : Region();}
 			/// Returns a union of the two regions. If the two regions don't intersect, throws @c std#invalid_argument.
 			Region getUnion(const Region& other) const {
-				if(!intersectsWith(other)) throw std::invalid_argument("can't make a union."); return Region(getTop(), other.getBottom());}
+				if(!intersectsWith(other)) throw std::invalid_argument("can't make a union."); return Region(beginning(), other.end());}
 			/// Returns true if @a p is contained by the region.
-			bool includes(const Position& p) const throw() {return p >= getTop() && p <= getBottom();}
+			bool includes(const Position& p) const throw() {return p >= beginning() && p <= end();}
 			/// Returns true if the region intersects with the other region.
 			bool intersectsWith(const Region& other) const throw() {return includes(other.first) || includes(other.second);}
 			/// Returns true if the region is empty.
@@ -672,6 +672,7 @@ namespace ascension {
 			length_t		getLineLength(length_t line) const;
 			length_t		getLineOffset(length_t line, NewlineRepresentation nlr) const;
 			length_t		getNumberOfLines() const throw();
+			ulong			getRevisionNumber() const throw();
 			Position		getStartPosition(bool accessibleRegion = true) const throw();
 			// content type information
 			IContentTypeInformationProvider&	getContentTypeInformation() const throw();
@@ -802,6 +803,7 @@ namespace ascension {
 			Newline newline_;
 			LineList lines_;
 			length_t length_;
+			ulong revisionNumber_;
 			std::set<Point*> points_;
 			std::auto_ptr<UndoManager> undoManager_;
 			bool onceUndoBufferCleared_;
@@ -1187,6 +1189,9 @@ inline const DocumentPartitioner& Document::getPartitioner() const throw() {
 	}
 	return *partitioner_;
 }
+
+/// Returns the revision number.
+inline ulong Document::getRevisionNumber() const throw() {return revisionNumber_;}
 
 /// Returns the session to which the document belongs.
 inline texteditor::Session* Document::getSession() throw() {return session_;}

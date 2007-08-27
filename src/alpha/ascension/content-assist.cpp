@@ -72,7 +72,7 @@ bool CompletionProposal::isAutoInsertable() const throw() {
 void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
 	document.beginSequentialEdit();
 	document.erase(replacementRegion);
-	document.insert(replacementRegion.getTop(), replacementString_);
+	document.insert(replacementRegion.beginning(), replacementString_);
 	document.endSequentialEdit();
 }
 
@@ -128,8 +128,8 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	document.getPartitioner().getPartition(i.tell(), currentPartition);
 	while(i.hasNext()) {
 		if(currentPartition.contentType != contentType_)
-			i.seek(currentPartition.region.getBottom());
-		if(i.tell() >= currentPartition.region.getBottom()) {
+			i.seek(currentPartition.region.end());
+		if(i.tell() >= currentPartition.region.end()) {
 			if(i.tell().column == i.getLine().length())
 				i.next();
 			document.getPartitioner().getPartition(i.tell(), currentPartition);
@@ -162,7 +162,7 @@ const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProp
 		const Region& replacementRegion, ICompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const throw() {
 	// select the partially matched proposal
 	String precedingIdentifier(textViewer.getDocument().getLine(replacementRegion.first.line).substr(
-		replacementRegion.getTop().column, replacementRegion.getBottom().column - replacementRegion.getTop().column));
+		replacementRegion.beginning().column, replacementRegion.end().column - replacementRegion.beginning().column));
 	if(precedingIdentifier.empty())
 		return 0;
 	const ICompletionProposal* activeProposal = *lower_bound(currentProposals,
@@ -397,8 +397,8 @@ void ContentAssistant::caretMoved(const Caret& self, const Region&) {
 		if(!completionSession_->incremental)
 			close();
 		// incremental mode: close if the caret gone out of the replacement region
-		else if(self.getPosition() < completionSession_->replacementRegion.getTop()
-				|| self.getPosition() > completionSession_->replacementRegion.getBottom())
+		else if(self.getPosition() < completionSession_->replacementRegion.beginning()
+				|| self.getPosition() > completionSession_->replacementRegion.end())
 			close();
 	}
 }
@@ -663,7 +663,7 @@ void ContentAssistant::updatePopupPositions() {
 		Caret& caret = textViewer_->getCaret();
 		int cx = (viewerRect.right - viewerRect.left) / 4;
 		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
-		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.getTop(), false, LineLayout::LEADING);
+		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.beginning(), false, LineLayout::LEADING);
 		const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
 		int x = !rtl ? (pt.x - 3) : (pt.x - cx - 1 + 3);
 		if(x + cx > viewerRect.right) {

@@ -584,22 +584,22 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 	const String indent = String(abs(level), character);
 	const Region region(*this, other);
 
-	if(region.getTop().line == region.getBottom().line) {	// 選択が1行以内 -> 単純な文字挿入
+	if(region.beginning().line == region.end().line) {	// 選択が 1 行以内 -> 単純な文字挿入
 		document.erase(region);
-		document.insert(region.getTop(), indent);
+		document.insert(region.beginning(), indent);
 		return getPosition();
 	}
 
 	const Position oldPosition = getPosition();
 	Position otherResult = other;
-	length_t line = region.getTop().line;
+	length_t line = region.beginning().line;
 	const bool adapts = adaptsToDocument();
 
 	adaptToDocument(false);
 
 	// 最初の行を (逆) インデント
 	if(level > 0) {
-		document.insert(Position(line, box ? region.getTop().column : 0), indent);
+		document.insert(Position(line, box ? region.beginning().column : 0), indent);
 		if(line == otherResult.line && otherResult.column != 0)
 			otherResult.column += level;
 		if(line == getLineNumber() && getColumnNumber() != 0)
@@ -624,8 +624,8 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 
 	// 選択のある全ての行を (逆) インデント
 	if(level > 0) {
-		for(++line; line <= region.getBottom().line; ++line) {
-			if(document.getLineLength(line) != 0 && (line != region.getBottom().line || region.getBottom().column > 0)) {
+		for(++line; line <= region.end().line; ++line) {
+			if(document.getLineLength(line) != 0 && (line != region.end().line || region.end().column > 0)) {
 				length_t insertPosition = 0;
 				if(box) {
 					length_t dummy;
@@ -639,7 +639,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 			}
 		}
 	} else {
-		for(++line; line <= region.getBottom().line; ++line) {
+		for(++line; line <= region.end().line; ++line) {
 			const String& s = document.getLine(line);
 			length_t indentLength;
 			for(indentLength = 0; indentLength < s.length(); ++indentLength) {

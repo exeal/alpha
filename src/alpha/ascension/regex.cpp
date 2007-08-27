@@ -178,10 +178,13 @@ namespace {
  * A (compiled) regular expression pattern.
  *
  * This class is implemented in terms of Boost.Regex, so the most features are same as
- * @c boost#basic_regex and the algorithm functions for match. The syntax options used
- * by this class are @c (boost#regex_constants#perl | boost#regex_constants_nocollate).
- * Because of this, almost all of the ECMAScript regular expression syntax features are
- * supported. For the details, see the document of Boost.Regex (http://www.boost.org/).
+ * @c boost#basic_regex and the algorithm functions for match. The syntax options used by this
+ * class are @c (boost#regex_constants#perl | boost#regex_constants_nocollate). Because of this,
+ * almost all of the ECMAScript regular expression syntax features are supported. For the details,
+ * see the document of Boost.Regex (http://www.boost.org/).
+ *
+ * Unlike Perl, recent Java and .NET, a @c \\G matches the "start of the current match", not "end of
+ * the previous match".
  *
  * Standard call sequence is following:
  *
@@ -390,7 +393,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 	if(value == String::npos)
 		return klass;
 
-	if(value != 0) {	// プロパティ名が与えられた
+	if(value != 0) {	// "name=value" or "name:value"
 		int(*valueNameDetector)(const Char*) = 0;
 		const String name = expression.substr(0, value - 1);
 		if(PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
@@ -407,22 +410,28 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 			if(p != NOT_PROPERTY)
 				klass.set(p);
 		}
-	} else {
+	} else {	// only "name" or "value"
 		const map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i = names_.find(expression.c_str());
 		if(i != names_.end())
 			klass.set(i->second);
 		else {
-			int p = GeneralCategory::forName(expression.c_str());
+#define ASCENSION_CHECK_PREFIX(lower, upper)					\
+	((expression.length() > 2									\
+	&& (expression[0] == lower[0] || expression[0] == upper[0])	\
+	&& (expression[1] == lower[1] || expression[1] == upper[1])) ? 2 : 0)
+
+			int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
 			if(p == NOT_PROPERTY) {
-				p = CodeBlock::forName(expression.c_str());
+				p = CodeBlock::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"in", L"IN"));
 				if(p == NOT_PROPERTY) {
-					p = Script::forName(expression.c_str());
+					p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
 					if(p == NOT_PROPERTY)
 						p = BinaryProperty::forName(expression.c_str());
 				}
 			}
 			if(p != NOT_PROPERTY)
 				klass.set(p);
+#undef ASCENSION_CHECK_PREFIX
 		}
 	}
 	return klass;
