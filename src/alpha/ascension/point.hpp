@@ -23,11 +23,12 @@ namespace ascension {
 	namespace text {
 		class EditPoint;
 
-		/// A listener for @c EditPoint and @c viewers#VisualPoint.
+		/**
+		 * A listener for @c EditPoint and @c viewers#VisualPoint.
+		 * @see IPointLifeCycleListener, viewers#ICaretListener
+		 */
 		class IPointListener {
 		private:
-			/// The point is destroyed.
-			virtual void pointDestroyed() = 0;
 			/**
 			 * The point was moved.
 			 * @param self the point
@@ -396,7 +397,6 @@ namespace ascension {
 			// VisualPoint
 			void	doMoveTo(const text::Position& position);
 			// text.IPointListener
-			void	pointDestroyed();
 			void	pointMoved(const text::EditPoint& self, const text::Position& oldPosition);
 			// text.IDocumentListener
 			void	documentAboutToBeChanged(const text::Document& document);
