@@ -206,6 +206,20 @@ namespace ascension {
 		};
 
 		/**
+		 * Interface for objects which are interested in lifecycle of the point.
+		 * @see Point#addLifeCycleListener, Point#removeLifeCycleListener, IPointListener
+		 */
+		class IPointLifeCycleListener {
+		protected:
+			/// Destructor.
+			virtual ~IPointLifeCycleListener() throw() {}
+		private:
+			/// The point was destroyed. After this, don't call @c Point#addLifeCycleListener.
+			virtual void pointDestroyed() = 0;
+			friend class Point;
+		};
+
+		/**
 		 * A point represents a document position and adapts to the document change.
 		 *
 		 * When the document change occured, @c Point moves automatically as follows:
@@ -254,6 +268,9 @@ namespace ascension {
 			bool			isDocumentDisposed() const throw();
 			bool			isExcludedFromRestriction() const throw();
 			void			setGravity(Direction gravity) throw();
+			// listeners
+			void	addLifeCycleListener(IPointLifeCycleListener& listener);
+			void	removeLifeCycleListener(IPointLifeCycleListener& listener);
 			// short-circuits
 			length_t	getColumnNumber() const throw();
 			ContentType	getContentType() const;
@@ -276,6 +293,7 @@ namespace ascension {
 			bool adapting_;
 			bool excludedFromRestriction_;
 			Direction gravity_;
+			ascension::internal::Listeners<IPointLifeCycleListener> lifeCycleListeners_;
 			friend class Document;
 		};
 

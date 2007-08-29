@@ -4274,30 +4274,32 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
  * @param color the initial color
  */
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
-		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(caret), color_(color) {
+		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(&caret), color_(color) {
 	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
-	caret_.getTextViewer().getPresentation().addLineColorDirector(temp);
-	caret_.addListener(*this);
-	caret_.addStateListener(*this);
+	caret.getTextViewer().getPresentation().addLineColorDirector(temp);
+	caret.addListener(*this);
+	caret.addStateListener(*this);
+	caret.addLifeCycleListener(*this);
 }
 
 /// Destructor.
 CurrentLineHighlighter::~CurrentLineHighlighter() throw() {
-	// oops, the caret will already be deleted
-//	caret_.removeListener(*this);
-//	caret_.removeStateListener(*this);
-//	caret_.getTextViewer().getPresentation().removeLineColorDirector(*this);
+	if(caret_ != 0) {
+		caret_->removeListener(*this);
+		caret_->removeStateListener(*this);
+		caret_->getTextViewer().getPresentation().removeLineColorDirector(*this);
+	}
 }
 
 /// @see ICaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
-		if(!caret_.isSelectionEmpty() || caret_.getLineNumber() != oldRegion.first.line)
-			caret_.getTextViewer().redrawLine(oldRegion.first.line, false);
+		if(!caret_->isSelectionEmpty() || caret_->getLineNumber() != oldRegion.first.line)
+			caret_->getTextViewer().redrawLine(oldRegion.first.line, false);
 	}
-	if(caret_.isSelectionEmpty()) {
-		if(!oldRegion.isEmpty() || caret_.getLineNumber() != oldRegion.first.line)
-			caret_.getTextViewer().redrawLine(caret_.getLineNumber(), false);
+	if(caret_->isSelectionEmpty()) {
+		if(!oldRegion.isEmpty() || caret_->getLineNumber() != oldRegion.first.line)
+			caret_->getTextViewer().redrawLine(caret_->getLineNumber(), false);
 	}
 }
 
@@ -4314,9 +4316,16 @@ void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const pair<Posit
 void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
 }
 
+/// @see IPointLifeCycleListener#pointDestroyed
+void CurrentLineHighlighter::pointDestroyed() {
+//	caret_->removeListener(*this);
+//	caret_->removeStateListener(*this);
+	caret_ = 0;
+}
+
 /// @see ILineColorDirector#queryLineColor
 ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t line, Colors& color) const {
-	if(caret_.isSelectionEmpty() && caret_.getLineNumber() == line) {
+	if(caret_ != 0 && caret_->isSelectionEmpty() && caret_->getLineNumber() == line && caret_->getTextViewer().hasFocus()) {
 		color = color_;
 		return LINE_COLOR_PRIORITY;
 	} else {

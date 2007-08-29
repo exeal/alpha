@@ -111,7 +111,7 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 * @see Document, DocumentPartitioner, TextViewer
 		 */
-		class Presentation : public manah::Noncopyable,
+		class Presentation : private manah::Noncopyable,
 				virtual public text::IDocumentListener, virtual public internal::ITextViewerCollection {
 		public:
 			typedef std::set<viewers::TextViewer*>::iterator TextViewerIterator;

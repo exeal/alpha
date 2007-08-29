@@ -415,8 +415,18 @@ Point::Point(const Point& rhs) :
 
 /// Destructor.
 Point::~Point() throw() {
+	lifeCycleListeners_.notify(IPointLifeCycleListener::pointDestroyed);
 	if(document_ != 0)
 		static_cast<internal::IPointCollection<Point>*>(document_)->removePoint(*this);
+}
+
+/**
+ * Registers the lifecycle listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Point::addLifeCycleListener(IPointLifeCycleListener& listener) {
+	lifeCycleListeners_.add(listener);
 }
 
 /**
@@ -454,6 +464,15 @@ void Point::normalize() const {
 		position = max(position_, document_->getStartPosition());
 		position = min(position_, document_->getEndPosition());
 	}
+}
+
+/**
+ * Removes the lifecycle listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Point::removeLifeCycleListener(IPointLifeCycleListener& listener) {
+	lifeCycleListeners_.remove(listener);
 }
 
 /**

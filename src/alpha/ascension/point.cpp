@@ -154,8 +154,6 @@ EditPoint::EditPoint(const EditPoint& rhs) throw() : Point(rhs), listener_(rhs.l
 
 /// Destructor.
 EditPoint::~EditPoint() throw() {
-	if(listener_ != 0)
-		listener_->pointDestroyed();
 }
 
 /**
@@ -1962,10 +1960,6 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 	}
 	getDocument()->endSequentialEdit();
 	getTextViewer().unfreeze(true);
-}
-
-/// @see IPointListener#pointDestroyed
-void Caret::pointDestroyed() {
 }
 
 /// @see IPointListener#pointMoved

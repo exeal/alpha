@@ -904,8 +904,8 @@ namespace ascension {
 		};
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public manah::Noncopyable,
-			virtual public presentation::ILineColorDirector, virtual public ICaretListener, virtual public ICaretStateListener {
+		class CurrentLineHighlighter : private manah::Noncopyable, virtual public presentation::ILineColorDirector,
+				virtual public ICaretListener, virtual public ICaretStateListener, virtual public text::IPointLifeCycleListener {
 		public:
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
@@ -917,7 +917,7 @@ namespace ascension {
 			const layout::Colors&	getColor() const throw();
 			void					setColor(const layout::Colors& color) throw();
 		private:
-			// ILineColorDirector
+			// presentation.ILineColorDirector
 			ILineColorDirector::Priority	queryLineColor(length_t line, layout::Colors& color) const;
 			// ICaretListener
 			void	caretMoved(const Caret& self, const text::Region& oldRegion);
@@ -925,8 +925,10 @@ namespace ascension {
 			void	matchBracketsChanged(const Caret& self, const std::pair<text::Position, text::Position>& oldPair, bool outsideOfView);
 			void	overtypeModeChanged(const Caret& self);
 			void	selectionShapeChanged(const Caret& self);
+			// text.IPointLifeCycleListener
+			void	pointDestroyed();
 		private:
-			Caret& caret_;
+			Caret* caret_;
 			layout::Colors color_;
 		};
 
