@@ -699,6 +699,7 @@ namespace ascension {
 			class Renderer : public layout::TextRenderer {
 			public:
 				explicit Renderer(TextViewer& viewer);
+				Renderer(const Renderer& rhs, TextViewer& viewer);
 				void	rewrapAtWindowEdge();
 			private:
 				// FontSelector

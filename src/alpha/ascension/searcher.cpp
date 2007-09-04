@@ -286,6 +286,9 @@ void TextSearcher::compilePattern(Direction direction) const {
 	case MIGEMO:
 		if(self.pattern_.regex == 0)
 			self.pattern_.regex = regex::MigemoPattern::create(p.data(), p.data() + p.length(), !options_.caseSensitive).release();
+		if(self.pattern_.regex == 0)
+			throw runtime_error("failed to create a regular expression pattern by using C/Migemo.");
+		break;
 #endif /* !ASCENSION_NO_MIGEMO */
 #endif /* !ASCENSION_NO_REGEX */
 	}
@@ -469,11 +472,15 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 		DocumentCharacterIterator e(document, endOfScope);
 		lastResult_.reset();
 
+		bool previousIsZeroWidth = false;
 		DocumentCharacterIterator i(e);	// position to start search
 		i.seek(scope.beginning());
 		setupRegexRegionalMatchOptions(i, e, options);
 		while(true) {
+			if(previousIsZeroWidth)
+				options |= regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH;
 			auto_ptr<regex::MatchResult<DocumentCharacterIterator> > result(pattern_.regex->search(i, e, options));
+			options &= ~regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH;
 			if(result.get() == 0)
 				break;
 			else if(!checkBoundary(result->getStart(), result->getEnd()))
@@ -497,12 +504,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 					i.setRegion(Region(scope.beginning(), endOfScope));
 					lastEOS = endOfScope;
 				}
-				if(matchedRegion.isEmpty()) {
-					if(i.tell() <= matchedRegion.first)
-						i.seek(matchedRegion.first);
-//					if(i.tell() == matchedRegion.first)
-						i.next();
-				}
+				if(i.tell() <= matchedRegion.second)
+					i.seek(matchedRegion.second);
+				previousIsZeroWidth = matchedRegion.isEmpty();
 			}
 			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
 			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
@@ -565,19 +569,15 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 		if(direction == FORWARD) {
 			DocumentCharacterIterator i(eob);
 			i.seek(scope.first);
-			if(!lastMatchIsZeroWidth || i.less(eob)) {
-				if(lastMatchIsZeroWidth)
-					i.next();
-				setupRegexRegionalMatchOptions(i, eob, options);
-				do {
-					result = pattern_.regex->search(i, eob, options);
-					if(result.get() == 0 || checkBoundary(result->getStart(), result->getEnd()))
-						break;
-					i.seek(result->getEnd().tell());	// move to the next search start
-					options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
-					options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-				} while(i.less(eob));
-			}
+			setupRegexRegionalMatchOptions(i, eob, options);
+			do {
+				result = pattern_.regex->search(i, eob, options | (lastMatchIsZeroWidth ? regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH : 0));
+				if(result.get() == 0 || checkBoundary(result->getStart(), result->getEnd()))
+					break;
+				i.seek(result->getEnd().tell());	// move to the next search start
+				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
+				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
+			} while(i.less(eob));
 		} else {
 			DocumentCharacterIterator i(eob);
 			i.seek(scope.second);
@@ -891,7 +891,7 @@ bool IncrementalSearcher::update() {
 	Region scope(
 		(lastStatus.direction == FORWARD) ? lastStatus.matchedRegion.second : document_->getStartPosition(),
 		(lastStatus.direction == FORWARD) ? document_->getEndPosition() : lastStatus.matchedRegion.first);
-	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
+/*	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
 		// handle the previous zero-width match
 		if(lastStatus.direction == FORWARD) {
 			DocumentCharacterIterator temp(*document_, scope.first);
@@ -903,7 +903,7 @@ bool IncrementalSearcher::update() {
 			scope.second = temp.tell();
 		}
 	}
-	matched_ = false;
+*/	matched_ = false;
 #ifndef ASCENSION_NO_REGEX
 	try {
 #endif /* !ASCENSION_NO_REGEX */
