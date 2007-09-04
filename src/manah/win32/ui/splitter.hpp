@@ -426,12 +426,12 @@ inline void Splitter<Pane, cdp>::removeInactivePanes() {
 		parent->children_[RIGHT].type = SplitterItem::PANETYPE_EMPTY;
 	}
 
-	if(root_.children_[LEFT].type == SplitterItem::PANETYPE_SINGLE && cdp == DELETE)
+	if(root_.children_[LEFT].type == SplitterItem::PANETYPE_SINGLE && cdp == STANDARD_DELETE)
 		delete root_.children_[LEFT].body.pane;
 	else if(root_.children_[LEFT].type == SplitterItem::PANETYPE_SPLITTER)
 		delete root_.children_[LEFT].body.splitter;
 	if(root_.direction_ != NO_SPLIT) {
-		if(root_.children_[RIGHT].type == SplitterItem::PANETYPE_SINGLE && cdp == DELETE)
+		if(root_.children_[RIGHT].type == SplitterItem::PANETYPE_SINGLE && cdp == STANDARD_DELETE)
 			delete root_.children_[RIGHT].body.pane;
 		else if(root_.children_[RIGHT].type == SplitterItem::PANETYPE_SPLITTER)
 			delete root_.children_[RIGHT].body.splitter;

@@ -114,7 +114,8 @@ namespace ascension {
 				TARGET_FIRST_IS_NOT_BOL = 0x0020,		///< Specifies that the start of the target is not the begin of a line.
 				TARGET_LAST_IS_NOT_EOL = 0x0040,		///< Specifies that the end of the target is not the end of a line.
 				TARGET_FIRST_IS_NOT_BOW = 0x0080,		///< Specifies that the start of the target is not the begin of a word.
-				TARGET_LAST_IS_NOT_EOW = 0x0100			///< Specifies that the end of the target is not the end of a word.
+				TARGET_LAST_IS_NOT_EOW = 0x0100,		///< Specifies that the end of the target is not the end of a word.
+				SKIP_BEGINNING_ZERO_WIDTH = 0x0200		///< Skips the zero-width match at the begnning of the target.
 			};
 			typedef manah::Flags<SyntaxOption> SyntaxOptions;
 			typedef manah::Flags<MatchOption> MatchOptions;
@@ -266,7 +267,9 @@ namespace ascension {
 				| (flags.has(TARGET_FIRST_IS_NOT_BOL) ? match_not_bol | match_prev_avail : 0)
 				| (flags.has(TARGET_LAST_IS_NOT_EOL) ? match_not_eol : 0)
 				| (flags.has(TARGET_FIRST_IS_NOT_BOW) ? match_not_bow | match_prev_avail : 0)
-				| (flags.has(TARGET_LAST_IS_NOT_EOW) ? match_not_eow : 0));
+				| (flags.has(TARGET_LAST_IS_NOT_EOW) ? match_not_eow : 0)
+				| (flags.has(SKIP_BEGINNING_ZERO_WIDTH) ? match_not_initial_null : 0)
+				);
 		}
 
 	}

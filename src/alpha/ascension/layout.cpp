@@ -1654,7 +1654,7 @@ const StyledText& LineLayout::StyledSegmentIterator::current() const throw() {
  */
 LineLayoutBuffer::LineLayoutBuffer(Document& document, length_t bufferSize, bool autoRepair) :
 		document_(document), bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
-		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(0) {
+		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.getNumberOfLines()) {
 	pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
 	if(bufferSize == 0)
 		throw invalid_argument("size of the buffer can't be zero.");

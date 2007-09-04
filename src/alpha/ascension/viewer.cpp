@@ -474,7 +474,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 		, accessibleProxy_(0)
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 {
-	renderer_.reset(new Renderer(*rhs.renderer_));
+	renderer_.reset(new Renderer(*rhs.renderer_, *this));
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
@@ -2154,18 +2154,18 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 
 /// @see WM_SETFOCUS
 void TextViewer::onSetFocus(HWND oldWindow) {
-	// スクロール位置を元に戻す
+	// restore the scroll positions
 	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
 	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
 
-	// 選択範囲を再描画 (フォーカスの有無で強調属性が変化するため)
-	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
+	// hmm...
+//	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
 		redrawLines(getCaret().getTopPoint().getLineNumber(), getCaret().getBottomPoint().getLineNumber());
 		update();
-	}
+//	}
 
 	if(oldWindow != getHandle()) {
-		// キャレットを復活させる
+		// resurrect the caret
 		recreateCaret();
 		updateCaretPosition();
 		if(texteditor::Session* session = getDocument().getSession()) {
@@ -3193,6 +3193,10 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.getPres
 #endif
 }
 
+/// Copy-constructor with a parameter.
+TextViewer::Renderer::Renderer(const Renderer& rhs, TextViewer& viewer) : TextRenderer(rhs), viewer_(viewer) {
+}
+
 /// @see layout#FontSelector#doGetDeviceContext
 auto_ptr<DC> TextViewer::Renderer::doGetDeviceContext() const {
 	return auto_ptr<DC>(viewer_.isWindow() ? new ClientDC(const_cast<TextViewer&>(viewer_).getDC()) : new ScreenDC());
@@ -3409,9 +3413,10 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 	// 垂直方向
 	if(bars == SB_VERT || bars == SB_BOTH) {
 		const length_t lines = viewer.getTextRenderer().getNumberOfVisualLines();
+		assert(lines > 0);
 //		vertical.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
 //		assert(vertical.rate != 0);
-		vertical.maximum = max(static_cast<int>(lines/* / vertical.rate*/), 0/*static_cast<int>(viewer.getVisibleLineCount() - 1)*/);
+		vertical.maximum = max(static_cast<int>((lines - 1)/* / vertical.rate*/), 0/*static_cast<int>(viewer.getVisibleLineCount() - 1)*/);
 		if(pageSizeChanged)
 			vertical.pageSize = static_cast<UINT>(viewer.getNumberOfVisibleLines());
 	}
