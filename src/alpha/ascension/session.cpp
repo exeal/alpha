@@ -50,11 +50,11 @@ void ClipboardRing::add(const String& text, bool box) {
  * @param index the index
  * @param[out] text	the text content
  * @param[out] box true if the text is rectangle
- * @throw std#out_of_range @a index is out of range
+ * @throw IndexOutOfBoundsException @a index is out of range
  */
 void ClipboardRing::getText(size_t index, String& text, bool& box) const {
 	if(index >= datas_.size())
-		throw out_of_range("the specified index is out of range.");
+		throw IndexOutOfBoundsException();
 	list<ClipText>::const_iterator it = datas_.begin();
 	for(size_t i = 0; i < index; ++i, ++it);
 	text = it->text;
@@ -64,11 +64,11 @@ void ClipboardRing::getText(size_t index, String& text, bool& box) const {
 /**
  * Removes the specified text.
  * @param index the index of the text
- * @throw std#out_of_range	@a index is invalid
+ * @throw IndexOutOfBoundsException	@a index is invalid
  */
 void ClipboardRing::remove(size_t index) {
 	if(index >= datas_.size())
-		throw out_of_range("the specified index is out of range.");
+		throw IndexOutOfBoundsException();
 	list<ClipText>::iterator it = datas_.begin();
 	for(size_t i = 0; i < index; ++i, ++it);
 	datas_.erase(it);

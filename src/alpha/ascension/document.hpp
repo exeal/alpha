@@ -298,10 +298,10 @@ namespace ascension {
 		};
 
 		/// Thrown when the read only document is about to be modified.
-		class ReadOnlyDocumentException : public std::logic_error {
+		class ReadOnlyDocumentException : public IllegalStateException {
 		public:
 			/// Constructor.
-			ReadOnlyDocumentException() : std::logic_error("The document is readonly. Any edit process is denied.") {}
+			ReadOnlyDocumentException() : IllegalStateException("The document is readonly. Any edit process is denied.") {}
 		};
 
 		/**
@@ -874,7 +874,7 @@ namespace ascension {
 			bool		hasNext() const throw();
 			bool		hasPrevious() const throw();
 		private:
-			void								assign(const CharacterIterator& rhs);
+			void								doAssign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	doClone() const;
 			void								doFirst();
 			void								doLast();
@@ -883,6 +883,7 @@ namespace ascension {
 			void								doNext();
 			void								doPrevious();
 		private:
+			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Document* document_;
 			Region region_;
 			const String* line_;
@@ -1392,7 +1393,7 @@ inline void Document::writeToStream(OutputStream& out, NewlineRepresentation nlr
  * Returns the content type of the partition contains the specified position.
  * @param at the position
  * @throw BadPositionException @a position is outside of the document
- * @throw std#logic_error the partitioner is not connected to any document
+ * @throw IllegalStateException the partitioner is not connected to any document
  * @return the content type
  */
 inline ContentType DocumentPartitioner::getContentType(const Position& at) const {
@@ -1412,11 +1413,11 @@ inline const Document* DocumentPartitioner::getDocument() const throw() {return 
  * @param at the position
  * @param[out] partition the partition
  * @throw BadPositionException @a position is outside of the document
- * @throw std#logic_error the partitioner is not connected to any document
+ * @throw IllegalStateException the partitioner is not connected to any document
  */
 inline void DocumentPartitioner::getPartition(const Position& at, DocumentPartition& partition) const {
 	if(document_ == 0)
-		throw std::logic_error("the partitioner is not connected to any document.");
+		throw IllegalStateException("the partitioner is not connected to any document.");
 	else if(at > document_->getEndPosition(false))
 		throw BadPositionException();
 	return doGetPartition(at, partition);
@@ -1426,11 +1427,11 @@ inline void DocumentPartitioner::getPartition(const Position& at, DocumentPartit
  * Notifies the partitioning change to the listeners.
  * Implementation of @c DocumentPartitioner *must* call this when the partitioning is changed.
  * @param changedRegion the changed region
- * @throw std#logic_error the partitioner is not connected any document
+ * @throw IllegalStateException the partitioner is not connected any document
  */
 inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
 	if(document_ == 0)
-		throw std::logic_error("the partitioner is not connected any document.");
+		throw IllegalStateException("the partitioner is not connected any document.");
 	document_->partitioningChanged(changedRegion);	// $friendly-access
 }
 

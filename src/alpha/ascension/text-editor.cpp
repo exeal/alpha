@@ -446,7 +446,9 @@ ulong FindAllCommand::execute() {
 	if(type_ == BOOKMARK) {
 		Bookmarker& bookmarker = document.getBookmarker();
 		Region matchedRegion;
-		while(s->search(document, scope, FORWARD, matchedRegion)) {
+		while(s->search(document,
+			max<Position>(viewer.getCaret().getTopPoint(), document.getStartPosition()),
+			scope, FORWARD, matchedRegion)) {
 			bookmarker.mark(matchedRegion.first.line);
 			scope.first.line = matchedRegion.first.line + 1;
 			scope.first.column = 0;
@@ -526,11 +528,11 @@ ulong FindNextCommand::execute() {
 	}
 
 	// 検索処理
-	const Region scope(
-		direction_ == FORWARD ? max<Position>(caret.getBottomPoint(), document.getStartPosition()) : document.getStartPosition(),
-		direction_ == FORWARD ? document.getEndPosition() : min<Position>(caret.getTopPoint(), document.getEndPosition()));
+	const Region scope(document.getStartPosition(), document.getEndPosition());
 	Region matchedRegion;
-	bool found = s->search(document, scope, direction_, matchedRegion);
+	bool found = s->search(document,
+		(direction_ == FORWARD) ? max<Position>(caret.getBottomPoint(), scope.first) : min<Position>(caret.getTopPoint(), scope.second),
+		scope, direction_, matchedRegion);
 
 	if(found) {
 		caret.select(matchedRegion);

@@ -318,13 +318,13 @@ void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
 /**
  * Updates the list's cursel based on the viewer's context.
  * @return true if only one candidate matched
- * @throw std#logic_error the completion is not running
+ * @throw IllegalStateException the completion is not running
  */
 bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 	assertValidAsWindow();
 
 	if(!running_)
-		throw logic_error("Completion is not running.");
+		throw IllegalStateException("Completion is not running.");
 
 	const String precedingID = viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH);
 	if(!precedingID.empty()) {

@@ -34,17 +34,21 @@ using namespace std;
  * }
  * @endcode
  *
- * Relational operations (@c #equals and @c #less) must be applied to the clones.
+ * Relational operations (@c #equals and @c #less) must be applied to the same types.
  *
  * @code
  * StringCharacterIterator i1 = ...;
  * auto_ptr<CharacterIterator> i2 = i1.clone(); // i2 is a clone of i1
- * StringCharacterIterator i3 = ...;            // i3 is NOT a clone of i1
+ * StringCharacterIterator i3 = ...;            // i3 is not a clone of i1, but has a same type
+ * DocumentCharacterIterator i4 = ...;          // i4 is not a clone of i1, and has a different type
  *
  * i1.equals(*i2); // ok
  * i2->less(i1);   // ok
- * i1.equals(i3);  // error! (std::invalid_argument exception)
+ * i1.equals(i3);  // ok
+ * i1.equals(i4);  // error! (std::invalid_argument exception)
  * @endcode
+ *
+ * Also, @c #assign has a like restricton. Any partial assignments are not allowed.
  *
  * <h3>Offsets</h3>
  *
@@ -65,7 +69,7 @@ using namespace std;
  *
  * A concrete iterator class must implement the following protected methods:
  *
- * - @c #assign for @c #operator=.
+ * - @c #doAssign for @c #assign.
  * - @c #doClone for @c #clone.
  * - @c #doFirst and @c #doLast for @c #first and @c #last.
  * - @c #doEquals and @c #doLess for @c #equals and @c #less.
@@ -73,13 +77,17 @@ using namespace std;
  *
  * And also must implement the following public methods: @c #current, @c #hasNext, @c #hasPrevious.
  *
+ * @c #doClone must be implemented by protected copy-constructor of @c CharacterIterator.
+ * @c #doAssign must be implemented by protected <code>CharacterIterator#operator=</code>.
+ *
  * <h3>Type-safety</h3>
  *
  * @c CharacterIterator is an abstract type and actual types of two concrete instances may be
  * different. This makes comparison of iterators difficult.
  *
- * For relational operations, it is guaranteed that the right argument is a clone of @c this. So
- * to implement by using down-cast is safe.
+ * Instances of @c CharacterIterator know the derived class (by using @c ConcreteTypeTag). So the
+ * right-hand-sides of @c #doAssign, @c #doEquals, and @c #doLess have same types of the callee.
+ * This means that the following implementation with down-cast is safe.
  *
  * @code
  * bool MyIterator::equals(const CharacterIterator& rhs) const {
@@ -88,8 +96,6 @@ using namespace std;
  *   // compare this and concrete...
  * }
  * @endcode
- *
- * For assignment operation (in @c #assign method), the above is not guarenteed.
  */
 
 namespace {

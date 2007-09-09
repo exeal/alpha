@@ -34,9 +34,9 @@ namespace ascension {
 		 * 
 		 * @see token#TokenScanner, partition#PartitionScanner
 		 */
-		class BadScannerStateException : public std::logic_error {
+		class BadScannerStateException : public IllegalStateException {
 		public:
-			BadScannerStateException() : std::logic_error("The scanner can't accept the requested operation in this state.") {}
+			BadScannerStateException() : IllegalStateException("The scanner can't accept the requested operation in this state.") {}
 		};
 
 		/// A token is a text segment with identifier.
@@ -117,7 +117,7 @@ namespace ascension {
 			RegexRule(Token::ID id, const String& pattern, bool caseSensitive = true);
 			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
-			const regex::Pattern pattern_;
+			std::auto_ptr<const regex::Pattern> pattern_;
 		};
 #endif /* !ASCENSION_NO_REGEX */
 
@@ -227,7 +227,7 @@ namespace ascension {
 				text::ContentType destination, const String& pattern, bool caseSensitive = true);
 			length_t	matches(const String& line, length_t column) const;
 		private:
-			const regex::Pattern pattern_;
+			std::auto_ptr<const regex::Pattern> pattern_;
 		};
 #endif /* !ASCENSION_NO_REGEX */
 
@@ -303,11 +303,11 @@ namespace ascension {
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(getDocument() != 0)
-				throw std::logic_error("The partitioner is already connected to document.");
+				throw IllegalStateException("The partitioner is already connected to document.");
 			clearRules();
 			std::copy(first, last, std::back_inserter(rules_));
 		}
 
-}} // namespace ascension::rules
+}} // namespace ascension.rules
 
 #endif /* !ASCENSION_RULES_HPP */

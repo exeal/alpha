@@ -165,9 +165,9 @@ namespace ascension {
 		/**
 		 * Returns the index of the active content in the ring.
 		 * @return the active index
-		 * @throw std#logic_error the ring is empty
+		 * @throw IllegalStateException the ring is empty
 		 */
-		inline size_t ClipboardRing::getActiveItem() const {if(isEmpty()) throw std::logic_error("the ring is empty."); return activeItem_;}
+		inline size_t ClipboardRing::getActiveItem() const {if(isEmpty()) throw IllegalStateException("the ring is empty."); return activeItem_;}
 
 		/// Returns the number of texts than the ring can contain.
 		inline std::size_t ClipboardRing::getCapacity() const throw() {return capacity_;}
@@ -188,9 +188,9 @@ namespace ascension {
 		/**
 		 * Sets the active content.
 		 * @param index the index of the content to be activated
-		 * @throw std#out_of_range	@a index is out of range
+		 * @throw IndexOutOfBoundsException @a index is out of range
 		 */
-		inline void ClipboardRing::setActiveItem(size_t index) {if(index >= datas_.size()) throw std::out_of_range("the index is out of range."); activeItem_ = index;}
+		inline void ClipboardRing::setActiveItem(size_t index) {if(index >= datas_.size()) throw IndexOutOfBoundsException(); activeItem_ = index;}
 
 		/// Returns the input sequence checkers.
 		inline InputSequenceCheckers* Session::getInputSequenceCheckers() throw() {return inputSequenceCheckers_.get();}

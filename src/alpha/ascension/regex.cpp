@@ -183,9 +183,6 @@ namespace {
  * almost all of the ECMAScript regular expression syntax features are supported. For the details,
  * see the document of Boost.Regex (http://www.boost.org/).
  *
- * Unlike Perl, recent Java and .NET, a @c \\G matches the "start of the current match", not "end of
- * the previous match".
- *
  * Standard call sequence is following:
  *
  * @code
@@ -252,41 +249,41 @@ namespace {
  */
 
 /**
- * Constructor builds regular expression pattern using UTF-16 string.
- * @param first the start of the pattern string
- * @param last the end of the pattern string
- * @param options the syntax options
- * @throw boost#regex_error the specified pattern is invalid
+ * @class ascension::regex::Matcher regex.hpp
  */
-Pattern::Pattern(const Char* first, const Char* last, const SyntaxOptions& options /* = NORMAL */) : options_(options) {
-	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-	impl_.assign(UTF16To32Iterator<const Char*>(first, last), UTF16To32Iterator<const Char*>(first, last, last),
-		boost::regex_constants::perl | boost::regex_constants::collate | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
+
+/**
+ * Private constructor.
+ * @param regex
+ * @param flags
+ * @throw PatternSyntaxException
+ */
+Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
+	try {
+		impl_.assign(UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end()),
+			UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end(), regex.end()),
+			boost::regex_constants::perl | boost::regex_constants::collate
+			| (toBoolean(flags & CASE_INSENSITIVE) ? boost::regex_constants::icase : 0)
+			| (toBoolean(flags & LITERAL) ? boost::regex_constants::literal : 0));
+	} catch(const boost::regex_error& e) {
+		throw PatternSyntaxException(e);
+	}
 }
 
 /**
- * Constructor builds regular expression pattern using UTF-16 string.
- * @param pattern the pattern string
- * @param options the syntax options
- * @throw boost#regex_error the specified pattern is invalid
- */
-Pattern::Pattern(const String& pattern, const SyntaxOptions& options /* = NORMAL */) : options_(options) {
-	Pattern(pattern.data(), pattern.data() + pattern.length(), options);
-}
-
-/**
- * Protected constructor builds regular expression pattern with the additional syntax flags.
+ * Protected constructor builds regular expression pattern with the Boost.Regex native syntax flags.
  * @param first the start of the pattern string
  * @param last the end of the pattern string
  * @param options the syntax options
  * @param nativeSyntax the syntax flags of @c boost#syntax_option_type
- * @throw boost#regex_error the specified pattern is invalid
+ * @throw PatternSyntaxException the specified pattern is invalid
  */
-Pattern::Pattern(const Char* first, const Char* last,
-		const manah::Flags<SyntaxOption>& options, boost::regex_constants::syntax_option_type nativeSyntax) : options_(options) {
-	RegexTraits::enablesExtendedProperties = options_.has(EXTENDED_PROPERTIES);
-	impl_.assign(UTF16To32Iterator<const Char*>(first, last), UTF16To32Iterator<const Char*>(first, last, last),
-		nativeSyntax | (options_.has(CASE_INSENSITIVE) ? boost::regex_constants::icase : 0));
+Pattern::Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
+	try {
+		impl_.assign(UTF16To32Iterator<const Char*>(first, last), UTF16To32Iterator<const Char*>(first, last, last), nativeSyntax);
+	} catch(const boost::regex_error& e) {
+		throw PatternSyntaxException(e);
+	}
 }
 
 /// Destructor.
@@ -294,7 +291,7 @@ Pattern::~Pattern() throw() {
 }
 
 
-// internal::RegexTraits ////////////////////////////////////////////////////
+// internal.RegexTraits /////////////////////////////////////////////////////
 
 bool RegexTraits::enablesExtendedProperties = false;
 map<const Char*, int, PropertyNameComparer<Char> > RegexTraits::names_;
@@ -450,8 +447,8 @@ manah::AutoBuffer<char> MigemoPattern::dictionaryPathName_;
  * @param ignoreCase set true to enable case-insensitive match
  */
 MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool ignoreCase) :
-		Pattern(first, last, ignoreCase ? CASE_INSENSITIVE : NORMAL,
-			boost::regex_constants::no_char_classes | boost::regex_constants::nosubs | boost::regex_constants::perl) {
+		Pattern(first, last, (ignoreCase ? boost::regex_constants::icase : 0)
+			| boost::regex_constants::no_char_classes | boost::regex_constants::nosubs | boost::regex_constants::perl) {
 }
 
 /**
@@ -461,7 +458,7 @@ MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool ignoreCas
  * @param ignoreCase set true to enable case-insensitive match
  * @return the pattern or @c null if Migemo is not installed
  */
-auto_ptr<MigemoPattern> MigemoPattern::create(const Char* first, const Char* last, bool ignoreCase) {
+auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* last, bool ignoreCase) {
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
