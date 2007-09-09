@@ -15,8 +15,8 @@
 #define ASCENSION_UNICODE_VERSION 0x0500	// 5.0.0
 
 #include "config.hpp"
-#include <string>	// std::string
-#include <sstream>	// std::basic_stringbuf, std::basic_stringstream, ...
+#include <string>	// std.string
+#include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
 #include <iterator>
 
 #ifdef _DEBUG
@@ -36,6 +36,7 @@ namespace ascension {
 	typedef std::basic_ostringstream<String::value_type>	OutputStringStream;	///< Output string stream.
 	typedef std::basic_istream<Char>	InputStream;	///< Abstract input stream.
 	typedef std::basic_ostream<Char>	OutputStream;	///< Abstract output stream.
+	typedef std::ostream_iterator<Char>	OutputStreamIterator;	///< Output stream iterator.
 
 	/// Invalid value of @c length_t.
 	const length_t INVALID_INDEX = 0xFFFFFFFFUL;
@@ -80,6 +81,22 @@ namespace ascension {
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 */
 	void updateSystemSettings() throw();
+
+	/// The operation was performed in an illegal state.
+	class IllegalStateException : public std::logic_error {
+	public:
+		/// Constructor.
+		explicit IllegalStateException(const std::string& message) : std::logic_error(message) {}
+	};
+
+	/// The specified index was out of bounds.
+	class IndexOutOfBoundsException : public std::out_of_range {
+	public:
+		/// Default constructor.
+		IndexOutOfBoundsException() : std::out_of_range("the index is out of range.") {}
+		/// Constructor.
+		explicit IndexOutOfBoundsException(const std::string& message) : std::out_of_range(message) {}
+	};
 
 	/**
 	 * Converts an Ascension basic bidirectional iterator class into the corresponding C++
@@ -156,6 +173,9 @@ namespace ascension {
 	template<> struct StaticAssertionFailureAtLine<-1> {};
 	#define ASCENSION_STATIC_ASSERT(expression)	\
 		typedef StaticAssertTest<sizeof(StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)> oh_static_assertion_shippaidayo_orz
+
+	// basic assertions
+	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 
 } // namespace ascension
 

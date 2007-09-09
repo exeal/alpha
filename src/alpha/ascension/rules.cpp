@@ -485,25 +485,24 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
  * @param id the identifier of the token which will be returned by the rule
  * @param pattern the pattern string
  * @param caseSensitive set false to enable caseless match
- * @throw boost#regex_error the specified pattern is invalid
+ * @throw regex#PatternSyntaxException the specified pattern is invalid
  */
 RegexRule::RegexRule(Token::ID id, const String& pattern, bool caseSensitive /* = true */)
-		: Rule(id, caseSensitive), pattern_(pattern.data(), pattern.data() + pattern.length()) {
+		: Rule(id, caseSensitive), pattern_(regex::Pattern::compile(pattern)) {
 }
 
 /// @see Rule#parse
 auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
-	const UTF16To32Iterator<const Char*> f(first, last), l(first, last, last);
-	auto_ptr<regex::MatchResult<UTF16To32Iterator<const Char*> > > r(pattern_.search(f, l,
-		regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST | (scanner.getPosition().column != 0 ? regex::Pattern::TARGET_FIRST_IS_NOT_BOL : 0)));
-	if(r.get() == 0)
+	const UTF16To32Iterator<const Char*> b(first, last), e(first, last, last);
+	auto_ptr<regex::Matcher<UTF16To32Iterator<const Char*> > > matcher(pattern_->matcher(b, e));
+	if(!matcher->lookingAt())
 		return auto_ptr<Token>(0);
-	auto_ptr<Token> result(new Token);
-	result->id = getTokenID();
-	result->region.first.line = result->region.second.line = scanner.getPosition().line;
-	result->region.first.column = scanner.getPosition().column;
-	result->region.second.column = result->region.first.column + (r->getEnd().tell() - r->getStart().tell());
-	return result;
+	auto_ptr<Token> token(new Token);
+	token->id = getTokenID();
+	token->region.first.line = token->region.second.line = scanner.getPosition().line;
+	token->region.first.column = scanner.getPosition().column;
+	token->region.second.column = token->region.first.column + (matcher->end().tell() - matcher->start().tell());
+	return token;
 }
 
 #endif /* !ASCENSION_NO_REGEX */
@@ -711,24 +710,21 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
  * @param destination the content type of the transition destination
  * @param pattern the pattern string to introduce the transition. can't be empty
  * @param caseSensitive set false to enable caseless match
- * @throw boost#regex_error @a pattern is invalid
+ * @throw regex#PatternSyntaxException @a pattern is invalid
  */
 RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
-		bool caseSensitive /* = true */) : TransitionRule(contentType, destination), 
-		pattern_(pattern.data(), pattern.data() + pattern.length(), caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE) {
+		bool caseSensitive /* = true */) : TransitionRule(contentType, destination),
+		pattern_(regex::Pattern::compile(pattern, caseSensitive ? 0 : regex::Pattern::CASE_INSENSITIVE)) {
 }
 
 /// @see TransitionRule#matches
 length_t RegexTransitionRule::matches(const String& line, length_t column) const {
 	try {
-		using namespace regex;
-		Pattern::MatchOptions flags = Pattern::MATCH_AT_ONLY_TARGET_FIRST;
-		if(column != 0)
-			flags |= Pattern::TARGET_FIRST_IS_NOT_BOL;
-		const Char* const p = line.data();
-		const UTF16To32Iterator<const Char*> first(p, p + line.length(), p + column), last(p, p + line.length(), p + line.length());
-		auto_ptr<MatchResult<UTF16To32Iterator<const Char*> > > result(pattern_.search(first, last, flags));
-		return (result.get() != 0) ? max(result->getEnd().tell() - result->getStart().tell(), 1) : 0;
+		typedef UTF16To32Iterator<String::const_iterator> I;
+		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.begin())));
+		matcher->region(I(line.begin(), line.end(), line.begin() + column), matcher->regionEnd());
+		matcher->useAnchoringBounds(false).useTransparentBounds(true);
+		return matcher->lookingAt() ? max(matcher->end().tell() - matcher->start().tell(), 1) : 0;
 	} catch(runtime_error&) {
 		return 0;
 	}

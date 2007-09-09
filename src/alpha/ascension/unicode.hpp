@@ -183,13 +183,12 @@ namespace ascension {
 			static const CodePoint DONE = 0xFFFFFFFFUL;
 		public:
 			virtual ~CharacterIterator() throw();
-			CharacterIterator&	operator=(const CharacterIterator& rhs);
 			// attributes
 			bool			equals(const CharacterIterator& rhs) const;
 			std::ptrdiff_t	getOffset() const throw();
-			bool			isCloneOf(const CharacterIterator& other) const throw();
 			bool			less(const CharacterIterator& rhs) const;
 			// operations
+			CharacterIterator&					assign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	clone() const;
 			CharacterIterator&					first();
 			CharacterIterator&					last();
@@ -205,8 +204,10 @@ namespace ascension {
 			/// Returns true if the iterator is not first.
 			virtual bool hasPrevious() const throw() = 0;
 		protected:
-			/// Assigns the other iterator.
-			virtual void assign(const CharacterIterator& rhs) = 0;
+			/// Identifies a concrete type of the derived class for relational operations.
+			struct ConcreteTypeTag {};
+			/// Called by @c #assign method.
+			virtual void doAssign(const CharacterIterator& rhs) = 0;
 			/// Called by @c #clone method.
 			virtual std::auto_ptr<CharacterIterator> doClone() const = 0;
 			/// Called by @c #equals method.
@@ -223,13 +224,13 @@ namespace ascension {
 			virtual void doPrevious() = 0;
 
 		protected:
-			CharacterIterator() throw();
+			explicit CharacterIterator(const ConcreteTypeTag& classID) throw();
 			CharacterIterator(const CharacterIterator& rhs) throw();
+			CharacterIterator& operator=(const CharacterIterator& rhs);
 		private:
-			void verifyRHS(const CharacterIterator& rhs) const {
-				if(!isCloneOf(rhs)) throw std::invalid_argument("the right is not a clone of this.");}
+			void verifyRHS(const CharacterIterator& rhs) const {if(classID_ != rhs.classID_) throw std::invalid_argument("type mismatch.");}
 			std::ptrdiff_t offset_;
-			const CharacterIterator* original_;
+			const ConcreteTypeTag* const classID_;
 		};
 
 		/**
@@ -253,7 +254,7 @@ namespace ascension {
 			bool		hasNext() const;
 			bool		hasPrevious() const;
 		private:
-			void 								assign(const CharacterIterator& rhs);
+			void 								doAssign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	doClone() const;
 			void								doFirst();
 			bool 								doEquals(const CharacterIterator& rhs) const;
@@ -262,6 +263,7 @@ namespace ascension {
 			void								doNext();
 			void								doPrevious();
 		private:
+			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Char* current_;
 			const Char* first_;
 			const Char* last_;
@@ -287,7 +289,7 @@ namespace ascension {
 			ConcreteIterator& operator=(const UTF16To32IteratorBase& rhs) {p_ = rhs.p_; return getConcrete();}
 			/// Dereference operator.
 			CodePoint operator*() const {
-				if(!getConcrete().hasNext()) throw std::logic_error("The iterator is last.");
+				if(!getConcrete().hasNext()) throw IllegalStateException("The iterator is last.");
 				if(!surrogates::isHighSurrogate(*p_)) return *p_;
 				++const_cast<UTF16To32IteratorBase*>(this)->p_;
 				const CodePoint next = getConcrete().hasNext() ? *p_ : INVALID_CODE_POINT;
@@ -296,12 +298,12 @@ namespace ascension {
 			/// Dereference operator.
 			CodePoint operator->() const {return operator*();}
 			/// Pre-fix increment operator.
-			ConcreteIterator& operator++() {if(!getConcrete().hasNext()) throw std::logic_error("The iterator is last.");
+			ConcreteIterator& operator++() {if(!getConcrete().hasNext()) throw IllegalStateException("The iterator is last.");
 				++p_; if(getConcrete().hasNext() && surrogates::isLowSurrogate(*p_)) ++p_; return getConcrete();}
 			/// Post-fix increment operator.
 			const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
 			/// Pre-fix decrement operator.
-			ConcreteIterator& operator--() {if(!getConcrete().hasPrevious()) throw std::logic_error("The iterator is first.");
+			ConcreteIterator& operator--() {if(!getConcrete().hasPrevious()) throw IllegalStateException("The iterator is first.");
 				--p_; if(getConcrete().hasPrevious() && surrogates::isLowSurrogate(*p_)) --p_; return getConcrete();}
 			/// Post-fix decrement operator.
 			const ConcreteIterator operator--(int) {ConcreteIterator temp(*this); --*this; return temp;}
@@ -894,22 +896,24 @@ namespace ascension {
 
 // inline implementations ///////////////////////////////////////////////////
 
-/// Constructor.
-inline CharacterIterator::CharacterIterator() throw() : offset_(0) {original_ = this;}
+/// Protected constructor.
+inline CharacterIterator::CharacterIterator(const ConcreteTypeTag& classID) throw() : offset_(0), classID_(&classID) {}
 
-/// Copy-constructor.
-inline CharacterIterator::CharacterIterator(const CharacterIterator& rhs) throw() : offset_(rhs.offset_), original_(rhs.original_) {}
+/// Protected copy-constructor.
+inline CharacterIterator::CharacterIterator(const CharacterIterator& rhs) throw() : offset_(rhs.offset_), classID_(rhs.classID_) {}
 
 /// Destructor.
 inline CharacterIterator::~CharacterIterator() throw() {}
 
-/// Assignment operator.
-inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) {
-	assign(rhs); original_ = rhs.original_; offset_ = rhs.offset_; return *this;}
+/// Protected assignment operator.
+inline CharacterIterator& CharacterIterator::operator=(const CharacterIterator& rhs) {offset_ = rhs.offset_; return *this;}
+
+/// Assigns the other iterator.
+inline CharacterIterator& CharacterIterator::assign(const CharacterIterator& rhs) {verifyRHS(rhs); doAssign(rhs); return *this;}
 
 /// Creates a copy of the iterator.
 inline std::auto_ptr<CharacterIterator> CharacterIterator::clone() const {
-	std::auto_ptr<CharacterIterator> p(doClone()); if(p.get() != 0) {p->offset_ = offset_; p->original_ = original_;} return p;}
+	std::auto_ptr<CharacterIterator> p(doClone()); if(p.get() != 0) p->offset_ = offset_; return p;}
 
 /// Returns true if the iterator equals @a rhs.
 inline bool CharacterIterator::equals(const CharacterIterator& rhs) const {verifyRHS(rhs); return doEquals(rhs);}
@@ -919,9 +923,6 @@ inline CharacterIterator& CharacterIterator::first() {doFirst(); offset_ = 0; re
 
 /// Returns the position in the character sequence.
 inline std::ptrdiff_t CharacterIterator::getOffset() const throw() {return offset_;}
-
-/// Returns true if the iterator is a clone of @a other.
-inline bool CharacterIterator::isCloneOf(const CharacterIterator& other) const throw() {return original_ == other.original_;}
 
 /// Moves to the end of the character sequence.
 inline CharacterIterator& CharacterIterator::last() {doLast(); offset_ = 0; return *this;}
@@ -955,7 +956,7 @@ inline const CodePoint& Normalizer::current() const throw() {return normalizedBu
 
 // Returns true if both iterators address the same character in the normalized text.
 inline bool Normalizer::equals(const Normalizer& rhs) const throw() {
-	return current_->isCloneOf(*rhs.current_) && current_->getOffset() == rhs.current_->getOffset() && indexInBuffer_ == rhs.indexInBuffer_;}
+	return /*current_->isCloneOf(*rhs.current_) &&*/ current_->getOffset() == rhs.current_->getOffset() && indexInBuffer_ == rhs.indexInBuffer_;}
 
 /// Returns the current position in the input text that is being normalized.
 inline std::ptrdiff_t Normalizer::getOffset() const throw() {return current_->getOffset();}

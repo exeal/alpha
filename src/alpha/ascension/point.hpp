@@ -510,10 +510,10 @@ inline const viewers::VisualPoint& viewers::Caret::getBottomPoint() const throw(
 /**
  * Returns the rectangle selection.
  * @return the virtual box represents the rectangle selection
- * @throw std#logic_error the selection is not rectangle.
+ * @throw IllegalStateException the selection is not rectangle.
  */
 inline const viewers::VirtualBox& viewers::Caret::getBoxForRectangleSelection() const {
-	if(!isSelectionRectangle()) throw std::logic_error("The selection is not rectangle.") ; return *box_;}
+	if(!isSelectionRectangle()) throw IllegalStateException("The selection is not rectangle.") ; return *box_;}
 /// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
 inline const std::pair<text::Position, text::Position>& viewers::Caret::getMatchBrackets() const throw() {return matchBrackets_;}
 /// Returns the selection mode.

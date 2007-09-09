@@ -2503,12 +2503,12 @@ HFONT FontSelector::getFontInFontset(const Fontset& fontset, bool bold, bool ita
  * @param bold true to get the bold variant
  * @param italic true to get the italic variant
  * @return the font
- * @throw std#out_of_range @a index is invalid
+ * @throw IndexOutOfBoundsException @a index is invalid
  * @see #getFont, #getNumberOfLinkedFonts
  */
 HFONT FontSelector::getLinkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
 	if(linkedFonts_ == 0)
-		throw out_of_range("the specified index is invalid.");
+		throw IndexOutOfBoundsException();
 	return getFontInFontset(*linkedFonts_->at(index), bold, italic);
 }
 

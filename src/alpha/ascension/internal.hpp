@@ -96,7 +96,7 @@ namespace ascension {
 		};
 
 		/// Manages the listeners.
-		template<class Listener> class Listeners : public manah::Noncopyable {
+		template<class Listener> class Listeners : private manah::Noncopyable {
 		public:
 			void add(Listener& listener) {
 				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())

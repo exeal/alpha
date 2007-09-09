@@ -7,10 +7,6 @@
 
 #include "stdafx.h"
 #include "searcher.hpp"
-#ifndef ASCENSION_NO_REGEX
-#include "regex.hpp"
-#endif /* !ASCENSION_NO_REGEX */
-
 using namespace ascension;
 using namespace ascension::searcher;
 using namespace ascension::text;
@@ -192,27 +188,8 @@ bool LiteralPattern::search(const CharacterIterator& target,
 
 // TextSearcher /////////////////////////////////////////////////////////////
 
-namespace {
-	inline void setupRegexRegionalMatchOptions(const DocumentCharacterIterator& first,
-			const DocumentCharacterIterator& last, regex::Pattern::MatchOptions& options) throw() {
-		options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, first.tell() != first.getDocument()->getStartPosition(false));
-		options.set(regex::Pattern::TARGET_LAST_IS_NOT_EOB, last.tell() != last.getDocument()->getEndPosition(false));
-		options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, first.tell().column != 0);
-		options.set(regex::Pattern::TARGET_LAST_IS_NOT_EOL, last.tell().column != last.getDocument()->getLineLength(last.tell().line));
-	}
-}
-
-void TextSearcher::LastResult::reset() throw() {
-	matchedRegion.first = matchedRegion.second = text::Position::INVALID_POSITION;
-#ifndef ASCENSION_NO_REGEX
-	delete regexResult;
-	regexResult = 0;
-#endif /* !ASCENSION_NO_REGEX */
-}
-
 /// Default constructor.
 TextSearcher::TextSearcher() : maximumNumberOfStoredStrings_(DEFAULT_NUMBER_OF_STORED_STRINGS) {
-	pattern_.literal = 0;
 }
 
 /// Destructor.
@@ -241,52 +218,41 @@ inline bool TextSearcher::checkBoundary(const DocumentCharacterIterator& first, 
 
 /// Clears the cache of the search pattern.
 void TextSearcher::clearPatternCache() {
+	literalPattern_.reset();
 #ifndef ASCENSION_NO_REGEX
-	lastResult_.reset();
+	regexMatcher_.reset();
 #endif /* !ASCENSION_NO_REGEX */
-	switch(options_.type) {
-	case LITERAL:
-		delete pattern_.literal;
-		pattern_.literal = 0;
-		break;
-#ifndef ASCENSION_NO_REGEX
-	case REGULAR_EXPRESSION:
-#ifndef ASCENSION_NO_MIGEMO
-	case MIGEMO:
-#endif /* !ASCENSION_NO_MIGEMO */
-		delete pattern_.regex;
-		pattern_.regex = 0;
-		break;
-#endif /* !ASCENSION_NO_REGEX */
-	}
 }
 
 /**
  * Compiles the regular expression pattern.
  * @param direction the direction to search (this is used by only @c LiteralPattern)
- * @throw std#logic_error the pattern is not specified
+ * @throw IllegalStateException the pattern is not specified
  */
 void TextSearcher::compilePattern(Direction direction) const {
 	if(storedPatterns_.empty() && temporaryPattern_.empty())
-		throw logic_error("pattern is not set.");
+		throw IllegalStateException("pattern is not set.");
 	TextSearcher& self = *const_cast<TextSearcher*>(this);
 	const String& p = temporaryPattern_.empty() ? storedPatterns_.front() : temporaryPattern_;
 	switch(options_.type) {
 	case LITERAL:
-		if(self.pattern_.literal == 0)
-			self.pattern_.literal = new LiteralPattern(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
+		if(self.literalPattern_.get() == 0)
+			self.literalPattern_.reset(new LiteralPattern(p.data(), p.data() + p.length(), direction, !options_.caseSensitive));
 		break;
 #ifndef ASCENSION_NO_REGEX
 	case REGULAR_EXPRESSION:
-		if(self.pattern_.regex == 0)
-			self.pattern_.regex = new regex::Pattern(p.data(), p.data() + p.length(),
-				options_.caseSensitive ? regex::Pattern::NORMAL : regex::Pattern::CASE_INSENSITIVE);
+		if(regexPattern_.get() == 0) {
+			self.regexPattern_ = regex::Pattern::compile(p,
+				regex::Pattern::MULTILINE | (options_.caseSensitive ? 0 : regex::Pattern::CASE_INSENSITIVE));
+			if(regexMatcher_.get() != 0)
+				self.regexMatcher_->reset();
+		}
 		break;
 #ifndef ASCENSION_NO_MIGEMO
 	case MIGEMO:
-		if(self.pattern_.regex == 0)
-			self.pattern_.regex = regex::MigemoPattern::create(p.data(), p.data() + p.length(), !options_.caseSensitive).release();
-		if(self.pattern_.regex == 0)
+		if(regexPattern_.get() == 0)
+			self.regexPattern_ = regex::MigemoPattern::compile(p.data(), p.data() + p.length(), !options_.caseSensitive);
+		if(regexPattern_.get() == 0)
 			throw runtime_error("failed to create a regular expression pattern by using C/Migemo.");
 		break;
 #endif /* !ASCENSION_NO_MIGEMO */
@@ -310,33 +276,34 @@ bool TextSearcher::isMigemoAvailable() const throw() {
  * @param document the document
  * @param target the target to match
  * @return true if matched
- * @throw std#logic_error the pattern is not specified
+ * @throw IllegalStateException the pattern is not specified
+ * @throw regex#PatternSyntaxException the speicifed regular expression was invalid
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
 	bool matched = false;
-	const DocumentCharacterIterator b(document, target.beginning());
-	DocumentCharacterIterator e(b);	// e must be a clone of b because of the operator==
-	e.seek(target.end());
-	compilePattern((options_.type == LITERAL && pattern_.literal != 0) ? pattern_.literal->getDirection() : FORWARD);
+	const DocumentCharacterIterator b(document, target.beginning()), e(document, target.end());
+	compilePattern((options_.type == LITERAL && literalPattern_.get() != 0) ? literalPattern_->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
-			matched = pattern_.literal->matches(DocumentCharacterIterator(document, target)) && checkBoundary(b, e);
+			matched = literalPattern_->matches(DocumentCharacterIterator(document, target)) && checkBoundary(b, e);
 			break;
 #ifndef ASCENSION_NO_REGEX
 		case REGULAR_EXPRESSION:
 #ifndef ASCENSION_NO_MIGEMO
 		case MIGEMO:
 #endif /* !ASCENSION_NO_MIGEMO */
-		{
-			regex::Pattern::MatchOptions options(regex::Pattern::MULTILINE);
-			setupRegexRegionalMatchOptions(b, e, options);
-			delete lastResult_.regexResult;
-			lastResult_.regexResult = pattern_.regex->matches(b, e, options).release();
-			if(lastResult_.regexResult != 0 && !checkBoundary(b, e))
+			if(regexMatcher_.get() == 0) {
+				TextSearcher& self = const_cast<TextSearcher&>(*this);
+				self.regexMatcher_ = regexPattern_->matcher(
+					DocumentCharacterIterator(document, document.getStartPosition(false)),
+					DocumentCharacterIterator(document, document.getEndPosition(false)));
+				self.regexMatcher_->useAnchoringBounds(false).useTransparentBounds(true);
+			}
+			matched = regexMatcher_->region(b, e).matches() && checkBoundary(b, e);
+			if(!matched)
 				lastResult_.reset();
-			matched = lastResult_.regexResult != 0;
-		}
+			break;
 #endif /* !ASCENSION_NO_REGEX */
 	}
 	if(matched) {
@@ -372,7 +339,7 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
  * @param[out] endOfReplacement the end of the region covers the replacement. can be @c null
  * @return true if replaced
  * @throw text#ReadOnlyDocumentException @a document is read only
- * @throw std#logic_error the pattern is not specified
+ * @throw IllegalStateException the pattern is not specified
  */
 bool TextSearcher::replace(Document& document, const Region& target, Position* endOfReplacement) const {
 	if(document.isReadOnly())
@@ -398,8 +365,8 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 #ifndef ASCENSION_NO_MIGEMO
 		case MIGEMO:
 #endif /* !ASCENSION_NO_MIGEMO */
-			assert(lastResult_.regexResult != 0);
-			replacement.assign(lastResult_.regexResult->replace(replacement.data(), replacement.data() + replacement.length()));
+			assert(regexMatcher_.get() != 0);
+			replacement.assign(regexMatcher_->replace(replacement));
 			break;
 #endif /* !ASCENSION_NO_REGEX */
 		}
@@ -423,7 +390,7 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
  * @param document the document
  * @param scope the region to search and replace
  * @return the number of replacement
- * @throw std#logic_error the pattern is not specified
+ * @throw IllegalStateException the pattern is not specified
  */
 size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
@@ -431,14 +398,14 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 	compilePattern(FORWARD);
 
 	if(options_.type == LITERAL) {
-		if(pattern_.literal->getDirection() != FORWARD) {	// recompile to change the direction
+		if(literalPattern_->getDirection() != FORWARD) {	// recompile to change the direction
 			const String& p = storedPatterns_.front();
-			pattern_.literal->compile(p.data(), p.data() + p.length(), FORWARD, !options_.caseSensitive);
+			literalPattern_->compile(p.data(), p.data() + p.length(), FORWARD, !options_.caseSensitive);
 		}
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
 		Point endOfScope(document, scope.end());
 		for(DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
-			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
+			if(!literalPattern_->search(i, matchedFirst, matchedLast))
 				break;
 			else if(!checkBoundary(
 					static_cast<DocumentCharacterIterator&>(*matchedFirst),
@@ -466,34 +433,32 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 			|| options_.type == MIGEMO
 #endif /* !ASCENSION_NO_MIGEMO */
 	) {
-		regex::Pattern::MatchOptions options = regex::Pattern::MULTILINE;
 		const Point endOfScope(document, scope.end());
 		Position lastEOS(endOfScope);
 		DocumentCharacterIterator e(document, endOfScope);
+		DocumentCharacterIterator b(e);
+		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(regexPattern_->matcher(
+			DocumentCharacterIterator(document, document.getStartPosition(false)),
+			DocumentCharacterIterator(document, document.getEndPosition(false))));
+		matcher->region(
+			DocumentCharacterIterator(document, scope.beginning()),
+			DocumentCharacterIterator(document, scope.end()))
+			.useAnchoringBounds(false).useTransparentBounds(true);
 		lastResult_.reset();
 
-		bool previousIsZeroWidth = false;
-		DocumentCharacterIterator i(e);	// position to start search
-		i.seek(scope.beginning());
-		setupRegexRegionalMatchOptions(i, e, options);
-		while(true) {
-			if(previousIsZeroWidth)
-				options |= regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH;
-			auto_ptr<regex::MatchResult<DocumentCharacterIterator> > result(pattern_.regex->search(i, e, options));
-			options &= ~regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH;
-			if(result.get() == 0)
-				break;
-			else if(!checkBoundary(result->getStart(), result->getEnd()))
-				i.next();
+		while(matcher->find()) {
+			if(!checkBoundary(matcher->start(), matcher->end()))
+				matcher->region(++DocumentCharacterIterator(matcher->start()), matcher->end());
 			else {
+				Position next(Position::ZERO_POSITION);
 				// matched -> replace
-				const Region matchedRegion(result->getStart().tell(), result->getEnd().tell());
+				const Region matchedRegion(matcher->start().tell(), matcher->end().tell());
 				if(!matchedRegion.isEmpty())
-					i.seek(document.erase(matchedRegion));
+					next = document.erase(matchedRegion);
 				if(!replacement.empty()) {
-					const String r(result->replace(replacement.data(), replacement.data() + replacement.length()));
+					const String r(matcher->replace(replacement));
 					if(!r.empty())
-						i.seek(document.insert(matchedRegion.beginning(), r));
+						next = document.insert(matchedRegion.beginning(), r);
 				}
 				++c;
 				if(matchedRegion.second == e.tell())	// reached the end of the scope
@@ -501,15 +466,14 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 				else if(endOfScope.getPosition() != lastEOS) {
 					e.setRegion(Region(scope.beginning(), endOfScope));
 					e.seek(endOfScope);
-					i.setRegion(Region(scope.beginning(), endOfScope));
+//					i.setRegion(Region(scope.beginning(), endOfScope));
 					lastEOS = endOfScope;
 				}
-				if(i.tell() <= matchedRegion.second)
-					i.seek(matchedRegion.second);
-				previousIsZeroWidth = matchedRegion.isEmpty();
+				if(next < matchedRegion.second)
+					next = matchedRegion.second;
+//				previousIsZeroWidth = matchedRegion.isEmpty();
+				matcher->region(DocumentCharacterIterator(document, next), matcher->end());
 			}
-			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
-			options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
 		}
 	}
 #endif /* !ASCENSION_NO_REGEX */
@@ -519,26 +483,30 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 /**
  * Searches the pattern in the document.
  * @param document the document
+ * @param from the position where the search begins
  * @param scope the region to search
  * @param direction the direction to search
  * @param[out] matchedRegion the matched region
  * @return true if the pattern is found
- * @throw std#logic_error the pattern is not specified
+ * @throw IllegalStateException the pattern is not specified
+ * @throw text#BadPositionException @a from is outside of @a scope
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool TextSearcher::search(const Document& document, const Region& scope, Direction direction, Region& matchedRegion) const {
+bool TextSearcher::search(const Document& document,
+		const Position& from, const Region& scope, Direction direction, Region& matchedRegion) const {
+	if(!scope.includes(from))
+		throw BadPositionException();
 	bool matched = false;
 	compilePattern(direction);
 	if(options_.type == LITERAL) {
-		if(direction != pattern_.literal->getDirection()) {	// recompile to change the direction
+		if(direction != literalPattern_->getDirection()) {	// recompile to change the direction
 			const String& p = storedPatterns_.front();
-			pattern_.literal->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
+			literalPattern_->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
 		}
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
-		for(DocumentCharacterIterator i = (direction == FORWARD) ?
-				DocumentCharacterIterator(document, scope) : DocumentCharacterIterator(document, scope, scope.second);
+		for(DocumentCharacterIterator i(document, scope, from);
 				(direction == FORWARD) ? i.hasNext() : i.hasPrevious(); (direction == FORWARD) ? i.next() : i.previous()) {
-			if(!pattern_.literal->search(i, matchedFirst, matchedLast))
+			if(!literalPattern_->search(i, matchedFirst, matchedLast))
 				break;	// not found
 			else if(checkBoundary(
 					static_cast<DocumentCharacterIterator&>(*matchedFirst),
@@ -557,52 +525,50 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 			|| options_.type == MIGEMO
 #endif /* !ASCENSION_NO_MIGEMO */
 	) {
-		const bool lastMatchIsZeroWidth = lastResult_.matched()
-			&& lastResult_.matchedRegion.isEmpty() && lastResult_.checkDocumentRevision(document)
-			&& ((direction == FORWARD && scope.first == lastResult_.matchedRegion.second)
-			|| (direction == BACKWARD && scope.second == lastResult_.matchedRegion.first));
-		regex::Pattern::MatchOptions options = regex::Pattern::MULTILINE;
-		const DocumentCharacterIterator eob(document, scope.second);
-		auto_ptr<regex::MatchResult<DocumentCharacterIterator> > result;
-		lastResult_.reset();
+		if(regexMatcher_.get() == 0)
+			(const_cast<TextSearcher*>(this)->regexMatcher_ = regexPattern_->matcher(
+				DocumentCharacterIterator(document, document.getStartPosition(false)),
+				DocumentCharacterIterator(document, document.getEndPosition(false))))
+				->useAnchoringBounds(false).useTransparentBounds(true);
+		else if(!lastResult_.checkDocumentRevision(document)) {
+			const_cast<TextSearcher*>(this)->regexMatcher_->reset(
+				DocumentCharacterIterator(document, document.getStartPosition(false)),
+				DocumentCharacterIterator(document, document.getEndPosition(false)));
+			lastResult_.reset();
+		}
 
+		const bool maybeContinuous = lastResult_.matched()
+			&& direction == lastResult_.direction && lastResult_.checkDocumentRevision(document);
 		if(direction == FORWARD) {
-			DocumentCharacterIterator i(eob);
-			i.seek(scope.first);
-			setupRegexRegionalMatchOptions(i, eob, options);
-			do {
-				result = pattern_.regex->search(i, eob, options | (lastMatchIsZeroWidth ? regex::Pattern::SKIP_BEGINNING_ZERO_WIDTH : 0));
-				if(result.get() == 0 || checkBoundary(result->getStart(), result->getEnd()))
+			const DocumentCharacterIterator eob(document, scope.end());
+			if(!maybeContinuous || from != lastResult_.matchedRegion.second)
+				regexMatcher_->region(DocumentCharacterIterator(document, from), eob);
+			while(regexMatcher_->find()) {
+				if(matched = checkBoundary(regexMatcher_->start(), regexMatcher_->end()))
 					break;
-				i.seek(result->getEnd().tell());	// move to the next search start
-				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOB;
-				options |= regex::Pattern::TARGET_FIRST_IS_NOT_BOL;
-			} while(i.less(eob));
+				regexMatcher_->region(++DocumentCharacterIterator(regexMatcher_->start()), eob);
+			}
 		} else {
-			DocumentCharacterIterator i(eob);
-			i.seek(scope.second);
-			if(!lastMatchIsZeroWidth || i.tell() > scope.first) {
-				if(lastMatchIsZeroWidth)
-					i.previous();
-				setupRegexRegionalMatchOptions(i, eob, options);
-				options |= regex::Pattern::MATCH_AT_ONLY_TARGET_FIRST;
+			// ascension.regex does not support backward searches...
+			const bool continuous = maybeContinuous && from == lastResult_.matchedRegion.first;
+			const DocumentCharacterIterator e(document, continuous ? lastResult_.matchedRegion.second : from);
+			DocumentCharacterIterator b(document, from);	// position from where the match should start
+			if(!continuous || b.tell() > scope.beginning()) {
+				if(continuous)
+					b.previous();
 				while(true) {
-					result = pattern_.regex->search(i, eob, options);
-					if(result.get() != 0 && checkBoundary(result->getStart(), result->getEnd()))
+					regexMatcher_->region(b, e);
+					if(matched = (regexMatcher_->lookingAt() && checkBoundary(regexMatcher_->start(), regexMatcher_->end())))
 						break;
-					else if(i.tell() <= scope.first)
+					else if(b.tell() <= scope.beginning())
 						break;
-					i.previous();	// move to the next search start
-					options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOB, i.tell() != document.getStartPosition(false));
-					options.set(regex::Pattern::TARGET_FIRST_IS_NOT_BOL, i.tell().column != 0);
+					b.previous();	// move to the next search start
 				}
 			}
 		}
-		if(result.get() != 0) {
-			matchedRegion.first = result->getStart().tell();
-			matchedRegion.second = result->getEnd().tell();
-			lastResult_.regexResult = result.release();
-			matched = true;
+		if(matched) {
+			matchedRegion.first = regexMatcher_->start().tell();
+			matchedRegion.second = regexMatcher_->end().tell();
 		}
 	}
 #endif /* !ASCENSION_NO_REGEX */
@@ -611,7 +577,9 @@ bool TextSearcher::search(const Document& document, const Region& scope, Directi
 		// remember the result for efficiency
 		lastResult_.updateDocumentRevision(document);
 		lastResult_.matchedRegion = matchedRegion;
-	}
+		lastResult_.direction = direction;
+	} else
+		lastResult_.reset();
 	return matched;
 }
 
@@ -685,11 +653,10 @@ void IncrementalSearcher::abort() {
  * Appends the specified character to the end of the current search pattern.
  * @param c the character to append
  * @return true if the pattern is found
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException the searcher is not running
  */
 bool IncrementalSearcher::addCharacter(Char c) {
-	if(!isRunning())
-		throw NotRunningException();
+	checkRunning();
 	pattern_ += c;
 	operationHistory_.push(TYPE);
 	return update();
@@ -700,11 +667,10 @@ bool IncrementalSearcher::addCharacter(Char c) {
  * Appends the specified character to the end of the current search pattern.
  * @param c the character to append
  * @return true if the pattern is found
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException the searcher is not running
  */
 bool IncrementalSearcher::addCharacter(CodePoint c) {
-	if(!isRunning())
-		throw NotRunningException();
+	checkRunning();
 	if(c < 0x010000U)
 		return addCharacter(static_cast<Char>(c & 0xFFFFU));
 	Char surrogates[2];
@@ -717,19 +683,24 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
  * @param first the start of the string to append
  * @param last the end og the string to append
  * @return true if the pattern is found
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException the searcher is not running
  * @throw std#invalid_argument the string is empty
  */
 bool IncrementalSearcher::addString(const Char* first, const Char* last) {
 	assert(first != 0 && last != 0 && first <= last);
-	if(!isRunning())
-		throw NotRunningException();
-	else if(first == last)
+	checkRunning();
+	if(first == last)
 		throw invalid_argument("Added string is empty.");
 	pattern_.append(first, last);
 	for(const Char* p = first; p < last; ++p)
 		operationHistory_.push(TYPE);
 	return update();
+}
+
+/// @internal Throws an @c IllegalStateException if not in running.
+void IncrementalSearcher::checkRunning() const {
+	if(!isRunning())
+		throw IllegalStateException("The incremental searcher is not running.");
 }
 
 /// @see text#IDocumentListener#documentAboutToBeChanged
@@ -761,12 +732,10 @@ void IncrementalSearcher::end() {
  * Search the next match. If the pattern is empty, this method uses the last used pattern.
  * @param direction the new direction of the search
  * @return true if matched after jump
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException the searcher is not running
  */
 bool IncrementalSearcher::next(Direction direction) {
-	if(!isRunning())
-		throw NotRunningException();
-
+	checkRunning();
 	if(pattern_.empty()) {
 		statusHistory_.top().direction = direction;
 		if(searcher_->getNumberOfStoredPatterns() > 0)
@@ -794,11 +763,10 @@ bool IncrementalSearcher::next(Direction direction) {
 
 /**
  * Reverts to the initial state.
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException the searcher is not running
  */
 void IncrementalSearcher::reset() {
-	if(statusHistory_.empty())
-		throw NotRunningException();
+	checkRunning();
 	while(!operationHistory_.empty())
 		operationHistory_.pop();
 	while(statusHistory_.size() > 1)
@@ -836,14 +804,12 @@ void IncrementalSearcher::start(Document& document, const Position& from,
  * Undoes the last search command. If the last command is typing, the end of the pattern is removed.
  * Otherwise if researching, reverts to the last state.
  * @return true if matched after the undo 
- * @throw NotRunningException the searcher is not running
- * @throw EmptyUndoBufferException can't undo
+ * @throw IllegalStateException the searcher is not running or the undo buffer is empty
  */
 bool IncrementalSearcher::undo() {
-	if(!isRunning())
-		throw NotRunningException();
-	else if(!canUndo())
-		throw EmptyUndoBufferException();
+	checkRunning();
+	if(!canUndo())
+		throw IllegalStateException("Undo buffer of incremental search is empty and not undoable.");
 
 	const Operation lastOperation = operationHistory_.top();
 	operationHistory_.pop();
@@ -888,9 +854,7 @@ bool IncrementalSearcher::update() {
 
 	searcher_->setPattern(pattern_, true);
 	Region matchedRegion;
-	Region scope(
-		(lastStatus.direction == FORWARD) ? lastStatus.matchedRegion.second : document_->getStartPosition(),
-		(lastStatus.direction == FORWARD) ? document_->getEndPosition() : lastStatus.matchedRegion.first);
+	Region scope(document_->getStartPosition(), document_->getEndPosition());
 /*	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
 		// handle the previous zero-width match
 		if(lastStatus.direction == FORWARD) {
@@ -907,7 +871,9 @@ bool IncrementalSearcher::update() {
 #ifndef ASCENSION_NO_REGEX
 	try {
 #endif /* !ASCENSION_NO_REGEX */
-		matched_ = searcher_->search(*document_, scope, lastStatus.direction, matchedRegion);
+		matched_ = searcher_->search(*document_,
+			(lastStatus.direction == FORWARD) ? lastStatus.matchedRegion.second : lastStatus.matchedRegion.first,
+			scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 	} catch(boost::regex_error&) {
 		if(callback_ != 0)

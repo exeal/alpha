@@ -1202,7 +1202,10 @@ bool Document::renameFile(const WCHAR* newName) {
 	return false;
 }
 
-/// Resets and initializes the content of the document.
+/**
+ * Resets and initializes the content of the document.
+ * @note This method does not reset the revision number to zero.
+ */
 void Document::resetContent() {
 	diskFile_.unlock();
 	widen();
@@ -1219,7 +1222,6 @@ void Document::resetContent() {
 		fireDocumentChanged(DocumentChange(true, entire), false);
 	} else if(lines_.isEmpty())
 		lines_.insert(lines_.begin(), new Line);
-	revisionNumber_ = 0;
 
 	setReadOnly(false);
 	setCodePage(Document::defaultCodePage_);
@@ -1822,8 +1824,10 @@ inline bool Document::DiskFile::unlock() throw() {
 
 // DocumentCharacterIterator ////////////////////////////////////////////////
 
+const CharacterIterator::ConcreteTypeTag DocumentCharacterIterator::CONCRETE_TYPE_TAG_;
+
 /// Default constructor.
-DocumentCharacterIterator::DocumentCharacterIterator() throw() : document_(0), line_(0) {
+DocumentCharacterIterator::DocumentCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_), document_(0), line_(0) {
 }
 
 /**
@@ -1832,7 +1836,8 @@ DocumentCharacterIterator::DocumentCharacterIterator() throw() : document_(0), l
  * @param position the position at which the iteration starts
  * @throw BadPositionException @a position is outside of the accessible area of the document
  */
-DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) : document_(&document),
+DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document),
 		region_(document.getStartPosition(), document.getEndPosition()), line_(&document.getLine(position.line)), p_(position) {
 	if(!region_.includes(p_))
 		throw BadPositionException();
@@ -1845,7 +1850,8 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  * @throw BadRegionException @a region intersects outside of the document
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
-		document_(&document), region_(region), line_(&document.getLine(region.beginning().line)), p_(region.beginning()) {
+		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region),
+		line_(&document.getLine(region.beginning().line)), p_(region.beginning()) {
 	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
 		throw BadRegionException();
 	region_.normalize();
@@ -1860,7 +1866,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  * @throw BadPositionException @a position is outside of @a region
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position) :
-		document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
+		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
 	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
 		throw BadRegionException();
 	else if(!region_.includes(p_))
@@ -1873,15 +1879,6 @@ DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIter
 		unicode::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
 }
 
-/// @see unicode#CharacterIterator#assign
-void DocumentCharacterIterator::assign(const CharacterIterator& rhs) {
-	const DocumentCharacterIterator& r = static_cast<const DocumentCharacterIterator&>(rhs);
-	document_ = r.document_;
-	line_ = r.line_;
-	p_ = r.p_;
-	region_ = r.region_;
-}
-
 /// @see unicode#CharacterIterator#current
 CodePoint DocumentCharacterIterator::current() const throw() {
 	if(p_ == region_.second)
@@ -1892,6 +1889,16 @@ CodePoint DocumentCharacterIterator::current() const throw() {
 		return (surrogates::isHighSurrogate((*line_)[p_.column])
 			&& p_.column + 1 < line_->length() && surrogates::isLowSurrogate((*line_)[p_.column + 1])) ?
 			surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
+}
+
+/// @see unicode#CharacterIterator#doAssign
+void DocumentCharacterIterator::doAssign(const CharacterIterator& rhs) {
+	CharacterIterator::operator=(rhs);
+	const DocumentCharacterIterator& r = static_cast<const DocumentCharacterIterator&>(rhs);
+	document_ = r.document_;
+	line_ = r.line_;
+	p_ = r.p_;
+	region_ = r.region_;
 }
 
 /// @see unicode#CharacterIterator#doClone

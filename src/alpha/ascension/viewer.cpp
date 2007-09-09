@@ -2699,11 +2699,11 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> 
  * by @c DefaultMouseInputStrategy class as the construction.
  * @param newStrategy the new strategy or @c null
  * @param delegateOwnership set true to transfer the ownership into the callee
- * @throw std#logic_error the window is not created yet
+ * @throw IllegalStateException the window is not created yet
  */
 void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
 	if(!isWindow())
-		throw logic_error("The window is not created yet.");
+		throw IllegalStateException("The window is not created yet.");
 	if(mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->uninstall();
 	if(newStrategy != 0)
@@ -3022,7 +3022,7 @@ STDMETHODIMP TextViewerAccessibleProxy::accSelect(long flagsSelect, VARIANT varC
 /// Informs that the viewer is inavailable to the proxy.
 void TextViewerAccessibleProxy::dispose() {
 	if(!available_)
-		throw logic_error("This proxy is already disposed.");
+		throw IllegalStateException("This proxy is already disposed.");
 	available_ = false;
 }
 
