@@ -69,7 +69,7 @@ namespace ascension {
 				String group() const {return group(0);}
 				String group(int group) const;
 				std::size_t groupCount() const {return impl_.size();}
-				String replace(const String& replacement) const;
+				virtual String replace(const String& replacement) const;
 				const CodePointIterator& start() const {return start(0);}
 				const CodePointIterator& start(int group) const {return get(group).first;}
 			protected:
@@ -157,6 +157,7 @@ namespace ascension {
 			Matcher&		appendReplacement(OutputIterator out, const String& replacement);
 			template<typename OutputIterator>
 			OutputIterator	appendTail(OutputIterator out) const;
+			String			replace(const String& replacement);
 			String			replaceAll(const String& replacement);
 			String			replaceFirst(const String& replacement);
 			// explicit reset
@@ -363,6 +364,10 @@ namespace ascension {
 
 		/// Returns the beginning of the regex engine.
 		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const throw() {return region_.first;}
+
+		/// @see MatchResult#replace
+		template<typename CPI> inline String Matcher<CPI>::replace(const String& replacement) {
+			return regex::internal::MatchResultImpl<CPI>::replace(replacement);}
 
 		/// Replaces the subsequences in the input sequence match the pattern with the given string.
 		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); OutputStringStream s;

@@ -1924,30 +1924,27 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 	if(fromClipboardRing && (session == 0 || session->getClipboardRing().getCount() == 0))
 		return;
 
-	const Position anchorOrg = anchor_->getPosition();
 	getDocument()->beginSequentialEdit();
 	getTextViewer().freeze(true);
 	if(!fromClipboardRing) {
-		if(!isSelectionEmpty()) {
+		if(!isSelectionEmpty())
 			eraseSelection();
-			moveTo(anchorOrg);
-		}
 		paste();
 	} else {
-		String str;
-		bool box;
 		size_t activeItem = session->getClipboardRing().getActiveItem();
-
 		if(pastingFromClipboardRing_ && ++activeItem == session->getClipboardRing().getCount())
 			activeItem = 0;
+
+		String str;
+		bool box;
 		session->getClipboardRing().getText(activeItem, str, box);
 		session->getClipboardRing().setActiveItem(activeItem);
 		if(!isSelectionEmpty()) {
 			if(pastingFromClipboardRing_)
 				getDocument()->undo();
 			eraseSelection();
-			moveTo(anchorOrg);
 		}
+		const Position p(getPosition());
 		if(!box) {
 			insert(str);
 			endBoxSelection();
@@ -1955,7 +1952,7 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 			insertBox(str);
 			beginBoxSelection();
 		}
-		select(anchorOrg, getPosition());
+		select(p, getPosition());
 		pastingFromClipboardRing_ = true;
 	}
 	getDocument()->endSequentialEdit();
