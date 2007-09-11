@@ -620,9 +620,9 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
  * Other classes also provide text manipulation for the document.
  *
  * A document manages a revision number indicates how many times the document was changed. This
- * value is initially zero and incremented by @c #insert, @c #insertFromStream, and @c #erase
- * methods. @c #resetContent resets this to zero. The current revision number can be obtained by
- * @c #getRevisionNumber.
+ * value is initially zero and incremented by @c #insert, @c #insertFromStream, @c #erase, and
+ * @c #resetContent methods. A revision number is never decremented or reset to zero. The current
+ * revision number can be obtained by @c #getRevisionNumber.
  *
  * A document can be devides into a sequence of semantic segments called partition.
  * Document partitioners expressed by @c DocumentPartitioner class define these
@@ -1219,6 +1219,7 @@ void Document::resetContent() {
 		lines_.clear();
 		lines_.insert(lines_.begin(), new Line);
 		length_ = 0;
+		++revisionNumber_;
 		fireDocumentChanged(DocumentChange(true, entire), false);
 	} else if(lines_.isEmpty())
 		lines_.insert(lines_.begin(), new Line);
