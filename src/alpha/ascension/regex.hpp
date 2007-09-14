@@ -19,39 +19,52 @@
 namespace ascension {
 
 	/**
-	 * Defines stuffs related to regular expression. Classes provided by this namespace have
-	 * interfaces familiar to Java/ICU regex users. @a CodePointIterator template parameters of
-	 * class @c MatchResult and @c Matcher must represent a UTF-32 code point sequence.
+	 * Classes for matching character sequences against patterns specified by regular expressions.
+	 *
+	 * An instance of the @c Pattern class represents a regular expression that is specified in
+	 * string form in a syntax similar to that used by Perl.
+	 *
+	 * Instances of the @c Matcher class are used to match character sequences against a given
+	 * pattern. Input is provided to matchers via the C++ standard bidirectional iterator in order
+	 * to support matching against characters from a wide variety of input sources.
+	 *
+	 * Classes provided by this namespace have interfaces familiar to Java/ICU regex users.
+	 * @a CodePointIterator template parameters of class @c MatchResult and @c Matcher must
+	 * represent a UTF-32 code point sequence.
+	 *
+	 * This uses Boost.Regex to implement internally.
 	 */
 	namespace regex {
 
 		/**
-		 * A result of a match operation.
+		 * The result of a match operation.
+		 * <p>This interface contains query methods used to determine the results of a match
+		 * against a regular expression. The match boundaries, groups and group boundaries can be
+		 * seen but not modified through a @c MatchResult.</p>
+		 * <p>Almost all methods throw @c IllegalStateException if no match has yet been attempted,
+		 * or if the previous match operation failed.</p>
 		 * @see Matcher
 		 */
 		template<typename CodePointIterator> class MatchResult {
 		public:
 			/// Destructor.
 			virtual ~MatchResult() {}
-			/// Returns the end of the matched subtring.
+			/// Returns the position after the last character matched.
 			virtual const CodePointIterator& end() const = 0;
-			/// Returns the end of the matched subtring.
+			/// Returns the position after the last character of the subsequence captured by
+			/// @a group during this match.
 			virtual const CodePointIterator& end(int group) const = 0;
-			///
+			/// Returns the input subsequence matched by the previous match.
 			virtual String group() const = 0;
-			///
+			/// Returns the input subsequence captured by @a group during the previous match
+			/// operation.
 			virtual String group(int group) const = 0;
-			/// Returns the number of the marked regex groups.
+			/// Returns the number of the capturing groups this match result's pattern.
 			virtual std::size_t groupCount() const = 0;
-			/**
-			 * Replaces the matched range by the specified replacement pattern.
-			 * @param replacement the replacement string
-			 * @return the replaced string
-			 */
-			virtual String replace(const String& replacement) const = 0;
-			///
+			/// Returns the start position of the match.
 			virtual const CodePointIterator& start() const = 0;
-			///
+			/// Returns the start position of the subsequence captured by @a group during this
+			/// match.
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
 			ASCENSION_STATIC_ASSERT(unicode::CodeUnitSizeOf<CodePointIterator>::result == 4);
@@ -69,7 +82,6 @@ namespace ascension {
 				String group() const {return group(0);}
 				String group(int group) const;
 				std::size_t groupCount() const {return impl_.size();}
-				virtual String replace(const String& replacement) const;
 				const CodePointIterator& start() const {return start(0);}
 				const CodePointIterator& start(int group) const {return get(group).first;}
 			protected:
@@ -157,9 +169,12 @@ namespace ascension {
 			Matcher&		appendReplacement(OutputIterator out, const String& replacement);
 			template<typename OutputIterator>
 			OutputIterator	appendTail(OutputIterator out) const;
-			String			replace(const String& replacement);
 			String			replaceAll(const String& replacement);
 			String			replaceFirst(const String& replacement);
+			// in-place replacement
+			Matcher&	endInplaceReplacement(CodePointIterator first, CodePointIterator last,
+							CodePointIterator regionFirst, CodePointIterator regionLast, CodePointIterator next);
+			String		replaceInplace(const String& replacement);
 			// explicit reset
 			Matcher&	reset();
 			Matcher&	reset(CodePointIterator first, CodePointIterator last);
@@ -171,41 +186,65 @@ namespace ascension {
 			template<typename OI> void appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&);
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<2>&) const;
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<4>&) const;
+			void checkInplaceReplacement() {if(replacedInplace_) throw IllegalStateException("the matcher entered to in-place replacement.");}
 			void checkPreviousMatch() {if(!impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
 			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const throw();
 			const Pattern* pattern_;
 			CodePointIterator current_;
 			std::pair<CodePointIterator, CodePointIterator> input_, region_;
 			CodePointIterator appendingPosition_;
+			bool replacedInplace_;	// between inplaceReplace() ~ endInplaceReplacement()
 			bool usesAnchoringBounds_, usesTransparentBounds_;
 			friend class Pattern;
 		};
 
+		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
 		class PatternSyntaxException : public std::invalid_argument {
 		public:
-			enum {
+			/// Error types (corresponds to @c boost#regex_constants#error_type).
+			enum Code {
+				NOT_ERROR,						///< Not an error.
+				INVALID_COLLATION_CHARACTER,	///< An invalid collating element was specified in a [[.name.]] block.
+				INVALID_CHARACTER_CLASS_NAME,	///< An invalid character class name was specified in a [[:name:]] block.
+				TRAILING_BACKSLASH,				///< An invalid or trailing escape was encountered.
+				INVALID_BACK_REFERENCE,			///< A back-reference to a non-existant marked sub-expression was encountered.
+				UNMATCHED_BARCKET,				///< An invalid character set [...] was encounted.
+				UNMATCHED_PAREN,				///< Mismatched '(' abd ')'.
+				UNMATCHED_BRACE,				///< Mismatched '{' and '}'.
+				INVALID_CONTENT_OF_BRACES,		///< Invalid contents of a {...} block.
+				INVALID_RANGE_END,				///< A character range was invalid, for example [d-a].
+				MEMORY_EXHAUSTED,				///< Out of memory.
+				INVALID_REPEATITION,			///< An attempt to repeat something that can not be repeated - for example a*+.
+				TOO_COMPLEX_REGULAR_EXPRESSION,	///< The expression became too complex to handle.
+				STACK_OVERFLOW,					///< Out of program stack space.
+				UNKNOWN_ERROR					///< Other unspecified errors.
 			};
 			/// Constructor.
-			explicit PatternSyntaxException(const boost::regex_error& src) : std::invalid_argument(""), impl_(src) {}
-			/// Returns the error code.
-			int code() const {return impl_.code();}
-			/// Returns the position in the expression where parsing stopped.
-			std::ptrdiff_t position() const {return impl_.position();}
+			PatternSyntaxException(const boost::regex_error& src, const String& pattern);
+			/// Retrieves the error code.
+			Code getCode() const;
+			/// Retrieves the description of the error.
+			std::string getDescription() const;
+			/// Retrieves the error index.
+			std::ptrdiff_t getIndex() const {return impl_.position();}
+			/// Retrieves the erroneous regular-expression pattern.
+			String getPattern() const throw() {return pattern_;}
 		private:
 			const boost::regex_error impl_;
+			const String pattern_;
 		};
 
 		class Pattern {
 		public:
 			enum {
-				CANON_EQ = 0x01,			///< Enables canonical equivalents (not implemented).
-				CASE_INSENSITIVE = 0x02,	///< Enables caseless matches.
-				COMMENTS = 0x04,			///< Enables white spaces and comments in pattern string.
-				DOTALL = 0x08,				///< Indicates that <kbd>/./</kbd> matches any characters include EOLs.
-				LITERAL = 0x10,				///< Enables literal matches.
-				MULTILINE = 0x20,			///< Enables multiline mode.
-				UNICODE_CASE = 0x40,		///< Enables Unicode-comformant caseless matches (not implemented).
-				UNIX_LINES = 0x80			///< Enables Unix line mode (not implemented).
+				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
+				CASE_INSENSITIVE = 0x02,	///< Enables case-insensitive matching.
+				COMMENTS = 0x04,			///< Permits whitespace and comments in pattern.
+				MULTILINE = 0x08,			///< Enables multiline mode.
+				LITERAL = 0x10,				///< Enables literal parsing of the pattern.
+				DOTALL = 0x20,				///< Enables dotall mode.
+				UNICODE_CASE = 0x40,		///< Enables Unicode-aware case folding (not implemented).
+				CANON_EQ = 0x80				///< Enables canonical equivalence (not implemented).
 			};
 		public:
 			virtual ~Pattern() throw();
@@ -273,19 +312,13 @@ namespace ascension {
 			const std::basic_string<CodePoint> s(get(group).str());
 			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));}
 
-		template<typename CPI> inline String regex::internal::MatchResultImpl<CPI>::replace(const String& replacement) const {
-			if(!impl_[0].matched) throw IllegalStateException("the previous was failed or not performed.");
-			const std::basic_string<CodePoint> temp(impl_.format(std::basic_string<CodePoint>(
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
 		// Matcher //////////////////////////////////////////////////////////
 
 		/// Private constructor.
 		template<typename CPI> inline Matcher<CPI>::Matcher(const Pattern& pattern, CPI first, CPI last) :
 			pattern_(&pattern), current_(first), input_(first, last), region_(first, last),
-			appendingPosition_(input_.first), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
+			appendingPosition_(input_.first), replacedInplace_(false), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 
 		template<typename CPI> template<typename OI>
 		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&) {
@@ -299,7 +332,7 @@ namespace ascension {
 
 		template<typename CPI> template<typename OI>
 		inline Matcher<CPI>& Matcher<CPI>::appendReplacement(OI out, const String& replacement) {
-			checkPreviousMatch();
+			checkInplaceReplacement(); checkPreviousMatch();
 			appendReplacement(out, replacement, ascension::internal::Int2Type<unicode::CodeUnitSizeOf<OI>::result>());
 			appendingPosition_ = impl()[0].second; return *this;}
 		
@@ -313,11 +346,17 @@ namespace ascension {
 		 * @param out
 		 */
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
-			return appendTail(out, unicode::CodeUnitSizeOf<OI>::result());}
+			checkInplaceReplacement(); return appendTail(out, unicode::CodeUnitSizeOf<OI>::result());}
+
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {
+			if(!replacedInplace_) throw IllegalStateException("the matcher is not entered in in-place replacement context.");
+			input_.first = first; input_.second = last; region_.first = regionFirst; region_.second = regionLast; current_ = next;
+			impl() = boost::match_results<CPI>(); appendingPosition_ = input_.first; replacedInplace_ = false; return *this;}
 
 		/// Searches the next subsequence matches the pattern in the input sequence.
-		template<typename CPI> inline bool Matcher<CPI>::find() {if(boost::regex_search(current_, region_.second, impl(),
-			pattern_->impl_, getNativeFlags(current_, region_.second, true))) current_ = impl()[0].second; return impl()[0].matched;}
+		template<typename CPI> inline bool Matcher<CPI>::find() {
+			checkInplaceReplacement(); if(boost::regex_search(current_, region_.second, impl(), pattern_->impl_,
+				getNativeFlags(current_, region_.second, true))) current_ = impl()[0].second; return impl()[0].matched;}
 
 		/// Resets the engine and searches the next subsequence matches the pattern in the input sequence from the given position.
 		template<typename CPI> inline bool Matcher<CPI>::find(CPI start) {
@@ -345,12 +384,13 @@ namespace ascension {
 		template<typename CPI> inline bool Matcher<CPI>::hasTransparentBounds() const throw() {return usesTransparentBounds_;}
 
 		/// Begins the match from the beginning of the region.
-		template<typename CPI> inline bool Matcher<CPI>::lookingAt() {return boost::regex_search(current_, region_.second,
-			impl(), pattern_->impl_, getNativeFlags(current_, region_.second, false) | boost::regex_constants::match_continuous);}
+		template<typename CPI> inline bool Matcher<CPI>::lookingAt() {if(boost::regex_search(
+			region_.first, region_.second, impl(), pattern_->impl_, getNativeFlags(region_.first, region_.second,
+			false) | boost::regex_constants::match_continuous)) current_ = end(); return impl()[0].matched;}
 
 		/// Returns true if the pattern matches the entire region.
-		template<typename CPI> inline bool Matcher<CPI>::matches() {return boost::regex_match(
-			region_.first, region_.second, impl(), pattern_->impl_, getNativeFlags(region_.first, region_.second, false));}
+		template<typename CPI> inline bool Matcher<CPI>::matches() {if(boost::regex_match(region_.first, region_.second,
+			impl(), pattern_->impl_, getNativeFlags(region_.first, region_.second, false))) current_ = end(); return impl()[0].matched;}
 
 		/// Returns the pattern interpreted by the regex engine.
 		template<typename CPI> inline const Pattern& Matcher<CPI>::pattern() const throw() {return *pattern_;}
@@ -365,9 +405,15 @@ namespace ascension {
 		/// Returns the beginning of the regex engine.
 		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const throw() {return region_.first;}
 
-		/// @see MatchResult#replace
-		template<typename CPI> inline String Matcher<CPI>::replace(const String& replacement) {
-			return regex::internal::MatchResultImpl<CPI>::replace(replacement);}
+		/// ...
+		template<typename CPI> inline String Matcher<CPI>::replaceInplace(const String& replacement) {
+			if(!impl_()[0].matched) throw IllegalStateException("the previous was failed or not performed.");
+			else if(replacedInplace_) throw IllegalStateException("this matcher already entered in in-place replacement.");
+			const std::basic_string<CodePoint> temp(impl_().format(std::basic_string<CodePoint>(
+				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
+				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
+			replacedInplace_ = true;
+			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
 		/// Replaces the subsequences in the input sequence match the pattern with the given string.
 		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); OutputStringStream s;
@@ -378,8 +424,8 @@ namespace ascension {
 			std::ostream_iterator<Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
 		/// Resets the regex engine.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset() {
-			impl() = boost::match_results<CPI>(); region_ = input_; appendingPosition_ = input_.first; return *this;}
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset() {impl() = boost::match_results<CPI>();
+			region_ = input_; current_ = appendingPosition_ = input_.first; replacedInplace_ = false; return *this;}
 
 		/// Resets the regex engine with the new input sequence.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset(CPI first, CPI last) {input_.first = first; input_.second; return reset();}
@@ -400,21 +446,34 @@ namespace ascension {
 
 		// Pattern //////////////////////////////////////////////////////////
 
-		/// Compiles the given regex into the pattern with the flags.
+		/**
+		 * Compiles the given regular expression into a pattern with the given flags.
+		 * @param regex the expression to be compiled
+		 * @param flags match flags
+		 * @throw std#invalid_argument bit values other than those corresponding to the defined match flags are set in @a flags
+		 * @throw PatternSyntaxException the expression's syntax is invalid
+		 */
 		inline std::auto_ptr<const Pattern> Pattern::compile(
 			const String& regex, int flags /* = 0 */) {return std::auto_ptr<const Pattern>(new Pattern(regex, flags));}
 
-		/// Returns the match flags of the pattern.
+		/// Returns this pattern's match flags.
 		inline int Pattern::flags() const throw() {return flags_;}
 
-		/// Creates the regular expression engine with the given input sequence.
-		template<typename CPI> inline std::auto_ptr<Matcher<CPI> > Pattern::matcher(CPI first, CPI last) const {
-			return std::auto_ptr<Matcher<CPI> >(new Matcher<CPI>(*this, first, last));}
+		/// Creates a matcher that will match the given input against this pattern.
+		template<typename CPI> inline std::auto_ptr<Matcher<CPI> > Pattern::matcher(
+			CPI first, CPI last) const {return std::auto_ptr<Matcher<CPI> >(new Matcher<CPI>(*this, first, last));}
 
-		/// Returns true if the given regular expression matches the input sequence.
-		template<typename CPI> inline bool Pattern::matches(const String& regex, CPI first, CPI last) {return compile(regex).matcher(first, last).matches();}
+		/**
+		 * Compiles the given regular expression and attempts to match the given input against it.
+		 * @param regex the expression to be compiled
+		 * @param first the character sequence to be matched
+		 * @param last the end of @a first
+		 * @throw PatternSyntaxException the expression's syntax is invalid
+		 */
+		template<typename CPI> inline bool Pattern::matches(
+			const String& regex, CPI first, CPI last) {return compile(regex).matcher(first, last).matches();}
 
-		/// Returns the compiled regular expression.
+		/// Returns the regular expression from which this pattern was compiled.
 		inline String Pattern::pattern() const {const std::basic_string<CodePoint> s(impl_.str());
 			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));}
 
