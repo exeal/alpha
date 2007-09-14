@@ -82,6 +82,13 @@ namespace ascension {
 	 */
 	void updateSystemSettings() throw();
 
+	/// Pointer argument is @c null but that is not allowed.
+	class NullPointerException : public std::invalid_argument {
+	public:
+		/// Constructor.
+		explicit NullPointerException(const std::string& message) : std::invalid_argument(message) {}
+	};
+
 	/// The operation was performed in an illegal state.
 	class IllegalStateException : public std::logic_error {
 	public:

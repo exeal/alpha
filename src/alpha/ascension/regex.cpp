@@ -171,6 +171,35 @@ namespace {
 } // namespace @0
 
 
+// PatternSyntaxException ///////////////////////////////////////////////////
+
+PatternSyntaxException::PatternSyntaxException(
+		const boost::regex_error& src, const String& pattern) : invalid_argument(""), impl_(src), pattern_() {
+}
+
+PatternSyntaxException::Code PatternSyntaxException::getCode() const {
+	// convert a native boost.regex_constants.error_type into the corresponding PatternSyntaxException.Code
+	using namespace boost::regex_constants;
+	switch(impl_.code()) {
+	case error_collate:		return INVALID_COLLATION_CHARACTER;
+	case error_ctype:		return INVALID_CHARACTER_CLASS_NAME;
+	case error_escape:		return TRAILING_BACKSLASH;
+	case error_backref:		return INVALID_BACK_REFERENCE;
+	case error_brack:		return UNMATCHED_BARCKET;			
+	case error_paren:		return UNMATCHED_PAREN;
+	case error_brace:		return UNMATCHED_BRACE;
+	case error_badbrace:	return INVALID_CONTENT_OF_BRACES;
+	case error_range:		return INVALID_RANGE_END;
+	case error_space:		return MEMORY_EXHAUSTED;
+	case error_badrepeat:	return INVALID_REPEATITION;
+	case error_complexity:	return TOO_COMPLEX_REGULAR_EXPRESSION;
+	case error_stack:		return STACK_OVERFLOW;
+	case error_bad_pattern:	return UNKNOWN_ERROR;
+	}
+	return NOT_ERROR;
+}
+
+
 // Pattern //////////////////////////////////////////////////////////////////
 
 /**
@@ -252,13 +281,10 @@ namespace {
  * @class ascension::regex::Matcher regex.hpp
  */
 
-/**
- * Private constructor.
- * @param regex
- * @param flags
- * @throw PatternSyntaxException
- */
+/// @internal Private constructor.
 Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
+	if((flags & ~(CANON_EQ | CASE_INSENSITIVE | COMMENTS | DOTALL | LITERAL | MULTILINE | UNICODE_CASE | UNIX_LINES)) != 0)
+		throw invalid_argument("flags includes illegal bit values.");
 	try {
 		impl_.assign(UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end()),
 			UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end(), regex.end()),
@@ -266,7 +292,7 @@ Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
 			| (toBoolean(flags & CASE_INSENSITIVE) ? boost::regex_constants::icase : 0)
 			| (toBoolean(flags & LITERAL) ? boost::regex_constants::literal : 0));
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e);
+		throw PatternSyntaxException(e, regex);
 	}
 }
 
@@ -276,13 +302,15 @@ Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
  * @param last the end of the pattern string
  * @param options the syntax options
  * @param nativeSyntax the syntax flags of @c boost#syntax_option_type
- * @throw PatternSyntaxException the specified pattern is invalid
+ * @throw PatternSyntaxException the expression's syntax is invalid
  */
 Pattern::Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
+	if(first == 0 || last == 0)
+		throw NullPointerException("first and/or last");
 	try {
 		impl_.assign(UTF16To32Iterator<const Char*>(first, last), UTF16To32Iterator<const Char*>(first, last, last), nativeSyntax);
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e);
+		throw PatternSyntaxException(e, String(first, last));
 	}
 }
 
