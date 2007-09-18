@@ -114,11 +114,9 @@ public:
 		void				setFont(const ::LOGFONTW& font);
 		void				setStatusText(const wchar_t* text, HFONT font = 0);
 		// searchs
-		void	replaceAll();
-		void	replaceAndSearchNext();
-		void	searchAndBookmarkAll();
-		bool	searchNext(bool forward, bool messageOnFailure);
-		void	showSearchDialog();
+		ui::SearchDialog&		getSearchDialog() throw();
+		const ui::SearchDialog&	getSearchDialog() const throw();
+		void					showSearchDialog();
 		// operations
 		void	loadKeyBinds(const std::wstring& schemeName);
 		int		messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
@@ -137,7 +135,6 @@ public:
 		void	saveINISettings();
 		void	setupMenus();
 		void	setupToolbar();
-		void	showRegexSearchError(const boost::regex_error& e);
 		void	updateStatusBarPaneSize();
 		void	updateTitleBar();
 
@@ -228,6 +225,12 @@ public:
 
 	/// Returns the MRU manager.
 	inline const MRUManager& Alpha::getMRUManager() const throw() {return *mruManager_;}
+
+	/// Returns the search dialog box.
+	inline ui::SearchDialog& Alpha::getSearchDialog() throw() {return *searchDialog_;}
+
+	/// Returns the search dialog box.
+	inline const ui::SearchDialog& Alpha::getSearchDialog() const throw() {return *searchDialog_;}
 
 	/// Returns the status bar.
 	inline manah::win32::ui::StatusBar& Alpha::getStatusBar() throw() {return statusBar_;}

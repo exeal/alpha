@@ -603,7 +603,7 @@ inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const Cha
 template<typename ConcreteProperty>
 inline int PropertyBase<ConcreteProperty>::forName(const Char* name) {
 	if(name == 0)
-		throw std::invalid_argument("the name is null.");
+		throw NullPointerException("name");
 	if(names_.empty()) {
 		for(int v = ConcreteProperty::FIRST_VALUE; v < ConcreteProperty::LAST_VALUE; ++v) {
 			names_[ConcreteProperty::names_[v - ConcreteProperty::FIRST_VALUE].longName] = v;
@@ -633,7 +633,7 @@ inline int CodeBlock::of(CodePoint cp) throw() {
 /// Returns the Canonical_Combining_Class with the given name.
 inline int CanonicalCombiningClass::forName(const Char* name) {
 	if(name == 0)
-		throw std::invalid_argument("the name is null.");
+		throw NullPointerException("name");
 	else if(names_.empty())
 		buildNames();
 	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));

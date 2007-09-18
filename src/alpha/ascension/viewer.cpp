@@ -1855,8 +1855,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
 		if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-			const Position start = document.getStartPosition();
-			const Position end = document.getEndPosition();
+			const Region region(document.accessibleRegion());
 			if(!getCaret().isSelectionEmpty()) {
 				// reconvert the selected region. the selection may be multi-line
 				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
@@ -1865,15 +1864,16 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			} else {
 				// reconvert the region IME passed if no selection (and create the new selection).
 				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(document.isNarrowed() && caret_->getLineNumber() == start.line) {	// the document is narrowed
-					if(rcs->dwCompStrOffset / sizeof(Char) < start.column) {
-						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * start.column - rcs->dwCompStrOffset);
+				if(document.isNarrowed() && caret_->getLineNumber() == region.first.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
 						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * start.column);
-					} else if(rcs->dwCompStrOffset / sizeof(Char) > end.column) {
-						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * end.column;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
 						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
-						rcs->dwCompStrLen = rcs->dwTargetStrLen = static_cast<DWORD>(sizeof(Char) * end.column - rcs->dwCompStrOffset);
+						rcs->dwCompStrLen = rcs->dwTargetStrLen
+							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
 					}
 				}
 				getCaret().select(
@@ -2379,7 +2379,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 	case WM_GETTEXTLENGTH:
 		// ウィンドウ関係だし改行は CRLF でいいか。NLR_PHYSICAL_DATA だと遅いし
 		handled = true;
-		return getDocument().getLength(NLR_CRLF);
+		return getDocument().length(NLR_CRLF);
 	case WM_INPUTLANGCHANGE:
 		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {

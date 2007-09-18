@@ -161,7 +161,7 @@ namespace ascension {
 			/// Returns true if the region is normalized.
 			bool isNormalized() const throw() {return first <= second;}
 			/// Normalizes the region.
-			void normalize() throw() {if(!isNormalized()) std::swap(first, second);}
+			Region& normalize() throw() {if(!isNormalized()) std::swap(first, second); return *this;}
 		};
 
 		/**
@@ -556,6 +556,51 @@ namespace ascension {
 			DocumentPartition p_;
 		};
 
+		/**
+		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
+		 * the end of line, @c #current method returns @c LINE_SEPARATOR. Otherwise, if an
+		 * iterator at the end of document, returns @c CharacterIterator#DONE.
+		 * @note This class is not intended to be subclassed.
+		 */
+		class DocumentCharacterIterator : public unicode::CharacterIterator,
+			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
+		public:
+			// constructors
+			DocumentCharacterIterator() throw();
+			DocumentCharacterIterator(const Document& document, const Position& position);
+			DocumentCharacterIterator(const Document& document, const Region& region);
+			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
+			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
+			// attributes
+			const Document*	getDocument() const throw();
+			const String&	getLine() const throw();
+			const Region&	getRegion() const throw();
+			void			setRegion(const Region& newRegion);
+			const Position&	tell() const throw();
+			// operation
+			DocumentCharacterIterator&	seek(const Position& to);
+
+			// CharacterIterator
+			CodePoint	current() const throw();
+			bool		hasNext() const throw();
+			bool		hasPrevious() const throw();
+		private:
+			void								doAssign(const CharacterIterator& rhs);
+			std::auto_ptr<CharacterIterator>	doClone() const;
+			void								doFirst();
+			void								doLast();
+			bool								doEquals(const CharacterIterator& rhs) const;
+			bool								doLess(const CharacterIterator& rhs) const;
+			void								doNext();
+			void								doPrevious();
+		private:
+			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
+			const Document* document_;
+			Region region_;
+			const String* line_;
+			Position p_;
+		};
+
 		class Document : public manah::Noncopyable,
 				virtual public internal::IPointCollection<Point>, virtual public texteditor::internal::ISessionElement {
 		public:
@@ -683,15 +728,15 @@ namespace ascension {
 			void						setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
 			void						setReadOnly(bool readOnly = true);
 			// contents
-			Position		getEndPosition(bool accessibleRegion = true) const throw();
-			length_t		getLength(NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			Region			accessibleRegion() const throw();
 			const String&	getLine(length_t line) const;
 			const Line&		getLineInfo(length_t line) const;
 			length_t		getLineLength(length_t line) const;
 			length_t		getLineOffset(length_t line, NewlineRepresentation nlr) const;
 			length_t		getNumberOfLines() const throw();
 			ulong			getRevisionNumber() const throw();
-			Position		getStartPosition(bool accessibleRegion = true) const throw();
+			length_t		length(NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			Region			region() const throw();
 			// content type information
 			IContentTypeInformationProvider&	getContentTypeInformation() const throw();
 			void								setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw();
@@ -715,6 +760,9 @@ namespace ascension {
 			bool	isNarrowed() const throw();
 			void	narrow(const Region& region);
 			void	widen();
+			// iterations
+			DocumentCharacterIterator	begin() const throw();
+			DocumentCharacterIterator	end() const throw();
 			// writing and reading
 			FileIOResult	load(const std::basic_string<WCHAR>& fileName,
 								const FileLockMode& lockMode, encodings::CodePage codePage, IFileIOListener* callback = 0);
@@ -843,51 +891,6 @@ namespace ascension {
 			static Newline defaultNewline_;
 
 			friend class DocumentPartitioner;
-		};
-
-		/**
-		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
-		 * the end of line, @c #current method returns @c LINE_SEPARATOR. Otherwise, if an
-		 * iterator at the end of document, returns @c CharacterIterator#DONE.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class DocumentCharacterIterator : public unicode::CharacterIterator,
-			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
-		public:
-			// constructors
-			DocumentCharacterIterator() throw();
-			DocumentCharacterIterator(const Document& document, const Position& position);
-			DocumentCharacterIterator(const Document& document, const Region& region);
-			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
-			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
-			// attributes
-			const Document*	getDocument() const throw();
-			const String&	getLine() const throw();
-			const Region&	getRegion() const throw();
-			void			setRegion(const Region& newRegion);
-			const Position&	tell() const throw();
-			// operation
-			DocumentCharacterIterator&	seek(const Position& to);
-
-			// CharacterIterator
-			CodePoint	current() const throw();
-			bool		hasNext() const throw();
-			bool		hasPrevious() const throw();
-		private:
-			void								doAssign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	doClone() const;
-			void								doFirst();
-			void								doLast();
-			bool								doEquals(const CharacterIterator& rhs) const;
-			bool								doLess(const CharacterIterator& rhs) const;
-			void								doNext();
-			void								doPrevious();
-		private:
-			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
-			const Document* document_;
-			Region region_;
-			const String* line_;
-			Position p_;
 		};
 
 		/**
@@ -1044,6 +1047,12 @@ inline void Point::setGravity(Direction gravity) throw() {verifyDocument(); grav
 /// Throws @c DisposedDocumentException if the document is already disposed.
 inline void Point::verifyDocument() const {if(isDocumentDisposed()) throw DisposedDocumentException();}
 
+
+/// Returns the accessible region of the document. The returned region is normalized.
+/// @see #region
+inline Region Document::accessibleRegion() const throw() {
+	return (accessibleArea_ != 0) ? Region(accessibleArea_->first, *accessibleArea_->second) : region();}
+
 /**
  * Registers the document listener with the document.
  * After registration @a listener is notified about each modification of this document.
@@ -1081,11 +1090,14 @@ inline void Document::addSequentialEditListener(ISequentialEditListener& listene
  */
 inline void Document::addStateListener(IDocumentStateListener& listener) {stateListeners_.add(listener);}
 
+/// Returns the @c DocumentCharacterIterator addresses the beginning of the document.
+inline DocumentCharacterIterator Document::begin() const throw() {return DocumentCharacterIterator(*this, Position::ZERO_POSITION);}
+
 /// Clears the undo/redo stacks and deletes the history.
-inline void Document::clearUndoBuffer() {
-	undoManager_->clear();
-	onceUndoBufferCleared_ = true;
-}
+inline void Document::clearUndoBuffer() {undoManager_->clear(); onceUndoBufferCleared_ = true;}
+
+/// Returns the @c DocumentCharacterIterator addresses the end of the document.
+inline DocumentCharacterIterator Document::end() const throw() {return DocumentCharacterIterator(*this, region().second);}
 
 /// @see #erase(const Region&)
 inline Position Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
@@ -1101,17 +1113,6 @@ inline encodings::CodePage Document::getCodePage() const throw() {return codePag
 
 /// Returns the content information provider.
 inline IContentTypeInformationProvider& Document::getContentTypeInformation() const throw() {return *contentTypeInformationProvider_;}
-
-/**
- * Returns the end position of the document.
- * @param accessibleArea true to restrict to the accessible area
- * @return the end position
- * @see #getStartPosition
- */
-inline Position Document::getEndPosition(bool accessibleArea /* = true */) const throw() {
-	return (accessibleArea && accessibleArea_ != 0) ? *accessibleArea_->second
-		: Position(lines_.getSize() - 1, getLineLength(lines_.getSize() - 1));
-}
 
 /// Returns the file extension name or @c null if the document is not bound to any of the files.
 inline const WCHAR* Document::getFileExtensionName() const throw() {
@@ -1129,34 +1130,6 @@ inline const WCHAR* Document::getFileName() const throw() {
 
 /// Returns the file full name or @c null if the document is not bound to any of the files.
 inline const WCHAR* Document::getFilePathName() const throw() {return diskFile_.pathName;}
-
-/**
- * Returns the count of characters in the document.
- * @param nlr the method to count newlines
- * @return the count of characters
- * @throw std#invalid_argument @a nlr is invalid
- */
-inline length_t Document::getLength(NewlineRepresentation nlr) const {
-	if(nlr == NLR_DOCUMENT_DEFAULT)
-		nlr = (getNewline() == NLF_CRLF) ? NLR_CRLF : NLR_LINE_FEED;
-	switch(nlr) {
-	case NLR_LINE_FEED:
-	case NLR_LINE_SEPARATOR:
-		return length_ + getNumberOfLines() - 1;
-	case NLR_CRLF:
-		return length_ + getNumberOfLines() * 2 - 1;
-	case NLR_PHYSICAL_DATA: {
-		length_t len = length_;
-		const length_t lines = getNumberOfLines();
-		for(length_t i = 0; i < lines; ++i)
-			len += getNewlineStringLength(lines_[i]->newline_);
-		return len;
-	}
-	case NLR_SKIP:
-		return length_;
-	}
-	throw std::invalid_argument("invalid parameter.");
-}
 
 /**
  * Returns the text of the specified line.
@@ -1218,15 +1191,6 @@ inline texteditor::Session* Document::getSession() throw() {return session_;}
 /// Returns the session to which the document belongs.
 inline const texteditor::Session* Document::getSession() const throw() {return session_;}
 
-/**
- * Returns the start position of the document.
- * @param accessibleArea true to restrict to the accessible area
- * @return the start position
- * @see #getEndPosition
- */
-inline Position Document::getStartPosition(bool accessibleArea /* = true */) const throw() {
-	return (accessibleArea && accessibleArea_ != 0) ? accessibleArea_->first : Position::ZERO_POSITION;}
-
 /// ...
 inline std::size_t Document::getUndoHistoryLength(bool redo /* = false */) const throw() {
 	return redo ? undoManager_->getRedoBufferLength() : undoManager_->getUndoBufferLength();}
@@ -1280,11 +1244,44 @@ inline bool Document::isRecordingOperation() const throw() {return recordingOper
 inline bool Document::isSavable() const throw() {return !diskFile_.unsavable;}
 
 /**
+ * Returns the number of characters (UTF-16 code units) in the document.
+ * @param nlr the method to count newlines
+ * @return the number of characters
+ * @throw std#invalid_argument @a nlr is invalid
+ */
+inline length_t Document::length(NewlineRepresentation nlr) const {
+	if(nlr == NLR_DOCUMENT_DEFAULT)
+		nlr = (getNewline() == NLF_CRLF) ? NLR_CRLF : NLR_LINE_FEED;
+	switch(nlr) {
+	case NLR_LINE_FEED:
+	case NLR_LINE_SEPARATOR:
+		return length_ + getNumberOfLines() - 1;
+	case NLR_CRLF:
+		return length_ + getNumberOfLines() * 2 - 1;
+	case NLR_PHYSICAL_DATA: {
+		length_t len = length_;
+		const length_t lines = getNumberOfLines();
+		for(length_t i = 0; i < lines; ++i)
+			len += getNewlineStringLength(lines_[i]->newline_);
+		return len;
+	}
+	case NLR_SKIP:
+		return length_;
+	}
+	throw std::invalid_argument("invalid parameter.");
+}
+
+/**
  * Transfers the partitioning change to the listeners.
  * @param changedRegion the changed region
  */
 inline void Document::partitioningChanged(const Region& changedRegion) throw() {
 	partitioningListeners_.notify<const Region&>(IDocumentPartitioningListener::documentPartitioningChanged, changedRegion);}
+
+/// Returns the entire region of the document. The returned region is normalized.
+/// @see #accessibleRegion
+inline Region Document::region() const throw() {
+	return Region(Position::ZERO_POSITION, Position(lines_.getSize() - 1, getLineLength(lines_.getSize() - 1)));}
 
 /**
  * Removes the document listener from the document.
@@ -1418,7 +1415,7 @@ inline const Document* DocumentPartitioner::getDocument() const throw() {return 
 inline void DocumentPartitioner::getPartition(const Position& at, DocumentPartition& partition) const {
 	if(document_ == 0)
 		throw IllegalStateException("the partitioner is not connected to any document.");
-	else if(at > document_->getEndPosition(false))
+	else if(at > document_->region().second)
 		throw BadPositionException();
 	return doGetPartition(at, partition);
 }
@@ -1463,7 +1460,8 @@ inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position
  * @throw BadRegionException @a newRegion intersects outside of the document
  */
 inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
-	if(newRegion.first > document_->getEndPosition(false) || newRegion.second > document_->getEndPosition(false))
+	const Position e(document_->region().second);
+	if(newRegion.first > e || newRegion.second > e)
 		throw BadRegionException();
 	if(!(region_ = newRegion).includes(p_))
 		seek(p_);

@@ -271,6 +271,7 @@ bool TextSearcher::isMigemoAvailable() const throw() {
 #endif /* ASCENSION_NO_MIGEMO */
 }
 
+#if 0
 /**
  * Returns true if the pattern matches the specified text.
  * @param document the document
@@ -295,12 +296,13 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 #endif /* !ASCENSION_NO_MIGEMO */
 			if(regexMatcher_.get() == 0) {
 				TextSearcher& self = const_cast<TextSearcher&>(*this);
-				self.regexMatcher_ = regexPattern_->matcher(
-					DocumentCharacterIterator(document, document.getStartPosition(false)),
-					DocumentCharacterIterator(document, document.getEndPosition(false)));
+				self.regexMatcher_ = regexPattern_->matcher(document.begin(), document.end());
 				self.regexMatcher_->useAnchoringBounds(false).useTransparentBounds(true);
 			}
+			const DocumentCharacterIterator oldRegionStart(regexMatcher_->regionStart());
+			const DocumentCharacterIterator oldRegionEnd(regexMatcher_->regionEnd());
 			matched = regexMatcher_->region(b, e).matches() && checkBoundary(b, e);
+			regexMatcher_->region(oldRegionStart, oldRegionEnd);
 			if(!matched)
 				lastResult_.reset();
 			break;
@@ -310,9 +312,11 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 		// remember the result for efficiency
 		lastResult_.updateDocumentRevision(document);
 		lastResult_.matchedRegion = target;
+		lastResult_.direction = FORWARD;
 	}
 	return matched;
 }
+#endif /* 0 */
 
 /**
  * Pushes the new string to the stored list.
@@ -329,6 +333,7 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 	history.push_front(s);
 }
 
+#if 0
 /**
  * Replaces the specified region with the replacement string.
  * <p>If the current search pattern does not match @a target, this method will fail and return false.<p>
@@ -359,18 +364,27 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 	else {
 		switch(options_.type) {
 		case LITERAL:
+			eor = document.insert(target.beginning(), replacement);
 			break;
 #ifndef ASCENSION_NO_REGEX
 		case REGULAR_EXPRESSION:
 #ifndef ASCENSION_NO_MIGEMO
 		case MIGEMO:
 #endif /* !ASCENSION_NO_MIGEMO */
+		{
 			assert(regexMatcher_.get() != 0);
-			replacement.assign(regexMatcher_->replace(replacement));
+			replacement.assign(regexMatcher_->replaceInplace(replacement));
+			const Point regionEnd(document, regexMatcher_->regionEnd().tell());
+			eor = !replacement.empty() ? document.insert(target.beginning(), replacement) : target.beginning();
+			regexMatcher_->endInplaceReplacement(document.begin(), document.end(),
+				regexMatcher_->regionStart(), DocumentCharacterIterator(document, regionEnd),
+				DocumentCharacterIterator(document, eor));
 			break;
-#endif /* !ASCENSION_NO_REGEX */
 		}
-		eor = !replacement.empty() ? document.insert(target.beginning(), replacement) : target.beginning();
+#endif /* !ASCENSION_NO_REGEX */
+		default:
+			assert(false);
+		}
 	}
 
 	assert(lastResult_.matched() && lastResult_.matchedRegion.first == target.beginning());
@@ -382,21 +396,44 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 		*endOfReplacement = eor;
 	return true;
 }
+#endif /* 0 */
 
 /**
  * Searches and replaces all occurences in the specified region.
- * <p>If the stored replacements list is empty, an empty is used as the replacement string.</p>
- * <p>This method does not begin and terminate an edit collection.</p>
+ *
+ * If @a callback parameter is not @c null, this method begins <em>interactive replacement</em>.
+ * In interactive replacement, this method finds the occurences match the pattern one by one,
+ * queries the callback object whether to replace it.
+ *
+ * If the stored replacements list is empty, an empty is used as the replacement string.
+ *
+ * This method does not begin and terminate an edit collection.
  * @param document the document
  * @param scope the region to search and replace
- * @return the number of replacement
+ * @param callback the callback object for interactive replacement. if @c null, this method
+ * replaces all the occurences silently
+ * @return the number of replacements
  * @throw IllegalStateException the pattern is not specified
+ * @throw ReadOnlyDocumentException @a document is read-only
+ * @throw BadRegionException @a region intersects outside of the document
  */
-size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
-	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
-	size_t c = 0;
-	compilePattern(FORWARD);
+size_t TextSearcher::replaceAll(Document& document, const Region& scope, IInteractiveReplacementCallback* callback) const {
+	if(document.isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(!document.region().encompasses(scope))
+		throw BadRegionException();
 
+	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
+	size_t numberOfMatches = 0, numberOfReplacements = 0;
+	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
+	ulong documentRevision;	// to detect other interruptions
+
+	IInteractiveReplacementCallback* const storedCallback = callback;
+	if(callback != 0)
+		callback->replacementStarted(document, Region(scope).normalize());
+	document.beginSequentialEdit();
+
+	compilePattern(FORWARD);
 	if(options_.type == LITERAL) {
 		if(literalPattern_->getDirection() != FORWARD) {	// recompile to change the direction
 			const String& p = storedPatterns_.front();
@@ -413,17 +450,48 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 				i.next();
 				continue;
 			}
+
 			// matched -> replace
-			const Region matchedRegion(
+			++numberOfMatches;
+			Region matchedRegion(
 				static_cast<DocumentCharacterIterator&>(*matchedFirst).tell(),
 				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
-			if(!matchedRegion.isEmpty())
-				i.seek(document.erase(matchedRegion));
-			if(!replacement.empty())
-				i.seek(document.insert(matchedRegion.first, replacement));
-			if(!matchedRegion.isEmpty() || !replacement.empty())
-				i.setRegion(Region(scope.beginning(), endOfScope));
-			++c;
+			IInteractiveReplacementCallback::Action action;
+			do {
+				action = (callback != 0) ?
+					callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
+				if(action == IInteractiveReplacementCallback::UNDO) {
+					if(!history.empty()) {
+						// undo the last replacement
+						matchedRegion.first = history.top().first;
+						matchedRegion.second = history.top().second;
+						history.pop();
+						document.undo();
+					}
+					continue;
+				}
+			} while(false);
+
+			if(action == IInteractiveReplacementCallback::REPLACE
+					|| IInteractiveReplacementCallback::REPLACE_ALL || IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
+				if(action == IInteractiveReplacementCallback::REPLACE_ALL) {
+					callback = 0;
+					document.beginSequentialEdit();
+				}
+				if(callback != 0 && (!matchedRegion.isEmpty() || !replacement.empty())) {
+					document.beginSequentialEdit();
+					if(!matchedRegion.isEmpty())
+						i.seek(document.erase(matchedRegion));
+					if(!replacement.empty())
+						i.seek(document.insert(matchedRegion.first, replacement));
+					i.setRegion(Region(scope.beginning(), endOfScope));
+				}
+				++numberOfReplacements;
+				history.push(matchedRegion);
+			} else if(action == IInteractiveReplacementCallback::SKIP)
+				i.seek(matchedRegion.second);
+			if(action == IInteractiveReplacementCallback::REPLACE_AND_EXIT || action == IInteractiveReplacementCallback::EXIT)
+				break;
 		}
 	}
 
@@ -437,9 +505,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 		Position lastEOS(endOfScope);
 		DocumentCharacterIterator e(document, endOfScope);
 		DocumentCharacterIterator b(e);
-		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(regexPattern_->matcher(
-			DocumentCharacterIterator(document, document.getStartPosition(false)),
-			DocumentCharacterIterator(document, document.getEndPosition(false))));
+		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(regexPattern_->matcher(document.begin(), document.end()));
 		matcher->region(
 			DocumentCharacterIterator(document, scope.beginning()),
 			DocumentCharacterIterator(document, scope.end()))
@@ -456,11 +522,11 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 				if(!matchedRegion.isEmpty())
 					next = document.erase(matchedRegion);
 				if(!replacement.empty()) {
-					const String r(matcher->replace(replacement));
+					const String r(matcher->replaceInplace(replacement));
 					if(!r.empty())
 						next = document.insert(matchedRegion.beginning(), r);
 				}
-				++c;
+				++numberOfMatches;
 				if(matchedRegion.second == e.tell())	// reached the end of the scope
 					break;
 				else if(endOfScope.getPosition() != lastEOS) {
@@ -477,7 +543,10 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope) const {
 		}
 	}
 #endif /* !ASCENSION_NO_REGEX */
-	return c;
+
+	if(storedCallback != 0)
+		storedCallback->replacementEnded(numberOfMatches, numberOfReplacements);
+	return numberOfReplacements;
 }
 
 /**
@@ -527,13 +596,9 @@ bool TextSearcher::search(const Document& document,
 	) {
 		if(regexMatcher_.get() == 0)
 			(const_cast<TextSearcher*>(this)->regexMatcher_ = regexPattern_->matcher(
-				DocumentCharacterIterator(document, document.getStartPosition(false)),
-				DocumentCharacterIterator(document, document.getEndPosition(false))))
-				->useAnchoringBounds(false).useTransparentBounds(true);
-		else if(!lastResult_.checkDocumentRevision(document)) {
-			const_cast<TextSearcher*>(this)->regexMatcher_->reset(
-				DocumentCharacterIterator(document, document.getStartPosition(false)),
-				DocumentCharacterIterator(document, document.getEndPosition(false)));
+				document.begin(), document.end()))->useAnchoringBounds(false).useTransparentBounds(true);
+		else if(!lastResult_.checkDocumentRevision(document) || direction != lastResult_.direction) {
+			const_cast<TextSearcher*>(this)->regexMatcher_->reset(document.begin(), document.end());
 			lastResult_.reset();
 		}
 
@@ -854,7 +919,7 @@ bool IncrementalSearcher::update() {
 
 	searcher_->setPattern(pattern_, true);
 	Region matchedRegion;
-	Region scope(document_->getStartPosition(), document_->getEndPosition());
+	Region scope(document_->accessibleRegion());
 /*	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
 		// handle the previous zero-width match
 		if(lastStatus.direction == FORWARD) {

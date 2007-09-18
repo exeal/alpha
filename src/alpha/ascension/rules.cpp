@@ -438,10 +438,13 @@ WordRule::WordRule(Token::ID id, const String* first, const String* last, bool c
  * @param last the end of the string
  * @param separator the separator character in the string
  * @param caseSensitive set false to enable caseless match
- * @throw std#invalid_argument @a first and/or @a last are @c null. or @a separator is a surrogate
+ * @throw NullPointerException @a first and/or @a last are @c null
+ * @throw std#invalid_argument @a separator is a surrogate
  */
 WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id, caseSensitive) {
-	if(first == 0 || last == 0 || first >= last)
+	if(first == 0 || last == 0)
+		throw NullPointerException("first and/or last is null.");
+	else if(first >= last)
 		throw invalid_argument("the input string list is invalid.");
 	else if(surrogates::isSurrogate(separator))
 		throw invalid_argument("the separator is a surrogate character.");
@@ -560,12 +563,13 @@ const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const throw()
 /**
  * Adds the new rule to the scanner.
  * @param rule the rule to be added
- * @throw std#invalid_argument @a rule is @c null or already registered
+ * @throw NullPointerException @a rule is @c null
+ * @throw std#invalid_argument @a rule is already registered
  * @throw BadScannerStateException the scanner is running
  */
 void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 	if(rule.get() == 0)
-		throw invalid_argument("the rule is null.");
+		throw NullPointerException("rule");
 	else if(!isDone())
 		throw BadScannerStateException();
 	else if(find(rules_.begin(), rules_.end(), rule.get()) != rules_.end())
@@ -576,12 +580,13 @@ void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 /**
  * Adds the new word rule to the scanner.
  * @param rule the rule to be added
- * @throw std#invalid_argument @a rule is @c null or already registered
+ * @throw NullPointerException @a rule is @c null
+ * @throw std#invalid_argument @a rule is already registered
  * @throw BadScannerStateException the scanner is running
  */
 void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 	if(rule.get() == 0)
-		throw invalid_argument("the rule is null.");
+		throw NullPointerException("rule");
 	else if(!isDone())
 		throw BadScannerStateException();
 	else if(find(wordRules_.begin(), wordRules_.end(), rule.get()) != wordRules_.end())
@@ -770,7 +775,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	assert(!change.getRegion().isEmpty());
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& document = *getDocument();
-	const Position eof(document.getEndPosition(false));
+	const Position eof(document.region().second);
 
 	// delete the partitions encompassed by the deleted region
 	if(change.isDeletion())
@@ -789,6 +794,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	erasePartitions(p.tell(), eol);
 
 	// reconstruct partitions in the affected region
+	const Position bof(document.region().first);
 	const String* line = &document.getLine(p.tell().line);
 	ContentType eolContentType = getTransitionStateAt(eol);
 	size_t partition = findClosestPartition(p.tell());
@@ -802,7 +808,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 			const Position tokenEnd(p.tell().line, p.tell().column + tokenLength);
 			// insert the new partition behind the current
 			assert(destination != contentType);
-			if(partition > 0 || p.tell() > document.getStartPosition(false))
+			if(partition > 0 || p.tell() > bof)
 				partitions_.insert(++partition,
 					new Partition(destination, (destination > contentType) ? p.tell() : tokenEnd, p.tell(), tokenLength));
 			else {
@@ -842,7 +848,7 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 	const Partition& p = *partitions_[i];
 	partition.contentType = p.contentType;
 	partition.region.first = p.start;
-	partition.region.second = (i < partitions_.getSize() - 1) ? partitions_[i + 1]->start : getDocument()->getEndPosition(false);
+	partition.region.second = (i < partitions_.getSize() - 1) ? partitions_[i + 1]->start : getDocument()->region().second;
 }
 
 /// @see text#DocumentPartitioner#doInstall
@@ -850,7 +856,8 @@ void LexicalPartitioner::doInstall() throw() {
 	partitions_.clear();
 	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
 	Region dummy;
-	computePartitioning(getDocument()->getStartPosition(false), getDocument()->getEndPosition(false), dummy);
+	const Region entire(getDocument()->region());
+	computePartitioning(entire.first, entire.second, dummy);
 }
 
 /// Dumps the partitions information.
@@ -889,17 +896,17 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 
 	// push a default partition if no partition includes the start of the document
 	const Document& document = *getDocument();
-	if(partitions_.isEmpty() || partitions_[0]->start != document.getStartPosition(false)) {
+	if(partitions_.isEmpty() || partitions_[0]->start != document.region().first) {
 		if(partitions_.isEmpty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
 			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
 		} else {
-			partitions_[0]->start = partitions_[0]->tokenStart = document.getStartPosition(false);
+			partitions_[0]->start = partitions_[0]->tokenStart = document.region().first;
 			partitions_[0]->tokenLength = 0;
 		}
 	}
 
 	// delete the partition whose start position is the end of the document
-	if(partitions_.getSize() > 1 && partitions_.back()->start == document.getEndPosition(false))
+	if(partitions_.getSize() > 1 && partitions_.back()->start == document.region().second)
 		partitions_.erase(partitions_.getSize() - 1);
 }
 
@@ -912,7 +919,7 @@ inline size_t LexicalPartitioner::findClosestPartition(const Position& at) const
 	size_t result = ascension::internal::searchBound(
 		static_cast<size_t>(0), partitions_.getSize(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
 	if(result == partitions_.getSize()) {
-		assert(partitions_.front()->start != getDocument()->getStartPosition(false));	// twilight context
+		assert(partitions_.front()->start != getDocument()->region().first);	// twilight context
 		return 0;
 	}
 	if(partitions_[result]->tokenStart == at && result > 0 && at.column == getDocument()->getLineLength(at.line))
@@ -957,7 +964,7 @@ inline length_t LexicalPartitioner::tryTransition(
 inline void LexicalPartitioner::verify() const {
 #ifdef _DEBUG
 	assert(!partitions_.isEmpty());
-	assert(partitions_.front()->start == getDocument()->getStartPosition(false));
+	assert(partitions_.front()->start == getDocument()->region().first);
 	bool previousWasEmpty = false;
 	for(size_t i = 0, e = partitions_.getSize(); i < e - 1; ++i) {
 		assert(partitions_[i]->contentType != partitions_[i + 1]->contentType);

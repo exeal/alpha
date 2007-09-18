@@ -50,6 +50,13 @@ namespace ascension {
 
 		/// Implementations of the standard commands.
 		namespace commands {
+			/// Searches and bookmarks all matched lines.
+			class BookmarkAllCommand : public internal::EditorCommandBase<bool> {
+			public:
+				explicit BookmarkAllCommand(viewers::TextViewer& viewer,
+					bool onlySelection) throw() : internal::EditorCommandBase<bool>(viewer, onlySelection) {}
+				ulong execute();
+			};
 			/// Bookmark operations.
 			class BookmarkCommand : public EditorCommand {
 			public:
@@ -173,29 +180,12 @@ namespace ascension {
 			private:
 				Type type_;
 			};
-			/// Searches all.
-			class FindAllCommand : public EditorCommand {
-			public:
-				enum Type {
-					BOOKMARK,	///< Sets bookmarks at the all matched lines.
-					REPLACE		///< Replaces the all matched texts.
-				};
-				FindAllCommand(viewers::TextViewer& view, Type type, bool onlySelection) throw()
-					: EditorCommand(view), type_(type), onlySelection_(onlySelection) {}
-				ulong execute();
-			private:
-				Type type_;
-				bool onlySelection_;
-			};
 			/// Searches the next or the previous.
-			class FindNextCommand : public EditorCommand {
+			class FindNextCommand : public internal::EditorCommandBase<Direction> {
 			public:
-				FindNextCommand(viewers::TextViewer& view, bool replace, Direction direction) throw() :
-					EditorCommand(view), replace_(replace), direction_(direction) {}
+				FindNextCommand(viewers::TextViewer& viewer, Direction direction) throw()
+					: internal::EditorCommandBase<Direction>(viewer, direction) {}
 				ulong execute();
-			private:
-				bool replace_;
-				Direction direction_;
 			};
 			/// Begins the incremental search.
 			class IncrementalSearchCommand : public EditorCommand {
@@ -237,11 +227,23 @@ namespace ascension {
 			public:
 				NewlineCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
 				ulong execute();
-			};			/// Reconverts by using IME.
+			};
+			/// Reconverts by using IME.
 			class ReconversionCommand : public EditorCommand {
 			public:
 				explicit ReconversionCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
 				ulong execute();
+			};
+			/// Replaces all matched texts.
+			class ReplaceAllCommand : public EditorCommand {
+			public:
+				explicit ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
+					searcher::IInteractiveReplacementCallback* callback) throw() : EditorCommand(viewer),
+					onlySelection_(onlySelection), callback_(callback) {}
+				ulong execute();
+			private:
+				bool onlySelection_;
+				searcher::IInteractiveReplacementCallback* callback_;
 			};
 			/// Extends the selection and begins rectangular selection.
 			class RowSelectionExtensionCommand : public EditorCommand {

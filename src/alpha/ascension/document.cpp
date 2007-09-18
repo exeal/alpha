@@ -57,9 +57,7 @@ namespace {
 	class InsertOperation : virtual public text::internal::IOperation, public manah::FastArenaObject<InsertOperation> {
 	public:
 		InsertOperation(const Position& pos, const String& text) : position_(pos), text_(text) {}
-		bool canExecute(Document& document) const throw() {
-			return !document.isNarrowed()
-				|| (position_ >= document.getStartPosition() && position_ <= document.getEndPosition());}
+		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().includes(position_);}
 		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
 		Position execute(Document& document) {return document.insert(position_, text_);}
@@ -72,8 +70,7 @@ namespace {
 	class DeleteOperation : virtual public text::internal::IOperation, public manah::FastArenaObject<DeleteOperation> {
 	public:
 		DeleteOperation(const Region& region) throw() : region_(region) {}
-		bool canExecute(Document& document) const throw() {
-			return !document.isNarrowed() || (region_.beginning() >= document.getStartPosition() && region_.end() <= document.getEndPosition());}
+		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().encompasses(region_);}
 		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {
 			const Position& bottom = region_.end();
@@ -395,12 +392,12 @@ inline bool Document::UndoManager::undo(Position& resultPosition) {
  * Constructor.
  * @param document the document to which the point attaches
  * @param position the initial position of the point
- * @throw std#invalid_argument @a position is outside of the document
+ * @throw BadPositionException @a position is outside of the document
  */
 Point::Point(Document& document, const Position& position /* = Position() */) :
 		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(FORWARD) {
-	if(position > document.getEndPosition(false))
-		throw invalid_argument("The specified initial position is outside of the document.");
+	if(!document.region().includes(position))
+		throw BadPositionException();
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
 
@@ -461,8 +458,9 @@ void Point::normalize() const {
 	position.line = min(position.line, document_->getNumberOfLines() - 1);
 	position.column = min(position.column, document_->getLineLength(position.line));
 	if(document_->isNarrowed() && excludedFromRestriction_) {
-		position = max(position_, document_->getStartPosition());
-		position = min(position_, document_->getEndPosition());
+		const Region r(document_->accessibleRegion());
+		position = max(position_, r.first);
+		position = min(position_, r.second);
 	}
 }
 
@@ -730,9 +728,10 @@ Position Document::erase(const Region& region) {
 	else if(region.isEmpty())	// 空 -> 無視
 		return region.beginning();
 	else if(isNarrowed()) {
-		if(region.end() <= getStartPosition())
+		const Region r(accessibleRegion());
+		if(region.end() <= r.first)
 			return region.end();
-		else if(region.beginning() >= getEndPosition())
+		else if(region.beginning() >= r.second)
 			return region.beginning();
 	} else if(!isModified() && timeStampDirector_ != 0) {
 		::FILETIME realTimeStamp;
@@ -746,8 +745,8 @@ Position Document::erase(const Region& region) {
 	ModificationGuard guard(*this);
 	fireDocumentAboutToBeChanged();
 
-	const Position begin = isNarrowed() ? max(region.beginning(), getStartPosition()) : region.beginning();
-	const Position end = isNarrowed() ? min(region.end(), getEndPosition()) : region.end();
+	const Position begin = isNarrowed() ? max(region.beginning(), accessibleRegion().first) : region.beginning();
+	const Position end = isNarrowed() ? min(region.end(), accessibleRegion().second) : region.end();
 	StringBuffer deletedString;	// 削除した文字列 (複数行になるときは現在の改行文字が挿入される)
 
 	if(begin.line == end.line) {	// 対象が1行以内
@@ -859,14 +858,17 @@ length_t Document::getLineOffset(length_t line, NewlineRepresentation nlr) const
  * @param last the end of the text
  * @return the result position
  * @throw ReadOnlyDocumentException the document is read only
- * @throw std#invalid_argument either @a first or @a last is @c null
+ * @throw NullPointerException either @a first or @a last is @c null
+ * @throw std#invalid_argument either @a first is greater than @a last
  */
 Position Document::insert(const Position& position, const Char* first, const Char* last) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(first == 0 || last == 0 || first > last)
-		throw invalid_argument("Argument first or last is invalid.");
-	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// ignore the insertion position is out of the accessible region
+	else if(first == 0 || last == 0)
+		throw NullPointerException("first and/or last are null.");
+	else if(first > last)
+		throw invalid_argument("first > last");
+	else if(isNarrowed() && !accessibleRegion().includes(position))	// ignore the insertion position is out of the accessible region
 		return position;
 	else if(first == last)	// ignore if the input is empty
 		return position;
@@ -953,7 +955,7 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 Position Document::insertFromStream(const Position& position, InputStream& in) {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(isNarrowed() && (position < getStartPosition() || position > getEndPosition()))	// アクセス可能範囲外 -> 無視
+	else if(isNarrowed() && !accessibleRegion().includes(position))	// アクセス可能範囲外 -> 無視
 		return position;
 	else if(in.eof())
 		return position;
@@ -1131,7 +1133,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	clearUndoBuffer();
 	setModified(false);
 	onceUndoBufferCleared_ = false;
-	fireDocumentChanged(DocumentChange(false, Region(Position::ZERO_POSITION, getEndPosition())), false);
+	fireDocumentChanged(DocumentChange(false, region()), false);
 	if(toBoolean(attributes & FILE_ATTRIBUTE_READONLY))
 		setReadOnly();
 
@@ -1213,7 +1215,7 @@ void Document::resetContent() {
 		(*it)->moveTo(0, 0);
 
 	if(length_ != 0) {
-		const Region entire(getStartPosition(false), getEndPosition(false));
+		const Region entire(region());
 		assert(!lines_.isEmpty());
 		fireDocumentAboutToBeChanged();
 		lines_.clear();
@@ -1282,7 +1284,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	auto_ptr<Encoder> encoder(encoderFactory.createEncoder(cp));
 	UnconvertableCharCallback* internalCallback = (callback != 0) ? new UnconvertableCharCallback(callback) : 0;
 	const length_t lineCount = getNumberOfLines();	// 総行数
-	const size_t nativeBufferBytes = (getLength(NLR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
+	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
 	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
 	size_t offset = 0;	// offset in bytes
 
@@ -1640,7 +1642,7 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) thro
 	partitioner_ = newPartitioner;
 	if(partitioner_.get() != 0)
 		partitioner_->install(*this);
-	partitioningChanged(Region(getStartPosition(false), getEndPosition(false)));
+	partitioningChanged(region());
 }
 
 /**
@@ -1761,7 +1763,7 @@ Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName
  */
 void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	const Position& start = region.beginning();
-	const Position end = min(region.end(), getEndPosition(false));
+	const Position end = min(region.end(), this->region().second);
 	if(start.line == end.line) {	// shortcut for single-line
 		out << getLine(end.line).substr(start.column, end.column - start.column);
 		return;
@@ -1839,7 +1841,7 @@ DocumentCharacterIterator::DocumentCharacterIterator() throw() : CharacterIterat
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document),
-		region_(document.getStartPosition(), document.getEndPosition()), line_(&document.getLine(position.line)), p_(position) {
+		region_(document.region()), line_(&document.getLine(position.line)), p_(position) {
 	if(!region_.includes(p_))
 		throw BadPositionException();
 }
@@ -1853,9 +1855,9 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region),
 		line_(&document.getLine(region.beginning().line)), p_(region.beginning()) {
-	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
-		throw BadRegionException();
 	region_.normalize();
+	if(!document.region().encompasses(region_))
+		throw BadRegionException();
 }
 
 /**
@@ -1868,11 +1870,11 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
-	if(region_.first > document.getEndPosition(false) || region_.second > document.getEndPosition(false))
+	region_.normalize();
+	if(!document.region().encompasses(region_))
 		throw BadRegionException();
 	else if(!region_.includes(p_))
 		throw BadPositionException();
-	region_.normalize();
 }
 
 /// Copy-constructor.
@@ -2035,7 +2037,7 @@ void NullPartitioner::documentChanged(const text::DocumentChange& change) {
 /// @see DocumentPartitioner#doGetPartition
 void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const throw() {
 	if(p_.region.second.line == INVALID_INDEX)
-		const_cast<NullPartitioner*>(this)->p_.region.second = getDocument()->getEndPosition(false);
+		const_cast<NullPartitioner*>(this)->p_.region.second = getDocument()->region().second;
 	partition = p_;
 }
 
@@ -2110,12 +2112,12 @@ wstring text::canonicalizePathName(const wchar_t* pathName) throw() {
  * @param s1 the first path name
  * @param s2 the second path name
  * @return true if @a s1 and @a s2 are equivalent
- * @throw std#invalid_argument either file name is null
+ * @throw NullPointerException either file name is @c null
  * @see canonicalizePathName
  */
 bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 	if(s1 == 0 || s2 == 0)
-		throw invalid_argument("either file name is null.");
+		throw NullPointerException("either file name is null.");
 
 //	// 最も簡単な方法
 //	if(toBoolean(::PathMatchSpecW(s1, s2)))
@@ -2165,16 +2167,16 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
  * @throw BadPositionException @a at is outside of the document
  */
 length_t text::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
-	if(at > document.getEndPosition(false))
+	if(at > document.region().second)
 		throw BadPositionException();
 	length_t offset = 0;
-	const Position start = document.getStartPosition(fromAccessibleStart);
+	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
 	for(length_t line = start.line; ; ++line) {
 		if(line == at.line) {
 			offset += at.column;
 			break;
 		} else {
-			offset += document.getLineLength(line) + 1;	// +1 is for a line break
+			offset += document.getLineLength(line) + 1;	// +1 is for a newline character
 			if(line == start.line)
 				offset -= start.column;
 		}

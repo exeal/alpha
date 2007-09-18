@@ -299,7 +299,7 @@ void EditPoint::insert(const Char* first, const Char* last) {
 bool EditPoint::isBeginningOfDocument() const {
 	verifyDocument();
 	normalize();
-	return isExcludedFromRestriction() ? getPosition() == getDocument()->getStartPosition() : getPosition() == Position::ZERO_POSITION;
+	return isExcludedFromRestriction() ? getPosition() == getDocument()->region().first : getPosition() == Position::ZERO_POSITION;
 }
 
 /// Returns true if the point is the beginning of the line.
@@ -307,7 +307,7 @@ bool EditPoint::isBeginningOfLine() const {
 	verifyDocument();
 	normalize();
 	if(isExcludedFromRestriction()) {
-		const Position start = getDocument()->getStartPosition();
+		const Position start(getDocument()->region().first);
 		return (start.line == getLineNumber()) ? start.column == getColumnNumber() : getColumnNumber() == 0;
 	} else
 		return getColumnNumber() == 0;
@@ -317,7 +317,7 @@ bool EditPoint::isBeginningOfLine() const {
 bool EditPoint::isEndOfDocument() const {
 	verifyDocument();
 	normalize();
-	return isExcludedFromRestriction() ? getPosition() == getDocument()->getEndPosition()
+	return isExcludedFromRestriction() ? getPosition() == getDocument()->region().second
 		: getLineNumber() == getDocument()->getNumberOfLines() - 1 && getColumnNumber() == getDocument()->getLineLength(getLineNumber());
 }
 
@@ -326,7 +326,7 @@ bool EditPoint::isEndOfLine() const {
 	verifyDocument();
 	normalize();
 	if(isExcludedFromRestriction()) {
-		const Position end = getDocument()->getEndPosition();
+		const Position end = getDocument()->region().second;
 		return (end.line == getLineNumber()) ?
 			getColumnNumber() == end.column : getColumnNumber() == getDocument()->getLineLength(getLineNumber());
 	} else
@@ -343,15 +343,14 @@ void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 
 	const Document& document = *getDocument();
 	length_t readCount = 0;
-	const Position start = document.getStartPosition();
-	const Position end = document.getEndPosition();
+	const Region region(document.region());
 
-	if(document.getLineLength(start.line) + 1 - start.column >= offset) {
-		moveTo(Position(start.line, start.column + offset));
+	if(document.getLineLength(region.first.line) + 1 - region.first.column >= offset) {
+		moveTo(Position(region.first.line, region.first.column + offset));
 		return;
 	}
-	readCount += document.getLineLength(start.line) + 1 - start.column;
-	for(length_t line = start.line + 1; line <= end.line; ++line) {
+	readCount += document.getLineLength(region.first.line) + 1 - region.first.column;
+	for(length_t line = region.first.line + 1; line <= region.second.line; ++line) {
 		const length_t lineLength = document.getLineLength(line) + 1;	// +1 is for a newline
 		if(readCount + lineLength >= offset) {
 			moveTo(Position(line, readCount + lineLength - offset));
@@ -359,7 +358,7 @@ void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 		}
 		readCount += lineLength;
 	}
-	moveTo(Position(end.line, document.getLineLength(end.line)));
+	moveTo(Position(region.second.line, document.getLineLength(region.second.line)));
 }
 
 /**
@@ -382,7 +381,7 @@ bool EditPoint::nextBookmark() {
 
 	const Bookmarker& bookmarker = getDocument()->getBookmarker();
 	length_t line;
-	const length_t endLine = getDocument()->getEndPosition().line;
+	const length_t endLine = getDocument()->region().second.line;
 
 	// search...
 	for(line = getLineNumber() + 1; line <= endLine; ++line) {
@@ -393,7 +392,7 @@ bool EditPoint::nextBookmark() {
 	}
 
 	// wrap around if not found
-	for(line = getDocument()->getStartPosition().line; line < getLineNumber(); ++line) {
+	for(line = getDocument()->region().first.line; line < getLineNumber(); ++line) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
 			return true;
@@ -410,7 +409,8 @@ bool EditPoint::nextBookmark() {
 void EditPoint::nextLine(length_t offset /* = 1 */) {
 	verifyDocument();
 	normalize();
-	const length_t newLine = min(getLineNumber() + offset, getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const length_t newLine = min(getLineNumber() + offset,
+		(isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).second.line);
 	if(newLine != getLineNumber())
 		moveTo(Position(newLine, getColumnNumber()));
 }
@@ -424,7 +424,7 @@ bool EditPoint::previousBookmark() {
 
 	const Bookmarker& bookmarker = getDocument()->getBookmarker();
 	length_t line = getLineNumber();
-	const length_t startLine = getDocument()->getStartPosition().line;
+	const length_t startLine = getDocument()->region().first.line;
 
 	// search...
 	while(line-- != startLine) {
@@ -435,7 +435,7 @@ bool EditPoint::previousBookmark() {
 	}
 
 	// wrap around if not found
-	for(line = getDocument()->getEndPosition().line; line > getLineNumber(); --line) {
+	for(line = getDocument()->region().second.line; line > getLineNumber(); --line) {
 		if(bookmarker.isMarked(line)) {
 			moveTo(Position(line, 0));
 			return true;
@@ -453,7 +453,8 @@ void EditPoint::previousLine(length_t offset /* = 1 */) {
 	verifyDocument();
 	normalize();
 	const length_t newLine = (getLineNumber() > offset) ?
-		max(getLineNumber() - offset, getDocument()->getStartPosition(isExcludedFromRestriction()).line) : 0;
+		max(getLineNumber() - offset,
+			(isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).first.line) : 0;
 	if(newLine != getLineNumber())
 		moveTo(Position(newLine, getColumnNumber()));
 }
@@ -695,7 +696,8 @@ void VisualPoint::endOfVisualLine() {
 /// Moves to the first printable character in the line.
 void VisualPoint::firstPrintableCharacterOfLine() {
 	verifyViewer();
-	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const length_t line = min(getLineNumber(),
+		(isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).second.line);
 	const Char* const p = getDocument()->getLine(line).data();
 	moveTo(Position(line, getIdentifierSyntax().eatWhiteSpaces(p, p + getDocument()->getLineLength(line), true) - p));
 }
@@ -703,7 +705,8 @@ void VisualPoint::firstPrintableCharacterOfLine() {
 /// Moves to the first printable character in the visual line.
 void VisualPoint::firstPrintableCharacterOfVisualLine() {
 	verifyViewer();
-	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const length_t line = min(getLineNumber(),
+		(isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).second.line);
 	const String& s = getDocument()->getLine(line);
 	const LineLayout& layout = viewer_->getTextRenderer().getLineLayout(line);
 	const length_t subline = layout.getSubline(getColumnNumber());
@@ -804,7 +807,7 @@ bool VisualPoint::isEndOfVisualLine() const {
 bool VisualPoint::isFirstPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
-	const Position start = getDocument()->getStartPosition(isExcludedFromRestriction());
+	const Position start((isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).first);
 	const length_t offset = (start.line == getLineNumber()) ? start.column : 0;
 	const String& line = getDocument()->getLine(getLineNumber());
 	return line.data() + getColumnNumber() - offset
@@ -821,7 +824,7 @@ bool VisualPoint::isFirstPrintableCharacterOfVisualLine() const {
 bool VisualPoint::isLastPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
-	const Position end = getDocument()->getEndPosition(isExcludedFromRestriction());
+	const Position end((isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).second);
 	const String& line = getDocument()->getLine(getLineNumber());
 	const length_t lineLength = (end.line == getLineNumber()) ? end.column : line.length();
 	return line.data() + lineLength - getColumnNumber()
@@ -837,7 +840,8 @@ bool VisualPoint::isLastPrintableCharacterOfVisualLine() const {
 /// Moves to the last printable character in the line.
 void VisualPoint::lastPrintableCharacterOfLine() {
 	verifyViewer();
-	const length_t line = min(getLineNumber(), getDocument()->getEndPosition(isExcludedFromRestriction()).line);
+	const length_t line = min(getLineNumber(),
+		(isExcludedFromRestriction() ? getDocument()->accessibleRegion() : getDocument()->region()).second.line);
 	const length_t lineLength = getDocument()->getLineLength(line);
 	const Char* const p = getDocument()->getLine(line).data();
 	const IdentifierSyntax& syntax = getIdentifierSyntax();
@@ -1202,9 +1206,6 @@ Position VisualPoint::tabIndent(const Position& other, bool box, long level /* =
  */
 bool VisualPoint::transposeCharacters() {
 	verifyViewer();
-
-#define IS_RESTRICTION(position) (position < top || position > bottom)
-
 	if(getDocument()->isReadOnly())
 		return false;
 
@@ -1217,38 +1218,37 @@ bool VisualPoint::transposeCharacters() {
 	// previous-cluster (named pos[0])
 
 	Position pos[3];
-	const Position top = getDocument()->getStartPosition();
-	const Position bottom = getDocument()->getEndPosition();
+	const Region region(getDocument()->accessibleRegion());
 
 	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(getCodePoint()))	// not the start of a grapheme
 		return false;
-	else if(IS_RESTRICTION(getPosition()))	// inaccessible
+	else if(!region.includes(getPosition()))	// inaccessible
 		return false;
 
-	if(getColumnNumber() == 0 || getPosition() == top) {
+	if(getColumnNumber() == 0 || getPosition() == region.first) {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*getDocument(), pos[0] = getPosition()));
 		pos[1] = (++i).base().tell();
-		if(pos[1].line != pos[0].line || pos[1] == pos[0] || IS_RESTRICTION(pos[1]))
+		if(pos[1].line != pos[0].line || pos[1] == pos[0] || !region.includes(pos[1]))
 			return false;
 		pos[2] = (++i).base().tell();
-		if(pos[2].line != pos[1].line || pos[2] == pos[1] || IS_RESTRICTION(pos[2]))
+		if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
 			return false;
-	} else if(getColumnNumber() == getDocument()->getLineLength(getLineNumber()) || getPosition() == bottom) {
+	} else if(getColumnNumber() == getDocument()->getLineLength(getLineNumber()) || getPosition() == region.second) {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*getDocument(), pos[2] = getPosition()));
 		pos[1] = (--i).base().tell();
-		if(pos[1].line != pos[2].line || pos[1] == pos[2] || IS_RESTRICTION(pos[1]))
+		if(pos[1].line != pos[2].line || pos[1] == pos[2] || !region.includes(pos[1]))
 			return false;
 		pos[0] = (--i).base().tell();
-		if(pos[0].line != pos[1].line || pos[0] == pos[1] || IS_RESTRICTION(pos[0]))
+		if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
 			return false;
 	} else {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*getDocument(), pos[1] = getPosition()));
 		pos[2] = (++i).base().tell();
-		if(pos[2].line != pos[1].line || pos[2] == pos[1] || IS_RESTRICTION(pos[2]))
+		if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
 			return false;
 		i.base().seek(pos[1]);
 		pos[0] = (--i).base().tell();
-		if(pos[0].line != pos[1].line || pos[0] == pos[1] || IS_RESTRICTION(pos[0]))
+		if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
 			return false;
 	}
 
@@ -1276,19 +1276,17 @@ bool VisualPoint::transposeLines() {
 	if(getDocument()->isReadOnly())
 		return false;
 
-	const Position top = getDocument()->getStartPosition();
-	const Position bottom = getDocument()->getEndPosition();
-
-	if(top.line == bottom.line)	// there is just one line
+	const Region region(getDocument()->accessibleRegion());
+	if(region.first.line == region.second.line)	// there is just one line
 		return false;
 
-	if(getLineNumber() == top.line)
+	if(getLineNumber() == region.first.line)
 		moveTo(getLineNumber() + 1, getColumnNumber());
 
-	const String str1 = (getLineNumber() - 1 == top.line) ?
-		getDocument()->getLine(getLineNumber() - 1).substr(top.column) : getDocument()->getLine(getLineNumber() - 1);
-	const String str2 = (getLineNumber() == bottom.line) ?
-		getDocument()->getLine(getLineNumber()).substr(0, bottom.column) : getDocument()->getLine(getLineNumber());
+	const String str1 = (getLineNumber() - 1 == region.first.line) ?
+		getDocument()->getLine(getLineNumber() - 1).substr(region.first.column) : getDocument()->getLine(getLineNumber() - 1);
+	const String str2 = (getLineNumber() == region.second.line) ?
+		getDocument()->getLine(getLineNumber()).substr(0, region.second.column) : getDocument()->getLine(getLineNumber());
 
 	// make the two lines empty
 	if(!str2.empty()) {
@@ -1296,7 +1294,7 @@ bool VisualPoint::transposeLines() {
 		erase(static_cast<signed_length_t>(str2.length()), UTF16_CODE_UNIT);
 	}
 	if(!str1.empty()) {
-		moveTo(getLineNumber() - 1, (getLineNumber() == top.line) ? top.column : 0);
+		moveTo(getLineNumber() - 1, (getLineNumber() == region.first.line) ? region.first.column : 0);
 		erase(static_cast<signed_length_t>(str1.length()), UTF16_CODE_UNIT);
 		moveTo(getLineNumber() + 1, getColumnNumber());
 	}
@@ -1308,7 +1306,7 @@ bool VisualPoint::transposeLines() {
 	}
 	moveTo(getLineNumber() - 1, getColumnNumber());
 	if(!str2.empty()) {
-		moveTo(getLineNumber(), (getLineNumber() == top.line) ? top.column : 0);
+		moveTo(getLineNumber(), (getLineNumber() == region.first.line) ? region.first.column : 0);
 		insert(str2);
 	}
 	moveTo(Position(getLineNumber() + 2, 0));
@@ -1335,8 +1333,7 @@ bool VisualPoint::transposeWords() {
 	// |   1st-word-end (named pos[1])
 	// 1st-word-start (named pos[0])
 
-	const Position top = getDocument()->getStartPosition();
-	const Position bottom = getDocument()->getEndPosition();
+	const Region region(getDocument()->accessibleRegion());
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(*getDocument(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, getIdentifierSyntax());
 	Position pos[4];

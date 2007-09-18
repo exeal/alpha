@@ -207,10 +207,10 @@ namespace ascension {
 		 * Registers the line color director.
 		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
 		 * @param director the director to register
-		 * @throw std#invalid_argument @a director is @c null
+		 * @throw NullPointerException @a director is @c null
 		 */
 		inline void Presentation::addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director) {
-			if(director.get() == 0) throw std::invalid_argument("the director is null."); lineColorDirectors_.push_back(director);}
+			if(director.get() == 0) throw NullPointerException("director"); lineColorDirectors_.push_back(director);}
 
 		/**
 		 * Registers the text viewer list listener.
