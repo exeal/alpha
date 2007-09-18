@@ -12,6 +12,11 @@
 #include "../manah/win32/ui/menu.hpp"
 #include "ascension/searcher.hpp"
 
+// fwd. decl.
+namespace ascension {
+	namespace viewers {class TextViewer;}
+}
+
 namespace alpha {
 	class EditorView;
 
@@ -19,20 +24,26 @@ namespace alpha {
 		/// "Search and Replace" dialog box.
 		class SearchDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> {
 		public:
+			// attributes
 			std::wstring	getActivePattern() const throw();
 			std::wstring	getActiveReplacement() const throw();
 			void			setOptions();
+			// operations
+			void	bookmarkAll();
+			void	replaceAll(bool interactive);
+			bool	searchNext(ascension::Direction direction);
 
 		private:
 			INT_PTR	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam);
+			void	showRegexErrorMessage(const ascension::regex::PatternSyntaxException* e);
 			void	updateOptions();
 		private:
-			void	onCancel(bool& continueDialog);									// IDCANCEL
-			void	onClose(bool& continueDialog);									// WM_CLOSE
-			bool	onCommand(WORD id, WORD notifyCode, HWND control);				// WM_COMMAND
-			void	onInitDialog(HWND focusWindow, bool& focusDefault);				// WM_INITDIALOG
+			void	onCancel(bool& continueDialog);						// IDCANCEL
+			void	onClose(bool& continueDialog);						// WM_CLOSE
+			bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
+			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
 		private:
-			// ÉRÉìÉgÉçÅ[Éã
+			// widgets
 			manah::win32::ui::ComboBox patternCombobox_;
 			manah::win32::ui::ComboBox replacementCombobox_;
 			manah::win32::ui::ComboBox searchTypeCombobox_;
@@ -47,6 +58,21 @@ namespace alpha {
 			MANAH_END_CONTROL_BINDING()
 		};
 
+		/// Implements interactive replacement callback for Alpha.
+		class InteractiveReplacementCallback : virtual public ascension::searcher::IInteractiveReplacementCallback {
+		public:
+			InteractiveReplacementCallback();
+			~InteractiveReplacementCallback() throw();
+			void	setTextViewer(ascension::viewers::TextViewer& textViewer) throw();
+		private:
+			ascension::searcher::IInteractiveReplacementCallback::Action
+					queryReplacementAction(const ascension::text::Region& matchedRegion, bool canUndo);
+			void	replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements);
+			void	replacementStarted(const ascension::text::Document& document, const ascension::text::Region& scope);
+		private:
+			HMENU menu_;
+			ascension::viewers::TextViewer* textViewer_;
+		};
 	}
 }
 

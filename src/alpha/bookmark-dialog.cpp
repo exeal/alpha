@@ -75,8 +75,8 @@ void BookmarkDialog::updateList() {
 		for(size_t i = 0; i < buffers.getCount(); ++i) {
 			const Buffer& buffer = buffers.getAt(i);
 			const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
-			const length_t topLine = buffer.getStartPosition().line;
-			const length_t bottomLine = buffer.getEndPosition().line;
+			const length_t topLine = buffer.accessibleRegion().first.line;
+			const length_t bottomLine = buffer.accessibleRegion().second.line;
 			length_t line = 0;
 
 			while((line = buffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
@@ -98,8 +98,8 @@ void BookmarkDialog::updateList() {
 		// アクティブなドキュメントだけを対象にする場合
 		const Buffer& activeBuffer = buffers.getActive();
 		const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
-		const length_t topLine = activeBuffer.getStartPosition().line;
-		const length_t bottomLine = activeBuffer.getEndPosition().line;
+		const length_t topLine = activeBuffer.accessibleRegion().first.line;
+		const length_t bottomLine = activeBuffer.accessibleRegion().second.line;
 		length_t line = 0;
 
 		while((line = activeBuffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {

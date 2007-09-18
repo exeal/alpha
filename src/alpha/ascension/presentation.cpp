@@ -221,12 +221,12 @@ const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& 
  * set, the old will be deleted
  * @param reconstructor the partition presentation reconstructor to set. can't be @c null. the
  * ownership will be transferred to the callee
- * @throw std#invalid_argument @a reconstructor is @c null
+ * @throw NullPointerException @a reconstructor is @c null
  */
 void PresentationReconstructor::setPartitionReconstructor(
 		ContentType contentType, auto_ptr<IPartitionPresentationReconstructor> reconstructor) {
 	if(reconstructor.get() == 0)
-		throw invalid_argument("the specified reconstructor is null.");
+		throw NullPointerException("reconstructor");
 	const map<ContentType, IPartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));
 	if(old != reconstructors_.end()) {
 		delete old->second;

@@ -434,12 +434,12 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		buffer.widen();
 		return true;
 
-	case CMD_SEARCH_FIND:			app.showSearchDialog(); return true;
-	case CMD_SEARCH_FINDNEXT:		return app.searchNext(true, app.showMessageBoxOnFind_);
-	case CMD_SEARCH_FINDPREV:		return app.searchNext(false, app.showMessageBoxOnFind_);
-	case CMD_SEARCH_REPLACEANDNEXT:	app.replaceAndSearchNext(); return true;
-	case CMD_SEARCH_REPLACEALL:		app.replaceAll(); return true;
-	case CMD_SEARCH_BOOKMARKALL:	app.searchAndBookmarkAll(); return true;
+	case CMD_SEARCH_FIND:		app.showSearchDialog(); return true;
+	case CMD_SEARCH_FINDNEXT:	return app.getSearchDialog().searchNext(FORWARD);
+	case CMD_SEARCH_FINDPREV:	return app.getSearchDialog().searchNext(BACKWARD);
+	case CMD_SEARCH_REPLACEALLINTERACTIVE:	app.getSearchDialog().replaceAll(true); return true;
+	case CMD_SEARCH_REPLACEALL:				app.getSearchDialog().replaceAll(false); return true;
+	case CMD_SEARCH_BOOKMARKALL:	app.getSearchDialog().bookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
 	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog().doModal(app.getMainWindow()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
@@ -897,7 +897,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		return app.getBufferList().getEditorSession().getIncrementalSearcher().isRunning()
 			|| (app.searchDialog_->isWindow() &&
 				::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);
-	case CMD_SEARCH_REPLACEANDNEXT:
+	case CMD_SEARCH_REPLACEALLINTERACTIVE:
 	case CMD_SEARCH_REPLACEALL:
 		return !readOnly && app.searchDialog_->isWindow() &&
 			(::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);

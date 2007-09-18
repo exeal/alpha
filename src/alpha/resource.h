@@ -4,6 +4,7 @@
 //
 #define IDR_MENU                        101
 #define IDR_MENU_SEARCHOPTION           102
+#define IDR_MENU_REPLACEALLACTION       103
 #define IDR_ICONS                       111
 #define IDB_BMP_LOGO                    153
 #define IDR_ICON_NARROWING              154
@@ -11,6 +12,7 @@
 #define IDR_ICON_TEMPMACROPAUSING       156
 #define IDR_CODEPAGE_NAME_TABLE         172
 #define IDD_DIALOG1                     174
+#define IDR_MENU1                       177
 #define IDC_STATUSBAR                   201
 #define IDC_TOOLBAR                     202
 #define IDC_BUFFERBAR                   204
@@ -204,7 +206,7 @@
 #define CMD_SEARCH_FIND                 3000
 #define CMD_SEARCH_FINDNEXT             3001
 #define CMD_SEARCH_FINDPREV             3002
-#define CMD_SEARCH_REPLACEANDNEXT       3004
+#define CMD_SEARCH_REPLACEALLINTERACTIVE 3004
 #define CMD_SEARCH_REPLACEALL           3005
 #define CMD_SEARCH_BOOKMARKALL          3006
 #define CMD_SEARCH_REVOKEMARK           3007
@@ -368,14 +370,16 @@
 #define MSG_OTHER__NOT_OBTAINED         20702
 #define MSG_OTHER__TEMPORARY_MACRO_QUERY 20703
 #define MSG_OTHER__NONE                 20704
+#define ID_AIUEO_WYU                    40056
+#define ID_AIUEO_ZZ                     40057
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        175
-#define _APS_NEXT_COMMAND_VALUE         40048
+#define _APS_NEXT_RESOURCE_VALUE        178
+#define _APS_NEXT_COMMAND_VALUE         40058
 #define _APS_NEXT_CONTROL_VALUE         1318
 #define _APS_NEXT_SYMED_VALUE           105
 #endif

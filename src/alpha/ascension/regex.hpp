@@ -107,7 +107,8 @@ namespace ascension {
 			private:
 				enum {
 					// POSIX compatible not in Unicode property
-					POSIX_ALNUM = unicode::ucd::SentenceBreak::LAST_VALUE, POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
+					POSIX_ALNUM = unicode::ucd::SentenceBreak::LAST_VALUE,
+					POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
 					// regex specific general category
 					GC_ANY, GC_ASSIGNED, GC_ASCII,
 					CLASS_END
@@ -115,7 +116,7 @@ namespace ascension {
 			public:
 				// original interface
 				RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
-				static bool	enablesExtendedProperties;
+				static bool	unixLineMode, usesExtendedProperties;
 				// minimal requirements for traits
 				typedef CodePoint char_type;
 				typedef std::size_t size_type;
@@ -186,14 +187,16 @@ namespace ascension {
 			template<typename OI> void appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&);
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<2>&) const;
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<4>&) const;
-			void checkInplaceReplacement() {if(replacedInplace_) throw IllegalStateException("the matcher entered to in-place replacement.");}
+			bool acceptResult() {const bool b(impl()[0].matched); matchedZeroWidth_ = b && impl().length() == 0; if(b) current_ = end(); return b;}
+			void checkInplaceReplacement() {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
 			void checkPreviousMatch() {if(!impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
 			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const throw();
 			const Pattern* pattern_;
 			CodePointIterator current_;
 			std::pair<CodePointIterator, CodePointIterator> input_, region_;
 			CodePointIterator appendingPosition_;
-			bool replacedInplace_;	// between inplaceReplace() ~ endInplaceReplacement()
+			bool replaced_;	// true between replaceInplace() and endInplaceReplacement()
+			bool matchedZeroWidth_;	// true if the previous performance matched a zero width subsequence
 			bool usesAnchoringBounds_, usesTransparentBounds_;
 			friend class Pattern;
 		};
@@ -252,7 +255,7 @@ namespace ascension {
 			int		flags() const throw();
 			String	pattern() const;
 			// compilation
-			static std::auto_ptr<const Pattern>				compile(const String& regex, int flags = 0);
+			static std::auto_ptr<const Pattern>			compile(const String& regex, int flags = 0);
 			template<typename CodePointIterator>
 			std::auto_ptr<Matcher<CodePointIterator> >	matcher(CodePointIterator first, CodePointIterator last) const;
 			// tools
@@ -287,6 +290,7 @@ namespace ascension {
 		// internal.RegexTraits /////////////////////////////////////////////
 
 		inline internal::RegexTraits::char_type internal::RegexTraits::translate(char_type c) const {
+			if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
 			return (c < 0x10000 && std::binary_search(LINE_BREAK_CHARACTERS,
 				endof(LINE_BREAK_CHARACTERS), static_cast<Char>(c & 0xFFFF))) ? LINE_SEPARATOR : c;
 		}
@@ -317,8 +321,8 @@ namespace ascension {
 
 		/// Private constructor.
 		template<typename CPI> inline Matcher<CPI>::Matcher(const Pattern& pattern, CPI first, CPI last) :
-			pattern_(&pattern), current_(first), input_(first, last), region_(first, last),
-			appendingPosition_(input_.first), replacedInplace_(false), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
+			pattern_(&pattern), current_(first), input_(first, last), region_(first, last), appendingPosition_(input_.first),
+			replaced_(false), matchedZeroWidth_(false), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 
 		template<typename CPI> template<typename OI>
 		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&) {
@@ -330,6 +334,7 @@ namespace ascension {
 			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, impl()[0].first, out);
 			const String& replaced(impl().format(replacement)); std::copy(replaced.begin(), replaced.end(), out);}
 
+		/// Implements a non-terminal append-and-replace step.
 		template<typename CPI> template<typename OI>
 		inline Matcher<CPI>& Matcher<CPI>::appendReplacement(OI out, const String& replacement) {
 			checkInplaceReplacement(); checkPreviousMatch();
@@ -342,33 +347,34 @@ namespace ascension {
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
 			const ascension::internal::Int2Type<4>&) const {return std::copy(appendingPosition_, input_.second, out);}
 
-		/**
-		 * @param out
-		 */
+		/// Implements a terminal append-and-replace step.
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
 			checkInplaceReplacement(); return appendTail(out, unicode::CodeUnitSizeOf<OI>::result());}
 
+		/// Ends the active in-place replacement context.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {
-			if(!replacedInplace_) throw IllegalStateException("the matcher is not entered in in-place replacement context.");
-			input_.first = first; input_.second = last; region_.first = regionFirst; region_.second = regionLast; current_ = next;
-			impl() = boost::match_results<CPI>(); appendingPosition_ = input_.first; replacedInplace_ = false; return *this;}
+			if(!replaced_) throw IllegalStateException("the matcher is not entered in in-place replacement context.");
+			const bool matchedZW = matchedZeroWidth_; reset(first, last);
+			region_.first = regionFirst; region_.second = regionLast; current_ = next; matchedZeroWidth_ = matchedZW; return *this;}
 
-		/// Searches the next subsequence matches the pattern in the input sequence.
-		template<typename CPI> inline bool Matcher<CPI>::find() {
-			checkInplaceReplacement(); if(boost::regex_search(current_, region_.second, impl(), pattern_->impl_,
-				getNativeFlags(current_, region_.second, true))) current_ = impl()[0].second; return impl()[0].matched;}
+		/// Attempts to find the next subsequence of the input sequence that matches the pattern.
+		/// This method starts at the beginning of the matcher's region, or, if a previous
+		/// invocation of the method was successful and the matcher has not since been reset, at the
+		/// first character not matched by the previous match.
+		template<typename CPI> inline bool Matcher<CPI>::find() {checkInplaceReplacement(); boost::regex_search(
+			current_, region_.second, impl(), pattern_->impl_, getNativeFlags(current_, region_.second, true)); return acceptResult();}
 
-		/// Resets the engine and searches the next subsequence matches the pattern in the input sequence from the given position.
-		template<typename CPI> inline bool Matcher<CPI>::find(CPI start) {
-			reset(); if(boost::regex_search(start, input_.second, impl(), pattern_.impl_,
-				getNativeFlags(start, input_.second, true))) current_ = impl()[0].second; return impl()[0].matched;}
+		/// Resets the matcher and then attempts to find the next subsequence of the input sequence
+		/// that matches the pattern, starting at the specified position.
+		template<typename CPI> inline bool Matcher<CPI>::find(CPI start) {reset(); boost::regex_search(
+			start, input_.second, impl(), pattern_.impl_, getNativeFlags(start, input_.second, true)); return acceptResult();}
 
 		template<typename CPI> inline boost::match_flag_type
 		Matcher<CPI>::getNativeFlags(const CPI& first, const CPI& last, bool continuous) const throw() {
 			boost::match_flag_type f(boost::regex_constants::match_default);
 			if((pattern_->flags() & Pattern::DOTALL) == 0) f |= boost::regex_constants::match_not_dot_newline;
 			if((pattern_->flags() & Pattern::MULTILINE) == 0) f |= boost::regex_constants::match_single_line;
-			if(continuous && impl()[0].matched && impl().length() == 0) f |= boost::regex_constants::match_not_initial_null;
+			if(continuous && matchedZeroWidth_) f |= boost::regex_constants::match_not_initial_null;
 			if(!usesAnchoringBounds_) {
 				if(first != input_.first) f |= boost::regex_constants::match_not_bob | boost::regex_constants::match_not_bol;
 				if(last != input_.second) f |= boost::regex_constants::match_not_eol | boost::regex_constants::match_not_eol;
@@ -377,72 +383,91 @@ namespace ascension {
 			return f;
 		}
 
-		/// Returns true if the engine uses anchoring bounds.
+		/// Queries the anchoring of region bounds for the matcher.
+		/// @return true the matcher uses <em>anchoring</em> bounds. false otherwise
 		template<typename CPI> inline bool Matcher<CPI>::hasAnchoringBounds() const throw() {return usesAnchoringBounds_;}
 
-		/// Returns true if the engine uses transparent bounds.
+		/// Queries the transparency of the region bounds for the matcher.
+		/// @retval true the matcher uses <em>transparent</em> bounds
+		/// @retval false the matcher uses <em>opaque</em> bounds
 		template<typename CPI> inline bool Matcher<CPI>::hasTransparentBounds() const throw() {return usesTransparentBounds_;}
 
-		/// Begins the match from the beginning of the region.
-		template<typename CPI> inline bool Matcher<CPI>::lookingAt() {if(boost::regex_search(
-			region_.first, region_.second, impl(), pattern_->impl_, getNativeFlags(region_.first, region_.second,
-			false) | boost::regex_constants::match_continuous)) current_ = end(); return impl()[0].matched;}
+		/// Attempts to match the input sequence, starting at the beginning of the region, against
+		/// the pattern. Like the @c matches method, this method always starts at the beginning of
+		/// the region; unlike that method, it does not require that the entire region be matched.
+		template<typename CPI> inline bool Matcher<CPI>::lookingAt() {
+			boost::regex_search(region_.first, region_.second, impl(), pattern_->impl_, getNativeFlags(
+				region_.first, region_.second, false) | boost::regex_constants::match_continuous); return acceptResult();}
 
-		/// Returns true if the pattern matches the entire region.
-		template<typename CPI> inline bool Matcher<CPI>::matches() {if(boost::regex_match(region_.first, region_.second,
-			impl(), pattern_->impl_, getNativeFlags(region_.first, region_.second, false))) current_ = end(); return impl()[0].matched;}
+		/// Attempts to match the entire region against the pattern.
+		template<typename CPI> inline bool Matcher<CPI>::matches() {
+			boost::regex_match(region_.first, region_.second, impl(), pattern_->impl_,
+				getNativeFlags(region_.first, region_.second, false)); return acceptResult();}
 
-		/// Returns the pattern interpreted by the regex engine.
+		/// Returns the pattern interpreted by the matcher.
 		template<typename CPI> inline const Pattern& Matcher<CPI>::pattern() const throw() {return *pattern_;}
 
-		/// Sets the region of the regex engine.
+		/// Sets the limits of the matcher's region. Invoking this method resets the matcher.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::region(
 			CPI start, CPI end) {reset(); current_ = region_.first = start; region_.second = end; return *this;}
 
-		/// Returns the end of the region of the regex engine.
+		/// Reports the end of the matcher's region.
 		template<typename CPI> inline const CPI& Matcher<CPI>::regionEnd() const throw() {return region_.second;}
 
-		/// Returns the beginning of the regex engine.
+		/// Reports the beginning of the matcher's region.
 		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const throw() {return region_.first;}
 
 		/// ...
 		template<typename CPI> inline String Matcher<CPI>::replaceInplace(const String& replacement) {
-			if(!impl_()[0].matched) throw IllegalStateException("the previous was failed or not performed.");
-			else if(replacedInplace_) throw IllegalStateException("this matcher already entered in in-place replacement.");
-			const std::basic_string<CodePoint> temp(impl_().format(std::basic_string<CodePoint>(
+			if(!impl()[0].matched) throw IllegalStateException("the previous was failed or not performed.");
+			else if(replaced_) throw IllegalStateException("this matcher already entered in in-place replacement.");
+			const std::basic_string<CodePoint> temp(impl().format(std::basic_string<CodePoint>(
 				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
 				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-			replacedInplace_ = true;
+			replaced_ = true;
 			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
-		/// Replaces the subsequences in the input sequence match the pattern with the given string.
+		/// Replaces every subsequence of the input sequence that matches the pattern with the given
+		/// replacement string. This method first resets the matcher.
 		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); OutputStringStream s;
 			std::ostream_iterator<Char> os(s); while(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
-		/// Replaces the first subsequence in the input sequence matches the pattern with the given string.
+		/// Replaces the first subsequence of the input sequence that matches the pattern with the
+		/// given replacement string. This method first resets the matcher.
 		template<typename CPI> inline String Matcher<CPI>::replaceFirst(const String& replacement) {reset(); OutputStringStream s;
 			std::ostream_iterator<Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
-		/// Resets the regex engine.
+		/// Resets the matcher. Resetting a matcher discards all of its explicit state information
+		/// and sets its append position to the beginning of the input. The matcher's region is set
+		/// to the default region, which is its entire character sequence. The anchoring and
+		/// transparency of the matcher's region boundaries are unaffected. 
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset() {impl() = boost::match_results<CPI>();
-			region_ = input_; current_ = appendingPosition_ = input_.first; replacedInplace_ = false; return *this;}
+			region_ = input_; current_ = appendingPosition_ = input_.first; replaced_ = false; return *this;}
 
-		/// Resets the regex engine with the new input sequence.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset(CPI first, CPI last) {input_.first = first; input_.second; return reset();}
+		/// Resets the matcher with a new input sequence.
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset(
+			CPI first, CPI last) {input_.first = first; input_.second; return reset();}
 
-		/// Returns a match result of the regex engine as @c MatchResult.
+		/// Returns the match state of the matcher as a @c MatchResult.
+		/// This result is unaffected by subsequent operations performed upon the matcher.
 		template<typename CPI> inline std::auto_ptr<MatchResult<CPI> > Matcher<CPI>::toMatchResult() const {
 			return std::auto_ptr<MatchResult<CPI> >(new internal::MatchResultImpl<CPI>(impl()));}
 
-		/// Sets the anchors of the region boundaries of the regex engine.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) throw() {usesAnchoringBounds_ = b; return *this;}
+		/// Sets the anchoring of region bounds for the matcher.
+		/// @param b true to use <em>anchoring</em> bounds
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) throw() {
+			usesAnchoringBounds_ = b; return *this;}
 
-		/// Changes the pattern to match.
+		/// Changes the pattern the matcher uses to find matches with. This method causes the
+		/// matcher to lose information about the groups of the last match that occured. The
+		/// matcher's position in the input is maintained and its last append position is unaffected.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::usePattern(
 			const Pattern& newPattern) {pattern_ = &pattern; impl().reset(); return *this;}
 
-		/// Sets the transparencies of the region boundaries of the regex engine.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useTransparentBounds(bool b) throw() {usesTransparentBounds_ = b; return *this;}
+		/// Sets the transparency of region bounds for the matcher.
+		/// @param b true to use <em>transparent</em> bounds
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useTransparentBounds(bool b) throw() {
+			usesTransparentBounds_ = b; return *this;}
 
 		// Pattern //////////////////////////////////////////////////////////
 

@@ -20,13 +20,13 @@ void GotoLineDialog::onInitDialog(HWND, bool&) {
 	const Buffer& buffer = app.getBufferList().getActive();
 	const length_t lineOffset = app.getBufferList().getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
 	const wstring s = app.loadString(MSG_DIALOG__LINE_NUMBER_RANGE, MARGS
-						% static_cast<ulong>(buffer.getStartPosition().line + lineOffset)
-						% static_cast<ulong>(buffer.getEndPosition().line + lineOffset));
+						% static_cast<ulong>(buffer.accessibleRegion().first.line + lineOffset)
+						% static_cast<ulong>(buffer.accessibleRegion().second.line + lineOffset));
 
 	setItemText(IDC_STATIC_1, s.c_str());
 	lineNumberSpin_.setRange(
-		static_cast<int>(buffer.getStartPosition().line + lineOffset),
-		static_cast<int>(buffer.getEndPosition().line + lineOffset));
+		static_cast<int>(buffer.accessibleRegion().first.line + lineOffset),
+		static_cast<int>(buffer.accessibleRegion().second.line + lineOffset));
 	lineNumberSpin_.setPosition(static_cast<int>(app.getBufferList().getActiveView().getCaret().getLineNumber() + lineOffset));
 	lineNumberSpin_.invalidateRect(0);
 

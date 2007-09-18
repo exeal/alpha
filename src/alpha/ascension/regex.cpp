@@ -228,8 +228,9 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  *
  * <dl>
  *   <dt>1.1 Hex Notation</dt>
- *   <dd>Supports @c \\x{HHHH} or @c \\x{HHHHHH} notations to refer to the corresponding
- *     code point (the number of 'H' is unlimited). @c \\u is not usable for this purpose.</dd>
+ *   <dd>Supports @c \\x{HHHH} or @c \\x{HHHHHH} notations to refer to a character has the
+ *     corresponding code point (the number of 'H' is unlimited). @c \\u is not usable for this
+ *     purpose.</dd>
  *   <dt>1.2 Properties</dt>
  *   <dd>Supports the following properties:
  *     - General_Category
@@ -279,6 +280,32 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
 
 /**
  * @class ascension::regex::Matcher regex.hpp
+ *
+ * An engine that performs match operations on a character sequence represented by
+ * @a CodePointIterator by interpreting a @c Pattern.
+ *
+ * <h3>Java/ICU-like replacements</h3>
+ *
+ * This class defines two types of methods for replacing matched subsequences: Java/ICU like and
+ * in-place replacement. Java/ICU style methods are the following:
+ *
+ * - @c #appendReplacement
+ * - @c #appendTail
+ * - @c #replaceAll
+ * - @c #replaceFirst
+ *
+ * The @c #appendReplacement and @c #appendTail methods can be used in tandem in order to collect
+ * the result into an output iterator, or the more convenient @c #replaceAll method can be used to
+ * create a string in which every macthing subsequence in the input sequence is replaced.
+ *
+ * <h3>In-place replacements</h3>
+ *
+ * - @c #replaceInplace
+ * - @c #endInplaceReplacement
+ *
+ * <h3>Region boundaries</h3>
+ *
+ * By default, a matcher uses anchoring and opaque region bounds.
  */
 
 /// @internal Private constructor.
@@ -321,7 +348,8 @@ Pattern::~Pattern() throw() {
 
 // internal.RegexTraits /////////////////////////////////////////////////////
 
-bool RegexTraits::enablesExtendedProperties = false;
+bool RegexTraits::unixLineMode = false;
+bool RegexTraits::usesExtendedProperties = false;
 map<const Char*, int, PropertyNameComparer<Char> > RegexTraits::names_;
 
 void RegexTraits::buildNames() {
@@ -386,7 +414,7 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 	if(f[script] || (f[Script::KATAKANA_OR_HIRAGANA] && (script == Script::HIRAGANA || script == Script::KATAKANA)))
 		return true;
 
-	if(!enablesExtendedProperties) {
+	if(!usesExtendedProperties) {
 		return (f[BinaryProperty::ALPHABETIC] && BinaryProperty::is<BinaryProperty::ALPHABETIC>(c))
 				|| (f[BinaryProperty::UPPERCASE] && BinaryProperty::is<BinaryProperty::UPPERCASE>(c))
 				|| (f[BinaryProperty::LOWERCASE] && BinaryProperty::is<BinaryProperty::LOWERCASE>(c))

@@ -2573,8 +2573,7 @@ void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
  * @param associations the association table. script values @c Script#COMMON, @c Script#UNKNOWN,
  * @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set. if this value is @c null,
  * the current associations will not be changed
- * @throw std#invalid_argument @a faceName is @c null, any script of @a associations is invalid,
- * or any typeface name of @a associations is @c null
+ * @throw std#invalid_argument any script of @a associations is invalid
  * @throw std#length_error the length of @a faceName or any typeface name of @a associations
  * exceeds @c LF_FACESIZE
  */
@@ -2586,7 +2585,7 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i) {
 			if(i->first == Script::COMMON || i->first == Script::UNKNOWN
 					|| i->first == Script::INHERITED || i->first == Script::KATAKANA_OR_HIRAGANA)
-				throw invalid_argument("the association language is invalid.");
+				throw invalid_argument("the association script is invalid.");
 			else if(i->second.length() >= LF_FACESIZE)
 				throw length_error("the association font name is too long.");
 		}

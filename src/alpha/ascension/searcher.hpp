@@ -101,6 +101,44 @@ namespace ascension {
 		};
 
 		/**
+		 * A callback defines reactions about the interactive replacement.
+		 * @see TextSearcher#replaceAll
+		 */
+		class IInteractiveReplacementCallback {
+		protected:
+			/// Reactions for @c #queryReplacementAction method.
+			enum Action {
+				REPLACE,			///< Replaces the matched region with the replacement, and continues.
+				SKIP,				///< Skips to the next without replacing.
+				REPLACE_ALL,		///< Replaces all remaining matches without queries.
+				REPLACE_AND_EXIT,	///< Replaces the matched region and then exits without searching.
+				UNDO,				///< Does undo the last replacement.
+				EXIT				///< Exits the replacements.
+			};
+		private:
+			/**
+			 * Returns how the text searcher should perform about matched text.
+			 * @param matchedRegion the region matched the pattern
+			 * @param canUndo this call can return the value @c UNDO as an action
+			 * @return the action the text searcher should perform
+			 */
+			virtual Action queryReplacementAction(const text::Region& matchedRegion, bool canUndo) = 0;
+			/**
+			 * The replacement exited or explicitly aborted.
+			 * @param numberOfMatched
+			 * @param numberOfReplacements
+			 */
+			virtual void replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements) = 0;
+			/**
+			 * The replacement started.
+			 * @param document the document to search and replace
+			 * @param scope the region to perform
+			 */
+			virtual void replacementStarted(const text::Document& document, const text::Region& scope) = 0;
+			friend class TextSearcher;
+		};
+
+		/**
 		 * Searches the specified pattern in the document.
 		 *
 		 * A session holds an instance of this class, while client can create instances.
@@ -134,9 +172,9 @@ namespace ascension {
 			void					setPattern(const String& pattern, bool dontRemember = false);
 			void					setReplacement(const String& replacement);
 			// operations
-			bool		match(const text::Document& document, const text::Region& target) const;
-			bool		replace(text::Document& document, const text::Region& target, text::Position* endOfReplacement) const;
-			std::size_t	replaceAll(text::Document& document, const text::Region& scope) const;
+			void		abortInteractiveReplacement();
+			std::size_t	replaceAll(text::Document& document,
+							const text::Region& scope, IInteractiveReplacementCallback* callback) const;
 			bool		search(const text::Document& document, const text::Position& from,
 							const text::Region& scope, Direction direction, text::Region& matchedRegion) const;
 			template<typename InputIterator>
@@ -170,6 +208,7 @@ namespace ascension {
 			String temporaryPattern_;
 			std::list<String> storedPatterns_, storedReplacements_;
 			std::size_t maximumNumberOfStoredStrings_;
+			bool abortedInteractiveReplacement_;
 			enum {DEFAULT_NUMBER_OF_STORED_STRINGS = 16, MINIMUM_NUMBER_OF_STORED_STRINGS = 4};
 		};
 

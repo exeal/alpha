@@ -696,69 +696,6 @@ void Alpha::registerScriptEngineAssociations() {
 	}
 }
 
-/**
- * @brief 現在位置以降の検索文字列を全て置換する
- *
- * このメソッドは置換ダイアログが非表示でも機能する
- */
-void Alpha::replaceAll() {
-	FindAllCommand command(buffers_->getActiveView(), FindAllCommand::REPLACE,
-						toBoolean(searchDialog_->isButtonChecked(IDC_RADIO_SELECTION)));
-	ulong replacedCount = -1;
-	searchDialog_->setOptions();
-	try {
-		replacedCount = command.execute();
-	} catch(boost::regex_error& e) {
-		if(showMessageBoxOnFind_)
-			showRegexSearchError(e);
-	} catch(runtime_error&) {
-		if(showMessageBoxOnFind_)
-			messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
-	}
-	if(replacedCount == 0) {
-		if(showMessageBoxOnFind_)
-			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
-	} else if(replacedCount != -1) {
-		if(showMessageBoxOnFind_)
-			messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % replacedCount);
-	}
-	if(searchDialog_->isWindow()) {
-		if(searchDialog_->isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [すべて置換後ダイアログを閉じる]
-			getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
-		else
-			::SetFocus(searchDialog_->getItem(IDC_COMBO_FINDWHAT));
-	}
-}
-
-/**
- * @brief 現在の選択範囲が検索文字列であれば置換を行う
- *
- * 置換後、或いは選択範囲が検索文字列で無い場合は次の検索文字列を検索し選択状態にする。
- * このメソッドは置換ダイアログが非表示でも機能する
- */
-void Alpha::replaceAndSearchNext() {
-	FindNextCommand command(buffers_->getActiveView(), true,
-		searchDialog_->isButtonChecked(IDC_CHK_SHIFT) ? BACKWARD : FORWARD);
-	searchDialog_->setOptions();
-
-	try {
-		if(command.execute() != 0 && showMessageBoxOnFind_)
-			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
-	} catch(boost::regex_error& e) {
-		if(showMessageBoxOnFind_)
-			showRegexSearchError(e);
-	} catch(runtime_error&) {
-		if(showMessageBoxOnFind_)
-			messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
-	}
-	if(searchDialog_->isVisible()) {
-//		if(searchDialog_.isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [検索後ダイアログを閉じる]
-//			getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
-//		else
-			::SetFocus(searchDialog_->getItem(IDC_COMBO_FINDWHAT));
-	}
-}
-
 /// INI ファイルに設定を保存する
 void Alpha::saveINISettings() {
 	wchar_t keyName[30];
@@ -789,56 +726,6 @@ void Alpha::saveINISettings() {
 	}
 	swprintf(keyName, L"replaceWith(%u)", s.getNumberOfStoredReplacements());
 	writeStringProfile(L"Find", keyName, L"");
-}
-
-/// [すべてマーク]
-void Alpha::searchAndBookmarkAll() {
-	FindAllCommand command(buffers_->getActiveView(), FindAllCommand::BOOKMARK,
-						toBoolean(searchDialog_->isButtonChecked(IDC_RADIO_SELECTION)));
-	searchDialog_->setOptions();
-	try {
-		command.execute();
-	} catch(boost::regex_error& e) {
-		if(showMessageBoxOnFind_)
-			showRegexSearchError(e);
-	} catch(runtime_error&) {
-		if(showMessageBoxOnFind_)
-			messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
-	}
-}
-
-/**
- * @brief 現在の検索条件に従って次、或いは前の文字列を検索
- *
- * このメソッドはヒットした部分文字列を選択状態にする。
- * また、検索ダイアログが非表示でも機能する
- * @param forward 前方検索
- * @param messageOnFailure 検索が失敗したときにプロンプトを表示する
- * @return 検索が失敗したとき false
- */
-bool Alpha::searchNext(bool forward, bool messageOnFailure) {
-	FindNextCommand command(buffers_->getActiveView(), false, forward ? FORWARD : BACKWARD);
-	searchDialog_->setOptions();
-	bool found = false;
-	try {
-		if(command.execute() == 0)
-			found = true;
-		else if(messageOnFailure)
-			messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
-	} catch(boost::regex_error& e) {
-		if(messageOnFailure)
-			showRegexSearchError(e);
-	} catch(runtime_error&) {
-		if(messageOnFailure)
-			messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
-	}
-	if(searchDialog_->isVisible()) {
-		if(searchDialog_->isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// [検索後ダイアログを閉じる]
-			getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
-		else
-			::SetFocus(searchDialog_->getItem(IDC_COMBO_FINDWHAT));
-	}
-	return found;
 }
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
@@ -1124,15 +1011,6 @@ void Alpha::setupToolbar() {
 	rbbi.fMask = RBBIM_IDEALSIZE;
 	rbbi.cxIdeal = rect.right;
 	rebar_.setBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
-}
-
-/**
- * 正規表現検索エラーダイアログを表示する
- * @param e エラー内容
- */
-void Alpha::showRegexSearchError(const boost::regex_error& e) {
-	messageBox(MSG_SEARCH__INVALID_REGEX_PATTERN, MB_ICONEXCLAMATION,
-		MARGS % loadString(MSG_SEARCH__BAD_REGEX_PATTERN_START + e.code()) % static_cast<long>(e.position()));
 }
 
 /// [検索と置換] ダイアログを表示してパターン編集テキストボックスにフォーカスを与える

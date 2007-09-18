@@ -21,7 +21,7 @@ using namespace std;
 using manah::win32::ui::WaitCursor;
 
 
-// commands::* //////////////////////////////////////////////////////////////
+// commands.* ///////////////////////////////////////////////////////////////
 
 #define ASSERT_IFISWINDOW()	assert(getTarget().isWindow())
 #define ABORT_ISEARCH()												\
@@ -45,6 +45,45 @@ using manah::win32::ui::WaitCursor;
 #define ABORT_MODES()					\
 	CLOSE_COMPLETION_PROPOSAL_POPUP();	\
 	ABORT_ISEARCH()
+
+/**
+ * Sets bookmarks.
+ * @return the number of marked lines
+ */
+ulong BookmarkAllCommand::execute() {
+	ABORT_MODES();
+	const bool onlySelection = param_;
+    if(onlySelection && getTarget().getCaret().isSelectionEmpty())
+		return 0;
+
+	WaitCursor wc;
+	TextViewer& viewer = getTarget();
+	Document& document = viewer.getDocument();
+	const searcher::TextSearcher* s;
+	if(const Session* const session = document.getSession())
+		s = &session->getTextSearcher();
+	else
+		return 0;	// TODO: prepares a default text searcher.
+
+	ulong count = 0;
+	Region scope(
+		onlySelection ? max<Position>(viewer.getCaret().getTopPoint(),
+			document.accessibleRegion().first) : document.accessibleRegion().first,
+		onlySelection ? min<Position>(viewer.getCaret().getBottomPoint(),
+			document.accessibleRegion().second) : document.accessibleRegion().second);
+
+	Bookmarker& bookmarker = document.getBookmarker();
+	Region matchedRegion;
+	while(s->search(document,
+			max<Position>(viewer.getCaret().getTopPoint(), document.accessibleRegion().first),
+			scope, FORWARD, matchedRegion)) {
+		bookmarker.mark(matchedRegion.first.line);
+		scope.first.line = matchedRegion.first.line + 1;
+		scope.first.column = 0;
+		++count;
+	}
+	return count;
+}
 
 /**
  * Removes all bookmarks or toggles the bookmark on the caret line.
@@ -206,7 +245,7 @@ ulong CharacterCodePointConversionCommand::execute() {
 	const EditPoint& bottom = viewer.getCaret().getBottomPoint();
 
 	if(bottom.isBeginningOfLine()
-			|| (document.isNarrowed() && bottom.getPosition() == document.getStartPosition())) {	// 行頭以外でなければならぬ
+			|| (document.isNarrowed() && bottom.getPosition() == document.accessibleRegion().first)) {	// 行頭以外でなければならぬ
 		viewer.beep();
 		return 1;
 	}
@@ -421,73 +460,10 @@ ulong DeletionCommand::execute() {
 }
 
 /**
- * Sets bookmarks or replaces.
- * @return the number of marked lines or of replced strings
- */
-ulong FindAllCommand::execute() {
-	ABORT_MODES();
-    if(onlySelection_ && getTarget().getCaret().isSelectionEmpty())
-		return 0;
-
-	WaitCursor wc;
-	TextViewer& viewer = getTarget();
-	Document& document = viewer.getDocument();
-	const searcher::TextSearcher* s;
-	if(const Session* const session = document.getSession())
-		s = &session->getTextSearcher();
-	else
-		return 0;	// TODO: prepares a default text searcher.
-
-	ulong count = 0;
-	Region scope(
-		onlySelection_ ? max<Position>(viewer.getCaret().getTopPoint(), document.getStartPosition()) : document.getStartPosition(),
-		onlySelection_ ? min<Position>(viewer.getCaret().getBottomPoint(), document.getEndPosition()) : document.getEndPosition());
-
-	if(type_ == BOOKMARK) {
-		Bookmarker& bookmarker = document.getBookmarker();
-		Region matchedRegion;
-		while(s->search(document,
-			max<Position>(viewer.getCaret().getTopPoint(), document.getStartPosition()),
-			scope, FORWARD, matchedRegion)) {
-			bookmarker.mark(matchedRegion.first.line);
-			scope.first.line = matchedRegion.first.line + 1;
-			scope.first.column = 0;
-			++count;
-		}
-	} else if(type_ == REPLACE) {
-		viewer.freeze();
-		document.beginSequentialEdit();
-
-		// mark to restore the selection later
-		text::Point oldAnchor(document, viewer.getCaret().getAnchor());
-		text::Point oldCaret(document, viewer.getCaret());
-
-		try {
-			count = static_cast<ulong>(s->replaceAll(document, scope));
-		} catch(...) {
-			document.endSequentialEdit();
-			if(count != 0)
-				viewer.getCaret().select(oldAnchor, oldCaret);
-			viewer.unfreeze();
-			throw;
-		}
-		document.endSequentialEdit();
-		if(count != 0)
-			viewer.getCaret().select(oldAnchor, oldCaret);
-		viewer.unfreeze();
-	}
-	return count;
-}
-
-/**
- * Searches and selects the next matched text, or replaces the selection by replacement-expression and then searches the next.
+ * Searches and selects the next matched text.
  * @return 1 if no text matched or the command failed. otherwise 0
  */
 ulong FindNextCommand::execute() {
-	if(replace_) {
-		CHECK_DOCUMENT_READONLY(1);
-//		CHECK_GUI_EDITABILITY(1);
-	}
 	END_ISEARCH();
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
@@ -503,36 +479,11 @@ ulong FindNextCommand::execute() {
 	else
 		return 0;	// TODO: prepares a default text searcher.
 
-	// 置換処理
-	if(replace_) {
-		document.beginSequentialEdit();
-		viewer.freeze();
-		bool replaced = false;
-		try {
-			if(direction_ == FORWARD) {
-				Position next;
-				if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
-					caret.moveTo(next);
-			} else {
-				Position next(caret.getTopPoint());
-				if(replaced = s->replace(document, caret.getSelectionRegion(), &next))
-					caret.moveTo(next);
-			}
-		} catch(...) {
-			viewer.unfreeze();
-			document.endSequentialEdit();
-			throw;
-		}
-		viewer.unfreeze();
-		document.endSequentialEdit();
-	}
-
-	// 検索処理
-	const Region scope(document.getStartPosition(), document.getEndPosition());
+	const Region scope(document.accessibleRegion());
 	Region matchedRegion;
 	bool found = s->search(document,
-		(direction_ == FORWARD) ? max<Position>(caret.getBottomPoint(), scope.first) : min<Position>(caret.getTopPoint(), scope.second),
-		scope, direction_, matchedRegion);
+		(param_ == FORWARD) ? max<Position>(caret.getBottomPoint(), scope.first) : min<Position>(caret.getTopPoint(), scope.second),
+		scope, param_, matchedRegion);
 
 	if(found) {
 		caret.select(matchedRegion);
@@ -724,6 +675,48 @@ ulong ReconversionCommand::execute() {
 }
 
 /**
+ * Replaces all matched texts. This does not freeze the text viewer.
+ * @return the number of replced strings
+ */
+ulong ReplaceAllCommand::execute() {
+	ABORT_MODES();
+    if(onlySelection_ && getTarget().getCaret().isSelectionEmpty())
+		return 0;
+
+	WaitCursor wc;
+	TextViewer& viewer = getTarget();
+	Document& document = viewer.getDocument();
+	const searcher::TextSearcher* s;
+	if(const Session* const session = document.getSession())
+		s = &session->getTextSearcher();
+	else
+		return 0;	// TODO: prepares a default text searcher.
+
+	Region scope(
+		onlySelection_ ? max<Position>(viewer.getCaret().getTopPoint(),
+			document.accessibleRegion().first) : document.accessibleRegion().first,
+		onlySelection_ ? min<Position>(viewer.getCaret().getBottomPoint(),
+			document.accessibleRegion().second) : document.accessibleRegion().second);
+
+	// mark to restore the selection later
+	text::Point oldAnchor(document, viewer.getCaret().getAnchor());
+	text::Point oldCaret(document, viewer.getCaret());
+
+	ulong c = 0;
+	try {
+		c = static_cast<ulong>(s->replaceAll(document, scope, callback_));
+	} catch(...) {
+		if(c != 0)
+			viewer.getCaret().select(oldAnchor, oldCaret);
+		viewer.unfreeze();
+		throw;
+	}
+	if(c != 0)
+		viewer.getCaret().select(oldAnchor, oldCaret);
+	return c;
+}
+
+/**
  * Starts box selection, or extends the selection if the selection is exist.
  * @return 0
  */
@@ -784,7 +777,7 @@ ulong SelectionCreationCommand::execute() {
 
 	getTarget().getCaret().endBoxSelection();
 	if(type_ == ALL)
-		getTarget().getCaret().select(getTarget().getDocument().getStartPosition(), getTarget().getDocument().getEndPosition());
+		getTarget().getCaret().select(getTarget().getDocument().accessibleRegion());
 	else if(type_ == CURRENT_WORD)
 		getTarget().getCaret().selectWord();
 	else
@@ -885,7 +878,7 @@ ulong UndoCommand::execute() {
 #undef CLOSE_COMPLETION_WINDOW
 
 
-// isc::AinuInputSequenceChecker ////////////////////////////////////////////
+// isc.AinuInputSequenceChecker /////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
 bool AinuInputSequenceChecker::check(HKL, const Char* first, const Char* last, CodePoint cp) const {
@@ -898,7 +891,7 @@ bool AinuInputSequenceChecker::check(HKL, const Char* first, const Char* last, C
 }
 
 
-// isc::ThaiInputSequenceChecker ////////////////////////////////////////////
+// isc.ThaiInputSequenceChecker /////////////////////////////////////////////
 
 const ThaiInputSequenceChecker::CharacterClass ThaiInputSequenceChecker::charClasses_[] = {
 /* U+0E00 */	CTRL, CONS, CONS, CONS, CONS, CONS, CONS, CONS,

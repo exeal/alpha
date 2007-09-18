@@ -109,6 +109,30 @@ LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 #pragma code_page(932)
 #endif //_WIN32
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_REPLACEALLACTION MENUEX 
+BEGIN
+	POPUP "dummy"
+    BEGIN
+        MENUITEM "置換しますか?", IDC_STATIC_PROMPT, MFT_STRING,
+        MFS_GRAYED | MFS_ENABLED | MFS_UNCHECKED | MFS_UNHILITE | MFS_DEFAULT
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "はい(&Y)", IDYES, MFT_STRING,MFS_ENABLED
+        MENUITEM "いいえ(&N)", IDNO, MFT_STRING,MFS_ENABLED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "元に戻す(&U)", CMD_EDIT_UNDO, MFT_STRING,MFS_ENABLED
+        MENUITEM "以下すべて置換(&!)", IDOK, MFT_STRING,MFS_ENABLED
+        MENUITEM "置換して終了(&.)", IDCLOSE, MFT_STRING,MFS_ENABLED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "キャンセル(&C)\tEsc", IDCANCEL, MFT_STRING,MFS_ENABLED
+    END
+END
+
+
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -202,7 +226,7 @@ BEGIN
     DEFPUSHBUTTON   "次を検索(&F)",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
     PUSHBUTTON      "前を検索(&B)",CMD_SEARCH_FINDPREV,297,21,59,14
     PUSHBUTTON      "すべてマーク(&M)",CMD_SEARCH_BOOKMARKALL,297,40,59,14
-    PUSHBUTTON      "置換(&R)",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
+    PUSHBUTTON      "置換(&R)",CMD_SEARCH_REPLACEALLINTERACTIVE,297,58,59,14
     PUSHBUTTON      "すべて置換(&A)",CMD_SEARCH_REPLACEALL,297,74,59,14
     PUSHBUTTON      "閉じる",IDCANCEL,297,99,59,14
     CONTROL         "自動的にダイアログを閉じる(&L)",IDC_CHK_AUTOCLOSE,
@@ -574,14 +598,6 @@ BEGIN
         BOTTOMMARGIN, 116
     END
 
-    IDD_DLG_PAGESETUPTEMPLATE, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 262
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 40
-    END
-
     IDD_DLG_PRINTING, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -821,7 +837,7 @@ BEGIN
     CMD_SEARCH_FIND         "検索と置換(&F)...\n[検索と置換] ダイアログを表示します。"
     CMD_SEARCH_FINDNEXT     "次を検索(&N)\n検索条件に適合する次の文字列を選択します。"
     CMD_SEARCH_FINDPREV     "前を検索(&P)\n検索条件に適合する前の文字列を選択します。"
-    CMD_SEARCH_REPLACEANDNEXT 
+    CMD_SEARCH_REPLACEALLINTERACTIVE 
                             "置換して次に\n選択文字列を置換し次を検索します。"
     CMD_SEARCH_REPLACEALL   "すべて置換\n検索条件に適合するすべての文字列を置換します。"
     CMD_SEARCH_BOOKMARKALL  "すべてマーク\n検索条件に適合する文字列が存在するすべての行にブックマークを設定します。"
@@ -942,11 +958,25 @@ BEGIN
                             "正規表現エンジンのロードに失敗しました。検索を行うことはできません。"
     MSG_SEARCH__INVALID_REGEX_PATTERN 
                             "正規表現検索中にエラーが発生しました。%n%n理由:%t%1%n位置:%t%2"
-    MSG_SEARCH__BAD_REGEX_PATTERN_START 
-                            "存在しない部分式への後方参照が見つかりました"
-    20605                   "中括弧の内容 (""{...}"") が不正です"
-    20606                   "不正な文字クラスです"
-    20607                   "不正な文字範囲です"
+    MSG_SEARCH__BAD_REGEX_PATTERN_START "エラーではありません"
+    20605                   "不正な照合要素です"
+    20606                   "不正な文字セットです"
+    20607                   "不正なエスケープです"
+END
+
+STRINGTABLE 
+BEGIN
+    20608                   "存在しない部分式への後方参照が見つかりました"
+    20609                   "不正な文字クラスです"
+    20610                   "対応する丸括弧 (')') が見つかりません"
+    20611                   "対応する中括弧 ('}') が見つかりません"
+    20612                   "中括弧の内容 (""{...}"") が不正です"
+    20613                   "不正な文字範囲です"
+    20614                   "メモリ不足のため、検索を行うことができません"
+    20615                   "不正な繰り返しです"
+    20616                   "パターンが複雑なため、検索を行うことができません"
+    20617                   "スタック空間が枯渇しています。検索を行うことはできません"
+    20618                   "不明"
 END
 
 STRINGTABLE 
@@ -1076,20 +1106,6 @@ END
 
 STRINGTABLE 
 BEGIN
-    20608                   "不正な文字セットです"
-    20609                   "不正な照合要素です"
-    20610                   "不正なエスケープです"
-    20611                   "不正な繰り返しです"
-    20612                   "対応する丸括弧 (')') が見つかりません"
-    20613                   "対応する中括弧 ('}') が見つかりません"
-    20614                   "パターンが複雑なため、検索を行うことができません"
-    20615                   "不明"
-    20616                   "メモリ不足のため、検索を行うことができません"
-    20617                   "スタック空間が枯渇しています。検索を行うことはできません"
-END
-
-STRINGTABLE 
-BEGIN
     CMD_EDIT_FIRSTCHARORLINEHOMEEXTEND 
                             "行頭か最初の非空白類文字まで選択を拡張\n行頭か現在の最初に現れる非空白類文字まで選択を拡張します。"
     CMD_EDIT_LASTCHARORLINEENDEXTEND 
@@ -1125,6 +1141,30 @@ END
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 #endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_REPLACEALLACTION MENUEX 
+BEGIN
+	POPUP "dummy"
+    BEGIN
+        MENUITEM "Do you want to replace this?", IDC_STATIC_PROMPT, MFT_STRING,
+        MFS_GRAYED | MFS_ENABLED | MFS_UNCHECKED | MFS_UNHILITE | MFS_DEFAULT
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "&Yes", IDYES, MFT_STRING,MFS_ENABLED
+        MENUITEM "&No", IDNO, MFT_STRING,MFS_ENABLED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "&Undo", CMD_EDIT_UNDO, MFT_STRING,MFS_ENABLED
+        MENUITEM "Replace All Remaining&!)", IDOK, MFT_STRING,MFS_ENABLED
+        MENUITEM "Replace and Exit&.)", IDCLOSE, MFT_STRING,MFS_ENABLED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "&Cancel\tEsc", IDCANCEL, MFT_STRING,MFS_ENABLED
+    END
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1407,7 +1447,7 @@ BEGIN
     DEFPUSHBUTTON   "Find &Forward",CMD_SEARCH_FINDNEXT,297,5,59,14,WS_GROUP
     PUSHBUTTON      "Find &Backward",CMD_SEARCH_FINDPREV,297,21,59,14
     PUSHBUTTON      "&Mark All",CMD_SEARCH_BOOKMARKALL,297,40,59,14
-    PUSHBUTTON      "&Replace",CMD_SEARCH_REPLACEANDNEXT,297,58,59,14
+    PUSHBUTTON      "&Replace",CMD_SEARCH_REPLACEALLINTERACTIVE,297,58,59,14
     PUSHBUTTON      "Replace &All",CMD_SEARCH_REPLACEALL,297,74,59,14
     PUSHBUTTON      "Close",IDCANCEL,297,99,59,14
     CONTROL         "C&lose automatically",IDC_CHK_AUTOCLOSE,"Button",
@@ -1560,7 +1600,7 @@ END
 // Data
 //
 
-IDR_CODEPAGE_NAME_TABLE    RCDATA                     "Resource\\code-page-name-table-en"
+IDR_CODEPAGE_NAME_TABLE     RCDATA                    "Resource\\code-page-name-table-en"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1777,7 +1817,7 @@ BEGIN
     CMD_SEARCH_FIND         "&Find...\nShow [Search and Replace] dialog."
     CMD_SEARCH_FINDNEXT     "Find &Next\nSearch next match."
     CMD_SEARCH_FINDPREV     "Find &Previous\nSearch previous match."
-    CMD_SEARCH_REPLACEANDNEXT 
+    CMD_SEARCH_REPLACEALLINTERACTIVE 
                             "Replace and Next\nReplace the selection and search next."
     CMD_SEARCH_REPLACEALL   "Replace All\nReplace all matches."
     CMD_SEARCH_BOOKMARKALL  "Mark All\nSet bookmarks on all matched lines."
@@ -1897,11 +1937,25 @@ BEGIN
                             "Failed to load the regular expression engine. Cannot search."
     MSG_SEARCH__INVALID_REGEX_PATTERN 
                             "An error occured during regular expression search.%n%nReason:%t%1%nPosition:%t%2"
-    MSG_SEARCH__BAD_REGEX_PATTERN_START 
-                            "A back-reference to a non-existant marked sub-expression was encountered"
-    20605                   "Invalid contents of a {...} block"
+    MSG_SEARCH__BAD_REGEX_PATTERN_START "Not an error"
+    20605                   "An invalid collating element was specified in a [[.name.]] block"
     20606                   "An invalid character class name was specified in a [[:name:]] block"
-    20607                   "A character range was invalid"
+    20607                   "An invalid or trailing escape was encountered"
+END
+
+STRINGTABLE 
+BEGIN
+    20608                   "A back-reference to a non-existant marked sub-expression was encountered"
+    20609                   "An invalid character set was encountered"
+    20610                   "Mismatched '(' and ')'"
+    20611                   "Mismatched '{' and '}'"
+    20612                   "Invalid contents of a {...} block"
+    20613                   "A character range was invalid"
+    20614                   "Out of memory"
+    20615                   "An attempt to repeat something that can not be repeated"
+    20616                   "The expression bacame too complex to handle"
+    20617                   "Out of program stack space"
+    20618                   "Unknown error"
 END
 
 STRINGTABLE 
@@ -2024,20 +2078,6 @@ BEGIN
     MSG_DIALOG__MOVE_FILE   "Move"
     MSG_DIALOG__KEEP_NEWLINE "No Change"
     MSG_DIALOG__SAVE_FILE_FILTER "All Files"
-END
-
-STRINGTABLE 
-BEGIN
-    20608                   "An invalid character set was encountered"
-    20609                   "An invalid collating element was specified in a [[.name.]] block"
-    20610                   "An invalid or trailing escape was encountered"
-    20611                   "An attempt to repeat something that can not be repeated"
-    20612                   "Mismatched '(' and ')'"
-    20613                   "Mismatched '{' and '}'"
-    20614                   "The expression bacame too complex to handle"
-    20615                   "Unknown error"
-    20616                   "Out of memory"
-    20617                   "Out of program stack space"
 END
 
 STRINGTABLE 
