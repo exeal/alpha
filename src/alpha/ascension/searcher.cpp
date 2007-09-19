@@ -220,6 +220,7 @@ inline bool TextSearcher::checkBoundary(const DocumentCharacterIterator& first, 
 void TextSearcher::clearPatternCache() {
 	literalPattern_.reset();
 #ifndef ASCENSION_NO_REGEX
+	regexPattern_.reset();
 	regexMatcher_.reset();
 #endif /* !ASCENSION_NO_REGEX */
 }
@@ -405,9 +406,11 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
  * In interactive replacement, this method finds the occurences match the pattern one by one,
  * queries the callback object whether to replace it.
  *
+ * When the callback object changed the document during replacements, this method will stop.
+ *
  * If the stored replacements list is empty, an empty is used as the replacement string.
  *
- * This method does not begin and terminate an edit collection.
+ * This method does not begin and terminate an <em>sequential edit</em>.
  * @param document the document
  * @param scope the region to search and replace
  * @param callback the callback object for interactive replacement. if @c null, this method
@@ -426,12 +429,12 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
 	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
-	ulong documentRevision;	// to detect other interruptions
+	ulong documentRevision = document.getRevisionNumber();	// to detect other interruptions
 
+	IInteractiveReplacementCallback::Action action;	// the action the callback returns
 	IInteractiveReplacementCallback* const storedCallback = callback;
 	if(callback != 0)
 		callback->replacementStarted(document, Region(scope).normalize());
-	document.beginSequentialEdit();
 
 	compilePattern(FORWARD);
 	if(options_.type == LITERAL) {
@@ -456,7 +459,6 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 			Region matchedRegion(
 				static_cast<DocumentCharacterIterator&>(*matchedFirst).tell(),
 				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
-			IInteractiveReplacementCallback::Action action;
 			do {
 				action = (callback != 0) ?
 					callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
@@ -472,19 +474,23 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				}
 			} while(false);
 
+			// stop if interrupted
+			if(documentRevision != document.getRevisionNumber())
+				break;
+
 			if(action == IInteractiveReplacementCallback::REPLACE
-					|| IInteractiveReplacementCallback::REPLACE_ALL || IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
-				if(action == IInteractiveReplacementCallback::REPLACE_ALL) {
+					|| action == IInteractiveReplacementCallback::REPLACE_ALL
+					|| action == IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
+				// replace? -- yes
+				if(action == IInteractiveReplacementCallback::REPLACE_ALL)
 					callback = 0;
-					document.beginSequentialEdit();
-				}
-				if(callback != 0 && (!matchedRegion.isEmpty() || !replacement.empty())) {
-					document.beginSequentialEdit();
+				if(!matchedRegion.isEmpty() || !replacement.empty()) {
 					if(!matchedRegion.isEmpty())
 						i.seek(document.erase(matchedRegion));
 					if(!replacement.empty())
 						i.seek(document.insert(matchedRegion.first, replacement));
 					i.setRegion(Region(scope.beginning(), endOfScope));
+					documentRevision = document.getRevisionNumber();
 				}
 				++numberOfReplacements;
 				history.push(matchedRegion);
@@ -518,15 +524,47 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 			else {
 				Position next(Position::ZERO_POSITION);
 				// matched -> replace
-				const Region matchedRegion(matcher->start().tell(), matcher->end().tell());
-				if(!matchedRegion.isEmpty())
-					next = document.erase(matchedRegion);
-				if(!replacement.empty()) {
-					const String r(matcher->replaceInplace(replacement));
-					if(!r.empty())
-						next = document.insert(matchedRegion.beginning(), r);
-				}
 				++numberOfMatches;
+				Region matchedRegion(matcher->start().tell(), matcher->end().tell());
+				do {
+					action = (callback != 0) ?
+						callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
+					if(action == IInteractiveReplacementCallback::UNDO) {
+						if(!history.empty()) {
+							// undo the last replacement
+							matchedRegion.first = history.top().first;
+							matchedRegion.second = history.top().second;
+							history.pop();
+							document.undo();
+						}
+						continue;
+					}
+				} while(false);
+
+				// stop if interrupted
+				if(documentRevision != document.getRevisionNumber())
+					break;
+
+				if(action == IInteractiveReplacementCallback::REPLACE
+						|| action == IInteractiveReplacementCallback::REPLACE_ALL
+						|| action == IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
+					// replace? -- yes
+					if(!matchedRegion.isEmpty())
+						next = document.erase(matchedRegion);
+					if(!replacement.empty()) {
+						const String r(matcher->replaceInplace(replacement));
+						if(!r.empty())
+							next = document.insert(matchedRegion.beginning(), r);
+						matcher->endInplaceReplacement(document.begin(), document.end(),
+							DocumentCharacterIterator(document, scope.beginning()), DocumentCharacterIterator(document, endOfScope),
+							DocumentCharacterIterator(document, next));
+						documentRevision = document.getRevisionNumber();
+					}
+				} else if(action == IInteractiveReplacementCallback::SKIP)
+					next = matchedRegion.second;
+				if(action == IInteractiveReplacementCallback::REPLACE_AND_EXIT || action == IInteractiveReplacementCallback::EXIT)
+					break;
+
 				if(matchedRegion.second == e.tell())	// reached the end of the scope
 					break;
 				else if(endOfScope.getPosition() != lastEOS) {
@@ -538,7 +576,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				if(next < matchedRegion.second)
 					next = matchedRegion.second;
 //				previousIsZeroWidth = matchedRegion.isEmpty();
-				matcher->region(DocumentCharacterIterator(document, next), matcher->end());
+//				matcher->region(DocumentCharacterIterator(document, next), matcher->end());
 			}
 		}
 	}
