@@ -140,8 +140,10 @@ void SearchDialog::replaceAll(bool interactive) {
 	ulong replacedCount = -1;
 
 	setOptions();
-	if(!interactive)
+	if(!interactive) {
+		textViewer.getDocument().beginSequentialEdit();
 		textViewer.freeze();
+	}
 	try {
 		replacedCount = command.execute();
 	} catch(const regex::PatternSyntaxException& e) {
@@ -149,8 +151,10 @@ void SearchDialog::replaceAll(bool interactive) {
 	} catch(runtime_error&) {
 		showRegexErrorMessage(0);
 	}
-	if(!interactive)
+	if(!interactive) {
 		textViewer.unfreeze();
+		textViewer.getDocument().endSequentialEdit();
+	}
 	if(replacedCount == 0)
 		Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	else if(replacedCount != -1)
@@ -293,9 +297,7 @@ InteractiveReplacementCallback::~InteractiveReplacementCallback() throw() {
 }
 
 /// @see InteractiveReplacementCallback#queryReplacementAction
-ascension::searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback::queryReplacementAction(const text::Region& matchedRegion, bool canUndo) {
-	assert(textViewer_ != 0);
-
+searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback::queryReplacementAction(const text::Region& matchedRegion, bool canUndo) {
 	textViewer_->getCaret().select(matchedRegion);
 
 	::POINT p = textViewer_->getClientXYForCharacter(matchedRegion.beginning(), false);
@@ -313,25 +315,35 @@ ascension::searcher::IInteractiveReplacementCallback::Action InteractiveReplacem
 //	::TPMPARAMS tpmp;
 //	tpmp.cbSize = sizeof(::TPMPARAMS);
 //	tpmp.rcExclude = ;
+	Action action = EXIT;
+	textViewer_->unfreeze();
+	textViewer_->getDocument().endSequentialEdit();
 	switch(static_cast<::UINT>(::TrackPopupMenuEx(
 			::GetSubMenu(menu_, 0), popupFlags, p.x, p.y, textViewer_->getHandle(), 0/*&tpmp*/))) {
-	case IDYES:			return REPLACE;
-	case IDNO:			return SKIP;
-	case CMD_EDIT_UNDO:	return UNDO;
-	case IDOK:			return REPLACE_ALL;
-	case IDCLOSE:		return REPLACE_AND_EXIT;
+	case IDYES:			action = REPLACE; break;
+	case IDNO:			action = SKIP; break;
+	case CMD_EDIT_UNDO:	action = UNDO; break;
+	case IDOK:			action = REPLACE_ALL; break;
+	case IDCLOSE:		action = REPLACE_AND_EXIT; break;
 	case IDCANCEL:
-	case 0:				return EXIT;
+	case 0:				action = EXIT; break;
 	}
-	return EXIT;
+	if(action == REPLACE || action == REPLACE_ALL || action == REPLACE_AND_EXIT) {
+		textViewer_->getDocument().beginSequentialEdit();
+		textViewer_->freeze();
+	}
+	return action;
 }
 
 /// @see InteractiveReplacementCallback#replacementEnded
 void InteractiveReplacementCallback::replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements) {
+	textViewer_->unfreeze();
+	textViewer_->getDocument().endSequentialEdit();
 }
 
 /// @see InteractiveReplacementCallback#replacementStarted
 void InteractiveReplacementCallback::replacementStarted(const text::Document& document, const text::Region& scope) {
+	textViewer_->getDocument().endSequentialEdit();
 }
 
 /**
