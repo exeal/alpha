@@ -27,6 +27,10 @@ namespace ascension {
 		/// Integer constant to type mapping trick from Loki.Int2Type.
 		template<int v> struct Int2Type {enum {value = v};};
 
+		/// Returns true if @a T and @a U are same types.
+		template<typename T, typename U> struct SameTypes {enum {result = 0};};
+		template<typename T> struct SameTypes<T, T> {enum {result = 1};};
+
 		/// Type selector from Loki.Select.
 		template<bool expression, typename T, typename U> struct Select {typedef T Result;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Result;};

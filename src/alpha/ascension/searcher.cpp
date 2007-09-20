@@ -459,20 +459,22 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 			Region matchedRegion(
 				static_cast<DocumentCharacterIterator&>(*matchedFirst).tell(),
 				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
-			do {
+			while(true) {
 				action = (callback != 0) ?
 					callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
-				if(action == IInteractiveReplacementCallback::UNDO) {
-					if(!history.empty()) {
-						// undo the last replacement
-						matchedRegion.first = history.top().first;
-						matchedRegion.second = history.top().second;
-						history.pop();
-						document.undo();
-					}
-					continue;
+				if(action != IInteractiveReplacementCallback::UNDO)
+					break;
+				if(!history.empty()) {
+					// undo the last replacement
+					matchedRegion.first = history.top().first;
+					matchedRegion.second = history.top().second;
+					history.pop();
+					document.undo();
+					documentRevision = document.getRevisionNumber();
+					--numberOfMatches;
+					--numberOfReplacements;
 				}
-			} while(false);
+			}
 
 			// stop if interrupted
 			if(documentRevision != document.getRevisionNumber())
@@ -526,20 +528,22 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				// matched -> replace
 				++numberOfMatches;
 				Region matchedRegion(matcher->start().tell(), matcher->end().tell());
-				do {
+				while(true) {
 					action = (callback != 0) ?
 						callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
-					if(action == IInteractiveReplacementCallback::UNDO) {
-						if(!history.empty()) {
-							// undo the last replacement
-							matchedRegion.first = history.top().first;
-							matchedRegion.second = history.top().second;
-							history.pop();
-							document.undo();
-						}
-						continue;
+					if(action != IInteractiveReplacementCallback::UNDO)
+						break;
+					if(!history.empty()) {
+						// undo the last replacement
+						matchedRegion.first = history.top().first;
+						matchedRegion.second = history.top().second;
+						history.pop();
+						document.undo();
+						documentRevision = document.getRevisionNumber();
+						--numberOfMatches;
+						--numberOfReplacements;
 					}
-				} while(false);
+				}
 
 				// stop if interrupted
 				if(documentRevision != document.getRevisionNumber())
@@ -549,6 +553,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 						|| action == IInteractiveReplacementCallback::REPLACE_ALL
 						|| action == IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
 					// replace? -- yes
+					if(action == IInteractiveReplacementCallback::REPLACE_ALL)
+						callback = 0;
+					history.push(matchedRegion);
 					if(!matchedRegion.isEmpty())
 						next = document.erase(matchedRegion);
 					if(!replacement.empty()) {
@@ -570,13 +577,10 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				else if(endOfScope.getPosition() != lastEOS) {
 					e.setRegion(Region(scope.beginning(), endOfScope));
 					e.seek(endOfScope);
-//					i.setRegion(Region(scope.beginning(), endOfScope));
 					lastEOS = endOfScope;
 				}
 				if(next < matchedRegion.second)
 					next = matchedRegion.second;
-//				previousIsZeroWidth = matchedRegion.isEmpty();
-//				matcher->region(DocumentCharacterIterator(document, next), matcher->end());
 			}
 		}
 	}

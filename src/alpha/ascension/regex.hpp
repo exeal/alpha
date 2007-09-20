@@ -188,8 +188,8 @@ namespace ascension {
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<2>&) const;
 			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<4>&) const;
 			bool acceptResult() {const bool b(impl()[0].matched); matchedZeroWidth_ = b && impl().length() == 0; if(b) current_ = end(); return b;}
-			void checkInplaceReplacement() {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
-			void checkPreviousMatch() {if(!impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
+			void checkInplaceReplacement() const {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
+			void checkPreviousMatch() const {if(!impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
 			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const throw();
 			const Pattern* pattern_;
 			CodePointIterator current_;
@@ -326,8 +326,13 @@ namespace ascension {
 
 		template<typename CPI> template<typename OI>
 		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&) {
+			typedef boost::match_results<CPI>::string_type String32;
 			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, impl()[0].first, out);
-			const String& replaced(replace(replacement)); std::copy(replaced.begin(), replaced.end(), out);}
+			const String32 replaced(impl().format(String32(
+				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
+				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
+			std::copy(unicode::UTF32To16Iterator<String32::const_iterator>(replaced.begin()),
+				unicode::UTF32To16Iterator<String32::const_iterator>(replaced.end()), out);}
 
 		template<typename CPI> template<typename OI>
 		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&) {
@@ -349,7 +354,7 @@ namespace ascension {
 
 		/// Implements a terminal append-and-replace step.
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
-			checkInplaceReplacement(); return appendTail(out, unicode::CodeUnitSizeOf<OI>::result());}
+			checkInplaceReplacement(); return appendTail(out, ascension::internal::Int2Type<unicode::CodeUnitSizeOf<OI>::result>());}
 
 		/// Ends the active in-place replacement context.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {
@@ -430,12 +435,12 @@ namespace ascension {
 		/// Replaces every subsequence of the input sequence that matches the pattern with the given
 		/// replacement string. This method first resets the matcher.
 		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); OutputStringStream s;
-			std::ostream_iterator<Char> os(s); while(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
+			std::ostream_iterator<Char, Char> os(s); while(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
 		/// Replaces the first subsequence of the input sequence that matches the pattern with the
 		/// given replacement string. This method first resets the matcher.
 		template<typename CPI> inline String Matcher<CPI>::replaceFirst(const String& replacement) {reset(); OutputStringStream s;
-			std::ostream_iterator<Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
+			std::ostream_iterator<Char, Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
 		/// Resets the matcher. Resetting a matcher discards all of its explicit state information
 		/// and sets its append position to the beginning of the input. The matcher's region is set
