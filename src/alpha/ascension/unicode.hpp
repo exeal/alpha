@@ -383,15 +383,36 @@ namespace ascension {
 
 		/// Returns the size of a code unit of the specified code unit sequence in bytes.
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			enum {result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)};
+			enum {result = sizeof(
+				ascension::internal::Select<
+					ascension::internal::SameTypes<
+						CodeUnitSequence, std::ostream_iterator<char, char>
+					>::result, char,
+					ascension::internal::Select<
+						ascension::internal::SameTypes<
+							CodeUnitSequence, std::ostream_iterator<uchar, uchar>
+						>::result, uchar,
+						ascension::internal::Select<
+							ascension::internal::SameTypes<
+								CodeUnitSequence, std::ostream_iterator<Char, Char>
+							>::result, Char,
+							ascension::internal::Select<
+								ascension::internal::SameTypes<
+									CodeUnitSequence, std::ostream_iterator<CodePoint, CodePoint>
+								>::result, CodePoint,
+								typename std::iterator_traits<CodeUnitSequence>::value_type
+							>::Result
+						>::Result
+					>::Result
+				>::Result)};
 		};
 
 		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
 		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator>
 		struct ToUTF32Sequence {
-			typedef ascension::internal::Select<
+			typedef typename ascension::internal::Select<
 				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
-				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> > Result;
+				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Result Result;
 		};
 
 		/**
