@@ -133,19 +133,22 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 /// Implements "replace all" command.
 void SearchDialog::replaceAll(bool interactive) {
 	static InteractiveReplacementCallback callback;
+	const bool wasVisible = isVisible();
 	viewers::TextViewer& textViewer = Alpha::getInstance().getBufferList().getActiveView();
 	callback.setTextViewer(textViewer);
 	texteditor::commands::ReplaceAllCommand command(textViewer,
 		toBoolean(isButtonChecked(IDC_RADIO_SELECTION)), interactive ? &callback : 0);
-	ulong replacedCount = -1;
+	ulong c = -1;
 
 	setOptions();
+	if(isWindow())
+		show(SW_HIDE);
 	if(!interactive) {
 		textViewer.getDocument().beginSequentialEdit();
 		textViewer.freeze();
 	}
 	try {
-		replacedCount = command.execute();
+		c = command.execute();
 	} catch(const regex::PatternSyntaxException& e) {
 		showRegexErrorMessage(&e);
 	} catch(runtime_error&) {
@@ -154,16 +157,14 @@ void SearchDialog::replaceAll(bool interactive) {
 	if(!interactive) {
 		textViewer.unfreeze();
 		textViewer.getDocument().endSequentialEdit();
+		if(c == 0)
+			Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+		else if(c != -1)
+			Alpha::getInstance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % c);
 	}
-	if(replacedCount == 0)
-		Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
-	else if(replacedCount != -1)
-		Alpha::getInstance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % replacedCount);
-	if(isWindow()) {
-		if(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// "Close Automatically"
-			Alpha::getInstance().getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
-		else
-			::SetFocus(getItem(IDC_COMBO_FINDWHAT));
+	if(wasVisible && isButtonChecked(IDC_CHK_AUTOCLOSE) != BST_CHECKED) {
+		show(SW_SHOW);
+		::SetFocus(getItem(IDC_COMBO_FINDWHAT));
 	}
 }
 
@@ -336,9 +337,13 @@ searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback
 }
 
 /// @see InteractiveReplacementCallback#replacementEnded
-void InteractiveReplacementCallback::replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements) {
+void InteractiveReplacementCallback::replacementEnded(size_t numberOfMatches, size_t numberOfReplacements) {
 	textViewer_->unfreeze();
 	textViewer_->getDocument().endSequentialEdit();
+	if(numberOfMatches == 0)
+		Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+	else
+		Alpha::getInstance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % numberOfReplacements);
 }
 
 /// @see InteractiveReplacementCallback#replacementStarted

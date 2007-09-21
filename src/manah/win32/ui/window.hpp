@@ -330,6 +330,8 @@ namespace internal {
 		DEFINE_DISPATCH(WM_MOVE) {w.onMove(LOWORD(lp), HIWORD(lp)); return 1;}
 		// WM_MOVING -> void onMoving(const ::RECT& rect)
 		DEFINE_DISPATCH(WM_MOVING) {w.onMoving(*reinterpret_cast<const ::RECT*>(lp)); return 1;}
+		// WM_NCCREATE -> bool onNcCreate(::CREATESTRUCT&)
+		DEFINE_DISPATCH(WM_NCCREATE) {handled = true; return w.onNcCreate(*reinterpret_cast<::CREATESTRUCT*>(lp));}
 		// WM_NOTIFY -> bool onNotify(int id, ::NMHDR& nmhdr)
 		DEFINE_DISPATCH(WM_NOTIFY) {handled = w.onNotify(static_cast<int>(wp), *reinterpret_cast<::NMHDR*>(lp)); return 1;}
 //		// WM_PAINT -> bool onPaint(void)
@@ -1101,7 +1103,7 @@ inline bool CustomControl<Control, BaseWindow>::create(HWND parent, const ::RECT
 template<class Control, class BaseWindow>
 inline LRESULT CALLBACK CustomControl<Control, BaseWindow>::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	typedef CustomControl<Control, BaseWindow> C;
-	if(message == WM_CREATE) {
+	if(message == WM_NCCREATE) {
 		C* const p = reinterpret_cast<C*>(reinterpret_cast<::CREATESTRUCT*>(lParam)->lpCreateParams);
 		assert(p != 0);
 		p->reset(window);	// ... the handle will be reset by BaseWindow::create (no problem)

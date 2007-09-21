@@ -665,6 +665,7 @@ namespace ascension {
 #ifdef WM_MOUSEWHEEL
 			void	onMouseWheel(UINT flags, short zDelta, const ::POINT& pt);
 #endif /* WM_MOUSEWHEEL */
+			bool	onNcCreate(::CREATESTRUCT& cs);
 			bool	onNotify(int id, ::NMHDR& nmhdr);
 			void	onPaint(manah::win32::gdi::PaintDC& dc);
 			void	onRButtonDblClk(UINT keyState, const ::POINT& pt);
