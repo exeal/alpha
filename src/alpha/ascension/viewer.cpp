@@ -412,6 +412,7 @@ MANAH_BEGIN_WINDOW_MESSAGE_MAP(TextViewer, BaseControl)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_MBUTTONUP)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_MOUSEMOVE)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_MOUSEWHEEL)
+	MANAH_WINDOW_MESSAGE_ENTRY(WM_NCCREATE)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_NOTIFY)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_RBUTTONDBLCLK)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_RBUTTONDOWN)
@@ -1997,6 +1998,12 @@ void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseWheelRotated(delta, pt, keyState);
+}
+
+/// @see WM_NCCREATE
+bool TextViewer::onNcCreate(::CREATESTRUCT& cs) {
+	modifyStyleEx(WS_EX_LAYOUTRTL, 0L);
+	return true;
 }
 
 /// @see WM_NOTIFY

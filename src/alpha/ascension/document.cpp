@@ -1827,6 +1827,24 @@ inline bool Document::DiskFile::unlock() throw() {
 
 // DocumentCharacterIterator ////////////////////////////////////////////////
 
+/**
+ * @class ascension::text::DocumentCharacterIterator
+ * Bidirectional iterator scans characters in the specified document.
+ *
+ * @c #current implementation of this class returns a character at which the iterator addresses. A
+ * returned character is as a UTF-32 code unit (not UTF-16). In the following cases, returns a
+ * special value depending on the context:
+ *
+ * - @c CharacterIterator#DONE at the end of the region of the iterator
+ * - @c LINE_SEPARATOR at the end of the line
+ * - a raw code unit value at any unpaired surrogate
+ *
+ * This class can't detect any change of the document. When the document changed, the existing
+ * iterators may be invalid.
+ *
+ * @note This class is not intended to be subclassed.
+ */
+
 const CharacterIterator::ConcreteTypeTag DocumentCharacterIterator::CONCRETE_TYPE_TAG_;
 
 /// Default constructor.

@@ -556,12 +556,6 @@ namespace ascension {
 			DocumentPartition p_;
 		};
 
-		/**
-		 * Bidirectional iterator scans characters in the specified document. If an iterator is at
-		 * the end of line, @c #current method returns @c LINE_SEPARATOR. Otherwise, if an
-		 * iterator at the end of document, returns @c CharacterIterator#DONE.
-		 * @note This class is not intended to be subclassed.
-		 */
 		class DocumentCharacterIterator : public unicode::CharacterIterator,
 			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
 		public:
@@ -601,6 +595,7 @@ namespace ascension {
 			Position p_;
 		};
 
+		// the documentation is at document.cpp
 		class Document : public manah::Noncopyable,
 				virtual public internal::IPointCollection<Point>, virtual public texteditor::internal::ISessionElement {
 		public:
