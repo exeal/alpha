@@ -135,24 +135,18 @@ inline HANDLE Module::loadImage(const ResourceID& id, UINT type, int desiredWidt
 inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenu(getHandle(), id.name);}
 
 inline std::basic_string<TCHAR> Module::loadMessage(DWORD id, const MessageArguments& args /* = MessageArguments() */) const {
-	void* p = 0;
-	TCHAR** const pp = new TCHAR*[args.args_.size()];
+	void* buffer = 0;
+	AutoBuffer<TCHAR*> inserts(new TCHAR*[args.args_.size()]);
 	std::list<std::basic_string<TCHAR> >::const_iterator it;
-	std::size_t i;
+	std::size_t i = 0;
 
-	for(it = args.args_.begin(), i = 0; it != args.args_.end(); ++it, ++i)
-		pp[i] = const_cast<TCHAR*>(it->c_str());
-	::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE
-		| FORMAT_MESSAGE_ARGUMENT_ARRAY, getHandle(), id, LANG_USER_DEFAULT,
-		reinterpret_cast<TCHAR*>(&p), 0, reinterpret_cast<va_list*>(pp));
-	delete[] pp;
-	if(p != 0) {
-		TCHAR*		psz_ = static_cast<TCHAR*>(p);
-		std::size_t	cch = std::_tcslen(psz_);
-		if(cch >= 2 && psz_[cch - 2] == _T('\r') && psz_[cch - 1] == _T('\n'))
-			psz_[cch - 2] = 0;
-		std::basic_string<TCHAR> temp = psz_;
-		::LocalFree(p);
+	for(std::list<std::basic_string<TCHAR> >::const_iterator insert(args.args_.begin()), e(args.args_.end()); insert != e; ++insert, ++i)
+		pp[i] = const_cast<TCHAR*>(insert->c_str());
+	::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+		getHandle(), id, 0, reinterpret_cast<TCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts));
+	if(buffer != 0) {
+		std::basic_string<TCHAR> temp(buffer);
+		::LocalFree(buffer);
 		return temp;
 	} else
 		return _T("");

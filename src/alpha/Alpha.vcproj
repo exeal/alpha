@@ -295,21 +295,7 @@
 				RelativePath="Resource\alpha.ico">
 			</File>
 			<File
-				RelativePath="Alpha.rc">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCResourceCompilerTool"
-						PreprocessorDefinitions=""
-						AdditionalIncludeDirectories="$(OUTDIR)"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCResourceCompilerTool"
-						PreprocessorDefinitions=""
-						AdditionalIncludeDirectories="$(OUTDIR)"/>
-				</FileConfiguration>
+				RelativePath=".\Resource\alpha.rc">
 			</File>
 			<File
 				RelativePath=".\Resource\code-page-name-table-en">
