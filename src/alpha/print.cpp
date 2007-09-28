@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "print.hpp"
 #include "application.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/ui/dialog.hpp"
 #include <commdlg.h>	// PrintDlgExW, SetupPageDlgW, ...
 #include <shlwapi.h>	// PathCompactPathW
@@ -210,7 +211,8 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		printing_ = false;
 		return false;
 	}
-	const basic_string<::WCHAR> bufferName(buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED));
+	const basic_string<::WCHAR> bufferName(buffer.isBoundToFile() ?
+		buffer.getFilePathName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED));
 	PrintingPrompt prompt(bufferName);
 	Alpha::getInstance().getMainWindow().enable(false);
 	prompt.doModeless(Alpha::getInstance().getMainWindow());

@@ -298,12 +298,6 @@
 				RelativePath=".\Resource\alpha.rc">
 			</File>
 			<File
-				RelativePath=".\Resource\code-page-name-table-en">
-			</File>
-			<File
-				RelativePath=".\Resource\code-page-name-table-ja">
-			</File>
-			<File
 				RelativePath="Resource\logo.bmp">
 			</File>
 			<File

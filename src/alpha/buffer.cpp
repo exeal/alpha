@@ -14,7 +14,7 @@
 #include "new-file-format-dialog.hpp"
 #include "save-some-buffers-dialog.hpp"
 #include "code-pages-dialog.hpp"
-#include "resource.h"
+#include "resource/messages.h"
 #include "../manah/win32/ui/wait-cursor.hpp"
 #include "../manah/com/common.hpp"	// ComPtr, ComQIPtr
 #include <commdlg.h>
@@ -48,9 +48,11 @@ namespace {
 			return retryWithOtherCodePage_;
 		}
 		bool unconvertableCharacterFound() {
+			const DWORD id = (encoding_ < 0x10000) ?
+				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
 			const int answer = app_.messageBox(forLoading_ ?
 				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % fileName_ % Alpha::getInstance().getCodePageName(encoding_)->c_str());
+				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
 			if(answer == IDYES)
 				retryWithOtherCodePage_ = true;
 			return answer == IDNO;
@@ -79,7 +81,7 @@ Buffer::~Buffer() {
 
 /// @see ascension#Document#getFileName
 const WCHAR* Buffer::getFileName() const throw() {
-	static const wstring untitled = Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED);
+	static const wstring untitled = Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED);
 	const TCHAR* const buffer = Document::getFileName();
 	return (buffer != 0) ? buffer : untitled.c_str();
 }
@@ -114,7 +116,7 @@ BufferList::BufferList(Alpha& app) : app_(app) {
 	updateContextMenu();
 
 	if(READ_ONLY_SIGNATURE_.empty())
-		const_cast<wstring&>(READ_ONLY_SIGNATURE_).assign(app_.loadString(MSG_STATUS__READ_ONLY_CAPTION));
+		const_cast<wstring&>(READ_ONLY_SIGNATURE_).assign(app_.loadMessage(MSG_STATUS__READ_ONLY_CAPTION));
 }
 
 /// Destructor.
@@ -188,7 +190,7 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, Newline ne
 
 	// バッファバーにボタンを追加
 	AutoZero<::TBBUTTON> button;
-	button.idCommand = CMD_VIEW_BUFFERLIST_START + bufferBar_.getButtonCount();
+	button.idCommand = CMD_SPECIAL_BUFFERSSTART + bufferBar_.getButtonCount();
 	button.iBitmap = static_cast<int>(buffers_.size() - 1);
 	button.fsState = TBSTATE_ENABLED;
 	button.fsStyle = BTNS_AUTOSIZE | BTNS_BUTTON | BTNS_GROUP | BTNS_NOPREFIX;
@@ -244,7 +246,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 		delete &buffer;
 
 		for(size_t i = index ; i < buffers_.size(); ++i)
-			bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + i), getDisplayName(*buffers_[i]).c_str());
+			bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + i), getDisplayName(*buffers_[i]).c_str());
 		resetResources();
 		recalculateBufferBarSize();
 		fireActiveBufferSwitched();
@@ -354,7 +356,7 @@ bool BufferList::createBar(Rebar& rebar) {
 
 	// レバーに乗せる
 	AutoZeroCB<::REBARBANDINFOW> rbbi;
-	const wstring caption = app_.loadString(MSG_DIALOG__BUFFERBAR_CAPTION);
+	const wstring caption = app_.loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE | RBBIM_TEXT;
 	rbbi.fStyle = RBBS_BREAK | RBBS_GRIPPERALWAYS;
 	rbbi.cxMinChild = 0;
@@ -401,7 +403,7 @@ void BufferList::fireActiveBufferSwitched() {
 	const size_t activeBuffer = getActiveIndex();
 	const EditorView& activeView = getActiveView();
 
-	bufferBar_.checkButton(static_cast<int>(activeBuffer) + CMD_VIEW_BUFFERLIST_START);
+	bufferBar_.checkButton(static_cast<int>(activeBuffer) + CMD_SPECIAL_BUFFERSSTART);
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
 		if(it.get().getCount() > 0 && &it.get().getVisibleView() == &activeView) {
 			editorWindow_.setDefaultActivePane(it.get());
@@ -456,19 +458,19 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 		if(mouse.dwItemSpec != -1) {
 			::POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
-			setActive(mouse.dwItemSpec - CMD_VIEW_BUFFERLIST_START);
+			setActive(mouse.dwItemSpec - CMD_SPECIAL_BUFFERSSTART);
 			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow().getHandle());
 			return true;
 		}
 	}
 
 	else if(nmhdr.hdr.code == TTN_GETDISPINFOW) {	// ツールチップ
-		assert(nmhdr.hdr.idFrom >= CMD_VIEW_BUFFERLIST_START && nmhdr.hdr.idFrom < CMD_VIEW_BUFFERLIST_END);
+		assert(nmhdr.hdr.idFrom >= CMD_SPECIAL_BUFFERSSTART && nmhdr.hdr.idFrom < CMD_SPECIAL_BUFFERSEND);
 		static wchar_t tipText[500];
 		::NMTTDISPINFOW& nmttdi = *reinterpret_cast<::NMTTDISPINFOW*>(&nmhdr.hdr);
 
 //		nmttdi->hinst = getHandle();
-		const Buffer& buffer = getAt(nmttdi.hdr.idFrom - CMD_VIEW_BUFFERLIST_START);
+		const Buffer& buffer = getAt(nmttdi.hdr.idFrom - CMD_SPECIAL_BUFFERSSTART);
 		wcscpy(tipText, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : buffer.getFileName());
 		nmttdi.lpszText = tipText;
 		return true;
@@ -605,7 +607,7 @@ void BufferList::move(size_t from, size_t to) {
 	// バッファバーのボタンを並び替え
 	const int end = min(static_cast<int>(max(from, to)), bufferBar_.getButtonCount() - 1);
 	for(int i = static_cast<int>(min(from, to)); i <= end; ++i)
-		bufferBar_.setButtonText(CMD_VIEW_BUFFERLIST_START + i, getDisplayName(*buffers_[i]).c_str());
+		bufferBar_.setButtonText(CMD_SPECIAL_BUFFERSSTART + i, getDisplayName(*buffers_[i]).c_str());
 	setActive(*buffer);
 	resetResources();
 }
@@ -617,7 +619,7 @@ void BufferList::textViewerListChanged(Presentation& presentation) {
 /// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
 void BufferList::documentModificationSignChanged(Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
-	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
 }
 
@@ -626,7 +628,7 @@ void BufferList::documentFileNameChanged(Document& document) {
 	Buffer& buffer = getConcreteDocument(document);
 	// TODO: call mode-application.
 	resetResources();
-	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
 	bufferBarPager_.recalcSize();
 }
 
@@ -641,7 +643,7 @@ void BufferList::documentEncodingChanged(Document& document) {
 /// @see ascension#text#IDocumentStateListenerdocumentReadOnlySignChanged
 void BufferList::documentReadOnlySignChanged(Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
-	bufferBar_.setButtonText(static_cast<int>(CMD_VIEW_BUFFERLIST_START + find(buffer)), getDisplayName(buffer).c_str());
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
 }
 
@@ -717,7 +719,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //		}
 	}
 
-	const wstring s = app_.loadString(MSG_STATUS__LOADING_FILE, MARGS % resolvedName);
+	const wstring s = app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName);
 	Document::FileIOResult result;
 	do {
 		WaitCursor wc;
@@ -762,7 +764,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
  * @return the result. see the description of @c BufferList::OpenResult
  */
 BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* = 0 */) {
-	wstring filterSource = app_.readStringProfile(L"File", L"filter", app_.loadString(MSG_DIALOG__DEFAULT_OPENFILE_FILTER).c_str());
+	wstring filterSource = app_.readStringProfile(L"File", L"filter", app_.loadMessage(MSG_DIALOG__DEFAULT_OPENFILE_FILTER).c_str());
 	wchar_t* filter = new wchar_t[filterSource.length() + 2];
 	WCHAR fileName[MAX_PATH + 1] = L"";
 	wstring errorMessage;
@@ -843,7 +845,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 				break;
 			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 
-			const wstring keepNLF = Alpha::getInstance().loadString(MSG_DIALOG__KEEP_NEWLINE);
+			const wstring keepNLF = Alpha::getInstance().loadMessage(MSG_DIALOG__KEEP_NEWLINE);
 			const CodePage cp = codePageCombobox.getItemData(codePageCombobox.getCurSel());
 			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
@@ -916,12 +918,16 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		const EncoderFactory& encoders = EncoderFactory::getInstance();
 		set<CodePage> codePages;
 		encoders.enumCodePages(codePages);
-		for(set<CodePage>::const_iterator it = codePages.begin(); it != codePages.end(); ++it) {
+		for(set<CodePage>::const_iterator cp(codePages.begin()), e(codePages.end()); cp != e; ++cp) {
 			if(newlineCombobox.isWindow()
-					&& (encoders.isCodePageForAutoDetection(*it) || encoders.isCodePageForAutoDetection(*it)))
+					&& (encoders.isCodePageForAutoDetection(*cp) || encoders.isCodePageForAutoDetection(*cp)))
 				continue;
-			else if(const wstring* name = Alpha::getInstance().getCodePageName(*it))
-				codePageCombobox.setItemData(codePageCombobox.addString(name->c_str()), *it);
+			else {
+				const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+				const wstring name(Alpha::getInstance().loadMessage(id));
+				if(!name.empty())
+					codePageCombobox.setItemData(codePageCombobox.addString(name.c_str()), *cp);
+			}
 		}
 
 		const UINT c = codePageCombobox.getCount();
@@ -1091,7 +1097,7 @@ void BufferList::resetResources() {
 			(buffers_[i]->getFilePathName() != 0) ? buffers_[i]->getFilePathName() : L"",
 			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
-		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_VIEW_BUFFERLIST_START);
+		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_SPECIAL_BUFFERSSTART);
 	}
 	bufferBar_.setImageList(icons_.getHandle());
 	if(bufferBar_.isVisible())
@@ -1120,7 +1126,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 	// 別名で保存 or ファイルが存在しない
 	if(!overwrite || buffer.getFilePathName() == 0 || !toBoolean(::PathFileExistsW(buffer.getFilePathName()))) {
 		AutoZero<::OSVERSIONINFOW> osVersion;
-		const wstring filterSource = app_.loadString(MSG_DIALOG__SAVE_FILE_FILTER);
+		const wstring filterSource = app_.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER);
 		wchar_t* filter = new wchar_t[filterSource.length() + 6];
 
 		osVersion.dwOSVersionInfoSize = sizeof(::OSVERSIONINFOW);
@@ -1463,7 +1469,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 	if(result == IIncrementalSearchCallback::EMPTY_PATTERN) {
 		getCaret().select(isearch.getMatchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
-		app.setStatusText(app.loadString(messageID).c_str(),
+		app.setStatusText(app.loadMessage(messageID).c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
 		return;
 	} else if(result == IIncrementalSearchCallback::FOUND) {
@@ -1477,7 +1483,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 		beep();
 	}
 
-	String prompt = app.loadString(messageID, MARGS % isearch.getPattern());
+	String prompt = app.loadMessage(messageID, MARGS % isearch.getPattern());
 	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 	app.setStatusText(prompt.c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
@@ -1526,18 +1532,16 @@ void EditorView::selectionShapeChanged(const Caret&) {
 void EditorView::updateCurrentPositionOnStatusBar() {
 	if(hasFocus()) {
 		// build the current position indication string
-		static wchar_t format[256] = {0};
-		if(format[0] == 0)
-			Alpha::getInstance().loadString(MSG_STATUS__CARET_POSITION, format, countof(format));
-		wchar_t text[countof(format)];
+		static const wstring format(Alpha::getInstance().loadMessage(MSG_STATUS__CARET_POSITION));
+		static manah::AutoBuffer<wchar_t> s(new wchar_t[format.length() + 100]);
 		AutoZero<::SCROLLINFO> si;
 		getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-		swprintf(text, format,
+		swprintf(s.get(), format.c_str(),
 			getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue,
 			getCaret().getVisualColumnNumber() + visualColumnStartValue_,
 			getCaret().getColumnNumber() + visualColumnStartValue_);
 		// show in the status bar
-		Alpha::getInstance().getStatusBar().setText(1, text);
+		Alpha::getInstance().getStatusBar().setText(1, s.get());
 	}
 }
 
@@ -1548,8 +1552,8 @@ void EditorView::updateNarrowingOnStatusBar() {
 		if(narrowingIcon_.getHandle() == 0)
 			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
 		StatusBar& statusBar = app.getStatusBar();
-//		statusBar.setText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
-		statusBar.setTipText(4, narrow ? app.loadString(MSG_STATUS__NARROWING).c_str() : L"");
+//		statusBar.setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
+		statusBar.setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
 	}
 }
@@ -1557,7 +1561,7 @@ void EditorView::updateNarrowingOnStatusBar() {
 void EditorView::updateOvertypeModeOnStatusBar() {
 	if(hasFocus())
 		Alpha::getInstance().getStatusBar().setText(3,
-			Alpha::getInstance().loadString(getCaret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
+			Alpha::getInstance().loadMessage(getCaret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
 }
 
 /// Updates the title bar text according to the current state.

@@ -108,11 +108,10 @@ public:
 		void							getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
 		manah::win32::ui::StatusBar&	getStatusBar() throw();
 		// attributes
-		const std::wstring*	getCodePageName(ascension::encodings::CodePage cp) const;
-		static Alpha&		getInstance();
-		void				getTextEditorFont(::LOGFONTW& font) const throw();
-		void				setFont(const ::LOGFONTW& font);
-		void				setStatusText(const wchar_t* text, HFONT font = 0);
+		static Alpha&	getInstance();
+		void			getTextEditorFont(::LOGFONTW& font) const throw();
+		void			setFont(const ::LOGFONTW& font);
+		void			setStatusText(const wchar_t* text, HFONT font = 0);
 		// searchs
 		ui::SearchDialog&		getSearchDialog() throw();
 		const ui::SearchDialog&	getSearchDialog() const throw();
@@ -187,7 +186,6 @@ public:
 //		std::auto_ptr<ScriptMacroManager> scriptMacroManager_;	// スクリプトマクロの管理
 		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
 		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
-		std::map<ascension::encodings::CodePage, std::wstring>	codePageNameTable_;
 		// オートメーション用インターフェイス
 //		alpha::ambient::Application* automation_;
 		// オプション

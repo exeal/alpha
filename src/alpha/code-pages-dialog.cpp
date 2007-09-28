@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "code-pages-dialog.hpp"
 #include "application.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/ui/standard-controls.hpp"
 using alpha::ui::CodePagesDialog;
 using namespace ascension::encodings;
@@ -36,11 +37,15 @@ void CodePagesDialog::onInitDialog(HWND focusWindow, bool&) {
 	set<CodePage> codePages;
 
 	encoders.enumCodePages(codePages);
-	for(set<CodePage>::const_iterator it = codePages.begin(); it != codePages.end(); ++it) {
-		if(!forReading_ && (encoders.isCodePageForAutoDetection(*it) || encoders.isCodePageForReadOnly(*it)))
+	for(set<CodePage>::const_iterator cp(codePages.begin()), e(codePages.end()); cp != e; ++cp) {
+		if(!forReading_ && (encoders.isCodePageForAutoDetection(*cp) || encoders.isCodePageForReadOnly(*cp)))
 			continue;
-		else if(const wstring* name = Alpha::getInstance().getCodePageName(*it))
-			codepageList_.setItemData(codepageList_.addString(((codePage_ == *it) ? *name + L" *" : *name).c_str()), *it);
+		else {
+			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+			const wstring name(Alpha::getInstance().loadMessage(id));
+			if(!name.empty())
+				codepageList_.setItemData(codepageList_.addString(((codePage_ == *cp) ? name + L" *" : name).c_str()), *cp);
+		}
 	}
 	const int c = codepageList_.getCount();
 	for(int i = 0; i < c; ++i) {
