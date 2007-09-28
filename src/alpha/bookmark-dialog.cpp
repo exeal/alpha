@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "bookmark-dialog.hpp"
 #include "command.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/ui/common-controls.hpp"
 
 using alpha::ui::BookmarkDialog;
@@ -163,8 +164,8 @@ void BookmarkDialog::onInitDialog(HWND focusWindow, bool&) {
 	Alpha& app = Alpha::getInstance();
 	bookmarksList_.modifyStyleEx(WS_EX_NOPARENTNOTIFY, 0);
 	bookmarksList_.setExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP);
-	bookmarksList_.insertColumn(0, app.loadString(MSG_DIALOG__BOOKMARKED_LINE).c_str(), LVCFMT_LEFT, 279, -1);
-	bookmarksList_.insertColumn(1, app.loadString(MSG_DIALOG__BOOKMARKED_POSITION).c_str(), LVCFMT_LEFT, 100, -1);
+	bookmarksList_.insertColumn(0, app.loadMessage(MSG_DIALOG__BOOKMARKED_LINE).c_str(), LVCFMT_LEFT, 279, -1);
+	bookmarksList_.insertColumn(1, app.loadMessage(MSG_DIALOG__BOOKMARKED_POSITION).c_str(), LVCFMT_LEFT, 100, -1);
 	updateList();
 
 	if(app.readIntegerProfile(L"Search", L"BookmarkDialog.autoClose", 0) == 1)

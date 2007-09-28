@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "mru-manager.hpp"
 #include "application.hpp"
+#include "resource/messages.h"
 using namespace alpha;
 using namespace std;
 using manah::win32::ui::Menu;
@@ -130,7 +131,7 @@ void MRUManager::updateMenu() {
 	while(popupMenu_.getNumberOfItems() > 0)
 		popupMenu_.erase<Menu::BY_POSITION>(0);
 	if(fileNames_.empty()) {	// —š—ğ‚ª‹ó‚Ìê‡
-		const wstring s = Alpha::getInstance().loadString(MSG_OTHER__EMPTY_MENU_CAPTION);
+		const wstring s = Alpha::getInstance().loadMessage(MSG_OTHER__EMPTY_MENU_CAPTION);
 		popupMenu_ << Menu::StringItem(0, s.c_str(), MFS_GRAYED);
 		return;
 	}

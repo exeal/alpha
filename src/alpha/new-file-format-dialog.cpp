@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "new-file-format-dialog.hpp"
 #include "application.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/ui/standard-controls.hpp"
 using alpha::ui::NewFileFormatDialog;
 using manah::win32::ui::ComboBox;
@@ -66,13 +67,15 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 
 	// [コードページ]
 	EncoderFactory::getInstance().enumCodePages(codePages);
-	for(set<CodePage>::const_iterator it = codePages.begin(); it != codePages.end(); ++it) {
-		if(EncoderFactory::getInstance().isCodePageForAutoDetection(*it))
+	for(set<CodePage>::const_iterator cp(codePages.begin()), e(codePages.end()); cp != e; ++cp) {
+		if(EncoderFactory::getInstance().isCodePageForAutoDetection(*cp))
 			continue;
-		if(const wstring* name = Alpha::getInstance().getCodePageName(*it)) {
-			const int i = codePageCombobox_.addString((*it == encoding_) ? (*name + L" *").c_str() : name->c_str());
-			codePageCombobox_.setItemData(i, *it);
-			if(*it == encoding_)
+		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+		const wstring name(Alpha::getInstance().loadMessage(id));
+		if(!name.empty()) {
+			const int i = codePageCombobox_.addString((*cp == encoding_) ? (name + L" *").c_str() : name.c_str());
+			codePageCombobox_.setItemData(i, *cp);
+			if(*cp == encoding_)
 				codePageCombobox_.setCurSel(i);
 		}
 	}

@@ -45,7 +45,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file is modified. Do you want to save?
+//  %1%n%nThe file is modified. Do you want to save?%0%0
 //
 #define MSG_BUFFER__BUFFER_IS_DIRTY      0x00000001L
 
@@ -54,7 +54,7 @@
 //
 // MessageText:
 //
-//  Do you want to reopen the file?
+//  Do you want to reopen the file?%0%0
 //
 #define MSG_BUFFER__CONFIRM_REOPEN       0x00000002L
 
@@ -63,8 +63,7 @@
 //
 // MessageText:
 //
-//  The file is modified.
-//  If you reopen, the modification will be lost. Do you want to do?
+//  The file is modified.%nIf you reopen, the modification will be lost. Do you want to do?%0%0
 //
 #define MSG_BUFFER__CONFIRM_REOPEN_EVEN_IF_DIRTY 0x00000003L
 
@@ -73,7 +72,7 @@
 //
 // MessageText:
 //
-//  Failed to send to a mailer.
+//  Failed to send to a mailer.%0%0
 //
 #define MSG_BUFFER__FAILED_TO_SEND_TO_MAILER 0x00000004L
 
@@ -82,7 +81,7 @@
 //
 // MessageText:
 //
-//  untitled
+//  untitled%0%0
 //
 #define MSG_BUFFER__UNTITLED             0x00000005L
 
@@ -91,8 +90,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file was modified by other process. Do you want to reload?
-//  If you reload, current editing contents will be disposed.
+//  %1%n%nThe file was modified by other process. Do you want to reload?%nIf you reload, current editing contents will be disposed.%0%0
 //
 #define MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN 0x00000006L
 
@@ -101,7 +99,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file was modified by other process. Do you want to continue to save?
+//  %1%n%nThe file was modified by other process. Do you want to continue to save?%0%0
 //
 #define MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE 0x00000007L
 
@@ -110,7 +108,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file was modified by other process. Do you want to continue to edit?
+//  %1%n%nThe file was modified by other process. Do you want to continue to edit?%0%0
 //
 #define MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT 0x00000008L
 
@@ -119,7 +117,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file has been already opened. Cannot write to an editing file.
+//  %1%n%nThe file has been already opened. Cannot write to an editing file.%0%0
 //
 #define MSG_BUFFER__SAVING_FILE_IS_OPENED 0x00000009L
 
@@ -128,7 +126,7 @@
 //
 // MessageText:
 //
-//  Specified string was not found.
+//  Specified string was not found.%0%0
 //
 #define MSG_SEARCH__PATTERN_NOT_FOUND    0x0000000AL
 
@@ -137,7 +135,7 @@
 //
 // MessageText:
 //
-//  Replaced %1 string(s).
+//  Replaced %1 string(s).%0%0
 //
 #define MSG_SEARCH__REPLACE_DONE         0x0000000BL
 
@@ -146,7 +144,7 @@
 //
 // MessageText:
 //
-//  Failed to load the regular expression engine. Cannot search.
+//  Failed to load the regular expression engine. Cannot search.%0%0
 //
 #define MSG_SEARCH_REGEX_IS_INAVAILABLE  0x0000000CL
 
@@ -155,7 +153,7 @@
 //
 // MessageText:
 //
-//  An error occured during regular expression search.%n%nReason:%t%1%nPosition:%t%2
+//  An error occured during regular expression search.%n%nReason:%t%1%nPosition:%t%2%0%0
 //
 #define MSG_SEARCH__INVALID_REGEX_PATTERN 0x0000000DL
 
@@ -164,7 +162,7 @@
 //
 // MessageText:
 //
-//  Not an error
+//  Not an error%0%0
 //
 #define MSG_SEARCH__BAD_PATTERN_START    0x0000000EL
 
@@ -173,7 +171,7 @@
 //
 // MessageText:
 //
-//  An invalid collating element was specified in a [[.name.]] block
+//  An invalid collating element was specified in a [[.name.]] block%0%0
 //
 
 
@@ -182,7 +180,7 @@
 //
 // MessageText:
 //
-//  An invalid character class name was specified in a [[:name:]] block
+//  An invalid character class name was specified in a [[:name:]] block%0%0
 //
 
 
@@ -191,7 +189,7 @@
 //
 // MessageText:
 //
-//  An invalid or trailing escape was encountered
+//  An invalid or trailing escape was encountered%0%0
 //
 
 
@@ -200,7 +198,7 @@
 //
 // MessageText:
 //
-//  A back-reference to a non-existant marked sub-expression was encountered
+//  A back-reference to a non-existant marked sub-expression was encountered%0%0
 //
 
 
@@ -209,7 +207,7 @@
 //
 // MessageText:
 //
-//  An invalid character set was encountered
+//  An invalid character set was encountered%0%0
 //
 
 
@@ -218,7 +216,7 @@
 //
 // MessageText:
 //
-//  Mismatched '(' and ')'
+//  Mismatched '(' and ')'%0%0
 //
 
 
@@ -227,7 +225,7 @@
 //
 // MessageText:
 //
-//  Mismatched '{' and '}'
+//  Mismatched '{' and '}'%0%0
 //
 
 
@@ -236,7 +234,7 @@
 //
 // MessageText:
 //
-//  Invalid contents of a {...} block
+//  Invalid contents of a {...} block%0%0
 //
 
 
@@ -245,7 +243,7 @@
 //
 // MessageText:
 //
-//  A character range was invalid
+//  A character range was invalid%0%0
 //
 
 
@@ -254,7 +252,7 @@
 //
 // MessageText:
 //
-//  Out of memory
+//  Out of memory%0%0
 //
 
 
@@ -263,7 +261,7 @@
 //
 // MessageText:
 //
-//  An attempt to repeat something that can not be repeated
+//  An attempt to repeat something that can not be repeated%0%0
 //
 
 
@@ -272,7 +270,7 @@
 //
 // MessageText:
 //
-//  The expression bacame too complex to handle
+//  The expression bacame too complex to handle%0%0
 //
 
 
@@ -281,7 +279,7 @@
 //
 // MessageText:
 //
-//  Out of program stack space
+//  Out of program stack space%0%0
 //
 
 
@@ -290,7 +288,7 @@
 //
 // MessageText:
 //
-//  Unknown error
+//  Unknown error%0%0
 //
 
 
@@ -299,7 +297,7 @@
 //
 // MessageText:
 //
-//  "%1"%nNo program assigned to the document type.
+//  "%1"%nNo program assigned to the document type.%0%0
 //
 #define MSG_ERROR__EXE_NOT_REGISTERED    0x0000001DL
 
@@ -308,8 +306,7 @@
 //
 // MessageText:
 //
-//  Failed to run the program.
-//  The path assigned to the document type may be incorrect.
+//  Failed to run the program.%nThe path assigned to the document type may be incorrect.%0%0
 //
 #define MSG_ERROR__FAILED_TO_RUN_EXE     0x0000001EL
 
@@ -318,7 +315,7 @@
 //
 // MessageText:
 //
-//  Alpha does not support your platform.
+//  Alpha does not support your platform.%0%0
 //
 #define MSG_ERROR__UNSUPPORTED_OS_VERSION 0x0000001FL
 
@@ -327,7 +324,7 @@
 //
 // MessageText:
 //
-//  There is already same abbreviation.
+//  There is already same abbreviation.%0%0
 //
 #define MSG_ERROR__DUPLICATE_ABBREV      0x00000020L
 
@@ -336,8 +333,7 @@
 //
 // MessageText:
 //
-//  Error occured during regular expression pattern matching.
-//  The pattern may be too complex.
+//  Error occured during regular expression pattern matching.%nThe pattern may be too complex.%0
 //
 #define MSG_ERROR__REGEX_UNKNOWN_ERROR   0x00000021L
 
@@ -346,7 +342,7 @@
 //
 // MessageText:
 //
-//  Error occured in Migemo.
+//  Error occured in Migemo.%0
 //
 #define MSG_ERROR__MIGEMO_UNKNOWN_ERROR  0x00000022L
 
@@ -355,7 +351,7 @@
 //
 // MessageText:
 //
-//  This command cannot execute in keyboard macro definition.
+//  This command cannot execute in keyboard macro definition.%0
 //
 #define MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING 0x00000023L
 
@@ -364,7 +360,7 @@
 //
 // MessageText:
 //
-//  Failed to load the keyboard macro file.%n%nFile: %1%nPosition: (%2, %3)%nReason: %4
+//  Failed to load the keyboard macro file.%n%nFile: %1%nPosition: (%2, %3)%nReason: %4%0
 //
 #define MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO 0x00000024L
 
@@ -373,7 +369,7 @@
 //
 // MessageText:
 //
-//  (Failed to load)
+//  (Failed to load)%0
 //
 #define MSG_ERROR__FAILED_TO_LOAD_SOMETHING 0x00000025L
 
@@ -382,7 +378,7 @@
 //
 // MessageText:
 //
-//  Process failed for out of memory.
+//  Process failed for out of memory.%0
 //
 #define MSG_ERROR__OUT_OF_MEMORY         0x00000026L
 
@@ -391,7 +387,7 @@
 //
 // MessageText:
 //
-//  [readonly]
+//  [readonly]%0
 //
 #define MSG_STATUS__READ_ONLY_CAPTION    0x00000027L
 
@@ -400,7 +396,7 @@
 //
 // MessageText:
 //
-//  Defining keyboard macro
+//  Defining keyboard macro%0
 //
 #define MSG_STATUS__TEMP_MACRO_DEFINING  0x00000028L
 
@@ -409,7 +405,7 @@
 //
 // MessageText:
 //
-//  Pausing keyboard macro definition
+//  Pausing keyboard macro definition%0
 //
 #define MSG_STATUS__TEMP_MACRO_PAUSING   0x00000029L
 
@@ -418,7 +414,7 @@
 //
 // MessageText:
 //
-//  Narrowing
+//  Narrowing%0
 //
 #define MSG_STATUS__NARROWING            0x0000002AL
 
@@ -427,7 +423,7 @@
 //
 // MessageText:
 //
-//  Debuggnig
+//  Debuggnig%0
 //
 #define MSG_STATUS__DEBUGGING            0x0000002BL
 
@@ -436,7 +432,7 @@
 //
 // MessageText:
 //
-//  Insert
+//  Insert%0
 //
 #define MSG_STATUS__INSERT_MODE          0x0000002CL
 
@@ -445,7 +441,7 @@
 //
 // MessageText:
 //
-//  Overtype
+//  Overtype%0
 //
 #define MSG_STATUS__OVERTYPE_MODE        0x0000002DL
 
@@ -454,7 +450,7 @@
 //
 // MessageText:
 //
-//  Line: %1!lu! , Column: %2!lu! , Char: %3!lu!
+//  Line: %1!lu! , Column: %2!lu! , Char: %3!lu!%0
 //
 #define MSG_STATUS__CARET_POSITION       0x0000002EL
 
@@ -463,7 +459,7 @@
 //
 // MessageText:
 //
-//  '%1' can expand to '%2'.
+//  '%1' can expand to '%2'.%0
 //
 #define MSG_STATUS__CAN_EXPAND_ABBREV    0x0000002FL
 
@@ -472,25 +468,25 @@
 //
 // MessageText:
 //
-//  Loading '%1'...
+//  Loading '%1'...%0
 //
 #define MSG_STATUS__LOADING_FILE         0x00000030L
 
 //
-// MessageId: MSG_STATUS__WAITING_FOR_2ND_KEY
+// MessageId: MSG_STATUS__WAITING_FOR_2ND_KEYS
 //
 // MessageText:
 //
-//  '%1' is pressed. Waiting for the second key combination.
+//  '%1' is pressed. Waiting for the second key combination.%0
 //
-#define MSG_STATUS__WAITING_FOR_2ND_KEY  0x00000031L
+#define MSG_STATUS__WAITING_FOR_2ND_KEYS 0x00000031L
 
 //
 // MessageId: MSG_STATUS__INVALID_2STROKE_COMBINATION
 //
 // MessageText:
 //
-//  There are no command bound to the key combination '%1'.
+//  There are no command bound to the key combination '%1'.%0
 //
 #define MSG_STATUS__INVALID_2STROKE_COMBINATION 0x00000032L
 
@@ -499,7 +495,7 @@
 //
 // MessageText:
 //
-//  Incremental search : %1
+//  Incremental search : %1%0
 //
 #define MSG_STATUS__ISEARCH              0x00000033L
 
@@ -508,7 +504,7 @@
 //
 // MessageText:
 //
-//  Incremental search : (empty pattern)
+//  Incremental search : (empty pattern)%0
 //
 #define MSG_STATUS__ISEARCH_EMPTY_PATTERN 0x00000034L
 
@@ -517,7 +513,7 @@
 //
 // MessageText:
 //
-//  Incremental Search : %1 (invalid pattern)
+//  Incremental Search : %1 (invalid pattern)%0
 //
 #define MSG_STATUS__ISEARCH_BAD_PATTERN  0x00000035L
 
@@ -526,7 +522,7 @@
 //
 // MessageText:
 //
-//  Incremental search : %1 (not found)
+//  Incremental search : %1 (not found)%0
 //
 #define MSG_STATUS__ISEARCH_NOT_FOUND    0x00000036L
 
@@ -535,7 +531,7 @@
 //
 // MessageText:
 //
-//  Reversal incremental search : %1
+//  Reversal incremental search : %1%0
 //
 #define MSG_STATUS__RISEARCH             0x00000037L
 
@@ -544,7 +540,7 @@
 //
 // MessageText:
 //
-//  Reversal incremental search : %1 (not found)
+//  Reversal incremental search : %1 (not found)%0
 //
 #define MSG_STATUS__RISEARCH_NOT_FOUND   0x00000038L
 
@@ -553,7 +549,7 @@
 //
 // MessageText:
 //
-//  Reversal Incremental Search : %1 (invalid pattern)
+//  Reversal Incremental Search : %1 (invalid pattern)%0
 //
 #define MSG_STATUS__RISEARCH_BAD_PATTERN 0x00000039L
 
@@ -562,7 +558,7 @@
 //
 // MessageText:
 //
-//  Reversal incremental search : (empty pattern)
+//  Reversal incremental search : (empty pattern)%0
 //
 #define MSG_STATUS__RISEARCH_EMPTY_PATTERN 0x0000003AL
 
@@ -571,7 +567,7 @@
 //
 // MessageText:
 //
-//  (Match brace) %1 : %2 
+//  (Match brace) %1 : %2 %0
 //
 #define MSG_STATUS__MATCH_BRACKET_OUT_OF_VIEW 0x0000003BL
 
@@ -580,7 +576,7 @@
 //
 // MessageText:
 //
-//  %1%nCtrl plus click to open the link.
+//  %1%nCtrl plus click to open the link.%0
 //
 #define MSG_STATUS__INVOKABLE_LINK_POPUP 0x0000003CL
 
@@ -589,7 +585,7 @@
 //
 // MessageText:
 //
-//  All Files:*.*
+//  All Files:*.*%0
 //
 #define MSG_DIALOG__DEFAULT_OPENFILE_FILTER 0x0000003DL
 
@@ -598,7 +594,7 @@
 //
 // MessageText:
 //
-//  Grapheme Cluster
+//  Grapheme Cluster%0
 //
 #define MSG_DIALOG__WHOLE_GRAPHEME_MATCH 0x0000003EL
 
@@ -607,7 +603,7 @@
 //
 // MessageText:
 //
-//  Word
+//  Word%0
 //
 #define MSG_DIALOG__WHOLE_WORD_MATCH     0x0000003FL
 
@@ -616,7 +612,7 @@
 //
 // MessageText:
 //
-//  Literal
+//  Literal%0
 //
 #define MSG_DIALOG__LITERAL_SEARCH       0x00000040L
 
@@ -625,7 +621,7 @@
 //
 // MessageText:
 //
-//  Regular expression (Boost.Regex 1.34.1)
+//  Regular expression (Boost.Regex 1.34.1)%0
 //
 #define MSG_DIALOG__REGEX_SEARCH         0x00000041L
 
@@ -634,7 +630,7 @@
 //
 // MessageText:
 //
-//  Migemo (C/Migemo 1.2 expected)
+//  Migemo (C/Migemo 1.2 expected)%0
 //
 #define MSG_DIALOG__MIGEMO_SEARCH        0x00000042L
 
@@ -643,7 +639,7 @@
 //
 // MessageText:
 //
-//  Buffers
+//  Buffers%0
 //
 #define MSG_DIALOG__BUFFERBAR_CAPTION    0x00000043L
 
@@ -652,7 +648,7 @@
 //
 // MessageText:
 //
-//  Abbreviation
+//  Abbreviation%0
 //
 #define MSG_DIALOG__ABBREVIATION         0x00000044L
 
@@ -661,7 +657,7 @@
 //
 // MessageText:
 //
-//  Expanded String
+//  Expanded String%0
 //
 #define MSG_DIALOG__EXPANDED_ABBREVIATION 0x00000045L
 
@@ -670,7 +666,7 @@
 //
 // MessageText:
 //
-//  Line
+//  Line%0
 //
 #define MSG_DIALOG__BOOKMARKED_LINE      0x00000046L
 
@@ -679,7 +675,7 @@
 //
 // MessageText:
 //
-//  Position
+//  Position%0
 //
 #define MSG_DIALOG__BOOKMARKED_POSITION  0x00000047L
 
@@ -688,7 +684,7 @@
 //
 // MessageText:
 //
-//  Line &Number (%1-%2):
+//  Line &Number (%1-%2):%0
 //
 #define MSG_DIALOG__LINE_NUMBER_RANGE    0x00000048L
 
@@ -697,7 +693,7 @@
 //
 // MessageText:
 //
-//  Select &All
+//  Select &All%0
 //
 #define MSG_DIALOG__SELECT_ALL           0x00000049L
 
@@ -706,7 +702,7 @@
 //
 // MessageText:
 //
-//  &Cancel All Selections
+//  &Cancel All Selections%0
 //
 #define MSG_DIALOG__UNSELECT_ALL         0x0000004AL
 
@@ -715,7 +711,7 @@
 //
 // MessageText:
 //
-//  Select a directory.
+//  Select a directory.%0
 //
 #define MSG_DIALOG__SELECT_DIRECTORY     0x0000004BL
 
@@ -724,7 +720,7 @@
 //
 // MessageText:
 //
-//  File Operation
+//  File Operation%0
 //
 #define MSG_DIALOG__FILE_OPERATION       0x0000004CL
 
@@ -733,7 +729,7 @@
 //
 // MessageText:
 //
-//  Rename
+//  Rename%0
 //
 #define MSG_DIALOG__RENAME_FILE          0x0000004DL
 
@@ -742,7 +738,7 @@
 //
 // MessageText:
 //
-//  Copy
+//  Copy%0
 //
 #define MSG_DIALOG__COPY_FILE            0x0000004EL
 
@@ -751,7 +747,7 @@
 //
 // MessageText:
 //
-//  Move
+//  Move%0
 //
 #define MSG_DIALOG__MOVE_FILE            0x0000004FL
 
@@ -760,7 +756,7 @@
 //
 // MessageText:
 //
-//  No Change
+//  No Change%0
 //
 #define MSG_DIALOG__KEEP_NEWLINE         0x00000050L
 
@@ -769,7 +765,7 @@
 //
 // MessageText:
 //
-//  All Files
+//  All Files%0
 //
 #define MSG_DIALOG__SAVE_FILE_FILTER     0x00000051L
 
@@ -778,7 +774,7 @@
 //
 // MessageText:
 //
-//  %1%n%nFailed to detect code page of the file. Used system-default code page.
+//  %1%n%nFailed to detect code page of the file. Used system-default code page.%0
 //
 #define MSG_IO__FAILED_TO_DETECT_ENCODE  0x00000052L
 
@@ -787,7 +783,7 @@
 //
 // MessageText:
 //
-//  %1%n%nSpecified code page is invalid. Cannot open the file.
+//  %1%n%nSpecified code page is invalid. Cannot open the file.%0
 //
 #define MSG_IO__INVALID_ENCODING         0x00000053L
 
@@ -796,7 +792,7 @@
 //
 // MessageText:
 //
-//  %1%n%nSpecified newline is invalid. Cannot open the file.
+//  %1%n%nSpecified newline is invalid. Cannot open the file.%0
 //
 #define MSG_IO__INVALID_NEWLINE          0x00000054L
 
@@ -805,10 +801,7 @@
 //
 // MessageText:
 //
-//  %1%nEncoding: %2%n
-//  The document contains unconvertable characters under specified encoding.
-//  These characters will be written incorrectly.
-//  Do you want to change code page?
+//  %1%nEncoding: %2%n%nThe document contains unconvertable characters under specified encoding.%nThese characters will be written incorrectly.%nDo you want to change code page?%0
 //
 #define MSG_IO__UNCONVERTABLE_UCS_CHAR   0x00000055L
 
@@ -817,10 +810,7 @@
 //
 // MessageText:
 //
-//  %1%nEncoding: %2%n
-//  The file contains unconvertable characters under specified encoding.
-//  Saving may destroy contents of the file.
-//  Do you want to change code page?
+//  %1%nEncoding: %2%n%nThe file contains unconvertable characters under specified encoding.%nSaving may destroy contents of the file.%nDo you want to change code page?%0
 //
 #define MSG_IO__UNCONVERTABLE_NATIVE_CHAR 0x00000056L
 
@@ -829,7 +819,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThe file size is too large. Maximum file size Alpha can handle is 2GB.
+//  %1%n%nThe file size is too large. Maximum file size Alpha can handle is 2GB.%0
 //
 #define MSG_IO__HUGE_FILE                0x00000057L
 
@@ -838,7 +828,7 @@
 //
 // MessageText:
 //
-//  %1%n%nCannot overwrite the file. The file is read-only.
+//  %1%n%nCannot overwrite the file. The file is read-only.%0
 //
 #define MSG_IO__FAILED_TO_WRITE_FOR_READONLY 0x00000058L
 
@@ -847,7 +837,7 @@
 //
 // MessageText:
 //
-//  %1%n%nFailed to resolve the shortcut. Cannot open the file.
+//  %1%n%nFailed to resolve the shortcut. Cannot open the file.%0
 //
 #define MSG_IO__FAILED_TO_RESOLVE_SHORTCUT 0x00000059L
 
@@ -856,7 +846,7 @@
 //
 // MessageText:
 //
-//  %1%n%nCannot open the file.
+//  %1%n%nCannot open the file.%0
 //
 #define MSG_IO__CANNOT_OPEN_FILE         0x0000005AL
 
@@ -865,7 +855,7 @@
 //
 // MessageText:
 //
-//  %1%n%nFailed to save the file. Cannot create temporary file.
+//  %1%n%nFailed to save the file. Cannot create temporary file.%0
 //
 #define MSG_IO__CANNOT_CREATE_TEMP_FILE  0x0000005BL
 
@@ -874,7 +864,7 @@
 //
 // MessageText:
 //
-//  %1%n%nFailed to save the file. The file is lost.
+//  %1%n%nFailed to save the file. The file is lost.%0
 //
 #define MSG_IO__LOST_DISK_FILE           0x0000005CL
 
@@ -883,7 +873,7 @@
 //
 // MessageText:
 //
-//  Script error occured.%n%nScript:%t%1%nLine:%t%2%nCharacter:%t%3%nError:%t%4%nSCODE:%t%5%nSource:%t%6
+//  Script error occured.%n%nScript:%t%1%nLine:%t%2%nCharacter:%t%3%nError:%t%4%nSCODE:%t%5%nSource:%t%6%0
 //
 #define MSG_SCRIPT__ERROR_DIALOG         0x0000005DL
 
@@ -892,7 +882,7 @@
 //
 // MessageText:
 //
-//  %1%n%nThis script is about to create an unsafe object.%nDo you allow this?%n%nQueried object:%n  ProgID:%t%2%n  IID:%t%3
+//  %1%n%nThis script is about to create an unsafe object.%nDo you allow this?%n%nQueried object:%n  ProgID:%t%2%n  IID:%t%3%0
 //
 #define MSG_SCRIPT__UNSAFE_ACTIVEX_CAUTION 0x0000005EL
 
@@ -901,7 +891,7 @@
 //
 // MessageText:
 //
-//  The language "%1" bound to the macro is invalid or not installed. Cannot execute.
+//  The language "%1" bound to the macro is invalid or not installed. Cannot execute.%0
 //
 #define MSG_SCRIPT__INVALID_LANGUAGE_NAME 0x0000005FL
 
@@ -910,7 +900,7 @@
 //
 // MessageText:
 //
-//  %1%n%nFailed to load the macro file. Cannot execute.
+//  %1%n%nFailed to load the macro file. Cannot execute.%0
 //
 #define MSG_SCRIPT__FAILED_TO_OPEN_MACRO_SCRIPT 0x00000060L
 
@@ -919,7 +909,7 @@
 //
 // MessageText:
 //
-//  (nothing)
+//  (nothing)%0
 //
 #define MSG_OTHER__EMPTY_MENU_CAPTION    0x00000061L
 
@@ -928,7 +918,7 @@
 //
 // MessageText:
 //
-//  (unknown)
+//  (unknown)%0
 //
 #define MSG_OTHER__UNKNOWN               0x00000062L
 
@@ -937,7 +927,7 @@
 //
 // MessageText:
 //
-//  (not obtained)
+//  (not obtained)%0
 //
 #define MSG_OTHER__NOT_OBTAINED          0x00000063L
 
@@ -946,17 +936,35 @@
 //
 // MessageText:
 //
-//  Proceed the macro?\n\nNo: Skip this repetition and next\nCancel: Abort the macro
+//  Proceed the macro?%n%nNo: Skip this repetition and next%nCancel: Abort the macro%0
 //
 #define MSG_OTHER__TEMPORARY_MACRO_QUERY 0x00000064L
 
+//
+// MessageId: MSG_OTHER__NONE
+//
+// MessageText:
+//
+//  None%0
+//
+#define MSG_OTHER__NONE                  0x00000065L
+
 // command names and description.
+//
+// MessageId: CMD_SPECIAL_START
+//
+// MessageText:
+//
+//  CMD_SPECIAL_START
+//
+#define CMD_SPECIAL_START                0x00010000L
+
 //
 // MessageId: CMD_FILE_TOP
 //
 // MessageText:
 //
-//  &File
+//  &File%0
 //
 #define CMD_FILE_TOP                     0x00010001L
 
@@ -965,7 +973,7 @@
 //
 // MessageText:
 //
-//  &New\nCreate a new document.
+//  &New%nCreate a new document.%0
 //
 #define CMD_FILE_NEW                     0x00010002L
 
@@ -974,7 +982,7 @@
 //
 // MessageText:
 //
-//  New wi&th Format...\nCreate a new document with specified code page, line break, and document type.
+//  New wi&th Format...%nCreate a new document with specified code page, line break, and document type.%0
 //
 #define CMD_FILE_NEWWITHFORMAT           0x00010003L
 
@@ -983,7 +991,7 @@
 //
 // MessageText:
 //
-//  &Open...\nOpen an existing document.
+//  &Open...%nOpen an existing document.%0
 //
 #define CMD_FILE_OPEN                    0x00010004L
 
@@ -992,7 +1000,7 @@
 //
 // MessageText:
 //
-//  &Close\nClose the document.
+//  &Close%nClose the document.%0
 //
 #define CMD_FILE_CLOSE                   0x00010005L
 
@@ -1001,7 +1009,7 @@
 //
 // MessageText:
 //
-//  Cl&ose All\nClose all documents.
+//  Cl&ose All%nClose all documents.%0
 //
 #define CMD_FILE_CLOSEALL                0x00010006L
 
@@ -1010,7 +1018,7 @@
 //
 // MessageText:
 //
-//  &Save\nSave the document.
+//  &Save%nSave the document.%0
 //
 #define CMD_FILE_SAVE                    0x00010007L
 
@@ -1019,7 +1027,7 @@
 //
 // MessageText:
 //
-//  Save &As...\nSave the document under a different name.
+//  Save &As...%nSave the document under a different name.%0
 //
 #define CMD_FILE_SAVEAS                  0x00010008L
 
@@ -1028,7 +1036,7 @@
 //
 // MessageText:
 //
-//  Sav&e All\nSave all documents.
+//  Sav&e All%nSave all documents.%0
 //
 #define CMD_FILE_SAVEALL                 0x00010009L
 
@@ -1037,7 +1045,7 @@
 //
 // MessageText:
 //
-//  Most Recent Used &Files
+//  Most Recent Used &Files%0
 //
 #define CMD_FILE_MRU                     0x0001000AL
 
@@ -1046,7 +1054,7 @@
 //
 // MessageText:
 //
-//  Op&erate
+//  Op&erate%0
 //
 #define CMD_FILE_OPERATE                 0x0001000BL
 
@@ -1055,7 +1063,7 @@
 //
 // MessageText:
 //
-//  &Reopen\nReopen the document.
+//  &Reopen%nReopen the document.%0
 //
 #define CMD_FILE_REOPEN                  0x0001000CL
 
@@ -1064,7 +1072,7 @@
 //
 // MessageText:
 //
-//  Reopen with Different Code Pa&ge...\nReopen the document with a different code page.
+//  Reopen with Different Code Pa&ge...%nReopen the document with a different code page.%0
 //
 #define CMD_FILE_REOPENWITHCODEPAGE      0x0001000DL
 
@@ -1073,7 +1081,7 @@
 //
 // MessageText:
 //
-//  E&xit Alpha\nClose all documents and exit.
+//  E&xit Alpha%nClose all documents and exit.%0
 //
 #define CMD_FILE_EXIT                    0x0001000EL
 
@@ -1082,7 +1090,7 @@
 //
 // MessageText:
 //
-//  Sen&d...\nSend the file.
+//  Sen&d...%nSend the file.%0
 //
 #define CMD_FILE_SENDMAIL                0x0001000FL
 
@@ -1091,7 +1099,7 @@
 //
 // MessageText:
 //
-//  Close Ot&hers\nClose all inactive documents.
+//  Close Ot&hers%nClose all inactive documents.%0
 //
 #define CMD_FILE_CLOSEOTHERS             0x00010010L
 
@@ -1100,7 +1108,7 @@
 //
 // MessageText:
 //
-//  &Print...\nPrint the document.
+//  &Print...%nPrint the document.%0
 //
 #define CMD_FILE_PRINT                   0x00010011L
 
@@ -1109,7 +1117,7 @@
 //
 // MessageText:
 //
-//  Set&up Page...\nSetup page layout.
+//  Set&up Page...%nSetup page layout.%0
 //
 #define CMD_FILE_PRINTSETUP              0x00010012L
 
@@ -1118,7 +1126,7 @@
 //
 // MessageText:
 //
-//  Pre&view Page...\nPreview the entire page.
+//  Pre&view Page...%nPreview the entire page.%0
 //
 #define CMD_FILE_PRINTPREVIEW            0x00010013L
 
@@ -1127,7 +1135,7 @@
 //
 // MessageText:
 //
-//  &Edit
+//  &Edit%0
 //
 #define CMD_EDIT_TOP                     0x00010014L
 
@@ -1136,7 +1144,7 @@
 //
 // MessageText:
 //
-//  &Advanced
+//  &Advanced%0
 //
 #define CMD_EDIT_ADVANCED                0x00010015L
 
@@ -1145,7 +1153,7 @@
 //
 // MessageText:
 //
-//  &Insert Unicode Control Characters
+//  &Insert Unicode Control Characters%0
 //
 #define CMD_EDIT_INSERTUNICODECTRLS      0x00010016L
 
@@ -1154,7 +1162,7 @@
 //
 // MessageText:
 //
-//  Insert Unicode &Whitespace Characters
+//  Insert Unicode &Whitespace Characters%0
 //
 #define CMD_EDIT_INSERTUNICODEWSS        0x00010017L
 
@@ -1163,7 +1171,7 @@
 //
 // MessageText:
 //
-//  &Delete\nDelete the selection.
+//  &Delete%nDelete the selection.%0
 //
 #define CMD_EDIT_DELETE                  0x00010018L
 
@@ -1172,7 +1180,7 @@
 //
 // MessageText:
 //
-//  Backspace\nDelete backward one character.
+//  Backspace%nDelete backward one character.%0
 //
 #define CMD_EDIT_BACKSPACE               0x00010019L
 
@@ -1181,7 +1189,7 @@
 //
 // MessageText:
 //
-//  Delete Next Word\nDelete to next word.
+//  Delete Next Word%nDelete to next word.%0
 //
 #define CMD_EDIT_DELETETONEXTWORD        0x0001001AL
 
@@ -1190,7 +1198,7 @@
 //
 // MessageText:
 //
-//  Delete Previous Word\nDelete to previous word.
+//  Delete Previous Word%nDelete to previous word.%0
 //
 #define CMD_EDIT_DELETETOPREVWORD        0x0001001BL
 
@@ -1199,7 +1207,7 @@
 //
 // MessageText:
 //
-//  Delete Line\nDelete current line.
+//  Delete Line%nDelete current line.%0
 //
 #define CMD_EDIT_DELETELINE              0x0001001CL
 
@@ -1208,7 +1216,7 @@
 //
 // MessageText:
 //
-//  Insert Previous\nInsert new line previous.
+//  Insert Previous%nInsert new line previous.%0
 //
 #define CMD_EDIT_INSERTPREVLINE          0x0001001DL
 
@@ -1217,7 +1225,7 @@
 //
 // MessageText:
 //
-//  Break\nBreak the line.
+//  Break%nBreak the line.%0
 //
 #define CMD_EDIT_BREAK                   0x0001001EL
 
@@ -1226,7 +1234,7 @@
 //
 // MessageText:
 //
-//  &Undo\nUndo editing.
+//  &Undo%nUndo editing.%0
 //
 #define CMD_EDIT_UNDO                    0x0001001FL
 
@@ -1235,7 +1243,7 @@
 //
 // MessageText:
 //
-//  &Redo\nRedo previously undone editing.
+//  &Redo%nRedo previously undone editing.%0
 //
 #define CMD_EDIT_REDO                    0x00010020L
 
@@ -1244,7 +1252,7 @@
 //
 // MessageText:
 //
-//  Cu&t\nCut the selection and put it on the Clipboard.
+//  Cu&t%nCut the selection and put it on the Clipboard.%0
 //
 #define CMD_EDIT_CUT                     0x00010021L
 
@@ -1253,7 +1261,7 @@
 //
 // MessageText:
 //
-//  &Copy\nCopy the selection and put it on the Clipboard.
+//  &Copy%nCopy the selection and put it on the Clipboard.%0
 //
 #define CMD_EDIT_COPY                    0x00010022L
 
@@ -1262,7 +1270,7 @@
 //
 // MessageText:
 //
-//  &Paste\nInsert Clipboard contents.
+//  &Paste%nInsert Clipboard contents.%0
 //
 #define CMD_EDIT_PASTE                   0x00010023L
 
@@ -1271,7 +1279,7 @@
 //
 // MessageText:
 //
-//  Insert Tab\nInsert a tab.
+//  Insert Tab%nInsert a tab.%0
 //
 #define CMD_EDIT_INSERTTAB               0x00010024L
 
@@ -1280,7 +1288,7 @@
 //
 // MessageText:
 //
-//  Delete Tab\nDelete a tab.
+//  Delete Tab%nDelete a tab.%0
 //
 #define CMD_EDIT_DELETETAB               0x00010025L
 
@@ -1289,7 +1297,7 @@
 //
 // MessageText:
 //
-//  Tabify\nConvert whitespaces in the selection to tabs.
+//  Tabify%nConvert whitespaces in the selection to tabs.%0
 //
 #define CMD_EDIT_TABIFY                  0x00010026L
 
@@ -1298,7 +1306,7 @@
 //
 // MessageText:
 //
-//  Untabify\nConvert tabs in the selection to spaces.
+//  Untabify%nConvert tabs in the selection to spaces.%0
 //
 #define CMD_EDIT_UNTABIFY                0x00010027L
 
@@ -1307,7 +1315,7 @@
 //
 // MessageText:
 //
-//  Paste From C&lipboard Ring\nInsert Clipboard Ring contents.
+//  Paste From C&lipboard Ring%nInsert Clipboard Ring contents.%0
 //
 #define CMD_EDIT_PASTEFROMCLIPBOARDRING  0x00010028L
 
@@ -1316,7 +1324,7 @@
 //
 // MessageText:
 //
-//  Input Above Character\nInput the character above caret.
+//  Input Above Character%nInput the character above caret.%0
 //
 #define CMD_EDIT_CHARFROMABOVELINE       0x00010029L
 
@@ -1325,7 +1333,7 @@
 //
 // MessageText:
 //
-//  Input Below Character\nInput the character below caret.
+//  Input Below Character%nInput the character below caret.%0
 //
 #define CMD_EDIT_CHARFROMBELOWLINE       0x0001002AL
 
@@ -1334,7 +1342,7 @@
 //
 // MessageText:
 //
-//  Transpose Lines\nTranspose the current line and the previous line.
+//  Transpose Lines%nTranspose the current line and the previous line.%0
 //
 #define CMD_EDIT_TRANSPOSELINES          0x0001002BL
 
@@ -1343,7 +1351,7 @@
 //
 // MessageText:
 //
-//  Transpose Characters\nTranspose the character before caret with the character after caret.
+//  Transpose Characters%nTranspose the character before caret with the character after caret.%0
 //
 #define CMD_EDIT_TRANSPOSECHARS          0x0001002CL
 
@@ -1352,7 +1360,7 @@
 //
 // MessageText:
 //
-//  Transpose Words\nTranspose the word before caret with the word after caret.
+//  Transpose Words%nTranspose the word before caret with the word after caret.%0
 //
 #define CMD_EDIT_TRANSPOSEWORDS          0x0001002DL
 
@@ -1361,7 +1369,7 @@
 //
 // MessageText:
 //
-//  Manage A&bbreviations...\nManage all abbreviations.
+//  Manage A&bbreviations...%nManage all abbreviations.%0
 //
 #define CMD_EDIT_SHOWABBREVIATIONDLG     0x0001002EL
 
@@ -1370,7 +1378,7 @@
 //
 // MessageText:
 //
-//  First Character\nGo to the first non-whitespace character in the line.
+//  First Character%nGo to the first non-whitespace character in the line.%0
 //
 #define CMD_EDIT_FIRSTCHAR               0x0001002FL
 
@@ -1379,7 +1387,7 @@
 //
 // MessageText:
 //
-//  Last Character\nGo to the last non-whitespace character in the line.
+//  Last Character%nGo to the last non-whitespace character in the line.%0
 //
 #define CMD_EDIT_LASTCHAR                0x00010030L
 
@@ -1388,7 +1396,7 @@
 //
 // MessageText:
 //
-//  Extend to First Character\nExtend the selection to the first non-whitespace character in the line.
+//  Extend to First Character%nExtend the selection to the first non-whitespace character in the line.%0
 //
 #define CMD_EDIT_FIRSTCHAREXTEND         0x00010031L
 
@@ -1397,7 +1405,7 @@
 //
 // MessageText:
 //
-//  Extend to Last Character\nExtend the selection to the last non-whitespace character in the line.
+//  Extend to Last Character%nExtend the selection to the last non-whitespace character in the line.%0
 //
 #define CMD_EDIT_LASTCHAREXTEND          0x00010032L
 
@@ -1406,7 +1414,7 @@
 //
 // MessageText:
 //
-//  First Character or Start of Line\nGo to the first non-whitespace character in the line or the start of the line.
+//  First Character or Start of Line%nGo to the first non-whitespace character in the line or the start of the line.%0
 //
 #define CMD_EDIT_FIRSTCHARORLINEHOME     0x00010033L
 
@@ -1415,1097 +1423,1205 @@
 //
 // MessageText:
 //
-//  Last Character or End of Line\nGo to the last non-whitespace character in the line or the end of the line.
+//  Last Character or End of Line%nGo to the last non-whitespace character in the line or the end of the line.%0
 //
 #define CMD_EDIT_LASTCHARORLINEEND       0x00010034L
+
+//
+// MessageId: CMD_EDIT_FIRSTCHARORLINEHOMEEXTEND
+//
+// MessageText:
+//
+//  Extend to First Character or Start of Line%nExtend the selection to the first non-whitespace character in the line or the start of the line.%0
+//
+#define CMD_EDIT_FIRSTCHARORLINEHOMEEXTEND 0x00010035L
+
+//
+// MessageId: CMD_EDIT_LASTCHARORLINEENDEXTEND
+//
+// MessageText:
+//
+//  Extend to Last Character or End of Line%nExtend the selection to the last non-whitespace character in the line or the end of the line.%0
+//
+#define CMD_EDIT_LASTCHARORLINEENDEXTEND 0x00010036L
 
 //
 // MessageId: CMD_EDIT_CHARTOCODEPOINT
 //
 // MessageText:
 //
-//  Character to Code Point\nConvert a character to a corresponding code point.
+//  Character to Code Point%nConvert a character to a corresponding code point.%0
 //
-#define CMD_EDIT_CHARTOCODEPOINT         0x00010035L
+#define CMD_EDIT_CHARTOCODEPOINT         0x00010037L
 
 //
 // MessageId: CMD_EDIT_CODEPOINTTOCHAR
 //
 // MessageText:
 //
-//  Code Point to Character\nConvert a code point to a corresponding character.
+//  Code Point to Character%nConvert a code point to a corresponding character.%0
 //
-#define CMD_EDIT_CODEPOINTTOCHAR         0x00010036L
+#define CMD_EDIT_CODEPOINTTOCHAR         0x00010038L
+
+//
+// MessageId: CMD_EDIT_NARROWTOSELECTION
+//
+// MessageText:
+//
+//  &Narrow%nProtect the out of the selection from modification.%0
+//
+#define CMD_EDIT_NARROWTOSELECTION       0x00010039L
+
+//
+// MessageId: CMD_EDIT_WIDEN
+//
+// MessageText:
+//
+//  &Widen%nRevoke the protection.%0
+//
+#define CMD_EDIT_WIDEN                   0x0001003AL
 
 //
 // MessageId: CMD_EDIT_RECOMPOSE
 //
 // MessageText:
 //
-//  Reconvert\nReconvert the selection.
+//  Reconvert%nReconvert the selection.%0
 //
-#define CMD_EDIT_RECOMPOSE               0x00010037L
+#define CMD_EDIT_RECOMPOSE               0x0001003BL
 
 //
 // MessageId: CMD_EDIT_TOGGLEOVERTYPEMODE
 //
 // MessageText:
 //
-//  Overtype Mode\nToggle insert/overtype mode.
+//  Overtype Mode%nToggle insert/overtype mode.%0
 //
-#define CMD_EDIT_TOGGLEOVERTYPEMODE      0x00010038L
+#define CMD_EDIT_TOGGLEOVERTYPEMODE      0x0001003CL
 
 //
-// MessageId: CMD_EDIT_OPENCANDIDATE
+// MessageId: CMD_EDIT_OPENCANDIDATEWINDOW
 //
 // MessageText:
 //
-//  I&nput Candidates\nShow the candidates window or complete the word.
+//  I&nput Candidates%nShow the candidates window or complete the word.%0
 //
-#define CMD_EDIT_OPENCANDIDATE           0x00010039L
+#define CMD_EDIT_OPENCANDIDATEWINDOW     0x0001003DL
 
 //
 // MessageId: CMD_EDIT_HOME
 //
 // MessageText:
 //
-//  Start of Document\nGo to the start of the document.
+//  Start of Document%nGo to the start of the document.%0
 //
-#define CMD_EDIT_HOME                    0x0001003AL
+#define CMD_EDIT_HOME                    0x0001003EL
 
 //
 // MessageId: CMD_EDIT_END
 //
 // MessageText:
 //
-//  End of Document\nGo to the end of the document.
+//  End of Document%nGo to the end of the document.%0
 //
-#define CMD_EDIT_END                     0x0001003BL
+#define CMD_EDIT_END                     0x0001003FL
 
 //
 // MessageId: CMD_EDIT_LINEHOME
 //
 // MessageText:
 //
-//  Start of Line\nGo to the start of the line.
+//  Start of Line%nGo to the start of the line.%0
 //
-#define CMD_EDIT_LINEHOME                0x0001003CL
+#define CMD_EDIT_LINEHOME                0x00010040L
 
 //
 // MessageId: CMD_EDIT_LINEEND
 //
 // MessageText:
 //
-//  End of Line\nGo to the end of the line.
+//  End of Line%nGo to the end of the line.%0
 //
-#define CMD_EDIT_LINEEND                 0x0001003DL
+#define CMD_EDIT_LINEEND                 0x00010041L
 
 //
 // MessageId: CMD_EDIT_CHARNEXT
 //
 // MessageText:
 //
-//  Next Character\nGo to the next character.
+//  Next Character%nGo to the next character.%0
 //
-#define CMD_EDIT_CHARNEXT                0x0001003EL
+#define CMD_EDIT_CHARNEXT                0x00010042L
 
 //
 // MessageId: CMD_EDIT_SCROLLCOLUMNNEXT
 //
 // MessageText:
 //
-//  Scroll Right\nScroll the window right one column right.
+//  Scroll Right%nScroll the window right one column right.%0
 //
-#define CMD_EDIT_SCROLLCOLUMNNEXT        0x0001003FL
+#define CMD_EDIT_SCROLLCOLUMNNEXT        0x00010043L
 
 //
 // MessageId: CMD_EDIT_SCROLLCOLUMNPREV
 //
 // MessageText:
 //
-//  Scroll Left\nScroll the window left one column left.
+//  Scroll Left%nScroll the window left one column left.%0
 //
-#define CMD_EDIT_SCROLLCOLUMNPREV        0x00010040L
+#define CMD_EDIT_SCROLLCOLUMNPREV        0x00010044L
 
 //
 // MessageId: CMD_EDIT_ENSURECARETCENTER
 //
 // MessageText:
 //
-//  Recenter\nEnsure the caret center.
+//  Recenter%nEnsure the caret center.%0
 //
-#define CMD_EDIT_ENSURECARETCENTER       0x00010041L
+#define CMD_EDIT_ENSURECARETCENTER       0x00010045L
 
 //
 // MessageId: CMD_EDIT_ENSURECARETVISIBLE
 //
 // MessageText:
 //
-//  Show Caret\nEnsure the caret visible.
+//  Show Caret%nEnsure the caret visible.%0
 //
-#define CMD_EDIT_ENSURECARETVISIBLE      0x00010042L
+#define CMD_EDIT_ENSURECARETVISIBLE      0x00010046L
 
 //
 // MessageId: CMD_EDIT_ROWCHARNEXT
 //
 // MessageText:
 //
-//  Extend Box to Next Character\nExtend the rectangle selection to the next character.
+//  Extend Box to Next Character%nExtend the rectangle selection to the next character.%0
 //
-#define CMD_EDIT_ROWCHARNEXT             0x00010043L
+#define CMD_EDIT_ROWCHARNEXT             0x00010047L
 
 //
 // MessageId: CMD_EDIT_ROWCHARPREV
 //
 // MessageText:
 //
-//  Extend Box to Previous Character\nExtend the rectangle selection to the previous character.
+//  Extend Box to Previous Character%nExtend the rectangle selection to the previous character.%0
 //
-#define CMD_EDIT_ROWCHARPREV             0x00010044L
+#define CMD_EDIT_ROWCHARPREV             0x00010048L
 
 //
 // MessageId: CMD_EDIT_ROWLINEDOWN
 //
 // MessageText:
 //
-//  Extend Box to Down Line\nExtend the rectangle selection to the one down line.
+//  Extend Box to Down Line%nExtend the rectangle selection to the one down line.%0
 //
-#define CMD_EDIT_ROWLINEDOWN             0x00010045L
+#define CMD_EDIT_ROWLINEDOWN             0x00010049L
 
 //
 // MessageId: CMD_EDIT_ROWLINEUP
 //
 // MessageText:
 //
-//  Extend Box to Up Line\nExtend the rectangle selection to the one up line.
+//  Extend Box to Up Line%nExtend the rectangle selection to the one up line.%0
 //
-#define CMD_EDIT_ROWLINEUP               0x00010046L
+#define CMD_EDIT_ROWLINEUP               0x0001004AL
 
 //
 // MessageId: CMD_EDIT_ROWLINEEND
 //
 // MessageText:
 //
-//  Extend Box to End of Line\nExtend the rectangle selection to the end of the line.
+//  Extend Box to End of Line%nExtend the rectangle selection to the end of the line.%0
 //
-#define CMD_EDIT_ROWLINEEND              0x00010047L
+#define CMD_EDIT_ROWLINEEND              0x0001004BL
 
 //
 // MessageId: CMD_EDIT_ROWLINEHOME
 //
 // MessageText:
 //
-//  Extend Box to Start of Line\nExtend the rectangle selection to the start of the line.
+//  Extend Box to Start of Line%nExtend the rectangle selection to the start of the line.%0
 //
-#define CMD_EDIT_ROWLINEHOME             0x00010048L
+#define CMD_EDIT_ROWLINEHOME             0x0001004CL
 
 //
 // MessageId: CMD_EDIT_ROWWORDNEXT
 //
 // MessageText:
 //
-//  Extend Box to Next Word\nExtend the rectangle selection to the next word.
+//  Extend Box to Next Word%nExtend the rectangle selection to the next word.%0
 //
-#define CMD_EDIT_ROWWORDNEXT             0x00010049L
+#define CMD_EDIT_ROWWORDNEXT             0x0001004DL
 
 //
 // MessageId: CMD_EDIT_ROWWORDPREV
 //
 // MessageText:
 //
-//  Extend Box to Previuos Word\nExtend the rectangle selection to the previous word.
+//  Extend Box to Previuos Word%nExtend the rectangle selection to the previous word.%0
 //
-#define CMD_EDIT_ROWWORDPREV             0x0001004AL
+#define CMD_EDIT_ROWWORDPREV             0x0001004EL
 
 //
 // MessageId: CMD_EDIT_ROWWORDENDNEXT
 //
 // MessageText:
 //
-//  Extend Box to Next Word End\nExtend the rectangle selection to the next word end.
+//  Extend Box to Next Word End%nExtend the rectangle selection to the next word end.%0
 //
-#define CMD_EDIT_ROWWORDENDNEXT          0x0001004BL
+#define CMD_EDIT_ROWWORDENDNEXT          0x0001004FL
 
 //
 // MessageId: CMD_EDIT_ROWWORDENDPREV
 //
 // MessageText:
 //
-//  Extend Box to Previous Word End\nExtend the rectangle selection to the previous word end.
+//  Extend Box to Previous Word End%nExtend the rectangle selection to the previous word end.%0
 //
-#define CMD_EDIT_ROWWORDENDPREV          0x0001004CL
+#define CMD_EDIT_ROWWORDENDPREV          0x00010050L
 
 //
 // MessageId: CMD_EDIT_CHARPREV
 //
 // MessageText:
 //
-//  Previous Character\nGo to the previous character.
+//  Previous Character%nGo to the previous character.%0
 //
-#define CMD_EDIT_CHARPREV                0x0001004DL
+#define CMD_EDIT_CHARPREV                0x00010051L
 
 //
 // MessageId: CMD_EDIT_WORDENDNEXT
 //
 // MessageText:
 //
-//  Next Word End\nGo to the next word end.
+//  Next Word End%nGo to the next word end.%0
 //
-#define CMD_EDIT_WORDENDNEXT             0x0001004EL
+#define CMD_EDIT_WORDENDNEXT             0x00010052L
 
 //
 // MessageId: CMD_EDIT_WORDENDPREV
 //
 // MessageText:
 //
-//  Previous Word End\nGo to the previous word end.
+//  Previous Word End%nGo to the previous word end.%0
 //
-#define CMD_EDIT_WORDENDPREV             0x0001004FL
+#define CMD_EDIT_WORDENDPREV             0x00010053L
 
 //
 // MessageId: CMD_EDIT_WORDNEXT
 //
 // MessageText:
 //
-//  Next Word\nGo to the next word.
+//  Next Word%nGo to the next word.%0
 //
-#define CMD_EDIT_WORDNEXT                0x00010050L
+#define CMD_EDIT_WORDNEXT                0x00010054L
 
 //
 // MessageId: CMD_EDIT_WORDPREV
 //
 // MessageText:
 //
-//  Previous Word\nGo to the previous word.
+//  Previous Word%nGo to the previous word.%0
 //
-#define CMD_EDIT_WORDPREV                0x00010051L
+#define CMD_EDIT_WORDPREV                0x00010055L
 
 //
 // MessageId: CMD_EDIT_LINEDOWN
 //
 // MessageText:
 //
-//  Down Line\nGo to the one down line.
+//  Down Line%nGo to the one down line.%0
 //
-#define CMD_EDIT_LINEDOWN                0x00010052L
+#define CMD_EDIT_LINEDOWN                0x00010056L
 
 //
 // MessageId: CMD_EDIT_LINEUP
 //
 // MessageText:
 //
-//  Up Line\nGo to the one up line.
+//  Up Line%nGo to the one up line.%0
 //
-#define CMD_EDIT_LINEUP                  0x00010053L
+#define CMD_EDIT_LINEUP                  0x00010057L
 
 //
 // MessageId: CMD_EDIT_PAGEDOWN
 //
 // MessageText:
 //
-//  Down Page\nGo to the one down page.
+//  Down Page%nGo to the one down page.%0
 //
-#define CMD_EDIT_PAGEDOWN                0x00010054L
+#define CMD_EDIT_PAGEDOWN                0x00010058L
 
 //
 // MessageId: CMD_EDIT_PAGEUP
 //
 // MessageText:
 //
-//  Up Page\nGo to the one up page.
+//  Up Page%nGo to the one up page.%0
 //
-#define CMD_EDIT_PAGEUP                  0x00010055L
+#define CMD_EDIT_PAGEUP                  0x00010059L
 
 //
 // MessageId: CMD_EDIT_HOMEEXTEND
 //
 // MessageText:
 //
-//  Extend to Start of Document\nExtend the selection to the start of the document.
+//  Extend to Start of Document%nExtend the selection to the start of the document.%0
 //
-#define CMD_EDIT_HOMEEXTEND              0x00010056L
+#define CMD_EDIT_HOMEEXTEND              0x0001005AL
 
 //
 // MessageId: CMD_EDIT_ENDEXTEND
 //
 // MessageText:
 //
-//  Extend to End of Document\nExtend the selection to the end of the document.
+//  Extend to End of Document%nExtend the selection to the end of the document.%0
 //
-#define CMD_EDIT_ENDEXTEND               0x00010057L
+#define CMD_EDIT_ENDEXTEND               0x0001005BL
 
 //
 // MessageId: CMD_EDIT_LINEHOMEEXTEND
 //
 // MessageText:
 //
-//  Extend to Start of Line\nExtend the selection to the start of the line.
+//  Extend to Start of Line%nExtend the selection to the start of the line.%0
 //
-#define CMD_EDIT_LINEHOMEEXTEND          0x00010058L
+#define CMD_EDIT_LINEHOMEEXTEND          0x0001005CL
 
 //
 // MessageId: CMD_EDIT_LINEENDEXTEND
 //
 // MessageText:
 //
-//  Extend to End of Line\nExtend the selection to the end of the line.
+//  Extend to End of Line%nExtend the selection to the end of the line.%0
 //
-#define CMD_EDIT_LINEENDEXTEND           0x00010059L
+#define CMD_EDIT_LINEENDEXTEND           0x0001005DL
 
 //
-// MessageId: CMD_EDIT_CHARNEXT
+// MessageId: CMD_EDIT_CHARNEXTEXTEND
 //
 // MessageText:
 //
-//  Extend to Next Character\nExtend the selection to the next character.
+//  Extend to Next Character%nExtend the selection to the next character.%0
 //
-#define CMD_EDIT_CHARNEXT                0x0001005AL
+#define CMD_EDIT_CHARNEXTEXTEND          0x0001005EL
 
 //
-// MessageId: CMD_EDIT_CHARPREV
+// MessageId: CMD_EDIT_CHARPREVEXTEND
 //
 // MessageText:
 //
-//  Extend to Previous Character\nExtend the selection to the previous character.
+//  Extend to Previous Character%nExtend the selection to the previous character.%0
 //
-#define CMD_EDIT_CHARPREV                0x0001005BL
+#define CMD_EDIT_CHARPREVEXTEND          0x0001005FL
 
 //
 // MessageId: CMD_EDIT_WORDENDNEXTEXTEND
 //
 // MessageText:
 //
-//  Extend to Next Word End\nExtend the selection to the next word end.
+//  Extend to Next Word End%nExtend the selection to the next word end.%0
 //
-#define CMD_EDIT_WORDENDNEXTEXTEND       0x0001005CL
+#define CMD_EDIT_WORDENDNEXTEXTEND       0x00010060L
 
 //
 // MessageId: CMD_EDIT_WORDENDPREVEXTEND
 //
 // MessageText:
 //
-//  Extend to Previous Word End\nExtend the selection to the previous word end.
+//  Extend to Previous Word End%nExtend the selection to the previous word end.%0
 //
-#define CMD_EDIT_WORDENDPREVEXTEND       0x0001005DL
+#define CMD_EDIT_WORDENDPREVEXTEND       0x00010061L
 
 //
 // MessageId: CMD_EDIT_WORDNEXTEXTEND
 //
 // MessageText:
 //
-//  Extend to Next Word\nExtend the selection to the next word.
+//  Extend to Next Word%nExtend the selection to the next word.%0
 //
-#define CMD_EDIT_WORDNEXTEXTEND          0x0001005EL
+#define CMD_EDIT_WORDNEXTEXTEND          0x00010062L
 
 //
 // MessageId: CMD_EDIT_WORDPREVEXTEND
 //
 // MessageText:
 //
-//  Extend to Previous Word\nExtend the selection to the previous word.
+//  Extend to Previous Word%nExtend the selection to the previous word.%0
 //
-#define CMD_EDIT_WORDPREVEXTEND          0x0001005FL
+#define CMD_EDIT_WORDPREVEXTEND          0x00010063L
 
 //
 // MessageId: CMD_EDIT_LINEDOWNEXTEND
 //
 // MessageText:
 //
-//  Extend to Next Line\nExtend the selection to the next line.
+//  Extend to Next Line%nExtend the selection to the next line.%0
 //
-#define CMD_EDIT_LINEDOWNEXTEND          0x00010060L
+#define CMD_EDIT_LINEDOWNEXTEND          0x00010064L
 
 //
 // MessageId: CMD_EDIT_LINEUPEXTEND
 //
 // MessageText:
 //
-//  Extend to Previous Line\nExtend the selection to the previous line.
+//  Extend to Previous Line%nExtend the selection to the previous line.%0
 //
-#define CMD_EDIT_LINEUPEXTEND            0x00010061L
+#define CMD_EDIT_LINEUPEXTEND            0x00010065L
 
 //
 // MessageId: CMD_EDIT_PAGEDOWNEXTEND
 //
 // MessageText:
 //
-//  Extend to Next Page\nExtend the selection to the next page.
+//  Extend to Next Page%nExtend the selection to the next page.%0
 //
-#define CMD_EDIT_PAGEDOWNEXTEND          0x00010062L
+#define CMD_EDIT_PAGEDOWNEXTEND          0x00010066L
 
 //
 // MessageId: CMD_EDIT_PAGEUPEXTEND
 //
 // MessageText:
 //
-//  Extend to Previous Page\nExtend the selection to the previous page.
+//  Extend to Previous Page%nExtend the selection to the previous page.%0
 //
-#define CMD_EDIT_PAGEUPEXTEND            0x00010063L
+#define CMD_EDIT_PAGEUPEXTEND            0x00010067L
 
 //
 // MessageId: CMD_EDIT_SELECTALL
 //
 // MessageText:
 //
-//  Select &All\nSelect the entire document.
+//  Select &All%nSelect the entire document.%0
 //
-#define CMD_EDIT_SELECTALL               0x00010064L
+#define CMD_EDIT_SELECTALL               0x00010068L
 
 //
 // MessageId: CMD_EDIT_SELECTCURRENTWORD
 //
 // MessageText:
 //
-//  Select Current Word\nSelect the current word.
+//  Select Current Word%nSelect the current word.%0
 //
-#define CMD_EDIT_SELECTCURRENTWORD       0x00010065L
+#define CMD_EDIT_SELECTCURRENTWORD       0x00010069L
 
 //
 // MessageId: CMD_EDIT_CANCELSELECTION
 //
 // MessageText:
 //
-//  Cancel Selection\nCancel the selection.
+//  Cancel Selection%nCancel the selection.%0
 //
-#define CMD_EDIT_CANCELSELECTION         0x00010066L
+#define CMD_EDIT_CANCELSELECTION         0x0001006AL
 
 //
 // MessageId: CMD_EDIT_SCROLLHOME
 //
 // MessageText:
 //
-//  Scroll to Start\nScroll the window to the top.
+//  Scroll to Start%nScroll the window to the top.%0
 //
-#define CMD_EDIT_SCROLLHOME              0x00010067L
+#define CMD_EDIT_SCROLLHOME              0x0001006BL
 
 //
 // MessageId: CMD_EDIT_SCROLLEND
 //
 // MessageText:
 //
-//  Scroll to End\nScroll the window to the bottom.
+//  Scroll to End%nScroll the window to the bottom.%0
 //
-#define CMD_EDIT_SCROLLEND               0x00010068L
+#define CMD_EDIT_SCROLLEND               0x0001006CL
 
 //
 // MessageId: CMD_EDIT_SCROLLLINEDOWN
 //
 // MessageText:
 //
-//  Scroll Down\nScroll the window one line down.
+//  Scroll Down%nScroll the window one line down.%0
 //
-#define CMD_EDIT_SCROLLLINEDOWN          0x00010069L
+#define CMD_EDIT_SCROLLLINEDOWN          0x0001006DL
 
 //
 // MessageId: CMD_EDIT_SCROLLLINEUP
 //
 // MessageText:
 //
-//  Scroll Up\nScroll the window one line up.
+//  Scroll Up%nScroll the window one line up.%0
 //
-#define CMD_EDIT_SCROLLLINEUP            0x0001006AL
+#define CMD_EDIT_SCROLLLINEUP            0x0001006EL
 
 //
 // MessageId: CMD_EDIT_SCROLLPAGEDOWN
 //
 // MessageText:
 //
-//  Scroll Page Down\nScroll the window one page down.
+//  Scroll Page Down%nScroll the window one page down.%0
 //
-#define CMD_EDIT_SCROLLPAGEDOWN          0x0001006BL
+#define CMD_EDIT_SCROLLPAGEDOWN          0x0001006FL
 
 //
 // MessageId: CMD_EDIT_SCROLLPAGEUP
 //
 // MessageText:
 //
-//  Scroll Page Up\nScroll the window one page up.
+//  Scroll Page Up%nScroll the window one page up.%0
 //
-#define CMD_EDIT_SCROLLPAGEUP            0x0001006CL
+#define CMD_EDIT_SCROLLPAGEUP            0x00010070L
 
 //
 // MessageId: CMD_SEARCH_TOP
 //
 // MessageText:
 //
-//  &Search
+//  &Search%0
 //
-#define CMD_SEARCH_TOP                   0x0001006DL
+#define CMD_SEARCH_TOP                   0x00010071L
 
 //
 // MessageId: CMD_SEARCH_BOOKMARKS
 //
 // MessageText:
 //
-//  &Bookmarks
+//  &Bookmarks%0
 //
-#define CMD_SEARCH_BOOKMARKS             0x0001006EL
+#define CMD_SEARCH_BOOKMARKS             0x00010072L
 
 //
 // MessageId: CMD_SEARCH_FIND
 //
 // MessageText:
 //
-//  &Find and Replace...\nShow [Search and Replace] dialog.
+//  &Find and Replace...%nShow [Search and Replace] dialog.%0
 //
-#define CMD_SEARCH_FIND                  0x0001006FL
+#define CMD_SEARCH_FIND                  0x00010073L
 
 //
 // MessageId: CMD_SEARCH_FINDNEXT
 //
 // MessageText:
 //
-//  Find &Next\nSearch next match.
+//  Find &Next%nSearch next match.%0
 //
-#define CMD_SEARCH_FINDNEXT              0x00010070L
+#define CMD_SEARCH_FINDNEXT              0x00010074L
 
 //
 // MessageId: CMD_SEARCH_FINDPREV
 //
 // MessageText:
 //
-//  Find &Previous\nSearch previous match.
+//  Find &Previous%nSearch previous match.%0
 //
-#define CMD_SEARCH_FINDPREV              0x00010071L
+#define CMD_SEARCH_FINDPREV              0x00010075L
 
 //
 // MessageId: CMD_SEARCH_REPLACEALLINTERACTIVE
 //
 // MessageText:
 //
-//  Replace and Next\nReplace the selection and search next.
+//  Replace and Next%nReplace the selection and search next.%0
 //
-#define CMD_SEARCH_REPLACEALLINTERACTIVE 0x00010072L
+#define CMD_SEARCH_REPLACEALLINTERACTIVE 0x00010076L
 
 //
 // MessageId: CMD_SEARCH_REPLACEALL
 //
 // MessageText:
 //
-//  Replace All\nReplace all matches.
+//  Replace All%nReplace all matches.%0
 //
-#define CMD_SEARCH_REPLACEALL            0x00010073L
+#define CMD_SEARCH_REPLACEALL            0x00010077L
 
 //
 // MessageId: CMD_SEARCH_BOOKMARKALL
 //
 // MessageText:
 //
-//  Mark All\nSet bookmarks on all matched lines.
+//  Mark All%nSet bookmarks on all matched lines.%0
 //
-#define CMD_SEARCH_BOOKMARKALL           0x00010074L
+#define CMD_SEARCH_BOOKMARKALL           0x00010078L
 
 //
 // MessageId: CMD_SEARCH_REVOKEMARK
 //
 // MessageText:
 //
-//  Revo&ke Highlight\nRevoke match highlight.
+//  Revo&ke Highlight%nRevoke match highlight.%0
 //
-#define CMD_SEARCH_REVOKEMARK            0x00010075L
+#define CMD_SEARCH_REVOKEMARK            0x00010079L
 
 //
 // MessageId: CMD_SEARCH_GOTOLINE
 //
 // MessageText:
 //
-//  &Go to Line...\nGo to specified line.
+//  &Go to Line...%nGo to specified line.%0
 //
-#define CMD_SEARCH_GOTOLINE              0x00010076L
+#define CMD_SEARCH_GOTOLINE              0x0001007AL
 
 //
 // MessageId: CMD_SEARCH_TOGGLEBOOKMARK
 //
 // MessageText:
 //
-//  T&oggle Bookmark\nSet or remove a bookmark on current line.
+//  T&oggle Bookmark%nSet or remove a bookmark on current line.%0
 //
-#define CMD_SEARCH_TOGGLEBOOKMARK        0x00010077L
+#define CMD_SEARCH_TOGGLEBOOKMARK        0x0001007BL
 
 //
 // MessageId: CMD_SEARCH_NEXTBOOKMARK
 //
 // MessageText:
 //
-//  Nex&t Bookmark\nGo to next bookmark.
+//  Nex&t Bookmark%nGo to next bookmark.%0
 //
-#define CMD_SEARCH_NEXTBOOKMARK          0x00010078L
+#define CMD_SEARCH_NEXTBOOKMARK          0x0001007CL
 
 //
 // MessageId: CMD_SEARCH_PREVBOOKMARK
 //
 // MessageText:
 //
-//  Pre&vious Bookmark\nGo to previous bookmark.
+//  Pre&vious Bookmark%nGo to previous bookmark.%0
 //
-#define CMD_SEARCH_PREVBOOKMARK          0x00010079L
+#define CMD_SEARCH_PREVBOOKMARK          0x0001007DL
 
 //
 // MessageId: CMD_SEARCH_CLEARBOOKMARKS
 //
 // MessageText:
 //
-//  &Clear All Bookmarks\nRemove all bookmarks in the document.
+//  &Clear All Bookmarks%nRemove all bookmarks in the document.%0
 //
-#define CMD_SEARCH_CLEARBOOKMARKS        0x0001007AL
+#define CMD_SEARCH_CLEARBOOKMARKS        0x0001007EL
 
 //
 // MessageId: CMD_SEARCH_MANAGEBOOKMARKS
 //
 // MessageText:
 //
-//  Manage &Bookmarks...\nManage all bookmarks.
+//  Manage &Bookmarks...%nManage all bookmarks.%0
 //
-#define CMD_SEARCH_MANAGEBOOKMARKS       0x0001007BL
+#define CMD_SEARCH_MANAGEBOOKMARKS       0x0001007FL
 
 //
 // MessageId: CMD_SEARCH_GOTOMATCHBRACKET
 //
 // MessageText:
 //
-//  Go to &Match Brace\nGo to the match brace.
+//  Go to &Match Brace%nGo to the match brace.%0
 //
-#define CMD_SEARCH_GOTOMATCHBRACKET      0x0001007CL
+#define CMD_SEARCH_GOTOMATCHBRACKET      0x00010080L
 
 //
 // MessageId: CMD_SEARCH_EXTENDTOMATCHBRACKET
 //
 // MessageText:
 //
-//  E&xtend Match Brace\nExtend the selection to the match brace.
+//  E&xtend Match Brace%nExtend the selection to the match brace.%0
 //
-#define CMD_SEARCH_EXTENDTOMATCHBRACKET  0x0001007DL
+#define CMD_SEARCH_EXTENDTOMATCHBRACKET  0x00010081L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCH
 //
 // MessageText:
 //
-//  &Incremental Search\nStart incremental search.
+//  &Incremental Search%nStart incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCH     0x0001007EL
+#define CMD_SEARCH_INCREMENTALSEARCH     0x00010082L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCHR
 //
 // MessageText:
 //
-//  &Reverse Incremental Search\nStart reverse incremental search.
+//  &Reverse Incremental Search%nStart reverse incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCHR    0x0001007FL
+#define CMD_SEARCH_INCREMENTALSEARCHR    0x00010083L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCHRF
 //
 // MessageText:
 //
-//  R&egular Expression Incremental Search\nStart regular expression incremental search.
+//  R&egular Expression Incremental Search%nStart regular expression incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCHRF   0x00010080L
+#define CMD_SEARCH_INCREMENTALSEARCHRF   0x00010084L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCHRR
 //
 // MessageText:
 //
-//  Reverse Regular Expression Incremental Search\nStart reverse regular expression incremental search.
+//  Reverse Regular Expression Incremental Search%nStart reverse regular expression incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCHRR   0x00010081L
+#define CMD_SEARCH_INCREMENTALSEARCHRR   0x00010085L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCHMF
 //
 // MessageText:
 //
-//  &Migemo Incremental Search\nStart Migemo incremental search.
+//  &Migemo Incremental Search%nStart Migemo incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCHMF   0x00010082L
+#define CMD_SEARCH_INCREMENTALSEARCHMF   0x00010086L
 
 //
 // MessageId: CMD_SEARCH_INCREMENTALSEARCHMR
 //
 // MessageText:
 //
-//  Reverse Migem&o Incremental Search\nStart reverse Migemo incremental search.
+//  Reverse Migem&o Incremental Search%nStart reverse Migemo incremental search.%0
 //
-#define CMD_SEARCH_INCREMENTALSEARCHMR   0x00010083L
+#define CMD_SEARCH_INCREMENTALSEARCHMR   0x00010087L
 
 //
 // MessageId: CMD_SEARCH_FINDFILES
 //
 // MessageText:
 //
-//  Find Files...\nFind files with the given pattern.
+//  Find Files...%nFind files with the given pattern.%0
 //
-#define CMD_SEARCH_FINDFILES             0x00010084L
+#define CMD_SEARCH_FINDFILES             0x00010088L
 
 //
 // MessageId: CMD_SEARCH_SEARCHMULTIPLEFILES
 //
 // MessageText:
 //
-//  Search in Files...\nSearch pattern in multiple files.
+//  Search in Files...%nSearch pattern in multiple files.%0
 //
-#define CMD_SEARCH_SEARCHMULTIPLEFILES   0x00010085L
+#define CMD_SEARCH_SEARCHMULTIPLEFILES   0x00010089L
 
 //
 // MessageId: CMD_SEARCH_REPLACEMULTIPLEFILES
 //
 // MessageText:
 //
-//  Replace in Files...\nReplace text in multiple files.
+//  Replace in Files...%nReplace text in multiple files.%0
 //
-#define CMD_SEARCH_REPLACEMULTIPLEFILES  0x00010086L
+#define CMD_SEARCH_REPLACEMULTIPLEFILES  0x0001008AL
 
 //
 // MessageId: CMD_WINDOW_TOP
 //
 // MessageText:
 //
-//  &Window
+//  &Window%0
 //
-#define CMD_WINDOW_TOP                   0x00010087L
+#define CMD_WINDOW_TOP                   0x0001008BL
 
 //
 // MessageId: CMD_VIEW_TOP
 //
 // MessageText:
 //
-//  &View
+//  &View%0
 //
-#define CMD_VIEW_TOP                     0x00010088L
+#define CMD_VIEW_TOP                     0x0001008CL
 
 //
 // MessageId: CMD_VIEW_BUFFERS
 //
 // MessageText:
 //
-//  Bu&ffers
+//  Bu&ffers%0
 //
-#define CMD_VIEW_BUFFERS                 0x00010089L
+#define CMD_VIEW_BUFFERS                 0x0001008DL
 
 //
 // MessageId: CMD_VIEW_TOOLBAR
 //
 // MessageText:
 //
-//  &Toolbar\nShow or hide the toolbar.
+//  &Toolbar%nShow or hide the toolbar.%0
 //
-#define CMD_VIEW_TOOLBAR                 0x0001008AL
+#define CMD_VIEW_TOOLBAR                 0x0001008EL
 
 //
 // MessageId: CMD_VIEW_STATUSBAR
 //
 // MessageText:
 //
-//  &Status Bar\nShow or hide the status bar.
+//  &Status Bar%nShow or hide the status bar.%0
 //
-#define CMD_VIEW_STATUSBAR               0x0001008BL
+#define CMD_VIEW_STATUSBAR               0x0001008FL
 
 //
 // MessageId: CMD_VIEW_WRAPNO
 //
 // MessageText:
 //
-//  N&o Wrap\nDo not wrap lines.
+//  N&o Wrap%nDo not wrap lines.%0
 //
-#define CMD_VIEW_WRAPNO                  0x0001008CL
+#define CMD_VIEW_WRAPNO                  0x00010090L
 
 //
 // MessageId: CMD_VIEW_WRAPBYSPECIFIEDWIDTH
 //
 // MessageText:
 //
-//  Wrap by Sp&ecified Width(&E)\nWrap lines at specified position.
+//  Wrap by Sp&ecified Width(&E)%nWrap lines at specified position.%0
 //
-#define CMD_VIEW_WRAPBYSPECIFIEDWIDTH    0x0001008DL
+#define CMD_VIEW_WRAPBYSPECIFIEDWIDTH    0x00010091L
 
 //
 // MessageId: CMD_VIEW_WRAPBYWINDOWWIDTH
 //
 // MessageText:
 //
-//  Wrap by &Window\nWrap lines at the end of window.
+//  Wrap by &Window%nWrap lines at the end of window.%0
 //
-#define CMD_VIEW_WRAPBYWINDOWWIDTH       0x0001008EL
+#define CMD_VIEW_WRAPBYWINDOWWIDTH       0x00010092L
 
 //
 // MessageId: CMD_VIEW_REFRESH
 //
 // MessageText:
 //
-//  &Refresh\nRefresh the window.
+//  &Refresh%nRefresh the window.%0
 //
-#define CMD_VIEW_REFRESH                 0x0001008FL
+#define CMD_VIEW_REFRESH                 0x00010093L
 
 //
 // MessageId: CMD_VIEW_NEXTBUFFER
 //
 // MessageText:
 //
-//  &Next Buffer\nShow next buffer.
+//  &Next Buffer%nShow next buffer.%0
 //
-#define CMD_VIEW_NEXTBUFFER              0x00010090L
+#define CMD_VIEW_NEXTBUFFER              0x00010094L
 
 //
 // MessageId: CMD_VIEW_PREVBUFFER
 //
 // MessageText:
 //
-//  &Previous Buffer\nShow previous buffer.
+//  &Previous Buffer%nShow previous buffer.%0
 //
-#define CMD_VIEW_PREVBUFFER              0x00010091L
+#define CMD_VIEW_PREVBUFFER              0x00010095L
 
 //
 // MessageId: CMD_VIEW_BUFFERBAR
 //
 // MessageText:
 //
-//  &Buffer Bar\nShow or hide the buffer bar.
+//  &Buffer Bar%nShow or hide the buffer bar.%0
 //
-#define CMD_VIEW_BUFFERBAR               0x00010092L
+#define CMD_VIEW_BUFFERBAR               0x00010096L
 
 //
 // MessageId: CMD_WINDOW_SPLITNS
 //
 // MessageText:
 //
-//  Sp&lit Window\nSplit the window into up and bottom.
+//  Sp&lit Window%nSplit the window into up and bottom.%0
 //
-#define CMD_WINDOW_SPLITNS               0x00010093L
+#define CMD_WINDOW_SPLITNS               0x00010097L
 
 //
 // MessageId: CMD_WINDOW_SPLITWE
 //
 // MessageText:
 //
-//  Split Window Si&de-by-Side\nSplit the window into side-by-side.
+//  Split Window Si&de-by-Side%nSplit the window into side-by-side.%0
 //
-#define CMD_WINDOW_SPLITWE               0x00010094L
+#define CMD_WINDOW_SPLITWE               0x00010098L
 
 //
 // MessageId: CMD_WINDOW_UNSPLITACTIVE
 //
 // MessageText:
 //
-//  &Close Window\nClose active window.
+//  &Close Window%nClose active window.%0
 //
-#define CMD_WINDOW_UNSPLITACTIVE         0x00010095L
+#define CMD_WINDOW_UNSPLITACTIVE         0x00010099L
 
 //
 // MessageId: CMD_WINDOW_UNSPLITOTHERS
 //
 // MessageText:
 //
-//  Close Ot&her Windows\nClose all inactive windows.
+//  Close Ot&her Windows%nClose all inactive windows.%0
 //
-#define CMD_WINDOW_UNSPLITOTHERS         0x00010096L
+#define CMD_WINDOW_UNSPLITOTHERS         0x0001009AL
 
 //
 // MessageId: CMD_WINDOW_NEXTPANE
 //
 // MessageText:
 //
-//  Ne&xt Pane\nActivate next window.
+//  Ne&xt Pane%nActivate next window.%0
 //
-#define CMD_WINDOW_NEXTPANE              0x00010097L
+#define CMD_WINDOW_NEXTPANE              0x0001009BL
 
 //
 // MessageId: CMD_WINDOW_PREVPANE
 //
 // MessageText:
 //
-//  Pre&vious Pane\nActivate previous window.
+//  Pre&vious Pane%nActivate previous window.%0
 //
-#define CMD_WINDOW_PREVPANE              0x00010098L
+#define CMD_WINDOW_PREVPANE              0x0001009CL
 
 //
 // MessageId: CMD_WINDOW_TOPMOSTALWAYS
 //
 // MessageText:
 //
-//  &Always in Foreground\nShow the application window foreground always.
+//  &Always in Foreground%nShow the application window foreground always.%0
 //
-#define CMD_WINDOW_TOPMOSTALWAYS         0x00010099L
+#define CMD_WINDOW_TOPMOSTALWAYS         0x0001009DL
 
 //
 // MessageId: CMD_MACRO_TOP
 //
 // MessageText:
 //
-//  &Macros
+//  &Macros%0
 //
-#define CMD_MACRO_TOP                    0x0001009AL
+#define CMD_MACRO_TOP                    0x0001009EL
 
 //
 // MessageId: CMD_MACRO_SCRIPTS
 //
 // MessageText:
 //
-//  &Scripts
+//  &Scripts%0
 //
-#define CMD_MACRO_SCRIPTS                0x0001009BL
+#define CMD_MACRO_SCRIPTS                0x0001009FL
 
 //
 // MessageId: CMD_MACRO_DEFINE
 //
 // MessageText:
 //
-//  Start/End &Definition\nStart or end the keyboard macro definition.
+//  Start/End &Definition%nStart or end the keyboard macro definition.%0
 //
-#define CMD_MACRO_DEFINE                 0x0001009CL
+#define CMD_MACRO_DEFINE                 0x000100A0L
 
 //
 // MessageId: CMD_MACRO_EXECUTE
 //
 // MessageText:
 //
-//  E&xecute\nExecute the active keyboard macro.
+//  E&xecute%nExecute the active keyboard macro.%0
 //
-#define CMD_MACRO_EXECUTE                0x0001009DL
+#define CMD_MACRO_EXECUTE                0x000100A1L
 
 //
 // MessageId: CMD_MACRO_APPEND
 //
 // MessageText:
 //
-//  &Append\nAppend definition to the active keyboard macro.
+//  &Append%nAppend definition to the active keyboard macro.%0
 //
-#define CMD_MACRO_APPEND                 0x0001009EL
+#define CMD_MACRO_APPEND                 0x000100A2L
 
 //
 // MessageId: CMD_MACRO_PAUSERESTART
 //
 // MessageText:
 //
-//  &Pause/Restart\nPause or restart the keyboard macro definition.
+//  &Pause/Restart%nPause or restart the keyboard macro definition.%0
 //
-#define CMD_MACRO_PAUSERESTART           0x0001009FL
+#define CMD_MACRO_PAUSERESTART           0x000100A3L
 
 //
 // MessageId: CMD_MACRO_INSERTQUERY
 //
 // MessageText:
 //
-//  Insert &Query\nInsert an user prompt into the defining keyboard macro.
+//  Insert &Query%nInsert an user prompt into the defining keyboard macro.%0
 //
-#define CMD_MACRO_INSERTQUERY            0x000100A0L
+#define CMD_MACRO_INSERTQUERY            0x000100A4L
 
 //
 // MessageId: CMD_MACRO_ABORT
 //
 // MessageText:
 //
-//  A&bort\nAbort the keyboard macro definition.
+//  A&bort%nAbort the keyboard macro definition.%0
 //
-#define CMD_MACRO_ABORT                  0x000100A1L
+#define CMD_MACRO_ABORT                  0x000100A5L
 
 //
 // MessageId: CMD_MACRO_SAVEAS
 //
 // MessageText:
 //
-//  Sa&ve As...\nSave the active keyboard macro with name.
+//  Sa&ve As...%nSave the active keyboard macro with name.%0
 //
-#define CMD_MACRO_SAVEAS                 0x000100A2L
+#define CMD_MACRO_SAVEAS                 0x000100A6L
 
 //
 // MessageId: CMD_MACRO_LOAD
 //
 // MessageText:
 //
-//  &Load...\nLoad keyboard macro from a file.
+//  &Load...%nLoad keyboard macro from a file.%0
 //
-#define CMD_MACRO_LOAD                   0x000100A3L
+#define CMD_MACRO_LOAD                   0x000100A7L
 
 //
 // MessageId: CMD_TOOL_TOP
 //
 // MessageText:
 //
-//  &Tool
+//  &Tool%0
 //
-#define CMD_TOOL_TOP                     0x000100A4L
+#define CMD_TOOL_TOP                     0x000100A8L
 
 //
 // MessageId: CMD_TOOL_APPDOCTYPES
 //
 // MessageText:
 //
-//  &Apply Document Type
+//  &Apply Document Type%0
 //
-#define CMD_TOOL_APPDOCTYPES             0x000100A5L
+#define CMD_TOOL_APPDOCTYPES             0x000100A9L
 
 //
 // MessageId: CMD_TOOL_COMMONOPTION
 //
 // MessageText:
 //
-//  &Common Options...\nSet the options common to all document types.
+//  &Common Options...%nSet the options common to all document types.%0
 //
-#define CMD_TOOL_COMMONOPTION            0x000100A6L
+#define CMD_TOOL_COMMONOPTION            0x000100AAL
 
 //
 // MessageId: CMD_TOOL_DOCTYPEOPTION
 //
 // MessageText:
 //
-//  Document T&ype Options...\nSet the options specific to the active document type.
+//  Document T&ype Options...%nSet the options specific to the active document type.%0
 //
-#define CMD_TOOL_DOCTYPEOPTION           0x000100A7L
+#define CMD_TOOL_DOCTYPEOPTION           0x000100ABL
 
 //
 // MessageId: CMD_TOOL_FONT
 //
 // MessageText:
 //
-//  &Font...\nSet font settings.
+//  &Font...%nSet font settings.%0
 //
-#define CMD_TOOL_FONT                    0x000100A8L
+#define CMD_TOOL_FONT                    0x000100ACL
 
 //
 // MessageId: CMD_TOOL_EXECUTE
 //
 // MessageText:
 //
-//  &Execute\nExecute document type specific program.
+//  &Execute%nExecute document type specific program.%0
 //
-#define CMD_TOOL_EXECUTE                 0x000100A9L
+#define CMD_TOOL_EXECUTE                 0x000100ADL
 
 //
 // MessageId: CMD_TOOL_EXECUTECOMMAND
 //
 // MessageText:
 //
-//  E&xecute Command...\nExecute external command.
+//  E&xecute Command...%nExecute external command.%0
 //
-#define CMD_TOOL_EXECUTECOMMAND          0x000100AAL
+#define CMD_TOOL_EXECUTECOMMAND          0x000100AEL
 
 //
 // MessageId: CMD_HELP_TOP
 //
 // MessageText:
 //
-//  &Help
+//  &Help%0
 //
-#define CMD_HELP_TOP                     0x000100ABL
+#define CMD_HELP_TOP                     0x000100AFL
 
 //
 // MessageId: CMD_HELP_ABOUT
 //
 // MessageText:
 //
-//  &About\nDisplay information and version of Alpha.
+//  &About%nDisplay information and version of Alpha.%0
 //
-#define CMD_HELP_ABOUT                   0x000100ACL
+#define CMD_HELP_ABOUT                   0x000100B0L
+
+//
+// MessageId: CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION
+//
+// MessageText:
+//
+//  CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION
+//
+#define CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION 0x000100B1L
+
+//
+// MessageId: CMD_SPECIAL_ILLEGALKEYSTROKES
+//
+// MessageText:
+//
+//  CMD_SPECIAL_ILLEGALKEYSTROKES
+//
+#define CMD_SPECIAL_ILLEGALKEYSTROKES    0x000100B2L
+
+//
+// MessageId: CMD_SPECIAL_MRUSTART
+//
+// MessageText:
+//
+//  CMD_SPECIAL_MRUSTART
+//
+#define CMD_SPECIAL_MRUSTART             0x000100B3L
+
+//
+// MessageId: CMD_SPECIAL_MRUEND
+//
+// MessageText:
+//
+//  CMD_SPECIAL_MRUEND
+//
+#define CMD_SPECIAL_MRUEND               0x0001049BL
+
+//
+// MessageId: CMD_SPECIAL_BUFFERSSTART
+//
+// MessageText:
+//
+//  CMD_SPECIAL_BUFFERSSTART
+//
+#define CMD_SPECIAL_BUFFERSSTART         0x0001049CL
+
+//
+// MessageId: CMD_SPECIAL_BUFFERSEND
+//
+// MessageText:
+//
+//  CMD_SPECIAL_BUFFERSEND
+//
+#define CMD_SPECIAL_BUFFERSEND           0x00010884L
+
+//
+// MessageId: CMD_SPECIAL_END
+//
+// MessageText:
+//
+//  CMD_SPECIAL_END
+//
+#define CMD_SPECIAL_END                  0x00010885L
 
 // encoding names
+//
+// MessageId: MSGID_ENCODING_START
+//
+// MessageText:
+//
+//  MSGID_ENCODING_START
+//
+#define MSGID_ENCODING_START             0x00020000L
+
 //
 // MessageId: 0x00020025L (No symbolic name defined)
 //
 // MessageText:
 //
-//  US-Canada (IBM EBCDIC)
+//  US-Canada (IBM EBCDIC)%0
 //
 
 
@@ -2514,7 +2630,7 @@
 //
 // MessageText:
 //
-//  United States (ibm-437)
+//  United States (ibm-437)%0
 //
 
 
@@ -2523,7 +2639,7 @@
 //
 // MessageText:
 //
-//  International (IBM EBCDIC)
+//  International (IBM EBCDIC)%0
 //
 
 
@@ -2532,7 +2648,7 @@
 //
 // MessageText:
 //
-//  Arabic (ASMO)
+//  Arabic (ASMO)%0
 //
 
 
@@ -2541,7 +2657,7 @@
 //
 // MessageText:
 //
-//  Arabic (ASMO 449+, BCON V4)
+//  Arabic (ASMO 449+, BCON V4)%0
 //
 
 
@@ -2550,7 +2666,7 @@
 //
 // MessageText:
 //
-//  Arabic (Transparent Arabic)
+//  Arabic (Transparent Arabic)%0
 //
 
 
@@ -2559,7 +2675,7 @@
 //
 // MessageText:
 //
-//  Arabic (Transparent ASMO)
+//  Arabic (Transparent ASMO)%0
 //
 
 
@@ -2568,7 +2684,7 @@
 //
 // MessageText:
 //
-//  Greek (437G, ibm-737)
+//  Greek (437G, ibm-737)%0
 //
 
 
@@ -2577,7 +2693,7 @@
 //
 // MessageText:
 //
-//  Baltic (ibm-775)
+//  Baltic (ibm-775)%0
 //
 
 
@@ -2586,7 +2702,7 @@
 //
 // MessageText:
 //
-//  Western European (ibm-850)
+//  Western European (ibm-850)%0
 //
 
 
@@ -2595,7 +2711,7 @@
 //
 // MessageText:
 //
-//  Central European (ibm-852)
+//  Central European (ibm-852)%0
 //
 
 
@@ -2604,7 +2720,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (ibm-855)
+//  Cyrillic (ibm-855)%0
 //
 
 
@@ -2613,7 +2729,7 @@
 //
 // MessageText:
 //
-//  Turkish (ibm-857)
+//  Turkish (ibm-857)%0
 //
 
 
@@ -2622,7 +2738,7 @@
 //
 // MessageText:
 //
-//  Multilingual Latin 1 + European (ibm-858)
+//  Multilingual Latin 1 + European (ibm-858)%0
 //
 
 
@@ -2631,7 +2747,7 @@
 //
 // MessageText:
 //
-//  Portuguese (ibm-860)
+//  Portuguese (ibm-860)%0
 //
 
 
@@ -2640,7 +2756,7 @@
 //
 // MessageText:
 //
-//  Icelandic (ibm-861)
+//  Icelandic (ibm-861)%0
 //
 
 
@@ -2649,7 +2765,7 @@
 //
 // MessageText:
 //
-//  Hebrew (ibm-862)
+//  Hebrew (ibm-862)%0
 //
 
 
@@ -2658,7 +2774,7 @@
 //
 // MessageText:
 //
-//  Canada-France (ibm-863)
+//  Canada-France (ibm-863)%0
 //
 
 
@@ -2667,7 +2783,7 @@
 //
 // MessageText:
 //
-//  Arabic (ibm-864)
+//  Arabic (ibm-864)%0
 //
 
 
@@ -2676,7 +2792,7 @@
 //
 // MessageText:
 //
-//  Northern European (ibm-865)
+//  Northern European (ibm-865)%0
 //
 
 
@@ -2685,7 +2801,7 @@
 //
 // MessageText:
 //
-//  Russian (ibm-866)
+//  Russian (ibm-866)%0
 //
 
 
@@ -2694,7 +2810,7 @@
 //
 // MessageText:
 //
-//  Modern Greek (ibm-869)
+//  Modern Greek (ibm-869)%0
 //
 
 
@@ -2703,7 +2819,7 @@
 //
 // MessageText:
 //
-//  Multilingual-RORCE (Latin-2, IBM EBCDIC)
+//  Multilingual-RORCE (Latin-2, IBM EBCDIC)%0
 //
 
 
@@ -2712,7 +2828,7 @@
 //
 // MessageText:
 //
-//  Thai (ibm-874)
+//  Thai (ibm-874)%0
 //
 
 
@@ -2721,7 +2837,7 @@
 //
 // MessageText:
 //
-//  Modern Greek (IBM EBCDIC)
+//  Modern Greek (IBM EBCDIC)%0
 //
 
 
@@ -2730,7 +2846,7 @@
 //
 // MessageText:
 //
-//  Japanese (Shift JIS, windows-932)
+//  Japanese (Shift JIS, windows-932)%0
 //
 
 
@@ -2739,7 +2855,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (GBK, windows-936)
+//  Simplified Chinese (GBK, windows-936)%0
 //
 
 
@@ -2748,7 +2864,7 @@
 //
 // MessageText:
 //
-//  Korean (windows-949)
+//  Korean (windows-949)%0
 //
 
 
@@ -2757,7 +2873,7 @@
 //
 // MessageText:
 //
-//  Traditional Chinese (Big5, windows-950)
+//  Traditional Chinese (Big5, windows-950)%0
 //
 
 
@@ -2766,7 +2882,7 @@
 //
 // MessageText:
 //
-//  Turkish (IBM EBCDIC)
+//  Turkish (IBM EBCDIC)%0
 //
 
 
@@ -2775,7 +2891,7 @@
 //
 // MessageText:
 //
-//  Latin-1/Open System (IBM EBCDIC)
+//  Latin-1/Open System (IBM EBCDIC)%0
 //
 
 
@@ -2784,7 +2900,7 @@
 //
 // MessageText:
 //
-//  US-Canada (37 + Euro, IBM EBCDIC)
+//  US-Canada (37 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2793,7 +2909,7 @@
 //
 // MessageText:
 //
-//  Germany (20273 + Euro, IBM EBCDIC)
+//  Germany (20273 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2802,7 +2918,7 @@
 //
 // MessageText:
 //
-//  Denmark-Norway (20277 + Euro, IBM EBCDIC)
+//  Denmark-Norway (20277 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2811,7 +2927,7 @@
 //
 // MessageText:
 //
-//  Finland-Sweden (20278 + Euro, IBM EBCDIC)
+//  Finland-Sweden (20278 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2820,7 +2936,7 @@
 //
 // MessageText:
 //
-//  Italy (20280 + Euro, IBM EBCDIC)
+//  Italy (20280 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2829,7 +2945,7 @@
 //
 // MessageText:
 //
-//  Latin America-Spain (20284 + Euro, IBM EBCDIC)
+//  Latin America-Spain (20284 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2838,7 +2954,7 @@
 //
 // MessageText:
 //
-//  UK (20285 + Euro, IBM EBCDIC)
+//  UK (20285 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2847,7 +2963,7 @@
 //
 // MessageText:
 //
-//  France (20297 + Euro, IBM EBCDIC)
+//  France (20297 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2856,7 +2972,7 @@
 //
 // MessageText:
 //
-//  International (500 + Euro, IBM EBCDIC)
+//  International (500 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2865,7 +2981,7 @@
 //
 // MessageText:
 //
-//  Icelandic (20871 + Euro, IBM EBCDIC)
+//  Icelandic (20871 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -2874,7 +2990,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-16)
+//  Unicode (UTF-16)%0
 //
 
 
@@ -2883,7 +2999,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-16 big endian)
+//  Unicode (UTF-16 big endian)%0
 //
 
 
@@ -2892,7 +3008,7 @@
 //
 // MessageText:
 //
-//  Central European (windows-1250)
+//  Central European (windows-1250)%0
 //
 
 
@@ -2901,7 +3017,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (windows-1251)
+//  Cyrillic (windows-1251)%0
 //
 
 
@@ -2910,7 +3026,7 @@
 //
 // MessageText:
 //
-//  Western European (windows-1252)
+//  Western European (windows-1252)%0
 //
 
 
@@ -2919,7 +3035,7 @@
 //
 // MessageText:
 //
-//  Greek (windows-1253)
+//  Greek (windows-1253)%0
 //
 
 
@@ -2928,7 +3044,7 @@
 //
 // MessageText:
 //
-//  Turkish (windows-1254)
+//  Turkish (windows-1254)%0
 //
 
 
@@ -2937,7 +3053,7 @@
 //
 // MessageText:
 //
-//  Hebrew (windows-1255)
+//  Hebrew (windows-1255)%0
 //
 
 
@@ -2946,7 +3062,7 @@
 //
 // MessageText:
 //
-//  Arabic (windows-1256)
+//  Arabic (windows-1256)%0
 //
 
 
@@ -2955,7 +3071,7 @@
 //
 // MessageText:
 //
-//  Baltic (windows-1257)
+//  Baltic (windows-1257)%0
 //
 
 
@@ -2964,7 +3080,7 @@
 //
 // MessageText:
 //
-//  Vietnamese (windows-1258)
+//  Vietnamese (windows-1258)%0
 //
 
 
@@ -2973,7 +3089,7 @@
 //
 // MessageText:
 //
-//  Korean (Johab)
+//  Korean (Johab)%0
 //
 
 
@@ -2982,7 +3098,7 @@
 //
 // MessageText:
 //
-//  Roman (Macintosh)
+//  Roman (Macintosh)%0
 //
 
 
@@ -2991,7 +3107,7 @@
 //
 // MessageText:
 //
-//  Japanese (Macintosh)
+//  Japanese (Macintosh)%0
 //
 
 
@@ -3000,7 +3116,7 @@
 //
 // MessageText:
 //
-//  Traditional Chinese (Macintosh)
+//  Traditional Chinese (Macintosh)%0
 //
 
 
@@ -3009,7 +3125,7 @@
 //
 // MessageText:
 //
-//  Korean (Macintosh)
+//  Korean (Macintosh)%0
 //
 
 
@@ -3018,7 +3134,7 @@
 //
 // MessageText:
 //
-//  Arabic (Macintosh)
+//  Arabic (Macintosh)%0
 //
 
 
@@ -3027,7 +3143,7 @@
 //
 // MessageText:
 //
-//  Hebrew (Macintosh)
+//  Hebrew (Macintosh)%0
 //
 
 
@@ -3036,7 +3152,7 @@
 //
 // MessageText:
 //
-//  Greek I (Macintosh)
+//  Greek I (Macintosh)%0
 //
 
 
@@ -3045,7 +3161,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (Macintosh)
+//  Cyrillic (Macintosh)%0
 //
 
 
@@ -3054,7 +3170,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (GB2312, Macintosh)
+//  Simplified Chinese (GB2312, Macintosh)%0
 //
 
 
@@ -3063,7 +3179,7 @@
 //
 // MessageText:
 //
-//  Rumanian (Macintosh)
+//  Rumanian (Macintosh)%0
 //
 
 
@@ -3072,7 +3188,7 @@
 //
 // MessageText:
 //
-//  Ukrainian (Macintosh)
+//  Ukrainian (Macintosh)%0
 //
 
 
@@ -3081,7 +3197,7 @@
 //
 // MessageText:
 //
-//  Thai (Macintosh)
+//  Thai (Macintosh)%0
 //
 
 
@@ -3090,7 +3206,7 @@
 //
 // MessageText:
 //
-//  Central European (Macintosh)
+//  Central European (Macintosh)%0
 //
 
 
@@ -3099,7 +3215,7 @@
 //
 // MessageText:
 //
-//  Icelandic (Macintosh)
+//  Icelandic (Macintosh)%0
 //
 
 
@@ -3108,7 +3224,7 @@
 //
 // MessageText:
 //
-//  Turkish (Macintosh)
+//  Turkish (Macintosh)%0
 //
 
 
@@ -3117,7 +3233,7 @@
 //
 // MessageText:
 //
-//  Croatian (Macintosh)
+//  Croatian (Macintosh)%0
 //
 
 
@@ -3126,7 +3242,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-32)
+//  Unicode (UTF-32)%0
 //
 
 
@@ -3135,7 +3251,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-32 big endian)
+//  Unicode (UTF-32 big endian)%0
 //
 
 
@@ -3144,7 +3260,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (CNS)
+//  Taiwanese (CNS)%0
 //
 
 
@@ -3153,7 +3269,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (TCA)
+//  Taiwanese (TCA)%0
 //
 
 
@@ -3162,7 +3278,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (Eten)
+//  Taiwanese (Eten)%0
 //
 
 
@@ -3171,7 +3287,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (IBM5550)
+//  Taiwanese (IBM5550)%0
 //
 
 
@@ -3180,7 +3296,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (TeleText)
+//  Taiwanese (TeleText)%0
 //
 
 
@@ -3189,7 +3305,7 @@
 //
 // MessageText:
 //
-//  Taiwanese (Wang)
+//  Taiwanese (Wang)%0
 //
 
 
@@ -3198,7 +3314,7 @@
 //
 // MessageText:
 //
-//  IRV International Alphabets No.5 (IA5)
+//  IRV International Alphabets No.5 (IA5)%0
 //
 
 
@@ -3207,7 +3323,7 @@
 //
 // MessageText:
 //
-//  German (IA5)
+//  German (IA5)%0
 //
 
 
@@ -3216,7 +3332,7 @@
 //
 // MessageText:
 //
-//  Swedish (IA5)
+//  Swedish (IA5)%0
 //
 
 
@@ -3225,7 +3341,7 @@
 //
 // MessageText:
 //
-//  Norwegian (IA5)
+//  Norwegian (IA5)%0
 //
 
 
@@ -3234,7 +3350,7 @@
 //
 // MessageText:
 //
-//  US-ASCII
+//  US-ASCII%0
 //
 
 
@@ -3243,7 +3359,7 @@
 //
 // MessageText:
 //
-//  T.61
+//  T.61%0
 //
 
 
@@ -3252,7 +3368,7 @@
 //
 // MessageText:
 //
-//  Non-Spacing Accent (ISO 6937)
+//  Non-Spacing Accent (ISO 6937)%0
 //
 
 
@@ -3261,7 +3377,7 @@
 //
 // MessageText:
 //
-//  Germany (IBM EBCDIC)
+//  Germany (IBM EBCDIC)%0
 //
 
 
@@ -3270,7 +3386,7 @@
 //
 // MessageText:
 //
-//  Denmark-Norway (IBM EBCDIC)
+//  Denmark-Norway (IBM EBCDIC)%0
 //
 
 
@@ -3279,7 +3395,7 @@
 //
 // MessageText:
 //
-//  Finland-Sweden (IBM EBCDIC)
+//  Finland-Sweden (IBM EBCDIC)%0
 //
 
 
@@ -3288,7 +3404,7 @@
 //
 // MessageText:
 //
-//  Italy (IBM EBCDIC)
+//  Italy (IBM EBCDIC)%0
 //
 
 
@@ -3297,7 +3413,7 @@
 //
 // MessageText:
 //
-//  Latin American-Spain (IBM EBCDIC)
+//  Latin American-Spain (IBM EBCDIC)%0
 //
 
 
@@ -3306,7 +3422,7 @@
 //
 // MessageText:
 //
-//  UK (IBM EBCDIC)
+//  UK (IBM EBCDIC)%0
 //
 
 
@@ -3315,7 +3431,7 @@
 //
 // MessageText:
 //
-//  Japanese (Katakana, IBM EBCDIC)
+//  Japanese (Katakana, IBM EBCDIC)%0
 //
 
 
@@ -3324,7 +3440,7 @@
 //
 // MessageText:
 //
-//  France (IBM EBCDIC)
+//  France (IBM EBCDIC)%0
 //
 
 
@@ -3333,7 +3449,7 @@
 //
 // MessageText:
 //
-//  Arabic (IBM EBCDIC)
+//  Arabic (IBM EBCDIC)%0
 //
 
 
@@ -3342,7 +3458,7 @@
 //
 // MessageText:
 //
-//  Greek (IBM EBCDIC)
+//  Greek (IBM EBCDIC)%0
 //
 
 
@@ -3351,7 +3467,7 @@
 //
 // MessageText:
 //
-//  Hebrew (IBM EBCDIC)
+//  Hebrew (IBM EBCDIC)%0
 //
 
 
@@ -3360,7 +3476,7 @@
 //
 // MessageText:
 //
-//  Korean and Korean Extended (IBM EBCDIC)
+//  Korean and Korean Extended (IBM EBCDIC)%0
 //
 
 
@@ -3369,7 +3485,7 @@
 //
 // MessageText:
 //
-//  Thai (IBM EBCDIC)
+//  Thai (IBM EBCDIC)%0
 //
 
 
@@ -3378,7 +3494,7 @@
 //
 // MessageText:
 //
-//  Russian (KOI8)
+//  Russian (KOI8)%0
 //
 
 
@@ -3387,7 +3503,7 @@
 //
 // MessageText:
 //
-//  Icelandic (IBM EBCDIC)
+//  Icelandic (IBM EBCDIC)%0
 //
 
 
@@ -3396,7 +3512,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (Russian, IBM EBCDIC)
+//  Cyrillic (Russian, IBM EBCDIC)%0
 //
 
 
@@ -3405,7 +3521,7 @@
 //
 // MessageText:
 //
-//  Turkish (IBM EBCDIC)
+//  Turkish (IBM EBCDIC)%0
 //
 
 
@@ -3414,7 +3530,7 @@
 //
 // MessageText:
 //
-//  Latin-1/Open System (1047 + Euro, IBM EBCDIC)
+//  Latin-1/Open System (1047 + Euro, IBM EBCDIC)%0
 //
 
 
@@ -3423,7 +3539,7 @@
 //
 // MessageText:
 //
-//  Japanese (JIS X 0208-1990 & 0212-1990, windows-20932)
+//  Japanese (JIS X 0208-1990 & 0212-1990, windows-20932)%0
 //
 
 
@@ -3432,7 +3548,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (GB2312)
+//  Simplified Chinese (GB2312)%0
 //
 
 
@@ -3441,7 +3557,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (Serbian-Bulgarian, IBM EBCDIC)
+//  Cyrillic (Serbian-Bulgarian, IBM EBCDIC)%0
 //
 
 
@@ -3450,7 +3566,7 @@
 //
 // MessageText:
 //
-//  Ext Alpha Lowercase
+//  Ext Alpha Lowercase%0
 //
 
 
@@ -3459,7 +3575,7 @@
 //
 // MessageText:
 //
-//  Ukrainian (KOI8-U)
+//  Ukrainian (KOI8-U)%0
 //
 
 
@@ -3468,7 +3584,7 @@
 //
 // MessageText:
 //
-//  Western European (ISO-8859-1)
+//  Western European (ISO-8859-1)%0
 //
 
 
@@ -3477,7 +3593,7 @@
 //
 // MessageText:
 //
-//  Central European (ISO-8859-2)
+//  Central European (ISO-8859-2)%0
 //
 
 
@@ -3486,7 +3602,7 @@
 //
 // MessageText:
 //
-//  Southern European (ISO-8859-3)
+//  Southern European (ISO-8859-3)%0
 //
 
 
@@ -3495,7 +3611,7 @@
 //
 // MessageText:
 //
-//  Baltic (ISO-8859-4)
+//  Baltic (ISO-8859-4)%0
 //
 
 
@@ -3504,7 +3620,7 @@
 //
 // MessageText:
 //
-//  Cyrillic (ISO-8859-5)
+//  Cyrillic (ISO-8859-5)%0
 //
 
 
@@ -3513,7 +3629,7 @@
 //
 // MessageText:
 //
-//  Arabic (ISO-8859-6)
+//  Arabic (ISO-8859-6)%0
 //
 
 
@@ -3522,7 +3638,7 @@
 //
 // MessageText:
 //
-//  Greek (ISO-8859-7)
+//  Greek (ISO-8859-7)%0
 //
 
 
@@ -3531,7 +3647,7 @@
 //
 // MessageText:
 //
-//  Hebrew (ISO-8859-8-Visual)
+//  Hebrew (ISO-8859-8-Visual)%0
 //
 
 
@@ -3540,7 +3656,7 @@
 //
 // MessageText:
 //
-//  Turkish (ISO-8859-9)
+//  Turkish (ISO-8859-9)%0
 //
 
 
@@ -3549,7 +3665,7 @@
 //
 // MessageText:
 //
-//  Northern European (ISO-8859-10)
+//  Northern European (ISO-8859-10)%0
 //
 
 
@@ -3558,7 +3674,7 @@
 //
 // MessageText:
 //
-//  Thai (ISO-8859-11)
+//  Thai (ISO-8859-11)%0
 //
 
 
@@ -3567,7 +3683,7 @@
 //
 // MessageText:
 //
-//  Baltic (ISO-8859-13)
+//  Baltic (ISO-8859-13)%0
 //
 
 
@@ -3576,7 +3692,7 @@
 //
 // MessageText:
 //
-//  Keltic (ISO-8859-14)
+//  Keltic (ISO-8859-14)%0
 //
 
 
@@ -3585,7 +3701,7 @@
 //
 // MessageText:
 //
-//  Western European (ISO-8859-15)
+//  Western European (ISO-8859-15)%0
 //
 
 
@@ -3594,7 +3710,7 @@
 //
 // MessageText:
 //
-//  Central European (ISO-8859-16)
+//  Central European (ISO-8859-16)%0
 //
 
 
@@ -3603,7 +3719,7 @@
 //
 // MessageText:
 //
-//  Europa 3
+//  Europa 3%0
 //
 
 
@@ -3612,7 +3728,7 @@
 //
 // MessageText:
 //
-//  Hebrew (ISO-8859-8-Logical)
+//  Hebrew (ISO-8859-8-Logical)%0
 //
 
 
@@ -3621,7 +3737,7 @@
 //
 // MessageText:
 //
-//  Auto-Select
+//  Auto-Select%0
 //
 
 
@@ -3630,7 +3746,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP, windows-50220)
+//  Japanese (ISO-2022-JP, windows-50220)%0
 //
 
 
@@ -3639,7 +3755,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-Allow 1 byte Kana, windows-50221)
+//  Japanese (ISO-2022-JP-Allow 1 byte Kana, windows-50221)%0
 //
 
 
@@ -3648,7 +3764,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP, JIS X 0201-1989, windows-50222)
+//  Japanese (ISO-2022-JP, JIS X 0201-1989, windows-50222)%0
 //
 
 
@@ -3657,7 +3773,7 @@
 //
 // MessageText:
 //
-//  Korean (ISO-2022-KR)
+//  Korean (ISO-2022-KR)%0
 //
 
 
@@ -3666,7 +3782,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (ISO-2022-CN)
+//  Simplified Chinese (ISO-2022-CN)%0
 //
 
 
@@ -3675,7 +3791,7 @@
 //
 // MessageText:
 //
-//  Traditional Chinese (ISO-2022-CN)
+//  Traditional Chinese (ISO-2022-CN)%0
 //
 
 
@@ -3684,7 +3800,7 @@
 //
 // MessageText:
 //
-//  Japanese (Katakana Extended)
+//  Japanese (Katakana Extended)%0
 //
 
 
@@ -3693,7 +3809,7 @@
 //
 // MessageText:
 //
-//  Japanese + US-Canada
+//  Japanese + US-Canada%0
 //
 
 
@@ -3702,7 +3818,7 @@
 //
 // MessageText:
 //
-//  Japanese (Auto-Select)
+//  Japanese (Auto-Select)%0
 //
 
 
@@ -3711,7 +3827,7 @@
 //
 // MessageText:
 //
-//  Korean + Korean Extended
+//  Korean + Korean Extended%0
 //
 
 
@@ -3720,7 +3836,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese + Simplified Chinese Extended
+//  Simplified Chinese + Simplified Chinese Extended%0
 //
 
 
@@ -3729,7 +3845,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese
+//  Simplified Chinese%0
 //
 
 
@@ -3738,7 +3854,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese + US-Canada
+//  Simplified Chinese + US-Canada%0
 //
 
 
@@ -3747,7 +3863,7 @@
 //
 // MessageText:
 //
-//  Japanese + Japanese Latin Extended
+//  Japanese + Japanese Latin Extended%0
 //
 
 
@@ -3756,7 +3872,7 @@
 //
 // MessageText:
 //
-//  Korean (Auto-Select)
+//  Korean (Auto-Select)%0
 //
 
 
@@ -3765,7 +3881,7 @@
 //
 // MessageText:
 //
-//  Japanese (EUC, windows-51932)
+//  Japanese (EUC, windows-51932)%0
 //
 
 
@@ -3774,7 +3890,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (EUC, windows-51936)
+//  Simplified Chinese (EUC, windows-51936)%0
 //
 
 
@@ -3783,7 +3899,7 @@
 //
 // MessageText:
 //
-//  Korean (EUC, windows-51949)
+//  Korean (EUC, windows-51949)%0
 //
 
 
@@ -3792,7 +3908,7 @@
 //
 // MessageText:
 //
-//  Traditional Chinese (EUC, windows-51950)
+//  Traditional Chinese (EUC, windows-51950)%0
 //
 
 
@@ -3801,7 +3917,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (HZ-GB2312)
+//  Simplified Chinese (HZ-GB2312)%0
 //
 
 
@@ -3810,7 +3926,7 @@
 //
 // MessageText:
 //
-//  Simplified Chinese (GB18030)
+//  Simplified Chinese (GB18030)%0
 //
 
 
@@ -3819,7 +3935,7 @@
 //
 // MessageText:
 //
-//  Hindi (ISCII, Devanagari)
+//  Hindi (ISCII, Devanagari)%0
 //
 
 
@@ -3828,7 +3944,7 @@
 //
 // MessageText:
 //
-//  Bengali (ISCII)
+//  Bengali (ISCII)%0
 //
 
 
@@ -3837,7 +3953,7 @@
 //
 // MessageText:
 //
-//  Tamil (ISCII)
+//  Tamil (ISCII)%0
 //
 
 
@@ -3846,7 +3962,7 @@
 //
 // MessageText:
 //
-//  Telugu (ISCII)
+//  Telugu (ISCII)%0
 //
 
 
@@ -3855,7 +3971,7 @@
 //
 // MessageText:
 //
-//  Assamese (ISCII)
+//  Assamese (ISCII)%0
 //
 
 
@@ -3864,7 +3980,7 @@
 //
 // MessageText:
 //
-//  Oriya (ISCII)
+//  Oriya (ISCII)%0
 //
 
 
@@ -3873,7 +3989,7 @@
 //
 // MessageText:
 //
-//  Kannada (ISCII)
+//  Kannada (ISCII)%0
 //
 
 
@@ -3882,7 +3998,7 @@
 //
 // MessageText:
 //
-//  Malayalam (ISCII)
+//  Malayalam (ISCII)%0
 //
 
 
@@ -3891,7 +4007,7 @@
 //
 // MessageText:
 //
-//  Gujarathi (ISCII)
+//  Gujarathi (ISCII)%0
 //
 
 
@@ -3900,7 +4016,7 @@
 //
 // MessageText:
 //
-//  Panjabi (ISCII, Gurmukhi)
+//  Panjabi (ISCII, Gurmukhi)%0
 //
 
 
@@ -3909,7 +4025,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-7)
+//  Unicode (UTF-7)%0
 //
 
 
@@ -3918,17 +4034,26 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-8)
+//  Unicode (UTF-8)%0
 //
 
 
 // extended encoding names
 //
+// MessageId: MSGID_EXTENDED_ENCODING_START
+//
+// MessageText:
+//
+//  MSGID_EXTENDED_ENCODING_START
+//
+#define MSGID_EXTENDED_ENCODING_START    0x00030000L
+
+//
 // MessageId: 0x00032710L (No symbolic name defined)
 //
 // MessageText:
 //
-//  Auto-Select (System Language)
+//  Auto-Select (System Language)%0
 //
 
 
@@ -3937,7 +4062,7 @@
 //
 // MessageText:
 //
-//  Auto-Select (User Language)
+//  Auto-Select (User Language)%0
 //
 
 
@@ -3946,7 +4071,7 @@
 //
 // MessageText:
 //
-//  Unicode (Auto-Select)
+//  Unicode (Auto-Select)%0
 //
 
 
@@ -3955,7 +4080,7 @@
 //
 // MessageText:
 //
-//  Unicode (UTF-5)
+//  Unicode (UTF-5)%0
 //
 
 
@@ -3964,7 +4089,7 @@
 //
 // MessageText:
 //
-//  Armenian (Auto-Select)
+//  Armenian (Auto-Select)%0
 //
 
 
@@ -3973,7 +4098,7 @@
 //
 // MessageText:
 //
-//  Armenian (ARMSCII-7)
+//  Armenian (ARMSCII-7)%0
 //
 
 
@@ -3982,7 +4107,7 @@
 //
 // MessageText:
 //
-//  Armenian (ARMSCII-8)
+//  Armenian (ARMSCII-8)%0
 //
 
 
@@ -3991,7 +4116,7 @@
 //
 // MessageText:
 //
-//  Armenian (ARMSCII-8A)
+//  Armenian (ARMSCII-8A)%0
 //
 
 
@@ -4000,7 +4125,7 @@
 //
 // MessageText:
 //
-//  Vietnamese (Auto-Select)
+//  Vietnamese (Auto-Select)%0
 //
 
 
@@ -4009,7 +4134,7 @@
 //
 // MessageText:
 //
-//  Vietnamese (TCVN)
+//  Vietnamese (TCVN)%0
 //
 
 
@@ -4018,7 +4143,7 @@
 //
 // MessageText:
 //
-//  Vietnamese (VISCII)
+//  Vietnamese (VISCII)%0
 //
 
 
@@ -4027,7 +4152,7 @@
 //
 // MessageText:
 //
-//  Vietnamese (VPS)
+//  Vietnamese (VPS)%0
 //
 
 
@@ -4036,7 +4161,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP)
+//  Japanese (ISO-2022-JP)%0
 //
 
 
@@ -4045,7 +4170,7 @@
 //
 // MessageText:
 //
-//  Japanese (Shift JIS)
+//  Japanese (Shift JIS)%0
 //
 
 
@@ -4054,7 +4179,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-1)
+//  Japanese (ISO-2022-JP-1)%0
 //
 
 
@@ -4063,7 +4188,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-2)
+//  Japanese (ISO-2022-JP-2)%0
 //
 
 
@@ -4072,7 +4197,7 @@
 //
 // MessageText:
 //
-//  Japanese (EUC)
+//  Japanese (EUC)%0
 //
 
 
@@ -4081,7 +4206,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-2004)
+//  Japanese (ISO-2022-JP-2004)%0
 //
 
 
@@ -4090,7 +4215,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-2004-Strict)
+//  Japanese (ISO-2022-JP-2004-Strict)%0
 //
 
 
@@ -4099,7 +4224,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-2004-Compatible)
+//  Japanese (ISO-2022-JP-2004-Compatible)%0
 //
 
 
@@ -4108,7 +4233,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-3)
+//  Japanese (ISO-2022-JP-3)%0
 //
 
 
@@ -4117,7 +4242,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-3-Strict)
+//  Japanese (ISO-2022-JP-3-Strict)%0
 //
 
 
@@ -4126,7 +4251,7 @@
 //
 // MessageText:
 //
-//  Japanese (ISO-2022-JP-3-Compatible)
+//  Japanese (ISO-2022-JP-3-Compatible)%0
 //
 
 
@@ -4135,7 +4260,7 @@
 //
 // MessageText:
 //
-//  Japanese (Shift_JIS-2004)
+//  Japanese (Shift_JIS-2004)%0
 //
 
 
@@ -4144,7 +4269,7 @@
 //
 // MessageText:
 //
-//  Japanese (EUC-JIS-2004)
+//  Japanese (EUC-JIS-2004)%0
 //
 
 
@@ -4153,7 +4278,7 @@
 //
 // MessageText:
 //
-//  Multilingual (ISO-2022, 7bits)
+//  Multilingual (ISO-2022, 7bits)%0
 //
 
 
@@ -4162,7 +4287,7 @@
 //
 // MessageText:
 //
-//  Multilingual (ISO-2022, 7bits, SS2)
+//  Multilingual (ISO-2022, 7bits, SS2)%0
 //
 
 
@@ -4171,7 +4296,7 @@
 //
 // MessageText:
 //
-//  Multilingual (ISO-2022, 7bits, SI/SO)
+//  Multilingual (ISO-2022, 7bits, SI/SO)%0
 //
 
 
@@ -4180,7 +4305,7 @@
 //
 // MessageText:
 //
-//  Multilingual (ISO-2022, 8bits, SS2)
+//  Multilingual (ISO-2022, 8bits, SS2)%0
 //
 
 
@@ -4189,7 +4314,7 @@
 //
 // MessageText:
 //
-//  Binary
+//  Binary%0
 //
 
 
@@ -4198,7 +4323,7 @@
 //
 // MessageText:
 //
-//  NextSTEP
+//  NextSTEP%0
 //
 
 
@@ -4207,7 +4332,7 @@
 //
 // MessageText:
 //
-//  Atari ST/TT
+//  Atari ST/TT%0
 //
 
 
@@ -4216,7 +4341,7 @@
 //
 // MessageText:
 //
-//  Thai (TIS 620-2533:1990)
+//  Thai (TIS 620-2533:1990)%0
 //
 
 
@@ -4225,7 +4350,7 @@
 //
 // MessageText:
 //
-//  Lao (MuleLao-1)
+//  Lao (MuleLao-1)%0
 //
 
 
@@ -4234,7 +4359,7 @@
 //
 // MessageText:
 //
-//  Lao (ibm-1132)
+//  Lao (ibm-1132)%0
 //
 
 
@@ -4243,7 +4368,7 @@
 //
 // MessageText:
 //
-//  Lao (ibm-1133)
+//  Lao (ibm-1133)%0
 //
 
 
@@ -4252,7 +4377,7 @@
 //
 // MessageText:
 //
-//  Irelandic (I.S. 434:1999)
+//  Irelandic (I.S. 434:1999)%0
 //
 
 
@@ -4261,7 +4386,7 @@
 //
 // MessageText:
 //
-//  Tamil (TAB)
+//  Tamil (TAB)%0
 //
 
 
@@ -4270,7 +4395,7 @@
 //
 // MessageText:
 //
-//  Tamil (TAM)
+//  Tamil (TAM)%0
 //
 
 
@@ -4279,7 +4404,7 @@
 //
 // MessageText:
 //
-//  Tamil (TSCII 1.7)
+//  Tamil (TSCII 1.7)%0
 //
 
 
@@ -4288,7 +4413,7 @@
 //
 // MessageText:
 //
-//  Hindi (Macintosh, Devanagari)
+//  Hindi (Macintosh, Devanagari)%0
 //
 
 
@@ -4297,7 +4422,7 @@
 //
 // MessageText:
 //
-//  Gujarathi (Macintosh)
+//  Gujarathi (Macintosh)%0
 //
 
 
@@ -4306,7 +4431,7 @@
 //
 // MessageText:
 //
-//  Panjabi (Macintosh, Gurmukhi)
+//  Panjabi (Macintosh, Gurmukhi)%0
 //
 
 

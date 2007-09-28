@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "goto-line-dialog.hpp"
 #include "command.hpp"
+#include "resource/messages.h"
 
 using alpha::ui::GotoLineDialog;
 using alpha::Alpha;
@@ -19,7 +20,7 @@ void GotoLineDialog::onInitDialog(HWND, bool&) {
 	Alpha& app = Alpha::getInstance();
 	const Buffer& buffer = app.getBufferList().getActive();
 	const length_t lineOffset = app.getBufferList().getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
-	const wstring s = app.loadString(MSG_DIALOG__LINE_NUMBER_RANGE, MARGS
+	const wstring s = app.loadMessage(MSG_DIALOG__LINE_NUMBER_RANGE, MARGS
 						% static_cast<ulong>(buffer.accessibleRegion().first.line + lineOffset)
 						% static_cast<ulong>(buffer.accessibleRegion().second.line + lineOffset));
 

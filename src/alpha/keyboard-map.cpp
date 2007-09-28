@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "keyboard-map.hpp"
 #include "command.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/file.hpp"
 using namespace alpha::command;
 using namespace std;
@@ -70,10 +71,10 @@ bool KeyboardMap::assign(const KeyAssignableCommand& command, const KeyCombinati
 	bool overridden = false;
 
 	if(firstKeyMap.command != 0 &&
-			(!firstKeyMap.command->isBuiltIn() || firstKeyMap.command->getID() != CMD_SPECIAL_WAITFOR2NDKEYS))
+			(!firstKeyMap.command->isBuiltIn() || firstKeyMap.command->getID() != CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION))
 		overridden = true;
 	delete firstKeyMap.command;
-	firstKeyMap.command = new BuiltInCommand(CMD_SPECIAL_WAITFOR2NDKEYS);
+	firstKeyMap.command = new BuiltInCommand(CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION);
 
 	if(firstKeyMap.secondKeyMap == 0) {
 		firstKeyMap.secondKeyMap = new KeyAssignableCommand**[8];
@@ -175,7 +176,7 @@ bool KeyboardMap::load(const WCHAR* fileName) {
 				break;
 			if(!file.read(&firstModifiers, sizeof(KeyModifier), &readBytes) || readBytes != sizeof(KeyModifier))
 				break;
-			if(id != CMD_SPECIAL_WAITFOR2NDKEYS)
+			if(id != CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION)
 				assign(BuiltInCommand(id), KeyCombination(firstKey, firstModifiers));
 			else {
 				if(!file.read(&id, sizeof(CommandID), &readBytes) || readBytes != sizeof(CommandID))

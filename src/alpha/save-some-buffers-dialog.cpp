@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "application.hpp"
 #include "save-some-buffers-dialog.hpp"
+#include "resource/messages.h"
 using alpha::Alpha;
 using alpha::ui::SaveSomeBuffersDialog;
 using namespace std;
@@ -28,10 +29,10 @@ void SaveSomeBuffersDialog::onInitDialog(HWND, bool&) {
 	::DestroyIcon(icon);
 	selectAllLink_.create(getHandle(), ::GetModuleHandle(0), IDC_LINK_SELECTALL);
 	selectAllLink_.move(106, 200, 0, 0);
-	selectAllLink_.setText(Alpha::getInstance().loadString(MSG_DIALOG__SELECT_ALL).c_str());
+	selectAllLink_.setText(Alpha::getInstance().loadMessage(MSG_DIALOG__SELECT_ALL).c_str());
 	clearAllLink_.create(getHandle(), ::GetModuleHandle(0), IDC_LINK_CLEARALL);
 	clearAllLink_.move(186, 200, 0, 0);
-	clearAllLink_.setText(Alpha::getInstance().loadString(MSG_DIALOG__UNSELECT_ALL).c_str());
+	clearAllLink_.setText(Alpha::getInstance().loadMessage(MSG_DIALOG__UNSELECT_ALL).c_str());
 
 	for(vector<DirtyFile>::const_iterator it = files_.begin(); it != files_.end(); ++it)
 		bufferListbox_.addString(it->fileName.c_str());

@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "temporary-macro.hpp"
 #include "command.hpp"
+#include "resource/messages.h"
 #include "../manah/win32/file.hpp"
 #include "../manah/win32/ui/dialog.hpp"
 #include "../manah/win32/ui/standard-controls.hpp"
@@ -244,13 +245,13 @@ void TemporaryMacro::changeState(State newState) throw() {
 	StatusBar& statusBar = app.getStatusBar();
 	switch(getState()) {
 	case TemporaryMacro::DEFINING:
-		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
-		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
+		statusBar.setText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
+		statusBar.setTipText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
 		statusBar.setIcon(2, definingIcon_.getHandle());
 		break;
 	case TemporaryMacro::PAUSING:
-		statusBar.setText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
-		statusBar.setTipText(2, app.loadString(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
+		statusBar.setText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
+		statusBar.setTipText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_PAUSING).c_str());
 		statusBar.setIcon(2, pausingIcon_.getHandle());
 		break;
 	default:

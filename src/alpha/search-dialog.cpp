@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "search-dialog.hpp"
 #include "application.hpp"
+#include "resource/messages.h"
 #include "ascension/text-editor.hpp"
 #include <algorithm>	// std.find
 #include "../manah/win32/ui/standard-controls.hpp"
@@ -115,7 +116,7 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	Alpha& app = Alpha::getInstance();
 	searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__LITERAL_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
-		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__REGEXP_SEARCH).c_str());
+		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__REGEX_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
 		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__MIGEMO_SEARCH).c_str());
 
@@ -225,7 +226,7 @@ void SearchDialog::showRegexErrorMessage(const regex::PatternSyntaxException* e)
 		app.messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
 	else
 		app.messageBox(MSG_SEARCH__INVALID_REGEX_PATTERN, MB_ICONEXCLAMATION,
-			MARGS % app.loadString(MSG_SEARCH__BAD_REGEX_PATTERN_START + e->getCode()) % static_cast<long>(e->getIndex()));
+			MARGS % app.loadString(MSG_SEARCH__BAD_PATTERN_START + e->getCode()) % static_cast<long>(e->getIndex()));
 }
 
 /// @see Dialog#processWindowMessage

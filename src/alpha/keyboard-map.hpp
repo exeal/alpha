@@ -17,7 +17,7 @@ namespace alpha {
 		class KeyAssignableCommand;
 
 		/// An numeric identifier of a command.
-		typedef WORD CommandID;	// typeof(ACCEL::cmd)
+		typedef DWORD CommandID;
 
 		/// A virtual key code.
 		typedef WORD VirtualKey;	// typeof(ACCEL::key)

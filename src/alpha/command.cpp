@@ -5,7 +5,7 @@
  */
 
 #include "stdafx.h"
-#include "resource.h"
+#include "resource/messages.h"
 #include "command.hpp"
 #include "application.hpp"
 #include "mru-manager.hpp"
@@ -191,8 +191,8 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 		wcscpy(fileTitle, ::PathFindFileNameW(wfd.cFileName));
 		::PathFindExtensionW(fileTitle)[0] = 0;
 
-		const CommandID id = static_cast<CommandID>(wcstoul(fileTitle, 0, 10));
-		if(id < COMMAND_START || id > COMMAND_END)
+		const CommandID id = static_cast<CommandID>(wcstoul(fileTitle, 0, 10) + CMD_SPECIAL_START);
+		if(id < CMD_SPECIAL_START || id > CMD_SPECIAL_END)
 			continue;
 		wcscpy(fileTitle, directory.c_str());
 		::PathAppendW(fileTitle, wfd.cFileName);
@@ -630,22 +630,22 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 
 	default:
-		if(id >= CMD_FILE_MRULIST_START && id < CMD_FILE_MRULIST_END) {	// [最近使ったファイル]
-			const MRU& file = app.mruManager_->getFileInfoAt(id - CMD_FILE_MRULIST_START);
+		if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {	// [最近使ったファイル]
+			const MRU& file = app.mruManager_->getFileInfoAt(id - CMD_SPECIAL_MRUSTART);
 			if(app.getBufferList().open(file.fileName, file.codePage) == BufferList::OPENRESULT_FAILED) {
-				app.mruManager_->remove(id - CMD_FILE_MRULIST_START);
+				app.mruManager_->remove(id - CMD_SPECIAL_MRUSTART);
 				return false;
 			}
-		} else if(id >= CMD_FILE_DOCTYPELIST_START && id < CMD_FILE_DOCTYPELIST_END) {	// [新規]
+		} /*else if(id >= CMD_FILE_DOCTYPELIST_START && id < CMD_FILE_DOCTYPELIST_END) {	// [新規]
 			app.getBufferList().addNew();
 			// TODO: class mode-application.
-//			app.applyDocumentType(app.getBufferList().getActive(),
-//				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
+			app.applyDocumentType(app.getBufferList().getActive(),
+				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
 		} else if(id >= CMD_TOOL_DOCTYPELIST_START && id < CMD_TOOL_DOCTYPELIST_END)	// [適用文書タイプ]
 			// TODO: class mode-application.
-//			app.applyDocumentType(app.getBufferList().getActive(),
-//				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
-/*		else if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {	// [スクリプト]
+			app.applyDocumentType(app.getBufferList().getActive(),
+				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
+		else if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {	// [スクリプト]
 			try {
 				app.scriptMacroManager_->execute(id - CMD_EDIT_PLUGINLIST_START);
 				return true;
@@ -672,11 +672,11 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
  * @return the human-readable name
  */
 wstring CommandManager::getCaption(CommandID id) const {
-	wchar_t	buffer[256];
-	Alpha::getInstance().loadString(id, buffer, countof(buffer));
-	if(wchar_t* p = wcschr(buffer, L'\n'))
-		*p = 0;
-	return buffer;
+	wstring s(Alpha::getInstance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos)
+		s.resize(eol);
+	return s;
 }
 
 /**
@@ -685,14 +685,13 @@ wstring CommandManager::getCaption(CommandID id) const {
  * @return the description text
  */
 wstring CommandManager::getDescription(CommandID id) const {
-	if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END) {
-		const Buffer& buffer = Alpha::getInstance().getBufferList().getAt(id - CMD_VIEW_BUFFERLIST_START);
-		return buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED);
+	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND) {
+		const Buffer& buffer = Alpha::getInstance().getBufferList().getAt(id - CMD_SPECIAL_BUFFERSSTART);
+		return buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED);
 	}
-	wchar_t	buffer[256];
-	Alpha::getInstance().loadString(id, buffer, countof(buffer));
-	const wchar_t* p = wcschr(buffer, L'\n');
-	return (p != 0) ? p + 1 : L"";
+	const wstring s(Alpha::getInstance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	return (eol != wstring::npos) ? s.substr(eol + 1) : L"";
 }
 
 /**
@@ -709,36 +708,36 @@ wstring CommandManager::getMenuName(CommandID id) const {
 			wcscat(buffer, L"\t");
 			wcscat(buffer, keyboardMap_.getKeyString(id, useShortKeyNames_).c_str());
 		} else
-			wcscpy(buffer, loadString(MSG_ERROR__FAILED_TO_LOAD_SOMETHING).c_str());
+			wcscpy(buffer, loadMessage(MSG_ERROR__FAILED_TO_LOAD_SOMETHING).c_str());
 		return buffer;
 	}
 	
-	else*/ if(id >= CMD_FILE_MRULIST_START && id < CMD_FILE_MRULIST_END) {
-		const MRU& file = Alpha::getInstance().getMRUManager().getFileInfoAt(id - CMD_FILE_MRULIST_START);
-		swprintf(buffer, L"&%X  %s", id - CMD_FILE_MRULIST_START, file.fileName.c_str());
+	else*/ if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {
+		const MRU& file = Alpha::getInstance().getMRUManager().getFileInfoAt(id - CMD_SPECIAL_MRUSTART);
+		swprintf(buffer, L"&%X  %s", id - CMD_SPECIAL_MRUSTART, file.fileName.c_str());
 		return buffer;
 	}
 	
-	else if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END) {
-		const Buffer& document = Alpha::getInstance().getBufferList().getAt(id - CMD_VIEW_BUFFERLIST_START);
-		if(id - CMD_VIEW_BUFFERLIST_START < 0x10)
-			swprintf(buffer, L"&%X  ", id - CMD_VIEW_BUFFERLIST_START);
+	else if(id >= CMD_SPECIAL_BUFFERSSTART && id <= CMD_SPECIAL_BUFFERSEND) {
+		const Buffer& document = Alpha::getInstance().getBufferList().getAt(id - CMD_SPECIAL_BUFFERSSTART);
+		if(id - CMD_SPECIAL_BUFFERSSTART < 0x10)
+			swprintf(buffer, L"&%X  ", id - CMD_SPECIAL_BUFFERSSTART);
 		else
 			buffer[0] = 0;
-		wcscat(buffer, document.isBoundToFile() ? document.getFileName() : Alpha::getInstance().loadString(MSG_BUFFER__UNTITLED).c_str());
+		wcscat(buffer, document.isBoundToFile() ? document.getFileName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED).c_str());
 		return buffer;
 	}
 
-	Alpha::getInstance().loadString(id, buffer, countof(buffer));
-	wchar_t* const delimiter = wcschr(buffer, L'\n');
-	if(delimiter != 0)
-		*delimiter = 0;
+	wstring s(Alpha::getInstance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos)
+		s.resize(eol);
 	const wstring keys = Alpha::getInstance().getKeyboardMap().getKeyString(id);
 	if(!keys.empty()) {
-		wcscat(buffer, L"\t");
-		wcscat(buffer, keys.c_str());
+		s += L"\t";
+		s += keys;
 	}
-	return buffer;
+	return s;
 }
 
 /**
@@ -747,22 +746,24 @@ wstring CommandManager::getMenuName(CommandID id) const {
  * @return the human-readable name
  */
 wstring CommandManager::getName(CommandID id) const {
-	wchar_t buffer[256];
-	Alpha::getInstance().loadString(id, buffer, countof(buffer));
-	if(wchar_t* lf = wcschr(buffer, L'\n')) {
-		*lf = 0;
+	wstring s(Alpha::getInstance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos) {
+		s.resize(eol);
 		// CJK アクセスキー
-		if((lf > buffer && lf[-1] == L')') || (lf - buffer > 4 && wcsncmp(lf - 4, L")...", 4) == 0)) {
-			if(wchar_t* const opener = wcsrchr(buffer, L'('))
-				*opener = 0;
+		if(s[eol - 1] == L')' || (s.length() > 4 && s.compare(eol - 4, 4, L")...") == 0)) {
+			const size_t opener = s.rfind(L'(');
+			if(opener != wstring::npos)
+				s.resize(opener);
 		}
 	}
 
 	// '&' を取り除く
-	if(wchar_t* const amp = wcschr(buffer, L'&'))
-		return wstring(buffer, amp) + (amp + 1);
+	const size_t amp = s.find(L'&');
+	if(amp != wstring::npos)
+		return s.substr(0, amp) + s.substr(amp + 1);
 	else
-		return buffer;
+		return s;
 }
 
 /**
@@ -772,8 +773,8 @@ wstring CommandManager::getName(CommandID id) const {
  */
 bool CommandManager::isChecked(CommandID id) const {
 	Alpha& app = Alpha::getInstance();
-	if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END)
-		return id - CMD_VIEW_BUFFERLIST_START == app.getBufferList().getActiveIndex();
+	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND)
+		return id - CMD_SPECIAL_BUFFERSSTART == app.getBufferList().getActiveIndex();
 
 	switch(id) {
 	case CMD_SEARCH_FIND:
@@ -982,7 +983,7 @@ bool CommandManager::isRecordable(CommandID id) const {
 	case CMD_HELP_ABOUT:
 		return false;
 	default:
-		if(id >= CMD_VIEW_BUFFERLIST_START && id < CMD_VIEW_BUFFERLIST_END)
+		if(id >= CMD_SPECIAL_BUFFERSSTART && id <= CMD_SPECIAL_BUFFERSEND)
 			return false;
 		return true;
 	}
