@@ -52,6 +52,12 @@ namespace ascension {
 		 */
 		namespace surrogates {
 			/**
+			 * Returns true if the specified code point is supplemental (out of BMP).
+			 * @param cp the code point
+			 * @return true if @a cp is supplemental
+			 */
+			inline bool isSupplemental(CodePoint cp) throw() {return (cp & 0xFFFF0000U) != 0;}
+			/**
 			 * Returns if the specified code unit is high (leading)-surrogate.
 			 * @param cp the code point
 			 * @return true if @a cp is high-surrogate

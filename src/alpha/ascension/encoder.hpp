@@ -11,382 +11,350 @@
 #include <cassert>
 #include <set>
 #include <map>
-#include <memory>	// std::auto_ptr
-#include <windows.h>
+#include <memory>	// std.auto_ptr
+#ifdef _WIN32
+#include <windows.h>	// GetCPInfo, MultiByteToWideChar, WideCharToMultiByte, ...
+#endif /* _WIN32 */
 
 
 namespace ascension {
 
-	/// About encodings.
-	namespace encodings {
+	/// Members of the namespace @c encoding provide conversions between text encodings.
+	namespace encoding {
 
-	/// Windows code page.
-	typedef uint CodePage;
+		/**
+		 * "The MIBenum value is a unique value for use in MIBs to identify coded character sets"
+		 * (http://www.iana.org/assignments/character-sets).
+		 *
+		 * Ascension defines own several encodings not registered by IANA. They have MIBenum
+		 * values whose regions are 3000-3999. These values are subject to change in the future.
+		 */
+		typedef ushort MIBenum;
 
-	const CodePage
-		CPEX_UNICODE_UTF16LE		= 1200,		///< UTF-16
-		CPEX_UNICODE_UTF16BE		= 1201,		///< UTF-16 big endian
-		CPEX_UNICODE_UTF32LE		= 12000,	///< UTF-32
-		CPEX_UNICODE_UTF32BE		= 12001,	///< UTF-32 big endian
+		const MIBenum MIB_UNICODE_AUTO_DETECTION = 3000;	///< Auto-detection for Unicode.
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		CPEX_AUTODETECT				= 50001,	///< Auto-detect
-		CPEX_JAPANESE_AUTODETECT	= 50932,	///< Japanese (Auto-detect)
-		CPEX_KOREAN_AUTODETECT		= 50949,	///< Korean (Auto-detect)
-		CPEX_AUTODETECT_SYSTEMLANG	= 70000,	///< Auto-detect (System language)
-		CPEX_AUTODETECT_USERLANG	= 70001,	///< Auto-detect (User language)
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-		CPEX_UNICODE_AUTODETECT		= 70010,	///< Unicode (Auto-detect)
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		CPEX_UNICODE_UTF5			= 70011,	///< UTF-5
-		CPEX_ARMENIAN_AUTODETECT	= 70020,	///< Armenian (Auto-detect)
-		CPEX_ARMENIAN_ARMSCII7		= 70021,	///< Armenian (ARMSCII-7)
-		CPEX_ARMENIAN_ARMSCII8		= 70022,	///< Armenian (ARMSCII-8)
-		CPEX_ARMENIAN_ARMSCII8A		= 70023,	///< Armenian (ARMSCII-8A)
-		CPEX_VIETNAMESE_AUTODETECT	= 70030,	///< Vietnamese (Auto-detect)
-		CPEX_VIETNAMESE_TCVN		= 70031,	///< Vietnamese (TCVN)
-		CPEX_VIETNAMESE_VISCII		= 70032,	///< Vietnamese (VISCII)
-		CPEX_VIETNAMESE_VPS			= 70033,	///< Vietnamese (VPS)
-		CPEX_JAPANESE_ISO2022JP		= 70040,	///< Japanese (ISO-2022-JP)
-		CPEX_JAPANESE_SHIFTJIS		= 70041,	///< Japanese (Shift JIS)
-		CPEX_JAPANESE_ISO2022JP1	= 70042,	///< Japanese (ISO-2022-JP-1)
-		CPEX_JAPANESE_ISO2022JP2	= 70043,	///< Japanese (ISO-2022-JP-2)
-		CPEX_JAPANESE_EUC			= 70044,	///< Japanese (EUC)
-		CPEX_JAPANESE_ISO2022JP2004				= 70045,	///< Japanese (ISO-2022-JP-2004)
-		CPEX_JAPANESE_ISO2022JP2004_STRICT		= 70046,	///< Japanese (ISO-2022-JP-2004-strict)
-		CPEX_JAPANESE_ISO2022JP2004_COMPATIBLE	= 70047,	///< Japanese (ISO-2022-JP-2004-compatible)
-		CPEX_JAPANESE_ISO2022JP3			= 70048,	///< Japanese (ISO-2022-JP-3)
-		CPEX_JAPANESE_ISO2022JP3_STRICT		= 70049,	///< Japanese (ISO-2022-JP-3-strict)
-		CPEX_JAPANESE_ISO2022JP3_COMPATIBLE	= 70050,	///< Japanese (ISO-2022-JP-3-compatible)
-		CPEX_JAPANESE_SHIFTJIS2004	= 70051,	///< Japanese (Shift_JIS-2004)
-		CPEX_JAPANESE_EUCJIS2004	= 70052,	///< Japanese (EUC-JIS-2004)
-		CPEX_MULTILINGUAL_ISO2022_7BIT		= 70060,	///< Multilingual (ISO-2022, 7-bit)
-		CPEX_MULTILINGUAL_ISO2022_7BITSS2	= 70061,	///< Multilingual (ISO-2022, 7-bit, SS2)
-		CPEX_MULTILINGUAL_ISO2022_7BITSISO	= 70062,	///< Multilingual (ISO-2022, 7-bit, SI/SO)
-		CPEX_MULTILINGUAL_ISO2022_8BITSS2	= 70063,	///< Multilingual (ISO-2022, 8-bit, SS2)
-		CPEX_UNCATEGORIZED_BINARY	= 70070,	///< Binary
-		CPEX_UNCATEGORIZED_NEXTSTEP	= 70071,	///< NEXTSTEP
-		CPEX_UNCATEGORIZED_ATARIST	= 70072,	///< Atari ST/TT
-		CPEX_THAI_TIS620	= 70080,	///< Thai (TIS 620-2533:1990)
-		CPEX_LAO_MULELAO	= 70090,	///< Lao (MuleLao)
-		CPEX_LAO_CP1132		= 70091,	///< Lao (ibm-1132)
-		CPEX_LAO_CP1133		= 70092,	///< Lao (ibm-1133)
-		CPEX_IRISH_IS434	= 70100,	///< Irelandic (I.S. 434:1999)
-		CPEX_TAMIL_TAB		= 70110,	///< Tamil (TAB)
-		CPEX_TAMIL_TAM		= 70111,	///< Tamil (TAM)
-		CPEX_TAMIL_TSCII	= 70112,	///< Tamil (TSCII 1.7)
-		CPEX_HINDI_MACINTOSH	= 70115,	///< Hindi (Macintosh, Devanagari)
-		CPEX_GUJARATI_MACINTOSH	= 70116,	///< Gujarati (Macintosh)
-		CPEX_PANJABI_MACINTOSH	= 70117,	///< Punjabi (Macintosh, Gurumkhi)
-		CPEX_CYRILLIC_MACINTOSH							= 10007,	///< Cyrillic (Macintosh)
-		CPEX_CYRILLIC_KOI8R								= 20866,	///< Russian (KOI8-R)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (Russian Support for DOS Version 3)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (Russian Support for DOS Version 4 Academic)
-		CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (Russian support for DOS Version 4 Non-Academic)
-		CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (Soviet KOI-8 Basic)
-		CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (Soviet KOI-8 Alternative)
-		CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (Soviet KOI-7)
-		CPEX_CYRILLIC_ECMA								= 70126,	///< Cyrillic (ISO-IR-111, ECMA)
-		CPEX_CYRILLIC_KOI8RU							= 70127,	///< Cyrillic (KOI8-RU)
-		CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 Unified)
-		CPEX_ISO8859_1	= 28591,	///< Western European (ISO-8859-1)
-		CPEX_ISO8859_2	= 28592,	///< Central European (ISO-8859-2)
-		CPEX_ISO8859_3	= 28593,	///< Southern European (ISO-8859-3)
-		CPEX_ISO8859_4	= 28594,	///< Baltic (ISO-8859-4)
-		CPEX_ISO8859_5	= 28595,	///< Cyrillic (ISO-8859-5)
-		CPEX_ISO8859_6	= 28596,	///< Arabic (ISO-8859-6)
-		CPEX_ISO8859_7	= 28597,	///< Greek (ISO-8859-7)
-		CPEX_ISO8859_8	= 28598,	///< Hebrew (ISO-8859-8)
-		CPEX_ISO8859_9	= 28599,	///< Turkish (ISO-8859-9)
-		CPEX_ISO8859_10	= 28600,	///< Northern European (ISO-8859-10)
-		CPEX_ISO8859_11	= 28601,	///< Thai (ISO-8859-11)
-		CPEX_ISO8859_13	= 28603,	///< Baltic (ISO-8859-13)
-		CPEX_ISO8859_14	= 28604,	///< Keltic (ISO-8859-14)
-		CPEX_ISO8859_15	= 28605,	///< Western European (ISO-8859-15)
-		CPEX_ISO8859_16	= 28606;	///< Central European (ISO-8859-16)
+		const MIBenum
+			MIB_UNIVERSAL_AUTO_DETECTION		= 3001,	///< Auto-detection for all languages (windows-50001).
+			MIB_JAPANESE_AUTO_DETECTION			= 3002,	///< Auto-detection for Japanese (windows-50932).
+			MIB_KOREAN_AUTO_DETECTION			= 3003,	///< Auto-detection for Korean (windows-50949).
+			MIB_AUTO_DETECTION_SYSTEM_LANGUAGE	= 3004,	///< Auto-detection for the system language.
+			MIB_AUTO_DETECTION_USER_LANGUAGE	= 3005,	///< Auto-detection for the user language.
+			MIB_UNICODE_UTF5					= 3006,	///< Unicode (UTF-5).
+			// Armenian
+			MIB_ARMENIAN_AUTO_DETECTION	= 3020,	///< Auto-detection for Armenian.
+			MIB_ARMENIAN_ARMSCII7		= 3021,	///< Armenian (ARMSCII-7).
+			MIB_ARMENIAN_ARMSCII8		= 3022,	///< Armenian (ARMSCII-8).
+			MIB_ARMENIAN_ARMSCII8A		= 3023,	///< Armenian (ARMSCII-8A).
+			// Vietnamese
+			MIB_VIETNAMESE_AUTO_DETECTION	= 3030,	///< Auto-detection for Vietnamese.
+			MIB_VIETNAMESE_TCVN				= 3031,	///< Vietnamese (TCVN).
+//			MIB_VIETNAMESE_VISCII			= 3032,	///< Vietnamese (VISCII).
+			MIB_VIETNAMESE_VPS				= 3033,	///< Vietnamese (VPS).
+			// Japanese
+			MIB_JAPANESE_ISO2022JP		= 3040,	///< Japanese (ISO-2022-JP)
+			MIB_JAPANESE_SHIFTJIS		= 3041,	///< Japanese (Shift JIS)
+			MIB_JAPANESE_ISO2022JP1		= 3042,	///< Japanese (ISO-2022-JP-1)
+			MIB_JAPANESE_ISO2022JP2		= 3043,	///< Japanese (ISO-2022-JP-2)
+			MIB_JAPANESE_EUC			= 3044,	///< Japanese (EUC)
+			MIB_JAPANESE_ISO2022JP2004				= 3045,	///< Japanese (ISO-2022-JP-2004)
+			MIB_JAPANESE_ISO2022JP2004_STRICT		= 3046,	///< Japanese (ISO-2022-JP-2004-strict)
+			MIB_JAPANESE_ISO2022JP2004_COMPATIBLE	= 3047,	///< Japanese (ISO-2022-JP-2004-compatible)
+			MIB_JAPANESE_ISO2022JP3				= 3048,	///< Japanese (ISO-2022-JP-3)
+			MIB_JAPANESE_ISO2022JP3_STRICT		= 3049,	///< Japanese (ISO-2022-JP-3-strict)
+			MIB_JAPANESE_ISO2022JP3_COMPATIBLE	= 3050,	///< Japanese (ISO-2022-JP-3-compatible)
+			MIB_JAPANESE_SHIFTJIS2004	= 3051,	///< Japanese (Shift_JIS-2004)
+			MIB_JAPANESE_EUCJIS2004		= 3052,	///< Japanese (EUC-JIS-2004)
+			// Lao
+			MIB_LAO_MULE_LAO	= 3060,	///< Lao (MuleLao)
+			MIB_LAO_CP1132		= 3061,	///< Lao (ibm-1132)
+			MIB_LAO_CP1133		= 3062,	///< Lao (ibm-1133)
+			// Irelandic
+			MIB_IRISH_IS434	= 3070,	///< Irelandic (I.S. 434:1999).
+			// Tamil
+			MIB_TAMIL_TAB	= 3080,	///< Tamil (TAB).
+			MIB_TAMIL_TAM	= 3081,	///< Tamil (TAM).
+//			MIB_TAMIL_TSCII	= 3082,	///< Tamil (TSCII 1.7).
+			// Hindi
+			MIB_HINDI_MACINTOSH	= 3090,	///< Hindi (Macintosh, Devanagari).
+			// Gujarati
+			MIB_GUJARATI_MACINTOSH	= 3100,	///< Gujarati (Macintosh).
+			// Panjabi
+			MIB_PANJABI_MACINTOSH	= 3110,	///< Punjabi (Macintosh, Gurumkhi).
+			// Cyrillic
+/*			CPEX_CYRILLIC_MACINTOSH							= 10007,	///< Cyrillic (Macintosh)
+			CPEX_CYRILLIC_KOI8R								= 20866,	///< Russian (KOI8-R)
+			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (Russian Support for DOS Version 3)
+			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (Russian Support for DOS Version 4 Academic)
+			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (Russian support for DOS Version 4 Non-Academic)
+			CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (Soviet KOI-8 Basic)
+			CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (Soviet KOI-8 Alternative)
+			CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (Soviet KOI-7)
+			CPEX_CYRILLIC_ECMA								= 70126,	///< Cyrillic (ISO-IR-111, ECMA)
+			CPEX_CYRILLIC_KOI8RU							= 70127,	///< Cyrillic (KOI8-RU)
+			CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 Unified)
+*/			// ISO-2022 multilingual
+			MIB_MULTILINGUAL_ISO2022_7BIT		= 3120,	///< Multilingual (ISO-2022, 7-bit).
+			MIB_MULTILINGUAL_ISO2022_7BITSS2	= 3121,	///< Multilingual (ISO-2022, 7-bit, SS2).
+			MIB_MULTILINGUAL_ISO2022_7BITSISO	= 3122,	///< Multilingual (ISO-2022, 7-bit, SI/SO).
+			MIB_MULTILINGUAL_ISO2022_8BITSS2	= 3123,	///< Multilingual (ISO-2022, 8-bit, SS2).
+			// miscellaneous
+			MIB_MISCELLANEOUS_BINARY	= 3900,	///< Binary.
+			MIB_MISCELLANEOUS_NEXTSTEP	= 3901,	///< NEXTSTEP.
+			MIB_MISCELLANEOUS_ATARIST	= 3902;	///< Atari ST/TT.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-	const uchar	UTF16LE_BOM[] = "\xFF\xFE";			///< BOM of UTF-16 little endian.
-	const uchar	UTF16BE_BOM[] = "\xFE\xFF";			///< BOM of UTF-16 big endian.
+		const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8.
+		const uchar	UTF16LE_BOM[] = "\xFF\xFE";			///< BOM of UTF-16 little endian.
+		const uchar	UTF16BE_BOM[] = "\xFE\xFF";			///< BOM of UTF-16 big endian.
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	const uchar	UTF32LE_BOM[] = "\xFF\xFF\x00\x00";	///< BOM of UTF-16 little endian.
-	const uchar	UTF32BE_BOM[] = "\xFE\xFF\x00\x00";	///< BOM of UTF-16 big endian.
+		const uchar	UTF32LE_BOM[] = "\xFF\xFF\x00\x00";	///< BOM of UTF-16 little endian.
+		const uchar	UTF32BE_BOM[] = "\xFE\xFF\x00\x00";	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8.
 
 
-	// Encoder //////////////////////////////////////////////////////////////
+		// Encoder //////////////////////////////////////////////////////////////
 
-	// 変換できない場合の既定の文字 (ユーザの言語から取得したほうがいいかもしれないが)
-	const uchar NATIVE_DEFAULT_CHARACTER = '?';
+		/// A replacement character used when unconvertable.
+		const uchar NATIVE_DEFAULT_CHARACTER = '?';
 
-	// 文字セットにマップされない文字
-	const wchar_t RP__CH = REPLACEMENT_CHARACTER;
-	const uchar N__A = 0x00;
+		/// A shorthand for @c REPLACEMENT_CHARACTER.
+		const Char RP__CH = REPLACEMENT_CHARACTER;
+		const uchar N__A = 0x00;
 
-	template<typename Ch> void setDefaultChar(Ch& ch);
-	template<> inline void setDefaultChar(char& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-	template<> inline void setDefaultChar(uchar& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-	template<> inline void setDefaultChar(ushort& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-	template<> inline void setDefaultChar(wchar_t& ch) {ch = REPLACEMENT_CHARACTER;}
-	template<> inline void setDefaultChar(ulong& ch) {ch = REPLACEMENT_CHARACTER;}
+		template<typename Ch> void setDefaultChar(Ch& ch);
+		template<> inline void setDefaultChar(char& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
+		template<> inline void setDefaultChar(uchar& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
+		template<> inline void setDefaultChar(ushort& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
+		template<> inline void setDefaultChar(wchar_t& ch) {ch = REPLACEMENT_CHARACTER;}
+		template<> inline void setDefaultChar(ulong& ch) {ch = REPLACEMENT_CHARACTER;}
 
-	#define BIT7_MASK(c)	static_cast<uchar>((c) & 0x7F)
-	#define BIT8_MASK(c)	static_cast<uchar>((c) & 0xFF)
-	#define BIT16_MASK(c)	static_cast<ushort>((c) & 0xFFFF)
-	#define UTF16_MASK(c)	static_cast<wchar_t>((c) & 0xFFFF)
+		template<typename T> inline uchar mask7Bit(T c) {return static_cast<uchar>(c) & 0x7FU;}
+		template<typename T> inline uchar mask8Bit(T c) {return static_cast<uchar>(c) & 0xFFU;}
+		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c) & 0xFFFFU;}
+		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c) & 0xFFFFU;}
 
-	#define CONFIRM_ILLEGAL_CHAR(lhs)										\
-		{																	\
-			if(callback == 0 || callback->unconvertableCharacterFound()) {	\
-				setDefaultChar(lhs);										\
-				callback = 0;												\
-			} else															\
-				return 0;													\
-		}
+		#define CONFIRM_ILLEGAL_CHAR(lhs)										\
+			{																	\
+				if(callback == 0 || callback->unconvertableCharacterFound()) {	\
+					setDefaultChar(lhs);										\
+					callback = 0;												\
+				} else															\
+					return 0;													\
+			}
 
-	#define CFU_ARGLIST											\
-		uchar* dest, std::size_t destLength,					\
-		const wchar_t* src, std::size_t srcLength /* = -1 */,	\
-		IUnconvertableCharCallback* callback /* = 0 */
+		#define MAP_TABLE(offset, table)	\
+			else MAP_TABLE_START(offset, table)
 
-	#define CTU_ARGLIST										\
-		wchar_t* dest, std::size_t destLength,				\
-		const uchar* src, std::size_t srcLength /* = -1 */,	\
-		IUnconvertableCharCallback* callback /* = 0 */
+		#define MAP_TABLE_START(offset, table)	\
+			if(src[i] >= offset && src[i] < offset + countof(table)) dest[j] = table[src[i] - offset]
 
-	#define CFU_CHECKARGS()				\
-		assert(dest != 0 && src != 0);	\
-		if(srcLength == -1)				\
-			srcLength = wcslen(src)
+		#define MAP_TABLE_0(table)	\
+			if(src[i] < countof(table)) dest[j] = table[src[i]]
 
-	#define CTU_CHECKARGS()				\
-		assert(dest != 0 && src != 0);	\
-		if(srcLength == -1)				\
-			srcLength = strlen(reinterpret_cast<const char*>(src))
+		#define MAP_TABLE_SB(offset, table)	\
+			else MAP_TABLE_SB_START(offset, table)
 
-	#define MAP_TABLE(offset, table)	\
-		else MAP_TABLE_START(offset, table)
+		#define MAP_TABLE_SB_START(offset, table)	\
+			if(src[i] >= offset && src[i] < offset + countof(table)) dest[i] = table[src[i] - offset]
 
-	#define MAP_TABLE_START(offset, table)	\
-		if(src[i] >= offset && src[i] < offset + countof(table)) dest[j] = table[src[i] - offset]
+		#define MAP_TABLE_SB_0(table)	\
+			if(src[i] < countof(table)) dest[i] = table[src[i]]
 
-	#define MAP_TABLE_0(table)	\
-		if(src[i] < countof(table)) dest[j] = table[src[i]]
-
-	#define MAP_TABLE_SB(offset, table)	\
-		else MAP_TABLE_SB_START(offset, table)
-
-	#define MAP_TABLE_SB_START(offset, table)	\
-		if(src[i] >= offset && src[i] < offset + countof(table)) dest[i] = table[src[i] - offset]
-
-	#define MAP_TABLE_SB_0(table)	\
-		if(src[i] < countof(table)) dest[i] = table[src[i]]
-
-	/// 変換できない文字の処理するコールバック
-	class IUnconvertableCharCallback {
-	public:
-		/// Destructor.
-		virtual ~IUnconvertableCharCallback() throw() {}
 		/**
-		 * ファイル読み込み時に Unicode に変換できない、
-		 * または保存時にネイティブコードに変換できない文字が見つかったときに呼び出される。
-		 * 戻り値によりその文字をどう扱うを決める。
-		 * このメソッドは1度の処理で1度しか呼び出されない
-		 * @retval true the encoder should replace the unconvertable character with default character and continue
-		 * @retval false the encoder should stop (変換メソッドは 0 を返す)
+		 * Compares the given two encoding (charset) names based on
+		 * <a href="http://www.unicode.org/reports/tr22/">UTS #22: CharMapML</a> 1.4 Charset Alias
+		 * Matching.
 		 */
-		virtual bool unconvertableCharacterFound() = 0;
-	};
+		template<typename CharacterSequence>
+		inline bool matchEncodingNames(CharacterSequence first1, CharacterSequence last1, CharacterSequence first2, CharacterSequence last2) {
+			const std::locale& lc = std::locale::classic();
+			bool precededByDigit[2] = {false, false};
+			while(first1 != last1 && first2 != last2) {
+				if(*first1 == '0' && !precededByDigit[0]) ++first1;
+				else if(!std::isalnum(*first1, lc)) {++first1; precededByDigit[0] = false;}
+				else if(*first2 == '0' && !precededByDigit[1]) ++first2;
+				else if(!std::isalnum(*first2, lc)) {++first2; precededByDigit[1] = false;}
+				else {
+					if(std::tolower(*first1, lc) != std::tolower(*first2, lc))
+						return false;
+					precededByDigit[0] = std::isdigit(*(first1++), lc);
+					precededByDigit[1] = std::isdigit(*(first2++), lc);
+				}
+			}
+			return first1 == last1 && first2 == last2;
+		}
 
-	/**
-	 * An abstract encoder.
-	 * @note This class will be rewritten in future.
-	 */
-	class Encoder : private manah::Noncopyable {
-		// コンストラクタ
-	protected:
-		Encoder() {}
-	public:
-		virtual ~Encoder() {}
-
-		// メソッド
-	public:
 		/**
-		 * Converts the given string from UTF-16 into native encode.
-		 * @param[out] dest the destination buffer
-		 * @param[in] destLength the size of @a dest
-		 * @param[in] src the source string
-		 * @param[in] srcLength the length of @a src
-		 * @param[in] callback the callback object handles unconvertable characters. can be @c null if not needed
-		 * @return the number of bytes written to @a dest
+		 * An abstract encoder.
+		 * @note This class will be rewritten in future.
 		 */
-		virtual std::size_t fromUnicode(uchar* dest, std::size_t destLength,
-			const wchar_t* src, std::size_t srcLength = -1, IUnconvertableCharCallback* callback = 0) = 0;
+		class Encoder : private manah::Noncopyable {
+		public:
+			enum Result {
+				/// The conversion fully succeeded. @a fromNext parameter of the conversion method
+				/// should equal @a fromEnd.
+				COMPLETED,
+				/// The conversion partially succeeded because the destination buffer is not large enough.
+				INSUFFICIENT_BUFFER,
+				/// The conversion partially succeeded because encounted an illegal character. If
+				/// @c USE_DEFAULT_CHARACTER is set, this value never be returned.
+				ILLEGAL_CHARACTER
+			};
+			enum Policy {
+				NO_POLICY						= 0x0,
+//				NO_UNICODE_BYTE_ORDER_SIGNATURE	= 0x1,
+				USE_DEFAULT_CHARACTER			= 0x2	///< Uses 
+			};
+			typedef std::auto_ptr<Encoder>(*EncoderProducer)();
+			typedef std::size_t(*EncodingDetector)(const uchar*, const uchar*, MIBenum&);
+		public:
+			virtual ~Encoder() throw();
+			// attributes
+			/**
+			 * Returns the aliases of the encoding. Default implementation returns an empty.
+			 * @return a string contains aliases separated by NUL
+			 */
+			virtual std::string getAliases() const throw() {return "";}
+			/// Returns the number of bytes represents a UCS character.
+			virtual std::size_t getMaximumNativeLength() const throw() = 0;
+			/// Returns the number of UCS characters represents a native character. Default
+			/// implementation returns 1.
+			virtual std::size_t getMaximumUCSLength() const throw() {return 1;}
+			/// Returns the MIBenum value of the encoding.
+			virtual MIBenum getMIBenum() const throw() = 0;
+			/**
+			 * Returns the name of the encoding. If the encoding is registered as a character set
+			 * in <a href="http://www.iana.org/assignments/character-sets">IANA character-sets
+			 * encoding file</a>, should return the preferred mime name.
+			 */
+			virtual std::string getName() const throw() = 0;
+			// operations
+			bool		canEncode(CodePoint c) const;
+			bool		canEncode(const Char* first, const Char* last) const;
+			bool		canEncode(const String& s) const;
+			Result		fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+							const Char* from, const Char* fromEnd, const Char*& fromNext,
+							const manah::Flags<Policy>& policy = NO_POLICY) const;
+			std::string	fromUnicode(const String& from, const manah::Flags<Policy>& policy = NO_POLICY) const;
+			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext,
+							const uchar* from, const uchar* fromEnd, const uchar*& fromNext,
+							const manah::Flags<Policy>& policy = NO_POLICY) const;
+			String		toUnicode(const std::string& from, const manah::Flags<Policy>& policy = NO_POLICY) const;
+			// factory
+			template<typename OutputIterator>
+			static void		getAvailableMIBs(OutputIterator out);
+			template<typename OutputIterator>
+			static void		getAvailableNames(OutputIterator out);
+			static Encoder*	forMIB(MIBenum mib) throw();
+			static Encoder*	forName(const std::string& name) throw();
+			static void		registerEncoder(std::auto_ptr<Encoder> encoder);
+			// auto detection
+			static MIBenum	detectEncoding(const uchar* first, const uchar* last, MIBenum mib);
+			static void		registerDetector(MIBenum mib, EncodingDetector detector);
+		protected:
+			Encoder() throw();
+			/**
+			 * Converts the given string from UTF-16 into native encoding.
+			 * @param[out] to the beginning of the destination buffer
+			 * @param[out] toEnd the end of the destination buffer
+			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
+			 * @param[in] from the beginning of the buffer to be converted
+			 * @param[in] fromEnd the end of the buffer to be converted
+			 * @param[in] fromNext points to the first unconverted character after the conversion
+			 * @param[in] policy the conversion policy
+			 * @return true if the conversion fully succeeded
+			 */
+			virtual Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+				const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const = 0;
+			/**
+			 * Converts the given string into UTF-16.
+			 * @param[out] to the beginning of the destination buffer
+			 * @param[out] toEnd the end of the destination buffer
+			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
+			 * @param[in] from the beginning of the buffer to be converted
+			 * @param[in] fromEnd the end of the buffer to be converted
+			 * @param[in] fromNext points to the first unconverted character after the conversion
+			 * @param[in] policy the conversion policy
+			 * @return true if the conversion fully succeeded
+			 */
+			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const = 0;
+		private:
+			typedef std::map<MIBenum, Encoder*> Encoders;
+			typedef std::map<MIBenum, EncodingDetector> EncodingDetectors;
+			static Encoders encoders_;
+			static EncodingDetectors encodingDetectors_;
+		};
+
+#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)													\
+	class className : public Encoder {																					\
+	public:																												\
+		className() throw() {}																							\
+	private:																											\
+		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,													\
+			const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const;	\
+		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,														\
+			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const;	\
+		std::size_t getMaximumNativeLength() const throw();																\
+		MIBenum getMIBenum() const throw();																				\
+		std::string getName() const throw();
+#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()																\
+	}
+
+		/// This macro defines a class has the name @a className extends @c Encoder.
+#define ASCENSION_DEFINE_SIMPLE_ENCODER(className)					\
+	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)	\
+	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()
+
+		/// This macro defines a class has the name @a className extends @c Encoder with aliases.
+#define ASCENSION_DEFINE_SIMPLE_ENCODER_WITH_ALIASES(className)		\
+	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)	\
+	std::string getAliases() const throw();							\
+	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()
+
+#ifdef _WIN32
+		/// Encoder uses Windows NLS.
+		class WindowsEncoder : public Encoder {
+		public:
+			WindowsEncoder(::UINT codePage);
+		private:
+			Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+							const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const;
+			Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const;
+			std::string	getAliases() const throw();
+			std::size_t	getMaximumNativeLength() const throw();
+			MIBenum		getMIBenum() const throw();
+			std::string	getName() const throw();
+		private:
+			const ::UINT codePage_;
+		};
+#endif /* _WIN32 */
+
+
 		/**
-		 * Converts the given string into UTF-16.
-		 * @param[out] dest the destination buffer
-		 * @param[in] destLength the size of @a dest
-		 * @param[in] src the source string
-		 * @param[in] srcLength the length of @a src
-		 * @param[in] callback the callback object handles unconvertable characters. can be @c null if not needed
-		 * @return the number of characters written to @a dest
+		 * Returns MIBs for all available encodings.
+		 * @param[out] out the output iterator to receive MIBs
 		 */
-		virtual std::size_t toUnicode(wchar_t* dest, std::size_t destLength,
-			const uchar* src, std::size_t srcLength = -1, IUnconvertableCharCallback* callback = 0) = 0;
-		/// UCS 1 文字をネイティブ文字に変換するのに必要な最大バイト長を返す
-		virtual uchar getMaxNativeCharLength() const = 0;
-		/// ネイティブ文字 1 バイトを UCS 文字に変換するのに必要な最大長さを返す (UTF-16 単位)
-		virtual uchar getMaxUCSCharLength() const = 0;
-	};
-
-
-	/// Factory of encoders.
-	class EncoderFactory {
-	public:
-		typedef std::auto_ptr<Encoder>(*EncoderProducer)();
-		typedef void(*CodePageDetector)(const uchar*, std::size_t, CodePage&, std::size_t&);
-	public:
-		std::auto_ptr<Encoder>	createEncoder(CodePage cp);
-		CodePage				detectCodePage(const uchar* src, std::size_t length, CodePage cp);
-		void					enumCodePages(std::set<CodePage>& codePages) const;
-		static EncoderFactory&	getInstance();
-		CodePageDetector		getUnicodeDetector() const;
-		bool					isCodePageForAutoDetection(CodePage cp) const;
-		bool					isCodePageForReadOnly(CodePage cp) const;
-		bool					isValidCodePage(CodePage cp) const;
-		bool	registerCodePageForReadOnly(CodePage cp);
-		bool	registerDetector(CodePage cp, CodePageDetector factoryMethod);
-		bool	registerEncoder(CodePage cp, EncoderProducer factoryMethod);
-
-	private:
-		typedef std::map<CodePage, EncoderProducer> EncoderMap;
-		typedef std::map<CodePage, CodePageDetector> DetectorMap;
-		EncoderMap registeredEncoders_;
-		DetectorMap registeredDetectors_;
-		std::set<CodePage> codePagesForReadOnly_;
-	};
-
-
-	#define BEGIN_ENCODER_DEFINITION()	namespace {
-
-	#define END_ENCODER_DEFINITION()	}
-
-	#define DEFINE_ENCODER_CLASS_(cp, name)							\
-		class Encoder_##name : public Encoder {						\
-		private:													\
-			Encoder_##name();										\
-		public:														\
-			std::size_t	fromUnicode(CFU_ARGLIST);					\
-			std::size_t	toUnicode(CTU_ARGLIST);						\
-			uchar		getMaxNativeCharLength() const;				\
-			uchar		getMaxUCSCharLength() const;				\
-			static std::auto_ptr<Encoder> create() {				\
-				return std::auto_ptr<Encoder>(new Encoder_##name);}	\
-		};															\
-		const bool res##name =										\
-			EncoderFactory::getInstance().registerEncoder(cp, &Encoder_##name::create);
-
-	#define DEFINE_ENCODER_CLASS(cp, name, cch, ccp)						\
-		DEFINE_ENCODER_CLASS_(cp, name)										\
-		Encoder_##name::Encoder_##name() {}									\
-		uchar Encoder_##name::getMaxNativeCharLength() const {return cch;}	\
-		uchar Encoder_##name::getMaxUCSCharLength() const {return ccp;}
-
-	#define DEFINE_DETECTOR(cp, name)														\
-		namespace {																			\
-			void detectCodePage_##name(const uchar* buffer,									\
-				std::size_t length, CodePage& result, std::size_t& convertableLength);		\
-			const bool res##name =															\
-				EncoderFactory::getInstance().registerDetector(cp, &detectCodePage_##name);	\
+		template<typename OutputIterator> inline void Encoder::getAvailableMIBs(OutputIterator out) {
+			for(EncoderProducers::const_iterator i(encoderProducers_.begin()), e(encoderProducers_.end()); i != e; ++i, ++out)
+				*out = i->first;
+			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
+				*out = i->first;
 		}
 
-	#define REGISTER_READONLY_CODEPAGE(cp)	\
-		const bool res##cp = EncoderFactory::getInstance().registerCodePageForReadOnly(cp)
-
-
-	/// Encoder uses Windows NLS.
-	class WindowsEncoder : public Encoder {
-	private:
-		WindowsEncoder(CodePage cp) : codePage_(cp) {
-			if(!toBoolean(::IsValidCodePage(cp)))
-				throw std::invalid_argument("Specified code page is not supported.");
+		/**
+		 * Returns names for all available encodings.
+		 * @param[out] out the output iterator to receive names
+		 */
+		template<typename OutputIterator> inline void Encoder::getAvailableNames(OutputIterator out) {
+			for(EncoderProducers::const_iterator i(encoderProducers_.begin()), e(encoderProducers_.end()); i != e; ++i, ++out)
+				*out = i->second.getName();
+			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
+				*out = i->second.getName();
 		}
-	public:
-		std::size_t fromUnicode(CFU_ARGLIST) {
-			if(const int result = ::WideCharToMultiByte(codePage_, 0,
-					src, static_cast<int>(srcLength), reinterpret_cast<char*>(dest), static_cast<int>(destLength), 0, 0))
-				return result;
-			return (callback == 0 || callback->unconvertableCharacterFound()) ?
-				::WideCharToMultiByte(codePage_, WC_DEFAULTCHAR,
-					src, static_cast<int>(srcLength), reinterpret_cast<char*>(dest), static_cast<int>(destLength), 0, 0) : 0;
-		}
-		std::size_t toUnicode(CTU_ARGLIST) {
-			if(const int result = ::MultiByteToWideChar(codePage_, MB_ERR_INVALID_CHARS,
-					reinterpret_cast<const char*>(src), static_cast<int>(srcLength), dest, static_cast<int>(destLength)))
-				return result;
-			return (callback == 0 || callback->unconvertableCharacterFound()) ?
-				::MultiByteToWideChar(codePage_, 0,
-					reinterpret_cast<const char*>(src), static_cast<int>(srcLength), dest, static_cast<int>(destLength)) : 0;
-		}
-		uchar getMaxNativeCharLength() const {
-			::CPINFO cpi; return toBoolean(::GetCPInfo(codePage_, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 0;}
-		uchar getMaxUCSCharLength() const {return 1;}
-		friend class EncoderFactory;
-	private:
-		const CodePage codePage_;
-	};
-
-
-	/// Returns the singleton instance.
-	inline EncoderFactory& EncoderFactory::getInstance() {static EncoderFactory instance; return instance;}
-
-	/// Returns the Unicode auto detector or @c null if not registered.
-	inline EncoderFactory::CodePageDetector EncoderFactory::getUnicodeDetector() const {
-		DetectorMap::const_iterator	it = registeredDetectors_.find(CPEX_UNICODE_AUTODETECT);
-		return (it != registeredDetectors_.end()) ? it->second : 0;}
-
-	/// Returns true if the specified code page is for auto-detection.
-	inline bool EncoderFactory::isCodePageForAutoDetection(CodePage cp) const {return registeredDetectors_.find(cp) != registeredDetectors_.end();}
-
-	/// Returns true if the specified code page supports only native-to-UCS conversion.
-	inline bool EncoderFactory::isCodePageForReadOnly(CodePage cp) const {return codePagesForReadOnly_.find(cp) != codePagesForReadOnly_.end();}
-
-	/**
-	 * Returns the specified code page is valid.
-	 * @param cp the code page
-	 * @return true if @a cp is valid
-	 */
-	inline bool EncoderFactory::isValidCodePage(CodePage cp) const {
-		return toBoolean(::IsValidCodePage(cp))
-			|| isCodePageForAutoDetection(cp)
-			|| registeredEncoders_.find(cp) != registeredEncoders_.end();}
-
-	/**
-	 * Registers the new code page supports only native-to-UCS conversion.
-	 * @param cp the code page
-	 * @return succeeded or not
-	 */
-	inline bool EncoderFactory::registerCodePageForReadOnly(CodePage cp) {return codePagesForReadOnly_.insert(cp).second;}	// VC extended return
-
-	/**
-	 * Registers the new auto encoding detector.
-	 * @param cp the code page
-	 * @param factoryMethod the function produces auto detectors
-	 * @return succeeded or not
-	 */
-	inline bool EncoderFactory::registerDetector(CodePage cp, CodePageDetector factoryMethod) {
-		assert(factoryMethod != 0); return registeredDetectors_.insert(std::make_pair(cp, factoryMethod)).second;}	// VC extended return
-
-	/**
-	 * Registers the new encoder.
-	 * @param cp the code page
-	 * @param factoryMethod the function produces encoders
-	 * @return succeeded or not
-	 */
-	inline bool EncoderFactory::registerEncoder(CodePage cp, EncoderProducer factoryMethod) {
-		assert(factoryMethod != 0); return registeredEncoders_.insert(std::make_pair(cp, factoryMethod)).second;}	// VC extended return
 
 	}
-} // namespace ascension::encodings
+} // namespace ascension.encoding
 
 #endif /* !ASCENSION_ENCODER_HPP */
