@@ -397,6 +397,9 @@
 					<File
 						RelativePath=".\Ascension\encodings\vietnamese.cpp">
 					</File>
+					<File
+						RelativePath=".\ascension\encodings\windows-nls.cpp">
+					</File>
 				</Filter>
 				<Filter
 					Name="unicode"
