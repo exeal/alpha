@@ -254,7 +254,7 @@ namespace ascension {
 		protected:
 			Encoder() throw();
 			/**
-			 * Converts the given string from UTF-16 into native encoding.
+			 * Converts the given string from UTF-16 into the native encoding.
 			 * @param[out] to the beginning of the destination buffer
 			 * @param[out] toEnd the end of the destination buffer
 			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
@@ -262,12 +262,12 @@ namespace ascension {
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
 			 * @param[in] policy the conversion policy
-			 * @return true if the conversion fully succeeded
+			 * @return the result of the conversion
 			 */
 			virtual Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const = 0;
 			/**
-			 * Converts the given string into UTF-16.
+			 * Converts the given string from the native encoding into UTF-16.
 			 * @param[out] to the beginning of the destination buffer
 			 * @param[out] toEnd the end of the destination buffer
 			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
@@ -275,7 +275,7 @@ namespace ascension {
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
 			 * @param[in] policy the conversion policy
-			 * @return true if the conversion fully succeeded
+			 * @return the result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const = 0;
