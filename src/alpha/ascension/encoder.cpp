@@ -47,7 +47,7 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	Char* fromNext;
 	uchar* toNext;
-	return doFromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext, NO_UNICODE_BYTE_ORDER_SIGNATURE);
+	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext) == COMPLETED;
 }
 
 bool Encoder::canEncode(const String& s) const {
@@ -61,34 +61,34 @@ bool Encoder::canEncode(const String& s) const {
  * @param mib the MIBenum value of the encoding
  * @return the MIBenum of the detected encoding
  */
-MIBenum EncoderFactory::detectCodePage(const uchar* first, const uchar* last, MIBenum mib) {
+MIBenum Encoder::detectEncoding(const uchar* first, const uchar* last, MIBenum mib) {
 	if(first == 0 || last == 0)
 		throw NullPointerException("first or last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	EncodingDetector::const_iterator detector(encodingDetectors_.find(mib));
-	if(detector == encodingDetector_.end())
-		throw invalid_argument("the given MIBenum is not registered as an encoding detection encoding.");
 
-	CodePage result;
-	size_t score;
-
-	// 透過的に言語を選択する場合
-	if(cp == CPEX_AUTODETECT_SYSTEMLANG || cp == CPEX_AUTODETECT_USERLANG) {
-		const LANGID langID = (cp == CPEX_AUTODETECT_SYSTEMLANG) ? ::GetSystemDefaultLangID() : ::GetUserDefaultLangID();
+	if(mib == MIB_AUTO_DETECTION_SYSTEM_LANGUAGE || mib == MIB_AUTO_DETECTION_USER_LANGUAGE) {
+#ifdef _WIN32
+		const ::LANGID langID = (mib == MIB_AUTO_DETECTION_SYSTEM_LANGUAGE) ? ::GetSystemDefaultLangID() : ::GetUserDefaultLangID();
 		switch(PRIMARYLANGID(langID)) {
-		case LANG_ARMENIAN:	cp = CPEX_ARMENIAN_AUTODETECT;	break;
-		case LANG_JAPANESE:	cp = CPEX_JAPANESE_AUTODETECT;	break;
-//		case LANG_KOREAN:	cp = CPEX_KOREAN_AUTODETECT;	break;
-		default:			cp = CPEX_UNICODE_AUTODETECT;	break;
+		case LANG_ARMENIAN:		mib = MIB_ARMENIAN_AUTO_DETECTION;		break;
+		case LANG_JAPANESE:		mib = MIB_JAPANESE_AUTO_DETECTION;		break;
+//		case LANG_KOREAN:		mib = MIB_KOREAN_AUTO_DETECTION;		break;
+		case LANG_VIETNAMESE:	mib = MIB_VIETNAMESE_AUTO_DETECTION;	break;
+		default:				mib = MIB_UNICODE_AUTO_DETECTION;		break;
 		}
+#else
+#endif
 	}
 
-	DetectorMap::iterator it = registeredDetectors_.find(cp);
+	EncodingDetectors::const_iterator detector(encodingDetectors_.find(mib));
+	if(detector == encodingDetectors_.end())
+		detector = encodingDetectors_.find(MIB_UNICODE_AUTO_DETECTION);
+	assert(detector != encodingDetectors_.end());
 
-	assert(it != registeredDetectors_.end());
-	it->second(src, length, result, score);
-	return (score != 0) ? result : ::GetACP();
+	MIBenum result;
+	size_t score = (*detector->second)(first, last, result);
+	return (score != 0) ? result : forName("UTF-8")->getMIBenum();;
 }
 
 /**
@@ -115,7 +115,18 @@ Encoder* Encoder::forName(const string& name) throw() {
 	return 0;
 }
 
-bool Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+/**
+ * Converts the given string from UTF-16 into the native encoding.
+ * @param[out] to the beginning of the destination buffer
+ * @param[out] toEnd the end of the destination buffer
+ * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
+ * @param[in] from the beginning of the buffer to be converted
+ * @param[in] fromEnd the end of the buffer to be converted
+ * @param[in] fromNext points to the first unconverted character after the conversion
+ * @param[in] policy the conversion policy
+ * @return the result of the conversion
+ */
+Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy /* = NO_POLICY */) const {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
@@ -126,6 +137,30 @@ bool Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 	toNext = to;
 	fromNext = from;
 	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/**
+ * Converts the given string from UTF-16 into the native encoding.
+ * @param from the string to be converted
+ * @param policy the conversion policy
+ * @return the converted string or an empty if encountered unconvertable character
+ */
+string Encoder::fromUnicode(const String& from, const manah::Flags<Policy>& policy /* = NO_POLICY */) const {
+	size_t bytes = getMaximumNativeLength() * from.length();
+	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
+	const Char* fromNext;
+	uchar* toNext;
+	Result result;
+	while(true) {
+		result = fromUnicode(temp.get(), temp.get() + bytes, toNext, from.data(), from.data() + from.length(), fromNext, policy);
+		if(result == COMPLETED)
+			break;
+		else if(result == INSUFFICIENT_BUFFER)
+			temp.reset(new uchar[bytes *= 2]);
+		else if(result == ILLEGAL_CHARACTER)
+			return "";
+	}
+	return string(temp.get(), toNext);
 }
 
 /**
@@ -155,4 +190,53 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	else if(encoders_.find(encoder->getMIBenum()) != encoders_.end())
 		throw invalid_argument("the encoder is already registered.");
 	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
+}
+
+/**
+ * Converts the given string from the native encoding into UTF-16.
+ * @param[out] to the beginning of the destination buffer
+ * @param[out] toEnd the end of the destination buffer
+ * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
+ * @param[in] from the beginning of the buffer to be converted
+ * @param[in] fromEnd the end of the buffer to be converted
+ * @param[in] fromNext points to the first unconverted character after the conversion
+ * @param[in] policy the conversion policy
+ * @return the result of the conversion
+ */
+Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy /* = NO_POLICY */) const {
+	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
+		throw NullPointerException("");
+	else if(to > toEnd)
+		throw invalid_argument("to > toEnd");
+	else if(from > fromEnd)
+		throw invalid_argument("from > fromEnd");
+	toNext = to;
+	fromNext = from;
+	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/**
+ * Converts the given string from the native encoding into UTF-16.
+ * @param from the string to be converted
+ * @param policy the conversion policy
+ * @return the converted string or an empty if encountered unconvertable character
+ */
+String Encoder::toUnicode(const string& from, const manah::Flags<Policy>& policy /* = NO_POLICY */) const {
+	size_t chars = getMaximumUCSLength() * from.length();
+	manah::AutoBuffer<Char> temp(new Char[chars]);
+	const uchar* fromNext;
+	Char* toNext;
+	Result result;
+	while(true) {
+		result = toUnicode(temp.get(), temp.get() + chars, toNext,
+			reinterpret_cast<const uchar*>(from.data()), reinterpret_cast<const uchar*>(from.data()) + from.length(), fromNext, policy);
+		if(result == COMPLETED)
+			break;
+		else if(result == INSUFFICIENT_BUFFER)
+			temp.reset(new Char[chars *= 2]);
+		else if(result == ILLEGAL_CHARACTER)
+			return L"";
+	}
+	return String(temp.get(), toNext);
 }
