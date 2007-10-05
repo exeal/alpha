@@ -31,76 +31,101 @@ namespace ascension {
 		 */
 		typedef ushort MIBenum;
 
-		const MIBenum MIB_UNICODE_AUTO_DETECTION = 3000;	///< Auto-detection for Unicode.
+		/// Fundamental encodings.
+		namespace fundamental {
+			const MIBenum
+				MIB_US_ASCII = 3,					///< ANSI X3.4:1968 (RFC1345).
+				MIB_ISO_8859_1 = 4,					///< ISO-8859-1:1987 (RFC1345).
+				MIB_UNICODE_UTF8 = 106,				///< UTF-8 (RFC3629).
+				MIB_UNICODE_UTF16BE = 1013,			///< UTF-16BE (RFC2781).
+				MIB_UNICODE_UTF16LE = 1014,			///< UTF-16LE (RFC2781).
+//				MIB_UNICODE_UTF16 = 1015,			///< UTF-16 (RFC2781).
+				MIB_UNICODE_AUTO_DETECTION = 3000;	///< Auto-detection for Unicode encodings.
+		}
+
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+		/// Standard encodings.
+		namespace standard {
+//			const MIBenum
+		}
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		const MIBenum
-			MIB_UNIVERSAL_AUTO_DETECTION		= 3001,	///< Auto-detection for all languages (windows-50001).
-			MIB_JAPANESE_AUTO_DETECTION			= 3002,	///< Auto-detection for Japanese (windows-50932).
-			MIB_KOREAN_AUTO_DETECTION			= 3003,	///< Auto-detection for Korean (windows-50949).
-			MIB_AUTO_DETECTION_SYSTEM_LANGUAGE	= 3004,	///< Auto-detection for the system language.
-			MIB_AUTO_DETECTION_USER_LANGUAGE	= 3005,	///< Auto-detection for the user language.
-			MIB_UNICODE_UTF5					= 3006,	///< Unicode (UTF-5).
-			// Armenian
-			MIB_ARMENIAN_AUTO_DETECTION	= 3020,	///< Auto-detection for Armenian.
-			MIB_ARMENIAN_ARMSCII7		= 3021,	///< Armenian (ARMSCII-7).
-			MIB_ARMENIAN_ARMSCII8		= 3022,	///< Armenian (ARMSCII-8).
-			MIB_ARMENIAN_ARMSCII8A		= 3023,	///< Armenian (ARMSCII-8A).
-			// Vietnamese
-			MIB_VIETNAMESE_AUTO_DETECTION	= 3030,	///< Auto-detection for Vietnamese.
-			MIB_VIETNAMESE_TCVN				= 3031,	///< Vietnamese (TCVN).
-//			MIB_VIETNAMESE_VISCII			= 3032,	///< Vietnamese (VISCII).
-			MIB_VIETNAMESE_VPS				= 3033,	///< Vietnamese (VPS).
-			// Japanese
-			MIB_JAPANESE_ISO2022JP		= 3040,	///< Japanese (ISO-2022-JP)
-			MIB_JAPANESE_SHIFTJIS		= 3041,	///< Japanese (Shift JIS)
-			MIB_JAPANESE_ISO2022JP1		= 3042,	///< Japanese (ISO-2022-JP-1)
-			MIB_JAPANESE_ISO2022JP2		= 3043,	///< Japanese (ISO-2022-JP-2)
-			MIB_JAPANESE_EUC			= 3044,	///< Japanese (EUC)
-			MIB_JAPANESE_ISO2022JP2004				= 3045,	///< Japanese (ISO-2022-JP-2004)
-			MIB_JAPANESE_ISO2022JP2004_STRICT		= 3046,	///< Japanese (ISO-2022-JP-2004-strict)
-			MIB_JAPANESE_ISO2022JP2004_COMPATIBLE	= 3047,	///< Japanese (ISO-2022-JP-2004-compatible)
-			MIB_JAPANESE_ISO2022JP3				= 3048,	///< Japanese (ISO-2022-JP-3)
-			MIB_JAPANESE_ISO2022JP3_STRICT		= 3049,	///< Japanese (ISO-2022-JP-3-strict)
-			MIB_JAPANESE_ISO2022JP3_COMPATIBLE	= 3050,	///< Japanese (ISO-2022-JP-3-compatible)
-			MIB_JAPANESE_SHIFTJIS2004	= 3051,	///< Japanese (Shift_JIS-2004)
-			MIB_JAPANESE_EUCJIS2004		= 3052,	///< Japanese (EUC-JIS-2004)
-			// Lao
-			MIB_LAO_MULE_LAO	= 3060,	///< Lao (MuleLao)
-			MIB_LAO_CP1132		= 3061,	///< Lao (ibm-1132)
-			MIB_LAO_CP1133		= 3062,	///< Lao (ibm-1133)
-			// Irelandic
-			MIB_IRISH_IS434	= 3070,	///< Irelandic (I.S. 434:1999).
-			// Tamil
-			MIB_TAMIL_TAB	= 3080,	///< Tamil (TAB).
-			MIB_TAMIL_TAM	= 3081,	///< Tamil (TAM).
-//			MIB_TAMIL_TSCII	= 3082,	///< Tamil (TSCII 1.7).
-			// Hindi
-			MIB_HINDI_MACINTOSH	= 3090,	///< Hindi (Macintosh, Devanagari).
-			// Gujarati
-			MIB_GUJARATI_MACINTOSH	= 3100,	///< Gujarati (Macintosh).
-			// Panjabi
-			MIB_PANJABI_MACINTOSH	= 3110,	///< Punjabi (Macintosh, Gurumkhi).
-			// Cyrillic
-/*			CPEX_CYRILLIC_MACINTOSH							= 10007,	///< Cyrillic (Macintosh)
-			CPEX_CYRILLIC_KOI8R								= 20866,	///< Russian (KOI8-R)
-			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (Russian Support for DOS Version 3)
-			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (Russian Support for DOS Version 4 Academic)
-			CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (Russian support for DOS Version 4 Non-Academic)
-			CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (Soviet KOI-8 Basic)
-			CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (Soviet KOI-8 Alternative)
-			CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (Soviet KOI-7)
-			CPEX_CYRILLIC_ECMA								= 70126,	///< Cyrillic (ISO-IR-111, ECMA)
-			CPEX_CYRILLIC_KOI8RU							= 70127,	///< Cyrillic (KOI8-RU)
-			CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 Unified)
-*/			// ISO-2022 multilingual
-			MIB_MULTILINGUAL_ISO2022_7BIT		= 3120,	///< Multilingual (ISO-2022, 7-bit).
-			MIB_MULTILINGUAL_ISO2022_7BITSS2	= 3121,	///< Multilingual (ISO-2022, 7-bit, SS2).
-			MIB_MULTILINGUAL_ISO2022_7BITSISO	= 3122,	///< Multilingual (ISO-2022, 7-bit, SI/SO).
-			MIB_MULTILINGUAL_ISO2022_8BITSS2	= 3123,	///< Multilingual (ISO-2022, 8-bit, SS2).
-			// miscellaneous
-			MIB_MISCELLANEOUS_BINARY	= 3900,	///< Binary.
-			MIB_MISCELLANEOUS_NEXTSTEP	= 3901,	///< NEXTSTEP.
-			MIB_MISCELLANEOUS_ATARIST	= 3902;	///< Atari ST/TT.
+		namespace extended {
+			const MIBenum
+				// Unicode
+				MIB_UNICODE_UTF5	= 3001,	///< Unicode (UTF-5).
+				MIB_UNICODE_UTF7	= 1012,	///< UTF-7 (RFC2152).
+				MIB_UNICODE_UTF32BE	= 1018,	///< UTF-32BE.
+				MIB_UNICODE_UTF32LE	= 1019,	///< UTF-32LE.
+				// auto-detections
+				MIB_UNIVERSAL_AUTO_DETECTION		= 3002,	///< Auto-detection for all languages (windows-50001).
+				MIB_JAPANESE_AUTO_DETECTION			= 3003,	///< Auto-detection for Japanese (windows-50932).
+				MIB_KOREAN_AUTO_DETECTION			= 3004,	///< Auto-detection for Korean (windows-50949).
+				MIB_AUTO_DETECTION_SYSTEM_LANGUAGE	= 3005,	///< Auto-detection for the system language.
+				MIB_AUTO_DETECTION_USER_LANGUAGE	= 3006,	///< Auto-detection for the user language.
+				// Armenian
+				MIB_ARMENIAN_AUTO_DETECTION	= 3020,	///< Auto-detection for Armenian.
+				MIB_ARMENIAN_ARMSCII7		= 3021,	///< Armenian (ARMSCII-7).
+				MIB_ARMENIAN_ARMSCII8		= 3022,	///< Armenian (ARMSCII-8).
+				MIB_ARMENIAN_ARMSCII8A		= 3023,	///< Armenian (ARMSCII-8A).
+				// Vietnamese
+				MIB_VIETNAMESE_AUTO_DETECTION	= 3030,	///< Auto-detection for Vietnamese.
+				MIB_VIETNAMESE_TCVN				= 3031,	///< Vietnamese (TCVN).
+//				MIB_VIETNAMESE_VISCII			= 3032,	///< Vietnamese (VISCII).
+				MIB_VIETNAMESE_VPS				= 3033,	///< Vietnamese (VPS).
+				// Japanese
+				MIB_JAPANESE_ISO2022JP		= 3040,	///< Japanese (ISO-2022-JP)
+				MIB_JAPANESE_SHIFTJIS		= 3041,	///< Japanese (Shift JIS)
+				MIB_JAPANESE_ISO2022JP1		= 3042,	///< Japanese (ISO-2022-JP-1)
+				MIB_JAPANESE_ISO2022JP2		= 3043,	///< Japanese (ISO-2022-JP-2)
+				MIB_JAPANESE_EUC			= 3044,	///< Japanese (EUC)
+				MIB_JAPANESE_ISO2022JP2004				= 3045,	///< Japanese (ISO-2022-JP-2004)
+				MIB_JAPANESE_ISO2022JP2004_STRICT		= 3046,	///< Japanese (ISO-2022-JP-2004-strict)
+				MIB_JAPANESE_ISO2022JP2004_COMPATIBLE	= 3047,	///< Japanese (ISO-2022-JP-2004-compatible)
+				MIB_JAPANESE_ISO2022JP3				= 3048,	///< Japanese (ISO-2022-JP-3)
+				MIB_JAPANESE_ISO2022JP3_STRICT		= 3049,	///< Japanese (ISO-2022-JP-3-strict)
+				MIB_JAPANESE_ISO2022JP3_COMPATIBLE	= 3050,	///< Japanese (ISO-2022-JP-3-compatible)
+				MIB_JAPANESE_SHIFTJIS2004	= 3051,	///< Japanese (Shift_JIS-2004)
+				MIB_JAPANESE_EUCJIS2004		= 3052,	///< Japanese (EUC-JIS-2004)
+				// Lao
+				MIB_LAO_MULE_LAO	= 3060,	///< Lao (MuleLao)
+				MIB_LAO_CP1132		= 3061,	///< Lao (ibm-1132)
+				MIB_LAO_CP1133		= 3062,	///< Lao (ibm-1133)
+				// Irelandic
+				MIB_IRISH_IS434	= 3070,	///< Irelandic (I.S. 434:1999).
+				// Tamil
+				MIB_TAMIL_TAB	= 3080,	///< Tamil (TAB).
+				MIB_TAMIL_TAM	= 3081,	///< Tamil (TAM).
+//				MIB_TAMIL_TSCII	= 3082,	///< Tamil (TSCII 1.7).
+				// Hindi
+				MIB_HINDI_MACINTOSH	= 3090,	///< Hindi (Macintosh, Devanagari).
+				// Gujarati
+				MIB_GUJARATI_MACINTOSH	= 3100,	///< Gujarati (Macintosh).
+				// Panjabi
+				MIB_PANJABI_MACINTOSH	= 3110,	///< Punjabi (Macintosh, Gurumkhi).
+				// Cyrillic
+/*				CPEX_CYRILLIC_MACINTOSH							= 10007,	///< Cyrillic (Macintosh)
+				CPEX_CYRILLIC_KOI8R								= 20866,	///< Russian (KOI8-R)
+				CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3				= 70120,	///< Russian (Russian Support for DOS Version 3)
+				CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS4ACADEMIC		= 70121,	///< Russian (Russian Support for DOS Version 4 Academic)
+				CPEX_CYRILLIC_RUSSIANSUPPORTFORDOS3NONACADEMIC	= 70122,	///< Russian (Russian support for DOS Version 4 Non-Academic)
+				CPEX_CYRILLIC_SOVIETKOI8BASIC					= 70123,	///< Russian (Soviet KOI-8 Basic)
+				CPEX_CYRILLIC_SOVIETKOI8ALTERNATIVE				= 70124,	///< Russian (Soviet KOI-8 Alternative)
+				CPEX_CYRILLIC_SOVIETKOI7						= 70125,	///< Russian (Soviet KOI-7)
+				CPEX_CYRILLIC_ECMA								= 70126,	///< Cyrillic (ISO-IR-111, ECMA)
+				CPEX_CYRILLIC_KOI8RU							= 70127,	///< Cyrillic (KOI8-RU)
+				CPEX_CYRILLIC_KOI8UNIFIED						= 70128,	///< Cyrillic (KOI8 Unified)
+*/				// ISO-2022 multilingual
+				MIB_MULTILINGUAL_ISO2022_7BIT		= 3120,	///< Multilingual (ISO-2022, 7-bit).
+				MIB_MULTILINGUAL_ISO2022_7BITSS2	= 3121,	///< Multilingual (ISO-2022, 7-bit, SS2).
+				MIB_MULTILINGUAL_ISO2022_7BITSISO	= 3122,	///< Multilingual (ISO-2022, 7-bit, SI/SO).
+				MIB_MULTILINGUAL_ISO2022_8BITSS2	= 3123,	///< Multilingual (ISO-2022, 8-bit, SS2).
+				// miscellaneous
+				MIB_MISCELLANEOUS_BINARY	= 3900,	///< Binary.
+				MIB_MISCELLANEOUS_NEXTSTEP	= 3901,	///< NEXTSTEP.
+				MIB_MISCELLANEOUS_ATARIST	= 3902;	///< Atari ST/TT.
+		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 		const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8.
@@ -120,13 +145,6 @@ namespace ascension {
 		/// A shorthand for @c REPLACEMENT_CHARACTER.
 		const Char RP__CH = REPLACEMENT_CHARACTER;
 		const uchar N__A = 0x00;
-
-		template<typename Ch> void setDefaultChar(Ch& ch);
-		template<> inline void setDefaultChar(char& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-		template<> inline void setDefaultChar(uchar& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-		template<> inline void setDefaultChar(ushort& ch) {ch = NATIVE_DEFAULT_CHARACTER;}
-		template<> inline void setDefaultChar(wchar_t& ch) {ch = REPLACEMENT_CHARACTER;}
-		template<> inline void setDefaultChar(ulong& ch) {ch = REPLACEMENT_CHARACTER;}
 
 		template<typename T> inline uchar mask7Bit(T c) {return static_cast<uchar>(c) & 0x7FU;}
 		template<typename T> inline uchar mask8Bit(T c) {return static_cast<uchar>(c) & 0xFFU;}
@@ -194,16 +212,23 @@ namespace ascension {
 				/// The conversion fully succeeded. @a fromNext parameter of the conversion method
 				/// should equal @a fromEnd.
 				COMPLETED,
-				/// The conversion partially succeeded because the destination buffer is not large enough.
+				/// The conversion partially succeeded because the destination buffer was not large enough.
 				INSUFFICIENT_BUFFER,
-				/// The conversion partially succeeded because encounted an illegal character. If
-				/// @c USE_DEFAULT_CHARACTER is set, this value never be returned.
-				ILLEGAL_CHARACTER
+				/// The conversion partially succeeded because encounted an unmappable character.
+				/// If either @c REPLACE_UNMAPPABLE_CHARACTER or @c IGNORE_UNMAPPABLE_CHARACTER is
+				/// set, this value never be returned.
+				UNMAPPABLE_CHARACTER,
+				/// The conversion partially succeeded because detected malformed input.
+				MALFORMED_INPUT
 			};
 			enum Policy {
-				NO_POLICY						= 0x0,
-//				NO_UNICODE_BYTE_ORDER_SIGNATURE	= 0x1,
-				USE_DEFAULT_CHARACTER			= 0x2	///< Uses 
+				/// Nothing.
+				NO_POLICY,
+//				NO_UNICODE_BYTE_ORDER_SIGNATURE	= 0x8000,
+				/// Replaces a unmappable character with default replacement character.
+				REPLACE_UNMAPPABLE_CHARACTER,
+				/// Skips (ignores) unmappable characters.
+				IGNORE_UNMAPPABLE_CHARACTER
 			};
 			typedef std::auto_ptr<Encoder>(*EncoderProducer)();
 			typedef std::size_t(*EncodingDetector)(const uchar*, const uchar*, MIBenum&);
@@ -215,6 +240,11 @@ namespace ascension {
 			 * @return a string contains aliases separated by NUL
 			 */
 			virtual std::string getAliases() const throw() {return "";}
+			/**
+			 * Returns the human-readable name of the encoding. Default implementation calls
+			 * @c #getName method.
+			 */
+			virtual std::string getDisplayName() const throw() {return getName();}
 			/// Returns the number of bytes represents a UCS character.
 			virtual std::size_t getMaximumNativeLength() const throw() = 0;
 			/// Returns the number of UCS characters represents a native character. Default
@@ -233,21 +263,26 @@ namespace ascension {
 			bool		canEncode(const Char* first, const Char* last) const;
 			bool		canEncode(const String& s) const;
 			Result		fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext,
-							const manah::Flags<Policy>& policy = NO_POLICY) const;
-			std::string	fromUnicode(const String& from, const manah::Flags<Policy>& policy = NO_POLICY) const;
+							const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy = NO_POLICY) const;
+			std::string	fromUnicode(const String& from, Policy policy = NO_POLICY) const;
 			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const uchar* from, const uchar* fromEnd, const uchar*& fromNext,
-							const manah::Flags<Policy>& policy = NO_POLICY) const;
-			String		toUnicode(const std::string& from, const manah::Flags<Policy>& policy = NO_POLICY) const;
+							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy = NO_POLICY) const;
+			String		toUnicode(const std::string& from, Policy policy = NO_POLICY) const;
 			// factory
+			static Encoder*	forCCSID(int ccsid) throw();
+			static Encoder*	forCPGID(int cpgid) throw();
+			static Encoder*	forMIB(MIBenum mib) throw();
+			static Encoder*	forName(const std::string& name) throw();
+#ifdef _WIN32
+			static Encoder*	forWindowCodePage(::UINT codePage) throw();
+#endif /* _WIN32 */
 			template<typename OutputIterator>
 			static void		getAvailableMIBs(OutputIterator out);
 			template<typename OutputIterator>
 			static void		getAvailableNames(OutputIterator out);
-			static Encoder*	forMIB(MIBenum mib) throw();
-			static Encoder*	forName(const std::string& name) throw();
+			static MIBenum	getDefault() throw();
 			static void		registerEncoder(std::auto_ptr<Encoder> encoder);
+			static bool		supports(MIBenum mib) throw();
 			// auto detection
 			static MIBenum	detectEncoding(const uchar* first, const uchar* last, MIBenum mib);
 			static void		registerDetector(MIBenum mib, EncodingDetector detector);
@@ -265,7 +300,7 @@ namespace ascension {
 			 * @return the result of the conversion
 			 */
 			virtual Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-				const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const = 0;
+				const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const = 0;
 			/**
 			 * Converts the given string from the native encoding into UTF-16.
 			 * @param[out] to the beginning of the destination buffer
@@ -278,7 +313,7 @@ namespace ascension {
 			 * @return the result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const = 0;
+				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const = 0;
 		private:
 			typedef std::map<MIBenum, Encoder*> Encoders;
 			typedef std::map<MIBenum, EncodingDetector> EncodingDetectors;
@@ -286,19 +321,19 @@ namespace ascension {
 			static EncodingDetectors encodingDetectors_;
 		};
 
-#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)													\
-	class className : public Encoder {																					\
-	public:																												\
-		className() throw() {}																							\
-	private:																											\
-		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,													\
-			const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const;	\
-		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,														\
-			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const;	\
-		std::size_t getMaximumNativeLength() const throw();																\
-		MIBenum getMIBenum() const throw();																				\
+#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)								\
+	class className : public Encoder {																\
+	public:																							\
+		className() throw() {}																		\
+	private:																						\
+		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,								\
+			const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;		\
+		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,									\
+			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const;	\
+		std::size_t getMaximumNativeLength() const throw();											\
+		MIBenum getMIBenum() const throw();															\
 		std::string getName() const throw();
-#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()																\
+#define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()											\
 	}
 
 		/// This macro defines a class has the name @a className extends @c Encoder.
@@ -311,25 +346,6 @@ namespace ascension {
 	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)	\
 	std::string getAliases() const throw();							\
 	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()
-
-#ifdef _WIN32
-		/// Encoder uses Windows NLS.
-		class WindowsEncoder : public Encoder {
-		public:
-			WindowsEncoder(::UINT codePage);
-		private:
-			Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext, const manah::Flags<Policy>& policy) const;
-			Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, const manah::Flags<Policy>& policy) const;
-			std::string	getAliases() const throw();
-			std::size_t	getMaximumNativeLength() const throw();
-			MIBenum		getMIBenum() const throw();
-			std::string	getName() const throw();
-		private:
-			const ::UINT codePage_;
-		};
-#endif /* _WIN32 */
 
 
 		/**
