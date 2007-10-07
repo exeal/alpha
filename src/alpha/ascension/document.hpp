@@ -430,17 +430,6 @@ namespace ascension {
 			friend class Document;
 		};
 
-		/// Used in @c Document#load and @c Document#save methods.
-		class IFileIOListener : virtual public encodings::IUnconvertableCharCallback {
-		protected:
-			/// Destructor.
-			virtual ~IFileIOListener() throw() {}
-		private:
-			/// Returns an @c IFileIOProgressCallback object or @c null if not needed.
-			virtual IFileIOProgressListener* queryProgressCallback() = 0;
-			friend class Document;
-		};
-
 		/**
 		 * Interface for objects which are interested in getting informed about changes of a
 		 * document's sequential edit.
@@ -604,14 +593,11 @@ namespace ascension {
 				/// Succeeded.
 				FIR_OK,
 				/// The specified encoding is invalid.
-				FIR_INVALID_CODE_PAGE,
+				FIR_INVALID_ENCODING,
 				/// The specified newline is based on Unicode but the encoding is not Unicode.
 				FIR_INVALID_NEWLINE,
-				/**
-				 * The caller aborted (ex. unconvertable character found).
-				 * @see Document#IFileIOListener
-				 */
-				FIR_CALLER_ABORTED,
+				/// The encoding failed (unmappable character or malformed input).
+				FIR_ENCODING_FAILURE,
 				/// Failed for out of memory.
 				FIR_OUT_OF_MEMORY,
 				/// The file to be opend is too huge.
@@ -625,18 +611,21 @@ namespace ascension {
 				FIR_CANNOT_CREATE_TEMPORARY_FILE,
 				/// Failed to write to the file and the file was <strong>lost</strong>.
 				FIR_LOST_DISK_FILE,
-				/// Win32 standard error whose detail can be obtained by @c GetLastError.
+#ifdef _WIN32
+				/// Win32 standard error whose detail can be obtained by Win32 @c GetLastError.
 				FIR_STANDARD_WIN32_ERROR,
+#endif /* _WIN32 */
 			};
 
 			/// Option flags for @c Document#save.
 			struct SaveParameters {
-				encodings::CodePage codePage;	///< The code page.
-				Newline newline;				///< The newline.
+				encoding::MIBenum encoding;					///< The MIBenum value of the encoding.
+				Newline newline;							///< The newline.
+				encoding::Encoder::Policy encodingPolicy;	///< The policy of encodings.
 				enum Option {
-					WRITE_UNICODE_BOM	= 0x01,	///< Writes a UTF byte order mark.
-					BY_COPYING			= 0x02,	///< Not implemented.
-					CREATE_BACKUP		= 0x04	///< Creates backup files.
+					WRITE_UNICODE_BYTE_ORDER_SIGNATURE	= 0x01,	///< Writes a UTF byte order signature.
+					BY_COPYING							= 0x02,	///< Not implemented.
+					CREATE_BACKUP						= 0x04	///< Creates backup files.
 				};
 				manah::Flags<Option> options;	///< Miscellaneous options.
 			};
@@ -697,10 +686,10 @@ namespace ascension {
 			void	removeSequentialEditListener(ISequentialEditListener& listener);
 			void	setUnexpectedFileTimeStampDirector(IUnexpectedFileTimeStampDirector* newDirector) throw();
 			// encodings
-			encodings::CodePage	getCodePage() const throw();
+			encoding::MIBenum	getEncoding() const throw();
 			Newline				getNewline() const throw();
-			void				setCodePage(encodings::CodePage cp);
-			static void			setDefaultCode(encodings::CodePage cp, Newline newline);
+			void				setEncoding(encoding::MIBenum mib);
+			static void			setDefaultCode(encoding::MIBenum mib, Newline newline);
 			void				setNewline(Newline newline);
 			// bound file name
 			const WCHAR*	getFileExtensionName() const throw();
@@ -759,11 +748,11 @@ namespace ascension {
 			DocumentCharacterIterator	begin() const throw();
 			DocumentCharacterIterator	end() const throw();
 			// writing and reading
-			FileIOResult	load(const std::basic_string<WCHAR>& fileName,
-								const FileLockMode& lockMode, encodings::CodePage codePage, IFileIOListener* callback = 0);
-			FileIOResult	save(const std::basic_string<WCHAR>& fileName, const SaveParameters& params, IFileIOListener* callback = 0);
+			FileIOResult	load(const std::basic_string<WCHAR>& fileName, const FileLockMode& lockMode,
+								encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy);
+			FileIOResult	save(const std::basic_string<WCHAR>& fileName, const SaveParameters& params);
 			FileIOResult	writeRegion(const std::basic_string<WCHAR>& fileName,
-								const Region& region, const SaveParameters& params, bool append, IFileIOListener* callback = 0);
+								const Region& region, const SaveParameters& params, bool append);
 			// streams
 			Position	insertFromStream(const Position& position, InputStream& in);
 			void		writeToStream(OutputStream& out, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
@@ -780,7 +769,9 @@ namespace ascension {
 			void						initialize();
 			void						partitioningChanged(const Region& changedRegion) throw();
 			void						updatePoints(const DocumentChange& change) throw();
-			static encodings::CodePage	translateSpecialCodePage(encodings::CodePage cp);
+#ifdef _WIN32
+			static ::UINT				translateSpecialCodePage(::UINT codePage);
+#endif /* _WIN32 */
 			bool						verifyTimeStamp(bool internal, ::FILETIME& newTimeStamp) throw();
 			// internal::ISessionElement
 			void	setSession(texteditor::Session& session) throw() {session_ = &session;}
@@ -860,7 +851,7 @@ namespace ascension {
 			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
 			bool modified_;
-			encodings::CodePage codePage_;
+			encoding::MIBenum encoding_;
 			Newline newline_;
 			LineList lines_;
 			length_t length_;
@@ -882,7 +873,7 @@ namespace ascension {
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 			IUnexpectedFileTimeStampDirector* timeStampDirector_;
 
-			static encodings::CodePage defaultCodePage_;
+			static encoding::MIBenum defaultEncoding_;
 			static Newline defaultNewline_;
 
 			friend class DocumentPartitioner;
@@ -1103,11 +1094,11 @@ inline Bookmarker& Document::getBookmarker() throw() {return *bookmarker_;}
 /// Returns the bookmarker of the document.
 inline const Bookmarker& Document::getBookmarker() const throw() {return *bookmarker_;}
 
-/// Returns the code page of the document.
-inline encodings::CodePage Document::getCodePage() const throw() {return codePage_;}
-
 /// Returns the content information provider.
 inline IContentTypeInformationProvider& Document::getContentTypeInformation() const throw() {return *contentTypeInformationProvider_;}
+
+/// Returns the MIBenum value of the encoding of the document.
+inline encoding::MIBenum Document::getEncoding() const throw() {return encoding_;}
 
 /// Returns the file extension name or @c null if the document is not bound to any of the files.
 inline const WCHAR* Document::getFileExtensionName() const throw() {
@@ -1316,16 +1307,15 @@ inline void Document::removeStateListener(IDocumentStateListener& listener) {sta
 
 /**
  * Sets the encoding of the document.
- * @param cp the code page of the encoding
+ * @param cp the MIBenum value of the encoding
  * @throw std#invalid_argument @a cp is invalid
  */
-inline void Document::setCodePage(encodings::CodePage cp) {
-	cp = translateSpecialCodePage(cp);
-	if(cp != codePage_) {
-		if(!encodings::EncoderFactory::getInstance().isValidCodePage(cp)
-				|| encodings::EncoderFactory::getInstance().isCodePageForAutoDetection(cp))
-			throw std::invalid_argument("Specified code page is not available.");
-		codePage_ = cp;
+inline void Document::setEncoding(encoding::MIBenum mib) {
+//	cp = translateSpecialCodePage(cp);
+	if(mib != encoding_) {
+		if(!encoding::Encoder::supports(mib))
+			throw std::invalid_argument("Specified encoding is not available.");
+		encoding_ = mib;
 		stateListeners_.notify<Document&>(IDocumentStateListener::documentEncodingChanged, *this);
 	}
 }

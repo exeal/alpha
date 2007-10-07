@@ -151,7 +151,7 @@ namespace ascension {
 			virtual ~VisualPoint() throw();
 			// attributes
 			static UINT			canPaste() throw();
-			encodings::CodePage	getClipboardNativeEncoding() const throw();
+			encoding::MIBenum	getClipboardNativeEncoding() const throw();
 			TextViewer&			getTextViewer();
 			const TextViewer&	getTextViewer() const;
 			length_t			getVisualColumnNumber() const;
@@ -161,7 +161,7 @@ namespace ascension {
 			bool				isLastPrintableCharacterOfLine() const;
 			bool				isLastPrintableCharacterOfVisualLine() const;
 			bool				isBeginningOfVisualLine() const;
-			void				setClipboardNativeEncoding(encodings::CodePage cp);
+			void				setClipboardNativeEncoding(encoding::MIBenum mib);
 			// movement
 			void	beginningOfVisualLine();
 			void	endOfVisualLine();
@@ -223,7 +223,7 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			encodings::CodePage clipboardNativeEncoding_;
+			encoding::MIBenum clipboardNativeEncoding_;
 			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
 			bool crossingLines_;	// 行間移動中
 			length_t visualLine_, visualSubline_;	// 点の表示行

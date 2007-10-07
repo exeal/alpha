@@ -119,24 +119,33 @@ namespace {
 				throw invalid_argument("Invalid text.");
 
 			// convert the source text from UTF-16 to native Japanese encoding
-			auto_ptr<encodings::Encoder> encoder = encodings::EncoderFactory::getInstance().createEncoder(932);
-			if(encoder.get() == 0)
+			encoding::Encoder* encoder = encoding::Encoder::forName("Shift_JIS");
+			if(encoder == 0)
 				return 0;
-			size_t bufferLength = encoder->getMaxNativeCharLength() * (last - first);
-			manah::AutoBuffer<uchar> buffer(new uchar[bufferLength + 1]);
-			if(0 == (bufferLength = encoder->fromUnicode(buffer.get(), bufferLength, first, last - first)))
-				return 0;
-			buffer.get()[bufferLength] = 0;
-			query(buffer.get());
-			if(lastNativePattern_ == 0)
-				return 0;
+			else {
+				size_t bufferLength = encoder->getMaximumNativeLength() * (last - first);
+				manah::AutoBuffer<uchar> buffer(new uchar[bufferLength + 1]);
+				uchar* toNext;
+				const Char* fromNext;
+				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
+						buffer.get() + bufferLength, toNext, first, last, fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER)
+					return 0;
+				*toNext = 0;
+				query(buffer.get());
+				if(lastNativePattern_ == 0)
+					return 0;
+			}
 
 			// convert the result pattern from native Japanese encoding to UTF-16
 			const size_t nativePatternLength = strlen(reinterpret_cast<char*>(lastNativePattern_));
-			outputLength = encoder->getMaxUCSCharLength() * (nativePatternLength + 1);
+			outputLength = encoder->getMaximumUCSLength() * (nativePatternLength + 1);
 			delete[] lastPattern_;
 			lastPattern_ = new Char[outputLength];
-			outputLength = encoder->toUnicode(lastPattern_, outputLength, lastNativePattern_, nativePatternLength);
+			Char* toNext;
+			const uchar* fromNext;
+			encoder->toUnicode(lastPattern_, lastPattern_ + outputLength, toNext,
+				lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext, encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+			outputLength = toNext - lastPattern_;
 			return lastPattern_;
 		}
 		/// @see #query(const Char*, const Char*, size_t&)
