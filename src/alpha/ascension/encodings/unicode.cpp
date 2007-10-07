@@ -770,18 +770,18 @@ namespace {
 
 	size_t UnicodeDetector(const uchar* first, const uchar* last, MIBenum& mib) {
 		mib = 0;
-		if(last - first >= 3 && memcmp(first, UTF8_BOM, 3) == 0)
+		if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
 			mib = 106;	// UTF-8
 		else if(last - first >= 2) {
-			if(memcmp(first, UTF16LE_BOM, 2) == 0)
+			if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
 				mib = 1014;	// UTF-16LE
-			else if(memcmp(first, UTF16BE_BOM, 2) == 0)
+			else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
 				mib = 1013;	// UTF-16BE
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 			if(last - first >= 4) {
-				if(memcmp(first, UTF32LE_BOM, 4) == 0)
+				if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
 					mib = 1019;	// UTF-32LE;
-				else if(memcmp(first, UTF32BE_BOM, 4) == 0)
+				else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
 					mib = 1018;	// UTF-32BE
 			}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

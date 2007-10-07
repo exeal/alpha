@@ -14,6 +14,36 @@ using namespace std;
 
 // Encoder //////////////////////////////////////////////////////////////////
 
+/**
+ * @class ascension::Encoder
+ * @c Encoder class provides conversions between text encodings.
+ *
+ * Ascension uses Unicode to store and manipulate strings. However, different encodings are
+ * preferred in many cases. Ascension provides a collection of @c Encoder classes to help with
+ * converting non-Unicode formats to/from Unicode.
+ *
+ * Ascension provides @c Encoder classes implement the encodings in three groups:
+ * <dl>
+ *   <dt>@c fundamental</dt>
+ *   <dd>The most fundamental encodings including US-ASCII, ISO-8859-1, UTF-8 and UTF-16.</dd>
+ *   <dt>@c standard</dt>
+ *   <dd>Major encodings including: most of ISO-8859-x, KOI-8, most of Windows-125x, ... These are
+ *     not available if @c ASCENSION_NO_STANDARD_ENCODINGS symbol is defined.</dd>
+ *   <dt>@c extended</dt>
+ *   <dd>Other minorities. Not available if @c ASCENSION_NO_EXTENDED_ENCODINGS symbol is defined.</dd>
+ * </dl>
+ *
+ * In addition, the encodings supported by the system are available if the target is Win32.
+ *
+ * @note This class is not compatible with C++ standard @c std#codecvt template class.
+ *
+ * <h3>Making user-defined @c Encoder classes</h3>
+ *
+ * You can create and add your own @c Encoder class.
+ *
+ * <h3>Important protocol of @c #fromUnicode and @c #toUnicode</h3>
+ */
+
 /// Protected default constructor.
 Encoder::Encoder() throw() {
 }
@@ -121,9 +151,25 @@ Encoder* Encoder::forMIB(MIBenum mib) throw() {
  */
 Encoder* Encoder::forName(const string& name) throw() {
 	for(Encoders::iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i) {
-		const string otherName = i->second->getName();
-		if(matchEncodingNames(name.begin(), name.end(), otherName.begin(), otherName.end()))
+		// test canonical name
+		const string canonicalName = i->second->getName();
+		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
 			return i->second;
+		// test aliases
+		const string aliases = i->second->getAliases();
+		for(size_t j = 0; ; ++j) {
+			size_t nul = aliases.find('\0', j);
+			if(nul == string::npos)
+				nul = aliases.length();
+			if(nul != j) {
+				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + nul))
+					return i->second;
+				++nul;
+			}
+			if(nul == aliases.length())
+				break;
+			j = nul;
+		}
 	}
 	return 0;
 }
@@ -147,8 +193,8 @@ Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		throw invalid_argument("to > toEnd");
 	else if(from > fromEnd)
 		throw invalid_argument("from > fromEnd");
-	toNext = to;
-	fromNext = from;
+	toNext = 0;
+	fromNext = 0;
 	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
 }
 
@@ -185,6 +231,15 @@ MIBenum Encoder::getDefault() throw() {
 //#endif /* _WIN32 */
 }
 
+String Encoder::getDisplayName() const throw() {
+	// getName() must return an only-ASCII string
+	const string canonicalName(getName());
+	String s(canonicalName.length(), L'X');
+	for(size_t i = 0, c = canonicalName.length(); i < c; ++i)
+		s[i] = mask8Bit(canonicalName[i]);
+	return s;
+}
+
 /**
  * Registers the new auto encoding detector.
  * @param mib the MIBenum value of the detector
@@ -214,7 +269,7 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
 }
 
-/// Returns true if supports the specified encoding.
+/// Returns true if supports the specified encoding. This returns true for also auto-detections.
 bool Encoder::supports(MIBenum mib) throw() {
 	return encoders_.find(mib) != encoders_.end();
 }
@@ -238,8 +293,8 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
 		throw invalid_argument("to > toEnd");
 	else if(from > fromEnd)
 		throw invalid_argument("from > fromEnd");
-	toNext = to;
-	fromNext = from;
+	toNext = 0;
+	fromNext = 0;
 	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
 }
 
@@ -269,6 +324,144 @@ String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) c
 }
 
 
+// EncodingDetector /////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param id the identifier of the encoding detector
+ * @param name the name of the encoding detector
+ */
+EncodingDetector::EncodingDetector(ID id, const string& name) : id_(id), name_(name) {
+}
+
+/// Destructor.
+EncodingDetector::~EncodingDetector() throw() {
+}
+
+
+// USASCIIEncoder ///////////////////////////////////////////////////////////
+
+namespace {
+	ASCENSION_DEFINE_SIMPLE_ENCODER_WITH_ALIASES(USASCIIEncoder);
+	template<Char maximum, uchar(*mask)(Char)>
+	inline Encoder::Result doFromUnicode8Bit(uchar* to, uchar* toEnd, uchar*& toNext,
+			const Char* from, const Char* fromEnd, const Char*& fromNext, Encoder::Policy policy) {
+		for(; to < toEnd && from < fromEnd; ++from) {
+			if(*from > maximum) {
+				if(policy == Encoder::REPLACE_UNMAPPABLE_CHARACTER)
+					*(to++) = NATIVE_DEFAULT_CHARACTER;
+				else if(policy != Encoder::IGNORE_UNMAPPABLE_CHARACTER) {
+					toNext = to;
+					fromNext = from;
+					return Encoder::UNMAPPABLE_CHARACTER;
+				} else
+					*(to++) = mask(*from);
+			}
+		}
+		toNext = to;
+		fromNext = from;
+		return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+	}
+	inline Encoder::Result doToUnicode8Bit(Char* to, Char* toEnd, Char*& toNext,
+			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Encoder::Policy policy) {
+		for(; to < toEnd && from < fromEnd; ++to, ++from)
+			*to = *from;
+		toNext = to;
+		fromNext = from;
+		return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+	}
+} // namespace @0
+
+/// @see Encoder#doFromUnicode
+Encoder::Result USASCIIEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	return doFromUnicode8Bit<0x7F, mask7Bit>(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result USASCIIEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	return doToUnicode8Bit(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/// @see Encoder#getAliases
+string USASCIIEncoder::getAliases() const throw() {
+	static const char aliases[] =
+		"iso-ir-6\0"
+		"ANSI_X3.4-1986\0"
+		"ISO_646.irv:1991\0"
+		"ASCII\0"
+		"ISO646-US\0"
+		"us\0"
+		"IBM367\0"
+		"cp367\0"
+		"csASCII";
+	return string(aliases, countof(aliases) - 1);
+}
+
+/// @see Encoder#getMaximumNativeLength
+size_t USASCIIEncoder::getMaximumNativeLength() const throw() {
+	return 1;
+}
+
+/// @see Encoder#getMIBenum
+MIBenum USASCIIEncoder::getMIBenum() const throw() {
+	return fundamental::MIB_US_ASCII;
+}
+
+/// @see Encoder#getName
+string USASCIIEncoder::getName() const throw() {
+	return "US-ASCII";
+}
+
+
+// ISO88591Encoder //////////////////////////////////////////////////////////
+
+namespace {
+	ASCENSION_DEFINE_SIMPLE_ENCODER_WITH_ALIASES(ISO88591Encoder);
+} // namespace @0
+
+/// @see Encoder#doFromUnicode
+Encoder::Result ISO88591Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	return doFromUnicode8Bit<0xFF, mask8Bit>(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result ISO88591Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	return doToUnicode8Bit(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+}
+
+/// @see Encoder#getAliases
+string ISO88591Encoder::getAliases() const throw() {
+	static const char aliases[] =
+		"iso-ir-100\0"
+		"ISO_8859-1\0"
+		"latin1\0"
+		"l1\0"
+		"IBM819\0"
+		"CP819\0"
+		"csISOLatin1";
+	return string(aliases, countof(aliases) - 1);
+}
+
+/// @see Encoder#getMaximumNativeLength
+size_t ISO88591Encoder::getMaximumNativeLength() const throw() {
+	return 1;
+}
+
+/// @see Encoder#getMIBenum
+MIBenum ISO88591Encoder::getMIBenum() const throw() {
+	return fundamental::MIB_ISO_8859_1;
+}
+
+/// @see Encoder#getName
+string ISO88591Encoder::getName() const throw() {
+	return "ISO-8859-1";
+}
+
+
 #ifdef _WIN32
 
 // WindowsEncoder ///////////////////////////////////////////////////////////
@@ -290,24 +483,12 @@ namespace {
 	private:
 		const ::UINT codePage_;
 	};
-
-	struct WindowsEncoderInstaller {
-		WindowsEncoderInstaller() throw() {
-			::EnumSystemCodePagesW(procedure, CP_INSTALLED);
-		}
-		static BOOL CALLBACK procedure(::LPWSTR name) {
-			const ::UINT cp = wcstoul(name, 0, 10);
-			if(toBoolean(::IsValidCodePage(cp)))
-				Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp)));
-			return TRUE;
-		}
-	} unused;
 } // namespace @0
 
 /**
  * Constructor.
- * @param codePage the code page
- * @throw std#invalid_argument @a codePage is not supported by the system
+ * @param cp the code page
+ * @throw std#invalid_argument @a cp is not supported by the system
  */
 WindowsEncoder::WindowsEncoder(::UINT cp) : codePage_(cp) {
 	if(!toBoolean(::IsValidCodePage(cp)))
@@ -362,5 +543,24 @@ string WindowsEncoder::getName() const throw() {
 	::GetCPInfoExA(codePage_, 0, &cpi);
 	return cpi.CodePageName;
 }
-
 #endif /* _WIN32 */
+
+namespace {
+	struct Installer {
+		Installer() throw() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new USASCIIEncoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88591Encoder));
+#ifdef _WIN32
+			::EnumSystemCodePagesW(procedure, CP_INSTALLED);
+#endif /* _WIN32 */
+		}
+#ifdef _WIN32
+		static BOOL CALLBACK procedure(::LPWSTR name) {
+			const ::UINT cp = wcstoul(name, 0, 10);
+			if(toBoolean(::IsValidCodePage(cp)))
+				Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp)));
+			return TRUE;
+		}
+#endif /* _WIN32 */
+	} unused;
+} // namespace @0

@@ -28,25 +28,55 @@ namespace ascension {
 		 *
 		 * Ascension defines own several encodings not registered by IANA. They have MIBenum
 		 * values whose regions are 3000-3999. These values are subject to change in the future.
+		 * @see MIB_MINIMUM, MIB_MAXIMUM, AutoDetector#ID
 		 */
 		typedef ushort MIBenum;
+
+		/// Minimum value of @c MIBenum.
+		/// Ascension never define an encoding has MIBenum less than this.
+		const MIBenum MIB_MINIMUM = 0;
+		/// Maximum value of @c MIBenum.
+		/// Ascension never define an encoding has MIBenum greater than this.
+		const MIBenum MIB_MAXIMUM = 3999;
 
 		/// Fundamental encodings.
 		namespace fundamental {
 			const MIBenum
-				MIB_US_ASCII = 3,					///< ANSI X3.4:1968 (RFC1345).
-				MIB_ISO_8859_1 = 4,					///< ISO-8859-1:1987 (RFC1345).
-				MIB_UNICODE_UTF8 = 106,				///< UTF-8 (RFC3629).
-				MIB_UNICODE_UTF16BE = 1013,			///< UTF-16BE (RFC2781).
-				MIB_UNICODE_UTF16LE = 1014,			///< UTF-16LE (RFC2781).
-//				MIB_UNICODE_UTF16 = 1015,			///< UTF-16 (RFC2781).
+				MIB_US_ASCII = 3,					///< ANSI X3.4:1968.
+				MIB_ISO_8859_1 = 4,					///< ISO-8859-1:1987.
+				MIB_UNICODE_UTF8 = 106,				///< UTF-8.
+				MIB_UNICODE_UTF16BE = 1013,			///< UTF-16BE.
+				MIB_UNICODE_UTF16LE = 1014,			///< UTF-16LE.
+//				MIB_UNICODE_UTF16 = 1015,			///< UTF-16.
 				MIB_UNICODE_AUTO_DETECTION = 3000;	///< Auto-detection for Unicode encodings.
 		}
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 		/// Standard encodings.
 		namespace standard {
-//			const MIBenum
+			const MIBenum
+				MIB_ISO_8859_2 = 5,		///< ISO-8859-2:1987.
+				MIB_ISO_8859_3 = 6,		///< ISO-8859-3:1988.
+				MIB_ISO_8859_4 = 7,		///< ISO-8859-4:1988.
+				MIB_ISO_8859_5 = 8,		///< ISO-8859-5:1988.
+				MIB_ISO_8859_6 = 9,		///< ISO-8859-6:1987.
+				MIB_ISO_8859_7 = 10,	///< ISO-8859-7:1987.
+				MIB_ISO_8859_8 = 11,	///< ISO-8859-8:1988.
+				MIB_ISO_8859_9 = 12,	///< ISO-8859-9:1989.
+				MIB_ISO_8859_10 = 13,	///< ISO-8859-10:1992.
+				MIB_SHIFT_JIS = 17,		///< Shift_JIS.
+				MIB_EUC_JP = 18,		///< EUC-JP.
+				MIB_ISO_2022_KR = 37,	///< ISO-2022-KR.
+				MIB_EUC_KR = 38,		///< EUC-KR.
+				MIB_ISO_2022_JP = 39,	///< ISO-2022-JP.
+				MIB_ISO_2022_JP_2 = 40,	///< ISO-2022-JP-2.
+				MIB_ISO_8859_6_E = 81,	///< ISO-8859-6-E.
+				MIB_ISO_8859_6_I = 82,	///< ISO-8859-6-I.
+				MIB_ISO_8859_8_E = 84,	///< ISO-8859-8-E.
+				MIB_ISO_8859_8_I = 85,	///< ISO-8859-8-I.
+				MIB_GB2312 = 2025,		///< GB2312.
+				MIB_BIG5 = 2026,		///< Big5.
+				MIB_KOI8_R = 2084;		///< KOI8-R.
 		}
 #endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 
@@ -128,12 +158,13 @@ namespace ascension {
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-		const uchar	UTF8_BOM[] = "\xEF\xBB\xBF";		///< BOM of UTF-8.
-		const uchar	UTF16LE_BOM[] = "\xFF\xFE";			///< BOM of UTF-16 little endian.
-		const uchar	UTF16BE_BOM[] = "\xFE\xFF";			///< BOM of UTF-16 big endian.
+		// These data are not terminated by NUL.
+		const uchar	UTF8_BOM[] = {0xEF, 0xBB, 0xBF};	///< BOM of UTF-8.
+		const uchar	UTF16LE_BOM[] = {0xFF, 0xFE};		///< BOM of UTF-16 little endian.
+		const uchar	UTF16BE_BOM[] = {0xFE, 0xFF};		///< BOM of UTF-16 big endian.
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		const uchar	UTF32LE_BOM[] = "\xFF\xFF\x00\x00";	///< BOM of UTF-16 little endian.
-		const uchar	UTF32BE_BOM[] = "\xFE\xFF\x00\x00";	///< BOM of UTF-16 big endian.
+		const uchar	UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 little endian.
+		const uchar	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 
@@ -150,33 +181,6 @@ namespace ascension {
 		template<typename T> inline uchar mask8Bit(T c) {return static_cast<uchar>(c) & 0xFFU;}
 		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c) & 0xFFFFU;}
 		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c) & 0xFFFFU;}
-
-		#define CONFIRM_ILLEGAL_CHAR(lhs)										\
-			{																	\
-				if(callback == 0 || callback->unconvertableCharacterFound()) {	\
-					setDefaultChar(lhs);										\
-					callback = 0;												\
-				} else															\
-					return 0;													\
-			}
-
-		#define MAP_TABLE(offset, table)	\
-			else MAP_TABLE_START(offset, table)
-
-		#define MAP_TABLE_START(offset, table)	\
-			if(src[i] >= offset && src[i] < offset + countof(table)) dest[j] = table[src[i] - offset]
-
-		#define MAP_TABLE_0(table)	\
-			if(src[i] < countof(table)) dest[j] = table[src[i]]
-
-		#define MAP_TABLE_SB(offset, table)	\
-			else MAP_TABLE_SB_START(offset, table)
-
-		#define MAP_TABLE_SB_START(offset, table)	\
-			if(src[i] >= offset && src[i] < offset + countof(table)) dest[i] = table[src[i] - offset]
-
-		#define MAP_TABLE_SB_0(table)	\
-			if(src[i] < countof(table)) dest[i] = table[src[i]]
 
 		/**
 		 * Compares the given two encoding (charset) names based on
@@ -202,10 +206,6 @@ namespace ascension {
 			return first1 == last1 && first2 == last2;
 		}
 
-		/**
-		 * An abstract encoder.
-		 * @note This class will be rewritten in future.
-		 */
 		class Encoder : private manah::Noncopyable {
 		public:
 			enum Result {
@@ -215,10 +215,13 @@ namespace ascension {
 				/// The conversion partially succeeded because the destination buffer was not large enough.
 				INSUFFICIENT_BUFFER,
 				/// The conversion partially succeeded because encounted an unmappable character.
-				/// If either @c REPLACE_UNMAPPABLE_CHARACTER or @c IGNORE_UNMAPPABLE_CHARACTER is
-				/// set, this value never be returned.
+				/// @c fromNext parameter of the conversion method should addresses the unmappable
+				/// character. If either @c REPLACE_UNMAPPABLE_CHARACTER or
+				/// @c IGNORE_UNMAPPABLE_CHARACTER is set, this value never be returned.
 				UNMAPPABLE_CHARACTER,
 				/// The conversion partially succeeded because detected malformed input.
+				/// @c fromNext parameter of the conversion method should addresses the unmappable
+				/// character. @c Encoder#fromUnicode should not return this value.
 				MALFORMED_INPUT
 			};
 			enum Policy {
@@ -230,8 +233,6 @@ namespace ascension {
 				/// Skips (ignores) unmappable characters.
 				IGNORE_UNMAPPABLE_CHARACTER
 			};
-			typedef std::auto_ptr<Encoder>(*EncoderProducer)();
-			typedef std::size_t(*EncodingDetector)(const uchar*, const uchar*, MIBenum&);
 		public:
 			virtual ~Encoder() throw();
 			// attributes
@@ -244,7 +245,7 @@ namespace ascension {
 			 * Returns the human-readable name of the encoding. Default implementation calls
 			 * @c #getName method.
 			 */
-			virtual std::string getDisplayName() const throw() {return getName();}
+			virtual String getDisplayName() const throw();
 			/// Returns the number of bytes represents a UCS character.
 			virtual std::size_t getMaximumNativeLength() const throw() = 0;
 			/// Returns the number of UCS characters represents a native character. Default
@@ -281,11 +282,8 @@ namespace ascension {
 			template<typename OutputIterator>
 			static void		getAvailableNames(OutputIterator out);
 			static MIBenum	getDefault() throw();
-			static void		registerEncoder(std::auto_ptr<Encoder> encoder);
+			static void		registerEncoder(std::auto_ptr<Encoder> newEncoder);
 			static bool		supports(MIBenum mib) throw();
-			// auto detection
-			static MIBenum	detectEncoding(const uchar* first, const uchar* last, MIBenum mib);
-			static void		registerDetector(MIBenum mib, EncodingDetector detector);
 		protected:
 			Encoder() throw();
 			/**
@@ -316,9 +314,58 @@ namespace ascension {
 				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const = 0;
 		private:
 			typedef std::map<MIBenum, Encoder*> Encoders;
-			typedef std::map<MIBenum, EncodingDetector> EncodingDetectors;
 			static Encoders encoders_;
+		};
+
+		class EncodingDetector : private manah::Noncopyable {
+		public:
+			/// An identifier of an encoding detector.
+			typedef ushort ID;
+			/// Minimum value of @c #ID.
+			/// Ascension never define an encoding detector has ID less than this.
+			static const ID MINIMUM_ID = 4000;
+			/// Maximum value of @c #ID.
+			/// Ascension never define an encoding detector has ID greater than this.
+			static const ID MAXIMUM_ID = 4999;
+		public:
+			// constructors
+			virtual ~EncodingDetector() throw();
+			// attributes
+			/// Returns the human-readable name. Default implementation calls @c #getName method.
+			virtual String getDisplayName() const throw();
+			/// Returns the identifier of the encoding detector.
+			ID getID() const throw() {return id_;}
+			/// Returns the name of the encoding detector.
+			std::string getName() const throw() {return name_;}
+			// detection
+			static MIBenum	detect(detectorID id, const uchar* first, const uchar* last);
+			// factory
+			static EncodingDetector*	forName(const std::string& name) throw();
+#ifdef _WIN32
+			static EncodingDetector*	forWindowCodePage(::UINT codePage) throw();
+#endif /* _WIN32 */
+			template<typename OutputIterator>
+			static void		getAvailableIDs(OutputIterator out);
+			template<typename OutputIterator>
+			static void		getAvailableNames(OutputIterator out);
+			static void		registerDetector(ID detectorID, std::auto_ptr<EncodingDetector> newDetector);
+			static bool		supports(ID detectorID) throw();
+		protected:
+			EncodingDetector(ID id, const std::string& name);
+			/**
+			 * Detects the encoding of the given character sequence.
+			 * @param first the beginning of the sequence
+			 * @param last the end of the sequence
+			 * @param[out] detectedEncoding the MIBenum value of the detected encoding
+			 * @return the number of bytes (from @a first) absolutely detected. can't exceed the
+			 * result of (@a last - @a first)
+			 */
+			virtual std::ptrdiff_t doDetect(const uchar* first, const uchar* last, MIBenum& detectedEncoding) const throw() = 0;
+		private:
+			typedef std::map<ID, EncodingDetector*> EncodingDetectors;
 			static EncodingDetectors encodingDetectors_;
+			const ID id_;
+			const std::string name_;
 		};
 
 #define ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)								\
@@ -346,6 +393,24 @@ namespace ascension {
 	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_PROLOGUE(className)	\
 	std::string getAliases() const throw();							\
 	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()
+
+		#define MAP_TABLE(offset, table)	\
+			else MAP_TABLE_START(offset, table)
+
+		#define MAP_TABLE_START(offset, table)	\
+			if(src[i] >= offset && src[i] < offset + countof(table)) dest[j] = table[src[i] - offset]
+
+		#define MAP_TABLE_0(table)	\
+			if(src[i] < countof(table)) dest[j] = table[src[i]]
+
+		#define MAP_TABLE_SB(offset, table)	\
+			else MAP_TABLE_SB_START(offset, table)
+
+		#define MAP_TABLE_SB_START(offset, table)	\
+			if(src[i] >= offset && src[i] < offset + countof(table)) dest[i] = table[src[i] - offset]
+
+		#define MAP_TABLE_SB_0(table)	\
+			if(src[i] < countof(table)) dest[i] = table[src[i]]
 
 
 		/**

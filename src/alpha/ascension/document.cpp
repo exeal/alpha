@@ -17,7 +17,7 @@
 
 using namespace ascension;
 using namespace ascension::text;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace ascension::unicode;
 using namespace manah::win32;
 using namespace manah::win32::io;
@@ -80,24 +80,6 @@ namespace {
 		Position execute(Document& document) {return document.erase(region_);}
 	private:
 		Region region_;
-	};
-
-	///
-	class UnconvertableCharCallback : virtual public IUnconvertableCharCallback {
-	public:
-		UnconvertableCharCallback(IUnconvertableCharCallback* impl) : callback_(impl), calledOnce_(false) {
-			assert(impl != 0);
-		}
-		bool unconvertableCharacterFound() {
-			calledOnce_ = true;
-			return callback_->unconvertableCharacterFound();
-		}
-		bool isCalledOnce() const throw() {
-			return calledOnce_;
-		}
-	private:
-		IUnconvertableCharCallback*	callback_;
-		bool						calledOnce_;
 	};
 
 	/// Emulation of Win32 @c GetLongPathNameW (duplicated from NewApis.h)
@@ -642,13 +624,13 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
 		}																						\
 	}
 
-CodePage Document::defaultCodePage_ = ::GetACP();
+MIBenum Document::defaultEncoding_ = Encoder::getDefault();
 Newline Document::defaultNewline_ = ASCENSION_DEFAULT_NEWLINE;
 
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
-		readOnly_(false), modified_(false), codePage_(defaultCodePage_), newline_(defaultNewline_),
+		readOnly_(false), modified_(false), encoding_(defaultEncoding_), newline_(defaultNewline_),
 		length_(0), revisionNumber_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false),
 		changing_(false), accessibleArea_(0), timeStampDirector_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
@@ -978,23 +960,26 @@ bool Document::isSequentialEditing() const throw() {
  * Reads the document from the specified file.
  * @param fileName the file name. this method doesn't resolves the short cut
  * @param lockMode the lock mode
- * @param codePage the code page
- * @param callback the callback. can be @c null
+ * @param encoding the MIBenum value of the file encoding
  * @return succeeded or not. see @c #FileIOResult
  * @throw std#invalid_argument the bit combination of @a fileOpenMode is invalid
+ * @deprecated 0.8
  */
 Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
-		const FileLockMode& lockMode, CodePage codePage, IFileIOListener* callback /* = 0 */) {
+		const FileLockMode& lockMode, MIBenum encoding, Encoder::Policy encodingPolicy) {
 //	Timer tm(L"load");	// 2.86s / 1MB
+	Encoder* encoder = Encoder::forMIB(encoding);
+	if(encoder == 0)
+		return FIR_INVALID_ENCODING;
+
 	const DWORD attributes = ::GetFileAttributesW(fileName.c_str());
 	if(attributes == INVALID_FILE_ATTRIBUTES)	// file not found
 		return FIR_STANDARD_WIN32_ERROR;
 
 	auto_ptr<File<true> > newFile(new File<true>);
-	EncoderFactory& encoderFactory = EncoderFactory::getInstance();
-	if(!encoderFactory.isValidCodePage(codePage))
-		return FIR_INVALID_CODE_PAGE;
+#ifdef _WIN32
 	ui::WaitCursor wc;
+#endif /* _WIN32 */
 
 	// open the file
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -1040,22 +1025,25 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	// convert the whole buffer
 	Position last(0, 0);	// 次に文字列を追加する位置
 	if(fileSize != 0) {
-		codePage = encoderFactory.detectCodePage(nativeBuffer, min(fileSize, 4UL * 1024), codePage);
+		encoding = Encoder::detectEncoding(nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024), encoding);
 
-		auto_ptr<Encoder> encoder = encoderFactory.createEncoder(codePage);
-		assert(encoder.get() != 0);
-		size_t destLength = encoder->getMaxUCSCharLength() * fileSize;
+		assert(encoder != 0);
+		size_t destLength = encoder->getMaximumUCSLength() * fileSize;
 		const uchar* bom;
 		size_t bomLength;
 
-		switch(codePage) {
-		case CP_UTF8:				bom = encodings::UTF8_BOM; bomLength = 3; break;
-		case CPEX_UNICODE_UTF16LE:	bom = encodings::UTF16LE_BOM; bomLength = 2; break;
-		case CPEX_UNICODE_UTF16BE:	bom = encodings::UTF16BE_BOM; bomLength = 2; break;
-		case CPEX_UNICODE_UTF32LE:	bom = encodings::UTF32LE_BOM; bomLength = 4; break;
-		case CPEX_UNICODE_UTF32BE:	bom = encodings::UTF32BE_BOM; bomLength = 4; break;
-		default:					bom = 0; bomLength = 0; break;
+		switch(encoding) {
+		case fundamental::MIB_UNICODE_UTF8:		bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
+		case fundamental::MIB_UNICODE_UTF16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
+		case fundamental::MIB_UNICODE_UTF16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+		case extended::MIB_UNICODE_UTF32LE:		bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+		case extended::MIB_UNICODE_UTF32BE:		bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+		default:								bom = 0; bomLength = 0; break;
 		}
+		if(bomLength != 0 && memcmp(nativeBuffer, bom, bomLength) != 0)
+			bomLength = 0;
 
 		Char* const ucsBuffer =
 			static_cast<Char*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, (destLength + 1) * sizeof(Char)));
@@ -1063,19 +1051,17 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 			CLOSE_AND_ABORT(FIR_OUT_OF_MEMORY);
 		}
 
-		if(bomLength != 0 && fileSize >= bomLength && memcmp(nativeBuffer, bom, bomLength) == 0)
-			destLength = encoder->toUnicode(ucsBuffer, destLength, nativeBuffer + bomLength, fileSize - bomLength, callback);
-		else
-			destLength = encoder->toUnicode(ucsBuffer, destLength, nativeBuffer, fileSize, callback);
-
-		if(destLength == 0) {	// encounted an unconvertable character and the client aborted
+		Char* toNext;
+		const uchar* fromNext;
+		if(Encoder::COMPLETED != encoder->toUnicode(ucsBuffer, ucsBuffer + destLength, toNext,
+				nativeBuffer + bomLength, nativeBuffer + fileSize, fromNext, encodingPolicy)) {
 			::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
-			CLOSE_AND_ABORT(FIR_CALLER_ABORTED);
+			CLOSE_AND_ABORT(FIR_ENCODING_FAILURE);
 		}
 
 #undef CLOSE_AND_ABORT
 
-		ucsBuffer[destLength] = 0;
+		*toNext = 0;
 		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 		fireDocumentAboutToBeChanged();
 
@@ -1118,7 +1104,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		}
 		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
 	} else {	// an empty file
-		codePage = ::GetACP();
+		encoding = defaultEncoding_;
 		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 	}
 
@@ -1129,7 +1115,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	if(diskFile_.lockMode.type == FileLockMode::LOCK_TYPE_NONE)
 		diskFile_.unlock();
 
-	setCodePage(codePage);
+	setEncoding(encoding);
 	clearUndoBuffer();
 	setModified(false);
 	onceUndoBufferCleared_ = false;
@@ -1227,7 +1213,7 @@ void Document::resetContent() {
 		lines_.insert(lines_.begin(), new Line);
 
 	setReadOnly(false);
-	setCodePage(Document::defaultCodePage_);
+	setEncoding(Document::defaultEncoding_);
 	setNewline(Document::defaultNewline_);
 	setFilePathName(0);
 	setModified(false);
@@ -1239,12 +1225,16 @@ void Document::resetContent() {
 /**
  * Writes the content of the document to the specified file.
  * @param fileName the file name
- * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the line breaks.
- * set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
- * @param callback the callback or @c null
+ * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
+ * line breaks
  * @return the result. @c FIR_OK if succeeded
  */
-Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const SaveParameters& params, IFileIOListener* callback /* = 0 */) {
+Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const SaveParameters& params) {
+	// load an encoder
+	Encoder* encoder = Encoder::forMIB(params.encoding);
+	if(encoder == 0)
+		return FIR_INVALID_ENCODING;
+
 	// 保存先のファイルが読み取り専用か調べておく
 	const DWORD originalAttrs = ::GetFileAttributesW(fileName.c_str());	// この値は後でもう 1 回使う
 	if(originalAttrs != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttrs & FILE_ATTRIBUTE_READONLY))
@@ -1258,99 +1248,94 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 				return FIR_OK;
 		}
 	}
-
 	const wstring realName = canonicalizePathName(fileName.c_str());
-	EncoderFactory& encoderFactory = EncoderFactory::getInstance();
-	if(!encoderFactory.isValidCodePage(params.codePage)					// コードページがインストールされているか
-			|| encoderFactory.isCodePageForReadOnly(params.codePage))	// 読み取り専用のコードページか
-		return FIR_INVALID_CODE_PAGE;
-	const CodePage cp = encoderFactory.isCodePageForAutoDetection(params.codePage) ? codePage_ : params.codePage;
 
 	// Unicode コードページでしか使えない改行コード
-	if((params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS)
-			&& cp != CPEX_UNICODE_UTF5 && cp != CP_UTF7 && cp != CP_UTF8
-			&& cp != CPEX_UNICODE_UTF16LE && cp != CPEX_UNICODE_UTF16BE
-			&& cp != CPEX_UNICODE_UTF32LE && cp != CPEX_UNICODE_UTF32BE)
+	if(params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS) {
+		const MIBenum mib = encoder->getMIBenum();
+		if(mib != fundamental::MIB_UNICODE_UTF8 && mib != fundamental::MIB_UNICODE_UTF16LE && mib != fundamental::MIB_UNICODE_UTF16BE
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+				&& mib != extended::MIB_UNICODE_UTF5 && mib != extended::MIB_UNICODE_UTF7
+				&& mib != extended::MIB_UNICODE_UTF32LE && mib != extended::MIB_UNICODE_UTF32BE
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+			)
 		return FIR_INVALID_NEWLINE;
+	}
 
+#ifdef _WIN32
 	ui::WaitCursor wc;
+#endif /* _WIN32 */
 	FileIOResult result = FIR_OK;
 
-	// query progression callback
-	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
-	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
+//	// query progression callback
+//	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
+//	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
 
 	// 1 行ずつ変換してバッファに書き込み、後で一度にファイルに書き込む
-	auto_ptr<Encoder> encoder(encoderFactory.createEncoder(cp));
-	UnconvertableCharCallback* internalCallback = (callback != 0) ? new UnconvertableCharCallback(callback) : 0;
-	const length_t lineCount = getNumberOfLines();	// 総行数
-	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaxNativeCharLength() + 4;
+	const length_t numberOfLines = getNumberOfLines();
+	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaximumNativeLength() + 4;
 	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
-	size_t offset = 0;	// offset in bytes
+	uchar* dest = nativeBuffer;	// destination pointer
 
-	if(nativeBuffer == 0) {
-		delete internalCallback;
+	if(nativeBuffer == 0)
 		return FIR_OUT_OF_MEMORY;
-	}
 
-	// BOM
-	if(params.options.has(SaveParameters::WRITE_UNICODE_BOM)) {
+	// Unicode byte order signature
+	if(params.options.has(SaveParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE)) {
 		size_t signatureSize = 0;
-		switch(cp) {
-		case CP_UTF8:
-			signatureSize = countof(encodings::UTF8_BOM) - 1;
-			memcpy(nativeBuffer, encodings::UTF8_BOM, signatureSize);
+		switch(encoder->getMIBenum()) {
+		case fundamental::MIB_UNICODE_UTF8:
+			signatureSize = countof(encoding::UTF8_BOM);
+			memcpy(nativeBuffer, encoding::UTF8_BOM, signatureSize);
 			break;
-		case CPEX_UNICODE_UTF16LE:
-			signatureSize = countof(encodings::UTF16LE_BOM) - 1;
-			memcpy(nativeBuffer, encodings::UTF16LE_BOM, signatureSize);
+		case fundamental::MIB_UNICODE_UTF16LE:
+			signatureSize = countof(encoding::UTF16LE_BOM);
+			memcpy(nativeBuffer, encoding::UTF16LE_BOM, signatureSize);
 			break;
-		case CPEX_UNICODE_UTF16BE:
-			signatureSize = countof(encodings::UTF16BE_BOM) - 1;
-			memcpy(nativeBuffer, encodings::UTF16BE_BOM, signatureSize);
+		case fundamental::MIB_UNICODE_UTF16BE:
+			signatureSize = countof(encoding::UTF16BE_BOM);
+			memcpy(nativeBuffer, encoding::UTF16BE_BOM, signatureSize);
 			break;
-		case CPEX_UNICODE_UTF32LE:
-			signatureSize = countof(encodings::UTF32LE_BOM) - 1;
-			memcpy(nativeBuffer, encodings::UTF32LE_BOM, signatureSize);
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+		case extended::MIB_UNICODE_UTF32LE:
+			signatureSize = countof(encoding::UTF32LE_BOM);
+			memcpy(nativeBuffer, encoding::UTF32LE_BOM, signatureSize);
 			break;
-		case CPEX_UNICODE_UTF32BE:
-			signatureSize = countof(encodings::UTF32BE_BOM) - 1;
-			memcpy(nativeBuffer, encodings::UTF32BE_BOM, signatureSize);
+		case extended::MIB_UNICODE_UTF32BE:
+			signatureSize = countof(encoding::UTF32BE_BOM);
+			memcpy(nativeBuffer, encoding::UTF32BE_BOM, signatureSize);
 			break;
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 		}
-		offset += sizeof(uchar) * signatureSize;
+		dest += signatureSize;
 	}
 
-	for(length_t i = 0; i < lineCount; ++i) {
+	for(length_t i = 0; i < numberOfLines; ++i) {
 		const Line& line = *lines_[i];
-		if(i == lineCount - 1) {	// the last line
+		if(i == numberOfLines - 1) {	// the last line
 			if(line.text_.empty())
 				break;
 		}
-		size_t convertedBytes;
 
+		const Char* fromNext;
+		uchar* toNext;
 		if(!line.text_.empty()) {
-			convertedBytes = encoder->fromUnicode(nativeBuffer + offset, nativeBufferBytes - offset,
-							line.text_.data(), line.text_.length(),
-							(internalCallback != 0 && !internalCallback->isCalledOnce()) ? internalCallback : 0);
-			if(convertedBytes == 0)
-				goto CLIENT_ABORTED;
-			offset += convertedBytes;
+			if(Encoder::COMPLETED != encoder->fromUnicode(dest, nativeBuffer + nativeBufferBytes, toNext,
+					line.text_.data(), line.text_.data() + line.text_.length(), fromNext, params.encodingPolicy))
+				goto ENCODING_FAILURE;
+			dest = toNext;
 		}
-		if(i != lineCount - 1) {
+		if(i != numberOfLines - 1) {
 			const String nlf(getNewlineString((params.newline != NLF_AUTO) ? params.newline : line.newline_));
-			convertedBytes = encoder->fromUnicode(nativeBuffer + offset,
-				nativeBufferBytes - offset, nlf.data(), nlf.length(),
-				(internalCallback != 0 && !internalCallback->isCalledOnce()) ? internalCallback : 0);
-			if(convertedBytes == 0)
-				goto CLIENT_ABORTED;
-			offset += convertedBytes;
+			if(Encoder::COMPLETED != encoder->fromUnicode(dest,
+					nativeBuffer + nativeBufferBytes, toNext, nlf.data(), nlf.data() + nlf.length(), fromNext))
+				goto ENCODING_FAILURE;
+			dest = toNext;
 		}
 		continue;
-CLIENT_ABORTED:
+ENCODING_FAILURE:
 		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBuffer);
-		delete internalCallback;
-		return FIR_CALLER_ABORTED;
+		return FIR_ENCODING_FAILURE;
 	}
 
 	diskFile_.unlock();
@@ -1404,9 +1389,8 @@ CLIENT_ABORTED:
 	}
 */
 
-#define FREE_TEMPORARY_BUFFER()											\
-	::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBuffer);	\
-	delete internalCallback
+#define FREE_TEMPORARY_BUFFER()	\
+	::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBuffer)
 
 	bool deletedOldFile = false;
 	byCopying = false;	// TODO: support "by-copying" file writing.
@@ -1431,7 +1415,7 @@ CLIENT_ABORTED:
 			FREE_TEMPORARY_BUFFER();
 			return FIR_CANNOT_CREATE_TEMPORARY_FILE;
 		}
-		tempFile.write(nativeBuffer, static_cast<DWORD>(offset));
+		tempFile.write(nativeBuffer, static_cast<DWORD>(dest - nativeBuffer));
 		tempFile.close();
 		FREE_TEMPORARY_BUFFER();
 		diskFile_.unlock();
@@ -1483,7 +1467,7 @@ CLIENT_ABORTED:
 	undoManager_->documentSaved();
 	setModified(false);
 	setReadOnly(false);
-	setCodePage(cp);
+	setEncoding(encoder->getMIBenum());
 	setFilePathName(realName.c_str());
 
 	// update the internal time stamp
@@ -1574,15 +1558,15 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 
 /**
  * Sets the default encoding and newline.
- * @param cp the code page of the encoding
+ * @param mib the MIBenum value of the encoding
  * @param newline the newline
- * @throw std#invalid_argument @a cp and/or @a newline are invalid
+ * @throw std#invalid_argument @a mib and/or @a newline are invalid
+ * @deprecated 0.8
  */
-void Document::setDefaultCode(CodePage cp, Newline newline) {
-	cp = translateSpecialCodePage(cp);
-	if(!EncoderFactory::getInstance().isValidCodePage(cp)
-			|| EncoderFactory::getInstance().isCodePageForAutoDetection(cp))
-		throw invalid_argument("Specified code page is not available.");
+void Document::setDefaultCode(MIBenum mib, Newline newline) {
+//	mib = translateSpecialCodePage(mib);
+	if(!Encoder::supports(mib))
+		throw invalid_argument("Specified encoding is not available.");
 	switch(newline) {
 	case NLF_LF:	case NLF_CR:	case NLF_CRLF:
 	case NLF_NEL:	case NLF_LS:	case NLF_PS:
@@ -1590,13 +1574,14 @@ void Document::setDefaultCode(CodePage cp, Newline newline) {
 	default:
 		throw invalid_argument("Specified newline is invalid.");
 	}
-	defaultCodePage_ = cp;
+	defaultEncoding_ = mib;
 	defaultNewline_ = newline;
 }
 
 /**
  * Renames (or move) the bound file.
  * @param pathName the fill name
+ * @deprecated 0.8
  */
 void Document::setFilePathName(const WCHAR* pathName) {
 	if(pathName != 0) {
@@ -1649,22 +1634,23 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) thro
  * Translates the special Win32 code page to concrete one.
  * @param cp the code page to be translated
  * @return the concrete code page
+ * @deprecated 0.8
  */
-CodePage Document::translateSpecialCodePage(CodePage cp) {
-	if(cp == CP_ACP)
+::UINT Document::translateSpecialCodePage(::UINT codePage) {
+	if(codePage == CP_ACP)
 		return ::GetACP();
-	else if(cp == CP_OEMCP)
+	else if(codePage == CP_OEMCP)
 		return ::GetOEMCP();
-	else if(cp == CP_MACCP) {
+	else if(codePage == CP_MACCP) {
 		wchar_t	wsz[7];
 		::GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTMACCODEPAGE, wsz, 6);
 		return (wcscmp(wsz, L"2") != 0) ? wcstoul(wsz, 0, 10) : 0;
-	} else if(cp == CP_THREAD_ACP) {
+	} else if(codePage == CP_THREAD_ACP) {
 		wchar_t	wsz[7];
 		::GetLocaleInfoW(::GetThreadLocale(), LOCALE_IDEFAULTANSICODEPAGE, wsz, 6);
 		return (wcscmp(wsz, L"3") != 0) ? wcstoul(wsz, 0, 10) : 0;
 	}
-	return cp;
+	return codePage;
 }
 
 /**
@@ -1744,13 +1730,13 @@ void Document::widen() {
  * @param fileName the file name
  * @param region the region to be written
  * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
- * newlines. set @a codePage member of this object to @c CPEX_AUTODETECT to use the current code page
+ * newlines
  * @param append true to append to the file
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded
  */
-Document::FileIOResult Document::writeRegion(const basic_string<WCHAR>& fileName,
-		const Region& region, const SaveParameters& params, bool append, IFileIOListener* callback /* = 0 */) {
+Document::FileIOResult Document::writeRegion(
+		const basic_string<WCHAR>& fileName, const Region& region, const SaveParameters& params, bool append) {
 	// TODO: not implemented.
 	return FIR_OK;
 }
