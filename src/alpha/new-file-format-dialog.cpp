@@ -11,7 +11,7 @@
 #include "../manah/win32/ui/standard-controls.hpp"
 using alpha::ui::NewFileFormatDialog;
 using manah::win32::ui::ComboBox;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace ascension::text;
 using namespace std;
 
@@ -21,7 +21,7 @@ using namespace std;
  * @param encoding the encoding initially selected
  * @param newline the newline initially selected
  */
-NewFileFormatDialog::NewFileFormatDialog(CodePage encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
+NewFileFormatDialog::NewFileFormatDialog(MIBenum encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
 }
 
 /// @see Dialog#onCommand
@@ -29,11 +29,11 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
 
-	const CodePage cp = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
+	const MIBenum mib = static_cast<MIBenum>(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()));
 
-	if(cp == CPEX_UNICODE_UTF5 || cp == CP_UTF7 || cp == CP_UTF8
-			|| cp == CPEX_UNICODE_UTF16LE || cp == CPEX_UNICODE_UTF16BE
-			|| cp == CPEX_UNICODE_UTF32LE || cp == CPEX_UNICODE_UTF32BE) {
+	if(mib == extended::MIB_UNICODE_UTF5 || mib == extended::MIB_UNICODE_UTF7 || mib == fundamental::MIB_UNICODE_UTF8
+			|| mib == fundamental::MIB_UNICODE_UTF16LE || mib == fundamental::MIB_UNICODE_UTF16BE
+			|| mib == extended::MIB_UNICODE_UTF32LE || mib == extended::MIB_UNICODE_UTF32BE) {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
@@ -63,20 +63,21 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
-	set<CodePage> codePages;
+	vector<MIBenum> mibs;
 
 	// [コードページ]
-	EncoderFactory::getInstance().enumCodePages(codePages);
-	for(set<CodePage>::const_iterator cp(codePages.begin()), e(codePages.end()); cp != e; ++cp) {
-		if(EncoderFactory::getInstance().isCodePageForAutoDetection(*cp))
-			continue;
-		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-		const wstring name(Alpha::getInstance().loadMessage(id));
-		if(!name.empty()) {
-			const int i = codePageCombobox_.addString((*cp == encoding_) ? (name + L" *").c_str() : name.c_str());
-			codePageCombobox_.setItemData(i, *cp);
-			if(*cp == encoding_)
-				codePageCombobox_.setCurSel(i);
+	Encoder::getAvailableMIBs(back_inserter(mibs));
+	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
+//		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+//		const wstring name(Alpha::getInstance().loadMessage(id));
+		if(const Encoder* encoder = Encoder::forMIB(*mib)) {
+			const wstring name(encoder->getDisplayName());
+			if(!name.empty()) {
+				const int i = encodingCombobox_.addString((*mib == encoding_) ? (name + L" *").c_str() : name.c_str());
+				encodingCombobox_.setItemData(i, *mib);
+				if(*mib == encoding_)
+					encodingCombobox_.setCurSel(i);
+			}
 		}
 	}
 
@@ -97,7 +98,7 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
-	encoding_ = static_cast<CodePage>(codePageCombobox_.getItemData(codePageCombobox_.getCurSel()));
+	encoding_ = static_cast<MIBenum>(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()));
 	newline_ = static_cast<Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
 }

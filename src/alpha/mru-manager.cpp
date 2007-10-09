@@ -11,7 +11,7 @@
 using namespace alpha;
 using namespace std;
 using manah::win32::ui::Menu;
-using ascension::encodings::CodePage;
+using ascension::encoding::MIBenum;
 
 
 /**
@@ -26,27 +26,25 @@ MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCoun
 /**
  * Adds the new file. If there is already in the list, moves to the top.
  * @param fileName the name of the file to add
- * @param cp the code page
+ * @param mib the MIBenum value of the encoding
  */
-void MRUManager::add(const basic_string<WCHAR>& fileName, CodePage cp) {
-	list<MRU>::iterator it = fileNames_.begin();
+void MRUManager::add(const basic_string<WCHAR>& fileName, MIBenum mib) {
 	const basic_string<WCHAR> realName = ascension::text::canonicalizePathName(fileName.c_str());
 
 	// 同じものがあるか探す
-	while(it != fileNames_.end()) {
-		if(ascension::text::comparePathNames(realName.c_str(), it->fileName.c_str())) {	// 見つかった -> 先頭に出す
-			MRU item = *it;
-			item.codePage = cp;
-			fileNames_.erase(it);
+	for(list<MRU>::iterator i(fileNames_.begin()), e(fileNames_.end()); i != e; ++i) {
+		if(ascension::text::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// 見つかった -> 先頭に出す
+			MRU item = *i;
+			item.encoding = mib;
+			fileNames_.erase(i);
 			fileNames_.push_front(item);
 			updateMenu();
 			return;
 		}
-		++it;
 	}
 
 	// 先頭に追加する。総数が上限値を超える場合は一番古いものを削除する
-	MRU item = {fileName, cp};
+	MRU item = {fileName, mib};
 	fileNames_.push_front(item);
 	if(fileNames_.size() > limitCount_)
 		fileNames_.resize(limitCount_);
@@ -74,8 +72,8 @@ void MRUManager::load() {
 		file.fileName = app.readStringProfile(L"MRU", keyName);
 		if(file.fileName.empty())
 			break;
-		swprintf(keyName, L"codePage(%u)", i);
-		file.codePage = app.readIntegerProfile(L"MRU", keyName, ascension::encodings::CPEX_AUTODETECT_USERLANG);
+		swprintf(keyName, L"encoding(%u)", i);
+		file.encoding = app.readIntegerProfile(L"MRU", keyName, ascension::encoding::extended::MIB_AUTO_DETECTION_USER_LANGUAGE);
 		fileNames_.push_back(file);
 	}
 	updateMenu();
@@ -100,8 +98,8 @@ void MRUManager::save() {
 	for(size_t i = 0; it != fileNames_.end(); ++i, ++it) {
 		swprintf(keyName, L"pathName(%u)", i);
 		app.writeStringProfile(L"MRU", keyName, it->fileName.c_str());
-		swprintf(keyName, L"codePage(%u)", i);
-		app.writeIntegerProfile(L"MRU", keyName, it->codePage);
+		swprintf(keyName, L"encoding(%u)", i);
+		app.writeIntegerProfile(L"MRU", keyName, it->encoding);
 	}
 	app.writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
 }

@@ -396,9 +396,9 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 	}
 	output << L"</temporary-macro>\n";
 
-	using namespace ascension::encodings;
-	auto_ptr<Encoder> encoder(EncoderFactory::getInstance().createEncoder(CP_UTF8));
-	if(encoder.get() == 0)
+	using namespace ascension::encoding;
+	Encoder* encoder = Encoder::forMIB(fundamental::MIB_UNICODE_UTF8);
+	if(encoder == 0)
 		return false;
 
 	File<true> file(fileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL);
@@ -406,12 +406,16 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 		return false;
 
 	const wstring xml = output.str();
-	const size_t bufferSize = xml.length() * encoder->getMaxNativeCharLength();
+	const size_t bufferSize = xml.length() * encoder->getMaximumNativeLength();
 	HGLOBAL data = ::GlobalAlloc(GHND, bufferSize);
 	uchar* buffer = static_cast<uchar*>(::GlobalLock(data));
 
+	uchar* toNext;
+	const wchar_t* fromNext;
+	encoder->fromUnicode(buffer, buffer + bufferSize, toNext,
+		xml.data(), xml.data() + xml.length(), fromNext, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
 //	file.write(UTF8_BOM, countof(UTF8_BOM));
-	file.write(buffer, static_cast<DWORD>(encoder->fromUnicode(buffer, bufferSize, xml.data(), xml.length())));
+	file.write(buffer, static_cast<DWORD>(toNext - buffer));
 	file.close();
 	::GlobalUnlock(data);
 	::GlobalFree(data);

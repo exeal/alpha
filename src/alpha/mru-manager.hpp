@@ -15,8 +15,8 @@
 namespace alpha {
 	/// A most recently used file.
 	struct MRU {
-		std::basic_string<WCHAR> fileName;			///< The file name.
-		ascension::encodings::CodePage codePage;	///< The code page.
+		std::basic_string<WCHAR> fileName;		///< The file name.
+		ascension::encoding::MIBenum encoding;	///< The encoding of the file.
 	};
 
 	/// Most recently used files.
@@ -30,7 +30,7 @@ namespace alpha {
 		const manah::win32::ui::Menu&	getPopupMenu() const throw();
 		void							setLimit(std::size_t newLimit);
 		// operations
-		void	add(const std::basic_string<WCHAR>& fileName, ascension::encodings::CodePage cp);
+		void	add(const std::basic_string<WCHAR>& fileName, ascension::encoding::MIBenum mib);
 		void	clear();
 		void	remove(std::size_t index);
 		// persistent

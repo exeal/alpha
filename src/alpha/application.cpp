@@ -31,7 +31,7 @@ using namespace alpha::command;
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::viewers;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace ascension::texteditor::commands;
 using namespace manah::win32;
 using namespace manah::win32::ui;

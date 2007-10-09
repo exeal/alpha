@@ -4,7 +4,7 @@
  * @date 2004-2006
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "encoder.hpp"
 #include <algorithm>
 using namespace ascension;
@@ -43,6 +43,8 @@ using namespace std;
  *
  * <h3>Important protocol of @c #fromUnicode and @c #toUnicode</h3>
  */
+
+map<MIBenum, ASCENSION_SHARED_POINTER<Encoder> > Encoder::encoders_;
 
 /// Protected default constructor.
 Encoder::Encoder() throw() {
@@ -96,52 +98,13 @@ bool Encoder::canEncode(const String& s) const {
 }
 
 /**
- * Detects the encoding of the string buffer.
- * @param first the beginning of the sequence
- * @param last the end of the sequence
- * @param mib the MIBenum value of the encoding
- * @return the MIBenum of the detected encoding
- */
-MIBenum Encoder::detectEncoding(const uchar* first, const uchar* last, MIBenum mib) {
-	if(first == 0 || last == 0)
-		throw NullPointerException("first or last");
-	else if(first > last)
-		throw invalid_argument("first > last");
-
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	if(mib == extended::MIB_AUTO_DETECTION_SYSTEM_LANGUAGE || mib == extended::MIB_AUTO_DETECTION_USER_LANGUAGE) {
-#ifdef _WIN32
-		const ::LANGID langID = (mib == extended::MIB_AUTO_DETECTION_SYSTEM_LANGUAGE) ? ::GetSystemDefaultLangID() : ::GetUserDefaultLangID();
-		switch(PRIMARYLANGID(langID)) {
-		case LANG_ARMENIAN:		mib = extended::MIB_ARMENIAN_AUTO_DETECTION;	break;
-		case LANG_JAPANESE:		mib = extended::MIB_JAPANESE_AUTO_DETECTION;	break;
-//		case LANG_KOREAN:		mib = extended::MIB_KOREAN_AUTO_DETECTION;		break;
-		case LANG_VIETNAMESE:	mib = extended::MIB_VIETNAMESE_AUTO_DETECTION;	break;
-		default:				mib = fundamental::MIB_UNICODE_AUTO_DETECTION;	break;
-		}
-#else
-#endif
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	}
-
-	EncodingDetectors::const_iterator detector(encodingDetectors_.find(mib));
-	if(detector == encodingDetectors_.end())
-		detector = encodingDetectors_.find(fundamental::MIB_UNICODE_AUTO_DETECTION);
-	assert(detector != encodingDetectors_.end());
-
-	MIBenum result;
-	size_t score = (*detector->second)(first, last, result);
-	return (score != 0) ? result : fundamental::MIB_UNICODE_UTF8;
-}
-
-/**
  * Returns the encoder which has the given MIBenum value.
  * @param mib the MIBenum value
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forMIB(MIBenum mib) throw() {
 	Encoders::iterator i(encoders_.find(mib));
-	return (i != encoders_.end()) ? i->second : 0;
+	return (i != encoders_.end()) ? i->second.get() : 0;
 }
 
 /**
@@ -154,7 +117,7 @@ Encoder* Encoder::forName(const string& name) throw() {
 		// test canonical name
 		const string canonicalName = i->second->getName();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
-			return i->second;
+			return i->second.get();
 		// test aliases
 		const string aliases = i->second->getAliases();
 		for(size_t j = 0; ; ++j) {
@@ -163,7 +126,7 @@ Encoder* Encoder::forName(const string& name) throw() {
 				nul = aliases.length();
 			if(nul != j) {
 				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + nul))
-					return i->second;
+					return i->second.get();
 				++nul;
 			}
 			if(nul == aliases.length())
@@ -173,6 +136,18 @@ Encoder* Encoder::forName(const string& name) throw() {
 	}
 	return 0;
 }
+
+#ifdef _WIN32
+/**
+ * Returns the encoder which has the given Win32 code page.
+ * @param codePage the code page
+ * @return the encoder or @c null if not registered
+ */
+Encoder* Encoder::forWindowsCodePage(::UINT codePage) throw() {
+	// TODO: not implemented.
+	return 0;
+}
+#endif /* _WIN32 */
 
 /**
  * Converts the given string from UTF-16 into the native encoding.
@@ -231,30 +206,6 @@ MIBenum Encoder::getDefault() throw() {
 //#endif /* _WIN32 */
 }
 
-String Encoder::getDisplayName() const throw() {
-	// getName() must return an only-ASCII string
-	const string canonicalName(getName());
-	String s(canonicalName.length(), L'X');
-	for(size_t i = 0, c = canonicalName.length(); i < c; ++i)
-		s[i] = mask8Bit(canonicalName[i]);
-	return s;
-}
-
-/**
- * Registers the new auto encoding detector.
- * @param mib the MIBenum value of the detector
- * @param detector the function produces an encoding detector
- * @throw NullPointerException @a detector is @c null
- * @throw std#invalid_argument @a mib is already registered
- */
-void Encoder::registerDetector(MIBenum mib, EncodingDetector detector) {
-	if(detector == 0)
-		throw NullPointerException("detector");
-	else if(encodingDetectors_.find(mib) != encodingDetectors_.end())
-		throw invalid_argument("min is already registered.");
-	encodingDetectors_.insert(make_pair(mib, detector));
-}
-
 /**
  * Registers the new encoder.
  * @param producer the function produces an encoder
@@ -269,7 +220,7 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
 }
 
-/// Returns true if supports the specified encoding. This returns true for also auto-detections.
+/// Returns true if supports the specified encoding.
 bool Encoder::supports(MIBenum mib) throw() {
 	return encoders_.find(mib) != encoders_.end();
 }
@@ -326,16 +277,136 @@ String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) c
 
 // EncodingDetector /////////////////////////////////////////////////////////
 
+map<MIBenum, ASCENSION_SHARED_POINTER<EncodingDetector> > EncodingDetector::encodingDetectors_;
+
 /**
  * Constructor.
  * @param id the identifier of the encoding detector
  * @param name the name of the encoding detector
+ * @throw std#invalid_argument @a id is invalid
  */
-EncodingDetector::EncodingDetector(ID id, const string& name) : id_(id), name_(name) {
+EncodingDetector::EncodingDetector(MIBenum id, const string& name) : id_(id), name_(name) {
+	if(id < MINIMUM_ID || id > MAXIMUM_ID)
+		throw invalid_argument("id");
 }
 
 /// Destructor.
 EncodingDetector::~EncodingDetector() throw() {
+}
+
+/**
+ * Detects the encoding of the string buffer.
+ * @param detectorID the identifier of the encoding detector to use
+ * @param first the beginning of the sequence
+ * @param last the end of the sequence
+ * @return the MIBenum of the detected encoding
+ */
+MIBenum EncodingDetector::detect(MIBenum detectorID, const uchar* first, const uchar* last) {
+	if(first == 0 || last == 0)
+		throw NullPointerException("first or last");
+	else if(first > last)
+		throw invalid_argument("first > last");
+
+#if 0
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+	if(detectorID == SYSTEM_LOCALE_DETECTOR || detectorID == USER_LOCALE_DETECTOR) {
+#ifdef _WIN32
+		const ::LANGID langID = (detectorID == SYSTEM_LOCALE_DETECTOR) ? ::GetSystemDefaultLangID() : ::GetUserDefaultLangID();
+		switch(PRIMARYLANGID(langID)) {
+		case LANG_ARMENIAN:		mib = extended::MIB_ARMENIAN_AUTO_DETECTION;	break;
+		case LANG_JAPANESE:		mib = extended::MIB_JAPANESE_AUTO_DETECTION;	break;
+//		case LANG_KOREAN:		mib = extended::MIB_KOREAN_AUTO_DETECTION;		break;
+		case LANG_VIETNAMESE:	mib = extended::MIB_VIETNAMESE_AUTO_DETECTION;	break;
+		default:				mib = fundamental::MIB_UNICODE_AUTO_DETECTION;	break;
+		}
+#else
+#endif
+	}
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif
+
+	MIBenum result = fundamental::MIB_UNICODE_UTF8;
+	if(detectorID == UNIVERSAL_DETECTOR) {
+		// try all detectors
+		MIBenum detected;
+		ptrdiff_t bestScore = 0;
+		for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
+			const ptrdiff_t score = i->second->doDetect(first, last, detected);
+			if(score > bestScore) {
+				result = detected;
+				if(score == last - first)
+					break;
+				bestScore = score;
+			}
+		}
+	} else {
+		EncodingDetectors::const_iterator detector(encodingDetectors_.find(detectorID));
+		if(detector == encodingDetectors_.end())
+			throw invalid_argument("unsupported encoding detector identifier.");
+		detector->second->doDetect(first, last, result);
+	}
+	return result;
+}
+
+/**
+ * Returns the encoding detector which has the given identifier.
+ * @param id the identifier
+ * @return the encoding detectir or @c null if not registered
+ */
+EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
+	EncodingDetectors::iterator i(encodingDetectors_.find(id));
+	return (i != encodingDetectors_.end()) ? i->second.get() : 0;
+}
+
+/**
+ * Returns the encoding detector which matches the given name.
+ * @param name the name
+ * @return the encoding detector or @c null if not registered
+ */
+EncodingDetector* EncodingDetector::forName(const string& name) throw() {
+	for(EncodingDetectors::iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
+		const string canonicalName = i->second->getName();
+		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
+			return i->second.get();
+	}
+	return 0;
+}
+
+#ifdef _WIN32
+/**
+ * Returns the encoding detector which has the given Windows code page.
+ * @param codePage the code page
+ * @return the encoding detector or @c null if not registered
+ */
+EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() {
+	// TODO: not implemented.
+//	for(EncodingDetectors::iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
+//		if(convertMIBenumToWindowsCodePage(i->second->getID()) == codePage)
+//			return i->second.get();
+//	}
+	return 0;
+}
+#endif /* !_WIN32 */
+
+/**
+ * Registers the new encoding detector.
+ * @param newDetector the encoding detector
+ * @throw NullPointerException @a detector is @c null
+ * @throw std#invalid_argument @a detectorID is already registered
+ */
+void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) {
+	if(newDetector.get() == 0)
+		throw NullPointerException("newDetector");
+	const MIBenum id(newDetector->getID());
+	if(encodingDetectors_.find(id) != encodingDetectors_.end())
+		throw invalid_argument("the same identifier is already registered.");
+	encodingDetectors_.insert(make_pair(id, ASCENSION_SHARED_POINTER<EncodingDetector>(newDetector.release())));
+}
+
+/// Returns true if the encoding detector which has the specified identifier.
+bool EncodingDetector::supports(MIBenum detectorID) throw() {
+	return detectorID == UNIVERSAL_DETECTOR || detectorID == SYSTEM_LOCALE_DETECTOR
+		|| detectorID == USER_LOCALE_DETECTOR || encodingDetectors_.find(detectorID) != encodingDetectors_.end();
 }
 
 
@@ -464,6 +535,104 @@ string ISO88591Encoder::getName() const throw() {
 
 #ifdef _WIN32
 
+namespace {
+	const pair<MIBenum, ::UINT> MIBtoWinCP[] = {
+		make_pair(3,	20127),	// US-ASCII
+		make_pair(4,	28591),	// ISO-8859-1
+		make_pair(5,	28592),	// ISO-8859-2
+		make_pair(6,	28593),	// ISO-8859-3
+		make_pair(7,	28594),	// ISO-8859-4
+		make_pair(8,	28595),	// ISO-8859-5
+		make_pair(9,	28596),	// ISO-8859-6
+		make_pair(10,	28597),	// ISO-8859-7
+		make_pair(11,	28598),	// ISO-8859-8
+		make_pair(12,	28599),	// ISO-8859-9
+		make_pair(13,	28600),	// ISO-8859-10
+		make_pair(17,	932),	// Shift_JIS <-> 2024 Windows-31J
+		make_pair(18,	51932),	// EUC-JP
+		make_pair(37,	50225),	// ISO-2022-KR
+		make_pair(38,	51949),	// EUC-KR
+		make_pair(39,	50220),	// ISO-2022-JP
+		make_pair(40,	20932),	// ISO-2022-JP-2
+		make_pair(65,	708),	// ASMO_449
+		// ?T.61?
+		// ?ISO-2022-CN?
+		// ?ISO-2022-CN-EXT?
+		make_pair(106,	65001),	// UTF-8
+		make_pair(109,	28603),	// ISO-8859-13
+		make_pair(110,	28604),	// ISO-8859-14
+		make_pair(111,	28605),	// ISO-8859-15
+		make_pair(112,	28606),	// ISO-8859-16
+		make_pair(113,	936),	// GBK
+		make_pair(114,	54936),	// GB-18030
+		make_pair(1012,	65000),	// UTF-7
+		make_pair(1013,	1201),	// UTF-16BE
+		make_pair(1014,	1200),	// UTF-16LE
+		make_pair(1018,	12001),	// UTF-32BE
+		make_pair(1019,	12000),	// UTF-32LE
+		make_pair(2009,	850),	// IBM850
+		make_pair(2013,	862),	// IBM862
+		make_pair(2025,	20936),	// GB2312
+		make_pair(2026,	950),	// Big5
+		make_pair(2028,	37),	// IBM037
+		make_pair(2011,	437),	// IBM437
+		make_pair(2044,	500),	// IBM500
+		make_pair(2045,	851),	// IBM851
+		make_pair(2010,	852),	// IBM852
+		make_pair(2046,	855),	// IBM855
+		make_pair(2047,	857),	// IBM857
+		make_pair(2048,	860),	// IBM860
+		make_pair(2049,	861),	// IBM861
+		make_pair(2050,	863),	// IBM863
+		make_pair(2051,	864),	// IBM864
+		make_pair(2052,	865),	// IBM865
+		make_pair(2053,	868),	// IBM868
+		make_pair(2054,	869),	// IBM869
+		make_pair(2055,	870),	// IBM870
+		make_pair(2056,	871),	// IBM871
+		make_pair(2057,	880),	// IBM880
+		make_pair(2058,	891),	// IBM891
+		make_pair(2059,	903),	// IBM903
+		make_pair(2060,	904),	// IBM904
+		make_pair(2061,	905),	// IBM905
+		make_pair(2062,	918),	// IBM918
+		make_pair(2063,	1026),	// IBM1026
+		make_pair(2084,	20866),	// KOI8-R
+		make_pair(2085,	52936),	// HZ-GB-2312
+		make_pair(2086,	866),	// IBM866
+		make_pair(2087,	775),	// IBM775
+		make_pair(2088,	21866),	// KOI8-U
+		make_pair(2089,	858),	// IBM00858
+		// ?IBM00924?
+		make_pair(2091,	1140),	// IBM01140
+		make_pair(2092,	1141),	// IBM01141
+		make_pair(2093,	1142),	// IBM01142
+		make_pair(2094,	1143),	// IBM01143
+		make_pair(2095,	1144),	// IBM01144
+		make_pair(2096,	1145),	// IBM01145
+		make_pair(2097,	1146),	// IBM01146
+		make_pair(2098,	1147),	// IBM01147
+		make_pair(2099,	1148),	// IBM01148
+		make_pair(2100,	1149),	// IBM01149
+		make_pair(2102,	1047),	// IBM01047
+		make_pair(2250,	1250),	// windows-1250
+		make_pair(2251,	1251),	// windows-1251
+		make_pair(2252,	1252),	// windows-1252
+		make_pair(2253,	1253),	// windows-1253
+		make_pair(2254,	1254),	// windows-1254
+		make_pair(2255,	1255),	// windows-1255
+		make_pair(2256,	1256),	// windows-1256
+		make_pair(2257,	1257),	// windows-1257
+		make_pair(2258,	1258),	// windows-1258
+		make_pair(2259,	874)	// TIS-620 <-> IBM874
+	};
+	inline MIBenum getFirst(const pair<MIBenum, ::UINT>& p) {return p.first;}
+	inline ::UINT convertMIBtoWindowsCodePage(MIBenum mib) {
+		const pair<MIBenum, ::UINT>* p = ascension::internal::searchBound(MIBtoWinCP, endof(MIBtoWinCP), mib, getFirst);
+		return (p->first == mib) ? p->second : 0;
+	}
+}
+
 // WindowsEncoder ///////////////////////////////////////////////////////////
 
 namespace {
@@ -531,17 +700,30 @@ Encoder::Result WindowsEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext
 		return (::GetLastError() == ERROR_INSUFFICIENT_BUFFER) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
 }
 
+/// @see Encoder#getAliases
+string WindowsEncoder::getAliases() const throw() {
+	// TODO: not implemented.
+	return "";
+}
+
 /// @see Encoder#getMaximumNativeLength
 size_t WindowsEncoder::getMaximumNativeLength() const throw() {
-	::CPINFO cpi;
-	return toBoolean(::GetCPInfo(codePage_, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 0;
+	::CPINFOEXW cpi;
+	return toBoolean(::GetCPInfoExW(codePage_, 0, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 0;
+}
+
+/// @see Encoder#getMIB
+MIBenum WindowsEncoder::getMIBenum() const throw() {
+	return codePage_;
+//	return convertWindowsCodePageToMIB(codePage_);
 }
 
 /// @see Encoder#getName
 string WindowsEncoder::getName() const throw() {
-	::CPINFOEXA cpi;
-	::GetCPInfoExA(codePage_, 0, &cpi);
-	return cpi.CodePageName;
+	static const char format[] = "x-windows-%lu";
+	char name[countof(format) + 32];
+	sprintf(name, format, codePage_);
+	return name;
 }
 #endif /* _WIN32 */
 
@@ -557,8 +739,11 @@ namespace {
 #ifdef _WIN32
 		static BOOL CALLBACK procedure(::LPWSTR name) {
 			const ::UINT cp = wcstoul(name, 0, 10);
-			if(toBoolean(::IsValidCodePage(cp)))
-				Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp)));
+			if(toBoolean(::IsValidCodePage(cp))) {
+				::CPINFOEXW cpi;
+				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi)))
+					Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp)));
+			}
 			return TRUE;
 		}
 #endif /* _WIN32 */
