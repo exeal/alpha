@@ -632,7 +632,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	default:
 		if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {	// [最近使ったファイル]
 			const MRU& file = app.mruManager_->getFileInfoAt(id - CMD_SPECIAL_MRUSTART);
-			if(app.getBufferList().open(file.fileName, file.codePage) == BufferList::OPENRESULT_FAILED) {
+			if(app.getBufferList().open(file.fileName, file.encoding) == BufferList::OPENRESULT_FAILED) {
 				app.mruManager_->remove(id - CMD_SPECIAL_MRUSTART);
 				return false;
 			}

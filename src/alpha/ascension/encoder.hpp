@@ -39,20 +39,19 @@ namespace ascension {
 		/// Ascension never define an encoding has MIBenum greater than this.
 		const MIBenum MIB_MAXIMUM = 3999;
 
-		/// Fundamental encodings.
+		/// MIBenum values of the fundamental encodings.
 		namespace fundamental {
 			const MIBenum
 				MIB_US_ASCII = 3,					///< ANSI X3.4:1968.
 				MIB_ISO_8859_1 = 4,					///< ISO-8859-1:1987.
 				MIB_UNICODE_UTF8 = 106,				///< UTF-8.
 				MIB_UNICODE_UTF16BE = 1013,			///< UTF-16BE.
-				MIB_UNICODE_UTF16LE = 1014,			///< UTF-16LE.
-//				MIB_UNICODE_UTF16 = 1015,			///< UTF-16.
-				MIB_UNICODE_AUTO_DETECTION = 3000;	///< Auto-detection for Unicode encodings.
+				MIB_UNICODE_UTF16LE = 1014;			///< UTF-16LE.
+//				MIB_UNICODE_UTF16 = 1015;			///< UTF-16.
 		}
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-		/// Standard encodings.
+		/// MIBenum values of the standard encodings.
 		namespace standard {
 			const MIBenum
 				MIB_ISO_8859_2 = 5,		///< ISO-8859-2:1987.
@@ -81,6 +80,7 @@ namespace ascension {
 #endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+		/// MIBenum values of the extended encodings.
 		namespace extended {
 			const MIBenum
 				// Unicode
@@ -167,9 +167,6 @@ namespace ascension {
 		const uchar	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-
-		// Encoder //////////////////////////////////////////////////////////////
-
 		/// A replacement character used when unconvertable.
 		const uchar NATIVE_DEFAULT_CHARACTER = '?';
 
@@ -241,11 +238,6 @@ namespace ascension {
 			 * @return a string contains aliases separated by NUL
 			 */
 			virtual std::string getAliases() const throw() {return "";}
-			/**
-			 * Returns the human-readable name of the encoding. Default implementation calls
-			 * @c #getName method.
-			 */
-			virtual String getDisplayName() const throw();
 			/// Returns the number of bytes represents a UCS character.
 			virtual std::size_t getMaximumNativeLength() const throw() = 0;
 			/// Returns the number of UCS characters represents a native character. Default
@@ -275,7 +267,7 @@ namespace ascension {
 			static Encoder*	forMIB(MIBenum mib) throw();
 			static Encoder*	forName(const std::string& name) throw();
 #ifdef _WIN32
-			static Encoder*	forWindowCodePage(::UINT codePage) throw();
+			static Encoder*	forWindowsCodePage(::UINT codePage) throw();
 #endif /* _WIN32 */
 			template<typename OutputIterator>
 			static void		getAvailableMIBs(OutputIterator out);
@@ -313,45 +305,50 @@ namespace ascension {
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const = 0;
 		private:
-			typedef std::map<MIBenum, Encoder*> Encoders;
+			typedef std::map<MIBenum, ASCENSION_SHARED_POINTER<Encoder> > Encoders;
 			static Encoders encoders_;
 		};
 
 		class EncodingDetector : private manah::Noncopyable {
 		public:
-			/// An identifier of an encoding detector.
-			typedef ushort ID;
-			/// Minimum value of @c #ID.
+			/// Minimum value of identifier of encoding detector.
 			/// Ascension never define an encoding detector has ID less than this.
-			static const ID MINIMUM_ID = 4000;
-			/// Maximum value of @c #ID.
+			static const MIBenum MINIMUM_ID = 4000;
+			/// Maximum value of identifier of encoding detector.
 			/// Ascension never define an encoding detector has ID greater than this.
-			static const ID MAXIMUM_ID = 4999;
+			static const MIBenum MAXIMUM_ID = 4999;
+			/// Identifier of the Unicode detector.
+			static const UNICODE_DETECTOR = MINIMUM_ID;
+			/// Identifier of the universal detector.
+			static const UNIVERSAL_DETECTOR = UNICODE_DETECTOR + 1;
+			/// Identifier of the detector for the system locale.
+			static const SYSTEM_LOCALE_DETECTOR = UNICODE_DETECTOR + 2;
+			/// Identifier of the detector for the user locale.
+			static const USER_LOCALE_DETECTOR = UNICODE_DETECTOR + 3;
 		public:
 			// constructors
 			virtual ~EncodingDetector() throw();
 			// attributes
-			/// Returns the human-readable name. Default implementation calls @c #getName method.
-			virtual String getDisplayName() const throw();
 			/// Returns the identifier of the encoding detector.
-			ID getID() const throw() {return id_;}
+			MIBenum getID() const throw() {return id_;}
 			/// Returns the name of the encoding detector.
 			std::string getName() const throw() {return name_;}
 			// detection
-			static MIBenum	detect(detectorID id, const uchar* first, const uchar* last);
+			static MIBenum	detect(MIBenum detectorID, const uchar* first, const uchar* last);
 			// factory
+			static EncodingDetector*	forID(MIBenum id) throw();
 			static EncodingDetector*	forName(const std::string& name) throw();
 #ifdef _WIN32
-			static EncodingDetector*	forWindowCodePage(::UINT codePage) throw();
+			static EncodingDetector*	forWindowsCodePage(::UINT codePage) throw();
 #endif /* _WIN32 */
 			template<typename OutputIterator>
 			static void		getAvailableIDs(OutputIterator out);
 			template<typename OutputIterator>
 			static void		getAvailableNames(OutputIterator out);
-			static void		registerDetector(ID detectorID, std::auto_ptr<EncodingDetector> newDetector);
-			static bool		supports(ID detectorID) throw();
+			static void		registerDetector(std::auto_ptr<EncodingDetector> newDetector);
+			static bool		supports(MIBenum detectorID) throw();
 		protected:
-			EncodingDetector(ID id, const std::string& name);
+			EncodingDetector(MIBenum id, const std::string& name);
 			/**
 			 * Detects the encoding of the given character sequence.
 			 * @param first the beginning of the sequence
@@ -362,9 +359,9 @@ namespace ascension {
 			 */
 			virtual std::ptrdiff_t doDetect(const uchar* first, const uchar* last, MIBenum& detectedEncoding) const throw() = 0;
 		private:
-			typedef std::map<ID, EncodingDetector*> EncodingDetectors;
+			typedef std::map<MIBenum, ASCENSION_SHARED_POINTER<EncodingDetector> > EncodingDetectors;
 			static EncodingDetectors encodingDetectors_;
-			const ID id_;
+			const MIBenum id_;
 			const std::string name_;
 		};
 
@@ -394,6 +391,15 @@ namespace ascension {
 	std::string getAliases() const throw();							\
 	ASCENSION_INTERNAL_DEFINE_SIMPLE_ENCODER_EPILOGUE()
 
+		/// This macro defines a class has the name @a name and the ID @a mib extends @c EncodingDetector.
+#define ASCENSION_DEFINE_ENCODING_DETECTOR(className, name, mib)					\
+		class className : public EncodingDetector {									\
+		public:																		\
+			className() : EncodingDetector(mib, name) {}							\
+		private:																	\
+			std::ptrdiff_t doDetect(const uchar*, const uchar*, MIBenum&) const;	\
+		}
+
 		#define MAP_TABLE(offset, table)	\
 			else MAP_TABLE_START(offset, table)
 
@@ -418,19 +424,29 @@ namespace ascension {
 		 * @param[out] out the output iterator to receive MIBs
 		 */
 		template<typename OutputIterator> inline void Encoder::getAvailableMIBs(OutputIterator out) {
-			for(EncoderProducers::const_iterator i(encoderProducers_.begin()), e(encoderProducers_.end()); i != e; ++i, ++out)
-				*out = i->first;
-			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
-				*out = i->first;
-		}
+			for(Encoders::const_iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i, ++out) *out = i->first;}
 
 		/**
 		 * Returns names for all available encodings.
 		 * @param[out] out the output iterator to receive names
 		 */
 		template<typename OutputIterator> inline void Encoder::getAvailableNames(OutputIterator out) {
-			for(EncoderProducers::const_iterator i(encoderProducers_.begin()), e(encoderProducers_.end()); i != e; ++i, ++out)
-				*out = i->second.getName();
+			for(Encoders::const_iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i, ++out) *out = i->second.getName();}
+
+		/**
+		 * Returns identifiers for all available encoding detectors.
+		 * @param[out] out the output iterator to receive identifiers
+		 */
+		template<typename OutputIterator> inline void EncodingDetector::getAvailableIDs(OutputIterator out) {
+			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
+				*out = i->first;
+		}
+
+		/**
+		 * Returns names for all available encoding detectors.
+		 * @param[out] out the output iterator to receive names
+		 */
+		template<typename OutputIterator> inline void EncodingDetector::getAvailableNames(OutputIterator out) {
 			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
 				*out = i->second.getName();
 		}

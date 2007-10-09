@@ -6,7 +6,7 @@
  */
 
 #include "stdafx.h"
-#include "ascension/text-editor.hpp"	// ascension::texteditor::commands::IncrementalSearchCommand
+#include "ascension/text-editor.hpp"	// ascension.texteditor.commands.IncrementalSearchCommand
 #include "buffer.hpp"
 #include "application.hpp"
 #include "command.hpp"
@@ -26,7 +26,7 @@ using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::searcher;
 using namespace ascension::presentation;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace ascension::viewers;
 using namespace manah::win32;
 using namespace manah::win32::ui;
@@ -36,10 +36,10 @@ using namespace std;
 
 namespace {
 	struct TextFileFormat {
-		CodePage encoding;
+		MIBenum encoding;
 		Newline newline;
 	};
-	class FileIOCallback : virtual public IFileIOListener {
+/*	class FileIOCallback : virtual public IFileIOListener {
 	public:
 		FileIOCallback(alpha::Alpha& app, bool forLoading, const WCHAR* fileName, CodePage encoding) throw()
 				: app_(app), forLoading_(forLoading), fileName_(fileName),
@@ -64,7 +64,7 @@ namespace {
 		const WCHAR* const fileName_;
 		const CodePage encoding_;
 		bool retryWithOtherCodePage_;
-	};
+	};*/
 } // namespace @0
 
 
@@ -140,7 +140,7 @@ BufferList::~BufferList() {
  * @param encoding the encoding (code page)
  * @param newline the newline
  */
-void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, Newline newline /* = NLF_AUTO */) {
+void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, Newline newline /* = NLF_AUTO */) {
 /*	if(::GetCurrentThreadId() != app_.getMainWindow().getWindowThreadID()) {
 		// ウィンドウの作成をメインスレッドに委譲
 		struct X : virtual public ICallable {
@@ -156,11 +156,13 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, Newline ne
 		return;
 	}
 */
+	if(!Encoder::supports(encoding))
+		throw invalid_argument("unsupported encoding.");
+
 	Buffer* const buffer = new Buffer();
 	editorSession_.addDocument(*buffer);
 
-	if(cp != CPEX_AUTODETECT_USERLANG)
-		buffer->setCodePage(cp);
+	buffer->setEncoding(encoding);
 	if(newline != NLF_AUTO)
 		buffer->setNewline(newline);
 	buffers_.push_back(buffer);
@@ -205,9 +207,9 @@ void BufferList::addNew(CodePage cp /* = CPEX_AUTODETECT_USERLANG */, Newline ne
 /// [書式を指定して新規] ダイアログを開き、バッファを新規作成する
 void BufferList::addNewDialog() {
 	TextFileFormat format;
-	format.encoding = app_.readIntegerProfile(L"File", L"defaultCodePage", ::GetACP());
-	if(format.encoding == CP_ACP)
-		format.encoding = ::GetACP();
+	format.encoding = app_.readIntegerProfile(L"File", L"defaultEncoding", Encoder::getDefault());
+	if(!Encoder::supports(format.encoding))
+		format.encoding = Encoder::getDefault();
 	format.newline= static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_AUTO));
 	if(format.newline == NLF_AUTO)
 		format.newline = NLF_CRLF;
@@ -569,10 +571,10 @@ bool BufferList::handleFileIOError(const WCHAR* fileName, bool forLoading, Docum
 		message += static_cast<wchar_t*>(buffer);
 		::LocalFree(buffer);
 		app_.getMainWindow().messageBox(message.c_str(), IDS_APPNAME, MB_ICONEXCLAMATION);
-	} else if(result != Document::FIR_CALLER_ABORTED) {
+	} else if(result != Document::FIR_ENCODING_FAILURE) {
 		DWORD messageID;
 		switch(result) {
-		case Document::FIR_INVALID_CODE_PAGE:				messageID = MSG_IO__INVALID_ENCODING; break;
+		case Document::FIR_INVALID_ENCODING:				messageID = MSG_IO__INVALID_ENCODING; break;
 		case Document::FIR_INVALID_NEWLINE:					messageID = MSG_IO__INVALID_NEWLINE; break;
 		case Document::FIR_OUT_OF_MEMORY:					messageID = MSG_ERROR__OUT_OF_MEMORY; break;
 		case Document::FIR_HUGE_FILE:						messageID = MSG_IO__HUGE_FILE; break;
@@ -651,13 +653,13 @@ void BufferList::documentReadOnlySignChanged(Document& document) {
  * Opens the specified file.
  * This method may show a dialog to indicate the result.
  * @param fileName the name of the file to open
- * @param encoding the encoding (code page). auto-detect if omitted
+ * @param encoding the encoding. auto-detect if omitted
  * @param asReadOnly set true to open as read only
  * @param addToMRU set true to add the file to MRU
  * @return the result. see the description of @c BufferList#OpenResult
  */
 BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
-		CodePage encoding /* = CPEX_AUTOSELECT */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
+		MIBenum encoding /* = EncodingDetector::UNIVERSAL_DETECTOR */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
 	WCHAR resolvedName[MAX_PATH];
 
 	// ショートカットの解決
@@ -708,9 +710,9 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		buffer = &getActive();
 	}
 
-	if(!EncoderFactory::getInstance().isCodePageForAutoDetection(encoding)) {
+	if(Encoder::supports(encoding)) {
 //		try {
-			buffer->setCodePage(encoding);
+			buffer->setEncoding(encoding);
 //		} catch(invalid_argument&) {
 //			if(IDNO == app_.messageBox(MSG_ILLEGAL_CODEPAGE, MB_YESNO | MB_ICONEXCLAMATION))
 //				return OPENRESULT_USERCANCELED;
@@ -719,31 +721,40 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //		}
 	}
 
-	const wstring s = app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName);
+	const wstring s(app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName));
 	Document::FileIOResult result;
 	do {
 		WaitCursor wc;
-		FileIOCallback callback(app_, true, resolvedName, encoding);
-
 		app_.setStatusText(s.c_str());
 		app_.getMainWindow().lockUpdate();
 
 		// 準備ができたのでファイルを開く
-		result = buffer->load(resolvedName, lockMode, encoding, &callback);
+		result = buffer->load(resolvedName, lockMode, encoding, Encoder::NO_POLICY);
 		app_.setStatusText(0);
 		app_.getMainWindow().unlockUpdate();
-
-		// ユーザがコードページの変更を要求していた
-		if(callback.doesUserWantToChangeCodePage()) {
-			assert(result == Document::FIR_CALLER_ABORTED);
-			ui::CodePagesDialog dlg(encoding, true);
-			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
-				encoding = dlg.getCodePage();
-				continue;	// コードページを変えて再挑戦
-			}
+		if(result == Document::FIR_ENCODING_FAILURE) {
+			// alert the encoding error
+//			const DWORD id = (encoding_ < 0x10000) ?
+//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
+//			const int answer = app_.messageBox(forLoading_ ?
+//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+//				MARGS % resolvedName % Alpha::getInstance().loadMessage(id).c_str());
+			const int answer = Alpha::getInstance().messageBox(
+				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+				MARGS % resolvedName % Encoder::forMIB(encoding)->getDisplayName().c_str());
+			if(answer == IDYES) {
+				// the user want to change the encoding
+				ui::EncodingsDialog dlg(encoding, true);
+				if(dlg.doModal(app_.getMainWindow()) != IDOK)
+					return OPENRESULT_USERCANCELED;
+				encoding = dlg.getSelection();
+				continue;
+			} else if(answer == IDNO)
+				result = buffer->load(resolvedName, lockMode, encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+			else
+				return OPENRESULT_USERCANCELED;
 		}
-		break;
-	} while(true);
+	} while(false);
 
 	app_.getMainWindow().show(app_.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
@@ -751,10 +762,10 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		if(asReadOnly)
 			buffer->setReadOnly();
 		if(addToMRU)
-			app_.getMRUManager().add(buffer->getFilePathName(), buffer->getCodePage());
+			app_.getMRUManager().add(buffer->getFilePathName(), buffer->getEncoding());
 		return OPENRESULT_SUCCEEDED;
 	}
-	return (result != Document::FIR_CALLER_ABORTED) ? OPENRESULT_FAILED : OPENRESULT_USERCANCELED;
+	return OPENRESULT_FAILED;
 }
 
 /**
@@ -790,7 +801,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		}
 	}
 
-	TextFileFormat format = {CPEX_AUTODETECT_USERLANG, NLF_AUTO};
+	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_AUTO};
 	AutoZeroLS<::OPENFILENAMEW> newOfn;
 	AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
@@ -815,7 +826,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	if(succeeded) {
 		const wstring directory = ofn.lpstrFile;
 
-		if(directory.length() > ofn.nFileOffset)	// 開くファイルは1つ
+		if(directory.length() > ofn.nFileOffset)	// 開くファイルは 1 つ
 			return open(directory, format.encoding, toBoolean(ofn.Flags & OFN_READONLY));	// pOfn->lpstrFile は完全ファイル名
 		else {	// 複数のファイルを開く場合
 			wchar_t* fileNames = ofn.lpstrFile + ofn.nFileOffset;
@@ -838,20 +849,21 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch(message) {
 	case WM_COMMAND:
-		// [コードページ] が変更された
+		// changed "Encoding"
 		if(LOWORD(wParam) == IDC_COMBO_ENCODING && HIWORD(wParam) == CBN_SELCHANGE) {
 			ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
 			if(!newlineCombobox.isWindow())
 				break;
-			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
+			ComboBox encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 
 			const wstring keepNLF = Alpha::getInstance().loadMessage(MSG_DIALOG__KEEP_NEWLINE);
-			const CodePage cp = codePageCombobox.getItemData(codePageCombobox.getCurSel());
+			const MIBenum encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
-			if(cp == CPEX_UNICODE_UTF5 || cp == CP_UTF7 || cp == CP_UTF8
-					|| cp == CPEX_UNICODE_UTF16LE || cp == CPEX_UNICODE_UTF16BE
-					|| cp == CPEX_UNICODE_UTF32LE || cp == CPEX_UNICODE_UTF32BE) {
+			if(encoding == extended::MIB_UNICODE_UTF5 || encoding == extended::MIB_UNICODE_UTF7
+					|| encoding == fundamental::MIB_UNICODE_UTF8
+					|| encoding == fundamental::MIB_UNICODE_UTF16LE || encoding == fundamental::MIB_UNICODE_UTF16BE
+					|| encoding == extended::MIB_UNICODE_UTF32LE || encoding == extended::MIB_UNICODE_UTF32BE) {
 				if(newlineCombobox.getCount() != 7) {
 					newlineCombobox.resetContent();
 					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
@@ -878,8 +890,8 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 	case WM_INITDIALOG: {
 		::OPENFILENAMEW& ofn = *reinterpret_cast<::OPENFILENAMEW*>(lParam);
 		HWND dialog = ::GetParent(window);
-		ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
-		Static codePageLabel(::GetDlgItem(window, IDC_STATIC_1));
+		ComboBox encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
+		Static encodingLabel(::GetDlgItem(window, IDC_STATIC_1));
 		ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
 		Static newlineLabel(::GetDlgItem(window, IDC_STATIC_2));
 		HFONT guiFont = reinterpret_cast<HFONT>(::SendMessage(dialog, WM_GETFONT, 0, 0L));
@@ -894,9 +906,9 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		// ラベル
 		::GetWindowRect(::GetDlgItem(dialog, stc2), &rect);
 		long x = rect.left;
-		codePageLabel.getRect(rect);
-		codePageLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-		codePageLabel.setFont(guiFont);
+		encodingLabel.getRect(rect);
+		encodingLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		encodingLabel.setFont(guiFont);
 		if(newlineLabel.isWindow()) {
 			newlineLabel.getRect(rect);
 			newlineLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
@@ -906,35 +918,42 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		// コンボボックス
 		::GetWindowRect(::GetDlgItem(dialog, cmb1), &rect);
 		x = rect.left;
-		codePageCombobox.getRect(rect);
-		codePageCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-		codePageCombobox.setFont(guiFont);
+		encodingCombobox.getRect(rect);
+		encodingCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		encodingCombobox.setFont(guiFont);
 		if(newlineCombobox.isWindow()) {
 			newlineCombobox.getRect(rect);
 			newlineCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			newlineCombobox.setFont(guiFont);
 		}
 
-		const EncoderFactory& encoders = EncoderFactory::getInstance();
-		set<CodePage> codePages;
-		encoders.enumCodePages(codePages);
-		for(set<CodePage>::const_iterator cp(codePages.begin()), e(codePages.end()); cp != e; ++cp) {
-			if(newlineCombobox.isWindow()
-					&& (encoders.isCodePageForAutoDetection(*cp) || encoders.isCodePageForAutoDetection(*cp)))
-				continue;
-			else {
-				const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-				const wstring name(Alpha::getInstance().loadMessage(id));
+		vector<MIBenum> mibs;
+		Encoder::getAvailableMIBs(back_inserter(mibs));
+		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
+//			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+//			const wstring name(Alpha::getInstance().loadMessage(id));
+			if(const Encoder* encoder = Encoder::forMIB(*mib)) {
+				const wstring name(encoder->getDisplayName());
 				if(!name.empty())
-					codePageCombobox.setItemData(codePageCombobox.addString(name.c_str()), *cp);
+					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
+			}
+		}
+		if(!newlineCombobox.isWindow()) {
+			mibs.clear();
+			EncodingDetector::getAvailableIDs(back_inserter(mibs));
+			for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
+				if(const EncodingDetector* detector = EncodingDetector::forID(*mib)) {
+					const wstring name(detector->getDisplayName());
+					if(!name.empty())
+						encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
+				}
 			}
 		}
 
-		const UINT c = codePageCombobox.getCount();
-		codePageCombobox.setCurSel(0);
-		for(UINT i = 0; i < c; ++i) {
-			if(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->encoding == codePageCombobox.getItemData(i)) {
-				codePageCombobox.setCurSel(i);
+		encodingCombobox.setCurSel(0);
+		for(::UINT i = 0, c = encodingCombobox.getCount(); i < c; ++i) {
+			if(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->encoding == encodingCombobox.getItemData(i)) {
+				encodingCombobox.setCurSel(i);
 				break;
 			}
 		}
@@ -956,12 +975,12 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 	case WM_NOTIFY: {
 		::OFNOTIFYW& ofn = *reinterpret_cast<OFNOTIFYW*>(lParam);
 		if(ofn.hdr.code == CDN_FILEOK) {	// [開く]/[保存]
-			ComboBox codePageCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
+			ComboBox encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 			ComboBox newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
 			Button readOnlyCheckbox(::GetDlgItem(::GetParent(window), chx1));
 			TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lpOFN->lCustData);
 
-			format.encoding = codePageCombobox.getItemData(codePageCombobox.getCurSel());
+			format.encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			if(newlineCombobox.isWindow()) {
 				switch(newlineCombobox.getCurSel()) {
 				case 0:	format.newline = NLF_AUTO;	break;
@@ -1029,11 +1048,11 @@ void BufferList::recalculateBufferBarSize() {
 /**
  * Reopens the specified buffer.
  * @param index the index of the buffer to reopen
- * @param changeCodePage set true to change the encoding
+ * @param changeEncoding set true to change the encoding
  * @return the result. see the description of @c BufferList#OpenResult
  * @throw std#out_of_range @a index is invalid
  */
-BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
+BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 	Buffer& buffer = getAt(index);
 
 	// ファイルが存在するか?
@@ -1045,35 +1064,46 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeCodePage) {
 		return OPENRESULT_USERCANCELED;
 
 	// コードページを変更する場合はダイアログを出す
-	CodePage cp = buffer.getCodePage();
-	if(changeCodePage) {
-		ui::CodePagesDialog dlg(cp, true);
+	MIBenum encoding = buffer.getEncoding();
+	if(changeEncoding) {
+		ui::EncodingsDialog dlg(encoding, true);
 		if(dlg.doModal(app_.getMainWindow()) != IDOK)
 			return OPENRESULT_USERCANCELED;
-		cp = dlg.getCodePage();
+		encoding = dlg.getSelection();
 	}
 
 	Document::FileIOResult result;
 	do {
-		FileIOCallback callback(app_, true, buffer.getFilePathName(), cp);
-
-		result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), cp, &callback);
-		if(callback.doesUserWantToChangeCodePage()) {
-			assert(result == Document::FIR_CALLER_ABORTED);
-			ui::CodePagesDialog dlg(cp, true);
-			if(dlg.doModal(app_.getMainWindow()) != IDOK)
+		result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), encoding, Encoder::NO_POLICY);
+		if(result == Document::FIR_ENCODING_FAILURE) {
+			// alert the encoding error
+//			const DWORD id = (encoding_ < 0x10000) ?
+//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
+//			const int answer = app_.messageBox(forLoading_ ?
+//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+//				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
+			const int answer = Alpha::getInstance().messageBox(
+				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+				MARGS % buffer.getFilePathName() % Encoder::forMIB(encoding)->getDisplayName().c_str());
+			if(answer == IDYES) {
+				// the user want to change the encoding
+				ui::EncodingsDialog dlg(encoding, true);
+				if(dlg.doModal(app_.getMainWindow()) != IDOK)
+					return OPENRESULT_USERCANCELED;
+				encoding = dlg.getSelection();
+				continue;
+			} else if(answer == IDNO)
+				result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+			else
 				return OPENRESULT_USERCANCELED;
-			cp = dlg.getCodePage();
-			continue;
 		}
-		break;
-	} while(true);
+	} while(false);
 
 	if(handleFileIOError(buffer.getFilePathName(), true, result)) {
-		app_.getMRUManager().add(buffer.getFilePathName(), buffer.getCodePage());
+		app_.getMRUManager().add(buffer.getFilePathName(), buffer.getEncoding());
 		return OPENRESULT_SUCCEEDED;
 	} else
-		return (result != Document::FIR_CALLER_ABORTED) ? OPENRESULT_FAILED : OPENRESULT_USERCANCELED;
+		return OPENRESULT_FAILED;
 }
 
 /// Reconstructs the image list and the menu according to the current buffer list.
@@ -1120,7 +1150,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		return true;
 
 	WCHAR fileName[MAX_PATH + 1];
-	TextFileFormat format = {buffer.getCodePage(), NLF_AUTO};
+	TextFileFormat format = {buffer.getEncoding(), NLF_AUTO};
 	bool newName = false;
 
 	// 別名で保存 or ファイルが存在しない
@@ -1166,32 +1196,47 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcscpy(fileName, buffer.getFilePathName());
 
 	const bool writeBOM =
-		(format.encoding == CP_UTF8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
-		|| (format.encoding == CPEX_UNICODE_UTF16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
-		|| (format.encoding == CPEX_UNICODE_UTF16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
-		|| (format.encoding == CPEX_UNICODE_UTF32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
-		|| (format.encoding == CPEX_UNICODE_UTF32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
+		(format.encoding == fundamental::MIB_UNICODE_UTF8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
+		|| (format.encoding == fundamental::MIB_UNICODE_UTF16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
+		|| (format.encoding == fundamental::MIB_UNICODE_UTF16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
+		|| (format.encoding == extended::MIB_UNICODE_UTF32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
+		|| (format.encoding == extended::MIB_UNICODE_UTF32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
 	Document::FileIOResult result;
 
 	do {
-		FileIOCallback callback(app_, false, fileName, format.encoding);
 		Document::SaveParameters params;
-		params.codePage = format.encoding;
+		params.encoding = format.encoding;
+		params.encodingPolicy = Encoder::NO_POLICY;
 		params.newline = format.newline;
 		if(writeBOM)
-			params.options = Document::SaveParameters::WRITE_UNICODE_BOM;
+			params.options = Document::SaveParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
 
-		result = buffer.save(fileName, params, &callback);
-		if(callback.doesUserWantToChangeCodePage()) {
-			ui::CodePagesDialog dlg(format.encoding, false);
-			assert(result == Document::FIR_CALLER_ABORTED);
-			if(dlg.doModal(app_.getMainWindow()) == IDOK) {
-				format.encoding = dlg.getCodePage();
+		result = buffer.save(fileName, params);
+		if(result == Document::FIR_ENCODING_FAILURE) {
+			// alert the encoding error
+//			const DWORD id = (encoding_ < 0x10000) ?
+//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
+//			const int answer = app_.messageBox(forLoading_ ?
+//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+//				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
+			const int answer = Alpha::getInstance().messageBox(
+				MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+				MARGS % fileName % Encoder::forMIB(params.encoding)->getDisplayName().c_str());
+			if(answer == IDYES) {
+				// the user want to change the encoding
+				ui::EncodingsDialog dlg(params.encoding, false);
+				if(dlg.doModal(app_.getMainWindow()) != IDOK)
+					return false;
+				params.encoding = dlg.getSelection();
 				continue;
-			}
+			} else if(answer == IDNO) {
+				params.encodingPolicy = Encoder::REPLACE_UNMAPPABLE_CHARACTER;
+				result = buffer.save(fileName, params);
+				break;
+			} else
+				return false;
 		}
-		break;
-	} while(true);
+	} while(false);
 
 	const bool succeeded = handleFileIOError(fileName, false, result);
 	if(succeeded && addToMRU && newName)

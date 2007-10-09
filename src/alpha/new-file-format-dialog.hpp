@@ -17,25 +17,25 @@ namespace alpha {
 		/// "New with Format" dialog box.
 		class NewFileFormatDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
-			NewFileFormatDialog(ascension::encodings::CodePage encoding, ascension::text::Newline newline) throw();
-			ascension::encodings::CodePage	getEncoding() const throw();
+			NewFileFormatDialog(ascension::encoding::MIBenum encoding, ascension::text::Newline newline) throw();
+			ascension::encoding::MIBenum	getEncoding() const throw();
 			ascension::text::Newline		getNewline() const throw();
 		private:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
 			void	onInitDialog(HWND focusWindow, bool& focusDefault);
 			void	onOK(bool& continueDialog);
-			ascension::encodings::CodePage encoding_;
+			ascension::encoding::MIBenum encoding_;
 			ascension::text::Newline newline_;
-			manah::win32::ui::ComboBox codePageCombobox_;
+			manah::win32::ui::ComboBox encodingCombobox_;
 			manah::win32::ui::ComboBox newlineCombobox_;
 			MANAH_BEGIN_CONTROL_BINDING()
-				MANAH_BIND_CONTROL(IDC_COMBO_ENCODING, codePageCombobox_)
+				MANAH_BIND_CONTROL(IDC_COMBO_ENCODING, encodingCombobox_)
 				MANAH_BIND_CONTROL(IDC_COMBO_NEWLINE, newlineCombobox_)
 			MANAH_END_CONTROL_BINDING()
 		};
 
 		/// Returns the encoding the user selected.
-		inline ascension::encodings::CodePage NewFileFormatDialog::getEncoding() const throw() {return encoding_;}
+		inline ascension::encoding::MIBenum NewFileFormatDialog::getEncoding() const throw() {return encoding_;}
 
 		/// Returns the newline the user selected.
 		inline ascension::text::Newline NewFileFormatDialog::getNewline() const throw() {return newline_;}

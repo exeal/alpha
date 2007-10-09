@@ -26,7 +26,7 @@ namespace {
 	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF32LittleEndianEncoder);
 	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF32BigEndianEncoder);
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	size_t UnicodeDetector(const uchar* first, const uchar* last, MIBenum& mib);
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, "UnicodeDetection", EncodingDetector::UNICODE_DETECTOR);
 
 	struct EncoderInstaller {
 		EncoderInstaller() throw() {
@@ -39,7 +39,7 @@ namespace {
 			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF32LittleEndianEncoder));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF32BigEndianEncoder));
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-			Encoder::registerDetector(fundamental::MIB_UNICODE_AUTO_DETECTION, UnicodeDetector);
+			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UnicodeDetector));
 		}
 	} installer;
 } // namespace @0
@@ -791,4 +791,30 @@ namespace {
 		mib = 106;	// UTF-8
 		return maybeUTF8(first, last) - first;
 	}
+}
+
+/// @see EncodingDetector#doDetect
+ptrdiff_t UnicodeDetector::doDetect(const uchar* first, const uchar* last, MIBenum& detectedEncoding) const {
+	detectedEncoding = 0;
+	// first, test Unicode byte order marks
+	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
+		detectedEncoding = fundamental::MIB_UNICODE_UTF8;
+	else if(last - first >= 2) {
+		if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
+			detectedEncoding = fundamental::MIB_UNICODE_UTF16LE;
+		else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
+			detectedEncoding = fundamental::MIB_UNICODE_UTF16BE;
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+		if(last - first >= 4) {
+			if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
+				detectedEncoding = extended::MIB_UNICODE_UTF32LE;
+			else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
+				detectedEncoding = extended::MIB_UNICODE_UTF32BE;
+		}
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+	}
+	if(detectedEncoding != 0)
+		return last - first;
+	detectedEncoding = fundamental::MIB_UNICODE_UTF8;
+	return maybeUTF8(first, last) - first;
 }

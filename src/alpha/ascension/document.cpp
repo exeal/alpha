@@ -969,7 +969,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		const FileLockMode& lockMode, MIBenum encoding, Encoder::Policy encodingPolicy) {
 //	Timer tm(L"load");	// 2.86s / 1MB
 	Encoder* encoder = Encoder::forMIB(encoding);
-	if(encoder == 0)
+	if(encoder == 0 && !EncodingDetector::supports(encoding))
 		return FIR_INVALID_ENCODING;
 
 	const DWORD attributes = ::GetFileAttributesW(fileName.c_str());
@@ -1025,9 +1025,10 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	// convert the whole buffer
 	Position last(0, 0);	// 次に文字列を追加する位置
 	if(fileSize != 0) {
-		encoding = Encoder::detectEncoding(nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024), encoding);
-
-		assert(encoder != 0);
+		if(EncodingDetector::supports(encoding)) {
+			encoding = EncodingDetector::detect(encoding, nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024));
+			encoder = Encoder::forMIB(encoding);
+		}
 		size_t destLength = encoder->getMaximumUCSLength() * fileSize;
 		const uchar* bom;
 		size_t bomLength;
@@ -1097,7 +1098,7 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 				if(newline_ == NLF_AUTO)	// 最初に現れた改行文字を既定の改行文字とする
 					setNewline(newline);
 			} else {	// the last line
-				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, destLength - lastBreak)));
+				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, toNext)));
 				length_ += destLength - lastBreak;
 				break;
 			}

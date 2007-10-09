@@ -1287,6 +1287,19 @@ namespace {
 			hr = S_FALSE;
 		return hr;
 	}
+	/// Fills default glyphs into @a run instead of using @c ScriptShape.
+	inline void generateDefaultGlyphs(const DC& dc, const Char* text, Run& run) {
+		::SCRIPT_FONTPROPERTIES fp;
+		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
+		if(FAILED(::ScriptGetFontProperties(dc.getHandle(), &run.cache, &fp)))
+			fp.wgDefault = 0;	// hmm...
+		fill_n(run.glyphs, run.numberOfGlyphs = static_cast<int>(run.length), fp.wgDefault);
+		const bool ltr = run.analysis.fRTL == 0 || run.analysis.fLogicalOrder == 1;
+		for(int i = 0; i < run.numberOfGlyphs; ++i)
+			run.clusters[i] = ltr ? i : (run.numberOfGlyphs - i);
+		const ::SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
+		fill_n(run.visualAttributes, run.numberOfGlyphs, va);
+	}
 	/**
 	 * Returns a Unicode script corresponds to Win32 language identifier for digit substitution.
 	 * @param id the language identifier
@@ -1455,8 +1468,11 @@ void LineLayout::shape(Run& run) throw() {
 
 			if(run.analysis.eScript != SCRIPT_UNDEFINED)
 				run.analysis.eScript = SCRIPT_UNDEFINED;	// disable shaping
-			else
-				assert(false);	// giveup...orz
+			else {
+				// worst case... -> fill with default glyph
+				generateDefaultGlyphs(*dc, text, run);
+				dc->selectObject(run.font = lip_.getFontSelector().getFont(Script::COMMON, run.style.bold, run.style.italic));
+			}
 			failedFonts.clear();
 		}
 	}
