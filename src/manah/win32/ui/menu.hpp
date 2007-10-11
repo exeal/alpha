@@ -246,8 +246,8 @@ inline LRESULT Menu::drawItem(const ::DRAWITEMSTRUCT& di, const TCHAR* text,
 			::RECT buttonRect;
 			buttonRect.left = di.rcItem.left + 1;
 			buttonRect.top = iconY - 1;
-			buttonRect.right = buttonRect.left + iconCx + 1;
-			buttonRect.bottom = buttonRect.top + iconCy + 1;
+			buttonRect.right = buttonRect.left + iconCx + 2;
+			buttonRect.bottom = buttonRect.top + iconCy + 2;
 //			if(flat)
 				dc.frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 //			else {

@@ -360,7 +360,7 @@
 //
 // MessageText:
 //
-//  Failed to load the keyboard macro file.%n%nFile: %1%nPosition: (%2, %3)%nReason: %4%0
+//  Failed to load the keyboard macro file.%n%nFile: %1%nPosition: (%2!lu!, %3!lu!)%nReason: %4%0
 //
 #define MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO 0x00000024L
 

@@ -7,9 +7,45 @@
 #include "stdafx.h"
 #include "encoder.hpp"
 #include <algorithm>
+#ifdef _WIN32
+#include <windows.h>	// GetCPInfoExW, MultiByteToWideChar, WideCharToMultiByte, ...
+#ifndef interface
+#define interface struct
+#endif
+#include <mlang.h>
+#include "../../manah/com/common.hpp"	// manah.com.ComPtr
+#endif /* _WIN32 */
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace std;
+
+
+/// Returns the human-readable name of the encoding.
+String encoding::getEncodingDisplayName(MIBenum mib) {
+#ifdef _WIN32
+	if(const uint cp = convertMIBtoWinCP(mib)) {
+		manah::com::ComPtr<::IMultiLanguage> mlang;
+		HRESULT hr = mlang.createInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC, IID_IMultiLanguage);
+		if(SUCCEEDED(hr)) {
+			::MIMECPINFO mcpi;
+			if(SUCCEEDED(hr = mlang->GetCodePageInfo(cp, &mcpi)))
+				return mcpi.wszDescription;
+		}
+	}
+#endif /* _WIN32 */
+	if(const Encoder* encoder = Encoder::forMIB(mib)) {
+		const string name(encoder->getName());
+		String s(name.length(), L'x');
+		copy(name.begin(), name.end(), s.begin());
+		return s;
+	} else if(const EncodingDetector* detector = EncodingDetector::forID(mib)) {
+		const string name(detector->getName());
+		String s(name.length(), L'x');
+		copy(name.begin(), name.end(), s.begin());
+		return s;
+	}
+	return L"";
+}
 
 
 // Encoder //////////////////////////////////////////////////////////////////
@@ -216,7 +252,8 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	if(encoder.get() == 0)
 		throw NullPointerException("encoder");
 	else if(encoders_.find(encoder->getMIBenum()) != encoders_.end())
-		throw invalid_argument("the encoder is already registered.");
+//		throw invalid_argument("the encoder is already registered.");
+		return;
 	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
 }
 
@@ -536,7 +573,7 @@ string ISO88591Encoder::getName() const throw() {
 #ifdef _WIN32
 
 namespace {
-	const pair<MIBenum, ::UINT> MIBtoWinCP[] = {
+	const pair<MIBenum, uint> MIBtoWinCP[] = {
 		make_pair(3,	20127),	// US-ASCII
 		make_pair(4,	28591),	// ISO-8859-1
 		make_pair(5,	28592),	// ISO-8859-2
@@ -626,11 +663,22 @@ namespace {
 		make_pair(2258,	1258),	// windows-1258
 		make_pair(2259,	874)	// TIS-620 <-> IBM874
 	};
-	inline MIBenum getFirst(const pair<MIBenum, ::UINT>& p) {return p.first;}
-	inline ::UINT convertMIBtoWindowsCodePage(MIBenum mib) {
-		const pair<MIBenum, ::UINT>* p = ascension::internal::searchBound(MIBtoWinCP, endof(MIBtoWinCP), mib, getFirst);
-		return (p->first == mib) ? p->second : 0;
-	}
+}
+
+/// Returns the Win32 code page corresponds to the given MIBenum value.
+uint encoding::convertMIBtoWinCP(MIBenum mib) throw() {
+	for(size_t i = 0; i < countof(MIBtoWinCP); ++i)
+		if(MIBtoWinCP[i].first == mib)
+			return MIBtoWinCP[i].second;
+	return 0;
+}
+
+/// Returns the MIBenum value corresponds to the given Win32 code page.
+MIBenum encoding::convertWinCPtoMIB(uint codePage) throw() {
+	for(size_t i = 0; i < countof(MIBtoWinCP); ++i)
+		if(MIBtoWinCP[i].second == codePage)
+			return MIBtoWinCP[i].first;
+	return 0;
 }
 
 // WindowsEncoder ///////////////////////////////////////////////////////////
@@ -639,7 +687,7 @@ namespace {
 	/// Encoder uses Windows NLS.
 	class WindowsEncoder : public Encoder {
 	public:
-		WindowsEncoder(::UINT codePage);
+		WindowsEncoder(::UINT codePage, MIBenum mib);
 	private:
 		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;
@@ -651,15 +699,17 @@ namespace {
 		std::string	getName() const throw();
 	private:
 		const ::UINT codePage_;
+		const MIBenum mib_;
 	};
 } // namespace @0
 
 /**
  * Constructor.
  * @param cp the code page
+ * @param mib the MIBenum value
  * @throw std#invalid_argument @a cp is not supported by the system
  */
-WindowsEncoder::WindowsEncoder(::UINT cp) : codePage_(cp) {
+WindowsEncoder::WindowsEncoder(::UINT cp, MIBenum mib) : codePage_(cp), mib_(mib) {
 	if(!toBoolean(::IsValidCodePage(cp)))
 		throw invalid_argument("Specified code page is not supported.");
 }
@@ -714,8 +764,7 @@ size_t WindowsEncoder::getMaximumNativeLength() const throw() {
 
 /// @see Encoder#getMIB
 MIBenum WindowsEncoder::getMIBenum() const throw() {
-	return codePage_;
-//	return convertWindowsCodePageToMIB(codePage_);
+	return mib_;
 }
 
 /// @see Encoder#getName
@@ -741,8 +790,12 @@ namespace {
 			const ::UINT cp = wcstoul(name, 0, 10);
 			if(toBoolean(::IsValidCodePage(cp))) {
 				::CPINFOEXW cpi;
-				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi)))
-					Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp)));
+				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi))) {
+					if(const MIBenum mib = convertWinCPtoMIB(cp)) {
+						if(!Encoder::supports(mib))
+							Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cp, mib)));
+					}
+				}
 			}
 			return TRUE;
 		}

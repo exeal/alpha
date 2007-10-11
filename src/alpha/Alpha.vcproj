@@ -304,6 +304,9 @@
 				RelativePath="Resource\manifest.xml">
 			</File>
 			<File
+				RelativePath=".\Resource\messages.mc">
+			</File>
+			<File
 				RelativePath=".\Resource\narrowing.ico">
 			</File>
 			<File
