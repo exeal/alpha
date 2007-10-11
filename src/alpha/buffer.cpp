@@ -741,7 +741,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //				MARGS % resolvedName % Alpha::getInstance().loadMessage(id).c_str());
 			const int answer = Alpha::getInstance().messageBox(
 				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % resolvedName % Encoder::forMIB(encoding)->getDisplayName().c_str());
+				MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
 			if(answer == IDYES) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);
@@ -932,21 +932,17 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 //			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
 //			const wstring name(Alpha::getInstance().loadMessage(id));
-			if(const Encoder* encoder = Encoder::forMIB(*mib)) {
-				const wstring name(encoder->getDisplayName());
-				if(!name.empty())
-					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
-			}
+			const wstring name(getEncodingDisplayName(*mib));
+			if(!name.empty())
+				encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
 		}
 		if(!newlineCombobox.isWindow()) {
 			mibs.clear();
 			EncodingDetector::getAvailableIDs(back_inserter(mibs));
 			for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-				if(const EncodingDetector* detector = EncodingDetector::forID(*mib)) {
-					const wstring name(detector->getDisplayName());
-					if(!name.empty())
-						encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
-				}
+				const wstring name(getEncodingDisplayName(*mib));
+				if(!name.empty())
+					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
 			}
 		}
 
@@ -1084,7 +1080,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 //				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
 			const int answer = Alpha::getInstance().messageBox(
 				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % buffer.getFilePathName() % Encoder::forMIB(encoding)->getDisplayName().c_str());
+				MARGS % buffer.getFilePathName() % getEncodingDisplayName(encoding).c_str());
 			if(answer == IDYES) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);
@@ -1127,7 +1123,7 @@ void BufferList::resetResources() {
 			(buffers_[i]->getFilePathName() != 0) ? buffers_[i]->getFilePathName() : L"",
 			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
-		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_SPECIAL_BUFFERSSTART);
+		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START);
 	}
 	bufferBar_.setImageList(icons_.getHandle());
 	if(bufferBar_.isVisible())
@@ -1221,7 +1217,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 //				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
 			const int answer = Alpha::getInstance().messageBox(
 				MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % fileName % Encoder::forMIB(params.encoding)->getDisplayName().c_str());
+				MARGS % fileName % getEncodingDisplayName(params.encoding).c_str());
 			if(answer == IDYES) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(params.encoding, false);
@@ -1577,16 +1573,36 @@ void EditorView::selectionShapeChanged(const Caret&) {
 void EditorView::updateCurrentPositionOnStatusBar() {
 	if(hasFocus()) {
 		// build the current position indication string
-		static const wstring format(Alpha::getInstance().loadMessage(MSG_STATUS__CARET_POSITION));
-		static manah::AutoBuffer<wchar_t> s(new wchar_t[format.length() + 100]);
-		AutoZero<::SCROLLINFO> si;
-		getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-		swprintf(s.get(), format.c_str(),
-			getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue,
-			getCaret().getVisualColumnNumber() + visualColumnStartValue_,
-			getCaret().getColumnNumber() + visualColumnStartValue_);
-		// show in the status bar
-		Alpha::getInstance().getStatusBar().setText(1, s.get());
+		static manah::AutoBuffer<WCHAR> message, messageFormat;
+		static size_t formatLength = 0;
+		if(messageFormat.get() == 0) {
+			void* messageBuffer;
+			if(0 != ::FormatMessageW(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+					::GetModuleHandle(0), MSG_STATUS__CARET_POSITION, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+					reinterpret_cast<wchar_t*>(&messageBuffer), 0, 0)) {
+				formatLength = wcslen(static_cast<WCHAR*>(messageBuffer));
+				messageFormat.reset(new WCHAR[formatLength + 1]);
+				wcscpy(messageFormat.get(), static_cast<WCHAR*>(messageBuffer));
+				::LocalFree(messageBuffer);
+			} else {
+				messageFormat.reset(new WCHAR[1]);
+				messageFormat[0] = 0;
+			}
+			message.reset(new WCHAR[formatLength + 100]);
+		}
+		if(formatLength != 0) {
+			length_t messageArguments[3];
+			AutoZero<::SCROLLINFO> si;
+			getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
+			messageArguments[0] = getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue;
+			messageArguments[1] = getCaret().getVisualColumnNumber() + visualColumnStartValue_;
+			messageArguments[2] = getCaret().getColumnNumber() + visualColumnStartValue_;
+			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
+				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
+			// show in the status bar
+			Alpha::getInstance().getStatusBar().setText(1, message.get());
+		}
 	}
 }
 

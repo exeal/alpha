@@ -6,15 +6,11 @@
 
 #ifndef ASCENSION_ENCODER_HPP
 #define ASCENSION_ENCODER_HPP
-
 #include "unicode.hpp"
 #include <cassert>
 #include <set>
 #include <map>
 #include <memory>	// std.auto_ptr
-#ifdef _WIN32
-#include <windows.h>	// GetCPInfo, MultiByteToWideChar, WideCharToMultiByte, ...
-#endif /* _WIN32 */
 
 
 namespace ascension {
@@ -202,6 +198,14 @@ namespace ascension {
 			}
 			return first1 == last1 && first2 == last2;
 		}
+
+		MIBenum	convertCCSIDtoMIB(uint ccsid) throw();
+		uint	convertMIBtoCCSID(MIBenum mib) throw();
+#ifdef _WIN32
+		uint	convertMIBtoWinCP(MIBenum mib) throw();
+		MIBenum	convertWinCPtoMIB(uint codePage) throw();
+#endif /* _WIN32 */
+		String	getEncodingDisplayName(MIBenum mib);
 
 		class Encoder : private manah::Noncopyable {
 		public:

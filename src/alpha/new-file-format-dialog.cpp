@@ -63,21 +63,18 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
-	vector<MIBenum> mibs;
-
 	// [コードページ]
+	vector<MIBenum> mibs;
 	Encoder::getAvailableMIBs(back_inserter(mibs));
 	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 //		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
 //		const wstring name(Alpha::getInstance().loadMessage(id));
-		if(const Encoder* encoder = Encoder::forMIB(*mib)) {
-			const wstring name(encoder->getDisplayName());
-			if(!name.empty()) {
-				const int i = encodingCombobox_.addString((*mib == encoding_) ? (name + L" *").c_str() : name.c_str());
-				encodingCombobox_.setItemData(i, *mib);
-				if(*mib == encoding_)
-					encodingCombobox_.setCurSel(i);
-			}
+		const wstring name(getEncodingDisplayName(*mib));
+		if(!name.empty()) {
+			const int i = encodingCombobox_.addString((*mib == encoding_) ? (name + L" *").c_str() : name.c_str());
+			encodingCombobox_.setItemData(i, *mib);
+			if(*mib == encoding_)
+				encodingCombobox_.setCurSel(i);
 		}
 	}
 

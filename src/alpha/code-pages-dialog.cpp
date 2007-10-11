@@ -36,22 +36,19 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 	vector<MIBenum> mibs;
 	Encoder::getAvailableMIBs(back_inserter(mibs));
 	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-		if(const Encoder* encoder = Encoder::forMIB(*mib)) {
-//			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-//			const wstring name(Alpha::getInstance().loadMessage(id));
-			const wstring name(encoder->getDisplayName());
-			if(!name.empty())
-				encodingList_.setItemData(encodingList_.addString(((mib_ == *mib) ? name + L" *" : name).c_str()), *mib);
-		}
+//		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
+//		const wstring name(Alpha::getInstance().loadMessage(id));
+		const wstring name(getEncodingDisplayName(*mib));
+		if(!name.empty())
+			encodingList_.setItemData(encodingList_.addString(((mib_ == *mib) ? name + L" *" : name).c_str()), *mib);
 	}
 	if(forReading_) {
+		mibs.clear();
 		EncodingDetector::getAvailableIDs(back_inserter(mibs));
 		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-			if(const EncodingDetector* detector = EncodingDetector::forID(*mib)) {
-				const wstring name(detector->getDisplayName());
-				if(!name.empty())
-					encodingList_.setItemData(encodingList_.addString(name.c_str()), *mib);
-			}
+			const wstring name(getEncodingDisplayName(*mib));
+			if(!name.empty())
+				encodingList_.setItemData(encodingList_.addString(name.c_str()), *mib);
 		}
 	}
 	for(int i = 0, c = encodingList_.getCount(); i < c; ++i) {

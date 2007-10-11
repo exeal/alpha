@@ -1115,7 +1115,7 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 	if(drawItem.CtlType != ODT_MENU)	// Œ»Žž“_‚Å‚Íƒƒjƒ…[‚Ì•`‰æ‚Ì‚Ý
 		return;
 	if(drawItem.itemID != 0) {
-		const wstring text = commandManager_->getMenuName(drawItem.itemID);
+		const wstring text = commandManager_->getMenuName(drawItem.itemID + CMD_SPECIAL_START);
 		manah::AutoBuffer<wchar_t> caption(new wchar_t[text.length() + 1]);
 		wcscpy(caption.get(), text.c_str());
 		wchar_t* accel = wcschr(caption.get(), L'\t');
@@ -1123,7 +1123,8 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 			accel = 0;
 		else if(accel != 0)
 			*(accel++) = 0;
-		Menu::drawItem(drawItem, caption.get(), accel, 0, 0, getBufferList().getBufferIcon(drawItem.itemID - CMD_SPECIAL_BUFFERSSTART));
+		Menu::drawItem(drawItem, caption.get(), accel, 0, 0,
+			getBufferList().getBufferIcon(drawItem.itemID - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START)));
 	} else
 		Menu::drawItem(drawItem, 0);
 }
@@ -1196,7 +1197,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 		if(mi.itemID == 0)
 			Menu::measureItem(mi, 0);
 		else {
-			const wstring s = commandManager_->getMenuName(mi.itemID);
+			const wstring s = commandManager_->getMenuName(mi.itemID + CMD_SPECIAL_START);
 			manah::AutoBuffer<wchar_t> caption(new wchar_t[s.length() + 1]);
 			wcscpy(caption.get(), s.c_str());
 			wchar_t* accel = wcschr(caption.get(), _T('\t'));
