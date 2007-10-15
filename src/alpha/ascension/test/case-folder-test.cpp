@@ -1,23 +1,21 @@
 // case-folder-test.cpp
 
-#include "test.hpp"
+#include <boost/test/unit_test.hpp>
+#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
 
-using namespace ascension;
-using namespace ascension::unicode;
-
 namespace {
-	void testEqual(const String& s1, const String& s2) {
-		BOOST_CHECK_EQUAL(CaseFolder::compare(s1, s2), 0);
-		BOOST_CHECK_EQUAL(CaseFolder::compare(s2, s1), 0);
-		BOOST_CHECK_EQUAL(CaseFolder::fold(s1).compare(CaseFolder::fold(s2)), 0);
+	void testEqual(const ascension::String& s1, const ascension::String& s2) {
+		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(s1, s2), 0);
+		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(s2, s1), 0);
+		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::fold(s1).compare(ascension::unicode::CaseFolder::fold(s2)), 0);
 	}
 } // namespace @0
 
 void testCaseFolder() {
 	testEqual(L"", L"");
 	// Turkish I
-	BOOST_CHECK_EQUAL(CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
+	BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
 	// Latin
 	testEqual(L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrstuvwxyz");
 	testEqual(L"\x00B5\x00C6\x00D0\x00DE\x00DF", L"\x03BC\x00E6\x00F0\x00FESS");
@@ -40,4 +38,10 @@ void testCaseFolder() {
 	// Deseret
 	testEqual(L"\xD801\xDC00\xD801\xDC01\xD801\xDC02\xD801\xDC03\xD801\xDC24\xD801\xDC25\xD801\xDC26\xD801\xDC27",
 		L"\xD801\xDC28\xD801\xDC29\xD801\xDC2A\xD801\xDC2B\xD801\xDC4C\xD801\xDC4D\xD801\xDC4E\xD801\xDC4F");
+}
+
+boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
+	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Case folder test");
+	test->add(BOOST_TEST_CASE(&testCaseFolder));
+	return test;
 }

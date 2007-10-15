@@ -322,13 +322,13 @@ namespace ascension {
 			/// Ascension never define an encoding detector has ID greater than this.
 			static const MIBenum MAXIMUM_ID = 4999;
 			/// Identifier of the Unicode detector.
-			static const UNICODE_DETECTOR = MINIMUM_ID;
+			static const MIBenum UNICODE_DETECTOR = MINIMUM_ID;
 			/// Identifier of the universal detector.
-			static const UNIVERSAL_DETECTOR = UNICODE_DETECTOR + 1;
+			static const MIBenum UNIVERSAL_DETECTOR = UNICODE_DETECTOR + 1;
 			/// Identifier of the detector for the system locale.
-			static const SYSTEM_LOCALE_DETECTOR = UNICODE_DETECTOR + 2;
+			static const MIBenum SYSTEM_LOCALE_DETECTOR = UNICODE_DETECTOR + 2;
 			/// Identifier of the detector for the user locale.
-			static const USER_LOCALE_DETECTOR = UNICODE_DETECTOR + 3;
+			static const MIBenum USER_LOCALE_DETECTOR = UNICODE_DETECTOR + 3;
 		public:
 			// constructors
 			virtual ~EncodingDetector() throw();
@@ -435,7 +435,7 @@ namespace ascension {
 		 * @param[out] out the output iterator to receive names
 		 */
 		template<typename OutputIterator> inline void Encoder::getAvailableNames(OutputIterator out) {
-			for(Encoders::const_iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i, ++out) *out = i->second.getName();}
+			for(Encoders::const_iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i, ++out) *out = i->second->getName();}
 
 		/**
 		 * Returns identifiers for all available encoding detectors.
@@ -452,7 +452,7 @@ namespace ascension {
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::getAvailableNames(OutputIterator out) {
 			for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i, ++out)
-				*out = i->second.getName();
+				*out = i->second->getName();
 		}
 
 	}

@@ -4,7 +4,6 @@
  * @date 2007
  */
 
-#include "stdafx.h"
 #include "dfa.hpp"
 #include "unicode.hpp"
 #include <memory>	// std.auto_ptr

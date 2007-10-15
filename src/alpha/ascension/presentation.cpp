@@ -5,7 +5,6 @@
  * @date 2006
  */
 
-#include "stdafx.h"
 #include "presentation.hpp"
 #include "viewer.hpp"
 using namespace ascension;

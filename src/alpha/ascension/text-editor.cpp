@@ -4,7 +4,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "text-editor.hpp"
 #include "content-assist.hpp"
 #include "../../manah/win32/utility.hpp"

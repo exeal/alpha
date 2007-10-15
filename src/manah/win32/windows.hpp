@@ -9,7 +9,6 @@
 #define size_t std::size_t
 //#include <winnt.h>
 #include <windows.h>
-#include <tchar.h>
 #undef size_t
 #include <stdexcept>
 
@@ -21,21 +20,21 @@ namespace manah {
 		template<class Base, typename sizeMemberType, sizeMemberType(Base::*sizeMember)>
 		struct AutoZeroS : public AutoZero<Base> {AutoZeroS() {this->*sizeMember = sizeof(Base);}};
 #if(_MSC_VER < 1300)
-		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, UINT, typename Base::cbSize> {};
-		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, DWORD, typename Base::lStructSize> {};
+		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, ::UINT, typename Base::cbSize> {};
+		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, ::DWORD, typename Base::lStructSize> {};
 #else
-		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, UINT, &Base::cbSize> {};
-		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, DWORD, &Base::lStructSize> {};
+		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, ::UINT, &Base::cbSize> {};
+		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, ::DWORD, &Base::lStructSize> {};
 #endif
 
 		struct ResourceID : public Noncopyable {
-			ResourceID(const TCHAR* nameString) throw() : name(nameString) {}
-			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCE(id)) {}
-			const TCHAR* const name;
+			ResourceID(const ::WCHAR* nameString) throw() : name(nameString) {}
+			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
+			const ::WCHAR* const name;
 		};
 
 		// base class for handle-wrapper classes
-		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
+		template<typename HandleType = ::HANDLE, ::BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
 		class Handle {
 		public:
 			Handle(HandleType handle = 0) : handle_(handle), attached_(handle != 0) {}
@@ -63,76 +62,76 @@ namespace manah {
 
 		// convenient types from ATL
 		struct MenuHandleOrControlID {
-			MenuHandleOrControlID(HMENU handle) throw() : menu(handle) {}
-			MenuHandleOrControlID(UINT_PTR id) throw() : menu(reinterpret_cast<HMENU>(id)) {}
-			HMENU menu;
+			MenuHandleOrControlID(::HMENU handle) throw() : menu(handle) {}
+			MenuHandleOrControlID(::UINT_PTR id) throw() : menu(reinterpret_cast<::HMENU>(id)) {}
+			::HMENU menu;
 		};
 
 		// others used by (CCustomControl derevied)::GetWindowClass
 		struct BrushHandleOrColor {
 			BrushHandleOrColor() throw() : brush(0) {}
-			BrushHandleOrColor(HBRUSH handle) throw() : brush(handle) {}
-			BrushHandleOrColor(COLORREF color) throw() : brush(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(color + 1))) {}
-			BrushHandleOrColor& operator=(HBRUSH rhs) throw() {brush = rhs; return *this;}
-			BrushHandleOrColor& operator=(COLORREF rhs) throw() {brush = reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(rhs + 1)); return *this;}
-			HBRUSH brush;
+			BrushHandleOrColor(::HBRUSH handle) throw() : brush(handle) {}
+			BrushHandleOrColor(::COLORREF color) throw() : brush(reinterpret_cast<::HBRUSH>(static_cast<::HANDLE_PTR>(color + 1))) {}
+			BrushHandleOrColor& operator=(::HBRUSH rhs) throw() {brush = rhs; return *this;}
+			BrushHandleOrColor& operator=(::COLORREF rhs) throw() {brush = reinterpret_cast<::HBRUSH>(static_cast<::HANDLE_PTR>(rhs + 1)); return *this;}
+			::HBRUSH brush;
 		};
 		struct CursorHandleOrID {
 			CursorHandleOrID() throw() : cursor(0) {}
-			CursorHandleOrID(HCURSOR handle) throw() : cursor(handle) {}
-			CursorHandleOrID(const TCHAR* systemCursorID) : cursor(::LoadCursor(0, systemCursorID)) {}
-			CursorHandleOrID& operator =(HCURSOR rhs) {cursor = rhs; return *this;}
-			CursorHandleOrID& operator =(const TCHAR* rhs) {cursor = ::LoadCursor(0, rhs); return *this;}
+			CursorHandleOrID(::HCURSOR handle) throw() : cursor(handle) {}
+			CursorHandleOrID(const ::WCHAR* systemCursorID) : cursor(::LoadCursorW(0, systemCursorID)) {}
+			CursorHandleOrID& operator=(::HCURSOR rhs) {cursor = rhs; return *this;}
+			CursorHandleOrID& operator=(const ::WCHAR* rhs) {cursor = ::LoadCursorW(0, rhs); return *this;}
 			HCURSOR cursor;
 		};
 
 		class DumpContext {
 		public:
 			// constructor
-			DumpContext(const TCHAR* fileName = 0);
+			DumpContext(const ::WCHAR* fileName = 0);
 			// operators
-			template<class T>
-			DumpContext& operator <<(const T& rhs) throw();
+			template<typename T>
+			DumpContext& operator<<(const T& rhs) throw();
 			// methods
 			void	flush() throw();
-			void	hexDump(const TCHAR* line, uchar* pb, int bytes, int width = 0x10) throw();
+			void	hexDump(const ::WCHAR* line, byte* pb, int bytes, int width = 0x10) throw();
 
 			// data member
 		private:
-			TCHAR* fileName_;	// error log
+			::WCHAR* fileName_;	// error log
 		};
 
-		inline DumpContext::DumpContext(const TCHAR* fileName /* = 0 */) {
+		inline DumpContext::DumpContext(const ::WCHAR* fileName /* = 0 */) {
 			if(fileName != 0)
 				throw std::exception("File log is not supported!");
 		}
 
 		inline void DumpContext::flush() throw() {/* not implemented */}
 
-		inline void DumpContext::hexDump(const TCHAR* line, uchar* pb, int bytes, int width /* = 0x10 */) throw() {
-			TCHAR* const output = new TCHAR[static_cast<std::size_t>(
-				(std::_tcslen(line) + 3 * width + 2) * static_cast<float>(bytes / width))];
-			std::_tcscpy(output, line);
+		inline void DumpContext::hexDump(const ::WCHAR* line, byte* pb, int bytes, int width /* = 0x10 */) throw() {
+			::WCHAR* const output = new ::WCHAR[static_cast<std::size_t>(
+				(std::wcslen(line) + 3 * width + 2) * static_cast<float>(bytes / width))];
+			std::wcscpy(output, line);
 
-			TCHAR byte[4];
+			::WCHAR buffer[4];
 			for(int i = 0; i < bytes; ++i){
-				::wsprintf(byte, _T(" %d"), pb);
-				std::_tcscat(output, byte);
+				::wsprintfW(buffer, L" %d", pb);
+				std::wcscat(output, buffer);
 				if(i % width == 0){
-					std::_tcscat(output, _T("\n"));
-					std::_tcscat(output, line);
+					std::wcscat(output, L"\n");
+					std::wcscat(output, line);
 				}
 			}
-			::OutputDebugString(_T("\n>----Dump is started"));
-			::OutputDebugString(output);
-			::OutputDebugString(_T("\n>----Dump is done"));
+			::OutputDebugStringW(L"\n>----Dump is started");
+			::OutputDebugStringW(output);
+			::OutputDebugStringW(L"\n>----Dump is done");
 			delete[] output;
 		}
 
-		template <class T> inline DumpContext& DumpContext::operator <<(const T& rhs) throw() {
-			std::basic_ostringstream<TCHAR>	ss;
+		template<typename T> inline DumpContext& DumpContext::operator<<(const T& rhs) throw() {
+			std::wostringstream ss;
 			ss << rhs;
-			::OutputDebugString(ss.str().c_str());
+			::OutputDebugStringW(ss.str().c_str());
 			return *this;
 		}
 	}

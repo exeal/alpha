@@ -1,6 +1,7 @@
 // unicode-iterator-test.cpp
 
-#include "test.hpp"
+#include <boost/test/unit_test.hpp>
+#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
@@ -53,4 +54,10 @@ void testUnicodeIterator() {
 	std::advance(j, std::min(v.size(), v32.size()));
 	k = v32.begin();
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
+}
+
+boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
+	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Unicode iterator test");
+	test->add(BOOST_TEST_CASE(&testUnicodeIterator));
+	return test;
 }

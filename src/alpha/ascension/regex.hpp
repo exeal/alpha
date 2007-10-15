@@ -259,6 +259,7 @@ namespace ascension {
 			template<typename CodePointIterator>
 			std::auto_ptr<Matcher<CodePointIterator> >	matcher(CodePointIterator first, CodePointIterator last) const;
 			// tools
+			static bool	matches(const String& regex, const String& input);
 			template<typename CodePointIterator>
 			static bool	matches(const String& regex, CodePointIterator first, CodePointIterator last);
 //			template<typename CodePointIterator, typename OutputIterator>
@@ -501,7 +502,16 @@ namespace ascension {
 		 * @throw PatternSyntaxException the expression's syntax is invalid
 		 */
 		template<typename CPI> inline bool Pattern::matches(
-			const String& regex, CPI first, CPI last) {return compile(regex).matcher(first, last).matches();}
+			const String& regex, CPI first, CPI last) {return compile(regex)->matcher(first, last)->matches();}
+
+		/**
+		 * Compiles the given regular expression and attempts to match the given input against it.
+		 * @param regex the expression to be compiled
+		 * @param input the character sequence to be matched
+		 * @throw PatternSyntaxException the expression's syntax is invalid
+		 */
+		inline bool Pattern::matches(const String& regex, const String& input) {
+			return matches(regex, unicode::StringCharacterIterator(input), unicode::StringCharacterIterator(input, input.end()));}
 
 		/// Returns the regular expression from which this pattern was compiled.
 		inline String Pattern::pattern() const {const std::basic_string<CodePoint> s(impl_.str());

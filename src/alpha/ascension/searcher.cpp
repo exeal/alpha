@@ -5,7 +5,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "searcher.hpp"
 using namespace ascension;
 using namespace ascension::searcher;

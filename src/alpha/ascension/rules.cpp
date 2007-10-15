@@ -5,7 +5,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "rules.hpp"
 using namespace ascension;
 using namespace ascension::presentation;

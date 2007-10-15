@@ -4,7 +4,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "session.hpp"
 #include "searcher.hpp"
 #include <algorithm>

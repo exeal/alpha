@@ -4,9 +4,6 @@
  * @date 2005-2007
  */
 
-//#ifndef ASCENSION_TEST_NO_STDAFX
-#include "stdafx.h"
-//#endif
 #include "unicode-property.hpp"
 using namespace ascension;
 using namespace ascension::unicode;

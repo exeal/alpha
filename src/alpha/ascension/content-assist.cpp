@@ -5,9 +5,8 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "content-assist.hpp"
-#include "viewer.hpp"	// SourceViewer
+#include "viewer.hpp"	// TextViewer
 #include "../../manah/win32/ui/standard-controls.hpp"	// manah.windows.ui.ListBox
 using namespace ascension;
 using namespace ascension::contentassist;

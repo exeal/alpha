@@ -4,10 +4,8 @@
  * @date 2003-2007
  */
 
-#include "stdafx.h"
 #include "viewer.hpp"
 #include "../../manah/win32/utility.hpp"
-
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::layout;

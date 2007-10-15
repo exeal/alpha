@@ -5,7 +5,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "layout.hpp"
 #include "viewer.hpp"
 #include <limits>	// std.numeric_limits

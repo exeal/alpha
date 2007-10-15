@@ -1,13 +1,12 @@
 // unicode-iterator-test.cpp
 
-#include "test.hpp"
+#include <boost/test/unit_test.hpp>
+#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
-
-using namespace ascension;
-using namespace ascension::unicode;
 
 namespace {
 	void testCompare() {
+		using namespace ascension::unicode;
 		BOOST_CHECK_EQUAL(Normalizer::compare(L"", L"", CASE_SENSITIVE), 0);
 		BOOST_CHECK_EQUAL(Normalizer::compare(L"abc", L"abc", CASE_SENSITIVE), 0);
 		BOOST_CHECK_EQUAL(Normalizer::compare(L"C\x0301\x0327", L"C\x0327\x0301", CASE_SENSITIVE), 0);
@@ -21,8 +20,8 @@ void testNormalizer() {
 	testCompare();
 	testNormalize();
 
-	const String source(L"\x1E69");
-	Normalizer n(StringCharacterIterator(source), Normalizer::FORM_D);
+	const ascension::String source(L"\x1E69");
+	ascension::unicode::Normalizer n(ascension::unicode::StringCharacterIterator(source), ascension::unicode::Normalizer::FORM_D);
 	BOOST_CHECK_EQUAL(*n, 0x0073);
 	BOOST_CHECK_EQUAL(*++n, 0x0323);
 	BOOST_CHECK_EQUAL(*++n, 0x0307);
@@ -32,9 +31,15 @@ void testNormalizer() {
 	BOOST_CHECK_EQUAL(*--n, 0x0073);
 	BOOST_CHECK(!n.hasPrevious());
 
-	const String source2(L"s\x0307\x0323");
-	Normalizer n2(StringCharacterIterator(source2), Normalizer::FORM_D);
+	const ascension::String source2(L"s\x0307\x0323");
+	ascension::unicode::Normalizer n2(ascension::unicode::StringCharacterIterator(source2), ascension::unicode::Normalizer::FORM_D);
 	BOOST_CHECK_EQUAL(*(n++), *(n2++));
 	BOOST_CHECK_EQUAL(*(n++), *(n2++));
 	BOOST_CHECK_EQUAL(*(n++), *(n2++));
+}
+
+boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
+	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Normalizer test");
+	test->add(BOOST_TEST_CASE(&testNormalizer));
+	return test;
 }

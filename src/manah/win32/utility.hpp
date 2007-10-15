@@ -21,12 +21,12 @@ public:
 	Point() throw() {}
 	Point(int xValue, int yValue) throw() {x = xValue, y = yValue;}
 	Point(const ::POINT& pt) throw() {x = pt.x; y = pt.y;}
-	Point(const SIZE& size) throw() {x = size.cx; y = size.cy;}
-	Point(DWORD dwPoint) throw() {x = LOWORD(dwPoint); y = HIWORD(dwPoint);}
+	Point(const ::SIZE& size) throw() {x = size.cx; y = size.cy;}
+	Point(::DWORD dwPoint) throw() {x = LOWORD(dwPoint); y = HIWORD(dwPoint);}
 	// methods
 	void offset(int dx, int dy) throw() {x += dx; y += dy;}
-	void offset(const POINT& pt) throw() {offset(pt.x, pt.y);}
-	void offset(const SIZE& size) throw() {offset(size.cx, size.cy);}
+	void offset(const ::POINT& pt) throw() {offset(pt.x, pt.y);}
+	void offset(const ::SIZE& size) throw() {offset(size.cx, size.cy);}
 };
 
 
@@ -36,7 +36,7 @@ public:
 	Size() throw() {}
 	Size(int cxValue, int cyValue) throw() {cx = cxValue; cy = cyValue;}
 	Size(const ::SIZE& size) throw() {cx = size.cx; cy = size.cy;}
-	Size(DWORD size) throw() {cx = LOWORD(size); cy = HIWORD(size);}
+	Size(::DWORD size) throw() {cx = LOWORD(size); cy = HIWORD(size);}
 };
 
 
@@ -87,33 +87,33 @@ public:
 	FileFind() : find_(0), found_(false) {}
 	~FileFind() {close();}
 	// attributes
-	void						getCreationTime(::FILETIME& timeStamp) const throw();
-	std::basic_string<TCHAR>	getFileName() const throw();
-	std::basic_string<TCHAR>	getFilePath() const;
-	ULONGLONG					getFileSize() const throw();
-	std::basic_string<TCHAR>	getFileTitle() const;
-	std::basic_string<TCHAR>	getFileUrl() const;
-	void						getLastAccessTime(::FILETIME& timeStamp) const throw();
-	void						getLastWriteTime(::FILETIME& timeStamp) const throw();
-	std::basic_string<TCHAR>	getRoot() const throw();
-	bool						isArchived() const throw();
-	bool						isCompressed() const throw();
-	bool						isDirectory() const throw();
-	bool						isDots() const throw();
-	bool						isHidden() const throw();
-	bool						isNormal() const throw();
-	bool						isReadOnly() const throw();
-	bool						isSystem() const throw();
-	bool						isTemporary() const throw();
-	bool						matchesMask(DWORD mask) const throw();
+	void			getCreationTime(::FILETIME& timeStamp) const throw();
+	std::wstring	getFileName() const throw();
+	std::wstring	getFilePath() const;
+	::ULONGLONG		getFileSize() const throw();
+	std::wstring	getFileTitle() const;
+	std::wstring	getFileUrl() const;
+	void			getLastAccessTime(::FILETIME& timeStamp) const throw();
+	void			getLastWriteTime(::FILETIME& timeStamp) const throw();
+	std::wstring	getRoot() const throw();
+	bool			isArchived() const throw();
+	bool			isCompressed() const throw();
+	bool			isDirectory() const throw();
+	bool			isDots() const throw();
+	bool			isHidden() const throw();
+	bool			isNormal() const throw();
+	bool			isReadOnly() const throw();
+	bool			isSystem() const throw();
+	bool			isTemporary() const throw();
+	bool			matchesMask(::DWORD mask) const throw();
 	// operations
 	void	close();
-	bool	find(const TCHAR* name = _T("*.*"));
+	bool	find(const ::WCHAR* name = L"*.*");
 	bool	findNext();
 
 private:
-	HANDLE find_;
-	::WIN32_FIND_DATA wfd_;
+	::HANDLE find_;
+	::WIN32_FIND_DATAW wfd_;
 	bool found_;
 };
 
@@ -128,13 +128,13 @@ inline void FileFind::close() {
 	}
 }
 
-inline bool FileFind::find(const TCHAR* name /* = _T("*.*") */) {
+inline bool FileFind::find(const ::WCHAR* name /* = L"*.*" */) {
 	close();
 	assert(name != 0);
-	assert(std::_tcslen(name) < MAX_PATH);
+	assert(std::wcslen(name) < MAX_PATH);
 
-	std::_tcscpy(wfd_.cFileName, name);
-	find_ = ::FindFirstFile(name, &wfd_);
+	std::wcscpy(wfd_.cFileName, name);
+	find_ = ::FindFirstFileW(name, &wfd_);
 	if(find_ == INVALID_HANDLE_VALUE) {
 		find_ = 0;
 		return false;
@@ -145,21 +145,21 @@ inline bool FileFind::find(const TCHAR* name /* = _T("*.*") */) {
 
 inline bool FileFind::findNext() {
 	if(find_ != 0 && found_)
-		found_ = toBoolean(::FindNextFile(find_, &wfd_));
+		found_ = toBoolean(::FindNextFileW(find_, &wfd_));
 	return found_;
 }
 
 inline void FileFind::getCreationTime(FILETIME& timeStamp) const throw() {assert(found_); timeStamp = wfd_.ftCreationTime;}
 
-inline std::basic_string<TCHAR> FileFind::getFileName() const throw() {assert(found_); return wfd_.cFileName;}
+inline std::wstring FileFind::getFileName() const throw() {assert(found_); return wfd_.cFileName;}
 
-inline std::basic_string<TCHAR> FileFind::getFilePath() const throw() {
+inline std::wstring FileFind::getFilePath() const throw() {
 	assert(found_);
-	TCHAR path[MAX_PATH];
-	return (::_tfullpath(path, wfd_.cFileName, MAX_PATH) != 0) ? path : _T("");
+	::WCHAR path[MAX_PATH];
+	return (::_wfullpath(path, wfd_.cFileName, MAX_PATH) != 0) ? path : L"";
 }
 
-inline ULONGLONG FileFind::getFileSize() const throw() {
+inline ::ULONGLONG FileFind::getFileSize() const throw() {
 	assert(found_);
 	::ULARGE_INTEGER size = {0};
 	size.HighPart = wfd_.nFileSizeHigh;
@@ -167,31 +167,31 @@ inline ULONGLONG FileFind::getFileSize() const throw() {
 	return size.QuadPart;
 }
 
-inline std::basic_string<TCHAR> FileFind::getFileTitle() const {
+inline std::wstring FileFind::getFileTitle() const {
 	assert(found_);
-	const std::basic_string<TCHAR> name = getFileName();
+	const std::wstring name(getFileName());
 	if(!name.empty()) {
-		TCHAR title[MAX_PATH];
-		::_tsplitpath(name.c_str(), 0, 0, title, 0);
+		::WCHAR title[MAX_PATH];
+		::_wsplitpath(name.c_str(), 0, 0, title, 0);
 		return title;
 	}
-	return _T("");
+	return L"";
 }
 
-inline std::basic_string<TCHAR> FileFind::getFileUrl() const {
+inline std::wstring FileFind::getFileUrl() const {
 	assert(found_);
-	const std::basic_string<TCHAR> path = getFilePath();
-	return !path.empty() ? (_T("file://") + path) : _T("");
+	const std::wstring path(getFilePath());
+	return !path.empty() ? (L"file://" + path) : L"";
 }
 
-inline void FileFind::getLastAccessTime(FILETIME& timeStamp) const throw() {assert(found_); timeStamp = wfd_.ftLastAccessTime;}
+inline void FileFind::getLastAccessTime(::FILETIME& timeStamp) const throw() {assert(found_); timeStamp = wfd_.ftLastAccessTime;}
 
-inline void FileFind::getLastWriteTime(FILETIME& timeStamp) const throw() {assert(found_); timeStamp = wfd_.ftLastWriteTime;}
+inline void FileFind::getLastWriteTime(::FILETIME& timeStamp) const throw() {assert(found_); timeStamp = wfd_.ftLastWriteTime;}
 
-inline std::basic_string<TCHAR> FileFind::getRoot() const throw() {
+inline std::wstring FileFind::getRoot() const throw() {
 	assert(found_);
-	TCHAR path[MAX_PATH];
-	return (::_tfullpath(path, wfd_.cFileName, MAX_PATH) != 0) ? path : _T("");
+	::WCHAR path[MAX_PATH];
+	return (::_wfullpath(path, wfd_.cFileName, MAX_PATH) != 0) ? path : L"";
 }
 
 inline bool FileFind::isArchived() const throw() {return matchesMask(FILE_ATTRIBUTE_ARCHIVE);}
@@ -201,7 +201,7 @@ inline bool FileFind::isCompressed() const throw() {return matchesMask(FILE_ATTR
 inline bool FileFind::isDirectory() const throw() {return matchesMask(FILE_ATTRIBUTE_DIRECTORY);}
 
 inline bool FileFind::isDots() const throw() {
-	return isDirectory() && (std::_tcscmp(wfd_.cFileName, _T(".")) == 0 || std::_tcscmp(wfd_.cFileName, _T("..")) == 0);}
+	return isDirectory() && (std::wcscmp(wfd_.cFileName, L".") == 0 || std::wcscmp(wfd_.cFileName, L"..") == 0);}
 
 inline bool FileFind::isHidden() const throw() {return matchesMask(FILE_ATTRIBUTE_HIDDEN);}
 
@@ -213,7 +213,7 @@ inline bool FileFind::isSystem() const throw() {return matchesMask(FILE_ATTRIBUT
 
 inline bool FileFind::isTemporary() const throw() {return matchesMask(FILE_ATTRIBUTE_TEMPORARY);}
 
-inline bool FileFind::matchesMask(DWORD mask) const throw() {assert(found_); return toBoolean(wfd_.dwFileAttributes & mask);}
+inline bool FileFind::matchesMask(::DWORD mask) const throw() {assert(found_); return toBoolean(wfd_.dwFileAttributes & mask);}
 
 }} // namespace manah.win32
 

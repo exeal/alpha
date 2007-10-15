@@ -257,8 +257,8 @@ namespace ascension {
 			const Char*	tell() const throw();
 			// CharacterIterator
 			CodePoint	current() const throw();
-			bool		hasNext() const;
-			bool		hasPrevious() const;
+			bool		hasNext() const throw();
+			bool		hasPrevious() const throw();
 		private:
 			void 								doAssign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	doClone() const;
@@ -970,10 +970,10 @@ inline const Char* StringCharacterIterator::getFirst() const throw() {return fir
 inline const Char* StringCharacterIterator::getLast() const throw() {return last_;}
 
 /// @see CharacterIterator#hasNext
-inline bool StringCharacterIterator::hasNext() const {return current_ != last_;}
+inline bool StringCharacterIterator::hasNext() const throw() {return current_ != last_;}
 
 /// @see CharacterIterator#hasPrevious
-inline bool StringCharacterIterator::hasPrevious() const {return current_ != first_;}
+inline bool StringCharacterIterator::hasPrevious() const throw() {return current_ != first_;}
 
 /// Returns the current position.
 inline const Char* StringCharacterIterator::tell() const throw() {return current_;}

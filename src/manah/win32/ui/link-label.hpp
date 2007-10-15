@@ -12,9 +12,9 @@ namespace ui {
 
 // 前は色々機能があったけどメンドいんでやーめた
 
-class LinkLabel : public CustomControl<LinkLabel>, public Noncopyable {
+class LinkLabel : public CustomControl<LinkLabel>, private Noncopyable {
 	DEFINE_WINDOW_CLASS() {
-		name = _T("ManahLinkLabel");
+		name = L"ManahLinkLabel";
 		style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
 		cursor = MAKEINTRESOURCE(32649);	// IDC_HAND
 	}
@@ -22,27 +22,27 @@ class LinkLabel : public CustomControl<LinkLabel>, public Noncopyable {
 public:
 	LinkLabel();
 public:
-	bool			create(HWND parent, HINSTANCE hinstance, int id = 0);
-	const TCHAR*	getTipText() const;
-	void			setTipText(const TCHAR* text);
+	bool			create(::HWND parent, ::HINSTANCE hinstance, int id = 0);
+	const ::WCHAR*	getTipText() const;
+	void			setTipText(const ::WCHAR* text);
 
 protected:
 	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(LinkLabel);
-	UINT	onGetDlgCode();											// WM_GETDLGCODE
-	HFONT	onGetFont();											// WM_GETFONT
-	void	onKeyDown(UINT vkey, UINT flags, bool& handled);		// WM_KEYDOWN
-	void	onKillFocus(HWND newWindow);							// WM_KILLFOCUS
-	void	onLButtonDown(UINT flags, const POINT& pt);				// WM_LBUTTONDOWN
-	void	onLButtonUp(UINT flags, const POINT& pt);				// WM_LBUTTONUP
-	void	onPaint(gdi::PaintDC& dc);								// WM_PAINT
-	bool	onSetCursor(HWND window, UINT hitTest, UINT message);	// WM_SETCURSOR
-	void	onSetFocus(HWND oldWindow);								// WM_SETFOCUS
-	bool	onSetText(const TCHAR* text);							// WM_SETTEXT
-	void	onSettingChange(UINT flags, const TCHAR* sectionName);	// WM_SETTINGCHANGE
+	::UINT	onGetDlgCode();												// WM_GETDLGCODE
+	::HFONT	onGetFont();												// WM_GETFONT
+	void	onKeyDown(::UINT vkey, ::UINT flags, bool& handled);		// WM_KEYDOWN
+	void	onKillFocus(::HWND newWindow);								// WM_KILLFOCUS
+	void	onLButtonDown(::UINT flags, const ::POINT& pt);				// WM_LBUTTONDOWN
+	void	onLButtonUp(::UINT flags, const ::POINT& pt);				// WM_LBUTTONUP
+	void	onPaint(gdi::PaintDC& dc);									// WM_PAINT
+	bool	onSetCursor(::HWND window, ::UINT hitTest, ::UINT message);	// WM_SETCURSOR
+	void	onSetFocus(::HWND oldWindow);								// WM_SETFOCUS
+	bool	onSetText(const ::WCHAR* text);								// WM_SETTEXT
+	void	onSettingChange(::UINT flags, const ::WCHAR* sectionName);	// WM_SETTINGCHANGE
 private:
 	void recreateFont();
 	AutoBuffer<TCHAR> tipText_;
-	HFONT font_;
+	::HFONT font_;
 };
 
 
@@ -61,7 +61,7 @@ MANAH_END_WINDOW_MESSAGE_MAP()
 
 inline LinkLabel::LinkLabel() {}
 
-inline bool LinkLabel::create(HWND parent, HINSTANCE hinstance, int id /* = 0 */) {
+inline bool LinkLabel::create(::HWND parent, ::HINSTANCE hinstance, int id /* = 0 */) {
 	assert(parent == 0 || toBoolean(::IsWindow(parent)));
 
 	if(!CustomControl<LinkLabel>::create(parent, DefaultWindowRect(), 0, WS_CHILD | WS_TABSTOP | WS_VISIBLE))
@@ -76,19 +76,19 @@ inline bool LinkLabel::create(HWND parent, HINSTANCE hinstance, int id /* = 0 */
 	return true;
 }
 
-inline const TCHAR* LinkLabel::getTipText() const {return tipText_.get();}
+inline const ::WCHAR* LinkLabel::getTipText() const {return tipText_.get();}
 
-inline void LinkLabel::setTipText(const TCHAR* text) {
+inline void LinkLabel::setTipText(const ::WCHAR* text) {
 	assert(text != 0);
-	tipText_.reset(new TCHAR[std::_tcslen(text) + 1]);
-	std::_tcscpy(tipText_.get(), text);
+	tipText_.reset(new ::WCHAR[std::wcslen(text) + 1]);
+	std::wcscpy(tipText_.get(), text);
 }
 
-inline UINT LinkLabel::onGetDlgCode() {return DLGC_BUTTON | DLGC_UNDEFPUSHBUTTON;}
+inline ::UINT LinkLabel::onGetDlgCode() {return DLGC_BUTTON | DLGC_UNDEFPUSHBUTTON;}
 
-inline HFONT LinkLabel::onGetFont() {return font_;}
+inline ::HFONT LinkLabel::onGetFont() {return font_;}
 
-inline void LinkLabel::onKeyDown(UINT vkey, UINT flags, bool&) {
+inline void LinkLabel::onKeyDown(::UINT vkey, ::UINT flags, bool&) {
 	if(!toBoolean(getStyle() & WS_DISABLED) && vkey == VK_RETURN)
 #ifdef _WIN64
 		getParent().sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(getHandle()));
@@ -97,17 +97,17 @@ inline void LinkLabel::onKeyDown(UINT vkey, UINT flags, bool&) {
 #endif /* _WIN64 */
 }
 
-inline void LinkLabel::onKillFocus(HWND) {
+inline void LinkLabel::onKillFocus(::HWND) {
 	gdi::ClientDC dc = getDC();
-	RECT rect;
+	::RECT rect;
 	getClientRect(rect);
 	::OffsetRect(&rect, -rect.left, -rect.top);
 	dc.drawFocusRect(rect);
 }
 
-inline void LinkLabel::onLButtonDown(UINT, const POINT&) {setFocus();}
+inline void LinkLabel::onLButtonDown(::UINT, const ::POINT&) {setFocus();}
 
-inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
+inline void LinkLabel::onLButtonUp(::UINT, const ::POINT&) {
 	if(toBoolean(getStyle() & WS_DISABLED))
 		return;
 	getParent().sendMessage(WM_COMMAND,
@@ -116,7 +116,7 @@ inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
 #else
 		getWindowLong(GWL_ID),
 #endif /* _WIN64 */
-		reinterpret_cast<LPARAM>(getHandle()));
+		reinterpret_cast<::LPARAM>(getHandle()));
 }
 
 inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
@@ -127,8 +127,8 @@ inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
 	if(len == 0)
 		return;
 
-	TCHAR* const caption = new TCHAR[len + 1];
-	HFONT oldFont = dc.selectObject(font_);
+	::WCHAR* const caption = new ::WCHAR[len + 1];
+	::HFONT oldFont = dc.selectObject(font_);
 	::RECT rect;
 
 	getText(caption, static_cast<int>(len + 1));
@@ -144,7 +144,7 @@ inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
 	dc.selectObject(oldFont);
 }
 
-inline bool LinkLabel::onSetCursor(HWND, UINT, UINT) {
+inline bool LinkLabel::onSetCursor(::HWND, ::UINT, ::UINT) {
 	if(toBoolean(getStyle() & WS_DISABLED)) {
 		::SetCursor(::LoadCursor(0, IDC_ARROW));
 		return true;
@@ -152,17 +152,17 @@ inline bool LinkLabel::onSetCursor(HWND, UINT, UINT) {
 		return false;
 }
 
-inline void LinkLabel::onSetFocus(HWND) {
+inline void LinkLabel::onSetFocus(::HWND) {
 	::RECT rect;
 	getClientRect(rect);
 	::OffsetRect(&rect, -rect.left, -rect.top);
 	getDC().drawFocusRect(rect);
 }
 
-inline bool LinkLabel::onSetText(const TCHAR* text) {
+inline bool LinkLabel::onSetText(const ::WCHAR* text) {
 	gdi::ClientDC dc = getDC();
-	RECT rect = {0, 0, 0, 0};
-	HFONT oldFont = dc.selectObject(getFont());
+	::RECT rect = {0, 0, 0, 0};
+	::HFONT oldFont = dc.selectObject(getFont());
 	dc.drawText(text, -1, rect, DT_CALCRECT);
 	dc.selectObject(oldFont);
 	rect.right += 2;
@@ -171,21 +171,21 @@ inline bool LinkLabel::onSetText(const TCHAR* text) {
 	return false;
 }
 
-inline void LinkLabel::onSettingChange(UINT, const TCHAR*) {recreateFont();}
+inline void LinkLabel::onSettingChange(::UINT, const ::WCHAR*) {recreateFont();}
 
 inline void LinkLabel::recreateFont() {
 	::DeleteObject(font_);
 	font_ = getParent().getFont();
-	::LOGFONT lf;
+	::LOGFONTW lf;
 	if(font_ != 0)
-		::GetObject(font_, sizeof(::LOGFONT), &lf);
+		::GetObject(font_, sizeof(::LOGFONTW), &lf);
 	else {
-		AutoZeroCB<::NONCLIENTMETRICS> ncm;
-		::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(::NONCLIENTMETRICS), &ncm, 0);
+		AutoZeroCB<::NONCLIENTMETRICSW> ncm;
+		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(::NONCLIENTMETRICSW), &ncm, 0);
 		lf = ncm.lfStatusFont;
 	}
 	lf.lfUnderline = true;
-	font_ = ::CreateFontIndirect(&lf);
+	font_ = ::CreateFontIndirectW(&lf);
 }
 
 }}} // namespace manah.win32.ui

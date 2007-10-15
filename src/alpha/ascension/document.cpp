@@ -5,7 +5,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "document.hpp"
 #include <shlwapi.h>	// PathXxxx
 #include <shlobj.h>		// SHGetDesktopFolder, IShellFolder, ...
