@@ -5,17 +5,16 @@
  */
 
 #ifndef ASCENSION_NO_REGEX
-#include "stdafx.h"
 #include "regex.hpp"
 #include "internal.hpp"	// internal.SharedLibrary
 #include "encoder.hpp"
-#ifndef ASCENSION_NO_MIGEMO
-#endif /* !ASCENSION_NO_MIGEMO */
-#ifdef _DEBUG
-#	pragma comment(lib, "libboost_regex-vc71-sgd-1_34_1.lib")
-#else
-#	pragma comment(lib, "libboost_regex-vc71-s-1_34_1.lib")
-#endif /* _DEBUG */
+#ifdef _MSC_VER
+#	ifdef _DEBUG
+#		pragma comment(lib, "libboost_regex-vc71-sgd-1_34_1.lib")
+#	else
+#		pragma comment(lib, "libboost_regex-vc71-s-1_34_1.lib")
+#	endif /* _DEBUG */
+#endif /* _MSC_VER */
 
 using namespace ascension;
 using namespace ascension::regex;
@@ -564,5 +563,4 @@ bool MigemoPattern::isMigemoInstalled() throw() {
 }
 
 #endif /* !ASCENSION_NO_MIGEMO */
-
-//#endif /* !ASCENSION_NO_REGEX */
+#endif /* !ASCENSION_NO_REGEX */

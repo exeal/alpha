@@ -392,7 +392,7 @@ namespace ascension {
 				name = L"ascension:text-viewer";
 				style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
 				bgColor = COLOR_WINDOW;
-				cursor = IDC_IBEAM;
+				cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 			}
 
 		public:
@@ -717,7 +717,7 @@ namespace ascension {
 					name = L"AutoScrollOriginMark";
 					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
 					bgColor = COLOR_WINDOW;
-					cursor = IDC_IBEAM;
+					cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 				}
 			public:
 				bool	create(const TextViewer& view);

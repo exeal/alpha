@@ -18,6 +18,7 @@
 #include <string>	// std.string
 #include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
 #include <iterator>
+#include <stdexcept>
 
 #ifdef _DEBUG
 #include "../../manah/win32/timer.hpp"

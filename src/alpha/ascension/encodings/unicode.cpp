@@ -7,7 +7,6 @@
  * @date 2003-2007
  */
 
-#include "stdafx.h"
 #include "../encoder.hpp"
 using namespace ascension;
 using namespace ascension::encoding;

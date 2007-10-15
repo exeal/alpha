@@ -5,11 +5,8 @@
  * @author exeal
  */
 
-//#ifndef ASCENSION_TEST_NO_STDAFX
-#include "stdafx.h"
-//#endif
 #include "../unicode-property.hpp"
-#include <memory>	// std::auto_ptr
+#include <memory>	// std.auto_ptr
 using namespace ascension;
 using namespace ascension::unicode;
 using namespace ascension::unicode::internal;

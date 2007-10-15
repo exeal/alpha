@@ -4,9 +4,6 @@
  * @date 2007
  */
 
-//#ifndef ASCENSION_TEST_NO_STDAFX
-#include "stdafx.h"
-//#endif
 #include "../unicode-property.hpp"
 #include <vector>
 using namespace ascension;
@@ -19,7 +16,7 @@ using namespace std;
 
 /**
  * @class ascension::unicode::IdentifierSyntax ../unicode.hpp
- * @c IdentifierSyntax classifies characters and detect identifiers based on
+ * An @c IdentifierSyntax classifies characters and detects identifiers based on
  * <a href="http://www.unicode.org/reports/tr31/">UAX #31: Identifier and Pattern Syntax</a>.
  *
  * This class conforms to Unicode 5.0 UAX #31 revision 7 Level 1.
@@ -63,9 +60,9 @@ namespace {
 			basic_string<CodePoint>& added, basic_string<CodePoint>& subtracted) {
 		basic_stringbuf<CodePoint> adding, subtracting;
 		while(addingFirst != addingLast)
-			adding.sputc(*addingFirst);
+			adding.sputc(*addingFirst++);
 		while(subtractingFirst != subtractingLast)
-			subtracting.sputc(*subtractingFirst);
+			subtracting.sputc(*subtractingFirst++);
 		basic_string<CodePoint> a(adding.str()), s(subtracting.str());
 		sort(a.begin(), a.end());
 		sort(s.begin(), s.end());

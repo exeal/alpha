@@ -15,6 +15,7 @@
 
 // modern types /////////////////////////////////////////////////////////////
 
+typedef unsigned char	byte;
 typedef unsigned char	uchar;
 typedef unsigned short	ushort;
 typedef unsigned int	uint;
@@ -33,7 +34,7 @@ namespace manah {
 			Unassignable(const Unassignable&) throw() {}
 			~Unassignable() throw() {}
 		private:
-			const Unassignable& operator =(const Unassignable&);
+			const Unassignable& operator=(const Unassignable&);
 		};
 
 		// noncopyable object's base class (from Boost.Noncopyable)

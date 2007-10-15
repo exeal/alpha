@@ -4,9 +4,6 @@
  * @date 2007
  */
 
-//#ifndef ASCENSION_TEST_NO_STDAFX
-#include "stdafx.h"
-//#endif
 #include "../unicode-property.hpp"
 using namespace ascension;
 using namespace ascension::unicode;
@@ -41,16 +38,16 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 		if(c1 == CharacterIterator::DONE) {
 			if(p1 >= folded1 && p1 < last1)
 				c1 = *p1++;
-			else if(CharacterIterator::DONE != (c1 = **i1)) {
-				++*i1;
+			else if(CharacterIterator::DONE != (c1 = i1->current())) {
+				i1->next();
 				p1 = folded1 - 1;
 			}
 		}
 		if(c2 == CharacterIterator::DONE) {
 			if(p2 >= folded2 && p2 < last2)
 				c2 = *p2++;
-			else if(CharacterIterator::DONE != (c2 = **i2)) {
-				++*i2;
+			else if(CharacterIterator::DONE != (c2 = i2->current())) {
+				i2->next();
 				p2 = folded2 - 1;
 			}
 		}
@@ -331,8 +328,8 @@ namespace {
 		length_t len;	// length of room
 		// decompose
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
-		for(auto_ptr<CharacterIterator> i(first.clone()); i->getOffset() < last.getOffset(); ++*i) {
-			len = internalDecompose(**i, form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
+		for(auto_ptr<CharacterIterator> i(first.clone()); i->getOffset() < last.getOffset(); i->next()) {
+			len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
 			for(UTF16To32Iterator<const Char*> j(room, room + len); j.hasNext(); ++j)
 				buffer.sputc(*j);
 		}
@@ -470,7 +467,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 	if(direction == FORWARD) {
 		if(!initialize) {
 			do {
-				++*current_;
+				current_->next();
 			} while(current_->getOffset() < nextOffset_);
 		}
 		if(!current_->hasNext()) {
@@ -480,18 +477,18 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 		}
 		// locate the next starter
 		next.reset(current_->clone().release());
-		for(++*next; next->hasNext(); ++*next) {
-			if(CanonicalCombiningClass::of(**next) == CanonicalCombiningClass::NOT_REORDERED)
+		for(next->next(); next->hasNext(); next->next()) {
+			if(CanonicalCombiningClass::of(next->current()) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
 		nextOffset_ = next->getOffset();
 	} else {
 		next.reset(current_->clone().release());
 		nextOffset_ = current_->getOffset();
-		--*current_;
+		current_->previous();
 		// locate the previous starter
 		while(current_->hasPrevious()) {
-			if(CanonicalCombiningClass::of(**current_) == CanonicalCombiningClass::NOT_REORDERED)
+			if(CanonicalCombiningClass::of(current_->current()) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
 	}
@@ -510,8 +507,8 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	StringBuffer buffer(ios_base::out);
 	CodePoint c;
 	Char surrogate[2];
-	for(Normalizer n(text, form); n.hasNext(); ++n) {
-		c = *n;
+	for(Normalizer n(text, form); n.hasNext(); n.next()) {
+		c = n.current();
 		if(c < 0x010000)
 			buffer.sputc(static_cast<Char>(c & 0xFFFF));
 		else {

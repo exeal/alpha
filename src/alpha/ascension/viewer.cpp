@@ -5,7 +5,6 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
 #include "viewer.hpp"
 #include "rules.hpp"
 #include "text-editor.hpp"

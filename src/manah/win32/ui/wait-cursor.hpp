@@ -10,10 +10,10 @@ namespace manah {
 		namespace ui {
 			class WaitCursor {
 			public:
-				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursor(0, IDC_WAIT));}
+				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursorW(0, IDC_WAIT));}
 				virtual ~WaitCursor() throw() {::SetCursor(originalCursor_);}
 			private:
-				HCURSOR	originalCursor_;
+				::HCURSOR	originalCursor_;
 			};
 		}
 	}
