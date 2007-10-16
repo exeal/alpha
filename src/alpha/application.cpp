@@ -72,7 +72,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		::MessageBoxA(0, prompt, "Alpha", MB_ICONHAND);	// title is obtained from IDS_APPNAME
 		return -1;
 	}
-	HANDLE mutex = ::CreateMutexW(0, false, IDS_APPFULLVERSION);
+	::HANDLE mutex = ::CreateMutexW(0, false, IDS_APPFULLVERSION);
 
 	int	exitCode = 0/*EXIT_SUCCESS*/;
 
@@ -171,7 +171,7 @@ Alpha::Alpha() : editorFont_(0), scriptSystem_(new ankh::ScriptSystem), mruManag
 	// load startup.xml
 	::WCHAR fileName[MAX_PATH];
 	wcscpy(fileName, getModuleFileName());
-	::WCHAR* const separator = wcsrchr(fileName, _T('\\'));
+	::WCHAR* const separator = wcsrchr(fileName, L'\\');
 	assert(separator != 0);
 	wcscpy(separator + 1, L"startup.xml");
 	ankh::StartupHandler sh(*scriptSystem_, fileName);
@@ -195,7 +195,7 @@ LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPA
 void Alpha::changeFont() {
 	EditorView& activeView = buffers_->getActiveView();
 	::LOGFONTW font;
-	AutoZeroLS<::CHOOSEFONTW> cf;
+	AutoZeroS<::CHOOSEFONTW> cf;
 
 	getTextEditorFont(font);
 	cf.hwndOwner = getMainWindow().getHandle();
@@ -341,7 +341,7 @@ bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
 /// @see manah#windows#Alpha#initInstance
 bool Alpha::initInstance(int showCommand) {
 	// ウィンドウクラスの登録
-	AutoZeroCB<::WNDCLASSEXW> wc;
+	AutoZeroS<::WNDCLASSEXW> wc;
 	wc.style = CS_DBLCLKS/* | CS_DROPSHADOW*/;
 	wc.lpfnWndProc = Alpha::appWndProc;
 	wc.cbClsExtra = 0;
@@ -991,7 +991,7 @@ void Alpha::setupToolbar() {
 	delete[] buttons;
 
 	// レバーに乗せる
-	AutoZeroCB<::REBARBANDINFOW> rbbi;
+	AutoZeroS<::REBARBANDINFOW> rbbi;
 	const wstring caption = loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE;
 	rbbi.fStyle = RBBS_GRIPPERALWAYS | RBBS_USECHEVRON;
@@ -1200,7 +1200,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 			const wstring s = commandManager_->getMenuName(mi.itemID + CMD_SPECIAL_START);
 			manah::AutoBuffer<wchar_t> caption(new wchar_t[s.length() + 1]);
 			wcscpy(caption.get(), s.c_str());
-			wchar_t* accel = wcschr(caption.get(), _T('\t'));
+			wchar_t* accel = wcschr(caption.get(), L'\t');
 			if(accel == caption.get())
 				accel = 0;
 			else if(accel != 0)
@@ -1320,7 +1320,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 
 /// RBN_CHEVRONPUSHED の処理
 void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
-	AutoZeroCB<::REBARBANDINFOW> rbi;
+	AutoZeroS<::REBARBANDINFOW> rbi;
 	::RECT bandRect;
 
 	// ツールバーを得る (バッファバーでも共通のコードが使える)
@@ -1341,7 +1341,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	// 非表示のボタンをメニュー項目に変換
 	PopupMenu popup;
 	::POINT pt = {chevron.rc.left, chevron.rc.bottom};
-	AutoZeroCB<::TBBUTTONINFOW> tbbi;
+	AutoZeroS<::TBBUTTONINFOW> tbbi;
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
 	for(; i < buttonCount; ++i) {
 		::SendMessage(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
@@ -1378,7 +1378,7 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 
 /// @see WM_SETTINGCHNAGE
 void Alpha::onSettingChange(UINT, const wchar_t*) {
-	AutoZeroCB<NONCLIENTMETRICSW> ncm;
+	AutoZeroS<::NONCLIENTMETRICSW> ncm;
 	ascension::updateSystemSettings();
 	::DeleteObject(statusFont_);
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);

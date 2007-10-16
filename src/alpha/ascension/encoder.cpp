@@ -110,9 +110,9 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 		throw invalid_argument("first > last");
 	const size_t bytes = (last - first) * getMaximumNativeLength();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
-	const Char* fromNext;
+	Char* fromNext;
 	uchar* toNext;
-	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext, NO_POLICY) == COMPLETED;
+	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext) == COMPLETED;
 }
 
 
@@ -246,7 +246,7 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	else if(encoders_.find(encoder->getMIBenum()) != encoders_.end())
 //		throw invalid_argument("the encoder is already registered.");
 		return;
-//	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
+	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
 }
 
 /// Returns true if supports the specified encoding.

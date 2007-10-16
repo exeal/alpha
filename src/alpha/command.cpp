@@ -26,10 +26,10 @@ using namespace manah::win32::ui;
 using namespace std;
 
 
-#define CHECK_REBAR_BAND_VISIBILITY(index)				\
-	manah::win32::AutoZeroCB<::REBARBANDINFOW> rbbi;	\
-	rbbi.fMask = RBBIM_STYLE;							\
-	app.rebar_.getBandInfo(index, rbbi);				\
+#define CHECK_REBAR_BAND_VISIBILITY(index)			\
+	manah::win32::AutoZeroS<::REBARBANDINFOW> rbbi;	\
+	rbbi.fMask = RBBIM_STYLE;						\
+	app.rebar_.getBandInfo(index, rbbi);			\
 	const bool visible = !toBoolean(rbbi.fStyle & RBBS_HIDDEN);
 
 namespace {	// アイコンビットマップを編集する連中

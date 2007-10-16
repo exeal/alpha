@@ -357,7 +357,7 @@ bool BufferList::createBar(Rebar& rebar) {
 	bufferBarPager_.setChild(bufferBar_.getHandle());
 
 	// ÉåÉoÅ[Ç…èÊÇπÇÈ
-	AutoZeroCB<::REBARBANDINFOW> rbbi;
+	AutoZeroS<::REBARBANDINFOW> rbbi;
 	const wstring caption = app_.loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE | RBBIM_TEXT;
 	rbbi.fStyle = RBBS_BREAK | RBBS_GRIPPERALWAYS;
@@ -802,8 +802,8 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	}
 
 	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_AUTO};
-	AutoZeroLS<::OPENFILENAMEW> newOfn;
-	AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
+	AutoZeroS<::OPENFILENAMEW> newOfn;
+	AutoZeroS<::OPENFILENAME_NT4W> oldOfn;
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
 	ofn.hwndOwner = app_.getMainWindow().getHandle();
 	ofn.hInstance = ::GetModuleHandle(0);
@@ -1161,8 +1161,8 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcsncpy(filter + filterSource.length(), L"\0*.*\0\0", 6);
 		wcscpy(fileName, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : L"");
 
-		AutoZeroLS<::OPENFILENAMEW> newOfn;
-		AutoZeroLS<::OPENFILENAME_NT4W> oldOfn;
+		AutoZeroS<::OPENFILENAMEW> newOfn;
+		AutoZeroS<::OPENFILENAME_NT4W> oldOfn;
 		::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
 		ofn.hwndOwner = app_.getMainWindow().getHandle();
 		ofn.hInstance = ::GetModuleHandle(0);

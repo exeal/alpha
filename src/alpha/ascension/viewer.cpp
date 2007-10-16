@@ -64,7 +64,7 @@ LANGID ascension::getUserDefaultUILanguage() throw() {
 	id = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
 	::OSVERSIONINFOW version;
 	version.dwOSVersionInfoSize = sizeof(::OSVERSIONINFOW);
-	::GetVersionEx(&version);
+	::GetVersionExW(&version);
 	assert(version.dwPlatformId == VER_PLATFORM_WIN32_NT);
 
 	// 2000/XP/Server 2003 以降の場合 -> kernel32.dll の GetUserDefaultUILanguage に転送
@@ -78,7 +78,8 @@ LANGID ascension::getUserDefaultUILanguage() throw() {
 
 	// NT 3.51-4.0 の場合 -> ntdll.dll のバージョン情報の言語
 	else if(HMODULE dll = ::LoadLibraryW(L"ntdll.dll")) {
-		::EnumResourceLanguagesW(dll, RT_VERSION, MAKEINTRESOURCE(1), enumResLangProc, reinterpret_cast<LONG_PTR>(&id));
+		::EnumResourceLanguagesW(dll, MAKEINTRESOURCEW(16)/*RT_VERSION*/,
+			MAKEINTRESOURCEW(1), enumResLangProc, reinterpret_cast<::LONG_PTR>(&id));
 		::FreeLibrary(dll);
 		if(id == MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) {	// special cases
 			const ::UINT cp = ::GetACP();
@@ -615,7 +616,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
 		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE))), 0);
 	if(toolTip_ != 0) {
-		AutoZeroCB<::TOOLINFOW> ti;
+		AutoZeroS<::TOOLINFOW> ti;
 		::RECT margins = {1, 1, 1, 1};
 		ti.hwnd = getHandle();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
@@ -2000,7 +2001,7 @@ void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
 }
 
 /// @see WM_NCCREATE
-bool TextViewer::onNcCreate(::CREATESTRUCT& cs) {
+bool TextViewer::onNcCreate(::CREATESTRUCTW& cs) {
 	modifyStyleEx(WS_EX_LAYOUTRTL, 0L);
 	return true;
 }
@@ -2188,7 +2189,7 @@ void TextViewer::onSize(UINT type, int, int) {
 		return;
 
 	// ツールチップに通知
-	AutoZeroCB<::TOOLINFOW> ti;
+	AutoZeroS<::TOOLINFOW> ti;
 	::RECT viewRect;
 	getClientRect(viewRect);
 	ti.hwnd = getHandle();
@@ -2848,7 +2849,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(minimum, -1, true);
 	assert(GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0 || scrollInfo_.horizontal.position == 0);
 	if(!isFrozen()) {
-		AutoZeroCB<::SCROLLINFO> scroll;
+		AutoZeroS<::SCROLLINFO> scroll;
 		scroll.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
 		scroll.nMax = configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum;
 		scroll.nPage = scrollInfo_.horizontal.pageSize;
@@ -2871,7 +2872,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(-1, minimum, true);
 	assert(GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0 || scrollInfo_.vertical.position == 0);
 	if(!isFrozen()) {
-		AutoZeroCB<::SCROLLINFO> scroll;
+		AutoZeroS<::SCROLLINFO> scroll;
 		scroll.fMask = SIF_DISABLENOSCROLL | SIF_PAGE | SIF_POS | SIF_RANGE;
 		scroll.nMax = scrollInfo_.vertical.maximum;
 		scroll.nPage = scrollInfo_.vertical.pageSize;
@@ -3217,7 +3218,7 @@ const LayoutSettings& TextViewer::Renderer::getLayoutSettings() const throw() {
 int TextViewer::Renderer::getWidth() const throw() {
 	const LineWrapConfiguration& lwc = viewer_.getConfiguration().lineWrap;
 	if(!lwc.wraps()) {
-		AutoZeroCB<::SCROLLINFO> si;
+		AutoZeroS<::SCROLLINFO> si;
 		si.fMask = SIF_RANGE;
 		viewer_.getScrollInformation(SB_HORZ, si);
 		return (si.nMax + 1) * viewer_.getTextRenderer().getAverageCharacterWidth();

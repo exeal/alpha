@@ -635,7 +635,7 @@ namespace ascension {
 					return toBoolean(color & layout::SYSTEM_COLOR_MASK) ? get(color & ~layout::SYSTEM_COLOR_MASK) : color;}
 				void update() throw() {for(int i = 0; i < countof(c_); ++i) c_[i] = ::GetSysColor(i);}
 			private:
-				COLORREF c_[COLOR_MENUBAR + 1];
+				COLORREF c_[128];
 			} systemColors;
 		}
 

@@ -200,7 +200,7 @@ template<bool noThrow> inline ::ULONGLONG File<noThrow>::getLength() const {
 
 template<bool noThrow> inline ::DWORD File<noThrow>::getCompressedFileSize(::DWORD* fileSizeHigh) const {
 	assertValidAsFile();
-	const ::DWORD	size = ::GetCompressedFileSize(fileName_, fileSizeHigh);
+	const ::DWORD	size = ::GetCompressedFileSizeW(fileName_, fileSizeHigh);
 	if(size == static_cast<DWORD>(-1) && ::GetLastError() != NO_ERROR && !noThrow)
 		throw FileException(getLastErrorMessage());
 	return size;
@@ -343,7 +343,7 @@ template<class DataType, bool noThrow>
 inline MemoryMappedFile<DataType, noThrow>::MemoryMappedFile(const File<noThrow>& file, ::DWORD protection,
 		const ::SECURITY_ATTRIBUTES* attributes /* = 0 */, const ::ULARGE_INTEGER* maximumSize /* = 0 */, const ::WCHAR* name /* = 0 */) {
 	try {
-		setHandle(::CreateFileMapping(file.get(), const_cast<::SECURITY_ATTRIBUTES*>(attributes),
+		setHandle(::CreateFileMappingW(file.get(), const_cast<::SECURITY_ATTRIBUTES*>(attributes),
 			protection, (maximumSize != 0) ? maximumSize->HighPart : 0, (maximumSize != 0) ? maximumSize->LowPart : 0, name));
 	} catch(...) {if(!noThrow) throw;}
 }

@@ -5,7 +5,23 @@
 #define MANAH_WINDOWS_HPP
 
 #include "../object.hpp"
+#define STRICT
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0500	// Windows 2000
+#endif /* !_WIN32_WINNT */
+#ifndef WINVER
+#define WINVER 0x0500	// Windows 2000
+#endif /* !WINVER */
 #define WIN32_LEAN_AND_MEAN
+
+#define NOMINMAX
+#include <cassert>
+#include <cstring>	// prevent C header inclusion
+#include <cwchar>	// prevent C header inclusion
+#include <cstdlib>	// prevent C header inclusion
+#undef min
+#undef max
+
 #define size_t std::size_t
 //#include <winnt.h>
 #include <windows.h>
@@ -16,18 +32,10 @@ namespace manah {
 	namespace win32 {
 
 		// Win32 structure initializement
-		template<class Base> struct AutoZero : public Base {AutoZero() {std::memset(this, 0, sizeof(Base));}};
-		template<class Base, typename sizeMemberType, sizeMemberType(Base::*sizeMember)>
-		struct AutoZeroS : public AutoZero<Base> {AutoZeroS() {this->*sizeMember = sizeof(Base);}};
-#if(_MSC_VER < 1300)
-		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, ::UINT, typename Base::cbSize> {};
-		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, ::DWORD, typename Base::lStructSize> {};
-#else
-		template<class Base> struct AutoZeroCB : public AutoZeroS<Base, ::UINT, &Base::cbSize> {};
-		template<class Base> struct AutoZeroLS : public AutoZeroS<Base, ::DWORD, &Base::lStructSize> {};
-#endif
+		template<typename T> struct AutoZero : public T {AutoZero() {std::memset(this, 0, sizeof(T));}};
+		template<typename T> struct AutoZeroS : public AutoZero<T> {AutoZeroS() {*reinterpret_cast<int*>(this) = sizeof(T);}};
 
-		struct ResourceID : public Noncopyable {
+		struct ResourceID : private Noncopyable {
 			ResourceID(const ::WCHAR* nameString) throw() : name(nameString) {}
 			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
 			const ::WCHAR* const name;
