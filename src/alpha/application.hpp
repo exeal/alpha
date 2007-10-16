@@ -21,15 +21,9 @@
 
 
 // タイトルバーとかに使うアプリケーション名
-#define __WTIMESTAMP__	_T(__TIMESTAMP__)
 #define IDS_APPNAME		L"Alpha"
 #define IDS_APPVERSION	L"0.7.94.0"
-#ifdef _DEBUG
-#	define IDS_APPVERSIONINFO	L"debug version [" __WTIMESTAMP__ L"]"
-#else
-#	define IDS_APPVERSIONINFO	L"[" __WTIMESTAMP__ L"]"
-#endif /* _DEBUG */
-#define IDS_APPFULLVERSION	IDS_APPNAME L" " IDS_APPVERSION L" " IDS_APPVERSIONINFO
+#define IDS_APPFULLVERSION	IDS_APPNAME L" " IDS_APPVERSION
 
 #define IDS_DEFAULTSTATUSTEXT	L""
 #define IDS_EVENTSCRIPTFILENAME	L"events.*"

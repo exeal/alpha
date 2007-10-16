@@ -4,9 +4,10 @@
  * @date 2006-2007
  */
 
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "core.hpp"
 #include "ankh_i.c"
+#include "../resource/messages.h"
 #include "../application.hpp"
 #include "../select-language-dialog.hpp"
 #include "../ascension/encoder.hpp"
@@ -748,12 +749,18 @@ bool ScriptHost::loadScript(const WCHAR* fileName) {
 		}
 
 		// UTF-8 ‚©‚ç UTF-16 ‚É•ÏŠ·
-		auto_ptr<ascension::encodings::Encoder> encoder(ascension::encodings::EncoderFactory::getInstance().createEncoder(CP_UTF8));
-		const size_t len = encoder->toUnicode(source, fileSize, buffer, fileSize);
-		source[len] = 0;
+		using namespace ascension::encoding;
+		Encoder* encoder = Encoder::forMIB(fundamental::MIB_UNICODE_UTF8);
+		::OLECHAR* toNext;
+		const uchar* fromNext;
+		const Encoder::Result r = encoder->toUnicode(source, source + fileSize,
+			toNext, buffer, buffer + fileSize, fromNext, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
 		::UnmapViewOfFile(buffer);
 		::CloseHandle(mappedFile);
 		::CloseHandle(file);
+		if(r != Encoder::COMPLETED)
+			return false;
+		*toNext = 0;
 	}
 
 	// •]‰¿
@@ -803,11 +810,11 @@ STDMETHODIMP ScriptHost::OnScriptError(IActiveScriptError* pscripterror) {
 	long column;
 	pscripterror->GetSourcePosition(&srcContext, &line, &column);
 	map<DWORD_PTR, basic_string<WCHAR> >::const_iterator i = loadedScripts_.find(srcContext);
-	app.messageBox(MSG_SCRIPT__SCRIPT_ERROR_DIALOG, MB_ICONHAND, MARGS
-		% ((i != loadedScripts_.end()) ? i->second.c_str() : app.loadString(MSG_OTHER__UNKNOWN))
+	app.messageBox(MSG_SCRIPT__ERROR_DIALOG, MB_ICONHAND, MARGS
+		% ((i != loadedScripts_.end()) ? i->second.c_str() : app.loadMessage(MSG_OTHER__UNKNOWN))
 		% (line + 1) % (column + 1)
-		% ((exception.bstrDescription != 0) ? exception.bstrDescription : app.loadString(MSG_OTHER__UNKNOWN))
-		% exception.scode % ((exception.bstrSource != 0) ? exception.bstrSource : app.loadString(MSG_OTHER__UNKNOWN)));
+		% ((exception.bstrDescription != 0) ? exception.bstrDescription : app.loadMessage(MSG_OTHER__UNKNOWN))
+		% exception.scode % ((exception.bstrSource != 0) ? exception.bstrSource : app.loadMessage(MSG_OTHER__UNKNOWN)));
 	::SysFreeString(exception.bstrSource);
 	::SysFreeString(exception.bstrDescription);
 	::SysFreeString(exception.bstrHelpFile);
@@ -1398,8 +1405,8 @@ STDMETHODIMP ScriptSystem::ProcessUrlAction(DWORD dwAction,
 		}
 		*pPolicy = (app.messageBox(MSG_ACTIVEX_CAUTION, dialogType, MARGS
 			% scriptFileName_
-			% ((progID != 0) ? progID : app.loadString(MSG_NOT_OBTAINED))
-			% ((clsid != 0) ? clsid : app.loadString(MSG_NOT_OBTAINED))) == IDYES) ? URLPOLICY_ALLOW : URLPOLICY_DISALLOW;
+			% ((progID != 0) ? progID : app.loadMessage(MSG_NOT_OBTAINED))
+			% ((clsid != 0) ? clsid : app.loadMessage(MSG_NOT_OBTAINED))) == IDYES) ? URLPOLICY_ALLOW : URLPOLICY_DISALLOW;
 
 		if(progID != 0)	::CoTaskMemFree(progID);
 		if(clsid != 0)	::CoTaskMemFree(clsid);
@@ -1514,12 +1521,12 @@ STDMETHODIMP Namespace::AddMember(::BSTR name, ::VARIANT* entity) {
 		return E_INVALIDARG;
 	if(entity->vt == VT_UNKNOWN) {
 		ComQIPtr<INamespace> temp;
-		if(S_OK == entity->punkVal->QueryInterface(IID_INamespace, &temp))
-			return E_INVALIDARG;
+//		if(S_OK == entity->punkVal->QueryInterface(IID_INamespace, &temp))
+//			return E_INVALIDARG;
 	} else if(entity->vt == VT_DISPATCH) {
 		ComQIPtr<INamespace> temp;
-		if(S_OK == entity->pdispVal->QueryInterface(IID_INamespace, &temp))
-			return E_INVALIDARG;
+//		if(S_OK == entity->pdispVal->QueryInterface(IID_INamespace, &temp))
+//			return E_INVALIDARG;
 	}
 	ComPtr<INamespace> temp;
 	members_.insert(make_pair(name, ::VARIANT()));

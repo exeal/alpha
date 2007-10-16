@@ -301,7 +301,7 @@ void ContentAssistant::CompletionProposalPopup::setFont(const HFONT font) {
 
 /// Updates the default font with system parameter.
 void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
-	manah::win32::AutoZeroCB<::NONCLIENTMETRICSW> ncm;
+	manah::win32::AutoZeroS<::NONCLIENTMETRICSW> ncm;
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
 	if(defaultFont_ != 0 && isWindow() && getFont() == defaultFont_) {

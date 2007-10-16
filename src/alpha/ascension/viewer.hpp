@@ -425,9 +425,13 @@ namespace ascension {
 				bool vanishesCursor;
 				/// Constructor.
 				Configuration() throw() : leadingMargin(5), topMargin(1) {
-					BOOL b;
+#if(_WIN32_WINNT >= 0x0501)
+					::BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
 					vanishesCursor = toBoolean(b);
+#else
+					vanishesCursor = false;
+#endif
 				}
 			};
 
@@ -665,33 +669,33 @@ namespace ascension {
 #ifdef WM_MOUSEWHEEL
 			void	onMouseWheel(UINT flags, short zDelta, const ::POINT& pt);
 #endif /* WM_MOUSEWHEEL */
-			bool	onNcCreate(::CREATESTRUCT& cs);
+			bool	onNcCreate(::CREATESTRUCTW& cs);
 			bool	onNotify(int id, ::NMHDR& nmhdr);
 			void	onPaint(manah::win32::gdi::PaintDC& dc);
-			void	onRButtonDblClk(UINT keyState, const ::POINT& pt);
-			void	onRButtonDown(UINT keyState, const ::POINT& pt);
-			void	onRButtonUp(UINT keyState, const ::POINT& pt);
-			bool	onSetCursor(HWND window, UINT hitTest, UINT message);
-			void	onSetFocus(HWND oldWindow);
-			void	onSize(UINT type, int cx, int cy);
+			void	onRButtonDblClk(::UINT keyState, const ::POINT& pt);
+			void	onRButtonDown(::UINT keyState, const ::POINT& pt);
+			void	onRButtonUp(::UINT keyState, const ::POINT& pt);
+			bool	onSetCursor(::HWND window, ::UINT hitTest, ::UINT message);
+			void	onSetFocus(::HWND oldWindow);
+			void	onSize(::UINT type, int cx, int cy);
 			void	onStyleChanged(int type, const ::STYLESTRUCT& style);
 			void	onStyleChanging(int type, ::STYLESTRUCT& style);
-			void	onSysChar(UINT ch, UINT flags);
+			void	onSysChar(::UINT ch, ::UINT flags);
 			void	onSysColorChange();
-			bool	onSysKeyDown(UINT ch, UINT flags);
-			bool	onSysKeyUp(UINT ch, UINT flags);
+			bool	onSysKeyDown(::UINT ch, ::UINT flags);
+			bool	onSysKeyUp(::UINT ch, ::UINT flags);
 #ifdef WM_THEMECHANGED
 			void	onThemeChanged();
 #endif /* WM_THEMECHANGED */
-			void	onTimer(UINT_PTR eventId, ::TIMERPROC timerProc);
+			void	onTimer(::UINT_PTR eventId, ::TIMERPROC timerProc);
 #ifdef WM_UNICHAR
-			void	onUniChar(UINT ch, UINT flags);
+			void	onUniChar(::UINT ch, ::UINT flags);
 #endif /* WM_UNICHAR */
-			void	onVScroll(UINT sbCode, UINT pos, HWND scrollBar);
+			void	onVScroll(::UINT sbCode, ::UINT pos, ::HWND scrollBar);
 #ifdef WM_XBUTTONDBLCLK
-			bool	onXButtonDblClk(WORD xButton, WORD keyState, const ::POINT& pt);
-			bool	onXButtonDown(WORD xButton, WORD keyState, const ::POINT& pt);
-			bool	onXButtonUp(WORD xButton, WORD keyState, const ::POINT& pt);
+			bool	onXButtonDblClk(::WORD xButton, ::WORD keyState, const ::POINT& pt);
+			bool	onXButtonDown(::WORD xButton, ::WORD keyState, const ::POINT& pt);
+			bool	onXButtonUp(::WORD xButton, ::WORD keyState, const ::POINT& pt);
 #endif /* WM_XBUTTONDBLCLK */
 
 			// internal classes

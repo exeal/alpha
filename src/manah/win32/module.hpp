@@ -152,7 +152,7 @@ inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /
 		return L"";
 }
 
-inline ::HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResourceW(getHandle(), resource);}
+inline ::HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(getHandle(), resource);}
 
 inline ::HCURSOR Module::loadStandardCursor(const ResourceID& id) {return ::LoadCursorW(0, id.name);}
 

@@ -4,7 +4,6 @@
  * @date 2007
  */
 
-#include "stdafx.h"
 #include "startup-handler.hpp"
 #include "../../manah/com/common.hpp"
 using namespace alpha::ankh;

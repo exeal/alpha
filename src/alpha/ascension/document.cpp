@@ -103,7 +103,7 @@ namespace {
 			::SetLastError((HRESULT_FACILITY(hr) == FACILITY_WIN32) ? HRESULT_CODE(hr) : ERROR_INVALID_DATA);
 			return 0;
 		}
-		if((c = ::SHGetPathFromIDList(idList, buffer)) == 0 && buffer[0] != 0) {
+		if((c = ::SHGetPathFromIDListW(idList, buffer)) == 0 && buffer[0] != 0) {
 			::SetLastError(ERROR_INVALID_DATA);
 			return 0;
 		}
@@ -1583,12 +1583,12 @@ void Document::setDefaultCode(MIBenum mib, Newline newline) {
  * @param pathName the fill name
  * @deprecated 0.8
  */
-void Document::setFilePathName(const WCHAR* pathName) {
+void Document::setFilePathName(const ::WCHAR* pathName) {
 	if(pathName != 0) {
 		if(diskFile_.pathName != 0 && wcscmp(pathName, diskFile_.pathName) == 0)
 			return;
 		delete[] diskFile_.pathName;
-		diskFile_.pathName = new TCHAR[wcslen(pathName) + 1];
+		diskFile_.pathName = new ::WCHAR[wcslen(pathName) + 1];
 		wcscpy(diskFile_.pathName, pathName);
 	} else if(diskFile_.pathName == 0)
 		return;
@@ -2138,7 +2138,7 @@ bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
-			return toBoolean(::PathFileExists(s1));
+			return toBoolean(::PathFileExistsW(s1));
 	}
 
 	// ボリューム情報を使う

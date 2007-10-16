@@ -71,7 +71,7 @@ namespace {
 				::EmptyClipboard();
 				::SetClipboardData(CF_UNICODETEXT, data);
 				if(asRectangle) {
-					if(const UINT clipFormat = ::RegisterClipboardFormat(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT)) {
+					if(const ::UINT clipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT)) {
 						data = ::GlobalAlloc(GMEM_MOVEABLE, 1);
 						buffer = static_cast<Char*>(::GlobalLock(data));
 						buffer[0] = 0;
@@ -1135,7 +1135,7 @@ bool VisualPoint::show(const Position& other) {
 
 	const TextRenderer& renderer = viewer_->getTextRenderer();
 	const length_t visibleLines = viewer_->getNumberOfVisibleLines();
-	AutoZeroCB<::SCROLLINFO> si;
+	AutoZeroS<::SCROLLINFO> si;
 	::POINT to = {-1, -1};
 
 	// for vertical direction

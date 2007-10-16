@@ -4,14 +4,6 @@
 #ifndef MANAH_OBJECT_HPP
 #define MANAH_OBJECT_HPP
 
-#define NOMINMAX
-#include <cassert>
-#include <cstring>	// prevent C header inclusion
-#include <cwchar>	// prevent C header inclusion
-#include <cstdlib>	// prevent C header inclusion
-#undef min
-#undef max
-
 
 // modern types /////////////////////////////////////////////////////////////
 
@@ -44,7 +36,7 @@ namespace manah {
 			~Noncopyable() throw() {}
 		private:
 			Noncopyable(const Noncopyable&);
-			const Noncopyable& operator =(const Noncopyable&);
+			const Noncopyable& operator=(const Noncopyable&);
 		};
 	}
 	typedef able_::Unassignable Unassignable;
