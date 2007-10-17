@@ -251,7 +251,7 @@ private:
 namespace internal {
 	template<::UINT message> struct Msg2Type {};
 	template<typename WindowClass> struct MessageDispatcher {
-#define DEFINE_DISPATCH(msg) static LRESULT dispatch(WindowClass& w, const Msg2Type<msg>, ::WPARAM wp, ::LPARAM lp, bool& handled)
+#define DEFINE_DISPATCH(msg) static ::LRESULT dispatch(WindowClass& w, const Msg2Type<msg>, ::WPARAM wp, ::LPARAM lp, bool& handled)
 		// WM_ACTIVATE -> void onActivate(UINT state, HWND otherWindow, bool minimized)
 		DEFINE_DISPATCH(WM_ACTIVATE) {w.onActivate(LOWORD(wp), reinterpret_cast<::HWND>(lp), toBoolean(HIWORD(wp))); return 1;}
 		// WM_CAPTURECHANGED -> void onCapturChanged(HWND newWindow)
@@ -330,7 +330,7 @@ namespace internal {
 		DEFINE_DISPATCH(WM_MOVE) {w.onMove(LOWORD(lp), HIWORD(lp)); return 1;}
 		// WM_MOVING -> void onMoving(const ::RECT& rect)
 		DEFINE_DISPATCH(WM_MOVING) {w.onMoving(*reinterpret_cast<const ::RECT*>(lp)); return 1;}
-		// WM_NCCREATE -> bool onNcCreate(::CREATESTRUCT&)
+		// WM_NCCREATE -> bool onNcCreate(::CREATESTRUCTW&)
 		DEFINE_DISPATCH(WM_NCCREATE) {handled = true; return w.onNcCreate(*reinterpret_cast<::CREATESTRUCTW*>(lp));}
 		// WM_NOTIFY -> bool onNotify(int id, ::NMHDR& nmhdr)
 		DEFINE_DISPATCH(WM_NOTIFY) {handled = w.onNotify(static_cast<int>(wp), *reinterpret_cast<::NMHDR*>(lp)); return 1;}
@@ -672,7 +672,7 @@ inline ::HICON Window::getIcon(bool bigIcon /* = true */) const {
 
 inline Window Window::getLastActivePopup() const {assertValidAsWindow(); return Window(::GetLastActivePopup(getHandle()));}
 
-#if(_WIN32_WINNT >= 0x0500)
+#if(_WIN32_WINNT >= 0x0501)
 inline bool Window::getLayeredAttributes(::COLORREF* keyColor, ::BYTE* alpha, ::DWORD* flags) const {
 	assertValidAsWindow(); return toBoolean(::GetLayeredWindowAttributes(getHandle(), keyColor, alpha, flags));}
 #endif
@@ -1087,9 +1087,10 @@ inline bool CustomControl<Control, BaseWindow>::create(::HWND parent, const ::RE
 		const ::WCHAR* windowName /* = 0 */, ::DWORD style /* = 0UL */, ::DWORD exStyle /* = 0UL */) {
 	BrushHandleOrColor bgColor;
 	CursorHandleOrID cursor;
-	AutoZeroCB<::WNDCLASSEXW> wc, dummy;
+	MANAH_AUTO_STRUCT_SIZE(::WNDCLASSEXW, wc);
+	MANAH_AUTO_STRUCT_SIZE(::WNDCLASSEXW, dummy);
 
-	wc.hInstance = ::GetModuleHandle(0);	// default value
+	wc.hInstance = ::GetModuleHandleW(0);	// default value
 	wc.lpfnWndProc = CustomControl<Control, BaseWindow>::windowProcedure;
 	Control::getClass(wc.lpszClassName, wc.hInstance, wc.style,
 		bgColor, cursor, wc.hIcon, wc.hIconSm, wc.cbClsExtra, wc.cbWndExtra);

@@ -1507,13 +1507,13 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 		return false;
 	}
 
-	AutoZero<::MapiMessage> message;
+	MANAH_AUTO_STRUCT(::MapiMessage, message);
 	ulong error;
 
 	message.flFlags = MAPI_RECEIPT_REQUESTED;
 
 	if(asAttachment) {	// 添付ファイルにするとき
-		AutoZero<::MapiFileDesc> fileDesc;
+		MANAH_AUTO_STRUCT(::MapiFileDesc, fileDesc);
 		const int cb = ::WideCharToMultiByte(CP_ACP, 0,
 							getFilePathName(), static_cast<int>(wcslen(getFileName())), 0, 0, 0, 0);
 		char* const filePath = new char[cb + 1];

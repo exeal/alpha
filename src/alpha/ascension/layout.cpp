@@ -1050,8 +1050,8 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	const Presentation& presentation = lip_.getPresentation();
 
 	// configure
-	manah::win32::AutoZero<::SCRIPT_CONTROL> control;
-	manah::win32::AutoZero<::SCRIPT_STATE> initialState;
+	MANAH_AUTO_STRUCT(::SCRIPT_CONTROL, control);
+	MANAH_AUTO_STRUCT(::SCRIPT_STATE, initialState);
 	initialState.uBidiLevel = (c.orientation == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
@@ -2973,8 +2973,8 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() throw() {
 			ClientDC dc = viewer_.getDC();
 			HFONT oldFont = dc.selectObject(viewer_.getTextRenderer().getFont());
 			::SCRIPT_STRING_ANALYSIS ssa;
-			AutoZero<::SCRIPT_CONTROL> sc;
-			AutoZero<::SCRIPT_STATE> ss;
+			MANAH_AUTO_STRUCT(::SCRIPT_CONTROL, sc);
+			MANAH_AUTO_STRUCT(::SCRIPT_STATE, ss);
 			HRESULT hr;
 			switch(configuration_.lineNumbers.digitSubstitution) {
 			case DST_CONTEXTUAL:

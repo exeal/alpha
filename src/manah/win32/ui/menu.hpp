@@ -21,8 +21,8 @@ namespace ui {
 // caution! this class does not support Win 95/NT.
 class Menu : public Handle<HMENU, ::DestroyMenu> {
 public:
-	struct ItemInfo : public AutoZero<::MENUITEMINFOW> {
-		ItemInfo() {cbSize = Menu::getSizeOfMENUITEMINFOW();}
+	struct ItemInfo : public ::MENUITEMINFOW {
+		ItemInfo() {std::memset(this, 0, Menu::getSizeOfMENUITEMINFOW()); cbSize = Menu::getSizeOfMENUITEMINFOW();}
 	};
 	enum ItemIdentificationPolicy {BY_COMMAND, BY_POSITION};
 	struct StringItem : public ItemInfo {
@@ -362,7 +362,7 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::hilite(::HWN
 	assertValidAsMenu(); return toBoolean(::HiliteMenuItem(window, getHandle(), item, (idPolicy == Menu::BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (hilite ? MF_HILITE : MF_UNHILITE)));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::insert(::UINT item, const ::MENUITEMINFOW& info) {
-	assertValidAsMenu(); return toBoolean(::InsertMenuItem(getHandle(), item, idPolicy == Menu::BY_POSITION, &info));}
+	assertValidAsMenu(); return toBoolean(::InsertMenuItemW(getHandle(), item, idPolicy == Menu::BY_POSITION, &info));}
 
 template<Menu::ItemIdentificationPolicy idPolicy>
 inline bool Menu::insert(::UINT item, ::UINT previousItem, ::UINT type, ::UINT state, const ::WCHAR* caption) {
@@ -414,7 +414,7 @@ inline ::LRESULT Menu::measureItem(::MEASUREITEMSTRUCT& mi, const ::WCHAR* text,
 		mi.itemWidth = 0;
 		mi.itemHeight = ::GetSystemMetrics(SM_CYMENU) / 2;
 	} else {
-		AutoZeroCB<::NONCLIENTMETRICSW> ncm;
+		MANAH_AUTO_STRUCT_SIZE(::NONCLIENTMETRICSW, ncm);
 		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 		ncm.lfMenuFont.lfWeight = FW_BOLD;
 		::HFONT menuFont = ::CreateFontIndirectW(&ncm.lfMenuFont);
@@ -491,7 +491,7 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setDefault(:
 	assertValidAsMenu(); return toBoolean(::SetMenuDefaultItem(getHandle(), item, idPolicy == Menu::BY_POSITION));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setItemInformation(::UINT item, const ::MENUITEMINFOW& info) {
-	assertValidAsMenu(); return toBoolean(::SetMenuItemInfo(getHandle(), item, idPolicy == Menu::BY_POSITION, &info));}
+	assertValidAsMenu(); return toBoolean(::SetMenuItemInfoW(getHandle(), item, idPolicy == Menu::BY_POSITION, &info));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setState(::UINT item, ::UINT state) {
 	assertValidAsMenu(); ItemInfo mi; mi.fMask = MIIM_STATE; mi.fState = state; return setItemInformation<idPolicy>(item, mi);}

@@ -27,7 +27,7 @@ using namespace std;
 
 
 #define CHECK_REBAR_BAND_VISIBILITY(index)			\
-	manah::win32::AutoZeroS<::REBARBANDINFOW> rbbi;	\
+	MANAH_AUTO_STRUCT_SIZE(::REBARBANDINFOW, rbbi);	\
 	rbbi.fMask = RBBIM_STYLE;						\
 	app.rebar_.getBandInfo(index, rbbi);			\
 	const bool visible = !toBoolean(rbbi.fStyle & RBBS_HIDDEN);

@@ -1135,7 +1135,7 @@ bool VisualPoint::show(const Position& other) {
 
 	const TextRenderer& renderer = viewer_->getTextRenderer();
 	const length_t visibleLines = viewer_->getNumberOfVisibleLines();
-	AutoZeroS<::SCROLLINFO> si;
+	MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, si);
 	::POINT to = {-1, -1};
 
 	// for vertical direction

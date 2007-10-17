@@ -357,7 +357,7 @@ namespace {
 			viewer.setConfiguration(0, &vrc);
 			viewer.modifyStyleEx(WS_EX_LEFT | WS_EX_LTRREADING, WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
-//				AutoZeroCB<::SCROLLINFO> scroll;
+//				MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, scroll);
 //				viewer.getScrollInformation(SB_HORZ, scroll);
 //				viewer.setScrollInformation(SB_HORZ, scroll);
 //			}
@@ -368,7 +368,7 @@ namespace {
 			viewer.setConfiguration(0, &vrc);
 			viewer.modifyStyleEx(WS_EX_RIGHT | WS_EX_RTLREADING, WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
-//				AutoZeroCB<::SCROLLINFO> scroll;
+//				MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, scroll);
 //				viewer.getScrollInformation(SB_HORZ, scroll);
 //				viewer.setScrollInformation(SB_HORZ, scroll);
 //			}
@@ -616,7 +616,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
 		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(getHandle(), GWLP_HINSTANCE))), 0);
 	if(toolTip_ != 0) {
-		AutoZeroS<::TOOLINFOW> ti;
+		MANAH_AUTO_STRUCT_SIZE(::TOOLINFOW, ti);
 		::RECT margins = {1, 1, 1, 1};
 		ti.hwnd = getHandle();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
@@ -2189,7 +2189,7 @@ void TextViewer::onSize(UINT type, int, int) {
 		return;
 
 	// ツールチップに通知
-	AutoZeroS<::TOOLINFOW> ti;
+	MANAH_AUTO_STRUCT_SIZE(::TOOLINFOW, ti);
 	::RECT viewRect;
 	getClientRect(viewRect);
 	ti.hwnd = getHandle();
@@ -2849,7 +2849,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(minimum, -1, true);
 	assert(GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0 || scrollInfo_.horizontal.position == 0);
 	if(!isFrozen()) {
-		AutoZeroS<::SCROLLINFO> scroll;
+		MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, scroll);
 		scroll.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
 		scroll.nMax = configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum;
 		scroll.nPage = scrollInfo_.horizontal.pageSize;
@@ -2872,7 +2872,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(-1, minimum, true);
 	assert(GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0 || scrollInfo_.vertical.position == 0);
 	if(!isFrozen()) {
-		AutoZeroS<::SCROLLINFO> scroll;
+		MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, scroll);
 		scroll.fMask = SIF_DISABLENOSCROLL | SIF_PAGE | SIF_POS | SIF_RANGE;
 		scroll.nMax = scrollInfo_.vertical.maximum;
 		scroll.nPage = scrollInfo_.vertical.pageSize;
@@ -3218,7 +3218,7 @@ const LayoutSettings& TextViewer::Renderer::getLayoutSettings() const throw() {
 int TextViewer::Renderer::getWidth() const throw() {
 	const LineWrapConfiguration& lwc = viewer_.getConfiguration().lineWrap;
 	if(!lwc.wraps()) {
-		AutoZeroS<::SCROLLINFO> si;
+		MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, si);
 		si.fMask = SIF_RANGE;
 		viewer_.getScrollInformation(SB_HORZ, si);
 		return (si.nMax + 1) * viewer_.getTextRenderer().getAverageCharacterWidth();

@@ -180,7 +180,7 @@ inline void LinkLabel::recreateFont() {
 	if(font_ != 0)
 		::GetObject(font_, sizeof(::LOGFONTW), &lf);
 	else {
-		AutoZeroCB<::NONCLIENTMETRICSW> ncm;
+		MANAH_AUTO_STRUCT_SIZE(::NONCLIENTMETRICSW, ncm);
 		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(::NONCLIENTMETRICSW), &ncm, 0);
 		lf = ncm.lfStatusFont;
 	}
