@@ -955,7 +955,7 @@ inline std::ptrdiff_t CharacterIterator::getOffset() const throw() {return offse
 inline CharacterIterator& CharacterIterator::last() {doLast(); offset_ = 0; return *this;}
 
 /// Returns true if the iterator is less than @a rhs.
-inline bool CharacterIterator::less(const CharacterIterator& rhs) const throw() {verifyRHS(rhs); return doLess(rhs);}
+inline bool CharacterIterator::less(const CharacterIterator& rhs) const {verifyRHS(rhs); return doLess(rhs);}
 
 /// Moves to the next code unit.
 inline CharacterIterator& CharacterIterator::next() {doNext(); ++offset_; return *this;}

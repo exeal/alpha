@@ -764,7 +764,7 @@ bool ScriptHost::loadScript(const WCHAR* fileName) {
 	}
 
 	// ï]âø
-	AutoZero<::EXCEPINFO> exception;
+	MANAH_AUTO_STRUCT(::EXCEPINFO, exception);
 	ComQIPtr<IActiveScriptParse> parser;
 	if(FAILED(scriptEngine_.QueryInterface(IID_IActiveScriptParse, &parser))) {
 		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, source);
@@ -798,7 +798,7 @@ STDMETHODIMP ScriptHost::OnScriptError(IActiveScriptError* pscripterror) {
 	else if(!scriptSystem_.isInteractive())
 		return S_OK;	// ñ≥éã
 
-	AutoZero<::EXCEPINFO> exception;	// Python Ç≈ÇÕÉ[ÉçÉNÉäÉAïKê{
+	MANAH_AUTO_STRUCT(::EXCEPINFO, exception);	// Python Ç≈ÇÕÉ[ÉçÉNÉäÉAïKê{
 	pscripterror->GetExceptionInfo(&exception);
 	if(exception.scode == S_OK)	// ÉGÉâÅ[Ç≈ÇÕÇ»Ç¢
 		return S_OK;

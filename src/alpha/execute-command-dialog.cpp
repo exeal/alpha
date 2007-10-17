@@ -84,7 +84,7 @@ bool ExecuteCommandDlg::execute(const wstring& commandLine, bool consoleProgram)
 	}
 
 	bool startupFailed = true;
-	win32::AutoZero<::PROCESS_INFORMATION> pi;
+	MANAH_AUTO_STRUCT(::PROCESS_INFORMATION, pi);
 
 	if(!consoleProgram) {	// GUI ÉvÉçÉOÉâÉÄ
 		if(toBoolean(::CreateProcessW(0,

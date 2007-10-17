@@ -31,10 +31,6 @@
 namespace manah {
 	namespace win32 {
 
-		// Win32 structure initializement
-		template<typename T> struct AutoZero : public T {AutoZero() {std::memset(this, 0, sizeof(T));}};
-		template<typename T> struct AutoZeroS : public AutoZero<T> {AutoZeroS() {*reinterpret_cast<int*>(this) = sizeof(T);}};
-
 		struct ResourceID : private Noncopyable {
 			ResourceID(const ::WCHAR* nameString) throw() : name(nameString) {}
 			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
@@ -144,6 +140,13 @@ namespace manah {
 		}
 	}
 }
+
+// Win32 structure initializement
+#define MANAH_AUTO_STRUCT(typeName, instanceName)	\
+	typeName instanceName; std::memset(&instanceName, 0, sizeof(typeName))
+#define MANAH_AUTO_STRUCT_SIZE(typeName, instanceName)	\
+	MANAH_AUTO_STRUCT(typeName, instanceName);			\
+	*reinterpret_cast<int*>(&instanceName) = sizeof(typeName)
 
 // sizeof(MENUITEMINFO)
 #if(WINVER >= 0x0500 && !defined(MENUITEMINFO_SIZE_VERSION_400))

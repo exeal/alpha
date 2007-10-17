@@ -114,15 +114,15 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	setLayeredAttributes(0, 220, LWA_ALPHA);
 
 	Alpha& app = Alpha::getInstance();
-	searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__LITERAL_SEARCH).c_str());
+	searchTypeCombobox_.addString(app.loadMessage(MSG_DIALOG__LITERAL_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
-		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__REGEX_SEARCH).c_str());
+		searchTypeCombobox_.addString(app.loadMessage(MSG_DIALOG__REGEX_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
-		searchTypeCombobox_.addString(app.loadString(MSG_DIALOG__MIGEMO_SEARCH).c_str());
+		searchTypeCombobox_.addString(app.loadMessage(MSG_DIALOG__MIGEMO_SEARCH).c_str());
 
-	wholeMatchCombobox_.addString(app.loadString(MSG_OTHER__NONE).c_str());
-	wholeMatchCombobox_.addString(app.loadString(MSG_DIALOG__WHOLE_GRAPHEME_MATCH).c_str());
-	wholeMatchCombobox_.addString(app.loadString(MSG_DIALOG__WHOLE_WORD_MATCH).c_str());
+	wholeMatchCombobox_.addString(app.loadMessage(MSG_OTHER__NONE).c_str());
+	wholeMatchCombobox_.addString(app.loadMessage(MSG_DIALOG__WHOLE_GRAPHEME_MATCH).c_str());
+	wholeMatchCombobox_.addString(app.loadMessage(MSG_DIALOG__WHOLE_WORD_MATCH).c_str());
 	checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);
 
 	collationWeightCombobox_.addString(L"15..IDENTICAL");
@@ -226,7 +226,7 @@ void SearchDialog::showRegexErrorMessage(const regex::PatternSyntaxException* e)
 		app.messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
 	else
 		app.messageBox(MSG_SEARCH__INVALID_REGEX_PATTERN, MB_ICONEXCLAMATION,
-			MARGS % app.loadString(MSG_SEARCH__BAD_PATTERN_START + e->getCode()) % static_cast<long>(e->getIndex()));
+			MARGS % app.loadMessage(MSG_SEARCH__BAD_PATTERN_START + e->getCode()) % static_cast<long>(e->getIndex()));
 }
 
 /// @see Dialog#processWindowMessage

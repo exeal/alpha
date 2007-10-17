@@ -95,7 +95,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		WCHAR* data = new WCHAR[commandLineLength + 1 + MAX_PATH];
 		::GetCurrentDirectoryW(MAX_PATH, data);
 		wcscpy(data + MAX_PATH, commandLine);
-		AutoZero<::COPYDATASTRUCT> cd;
+		MANAH_AUTO_STRUCT(::COPYDATASTRUCT, cd);
 		cd.lpData = data;
 		cd.cbData = static_cast<DWORD>(sizeof(WCHAR) * (commandLineLength + 1 + MAX_PATH));
 		::SendMessageW(existWnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
@@ -195,7 +195,7 @@ LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPA
 void Alpha::changeFont() {
 	EditorView& activeView = buffers_->getActiveView();
 	::LOGFONTW font;
-	AutoZeroS<::CHOOSEFONTW> cf;
+	MANAH_AUTO_STRUCT_SIZE(::CHOOSEFONTW, cf);
 
 	getTextEditorFont(font);
 	cf.hwndOwner = getMainWindow().getHandle();
@@ -341,7 +341,7 @@ bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
 /// @see manah#windows#Alpha#initInstance
 bool Alpha::initInstance(int showCommand) {
 	// ウィンドウクラスの登録
-	AutoZeroS<::WNDCLASSEXW> wc;
+	MANAH_AUTO_STRUCT_SIZE(::WNDCLASSEXW, wc);
 	wc.style = CS_DBLCLKS/* | CS_DROPSHADOW*/;
 	wc.lpfnWndProc = Alpha::appWndProc;
 	wc.cbClsExtra = 0;
@@ -479,7 +479,7 @@ bool Alpha::initInstance(int showCommand) {
 /// INI ファイルから設定を読み込む
 void Alpha::loadINISettings() {
 	// 表示に関する設定
-	AutoZero<::LOGFONTW> lf;
+	MANAH_AUTO_STRUCT(::LOGFONTW, lf);
 	if(!readStructureProfile(L"View", L"Font.default", lf)) {
 		lf.lfCharSet = ANSI_CHARSET;
 		lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
@@ -693,7 +693,7 @@ void Alpha::saveINISettings() {
 	wchar_t keyName[30];
 
 	// バーの可視性の保存
-	AutoZero<::REBARBANDINFOW> rbbi;
+	MANAH_AUTO_STRUCT(::REBARBANDINFOW, rbbi);
 	rbbi.fMask = RBBIM_STYLE;
 	rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
 	writeIntegerProfile(L"View", L"visibleToolbar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
@@ -991,7 +991,7 @@ void Alpha::setupToolbar() {
 	delete[] buttons;
 
 	// レバーに乗せる
-	AutoZeroS<::REBARBANDINFOW> rbbi;
+	MANAH_AUTO_STRUCT_SIZE(::REBARBANDINFOW, rbbi);
 	const wstring caption = loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE;
 	rbbi.fStyle = RBBS_GRIPPERALWAYS | RBBS_USECHEVRON;
@@ -1320,7 +1320,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 
 /// RBN_CHEVRONPUSHED の処理
 void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
-	AutoZeroS<::REBARBANDINFOW> rbi;
+	MANAH_AUTO_STRUCT_SIZE(::REBARBANDINFOW, rbi);
 	::RECT bandRect;
 
 	// ツールバーを得る (バッファバーでも共通のコードが使える)
@@ -1341,7 +1341,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	// 非表示のボタンをメニュー項目に変換
 	PopupMenu popup;
 	::POINT pt = {chevron.rc.left, chevron.rc.bottom};
-	AutoZeroS<::TBBUTTONINFOW> tbbi;
+	MANAH_AUTO_STRUCT_SIZE(::TBBUTTONINFOW, tbbi);
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
 	for(; i < buttonCount; ++i) {
 		::SendMessage(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
@@ -1378,7 +1378,7 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 
 /// @see WM_SETTINGCHNAGE
 void Alpha::onSettingChange(UINT, const wchar_t*) {
-	AutoZeroS<::NONCLIENTMETRICSW> ncm;
+	MANAH_AUTO_STRUCT_SIZE(::NONCLIENTMETRICSW, ncm);
 	ascension::updateSystemSettings();
 	::DeleteObject(statusFont_);
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);

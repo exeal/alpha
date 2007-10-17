@@ -191,7 +191,7 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 //	view.getLayoutSetter().setFont(lf);
 
 	// バッファバーにボタンを追加
-	AutoZero<::TBBUTTON> button;
+	MANAH_AUTO_STRUCT(::TBBUTTON, button);
 	button.idCommand = CMD_SPECIAL_BUFFERSSTART + bufferBar_.getButtonCount();
 	button.iBitmap = static_cast<int>(buffers_.size() - 1);
 	button.fsState = TBSTATE_ENABLED;
@@ -357,7 +357,7 @@ bool BufferList::createBar(Rebar& rebar) {
 	bufferBarPager_.setChild(bufferBar_.getHandle());
 
 	// レバーに乗せる
-	AutoZeroS<::REBARBANDINFOW> rbbi;
+	MANAH_AUTO_STRUCT_SIZE(::REBARBANDINFOW, rbbi);
 	const wstring caption = app_.loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE | RBBIM_TEXT;
 	rbbi.fStyle = RBBS_BREAK | RBBS_GRIPPERALWAYS;
@@ -786,7 +786,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	filter[filterSource.length()] = L'\0';
 	filter[filterSource.length() + 1] = L'\0';
 
-	AutoZero<::OSVERSIONINFOW> osVersion;
+	MANAH_AUTO_STRUCT(::OSVERSIONINFOW, osVersion);
 	osVersion.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
 	::GetVersionEx(&osVersion);
 
@@ -802,8 +802,8 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	}
 
 	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_AUTO};
-	AutoZeroS<::OPENFILENAMEW> newOfn;
-	AutoZeroS<::OPENFILENAME_NT4W> oldOfn;
+	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
+	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
 	ofn.hwndOwner = app_.getMainWindow().getHandle();
 	ofn.hInstance = ::GetModuleHandle(0);
@@ -1031,7 +1031,7 @@ void BufferList::recalculateBufferBarSize() {
 
 	// バッファバーの理想長さの再計算
 	if(bufferBar_.isVisible()) {
-		AutoZero<::REBARBANDINFOW> rbbi;
+		MANAH_AUTO_STRUCT(::REBARBANDINFOW, rbbi);
 		Rebar rebar(bufferBarPager_.getParent().getHandle());
 		::RECT rect;
 		rbbi.fMask = RBBIM_IDEALSIZE;
@@ -1151,7 +1151,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 
 	// 別名で保存 or ファイルが存在しない
 	if(!overwrite || buffer.getFilePathName() == 0 || !toBoolean(::PathFileExistsW(buffer.getFilePathName()))) {
-		AutoZero<::OSVERSIONINFOW> osVersion;
+		MANAH_AUTO_STRUCT(::OSVERSIONINFOW, osVersion);
 		const wstring filterSource = app_.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER);
 		wchar_t* filter = new wchar_t[filterSource.length() + 6];
 
@@ -1161,8 +1161,8 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcsncpy(filter + filterSource.length(), L"\0*.*\0\0", 6);
 		wcscpy(fileName, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : L"");
 
-		AutoZeroS<::OPENFILENAMEW> newOfn;
-		AutoZeroS<::OPENFILENAME_NT4W> oldOfn;
+		MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
+		MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
 		::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
 		ofn.hwndOwner = app_.getMainWindow().getHandle();
 		ofn.hInstance = ::GetModuleHandle(0);
@@ -1593,7 +1593,7 @@ void EditorView::updateCurrentPositionOnStatusBar() {
 		}
 		if(formatLength != 0) {
 			length_t messageArguments[3];
-			AutoZero<::SCROLLINFO> si;
+			MANAH_AUTO_STRUCT(::SCROLLINFO, si);
 			getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
 			messageArguments[0] = getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue;
 			messageArguments[1] = getCaret().getVisualColumnNumber() + visualColumnStartValue_;
