@@ -11,7 +11,7 @@
 #define interface struct
 #endif
 #include <mlang.h>
-#include "../../manah/com/common.hpp"	// manah.com.ComPtr
+#include "../../../manah/com/common.hpp"	// manah.com.ComPtr
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace std;

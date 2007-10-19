@@ -20,7 +20,7 @@ using namespace std;
 
 // StringCharacterIterator //////////////////////////////////////////////////
 
-const CharacterIterator::ConcreteTypeTag StringCharacterIterator::CONCRETE_TYPE_TAG_;
+const CharacterIterator::ConcreteTypeTag StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
 StringCharacterIterator::StringCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_) {

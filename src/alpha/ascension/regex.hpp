@@ -73,7 +73,7 @@ namespace ascension {
 		namespace internal {
 			/// @internal
 			template<typename CodePointIterator>
-			class MatchResultImpl : public MatchResult<CodePointIterator> {
+			class MatchResultImpl : virtual public MatchResult<CodePointIterator> {
 			public:
 				MatchResultImpl() {}
 				explicit MatchResultImpl(const boost::match_results<CodePointIterator>& src) : impl_(src) {}
@@ -148,7 +148,7 @@ namespace ascension {
 		class Pattern;
 
 		template<typename CodePointIterator>
-		class Matcher : virtual public regex::internal::MatchResultImpl<CodePointIterator> {
+		class Matcher : public regex::internal::MatchResultImpl<CodePointIterator> {
 		public:
 			// attributes
 			bool						hasAnchoringBounds() const throw();

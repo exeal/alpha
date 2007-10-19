@@ -18,7 +18,7 @@ bin:
 	@if not exist "vc71" mkdir vc71
 
 clean:
-	del vc71\*
+	del vc71\*.obj
 
 test: all
 
