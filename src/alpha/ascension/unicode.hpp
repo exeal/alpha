@@ -356,6 +356,7 @@ namespace ascension {
 		};
 
 		/// Concrete class derived from @c UTF16To32IteratorBase.
+		/// @see makeUTF16To32Iterator
 		template<typename BaseIterator = const Char*>
 		class UTF16To32Iterator : public UTF16To32IteratorBase<BaseIterator, UTF16To32Iterator<BaseIterator> > {
 		private:
@@ -369,12 +370,6 @@ namespace ascension {
 			/// Constructor takes a position to start iteration. The ownership of the target text
 			/// will not be transferred to this.
 			UTF16To32Iterator(BaseIterator first, BaseIterator last, BaseIterator start) : Base(start), first_(first), last_(last) {}
-			/// Constructor takes a C++ standard container.
-			template<typename Container>
-			UTF16To32Iterator(const Container& c) : Base(c.begin()), first_(c.begin()), last_(c.end()) {}
-			/// Constructor takes a C++ standard container.
-			template<typename Container>
-			UTF16To32Iterator(const Container& c, BaseIterator start) : Base(start), first_(c.begin()), last_(c.end()) {}
 			/// Copy constructor.
 			UTF16To32Iterator(const UTF16To32Iterator& rhs) : Base(rhs), first_(rhs.first_), last_(rhs.last_) {}
 			/// Assignment operator.
@@ -387,30 +382,24 @@ namespace ascension {
 			BaseIterator first_, last_;
 		};
 
+		/// Returns a @c UTF16To32Iterator instance iterates elements of the given container.
+		template<typename Container>
+		inline UTF16To32Iterator<typename Container::const_iterator> makeUTF16To32Iterator(const Container& c) {
+			return UTF16To32Iterator<typename Container::const_iterator>(c.begin(), c.end());
+		}
+		/// Returns a @c UTF16To32Iterator instance iterates elements of the given container.
+		template<typename Container>
+		inline UTF16To32Iterator<typename Container::const_iterator> makeUTF16To32Iterator(
+				const Container& c, typename Container::const_iterator start) {
+			return UTF16To32Iterator<typename Container::const_iterator>(c.begin(), c.end(), start);
+		}
+
 		/// Returns the size of a code unit of the specified code unit sequence in bytes.
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			enum {result = sizeof(
-				ascension::internal::Select<
-					ascension::internal::SameTypes<
-						CodeUnitSequence, std::ostream_iterator<char, char>
-					>::result, char,
-					ascension::internal::Select<
-						ascension::internal::SameTypes<
-							CodeUnitSequence, std::ostream_iterator<uchar, uchar>
-						>::result, uchar,
-						ascension::internal::Select<
-							ascension::internal::SameTypes<
-								CodeUnitSequence, std::ostream_iterator<Char, Char>
-							>::result, Char,
-							ascension::internal::Select<
-								ascension::internal::SameTypes<
-									CodeUnitSequence, std::ostream_iterator<CodePoint, CodePoint>
-								>::result, CodePoint,
-								typename std::iterator_traits<CodeUnitSequence>::value_type
-							>::Result
-						>::Result
-					>::Result
-				>::Result)};
+			enum {result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)};
+		};
+		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
+			enum {result = sizeof(T)};
 		};
 
 		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
@@ -853,6 +842,7 @@ namespace ascension {
 		public:
 			static const int NULL_ORDER;
 		public:
+			virtual ~CollationElementIterator() throw();
 			bool equals(const CollationElementIterator& rhs) const {return position() == rhs.position();}
 			bool less(const CollationElementIterator &rhs) const {return position() < rhs.position();}
 		public:
@@ -861,7 +851,7 @@ namespace ascension {
 			virtual void previous() = 0;
 			virtual std::size_t position() const = 0;
 		protected:
-			CollationElementIterator() throw() {}
+			CollationElementIterator() throw();
 		};
 
 		class Collator {
