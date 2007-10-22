@@ -111,8 +111,8 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 * @see Document, DocumentPartitioner, TextViewer
 		 */
-		class Presentation : private manah::Noncopyable,
-				virtual public text::IDocumentListener, virtual public internal::ITextViewerCollection {
+		class Presentation : virtual public text::IDocumentListener, virtual public internal::ITextViewerCollection {
+			MANAH_NONCOPYABLE_TAG(Presentation);
 		public:
 			typedef std::set<viewers::TextViewer*>::iterator TextViewerIterator;
 			typedef std::set<viewers::TextViewer*>::const_iterator TextViewerConstIterator;
@@ -169,8 +169,8 @@ namespace ascension {
 		};
 
 		/// Reconstructs document presentation with single text style.
-		class SingleStyledPartitionPresentationReconstructor :
-			virtual public IPartitionPresentationReconstructor, private manah::Unassignable {
+		class SingleStyledPartitionPresentationReconstructor : virtual public IPartitionPresentationReconstructor {
+			MANAH_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
 			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw();
 		private:
@@ -183,8 +183,8 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : virtual public ILineStyleDirector,
-			virtual public text::IDocumentPartitioningListener, private manah::Unassignable {
+		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public text::IDocumentPartitioningListener {
+			MANAH_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
 			explicit PresentationReconstructor(Presentation& presentation) throw();

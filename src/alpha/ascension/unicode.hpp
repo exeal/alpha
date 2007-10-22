@@ -185,8 +185,7 @@ namespace ascension {
 
 		class CharacterIterator {
 		public:
-			/// Indicates the iterator is the last.
-			static const CodePoint DONE = 0xFFFFFFFFUL;
+			static const CodePoint DONE;
 		public:
 			virtual ~CharacterIterator() throw();
 			// attributes
@@ -571,7 +570,8 @@ namespace ascension {
 		 *
 		 * This class does not have an interface for standard C++ iterator.
 		 */
-		class BreakIterator : private manah::Unassignable {
+		class BreakIterator {
+			MANAH_UNASSIGNABLE_TAG(BreakIterator);
 		public:
 			/// Destructor.
 			virtual ~BreakIterator() throw() {}
@@ -632,7 +632,8 @@ namespace ascension {
 
 		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
 		template<class BaseIterator> class GraphemeBreakIterator :
-			public AbstractGraphemeBreakIterator, public internal::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
+				public AbstractGraphemeBreakIterator, public internal::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
+			MANAH_UNASSIGNABLE_TAG(GraphemeBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -646,8 +647,8 @@ namespace ascension {
 			/// Returns the base iterator.
 			const BaseIterator& base() const throw() {return p_;}
 		private:
-			CharacterIterator& getCharacterIterator() {return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& getCharacterIterator() throw() {return static_cast<CharacterIterator&>(p_);}
+			const CharacterIterator& getCharacterIterator() const throw() {return static_cast<const CharacterIterator&>(p_);}
 			BaseIterator p_;
 		};
 
@@ -692,7 +693,8 @@ namespace ascension {
 
 		/// @c WordBreakIterator locates word boundaries in text.
 		template<class BaseIterator> class WordBreakIterator :
-			public AbstractWordBreakIterator, public internal::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
+				public AbstractWordBreakIterator, public internal::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
+			MANAH_UNASSIGNABLE_TAG(WordBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -708,8 +710,8 @@ namespace ascension {
 			/// Returns the base iterator.
 			const BaseIterator& base() const throw() {return p_;}
 		private:
-			CharacterIterator& getCharacterIterator() {return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& getCharacterIterator() throw() {return static_cast<CharacterIterator&>(p_);}
+			const CharacterIterator& getCharacterIterator() const throw() {return static_cast<const CharacterIterator&>(p_);}
 			BaseIterator p_;
 		};
 
@@ -746,7 +748,8 @@ namespace ascension {
 
 		/// @c SentenceBreakIterator locates sentence boundaries in text.
 		template<class BaseIterator> class SentenceBreakIterator :
-			public AbstractSentenceBreakIterator, public internal::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
+				public AbstractSentenceBreakIterator, public internal::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
+			MANAH_UNASSIGNABLE_TAG(SentenceBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -762,8 +765,8 @@ namespace ascension {
 			/// Returns the base iterator.
 			const BaseIterator& base() const throw() {return p_;}
 		private:
-			CharacterIterator& getCharacterIterator() {return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& getCharacterIterator() throw() {return static_cast<CharacterIterator&>(p_);}
+			const CharacterIterator& getCharacterIterator() const throw() {return static_cast<const CharacterIterator&>(p_);}
 			BaseIterator p_;
 		};
 
@@ -780,7 +783,8 @@ namespace ascension {
 
 		/// @c LineBreakIterator locates line break opportunities in text.
 		template<class BaseIterator> class LineBreakIterator :
-			public AbstractLineBreakIterator, public internal::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
+				public AbstractLineBreakIterator, public internal::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
+			MANAH_UNASSIGNABLE_TAG(LineBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -793,8 +797,8 @@ namespace ascension {
 			/// Returns the base iterator.
 			const BaseIterator& base() const throw() {return p_;}
 		private:
-			CharacterIterator& getCharacterIterator() {return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& getCharacterIterator() const {return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& getCharacterIterator() throw() {return static_cast<CharacterIterator&>(p_);}
+			const CharacterIterator& getCharacterIterator() const throw() {return static_cast<const CharacterIterator&>(p_);}
 			BaseIterator p_;
 		};
 
@@ -803,7 +807,8 @@ namespace ascension {
 		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.
 		 * @see Collator, Normalizer, searcher#LiteralPattern
 		 */
-		class CaseFolder : public manah::Noncopyable {
+		class CaseFolder {
+			MANAH_NONCOPYABLE_TAG(CaseFolder);
 		public:
 			static const length_t	MAXIMUM_EXPANSION_CHARACTERS;
 			static int			compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI = false);

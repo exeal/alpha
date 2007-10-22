@@ -60,6 +60,7 @@ namespace ascension {
 
 		/// Default implementation of @c ICompletionalProposal.
 		class CompletionProposal : virtual public ICompletionProposal {
+			MANAH_UNASSIGNABLE_TAG(CompletionProposal);
 		public:
 			explicit CompletionProposal(const String& replacementString,
 				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
@@ -73,7 +74,7 @@ namespace ascension {
 			void	replace(text::Document& document, const text::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
-			HICON icon_;
+			::HICON icon_;
 			const bool autoInsertable_;
 		};
 
@@ -146,6 +147,7 @@ namespace ascension {
 		 * collecting identifiers in the document.
 		 */
 		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
+			MANAH_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
 			IdentifiersProposalProcessor(text::ContentType contentType, const unicode::IdentifierSyntax& syntax) throw();

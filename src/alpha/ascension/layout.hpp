@@ -191,7 +191,8 @@ namespace ascension {
 		 * Font Fallback mechanism for multilingual text display.
 		 * @see TextRenderer
 		 */
-		class FontSelector : public manah::Unassignable {
+		class FontSelector {
+			MANAH_UNASSIGNABLE_TAG(FontSelector);
 		public:
 			/// Font association table consists of pairs of a script and a font familiy name.
 			typedef std::map<int, std::basic_string<WCHAR> > FontAssociations;
@@ -249,7 +250,9 @@ namespace ascension {
 			virtual ~ISpecialCharacterRenderer() throw() {}
 		protected:
 			/// Context of the layout.
-			struct LayoutContext : private manah::Unassignable {
+			struct LayoutContext {
+				MANAH_UNASSIGNABLE_TAG(LayoutContext);
+			public:
 				mutable manah::win32::gdi::DC& dc;	///< the device context.
 				Orientation orientation;			///< the orientation of the character.
 				/// Constructor.
@@ -381,7 +384,8 @@ namespace ascension {
 
 		namespace internal {struct Run;}
 
-		class LineLayout : public manah::Noncopyable {
+		class LineLayout {
+			MANAH_NONCOPYABLE_TAG(LineLayout);
 		public:
 			/// Edge of a character.
 			enum Edge {
@@ -390,6 +394,8 @@ namespace ascension {
 			};
 			/// Used for @c #draw methods.
 			struct Selection {
+				MANAH_UNASSIGNABLE_TAG(Selection);
+			public:
 				/// Constructor.
 				Selection(const viewers::Caret& caret, const Colors& color) throw() : caret(caret), color(color) {}
 				const viewers::Caret& caret;	///< Caret object.
@@ -518,8 +524,8 @@ namespace ascension {
 		 * the visual lines.
 		 * @see LineLayout, TextRenderer
 		 */
-		class LineLayoutBuffer : private manah::Noncopyable,
-				virtual public text::IDocumentListener/*, virtual public presentation::IPresentationStylistListener*/ {
+		class LineLayoutBuffer : virtual public text::IDocumentListener/*, virtual public presentation::IPresentationStylistListener*/ {
+			MANAH_NONCOPYABLE_TAG(LineLayoutBuffer);
 		public:
 			// constructors
 			LineLayoutBuffer(text::Document& document, length_t bufferSize, bool autoRepair);

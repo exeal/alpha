@@ -9,17 +9,23 @@ namespace manah {
 namespace win32 {
 namespace io {
 
-template<bool autoClose> class KernelHandle : private Noncopyable {
+template<bool autoClose> class KernelHandle {
+	MANAH_NONCOPYABLE_TAG(KernelHandle);
 public:
 	explicit KernelHandle(::HANDLE handle = 0) throw() : handle_(handle) {}
-	virtual ~KernelHandle() throw() {if(autoClose) close();}
+	virtual ~KernelHandle() throw();
 	virtual bool close() throw() {if(toBoolean(::CloseHandle(handle_))) {handle_ = 0; return true;} return false;}
 	::HANDLE get() const throw() {return handle_;}
 protected:
-	void setHandle(::HANDLE newHandle) throw() {if(autoClose) close(); handle_ = newHandle;}
+	void setHandle(::HANDLE newHandle) throw();
 private:
 	::HANDLE handle_;
 };
+
+template<bool autoClose> inline KernelHandle<autoClose>::~KernelHandle() throw() {close();}
+template<> inline KernelHandle<false>::~KernelHandle() throw() {}
+template<bool autoClose> inline void KernelHandle<autoClose>::setHandle(::HANDLE newHandle) throw() {close(); handle_ = newHandle;}
+template<> inline void KernelHandle<false>::setHandle(::HANDLE newHandle) throw() {handle_ = newHandle;}
 
 class FileException : public std::runtime_error {
 public:
@@ -84,7 +90,7 @@ protected:
 	virtual void	assertValidAsFile() const {}
 #endif /* _DEBUG */
 private:
-	static std::string	getLastErrorMessage();
+	static void	throwCurrentError();
 
 private:
 	::WCHAR* fileName_;	// full name of the file
@@ -93,7 +99,8 @@ private:
 
 template<class DataType, bool noThrow> class MemoryMappedFile : public KernelHandle<true> {
 public:
-	class View : public Noncopyable {
+	class View {
+		MANAH_NONCOPYABLE_TAG(View);
 	public:
 		~View() {if(parent_.get() != 0) ::UnmapViewOfFile(pointer_);}
 		DataType* getData() const throw() {return pointer_;}
@@ -104,12 +111,12 @@ public:
 		friend class MemoryMappedFile<DataType, noThrow>;
 	};
 	// constructors
-	MemoryMappedFile(const File<noThrow>& file, DWORD protection,
+	MemoryMappedFile(const File<noThrow>& file, ::DWORD protection,
 		const ::SECURITY_ATTRIBUTES* securityAttributes = 0, const ::ULARGE_INTEGER* maximumSize = 0, const ::WCHAR* name = 0);
-	MemoryMappedFile(DWORD desiredAccess, bool inheritHandle, const ::WCHAR* name);
+	MemoryMappedFile(::DWORD desiredAccess, bool inheritHandle, const ::WCHAR* name);
 	// methods
 	static bool			flushViewOfFile(const void* baseAddress, ::DWORD flushBytes = 0) throw();
-	std::auto_ptr<View>	mapView(DWORD desiredAccess,
+	std::auto_ptr<View>	mapView(::DWORD desiredAccess,
 							const ::ULARGE_INTEGER* fileOffset = 0, ::DWORD mappingBytes = 0, const void* baseAddress = 0);
 };
 
@@ -135,9 +142,8 @@ template<bool noThrow> inline void File<noThrow>::abort() {
 template<bool noThrow> inline bool File<noThrow>::close() {
 	if(get() != 0) {
 		if(!KernelHandle<false>::close()) {
-			if(noThrow)
-				return false;
-			throw FileException(getLastErrorMessage());
+			throwCurrentError();
+			return false;
 		}
 	}
 	managed_ = false;
@@ -152,9 +158,8 @@ template<bool noThrow> inline std::auto_ptr<File<noThrow> > File<noThrow>::dupli
 
 	::HANDLE handle;
 	if(!toBoolean(::DuplicateHandle(::GetCurrentProcess(), get(), ::GetCurrentProcess(), &handle, 0, false, DUPLICATE_SAME_ACCESS))) {
-		if(noThrow)
-			return std::auto_ptr<File<noThrow> >(0);
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return std::auto_ptr<File<noThrow> >(0);
 	}
 	std::auto_ptr<File> newFile(new File(handle));
 	assert(newFile->get() != 0);
@@ -166,26 +171,10 @@ template<bool noThrow> inline std::auto_ptr<File<noThrow> > File<noThrow>::dupli
 template<bool noThrow> inline bool File<noThrow>::flush() {
 	assertValidAsFile();
 	if(!toBoolean(::FlushFileBuffers(get()))) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	return true;
-}
-
-template<bool noThrow> inline std::string File<noThrow>::getLastErrorMessage() {
-	std::string	message;
-	void* buffer = 0;
-	const DWORD n = ::GetLastError();
-
-	::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
-		| FORMAT_MESSAGE_FROM_SYSTEM
-		| FORMAT_MESSAGE_IGNORE_INSERTS,
-		0, n, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		reinterpret_cast<char*>(&buffer), 0, 0);
-	message = static_cast<char*>(buffer);
-	::LocalFree(buffer);
-	return message;
 }
 
 template<bool noThrow> inline ::ULONGLONG File<noThrow>::getLength() const {
@@ -193,16 +182,16 @@ template<bool noThrow> inline ::ULONGLONG File<noThrow>::getLength() const {
 
 	::ULARGE_INTEGER len;
 	len.LowPart = ::GetFileSize(get(), &len.HighPart);
-	if(len.LowPart == -1 && ::GetLastError() != NO_ERROR && !noThrow)
-		throw FileException(getLastErrorMessage());
+	if(len.LowPart == -1 && ::GetLastError() != NO_ERROR)
+		throwCurrentError();
 	return len.QuadPart;
 }
 
 template<bool noThrow> inline ::DWORD File<noThrow>::getCompressedFileSize(::DWORD* fileSizeHigh) const {
 	assertValidAsFile();
 	const ::DWORD	size = ::GetCompressedFileSizeW(fileName_, fileSizeHigh);
-	if(size == static_cast<DWORD>(-1) && ::GetLastError() != NO_ERROR && !noThrow)
-		throw FileException(getLastErrorMessage());
+	if(size == static_cast<DWORD>(-1) && ::GetLastError() != NO_ERROR)
+		throwCurrentError();
 	return size;
 }
 
@@ -210,16 +199,16 @@ template<bool noThrow> inline bool File<noThrow>::getFileTime(
 		::LPFILETIME creationTime, ::LPFILETIME lastAccessTime, ::LPFILETIME lastWriteTime) const {
 	assertValidAsFile();
 	const bool succeeded = toBoolean(::GetFileTime(get(), creationTime, lastAccessTime, lastWriteTime));
-	if(!succeeded && ::GetLastError() != NO_ERROR && !noThrow)
-		throw FileException(getLastErrorMessage());
+	if(!succeeded && ::GetLastError() != NO_ERROR)
+		throwCurrentError();
 	return succeeded;
 }
 
 template<bool noThrow> inline ::DWORD File<noThrow>::getPosition() const {
 	assertValidAsFile();
 	const ::DWORD pos = ::SetFilePointer(get(), 0, 0, FILE_CURRENT);
-	if(pos == static_cast<DWORD>(-1) && !noThrow)
-		throw FileException(getLastErrorMessage());
+	if(pos == static_cast<::DWORD>(-1))
+		throwCurrentError();
 	return pos;
 }
 
@@ -228,9 +217,8 @@ template<bool noThrow> inline bool File<noThrow>::isOpened() const {return get()
 template<bool noThrow> inline bool File<noThrow>::lockRange(::DWORD pos, ::DWORD count) {
 	assertValidAsFile();
 	if(!toBoolean(::LockFile(get(), pos, 0, count, 0))) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	return true;
 }
@@ -250,10 +238,8 @@ template<bool noThrow> inline bool File<noThrow>::open(const ::WCHAR* fileName,
 	::HANDLE handle = ::CreateFileW(fileName, desiredAccess, shareMode,
 		securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
 	if(handle == INVALID_HANDLE_VALUE) {
-		if(noThrow)
-			return false;
-		else
-			throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 
 	setHandle(handle);
@@ -276,9 +262,8 @@ template<bool noThrow> inline bool File<noThrow>::read(void* buffer, ::DWORD byt
 
 	::DWORD readBytesBuffer;
 	if(!toBoolean(::ReadFile(get(), buffer, bytes, &readBytesBuffer, 0))) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	if(readBytes != 0)
 		*readBytes = readBytesBuffer;
@@ -292,9 +277,8 @@ template<bool noThrow> inline ::ULONGLONG File<noThrow>::seek(::LONGLONG offset,
 	offsets.QuadPart = offset;
 	offsets.LowPart = ::SetFilePointer(get(), offsets.LowPart, &offsets.HighPart, mode);
 	if(offsets.LowPart == -1 && ::GetLastError() != NO_ERROR) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	return true;
 }
@@ -302,20 +286,36 @@ template<bool noThrow> inline ::ULONGLONG File<noThrow>::seek(::LONGLONG offset,
 template<bool noThrow> inline void File<noThrow>::setLength(::ULONGLONG newLength) {
 	assertValidAsFile();
 	seek(newLength, FROM_BEGIN);
-	if(!toBoolean(::SetEndOfFile(get())) && !noThrow)
-		throw FileException(getLastErrorMessage());
+	if(!toBoolean(::SetEndOfFile(get())))
+		throwCurrentError();
 }
 
 template<bool noThrow> inline void File<noThrow>::seekToBegin() {seek(0, File<noThrow>::FROM_BEGIN);}
 
 template<bool noThrow> inline ::ULONGLONG File<noThrow>::seekToEnd() {return seek(0, File<noThrow>::FROM_END);}
 
+template<bool noThrow> inline void File<noThrow>::throwCurrentError() {}
+
+template<> inline void File<false>::throwCurrentError() {
+	std::string	message;
+	void* buffer = 0;
+	const ::DWORD n = ::GetLastError();
+
+	::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
+		| FORMAT_MESSAGE_FROM_SYSTEM
+		| FORMAT_MESSAGE_IGNORE_INSERTS,
+		0, n, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		reinterpret_cast<char*>(&buffer), 0, 0);
+	message = static_cast<char*>(buffer);
+	::LocalFree(buffer);
+	throw FileException(message);
+}
+
 template<bool noThrow> inline bool File<noThrow>::unlockRange(::DWORD pos, ::DWORD count) {
 	assertValidAsFile();
 	if(!toBoolean(::UnlockFile(get(), pos, 0, count, 0))) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	return true;
 }
@@ -329,9 +329,8 @@ template<bool noThrow> inline bool File<noThrow>::write(const void* buffer, ::DW
 
 	::DWORD writtenBytesBuffer;
 	if(!toBoolean(::WriteFile(get(), buffer, bytes, (writtenBytes != 0) ? writtenBytes : &writtenBytesBuffer, 0))) {
-		if(noThrow)
-			return false;
-		throw FileException(getLastErrorMessage());
+		throwCurrentError();
+		return false;
 	}
 	return true;
 }

@@ -203,6 +203,7 @@ namespace ascension {
 
 		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
 		class PatternSyntaxException : public std::invalid_argument {
+			MANAH_UNASSIGNABLE_TAG(PatternSyntaxException);
 		public:
 			/// Error types (corresponds to @c boost#regex_constants#error_type).
 			enum Code {
@@ -238,6 +239,7 @@ namespace ascension {
 		};
 
 		class Pattern {
+			MANAH_UNASSIGNABLE_TAG(Pattern);
 		public:
 			enum {
 				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
@@ -276,6 +278,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_MIGEMO
 		/// Builds regular expression pattern for Migemo use.
 		class MigemoPattern : public Pattern {
+			MANAH_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
 			static std::auto_ptr<MigemoPattern>	compile(const Char* first, const Char* last, bool ignoreCase);
 			static void							initialize(const char* runtimePathName, const char* dictionaryPathName);

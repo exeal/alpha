@@ -14,7 +14,7 @@
 #include "../manah/win32/ui/common-controls.hpp"
 #include <map>
 #define _COM_NO_STANDARD_GUIDS_
-#include "msxml3.tlh"	// MSXML2.ISAXAttributes
+#include "msxml4.tlh"	// MSXML2.ISAXAttributes
 
 
 namespace alpha {
@@ -57,7 +57,7 @@ namespace alpha {
 		};
 
 		/// A command.
-		class Command : manah::Noncopyable {
+		class Command {
 		public:
 			/// Destructor.
 			virtual ~Command() throw() {}

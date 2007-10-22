@@ -13,7 +13,8 @@ namespace alpha {
 
 	class Buffer;
 
-	class Printing : private manah::Noncopyable {
+	class Printing {
+		MANAH_NONCOPYABLE_TAG(Printing);
 	public:
 		void				abort();
 		static Printing&	instance() throw();

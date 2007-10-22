@@ -31,7 +31,9 @@
 namespace manah {
 	namespace win32 {
 
-		struct ResourceID : private Noncopyable {
+		struct ResourceID {
+			MANAH_NONCOPYABLE_TAG(ResourceID);
+		public:
 			ResourceID(const ::WCHAR* nameString) throw() : name(nameString) {}
 			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
 			const ::WCHAR* const name;

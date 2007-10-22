@@ -12,7 +12,8 @@ namespace ui {
 
 // 前は色々機能があったけどメンドいんでやーめた
 
-class LinkLabel : public CustomControl<LinkLabel>, private Noncopyable {
+class LinkLabel : public CustomControl<LinkLabel> {
+	MANAH_NONCOPYABLE_TAG(LinkLabel);
 	DEFINE_WINDOW_CLASS() {
 		name = L"ManahLinkLabel";
 		style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;

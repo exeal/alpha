@@ -83,7 +83,8 @@ namespace ascension {
 		template<typename T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
 
 		/// Manages a strategy object.
-		template<typename Strategy> class StrategyPointer : private manah::Noncopyable {
+		template<typename Strategy> class StrategyPointer {
+			MANAH_NONCOPYABLE_TAG(StrategyPointer);
 		public:
 			StrategyPointer() throw() : pointee_(0), manages_(false) {}
 			StrategyPointer(Strategy* pointee, bool manage) throw() : pointee_(pointee), manages_(manage) {}
@@ -100,8 +101,10 @@ namespace ascension {
 		};
 
 		/// Manages the listeners.
-		template<class Listener> class Listeners : private manah::Noncopyable {
+		template<class Listener> class Listeners {
+			MANAH_NONCOPYABLE_TAG(Listeners);
 		public:
+			Listeners() throw() {}
 			void add(Listener& listener) {
 				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
 					throw std::invalid_argument("The listener already has been registered.");

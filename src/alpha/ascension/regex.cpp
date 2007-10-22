@@ -182,7 +182,7 @@ namespace {
 // PatternSyntaxException ///////////////////////////////////////////////////
 
 PatternSyntaxException::PatternSyntaxException(
-		const boost::regex_error& src, const String& pattern) : invalid_argument(""), impl_(src), pattern_() {
+		const boost::regex_error& src, const String& pattern) : invalid_argument(""), impl_(src), pattern_(pattern) {
 }
 
 PatternSyntaxException::Code PatternSyntaxException::getCode() const {

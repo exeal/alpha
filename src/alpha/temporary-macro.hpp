@@ -26,7 +26,8 @@ namespace alpha {
 		 * 指定したディレクトリに XML ファイルとして保存される。
 		 * その XML スキーマは temporary-macro.xsd である
 		 */
-		class TemporaryMacro : public manah::Noncopyable {
+		class TemporaryMacro {
+			MANAH_NONCOPYABLE_TAG(TemporaryMacro);
 		public:
 			/// 状態
 			enum State {

@@ -181,7 +181,8 @@ namespace ascension {
 		 * A changed content of the document.
 		 * @see IDocumentListener, PositionUpdater
 		 */
-		class DocumentChange : public manah::Noncopyable {
+		class DocumentChange {
+			MANAH_NONCOPYABLE_TAG(DocumentChange);
 		public:
 			/// Returns the deleted region if the modification is deletion, otherwise the region of the inserted text.
 			const Region& getRegion() const throw() {return region_;}
@@ -242,7 +243,8 @@ namespace ascension {
 		 *
 		 * @see Position, Document, EditPoint, viewers#VisualPoint, viewers#Caret
 		 */
-		class Point : private manah::Unassignable {
+		class Point {
+			MANAH_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
 			explicit Point(Document& document, const Position& position = Position());
@@ -337,7 +339,8 @@ namespace ascension {
 		 * @c Bookmark manages bookmarks of the document.
 		 * @see Document#getBookmarker, Document#Line#isBookmarked
 		 */
-		class Bookmarker : public manah::Noncopyable {
+		class Bookmarker {
+			MANAH_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			void		addListener(IBookmarkListener& listener);
 			void		clear() throw();
@@ -585,8 +588,8 @@ namespace ascension {
 		};
 
 		// the documentation is at document.cpp
-		class Document : public manah::Noncopyable,
-				virtual public internal::IPointCollection<Point>, virtual public texteditor::internal::ISessionElement {
+		class Document : virtual public internal::IPointCollection<Point>, virtual public texteditor::internal::ISessionElement {
+			MANAH_NONCOPYABLE_TAG(Document);
 		public:
 			/// Values returned by @c Document#load and @c Document#save.
 			enum FileIOResult {
@@ -653,7 +656,7 @@ namespace ascension {
 				bool isModified() const throw() {return operationHistory_ != 0;}
 			private:
 				Line() throw() : operationHistory_(0), newline_(NLF_AUTO), bookmarked_(false) {}
-				explicit Line(String& text, Newline newline = NLF_AUTO, bool modified = false)
+				explicit Line(const String& text, Newline newline = NLF_AUTO, bool modified = false)
 					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline), bookmarked_(false) {}
 				String text_;
 				ulong operationHistory_ : 28;
@@ -782,6 +785,7 @@ namespace ascension {
 		private:
 			/// Manages undo/redo of the document.
 			class UndoManager {
+				MANAH_NONCOPYABLE_TAG(UndoManager);
 			public:
 				// constructors
 				UndoManager(Document& document) throw();
@@ -822,6 +826,7 @@ namespace ascension {
 			};
 
 			class ModificationGuard {
+				MANAH_UNASSIGNABLE_TAG(ModificationGuard);
 			public:
 				ModificationGuard(Document& document) throw() : document_(document) {document_.changing_ = true;}
 				~ModificationGuard() throw() {document_.changing_= false;}

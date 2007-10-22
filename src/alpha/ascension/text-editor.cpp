@@ -832,7 +832,7 @@ ulong TranspositionCommand::execute() {
 
 	TextViewer& viewer = getTarget();
 	Caret& caret = viewer.getCaret();
-	bool succeeded;
+	bool succeeded = false;
 	viewer.freeze();
 	viewer.getDocument().beginSequentialEdit();
 	switch(type_) {

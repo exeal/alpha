@@ -71,7 +71,7 @@ namespace {
 		DeleteOperation(const Region& region) throw() : region_(region) {}
 		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().encompasses(region_);}
 		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const throw() {
+		bool isConcatenatable(DeleteOperation& postOperation, const Document&) const throw() {
 			const Position& bottom = region_.end();
 			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
 			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
@@ -207,7 +207,7 @@ inline void text::internal::OperationUnit::pop() {
  * @param operation the operation to be pushed
  * @param document the document
  */
-inline void text::internal::OperationUnit::push(InsertOperation& operation, const Document& document) {
+inline void text::internal::OperationUnit::push(InsertOperation& operation, const Document&) {
 	operations_.push(&operation);
 }
 
@@ -1072,24 +1072,32 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		newline_ = NLF_AUTO;
 		while(true) {
 			for(size_t i = lastBreak; ; ++i) {	// search the next new line
-				if(i == destLength) {
-					nextBreak = -1;
+				if(ucsBuffer + i == toNext) {
+					nextBreak = static_cast<length_t>(-1);
 					break;
 				} else if(binary_search(LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS) - 1, ucsBuffer[i])) {
 					nextBreak = i;
 					break;
 				}
 			}
-			if(nextBreak != -1) {
-				// 改行文字の判定
+			if(nextBreak != static_cast<length_t>(-1)) {
+				// detect the newline character
 				switch(ucsBuffer[nextBreak]) {
-				case LINE_FEED:	newline = NLF_LF;	break;
+				case LINE_FEED:
+					newline = NLF_LF;
+					break;
 				case CARRIAGE_RETURN:
 					newline = (nextBreak + 1 < destLength && ucsBuffer[nextBreak + 1] == LINE_FEED) ? NLF_CRLF : NLF_CR;
 					break;
-				case NEXT_LINE:	newline = NLF_NEL;	break;
-				case LINE_SEPARATOR:		newline = NLF_LS;	break;
-				case PARAGRAPH_SEPARATOR:	newline = NLF_PS;	break;
+				case NEXT_LINE:
+					newline = NLF_NEL;
+					break;
+				case LINE_SEPARATOR:
+					newline = NLF_LS;
+					break;
+				case PARAGRAPH_SEPARATOR:
+					newline = NLF_PS;
+					break;
 				}
 				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, nextBreak - lastBreak), newline));
 				length_ += nextBreak - lastBreak;
@@ -2034,7 +2042,7 @@ void NullPartitioner::documentAboutToBeChanged() {
 }
 
 /// @see DocumentPartitioner#documentChanged
-void NullPartitioner::documentChanged(const text::DocumentChange& change) {
+void NullPartitioner::documentChanged(const text::DocumentChange&) {
 	p_.region.second.line = INVALID_INDEX;
 }
 

@@ -18,6 +18,9 @@ typedef unsigned long	ulong;
 
 namespace manah {
 
+	// provides convenient base classes for defining unassignable/uncopyable classes.
+	// however, MANAH_***ABLE_TAG macros are preferrable...
+#if 0
 	namespace able_ {
 		// unassignable object's base class
 		class Unassignable {
@@ -41,6 +44,7 @@ namespace manah {
 	}
 	typedef able_::Unassignable Unassignable;
 	typedef able_::Noncopyable Noncopyable;
+#endif /* 0 */
 
 	// OR-combinations of enum values (from Qt.QFlags)
 	template<typename Enum> class Flags {
@@ -79,5 +83,8 @@ namespace manah {
 #ifndef endof
 #define endof(array) (array + countof(array))
 #endif /* !endof */
+
+#define MANAH_UNASSIGNABLE_TAG(className)	private: className& operator=(const className&)
+#define MANAH_NONCOPYABLE_TAG(className)	MANAH_UNASSIGNABLE_TAG(className); className(const className&)
 
 #endif /* !MANAH_OBJECT_HPP */

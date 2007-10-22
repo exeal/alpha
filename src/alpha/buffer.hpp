@@ -94,7 +94,8 @@ namespace alpha {
 	};
 
 	/// A pane for a text editor.
-	class EditorPane : virtual public manah::win32::ui::AbstractPane, public manah::Unassignable {
+	class EditorPane : virtual public manah::win32::ui::AbstractPane {
+		MANAH_UNASSIGNABLE_TAG(EditorPane);
 	public:
 		// constructor
 		EditorPane(EditorView* initialView = 0);
@@ -124,10 +125,11 @@ namespace alpha {
 	 * リストに追加されたバッファはこのオブジェクトが破壊する。
 	 * またこのクラスはバッファバーに使うアイコンも提供する
 	 */
-	class BufferList : private manah::Noncopyable,
+	class BufferList :
 			virtual public ascension::text::IDocumentStateListener,
 			virtual public ascension::text::IUnexpectedFileTimeStampDirector,
 			virtual public ascension::presentation::ITextViewerListListener {
+		MANAH_NONCOPYABLE_TAG(BufferList);
 	public:
 		/// Results of @c #open and @c #reopen methods.
 		enum OpenResult {

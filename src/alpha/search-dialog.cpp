@@ -72,11 +72,11 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	bool enableCommandsAsOnlySelection = true;
 
 	switch(id) {
-	case CMD_SEARCH_FINDNEXT:		// [次を検索]
-	case CMD_SEARCH_FINDPREV:		// [前を検索]
-	case CMD_SEARCH_BOOKMARKALL:	// [すべてマーク]
-	case CMD_SEARCH_REPLACEALL:		// [すべて置換]
-	case CMD_SEARCH_REPLACEALLINTERACTIVE:	// [置換]
+	case CMD_SEARCH_FINDNEXT - CMD_SPECIAL_START:		// [次を検索]
+	case CMD_SEARCH_FINDPREV - CMD_SPECIAL_START:		// [前を検索]
+	case CMD_SEARCH_BOOKMARKALL - CMD_SPECIAL_START:	// [すべてマーク]
+	case CMD_SEARCH_REPLACEALL - CMD_SPECIAL_START:		// [すべて置換]
+	case CMD_SEARCH_REPLACEALLINTERACTIVE - CMD_SPECIAL_START:	// [置換]
 		getParent().sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
 		return true;
 	case IDC_COMBO_FINDWHAT:	// [検索する文字列]

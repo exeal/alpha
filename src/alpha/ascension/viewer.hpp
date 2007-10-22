@@ -57,7 +57,8 @@ namespace ascension {
 		 * @note This feature is not fully available on bidirectional texts.
 		 * @see Caret#getBoxForRectangleSelection
 		 */
-		class VirtualBox : private manah::Unassignable {
+		class VirtualBox {
+			MANAH_UNASSIGNABLE_TAG(VirtualBox);
 		public:
 			VirtualBox(const TextViewer& view, const text::Region& region) throw();
 			bool	getOverlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw();
@@ -95,7 +96,8 @@ namespace ascension {
 		 * @c CaretShapeUpdater updates the caret of the text viewer.
 		 * @see TextViewer, ICaretShapeProvider
 		 */
-		class CaretShapeUpdater : private manah::Unassignable {
+		class CaretShapeUpdater {
+			MANAH_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
 			TextViewer&	getTextViewer() throw();
 			void		update() throw();
@@ -245,8 +247,8 @@ namespace ascension {
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy,
-			virtual public ::IDropSource, virtual public ::IDropTarget, private manah::Unassignable {
+		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy, virtual public ::IDropSource, virtual public ::IDropTarget {
+			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
 			// IUnknown
@@ -360,6 +362,7 @@ namespace ascension {
 				void	documentChanged(const text::Document& document, const text::DocumentChange& change);
 			private:
 				class Hyperlink : virtual public IHyperlink {
+					MANAH_UNASSIGNABLE_TAG(Hyperlink);
 				public:
 					Hyperlink(const String& uri, const text::Region& region) throw();
 					String			getDescription() const throw();
@@ -702,6 +705,7 @@ namespace ascension {
 		private:
 			/// Internal extension of @c layout#TextRenderer.
 			class Renderer : public layout::TextRenderer {
+				MANAH_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
 				Renderer(const Renderer& rhs, TextViewer& viewer);
@@ -716,7 +720,8 @@ namespace ascension {
 				TextViewer& viewer_;
 			};
 			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark>, private manah::Noncopyable {
+			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
+				MANAH_NONCOPYABLE_TAG(AutoScrollOriginMark);
 				DEFINE_WINDOW_CLASS() {
 					name = L"AutoScrollOriginMark";
 					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
@@ -724,6 +729,7 @@ namespace ascension {
 					cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 				}
 			public:
+				AutoScrollOriginMark() throw();
 				bool	create(const TextViewer& view);
 			protected:
 				void	onPaint(manah::win32::gdi::PaintDC& dc);
@@ -731,7 +737,8 @@ namespace ascension {
 				static const long WINDOW_WIDTH;
 			};
 			/// @c VerticalRulerDrawer draws the vertical ruler of the @c TextViewer.
-			class VerticalRulerDrawer : public manah::Noncopyable {
+			class VerticalRulerDrawer {
+				MANAH_NONCOPYABLE_TAG(VerticalRulerDrawer);
 			public:
 				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) throw();
 				void								draw(manah::win32::gdi::PaintDC& dc);
@@ -910,8 +917,9 @@ namespace ascension {
 		};
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : private manah::Noncopyable, virtual public presentation::ILineColorDirector,
+		class CurrentLineHighlighter : virtual public presentation::ILineColorDirector,
 				virtual public ICaretListener, virtual public ICaretStateListener, virtual public text::IPointLifeCycleListener {
+			MANAH_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;

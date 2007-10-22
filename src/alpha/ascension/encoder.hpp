@@ -207,7 +207,8 @@ namespace ascension {
 #endif /* _WIN32 */
 		String	getEncodingDisplayName(MIBenum mib);
 
-		class Encoder : private manah::Noncopyable {
+		class Encoder {
+			MANAH_NONCOPYABLE_TAG(Encoder);
 		public:
 			enum Result {
 				/// The conversion fully succeeded. @a fromNext parameter of the conversion method
@@ -313,7 +314,8 @@ namespace ascension {
 			static Encoders encoders_;
 		};
 
-		class EncodingDetector : private manah::Noncopyable {
+		class EncodingDetector {
+			MANAH_NONCOPYABLE_TAG(EncodingDetector);
 		public:
 			/// Minimum value of identifier of encoding detector.
 			/// Ascension never define an encoding detector has ID less than this.
