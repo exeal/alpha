@@ -1,8 +1,7 @@
 // case-folder-test.cpp
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
+#include <boost/test/included/test_exec_monitor.hpp>
 
 namespace {
 	void testEqual(const ascension::String& s1, const ascension::String& s2) {
@@ -40,8 +39,7 @@ void testCaseFolder() {
 		L"\xD801\xDC28\xD801\xDC29\xD801\xDC2A\xD801\xDC2B\xD801\xDC4C\xD801\xDC4D\xD801\xDC4E\xD801\xDC4F");
 }
 
-boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
-	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Case folder test");
-	test->add(BOOST_TEST_CASE(&testCaseFolder));
-	return test;
+int test_main(int, char*[]) {
+	testCaseFolder();
+	return 0;
 }

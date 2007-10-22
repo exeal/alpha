@@ -88,6 +88,7 @@ LiteralPattern::~LiteralPattern() throw() {
  */
 void LiteralPattern::compile(const Char* first, const Char* last,
 		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) {
+	// TODO: use collator.
 	if(first == 0 || last == 0 || first >= last)
 		throw invalid_argument("invalid pattern input.");
 	direction_ = direction;
@@ -119,6 +120,7 @@ void LiteralPattern::compile(const Char* first, const Char* last,
  * @return true if matched
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
+	// TODO: compare using collation elements.
 	auto_ptr<CharacterIterator> i(target.clone());
 	for(const int* e = first_; e < last_ && i->hasNext(); ++e, i->next()) {
 		if(*e != (caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))

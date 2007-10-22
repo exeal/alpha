@@ -238,7 +238,8 @@ namespace manah {
 		mutable const FixedAllocator*	prev_;
 	};
 
-	template<std::size_t chunkSize, std::size_t maxSmallObjectSize> class SmallObjectAllocator : public Noncopyable {
+	template<std::size_t chunkSize, std::size_t maxSmallObjectSize> class SmallObjectAllocator {
+		MANAH_NONCOPYABLE_TAG(SmallObjectAllocator);
 		friend class SmallObject<>;
 	private:
 		SmallObjectAllocator() : lastAllocated_(0), lastDeallocated_(0) {}

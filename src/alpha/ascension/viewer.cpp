@@ -118,8 +118,7 @@ class viewers::internal::TextViewerAccessibleProxy :
 		virtual public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
 			::IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&::LIBID_Accessibility, &::IID_IAccessible>
-		>,
-		private manah::Unassignable {
+		> {
 	// IAccessible の実装については以下を参考にした:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
 	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
@@ -129,6 +128,7 @@ class viewers::internal::TextViewerAccessibleProxy :
 	//   (http://www.mozilla-japan.org/access/toolkit-checklist.html)
 	//   IAccessible Implementation Sample for a Custom Push Button
 	//   (http://www.gotdotnet.com/workspaces/workspace.aspx?id=4b5530a0-c900-421b-8ed6-7407997fa979)
+	MANAH_UNASSIGNABLE_TAG(TextViewerAccessibleProxy);
 public:
 	// コンストラクタ
 	TextViewerAccessibleProxy(TextViewer& view);
@@ -707,7 +707,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	scanner.reset(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
 	scanner->addWordRule(jsKeywords);
 	scanner->addWordRule(jsFutureKeywords);
-	scanner->addRule(auto_ptr<Rule>(new NumberRule(223)));
+	scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
 	map<Token::ID, const TextStyle> jsStyles;
 	jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
 	jsStyles.insert(make_pair(221, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)))));
@@ -2001,7 +2001,7 @@ void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
 }
 
 /// @see WM_NCCREATE
-bool TextViewer::onNcCreate(::CREATESTRUCTW& cs) {
+bool TextViewer::onNcCreate(::CREATESTRUCTW&) {
 	modifyStyleEx(WS_EX_LAYOUTRTL, 0L);
 	return true;
 }
@@ -2126,7 +2126,7 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 	RESTORE_HIDDEN_CURSOR();
 
 	// リンクのポップアップやカーソルを変える場合
-	const HitTestResult htr = hitTest(pt);
+//	const HitTestResult htr = hitTest(pt);
 /*	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
 		Region region;
 		AutoBuffer<Char> uri;
@@ -3253,6 +3253,10 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 
 const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
 
+/// Default constructor.
+TextViewer::AutoScrollOriginMark::AutoScrollOriginMark() throw() {
+}
+
 /**
  * Creates the window.
  * @param view the viewer
@@ -3956,10 +3960,12 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, uint) {
 	if(!viewer_->endAutoScroll()) {
 		// use system settings
-		UINT lines;	// the number of lines to scroll
+		::UINT lines;	// the number of lines to scroll
 		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
 			lines = 3;
-		delta *= static_cast<short>((lines != WHEEL_PAGESCROLL) ? lines : static_cast<UINT>(viewer_->getNumberOfVisibleLines()));
+		if(lines == WHEEL_PAGESCROLL)
+			lines = static_cast<::UINT>(viewer_->getNumberOfVisibleLines());
+		delta *= static_cast<short>(lines);
 		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
 	}
 }
@@ -4459,6 +4465,7 @@ hyperlink::URLHyperlinkDetector::~URLHyperlinkDetector() throw() {
 
 /// @see IHyperlinkDetector#detectHyperlink
 auto_ptr<hyperlink::IHyperlink> hyperlink::URLHyperlinkDetector::detectHyperlink(const Position& at) const {
+	// TODO: not implemented.
 	return auto_ptr<hyperlink::IHyperlink>(0);
 }
 
@@ -4486,10 +4493,12 @@ hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const 
 
 /// @see IDocumentListener#documentAboutToBeChanged
 void hyperlink::URLHyperlinkDetector::documentAboutToBeChanged(const Document& document) {
+	// TODO: not implemented.
 }
 
 /// @see IDocumentListener#documentChanged
 void hyperlink::URLHyperlinkDetector::documentChanged(const Document& document, const DocumentChange& change) {
+	// TODO: not implemented.
 }
 
 /// @see IHyperlinkDetector#install

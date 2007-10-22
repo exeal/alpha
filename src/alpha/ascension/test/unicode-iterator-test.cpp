@@ -1,11 +1,12 @@
 // unicode-iterator-test.cpp
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
+#include <boost/test/included/test_exec_monitor.hpp>
+#include <vector>
+#include <algorithm>
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
-void testUnicodeIterator() {
+void testUTFIterator() {
 	// spot checks
 	ascension::CodePoint spot16[] = {0x10302U};
 	ascension::unicode::UTF32To16Iterator<> it(spot16);
@@ -56,8 +57,47 @@ void testUnicodeIterator() {
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
 }
 
-boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
-	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Unicode iterator test");
-	test->add(BOOST_TEST_CASE(&testUnicodeIterator));
-	return test;
+void testStringCharacterIterator() {
+	// simple test
+	const ascension::String s1(L"test");
+	ascension::unicode::StringCharacterIterator i1(s1);
+	BOOST_CHECK(!i1.hasPrevious());
+	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
+	BOOST_CHECK_EQUAL(i1.current(), L't');
+	i1.next();
+	BOOST_CHECK(i1.hasNext() && i1.hasPrevious());
+	BOOST_CHECK_EQUAL(i1.getOffset(), 1);
+	BOOST_CHECK_EQUAL(*i1, L'e');
+	i1.last();
+	BOOST_CHECK(!i1.hasNext());
+	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
+	BOOST_CHECK_EQUAL(i1.current(), ascension::unicode::CharacterIterator::DONE);
+
+	// out of BMP
+	const ascension::String s2(L"\xD800\xDC00");
+	ascension::unicode::StringCharacterIterator i2(s2);
+	BOOST_CHECK_EQUAL(i2.current(), 0x010000);
+	++i2;
+	BOOST_CHECK(!i2.hasNext());
+	BOOST_CHECK_EQUAL(i2.getOffset(), 1);
+	--i2;
+	BOOST_CHECK(!i2.hasPrevious());
+
+	// malformed UTF-16 input
+	const ascension::Char s3[] = L"\xDC00\xD800";
+	ascension::unicode::StringCharacterIterator i3(s3, s3 + 2);
+	BOOST_CHECK_EQUAL(*i3, 0xDC00);
+	BOOST_CHECK(i3.hasNext());
+	++i3;
+	BOOST_CHECK_EQUAL(*i3, 0xD800);
+	++i3;
+	BOOST_CHECK_EQUAL(*i3, ascension::unicode::CharacterIterator::DONE);
+	std::advance(i3, -2);
+	BOOST_CHECK(!i3.hasPrevious());
+}
+
+int test_main(int, char*[]) {
+	testUTFIterator();
+	testStringCharacterIterator();
+	return 0;
 }

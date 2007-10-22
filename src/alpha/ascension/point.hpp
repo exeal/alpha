@@ -143,6 +143,7 @@ namespace ascension {
 		 * @see text#EditPoint, text#IPointListener, text#DisposedViewException
 		 */
 		class VisualPoint : public text::EditPoint, virtual public layout::IVisualLinesListener {
+			MANAH_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
@@ -150,7 +151,7 @@ namespace ascension {
 			VisualPoint(const VisualPoint& rhs);
 			virtual ~VisualPoint() throw();
 			// attributes
-			static UINT			canPaste() throw();
+			static ::UINT		canPaste() throw();
 			encoding::MIBenum	getClipboardNativeEncoding() const throw();
 			TextViewer&			getTextViewer();
 			const TextViewer&	getTextViewer() const;

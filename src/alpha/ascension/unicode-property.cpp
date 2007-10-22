@@ -12,6 +12,8 @@ using namespace ascension::unicode::ucd::internal;
 using namespace std;
 
 
+// CharacterIterator ////////////////////////////////////////////////////////
+
 /**
  * @class ascension::unicode::CharacterIterator
  * Abstract class defines an interface for bidirectional iteration on text.
@@ -94,6 +96,101 @@ using namespace std;
  * }
  * @endcode
  */
+
+/// Indicates the iterator is the last.
+const CodePoint CharacterIterator::DONE = 0xFFFFFFFFUL;
+
+
+// StringCharacterIterator //////////////////////////////////////////////////
+
+const CharacterIterator::ConcreteTypeTag StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
+
+/// Default constructor.
+StringCharacterIterator::StringCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_) {
+}
+
+StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(first), first_(first), last_(last) {
+	if(first_ > last_)
+		throw invalid_argument("the first is greater than last.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last, const Char* start) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), first_(first), last_(last) {
+	if(first_ > last_ || current_ < first_ || current_ > last_)
+		throw invalid_argument("invalid input.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const String& s) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data()), first_(s.data()), last_(s.data() + s.length()) {
+	if(first_ > last_)
+		throw invalid_argument("the first is greater than last.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const String& s, String::const_iterator start) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data() + (start - s.begin())), first_(s.data()), last_(s.data() + s.length()) {
+	if(first_ > last_ || current_ < first_ || current_ > last_)
+		throw invalid_argument("invalid input.");
+}
+
+/// Copy-constructor.
+StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& rhs) throw() :
+	CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
+
+/// @see CharacterIterator#current
+CodePoint StringCharacterIterator::current() const throw() {
+	return (current_ != last_) ? surrogates::decodeFirst(current_, last_) : DONE;
+}
+
+/// @see CharacterIterator#doAssign
+void StringCharacterIterator::doAssign(const CharacterIterator& rhs) {
+	CharacterIterator::operator=(rhs);
+	current_ = static_cast<const StringCharacterIterator&>(rhs).current_;
+	first_ = static_cast<const StringCharacterIterator&>(rhs).first_;
+	last_ = static_cast<const StringCharacterIterator&>(rhs).last_;
+}
+
+/// @see CharacterIterator#doClone
+auto_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
+	return auto_ptr<CharacterIterator>(new StringCharacterIterator(*this));
+}
+
+/// @see CharacterIterator#doEquals
+bool StringCharacterIterator::doEquals(const CharacterIterator& rhs) const {
+	return current_ == static_cast<const StringCharacterIterator&>(rhs).current_;
+}
+
+/// @see CharacterIterator#doFirst
+void StringCharacterIterator::doFirst() {
+	current_ = first_;
+}
+
+/// @see CharacterIterator#doLast
+void StringCharacterIterator::doLast() {
+	current_ = last_;
+}
+
+/// @see CharacterIterator#doLess
+bool StringCharacterIterator::doLess(const CharacterIterator& rhs) const {
+	return current_ < static_cast<const StringCharacterIterator&>(rhs).current_;
+}
+
+/// @see CharacterIterator#doNext
+void StringCharacterIterator::doNext() {
+	if(current_ == last_)
+//		throw out_of_range("the iterator is the last.");
+		return;
+	current_ = surrogates::next(current_, last_);
+}
+
+/// @see CharacterIterator#doPrevious
+void StringCharacterIterator::doPrevious() {
+	if(current_ == first_)
+//		throw out_of_range("the iterator is the first.");
+		return;
+	current_ = surrogates::previous(first_, current_);
+}
+
 
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.

@@ -675,6 +675,7 @@ String LineLayout::fillToX(int x) const {
 	HFONT oldFont = dc->selectObject(lip_.getFontSelector().getFont(Script::COMMON));
 	int spaceWidth;
 	dc->getCharWidth(L' ', L' ', &spaceWidth);
+	dc->selectObject(oldFont);
 	size_t numberOfSpaces = 0;
 	while(true) {
 		if(cx + spaceWidth > x)
@@ -1287,7 +1288,7 @@ namespace {
 		return hr;
 	}
 	/// Fills default glyphs into @a run instead of using @c ScriptShape.
-	inline void generateDefaultGlyphs(const DC& dc, const Char* text, Run& run) {
+	inline void generateDefaultGlyphs(const DC& dc, Run& run) {
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
 		if(FAILED(::ScriptGetFontProperties(dc.getHandle(), &run.cache, &fp)))
@@ -1295,7 +1296,7 @@ namespace {
 		fill_n(run.glyphs, run.numberOfGlyphs = static_cast<int>(run.length), fp.wgDefault);
 		const bool ltr = run.analysis.fRTL == 0 || run.analysis.fLogicalOrder == 1;
 		for(int i = 0; i < run.numberOfGlyphs; ++i)
-			run.clusters[i] = ltr ? i : (run.numberOfGlyphs - i);
+			run.clusters[i] = static_cast<::WORD>(ltr ? i : (run.numberOfGlyphs - i));
 		const ::SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
 		fill_n(run.visualAttributes, run.numberOfGlyphs, va);
 	}
@@ -1392,7 +1393,7 @@ void LineLayout::shape(Run& run) throw() {
 			const Char* p = !textIsDanger ? text : safeText.get();
 			// 1/5. the primary font
 			oldFont = dc->selectObject(run.font = lip_.getFontSelector().getFont(Script::COMMON, run.style.bold, run.style.italic));
-			if(S_OK == (hr = generateGlyphs(*dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
+			if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 				break;
 			::ScriptFreeCache(&run.cache);
 			failedFonts.insert(run.font);
@@ -1403,7 +1404,7 @@ void LineLayout::shape(Run& run) throw() {
 				if(script != NOT_PROPERTY && 0 != (run.font = lip_.getFontSelector().getFont(script, run.style.bold, run.style.italic))) {
 					if(failedFonts.find(run.font) == failedFonts.end()) {
 						dc->selectObject(run.font);
-						if(S_OK == (hr = generateGlyphs(*dc, text, run, expectedNumberOfGlyphs, true)))
+						if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, true)))
 							break;
 						::ScriptFreeCache(&run.cache);
 						failedFonts.insert(run.font);
@@ -1416,7 +1417,7 @@ void LineLayout::shape(Run& run) throw() {
 				run.font = lip_.getFontSelector().getLinkedFont(i);
 				if(failedFonts.find(run.font) == failedFonts.end()) {
 					dc->selectObject(run.font);
-					if(S_OK == (hr = generateGlyphs(*dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
+					if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 						break;
 					::ScriptFreeCache(&run.cache);
 					failedFonts.insert(run.font);
@@ -1427,7 +1428,7 @@ void LineLayout::shape(Run& run) throw() {
 
 			// 4/7. the fallback font
 			if(script == NOT_PROPERTY) {
-				for(StringCharacterIterator i(text, text + run.length); i.hasNext(); i.next()) {
+				for(StringCharacterIterator i(p, p + run.length); i.hasNext(); i.next()) {
 					script = Script::of(i.current());
 					if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 						break;
@@ -1439,7 +1440,7 @@ void LineLayout::shape(Run& run) throw() {
 				run.font = 0;
 				// ambiguous CJK?
 				if(script == Script::COMMON && scriptProperties.get(run.analysis.eScript).fAmbiguousCharSet != 0) {
-					switch(CodeBlock::of(surrogates::decodeFirst(text, text + run.length))) {
+					switch(CodeBlock::of(surrogates::decodeFirst(p, p + run.length))) {
 					case CodeBlock::CJK_SYMBOLS_AND_PUNCTUATION:
 					case CodeBlock::ENCLOSED_CJK_LETTERS_AND_MONTHS:
 					case CodeBlock::CJK_COMPATIBILITY:
@@ -1460,7 +1461,7 @@ void LineLayout::shape(Run& run) throw() {
 			}
 			if(run.font != 0 && failedFonts.find(run.font) == failedFonts.end()) {
 				dc->selectObject(run.font);
-				if(S_OK == (hr = generateGlyphs(*dc, text, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
+				if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 					break;
 				::ScriptFreeCache(&run.cache);
 			}
@@ -1469,7 +1470,7 @@ void LineLayout::shape(Run& run) throw() {
 				run.analysis.eScript = SCRIPT_UNDEFINED;	// disable shaping
 			else {
 				// worst case... -> fill with default glyph
-				generateDefaultGlyphs(*dc, text, run);
+				generateDefaultGlyphs(*dc, run);
 				dc->selectObject(run.font = lip_.getFontSelector().getFont(Script::COMMON, run.style.bold, run.style.italic));
 			}
 			failedFonts.clear();
@@ -1715,7 +1716,7 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 	if(first == last)
 		return;
 
-	const size_t originalSize = layouts_.size();
+//	const size_t originalSize = layouts_.size();
 	length_t oldSublines = 0, cachedLines = 0;
 	if(repair) {
 		length_t newSublines = 0, actualFirst = last, actualLast = first;
@@ -1789,7 +1790,7 @@ void LineLayoutBuffer::fireVisualLinesDeleted(length_t first, length_t last, len
 	numberOfVisualLines_ -= sublines;
 	const bool widthChanged = longestLine_ >= first && longestLine_ < last;
 	if(widthChanged)
-		updateLongestLine(-1, 0);
+		updateLongestLine(static_cast<length_t>(-1), 0);
 	listeners_.notify<length_t, length_t, length_t>(IVisualLinesListener::visualLinesDeleted, first, last, sublines, widthChanged);
 }
 
@@ -1806,7 +1807,7 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 	// update the longest line
 	bool longestLineChanged = false;;
 	if(longestLine_ >= first && longestLine_ < last) {
-		updateLongestLine(-1, 0);
+		updateLongestLine(static_cast<length_t>(-1), 0);
 		longestLineChanged = true;
 	} else {
 		length_t newLongestLine = longestLine_;
@@ -2060,7 +2061,7 @@ void LineLayoutBuffer::updateLongestLine(length_t line, int width) throw() {
 		longestLine_ = line;
 		longestLineWidth_ = width;
 	} else {
-		longestLine_ = -1;
+		longestLine_ = static_cast<length_t>(-1);
 		longestLineWidth_ = 0;
 		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
 			if((*i)->getLongestSublineWidth() > longestLineWidth_) {
@@ -2305,7 +2306,9 @@ namespace {
 	}
 }
 
-struct FontSelector::Fontset : private manah::Noncopyable {
+struct FontSelector::Fontset {
+	MANAH_UNASSIGNABLE_TAG(Fontset);
+public:
 	WCHAR faceName[LF_FACESIZE];
 	HFONT regular, bold, italic, boldItalic;
 	explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {
@@ -2823,7 +2826,6 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		return;
 
 	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
-	const Presentation& presentation = viewer_.getPresentation();
 	const TextRenderer& renderer = viewer_.getTextRenderer();
 	::RECT clientRect;
 	viewer_.getClientRect(clientRect);

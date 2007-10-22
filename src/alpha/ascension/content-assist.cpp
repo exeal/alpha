@@ -193,6 +193,7 @@ void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
 
 /// A completion window.
 class ContentAssistant::CompletionProposalPopup : public manah::win32::ui::ListBox {
+	MANAH_NONCOPYABLE_TAG(CompletionProposalPopup);
 public:
 	// constructor
 	CompletionProposalPopup(IContentAssistant::ICompletionProposalsUI& ui) throw();
@@ -403,7 +404,7 @@ void ContentAssistant::caretMoved(const Caret& self, const Region&) {
 }
 
 /// @see viewers#ICharacterInputListener#characterInputted
-void ContentAssistant::characterInputted(const Caret& self, CodePoint c) {
+void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 	if(textViewer_ != 0) {
 		if(completionSession_.get() != 0) {
 			if(!completionSession_->incremental)
@@ -471,7 +472,7 @@ void ContentAssistant::documentAboutToBeChanged(const Document&) {
 }
 
 /// @see text#IDocumentListener#documentChanged
-void ContentAssistant::documentChanged(const Document& document, const DocumentChange& change) {
+void ContentAssistant::documentChanged(const Document&, const DocumentChange& change) {
 	if(completionSession_.get() != 0) {
 		// exit or update the replacement region
 		if(!completionSession_->incremental || change.getRegion().first.line != change.getRegion().second.line)
@@ -659,7 +660,6 @@ void ContentAssistant::updatePopupPositions() {
 	if(proposalPopup_ != 0 && proposalPopup_->isWindow()) {
 		::RECT viewerRect;
 		textViewer_->getClientRect(viewerRect);
-		Caret& caret = textViewer_->getCaret();
 		int cx = (viewerRect.right - viewerRect.left) / 4;
 		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
 		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.beginning(), false, LineLayout::LEADING);

@@ -8,7 +8,7 @@ MSVCDIR=$(VS71COMNTOOLS)..\..\VC7
 !error Variable MSVCDIR not set.
 !endif
 
-CXX_FLAGS=/c /DBOOST_TEST_NO_LIB /DWIN32 /D_WINDOWS /D_DEBUG /EHac /GS /GX /MLd /nologo /RTCcsu /W3 /Wp64 /Zc:forScope /Zc:wchar_t
+CXX_FLAGS=/c /DWIN32 /D_WINDOWS /D_DEBUG /EHac /GS /GX /MTd /nologo /RTCcus /W4 /Wp64 /Zc:forScope /Zc:wchar_t
 XS_FLAGS=/DEBUG /nologo ole32.lib odbc32.lib odbccp32.lib shlwapi.lib
 ALL_HEADER=
 
@@ -58,8 +58,8 @@ break-iterator-test: vc71/break-iterator-test.exe
 ./vc71/unicode-iterator-test.obj: unicode-iterator-test.cpp $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/unicode-iterator-test.obj unicode-iterator-test.cpp
 
-./vc71/unicode-iterator-test.exe: vc71/unicode-iterator-test.obj
-	link $(XS_FLAGS) /out:vc71/unicode-iterator-test.exe vc71/unicode-iterator-test.obj
+./vc71/unicode-iterator-test.exe: vc71/unicode-iterator-test.obj vc71/unicode-property.obj vc71/identifier-syntax.obj
+	link $(XS_FLAGS) /out:vc71/unicode-iterator-test.exe vc71/unicode-iterator-test.obj vc71/unicode-property.obj vc71/identifier-syntax.obj
 
 unicode-iterator-test: vc71/unicode-iterator-test.exe
 	vc71\unicode-iterator-test.exe

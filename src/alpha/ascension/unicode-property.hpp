@@ -63,10 +63,16 @@ namespace ascension {
 			public:
 				static int forName(const Char* name);
 			protected:
+#ifdef _MSC_VER
+#pragma warning(disable : 4510 4512 4610)
+#endif /* _MSC_VER */
 				struct Names {
 					const Char* const shortName;
 					const Char* const longName;
 				};
+#ifdef _MSC_VER
+#pragma warning(default : 4510 4512 4610)
+#endif /* _MSC_VER */
 			private:
 				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
 			};

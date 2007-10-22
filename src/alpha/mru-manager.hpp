@@ -20,7 +20,8 @@ namespace alpha {
 	};
 
 	/// Most recently used files.
-	class MRUManager : public manah::Noncopyable {
+	class MRUManager {
+		MANAH_NONCOPYABLE_TAG(MRUManager);
 	public:
 		// constructor
 		MRUManager(std::size_t limit, int startID);

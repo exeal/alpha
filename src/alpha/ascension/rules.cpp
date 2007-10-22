@@ -21,7 +21,7 @@ namespace {
 	struct InRange : unary_function<T, bool> {
 		InRange(T first, T last) : f(first), l(last) {}
 		bool operator()(T v) const throw() {return v >= f && v <= l;}
-		const T f, l;
+		T f, l;
 	};
 }
 
@@ -31,6 +31,7 @@ namespace ascension {
 	namespace rules {
 		namespace internal {
 			class HashTable {
+				MANAH_NONCOPYABLE_TAG(HashTable);
 			public:
 				template<typename StringSequence>
 				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
@@ -96,7 +97,7 @@ bool HashTable::find(const Char* first, const Char* last) const {
 			return false;
 		const size_t h = getHashCode(first, last);
 		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
-			if(entry->data.length() == last - first && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
+			if(entry->data.length() == static_cast<size_t>(last - first) && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
 				return true;
 		}
 	} else {
@@ -257,7 +258,7 @@ const Char* URIDetector::eatURL(const Char* first, const Char* last, bool) {
 // Token ////////////////////////////////////////////////////////////////////
 
 const Token::ID Token::DEFAULT_TOKEN = 0;
-const Token::ID Token::UNCALCULATED = -1;
+const Token::ID Token::UNCALCULATED = static_cast<Token::ID>(-1);
 
 
 // Rule /////////////////////////////////////////////////////////////////////

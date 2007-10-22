@@ -338,7 +338,8 @@ namespace ascension {
 				bool	check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
 			};
 			/// I.S.C. for Thai.
-			class ThaiInputSequenceChecker : virtual public InputSequenceChecker, private manah::Unassignable {
+			class ThaiInputSequenceChecker : virtual public InputSequenceChecker {
+				MANAH_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
 				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) throw() : mode_(mode) {}

@@ -142,8 +142,10 @@ namespace {
 	};
 	/// Encoder uses Windows NLS.
 	class WindowsNLSEncoder : public WindowsEncoder {
+		MANAH_UNASSIGNABLE_TAG(WindowsNLSEncoder);
 	public:
 		WindowsNLSEncoder(::UINT codePage, MIBenum mib);
+		WindowsNLSEncoder(const WindowsNLSEncoder& rhs);
 	private:
 		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;
@@ -153,8 +155,10 @@ namespace {
 	};
 	/// Encoder uses Windows MLang.
 	class MLangEncoder : public WindowsEncoder {
+		MANAH_UNASSIGNABLE_TAG(MLangEncoder);
 	public:
 		MLangEncoder(::UINT codePage, MIBenum mib);
+		MLangEncoder(const MLangEncoder& rhs);
 	private:
 		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;

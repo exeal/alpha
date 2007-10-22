@@ -53,7 +53,8 @@ namespace ascension {
 		 * Base class for concrete rule classes.
 		 * @see LexicalTokenScanner, RegionRule, NumberRule, WordRule, RegexRule
 		 */
-		class Rule : private manah::Unassignable {
+		class Rule {
+			MANAH_UNASSIGNABLE_TAG(Rule);
 		public:
 			/// Returns the identifier of the token.
 			Token::ID getTokenID() const throw() {return id_;}
@@ -169,7 +170,8 @@ namespace ascension {
 		 * not supported by this class.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalTokenScanner : virtual public ITokenScanner, public manah::Noncopyable {
+		class LexicalTokenScanner : virtual public ITokenScanner {
+			MANAH_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
 			explicit LexicalTokenScanner(text::ContentType contentType) throw();
@@ -195,7 +197,8 @@ namespace ascension {
 		 * @note This class is not dervable.
 		 * @see LexicalPartitioner
 		 */
-		class TransitionRule : private manah::Unassignable {
+		class TransitionRule {
+			MANAH_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() throw();
 			text::ContentType	getContentType() const throw();
@@ -280,8 +283,8 @@ namespace ascension {
 		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalPartitionPresentationReconstructor :
-			virtual public presentation::IPartitionPresentationReconstructor, private manah::Unassignable {
+		class LexicalPartitionPresentationReconstructor : virtual public presentation::IPartitionPresentationReconstructor {
+			MANAH_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(const text::Document& document,
 				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);

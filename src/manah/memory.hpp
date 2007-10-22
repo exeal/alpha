@@ -10,19 +10,21 @@
 //	MemoryPool
 //	FastArenaObject
 
-#include "object.hpp"	// manah.Noncopyable
+#include "object.hpp"	// MANAH_NONCOPYABLE_TAG
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow
 #include <cstddef>		// std.size_t
 #include <memory>		// std.auto_ptr
+#undef min
+#undef max
 
 
 namespace manah {
 
 	// AutoBuffer ///////////////////////////////////////////////////////////
 
-	// std::auto_ptr for arrays
-	template<typename T> /* final */ class AutoBuffer {
+	// std.auto_ptr for arrays
+	template<typename T> class AutoBuffer {
 	public:
 		// type
 		typedef T ElementType;
@@ -49,7 +51,8 @@ namespace manah {
 
 	// efficient memory pool implementation (from MemoryPool of Efficient C++).
 	// template paramater of Allocator always bound to char
-	class MemoryPool : private Noncopyable {
+	class MemoryPool {
+		MANAH_NONCOPYABLE_TAG(MemoryPool);
 	public:
 		MemoryPool(std::size_t chunkSize) : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {expandChunks();}
 		~MemoryPool() throw() {release();}
@@ -138,7 +141,8 @@ namespace manah {
 	// SharedPointer ////////////////////////////////////////////////////////
 
 	namespace internal {
-		class SharedPointerRC : private Noncopyable, public FastArenaObject<SharedPointerRC> {
+		class SharedPointerRC : public FastArenaObject<SharedPointerRC> {
+			MANAH_NONCOPYABLE_TAG(SharedPointerRC);
 		public:
 			SharedPointerRC() throw() : c_(1) {}
 			~SharedPointerRC() throw() {assert(c_ == 0);}

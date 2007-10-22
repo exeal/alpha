@@ -13,10 +13,11 @@
 namespace manah {
 	namespace win32 {
 
-		class Module : public Handle<HMODULE, 0> {
+		class Module : public Handle<::HMODULE, 0> {
 		public:
 			// message arguments
-			class MessageArguments : private Noncopyable {
+			class MessageArguments {
+				MANAH_NONCOPYABLE_TAG(MessageArguments);
 			public:
 				MessageArguments() {}
 				template<typename T> MessageArguments& operator%(const T& rhs) {

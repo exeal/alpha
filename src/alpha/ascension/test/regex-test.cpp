@@ -1,8 +1,7 @@
 // regex-test.cpp
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/included/unit_test.hpp>
 #include "../regex.hpp"
+#include <boost/test/included/test_exec_monitor.hpp>
 
 namespace a = ascension;
 namespace re = ascension::regex;
@@ -46,10 +45,9 @@ void testZeroWidth() {
 //	checkEqualStrings(oss.str(), L"!a!b!c!d!e!");
 }
 
-boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
-	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Regular expression test");
-	test->add(BOOST_TEST_CASE(&testUCS4Matches));
-	test->add(BOOST_TEST_CASE(&testTransparentBounds));
-	test->add(BOOST_TEST_CASE(&testZeroWidth));
-	return test;
+int test_main(int, char*[]) {
+	testUCS4Matches();
+	testTransparentBounds();
+	testZeroWidth();
+	return 0;
 }

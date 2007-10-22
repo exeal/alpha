@@ -20,9 +20,11 @@ using namespace std;
 
 namespace {
 	/// The clipboard.
-	class Clipboard : public manah::Noncopyable {
+	class Clipboard {
+		MANAH_NONCOPYABLE_TAG(Clipboard);
 	public:
-		class Text : public manah::Unassignable {
+		class Text {
+			MANAH_UNASSIGNABLE_TAG(Text);
 		public:
 			Text(HGLOBAL handle, const Char* text) throw() : handle_(handle), text_(text) {}
 			Text(const Text& rhs) throw() : handle_(rhs.handle_), text_(rhs.text_) {const_cast<Text&>(rhs).handle_ = 0;}
@@ -228,7 +230,7 @@ void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit
 	if(getDocument()->isReadOnly() || length == 0)
 		return;
 	erase((length > 0) ?
-		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length) : getBackwardCharacterPosition(*getDocument(), *this, UTF16_CODE_UNIT, -length));
+		getForwardCharacterPosition(*getDocument(), *this, getCharacterUnit(), length) : getBackwardCharacterPosition(*getDocument(), *this, cu, -length));
 }
 
 /**
@@ -469,7 +471,8 @@ void EditPoint::previousLine(length_t offset /* = 1 */) {
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
 		EditPoint(viewer.getDocument(), position, listener),viewer_(&viewer),
-		clipboardNativeEncoding_(::GetACP()), lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
+		clipboardNativeEncoding_(encoding::Encoder::getDefault()),
+		lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
 	static_cast<text::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->getTextRenderer().addVisualLinesListener(*this);
 }
@@ -1479,7 +1482,7 @@ void Caret::beginWordSelection() {
 
 /// 対括弧の追跡を更新する
 void Caret::checkMatchBrackets() {
-	bool matched;
+//	bool matched;
 	pair<Position, Position> oldPair(matchBrackets_);
 	// TODO: implement matching brackets checking
 /*	if(!isSelectionEmpty() || matchBracketsTrackingMode_ == DONT_TRACK)

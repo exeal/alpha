@@ -33,7 +33,8 @@ template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp> class Splitter
 
 namespace internal {
 	template<class Pane /* implements AbstractPane */, SplitterBase::ChildrenDestructionPolicy cdp>
-	class SplitterItem : public Noncopyable, public SplitterBase {
+	class SplitterItem : public SplitterBase {
+		MANAH_NONCOPYABLE_TAG(SplitterItem);
 	public:
 		enum PaneType {PANETYPE_EMPTY, PANETYPE_SINGLE, PANETYPE_SPLITTER};
 		SplitterItem() throw() : parent_(0), direction_(NO_SPLIT), firstPaneSizeRatio_(0.5F) {}
@@ -64,9 +65,11 @@ namespace internal {
 } // namespace internal
 
 template<class Pane /* implements AbstractPane*/, SplitterBase::ChildrenDestructionPolicy cdp = SplitterBase::STANDARD_DELETE>
-/* final */ class Splitter : public CustomControl<Splitter>, public Noncopyable, public SplitterBase {
+/* final */ class Splitter : public CustomControl<Splitter>, public SplitterBase {
+	MANAH_NONCOPYABLE_TAG(Splitter);
 public:
-	class Iterator : public Unassignable {	// once the structure is changed, iterator is inavailable
+	class Iterator {	// once the structure is changed, iterator is inavailable
+		MANAH_UNASSIGNABLE_TAG(Iterator);
 	public:
 		Iterator(const Iterator& rhs) throw() : parent_(rhs.parent_), pane_(rhs.pane_) {}
 		Pane&	get() const {if(pane_ == 0) throw std::logic_error(""); return *pane_;}
@@ -83,7 +86,7 @@ public:
 	};
 
 	DEFINE_WINDOW_CLASS() {
-		name = _T("manah:splitter-root");
+		name = L"manah:splitter-root";
 		bgColor = COLOR_BTNFACE;
 		style = CS_DBLCLKS;
 	}

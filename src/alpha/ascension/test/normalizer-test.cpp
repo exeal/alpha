@@ -1,8 +1,7 @@
 // unicode-iterator-test.cpp
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/included/unit_test.hpp>
 #include "../unicode.hpp"
+#include <boost/test/included/test_exec_monitor.hpp>
 
 namespace {
 	void testCompare() {
@@ -38,8 +37,7 @@ void testNormalizer() {
 	BOOST_CHECK_EQUAL(*(n++), *(n2++));
 }
 
-boost::unit_test::test_suite* init_unit_test_suite(int, char*[]) {
-	boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Normalizer test");
-	test->add(BOOST_TEST_CASE(&testNormalizer));
-	return test;
+int test_main(int, char*[]) {
+	testNormalizer();
+	return 0;
 }

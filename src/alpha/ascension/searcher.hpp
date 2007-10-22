@@ -153,7 +153,8 @@ namespace ascension {
 		 * @see texteditor#Session#getTextSearcher, texteditor#commands#FindAllCommand,
 		 * texteditor#commands#FindNextCommand
 		 */
-		class TextSearcher : public manah::Noncopyable {
+		class TextSearcher {
+			MANAH_NONCOPYABLE_TAG(TextSearcher);
 		public:
 			// constructors.
 			TextSearcher();
@@ -262,7 +263,8 @@ namespace ascension {
 		 * @see TextSearcher, texteditor#Session#getIncrementalSearcher,
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
-		class IncrementalSearcher : virtual public text::IDocumentListener, public manah::Noncopyable {
+		class IncrementalSearcher : virtual public text::IDocumentListener {
+			MANAH_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
 			// constructor
 			IncrementalSearcher() throw();

@@ -93,7 +93,8 @@ namespace ascension {
 		 * Collection of input sequence checkers.
 		 * @see InputSequenceChecker, Session#getInputSequenceCheckers
 		 */
-		class InputSequenceCheckers : public manah::Noncopyable {
+		class InputSequenceCheckers {
+			MANAH_NONCOPYABLE_TAG(InputSequenceCheckers);
 		public:
 			~InputSequenceCheckers();
 			void	add(std::auto_ptr<InputSequenceChecker> checker);
@@ -110,6 +111,7 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 */
 		class Session {
+			MANAH_NONCOPYABLE_TAG(Session);
 		public:
 			// constructor
 			Session() throw();

@@ -16,7 +16,8 @@ protected:
 	virtual void bindControls() {}
 };
 
-class Dialog : public Window, public BaseDialog, public Noncopyable {
+class Dialog : public Window, public BaseDialog {
+	MANAH_NONCOPYABLE_TAG(Dialog);
 public:
 	// constructors
 	Dialog();

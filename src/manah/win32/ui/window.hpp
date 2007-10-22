@@ -225,7 +225,7 @@ public:
 
 protected:
 	// Do not override this directly. Use MANAH_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
-	virtual ::LRESULT processWindowMessage(::UINT /* message */, ::WPARAM /* wParam */, ::LPARAM /* lParam */, bool& handled) {return 1;}
+	virtual ::LRESULT processWindowMessage(::UINT /* message */, ::WPARAM /* wParam */, ::LPARAM /* lParam */, bool& /* handled */) {return 1;}
 	// Call the implementation of the base class if override this.
 	virtual ::LRESULT preTranslateWindowMessage(::UINT /* message */, ::WPARAM /* wParam */, ::LPARAM /* lParam */, bool& /* handled */) {return 1;}
 	::LRESULT fireProcessWindowMessage(::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
@@ -417,7 +417,8 @@ protected:																				\
 	}
 
 
-template<class ConcreteWindow = Window> class Subclassable : public ConcreteWindow, public Noncopyable {
+template<class ConcreteWindow = Window> class Subclassable : public ConcreteWindow {
+	MANAH_NONCOPYABLE_TAG(Subclassable);
 public:
 	explicit Subclassable(::HWND handle = 0) : ConcreteWindow(handle), originalProcedure_(0) {}
 	virtual ~Subclassable() {if(isWindow()) unsubclass();}
@@ -493,7 +494,8 @@ protected:
 	manah::win32::CursorHandleOrID& cursor,	::HICON& icon, ::HICON& smallIcon, int& clsExtraBytes, int& wndExtraBytes
 #define DEFINE_WINDOW_CLASS()	public: static void getClass(GET_CLASS_PARAM_LIST)
 template<class Control, class BaseWindow = Window>
-class CustomControl : public BaseWindow, public Unassignable {
+class CustomControl : public BaseWindow {
+	MANAH_UNASSIGNABLE_TAG(CustomControl);
 public:
 	explicit CustomControl(::HWND handle = 0) : BaseWindow(handle) {}
 	virtual ~CustomControl();
