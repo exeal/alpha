@@ -5,8 +5,15 @@
  */
 
 #include "encoder.hpp"
-#include "encodings/win32cp.cpp"
 #include <algorithm>
+#ifdef _WIN32
+#include <windows.h>	// GetCPInfoExW, MultiByteToWideChar, WideCharToMultiByte, ...
+#ifndef interface
+#define interface struct
+#endif
+#include <mlang.h>
+#include "../../manah/com/common.hpp"
+#endif /* _WIN32 */
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace std;
@@ -567,24 +574,9 @@ namespace {
 		Installer() throw() {
 			Encoder::registerEncoder(auto_ptr<Encoder>(new USASCIIEncoder));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88591Encoder));
-#ifdef _WIN32
-			::EnumSystemCodePagesW(procedure, CP_INSTALLED);
-#endif /* _WIN32 */
 		}
-#ifdef _WIN32
-		static BOOL CALLBACK procedure(::LPWSTR name) {
-			const ::UINT cp = wcstoul(name, 0, 10);
-			if(toBoolean(::IsValidCodePage(cp))) {
-				::CPINFOEXW cpi;
-				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi))) {
-					if(const MIBenum mib = convertWinCPtoMIB(cp)) {
-						if(!Encoder::supports(mib))
-							Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsNLSEncoder(cp, mib)));
-					}
-				}
-			}
-			return TRUE;
-		}
-#endif /* _WIN32 */
 	} unused;
 } // namespace @0
+
+
+#include "encodings/win32cp.cpp"

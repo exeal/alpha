@@ -6,16 +6,6 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>	// GetCPInfoExW, MultiByteToWideChar, WideCharToMultiByte, ...
-#ifndef interface
-#define interface struct
-#endif
-#include <mlang.h>
-#include "../../../manah/com/common.hpp"	// manah.com.ComPtr
-using namespace ascension;
-using namespace ascension::encoding;
-using namespace std;
-
 
 namespace {
 	const pair<MIBenum, uint> MIBtoWinCP[] = {
@@ -318,6 +308,48 @@ string MLangEncoder::getName() const throw() {
 	char name[countof(format) + 32];
 	sprintf(name, format, getCodePage());
 	return name;
+}
+
+
+namespace {
+	struct WindowsEncoderInstaller {
+		WindowsEncoderInstaller() {
+			::EnumSystemCodePagesW(procedure, CP_INSTALLED);
+
+			::HRESULT hr, enteredApartment = ::CoInitialize(0);
+			{
+				manah::com::ComPtr<::IMultiLanguage> mlang1;
+				if(SUCCEEDED(hr = mlang1.createInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage))) {
+					manah::com::ComPtr<IEnumCodePage> e;
+					if(SUCCEEDED(hr = mlang1->EnumCodePages(MIMECONTF_IMPORT | MIMECONTF_EXPORT | MIMECONTF_VALID, &e))) {
+						::MIMECPINFO cpi;
+						::ULONG fetched;
+						for(e->Reset(); S_OK == (hr = e->Next(1, &cpi, &fetched)); ) {
+							if(const MIBenum mib = convertWinCPtoMIB(cpi.uiCodePage)) {
+								if(!Encoder::supports(mib))
+									Encoder::registerEncoder(auto_ptr<Encoder>(new MLangEncoder(cpi.uiCodePage, mib)));
+							}
+						}
+					}
+				}
+			}
+			if(enteredApartment == S_OK || enteredApartment == S_FALSE)
+				::CoUninitialize();
+		}
+		static ::BOOL CALLBACK procedure(::LPWSTR name) {
+			const ::UINT cp = wcstoul(name, 0, 10);
+			if(toBoolean(::IsValidCodePage(cp))) {
+				::CPINFOEXW cpi;
+				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi))) {
+					if(const MIBenum mib = convertWinCPtoMIB(cp)) {
+						if(!Encoder::supports(mib))
+							Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsNLSEncoder(cp, mib)));
+					}
+				}
+			}
+			return TRUE;
+		}
+	} windowsEncoderInstaller;
 }
 
 
