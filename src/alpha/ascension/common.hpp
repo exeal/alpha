@@ -88,6 +88,8 @@ namespace ascension {
 	public:
 		/// Constructor.
 		explicit NullPointerException(const std::string& message) : std::invalid_argument(message) {}
+		/// Destructor.
+		~NullPointerException() throw() {}
 	};
 
 	/// The operation was performed in an illegal state.
