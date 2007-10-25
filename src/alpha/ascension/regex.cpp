@@ -27,19 +27,18 @@ using regex::internal::RegexTraits;
 #ifndef ASCENSION_NO_MIGEMO
 #include "migemo.h"
 
-ASCENSION_BEGIN_SHARED_LIB_ENTRIES(MigemoEntries, 7)
-	ASCENSION_SHARED_LIB_ENTRY(0, "migemo_open", migemo*(*signature)(char*))
-	ASCENSION_SHARED_LIB_ENTRY(1, "migemo_close", void(*signature)(migemo*))
-	ASCENSION_SHARED_LIB_ENTRY(2, "migemo_query", unsigned char*(*signature)(migemo*, unsigned char*))
-	ASCENSION_SHARED_LIB_ENTRY(3, "migemo_release", void(*signature)(migemo*, unsigned char*))
-	ASCENSION_SHARED_LIB_ENTRY(4, "migemo_load", int(*signature)(migemo*, int, char*))
-	ASCENSION_SHARED_LIB_ENTRY(5, "migemo_is_enable", int(*signature)(migemo*))
-	ASCENSION_SHARED_LIB_ENTRY(6, "migemo_set_operator", int(*signature)(migemo*, int, unsigned char*))
-ASCENSION_END_SHARED_LIB_ENTRIES()
+ASCENSION_DEFINE_SHARED_LIB_ENTRIES(CMigemo, 7);
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 0, "migemo_open", migemo*(*signature)(char*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 1, "migemo_close", void(*signature)(migemo*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 2, "migemo_query", unsigned char*(*signature)(migemo*, unsigned char*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 3, "migemo_release", void(*signature)(migemo*, unsigned char*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 4, "migemo_load", int(*signature)(migemo*, int, char*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 5, "migemo_is_enable", int(*signature)(migemo*));
+ASCENSION_SHARED_LIB_ENTRY(CMigemo, 6, "migemo_set_operator", int(*signature)(migemo*, int, unsigned char*));
 
 namespace {
 	/// Wrapper for C/Migemo.
-	class Migemo : protected ascension::internal::SharedLibrary<MigemoEntries> {
+	class Migemo : protected ascension::internal::SharedLibrary<CMigemo> {
 	public:
 		/**
 		 * Constructor.
@@ -49,13 +48,13 @@ namespace {
 		 * @throw std#invalid_argument @a dictionaryPathName is empty
 		 */
 		Migemo(const string& runtimeFileName, const string& dictionaryPathName) :
-				ascension::internal::SharedLibrary<MigemoEntries>(runtimeFileName.c_str()),
+				ascension::internal::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
 				instance_(0), lastNativePattern_(0), lastPattern_(0) {
 			if(dictionaryPathName.empty())
 				throw invalid_argument("Dictionary path name is empty.");
-			MigemoEntries::Procedure<0>::signature migemoOpen;
-			MigemoEntries::Procedure<4>::signature migemoLoad;
-			MigemoEntries::Procedure<6>::signature migemoSetOperator;
+			CMigemo::Procedure<0>::signature migemoOpen;
+			CMigemo::Procedure<4>::signature migemoLoad;
+			CMigemo::Procedure<6>::signature migemoSetOperator;
 			if((migemoOpen = get<0>()) && (migemoQuery_ = get<2>())
 					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>()) && (migemoSetOperator = get<6>())) {
 				if(0 != (instance_ = migemoOpen(0))) {
@@ -76,11 +75,11 @@ namespace {
 					strcpy(pathName.get() + directoryLength, "han2zen.dat");
 					migemoLoad(instance_, MIGEMO_DICTID_HAN2ZEN, pathName.get());
 					// define some operators
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_OR, reinterpret_cast<uchar*>("|"));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_IN, reinterpret_cast<uchar*>("("));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_OUT, reinterpret_cast<uchar*>(")"));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_IN, reinterpret_cast<uchar*>("["));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_OUT, reinterpret_cast<uchar*>("]"));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_OR, const_cast<uchar*>(reinterpret_cast<const uchar*>("|")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_IN, const_cast<uchar*>(reinterpret_cast<const uchar*>("(")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_OUT, const_cast<uchar*>(reinterpret_cast<const uchar*>(")")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_IN, const_cast<uchar*>(reinterpret_cast<const uchar*>("[")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_OUT, const_cast<uchar*>(reinterpret_cast<const uchar*>("]")));
 				}
 			}
 		}
@@ -88,7 +87,7 @@ namespace {
 		~Migemo() throw() {
 			releasePatterns();
 			if(instance_ != 0) {
-				if(MigemoEntries::Procedure<1>::signature migemoClose = get<1>())
+				if(CMigemo::Procedure<1>::signature migemoClose = get<1>())
 					migemoClose(instance_);
 			}
 		}
@@ -164,14 +163,14 @@ namespace {
 		bool isEnable() const throw() {
 			if(instance_ == 0)
 				return false;
-			else if(MigemoEntries::Procedure<5>::signature migemoIsEnable = get<5>())
+			else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
 				return toBoolean(migemoIsEnable(instance_));
 			return false;
 		}
 	private:
 		migemo* instance_;
-		MigemoEntries::Procedure<2>::signature migemoQuery_;
-		MigemoEntries::Procedure<3>::signature migemoRelease_;
+		CMigemo::Procedure<2>::signature migemoQuery_;
+		CMigemo::Procedure<3>::signature migemoRelease_;
 		uchar* lastNativePattern_;
 		wchar_t* lastPattern_;
 	};
@@ -203,6 +202,8 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
 	case error_complexity:	return TOO_COMPLEX_REGULAR_EXPRESSION;
 	case error_stack:		return STACK_OVERFLOW;
 	case error_bad_pattern:	return UNKNOWN_ERROR;
+	// g++ says 'error_ok', 'error_no_match', 'error_end', 'error_size',
+	// 'error_right_paren', 'error_empty' and 'error_unknown' are not handled here...
 	}
 	return NOT_ERROR;
 }
