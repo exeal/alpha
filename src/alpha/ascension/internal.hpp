@@ -138,45 +138,39 @@ namespace ascension {
 			typedef typename std::list<Listener*>::iterator Iterator;
 		};
 
-#ifdef _WINDOWS_
-		template<class Entries> class SharedLibrary {
+#ifdef _WIN32
+		template<class ProcedureEntries> class SharedLibrary {
+			MANAH_NONCOPYABLE_TAG(SharedLibrary);
 		public:
 			explicit SharedLibrary(const char* fileName) : dll_(::LoadLibraryA(fileName)) {
 				if(dll_ == 0)
 					throw std::runtime_error("Cannot open the library.");
-				std::fill(procedures_, procedures_ + Entries::NUMBER, reinterpret_cast<FARPROC>(1));
+				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<FARPROC>(1));
 			}
 			~SharedLibrary() throw() {::FreeLibrary(dll_);}
-			template<size_t index> typename Entries::Procedure<index>::signature get() const throw() {
+			template<std::size_t index> typename ProcedureEntries::template Procedure<index>::signature get() const throw() {
+				typedef typename ProcedureEntries::template Procedure<index> Procedure;
 				if(procedures_[index] == reinterpret_cast<FARPROC>(1))
-					procedures_[index] = ::GetProcAddress(dll_, Entries::Procedure<index>::name());
-				return reinterpret_cast<Entries::Procedure<index>::signature>(procedures_[index]);}
+					procedures_[index] = ::GetProcAddress(dll_, Procedure::name());
+				return reinterpret_cast<typename Procedure::signature>(procedures_[index]);
+			}
 		private:
-			HMODULE dll_;
-			mutable FARPROC procedures_[Entries::NUMBER];
+			::HMODULE dll_;
+			mutable ::FARPROC procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
 		};
 #else
 #endif
-#define ASCENSION_BEGIN_SHARED_LIB_ENTRIES(name, numberOfProcedures)	\
-	struct name {														\
-		enum {NUMBER = numberOfProcedures};								\
-		template<size_t index> struct Procedure;
-#define ASCENSION_SHARED_LIB_ENTRY(index, procedureName, procedureSignature)	\
-		template<> struct Procedure<index> {									\
-			static const char* name() {return procedureName;}					\
-			typedef procedureSignature;											\
-		};
-#define ASCENSION_END_SHARED_LIB_ENTRIES()	\
-	};
 
-		template<typename T> void alert(const T& t) {
-			OutputStringStream s;
-			s << t;
-#ifdef _WINDOWS_
-			::MessageBoxW(0, s.str().c_str(), L"alert", MB_OK);
-#else
-#endif
-		}
+#define ASCENSION_DEFINE_SHARED_LIB_ENTRIES(libraryName, numberOfProcedures)	\
+	struct libraryName {														\
+		enum {NUMBER_OF_ENTRIES = numberOfProcedures};							\
+		template<std::size_t index> struct Procedure;							\
+	}
+#define ASCENSION_SHARED_LIB_ENTRY(libraryName, index, procedureName, procedureSignature)	\
+	template<> struct libraryName::Procedure<index> {										\
+		static const char* name() {return procedureName;}									\
+		typedef procedureSignature;															\
+	}
 
 	} // namespace internal
 
