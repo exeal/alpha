@@ -5,24 +5,43 @@
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
  */
 
-#include "stdafx.h"
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 #include "../encoder.hpp"
-#include <algorithm>	// std::binary_search
-using namespace ascension::encodings;
+#include <algorithm>	// std.binary_search
+using namespace ascension;
+using namespace ascension::encoding;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII7Encoder, extended::MIB_ARMENIAN_ARMSCII7, "ARMSCII-7")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
+		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8Encoder, extended::MIB_ARMENIAN_ARMSCII8, "ARMSCII-8")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
+		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8AEncoder, extended::MIB_ARMENIAN_ARMSCII8A, "ARMSCII-8A")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
+		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_DEFINE_ENCODING_DETECTOR(ArmenianDetector, EncodingDetector::ARMSCII_DETECTOR, "ARMSCIIAutoDetect");
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_ARMENIAN_ARMSCII7, Armenian_Armscii7, 2, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ARMENIAN_ARMSCII8, Armenian_Armscii8, 2, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ARMENIAN_ARMSCII8A, Armenian_Armscii8a, 2, 1)
-END_ENCODER_DEFINITION()
-DEFINE_DETECTOR(CPEX_ARMENIAN_AUTODETECT, Armenian);
-
+	struct Installer {
+		Installer() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII7Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII8Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII8AEncoder));
+			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new ArmenianDetector));
+		}
+	} installer;
+} // namespace @0
 
 namespace {
-	const wchar_t ARMSCII78toUCS_20[] = {
+	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const uchar N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const Char ARMSCII78toUCS_20[] = {
 	/* 0x20 */	0x0020, RP__CH, 0x00A7, 0x0589, 0x0029, 0x0028, 0x00BB, 0x00AB,
 				0x2014, 0x002E, 0x055D, 0x002C, 0x002D, 0x058A, 0x2026, 0x055C,
 	/* 0x30 */	0x055B, 0x055E, 0x0531, 0x0561, 0x0532, 0x0562, 0x0533, 0x0563,
@@ -67,7 +86,7 @@ namespace {
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0x2E
 	};
-	const wchar_t ARMSCII8AtoUCS_20[] = {
+	const Char ARMSCII8AtoUCS_20[] = {
 	/* 0x20 */	0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x055B,
 				0x0028, 0x0029, 0x0030, 0x0031, 0x002C, 0x2014, 0x002E, 0x0032,
 	/* 0x30 */	0x0030, 0x0031, 0x0032, 0x0033, 0x0034, 0x0035, 0x0036, 0x0037,
@@ -87,7 +106,7 @@ namespace {
 	/* 0xA0 */	0x0541, 0x0571, 0x0542, 0x0572, 0x0543, 0x0573, 0x0544, 0x0574,
 				0x0545, 0x0575, 0x0546, 0x0576, 0x0547, 0x0577, 0x00AB, 0x00BB
 	};
-	const wchar_t ARMSCII8AtoUCS_D8[] = {
+	const Char ARMSCII8AtoUCS_D8[] = {
 				RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, 0x058A, 0x2026, 0x055E,
 	/* 0xE0 */	0x0548, 0x0578, 0x0549, 0x0579, 0x054A, 0x057A, 0x054B, 0x057B,
 				0x054C, 0x057C, 0x054D, 0x057D, 0x054E, 0x057E, 0x054F, 0x057F,
@@ -120,8 +139,8 @@ namespace {
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0xDE
 	};
 
-	inline const wchar_t* decomposeArmenianLigature(wchar_t ch) {
-		switch(ch) {
+	inline const Char* decomposeArmenianLigature(Char c) {
+		switch(c) {
 		case 0x0587:	return L"\x0565\x0582";	// Ech Yiwn
 		case 0xFB13:	return L"\x0574\x0576";	// Men Now
 		case 0xFB14:	return L"\x0574\x0565";	// Men Ech
@@ -131,176 +150,256 @@ namespace {
 		default:		return 0;
 		}
 	}
-
-	void detectCodePage_Armenian(const uchar* src, size_t len, CodePage& result, size_t& convertableLength) {
-		// まず Unicode を調べる
-		if(EncoderFactory::CodePageDetector unicodeDetector = EncoderFactory::getInstance().getUnicodeDetector()) {
-			unicodeDetector(src, len, result, convertableLength);
-			if(len == convertableLength)
-				return;
-		}
-
-		result = CPEX_ARMENIAN_ARMSCII8;	// preferred code page
-		convertableLength = len;
-
-		bool b[3] = {true, true, true};	// 0:-7, 1:-8, 2:-8A
-		for(size_t i = 0; i < len; ++i) {
-			const uchar	ch = src[i];
-			if(ch >= 0x80)				b[0] = false;	// ARMSCII-7 consists of only 7-bits
-			if(ch >= 0x80 && ch < 0xA0)	b[1] = false;	// 8bit controls (but ARMSCII-8 may contain these)
-			if(ch >= 0xB0 && ch < 0xDC)	b[2] = false;
-
-			if(!b[0] && !b[2])
-				return;	// ARMSCII-8
-		}
-		if(!b[0] && !b[1])		result = CPEX_ARMENIAN_ARMSCII8A;
-		else if(!b[2] && !b[1])	result = CPEX_ARMENIAN_ARMSCII7;
-	}
-} // namespace `anonymous'
+} // namespace @0
 
 
-// アルメニア語 (ARMSCII-7) /////////////////////////////////////////////////
+// ARMSCII7Encoder //////////////////////////////////////////////////////////
 
-size_t Encoder_Armenian_Armscii7::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-
-	size_t j = 0;
-	for(size_t i = 0; i < srcLength && j < destLength; ++i) {
-		if(src[i] < 0x0028) {
-			dest[j++] = BIT8_MASK(src[i]);
+/// @see Encoder#doFromUnicode
+Encoder::Result ARMSCII7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x0028) {
+			*to = mask8Bit(*from);
 			continue;
-		}
-		MAP_TABLE(0x0028, UCStoARMSCII7_0028);
-		MAP_TABLE(0x00A0, UCStoARMSCII78_00A0);
-		MAP_TABLE(0x0530, UCStoARMSCII78_0530);
-		MAP_TABLE(0x2010, UCStoARMSCII78_2010);
-		else if(const wchar_t* const decomposed = decomposeArmenianLigature(src[i])) {
-			if(j + 1 < destLength)
-				return j;
-			dest[j++] = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
-			dest[j++] = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
-			assert(dest[j - 2] != N__A && dest[j - 1] != N__A);
+		} else if(*from < 0x0028 + countof(UCStoARMSCII7_0028))
+			*to = UCStoARMSCII7_0028[*from - 0x0028];
+		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
+			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
+		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
+			*to = UCStoARMSCII78_0530[*from - 0x0530];
+		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
+			*to = UCStoARMSCII78_2010[*from - 0x2010];
+		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
+			if(to + 1 < toEnd) {
+				toNext = to;
+				fromNext = from;
+				return INSUFFICIENT_BUFFER;
+			}
+			*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
+			*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
+			assert(to[-1] != UNMAPPABLE_NATIVE_CHARACTER && to[0] != UNMAPPABLE_NATIVE_CHARACTER);
 			continue;
 		} else
-			dest[j] = N__A;
+			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
-		if(dest[j] == N__A)
-			CONFIRM_ILLEGAL_CHAR(dest[j++]);
-		++j;
-	}
-	return j;
-}
-
-size_t Encoder_Armenian_Armscii7::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0x20)
-			dest[i] = src[i];
-		else if(src[i] < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[src[i] - 0x20] != RP__CH)
-			dest[i] = ARMSCII78toUCS_20[src[i] - 0x20];
-		else
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
-}
-
-
-// アルメニア語 (ARMSCII-8) /////////////////////////////////////////////////
-
-size_t Encoder_Armenian_Armscii8::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-
-	size_t j = 0;
-	for(size_t i = 0; i < srcLength && j < destLength; ++i) {
-		if(src[i] < 0x0028) {
-			dest[j++] = BIT8_MASK(src[i]);
-			continue;
+		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
+			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+				*to = NATIVE_REPLACEMENT_CHARACTER;
+			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+				--to;
+			else {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
 		}
-		MAP_TABLE(0x0028, UCStoARMSCII8_0028);
-		MAP_TABLE(0x00A0, UCStoARMSCII78_00A0);
-		MAP_TABLE(0x0530, UCStoARMSCII78_0530);
-		MAP_TABLE(0x2010, UCStoARMSCII78_2010);
-		else if(const wchar_t* decomposed = decomposeArmenianLigature(src[i])) {
-			if(j + 1 < destLength)
-				return j;
-			dest[j++] = UCStoARMSCII78_0530[decomposed[0] - 0x0530] + 0x80;
-			dest[j++] = UCStoARMSCII78_0530[decomposed[1] - 0x0530] + 0x80;
-			assert(dest[j - 2] != 0x80 && dest[j - 1] != 0x80);
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result ARMSCII7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x20)
+			*to = *from;
+		else if(*from < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
+			*to = ARMSCII78toUCS_20[*from - 0x20];
+		else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			--to;
+		else if(policy == NO_POLICY) {
+			toNext = to;
+			fromNext = from;
+			return UNMAPPABLE_CHARACTER;
+		}
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+
+// ARMSCII8Encoder //////////////////////////////////////////////////////////
+
+/// @see Encoder#doFromUnicode
+Encoder::Result ARMSCII8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x0028) {
+			*to = mask8Bit(*from);
+			continue;
+		} else if(*from < 0x0028 + countof(UCStoARMSCII8_0028))
+			*to = UCStoARMSCII8_0028[*from - 0x0028];
+		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
+			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
+		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
+			*to = UCStoARMSCII78_0530[*from - 0x0530];
+		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
+			*to = UCStoARMSCII78_2010[*from - 0x2010];
+		else if(const Char* decomposed = decomposeArmenianLigature(*from)) {
+			if(to + 1 < toEnd) {
+				toNext = to;
+				fromNext = from;
+				return INSUFFICIENT_BUFFER;
+			}
+			*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530] + 0x80;
+			*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530] + 0x80;
+			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			dest[j] = N__A;
+			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
-		if(dest[j] == N__A)
-			CONFIRM_ILLEGAL_CHAR(dest[j++]);
-		dest[j++] += 0x80;
-	}
-	return j;
-}
-
-size_t Encoder_Armenian_Armscii8::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0xA1)
-			dest[i] = src[i];
-		else if(ARMSCII78toUCS_20[src[i] - 0x20 - 0x80] != RP__CH)
-			dest[i] = ARMSCII78toUCS_20[src[i] - 0x20 - 0x80];
-		else
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
-}
-
-
-// アルメニア語 (ARMSCII-8A) ////////////////////////////////////////////////
-
-size_t Encoder_Armenian_Armscii8a::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-
-	size_t j = 0;
-	for(size_t i = 0; i < srcLength && j < destLength; ++i) {
-		if(src[i] < 0x80) {
-			static const wchar_t invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
-			dest[j] = binary_search(invChars, invChars + countof(invChars), src[i]) ? BIT8_MASK(src[i]) : N__A;
+		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
+			if(policy == REPLACE_UNMAPPABLE_CHARACTER) {
+				*to = NATIVE_REPLACEMENT_CHARACTER;
+				continue;
+			} else if(policy == IGNORE_UNMAPPABLE_CHARACTER) {
+				--to;
+				continue;
+			} else {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
 		}
-		MAP_TABLE(0x00A8, UCStoARMSCII8A_00A8);
-		MAP_TABLE(0x0530, UCStoARMSCII8A_0530);
-		MAP_TABLE(0x2010, UCStoARMSCII8A_2010);
-		else if(const wchar_t* const decomposed = decomposeArmenianLigature(src[i])) {
-			if(j + 1 < destLength)
-				return j;
-			dest[j++] = UCStoARMSCII8A_0530[decomposed[0] - 0x0530] + 0x80;
-			dest[j++] = UCStoARMSCII8A_0530[decomposed[1] - 0x0530] + 0x80;
-			assert(dest[j - 2] != 0x80 && dest[j - 1] != 0x80);
+		*to += 0x80;
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result ARMSCII8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0xA1)
+			*to = *from;
+		else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != REPLACEMENT_CHARACTER)
+			*to = ARMSCII78toUCS_20[*from - 0x20 - 0x80];
+		else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			--to;
+		else if(policy == NO_POLICY) {
+			toNext = to;
+			fromNext = from;
+			return UNMAPPABLE_CHARACTER;
+		}
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+
+// ARMSCII8AEncoder /////////////////////////////////////////////////////////
+
+/// @see Encoder#doFromUnicode
+Encoder::Result ARMSCII8AEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x80) {
+			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
+			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : UNMAPPABLE_NATIVE_CHARACTER;
+		} else if(*from < 0x00A8)
+			*to = UNMAPPABLE_NATIVE_CHARACTER;
+		else if(*from < 0x00A8 + countof(UCStoARMSCII8A_00A8))
+			*to = UCStoARMSCII8A_00A8[*from - 0x00A8];
+		else if(*from < 0x0530 + countof(UCStoARMSCII8A_0530))
+			*to = UCStoARMSCII8A_0530[*from - 0x0530];
+		else if(*from < 0x2010 + countof(UCStoARMSCII8A_2010))
+			*to = UCStoARMSCII8A_2010[*from - 0x2010];
+		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
+			if(to + 1 < toEnd) {
+				toNext = to;
+				fromNext = from;
+				return INSUFFICIENT_BUFFER;
+			}
+			*to = UCStoARMSCII8A_0530[decomposed[0] - 0x0530] + 0x80;
+			*++to = UCStoARMSCII8A_0530[decomposed[1] - 0x0530] + 0x80;
+			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			dest[j] = N__A;
+			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
-		if(dest[j] == N__A)
-			CONFIRM_ILLEGAL_CHAR(dest[j++]);
-		++j;
+		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
+			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+				*to = NATIVE_REPLACEMENT_CHARACTER;
+			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+				--to;
+			else {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
+		}
 	}
-	return j;
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-size_t Encoder_Armenian_Armscii8a::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0x20)
-			dest[i] = src[i];
-		else if(src[i] < 0x20 + countof(ARMSCII8AtoUCS_20))
-			dest[i] = ARMSCII8AtoUCS_20[src[i] - 0x20];
+/// @see Encoder#doToUnicode
+Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x20)
+			*to = *from;
+		else if(*from < 0x20 + countof(ARMSCII8AtoUCS_20))
+			*to = ARMSCII8AtoUCS_20[*from - 0x20];
 		else
-			dest[i] = ARMSCII8AtoUCS_D8[src[i] - 0xD8];
-		if(dest[i] == ascension::REPLACEMENT_CHARACTER)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
+			*to = ARMSCII8AtoUCS_D8[*from - 0xD8];
+		if(*to == REPLACEMENT_CHARACTER) {
+			if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+				--to;
+			else if(policy == NO_POLICY) {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
+		}
 	}
-	return len;
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+
+// ArmenianDetector /////////////////////////////////////////////////////////
+
+/// @see EncodingDetector#doDetect
+MIBenum ArmenianDetector::doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const throw() {
+	// first, check if Unicode
+	if(const EncodingDetector* unicodeDetector = forID(UNICODE_DETECTOR)) {
+		ptrdiff_t temp;
+		MIBenum result = unicodeDetector->detect(first, last, &temp);
+		if(temp == last - first) {
+			if(convertibleBytes != 0)
+				*convertibleBytes = temp;
+			return result;
+		}
+	}
+
+	if(convertibleBytes != 0)
+		*convertibleBytes = last - first;
+
+	bool b[3] = {true, true, true};	// 0:-7, 1:-8, 2:-8A
+	for(; first < last; ++first) {
+		const uchar	c = *first;
+		if(c >= 0x80)				b[0] = false;	// ARMSCII-7 consists of only 7-bits
+		if(c >= 0x80 && c < 0xA0)	b[1] = false;	// 8-bit controls (but ARMSCII-8 may contain these)
+		if(c >= 0xB0 && c < 0xDC)	b[2] = false;
+
+		if(!b[0] && !b[2])
+			return extended::MIB_ARMENIAN_ARMSCII8;	// ARMSCII-8
+	}
+	if(!b[0] && !b[1])
+		return extended::MIB_ARMENIAN_ARMSCII8A;
+	else if(!b[2] && !b[1])
+		return extended::MIB_ARMENIAN_ARMSCII7;
+	return extended::MIB_ARMENIAN_ARMSCII8;	// most preferred encoding
 }
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

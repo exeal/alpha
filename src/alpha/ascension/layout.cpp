@@ -25,23 +25,22 @@ extern bool DIAGNOSE_INHERENT_DRAWING;
 #pragma comment(lib, "usp10.lib")
 
 namespace {
-	ASCENSION_BEGIN_SHARED_LIB_ENTRIES(USPEntries, 14)
-		ASCENSION_SHARED_LIB_ENTRY(0, "ScriptFreeCache", HRESULT(WINAPI *signature)(::SCRIPT_CACHE*))
-		ASCENSION_SHARED_LIB_ENTRY(1, "ScriptItemize", HRESULT(WINAPI *signature)(const WCHAR*, int, int, const ::SCRIPT_CONTROL*, const ::SCRIPT_STATE*, ::SCRIPT_ITEM*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(2, "ScriptLayout", HRESULT(WINAPI *signature)(int, const ::BYTE*, int*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(3, "ScriptShape", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, const WCHAR*, int, int, ::SCRIPT_ANALYSIS*, WORD*, WORD*, ::SCRIPT_VISATTR*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(4, "ScriptPlace", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, const WORD*, int, const ::SCRIPT_VISATTR*, ::SCRIPT_ANALYSIS*, int*, ::GOFFSET*, ::ABC*))
-		ASCENSION_SHARED_LIB_ENTRY(5, "ScriptTextOut", HRESULT(WINAPI *signature)(const HDC, ::SCRIPT_CACHE*, int, int, UINT, const ::RECT*, const ::SCRIPT_ANALYSIS*, const WCHAR*, int, const WORD*, int, const int*, const int*, const ::GOFFSET*))
-		ASCENSION_SHARED_LIB_ENTRY(6, "ScriptJustify", HRESULT(WINAPI *signature)(const ::SCRIPT_VISATTR*, const int*, int, int, int, int*))
-		ASCENSION_SHARED_LIB_ENTRY(7, "ScriptBreak", HRESULT(WINAPI *signature)(const WCHAR*, int, const ::SCRIPT_ANALYSIS*, ::SCRIPT_LOGATTR*))
-		ASCENSION_SHARED_LIB_ENTRY(8, "ScriptCPtoX", HRESULT(WINAPI *signature)(int, BOOL, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(9, "ScriptXtoCP", HRESULT(WINAPI *signature)(int, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(10, "ScriptGetLogicalWidths", HRESULT(WINAPI *signature)(const ::SCRIPT_ANALYSIS*, int, int, const int*, const WORD*, const ::SCRIPT_VISATTR*, int*))
-		ASCENSION_SHARED_LIB_ENTRY(11, "ScriptGetProperties", HRESULT(WINAPI *signature)(const ::SCRIPT_PROPERTIES***, int*))
-		ASCENSION_SHARED_LIB_ENTRY(12, "ScriptGetFontProperties", HRESULT(WINAPI *signature)(HDC, ::SCRIPT_CACHE*, ::SCRIPT_FONTPROPERTIES*))
-		ASCENSION_SHARED_LIB_ENTRY(13, "ScriptRecordDigitSubstitution", HRESULT(WINAPI *signature)(::LCID, ::SCRIPT_DIGITSUBSTITUTE*))
-		ASCENSION_SHARED_LIB_ENTRY(14, "ScriptApplyDigitSubstitution", HRESULT(WINAPI *signature)(const ::SCRIPT_DIGITSUBSTITUTE*, ::SCRIPT_CONTROL*, SCRIPT_STATE*))
-	ASCENSION_END_SHARED_LIB_ENTRIES()
+	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(USPEntries, 14);
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 0, "ScriptFreeCache", ::HRESULT(WINAPI *signature)(::SCRIPT_CACHE*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 1, "ScriptItemize", ::HRESULT(WINAPI *signature)(const ::WCHAR*, int, int, const ::SCRIPT_CONTROL*, const ::SCRIPT_STATE*, ::SCRIPT_ITEM*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 2, "ScriptLayout", ::HRESULT(WINAPI *signature)(int, const ::BYTE*, int*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 3, "ScriptShape", ::HRESULT(WINAPI *signature)(::HDC, ::SCRIPT_CACHE*, const ::WCHAR*, int, int, ::SCRIPT_ANALYSIS*, ::WORD*, ::WORD*, ::SCRIPT_VISATTR*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 4, "ScriptPlace", ::HRESULT(WINAPI *signature)(::HDC, ::SCRIPT_CACHE*, const ::WORD*, int, const ::SCRIPT_VISATTR*, ::SCRIPT_ANALYSIS*, int*, ::GOFFSET*, ::ABC*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 5, "ScriptTextOut", ::HRESULT(WINAPI *signature)(const ::HDC, ::SCRIPT_CACHE*, int, int, ::UINT, const ::RECT*, const ::SCRIPT_ANALYSIS*, const ::WCHAR*, int, const ::WORD*, int, const int*, const int*, const ::GOFFSET*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 6, "ScriptJustify", ::HRESULT(WINAPI *signature)(const ::SCRIPT_VISATTR*, const int*, int, int, int, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 7, "ScriptBreak", ::HRESULT(WINAPI *signature)(const ::WCHAR*, int, const ::SCRIPT_ANALYSIS*, ::SCRIPT_LOGATTR*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 8, "ScriptCPtoX", ::HRESULT(WINAPI *signature)(int, ::BOOL, int, int, const WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 9, "ScriptXtoCP", ::HRESULT(WINAPI *signature)(int, int, int, const ::WORD*, const ::SCRIPT_VISATTR*, const int*, const ::SCRIPT_ANALYSIS*, int*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 10, "ScriptGetLogicalWidths", ::HRESULT(WINAPI *signature)(const ::SCRIPT_ANALYSIS*, int, int, const int*, const ::WORD*, const ::SCRIPT_VISATTR*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 11, "ScriptGetProperties", ::HRESULT(WINAPI *signature)(const ::SCRIPT_PROPERTIES***, int*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 12, "ScriptGetFontProperties", ::HRESULT(WINAPI *signature)(::HDC, ::SCRIPT_CACHE*, ::SCRIPT_FONTPROPERTIES*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 13, "ScriptRecordDigitSubstitution", ::HRESULT(WINAPI *signature)(::LCID, ::SCRIPT_DIGITSUBSTITUTE*));
+	ASCENSION_SHARED_LIB_ENTRY(USPEntries, 14, "ScriptApplyDigitSubstitution", ::HRESULT(WINAPI *signature)(const ::SCRIPT_DIGITSUBSTITUTE*, ::SCRIPT_CONTROL*, SCRIPT_STATE*));
 
 	auto_ptr<ascension::internal::SharedLibrary<USPEntries> > uspLib;
 
@@ -99,11 +98,11 @@ namespace {
 struct ascension::layout::internal::Run : public StyledText {
 	::SCRIPT_ANALYSIS analysis;
 	::SCRIPT_CACHE cache;
-	HFONT font;			// the font to draw the run
-	WORD* glyphs;
+	::HFONT font;		// the font to draw the run
+	::WORD* glyphs;
 	length_t length;	// the number of characters of the run
 	int numberOfGlyphs;	// the number of glyphs of the run
-	WORD* clusters;
+	::WORD* clusters;
 	::SCRIPT_VISATTR* visualAttributes;
 	int* advances;
 	int* justifiedAdvances;
@@ -160,7 +159,7 @@ void ascension::updateSystemSettings() throw() {
  * @param[out] strikethroughThickness the thickness of linethrough in pixels
  * @return succeeded or not
  */
-bool layout::getDecorationLineMetrics(HDC dc, int* baselineOffset,
+bool layout::getDecorationLineMetrics(::HDC dc, int* baselineOffset,
 		int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) throw() {
 	::OUTLINETEXTMETRICW* otm = 0;
 	::TEXTMETRICW tm;
@@ -1252,7 +1251,7 @@ namespace {
 				return hr;
 			// repeat until a large enough buffer is provided
 			expectedNumberOfGlyphs *= 2;
-			if(0 == (run.glyphs = new(nothrow) WORD[expectedNumberOfGlyphs]))
+			if(0 == (run.glyphs = new(nothrow) ::WORD[expectedNumberOfGlyphs]))
 				return E_OUTOFMEMORY;
 			if(0 == (run.visualAttributes = new(nothrow) ::SCRIPT_VISATTR[expectedNumberOfGlyphs])) {
 				delete[] run.glyphs; run.glyphs = 0;
@@ -1273,7 +1272,7 @@ namespace {
 			return false;
 		// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 		for(int i = 0; i < run.numberOfGlyphs; ++i) {
-			const WORD glyph = run.glyphs[i];
+			const ::WORD glyph = run.glyphs[i];
 			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
 				return true;
 			else if(run.visualAttributes[i].fZeroWidth == 1 && scriptProperties.get(run.analysis.eScript).fComplex == 0)
@@ -1344,7 +1343,7 @@ void LineLayout::shape(Run& run) throw() {
 	HRESULT hr;
 	const Char* const text = getText().data() + run.column;
 	auto_ptr<DC> dc = lip_.getFontSelector().getDeviceContext();
-	run.clusters = new WORD[run.length];
+	run.clusters = new ::WORD[run.length];
 	if(lip_.getLayoutSettings().inhibitsShaping)
 		run.analysis.eScript = SCRIPT_UNDEFINED;
 
@@ -1353,7 +1352,7 @@ void LineLayout::shape(Run& run) throw() {
 	if(run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0) {
 		// bidirectional format controls
 		expectedNumberOfGlyphs = run.length;
-		run.glyphs = new WORD[expectedNumberOfGlyphs];
+		run.glyphs = new ::WORD[expectedNumberOfGlyphs];
 		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
 		oldFont = dc->selectObject(run.font = lip_.getFontSelector().getFontForShapingControls());
 		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(*dc, text, run, expectedNumberOfGlyphs))) {
@@ -1374,7 +1373,7 @@ void LineLayout::shape(Run& run) throw() {
 		// 6. the linked fonts without shaping
 		// 7. the fallback font without shaping
 		expectedNumberOfGlyphs = run.length * 3 / 2 + 16;
-		run.glyphs = new WORD[expectedNumberOfGlyphs];
+		run.glyphs = new ::WORD[expectedNumberOfGlyphs];
 		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
 		int script = NOT_PROPERTY;	// script of the run for fallback
 		set<HFONT> failedFonts;		// fonts failed to generate glyphs
@@ -2385,7 +2384,7 @@ inline void FontSelector::fireFontChanged() {
 }
 
 namespace {
-	int CALLBACK checkFontInstalled(::ENUMLOGFONTEXW*, ::NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
+	int CALLBACK checkFontInstalled(::ENUMLOGFONTEXW*, ::NEWTEXTMETRICEXW*, ::DWORD, LPARAM param) {
 		*reinterpret_cast<bool*>(param) = true;
 		return 0;
 	}
@@ -2545,7 +2544,7 @@ void FontSelector::linkPrimaryFont() throw() {
 		e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
 			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
 	if(e == ERROR_SUCCESS) {
-		DWORD type, bytes;
+		::DWORD type, bytes;
 		if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_->faceName, 0, &type, 0, &bytes)) {
 			manah::AutoBuffer<::BYTE> data(new ::BYTE[bytes]);
 			if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_->faceName, 0, &type, data.get(), &bytes)) {
@@ -2944,7 +2943,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				if(configuration_.lineNumbers.visible) {
 					wchar_t buffer[32];
 					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
-					UINT option;
+					::UINT option;
 					switch(configuration_.lineNumbers.digitSubstitution) {
 					case DST_CONTEXTUAL:
 					case DST_NOMINAL:		option = ETO_NUMERICSLATIN; break;

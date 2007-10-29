@@ -73,7 +73,7 @@ void MRUManager::load() {
 		if(file.fileName.empty())
 			break;
 		swprintf(keyName, L"encoding(%u)", i);
-		file.encoding = app.readIntegerProfile(L"MRU", keyName, ascension::encoding::extended::MIB_AUTO_DETECTION_USER_LANGUAGE);
+		file.encoding = app.readIntegerProfile(L"MRU", keyName, ascension::encoding::EncodingDetector::UNIVERSAL_DETECTOR);
 		fileNames_.push_back(file);
 	}
 	updateMenu();

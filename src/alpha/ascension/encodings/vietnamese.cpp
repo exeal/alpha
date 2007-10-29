@@ -7,29 +7,43 @@
  * (http://www.vnet.org/vanlangsj/mozilla/).
  */
 
-#include "stdafx.h"
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 #include "../encoder.hpp"
 using namespace ascension;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(VISCIIEncoder, extended::MIB_VIETNAMESE_VISCII, "VISCII")
+		ASCENSION_ENCODER_ALIASES("csVISCII\0")
+	ASCENSION_END_ENCODER_CLASS()
+//	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(VIQREncoder, extended::MIB_VIETNAMESE_VIQR, "VIQR")
+//		ASCENSION_ENCODER_ALIASES("csVIQR\0")
+//	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_DEFINE_SBCS_ENCODER(TCVNEncoder, extended::MIB_VIETNAMESE_TCVN, "TCVN")
+	ASCENSION_DEFINE_SBCS_ENCODER(VPSEncoder, extended::MIB_VIETNAMESE_VPS, "VPS")
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_VIETNAMESE_TCVN, Vietnamese_Tcvn, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_VIETNAMESE_VISCII, Vietnamese_Viscii, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_VIETNAMESE_VPS, Vietnamese_Vps, 1, 1)
-END_ENCODER_DEFINITION()
-
+	struct Installer {
+		Installer() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new VISCIIEncoder));
+//			Encoder::registerEncoder(auto_ptr<Encoder>(new VIQREncoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new TCVNEncoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new VPSEncoder));
+		}
+	} installer;
+} // namespace @0
 
 namespace {
-	const wchar_t TCVNtoUCS_00[] = {
+	const uchar N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const Char TCVNtoUCS_00[] = {
 	/* 0x00 */	0x0000, 0x00DA, 0x1EE4, 0x0003, 0x1EEA, 0x1EEC, 0x1EEE, 0x0007,
 				0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
 	/* 0x10 */	0x0010, 0x1EE8, 0x1EF0, 0x1EF2, 0x1EF6, 0x1EF8, 0x00DD, 0x1EF4,
 				0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F
 	};
-	const wchar_t TCVNtoUCS_80[] = {
+	const Char TCVNtoUCS_80[] = {
 	/* 0x80 */	0x00C0, 0x1EA2, 0x00C3, 0x00C1, 0x1EA0, 0x1EB6, 0x1EAC, 0x00C8,
 				0x1EBA, 0x1EBC, 0x00C9, 0x1EB8, 0x1EC6, 0x00CC, 0x1EC8, 0x0128,
 	/* 0x90 */	0x00CD, 0x1ECA, 0x00D2, 0x1ECE, 0x00D5, 0x00D3, 0x1ECC, 0x1ED8,
@@ -98,13 +112,13 @@ namespace {
 	/* U+1EF0 */	0x12, 0xF9, 0x13, 0xFA, 0x17, 0xFE, 0x14, 0xFB,
 					0x15, 0xFC
 	};
-	const wchar_t VISCIItoUCS_00[] = {
+	const Char VISCIItoUCS_00[] = {
 	/* 0x00 */	0x0000, 0x0001, 0x1EB2, 0x0003, 0x0004, 0x1EB4, 0x1EAA, 0x0007,
 				0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
 	/* 0x10 */	0x0010, 0x0011, 0x0012, 0x0013, 0x1EF6, 0x0015, 0x0016, 0x0017,
 				0x0018, 0x1EF8, 0x001A, 0x001B, 0x001C, 0x001D, 0x1EF4, 0x001F
 	};
-	const wchar_t VISCIItoUCS_80[] = {
+	const Char VISCIItoUCS_80[] = {
 	/* 0x80 */	0x1EA0, 0x1EAE, 0x1EB0, 0x1EB6, 0x1EA4, 0x1EA6, 0x1EA8, 0x1EAC,
 				0x1EBC, 0x1EB8, 0x1EBE, 0x1EC0, 0x1EC2, 0x1EC4, 0x1EC6, 0x1ED0,
 	/* 0x90 */	0x1ED2, 0x1ED4, 0x1ED6, 0x1ED8, 0x1EE2, 0x1EDA, 0x1EDC, 0x1EDE,
@@ -166,7 +180,7 @@ namespace {
 	/* U+1EF0 */	0xB9, 0xF1, 0x9F, 0xCF, 0x1E, 0xDC, 0x14, 0xD6,
 					0x19, 0xDB
 	};
-	const wchar_t VPStoUCS_00[] = {
+	const Char VPStoUCS_00[] = {
 	/* 0x00 */	0x0000, 0x0001, 0x1EA0, 0x1EAC, 0x1EB6, 0x1EB8, 0x1EC6, 0x0007,
 				0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
 	/* 0x10 */	0x1ECA, 0x1ECC, 0x1ED8, 0x1EE2, 0x1EE4, 0x1EF0, 0x0016, 0x0017,
@@ -253,108 +267,99 @@ namespace {
 } // namespace `anonymous'
 
 
-// ベトナム語 (TCVN) ////////////////////////////////////////////////////////
+// TCVNEncoder //////////////////////////////////////////////////////////////
 
-size_t Encoder_Vietnamese_Tcvn::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		MAP_TABLE_SB_0(UCStoTCVN_0000);
-		else if(src[i] < 0x0080)
-			dest[i] = BIT8_MASK(src[i]);
-		MAP_TABLE_SB(0x00C0, UCStoTCVN_00C0);
-		MAP_TABLE_SB(0x0168, UCStoTCVN_0168);
-		MAP_TABLE_SB(0x01A0, UCStoTCVN_01A0);
-		MAP_TABLE_SB(0x0300, UCStoTCVN_0300);
-		MAP_TABLE_SB(0x1EA0, UCStoTCVN_1EA0);
-		else
-			dest[i] = N__A;
-		if(dest[i] == 0 && src[i] != 0)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doFromUnicode
+inline bool TCVNEncoder::doFromUnicode(uchar& to, Char from) const {
+	if(from < countof(UCStoTCVN_0000))
+		to = UCStoTCVN_0000[from];
+	else if(from < 0x0080)
+		to = mask8Bit(from);
+	else if(from >= 0x00C0 && from < 0x00C0 + countof(UCStoTCVN_00C0))
+		to = UCStoTCVN_00C0[from - 0x00C0];
+	else if(from >= 0x0168 && from < 0x0168 + countof(UCStoTCVN_0168))
+		to = UCStoTCVN_0168[from - 0x0168];
+	else if(from >= 0x01A0 && from < 0x01A0 + countof(UCStoTCVN_01A0))
+		to = UCStoTCVN_01A0[from - 0x01A0];
+	else if(from >= 0x0300 && from < 0x0300 + countof(UCStoTCVN_0300))
+		to = UCStoTCVN_0300[from - 0x0300];
+	else if(from >= 0x1EA0 && from < 0x1EA0 + countof(UCStoTCVN_1EA0))
+		to = UCStoTCVN_1EA0[from - 0x1EA0];
+	else
+		return false;
+	return to != REPLACEMENT_CHARACTER;
 }
 
-size_t Encoder_Vietnamese_Tcvn::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < countof(TCVNtoUCS_00))
-			dest[i] = TCVNtoUCS_00[src[i]];
-		else if(src[i] < 0x80)
-			dest[i] = src[i];
-		else
-			dest[i] = TCVNtoUCS_80[src[i] - 0x80];
-		if(dest[i] == REPLACEMENT_CHARACTER)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doToUnicode
+inline bool TCVNEncoder::doToUnicode(Char& to, uchar from) const {
+	if(from < countof(TCVNtoUCS_00))
+		to = TCVNtoUCS_00[from];
+	else if(from < 0x80)
+		to = from;
+	else
+		to = TCVNtoUCS_80[from - 0x80];
+	return to != REPLACEMENT_CHARACTER;
 }
 
 
-// ベトナム語 (VISCII) //////////////////////////////////////////////////////
+// VISCIIEncoder ////////////////////////////////////////////////////////////
 
-size_t Encoder_Vietnamese_Viscii::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		MAP_TABLE_SB_0(UCStoVISCII_0000);
-		else if(src[i] < 0x0080)
-			dest[i] = BIT8_MASK(src[i]);
-		MAP_TABLE_SB(0x00C0, UCStoVISCII_00C0);
-		MAP_TABLE_SB(0x0168, UCStoVISCII_0168);
-		MAP_TABLE_SB(0x01A0, UCStoVISCII_01A0);
-		MAP_TABLE_SB(0x1EA0, UCStoVISCII_1EA0);
-		else
-			dest[i] = N__A;
-		if(dest[i] == 0 && src[i] != 0)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doFromUnicode
+inline bool VISCIIEncoder::doFromUnicode(uchar& to, Char from) const {
+	if(from < countof(UCStoVISCII_0000))
+		to = UCStoVISCII_0000[from];
+	else if(from < 0x0080)
+		to = mask8Bit(from);
+	else if(from >= 0x00C0 && from < 0x00C0 + countof(UCStoVISCII_00C0))
+		to = UCStoVISCII_00C0[from - 0x00C0];
+	else if(from >= 0x0168 && from < 0x0168 + countof(UCStoVISCII_0168))
+		to = UCStoVISCII_0168[from - 0x0168];
+	else if(from >= 0x01A0 && from < 0x01A0 + countof(UCStoVISCII_01A0))
+		to = UCStoVISCII_01A0[from - 0x01A0];
+	else if(from >= 0x1EA0 && from < 0x1EA0 + countof(UCStoVISCII_1EA0))
+		to = UCStoVISCII_1EA0[from - 0x1EA0];
+	else
+		return false;
+	return true;
 }
 
-size_t Encoder_Vietnamese_Viscii::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		MAP_TABLE_SB_0(VISCIItoUCS_00);
-		else if(src[i] < 0x80)
-			dest[i] = src[i];
-		else
-			dest[i] = VISCIItoUCS_80[src[i] - 0x80];
-		if(dest[i] == REPLACEMENT_CHARACTER)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doToUnicode
+inline bool VISCIIEncoder::doToUnicode(Char& to, uchar from) const {
+	if(from < countof(VISCIItoUCS_00))
+		to = VISCIItoUCS_00[from];
+	else if(from < 0x80)
+		to = from;
+	else
+		to = VISCIItoUCS_80[from - 0x80];
+	return to != REPLACEMENT_CHARACTER;
 }
 
 
-// ベトナム語 (VPS) /////////////////////////////////////////////////////////
+// VPSEncoder ///////////////////////////////////////////////////////////////
 
-size_t Encoder_Vietnamese_Vps::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		MAP_TABLE_SB_0(UCStoVPS_0000);
-		MAP_TABLE_SB(0x00A0, UCStoVPS_00A0);
-		MAP_TABLE_SB(0x0168, UCStoVPS_0168);
-		MAP_TABLE_SB(0x01A0, UCStoVPS_01A0);
-		MAP_TABLE_SB(0x1EA0, UCStoVPS_1EA0);
-		MAP_TABLE_SB(0x2018, UCStoVPS_2018);
-		else
-			dest[i] = N__A;
-		if(dest[i] == 0 && src[i] != 0)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doFromUnicode
+inline bool VPSEncoder::doFromUnicode(uchar& to, Char from) const {
+	if(from < countof(UCStoVPS_0000))
+		to = UCStoVPS_0000[from];
+	else if(from >= 0x00A0 && from < 0x00A0 + countof(UCStoVPS_00A0))
+		to = UCStoVPS_00A0[from - 0x00A0];
+	else if(from >= 0x0168 && from < 0x0168 + countof(UCStoVPS_0168))
+		to = UCStoVPS_0168[from - 0x0168];
+	else if(from >= 0x01A0 && from < 0x01A0 + countof(UCStoVPS_01A0))
+		to = UCStoVPS_01A0[from - 0x01A0];
+	else if(from >= 0x1EA0 && from < 0x1EA0 + countof(UCStoVPS_1EA0))
+		to = UCStoVPS_1EA0[from - 0x1EA0];
+	else if(from >= 0x2018 && from < 0x2018 + countof(UCStoVPS_2018))
+		to = UCStoVPS_2018[from - 0x2018];
+	else
+		return false;
+	return to != 0 || from != to;
 }
 
-size_t Encoder_Vietnamese_Vps::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i)
-		dest[i] = VPStoUCS_00[src[i]];
-	return len;
+/// @see SBCSEncoder#doToUnicode
+inline bool VPSEncoder::doToUnicode(Char& to, uchar from) const {
+	to = VPStoUCS_00[from];
+	return true;
 }
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

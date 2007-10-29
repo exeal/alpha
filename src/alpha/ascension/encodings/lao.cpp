@@ -1,24 +1,35 @@
 /**
  * @file lao.cpp
+ * Defines encoders for MuleLao-1, CP1132 and CP1133.
  * @author exeal
  * @date 2004-2007
  */
 
-#include "stdafx.h"
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 #include "../encoder.hpp"
 using namespace ascension;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_DEFINE_SBCS_ENCODER(MuleLao1Encoder, extended::MIB_LAO_MULE_LAO, "MuleLao-1")
+//	ASCENSION_DEFINE_SBCS_ENCODER(CP1132Encoder, extended::MIB_LAO_CP1132, "CP1132")
+	ASCENSION_DEFINE_SBCS_ENCODER(CP1133Encoder, extended::MIB_LAO_CP1133, "CP1133")
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_LAO_MULELAO, Lao_Mulelao, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_LAO_CP1133, Lao_Cp1133, 1, 1)
-END_ENCODER_DEFINITION()
+	struct Installer {
+		Installer() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new MuleLao1Encoder));
+//			Encoder::registerEncoder(auto_ptr<Encoder>(new CP1132Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new CP1133Encoder));
+		}
+	} installer;
+} // namespace @0
 
 namespace {
-	const wchar_t MULELAOtoUCS[] = {
+	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const uchar N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const Char MULELAOtoUCS[] = {
 	/* 0xA0 */	0x00A0, 0x0E81, 0x0E82, RP__CH, 0x0E84, RP__CH, RP__CH, 0x0E87,
 				0x0E88, RP__CH, 0x0E8A, RP__CH, RP__CH, 0x0E8D, RP__CH, RP__CH,
 	/* 0xB0 */	RP__CH, RP__CH, RP__CH, RP__CH, 0x0E94, 0x0E95, 0x0E96, 0x0E97,
@@ -46,7 +57,7 @@ namespace {
 	/* U+0ED0 */	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7,
 					0xF8, 0xF9, N__A, N__A, 0xFC, 0xFD
 	};
-	const wchar_t CP1133toUCS[] = {
+	const Char CP1133toUCS[] = {
 	/* 0xA0 */	RP__CH, 0x0E81, 0x0E82, 0x0E84, 0x0E87, 0x0E88, 0x0EAA, 0x0E8A,
 				0x0E8D, 0x0E94, 0x0E95, 0x0E96, 0x0E97, 0x0E99, 0x0E9A, 0x0E9B,
 	/* 0xB0 */	0x0E9C, 0x0E9D, 0x0E9E, 0x0E9F, 0x0EA1, 0x0EA2, 0x0EA3, 0x0EA5,
@@ -81,74 +92,64 @@ namespace {
 }
 
 
-// ƒ‰ƒIŒê (MuleLao-1) ///////////////////////////////////////////////////////
+// MuleLao1Encoder //////////////////////////////////////////////////////////
 
-size_t Encoder_Lao_Mulelao::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] <= 0x00A0)
-			dest[i] = BIT8_MASK(src[i]);
-		else {
-			dest[i] = (src[i] >= 0x0E80 && src[i] < 0x0E80 + countof(UCStoMULELAO)) ? UCStoMULELAO[src[i] - 0x0E80] : N__A;
-			if(dest[i] == N__A)
-				CONFIRM_ILLEGAL_CHAR(dest[i]);
-		}
+/// @see SBCSEncoder#doFromUnicode
+inline bool MuleLao1Encoder::doFromUnicode(uchar& to, Char from) const {
+	if(from <= 0x00A0)
+		to = mask8Bit(from);
+	else {
+		to = (from >= 0x0E80 && from < 0x0E80 + countof(UCStoMULELAO)) ? UCStoMULELAO[from - 0x0E80] : UNMAPPABLE_NATIVE_CHARACTER;
+		if(to == UNMAPPABLE_NATIVE_CHARACTER)
+			return false;
 	}
-	return len;
+	return true;
 }
 
-size_t Encoder_Lao_Mulelao::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0xA0)
-			dest[i] = src[i];
-		else {
-			dest[i] = MULELAOtoUCS[src[i] - 0xA0];
-			if(dest[i] == REPLACEMENT_CHARACTER)
-				CONFIRM_ILLEGAL_CHAR(dest[i]);
-		}
+/// @see SBCSEncoder#doToUnicode
+inline bool MuleLao1Encoder::doToUnicode(Char& to, uchar from) const {
+	if(from < 0xA0)
+		to = from;
+	else {
+		to = MULELAOtoUCS[from - 0xA0];
+		if(to == REPLACEMENT_CHARACTER)
+			return false;
 	}
-	return len;
+	return true;
 }
 
 
-// ƒ‰ƒIŒê (ibm-1133) ////////////////////////////////////////////////////////
+// CP1133Encoder ////////////////////////////////////////////////////////////
 
-size_t Encoder_Lao_Cp1133::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0x00A0)
-			dest[i] = BIT8_MASK(src[i]);
-		else {
-			MAP_TABLE_SB_START(0x00A0, UCStoCP1133_00A0);
-			MAP_TABLE_SB(0x0E80, UCStoCP1133_0E80);
-			else if(src[i] == 0x20AD)
-				dest[i] = static_cast<uchar>(0xDF);
-			else
-				dest[i] = N__A;
-			if(dest[i] == N__A)
-				CONFIRM_ILLEGAL_CHAR(dest[i]);
-		}
+/// @see SBCSEncoder#doFromUnicode
+inline bool CP1133Encoder::doFromUnicode(uchar& to, Char from) const {
+	if(from < 0x00A0)
+		to = mask8Bit(from);
+	else {
+		if(from < 0x00A0 + countof(UCStoCP1133_00A0))
+			to = UCStoCP1133_00A0[from - 0x00A0];
+		else if(from < 0x0E80 + countof(UCStoCP1133_0E80))
+			to = UCStoCP1133_0E80[from - 0x0E80];
+		else if(from == 0x20AD)
+			to = static_cast<uchar>(0xDF);
+		else
+			return false;
+		if(to == UNMAPPABLE_NATIVE_CHARACTER)
+			return false;
 	}
-	return len;
+	return true;
 }
 
-size_t Encoder_Lao_Cp1133::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0xA0)
-			dest[i] = src[i];
-		else {
-			dest[i] = CP1133toUCS[src[i] - 0xA0];
-			if(dest[i] == REPLACEMENT_CHARACTER)
-				CONFIRM_ILLEGAL_CHAR(dest[i]);
-		}
+/// @see SBCSEncoder#doToUnicode
+inline bool CP1133Encoder::doToUnicode(Char& to, uchar from) const {
+	if(from < 0xA0)
+		to = from;
+	else {
+		to = CP1133toUCS[from - 0xA0];
+		if(to == REPLACEMENT_CHARACTER)
+			return false;
 	}
-	return len;
+	return true;
 }
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

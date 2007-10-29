@@ -121,7 +121,7 @@ namespace {
 			if(encoder == 0)
 				return 0;
 			else {
-				size_t bufferLength = encoder->getMaximumNativeLength() * (last - first);
+				size_t bufferLength = encoder->getMaximumNativeBytes() * (last - first);
 				manah::AutoBuffer<uchar> buffer(new uchar[bufferLength + 1]);
 				uchar* toNext;
 				const Char* fromNext;
