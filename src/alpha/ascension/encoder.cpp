@@ -6,6 +6,7 @@
 
 #include "encoder.hpp"
 #include <algorithm>
+#include <vector>
 #ifdef _WIN32
 #include <windows.h>	// GetCPInfoExW, MultiByteToWideChar, WideCharToMultiByte, ...
 #ifndef interface
@@ -79,8 +80,6 @@ String encoding::getEncodingDisplayName(MIBenum mib) {
  * <h3>Important protocol of @c #fromUnicode and @c #toUnicode</h3>
  */
 
-map<MIBenum, ASCENSION_SHARED_POINTER<Encoder> > Encoder::encoders_;
-
 /// Protected default constructor.
 Encoder::Encoder() throw() {
 }
@@ -115,7 +114,7 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	const size_t bytes = (last - first) * getMaximumNativeLength();
+	const size_t bytes = (last - first) * getMaximumNativeBytes();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	Char* fromNext;
 	uchar* toNext;
@@ -138,8 +137,8 @@ bool Encoder::canEncode(const String& s) const {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forMIB(MIBenum mib) throw() {
-	Encoders::iterator i(encoders_.find(mib));
-	return (i != encoders_.end()) ? i->second.get() : 0;
+	Encoders::iterator i(registry().find(mib));
+	return (i != registry().end()) ? i->second.get() : 0;
 }
 
 /**
@@ -148,7 +147,7 @@ Encoder* Encoder::forMIB(MIBenum mib) throw() {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forName(const string& name) throw() {
-	for(Encoders::iterator i(encoders_.begin()), e(encoders_.end()); i != e; ++i) {
+	for(Encoders::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
 		const string canonicalName = i->second->getName();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
@@ -212,10 +211,10 @@ Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
  * Converts the given string from UTF-16 into the native encoding.
  * @param from the string to be converted
  * @param policy the conversion policy
- * @return the converted string or an empty if encountered unconvertable character
+ * @return the converted string or an empty if encountered unconvertible character
  */
 string Encoder::fromUnicode(const String& from, Policy policy /* = NO_POLICY */) const {
-	size_t bytes = getMaximumNativeLength() * from.length();
+	size_t bytes = getMaximumNativeBytes() * from.length();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	const Char* fromNext;
 	uchar* toNext;
@@ -250,15 +249,20 @@ MIBenum Encoder::getDefault() throw() {
 void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	if(encoder.get() == 0)
 		throw NullPointerException("encoder");
-	else if(encoders_.find(encoder->getMIBenum()) != encoders_.end())
+	else if(registry().find(encoder->getMIBenum()) != registry().end())
 //		throw invalid_argument("the encoder is already registered.");
 		return;
-	encoders_.insert(make_pair(encoder->getMIBenum(), encoder.release()));
+	registry().insert(make_pair(encoder->getMIBenum(), encoder.release()));
+}
+
+Encoder::Encoders& Encoder::registry() throw() {
+	static Encoders singleton;
+	return singleton;
 }
 
 /// Returns true if supports the specified encoding.
 bool Encoder::supports(MIBenum mib) throw() {
-	return encoders_.find(mib) != encoders_.end();
+	return registry().find(mib) != registry().end();
 }
 
 /**
@@ -289,7 +293,7 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
  * Converts the given string from the native encoding into UTF-16.
  * @param from the string to be converted
  * @param policy the conversion policy
- * @return the converted string or an empty if encountered unconvertable character
+ * @return the converted string or an empty if encountered unconvertible character
  */
 String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) const {
 	size_t chars = getMaximumUCSLength() * from.length();
@@ -313,8 +317,6 @@ String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) c
 
 // EncodingDetector /////////////////////////////////////////////////////////
 
-map<MIBenum, ASCENSION_SHARED_POINTER<EncodingDetector> > EncodingDetector::encodingDetectors_;
-
 /**
  * Constructor.
  * @param id the identifier of the encoding detector
@@ -335,53 +337,18 @@ EncodingDetector::~EncodingDetector() throw() {
  * @param detectorID the identifier of the encoding detector to use
  * @param first the beginning of the sequence
  * @param last the end of the sequence
+ * @param[out] convertibleBytes the number of bytes (from @a first) absolutely detected. the value
+ * can't exceed the result of (@a last - @a first). can be @c null if not needed
  * @return the MIBenum of the detected encoding
+ * @throw NullPointerException @a first or @last is @c null
+ * @throw std#invalid_argument @c first is greater than @a last
  */
-MIBenum EncodingDetector::detect(MIBenum detectorID, const uchar* first, const uchar* last) {
+MIBenum EncodingDetector::detect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const {
 	if(first == 0 || last == 0)
 		throw NullPointerException("first or last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-
-#if 0
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	if(detectorID == SYSTEM_LOCALE_DETECTOR || detectorID == USER_LOCALE_DETECTOR) {
-#ifdef _WIN32
-		const ::LANGID langID = (detectorID == SYSTEM_LOCALE_DETECTOR) ? ::GetSystemDefaultLangID() : ::GetUserDefaultLangID();
-		switch(PRIMARYLANGID(langID)) {
-		case LANG_ARMENIAN:		mib = extended::MIB_ARMENIAN_AUTO_DETECTION;	break;
-		case LANG_JAPANESE:		mib = extended::MIB_JAPANESE_AUTO_DETECTION;	break;
-//		case LANG_KOREAN:		mib = extended::MIB_KOREAN_AUTO_DETECTION;		break;
-		case LANG_VIETNAMESE:	mib = extended::MIB_VIETNAMESE_AUTO_DETECTION;	break;
-		default:				mib = fundamental::MIB_UNICODE_AUTO_DETECTION;	break;
-		}
-#else
-#endif
-	}
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-#endif
-
-	MIBenum result = fundamental::MIB_UNICODE_UTF8;
-	if(detectorID == UNIVERSAL_DETECTOR) {
-		// try all detectors
-		MIBenum detected;
-		ptrdiff_t bestScore = 0;
-		for(EncodingDetectors::const_iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
-			const ptrdiff_t score = i->second->doDetect(first, last, detected);
-			if(score > bestScore) {
-				result = detected;
-				if(score == last - first)
-					break;
-				bestScore = score;
-			}
-		}
-	} else {
-		EncodingDetectors::const_iterator detector(encodingDetectors_.find(detectorID));
-		if(detector == encodingDetectors_.end())
-			throw invalid_argument("unsupported encoding detector identifier.");
-		detector->second->doDetect(first, last, result);
-	}
-	return result;
+	return doDetect(first, last, convertibleBytes);
 }
 
 /**
@@ -390,8 +357,8 @@ MIBenum EncodingDetector::detect(MIBenum detectorID, const uchar* first, const u
  * @return the encoding detectir or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
-	EncodingDetectors::iterator i(encodingDetectors_.find(id));
-	return (i != encodingDetectors_.end()) ? i->second.get() : 0;
+	EncodingDetectors::iterator i(registry().find(id));
+	return (i != registry().end()) ? i->second.get() : 0;
 }
 
 /**
@@ -400,7 +367,7 @@ EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
  * @return the encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forName(const string& name) throw() {
-	for(EncodingDetectors::iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
+	for(EncodingDetectors::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		const string canonicalName = i->second->getName();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
 			return i->second.get();
@@ -415,12 +382,12 @@ EncodingDetector* EncodingDetector::forName(const string& name) throw() {
  * @return the encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() {
-	// TODO: not implemented.
-//	for(EncodingDetectors::iterator i(encodingDetectors_.begin()), e(encodingDetectors_.end()); i != e; ++i) {
-//		if(convertMIBenumToWindowsCodePage(i->second->getID()) == codePage)
-//			return i->second.get();
-//	}
-	return 0;
+	switch(codePage) {
+	case 50001:	return forID(UNIVERSAL_DETECTOR);
+	case 50932:	return forID(JIS_DETECTOR);
+	case 50949:	return forID(KS_DETECTOR);
+	default:	return 0;
+	}
 }
 #endif /* !_WIN32 */
 
@@ -434,138 +401,116 @@ void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) 
 	if(newDetector.get() == 0)
 		throw NullPointerException("newDetector");
 	const MIBenum id(newDetector->getID());
-	if(encodingDetectors_.find(id) != encodingDetectors_.end())
+	if(registry().find(id) != registry().end())
 		throw invalid_argument("the same identifier is already registered.");
-	encodingDetectors_.insert(make_pair(id, ASCENSION_SHARED_POINTER<EncodingDetector>(newDetector.release())));
+	registry().insert(make_pair(id, ASCENSION_SHARED_POINTER<EncodingDetector>(newDetector.release())));
+}
+
+EncodingDetector::EncodingDetectors& EncodingDetector::registry() throw() {
+	static EncodingDetectors singleton;
+	return singleton;
 }
 
 /// Returns true if the encoding detector which has the specified identifier.
 bool EncodingDetector::supports(MIBenum detectorID) throw() {
 	return detectorID == UNIVERSAL_DETECTOR || detectorID == SYSTEM_LOCALE_DETECTOR
-		|| detectorID == USER_LOCALE_DETECTOR || encodingDetectors_.find(detectorID) != encodingDetectors_.end();
+		|| detectorID == USER_LOCALE_DETECTOR || registry().find(detectorID) != registry().end();
 }
 
 
 // USASCIIEncoder ///////////////////////////////////////////////////////////
 
 namespace {
-	ASCENSION_DEFINE_SIMPLE_ENCODER_WITH_ALIASES(USASCIIEncoder);
-	template<Char maximum, uchar(*mask)(Char)>
-	inline Encoder::Result doFromUnicode8Bit(uchar* to, uchar* toEnd, uchar*& toNext,
-			const Char* from, const Char* fromEnd, const Char*& fromNext, Encoder::Policy policy) {
-		for(; to < toEnd && from < fromEnd; ++from) {
-			if(*from > maximum) {
-				if(policy == Encoder::REPLACE_UNMAPPABLE_CHARACTER)
-					*(to++) = NATIVE_DEFAULT_CHARACTER;
-				else if(policy != Encoder::IGNORE_UNMAPPABLE_CHARACTER) {
-					toNext = to;
-					fromNext = from;
-					return Encoder::UNMAPPABLE_CHARACTER;
-				} else
-					*(to++) = mask(*from);
-			}
-		}
-		toNext = to;
-		fromNext = from;
-		return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
-	}
-	inline Encoder::Result doToUnicode8Bit(Char* to, Char* toEnd, Char*& toNext,
-			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Encoder::Policy policy) {
-		for(; to < toEnd && from < fromEnd; ++to, ++from)
-			*to = *from;
-		toNext = to;
-		fromNext = from;
-		return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(USASCIIEncoder, fundamental::MIB_US_ASCII, "US-ASCII")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-6\0"
+			"ANSI_X3.4-1986\0"
+			"ISO_646.irv:1991\0"
+			"ASCII\0"
+			"ISO646-US\0"
+			"us\0"
+			"IBM367\0"
+			"cp367\0"
+			"csASCII"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	template<Char maximum, uchar(*mask)(Char)> inline bool doFromUnicode8Bit(uchar& to, Char from) {
+		if(from > maximum)
+			return false;
+		to = mask(from);
+		return true;
 	}
 } // namespace @0
 
-/// @see Encoder#doFromUnicode
-Encoder::Result USASCIIEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
-	return doFromUnicode8Bit<0x7F, mask7Bit>(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+/// @see SBCSEncoder#doFromUnicode
+inline bool USASCIIEncoder::doFromUnicode(uchar& to, Char from) const {
+	return doFromUnicode8Bit<0x7F, mask7Bit>(to, from);
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result USASCIIEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
-	return doToUnicode8Bit(to, toEnd, toNext, from, fromEnd, fromNext, policy);
-}
-
-/// @see Encoder#getAliases
-string USASCIIEncoder::getAliases() const throw() {
-	static const char aliases[] =
-		"iso-ir-6\0"
-		"ANSI_X3.4-1986\0"
-		"ISO_646.irv:1991\0"
-		"ASCII\0"
-		"ISO646-US\0"
-		"us\0"
-		"IBM367\0"
-		"cp367\0"
-		"csASCII";
-	return string(aliases, countof(aliases) - 1);
-}
-
-/// @see Encoder#getMaximumNativeLength
-size_t USASCIIEncoder::getMaximumNativeLength() const throw() {
-	return 1;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum USASCIIEncoder::getMIBenum() const throw() {
-	return fundamental::MIB_US_ASCII;
-}
-
-/// @see Encoder#getName
-string USASCIIEncoder::getName() const throw() {
-	return "US-ASCII";
+/// @see SBCSEncoder#doToUnicode
+inline bool USASCIIEncoder::doToUnicode(Char& to, uchar from) const {
+	return to = from, true;
 }
 
 
 // ISO88591Encoder //////////////////////////////////////////////////////////
 
 namespace {
-	ASCENSION_DEFINE_SIMPLE_ENCODER_WITH_ALIASES(ISO88591Encoder);
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88591Encoder, fundamental::MIB_ISO_8859_1, "ISO-8859-1")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-100\0"
+			"ISO_8859-1\0"
+			"latin1\0"
+			"l1\0"
+			"IBM819\0"
+			"CP819\0"
+			"csISOLatin1"
+		)
+	ASCENSION_END_ENCODER_CLASS()
 } // namespace @0
 
-/// @see Encoder#doFromUnicode
-Encoder::Result ISO88591Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
-	return doFromUnicode8Bit<0xFF, mask8Bit>(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88591Encoder::doFromUnicode(uchar& to, Char from) const {
+	return doFromUnicode8Bit<0xFF, mask8Bit>(to, from);
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result ISO88591Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
-	return doToUnicode8Bit(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88591Encoder::doToUnicode(Char& to, uchar from) const {
+	return to = from, true;
 }
 
-/// @see Encoder#getAliases
-string ISO88591Encoder::getAliases() const throw() {
-	static const char aliases[] =
-		"iso-ir-100\0"
-		"ISO_8859-1\0"
-		"latin1\0"
-		"l1\0"
-		"IBM819\0"
-		"CP819\0"
-		"csISOLatin1";
-	return string(aliases, countof(aliases) - 1);
-}
 
-/// @see Encoder#getMaximumNativeLength
-size_t ISO88591Encoder::getMaximumNativeLength() const throw() {
-	return 1;
-}
+// UniversalDetector ////////////////////////////////////////////////////////
 
-/// @see Encoder#getMIBenum
-MIBenum ISO88591Encoder::getMIBenum() const throw() {
-	return fundamental::MIB_ISO_8859_1;
-}
+namespace {
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UniversalDetector, EncodingDetector::UNIVERSAL_DETECTOR, "UniversalAutoDetection");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, EncodingDetector::SYSTEM_LOCALE_DETECTOR, "SystemLocaleAutoDetection");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, EncodingDetector::USER_LOCALE_DETECTOR, "UserLocaleAutoDetection");
+} // namespace @0
 
-/// @see Encoder#getName
-string ISO88591Encoder::getName() const throw() {
-	return "ISO-8859-1";
+/// @see EncodingDetector#doDetect
+MIBenum UniversalDetector::doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const throw() {
+	// try all detectors
+	vector<MIBenum> mibs;
+	getAvailableIDs(back_inserter(mibs));
+
+	MIBenum result;
+	ptrdiff_t bestScore = 0, score;
+	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
+		if(const EncodingDetector* detector = forID(*mib)) {
+			const MIBenum detectedEncoding = detector->detect(first, last, &score);
+			if(score > bestScore) {
+				result = detectedEncoding;
+				if(score == last - first)
+					break;
+				bestScore = score;
+			}
+		}
+	}
+
+	if(convertibleBytes != 0)
+		*convertibleBytes = bestScore;
+	return result;
 }
 
 

@@ -1024,8 +1024,8 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 	// convert the whole buffer
 	Position last(0, 0);	// 次に文字列を追加する位置
 	if(fileSize != 0) {
-		if(EncodingDetector::supports(encoding)) {
-			encoding = EncodingDetector::detect(encoding, nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024));
+		if(const EncodingDetector* const detector = EncodingDetector::forID(encoding)) {
+			encoding = detector->detect(nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024), 0);
 			encoder = Encoder::forMIB(encoding);
 		}
 		size_t destLength = encoder->getMaximumUCSLength() * fileSize;
@@ -1281,7 +1281,7 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 
 	// 1 行ずつ変換してバッファに書き込み、後で一度にファイルに書き込む
 	const length_t numberOfLines = getNumberOfLines();
-	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaximumNativeLength() + 4;
+	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaximumNativeBytes() + 4;
 	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
 	uchar* dest = nativeBuffer;	// destination pointer
 

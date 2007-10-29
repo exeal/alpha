@@ -16,16 +16,30 @@ using namespace std;
 
 // registry
 namespace {
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF8Encoder);
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF16LittleEndianEncoder);
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF16BigEndianEncoder);
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF8Encoder, fundamental::MIB_UNICODE_UTF8, "UTF-8")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF16LittleEndianEncoder, fundamental::MIB_UNICODE_UTF16LE, "UTF-16LE")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF16BigEndianEncoder, fundamental::MIB_UNICODE_UTF16BE, "UTF-16BE")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
+	ASCENSION_END_ENCODER_CLASS()
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF5Encoder);
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF7Encoder);
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF32LittleEndianEncoder);
-	ASCENSION_DEFINE_SIMPLE_ENCODER(UTF32BigEndianEncoder);
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF5Encoder, extended::MIB_UNICODE_UTF5, "UTF-5")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(6)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF7Encoder, extended::MIB_UNICODE_UTF7, "UTF-7")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(8)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF32LittleEndianEncoder, extended::MIB_UNICODE_UTF32LE, "UTF-32LE")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF32BigEndianEncoder, extended::MIB_UNICODE_UTF32BE, "UTF-32BE")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
+	ASCENSION_END_ENCODER_CLASS()
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, "UnicodeDetection", EncodingDetector::UNICODE_DETECTOR);
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, EncodingDetector::UNICODE_DETECTOR, "UnicodeDetection");
 
 	struct EncoderInstaller {
 		EncoderInstaller() throw() {
@@ -205,21 +219,6 @@ Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t UTF8Encoder::getMaximumNativeLength() const throw() {
-	return 4;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF8Encoder::getMIBenum() const throw() {
-	return fundamental::MIB_UNICODE_UTF8;
-}
-
-/// @see Encoder#getName
-string UTF8Encoder::getName() const throw() {
-	return "UTF-8";
-}
-
 
 // UTF16LittleEndianEncoder /////////////////////////////////////////////////
 
@@ -248,21 +247,6 @@ Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 		return (to >= toEnd - 1) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t UTF16LittleEndianEncoder::getMaximumNativeLength() const throw() {
-	return 2;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF16LittleEndianEncoder::getMIBenum() const throw() {
-	return fundamental::MIB_UNICODE_UTF16LE;
-}
-
-/// @see Encoder#getName
-string UTF16LittleEndianEncoder::getName() const throw() {
-	return "UTF-16LE";
-}
-
 
 // UTF16BigEndianEncoder /////////////////////////////////////////////////
 
@@ -289,21 +273,6 @@ Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 		return COMPLETED;
 	else
 		return (to >= toEnd - 1) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
-}
-
-/// @see Encoder#getMaximumNativeLength
-size_t UTF16BigEndianEncoder::getMaximumNativeLength() const throw() {
-	return 2;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF16BigEndianEncoder::getMIBenum() const throw() {
-	return fundamental::MIB_UNICODE_UTF16BE;
-}
-
-/// @see Encoder#getName
-string UTF16BigEndianEncoder::getName() const throw() {
-	return "UTF-16BE";
 }
 
 
@@ -349,21 +318,6 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t UTF32LittleEndianEncoder::getMaximumNativeLength() const throw() {
-	return 4;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF32LittleEndianEncoder::getMIBenum() const throw() {
-	return extended::MIB_UNICODE_UTF32LE;
-}
-
-/// @see Encoder#getName
-string UTF32LittleEndianEncoder::getName() const throw() {
-	return "UTF-32LE";
-}
-
 
 // UTF32BigEndianEncoder /////////////////////////////////////////////////
 
@@ -403,21 +357,6 @@ Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 	fromNext = from;
 	toNext = to;
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
-}
-
-/// @see Encoder#getMaximumNativeLength
-size_t UTF32BigEndianEncoder::getMaximumNativeLength() const throw() {
-	return 2;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF32BigEndianEncoder::getMIBenum() const throw() {
-	return extended::MIB_UNICODE_UTF32BE;
-}
-
-/// @see Encoder#getName
-string UTF32BigEndianEncoder::getName() const throw() {
-	return "UTF-32BE";
 }
 
 
@@ -563,21 +502,6 @@ Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t UTF7Encoder::getMaximumNativeLength() const throw() {
-	return 8;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF7Encoder::getMIBenum() const throw() {
-	return extended::MIB_UNICODE_UTF7;
-}
-
-/// @see Encoder#getName
-string UTF7Encoder::getName() const throw() {
-	return "UTF-7";
-}
-
 
 // UTF5Encoder //////////////////////////////////////////////////////////////
 
@@ -677,7 +601,7 @@ Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
 			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
-				*(to++) = NATIVE_DEFAULT_CHARACTER;
+				*(to++) = NATIVE_REPLACEMENT_CHARACTER;
 			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {
@@ -740,21 +664,6 @@ Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t UTF5Encoder::getMaximumNativeLength() const throw() {
-	return 6;
-}
-
-/// @see Encoder#getMIBenum
-MIBenum UTF5Encoder::getMIBenum() const throw() {
-	return extended::MIB_UNICODE_UTF5;
-}
-
-/// @see Encoder#getName
-string UTF5Encoder::getName() const throw() {
-	return "UTF-5";
-}
-
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 namespace {
@@ -793,27 +702,32 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetect
-ptrdiff_t UnicodeDetector::doDetect(const uchar* first, const uchar* last, MIBenum& detectedEncoding) const {
-	detectedEncoding = 0;
+MIBenum UnicodeDetector::doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const {
+	MIBenum result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
-		detectedEncoding = fundamental::MIB_UNICODE_UTF8;
+		result = fundamental::MIB_UNICODE_UTF8;
 	else if(last - first >= 2) {
 		if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
-			detectedEncoding = fundamental::MIB_UNICODE_UTF16LE;
+			result = fundamental::MIB_UNICODE_UTF16LE;
 		else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
-			detectedEncoding = fundamental::MIB_UNICODE_UTF16BE;
+			result = fundamental::MIB_UNICODE_UTF16BE;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 		if(last - first >= 4) {
 			if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-				detectedEncoding = extended::MIB_UNICODE_UTF32LE;
+				result = extended::MIB_UNICODE_UTF32LE;
 			else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-				detectedEncoding = extended::MIB_UNICODE_UTF32BE;
+				result = extended::MIB_UNICODE_UTF32BE;
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 	}
-	if(detectedEncoding != 0)
-		return last - first;
-	detectedEncoding = fundamental::MIB_UNICODE_UTF8;
-	return maybeUTF8(first, last) - first;
+	if(result != 0) {
+		if(convertibleBytes != 0)
+			*convertibleBytes = last - first;
+		return result;
+	}
+	// force into UTF-8
+	if(convertibleBytes != 0)
+		*convertibleBytes = maybeUTF8(first, last) - first;
+	return fundamental::MIB_UNICODE_UTF8;
 }

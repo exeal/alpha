@@ -723,7 +723,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 
 	const wstring s(app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName));
 	Document::FileIOResult result;
-	do {
+	while(true) {
 		WaitCursor wc;
 		app_.setStatusText(s.c_str());
 		app_.getMainWindow().lockUpdate();
@@ -754,7 +754,8 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 			else
 				return OPENRESULT_USERCANCELED;
 		}
-	} while(false);
+		break;
+	}
 
 	app_.getMainWindow().show(app_.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
@@ -1069,7 +1070,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 	}
 
 	Document::FileIOResult result;
-	do {
+	while(true) {
 		result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), encoding, Encoder::NO_POLICY);
 		if(result == Document::FIR_ENCODING_FAILURE) {
 			// alert the encoding error
@@ -1093,7 +1094,8 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 			else
 				return OPENRESULT_USERCANCELED;
 		}
-	} while(false);
+		break;
+	}
 
 	if(handleFileIOError(buffer.getFilePathName(), true, result)) {
 		app_.getMRUManager().add(buffer.getFilePathName(), buffer.getEncoding());
@@ -1199,7 +1201,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		|| (format.encoding == extended::MIB_UNICODE_UTF32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
 	Document::FileIOResult result;
 
-	do {
+	while(true) {
 		Document::SaveParameters params;
 		params.encoding = format.encoding;
 		params.encodingPolicy = Encoder::NO_POLICY;
@@ -1232,7 +1234,8 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 			} else
 				return false;
 		}
-	} while(false);
+		break;
+	}
 
 	const bool succeeded = handleFileIOError(fileName, false, result);
 	if(succeeded && addToMRU && newName)

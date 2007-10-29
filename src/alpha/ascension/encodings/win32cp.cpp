@@ -96,7 +96,11 @@ namespace {
 		make_pair(2256,	1256),	// windows-1256
 		make_pair(2257,	1257),	// windows-1257
 		make_pair(2258,	1258),	// windows-1258
-		make_pair(2259,	874)	// TIS-620 <-> IBM874
+		make_pair(2259,	874),	// TIS-620 <-> IBM874
+		// Windows auto detections
+		make_pair(EncodingDetector::UNIVERSAL_DETECTOR,	50001),
+		make_pair(EncodingDetector::JIS_DETECTOR,		50932),
+		make_pair(EncodingDetector::KS_DETECTOR,		50949)
 	};
 }
 
@@ -124,7 +128,7 @@ namespace {
 		::UINT getCodePage() const throw() {return codePage_;}
 	private:
 		std::string	getAliases() const throw();
-		std::size_t	getMaximumNativeLength() const throw();
+		std::size_t	getMaximumNativeBytes() const throw();
 		MIBenum		getMIBenum() const throw();
 	private:
 		const ::UINT codePage_;
@@ -157,6 +161,21 @@ namespace {
 		std::string	getName() const throw();
 	};
 	static manah::com::ComPtr<::IMultiLanguage2> mlang;
+	string getMLangEncodingName(::UINT codePage) throw() {
+		if(mlang.get() != 0) {
+			::MIMECPINFO mcpi;
+			if(S_OK == mlang->GetCodePageInfo(codePage, LOCALE_USER_DEFAULT, &mcpi)) {
+				string name(wcslen(mcpi.wszWebCharset), 'X');
+				for(size_t i = 0; i < name.length(); ++i)
+					name[i] = mask8Bit(mcpi.wszWebCharset[i]);
+				return name;
+			}
+		}
+		static const char format[] = "x-windows-%lu";
+		char name[countof(format) + 32];
+		sprintf(name, format, codePage);
+		return name;
+	}
 } // namespace @0
 
 
@@ -168,8 +187,8 @@ string WindowsEncoder::getAliases() const throw() {
 	return "";
 }
 
-/// @see Encoder#getMaximumNativeLength
-size_t WindowsEncoder::getMaximumNativeLength() const throw() {
+/// @see Encoder#getMaximumNativeBytes
+size_t WindowsEncoder::getMaximumNativeBytes() const throw() {
 	::CPINFOEXW cpi;
 	return toBoolean(::GetCPInfoExW(codePage_, 0, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 4;
 }
@@ -202,13 +221,15 @@ Encoder::Result WindowsNLSEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*
 		toNext = to;
 		return COMPLETED;
 	} else if(const int writtenBytes = ::WideCharToMultiByte(getCodePage(),
-			WC_SEPCHARS | (policy == REPLACE_UNMAPPABLE_CHARACTER ? WC_DEFAULTCHAR : 0),
+			(policy == REPLACE_UNMAPPABLE_CHARACTER ? WC_DEFAULTCHAR : 0),
 			from, static_cast<int>(fromEnd - from), reinterpret_cast<char*>(to), static_cast<int>(toEnd - to), 0, 0)) {
 		// succeeded (fromNext is not modified)
 		toNext = to + writtenBytes;
 		return COMPLETED;
-	} else
-		return (::GetLastError() == ERROR_INSUFFICIENT_BUFFER) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
+	} else {
+		::DWORD e = ::GetLastError();
+		return (e == ERROR_INSUFFICIENT_BUFFER) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
+	}
 }
 
 /// @see Encoder#doToUnicode
@@ -295,20 +316,50 @@ Encoder::Result MLangEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 
 /// @see Encoder#getName
 string MLangEncoder::getName() const throw() {
-	if(mlang.get() != 0) {
-		::MIMECPINFO mcpi;
-		if(S_OK == mlang->GetCodePageInfo(getCodePage(), LOCALE_USER_DEFAULT, &mcpi)) {
-			string name(wcslen(mcpi.wszWebCharset), 'X');
-			for(size_t i = 0; i < name.length(); ++i)
-				name[i] = mask8Bit(mcpi.wszWebCharset[i]);
-			return name;
-		}
-	}
-	static const char format[] = "x-windows-%lu";
-	char name[countof(format) + 32];
-	sprintf(name, format, getCodePage());
-	return name;
+	return getMLangEncodingName(getCodePage());
 }
+
+
+// MLangDetector ////////////////////////////////////////////////////////////
+
+namespace {
+	class MLangDetector : public EncodingDetector {
+	public:
+		explicit MLangDetector(MIBenum mib, ::UINT codePage, ::MLDETECTCP flag = ::MLDETECTCP_NONE) :
+			EncodingDetector(mib, getMLangEncodingName(codePage)), codePage_(codePage), flag_(flag) {}
+	private:
+		MIBenum doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const throw() {
+			if(mlang.get() != 0) {
+				::HRESULT hr;
+				::UINT numberOfCodePages;
+				if(SUCCEEDED(hr = mlang->GetNumberOfCodePageInfo(&numberOfCodePages))) {
+					manah::AutoBuffer<::DetectEncodingInfo> results(new ::DetectEncodingInfo[numberOfCodePages]);
+					int bytes = static_cast<int>(last - first);
+					int c = numberOfCodePages;
+					if(SUCCEEDED(hr = mlang->DetectInputCodepage(flag_, codePage_,
+							const_cast<char*>(reinterpret_cast<const char*>(first)), &bytes, results.get(), &c))) {
+						const ::DetectEncodingInfo* bestScore = 0;
+						for(int i = 0; i < c; ++i) {
+							if(bestScore == 0 || results[i].nConfidence > bestScore->nConfidence)
+								bestScore = &results[i];
+						}
+						if(bestScore != 0) {
+							if(convertibleBytes != 0)
+								*convertibleBytes = (last - first) * bestScore->nDocPercent;
+							return convertWinCPtoMIB(bestScore->nCodePage);
+						}
+					}
+				}
+			}
+			if(convertibleBytes != 0)
+				*convertibleBytes = 0;
+			return fundamental::MIB_UNICODE_UTF8;
+		}
+	private:
+		::UINT codePage_;
+		::MLDETECTCP flag_;
+	};
+} // namespace @0
 
 
 namespace {
@@ -332,6 +383,9 @@ namespace {
 						}
 					}
 				}
+				EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new MLangDetector(EncodingDetector::UNIVERSAL_DETECTOR, 50001)));
+				EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new MLangDetector(EncodingDetector::JIS_DETECTOR, 50932)));
+				EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new MLangDetector(EncodingDetector::KS_DETECTOR, 50949)));
 			}
 			if(enteredApartment == S_OK || enteredApartment == S_FALSE)
 				::CoUninitialize();

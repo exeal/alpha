@@ -5,124 +5,151 @@
  *
  * Implementation of Japanese encoders.
  *
- * Following documentation is written in Japanese... (HeHe).
+ * Following documentation is written in Japanese (HeHe).
  *
- *	<h3>�������镶���W���ƃG���R�[�h</h3>
+ * <h3>Implemented character sets and encodings</h3>
  *
- *	���̃t�@�C���ł͈ȉ��̃G���R�[�h����������:
- *	<ul>
- *		<li>JIS X 0208 -- �V�t�g JIS �AISO-2022-JP</li>
- *		<li>JIS X 0208 �� JIS X 0212 -- EUC �AISO-2022-JP-1 �AISO-2022-JP-2</li>
- *		<li>JIS X 0213 -- Shift_JIS-2004 �AEUC-JIS-2004 �AISO-2022-JP-3 (3��)�AISO-2022-JP-2004 (3��)</li>
- *		<li>CP932 -- �V�t�g JIS �AEUC �AISO-2022-JP</li>
- *	</ul>
- *	CP932 �x�[�X�̃G���R�[�h�� Windows �̕ϊ��\�Ɋ�Â����̂ŁA
- *	EUC �ł� JIS X 0212 �����W�����܂�ł��Ȃ��B�܂��V�X�e����
- *	CP932 ���C���X�g�[������Ă��Ȃ���Ζ���
+ * This file implements the following encodings:
  *
- *	�e�G���R�[�h�̊ȒP�ȉ���� Ascension �ł̎�舵���ɂ��ăR�[�h���ɃR�����g����
+ * - JIS X 0208 -- Shift_JIS, ISO-2022-JP
+ * - JIS X 0208 and JIS X 0212 -- EUC-JP, ISO-2022-JP-1 and ISO-2022-JP-2
+ * - JIS X 0213 -- Shift_JIS-2004, EUC-JIS-2004, ISO-2022-JP-3-* and ISO-2022-JP-2004-*
+ * - CP932 -- Windows-932, EUC (Windows-51932) and ISO-2022-JP (Windows-50220)
  *
- *	ISO-2022-JP* ���� UCS �ւ̕ϊ��ɂ����āA�s���ȃG�X�P�[�v�V�[�P���X�Ƃ��̌㑱�f�[�^��1�o�C�g�������ȃR�[�h�l��
- *	UCS �ɕϊ�����B����̓��[�U��������ϊ��𔭌����Ղ��Ȃ���ʂ����邪�A���̂܂ܓ����G���R�[�h�Ŕ�
- *	UCS �ɕϊ����Ă����̃f�[�^�ɂ͖߂�Ȃ��̂Œ���
+ * The encodings based on CP932 are implemented in terms of Windows NLS and does not contain
+ * characters of JIS X 0212 character set.
  *
- *	<h3>JIS X 0208 �� UCS �̑Ή��ŕ����̉��߂����镶��</h3>
+ * 各エンコードの簡単な解説と Ascension での取り扱いについてコード中にコメントした
  *
- *	KUBOTA ���̒��� (http://www.debian.or.jp/~kubota/unicode-symbols-map2.html) �ɂ���
- *	JIS X 0208 ��12�̕����� UCS �Ƃ̑Ή��ɂ��ĕ����̕ϊ��\�ŉ��߂ɈႢ������B
- *	Ascension �ł� JISX0213 InfoCenter �̕\�� JIS X 0208 �AJIS X 0213 �̃e�[�u���쐬�ɗp���Ă���A
- *	�����̕\����L�����̔�r�ΏۂɊ܂܂�Ă���B���͂����̕\�̒��ŉ��߂ɗh��̂���12������
- *	libiconv EUC-JP �̂��̂ɕύX���A�����̃e�[�u�����쐬���� (Jis �f�B���N�g��)
+ * ISO-2022-JP* から UCS への変換において、
+ * 不正なエスケープシーケンスとその後続データは 1 バイトずつ等価なコード値の UCS に変換する。
+ * これはユーザが誤った変換を発見し易くなる効果があるが、そのまま同じエンコードで非
+ * UCS に変換しても元のデータには戻らないので注意
  *
- *	<h3>ISO-2022-JP-2004 ��3�̃G���R�[�h</h3>
+ * <h3>JIS X 0208 と UCS の対応で複数の解釈がある文字</h3>
  *
- *	Emacs �� ISO-2022-JP �Ƃ̌݊����̂��߂� ISO-2022-JP-3 �Ƃ��̕ώ�����킹��3�������Ă���B
- *	����� JIS X 0208 �� JIS X 0213 �Ŋ����̕�ۊ���قȂ邽�߂ł���B
- *	�ڍׂ�e�G���R�[�h�ɂ��Ă͈ȉ��̃y�[�W���Q��:
- *	<ul>
- *		<li>JIS X 0213�̓����ƁAEmacs��ł̎���
- *		(http://www.m17n.org/m17n2000_all_but_registration/proceedings/kawabata/jisx0213.html)</li>
- *		<li>Becky! JIS X 0213 �v���O�C��
- *		(http://members.at.infoseek.co.jp/jisx0213/bk0213.html)</li>
- *	</ul>
+ * KUBOTA 氏の調査 (http://www.debian.or.jp/~kubota/unicode-symbols-map2.html) によれば
+ * JIS X 0208 の 12 個の文字は UCS との対応について複数の変換表で解釈に違いがある。
+ * Ascension では JISX0213 InfoCenter の表を JIS X 0208 、JIS X 0213 のテーブル作成に用いており、
+ * これらの表も上記調査の比較対象に含まれている。私はこれらの表の中で解釈に揺れのある12文字を
+ * libiconv EUC-JP のものに変更し、自分のテーブルを作成した (Jis ディレクトリ)
  *
- *	<h3>����</h3>
+ * <h3>ISO-2022-JP-2004 の3つのエンコード</h3>
  *
- *	JIS X 0213 �ɂ͍����\�Ȕ����L�����܂܂�Ă���AUCS ����̕ϊ���
- *	JIS ���ɖ��������ςݕ����ɂ��Ă͊�b�����Ɣ����L���ɕ������邱�Ƃŗ��_��͕\���ł���B
- *	������ Ascension �ł͂��̕������s��Ȃ��A�����_�ł͕ϊ��͕s�\�ł���B
- *	JIS X 0213 �Ɍ���鍇���ς݉����ɂ��Ă͑Ή����Ă���
+ * Emacs は ISO-2022-JP との互換性のために ISO-2022-JP-3 とその変種を合わせて3つ実装している。
+ * これは JIS X 0208 と JIS X 0213 で漢字の包摂基準が異なるためである。
+ * 詳細や各エンコードについては以下のページを参照:
  *
- *	<h3>�����L���̍���</h3>
+ * - JIS X 0213の特徴と、Emacs上での実装
+ *   (http://www.m17n.org/m17n2000_all_but_registration/proceedings/kawabata/jisx0213.html)
+ * - Becky! JIS X 0213 プラグイン
+ *   (http://members.at.infoseek.co.jp/jisx0213/bk0213.html)</li>
  *
- *	JIS X 0213 ��2�̐����L���A�㏸�� (1-11-69) �Ɖ��~�� (1-11-70) �ɒ��ڑΉ����� UCS �����͖����A
- *	2�̃R�[�h�|�C���g�̍������Ή�����ƍl������B���Ȃ킿 JIS ���� UCS �ւ̕ϊ��ɂ����āA�㏸����
- *	U+02E9+02E5�A���~���� U+02E5+02E9 �ƂȂ�B���������̂悤�ȒP���ȕϊ����s���� JIS �� UCS
- *	�̃R�[�h�������������Ă��܂��悤�� (http://wakaba-web.hp.infoseek.co.jp/table/jis-note.ja.html)�B
- *	Ascension �ł� ZWNJ ���g���č����ƈӐ}�����R�[�h�|�C���g�̑g�ݍ��킹�Ƃ����łȂ����̂���ʂ���B
- *	�܂�AJIS ���Œ��� (1-11-64) �ƒ��� (1-11-68) ������ł���ꍇ�́A���ꂼ��̕����� UCS
- *	�ɕϊ����ĊԂ� ZWNJ �����ށB�t�� UCS ���� U+02E5 �� U+02E9 ������ł���ꍇ�� JIS
- *	�̑Ή�����1�̐����L���ɕϊ����A�Ԃ� ZWNJ ������ꍇ��2�̐����L���ɕϊ�����
+ * <h3>Limitations</h3>
+ *
+ * JIS X 0213 には合成可能な発音記号が含まれており、UCS からの変換で
+ * JIS 側に無い合成済み文字については基礎文字と発音記号に分解することで理論上は表現できる。
+ * しかし Ascension ではこの分解を行わなず、現時点では変換は不可能である。
+ * JIS X 0213 に現れる合成済み仮名については対応している
+ *
+ * <h3>声調記号の合字</h3>
+ *
+ * JIS X 0213 の 2 つの声調記号、上昇調 (1-11-69) と下降調 (1-11-70) に直接対応する UCS 文字は無く、
+ * 2つのコードポイントの合字が対応すると考えられる。すなわち JIS から UCS への変換において、上昇調は
+ * U+02E9+02E5、下降調は U+02E5+02E9 となる。しかしこのような単純な変換を行うと JIS と UCS
+ * のコード交換性が失われてしまうようだ (http://wakaba-web.hp.infoseek.co.jp/table/jis-note.ja.html)。
+ * Ascension では ZWNJ を使って合字と意図したコードポイントの組み合わせとそうでないものを区別する。
+ * つまり、JIS 側で超高 (1-11-64) と超低 (1-11-68) が並んでいる場合は、それぞれの文字を UCS
+ * に変換して間に ZWNJ を挟む。逆に UCS 側で U+02E5 と U+02E9 が並んでいる場合は JIS
+ * の対応する 1 つの声調記号に変換し、間に ZWNJ がある場合は2つの声調記号に変換する
  */
 
-#include "stdafx.h"
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 #include "../encoder.hpp"
-#include <memory>		// std::auto_ptr
+#include <memory>		// std.auto_ptr
 #include <map>
-#include <algorithm>	// std::binary_search
+#include <algorithm>	// std.binary_search
 using namespace ascension;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace ascension::unicode;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_BEGIN_ENCODER_CLASS(ShiftJISEncoder, standard::MIB_SHIFT_JIS, "Shift_JIS")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
+		ASCENSION_ENCODER_ALIASES("MS_Kanji\0" "csShiftJIS\0")
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(EUCJPEncoder, standard::MIB_EUC_JP, "EUC-JP")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(3)
+		ASCENSION_ENCODER_ALIASES("Extended_UNIX_Code_Packed_Format_for_Japanese\0" "csEUCPkdFmtJapanese\0")
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JPEncoder, standard::MIB_ISO_2022_JP, "ISO-2022-JP")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(8)
+		ASCENSION_ENCODER_ALIASES("csISO2022JP\0")
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP2Encoder, standard::MIB_ISO_2022_JP_2, "ISO-2022-JP-2")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+		ASCENSION_ENCODER_ALIASES("csISO2022JP2\0")
+	ASCENSION_END_ENCODER_CLASS()
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP1Encoder, extended::MIB_JAPANESE_ISO_2022_JP_1, "ISO-2022-JP-1")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP2004Encoder, extended::MIB_JAPANESE_ISO_2022_JP_2004, "ISO-2022-JP-2004")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP2004StrictEncoder, extended::MIB_JAPANESE_ISO_2022_JP_2004_STRICT, "ISO-2022-JP-2004-strict")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP2004CompatibleEncoder, extended::MIB_JAPANESE_ISO_2022_JP_2004_COMPATIBLE, "ISO-2022-JP-2004-compatible")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP3Encoder, extended::MIB_JAPANESE_ISO_2022_JP_3, "ISO-2022-JP-3")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP3StrictEncoder, extended::MIB_JAPANESE_ISO_2022_JP_3_STRICT, "ISO-2022-JP-3-strict")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ISO2022JP3CompatibleEncoder, extended::MIB_JAPANESE_ISO_2022_JP_3_COMPATIBLE, "ISO-2022-JP-3-compatible")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(9)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(ShiftJIS2004Encoder, extended::MIB_JAPANESE_SHIFT_JIS_2004, "Shift_JIS-2004")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_ENCODER_CLASS(EUCJIS2004Encoder, extended::MIB_JAPANESE_EUC_JIS_2004, "EUC-JIS-2004")
+		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(3)
+	ASCENSION_END_ENCODER_CLASS()
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+	ASCENSION_DEFINE_ENCODING_DETECTOR(JISDetector, EncodingDetector::JIS_DETECTOR, "JISAutoDetect");
+} // namespace @0
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_SHIFTJIS, Japanese_ShiftJIS, 2, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_SHIFTJIS2004, Japanese_ShiftJIS2004, 2, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_EUC, Japanese_EUCJP, 3, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_EUCJIS2004, Japanese_EUCJIS2004, 3, 1)
-	DEFINE_ENCODER_CLASS_(51932, Japanese_EUCJPWindows)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP, Japanese_ISO2022JP, 8, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP1, Japanese_ISO2022JP1, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP2, Japanese_ISO2022JP2, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP2004, Japanese_ISO2022JP2004, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP2004_STRICT, Japanese_ISO2022JP2004_Strict, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP2004_COMPATIBLE, Japanese_ISO2022JP2004_Compatible, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP3, Japanese_ISO2022JP3, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP3_STRICT, Japanese_ISO2022JP3_Strict, 9, 1)
-	DEFINE_ENCODER_CLASS(CPEX_JAPANESE_ISO2022JP3_COMPATIBLE, Japanese_ISO2022JP3_Compatible, 9, 1)
-//	DEFINE_ENCODER_CLASS(50221, Japanese_ISO2022JPWindows)
-END_ENCODER_DEFINITION()
-DEFINE_DETECTOR(CPEX_JAPANESE_AUTODETECT, Japanese);
-
-
-#define IS_ISO2022JP3(cp)	\
-	(cp >= CPEX_JAPANESE_ISO2022JP3 && cp <= CPEX_JAPANESE_ISO2022JP3_COMPATIBLE)
-
-#define IS_ISO2022JP2004(cp)	\
-	(cp >= CPEX_JAPANESE_ISO2022JP2004 && cp <= CPEX_JAPANESE_ISO2022JP2004_COMPATIBLE)
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#	define IS_ISO_2022_JP_3(mib)	\
+		(mib >= extended::MIB_JAPANESE_ISO_2022_JP_3 && mib <= extended::MIB_JAPANESE_ISO_2022_JP_3_COMPATIBLE)
+#	define IS_ISO_2022_JP_2004(mib)	\
+		(mib >= extended::MIB_JAPANESE_ISO_2022_JP_2004 && mib <= extended::MIB_JAPANESE_ISO_2022_JP_2004_COMPATIBLE)
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 #define JK(ku, ten)	((ku << 8) | ten) + 0x2020
 
 
 namespace {
-	// JIS <-> UCS �ϊ��e�[�u�� (make_table.pl ���쐬�����t�@�C����؂荏�񂾂���)�B
-	// JIS X 0213 �ɂ��Ă͗������Ƃ� 32 �r�b�g���l�Ńe�[�u�����쐬�����B
-	// UCS ���� 0x0000-0xFFFF �͂��̂܂� UCS-2�A0x10000-0x10FFFF �� UCS-4�A0xFFFFFFF �ȏ�� UCS-2 2������\��
-	// JIS ���ł�
+	// JIS <-> UCS 変換テーブル (make_table.pl より作成したファイルを切り刻んだもの)。
+	// JIS X 0213 については両方向とも 32 ビット数値でテーブルを作成した。
+	// UCS 側で 0x0000-0xFFFF はそのまま UCS-2、0x10000-0x10FFFF は UCS-4、0xFFFFFFF 以上は UCS-2 2文字を表す
+	// JIS 側では
 
 	const uchar ESC = '\x1B';
 	const uchar SS2 = static_cast<uchar>(0x8E);
 	const uchar SS3 = static_cast<uchar>(0x8F);
-	const wchar_t ZWNJ = L'\x200C';	// Zero Width Non-Joiner (U+200C)
-	const wchar_t JISX0208toUCS_2121[] = {	// 0x2121-0x2840
+	const Char JISX0208toUCS_2121[] = {	// 0x2121-0x2840
 		#include "Jis\JISX0208toUCS_2121"
 	};
-	const wchar_t JISX0208toUCS_3021[] = {	// 0x3021-0x4F53
+	const Char JISX0208toUCS_3021[] = {	// 0x3021-0x4F53
 		#include "Jis\JISX0208toUCS_3021"
 	};
-	const wchar_t JISX0208toUCS_5021[] = {	// 0x5021-0x7426
+	const Char JISX0208toUCS_5021[] = {	// 0x5021-0x7426
 		#include "Jis\JISX0208toUCS_5021"
 	};
 	const ushort UCStoJISX0208_00A2[] = {	// U+00A2-U+00F7
@@ -146,13 +173,13 @@ namespace {
 	const ushort UCStoJISX0208_FF01[] = {	// U+FF01-U+FFE5
 		#include "Jis\UCStoJISX0208_FF01"
 	};
-	const wchar_t JISX0212toUCS_222F[] = {	// 0x222F-0x2271
+	const Char JISX0212toUCS_222F[] = {	// 0x222F-0x2271
 		#include "Jis\JISX0212toUCS_222F"
 	};
-	const wchar_t JISX0212toUCS_2661[] = {	// 0x2661-0x2B77
+	const Char JISX0212toUCS_2661[] = {	// 0x2661-0x2B77
 		#include "Jis\JISX0212toUCS_2661"
 	};
-	const wchar_t JISX0212toUCS_3021[] = {	// 0x3021-0x6D63
+	const Char JISX0212toUCS_3021[] = {	// 0x3021-0x6D63
 		#include "Jis\JISX0212toUCS_3021"
 	};
 	const ushort UCStoJISX0212_007E[] = {	// U+007E-U+045F
@@ -204,59 +231,59 @@ namespace {
 		#include "Jis\UCStoJISX0213_FE45"
 	};
 
-	// ISO-2022-JP-3 �̋֎~���� (JIS X 0213:2000 ������2�\1)
-	const ushort ProhibitedIdeographs_2000[] = {	// �s�A������
-		JK( 3,26),JK( 3,27),JK( 3,28),JK( 3,29),JK( 3,30),JK( 3,31),	// <�L��>
+	// ISO-2022-JP-3 の禁止漢字 (JIS X 0213:2000 附属書 2 表 1)
+	const ushort ProhibitedIdeographs_2000[] = {	// 不連続部分
+		JK( 3,26),JK( 3,27),JK( 3,28),JK( 3,29),JK( 3,30),JK( 3,31),	// <記号>
 		JK( 3,32),
-		JK( 3,59),JK( 3,60),JK( 3,61),JK( 3,62),JK( 3,63),JK( 3,64),	// <�L��>
+		JK( 3,59),JK( 3,60),JK( 3,61),JK( 3,62),JK( 3,63),JK( 3,64),	// <記号>
 		JK( 3,91),JK( 3,92),JK( 3,93),JK( 3,94),
-		JK( 4,84),JK( 4,85),JK( 4,86),JK( 8,87),JK( 4,88),JK( 4,89),	// <������>
+		JK( 4,84),JK( 4,85),JK( 4,86),JK( 8,87),JK( 4,88),JK( 4,89),	// <平仮名>
 		JK( 4,90),JK( 4,91),
-		JK( 5,87),JK( 5,88),JK( 5,89),JK( 5,90),JK( 5,91),JK( 5,92),	// <�Љ���>
+		JK( 5,87),JK( 5,88),JK( 5,89),JK( 5,90),JK( 5,91),JK( 5,92),	// <片仮名>
 		JK( 5,93),JK( 5,94),
-		JK( 6,25),JK( 6,26),JK( 6,27),JK( 6,28),JK( 6,29),JK( 6,30),	// <�g�����v>
+		JK( 6,25),JK( 6,26),JK( 6,27),JK( 6,28),JK( 6,29),JK( 6,30),	// <トランプ>
 		JK( 6,31),JK( 6,32),
-												JK(13,83),JK(13,88),	// �@�@�@�@����
-		JK(13,89),JK(13,93),JK(13,94),									// ���E�E
-														  JK(16, 2),	// ��
-		JK(16,19),JK(16,79),JK(17,58),JK(17,75),JK(17,79),JK(18, 3),	// ����y������
-		JK(18, 9),JK(18,10),JK(18,11),JK(18,25),JK(18,50),JK(18,89),	// ���������Љ�
-		JK(19, 4),JK(19,20),JK(19,21),JK(19,34),JK(19,41),JK(19,69),	// �C�S�T�a�h��
-		JK(19,73),JK(19,76),JK(19,86),JK(19,90),JK(20,18),JK(20,33),	// ������������
-		JK(20,35),JK(20,50),JK(20,79),JK(20,91),JK(21, 7),JK(21,85),	// ���Њ���F��
-		JK(22, 2),JK(22,31),JK(22,33),JK(22,38),JK(22,48),JK(22,64),	// �������ċ΋�
-		JK(22,77),JK(23,16),JK(23,39),JK(23,59),JK(23,66),JK(24, 6),	// ��O�f�z����
-		JK(24,20),JK(25,60),JK(25,77),JK(25,82),JK(25,85),JK(27, 6),	// ���{�������E
-		JK(27,67),JK(27,75),JK(28,40),JK(28,41),JK(28,49),JK(28,50),	// �����Ǝǎώ�
-		JK(28,52),JK(29,11),JK(29,13),JK(29,43),JK(29,75),JK(29,77),	// �ҏJ�L�j����
-		JK(29,79),JK(29,80),JK(29,84),JK(30,36),JK(30,45),JK(30,53),	// �������ˏ�
-		JK(30,63),JK(30,85),JK(31,32),JK(31,57),JK(32, 5),JK(32,65),	// �ݏ�_�x����
-		JK(32,70),JK(33, 8),JK(33,36),JK(33,46),JK(33,56),JK(33,63),	// ��G�c�m�w�~
-		JK(33,67),JK(33,93),JK(33,94),JK(34, 3),JK(34, 8),JK(34,45),	// ������������
-		JK(34,86),JK(35,18),JK(35,29),JK(35,86),JK(35,88),JK(36, 7),	// ���Q�\������
-		JK(36, 8),JK(36,45),JK(36,47),JK(36,59),JK(36,87),JK(37,22),	// ���˒ْ͒��U
-		JK(37,31),JK(37,52),JK(37,55),JK(37,78),JK(37,83),JK(37,88),	// �^�s�v������
-		JK(38,33),JK(38,34),JK(38,45),JK(38,81),JK(38,86),JK(39,25),	// �����˓���X
-		JK(39,63),JK(39,72),JK(40,14),JK(40,16),JK(40,43),JK(40,53),	// �~�������ɔ�
-		JK(40,60),JK(40,74),JK(41,16),JK(41,48),JK(41,49),JK(41,50),	// �ڔ�O�o�p�q
-		JK(41,51),JK(41,78),JK(42, 1),JK(42,27),JK(42,29),JK(42,57),	// �r����������
-		JK(42,66),JK(43,43),JK(43,47),JK(43,72),JK(43,74),JK(43,89),	// ���j�n������
-		JK(44,40),JK(44,45),JK(44,65),JK(44,89),JK(45,20),JK(45,58),	// �Ɩ˖ߖ��S�y
-		JK(45,73),JK(45,74),JK(45,83),JK(46,20),JK(46,26),JK(46,48),	// ������������
-		JK(46,62),JK(46,64),JK(46,81),JK(46,82),JK(46,93),JK(47, 3),	// �ܗޗ����B
-		JK(47,13),JK(47,15),JK(47,22),JK(47,25),JK(47,26),JK(47,31),	// �L�N�U�X�Y�^
-							JK(48,54),JK(52,68),JK(57,88),JK(58,25),	// �@�@�Ԛ❘��
-		JK(59,56),JK(59,77),JK(62,25),JK(62,85),JK(63,70),JK(64,86),	// �w����������
-		JK(66,72),JK(66,74),JK(67,62),JK(68,38),JK(73, 2),JK(73,14),	// �����}���A�M
-		JK(73,58),JK(74, 4),JK(75,61),JK(76,45),JK(77,78),JK(80,55),	// �y��|�����
-		JK(80,84),JK(82,45),JK(82,84),JK(84, 1),JK(84, 2),JK(84, 3),	// ���������
-		JK(84, 4),JK(84, 5),JK(84, 6),									// ���
+												JK(13,83),JK(13,88),	// 　　　　∮∟
+		JK(13,89),JK(13,93),JK(13,94),									// ⊿・・
+														  JK(16, 2),	// 唖
+		JK(16,19),JK(16,79),JK(17,58),JK(17,75),JK(17,79),JK(18, 3),	// 鯵逸謁焔縁横
+		JK(18, 9),JK(18,10),JK(18,11),JK(18,25),JK(18,50),JK(18,89),	// 鴬鴎黄温禍悔
+		JK(19, 4),JK(19,20),JK(19,21),JK(19,34),JK(19,41),JK(19,69),	// 海慨概蛎撹喝
+		JK(19,73),JK(19,76),JK(19,86),JK(19,90),JK(20,18),JK(20,33),	// 渇褐竃噛寛漢
+		JK(20,35),JK(20,50),JK(20,79),JK(20,91),JK(21, 7),JK(21,85),	// 潅諌器既祈虚
+		JK(22, 2),JK(22,31),JK(22,33),JK(22,38),JK(22,48),JK(22,64),	// 侠郷響尭勤謹
+		JK(22,77),JK(23,16),JK(23,39),JK(23,59),JK(23,66),JK(24, 6),	// 躯薫掲頚撃研
+		JK(24,20),JK(25,60),JK(25,77),JK(25,82),JK(25,85),JK(27, 6),	// 鹸砿麹穀黒殺
+		JK(27,67),JK(27,75),JK(28,40),JK(28,41),JK(28,49),JK(28,50),	// 祉視屡蕊煮社
+		JK(28,52),JK(29,11),JK(29,13),JK(29,43),JK(29,75),JK(29,77),	// 者繍臭祝暑渚
+		JK(29,79),JK(29,80),JK(29,84),JK(30,36),JK(30,45),JK(30,53),	// 緒署諸渉祥蒋
+		JK(30,63),JK(30,85),JK(31,32),JK(31,57),JK(32, 5),JK(32,65),	// 醤状神靭瀬節
+		JK(32,70),JK(33, 8),JK(33,36),JK(33,46),JK(33,56),JK(33,63),	// 蝉賎祖僧層掻
+		JK(33,67),JK(33,93),JK(33,94),JK(34, 3),JK(34, 8),JK(34,45),	// 巣増憎贈即騨
+		JK(34,86),JK(35,18),JK(35,29),JK(35,86),JK(35,88),JK(36, 7),	// 琢嘆箪猪著徴
+		JK(36, 8),JK(36,45),JK(36,47),JK(36,59),JK(36,87),JK(37,22),	// 懲塚掴壷禎填
+		JK(37,31),JK(37,52),JK(37,55),JK(37,78),JK(37,83),JK(37,88),	// 顛都砺梼涛祷
+		JK(38,33),JK(38,34),JK(38,45),JK(38,81),JK(38,86),JK(39,25),	// 徳涜突難迩嚢
+		JK(39,63),JK(39,72),JK(40,14),JK(40,16),JK(40,43),JK(40,53),	// 梅蝿溌醗繁晩
+		JK(40,60),JK(40,74),JK(41,16),JK(41,48),JK(41,49),JK(41,50),	// 卑碑桧賓頻敏
+		JK(41,51),JK(41,78),JK(42, 1),JK(42,27),JK(42,29),JK(42,57),	// 瓶侮福併塀勉
+		JK(42,66),JK(43,43),JK(43,47),JK(43,72),JK(43,74),JK(43,89),	// 歩頬墨毎槙侭
+		JK(44,40),JK(44,45),JK(44,65),JK(44,89),JK(45,20),JK(45,58),	// 免麺戻薮祐遥
+		JK(45,73),JK(45,74),JK(45,83),JK(46,20),JK(46,26),JK(46,48),	// 莱頼欄隆虜緑
+		JK(46,62),JK(46,64),JK(46,81),JK(46,82),JK(46,93),JK(47, 3),	// 涙類暦歴練錬
+		JK(47,13),JK(47,15),JK(47,22),JK(47,25),JK(47,26),JK(47,31),	// 廊朗篭蝋郎録
+							JK(48,54),JK(52,68),JK(57,88),JK(58,25),	// 　　儘壺攪攅
+		JK(59,56),JK(59,77),JK(62,25),JK(62,85),JK(63,70),JK(64,86),	// 檜檮濤灌煕瑶
+		JK(66,72),JK(66,74),JK(67,62),JK(68,38),JK(73, 2),JK(73,14),	// 礦礪竈籠蘂藪
+		JK(73,58),JK(74, 4),JK(75,61),JK(76,45),JK(77,78),JK(80,55),	// 蠣蠅諫賤邇靱
+		JK(80,84),JK(82,45),JK(82,84),JK(84, 1),JK(84, 2),JK(84, 3),	// 頸鰺鶯堯槇遙
+		JK(84, 4),JK(84, 5),JK(84, 6),									// 瑤凜熙
 	};
-	const ushort ProhibitedIdeographs_2004[] = {	// ISO-2022-JP-2004 �̋֎~���� (JIS X0213:2004 ������2�\2)
-		JK(14, 1),JK(15,94),JK(17,19),JK(22,70),JK(23,50),JK(28,24),	// �E�E�R��q��
-		JK(33,73),JK(38,61),JK(39,77),JK(47,52),JK(47,94),JK(53,11),	// ���۔��E�E�J
-		JK(54, 2),JK(54,58),JK(84, 7),JK(94,90),JK(94,91),JK(94,92),	// ����E�E�E�E
-		JK(94,93),JK(94,94)												// �E�E
+	const ushort ProhibitedIdeographs_2004[] = {	// ISO-2022-JP-2004 の禁止漢字 (JIS X0213:2004 附属書 2 表 2)
+		JK(14, 1),JK(15,94),JK(17,19),JK(22,70),JK(23,50),JK(28,24),	// ・・嘘倶繋叱
+		JK(33,73),JK(38,61),JK(39,77),JK(47,52),JK(47,94),JK(53,11),	// 痩呑剥・・妍
+		JK(54, 2),JK(54,58),JK(84, 7),JK(94,90),JK(94,91),JK(94,92),	// 屏并・・・・
+		JK(94,93),JK(94,94)												// ・・
 	};
 	const ushort CJK_EXT_B_UCS[] = {
 		0x000B,0x0089,0x00A2,0x00A4,0x01A2,0x0213,0x032B,0x0371,0x0381,0x03F9,0x044A,0x0509,0x05D6,0x0628,0x074F,0x0807,
@@ -308,7 +335,7 @@ namespace {
 		UNDESIGNATED = KSC5601 + 1 , ISO_8859_1, ISO_8859_7
 	};
 
-	// ISO-2022-JP-3 �̋֎~������
+	// ISO-2022-JP-3 の禁止漢字か
 	inline bool isISO2022JP3ProhibitedIdeograph(ushort jis) {
 		return (jis >= JK(6, 57) && jis <= JK(6, 94))
 			|| (jis >= JK(7, 34) && jis <= JK(7, 48))
@@ -322,75 +349,75 @@ namespace {
 			|| (jis >= JK(84, 8) && jis <= JK(94, 89))
 			|| binary_search(ProhibitedIdeographs_2000, endof(ProhibitedIdeographs_2000), jis);
 	}
-	// JIS X 0213:2004 �Œǉ����ꂽ�֎~������
+	// JIS X 0213:2004 で追加された禁止漢字か
 	inline bool isISO2022JP2004ProhibitedIdeograph(ushort jis) {
 		return binary_search(ProhibitedIdeographs_2004, endof(ProhibitedIdeographs_2004), jis);
 	}
 
-	// JIS X 0201 Roman -> UCS �ϊ�
-	inline wchar_t jisX0201RomanToUCS(uchar ch) {
-		if(ch == 0x5C)						return 0x00A5;					// Yen Sign
-		else if(ch == 0x7E)					return 0x203E;					// Overline
-		else if(ch >= 0x20 && ch <= 0x7D)	return ch;						// 7-bit
-		else								return REPLACEMENT_CHARACTER;	// invalid
+	// JIS X 0201 Roman -> UCS 変換
+	inline Char jisX0201RomanToUCS(uchar c) {
+		if(c == 0x5C)					return 0x00A5;					// Yen Sign
+		else if(c == 0x7E)				return 0x203E;					// Overline
+		else if(c >= 0x20 && c <= 0x7D)	return c;						// 7-bit
+		else							return REPLACEMENT_CHARACTER;	// invalid
 	}
 
-	// UCS -> JIS X 0201 Roman �ϊ�
-	inline uchar ucsToJISX0201Roman(wchar_t ch) {
-		if(ch >= 0x0020 && ch <= 0x005B)		return BIT8_MASK(ch);	// 7-bit
-		else if(ch >= 0x005D && ch <= 0x007D)	return BIT8_MASK(ch);	// 7-bit
-		else if(ch == 0x00A5)					return 0x5C;			// Yen Sign
-		else if(ch == 0x203E)					return 0x7E;			// Overline
-		else									return 0x00;			// invalid
+	// UCS -> JIS X 0201 Roman 変換
+	inline uchar ucsToJISX0201Roman(Char c) {
+		if(c >= 0x0020 && c <= 0x005B)		return mask8Bit(c);	// 7-bit
+		else if(c >= 0x005D && c <= 0x007D)	return mask8Bit(c);	// 7-bit
+		else if(c == 0x00A5)				return 0x5C;		// Yen Sign
+		else if(c == 0x203E)				return 0x7E;		// Overline
+		else								return 0x00;		// invalid
 	}
 
-	// JIS X 0201 Kana -> UCS �ϊ�
-	inline wchar_t jisX0201KanaToUCS(uchar ch) {
-		return (ch >= 0xA1 && ch <= 0xDF) ? ch + 0xFEC0 : REPLACEMENT_CHARACTER;
+	// JIS X 0201 Kana -> UCS 変換
+	inline Char jisX0201KanaToUCS(uchar c) {
+		return (c >= 0xA1 && c <= 0xDF) ? c + 0xFEC0 : REPLACEMENT_CHARACTER;
 	}
 
-	// UCS -> JIS X 0201 Kana �ϊ�
-	inline uchar ucsToJISX0201Kana(wchar_t ch) {
-		return (ch >= 0xFF61 && ch <= 0xFF9F) ? BIT8_MASK(ch - 0xFEC0) : 0x00;
+	// UCS -> JIS X 0201 Kana 変換
+	inline uchar ucsToJISX0201Kana(Char c) {
+		return (c >= 0xFF61 && c <= 0xFF9F) ? mask8Bit(c - 0xFEC0) : 0x00;
 	}
 
-	// JIS X 0208 -> UCS �ϊ�
-	inline wchar_t jisX0208ToUCS(ushort jis) {
+	// JIS X 0208 -> UCS 変換
+	inline Char jisX0208ToUCS(ushort jis) {
 		if(jis >= 0x2121 && jis < 0x2121 + countof(JISX0208toUCS_2121))			return JISX0208toUCS_2121[jis - 0x2121];
 		else if(jis >= 0x3021 && jis < 0x3021 + countof(JISX0208toUCS_3021))	return JISX0208toUCS_3021[jis - 0x3021];
 		else if(jis >= 0x5021 && jis < 0x5021 + countof(JISX0208toUCS_5021))	return JISX0208toUCS_5021[jis - 0x5021];
 		else																	return REPLACEMENT_CHARACTER;
 	}
 
-	// UCS -> JIS X 0208 �ϊ�
-	inline ushort ucsToJISX0208(wchar_t ch) {
-		if(ch >= 0x00A2 && ch < 0x00A2 + countof(UCStoJISX0208_00A2))		return UCStoJISX0208_00A2[ch - 0x00A2];
-		else if(ch >= 0x0391 && ch < 0x0391 + countof(UCStoJISX0208_0391))	return UCStoJISX0208_0391[ch - 0x0391];
-		else if(ch >= 0x2010 && ch < 0x2010 + countof(UCStoJISX0208_2010))	return UCStoJISX0208_2010[ch - 0x2010];
-		else if(ch >= 0x2500 && ch < 0x2500 + countof(UCStoJISX0208_2500))	return UCStoJISX0208_2500[ch - 0x2500];
-		else if(ch >= 0x3000 && ch < 0x3000 + countof(UCStoJISX0208_3000))	return UCStoJISX0208_3000[ch - 0x3000];
-		else if(ch >= 0x4E00 && ch < 0x4E00 + countof(UCStoJISX0208_4E00))	return UCStoJISX0208_4E00[ch - 0x4E00];
-		else if(ch >= 0xFF01 && ch < 0xFF01 + countof(UCStoJISX0208_FF01))	return UCStoJISX0208_FF01[ch - 0xFF01];
+	// UCS -> JIS X 0208 変換
+	inline ushort ucsToJISX0208(Char c) {
+		if(c >= 0x00A2 && ch < 0x00A2 + countof(UCStoJISX0208_00A2))		return UCStoJISX0208_00A2[c - 0x00A2];
+		else if(c >= 0x0391 && c < 0x0391 + countof(UCStoJISX0208_0391))	return UCStoJISX0208_0391[c - 0x0391];
+		else if(c >= 0x2010 && c < 0x2010 + countof(UCStoJISX0208_2010))	return UCStoJISX0208_2010[c - 0x2010];
+		else if(c >= 0x2500 && c < 0x2500 + countof(UCStoJISX0208_2500))	return UCStoJISX0208_2500[c - 0x2500];
+		else if(c >= 0x3000 && c < 0x3000 + countof(UCStoJISX0208_3000))	return UCStoJISX0208_3000[c - 0x3000];
+		else if(c >= 0x4E00 && c < 0x4E00 + countof(UCStoJISX0208_4E00))	return UCStoJISX0208_4E00[c - 0x4E00];
+		else if(c >= 0xFF01 && c < 0xFF01 + countof(UCStoJISX0208_FF01))	return UCStoJISX0208_FF01[c - 0xFF01];
 		else																return 0x0000;
 	}
 
-	// JIS X 0212 -> UCS �ϊ�
-	inline wchar_t jisX0212ToUCS(ushort jis) {
+	// JIS X 0212 -> UCS 変換
+	inline Char jisX0212ToUCS(ushort jis) {
 		if(jis >= 0x222F && jis < 0x222F + countof(JISX0212toUCS_222F))			return JISX0212toUCS_222F[jis - 0x222F];
 		else if(jis >= 0x2661 && jis < 0x2661 + countof(JISX0212toUCS_2661))	return JISX0212toUCS_2661[jis - 0x2661];
 		else if(jis >= 0x3021 && jis < 0x3021 + countof(JISX0212toUCS_3021))	return JISX0212toUCS_3021[jis - 0x3021];
 		else																	return REPLACEMENT_CHARACTER;
 	}
 
-	// UCS -> JIS X 0212 �ϊ�
-	inline ushort ucsToJISX0212(wchar_t ch) {
-		if(ch >= 0x007E && ch < 0x007E + countof(UCStoJISX0212_007E))		return UCStoJISX0212_007E[ch - 0x007E];
-		else if(ch >= 0x2116 && ch < 0x2116 + countof(UCStoJISX0212_2116))	return UCStoJISX0212_2116[ch - 0x2116];
-		else if(ch >= 0x4E02 && ch < 0x4E02 + countof(UCStoJISX0212_4E02))	return UCStoJISX0212_4E02[ch - 0x4E02];
+	// UCS -> JIS X 0212 変換
+	inline ushort ucsToJISX0212(Char c) {
+		if(c >= 0x007E && c < 0x007E + countof(UCStoJISX0212_007E))			return UCStoJISX0212_007E[c - 0x007E];
+		else if(c >= 0x2116 && c < 0x2116 + countof(UCStoJISX0212_2116))	return UCStoJISX0212_2116[c - 0x2116];
+		else if(c >= 0x4E02 && c < 0x4E02 + countof(UCStoJISX0212_4E02))	return UCStoJISX0212_4E02[c - 0x4E02];
 		else																return 0x0000;
 	}
 
-	// JIS X 0213 ��1�� -> UCS �ϊ�
+	// JIS X 0213 第1面 -> UCS 変換
 	inline ulong jisX0213P1ToUCS(ushort jis) {
 		if(jis >= 0x2121 && jis < 0x2121 + countof(JISX0213P1toUCS_2121))		return JISX0213P1toUCS_2121[jis - 0x2121];
 		else if(jis >= 0x4F54 && jis < 0x4F54 + countof(JISX0213P1toUCS_4F54))	return JISX0213P1toUCS_4F54[jis - 0x4F54];
@@ -398,7 +425,7 @@ namespace {
 		else																	return jisX0208ToUCS(jis);
 	}
 
-	// JIS X 0213 ��2�� -> UCS �ϊ�
+	// JIS X 0213 第2面 -> UCS 変換
 	inline ulong jisX0213P2ToUCS(ushort jis) {
 		if(jis >= 0x2121 && jis < 0x2121 + countof(JISX0213P2toUCS_2121))		return JISX0213P2toUCS_2121[jis - 0x2121];
 		else if(jis >= 0x2321 && jis < 0x2321 + countof(JISX0213P2toUCS_2321))	return JISX0213P2toUCS_2321[jis - 0x2321];
@@ -408,8 +435,8 @@ namespace {
 		else																	return 0x00000000;
 	}
 
-	// UCS -> JIS X 0213 �ϊ� (eaten �͓��͎��� ucs �̕������A�o�͎��͕ϊ��Ɏg�p����������)
-	inline ushort ucsToJISX0213(const wchar_t* ucs, ushort& eaten, bool& plane2) {
+	// UCS -> JIS X 0213 変換 (eaten は入力時は ucs の文字数、出力時は変換に使用した文字数)
+	inline ushort ucsToJISX0213(const Char* ucs, ushort& eaten, bool& plane2) {
 		assert(ucs != 0 && eaten != 0);
 		if(cjkExtBtoJis.empty()) {
 			for(size_t i = 0; i < countof(CJK_EXT_B_UCS); ++i)
@@ -495,13 +522,16 @@ namespace {
 		return BIT16_MASK(jis);
 	}
 
-	// ISO-2022-JP-X -> UTF-16 �ϊ��w���p
-	size_t convertISO2022JPXToUTF16(CodePage cp, wchar_t* dest, size_t destLength,
+	// ISO-2022-JP-X -> UTF-16 変換ヘルパ
+	size_t convertISO2022JPXToUTF16(MIBenum mib, Char* dest, size_t destLength,
 			const uchar* src, size_t srcLength, IUnconvertableCharCallback* callback) {
-		assert(cp == CPEX_JAPANESE_ISO2022JP || cp == CPEX_JAPANESE_ISO2022JP1
-			|| cp == CPEX_JAPANESE_ISO2022JP2 || IS_ISO2022JP3(cp) || IS_ISO2022JP2004(cp));
+		assert(mib == standard::MIB_ISO_2022_JP || mib == standard::MIB_ISO_2022_JP_2
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+			|| mib == extended::MIB_JAPANESE_ISO_2022_JP_1 || IS_ISO_2022_JP_3(mib) || IS_ISO_2022_JP_2004(mib)
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+		);
 
-		// �܂߂邱�Ƃ̂ł��镶���W���Ǝw���V�[�P���X�͎��̒ʂ�B���ɋL�q���������� G0:
+		// 含めることのできる文字集合と指示シーケンスは次の通り。特に記述が無い限り G0:
 		//
 		// ISO-2022-JP
 		//	ASCII					ESC ( B
@@ -509,49 +539,49 @@ namespace {
 		//	JIS X 0208:1978			ESC $ @
 		//	JIS X 0208:1983			ESC $ B
 		//
-		// ISO-2022-JP-1 (ISO-2022-JP �Ɉȉ���ǉ�)
+		// ISO-2022-JP-1 (ISO-2022-JP に以下を追加)
 		//	JIS X 0212:1990			ESC $ ( D
 		//
-		// ISO-2022-JP-2 (ISO-2022-JP-1 �Ɉȉ���ǉ�)
+		// ISO-2022-JP-2 (ISO-2022-JP-1 に以下を追加)
 		//	GB2312:1980				ESC $ A
 		//	KSC5601:1987			ESC $ ( C
-		//	ISO-8859-1				ESC . A		96�����W���ɂ� G2
-		//	ISO-8859-7				ESC . F		96�����W���ɂ� G2
+		//	ISO-8859-1				ESC . A		96 文字集合につき G2
+		//	ISO-8859-7				ESC . F		96 文字集合につき G2
 		//
 		// ISO-2022-JP-3
 		//	ASCII					ESC ( B
-		//	JIS X 0213:2000 1��		ESC $ ( O
-		//							ESC $ B		�֎~����������
-		//	JIS X 0213:2000 2��		ESC $ ( P
+		//	JIS X 0213:2000 1 面	ESC $ ( O
+		//							ESC $ B		禁止漢字がある
+		//	JIS X 0213:2000 2 面	ESC $ ( P
 		//
 		// ISO-2022-JP-2004
 		//	ASCII					ESC ( B
-		//	JIS X 0213:2004 1��		ESC $ ( Q
-		//							ESC $ B		�֎~����������
-		//	JIS X 0213:2004 2��		ESC $ ( P
-		//	JIS X 0213:2000 1��		ESC $ ( O	�֎~����������
+		//	JIS X 0213:2004 1 面	ESC $ ( Q
+		//							ESC $ B		禁止漢字がある
+		//	JIS X 0213:2004 2 面	ESC $ ( P
+		//	JIS X 0213:2000 1 面	ESC $ ( O	禁止漢字がある
 		//
-		// JIS X 0213 1�ʂ̎w���ł� JIS X 0208 ���w�����邽�߂Ɏg�p���Ă��� ESC $ B ���p���邱�Ƃ��F�߂��Ă��邪�A
-		// ��ۊ�̕ύX�ɂ��A���̌݊��V�[�P���X�� JIS X 0213 1�ʂ��w�������ꍇ�AJIS X 0208
-		// �Ɋ܂܂�镶���̒��Ŏg�p���֎~����Ă��镶��������
+		// JIS X 0213 1面の指示では JIS X 0208 を指示するために使用していた ESC $ B を代用することが認められているが、
+		// 包摂基準の変更により、この互換シーケンスで JIS X 0213 1面を指示した場合、JIS X 0208
+		// に含まれる文字の中で使用が禁止されている文字がある
 		//
-		// JIS X 0213:2004 (�Ǖ�1) �ł͂��̋֎~����������ǉ����ꂽ�B�����̕����� ISO-2022-JP-2004 �ɂ�����
-		// ESC $ ( O �� JIS X 0213 1�ʂ��w�������ꍇ�ɂ��g�p�ł��Ȃ�
+		// JIS X 0213:2004 (追補 1) ではこの禁止漢字が幾つか追加された。これらの文字は ISO-2022-JP-2004 において
+		// ESC $ ( O で JIS X 0213 1面を指示した場合にも使用できない
 		//
-		// Ascension �̐����A���߂͎��̒ʂ�:
-		//	- JIS X 0201-Kana ���g������������邪�AAscension �ł͂��̕����W�����g��Ȃ��B
-		//	  �x���_�g���������ϊ��\���珜�O����Ă���A�g��Ȃ�
-		//	- JIS X 0208 �͔N�����ʂ����A�S�� JIS X 0208:1997 ���g��
-		//	- �����_�ł� ISO-2022-JP-2 �̒�����Ɗ؍��ꕶ���W���̕ϊ��ɂ� Windows �̕ϊ��\���g��
-		//	- JIS X 0213 1�ʂ��� UCS �ւ̕ϊ��ɂ����āA�w���V�[�P���X�͔N�x����ʂ��Ȃ�
-		//	- ISO-2022-JP-*-Strict �AISO-2022-JP-*-Compatible �ł� JIS X 0208 �ŕ\���\�ȕ�����
-		//	  "ESC $ B" �Ŏw������
-		//	- ISO-2022-JP-*-Compatible �ł͋֎~������ "ESC $ B" �Ŏw������
-		//	- ISO-2022-JP-*-Strict ���� UCS �ւ̕ϊ��ł͋֎~�������l�����Ȃ�
-		//	- ISO-2022-JP-3 �n�̃G���R�[�f�B���O�ł� JIS X 0213 1�ʂ̎w���� ESC $ ( O ���g���B
-		//	  ISO-2022-JP-2004 �n�G���R�[�f�B���O�Ƃ̍��ق͂��ꂾ���ŁAISO-2022-JP-3
-		//	  �n�G���R�[�f�B���O�ł��Ǖ�1�Œǉ����ꂽ�������g�����Ƃ��ł��� (UCS �ւ̕ϊ��ɂ��Ă͋�ʂ�����)
-		//  - ISO-2022-JP-2004-Compatible �̌݊����� ISO-2022-JP �ɑ΂�����̂ł���AISO-2022-JP-3 �ɑ΂�����̂ł͂Ȃ�
+		// Ascension の制限、解釈は次の通り:
+		//	- JIS X 0201-Kana を使える実装もあるが、Ascension ではこの文字集合を使わない。
+		//	  ベンダ拡張文字も変換表から除外されており、使わない
+		//	- JIS X 0208 は年代を区別せず、全て JIS X 0208:1997 を使う
+		//	- 現時点では ISO-2022-JP-2 の中国語と韓国語文字集合の変換には Windows の変換表を使う
+		//	- JIS X 0213 1面から UCS への変換において、指示シーケンスは年度を区別しない
+		//	- ISO-2022-JP-*-Strict 、ISO-2022-JP-*-Compatible では JIS X 0208 で表現可能な文字は
+		//	  "ESC $ B" で指示する
+		//	- ISO-2022-JP-*-Compatible では禁止漢字も "ESC $ B" で指示する
+		//	- ISO-2022-JP-*-Strict から UCS への変換では禁止漢字を考慮しない
+		//	- ISO-2022-JP-3 系のエンコーディングでは JIS X 0213 1面の指示に ESC $ ( O を使う。
+		//	  ISO-2022-JP-2004 系エンコーディングとの差異はそれだけで、ISO-2022-JP-3
+		//	  系エンコーディングでも追補1で追加された文字を使うことができる (UCS への変換については区別が無い)
+		//  - ISO-2022-JP-2004-Compatible の互換性は ISO-2022-JP に対するものであり、ISO-2022-JP-3 に対するものではない
 
 		size_t i = 0, j = 0;
 		ISO2022JPCharset_G0	g0 = ASCII;
@@ -594,12 +624,12 @@ namespace {
 				}
 			}
 
-			if((src[i] <= 0x20 && src[i] != ESC) || (src[i] >= 0x80 && src[i] < 0xA0)) {	// C0 �AC1
+			if((src[i] <= 0x20 && src[i] != ESC) || (src[i] >= 0x80 && src[i] < 0xA0)) {	// C0 、C1
 				if(src[i] == 0x0A || src[i] == 0x0D) {
 					g0 = ASCII;
 					g2 = UNDESIGNATED;
 				}
-				dest[j++] = src[i++];	// SI �ASO �A(1�o�C�g��) SS2 �ASS3 �͖���
+				dest[j++] = src[i++];	// SI 、SO 、(1バイトの) SS2 、SS3 は無視
 			} else if(srcLength - i > 1 && destLength - j > 1
 					&& memcmp(src + i, "\x1BN", 2) == 0) {	// SS2
 				i += 2;
@@ -713,9 +743,9 @@ namespace {
 		return j;
 	}
 
-	// UTF-16 -> ISO-2022-JP-X �ϊ��w���p
-	size_t convertUTF16ToISO2022JPX(CodePage cp, uchar* dest, size_t destLength,
-			const wchar_t* src, size_t srcLength, IUnconvertableCharCallback* callback) {
+	// UTF-16 -> ISO-2022-JP-X 変換ヘルパ
+	size_t convertUTF16ToISO2022JPX(MIBenum mib, uchar* dest, size_t destLength,
+			const Char* src, size_t srcLength, IUnconvertableCharCallback* callback) {
 		assert(cp == CPEX_JAPANESE_ISO2022JP || cp == CPEX_JAPANESE_ISO2022JP1
 			|| cp == CPEX_JAPANESE_ISO2022JP2 || IS_ISO2022JP3(cp) || IS_ISO2022JP2004(cp));
 
@@ -753,7 +783,7 @@ namespace {
 
 				if(jis != N__A) {
 					charset = UNDESIGNATED;
-					if(!isPlane2) {	// JIS X 0208 �݊��V�[�P���X���g����
+					if(!isPlane2) {	// JIS X 0208 互換シーケンスを使うか
 						if((cp == CPEX_JAPANESE_ISO2022JP3_COMPATIBLE
 								|| cp == CPEX_JAPANESE_ISO2022JP2004_COMPATIBLE) && ucsToJISX0208(ucs) != N__A)
 							charset = JIS_X_0208;
@@ -861,7 +891,7 @@ namespace {
 			i += eatenUtf16;
 		}
 
-		// G0 �� ASCII �ɖ߂��ďI���
+		// G0 を ASCII に戻して終わり
 		if(g0 != ASCII && destLength > 3 && j <= destLength - 3) {
 			memcpy(dest + j, "\x1B(B", 3);
 			j += 3;
@@ -872,11 +902,11 @@ namespace {
 #undef DESIGNATE_TO_G2
 	}
 
-	// JIS X 0208 or JIS X 0213 <-> �V�t�g JIS 2�o�C�g�����̕ϊ�
+	// JIS X 0208 or JIS X 0213 <-> シフト JIS 2 バイト文字の変換
 	inline void convertX0208ToShiftJISDBCS(ushort jis, uchar* dbcs) {
 		assert(dbcs != 0);
-		const uchar jk = static_cast<uchar>((jis - 0x2020) >> 8);		// ��
-		const uchar jt = static_cast<uchar>((jis - 0x2020) & 0x00FF);	// �_
+		const uchar jk = static_cast<uchar>((jis - 0x2020) >> 8);		// 区
+		const uchar jt = static_cast<uchar>((jis - 0x2020) & 0x00FF);	// 点
 
 		assert(jk >= 1 && jk <= 94 && jt >= 1 && jt <= 94);
 		dbcs[0] = (jk - 1) / 2 + ((jk <= 62) ? 0x81 : 0xC1);
@@ -887,15 +917,15 @@ namespace {
 		assert(dbcs != 0);
 		uchar jk, jt;
 
-		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9F)	// ��: 01-62
+		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9F)	// 区: 01-62
 			jk = (dbcs[0] - 0x81) * 2 + ((dbcs[1] > 0x9E) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0x81
-		else	// ��: 63-94
+		else	// 区: 63-94
 			jk = (dbcs[0] - 0xC1) * 2 + ((dbcs[1] > 0x9E) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0xC1
 		if(jk % 2 == 0)
 			jt = dbcs[1] - 0x9E;	// < trailbyte = jt + 0x9E
-		else if(dbcs[1] <= 0x3F + 63)	// �_: 01-63
+		else if(dbcs[1] <= 0x3F + 63)	// 点: 01-63
 			jt = dbcs[1] - 0x3F;	// < trailbyte = jt + 0x3F
-		else	// �_: 64-94
+		else	// 点: 64-94
 			jt = dbcs[1] - 0x40;	// < trailbyte = jt + 0x40
 		return ((jk << 8) | jt) + 0x2020;
 	}
@@ -921,14 +951,14 @@ namespace {
 		}
 		if(jk % 2 == 0)
 			jt = dbcs[1] - 0x9E;	// < trailbyte = jt + 0x9E
-		else if(dbcs[1] <= 0x3F + 63)	// �_: 01-63
+		else if(dbcs[1] <= 0x3F + 63)	// 点: 01-63
 			jt = dbcs[1] - 0x3F;	// < trailbyte = jt + 0x3F
-		else	// �_: 64-94
+		else	// 点: 64-94
 			jt = dbcs[1] - 0x40;	// < trailbyte = jt + 0x40
 		return ((jk << 8) | jt) + 0x2020;
 	}
 
-	// �������ʃw���p
+	// 自動判別ヘルパ
 	inline size_t isShiftJIS(const uchar* src, size_t len, CodePage& cp, bool& foundKana) {
 		cp = 932;
 		foundKana = false;
@@ -939,10 +969,10 @@ namespace {
 				return i;
 			else if(ch < 0x80)	// ASCII
 				continue;
-			else if(ch >= 0xA1 && ch <= 0xDF) {	// JIS X0201 ����
+			else if(ch >= 0xA1 && ch <= 0xDF) {	// JIS X 0201 仮名
 				foundKana = true;
 				continue;
-			} else if(i < len - 1) {	// 2�o�C�g����?
+			} else if(i < len - 1) {	// 2バイト文字?
 				if(ch < 0x81 || ch > 0xFC || (ch > 0x9F && ch < 0xE0))
 					return i;
 				const uchar	trail = src[i + 1];
@@ -978,7 +1008,7 @@ namespace {
 				return i;
 			else if(ch < 0x80)	// ASCII
 				continue;
-			else if(ch == SS2) {	// SS2 -> JIS X 0201 ����
+			else if(ch == SS2) {	// SS2 -> JIS X 0201 仮名
 				if(i + 1 >= len || src[i + 1] < 0xA0 || src[i + 1] > 0xE0)
 					return i;
 				foundKana = true;
@@ -1001,7 +1031,7 @@ namespace {
 				} else
 					return i;
 				i += 2;
-			} else if(i < len - 1) {	// 2�o�C�g����?
+			} else if(i < len - 1) {	// 2バイト文字?
 				ushort jis = ch << 8 | src[i + 1];
 				if(jis > 0x8080) {
 					jis -= 0x8080;
@@ -1088,7 +1118,7 @@ namespace {
 	}
 
 	void detectCodePage_Japanese(const uchar* src, size_t len, CodePage& result, size_t& convertableLength) {
-		// �܂� Unicode �𒲂ׂ� (CP932 ���C���X�g�[������Ă��Ȃ��ꍇ�� Unicode �̂�)
+		// まず Unicode を調べる (CP932 がインストールされていない場合は Unicode のみ)
 		if(EncoderFactory::CodePageDetector unicodeDetector = EncoderFactory::getInstance().getUnicodeDetector()) {
 			unicodeDetector(src, len, result, convertableLength);
 			if(len == convertableLength || !EncoderFactory::getInstance().isValidCodePage(932))
@@ -1126,67 +1156,81 @@ namespace {
 			convertableLength = converted;
 		}
 	}
-} // namespace `anonymous'
+} // namespace @0
 
 
-// ���{�� (�V�t�g JIS) ///////////////////////////////////////////////////////////////
+// ShiftJISEncoder //////////////////////////////////////////////////////////
 
-size_t Encoder_Japanese_ShiftJIS::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-
-	size_t j = 0;
-	for(size_t i = 0; i < srcLength && j < destLength; ++i) {
-		if(src[i] < 0x80)
-			dest[j++] = BIT8_MASK(src[i]);
+/// @see Encoder#doFromUnicode
+Encoder::Result ShiftJISEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+	for(; to < toEnd && from < from; ++to, ++from) {
+		if(*from < 0x80)
+			*to = mask8Bit(*from);
 		else {
-			ushort jis = ucsToJISX0208(src[i]);
-			if(jis == N__A) {
-				if(const uchar kana = ucsToJISX0201Kana(src[i]))
-					dest[j++] = kana;
-				else
-					CONFIRM_ILLEGAL_CHAR(dest[j++]);
-			} else if(j + 1 < destLength) {
-				convertX0208ToShiftJISDBCS(jis, reinterpret_cast<uchar*>(dest + j));
-				j += 2;
-			} else
-				return j;
-		}
-	}
-	return j;
-}
-
-size_t Encoder_Japanese_ShiftJIS::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-
-	size_t i = 0, j = 0;
-	while(i < srcLength && j < destLength) {
-		if(src[i] < 0x80)	// ascii
-			dest[j++] = src[i++];
-		else if(src[i] >= 0xA1 && src[i] <= 0xDF)	// kana
-			dest[j++] = jisX0201KanaToUCS(src[i++]);
-		else if(src[i] == 0xA0) {	// illegal byte
-			CONFIRM_ILLEGAL_CHAR(dest[j]);
-			++j;
-		} else {	// DBCS lead byte
-			const uchar trailByte = src[i + 1];
-			if(i < srcLength - 1
-					&& (trailByte >= 0x40 && trailByte <= 0xFC && trailByte != 0x7F)) {	// double-byte
-				wchar_t ucs = jisX0208ToUCS(convertShiftJISDBCSToX0208(src + i));
-				if(ucs == REPLACEMENT_CHARACTER)
-					CONFIRM_ILLEGAL_CHAR(ucs);
-				dest[j++] = ucs;
-				i += 2;
-			} else {	// illegal couple
-				CONFIRM_ILLEGAL_CHAR(dest[j]);
-				++j;
+			ushort jis = ucsToJISX0208(*from);	// try JIS X 0208
+			if(jis == UNMAPPABLE_NATIVE_CHARACTER) {
+				if(const uchar kana = ucsToJISX0201Kana(*from)) {	// try JIS X 0201 kana
+					*to = kana;
+					continue;
+				}
+			} else if(to + 1 < toEnd) {
+				convertX0208ToShiftJISDBCS(jis, to);
+				++to;	// DBCS
+				continue;
+			}
+			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+				*to = NATIVE_REPLACEMENT_CHARACTER;
+			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+				--to;
+			else {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
 			}
 		}
 	}
-	return j;
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result ShiftJISEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+	for(to < toEnd && from < fromEnd; ++to; ++from) {
+		if(*from < 0x80)	// ascii
+			*to = *from;
+		else if(*from >= 0xA1 && *from <= 0xDF)	// 1-byte kana
+			*to = jisX0201KanaToUCS(*from);
+		else {
+			if(*from != 0xA0) {	// DBCS leading byte
+				if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xFC && from[1] != 0x7F) {
+					*to = jisX0208ToUCS(convertShiftJISDBCSToX0208(from));
+					if(*to == REPLACEMENT_CHARACTER) {
+						if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+							--to;
+						else if(policy != REPLACE_UNMAPPABLE_CHARACTER) {
+							toNext = to;
+							fromNext = from;
+							return UNMAPPABLE_CHARACTER;
+						}
+					}
+				} else {
+					toNext = to;
+					fromNext = from;
+					return MALFORMED_INPUT;
+				}
+			}
+		}
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
 
-// ���{�� (Shift_JIS-2004) /////////////////////////////////////////////////
+// 日本語 (Shift_JIS-2004) /////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ShiftJIS2004::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1203,13 +1247,13 @@ size_t Encoder_Japanese_ShiftJIS2004::fromUnicode(CFU_ARGLIST) {
 		if(jis < 0x0100)	// ascii or kana
 			dest[j++] = BIT8_MASK(jis);
 		else if(j + 1 < destLength) {
-			const uchar jk = BIT8_MASK((jis - 0x2020) >> 8);	// ��
-			const uchar jt = BIT8_MASK(jis - 0x2020);			// �_
+			const uchar jk = BIT8_MASK((jis - 0x2020) >> 8);	// 区
+			const uchar jt = BIT8_MASK(jis - 0x2020);			// 点
 
 			assert(jk >= 1 && jk <= 94 && jt >= 1 && jt <= 94);
-			if(!plane2)	// 1��
+			if(!plane2)	// 1面
 				dest[j++] = (jk + ((jk <= 62) ? 0x101 : 0x181)) / 2;
-			else	// 2��
+			else	// 2面
 				dest[j++] = (jk >= 78) ? ((jk + 0x19B) / 2) : ((jk + 0x1DF) / 2 - jk / 8 * 3);
 			if(jk % 2 == 0)	dest[j++] = jt + 0x9E;
 			else			dest[j++] = jt + ((jt <= 63) ? 0x3F : 0x40);
@@ -1239,12 +1283,12 @@ size_t Encoder_Japanese_ShiftJIS2004::toUnicode(CTU_ARGLIST) {
 
 				if(ucs == REPLACEMENT_CHARACTER)
 					CONFIRM_ILLEGAL_CHAR(ucs);
-				if(ucs > 0x0010FFFF) {	// 2�R�[�h�|�C���g��������
+				if(ucs > 0x0010FFFF) {	// 2コードポイント相当文字
 					if(j + 1 >= destLength)
 						return j;
 					dest[j++] = UTF16_MASK(ucs >> 16);
 					dest[j++] = UTF16_MASK(ucs);
-				} else if(ucs >= 0x00010000) {	// �� BMP
+				} else if(ucs >= 0x00010000) {	// 超 BMP
 					if(j + 1 >= destLength)
 						return j;
 					surrogates::encode(ucs, dest + j);
@@ -1270,7 +1314,7 @@ size_t Encoder_Japanese_ShiftJIS2004::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (EUC) ////////////////////////////////////////////////////////////
+// 日本語 (EUC) ////////////////////////////////////////////////////////////
 
 size_t Encoder_Japanese_EUCJP::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1362,7 +1406,7 @@ size_t Encoder_Japanese_EUCJP::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (EUC-JIS-2004) /////////////////////////////////////////////////
+// 日本語 (EUC-JIS-2004) /////////////////////////////////////////////////
 
 size_t Encoder_Japanese_EUCJIS2004::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1388,12 +1432,12 @@ size_t Encoder_Japanese_EUCJIS2004::fromUnicode(CFU_ARGLIST) {
 			return j;
 		else {
 			jis += 0x8080;	// jis -> euc-jp
-			if(!plane2) {	// 1 ��
+			if(!plane2) {	// 1 面
 				dest[j++] = BIT8_MASK(jis >> 8);
 				dest[j++] = BIT8_MASK(jis >> 0);
 			} else if(destLength - j < 3)
 				return j;
-			else {	// 2 ��
+			else {	// 2 面
 				dest[j++] = SS3;
 				dest[j++] = BIT8_MASK(jis >> 8);
 				dest[j++] = BIT8_MASK(jis >> 0);
@@ -1427,12 +1471,12 @@ size_t Encoder_Japanese_EUCJIS2004::toUnicode(CTU_ARGLIST) {
 
 			if(ucs == REPLACEMENT_CHARACTER)
 				CONFIRM_ILLEGAL_CHAR(ucs);
-			if(ucs > 0x0010FFFF) {	// 2�R�[�h�|�C���g�������� (�����Ǝv��)
+			if(ucs > 0x0010FFFF) {	// 2コードポイント相当文字 (無いと思う)
 				if(j + 1 >= destLength)
 					return j;
 				dest[j++] = UTF16_MASK(ucs >> 16);
 				dest[j++] = UTF16_MASK(ucs >> 0);
-			} else if(ucs >= 0x00010000) {	// �� BMP
+			} else if(ucs >= 0x00010000) {	// 超 BMP
 				if(j + 1 >= destLength)
 					return j;
 				surrogates::encode(ucs, dest + j);
@@ -1448,10 +1492,10 @@ size_t Encoder_Japanese_EUCJIS2004::toUnicode(CTU_ARGLIST) {
 
 			if(ucs == REPLACEMENT_CHARACTER)
 				CONFIRM_ILLEGAL_CHAR(ucs);
-			if(ucs > 0x0010FFFF) {	// 2�R�[�h�|�C���g����
+			if(ucs > 0x0010FFFF) {	// 2コードポイント相当
 				dest[j++] = UTF16_MASK(ucs >> 16);
 				dest[j++] = UTF16_MASK(ucs >> 0);
-			} else if(ucs >= 0x00010000) {	// �� BMP
+			} else if(ucs >= 0x00010000) {	// 超 BMP
 				surrogates::encode(ucs, dest + j);
 				j += 2;
 			} else {
@@ -1473,9 +1517,9 @@ size_t Encoder_Japanese_EUCJIS2004::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP) //////////////////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP) //////////////////////////////////////////////////////////////
 
-// destLength ������Ȃ��ƃG�X�P�[�v�V�[�P���X���������������܂�Ȃ��\��������
+// destLength が足りないとエスケープシーケンスが正しく書き込まれない可能性がある
 size_t Encoder_Japanese_ISO2022JP::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
 	return convertUTF16ToISO2022JPX(CPEX_JAPANESE_ISO2022JP, dest, destLength, src, srcLength, callback);
@@ -1487,7 +1531,7 @@ size_t Encoder_Japanese_ISO2022JP::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-1) ///////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-1) ///////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP1::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1500,7 +1544,7 @@ size_t Encoder_Japanese_ISO2022JP1::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-2) ///////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-2) ///////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP2::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1513,7 +1557,7 @@ size_t Encoder_Japanese_ISO2022JP2::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-2004) ////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-2004) ////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP2004::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1526,7 +1570,7 @@ size_t Encoder_Japanese_ISO2022JP2004::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-2004-Strict) ////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-2004-Strict) ////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP2004_Strict::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1539,7 +1583,7 @@ size_t Encoder_Japanese_ISO2022JP2004_Strict::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-2004-Compatible) ////////////////////////////////////////
+// 日本語 (ISO-2022-JP-2004-Compatible) ////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP2004_Compatible::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1552,7 +1596,7 @@ size_t Encoder_Japanese_ISO2022JP2004_Compatible::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-3) ////////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-3) ////////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP3::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1565,7 +1609,7 @@ size_t Encoder_Japanese_ISO2022JP3::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-3-Strict) ////////////////////////////////////////////
+// 日本語 (ISO-2022-JP-3-Strict) ////////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP3_Strict::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1579,7 +1623,7 @@ size_t Encoder_Japanese_ISO2022JP3_Strict::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (ISO-2022-JP-3-Compatible) ////////////////////////////////////////
+// 日本語 (ISO-2022-JP-3-Compatible) ////////////////////////////////////////
 
 size_t Encoder_Japanese_ISO2022JP3_Compatible::fromUnicode(CFU_ARGLIST) {
 	CFU_CHECKARGS();
@@ -1592,7 +1636,7 @@ size_t Encoder_Japanese_ISO2022JP3_Compatible::toUnicode(CTU_ARGLIST) {
 }
 
 
-// ���{�� (EUC, windows-51932) //////////////////////////////////////////////
+// 日本語 (EUC, windows-51932) //////////////////////////////////////////////
 
 Encoder_Japanese_EUCJPWindows::Encoder_Japanese_EUCJPWindows() {
 	if(!::IsValidCodePage(932))
@@ -1616,16 +1660,16 @@ size_t Encoder_Japanese_EUCJPWindows::fromUnicode(CFU_ARGLIST) {
 		}
 
 		// cp932 -> cp51932
-		if(convertedBytes == 1 && dbcs[0] >= 0xA1 && dbcs[0] <= 0xDF) {	// ���p�J�i
+		if(convertedBytes == 1 && dbcs[0] >= 0xA1 && dbcs[0] <= 0xDF) {	// 半角カナ
 			dest[j++] = SS2;
 			dest[j++] = dbcs[0];
 		} else if(convertedBytes == 2
 				&& ((dbcs[0] >= 0x81 && dbcs[0] <= 0x9F) || (dbcs[0] >= 0xE0 && dbcs[0] <= 0xFC))
-				&& (dbcs[1] >= 0x40 && dbcs[1] <= 0xFC) && dbcs[1] != 0x7F) {	// 2 �o�C�g����
+				&& (dbcs[1] >= 0x40 && dbcs[1] <= 0xFC) && dbcs[1] != 0x7F) {	// 2 バイト文字
 			const ushort jis = convertShiftJISDBCSToX0208(dbcs);
 			dest[j++] = BIT8_MASK((jis | 0x8000) >> 8);
 			dest[j++] = BIT8_MASK((jis | 0x0080) >> 0);
-		} else	// ���̑�
+		} else	// その他
 			dest[j++] = dbcs[0];
 	}
 	return j;
@@ -1638,14 +1682,14 @@ size_t Encoder_Japanese_EUCJPWindows::toUnicode(CTU_ARGLIST) {
 	uchar dbcs[2];
 	for(size_t i = 0; i < srcLength && j < destLength; ++j) {
 		// cp51932 -> cp932
-		if(src[i] == SS2) {	// ���p�J�i
+		if(src[i] == SS2) {	// 半角カナ
 			if(i + 1 >= srcLength)
 				break;
 			dbcs[0] = src[i + 1];
 			dbcs[1] = 0;
 			i += 2;
 		} else if(src[i] >= 0xA1 && src[i] <= 0xFE
-				&& src[i + 1] >= 0xA1 && src[i + 1] <= 0xFE) {	// 2�o�C�g����
+				&& src[i + 1] >= 0xA1 && src[i + 1] <= 0xFE) {	// 2バイト文字
 			convertX0208ToShiftJISDBCS(((src[i] << 8) | src[i + 1]) - 0x8080, dbcs);
 			i += 2;
 		} else {

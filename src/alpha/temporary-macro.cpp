@@ -406,7 +406,7 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 		return false;
 
 	const wstring xml = output.str();
-	const size_t bufferSize = xml.length() * encoder->getMaximumNativeLength();
+	const size_t bufferSize = xml.length() * encoder->getMaximumNativeBytes();
 	HGLOBAL data = ::GlobalAlloc(GHND, bufferSize);
 	uchar* buffer = static_cast<uchar*>(::GlobalLock(data));
 

@@ -3527,10 +3527,10 @@ namespace {
 	inline AutoBuffer<wchar_t> a2u(const char* src, size_t length, size_t* resultLength = 0) {
 		const int c = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), 0, 0);
 		if(c == 0)
-			throw invalid_argument("Unconvertable character sequence.");
+			throw invalid_argument("Unconvertible character sequence.");
 		AutoBuffer<wchar_t> buffer(new wchar_t[c]);
 		if(0 == ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), buffer.get(), c))
-			throw invalid_argument("Unconvertable character sequence.");
+			throw invalid_argument("Unconvertible character sequence.");
 		if(resultLength != 0)
 			*resultLength = c;
 		return buffer;
