@@ -861,10 +861,10 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			const MIBenum encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
-			if(encoding == extended::MIB_UNICODE_UTF5 || encoding == extended::MIB_UNICODE_UTF7
-					|| encoding == fundamental::MIB_UNICODE_UTF8
-					|| encoding == fundamental::MIB_UNICODE_UTF16LE || encoding == fundamental::MIB_UNICODE_UTF16BE
-					|| encoding == extended::MIB_UNICODE_UTF32LE || encoding == extended::MIB_UNICODE_UTF32BE) {
+			if(encoding == extended::UTF_5 || encoding == extended::UTF_7
+					|| encoding == fundamental::UTF_8
+					|| encoding == fundamental::UTF_16LE || encoding == fundamental::UTF_16BE
+					|| encoding == extended::UTF_32LE || encoding == extended::UTF_32BE) {
 				if(newlineCombobox.getCount() != 7) {
 					newlineCombobox.resetContent();
 					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
@@ -1194,11 +1194,11 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcscpy(fileName, buffer.getFilePathName());
 
 	const bool writeBOM =
-		(format.encoding == fundamental::MIB_UNICODE_UTF8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
-		|| (format.encoding == fundamental::MIB_UNICODE_UTF16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
-		|| (format.encoding == fundamental::MIB_UNICODE_UTF16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
-		|| (format.encoding == extended::MIB_UNICODE_UTF32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
-		|| (format.encoding == extended::MIB_UNICODE_UTF32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
+		(format.encoding == fundamental::UTF_8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
+		|| (format.encoding == fundamental::UTF_16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
+		|| (format.encoding == fundamental::UTF_16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
+		|| (format.encoding == extended::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
+		|| (format.encoding == extended::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
 	Document::FileIOResult result;
 
 	while(true) {

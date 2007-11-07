@@ -13,7 +13,7 @@
 #include <algorithm>
 #include "../../manah/object.hpp"
 #ifdef _WIN32
-#include <windows.h>
+#include "../../manah/win32/windows.hpp"
 #endif /* _WIN32 */
 
 namespace ascension {

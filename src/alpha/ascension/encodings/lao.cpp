@@ -13,9 +13,9 @@ using namespace std;
 
 // registry
 namespace {
-	ASCENSION_DEFINE_SBCS_ENCODER(MuleLao1Encoder, extended::MIB_LAO_MULE_LAO, "MuleLao-1")
-//	ASCENSION_DEFINE_SBCS_ENCODER(CP1132Encoder, extended::MIB_LAO_CP1132, "CP1132")
-	ASCENSION_DEFINE_SBCS_ENCODER(CP1133Encoder, extended::MIB_LAO_CP1133, "CP1133")
+	ASCENSION_DEFINE_SBCS_ENCODER(MuleLao1Encoder, extended::MULE_LAO, "MuleLao-1")
+//	ASCENSION_DEFINE_SBCS_ENCODER(CP1132Encoder, extended::CP1132, "CP1132")
+	ASCENSION_DEFINE_SBCS_ENCODER(CP1133Encoder, extended::CP1133, "CP1133")
 
 	struct Installer {
 		Installer() {

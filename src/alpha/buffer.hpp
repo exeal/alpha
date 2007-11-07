@@ -157,7 +157,7 @@ namespace alpha {
 		void									setActive(const Buffer& buffer);
 		// operations
 		void		addNew(
-						ascension::encoding::MIBenum encoding = ascension::encoding::fundamental::MIB_UNICODE_UTF8,
+						ascension::encoding::MIBenum encoding = ascension::encoding::fundamental::UTF_8,
 						ascension::text::Newline newline = ascension::text::NLF_AUTO);
 		void		addNewDialog();
 		bool		close(std::size_t index, bool queryUser);

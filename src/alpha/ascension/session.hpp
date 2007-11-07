@@ -7,9 +7,9 @@
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
 #include "internal.hpp"
+#include "../../manah/win32/windows.hpp"	// ::HKL
 #include <list>
 #include <vector>
-#include <windows.h>	// ::HKL
 // TODO: make Win32-independent.
 
 namespace ascension {

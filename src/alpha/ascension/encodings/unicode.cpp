@@ -16,30 +16,30 @@ using namespace std;
 
 // registry
 namespace {
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF8Encoder, fundamental::MIB_UNICODE_UTF8, "UTF-8")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF8Encoder, fundamental::UTF_8, "UTF-8")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF16LittleEndianEncoder, fundamental::MIB_UNICODE_UTF16LE, "UTF-16LE")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF16LittleEndianEncoder, fundamental::UTF_16LE, "UTF-16LE")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF16BigEndianEncoder, fundamental::MIB_UNICODE_UTF16BE, "UTF-16BE")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF16BigEndianEncoder, fundamental::UTF_16BE, "UTF-16BE")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
 	ASCENSION_END_ENCODER_CLASS()
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF5Encoder, extended::MIB_UNICODE_UTF5, "UTF-5")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF5Encoder, extended::UTF_5, "UTF-5")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(6)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF7Encoder, extended::MIB_UNICODE_UTF7, "UTF-7")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF7Encoder, extended::UTF_7, "UTF-7")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(8)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF32LittleEndianEncoder, extended::MIB_UNICODE_UTF32LE, "UTF-32LE")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF32LittleEndianEncoder, extended::UTF_32LE, "UTF-32LE")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF32BigEndianEncoder, extended::MIB_UNICODE_UTF32BE, "UTF-32BE")
+	ASCENSION_BEGIN_ENCODER_CLASS(UTF32BigEndianEncoder, extended::UTF_32BE, "UTF-32BE")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
 	ASCENSION_END_ENCODER_CLASS()
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, EncodingDetector::UNICODE_DETECTOR, "UnicodeDetection");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, EncodingDetector::UNICODE_DETECTOR, "UnicodeAutoDetect");
 
 	struct EncoderInstaller {
 		EncoderInstaller() throw() {
@@ -171,7 +171,7 @@ namespace {
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	uchar temp[6];
 	uchar* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
@@ -195,7 +195,7 @@ Encoder::Result UTF8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	const uchar* e;
 	CodePoint cp;
 	while(to < toEnd && from < fromEnd) {
@@ -224,7 +224,7 @@ Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<uchar>((*from & 0x00FFU) >> 0);
 		*(to++) = static_cast<uchar>((*from & 0xFF00U) >> 8);
@@ -236,7 +236,7 @@ Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd,
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = *from | maskUCS2(from[1] << 8);
 	fromNext = from;
@@ -252,7 +252,7 @@ Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF16BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<uchar>((*from & 0xFF00U) >> 8);
 		*(to++) = static_cast<uchar>((*from & 0x00FFU) >> 0);
@@ -264,7 +264,7 @@ Encoder::Result UTF16BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uc
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = maskUCS2(*from << 8) | from[1];
 	fromNext = from;
@@ -282,7 +282,7 @@ Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
 		*(to++) = mask8Bit((cp & 0x000000FFU) >> 0);
@@ -299,13 +299,13 @@ Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd,
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(cp)) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(policy != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(getPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -323,7 +323,7 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF32BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
 		*(to++) = mask8Bit((cp & 0xFF000000U) >> 24);
@@ -340,13 +340,13 @@ Encoder::Result UTF32BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uc
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(policy != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(getPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -381,7 +381,7 @@ namespace {
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	static const uchar base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	while(true /* from < fromEnd */) {
 		// calculate the length of the substring to need to modified-BASE64 encode
@@ -434,7 +434,7 @@ Encoder::Result UTF7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 		
 /// @see Encoder#doToUnicode
 Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	static const uchar base64[] = {
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
@@ -594,15 +594,15 @@ namespace {
 
 /// @see Encoder#doFromUnicode
 Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	uchar temp[8];
 	uchar* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = NATIVE_REPLACEMENT_CHARACTER;
-			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {
 				fromNext = from;
@@ -627,7 +627,7 @@ Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	const uchar* e;
 	CodePoint cp;
 	while(to < toEnd && from < fromEnd) {
@@ -637,11 +637,11 @@ Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			toNext = to;
 			return MALFORMED_INPUT;
 		} else if(!isValidCodePoint(cp)) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				cp = REPLACEMENT_CHARACTER;
 				if(e == from)
 					e = from + 1;
-			} else if(policy == IGNORE_UNMAPPABLE_CHARACTER) {
+			} else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				++from;
 				continue;
 			} else {
@@ -706,18 +706,18 @@ MIBenum UnicodeDetector::doDetect(const uchar* first, const uchar* last, ptrdiff
 	MIBenum result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
-		result = fundamental::MIB_UNICODE_UTF8;
+		result = fundamental::UTF_8;
 	else if(last - first >= 2) {
 		if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
-			result = fundamental::MIB_UNICODE_UTF16LE;
+			result = fundamental::UTF_16LE;
 		else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
-			result = fundamental::MIB_UNICODE_UTF16BE;
+			result = fundamental::UTF_16BE;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 		if(last - first >= 4) {
 			if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-				result = extended::MIB_UNICODE_UTF32LE;
+				result = extended::UTF_32LE;
 			else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-				result = extended::MIB_UNICODE_UTF32BE;
+				result = extended::UTF_32BE;
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 	}
@@ -729,5 +729,5 @@ MIBenum UnicodeDetector::doDetect(const uchar* first, const uchar* last, ptrdiff
 	// force into UTF-8
 	if(convertibleBytes != 0)
 		*convertibleBytes = maybeUTF8(first, last) - first;
-	return fundamental::MIB_UNICODE_UTF8;
+	return fundamental::UTF_8;
 }

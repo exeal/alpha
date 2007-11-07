@@ -135,11 +135,11 @@ public:
 	// メソッド
 	void	dispose();
 	// IUnknown
-	IMPLEMENT_UNKNOWN_MULTI_THREADED()
-	BEGIN_INTERFACE_TABLE()
-		IMPLEMENTS_LEFTMOST_INTERFACE(IAccessible)
-		IMPLEMENTS_INTERFACE(IDispatch)
-	END_INTERFACE_TABLE()
+	MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
+	MANAH_BEGIN_INTERFACE_TABLE()
+		MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IAccessible)
+		MANAH_IMPLEMENTS_INTERFACE(IDispatch)
+	MANAH_END_INTERFACE_TABLE()
 	// IAccessible
 	STDMETHODIMP	get_accParent(IDispatch** ppdispParent);
 	STDMETHODIMP	get_accChildCount(long* pcountChildren);
@@ -2372,7 +2372,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		if(lParam == OBJID_CLIENT) {
 			ComPtr<IAccessible> acc;
 			if(SUCCEEDED(getAccessibleObject(*&acc)) && accLib.isAvailable())
-				return accLib.lresultFromObject(IID_IAccessible, wParam, acc);
+				return accLib.lresultFromObject(IID_IAccessible, wParam, acc.get());
 		} else if(lParam == OBJID_WINDOW) {
 		}
 		return 0;
@@ -2979,7 +2979,7 @@ STDMETHODIMP TextViewerAccessibleProxy::accDoDefaultAction(VARIANT) {
 STDMETHODIMP TextViewerAccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
 	VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
-	VERIFY_POINTER(pvarChild);
+	MANAH_VERIFY_POINTER(pvarChild);
 	::POINT pt = {xLeft, yTop};
 	::RECT rect;
 	view_.getClientRect(rect);
@@ -2997,10 +2997,10 @@ STDMETHODIMP TextViewerAccessibleProxy::accHitTest(long xLeft, long yTop, VARIAN
 /// @see IAccessible#accLocation
 STDMETHODIMP TextViewerAccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pxLeft);
-	VERIFY_POINTER(pyTop);
-	VERIFY_POINTER(pcxWidth);
-	VERIFY_POINTER(pcyHeight);
+	MANAH_VERIFY_POINTER(pxLeft);
+	MANAH_VERIFY_POINTER(pyTop);
+	MANAH_VERIFY_POINTER(pcxWidth);
+	MANAH_VERIFY_POINTER(pcyHeight);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	::RECT rect;
@@ -3046,7 +3046,7 @@ void TextViewerAccessibleProxy::documentChanged(const Document&, const DocumentC
 /// @see IAccessible#get_accChild
 STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(ppdispChild);
+	MANAH_VERIFY_POINTER(ppdispChild);
 	*ppdispChild = 0;
 	return S_OK;
 }
@@ -3054,7 +3054,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT, IDispatch** ppdisp
 /// @see IAccessible#get_accChildCount
 STDMETHODIMP TextViewerAccessibleProxy::get_accChildCount(long* pcountChildren) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pcountChildren);
+	MANAH_VERIFY_POINTER(pcountChildren);
 	*pcountChildren = 0;
 	return S_OK;
 }
@@ -3074,7 +3074,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accDescription(VARIANT, BSTR*) {
 /// @see IAccessible#get_accFocus
 STDMETHODIMP TextViewerAccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pvarChild);
+	MANAH_VERIFY_POINTER(pvarChild);
 	pvarChild->vt = VT_I4;
 	pvarChild->lVal = CHILDID_SELF;
 	return S_OK;
@@ -3095,7 +3095,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) 
 /// @see IAccessible#get_accKeyboardShortcut
 STDMETHODIMP TextViewerAccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pszKeyboardShortcut);
+	MANAH_VERIFY_POINTER(pszKeyboardShortcut);
 	*pszKeyboardShortcut = 0;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -3105,7 +3105,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accKeyboardShortcut(VARIANT varChild
 /// @see IAccessible#get_accName
 STDMETHODIMP TextViewerAccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pszName);
+	MANAH_VERIFY_POINTER(pszName);
 	*pszName = 0;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -3123,7 +3123,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accParent(IDispatch** ppdispParent) 
 /// @see IAccessible#get_accRole
 STDMETHODIMP TextViewerAccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pvarRole);
+	MANAH_VERIFY_POINTER(pvarRole);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	pvarRole->vt = VT_I4;
@@ -3134,7 +3134,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accRole(VARIANT varChild, VARIANT* p
 /// @see IAccessible#get_accSelection
 STDMETHODIMP TextViewerAccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pvarChildren);
+	MANAH_VERIFY_POINTER(pvarChildren);
 	pvarChildren->vt = VT_EMPTY;
 	return S_FALSE;
 }
@@ -3160,7 +3160,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* 
 /// @see IAccessible#get_accValue
 STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
 	VERIFY_AVAILABILITY();
-	VERIFY_POINTER(pszValue);
+	MANAH_VERIFY_POINTER(pszValue);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	OutputStringStream s;
@@ -3605,7 +3605,7 @@ void DefaultMouseInputStrategy::captureChanged() {
 STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, ::POINTL pt, DWORD* effect) {
 	if(data == 0)
 		return E_INVALIDARG;
-	VERIFY_POINTER(effect);
+	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
 	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly()
@@ -3645,7 +3645,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
 
 /// @see IDropTarget#DragOver
 STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DWORD* effect) {
-	VERIFY_POINTER(effect);
+	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
 	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly() || !viewer_->allowsMouseInput())
@@ -3676,7 +3676,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DW
 STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
 	if(data == 0)
 		return E_INVALIDARG;
-	VERIFY_POINTER(effect);
+	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
 	Document& document = viewer_->getDocument();
