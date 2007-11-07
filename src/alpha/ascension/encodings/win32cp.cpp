@@ -120,71 +120,126 @@ MIBenum encoding::convertWinCPtoMIB(uint codePage) throw() {
 	return 0;
 }
 
+
+// WindowsEncoder ///////////////////////////////////////////////////////////
+
 namespace {
-	/// 
 	class WindowsEncoder : public Encoder {
-	protected:
-		WindowsEncoder(::UINT codePage, MIBenum mib) : codePage_(codePage), mib_(mib) {}
-		::UINT getCodePage() const throw() {return codePage_;}
+	public:
+		WindowsEncoder(::UINT codePage, MIBenum mib) throw();
+		static std::string	getDisplayName(::UINT codePage) throw();
 	private:
+		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+						const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const;
 		std::string	getAliases() const throw();
 		std::size_t	getMaximumNativeBytes() const throw();
 		MIBenum		getMIBenum() const throw();
+		std::string	getName() const throw();
+	private:
 	private:
 		const ::UINT codePage_;
 		const MIBenum mib_;
 	};
-	/// Encoder uses Windows NLS.
-	class WindowsNLSEncoder : public WindowsEncoder {
-		MANAH_UNASSIGNABLE_TAG(WindowsNLSEncoder);
-	public:
-		WindowsNLSEncoder(::UINT codePage, MIBenum mib);
-		WindowsNLSEncoder(const WindowsNLSEncoder& rhs);
-	private:
-		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;
-		Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const;
-		std::string	getName() const throw();
-	};
-	/// Encoder uses Windows MLang.
-	class MLangEncoder : public WindowsEncoder {
-		MANAH_UNASSIGNABLE_TAG(MLangEncoder);
-	public:
-		MLangEncoder(::UINT codePage, MIBenum mib);
-		MLangEncoder(const MLangEncoder& rhs);
-	private:
-		Result		doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;
-		Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const;
-		std::string	getName() const throw();
-	};
-	static manah::com::ComPtr<::IMultiLanguage2> mlang;
-	string getMLangEncodingName(::UINT codePage) throw() {
-		if(mlang.get() != 0) {
-			::MIMECPINFO mcpi;
-			if(S_OK == mlang->GetCodePageInfo(codePage, LOCALE_USER_DEFAULT, &mcpi)) {
-				string name(wcslen(mcpi.wszWebCharset), 'X');
-				for(size_t i = 0; i < name.length(); ++i)
-					name[i] = mask8Bit(mcpi.wszWebCharset[i]);
-				return name;
-			}
-		}
-		static const char format[] = "x-windows-%lu";
-		char name[countof(format) + 32];
-		sprintf(name, format, codePage);
-		return name;
-	}
 } // namespace @0
 
+/**
+ * Constructor.
+ * @param codePage the code page
+ * @param mib the MIBenum value
+ */
+WindowsEncoder::WindowsEncoder(::UINT codePage, MIBenum mib) throw() : codePage_(codePage), mib_(mib) {
+}
 
-// WindowsEncoder ///////////////////////////////////////////////////////////
+/// @see Encoder#doFromUnicode
+Encoder::Result WindowsEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+	static const ::WCHAR defaultCharacters[] = L"?";
+	const ::HRESULT enteredApartment = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+	::IMultiLanguage2* mlang;
+	if(S_OK == ::CoCreateInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage2, reinterpret_cast<void**>(&mlang))) {
+		::DWORD mode = 0;
+		::UINT sourceSize = static_cast<::UINT>(fromEnd - from), destinationSize = static_cast<::UINT>(toEnd - to);
+		if(S_OK == mlang->ConvertStringFromUnicodeEx(&mode, codePage_,
+				const_cast<Char*>(from), &sourceSize, reinterpret_cast<char*>(to), &destinationSize,
+				(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MLCONVCHARF_USEDEFCHAR : 0,
+				(getPolicy()== REPLACE_UNMAPPABLE_CHARACTER) ? const_cast<::WCHAR*>(defaultCharacters) : 0)) {
+			mlang->Release();
+			if(SUCCEEDED(enteredApartment))
+				::CoUninitialize();
+			fromNext = from + sourceSize;
+			toNext = to + destinationSize;
+			if(fromNext == fromEnd)
+				return COMPLETED;
+			else if(toNext == toEnd)
+				return INSUFFICIENT_BUFFER;
+			else
+				return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER
+					|| getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+		}
+		mlang->Release();
+	}
+	if(SUCCEEDED(enteredApartment))
+		::CoUninitialize();
+	return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+}
+
+/// @see Encoder#doToUnicode
+Encoder::Result WindowsEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
+	const ::HRESULT enteredApartment = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+	::IMultiLanguage2* mlang;
+	if(S_OK == ::CoCreateInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage2, reinterpret_cast<void**>(&mlang))) {
+		::DWORD mode = 0;
+		::UINT sourceSize = static_cast<::UINT>(fromEnd - from), destinationSize = static_cast<::UINT>(toEnd - to);
+		if(S_OK == mlang->ConvertStringToUnicodeEx(&mode, codePage_,
+				reinterpret_cast<char*>(const_cast<uchar*>(from)), &sourceSize, to, &destinationSize, 0, 0)) {
+			mlang->Release();
+			if(SUCCEEDED(enteredApartment))
+				::CoUninitialize();
+			fromNext = from + sourceSize;
+			toNext = to + destinationSize;
+			if(fromNext == fromEnd)
+				return COMPLETED;
+			return (toNext == toEnd) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
+		}
+		mlang->Release();
+	}
+	if(SUCCEEDED(enteredApartment))
+		::CoUninitialize();
+	return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+}
 
 /// @see Encoder#getAliases
 string WindowsEncoder::getAliases() const throw() {
 	// TODO: not implemented.
 	return "";
+}
+
+/// Returns the human-readable encoding name of the given Win32 code page.
+string WindowsEncoder::getDisplayName(::UINT codePage) throw() {
+	const ::HRESULT enteredApartment = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+	::IMultiLanguage2* mlang;
+	if(S_OK == ::CoCreateInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage2, reinterpret_cast<void**>(&mlang))) {
+		::MIMECPINFO mcpi;
+		if(S_OK == mlang->GetCodePageInfo(codePage, LOCALE_USER_DEFAULT, &mcpi)) {
+			string name(wcslen(mcpi.wszWebCharset), 'X');
+			for(size_t i = 0; i < name.length(); ++i)
+				name[i] = mask8Bit(mcpi.wszWebCharset[i]);
+			mlang->Release();
+			if(SUCCEEDED(enteredApartment))
+				::CoUninitialize();
+			return name;
+		}
+		mlang->Release();
+	}
+	if(SUCCEEDED(enteredApartment))
+		::CoUninitialize();
+	static const char format[] = "x-windows-%lu";
+	char name[countof(format) + 32];
+	sprintf(name, format, codePage);
+	return name;
 }
 
 /// @see Encoder#getMaximumNativeBytes
@@ -198,125 +253,9 @@ MIBenum WindowsEncoder::getMIBenum() const throw() {
 	return mib_;
 }
 
-
-// WindowsNLSEncoder ////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param cp the code page
- * @param mib the MIBenum value
- * @throw std#invalid_argument @a cp is not supported by the system
- */
-WindowsNLSEncoder::WindowsNLSEncoder(::UINT cp, MIBenum mib) : WindowsEncoder(cp, mib) {
-	if(!toBoolean(::IsValidCodePage(cp)))
-		throw invalid_argument("the specified code page is not supported.");
-}
-
-/// @see Encoder#doFromUnicode
-Encoder::Result WindowsNLSEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
-	if(from == fromEnd) {
-		// no conversion
-		fromNext = from;
-		toNext = to;
-		return COMPLETED;
-	} else if(const int writtenBytes = ::WideCharToMultiByte(getCodePage(),
-			(policy == REPLACE_UNMAPPABLE_CHARACTER ? WC_DEFAULTCHAR : 0),
-			from, static_cast<int>(fromEnd - from), reinterpret_cast<char*>(to), static_cast<int>(toEnd - to), 0, 0)) {
-		// succeeded (fromNext is not modified)
-		toNext = to + writtenBytes;
-		return COMPLETED;
-	} else {
-		::DWORD e = ::GetLastError();
-		return (e == ERROR_INSUFFICIENT_BUFFER) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
-	}
-}
-
-/// @see Encoder#doToUnicode
-Encoder::Result WindowsNLSEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
-	if(from == fromEnd) {
-		// no conversion
-		fromNext = from;
-		toNext = to;
-		return COMPLETED;
-	} else if(const int writtenChars = ::MultiByteToWideChar(getCodePage(),
-			policy == REPLACE_UNMAPPABLE_CHARACTER ? 0 : MB_ERR_INVALID_CHARS,
-			reinterpret_cast<const char*>(from), static_cast<int>(fromEnd - from), to, static_cast<int>(toEnd - to))) {
-		// succeeded (fromNext is not modified)
-		toNext = to + writtenChars;
-		return COMPLETED;
-	} else
-		return (::GetLastError() == ERROR_INSUFFICIENT_BUFFER) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
-}
-
 /// @see Encoder#getName
-string WindowsNLSEncoder::getName() const throw() {
-	static const char format[] = "x-windows-%lu";
-	char name[countof(format) + 32];
-	sprintf(name, format, getCodePage());
-	return name;
-}
-
-
-// MLangEncoder /////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param cp the code page
- * @param mib the MIBenum value
- * @throw std#invalid_argument @a cp is not supported by the system
- */
-MLangEncoder::MLangEncoder(::UINT cp, MIBenum mib) : WindowsEncoder(cp, mib) {
-	if(mlang.get() == 0)
-		mlang.createInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC);
-	::MIMECPINFO mci;
-	if(S_OK != mlang->GetCodePageInfo(cp, LOCALE_USER_DEFAULT, &mci))
-		throw invalid_argument("the specified code page is not supported.");
-}
-
-/// @see Encoder#doFromUnicode
-Encoder::Result MLangEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
-	static const ::WCHAR defaultCharacters[] = L"?";
-	::DWORD mode = 0;
-	::UINT sourceSize = static_cast<::UINT>(fromEnd - from), destinationSize = static_cast<::UINT>(toEnd - to);
-	if(S_OK == mlang->ConvertStringFromUnicodeEx(&mode, getCodePage(),
-			const_cast<Char*>(from), &sourceSize, reinterpret_cast<char*>(to), &destinationSize,
-			(policy == REPLACE_UNMAPPABLE_CHARACTER) ? MLCONVCHARF_USEDEFCHAR : 0,
-			(policy == REPLACE_UNMAPPABLE_CHARACTER) ? const_cast<::WCHAR*>(defaultCharacters) : 0)) {
-		fromNext = from + sourceSize;
-		toNext = to + destinationSize;
-		if(fromNext == fromEnd)
-			return COMPLETED;
-		else if(toNext == toEnd)
-			return INSUFFICIENT_BUFFER;
-		else
-			return (policy == REPLACE_UNMAPPABLE_CHARACTER
-				|| policy == IGNORE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
-	} else
-		return (policy == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
-}
-
-/// @see Encoder#doToUnicode
-Encoder::Result MLangEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
-	::DWORD mode = 0;
-	::UINT sourceSize = static_cast<::UINT>(fromEnd - from), destinationSize = static_cast<::UINT>(toEnd - to);
-	if(S_OK == mlang->ConvertStringToUnicodeEx(&mode, getCodePage(),
-			reinterpret_cast<char*>(const_cast<uchar*>(from)), &sourceSize, to, &destinationSize, 0, 0)) {
-		fromNext = from + sourceSize;
-		toNext = to + destinationSize;
-		if(fromNext == fromEnd)
-			return COMPLETED;
-		return (toNext == toEnd) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
-	} else
-		return UNMAPPABLE_CHARACTER;
-}
-
-/// @see Encoder#getName
-string MLangEncoder::getName() const throw() {
-	return getMLangEncodingName(getCodePage());
+string WindowsEncoder::getName() const throw() {
+	return getDisplayName(codePage_);
 }
 
 
@@ -326,18 +265,19 @@ namespace {
 	class MLangDetector : public EncodingDetector {
 	public:
 		explicit MLangDetector(MIBenum mib, ::UINT codePage, ::MLDETECTCP flag = ::MLDETECTCP_NONE) :
-			EncodingDetector(mib, getMLangEncodingName(codePage)), codePage_(codePage), flag_(flag) {}
+			EncodingDetector(mib, WindowsEncoder::getDisplayName(codePage)), codePage_(codePage), flag_(flag) {}
 	private:
 		MIBenum doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const throw() {
-			if(mlang.get() != 0) {
-				::HRESULT hr;
+			const ::HRESULT enteredApartment = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+			::IMultiLanguage2* mlang;
+			if(S_OK == ::CoCreateInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage2, reinterpret_cast<void**>(&mlang))) {
 				::UINT numberOfCodePages;
-				if(SUCCEEDED(hr = mlang->GetNumberOfCodePageInfo(&numberOfCodePages))) {
+				if(S_OK == mlang->GetNumberOfCodePageInfo(&numberOfCodePages)) {
 					manah::AutoBuffer<::DetectEncodingInfo> results(new ::DetectEncodingInfo[numberOfCodePages]);
 					int bytes = static_cast<int>(last - first);
 					int c = numberOfCodePages;
-					if(SUCCEEDED(hr = mlang->DetectInputCodepage(flag_, codePage_,
-							const_cast<char*>(reinterpret_cast<const char*>(first)), &bytes, results.get(), &c))) {
+					if(S_OK == mlang->DetectInputCodepage(flag_, codePage_,
+							const_cast<char*>(reinterpret_cast<const char*>(first)), &bytes, results.get(), &c)) {
 						const ::DetectEncodingInfo* bestScore = 0;
 						for(int i = 0; i < c; ++i) {
 							if(bestScore == 0 || results[i].nConfidence > bestScore->nConfidence)
@@ -346,14 +286,20 @@ namespace {
 						if(bestScore != 0) {
 							if(convertibleBytes != 0)
 								*convertibleBytes = (last - first) * bestScore->nDocPercent;
+							mlang->Release();
+							if(SUCCEEDED(enteredApartment))
+								::CoUninitialize();
 							return convertWinCPtoMIB(bestScore->nCodePage);
 						}
 					}
 				}
+				mlang->Release();
 			}
+			if(SUCCEEDED(enteredApartment))
+				::CoUninitialize();
 			if(convertibleBytes != 0)
 				*convertibleBytes = 0;
-			return fundamental::MIB_UNICODE_UTF8;
+			return fundamental::UTF_8;
 		}
 	private:
 		::UINT codePage_;
@@ -365,21 +311,17 @@ namespace {
 namespace {
 	struct WindowsEncoderInstaller {
 		WindowsEncoderInstaller() {
-			::EnumSystemCodePagesW(procedure, CP_INSTALLED);
-
-			::HRESULT hr, enteredApartment = ::CoInitialize(0);
-			{
-				manah::com::ComPtr<::IMultiLanguage> mlang1;
-				if(SUCCEEDED(hr = mlang1.createInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage))) {
-					manah::com::ComPtr<IEnumCodePage> e;
-					if(SUCCEEDED(hr = mlang1->EnumCodePages(MIMECONTF_IMPORT | MIMECONTF_EXPORT | MIMECONTF_VALID, &e))) {
-						::MIMECPINFO cpi;
-						::ULONG fetched;
-						for(e->Reset(); S_OK == (hr = e->Next(1, &cpi, &fetched)); ) {
-							if(const MIBenum mib = convertWinCPtoMIB(cpi.uiCodePage)) {
-								if(!Encoder::supports(mib))
-									Encoder::registerEncoder(auto_ptr<Encoder>(new MLangEncoder(cpi.uiCodePage, mib)));
-							}
+			const ::HRESULT enteredApartment = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+			::IMultiLanguage* mlang;
+			if(S_OK == ::CoCreateInstance(::CLSID_CMultiLanguage, 0, CLSCTX_INPROC, ::IID_IMultiLanguage, reinterpret_cast<void**>(&mlang))) {
+				manah::com::ComPtr<::IEnumCodePage> e;
+				if(S_OK == mlang->EnumCodePages(MIMECONTF_IMPORT | MIMECONTF_EXPORT | MIMECONTF_VALID, &e)) {
+					::MIMECPINFO cpi;
+					::ULONG fetched;
+					for(e->Reset(); S_OK == e->Next(1, &cpi, &fetched); ) {
+						if(const MIBenum mib = convertWinCPtoMIB(cpi.uiCodePage)) {
+							if(!Encoder::supports(mib))
+								Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsEncoder(cpi.uiCodePage, mib)));
 						}
 					}
 				}
@@ -387,21 +329,9 @@ namespace {
 				EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new MLangDetector(EncodingDetector::JIS_DETECTOR, 50932)));
 				EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new MLangDetector(EncodingDetector::KS_DETECTOR, 50949)));
 			}
-			if(enteredApartment == S_OK || enteredApartment == S_FALSE)
+			mlang->Release();
+			if(SUCCEEDED(enteredApartment))
 				::CoUninitialize();
-		}
-		static ::BOOL CALLBACK procedure(::LPWSTR name) {
-			const ::UINT cp = wcstoul(name, 0, 10);
-			if(toBoolean(::IsValidCodePage(cp))) {
-				::CPINFOEXW cpi;
-				if(toBoolean(::GetCPInfoExW(cp, 0, &cpi))) {
-					if(const MIBenum mib = convertWinCPtoMIB(cp)) {
-						if(!Encoder::supports(mib))
-							Encoder::registerEncoder(auto_ptr<Encoder>(new WindowsNLSEncoder(cp, mib)));
-					}
-				}
-			}
-			return TRUE;
 		}
 	} windowsEncoderInstaller;
 }

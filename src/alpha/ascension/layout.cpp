@@ -2394,27 +2394,42 @@ namespace {
 const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations() throw() {
 	if(defaultAssociations_.empty()) {
 		defaultAssociations_[Script::ARABIC] = L"Microsoft Sans Serif";
-		defaultAssociations_[Script::ARMENIAN] = L"Sylfaen";
-		defaultAssociations_[Script::BENGALI] = L"Vrinda";
-		defaultAssociations_[Script::CYRILLIC] = L"Microsoft Sans Serif";	// Segoe UI is an alternative
-		defaultAssociations_[Script::DEVANAGARI] = L"Mangal";
-		defaultAssociations_[Script::GEORGIAN] = L"Sylfaen";	// partial support
+		defaultAssociations_[Script::CYRILLIC] = L"Microsoft Sans Serif";
 		defaultAssociations_[Script::GREEK] = L"Microsoft Sans Serif";
-		defaultAssociations_[Script::GUJARATI] = L"Shruti";
-		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
 		defaultAssociations_[Script::HANGUL] = L"Gulim";
 		defaultAssociations_[Script::HEBREW] = L"Microsoft Sans Serif";
 //		defaultAssociations_[Script::HIRAGANA] = L"MS P Gothic";
-		defaultAssociations_[Script::KANNADA] = L"Tunga";
 //		defaultAssociations_[Script::KATAKANA] = L"MS P Gothic";
 		defaultAssociations_[Script::LATIN] = L"Tahoma";
-		defaultAssociations_[Script::MALAYALAM] = L"Kartika";
-    defaultAssociations_[Script::SYRIAC] = L"Estrangelo Edessa";
-		defaultAssociations_[Script::TAMIL] = L"Latha";
-		defaultAssociations_[Script::TELUGU] = L"Gautami";
 		defaultAssociations_[Script::THAI] = L"Tahoma";
-    defaultAssociations_[Script::THAANA] = L"MV Boli";
-		const LANGID uiLang = getUserCJKLanguage();
+		// Windows 2000
+		defaultAssociations_[Script::ARMENIAN] = L"Sylfaen";
+		defaultAssociations_[Script::DEVANAGARI] = L"Mangal";
+		defaultAssociations_[Script::GEORGIAN] = L"Sylfaen";	// partial support?
+		defaultAssociations_[Script::TAMIL] = L"Latha";
+		// Windows XP
+		defaultAssociations_[Script::GUJARATI] = L"Shruti";
+		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
+		defaultAssociations_[Script::KANNADA] = L"Tunga";
+		defaultAssociations_[Script::SYRIAC] = L"Estrangelo Edessa";
+		defaultAssociations_[Script::TELUGU] = L"Gautami";
+		defaultAssociations_[Script::THAANA] = L"MV Boli";
+		// Windows XP SP2
+		defaultAssociations_[Script::BENGALI] = L"Vrinda";
+		defaultAssociations_[Script::MALAYALAM] = L"Kartika";
+		// Windows Vista
+		defaultAssociations_[Script::CANADIAN_ABORIGINAL] = L"Euphemia";
+		defaultAssociations_[Script::CHEROKEE] = L"Plantagenet";
+		defaultAssociations_[Script::ETHIOPIC] = L"Nyala";
+		defaultAssociations_[Script::KHMER] = L"DaunPenh";	// or "MoolBoran"
+		defaultAssociations_[Script::LAO] = L"DokChampa";
+		defaultAssociations_[Script::MONGOLIAN] = L"Mongolian Baiti";
+		defaultAssociations_[Script::ORIYA] = L"Kalinga";
+		defaultAssociations_[Script::SINHALA] = L"Iskoola Pota";
+		defaultAssociations_[Script::TIBETAN] = L"Microsoft Himalaya";
+		defaultAssociations_[Script::YI] = L"Yi Baiti";
+		// CJK
+		const ::LANGID uiLang = getUserCJKLanguage();
 		switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
 		case LANG_CHINESE:
 			defaultAssociations_[Script::HAN] = (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
@@ -2434,7 +2449,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 	wcscpy(lf.lfFaceName, fontname);							\
 	::EnumFontFamiliesExW(dc.getHandle(), &lf,					\
 		reinterpret_cast<::FONTENUMPROCW>(checkFontInstalled),	\
-		reinterpret_cast<LPARAM>(&installed), 0);				\
+		reinterpret_cast<::LPARAM>(&installed), 0);				\
 	if(installed) {												\
 		defaultAssociations_[Script::HAN] = lf.lfFaceName;		\
 		break;													\

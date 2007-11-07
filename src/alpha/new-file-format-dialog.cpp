@@ -31,9 +31,9 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 	const MIBenum mib = static_cast<MIBenum>(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()));
 
-	if(mib == extended::MIB_UNICODE_UTF5 || mib == extended::MIB_UNICODE_UTF7 || mib == fundamental::MIB_UNICODE_UTF8
-			|| mib == fundamental::MIB_UNICODE_UTF16LE || mib == fundamental::MIB_UNICODE_UTF16BE
-			|| mib == extended::MIB_UNICODE_UTF32LE || mib == extended::MIB_UNICODE_UTF32BE) {
+	if(mib == extended::UTF_5 || mib == extended::UTF_7 || mib == fundamental::UTF_8
+			|| mib == fundamental::UTF_16LE || mib == fundamental::UTF_16BE
+			|| mib == extended::UTF_32LE || mib == extended::UTF_32BE) {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();

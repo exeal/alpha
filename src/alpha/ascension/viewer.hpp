@@ -252,19 +252,19 @@ namespace ascension {
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
 			// IUnknown
-			IMPLEMENT_UNKNOWN_NO_REF_COUNT()
-			BEGIN_INTERFACE_TABLE()
-				IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
-				IMPLEMENTS_INTERFACE(IDropTarget)
-			END_INTERFACE_TABLE()
+			MANAH_IMPLEMENT_UNKNOWN_NO_REF_COUNT()
+			MANAH_BEGIN_INTERFACE_TABLE()
+				MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
+				MANAH_IMPLEMENTS_INTERFACE(IDropTarget)
+			MANAH_END_INTERFACE_TABLE()
 			// IDropSource
-			STDMETHODIMP	QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
-			STDMETHODIMP	GiveFeedback(DWORD dwEffect);
+			STDMETHODIMP	QueryContinueDrag(::BOOL fEscapePressed, ::DWORD grfKeyState);
+			STDMETHODIMP	GiveFeedback(::DWORD dwEffect);
 			// IDropTarget
-			STDMETHODIMP	DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
-			STDMETHODIMP	DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+			STDMETHODIMP	DragEnter(::IDataObject* pDataObj, ::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
+			STDMETHODIMP	DragOver(::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
 			STDMETHODIMP	DragLeave();
-			STDMETHODIMP	Drop(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+			STDMETHODIMP	Drop(::IDataObject* pDataObj, ::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
 		private:
 			void					beginTimer(UINT interval);
 			void					endTimer();

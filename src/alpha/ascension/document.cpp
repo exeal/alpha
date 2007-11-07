@@ -1033,12 +1033,12 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 		size_t bomLength;
 
 		switch(encoding) {
-		case fundamental::MIB_UNICODE_UTF8:		bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
-		case fundamental::MIB_UNICODE_UTF16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
-		case fundamental::MIB_UNICODE_UTF16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
+		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
+		case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
+		case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		case extended::MIB_UNICODE_UTF32LE:		bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-		case extended::MIB_UNICODE_UTF32BE:		bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
+		case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+		case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 		default:								bom = 0; bomLength = 0; break;
 		}
@@ -1053,8 +1053,8 @@ Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
 
 		Char* toNext;
 		const uchar* fromNext;
-		if(Encoder::COMPLETED != encoder->toUnicode(ucsBuffer, ucsBuffer + destLength, toNext,
-				nativeBuffer + bomLength, nativeBuffer + fileSize, fromNext, encodingPolicy)) {
+		if(Encoder::COMPLETED != encoder->setPolicy(encodingPolicy).toUnicode(
+				ucsBuffer, ucsBuffer + destLength, toNext, nativeBuffer + bomLength, nativeBuffer + fileSize, fromNext)) {
 			::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
 			CLOSE_AND_ABORT(FIR_ENCODING_FAILURE);
 		}
@@ -1261,10 +1261,10 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	// Unicode コードページでしか使えない改行コード
 	if(params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS) {
 		const MIBenum mib = encoder->getMIBenum();
-		if(mib != fundamental::MIB_UNICODE_UTF8 && mib != fundamental::MIB_UNICODE_UTF16LE && mib != fundamental::MIB_UNICODE_UTF16BE
+		if(mib != fundamental::UTF_8 && mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-				&& mib != extended::MIB_UNICODE_UTF5 && mib != extended::MIB_UNICODE_UTF7
-				&& mib != extended::MIB_UNICODE_UTF32LE && mib != extended::MIB_UNICODE_UTF32BE
+				&& mib != extended::UTF_5 && mib != extended::UTF_7
+				&& mib != extended::UTF_32LE && mib != extended::UTF_32BE
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 			)
 		return FIR_INVALID_NEWLINE;
@@ -1292,24 +1292,24 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 	if(params.options.has(SaveParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE)) {
 		size_t signatureSize = 0;
 		switch(encoder->getMIBenum()) {
-		case fundamental::MIB_UNICODE_UTF8:
+		case fundamental::UTF_8:
 			signatureSize = countof(encoding::UTF8_BOM);
 			memcpy(nativeBuffer, encoding::UTF8_BOM, signatureSize);
 			break;
-		case fundamental::MIB_UNICODE_UTF16LE:
+		case fundamental::UTF_16LE:
 			signatureSize = countof(encoding::UTF16LE_BOM);
 			memcpy(nativeBuffer, encoding::UTF16LE_BOM, signatureSize);
 			break;
-		case fundamental::MIB_UNICODE_UTF16BE:
+		case fundamental::UTF_16BE:
 			signatureSize = countof(encoding::UTF16BE_BOM);
 			memcpy(nativeBuffer, encoding::UTF16BE_BOM, signatureSize);
 			break;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		case extended::MIB_UNICODE_UTF32LE:
+		case extended::UTF_32LE:
 			signatureSize = countof(encoding::UTF32LE_BOM);
 			memcpy(nativeBuffer, encoding::UTF32LE_BOM, signatureSize);
 			break;
-		case extended::MIB_UNICODE_UTF32BE:
+		case extended::UTF_32BE:
 			signatureSize = countof(encoding::UTF32BE_BOM);
 			memcpy(nativeBuffer, encoding::UTF32BE_BOM, signatureSize);
 			break;
@@ -1328,8 +1328,8 @@ Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const
 		const Char* fromNext;
 		uchar* toNext;
 		if(!line.text_.empty()) {
-			if(Encoder::COMPLETED != encoder->fromUnicode(dest, nativeBuffer + nativeBufferBytes, toNext,
-					line.text_.data(), line.text_.data() + line.text_.length(), fromNext, params.encodingPolicy))
+			if(Encoder::COMPLETED != encoder->setPolicy(params.encodingPolicy).fromUnicode(
+					dest, nativeBuffer + nativeBufferBytes, toNext, line.text_.data(), line.text_.data() + line.text_.length(), fromNext))
 				goto ENCODING_FAILURE;
 			dest = toNext;
 		}

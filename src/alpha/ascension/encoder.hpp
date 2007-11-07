@@ -8,9 +8,9 @@
 #define ASCENSION_ENCODER_HPP
 #include "unicode.hpp"
 #include <cassert>
-#include <set>
 #include <map>
 #include <memory>	// std.auto_ptr
+#include <locale>	// std.codecvt
 
 
 namespace ascension {
@@ -38,40 +38,40 @@ namespace ascension {
 		/// MIBenum values of the fundamental encodings.
 		namespace fundamental {
 			const MIBenum
-				MIB_US_ASCII = 3,			///< ANSI X3.4:1968.
-				MIB_ISO_8859_1 = 4,			///< ISO-8859-1:1987.
-				MIB_UNICODE_UTF8 = 106,		///< UTF-8.
-				MIB_UNICODE_UTF16BE = 1013,	///< UTF-16BE.
-				MIB_UNICODE_UTF16LE = 1014;	///< UTF-16LE.
-//				MIB_UNICODE_UTF16 = 1015;	///< UTF-16.
+				US_ASCII = 3,		///< ANSI X3.4:1968.
+				ISO_8859_1 = 4,		///< ISO-8859-1:1987.
+				UTF_8 = 106,		///< UTF-8.
+				UTF_16BE = 1013,	///< UTF-16BE.
+				UTF_16LE = 1014;	///< UTF-16LE.
+//				UTF_16 = 1015;		///< UTF-16.
 		}
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 		/// MIBenum values of the standard encodings.
 		namespace standard {
 			const MIBenum
-				MIB_ISO_8859_2 = 5,		///< ISO-8859-2:1987.
-				MIB_ISO_8859_3 = 6,		///< ISO-8859-3:1988.
-				MIB_ISO_8859_4 = 7,		///< ISO-8859-4:1988.
-				MIB_ISO_8859_5 = 8,		///< ISO-8859-5:1988.
-				MIB_ISO_8859_6 = 9,		///< ISO-8859-6:1987.
-				MIB_ISO_8859_7 = 10,	///< ISO-8859-7:1987.
-				MIB_ISO_8859_8 = 11,	///< ISO-8859-8:1988.
-				MIB_ISO_8859_9 = 12,	///< ISO-8859-9:1989.
-				MIB_ISO_8859_10 = 13,	///< ISO-8859-10:1992.
-				MIB_SHIFT_JIS = 17,		///< Shift_JIS (JIS X 0208:1997).
-				MIB_EUC_JP = 18,		///< EUC-JP (JIS X 0208:1997 and JIS X 0212:1990).
-				MIB_ISO_2022_KR = 37,	///< ISO-2022-KR.
-				MIB_EUC_KR = 38,		///< EUC-KR.
-				MIB_ISO_2022_JP = 39,	///< ISO-2022-JP (RFC1468 and JIS X 0208:1997).
-				MIB_ISO_2022_JP_2 = 40,	///< ISO-2022-JP-2 (RFC1554 and JIS X 0212:1990).
-				MIB_ISO_8859_6_E = 81,	///< ISO-8859-6-E.
-				MIB_ISO_8859_6_I = 82,	///< ISO-8859-6-I.
-				MIB_ISO_8859_8_E = 84,	///< ISO-8859-8-E.
-				MIB_ISO_8859_8_I = 85,	///< ISO-8859-8-I.
-				MIB_GB2312 = 2025,		///< GB2312.
-				MIB_BIG5 = 2026,		///< Big5.
-				MIB_KOI8_R = 2084;		///< KOI8-R.
+				ISO_8859_2 = 5,		///< ISO-8859-2:1987.
+				ISO_8859_3 = 6,		///< ISO-8859-3:1988.
+				ISO_8859_4 = 7,		///< ISO-8859-4:1988.
+				ISO_8859_5 = 8,		///< ISO-8859-5:1988.
+				ISO_8859_6 = 9,		///< ISO-8859-6:1987.
+				ISO_8859_7 = 10,	///< ISO-8859-7:1987.
+				ISO_8859_8 = 11,	///< ISO-8859-8:1988.
+				ISO_8859_9 = 12,	///< ISO-8859-9:1989.
+				ISO_8859_10 = 13,	///< ISO-8859-10:1992.
+				SHIFT_JIS = 17,		///< Shift_JIS (JIS X 0208:1997).
+				EUC_JP = 18,		///< EUC-JP (JIS X 0208:1997 and JIS X 0212:1990).
+				ISO_2022_KR = 37,	///< ISO-2022-KR.
+				EUC_KR = 38,		///< EUC-KR.
+				ISO_2022_JP = 39,	///< ISO-2022-JP (RFC1468 and JIS X 0208:1997).
+				ISO_2022_JP_2 = 40,	///< ISO-2022-JP-2 (RFC1554 and JIS X 0212:1990).
+				ISO_8859_6_E = 81,	///< ISO-8859-6-E.
+				ISO_8859_6_I = 82,	///< ISO-8859-6-I.
+				ISO_8859_8_E = 84,	///< ISO-8859-8-E.
+				ISO_8859_8_I = 85,	///< ISO-8859-8-I.
+				GB2312 = 2025,		///< GB2312.
+				BIG5 = 2026,		///< Big5.
+				KOI8_R = 2084;		///< KOI8-R.
 		}
 #endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 
@@ -80,42 +80,47 @@ namespace ascension {
 		namespace extended {
 			const MIBenum
 				// Unicode
-				MIB_UNICODE_UTF5	= 3001,	///< UTF-5.
-				MIB_UNICODE_UTF7	= 1012,	///< UTF-7 (RFC2152).
-				MIB_UNICODE_UTF32BE	= 1018,	///< UTF-32BE.
-				MIB_UNICODE_UTF32LE	= 1019,	///< UTF-32LE.
+				UTF_5		= 3001,	///< UTF-5.
+				UTF_7		= 1012,	///< UTF-7 (RFC2152).
+				UTF_32BE	= 1018,	///< UTF-32BE.
+				UTF_32LE	= 1019,	///< UTF-32LE.
+				// Latin
+				ISO_8859_13	= 109,	///< ISO-8859-13.
+				ISO_8859_14	= 110,	///< ISO-8859-14:1998.
+				ISO_8859_15	= 111,	///< ISO-8859-15.
+				ISO_8859_16	= 112,	///< ISO-8859-16:2001.
 				// Armenian
-				MIB_ARMENIAN_ARMSCII7	= 3020,	///< ARMSCII-7.
-				MIB_ARMENIAN_ARMSCII8	= 3021,	///< ARMSCII-8.
-				MIB_ARMENIAN_ARMSCII8A	= 3022,	///< ARMSCII-8A.
+				ARMSCII7	= 3020,	///< ARMSCII-7.
+				ARMSCII8	= 3021,	///< ARMSCII-8.
+				ARMSCII8A	= 3022,	///< ARMSCII-8A.
 				// Vietnamese
-				MIB_VIETNAMESE_VISCII	= 2082,	///< VISCII (VIetnamese Standard Code for Information Interchange; RFC1456).
-				MIB_VIETNAMESE_VIQR		= 2083,	///< VIQR (VIetnamese Quoted-Readable; RFC1456).
-				MIB_VIETNAMESE_TCVN		= 3030,	///< TCVN.
-				MIB_VIETNAMESE_VPS		= 3031,	///< VPS.
+				VISCII	= 2082,	///< VISCII (VIetnamese Standard Code for Information Interchange; RFC1456).
+				VIQR	= 2083,	///< VIQR (VIetnamese Quoted-Readable; RFC1456).
+				TCVN	= 3030,	///< TCVN.
+				VPS		= 3031,	///< VPS.
 				// Japanese
-				MIB_JAPANESE_ISO_2022_JP_1					= 3040,	///< ISO-2022-JP-1 (RFC and JIS X 0208:1997).
-				MIB_JAPANESE_ISO_2022_JP_2004				= 3041,	///< ISO-2022-JP-2004 (JIS X 0213:2004).
-				MIB_JAPANESE_ISO_2022_JP_2004_STRICT		= 3042,	///< ISO-2022-JP-2004-strict (Emacs).
-				MIB_JAPANESE_ISO_2022_JP_2004_COMPATIBLE	= 3043,	///< ISO-2022-JP-2004-compatible (Emacs).
-				MIB_JAPANESE_ISO_2022_JP_3					= 3044,	///< ISO-2022-JP-3 (JIS X 0213:2000).
-				MIB_JAPANESE_ISO_2022_JP_3_STRICT			= 3045,	///< ISO-2022-JP-3-strict (Emacs).
-				MIB_JAPANESE_ISO_2022_JP_3_COMPATIBLE		= 3046,	///< ISO-2022-JP-3-compatible (Emacs).
-				MIB_JAPANESE_SHIFT_JIS_2004					= 3047,	///< Shift_JIS-2004 (JIS X 0213:2004).
-				MIB_JAPANESE_EUC_JIS_2004					= 3048,	///< EUC-JIS-2004 (JIS X 0213:2004).
+				ISO_2022_JP_1				= 3040,	///< ISO-2022-JP-1 (RFC and JIS X 0208:1997).
+				ISO_2022_JP_2004			= 3041,	///< ISO-2022-JP-2004 (JIS X 0213:2004).
+				ISO_2022_JP_2004_STRICT		= 3042,	///< ISO-2022-JP-2004-strict (Emacs).
+				ISO_2022_JP_2004_COMPATIBLE	= 3043,	///< ISO-2022-JP-2004-compatible (Emacs).
+				ISO_2022_JP_3				= 3044,	///< ISO-2022-JP-3 (JIS X 0213:2000).
+				ISO_2022_JP_3_STRICT		= 3045,	///< ISO-2022-JP-3-strict (Emacs).
+				ISO_2022_JP_3_COMPATIBLE	= 3046,	///< ISO-2022-JP-3-compatible (Emacs).
+				SHIFT_JIS_2004				= 3047,	///< Shift_JIS-2004 (JIS X 0213:2004).
+				EUC_JIS_2004				= 3048,	///< EUC-JIS-2004 (JIS X 0213:2004).
 				// Thai
-				MIB_THAI_TIS620			= 2259,	///< TIS 620-2533:1990.
-				MIB_THAI_ISO_8859_11	= 3060,	///< ISO-8859-11.
+				TIS620		= 2259,	///< TIS 620-2533:1990.
+				ISO_8859_11	= 3060,	///< ISO-8859-11.
 				// Lao
-				MIB_LAO_MULE_LAO	= 3065,	///< MuleLao-1.
-				MIB_LAO_CP1132		= 3066,	///< IBM1132.
-				MIB_LAO_CP1133		= 3067,	///< IBM1133.
+				MULE_LAO	= 3065,	///< MuleLao-1.
+				CP1132		= 3066,	///< IBM1132.
+				CP1133		= 3067,	///< IBM1133.
 				// Irelandic
-				MIB_IRISH_IS434	= 3070,	///< Irelandic (I.S. 434:1999).
+				IS434	= 3070,	///< Irelandic (I.S. 434:1999).
 				// Tamil
-				MIB_TAMIL_TAB	= 3080,	///< Tamil (TAB).
-				MIB_TAMIL_TAM	= 3081,	///< Tamil (TAM).
-//				MIB_TAMIL_TSCII	= 3082,	///< Tamil (TSCII 1.7).
+				TAB		= 3080,	///< Tamil (TAB).
+				TAM		= 3081,	///< Tamil (TAM).
+//				TSCII	= 3082,	///< Tamil (TSCII 1.7).
 				// Hindi
 				MIB_HINDI_MACINTOSH	= 3090,	///< Hindi (Macintosh, Devanagari).
 				// Gujarati
@@ -140,9 +145,9 @@ namespace ascension {
 				MIB_MULTILINGUAL_ISO2022_7BITSISO	= 3122,	///< Multilingual (ISO-2022, 7-bit, SI/SO).
 				MIB_MULTILINGUAL_ISO2022_8BITSS2	= 3123,	///< Multilingual (ISO-2022, 8-bit, SS2).
 				// miscellaneous
-				MIB_MISCELLANEOUS_BINARY	= 3900,	///< Binary.
-				MIB_MISCELLANEOUS_NEXTSTEP	= 3901,	///< NEXTSTEP.
-				MIB_MISCELLANEOUS_ATARIST	= 3902;	///< Atari ST/TT.
+				BINARY	= 3900,	///< Binary.
+				NEXTSTEP	= 3901,	///< NEXTSTEP.
+				ATARIST	= 3902;	///< Atari ST/TT.
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
@@ -200,11 +205,29 @@ namespace ascension {
 		class Encoder {
 			MANAH_NONCOPYABLE_TAG(Encoder);
 		public:
+			/**
+			 * A value represents intermediate states of a encoder. The sematics are defined by
+			 * each specific encoder implementations, but should treat zero as the initial state.
+			 */
+			class State {
+			public:
+				/// Constructor initializes the value with zero.
+				State() throw() : value_(0) {}
+				/// Conversion operator.
+				operator int() const throw() {return value_;}
+				/// Assignment operator takes an integer.
+				State& operator=(int newValue) throw() {value_ = newValue; return *this;}
+			private:
+				int value_;
+			};
+
+			/// Result of conversion.
 			enum Result {
 				/// The conversion fully succeeded. @a fromNext parameter of the conversion method
 				/// should equal @a fromEnd.
 				COMPLETED,
-				/// The conversion partially succeeded because the destination buffer was not large enough.
+				/// The conversion partially succeeded because the destination buffer was not large
+				/// enough.
 				INSUFFICIENT_BUFFER,
 				/// The conversion partially succeeded because encounted an unmappable character.
 				/// @c fromNext parameter of the conversion method should addresses the unmappable
@@ -216,6 +239,9 @@ namespace ascension {
 				/// character. @c Encoder#fromUnicode should not return this value.
 				MALFORMED_INPUT
 			};
+
+			/// Conversion policies.
+			/// @see #getPolicy, #setPolicy
 			enum Policy {
 				/// Nothing.
 				NO_POLICY,
@@ -227,7 +253,10 @@ namespace ascension {
 			};
 		public:
 			virtual ~Encoder() throw();
-			// attributes
+			// concrete attributes
+			Policy		getPolicy() const throw();
+			Encoder&	setPolicy(Policy newPolicy);
+			// abstract attributes
 			/**
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
 			 * @return a string contains aliases separated by NUL
@@ -251,11 +280,11 @@ namespace ascension {
 			bool		canEncode(const Char* first, const Char* last) const;
 			bool		canEncode(const String& s) const;
 			Result		fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy = NO_POLICY) const;
-			std::string	fromUnicode(const String& from, Policy policy = NO_POLICY) const;
+							const Char* from, const Char* fromEnd, const Char*& fromNext, State* state = 0) const;
+			std::string	fromUnicode(const String& from) const;
 			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy = NO_POLICY) const;
-			String		toUnicode(const std::string& from, Policy policy = NO_POLICY) const;
+							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state = 0) const;
+			String		toUnicode(const std::string& from) const;
 			// factory
 			static Encoder*	forCCSID(int ccsid) throw();
 			static Encoder*	forCPGID(int cpgid) throw();
@@ -281,11 +310,11 @@ namespace ascension {
 			 * @param[in] from the beginning of the buffer to be converted
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @param[in] policy the conversion policy
+			 * @param[in,out] state the conversion state. may be @c null
 			 * @return the result of the conversion
 			 */
 			virtual Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-				const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const = 0;
+				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const = 0;
 			/**
 			 * Converts the given string from the native encoding into UTF-16.
 			 * @param[out] to the beginning of the destination buffer
@@ -294,14 +323,15 @@ namespace ascension {
 			 * @param[in] from the beginning of the buffer to be converted
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @param[in] policy the conversion policy
+			 * @param[in,out] state the conversion state. may be @c null
 			 * @return the result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const = 0;
+				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const = 0;
 		private:
 			typedef std::map<MIBenum, ASCENSION_SHARED_POINTER<Encoder> > Encoders;
 			static Encoders& registry() throw();
+			Policy policy_;
 		};
 
 		class EncodingDetector {
@@ -378,20 +408,20 @@ namespace ascension {
 			template<typename Concrete> class SBCSEncoder : public Encoder {
 			private:
 				Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+						const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(!static_cast<const Concrete*>(this)->doFromUnicode(*to, *from)) {
-							if(policy == REPLACE_UNMAPPABLE_CHARACTER) *to = NATIVE_REPLACEMENT_CHARACTER;
-							else if(policy == IGNORE_UNMAPPABLE_CHARACTER) --to;
+							if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) *to = NATIVE_REPLACEMENT_CHARACTER;
+							else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
 							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
 					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 				Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(!static_cast<const Concrete*>(this)->doToUnicode(*to, *from)) {
-							if(policy == REPLACE_UNMAPPABLE_CHARACTER) *to = REPLACEMENT_CHARACTER;
-							else if(policy == IGNORE_UNMAPPABLE_CHARACTER) --to;
+							if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) *to = REPLACEMENT_CHARACTER;
+							else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
 							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
 					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
@@ -407,9 +437,9 @@ namespace ascension {
 	class className : public ascension::encoding::Encoder {											\
 	private:																						\
 		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,								\
-			const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const;		\
+			const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;		\
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,									\
-			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const;	\
+			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const;	\
 		MIBenum getMIBenum() const throw() {return mib;}											\
 		std::string getName() const throw() {return name;}
 		/// Enters the definition of @c Encoder#getAliases method.
@@ -461,6 +491,9 @@ namespace ascension {
 		 */
 		template<typename OutputIterator> inline void Encoder::getAvailableNames(OutputIterator out) {
 			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->getName();}
+
+		/// Returns the conversion policy.
+		inline Encoder::Policy Encoder::getPolicy() const throw() {return policy_;}
 
 		/**
 		 * Returns identifiers for all available encoding detectors.

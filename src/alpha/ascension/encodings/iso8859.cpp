@@ -1,73 +1,154 @@
 /**
  * @file iso8859.cpp
+ * Implements encoders for ISO-8859-2..10 and 13..16 (ISO-8859-1 is defined in encoder.cpp and
+ * ISO-8859-11 is defined in thai.cpp).
  * @author exeal
  * @date 2004-2007
  */
 
-#include "stdafx.h"
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 #include "../encoder.hpp"
 using namespace ascension;
-using namespace ascension::encodings;
+using namespace ascension::encoding;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88592Encoder, standard::ISO_8859_2, "ISO-8859-2")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-101\0"
+			"ISO_8859-2\0"
+			"latin2\0"
+			"l2\0"
+			"csISOLatin2\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88593Encoder, standard::ISO_8859_3, "ISO-8859-3")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-109\0"
+			"ISO_8859-3\0"
+			"latin3\0"
+			"l3\0"
+			"csISOLatin3\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88594Encoder, standard::ISO_8859_4, "ISO-8859-4")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-110\0"
+			"ISO_8859-4\0"
+			"latin4\0"
+			"l4\0"
+			"csISOLatin4\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88595Encoder, standard::ISO_8859_5, "ISO-8859-5")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-144\0"
+			"ISO_8859-5\0"
+			"cyrillic\0"
+			"csISOLatinCyrillic\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88596Encoder, standard::ISO_8859_6, "ISO-8859-6")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-127\0"
+			"ISO_8859-6\0"
+			"ECMA-114\0"
+			"ASMO-708\0"
+			"arabic\0"
+			"csISOLatinArabic\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88597Encoder, standard::ISO_8859_7, "ISO-8859-7")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-126\0"
+			"ISO_8859-7\0"
+			"ELOT_928\0"
+			"ECMA-118\0"
+			"greek\0"
+			"greek8\0"
+			"csISOLatinGreek\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88598Encoder, standard::ISO_8859_8, "ISO-8859-8")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-138\0"
+			"ISO_8859-8\0"
+			"hebrew\0"
+			"csISOLatinHebrew\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88599Encoder, standard::ISO_8859_9, "ISO-8859-9")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-148\0"
+			"ISO_8859-9\0"
+			"latin5\0"
+			"l5\0"
+			"csISOLatin5\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO885910Encoder, standard::ISO_8859_10, "ISO-8859-10")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-157\0"
+			"l6\0"
+			"ISO_8859-10:1992\0"
+			"csISOLatin6\0"
+			"latin6\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+	ASCENSION_DEFINE_SBCS_ENCODER(ISO885913Encoder, extended::ISO_8859_13, "ISO-8859-13")
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO885914Encoder, extended::ISO_8859_14, "ISO-8859-14")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-199\0"
+			"ISO_8859-14:1998\0"
+			"ISO_8859-14\0"
+			"latin8\0"
+			"iso-celtic\0"
+			"l8\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO885915Encoder, extended::ISO_8859_15, "ISO-8859-15")
+		ASCENSION_ENCODER_ALIASES(
+			"ISO_8859-15\0"
+			"Latin-9\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO885916Encoder, extended::ISO_8859_16, "ISO-8859-16")
+		ASCENSION_ENCODER_ALIASES(
+			"iso-ir-226\0"
+			"ISO_8859-16:2001\0"
+			"ISO_8859-16\0"
+			"latin10\0"
+			"l10\0"
+		)
+	ASCENSION_END_ENCODER_CLASS()
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_1, Iso8859_1, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_2, Iso8859_2, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_3, Iso8859_3, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_4, Iso8859_4, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_5, Iso8859_5, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_6, Iso8859_6, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_7, Iso8859_7, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_8, Iso8859_8, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_9, Iso8859_9, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_10, Iso8859_10, 1, 1)
-//	DEFINE_ENCODER_CLASS(CPEX_ISO8859_11, Iso8859_11, 1, 1)	// Thai.cpp で実装
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_13, Iso8859_13, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_14, Iso8859_14, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_15, Iso8859_15, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_ISO8859_16, Iso8859_16, 1, 1)
-END_ENCODER_DEFINITION()
-
-
-#define IMPLEMENT_ISO8859_TO_UNICODE(tableName)											\
-	CTU_CHECKARGS();																	\
-	const size_t len = min(srcLength, destLength);										\
-	for(size_t i = 0; i < len; ++i) {													\
-		if(src[i] < 0xA0)																\
-			dest[i] = src[i];															\
-		else if(src[i] - 0xA0 < countof(tableName) && tableName[src[i] - 0xA0] != N__A)	\
-			dest[i] = tableName[src[i] - 0xA0];											\
-		else																			\
-			dest[i] = REPLACEMENT_CHARACTER;											\
-		if(dest[i] == REPLACEMENT_CHARACTER)											\
-			CONFIRM_ILLEGAL_CHAR(dest[i]);												\
-	}																					\
-	return len
-
-#define IMPLEMENT_UNICODE_TO_ISO8859_BEGIN()		\
-	CFU_CHECKARGS();								\
-	const size_t len = min(srcLength, destLength);	\
-	for(size_t i = 0; i < len; ++i) {				\
-		if(src[i] < 0x00A0)							\
-			dest[i] = BIT8_MASK(src[i])
-
-#define ENTRY_UNICODE_TO_ISO8859_MAP(baseTableName, offset)												\
-		else if(src[i] >= 0x##offset && src[i] < 0x##offset + countof(baseTableName##offset))	\
-			dest[i] = baseTableName##offset[src[i] - 0x##offset]
-
-#define IMPLEMENT_UNICODE_TO_ISO8859_END()	\
-		else								\
-			dest[i] = N__A;					\
-		if(dest[i] == N__A)					\
-			CONFIRM_ILLEGAL_CHAR(dest[i]);	\
-	}										\
-	return len
+	struct Installer {
+		Installer() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88592Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88593Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88594Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88595Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88596Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88597Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88598Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO88599Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO885910Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO885913Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO885914Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO885915Encoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new ISO885916Encoder));
+		}
+	} installer;
+} // namespace @0
 
 
 namespace {
-	const wchar_t ISO88592toUCS_A0[] = {
+	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const uchar N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const Char ISO88592toUCS_A0[] = {
 	/* 0xA0 */	0x00A0, 0x0104, 0x02D8, 0x0141, 0x00A4, 0x013D, 0x015A, 0x00A7,
 				0x00A8, 0x0160, 0x015E, 0x0164, 0x0179, 0x00AD, 0x017D, 0x017B,
 	/* 0xB0 */	0x00B0, 0x0105, 0x02DB, 0x0142, 0x00B4, 0x013E, 0x015B, 0x02C7,
@@ -101,7 +182,7 @@ namespace {
 												  0xB7, N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 		N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A, 0xA2, 0xFF, N__A, 0xB2, N__A, 0xBD
 	};
-	const wchar_t ISO88593toUCS_A0[] = {
+	const Char ISO88593toUCS_A0[] = {
 	/* 0xA0 */	0x00A0, 0x0126, 0x02D8, 0x00A3, 0x00A4, RP__CH, 0x0124, 0x00A7,
 				0x00A8, 0x0130, 0x015E, 0x011E, 0x0134, 0x00AD, RP__CH, 0x017B,
 	/* 0xB0 */	0x00B0, 0x0127, 0x00B2, 0x00B3, 0x00B4, 0x00B5, 0x0125, 0x00B7,
@@ -135,7 +216,7 @@ namespace {
 	const uchar UCStoISO88593_02D8[] = {
 		0xA2, 0xFF
 	};
-	const wchar_t ISO88594toUCS_A0[] = {
+	const Char ISO88594toUCS_A0[] = {
 		0x00A0, 0x0104, 0x0138, 0x0156, 0x00A4, 0x0128, 0x013B, 0x00A7,
 		0x00A8, 0x0160, 0x0112, 0x0122, 0x0166, 0x00AD, 0x017D, 0x00AF,
 		0x00B0, 0x0105, 0x02DB, 0x0157, 0x00B4, 0x0129, 0x013C, 0x02C7,
@@ -169,7 +250,7 @@ namespace {
 												  0xB7, N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A, 
 		N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A, 0xFF, N__A, 0xB2
 	};
-	const wchar_t ISO88595toUCS_A0[] = {
+	const Char ISO88595toUCS_A0[] = {
 		0x00A0, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407,
 		0x0408, 0x0409, 0x040A, 0x040B, 0x040C, 0x00AD, 0x040E, 0x040F, 
 		0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0415, 0x0416, 0x0417,
@@ -197,7 +278,7 @@ namespace {
 	const uchar UCStoISO88595_2116[] = {
 											0xF0
 	};
-	const wchar_t ISO88596toUCS_A0[] = {
+	const Char ISO88596toUCS_A0[] = {
 		0x00A0, RP__CH, RP__CH, RP__CH, 0x00A4, RP__CH, RP__CH, RP__CH,
 		RP__CH, RP__CH, RP__CH, RP__CH, 0x060C, 0x00AD, RP__CH, RP__CH, 
 		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,
@@ -221,7 +302,7 @@ namespace {
 		0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,
 		0xF0, 0xF1, 0xF2
 	};
-	const wchar_t ISO88597toUCS_A0[] = {
+	const Char ISO88597toUCS_A0[] = {
 		0x00A0, 0x2018, 0x2019, 0x00A3, 0x20AC, 0x20AF, 0x00A6, 0x00A7,
 		0x00A8, 0x00A9, 0x037A, 0x00AB, 0x00AC, 0x00AD, RP__CH, 0x2015,
 		0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x0384, 0x0385, 0x0386, 0x00B7,
@@ -253,7 +334,7 @@ namespace {
 	const uchar UCStoISO88597_20AC[] = {
 																				0xA4, N__A, N__A, 0xA5
 	};
-	const wchar_t ISO88598toUCS_A0[] = {
+	const Char ISO88598toUCS_A0[] = {
 		0x00A0, RP__CH, 0x00A2, 0x00A3, 0x00A4, 0x00A5, 0x00A6, 0x00A7,
 		0x00A8, 0x00A9, 0x00D7, 0x00AB, 0x00AC, 0x00AD, 0x00AE, 0x00AF, 
 		0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x00B4, 0x00B5, 0x00B6, 0x00B7,
@@ -285,7 +366,7 @@ namespace {
 																							0xFD, 0xFE,
 		N__A, N__A, N__A, N__A, N__A, N__A, N__A, 0xDF
 	};
-	const wchar_t ISO88599toUCS_A0[] = {
+	const Char ISO88599toUCS_A0[] = {
 		0x00A0, 0x00A1, 0x00A2, 0x00A3, 0x00A4, 0x00A5, 0x00A6, 0x00A7,
 		0x00A8, 0x00A9, 0x00AA, 0x00AB, 0x00AC, 0x00AD, 0x00AE, 0x00AF, 
 		0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x00B4, 0x00B5, 0x00B6, 0x00B7,
@@ -316,7 +397,7 @@ namespace {
 	const uchar UCStoISO88599_015E[] = {
 																							0xDE, 0xFE
 	};
-	const wchar_t ISO885910toUCS_A0[] = {
+	const Char ISO885910toUCS_A0[] = {
 		0x00A0, 0x0104, 0x0112, 0x0122, 0x012A, 0x0128, 0x0136, 0x00A7, 0x013B, 0x0110, 0x0160, 0x0166, 0x017D, 0x00AD, 0x016A, 0x014A,
 		0x00B0, 0x0105, 0x0113, 0x0123, 0x012B, 0x0129, 0x0137, 0x00B7, 0x013C, 0x0111, 0x0161, 0x0167, 0x017E, 0x2015, 0x016B, 0x014B,
 		0x0100, 0x00C1, 0x00C2, 0x00C3, 0x00C4, 0x00C5, 0x00C6, 0x012E, 0x010C, 0x00C9, 0x0118, 0x00CB, 0x0116, 0x00CD, 0x00CE, 0x00CF,
@@ -343,7 +424,7 @@ namespace {
 	const uchar UCStoISO885910_2015[] = {
 									  0xBD
 	};
-	const wchar_t ISO885913toUCS_A0[] = {
+	const Char ISO885913toUCS_A0[] = {
 		0x00A0, 0x201D, 0x00A2, 0x00A3, 0x00A4, 0x201E, 0x00A6, 0x00A7, 0x00D8, 0x00A9, 0x0156, 0x00AB, 0x00AC, 0x00AD, 0x00AE, 0x00C6,
 		0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x201C, 0x00B5, 0x00B6, 0x00B7, 0x00F8, 0x00B9, 0x0157, 0x00BB, 0x00BC, 0x00BD, 0x00BE, 0x00E6,
 		0x0104, 0x012E, 0x0100, 0x0106, 0x00C4, 0x00C5, 0x0118, 0x0112, 0x010C, 0x00C9, 0x0179, 0x0116, 0x0122, 0x0136, 0x012A, 0x013B,
@@ -370,7 +451,7 @@ namespace {
 	const uchar UCStoISO885913_2019[] = {
 															  0xFF, N__A, N__A, 0xB4, 0xA1, 0xA5
 	};
-	const wchar_t ISO885914toUCS_A0[] = {
+	const Char ISO885914toUCS_A0[] = {
 		0x00A0, 0x1E02, 0x1E03, 0x00A3, 0x010A, 0x010B, 0x1E0A, 0x00A7, 0x1E80, 0x00A9, 0x1E82, 0x1E0B, 0x1EF2, 0x00AD, 0x00AE, 0x0178,
 		0x1E1E, 0x1E1F, 0x0120, 0x0121, 0x1E40, 0x1E41, 0x00B6, 0x1E56, 0x1E81, 0x1E57, 0x1E83, 0x1E60, 0x1EF3, 0x1E84, 0x1E85, 0x1E61,
 		0x00C0, 0x00C1, 0x00C2, 0x00C3, 0x00C4, 0x00C5, 0x00C6, 0x00C7, 0x00C8, 0x00C9, 0x00CA, 0x00CB, 0x00CC, 0x00CD, 0x00CE, 0x00CF,
@@ -406,7 +487,7 @@ namespace {
 	const uchar UCStoISO885914_1EF2[] = {
 		N__A, N__A, 0xAC, 0xBC
 	};
-	const wchar_t ISO885915toUCS_A0[] = {
+	const Char ISO885915toUCS_A0[] = {
 		0x00A0, 0x00A1, 0x00A2, 0x00A3, 0x20AC, 0x00A5, 0x0160, 0x00A7, 0x0161, 0x00A9, 0x00AA, 0x00AB, 0x00AC, 0x00AD, 0x00AE, 0x00AF,
 		0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x017D, 0x00B5, 0x00B6, 0x00B7, 0x017E, 0x00B9, 0x00BA, 0x00BB, 0x0152, 0x0153, 0x0178, 0x00BF,
 		0x00C0, 0x00C1, 0x00C2, 0x00C3, 0x00C4, 0x00C5, 0x00C6, 0x00C7, 0x00C8, 0x00C9, 0x00CA, 0x00CB, 0x00CC, 0x00CD, 0x00CE, 0x00CF,
@@ -430,7 +511,7 @@ namespace {
 	const uchar UCStoISO885915_20AC[] = {
 																				0xA4
 	};
-	const wchar_t ISO885916toUCS_A0[] = {
+	const Char ISO885916toUCS_A0[] = {
 		0x00A0, 0x0104, 0x0105, 0x0141, 0x20AC, 0x201E, 0x0160, 0x00A7, 0x0161, 0x00A9, 0x0218, 0x00AB, 0x0179, 0x00AD, 0x017A, 0x017B,
 		0x00B0, 0x00B1, 0x010C, 0x0142, 0x017D, 0x201D, 0x00B6, 0x00B7, 0x017E, 0x010D, 0x0219, 0x00BB, 0x0152, 0x0153, 0x0178, 0x017C,
 		0x00C0, 0x00C1, 0x00C2, 0x0102, 0x00C4, 0x0106, 0x00C6, 0x00C7, 0x00C8, 0x00C9, 0x00CA, 0x00CB, 0x00CC, 0x00CD, 0x00CE, 0x00CF,
@@ -463,229 +544,252 @@ namespace {
 	const uchar UCStoISO885916_20AC[] = {
 																				0xA4
 	};
-} // namespace `anonymous'
+} // namespace @0
 
 
-// 西ヨーロッパ (ISO-8859-1) //////////////////////////////////////////////////////
+#define ASCENSION_BEGIN_TABLE_U2N()	\
+	if(from < 0x00A0U) to = mask8Bit(from);
+#define ASCENSION_TABLE_ENTRY_U2N(tableNamePrefix, tableOffset)														\
+	else if(from >= 0x##tableOffset##U && from < 0x##tableOffset##U + countof(tableNamePrefix##_##tableOffset))	\
+		to = tableNamePrefix##_##tableOffset[from - 0x##tableOffset];
+#define ASCENSION_END_TABLE_U2N()	\
+	else return false; return true;
+#define ASCENSION_TABLE_N2U(tableName)																\
+	if(from < 0xA0) to = from;																		\
+	else if(from - 0xA0 < countof(tableName)														\
+		&& tableName[from - 0xA0] != UNMAPPABLE_NATIVE_CHARACTER)	to = tableName[from - 0xA0];	\
+	else return false; return true;
 
-size_t Encoder_Iso8859_1::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
 
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] > 0x00FF)
-			CONFIRM_ILLEGAL_CHAR(dest[i])
-		else
-			dest[i] = BIT8_MASK(src[i]);
-	}
-	return len;
+// ISO-8859-2 ///////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88592Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88592, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88592, 02C7)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_1::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i)
-		dest[i] = src[i];
-	return len;
-}
-
-
-// 中央ヨーロッパ (ISO-8859-2) //////////////////////////////////////////////
-
-size_t Encoder_Iso8859_2::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88592_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88592_, 02C7);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
-}
-
-size_t Encoder_Iso8859_2::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88592toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88592Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88592toUCS_A0)
 }
 
 
-// 南ヨーロッパ (ISO-8859-3) ////////////////////////////////////////////////
+// ISO-8859-3 ///////////////////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_3::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88593_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88593_, 015C);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88593_, 02D8);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88593Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88593, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88593, 015C)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88593, 02D8)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_3::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88593toUCS_A0);
-}
-
-
-// バルト言語 (ISO-8859-4) //////////////////////////////////////////////////
-
-size_t Encoder_Iso8859_4::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88594_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88594_, 02C7);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
-}
-
-size_t Encoder_Iso8859_4::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88594toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88593Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88593toUCS_A0)
 }
 
 
-// キリル言語 (ISO-8859-5) //////////////////////////////////////////////////
+// ISO-8859-4 ///////////////////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_5::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88595_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88595_, 0401);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88595_, 2116);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88594Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88594, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88594, 02C7)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_5::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88595toUCS_A0);
-}
-
-
-// アラビア語 (ISO-8859-6) //////////////////////////////////////////////////
-
-size_t Encoder_Iso8859_6::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88596_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88596_, 060C);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
-}
-
-size_t Encoder_Iso8859_6::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88596toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88594Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88594toUCS_A0)
 }
 
 
-// ギリシャ語 (ISO-8859-7) //////////////////////////////////////////////////
+// ISO-8859-5 ///////////////////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_7::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88597_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88597_, 037A);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88597_, 2015);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88597_, 20AC);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88595Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88595, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88595, 0401)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88595, 2116)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_7::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88597toUCS_A0);
-}
-
-
-// ヘブライ語 (ISO-8859-8, 視覚順) //////////////////////////////////////////
-
-size_t Encoder_Iso8859_8::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88598_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88598_, 00D7);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88598_, 00F7);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88598_, 05D0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88598_, 200E);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
-}
-
-size_t Encoder_Iso8859_8::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88598toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88595Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88595toUCS_A0)
 }
 
 
-// トルコ語 (ISO-8859-9) ////////////////////////////////////////////////////
+// ISO-8859-6 ///////////////////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_9::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88599_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88599_, 011E);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88599_, 0130);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO88599_, 015E);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88596Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88596, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88596, 060C)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_9::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO88599toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88596Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88596toUCS_A0)
 }
 
-// 北欧 (ISO-8859-10) ///////////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_10::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885910_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885910_, 2015);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+// ISO-8859-7 ///////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88597Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88597, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88597, 037A)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88597, 2015)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88597, 20AC)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_10::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO885910toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88597Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88597toUCS_A0)
 }
 
-// バルト言語 (ISO-8859-13) /////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_13::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885913_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885913_, 2019);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+// ISO-8859-8 ///////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88598Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88598, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88598, 00D7)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88598, 00F7)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88598, 05D0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88598, 200E)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_13::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO885913toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88598Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88598toUCS_A0)
 }
 
-// ケルト語 (ISO-8859-14) ///////////////////////////////////////////////////
 
-size_t Encoder_Iso8859_14::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885914_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885914_, 0174);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885914_, 1E02);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885914_, 1E40);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885914_, 1EF2);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+// ISO-8859-9 ///////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO88599Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88599, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88599, 011E)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88599, 0130)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO88599, 015E)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_14::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO885914toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO88599Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO88599toUCS_A0)
 }
 
-// 西ヨーロッパ (ISO-8859-15) ///////////////////////////////////////////////
 
-size_t Encoder_Iso8859_15::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885915_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885915_, 0152);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885915_, 20AC);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+// ISO-8859-10 //////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO885910Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885910, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885910, 2015)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_15::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO885915toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO885910Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO885910toUCS_A0)
 }
 
-// 中央ヨーロッパ (ISO-8859-16) /////////////////////////////////////////////
 
-size_t Encoder_Iso8859_16::fromUnicode(CFU_ARGLIST) {
-	IMPLEMENT_UNICODE_TO_ISO8859_BEGIN();
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885916_, 00A0);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885916_, 0141);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885916_, 0218);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885916_, 201D);
-		ENTRY_UNICODE_TO_ISO8859_MAP(UCStoISO885916_, 20AC);
-	IMPLEMENT_UNICODE_TO_ISO8859_END();
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+
+// ISO-8859-13 //////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO885913Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885913, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885913, 2019)
+	ASCENSION_END_TABLE_U2N()
 }
 
-size_t Encoder_Iso8859_16::toUnicode(CTU_ARGLIST) {
-	IMPLEMENT_ISO8859_TO_UNICODE(ISO885916toUCS_A0);
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO885913Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO885913toUCS_A0)
 }
 
-#undef IMPLEMENT_ISO8859_TO_UNICODE
-#undef IMPLEMENT_UNICODE_TO_ISO8859_BEGIN
-#undef ENTRY_UNICODE_TO_ISO8859_MAP
-#undef IMPLEMENT_UNICODE_TO_ISO8859_END
+
+// ISO-8859-14 //////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO885914Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885914, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885914, 0174)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885914, 1E02)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885914, 1E40)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885914, 1EF2)
+	ASCENSION_END_TABLE_U2N()
+}
+
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO885914Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO885914toUCS_A0)
+}
+
+
+// ISO-8859-15 //////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO885915Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885915, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885915, 0152)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885915, 20AC)
+	ASCENSION_END_TABLE_U2N()
+}
+
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO885915Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO885915toUCS_A0)
+}
+
+
+// ISO-8859-16 //////////////////////////////////////////////////////////////
+
+/// @see SBCSEncoder#doFromUnicode
+inline bool ISO885916Encoder::doFromUnicode(uchar& to, Char from) const {
+	ASCENSION_BEGIN_TABLE_U2N()
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885916, 00A0)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885916, 0141)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885916, 0218)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885916, 201D)
+		ASCENSION_TABLE_ENTRY_U2N(UCStoISO885916, 20AC)
+	ASCENSION_END_TABLE_U2N()
+}
+
+/// @see SBCSEncoder#doToUnicode
+inline bool ISO885916Encoder::doToUnicode(Char& to, uchar from) const {
+	ASCENSION_TABLE_N2U(ISO885916toUCS_A0)
+}
+
+#undef ASCENSION_BEGIN_TABLE_U2N
+#undef ASCENSION_TABLE_ENTRY_U2N
+#undef ASCENSION_END_TABLE_U2N
+#undef ASCENSION_TABLE_N2U
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */

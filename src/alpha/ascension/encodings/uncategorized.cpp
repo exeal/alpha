@@ -4,23 +4,33 @@
  * @date 2004-2007
  */
 
-#include "stdafx.h"
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 #include "../encoder.hpp"
-using namespace ascension::encodings;
+
+using namespace ascension;
+using namespace ascension::encoding;
 using namespace std;
 
+// registry
+namespace {
+	ASCENSION_DEFINE_SBCS_ENCODER(BinaryEncoder, extended::BINARY, "Binary")
+//	ASCENSION_DEFINE_SBCS_ENCODER(NextstepEncoder, extended::NEXTSTEP, "Nextstep")
+	ASCENSION_DEFINE_SBCS_ENCODER(AtaristEncoder, extended::ATARIST, "Atarist ST/TT")
 
-BEGIN_ENCODER_DEFINITION()
-	DEFINE_ENCODER_CLASS(CPEX_UNCATEGORIZED_BINARY, Uncategorized_Binary, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_UNCATEGORIZED_NEXTSTEP, Uncategorized_Nextstep, 1, 1)
-	DEFINE_ENCODER_CLASS(CPEX_UNCATEGORIZED_ATARIST, Uncategorized_Atarist, 1, 1)
-END_ENCODER_DEFINITION()
+	struct Installer {
+		Installer() {
+			Encoder::registerEncoder(auto_ptr<Encoder>(new BinaryEncoder));
+//			Encoder::registerEncoder(auto_ptr<Encoder>(new NextstepEncoder));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new AtaristEncoder));
+		}
+	} installer;
+} // namespace @0
 
 // 以下の変換テーブルは Atari ST/TT Character Encoding (http://www.kostis.net/charsets/atarist.htm)
 // 及び Unicode.org のファイル (http://www.unicode.org/Public/MAPPINGS/VENDORS/MISC/ATARIST.TXT) によった
 namespace {
-	const wchar_t ATARISTtoUCS_80[] = {
+	const uchar N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const Char ATARISTtoUCS_80[] = {
 		/* 0x80 */	0x00C7, 0x00FC, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7,
 					0x00EA, 0x00EB, 0x00E8, 0x00EF, 0x00EE, 0x00EC, 0x00C4, 0x00C5,
 		/* 0x90 */	0x00C9, 0x00E6, 0x00C6, 0x00F4, 0x00F6, 0x00F2, 0x00FB, 0x00F9,
@@ -106,78 +116,57 @@ namespace {
 }
 
 
-// バイナリ /////////////////////////////////////////////////////////////////
+// Binary ///////////////////////////////////////////////////////////////////
 
-size_t Encoder_Uncategorized_Binary::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] > 0x00FF)
-			CONFIRM_ILLEGAL_CHAR(dest[i]);
-		dest[i] = BIT8_MASK(src[i]);
-	}
-	return len;
+/// @see SBCSEncoder#doFromUnicode
+inline bool BinaryEncoder::doFromUnicode(uchar& to, Char from) const {
+	if(from > 0x00FF)
+		return false;
+	to = mask8Bit(from);
+	return true;
 }
 
-size_t Encoder_Uncategorized_Binary::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i)
-		dest[i] = src[i];
-	return len;
-}
-
-
-// NEXTSTEP /////////////////////////////////////////////////////////////////
-
-size_t Encoder_Uncategorized_Nextstep::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	return 0;
-}
-
-size_t Encoder_Uncategorized_Nextstep::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	return 0;
+/// @see SBCSEncoder#doToUnicode
+inline bool BinaryEncoder::doToUnicode(Char& to, uchar from) const {
+	to = from;
+	return true;
 }
 
 
 // Atari ST/TT //////////////////////////////////////////////////////////////
 
-size_t Encoder_Uncategorized_Atarist::fromUnicode(CFU_ARGLIST) {
-	CFU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i) {
-		if(src[i] < 0x80)
-			dest[i] = BIT8_MASK(src[i]);
-		else {
-			MAP_TABLE_SB_START(0x00A0, UCStoATARIST_00A0);
-			MAP_TABLE_SB(0x0132, UCStoATARIST_0132);
-			MAP_TABLE_SB(0x0152, UCStoATARIST_0152);
-			MAP_TABLE_SB(0x0192, UCStoATARIST_0192);
-			MAP_TABLE_SB(0x0393, UCStoATARIST_0393);
-			MAP_TABLE_SB(0x05D0, UCStoATARIST_05D0);
-			MAP_TABLE_SB(0x2020, UCStoATARIST_2020);
-			MAP_TABLE_SB(0x207F, UCStoATARIST_207F);
-			MAP_TABLE_SB(0x2122, UCStoATARIST_2122);
-			MAP_TABLE_SB(0x2208, UCStoATARIST_2208);
-			MAP_TABLE_SB(0x2248, UCStoATARIST_2248);
-			MAP_TABLE_SB(0x2261, UCStoATARIST_2261);
-			MAP_TABLE_SB(0x2310, UCStoATARIST_2310);
-			else
-				dest[i] = N__A;
-			if(dest[i] == N__A)
-				CONFIRM_ILLEGAL_CHAR(dest[i]);
-		}
-	}
-	return len;
+/// @see SBCSEncoder#doFromUnicode
+inline bool AtaristEncoder::doFromUnicode(uchar& to, Char from) const {
+#define ASCENSION_TABLE(tableOffset)																	\
+	else if(from >= 0x##tableOffset && from < 0x##tableOffset + countof(UCStoATARIST_##tableOffset))	\
+	to = UCStoATARIST_##tableOffset[from - 0x##tableOffset]
+
+	if(from < 0x80)
+		to = mask8Bit(from);
+	ASCENSION_TABLE(00A0);
+	ASCENSION_TABLE(0132);
+	ASCENSION_TABLE(0152);
+	ASCENSION_TABLE(0192);
+	ASCENSION_TABLE(0393);
+	ASCENSION_TABLE(05D0);
+	ASCENSION_TABLE(2020);
+	ASCENSION_TABLE(207F);
+	ASCENSION_TABLE(2122);
+	ASCENSION_TABLE(2208);
+	ASCENSION_TABLE(2248);
+	ASCENSION_TABLE(2261);
+	ASCENSION_TABLE(2310);
+	else
+		return false;
+	return true;
+
+#undef ASCENSION_TABLE
 }
 
-size_t Encoder_Uncategorized_Atarist::toUnicode(CTU_ARGLIST) {
-	CTU_CHECKARGS();
-	const size_t len = min(srcLength, destLength);
-	for(size_t i = 0; i < len; ++i)
-		dest[i] = (src[i] < 0x80) ? src[i] : ATARISTtoUCS_80[src[i]];
-	return len;
+/// @see SBCSEncoder#doToUnicode
+inline bool AtaristEncoder::doToUnicode(Char& to, uchar from) const {
+	to = (from < 0x80) ? from : ATARISTtoUCS_80[from - 0x80];
+	return true;
 }
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

@@ -12,8 +12,8 @@ using namespace std;
 
 // registry
 namespace {
-	ASCENSION_DEFINE_SBCS_ENCODER(TIS620Encoder, extended::MIB_THAI_TIS620, "TIS-620")
-	ASCENSION_DEFINE_SBCS_ENCODER(ISO885911Encoder, extended::MIB_THAI_ISO_8859_11, "ISO-8859-11")
+	ASCENSION_DEFINE_SBCS_ENCODER(TIS620Encoder, extended::TIS620, "TIS-620")
+	ASCENSION_DEFINE_SBCS_ENCODER(ISO885911Encoder, extended::ISO_8859_11, "ISO-8859-11")
 
 	struct Installer {
 		Installer() {

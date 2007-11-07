@@ -29,9 +29,9 @@ namespace {
 		explicit TemporaryMacroFileReader(TemporaryMacro& macro) throw() : macro_(macro), textInputTag_(0) {}
 		~TemporaryMacroFileReader() throw() {delete textInputTag_;}
 		// IUnknown
-		IMPLEMENT_UNKNOWN_NO_REF_COUNT()
+		MANAH_IMPLEMENT_UNKNOWN_NO_REF_COUNT()
 		STDMETHODIMP QueryInterface(REFIID riid, void** ppvObject) {
-			VERIFY_POINTER(ppvObject);
+			MANAH_VERIFY_POINTER(ppvObject);
 			if(riid == IID_IUnknown || riid == __uuidof(ISAXContentHandler))
 				*ppvObject = static_cast<ISAXContentHandler*>(this);
 			else if(riid == __uuidof(ISAXErrorHandler))
@@ -397,7 +397,7 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 	output << L"</temporary-macro>\n";
 
 	using namespace ascension::encoding;
-	Encoder* encoder = Encoder::forMIB(fundamental::MIB_UNICODE_UTF8);
+	Encoder* encoder = Encoder::forMIB(fundamental::UTF_8);
 	if(encoder == 0)
 		return false;
 
@@ -412,8 +412,8 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 
 	uchar* toNext;
 	const wchar_t* fromNext;
-	encoder->fromUnicode(buffer, buffer + bufferSize, toNext,
-		xml.data(), xml.data() + xml.length(), fromNext, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+	encoder->setPolicy(Encoder::REPLACE_UNMAPPABLE_CHARACTER).fromUnicode(
+		buffer, buffer + bufferSize, toNext, xml.data(), xml.data() + xml.length(), fromNext);
 //	file.write(UTF8_BOM, countof(UTF8_BOM));
 	file.write(buffer, static_cast<DWORD>(toNext - buffer));
 	file.close();

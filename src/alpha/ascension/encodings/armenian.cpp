@@ -14,15 +14,15 @@ using namespace std;
 
 // registry
 namespace {
-	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII7Encoder, extended::MIB_ARMENIAN_ARMSCII7, "ARMSCII-7")
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII7Encoder, extended::ARMSCII7, "ARMSCII-7")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
 		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8Encoder, extended::MIB_ARMENIAN_ARMSCII8, "ARMSCII-8")
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8Encoder, extended::ARMSCII8, "ARMSCII-8")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
 		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
 	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8AEncoder, extended::MIB_ARMENIAN_ARMSCII8A, "ARMSCII-8A")
+	ASCENSION_BEGIN_ENCODER_CLASS(ARMSCII8AEncoder, extended::ARMSCII8A, "ARMSCII-8A")
 		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(1)
 		ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(2)
 	ASCENSION_END_ENCODER_CLASS()
@@ -157,7 +157,7 @@ namespace {
 
 /// @see Encoder#doFromUnicode
 Encoder::Result ARMSCII7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -184,9 +184,9 @@ Encoder::Result ARMSCII7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
 		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
 				toNext = to;
@@ -202,15 +202,15 @@ Encoder::Result ARMSCII7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 
 /// @see Encoder#doToUnicode
 Encoder::Result ARMSCII7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
 		else if(*from < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20];
-		else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+		else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 			--to;
-		else if(policy == NO_POLICY) {
+		else if(getPolicy() == NO_POLICY) {
 			toNext = to;
 			fromNext = from;
 			return UNMAPPABLE_CHARACTER;
@@ -226,7 +226,7 @@ Encoder::Result ARMSCII7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNex
 
 /// @see Encoder#doFromUnicode
 Encoder::Result ARMSCII8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -253,10 +253,10 @@ Encoder::Result ARMSCII8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
 		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				*to = NATIVE_REPLACEMENT_CHARACTER;
 				continue;
-			} else if(policy == IGNORE_UNMAPPABLE_CHARACTER) {
+			} else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				--to;
 				continue;
 			} else {
@@ -274,15 +274,15 @@ Encoder::Result ARMSCII8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 
 /// @see Encoder#doToUnicode
 Encoder::Result ARMSCII8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0xA1)
 			*to = *from;
 		else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20 - 0x80];
-		else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+		else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 			--to;
-		else if(policy == NO_POLICY) {
+		else if(getPolicy() == NO_POLICY) {
 			toNext = to;
 			fromNext = from;
 			return UNMAPPABLE_CHARACTER;
@@ -298,7 +298,7 @@ Encoder::Result ARMSCII8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNex
 
 /// @see Encoder#doFromUnicode
 Encoder::Result ARMSCII8AEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
@@ -325,9 +325,9 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*&
 			*to = UNMAPPABLE_NATIVE_CHARACTER;
 
 		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy == REPLACE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
 				toNext = to;
@@ -343,7 +343,7 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*&
 
 /// @see Encoder#doToUnicode
 Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
@@ -352,9 +352,9 @@ Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNe
 		else
 			*to = ARMSCII8AtoUCS_D8[*from - 0xD8];
 		if(*to == REPLACEMENT_CHARACTER) {
-			if(policy == IGNORE_UNMAPPABLE_CHARACTER)
+			if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
-			else if(policy == NO_POLICY) {
+			else if(getPolicy() == NO_POLICY) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -393,13 +393,13 @@ MIBenum ArmenianDetector::doDetect(const uchar* first, const uchar* last, ptrdif
 		if(c >= 0xB0 && c < 0xDC)	b[2] = false;
 
 		if(!b[0] && !b[2])
-			return extended::MIB_ARMENIAN_ARMSCII8;	// ARMSCII-8
+			return extended::ARMSCII8;	// ARMSCII-8
 	}
 	if(!b[0] && !b[1])
-		return extended::MIB_ARMENIAN_ARMSCII8A;
+		return extended::ARMSCII8A;
 	else if(!b[2] && !b[1])
-		return extended::MIB_ARMENIAN_ARMSCII7;
-	return extended::MIB_ARMENIAN_ARMSCII8;	// most preferred encoding
+		return extended::ARMSCII7;
+	return extended::ARMSCII8;	// most preferred encoding
 }
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

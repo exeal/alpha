@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <vector>
 #ifdef _WIN32
-#include <windows.h>	// GetCPInfoExW, MultiByteToWideChar, WideCharToMultiByte, ...
+#include <windows.h>	// GetCPInfoExW, ...
 #ifndef interface
 #define interface struct
 #endif
@@ -21,11 +21,11 @@ using namespace std;
 
 
 /// Returns the human-readable name of the encoding.
-String encoding::getEncodingDisplayName(MIBenum mib) {
+String encoding::getEncodingDisplayName(MIBenum mib) {/*
 #ifdef _WIN32
 	if(const uint cp = convertMIBtoWinCP(mib)) {
 		manah::com::ComPtr<::IMultiLanguage> mlang;
-		HRESULT hr = mlang.createInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC, IID_IMultiLanguage);
+		HRESULT hr = mlang.createInstance(::CLSID_CMultiLanguage, ::IID_IMultiLanguage, CLSCTX_INPROC);
 		if(SUCCEEDED(hr)) {
 			::MIMECPINFO mcpi;
 			if(SUCCEEDED(hr = mlang->GetCodePageInfo(cp, &mcpi)))
@@ -51,7 +51,7 @@ String encoding::getEncodingDisplayName(MIBenum mib) {
 // Encoder //////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::Encoder
+ * @class ascension::encoding::Encoder
  * @c Encoder class provides conversions between text encodings.
  *
  * Ascension uses Unicode to store and manipulate strings. However, different encodings are
@@ -81,7 +81,7 @@ String encoding::getEncodingDisplayName(MIBenum mib) {
  */
 
 /// Protected default constructor.
-Encoder::Encoder() throw() {
+Encoder::Encoder() throw() : policy_(NO_POLICY) {
 }
 
 /// Destructor.
@@ -191,11 +191,11 @@ Encoder* Encoder::forWindowsCodePage(::UINT codePage) throw() {
  * @param[in] from the beginning of the buffer to be converted
  * @param[in] fromEnd the end of the buffer to be converted
  * @param[in] fromNext points to the first unconverted character after the conversion
- * @param[in] policy the conversion policy
+ * @param[in,out] state the conversion state. can be @c null
  * @return the result of the conversion
  */
 Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, Policy policy /* = NO_POLICY */) const {
+		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state /* = 0*/) const {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -204,23 +204,22 @@ Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		throw invalid_argument("from > fromEnd");
 	toNext = 0;
 	fromNext = 0;
-	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext, state);
 }
 
 /**
  * Converts the given string from UTF-16 into the native encoding.
  * @param from the string to be converted
- * @param policy the conversion policy
  * @return the converted string or an empty if encountered unconvertible character
  */
-string Encoder::fromUnicode(const String& from, Policy policy /* = NO_POLICY */) const {
+string Encoder::fromUnicode(const String& from) const {
 	size_t bytes = getMaximumNativeBytes() * from.length();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	const Char* fromNext;
 	uchar* toNext;
 	Result result;
 	while(true) {
-		result = fromUnicode(temp.get(), temp.get() + bytes, toNext, from.data(), from.data() + from.length(), fromNext, policy);
+		result = fromUnicode(temp.get(), temp.get() + bytes, toNext, from.data(), from.data() + from.length(), fromNext);
 		if(result == COMPLETED)
 			break;
 		else if(result == INSUFFICIENT_BUFFER)
@@ -236,7 +235,7 @@ MIBenum Encoder::getDefault() throw() {
 //#ifdef _WIN32
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
-	return fundamental::MIB_UNICODE_UTF8;
+	return fundamental::UTF_8;
 //#endif /* _WIN32 */
 }
 
@@ -260,6 +259,19 @@ Encoder::Encoders& Encoder::registry() throw() {
 	return singleton;
 }
 
+/**
+ * Sets the conversion policy.
+ * @param newPolicy the new policy
+ * @return this encoder
+ * @throw std#invalid_argument @a newPolicy is invalid
+ */
+Encoder& Encoder::setPolicy(Policy newPolicy) {
+	if(newPolicy < NO_POLICY || newPolicy > IGNORE_UNMAPPABLE_CHARACTER)
+		throw invalid_argument("the given policy is not supported.");
+	policy_ = newPolicy;
+	return *this;
+}
+
 /// Returns true if supports the specified encoding.
 bool Encoder::supports(MIBenum mib) throw() {
 	return registry().find(mib) != registry().end();
@@ -273,11 +285,11 @@ bool Encoder::supports(MIBenum mib) throw() {
  * @param[in] from the beginning of the buffer to be converted
  * @param[in] fromEnd the end of the buffer to be converted
  * @param[in] fromNext points to the first unconverted character after the conversion
- * @param[in] policy the conversion policy
+ * @param[in,out] state the conversion state. can be @c null
  * @return the result of the conversion
  */
 Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, Policy policy /* = NO_POLICY */) const {
+		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state /* = 0*/) const {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -286,16 +298,15 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
 		throw invalid_argument("from > fromEnd");
 	toNext = 0;
 	fromNext = 0;
-	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext, policy);
+	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext, state);
 }
 
 /**
  * Converts the given string from the native encoding into UTF-16.
  * @param from the string to be converted
- * @param policy the conversion policy
  * @return the converted string or an empty if encountered unconvertible character
  */
-String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) const {
+String Encoder::toUnicode(const string& from) const {
 	size_t chars = getMaximumUCSLength() * from.length();
 	manah::AutoBuffer<Char> temp(new Char[chars]);
 	const uchar* fromNext;
@@ -303,7 +314,7 @@ String Encoder::toUnicode(const string& from, Policy policy /* = NO_POLICY */) c
 	Result result;
 	while(true) {
 		result = toUnicode(temp.get(), temp.get() + chars, toNext,
-			reinterpret_cast<const uchar*>(from.data()), reinterpret_cast<const uchar*>(from.data()) + from.length(), fromNext, policy);
+			reinterpret_cast<const uchar*>(from.data()), reinterpret_cast<const uchar*>(from.data()) + from.length(), fromNext);
 		if(result == COMPLETED)
 			break;
 		else if(result == INSUFFICIENT_BUFFER)
@@ -402,7 +413,8 @@ void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) 
 		throw NullPointerException("newDetector");
 	const MIBenum id(newDetector->getID());
 	if(registry().find(id) != registry().end())
-		throw invalid_argument("the same identifier is already registered.");
+//		throw invalid_argument("the same identifier is already registered.");
+		return;
 	registry().insert(make_pair(id, ASCENSION_SHARED_POINTER<EncodingDetector>(newDetector.release())));
 }
 
@@ -421,7 +433,7 @@ bool EncodingDetector::supports(MIBenum detectorID) throw() {
 // USASCIIEncoder ///////////////////////////////////////////////////////////
 
 namespace {
-	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(USASCIIEncoder, fundamental::MIB_US_ASCII, "US-ASCII")
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(USASCIIEncoder, fundamental::US_ASCII, "US-ASCII")
 		ASCENSION_ENCODER_ALIASES(
 			"iso-ir-6\0"
 			"ANSI_X3.4-1986\0"
@@ -456,7 +468,7 @@ inline bool USASCIIEncoder::doToUnicode(Char& to, uchar from) const {
 // ISO88591Encoder //////////////////////////////////////////////////////////
 
 namespace {
-	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88591Encoder, fundamental::MIB_ISO_8859_1, "ISO-8859-1")
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(ISO88591Encoder, fundamental::ISO_8859_1, "ISO-8859-1")
 		ASCENSION_ENCODER_ALIASES(
 			"iso-ir-100\0"
 			"ISO_8859-1\0"
@@ -483,9 +495,9 @@ inline bool ISO88591Encoder::doToUnicode(Char& to, uchar from) const {
 // UniversalDetector ////////////////////////////////////////////////////////
 
 namespace {
-	ASCENSION_DEFINE_ENCODING_DETECTOR(UniversalDetector, EncodingDetector::UNIVERSAL_DETECTOR, "UniversalAutoDetection");
-	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, EncodingDetector::SYSTEM_LOCALE_DETECTOR, "SystemLocaleAutoDetection");
-	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, EncodingDetector::USER_LOCALE_DETECTOR, "UserLocaleAutoDetection");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UniversalDetector, EncodingDetector::UNIVERSAL_DETECTOR, "UniversalAutoDetect");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, EncodingDetector::SYSTEM_LOCALE_DETECTOR, "SystemLocaleAutoDetect");
+	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, EncodingDetector::USER_LOCALE_DETECTOR, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
