@@ -22,7 +22,7 @@ using namespace std;
 
 /// Returns the human-readable name of the encoding.
 String encoding::getEncodingDisplayName(MIBenum mib) {/*
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 	if(const uint cp = convertMIBtoWinCP(mib)) {
 		manah::com::ComPtr<::IMultiLanguage> mlang;
 		HRESULT hr = mlang.createInstance(::CLSID_CMultiLanguage, ::IID_IMultiLanguage, CLSCTX_INPROC);
@@ -32,19 +32,34 @@ String encoding::getEncodingDisplayName(MIBenum mib) {/*
 				return mcpi.wszDescription;
 		}
 	}
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */
 	if(const Encoder* encoder = Encoder::forMIB(mib)) {
-		const string name(encoder->getName());
+		const string name(encoder->name());
 		String s(name.length(), L'x');
 		copy(name.begin(), name.end(), s.begin());
 		return s;
 	} else if(const EncodingDetector* detector = EncodingDetector::forID(mib)) {
-		const string name(detector->getName());
+		const string name(detector->name());
 		String s(name.length(), L'x');
 		copy(name.begin(), name.end(), s.begin());
 		return s;
 	}
 	return L"";
+}
+
+
+// UnsupportedEncodingException /////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param mib the MIBenum vaule of the encoding
+ */
+UnsupportedEncodingException::UnsupportedEncodingException(MIBenum mib) : invalid_argument("unsupported encoding."), mib_(mib) {
+}
+
+/// Returns the MIBenum value of the encoding
+MIBenum UnsupportedEncodingException::mibEnum() const throw() {
+	return mib_;
 }
 
 
@@ -114,7 +129,7 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	const size_t bytes = (last - first) * getMaximumNativeBytes();
+	const size_t bytes = (last - first) * maximumNativeBytes();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	Char* fromNext;
 	uchar* toNext;
@@ -149,11 +164,11 @@ Encoder* Encoder::forMIB(MIBenum mib) throw() {
 Encoder* Encoder::forName(const string& name) throw() {
 	for(Encoders::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
-		const string canonicalName = i->second->getName();
+		const string canonicalName = i->second->name();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
 			return i->second.get();
 		// test aliases
-		const string aliases = i->second->getAliases();
+		const string aliases = i->second->aliases();
 		for(size_t j = 0; ; ++j) {
 			size_t nul = aliases.find('\0', j);
 			if(nul == string::npos)
@@ -213,7 +228,7 @@ Encoder::Result Encoder::fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
  * @return the converted string or an empty if encountered unconvertible character
  */
 string Encoder::fromUnicode(const String& from) const {
-	size_t bytes = getMaximumNativeBytes() * from.length();
+	size_t bytes = maximumNativeBytes() * from.length();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
 	const Char* fromNext;
 	uchar* toNext;
@@ -248,10 +263,10 @@ MIBenum Encoder::getDefault() throw() {
 void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	if(encoder.get() == 0)
 		throw NullPointerException("encoder");
-	else if(registry().find(encoder->getMIBenum()) != registry().end())
+	else if(registry().find(encoder->mibEnum()) != registry().end())
 //		throw invalid_argument("the encoder is already registered.");
 		return;
-	registry().insert(make_pair(encoder->getMIBenum(), encoder.release()));
+	registry().insert(make_pair(encoder->mibEnum(), encoder.release()));
 }
 
 Encoder::Encoders& Encoder::registry() throw() {
@@ -307,7 +322,7 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
  * @return the converted string or an empty if encountered unconvertible character
  */
 String Encoder::toUnicode(const string& from) const {
-	size_t chars = getMaximumUCSLength() * from.length();
+	size_t chars = maximumUCSLength() * from.length();
 	manah::AutoBuffer<Char> temp(new Char[chars]);
 	const uchar* fromNext;
 	Char* toNext;
@@ -379,7 +394,7 @@ EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
  */
 EncodingDetector* EncodingDetector::forName(const string& name) throw() {
 	for(EncodingDetectors::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
-		const string canonicalName = i->second->getName();
+		const string canonicalName = i->second->name();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
 			return i->second.get();
 	}
@@ -411,7 +426,7 @@ EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() 
 void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) {
 	if(newDetector.get() == 0)
 		throw NullPointerException("newDetector");
-	const MIBenum id(newDetector->getID());
+	const MIBenum id(newDetector->id());
 	if(registry().find(id) != registry().end())
 //		throw invalid_argument("the same identifier is already registered.");
 		return;
@@ -504,7 +519,7 @@ namespace {
 MIBenum UniversalDetector::doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const throw() {
 	// try all detectors
 	vector<MIBenum> mibs;
-	getAvailableIDs(back_inserter(mibs));
+	availableIDs(back_inserter(mibs));
 
 	MIBenum result;
 	ptrdiff_t bestScore = 0, score;

@@ -272,7 +272,6 @@ namespace {
  *
  * @c TextViewer provides two methods #freeze and #unfreeze to freeze of the screen of the window.
  * While the viewer is frozen, the window does not redraw the content.
- * If the document is reset (@c text#Document#resetContent), the viewer is unfreezed.
  *
  * <h3>Duplication</h3>
  *
