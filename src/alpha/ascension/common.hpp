@@ -14,6 +14,13 @@
 /// Version of Unicode we're tracking
 #define ASCENSION_UNICODE_VERSION 0x0500	// 5.0.0
 
+// platform
+#ifdef _WIN32
+#define ASCENSION_WINDOWS
+#else
+#define ASCENSION_POSIX
+#endif
+
 #include "config.hpp"
 #include <string>	// std.string
 #include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
@@ -177,6 +184,17 @@ namespace ascension {
 		const ConcreteIterator& concrete() const throw() {return static_cast<const ConcreteIterator&>(*this);}
 	};
 
+	namespace texteditor {	// see session.hpp
+		class Session;
+		namespace internal {
+			class ISessionElement {
+			protected:
+				virtual void setSession(Session& session) throw() = 0;
+				friend class Session;
+			};
+		}
+	} // namespace texteditor
+
 	// static assertion
 	template<std::size_t> struct StaticAssertTest {};
 	template<int> struct StaticAssertionFailureAtLine;
@@ -186,6 +204,7 @@ namespace ascension {
 
 	// basic assertions
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
+	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
 } // namespace ascension
 

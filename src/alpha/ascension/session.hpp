@@ -7,16 +7,12 @@
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
 #include "internal.hpp"
-#include "../../manah/win32/windows.hpp"	// ::HKL
 #include <list>
 #include <vector>
-// TODO: make Win32-independent.
 
 namespace ascension {
 
-	namespace text {
-		class Document;
-	}
+	namespace text {class Document;}
 
 	namespace searcher {
 		class IncrementalSearcher;
@@ -60,16 +56,17 @@ namespace ascension {
 
 		private:
 			struct ClipText {
-				String text;	// テキスト
-				bool box;		// 矩形データか
+				String text;	// the text data
+				bool rectangle;	// true if the text is rectangle
 			};
 			std::list<ClipText> datas_;
 			std::size_t capacity_;
-			ulong maxBytes_;
+			ulong maximumBytes_;
 			std::size_t activeItem_;
 			internal::Listeners<IClipboardRingListener> listeners_;
 		};
 
+#ifdef _WIN32
 		/**
 		 * Base class for input sequence checkers.
 		 * @see isc
@@ -101,11 +98,12 @@ namespace ascension {
 			bool	check(const Char* first, const Char* last, CodePoint cp) const;
 			void	clear();
 			bool	isEmpty() const throw();
-			void	setKeyboardLayout(HKL keyboardLayout) throw();
+			void	setKeyboardLayout(::HKL keyboardLayout) throw();
 		private:
 			std::list<InputSequenceChecker*> strategies_;
 			::HKL keyboardLayout_;
 		};
+#endif /* _WIN32 */
 
 		/**
 		 * @note This class is not derivable.
@@ -147,14 +145,6 @@ namespace ascension {
 			WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
 #endif /* !ASCENSION_NO_MIGEMO */
 		};
-
-		namespace internal {
-			class ISessionElement {
-			protected:
-				virtual void setSession(Session& session) throw() = 0;
-				friend class Session;
-			};
-		}
 
 
 		/**

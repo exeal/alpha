@@ -12,7 +12,7 @@ CXX_FLAGS=/c /DWIN32 /D_WINDOWS /D_DEBUG /EHac /GS /GX /MTd /nologo /RTCcus /W4 
 XS_FLAGS=/DEBUG /nologo ole32.lib odbc32.lib odbccp32.lib shlwapi.lib
 ALL_HEADER=
 
-all: bin break-iterator-test case-folder-test normalizer-test regex-test unicode-iterator-test
+all: bin document-test break-iterator-test case-folder-test normalizer-test regex-test unicode-iterator-test
 
 bin:
 	@if not exist "vc71" mkdir vc71
@@ -39,6 +39,22 @@ test: all
 
 ./vc71/normalizer.obj: ../unicode/normalizer.cpp $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/normalizer.obj ../unicode/normalizer.cpp
+
+
+# document-test #############################################################
+
+./vc71/document.obj: ../document.cpp $(ALL_HEADER)
+	cl $(CXX_FLAGS) /Fovc71/document.obj ../document.cpp
+
+./vc71/document-test.obj: document-test.cpp vc71/document.obj $(ALL_HEADER)
+	cl $(CXX_FLAGS) /Fovc71/document-test.obj document-test.cpp document.obj
+
+./vc71/document-test.exe: vc71/document-test.obj vc71/encoder.obj
+	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/encoder.obj
+
+document-test: vc71/document-test.exe
+	vc71\document-test.exe
+
 
 
 # break-iterator-test #######################################################

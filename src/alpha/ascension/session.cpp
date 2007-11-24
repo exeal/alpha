@@ -15,7 +15,7 @@ using namespace std;
 // ClipboardRing ////////////////////////////////////////////////////////////
 
 /// Constructor.
-ClipboardRing::ClipboardRing() throw() : capacity_(16), maxBytes_(100 * 1024), activeItem_(static_cast<size_t>(-1)) {
+ClipboardRing::ClipboardRing() throw() : capacity_(16), maximumBytes_(100 * 1024), activeItem_(static_cast<size_t>(-1)) {
 }
 
 /**
@@ -25,18 +25,18 @@ ClipboardRing::ClipboardRing() throw() : capacity_(16), maxBytes_(100 * 1024), a
  *
  * If the specified text is too long, listeners' IClipboardRingListener#clipboardRingAddingDenied are invoked.
  * @param text the text to be added. this can't be empty
- * @param box true if the text is rectangle
+ * @param rectangle true if the text is rectangle
  */
-void ClipboardRing::add(const String& text, bool box) {
+void ClipboardRing::add(const String& text, bool rectangle) {
 	assert(!text.empty());
-	if(text.length() * sizeof(Char) > maxBytes_) {
+	if(text.length() * sizeof(Char) > maximumBytes_) {
 		listeners_.notify(IClipboardRingListener::clipboardRingAddingDenied);
 		return;
 	}
 
 	ClipText ct;
 	ct.text = text;
-	ct.box = box;
+	ct.rectangle = rectangle;
 	datas_.push_front(ct);
 	if(datas_.size() > capacity_)
 		datas_.pop_back();
@@ -48,16 +48,16 @@ void ClipboardRing::add(const String& text, bool box) {
  * Returns the content of the specified index.
  * @param index the index
  * @param[out] text	the text content
- * @param[out] box true if the text is rectangle
+ * @param[out] rectangle true if the text is rectangle
  * @throw IndexOutOfBoundsException @a index is out of range
  */
-void ClipboardRing::getText(size_t index, String& text, bool& box) const {
+void ClipboardRing::getText(size_t index, String& text, bool& rectangle) const {
 	if(index >= datas_.size())
 		throw IndexOutOfBoundsException();
-	list<ClipText>::const_iterator it = datas_.begin();
-	for(size_t i = 0; i < index; ++i, ++it);
-	text = it->text;
-	box = it->box;
+	list<ClipText>::const_iterator i(datas_.begin());
+	advance(i, index);
+	text = i->text;
+	rectangle = i->rectangle;
 }
 
 /**

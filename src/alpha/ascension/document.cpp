@@ -6,365 +6,459 @@
  */
 
 #include "document.hpp"
-#include <shlwapi.h>	// PathXxxx
-#include <shlobj.h>		// SHGetDesktopFolder, IShellFolder, ...
-#include <MAPI.h>		// MAPISendMail
+//#include <shlwapi.h>	// PathXxxx
+//#include <shlobj.h>	// SHGetDesktopFolder, IShellFolder, ...
+//#include <MAPI.h>		// MAPISendMail
 #include "../../manah/win32/ui/wait-cursor.hpp"
 #include "../../manah/com/common.hpp"
 #include <algorithm>
 #include <limits>	// std.numeric_limits
+#ifdef ASCENSION_POSIX
+#	include <fcntl.h>		// fcntl
+#	include <unistd.h>		// fcntl
+#	include <sys/mman.h>	// mmap, munmap, ...
+#endif /* !ASCENSION_POSIX */
 
 using namespace ascension;
-using namespace ascension::text;
-using namespace ascension::encoding;
+using namespace ascension::kernel;
 using namespace ascension::unicode;
-using namespace manah::win32;
-using namespace manah::win32::io;
-using namespace manah::com;
 using namespace std;
 
 
 const Position Position::ZERO_POSITION(0, 0);
 const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
 
-namespace {
-	class InsertOperation;
-	class DeleteOperation;
+
+// kernel free functions ////////////////////////////////////////////////////
+
+/**
+ * Returns absolute character offset of the specified position from the start of the document.
+ * @param document the document
+ * @param at the position
+ * @param fromAccessibleStart
+ * @throw BadPositionException @a at is outside of the document
+ */
+length_t kernel::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
+	if(at > document.region().second)
+		throw BadPositionException();
+	length_t offset = 0;
+	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
+	for(length_t line = start.line; ; ++line) {
+		if(line == at.line) {
+			offset += at.column;
+			break;
+		} else {
+			offset += document.lineLength(line) + 1;	// +1 is for a newline character
+			if(line == start.line)
+				offset -= start.column;
+		}
+	}
+	return offset;
+}
+
+/**
+ * Returns the number of lines in the specified text string.
+ * @param first the start of the text string
+ * @param last the end of the text string
+ * @return the number of lines
+ */
+length_t kernel::getNumberOfLines(const Char* first, const Char* last) throw() {
+	if(first == last)
+		return 0;
+	length_t lines = 1;
+	while(true) {
+		first = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+		if(first == last)
+			break;
+		++lines;
+		first += (*first == CARRIAGE_RETURN && first < last - 1 && first[1] == LINE_FEED) ? 2 : 1;
+	}
+	return lines;
+}
+
+/**
+ * Reads the content of the specified input stream and write into the document.
+ * @param in the input stream
+ * @param document the document
+ * @param at the position to which
+ * @param newline the newline written into the document. if this is not @c NLF_AUTO, the method
+ * replaces original newline characters with the corresponding ones
+ * @return @a in
+ * @throw ReadOnlyDocumentException @a document is read only
+ * @throw BadPositionException @a at is outside of the document
+ */
+InputStream& kernel::readDocumentFromStream(InputStream& in, Document& document, const Position& at, Newline newline /* = NLF_AUTO */) {
+	if(document.isReadOnly())
+		throw ReadOnlyDocumentException();
+	if(at > document.region().end())
+		throw BadPositionException();
+
+	Position p(at);
+	Char buffer[8192];
+	do {
+		in.read(buffer, countof(buffer));
+		p = document.insert(p, buffer, buffer + in.gcount());
+	} while(in.gcount() < countof(buffer));
+	return in;
+}
+
+/**
+ * Adapts the specified position to the document change.
+ * @param position the original position
+ * @param change the content of the document change
+ * @param gravity the gravity which determines the direction to which the position should move if
+ * a text was inserted at the position. if @c FORWARD is specified, the position will move to the
+ * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
+ * @return the result position
+ */
+Position kernel::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
+	Position newPosition(position);
+	if(!change.isDeletion()) {	// insertion
+		if(position < change.getRegion().first)	// behind the current position
+			return newPosition;
+		else if(position == change.getRegion().first && gravity == BACKWARD) // the current position + backward gravity
+			return newPosition;
+		else if(position.line > change.getRegion().first.line)	// in front of the current line
+			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
+		else {	// in the current line
+			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
+			newPosition.column += change.getRegion().second.column - change.getRegion().first.column;
+		}
+	} else {	// deletion
+		if(position < change.getRegion().second) {	// the end is behind the current line
+			if(position <= change.getRegion().first)
+				return newPosition;
+			else	// in the region
+				newPosition = change.getRegion().first;
+		} else if(position.line > change.getRegion().second.line)	// in front of the current line
+			newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
+		else {	// the end is the current line
+			if(position.line == change.getRegion().first.line)	// the region is single-line
+				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
+			else {	// the region is multiline
+				newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
+				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
+			}
+		}
+	}
+	return newPosition;
+}
+
+/**
+ * Writes the content of the document to the specified output stream.
+ * <p>This method does not write Unicode byte order mark.</p>
+ * @param out the output stream
+ * @param document the document
+ * @param region the region to be written (this region is not restricted with narrowing)
+ * @param newline the newline string. if set to an empty string, actual contents (can obtain by
+ * @c Document#Line#newline) are used
+ * @return @a out
+ * @see getNewlineString, readDocumentFromStream
+ */
+OutputStream& kernel::writeDocumentToStream(OutputStream& out,
+		const Document& document, const Region& region, const String& newline /* = L"" */) {
+	const Position& beginning = region.beginning();
+	const Position end = min(region.end(), document.region().second);
+	if(beginning.line == end.line)	// shortcut for single-line
+		out << document.line(end.line).substr(beginning.column, end.column - beginning.column);
+	else {
+		const bool rawNewline = newline.empty();
+		for(length_t i = beginning.line; ; ++i) {
+			const Document::Line& line = document.getLineInformation(i);
+			const length_t first = (i == beginning.line) ? beginning.column : 0;
+			const length_t last = (i == end.line) ? end.column : line.text().length();
+			out.write(line.text().data() + first, static_cast<streamsize>(last - first));
+			if(i == end.line)
+				break;
+			if(rawNewline)
+				out << getNewlineString(line.newline());
+			else
+				out.write(newline.data(), static_cast<streamsize>(newline.length()));
+		}
+	}
+	return out;
 }
 
 
-/**
- * An abstract edit operation.
- * @see DeleteOperation, InsertOperation
- */
-class text::internal::IOperation {
-public:
-	/// Destructor
-	virtual ~IOperation() throw() {}
-	/// Returns the operation is executable.
-	virtual bool canExecute(Document& document) const = 0;
-	/// Returns true if the operation can be appended to insertion @a postOperation.
-	virtual bool isConcatenatable(InsertOperation& postOperation, const Document& document) const = 0;
-	/// Returns true if the operation can be appended to deletion @a postOperation.
-	virtual bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const = 0;
-	/// Executes the operation.
-	virtual Position execute(Document& document) = 0;
-};
+// kernel.files free functions //////////////////////////////////////////////
 
 namespace {
-	/// An insertion operation.
-	class InsertOperation : virtual public text::internal::IOperation, public manah::FastArenaObject<InsertOperation> {
-	public:
-		InsertOperation(const Position& pos, const String& text) : position_(pos), text_(text) {}
-		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().includes(position_);}
-		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
-		Position execute(Document& document) {return document.insert(position_, text_);}
-	private:
-		Position position_;
-		String text_;
-	};
+#ifdef ASCENSION_WINDOWS
+	static const files::Char PATH_SEPARATORS[] = {'/', '\\'};
+#else // ASCENSION_POSIX
+	static const files::Char PATH_SEPARATORS[] = {'/'};
+#endif
+	/**
+	 * Returns true if the specified file exists.
+	 * @param fileName the name of the file
+	 * @return if the file exists
+	 * @throw NullPointerException @a fileName is @c null
+	 * @throw files#IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occured.
+	 * for details, use POSIX @c errno or Win32 @c GetLastError
+	 */
+	bool fileExists(const files::Char* fileName) {
+		if(fileName == 0)
+			throw NullPointerException("fileName");
+#ifdef ASCENSION_WINDOWS
+#ifdef PathFileExists
+		return toBoolean(::PathFileExistsW(fileName));
+#else
+		if(::GetFileAttributesW(fileName) != INVALID_FILE_ATTRIBUTES)
+			return true;
+		const ::DWORD e = ::GetLastError();
+		if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
+				|| e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
+			return false;
+#endif /* PathFileExists */
+#else // ASCENSION_POSIX
+		struct stat s;
+		if(::stat(fileName, &s) == 0)
+			return true;
+		else if(::errno == E_NOENT)
+			return false;
+#endif
+		throw files::IOException(files::IOException::PLATFORM_DEPENDENT_ERROR);
+	}
 
-	/// An deletion operation.
-	class DeleteOperation : virtual public text::internal::IOperation, public manah::FastArenaObject<DeleteOperation> {
-	public:
-		DeleteOperation(const Region& region) throw() : region_(region) {}
-		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().encompasses(region_);}
-		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation& postOperation, const Document&) const throw() {
-			const Position& bottom = region_.end();
-			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
-			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
-		}
-		Position execute(Document& document) {return document.erase(region_);}
-	private:
-		Region region_;
-	};
-
-	/// Emulation of Win32 @c GetLongPathNameW (duplicated from NewApis.h)
-	size_t getLongPathName(const WCHAR* shortName, WCHAR* longName, size_t bufferLength) {
-		if(::GetFileAttributesW(shortName) == INVALID_FILE_ATTRIBUTES)
-			return 0;
-		WCHAR buffer[MAX_PATH];
-		size_t c = ::GetFullPathNameW(shortName, MAX_PATH, buffer, 0);
-		if(c == 0)
-			return 0;
-		else if(c >= MAX_PATH) {
-			::SetLastError(ERROR_BUFFER_OVERFLOW);
-			return 0;
-		}
-		ComPtr<IShellFolder> desktop;
-		HRESULT hr = ::SHGetDesktopFolder(&desktop);
-		if(FAILED(hr))
-			return 0;
-		::ITEMIDLIST* idList;
-		ULONG eaten;
-		if(FAILED(hr = desktop->ParseDisplayName(0, 0, buffer, &eaten, &idList, 0))) {
-			::SetLastError((HRESULT_FACILITY(hr) == FACILITY_WIN32) ? HRESULT_CODE(hr) : ERROR_INVALID_DATA);
-			return 0;
-		}
-		if((c = ::SHGetPathFromIDListW(idList, buffer)) == 0 && buffer[0] != 0) {
-			::SetLastError(ERROR_INVALID_DATA);
-			return 0;
-		}
-		c = wcslen(buffer);
-		if(c + 1 > bufferLength) {
-			::SetLastError(ERROR_INSUFFICIENT_BUFFER);
-			return ++c;
-		}
-		wcsncpy(longName, buffer, bufferLength);
-		longName[bufferLength] = 0;
-		ComPtr<IMalloc> m;
-		if(SUCCEEDED(::SHGetMalloc(&m)))
-			m->Free(idList);
-		return c;
+	/// Finds the base name in the given file path name.
+	template<typename InputIterator> inline InputIterator findFileName(InputIterator first, InputIterator last) {
+		InputIterator delimiter(find_last_of(first, last, PATH_SEPARATORS, endof(PATH_SEPARATORS)));
+		return (delimiter != last) ? ++delimiter : first;
 	}
 
 	/**
-	 * Makes the file name absolute if the file name is relative.
-	 * @param fileName the file name
-	 * @param[out] dest the destination
+	 * Returns the last write time of the specified file.
+	 * @param fileName the name of the file
+	 * @param[out] timeStamp the time
+	 * @throw files#IOException any I/O error occured
 	 */
-	void resolveRelativePathName(const WCHAR* fileName, WCHAR* dest) throw() {
-		if(toBoolean(::PathIsRelativeW(fileName))) {
-			WCHAR currDir[MAX_PATH];
-			::GetCurrentDirectoryW(MAX_PATH, currDir);
-			::PathCombineW(dest, currDir, fileName);
-		} else
-			wcscpy(dest, fileName);
+	void getFileLastWriteTime(const files::String& fileName, files::FileBinder::Time& timeStamp) {
+#ifdef ASCENSION_WINDOWS
+		::WIN32_FILE_ATTRIBUTE_DATA attributes;
+		if(::GetFileAttributesExW(fileName.c_str(), GetFileExInfoStandard, &attributes) != 0)
+			timeStamp = attributes.ftLastWriteTime;
+		else {
+			const ::DWORD e = ::GetLastError();
+			throw files::IOException((e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND) ?
+				files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
+		}
+#else // ASCENSION_POSIX
+		struct stat s;
+		if(::stat(fileName.c_str(), &s) == 0)
+			timeStamp = s.st_mtime;
+		else
+			throw files::IOException((::errno == E_NOENT) ?
+				files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
+#endif
 	}
 
-	// Document::length_ メンバ診断用
+	/**
+	 * Returns the size of the specified file.
+	 * @param fileName the name of the file
+	 * @return the size of the file in bytes or -1 if the file is too large
+	 * @throw NullPointerException @a fileName is @c null
+	 * @throw files#IOException any I/O error occured
+	 */
+	ptrdiff_t getFileSize(const files::Char* fileName) {
+		if(fileName == 0)
+			throw NullPointerException("fileName");
+#ifdef ASCENSION_WINDOWS
+		::WIN32_FILE_ATTRIBUTE_DATA attributes;
+		if(::GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes) == 0) {
+			::DWORD e = ::GetLastError();
+			throw files::IOException(
+				(e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_BAD_NETPATH) ?
+					files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
+		}
+		return (attributes.nFileSizeHigh == 0
+			&& attributes.nFileSizeLow <= static_cast<::DWORD>(numeric_limits<ptrdiff_t>::max())) ?
+				static_cast<ptrdiff_t>(attributes.nFileSizeLow) : -1;
+#else // ASCENSION_POSIX
+		struct stat s;
+		if(::stat(fileName, &s) != 0)
+			throw files::IOException((::errno == E_NOENT) ?
+				files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
+		return s.st_size;
+#endif
+	}
+
+	/**
+	 * Creates a name for a temporary file.
+	 * @param seed the string contains a directory path and a prefix string
+	 * @return the result string
+	 * @throw files#IOException any I/O error occured
+	 */
+	files::String getTemporaryFileName(const files::String& seed) {
+		manah::AutoBuffer<files::Char> s(new files::Char[seed.length() + 1]);
+		copy(seed.begin(), seed.end(), s.get());
+		s[seed.length()] = 0;
+		files::Char* name = findFileName(s.get(), s.get() + seed.length());
+		if(name != s.get())
+			name[-1] = 0;
+#ifdef ASCENSION_WINDOWS
+		::WCHAR result[MAX_PATH];
+		if(::GetTempFileNameW(s.get(), name, 0, result) != 0)
+			return result;
+#else // ASCENSION_POSIX
+		if(const files::Char* p = ::tempnam(s.get(), name)) {
+			files::String result(p);
+			::free(p);
+			return result;
+		}
+#endif
+		throw files::IOException(files::IOException::PLATFORM_DEPENDENT_ERROR);
+	}
+} // namespace @0
+
+/**
+ * Makes the given path name real. This method will not fail even if the path name is not exist.
+ * Win32 target platform: If @a pathName is a UNC, the case of @a pathName will not be fixed. All
+ * slashes will be replaced by backslashes.
+ * @param pathName the absolute path name
+ * @return the result real path name
+ * @throw NullPointerException @a pathName is @c null
+ * @see comparePathNames
+ */
+files::String kernel::files::canonicalizePathName(const files::Char* pathName) {
+	if(pathName == 0)
+		throw NullPointerException("pathName");
+
+#ifdef ASCENSION_WINDOWS
+
+	if(wcslen(pathName) >= MAX_PATH)	// too long name
+		return pathName;
+
+	// resolve relative path name
+	::WCHAR path[MAX_PATH];
+	::WCHAR* dummy;
+	if(::GetFullPathNameW(pathName, countof(path), path, &dummy) == 0)
+		wcscpy(path, pathName);
+
+	// get real component names (from Ftruename implementation in xyzzy)
+	files::String result;
+	result.reserve(MAX_PATH);
+	const files::Char* p = path;
+	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
+			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// drive letter
+		result.append(path, 3);
+		result[0] = towupper(path[0]);	// unify with uppercase letters...
+		p += 3;
+	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
+		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// server name
+			return false;
+		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// shared name
+			return false;
+		result.append(path, ++p - path);
+	} else	// not absolute name
+		return pathName;
+
+	::WIN32_FIND_DATAW wfd;
+	while(true) {
+		if(files::Char* next = wcspbrk(p, L"\\/")) {
+			const files::Char c = *next;
+			*next = 0;
+			::HANDLE h = ::FindFirstFileW(path, &wfd);
+			if(h != INVALID_HANDLE_VALUE) {
+				::FindClose(h);
+				result += wfd.cFileName;
+			} else
+				result += p;
+			*next = c;
+			result += L'\\';
+			p = next + 1;
+		} else {
+			::HANDLE h = ::FindFirstFileW(path, &wfd);
+			if(h != INVALID_HANDLE_VALUE) {
+				::FindClose(h);
+				result += wfd.cFileName;
+			} else
+				result += p;
+			break;
+		}
+	}
+	return result;
+
+#else // ASCENSION_POSIX
+
+	files::Char resolved[PATH_MAX];
+	return (::realpath(pathName, resolved) != 0) ? resolved : pathName;
+
+#endif
+}
+
+/**
+ * Returns true if the specified two file path names are equivalent.
+ * @param s1 the first path name
+ * @param s2 the second path name
+ * @return true if @a s1 and @a s2 are equivalent
+ * @throw NullPointerException either file name is @c null
+ * @see canonicalizePathName
+ */
+bool kernel::files::comparePathNames(const files::Char* s1, const files::Char* s2) {
+	if(s1 == 0 || s2 == 0)
+		throw NullPointerException("either file name is null.");
+
+#ifdef ASCENSION_WINDOWS
+#ifdef PathMatchSpec
+	if(toBoolean(::PathMatchSpecW(s1, s2)))
+		return true;
+#endif /* PathMatchSpec */
+	// by lexicographical comparison
+	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
+	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
+	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
+	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
+		manah::AutoBuffer<WCHAR> fs1(new ::WCHAR[fc1]), fs2(new ::WCHAR[fc2]);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
+			return fileExists(s1);
+	}
+	// by volume information
+	bool eq = false;
+	::HANDLE f1 = ::CreateFileW(s1, 0,
+		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+	if(f1 != INVALID_HANDLE_VALUE) {
+		::HANDLE f2 = ::CreateFileW(s1, 0,
+			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+		if(f2 != INVALID_HANDLE_VALUE) {
+			::BY_HANDLE_FILE_INFORMATION fi1;
+			if(toBoolean(::GetFileInformationByHandle(f1, &fi1))) {
+				::BY_HANDLE_FILE_INFORMATION fi2;
+				if(toBoolean(::GetFileInformationByHandle(f2, &fi2)))
+					eq = fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
+						&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
+						&& fi1.nFileIndexLow == fi2.nFileIndexLow;
+			}
+			::CloseHandle(f2);
+		}
+		::CloseHandle(f1);
+	}
+	return eq;
+#else // ASCENSION_POSIX
+	// by lexicographical comparison
+	if(wcscmp(s1, s2) == 0)
+		return true;
+	// by volume information
+	struct stat st1, st2;
+	return ::stat(s1, &st1) == 0 && ::stat(s2, &st2) == 0
+		&& st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino
+		&& st1.st_size == st2.st_size && st1.st_mtime == st2.st_mtime;
+#endif
+}
+
+namespace {
 #ifdef _DEBUG
+	// for Document.length_ diagnostic
 	length_t calculateDocumentLength(const Document& document) {
 		length_t c = 0;
-		const length_t lines = document.getNumberOfLines();
+		const length_t lines = document.numberOfLines();
 		for(length_t i = 0; i < lines; ++i)
-			c += document.getLineLength(i);
+			c += document.lineLength(i);
 		return c;
 	}
 #endif /* _DEBUG */
 } // namespace @0
-
-
-/// まとめてアンドゥ/リドゥ可能な一連の操作
-class text::internal::OperationUnit : public manah::FastArenaObject<OperationUnit> {
-public:
-	virtual ~OperationUnit() throw();
-	bool		execute(Document& document, Position& resultPosition);
-	void		pop();
-	void		push(InsertOperation& operation, const Document& document);
-	void		push(DeleteOperation& operation, const Document& document);
-	IOperation&	top() const;
-private:
-	stack<IOperation*> operations_;	// この単位に含まれる一連の操作
-};
-
-
-// OperationUnit ////////////////////////////////////////////////////////////
-
-/// Destructor.
-inline text::internal::OperationUnit::~OperationUnit() throw() {
-	while(!operations_.empty()) {
-		delete operations_.top();
-		operations_.pop();
-	}
-}
-
-/**
- * Executes the operation unit.
- *
- * 全操作を実行できたとき、このメソッドは true を返し、オブジェクトは無効になる。
- * ナローイングなどで実行できない操作があると、その操作までを実行し、
- * このオブジェクトは実行できなかった残りの操作を保持する。
- * 後でそれらの操作が実行可能になった後で再度メソッドを呼び出すと残りの操作が実行される
- * @param document 操作対象ドキュメント
- * @param[out] resultPosition 操作終了後にキャレットを置くべき位置
- * @return 全ての操作を実行できたとき true
- */
-inline bool text::internal::OperationUnit::execute(Document& document, Position& resultPosition) {
-	resultPosition = Position::INVALID_POSITION;
-	while(!operations_.empty()) {	// 全ての操作を実行する
-		if(!operations_.top()->canExecute(document))
-			return false;
-		resultPosition = operations_.top()->execute(document);
-		delete operations_.top();
-		operations_.pop();
-	}
-	return true;
-}
-
-/**
- * Pops the top operation.
- * @see #push, #top
- */
-inline void text::internal::OperationUnit::pop() {
-	operations_.pop();
-}
-
-/**
- * Pushes an operation.
- * @param operation the operation to be pushed
- * @param document the document
- */
-inline void text::internal::OperationUnit::push(InsertOperation& operation, const Document&) {
-	operations_.push(&operation);
-}
-
-/// Pushes an operation (@a operation will be inavailble after this call).
-inline void text::internal::OperationUnit::push(DeleteOperation& operation, const Document& document) {
-	// if also the previous operation is deletion, extend the region to concatenate the operations
-	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
-		delete &operation;
-		return;
-	}
-	operations_.push(&operation);
-}
-
-/**
- * Returns the top operation.
- * @see #pop, #push
- */
-inline text::internal::IOperation& text::internal::OperationUnit::top() const {
-	return *operations_.top();
-}
-
-
-// Document::UndoManager /////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param document the target document
- */
-inline Document::UndoManager::UndoManager(Document& document) throw()
-		: document_(document), compoundOperationStackingState_(NONE),
-		virtualOperation_(false), virtualUnit_(0), lastUnit_(0), savedOperation_(0) {
-}
-
-/// Destructor.
-inline Document::UndoManager::~UndoManager() throw() {
-	clear();
-}
-
-/// Starts the compound operation.
-inline void Document::UndoManager::beginCompoundOperation() throw() {
-	assert(compoundOperationStackingState_ == NONE);
-	compoundOperationStackingState_ = WAIT_FOR_FIRST_PUSH;
-}
-
-/// Clears the stacks.
-inline void Document::UndoManager::clear() throw() {
-	compoundOperationStackingState_ = NONE;
-	lastUnit_ = 0;
-	savedOperation_ = 0;
-	while(!undoStack_.empty()) {
-		delete undoStack_.top();
-		undoStack_.pop();
-	}
-	while(!redoStack_.empty()) {
-		delete redoStack_.top();
-		redoStack_.pop();
-	}
-}
-
-/// The document was saved.
-inline void Document::UndoManager::documentSaved() throw() {
-	savedOperation_ = !undoStack_.empty() ? &undoStack_.top()->top() : 0;
-}
-
-/// Ends the compound operation.
-inline void Document::UndoManager::endCompoundOperation() throw() {
-	compoundOperationStackingState_ = NONE;
-}
-
-/// Returns the number of the redoable operations.
-inline size_t Document::UndoManager::getRedoBufferLength() const throw() {
-	return redoStack_.size();
-}
-
-/// Returns the number of the undoable operations.
-inline size_t Document::UndoManager::getUndoBufferLength() const throw() {
-	return undoStack_.size();
-}
-
-/// 前回保存時から操作が追加、削除されたかを返す
-inline bool Document::UndoManager::isModifiedSinceLastSave() const throw() {
-	if(undoStack_.empty())
-		return savedOperation_ != 0;
-	return savedOperation_ != &undoStack_.top()->top();
-}
-
-/// Returns true if the compound operation is running.
-inline bool Document::UndoManager::isStackingCompoundOperation() const throw() {
-	return compoundOperationStackingState_ != NONE;
-}
-
-/**
- * Pushes the operation into the undo stack.
- * @param operation the operation to be pushed
- */
-template<class Operation> inline void Document::UndoManager::pushUndoBuffer(Operation& operation) {
-	// make the redo stack empty
-	if(!virtualOperation_) {
-		while(!redoStack_.empty()) {
-			delete redoStack_.top();
-			redoStack_.pop();
-		}
-	}
-
-	if(virtualOperation_) {	// 仮想操作時はスタックへの追加を遅延する
-		if(virtualUnit_ == 0)	// 初回
-			virtualUnit_ = new internal::OperationUnit();
-		virtualUnit_->push(operation, document_);
-	} else if(compoundOperationStackingState_ == WAIT_FOR_CONTINUATION && lastUnit_ != 0)	// 最後の操作単位に結合
-		lastUnit_->push(operation, document_);
-	else {
-		internal::OperationUnit* newUnit = new internal::OperationUnit();
-		newUnit->push(operation, document_);
-		undoStack_.push(newUnit);
-		lastUnit_ = newUnit;
-		if(compoundOperationStackingState_ == WAIT_FOR_FIRST_PUSH)
-			compoundOperationStackingState_ = WAIT_FOR_CONTINUATION;
-	}
-}
-
-/// Redoes one operation.
-inline bool Document::UndoManager::redo(Position& resultPosition) {
-	if(redoStack_.empty())
-		return false;
-
-	internal::OperationUnit* unit = redoStack_.top();
-	virtualOperation_ = true;			// 仮想操作開始
-	const bool succeeded = unit->execute(document_, resultPosition);
-	if(succeeded)
-		redoStack_.pop();
-	if(virtualUnit_ != 0)
-		undoStack_.push(virtualUnit_);	// 仮想操作単位をアンドゥスタックへ移す
-	virtualUnit_ = lastUnit_ = 0;
-	virtualOperation_ = false;			// 仮想操作終了
-	if(succeeded)
-		delete unit;
-	return succeeded;
-}
-
-/// Undoes one operation.
-inline bool Document::UndoManager::undo(Position& resultPosition) {
-	if(undoStack_.empty())
-		return false;
-
-	internal::OperationUnit* unit = undoStack_.top();
-	virtualOperation_ = true;			// 仮想操作開始
-	const bool succeeded = unit->execute(document_, resultPosition);
-	if(succeeded)
-		undoStack_.pop();
-	if(virtualUnit_ != 0)
-		redoStack_.push(virtualUnit_);	// 仮想操作単位をリドゥスタックへ移す
-	virtualUnit_ = lastUnit_ = 0;
-	virtualOperation_ = false;			// 仮想操作終了
-	if(succeeded)
-		delete unit;
-	return succeeded;
-}
 
 
 // Point ////////////////////////////////////////////////////////////////////
@@ -436,8 +530,8 @@ void Point::moveTo(const Position& to) {
 void Point::normalize() const {
 	verifyDocument();
 	Position& position = const_cast<Point*>(this)->position_;
-	position.line = min(position.line, document_->getNumberOfLines() - 1);
-	position.column = min(position.column, document_->getLineLength(position.line));
+	position.line = min(position.line, document_->numberOfLines() - 1);
+	position.column = min(position.column, document_->lineLength(position.line));
 	if(document_->isNarrowed() && excludedFromRestriction_) {
 		const Region r(document_->accessibleRegion());
 		position = max(position_, r.first);
@@ -490,10 +584,10 @@ void Bookmarker::addListener(IBookmarkListener& listener) {
 
 /// Deletes all bookmarks.
 void Bookmarker::clear() throw() {
-	const length_t lines = document_.getNumberOfLines();
+	const length_t lines = document_.numberOfLines();
 	bool clearedOnce = false;
 	for(length_t i = 0; i < lines; ++i) {
-		const Document::Line& line = document_.getLineInfo(i);
+		const Document::Line& line = document_.getLineInformation(i);
 		if(line.bookmarked_) {
 			line.bookmarked_ = false;
 			clearedOnce = true;
@@ -511,17 +605,17 @@ void Bookmarker::clear() throw() {
  * @throw BadPositionException @a line is outside of the document
  */
 length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
-	const length_t lines = document_.getNumberOfLines();
+	const length_t lines = document_.numberOfLines();
 	if(startLine >= lines)
 		throw BadPositionException();
 	else if(direction == FORWARD) {
 		for(length_t line = startLine; line < lines; ++line) {
-			if(document_.getLineInfo(line).bookmarked_)
+			if(document_.getLineInformation(line).bookmarked_)
 				return line;
 		}
 	} else {
 		for(length_t line = startLine + 1; line >= 0; --line) {
-			if(document_.getLineInfo(line - 1).bookmarked_)
+			if(document_.getLineInformation(line - 1).bookmarked_)
 				return line - 1;
 		}
 	}
@@ -534,7 +628,7 @@ length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
  * @throw BadPositionException @a line is outside of the document
  */
 bool Bookmarker::isMarked(length_t line) const {
-	return document_.getLineInfo(line).bookmarked_;
+	return document_.getLineInformation(line).bookmarked_;
 }
 
 /**
@@ -544,7 +638,7 @@ bool Bookmarker::isMarked(length_t line) const {
  * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::mark(length_t line, bool set) {
-	const Document::Line& l = document_.getLineInfo(line);
+	const Document::Line& l = document_.getLineInformation(line);
 	if(l.bookmarked_ != set) {
 		l.bookmarked_ = set;
 		listeners_.notify<length_t>(IBookmarkListener::bookmarkChanged, line);
@@ -566,7 +660,7 @@ void Bookmarker::removeListener(IBookmarkListener& listener) {
  * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::toggle(length_t line) {
-	const Document::Line& l = document_.getLineInfo(line);
+	const Document::Line& l = document_.getLineInformation(line);
 	l.bookmarked_ = !l.bookmarked_;
 	listeners_.notify<length_t>(IBookmarkListener::bookmarkChanged, line);
 }
@@ -580,6 +674,256 @@ DocumentPartitioner::DocumentPartitioner() throw() : document_(0) {
 
 /// Destructor.
 DocumentPartitioner::~DocumentPartitioner() throw() {
+}
+
+
+// Document.UndoManager /////////////////////////////////////////////////////
+
+// about document undo/redo
+namespace {
+	class InsertOperation;
+	class DeleteOperation;
+
+	/**
+	 * An abstract edit operation.
+	 * @see DeleteOperation, InsertOperation
+	 */
+	class IOperation {
+	public:
+		/// Destructor
+		virtual ~IOperation() throw() {}
+		/// Returns the operation is executable.
+		virtual bool canExecute(Document& document) const = 0;
+		/// Returns true if the operation can be appended to insertion @a postOperation.
+		virtual bool isConcatenatable(InsertOperation& postOperation, const Document& document) const = 0;
+		/// Returns true if the operation can be appended to deletion @a postOperation.
+		virtual bool isConcatenatable(DeleteOperation& postOperation, const Document& document) const = 0;
+		/// Executes the operation.
+		virtual Position execute(Document& document) = 0;
+	};
+
+	/// An insertion operation.
+	class InsertOperation : virtual public IOperation, public manah::FastArenaObject<InsertOperation> {
+	public:
+		InsertOperation(const Position& pos, const String& text) : position_(pos), text_(text) {}
+		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().includes(position_);}
+		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
+		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
+		Position execute(Document& document) {return document.insert(position_, text_);}
+	private:
+		Position position_;
+		String text_;
+	};
+
+	/// An deletion operation.
+	class DeleteOperation : virtual public IOperation, public manah::FastArenaObject<DeleteOperation> {
+	public:
+		DeleteOperation(const Region& region) throw() : region_(region) {}
+		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().encompasses(region_);}
+		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
+		bool isConcatenatable(DeleteOperation& postOperation, const Document&) const throw() {
+			const Position& bottom = region_.end();
+			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
+			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
+		}
+		Position execute(Document& document) {return document.erase(region_);}
+	private:
+		Region region_;
+	};
+
+	/// A compound operation.
+	class CompoundOperation : public manah::FastArenaObject<CompoundOperation> {
+	public:
+		~CompoundOperation() throw();
+		pair<bool, size_t> execute(Document& document, Position& resultPosition);
+		void pop() {operations_.pop();}
+		void push(InsertOperation& operation, const Document&) {operations_.push(&operation);}
+		void push(DeleteOperation& operation, const Document& document);
+		IOperation& top() const {return *operations_.top();}
+	private:
+		stack<IOperation*> operations_;
+	};
+} // namespace @0
+
+CompoundOperation::~CompoundOperation() throw() {
+	while(!operations_.empty()) {
+		delete operations_.top();
+		operations_.pop();
+	}
+}
+
+inline pair<bool, size_t> CompoundOperation::execute(Document& document, Position& resultPosition) {
+	const size_t c = operations_.size();
+	resultPosition = Position::INVALID_POSITION;
+	while(!operations_.empty()) {
+		if(!operations_.top()->canExecute(document))
+			break;
+		resultPosition = operations_.top()->execute(document);
+		delete operations_.top();
+		operations_.pop();
+	}
+	// return <completely executed?, # of executed operations>
+	return make_pair(operations_.empty(), c - operations_.size());
+}
+
+inline void CompoundOperation::push(DeleteOperation& operation, const Document& document) {
+	// if also the previous operation is deletion, extend the region to concatenate the operations
+	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document))
+		delete &operation;
+	else
+		operations_.push(&operation);
+}
+
+/// Manages undo/redo of the document.
+class Document::UndoManager {
+	MANAH_NONCOPYABLE_TAG(UndoManager);
+public:
+	// constructors
+	UndoManager(Document& document) throw();
+	virtual ~UndoManager() throw();
+	// attributes
+	size_t	numberOfRedoableCompoundOperations() const throw();
+	size_t	numberOfUndoableCompoundOperations() const throw();
+	bool	isStackingCompoundOperation() const throw();
+	// operations
+	void				beginCompoundOperation() throw();
+	void				clear() throw();
+	void				endCompoundOperation() throw();
+	template<typename Operation>
+	void				pushUndoableOperation(Operation& operation);
+	pair<bool, size_t>	redo(Position& resultPosition);
+	pair<bool, size_t>	undo(Position& resultPosition);
+private:
+	Document& document_;
+	stack<CompoundOperation*> undoStack_, redoStack_;
+	enum {
+		NONE, WAIT_FOR_FIRST_PUSH, WAIT_FOR_CONTINUATION
+	} compoundOperationStackingState_;
+	bool virtualOperation_;
+	CompoundOperation* virtualUnit_;
+	CompoundOperation* lastUnit_;
+	IOperation* savedOperation_;
+};
+
+/**
+ * Constructor.
+ * @param document the target document
+ */
+Document::UndoManager::UndoManager(Document& document) throw()
+		: document_(document), compoundOperationStackingState_(NONE),
+		virtualOperation_(false), virtualUnit_(0), lastUnit_(0), savedOperation_(0) {
+}
+
+/// Destructor.
+Document::UndoManager::~UndoManager() throw() {
+	clear();
+}
+
+/// Starts the compound operation.
+inline void Document::UndoManager::beginCompoundOperation() throw() {
+	assert(compoundOperationStackingState_ == NONE);
+	compoundOperationStackingState_ = WAIT_FOR_FIRST_PUSH;
+}
+
+/// Clears the stacks.
+inline void Document::UndoManager::clear() throw() {
+	compoundOperationStackingState_ = NONE;
+	lastUnit_ = 0;
+	while(!undoStack_.empty()) {
+		delete undoStack_.top();
+		undoStack_.pop();
+	}
+	while(!redoStack_.empty()) {
+		delete redoStack_.top();
+		redoStack_.pop();
+	}
+}
+
+/// Ends the compound operation.
+inline void Document::UndoManager::endCompoundOperation() throw() {
+	compoundOperationStackingState_ = NONE;
+}
+
+/// Returns true if the compound operation is running.
+inline bool Document::UndoManager::isStackingCompoundOperation() const throw() {
+	return compoundOperationStackingState_ != NONE;
+}
+
+/// Returns the number of the redoable operations.
+inline size_t Document::UndoManager::numberOfRedoableCompoundOperations() const throw() {
+	return redoStack_.size();
+}
+
+/// Returns the number of the undoable operations.
+inline size_t Document::UndoManager::numberOfUndoableCompoundOperations() const throw() {
+	return undoStack_.size();
+}
+
+/**
+ * Pushes the operation into the undo stack.
+ * @param operation the operation to be pushed
+ */
+template<typename Operation> void Document::UndoManager::pushUndoableOperation(Operation& operation) {
+	// make the redo stack empty
+	if(!virtualOperation_) {
+		while(!redoStack_.empty()) {
+			delete redoStack_.top();
+			redoStack_.pop();
+		}
+	}
+
+	if(virtualOperation_) {	// 仮想操作時はスタックへの追加を遅延する
+		if(virtualUnit_ == 0)	// 初回
+			virtualUnit_ = new CompoundOperation();
+		virtualUnit_->push(operation, document_);
+	} else if(compoundOperationStackingState_ == WAIT_FOR_CONTINUATION && lastUnit_ != 0)	// 最後の操作単位に結合
+		lastUnit_->push(operation, document_);
+	else {
+		CompoundOperation* newUnit = new CompoundOperation();
+		newUnit->push(operation, document_);
+		undoStack_.push(newUnit);
+		lastUnit_ = newUnit;
+		if(compoundOperationStackingState_ == WAIT_FOR_FIRST_PUSH)
+			compoundOperationStackingState_ = WAIT_FOR_CONTINUATION;
+	}
+}
+
+/// Redoes one operation.
+pair<bool, size_t> Document::UndoManager::redo(Position& resultPosition) {
+	if(redoStack_.empty())
+		return make_pair(false, 0);
+
+	CompoundOperation* unit = redoStack_.top();
+	virtualOperation_ = true;			// 仮想操作開始
+	const pair<bool, size_t> status(unit->execute(document_, resultPosition));
+	if(status.first)
+		redoStack_.pop();
+	if(virtualUnit_ != 0)
+		undoStack_.push(virtualUnit_);	// 仮想操作単位をアンドゥスタックへ移す
+	virtualUnit_ = lastUnit_ = 0;
+	virtualOperation_ = false;			// 仮想操作終了
+	if(status.first)
+		delete unit;
+	return status;
+}
+
+/// Undoes one operation.
+pair<bool, size_t> Document::UndoManager::undo(Position& resultPosition) {
+	if(undoStack_.empty())
+		return make_pair(false, 0);
+
+	CompoundOperation* unit = undoStack_.top();
+	virtualOperation_ = true;			// 仮想操作開始
+	const pair<bool, size_t> status = unit->execute(document_, resultPosition);
+	if(status.first)
+		undoStack_.pop();
+	if(virtualUnit_ != 0)
+		redoStack_.push(virtualUnit_);	// 仮想操作単位をリドゥスタックへ移す
+	virtualUnit_ = lastUnit_ = 0;
+	virtualOperation_ = false;			// 仮想操作終了
+	if(status.first)
+		delete unit;
+	return status;
 }
 
 
@@ -612,42 +956,54 @@ DocumentPartitioner::~DocumentPartitioner() throw() {
  * @see Viewer, IDocumentPartitioner, Point, EditPoint
  */
 
-#define CHECK_FIRST_MODIFICATION()																\
-	if(!isModified() && timeStampDirector_ != 0) {												\
-		::FILETIME realTimeStamp;																\
-		if(!verifyTimeStamp(true, realTimeStamp)) {												\
-			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(					\
-					*this, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))				\
-				return position;																\
-			diskFile_.lastWriteTimes.internal = diskFile_.lastWriteTimes.user = realTimeStamp;	\
-		}																						\
-	}
-
-MIBenum Document::defaultEncoding_ = Encoder::getDefault();
-Newline Document::defaultNewline_ = ASCENSION_DEFAULT_NEWLINE;
+const DocumentPropertyKey Document::TITLE_PROPERTY;
 
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
-		readOnly_(false), modified_(false), encoding_(defaultEncoding_), newline_(defaultNewline_),
-		length_(0), revisionNumber_(0), onceUndoBufferCleared_(false), recordingOperations_(true), virtualOperating_(false),
-		changing_(false), accessibleArea_(0), timeStampDirector_(0) {
+		readOnly_(false), modified_(false), length_(0), revisionNumber_(0),
+		onceUndoBufferCleared_(false), recordingOperations_(true), changing_(false), accessibleArea_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
-	undoManager_.reset(new UndoManager(*this));
+	undoManager_ = new UndoManager(*this);
 	resetContent();
 }
 
 /// Destructor.
 Document::~Document() {
-	if(diskFile_.isLocked())
-		diskFile_.unlock();
-	delete[] diskFile_.pathName;
-	for(set<Point*>::iterator it = points_.begin(); it != points_.end(); ++it)
-		(*it)->documentDisposed();
+	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
+		(*i)->documentDisposed();
 	if(accessibleArea_ != 0) {
 		delete accessibleArea_->second;
 		delete accessibleArea_;
 	}
+	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
+		delete i->second;
+	delete undoManager_;
+}
+
+/**
+ * Registers the document listener with the document. After registration @a listener is notified
+ * about each modification of this document.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addListener(IDocumentListener& listener) {
+	if(find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
+		throw invalid_argument("the listener already has been registered.");
+	listeners_.push_back(&listener);
+}
+
+/**
+ * Registers the document listener as one which is notified before those document listeners
+ * registered with @c #addListener are notified.
+ * @internal This method is not for public use.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addPrenotifiedListener(IDocumentListener& listener) {
+	if(find(prenotifiedListeners_.begin(), prenotifiedListeners_.end(), &listener) != prenotifiedListeners_.end())
+		throw invalid_argument("the listener already has been registered.");
+	prenotifiedListeners_.push_back(&listener);
 }
 
 /**
@@ -661,26 +1017,14 @@ void Document::beginSequentialEdit() throw() {
 	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStarted, *this);
 }
 
-/**
- * Checks the last modified date/time of the bound file and verifies if the other modified the
- * file. If the file is modified, the listener's
- * @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
- * @return the value which the listener returned or true if the listener is not set
- */
-bool Document::checkTimeStamp() {
-	::FILETIME newTimeStamp;
-	if(!verifyTimeStamp(false, newTimeStamp)) {
-		::FILETIME original = diskFile_.lastWriteTimes.user;
-		memset(&diskFile_.lastWriteTimes.user, 0, sizeof(::FILETIME));
-		if(timeStampDirector_ == 0
-				|| timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(*this, IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION)) {
-			diskFile_.lastWriteTimes.user = newTimeStamp;
-			return true;
-		}
-		diskFile_.lastWriteTimes.user = original;
-		return false;
-	}
-	return true;
+/// Clears the undo/redo stacks and deletes the history.
+void Document::clearUndoBuffer() {
+	undoManager_->clear();
+	onceUndoBufferCleared_ = true;
+}
+
+/// @c #resetContent invokes this method finally. Default implementation does nothing.
+void Document::doResetContent() {
 }
 
 /**
@@ -706,7 +1050,7 @@ void Document::endSequentialEdit() throw() {
 Position Document::erase(const Region& region) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(region.isEmpty())	// 空 -> 無視
+	else if(region.isEmpty())	// empty -> ignore
 		return region.beginning();
 	else if(isNarrowed()) {
 		const Region r(accessibleRegion());
@@ -714,57 +1058,53 @@ Position Document::erase(const Region& region) {
 			return region.end();
 		else if(region.beginning() >= r.second)
 			return region.beginning();
-	} else if(!isModified() && timeStampDirector_ != 0) {
-		::FILETIME realTimeStamp;
-		if(!verifyTimeStamp(true, realTimeStamp)) {	// 他で上書きされとる
-			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(*this, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
-				return region.beginning();
-			diskFile_.lastWriteTimes.internal = diskFile_.lastWriteTimes.user = realTimeStamp;
-		}
 	}
 
 	ModificationGuard guard(*this);
-	fireDocumentAboutToBeChanged();
+	if(!fireDocumentAboutToBeChanged(DocumentChange(true, region)))
+		return region.beginning();
+	return eraseText(region);
+}
 
-	const Position begin = isNarrowed() ? max(region.beginning(), accessibleRegion().first) : region.beginning();
-	const Position end = isNarrowed() ? min(region.end(), accessibleRegion().second) : region.end();
-	StringBuffer deletedString;	// 削除した文字列 (複数行になるときは現在の改行文字が挿入される)
+Position Document::eraseText(const Region& region) {
+	const Position beginning(isNarrowed() ? max(region.beginning(), accessibleRegion().first) : region.beginning());
+	const Position end(isNarrowed() ? min(region.end(), accessibleRegion().second) : region.end());
+	StringBuffer deletedString;
 
-	if(begin.line == end.line) {	// 対象が1行以内
-		const Line&	lineInfo = getLineInfo(end.line);
-		String&	line = const_cast<String&>(getLine(end.line));
+	if(beginning.line == end.line) {	// region is single line
+		const Line&	lineInfo = getLineInformation(end.line);
+		String&	line = const_cast<String&>(this->line(end.line));
 
 		++const_cast<Line&>(lineInfo).operationHistory_;
-		deletedString.sputn(line.data() + begin.column, static_cast<streamsize>(end.column - begin.column));
-		line.erase(begin.column, end.column - begin.column);
-		length_ -= end.column - begin.column;
-	} else {							// 対象が複数行
-		Line* line = lines_[begin.line];
+		deletedString.sputn(line.data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
+		line.erase(beginning.column, end.column - beginning.column);
+		length_ -= end.column - beginning.column;
+	} else {						// region is multiline
+		Line* line = lines_[beginning.line];
 		auto_ptr<String> tail;
-		deletedString.sputn(line->text_.data() + begin.column, static_cast<streamsize>(line->text_.length() - begin.column));
-		length_ -= line->text_.length() - begin.column;
-		line->text_.erase(begin.column);
+		deletedString.sputn(line->text_.data() + beginning.column, static_cast<streamsize>(line->text_.length() - beginning.column));
+		length_ -= line->text_.length() - beginning.column;
+		line->text_.erase(beginning.column);
 
-		// 削除する部分を保存しつつ削除
-		Line& firstLine = *lines_[begin.line];
+		Line& firstLine = *lines_[beginning.line];
 		Newline lastNewline;
-		deletedString.sputn(getNewlineString(lines_[begin.line]->newline_),
-			static_cast<streamsize>(getNewlineStringLength(lines_[begin.line]->newline_)));
-		for(length_t i = begin.line + 1; ; ++i) {
+		deletedString.sputn(getNewlineString(lines_[beginning.line]->newline_),
+			static_cast<streamsize>(getNewlineStringLength(lines_[beginning.line]->newline_)));
+		for(length_t i = beginning.line + 1; ; ++i) {
 			line = lines_[i];
 			deletedString.sputn(line->text_.data(), static_cast<streamsize>((i != end.line) ? line->text_.length() : end.column));
 			length_ -= line->text_.length();
 			if(i != end.line)
 				deletedString.sputn(getNewlineString(line->newline_), static_cast<streamsize>(getNewlineStringLength(line->newline_)));
-			else {	// 削除終了行
+			else {	// last
 				tail.reset(new String(line->text_.substr(end.column)));
 				lastNewline = line->newline_;
 				break;
 			}
 		}
-		lines_.erase(begin.line + 1, end.line - begin.line);
+		lines_.erase(beginning.line + 1, end.line - beginning.line);
 
-		// 削除した部分の前後を繋ぐ
+		// concatinate before and after erased part
 		firstLine.newline_ = lastNewline;
 		++firstLine.operationHistory_;
 		if(!tail->empty()) {
@@ -774,58 +1114,39 @@ Position Document::erase(const Region& region) {
 	}
 
 	if(recordingOperations_)
-		undoManager_->pushUndoBuffer(*(new InsertOperation(begin, deletedString.str())));
+		undoManager_->pushUndoableOperation(*(new InsertOperation(beginning, deletedString.str())));
 
 	// notify the change
 	++revisionNumber_;
-	fireDocumentChanged(DocumentChange(true, Region(begin, end)));
+	fireDocumentChanged(DocumentChange(true, Region(beginning, end)));
 	setModified();
 
-	return begin;
+	return beginning;
 }
 
-/// Invokes the listeners' @c IDocumentListener#documentAboutToBeChanged.
-inline void Document::fireDocumentAboutToBeChanged() throw() {
+bool Document::fireDocumentAboutToBeChanged(const DocumentChange& c) throw() {
 	if(partitioner_.get() != 0)
 		partitioner_->documentAboutToBeChanged();
-	prenotifiedListeners_.notify<const Document&>(IDocumentListener::documentAboutToBeChanged, *this);
-	listeners_.notify<const Document&>(IDocumentListener::documentAboutToBeChanged, *this);
+	for(list<IDocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i) {
+		if(!(*i)->documentAboutToBeChanged(*this, c))
+			return false;
+	}
+	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i) {
+		if(!(*i)->documentAboutToBeChanged(*this, c))
+			return false;
+	}
+	return true;
 }
 
-/// Invokes the listeners' @c IDocumentListener#documentChanged.
-inline void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) throw() {
+void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) throw() {
 	if(partitioner_.get() != 0)
 		partitioner_->documentChanged(c);
 	if(updateAllPoints)
 		updatePoints(c);
-	prenotifiedListeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
-	listeners_.notify<const Document&, const DocumentChange&>(IDocumentListener::documentChanged, *this, c);
-}
-
-/**
- * Returns the offset of the line.
- * @param line the line
- * @param nlr the line representation policy for character counting
- * @throw BadPostionException @a line is outside of the document
- */
-length_t Document::getLineOffset(length_t line, NewlineRepresentation nlr) const {
-	if(line >= lines_.getSize())
-		throw BadPositionException();
-
-	length_t offset = 0;
-	for(length_t i = 0; i < line; ++i) {
-		const Line& ln = *lines_[i];
-		offset += ln.text_.length();
-		switch(nlr) {
-		case NLR_LINE_FEED:
-		case NLR_LINE_SEPARATOR:	offset += 1; break;
-		case NLR_CRLF:				offset += 2; break;
-		case NLR_PHYSICAL_DATA:		offset += getNewlineStringLength(ln.newline_); break;
-		case NLR_DOCUMENT_DEFAULT:	offset += getNewlineStringLength(getNewline()); break;
-		case NLR_SKIP:				break;
-		}
-	}
-	return offset;
+	for(list<IDocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
+		(*i)->documentChanged(*this, c);
+	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
+		(*i)->documentChanged(*this, c);
 }
 
 /**
@@ -853,17 +1174,19 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 		return position;
 	else if(first == last)	// ignore if the input is empty
 		return position;
-	else
-		CHECK_FIRST_MODIFICATION()
 
 	ModificationGuard guard(*this);
-	fireDocumentAboutToBeChanged();
+	if(!fireDocumentAboutToBeChanged(DocumentChange(false, Region(position))))
+		return position;
+	return insertText(position, first, last);
+}
 
+Position Document::insertText(const Position& position, const Char* first, const Char* last) {
 	Position resultPosition(position.line, 0);
 	const Char* breakPoint = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
 
 	if(breakPoint == last) {	// single-line
-		Line& line = const_cast<Line&>(getLineInfo(position.line));
+		Line& line = const_cast<Line&>(getLineInformation(position.line));
 		line.text_.insert(position.column, first, static_cast<String::size_type>(last - first));
 		length_ += static_cast<length_t>(last - first);
 		++line.operationHistory_;
@@ -915,7 +1238,7 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 	}
 
 	if(recordingOperations_)
-		undoManager_->pushUndoBuffer(*(new DeleteOperation(Region(position, resultPosition))));
+		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(position, resultPosition))));
 
 	// notify the change
 	++revisionNumber_;
@@ -940,8 +1263,6 @@ Position Document::insertFromStream(const Position& position, InputStream& in) {
 		return position;
 	else if(in.eof())
 		return position;
-	else
-		CHECK_FIRST_MODIFICATION()
 
 	// TODO: not implemented.
 	return position;
@@ -956,182 +1277,55 @@ bool Document::isSequentialEditing() const throw() {
 }
 
 /**
- * Reads the document from the specified file.
- * @param fileName the file name. this method doesn't resolves the short cut
- * @param lockMode the lock mode
- * @param encoding the MIBenum value of the file encoding
- * @return succeeded or not. see @c #FileIOResult
- * @throw std#invalid_argument the bit combination of @a fileOpenMode is invalid
- * @deprecated 0.8
+ * Returns the number of characters (UTF-16 code units) in the document.
+ * @param nlr the method to count newlines
+ * @return the number of characters
+ * @throw std#invalid_argument @a nlr is invalid
+ * @see files#FileBinder#lengthOfDocument
  */
-Document::FileIOResult Document::load(const basic_string<WCHAR>& fileName,
-		const FileLockMode& lockMode, MIBenum encoding, Encoder::Policy encodingPolicy) {
-//	Timer tm(L"load");	// 2.86s / 1MB
-	Encoder* encoder = Encoder::forMIB(encoding);
-	if(encoder == 0 && !EncodingDetector::supports(encoding))
-		return FIR_INVALID_ENCODING;
-
-	const DWORD attributes = ::GetFileAttributesW(fileName.c_str());
-	if(attributes == INVALID_FILE_ATTRIBUTES)	// file not found
-		return FIR_STANDARD_WIN32_ERROR;
-
-	auto_ptr<File<true> > newFile(new File<true>);
-#ifdef _WIN32
-	ui::WaitCursor wc;
-#endif /* _WIN32 */
-
-	// open the file
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-	if(lockMode.type != FileLockMode::LOCK_TYPE_NONE && !lockMode.onlyAsEditing)
-		shareMode = (lockMode.type == FileLockMode::LOCK_TYPE_SHARED) ? FILE_SHARE_READ : 0;
-	if(!newFile->open(fileName.c_str(), GENERIC_READ, shareMode, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN))
-		return FIR_STANDARD_WIN32_ERROR;	// ERROR_SHARING_VIOLATION, ...
-
-	// abort if the file is too large
-	if(newFile->getLength() > numeric_limits<ulong>::max()) {
-		newFile->close();
-		return FIR_HUGE_FILE;
+length_t Document::length(NewlineRepresentation nlr) const {
+	switch(nlr) {
+	case NLR_LINE_FEED:
+	case NLR_LINE_SEPARATOR:
+		return length_ + numberOfLines() - 1;
+	case NLR_CRLF:
+		return length_ + numberOfLines() * 2 - 1;
+	case NLR_PHYSICAL_DATA: {
+		length_t len = length_;
+		const length_t lines = numberOfLines();
+		for(length_t i = 0; i < lines; ++i)
+			len += getNewlineStringLength(lines_[i]->newline_);
+		return len;
 	}
-
-	// bind to the new file
-	resetContent();
-	diskFile_.lockingFile.reset(newFile.release());
-	diskFile_.lockMode = lockMode;
-
-#define CLOSE_AND_ABORT(errorCode)	\
-	fileView.reset(0);				\
-	if(fileMapper.get() != 0)		\
-		fileMapper->close();		\
-	diskFile_.lockingFile->close();	\
-	return errorCode
-
-	const ulong fileSize = static_cast<ulong>(diskFile_.lockingFile->getLength() & 0xFFFFFFFFUL);
-	const uchar* nativeBuffer;
-	auto_ptr<MemoryMappedFile<const uchar, true> > fileMapper(
-		(fileSize != 0) ? new MemoryMappedFile<const uchar, true>(*diskFile_.lockingFile, PAGE_READONLY) : 0);
-	auto_ptr<MemoryMappedFile<const uchar, true>::View> fileView;
-	if(fileSize != 0) {
-		if(fileMapper->get() == 0) {
-			CLOSE_AND_ABORT(FIR_STANDARD_WIN32_ERROR);
-		}
-		fileView = fileMapper->mapView(FILE_MAP_READ);
-		if(fileView.get() == 0) {
-			CLOSE_AND_ABORT(FIR_STANDARD_WIN32_ERROR);
-		}
-		nativeBuffer = fileView->getData();
+	case NLR_SKIP:
+		return length_;
 	}
+	throw invalid_argument("invalid parameter.");
+}
 
-	// convert the whole buffer
-	Position last(0, 0);	// 次に文字列を追加する位置
-	if(fileSize != 0) {
-		if(const EncodingDetector* const detector = EncodingDetector::forID(encoding)) {
-			encoding = detector->detect(nativeBuffer, nativeBuffer + min(fileSize, 4UL * 1024), 0);
-			encoder = Encoder::forMIB(encoding);
+/**
+ * Returns the offset of the line.
+ * @param line the line
+ * @param nlr the line representation policy for character counting
+ * @throw BadPostionException @a line is outside of the document
+ */
+length_t Document::lineOffset(length_t line, NewlineRepresentation nlr) const {
+	if(line >= lines_.getSize())
+		throw BadPositionException();
+
+	length_t offset = 0;
+	for(length_t i = 0; i < line; ++i) {
+		const Line& ln = *lines_[i];
+		offset += ln.text_.length();
+		switch(nlr) {
+		case NLR_LINE_FEED:
+		case NLR_LINE_SEPARATOR:	offset += 1; break;
+		case NLR_CRLF:				offset += 2; break;
+		case NLR_PHYSICAL_DATA:		offset += getNewlineStringLength(ln.newline_); break;
+		case NLR_SKIP:				break;
 		}
-		size_t destLength = encoder->getMaximumUCSLength() * fileSize;
-		const uchar* bom;
-		size_t bomLength;
-
-		switch(encoding) {
-		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
-		case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
-		case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-		case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-		default:								bom = 0; bomLength = 0; break;
-		}
-		if(bomLength != 0 && memcmp(nativeBuffer, bom, bomLength) != 0)
-			bomLength = 0;
-
-		Char* const ucsBuffer =
-			static_cast<Char*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, (destLength + 1) * sizeof(Char)));
-		if(ucsBuffer == 0) {
-			CLOSE_AND_ABORT(FIR_OUT_OF_MEMORY);
-		}
-
-		Char* toNext;
-		const uchar* fromNext;
-		if(Encoder::COMPLETED != encoder->setPolicy(encodingPolicy).toUnicode(
-				ucsBuffer, ucsBuffer + destLength, toNext, nativeBuffer + bomLength, nativeBuffer + fileSize, fromNext)) {
-			::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
-			CLOSE_AND_ABORT(FIR_ENCODING_FAILURE);
-		}
-
-#undef CLOSE_AND_ABORT
-
-		*toNext = 0;
-		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
-		fireDocumentAboutToBeChanged();
-
-		// break the buffer into lines by newlines
-		length_t nextBreak, lastBreak = 0;
-		Newline newline;
-		lines_.clear();
-		newline_ = NLF_AUTO;
-		while(true) {
-			for(size_t i = lastBreak; ; ++i) {	// search the next new line
-				if(ucsBuffer + i == toNext) {
-					nextBreak = static_cast<length_t>(-1);
-					break;
-				} else if(binary_search(LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS) - 1, ucsBuffer[i])) {
-					nextBreak = i;
-					break;
-				}
-			}
-			if(nextBreak != static_cast<length_t>(-1)) {
-				// detect the newline character
-				switch(ucsBuffer[nextBreak]) {
-				case LINE_FEED:
-					newline = NLF_LF;
-					break;
-				case CARRIAGE_RETURN:
-					newline = (nextBreak + 1 < destLength && ucsBuffer[nextBreak + 1] == LINE_FEED) ? NLF_CRLF : NLF_CR;
-					break;
-				case NEXT_LINE:
-					newline = NLF_NEL;
-					break;
-				case LINE_SEPARATOR:
-					newline = NLF_LS;
-					break;
-				case PARAGRAPH_SEPARATOR:
-					newline = NLF_PS;
-					break;
-				}
-				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, nextBreak - lastBreak), newline));
-				length_ += nextBreak - lastBreak;
-				lastBreak = nextBreak + ((newline != NLF_CRLF) ? 1 : 2);
-				if(newline_ == NLF_AUTO)	// 最初に現れた改行文字を既定の改行文字とする
-					setNewline(newline);
-			} else {	// the last line
-				lines_.insert(lines_.getSize(), new Line(String(ucsBuffer + lastBreak, toNext)));
-				length_ += destLength - lastBreak;
-				break;
-			}
-		}
-		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, ucsBuffer);
-	} else {	// an empty file
-		encoding = defaultEncoding_;
-		setFilePathName(canonicalizePathName(fileName.c_str()).c_str());
 	}
-
-	if(newline_ == NLF_AUTO)
-		setNewline(Document::defaultNewline_);
-	diskFile_.lockingFile->getFileTime(0, 0, &diskFile_.lastWriteTimes.internal);
-	diskFile_.lastWriteTimes.user = diskFile_.lastWriteTimes.internal;
-	if(diskFile_.lockMode.type == FileLockMode::LOCK_TYPE_NONE)
-		diskFile_.unlock();
-
-	setEncoding(encoding);
-	clearUndoBuffer();
-	setModified(false);
-	onceUndoBufferCleared_ = false;
-	fireDocumentChanged(DocumentChange(false, region()), false);
-	if(toBoolean(attributes & FILE_ATTRIBUTE_READONLY))
-		setReadOnly();
-
-	return FIR_OK;
+	return offset;
 }
 
 /**
@@ -1150,6 +1344,16 @@ void Document::narrow(const Region& region) {
 			(*i)->normalize();
 	}
 	stateListeners_.notify<Document&>(IDocumentStateListener::documentAccessibleRegionChanged, *this);
+}
+
+/// Returns the number of undoable edits.
+size_t Document::numberOfUndoableEdits() const throw() {
+	return undoManager_->numberOfUndoableCompoundOperations();
+}
+
+/// Returns the number of redoable edits.
+size_t Document::numberOfRedoableEdits() const throw() {
+	return undoManager_->numberOfRedoableCompoundOperations();
 }
 
 /**
@@ -1173,325 +1377,81 @@ void Document::recordOperations(bool record) {
 bool Document::redo() {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(getUndoHistoryLength(true) == 0)
+	else if(numberOfRedoableEdits() == 0)
 		return false;
 
 	beginSequentialEdit();
-	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentUndoSequenceStarted, *this);
+	sequentialEditListeners_.notify<Document&>(
+		ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
-	const bool succeeded = undoManager_->redo(resultPosition);
-	sequentialEditListeners_.notify<Document&, const Position&>(ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
+	const bool succeeded = undoManager_->redo(resultPosition).first;
+	sequentialEditListeners_.notify<Document&, const Position&>(
+		ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
-
-	if(!undoManager_->isModifiedSinceLastSave())
-		setModified(false);
 	return succeeded;
 }
 
 /**
- * Renames (moves) the bound file.
- * @param newName the new name
- * @return true if succeeded
+ * Removes the document listener from the document.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
  */
-bool Document::renameFile(const WCHAR* newName) {
-	// TODO: not implemented.
-	return false;
+void Document::removeListener(IDocumentListener& listener) {
+	const list<IDocumentListener*>::iterator i(find(listeners_.begin(), listeners_.end(), &listener));
+	if(i == listeners_.end())
+		throw invalid_argument("the listener is not registered.");
+	listeners_.erase(i);
 }
 
 /**
- * Resets and initializes the content of the document.
- * @note This method does not reset the revision number to zero.
+ * Removes the pre-notified document listener from the document.
+ * @internal This method is not for public use.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Document::removePrenotifiedListener(IDocumentListener& listener) {
+	const list<IDocumentListener*>::iterator i(find(prenotifiedListeners_.begin(), prenotifiedListeners_.end(), &listener));
+	if(i == prenotifiedListeners_.end())
+		throw invalid_argument("the listener is not registered.");
+	prenotifiedListeners_.erase(i);
+}
+
+/**
+ * Resets and initializes the content of the document. Does the following:
+ * - Clears the text buffer, invokes the two methods of @c IDocumentListener and increments the
+ *   revision number even if the document was empty.
+ * - Moves the all point to the beginning of the document.
+ * - Clears the undo/redo buffers.
+ * - Resets the modification flag to false.
+ * - Resets the read-only flag to false.
+ * - Revokes the narrowing.
+ * @see #doResetContent
  */
 void Document::resetContent() {
-	diskFile_.unlock();
 	widen();
-	for(set<Point*>::iterator it = points_.begin(); it != points_.end(); ++it)
-		(*it)->moveTo(0, 0);
+	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
+		(*i)->moveTo(0, 0);
 
+	const DocumentChange ca(true, region());
+	fireDocumentAboutToBeChanged(ca);
 	if(length_ != 0) {
-		const Region entire(region());
 		assert(!lines_.isEmpty());
-		fireDocumentAboutToBeChanged();
 		lines_.clear();
 		lines_.insert(lines_.begin(), new Line);
 		length_ = 0;
 		++revisionNumber_;
-		fireDocumentChanged(DocumentChange(true, entire), false);
 	} else if(lines_.isEmpty())
 		lines_.insert(lines_.begin(), new Line);
+	fireDocumentChanged(ca, false);
 
 	setReadOnly(false);
-	setEncoding(Document::defaultEncoding_);
-	setNewline(Document::defaultNewline_);
-	setFilePathName(0);
 	setModified(false);
 	clearUndoBuffer();
 	onceUndoBufferCleared_ = false;
-	diskFile_.DiskFile::DiskFile();
+	doResetContent();
 }
 
-/**
- * Writes the content of the document to the specified file.
- * @param fileName the file name
- * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
- * line breaks
- * @return the result. @c FIR_OK if succeeded
- */
-Document::FileIOResult Document::save(const basic_string<WCHAR>& fileName, const SaveParameters& params) {
-	// load an encoder
-	Encoder* encoder = Encoder::forMIB(params.encoding);
-	if(encoder == 0)
-		return FIR_INVALID_ENCODING;
-
-	// 保存先のファイルが読み取り専用か調べておく
-	const DWORD originalAttrs = ::GetFileAttributesW(fileName.c_str());	// この値は後でもう 1 回使う
-	if(originalAttrs != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttrs & FILE_ATTRIBUTE_READONLY))
-		return FIR_READ_ONLY_MODE;
-
-	// 現在開いているファイルに上書きする場合は、外部で変更されていないか調べる
-	if(timeStampDirector_ != 0) {
-		::FILETIME realTimeStamp;
-		if(!verifyTimeStamp(true, realTimeStamp)) {	// 他で上書きされとる
-			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(*this, IUnexpectedFileTimeStampDirector::OVERWRITE_FILE))
-				return FIR_OK;
-		}
-	}
-	const wstring realName = canonicalizePathName(fileName.c_str());
-
-	// Unicode コードページでしか使えない改行コード
-	if(params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS) {
-		const MIBenum mib = encoder->getMIBenum();
-		if(mib != fundamental::UTF_8 && mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-				&& mib != extended::UTF_5 && mib != extended::UTF_7
-				&& mib != extended::UTF_32LE && mib != extended::UTF_32BE
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-			)
-		return FIR_INVALID_NEWLINE;
-	}
-
-#ifdef _WIN32
-	ui::WaitCursor wc;
-#endif /* _WIN32 */
-	FileIOResult result = FIR_OK;
-
-//	// query progression callback
-//	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
-//	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
-
-	// 1 行ずつ変換してバッファに書き込み、後で一度にファイルに書き込む
-	const length_t numberOfLines = getNumberOfLines();
-	const size_t nativeBufferBytes = (length(NLR_CRLF)) * encoder->getMaximumNativeBytes() + 4;
-	uchar* const nativeBuffer = static_cast<uchar*>(::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBufferBytes));
-	uchar* dest = nativeBuffer;	// destination pointer
-
-	if(nativeBuffer == 0)
-		return FIR_OUT_OF_MEMORY;
-
-	// Unicode byte order signature
-	if(params.options.has(SaveParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE)) {
-		size_t signatureSize = 0;
-		switch(encoder->getMIBenum()) {
-		case fundamental::UTF_8:
-			signatureSize = countof(encoding::UTF8_BOM);
-			memcpy(nativeBuffer, encoding::UTF8_BOM, signatureSize);
-			break;
-		case fundamental::UTF_16LE:
-			signatureSize = countof(encoding::UTF16LE_BOM);
-			memcpy(nativeBuffer, encoding::UTF16LE_BOM, signatureSize);
-			break;
-		case fundamental::UTF_16BE:
-			signatureSize = countof(encoding::UTF16BE_BOM);
-			memcpy(nativeBuffer, encoding::UTF16BE_BOM, signatureSize);
-			break;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		case extended::UTF_32LE:
-			signatureSize = countof(encoding::UTF32LE_BOM);
-			memcpy(nativeBuffer, encoding::UTF32LE_BOM, signatureSize);
-			break;
-		case extended::UTF_32BE:
-			signatureSize = countof(encoding::UTF32BE_BOM);
-			memcpy(nativeBuffer, encoding::UTF32BE_BOM, signatureSize);
-			break;
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-		}
-		dest += signatureSize;
-	}
-
-	for(length_t i = 0; i < numberOfLines; ++i) {
-		const Line& line = *lines_[i];
-		if(i == numberOfLines - 1) {	// the last line
-			if(line.text_.empty())
-				break;
-		}
-
-		const Char* fromNext;
-		uchar* toNext;
-		if(!line.text_.empty()) {
-			if(Encoder::COMPLETED != encoder->setPolicy(params.encodingPolicy).fromUnicode(
-					dest, nativeBuffer + nativeBufferBytes, toNext, line.text_.data(), line.text_.data() + line.text_.length(), fromNext))
-				goto ENCODING_FAILURE;
-			dest = toNext;
-		}
-		if(i != numberOfLines - 1) {
-			const String nlf(getNewlineString((params.newline != NLF_AUTO) ? params.newline : line.newline_));
-			if(Encoder::COMPLETED != encoder->fromUnicode(dest,
-					nativeBuffer + nativeBufferBytes, toNext, nlf.data(), nlf.data() + nlf.length(), fromNext))
-				goto ENCODING_FAILURE;
-			dest = toNext;
-		}
-		continue;
-ENCODING_FAILURE:
-		::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBuffer);
-		return FIR_ENCODING_FAILURE;
-	}
-
-	diskFile_.unlock();
-
-	bool byCopying = params.options.has(SaveParameters::BY_COPYING);
-	if(byCopying) {
-		if(toBoolean(::PathFileExistsW(fileName.c_str())))
-			byCopying = false;
-		else {
-			// don't copy if the destination is removal
-			const int driveNumber = ::PathGetDriveNumberW(fileName.c_str());
-			if(driveNumber != -1) {
-				WCHAR drive[4];
-				::PathBuildRootW(drive, driveNumber);
-				switch(::GetDriveTypeW(drive)) {
-				case DRIVE_CDROM:	case DRIVE_FIXED:
-				case DRIVE_RAMDISK:	case DRIVE_REMOVABLE:
-					byCopying = false;
-					break;
-				}
-			}
-		}
-	}
-
-	// prepare temporary file
-	WCHAR tempName[MAX_PATH + 1];
-	{
-		WCHAR path[MAX_PATH + 1];
-		const WCHAR* const name = ::PathFindFileNameW(fileName.c_str());
-		wcsncpy(path, fileName.c_str(), name - fileName.c_str() - 1);
-		path[name - fileName.c_str() - 1] = 0;
-		::GetTempFileNameW(path, name, 0, tempName);
-	}
-
-	// TODO: support backup on writing.
-/*	// デバッグバージョンは常にバックアップを作る (上書きの場合のみ)
-	if(
-#ifdef _DEBUG
-	true ||
-#endif
-	(options.has(SDO_CREATE_BACKUP) && toBoolean(::PathFileExistsW(fileName.c_str())))) {
-		WCHAR backupPath[MAX_PATH + 1];
-		SHFILEOPSTRUCTW	shfos = {
-			0, FO_DELETE, backupPath, 0, FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT, false, 0
-		};
-		wcscpy(backupPath, filePath.c_str());
-		wcscat(backupPath, L".bak");
-		backupPath[wcslen(backupPath) + 1] = 0;
-		::CopyFileW(filePath.c_str(), backupPath, false);
-		::SHFileOperationW(&shfos);	// ごみ箱に持っていく
-	}
-*/
-
-#define FREE_TEMPORARY_BUFFER()	\
-	::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, nativeBuffer)
-
-	bool deletedOldFile = false;
-	byCopying = false;	// TODO: support "by-copying" file writing.
-	if(byCopying) {
-/*		if(!toBoolean(::CopyFileW(getPathName(), tempName, true)))
-			return FIR_STANDARD_WIN32_ERROR;
-		File<true> file(filePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-		if(::GetLastError() == ERROR_ACCESS_DENIED) {
-			if(toBoolean(originalAttrs & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))) {
-				if(!toBoolean(::SetFileAttributesW(filePath.c_str(), originalAttrs & ~(FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))))
-					return FIR_STANDARD_WIN32_ERROR;
-				file.open(filePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-				resolvedAccess = true;
-			}
-		}
-		bool resolvedAccess = false;
-		FREE_TEMPORARY_BUFFER();
-*/	} else {
-		// 保存用のファイルを作成 -> 元のファイルを削除 (上書きの場合) -> 名前を変更
-		File<true> tempFile(tempName, GENERIC_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE);
-		if(!tempFile.isOpened()) {
-			FREE_TEMPORARY_BUFFER();
-			return FIR_CANNOT_CREATE_TEMPORARY_FILE;
-		}
-		tempFile.write(nativeBuffer, static_cast<DWORD>(dest - nativeBuffer));
-		tempFile.close();
-		FREE_TEMPORARY_BUFFER();
-		diskFile_.unlock();
-		const DWORD attrs = ::GetFileAttributesW(realName.c_str());
-		if(attrs != INVALID_FILE_ATTRIBUTES) {
-			::SetFileAttributesW(tempName, attrs);
-			// 上書きの場合は古いファイルを消す
-			if(!toBoolean(::DeleteFileW(realName.c_str())) && ::GetLastError() != ERROR_FILE_NOT_FOUND) {
-				const DWORD e = ::GetLastError();
-				::DeleteFileW(tempName);
-				// 自分が開いていたファイルだった場合はロックし直す
-				if(diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE
-						&& isBoundToFile() && (!diskFile_.lockMode.onlyAsEditing || isModified())
-						&& comparePathNames(realName.c_str(), getFilePathName()))
-					diskFile_.lock(getFilePathName());
-				::SetLastError(e);
-				return FIR_STANDARD_WIN32_ERROR;
-			}
-			deletedOldFile = true;
-		}
-		// rename the file
-		const bool moved = toBoolean(::MoveFileW(tempName, realName.c_str()));
-		if(!moved && deletedOldFile)	// worst case (lost)
-			return FIR_LOST_DISK_FILE;
-		// relock the file
-		if(!deletedOldFile && diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE && !diskFile_.lockMode.onlyAsEditing)
-			diskFile_.lock(realName.c_str());
-		if(!moved) {
-			const DWORD e = ::GetLastError();
-			::DeleteFileW(tempName);
-			::SetLastError(e);
-			return FIR_STANDARD_WIN32_ERROR;
-		}
-	}
-
-#undef FREE_TEMPORARY_BUFFER
-
-	if(params.newline != NLF_AUTO) {
-		setNewline(params.newline);	// determine the newlines
-		for(length_t i = 0; i < lines_.getSize(); ++i) {
-			Line& line = *lines_[i];
-			line.operationHistory_ = 0;		// erase the operation history
-			line.newline_ = params.newline;	// overwrite the newline
-		}
-	} else {
-		for(length_t i = 0; i < lines_.getSize(); ++i)
-			lines_[i]->operationHistory_ = 0;
-	}
-	undoManager_->documentSaved();
-	setModified(false);
-	setReadOnly(false);
-	setEncoding(encoder->getMIBenum());
-	setFilePathName(realName.c_str());
-
-	// update the internal time stamp
-	::WIN32_FIND_DATAW wfd;
-	HANDLE find = ::FindFirstFileW(getFilePathName(), &wfd);
-	if(find != INVALID_HANDLE_VALUE) {
-		diskFile_.lastWriteTimes.internal = diskFile_.lastWriteTimes.user = wfd.ftLastWriteTime;
-		::FindClose(find);
-	} else {
-		memset(&diskFile_.lastWriteTimes.internal, 0, sizeof(::FILETIME));
-		memset(&diskFile_.lastWriteTimes.user, 0, sizeof(::FILETIME));
-	}
-
-	return result;
-}
-
+#if 0
 /**
  * Sends the document to the user's mailer.
  * @param asAttachment true to send as attachment. in this case, the modification  is not 
@@ -1563,67 +1523,17 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 	::FreeLibrary(dll);
 	return error == SUCCESS_SUCCESS || error == MAPI_USER_ABORT || error == MAPI_E_LOGIN_FAILURE;
 }
-
-/**
- * Sets the default encoding and newline.
- * @param mib the MIBenum value of the encoding
- * @param newline the newline
- * @throw std#invalid_argument @a mib and/or @a newline are invalid
- * @deprecated 0.8
- */
-void Document::setDefaultCode(MIBenum mib, Newline newline) {
-//	mib = translateSpecialCodePage(mib);
-	if(!Encoder::supports(mib))
-		throw invalid_argument("Specified encoding is not available.");
-	switch(newline) {
-	case NLF_LF:	case NLF_CR:	case NLF_CRLF:
-	case NLF_NEL:	case NLF_LS:	case NLF_PS:
-		break;
-	default:
-		throw invalid_argument("Specified newline is invalid.");
-	}
-	defaultEncoding_ = mib;
-	defaultNewline_ = newline;
-}
-
-/**
- * Renames (or move) the bound file.
- * @param pathName the fill name
- * @deprecated 0.8
- */
-void Document::setFilePathName(const ::WCHAR* pathName) {
-	if(pathName != 0) {
-		if(diskFile_.pathName != 0 && wcscmp(pathName, diskFile_.pathName) == 0)
-			return;
-		delete[] diskFile_.pathName;
-		diskFile_.pathName = new ::WCHAR[wcslen(pathName) + 1];
-		wcscpy(diskFile_.pathName, pathName);
-	} else if(diskFile_.pathName == 0)
-		return;
-	else {
-		delete[] diskFile_.pathName;
-		diskFile_.pathName = 0;
-	}
-	stateListeners_.notify<Document&>(IDocumentStateListener::documentFileNameChanged, *this);
-}
+#endif /* 0 */
 
 /**
  * Sets the modification flag of the document.
- * Derived classes can hook changes of the flag by overriding this method.
  * @param modified set true to make the document modfied
  * @see #isModified, IDocumentStateListener#documentModificationSignChanged
  */
 void Document::setModified(bool modified /* = true */) throw() {
-	const bool was = modified_;
 	if(modified != modified_) {
 		modified_ = modified;
 		stateListeners_.notify<Document&>(IDocumentStateListener::documentModificationSignChanged, *this);
-	}
-	if(modified_ != was && diskFile_.lockMode.onlyAsEditing && isBoundToFile()) {
-		if(was)
-			diskFile_.unlock();
-		else
-			diskFile_.lock(getFilePathName());
 	}
 }
 
@@ -1638,6 +1548,33 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) thro
 	partitioningChanged(region());
 }
 
+/**
+ * Associates the given property with the document.
+ * @param key the key of the property
+ * @param property the property value
+ * @see #property
+ */
+void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
+	std::map<const DocumentPropertyKey*, String*>::iterator i(properties_.find(&key));
+	if(i == properties_.end())
+		properties_.insert(make_pair(&key, new String(property)));
+	else
+		i->second->assign(property);
+	stateListeners_.notify<Document&, const DocumentPropertyKey&>(IDocumentStateListener::documentPropertyChanged, *this, key);
+}
+
+/**
+ * Makes the document read only or not.
+ * @see ReadOnlyDocumentException, #isReadOnly
+ */
+void Document::setReadOnly(bool readOnly /* = true */) {
+	if(readOnly != isReadOnly()) {
+		readOnly_ = readOnly;
+		stateListeners_.notify<Document&>(IDocumentStateListener::documentReadOnlySignChanged, *this);
+	}
+}
+
+#if 0
 /**
  * Translates the special Win32 code page to concrete one.
  * @param cp the code page to be translated
@@ -1660,6 +1597,7 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) thro
 	}
 	return codePage;
 }
+#endif /* 0 */
 
 /**
  * @brief アンドゥの実行
@@ -1672,19 +1610,20 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) thro
 bool Document::undo() {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(getUndoHistoryLength(false) == 0)
+	else if(numberOfUndoableEdits == 0)
 		return false;
 
 	beginSequentialEdit();
-	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentUndoSequenceStarted, *this);
+	sequentialEditListeners_.notify<Document&>(
+		ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
-	const bool succeeded = undoManager_->undo(resultPosition);
-	sequentialEditListeners_.notify<Document&, const Position&>(ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
+	const pair<bool, size_t> status(undoManager_->undo(resultPosition));
+	sequentialEditListeners_.notify<Document&, const Position&>(
+		ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
 
-	if(!undoManager_->isModifiedSinceLastSave())
-		setModified(false);
-	return succeeded;
+	revisionNumber_ -= status.second * 2;
+	return status.first;
 }
 
 /**
@@ -1699,28 +1638,6 @@ inline void Document::updatePoints(const DocumentChange& change) throw() {
 }
 
 /**
- * Returns last modified time.
- * @param internal set true for @c diskFile_.lastWriteTimes.internal, false for @c user
- * @param[out] newTimeStamp ファイルの実際の更新日時
- * @return 自分で書き込んだ日時と一致しなければ false
- */
-bool Document::verifyTimeStamp(bool internal, ::FILETIME& newTimeStamp) throw() {
-	const ::FILETIME& about = internal ? diskFile_.lastWriteTimes.internal : diskFile_.lastWriteTimes.user;
-	if(!isBoundToFile()	// ファイルに束縛されていない場合や排他制御を行っている場合は無意味
-			|| (about.dwLowDateTime == 0 && about.dwHighDateTime == 0)
-			|| diskFile_.lockMode.type != FileLockMode::LOCK_TYPE_NONE)
-		return true;
-
-	::WIN32_FIND_DATAW wfd;
-	HANDLE find = ::FindFirstFileW(getFilePathName(), &wfd);
-	if(find == INVALID_HANDLE_VALUE)
-		return true;	// ファイルは既に存在しない?
-	::FindClose(find);
-	newTimeStamp = wfd.ftLastWriteTime;
-	return ::CompareFileTime(&about, &newTimeStamp) != -1;
-}
-
-/**
  * Revokes the narrowing.
  * @see #isNarrowed, #narrow
  */
@@ -1731,91 +1648,6 @@ void Document::widen() {
 		accessibleArea_ = 0;
 		stateListeners_.notify<Document&>(IDocumentStateListener::documentAccessibleRegionChanged, *this);
 	}
-}
-
-/**
- * Writes the specified region to the specified file.
- * @param fileName the file name
- * @param region the region to be written
- * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
- * newlines
- * @param append true to append to the file
- * @param callback the callback or @c null
- * @return the result. @c FIR_OK if succeeded
- */
-Document::FileIOResult Document::writeRegion(
-		const basic_string<WCHAR>& fileName, const Region& region, const SaveParameters& params, bool append) {
-	// TODO: not implemented.
-	return FIR_OK;
-}
-
-/**
- * Writes the content of the document to the specified output stream.
- * @param out the output stream
- * @param region the region to be written (this region is not restricted with narrowing)
- * @param lbr the line break to be used
- */
-void Document::writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	const Position& start = region.beginning();
-	const Position end = min(region.end(), this->region().second);
-	if(start.line == end.line) {	// shortcut for single-line
-		out << getLine(end.line).substr(start.column, end.column - start.column);
-		return;
-	}
-	Char eol[3] = L"";
-	switch(nlr) {
-	case NLR_LINE_FEED:			wcscpy(eol, L"\n"); break;
-	case NLR_CRLF:				wcscpy(eol, L"\r\n"); break;
-	case NLR_LINE_SEPARATOR:	wcscpy(eol, L"\x2028"); break;
-	case NLR_DOCUMENT_DEFAULT:	wcscpy(eol, getNewlineString(getNewline())); break;
-	}
-	const streamsize eolSize = static_cast<streamsize>(wcslen(eol));
-	for(length_t i = start.line; ; ++i) {
-		const Line& line = *lines_[i];
-		const length_t first = (i == start.line) ? start.column : 0;
-		const length_t last = (i == end.line) ? end.column : line.text_.length();
-		out.write(line.text_.data() + first, static_cast<streamsize>(last - first));
-		if(i == end.line)
-			return;
-		if(nlr == NLR_PHYSICAL_DATA)
-			out << getNewlineString(line.newline_);
-		else if(nlr != NLR_SKIP)
-			out.write(eol, eolSize);
-	}
-}
-
-
-// Document.DiskFile /////////////////////////////////////////////////////////
-
-/// Returns the file is locked.
-inline bool Document::DiskFile::isLocked() const throw() {
-	return lockingFile.get() != 0 && lockingFile->isOpened();
-}
-
-/**
- * Locks the specified file.
- * @param fileName the name of the file
- * @return succeeded or not
- */
-inline bool Document::DiskFile::lock(const WCHAR* fileName) throw() {
-	if(isLocked())
-		unlock();
-	if(lockingFile.get() == 0)
-		lockingFile.reset(new File<true>(fileName, GENERIC_READ,
-			lockMode.type == FileLockMode::LOCK_TYPE_SHARED ? FILE_SHARE_READ : 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL));
-	return lockingFile->isOpened();
-}
-
-/**
- * Unlocks the file.
- * @return succeeded or not
- */
-inline bool Document::DiskFile::unlock() throw() {
-	if(!isLocked() || lockingFile->close()) {
-		lockingFile.reset(0);
-		return true;
-	}
-	return false;
 }
 
 
@@ -1853,7 +1685,7 @@ DocumentCharacterIterator::DocumentCharacterIterator() throw() : CharacterIterat
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document),
-		region_(document.region()), line_(&document.getLine(position.line)), p_(position) {
+		region_(document.region()), line_(&document.line(position.line)), p_(position) {
 	if(!region_.includes(p_))
 		throw BadPositionException();
 }
@@ -1866,7 +1698,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region),
-		line_(&document.getLine(region.beginning().line)), p_(region.beginning()) {
+		line_(&document.line(region.beginning().line)), p_(region.beginning()) {
 	region_.normalize();
 	if(!document.region().encompasses(region_))
 		throw BadRegionException();
@@ -1881,7 +1713,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
  * @throw BadPositionException @a position is outside of @a region
  */
 DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region), line_(&document.getLine(position.line)), p_(position) {
+		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region), line_(&document.line(position.line)), p_(position) {
 	region_.normalize();
 	if(!document.region().encompasses(region_))
 		throw BadRegionException();
@@ -1947,7 +1779,7 @@ void DocumentCharacterIterator::doNext() {
 //		throw out_of_range("the iterator is at the last.");
 		return;
 	else if(p_.column == line_->length()) {
-		line_ = &document_->getLine(++p_.line);
+		line_ = &document_->line(++p_.line);
 		p_.column = 0;
 	} else if(++p_.column < line_->length()
 			&& surrogates::isLowSurrogate((*line_)[p_.column]) && surrogates::isHighSurrogate((*line_)[p_.column - 1]))
@@ -1960,7 +1792,7 @@ void DocumentCharacterIterator::doPrevious() {
 //		throw out_of_range("the iterator is at the first.");
 		return;
 	else if(p_.column == 0)
-		p_.column = (line_ = &document_->getLine(--p_.line))->length();
+		p_.column = (line_ = &document_->line(--p_.line))->length();
 	else if(--p_.column > 0 && surrogates::isLowSurrogate((*line_)[p_.column]) && surrogates::isHighSurrogate((*line_)[p_.column - 1]))
 		--p_.column;
 }
@@ -2042,7 +1874,7 @@ void NullPartitioner::documentAboutToBeChanged() {
 }
 
 /// @see DocumentPartitioner#documentChanged
-void NullPartitioner::documentChanged(const text::DocumentChange&) {
+void NullPartitioner::documentChanged(const DocumentChange&) {
 	p_.region.second.line = INVALID_INDEX;
 }
 
@@ -2058,202 +1890,682 @@ void NullPartitioner::doInstall() throw() {
 	p_.region.second.line = INVALID_INDEX;
 }
 
+// files.TextFileStreamBuffer ///////////////////////////////////////////////
 
-// free functions ///////////////////////////////////////////////////////////
+namespace {
+	class SystemErrorSaver {
+	public:
+#ifdef ASCENSION_WINDOWS
+		SystemErrorSaver() throw() : e_(::GetLastError()) {}
+		~SystemErrorSaver() throw() {::SetLastError(e_);}
+	private:
+		::DWORD e_;
+#else // ASCENSION_POSIX
+		SystemErrorSaver() throw() : e_(::errno) {}
+		~SystemErrorSaver() throw() {::errno = e_;}
+	private:
+		int e_;
+#endif
+	};
+} // namespace @0
 
 /**
- * Makes the specified path name real. If the path is UNC, the case of @a pathName will not be
- * fixed. All slashes will be replaced by backslashes. Even if the path name is not exist, this
- * method will not fail.
- * @param pathName the absolute path name
- * @return the result real path name
- * @see comparePathNames
+ * Constructor opens the specified file.
+ * @param fileName the name of the file
+ * @param mode the file open mode. must be either @c std#ios_base#in or @c std#ios_base#out
+ * @param encoding the MIBenum value of the file encoding or auto detection identifier
+ * @param encodingPolicy the policy about encoding conversion
+ * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
+ * @throw IOException any I/O error occured
  */
-wstring text::canonicalizePathName(const wchar_t* pathName) throw() {
-	wchar_t path[MAX_PATH];
-	resolveRelativePathName(pathName, path);
+files::TextFileStreamBuffer::TextFileStreamBuffer(const files::String& fileName, ios_base::openmode mode,
+		const encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy, bool writeByteOrderMark) :
+		encoder_(encoding::Encoder::forMIB(encoding)), encodingError_(encoding::Encoder::COMPLETED) {
+	using namespace ascension::encoding;
+	if(!fileExists(fileName.c_str()))
+		throw IOException(IOException::FILE_NOT_FOUND);
+	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
+	if(mode == ios_base::in) {
+		EncodingDetector* encodingDetector = 0;
+		if(encoder_ == 0) {	// 'encoding' may be for auto-detection
+			encodingDetector = EncodingDetector::forID(encoding);
+			if(encodingDetector == 0)
+				throw IOException(IOException::INVALID_ENCODING);
+		}
+		// open the file and create memory-mapped object
+		const ptrdiff_t fileSize = getFileSize(fileName.c_str());
+		if(fileSize == -1)
+			throw IOException(IOException::HUGE_FILE);
+#ifdef ASCENSION_WINDOWS
+		fileHandle_ = ::CreateFileW(fileName.c_str(), GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+		if(fileHandle_ == INVALID_HANDLE_VALUE) {
+			const ::DWORD e = ::GetLastError();
+			throw IOException((e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER
+				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+		}
+		if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
+			inputMapping_.first = static_cast<const ::uchar*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
+		if(inputMapping_.first == 0) {
+			SystemErrorSaver temp;
+			if(fileMapping_ != 0)
+				::CloseHandle(fileMapping_);
+			::CloseHandle(fileHandle_);
+			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		}
+#else // ASCENSION_POSIX
+		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY)))
+			throw IOException((::errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+		if(MAP_FAILED == (inputMapping_.first = static_cast<const uchar*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, newFile, 0)))) {
+			SystemErrorSaver temp;
+			inputMapping_.first = 0;
+			::close(fileDescriptor_);
+			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		}
+#endif
+		inputMapping_.last = inputMapping_.first + fileSize;
+		// detect input encoding if neccssary
+		if(encodingDetector != 0) {
+			encoder_ = Encoder::forMIB(encodingDetector->detect(
+				inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), 0));
+			if(encoder_ == 0)
+				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
+		}
+		// skip Unicode byte order mark if necessary
+		const uchar* bom = 0;
+		ptrdiff_t bomLength = 0;
+		switch(encoder_->mibEnum()) {
+		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
+		case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
+		case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+		case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+		case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+		}
+		if(bomLength >= fileSize && memcmp(inputMapping_.first, bom, bomLength) == 0)
+			inputMapping_.first += bomLength;
+		inputMapping_.current = inputMapping_.first;
+	} else if(mode == ios_base::out) {
+		if(encoder_ == 0)
+			throw IOException(IOException::INVALID_ENCODING);
+#ifdef ASCENSION_WINDOWS
+		if(INVALID_HANDLE_VALUE == (fileHandle_ =
+				::CreateFileW(fileName.c_str(), GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE, 0)))
+			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+#else // ASCENSION_POSIX
+		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT)))
+			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+#endif
+		if(writeByteOrderMark) {
+			const uchar* bom = 0;
+			size_t bomLength;
+			switch(encoder_->mibEnum()) {
+			case encoding::fundamental::UTF_8:
+				bom = encoding::UTF8_BOM; bomLength = countof(encoding::UTF8_BOM); break;
+			case encoding::fundamental::UTF_16LE:
+				bom = encoding::UTF16LE_BOM; bomLength = countof(encoding::UTF16LE_BOM); break;
+			case encoding::fundamental::UTF_16BE:
+				bom = encoding::UTF16BE_BOM; bomLength = countof(encoding::UTF16BE_BOM); break;
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+			case encoding::extended::UTF_32LE:
+				bom = encoding::UTF32LE_BOM; bomLength = countof(encoding::UTF32LE_BOM); break;
+			case encoding::extended::UTF_32BE:
+				bom = encoding::UTF32BE_BOM; bomLength = countof(encoding::UTF32BE_BOM); break;
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+			}
+#ifdef ASCENSION_WINDOWS
+			::WriteFile(fileHandle_, bom, static_cast<::DWORD>(bomLength), 0, 0);
+#else // ASCENSION_POSIX
+			::write(fileDescriptor_, bom, bomLength);
+#endif
+		}
+	} else
+		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
+	encoder_->setPolicy(encodingPolicy);
+}
 
-	// from Ftruename implementation in xyzzy
+/// Destructor.
+files::TextFileStreamBuffer::~TextFileStreamBuffer() {
+	close();
+}
 
-	wstring result;
-	result.reserve(MAX_PATH);
-	const wchar_t* p = path;
-	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
-			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// drive letter
-		result.append(path, 3);
-		result[0] = towupper(path[0]);	// unify with uppercase letters...
-		p += 3;
-	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
-		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// server name
-			return false;
-		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// shared name
-			return false;
-		result.append(path, ++p - path);
-	} else	// not absolute name
-		return pathName;
+/**
+ * Closes the file.
+ * @return this or @c null if the file is not open
+ */
+files::TextFileStreamBuffer* files::TextFileStreamBuffer::close() {
+	sync();
+#ifdef ASCENSION_WINDOWS
+	if(inputMapping_.first != 0) {
+		::CloseHandle(fileMapping_);
+		inputMapping_.first = 0;
+		fileMapping_ = 0;
+	}
+	if(fileHandle_ != 0) {
+		::CloseHandle(fileHandle_);
+		fileHandle_ = 0;
+		return this;
+	}
+#else // ASCENSION_POSIX
+	if(mappedAddress_ != 0) {
+		::munmap(mappedAddress_, mappingLength_);
+		inputMapping_.first = 0;
+	}
+	if(fileDescriptor_ == -1) {
+		::close(fileDescriptor_);
+		fileDescriptor_ = -1;
+		return this;
+	}
+#endif
+	return 0;
+}
 
-	::WIN32_FIND_DATAW wfd;
-	while(true) {
-		if(wchar_t* next = wcspbrk(p, L"\\/")) {
-			const wchar_t c = *next;
-			*next = 0;
-			HANDLE h = ::FindFirstFileW(path, &wfd);
-			if(h != INVALID_HANDLE_VALUE) {
-				::FindClose(h);
-				result += wfd.cFileName;
-			} else
-				result += p;
-			*next = c;
-			result += L'\\';
-			p = next + 1;
-		} else {
-			HANDLE h = ::FindFirstFileW(path, &wfd);
-			if(h != INVALID_HANDLE_VALUE) {
-				::FindClose(h);
-				result += wfd.cFileName;
-			} else
-				result += p;
-			break;
+/// Returns the MIBenum value of the encoding.
+encoding::MIBenum files::TextFileStreamBuffer::encoding() const throw() {
+	return encoder_->mibEnum();
+}
+
+/// Returns true if the file is open.
+bool files::TextFileStreamBuffer::isOpen() const throw() {
+#ifdef ASCENSION_WINDOWS
+	return fileHandle_ != INVALID_HANDLE_VALUE;
+#else // ASCENSION_POSIX
+	return fileDescriptor_ != -1;
+#endif
+}
+
+/// Returns the result of the previous encoding conversion.
+encoding::Encoder::Result files::TextFileStreamBuffer::lastEncodingError() const throw() {
+	return encodingError_;
+}
+
+/// @see std#basic_streambuf#overflow
+files::TextFileStreamBuffer::int_type files::TextFileStreamBuffer::overflow(int_type c) {
+	return traits_type::eof();
+}
+
+/// @see std#basic_streambuf#pbackfail
+files::TextFileStreamBuffer::int_type files::TextFileStreamBuffer::pbackfail(int_type c) {
+	if(inputMapping_.first != 0) {
+		if(gptr() > eback()) {
+			gbump(-1);
+			return traits_type::not_eof(c);	// c is ignored
 		}
 	}
-	return result;
+	return traits_type::eof();
 }
 
-/**
- * Returns true if the specified two file path names are equivalent.
- * @param s1 the first path name
- * @param s2 the second path name
- * @return true if @a s1 and @a s2 are equivalent
- * @throw NullPointerException either file name is @c null
- * @see canonicalizePathName
- */
-bool text::comparePathNames(const wchar_t* s1, const wchar_t* s2) {
-	if(s1 == 0 || s2 == 0)
-		throw NullPointerException("either file name is null.");
-
-//	// 最も簡単な方法
-//	if(toBoolean(::PathMatchSpecW(s1, s2)))
-//		return true;
-
-	// from pathname_equal and same_file_p implementation in xyzzy
-
-	// ファイル名の文字列比較
-	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
-	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
-	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
-	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
-		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
-		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
-			return toBoolean(::PathFileExistsW(s1));
-	}
-
-	// ボリューム情報を使う
-	File<true> f1(s1, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(!f1.isOpened())
-		f1.open(s1, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(!f1.isOpened())
-		return false;
-	File<true> f2(s2, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(!f2.isOpened())
-		f2.open(s2, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
-	if(!f2.isOpened())
-		return false;
-	::BY_HANDLE_FILE_INFORMATION fi1;
-	if(toBoolean(::GetFileInformationByHandle(f1.get(), &fi1))) {
-		::BY_HANDLE_FILE_INFORMATION fi2;
-		if(toBoolean(::GetFileInformationByHandle(f2.get(), &fi2)))
-			return fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
-				&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
-				&& fi1.nFileIndexLow == fi2.nFileIndexLow;
-	}
-	return false;
+/// @see std#basic_streambuf#showmanyc
+streamsize files::TextFileStreamBuffer::showmanyc() {
+	return static_cast<streamsize>(gptr() - egptr());
 }
 
+/// std#basic_streambuf#sync
+int files::TextFileStreamBuffer::sync() {
+	return 0;
+}
+
+/// @see std#basic_streambuf#underflow
+files::TextFileStreamBuffer::int_type files::TextFileStreamBuffer::underflow() {
+	if(inputMapping_.first == 0)
+		return traits_type::eof();	// not input mode
+	ascension::Char* toNext;
+	uchar* fromNext;
+	if((encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext,
+			inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) == encoding::Encoder::COMPLETED)
+		inputMapping_.current = inputMapping_.last;
+	else
+		inputMapping_.current = fromNext;
+	if(encodingError_ == encoding::Encoder::INSUFFICIENT_BUFFER)
+		encodingError_ = encoding::Encoder::COMPLETED;
+	setg(ucsBuffer_, ucsBuffer_, toNext);
+	return (toNext > ucsBuffer_) ? *gptr() : traits_type::eof();
+}
+
+
+// files.FileBinder /////////////////////////////////////////////////////////
+
+const DocumentPropertyKey files::FileBinder::ENCODING_PROPERTY;
+const DocumentPropertyKey files::FileBinder::NEWLINE_PROPERTY;
+
 /**
- * Returns absolute character offset of the specified position from the start of the document.
+ * Constructor.
  * @param document the document
- * @param at the position
- * @param fromAccessibleStart
- * @throw BadPositionException @a at is outside of the document
  */
-length_t text::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
-	if(at > document.region().second)
-		throw BadPositionException();
-	length_t offset = 0;
-	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
-	for(length_t line = start.line; ; ++line) {
-		if(line == at.line) {
-			offset += at.column;
-			break;
-		} else {
-			offset += document.getLineLength(line) + 1;	// +1 is for a newline character
-			if(line == start.line)
-				offset -= start.column;
-		}
-	}
-	return offset;
+files::FileBinder::FileBinder(Document& document) : document_(document), lockingFile_(
+#ifdef ASCENSION_WINDOWS
+		INVALID_HANDLE_VALUE
+#else // ASCENSION_POSIX
+		-1
+#endif
+		), savedDocumentRevision_(0), timeStampDirector_(0) {
+	lockMode_.type = LockMode::DONT_LOCK;
+	lockMode_.onlyAsEditing = true;
+	memset(&userLastWriteTime_, 0, sizeof(Time));
+	memset(&internalLastWriteTime_, 0, sizeof(Time));
+	document.addListener(*this);
 }
 
 /**
- * Returns the number of lines in the specified text string.
- * @param first the start of the text string
- * @param last the end of the text string
- * @return the number of lines
+ * Constructor.
+ * @param 
  */
-length_t text::getNumberOfLines(const Char* first, const Char* last) throw() {
-	if(first == last)
-		return 0;
-	length_t lines = 1;
-	while(true) {
-		first = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
-		if(first == last)
-			break;
-		++lines;
-		first += (*first == CARRIAGE_RETURN && first < last - 1 && first[1] == LINE_FEED) ? 2 : 1;
-	}
-	return lines;
-}
 
 /**
- * Adapts the specified position to the document change.
- * @param position the original position
- * @param change the content of the document change
- * @param gravity the gravity which determines the direction to which the position should move if
- * a text was inserted at the position. if @c FORWARD is specified, the position will move to the
- * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
- * @return the result position
+ * Binds the document to the specified file.
+ * @param fileName the file name. this method doesn't resolves the short cut
+ * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
+ * description of the return value
+ * @param encoding the MIBenum value of the file encoding or auto detection identifier
+ * @param encodingPolicy the policy about encoding conversion
+ * @param unexpectedTimeStampDirector
+ * @return true if succeeded to lock the file with the desired mode @a lockMode.type
+ * @throw IOException any I/O error occured. in this case, the document's content will be lost
  */
-Position text::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
-	Position newPosition(position);
-	if(!change.isDeletion()) {	// 挿入操作の場合
-		if(position < change.getRegion().first)	// 現在位置より後方
-			return newPosition;
-		else if(position == change.getRegion().first && gravity == BACKWARD) // 現在位置 + backward gravity
-			return newPosition;
-		else if(position.line > change.getRegion().first.line)	// 現在行より前
-			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
-		else {	// 現在行と同じ行
-			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
-			newPosition.column += change.getRegion().second.column - change.getRegion().first.column;
-		}
-	} else {	// 削除操作の場合
-		if(position < change.getRegion().second) {	// 終端が現在位置より後方
-			if(position <= change.getRegion().first)
-				return newPosition;
-			else	// 範囲内
-				newPosition = change.getRegion().first;
-		} else if(position.line > change.getRegion().second.line)	// 現在行より前
-			newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
-		else {	// 終了点が現在行と同じ行
-			if(position.line == change.getRegion().first.line)	// 範囲が1行
-				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
-			else {	// 範囲が複数行
-				newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
-				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
+bool files::FileBinder::bind(const files::String& fileName, const LockMode& lockMode, encoding::MIBenum encoding,
+		encoding::Encoder::Policy encodingPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
+//	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
+	unlock();
+	document_.resetContent();
+	timeStampDirector_ = 0;
+
+	// read from the file
+	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingPolicy, false);
+	const bool recorded = document_.isRecordingOperations();
+	document_.recordOperations(false);
+	try {
+		readDocumentFromStream(InputStream(&sb), document_, document_.region().beginning());
+	} catch(...) {
+		document_.recordOperations(recorded);
+		throw;
+	}
+	document_.recordOperations(recorded);
+	sb.close();
+
+	// lock the file
+	bool lockSucceeded = true;
+	lockMode_ = lockMode;
+	if(lockMode_.type != LockMode::DONT_LOCK && !lockMode_.onlyAsEditing) {
+		if(!(lockSucceeded = lock())) {
+			if(lockMode_.type == LockMode::EXCLUSIVE_LOCK) {
+				lockMode_.type = LockMode::SHARED_LOCK;
+				if(!lock())
+					lockMode_.type = LockMode::DONT_LOCK;
 			}
 		}
 	}
-	return newPosition;
+
+	// set the new properties of the document
+	savedDocumentRevision_ = document_.revisionNumber();
+	timeStampDirector_ = unexpectedTimeStampDirector;
+	fileName_ = canonicalizePathName(fileName.c_str());
+	document_.setProperty(Document::TITLE_PROPERTY, name());
+	setEncoding(sb.encoding());
+	setNewline(document_.getLineInformation(0).newline());	// use the newline of the first line
+
+	document_.clearUndoBuffer();
+	document_.setModified(false);
+
+	// update the internal time stamp
+	try {
+		getFileLastWriteTime(fileName_, internalLastWriteTime_);
+		userLastWriteTime_ = internalLastWriteTime_;
+	} catch(IOException&) {
+		// ignore...
+	}
+
+	return lockSucceeded;
+}
+
+/**
+ * Checks the last modified date/time of the bound file and verifies if the other modified the
+ * file. If the file is modified, the listener's
+ * @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
+ * @return the value which the listener returned or true if the listener is not set
+ */
+bool files::FileBinder::checkTimeStamp() {
+	Time newTimeStamp;
+	if(!verifyTimeStamp(false, newTimeStamp)) {
+		Time original = userLastWriteTime_;
+		memset(&userLastWriteTime_, 0, sizeof(Time));
+		if(timeStampDirector_ == 0
+				|| timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
+					document_, IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION)) {
+			userLastWriteTime_ = newTimeStamp;
+			return true;
+		}
+		userLastWriteTime_ = original;
+		return false;
+	}
+	return true;
+}
+
+/// @see IDocumentListener#documentAboutToBeChanged
+bool files::FileBinder::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+	// check the time stamp is this is the first modification
+	if(timeStampDirector_ != 0 && !document_.isModified()) {
+		Time realTimeStamp;
+		if(!verifyTimeStamp(true, realTimeStamp)) {	// the other overwritten the file
+			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
+					document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
+				return false;
+			internalLastWriteTime_ = userLastWriteTime_ = realTimeStamp;
+		}
+	}
+}
+
+/// @see IDocumentListener#documentChanged
+void files::FileBinder::documentChanged(const Document&, const DocumentChange&) {
+}
+
+/// @see IDocumentStateListener#documentModificationSignChanged
+void files::FileBinder::documentModificationSignChanged(Document&) {
+	if(lockMode_.onlyAsEditing && isBound()) {
+		if(document_.isModified())
+			lock();
+		else
+			unlock();
+	}
+}
+
+/// Returns the MIBenum value of the encoding of the file.
+encoding::MIBenum files::FileBinder::encoding() const throw() {
+	if(const String* s = document_.property(ENCODING_PROPERTY)) {
+		Char* dummy;
+		const ulong n = wcstoul(s->c_str(), &dummy, 10);
+		if(n != 0 && n != numeric_limits<ulong>::max())
+			return static_cast<encoding::MIBenum>(n);
+	}
+	return encoding::Encoder::getDefault();
+}
+
+/// Returns the file extension name or @c null if the document is not bound to any of the files.
+files::String files::FileBinder::extensionName() const throw() {
+	const files::String s(pathName());
+	const files::String::size_type dot = s.rfind('.');
+	return (dot != files::String::npos) ? s.substr(dot + 1) : files::String();
+}
+
+/**
+ * Locks the file.
+ * @return true if locked successfully or the lock mode is @c LockMode#DONT_LOCK
+ */
+bool files::FileBinder::lock() throw() {
+	unlock();
+	if(lockMode_.type != LockMode::DONT_LOCK && isBound()) {
+#ifdef ASCENSION_WINDOWS
+		assert(lockingFile_ == INVALID_HANDLE_VALUE);
+		lockingFile_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ,
+			(lockMode_.type == LockMode::SHARED_LOCK) ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		if(lockingFile_ == INVALID_HANDLE_VALUE)
+			return false;
+#else // ASCENSION_POSIX
+		assert(lockingFile_ == -1);
+		if(-1 == (lockingFile_ = ::open(fileName_.c_str(), O_RDONLY)))
+			return false;
+		::flock fl;
+		fl.l_whence = SEEK_SET;
+		fl.l_start = 0;
+		fl.l_len = 0;
+		fl.l_type = (lockMode.type == LockMode::SHARED_LOCK) ? F_RDLCK : F_WRLCK;
+		if(::fcntl(fileHandle_, F_SETLK, &fl) == 0) {
+			::close(lockingFile_);
+			lockingFile_ = -1;
+		}
+#endif
+	}
+	return true;
+}
+
+/// Returns the file name or an empty string if the document is not bound to any of the files.
+files::String files::FileBinder::name() const throw() {
+	const String::const_iterator p = findFileName(fileName_.begin(), fileName_.end());
+	return fileName_.substr(p - fileName_.begin());
+}
+
+/// Returns the newline of the file.
+Newline files::FileBinder::newline() const throw() {
+	if(const String* s = document_.property(NEWLINE_PROPERTY)) {
+		Char* dummy;
+		const ulong n = wcstoul(s->c_str(), &dummy, 10);
+		if(n != 0 && n != numeric_limits<ulong>::max())
+			return static_cast<Newline>(n);
+	}
+	return ASCENSION_DEFAULT_NEWLINE;
+}
+
+/**
+ * Sets the encoding.
+ * @param mib the MIBenum value of the encoding
+ * @throw std#invalid_argument @a mib is invalid
+ */
+void files::FileBinder::setEncoding(encoding::MIBenum mib) {
+	if(!encoding::Encoder::supports(mib))
+		throw invalid_argument("the given encoding is not available.");
+	Char buffer[128];
+	if(swprintf(buffer, L"%u", mib) != -1)
+		document_.setProperty(ENCODING_PROPERTY, buffer);
+}
+
+/**
+ * Sets the newline.
+ * @param newline the newline
+ * @throw std#invalid_argument @a newline is invalid
+ */
+void files::FileBinder::setNewline(Newline newline) {
+	if(newline == NLF_LF || newline == NLF_CR || newline == NLF_CRLF
+			|| newline == NLF_NEL || newline == NLF_LS || newline == NLF_PS) {
+		Char buffer[128];
+		swprintf(buffer, L"%u", newline);
+		document_.setProperty(NEWLINE_PROPERTY, buffer);
+	} else
+		throw invalid_argument("unknown newline specified.");
+}
+
+/**
+ * Unlocks the file.
+ * @return succeeded or not
+ */
+bool files::FileBinder::unlock() throw() {
+#ifdef ASCENSION_WINDOWS
+	if(lockingFile_ != INVALID_HANDLE_VALUE) {
+		if(!toBoolean(::CloseHandle(lockingFile_)))
+			return false;
+		lockingFile_ = INVALID_HANDLE_VALUE;
+	}
+#else // ASCENSION_POSIX
+	if(lockingFile_ != -1) {
+		if(::close(lockingFile_) != 0)
+			return false;
+		lockingFile_ = -1;
+	}
+#endif
+	return true;
+}
+
+/**
+ * Returns last modified time.
+ * @param internal set true for @c internalLastWriteTime_, false for @c userLastWriteTime_
+ * @param[out] newTimeStamp the actual time stamp
+ * @return false if not match
+ */
+bool files::FileBinder::verifyTimeStamp(bool internal, Time& newTimeStamp) throw() {
+	const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
+	if(!isBound()
+			|| (about.dwLowDateTime == 0 && about.dwHighDateTime == 0)
+			|| lockMode_.type != LockMode::DONT_LOCK)
+		return true;	// not managed
+
+	try {
+		getFileLastWriteTime(fileName_.c_str(), newTimeStamp);
+	} catch(IOException&) {
+		return true;
+	}
+#ifdef ASCENSION_WINDOWS
+	return ::CompareFileTime(&about, &newTimeStamp) != -1;
+#else // ASCENSION_POSIX
+	return about >= newTimeStamp;
+#endif
+}
+
+/**
+ * Writes the content of the document to the specified file.
+ * @param fileName the file name
+ * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
+ * line breaks
+ * @return the result. @c FIR_OK if succeeded
+ */
+bool files::FileBinder::write(const files::String& fileName, const files::FileBinder::WriteParameters& params) {
+	// check Unicode newlines
+	if(params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS) {
+		if(params.encoding != encoding::fundamental::UTF_8
+				&& params.encoding != encoding::fundamental::UTF_16LE
+				&& params.encoding != encoding::fundamental::UTF_16BE
+#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+				&& params.encoding != encoding::extended::UTF_5
+				&& params.encoding != encoding::extended::UTF_7
+				&& params.encoding != encoding::extended::UTF_32LE
+				&& params.encoding != encoding::extended::UTF_32BE
+#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+			)
+			throw IOException(IOException::INVALID_NEWLINE);
+	}
+
+	// check if writable
+#ifdef ASCENSION_WINDOWS
+	const ::DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
+	if(originalAttributes != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttributes & FILE_ATTRIBUTE_READONLY))
+		throw IOException(IOException::UNWRITABLE_FILE);
+#else // ASCENSION_POSIX
+	struct stat originalStat;
+	bool gotStat = false;
+	if(::stat(fileName_.c_str(), &originalStat) == 0) {
+		gotStat = true;
+		// TODO: check the permission.
+	}
+#endif
+
+	// check if the existing file was modified by others
+	if(timeStampDirector_ != 0) {
+		Time realTimeStamp;
+		if(!verifyTimeStamp(true, realTimeStamp)) {
+			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
+					document_, IUnexpectedFileTimeStampDirector::OVERWRITE_FILE))
+				return true;
+		}
+	}
+	const String realName(canonicalizePathName(fileName.c_str()));
+
+//	// query progression callback
+//	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
+//	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
+
+	// create a temporary file and write into
+	const files::String tempFileName(getTemporaryFileName(realName));
+	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
+		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
+	writeDocumentToStream(basic_ostream<Char>(&sb), document_,
+		document_.region(), (params.newline != NLF_AUTO) ? getNewlineString(params.newline) : L"");
+	sb.close();
+
+	// copy file attributes (file mode) and delete the old file
+	unlock();
+#ifdef ASCENSION_WINDOWS
+	if(originalAttributes != INVALID_FILE_ATTRIBUTES) {
+		::SetFileAttributesW(tempFileName.c_str(), originalAttributes);
+		if(!toBoolean(::DeleteFileW(realName.c_str()))) {
+			SystemErrorSaver ses;
+			if(::GetLastError() != ERROR_FILE_NOT_FOUND) {
+				::DeleteFileW(tempFileName.c_str());
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			}
+		}
+	}
+	if(!::MoveFileW(tempFileName.c_str(), realName.c_str())) {
+		if(originalAttributes != INVALID_FILE_ATTRIBUTES)
+			throw IOException(IOException::LOST_DISK_FILE);
+		SystemErrorSaver ses;
+		::DeleteFileW(tempFileName.c_str());
+		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+	}
+#else // ASCENSION_POSIX
+	if(gotStat) {
+		::chmod(tempFileName.c_str(), originalStat.st_mode);
+		if(::remove(realName.c_str()) != 0) {
+			SystemErrorSaver ses;
+			if(::errno != ENOENT) {
+				::remove(tempFileName.c_str());
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			}
+		}
+	}
+	if(::rename(tempFileName.c_str(), realName.c_str()) != 0) {
+		if(gotStat)
+			throw IOException(IOException::LOST_DISK_FILE);
+		SystemErrorSaver ses;
+		::remove(tempFileName.c_str());
+		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+	}
+#endif
+
+	// TODO: support backup on writing.
+/*	// デバッグバージョンは常にバックアップを作る (上書きの場合のみ)
+	if(
+#ifdef _DEBUG
+	true ||
+#endif
+	(options.has(SDO_CREATE_BACKUP) && toBoolean(::PathFileExistsW(fileName.c_str())))) {
+		WCHAR backupPath[MAX_PATH + 1];
+		SHFILEOPSTRUCTW	shfos = {
+			0, FO_DELETE, backupPath, 0, FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT, false, 0
+		};
+		wcscpy(backupPath, filePath.c_str());
+		wcscat(backupPath, L".bak");
+		backupPath[wcslen(backupPath) + 1] = 0;
+		::CopyFileW(filePath.c_str(), backupPath, false);
+		::SHFileOperationW(&shfos);	// ごみ箱に持っていく
+	}
+*/
+
+	if(params.newline != NLF_AUTO) {
+		setNewline(params.newline);	// determine the newlines
+//		for(length_t i = 0; i < lines_.getSize(); ++i) {
+//			Line& line = *lines_[i];
+//			line.operationHistory_ = 0;		// erase the operation history
+//			line.newline_ = params.newline;	// overwrite the newline
+//		}
+	} else {
+//		for(length_t i = 0; i < lines_.getSize(); ++i)
+//			lines_[i]->operationHistory_ = 0;
+	}
+	savedDocumentRevision_ = document_.revisionNumber();
+	document_.setModified(false);
+	document_.setReadOnly(false);
+	setEncoding(params.encoding);
+
+	// update the internal time stamp
+	try {
+		getFileLastWriteTime(fileName_ = realName, internalLastWriteTime_);
+	} catch(IOException&) {
+		memset(&internalLastWriteTime_, 0, sizeof(Time));
+	}
+	userLastWriteTime_ = internalLastWriteTime_;
+
+	return lock();
+}
+
+/**
+ * Writes the specified region to the specified file.
+ * @param fileName the file name
+ * @param region the region to be written
+ * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
+ * newlines
+ * @param append true to append to the file
+ * @param callback the callback or @c null
+ * @return the result. @c FIR_OK if succeeded
+ */
+bool files::FileBinder::writeRegion(const files::String& fileName, const Region& region, const files::FileBinder::WriteParameters& params, bool append) {
+	// TODO: not implemented.
+	return false;
 }

@@ -196,11 +196,20 @@ namespace ascension {
 
 		MIBenum	convertCCSIDtoMIB(uint ccsid) throw();
 		uint	convertMIBtoCCSID(MIBenum mib) throw();
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 		uint	convertMIBtoWinCP(MIBenum mib) throw();
 		MIBenum	convertWinCPtoMIB(uint codePage) throw();
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */
 		String	getEncodingDisplayName(MIBenum mib);
+
+		/// Thrown if the specified encoding is not supported.
+		class UnsupportedEncodingException : public std::invalid_argument {
+		public:
+			explicit UnsupportedEncodingException(MIBenum mib);
+			MIBenum mibEnum() const throw();
+		private:
+			const MIBenum mib_;
+		};
 
 		class Encoder {
 			MANAH_NONCOPYABLE_TAG(Encoder);
@@ -241,7 +250,7 @@ namespace ascension {
 			};
 
 			/// Conversion policies.
-			/// @see #getPolicy, #setPolicy
+			/// @see #policy, #setPolicy
 			enum Policy {
 				/// Nothing.
 				NO_POLICY,
@@ -254,27 +263,27 @@ namespace ascension {
 		public:
 			virtual ~Encoder() throw();
 			// concrete attributes
-			Policy		getPolicy() const throw();
+			Policy		policy() const throw();
 			Encoder&	setPolicy(Policy newPolicy);
 			// abstract attributes
 			/**
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
 			 * @return a string contains aliases separated by NUL
 			 */
-			virtual std::string getAliases() const throw() {return "";}
+			virtual std::string aliases() const throw() {return "";}
 			/// Returns the number of bytes represents a UCS character.
-			virtual std::size_t getMaximumNativeBytes() const throw() = 0;
+			virtual std::size_t maximumNativeBytes() const throw() = 0;
 			/// Returns the number of UCS characters represents a native character. Default
 			/// implementation returns 1.
-			virtual std::size_t getMaximumUCSLength() const throw() {return 1;}
+			virtual std::size_t maximumUCSLength() const throw() {return 1;}
 			/// Returns the MIBenum value of the encoding.
-			virtual MIBenum getMIBenum() const throw() = 0;
+			virtual MIBenum mibEnum() const throw() = 0;
 			/**
 			 * Returns the name of the encoding. If the encoding is registered as a character set
 			 * in <a href="http://www.iana.org/assignments/character-sets">IANA character-sets
 			 * encoding file</a>, should return the preferred mime name.
 			 */
-			virtual std::string getName() const throw() = 0;
+			virtual std::string name() const throw() = 0;
 			// operations
 			bool		canEncode(CodePoint c) const;
 			bool		canEncode(const Char* first, const Char* last) const;
@@ -294,9 +303,9 @@ namespace ascension {
 			static Encoder*	forWindowsCodePage(::UINT codePage) throw();
 #endif /* _WIN32 */
 			template<typename OutputIterator>
-			static void		getAvailableMIBs(OutputIterator out);
+			static void		availableMIBs(OutputIterator out);
 			template<typename OutputIterator>
-			static void		getAvailableNames(OutputIterator out);
+			static void		availableNames(OutputIterator out);
 			static MIBenum	getDefault() throw();
 			static void		registerEncoder(std::auto_ptr<Encoder> newEncoder);
 			static bool		supports(MIBenum mib) throw();
@@ -366,9 +375,9 @@ namespace ascension {
 			virtual ~EncodingDetector() throw();
 			// attributes
 			/// Returns the identifier of the encoding detector.
-			MIBenum getID() const throw() {return id_;}
+			MIBenum id() const throw() {return id_;}
 			/// Returns the name of the encoding detector.
-			std::string getName() const throw() {return name_;}
+			std::string name() const throw() {return name_;}
 			// detection
 			MIBenum	detect(const uchar* first, const uchar* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
@@ -378,9 +387,9 @@ namespace ascension {
 			static EncodingDetector*	forWindowsCodePage(::UINT codePage) throw();
 #endif /* _WIN32 */
 			template<typename OutputIterator>
-			static void		getAvailableIDs(OutputIterator out);
+			static void		availableIDs(OutputIterator out);
 			template<typename OutputIterator>
-			static void		getAvailableNames(OutputIterator out);
+			static void		availableNames(OutputIterator out);
 			static void		registerDetector(std::auto_ptr<EncodingDetector> newDetector);
 			static bool		supports(MIBenum detectorID) throw();
 		protected:
@@ -411,8 +420,8 @@ namespace ascension {
 						const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(!static_cast<const Concrete*>(this)->doFromUnicode(*to, *from)) {
-							if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) *to = NATIVE_REPLACEMENT_CHARACTER;
-							else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
+							if(policy() == REPLACE_UNMAPPABLE_CHARACTER) *to = NATIVE_REPLACEMENT_CHARACTER;
+							else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
 							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
 					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
@@ -420,12 +429,12 @@ namespace ascension {
 						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(!static_cast<const Concrete*>(this)->doToUnicode(*to, *from)) {
-							if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) *to = REPLACEMENT_CHARACTER;
-							else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
+							if(policy() == REPLACE_UNMAPPABLE_CHARACTER) *to = REPLACEMENT_CHARACTER;
+							else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
 							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
 					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
-				std::size_t getMaximumNativeBytes() const throw() {return 1;}
+				std::size_t maximumNativeBytes() const throw() {return 1;}
 			};
 		}
 
@@ -440,40 +449,40 @@ namespace ascension {
 			const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;		\
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,									\
 			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const;	\
-		MIBenum getMIBenum() const throw() {return mib;}											\
-		std::string getName() const throw() {return name;}
-		/// Enters the definition of @c Encoder#getAliases method.
-#define ASCENSION_ENCODER_ALIASES(aliases)	\
-		std::string getAliases() const throw() {static const char s[] = aliases; return std::string(s, countof(s) - 1);}
-		/// Enters the definition of @c Encoder#getMaximumNativeBytes method.
+		MIBenum mibEnum() const throw() {return mib;}												\
+		std::string name() const throw() {return name;}
+		/// Enters the definition of @c Encoder#aliases method.
+#define ASCENSION_ENCODER_ALIASES(aliasesString)	\
+		std::string aliases() const throw() {static const char s[] = aliasesString; return std::string(s, countof(s) - 1);}
+		/// Enters the definition of @c Encoder#maximumNativeBytes method.
 #define ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(bytes)	\
-		std::size_t getMaximumNativeBytes() const throw() {return bytes;}
-		/// Enters the definition of @c Encoder#getMaximumUCSLength method.
+		std::size_t maximumNativeBytes() const throw() {return bytes;}
+		/// Enters the definition of @c Encoder#maximumUCSLength method.
 #define ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(length)	\
-		std::size_t getMaximumUCSLength() const throw() {return length;}
+		std::size_t maximumUCSLength() const throw() {return length;}
 		/// Ends the class definition opened by @c ASCENSION_BEGIN_ENCODER_CLASS or
 		/// @c ASCENSION_BEGIN_SBCS_ENCODER_CLASS.
 #define ASCENSION_END_ENCODER_CLASS()	\
 	};
 		/// Begins the definition of an encoder class for SBCS encoding.
 		/// @see ASCENSION_BEGIN_ENCODER_CLASS
-#define ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, name)							\
+#define ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, nameString)						\
 	class className : public ascension::encoding::implementation::SBCSEncoder<className> {	\
-	public:																				\
+	public:																					\
 		bool doFromUnicode(uchar& to, Char from) const;										\
 		bool doToUnicode(Char& to, uchar from) const;										\
-		MIBenum getMIBenum() const throw() {return mib;}									\
-		std::string getName() const throw() {return name;}
+		MIBenum mibEnum() const throw() {return mib;}										\
+		std::string name() const throw() {return nameString;}
 		/// Defines a SBCS encoder class.
-#define ASCENSION_DEFINE_SBCS_ENCODER(className, mib, name)		\
-	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, name)	\
+#define ASCENSION_DEFINE_SBCS_ENCODER(className, mib, nameString)	\
+	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, nameString)	\
 	ASCENSION_END_ENCODER_CLASS()
 
 		/// This macro defines a class has the name @a name and the ID @a mib extends @c EncodingDetector.
-#define ASCENSION_DEFINE_ENCODING_DETECTOR(className, mib, name)							\
+#define ASCENSION_DEFINE_ENCODING_DETECTOR(className, mib, nameString)						\
 		class className : public EncodingDetector {											\
 		public:																				\
-			className() : EncodingDetector(mib, name) {}									\
+			className() : EncodingDetector(mib, nameString) {}								\
 		private:																			\
 			MIBenum doDetect(const uchar*, const uchar*, std::ptrdiff_t*) const throw();	\
 		}
@@ -482,32 +491,32 @@ namespace ascension {
 		 * Returns MIBs for all available encodings.
 		 * @param[out] out the output iterator to receive MIBs
 		 */
-		template<typename OutputIterator> inline void Encoder::getAvailableMIBs(OutputIterator out) {
+		template<typename OutputIterator> inline void Encoder::availableMIBs(OutputIterator out) {
 			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
 
 		/**
 		 * Returns names for all available encodings.
 		 * @param[out] out the output iterator to receive names
 		 */
-		template<typename OutputIterator> inline void Encoder::getAvailableNames(OutputIterator out) {
-			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->getName();}
+		template<typename OutputIterator> inline void Encoder::availableNames(OutputIterator out) {
+			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
 
 		/// Returns the conversion policy.
-		inline Encoder::Policy Encoder::getPolicy() const throw() {return policy_;}
+		inline Encoder::Policy Encoder::policy() const throw() {return policy_;}
 
 		/**
 		 * Returns identifiers for all available encoding detectors.
 		 * @param[out] out the output iterator to receive identifiers
 		 */
-		template<typename OutputIterator> inline void EncodingDetector::getAvailableIDs(OutputIterator out) {
+		template<typename OutputIterator> inline void EncodingDetector::availableIDs(OutputIterator out) {
 			for(EncodingDetectors::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
 
 		/**
 		 * Returns names for all available encoding detectors.
 		 * @param[out] out the output iterator to receive names
 		 */
-		template<typename OutputIterator> inline void EncodingDetector::getAvailableNames(OutputIterator out) {
-			for(EncodingDetectors::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->getName();}
+		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
+			for(EncodingDetectors::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
 
 	}
 } // namespace ascension.encoding

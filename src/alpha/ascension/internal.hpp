@@ -12,9 +12,9 @@
 #include <stdexcept>
 #include <algorithm>
 #include "../../manah/object.hpp"
-#ifdef _WIN32
-#include "../../manah/win32/windows.hpp"
-#endif /* _WIN32 */
+#ifdef ASCENSION_WINDOWS
+#include "../../manah/win32/windows.hpp"	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
+#endif /* ASCENSION_WINDOWS */
 
 namespace ascension {
 

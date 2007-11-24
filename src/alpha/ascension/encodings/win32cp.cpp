@@ -5,7 +5,7 @@
  * @date 2007
  */
 
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 
 namespace {
 	const pair<MIBenum, uint> MIBtoWinCP[] = {
@@ -133,10 +133,10 @@ namespace {
 						const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
 		Result		doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const;
-		std::string	getAliases() const throw();
-		std::size_t	getMaximumNativeBytes() const throw();
-		MIBenum		getMIBenum() const throw();
-		std::string	getName() const throw();
+		std::string	aliases() const throw();
+		std::size_t	maximumNativeBytes() const throw();
+		MIBenum		mibEnum() const throw();
+		std::string	name() const throw();
 	private:
 	private:
 		const ::UINT codePage_;
@@ -163,8 +163,8 @@ Encoder::Result WindowsEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& t
 		::UINT sourceSize = static_cast<::UINT>(fromEnd - from), destinationSize = static_cast<::UINT>(toEnd - to);
 		if(S_OK == mlang->ConvertStringFromUnicodeEx(&mode, codePage_,
 				const_cast<Char*>(from), &sourceSize, reinterpret_cast<char*>(to), &destinationSize,
-				(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MLCONVCHARF_USEDEFCHAR : 0,
-				(getPolicy()== REPLACE_UNMAPPABLE_CHARACTER) ? const_cast<::WCHAR*>(defaultCharacters) : 0)) {
+				(policy() == REPLACE_UNMAPPABLE_CHARACTER) ? MLCONVCHARF_USEDEFCHAR : 0,
+				(policy()== REPLACE_UNMAPPABLE_CHARACTER) ? const_cast<::WCHAR*>(defaultCharacters) : 0)) {
 			mlang->Release();
 			if(SUCCEEDED(enteredApartment))
 				::CoUninitialize();
@@ -175,14 +175,14 @@ Encoder::Result WindowsEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& t
 			else if(toNext == toEnd)
 				return INSUFFICIENT_BUFFER;
 			else
-				return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER
-					|| getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+				return (policy() == REPLACE_UNMAPPABLE_CHARACTER
+					|| policy() == IGNORE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
 		}
 		mlang->Release();
 	}
 	if(SUCCEEDED(enteredApartment))
 		::CoUninitialize();
-	return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+	return (policy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
 }
 
 /// @see Encoder#doToUnicode
@@ -208,11 +208,11 @@ Encoder::Result WindowsEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext
 	}
 	if(SUCCEEDED(enteredApartment))
 		::CoUninitialize();
-	return (getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
+	return (policy() == REPLACE_UNMAPPABLE_CHARACTER) ? MALFORMED_INPUT : UNMAPPABLE_CHARACTER;
 }
 
-/// @see Encoder#getAliases
-string WindowsEncoder::getAliases() const throw() {
+/// @see Encoder#aliases
+string WindowsEncoder::aliases() const throw() {
 	// TODO: not implemented.
 	return "";
 }
@@ -242,19 +242,19 @@ string WindowsEncoder::getDisplayName(::UINT codePage) throw() {
 	return name;
 }
 
-/// @see Encoder#getMaximumNativeBytes
-size_t WindowsEncoder::getMaximumNativeBytes() const throw() {
+/// @see Encoder#maximumNativeBytes
+size_t WindowsEncoder::maximumNativeBytes() const throw() {
 	::CPINFOEXW cpi;
 	return toBoolean(::GetCPInfoExW(codePage_, 0, &cpi)) ? static_cast<uchar>(cpi.MaxCharSize) : 4;
 }
 
-/// @see Encoder#getMIB
-MIBenum WindowsEncoder::getMIBenum() const throw() {
+/// @see Encoder#mibEnum
+MIBenum WindowsEncoder::mibEnum() const throw() {
 	return mib_;
 }
 
-/// @see Encoder#getName
-string WindowsEncoder::getName() const throw() {
+/// @see Encoder#name
+string WindowsEncoder::name() const throw() {
 	return getDisplayName(codePage_);
 }
 
@@ -337,4 +337,4 @@ namespace {
 }
 
 
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */

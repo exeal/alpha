@@ -15,15 +15,29 @@
  * other class such as @c boost#shared_ptr.
  */
 #define ASCENSION_SHARED_POINTER manah::SharedPointer
+//#define ASCENSION_SHARED_POINTER boost::shared_ptr
 
 
-// about ascension.text /////////////////////////////////////////////////////
+// about ascension.kernel ///////////////////////////////////////////////////
 
 /**
  * @def ASCENSION_DEFAULT_NEWLINE
- * Default newline. This must be one of @c ascension#text#Newline enumerations.
+ * Default newline. This must be one of @c ascension#kernel#Newline enumerations.
  */
-#define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_CRLF
+#ifdef _WIN32
+#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CRLF
+#else
+#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LF
+#endif
+
+
+// about ascension.kernel.files /////////////////////////////////////////////
+
+#ifdef _WIN32
+#	define ASCENSION_FILE_NAME_CHARACTER_TYPE ::WCHAR
+#else
+#	define ASCENSION_FILE_NAME_CHARACTER_TYPE char
+#endif
 
 
 // about ascension.unicode //////////////////////////////////////////////////
