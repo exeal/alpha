@@ -25,7 +25,7 @@ using namespace ascension::viewers;
 using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
 using namespace ascension::layout;
-using namespace ascension::text;
+using namespace ascension::kernel;
 using namespace manah::win32;
 using namespace manah::win32::gdi;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -45,16 +45,16 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 
 namespace {
 	// すぐ下で使う
-	BOOL CALLBACK enumResLangProc(HMODULE, const WCHAR*, const WCHAR* name, WORD langID, LONG_PTR param) {
+	::BOOL CALLBACK enumResLangProc(::HMODULE, const ::WCHAR*, const ::WCHAR* name, ::WORD langID, ::LONG_PTR param) {
 		if(name == 0)
 			return false;
 		else if(langID != MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US))
-			*reinterpret_cast<LANGID*>(param) = langID;
+			*reinterpret_cast<::LANGID*>(param) = langID;
 		return true;
 	}
 } // namespace @0
 
-LANGID ascension::getUserDefaultUILanguage() throw() {
+::LANGID ascension::getUserDefaultUILanguage() throw() {
 	// 参考 (いずれも Global Dev)
 	// Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
 	// Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
@@ -69,15 +69,15 @@ LANGID ascension::getUserDefaultUILanguage() throw() {
 
 	// 2000/XP/Server 2003 以降の場合 -> kernel32.dll の GetUserDefaultUILanguage に転送
 	if(version.dwMajorVersion >= 5) {
-		if(HMODULE dll = ::LoadLibraryW(L"kernel32.dll")) {
-			if(LANGID(WINAPI *function)(void) = reinterpret_cast<LANGID(WINAPI*)(void)>(::GetProcAddress(dll, "GetUserDefaultUILanguage")))
+		if(::HMODULE dll = ::LoadLibraryW(L"kernel32.dll")) {
+			if(::LANGID(WINAPI *function)(void) = reinterpret_cast<::LANGID(WINAPI*)(void)>(::GetProcAddress(dll, "GetUserDefaultUILanguage")))
 				id = (*function)();
 			::FreeLibrary(dll);
 		}
 	}
 
 	// NT 3.51-4.0 の場合 -> ntdll.dll のバージョン情報の言語
-	else if(HMODULE dll = ::LoadLibraryW(L"ntdll.dll")) {
+	else if(::HMODULE dll = ::LoadLibraryW(L"ntdll.dll")) {
 		::EnumResourceLanguagesW(dll, MAKEINTRESOURCEW(16)/*RT_VERSION*/,
 			MAKEINTRESOURCEW(1), enumResLangProc, reinterpret_cast<::LONG_PTR>(&id));
 		::FreeLibrary(dll);
@@ -164,12 +164,12 @@ public:
 	STDMETHODIMP	put_accValue(VARIANT varChild, BSTR szValue);
 private:
 	// IDocumentListener
-	void	documentAboutToBeChanged(const Document& document);
+	bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
 	void	documentChanged(const Document& document, const DocumentChange& change);
 private:
 	TextViewer& view_;
 	bool available_;
-	ComQIPtr<IAccessible> defaultServer_;
+	ComQIPtr<::IAccessible> defaultServer_;
 //	enum {CHILDID_SELECTION = 1};
 };
 
@@ -183,30 +183,30 @@ namespace {
 				oleaccDLL_ = user32DLL_ = 0;
 			} else {
 				accessibleObjectFromWindowPtr_ =
-					reinterpret_cast<LPFNACCESSIBLEOBJECTFROMWINDOW>(::GetProcAddress(oleaccDLL_, "AccessibleObjectFromWindow"));
+					reinterpret_cast<::LPFNACCESSIBLEOBJECTFROMWINDOW>(::GetProcAddress(oleaccDLL_, "AccessibleObjectFromWindow"));
 				createStdAccessibleObjectPtr_ =
-					reinterpret_cast<LPFNCREATESTDACCESSIBLEOBJECT>(::GetProcAddress(oleaccDLL_, "CreateStdAccessibleObject"));
-				lresultFromObjectPtr_ = reinterpret_cast<LPFNLRESULTFROMOBJECT>(::GetProcAddress(oleaccDLL_, "LresultFromObject"));
+					reinterpret_cast<::LPFNCREATESTDACCESSIBLEOBJECT>(::GetProcAddress(oleaccDLL_, "CreateStdAccessibleObject"));
+				lresultFromObjectPtr_ = reinterpret_cast<::LPFNLRESULTFROMOBJECT>(::GetProcAddress(oleaccDLL_, "LresultFromObject"));
 				notifyWinEventPtr_ =
-					reinterpret_cast<VOID(WINAPI *)(DWORD, HWND, LONG, LONG)>(::GetProcAddress(user32DLL_, "NotifyWinEvent"));
+					reinterpret_cast<VOID(WINAPI *)(::DWORD, ::HWND, ::LONG, ::LONG)>(::GetProcAddress(user32DLL_, "NotifyWinEvent"));
 			}
 		}
 		~AccLib() throw() {::FreeLibrary(oleaccDLL_); ::FreeLibrary(user32DLL_);}
 		bool isAvailable() const throw() {return oleaccDLL_ != 0;}
-		HRESULT accessibleObjectFromWindow(HWND window, DWORD objectID, REFIID iid, void** object) {
+		::HRESULT accessibleObjectFromWindow(::HWND window, ::DWORD objectID, REFIID iid, void** object) {
 			assert(isAvailable()); return (*accessibleObjectFromWindowPtr_)(window, objectID, iid, object);}
-		void createStdAccessibleObject(HWND window, long objectID, REFIID iid, void** object) {
+		void createStdAccessibleObject(::HWND window, long objectID, REFIID iid, void** object) {
 			assert(isAvailable()); (*createStdAccessibleObjectPtr_)(window, objectID, iid, object);}
-		LRESULT lresultFromObject(REFIID iid, WPARAM wParam, LPUNKNOWN object) {
+		::LRESULT lresultFromObject(REFIID iid, ::WPARAM wParam, ::LPUNKNOWN object) {
 			assert(isAvailable()); return (*lresultFromObjectPtr_)(iid, wParam, object);}
-		void notifyWinEvent(DWORD event, HWND window, long objectID, long childID) {
+		void notifyWinEvent(::DWORD event, ::HWND window, long objectID, long childID) {
 			assert(isAvailable()); return (*notifyWinEventPtr_)(event, window, objectID, childID);}
 	private:
-		HMODULE oleaccDLL_, user32DLL_;
-		LPFNACCESSIBLEOBJECTFROMWINDOW accessibleObjectFromWindowPtr_;
-		LPFNCREATESTDACCESSIBLEOBJECT createStdAccessibleObjectPtr_;
-		LPFNLRESULTFROMOBJECT lresultFromObjectPtr_;
-		VOID(WINAPI *notifyWinEventPtr_)(DWORD, HWND, LONG, LONG);
+		::HMODULE oleaccDLL_, user32DLL_;
+		::LPFNACCESSIBLEOBJECTFROMWINDOW accessibleObjectFromWindowPtr_;
+		::LPFNCREATESTDACCESSIBLEOBJECT createStdAccessibleObjectPtr_;
+		::LPFNLRESULTFROMOBJECT lresultFromObjectPtr_;
+		VOID(WINAPI *notifyWinEventPtr_)(::DWORD, ::HWND, ::LONG, ::LONG);
 	} accLib;
 } // namespace @0
 
@@ -330,26 +330,26 @@ namespace {
 // local helpers
 namespace {
 	inline void abortIncrementalSearch(TextViewer& viewer) throw() {
-		if(texteditor::Session* session = viewer.getDocument().getSession()) {
-			if(session->getIncrementalSearcher().isRunning())
-				session->getIncrementalSearcher().abort();
+		if(texteditor::Session* session = viewer.document().session()) {
+			if(session->incrementalSearcher().isRunning())
+				session->incrementalSearcher().abort();
 		}
 	}
 	inline void closeCompletionProposalsPopup(TextViewer& viewer) throw() {
-		if(contentassist::IContentAssistant* ca = viewer.getContentAssistant()) {
+		if(contentassist::IContentAssistant* ca = viewer.contentAssistant()) {
 			if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI())
 				cpui->close();
 		}
 	}
 	inline void endIncrementalSearch(TextViewer& viewer) throw() {
-		if(texteditor::Session* session = viewer.getDocument().getSession()) {
-			if(session->getIncrementalSearcher().isRunning())
-				session->getIncrementalSearcher().end();
+		if(texteditor::Session* session = viewer.document().session()) {
+			if(session->incrementalSearcher().isRunning())
+				session->incrementalSearcher().end();
 		}
 	}
 	inline void toggleOrientation(TextViewer& viewer) throw() {
-		TextViewer::VerticalRulerConfiguration vrc = viewer.getVerticalRulerConfiguration();
-		if(viewer.getConfiguration().orientation == LEFT_TO_RIGHT) {
+		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
+		if(viewer.configuration().orientation == LEFT_TO_RIGHT) {
 			vrc.alignment = ALIGN_RIGHT;
 			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
 				vrc.lineNumbers.alignment = ALIGN_LEFT;
@@ -374,16 +374,16 @@ namespace {
 		}
 	}
 	inline void getCurrentCharacterSize(const TextViewer& viewer, ::SIZE& result) {
-		const Caret& caret = viewer.getCaret();
+		const Caret& caret = viewer.caret();
 		if(caret.isEndOfLine())	// EOL
-			result.cx = viewer.getTextRenderer().getAverageCharacterWidth();
+			result.cx = viewer.textRenderer().averageCharacterWidth();
 		else {
-			const LineLayout& layout = viewer.getTextRenderer().getLineLayout(caret.getLineNumber());
-			const int leading = layout.getLocation(caret.getColumnNumber(), LineLayout::LEADING).x;
-			const int trailing = layout.getLocation(caret.getColumnNumber(), LineLayout::TRAILING).x;
+			const LineLayout& layout = viewer.textRenderer().lineLayout(caret.lineNumber());
+			const int leading = layout.location(caret.columnNumber(), LineLayout::LEADING).x;
+			const int trailing = layout.location(caret.columnNumber(), LineLayout::TRAILING).x;
 			result.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
 		}
-		result.cy = viewer.getTextRenderer().getLineHeight();
+		result.cy = viewer.textRenderer().lineHeight();
 	}
 } // namespace @0
 
@@ -458,9 +458,9 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this, true));
 
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
-	getDocument().addListener(*this);
-	getDocument().addStateListener(*this);
-	getDocument().addSequentialEditListener(*this);
+	document().addListener(*this);
+	document().addStateListener(*this);
+	document().addSequentialEditListener(*this);
 
 	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
 }
@@ -487,17 +487,17 @@ TextViewer::TextViewer(const TextViewer& rhs) : ui::CustomControl<TextViewer>(0)
 	imeCompositionActivated_ = imeComposingCharacter_ = false;
 	mouseInputDisabledCount_ = 0;
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).addTextViewer(*this);
-	getDocument().addListener(*this);
-	getDocument().addStateListener(*this);
-	getDocument().addSequentialEditListener(*this);
+	document().addListener(*this);
+	document().addStateListener(*this);
+	document().addSequentialEditListener(*this);
 }
 
 /// Destructor.
 TextViewer::~TextViewer() {
 	static_cast<presentation::internal::ITextViewerCollection&>(presentation_).removeTextViewer(*this);
-	getDocument().removeListener(*this);
-	getDocument().removeStateListener(*this);
-	getDocument().removeSequentialEditListener(*this);
+	document().removeListener(*this);
+	document().removeStateListener(*this);
+	document().removeSequentialEditListener(*this);
 	renderer_->removeFontListener(*this);
 	renderer_->removeVisualLinesListener(*this);
 	caret_->removeListener(*this);
@@ -517,7 +517,7 @@ TextViewer::~TextViewer() {
 /// Starts the auto scroll.
 void TextViewer::beginAutoScroll() {
 	assertValidAsWindow();
-	if(!hasFocus() || getDocument().getNumberOfLines() <= getNumberOfVisibleLines())
+	if(!hasFocus() || document().numberOfLines() <= numberOfVisibleLines())
 		return;
 
 	::RECT rect;
@@ -538,7 +538,7 @@ void TextViewer::beginAutoScroll() {
 void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	if(!isVisible())
 		return;
-	const Region newRegion = self.getSelectionRegion();
+	const Region newRegion = self.selectionRegion();
 	bool changed = false;
 
 	// キャレットの調整
@@ -679,9 +679,9 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
 	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
 	p->setRules(rules, endof(rules));
-	getDocument().setPartitioner(p);
+	document().setPartitioner(p);
 
-	PresentationReconstructor* pr = new PresentationReconstructor(getPresentation());
+	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
 
 	// JSDoc syntax highlight test
 	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
@@ -693,7 +693,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
 	jsdocStyles.insert(make_pair(220, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), true)));
 	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(
-		new LexicalPartitionPresentationReconstructor(getDocument(), scanner, jsdocStyles));
+		new LexicalPartitionPresentationReconstructor(document(), scanner, jsdocStyles));
 	pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
 
 	// JavaScript syntax highlight test
@@ -713,7 +713,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	jsStyles.insert(make_pair(222, TextStyle(Colors(RGB(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
 	jsStyles.insert(make_pair(223, TextStyle(Colors(RGB(0x80, 0x00, 0x00)))));
 	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
-		auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(getDocument(), scanner, jsStyles)));
+		auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(), scanner, jsStyles)));
 
 	// other contents
 	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
@@ -759,7 +759,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
 	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
 	setContentAssistant(ca);
-	getDocument().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
+	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif /* _DEBUG */
 	
 	renderer_->addFontListener(*this);
@@ -778,26 +778,27 @@ void TextViewer::doBeep() throw() {
 	::MessageBeep(MB_OK);
 }
 
-/// @see text#IDocumentStateListener#documentAccessibleRegionChanged
+/// @see kernel#IDocumentStateListener#documentAccessibleRegionChanged
 void TextViewer::documentAccessibleRegionChanged(Document&) {
-	if(getDocument().isNarrowed())
+	if(document().isNarrowed())
 		scrollTo(-1, -1, false);
 	invalidateRect(0, false);
 }
 
-/// @see text#IDocumentListener#documentAboutToBeChanged
-void TextViewer::documentAboutToBeChanged(const Document&) {
+/// @see kernel#IDocumentListener#documentAboutToBeChanged
+bool TextViewer::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+	return true;
 }
 
-/// @see text#IDocumentListener#documentChanged
+/// @see kernel#IDocumentListener#documentChanged
 void TextViewer::documentChanged(const Document&, const DocumentChange& change) {
 	// インクリメンタル検索中であればやめさせる
-	if(texteditor::Session* session = getDocument().getSession()) {
-		if(session->getIncrementalSearcher().isRunning())
-			session->getIncrementalSearcher().abort();
+	if(texteditor::Session* session = document().session()) {
+		if(session->incrementalSearcher().isRunning())
+			session->incrementalSearcher().abort();
 	}
 
-	const Region& region = change.getRegion();
+	const Region& region = change.region();
 	const bool multiLine = region.beginning().line != region.end().line;
 	if(isFrozen() && multiLine && freezeInfo_.invalidLines.first != INVALID_INDEX) {
 		// 凍結中の描画待ち行のずらす
@@ -825,36 +826,36 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 		updateScrollBars();
 }
 
-/// @see text#IDocumentStateListener#documentEncodingChanged
+/// @see kernel#IDocumentStateListener#documentEncodingChanged
 void TextViewer::documentEncodingChanged(Document&) {
 }
 
-/// @see text#IDocumentStateListener#documentFileNameChanged
+/// @see kernel#IDocumentStateListener#documentFileNameChanged
 void TextViewer::documentFileNameChanged(Document&) {
 }
 
-/// @see text#IDocumentStateListener#documentModificationSignChanged
+/// @see kernel#IDocumentStateListener#documentModificationSignChanged
 void TextViewer::documentModificationSignChanged(Document&) {
 }
 
-/// @see text#IDocumentStateListener#documentReadOnlySignChanged
+/// @see kernel#IDocumentStateListener#documentReadOnlySignChanged
 void TextViewer::documentReadOnlySignChanged(Document&) {
 }
 
-/// @see text#ISequentialEditListener#documentSequentialEditStarted
+/// @see kernel#ISequentialEditListener#documentSequentialEditStarted
 void TextViewer::documentSequentialEditStarted(Document&) {
 }
 
-/// @see text#ISequentialEditListener#documentSequentialEditStopped
+/// @see kernel#ISequentialEditListener#documentSequentialEditStopped
 void TextViewer::documentSequentialEditStopped(Document&) {
 }
 
-/// @see text#ISequentialEditListener#documentUndoSequenceStarted
+/// @see kernel#ISequentialEditListener#documentUndoSequenceStarted
 void TextViewer::documentUndoSequenceStarted(Document&) {
 	freeze(false);
 }
 
-/// @see text#ISequentialEditListener#documentUndoSequenceStopped
+/// @see kernel#ISequentialEditListener#documentUndoSequenceStopped
 void TextViewer::documentUndoSequenceStopped(Document&, const Position& resultPosition) {
 	unfreeze(false);
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
@@ -907,14 +908,14 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 	if(!forAllClones)
 		++freezeInfo_.count;
 	else {
-		for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()), e(presentation_.getLastTextViewer()); i != e; ++i)
+		for(Presentation::TextViewerIterator i(presentation_.firstTextViewer()), e(presentation_.lastTextViewer()); i != e; ++i)
 			++(*i)->freezeInfo_.count;
 	}
 }
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 /// Returns the accessible proxy of the viewer.
-HRESULT TextViewer::getAccessibleObject(IAccessible*& acc) const throw() {
+::HRESULT TextViewer::accessibleObject(IAccessible*& acc) const throw() {
 	TextViewer& self = *const_cast<TextViewer*>(this);
 	acc = 0;
 	if(accessibleProxy_ == 0 && isWindow() && accLib.isAvailable()) {
@@ -939,23 +940,23 @@ HRESULT TextViewer::getAccessibleObject(IAccessible*& acc) const throw() {
  * @return returns the document position
  * @see #getClientXYForCharacter, #hitTest, LineLayout#getOffset
  */
-Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLeading) const {
+Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading) const {
 	assertValidAsWindow();
 
 	// determine the logical line
 	length_t line, subline;
 	mapClientYToLine(pt.y, &line, &subline);
-	const LineLayout& layout = renderer_->getLineLayout(line);
+	const LineLayout& layout = renderer_->lineLayout(line);
 	// determine the column
 	const long x = pt.x - getDisplayXOffset(line);
 	length_t column;
 	if(!nearestLeading)
-		column = layout.getOffset(x, static_cast<int>(renderer_->getLinePitch() * subline));
+		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline));
 	else {
 		length_t trailing;
-		column = layout.getOffset(x, static_cast<int>(renderer_->getLinePitch() * subline), trailing);
-//		if(ascension::internal::advance(x, layout.getLocation(column).x)
-//				> ascension::internal::advance(x, layout.getLocation(column + trailing).x))
+		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing);
+//		if(ascension::internal::advance(x, layout.location(column).x)
+//				> ascension::internal::advance(x, layout.location(column + trailing).x))
 			column += trailing;
 	}
 	return Position(line, column);
@@ -974,10 +975,10 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  * @throw BadPositionException @a position is outside of the document
  * @see #getCharacterForClientXY, #hitTest, layout#LineLayout#getLocation
  */
-::POINT TextViewer::getClientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
+::POINT TextViewer::clientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();
-	const LineLayout& layout = renderer_->getLineLayout(position.line);
-	::POINT pt = layout.getLocation(position.column, edge);
+	const LineLayout& layout = renderer_->lineLayout(position.line);
+	::POINT pt = layout.location(position.column, edge);
 	pt.x += getDisplayXOffset(position.line);
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
@@ -993,23 +994,23 @@ Position TextViewer::getCharacterForClientXY(const ::POINT& pt, bool nearestLead
  * @return the offset
  */
 int TextViewer::getDisplayXOffset(length_t line) const {
-	const ::RECT margins = getTextAreaMargins();
+	const ::RECT margins = textAreaMargins();
 	if(configuration_.alignment == ALIGN_LEFT || configuration_.justifiesLines)
-		return margins.left - scrollInfo_.getX() * renderer_->getAverageCharacterWidth();
+		return margins.left - scrollInfo_.x() * renderer_->averageCharacterWidth();
 
 	int indent;
 	Rect clientRect;
 	getClientRect(clientRect);
-	if(renderer_->getLongestLineWidth() + margins.left + margins.right > clientRect.getWidth()) {
-		indent = renderer_->getLongestLineWidth() - renderer_->getLineLayout(line).getSublineWidth(0) + margins.left;
-		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->getAverageCharacterWidth();
+	if(renderer_->longestLineWidth() + margins.left + margins.right > clientRect.getWidth()) {
+		indent = renderer_->longestLineWidth() - renderer_->lineLayout(line).sublineWidth(0) + margins.left;
+		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->averageCharacterWidth();
 	} else
-		indent = clientRect.getWidth() - renderer_->getLineLayout(line).getSublineWidth(0) - margins.right;
+		indent = clientRect.getWidth() - renderer_->lineLayout(line).sublineWidth(0) - margins.right;
 	if(configuration_.alignment == ALIGN_CENTER)
 		indent /= 2;
 	else
 		assert(configuration_.alignment == ALIGN_RIGHT);
-	return indent - static_cast<long>(scrollInfo_.getX()) * renderer_->getAverageCharacterWidth();
+	return indent - static_cast<long>(scrollInfo_.x()) * renderer_->averageCharacterWidth();
 }
 
 #if 0
@@ -1022,7 +1023,7 @@ int TextViewer::getDisplayXOffset(length_t line) const {
  */
 bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) const {
 	assertValidAsWindow();
-	const Document& document = getDocument();
+	const Document& document = document();
 	const Position pos = getCharacterForClientXY(getCursorPosition(), false);	// カーソル位置に最も近い文字位置
 
 	if(pos.column == document.getLineLength(pos.line))	// 指定位置に文字が無い
@@ -1075,24 +1076,6 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 	return false;
 }
 #endif
-
-/**
- * Returns the margins of text area.
- * @return the rectangle whose members correspond to each margins
- */
-::RECT TextViewer::getTextAreaMargins() const throw() {
-	::RECT margins = {0, 0, 0, 0};
-	((verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->getWidth();
-	Alignment alignment = configuration_.alignment;
-	if(alignment != ALIGN_LEFT && alignment != ALIGN_RIGHT)
-		alignment = (configuration_.orientation == LEFT_TO_RIGHT) ? ALIGN_LEFT : ALIGN_RIGHT;
-	if(alignment == ALIGN_LEFT)
-		margins.left += configuration_.leadingMargin;
-	else if(alignment == ALIGN_RIGHT)
-		margins.right += configuration_.leadingMargin;
-	margins.top += configuration_.topMargin;
-	return margins;
-}
 
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
@@ -1296,7 +1279,7 @@ void TextViewer::hideToolTip() {
 TextViewer::HitTestResult TextViewer::hitTest(const ::POINT& pt) const {
 	assertValidAsWindow();
 
-	const VerticalRulerConfiguration& vrc = verticalRulerDrawer_->getConfiguration();
+	const VerticalRulerConfiguration& vrc = verticalRulerDrawer_->configuration();
 	::RECT clientRect;
 	getClientRect(clientRect);
 	if(!toBoolean(::PtInRect(&clientRect, pt)))
@@ -1307,13 +1290,13 @@ TextViewer::HitTestResult TextViewer::hitTest(const ::POINT& pt) const {
 			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - vrc.indicatorMargin.width)))
 		return INDICATOR_MARGIN;
 	else if(vrc.lineNumbers.visible
-			&& ((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->getWidth())
-			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->getWidth())))
+			&& ((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->width())
+			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width())))
 		return LINE_NUMBERS;
-	else if((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->getWidth() + configuration_.leadingMargin)
-			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->getWidth() - configuration_.leadingMargin))
+	else if((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->width() + configuration_.leadingMargin)
+			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width() - configuration_.leadingMargin))
 		return LEADING_MARGIN;
-	else if(pt.y < getTextAreaMargins().top)
+	else if(pt.y < textAreaMargins().top)
 		return TOP_MARGIN;
 	else
 		return TEXT_AREA;
@@ -1330,7 +1313,7 @@ inline void TextViewer::internalUnfreeze() {
 		redrawLines(freezeInfo_.invalidLines.first, freezeInfo_.invalidLines.second);
 	freezeInfo_.invalidLines.first = freezeInfo_.invalidLines.second = INVALID_INDEX;
 
-	caretMoved(getCaret(), getCaret().getSelectionRegion());
+	caretMoved(caret(), caret().selectionRegion());
 	update();
 }
 
@@ -1344,10 +1327,10 @@ inline void TextViewer::internalUnfreeze() {
 void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw() {
 	if(logicalLine == 0 && visualSublineOffset == 0)
 		return;
-	y -= getTextAreaMargins().top;
+	y -= textAreaMargins().top;
 	length_t line, subline;
-	getFirstVisibleLine(&line, 0, &subline);
-	renderer_->offsetVisualLine(line, subline, y / renderer_->getLinePitch());
+	firstVisibleLine(&line, 0, &subline);
+	renderer_->offsetVisualLine(line, subline, y / renderer_->linePitch());
 	if(logicalLine != 0)
 		*logicalLine = line;
 	if(visualSublineOffset != 0)
@@ -1365,20 +1348,20 @@ void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visual
  * @see #mapClientYToLine, TextRenderer#offsetVisualLine
  */
 int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
-	const ::RECT margins = getTextAreaMargins();
+	const ::RECT margins = textAreaMargins();
 	if(line == scrollInfo_.firstVisibleLine) {
 		if(scrollInfo_.firstVisibleSubline == 0)
 			return margins.top;
 		else
-			return fullSearch ? margins.top - static_cast<int>(renderer_->getLinePitch() * scrollInfo_.firstVisibleSubline) : -32768;
+			return fullSearch ? margins.top - static_cast<int>(renderer_->linePitch() * scrollInfo_.firstVisibleSubline) : -32768;
 	} else if(line > scrollInfo_.firstVisibleLine) {
-		const int lineSpan = renderer_->getLinePitch();
+		const int lineSpan = renderer_->linePitch();
 		::RECT clientRect;
 		getClientRect(clientRect);
 		int y = margins.top;
-		y += lineSpan * static_cast<int>((renderer_->getNumberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline));
+		y += lineSpan * static_cast<int>((renderer_->numberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline));
 		for(length_t i = scrollInfo_.firstVisibleLine + 1; i < line; ++i) {
-			y += lineSpan * static_cast<int>(renderer_->getNumberOfSublinesOfLine(i));
+			y += lineSpan * static_cast<int>(renderer_->numberOfSublinesOfLine(i));
 			if(y >= clientRect.bottom - clientRect.top && !fullSearch)
 				return 32767;
 		}
@@ -1386,10 +1369,10 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 	} else if(!fullSearch)
 		return -32768;
 	else {
-		const int linePitch = renderer_->getLinePitch();
+		const int linePitch = renderer_->linePitch();
 		int y = margins.top - static_cast<int>(linePitch * scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
-			y -= static_cast<int>(renderer_->getNumberOfSublinesOfLine(i) * linePitch);
+			y -= static_cast<int>(renderer_->numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
 				break;
 		}
@@ -1400,7 +1383,7 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 
 /// @see ICaretStateListener#matchBracketsChanged
 void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Position>& oldPair, bool outsideOfView) {
-	const pair<Position, Position>& newPair = self.getMatchBrackets();
+	const pair<Position, Position>& newPair = self.matchBrackets();
 	if(newPair.first != Position::INVALID_POSITION) {
 		assert(newPair.second != Position::INVALID_POSITION);
 		redrawLine(newPair.first.line);
@@ -1473,7 +1456,7 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 		toggleOrientation(*this);
 		break;
 	case ID_DISPLAYSHAPINGCONTROLS: {	// [Unicode 制御文字の表示]
-		Configuration c = getConfiguration();
+		Configuration c(configuration());
 		c.displaysShapingControls = !c.displaysShapingControls;
 		setConfiguration(&c, 0);
 		break;
@@ -1560,13 +1543,13 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 	if(!toBoolean(::PtInRect(&rect, pt)))
 		return false;
 
-	const Document& document = getDocument();
-	const bool hasSelection = !getCaret().isSelectionEmpty();
-	const bool readOnly = document.isReadOnly();
+	const Document& doc = document();
+	const bool hasSelection = !caret().isSelectionEmpty();
+	const bool readOnly = doc.isReadOnly();
 	const bool japanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
 
 	static ui::PopupMenu menu;
-	static const WCHAR* captions[] = {
+	static const ::WCHAR* captions[] = {
 		L"&Undo",								L"\x5143\x306B\x623B\x3059(&U)",
 		L"&Redo",								L"\x3084\x308A\x76F4\x3057(&R)",
 		0,										0,
@@ -1664,32 +1647,32 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 #undef GET_CAPTION
 
 	// メニュー項目の修正
-	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && document.getUndoHistoryLength(false) != 0);
-	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && document.getUndoHistoryLength(true) != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && doc.numberOfUndoableEdits() != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableEdits() != 0);
 	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste());
 	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
-	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, document.getNumberOfLines() > 1 || document.getLineLength(0) > 0);
+	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
 	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
 	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
 
 	// IME 関連
-	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
+	::HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		HIMC imc = ::ImmGetContext(getHandle());
-		WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
-		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
-		WCHAR* openSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x958B\x304F(&E)" : L"Op&en soft keyboard";
-		WCHAR* closeSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x9589\x3058\x308B(&F)" : L"Close so&ft keyboard";
-		WCHAR* reconvert = japanese ? L"\x518D\x5909\x63DB(&R)" : L"&Reconvert";
+		::HIMC imc = ::ImmGetContext(getHandle());
+		::WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
+		::WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
+		::WCHAR* openSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x958B\x304F(&E)" : L"Op&en soft keyboard";
+		::WCHAR* closeSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x9589\x3058\x308B(&F)" : L"Close so&ft keyboard";
+		::WCHAR* reconvert = japanese ? L"\x518D\x5909\x63DB(&R)" : L"&Reconvert";
 
 		menu << Menu::SeparatorItem()
 			<< Menu::StringItem(ID_TOGGLEIMESTATUS, toBoolean(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
 
 		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
-			DWORD convMode;
+			::DWORD convMode;
 			::ImmGetConversionStatus(imc, &convMode, 0);
 			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, toBoolean(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
 		}
@@ -1736,21 +1719,21 @@ bool TextViewer::onEraseBkgnd(HDC) {
 }
 
 /// @see WM_GETFONT
-HFONT TextViewer::onGetFont() {
-	return renderer_->getFont();
+::HFONT TextViewer::onGetFont() {
+	return renderer_->font();
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT, HWND) {
+void TextViewer::onHScroll(::UINT sbCode, ::UINT, ::HWND) {
 	switch(sbCode) {
 	case SB_LINELEFT:	// 1 列分左
 		scroll(-1, 0, true); break;
 	case SB_LINERIGHT:	// 1 列分右
 		scroll(+1, 0, true); break;
 	case SB_PAGELEFT:	// 1 ページ左
-		scroll(-static_cast<int>(getNumberOfVisibleColumns()), 0, true); break;
+		scroll(-static_cast<int>(numberOfVisibleColumns()), 0, true); break;
 	case SB_PAGERIGHT:	// 1 ページ右
-		scroll(+static_cast<int>(getNumberOfVisibleColumns()), 0, true); break;
+		scroll(+static_cast<int>(numberOfVisibleColumns()), 0, true); break;
 	case SB_LEFT:		// 左端
 	case SB_RIGHT: {	// 右端
 		int left, right;
@@ -1763,9 +1746,9 @@ void TextViewer::onHScroll(UINT sbCode, UINT, HWND) {
 }
 
 /// @see WM_IME_COMPOSITION
-void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
+void TextViewer::onIMEComposition(::WPARAM wParam, ::LPARAM lParam, bool& handled) {
 	if(/*lParam == 0 ||*/ toBoolean(lParam & GCS_RESULTSTR)) {	// completed
-		if(HIMC	imc = ::ImmGetContext(getHandle())) {
+		if(::HIMC imc = ::ImmGetContext(getHandle())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
@@ -1774,11 +1757,10 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				if(!imeComposingCharacter_)
 					texteditor::commands::TextInputCommand(*this, text.get()).execute();
 				else {
-					Document& document = getDocument();
-					document.erase(*caret_,
-						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document, *caret_).next()).tell());
-					document.insert(*caret_, String(1, static_cast<Char>(wParam)));
-					document.endSequentialEdit();
+					document().erase(*caret_,
+						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document(), caret()).next()).tell());
+					document().insert(*caret_, String(1, static_cast<Char>(wParam)));
+					document().endSequentialEdit();
 					imeComposingCharacter_ = false;
 					recreateCaret();
 				}
@@ -1789,13 +1771,13 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 		}
 	} else if(toBoolean(GCS_COMPSTR & lParam)) {
 		if(toBoolean(lParam & CS_INSERTCHAR)) {
-			Document& document = getDocument();
+			Document& doc = document();
 			if(imeComposingCharacter_)
-				document.erase(*caret_,
-					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document, *caret_).next()).tell());
+				doc.erase(*caret_,
+					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell());
 			else
-				getDocument().beginSequentialEdit();			
-			document.insert(*caret_, String(1, static_cast<Char>(wParam)));	
+				doc.beginSequentialEdit();			
+			doc.insert(*caret_, String(1, static_cast<Char>(wParam)));	
 			imeComposingCharacter_ = true;
 			handled = true;
 			if(toBoolean(lParam & CS_NOMOVECARET))
@@ -1812,38 +1794,37 @@ void TextViewer::onIMEEndComposition() {
 }
 
 /// @see WM_IME_NOTIFY
-LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
+::LRESULT TextViewer::onIMENotify(::WPARAM command, ::LPARAM, bool&) {
 	if(command == IMN_SETOPENSTATUS)
 		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
 	return 0L;
 }
 
 /// @see WM_IME_REQUEST
-LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
-	const Document& document = getDocument();
+::LRESULT TextViewer::onIMERequest(::WPARAM command, ::LPARAM lParam, bool& handled) {
+	const Document& doc = document();
 
 	// this command will be sent two times when reconversion is invoked
 	if(command == IMR_RECONVERTSTRING) {
-		if(document.isReadOnly() || getCaret().isSelectionRectangle()) {
+		if(doc.isReadOnly() || caret().isSelectionRectangle()) {
 			beep();
 			return 0L;
 		}
 		handled = true;
 		if(caret_->isSelectionEmpty()) {	// IME selects the composition target automatically if no selection
-			const VisualPoint& caret = getCaret();
 			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-				const String& line = document.getLine(caret.getLineNumber());
-				rcs->dwStrLen = static_cast<DWORD>(line.length());
+				const String& line = doc.line(caret().lineNumber());
+				rcs->dwStrLen = static_cast<::DWORD>(line.length());
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
-				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * getCaret().getColumnNumber());
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<::DWORD>(sizeof(Char) * caret().columnNumber());
 				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
 				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret.getLineNumber());
+			return sizeof(::RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
 		} else {
-			const String selection = getCaret().getSelectionText(NLR_PHYSICAL_DATA);
+			const String selection(caret().selectionText(NLR_PHYSICAL_DATA));
 			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
+				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<::DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
 				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = 0;
 				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
@@ -1855,8 +1836,8 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
 		if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-			const Region region(document.accessibleRegion());
-			if(!getCaret().isSelectionEmpty()) {
+			const Region region(doc.accessibleRegion());
+			if(!caret().isSelectionEmpty()) {
 				// reconvert the selected region. the selection may be multi-line
 				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
 					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
@@ -1864,21 +1845,21 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			} else {
 				// reconvert the region IME passed if no selection (and create the new selection).
 				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(document.isNarrowed() && caret_->getLineNumber() == region.first.line) {	// the document is narrowed
+				if(doc.isNarrowed() && caret().lineNumber() == region.first.line) {	// the document is narrowed
 					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
-						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
+						rcs->dwCompStrLen += static_cast<::DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
 						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<::DWORD>(sizeof(Char) * region.first.column);
 					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
 						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
 						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
 						rcs->dwCompStrLen = rcs->dwTargetStrLen
-							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
+							= static_cast<::DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
 					}
 				}
-				getCaret().select(
-					Position(caret_->getLineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
-					Position(caret_->getLineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+				caret().select(
+					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
+					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
 			handled = true;
 			return true;
@@ -1891,16 +1872,16 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 
 	// queried document content for higher conversion accuracy
 	else if(command == IMR_DOCUMENTFEED) {
-		if(caret_->getLineNumber() == caret_->getAnchor().getLineNumber()) {
+		if(caret().lineNumber() == caret().anchor().lineNumber()) {
 			handled = true;
 			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
-				rcs->dwStrLen = static_cast<DWORD>(document.getLineLength(caret_->getLineNumber()));
+				rcs->dwStrLen = static_cast<::DWORD>(doc.lineLength(caret().lineNumber()));
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
 				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret_->getTopPoint().getColumnNumber());
-				getDocument().getLine(caret_->getLineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<::DWORD>(caret().beginning().columnNumber());
+				doc.line(caret().lineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(::RECONVERTSTRING) + sizeof(Char) * document.getLineLength(caret_->getLineNumber());
+			return sizeof(::RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
 		}
 	}
 
@@ -1915,13 +1896,13 @@ void TextViewer::onIMEStartComposition() {
 }
 
 /// @see WM_KEYDOWN
-void TextViewer::onKeyDown(UINT vkey, UINT, bool& handled) {
+void TextViewer::onKeyDown(::UINT vkey, ::UINT, bool& handled) {
 	endAutoScroll();
 	handled = handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), false);
 }
 
 /// @see WM_KILLFOCUS
-void TextViewer::onKillFocus(HWND newWindow) {
+void TextViewer::onKillFocus(::HWND newWindow) {
 	RESTORE_HIDDEN_CURSOR();
 	endAutoScroll();
 /*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
@@ -1933,7 +1914,7 @@ void TextViewer::onKillFocus(HWND newWindow) {
 		closeCompletionProposalsPopup(*this);
 */	abortIncrementalSearch(*this);
 	if(imeCompositionActivated_) {	// stop IME input
-		HIMC imc = ::ImmGetContext(getHandle());
+		::HIMC imc = ::ImmGetContext(getHandle());
 		::ImmNotifyIME(imc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
 		::ImmReleaseContext(getHandle(), imc);
 	}
@@ -1941,59 +1922,59 @@ void TextViewer::onKillFocus(HWND newWindow) {
 		hideCaret();
 		::DestroyCaret();
 	}
-	redrawLines(getCaret().getTopPoint().getLineNumber(), getCaret().getBottomPoint().getLineNumber());
+	redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
 	update();
 }
 
 /// @see WM_LBUTTONDBLCLK
-void TextViewer::onLButtonDblClk(UINT keyState, const ::POINT& pt) {
+void TextViewer::onLButtonDblClk(::UINT keyState, const ::POINT& pt) {
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
 }
 
 /// @see WM_LBUTTONDOWN
-void TextViewer::onLButtonDown(UINT keyState, const ::POINT& pt) {
+void TextViewer::onLButtonDown(::UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
 }
 
 /// @see WM_LBUTTONUP
-void TextViewer::onLButtonUp(UINT keyState, const ::POINT& pt) {
+void TextViewer::onLButtonUp(::UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
 }
 
 /// @see WM_MBUTTONDBLCLK
-void TextViewer::onMButtonDblClk(UINT keyState, const ::POINT& pt) {
+void TextViewer::onMButtonDblClk(::UINT keyState, const ::POINT& pt) {
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
 }
 
 /// @see WM_MBUTTONDOWN
-void TextViewer::onMButtonDown(UINT keyState, const ::POINT& pt) {
+void TextViewer::onMButtonDown(::UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
 }
 
 /// @see WM_MBUTTONUP
-void TextViewer::onMButtonUp(UINT keyState, const ::POINT& pt) {
+void TextViewer::onMButtonUp(::UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
 }
 
 /// @see WM_MOUSEMOVE
-void TextViewer::onMouseMove(UINT keyState, const ::POINT& position) {
+void TextViewer::onMouseMove(::UINT keyState, const ::POINT& position) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseMoved(position, keyState);
 }
 
 /// @see WM_MOUSEWHEEL
-void TextViewer::onMouseWheel(UINT keyState, short delta, const ::POINT& pt) {
+void TextViewer::onMouseWheel(::UINT keyState, short delta, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseWheelRotated(delta, pt, keyState);
@@ -2023,29 +2004,29 @@ void TextViewer::onPaint(PaintDC& dc) {
 	else if(toBoolean(::IsRectEmpty(&dc.getPaintStruct().rcPaint)))	// skip if the region to paint is empty
 		return;
 
-	const Document& document = getDocument();
+	const Document& doc = document();
 	::RECT clientRect;
 	getClientRect(clientRect);
 
 //	Timer tm(L"onPaint");
 
-	const length_t lines = document.getNumberOfLines();
+	const length_t lines = doc.numberOfLines();
 	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
-	const int linePitch = renderer_->getLinePitch();
+	const int linePitch = renderer_->linePitch();
 
 	// draw the vertical ruler
 	verticalRulerDrawer_->draw(dc);
 
 	// draw horizontal margins
 	using layout::internal::systemColors;
-	const ::RECT margins = getTextAreaMargins();
-	const COLORREF marginColor = systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
+	const ::RECT margins = textAreaMargins();
+	const ::COLORREF marginColor = systemColors.getReal(configuration_.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
 	if(margins.left > 0) {
-		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->getWidth() : 0;
+		const int vrWidth = (verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
-		const int vrWidth = (verticalRulerDrawer_->getConfiguration().alignment == ALIGN_RIGHT) ? verticalRulerDrawer_->getWidth() : 0;
+		const int vrWidth = (verticalRulerDrawer_->configuration().alignment == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 
@@ -2074,7 +2055,7 @@ void TextViewer::onPaint(PaintDC& dc) {
 #endif /* _DEBUG */
 			LineLayout::Selection selection(*caret_, selectionColor);
 			renderer_->renderLine(line, dc, getDisplayXOffset(line), y, dc.getPaintStruct().rcPaint, lineRect, &selection);
-			y += linePitch * static_cast<int>(renderer_->getNumberOfSublinesOfLine(line++));
+			y += linePitch * static_cast<int>(renderer_->numberOfSublinesOfLine(line++));
 			subline = 0;
 		}
 #ifdef _DEBUG
@@ -2095,20 +2076,20 @@ void TextViewer::onPaint(PaintDC& dc) {
 }
 
 /// @see WM_RBUTTONDBLCLK
-void TextViewer::onRButtonDblClk(UINT keyState, const ::POINT& pt) {
+void TextViewer::onRButtonDblClk(::UINT keyState, const ::POINT& pt) {
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
 }
 
 /// @see WM_RBUTTONDOWN
-void TextViewer::onRButtonDown(UINT keyState, const ::POINT& pt) {
+void TextViewer::onRButtonDown(::UINT keyState, const ::POINT& pt) {
 	RESTORE_HIDDEN_CURSOR();
 	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
 }
 
 /// @see WM_RBUTTONUP
-void TextViewer::onRButtonUp(UINT keyState, const ::POINT& pt) {
+void TextViewer::onRButtonUp(::UINT keyState, const ::POINT& pt) {
 	if(allowsMouseInput()) {
 		RESTORE_HIDDEN_CURSOR();
 		if(mouseInputStrategy_.get() != 0)
@@ -2117,7 +2098,7 @@ void TextViewer::onRButtonUp(UINT keyState, const ::POINT& pt) {
 }
 
 /// @see WM_SETCURSOR
-bool TextViewer::onSetCursor(HWND, UINT, UINT) {
+bool TextViewer::onSetCursor(::HWND, ::UINT, ::UINT) {
 	static length_t detectedUriLineLast = INVALID_INDEX;
 	::POINT pt = getCursorPosition();	// カーソル位置
 	bool cursorChanged = false;
@@ -2159,14 +2140,14 @@ bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 }
 
 /// @see WM_SETFOCUS
-void TextViewer::onSetFocus(HWND oldWindow) {
+void TextViewer::onSetFocus(::HWND oldWindow) {
 	// restore the scroll positions
 	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
 	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
 
 	// hmm...
 //	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(getCaret().getTopPoint().getLineNumber(), getCaret().getBottomPoint().getLineNumber());
+		redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
 		update();
 //	}
 
@@ -2174,15 +2155,15 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 		// resurrect the caret
 		recreateCaret();
 		updateCaretPosition();
-		if(texteditor::Session* session = getDocument().getSession()) {
-			if(texteditor::InputSequenceCheckers* isc = session->getInputSequenceCheckers())
+		if(texteditor::Session* const session = document().session()) {
+			if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
 				isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
 		}
 	}
 }
 
 /// @see WM_SIZE
-void TextViewer::onSize(UINT type, int, int) {
+void TextViewer::onSize(::UINT type, int, int) {
 	closeCompletionProposalsPopup(*this);
 	if(type == SIZE_MINIMIZED)
 		return;
@@ -2205,7 +2186,7 @@ void TextViewer::onSize(UINT type, int, int) {
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
 	verticalRulerDrawer_->update();
-	if(verticalRulerDrawer_->getConfiguration().alignment != ALIGN_LEFT) {
+	if(verticalRulerDrawer_->configuration().alignment != ALIGN_LEFT) {
 		recreateCaret();
 //		redrawVerticalRuler();
 		invalidateRect(0, false);	// うーむ...
@@ -2217,7 +2198,7 @@ void TextViewer::onStyleChanged(int type, const ::STYLESTRUCT& style) {
 	if(type == GWL_EXSTYLE
 			&& (((style.styleOld ^ style.styleNew) & (WS_EX_RIGHT | WS_EX_RTLREADING)) != 0)) {
 		// ウィンドウスタイルの変更をに Presentation に反映する
-		Configuration c = getConfiguration();
+		Configuration c(configuration());
 		c.orientation = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
 		c.alignment = ((style.styleNew & WS_EX_RIGHT) != 0) ? ALIGN_RIGHT : ALIGN_LEFT;
 		setConfiguration(&c, 0);
@@ -2268,8 +2249,8 @@ void TextViewer::onTimer(UINT_PTR eventID, ::TIMERPROC) {
 	} else if(eventID == TIMERID_AUTOSCROLL) {	// 自動スクロール
 		killTimer(TIMERID_AUTOSCROLL);
 		const ::POINT pt = getCursorPosition();
-		const long yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->getLinePitch();
-//		const long xScrollDegree = (pt.x - autoScroll_.indicatorPosition.x) / presentation_.getLineHeight();
+		const long yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->linePitch();
+//		const long xScrollDegree = (pt.x - autoScroll_.indicatorPosition.x) / presentation_.lineHeight();
 //		const long scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
 		if(yScrollDegree != 0 /*&& abs(yScrollDegree) >= abs(xScrollDegree)*/)
@@ -2293,16 +2274,16 @@ void TextViewer::onUniChar(UINT ch, UINT) {
 #endif /* WM_UNICHAR */
 
 /// @see Window#onVScroll
-void TextViewer::onVScroll(UINT sbCode, UINT, HWND) {
+void TextViewer::onVScroll(::UINT sbCode, ::UINT, ::HWND) {
 	switch(sbCode) {
 	case SB_LINEUP:		// 1 行上
 		scroll(0, -1, true); break;
 	case SB_LINEDOWN:	// 1 行下
 		scroll(0, +1, true); break;
 	case SB_PAGEUP:		// 1 ページ上
-		scroll(0, -static_cast<int>(getNumberOfVisibleLines()), true); break;
+		scroll(0, -static_cast<int>(numberOfVisibleLines()), true); break;
 	case SB_PAGEDOWN:	// 1 ページ下
-		scroll(0, +static_cast<int>(getNumberOfVisibleLines()), true); break;
+		scroll(0, +static_cast<int>(numberOfVisibleLines()), true); break;
 	case SB_TOP:		// 上端
 	case SB_BOTTOM: {	// 下端
 		int top, bottom;
@@ -2370,27 +2351,27 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 	case WM_GETOBJECT:
 		if(lParam == OBJID_CLIENT) {
 			ComPtr<IAccessible> acc;
-			if(SUCCEEDED(getAccessibleObject(*&acc)) && accLib.isAvailable())
-				return accLib.lresultFromObject(IID_IAccessible, wParam, acc.get());
+			if(SUCCEEDED(accessibleObject(*&acc)) && accLib.isAvailable())
+				return accLib.lresultFromObject(::IID_IAccessible, wParam, acc.get());
 		} else if(lParam == OBJID_WINDOW) {
 		}
 		return 0;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 	case WM_GETTEXT: {
 		OutputStringStream s;
-		getDocument().writeToStream(s, NLR_CRLF);
+		document().writeToStream(s, NLR_CRLF);
 		handled = true;
 		return reinterpret_cast<LRESULT>(s.str().c_str());
 	}
 	case WM_GETTEXTLENGTH:
 		// ウィンドウ関係だし改行は CRLF でいいか。NLR_PHYSICAL_DATA だと遅いし
 		handled = true;
-		return getDocument().length(NLR_CRLF);
+		return document().length(NLR_CRLF);
 	case WM_INPUTLANGCHANGE:
 		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
-			if(texteditor::Session* session = getDocument().getSession()) {
-				if(texteditor::InputSequenceCheckers* isc = session->getInputSequenceCheckers())
+			if(texteditor::Session* const session = document().session()) {
+				if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
 					isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
 			}
 		}
@@ -2405,7 +2386,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
 	case WM_SETTEXT:
 		SelectionCreationCommand(*this, SelectionCreationCommand::ALL).execute();
-		getCaret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
+		caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
 		handled = true;
 		return 0L;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -2485,7 +2466,7 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 		return;
 	}
 
-	const length_t lines = getDocument().getNumberOfLines();
+	const length_t lines = document().numberOfLines();
 	if(first >= lines || last < scrollInfo_.firstVisibleLine)
 		return;
 
@@ -2503,9 +2484,9 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 		return;
 	// 下端
 	if(last != numeric_limits<length_t>::max()) {
-		long bottom = rect.top + static_cast<long>(renderer_->getNumberOfSublinesOfLine(first) * renderer_->getLinePitch());
+		long bottom = rect.top + static_cast<long>(renderer_->numberOfSublinesOfLine(first) * renderer_->linePitch());
 		for(length_t line = first + 1; line <= last; ++line) {
-			bottom += static_cast<long>(renderer_->getNumberOfSublinesOfLine(line) * renderer_->getLinePitch());
+			bottom += static_cast<long>(renderer_->numberOfSublinesOfLine(line) * renderer_->linePitch());
 			if(bottom >= rect.bottom)
 				break;
 		}
@@ -2518,10 +2499,10 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 void TextViewer::redrawVerticalRuler() {
 	::RECT r;
 	getClientRect(r);
-	if(verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT)
-		r.right = r.left + verticalRulerDrawer_->getWidth();
+	if(verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT)
+		r.right = r.left + verticalRulerDrawer_->width();
 	else
-		r.left = r.right - verticalRulerDrawer_->getWidth();
+		r.left = r.right - verticalRulerDrawer_->width();
 	invalidateRect(&r, false);
 }
 
@@ -2565,34 +2546,34 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 
 	// 編集領域のスクロール:
 	::RECT clipRect, clientRect;
-	const ::RECT margins = getTextAreaMargins();
+	const ::RECT margins = textAreaMargins();
 	getClientRect(clientRect);
 	clipRect = clientRect;
 	clipRect.top += margins.top;
 	clipRect.bottom -= margins.bottom;
-	if(static_cast<uint>(abs(dy)) >= getNumberOfVisibleLines())
+	if(static_cast<uint>(abs(dy)) >= numberOfVisibleLines())
 		invalidateRect(&clipRect, false);	// スクロール量が 1 ページ以上であれば全体を再描画
 	else if(dx == 0)	// 垂直方向のみ
-		scrollEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+		scrollEx(0, -dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 	else {	// 先行マージンと編集領域を分けて処理する
 		// 編集領域のスクロール
 		clipRect.left += margins.left;
 		clipRect.right -= margins.right;
-		if(static_cast<uint>(abs(dx)) >= getNumberOfVisibleColumns())
+		if(static_cast<uint>(abs(dx)) >= numberOfVisibleColumns())
 			invalidateRect(&clipRect, false);	// スクロール量が 1 ページ以上であれば全体を再描画
 		else
-			scrollEx(-dx * getScrollRate(true) * renderer_->getAverageCharacterWidth(),
-				-dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+			scrollEx(-dx * scrollRate(true) * renderer_->averageCharacterWidth(),
+				-dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		// 垂直ルーラのスクロール
 		if(dy != 0) {
-			if(verticalRulerDrawer_->getConfiguration().alignment == ALIGN_LEFT) {
+			if(verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) {
 				clipRect.left = clientRect.left;
-				clipRect.right = clipRect.left + verticalRulerDrawer_->getWidth();
+				clipRect.right = clipRect.left + verticalRulerDrawer_->width();
 			} else {
 				clipRect.right = clientRect.right;
-				clipRect.left = clipRect.right - verticalRulerDrawer_->getWidth();
+				clipRect.left = clipRect.right - verticalRulerDrawer_->width();
 			}
-			scrollEx(0, -dy * getScrollRate(false) * renderer_->getLinePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+			scrollEx(0, -dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		}
 	}
 
@@ -2632,7 +2613,7 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
 void TextViewer::scrollTo(length_t line, bool redraw) {
 	// TODO: not implemented.
 	assertValidAsWindow();
-	if(line >= getDocument().getNumberOfLines())
+	if(line >= document().numberOfLines())
 		throw BadPositionException();
 	scrollInfo_.firstVisibleLine = line;
 	scrollInfo_.firstVisibleSubline = 0;
@@ -2643,7 +2624,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 		// TODO: this code can be more faster.
 		visualLine = 0;
 		for(length_t i = 0; i < line; ++i)
-			visualLine += renderer_->getNumberOfSublinesOfLine(i);
+			visualLine += renderer_->numberOfSublinesOfLine(i);
 	}
 	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, true, true);
 }
@@ -2651,7 +2632,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 /// @see ICaretStateListener#selectionShapeChanged
 void TextViewer::selectionShapeChanged(const Caret& self) {
 	if(!isFrozen() && !self.isSelectionEmpty())
-		redrawLines(self.getTopPoint().getLineNumber(), self.getBottomPoint().getLineNumber());
+		redrawLines(self.beginning().lineNumber(), self.end().lineNumber());
 }
 
 /**
@@ -2755,6 +2736,24 @@ HRESULT TextViewer::startTextServices() {
 #endif /* !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK */
 
 /**
+ * Returns the margins of text area.
+ * @return the rectangle whose members correspond to each margins
+ */
+::RECT TextViewer::textAreaMargins() const throw() {
+	::RECT margins = {0, 0, 0, 0};
+	((verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->width();
+	Alignment alignment = configuration_.alignment;
+	if(alignment != ALIGN_LEFT && alignment != ALIGN_RIGHT)
+		alignment = (configuration_.orientation == LEFT_TO_RIGHT) ? ALIGN_LEFT : ALIGN_RIGHT;
+	if(alignment == ALIGN_LEFT)
+		margins.left += configuration_.leadingMargin;
+	else if(alignment == ALIGN_RIGHT)
+		margins.right += configuration_.leadingMargin;
+	margins.top += configuration_.topMargin;
+	return margins;
+}
+
+/**
  * Revokes the frozen state of the viewer.
  * @param forAllClones true to revoke also all clones of the viewer
  * @see #freeze, #isFrozen
@@ -2765,7 +2764,7 @@ void TextViewer::unfreeze(bool forAllClones /* = true */) {
 		if(freezeInfo_.count > 0 && --freezeInfo_.count == 0)
 			internalUnfreeze();
 	} else {
-		for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()), e(presentation_.getLastTextViewer()); i != e; ++i) {
+		for(Presentation::TextViewerIterator i(presentation_.firstTextViewer()), e(presentation_.lastTextViewer()); i != e; ++i) {
 			if((*i)->freezeInfo_.count > 0 && --(*i)->freezeInfo_.count == 0)
 				(*i)->internalUnfreeze();
 		}
@@ -2777,17 +2776,17 @@ void TextViewer::updateCaretPosition() {
 	if(!hasFocus() || isFrozen())
 		return;
 
-	::POINT pt = getClientXYForCharacter(getCaret(), true, LineLayout::LEADING);
-	const ::RECT margins = getTextAreaMargins();
+	::POINT pt = clientXYForCharacter(caret(), true, LineLayout::LEADING);
+	const ::RECT margins = textAreaMargins();
 	::RECT textArea;
 	getClientRect(textArea);
 	textArea.left += margins.left; textArea.top += margins.top;
 	textArea.right -= margins.right - 1; textArea.bottom -= margins.bottom;
 
 	if(!toBoolean(::PtInRect(&textArea, pt)))	// "hide" the caret
-		pt.y = -renderer_->getLinePitch();
+		pt.y = -renderer_->linePitch();
 	else if(caretShape_.orientation == RIGHT_TO_LEFT
-			|| renderer_->getLineLayout(caret_->getLineNumber()).getBidiEmbeddingLevel(caret_->getColumnNumber()) % 2 == 1)
+			|| renderer_->lineLayout(caret().lineNumber()).bidiEmbeddingLevel(caret().columnNumber()) % 2 == 1)
 		pt.x -= caretShape_.width;
 	setCaretPosition(pt);
 	updateIMECompositionWindowPosition();
@@ -2802,13 +2801,13 @@ void TextViewer::updateIMECompositionWindowPosition() {
 		// composition window placement
 		::COMPOSITIONFORM cf;
 		getClientRect(cf.rcArea);
-		::RECT margins = getTextAreaMargins();
+		::RECT margins = textAreaMargins();
 		cf.rcArea.left += margins.left;
 		cf.rcArea.top += margins.top;
 		cf.rcArea.right -= margins.right;
 		cf.rcArea.bottom -= margins.bottom;
 		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = getClientXYForCharacter(caret_->getTopPoint(), false, LineLayout::LEADING);
+		cf.ptCurrentPos = clientXYForCharacter(caret().beginning(), false, LineLayout::LEADING);
 		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? cf.rcArea.top : cf.rcArea.bottom;
 		else
@@ -2819,7 +2818,7 @@ void TextViewer::updateIMECompositionWindowPosition() {
 
 		// composition font
 		::LOGFONTW font;
-		::GetObjectW(renderer_->getFont(), sizeof(::LOGFONTW), &font);
+		::GetObjectW(renderer_->font(), sizeof(::LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
 		
 		::ImmReleaseContext(getHandle(), imc);
@@ -3033,7 +3032,8 @@ void TextViewerAccessibleProxy::dispose() {
 }
 
 /// @see Document#IListener#documentAboutToBeChanged
-void TextViewerAccessibleProxy::documentAboutToBeChanged(const Document&) {
+bool TextViewerAccessibleProxy::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+	return true;
 }
 
 /// @see Document#IListener#documentChanged
@@ -3151,7 +3151,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* 
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
 	if(view_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
-	if(view_.getDocument().isReadOnly())
+	if(view_.document().isReadOnly())
 		pvarState->lVal |= STATE_SYSTEM_READONLY;
 	return S_OK;
 }
@@ -3163,7 +3163,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* psz
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	OutputStringStream s;
-	view_.getDocument().writeToStream(s);
+	view_.document().writeToStream(s);
 	*pszValue = ::SysAllocString(s.str().c_str());
 	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
 }
@@ -3179,9 +3179,9 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 	VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	else if(view_.getDocument().isReadOnly())
+	else if(view_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	view_.getCaret().replaceSelection(safeBSTR(szValue));
+	view_.caret().replaceSelection(safeBSTR(szValue));
 	return S_OK;
 }
 
@@ -3192,7 +3192,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 // TextViewer.Renderer //////////////////////////////////////////////////////
 
 /// Constructor.
-TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.getPresentation(), true), viewer_(viewer) {
+TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), true), viewer_(viewer) {
 #if 1
 	// for test
 	setSpecialCharacterRenderer(new DefaultSpecialCharacterRenderer, true);
@@ -3203,26 +3203,26 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.getPres
 TextViewer::Renderer::Renderer(const Renderer& rhs, TextViewer& viewer) : TextRenderer(rhs), viewer_(viewer) {
 }
 
-/// @see layout#FontSelector#doGetDeviceContext
-auto_ptr<DC> TextViewer::Renderer::doGetDeviceContext() const {
+/// @see layout#FontSelector#getDeviceContext
+auto_ptr<DC> TextViewer::Renderer::getDeviceContext() const {
 	return auto_ptr<DC>(viewer_.isWindow() ? new ClientDC(const_cast<TextViewer&>(viewer_).getDC()) : new ScreenDC());
 }
 
 /// @see layout#ILayoutInformationProvider#getLayoutSettings
 const LayoutSettings& TextViewer::Renderer::getLayoutSettings() const throw() {
-	return viewer_.getConfiguration();
+	return viewer_.configuration();
 }
 
 /// @see layout#ILayoutInformationProvider#getWidth
 int TextViewer::Renderer::getWidth() const throw() {
-	const LineWrapConfiguration& lwc = viewer_.getConfiguration().lineWrap;
+	const LineWrapConfiguration& lwc = viewer_.configuration().lineWrap;
 	if(!lwc.wraps()) {
 		MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, si);
 		si.fMask = SIF_RANGE;
 		viewer_.getScrollInformation(SB_HORZ, si);
-		return (si.nMax + 1) * viewer_.getTextRenderer().getAverageCharacterWidth();
+		return (si.nMax + 1) * viewer_.textRenderer().averageCharacterWidth();
 	} else if(lwc.wrapsAtWindowEdge()) {
-		::RECT rc, margins = viewer_.getTextAreaMargins();
+		::RECT rc, margins = viewer_.textAreaMargins();
 		viewer_.getClientRect(rc);
 		return rc.right - rc.left - margins.left - margins.right;	// $friendly-access
 	} else
@@ -3231,18 +3231,18 @@ int TextViewer::Renderer::getWidth() const throw() {
 
 /// Rewraps the visual lines at the window's edge.
 void TextViewer::Renderer::rewrapAtWindowEdge() {
-	if(viewer_.getConfiguration().lineWrap.wrapsAtWindowEdge()) {
+	if(viewer_.configuration().lineWrap.wrapsAtWindowEdge()) {
 		Rect clientRect;
 		viewer_.getClientRect(clientRect);
-		::RECT margins = viewer_.getTextAreaMargins();
+		::RECT margins = viewer_.textAreaMargins();
 		const int newWidth = clientRect.getWidth() - margins.left - margins.right;
-		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ) {
+		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ) {
 			const LineLayout& layout = **i;
 			++i;	// invalidate() may break iterator
-			if(layout.getNumberOfSublines() != 1
-					|| viewer_.getConfiguration().justifiesLines || layout.getLongestSublineWidth() > newWidth)
+			if(layout.numberOfSublines() != 1
+					|| viewer_.configuration().justifiesLines || layout.longestSublineWidth() > newWidth)
 //				layout.rewrap();
-				invalidate(layout.getLineNumber(), layout.getLineNumber() + 1);
+				invalidate(layout.lineNumber(), layout.lineNumber() + 1);
 		}
 	}
 }
@@ -3326,7 +3326,7 @@ TextViewer::VerticalRulerDrawer::VerticalRulerDrawer(TextViewer& viewer, bool en
 /// Returns the maximum number of digits of line numbers.
 uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const throw() {
 	uint n = 1;
-	length_t lines = viewer_.getDocument().getNumberOfLines() + configuration_.lineNumbers.startValue - 1;
+	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
 	while(lines >= 10) {
 		lines /= 10;
 		++n;
@@ -3395,14 +3395,14 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 	if(bars == SB_HORZ || bars == SB_BOTH) {
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
-		const Alignment alignment = viewer.getConfiguration().alignment;
+		const Alignment alignment = viewer.configuration().alignment;
 		const ulong columns =
-			(!viewer.getConfiguration().lineWrap.wrapsAtWindowEdge()) ?
-				viewer.getTextRenderer().getLongestLineWidth() / viewer.getTextRenderer().getAverageCharacterWidth() : 0;
+			(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ?
+				viewer.textRenderer().longestLineWidth() / viewer.textRenderer().averageCharacterWidth() : 0;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
 //		assert(horizontal.rate != 0);
 		const int oldMaximum = horizontal.maximum;
-		horizontal.maximum = max(static_cast<int>(columns/* / horizontal.rate*/), static_cast<int>(viewer.getNumberOfVisibleColumns() - 1));
+		horizontal.maximum = max(static_cast<int>(columns/* / horizontal.rate*/), static_cast<int>(viewer.numberOfVisibleColumns() - 1));
 		if(alignment == ALIGN_RIGHT)
 			horizontal.position += horizontal.maximum - oldMaximum;
 		else if(alignment == ALIGN_CENTER)
@@ -3410,8 +3410,8 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 			horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
 		horizontal.position = max(horizontal.position, 0);
 		if(pageSizeChanged) {
-			const UINT oldPageSize = horizontal.pageSize;
-			horizontal.pageSize = static_cast<UINT>(viewer.getNumberOfVisibleColumns());
+			const ::UINT oldPageSize = horizontal.pageSize;
+			horizontal.pageSize = static_cast<::UINT>(viewer.numberOfVisibleColumns());
 			if(alignment == ALIGN_RIGHT)
 				horizontal.position -= horizontal.pageSize - oldPageSize;
 			else if(alignment == ALIGN_CENTER)
@@ -3422,21 +3422,21 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 	}
 	// 垂直方向
 	if(bars == SB_VERT || bars == SB_BOTH) {
-		const length_t lines = viewer.getTextRenderer().getNumberOfVisualLines();
+		const length_t lines = viewer.textRenderer().numberOfVisualLines();
 		assert(lines > 0);
 //		vertical.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
 //		assert(vertical.rate != 0);
-		vertical.maximum = max(static_cast<int>((lines - 1)/* / vertical.rate*/), 0/*static_cast<int>(viewer.getVisibleLineCount() - 1)*/);
+		vertical.maximum = max(static_cast<int>((lines - 1)/* / vertical.rate*/), 0/*static_cast<int>(viewer.numberOfVisibleLines() - 1)*/);
 		if(pageSizeChanged)
-			vertical.pageSize = static_cast<UINT>(viewer.getNumberOfVisibleLines());
+			vertical.pageSize = static_cast<UINT>(viewer.numberOfVisibleLines());
 	}
 }
 
 void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) throw() {
-	vertical.maximum = static_cast<int>(viewer.getTextRenderer().getNumberOfVisualLines());
-	firstVisibleLine = min(firstVisibleLine, viewer.getDocument().getNumberOfLines() - 1);
-	firstVisibleSubline = min(viewer.getTextRenderer().getNumberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
-	vertical.position = static_cast<int>(viewer.getTextRenderer().mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
+	vertical.maximum = static_cast<int>(viewer.textRenderer().numberOfVisualLines());
+	firstVisibleLine = min(firstVisibleLine, viewer.document().numberOfLines() - 1);
+	firstVisibleSubline = min(viewer.textRenderer().numberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
+	vertical.position = static_cast<int>(viewer.textRenderer().mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
 }
 
 
@@ -3452,32 +3452,6 @@ VirtualBox::VirtualBox(const TextViewer& view, const Region& region) throw() : v
 }
 
 /**
- * Returns the range which the box overlaps with in specified visual line.
- * @param line the logical line
- * @param subline the visual subline
- * @param[out] first the start of range
- * @param[out] last the end of range
- * @return true if the box and the visual line overlap
- */
-bool VirtualBox::getOverlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw() {
-	assert(view_.isWindow());
-	const Point& top = beginning();
-	const Point& bottom = end();
-	if(line < top.line || (line == top.line && subline < top.subline)	// out of the region
-			|| line > bottom.line || (line == bottom.line && subline > bottom.subline))
-		return false;
-	else {
-		const TextRenderer& renderer = view_.getTextRenderer();
-		const LineLayout& layout = renderer.getLineLayout(line);
-		first = layout.getOffset(points_[0].x - renderer.getLineIndent(line, 0), static_cast<int>(renderer.getLinePitch() * subline));
-		last = layout.getOffset(points_[1].x - renderer.getLineIndent(line, 0), static_cast<int>(renderer.getLinePitch() * subline));
-		if(first > last)
-			swap(first, last);
-		return first != last;
-	}
-}
-
-/**
  * Returns if the specified point is on the virtual box.
  * @param pt the client coordinates of the point
  * @return true if the point is on the virtual box
@@ -3486,7 +3460,7 @@ bool VirtualBox::isPointOver(const ::POINT& pt) const throw() {
 	assert(view_.isWindow());
 	if(view_.hitTest(pt) != TextViewer::TEXT_AREA)	// ignore if not in text area
 		return false;
-	const int leftMargin = view_.getTextAreaMargins().left;
+	const int leftMargin = view_.textAreaMargins().left;
 	if(pt.x < left() + leftMargin || pt.x >= right() + leftMargin)	// about x-coordinate
 		return false;
 
@@ -3504,19 +3478,45 @@ bool VirtualBox::isPointOver(const ::POINT& pt) const throw() {
 }
 
 /**
+ * Returns the range which the box overlaps with in specified visual line.
+ * @param line the logical line
+ * @param subline the visual subline
+ * @param[out] first the start of range
+ * @param[out] last the end of range
+ * @return true if the box and the visual line overlap
+ */
+bool VirtualBox::overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw() {
+	assert(view_.isWindow());
+	const Point& top = beginning();
+	const Point& bottom = end();
+	if(line < top.line || (line == top.line && subline < top.subline)	// out of the region
+			|| line > bottom.line || (line == bottom.line && subline > bottom.subline))
+		return false;
+	else {
+		const TextRenderer& renderer = view_.textRenderer();
+		const LineLayout& layout = renderer.lineLayout(line);
+		first = layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline));
+		last = layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline));
+		if(first > last)
+			swap(first, last);
+		return first != last;
+	}
+}
+
+/**
  * Updates the rectangle of the virtual box.
  * @param region the region consists the rectangle
  */
 void VirtualBox::update(const Region& region) throw() {
-	const TextRenderer& r = view_.getTextRenderer();
-	const LineLayout* layout = &r.getLineLayout(points_[0].line = region.first.line);
-	::POINT location = layout->getLocation(region.first.column);
-	points_[0].x = location.x + r.getLineIndent(points_[0].line, 0);
-	points_[0].subline = location.y / r.getLinePitch();
-	layout = &r.getLineLayout(points_[1].line = region.second.line);
-	location = layout->getLocation(region.second.column);
-	points_[1].x = location.x + r.getLineIndent(points_[1].line, 0);
-	points_[1].subline = location.y / r.getLinePitch();
+	const TextRenderer& r = view_.textRenderer();
+	const LineLayout* layout = &r.lineLayout(points_[0].line = region.first.line);
+	::POINT location = layout->location(region.first.column);
+	points_[0].x = location.x + r.lineIndent(points_[0].line, 0);
+	points_[0].subline = location.y / r.linePitch();
+	layout = &r.lineLayout(points_[1].line = region.second.line);
+	location = layout->location(region.second.column);
+	points_[1].x = location.x + r.lineIndent(points_[1].line, 0);
+	points_[1].subline = location.y / r.linePitch();
 }
 
 
@@ -3596,7 +3596,7 @@ void DefaultMouseInputStrategy::beginTimer(UINT interval) {
 /// @see IMouseInputStrategy#captureChanged
 void DefaultMouseInputStrategy::captureChanged() {
 	endTimer();
-	viewer_->getCaret().restoreSelectionMode();
+	viewer_->caret().restoreSelectionMode();
 	leftButtonPressed_ = false;
 }
 
@@ -3607,8 +3607,8 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly()
-			|| !viewer_->allowsMouseInput() || viewer_->getConfiguration().alignment != ALIGN_LEFT)
+	if(!oleDragAndDropEnabled_ || viewer_->document().isReadOnly()
+			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
 		return S_OK;
 
 	// validate the dragged data if can drop
@@ -3647,18 +3647,18 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DW
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!oleDragAndDropEnabled_ || viewer_->getDocument().isReadOnly() || !viewer_->allowsMouseInput())
+	if(!oleDragAndDropEnabled_ || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
 
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
-	const Position p(viewer_->getCharacterForClientXY(caretPoint, true));
-	viewer_->setCaretPosition(viewer_->getClientXYForCharacter(p, true, LineLayout::LEADING));
+	const Position p(viewer_->characterForClientXY(caretPoint, true));
+	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
 
 	// drop rectangle text into bidirectional line is not supported...
-	const length_t lines = min(viewer_->getDocument().getNumberOfLines(), p.line + numberOfDraggedRectangleLines_);
+	const length_t lines = min(viewer_->document().numberOfLines(), p.line + numberOfDraggedRectangleLines_);
 	for(length_t line = p.line; line < lines; ++line) {
-		if(viewer_->getTextRenderer().getLineLayout(line).isBidirectional()) {
+		if(viewer_->textRenderer().lineLayout(line).isBidirectional()) {
 			*effect = DROPEFFECT_NONE;
 			return S_OK;
 		}
@@ -3678,17 +3678,17 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	Document& document = viewer_->getDocument();
+	Document& document = viewer_->document();
 	if(!oleDragAndDropEnabled_ || document.isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
-	Caret& caret = viewer_->getCaret();
+	Caret& ca = viewer_->caret();
 
 	if(!leftButtonPressed_) {	// dropped from the other widget
 		::POINT caretPoint = {pt.x, pt.y};
 		endTimer();
 		viewer_->screenToClient(caretPoint);
-		const Position pos = viewer_->getCharacterForClientXY(caretPoint, true);
-		caret.moveTo(pos);
+		const Position pos(viewer_->characterForClientXY(caretPoint, true));
+		ca.moveTo(pos);
 
 		bool rectangle;
 		auto_ptr<String> text = getTextData(*data, &rectangle);
@@ -3697,66 +3697,66 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			viewer_->freeze();
 			if(rectangle) {
 				document.beginSequentialEdit();
-				caret.insertBox(*text);
+				ca.insertBox(*text);
 				document.endSequentialEdit();
-				caret.beginBoxSelection();
+				ca.beginBoxSelection();
 			} else
-				caret.insert(*text);
-			caret.select(pos, caret);
+				ca.insert(*text);
+			ca.select(pos, ca);
 			viewer_->unfreeze();
 			*effect = DROPEFFECT_COPY;
 		}
 	} else {	// drop from the same widget
-		String text = caret.getSelectionText(NLR_PHYSICAL_DATA);
+		String text = ca.selectionText(NLR_PHYSICAL_DATA);
 		::POINT caretPoint = {pt.x, pt.y};
 
 		viewer_->screenToClient(caretPoint);
-		const Position pos = viewer_->getCharacterForClientXY(caretPoint, true);
+		const Position pos(viewer_->characterForClientXY(caretPoint, true));
 
 		// can't drop into the selection
-		if(caret.isPointOverSelection(caretPoint)) {
-			caret.moveTo(pos);
+		if(ca.isPointOverSelection(caretPoint)) {
+			ca.moveTo(pos);
 			oleDragging_ = false;
 			return S_OK;
 		}
 
-		const bool rectangle = caret.isSelectionRectangle();
+		const bool rectangle = ca.isSelectionRectangle();
 		document.beginSequentialEdit();
 		viewer_->freeze();
 		if(toBoolean(keyState & MK_CONTROL)) {	// copy
-//			viewer_->redrawLines(caret.getTopPoint().getLineNumber(), caret.getBottomPoint().getLineNumber());
-			caret.enableAutoShow(false);
-			caret.moveTo(pos);
+//			viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
+			ca.enableAutoShow(false);
+			ca.moveTo(pos);
 			if(rectangle)	// copy as a rectangle
-				caret.insertBox(text);
+				ca.insertBox(text);
 			else	// copy as linear
-				caret.insert(text);
-			caret.enableAutoShow(true);
-			caret.select(pos, caret);
+				ca.insert(text);
+			ca.enableAutoShow(true);
+			ca.select(pos, ca);
 			*effect = DROPEFFECT_COPY;
 		} else if(rectangle) {	// move as a rectangle
-			text::Point p(document);
+			kernel::Point p(document);
 			p.moveTo(pos);
-			caret.eraseSelection();
+			ca.eraseSelection();
 			p.adaptToDocument(false);
-			caret.enableAutoShow(false);
-			caret.extendSelection(p);
-			caret.insertBox(text);
-			caret.enableAutoShow(true);
-			caret.select(p, caret);
+			ca.enableAutoShow(false);
+			ca.extendSelection(p);
+			ca.insertBox(text);
+			ca.enableAutoShow(true);
+			ca.select(p, ca);
 			*effect = DROPEFFECT_MOVE;
 		} else {	// move as linear
 			VisualPoint activePointOrg(*viewer_);
-			const Position anchorPointOrg = caret.getAnchor();
-			activePointOrg.moveTo(caret);
-			caret.enableAutoShow(false);
-			caret.moveTo(pos);
+			const Position anchorPointOrg = ca.anchor();
+			activePointOrg.moveTo(ca);
+			ca.enableAutoShow(false);
+			ca.moveTo(pos);
 			activePointOrg.erase(anchorPointOrg);
-			const Position temp = caret;
-			caret.endBoxSelection();
-			caret.insert(text);
-			caret.enableAutoShow(true);
-			caret.select(temp, caret);
+			const Position temp = ca;
+			ca.endBoxSelection();
+			ca.insert(text);
+			ca.enableAutoShow(true);
+			ca.select(temp, ca);
 			*effect = DROPEFFECT_MOVE;
 		}
 		viewer_->unfreeze();
@@ -3780,18 +3780,18 @@ void DefaultMouseInputStrategy::endTimer() {
 /// Extends the selection to the current cursor position.
 void DefaultMouseInputStrategy::extendSelection() {
 	::RECT rc;
-	const ::RECT margins = viewer_->getTextAreaMargins();
+	const ::RECT margins = viewer_->textAreaMargins();
 	viewer_->getClientRect(rc);
 	::POINT p = viewer_->getCursorPosition();
-	Caret& caret = viewer_->getCaret();
-	if(caret.getSelectionMode() == Caret::LINE || caret.getSelectionMode() == Caret::WORD) {
+	Caret& caret = viewer_->caret();
+	if(caret.selectionMode() == Caret::LINE || caret.selectionMode() == Caret::WORD) {
 		const TextViewer::HitTestResult htr = viewer_->hitTest(p);
-		if(caret.getSelectionMode() == Caret::LINE && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
+		if(caret.selectionMode() == Caret::LINE && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
 			caret.restoreSelectionMode();
 	}
 	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
 	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
-	const Position dest = viewer_->getCharacterForClientXY(p, true);
+	const Position dest(viewer_->characterForClientXY(p, true));
 	caret.extendSelection(dest);
 }
 
@@ -3804,7 +3804,7 @@ STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
 void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position, uint keyState) {
 	bool boxDragging = false;
 //	AutoBuffer<Char> uri;
-	Caret& caret = viewer_->getCaret();
+	Caret& caret = viewer_->caret();
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 
 	closeCompletionProposalsPopup(*viewer_);
@@ -3816,7 +3816,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 		if(toBoolean(keyState & MK_CONTROL))	// 全行選択
 			texteditor::commands::SelectionCreationCommand(*viewer_, texteditor::commands::SelectionCreationCommand::ALL).execute();
 		else {
-			caret.moveTo(viewer_->getCharacterForClientXY(position, false));
+			caret.moveTo(viewer_->characterForClientXY(position, false));
 			caret.beginLineSelection();
 		}
 		viewer_->setCapture();
@@ -3837,14 +3837,14 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	// 矩形選択開始
 	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
 		caret.beginBoxSelection();
-		caret.moveTo(viewer_->getCharacterForClientXY(position, true));
+		caret.moveTo(viewer_->characterForClientXY(position, true));
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
 	// その他。線形選択開始、キャレット移動
 	else {
-		const Position p = viewer_->getCharacterForClientXY(position, true);
+		const Position p = viewer_->characterForClientXY(position, true);
 		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
 			caret.moveTo(p);
 			caret.beginWordSelection();
@@ -3869,17 +3869,16 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position, uint) {
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
 		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
-		viewer_->getCaret().moveTo(viewer_->getCharacterForClientXY(position, true));
+		viewer_->caret().moveTo(viewer_->characterForClientXY(position, true));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
 	}
 	endTimer();
 	if(leftButtonPressed_) {
 		leftButtonPressed_ = false;
 		// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
-		viewer_->getCaret().show();
+		viewer_->caret().show();
 	}
 	viewer_->releaseCapture();
-
 }
 
 /// @see IMouseInputStrategy#install
@@ -3902,7 +3901,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->getCursorPosition());
 			if(htr == TextViewer::LEADING_MARGIN || htr == TextViewer::TOP_MARGIN || htr == TextViewer::TEXT_AREA) {
 //			leftDownMode_ = LDM_SELECTION_WORD;
-				viewer_->getCaret().beginWordSelection();
+				viewer_->caret().beginWordSelection();
 				viewer_->setCapture();
 				beginTimer(SELECTION_EXPANSION_INTERVAL);
 			}
@@ -3920,7 +3919,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 /// @see IMouseInputStrategy#mouseMoved
 void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE dragging starts?
-		if(!oleDragAndDropEnabled_ || viewer_->getCaret().isSelectionEmpty())
+		if(!oleDragAndDropEnabled_ || viewer_->caret().isSelectionEmpty())
 			lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
 		else {
 			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
@@ -3929,8 +3928,8 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 					|| (position.x < lastLeftButtonPressedPoint_.x - cxDragBox / 2)
 					|| (position.y > lastLeftButtonPressedPoint_.y + cyDragBox / 2)
 					|| (position.y < lastLeftButtonPressedPoint_.y - cyDragBox / 2)) {
-				const bool box = viewer_->getCaret().isSelectionRectangle();
-				const String selection = viewer_->getCaret().getSelectionText(NLR_CRLF);
+				const bool box = viewer_->caret().isSelectionRectangle();
+				const String selection(viewer_->caret().selectionText(NLR_CRLF));
 				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
 
 				if(box) {
@@ -3963,7 +3962,7 @@ void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, u
 		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
 			lines = 3;
 		if(lines == WHEEL_PAGESCROLL)
-			lines = static_cast<::UINT>(viewer_->getNumberOfVisibleLines());
+			lines = static_cast<::UINT>(viewer_->numberOfVisibleLines());
 		delta *= static_cast<short>(lines);
 		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
 	}
@@ -3985,7 +3984,7 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
 		::SetCursor(::LoadCursor(0, IDC_ARROW));
 	// on a draggable text selection?
-	else if(oleDragAndDropEnabled_ && !viewer_->getCaret().isSelectionEmpty() && viewer_->getCaret().isPointOverSelection(position))
+	else if(oleDragAndDropEnabled_ && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
 		::SetCursor(::LoadCursor(0, IDC_ARROW));
 	else
 		return false;
@@ -4002,12 +4001,12 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 		const ::POINT pt = self.viewer_->getCursorPosition();
 		::RECT clientRect;
 		self.viewer_->getClientRect(clientRect);
-		::RECT margins = self.viewer_->getTextAreaMargins();
-		const TextRenderer& renderer = self.viewer_->getTextRenderer();
-		margins.left = max<long>(renderer.getAverageCharacterWidth(), margins.left);
-		margins.top = max<long>(renderer.getLinePitch() / 2, margins.top);
-		margins.right = max<long>(renderer.getAverageCharacterWidth(), margins.right);
-		margins.bottom = max<long>(renderer.getLinePitch() / 2, margins.bottom);
+		::RECT margins = self.viewer_->textAreaMargins();
+		const TextRenderer& renderer = self.viewer_->textRenderer();
+		margins.left = max<long>(renderer.averageCharacterWidth(), margins.left);
+		margins.top = max<long>(renderer.linePitch() / 2, margins.top);
+		margins.right = max<long>(renderer.averageCharacterWidth(), margins.right);
+		margins.bottom = max<long>(renderer.linePitch() / 2, margins.bottom);
 
 		// 以下のスクロール量には根拠は無い
 		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
@@ -4015,23 +4014,23 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
 			self.viewer_->scroll(0, +1, true);
 		else if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
-			self.viewer_->scroll(-3/*viewer_->getVisibleColumnCount()*/, 0, true);
+			self.viewer_->scroll(-3/*viewer_->numberOfVisibleColumns()*/, 0, true);
 		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
-			self.viewer_->scroll(+3/*viewer_->getVisibleColumnCount()*/, 0, true);
+			self.viewer_->scroll(+3/*viewer_->numberOfVisibleColumns()*/, 0, true);
 	} else if(self.leftButtonPressed_) {	// scroll automatically during extending the selection
 		const ::POINT pt = self.viewer_->getCursorPosition();
 		::RECT rc;
-		const ::RECT margins = self.viewer_->getTextAreaMargins();
+		const ::RECT margins = self.viewer_->textAreaMargins();
 		self.viewer_->getClientRect(rc);
 		// 以下のスクロール量には根拠は無い
 		if(pt.y < rc.top + margins.top)
-			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->getTextRenderer().getLinePitch() - 1, true);
+			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->textRenderer().linePitch() - 1, true);
 		else if(pt.y >= rc.bottom - margins.bottom)
-			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->getTextRenderer().getLinePitch() + 1, true);
+			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->textRenderer().linePitch() + 1, true);
 		else if(pt.x < rc.left + margins.left)
-			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->getTextRenderer().getAverageCharacterWidth() - 1, 0, true);
+			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->textRenderer().averageCharacterWidth() - 1, 0, true);
 		else if(pt.x >= rc.right - margins.right)
-			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->getTextRenderer().getAverageCharacterWidth() + 1, 0, true);
+			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->textRenderer().averageCharacterWidth() + 1, 0, true);
 		self.extendSelection();
 	}
 }
@@ -4053,14 +4052,14 @@ void DefaultMouseInputStrategy::uninstall() {
 CaretShapeUpdater::CaretShapeUpdater(TextViewer& viewer) throw() : viewer_(viewer) {
 }
 
-/// Returns the text viewer.
-TextViewer& CaretShapeUpdater::getTextViewer() throw() {
-	return viewer_;
-}
-
 /// Notifies the text viewer to update the shape of the caret.
 void CaretShapeUpdater::update() throw() {
 	viewer_.recreateCaret();	// $friendly-access
+}
+
+/// Returns the text viewer.
+TextViewer& CaretShapeUpdater::textViewer() throw() {
+	return viewer_;
 }
 
 
@@ -4076,13 +4075,13 @@ void DefaultCaretShaper::getCaretShape(auto_ptr<Bitmap>&, ::SIZE& solidSize, Ori
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	solidSize.cx = width;
-	solidSize.cy = viewer_->getTextRenderer().getLineHeight();
+	solidSize.cy = viewer_->textRenderer().lineHeight();
 	orientation = LEFT_TO_RIGHT;	// no matter
 }
 
 /// @see ICaretShapeProvider#install
 void DefaultCaretShaper::install(CaretShapeUpdater& updater) throw() {
-	viewer_ = &updater.getTextViewer();
+	viewer_ = &updater.textViewer();
 }
 
 /// @see ICaretShapeProvider#uninstall
@@ -4200,19 +4199,19 @@ void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 
 /// @see ICaretShapeProvider#getCaretShape
 void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE& solidSize, Orientation& orientation) throw() {
-	const Caret& caret = updater_->getTextViewer().getCaret();
+	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && caret.isSelectionEmpty();
 
 	if(!overtype) {
 		solidSize.cx = bold_ ? 2 : 1;	// 本当はシステムの設定値を使わなければならない
-		solidSize.cy = updater_->getTextViewer().getTextRenderer().getLineHeight();
+		solidSize.cy = updater_->textViewer().textRenderer().lineHeight();
 	} else	// 上書きモードのときはキャレットを次のグリフと同じ幅にする
-		getCurrentCharacterSize(updater_->getTextViewer(), solidSize);
+		getCurrentCharacterSize(updater_->textViewer(), solidSize);
 	orientation = LEFT_TO_RIGHT;
 
-	HIMC imc = ::ImmGetContext(updater_->getTextViewer().getHandle());
+	::HIMC imc = ::ImmGetContext(updater_->textViewer().getHandle());
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
-	::ImmReleaseContext(updater_->getTextViewer().getHandle(), imc);
+	::ImmReleaseContext(updater_->textViewer().getHandle(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const ::RGBQUAD red = {0xFF, 0xFF, 0x80, 0x00};
 		bitmap.reset(new Bitmap);
@@ -4293,7 +4292,7 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(&caret), color_(color) {
 	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
-	caret.getTextViewer().getPresentation().addLineColorDirector(temp);
+	caret.textViewer().presentation().addLineColorDirector(temp);
 	caret.addListener(*this);
 	caret.addStateListener(*this);
 	caret.addLifeCycleListener(*this);
@@ -4304,24 +4303,24 @@ CurrentLineHighlighter::~CurrentLineHighlighter() throw() {
 	if(caret_ != 0) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
-		caret_->getTextViewer().getPresentation().removeLineColorDirector(*this);
+		caret_->textViewer().presentation().removeLineColorDirector(*this);
 	}
 }
 
 /// @see ICaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
-		if(!caret_->isSelectionEmpty() || caret_->getLineNumber() != oldRegion.first.line)
-			caret_->getTextViewer().redrawLine(oldRegion.first.line, false);
+		if(!caret_->isSelectionEmpty() || caret_->lineNumber() != oldRegion.first.line)
+			caret_->textViewer().redrawLine(oldRegion.first.line, false);
 	}
 	if(caret_->isSelectionEmpty()) {
-		if(!oldRegion.isEmpty() || caret_->getLineNumber() != oldRegion.first.line)
-			caret_->getTextViewer().redrawLine(caret_->getLineNumber(), false);
+		if(!oldRegion.isEmpty() || caret_->lineNumber() != oldRegion.first.line)
+			caret_->textViewer().redrawLine(caret_->lineNumber(), false);
 	}
 }
 
 /// Returns the color.
-const Colors& CurrentLineHighlighter::getColor() const throw() {
+const Colors& CurrentLineHighlighter::color() const throw() {
 	return color_;
 }
 
@@ -4342,7 +4341,7 @@ void CurrentLineHighlighter::pointDestroyed() {
 
 /// @see ILineColorDirector#queryLineColor
 ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t line, Colors& color) const {
-	if(caret_ != 0 && caret_->isSelectionEmpty() && caret_->getLineNumber() == line && caret_->getTextViewer().hasFocus()) {
+	if(caret_ != 0 && caret_->isSelectionEmpty() && caret_->lineNumber() == line && caret_->textViewer().hasFocus()) {
 		color = color_;
 		return LINE_COLOR_PRIORITY;
 	} else {
@@ -4380,8 +4379,8 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 	static const length_t MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
 
 	DocumentPartition partition;
-	document.getPartitioner().getPartition(position, partition);
-	const IdentifierSyntax& syntax = document.getContentTypeInformation().getIdentifierSyntax(partition.contentType);
+	document.partitioner().partition(position, partition);
+	const IdentifierSyntax& syntax = document.contentTypeInformation().getIdentifierSyntax(partition.contentType);
 	length_t start = position.column, end = position.column;
 
 	// find the start of the identifier
@@ -4405,7 +4404,7 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
 	// find the end of the identifier
 	if(endColumn != 0) {
 		DocumentCharacterIterator i(document, Region(position,
-			min(partition.region.end(), Position(position.line, document.getLineLength(position.line)))), position);
+			min(partition.region.end(), Position(position.line, document.lineLength(position.line)))), position);
 		while(i.hasNext()) {
 			if(!syntax.isIdentifierContinueCharacter(i.current())) {
 				end = i.tell().column;
@@ -4437,9 +4436,8 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 		::POINT cursorPoint;
 		::GetCursorPos(&cursorPoint);
 		viewer.screenToClient(cursorPoint);
-		const Position cursor = viewer.getCharacterForClientXY(cursorPoint, false);
-
-		if(source::getNearestIdentifier(viewer.getDocument(), cursor,
+		const Position cursor = viewer.characterForClientXY(cursorPoint, false);
+		if(source::getNearestIdentifier(viewer.document(), cursor,
 				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)
 				startPosition->line = cursor.line;
@@ -4471,10 +4469,10 @@ auto_ptr<hyperlink::IHyperlink> hyperlink::URLHyperlinkDetector::detectHyperlink
 /// @see IHyperlinkDetector#detectHyperlinks
 hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const Region& region, size_t& numberOfHyperlinks) const {
 	list<IHyperlink*> eaten;
-	DocumentCharacterIterator i(textViewer_->getDocument(), region);
+	DocumentCharacterIterator i(textViewer_->document(), region);
 	while(i.hasNext()) {
-		const Char* const bol = i.getLine().data();
-		const Char* const e = rules::URIDetector::eatURL(bol + i.tell().column, i.getLine().data() + i.getLine().length(), true);
+		const Char* const bol = i.line().data();
+		const Char* const e = rules::URIDetector::eatURL(bol + i.tell().column, i.line().data() + i.line().length(), true);
 		if(e == bol + i.tell().column)
 			i.next();
 		else {
@@ -4491,8 +4489,9 @@ hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const 
 }
 
 /// @see IDocumentListener#documentAboutToBeChanged
-void hyperlink::URLHyperlinkDetector::documentAboutToBeChanged(const Document& document) {
+bool hyperlink::URLHyperlinkDetector::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
 	// TODO: not implemented.
+	return true;
 }
 
 /// @see IDocumentListener#documentChanged
@@ -4502,12 +4501,12 @@ void hyperlink::URLHyperlinkDetector::documentChanged(const Document& document, 
 
 /// @see IHyperlinkDetector#install
 void hyperlink::URLHyperlinkDetector::install(TextViewer& textViewer) {
-	(textViewer_ = &textViewer)->getDocument().addListener(*this);
+	(textViewer_ = &textViewer)->document().addListener(*this);
 }
 
 /// @see IHyperlinkDetector#uninstall
 void hyperlink::URLHyperlinkDetector::uninstall() {
-	textViewer_->getDocument().removeListener(*this);
+	textViewer_->document().removeListener(*this);
 	textViewer_ = 0;
 }
 

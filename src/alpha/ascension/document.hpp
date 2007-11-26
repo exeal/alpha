@@ -70,10 +70,10 @@ namespace ascension {
 
 		/**
 		 * Representation of a line break. Defines how an interpreter treats line breaks. For
-		 * example, @c Document#getLength method which calculates the length of the document refers
+		 * example, @c Document#length method which calculates the length of the document refers
 		 * this setting. Some methods can select prefer setting to <> its efficiency.
 		 * @see Document#length, Document#lineOffset, Document#writeToStream,
-		 * EditPoint#getText, viewers#Selection#getText
+		 * EditPoint#getText, viewers#Caret#selectionText
 		 */
 		enum NewlineRepresentation {
 			NLR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
@@ -163,7 +163,7 @@ namespace ascension {
 
 		/**
 		 * A document partition.
-		 * @see DocumentPartitioner#getPartition
+		 * @see DocumentPartitioner#partition
 		 */
 		struct DocumentPartition {
 			ContentType contentType;	///< Content type of the partition.
@@ -181,10 +181,10 @@ namespace ascension {
 		class DocumentChange {
 			MANAH_NONCOPYABLE_TAG(DocumentChange);
 		public:
-			/// Returns the deleted region if the modification is deletion, otherwise the region of the inserted text.
-			const Region& getRegion() const throw() {return region_;}
 			/// Returns true if the modification is deletion or insertion.
 			bool isDeletion() const throw() {return deletion_;}
+			/// Returns the deleted region if the modification is deletion, otherwise the region of the inserted text.
+			const Region& region() const throw() {return region_;}
 		private:
 			explicit DocumentChange(bool deletion, const Region& region) throw() : deletion_(deletion), region_(region) {}
 			~DocumentChange() throw() {}
@@ -271,20 +271,20 @@ namespace ascension {
 			bool			adaptsToDocument() const throw();
 			void			adaptToDocument(bool adapt) throw();
 			void			excludeFromRestriction(bool exclude);
-			Document*		getDocument() throw();
-			const Document*	getDocument() const throw();
-			Direction		getGravity() const throw();
-			const Position&	getPosition() const throw();
+			Document*		document() throw();
+			const Document*	document() const throw();
+			Direction		gravity() const throw();
 			bool			isDocumentDisposed() const throw();
 			bool			isExcludedFromRestriction() const throw();
+			const Position&	position() const throw();
 			void			setGravity(Direction gravity) throw();
 			// listeners
 			void	addLifeCycleListener(IPointLifeCycleListener& listener);
 			void	removeLifeCycleListener(IPointLifeCycleListener& listener);
 			// short-circuits
-			length_t	getColumnNumber() const throw();
+			length_t	columnNumber() const throw();
 			ContentType	getContentType() const;
-			length_t	getLineNumber() const throw();
+			length_t	lineNumber() const throw();
 			// operations
 			void	moveTo(const Position& to);
 			void	moveTo(length_t line, length_t column);
@@ -345,7 +345,7 @@ namespace ascension {
 
 		/**
 		 * @c Bookmark manages bookmarks of the document.
-		 * @see Document#getBookmarker, Document#Line#isBookmarked
+		 * @see Document#bookmarker, Document#Line#isBookmarked
 		 */
 		class Bookmarker {
 			MANAH_NONCOPYABLE_TAG(Bookmarker);
@@ -362,6 +362,22 @@ namespace ascension {
 			Document& document_;
 			ascension::internal::Listeners<IBookmarkListener> listeners_;
 			friend class Document;
+		};
+
+		/**
+		 * Provides information about a document input.
+		 * @see Document
+		 */
+		class IDocumentInput {
+		public:
+			/// Destructor.
+			virtual ~IDocumentInput() throw() {}
+			/// Returns the MIBenum value of the encoding of the document input.
+			virtual encoding::MIBenum encoding() const throw() = 0;
+			/// Returns the location of the document input or an empty string.
+			virtual String location() const throw() = 0;
+			/// Returns the default newline of the document.
+			virtual Newline newline() const throw() = 0;
 		};
 
 		/**
@@ -467,16 +483,16 @@ namespace ascension {
 
 		/**
 		 * A document partitioner devides a document into disjoint text partitions.
-		 * @see ContentType, Document, DocumentPartition, Document#getDocumentPartitioner,
-		 * Document#setDocumentPartitioner, NullPartitioner
+		 * @see ContentType, Document, DocumentPartition, Document#partitioner,
+		 * Document#setPartitioner, NullPartitioner
 		 */
 		class DocumentPartitioner {
 		public:
 			virtual			~DocumentPartitioner() throw();
-			void			getPartition(const Position& at, DocumentPartition& partition) const;
-			ContentType		getContentType(const Position& at) const;
-			Document*		getDocument() throw();
-			const Document*	getDocument() const throw();
+			ContentType		contentType(const Position& at) const;
+			Document*		document() throw();
+			const Document*	document() const throw();
+			void			partition(const Position& at, DocumentPartition& partition) const;
 		protected:
 			DocumentPartitioner() throw();
 			void	notifyDocument(const Region& changedRegion);
@@ -529,9 +545,9 @@ namespace ascension {
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
 			// attributes
-			const Document*	getDocument() const throw();
-			const String&	getLine() const throw();
-			const Region&	getRegion() const throw();
+			const Document*	document() const throw();
+			const String&	line() const throw();
+			const Region&	region() const throw();
 			void			setRegion(const Region& newRegion);
 			const Position&	tell() const throw();
 			// operation
@@ -614,6 +630,7 @@ namespace ascension {
 			// attributes
 			Bookmarker&					bookmarker() throw();
 			const Bookmarker&			bookmarker() const throw();
+			IDocumentInput*				input() const throw();
 			bool						isModified() const throw();
 			bool						isReadOnly() const throw();
 			bool						isSavable() const throw();
@@ -621,6 +638,7 @@ namespace ascension {
 			const String*				property(const DocumentPropertyKey& key) const throw();
 			texteditor::Session*		session() throw();
 			const texteditor::Session*	session() const throw();
+			void						setInput(std::auto_ptr<IDocumentInput> newInput) throw();
 			void						setModified(bool modified = true) throw();
 			void						setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
 			void						setProperty(const DocumentPropertyKey& key, const String& property);
@@ -669,7 +687,6 @@ namespace ascension {
 			void		writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
 			// operations
 			bool	checkTimeStamp();
-			bool	renameFile(const WCHAR* newName);
 			bool	sendFile(bool asAttachment, bool showDialog = true);
 
 			// overridables
@@ -688,7 +705,6 @@ namespace ascension {
 #ifdef ASCENSION_WINDOWS
 			static ::UINT	translateSpecialCodePage(::UINT codePage);
 #endif /* ASCENSION_WINDOWS */
-			bool		verifyTimeStamp(bool internal, ::FILETIME& newTimeStamp) throw();
 			// internal::ISessionElement
 			void	setSession(texteditor::Session& session) throw() {session_ = &session;}
 			// internal::IPointCollection<Point>
@@ -715,6 +731,7 @@ namespace ascension {
 			friend class ModificationGuard;
 
 			texteditor::Session* session_;
+			std::auto_ptr<IDocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
@@ -849,7 +866,7 @@ namespace ascension {
 				virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) throw() = 0;
 				friend class FileBinder;
 			};
-
+#if 0
 			/// Interface for objects which are interested in getting informed about progression of file IO.
 			class IFileIOProgressMonitor {
 			public:
@@ -868,7 +885,7 @@ namespace ascension {
 				virtual void release() = 0;
 				friend class Document;
 			};
-
+#endif
 			/// @c std#basic_streambuf implementation of the text file with encoding conversion.
 			class TextFileStreamBuffer : public std::basic_streambuf<ascension::Char> {
 				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
@@ -905,15 +922,9 @@ namespace ascension {
 			};
 
 			/// 
-			class FileBinder : virtual public IDocumentListener, virtual public IDocumentStateListener {
+			class FileBinder : virtual public IDocumentInput,
+				virtual public IDocumentListener, virtual public IDocumentStateListener {
 			public:
-				/// The property key for the encoding of the file-bound document. The property
-				/// value is a numeric value of @c encoding#MIBenum enumeration.
-				static const DocumentPropertyKey ENCODING_PROPERTY;
-				/// The property key for the newline of the file-bound document. The property value
-				/// is a numeric value of @c Newline enumeration.
-				static const DocumentPropertyKey NEWLINE_PROPERTY;
-
 				/// The structure used to represent a file time.
 #ifdef ASCENSION_WINDOWS
 				typedef ::FILETIME Time;
@@ -957,10 +968,8 @@ namespace ascension {
 				String	pathName() const throw();
 				void	setPathName(const String& pathName);
 				// encodings
-				encoding::MIBenum	encoding() const throw();
-				Newline				newline() const throw();
-				void				setEncoding(encoding::MIBenum mib);
-				void				setNewline(Newline newline);
+				void	setEncoding(encoding::MIBenum mib);
+				void	setNewline(Newline newline);
 				// I/O
 				bool	bind(const String& fileName, const LockMode& lockMode,
 							encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy,
@@ -968,10 +977,14 @@ namespace ascension {
 				bool	unbind();
 				bool	write(const String& fileName, const WriteParameters& params);
 				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
+				// IDocumentInput
+				encoding::MIBenum	encoding() const throw();
+				String				location() const throw();
+				Newline				newline() const throw();
 			private:
 				bool	lock();
 				bool	unlock();
-				bool	verifyTimeStamp(bool internal, ::FILETIME& newTimeStamp) throw();
+				bool	verifyTimeStamp(bool internal, Time& newTimeStamp) throw();
 				// IDocumentListener
 				bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
 				void	documentChanged(const Document& document, const DocumentChange& change);
@@ -983,6 +996,8 @@ namespace ascension {
 			private:
 				Document& document_;
 				String fileName_;
+				encoding::MIBenum encoding_;
+				Newline newline_;
 				LockMode lockMode_;
 #ifdef ASCENSION_WINDOWS
 				::HANDLE
@@ -1069,11 +1084,11 @@ inline Point::operator const Position() const throw() {return position_;}
  */
 inline Point& Point::operator=(const Position& rhs) throw() {position_ = rhs; return *this;}
 /// Equality operator.
-inline bool Point::operator==(const Point& rhs) const throw() {return getPosition() == rhs.getPosition();}
+inline bool Point::operator==(const Point& rhs) const throw() {return position() == rhs.position();}
 /// Unequality operator.
 inline bool Point::operator!=(const Point& rhs) const throw() {return !(*this == rhs);}
 /// Less-than operator.
-inline bool Point::operator<(const Point& rhs) const throw() {return getPosition() < rhs.getPosition();}
+inline bool Point::operator<(const Point& rhs) const throw() {return position() < rhs.position();}
 /// Less-than-or-equal-to operator.
 inline bool Point::operator<=(const Point& rhs) const throw() {return *this < rhs || *this == rhs;}
 /// Greater-than operator.
@@ -1084,30 +1099,30 @@ inline bool Point::operator>=(const Point& rhs) const throw() {return !(*this > 
 inline bool Point::adaptsToDocument() const throw() {return adapting_;}
 /// Adapts the point to the document change.
 inline void Point::adaptToDocument(bool adapt) throw() {adapting_ = adapt;}
+/// Returns the column.
+inline length_t Point::columnNumber() const throw() {return position_.column;}
+/// Returns the document or @c null if the document is already disposed.
+inline Document* Point::document() throw() {return document_;}
+/// Returns the document or @c null if the document is already disposed.
+inline const Document* Point::document() const throw() {return document_;}
 /// Called when the document is disposed.
 inline void Point::documentDisposed() throw() {document_ = 0;}
 /// ...
 inline void Point::excludeFromRestriction(bool exclude) {verifyDocument(); if(excludedFromRestriction_ = exclude) normalize();}
-/// Returns the column.
-inline length_t Point::getColumnNumber() const throw() {return position_.column;}
 /// Returns the content type of the document partition contains the point.
-inline ContentType Point::getContentType() const {verifyDocument(); return document_->partitioner().getContentType(*this);}
-/// Returns the document or @c null if the document is already disposed.
-inline Document* Point::getDocument() throw() {return document_;}
-/// Returns the document or @c null if the document is already disposed.
-inline const Document* Point::getDocument() const throw() {return document_;}
-/// Returns the line number.
-inline length_t Point::getLineNumber() const throw() {return position_.line;}
+inline ContentType Point::getContentType() const {verifyDocument(); return document_->partitioner().contentType(*this);}
 /// Returns the gravity.
-inline Direction Point::getGravity() const throw() {return gravity_;}
-/// Returns the position.
-inline const Position& Point::getPosition() const throw() {return position_;}
+inline Direction Point::gravity() const throw() {return gravity_;}
 /// Returns true if the document is already disposed.
 inline bool Point::isDocumentDisposed() const throw() {return document_ == 0;}
 /// Returns true if the point can't enter the inaccessible area of the document.
 inline bool Point::isExcludedFromRestriction() const throw() {return excludedFromRestriction_;}
+/// Returns the line number.
+inline length_t Point::lineNumber() const throw() {return position_.line;}
 /// Moves to the specified position.
 inline void Point::moveTo(length_t line, length_t column) {moveTo(Position(line, column));}
+/// Returns the position.
+inline const Position& Point::position() const throw() {return position_;}
 /// Sets the gravity.
 inline void Point::setGravity(Direction gravity) throw() {verifyDocument(); gravity_ = gravity;}
 /// Throws @c DisposedDocumentException if the document is already disposed.
@@ -1175,6 +1190,9 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 	return lines_.begin() + line;
 }
 #endif
+
+/// Returns the document input or @c null.
+inline IDocumentInput* Document::input() const throw() {return input_.get();}
 
 /**
  * Inserts the text at the specified position.
@@ -1308,6 +1326,9 @@ inline const texteditor::Session* Document::session() const throw() {return sess
 inline void Document::setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw() {
 	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
+/// Sets the new document input.
+inline void Document::setInput(std::auto_ptr<IDocumentInput> newInput) throw() {input_ = newInput;}
+
 /**
  * Writes the content of the document to the specified output stream.
  * @param out the output stream
@@ -1323,32 +1344,17 @@ inline void Document::writeToStream(OutputStream& out, NewlineRepresentation nlr
  * @throw IllegalStateException the partitioner is not connected to any document
  * @return the content type
  */
-inline ContentType DocumentPartitioner::getContentType(const Position& at) const {
+inline ContentType DocumentPartitioner::contentType(const Position& at) const {
 	DocumentPartition p;
-	getPartition(at, p);
+	partition(at, p);
 	return p.contentType;
 }
 
 /// Returns the document to which the partitioner connects or @c null.
-inline Document* DocumentPartitioner::getDocument() throw() {return document_;}
+inline Document* DocumentPartitioner::document() throw() {return document_;}
 
 /// Returns the document to which the partitioner connects or @c null.
-inline const Document* DocumentPartitioner::getDocument() const throw() {return document_;}
-
-/**
- * Returns the document partition contains the specified position.
- * @param at the position
- * @param[out] partition the partition
- * @throw BadPositionException @a position is outside of the document
- * @throw IllegalStateException the partitioner is not connected to any document
- */
-inline void DocumentPartitioner::getPartition(const Position& at, DocumentPartition& partition) const {
-	if(document_ == 0)
-		throw IllegalStateException("the partitioner is not connected to any document.");
-	else if(at > document_->region().second)
-		throw BadPositionException();
-	return doGetPartition(at, partition);
-}
+inline const Document* DocumentPartitioner::document() const throw() {return document_;}
 
 /**
  * Notifies the partitioning change to the listeners.
@@ -1362,20 +1368,35 @@ inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
 	document_->partitioningChanged(changedRegion);	// $friendly-access
 }
 
+/**
+ * Returns the document partition contains the specified position.
+ * @param at the position
+ * @param[out] partition the partition
+ * @throw BadPositionException @a position is outside of the document
+ * @throw IllegalStateException the partitioner is not connected to any document
+ */
+inline void DocumentPartitioner::partition(const Position& at, DocumentPartition& partition) const {
+	if(document_ == 0)
+		throw IllegalStateException("the partitioner is not connected to any document.");
+	else if(at > document_->region().second)
+		throw BadPositionException();
+	return doGetPartition(at, partition);
+}
+
 /// Returns the document.
-inline const Document* DocumentCharacterIterator::getDocument() const throw() {return document_;}
-
-/// Returns the iteration region.
-inline const Region& DocumentCharacterIterator::getRegion() const throw() {return region_;}
-
-/// Returns the line.
-inline const String& DocumentCharacterIterator::getLine() const throw() {return *line_;}
+inline const Document* DocumentCharacterIterator::document() const throw() {return document_;}
 
 /// @see unicode#CharacterIterator#hasNext
 inline bool DocumentCharacterIterator::hasNext() const throw() {return p_ != region_.second;}
 
 /// @see unicode#CharacterIterator#hasPrevious
 inline bool DocumentCharacterIterator::hasPrevious() const throw() {return p_ != region_.first;}
+
+/// Returns the line.
+inline const String& DocumentCharacterIterator::line() const throw() {return *line_;}
+
+/// Returns the iteration region.
+inline const Region& DocumentCharacterIterator::region() const throw() {return region_;}
 
 /**
  * Moves to the specified position.

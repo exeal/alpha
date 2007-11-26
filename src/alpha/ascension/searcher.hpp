@@ -35,7 +35,7 @@ namespace ascension {
 			LiteralPattern(const String& pattern, Direction direction, bool ignoreCase = false, const unicode::Collator* collator = 0);
 			~LiteralPattern() throw();
 			// attributes
-			Direction	getDirection() const throw();
+			Direction	direction() const throw();
 			bool		isCaseSensitive() const throw();
 			// operation
 			void	compile(const Char* first, const Char* last,
@@ -122,7 +122,7 @@ namespace ascension {
 			 * @param canUndo this call can return the value @c UNDO as an action
 			 * @return the action the text searcher should perform
 			 */
-			virtual Action queryReplacementAction(const text::Region& matchedRegion, bool canUndo) = 0;
+			virtual Action queryReplacementAction(const kernel::Region& matchedRegion, bool canUndo) = 0;
 			/**
 			 * The replacement exited or explicitly aborted.
 			 * @param numberOfMatched
@@ -134,7 +134,7 @@ namespace ascension {
 			 * @param document the document to search and replace
 			 * @param scope the region to perform
 			 */
-			virtual void replacementStarted(const text::Document& document, const text::Region& scope) = 0;
+			virtual void replacementStarted(const kernel::Document& document, const kernel::Region& scope) = 0;
 			friend class TextSearcher;
 		};
 
@@ -160,28 +160,28 @@ namespace ascension {
 			TextSearcher();
 			virtual ~TextSearcher();
 			// attributes
-			std::size_t				getNumberOfStoredPatterns() const throw();
-			std::size_t				getNumberOfStoredReplacements() const throw();
-			const SearchOptions&	getOptions() const throw();
-			const String&			getPattern(std::size_t index = 0) const;
-			const String&			getReplacement(std::size_t index = 0) const;
 			bool					isLastPatternMatched() const throw();
 			bool					isMigemoAvailable() const throw();
 			static bool				isRegexAvailable() throw();
+			std::size_t				numberOfStoredPatterns() const throw();
+			std::size_t				numberOfStoredReplacements() const throw();
+			const SearchOptions&	options() const throw();
+			const String&			pattern(std::size_t index = 0) const;
+			const String&			replacement(std::size_t index = 0) const;
 			void					setMaximumNumberOfStoredStrings(std::size_t number) throw();
 			void					setOptions(const SearchOptions& options) throw();
 			void					setPattern(const String& pattern, bool dontRemember = false);
 			void					setReplacement(const String& replacement);
 			// operations
 			void		abortInteractiveReplacement();
-			std::size_t	replaceAll(text::Document& document,
-							const text::Region& scope, IInteractiveReplacementCallback* callback) const;
-			bool		search(const text::Document& document, const text::Position& from,
-							const text::Region& scope, Direction direction, text::Region& matchedRegion) const;
+			std::size_t	replaceAll(kernel::Document& document,
+							const kernel::Region& scope, IInteractiveReplacementCallback* callback) const;
+			bool		search(const kernel::Document& document, const kernel::Position& from,
+							const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
 			template<typename InputIterator>
 			void		setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
 		private:
-			bool	checkBoundary(const text::DocumentCharacterIterator& first, const text::DocumentCharacterIterator& last) const;
+			bool	checkBoundary(const kernel::DocumentCharacterIterator& first, const kernel::DocumentCharacterIterator& last) const;
 			void	clearPatternCache();
 			void	compilePattern(Direction direction) const;
 			void	pushHistory(const String& s, bool forReplacements);
@@ -189,21 +189,21 @@ namespace ascension {
 			std::auto_ptr<LiteralPattern> literalPattern_;
 #ifndef ASCENSION_NO_REGEX
 			std::auto_ptr<const regex::Pattern> regexPattern_;
-			std::auto_ptr<regex::Matcher<text::DocumentCharacterIterator> > regexMatcher_;
+			std::auto_ptr<regex::Matcher<kernel::DocumentCharacterIterator> > regexMatcher_;
 #endif /* !ASCENSION_NO_REGEX */
 			mutable struct LastResult {
-				const text::Document* document;
-				text::Region matchedRegion;
+				const kernel::Document* document;
+				kernel::Region matchedRegion;
 				Direction direction;
-				ulong documentRevisionNumber;
-				LastResult() throw() : document(0), matchedRegion(text::Position::INVALID_POSITION) {}
+				std::size_t documentRevisionNumber;
+				LastResult() throw() : document(0), matchedRegion(kernel::Position::INVALID_POSITION) {}
 				~LastResult() throw() {reset();}
-				bool checkDocumentRevision(const text::Document& current) const throw() {
-					return document == &current && documentRevisionNumber == current.getRevisionNumber();}
-				bool matched() const throw() {return matchedRegion.first != text::Position::INVALID_POSITION;}
-				void reset() throw() {matchedRegion.first = matchedRegion.second = text::Position::INVALID_POSITION;}
-				void updateDocumentRevision(const text::Document& document) throw() {
-					this->document = &document; documentRevisionNumber = document.getRevisionNumber();}
+				bool checkDocumentRevision(const kernel::Document& current) const throw() {
+					return document == &current && documentRevisionNumber == current.revisionNumber();}
+				bool matched() const throw() {return matchedRegion.first != kernel::Position::INVALID_POSITION;}
+				void reset() throw() {matchedRegion.first = matchedRegion.second = kernel::Position::INVALID_POSITION;}
+				void updateDocumentRevision(const kernel::Document& document) throw() {
+					this->document = &document; documentRevisionNumber = document.revisionNumber();}
 			} lastResult_;
 			SearchOptions options_;
 			String temporaryPattern_;
@@ -238,7 +238,7 @@ namespace ascension {
 			 * The search was aborted.
 			 * @param initialPosition the position at which the search started.
 			 */
-			virtual void incrementalSearchAborted(const text::Position& initialPosition) = 0;
+			virtual void incrementalSearchAborted(const kernel::Position& initialPosition) = 0;
 			/// The search was completed successfully.
 			virtual void incrementalSearchCompleted() = 0;
 			/**
@@ -251,7 +251,7 @@ namespace ascension {
 			 * @c EMPTY_PATTERN after this.
 			 * @param document the document to search
 			 */
-			virtual void incrementalSearchStarted(const text::Document& document) = 0;
+			virtual void incrementalSearchStarted(const kernel::Document& document) = 0;
 			friend class IncrementalSearcher;
 		};
 
@@ -263,17 +263,17 @@ namespace ascension {
 		 * @see TextSearcher, texteditor#Session#getIncrementalSearcher,
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
-		class IncrementalSearcher : virtual public text::IDocumentListener {
+		class IncrementalSearcher : virtual public kernel::IDocumentListener {
 			MANAH_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
 			// constructor
 			IncrementalSearcher() throw();
 			// attributes
-			bool				canUndo() const throw();
-			Direction			getDirection() const;
-			const text::Region&	getMatchedRegion() const;
-			const String&		getPattern() const;
-			bool				isRunning() const throw();
+			bool					canUndo() const throw();
+			Direction				direction() const;
+			bool					isRunning() const throw();
+			const kernel::Region&	matchedRegion() const;
+			const String&			pattern() const;
 			// operations
 			void	abort();
 			bool	addCharacter(Char c);
@@ -283,26 +283,26 @@ namespace ascension {
 			void	end();
 			bool	next(Direction direction);
 			void	reset();
-			void	start(text::Document& document, const text::Position& from,
+			void	start(kernel::Document& document, const kernel::Position& from,
 						TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
 			bool	undo();
 		private:
 			bool	update();
-			// text.IDocumentListener
-			void	documentAboutToBeChanged(const text::Document& document);
-			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
+			// kernel.IDocumentListener
+			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 
 		private:
 			void checkRunning() const;
 			enum Operation {TYPE, JUMP};
 			struct Status {
-				text::Region matchedRegion;
+				kernel::Region matchedRegion;
 				Direction direction;
 			};
-			text::Document* document_;
+			kernel::Document* document_;
 			TextSearcher* searcher_;
 			IIncrementalSearchCallback* callback_;
-			text::Region matchedRegion_;
+			kernel::Region matchedRegion_;
 			std::stack<Operation> operationHistory_;
 			std::stack<Status> statusHistory_;
 			String pattern_;
@@ -323,23 +323,9 @@ namespace ascension {
 	inline void LiteralPattern::compile(const String& pattern, Direction direction, bool ignoreCase /* = false */,
 		const unicode::Collator* collator /* = 0 */) {compile(pattern.data(), pattern.data() + pattern.length(), direction, ignoreCase, collator);}
 	/// Returns the direction to search.
-	inline Direction LiteralPattern::getDirection() const throw() {return direction_;}
+	inline Direction LiteralPattern::direction() const throw() {return direction_;}
 	/// Returns true if the pattern performs case-sensitive match.
 	inline bool LiteralPattern::isCaseSensitive() const throw() {return caseSensitive_;}
-	/// Returns the number of the stored patterns.
-	inline std::size_t TextSearcher::getNumberOfStoredPatterns() const throw() {return storedPatterns_.size();}
-	/// Returns the number of the stored replacements.
-	inline std::size_t TextSearcher::getNumberOfStoredReplacements() const throw() {return storedReplacements_.size();}
-	/// Returns the search options.
-	inline const SearchOptions& TextSearcher::getOptions() const throw() {return options_;}
-	/// Returns the pattern string.
-	inline const String& TextSearcher::getPattern(std::size_t index /* = 0 */) const {
-		if(index >= storedPatterns_.size()) throw IndexOutOfBoundsException();
-		std::list<String>::const_iterator i(storedPatterns_.begin()); std::advance(i, index); return *i;}
-	/// Returns the replacement string.
-	inline const String& TextSearcher::getReplacement(std::size_t index /* = 0 */) const {
-		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
-		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
 	/// Returns true if the search using regular expression is available.
 	inline bool TextSearcher::isRegexAvailable() throw() {
 #ifdef ASCENSION_NO_REGEX
@@ -348,6 +334,20 @@ namespace ascension {
 		return true;
 #endif /* ASCENSION_NO_REGEX */
 	}
+	/// Returns the number of the stored patterns.
+	inline std::size_t TextSearcher::numberOfStoredPatterns() const throw() {return storedPatterns_.size();}
+	/// Returns the number of the stored replacements.
+	inline std::size_t TextSearcher::numberOfStoredReplacements() const throw() {return storedReplacements_.size();}
+	/// Returns the search options.
+	inline const SearchOptions& TextSearcher::options() const throw() {return options_;}
+	/// Returns the pattern string.
+	inline const String& TextSearcher::pattern(std::size_t index /* = 0 */) const {
+		if(index >= storedPatterns_.size()) throw IndexOutOfBoundsException();
+		std::list<String>::const_iterator i(storedPatterns_.begin()); std::advance(i, index); return *i;}
+	/// Returns the replacement string.
+	inline const String& TextSearcher::replacement(std::size_t index /* = 0 */) const {
+		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
+		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
 	/**
 	 * Sets the stored list.
 	 * @param first the first string of the list
@@ -373,19 +373,19 @@ namespace ascension {
 	 * @return the direction
 	 * @throw IllegalStateException the searcher is not running
 	 */
-	inline Direction IncrementalSearcher::getDirection() const {checkRunning(); return statusHistory_.top().direction;}
-	/**
-	 * Returns the current search pattern.
-	 * @throw NotRunningException the searcher is not running
-	 */
-	inline const String& IncrementalSearcher::getPattern() const {checkRunning(); return pattern_;}
+	inline Direction IncrementalSearcher::direction() const {checkRunning(); return statusHistory_.top().direction;}
 	/// Returns true if the search is active.
 	inline bool IncrementalSearcher::isRunning() const throw() {return !statusHistory_.empty();}
 	/**
 	 * Returns the matched region.
 	 * @throw NotRunningException the searcher is not running
 	 */
-	inline const text::Region& IncrementalSearcher::getMatchedRegion() const {checkRunning(); return matchedRegion_;}
+	inline const kernel::Region& IncrementalSearcher::matchedRegion() const {checkRunning(); return matchedRegion_;}
+	/**
+	 * Returns the current search pattern.
+	 * @throw NotRunningException the searcher is not running
+	 */
+	inline const String& IncrementalSearcher::pattern() const {checkRunning(); return pattern_;}
 
 }} // namespace ascension.searcher
 

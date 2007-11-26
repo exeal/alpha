@@ -131,7 +131,7 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 		throw invalid_argument("first > last");
 	const size_t bytes = (last - first) * maximumNativeBytes();
 	manah::AutoBuffer<uchar> temp(new uchar[bytes]);
-	Char* fromNext;
+	const Char* fromNext;
 	uchar* toNext;
 	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext) == COMPLETED;
 }

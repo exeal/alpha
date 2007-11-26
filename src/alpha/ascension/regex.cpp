@@ -121,7 +121,7 @@ namespace {
 			if(encoder == 0)
 				return 0;
 			else {
-				size_t bufferLength = encoder->getMaximumNativeBytes() * (last - first);
+				size_t bufferLength = encoder->maximumNativeBytes() * (last - first);
 				manah::AutoBuffer<uchar> buffer(new uchar[bufferLength + 1]);
 				uchar* toNext;
 				const Char* fromNext;
@@ -136,13 +136,13 @@ namespace {
 
 			// convert the result pattern from native Japanese encoding to UTF-16
 			const size_t nativePatternLength = strlen(reinterpret_cast<char*>(lastNativePattern_));
-			outputLength = encoder->getMaximumUCSLength() * (nativePatternLength + 1);
+			outputLength = encoder->maximumUCSLength() * (nativePatternLength + 1);
 			delete[] lastPattern_;
 			lastPattern_ = new Char[outputLength];
 			Char* toNext;
 			const uchar* fromNext;
-			encoder->toUnicode(lastPattern_, lastPattern_ + outputLength, toNext,
-				lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext, encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+			encoder->setPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER).toUnicode(
+				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
 			outputLength = toNext - lastPattern_;
 			return lastPattern_;
 		}

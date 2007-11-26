@@ -9,7 +9,7 @@
 #include "viewer.hpp"
 #include <limits>	// std.numeric_limits
 using namespace ascension;
-using namespace ascension::text;
+using namespace ascension::kernel;
 using namespace ascension::layout;
 using namespace ascension::layout::internal;
 using namespace ascension::presentation;
@@ -123,17 +123,17 @@ struct ascension::layout::internal::Run : public StyledText {
 		delete[] justifiedAdvances; justifiedAdvances = 0;
 		delete[] glyphOffsets; glyphOffsets = 0;
 	}
-	HRESULT getLogicalWidths(int widths[]) const throw() {
+	::HRESULT logicalWidths(int widths[]) const throw() {
 		return ::ScriptGetLogicalWidths(&analysis,
 			static_cast<int>(length), static_cast<int>(numberOfGlyphs), advances, clusters, visualAttributes, widths);
 	}
-	Orientation getOrientation() const throw() {return ((analysis.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
-	int getWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
-	HRESULT getX(size_t offset, bool trailing, int& x) const throw() {
+	Orientation orientation() const throw() {return ((analysis.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
+	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
+	int totalWidth() const throw() {return width.abcA + width.abcB + width.abcC;}
+	::HRESULT x(size_t offset, bool trailing, int& x) const throw() {
 		return ::ScriptCPtoX(static_cast<int>(offset), trailing, static_cast<int>(length),
 			numberOfGlyphs, clusters, visualAttributes, (justifiedAdvances == 0) ? advances : justifiedAdvances, &analysis, &x);
 	}
-	bool overhangs() const throw() {return width.abcA < 0 || width.abcC < 0;}
 };
 
 void dumpRuns(const LineLayout& layout) {
@@ -267,7 +267,7 @@ namespace {
  * Constructor.
  * @param layoutInformation the layout information
  * @param line the line
- * @throw text#BadPositionException @a line is invalid
+ * @throw kernel#BadPositionException @a line is invalid
  */
 LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation), lineNumber_(line),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
@@ -275,14 +275,14 @@ LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, leng
 	if(layoutInformation.getLayoutSettings().lineWrap.wraps()) {
 		wrapWidth_ = layoutInformation.getWidth();
 		if(ISpecialCharacterRenderer* scr = lip_.getSpecialCharacterRenderer()) {
-			auto_ptr<DC> dc(lip_.getFontSelector().getDeviceContext());
+			auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
 			ISpecialCharacterRenderer::LayoutContext context(*dc);
 			context.orientation = lip_.getLayoutSettings().orientation;
 			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
 		}
 	}
 	// construct the layout
-	if(!getText().empty()) {
+	if(!text().empty()) {
 		itemize(line);
 		for(size_t i = 0; i < numberOfRuns_; ++i)
 			shape(*runs_[i]);
@@ -310,6 +310,96 @@ LineLayout::~LineLayout() throw() {
 	dispose();
 }
 
+/**
+ * Returns the bidirectional embedding level at specified position.
+ * @param column the column
+ * @return the embedding level
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
+ */
+uchar LineLayout::bidiEmbeddingLevel(length_t column) const {
+	if(numberOfRuns_ == 0) {
+		if(column != 0)
+			throw kernel::BadPositionException();
+		// use the default level
+		return (lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
+	}
+	const size_t i = findRunForPosition(column);
+	if(i == numberOfRuns_)
+		throw kernel::BadPositionException();
+	return static_cast<uchar>(runs_[i]->analysis.s.uBidiLevel);
+}
+
+/**
+ * Returns the smallest rectangle emcompasses the whole text of the line.
+ * @return the size of the bounds
+ * @see #getBounds(length_t, length_t), #getSublineBounds
+ */
+::SIZE LineLayout::bounds() const throw() {
+	::SIZE s;
+	s.cx = longestSublineWidth();
+	s.cy = static_cast<long>(linePitch() * numberOfSublines_);
+	return s;
+}
+
+/**
+ * Returns the smallest rectangle emcompasses all characters in the range.
+ * @param first the start of the range
+ * @param last the end of the range
+ * @return the bounds
+ * @throw kernel#BadPositionException @a first or @a last is greater than the length of the line
+ * @throw std#invalid_argument @a first is greater than @a last
+ * @see #getBounds(void), #getSublineBounds
+ */
+::RECT LineLayout::bounds(length_t first, length_t last) const {
+	if(first > last)
+		throw invalid_argument("first is greater than last.");
+	else if(last > text().length())
+		throw kernel::BadPositionException();
+	::RECT bounds;	// the result
+	int cx = 0, x;
+
+	// for first
+	length_t sl = subline(first);
+	size_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
+	bounds.top = static_cast<long>(linePitch() * sl);
+	for(size_t i = sublineFirstRuns_[sl]; i < lastRun; ++i) {
+		const Run& run = *runs_[i];
+		if(run.column <= first && run.column + run.length > first) {
+			run.x(first - run.column, false, x);
+			bounds.left = cx + x;
+			break;
+		}
+		cx += run.totalWidth();
+	}
+
+	// for last
+	if(last == first) {
+		bounds.bottom = bounds.top + linePitch();
+		bounds.right = bounds.left;
+	} else {
+		sl = subline(last);
+		lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
+		bounds.bottom = static_cast<long>(linePitch() * sl);
+		cx = 0;
+		for(size_t i = sublineFirstRuns_[sl]; i < lastRun; ++i) {
+			const Run& run = *runs_[i];
+			if(run.column <= last && run.column + run.length > last) {
+				run.x(last - run.column, false, x);
+				bounds.right = cx + x;
+				break;
+			}
+			cx += run.totalWidth();
+		}
+		if(bounds.left > bounds.right)
+			swap(bounds.left, bounds.right);
+		if(bounds.top > bounds.bottom)
+			swap(bounds.top, bounds.bottom);
+		bounds.bottom += linePitch();
+	}
+
+	return bounds;
+}
+
 /// Disposes the layout.
 inline void LineLayout::dispose() throw() {
 	for(size_t i = 0; i < numberOfRuns_; ++i)
@@ -335,7 +425,7 @@ inline void LineLayout::dispose() throw() {
  * @param selection defines the region and the color of the selection
  */
 void LineLayout::draw(DC& dc, int x, int y, const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const throw() {
-	const int linePitch = getLinePitch();
+	const int dy = linePitch();
 
 	// empty line
 	if(isDisposed()) {
@@ -343,7 +433,7 @@ void LineLayout::draw(DC& dc, int x, int y, const ::RECT& paintRect, const ::REC
 		r.left = max(paintRect.left, clipRect.left);
 		r.top = max(clipRect.top, max<long>(paintRect.top, y));
 		r.right = min(paintRect.right, clipRect.right);
-		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + linePitch));
+		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + dy));
 		const Colors lineColor = lip_.getPresentation().getLineColor(lineNumber_);
 		dc.fillSolidRect(r, internal::systemColors.getReal((lineColor.background == STANDARD_COLOR) ?
 			lip_.getLayoutSettings().color.background : lineColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW));
@@ -351,14 +441,14 @@ void LineLayout::draw(DC& dc, int x, int y, const ::RECT& paintRect, const ::REC
 	}
 
 	// skip to the subline needs to draw
-	length_t subline = (y + linePitch >= paintRect.top) ? 0 : (paintRect.top - (y + linePitch)) / linePitch;
+	length_t subline = (y + dy >= paintRect.top) ? 0 : (paintRect.top - (y + dy)) / dy;
 	if(subline >= numberOfSublines_)
 		return;	// this logical line does not need to draw
-	y += static_cast<int>(linePitch * subline);
+	y += static_cast<int>(dy * subline);
 
 	for(; subline < numberOfSublines_; ++subline) {
 		draw(subline, dc, x, y, paintRect, clipRect, selection);
-		if((y += linePitch) >= paintRect.bottom)	// to next subline
+		if((y += dy) >= paintRect.bottom)	// to next subline
 			break;
 	}
 }
@@ -374,7 +464,7 @@ void LineLayout::draw(DC& dc, int x, int y, const ::RECT& paintRect, const ::REC
  * @param paintRect the region to draw
  * @param clipRect the clipping region
  * @param selection defines the region and the color of the selection. can be @c null
- * @throw text#BadPositionException @a subline is invalid
+ * @throw kernel#BadPositionException @a subline is invalid
  */
 void LineLayout::draw(length_t subline, DC& dc,
 		int x, int y, const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const {
@@ -385,10 +475,10 @@ void LineLayout::draw(length_t subline, DC& dc,
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
-	const int linePitch = getLinePitch();
-	const int lineHeight = lip_.getFontSelector().getLineHeight();
+	const int dy = linePitch();
+	const int lineHeight = lip_.getFontSelector().lineHeight();
 	const Colors lineColor = lip_.getPresentation().getLineColor(lineNumber_);
-	const COLORREF marginColor = internal::systemColors.getReal((lineColor.background == STANDARD_COLOR) ?
+	const ::COLORREF marginColor = internal::systemColors.getReal((lineColor.background == STANDARD_COLOR) ?
 		lip_.getLayoutSettings().color.background : lineColor.background, SYSTEM_COLOR_MASK | COLOR_WINDOW);
 	ISpecialCharacterRenderer::DrawingContext context(dc);
 	ISpecialCharacterRenderer* specialCharacterRenderer = lip_.getSpecialCharacterRenderer();
@@ -405,22 +495,22 @@ void LineLayout::draw(length_t subline, DC& dc,
 		r.left = max(paintRect.left, clipRect.left);
 		r.top = max(clipRect.top, max<long>(paintRect.top, y));
 		r.right = min(paintRect.right, clipRect.right);
-		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + linePitch));
+		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + dy));
 		dc.fillSolidRect(r, marginColor);
 	} else {
-		const String& text = getText();
-		HRESULT hr;
+		const String& line = text();
+		::HRESULT hr;
 		length_t selStart, selEnd;
 		const bool sel = (selection != 0) ?
-			selection->caret.getSelectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd) : false;
+			selection->caret.selectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd) : false;
 
 		// paint between sublines
-		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + linePitch, clipRect.bottom)));
+		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + dy, clipRect.bottom)));
 //		dc.selectClipRgn(clipRegion.getHandle());
-		if(linePitch - lineHeight > 0)
-			dc.fillSolidRect(paintRect.left, y + lineHeight, paintRect.right - paintRect.left, linePitch - lineHeight, marginColor);
+		if(dy - lineHeight > 0)
+			dc.fillSolidRect(paintRect.left, y + lineHeight, paintRect.right - paintRect.left, dy - lineHeight, marginColor);
 
-		x += getSublineIndent(subline);
+		x += sublineIndent(subline);
 
 		// 1. paint background of the runs
 		// 2. determine the first and the last runs need to draw
@@ -434,22 +524,22 @@ void LineLayout::draw(length_t subline, DC& dc,
 		int startX = x;
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
-			if(x + run.getWidth() < paintRect.left) {	// this run does not need to draw
+			if(x + run.totalWidth() < paintRect.left) {	// this run does not need to draw
 				++firstRun;
-				startX = x + run.getWidth();
+				startX = x + run.totalWidth();
 			} else {
-				const COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
+				const ::COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
 					internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
 				if(!sel || run.column >= selEnd || run.column + run.length <= selStart)	// no selection in this run
-					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, bgColor);
+					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, bgColor);
 				else if(sel && run.column >= selStart && run.column + run.length <= selEnd) {	// this run is selected entirely
 					assert(selection != 0);
-					dc.fillSolidRect(x, y, run.getWidth(), lineHeight, selection->color.background);
-					dc.excludeClipRect(x, y, x + run.getWidth(), y + lineHeight);
+					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, selection->color.background);
+					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
 				} else {	// selected partially
 					int left, right;
-					hr = run.getX(max(selStart, run.column) - run.column, false, left);
-					hr = run.getX(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
+					hr = run.x(max(selStart, run.column) - run.column, false, left);
+					hr = run.x(min(selEnd, run.column + run.length) - 1 - run.column, true, right);
 					if(left > right)
 						swap(left, right);
 					left += x;
@@ -460,11 +550,11 @@ void LineLayout::draw(length_t subline, DC& dc,
 						dc.fillSolidRect(left, y, right - left, lineHeight, selection->color.background);
 						dc.excludeClipRect(left, y, right, y + lineHeight);
 					}
-					if(right < x + run.getWidth())
-						dc.fillSolidRect(right, y, run.getWidth() - (left - x), lineHeight, bgColor);
+					if(right < x + run.totalWidth())
+						dc.fillSolidRect(right, y, run.totalWidth() - (left - x), lineHeight, bgColor);
 				}
 			}
-			x += run.getWidth();
+			x += run.totalWidth();
 			if(x >= paintRect.right) {
 				lastRun = i + 1;
 				break;
@@ -472,32 +562,32 @@ void LineLayout::draw(length_t subline, DC& dc,
 		}
 		// paint the right margin
 		if(x < paintRect.right)
-			dc.fillSolidRect(x, y, paintRect.right - x, linePitch, marginColor);
+			dc.fillSolidRect(x, y, paintRect.right - x, dy, marginColor);
 
 		// draw outside of the selection
 		::RECT runRect;
 		runRect.top = y;
-		runRect.bottom = y + linePitch;
+		runRect.bottom = y + dy;
 		runRect.left = x = startX;
 		dc.setBkMode(TRANSPARENT);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
-			const COLORREF foregroundColor =
+			const ::COLORREF foregroundColor =
 				internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
 					run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK);
-			if(text[run.column] != L'\t') {
+			if(line[run.column] != L'\t') {
 				if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length <= selEnd)) {
 					dc.selectObject(run.font);
 					dc.setTextColor(foregroundColor);
 					runRect.left = x;
-					runRect.right = runRect.left + run.getWidth();
-					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + lip_.getFontSelector().getAscent(), 0, &runRect,
+					runRect.right = runRect.left + run.totalWidth();
+					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + lip_.getFontSelector().ascent(), 0, &runRect,
 						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
 				}
 			}
 			// decoration (underline and border)
-			drawDecorationLines(dc, run.style, foregroundColor, x, y, run.getWidth(), linePitch);
-			x += run.getWidth();
+			drawDecorationLines(dc, run.style, foregroundColor, x, y, run.totalWidth(), dy);
+			x += run.totalWidth();
 			runRect.left = x;
 		}
 
@@ -509,18 +599,18 @@ void LineLayout::draw(length_t subline, DC& dc,
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
 				// text
-				if(sel && text[run.column] != L'\t'
+				if(sel && line[run.column] != L'\t'
 						&& (run.overhangs() || (run.column < selEnd && run.column + run.length > selStart))) {
 					dc.selectObject(run.font);
 					dc.setTextColor(selection->color.foreground);
 					runRect.left = x;
-					runRect.right = runRect.left + run.getWidth();
-					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + lip_.getFontSelector().getAscent(), 0, &runRect,
+					runRect.right = runRect.left + run.totalWidth();
+					hr = ::ScriptTextOut(dc.getHandle(), &run.cache, x, y + lip_.getFontSelector().ascent(), 0, &runRect,
 						&run.analysis, 0, 0, run.glyphs, run.numberOfGlyphs, run.advances, run.justifiedAdvances, run.glyphOffsets);
 				}
 				// decoration (underline and border)
-				drawDecorationLines(dc, run.style, selection->color.foreground, x, y, run.getWidth(), linePitch);
-				x += run.getWidth();
+				drawDecorationLines(dc, run.style, selection->color.foreground, x, y, run.totalWidth(), dy);
+				x += run.totalWidth();
 			}
 		}
 
@@ -532,27 +622,27 @@ void LineLayout::draw(length_t subline, DC& dc,
 			int dx;
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
-				context.orientation = run.getOrientation();
+				context.orientation = run.orientation();
 				for(length_t j = run.column; j < run.column + run.length; ++j) {
-					if(BinaryProperty::is(text[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-						run.getX(j - run.column, false, dx);
+					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
+						run.x(j - run.column, false, dx);
 						context.rect.left = x + dx;
-						run.getX(j - run.column, true, dx);
+						run.x(j - run.column, true, dx);
 						context.rect.right = x + dx;
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
-						specialCharacterRenderer->drawWhiteSpaceCharacter(context, text[j]);
-					} else if(isC0orC1Control(text[j])) {
-						run.getX(j - run.column, false, dx);
+						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
+					} else if(isC0orC1Control(line[j])) {
+						run.x(j - run.column, false, dx);
 						context.rect.left = x + dx;
-						run.getX(j - run.column, true, dx);
+						run.x(j - run.column, true, dx);
 						context.rect.right = x + dx;
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
-						specialCharacterRenderer->drawControlCharacter(context, text[j]);
+						specialCharacterRenderer->drawControlCharacter(context, line[j]);
 					}
 				}
-				x += run.getWidth();
+				x += run.totalWidth();
 			}
 		}
 		if(subline == numberOfSublines_ - 1 && lip_.getLayoutSettings().alignment == ALIGN_RIGHT)
@@ -560,7 +650,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 	} // end of nonempty line case
 	
 	// line terminator and line wrapping mark
-	const Document& document = lip_.getPresentation().getDocument();
+	const Document& document = lip_.getPresentation().document();
 	if(specialCharacterRenderer != 0) {
 		context.orientation = getLineTerminatorOrientation(lip_.getLayoutSettings());
 		if(subline < numberOfSublines_ - 1) {	// line wrapping mark
@@ -573,8 +663,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 				context.rect.right = markWidth;
 			}
 			specialCharacterRenderer->drawLineWrappingMark(context);
-		} else if(lineNumber_ < document.getNumberOfLines() - 1) {	// line teminator
-			const text::Newline nlf = document.getLineInfo(lineNumber_).getNewline();
+		} else if(lineNumber_ < document.numberOfLines() - 1) {	// line teminator
+			const kernel::Newline nlf = document.getLineInformation(lineNumber_).newline();
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
 			if(context.orientation == LEFT_TO_RIGHT) {
 				context.rect.left = x;
@@ -584,12 +674,12 @@ void LineLayout::draw(length_t subline, DC& dc,
 				context.rect.right = x;
 			}
 			if(selection != 0) {
-				const Position eol(lineNumber_, document.getLineLength(lineNumber_));
+				const Position eol(lineNumber_, document.lineLength(lineNumber_));
 				if(!selection->caret.isSelectionRectangle()
-						&& selection->caret.getTopPoint().getPosition() <= eol
-						&& selection->caret.getBottomPoint().getPosition() > eol)
+						&& selection->caret.beginning().position() <= eol
+						&& selection->caret.end().position() > eol)
 					dc.fillSolidRect(
-						x - (context.orientation == RIGHT_TO_LEFT ? nlfWidth : 0), y, nlfWidth, linePitch, selection->color.background);
+						x - (context.orientation == RIGHT_TO_LEFT ? nlfWidth : 0), y, nlfWidth, dy, selection->color.background);
 			}
 			dc.setBkMode(TRANSPARENT);
 			specialCharacterRenderer->drawLineTerminator(context, nlf);
@@ -617,28 +707,28 @@ void LineLayout::dumpRuns(ostream& out) const {
 /// Expands the all tabs and resolves each width.
 inline void LineLayout::expandTabsWithoutWrapping() throw() {
 	const bool rtl = getLineTerminatorOrientation(lip_.getLayoutSettings()) == RIGHT_TO_LEFT;
-	const String& text = getText();
+	const String& line = text();
 	int x = 0;
 	Run* run;
 	if(!rtl) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
 			run = runs_[i];
-			if(run->length == 1 && text[run->column] == L'\t') {
-				run->advances[0] = getNextTabStop(x, FORWARD) - x;
+			if(run->length == 1 && line[run->column] == L'\t') {
+				run->advances[0] = nextTabStop(x, FORWARD) - x;
 				run->width.abcB = run->advances[0];
 				run->width.abcA = run->width.abcC = 0;
 			}
-			x += run->getWidth();
+			x += run->totalWidth();
 		}
 	} else {	// expand from the right most
 		for(size_t i = numberOfRuns_; i > 0; --i) {
 			run = runs_[i - 1];
-			if(run->length == 1 && text[run->column] == L'\t') {
-				run->advances[0] = getNextTabStop(x, FORWARD) - x;
+			if(run->length == 1 && line[run->column] == L'\t') {
+				run->advances[0] = nextTabStop(x, FORWARD) - x;
 				run->width.abcB = run->advances[0];
 				run->width.abcA = run->width.abcC = 0;
 			}
-			x += run->getWidth();
+			x += run->totalWidth();
 		}
 	}
 	longestSublineWidth_ = x;
@@ -649,18 +739,18 @@ inline void LineLayout::expandTabsWithoutWrapping() throw() {
  * point. If the end of the line is over @a virtualX, the result is an empty string.
  * @param x the x-coordinate of the virtual point
  * @return the space string consists of only white spaces (U+0020) and horizontal tabs (U+0009)
- * @throw text#BadPositionException @a line is outside of the document
+ * @throw kernel#BadPositionException @a line is outside of the document
  * @deprecated 0.8
  * @note This does not support line wrapping and bidirectional context.
  */
 String LineLayout::fillToX(int x) const {
-	int cx = getLongestSublineWidth();
+	int cx = longestSublineWidth();
 	if(cx >= x)
 		return L"";
 
 	size_t numberOfTabs = 0;
 	while(true) {
-		const int next = getNextTabStopBasedLeftEdge(cx, true);
+		const int next = nextTabStopBasedLeftEdge(cx, true);
 		if(next > x)
 			break;
 		++numberOfTabs;
@@ -670,8 +760,8 @@ String LineLayout::fillToX(int x) const {
 	if(cx == x)
 		return String(numberOfTabs, L'\t');
 
-	auto_ptr<DC> dc = lip_.getFontSelector().getDeviceContext();
-	HFONT oldFont = dc->selectObject(lip_.getFontSelector().getFont(Script::COMMON));
+	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
+	::HFONT oldFont = dc->selectObject(lip_.getFontSelector().font(Script::COMMON));
 	int spaceWidth;
 	dc->getCharWidth(L' ', L' ', &spaceWidth);
 	dc->selectObject(oldFont);
@@ -695,11 +785,11 @@ String LineLayout::fillToX(int x) const {
  */
 inline size_t LineLayout::findRunForPosition(length_t column) const throw() {
 	assert(numberOfRuns_ > 0);
-	if(column == getText().length())
+	if(column == text().length())
 		return numberOfRuns_ - 1;
-	const length_t subline = getSubline(column);
-	const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
+	const length_t sl = subline(column);
+	const size_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
+	for(size_t i = sublineFirstRuns_[sl]; i < lastRun; ++i) {
 		if(runs_[i]->column <= column && runs_[i]->column + runs_[i]->length > column)
 			return i;
 	}
@@ -707,323 +797,9 @@ inline size_t LineLayout::findRunForPosition(length_t column) const throw() {
 	return lastRun - 1;	// ここには来ないだろうが...
 }
 
-/**
- * Returns the bidirectional embedding level at specified position.
- * @param column the column
- * @return the embedding level
- * @throw text#BadPositionException @a column is greater than the length of the line
- */
-uchar LineLayout::getBidiEmbeddingLevel(length_t column) const {
-	if(numberOfRuns_ == 0) {
-		if(column != 0)
-			throw text::BadPositionException();
-		// use the default level
-		return (lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
-	}
-	const size_t i = findRunForPosition(column);
-	if(i == numberOfRuns_)
-		throw text::BadPositionException();
-	return static_cast<uchar>(runs_[i]->analysis.s.uBidiLevel);
-}
-
-/**
- * Returns the smallest rectangle emcompasses the whole text of the line.
- * @return the size of the bounds
- * @see #getBounds(length_t, length_t), #getSublineBounds
- */
-::SIZE LineLayout::getBounds() const throw() {
-	::SIZE s;
-	s.cx = getLongestSublineWidth();
-	s.cy = static_cast<long>(getLinePitch() * numberOfSublines_);
-	return s;
-}
-
-/**
- * Returns the smallest rectangle emcompasses all characters in the range.
- * @param first the start of the range
- * @param last the end of the range
- * @return the bounds
- * @throw text#BadPositionException @a first or @a last is greater than the length of the line
- * @throw std#invalid_argument @a first is greater than @a last
- * @see #getBounds(void), #getSublineBounds
- */
-::RECT LineLayout::getBounds(length_t first, length_t last) const {
-	if(first > last)
-		throw invalid_argument("first is greater than last.");
-	else if(last > getText().length())
-		throw text::BadPositionException();
-	::RECT bounds;	// the result
-	int cx = 0, x;
-
-	// for first
-	length_t subline = getSubline(first);
-	size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-	bounds.top = static_cast<long>(getLinePitch() * subline);
-	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
-		const Run& run = *runs_[i];
-		if(run.column <= first && run.column + run.length > first) {
-			run.getX(first - run.column, false, x);
-			bounds.left = cx + x;
-			break;
-		}
-		cx += run.getWidth();
-	}
-
-	// for last
-	if(last == first) {
-		bounds.bottom = bounds.top + getLinePitch();
-		bounds.right = bounds.left;
-	} else {
-		subline = getSubline(last);
-		lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		bounds.bottom = static_cast<long>(getLinePitch() * subline);
-		cx = 0;
-		for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
-			const Run& run = *runs_[i];
-			if(run.column <= last && run.column + run.length > last) {
-				run.getX(last - run.column, false, x);
-				bounds.right = cx + x;
-				break;
-			}
-			cx += run.getWidth();
-		}
-		if(bounds.left > bounds.right)
-			swap(bounds.left, bounds.right);
-		if(bounds.top > bounds.bottom)
-			swap(bounds.top, bounds.bottom);
-		bounds.bottom += getLinePitch();
-	}
-
-	return bounds;
-}
-
 /// Returns an iterator addresses the first styled segment.
-LineLayout::StyledSegmentIterator LineLayout::getFirstStyledSegment() const throw() {
+LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const throw() {
 	return StyledSegmentIterator(*runs_);
-}
-
-/// Returns an iterator addresses the last styled segment.
-LineLayout::StyledSegmentIterator LineLayout::getLastStyledSegment() const throw() {
-	return StyledSegmentIterator(runs_[numberOfRuns_]);
-}
-
-/// Returns the line pitch in pixels.
-inline int LineLayout::getLinePitch() const throw() {
-	return lip_.getFontSelector().getLineHeight() + lip_.getLayoutSettings().lineSpacing;
-}
-
-/**
- * Return the location for the specified character offset.
- * @param column the character offset from the line start
- * @param edge the edge of the character to locate
- * @return the location. x-coordinate is distance from the left edge of the renderer, y-coordinate is relative in the visual lines
- * @throw text#BadPositionException @a column is greater than the length of the line
- */
-::POINT LineLayout::getLocation(length_t column, Edge edge /* = LEADING */) const {
-	::POINT location;
-	if(column > getText().length())
-		throw text::BadPositionException();
-	else if(isDisposed())
-		location.x = location.y = 0;
-	else {
-		const length_t subline = getSubline(column);
-		const length_t firstRun = sublineFirstRuns_[subline];
-		const length_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		// about x
-		if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
-			location.x = getSublineIndent(subline);
-			for(size_t i = firstRun; i < lastRun; ++i) {
-				const Run& run = *runs_[i];
-				if(column >= run.column && column <= run.column + run.length) {
-					int offset;
-					run.getX(column - run.column, edge == TRAILING, offset);
-					location.x += offset;
-					break;
-				}
-				location.x += run.getWidth();
-			}
-		} else {	// RTL
-			location.x = getSublineIndent(subline) + getSublineWidth(subline);
-			for(size_t i = lastRun - 1; ; --i) {
-				const Run& run = *runs_[i];
-				location.x -= run.getWidth();
-				if(column >= run.column && column <= run.column + run.length) {
-					int offset;
-					run.getX(column - run.column, edge == TRAILING, offset);
-					location.x += offset;
-					break;
-				}
-				if(i == firstRun)
-					break;
-			}
-		}
-		// about y
-		location.y = static_cast<long>(subline * getLinePitch());
-	}
-	return location;
-}
-
-/// Returns the width of the longest subline.
-int LineLayout::getLongestSublineWidth() const throw() {
-	if(longestSublineWidth_ == -1) {
-		int width = 0;
-		for(length_t subline = 0; subline < numberOfSublines_; ++subline)
-			width = max<long>(getSublineWidth(subline), width);
-		const_cast<LineLayout*>(this)->longestSublineWidth_ = width;
-	}
-	return longestSublineWidth_;
-}
-
-/**
- * Returns the next tab stop position.
- * @param x the distance from leading edge of the line (can not be negative)
- * @param direction the direction
- * @return the distance from leading edge of the line to the next tab position
- */
-inline int LineLayout::getNextTabStop(int x, Direction direction) const throw() {
-	assert(x >= 0);
-	const int tabWidth = lip_.getFontSelector().getAverageCharacterWidth() * lip_.getLayoutSettings().tabWidth;
-	return (direction == FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
-}
-
-/**
- * Returns the next tab stop.
- * @param x the distance from the left edge of the line to base position (can not be negative)
- * @param right true to find the next right position
- * @return the tab stop position in pixel
- */
-int LineLayout::getNextTabStopBasedLeftEdge(int x, bool right) const throw() {
-	assert(x >= 0);
-	const LayoutSettings& c = lip_.getLayoutSettings();
-	const int tabWidth = lip_.getFontSelector().getAverageCharacterWidth() * c.tabWidth;
-	if(getLineTerminatorOrientation(c) == LEFT_TO_RIGHT)
-		return getNextTabStop(x, right ? FORWARD : BACKWARD);
-	else
-		return right ? x + (x - getLongestSublineWidth()) % tabWidth : x - (tabWidth - (x - getLongestSublineWidth()) % tabWidth);
-}
-
-/**
- * Returns the character column (offset) for the specified point.
- * @param x the x coordinate of the point. distance from the left edge of the first subline
- * @param y the y coordinate of the point. distance from the top edge of the first subline
- * @param[out] trailing the trailing buffer
- * @return the character offset
- * @see #getLocation
- */
-length_t LineLayout::getOffset(int x, int y, length_t& trailing) const throw() {
-	if(getText().empty())
-		return trailing = 0;
-
-	// determine the subline
-	length_t subline = 0;
-	for(; subline < numberOfSublines_ - 1; ++subline) {
-		if(static_cast<int>(getLinePitch() * subline) >= y)
-			break;
-	}
-
-	// determine the column
-	assert(numberOfRuns_ > 0);
-	const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-	int cx = getSublineIndent(subline);
-	if(x <= cx) {	// on the left margin
-		trailing = 0;
-		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
-		return firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length);
-	}
-	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
-		const Run& run = *runs_[i];
-		if(x >= cx && x <= cx + run.getWidth()) {
-			int cp, t;
-			::ScriptXtoCP(x - cx, static_cast<int>(run.length), static_cast<int>(run.numberOfGlyphs), run.clusters,
-				run.visualAttributes, (run.justifiedAdvances == 0) ? run.advances : run.justifiedAdvances, &run.analysis, &cp, &t);
-			trailing = static_cast<length_t>(t);
-			return run.column + static_cast<length_t>(cp);
-		}
-		cx += run.getWidth();
-	}
-	trailing = 0;	// on the right margin
-	return runs_[lastRun - 1]->column + ((runs_[lastRun - 1]->analysis.fRTL == 0) ? runs_[lastRun - 1]->length : 0);
-}
-
-/**
- * Returns the styled segment containing the specified column.
- * @param column the column
- * @return the styled segment
- * @throw text#BadPositionException @a column is greater than the length of the line
- */
-const StyledText& LineLayout::getStyledSegment(length_t column) const {
-	if(column > getText().length())
-		throw text::BadPositionException();
-	return *runs_[findRunForPosition(column)];
-}
-
-/**
- * Returns the smallest rectangle emcompasses the specified visual line.
- * @param subline the wrapped line
- * @return the rectangle
- * @throw text#BadPositionException @a subline is greater than the number of the wrapped lines
- */
-::RECT LineLayout::getSublineBounds(length_t subline) const {
-	if(subline >= numberOfSublines_)
-		throw text::BadPositionException();
-	::RECT rc;
-	rc.left = 0;
-	rc.top = getLinePitch() * static_cast<long>(subline);
-	rc.right = rc.left + getSublineWidth(subline);
-	rc.bottom = rc.top + getLinePitch();
-	return rc;
-}
-
-/**
- * Returns the indentation of the specified subline. An indent is a horizontal distance from the
- * leftmost of the first subline to the leftmost of the given subline. If the subline is longer
- * than the first subline, the result is negative. The first subline's indent is always zero.
- * @param subline the visual line
- * @return the indentation in pixel
- * @throw text#BadPositionException @a subline is invalid
- */
-int LineLayout::getSublineIndent(length_t subline) const {
-	if(subline == 0)
-		return 0;
-	const LayoutSettings& c = lip_.getLayoutSettings();
-	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
-		return 0;
-	switch(c.alignment) {
-	case ALIGN_LEFT:
-	default:
-		return 0;
-	case ALIGN_RIGHT:
-		return getSublineWidth(0) - getSublineWidth(subline);
-	case ALIGN_CENTER:
-		return (getSublineWidth(0) - getSublineWidth(subline)) / 2;
-	}
-}
-
-/**
- * Returns the width of the specified wrapped line.
- * @param subline the visual line
- * @return the width
- * @throw text#BadPositionException @a subline is greater than the number of visual lines
- */
-int LineLayout::getSublineWidth(length_t subline) const {
-	if(subline >= numberOfSublines_)
-		throw text::BadPositionException();
-	else if(isDisposed())
-		return 0;
-	else if(numberOfSublines_ == 1 && longestSublineWidth_ != -1)
-		return longestSublineWidth_;
-	else {
-		const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		int cx = 0;
-		for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i)
-			cx += runs_[i]->getWidth();
-		return cx;
-	}
-}
-
-/// Returns the text of the line.
-inline const String& LineLayout::getText() const throw() {
-	return lip_.getPresentation().getDocument().getLine(lineNumber_);
 }
 
 /// Returns if the line contains right-to-left run.
@@ -1031,7 +807,7 @@ bool LineLayout::isBidirectional() const throw() {
 	if(lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(runs_[i]->getOrientation() == RIGHT_TO_LEFT)
+		if(runs_[i]->orientation() == RIGHT_TO_LEFT)
 			return true;
 	}
 	return false;
@@ -1042,10 +818,10 @@ bool LineLayout::isBidirectional() const throw() {
  * @param lineNumber the line number of the line
  */
 inline void LineLayout::itemize(length_t lineNumber) throw() {
-	const String& text = getText();
-	assert(!text.empty());
+	const String& line = text();
+	assert(!line.empty());
 
-	HRESULT hr;
+	::HRESULT hr;
 	const LayoutSettings& c = lip_.getLayoutSettings();
 	const Presentation& presentation = lip_.getPresentation();
 
@@ -1075,12 +851,12 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	}
 
 	// itemize
-	int expectedNumberOfRuns = max(static_cast<int>(text.length()) / 8, 2);
+	int expectedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2);
 	::SCRIPT_ITEM* items;
 	int numberOfItems;
 	while(true) {
 		items = new ::SCRIPT_ITEM[expectedNumberOfRuns];
-		hr = ::ScriptItemize(text.data(), static_cast<int>(text.length()),
+		hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
 			expectedNumberOfRuns, &control, &initialState, items, &numberOfItems);
 		if(hr != E_OUTOFMEMORY)	// expectedNumberOfRuns was enough...
 			break;
@@ -1123,19 +899,91 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 inline void LineLayout::justify() throw() {
 	assert(wrapWidth_ != -1);
 	for(length_t subline = 0; subline < numberOfSublines_; ++subline) {
-		const int lineWidth = getSublineWidth(subline);
+		const int lineWidth = sublineWidth(subline);
 		const size_t last = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		for(size_t i = sublineFirstRuns_[subline]; i < last; ++i) {
 			Run& run = *runs_[i];
-			const int newRunWidth = ::MulDiv(run.getWidth(), wrapWidth_, lineWidth);	// TODO: there is more precise way.
-			if(newRunWidth != run.getWidth()) {
+			const int newRunWidth = ::MulDiv(run.totalWidth(), wrapWidth_, lineWidth);	// TODO: there is more precise way.
+			if(newRunWidth != run.totalWidth()) {
 				run.justifiedAdvances = new int[run.numberOfGlyphs];
 				::ScriptJustify(run.visualAttributes, run.advances,
-					run.numberOfGlyphs, newRunWidth - run.getWidth(), 2, run.justifiedAdvances);
-				run.width.abcB += newRunWidth - run.getWidth();
+					run.numberOfGlyphs, newRunWidth - run.totalWidth(), 2, run.justifiedAdvances);
+				run.width.abcB += newRunWidth - run.totalWidth();
 			}
 		}
 	}
+}
+
+/// Returns an iterator addresses the last styled segment.
+LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const throw() {
+	return StyledSegmentIterator(runs_[numberOfRuns_]);
+}
+
+/// Returns the line pitch in pixels.
+inline int LineLayout::linePitch() const throw() {
+	return lip_.getFontSelector().lineHeight() + lip_.getLayoutSettings().lineSpacing;
+}
+
+/**
+ * Return the location for the specified character offset.
+ * @param column the character offset from the line start
+ * @param edge the edge of the character to locate
+ * @return the location. x-coordinate is distance from the left edge of the renderer, y-coordinate is relative in the visual lines
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
+ */
+::POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
+	::POINT location;
+	if(column > text().length())
+		throw kernel::BadPositionException();
+	else if(isDisposed())
+		location.x = location.y = 0;
+	else {
+		const length_t sl = subline(column);
+		const length_t firstRun = sublineFirstRuns_[sl];
+		const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
+		// about x
+		if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
+			location.x = sublineIndent(sl);
+			for(size_t i = firstRun; i < lastRun; ++i) {
+				const Run& run = *runs_[i];
+				if(column >= run.column && column <= run.column + run.length) {
+					int offset;
+					run.x(column - run.column, edge == TRAILING, offset);
+					location.x += offset;
+					break;
+				}
+				location.x += run.totalWidth();
+			}
+		} else {	// RTL
+			location.x = sublineIndent(sl) + sublineWidth(sl);
+			for(size_t i = lastRun - 1; ; --i) {
+				const Run& run = *runs_[i];
+				location.x -= run.totalWidth();
+				if(column >= run.column && column <= run.column + run.length) {
+					int offset;
+					run.x(column - run.column, edge == TRAILING, offset);
+					location.x += offset;
+					break;
+				}
+				if(i == firstRun)
+					break;
+			}
+		}
+		// about y
+		location.y = static_cast<long>(sl * linePitch());
+	}
+	return location;
+}
+
+/// Returns the width of the longest subline.
+int LineLayout::longestSublineWidth() const throw() {
+	if(longestSublineWidth_ == -1) {
+		int width = 0;
+		for(length_t subline = 0; subline < numberOfSublines_; ++subline)
+			width = max<long>(sublineWidth(subline), width);
+		const_cast<LineLayout*>(this)->longestSublineWidth_ = width;
+	}
+	return longestSublineWidth_;
 }
 
 /**
@@ -1146,7 +994,7 @@ inline void LineLayout::justify() throw() {
  */
 inline void LineLayout::merge(const ::SCRIPT_ITEM items[], size_t numberOfItems, const LineStyle& styles) throw() {
 	assert(runs_ == 0 && items != 0 && numberOfItems > 0 && styles.count > 0);
-	const String& text = getText();
+	const String& line = text();
 	vector<Run*> runs;
 	Run* run = new Run(styles.array[0].style);
 	run->column = 0;
@@ -1159,7 +1007,7 @@ inline void LineLayout::merge(const ::SCRIPT_ITEM items[], size_t numberOfItems,
 		Run& back = *runs.back();										\
 		Run* piece = new Run(back.style);								\
 		length_t pieceLength = MAXIMUM_RUN_LENGTH;						\
-		if(surrogates::isLowSurrogate(text[back.column + pieceLength]))	\
+		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
 			--pieceLength;												\
 		piece->analysis = back.analysis;								\
 		piece->column = back.column + pieceLength;						\
@@ -1170,8 +1018,8 @@ inline void LineLayout::merge(const ::SCRIPT_ITEM items[], size_t numberOfItems,
 
 	for(size_t itemIndex = 1, styleIndex = 1; itemIndex < numberOfItems || styleIndex < styles.count; ) {
 		bool brokeItem = false;
-		const length_t nextItem = (itemIndex < numberOfItems) ? items[itemIndex].iCharPos : text.length();
-		const length_t nextStyle = (styleIndex < styles.count) ? styles.array[styleIndex].column : text.length();
+		const length_t nextItem = (itemIndex < numberOfItems) ? items[itemIndex].iCharPos : line.length();
+		const length_t nextStyle = (styleIndex < styles.count) ? styles.array[styleIndex].column : line.length();
 		length_t column;
 		if(nextItem < nextStyle)
 			column = items[itemIndex++].iCharPos;
@@ -1187,14 +1035,14 @@ inline void LineLayout::merge(const ::SCRIPT_ITEM items[], size_t numberOfItems,
 		run->column = column;
 		run->analysis = items[itemIndex - 1].a;
 		if(brokeItem
-				&& !legacyctype::isspace(text[styles.array[styleIndex - 1].column])
-				&& !legacyctype::isspace(text[styles.array[styleIndex - 1].column - 1]))
+				&& !legacyctype::isspace(line[styles.array[styleIndex - 1].column])
+				&& !legacyctype::isspace(line[styles.array[styleIndex - 1].column - 1]))
 			runs[runs.size() - 1]->analysis.fLinkAfter = run->analysis.fLinkBefore = 1;
 		runs.back()->length = run->column - runs.back()->column;
 		SPLIT_LAST_RUN();
 		runs.push_back(run);
 	}
-	run->length = text.length() - run->column;
+	run->length = line.length() - run->column;
 	SPLIT_LAST_RUN();
 	runs_ = new Run*[numberOfRuns_ = runs.size()];
 	copy(runs.begin(), runs.end(), runs_);
@@ -1223,6 +1071,158 @@ inline void LineLayout::reorder() throw() {
 		delete[] log2vis;
 	}
 	delete[] temp;
+}
+
+/**
+ * Returns the next tab stop position.
+ * @param x the distance from leading edge of the line (can not be negative)
+ * @param direction the direction
+ * @return the distance from leading edge of the line to the next tab position
+ */
+inline int LineLayout::nextTabStop(int x, Direction direction) const throw() {
+	assert(x >= 0);
+	const int tabWidth = lip_.getFontSelector().averageCharacterWidth() * lip_.getLayoutSettings().tabWidth;
+	return (direction == FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
+}
+
+/**
+ * Returns the next tab stop.
+ * @param x the distance from the left edge of the line to base position (can not be negative)
+ * @param right true to find the next right position
+ * @return the tab stop position in pixel
+ */
+int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const throw() {
+	assert(x >= 0);
+	const LayoutSettings& c = lip_.getLayoutSettings();
+	const int tabWidth = lip_.getFontSelector().averageCharacterWidth() * c.tabWidth;
+	if(getLineTerminatorOrientation(c) == LEFT_TO_RIGHT)
+		return nextTabStop(x, right ? FORWARD : BACKWARD);
+	else
+		return right ? x + (x - longestSublineWidth()) % tabWidth : x - (tabWidth - (x - longestSublineWidth()) % tabWidth);
+}
+
+/**
+ * Returns the character column (offset) for the specified point.
+ * @param x the x coordinate of the point. distance from the left edge of the first subline
+ * @param y the y coordinate of the point. distance from the top edge of the first subline
+ * @param[out] trailing the trailing buffer
+ * @return the character offset
+ * @see #getLocation
+ */
+length_t LineLayout::offset(int x, int y, length_t& trailing) const throw() {
+	if(text().empty())
+		return trailing = 0;
+
+	// determine the subline
+	length_t subline = 0;
+	for(; subline < numberOfSublines_ - 1; ++subline) {
+		if(static_cast<int>(linePitch() * subline) >= y)
+			break;
+	}
+
+	// determine the column
+	assert(numberOfRuns_ > 0);
+	const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+	int cx = sublineIndent(subline);
+	if(x <= cx) {	// on the left margin
+		trailing = 0;
+		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
+		return firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length);
+	}
+	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
+		const Run& run = *runs_[i];
+		if(x >= cx && x <= cx + run.totalWidth()) {
+			int cp, t;
+			::ScriptXtoCP(x - cx, static_cast<int>(run.length), static_cast<int>(run.numberOfGlyphs), run.clusters,
+				run.visualAttributes, (run.justifiedAdvances == 0) ? run.advances : run.justifiedAdvances, &run.analysis, &cp, &t);
+			trailing = static_cast<length_t>(t);
+			return run.column + static_cast<length_t>(cp);
+		}
+		cx += run.totalWidth();
+	}
+	trailing = 0;	// on the right margin
+	return runs_[lastRun - 1]->column + ((runs_[lastRun - 1]->analysis.fRTL == 0) ? runs_[lastRun - 1]->length : 0);
+}
+
+/**
+ * Returns the styled segment containing the specified column.
+ * @param column the column
+ * @return the styled segment
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
+ */
+const StyledText& LineLayout::styledSegment(length_t column) const {
+	if(column > text().length())
+		throw kernel::BadPositionException();
+	return *runs_[findRunForPosition(column)];
+}
+
+/**
+ * Returns the smallest rectangle emcompasses the specified visual line.
+ * @param subline the wrapped line
+ * @return the rectangle
+ * @throw kernel#BadPositionException @a subline is greater than the number of the wrapped lines
+ */
+::RECT LineLayout::sublineBounds(length_t subline) const {
+	if(subline >= numberOfSublines_)
+		throw kernel::BadPositionException();
+	::RECT rc;
+	rc.left = 0;
+	rc.top = linePitch() * static_cast<long>(subline);
+	rc.right = rc.left + sublineWidth(subline);
+	rc.bottom = rc.top + linePitch();
+	return rc;
+}
+
+/**
+ * Returns the indentation of the specified subline. An indent is a horizontal distance from the
+ * leftmost of the first subline to the leftmost of the given subline. If the subline is longer
+ * than the first subline, the result is negative. The first subline's indent is always zero.
+ * @param subline the visual line
+ * @return the indentation in pixel
+ * @throw kernel#BadPositionException @a subline is invalid
+ */
+int LineLayout::sublineIndent(length_t subline) const {
+	if(subline == 0)
+		return 0;
+	const LayoutSettings& c = lip_.getLayoutSettings();
+	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
+		return 0;
+	switch(c.alignment) {
+	case ALIGN_LEFT:
+	default:
+		return 0;
+	case ALIGN_RIGHT:
+		return sublineWidth(0) - sublineWidth(subline);
+	case ALIGN_CENTER:
+		return (sublineWidth(0) - sublineWidth(subline)) / 2;
+	}
+}
+
+/**
+ * Returns the width of the specified wrapped line.
+ * @param subline the visual line
+ * @return the width
+ * @throw kernel#BadPositionException @a subline is greater than the number of visual lines
+ */
+int LineLayout::sublineWidth(length_t subline) const {
+	if(subline >= numberOfSublines_)
+		throw kernel::BadPositionException();
+	else if(isDisposed())
+		return 0;
+	else if(numberOfSublines_ == 1 && longestSublineWidth_ != -1)
+		return longestSublineWidth_;
+	else {
+		const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+		int cx = 0;
+		for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i)
+			cx += runs_[i]->totalWidth();
+		return cx;
+	}
+}
+
+/// Returns the text of the line.
+inline const String& LineLayout::text() const throw() {
+	return lip_.getPresentation().document().line(lineNumber_);
 }
 
 namespace {
@@ -1340,25 +1340,25 @@ namespace {
  */
 void LineLayout::shape(Run& run) throw() {
 	assert(run.glyphs == 0);
-	HRESULT hr;
-	const Char* const text = getText().data() + run.column;
-	auto_ptr<DC> dc = lip_.getFontSelector().getDeviceContext();
+	::HRESULT hr;
+	const Char* const line = text().data() + run.column;
+	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
 	run.clusters = new ::WORD[run.length];
 	if(lip_.getLayoutSettings().inhibitsShaping)
 		run.analysis.eScript = SCRIPT_UNDEFINED;
 
-	HFONT oldFont;
+	::HFONT oldFont;
 	size_t expectedNumberOfGlyphs;
 	if(run.analysis.s.fDisplayZWG != 0 && scriptProperties.get(run.analysis.eScript).fControl != 0) {
 		// bidirectional format controls
 		expectedNumberOfGlyphs = run.length;
 		run.glyphs = new ::WORD[expectedNumberOfGlyphs];
 		run.visualAttributes = new ::SCRIPT_VISATTR[expectedNumberOfGlyphs];
-		oldFont = dc->selectObject(run.font = lip_.getFontSelector().getFontForShapingControls());
-		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(*dc, text, run, expectedNumberOfGlyphs))) {
+		oldFont = dc->selectObject(run.font = lip_.getFontSelector().fontForShapingControls());
+		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(*dc, line, run, expectedNumberOfGlyphs))) {
 			assert(run.analysis.eScript != SCRIPT_UNDEFINED);
 			run.analysis.eScript = SCRIPT_UNDEFINED;	// hmm...
-			hr = buildGlyphs(*dc, text, run, expectedNumberOfGlyphs);
+			hr = buildGlyphs(*dc, line, run, expectedNumberOfGlyphs);
 			assert(SUCCEEDED(hr));
 		}
 		dc->selectObject(oldFont);
@@ -1383,15 +1383,15 @@ void LineLayout::shape(Run& run) throw() {
 			// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
 			manah::AutoBuffer<Char> safeText;
 			const bool textIsDanger = run.analysis.eScript == SCRIPT_UNDEFINED
-				&& find_if(text, text + run.length, surrogates::isSurrogate) != text + run.length;
+				&& find_if(line, line + run.length, surrogates::isSurrogate) != line + run.length;
 			if(textIsDanger) {
 				safeText.reset(new Char[run.length]);
-				wmemcpy(safeText.get(), text, run.length);
+				wmemcpy(safeText.get(), line, run.length);
 				replace_if(safeText.get(), safeText.get() + run.length, surrogates::isSurrogate, REPLACEMENT_CHARACTER);
 			}
-			const Char* p = !textIsDanger ? text : safeText.get();
+			const Char* p = !textIsDanger ? line : safeText.get();
 			// 1/5. the primary font
-			oldFont = dc->selectObject(run.font = lip_.getFontSelector().getFont(Script::COMMON, run.style.bold, run.style.italic));
+			oldFont = dc->selectObject(run.font = lip_.getFontSelector().font(Script::COMMON, run.style.bold, run.style.italic));
 			if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
 				break;
 			::ScriptFreeCache(&run.cache);
@@ -1400,7 +1400,7 @@ void LineLayout::shape(Run& run) throw() {
 			// 2. the national font for digit substitution
 			if(hr == USP_E_SCRIPT_NOT_IN_FONT && run.analysis.eScript != SCRIPT_UNDEFINED && run.analysis.s.fDigitSubstitute != 0) {
 				script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(run.analysis.eScript).langid);
-				if(script != NOT_PROPERTY && 0 != (run.font = lip_.getFontSelector().getFont(script, run.style.bold, run.style.italic))) {
+				if(script != NOT_PROPERTY && 0 != (run.font = lip_.getFontSelector().font(script, run.style.bold, run.style.italic))) {
 					if(failedFonts.find(run.font) == failedFonts.end()) {
 						dc->selectObject(run.font);
 						if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, true)))
@@ -1412,8 +1412,8 @@ void LineLayout::shape(Run& run) throw() {
 			}
 
 			// 3/6. the linked fonts
-			for(size_t i = 0; i < lip_.getFontSelector().getNumberOfLinkedFonts(); ++i) {
-				run.font = lip_.getFontSelector().getLinkedFont(i);
+			for(size_t i = 0; i < lip_.getFontSelector().numberOfLinkedFonts(); ++i) {
+				run.font = lip_.getFontSelector().linkedFont(i);
 				if(failedFonts.find(run.font) == failedFonts.end()) {
 					dc->selectObject(run.font);
 					if(S_OK == (hr = generateGlyphs(*dc, p, run, expectedNumberOfGlyphs, run.analysis.eScript != SCRIPT_UNDEFINED)))
@@ -1434,7 +1434,7 @@ void LineLayout::shape(Run& run) throw() {
 				}
 			}
 			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-				run.font = lip_.getFontSelector().getFont(script, run.style.bold, run.style.italic);
+				run.font = lip_.getFontSelector().font(script, run.style.bold, run.style.italic);
 			else {
 				run.font = 0;
 				// ambiguous CJK?
@@ -1447,7 +1447,7 @@ void LineLayout::shape(Run& run) throw() {
 					case CodeBlock::CJK_COMPATIBILITY_FORMS:
 					case CodeBlock::SMALL_FORM_VARIANTS:	// as of CNS-11643
 					case CodeBlock::HALFWIDTH_AND_FULLWIDTH_FORMS:
-						run.font = lip_.getFontSelector().getFont(Script::HAN, run.style.bold, run.style.italic);
+						run.font = lip_.getFontSelector().font(Script::HAN, run.style.bold, run.style.italic);
 						break;
 					}
 				}
@@ -1470,7 +1470,7 @@ void LineLayout::shape(Run& run) throw() {
 			else {
 				// worst case... -> fill with default glyph
 				generateDefaultGlyphs(*dc, run);
-				dc->selectObject(run.font = lip_.getFontSelector().getFont(Script::COMMON, run.style.bold, run.style.italic));
+				dc->selectObject(run.font = lip_.getFontSelector().font(Script::COMMON, run.style.bold, run.style.italic));
 			}
 			failedFonts.clear();
 		}
@@ -1484,12 +1484,12 @@ void LineLayout::shape(Run& run) throw() {
 	// query widths of C0 and C1 controls in this logical line
 	if(ISpecialCharacterRenderer* scr = lip_.getSpecialCharacterRenderer()) {
 		ISpecialCharacterRenderer::LayoutContext context(*dc);
-		context.orientation = run.getOrientation();
+		context.orientation = run.orientation();
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = 0;
 		for(length_t i = 0; i < run.length; ++i) {
-			if(isC0orC1Control(text[i])) {
-				if(const int width = scr->getControlCharacterWidth(context, text[i])) {
+			if(isC0orC1Control(line[i])) {
+				if(const int width = scr->getControlCharacterWidth(context, line[i])) {
 					// substitute the glyph
 					run.width.abcB += width - run.advances[i];
 					run.advances[i] = width;
@@ -1510,10 +1510,10 @@ void LineLayout::wrap() throw() {
 	assert(numberOfRuns_ != 0 && lip_.getLayoutSettings().lineWrap.wraps());
 	assert(numberOfSublines_ == 0 && sublineOffsets_ == 0 && sublineFirstRuns_ == 0);
 
-	const String& text = getText();
+	const String& line = text();
 	vector<length_t> sublineFirstRuns;
 	sublineFirstRuns.push_back(0);
-	auto_ptr<DC> dc = lip_.getFontSelector().getDeviceContext();
+	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
 	const int cookie = dc->save();
 	int cx = 0;
 	vector<Run*> newRuns;
@@ -1523,20 +1523,20 @@ void LineLayout::wrap() throw() {
 		Run& run = *runs_[i];
 
 		// if the run is a tab, expand and calculate actual width
-		if(text[run.column] == L'\t') {
+		if(line[run.column] == L'\t') {
 			assert(run.length == 1);
 			if(cx == wrapWidth_) {
-				cx = run.width.abcB = getNextTabStop(0, FORWARD);
+				cx = run.width.abcB = nextTabStop(0, FORWARD);
 				run.width.abcA = run.width.abcC = 0;
 				newRuns.push_back(&run);
 				sublineFirstRuns.push_back(newRuns.size());
 			} else {
-				run.width.abcB = min(getNextTabStop(cx, FORWARD), wrapWidth_) - cx;
+				run.width.abcB = min(nextTabStop(cx, FORWARD), wrapWidth_) - cx;
 				run.width.abcA = run.width.abcC = 0;
-				cx += run.getWidth();
+				cx += run.totalWidth();
 				newRuns.push_back(&run);
 			}
-			run.advances[0] = run.getWidth();
+			run.advances[0] = run.totalWidth();
 			continue;
 		}
 
@@ -1544,8 +1544,8 @@ void LineLayout::wrap() throw() {
 		int* logicalWidths = new int[run.length];
 		::SCRIPT_LOGATTR* logicalAttributes = new ::SCRIPT_LOGATTR[run.length];
 		dc->selectObject(run.font);
-		HRESULT hr = run.getLogicalWidths(logicalWidths);
-		hr = ::ScriptBreak(text.data() + run.column, static_cast<int>(run.length), &run.analysis, logicalAttributes);
+		::HRESULT hr = run.logicalWidths(logicalWidths);
+		hr = ::ScriptBreak(line.data() + run.column, static_cast<int>(run.length), &run.analysis, logicalAttributes);
 		const length_t originalRunPosition = run.column;
 		int widthInThisRun = 0;
 		length_t lastBreakable = run.column, lastGlyphEnd = run.column;
@@ -1587,7 +1587,7 @@ void LineLayout::wrap() throw() {
 				}
 				// case 2: break at the end of the run
 				else if(lastBreakable == run.column + run.length) {
-					if(lastBreakable < text.length()) {
+					if(lastBreakable < line.length()) {
 						assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 						sublineFirstRuns.push_back(newRuns.size() + 1);
 //dout << L"broke the line at " << lastBreakable << L" where the run end.\n";
@@ -1669,7 +1669,7 @@ const StyledText& LineLayout::StyledSegmentIterator::current() const throw() {
  */
 LineLayoutBuffer::LineLayoutBuffer(Document& document, length_t bufferSize, bool autoRepair) :
 		document_(document), bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
-		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.getNumberOfLines()) {
+		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
 	pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
 	if(bufferSize == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
@@ -1691,7 +1691,7 @@ LineLayoutBuffer::~LineLayoutBuffer() throw() {
  */
 void LineLayoutBuffer::addVisualLinesListener(IVisualLinesListener& listener) {
 	listeners_.add(listener);
-	const length_t lines = document_.getNumberOfLines();
+	const length_t lines = document_.numberOfLines();
 	if(lines > 1)
 		listener.visualLinesInserted(1, lines);
 }
@@ -1721,12 +1721,12 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 		length_t newSublines = 0, actualFirst = last, actualLast = first;
 		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
 			LineLayout*& layout = *i;
-			const length_t lineNumber = layout->getLineNumber();
+			const length_t lineNumber = layout->lineNumber();
 			if(lineNumber >= first && lineNumber < last) {
-				oldSublines += layout->getNumberOfSublines();
+				oldSublines += layout->numberOfSublines();
 				delete layout;
 				layout = new LineLayout(*lip_, lineNumber);
-				newSublines += layout->getNumberOfSublines();
+				newSublines += layout->numberOfSublines();
 				++cachedLines;
 				actualFirst = min(actualFirst, lineNumber);
 				actualLast = max(actualLast, lineNumber);
@@ -1739,8 +1739,8 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
 		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ) {
-			if((*i)->getLineNumber() >= first && (*i)->getLineNumber() < last) {
-				oldSublines += (*i)->getNumberOfSublines();
+			if((*i)->lineNumber() >= first && (*i)->lineNumber() < last) {
+				oldSublines += (*i)->numberOfSublines();
 				delete *i;
 				i = layouts_.erase(i);
 				++cachedLines;
@@ -1751,25 +1751,26 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 	}
 }
 
-/// @see text#IDocumentListener#documentAboutToBeChanged
-void LineLayoutBuffer::documentAboutToBeChanged(const text::Document&) {
+/// @see kernel#IDocumentListener#documentAboutToBeChanged
+bool LineLayoutBuffer::documentAboutToBeChanged(const kernel::Document&) {
 	documentChangePhase_ = ABOUT_CHANGE;
+	return true;
 }
 
-/// @see text#IDocumentListener#documentChanged
-void LineLayoutBuffer::documentChanged(const text::Document&, const text::DocumentChange& change) {
-	const length_t top = change.getRegion().beginning().line, bottom = change.getRegion().end().line;
+/// @see kernel#IDocumentListener#documentChanged
+void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
+	const length_t top = change.region().beginning().line, bottom = change.region().end().line;
 	documentChangePhase_ = CHANGING;
 	if(top != bottom) {
 		if(change.isDeletion()) {	// deleted region includes newline(s)
 			clearCaches(top + 1, bottom + 1, false);
 			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-				if((*i)->getLineNumber() > top)
+				if((*i)->lineNumber() > top)
 					(*i)->lineNumber_ -= bottom - top;	// $friendly-access
 			}
 		} else {	// inserted text is multiline
 			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-				if((*i)->getLineNumber() > top)
+				if((*i)->lineNumber() > top)
 					(*i)->lineNumber_ += bottom - top;	// $friendly-access
 			}
 			fireVisualLinesInserted(top + 1, bottom + 1);
@@ -1811,11 +1812,11 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 	} else {
 		length_t newLongestLine = longestLine_;
 		int newLongestLineWidth = longestLineWidth_;
-		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
+		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
 			const LineLayout& layout = **i;
-			if(layout.getLongestSublineWidth() > newLongestLineWidth) {
-				newLongestLine = (*i)->getLineNumber();
-				newLongestLineWidth = layout.getLongestSublineWidth();
+			if(layout.longestSublineWidth() > newLongestLineWidth) {
+				newLongestLine = (*i)->lineNumber();
+				newLongestLineWidth = layout.longestSublineWidth();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -1827,18 +1828,57 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 		static_cast<signed_length_t>(newSublines) - static_cast<signed_length_t>(oldSublines), documentChanged, longestLineChanged);
 }
 
+/// Invalidates all layouts.
+void LineLayoutBuffer::invalidate() {
+	clearCaches(0, lip_->getPresentation().document().numberOfLines(), autoRepair_);
+}
+
+/**
+ * Invalidates the layouts of the specified lines.
+ * @param first the start of the lines
+ * @param last the end of the lines (exclusive. this line will not be cleared)
+ * @throw std#invalid_argument @a first &gt;= @a last
+ */
+void LineLayoutBuffer::invalidate(length_t first, length_t last) {
+	if(first >= last)
+		throw invalid_argument("Any line number is invalid.");
+	clearCaches(first, last, autoRepair_);
+}
+
+/**
+ * Resets the cached layout of the specified line and repairs if necessary.
+ * @param line the line to invalidate layout
+ */
+inline void LineLayoutBuffer::invalidate(length_t line) throw() {
+	for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+		LineLayout*& p = *i;
+		if(p->lineNumber() == line) {
+			const length_t oldSublines = p->numberOfSublines();
+			delete p;
+			if(autoRepair_) {
+				p = new LineLayout(*lip_, line);
+				fireVisualLinesModified(line, line + 1, p->numberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
+			} else {
+				layouts_.erase(i);
+				fireVisualLinesModified(line, line + 1, 1, oldSublines, documentChangePhase_ == CHANGING);
+			}
+			break;
+		}
+	}
+}
+
 /**
  * Returns the layout of the specified line.
  * @param line the line
  * @return the layout
- * @throw text#BadPositionException @a line is greater than the number of the lines
+ * @throw kernel#BadPositionException @a line is greater than the number of the lines
  */
-const LineLayout& LineLayoutBuffer::getLineLayout(length_t line) const {
+const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 #ifdef TRACE_LAYOUT_CACHES
 	dout << "finding layout for line " << line;
 #endif
-	if(line > lip_->getPresentation().getDocument().getNumberOfLines())
-		throw text::BadPositionException();
+	if(line > lip_->getPresentation().document().numberOfLines())
+		throw kernel::BadPositionException();
 	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
 	list<LineLayout*>::iterator i(self.layouts_.begin());
 	for(const list<LineLayout*>::iterator e(self.layouts_.end()); i != e; ++i) {
@@ -1865,53 +1905,14 @@ const LineLayout& LineLayoutBuffer::getLineLayout(length_t line) const {
 			// delete the last
 			LineLayout* p = layouts_.back();
 			self.layouts_.pop_back();
-			self.fireVisualLinesModified(p->getLineNumber(), p->getLineNumber() + 1,
-				1, p->getNumberOfSublines(), documentChangePhase_ == CHANGING);
+			self.fireVisualLinesModified(p->lineNumber(), p->lineNumber() + 1,
+				1, p->numberOfSublines(), documentChangePhase_ == CHANGING);
 			delete p;
 		}
 		LineLayout* const layout = new LineLayout(*lip_, line);
 		self.layouts_.push_front(layout);
-		self.fireVisualLinesModified(line, line + 1, layout->getNumberOfSublines(), 1, documentChangePhase_ == CHANGING);
+		self.fireVisualLinesModified(line, line + 1, layout->numberOfSublines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
-	}
-}
-
-/// Invalidates all layouts.
-void LineLayoutBuffer::invalidate() {
-	clearCaches(0, lip_->getPresentation().getDocument().getNumberOfLines(), autoRepair_);
-}
-
-/**
- * Invalidates the layouts of the specified lines.
- * @param first the start of the lines
- * @param last the end of the lines (exclusive. this line will not be cleared)
- * @throw std#invalid_argument @a first &gt;= @a last
- */
-void LineLayoutBuffer::invalidate(length_t first, length_t last) {
-	if(first >= last)
-		throw invalid_argument("Any line number is invalid.");
-	clearCaches(first, last, autoRepair_);
-}
-
-/**
- * Resets the cached layout of the specified line and repairs if necessary.
- * @param line the line to invalidate layout
- */
-inline void LineLayoutBuffer::invalidate(length_t line) throw() {
-	for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-		LineLayout*& p = *i;
-		if(p->getLineNumber() == line) {
-			const length_t oldSublines = p->getNumberOfSublines();
-			delete p;
-			if(autoRepair_) {
-				p = new LineLayout(*lip_, line);
-				fireVisualLinesModified(line, line + 1, p->getNumberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
-			} else {
-				layouts_.erase(i);
-				fireVisualLinesModified(line, line + 1, 1, oldSublines, documentChangePhase_ == CHANGING);
-			}
-			break;
-		}
 	}
 }
 
@@ -1919,18 +1920,18 @@ inline void LineLayoutBuffer::invalidate(length_t line) throw() {
  * Returns the first visual line number of the specified logical line.
  * @param line the logical line
  * @return the first visual line of @a line
- * @throw text#BadPositionException @a line is outside of the document
+ * @throw kernel#BadPositionException @a line is outside of the document
  * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
  */
 length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
-	if(line >= lip_->getPresentation().getDocument().getNumberOfLines())
-		throw text::BadPositionException();
+	if(line >= lip_->getPresentation().document().numberOfLines())
+		throw kernel::BadPositionException();
 	else if(!lip_->getLayoutSettings().lineWrap.wraps())
 		return line;
 	length_t result = 0, cachedLines = 0;
-	for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
-		if((*i)->getLineNumber() < line) {
-			result += (*i)->getNumberOfSublines();
+	for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+		if((*i)->lineNumber() < line) {
+			result += (*i)->numberOfSublines();
 			++cachedLines;
 		}
 	}
@@ -1942,7 +1943,7 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
  * @param position the logical coordinates of the position to be mapped
  * @param[out] column the visual column of @a position. can be @c null if not needed
  * @return the visual line of @a position
- * @throw text#BadPositionException @a position is outside of the document
+ * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
  */
 length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
@@ -1951,10 +1952,10 @@ length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& po
 			*column = position.column;
 		return position.line;
 	}
-	const LineLayout& layout = getLineLayout(position.line);
-	const length_t subline = layout.getSubline(position.column);
+	const LineLayout& layout = lineLayout(position.line);
+	const length_t subline = layout.subline(position.column);
 	if(column != 0)
-		*column = position.column - layout.getSublineOffset(subline);
+		*column = position.column - layout.sublineOffset(subline);
 	return mapLogicalLineToVisualLine(position.line) + subline;
 }
 
@@ -1964,7 +1965,7 @@ length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& po
  * @param line the visual line
  * @param[out] subline the visual subline of @a line. can be @c null if not needed
  * @return the logical line
- * @throw text#BadPositionException @a line is outside of the document
+ * @throw kernel#BadPositionException @a line is outside of the document
  * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
  */
 length_t LineLayoutBuffer::mapVisualLineToLogicalLine(length_t line, length_t* subline) const {
@@ -1990,7 +1991,7 @@ length_t LineLayoutBuffer::mapVisualLineToLogicalLine(length_t line, length_t* s
  * Returns the logical line number and the logical column number of the specified visual position.
  * @param position the visual coordinates of the position to be mapped
  * @return the logical coordinates of @a position
- * @throw text#BadPositionException @a position is outside of the document
+ * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
  */
 Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& position) const {
@@ -2012,14 +2013,14 @@ Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& po
  */
 void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline, signed_length_t offset) const throw() {
 	if(offset > 0) {
-		if(subline + offset < getNumberOfSublinesOfLine(line))
+		if(subline + offset < numberOfSublinesOfLine(line))
 			subline += offset;
 		else {
-			const length_t lines = getDocument().getNumberOfLines();
-			offset -= static_cast<signed_length_t>(getNumberOfSublinesOfLine(line) - subline) - 1;
+			const length_t lines = document().numberOfLines();
+			offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(line) - subline) - 1;
 			while(offset > 0 && line < lines - 1)
-				offset -= static_cast<signed_length_t>(getNumberOfSublinesOfLine(++line));
-			subline = getNumberOfSublinesOfLine(line) - 1;
+				offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(++line));
+			subline = numberOfSublinesOfLine(line) - 1;
 			if(offset < 0)
 				subline += offset;
 		}
@@ -2029,7 +2030,7 @@ void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline, signe
 		else {
 			offset += static_cast<signed_length_t>(subline);
 			while(offset < 0 && line > 0)
-				offset += static_cast<signed_length_t>(getNumberOfSublinesOfLine(--line));
+				offset += static_cast<signed_length_t>(numberOfSublinesOfLine(--line));
 			subline = (offset > 0) ? offset : 0;
 		}
 	}
@@ -2062,10 +2063,10 @@ void LineLayoutBuffer::updateLongestLine(length_t line, int width) throw() {
 	} else {
 		longestLine_ = static_cast<length_t>(-1);
 		longestLineWidth_ = 0;
-		for(Iterator i(getFirstCachedLine()), e(getLastCachedLine()); i != e; ++i) {
-			if((*i)->getLongestSublineWidth() > longestLineWidth_) {
-				longestLine_ = (*i)->getLineNumber();
-				longestLineWidth_ = (*i)->getLongestSublineWidth();
+		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+			if((*i)->longestSublineWidth() > longestLineWidth_) {
+				longestLine_ = (*i)->lineNumber();
+				longestLineWidth_ = (*i)->longestSublineWidth();
 			}
 		}
 	}
@@ -2095,7 +2096,7 @@ void LineLayoutBuffer::updateLongestLine(length_t line, int width) throw() {
  * <em>C1 controls</em> include characters whose code point is U+0080..009F. But only U+0085 is
  * excluded. This is one of "End of line" character.
  *
- * <em>End of line</em> includes any NLFs in Unicode. Identified by @c text#Newline enumeration.
+ * <em>End of line</em> includes any NLFs in Unicode. Identified by @c kernel#Newline enumeration.
  *
  * <em>White space characters</em> include all Unicode white spaces and horizontal tab (U+0009). An
  * instance of @c ISpecialCharacterRenderer can't set the width of these glyphs.
@@ -2165,21 +2166,21 @@ DefaultSpecialCharacterRenderer::~DefaultSpecialCharacterRenderer() throw() {
 
 /// @see ISpecialCharacterRenderer#drawControlCharacter
 void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
-	HFONT oldFont = context.dc.selectObject(renderer_->getFont());
+	::HFONT oldFont = context.dc.selectObject(renderer_->font());
 	context.dc.setTextColor(controlColor_);
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->getAscent(), 0, 0, buffer, 2, 0);
+	context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->ascent(), 0, 0, buffer, 2, 0);
 	context.dc.selectObject(oldFont);
 }
 
 /// @see ISpecialCharacterRenderer#drawLineTerminator
-void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, text::Newline) const {
+void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, kernel::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xFFFF) {
-		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000) ? font_ : renderer_->getFont());
+		::HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000) ? font_ : renderer_->font());
 		context.dc.setTextColor(eolColor_);
 		context.dc.extTextOut(context.rect.left,
-			context.rect.top + renderer_->getAscent(), ETO_GLYPH_INDEX, 0, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
+			context.rect.top + renderer_->ascent(), ETO_GLYPH_INDEX, 0, reinterpret_cast<const ::WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
 		context.dc.selectObject(oldFont);
 	}
 }
@@ -2189,9 +2190,9 @@ void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext&
 	const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
 	const ::WCHAR glyph = glyphs_[id];
 	if(glyph != 0xFFFF) {
-		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->getFont());
+		::HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->font());
 		context.dc.setTextColor(wrapMarkColor_);
-		context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->getAscent(), ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
+		context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->ascent(), ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
 		context.dc.selectObject(oldFont);
 	}
 }
@@ -2204,22 +2205,22 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
 		const ::WCHAR glyph = glyphs_[id];
 		if(glyph != 0xFFFF) {
-			HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->getFont());
+			::HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[id] & 0x80000000) ? font_ : renderer_->font());
 			const int glyphWidth = glyphWidths_[id] & 0x7FFFFFFF;
 			const int x =
 				((context.orientation == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
 					|| (context.orientation == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
 				context.rect.left : context.rect.right - glyphWidth;
 			context.dc.setTextColor(whiteSpaceColor_);
-			context.dc.extTextOut(x, context.rect.top + renderer_->getAscent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect, &glyph, 1, 0);
+			context.dc.extTextOut(x, context.rect.top + renderer_->ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect, &glyph, 1, 0);
 			context.dc.selectObject(oldFont);
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xFFFF) {
-		HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000) ? font_ : renderer_->getFont());
+		::HFONT oldFont = context.dc.selectObject(toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000) ? font_ : renderer_->font());
 		context.dc.setTextColor(whiteSpaceColor_);
 		context.dc.extTextOut((context.rect.left + context.rect.right - (glyphWidths_[WHITE_SPACE] & 0x7FFFFFFF)) / 2,
-			context.rect.top + renderer_->getAscent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect,
-			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
+			context.rect.top + renderer_->ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect,
+			reinterpret_cast<const ::WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
 		context.dc.selectObject(oldFont);
 	}
 }
@@ -2230,7 +2231,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 
 	// using the primary font
 	ScreenDC dc;
-	HFONT oldFont = dc.selectObject(renderer_->getFont());
+	::HFONT oldFont = dc.selectObject(renderer_->font());
 	dc.getGlyphIndices(codes, countof(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
 	dc.getCharWidthI(glyphs_, countof(codes), glyphWidths_);
 
@@ -2239,7 +2240,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 	font_ = 0;
 	if(find(glyphs_, endof(glyphs_), 0xFFFF) != endof(glyphs_)) {
 		::LOGFONTW lf;
-		::GetObject(renderer_->getFont(), sizeof(::LOGFONTW), &lf);
+		::GetObject(renderer_->font(), sizeof(::LOGFONTW), &lf);
 		lf.lfWeight = FW_REGULAR;
 		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
 		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");
@@ -2266,14 +2267,14 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	HFONT oldFont = context.dc.selectObject(renderer_->getFont());
+	::HFONT oldFont = context.dc.selectObject(renderer_->font());
 	const int result = context.dc.getTextExtent(buffer, 2).cx;
 	context.dc.selectObject(oldFont);
 	return result;
 }
 
 /// @see ISpecialCharacterRenderer#getLineTerminatorWidth
-int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, text::Newline) const {
+int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, kernel::Newline) const {
 	return showsEOLs_ ? (glyphWidths_[LINE_TERMINATOR] & 0x7FFFFFFF) : 0;
 }
 
@@ -2478,20 +2479,20 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @throw std#invalid_argument @a script is invalid
  * @see #getLinkedFont, #setFont
  */
-HFONT FontSelector::getFont(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
+::HFONT FontSelector::font(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
 	if(script <= Script::FIRST_VALUE || script == Script::INHERITED
 			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
 		throw invalid_argument("invalid script value.");
 	if(script == Script::COMMON)
-		return getFontInFontset(*const_cast<FontSelector*>(this)->primaryFont_, bold, italic);
+		return fontInFontset(*const_cast<FontSelector*>(this)->primaryFont_, bold, italic);
 	else {
 		map<int, Fontset*>::iterator i = const_cast<FontSelector*>(this)->associations_.find(script);
-		return (i != associations_.end()) ? getFontInFontset(*i->second, bold, italic) : 0;
+		return (i != associations_.end()) ? fontInFontset(*i->second, bold, italic) : 0;
 	}
 }
 
 /// Returns the font to render shaping control characters.
-HFONT FontSelector::getFontForShapingControls() const throw() {
+::HFONT FontSelector::fontForShapingControls() const throw() {
 	if(shapingControlsFont_ == 0)
 		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
 			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
@@ -2506,15 +2507,15 @@ HFONT FontSelector::getFontForShapingControls() const throw() {
  * @param italic set true to get an italic font
  * @return the font
  */
-HFONT FontSelector::getFontInFontset(const Fontset& fontset, bool bold, bool italic) const throw() {
+::HFONT FontSelector::fontInFontset(const Fontset& fontset, bool bold, bool italic) const throw() {
 	Fontset& fs = const_cast<Fontset&>(fontset);
-	HFONT& font = bold ? (italic ? fs.boldItalic : fs.bold) : (italic ? fs.italic : fs.regular);
+	::HFONT& font = bold ? (italic ? fs.boldItalic : fs.bold) : (italic ? fs.italic : fs.regular);
 	if(font == 0) {
 		font = ::CreateFontW(-(ascent_ + descent_),
 			0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
 			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
-		auto_ptr<DC> dc = getDeviceContext();
-		HFONT oldFont = dc->selectObject(font);
+		auto_ptr<DC> dc = deviceContext();
+		::HFONT oldFont = dc->selectObject(font);
 		::TEXTMETRICW tm;
 		dc->getTextMetrics(tm);
 		dc->selectObject(oldFont);
@@ -2538,10 +2539,10 @@ HFONT FontSelector::getFontInFontset(const Fontset& fontset, bool bold, bool ita
  * @throw IndexOutOfBoundsException @a index is invalid
  * @see #getFont, #getNumberOfLinkedFonts
  */
-HFONT FontSelector::getLinkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
+::HFONT FontSelector::linkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
 	if(linkedFonts_ == 0)
 		throw IndexOutOfBoundsException();
-	return getFontInFontset(*linkedFonts_->at(index), bold, italic);
+	return fontInFontset(*linkedFonts_->at(index), bold, italic);
 }
 
 ///
@@ -2579,7 +2580,7 @@ void FontSelector::linkPrimaryFont() throw() {
 	fireFontChanged();
 }
 
-void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
+void FontSelector::resetPrimaryFont(DC& dc, ::HFONT font) {
 	assert(font != 0);
 	::TEXTMETRICW tm;
 	HFONT oldFont = dc.selectObject(primaryFont_->regular = font);
@@ -2669,7 +2670,7 @@ namespace {
  * @param enableDoubleBuffering set true to use double-buffering for non-flicker drawing
  */
 TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBuffering) :
-		LineLayoutBuffer(presentation.getDocument(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+		LineLayoutBuffer(presentation.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(presentation), enablesDoubleBuffering_(enableDoubleBuffering) {
 	setLayoutInformation(this, false);
 	setFont(0, 0, &getDefaultFontAssociations());
@@ -2685,7 +2686,7 @@ TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBufferin
 
 /// Copy-constructor.
 TextRenderer::TextRenderer(const TextRenderer& rhs) : FontSelector(rhs),
-		LineLayoutBuffer(rhs.presentation_.getDocument(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+		LineLayoutBuffer(rhs.presentation_.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(rhs.presentation_), enablesDoubleBuffering_(rhs.enablesDoubleBuffering_) {
 	setLayoutInformation(this, false);
 //	updateViewerSize(); ???
@@ -2703,7 +2704,7 @@ void TextRenderer::fontChanged() {
 	if(enablesDoubleBuffering_ && memoryBitmap_.getHandle() != 0) {
 		::BITMAP b;
 		memoryBitmap_.getBitmap(b);
-		if(b.bmHeight != calculateMemoryBitmapSize(getLinePitch()))
+		if(b.bmHeight != calculateMemoryBitmapSize(linePitch()))
 			memoryBitmap_.reset();
 	}
 }
@@ -2711,30 +2712,6 @@ void TextRenderer::fontChanged() {
 /// @see ILayoutInformationProvider#getFontSelector
 const FontSelector& TextRenderer::getFontSelector() const throw() {
 	return *this;
-}
-
-/**
- * Returns the indentation of the specified visual line from the left most.
- * @param line the line number
- * @param subline the visual subline number
- * @return the indentation in pixel
- * @throw text#BadPositionException @a line or @a subline is invalid
- */
-int TextRenderer::getLineIndent(length_t line, length_t subline) const {
-	const LayoutSettings& c = getLayoutSettings();
-	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
-		return 0;
-	else {
-		int width = getWidth();
-		switch(c.alignment) {
-		case ALIGN_RIGHT:
-			return width - getLineLayout(line).getSublineWidth(subline);
-		case ALIGN_CENTER:
-			return (width - getLineLayout(line).getSublineWidth(subline)) / 2;
-		default:
-			return 0;
-		}
-	}
 }
 
 /// @see ILayoutInformationProvider#getPresentation
@@ -2748,11 +2725,35 @@ ISpecialCharacterRenderer* TextRenderer::getSpecialCharacterRenderer() const thr
 }
 
 /**
+ * Returns the indentation of the specified visual line from the left most.
+ * @param line the line number
+ * @param subline the visual subline number
+ * @return the indentation in pixel
+ * @throw kernel#BadPositionException @a line or @a subline is invalid
+ */
+int TextRenderer::lineIndent(length_t line, length_t subline) const {
+	const LayoutSettings& c = getLayoutSettings();
+	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
+		return 0;
+	else {
+		int width = getWidth();
+		switch(c.alignment) {
+		case ALIGN_RIGHT:
+			return width - lineLayout(line).sublineWidth(subline);
+		case ALIGN_CENTER:
+			return (width - lineLayout(line).sublineWidth(subline)) / 2;
+		default:
+			return 0;
+		}
+	}
+}
+
+/**
  * Returns the pitch of each lines (height + space).
  * @see FontSelector#getLineHeight
  */
-int TextRenderer::getLinePitch() const throw() {
-	return getLineHeight() + getLayoutSettings().lineSpacing;
+int TextRenderer::linePitch() const throw() {
+	return lineHeight() + getLayoutSettings().lineSpacing;
 }
 
 /**
@@ -2770,23 +2771,23 @@ int TextRenderer::getLinePitch() const throw() {
 void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 		const ::RECT& paintRect, const ::RECT& clipRect, const LineLayout::Selection* selection) const throw() {
 	if(!enablesDoubleBuffering_) {
-		getLineLayout(line).draw(dc, x, y, paintRect, clipRect, selection);
+		lineLayout(line).draw(dc, x, y, paintRect, clipRect, selection);
 		return;
 	}
 
-	const LineLayout& layout = getLineLayout(line);
-	const int dy = getLinePitch();
+	const LineLayout& layout = lineLayout(line);
+	const int dy = linePitch();
 
 	// skip to the subline needs to draw
 	const int top = max(paintRect.top, clipRect.top);
 	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
-	if(subline >= layout.getNumberOfSublines())
+	if(subline >= layout.numberOfSublines())
 		return;	// this logical line does not need to draw
 	y += static_cast<int>(dy * subline);
 
 	TextRenderer& self = *const_cast<TextRenderer*>(this);
 	if(memoryDC_.get() == 0)		
-		self.memoryDC_ = getDeviceContext()->createCompatibleDC();
+		self.memoryDC_ = deviceContext()->createCompatibleDC();
 	const int horizontalResolution = calculateMemoryBitmapSize(dc.getDeviceCaps(HORZRES));
 	if(memoryBitmap_.getHandle() != 0) {
 		::BITMAP b;
@@ -2803,7 +2804,7 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	manah::win32::Rect offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
 	offsetedPaintRect.offset(-left, -y);
 	offsetedClipRect.offset(-left, -y);
-	for(; subline < layout.getNumberOfSublines() && offsetedPaintRect.bottom >= 0;
+	for(; subline < layout.numberOfSublines() && offsetedPaintRect.bottom >= 0;
 			++subline, y += dy, offsetedPaintRect.offset(0, -dy), offsetedClipRect.offset(0, -dy)) {
 		layout.draw(subline, *memoryDC_, x, 0, offsetedPaintRect, offsetedClipRect, selection);
 		dc.bitBlt(left, y, right - left, dy, memoryDC_->getHandle(), 0, 0, SRCCOPY);
@@ -2903,7 +2904,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		dcex->setBkMode(TRANSPARENT);
 		dcex->setTextColor(configuration_.lineNumbers.textColor.foreground);
 		dcex->setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
-		dcex->selectObject(viewer_.getTextRenderer().getFont());
+		dcex->selectObject(viewer_.getTextRenderer().font());
 	}
 
 	// 行番号描画の準備
@@ -2935,22 +2936,22 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 	// 1 行ずつ細かい描画
 	length_t line, visualSublineOffset;
-	const length_t lines = viewer_.getDocument().getNumberOfLines();
+	const length_t lines = viewer_.getDocument().numberOfLines();
 	viewer_.mapClientYToLine(paintRect.top, &line, &visualSublineOffset);	// $friendly-access
 	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
 		++line;
 	int y = viewer_.mapLineToClientY(line, false);
 	if(y != 32767 && y != -32768) {
 		while(y < paintRect.bottom && line < lines) {
-			const LineLayout& layout = renderer.getLineLayout(line);
-			const int nextY = y + static_cast<int>(layout.getNumberOfSublines() * renderer.getLinePitch());
+			const LineLayout& layout = renderer.lineLayout(line);
+			const int nextY = y + static_cast<int>(layout.numberOfSublines() * renderer.linePitch());
 			if(nextY >= paintRect.top) {
 				// 派生クラスにインジケータマージンの描画機会を与える
 				if(configuration_.indicatorMargin.visible) {
 					::RECT rect = {
 						alignLeft ? left : right - configuration_.indicatorMargin.width,
 						y, alignLeft ? left + configuration_.indicatorMargin.width : right,
-						y + renderer.getLinePitch()};
+						y + renderer.linePitch()};
 					viewer_.drawIndicatorMargin(line, *dcex, rect);
 				}
 
@@ -2987,7 +2988,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() throw() {
 		if(newLineNumberDigits != lineNumberDigitsCache_) {
 			// the width of the line numbers area is determined by the maximum width of glyphs of 0..9
 			ClientDC dc = viewer_.getDC();
-			HFONT oldFont = dc.selectObject(viewer_.getTextRenderer().getFont());
+			::HFONT oldFont = dc.selectObject(viewer_.getTextRenderer().font());
 			::SCRIPT_STRING_ANALYSIS ssa;
 			MANAH_AUTO_STRUCT(::SCRIPT_CONTROL, sc);
 			MANAH_AUTO_STRUCT(::SCRIPT_STATE, ss);

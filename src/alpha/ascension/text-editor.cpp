@@ -9,10 +9,10 @@
 #include "../../manah/win32/utility.hpp"
 #include "../../manah/win32/ui/wait-cursor.hpp"
 using namespace ascension;
+using namespace ascension::kernel;
 using namespace ascension::texteditor;
 using namespace ascension::texteditor::commands;
 using namespace ascension::texteditor::isc;
-using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace manah;
 using namespace manah::win32;
@@ -22,24 +22,24 @@ using manah::win32::ui::WaitCursor;
 
 // commands.* ///////////////////////////////////////////////////////////////
 
-#define ASSERT_IFISWINDOW()	assert(getTarget().isWindow())
+#define ASSERT_IFISWINDOW()	assert(target().isWindow())
 #define ABORT_ISEARCH()												\
-	if(Session* session = getTarget().getDocument().getSession()) {	\
-		if(session->getIncrementalSearcher().isRunning())			\
-			session->getIncrementalSearcher().abort();				\
+	if(Session* const session = target().document().session()) {	\
+		if(session->incrementalSearcher().isRunning())				\
+			session->incrementalSearcher().abort();					\
 	}
 #define END_ISEARCH()												\
-	if(Session* session = getTarget().getDocument().getSession()) {	\
-		if(session->getIncrementalSearcher().isRunning())			\
-			session->getIncrementalSearcher().end();				\
+	if(Session* const session = target().document().session()) {	\
+		if(session->incrementalSearcher().isRunning())				\
+			session->incrementalSearcher().end();					\
 	}
-#define CHECK_DOCUMENT_READONLY(retval)			\
-	if(getTarget().getDocument().isReadOnly())	\
+#define CHECK_DOCUMENT_READONLY(retval)		\
+	if(target().document().isReadOnly())	\
 		return retval
-#define CLOSE_COMPLETION_PROPOSAL_POPUP()																	\
-	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {							\
-		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI())	\
-			cpui->close();																					\
+#define CLOSE_COMPLETION_PROPOSAL_POPUP()																			\
+	if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {									\
+		if(contentassist::IContentAssistant::ICompletionProposalsUI* const cpui = ca->getCompletionProposalsUI())	\
+			cpui->close();																							\
 	}
 #define ABORT_MODES()					\
 	CLOSE_COMPLETION_PROPOSAL_POPUP();	\
@@ -52,29 +52,29 @@ using manah::win32::ui::WaitCursor;
 ulong BookmarkAllCommand::execute() {
 	ABORT_MODES();
 	const bool onlySelection = param_;
-    if(onlySelection && getTarget().getCaret().isSelectionEmpty())
+    if(onlySelection && target().caret().isSelectionEmpty())
 		return 0;
 
 	WaitCursor wc;
-	TextViewer& viewer = getTarget();
-	Document& document = viewer.getDocument();
+	TextViewer& viewer = target();
+	Document& document = viewer.document();
 	const searcher::TextSearcher* s;
-	if(const Session* const session = document.getSession())
-		s = &session->getTextSearcher();
+	if(const Session* const session = document.session())
+		s = &session->textSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
 
 	ulong count = 0;
 	Region scope(
-		onlySelection ? max<Position>(viewer.getCaret().getTopPoint(),
+		onlySelection ? max<Position>(viewer.caret().beginning(),
 			document.accessibleRegion().first) : document.accessibleRegion().first,
-		onlySelection ? min<Position>(viewer.getCaret().getBottomPoint(),
+		onlySelection ? min<Position>(viewer.caret().end(),
 			document.accessibleRegion().second) : document.accessibleRegion().second);
 
-	Bookmarker& bookmarker = document.getBookmarker();
+	Bookmarker& bookmarker = document.bookmarker();
 	Region matchedRegion;
 	while(s->search(document,
-			max<Position>(viewer.getCaret().getTopPoint(), document.accessibleRegion().first),
+			max<Position>(viewer.caret().beginning(), document.accessibleRegion().first),
 			scope, FORWARD, matchedRegion)) {
 		bookmarker.mark(matchedRegion.first.line);
 		scope.first.line = matchedRegion.first.line + 1;
@@ -91,9 +91,9 @@ ulong BookmarkAllCommand::execute() {
 ulong BookmarkCommand::execute() {
 	ABORT_MODES();
 	if(type_ == CLEAR_ALL)
-		getTarget().getDocument().getBookmarker().clear();
+		target().document().bookmarker().clear();
 	else if(type_ == TOGGLE_CURRENT_LINE)
-		getTarget().getDocument().getBookmarker().toggle(getTarget().getCaret().getLineNumber());
+		target().document().bookmarker().toggle(target().caret().lineNumber());
 	else
 		assert(false);
 	return 0;
@@ -106,7 +106,7 @@ ulong BookmarkCommand::execute() {
 ulong CancelCommand::execute() {
 	ASSERT_IFISWINDOW();
 	ABORT_MODES();
-	getTarget().getCaret().clearSelection();
+	target().caret().clearSelection();
 	return 0;
 }
 
@@ -117,13 +117,13 @@ ulong CancelCommand::execute() {
  */
 ulong CaretMovementCommand::execute() {
 	END_ISEARCH();
-	Caret& caret = getTarget().getCaret();
+	Caret& caret = target().caret();
 
 	if(!extend_) {
 		if(type_ == NEXT_LINE || type_ == NEXT_VISUAL_LINE || type_ == PREVIOUS_LINE
 				|| type_ == PREVIOUS_VISUAL_LINE || type_ == NEXT_PAGE || type_ == PREVIOUS_PAGE) {
-			if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
-				if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
+			if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {
+				if(contentassist::IContentAssistant::ICompletionProposalsUI* const cpui = ca->getCompletionProposalsUI()) {
 					switch(type_) {
 					case NEXT_LINE:
 					case NEXT_VISUAL_LINE:		cpui->nextProposal(+1); break;
@@ -138,26 +138,26 @@ ulong CaretMovementCommand::execute() {
 		}
 		caret.endBoxSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
-			const bool rtl = getTarget().getConfiguration().orientation == layout::RIGHT_TO_LEFT;
+			const bool rtl = target().configuration().orientation == layout::RIGHT_TO_LEFT;
 			if(type_ == FORWARD_CHARACTER
 					|| (type_ == RIGHT_CHARACTER && !rtl)
 					|| (type_ == LEFT_CHARACTER && rtl)) {
-				caret.moveTo(caret.getBottomPoint());
+				caret.moveTo(caret.end());
 				return 0;
 			} else if(type_ == BACKWARD_CHARACTER
 					|| (type_ == LEFT_CHARACTER && !rtl)
 					|| (type_ == RIGHT_CHARACTER && rtl)) {
-				caret.moveTo(caret.getTopPoint());
+				caret.moveTo(caret.beginning());
 				return 0;
 			}
 		}
 	}
 
 	if(type_ == MATCH_BRACKET) {
-		Position foundPosition = caret.getMatchBrackets().first;
+		Position foundPosition(caret.matchBrackets().first);
 
 		if(foundPosition == Position::INVALID_POSITION) {
-			getTarget().beep();	// not found
+			target().beep();	// not found
 			return 1;
 		}
 		if(!extend_)
@@ -165,7 +165,7 @@ ulong CaretMovementCommand::execute() {
 		else if(foundPosition > caret)
 			caret.select(caret, Position(foundPosition.line, foundPosition.column + 1));
 		else
-			caret.select(Position(caret.getLineNumber(), caret.getColumnNumber() + 1), foundPosition);
+			caret.select(Position(caret.lineNumber(), caret.columnNumber() + 1), foundPosition);
 	} else {
 		int type = type_;
 		switch(type) {
@@ -199,11 +199,11 @@ ulong CaretMovementCommand::execute() {
 			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_VISUAL_LINE, VisualPoint, previousVisualLine);
 #undef ASCENSION_HANDLE_CARET_MOVEMENT
 		case NEXT_PAGE:
-			getTarget().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
+			target().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
 			extend_ ? caret.extendSelection(mem_fun(VisualPoint::nextPage), offset_) : caret.nextPage(offset_);
 			break;
 		case PREVIOUS_PAGE:
-			getTarget().sendMessage(WM_VSCROLL, SB_PAGEUP);
+			target().sendMessage(WM_VSCROLL, SB_PAGEUP);
 			extend_ ? caret.extendSelection(mem_fun(VisualPoint::previousPage), offset_) : caret.previousPage(offset_);
 			break;
 #define ASCENSION_HANDLE_CARET_MOVEMENT(commandType, className, methodName)	\
@@ -239,30 +239,30 @@ ulong CharacterCodePointConversionCommand::execute() {
 
 	using namespace ascension::unicode;
 
-	TextViewer& viewer = getTarget();
-	const Document& document = viewer.getDocument();
-	const EditPoint& bottom = viewer.getCaret().getBottomPoint();
+	TextViewer& viewer = target();
+	const Document& document = viewer.document();
+	const EditPoint& bottom = viewer.caret().end();
 
 	if(bottom.isBeginningOfLine()
-			|| (document.isNarrowed() && bottom.getPosition() == document.accessibleRegion().first)) {	// 行頭以外でなければならぬ
+			|| (document.isNarrowed() && bottom.position() == document.accessibleRegion().first)) {	// 行頭以外でなければならぬ
 		viewer.beep();
 		return 1;
 	}
 
-	Caret& caret = viewer.getCaret();
-	const Char* const line = document.getLine(bottom.getLineNumber()).data();
+	Caret& caret = viewer.caret();
+	const Char* const line = document.line(bottom.lineNumber()).data();
 	CodePoint cp;
 	Char buffer[7];
 
 	if(param_) {	// 文字 -> コードポイント
-		cp = surrogates::decodeLast(line, line + bottom.getColumnNumber());
+		cp = surrogates::decodeLast(line, line + bottom.columnNumber());
 		swprintf(buffer, L"%lX", cp);
 		viewer.freeze();
-		caret.select(Position(bottom.getLineNumber(), bottom.getColumnNumber() - ((cp > 0xFFFF) ? 2 : 1)), bottom);
+		caret.select(Position(bottom.lineNumber(), bottom.columnNumber() - ((cp > 0xFFFF) ? 2 : 1)), bottom);
 		caret.replaceSelection(buffer, buffer + wcslen(buffer), false);
 		viewer.unfreeze();
 	} else {	// コードポイント -> 文字
-		const length_t column = bottom.getColumnNumber();
+		const length_t column = bottom.columnNumber();
 		length_t i = column - 1;
 
 		// 変換できるのは "N" 、"U+N" および "u+N" のいずれか (N は 6 桁以下の16進数)
@@ -284,7 +284,7 @@ ulong CharacterCodePointConversionCommand::execute() {
 				if(i >= 2 && line[i - 1] == L'+' && (line[i - 2] == L'U' || line[i - 2] == L'u'))
 					i -= 2;
 				viewer.freeze();
-				caret.select(Position(bottom.getLineNumber(), i), bottom);
+				caret.select(Position(bottom.lineNumber(), i), bottom);
 				caret.replaceSelection(buffer, buffer + (cp < 0x10000U ? 1 : 2), false);
 				viewer.unfreeze();
 				return 0;
@@ -304,15 +304,15 @@ ulong CharacterCodePointConversionCommand::execute() {
  */
 ulong CharacterInputCommand::execute() {
 	// インクリメンタル検索中 -> 検索式に追加
-	if(Session* session = getTarget().getDocument().getSession()) {
-		if(session->getIncrementalSearcher().isRunning()) {
+	if(Session* const session = target().document().session()) {
+		if(session->incrementalSearcher().isRunning()) {
 			CLOSE_COMPLETION_PROPOSAL_POPUP();
 			if(param_ == 0x0009 || !toBoolean(iswcntrl(static_cast<wint_t>(param_))))
-				session->getIncrementalSearcher().addCharacter(param_);
+				session->incrementalSearcher().addCharacter(param_);
 			return 0;
 		}
 	}
-	return getTarget().getCaret().inputCharacter(param_) ? 1 : 0;
+	return target().caret().inputCharacter(param_) ? 1 : 0;
 }
 
 /**
@@ -326,13 +326,13 @@ ulong CharacterInputFromNextLineCommand::execute() {
 
 	// TODO: recognizes narrowing.
 
-	const Document& document = getTarget().getDocument();
-	const VisualPoint& caret = getTarget().getCaret();
+	const Document& document = target().document();
+	const VisualPoint& caret = target().caret();
 	const bool& fromPrevious = !param_;	// 名前が分かりにくいんで...
 
-	if((caret.getLineNumber() == 0 && fromPrevious)
-			|| (caret.getLineNumber() == document.getNumberOfLines() - 1 && !fromPrevious)) {
-		getTarget().beep();
+	if((caret.lineNumber() == 0 && fromPrevious)
+			|| (caret.lineNumber() == document.numberOfLines() - 1 && !fromPrevious)) {
+		target().beep();
 		return 1;
 	}
 
@@ -344,13 +344,13 @@ ulong CharacterInputFromNextLineCommand::execute() {
 	else
 		p.nextVisualLine();
 
-	const length_t column = p.getColumnNumber();
-	const String& line = document.getLine(caret.getLineNumber() + (fromPrevious ? -1 : 1));
+	const length_t column = p.columnNumber();
+	const String& line = document.line(caret.lineNumber() + (fromPrevious ? -1 : 1));
 	if(column >= line.length()) {
-		getTarget().beep();
+		target().beep();
 		return 1;
 	}
-	return CharacterInputCommand(getTarget(), unicode::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
+	return CharacterInputCommand(target(), unicode::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
 }
 
 /**
@@ -367,11 +367,11 @@ ulong ClipboardCommand::execute() {
 			ABORT_ISEARCH();
 	}
 	if(type_ == COPY)
-		getTarget().getCaret().copySelection(performClipboardRing_);
+		target().caret().copySelection(performClipboardRing_);
 	else if(type_ == CUT)
-		getTarget().getCaret().cutSelection(performClipboardRing_);
+		target().caret().cutSelection(performClipboardRing_);
 	else if(type_ == PASTE)
-		getTarget().getCaret().pasteToSelection(performClipboardRing_);
+		target().caret().pasteToSelection(performClipboardRing_);
 	return 0;
 }
 
@@ -384,11 +384,11 @@ ulong CompletionProposalPopupCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	ABORT_ISEARCH();
-	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
+	if(contentassist::IContentAssistant* ca = target().contentAssistant()) {
 		ca->showPossibleCompletions();
 		return 0;
 	} else {
-		getTarget().beep();
+		target().beep();
 		return 1;
 	}
 }
@@ -403,15 +403,15 @@ ulong DeletionCommand::execute() {
 	if(type_ != NEXT_CHARACTER && type_ != PREVIOUS_CHARACTER)
 		ABORT_ISEARCH();
 
-	TextViewer& viewer = getTarget();
-	Caret& caret = viewer.getCaret();
+	TextViewer& viewer = target();
+	Caret& caret = viewer.caret();
 	if(/*caret.isAutoCompletionRunning() &&*/ type_ != PREVIOUS_CHARACTER)
 		CLOSE_COMPLETION_PROPOSAL_POPUP();
 
-	Document& document = viewer.getDocument();
+	Document& document = viewer.document();
 	searcher::IncrementalSearcher* isearch = 0;
-	if(Session* session = document.getSession())
-		isearch = &session->getIncrementalSearcher();
+	if(Session* const session = document.session())
+		isearch = &session->incrementalSearcher();
 	if(isearch != 0 && isearch->isRunning()) {
 		if(type_ == NEXT_CHARACTER)
 			isearch->reset();
@@ -422,11 +422,11 @@ ulong DeletionCommand::execute() {
 				isearch->undo();
 		}
 	} else if(type_ == NEXT_WORD || type_ == PREVIOUS_WORD) {
-		const Position from = (type_ == NEXT_WORD) ? caret.getTopPoint() : caret.getBottomPoint();
+		const Position from = (type_ == NEXT_WORD) ? caret.beginning() : caret.end();
 		unicode::WordBreakIterator<DocumentCharacterIterator> to(
-			DocumentCharacterIterator(document, (type_ == NEXT_WORD) ? caret.getBottomPoint() : caret.getTopPoint()),
+			DocumentCharacterIterator(document, (type_ == NEXT_WORD) ? caret.end() : caret.beginning()),
 			unicode::AbstractWordBreakIterator::START_OF_SEGMENT,
-				viewer.getDocument().getContentTypeInformation().getIdentifierSyntax(caret.getContentType()));
+				viewer.document().contentTypeInformation().getIdentifierSyntax(caret.getContentType()));
 		(type_ == NEXT_WORD) ? ++to : --to;
 		if(to.base().tell() != from) {
 			viewer.freeze();
@@ -448,9 +448,9 @@ ulong DeletionCommand::execute() {
 		document.endSequentialEdit();
 		caret.erase(-1);
 	} else if(type_ == WHOLE_LINE) {
-		const length_t line = caret.getLineNumber();
+		const length_t line = caret.lineNumber();
 		document.endSequentialEdit();
-		if(line != document.getNumberOfLines() - 1)	// 最終行でない場合
+		if(line != document.numberOfLines() - 1)	// 最終行でない場合
 			caret.nextLine();
 		document.erase(Position(line, 0), Position(line, INVALID_INDEX));
 	} else
@@ -469,19 +469,19 @@ ulong FindNextCommand::execute() {
 	using namespace ascension::searcher;
 
 	WaitCursor wc;
-	TextViewer& viewer = getTarget();
-	Document& document = viewer.getDocument();
-	Caret& caret = viewer.getCaret();
+	TextViewer& viewer = target();
+	Document& document = viewer.document();
+	Caret& caret = viewer.caret();
 	const TextSearcher* s;
-	if(const Session* const session = document.getSession())
-		s = &session->getTextSearcher();
+	if(const Session* const session = document.session())
+		s = &session->textSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
 
 	const Region scope(document.accessibleRegion());
 	Region matchedRegion;
 	bool found = s->search(document,
-		(param_ == FORWARD) ? max<Position>(caret.getBottomPoint(), scope.first) : min<Position>(caret.getTopPoint(), scope.second),
+		(param_ == FORWARD) ? max<Position>(caret.end(), scope.first) : min<Position>(caret.beginning(), scope.second),
 		scope, param_, matchedRegion);
 
 	if(found) {
@@ -500,13 +500,13 @@ ulong FindNextCommand::execute() {
  */
 ulong IncrementalSearchCommand::execute() {
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
-	if(Session* const session = getTarget().getDocument().getSession()) {
-		searcher::IncrementalSearcher& isearch = session->getIncrementalSearcher();
+	if(Session* const session = target().document().session()) {
+		searcher::IncrementalSearcher& isearch = session->incrementalSearcher();
 		if(!isearch.isRunning())	// 開始
-			isearch.start(getTarget().getDocument(), getTarget().getCaret(), session->getTextSearcher(), direction_, callback_);
+			isearch.start(target().document(), target().caret(), session->textSearcher(), direction_, callback_);
 		else {	// 次の一致位置へジャンプ (検索方向のみ有効。type_ は無視される)
 			if(!isearch.next(direction_))
-				getTarget().beep();
+				target().beep();
 		}
 	}
 	return 0;
@@ -523,14 +523,14 @@ ulong IndentationCommand::execute() {
 	END_ISEARCH();
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
-	TextViewer& viewer = getTarget();
-	Caret& caret = viewer.getCaret();
-	viewer.getDocument().beginSequentialEdit();
+	TextViewer& viewer = target();
+	Caret& caret = viewer.caret();
+	viewer.document().beginSequentialEdit();
 	viewer.freeze();
 	Position anchorResult = tabIndent_ ?
-		caret.tabIndent(caret.getAnchor(), caret.isSelectionRectangle(), level_ * (indent_ ? 1 : -1))
-		: caret.spaceIndent(caret.getAnchor(), caret.isSelectionRectangle(), level_ * (indent_ ? 1 : -1));
-	viewer.getDocument().endSequentialEdit();
+		caret.tabIndent(caret.anchor(), caret.isSelectionRectangle(), level_ * (indent_ ? 1 : -1))
+		: caret.spaceIndent(caret.anchor(), caret.isSelectionRectangle(), level_ * (indent_ ? 1 : -1));
+	viewer.document().endSequentialEdit();
 	caret.select(anchorResult, caret);
 	viewer.unfreeze();
 
@@ -543,23 +543,23 @@ ulong IndentationCommand::execute() {
  */
 ulong InputStatusToggleCommand::execute() {
 	if(type_ == IME_STATUS) {
-		assert(getTarget().isWindow());
-		HIMC imc = ::ImmGetContext(getTarget().getHandle());
+		assert(target().isWindow());
+		::HIMC imc = ::ImmGetContext(target().getHandle());
 		::ImmSetOpenStatus(imc, !toBoolean(::ImmGetOpenStatus(imc)));
-		::ImmReleaseContext(getTarget().getHandle(), imc);
+		::ImmReleaseContext(target().getHandle(), imc);
 	} else if(type_ == OVERTYPE_MODE) {
-		Caret& caret = getTarget().getCaret();
+		Caret& caret = target().caret();
 		caret.setOvertypeMode(!caret.isOvertypeMode());
 		CLOSE_COMPLETION_PROPOSAL_POPUP();
 	} else if(type_ == SOFT_KEYBOARD) {
-		assert(getTarget().isWindow());
-		HIMC imc = ::ImmGetContext(getTarget().getHandle());
-		DWORD conversionMode, sentenceMode;
+		assert(target().isWindow());
+		::HIMC imc = ::ImmGetContext(target().getHandle());
+		::DWORD conversionMode, sentenceMode;
 		::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode);
 		conversionMode = toBoolean(conversionMode & IME_CMODE_SOFTKBD) ?
 			(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
 		::ImmSetConversionStatus(imc, conversionMode, sentenceMode);
-		::ImmReleaseContext(getTarget().getHandle(), imc);
+		::ImmReleaseContext(target().getHandle(), imc);
 	} else
 		assert(false);
 	return 0;
@@ -575,18 +575,18 @@ ulong InputStatusToggleCommand::execute() {
  * @retval 1 the command failed
  */
 ulong NewlineCommand::execute() {
-	TextViewer& viewer = getTarget();
+	TextViewer& viewer = target();
 
-	if(contentassist::IContentAssistant* ca = getTarget().getContentAssistant()) {
+	if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {
 		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
 			if(cpui->complete())
 				return 0;
 		}
 	}
 
-	if(Session* const session = viewer.getDocument().getSession()) {
-		if(session->getIncrementalSearcher().isRunning()) {
-			session->getIncrementalSearcher().end();
+	if(Session* const session = viewer.document().session()) {
+		if(session->incrementalSearcher().isRunning()) {
+			session->incrementalSearcher().end();
 			return 0;
 		}
 	}
@@ -594,27 +594,27 @@ ulong NewlineCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
-	Caret& caret = viewer.getCaret();
+	Caret& caret = viewer.caret();
 
 	if(param_) {
 		caret.enableAutoShow(false);
-		if(caret.getTopPoint().getLineNumber() != 0)
-			caret.moveTo(Position(caret.getTopPoint().getLineNumber() - 1, INVALID_INDEX));
+		if(caret.beginning().lineNumber() != 0)
+			caret.moveTo(Position(caret.beginning().lineNumber() - 1, INVALID_INDEX));
 		else
 			caret.moveTo(Position::ZERO_POSITION);
 		caret.enableAutoShow(true);
 	}
 
 	viewer.freeze();
-	viewer.getDocument().beginSequentialEdit();
+	viewer.document().beginSequentialEdit();
 	if(caret.isSelectionEmpty()) {
-		viewer.getDocument().endSequentialEdit();
+		viewer.document().endSequentialEdit();
 		caret.newLine(false);
 	} else {
 		caret.eraseSelection();
 		caret.newLine(false);
 	}
-	caret.moveTo(caret.getAnchor());
+	caret.moveTo(caret.anchor());
 	viewer.unfreeze();
 	return 0;
 }
@@ -630,29 +630,29 @@ ulong ReconversionCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
-	TextViewer& viewer = getTarget();
-	Caret& caret = viewer.getCaret();
+	TextViewer& viewer = target();
+	Caret& caret = viewer.caret();
 	if(caret.isSelectionRectangle()) {
 		viewer.beep();
 		return 1;
 	}
-	HIMC imc = ::ImmGetContext(viewer.getHandle());
+	::HIMC imc = ::ImmGetContext(viewer.getHandle());
 	if(!toBoolean(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
 		::ImmSetOpenStatus(imc, true);
 
 	// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
-	const bool multilineSelection = caret.getLineNumber() != caret.getAnchor().getLineNumber();
-	const String s = multilineSelection ? caret.getSelectionText() : viewer.getDocument().getLine(caret.getLineNumber());
-	const DWORD bytes = static_cast<DWORD>(sizeof(::RECONVERTSTRING) + sizeof(Char) * s.length());
+	const bool multilineSelection = caret.lineNumber() != caret.anchor().lineNumber();
+	const String s = multilineSelection ? caret.selectionText() : viewer.document().line(caret.lineNumber());
+	const ::DWORD bytes = static_cast<::DWORD>(sizeof(::RECONVERTSTRING) + sizeof(Char) * s.length());
 	::RECONVERTSTRING* const rcs = static_cast<::RECONVERTSTRING*>(::operator new(bytes));
 	rcs->dwSize = bytes;
 	rcs->dwVersion = 0;
-	rcs->dwStrLen = static_cast<DWORD>(s.length());
+	rcs->dwStrLen = static_cast<::DWORD>(s.length());
 	rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
-	rcs->dwCompStrLen = rcs->dwTargetStrLen = static_cast<DWORD>(multilineSelection ? s.length() :
-		(caret.getBottomPoint().getColumnNumber() - caret.getTopPoint().getColumnNumber()));
+	rcs->dwCompStrLen = rcs->dwTargetStrLen = static_cast<::DWORD>(multilineSelection ? s.length() :
+		(caret.end().columnNumber() - caret.beginning().columnNumber()));
 	rcs->dwCompStrOffset = rcs->dwTargetStrOffset =
-		multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * caret.getTopPoint().getColumnNumber());
+		multilineSelection ? 0 : static_cast<::DWORD>(sizeof(Char) * caret.beginning().columnNumber());
 	s.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), s.length());
 	if(caret.isSelectionEmpty()) {
 		// IME selects the composition target automatically if no selection
@@ -662,8 +662,8 @@ ulong ReconversionCommand::execute() {
 			return 1;
 		}
 		caret.select(
-			Position(caret.getLineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
-			Position(caret.getLineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+			Position(caret.lineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
+			Position(caret.lineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 	}
 	::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, 0, 0);
 	::operator delete(rcs);
@@ -679,39 +679,39 @@ ulong ReconversionCommand::execute() {
  */
 ulong ReplaceAllCommand::execute() {
 	ABORT_MODES();
-    if(onlySelection_ && getTarget().getCaret().isSelectionEmpty())
+    if(onlySelection_ && target().caret().isSelectionEmpty())
 		return 0;
 
 	WaitCursor wc;
-	TextViewer& viewer = getTarget();
-	Document& document = viewer.getDocument();
+	TextViewer& viewer = target();
+	Document& document = viewer.document();
 	const searcher::TextSearcher* s;
-	if(const Session* const session = document.getSession())
-		s = &session->getTextSearcher();
+	if(const Session* const session = document.session())
+		s = &session->textSearcher();
 	else
 		return 0;	// TODO: prepares a default text searcher.
 
 	Region scope(
-		onlySelection_ ? max<Position>(viewer.getCaret().getTopPoint(),
+		onlySelection_ ? max<Position>(viewer.caret().beginning(),
 			document.accessibleRegion().first) : document.accessibleRegion().first,
-		onlySelection_ ? min<Position>(viewer.getCaret().getBottomPoint(),
+		onlySelection_ ? min<Position>(viewer.caret().end(),
 			document.accessibleRegion().second) : document.accessibleRegion().second);
 
 	// mark to restore the selection later
-	text::Point oldAnchor(document, viewer.getCaret().getAnchor());
-	text::Point oldCaret(document, viewer.getCaret());
+	kernel::Point oldAnchor(document, viewer.caret().anchor());
+	kernel::Point oldCaret(document, viewer.caret());
 
 	ulong c = 0;
 	try {
 		c = static_cast<ulong>(s->replaceAll(document, scope, callback_));
 	} catch(...) {
 		if(c != 0)
-			viewer.getCaret().select(oldAnchor, oldCaret);
+			viewer.caret().select(oldAnchor, oldCaret);
 		viewer.unfreeze();
 		throw;
 	}
 	if(c != 0)
-		viewer.getCaret().select(oldAnchor, oldCaret);
+		viewer.caret().select(oldAnchor, oldCaret);
 	return c;
 }
 
@@ -723,7 +723,7 @@ ulong RowSelectionExtensionCommand::execute() {
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	END_ISEARCH();
 
-	Caret& caret = getTarget().getCaret();
+	Caret& caret = target().caret();
 	static const int commandMap[] = {
 		FORWARD_CHARACTER, CaretMovementCommand::FORWARD_CHARACTER,
 		BACKWARD_CHARACTER, CaretMovementCommand::BACKWARD_CHARACTER,
@@ -760,7 +760,7 @@ ulong RowSelectionExtensionCommand::execute() {
 	assert(type_ >= 0 && type_ < countof(commandMap));
 	for(int i = 0; i < countof(commandMap); i += 2) {
 		if(commandMap[i] == type_) {
-			CaretMovementCommand(getTarget(), static_cast<CaretMovementCommand::Type>(commandMap[i + 1]), true).execute();
+			CaretMovementCommand(target(), static_cast<CaretMovementCommand::Type>(commandMap[i + 1]), true).execute();
 			break;
 		}
 	}
@@ -774,11 +774,11 @@ ulong RowSelectionExtensionCommand::execute() {
 ulong SelectionCreationCommand::execute() {
 	END_ISEARCH();
 
-	getTarget().getCaret().endBoxSelection();
+	target().caret().endBoxSelection();
 	if(type_ == ALL)
-		getTarget().getCaret().select(getTarget().getDocument().accessibleRegion());
+		target().caret().select(target().document().accessibleRegion());
 	else if(type_ == CURRENT_WORD)
-		getTarget().getCaret().selectWord();
+		target().caret().selectWord();
 	else
 		assert(false);
 	return 0;
@@ -804,16 +804,16 @@ ulong TabifyCommand::execute() {
  */
 ulong TextInputCommand::execute() {
 	// インクリメンタル検索中 -> 検索式に追加
-	if(Session* const session = getTarget().getDocument().getSession()) {
-		if(session->getIncrementalSearcher().isRunning()) {
-			session->getIncrementalSearcher().addString(param_);
+	if(Session* const session = target().document().session()) {
+		if(session->incrementalSearcher().isRunning()) {
+			session->incrementalSearcher().addString(param_);
 			return 0;
 		}
 	}
 
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
-	getTarget().getCaret().replaceSelection(param_);
+	target().caret().replaceSelection(param_);
 	return 0;
 }
 
@@ -830,11 +830,11 @@ ulong TranspositionCommand::execute() {
 	END_ISEARCH();
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 
-	TextViewer& viewer = getTarget();
-	Caret& caret = viewer.getCaret();
+	TextViewer& viewer = target();
+	Caret& caret = viewer.caret();
 	bool succeeded = false;
 	viewer.freeze();
-	viewer.getDocument().beginSequentialEdit();
+	viewer.document().beginSequentialEdit();
 	switch(type_) {
 	case CHARACTERS:	succeeded = caret.transposeCharacters();	break;
 	case WORDS:			succeeded = caret.transposeWords();			break;
@@ -844,7 +844,7 @@ ulong TranspositionCommand::execute() {
 	}
 	if(!succeeded)
 		viewer.beep();
-	viewer.getDocument().endSequentialEdit();
+	viewer.document().endSequentialEdit();
 	viewer.unfreeze();
 
 	return succeeded ? 0 : 1;
@@ -860,12 +860,13 @@ ulong UndoCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
-	if(getTarget().getDocument().getUndoHistoryLength(!param_) == 0)
+	if((param_ && target().document().numberOfUndoableEdits() == 0)
+			|| (!param_ && target().document().numberOfRedoableEdits() == 0))
 		return 1;
 
 	WaitCursor wc;
-	if(param_)	getTarget().getDocument().undo();
-	else		getTarget().getDocument().redo();
+	if(param_)	target().document().undo();
+	else		target().document().redo();
 	return 0;
 }
 
