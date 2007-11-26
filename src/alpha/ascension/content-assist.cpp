@@ -10,7 +10,7 @@
 #include "../../manah/win32/ui/standard-controls.hpp"	// manah.windows.ui.ListBox
 using namespace ascension;
 using namespace ascension::contentassist;
-using namespace ascension::text;
+using namespace ascension::kernel;
 using namespace ascension::unicode;
 using namespace ascension::layout;
 using namespace ascension::viewers;
@@ -124,14 +124,14 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	DocumentPartition currentPartition;
 	set<String> identifiers;
 	bool followingNIDs = false;
-	document.getPartitioner().getPartition(i.tell(), currentPartition);
+	document.partitioner().getPartition(i.tell(), currentPartition);
 	while(i.hasNext()) {
 		if(currentPartition.contentType != contentType_)
 			i.seek(currentPartition.region.end());
 		if(i.tell() >= currentPartition.region.end()) {
 			if(i.tell().column == i.getLine().length())
 				i.next();
-			document.getPartitioner().getPartition(i.tell(), currentPartition);
+			document.partitioner().getPartition(i.tell(), currentPartition);
 			continue;
 		}
 		if(!followingNIDs) {
@@ -160,7 +160,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProposal(const TextViewer& textViewer,
 		const Region& replacementRegion, ICompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const throw() {
 	// select the partially matched proposal
-	String precedingIdentifier(textViewer.getDocument().getLine(replacementRegion.first.line).substr(
+	String precedingIdentifier(textViewer.getDocument().line(replacementRegion.first.line).substr(
 		replacementRegion.beginning().column, replacementRegion.end().column - replacementRegion.beginning().column));
 	if(precedingIdentifier.empty())
 		return 0;
@@ -173,7 +173,7 @@ const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProp
 }
 
 /// Returns the identifier syntax the processor uses or @c null.
-const IdentifierSyntax& IdentifiersProposalProcessor::getIdentifierSyntax() const throw() {
+const IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const throw() {
 	return syntax_;
 }
 
@@ -390,6 +390,11 @@ ContentAssistant::~ContentAssistant() throw() {
 	delete proposalPopup_;
 }
 
+/// Returns the automatic activation delay in milliseconds.
+ulong ContentAssistant::autoActivationDelay() const throw() {
+	return autoActivationDelay_;
+}
+
 /// @see viewers#ICaretListener
 void ContentAssistant::caretMoved(const Caret& self, const Region&) {
 	if(completionSession_.get() != 0) {
@@ -467,11 +472,12 @@ bool ContentAssistant::complete() {
 	return false;
 }
 
-/// @see text#IDocumentListener#documentAboutToBeChanged
-void ContentAssistant::documentAboutToBeChanged(const Document&) {
+/// @see kernel#IDocumentListener#documentAboutToBeChanged
+bool ContentAssistant::documentAboutToBeChanged(const Document&) {
+	return true;
 }
 
-/// @see text#IDocumentListener#documentChanged
+/// @see kernel#IDocumentListener#documentChanged
 void ContentAssistant::documentChanged(const Document&, const DocumentChange& change) {
 	if(completionSession_.get() != 0) {
 		// exit or update the replacement region
@@ -508,11 +514,6 @@ void ContentAssistant::documentChanged(const Document&, const DocumentChange& ch
 		selectProposal(*proposalPopup_, completionSession_->processor->getActiveCompletionProposal(
 			*textViewer_, completionSession_->replacementRegion, completionSession_->proposals.get(), completionSession_->numberOfProposals));
 	}
-}
-
-/// Returns the automatic activation delay in milliseconds.
-ulong ContentAssistant::getAutoActivationDelay() const throw() {
-	return autoActivationDelay_;
 }
 
 /// @see IContentAssistant#getCompletionProposalsUI

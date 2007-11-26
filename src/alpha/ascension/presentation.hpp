@@ -111,38 +111,38 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 * @see Document, DocumentPartitioner, TextViewer
 		 */
-		class Presentation : virtual public text::IDocumentListener, virtual public internal::ITextViewerCollection {
+		class Presentation : virtual public kernel::IDocumentListener, virtual public internal::ITextViewerCollection {
 			MANAH_NONCOPYABLE_TAG(Presentation);
 		public:
 			typedef std::set<viewers::TextViewer*>::iterator TextViewerIterator;
 			typedef std::set<viewers::TextViewer*>::const_iterator TextViewerConstIterator;
 			// constructors
-			explicit Presentation(text::Document& document) throw();
+			explicit Presentation(kernel::Document& document) throw();
 			// attributes
 			void					addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
 			void					addTextViewerListListener(ITextViewerListListener& listener);
-			text::Document&			getDocument() throw();
-			const text::Document&	getDocument() const throw();
+			kernel::Document&		document() throw();
+			const kernel::Document&	document() const throw();
 			layout::Colors			getLineColor(length_t line) const;
 			const LineStyle&		getLineStyle(length_t line, bool& delegatedOwnership) const;
 			void					removeLineColorDirector(ILineColorDirector& director) throw();
 			void					removeTextViewerListListener(ITextViewerListListener& listener);
 			void					setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
 			// enumeration
-			TextViewerIterator		getFirstTextViewer() throw();
-			TextViewerConstIterator	getFirstTextViewer() const throw();
-			TextViewerIterator		getLastTextViewer() throw();
-			TextViewerConstIterator	getLastTextViewer() const throw();
-			std::size_t				getNumberOfTextViewers() const throw();
+			TextViewerIterator		firstTextViewer() throw();
+			TextViewerConstIterator	firstTextViewer() const throw();
+			TextViewerIterator		lastTextViewer() throw();
+			TextViewerConstIterator	lastTextViewer() const throw();
+			std::size_t				numberOfTextViewers() const throw();
 		private:
-			// IDocumentListener
-			void	documentAboutToBeChanged(const text::Document& document);
-			void	documentChanged(const text::Document& document, const text::DocumentChange& change);
-			// internal::ITextViewerCollection
+			// kernel.IDocumentListener
+			bool	documentAboutToBeChanged(const kernel::Document& document);
+			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			// internal.ITextViewerCollection
 			void	addTextViewer(viewers::TextViewer& viewer) throw();
 			void	removeTextViewer(viewers::TextViewer& viewer) throw();
 		private:
-			text::Document& document_;
+			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
 			ASCENSION_SHARED_POINTER<ILineStyleDirector> lineStyleDirector_;
 			std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> > lineColorDirectors_;
@@ -164,7 +164,7 @@ namespace ascension {
 			 * @param region the region to reconstruct the new presentation
 			 * @return the presentation. the ownership will be transferred to the caller
 			 */
-			virtual std::auto_ptr<LineStyle> getPresentation(const text::Region& region) const throw() = 0;
+			virtual std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const throw() = 0;
 			friend class PresentationReconstructor;
 		};
 
@@ -175,7 +175,7 @@ namespace ascension {
 			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw();
 		private:
 			// IPartitionPresentationReconstructor
-			std::auto_ptr<LineStyle>	getPresentation(const text::Region& region) const throw();
+			std::auto_ptr<LineStyle>	getPresentation(const kernel::Region& region) const throw();
 		private:
 			const TextStyle style_;
 		};
@@ -183,23 +183,23 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public text::IDocumentPartitioningListener {
+		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public kernel::IDocumentPartitioningListener {
 			MANAH_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
 			explicit PresentationReconstructor(Presentation& presentation) throw();
 			~PresentationReconstructor() throw();
 			// attribute
-			void	setPartitionReconstructor(text::ContentType contentType,
+			void	setPartitionReconstructor(kernel::ContentType contentType,
 						std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
 		private:
 			// ILineStyleDirector
 		const LineStyle&	queryLineStyle(length_t line, bool& delegates) const;
-			// IDocumentPartitioningListener
-			void	documentPartitioningChanged(const text::Region& changedRegion);
+			// kernel.IDocumentPartitioningListener
+			void	documentPartitioningChanged(const kernel::Region& changedRegion);
 		private:
 			Presentation& presentation_;
-			std::map<text::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
+			std::map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
 		};
 
 
@@ -220,7 +220,7 @@ namespace ascension {
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
 
 		/// Returns the number of text viewers.
-		inline std::size_t Presentation::getNumberOfTextViewers() const throw() {return textViewers_.size();}
+		inline std::size_t Presentation::numberOfTextViewers() const throw() {return textViewers_.size();}
 
 		/**
 		 * Removes the specified line color director.

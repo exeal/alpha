@@ -12,7 +12,7 @@
 
 namespace ascension {
 
-	namespace text {class Document;}
+	namespace kernel {class Document;}
 
 	namespace searcher {
 		class IncrementalSearcher;
@@ -40,15 +40,15 @@ namespace ascension {
 			// constructor
 			ClipboardRing() throw();
 			// attributes
-			std::size_t	getActiveItem() const;
+			std::size_t	activeItem() const;
 			void		addListener(IClipboardRingListener& listener);
-			std::size_t	getCapacity() const throw();
-			std::size_t	getCount() const throw();
-			void		getText(std::size_t index, String& text, bool& box) const;
+			std::size_t	capacity() const throw();
 			bool		isEmpty() const throw();
+			std::size_t	numberOfItems() const throw();
 			void		removeListener(IClipboardRingListener& listener);
 			void		setActiveItem(std::size_t index);
 			void		setCapacity(std::size_t limit);
+			void		text(std::size_t index, String& text, bool& box) const;
 			// operations
 			void	add(const String& text, bool box);
 			void	remove(std::size_t index);
@@ -63,10 +63,10 @@ namespace ascension {
 			std::size_t capacity_;
 			ulong maximumBytes_;
 			std::size_t activeItem_;
-			internal::Listeners<IClipboardRingListener> listeners_;
+			ascension::internal::Listeners<IClipboardRingListener> listeners_;
 		};
 
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 		/**
 		 * Base class for input sequence checkers.
 		 * @see isc
@@ -103,7 +103,7 @@ namespace ascension {
 			std::list<InputSequenceChecker*> strategies_;
 			::HKL keyboardLayout_;
 		};
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */
 
 		/**
 		 * @note This class is not derivable.
@@ -115,37 +115,44 @@ namespace ascension {
 			Session() throw();
 			~Session() throw();
 			// attributes
-			ClipboardRing&							getClipboardRing() throw();
-			const ClipboardRing&					getClipboardRing() const throw();
-			const std::vector<text::Document*>		getDocuments() const throw();
-			searcher::IncrementalSearcher&			getIncrementalSearcher() throw();
-			const searcher::IncrementalSearcher&	getIncrementalSearcher() const throw();
-			InputSequenceCheckers*					getInputSequenceCheckers() throw();
-			const InputSequenceCheckers*			getInputSequenceCheckers() const throw();
+			ClipboardRing&							clipboardRing() throw();
+			const ClipboardRing&					clipboardRing() const throw();
+			const std::vector<kernel::Document*>	documents() const throw();
+			searcher::IncrementalSearcher&			incrementalSearcher() throw();
+			const searcher::IncrementalSearcher&	incrementalSearcher() const throw();
+			InputSequenceCheckers*					inputSequenceCheckers() throw();
+			const InputSequenceCheckers*			inputSequenceCheckers() const throw();
 #ifndef ASCENSION_NO_MIGEMO
-			const WCHAR*							getMigemoPathName(bool runtime) throw();
+			const WCHAR*							migemoPathName(bool runtime) throw();
 #endif /* !ASCENSION_NO_MIGEMO */
-			searcher::TextSearcher&					getTextSearcher() throw();
-			const searcher::TextSearcher&			getTextSearcher() const throw();
+			searcher::TextSearcher&					textSearcher() throw();
+			const searcher::TextSearcher&			textSearcher() const throw();
 			void									setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) throw();
 #ifndef ASCENSION_NO_MIGEMO
 			void									setMigemoPathName(const WCHAR* pathName, bool runtime);
 #endif /* !ASCENSION_NO_MIGEMO */
 			// operations
-			void	addDocument(text::Document& document);
-			void	removeDocument(text::Document& document);
+			void	addDocument(kernel::Document& document);
+			void	removeDocument(kernel::Document& document);
 
 		private:
-			std::vector<text::Document*> documents_;
+			std::vector<kernel::Document*> documents_;
 			ClipboardRing clipboardRing_;
 			searcher::IncrementalSearcher* isearch_;
 			searcher::TextSearcher* textSearcher_;
 			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
+			::WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
 #endif /* !ASCENSION_NO_MIGEMO */
 		};
 
+
+		/**
+		 * Returns the index of the active content in the ring.
+		 * @return the active index
+		 * @throw IllegalStateException the ring is empty
+		 */
+		inline std::size_t ClipboardRing::activeItem() const {if(isEmpty()) throw IllegalStateException("the ring is empty."); return activeItem_;}
 
 		/**
 		 * Registers the listener.
@@ -154,21 +161,14 @@ namespace ascension {
 		 */
 		inline void ClipboardRing::addListener(IClipboardRingListener& listener) {listeners_.add(listener);}
 
-		/**
-		 * Returns the index of the active content in the ring.
-		 * @return the active index
-		 * @throw IllegalStateException the ring is empty
-		 */
-		inline size_t ClipboardRing::getActiveItem() const {if(isEmpty()) throw IllegalStateException("the ring is empty."); return activeItem_;}
-
 		/// Returns the number of texts than the ring can contain.
-		inline std::size_t ClipboardRing::getCapacity() const throw() {return capacity_;}
-
-		/// Returns the count of the stored texts.
-		inline size_t ClipboardRing::getCount() const throw() {return datas_.size();}
+		inline std::size_t ClipboardRing::capacity() const throw() {return capacity_;}
 
 		/// Returns true if the ring is empty.
 		inline bool ClipboardRing::isEmpty() const throw() {return datas_.empty();}
+
+		/// Returns the count of the stored texts.
+		inline std::size_t ClipboardRing::numberOfItems() const throw() {return datas_.size();}
 
 		/**
 		 * Removes the listener.
@@ -182,13 +182,13 @@ namespace ascension {
 		 * @param index the index of the content to be activated
 		 * @throw IndexOutOfBoundsException @a index is out of range
 		 */
-		inline void ClipboardRing::setActiveItem(size_t index) {if(index >= datas_.size()) throw IndexOutOfBoundsException(); activeItem_ = index;}
+		inline void ClipboardRing::setActiveItem(std::size_t index) {if(index >= datas_.size()) throw IndexOutOfBoundsException(); activeItem_ = index;}
 
 		/// Returns the input sequence checkers.
-		inline InputSequenceCheckers* Session::getInputSequenceCheckers() throw() {return inputSequenceCheckers_.get();}
+		inline InputSequenceCheckers* Session::inputSequenceCheckers() throw() {return inputSequenceCheckers_.get();}
 
 		/// Returns the input sequence checkers.
-		inline const InputSequenceCheckers* Session::getInputSequenceCheckers() const throw() {return inputSequenceCheckers_.get();}
+		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const throw() {return inputSequenceCheckers_.get();}
 
 	} // namespace texteditor
 

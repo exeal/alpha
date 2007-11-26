@@ -8,9 +8,9 @@
 #include "presentation.hpp"
 #include "viewer.hpp"
 using namespace ascension;
+using namespace ascension::kernel;
 using namespace ascension::presentation;
 using namespace ascension::rules;
-using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
 using ascension::layout::Colors;
@@ -31,44 +31,35 @@ void Presentation::addTextViewer(TextViewer& textViewer) throw() {
 	textViewers_.insert(&textViewer);
 }
 
-/// @see text#IDocumentListener#documentAboutToBeChanged
-void Presentation::documentAboutToBeChanged(const Document& document) {
-	// TODO: not implemented.
+/// Returns the document to which the presentation connects.
+const Document& Presentation::document() const throw() {
+	return document_;
 }
 
-/// @see text#IDocumentListener#documentChanged
+/// Returns the document to which the presentation connects.
+Document& Presentation::document() throw() {
+	return document_;
+}
+
+/// @see kernel#IDocumentListener#documentAboutToBeChanged
+bool Presentation::documentAboutToBeChanged(const Document& document) {
+	// TODO: not implemented.
+	return true;
+}
+
+/// @see kernel#IDocumentListener#documentChanged
 void Presentation::documentChanged(const Document& document, const DocumentChange& change) {
 	// TODO: not implemented.
 }
 
-/// Returns the document to which the presentation connects.
-const Document& Presentation::getDocument() const throw() {
-	return document_;
-}
-
-/// Returns the document to which the presentation connects.
-Document& Presentation::getDocument() throw() {
-	return document_;
-}
-
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::iterator Presentation::getFirstTextViewer() throw() {
+set<TextViewer*>::iterator Presentation::firstTextViewer() throw() {
 	return textViewers_.begin();
 }
 
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::const_iterator Presentation::getFirstTextViewer() const throw() {
+set<TextViewer*>::const_iterator Presentation::firstTextViewer() const throw() {
 	return textViewers_.begin();
-}
-
-/// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::iterator Presentation::getLastTextViewer() throw() {
-	return textViewers_.end();
-}
-
-/// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::const_iterator Presentation::getLastTextViewer() const throw() {
-	return textViewers_.end();
 }
 
 /**
@@ -78,7 +69,7 @@ set<TextViewer*>::const_iterator Presentation::getLastTextViewer() const throw()
  * @throw BadPositionException @a line is outside of the document
  */
 Colors Presentation::getLineColor(length_t line) const {
-	if(line >= document_.getNumberOfLines())
+	if(line >= document_.numberOfLines())
 		throw BadPositionException();
 	ILineColorDirector::Priority highestPriority = 0, p;
 	Colors result = Colors::STANDARD, c;
@@ -101,13 +92,23 @@ Colors Presentation::getLineColor(length_t line) const {
  * @throw BadPositionException @a line is outside of the document
  */
 const LineStyle& Presentation::getLineStyle(length_t line, bool& delegatedOwnership) const {
-	if(line >= document_.getNumberOfLines())
+	if(line >= document_.numberOfLines())
 		throw BadPositionException();
 	const LineStyle& styles = (lineStyleDirector_.get() != 0) ?
 		lineStyleDirector_->queryLineStyle(line, delegatedOwnership) : LineStyle::NULL_STYLE;
 	if(&styles == &LineStyle::NULL_STYLE)
 		delegatedOwnership = false;
 	return styles;
+}
+
+/// Returns an iterator addresses the location succeeding the last text viewer.
+set<TextViewer*>::iterator Presentation::lastTextViewer() throw() {
+	return textViewers_.end();
+}
+
+/// Returns an iterator addresses the location succeeding the last text viewer.
+set<TextViewer*>::const_iterator Presentation::lastTextViewer() const throw() {
+	return textViewers_.end();
 }
 
 /// @see internal#ITextViewerCollection#removeTextViewer
@@ -143,26 +144,26 @@ auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentat
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
 	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(this));	// TODO: danger call (may delete this).
-	presentation_.getDocument().addPartitioningListener(*this);
+	presentation_.document().addPartitioningListener(*this);
 }
 
 /// Destructor.
 PresentationReconstructor::~PresentationReconstructor() throw() {
 //	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(0));
-	presentation_.getDocument().removePartitioningListener(*this);
+	presentation_.document().removePartitioningListener(*this);
 	for(map<ContentType, IPartitionPresentationReconstructor*>::iterator i(reconstructors_.begin()); i != reconstructors_.end(); ++i)
 		delete i->second;
 }
 
-/// @see text#IDocumentPartitioningListener#documentPartitioningChanged
+/// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
 void PresentationReconstructor::documentPartitioningChanged(const Region& changedRegion) {
-	for(Presentation::TextViewerIterator i(presentation_.getFirstTextViewer()); i != presentation_.getLastTextViewer(); ++i)
-		(*i)->getTextRenderer().invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
+	for(Presentation::TextViewerIterator i(presentation_.firstTextViewer()); i != presentation_.lastTextViewer(); ++i)
+		(*i)->textRenderer().invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
 }
 
 /// @see ILineStyleDirector#queryLineStyle
 const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& delegates) const {
-	const length_t lineLength = presentation_.getDocument().getLineLength(line);
+	const length_t lineLength = presentation_.document().lineLength(line);
 	if(lineLength == 0) {	// empty line
 		delegates = false;
 		return LineStyle::NULL_STYLE;
@@ -170,11 +171,11 @@ const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& 
 
 	// get partitions in this line
 	vector<DocumentPartition> partitions;
-	const DocumentPartitioner& partitioner = presentation_.getDocument().getPartitioner();
+	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
 	delegates = true;
 	for(length_t column = 0; column < lineLength; ) {
 		DocumentPartition temp;
-		partitioner.getPartition(Position(line, column), temp);
+		partitioner.partition(Position(line, column), temp);
 		if(!temp.region.isEmpty()) {	// skip an empty partition
 			partitions.push_back(temp);
 			if(temp.region.end().line != line)

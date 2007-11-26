@@ -32,7 +32,7 @@ namespace ascension {
 			void retarget(viewers::TextViewer& view) throw() {view_ = &view;}
 		protected:
 			/// Returns the command target.
-			viewers::TextViewer& getTarget() const throw() {return *view_;}
+			viewers::TextViewer& target() const throw() {return *view_;}
 		private:
 			viewers::TextViewer* view_;
 		};

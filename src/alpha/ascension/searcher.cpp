@@ -7,8 +7,8 @@
 
 #include "searcher.hpp"
 using namespace ascension;
+using namespace ascension::kernel;
 using namespace ascension::searcher;
-using namespace ascension::text;
 using namespace ascension::unicode;
 using namespace std;
 
@@ -204,13 +204,13 @@ inline bool TextSearcher::checkBoundary(const DocumentCharacterIterator& first, 
 			const GraphemeBreakIterator<DocumentCharacterIterator> bi(first);
 			return bi.isBoundary(first) && bi.isBoundary(last);
 		} case SearchOptions::WORD: {
-			const Document& document = *first.getDocument();
+			const Document& document = *first.document();
 			const WordBreakIterator<DocumentCharacterIterator> bi1(first, AbstractWordBreakIterator::START_OF_SEGMENT,
-				document.getContentTypeInformation().getIdentifierSyntax(document.getPartitioner().getContentType(first.tell())));
+				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(first.tell())));
 			if(!bi1.isBoundary(first))
 				return false;
 			const WordBreakIterator<DocumentCharacterIterator> bi2(last, AbstractWordBreakIterator::END_OF_SEGMENT,
-				document.getContentTypeInformation().getIdentifierSyntax(document.getPartitioner().getContentType(last.tell())));
+				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(last.tell())));
 			return bi2.isBoundary(last);
 		}
 	}
@@ -345,7 +345,7 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
  * @param target the region to replace
  * @param[out] endOfReplacement the end of the region covers the replacement. can be @c null
  * @return true if replaced
- * @throw text#ReadOnlyDocumentException @a document is read only
+ * @throw kernel#ReadOnlyDocumentException @a document is read only
  * @throw IllegalStateException the pattern is not specified
  */
 bool TextSearcher::replace(Document& document, const Region& target, Position* endOfReplacement) const {
@@ -430,7 +430,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
 	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
-	ulong documentRevision = document.getRevisionNumber();	// to detect other interruptions
+	size_t documentRevision = document.revisionNumber();	// to detect other interruptions
 
 	IInteractiveReplacementCallback::Action action;	// the action the callback returns
 	IInteractiveReplacementCallback* const storedCallback = callback;
@@ -439,7 +439,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 
 	compilePattern(FORWARD);
 	if(options_.type == LITERAL) {
-		if(literalPattern_->getDirection() != FORWARD) {	// recompile to change the direction
+		if(literalPattern_->direction() != FORWARD) {	// recompile to change the direction
 			const String& p = storedPatterns_.front();
 			literalPattern_->compile(p.data(), p.data() + p.length(), FORWARD, !options_.caseSensitive);
 		}
@@ -471,14 +471,14 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 					matchedRegion.second = history.top().second;
 					history.pop();
 					document.undo();
-					documentRevision = document.getRevisionNumber();
+					documentRevision = document.revisionNumber();
 					--numberOfMatches;
 					--numberOfReplacements;
 				}
 			}
 
 			// stop if interrupted
-			if(documentRevision != document.getRevisionNumber())
+			if(documentRevision != document.revisionNumber())
 				break;
 
 			if(action == IInteractiveReplacementCallback::REPLACE
@@ -493,7 +493,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 					if(!replacement.empty())
 						i.seek(document.insert(matchedRegion.first, replacement));
 					i.setRegion(Region(scope.beginning(), endOfScope));
-					documentRevision = document.getRevisionNumber();
+					documentRevision = document.revisionNumber();
 				}
 				++numberOfReplacements;
 				history.push(matchedRegion);
@@ -540,14 +540,14 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 						matchedRegion.second = history.top().second;
 						history.pop();
 						document.undo();
-						documentRevision = document.getRevisionNumber();
+						documentRevision = document.revisionNumber();
 						--numberOfMatches;
 						--numberOfReplacements;
 					}
 				}
 
 				// stop if interrupted
-				if(documentRevision != document.getRevisionNumber())
+				if(documentRevision != document.revisionNumber())
 					break;
 
 				if(action == IInteractiveReplacementCallback::REPLACE
@@ -566,7 +566,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 						matcher->endInplaceReplacement(document.begin(), document.end(),
 							DocumentCharacterIterator(document, scope.beginning()), DocumentCharacterIterator(document, endOfScope),
 							DocumentCharacterIterator(document, next));
-						documentRevision = document.getRevisionNumber();
+						documentRevision = document.revisionNumber();
 					}
 				} else if(action == IInteractiveReplacementCallback::SKIP)
 					next = matchedRegion.second;
@@ -575,7 +575,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 
 				if(matchedRegion.second == e.tell())	// reached the end of the scope
 					break;
-				else if(endOfScope.getPosition() != lastEOS) {
+				else if(endOfScope.position() != lastEOS) {
 					e.setRegion(Region(scope.beginning(), endOfScope));
 					e.seek(endOfScope);
 					lastEOS = endOfScope;
@@ -601,7 +601,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
  * @param[out] matchedRegion the matched region
  * @return true if the pattern is found
  * @throw IllegalStateException the pattern is not specified
- * @throw text#BadPositionException @a from is outside of @a scope
+ * @throw kernel#BadPositionException @a from is outside of @a scope
  * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
 bool TextSearcher::search(const Document& document,
@@ -611,7 +611,7 @@ bool TextSearcher::search(const Document& document,
 	bool matched = false;
 	compilePattern(direction);
 	if(options_.type == LITERAL) {
-		if(direction != literalPattern_->getDirection()) {	// recompile to change the direction
+		if(direction != literalPattern_->direction()) {	// recompile to change the direction
 			const String& p = storedPatterns_.front();
 			literalPattern_->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
 		}
@@ -811,12 +811,13 @@ void IncrementalSearcher::checkRunning() const {
 		throw IllegalStateException("The incremental searcher is not running.");
 }
 
-/// @see text#IDocumentListener#documentAboutToBeChanged
-void IncrementalSearcher::documentAboutToBeChanged(const Document&) {
+/// @see kernel#IDocumentListener#documentAboutToBeChanged
+bool IncrementalSearcher::documentAboutToBeChanged(const Document&, const DocumentChange&) {
 	abort();
+	return true;
 }
 
-/// @see text#IDocumentListener#documentChanged
+/// @see kernel#IDocumentListener#documentChanged
 void IncrementalSearcher::documentChanged(const Document&, const DocumentChange&) {
 }
 
@@ -846,8 +847,8 @@ bool IncrementalSearcher::next(Direction direction) {
 	checkRunning();
 	if(pattern_.empty()) {
 		statusHistory_.top().direction = direction;
-		if(searcher_->getNumberOfStoredPatterns() > 0)
-			return addString(searcher_->getPattern());	// use the most recent used
+		if(searcher_->numberOfStoredPatterns() > 0)
+			return addString(searcher_->pattern());	// use the most recent used
 		else {
 			if(callback_ != 0)
 				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);

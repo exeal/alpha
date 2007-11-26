@@ -9,8 +9,6 @@
 //#include <shlwapi.h>	// PathXxxx
 //#include <shlobj.h>	// SHGetDesktopFolder, IShellFolder, ...
 //#include <MAPI.h>		// MAPISendMail
-#include "../../manah/win32/ui/wait-cursor.hpp"
-#include "../../manah/com/common.hpp"
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
@@ -114,30 +112,30 @@ InputStream& kernel::readDocumentFromStream(InputStream& in, Document& document,
 Position kernel::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
 	Position newPosition(position);
 	if(!change.isDeletion()) {	// insertion
-		if(position < change.getRegion().first)	// behind the current position
+		if(position < change.region().first)	// behind the current position
 			return newPosition;
-		else if(position == change.getRegion().first && gravity == BACKWARD) // the current position + backward gravity
+		else if(position == change.region().first && gravity == BACKWARD) // the current position + backward gravity
 			return newPosition;
-		else if(position.line > change.getRegion().first.line)	// in front of the current line
-			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
+		else if(position.line > change.region().first.line)	// in front of the current line
+			newPosition.line += change.region().second.line - change.region().first.line;
 		else {	// in the current line
-			newPosition.line += change.getRegion().second.line - change.getRegion().first.line;
-			newPosition.column += change.getRegion().second.column - change.getRegion().first.column;
+			newPosition.line += change.region().second.line - change.region().first.line;
+			newPosition.column += change.region().second.column - change.region().first.column;
 		}
 	} else {	// deletion
-		if(position < change.getRegion().second) {	// the end is behind the current line
-			if(position <= change.getRegion().first)
+		if(position < change.region().second) {	// the end is behind the current line
+			if(position <= change.region().first)
 				return newPosition;
 			else	// in the region
-				newPosition = change.getRegion().first;
-		} else if(position.line > change.getRegion().second.line)	// in front of the current line
-			newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
+				newPosition = change.region().first;
+		} else if(position.line > change.region().second.line)	// in front of the current line
+			newPosition.line -= change.region().second.line - change.region().first.line;
 		else {	// the end is the current line
-			if(position.line == change.getRegion().first.line)	// the region is single-line
-				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
+			if(position.line == change.region().first.line)	// the region is single-line
+				newPosition.column -= change.region().second.column - change.region().first.column;
 			else {	// the region is multiline
-				newPosition.line -= change.getRegion().second.line - change.getRegion().first.line;
-				newPosition.column -= change.getRegion().second.column - change.getRegion().first.column;
+				newPosition.line -= change.region().second.line - change.region().first.line;
+				newPosition.column -= change.region().second.column - change.region().first.column;
 			}
 		}
 	}
@@ -184,9 +182,9 @@ OutputStream& kernel::writeDocumentToStream(OutputStream& out,
 
 namespace {
 #ifdef ASCENSION_WINDOWS
-	static const files::Char PATH_SEPARATORS[] = {'/', '\\'};
+	static const files::Char PATH_SEPARATORS[] = L"/\\";
 #else // ASCENSION_POSIX
-	static const files::Char PATH_SEPARATORS[] = {'/'};
+	static const files::Char PATH_SEPARATORS[] = "/";
 #endif
 	/**
 	 * Returns true if the specified file exists.
@@ -221,9 +219,9 @@ namespace {
 	}
 
 	/// Finds the base name in the given file path name.
-	template<typename InputIterator> inline InputIterator findFileName(InputIterator first, InputIterator last) {
-		InputIterator delimiter(find_last_of(first, last, PATH_SEPARATORS, endof(PATH_SEPARATORS)));
-		return (delimiter != last) ? ++delimiter : first;
+	inline files::String::const_iterator findFileName(const files::String& s) {
+		const files::String::size_type i = s.find_last_of(PATH_SEPARATORS);
+		return s.begin() + ((i != files::String::npos) ? i + 1 : 0);
 	}
 
 	/**
@@ -292,7 +290,7 @@ namespace {
 		manah::AutoBuffer<files::Char> s(new files::Char[seed.length() + 1]);
 		copy(seed.begin(), seed.end(), s.get());
 		s[seed.length()] = 0;
-		files::Char* name = findFileName(s.get(), s.get() + seed.length());
+		files::Char* name = s.get() + (findFileName(seed) - seed.begin());
 		if(name != s.get())
 			name[-1] = 0;
 #ifdef ASCENSION_WINDOWS
@@ -300,7 +298,7 @@ namespace {
 		if(::GetTempFileNameW(s.get(), name, 0, result) != 0)
 			return result;
 #else // ASCENSION_POSIX
-		if(const files::Char* p = ::tempnam(s.get(), name)) {
+		if(files::Char* p = ::tempnam(s.get(), name)) {
 			files::String result(p);
 			::free(p);
 			return result;
@@ -437,7 +435,7 @@ bool kernel::files::comparePathNames(const files::Char* s1, const files::Char* s
 	return eq;
 #else // ASCENSION_POSIX
 	// by lexicographical comparison
-	if(wcscmp(s1, s2) == 0)
+	if(strcmp(s1, s2) == 0)
 		return true;
 	// by volume information
 	struct stat st1, st2;
@@ -1881,7 +1879,7 @@ void NullPartitioner::documentChanged(const DocumentChange&) {
 /// @see DocumentPartitioner#doGetPartition
 void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const throw() {
 	if(p_.region.second.line == INVALID_INDEX)
-		const_cast<NullPartitioner*>(this)->p_.region.second = getDocument()->region().second;
+		const_cast<NullPartitioner*>(this)->p_.region.second = document()->region().second;
 	partition = p_;
 }
 
@@ -2048,8 +2046,8 @@ files::TextFileStreamBuffer* files::TextFileStreamBuffer::close() {
 		return this;
 	}
 #else // ASCENSION_POSIX
-	if(mappedAddress_ != 0) {
-		::munmap(mappedAddress_, mappingLength_);
+	if(inputMapping_.first != 0) {
+		::munmap(inputMapping_.first, inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
 	if(fileDescriptor_ == -1) {
@@ -2126,14 +2124,12 @@ files::TextFileStreamBuffer::int_type files::TextFileStreamBuffer::underflow() {
 
 // files.FileBinder /////////////////////////////////////////////////////////
 
-const DocumentPropertyKey files::FileBinder::ENCODING_PROPERTY;
-const DocumentPropertyKey files::FileBinder::NEWLINE_PROPERTY;
-
 /**
  * Constructor.
  * @param document the document
  */
-files::FileBinder::FileBinder(Document& document) : document_(document), lockingFile_(
+files::FileBinder::FileBinder(Document& document) : document_(document),
+		encoding_(encoding::Encoder::getDefault()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_POSIX
@@ -2201,8 +2197,8 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 	timeStampDirector_ = unexpectedTimeStampDirector;
 	fileName_ = canonicalizePathName(fileName.c_str());
 	document_.setProperty(Document::TITLE_PROPERTY, name());
-	setEncoding(sb.encoding());
-	setNewline(document_.getLineInformation(0).newline());	// use the newline of the first line
+	encoding_ = sb.encoding();
+	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line
 
 	document_.clearUndoBuffer();
 	document_.setModified(false);
@@ -2215,6 +2211,7 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 		// ignore...
 	}
 
+	document_.setInput(auto_ptr<IDocumentInput>(this));
 	return lockSucceeded;
 }
 
@@ -2253,6 +2250,7 @@ bool files::FileBinder::documentAboutToBeChanged(const Document&, const Document
 			internalLastWriteTime_ = userLastWriteTime_ = realTimeStamp;
 		}
 	}
+	return true;
 }
 
 /// @see IDocumentListener#documentChanged
@@ -2269,15 +2267,9 @@ void files::FileBinder::documentModificationSignChanged(Document&) {
 	}
 }
 
-/// Returns the MIBenum value of the encoding of the file.
+/// @see IDocumentInput#encoding, #setEncoding
 encoding::MIBenum files::FileBinder::encoding() const throw() {
-	if(const String* s = document_.property(ENCODING_PROPERTY)) {
-		Char* dummy;
-		const ulong n = wcstoul(s->c_str(), &dummy, 10);
-		if(n != 0 && n != numeric_limits<ulong>::max())
-			return static_cast<encoding::MIBenum>(n);
-	}
-	return encoding::Encoder::getDefault();
+	return encoding_;
 }
 
 /// Returns the file extension name or @c null if the document is not bound to any of the files.
@@ -2320,32 +2312,25 @@ bool files::FileBinder::lock() throw() {
 
 /// Returns the file name or an empty string if the document is not bound to any of the files.
 files::String files::FileBinder::name() const throw() {
-	const String::const_iterator p = findFileName(fileName_.begin(), fileName_.end());
+	const String::const_iterator p = findFileName(fileName_);
 	return fileName_.substr(p - fileName_.begin());
 }
 
-/// Returns the newline of the file.
+/// @see IDocumentInput#newline, #setNewline
 Newline files::FileBinder::newline() const throw() {
-	if(const String* s = document_.property(NEWLINE_PROPERTY)) {
-		Char* dummy;
-		const ulong n = wcstoul(s->c_str(), &dummy, 10);
-		if(n != 0 && n != numeric_limits<ulong>::max())
-			return static_cast<Newline>(n);
-	}
-	return ASCENSION_DEFAULT_NEWLINE;
+	return newline_;
 }
 
 /**
  * Sets the encoding.
  * @param mib the MIBenum value of the encoding
  * @throw std#invalid_argument @a mib is invalid
+ * @see #encoding
  */
 void files::FileBinder::setEncoding(encoding::MIBenum mib) {
 	if(!encoding::Encoder::supports(mib))
 		throw invalid_argument("the given encoding is not available.");
-	Char buffer[128];
-	if(swprintf(buffer, L"%u", mib) != -1)
-		document_.setProperty(ENCODING_PROPERTY, buffer);
+	encoding_ = mib;
 }
 
 /**
@@ -2355,11 +2340,9 @@ void files::FileBinder::setEncoding(encoding::MIBenum mib) {
  */
 void files::FileBinder::setNewline(Newline newline) {
 	if(newline == NLF_LF || newline == NLF_CR || newline == NLF_CRLF
-			|| newline == NLF_NEL || newline == NLF_LS || newline == NLF_PS) {
-		Char buffer[128];
-		swprintf(buffer, L"%u", newline);
-		document_.setProperty(NEWLINE_PROPERTY, buffer);
-	} else
+			|| newline == NLF_NEL || newline == NLF_LS || newline == NLF_PS)
+		newline_ = newline;
+	else
 		throw invalid_argument("unknown newline specified.");
 }
 

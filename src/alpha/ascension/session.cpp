@@ -45,22 +45,6 @@ void ClipboardRing::add(const String& text, bool rectangle) {
 }
 
 /**
- * Returns the content of the specified index.
- * @param index the index
- * @param[out] text	the text content
- * @param[out] rectangle true if the text is rectangle
- * @throw IndexOutOfBoundsException @a index is out of range
- */
-void ClipboardRing::getText(size_t index, String& text, bool& rectangle) const {
-	if(index >= datas_.size())
-		throw IndexOutOfBoundsException();
-	list<ClipText>::const_iterator i(datas_.begin());
-	advance(i, index);
-	text = i->text;
-	rectangle = i->rectangle;
-}
-
-/**
  * Removes the specified text.
  * @param index the index of the text
  * @throw IndexOutOfBoundsException	@a index is invalid
@@ -97,6 +81,22 @@ void ClipboardRing::setCapacity(size_t capacity) {
 		datas_.resize(capacity_);
 		listeners_.notify(IClipboardRingListener::clipboardRingChanged);
 	}
+}
+
+/**
+ * Returns the content of the specified index.
+ * @param index the index
+ * @param[out] text	the text content
+ * @param[out] rectangle true if the text is rectangle
+ * @throw IndexOutOfBoundsException @a index is out of range
+ */
+void ClipboardRing::text(size_t index, String& text, bool& rectangle) const {
+	if(index >= datas_.size())
+		throw IndexOutOfBoundsException();
+	list<ClipText>::const_iterator i(datas_.begin());
+	advance(i, index);
+	text = i->text;
+	rectangle = i->rectangle;
 }
 
 
@@ -177,7 +177,7 @@ Session::~Session() throw() {
  * @param document the document to be added
  * @throw std#invalid_argument @a document is already registered
  */
-void Session::addDocument(text::Document& document) {
+void Session::addDocument(kernel::Document& document) {
 	if(find(documents_.begin(), documents_.end(), &document) != documents_.end())
 		throw invalid_argument("The specified document is already registered.");
 	documents_.push_back(&document);
@@ -185,24 +185,24 @@ void Session::addDocument(text::Document& document) {
 }
 
 /// Returns the clipboard ring.
-ClipboardRing& Session::getClipboardRing() throw() {
+ClipboardRing& Session::clipboardRing() throw() {
 	return clipboardRing_;
 }
 
 /// Returns the clipboard ring.
-const ClipboardRing& Session::getClipboardRing() const throw() {
+const ClipboardRing& Session::clipboardRing() const throw() {
 	return clipboardRing_;
 }
 
 /// Returns the incremental searcher.
-searcher::IncrementalSearcher& Session::getIncrementalSearcher() throw() {
+searcher::IncrementalSearcher& Session::incrementalSearcher() throw() {
 	if(isearch_ == 0)
 		isearch_ = new searcher::IncrementalSearcher();
 	return *isearch_;
 }
 
 /// Returns the incremental searcher.
-const searcher::IncrementalSearcher& Session::getIncrementalSearcher() const throw() {
+const searcher::IncrementalSearcher& Session::incrementalSearcher() const throw() {
 	if(isearch_ == 0)
 		const_cast<searcher::IncrementalSearcher*&>(isearch_) = new searcher::IncrementalSearcher();
 	return *isearch_;
@@ -214,32 +214,18 @@ const searcher::IncrementalSearcher& Session::getIncrementalSearcher() const thr
  * @param runtime true to get about DLL, false to get about dictionary
  * @return the path name of the directory
  */
-const WCHAR* Session::getMigemoPathName(bool runtime) throw() {
+const ::WCHAR* Session::migemoPathName(bool runtime) throw() {
 	return runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_;
 }
 #endif /* !ASCENSION_NO_MIGEMO */
-
-/// Returns the text searcher.
-searcher::TextSearcher& Session::getTextSearcher() throw() {
-	if(textSearcher_ == 0)
-		textSearcher_ = new searcher::TextSearcher();
-	return *textSearcher_;
-}
-
-/// Returns the text searcher.
-const searcher::TextSearcher& Session::getTextSearcher() const throw() {
-	if(textSearcher_ == 0)
-		const_cast<searcher::TextSearcher*&>(textSearcher_) = new searcher::TextSearcher();
-	return *textSearcher_;
-}
 
 /**
  * Removes the document.
  * @param document the document to be removed
  * @throw std#invalid_argument @a document is not registered
  */
-void Session::removeDocument(text::Document& document) {
-	vector<text::Document*>::iterator i = find(documents_.begin(), documents_.end(), &document);
+void Session::removeDocument(kernel::Document& document) {
+	vector<kernel::Document*>::iterator i = find(documents_.begin(), documents_.end(), &document);
 	if(i == documents_.end())
 		throw invalid_argument("The specified document is not registered.");
 	documents_.erase(i);
@@ -260,3 +246,17 @@ void Session::setMigemoPathName(const WCHAR* pathName, bool runtime) {
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
 }
 #endif /* !ASCENSION_NO_MIGEMO */
+
+/// Returns the text searcher.
+searcher::TextSearcher& Session::textSearcher() throw() {
+	if(textSearcher_ == 0)
+		textSearcher_ = new searcher::TextSearcher();
+	return *textSearcher_;
+}
+
+/// Returns the text searcher.
+const searcher::TextSearcher& Session::textSearcher() const throw() {
+	if(textSearcher_ == 0)
+		const_cast<searcher::TextSearcher*&>(textSearcher_) = new searcher::TextSearcher();
+	return *textSearcher_;
+}

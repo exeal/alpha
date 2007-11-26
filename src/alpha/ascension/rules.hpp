@@ -44,7 +44,7 @@ namespace ascension {
 			typedef ushort ID;
 			static const ID DEFAULT_TOKEN, UNCALCULATED;
 			ID id;
-			text::Region region;
+			kernel::Region region;
 		};
 
 		class ITokenScanner;
@@ -135,7 +135,7 @@ namespace ascension {
 			/// Returns the identifier syntax.
 			virtual const unicode::IdentifierSyntax& getIdentifierSyntax() const throw() = 0;
 			/// Returns the current position.
-			virtual text::Position getPosition() const throw() = 0;
+			virtual kernel::Position getPosition() const throw() = 0;
 			/// Returns true if the scanning is done.
 			virtual bool isDone() const throw() = 0;
 			/**
@@ -148,19 +148,19 @@ namespace ascension {
 			 * be the top of the specified region.
 			 * @param document the document
 			 * @param region the region to be scanned
-			 * @throw text#BadRegionException @a region intersects outside of the document
+			 * @throw kernel#BadRegionException @a region intersects outside of the document
 			 */
-			virtual void parse(const text::Document& document, const text::Region& region) = 0;
+			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
 		};
 
 		/// @c NullTokenScanner returns no tokens. @c #isDone returns always true.
 		class NullTokenScanner : virtual public ITokenScanner {
 		public:
 			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
-			text::Position						getPosition() const throw();
+			kernel::Position					getPosition() const throw();
 			bool								isDone() const throw();
 			std::auto_ptr<Token>				nextToken();
-			void								parse(const text::Document& document, const text::Region& region);
+			void								parse(const kernel::Document& document, const kernel::Region& region);
 		};
 
 		/**
@@ -174,22 +174,22 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
-			explicit LexicalTokenScanner(text::ContentType contentType) throw();
+			explicit LexicalTokenScanner(kernel::ContentType contentType) throw();
 			~LexicalTokenScanner() throw();
 			// attributes
 			void	addRule(std::auto_ptr<const Rule> rule);
 			void	addWordRule(std::auto_ptr<const WordRule> rule);
 			// ITokenScanner
 			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
-			text::Position						getPosition() const throw();
+			kernel::Position					getPosition() const throw();
 			bool								isDone() const throw();
 			std::auto_ptr<Token>				nextToken();
-			void								parse(const text::Document& document, const text::Region& region);
+			void								parse(const kernel::Document& document, const kernel::Region& region);
 		private:
-			text::ContentType contentType_;
+			kernel::ContentType contentType_;
 			std::list<const Rule*> rules_;
 			std::list<const WordRule*> wordRules_;
-			text::DocumentCharacterIterator current_;
+			kernel::DocumentCharacterIterator current_;
 		};
 
 		/**
@@ -201,20 +201,20 @@ namespace ascension {
 			MANAH_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() throw();
-			text::ContentType	getContentType() const throw();
-			text::ContentType	getDestination() const throw();
+			kernel::ContentType	contentType() const throw();
+			kernel::ContentType	destination() const throw();
 			virtual length_t	matches(const String& line, length_t column) const = 0;
 		protected:
-			TransitionRule(text::ContentType contentType, text::ContentType destination) throw();
+			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) throw();
 		private:
-			const text::ContentType contentType_, destination_;
+			const kernel::ContentType contentType_, destination_;
 		};
 
 		/// Implementation of @c TransitionRule uses literal string match.
 		class LiteralTransitionRule : public TransitionRule {
 		public:
-			LiteralTransitionRule(text::ContentType contentType,
-				text::ContentType destination, const String& pattern, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
+			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
+				const String& pattern, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
 			length_t	matches(const String& line, length_t column) const;
 		private:
 			const String pattern_;
@@ -226,8 +226,8 @@ namespace ascension {
 		/// Implementation of @c TransitionRule uses regular expression match.
 		class RegexTransitionRule : public TransitionRule {
 		public:
-			RegexTransitionRule(text::ContentType contentType,
-				text::ContentType destination, const String& pattern, bool caseSensitive = true);
+			RegexTransitionRule(kernel::ContentType contentType,
+				kernel::ContentType destination, const String& pattern, bool caseSensitive = true);
 			length_t	matches(const String& line, length_t column) const;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
@@ -237,9 +237,9 @@ namespace ascension {
 		/**
 		 * @c LexicalPartitioner makes document partitions by using the specified lexical rules.
 		 * @note This class is not derivable.
-		 * @see text#Document, PartitionScanner
+		 * @see kernel#Document
 		 */
-		class LexicalPartitioner : public text::DocumentPartitioner {
+		class LexicalPartitioner : public kernel::DocumentPartitioner {
 		public:
 			// constructor
 			LexicalPartitioner() throw();
@@ -249,30 +249,30 @@ namespace ascension {
 			void	setRules(InputIterator first, InputIterator last);
 		private:
 			void				clearRules() throw();
-			void				computePartitioning(const text::Position& start,
-									const text::Position& minimalLast, text::Region& changedRegion);
+			void				computePartitioning(const kernel::Position& start,
+									const kernel::Position& minimalLast, kernel::Region& changedRegion);
 			void				dump() const;
-			void				erasePartitions(const text::Position& first, const text::Position& last);
-			std::size_t			findClosestPartition(const text::Position& at) const throw();
-			text::ContentType	getTransitionStateAt(const text::Position& at) const throw();
+			void				erasePartitions(const kernel::Position& first, const kernel::Position& last);
+			std::size_t			findClosestPartition(const kernel::Position& at) const throw();
+			kernel::ContentType	getTransitionStateAt(const kernel::Position& at) const throw();
 			length_t			tryTransition(const String& line, length_t column,
-									text::ContentType contentType, text::ContentType& destination) const throw();
+									kernel::ContentType contentType, kernel::ContentType& destination) const throw();
 			void				verify() const;
 			// DocumentPartitioner
 			void	documentAboutToBeChanged() throw();
-			void	documentChanged(const text::DocumentChange& change) throw();
-			void	doGetPartition(const text::Position& at, text::DocumentPartition& partition) const throw();
+			void	documentChanged(const kernel::DocumentChange& change) throw();
+			void	doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const throw();
 			void	doInstall() throw();
 		private:
 			struct Partition {
-				text::ContentType contentType;
-				text::Position start, tokenStart;
+				kernel::ContentType contentType;
+				kernel::Position start, tokenStart;
 				length_t tokenLength;
-				Partition(text::ContentType type, const text::Position& p, const text::Position& startOfToken, length_t lengthOfToken) throw()
-					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
-				text::Position getTokenEnd() const throw() {return text::Position(tokenStart.line, tokenStart.column + tokenLength);}
+				Partition(kernel::ContentType type, const kernel::Position& p, const kernel::Position& startOfToken,
+					length_t lengthOfToken) throw() : contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
+				kernel::Position getTokenEnd() const throw() {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
-			const text::Position& getPartitionStart(size_t partition) const throw() {return partitions_[partition]->start;}
+			const kernel::Position& getPartitionStart(size_t partition) const throw() {return partitions_[partition]->start;}
 			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
@@ -286,26 +286,26 @@ namespace ascension {
 		class LexicalPartitionPresentationReconstructor : virtual public presentation::IPartitionPresentationReconstructor {
 			MANAH_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
-			explicit LexicalPartitionPresentationReconstructor(const text::Document& document,
+			explicit LexicalPartitionPresentationReconstructor(const kernel::Document& document,
 				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);
 		private:
 			// IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::LineStyle>	getPresentation(const text::Region& region) const throw();
+			std::auto_ptr<presentation::LineStyle>	getPresentation(const kernel::Region& region) const throw();
 		private:
-			const text::Document& document_;
+			const kernel::Document& document_;
 			std::auto_ptr<ITokenScanner> tokenScanner_;
 			const std::map<Token::ID, const presentation::TextStyle> styles_;
 		};
 
 
 		/// Returns the content type.
-		inline text::ContentType TransitionRule::getContentType() const throw() {return contentType_;}
+		inline kernel::ContentType TransitionRule::contentType() const throw() {return contentType_;}
 
 		/// Returns the content type of the transition destination.
-		inline text::ContentType TransitionRule::getDestination() const throw() {return destination_;}
+		inline kernel::ContentType TransitionRule::destination() const throw() {return destination_;}
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
-			if(getDocument() != 0)
+			if(document() != 0)
 				throw IllegalStateException("The partitioner is already connected to document.");
 			clearRules();
 			std::copy(first, last, std::back_inserter(rules_));
