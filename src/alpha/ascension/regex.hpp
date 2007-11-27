@@ -8,7 +8,7 @@
 #ifndef ASCENSION_NO_REGEX
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
-#include "unicode.hpp"	// unicode.UTF16To32Iterator
+#include "unicode.hpp"	// text.UTF16To32Iterator
 #include "unicode-property.hpp"
 #include "internal.hpp"	// internal.Int2Type
 #include <memory>
@@ -67,7 +67,7 @@ namespace ascension {
 			/// match.
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
-			ASCENSION_STATIC_ASSERT(unicode::CodeUnitSizeOf<CodePointIterator>::result == 4);
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
 		};
 
 		namespace internal {
@@ -107,7 +107,7 @@ namespace ascension {
 			private:
 				enum {
 					// POSIX compatible not in Unicode property
-					POSIX_ALNUM = unicode::ucd::SentenceBreak::LAST_VALUE,
+					POSIX_ALNUM = text::ucd::SentenceBreak::LAST_VALUE,
 					POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
 					// regex specific general category
 					GC_ANY, GC_ASSIGNED, GC_ASCII,
@@ -125,7 +125,7 @@ namespace ascension {
 				typedef std::bitset<CLASS_END> char_class_type;
 				static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
 				char_type translate(char_type c) const;
-				char_type translate_nocase(char_type c) const {return unicode::CaseFolder::fold(translate(c));}
+				char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
 				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
@@ -140,7 +140,7 @@ namespace ascension {
 			private:
 				locale_type locale_;
 				const std::collate<char_type>* collator_;
-				static std::map<const Char*, int, unicode::ucd::PropertyNameComparer<Char> > names_;
+				static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
 				static void buildNames();
 			};
 		} // namespace internal
@@ -322,7 +322,7 @@ namespace ascension {
 
 		template<typename CPI> inline String regex::internal::MatchResultImpl<CPI>::group(int group) const {
 			const std::basic_string<CodePoint> s(get(group).str());
-			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));}
+			return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));}
 
 
 		// Matcher //////////////////////////////////////////////////////////
@@ -337,10 +337,10 @@ namespace ascension {
 			typedef typename boost::match_results<CPI>::string_type String32;
 			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, Base::impl()[0].first, out);
 			const String32 replaced(Base::impl().format(String32(
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-			std::copy(unicode::UTF32To16Iterator<typename String32::const_iterator>(replaced.begin()),
-				unicode::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);}
+				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
+				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
+			std::copy(text::UTF32To16Iterator<typename String32::const_iterator>(replaced.begin()),
+				text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);}
 
 		template<typename CPI> template<typename OI>
 		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&) {
@@ -351,18 +351,18 @@ namespace ascension {
 		template<typename CPI> template<typename OI>
 		inline Matcher<CPI>& Matcher<CPI>::appendReplacement(OI out, const String& replacement) {
 			checkInplaceReplacement(); checkPreviousMatch();
-			appendReplacement(out, replacement, ascension::internal::Int2Type<unicode::CodeUnitSizeOf<OI>::result>());
+			appendReplacement(out, replacement, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());
 			appendingPosition_ = Base::impl()[0].second; return *this;}
 		
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
-			const ascension::internal::Int2Type<2>&) const {return std::copy(unicode::UTF32To16Iterator<CPI>(appendingPosition_), unicode::UTF32To16Iterator<CPI>(input_.second), out);}
+			const ascension::internal::Int2Type<2>&) const {return std::copy(text::UTF32To16Iterator<CPI>(appendingPosition_), text::UTF32To16Iterator<CPI>(input_.second), out);}
 
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
 			const ascension::internal::Int2Type<4>&) const {return std::copy(appendingPosition_, input_.second, out);}
 
 		/// Implements a terminal append-and-replace step.
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
-			checkInplaceReplacement(); return appendTail(out, ascension::internal::Int2Type<unicode::CodeUnitSizeOf<OI>::result>());}
+			checkInplaceReplacement(); return appendTail(out, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());}
 
 		/// Ends the active in-place replacement context.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {
@@ -435,10 +435,10 @@ namespace ascension {
 			if(!Base::impl()[0].matched) throw IllegalStateException("the previous was failed or not performed.");
 			else if(replaced_) throw IllegalStateException("this matcher already entered in in-place replacement.");
 			const std::basic_string<CodePoint> temp(Base::impl().format(std::basic_string<CodePoint>(
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-				unicode::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
+				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
+				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
 			replaced_ = true;
-			return String(unicode::UTF32To16Iterator<>(temp.data()), unicode::UTF32To16Iterator<>(temp.data() + temp.length()));}
+			return String(text::UTF32To16Iterator<>(temp.data()), text::UTF32To16Iterator<>(temp.data() + temp.length()));}
 
 		/// Replaces every subsequence of the input sequence that matches the pattern with the given
 		/// replacement string. This method first resets the matcher.
@@ -518,11 +518,11 @@ namespace ascension {
 		 * @throw PatternSyntaxException the expression's syntax is invalid
 		 */
 		inline bool Pattern::matches(const String& regex, const String& input) {
-			return matches(regex, unicode::StringCharacterIterator(input), unicode::StringCharacterIterator(input, input.end()));}
+			return matches(regex, text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));}
 
 		/// Returns the regular expression from which this pattern was compiled.
 		inline String Pattern::pattern() const {const std::basic_string<CodePoint> s(impl_.str());
-			return String(unicode::UTF32To16Iterator<>(s.data()), unicode::UTF32To16Iterator<>(s.data() + s.length()));}
+			return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));}
 
 }}	// namespace ascension.regex
 

@@ -442,7 +442,7 @@ namespace ascension {
 		// implementation macros
 
 		/// Begins the definition of a class has the name @a className extends @c Encoder.
-#define ASCENSION_BEGIN_ENCODER_CLASS(className, mib, name)											\
+#define ASCENSION_BEGIN_ENCODER_CLASS(className, mib, nameString)									\
 	class className : public ascension::encoding::Encoder {											\
 	private:																						\
 		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,								\
@@ -450,7 +450,7 @@ namespace ascension {
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,									\
 			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const;	\
 		MIBenum mibEnum() const throw() {return mib;}												\
-		std::string name() const throw() {return name;}
+		std::string name() const throw() {return nameString;}
 		/// Enters the definition of @c Encoder#aliases method.
 #define ASCENSION_ENCODER_ALIASES(aliasesString)	\
 		std::string aliases() const throw() {static const char s[] = aliasesString; return std::string(s, countof(s) - 1);}

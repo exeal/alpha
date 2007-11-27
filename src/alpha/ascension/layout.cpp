@@ -13,8 +13,8 @@ using namespace ascension::kernel;
 using namespace ascension::layout;
 using namespace ascension::layout::internal;
 using namespace ascension::presentation;
-using namespace ascension::unicode;
-using namespace ascension::unicode::ucd;
+using namespace ascension::text;
+using namespace ascension::text::ucd;
 using namespace manah::win32;
 using namespace manah::win32::gdi;
 using namespace std;
@@ -1752,7 +1752,7 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-bool LineLayoutBuffer::documentAboutToBeChanged(const kernel::Document&) {
+bool LineLayoutBuffer::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 	documentChangePhase_ = ABOUT_CHANGE;
 	return true;
 }
@@ -1791,12 +1791,12 @@ void LineLayoutBuffer::fireVisualLinesDeleted(length_t first, length_t last, len
 	const bool widthChanged = longestLine_ >= first && longestLine_ < last;
 	if(widthChanged)
 		updateLongestLine(static_cast<length_t>(-1), 0);
-	listeners_.notify<length_t, length_t, length_t>(IVisualLinesListener::visualLinesDeleted, first, last, sublines, widthChanged);
+	listeners_.notify<length_t, length_t, length_t>(&IVisualLinesListener::visualLinesDeleted, first, last, sublines, widthChanged);
 }
 
 void LineLayoutBuffer::fireVisualLinesInserted(length_t first, length_t last) throw() {
 	numberOfVisualLines_ += last - first;
-	listeners_.notify<length_t, length_t>(IVisualLinesListener::visualLinesInserted, first, last);
+	listeners_.notify<length_t, length_t>(&IVisualLinesListener::visualLinesInserted, first, last);
 }
 
 void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
@@ -1824,7 +1824,7 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 	}
 
 	listeners_.notify<length_t, length_t, signed_length_t>(
-		IVisualLinesListener::visualLinesModified, first, last,
+		&IVisualLinesListener::visualLinesModified, first, last,
 		static_cast<signed_length_t>(newSublines) - static_cast<signed_length_t>(oldSublines), documentChanged, longestLineChanged);
 }
 
@@ -2381,7 +2381,7 @@ void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
 
 inline void FontSelector::fireFontChanged() {
 	fontChanged();
-	listeners_.notify(IFontSelectorListener::fontChanged);
+	listeners_.notify(&IFontSelectorListener::fontChanged);
 }
 
 namespace {
@@ -2837,15 +2837,15 @@ using viewers::TextViewer;
  * @param dc the device context
  */
 void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
-	if(getWidth() == 0)
+	if(width() == 0)
 		return;
 
 	const ::RECT& paintRect = dc.getPaintStruct().rcPaint;
-	const TextRenderer& renderer = viewer_.getTextRenderer();
+	const TextRenderer& renderer = viewer_.textRenderer();
 	::RECT clientRect;
 	viewer_.getClientRect(clientRect);
-	if((configuration_.alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + getWidth())
-			|| (configuration_.alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - getWidth()))
+	if((configuration_.alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + width())
+			|| (configuration_.alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - width()))
 		return;
 
 #ifdef _DEBUG
@@ -2864,15 +2864,15 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 			memoryDC_ = viewer_.getDC().createCompatibleDC();
 		if(memoryBitmap_.getHandle() == 0)
 			memoryBitmap_ = Bitmap::createCompatibleBitmap(dc,
-				getWidth(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
+				width(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
 		memoryDC_->selectObject(memoryBitmap_.getHandle());
 		dcex = memoryDC_.get();
 		left = 0;
 	} else {
 		dcex = &dc;
-		left = alignLeft ? clientRect.left : clientRect.right - getWidth();
+		left = alignLeft ? clientRect.left : clientRect.right - width();
 	}
-	const int right = left + getWidth();
+	const int right = left + width();
 
 	// まず、描画領域全体を描いておく
 	if(configuration_.indicatorMargin.visible) {
@@ -2904,7 +2904,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		dcex->setBkMode(TRANSPARENT);
 		dcex->setTextColor(configuration_.lineNumbers.textColor.foreground);
 		dcex->setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
-		dcex->selectObject(viewer_.getTextRenderer().font());
+		dcex->selectObject(viewer_.textRenderer().font());
 	}
 
 	// 行番号描画の準備
@@ -2927,8 +2927,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 			break;
 		case ALIGN_CENTER:	// 中央揃えなんて誰も使わんと思うけど...
 			lineNumbersX = alignLeft ?
-				left + (imWidth + configuration_.lineNumbers.leadingMargin + getWidth() - configuration_.lineNumbers.trailingMargin) / 2
-				: right - (getWidth() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
+				left + (imWidth + configuration_.lineNumbers.leadingMargin + width() - configuration_.lineNumbers.trailingMargin) / 2
+				: right - (width() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
 			dcex->setTextAlign(TA_CENTER | TA_TOP | TA_NOUPDATECP);
 			break;
 		}
@@ -2936,7 +2936,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 	// 1 行ずつ細かい描画
 	length_t line, visualSublineOffset;
-	const length_t lines = viewer_.getDocument().numberOfLines();
+	const length_t lines = viewer_.document().numberOfLines();
 	viewer_.mapClientYToLine(paintRect.top, &line, &visualSublineOffset);	// $friendly-access
 	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
 		++line;
@@ -2975,7 +2975,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 
 	if(enablesDoubleBuffering_)
-		dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - getWidth(), paintRect.top,
+		dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - width(), paintRect.top,
 			right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, paintRect.top, SRCCOPY);
 	dc.restore(savedCookie);
 }
@@ -2988,7 +2988,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() throw() {
 		if(newLineNumberDigits != lineNumberDigitsCache_) {
 			// the width of the line numbers area is determined by the maximum width of glyphs of 0..9
 			ClientDC dc = viewer_.getDC();
-			::HFONT oldFont = dc.selectObject(viewer_.getTextRenderer().font());
+			::HFONT oldFont = dc.selectObject(viewer_.textRenderer().font());
 			::SCRIPT_STRING_ANALYSIS ssa;
 			MANAH_AUTO_STRUCT(::SCRIPT_CONTROL, sc);
 			MANAH_AUTO_STRUCT(::SCRIPT_STATE, ss);

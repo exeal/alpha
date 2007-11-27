@@ -133,7 +133,7 @@ namespace ascension {
 			/// Destructor.
 			virtual ~ITokenScanner() throw() {}
 			/// Returns the identifier syntax.
-			virtual const unicode::IdentifierSyntax& getIdentifierSyntax() const throw() = 0;
+			virtual const text::IdentifierSyntax& getIdentifierSyntax() const throw() = 0;
 			/// Returns the current position.
 			virtual kernel::Position getPosition() const throw() = 0;
 			/// Returns true if the scanning is done.
@@ -156,11 +156,11 @@ namespace ascension {
 		/// @c NullTokenScanner returns no tokens. @c #isDone returns always true.
 		class NullTokenScanner : virtual public ITokenScanner {
 		public:
-			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
-			kernel::Position					getPosition() const throw();
-			bool								isDone() const throw();
-			std::auto_ptr<Token>				nextToken();
-			void								parse(const kernel::Document& document, const kernel::Region& region);
+			const text::IdentifierSyntax&	getIdentifierSyntax() const throw();
+			kernel::Position				getPosition() const throw();
+			bool							isDone() const throw();
+			std::auto_ptr<Token>			nextToken();
+			void							parse(const kernel::Document& document, const kernel::Region& region);
 		};
 
 		/**
@@ -180,11 +180,11 @@ namespace ascension {
 			void	addRule(std::auto_ptr<const Rule> rule);
 			void	addWordRule(std::auto_ptr<const WordRule> rule);
 			// ITokenScanner
-			const unicode::IdentifierSyntax&	getIdentifierSyntax() const throw();
-			kernel::Position					getPosition() const throw();
-			bool								isDone() const throw();
-			std::auto_ptr<Token>				nextToken();
-			void								parse(const kernel::Document& document, const kernel::Region& region);
+			const text::IdentifierSyntax&	getIdentifierSyntax() const throw();
+			kernel::Position				getPosition() const throw();
+			bool							isDone() const throw();
+			std::auto_ptr<Token>			nextToken();
+			void							parse(const kernel::Document& document, const kernel::Region& region);
 		private:
 			kernel::ContentType contentType_;
 			std::list<const Rule*> rules_;

@@ -18,8 +18,8 @@
 
 using namespace ascension;
 using namespace ascension::regex;
-using namespace ascension::unicode;
-using namespace ascension::unicode::ucd;
+using namespace ascension::text;
+using namespace ascension::text::ucd;
 using namespace std;
 using regex::internal::RegexTraits;
 
@@ -273,9 +273,9 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  *   <dt>2.1 Canonical Equivalents</dt>
  *   <dd>Designed @c Pattern#CANONICAL_EQUIVALENTS but not supported currently.</dd>
  *   <dt>2.2 Default Grapheme Clusters</dt>
- *   <dd>Not supported. You can use @c unicode#GraphemeBreakIterator to implement "whole grapheme cluster match".</dd>
+ *   <dd>Not supported. You can use @c text#GraphemeBreakIterator to implement "whole grapheme cluster match".</dd>
  *   <dt>2.3 Default Word Boundaries</dt>
- *   <dd>Not supported You can use @c unicode#WordBreakIterator to implement "whole word match".</dd>
+ *   <dd>Not supported You can use @c text#WordBreakIterator to implement "whole word match".</dd>
  *   <dt>2.4 Default Loose Matches .. 2.6 Wildcard Properties</dt>
  *   <dd>Follows to Boost.Regex.</dd>
  *   <dt>3.1 Tailored Punctuation .. 3.11 Submatchers</dt>

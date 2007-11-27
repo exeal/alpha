@@ -136,7 +136,7 @@ namespace ascension {
 			std::size_t				numberOfTextViewers() const throw();
 		private:
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document);
+			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// internal.ITextViewerCollection
 			void	addTextViewer(viewers::TextViewer& viewer) throw();

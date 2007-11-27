@@ -13,7 +13,7 @@
 #include "unicode.hpp"
 
 namespace ascension {
-	namespace unicode {
+	namespace text {
 
 		/**
 		 * Implements <a href="http://www.unicode.org/Public/UNIDATA/UCD.html">UCD (Unicode
@@ -695,6 +695,6 @@ inline int LineBreak::of(CodePoint cp) throw() {
 
 #undef IMPLEMENT_FORNAME
 
-}}} // namespace ascension.unicode.ucd
+}}} // namespace ascension.text.ucd
 
 #endif /* !ASCENSION_UNICODE_PROPERTY_HPP */

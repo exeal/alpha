@@ -44,7 +44,7 @@ namespace ascension {
 	 * - Unicode properties.
 	 * @see ASCENSION_UNICODE_VERSION
 	 */
-	namespace unicode {
+	namespace text {
 
 		/**
 		 * @c surrogates namespace collects low level procedures handle UTF-16 surrogate pair.
@@ -190,8 +190,8 @@ namespace ascension {
 			virtual ~CharacterIterator() throw();
 			// attributes
 			bool			equals(const CharacterIterator& rhs) const;
-			std::ptrdiff_t	getOffset() const throw();
 			bool			less(const CharacterIterator& rhs) const;
+			std::ptrdiff_t	offset() const throw();
 			// operations
 			CharacterIterator&					assign(const CharacterIterator& rhs);
 			std::auto_ptr<CharacterIterator>	clone() const;
@@ -251,8 +251,8 @@ namespace ascension {
 			StringCharacterIterator(const String& s);
 			StringCharacterIterator(const String& s, String::const_iterator start);
 			StringCharacterIterator(const StringCharacterIterator& rhs) throw();
-			const Char*	getFirst() const throw();
-			const Char*	getLast() const throw();
+			const Char*	beginning() const throw();
+			const Char*	end() const throw();
 			const Char*	tell() const throw();
 			// CharacterIterator
 			CodePoint	current() const throw();
@@ -494,9 +494,9 @@ namespace ascension {
 			// operator
 			Normalizer&	operator=(const Normalizer& rhs);
 			// attributes
-			std::ptrdiff_t	getOffset() const throw();
 			bool			hasNext() const throw();
 			bool			hasPrevious() const throw();
+			std::ptrdiff_t	offset() const throw();
 			// class operations
 			static int		compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
 			static Form		formForName(const Char* name);
@@ -523,7 +523,7 @@ namespace ascension {
 			/// Types of character classification used by @c IdentifierSyntax.
 			enum CharacterClassification {
 				ASCII,				///< Uses only 7-bit ASCII characters.
-				LEGACY_POSIX,		///< Classifies using @c unicode#ucd#legacyctype namespace functions.
+				LEGACY_POSIX,		///< Classifies using @c text#ucd#legacyctype namespace functions.
 				UNICODE_DEFAULT,	///< Conforms to the default identifier syntax of UAX #31.
 				UNICODE_ALTERNATIVE	///< Conforms to the alternative identifier syntax of UAX #31.
 			};
@@ -537,7 +537,7 @@ namespace ascension {
 			IdentifierSyntax(const IdentifierSyntax& rhs) throw();
 			IdentifierSyntax&	operator=(const IdentifierSyntax& rhs) throw();
 			// singleton
-			static const IdentifierSyntax&	getDefaultInstance() throw();
+			static const IdentifierSyntax&	defaultInstance() throw();
 			// classification for character
 			bool	isIdentifierStartCharacter(CodePoint cp) const throw();
 			bool	isIdentifierContinueCharacter(CodePoint cp) const throw();
@@ -576,7 +576,7 @@ namespace ascension {
 			/// Destructor.
 			virtual ~BreakIterator() throw() {}
 			/// Returns the locale.
-			const std::locale& getLocale() const throw() {return locale_;}
+			const std::locale& locale() const throw() {return locale_;}
 			/// Returns true if @a at addresses a boundary.
 			virtual bool isBoundary(const CharacterIterator& at) const = 0;
 			/// Moves to the next boundary.
@@ -871,16 +871,16 @@ namespace ascension {
 			// constructor
 			virtual ~Collator() throw();
 			// attributes
-			Decomposition	getDecomposition() const throw();
-			Strength		getStrength() const throw();
+			Decomposition	decomposition() const throw();
 			void			setDecomposition(Decomposition newDecomposition);
 			void			setStrength(Strength newStrength);
+			Strength		strength() const throw();
 			// operations
+			virtual std::auto_ptr<CollationKey>				collationKey(const String& s) const = 0;
 			int												compare(const String& s1, const String& s2) const;
 			virtual int										compare(const CharacterIterator& s1, const CharacterIterator& s2) const = 0;
 			std::auto_ptr<CollationElementIterator>			createCollationElementIterator(const String& source) const;
 			virtual std::auto_ptr<CollationElementIterator>	createCollationElementIterator(const CharacterIterator& source) const = 0;
-			virtual std::auto_ptr<CollationKey>				getCollationKey(const String& s) const = 0;
 		protected:
 			Collator() throw() : strength_(IDENTICAL), decomposition_(NO_DECOMPOSITION) {}
 		private:
@@ -892,9 +892,9 @@ namespace ascension {
 		class NullCollator : public Collator {
 		public:
 			NullCollator() throw();
+			std::auto_ptr<CollationKey>				collationKey(const String& s) const;
 			int										compare(const CharacterIterator& s1, const CharacterIterator& s2) const;
 			std::auto_ptr<CollationElementIterator>	createCollationElementIterator(const CharacterIterator& source) const;
-			std::auto_ptr<CollationKey>				getCollationKey(const String& s) const;
 		private:
 			class ElementIterator : public CollationElementIterator {
 			public:
@@ -903,7 +903,7 @@ namespace ascension {
 				int current() const {return i_->hasNext() ? i_->current() : NULL_ORDER;}
 				void next() {i_->next();}
 				void previous() {i_->previous();}
-				std::size_t position() const {return i_->getOffset();}
+				std::size_t position() const {return i_->offset();}
 			private:
 				std::auto_ptr<CharacterIterator> i_;
 			};
@@ -943,9 +943,6 @@ inline bool CharacterIterator::equals(const CharacterIterator& rhs) const {verif
 /// Moves to the start of the character sequence.
 inline CharacterIterator& CharacterIterator::first() {doFirst(); offset_ = 0; return *this;}
 
-/// Returns the position in the character sequence.
-inline std::ptrdiff_t CharacterIterator::getOffset() const throw() {return offset_;}
-
 /// Moves to the end of the character sequence.
 inline CharacterIterator& CharacterIterator::last() {doLast(); offset_ = 0; return *this;}
 
@@ -955,14 +952,17 @@ inline bool CharacterIterator::less(const CharacterIterator& rhs) const {verifyR
 /// Moves to the next code unit.
 inline CharacterIterator& CharacterIterator::next() {doNext(); ++offset_; return *this;}
 
+/// Returns the position in the character sequence.
+inline std::ptrdiff_t CharacterIterator::offset() const throw() {return offset_;}
+
 /// Moves to the previous code unit.
 inline CharacterIterator& CharacterIterator::previous() {doPrevious(); --offset_; return *this;}
 
-/// Returns the first position.
-inline const Char* StringCharacterIterator::getFirst() const throw() {return first_;}
+/// Returns the beginning position.
+inline const Char* StringCharacterIterator::beginning() const throw() {return first_;}
 
-/// Returns the last position.
-inline const Char* StringCharacterIterator::getLast() const throw() {return last_;}
+/// Returns the end position.
+inline const Char* StringCharacterIterator::end() const throw() {return last_;}
 
 /// @see CharacterIterator#hasNext
 inline bool StringCharacterIterator::hasNext() const throw() {return current_ != last_;}
@@ -978,10 +978,7 @@ inline const CodePoint& Normalizer::current() const throw() {return normalizedBu
 
 // Returns true if both iterators address the same character in the normalized text.
 inline bool Normalizer::equals(const Normalizer& rhs) const throw() {
-	return /*current_->isCloneOf(*rhs.current_) &&*/ current_->getOffset() == rhs.current_->getOffset() && indexInBuffer_ == rhs.indexInBuffer_;}
-
-/// Returns the current position in the input text that is being normalized.
-inline std::ptrdiff_t Normalizer::getOffset() const throw() {return current_->getOffset();}
+	return /*current_->isCloneOf(*rhs.current_) &&*/ current_->offset() == rhs.current_->offset() && indexInBuffer_ == rhs.indexInBuffer_;}
 
 /// Moves to the next normalized character.
 inline Normalizer& Normalizer::next() {
@@ -997,6 +994,9 @@ inline bool Normalizer::hasNext() const throw() {return current_->hasNext();}
 
 /// Returns false if the iterator addresses the start of the normalized text.
 inline bool Normalizer::hasPrevious() const throw() {return current_->hasPrevious() || indexInBuffer_ != 0;}
+
+/// Returns the current position in the input text that is being normalized.
+inline std::ptrdiff_t Normalizer::offset() const throw() {return current_->offset();}
 
 /// Returns the word component to search.
 inline AbstractWordBreakIterator::Component AbstractWordBreakIterator::getComponent() const throw() {return component_;}
@@ -1138,7 +1138,7 @@ inline CodePoint CaseFolder::foldCommon(CodePoint c) throw() {
 
 inline CodePoint CaseFolder::foldTurkishI(CodePoint c) throw() {if(c == 0x0049U) c = 0x0131U; else if(c == 0x0130U) c = 0x0069U; return c;}
 
-}} // namespace ascension.unicode
+}} // namespace ascension.text
 
 #undef CASE_FOLDING_EXPANSION_MAX_CHARS
 

@@ -7,14 +7,14 @@
 #include "encoder.hpp"
 #include <algorithm>
 #include <vector>
-#ifdef _WIN32
-#include <windows.h>	// GetCPInfoExW, ...
-#ifndef interface
-#define interface struct
-#endif
+#ifdef ASCENSION_WINDOWS
+#	include <windows.h>	// GetCPInfoExW, ...
+#	ifndef interface
+#		define interface struct
+#	endif
 #include <mlang.h>
 #include "../../manah/com/common.hpp"
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace std;
@@ -107,13 +107,13 @@ Encoder::~Encoder() throw() {
  * Returns true if the given character can be fully encoded with this encoding.
  * @param c the code point of the character
  * @return succeeded or not
- * @throw invalid_argument @a c is not a Unicode scalar value
+ * @throw std#invalid_argument @a c is not a Unicode scalar value
  */
 bool Encoder::canEncode(CodePoint c) const {
-	if(!unicode::isScalarValue(c))
+	if(!text::isScalarValue(c))
 		throw invalid_argument("the code point is not a scalar value.");
 	Char temp[2];
-	return canEncode(temp, temp + unicode::surrogates::encode(c, temp));
+	return canEncode(temp, temp + text::surrogates::encode(c, temp));
 }
 
 /**
