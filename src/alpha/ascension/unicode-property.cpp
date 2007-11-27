@@ -6,16 +6,16 @@
 
 #include "unicode-property.hpp"
 using namespace ascension;
-using namespace ascension::unicode;
-using namespace ascension::unicode::ucd;
-using namespace ascension::unicode::ucd::internal;
+using namespace ascension::text;
+using namespace ascension::text::ucd;
+using namespace ascension::text::ucd::internal;
 using namespace std;
 
 
 // CharacterIterator ////////////////////////////////////////////////////////
 
 /**
- * @class ascension::unicode::CharacterIterator
+ * @class ascension::text::CharacterIterator
  * Abstract class defines an interface for bidirectional iteration on text.
  *
  * <h3>Code point-based interface</h3>

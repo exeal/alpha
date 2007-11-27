@@ -237,7 +237,7 @@ ulong CharacterCodePointConversionCommand::execute() {
 	CHECK_DOCUMENT_READONLY(1);
 	ABORT_MODES();
 
-	using namespace ascension::unicode;
+	using namespace ascension::text;
 
 	TextViewer& viewer = target();
 	const Document& document = viewer.document();
@@ -350,7 +350,7 @@ ulong CharacterInputFromNextLineCommand::execute() {
 		target().beep();
 		return 1;
 	}
-	return CharacterInputCommand(target(), unicode::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
+	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
 }
 
 /**
@@ -423,9 +423,9 @@ ulong DeletionCommand::execute() {
 		}
 	} else if(type_ == NEXT_WORD || type_ == PREVIOUS_WORD) {
 		const Position from = (type_ == NEXT_WORD) ? caret.beginning() : caret.end();
-		unicode::WordBreakIterator<DocumentCharacterIterator> to(
+		text::WordBreakIterator<DocumentCharacterIterator> to(
 			DocumentCharacterIterator(document, (type_ == NEXT_WORD) ? caret.end() : caret.beginning()),
-			unicode::AbstractWordBreakIterator::START_OF_SEGMENT,
+			text::AbstractWordBreakIterator::START_OF_SEGMENT,
 				viewer.document().contentTypeInformation().getIdentifierSyntax(caret.getContentType()));
 		(type_ == NEXT_WORD) ? ++to : --to;
 		if(to.base().tell() != from) {

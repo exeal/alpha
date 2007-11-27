@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
+#	include <errno.h>		// errno
 #	include <fcntl.h>		// fcntl
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
@@ -19,7 +20,7 @@
 
 using namespace ascension;
 using namespace ascension::kernel;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
 
 
@@ -212,7 +213,7 @@ namespace {
 		struct stat s;
 		if(::stat(fileName, &s) == 0)
 			return true;
-		else if(::errno == E_NOENT)
+		else if(errno == ENOENT)
 			return false;
 #endif
 		throw files::IOException(files::IOException::PLATFORM_DEPENDENT_ERROR);
@@ -245,7 +246,7 @@ namespace {
 		if(::stat(fileName.c_str(), &s) == 0)
 			timeStamp = s.st_mtime;
 		else
-			throw files::IOException((::errno == E_NOENT) ?
+			throw files::IOException((errno == ENOENT) ?
 				files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
 #endif
 	}
@@ -274,7 +275,7 @@ namespace {
 #else // ASCENSION_POSIX
 		struct stat s;
 		if(::stat(fileName, &s) != 0)
-			throw files::IOException((::errno == E_NOENT) ?
+			throw files::IOException((errno == ENOENT) ?
 				files::IOException::FILE_NOT_FOUND : files::IOException::PLATFORM_DEPENDENT_ERROR);
 		return s.st_size;
 #endif
@@ -485,7 +486,7 @@ Point::Point(const Point& rhs) :
 
 /// Destructor.
 Point::~Point() throw() {
-	lifeCycleListeners_.notify(IPointLifeCycleListener::pointDestroyed);
+	lifeCycleListeners_.notify(&IPointLifeCycleListener::pointDestroyed);
 	if(document_ != 0)
 		static_cast<internal::IPointCollection<Point>*>(document_)->removePoint(*this);
 }
@@ -592,7 +593,7 @@ void Bookmarker::clear() throw() {
 		}
 	}
 	if(clearedOnce)
-		listeners_.notify(IBookmarkListener::bookmarkCleared);
+		listeners_.notify(&IBookmarkListener::bookmarkCleared);
 }
 
 /**
@@ -639,7 +640,7 @@ void Bookmarker::mark(length_t line, bool set) {
 	const Document::Line& l = document_.getLineInformation(line);
 	if(l.bookmarked_ != set) {
 		l.bookmarked_ = set;
-		listeners_.notify<length_t>(IBookmarkListener::bookmarkChanged, line);
+		listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
 	}
 }
 
@@ -660,7 +661,7 @@ void Bookmarker::removeListener(IBookmarkListener& listener) {
 void Bookmarker::toggle(length_t line) {
 	const Document::Line& l = document_.getLineInformation(line);
 	l.bookmarked_ = !l.bookmarked_;
-	listeners_.notify<length_t>(IBookmarkListener::bookmarkChanged, line);
+	listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
 }
 
 
@@ -928,7 +929,7 @@ pair<bool, size_t> Document::UndoManager::undo(Position& resultPosition) {
 // Document //////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::text::Document
+ * @class ascension::kernel::Document
  * A document manages a text content and supports text manipulations.
  *
  * All text content is represented in UTF-16. To treat this as UTF-32, use
@@ -1012,7 +1013,7 @@ void Document::beginSequentialEdit() throw() {
 	if(isSequentialEditing())
 		endSequentialEdit();
 	undoManager_->beginCompoundOperation();
-	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStarted, *this);
+	sequentialEditListeners_.notify<Document&>(&ISequentialEditListener::documentSequentialEditStarted, *this);
 }
 
 /// Clears the undo/redo stacks and deletes the history.
@@ -1031,7 +1032,7 @@ void Document::doResetContent() {
  */
 void Document::endSequentialEdit() throw() {
 	undoManager_->endCompoundOperation();
-	sequentialEditListeners_.notify<Document&>(ISequentialEditListener::documentSequentialEditStopped, *this);
+	sequentialEditListeners_.notify<Document&>(&ISequentialEditListener::documentSequentialEditStopped, *this);
 }
 
 /**
@@ -1248,25 +1249,6 @@ Position Document::insertText(const Position& position, const Char* first, const
 }
 
 /**
- * Inserts the text into the specified position from the input stream.
- * @param position the position
- * @param in the input stream
- * @return the result position
- * @throw ReadOnlyDocumentException the document is read only
- */
-Position Document::insertFromStream(const Position& position, InputStream& in) {
-	if(isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(isNarrowed() && !accessibleRegion().includes(position))	// アクセス可能範囲外 -> 無視
-		return position;
-	else if(in.eof())
-		return position;
-
-	// TODO: not implemented.
-	return position;
-}
-
-/**
  * Returns true if the document is sequential editing.
  * @see #beginSequentialEdit, #endSequentialEdit
  */
@@ -1279,7 +1261,6 @@ bool Document::isSequentialEditing() const throw() {
  * @param nlr the method to count newlines
  * @return the number of characters
  * @throw std#invalid_argument @a nlr is invalid
- * @see files#FileBinder#lengthOfDocument
  */
 length_t Document::length(NewlineRepresentation nlr) const {
 	switch(nlr) {
@@ -1341,7 +1322,7 @@ void Document::narrow(const Region& region) {
 		if((*i)->isExcludedFromRestriction())
 			(*i)->normalize();
 	}
-	stateListeners_.notify<Document&>(IDocumentStateListener::documentAccessibleRegionChanged, *this);
+	stateListeners_.notify<Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 }
 
 /// Returns the number of undoable edits.
@@ -1380,11 +1361,11 @@ bool Document::redo() {
 
 	beginSequentialEdit();
 	sequentialEditListeners_.notify<Document&>(
-		ISequentialEditListener::documentUndoSequenceStarted, *this);
+		&ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const bool succeeded = undoManager_->redo(resultPosition).first;
 	sequentialEditListeners_.notify<Document&, const Position&>(
-		ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
+		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
 	return succeeded;
 }
@@ -1524,6 +1505,15 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 #endif /* 0 */
 
 /**
+ * Sets the new document input.
+ * @param newInput the new document input. can be @c null
+ * @param delegateOwnership set true to transfer the ownership into the callee
+ */
+void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) throw() {
+	input_.reset(newInput, delegateOwnership);
+}
+
+/**
  * Sets the modification flag of the document.
  * @param modified set true to make the document modfied
  * @see #isModified, IDocumentStateListener#documentModificationSignChanged
@@ -1531,7 +1521,7 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
 void Document::setModified(bool modified /* = true */) throw() {
 	if(modified != modified_) {
 		modified_ = modified;
-		stateListeners_.notify<Document&>(IDocumentStateListener::documentModificationSignChanged, *this);
+		stateListeners_.notify<Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	}
 }
 
@@ -1558,7 +1548,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
 		properties_.insert(make_pair(&key, new String(property)));
 	else
 		i->second->assign(property);
-	stateListeners_.notify<Document&, const DocumentPropertyKey&>(IDocumentStateListener::documentPropertyChanged, *this, key);
+	stateListeners_.notify<Document&, const DocumentPropertyKey&>(&IDocumentStateListener::documentPropertyChanged, *this, key);
 }
 
 /**
@@ -1568,7 +1558,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
 void Document::setReadOnly(bool readOnly /* = true */) {
 	if(readOnly != isReadOnly()) {
 		readOnly_ = readOnly;
-		stateListeners_.notify<Document&>(IDocumentStateListener::documentReadOnlySignChanged, *this);
+		stateListeners_.notify<Document&>(&IDocumentStateListener::documentReadOnlySignChanged, *this);
 	}
 }
 
@@ -1608,16 +1598,16 @@ void Document::setReadOnly(bool readOnly /* = true */) {
 bool Document::undo() {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(numberOfUndoableEdits == 0)
+	else if(numberOfUndoableEdits() == 0)
 		return false;
 
 	beginSequentialEdit();
 	sequentialEditListeners_.notify<Document&>(
-		ISequentialEditListener::documentUndoSequenceStarted, *this);
+		&ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const pair<bool, size_t> status(undoManager_->undo(resultPosition));
 	sequentialEditListeners_.notify<Document&, const Position&>(
-		ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
+		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
 
 	revisionNumber_ -= status.second * 2;
@@ -1644,7 +1634,7 @@ void Document::widen() {
 		delete accessibleArea_->second;
 		delete accessibleArea_;
 		accessibleArea_ = 0;
-		stateListeners_.notify<Document&>(IDocumentStateListener::documentAccessibleRegionChanged, *this);
+		stateListeners_.notify<Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 	}
 }
 
@@ -1721,10 +1711,10 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 
 /// Copy-constructor.
 DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw() :
-		unicode::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
+		text::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
 }
 
-/// @see unicode#CharacterIterator#current
+/// @see text#CharacterIterator#current
 CodePoint DocumentCharacterIterator::current() const throw() {
 	if(p_ == region_.second)
 		return DONE;
@@ -1736,7 +1726,7 @@ CodePoint DocumentCharacterIterator::current() const throw() {
 			surrogates::decode((*line_)[p_.column], (*line_)[p_.column + 1]) : (*line_)[p_.column];
 }
 
-/// @see unicode#CharacterIterator#doAssign
+/// @see text#CharacterIterator#doAssign
 void DocumentCharacterIterator::doAssign(const CharacterIterator& rhs) {
 	CharacterIterator::operator=(rhs);
 	const DocumentCharacterIterator& r = static_cast<const DocumentCharacterIterator&>(rhs);
@@ -1746,32 +1736,32 @@ void DocumentCharacterIterator::doAssign(const CharacterIterator& rhs) {
 	region_ = r.region_;
 }
 
-/// @see unicode#CharacterIterator#doClone
+/// @see text#CharacterIterator#doClone
 auto_ptr<CharacterIterator> DocumentCharacterIterator::doClone() const {
 	return auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
 }
 
-/// @see unicode#CharacterIterator#doFirst
+/// @see text#CharacterIterator#doFirst
 void DocumentCharacterIterator::doFirst() {
 	seek(region_.first);
 }
 
-/// @see unicode#CharacterIterator#doLast
+/// @see text#CharacterIterator#doLast
 void DocumentCharacterIterator::doLast() {
 	seek(region_.second);
 }
 
-/// @see unicode#CharacterIterator#doEquals
+/// @see text#CharacterIterator#doEquals
 bool DocumentCharacterIterator::doEquals(const CharacterIterator& rhs) const {
 	return p_ == static_cast<const DocumentCharacterIterator&>(rhs).p_;
 }
 
-/// @see unicode#CharacterIterator#doLess
+/// @see text#CharacterIterator#doLess
 bool DocumentCharacterIterator::doLess(const CharacterIterator& rhs) const {
 	return p_ < static_cast<const DocumentCharacterIterator&>(rhs).p_;
 }
 
-/// @see unicode#CharacterIterator#doNext
+/// @see text#CharacterIterator#doNext
 void DocumentCharacterIterator::doNext() {
 	if(!hasNext())
 //		throw out_of_range("the iterator is at the last.");
@@ -1784,7 +1774,7 @@ void DocumentCharacterIterator::doNext() {
 		++p_.column;
 }
 
-/// @see unicode#CharacterIterator#doPrevious
+/// @see text#CharacterIterator#doPrevious
 void DocumentCharacterIterator::doPrevious() {
 	if(!hasPrevious())
 //		throw out_of_range("the iterator is at the first.");
@@ -1868,11 +1858,11 @@ NullPartitioner::NullPartitioner() throw() : p_(DEFAULT_CONTENT_TYPE, Region(Pos
 }
 
 /// @see DocumentPartitioner#documentAboutToBeChanged
-void NullPartitioner::documentAboutToBeChanged() {
+void NullPartitioner::documentAboutToBeChanged() throw() {
 }
 
 /// @see DocumentPartitioner#documentChanged
-void NullPartitioner::documentChanged(const DocumentChange&) {
+void NullPartitioner::documentChanged(const DocumentChange&) throw() {
 	p_.region.second.line = INVALID_INDEX;
 }
 
@@ -1899,8 +1889,8 @@ namespace {
 	private:
 		::DWORD e_;
 #else // ASCENSION_POSIX
-		SystemErrorSaver() throw() : e_(::errno) {}
-		~SystemErrorSaver() throw() {::errno = e_;}
+		SystemErrorSaver() throw() : e_(errno) {}
+		~SystemErrorSaver() throw() {errno = e_;}
 	private:
 		int e_;
 #endif
@@ -1953,8 +1943,8 @@ files::TextFileStreamBuffer::TextFileStreamBuffer(const files::String& fileName,
 		}
 #else // ASCENSION_POSIX
 		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY)))
-			throw IOException((::errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
-		if(MAP_FAILED == (inputMapping_.first = static_cast<const uchar*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, newFile, 0)))) {
+			throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+		if(MAP_FAILED == (inputMapping_.first = static_cast<const uchar*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)))) {
 			SystemErrorSaver temp;
 			inputMapping_.first = 0;
 			::close(fileDescriptor_);
@@ -2047,7 +2037,7 @@ files::TextFileStreamBuffer* files::TextFileStreamBuffer::close() {
 	}
 #else // ASCENSION_POSIX
 	if(inputMapping_.first != 0) {
-		::munmap(inputMapping_.first, inputMapping_.last - inputMapping_.first);
+		::munmap(const_cast<uchar*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
 	if(fileDescriptor_ == -1) {
@@ -2143,13 +2133,16 @@ files::FileBinder::FileBinder(Document& document) : document_(document),
 	document.addListener(*this);
 }
 
-/**
- * Constructor.
- * @param 
- */
+/// Destructor.
+files::FileBinder::~FileBinder() throw() {
+	unlock();
+	document_.removeListener(*this);
+	if(isBound())
+		document_.setInput(0, false);
+}
 
 /**
- * Binds the document to the specified file.
+ * Binds the document to the specified file. This method call document's @c Document#setInput.
  * @param fileName the file name. this method doesn't resolves the short cut
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
  * description of the return value
@@ -2171,7 +2164,8 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 	const bool recorded = document_.isRecordingOperations();
 	document_.recordOperations(false);
 	try {
-		readDocumentFromStream(InputStream(&sb), document_, document_.region().beginning());
+		InputStream in(&sb);
+		readDocumentFromStream(in, document_, document_.region().beginning());
 	} catch(...) {
 		document_.recordOperations(recorded);
 		throw;
@@ -2196,7 +2190,11 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 	savedDocumentRevision_ = document_.revisionNumber();
 	timeStampDirector_ = unexpectedTimeStampDirector;
 	fileName_ = canonicalizePathName(fileName.c_str());
+#ifdef ASCENSION_WINDOWS
 	document_.setProperty(Document::TITLE_PROPERTY, name());
+#else // ASCENSION_POSIX
+	// TODO: convert name() into the 8-bit file system encoding.
+#endif
 	encoding_ = sb.encoding();
 	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line
 
@@ -2211,7 +2209,7 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 		// ignore...
 	}
 
-	document_.setInput(auto_ptr<IDocumentInput>(this));
+	document_.setInput(this, false);
 	return lockSucceeded;
 }
 
@@ -2300,8 +2298,8 @@ bool files::FileBinder::lock() throw() {
 		fl.l_whence = SEEK_SET;
 		fl.l_start = 0;
 		fl.l_len = 0;
-		fl.l_type = (lockMode.type == LockMode::SHARED_LOCK) ? F_RDLCK : F_WRLCK;
-		if(::fcntl(fileHandle_, F_SETLK, &fl) == 0) {
+		fl.l_type = (lockMode_.type == LockMode::SHARED_LOCK) ? F_RDLCK : F_WRLCK;
+		if(::fcntl(lockingFile_, F_SETLK, &fl) == 0) {
 			::close(lockingFile_);
 			lockingFile_ = -1;
 		}
@@ -2374,9 +2372,14 @@ bool files::FileBinder::unlock() throw() {
  * @return false if not match
  */
 bool files::FileBinder::verifyTimeStamp(bool internal, Time& newTimeStamp) throw() {
+	static Time uninitialized;
+	static bool initializedUninitialized = false;
+	if(!initializedUninitialized)
+		memset(&uninitialized, 0, sizeof(Time));
+
 	const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
 	if(!isBound()
-			|| (about.dwLowDateTime == 0 && about.dwHighDateTime == 0)
+			|| memcmp(&about, &uninitialized, sizeof(Time)) == 0
 			|| lockMode_.type != LockMode::DONT_LOCK)
 		return true;	// not managed
 
@@ -2448,7 +2451,7 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
 	const files::String tempFileName(getTemporaryFileName(realName));
 	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
 		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
-	writeDocumentToStream(basic_ostream<Char>(&sb), document_,
+	writeDocumentToStream(basic_ostream<ascension::Char>(&sb), document_,
 		document_.region(), (params.newline != NLF_AUTO) ? getNewlineString(params.newline) : L"");
 	sb.close();
 
@@ -2477,7 +2480,7 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
 		::chmod(tempFileName.c_str(), originalStat.st_mode);
 		if(::remove(realName.c_str()) != 0) {
 			SystemErrorSaver ses;
-			if(::errno != ENOENT) {
+			if(errno != ENOENT) {
 				::remove(tempFileName.c_str());
 				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 			}

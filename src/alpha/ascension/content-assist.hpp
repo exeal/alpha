@@ -150,11 +150,11 @@ namespace ascension {
 			MANAH_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
-			IdentifiersProposalProcessor(kernel::ContentType contentType, const unicode::IdentifierSyntax& syntax) throw();
+			IdentifiersProposalProcessor(kernel::ContentType contentType, const text::IdentifierSyntax& syntax) throw();
 			virtual ~IdentifiersProposalProcessor() throw();
 			// attributes
 			kernel::ContentType contentType() const throw();
-			const unicode::IdentifierSyntax& identifierSyntax() const throw();
+			const text::IdentifierSyntax& identifierSyntax() const throw();
 			// IContentAssistProcessor
 			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
 				kernel::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
@@ -167,7 +167,7 @@ namespace ascension {
 				std::size_t numberOfCurrentProposals, std::set<ICompletionProposal*>& newProposals) const;
 		private:
 			const kernel::ContentType contentType_;
-			const unicode::IdentifierSyntax& syntax_;
+			const text::IdentifierSyntax& syntax_;
 		};
 
 		/**

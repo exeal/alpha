@@ -40,22 +40,22 @@
 #endif
 
 
-// about ascension.unicode //////////////////////////////////////////////////
+// about ascension.text //////////////////////////////////////////////////
 
 /**
  * @def ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
- * Default character set for @c ascension#unicode#IdentifierSyntax. This value is used by default
+ * Default character set for @c ascension#text#IdentifierSyntax. This value is used by default
  * character classification (such as the partitioner which does not have scanners). This must be
- * one of @c ascension#unicode#CharacterDetector#CharacterClassification enumeration.
+ * one of @c ascension#text#CharacterDetector#CharacterClassification enumeration.
  */
-#define ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION ascension::unicode::IdentifierSyntax::UNICODE_DEFAULT
+#define ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION ascension::text::IdentifierSyntax::UNICODE_DEFAULT
 
 /**
  * @def ASCENSION_NO_UNICODE_NORMALIZATION
  * Define the symbol if you do not use Unicode normalization features. If defined,
- * @c ascension#unicode#Normalizer class and @c ascension#unicode#CanonicalCombiningClass class
+ * @c ascension#text#Normalizer class and @c ascension#text#CanonicalCombiningClass class
  * will be not available.
- * @see ascension#unicode#Normalizer, ascension#unicode#CanonicalCombiningClass,
+ * @see ascension#text#Normalizer, ascension#text#CanonicalCombiningClass,
  * @see ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
  */
 // #define ASCENSION_NO_UNICODE_NORMALIZATION
@@ -64,14 +64,14 @@
  * @def ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
  * Define the symbol if you do not use Unicode compatibility mappings. If defined, normalization
  * features for compatibility mapping and compatibility equivalents will be not available.
- * @see ASCENSION_NO_UNICODE_NORMALIZATION, ascension#unicode#Normalizer
+ * @see ASCENSION_NO_UNICODE_NORMALIZATION, ascension#text#Normalizer
  */
 #define ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
 
 /**
  * @def ASCENSION_NO_UNICODE_COLLATION
  * Define the symbol if you do not use Unicode collation facilities.
- * @see ascension#unicode#Collator, collator.hpp
+ * @see ascension#text#Collator, collator.hpp
  */
 #define ASCENSION_NO_UNICODE_COLLATION
 

@@ -30,7 +30,7 @@ ClipboardRing::ClipboardRing() throw() : capacity_(16), maximumBytes_(100 * 1024
 void ClipboardRing::add(const String& text, bool rectangle) {
 	assert(!text.empty());
 	if(text.length() * sizeof(Char) > maximumBytes_) {
-		listeners_.notify(IClipboardRingListener::clipboardRingAddingDenied);
+		listeners_.notify(&IClipboardRingListener::clipboardRingAddingDenied);
 		return;
 	}
 
@@ -41,7 +41,7 @@ void ClipboardRing::add(const String& text, bool rectangle) {
 	if(datas_.size() > capacity_)
 		datas_.pop_back();
 	activeItem_ = 0;
-	listeners_.notify(IClipboardRingListener::clipboardRingChanged);
+	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
 }
 
 /**
@@ -57,13 +57,13 @@ void ClipboardRing::remove(size_t index) {
 	datas_.erase(it);
 	if(index == datas_.size() && index == activeItem_)
 		--activeItem_;
-	listeners_.notify(IClipboardRingListener::clipboardRingChanged);
+	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
 }
 
 /// Removes all the stored texts.
 void ClipboardRing::removeAll() {
 	datas_.clear();
-	listeners_.notify(IClipboardRingListener::clipboardRingChanged);
+	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
 }
 
 /**
@@ -79,7 +79,7 @@ void ClipboardRing::setCapacity(size_t capacity) {
 	capacity_ = capacity;
 	if(datas_.size() > capacity_) {
 		datas_.resize(capacity_);
-		listeners_.notify(IClipboardRingListener::clipboardRingChanged);
+		listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
 	}
 }
 

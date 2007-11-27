@@ -11,8 +11,8 @@
 using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::kernel;
-using namespace ascension::unicode;
 using namespace ascension::layout;
+using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
 using manah::AutoBuffer;
@@ -110,34 +110,34 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
 	if(!incremental || caret.isBeginningOfLine())
 		replacementRegion.first = caret;
-	else if(source::getNearestIdentifier(*caret.getDocument(), caret, &replacementRegion.first.column, 0))
-		replacementRegion.first.line = caret.getLineNumber();
+	else if(source::getNearestIdentifier(*caret.document(), caret, &replacementRegion.first.column, 0))
+		replacementRegion.first.line = caret.lineNumber();
 	else
 		replacementRegion.first = caret;
 
 	// collect identifiers in the document
 	static const length_t MAXIMUM_BACKTRACKING_LINES = 500;
-	const Document& document = *caret.getDocument();
+	const Document& document = *caret.document();
 	DocumentCharacterIterator i(document, Region(Position(
-		(caret.getLineNumber() > MAXIMUM_BACKTRACKING_LINES) ?
-			caret.getLineNumber() - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
+		(caret.lineNumber() > MAXIMUM_BACKTRACKING_LINES) ?
+			caret.lineNumber() - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
 	DocumentPartition currentPartition;
 	set<String> identifiers;
 	bool followingNIDs = false;
-	document.partitioner().getPartition(i.tell(), currentPartition);
+	document.partitioner().partition(i.tell(), currentPartition);
 	while(i.hasNext()) {
 		if(currentPartition.contentType != contentType_)
 			i.seek(currentPartition.region.end());
 		if(i.tell() >= currentPartition.region.end()) {
-			if(i.tell().column == i.getLine().length())
+			if(i.tell().column == i.line().length())
 				i.next();
-			document.partitioner().getPartition(i.tell(), currentPartition);
+			document.partitioner().partition(i.tell(), currentPartition);
 			continue;
 		}
 		if(!followingNIDs) {
-			const Char* const bol = i.getLine().data();
+			const Char* const bol = i.line().data();
 			const Char* const s = bol + i.tell().column;
-			const Char* e = syntax_.eatIdentifier(s, bol + i.getLine().length());
+			const Char* e = syntax_.eatIdentifier(s, bol + i.line().length());
 			if(e > s) {
 				identifiers.insert(String(s, e));	// automatically merged
 				i.seek(Position(i.tell().line, e - bol));
@@ -160,7 +160,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProposal(const TextViewer& textViewer,
 		const Region& replacementRegion, ICompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const throw() {
 	// select the partially matched proposal
-	String precedingIdentifier(textViewer.getDocument().line(replacementRegion.first.line).substr(
+	String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
 		replacementRegion.beginning().column, replacementRegion.end().column - replacementRegion.beginning().column));
 	if(precedingIdentifier.empty())
 		return 0;
@@ -402,8 +402,8 @@ void ContentAssistant::caretMoved(const Caret& self, const Region&) {
 		if(!completionSession_->incremental)
 			close();
 		// incremental mode: close if the caret gone out of the replacement region
-		else if(self.getPosition() < completionSession_->replacementRegion.beginning()
-				|| self.getPosition() > completionSession_->replacementRegion.end())
+		else if(self.position() < completionSession_->replacementRegion.beginning()
+				|| self.position() > completionSession_->replacementRegion.end())
 			close();
 	}
 }
@@ -415,14 +415,14 @@ void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 			if(!completionSession_->incremental)
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
-				textViewer_->getDocument().beginSequentialEdit();
-				textViewer_->getCaret().erase(-1, EditPoint::UTF32_CODE_UNIT);
-				textViewer_->getDocument().endSequentialEdit();
+				textViewer_->document().beginSequentialEdit();
+				textViewer_->caret().erase(-1, EditPoint::UTF32_CODE_UNIT);
+				textViewer_->document().endSequentialEdit();
 				complete();
 			}
 		} else {
 			// activate automatically
-			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->getCaret().getContentType())) {
+			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->caret().getContentType())) {
 				if(cap->isCompletionProposalAutoActivationCharacter(c)) {
 					if(autoActivationDelay_ == 0)
 						showPossibleCompletions();
@@ -440,9 +440,9 @@ void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 void ContentAssistant::close() {
 	if(completionSession_.get() != 0) {
 		textViewer_->removeViewportListener(*this);
-		textViewer_->getCaret().removeListener(*this);
+		textViewer_->caret().removeListener(*this);
 		if(completionSession_->incremental)
-			textViewer_->getDocument().removeListener(*this);
+			textViewer_->document().removeListener(*this);
 		completionSession_.reset();
 		proposalPopup_->show(SW_HIDE);
 		proposalPopup_->resetContent();
@@ -456,7 +456,7 @@ bool ContentAssistant::complete() {
 		if(sel != LB_ERR) {
 			if(ICompletionProposal* p = static_cast<ICompletionProposal*>(proposalPopup_->getItemDataPtr(sel))) {
 				auto_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
-				Document& document = textViewer_->getDocument();
+				Document& document = textViewer_->document();
 				if(!document.isReadOnly()) {
 					document.beginSequentialEdit();
 					p->replace(document, temp->replacementRegion);
@@ -473,7 +473,7 @@ bool ContentAssistant::complete() {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-bool ContentAssistant::documentAboutToBeChanged(const Document&) {
+bool ContentAssistant::documentAboutToBeChanged(const Document&, const DocumentChange&) {
 	return true;
 }
 
@@ -481,13 +481,13 @@ bool ContentAssistant::documentAboutToBeChanged(const Document&) {
 void ContentAssistant::documentChanged(const Document&, const DocumentChange& change) {
 	if(completionSession_.get() != 0) {
 		// exit or update the replacement region
-		if(!completionSession_->incremental || change.getRegion().first.line != change.getRegion().second.line)
+		if(!completionSession_->incremental || change.region().first.line != change.region().second.line)
 			close();
 		const Region& replacementRegion = completionSession_->replacementRegion;
-		if(change.isDeletion() && !replacementRegion.encompasses(change.getRegion()))
+		if(change.isDeletion() && !replacementRegion.encompasses(change.region()))
 			close();
 		completionSession_->replacementRegion.second = updatePosition(completionSession_->replacementRegion.second, change, FORWARD);
-		if(!change.isDeletion() && !replacementRegion.encompasses(change.getRegion()))
+		if(!change.isDeletion() && !replacementRegion.encompasses(change.region()))
 			close();
 
 		// rebuild proposals
@@ -500,7 +500,7 @@ void ContentAssistant::documentChanged(const Document&, const DocumentChange& ch
 				delete completionSession_->proposals[i];
 			completionSession_->proposals.reset();
 			if(newProposals.size() == 1 && (*newProposals.begin())->isAutoInsertable()) {
-				(*newProposals.begin())->replace(textViewer_->getDocument(), completionSession_->replacementRegion);
+				(*newProposals.begin())->replace(textViewer_->document(), completionSession_->replacementRegion);
 				return close();
 			}
 			completionSession_->proposals.reset(new ICompletionProposal*[completionSession_->numberOfProposals = newProposals.size()]);
@@ -534,7 +534,7 @@ bool ContentAssistant::hasSelection() const throw() {
 
 /// @see IContentAssistant#install
 void ContentAssistant::install(TextViewer& viewer) {
-	(textViewer_ = &viewer)->getCaret().addCharacterInputListener(*this);
+	(textViewer_ = &viewer)->caret().addCharacterInputListener(*this);
 }
 
 /// @see ICompletionProposalsUI#nextPage
@@ -588,9 +588,9 @@ void ContentAssistant::setContentAssistProcessor(ContentType contentType, auto_p
 
 /// @see IContentAssistant#showPossibleCompletions
 void ContentAssistant::showPossibleCompletions() {
-	if(textViewer_ == 0 || completionSession_.get() != 0 || textViewer_->getDocument().isReadOnly())
+	if(textViewer_ == 0 || completionSession_.get() != 0 || textViewer_->document().isReadOnly())
 		return textViewer_->beep();
-	const Caret& caret = textViewer_->getCaret();
+	const Caret& caret = textViewer_->caret();
 	if(const IContentAssistProcessor* const cap = getContentAssistProcessor(caret.getContentType())) {
 		set<ICompletionProposal*> proposals;
 		completionSession_.reset(new CompletionSession);
@@ -598,7 +598,7 @@ void ContentAssistant::showPossibleCompletions() {
 			completionSession_->incremental, completionSession_->replacementRegion, proposals);
 		if(!proposals.empty()) {
 			if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
-				(*proposals.begin())->replace(textViewer_->getDocument(), completionSession_->replacementRegion);
+				(*proposals.begin())->replace(textViewer_->document(), completionSession_->replacementRegion);
 				completionSession_.reset();
 				delete *proposals.begin();
 			} else {
@@ -628,15 +628,15 @@ void ContentAssistant::startPopup() {
 		proposalPopup_->resetContent();
 
 	// determine the horizontal orientation of the window
-	const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
+	const bool rtl = textViewer_->configuration().orientation == RIGHT_TO_LEFT;
 	proposalPopup_->modifyStyleEx(rtl ? 0: WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
 	setupPopupContent(*proposalPopup_, completionSession_->proposals.get(), completionSession_->numberOfProposals);
 
 	updatePopupPositions();
 	textViewer_->addViewportListener(*this);
-	textViewer_->getCaret().addListener(*this);
+	textViewer_->caret().addListener(*this);
 	if(completionSession_->incremental)
-		textViewer_->getDocument().addListener(*this);
+		textViewer_->document().addListener(*this);
 }
 
 void CALLBACK ContentAssistant::timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD) {
@@ -652,7 +652,7 @@ void CALLBACK ContentAssistant::timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWOR
 /// @see IContentAssistant#uninstall
 void ContentAssistant::uninstall() {
 	if(textViewer_ != 0) {
-		textViewer_->getCaret().removeCharacterInputListener(*this);
+		textViewer_->caret().removeCharacterInputListener(*this);
 		textViewer_ = 0;
 	}
 }
@@ -663,13 +663,13 @@ void ContentAssistant::updatePopupPositions() {
 		textViewer_->getClientRect(viewerRect);
 		int cx = (viewerRect.right - viewerRect.left) / 4;
 		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
-		const ::POINT pt = textViewer_->getClientXYForCharacter(completionSession_->replacementRegion.beginning(), false, LineLayout::LEADING);
-		const bool rtl = textViewer_->getConfiguration().orientation == RIGHT_TO_LEFT;
+		const ::POINT pt = textViewer_->clientXYForCharacter(completionSession_->replacementRegion.beginning(), false, LineLayout::LEADING);
+		const bool rtl = textViewer_->configuration().orientation == RIGHT_TO_LEFT;
 		int x = !rtl ? (pt.x - 3) : (pt.x - cx - 1 + 3);
 		if(x + cx > viewerRect.right) {
 //			if()
 		}
-		int y = pt.y + textViewer_->getTextRenderer().getLineHeight();
+		int y = pt.y + textViewer_->textRenderer().lineHeight();
 		if(y + cy > viewerRect.bottom) {
 			if(pt.y - 1 - viewerRect.top < viewerRect.bottom - y)
 				cy = viewerRect.bottom - y;

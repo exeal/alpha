@@ -12,8 +12,8 @@ using namespace ascension::kernel;
 using namespace ascension::layout;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
-using namespace ascension::unicode;
-using namespace ascension::unicode::ucd;
+using namespace ascension::text;
+using namespace ascension::text::ucd;
 //using namespace ascension::internal;
 using namespace manah::win32;
 using namespace std;
@@ -275,7 +275,7 @@ inline String EditPoint::getText(signed_length_t length, NewlineRepresentation n
 
 inline String EditPoint::getText(const Position& other, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
 	OutputStringStream s;
-	document()->writeToStream(s, Region(*this, other), nlr);
+	writeDocumentToStream(s, *document(), Region(*this, other), nlr);
 	return s.str();
 }
 
@@ -1445,7 +1445,7 @@ void Caret::beginBoxSelection() {
 	verifyViewer();
 	if(box_ == 0) {
 		box_ = new VirtualBox(textViewer(), selectionRegion());
-		stateListeners_.notify<const Caret&>(ICaretStateListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
 	}
 }
 
@@ -1502,7 +1502,7 @@ void Caret::checkMatchBrackets() {
 */	// TODO: check if the pair is out of view.
 	if(matchBrackets_ != oldPair)
 		stateListeners_.notify<const Caret&, const pair<Position,
-			Position>&, bool>(ICaretStateListener::matchBracketsChanged, *this, oldPair, false);
+			Position>&, bool>(&ICaretStateListener::matchBracketsChanged, *this, oldPair, false);
 }
 
 /// Clears the selection.
@@ -1585,7 +1585,7 @@ void Caret::endBoxSelection() {
 	if(box_ != 0) {
 		delete box_;
 		box_ = 0;
-		stateListeners_.notify<const Caret&>(ICaretStateListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
 	}
 }
 
@@ -1811,7 +1811,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 		insert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		editingByThis_ = false;
 	}
-	characterInputListeners_.notify<const Caret&, CodePoint>(ICharacterInputListener::characterInputted, *this, cp);
+	characterInputListeners_.notify<const Caret&, CodePoint>(&ICharacterInputListener::characterInputted, *this, cp);
 
 	return true;
 }
@@ -1894,7 +1894,7 @@ void Caret::pointMoved(const EditPoint& self, const Position& oldPosition) {
 		return;
 	if((oldPosition == position()) != isSelectionEmpty())
 		checkMatchBrackets();
-	listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, Region(oldPosition, position()));
+	listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, Region(oldPosition, position()));
 }
 
 /**
@@ -1955,7 +1955,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 			box_->update(selectionRegion());
 		if(autoShow_)
 			show();
-		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, oldRegion);
+		listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, oldRegion);
 	}
 	checkMatchBrackets();
 }
@@ -2063,7 +2063,7 @@ void Caret::selectWord() {
 void Caret::setOvertypeMode(bool overtype) throw() {
 	if(overtype != overtypeMode_) {
 		overtypeMode_ = overtype;
-		stateListeners_.notify<const Caret&>(ICaretStateListener::overtypeModeChanged, *this);
+		stateListeners_.notify<const Caret&>(&ICaretStateListener::overtypeModeChanged, *this);
 	}
 }
 
@@ -2081,7 +2081,7 @@ inline void Caret::updateVisualAttributes() {
 	if(isSelectionRectangle())
 		box_->update(selectionRegion());
 	if((regionBeforeMoved_.first != position() || regionBeforeMoved_.second != position()))
-		listeners_.notify<const Caret&, const Region&>(ICaretListener::caretMoved, *this, regionBeforeMoved_);
+		listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, regionBeforeMoved_);
 	if(autoShow_)
 		show();
 	checkMatchBrackets();

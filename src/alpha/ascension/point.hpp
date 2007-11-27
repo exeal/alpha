@@ -208,9 +208,9 @@ namespace ascension {
 			bool				transposeWords();
 
 		protected:
-			virtual void						doMoveTo(const kernel::Position& to);
-			const unicode::IdentifierSyntax&	identifierSyntax() const throw();
-			void								verifyViewer() const;
+			virtual void					doMoveTo(const kernel::Position& to);
+			const text::IdentifierSyntax&	identifierSyntax() const throw();
+			void							verifyViewer() const;
 		private:
 			using kernel::EditPoint::newLine;	// 明示的な隠蔽
 			kernel::Position	doIndent(const kernel::Position& other, Char character, bool box, long level);

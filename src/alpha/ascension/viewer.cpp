@@ -648,7 +648,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// this is JavaScript partitioning and lexing settings for test
 	using namespace contentassist;
 	using namespace rules;
-	using namespace unicode;
+	using namespace text;
 
 	static const ContentType JS_MULTILINE_DOC_COMMENT = 40,
 		JS_MULTILINE_COMMENT = 42, JS_SINGLELINE_COMMENT = 43, JS_DQ_STRING = 44, JS_SQ_STRING = 45;
@@ -1796,7 +1796,7 @@ void TextViewer::onIMEEndComposition() {
 /// @see WM_IME_NOTIFY
 ::LRESULT TextViewer::onIMENotify(::WPARAM command, ::LPARAM, bool&) {
 	if(command == IMN_SETOPENSTATUS)
-		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
+		inputStatusListeners_.notify(&ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
 	return 0L;
 }
 
@@ -2182,7 +2182,7 @@ void TextViewer::onSize(::UINT type, int, int) {
 
 	if(configuration_.lineWrap.wrapsAtWindowEdge())
 		renderer_->invalidate();
-	displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
+	displaySizeListeners_.notify(&IDisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
 	verticalRulerDrawer_->update();
@@ -2359,7 +2359,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 	case WM_GETTEXT: {
 		OutputStringStream s;
-		document().writeToStream(s, NLR_CRLF);
+		writeDocumentToStream(s, document(), document().region(), getNewlineString(NLF_CRLF));
 		handled = true;
 		return reinterpret_cast<LRESULT>(s.str().c_str());
 	}
@@ -2368,7 +2368,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		handled = true;
 		return document().length(NLR_CRLF);
 	case WM_INPUTLANGCHANGE:
-		inputStatusListeners_.notify(ITextViewerInputStatusListener::textViewerInputLanguageChanged);
+		inputStatusListeners_.notify(&ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
 			if(texteditor::Session* const session = document().session()) {
 				if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
@@ -2581,7 +2581,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	updateCaretPosition();
 	if(redraw)
 		update();
-	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, dx != 0, dy != 0);
+	viewportListeners_.notify<bool, bool>(&IViewportListener::viewportChanged, dx != 0, dy != 0);
 }
 
 /**
@@ -2626,7 +2626,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 		for(length_t i = 0; i < line; ++i)
 			visualLine += renderer_->numberOfSublinesOfLine(i);
 	}
-	viewportListeners_.notify<bool, bool>(IViewportListener::viewportChanged, true, true);
+	viewportListeners_.notify<bool, bool>(&IViewportListener::viewportChanged, true, true);
 }
 
 /// @see ICaretStateListener#selectionShapeChanged
@@ -2650,7 +2650,7 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 	if(general != 0) {
 		const Alignment oldAlignment = configuration_.alignment;
 		configuration_ = *general;
-		displaySizeListeners_.notify(IDisplaySizeListener::viewerDisplaySizeChanged);
+		displaySizeListeners_.notify(&IDisplaySizeListener::viewerDisplaySizeChanged);
 		renderer_->invalidate();
 		if((oldAlignment == ALIGN_LEFT && configuration_.alignment == ALIGN_RIGHT)
 				|| (oldAlignment == ALIGN_RIGHT && configuration_.alignment == ALIGN_LEFT))
@@ -3163,7 +3163,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* psz
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	OutputStringStream s;
-	view_.document().writeToStream(s);
+	writeDocumentToStream(s, view_.document(), view_.document().region());
 	*pszValue = ::SysAllocString(s.str().c_str());
 	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
 }
@@ -4375,7 +4375,7 @@ void CurrentLineHighlighter::setColor(const Colors& color) throw() {
  * @see #getPointedIdentifier
  */
 bool source::getNearestIdentifier(const Document& document, const Position& position, length_t* startColumn, length_t* endColumn) {
-	using namespace unicode;
+	using namespace text;
 	static const length_t MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
 
 	DocumentPartition partition;

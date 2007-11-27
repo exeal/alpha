@@ -9,7 +9,7 @@
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::searcher;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
 
 /**
@@ -179,7 +179,7 @@ bool LiteralPattern::search(const CharacterIterator& target,
 				}
 			}
 			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - first_ + 1);
-			if(skipLength > t->getOffset() - target.getOffset())
+			if(skipLength > t->offset() - target.offset())
 				break;
 		}
 	}

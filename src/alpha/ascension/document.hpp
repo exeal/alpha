@@ -23,17 +23,13 @@ namespace ascension {
 	namespace kernel {
 
 		namespace internal {
-			/**
-			 * Interface for objects which are managing the set of points.
-			 * @see Document
-			 */
+			/// @internal Interface for objects which manage the set of points.
 			template<class PointType> class IPointCollection {
-			private:
+			public:
 				/// Adds the newly created point.
 				virtual void addNewPoint(PointType& point) = 0;
 				/// Deletes the point about to be destroyed (@a point is in its destructor call).
 				virtual void removePoint(PointType& point) = 0;
-				friend typename PointType;
 			};
 			const Char NEWLINE_STRINGS[][7] = {
 				L"", {LINE_FEED, 0}, {CARRIAGE_RETURN, 0}, {CARRIAGE_RETURN, LINE_FEED, 0},
@@ -72,8 +68,7 @@ namespace ascension {
 		 * Representation of a line break. Defines how an interpreter treats line breaks. For
 		 * example, @c Document#length method which calculates the length of the document refers
 		 * this setting. Some methods can select prefer setting to <> its efficiency.
-		 * @see Document#length, Document#lineOffset, Document#writeToStream,
-		 * EditPoint#getText, viewers#Caret#selectionText
+		 * @see Document#length, Document#lineOffset, EditPoint#getText, viewers#Caret#selectionText
 		 */
 		enum NewlineRepresentation {
 			NLR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
@@ -464,7 +459,7 @@ namespace ascension {
 			 * @param contentType the type of content
 			 * @return the identifier syntax
 			 */
-			virtual const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const throw() = 0;
+			virtual const text::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const throw() = 0;
 		};
 
 		/**
@@ -535,7 +530,7 @@ namespace ascension {
 			DocumentPartition p_;
 		};
 
-		class DocumentCharacterIterator : public unicode::CharacterIterator,
+		class DocumentCharacterIterator : public text::CharacterIterator,
 			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
 		public:
 			// constructors
@@ -633,12 +628,11 @@ namespace ascension {
 			IDocumentInput*				input() const throw();
 			bool						isModified() const throw();
 			bool						isReadOnly() const throw();
-			bool						isSavable() const throw();
 			const DocumentPartitioner&	partitioner() const throw();
 			const String*				property(const DocumentPropertyKey& key) const throw();
 			texteditor::Session*		session() throw();
 			const texteditor::Session*	session() const throw();
-			void						setInput(std::auto_ptr<IDocumentInput> newInput) throw();
+			void						setInput(IDocumentInput* newInput, bool delegateOwnership) throw();
 			void						setModified(bool modified = true) throw();
 			void						setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
 			void						setProperty(const DocumentPropertyKey& key, const String& property);
@@ -681,13 +675,8 @@ namespace ascension {
 			// iterations
 			DocumentCharacterIterator	begin() const throw();
 			DocumentCharacterIterator	end() const throw();
-			// streams
-			Position	insertFromStream(const Position& position, InputStream& in);
-			void		writeToStream(OutputStream& out, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
-			void		writeToStream(OutputStream& out, const Region& region, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
-			// operations
+			// time stamp
 			bool	checkTimeStamp();
-			bool	sendFile(bool asAttachment, bool showDialog = true);
 
 			// overridables
 		protected:
@@ -715,9 +704,9 @@ namespace ascension {
 			class UndoManager;
 			class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
 			public:
-				const unicode::IdentifierSyntax& getIdentifierSyntax(ContentType) const throw() {return syntax_;}
+				const text::IdentifierSyntax& getIdentifierSyntax(ContentType) const throw() {return syntax_;}
 			private:
-				unicode::IdentifierSyntax syntax_;
+				text::IdentifierSyntax syntax_;
 			};
 
 			class ModificationGuard {
@@ -731,7 +720,7 @@ namespace ascension {
 			friend class ModificationGuard;
 
 			texteditor::Session* session_;
-			std::auto_ptr<IDocumentInput> input_;
+			ascension::internal::StrategyPointer<IDocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
@@ -794,7 +783,7 @@ namespace ascension {
 		length_t		getNumberOfLines(const Char* first, const Char* last) throw();
 		length_t		getNumberOfLines(const String& text) throw();
 		InputStream&	readDocumentFromStream(InputStream& in, Document& document, const Position& at, Newline newline = NLF_AUTO);
-		Position		updatePosition(const Position& position, const DocumentChange& change, Direction gravity);
+		Position		updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
 		OutputStream&	writeDocumentToStream(OutputStream& out,
 							const Document& document, const Region& region, const String& newline = L"");
 
@@ -955,9 +944,6 @@ namespace ascension {
 				};
 			public:
 				explicit FileBinder(Document& document);
-				FileBinder(Document& document, const String& fileName, const LockMode& lockMode,
-					encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy,
-					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				~FileBinder() throw();
 				bool			checkTimeStamp();
 				const LockMode&	lockMode() const throw();
@@ -979,11 +965,11 @@ namespace ascension {
 				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
 				// IDocumentInput
 				encoding::MIBenum	encoding() const throw();
-				String				location() const throw();
+				ascension::String	location() const throw();
 				Newline				newline() const throw();
 			private:
-				bool	lock();
-				bool	unlock();
+				bool	lock() throw();
+				bool	unlock() throw();
 				bool	verifyTimeStamp(bool internal, Time& newTimeStamp) throw();
 				// IDocumentListener
 				bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
@@ -1270,7 +1256,7 @@ inline const DocumentPartitioner& Document::partitioner() const throw() {
  * @param changedRegion the changed region
  */
 inline void Document::partitioningChanged(const Region& changedRegion) throw() {
-	partitioningListeners_.notify<const Region&>(IDocumentPartitioningListener::documentPartitioningChanged, changedRegion);}
+	partitioningListeners_.notify<const Region&>(&IDocumentPartitioningListener::documentPartitioningChanged, changedRegion);}
 
 /**
  * Returns the property associated with the document.
@@ -1326,17 +1312,6 @@ inline const texteditor::Session* Document::session() const throw() {return sess
 inline void Document::setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw() {
 	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
-/// Sets the new document input.
-inline void Document::setInput(std::auto_ptr<IDocumentInput> newInput) throw() {input_ = newInput;}
-
-/**
- * Writes the content of the document to the specified output stream.
- * @param out the output stream
- * @param nlr the newline to be used
- */
-inline void Document::writeToStream(OutputStream& out, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	writeToStream(out, Region(Position::ZERO_POSITION, Position(numberOfLines() - 1, lineLength(numberOfLines() - 1))), nlr);}
-
 /**
  * Returns the content type of the partition contains the specified position.
  * @param at the position
@@ -1386,10 +1361,10 @@ inline void DocumentPartitioner::partition(const Position& at, DocumentPartition
 /// Returns the document.
 inline const Document* DocumentCharacterIterator::document() const throw() {return document_;}
 
-/// @see unicode#CharacterIterator#hasNext
+/// @see text#CharacterIterator#hasNext
 inline bool DocumentCharacterIterator::hasNext() const throw() {return p_ != region_.second;}
 
-/// @see unicode#CharacterIterator#hasPrevious
+/// @see text#CharacterIterator#hasPrevious
 inline bool DocumentCharacterIterator::hasPrevious() const throw() {return p_ != region_.first;}
 
 /// Returns the line.

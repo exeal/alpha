@@ -206,9 +206,9 @@ namespace ascension {
 			int	descent() const throw();
 			int	lineHeight() const throw();
 			// primary font and alternatives
-			::HFONT		font(int script = unicode::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
-			::HFONT		fontForShapingControls() const throw();
-			void		setFont(const ::WCHAR* faceName, int height, const FontAssociations* associations);
+			::HFONT	font(int script = text::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
+			::HFONT	fontForShapingControls() const throw();
+			void	setFont(const ::WCHAR* faceName, int height, const FontAssociations* associations);
 			// default settings
 			static const FontAssociations&	getDefaultFontAssociations() throw();
 			// font linking

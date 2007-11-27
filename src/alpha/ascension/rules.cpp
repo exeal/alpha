@@ -10,7 +10,7 @@ using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;
 using namespace ascension::rules;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
 using namespace manah;
 using rules::internal::HashTable;
@@ -515,7 +515,7 @@ auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first
 
 /// @see ITokenScanner#getIdentifierSyntax
 const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const throw() {
-	return IdentifierSyntax::getDefaultInstance();
+	return IdentifierSyntax::defaultInstance();
 }
 
 /// @see ITokenScanner#getPosition
