@@ -97,7 +97,7 @@ InputStream& kernel::readDocumentFromStream(InputStream& in, Document& document,
 	do {
 		in.read(buffer, countof(buffer));
 		p = document.insert(p, buffer, buffer + in.gcount());
-	} while(in.gcount() < countof(buffer));
+	} while(static_cast<size_t>(in.gcount()) < countof(buffer));
 	return in;
 }
 
@@ -690,7 +690,7 @@ namespace {
 	class IOperation {
 	public:
 		/// Destructor
-		virtual ~IOperation() throw() {}
+		virtual ~IOperation() {}
 		/// Returns the operation is executable.
 		virtual bool canExecute(Document& document) const = 0;
 		/// Returns true if the operation can be appended to insertion @a postOperation.
@@ -1659,7 +1659,7 @@ void Document::widen() {
  * @note This class is not intended to be subclassed.
  */
 
-const CharacterIterator::ConcreteTypeTag DocumentCharacterIterator::CONCRETE_TYPE_TAG_;
+const CharacterIterator::ConcreteTypeTag DocumentCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
 DocumentCharacterIterator::DocumentCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_), document_(0), line_(0) {
@@ -2099,7 +2099,7 @@ files::TextFileStreamBuffer::int_type files::TextFileStreamBuffer::underflow() {
 	if(inputMapping_.first == 0)
 		return traits_type::eof();	// not input mode
 	ascension::Char* toNext;
-	uchar* fromNext;
+	const uchar* fromNext;
 	if((encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext,
 			inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) == encoding::Encoder::COMPLETED)
 		inputMapping_.current = inputMapping_.last;
@@ -2451,8 +2451,9 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
 	const files::String tempFileName(getTemporaryFileName(realName));
 	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
 		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
-	writeDocumentToStream(basic_ostream<ascension::Char>(&sb), document_,
-		document_.region(), (params.newline != NLF_AUTO) ? getNewlineString(params.newline) : L"");
+	basic_ostream<ascension::Char> outputStream(&sb);
+	writeDocumentToStream(outputStream, document_, document_.region(),
+		(params.newline != NLF_AUTO) ? getNewlineString(params.newline) : L"");
 	sb.close();
 
 	// copy file attributes (file mode) and delete the old file

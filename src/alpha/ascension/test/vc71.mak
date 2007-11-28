@@ -47,10 +47,10 @@ test: all
 	cl $(CXX_FLAGS) /Fovc71/document.obj ../document.cpp
 
 ./vc71/document-test.obj: document-test.cpp vc71/document.obj $(ALL_HEADER)
-	cl $(CXX_FLAGS) /Fovc71/document-test.obj document-test.cpp document.obj
+	cl $(CXX_FLAGS) /Fovc71/document-test.obj document-test.cpp
 
-./vc71/document-test.exe: vc71/document-test.obj vc71/encoder.obj
-	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/encoder.obj
+./vc71/document-test.exe: vc71/document-test.obj vc71/document.obj vc71/encoder.obj
+	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/document.obj vc71/encoder.obj
 
 document-test: vc71/document-test.exe
 	vc71\document-test.exe

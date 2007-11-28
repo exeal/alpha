@@ -704,6 +704,7 @@ namespace ascension {
 			class UndoManager;
 			class DefaultContentTypeInformationProvider : virtual public IContentTypeInformationProvider {
 			public:
+				~DefaultContentTypeInformationProvider() throw() {}
 				const text::IdentifierSyntax& getIdentifierSyntax(ContentType) const throw() {return syntax_;}
 			private:
 				text::IdentifierSyntax syntax_;
@@ -830,7 +831,7 @@ namespace ascension {
 				/// Constructor.
 				explicit IOException(Type type) throw() : std::runtime_error(""), type_(type) {}
 				/// Returns the error type.
-				Type type() const throw() {}
+				Type type() const throw() {return type_;}
 			private:
 				Type type_;
 			};
