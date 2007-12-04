@@ -612,11 +612,10 @@ namespace ascension {
 			// protected interfaces
 		protected:
 			// kernel.IDocumentStateListener (overridable)
-			virtual void	documentAccessibleRegionChanged(kernel::Document& document);
-			virtual void	documentEncodingChanged(kernel::Document& document);
-			virtual void	documentFileNameChanged(kernel::Document& document);
-			virtual void	documentModificationSignChanged(kernel::Document& document);
-			virtual void	documentReadOnlySignChanged(kernel::Document& document);
+			virtual void	documentAccessibleRegionChanged(const kernel::Document& document);
+			virtual void	documentModificationSignChanged(const kernel::Document& document);
+			virtual void	documentPropertyChanged(const kernel::Document& document, const kernel::DocumentPropertyKey& key);
+			virtual void	documentReadOnlySignChanged(const kernel::Document& document);
 			// ICaretListener (overridable)
 			virtual void	caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// ICaretStateListener (overridable)
@@ -629,10 +628,10 @@ namespace ascension {
 			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.ISequentialEditListener
-			void	documentSequentialEditStarted(kernel::Document& document);
-			void	documentSequentialEditStopped(kernel::Document& document);
-			void	documentUndoSequenceStarted(kernel::Document& document);
-			void	documentUndoSequenceStopped(kernel::Document& document, const kernel::Position& resultPosition);
+			void	documentSequentialEditStarted(const kernel::Document& document);
+			void	documentSequentialEditStopped(const kernel::Document& document);
+			void	documentUndoSequenceStarted(const kernel::Document& document);
+			void	documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
 			// layout.IFontSelectorListener
 			void	fontChanged() throw();
 			// layout.IVisualLinesListener

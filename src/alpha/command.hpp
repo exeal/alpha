@@ -96,7 +96,7 @@ namespace alpha {
 			explicit BuiltInCommand(CommandID id) : id_(id) {}
 			void copy(KeyAssignableCommand*& p) const {p = new BuiltInCommand(id_);}
 			void copy(SerializableCommand*& p) const {p = new BuiltInCommand(id_);}
-			bool execute() {return Alpha::getInstance().commandManager_->executeCommand(id_, true);}
+			bool execute() {return Alpha::instance().commandManager_->executeCommand(id_, true);}
 			CommandID getID() const {return id_;}
 			void getXMLOutput(std::wostringstream& os) const {os << L"<built-in identifier=\"" << id_ << L"\" />\n";}
 			bool isBuiltIn() const {return true;}
@@ -133,7 +133,7 @@ namespace alpha {
 		public:
 			explicit CharacterInputCommand(ascension::CodePoint cp) : cp_(cp) {}
 			void copy(SerializableCommand*& p) const {p = new CharacterInputCommand(cp_);}
-			bool execute() {return Alpha::getInstance().getBufferList().getActiveView().getCaret().inputCharacter(cp_, false, false);}
+			bool execute() {return Alpha::instance().bufferList().activeView().caret().inputCharacter(cp_, false, false);}
 			CommandID getID() const {throw std::logic_error("This command is not built-in.");}
 			void getXMLOutput(std::wostringstream& os) const {os << L"<char-input code-point=\"" << cp_ << L"\" />\n";}
 			bool isBuiltIn() const {return false;}
@@ -159,7 +159,7 @@ namespace alpha {
 			explicit TextInputCommand(bool asRectangle) : asRectangle_(asRectangle) {}
 			void copy(SerializableCommand*& p) const {p = new TextInputCommand(text_, asRectangle_);}
 			bool execute() {
-				ascension::viewers::Caret& caret = Alpha::getInstance().getBufferList().getActiveView().getCaret();
+				ascension::viewers::Caret& caret = Alpha::instance().bufferList().activeView().caret();
 				asRectangle_ ? caret.insertBox(text_) : caret.insert(text_);
 				return true;}
 			CommandID getID() const {throw std::logic_error("This command is not built-in.");}

@@ -52,7 +52,7 @@ void BookmarkDialog::onBtnDelete() {
 	if(bufferIndices_.find(buffer) == bufferIndices_.end())
 		return;
 
-	buffer->getBookmarker().mark(line, false);
+	buffer->bookmarker().mark(line, false);
 	bookmarksList_.deleteItem(sel);
 	if(bookmarksList_.getItemCount() != 0) {
 		bookmarksList_.setItemState(0, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
@@ -75,12 +75,12 @@ void BookmarkDialog::updateList() {
 	if(isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) {	// 全てのドキュメントを扱う場合
 		for(size_t i = 0; i < buffers.getCount(); ++i) {
 			const Buffer& buffer = buffers.getAt(i);
-			const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
+			const length_t lineOffset = buffers.getActiveView().verticalRulerConfiguration().lineNumbers.startValue;
 			const length_t topLine = buffer.accessibleRegion().first.line;
 			const length_t bottomLine = buffer.accessibleRegion().second.line;
 			length_t line = 0;
 
-			while((line = buffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
+			while((line = buffer.bookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
 				if(line >= topLine && line <= bottomLine) {
 					String s = buffer.getLine(line).substr(0, 100);
 					++item;

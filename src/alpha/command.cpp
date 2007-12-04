@@ -201,7 +201,7 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 		HICON icon = 0;
 
 		// イメージを読み込む
-		Alpha& app = Alpha::getInstance();
+		Alpha& app = Alpha::instance();
 		if(imageIsBmp)
 			bitmap = static_cast<HBITMAP>(app.loadImage(fileTitle, IMAGE_BITMAP, 16, 16, LR_CREATEDIBSECTION | LR_LOADFROMFILE));
 		else {
@@ -299,36 +299,36 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	if(!isEnabled(id, userContext))
 		return false;
 
-	Alpha& app = Alpha::getInstance();
-	EditorView& view = app.getBufferList().getActiveView();
-	Buffer& buffer = view.getDocument();
+	Alpha& app = Alpha::instance();
+	EditorView& view = app.bufferList().activeView();
+	Buffer& buffer = view.document();
 
 	// 一時マクロ記録中
-	if(temporaryMacro_.getState() == TemporaryMacro::DEFINING && isRecordable(id))
+	if(temporaryMacro_.state() == TemporaryMacro::DEFINING && isRecordable(id))
 		temporaryMacro_.pushCommand(BuiltInCommand(id));
 
 	lastCommandID_ = id;
 
 	switch(id) {
-	case CMD_FILE_NEW:				app.getBufferList().addNew(); return true;
-	case CMD_FILE_NEWWITHFORMAT:	app.getBufferList().addNewDialog(); return true;
-	case CMD_FILE_OPEN:				return app.getBufferList().openDialog() == BufferList::OPENRESULT_SUCCEEDED;
-	case CMD_FILE_CLOSE:			return app.getBufferList().close(app.getBufferList().getActiveIndex(), true);
-	case CMD_FILE_CLOSEALL:			return app.getBufferList().closeAll(true, false);
-	case CMD_FILE_SAVE:				return app.getBufferList().save(app.getBufferList().getActiveIndex());
+	case CMD_FILE_NEW:				app.bufferList().addNew(); return true;
+	case CMD_FILE_NEWWITHFORMAT:	app.bufferList().addNewDialog(); return true;
+	case CMD_FILE_OPEN:				return app.bufferList().openDialog() == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_CLOSE:			return app.bufferList().close(app.bufferList().activeIndex(), true);
+	case CMD_FILE_CLOSEALL:			return app.bufferList().closeAll(true, false);
+	case CMD_FILE_SAVE:				return app.bufferList().save(app.bufferList().activeIndex());
 	case CMD_FILE_SAVEAS:
-		if(app.getBufferList().save(app.getBufferList().getActiveIndex(), false)) {
+		if(app.bufferList().save(app.bufferList().activeIndex(), false)) {
 			// TODO: call mode-application.
-//			app.applyDocumentType(app.getBufferList().getActive());
+//			app.applyDocumentType(app.bufferList().active());
 			return true;
 		}
 		return false;
-	case CMD_FILE_SAVEALL:				return app.getBufferList().saveAll();
-	case CMD_FILE_REOPEN:				return app.getBufferList().reopen(app.getBufferList().getActiveIndex(), false) == BufferList::OPENRESULT_SUCCEEDED;
-	case CMD_FILE_REOPENWITHCODEPAGE:	return app.getBufferList().reopen(app.getBufferList().getActiveIndex(), true) == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_SAVEALL:				return app.bufferList().saveAll();
+	case CMD_FILE_REOPEN:				return app.bufferList().reopen(app.bufferList().activeIndex(), false) == BufferList::OPENRESULT_SUCCEEDED;
+	case CMD_FILE_REOPENWITHCODEPAGE:	return app.bufferList().reopen(app.bufferList().activeIndex(), true) == BufferList::OPENRESULT_SUCCEEDED;
 	case CMD_FILE_EXIT:					app.getMainWindow().postMessage(WM_CLOSE); return true;
 	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
-	case CMD_FILE_CLOSEOTHERS:			return app.getBufferList().closeAll(true, true);
+	case CMD_FILE_CLOSEOTHERS:			return app.bufferList().closeAll(true, true);
 	case CMD_FILE_PRINT:				Printing::instance().print(buffer, true); return true;
 	case CMD_FILE_PRINTSETUP:			Printing::instance().setupPages(); return true;
 
@@ -406,8 +406,8 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_EDIT_SCROLLPAGEUP:			view.sendMessage(WM_VSCROLL, SB_PAGEUP); return true;
 	case CMD_EDIT_SCROLLCOLUMNNEXT:		view.sendMessage(WM_HSCROLL, SB_RIGHT); return true;
 	case CMD_EDIT_SCROLLCOLUMNPREV:		view.sendMessage(WM_HSCROLL, SB_LEFT); return true;
-	case CMD_EDIT_ENSURECARETCENTER:	view.getCaret().recenter(); return true;
-	case CMD_EDIT_ENSURECARETVISIBLE:	view.getCaret().show(); return true;
+	case CMD_EDIT_ENSURECARETCENTER:	view.caret().recenter(); return true;
+	case CMD_EDIT_ENSURECARETVISIBLE:	view.caret().show(); return true;
 	case CMD_EDIT_ROWCHARNEXT:			RowSelectionExtensionCommand(view, RowSelectionExtensionCommand::RIGHT_CHARACTER).execute(); return true;
 	case CMD_EDIT_ROWCHARPREV:			RowSelectionExtensionCommand(view, RowSelectionExtensionCommand::LEFT_CHARACTER).execute(); return true;
 	case CMD_EDIT_ROWLINEDOWN:			RowSelectionExtensionCommand(view, RowSelectionExtensionCommand::NEXT_VISUAL_LINE).execute(); return true;
@@ -428,18 +428,18 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 //		return true;
 //	}
 	case CMD_EDIT_NARROWTOSELECTION:
-		buffer.narrow(view.getCaret().getSelectionRegion());
+		buffer.narrow(view.caret().selectionRegion());
 		return true;
 	case CMD_EDIT_WIDEN:
 		buffer.widen();
 		return true;
 
 	case CMD_SEARCH_FIND:		app.showSearchDialog(); return true;
-	case CMD_SEARCH_FINDNEXT:	return app.getSearchDialog().searchNext(FORWARD);
-	case CMD_SEARCH_FINDPREV:	return app.getSearchDialog().searchNext(BACKWARD);
-	case CMD_SEARCH_REPLACEALLINTERACTIVE:	app.getSearchDialog().replaceAll(true); return true;
-	case CMD_SEARCH_REPLACEALL:				app.getSearchDialog().replaceAll(false); return true;
-	case CMD_SEARCH_BOOKMARKALL:	app.getSearchDialog().bookmarkAll(); return true;
+	case CMD_SEARCH_FINDNEXT:	return app.searchDialog().searchNext(FORWARD);
+	case CMD_SEARCH_FINDPREV:	return app.searchDialog().searchNext(BACKWARD);
+	case CMD_SEARCH_REPLACEALLINTERACTIVE:	app.searchDialog().replaceAll(true); return true;
+	case CMD_SEARCH_REPLACEALL:				app.searchDialog().replaceAll(false); return true;
+	case CMD_SEARCH_BOOKMARKALL:	app.searchDialog().bookmarkAll(); return true;
 //	case CMD_SEARCH_REVOKEMARK:		view.highlightMatchTexts(false); return true;
 	case CMD_SEARCH_GOTOLINE:		ui::GotoLineDialog().doModal(app.getMainWindow()); return true;
 	case CMD_SEARCH_TOGGLEBOOKMARK:		BookmarkCommand(view, BookmarkCommand::TOGGLE_CURRENT_LINE).execute(); return true;
@@ -458,32 +458,32 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_SEARCH_GOTOMATCHBRACKET:		return CaretMovementCommand(view, CaretMovementCommand::MATCH_BRACKET, false).execute() == 0;
 	case CMD_SEARCH_EXTENDTOMATCHBRACKET:	return CaretMovementCommand(view, CaretMovementCommand::MATCH_BRACKET, true).execute() == 0;
 	case CMD_SEARCH_INCREMENTALSEARCH:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::LITERAL, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHR:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::LITERAL, BACKWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHRF:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::REGULAR_EXPRESSION, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHRR:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::REGULAR_EXPRESSION, BACKWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHMF:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::MIGEMO, FORWARD);
 		return true;
 	case CMD_SEARCH_INCREMENTALSEARCHMR:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		view.beginIncrementalSearch(searcher::MIGEMO, BACKWARD);
 		return true;
@@ -503,11 +503,11 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 	}
 	case CMD_VIEW_WRAPNO: {
-		presentation::Presentation& p = buffer.getPresentation();
-		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NONE)
+		presentation::Presentation& p = buffer.presentation();
+		for(presentation::Presentation::TextViewerIterator i = p.firstTextViewer(); i != p.lastTextViewer(); ++i) {
+			if((*i)->configuration().lineWrap.mode == layout::LineWrapConfiguration::NONE)
 				continue;
-			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
+			viewers::TextViewer::Configuration c = (*i)->configuration();
 			c.lineWrap.mode = layout::LineWrapConfiguration::NONE;
 			(*i)->setConfiguration(&c, 0);
 		}
@@ -515,11 +515,11 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	}
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:	view.setWrapMode(WPM_SPECIFIED); return true;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH: {
-		presentation::Presentation& p = buffer.getPresentation();
-		for(presentation::Presentation::TextViewerIterator i = p.getFirstTextViewer(); i != p.getLastTextViewer(); ++i) {
-			if((*i)->getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NORMAL)
+		presentation::Presentation& p = buffer.presentation();
+		for(presentation::Presentation::TextViewerIterator i = p.firstTextViewer(); i != p.lastTextViewer(); ++i) {
+			if((*i)->configuration().lineWrap.mode == layout::LineWrapConfiguration::NORMAL)
 				continue;
-			viewers::TextViewer::Configuration c = (*i)->getConfiguration();
+			viewers::TextViewer::Configuration c = (*i)->configuration();
 			c.lineWrap.mode = layout::LineWrapConfiguration::NORMAL;
 			(*i)->setConfiguration(&c, 0);
 		}
@@ -527,17 +527,17 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	}
 	case CMD_VIEW_REFRESH:	view.invalidateRect(0); return true;
 	case CMD_VIEW_NEXTBUFFER:
-		if(app.getBufferList().getCount() > 1) {
-			size_t i = app.getBufferList().getActiveIndex();
-			i = (i + 1 != app.getBufferList().getCount()) ? i + 1 : 0;
+		if(app.bufferList().numberOfBuffers() > 1) {
+			size_t i = app.bufferList().activeIndex();
+			i = (i + 1 != app.bufferList().numberOfBuffers()) ? i + 1 : 0;
 			app.getBufferList().setActive(i);
 		}
 		return true;
 	case CMD_VIEW_PREVBUFFER:
-		if(app.getBufferList().getCount() > 1) {
-			size_t i = app.getBufferList().getActiveIndex();
-			i = (i != 0) ? i - 1 : app.getBufferList().getCount() - 1;
-			app.getBufferList().setActive(i);
+		if(app.bufferList().numberOfBuffers() > 1) {
+			size_t i = app.bufferList().activeIndex();
+			i = (i != 0) ? i - 1 : app.bufferList().numberOfBuffers() - 1;
+			app.bufferList().setActive(i);
 		}
 		return true;
 
@@ -563,15 +563,15 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		}
 		return false;
 	case CMD_MACRO_PAUSERESTART:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			temporaryMacro_.pauseDefinition();
-		else if(temporaryMacro_.getState() == TemporaryMacro::PAUSING)
+		else if(temporaryMacro_.state() == TemporaryMacro::PAUSING)
 			temporaryMacro_.restartDefinition();
 		else
 			return false;
 		return true;
 	case CMD_MACRO_INSERTQUERY:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING) {
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING) {
 			temporaryMacro_.insertUserQuery();
 			return true;
 		}
@@ -606,19 +606,19 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 		
 	case CMD_WINDOW_SPLITNS: {
-		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
-		app.getBufferList().getEditorWindow().splitNS(activePane, *(new EditorPane(activePane)));
+		EditorPane& activePane = app.bufferList().editorWindow().activePane();
+		app.bufferList().editorWindow().splitNS(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
 	case CMD_WINDOW_SPLITWE: {
-		EditorPane& activePane = app.getBufferList().getEditorWindow().getActivePane();
-		app.getBufferList().getEditorWindow().splitWE(activePane, *(new EditorPane(activePane)));
+		EditorPane& activePane = app.bufferList().editorWindow().activePane();
+		app.bufferList().editorWindow().splitWE(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
-	case CMD_WINDOW_UNSPLITOTHERS:	app.getBufferList().getEditorWindow().removeInactivePanes();	break;
-	case CMD_WINDOW_UNSPLITACTIVE:	app.getBufferList().getEditorWindow().removeActivePane();		break;
-	case CMD_WINDOW_NEXTPANE:			app.getBufferList().getEditorWindow().activateNextPane();		break;
-	case CMD_WINDOW_PREVPANE:			app.getBufferList().getEditorWindow().activatePreviousPane();	break;
+	case CMD_WINDOW_UNSPLITOTHERS:	app.bufferList().editorWindow().removeInactivePanes();	break;
+	case CMD_WINDOW_UNSPLITACTIVE:	app.bufferList().editorWindow().removeActivePane();		break;
+	case CMD_WINDOW_NEXTPANE:			app.bufferList().editorWindow().activateNextPane();		break;
+	case CMD_WINDOW_PREVPANE:			app.bufferList().editorWindow().activatePreviousPane();	break;
 	case CMD_WINDOW_TOPMOSTALWAYS:
 		app.getMainWindow().setPosition(
 			toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST,
@@ -631,20 +631,20 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 
 	default:
 		if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {	// [最近使ったファイル]
-			const MRU& file = app.mruManager_->getFileInfoAt(id - CMD_SPECIAL_MRUSTART);
-			if(app.getBufferList().open(file.fileName, file.encoding) == BufferList::OPENRESULT_FAILED) {
+			const MRU& file = app.mruManager_->at(id - CMD_SPECIAL_MRUSTART);
+			if(app.bufferList().open(file.fileName, file.encoding) == BufferList::OPENRESULT_FAILED) {
 				app.mruManager_->remove(id - CMD_SPECIAL_MRUSTART);
 				return false;
 			}
 		} /*else if(id >= CMD_FILE_DOCTYPELIST_START && id < CMD_FILE_DOCTYPELIST_END) {	// [新規]
-			app.getBufferList().addNew();
+			app.bufferList().addNew();
 			// TODO: class mode-application.
-			app.applyDocumentType(app.getBufferList().getActive(),
-				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
+			app.applyDocumentType(app.bufferList().active(),
+				app.bufferList().getDocumentTypeManager().getAt(id - CMD_FILE_DOCTYPELIST_START).name);
 		} else if(id >= CMD_TOOL_DOCTYPELIST_START && id < CMD_TOOL_DOCTYPELIST_END)	// [適用文書タイプ]
 			// TODO: class mode-application.
-			app.applyDocumentType(app.getBufferList().getActive(),
-				app.getBufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
+			app.applyDocumentType(app.bufferList().active(),
+				app.bufferList().getDocumentTypeManager().getAt(id - CMD_TOOL_DOCTYPELIST_START).name);
 		else if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {	// [スクリプト]
 			try {
 				app.scriptMacroManager_->execute(id - CMD_EDIT_PLUGINLIST_START);
@@ -672,7 +672,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
  * @return the human-readable name
  */
 wstring CommandManager::getCaption(CommandID id) const {
-	wstring s(Alpha::getInstance().loadMessage(id));
+	wstring s(Alpha::instance().loadMessage(id));
 	const size_t eol = s.find_first_of(L"\n\r");
 	if(eol != wstring::npos)
 		s.resize(eol);
@@ -686,10 +686,10 @@ wstring CommandManager::getCaption(CommandID id) const {
  */
 wstring CommandManager::getDescription(CommandID id) const {
 	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND) {
-		const Buffer& buffer = Alpha::getInstance().getBufferList().getAt(id - CMD_SPECIAL_BUFFERSSTART);
-		return buffer.isBoundToFile() ? buffer.getFilePathName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED);
+		const Buffer& buffer = Alpha::instance().bufferList().at(id - CMD_SPECIAL_BUFFERSSTART);
+		return buffer.isBoundToFile() ? buffer.fileName() : Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED);
 	}
-	const wstring s(Alpha::getInstance().loadMessage(id));
+	const wstring s(Alpha::instance().loadMessage(id));
 	const size_t eol = s.find_first_of(L"\n\r");
 	return (eol != wstring::npos) ? s.substr(eol + 1) : L"";
 }
@@ -793,11 +793,11 @@ bool CommandManager::isChecked(CommandID id) const {
 	case CMD_VIEW_STATUSBAR:
 		return app.statusBar_.isVisible();
 	case CMD_VIEW_WRAPNO:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode == layout::LineWrapConfiguration::NONE;
+		return app.getBufferList().getActiveView().configuration().lineWrap.mode == layout::LineWrapConfiguration::NONE;
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
 //		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
-		return app.getBufferList().getActiveView().getConfiguration().lineWrap.mode != layout::LineWrapConfiguration::NONE;
+		return app.getBufferList().getActiveView().configuration().lineWrap.mode != layout::LineWrapConfiguration::NONE;
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();
@@ -830,7 +830,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	const Buffer& buffer = view.getDocument();
 	const bool modified = buffer.isModified();
 	const bool readOnly = buffer.isReadOnly();
-	const bool hasSelection = !view.getCaret().isSelectionEmpty();
+	const bool hasSelection = !view.caret().isSelectionEmpty();
 
 	switch(id) {
 		// ファイル
@@ -861,17 +861,17 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_EDIT_BREAK:
 		return !readOnly;
 	case CMD_EDIT_UNDO:
-		return !readOnly && buffer.getUndoHistoryLength() != 0;
+		return !readOnly && buffer.numberOfUndoableEdits() != 0;
 	case CMD_EDIT_REDO:
-		return !readOnly && buffer.getUndoHistoryLength(true) != 0;
+		return !readOnly && buffer.numberOfRedoableEdits() != 0;
 	case CMD_EDIT_CUT:
 		return !readOnly && hasSelection;
 	case CMD_EDIT_COPY:
 		return hasSelection;
 	case CMD_EDIT_PASTE:
-		return !readOnly && view.getCaret().canPaste() != 0;
+		return !readOnly && view.caret().canPaste() != 0;
 	case CMD_EDIT_PASTEFROMCLIPBOARDRING:
-		return !readOnly && app.getBufferList().getEditorSession().getClipboardRing().getCount() != 0;
+		return !readOnly && app.getBufferList().getEditorSession().clipboardRing().numberOfItems() != 0;
 	case CMD_EDIT_INSERTTAB:
 	case CMD_EDIT_DELETETAB:
 		return !readOnly;
@@ -895,7 +895,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		// 検索
 	case CMD_SEARCH_FINDNEXT:
 	case CMD_SEARCH_FINDPREV:
-		return app.getBufferList().getEditorSession().getIncrementalSearcher().isRunning()
+		return app.getBufferList().getEditorSession().incrementalSearcher().isRunning()
 			|| (app.searchDialog_->isWindow() &&
 				::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);
 	case CMD_SEARCH_REPLACEALLINTERACTIVE:

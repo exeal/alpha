@@ -17,15 +17,15 @@ namespace alpha {
 		/// "New with Format" dialog box.
 		class NewFileFormatDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
-			NewFileFormatDialog(ascension::encoding::MIBenum encoding, ascension::text::Newline newline) throw();
-			ascension::encoding::MIBenum	getEncoding() const throw();
-			ascension::text::Newline		getNewline() const throw();
+			NewFileFormatDialog(ascension::encoding::MIBenum encoding, ascension::kernel::Newline newline) throw();
+			ascension::encoding::MIBenum	encoding() const throw();
+			ascension::kernel::Newline		newline() const throw();
 		private:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
 			void	onInitDialog(HWND focusWindow, bool& focusDefault);
 			void	onOK(bool& continueDialog);
 			ascension::encoding::MIBenum encoding_;
-			ascension::text::Newline newline_;
+			ascension::kernel::Newline newline_;
 			manah::win32::ui::ComboBox encodingCombobox_;
 			manah::win32::ui::ComboBox newlineCombobox_;
 			MANAH_BEGIN_CONTROL_BINDING()
@@ -35,10 +35,10 @@ namespace alpha {
 		};
 
 		/// Returns the encoding the user selected.
-		inline ascension::encoding::MIBenum NewFileFormatDialog::getEncoding() const throw() {return encoding_;}
+		inline ascension::encoding::MIBenum NewFileFormatDialog::encoding() const throw() {return encoding_;}
 
 		/// Returns the newline the user selected.
-		inline ascension::text::Newline NewFileFormatDialog::getNewline() const throw() {return newline_;}
+		inline ascension::kernel::Newline NewFileFormatDialog::newline() const throw() {return newline_;}
 
 	} // namespace ui
 } // namespace alpha

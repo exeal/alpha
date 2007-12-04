@@ -12,6 +12,7 @@
 #include "regex.hpp"
 #endif /* !ASCENSION_NO_REGEX */
 #include <list>
+#include <stack>
 
 
 namespace ascension {

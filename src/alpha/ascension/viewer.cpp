@@ -732,8 +732,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(JS_MULTILINE_DOC_COMMENT, ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
 				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
-			StringBuffer sb(JSDOC_ATTRIBUTES);
-			wistream s(&sb);
+			basic_istringstream<Char> s(JSDOC_ATTRIBUTES);
 			String p;
 			while(s >> p)
 				proposals.insert(new CompletionProposal(p));
@@ -746,8 +745,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(DEFAULT_CONTENT_TYPE, ids) {}
 		void computeCompletionProposals(const Caret& caret, bool& incremental,
 				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
-			StringBuffer sb(JS_KEYWORDS);
-			wistream s(&sb);
+			basic_istringstream<Char> s(JS_KEYWORDS);
 			String p;
 			while(s >> p)
 				proposals.insert(new CompletionProposal(p));
@@ -779,7 +777,7 @@ void TextViewer::doBeep() throw() {
 }
 
 /// @see kernel#IDocumentStateListener#documentAccessibleRegionChanged
-void TextViewer::documentAccessibleRegionChanged(Document&) {
+void TextViewer::documentAccessibleRegionChanged(const Document&) {
 	if(document().isNarrowed())
 		scrollTo(-1, -1, false);
 	invalidateRect(0, false);
@@ -826,37 +824,29 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 		updateScrollBars();
 }
 
-/// @see kernel#IDocumentStateListener#documentEncodingChanged
-void TextViewer::documentEncodingChanged(Document&) {
-}
-
-/// @see kernel#IDocumentStateListener#documentFileNameChanged
-void TextViewer::documentFileNameChanged(Document&) {
-}
-
 /// @see kernel#IDocumentStateListener#documentModificationSignChanged
-void TextViewer::documentModificationSignChanged(Document&) {
+void TextViewer::documentModificationSignChanged(const Document&) {
 }
 
 /// @see kernel#IDocumentStateListener#documentReadOnlySignChanged
-void TextViewer::documentReadOnlySignChanged(Document&) {
+void TextViewer::documentReadOnlySignChanged(const Document&) {
 }
 
 /// @see kernel#ISequentialEditListener#documentSequentialEditStarted
-void TextViewer::documentSequentialEditStarted(Document&) {
+void TextViewer::documentSequentialEditStarted(const Document&) {
 }
 
 /// @see kernel#ISequentialEditListener#documentSequentialEditStopped
-void TextViewer::documentSequentialEditStopped(Document&) {
+void TextViewer::documentSequentialEditStopped(const Document&) {
 }
 
 /// @see kernel#ISequentialEditListener#documentUndoSequenceStarted
-void TextViewer::documentUndoSequenceStarted(Document&) {
+void TextViewer::documentUndoSequenceStarted(const Document&) {
 	freeze(false);
 }
 
 /// @see kernel#ISequentialEditListener#documentUndoSequenceStopped
-void TextViewer::documentUndoSequenceStopped(Document&, const Position& resultPosition) {
+void TextViewer::documentUndoSequenceStopped(const Document&, const Position& resultPosition) {
 	unfreeze(false);
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
 		closeCompletionProposalsPopup(*this);
@@ -1822,7 +1812,7 @@ void TextViewer::onIMEEndComposition() {
 			}
 			return sizeof(::RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
 		} else {
-			const String selection(caret().selectionText(NLR_PHYSICAL_DATA));
+			const String selection(caret().selectionText(NLF_RAW_VALUE));
 			if(::RECONVERTSTRING* const rcs = reinterpret_cast<::RECONVERTSTRING*>(lParam)) {
 				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<::DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(::RECONVERTSTRING);
@@ -2350,7 +2340,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	case WM_GETOBJECT:
 		if(lParam == OBJID_CLIENT) {
-			ComPtr<IAccessible> acc;
+			ComPtr<::IAccessible> acc;
 			if(SUCCEEDED(accessibleObject(*&acc)) && accLib.isAvailable())
 				return accLib.lresultFromObject(::IID_IAccessible, wParam, acc.get());
 		} else if(lParam == OBJID_WINDOW) {
@@ -2358,15 +2348,15 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		return 0;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 	case WM_GETTEXT: {
-		OutputStringStream s;
-		writeDocumentToStream(s, document(), document().region(), getNewlineString(NLF_CRLF));
+		basic_ostringstream<Char> s;
+		writeDocumentToStream(s, document(), document().region(), NLF_CR_LF);
 		handled = true;
-		return reinterpret_cast<LRESULT>(s.str().c_str());
+		return reinterpret_cast<::LRESULT>(s.str().c_str());
 	}
 	case WM_GETTEXTLENGTH:
-		// ウィンドウ関係だし改行は CRLF でいいか。NLR_PHYSICAL_DATA だと遅いし
+		// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
 		handled = true;
-		return document().length(NLR_CRLF);
+		return document().length(NLF_CR_LF);
 	case WM_INPUTLANGCHANGE:
 		inputStatusListeners_.notify(&ITextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
@@ -3162,7 +3152,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* psz
 	MANAH_VERIFY_POINTER(pszValue);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	OutputStringStream s;
+	basic_ostringstream<Char> s;
 	writeDocumentToStream(s, view_.document(), view_.document().region());
 	*pszValue = ::SysAllocString(s.str().c_str());
 	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
@@ -3707,7 +3697,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			*effect = DROPEFFECT_COPY;
 		}
 	} else {	// drop from the same widget
-		String text = ca.selectionText(NLR_PHYSICAL_DATA);
+		String text(ca.selectionText(NLF_RAW_VALUE));
 		::POINT caretPoint = {pt.x, pt.y};
 
 		viewer_->screenToClient(caretPoint);
@@ -3929,7 +3919,7 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 					|| (position.y > lastLeftButtonPressedPoint_.y + cyDragBox / 2)
 					|| (position.y < lastLeftButtonPressedPoint_.y - cyDragBox / 2)) {
 				const bool box = viewer_->caret().isSelectionRectangle();
-				const String selection(viewer_->caret().selectionText(NLR_CRLF));
+				const String selection(viewer_->caret().selectionText(NLF_CR_LF));
 				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
 
 				if(box) {

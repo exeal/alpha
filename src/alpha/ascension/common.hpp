@@ -27,10 +27,10 @@
 #include <iterator>
 #include <stdexcept>
 
-#ifdef _DEBUG
+#if defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 #include "../../manah/win32/timer.hpp"
 using manah::win32::Timer;
-#endif /* _DEBUG */
+#endif /* defined(ASCENSION_WINDOWS) && defined(_DEBUG) */
 
 namespace ascension {
 
@@ -38,13 +38,6 @@ namespace ascension {
 	typedef wchar_t					Char;		///< Type for characters as UTF-16 code unit.
 	typedef std::basic_string<Char>	String;		///< Type for strings as UTF-16.
 	typedef std::size_t				length_t;	///< Length of string or index.
-	typedef std::basic_stringbuf<String::value_type>		StringBuffer;		///< String buffer.
-	typedef std::basic_stringstream<String::value_type>		StringStream;		///< String stream.
-	typedef std::basic_istringstream<String::value_type>	InputStringStream;	///< Input string stream.
-	typedef std::basic_ostringstream<String::value_type>	OutputStringStream;	///< Output string stream.
-	typedef std::basic_istream<Char>	InputStream;	///< Abstract input stream.
-	typedef std::basic_ostream<Char>	OutputStream;	///< Abstract output stream.
-	typedef std::ostream_iterator<Char>	OutputStreamIterator;	///< Output stream iterator.
 
 	/// Invalid value of @c length_t.
 	const length_t INVALID_INDEX = 0xFFFFFFFFUL;
@@ -207,5 +200,19 @@ namespace ascension {
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
 } // namespace ascension
+
+#ifdef ASCENSION_TEST
+namespace std {
+	inline ostream& operator<<(ostream& out, const ascension::String& value) {
+		const char prefix[2] = {'\\', 'u'};
+		char digits[5];
+		for(ascension::String::const_iterator i(value.begin()), e(value.end()); i != e; ++i) {
+			sprintf(digits, "%04x", *i);
+			out.write(prefix, countof(prefix)).write(digits, 4);
+		}
+		return out;
+	}
+}
+#endif /* ASCENSION_TEST */
 
 #endif /* !ASCENSION_COMMON_HPP */

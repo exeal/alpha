@@ -25,8 +25,8 @@ namespace alpha {
 		class SearchDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> {
 		public:
 			// attributes
-			std::wstring	getActivePattern() const throw();
-			std::wstring	getActiveReplacement() const throw();
+			std::wstring	activePattern() const throw();
+			std::wstring	activeReplacement() const throw();
 			void			setOptions();
 			// operations
 			void	bookmarkAll();
@@ -66,9 +66,9 @@ namespace alpha {
 			void	setTextViewer(ascension::viewers::TextViewer& textViewer) throw();
 		private:
 			ascension::searcher::IInteractiveReplacementCallback::Action
-					queryReplacementAction(const ascension::text::Region& matchedRegion, bool canUndo);
+					queryReplacementAction(const ascension::kernel::Region& matchedRegion, bool canUndo);
 			void	replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements);
-			void	replacementStarted(const ascension::text::Document& document, const ascension::text::Region& scope);
+			void	replacementStarted(const ascension::kernel::Document& document, const ascension::kernel::Region& scope);
 		private:
 			HMENU menu_;
 			ascension::viewers::TextViewer* textViewer_;

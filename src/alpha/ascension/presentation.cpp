@@ -42,7 +42,7 @@ Document& Presentation::document() throw() {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-bool Presentation::documentAboutToBeChanged(const Document& document) {
+bool Presentation::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
 	// TODO: not implemented.
 	return true;
 }

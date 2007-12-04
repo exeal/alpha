@@ -267,15 +267,15 @@ CodePoint EditPoint::getCodePoint(bool useLineFeed /* = false */) const {
 	return surrogates::decodeFirst(line.begin() + columnNumber(), line.end());
 }
 
-inline String EditPoint::getText(signed_length_t length, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
+inline String EditPoint::getText(signed_length_t length, Newline newline /* = NLF_RAW_VALUE */) const {
 	return getText((length >= 0) ?
 		getForwardCharacterPosition(*document(), *this, characterUnit(), length)
-		: getBackwardCharacterPosition(*document(), *this, characterUnit(), length), nlr);
+		: getBackwardCharacterPosition(*document(), *this, characterUnit(), length), newline);
 }
 
-inline String EditPoint::getText(const Position& other, NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
-	OutputStringStream s;
-	writeDocumentToStream(s, *document(), Region(*this, other), nlr);
+inline String EditPoint::getText(const Position& other, Newline newline /* = NLF_RAW_VALUE */) const {
+	basic_ostringstream<Char> s;
+	writeDocumentToStream(s, *document(), Region(*this, other), newline);
 	return s.str();
 }
 
@@ -1521,7 +1521,7 @@ void Caret::copySelection(bool alsoSendToClipboardRing) {
 	verifyViewer();
 	if(isSelectionEmpty())
 		return;
-	const String s(selectionText(NLR_PHYSICAL_DATA));
+	const String s(selectionText(NLF_RAW_VALUE));
 	Clipboard(textViewer().getHandle()).write(s, isSelectionRectangle());
 	if(alsoSendToClipboardRing) {	// クリップボードリングにも転送
 		if(texteditor::Session* const session = document()->session())
@@ -2009,20 +2009,20 @@ bool Caret::selectedRangeOnVisualLine(length_t line, length_t subline, length_t&
 
 /**
  * Returns the selected text.
- * @param nlr the newline representation for multiline selection. if the selection is rectangular,
- * this value is ignored and the document's newline is used instead
+ * @param newline the newline representation for multiline selection. if the selection is
+ * rectangular, this value is ignored and the document's newline is used instead
  * @return the text
  */
-String Caret::selectionText(NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */) const {
+String Caret::selectionText(Newline newline /* = NLF_RAW_VALUE */) const {
 	verifyViewer();
 
 	if(isSelectionEmpty())
 		return L"";
 	else if(!isSelectionRectangle())
-		return getText(*anchor_, nlr);
+		return getText(*anchor_, newline);
 
 	// rectangular selection
-	StringBuffer s(ios_base::out);
+	basic_stringbuf<Char> s(ios_base::out);
 	const length_t bottomLine = end().lineNumber();
 	length_t first, last;
 	for(length_t line = beginning().lineNumber(); line <= bottomLine; ++line) {

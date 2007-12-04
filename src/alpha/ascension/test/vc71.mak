@@ -8,7 +8,7 @@ MSVCDIR=$(VS71COMNTOOLS)..\..\VC7
 !error Variable MSVCDIR not set.
 !endif
 
-CXX_FLAGS=/c /DWIN32 /D_WINDOWS /D_DEBUG /EHac /GS /GX /MTd /nologo /RTCcus /W4 /Wp64 /Zc:forScope /Zc:wchar_t
+CXX_FLAGS=/c /DWIN32 /D_WINDOWS /D_DEBUG /DASCENSION_TEST /EHac /GS /GX /MTd /nologo /RTCcus /W4 /Wp64 /Zc:forScope /Zc:wchar_t
 XS_FLAGS=/DEBUG /nologo ole32.lib odbc32.lib odbccp32.lib shlwapi.lib
 ALL_HEADER=
 
@@ -49,8 +49,8 @@ test: all
 ./vc71/document-test.obj: document-test.cpp vc71/document.obj $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/document-test.obj document-test.cpp
 
-./vc71/document-test.exe: vc71/document-test.obj vc71/document.obj vc71/encoder.obj
-	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/document.obj vc71/encoder.obj
+./vc71/document-test.exe: vc71/document-test.obj vc71/document.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj
+	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/document.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj
 
 document-test: vc71/document-test.exe
 	vc71\document-test.exe

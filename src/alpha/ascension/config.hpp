@@ -22,12 +22,13 @@
 
 /**
  * @def ASCENSION_DEFAULT_NEWLINE
- * Default newline. This must be one of @c ascension#kernel#Newline enumerations.
+ * Default newline. This must be one of @c ascension#kernel#Newline enumerations except 
+ * @c ascension#kernel#NLF_RAW_VALUE and @c ascension#kernel#NLF_DOCUMENT_INPUT.
  */
 #ifdef _WIN32
-#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CRLF
+#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CR_LF
 #else
-#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LF
+#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LINE_FEED
 #endif
 
 

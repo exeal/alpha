@@ -178,7 +178,7 @@ void ExecuteCommandDlg::onCancel(bool& continueDialog) {
 void ExecuteCommandDlg::onClose(bool&) {
 	wchar_t keyName[35];
 
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	interrupted_ = true;
 
 	// óöóÇ∆ê›íËÇï€ë∂
@@ -226,7 +226,7 @@ void ExecuteCommandDlg::onInitDialog(HWND focusWindow, bool&) {
 	}
 
 	// óöóÇ∆ê›íËÇì«Ç›çûÇﬁ
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	wchar_t keyName[35];
 	for(uint i = 0; i < MAX_HISTORY_LENGTH; ++i) {
 		swprintf(keyName, L"CommandExecutionDialog.command(%u)", i);
@@ -250,8 +250,10 @@ void ExecuteCommandDlg::onOK(bool& continueDialog) {
 	if(!executing_) {	// [é¿çs]
 		const int len = commandCombobox_.getTextLength();
 		wchar_t* rawCmdLine = new wchar_t[len + 1];
-		const basic_string<WCHAR> filePath = (Alpha::getInstance().getBufferList().getActive().getFilePathName() != 0) ?
-			basic_string<WCHAR>(L"\"") + Alpha::getInstance().getBufferList().getActive().getFilePathName() + L"\"" : L"";
+		const Buffer& buffer = Alpha::instance().bufferList().active();
+		basic_string<WCHAR> filePath((buffer.input() != 0) ? buffer.input()->location() : L"");
+		if(!filePath.empty())
+			filePath = L"\"" + filePath + L"\"";
 
 		commandCombobox_.getText(rawCmdLine, len + 1);
 

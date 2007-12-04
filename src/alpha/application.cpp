@@ -383,11 +383,11 @@ bool Alpha::initInstance(int showCommand) {
 */
 	// 既定の書式を読み込む
 	try {
-		text::Newline newline =
-			static_cast<text::Newline>(readIntegerProfile(L"File", L"defaultNewline", text::NLF_CRLF));
-		if(newline == text::NLF_AUTO)
-			newline = text::NLF_CRLF;
-		text::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
+		kernel::Newline newline =
+			static_cast<kernel::Newline>(readIntegerProfile(L"File", L"defaultNewline", kernel::NLF_CRLF));
+		if(newline == kernel::NLF_AUTO)
+			newline = kernel::NLF_CRLF;
+		kernel::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
 	} catch(invalid_argument&) {
 		// TODO: 設定が間違っていることをユーザに通知
 	}
@@ -519,7 +519,7 @@ void Alpha::loadINISettings() {
 			break;
 		replacesWiths.push_back(value);
 	}
-	searcher::TextSearcher& s = buffers_->getEditorSession().getTextSearcher();
+	searcher::TextSearcher& s = buffers_->getEditorSession().textSearcher();
 	s.setMaximumNumberOfStoredStrings(16);
 	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
 	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
@@ -705,18 +705,18 @@ void Alpha::saveINISettings() {
 	mruManager_->save();
 
 	// 検索文字列履歴の保存
-	const searcher::TextSearcher& s = buffers_->getEditorSession().getTextSearcher();
-	for(size_t i = 0; i < s.getNumberOfStoredPatterns(); ++i) {
+	const searcher::TextSearcher& s = buffers_->getEditorSession().textSearcher();
+	for(size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
 		swprintf(keyName, L"findWhat(%u)", i);
-		writeStringProfile(L"Find", keyName, s.getPattern(i).c_str());
+		writeStringProfile(L"Find", keyName, s.pattern(i).c_str());
 	}
-	swprintf(keyName, L"findWhat(%u)", s.getNumberOfStoredPatterns());
+	swprintf(keyName, L"findWhat(%u)", s.numberOfStoredPatterns());
 	writeStringProfile(L"Find", keyName, L"");
-	for(size_t i = 0; i < s.getNumberOfStoredReplacements(); ++i) {
+	for(size_t i = 0; i < s.numberOfStoredReplacements(); ++i) {
 		swprintf(keyName, L"replaceWith(%u)", i);
-		writeStringProfile(L"Find", keyName, s.getReplacement(i).c_str());
+		writeStringProfile(L"Find", keyName, s.replacement(i).c_str());
 	}
-	swprintf(keyName, L"replaceWith(%u)", s.getNumberOfStoredReplacements());
+	swprintf(keyName, L"replaceWith(%u)", s.numberOfStoredReplacements());
 	writeStringProfile(L"Find", keyName, L"");
 }
 
@@ -731,8 +731,8 @@ void Alpha::setFont(const ::LOGFONTW& font) {
 	// 全てのビューのフォントを更新
 	for(size_t i = 0; i < buffers_->getCount(); ++i) {
 		presentation::Presentation& p = buffers_->getAt(i).getPresentation();
-		for(presentation::Presentation::TextViewerIterator it = p.getFirstTextViewer(); it != p.getLastTextViewer(); ++it)
-			(*it)->getTextRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
+		for(presentation::Presentation::TextViewerIterator it = p.firstTextViewer(); it != p.lastTextViewer(); ++it)
+			(*it)->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 	}
 
 	// 一部のコントロールにも設定
@@ -1013,14 +1013,14 @@ void Alpha::setupToolbar() {
 void Alpha::showSearchDialog() {
 	if(!searchDialog_->isVisible()) {
 		if(initializeFindTextFromEditor_) {	// アクティブなエディタから検索パターンを取り出す
-			Caret& caret = buffers_->getActiveView().getCaret();
+			Caret& caret = buffers_->getActiveView().caret();
 			if(caret.isSelectionEmpty()) {
 //				String s;
 //				// TODO: obtain the word nearest from the caret position.
 //				caret.getNearestWordFromCaret(0, 0, &s);
 //				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
-			} else if(caret.getAnchor().getLineNumber() == caret.getLineNumber())
-				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, caret.getSelectionText().c_str());
+			} else if(caret.anchor().lineNumber() == caret.lineNumber())
+				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, caret.selectionText().c_str());
 		}
 		searchDialog_->show(SW_SHOW);
 	} else

@@ -90,25 +90,25 @@ public:
 		Alpha();
 		~Alpha() throw();
 		// 下位オブジェクト
-		BufferList&						getBufferList() throw();
-		const BufferList&				getBufferList() const throw();
-		command::CommandManager&		getCommandManager() throw();
-		const command::CommandManager&	getCommandManager() const throw();
-		command::KeyboardMap&			getKeyboardMap() throw();
-		const command::KeyboardMap&		getKeyboardMap() const throw();
-		MRUManager&						getMRUManager() throw();
-		const MRUManager&				getMRUManager() const throw();
-		void							getScriptSystem(ankh::ScriptSystem*& scriptSystem) throw();
-		void							getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
-		manah::win32::ui::StatusBar&	getStatusBar() throw();
+		BufferList&						bufferList() throw();
+		const BufferList&				bufferList() const throw();
+		command::CommandManager&		commandManager() throw();
+		const command::CommandManager&	commandManager() const throw();
+		command::KeyboardMap&			keyboardMap() throw();
+		const command::KeyboardMap&		keyboardMap() const throw();
+		MRUManager&						mruManager() throw();
+		const MRUManager&				mruManager() const throw();
+		void							scriptSystem(ankh::ScriptSystem*& scriptSystem) throw();
+		void							scriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
+		manah::win32::ui::StatusBar&	statusBar() throw();
 		// attributes
-		static Alpha&	getInstance();
-		void			getTextEditorFont(::LOGFONTW& font) const throw();
+		static Alpha&	instance();
+		void			textEditorFont(::LOGFONTW& font) const throw();
 		void			setFont(const ::LOGFONTW& font);
 		void			setStatusText(const wchar_t* text, HFONT font = 0);
 		// searchs
-		ui::SearchDialog&		getSearchDialog() throw();
-		const ui::SearchDialog&	getSearchDialog() const throw();
+		ui::SearchDialog&		searchDialog() throw();
+		const ui::SearchDialog&	searchDialog() const throw();
 		void					showSearchDialog();
 		// operations
 		void	loadKeyBinds(const std::wstring& schemeName);
@@ -192,43 +192,43 @@ public:
 
 
 	/// Returns the buffer list.
-	inline BufferList& Alpha::getBufferList() throw() {return *buffers_;}
+	inline BufferList& Alpha::bufferList() throw() {return *buffers_;}
 
 	/// Returns the buffer list.
-	inline const BufferList& Alpha::getBufferList() const throw() {return *buffers_;}
+	inline const BufferList& Alpha::bufferList() const throw() {return *buffers_;}
 
 	/// Returns the command manager.
-	inline command::CommandManager& Alpha::getCommandManager() throw() {return *commandManager_;}
+	inline command::CommandManager& Alpha::commandManager() throw() {return *commandManager_;}
 
 	/// Returns the command manager.
-	inline const command::CommandManager& Alpha::getCommandManager() const throw() {return *commandManager_;}
+	inline const command::CommandManager& Alpha::commandManager() const throw() {return *commandManager_;}
 
 	/// Returns the singleton application object.
-	inline Alpha& Alpha::getInstance() {assert(instance_ != 0); return *instance_;}
+	inline Alpha& Alpha::instance() {assert(instance_ != 0); return *instance_;}
 
 	/// Returns the keyboard map.
-	inline command::KeyboardMap& Alpha::getKeyboardMap() throw() {return keyboardMap_;}
+	inline command::KeyboardMap& Alpha::keyboardMap() throw() {return keyboardMap_;}
 
 	/// Returns the keyboard map.
-	inline const command::KeyboardMap& Alpha::getKeyboardMap() const throw() {return keyboardMap_;}
+	inline const command::KeyboardMap& Alpha::keyboardMap() const throw() {return keyboardMap_;}
 
 	/// Returns the MRU manager.
-	inline MRUManager& Alpha::getMRUManager() throw() {return *mruManager_;}
+	inline MRUManager& Alpha::mruManager() throw() {return *mruManager_;}
 
 	/// Returns the MRU manager.
-	inline const MRUManager& Alpha::getMRUManager() const throw() {return *mruManager_;}
+	inline const MRUManager& Alpha::mruManager() const throw() {return *mruManager_;}
 
 	/// Returns the search dialog box.
-	inline ui::SearchDialog& Alpha::getSearchDialog() throw() {return *searchDialog_;}
+	inline ui::SearchDialog& Alpha::searchDialog() throw() {return *searchDialog_;}
 
 	/// Returns the search dialog box.
-	inline const ui::SearchDialog& Alpha::getSearchDialog() const throw() {return *searchDialog_;}
+	inline const ui::SearchDialog& Alpha::searchDialog() const throw() {return *searchDialog_;}
 
 	/// Returns the status bar.
-	inline manah::win32::ui::StatusBar& Alpha::getStatusBar() throw() {return statusBar_;}
+	inline manah::win32::ui::StatusBar& Alpha::statusBar() throw() {return statusBar_;}
 
 	/// Returns the font for text editors.
-	inline void Alpha::getTextEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}
+	inline void Alpha::textEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}
 
 } // namespace alpha
 

@@ -8,7 +8,6 @@
 #ifndef ASCENSION_DOCUMENT_HPP
 #define ASCENSION_DOCUMENT_HPP
 
-#include <stack>
 #include <set>
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
@@ -31,10 +30,6 @@ namespace ascension {
 				/// Deletes the point about to be destroyed (@a point is in its destructor call).
 				virtual void removePoint(PointType& point) = 0;
 			};
-			const Char NEWLINE_STRINGS[][7] = {
-				L"", {LINE_FEED, 0}, {CARRIAGE_RETURN, 0}, {CARRIAGE_RETURN, LINE_FEED, 0},
-				{NEXT_LINE, 0}, {LINE_SEPARATOR, 0}, {PARAGRAPH_SEPARATOR, 0}
-			};
 		} // namespace internal
 
 		class Document;
@@ -50,33 +45,22 @@ namespace ascension {
 			UNDETERMINED_CONTENT_TYPE = 0xFFFFFFFEUL;	///< Type of Undetermined (not calculated) content.
 
 		/**
-		 * Newlines in document.
-		 * @see getNewlineStringLength, getNewlineString, Document
+		 * Value represent a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
+		 * special values indicate how to interpret newlines during any text I/O.
+		 * @see getNewlineStringLength, getNewlineString, Document, ASCENSION_DEFAULT_NEWLINE
 		 */
 		enum Newline {
-			NLF_AUTO,	///< Indicates no-conversion or unspecified.
-			NLF_LF,		///< Line feed. Standard of Unix (Lf, U+000A).
-			NLF_CR,		///< Carriage return. Old standard of Macintosh (Cr, U+000D).
-			NLF_CRLF,	///< CR+LF. Standard of Windows (CrLf, U+000D U+000A).
-			NLF_NEL,	///< Next line. Standard of EBCDIC-based OS (U+0085).
-			NLF_LS,		///< Line separator (U+2028).
-			NLF_PS,		///< Paragraph separator (U+2029).
-			NLF_COUNT
-		};
-
-		/**
-		 * Representation of a line break. Defines how an interpreter treats line breaks. For
-		 * example, @c Document#length method which calculates the length of the document refers
-		 * this setting. Some methods can select prefer setting to <> its efficiency.
-		 * @see Document#length, Document#lineOffset, EditPoint#getText, viewers#Caret#selectionText
-		 */
-		enum NewlineRepresentation {
-			NLR_LINE_FEED,			///< Represents any NLF as LF (U+000D).
-			NLR_CRLF,				///< Represents any NLF as CRLF (U+000D+000A).
-			NLR_LINE_SEPARATOR,		///< Represents any NLF as LS (U+2028).
-			NLR_PHYSICAL_DATA,		///< Represents any NLF as the actual newline of the line (@c Document#Line#newline()).
-//			NLR_DOCUMENT_DEFAULT,	///< Represents any NLF as the document default newline.
-			NLR_SKIP,				///< Skips any NLF.
+			NLF_LINE_FEED,				///< Line feed. Standard of Unix (Lf, U+000A).
+			NLF_CARRIAGE_RETURN,		///< Carriage return. Old standard of Macintosh (Cr, U+000D).
+			NLF_CR_LF,					///< CR+LF. Standard of Windows (CrLf, U+000D U+000A).
+			NLF_NEXT_LINE,				///< Next line. Standard of EBCDIC-based OS (U+0085).
+			NLF_LINE_SEPARATOR,			///< Line separator (U+2028).
+			NLF_PARAGRAPH_SEPARATOR,	///< Paragraph separator (U+2029).
+			NLF_SPECIAL_VALUE_MASK	= 0x1000,
+			/// Represents any NLF as the actual newline of the line (@c Document#Line#newline()).
+			NLF_RAW_VALUE = 0 | NLF_SPECIAL_VALUE_MASK,
+			/// Represents any NLF as the value of @c IDocumentInput#newline().
+			NLF_DOCUMENT_INPUT = 1 | NLF_SPECIAL_VALUE_MASK
 		};
 
 		/**
@@ -371,7 +355,8 @@ namespace ascension {
 			virtual encoding::MIBenum encoding() const throw() = 0;
 			/// Returns the location of the document input or an empty string.
 			virtual String location() const throw() = 0;
-			/// Returns the default newline of the document.
+			/// Returns the default newline of the document. The returned value can be neighter
+			/// @c NLF_RAW_VALUE nor @c NLF_DOCUMENT_INPUT.
 			virtual Newline newline() const throw() = 0;
 		};
 
@@ -405,13 +390,13 @@ namespace ascension {
 		class IDocumentStateListener {
 		private:
 			/// The accessible region of the document was changed.
-			virtual void documentAccessibleRegionChanged(Document& document) = 0;
+			virtual void documentAccessibleRegionChanged(const Document& document) = 0;
 			/// The modification flag of the document was changed.
-			virtual void documentModificationSignChanged(Document& document) = 0;
+			virtual void documentModificationSignChanged(const Document& document) = 0;
 			/// The property has @c key associated with the document was changed.
-			virtual void documentPropertyChanged(Document& document, const DocumentPropertyKey& key) = 0;
+			virtual void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key) = 0;
 			/// The read only mode of the document was changed.
-			virtual void documentReadOnlySignChanged(Document& document) = 0;
+			virtual void documentReadOnlySignChanged(const Document& document) = 0;
 			friend class Document;
 		};
 
@@ -426,23 +411,23 @@ namespace ascension {
 			 * The sequential is started.
 			 * @param document the document
 			 */
-			virtual void documentSequentialEditStarted(Document& document) = 0;
+			virtual void documentSequentialEditStarted(const Document& document) = 0;
 			/**
 			 * The sequential edit is stopped.
 			 * @param document the document
 			 */
-			virtual void documentSequentialEditStopped(Document& document) = 0;
+			virtual void documentSequentialEditStopped(const Document& document) = 0;
 			/**
 			 * The undo/redo operation is started.
 			 * @param document the document
 			 */
-			virtual void documentUndoSequenceStarted(Document& document) = 0;
+			virtual void documentUndoSequenceStarted(const Document& document) = 0;
 			/**
 			 * The undo/redo operation is stopped.
 			 * @param document the document
 			 * @param resultPosition preferable position to put the caret
 			 */
-			virtual void documentUndoSequenceStopped(Document& document, const Position& resultPosition) = 0;
+			virtual void documentUndoSequenceStopped(const Document& document, const Position& resultPosition) = 0;
 			friend class Document;
 		};
 
@@ -590,8 +575,8 @@ namespace ascension {
 				/// Returns the text of the line.
 				const String& text() const throw() {return text_;}
 			private:
-				Line() throw() : operationHistory_(0), newline_(NLF_AUTO), bookmarked_(false) {}
-				explicit Line(const String& text, Newline newline = NLF_AUTO, bool modified = false)
+				Line() throw() : operationHistory_(0), newline_(ASCENSION_DEFAULT_NEWLINE), bookmarked_(false) {}
+				explicit Line(const String& text, Newline newline = ASCENSION_DEFAULT_NEWLINE, bool modified = false)
 					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline), bookmarked_(false) {}
 				String text_;
 				ulong operationHistory_ : 28;
@@ -640,10 +625,10 @@ namespace ascension {
 			// contents
 			Region			accessibleRegion() const throw();
 			const Line&		getLineInformation(length_t line) const;
-			length_t		length(NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			length_t		length(Newline newline = NLF_RAW_VALUE) const;
 			const String&	line(length_t line) const;
 			length_t		lineLength(length_t line) const;
-			length_t		lineOffset(length_t line, NewlineRepresentation nlr) const;
+			length_t		lineOffset(length_t line, Newline newline = NLF_RAW_VALUE) const;
 			length_t		numberOfLines() const throw();
 			Region			region() const throw();
 			std::size_t		revisionNumber() const throw();
@@ -675,8 +660,6 @@ namespace ascension {
 			// iterations
 			DocumentCharacterIterator	begin() const throw();
 			DocumentCharacterIterator	end() const throw();
-			// time stamp
-			bool	checkTimeStamp();
 
 			// overridables
 		protected:
@@ -726,16 +709,13 @@ namespace ascension {
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
-			bool modified_;
 			LineList lines_;
 			length_t length_;
-			std::size_t revisionNumber_;
+			std::size_t revisionNumber_, lastUnmodifiedRevisionNumber_;
 			std::set<Point*> points_;
 			UndoManager* undoManager_;
 			std::map<const DocumentPropertyKey*, String*> properties_;
-			bool onceUndoBufferCleared_;
-			bool recordingOperations_;
-			bool changing_;
+			bool onceUndoBufferCleared_, recordingOperations_, changing_;
 
 			std::pair<Position, Point*>* accessibleArea_;
 
@@ -760,7 +740,7 @@ namespace ascension {
 		class DocumentBuffer : public std::basic_streambuf<Char> {
 		public:
 			explicit DocumentBuffer(Document& document, const Position& initialPosition = Position::ZERO_POSITION,
-				NewlineRepresentation nlr = NLR_PHYSICAL_DATA, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+				Newline newline = NLF_RAW_VALUE, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 			~DocumentBuffer() throw();
 			const Position&	tell() const throw();
 		private:
@@ -770,23 +750,61 @@ namespace ascension {
 			int_type	underflow();
 		private:
 			Document& document_;
-			const NewlineRepresentation nlr_;
+			const Newline newline_;
 			const std::ios_base::openmode mode_;
 			Position current_;
 			char_type buffer_[8192];
 		};
 
+		/// Input stream for @c Document.
+		class DocumentInputStream : public std::basic_istream<Char> {
+		public:
+			explicit DocumentInputStream(Document& document,
+				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+			DocumentBuffer* rdbuf() const;
+		private:
+			DocumentBuffer buffer_;
+		};
+
+		/// Output stream for @c Document.
+		class DocumentOutputStream : public std::basic_ostream<Char> {
+		public:
+			explicit DocumentOutputStream(Document& document,
+				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+			DocumentBuffer* rdbuf() const;
+		private:
+			DocumentBuffer buffer_;
+		};
+
+		/// Stream for @c Document.
+		class DocumentStream : public std::basic_iostream<Char> {
+		public:
+			explicit DocumentStream(Document& document,
+				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+			DocumentBuffer* rdbuf() const;
+		private:
+			DocumentBuffer buffer_;
+		};
+
 		// free functions related to document
-		Newline			eatNewline(const Char* first, const Char* last);
-		length_t		getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
-		const Char*		getNewlineString(Newline newline);
-		length_t		getNewlineStringLength(Newline newline);
-		length_t		getNumberOfLines(const Char* first, const Char* last) throw();
-		length_t		getNumberOfLines(const String& text) throw();
-		InputStream&	readDocumentFromStream(InputStream& in, Document& document, const Position& at, Newline newline = NLF_AUTO);
-		Position		updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
-		OutputStream&	writeDocumentToStream(OutputStream& out,
-							const Document& document, const Region& region, const String& newline = L"");
+		template<typename ForwardIterator>
+		Newline						eatNewline(ForwardIterator first, ForwardIterator last);
+		length_t					getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
+		const Char*					getNewlineString(Newline newline);
+		length_t					getNewlineStringLength(Newline newline);
+		template<typename ForwardIterator>
+		length_t					getNumberOfLines(ForwardIterator first, ForwardIterator last);
+		length_t					getNumberOfLines(const String& text) throw();
+		std::basic_istream<Char>&	readDocumentFromStream(std::basic_istream<Char>& in, Document& document, const Position& at);
+		Position					updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
+		std::basic_ostream<Char>&	writeDocumentToStream(std::basic_ostream<Char>& out,
+										const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
+
+		// free functions output a primitive into stream
+		template<typename Element, typename Traits>
+		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Position& value);
+		template<typename Element, typename Traits>
+		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value);
 
 		/// Provides features about file-bound document.
 		namespace files {
@@ -834,6 +852,21 @@ namespace ascension {
 				Type type() const throw() {return type_;}
 			private:
 				Type type_;
+			};
+
+			class FileBinder;
+
+			/**
+			 * Interface for objects which are interested in getting informed about changes of @c FileBinder.
+			 * @see FileBinder#addListener, FileBinder#removeListener
+			 */
+			class IFilePropertyListener {
+			private:
+				/// The encoding or newline of the bound file was changed.
+				virtual void fileEncodingChanged(const FileBinder& fileBinder);
+				/// The the name of the bound file was changed.
+				virtual void fileNameChanged(const FileBinder& fileBinder);
+				friend class FileBinder;
 			};
 
 			/// Interface for objects which should handle the unexpected time stamp of the file.
@@ -913,7 +946,8 @@ namespace ascension {
 
 			/// 
 			class FileBinder : virtual public IDocumentInput,
-				virtual public IDocumentListener, virtual public IDocumentStateListener {
+					virtual public IDocumentListener, virtual public IDocumentStateListener {
+				MANAH_NONCOPYABLE_TAG(FileBinder);
 			public:
 				/// The structure used to represent a file time.
 #ifdef ASCENSION_WINDOWS
@@ -948,6 +982,9 @@ namespace ascension {
 				~FileBinder() throw();
 				bool			checkTimeStamp();
 				const LockMode&	lockMode() const throw();
+				// listener
+				void	addListener(IFilePropertyListener& listener);
+				void	removeListener(IFilePropertyListener& listener);
 				// bound file name
 				String	extensionName() const throw();
 				bool	isBound() const throw();
@@ -976,10 +1013,10 @@ namespace ascension {
 				bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
 				void	documentChanged(const Document& document, const DocumentChange& change);
 				// IDocumentStateListener
-				void	documentAccessibleRegionChanged(Document& document);
-				void	documentModificationSignChanged(Document& document);
-				void	documentPropertyChanged(Document& document, const DocumentPropertyKey& key);
-				void	documentReadOnlySignChanged(Document& document);
+				void	documentAccessibleRegionChanged(const Document& document);
+				void	documentModificationSignChanged(const Document& document);
+				void	documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
+				void	documentReadOnlySignChanged(const Document& document);
 			private:
 				Document& document_;
 				String fileName_;
@@ -994,6 +1031,7 @@ namespace ascension {
 					lockingFile_;
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
+				ascension::internal::Listeners<IFilePropertyListener> listeners_;
 				IUnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
 
@@ -1005,35 +1043,65 @@ namespace ascension {
 
 // inline implementation ////////////////////////////////////////////////////
 
+/// Write a @c Position into the output stream.
+template<typename Element, typename Traits>
+inline std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Position& value) {
+	const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
+	std::basic_ostringstream<Element, Traits> s;
+	s.flags(out.flags());
+	s.imbue(out.getloc());
+	s.precision(out.precision());
+	s << ct.widen('(') << value.line << ct.widen(',') << value.column << ct.widen(')');
+	return out << s.str().c_str();
+}
+
+/// Write a @c Region into the output stream.
+template<typename Element, typename Traits>
+inline std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value) {
+	const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
+	std::basic_ostringstream<Element, Traits> s;
+	s.flags(out.flags());
+	s.imbue(out.getloc());
+	s.precision(out.precision());
+	s << value.first << ct.widen('-') << value.second;
+	return out << s.str().c_str();
+}
+
 /**
- * Returns the newline at the start of the specified buffer.
- * @param first the start of the buffer
+ * Returns the newline at the beginning of the specified buffer.
+ * @param first the beginning of the buffer
  * @param last the end of the buffer
- * @return the newline or @c NLF_AUTO if the start of the buffer is not line break
+ * @return the newline or @c NLF_RAW_VALUE if the beginning of the buffer is not line break
  */
-inline Newline eatNewline(const Char* first, const Char* last) {
-	assert(first != 0 && last != 0 && first <= last);
+template<typename ForwardIterator>
+inline Newline eatNewline(ForwardIterator first, ForwardIterator last) {
 	switch(*first) {
-	case LINE_FEED:				return NLF_LF;
-	case CARRIAGE_RETURN:		return (last - first > 1 && first[1] == LINE_FEED) ? NLF_CRLF : NLF_CR;
-	case NEXT_LINE:				return NLF_NEL;
-	case LINE_SEPARATOR:		return NLF_LS;
-	case PARAGRAPH_SEPARATOR:	return NLF_PS;
-	default:					return NLF_AUTO;
+	case LINE_FEED:				return NLF_LINE_FEED;
+	case CARRIAGE_RETURN:		return (++first != last && *first == LINE_FEED) ? NLF_CR_LF : NLF_CARRIAGE_RETURN;
+	case NEXT_LINE:				return NLF_NEXT_LINE;
+	case LINE_SEPARATOR:		return NLF_LINE_SEPARATOR;
+	case PARAGRAPH_SEPARATOR:	return NLF_PARAGRAPH_SEPARATOR;
+	default:					return NLF_RAW_VALUE;
 	}
 }
 
 /**
- * Returns the string represents the specified newline.
+ * Returns the null-terminated string represents the specified newline.
  * @param newline the newline
- * @return the string. an empty string if @a newline is @c NLF_AUTO
+ * @return the string
  * @throw std#invalid_argument @a newline is invalid
  * @see #getNewlineStringLength
  */
 inline const Char* getNewlineString(Newline newline) {
-	if(newline >= static_cast<Newline>(countof(internal::NEWLINE_STRINGS)))
-		throw std::invalid_argument("Unknown newline specified.");
-	return internal::NEWLINE_STRINGS[newline];
+	switch(newline) {
+	case NLF_LINE_FEED:				return L"\n";
+	case NLF_CARRIAGE_RETURN:		return L"\r";
+	case NLF_CR_LF:					return L"\r\n";
+	case NLF_NEXT_LINE:				return L"\x0085";
+	case NLF_LINE_SEPARATOR:		return L"\x2028";
+	case NLF_PARAGRAPH_SEPARATOR:	return L"\x2029";
+	default:						throw std::invalid_argument("unknown newline specified.");
+	}
 }
 
 /**
@@ -1045,13 +1113,44 @@ inline const Char* getNewlineString(Newline newline) {
  */
 inline length_t getNewlineStringLength(Newline newline) {
 	switch(newline) {
-	case NLF_CRLF:
-		return 2;
-	case NLF_LF: case NLF_CR: case NLF_NEL: case NLF_LS: case NLF_PS:
+	case NLF_LINE_FEED:
+	case NLF_CARRIAGE_RETURN:
+	case NLF_NEXT_LINE:
+	case NLF_LINE_SEPARATOR:
+	case NLF_PARAGRAPH_SEPARATOR:
 		return 1;
+	case NLF_CR_LF:
+		return 2;
 	default:
-		throw std::invalid_argument("Unknown newline specified.");
+		throw std::invalid_argument("unknown newline specified.");
 	}
+}
+
+/**
+ * Returns the number of lines in the specified character sequence.
+ * @param first the beginning of the character sequence
+ * @param last the end of the character sequence
+ * @return the number of lines. zero if and only if the input sequence is empty
+ */
+template<typename ForwardIterator>
+inline length_t getNumberOfLines(ForwardIterator first, ForwardIterator last) {
+	if(first == last)
+		return 0;
+	length_t lines = 1;
+	while(true) {
+		first = std::find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+		if(first == last)
+			break;
+		++lines;
+		if(*first == CARRIAGE_RETURN) {
+			if(++first == last)
+				break;
+			else if(*first == LINE_FEED)
+				++first;
+		} else
+			++first;
+	}
+	return lines;
 }
 
 /**
@@ -1059,7 +1158,7 @@ inline length_t getNewlineStringLength(Newline newline) {
  * @param text the text string
  * @return the number of lines
  */
-inline length_t getNumberOfLines(const String& text) throw() {return getNumberOfLines(text.data(), text.data() + text.length());}
+inline length_t getNumberOfLines(const String& text) throw() {return getNumberOfLines(text.begin(), text.end());}
 
 /// Conversion operator for convenience.
 inline Point::operator Position() throw() {return position_;}
@@ -1167,7 +1266,7 @@ inline Position Document::erase(const Position& pos1, const Position& pos2) {ret
  * @throw BadPostionException @a line is outside of the document
  */
 inline const Document::Line& Document::getLineInformation(length_t line) const {
-	if(line >= lines_.getSize()) throw BadPositionException(); return *lines_[line];}
+	if(line >= lines_.size()) throw BadPositionException(); return *lines_[line];}
 
 #if 0
 inline Document::LineIterator Document::getLineIterator(length_t line) const {
@@ -1203,7 +1302,7 @@ inline bool Document::isChanging() const throw() {return changing_;}
  * Returns true if the document has been modified.
  * @see #setModified, IDocumentStateListener#documentModificationSignChanged
  */
-inline bool Document::isModified() const throw() {return modified_;}
+inline bool Document::isModified() const throw() {return revisionNumber() != lastUnmodifiedRevisionNumber_;}
 
 /**
  * Returns true if the document is narrowed.
@@ -1240,7 +1339,7 @@ inline const String& Document::line(length_t line) const {return getLineInformat
 inline length_t Document::lineLength(length_t line) const {return this->line(line).length();}
 
 /// Returns the number of lines in the document.
-inline length_t Document::numberOfLines() const throw() {return lines_.getSize();}
+inline length_t Document::numberOfLines() const throw() {return lines_.size();}
 
 /// Returns the document partitioner of the document.
 inline const DocumentPartitioner& Document::partitioner() const throw() {
@@ -1273,7 +1372,7 @@ inline const String* Document::property(const DocumentPropertyKey& key) const th
 /// Returns the entire region of the document. The returned region is normalized.
 /// @see #accessibleRegion
 inline Region Document::region() const throw() {
-	return Region(Position::ZERO_POSITION, Position(lines_.getSize() - 1, lineLength(lines_.getSize() - 1)));}
+	return Region(Position::ZERO_POSITION, Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));}
 
 /**
  * Removes the document partitioning listener from the document.
@@ -1397,11 +1496,26 @@ inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}
 
+/// Returns the stored stream buffer.
+inline DocumentBuffer* DocumentInputStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+
+/// Returns the stored stream buffer.
+inline DocumentBuffer* DocumentOutputStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+
+/// Returns the stored stream buffer.
+inline DocumentBuffer* DocumentStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+
+/// @see IDocumentInput#encoding, #setEncoding
+inline encoding::MIBenum files::FileBinder::encoding() const throw() {return encoding_;}
+
 /// Returns true if the document is bound to any file.
 inline bool files::FileBinder::isBound() const throw() {return !fileName_.empty();}
 
 /// Returns the file lock mode.
 inline const files::FileBinder::LockMode& files::FileBinder::lockMode() const throw() {return lockMode_;}
+
+/// @see IDocumentInput#newline, #setNewline
+inline Newline files::FileBinder::newline() const throw() {return newline_;}
 
 /// Returns the file full name or an empty string if the document is not bound to any of the files.
 inline files::String files::FileBinder::pathName() const throw() {return fileName_;}

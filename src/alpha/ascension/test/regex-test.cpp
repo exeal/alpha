@@ -19,13 +19,13 @@ void testUCS4Matches() {
 void testTransparentBounds() {
 	std::auto_ptr<const re::Pattern> p(re::Pattern::compile(L"\\bcar\\b"));
 	a::String text(L"Madagascar is best seen by car or bike.");
-	const a::unicode::StringCharacterIterator e(text, text.end());
-	std::auto_ptr<re::Matcher<a::unicode::StringCharacterIterator> > m(p->matcher(a::unicode::StringCharacterIterator(text), e));
-	m->region(a::unicode::StringCharacterIterator(text, text.begin() + 7), e);
+	const a::text::StringCharacterIterator e(text, text.end());
+	std::auto_ptr<re::Matcher<a::text::StringCharacterIterator> > m(p->matcher(a::text::StringCharacterIterator(text), e));
+	m->region(a::text::StringCharacterIterator(text, text.begin() + 7), e);
 	m->find();
 	BOOST_CHECK_EQUAL(m->start().tell() - text.data(), 7);
 	m->useTransparentBounds(true);
-	m->region(a::unicode::StringCharacterIterator(text, text.begin() + 7), e);
+	m->region(a::text::StringCharacterIterator(text, text.begin() + 7), e);
 	m->find();
 	BOOST_CHECK_EQUAL(m->start().tell() - text.data(), 27);
 }
@@ -33,8 +33,8 @@ void testTransparentBounds() {
 void testZeroWidth() {
 	a::String input(L"abcde");
 	std::auto_ptr<const re::Pattern> p(re::Pattern::compile(L"x?"));
-	std::auto_ptr<re::Matcher<a::unicode::StringCharacterIterator> >
-		m(p->matcher(a::unicode::StringCharacterIterator(input), a::unicode::StringCharacterIterator(input, input.end())));
+	std::auto_ptr<re::Matcher<a::text::StringCharacterIterator> >
+		m(p->matcher(a::text::StringCharacterIterator(input), a::text::StringCharacterIterator(input, input.end())));
 	checkEqualStrings(m->replaceAll(L"!"), L"!a!b!c!d!e!");
 
 	std::basic_ostringstream<a::Char> oss;

@@ -23,7 +23,7 @@
 #include <dlgs.h>
 using namespace alpha;
 using namespace ascension;
-using namespace ascension::text;
+using namespace ascension::kernel;
 using namespace ascension::searcher;
 using namespace ascension::presentation;
 using namespace ascension::encoding;
@@ -73,26 +73,28 @@ namespace {
 /// Constructor.
 Buffer::Buffer() {
 	presentation_.reset(new Presentation(*this));
+	fileBinder_.reset(new files::FileBinder(*this));
 }
 
 /// Destructor.
 Buffer::~Buffer() {
 }
 
-/// @see ascension#Document#getFileName
-const WCHAR* Buffer::getFileName() const throw() {
-	static const wstring untitled = Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED);
-	const TCHAR* const buffer = Document::getFileName();
-	return (buffer != 0) ? buffer : untitled.c_str();
+/// Returns the file name of the buffer.
+const basic_string<::WCHAR> Buffer::fileName() const throw() {
+	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
+	if(fileBinder_->isBound())
+		return fileBinder_->location();
+	return untitled.c_str();
 }
 
 /// Returns the presentation object of Ascension.
-Presentation& Buffer::getPresentation() throw() {
+Presentation& Buffer::presentation() throw() {
 	return *presentation_;
 }
 
 /// Returns the presentation object of Ascension.
-const Presentation& Buffer::getPresentation() const throw() {
+const Presentation& Buffer::presentation() const throw() {
 	return *presentation_;
 }
 
@@ -162,32 +164,33 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 	Buffer* const buffer = new Buffer();
 	editorSession_.addDocument(*buffer);
 
-	buffer->setEncoding(encoding);
-	if(newline != NLF_AUTO)
-		buffer->setNewline(newline);
+	buffer->fileBinder().setEncoding(encoding);
+	if((newline & NLF_SPECIAL_VALUE_MASK) == 0)
+		buffer->fileBinder().setNewline(newline);
 	buffers_.push_back(buffer);
 
 	// 現在のペインの数だけビューを作成する
 	::LOGFONTW font;
-	app_.getTextEditorFont(font);
+	app_.textEditorFont(font);
 	EditorView* originalView = 0;
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
-		EditorView* view = (originalView == 0) ? new EditorView(buffer->getPresentation()) : new EditorView(*originalView);
+		EditorView* view = (originalView == 0) ? new EditorView(buffer->presentation()) : new EditorView(*originalView);
 		view->create(editorWindow_.getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(view->isWindow());
 		if(originalView == 0)
 			originalView = view;
 		it.get().addView(*view);
-		view->getTextRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
+		view->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 		if(originalView != view)
-			view->setConfiguration(&originalView->getConfiguration(), 0);
+			view->setConfiguration(&originalView->configuration(), 0);
 	}
 
 //	view.addEventListener(app_);
-	buffer->getPresentation().addTextViewerListListener(*this);
+	buffer->presentation().addTextViewerListListener(*this);
 	buffer->addStateListener(*this);
-	buffer->setUnexpectedFileTimeStampDirector(this);
+	if(buffer->input() != 0)
+		buffer->input()->setUnexpectedFileTimeStampDirector(this);
 //	view.getLayoutSetter().setFont(lf);
 
 	// バッファバーにボタンを追加
@@ -196,7 +199,7 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 	button.iBitmap = static_cast<int>(buffers_.size() - 1);
 	button.fsState = TBSTATE_ENABLED;
 	button.fsStyle = BTNS_AUTOSIZE | BTNS_BUTTON | BTNS_GROUP | BTNS_NOPREFIX;
-	button.iString = reinterpret_cast<INT_PTR>(buffer->getFileName());
+	button.iString = reinterpret_cast<INT_PTR>(buffer->fileName().c_str());
 	bufferBar_.insertButton(bufferBar_.getButtonCount(), button);
 
 	resetResources();
@@ -210,14 +213,12 @@ void BufferList::addNewDialog() {
 	format.encoding = app_.readIntegerProfile(L"File", L"defaultEncoding", Encoder::getDefault());
 	if(!Encoder::supports(format.encoding))
 		format.encoding = Encoder::getDefault();
-	format.newline= static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_AUTO));
-	if(format.newline == NLF_AUTO)
-		format.newline = NLF_CRLF;
+	format.newline= static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
 	if(dlg.doModal(app_.getMainWindow()) != IDOK)
 		return;
-	addNew(dlg.getEncoding(), dlg.getNewline());
+	addNew(dlg.encoding(), dlg.newline());
 }
 
 /**
@@ -228,11 +229,11 @@ void BufferList::addNewDialog() {
  * @throw std#out_of_range @a index is invalid
  */
 bool BufferList::close(size_t index, bool queryUser) {
-	Buffer& buffer = getAt(index);
+	Buffer& buffer = at(index);
 
 	if(queryUser && buffer.isModified()) {
 		setActive(buffer);	// 対象のバッファをユーザに見えるようにする
-		const int answer = app_.messageBox(MSG_BUFFER__BUFFER_IS_DIRTY, MB_YESNOCANCEL | MB_ICONEXCLAMATION, MARGS % buffer.getFileName());
+		const int answer = app_.messageBox(MSG_BUFFER__BUFFER_IS_DIRTY, MB_YESNOCANCEL | MB_ICONEXCLAMATION, MARGS % buffer.fileName());
 		if(answer == IDCANCEL)
 			return false;
 		else if(answer == IDYES && !save(index, true))
@@ -252,7 +253,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 		resetResources();
 		recalculateBufferBarSize();
 		fireActiveBufferSwitched();
-	} else {	// 最後の1つの場合
+	} else {	// 最後の 1 つの場合
 		if(!buffer.isBoundToFile()) {
 			buffer.resetContent();			// 新規バッファの場合、resetContent() でもファイル名が変わらないため
 //			app_.applyDocumentType(buffer);	// 文書タイプの変更イベントが発行されない
@@ -270,7 +271,7 @@ bool BufferList::close(size_t index, bool queryUser) {
  *	@return				1つもユーザに拒否されなければ true
  */
 bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
-	const size_t active = getActiveIndex();
+	const size_t active = activeIndex();
 
 	app_.getMainWindow().lockUpdate();
 
@@ -297,7 +298,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 		if(buffers_[dirty]->isModified()) {
 			if(exceptActive)
 				setActive(dirty);
-			return close(getActiveIndex(), queryUser);
+			return close(activeIndex(), queryUser);
 		}
 	}
 
@@ -308,7 +309,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 			continue;
 		ui::DirtyFile df;
 		df.index = static_cast<uint>(i);
-		df.fileName = buffers_[i]->getFileName();
+		df.fileName = buffers_[i]->fileName().c_str();
 		df.save = true;
 		dlg.files_.push_back(df);
 	}
@@ -402,8 +403,8 @@ size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 
 /// IActiveBufferListener::activeBufferSwitched のトリガ
 void BufferList::fireActiveBufferSwitched() {
-	const size_t activeBuffer = getActiveIndex();
-	const EditorView& activeView = getActiveView();
+	const size_t activeBuffer = activeIndex();
+	const EditorView& activeView = activeView();
 
 	bufferBar_.checkButton(static_cast<int>(activeBuffer) + CMD_SPECIAL_BUFFERSSTART);
 	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
@@ -446,7 +447,7 @@ Buffer& BufferList::getConcreteDocument(Document& document) const {
  * @return the name
  */
 wstring BufferList::getDisplayName(const Buffer& buffer) {
-	const std::wstring str = buffer.getFileName();
+	const std::wstring str(buffer.fileName());
 	if(buffer.isModified())
 		return buffer.isReadOnly() ? str + L" * " + READ_ONLY_SIGNATURE_ : str + L" *";
 	else
@@ -461,7 +462,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 			::POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
 			setActive(mouse.dwItemSpec - CMD_SPECIAL_BUFFERSSTART);
-			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::getInstance().getMainWindow().getHandle());
+			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::instance().getMainWindow().getHandle());
 			return true;
 		}
 	}
@@ -472,7 +473,7 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 		::NMTTDISPINFOW& nmttdi = *reinterpret_cast<::NMTTDISPINFOW*>(&nmhdr.hdr);
 
 //		nmttdi->hinst = getHandle();
-		const Buffer& buffer = getAt(nmttdi.hdr.idFrom - CMD_SPECIAL_BUFFERSSTART);
+		const Buffer& buffer = at(nmttdi.hdr.idFrom - CMD_SPECIAL_BUFFERSSTART);
 		wcscpy(tipText, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : buffer.getFileName());
 		nmttdi.lpszText = tipText;
 		return true;
@@ -696,7 +697,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		return OPENRESULT_SUCCEEDED;
 	}
 
-	Buffer* buffer = &getActive();
+	Buffer* buffer = &active();
 	Document::FileLockMode lockMode;
 	lockMode.onlyAsEditing = false;
 	switch(app_.readIntegerProfile(L"File", L"shareMode", 0)) {
@@ -707,7 +708,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 
 	if(buffer->isModified() || buffer->getFilePathName() != 0) {	// 新しいコンテナで開く
 		addNew(encoding);
-		buffer = &getActive();
+		buffer = &active();
 	}
 
 	if(Encoder::supports(encoding)) {
@@ -739,7 +740,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //			const int answer = app_.messageBox(forLoading_ ?
 //				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
 //				MARGS % resolvedName % Alpha::getInstance().loadMessage(id).c_str());
-			const int answer = Alpha::getInstance().messageBox(
+			const int answer = Alpha::instance().messageBox(
 				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
 				MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
 			if(answer == IDYES) {
@@ -747,7 +748,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 				ui::EncodingsDialog dlg(encoding, true);
 				if(dlg.doModal(app_.getMainWindow()) != IDOK)
 					return OPENRESULT_USERCANCELED;
-				encoding = dlg.getSelection();
+				encoding = dlg.resultEncoding();
 				continue;
 			} else if(answer == IDNO)
 				result = buffer->load(resolvedName, lockMode, encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
@@ -1398,17 +1399,21 @@ Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
-	getDocument().getBookmarker().addListener(*this);
+	if(document().input() != 0)
+		document().input()->addListener(*this);
+	document().bookmarker().addListener(*this);
 }
 
 /// Copy-constructor.
 EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
-	getDocument().getBookmarker().addListener(*this);
+	if(document().input() != 0)
+		document().input()->addListener(*this);
+	document().bookmarker().addListener(*this);
 }
 
 /// Destructor.
 EditorView::~EditorView() {
-	getDocument().getBookmarker().removeListener(*this);
+	document().bookmarker().removeListener(*this);
 }
 
 /// Begins incremental search.
@@ -1467,10 +1472,10 @@ void EditorView::documentReadOnlySignChanged(Document& document) {
 
 /// @see TextViewer#drawIndicatorMargin
 void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect) {
-	if(getDocument().getBookmarker().isMarked(line)) {
+	if(document().bookmarker().isMarked(line)) {
 		// draw a bookmark indication mark
-		const COLORREF selColor = ::GetSysColor(COLOR_HIGHLIGHT);
-		const COLORREF selTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+		const ::COLORREF selColor = ::GetSysColor(COLOR_HIGHLIGHT);
+		const ::COLORREF selTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
 //		dc.fillSolidRect(rect, selectionColor);
 		::TRIVERTEX vertex[2];
 		vertex[0].x = rect.left + 2;
@@ -1495,29 +1500,29 @@ void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, c
 /// @see IIncrementalSearchListener#incrementalSearchAborted
 void EditorView::incrementalSearchAborted(const Position& initialPosition) {
 	incrementalSearchCompleted();
-	getCaret().moveTo(initialPosition);
+	caret().moveTo(initialPosition);
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchCompleted
 void EditorView::incrementalSearchCompleted() {
-	Alpha::getInstance().setStatusText(0);
+	Alpha::instance().setStatusText(0);
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchPatternChanged
 void EditorView::incrementalSearchPatternChanged(Result result, const manah::Flags<WrappingStatus>&) {
-	UINT messageID;
-	Alpha& app = Alpha::getInstance();
-	const IncrementalSearcher& isearch = Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher();
-	const bool forward = isearch.getDirection() == FORWARD;
+	::UINT messageID;
+	Alpha& app = Alpha::instance();
+	const IncrementalSearcher& isearch = Alpha::instance().bufferList().editorSession().incrementalSearcher();
+	const bool forward = isearch.direction() == FORWARD;
 
 	if(result == IIncrementalSearchCallback::EMPTY_PATTERN) {
-		getCaret().select(isearch.getMatchedRegion());
+		getCaret().select(isearch.matchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
 		app.setStatusText(app.loadMessage(messageID).c_str(),
-			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
 		return;
 	} else if(result == IIncrementalSearchCallback::FOUND) {
-		getCaret().select(isearch.getMatchedRegion());
+		caret().select(isearch.matchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH : MSG_STATUS__RISEARCH;
 	} else {
 		if(result == IIncrementalSearchCallback::NOT_FOUND)
@@ -1527,10 +1532,10 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 		beep();
 	}
 
-	String prompt = app.loadMessage(messageID, MARGS % isearch.getPattern());
+	String prompt(app.loadMessage(messageID, MARGS % isearch.pattern()));
 	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 	app.setStatusText(prompt.c_str(),
-			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? getTextRenderer().getFont() : 0);
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchStarted
@@ -1552,7 +1557,7 @@ void EditorView::onKeyDown(UINT vkey, UINT flags, bool& handled) {
 /// @see Window#onKillFocus
 void EditorView::onKillFocus(HWND newWindow) {
 	TextViewer::onKillFocus(newWindow);
-	Alpha::getInstance().getBufferList().getEditorSession().getIncrementalSearcher().end();
+	Alpha::instance().bufferList().editorSession().incrementalSearcher().end();
 }
 
 /// @see Window#onSetFocus

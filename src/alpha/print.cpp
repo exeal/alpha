@@ -25,7 +25,7 @@ namespace {
 		}
 	private:
 		// FontSelector
-		auto_ptr<manah::win32::gdi::DC> doGetDeviceContext() const {
+		auto_ptr<manah::win32::gdi::DC> getDeviceContext() const {
 			auto_ptr<manah::win32::gdi::DC> temp(new manah::win32::gdi::DC());
 			temp->attach(dc_);
 			return temp;
@@ -70,8 +70,8 @@ namespace {
 
 /// Private constructor.
 Printing::Printing() throw() : devmode_(0), devnames_(0),
-		printsLineNumbers_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsLineNumbers", 1)),
-		printsHeader_(Alpha::getInstance().readIntegerProfile(L"Printing", L"printsHeader", 1)),
+		printsLineNumbers_(Alpha::instance().readIntegerProfile(L"Printing", L"printsLineNumbers", 1)),
+		printsHeader_(Alpha::instance().readIntegerProfile(L"Printing", L"printsHeader", 1)),
 		printing_(false), userAborted_(false) {
 	doSetupPages(true);
 }
@@ -109,7 +109,7 @@ bool Printing::doSetupPages(bool returnDefault) {
 	::PAGESETUPDLGW psd;
 	memset(&psd, 0, sizeof(::PAGESETUPDLGW));
 	psd.lStructSize = sizeof(::PAGESETUPDLGW);
-	psd.hwndOwner = Alpha::getInstance().getMainWindow().getHandle();
+	psd.hwndOwner = Alpha::instance().getMainWindow().getHandle();
 	psd.hDevMode = devmode_;
 	psd.hDevNames = devnames_;
 	psd.Flags = PSD_DEFAULTMINMARGINS | PSD_INHUNDREDTHSOFMILLIMETERS | PSD_SHOWHELP;
@@ -154,7 +154,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	::PRINTDLGEXW pdex;
 	memset(&pdex, 0, sizeof(::PRINTDLGEXW));
 	pdex.lStructSize = sizeof(::PRINTDLGEXW);
-	pdex.hwndOwner = Alpha::getInstance().getMainWindow().getHandle();
+	pdex.hwndOwner = Alpha::instance().getMainWindow().getHandle();
 	pdex.hDevMode = devmode_;
 	pdex.hDevNames = devnames_;
 	pdex.Flags = (showDialog ? (PD_COLLATE | PD_NOCURRENTPAGE | PD_NOPAGENUMS | PD_NOSELECTION) : PD_RETURNDEFAULT) | PD_RETURNDC;
@@ -194,11 +194,11 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 #define MM100_TO_PIXELS_Y(mm100)	::MulDiv(mm100, ydpi, MM100_PER_INCH)
 
 	// reset fonts
-	PrintingRenderer renderer(const_cast<ascension::presentation::Presentation&>(buffer.getPresentation()),
-		dc.getHandle(), (*buffer.getPresentation().getFirstTextViewer())->getConfiguration(),
+	PrintingRenderer renderer(const_cast<ascension::presentation::Presentation&>(buffer.presentation()),
+		dc.getHandle(), (*buffer.presentation().firstTextViewer())->configuration(),
 		MM100_TO_PIXELS_X(paperSize_.cx - margins_.left - margins_.right));
 	::LOGFONTW lf;
-	::GetObject((*buffer.getPresentation().getFirstTextViewer())->getTextRenderer().getFont(), sizeof(::LOGFONTW), &lf);
+	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().font(), sizeof(::LOGFONTW), &lf);
 	manah::win32::gdi::ScreenDC screenDC;
 	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
 
@@ -206,22 +206,22 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	dc.setAbortProc(abortProcedure);
 	::DOCINFOW di;
 	memset(&di, 0, sizeof(::DOCINFOW));
-	di.lpszDocName = buffer.getFilePathName();
+	di.lpszDocName = buffer.fileName().c_str();
 	if(dc.startDoc(di) == SP_ERROR) {
 		printing_ = false;
 		return false;
 	}
-	const basic_string<::WCHAR> bufferName(buffer.isBoundToFile() ?
-		buffer.getFilePathName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED));
+	const basic_string<::WCHAR> bufferName(buffer.isBound() ?
+		buffer.fileName() : Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
 	PrintingPrompt prompt(bufferName);
-	Alpha::getInstance().getMainWindow().enable(false);
-	prompt.doModeless(Alpha::getInstance().getMainWindow());
+	Alpha::instance().getMainWindow().enable(false);
+	prompt.doModeless(Alpha::instance().getMainWindow());
 
 	// calculate compacted path name
 	::RECT rc = {MM100_TO_PIXELS_X(margins_.left), 0,
 		MM100_TO_PIXELS_X(paperSize_.cx - margins_.right), MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
-	HFONT oldFont = dc.selectObject(renderer.getFont());
-	WCHAR compactedPathName[MAX_PATH];
+	::HFONT oldFont = dc.selectObject(renderer.font());
+	::WCHAR compactedPathName[MAX_PATH];
 	wcscpy(compactedPathName, bufferName.c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
 
@@ -235,13 +235,13 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	// print lines on pages
 	bool error = false;
 	ulong page = 0;
-	WCHAR pageNumber[128];
-	const int linePitch = renderer.getLinePitch();
-	const ascension::layout::Alignment alignment = (*buffer.getPresentation().getFirstTextViewer())->getConfiguration().alignment;
+	::WCHAR pageNumber[128];
+	const int linePitch = renderer.linePitch();
+	const ascension::layout::Alignment alignment = (*buffer.presentation().firstTextViewer())->configuration().alignment;
 	rc.top = rc.bottom;
-	for(ascension::length_t line = 0, lines = buffer.getNumberOfLines(); !error && line < lines; ++line) {
-		const ascension::layout::LineLayout& layout = renderer.getLineLayout(line);
-		for(ascension::length_t subline = 0; !error && subline < layout.getNumberOfSublines(); ++subline) {
+	for(ascension::length_t line = 0, lines = buffer.numberOfLines(); !error && line < lines; ++line) {
+		const ascension::layout::LineLayout& layout = renderer.lineLayout(line);
+		for(ascension::length_t subline = 0; !error && subline < layout.numberOfSublines(); ++subline) {
 			if(rc.top + linePitch > rc.bottom) {
 				// go to the next page
 				if(++page > 1) {
@@ -257,14 +257,14 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				prompt.setPageNumber(page);
 				dc.setViewportOrg(-physicalOffsetInMM.x, -physicalOffsetInMM.y);
 				// print a header
-				HFONT oldFont = dc.selectObject(renderer.getFont());
+				::HFONT oldFont = dc.selectObject(renderer.font());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.left, rc.top = MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
 				swprintf(pageNumber, L"%lu", page);
 				dc.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.right, rc.top, pageNumber, static_cast<int>(wcslen(pageNumber)));
 				dc.selectObject(oldFont);
-				HPEN oldPen = dc.selectObject(separatorPen);
+				::HPEN oldPen = dc.selectObject(separatorPen);
 				dc.moveTo(rc.left, rc.top + linePitch + separatorThickness / 2);
 				dc.lineTo(rc.right, rc.top + linePitch + separatorThickness / 2);
 				dc.selectObject(oldPen);
@@ -275,10 +275,10 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
 				break;
 			case ascension::layout::ALIGN_RIGHT:
-				layout.draw(subline, dc, rc.right - layout.getSublineWidth(0), rc.top, rc, rc, 0);
+				layout.draw(subline, dc, rc.right - layout.sublineWidth(0), rc.top, rc, rc, 0);
 				break;
 			case ascension::layout::ALIGN_CENTER:
-				layout.draw(subline, dc, (rc.right - layout.getSublineWidth(0)) / 2, rc.top, rc, rc, 0);
+				layout.draw(subline, dc, (rc.right - layout.sublineWidth(0)) / 2, rc.top, rc, rc, 0);
 				break;
 			}
 			rc.top += linePitch;
@@ -295,7 +295,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	} else
 		dc.abortDoc();
 	::DeleteObject(separatorPen);
-	Alpha::getInstance().getMainWindow().enable(true);
+	Alpha::instance().getMainWindow().enable(true);
 
 	printing_ = userAborted_ = false;
 	return !error;
