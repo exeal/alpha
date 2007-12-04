@@ -20,6 +20,17 @@ using namespace ascension::encoding;
 using namespace std;
 
 
+namespace {
+	template<typename Element> struct Registry {
+		~Registry() {
+			for(map<MIBenum, Element*>::iterator i(registry.begin()), e(registry.end()); i != e; ++i)
+				delete i->second;
+		}
+		map<MIBenum, Element*> registry;
+	};
+} // namespace @0
+
+
 /// Returns the human-readable name of the encoding.
 String encoding::getEncodingDisplayName(MIBenum mib) {/*
 #ifdef ASCENSION_WINDOWS
@@ -152,8 +163,8 @@ bool Encoder::canEncode(const String& s) const {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forMIB(MIBenum mib) throw() {
-	Encoders::iterator i(registry().find(mib));
-	return (i != registry().end()) ? i->second.get() : 0;
+	map<MIBenum, Encoder*>::iterator i(registry().find(mib));
+	return (i != registry().end()) ? i->second : 0;
 }
 
 /**
@@ -162,11 +173,11 @@ Encoder* Encoder::forMIB(MIBenum mib) throw() {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forName(const string& name) throw() {
-	for(Encoders::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
+	for(map<MIBenum, Encoder*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
 		const string canonicalName = i->second->name();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
-			return i->second.get();
+			return i->second;
 		// test aliases
 		const string aliases = i->second->aliases();
 		for(size_t j = 0; ; ++j) {
@@ -175,7 +186,7 @@ Encoder* Encoder::forName(const string& name) throw() {
 				nul = aliases.length();
 			if(nul != j) {
 				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + nul))
-					return i->second.get();
+					return i->second;
 				++nul;
 			}
 			if(nul == aliases.length())
@@ -269,9 +280,9 @@ void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	registry().insert(make_pair(encoder->mibEnum(), encoder.release()));
 }
 
-Encoder::Encoders& Encoder::registry() throw() {
-	static Encoders singleton;
-	return singleton;
+map<MIBenum, Encoder*>& Encoder::registry() {
+	static Registry<Encoder> singleton;
+	return singleton.registry;
 }
 
 /**
@@ -383,8 +394,8 @@ MIBenum EncodingDetector::detect(const uchar* first, const uchar* last, ptrdiff_
  * @return the encoding detectir or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
-	EncodingDetectors::iterator i(registry().find(id));
-	return (i != registry().end()) ? i->second.get() : 0;
+	map<MIBenum, EncodingDetector*>::iterator i(registry().find(id));
+	return (i != registry().end()) ? i->second : 0;
 }
 
 /**
@@ -393,15 +404,15 @@ EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
  * @return the encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forName(const string& name) throw() {
-	for(EncodingDetectors::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
+	for(map<MIBenum, EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		const string canonicalName = i->second->name();
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
-			return i->second.get();
+			return i->second;
 	}
 	return 0;
 }
 
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 /**
  * Returns the encoding detector which has the given Windows code page.
  * @param codePage the code page
@@ -415,7 +426,12 @@ EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() 
 	default:	return 0;
 	}
 }
-#endif /* !_WIN32 */
+#endif /* ASCENSION_WINDOWS */
+
+map<MIBenum, EncodingDetector*>& EncodingDetector::registry() {
+	static Registry<EncodingDetector> singleton;
+	return singleton.registry;
+}
 
 /**
  * Registers the new encoding detector.
@@ -430,12 +446,7 @@ void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) 
 	if(registry().find(id) != registry().end())
 //		throw invalid_argument("the same identifier is already registered.");
 		return;
-	registry().insert(make_pair(id, ASCENSION_SHARED_POINTER<EncodingDetector>(newDetector.release())));
-}
-
-EncodingDetector::EncodingDetectors& EncodingDetector::registry() throw() {
-	static EncodingDetectors singleton;
-	return singleton;
+	registry().insert(make_pair(id, newDetector.release()));
 }
 
 /// Returns true if the encoding detector which has the specified identifier.
@@ -521,7 +532,7 @@ MIBenum UniversalDetector::doDetect(const uchar* first, const uchar* last, ptrdi
 	vector<MIBenum> mibs;
 	availableIDs(back_inserter(mibs));
 
-	MIBenum result;
+	MIBenum result = Encoder::getDefault();
 	ptrdiff_t bestScore = 0, score;
 	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 		if(const EncodingDetector* detector = forID(*mib)) {

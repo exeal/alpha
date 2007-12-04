@@ -105,8 +105,8 @@ namespace ascension {
 		protected:
 			virtual void	doMoveTo(const Position& to);
 			IPointListener*	getListener() const throw();
-			String			getText(signed_length_t length, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
-			String			getText(const Position& other, NewlineRepresentation nlr = NLR_PHYSICAL_DATA) const;
+			String			getText(signed_length_t length, Newline newline = NLF_RAW_VALUE) const;
+			String			getText(const Position& other, Newline newline = NLF_RAW_VALUE) const;
 		private:
 			IPointListener* listener_;
 			CharacterUnit characterUnit_;
@@ -358,7 +358,7 @@ namespace ascension {
 			bool				selectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
 			SelectionMode		selectionMode() const throw();
 			kernel::Region		selectionRegion() const throw();
-			String				selectionText(kernel::NewlineRepresentation nlr = kernel::NLR_PHYSICAL_DATA) const;
+			String				selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
 			// attributes : character input
 			bool	isOvertypeMode() const throw();
 			void	setOvertypeMode(bool overtype) throw();

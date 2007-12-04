@@ -6,9 +6,9 @@
 
 #include "../unicode-property.hpp"
 using namespace ascension;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
-using unicode::ucd::CanonicalCombiningClass;
+using text::ucd::CanonicalCombiningClass;
 
 
 // CaseFolder ///////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 // Normalizer ///////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::unicode::Normalizer ../unicode.hpp
+ * @class ascension::text::Normalizer ../unicode.hpp
  * @c Nomalizer supports the standard normalization forms described in
  * <a href="http://www.unicode.org/reports/tr15/">UAX #15: Unicode Normalization Forms</a> revision 27.
  * One can use this to normalize text or compare two strings for canonical equivalence for sorting
@@ -328,7 +328,7 @@ namespace {
 		length_t len;	// length of room
 		// decompose
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
-		for(auto_ptr<CharacterIterator> i(first.clone()); i->getOffset() < last.getOffset(); i->next()) {
+		for(auto_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {
 			len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
 			for(UTF16To32Iterator<const Char*> j(room, room + len); j.hasNext(); ++j)
 				buffer.sputc(*j);
@@ -468,7 +468,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 		if(!initialize) {
 			do {
 				current_->next();
-			} while(current_->getOffset() < nextOffset_);
+			} while(current_->offset() < nextOffset_);
 		}
 		if(!current_->hasNext()) {
 			// reached the end of the source character sequence
@@ -481,10 +481,10 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 			if(CanonicalCombiningClass::of(next->current()) == CanonicalCombiningClass::NOT_REORDERED)
 				break;
 		}
-		nextOffset_ = next->getOffset();
+		nextOffset_ = next->offset();
 	} else {
 		next.reset(current_->clone().release());
-		nextOffset_ = current_->getOffset();
+		nextOffset_ = current_->offset();
 		current_->previous();
 		// locate the previous starter
 		while(current_->hasPrevious()) {
@@ -504,7 +504,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	// TODO: there is more efficient implementation.
 	Normalizer n(text, form);
-	StringBuffer buffer(ios_base::out);
+	basic_stringbuf<Char> buffer(ios_base::out);
 	CodePoint c;
 	Char surrogate[2];
 	for(Normalizer n(text, form); n.hasNext(); n.next()) {

@@ -4,18 +4,20 @@
 #include <boost/test/included/test_exec_monitor.hpp>
 #include <vector>
 #include <algorithm>
+namespace a = ascension;
+namespace t = ascension::text;
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
 void testUTFIterator() {
 	// spot checks
-	ascension::CodePoint spot16[] = {0x10302U};
-	ascension::unicode::UTF32To16Iterator<> it(spot16);
+	a::CodePoint spot16[] = {0x10302U};
+	t::UTF32To16Iterator<> it(spot16);
 	BOOST_CHECK_EQUAL(*it++, 0xD800U);
 	BOOST_CHECK_EQUAL(*it++, 0xDF02U);
 	BOOST_CHECK_EQUAL(*--it, 0xDF02U);
 	BOOST_CHECK_EQUAL(*--it, 0xD800U);
 
-	std::vector<ascension::CodePoint> v;
+	std::vector<a::CodePoint> v;
 	v.push_back(0);
 	v.push_back(0xD7FF);
 	v.push_back(0xE000);
@@ -29,14 +31,14 @@ void testUTFIterator() {
 	v.push_back(0x10000U);
 	v.push_back(0x10000U - 1);
 
-	typedef ascension::unicode::UTF32To16Iterator<std::vector<ascension::CodePoint>::const_iterator> U32to16;
-	typedef ascension::unicode::UTF16To32IteratorUnsafe<std::vector<ascension::Char>::const_iterator> U16to32;
-	std::vector<ascension::Char> v16(U32to16(v.begin()), U32to16(v.end()));
+	typedef t::UTF32To16Iterator<std::vector<a::CodePoint>::const_iterator> U32to16;
+	typedef t::UTF16To32IteratorUnsafe<std::vector<a::Char>::const_iterator> U16to32;
+	std::vector<a::Char> v16(U32to16(v.begin()), U32to16(v.end()));
 	BOOST_CHECK_EQUAL(std::distance(U32to16(v.begin()), U32to16(v.end())), v16.size());
-	std::vector<ascension::CodePoint> v32(U16to32(v16.begin()), U16to32(v16.end()));
+	std::vector<a::CodePoint> v32(U16to32(v16.begin()), U16to32(v16.end()));
 	BOOST_CHECK_EQUAL(std::distance(U16to32(v16.begin()), U16to32(v16.end())), v32.size());
 	BOOST_CHECK_EQUAL(v.size(), v32.size());
-	std::vector<ascension::CodePoint>::const_iterator i = v.begin(), j = v.begin(), k;
+	std::vector<a::CodePoint>::const_iterator i = v.begin(), j = v.begin(), k;
 	std::advance(j, std::min(v.size(), v32.size()));
 	k = v32.begin();
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
@@ -59,8 +61,8 @@ void testUTFIterator() {
 
 void testStringCharacterIterator() {
 	// simple test
-	const ascension::String s1(L"test");
-	ascension::unicode::StringCharacterIterator i1(s1);
+	const a::String s1(L"test");
+	t::StringCharacterIterator i1(s1);
 	BOOST_CHECK(!i1.hasPrevious());
 	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
 	BOOST_CHECK_EQUAL(i1.current(), L't');
@@ -71,11 +73,11 @@ void testStringCharacterIterator() {
 	i1.last();
 	BOOST_CHECK(!i1.hasNext());
 	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
-	BOOST_CHECK_EQUAL(i1.current(), ascension::unicode::CharacterIterator::DONE);
+	BOOST_CHECK_EQUAL(i1.current(), t::CharacterIterator::DONE);
 
 	// out of BMP
-	const ascension::String s2(L"\xD800\xDC00");
-	ascension::unicode::StringCharacterIterator i2(s2);
+	const a::String s2(L"\xD800\xDC00");
+	t::StringCharacterIterator i2(s2);
 	BOOST_CHECK_EQUAL(i2.current(), 0x010000);
 	++i2;
 	BOOST_CHECK(!i2.hasNext());
@@ -84,14 +86,14 @@ void testStringCharacterIterator() {
 	BOOST_CHECK(!i2.hasPrevious());
 
 	// malformed UTF-16 input
-	const ascension::Char s3[] = L"\xDC00\xD800";
-	ascension::unicode::StringCharacterIterator i3(s3, s3 + 2);
+	const a::Char s3[] = L"\xDC00\xD800";
+	t::StringCharacterIterator i3(s3, s3 + 2);
 	BOOST_CHECK_EQUAL(*i3, 0xDC00);
 	BOOST_CHECK(i3.hasNext());
 	++i3;
 	BOOST_CHECK_EQUAL(*i3, 0xD800);
 	++i3;
-	BOOST_CHECK_EQUAL(*i3, ascension::unicode::CharacterIterator::DONE);
+	BOOST_CHECK_EQUAL(*i3, t::CharacterIterator::DONE);
 	std::advance(i3, -2);
 	BOOST_CHECK(!i3.hasPrevious());
 }

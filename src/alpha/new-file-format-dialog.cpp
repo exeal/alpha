@@ -12,7 +12,7 @@
 using alpha::ui::NewFileFormatDialog;
 using manah::win32::ui::ComboBox;
 using namespace ascension::encoding;
-using namespace ascension::text;
+using namespace ascension::kernel;
 using namespace std;
 
 
@@ -37,12 +37,12 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_NEL) ? IDS_BREAK_NEL L" *" : IDS_BREAK_NEL), NLF_NEL);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LS) ? IDS_BREAK_LS L" *" : IDS_BREAK_LS), NLF_LS);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_PS) ? IDS_BREAK_PS L" *" : IDS_BREAK_PS), NLF_PS);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CR_LF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LINE_FEED) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CARRIAGE_RETURN) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_NEXT_LINE) ? IDS_BREAK_NEL L" *" : IDS_BREAK_NEL), NLF_NEL);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LINE_SEPARATOR) ? IDS_BREAK_LS L" *" : IDS_BREAK_LS), NLF_LS);
+			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_PARAGRAPH_SEPARATOR) ? IDS_BREAK_PS L" *" : IDS_BREAK_PS), NLF_PS);
 			newlineCombobox_.setCurSel(org);
 		}
 	} else {
@@ -50,11 +50,11 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
 			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_CRLF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
+				(newline_ == NLF_CR_LF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CR_LF);
 			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_LF) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
+				(newline_ == NLF_LINE_FEED) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LINE_FEED);
 			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_CR) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
+				(newline_ == NLF_CARRIAGE_RETURN) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
 			newlineCombobox_.setCurSel((org < newlineCombobox_.getCount()) ? org : 0);
 		}
 	}
@@ -65,7 +65,7 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	// [コードページ]
 	vector<MIBenum> mibs;
-	Encoder::getAvailableMIBs(back_inserter(mibs));
+	Encoder::availableMIBs(back_inserter(mibs));
 	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 //		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
 //		const wstring name(Alpha::getInstance().loadMessage(id));

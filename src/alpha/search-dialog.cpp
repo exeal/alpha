@@ -21,22 +21,8 @@ using namespace std;
 
 // SearchDialog /////////////////////////////////////////////////////////////
 
-/// Implements "bookmark all" command.
-void SearchDialog::bookmarkAll() {
-	texteditor::commands::BookmarkAllCommand command(
-		Alpha::getInstance().getBufferList().getActiveView(), toBoolean(isButtonChecked(IDC_RADIO_SELECTION)));
-	setOptions();
-	try {
-		command.execute();
-	} catch(regex::PatternSyntaxException& e) {
-		showRegexErrorMessage(&e);
-	} catch(runtime_error&) {
-		showRegexErrorMessage(0);
-	}
-}
-
 /// Returns the active pattern string.
-wstring SearchDialog::getActivePattern() const throw() {
+wstring SearchDialog::activePattern() const throw() {
 	if(const int len = patternCombobox_.getTextLength()) {
 		manah::AutoBuffer<wchar_t> s(new wchar_t[len + 1]);
 		patternCombobox_.getText(s.get(), len + 1);
@@ -46,13 +32,27 @@ wstring SearchDialog::getActivePattern() const throw() {
 }
 
 /// Returns the active replacement string.
-wstring SearchDialog::getActiveReplacement() const throw() {
+wstring SearchDialog::activeReplacement() const throw() {
 	if(const int len = replacementCombobox_.getTextLength()) {
 		manah::AutoBuffer<wchar_t> s(new wchar_t[len + 1]);
 		replacementCombobox_.getText(s.get(), len + 1);
 		return wstring(s.get());
 	}
 	return L"";
+}
+
+/// Implements "bookmark all" command.
+void SearchDialog::bookmarkAll() {
+	texteditor::commands::BookmarkAllCommand command(
+		Alpha::instance().bufferList().activeView(), toBoolean(isButtonChecked(IDC_RADIO_SELECTION)));
+	setOptions();
+	try {
+		command.execute();
+	} catch(regex::PatternSyntaxException& e) {
+		showRegexErrorMessage(&e);
+	} catch(runtime_error&) {
+		showRegexErrorMessage(0);
+	}
 }
 
 /// @see Dialog#onCancel
@@ -86,7 +86,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 			enableCommandsAsOnlySelection = ::GetWindowTextLength(getItem(IDC_COMBO_FINDWHAT)) != 0;
 		::EnableWindow(getItem(CMD_SEARCH_BOOKMARKALL), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_REPLACEALL),
-			enableCommandsAsOnlySelection && !Alpha::getInstance().getBufferList().getActive().isReadOnly());
+			enableCommandsAsOnlySelection && !Alpha::instance().bufferList().active().isReadOnly());
 		/* fall-through */
 	case IDC_RADIO_WHOLEFILE:	// [ファイル全体]
 	case IDC_RADIO_SELECTION:	// [選択範囲]
@@ -95,7 +95,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		::EnableWindow(getItem(CMD_SEARCH_FINDNEXT), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_FINDPREV), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(CMD_SEARCH_REPLACEALLINTERACTIVE),
-			enableCommandsAsOnlySelection && !Alpha::getInstance().getBufferList().getActive().isReadOnly());
+			enableCommandsAsOnlySelection && !Alpha::instance().bufferList().active().isReadOnly());
 		break;
 	case IDC_BTN_BROWSE: {	// [拡張オプション]
 //			RECT rect;
@@ -113,7 +113,7 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	modifyStyleEx(0, WS_EX_LAYERED);
 	setLayeredAttributes(0, 220, LWA_ALPHA);
 
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	searchTypeCombobox_.addString(app.loadMessage(MSG_DIALOG__LITERAL_SEARCH).c_str());
 	if(TextSearcher::isRegexAvailable())
 		searchTypeCombobox_.addString(app.loadMessage(MSG_DIALOG__REGEX_SEARCH).c_str());
@@ -135,7 +135,7 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 void SearchDialog::replaceAll(bool interactive) {
 	static InteractiveReplacementCallback callback;
 	const bool wasVisible = isVisible();
-	viewers::TextViewer& textViewer = Alpha::getInstance().getBufferList().getActiveView();
+	viewers::TextViewer& textViewer = Alpha::instance().bufferList().activeView();
 	callback.setTextViewer(textViewer);
 	texteditor::commands::ReplaceAllCommand command(textViewer,
 		toBoolean(isButtonChecked(IDC_RADIO_SELECTION)), interactive ? &callback : 0);
@@ -145,7 +145,7 @@ void SearchDialog::replaceAll(bool interactive) {
 	if(isWindow())
 		show(SW_HIDE);
 	if(!interactive) {
-		textViewer.getDocument().beginSequentialEdit();
+		textViewer.document().beginSequentialEdit();
 		textViewer.freeze();
 	}
 	try {
@@ -157,11 +157,11 @@ void SearchDialog::replaceAll(bool interactive) {
 	}
 	if(!interactive) {
 		textViewer.unfreeze();
-		textViewer.getDocument().endSequentialEdit();
+		textViewer.document().endSequentialEdit();
 		if(c == 0)
-			Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+			Alpha::instance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 		else if(c != -1)
-			Alpha::getInstance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % c);
+			Alpha::instance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % c);
 	}
 	if(wasVisible && isButtonChecked(IDC_CHK_AUTOCLOSE) != BST_CHECKED) {
 		show(SW_SHOW);
@@ -171,22 +171,22 @@ void SearchDialog::replaceAll(bool interactive) {
 
 /// Implements "search next" command.
 bool SearchDialog::searchNext(Direction direction) {
-	texteditor::commands::FindNextCommand command(Alpha::getInstance().getBufferList().getActiveView(), direction);
+	texteditor::commands::FindNextCommand command(Alpha::instance().bufferList().activeView(), direction);
 	setOptions();
 	bool found = false;
 	try {
 		if(command.execute() == 0)
 			found = true;
 		else
-			Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+			Alpha::instance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	} catch(const regex::PatternSyntaxException& e) {
 		showRegexErrorMessage(&e);
 	} catch(runtime_error&) {
-		Alpha::getInstance().messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
+		Alpha::instance().messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
 	}
 	if(isVisible()) {
 		if(isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED)	// "Close automatically"
-			Alpha::getInstance().getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
+			Alpha::instance().getMainWindow().sendMessage(WM_COMMAND, CMD_SEARCH_FIND);
 		else
 			::SetFocus(getItem(IDC_COMBO_FINDWHAT));
 	}
@@ -197,8 +197,8 @@ bool SearchDialog::searchNext(Direction direction) {
 void SearchDialog::setOptions() {
 	assertValidAsWindow();
 
-	TextSearcher& searcher = Alpha::getInstance().getBufferList().getEditorSession().getTextSearcher();
-	SearchOptions options = searcher.getOptions();
+	TextSearcher& searcher = Alpha::instance().bufferList().editorSession().textSearcher();
+	SearchOptions options = searcher.options();
 
 	switch(searchTypeCombobox_.getCurSel()) {
 	case 0:	options.type = LITERAL; break;
@@ -213,15 +213,15 @@ void SearchDialog::setOptions() {
 	case 2:	options.wholeMatch = SearchOptions::WORD; break;
 	}
 	searcher.setOptions(options);
-	const wstring p = getActivePattern();
+	const wstring p(activePattern());
 	if(!p.empty())
 		searcher.setPattern(p);
-	searcher.setReplacement(getActiveReplacement());
+	searcher.setReplacement(activeReplacement());
 }
 
 /// Shows a message box indicating regular expression search error.
 void SearchDialog::showRegexErrorMessage(const regex::PatternSyntaxException* e) {
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	if(e == 0)
 		app.messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
 	else
@@ -242,17 +242,17 @@ INT_PTR SearchDialog::processWindowMessage(UINT message, WPARAM wParam, LPARAM l
 
 /// 検索オブジェクトの設定を GUI に反映する
 void SearchDialog::updateOptions() {
-	const BufferList& buffers = Alpha::getInstance().getBufferList();
-	const TextSearcher& s = buffers.getEditorSession().getTextSearcher();
-	const SearchOptions& options = s.getOptions();
+	const BufferList& buffers = Alpha::instance().bufferList();
+	const TextSearcher& s = buffers.editorSession().textSearcher();
+	const SearchOptions& options = s.options();
 
-	const String currentPattern = getActivePattern(), currentReplacement = getActiveReplacement();
+	const String currentPattern = activePattern(), currentReplacement = activeReplacement();
 	patternCombobox_.resetContent();
-	for(size_t i = 0; i < s.getNumberOfStoredPatterns(); ++i)
-		patternCombobox_.addString(s.getPattern(i).c_str());
+	for(size_t i = 0; i < s.numberOfStoredPatterns(); ++i)
+		patternCombobox_.addString(s.pattern(i).c_str());
 	replacementCombobox_.resetContent();
-	for(size_t i = 0; i < s.getNumberOfStoredReplacements(); ++i)
-		replacementCombobox_.addString(s.getReplacement(i).c_str());
+	for(size_t i = 0; i < s.numberOfStoredReplacements(); ++i)
+		replacementCombobox_.addString(s.replacement(i).c_str());
 	patternCombobox_.setText(currentPattern.c_str());
 	replacementCombobox_.setText(currentReplacement.c_str());
 
@@ -270,8 +270,8 @@ void SearchDialog::updateOptions() {
 	}
 
 	const bool patternIsEmpty = patternCombobox_.getTextLength() == 0;
-	const bool hasSelection = !buffers.getActiveView().getCaret().isSelectionEmpty();
-	const bool readOnly = buffers.getActiveView().getDocument().isReadOnly();
+	const bool hasSelection = !buffers.activeView().caret().isSelectionEmpty();
+	const bool readOnly = buffers.activeView().document().isReadOnly();
 	const bool onlySelection = isButtonChecked(IDC_RADIO_SELECTION) == BST_CHECKED;
 	if(!hasSelection)
 		checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);
@@ -288,7 +288,7 @@ void SearchDialog::updateOptions() {
 
 /// Default constructor.
 InteractiveReplacementCallback::InteractiveReplacementCallback() :
-		menu_(Alpha::getInstance().loadMenu(IDR_MENU_REPLACEALLACTION)), textViewer_(0) {
+		menu_(Alpha::instance().loadMenu(IDR_MENU_REPLACEALLACTION)), textViewer_(0) {
 	if(menu_ == 0)
 		throw runtime_error("popup menu can't load.");
 }
@@ -299,10 +299,10 @@ InteractiveReplacementCallback::~InteractiveReplacementCallback() throw() {
 }
 
 /// @see InteractiveReplacementCallback#queryReplacementAction
-searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback::queryReplacementAction(const text::Region& matchedRegion, bool canUndo) {
-	textViewer_->getCaret().select(matchedRegion);
+searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback::queryReplacementAction(const kernel::Region& matchedRegion, bool canUndo) {
+	textViewer_->caret().select(matchedRegion);
 
-	::POINT p = textViewer_->getClientXYForCharacter(matchedRegion.beginning(), false);
+	::POINT p = textViewer_->clientXYForCharacter(matchedRegion.beginning(), false);
 	::UINT popupFlags = TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_LEFTBUTTON | TPM_NOANIMATION | TPM_VERTICAL;
 	if(p.y == -32768)
 		p.y = 0;
@@ -311,7 +311,7 @@ searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback
 		textViewer_->getClientRect(clientRect);
 		p.y = clientRect.bottom;
 	} else
-		p.y += textViewer_->getTextRenderer().getLineHeight();
+		p.y += textViewer_->textRenderer().lineHeight();
 	textViewer_->clientToScreen(p);
 
 //	::TPMPARAMS tpmp;
@@ -319,7 +319,7 @@ searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback
 //	tpmp.rcExclude = ;
 	Action action = EXIT;
 	textViewer_->unfreeze();
-	textViewer_->getDocument().endSequentialEdit();
+	textViewer_->document().endSequentialEdit();
 	switch(static_cast<::UINT>(::TrackPopupMenuEx(
 			::GetSubMenu(menu_, 0), popupFlags, p.x, p.y, textViewer_->getHandle(), 0/*&tpmp*/))) {
 	case IDYES:			action = REPLACE; break;
@@ -331,7 +331,7 @@ searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback
 	case 0:				action = EXIT; break;
 	}
 	if(action == REPLACE || action == REPLACE_ALL || action == REPLACE_AND_EXIT) {
-		textViewer_->getDocument().beginSequentialEdit();
+		textViewer_->document().beginSequentialEdit();
 		textViewer_->freeze();
 	}
 	return action;
@@ -340,16 +340,16 @@ searcher::IInteractiveReplacementCallback::Action InteractiveReplacementCallback
 /// @see InteractiveReplacementCallback#replacementEnded
 void InteractiveReplacementCallback::replacementEnded(size_t numberOfMatches, size_t numberOfReplacements) {
 	textViewer_->unfreeze();
-	textViewer_->getDocument().endSequentialEdit();
+	textViewer_->document().endSequentialEdit();
 	if(numberOfMatches == 0)
-		Alpha::getInstance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+		Alpha::instance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
 	else
-		Alpha::getInstance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % numberOfReplacements);
+		Alpha::instance().messageBox(MSG_SEARCH__REPLACE_DONE, MB_ICONINFORMATION, MARGS % numberOfReplacements);
 }
 
 /// @see InteractiveReplacementCallback#replacementStarted
-void InteractiveReplacementCallback::replacementStarted(const text::Document& document, const text::Region& scope) {
-	textViewer_->getDocument().endSequentialEdit();
+void InteractiveReplacementCallback::replacementStarted(const kernel::Document& document, const kernel::Region& scope) {
+	textViewer_->document().endSequentialEdit();
 }
 
 /**

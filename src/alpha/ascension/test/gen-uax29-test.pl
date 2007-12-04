@@ -3,7 +3,7 @@
 # gen-uax29-test.pl (c) 2007 exeal
 #
 # This script generates C++ code for tests about concrete break iterators
-# implement ascension.unicode.BreakIterator. See ascension/test/break-iterator-test.cpp.
+# implement ascension.text.BreakIterator. See ascension/test/break-iterator-test.cpp.
 #
 # This takes three input files obtained from Unicode.org:
 # - GraphemeBreakTest.txt
@@ -55,6 +55,8 @@ print $out <<'HEAD';
 // break-iterator-test.cpp
 #include "../unicode.hpp"
 #include <boost/test/included/test_exec_monitor.hpp>
+namespace a = ascension;
+namespace t = ascension::text;
 
 namespace {
 	template<class Container>
@@ -80,8 +82,8 @@ namespace {
 	}
 
 	template<template<class> class Iterator>
-	void check(Iterator<ascension::unicode::StringCharacterIterator>& i, const std::vector<std::size_t>& indices) {
-		const ascension::Char* const p = i.base().tell();
+	void check(Iterator<t::StringCharacterIterator>& i, const std::vector<std::size_t>& indices) {
+		const a::Char* const p = i.base().tell();
 		// forward iteration
 		for(std::vector<std::size_t>::const_iterator j = indices.begin(); j != indices.end(); ++j)
 			BOOST_WARN_EQUAL((i++).base().tell(), p + *j);
@@ -92,23 +94,22 @@ namespace {
 		// random check
 		BOOST_WARN(!i.base().hasPrevious());	// BOOST_REQUIRE is preferred
 		for(std::vector<std::size_t>::const_iterator j = indices.begin(); j != indices.end(); ++j)
-			BOOST_WARN(i.isBoundary(ascension::unicode::StringCharacterIterator(p, i.base().getLast(), p + *j)));
+			BOOST_WARN(i.isBoundary(t::StringCharacterIterator(p, i.base().end(), p + *j)));
 	}
 
-	inline void checkGBI(const ascension::String& s, const std::vector<std::size_t>& indices) {
-		ascension::unicode::StringCharacterIterator text(s);
-		ascension::unicode::GraphemeBreakIterator<ascension::unicode::StringCharacterIterator> i(text);
+	inline void checkGBI(const a::String& s, const std::vector<std::size_t>& indices) {
+		t::StringCharacterIterator text(s);
+		t::GraphemeBreakIterator<t::StringCharacterIterator> i(text);
 		return check(i, indices);
 	}
 
-	inline void checkWBI(const ascension::String& s, const std::vector<std::size_t>& indices) {
-		ascension::unicode::StringCharacterIterator text(s);
-		ascension::unicode::WordBreakIterator<ascension::unicode::StringCharacterIterator> i(
-			text, ascension::unicode::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, ascension::unicode::IdentifierSyntax());
-		return check<ascension::unicode::WordBreakIterator>(i, indices);
+	inline void checkWBI(const a::String& s, const std::vector<std::size_t>& indices) {
+		t::StringCharacterIterator text(s);
+		t::WordBreakIterator<t::StringCharacterIterator> i(text, t::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, t::IdentifierSyntax());
+		return check<t::WordBreakIterator>(i, indices);
 	}
 
-	inline void checkSBI(const ascension::String& s, const std::vector<std::size_t>& indices) {
+	inline void checkSBI(const a::String& s, const std::vector<std::size_t>& indices) {
 	}
 }
 HEAD

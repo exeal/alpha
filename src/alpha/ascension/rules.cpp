@@ -782,7 +782,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 		erasePartitions(change.region().beginning(), change.region().end());
 
 	// move the partitions adapting to the document change
-	for(size_t i = 0, c = partitions_.getSize(); i < c; ++i) {
+	for(size_t i = 0, c = partitions_.size(); i < c; ++i) {
 		partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
 		partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
 	}
@@ -848,7 +848,7 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 	const Partition& p = *partitions_[i];
 	partition.contentType = p.contentType;
 	partition.region.first = p.start;
-	partition.region.second = (i < partitions_.getSize() - 1) ? partitions_[i + 1]->start : document()->region().second;
+	partition.region.second = (i < partitions_.size() - 1) ? partitions_[i + 1]->start : document()->region().second;
 }
 
 /// @see kernel#DocumentPartitioner#doInstall
@@ -865,7 +865,7 @@ void LexicalPartitioner::dump() const {
 #ifdef _DEBUG
 	win32::DumpContext dout;
 	dout << "LexicalPartitioner dump start:\n";
-	for(size_t i = 0; i < partitions_.getSize(); ++i) {
+	for(size_t i = 0; i < partitions_.size(); ++i) {
 		const Partition& p = *partitions_[i];
 		dout << "\t" << p.contentType << " = ("
 			<< static_cast<ulong>(p.start.line) << ", " << static_cast<ulong>(p.start.column) << ")\n";
@@ -883,12 +883,12 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 //		++deletedFirst;	// delete from the next partition
 	// locate the last partition to delete
 	size_t deletedLast = findClosestPartition(last) + 1;	// exclusive
-	if(deletedLast < partitions_.getSize() && partitions_[deletedLast]->tokenStart < last)
+	if(deletedLast < partitions_.size() && partitions_[deletedLast]->tokenStart < last)
 		++deletedLast;
 //	else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
 //		--deletedLast;
 	if(deletedLast > deletedFirst) {
-		if(deletedFirst > 0 && deletedLast < partitions_.getSize()
+		if(deletedFirst > 0 && deletedLast < partitions_.size()
 				&& partitions_[deletedFirst - 1]->contentType == partitions_[deletedLast]->contentType)
 			++deletedLast;	// combine
 		partitions_.erase(deletedFirst, deletedLast - deletedFirst);
@@ -896,8 +896,8 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 
 	// push a default partition if no partition includes the start of the document
 	const Document& d = *document();
-	if(partitions_.isEmpty() || partitions_[0]->start != d.region().first) {
-		if(partitions_.isEmpty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
+	if(partitions_.empty() || partitions_[0]->start != d.region().first) {
+		if(partitions_.empty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
 			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
 		} else {
 			partitions_[0]->start = partitions_[0]->tokenStart = d.region().first;
@@ -906,8 +906,8 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	}
 
 	// delete the partition whose start position is the end of the document
-	if(partitions_.getSize() > 1 && partitions_.back()->start == d.region().second)
-		partitions_.erase(partitions_.getSize() - 1);
+	if(partitions_.size() > 1 && partitions_.back()->start == d.region().second)
+		partitions_.erase(partitions_.size() - 1);
 }
 
 /**
@@ -917,8 +917,8 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
  */
 inline size_t LexicalPartitioner::findClosestPartition(const Position& at) const throw() {
 	size_t result = ascension::internal::searchBound(
-		static_cast<size_t>(0), partitions_.getSize(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
-	if(result == partitions_.getSize()) {
+		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
+	if(result == partitions_.size()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return 0;
 	}
@@ -963,10 +963,10 @@ inline length_t LexicalPartitioner::tryTransition(
 /// Diagnoses the partitions.
 inline void LexicalPartitioner::verify() const {
 #ifdef _DEBUG
-	assert(!partitions_.isEmpty());
+	assert(!partitions_.empty());
 	assert(partitions_.front()->start == document()->region().first);
 	bool previousWasEmpty = false;
-	for(size_t i = 0, e = partitions_.getSize(); i < e - 1; ++i) {
+	for(size_t i = 0, e = partitions_.size(); i < e - 1; ++i) {
 		assert(partitions_[i]->contentType != partitions_[i + 1]->contentType);
 		if(partitions_[i]->start == partitions_[i + 1]->start) {
 			if(previousWasEmpty)

@@ -3,18 +3,18 @@
 
 #ifndef MANAH_GAP_BUFFER_HPP
 #define MANAH_GAP_BUFFER_HPP
-#include <memory>		// std::allocator, std::uninitialized_copy
-#include <iterator>		// std::iterator, ...
-#include <stdexcept>	// std::out_of_range
+#include <memory>		// std.allocator, std.uninitialized_copy
+#include <iterator>		// std.iterator, ...
+#include <stdexcept>	// std.out_of_range
 #include <algorithm>
 
 
 namespace manah {
 
-	template<class T> struct GapBuffer_DoNothing {void operator()(T*, T*) {}};
-	template<class T> struct GapBuffer_DeletePointer {void operator()(T* first, T* last) {while(first != last) delete *(first++);}};
+	template<typename T> struct GapBuffer_DoNothing {void operator()(T*, T*) {}};
+	template<typename T> struct GapBuffer_DeletePointer {void operator()(T* first, T* last) {while(first != last) delete *(first++);}};
 
-	template<class T, class ElementsDeleter = GapBuffer_DoNothing<T>, class Allocator = std::allocator<T> >	// T must be primitive...
+	template<typename T, typename ElementsDeleter = GapBuffer_DoNothing<T>, typename Allocator = std::allocator<T> >	// T must be primitive...
 	/* final */ class GapBuffer {
 	public:
 		// types
@@ -40,7 +40,7 @@ namespace manah {
 			allocator_(allocator),
 			first_(allocator_.allocate(count, 0)), last_(first_ + count),
 			gapFirst_(first_), gapLast_(last_) {insert(0, count, value);}
-		template<class InputIterator> GapBuffer(InputIterator first, InputIterator last, const Allocator& allocator = Allocator()) :
+		template<typename InputIterator> GapBuffer(InputIterator first, InputIterator last, const Allocator& allocator = Allocator()) :
 			allocator_(allocator), first_(0), last_(0), gapFirst_(0), gapLast_(0) {insert(0, first, last);}
 		GapBuffer(const GapBuffer& rhs) : allocator_(rhs.allocator),
 				first_(allocator_.allocate(last_ - first_)), last_(first_ + (rhs.last_ - rhs.first_)),
@@ -49,7 +49,7 @@ namespace manah {
 			std::uninitialized_copy(rhs.gapLast_, rhs.last_, gapFirst_);
 		}
 		GapBuffer& operator=(const GapBuffer& rhs) {GapBuffer(rhs).swap(*this); return *this;}
-		~GapBuffer() {clear(); allocator_.deallocate(first_, getCapacity());}
+		~GapBuffer() {clear(); allocator_.deallocate(first_, capacity());}
 		// iterations
 		Iterator begin() throw() {return Iterator(*this, first_);}
 		ConstIterator begin() const throw() {return ConstIterator(*this, first_);}
@@ -60,48 +60,48 @@ namespace manah {
 		ReverseIterator rend() throw() {return ReverseIterator(begin());}
 		ConstReverseIterator rend() const throw() {return ConstReverseIterator(begin());}
 		// attributes
-		Reference getAt(SizeType index) {if(index >= getSize()) throw std::out_of_range(""); return operator[](index);}
-		ConstReference getAt(SizeType index) const {if(index >= getSize()) throw std::out_of_range(""); return operator[](index);}
-		Reference operator[](SizeType index) throw() {return first_[(first_ + index < gapFirst_) ? index : index + getGap()];}
-		ConstReference operator[](SizeType index) const throw() {return first_[(first_ + index < gapFirst_) ? index : index + getGap()];}
-		bool isEmpty() const throw() {return getSize() == 0;}
-		SizeType getSize() const throw() {return getCapacity() - getGap();}	// returns not byte-count but element count
-		SizeType getCapacity() const throw() {return last_ - first_;}	// returns not byte-count but element count
-		SizeType getMaxSize() const {return allocator_.max_size();}	// returns not byte-count but element count
+		Reference at(SizeType index) {if(index >= size()) throw std::out_of_range("index"); return operator[](index);}
+		ConstReference at(SizeType index) const {if(index >= getSize()) throw std::out_of_range("index"); return operator[](index);}
+		Reference operator[](SizeType index) throw() {return first_[(first_ + index < gapFirst_) ? index : index + gap()];}
+		ConstReference operator[](SizeType index) const throw() {return first_[(first_ + index < gapFirst_) ? index : index + gap()];}
+		bool empty() const throw() {return size() == 0;}
+		SizeType size() const throw() {return capacity() - gap();}	// returns not byte-count but element count
+		SizeType capacity() const throw() {return last_ - first_;}	// returns not byte-count but element count
+		SizeType maxSize() const {return allocator_.max_size();}	// returns not byte-count but element count
 		Reference front() throw() {return *begin();}
 		ConstReference front() const throw() {return *begin();}
 		Reference back() throw() {return *--end();}
 		ConstReference back() const throw() {return *--end();}
 		// operations (versions take iterator are slow)
-		template<class InputIterator> void assign(InputIterator first, InputIterator last) {clear(); insert(0, first, last);}
+		template<typename InputIterator> void assign(InputIterator first, InputIterator last) {clear(); insert(0, first, last);}
 		void assign(SizeType count, ConstReference value = ValueType()) {clear(); insert(0, count, value);}
 		void insert(SizeType index, ConstReference value) {
 			makeGapAt(first_ + index);
 			*(gapFirst_++) = value;
 			if(gapFirst_ == gapLast_)
-				reallocate(getCapacity() * 2);
+				reallocate(capacity() * 2);
 		}
 		Iterator insert(Iterator position, ConstReference value) {
-			const DifferenceType offset = position.getOffset(); insert(offset, value); return begin() + offset;}
+			const DifferenceType offset = position.offset(); insert(offset, value); return begin() + offset;}
 		void insert(SizeType index, SizeType count, ConstReference value) {
-			makeGapAt(first_ + getSize());
+			makeGapAt(first_ + size());
 			makeGapAt(first_ + index);
-			if(static_cast<SizeType>(getGap()) <= count)
-				reallocate(std::max(getCapacity() + count + 1, getCapacity() * 2));
+			if(static_cast<SizeType>(gap()) <= count)
+				reallocate(std::max(capacity() + count + 1, capacity() * 2));
 			std::fill_n(gapFirst_, count, value);
 			gapFirst_ += count;
 		}
-		void insert(Iterator position, SizeType count, ConstReference value) {insert(position.getOffset(), count, value);}
-		template<class InputIterator> void insert(SizeType index, InputIterator first, InputIterator last) {
-			makeGapAt(first_ + getSize());
+		void insert(Iterator position, SizeType count, ConstReference value) {insert(position.offset(), count, value);}
+		template<typename InputIterator> void insert(SizeType index, InputIterator first, InputIterator last) {
+			makeGapAt(first_ + size());
 			makeGapAt(first_ + index);
-			if(getGap() <= last - first)
-				reallocate(std::max(getCapacity() + (last - first) + 1, getCapacity() * 2));
+			if(gap() <= last - first)
+				reallocate(std::max(capacity() + (last - first) + 1, capacity() * 2));
 			std::memcpy(gapFirst_, first, (last - first) * sizeof(ValueType));
 			gapFirst_ += last - first;
 		}
-		template<class InputIterator>
-		void insert(ConstIterator position, InputIterator first, InputIterator last) {insert(position.getOffset(), first, last);}
+		template<typename InputIterator>
+		void insert(ConstIterator position, InputIterator first, InputIterator last) {insert(position.offset(), first, last);}
 		void clear() {erase(begin(), end());}
 		void erase(SizeType index, SizeType length = 1) {
 			if(first_ + index <= gapFirst_ && gapFirst_ <= first_ + index + length) {
@@ -113,8 +113,8 @@ namespace manah {
 			ElementsDeleter()(gapLast_, gapLast_ + length);
 			gapLast_ += length;
 		}
-		Iterator erase(Iterator position) {const DifferenceType offset = position.getOffset(); erase(offset); return begin() + offset;}
-		void erase(ConstIterator first, ConstIterator last) {erase(first.getOffset(), last - first);}
+		Iterator erase(Iterator position) {const DifferenceType offset = position.offset(); erase(offset); return begin() + offset;}
+		void erase(ConstIterator first, ConstIterator last) {erase(first.offset(), last - first);}
 		void swap(GapBuffer<ValueType, Allocator>& rhs) {
 			std::swap(allocator_, rhs.allocator);
 			std::swap(first_, rhs.first_);
@@ -138,23 +138,23 @@ namespace manah {
 			ConstIterator operator--(int) throw() {ConstIterator temp(*this); --*this; return temp;}
 			ConstIterator& operator+=(DifferenceType n) throw() {
 				if(current_ + n >= target_->gapFirst_ && current_ + n < target_->gapLast_)
-					n += target_->getGap();
+					n += target_->gap();
 				current_ += n;
 				return *this;
 			}
 			ConstIterator& operator-=(DifferenceType n) throw() {return *this += -n;}
 			ConstIterator operator+(DifferenceType n) const throw() {ConstIterator temp(*this); return temp += n;}
 			ConstIterator operator-(DifferenceType n) const throw() {ConstIterator temp(*this); return temp -= n;}
-			DifferenceType operator-(const ConstIterator& rhs) const {return getOffset() - rhs.getOffset();}
-			bool operator==(const ConstIterator& rhs) const throw() {return getOffset() == rhs.getOffset();}
+			DifferenceType operator-(const ConstIterator& rhs) const {return offset() - rhs.offset();}
+			bool operator==(const ConstIterator& rhs) const throw() {return offset() == rhs.offset();}
 			bool operator!=(const ConstIterator& rhs) const throw() {return !(*this == rhs);}
-			bool operator<(const ConstIterator& rhs) const throw() {return getOffset() < rhs.getOffset();}
+			bool operator<(const ConstIterator& rhs) const throw() {return offset() < rhs.offset();}
 			bool operator<=(const ConstIterator& rhs) const throw() {return *this == rhs || *this < rhs;}
 			bool operator>(const ConstIterator& rhs) const throw() {return !(*this <= rhs);}
 			bool operator>=(const ConstIterator& rhs) const throw() {return !(*this < rhs);}
 			friend ConstIterator operator+(DifferenceType lhs, const ConstIterator& rhs) throw() {return rhs + lhs;}
 		protected:
-			DifferenceType getOffset() const throw() {
+			DifferenceType offset() const throw() {
 				return (current_ <= target_->gapFirst_) ?
 					current_ - target_->first_ : current_ - target_->gapLast_ + target_->gapFirst_ - target_->first_;}
 			const GapBuffer<ValueType, ElementsDeleter, Allocator>* target_;
@@ -177,36 +177,36 @@ namespace manah {
 			Iterator operator--(int) throw() {Iterator temp(*this); --*this; return temp;}
 			Iterator& operator+=(DifferenceType n) throw() {
 				if(current_ + n >= target_->gapFirst_ && current_ + n < target_->gapLast_)
-					n += target_->getGap();
+					n += target_->gap();
 				current_ += n;
 				return *this;
 			}
 			Iterator& operator-=(DifferenceType n) throw() {return *this += -n;}
 			Iterator operator+(DifferenceType n) const throw() {Iterator temp(*this); return temp += n;}
 			Iterator operator-(DifferenceType n) const throw() {Iterator temp(*this); return temp -= n;}
-			DifferenceType operator-(const Iterator& rhs) const throw() {return getOffset() - rhs.getOffset();}
-			bool operator==(const Iterator& rhs) const throw() {return getOffset() == rhs.getOffset();}
+			DifferenceType operator-(const Iterator& rhs) const throw() {return offset() - rhs.offset();}
+			bool operator==(const Iterator& rhs) const throw() {return offset() == rhs.offset();}
 			bool operator!=(const Iterator& rhs) const throw() {return !(*this == rhs);}
-			bool operator<(const Iterator& rhs) const throw() {return getOffset() < rhs.getOffset();}
+			bool operator<(const Iterator& rhs) const throw() {return offset() < rhs.offset();}
 			bool operator<=(const Iterator& rhs) const throw() {return *this == rhs || *this < rhs;}
 			bool operator>(const Iterator& rhs) const throw() {return !(*this <= rhs);}
 			bool operator>=(const Iterator& rhs) const throw() {return !(*this < rhs);}
 		private:
 			using ConstIterator::target_;
 			using ConstIterator::current_;
-			using ConstIterator::getOffset;
+			using ConstIterator::offset;
 			friend Iterator operator+(DifferenceType lhs, const Iterator& rhs) throw() {return rhs + lhs;}
 			friend class GapBuffer<ValueType, ElementsDeleter, Allocator>;
 		};
 	private:
 		// helpers
-		DifferenceType getGap() const throw() {return gapLast_ - gapFirst_;}
+		DifferenceType gap() const throw() {return gapLast_ - gapFirst_;}
 		void makeGapAt(Pointer position) {
 			if(position < gapFirst_) {
 				gapLast_ -= gapFirst_ - position;
 				std::memmove(gapLast_, position, (gapFirst_ - position) * sizeof(T));
 			} else if(position > gapFirst_) {
-				const Pointer p = position + getGap();
+				const Pointer p = position + gap();
 				std::memmove(gapFirst_, gapLast_, (p - gapLast_) * sizeof(T));
 				gapLast_ = p;
 			}
@@ -216,10 +216,10 @@ namespace manah {
 			Pointer newBuffer = allocator_.allocate(newSize, 0);
 			Pointer old = first_;
 			const DifferenceType tailOffset = gapLast_ - first_;
-			const SizeType tailLength = getCapacity() - tailOffset;
+			const SizeType tailLength = capacity() - tailOffset;
 			std::uninitialized_copy(old, old + (gapFirst_ - first_), newBuffer);
 			std::uninitialized_copy(old + tailOffset, old + tailOffset + tailLength, newBuffer + newSize - tailLength);
-			allocator_.deallocate(old, getCapacity());
+			allocator_.deallocate(old, capacity());
 			gapFirst_ = newBuffer + (gapFirst_ - first_);
 			first_ = newBuffer;
 			gapLast_ = (first_ + newSize) - tailLength;

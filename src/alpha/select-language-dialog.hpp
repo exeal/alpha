@@ -13,11 +13,11 @@
 
 namespace alpha {
 	namespace ui {
-		/// [言語エンジンの選択] ダイアログ
+		/// "Select Script Language" dialog box.
 		class SelectLanguageDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SELECTLANGUAGE> {
 		public:
 			explicit SelectLanguageDialog(const std::basic_string<WCHAR>& scriptName);
-			const std::wstring&	getSelectedLanguage() const throw();
+			const std::wstring&	resultLanguage() const throw();
 
 		protected:
 			bool	onCommand(WORD wID, WORD wNotifyCode, HWND hwndCtrl);	// WM_COMMAND
@@ -33,7 +33,7 @@ namespace alpha {
 		};
 
 		/// Returns the language the user selected.
-		inline const std::wstring& SelectLanguageDialog::getSelectedLanguage() const throw() {return selectedLanguage_;}
+		inline const std::wstring& SelectLanguageDialog::resultLanguage() const throw() {return selectedLanguage_;}
 	}
 }
 

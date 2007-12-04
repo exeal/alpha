@@ -26,9 +26,9 @@ namespace alpha {
 		// constructor
 		MRUManager(std::size_t limit, int startID);
 		// attributes
-		std::size_t						getCount() const throw();
-		const MRU&						getFileInfoAt(std::size_t index) const;
-		const manah::win32::ui::Menu&	getPopupMenu() const throw();
+		const MRU&						at(std::size_t index) const;
+		std::size_t						numberOfFiles() const throw();
+		const manah::win32::ui::Menu&	popupMenu() const throw();
 		void							setLimit(std::size_t newLimit);
 		// operations
 		void	add(const std::basic_string<WCHAR>& fileName, ascension::encoding::MIBenum mib);
@@ -52,10 +52,10 @@ namespace alpha {
 	inline void MRUManager::clear() {fileNames_.clear(); updateMenu();}
 
 	/// Returns the number of files.
-	inline size_t MRUManager::getCount() const throw() {return fileNames_.size();}
+	inline size_t MRUManager::numberOfFiles() const throw() {return fileNames_.size();}
 
 	/// Returns the popup menu.
-	inline const manah::win32::ui::Menu& MRUManager::getPopupMenu() const throw() {return popupMenu_;}
+	inline const manah::win32::ui::Menu& MRUManager::popupMenu() const throw() {return popupMenu_;}
 
 }
 

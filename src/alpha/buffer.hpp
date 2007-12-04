@@ -9,6 +9,7 @@
 
 #include "ascension/viewer.hpp"
 #include "ascension/searcher.hpp"	// ascension.searcher.IIncrementalSearchListener
+#include "ascension/session.hpp"
 #include <objbase.h>
 #include "../manah/win32/ui/splitter.hpp"
 #include "../manah/win32/ui/menu.hpp"
@@ -19,40 +20,42 @@
 namespace alpha {
 	class Alpha;
 	class BufferList;
-	namespace ambient {
-		class Buffer;
-	}
+	namespace ambient {class Buffer;}
 
 	/// A buffer.
-	class Buffer : public ascension::text::Document {
+	class Buffer : public ascension::kernel::Document {
 	public:
 		// constructors
 		Buffer() throw();
 		~Buffer() throw();
-		// methods
-		const TCHAR*									getFileName() const;
-		ascension::presentation::Presentation&			getPresentation() throw();
-		const ascension::presentation::Presentation&	getPresentation() const throw();
+		// attributes
+		ascension::kernel::files::FileBinder&			fileBinder() throw();
+		const ascension::kernel::files::FileBinder&		fileBinder() const throw();
+		const std::basic_string<::WCHAR>				fileName() const;
+		ascension::presentation::Presentation&			presentation() throw();
+		const ascension::presentation::Presentation&	presentation() const throw();
 
 	private:
 		std::auto_ptr<ascension::presentation::Presentation> presentation_;
+		std::auto_ptr<ascension::kernel::files::FileBinder> fileBinder_;
 	};
 
 	/// A view of a text editor.
-	class EditorView : public ascension::viewers::TextViewer,
-		virtual public ascension::text::IBookmarkListener, virtual public ascension::searcher::IIncrementalSearchCallback {
+	class EditorView : public ascension::viewers::TextViewer, virtual public ascension::kernel::files::IFilePropertyListener,
+		virtual public ascension::kernel::IBookmarkListener, virtual public ascension::searcher::IIncrementalSearchCallback {
 	public:
 		// constructors
 		EditorView(ascension::presentation::Presentation& presentation);
 		EditorView(const EditorView& rhs);
 		~EditorView();
-		// methods
-		void				beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
-		const wchar_t*		getCurrentPositionString() const;
-		Buffer&				getDocument() throw();
-		const Buffer&		getDocument() const throw();
-		ascension::length_t	getVisualColumnStartValue() const throw();
+		// attributes
+		const wchar_t*		currentPositionString() const;
+		Buffer&				document() throw();
+		const Buffer&		document() const throw();
+		ascension::length_t	visualColumnStartValue() const throw();
 		void				setVisualColumnStartValue() throw();
+		// operations
+		void	beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
 
 	private:
 		void	updateCurrentPositionOnStatusBar();
@@ -61,25 +64,27 @@ namespace alpha {
 		void	updateTitleBar();
 		// ascension.viewers.TextViewer (overrides)
 		void	drawIndicatorMargin(ascension::length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
-		// ascension.text.IDocumentStateListener (overrides)
-		void	documentAccessibleRegionChanged(ascension::text::Document& document);
-		void	documentEncodingChanged(ascension::text::Document& document);
-		void	documentFileNameChanged(ascension::text::Document& document);
-		void	documentModificationSignChanged(ascension::text::Document& document);
-		void	documentReadOnlySignChanged(ascension::text::Document& document);
+		// ascension.kernel.IDocumentStateListener (overrides)
+		void	documentAccessibleRegionChanged(const ascension::kernel::Document& document);
+		void	documentModificationSignChanged(const ascension::kernel::Document& document);
+		void	documentPropertyChanged(const ascension::kernel::Document& document, const ascension::kernel::DocumentPropertyKey& key);
+		void	documentReadOnlySignChanged(const ascension::kernel::Document& document);
+		// ascension.kernel.files.IFilePropertyListener
+		void	fileEncodingChanged(const ascension::kernel::files::FileBinder& fileBinder);
+		void	fileNameChanged(const ascension::kernel::files::FileBinder& fileBinder);
 		// ascension.viewers.ICaretListener (overrides)
-		void	caretMoved(const ascension::viewers::Caret& self, const ascension::text::Region& oldRegion);
+		void	caretMoved(const ascension::viewers::Caret& self, const ascension::kernel::Region& oldRegion);
 		void	characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
 		void	matchBracketsChanged(const ascension::viewers::Caret& self,
-					const std::pair<ascension::text::Position, ascension::text::Position>& oldPair, bool outsideOfView);
+					const std::pair<ascension::kernel::Position, ascension::kernel::Position>& oldPair, bool outsideOfView);
 		void	overtypeModeChanged(const ascension::viewers::Caret& self);
 		void	selectionShapeChanged(const ascension::viewers::Caret& self);
 		// ascension.searcher.IIncrementalSearchCallback
-		void	incrementalSearchAborted(const ascension::text::Position& initialPosition);
+		void	incrementalSearchAborted(const ascension::kernel::Position& initialPosition);
 		void	incrementalSearchCompleted();
 		void	incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchCallback::Result result,
 					const manah::Flags<ascension::searcher::IIncrementalSearchCallback::WrappingStatus>& wrappingStatus);
-		void	incrementalSearchStarted(const ascension::text::Document& document);
+		void	incrementalSearchStarted(const ascension::kernel::Document& document);
 		// ascension.text.IBookmarkListener
 		void	bookmarkChanged(ascension::length_t line);
 		void	bookmarkCleared();
@@ -102,15 +107,16 @@ namespace alpha {
 		EditorPane(const EditorPane& rhs);
 		~EditorPane();
 		// attributes
-		std::size_t	getCount() const throw();
-		HWND		getWindow() const throw();
-		Buffer&		getVisibleBuffer() const;
-		EditorView&	getVisibleView() const;
+		std::size_t	numberOfViews() const throw();
+		Buffer&		visibleBuffer() const;
+		EditorView&	visibleView() const;
 		// operations
 		void	addView(EditorView& view);
 		void	removeAll();
 		void	removeBuffer(const Buffer& buffer);
 		void	showBuffer(const Buffer& buffer);
+		// manah.win32.ui.AbstractPane
+		::HWND		getWindow() const throw();
 	private:
 		std::set<EditorView*> views_;
 		EditorView* visibleView_;
@@ -126,8 +132,8 @@ namespace alpha {
 	 * またこのクラスはバッファバーに使うアイコンも提供する
 	 */
 	class BufferList :
-			virtual public ascension::text::IDocumentStateListener,
-			virtual public ascension::text::IUnexpectedFileTimeStampDirector,
+			virtual public ascension::kernel::IDocumentStateListener,
+			virtual public ascension::kernel::files::IUnexpectedFileTimeStampDirector,
 			virtual public ascension::presentation::ITextViewerListListener {
 		MANAH_NONCOPYABLE_TAG(BufferList);
 	public:
@@ -142,57 +148,57 @@ namespace alpha {
 		BufferList(Alpha& app);
 		~BufferList();
 		// attributes
-		Buffer&									getActive() const;
-		std::size_t								getActiveIndex() const;
-		EditorView&								getActiveView() const;
-		Buffer&									getAt(std::size_t index) const;
-		HICON									getBufferIcon(std::size_t index) const;
-		std::size_t								getCount() const throw();
-		static std::wstring						getDisplayName(const Buffer& buffer);
-		ascension::texteditor::Session&			getEditorSession() throw();
-		const ascension::texteditor::Session&	getEditorSession() const throw();
-		EditorWindow&							getEditorWindow() const throw();
-		const manah::win32::ui::Menu&			getListMenu() const throw();
+		Buffer&									active() const;
+		std::size_t								activeIndex() const;
+		EditorView&								activeView() const;
+		Buffer&									at(std::size_t index) const;
+		::HICON									bufferIcon(std::size_t index) const;
+		static std::wstring						displayName(const Buffer& buffer);
+		ascension::texteditor::Session&			editorSession() throw();
+		const ascension::texteditor::Session&	editorSession() const throw();
+		EditorWindow&							editorWindow() const throw();
+		const manah::win32::ui::Menu&			listMenu() const throw();
+		std::size_t								numberOfBuffers() const throw();
 		void									setActive(std::size_t index);
 		void									setActive(const Buffer& buffer);
 		// operations
 		void		addNew(
 						ascension::encoding::MIBenum encoding = ascension::encoding::fundamental::UTF_8,
-						ascension::text::Newline newline = ascension::text::NLF_AUTO);
+						ascension::kernel::Newline newline = ascension::kernel::NLF_RAW_VALUE);
 		void		addNewDialog();
 		bool		close(std::size_t index, bool queryUser);
 		bool		closeAll(bool queryUser, bool exceptActive = false);
 		bool		createBar(manah::win32::ui::Rebar& rebar);
 		std::size_t	find(const Buffer& buffer) const;
-		std::size_t	find(const std::basic_string<WCHAR>& fileName) const;
-		LRESULT		handleBufferBarNotification(::NMTOOLBAR& nmhdr);
-		LRESULT		handleBufferBarPagerNotification(::NMHDR& nmhdr);
+		std::size_t	find(const std::basic_string<::WCHAR>& fileName) const;
+		::LRESULT	handleBufferBarNotification(::NMTOOLBAR& nmhdr);
+		::LRESULT	handleBufferBarPagerNotification(::NMHDR& nmhdr);
 		void		move(std::size_t from, std::size_t to);
-		OpenResult	open(const std::basic_string<WCHAR>& fileName,
+		OpenResult	open(const std::basic_string<::WCHAR>& fileName,
 						ascension::encoding::MIBenum encoding = ascension::encoding::EncodingDetector::UNIVERSAL_DETECTOR,
 						bool asReadOnly = false, bool addToMRU = true);
-		OpenResult	openDialog(const WCHAR* initialDirectory = 0);
+		OpenResult	openDialog(const ::WCHAR* initialDirectory = 0);
 		OpenResult	reopen(std::size_t index, bool changeCodePage);
 		bool		save(std::size_t index, bool overwrite = true, bool addToMRU = true);
 		bool		saveAll(bool addToMRU = true);
 		void		updateContextMenu();
-		// ascension::text::IDocumentStateListener
-		void	documentAccessibleRegionChanged(ascension::text::Document& document);
-		void	documentEncodingChanged(ascension::text::Document& document);
-		void	documentFileNameChanged(ascension::text::Document& document);
-		void	documentModificationSignChanged(ascension::text::Document& document);
-		void	documentReadOnlySignChanged(ascension::text::Document& document);
-		// ascension::text::IUnexpectedFileTimeStampDerector
-		bool	queryAboutUnexpectedDocumentFileTimeStamp(
-			ascension::text::Document& document, ascension::text::IUnexpectedFileTimeStampDirector::Context context) throw();
-		// ascension::presentation::ITextViewerListListener
+		// ascension.kernel.IDocumentStateListener
+		void	documentAccessibleRegionChanged(ascension::kernel::Document& document);
+		void	documentEncodingChanged(ascension::kernel::Document& document);
+		void	documentFileNameChanged(ascension::kernel::Document& document);
+		void	documentModificationSignChanged(ascension::kernel::Document& document);
+		void	documentReadOnlySignChanged(ascension::kernel::Document& document);
+		// ascension.kernel.files.IUnexpectedFileTimeStampDerector
+		bool	queryAboutUnexpectedDocumentFileTimeStamp(ascension::kernel::Document& document,
+					ascension::kernel::files::IUnexpectedFileTimeStampDirector::Context context) throw();
+		// ascension.presentation.ITextViewerListListener
 		void	textViewerListChanged(ascension::presentation::Presentation& presentation);
 
 	private:
 		void						fireActiveBufferSwitched();
-		Buffer&						getConcreteDocument(ascension::text::Document& document) const;
-		bool						handleFileIOError(const WCHAR* fileName, bool forLoading, ascension::text::Document::FileIOResult result);
-		static UINT_PTR CALLBACK	openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+		Buffer&						getConcreteDocument(ascension::kernel::Document& document) const;
+		bool						handleFileIOError(const ::WCHAR* fileName, bool forLoading, ascension::kernel::files::IOException::Type result);
+		static ::UINT_PTR CALLBACK	openFileNameHookProc(::HWND window, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 		void						recalculateBufferBarSize();
 		void						resetResources();
 	private:
@@ -208,55 +214,56 @@ namespace alpha {
 	};
 
 
-
-	/// Returns the number of the viewers.
-	inline std::size_t EditorPane::getCount() const throw() {return views_.size();}
+	/// Returns 
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getHandle() : 0;}
+	inline ::HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getHandle() : 0;}
+
+	/// Returns the number of the viewers.
+	inline std::size_t EditorPane::numberOfViews() const throw() {return views_.size();}
 
 	/// Returns the visible buffer.
-	inline Buffer& EditorPane::getVisibleBuffer() const {return getVisibleView().getDocument();}
+	inline Buffer& EditorPane::visibleBuffer() const {return visibleView().document();}
 
 	/// Returns the visible viewer.
-	inline EditorView& EditorPane::getVisibleView() const {if(visibleView_ == 0) throw std::logic_error("There no views."); return *visibleView_;}
+	inline EditorView& EditorPane::visibleView() const {if(visibleView_ == 0) throw std::logic_error("There no views."); return *visibleView_;}
 
 	/// Returns the active buffer.
-	inline Buffer& BufferList::getActive() const {return editorWindow_.getActivePane().getVisibleBuffer();}
+	inline Buffer& BufferList::active() const {return editorWindow_.getActivePane().visibleBuffer();}
 
 	/// Returns the index of the active buffer.
-	inline std::size_t BufferList::getActiveIndex() const {return find(getActive());}
+	inline std::size_t BufferList::activeIndex() const {return find(active());}
 
 	/// Returns the active viewer.
-	inline EditorView& BufferList::getActiveView() const {return editorWindow_.getActivePane().getVisibleView();}
+	inline EditorView& BufferList::activeView() const {return editorWindow_.getActivePane().visibleView();}
 
 	/// Returns the viewer has the given index.
-	inline Buffer& BufferList::getAt(std::size_t index) const {return *buffers_.at(index);}
-
-	/// Returns the number of the buffers.
-	inline std::size_t BufferList::getCount() const throw() {return buffers_.size();}
+	inline Buffer& BufferList::at(std::size_t index) const {return *buffers_.at(index);}
 
 	/// Returns the icon of the specified buffer.
-	inline HICON BufferList::getBufferIcon(std::size_t index) const {
-		if(index >= getCount()) throw std::out_of_range("Index is invalid."); return icons_.getIcon(static_cast<int>(index));}
+	inline HICON BufferList::bufferIcon(std::size_t index) const {
+		if(index >= numberOfBuffers()) throw std::out_of_range("Index is invalid."); return icons_.getIcon(static_cast<int>(index));}
 
 	/// Returns the session of the text editor framework.
-	inline ascension::texteditor::Session& BufferList::getEditorSession() throw() {return editorSession_;}
+	inline ascension::texteditor::Session& BufferList::editorSession() throw() {return editorSession_;}
 
 	/// Returns the session of the text editor framework.
-	inline const ascension::texteditor::Session& BufferList::getEditorSession() const throw() {return editorSession_;}
+	inline const ascension::texteditor::Session& BufferList::editorSession() const throw() {return editorSession_;}
 
 	/// Returns the text editor window.
-	inline EditorWindow& BufferList::getEditorWindow() const throw() {return const_cast<BufferList*>(this)->editorWindow_;}
+	inline EditorWindow& BufferList::editorWindow() const throw() {return const_cast<BufferList*>(this)->editorWindow_;}
 
 	/// Returns the menu for the buffer bar.
-	inline const manah::win32::ui::Menu& BufferList::getListMenu() const throw() {return listMenu_;}
+	inline const manah::win32::ui::Menu& BufferList::listMenu() const throw() {return listMenu_;}
 
-	/// @see ascension#viewers#TextViewer#getDocument
-	inline Buffer& EditorView::getDocument() throw() {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::getDocument());}
+	/// Returns the number of the buffers.
+	inline std::size_t BufferList::numberOfBuffers() const throw() {return buffers_.size();}
 
-	/// @see ascension#viewers#TextViewer#getDocument
-	inline const Buffer& EditorView::getDocument() const throw() {return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::getDocument());}
+	/// @see ascension#viewers#TextViewer#document
+	inline Buffer& EditorView::document() throw() {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::document());}
+
+	/// @see ascension#viewers#TextViewer#document
+	inline const Buffer& EditorView::document() const throw() {return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::document());}
 }
 
 #endif /* !ALPHA_BUFFER_HPP */

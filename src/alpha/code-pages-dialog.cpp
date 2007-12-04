@@ -34,7 +34,7 @@ bool EncodingsDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 /// @see Dialog#onInitDialog
 void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 	vector<MIBenum> mibs;
-	Encoder::getAvailableMIBs(back_inserter(mibs));
+	Encoder::availableMIBs(back_inserter(mibs));
 	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 //		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
 //		const wstring name(Alpha::getInstance().loadMessage(id));
@@ -44,7 +44,7 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 	}
 	if(forReading_) {
 		mibs.clear();
-		EncodingDetector::getAvailableIDs(back_inserter(mibs));
+		EncodingDetector::availableIDs(back_inserter(mibs));
 		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 			const wstring name(getEncodingDisplayName(*mib));
 			if(!name.empty())

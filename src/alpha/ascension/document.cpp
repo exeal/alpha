@@ -9,6 +9,7 @@
 //#include <shlwapi.h>	// PathXxxx
 //#include <shlobj.h>	// SHGetDesktopFolder, IShellFolder, ...
 //#include <MAPI.h>		// MAPISendMail
+#include <stack>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
@@ -22,6 +23,21 @@ using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::text;
 using namespace std;
+
+
+namespace {
+	inline bool isLiteralNewline(Newline newline) throw() {
+		return newline >= NLF_LINE_FEED && newline <= NLF_PARAGRAPH_SEPARATOR;
+	}
+	inline Newline resolveNewline(const Document& document, Newline newline) {
+		if(newline == NLF_DOCUMENT_INPUT) {
+			// fallback
+			newline = (document.input() != 0) ? document.input()->newline() : ASCENSION_DEFAULT_NEWLINE;
+			assert((newline & NLF_SPECIAL_VALUE_MASK) != 0);
+		}
+		return newline;
+	}
+} // namespace @0
 
 
 const Position Position::ZERO_POSITION(0, 0);
@@ -56,37 +72,15 @@ length_t kernel::getAbsoluteOffset(const Document& document, const Position& at,
 }
 
 /**
- * Returns the number of lines in the specified text string.
- * @param first the start of the text string
- * @param last the end of the text string
- * @return the number of lines
- */
-length_t kernel::getNumberOfLines(const Char* first, const Char* last) throw() {
-	if(first == last)
-		return 0;
-	length_t lines = 1;
-	while(true) {
-		first = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
-		if(first == last)
-			break;
-		++lines;
-		first += (*first == CARRIAGE_RETURN && first < last - 1 && first[1] == LINE_FEED) ? 2 : 1;
-	}
-	return lines;
-}
-
-/**
  * Reads the content of the specified input stream and write into the document.
  * @param in the input stream
  * @param document the document
  * @param at the position to which
- * @param newline the newline written into the document. if this is not @c NLF_AUTO, the method
- * replaces original newline characters with the corresponding ones
  * @return @a in
  * @throw ReadOnlyDocumentException @a document is read only
  * @throw BadPositionException @a at is outside of the document
  */
-InputStream& kernel::readDocumentFromStream(InputStream& in, Document& document, const Position& at, Newline newline /* = NLF_AUTO */) {
+basic_istream<Char>& kernel::readDocumentFromStream(basic_istream<Char>& in, Document& document, const Position& at) {
 	if(document.isReadOnly())
 		throw ReadOnlyDocumentException();
 	if(at > document.region().end())
@@ -149,19 +143,21 @@ Position kernel::updatePosition(const Position& position, const DocumentChange& 
  * @param out the output stream
  * @param document the document
  * @param region the region to be written (this region is not restricted with narrowing)
- * @param newline the newline string. if set to an empty string, actual contents (can obtain by
- * @c Document#Line#newline) are used
+ * @param newline the newline representation
  * @return @a out
  * @see getNewlineString, readDocumentFromStream
  */
-OutputStream& kernel::writeDocumentToStream(OutputStream& out,
-		const Document& document, const Region& region, const String& newline /* = L"" */) {
+basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
+		const Document& document, const Region& region, Newline newline /* = NLF_RAW_VALUE */) {
 	const Position& beginning = region.beginning();
 	const Position end = min(region.end(), document.region().second);
 	if(beginning.line == end.line)	// shortcut for single-line
 		out << document.line(end.line).substr(beginning.column, end.column - beginning.column);
 	else {
-		const bool rawNewline = newline.empty();
+		newline = resolveNewline(document, newline);
+		String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
+		if(eol.empty() && newline != NLF_RAW_VALUE)
+			throw invalid_argument("newline");
 		for(length_t i = beginning.line; ; ++i) {
 			const Document::Line& line = document.getLineInformation(i);
 			const length_t first = (i == beginning.line) ? beginning.column : 0;
@@ -169,10 +165,10 @@ OutputStream& kernel::writeDocumentToStream(OutputStream& out,
 			out.write(line.text().data() + first, static_cast<streamsize>(last - first));
 			if(i == end.line)
 				break;
-			if(rawNewline)
+			if(newline == NLF_RAW_VALUE)
 				out << getNewlineString(line.newline());
 			else
-				out.write(newline.data(), static_cast<streamsize>(newline.length()));
+				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}
 	}
 	return out;
@@ -735,12 +731,13 @@ namespace {
 	public:
 		~CompoundOperation() throw();
 		pair<bool, size_t> execute(Document& document, Position& resultPosition);
-		void pop() {operations_.pop();}
-		void push(InsertOperation& operation, const Document&) {operations_.push(&operation);}
+		void pop() {operations_.pop(); numbersOfOperations_.pop();}
+		void push(InsertOperation& operation, const Document&) {operations_.push(&operation); numbersOfOperations_.push(1);}
 		void push(DeleteOperation& operation, const Document& document);
 		IOperation& top() const {return *operations_.top();}
 	private:
 		stack<IOperation*> operations_;
+		stack<size_t> numbersOfOperations_;
 	};
 } // namespace @0
 
@@ -752,25 +749,28 @@ CompoundOperation::~CompoundOperation() throw() {
 }
 
 inline pair<bool, size_t> CompoundOperation::execute(Document& document, Position& resultPosition) {
-	const size_t c = operations_.size();
+	size_t c = 0;
 	resultPosition = Position::INVALID_POSITION;
 	while(!operations_.empty()) {
 		if(!operations_.top()->canExecute(document))
 			break;
 		resultPosition = operations_.top()->execute(document);
 		delete operations_.top();
-		operations_.pop();
+		c += numbersOfOperations_.top() + 1;
+		pop();
 	}
-	// return <completely executed?, # of executed operations>
-	return make_pair(operations_.empty(), c - operations_.size());
+	return make_pair(operations_.empty(), c);
 }
 
 inline void CompoundOperation::push(DeleteOperation& operation, const Document& document) {
 	// if also the previous operation is deletion, extend the region to concatenate the operations
-	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document))
+	if(!operations_.empty() && operations_.top()->isConcatenatable(operation, document)) {
 		delete &operation;
-	else
+		++numbersOfOperations_.top();
+	} else {
 		operations_.push(&operation);
+		numbersOfOperations_.push(1);
+	}
 }
 
 /// Manages undo/redo of the document.
@@ -942,9 +942,10 @@ pair<bool, size_t> Document::UndoManager::undo(Position& resultPosition) {
  * Other classes also provide text manipulation for the document.
  *
  * A document manages a revision number indicates how many times the document was changed. This
- * value is initially zero and incremented by @c #insert, @c #insertFromStream, @c #erase, and
- * @c #resetContent methods. A revision number is never decremented or reset to zero. The current
- * revision number can be obtained by @c #getRevisionNumber.
+ * value is initially zero. @c #insert, @c #erase, @c #redo, and @c #resetContent methods increment
+ * and @c #undo method decrement the revision number. The current revision number can be obtained
+ * by @c #revisionNumber. It is guarenteed that the contents of a document correspond to same
+ * revision number are equivalent.
  *
  * A document can be devides into a sequence of semantic segments called partition.
  * Document partitioners expressed by @c DocumentPartitioner class define these
@@ -960,7 +961,7 @@ const DocumentPropertyKey Document::TITLE_PROPERTY;
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
-		readOnly_(false), modified_(false), length_(0), revisionNumber_(0),
+		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
 		onceUndoBufferCleared_(false), recordingOperations_(true), changing_(false), accessibleArea_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_ = new UndoManager(*this);
@@ -1013,7 +1014,7 @@ void Document::beginSequentialEdit() throw() {
 	if(isSequentialEditing())
 		endSequentialEdit();
 	undoManager_->beginCompoundOperation();
-	sequentialEditListeners_.notify<Document&>(&ISequentialEditListener::documentSequentialEditStarted, *this);
+	sequentialEditListeners_.notify<const Document&>(&ISequentialEditListener::documentSequentialEditStarted, *this);
 }
 
 /// Clears the undo/redo stacks and deletes the history.
@@ -1032,7 +1033,7 @@ void Document::doResetContent() {
  */
 void Document::endSequentialEdit() throw() {
 	undoManager_->endCompoundOperation();
-	sequentialEditListeners_.notify<Document&>(&ISequentialEditListener::documentSequentialEditStopped, *this);
+	sequentialEditListeners_.notify<const Document&>(&ISequentialEditListener::documentSequentialEditStopped, *this);
 }
 
 /**
@@ -1068,7 +1069,7 @@ Position Document::erase(const Region& region) {
 Position Document::eraseText(const Region& region) {
 	const Position beginning(isNarrowed() ? max(region.beginning(), accessibleRegion().first) : region.beginning());
 	const Position end(isNarrowed() ? min(region.end(), accessibleRegion().second) : region.end());
-	StringBuffer deletedString;
+	basic_stringbuf<Char> deletedString;
 
 	if(beginning.line == end.line) {	// region is single line
 		const Line&	lineInfo = getLineInformation(end.line);
@@ -1210,7 +1211,8 @@ Position Document::insertText(const Position& position, const Char* first, const
 		length_ += breakPoint - first - firstLineRest.length();
 		firstLine.text_.replace(position.column, firstLineRest.length(), first, static_cast<String::size_type>(breakPoint - first));
 		firstLine.newline_ = eatNewline(breakPoint, last);
-		breakPoint += (firstLine.newline_ != NLF_CRLF) ? 1 : 2;
+		assert(firstLine.newline_ != NLF_RAW_VALUE);
+		breakPoint += (firstLine.newline_ != NLF_CR_LF) ? 1 : 2;
 		++firstLine.operationHistory_;
 		++line;
 		++resultPosition.line;
@@ -1227,7 +1229,7 @@ Position Document::insertText(const Position& position, const Char* first, const
 				lines_.insert(line, new Line(String(breakPoint, nextBreak), newline, true));
 				++line;
 				++resultPosition.line;
-				breakPoint = nextBreak + ((newline != NLF_CRLF) ? 1 : 2);
+				breakPoint = nextBreak + ((newline != NLF_CR_LF) ? 1 : 2);
 			} else {	// 最終行
 				length_ += last - breakPoint + firstLineRest.length();
 				lines_.insert(line, new Line(String(breakPoint, last) + firstLineRest, firstNewline, true));
@@ -1262,47 +1264,42 @@ bool Document::isSequentialEditing() const throw() {
  * @return the number of characters
  * @throw std#invalid_argument @a nlr is invalid
  */
-length_t Document::length(NewlineRepresentation nlr) const {
-	switch(nlr) {
-	case NLR_LINE_FEED:
-	case NLR_LINE_SEPARATOR:
-		return length_ + numberOfLines() - 1;
-	case NLR_CRLF:
-		return length_ + numberOfLines() * 2 - 1;
-	case NLR_PHYSICAL_DATA: {
+length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
+	newline = resolveNewline(*this, newline);
+	if(isLiteralNewline(newline))
+		return length_ + (numberOfLines() - 1) * ((newline != NLF_CR_LF) ? 1 : 2);
+	else if(newline == NLF_RAW_VALUE) {
 		length_t len = length_;
 		const length_t lines = numberOfLines();
-		for(length_t i = 0; i < lines; ++i)
+		assert(lines > 0);
+		for(length_t i = 0; i < lines - 1; ++i)
 			len += getNewlineStringLength(lines_[i]->newline_);
 		return len;
-	}
-	case NLR_SKIP:
-		return length_;
-	}
-	throw invalid_argument("invalid parameter.");
+	} else
+		throw invalid_argument("newline");
 }
 
 /**
  * Returns the offset of the line.
  * @param line the line
- * @param nlr the line representation policy for character counting
+ * @param newline the line representation policy for character counting
  * @throw BadPostionException @a line is outside of the document
  */
-length_t Document::lineOffset(length_t line, NewlineRepresentation nlr) const {
-	if(line >= lines_.getSize())
+length_t Document::lineOffset(length_t line, Newline newline) const {
+	if(line >= numberOfLines())
 		throw BadPositionException();
+	newline = resolveNewline(*this, newline);
 
-	length_t offset = 0;
+	length_t offset = 0, eolLength = isLiteralNewline(newline) ? getNewlineStringLength(newline) : 0;
+	if(eolLength == 0 && newline != NLF_RAW_VALUE)
+		throw invalid_argument("newline");
 	for(length_t i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
-		switch(nlr) {
-		case NLR_LINE_FEED:
-		case NLR_LINE_SEPARATOR:	offset += 1; break;
-		case NLR_CRLF:				offset += 2; break;
-		case NLR_PHYSICAL_DATA:		offset += getNewlineStringLength(ln.newline_); break;
-		case NLR_SKIP:				break;
-		}
+		if(newline == NLF_RAW_VALUE)
+			offset += getNewlineStringLength(ln.newline_);
+		else
+			offset += eolLength;
 	}
 	return offset;
 }
@@ -1322,7 +1319,7 @@ void Document::narrow(const Region& region) {
 		if((*i)->isExcludedFromRestriction())
 			(*i)->normalize();
 	}
-	stateListeners_.notify<Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
+	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 }
 
 /// Returns the number of undoable edits.
@@ -1360,11 +1357,11 @@ bool Document::redo() {
 		return false;
 
 	beginSequentialEdit();
-	sequentialEditListeners_.notify<Document&>(
+	sequentialEditListeners_.notify<const Document&>(
 		&ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const bool succeeded = undoManager_->redo(resultPosition).first;
-	sequentialEditListeners_.notify<Document&, const Position&>(
+	sequentialEditListeners_.notify<const Document&, const Position&>(
 		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
 	return succeeded;
@@ -1407,21 +1404,24 @@ void Document::removePrenotifiedListener(IDocumentListener& listener) {
  * @see #doResetContent
  */
 void Document::resetContent() {
-	widen();
-	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
-		(*i)->moveTo(0, 0);
+	if(lines_.empty())	// called by constructor
+		lines_.insert(lines_.begin(), new Line);
+	else {
+		widen();
+		for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
+			(*i)->moveTo(0, 0);
 
-	const DocumentChange ca(true, region());
-	fireDocumentAboutToBeChanged(ca);
-	if(length_ != 0) {
-		assert(!lines_.isEmpty());
-		lines_.clear();
-		lines_.insert(lines_.begin(), new Line);
-		length_ = 0;
-		++revisionNumber_;
-	} else if(lines_.isEmpty())
-		lines_.insert(lines_.begin(), new Line);
-	fireDocumentChanged(ca, false);
+		const DocumentChange ca(true, region());
+		fireDocumentAboutToBeChanged(ca);
+		if(length_ != 0) {
+			assert(!lines_.empty());
+			lines_.clear();
+			lines_.insert(lines_.begin(), new Line);
+			length_ = 0;
+			++revisionNumber_;
+		} else if(lines_.empty())
+		fireDocumentChanged(ca, false);
+	}
 
 	setReadOnly(false);
 	setModified(false);
@@ -1519,9 +1519,12 @@ void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) throw(
  * @see #isModified, IDocumentStateListener#documentModificationSignChanged
  */
 void Document::setModified(bool modified /* = true */) throw() {
-	if(modified != modified_) {
-		modified_ = modified;
-		stateListeners_.notify<Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+	if(modified != isModified()) {
+		if(modified)
+			lastUnmodifiedRevisionNumber_ = numeric_limits<size_t>::max();
+		else
+			lastUnmodifiedRevisionNumber_ = revisionNumber();
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	}
 }
 
@@ -1548,7 +1551,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
 		properties_.insert(make_pair(&key, new String(property)));
 	else
 		i->second->assign(property);
-	stateListeners_.notify<Document&, const DocumentPropertyKey&>(&IDocumentStateListener::documentPropertyChanged, *this, key);
+	stateListeners_.notify<const Document&, const DocumentPropertyKey&>(&IDocumentStateListener::documentPropertyChanged, *this, key);
 }
 
 /**
@@ -1558,7 +1561,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
 void Document::setReadOnly(bool readOnly /* = true */) {
 	if(readOnly != isReadOnly()) {
 		readOnly_ = readOnly;
-		stateListeners_.notify<Document&>(&IDocumentStateListener::documentReadOnlySignChanged, *this);
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentReadOnlySignChanged, *this);
 	}
 }
 
@@ -1602,15 +1605,15 @@ bool Document::undo() {
 		return false;
 
 	beginSequentialEdit();
-	sequentialEditListeners_.notify<Document&>(
+	sequentialEditListeners_.notify<const Document&>(
 		&ISequentialEditListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const pair<bool, size_t> status(undoManager_->undo(resultPosition));
-	sequentialEditListeners_.notify<Document&, const Position&>(
+	sequentialEditListeners_.notify<const Document&, const Position&>(
 		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
 	endSequentialEdit();
 
-	revisionNumber_ -= status.second * 2;
+	revisionNumber_ -= status.second;
 	return status.first;
 }
 
@@ -1634,7 +1637,7 @@ void Document::widen() {
 		delete accessibleArea_->second;
 		delete accessibleArea_;
 		accessibleArea_ = 0;
-		stateListeners_.notify<Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 	}
 }
 
@@ -1797,8 +1800,8 @@ void DocumentCharacterIterator::doPrevious() {
  * @throw std#invalid_argument @a mode is invalid
  */
 DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		NewlineRepresentation nlr /* = NLR_PHYSICAL_DATA */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
-		document_(document), nlr_(nlr), mode_(streamMode), current_(initialPosition) {
+		Newline newline /* = NLF_RAW_VALUE */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
+		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
 		throw invalid_argument("the given mode is invalid.");
 	setp(buffer_, endof(buffer_) - 1);
@@ -1848,6 +1851,24 @@ DocumentBuffer::int_type DocumentBuffer::uflow() {
 /// @see std#basic_streambuf#underflow
 DocumentBuffer::int_type DocumentBuffer::underflow() {
 	return (gptr() != egptr()) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
+}
+
+
+// document stream classes //////////////////////////////////////////////////
+
+/// Constructor.
+DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
+		Newline newline /* = NLF_RAW_VALUE */) : basic_istream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+}
+
+/// Constructor.
+DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
+		Newline newline /* = NLF_RAW_VALUE */) : basic_ostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+}
+
+/// Constructor.
+DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
+		Newline newline /* = NLF_RAW_VALUE */) : basic_iostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 }
 
 
@@ -2142,6 +2163,15 @@ files::FileBinder::~FileBinder() throw() {
 }
 
 /**
+ * Registers the file property listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void files::FileBinder::addListener(IFilePropertyListener& listener) {
+	listeners_.add(listener);
+}
+
+/**
  * Binds the document to the specified file. This method call document's @c Document#setInput.
  * @param fileName the file name. this method doesn't resolves the short cut
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
@@ -2164,7 +2194,7 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 	const bool recorded = document_.isRecordingOperations();
 	document_.recordOperations(false);
 	try {
-		InputStream in(&sb);
+		basic_istream<Char> in(&sb);
 		readDocumentFromStream(in, document_, document_.region().beginning());
 	} catch(...) {
 		document_.recordOperations(recorded);
@@ -2197,6 +2227,8 @@ bool files::FileBinder::bind(const files::String& fileName, const LockMode& lock
 #endif
 	encoding_ = sb.encoding();
 	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line
+	listeners_.notify<const FileBinder&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	listeners_.notify<const FileBinder&>(&IFilePropertyListener::fileNameChanged, *this);
 
 	document_.clearUndoBuffer();
 	document_.setModified(false);
@@ -2251,12 +2283,16 @@ bool files::FileBinder::documentAboutToBeChanged(const Document&, const Document
 	return true;
 }
 
+/// @see IDocumentStateListener#documentAccessibleRegionChanged
+void files::FileBinder::documentAccessibleRegionChanged(const Document&) {
+}
+
 /// @see IDocumentListener#documentChanged
 void files::FileBinder::documentChanged(const Document&, const DocumentChange&) {
 }
 
 /// @see IDocumentStateListener#documentModificationSignChanged
-void files::FileBinder::documentModificationSignChanged(Document&) {
+void files::FileBinder::documentModificationSignChanged(const Document&) {
 	if(lockMode_.onlyAsEditing && isBound()) {
 		if(document_.isModified())
 			lock();
@@ -2265,9 +2301,12 @@ void files::FileBinder::documentModificationSignChanged(Document&) {
 	}
 }
 
-/// @see IDocumentInput#encoding, #setEncoding
-encoding::MIBenum files::FileBinder::encoding() const throw() {
-	return encoding_;
+/// @see IDocumentStateListener#documentPropertyChanged
+void files::FileBinder::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
+}
+
+/// @see IDocumentStateListener#documentAccessibleRegionChanged
+void files::FileBinder::documentReadOnlySignChanged(const Document&) {
 }
 
 /// Returns the file extension name or @c null if the document is not bound to any of the files.
@@ -2275,6 +2314,21 @@ files::String files::FileBinder::extensionName() const throw() {
 	const files::String s(pathName());
 	const files::String::size_type dot = s.rfind('.');
 	return (dot != files::String::npos) ? s.substr(dot + 1) : files::String();
+}
+
+/// @see IDocumentInput#location
+String files::FileBinder::location() const throw() {
+#ifdef ASCENSION_WINDOWS
+	return fileName_;
+#else // ASCENSION_POSIX
+	const codecvt<ascension::Char, Char>& converter = use_facet<codecvt<ascension::Char, Char> >(locale());
+	ascension::Char result[PATH_MAX * 2];
+	mbstate_t dummy;
+	const Char* fromNext;
+	ascension::Char* toNext;
+	return (converter.in(dummy, fileName_.c_str(),
+		fileName_.c_str() + fileName_.length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok ? result : L"");
+#endif
 }
 
 /**
@@ -2314,9 +2368,13 @@ files::String files::FileBinder::name() const throw() {
 	return fileName_.substr(p - fileName_.begin());
 }
 
-/// @see IDocumentInput#newline, #setNewline
-Newline files::FileBinder::newline() const throw() {
-	return newline_;
+/**
+ * Removes the file property listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void files::FileBinder::removeListener(IFilePropertyListener& listener) {
+	listeners_.remove(listener);
 }
 
 /**
@@ -2328,7 +2386,10 @@ Newline files::FileBinder::newline() const throw() {
 void files::FileBinder::setEncoding(encoding::MIBenum mib) {
 	if(!encoding::Encoder::supports(mib))
 		throw invalid_argument("the given encoding is not available.");
-	encoding_ = mib;
+	else if(mib != encoding_) {
+		encoding_ = mib;
+		listeners_.notify<const FileBinder&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	}
 }
 
 /**
@@ -2337,11 +2398,12 @@ void files::FileBinder::setEncoding(encoding::MIBenum mib) {
  * @throw std#invalid_argument @a newline is invalid
  */
 void files::FileBinder::setNewline(Newline newline) {
-	if(newline == NLF_LF || newline == NLF_CR || newline == NLF_CRLF
-			|| newline == NLF_NEL || newline == NLF_LS || newline == NLF_PS)
-		newline_ = newline;
-	else
+	if(!isLiteralNewline(newline))
 		throw invalid_argument("unknown newline specified.");
+	else if(newline != newline_) {
+		newline_ = newline;
+		listeners_.notify<const FileBinder&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	}
 }
 
 /**
@@ -2398,13 +2460,12 @@ bool files::FileBinder::verifyTimeStamp(bool internal, Time& newTimeStamp) throw
 /**
  * Writes the content of the document to the specified file.
  * @param fileName the file name
- * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
- * line breaks
- * @return the result. @c FIR_OK if succeeded
+ * @param params the options
+ * @return true if succeeded
  */
 bool files::FileBinder::write(const files::String& fileName, const files::FileBinder::WriteParameters& params) {
-	// check Unicode newlines
-	if(params.newline == NLF_NEL || params.newline == NLF_LS || params.newline == NLF_PS) {
+	// check Unicode spcific newlines
+	if(params.newline == NLF_NEXT_LINE || params.newline == NLF_LINE_SEPARATOR || params.newline == NLF_PARAGRAPH_SEPARATOR) {
 		if(params.encoding != encoding::fundamental::UTF_8
 				&& params.encoding != encoding::fundamental::UTF_16LE
 				&& params.encoding != encoding::fundamental::UTF_16BE
@@ -2452,8 +2513,7 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
 	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
 		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
 	basic_ostream<ascension::Char> outputStream(&sb);
-	writeDocumentToStream(outputStream, document_, document_.region(),
-		(params.newline != NLF_AUTO) ? getNewlineString(params.newline) : L"");
+	writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
 	sb.close();
 
 	// copy file attributes (file mode) and delete the old file
@@ -2515,7 +2575,7 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
 	}
 */
 
-	if(params.newline != NLF_AUTO) {
+	if(isLiteralNewline(params.newline)) {
 		setNewline(params.newline);	// determine the newlines
 //		for(length_t i = 0; i < lines_.getSize(); ++i) {
 //			Line& line = *lines_[i];
@@ -2546,8 +2606,8 @@ bool files::FileBinder::write(const files::String& fileName, const files::FileBi
  * Writes the specified region to the specified file.
  * @param fileName the file name
  * @param region the region to be written
- * @param params the options. set @a newline member of this object to @c NLF_AUTO not to unify the
- * newlines
+ * @param params the options
+ * the newlines
  * @param append true to append to the file
  * @param callback the callback or @c null
  * @return the result. @c FIR_OK if succeeded

@@ -28,12 +28,12 @@ MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCoun
  * @param fileName the name of the file to add
  * @param mib the MIBenum value of the encoding
  */
-void MRUManager::add(const basic_string<WCHAR>& fileName, MIBenum mib) {
-	const basic_string<WCHAR> realName = ascension::text::canonicalizePathName(fileName.c_str());
+void MRUManager::add(const basic_string<::WCHAR>& fileName, MIBenum mib) {
+	const basic_string<::WCHAR> realName = ascension::kernel::files::canonicalizePathName(fileName.c_str());
 
 	// “¯‚¶‚à‚Ì‚ª‚ ‚é‚©’T‚·
 	for(list<MRU>::iterator i(fileNames_.begin()), e(fileNames_.end()); i != e; ++i) {
-		if(ascension::text::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
+		if(ascension::kernel::files::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
 			MRU item = *i;
 			item.encoding = mib;
 			fileNames_.erase(i);
@@ -52,7 +52,7 @@ void MRUManager::add(const basic_string<WCHAR>& fileName, MIBenum mib) {
 }
 
 /// Returns the item.
-const MRU& MRUManager::getFileInfoAt(size_t index) const {
+const MRU& MRUManager::at(size_t index) const {
 	if(index >= fileNames_.size())
 		throw out_of_range("First argument is out of range!");
 	list<MRU>::const_iterator it = fileNames_.begin();
@@ -63,7 +63,7 @@ const MRU& MRUManager::getFileInfoAt(size_t index) const {
 
 /// Loads the list from INI file.
 void MRUManager::load() {
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	wchar_t keyName[30];
 	fileNames_.clear();
 	for(uint i = 0; i < limitCount_; ++i) {
@@ -92,7 +92,7 @@ void MRUManager::remove(size_t index) {
 
 /// Write the list to INI file.
 void MRUManager::save() {
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	wchar_t keyName[30];
 	list<MRU>::const_iterator it(fileNames_.begin());
 	for(size_t i = 0; it != fileNames_.end(); ++i, ++it) {
@@ -129,7 +129,7 @@ void MRUManager::updateMenu() {
 	while(popupMenu_.getNumberOfItems() > 0)
 		popupMenu_.erase<Menu::BY_POSITION>(0);
 	if(fileNames_.empty()) {	// —š—ğ‚ª‹ó‚Ìê‡
-		const wstring s = Alpha::getInstance().loadMessage(MSG_OTHER__EMPTY_MENU_CAPTION);
+		const wstring s = Alpha::instance().loadMessage(MSG_OTHER__EMPTY_MENU_CAPTION);
 		popupMenu_ << Menu::StringItem(0, s.c_str(), MFS_GRAYED);
 		return;
 	}

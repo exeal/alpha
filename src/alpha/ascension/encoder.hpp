@@ -8,9 +8,9 @@
 #define ASCENSION_ENCODER_HPP
 #include "unicode.hpp"
 #include <cassert>
-#include <map>
 #include <memory>	// std.auto_ptr
 #include <locale>	// std.codecvt
+#include <map>
 
 
 namespace ascension {
@@ -338,8 +338,7 @@ namespace ascension {
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const = 0;
 		private:
-			typedef std::map<MIBenum, ASCENSION_SHARED_POINTER<Encoder> > Encoders;
-			static Encoders& registry() throw();
+			static std::map<MIBenum, Encoder*>& registry();
 			Policy policy_;
 		};
 
@@ -383,9 +382,9 @@ namespace ascension {
 			// factory
 			static EncodingDetector*	forID(MIBenum id) throw();
 			static EncodingDetector*	forName(const std::string& name) throw();
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 			static EncodingDetector*	forWindowsCodePage(::UINT codePage) throw();
-#endif /* _WIN32 */
+#endif /* ASCENSION_WINDOWS */
 			template<typename OutputIterator>
 			static void		availableIDs(OutputIterator out);
 			template<typename OutputIterator>
@@ -404,8 +403,7 @@ namespace ascension {
 			 */
 			virtual MIBenum doDetect(const uchar* first, const uchar* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
 		private:
-			typedef std::map<MIBenum, ASCENSION_SHARED_POINTER<EncodingDetector> > EncodingDetectors;
-			static EncodingDetectors& registry() throw();
+			static std::map<MIBenum, EncodingDetector*>& registry();
 			const MIBenum id_;
 			const std::string name_;
 		};
@@ -492,14 +490,14 @@ namespace ascension {
 		 * @param[out] out the output iterator to receive MIBs
 		 */
 		template<typename OutputIterator> inline void Encoder::availableMIBs(OutputIterator out) {
-			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
+			for(std::map<MIBenum, Encoder*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
 
 		/**
 		 * Returns names for all available encodings.
 		 * @param[out] out the output iterator to receive names
 		 */
 		template<typename OutputIterator> inline void Encoder::availableNames(OutputIterator out) {
-			for(Encoders::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
+			for(std::map<MIBenum, Encoder*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
 
 		/// Returns the conversion policy.
 		inline Encoder::Policy Encoder::policy() const throw() {return policy_;}
@@ -509,14 +507,14 @@ namespace ascension {
 		 * @param[out] out the output iterator to receive identifiers
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::availableIDs(OutputIterator out) {
-			for(EncodingDetectors::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
+			for(std::map<MIBenum, EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->first;}
 
 		/**
 		 * Returns names for all available encoding detectors.
 		 * @param[out] out the output iterator to receive names
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
-			for(EncodingDetectors::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
+			for(std::map<MIBenum, EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
 
 	}
 } // namespace ascension.encoding

@@ -2,19 +2,21 @@
 
 #include "../unicode.hpp"
 #include <boost/test/included/test_exec_monitor.hpp>
+namespace a = ascension;
+namespace t = ascension::text;
 
 namespace {
-	void testEqual(const ascension::String& s1, const ascension::String& s2) {
-		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(s1, s2), 0);
-		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(s2, s1), 0);
-		BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::fold(s1).compare(ascension::unicode::CaseFolder::fold(s2)), 0);
+	void testEqual(const a::String& s1, const a::String& s2) {
+		BOOST_CHECK_EQUAL(t::CaseFolder::compare(s1, s2), 0);
+		BOOST_CHECK_EQUAL(t::CaseFolder::compare(s2, s1), 0);
+		BOOST_CHECK_EQUAL(t::CaseFolder::fold(s1).compare(t::CaseFolder::fold(s2)), 0);
 	}
 } // namespace @0
 
 void testCaseFolder() {
 	testEqual(L"", L"");
 	// Turkish I
-	BOOST_CHECK_EQUAL(ascension::unicode::CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
+	BOOST_CHECK_EQUAL(t::CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
 	// Latin
 	testEqual(L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrstuvwxyz");
 	testEqual(L"\x00B5\x00C6\x00D0\x00DE\x00DF", L"\x03BC\x00E6\x00F0\x00FESS");

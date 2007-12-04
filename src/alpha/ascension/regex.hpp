@@ -442,12 +442,12 @@ namespace ascension {
 
 		/// Replaces every subsequence of the input sequence that matches the pattern with the given
 		/// replacement string. This method first resets the matcher.
-		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); OutputStringStream s;
+		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); std::basic_ostringstream<Char> s;
 			std::ostream_iterator<Char, Char> os(s); while(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
 		/// Replaces the first subsequence of the input sequence that matches the pattern with the
 		/// given replacement string. This method first resets the matcher.
-		template<typename CPI> inline String Matcher<CPI>::replaceFirst(const String& replacement) {reset(); OutputStringStream s;
+		template<typename CPI> inline String Matcher<CPI>::replaceFirst(const String& replacement) {reset(); std::basic_ostringstream<Char> s;
 			std::ostream_iterator<Char, Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
 
 		/// Resets the matcher. Resetting a matcher discards all of its explicit state information

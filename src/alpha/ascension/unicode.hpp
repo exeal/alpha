@@ -1099,7 +1099,7 @@ template<typename CharacterSequence>
 inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI /* = false */) {
 	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 	using namespace std;
-	StringBuffer s(ios_base::out);
+	std::basic_stringbuf<Char> s(ios_base::out);
 	CodePoint c, f;
 	Char buffer[2];
 	for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {

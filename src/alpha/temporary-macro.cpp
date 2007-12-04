@@ -94,7 +94,7 @@ namespace {
 			int line, column;
 			pLocator->getLineNumber(&line);
 			pLocator->getColumnNumber(&column);
-			Alpha::getInstance().messageBox(MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO, MB_ICONEXCLAMATION | MB_OK,
+			Alpha::instance().messageBox(MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO, MB_ICONEXCLAMATION | MB_OK,
 				MARGS % macro_.getFileName() % line % column % reinterpret_cast<wchar_t*>(pwchErrorMessage));
 			return S_OK;
 		}
@@ -107,7 +107,7 @@ namespace {
 		TemporaryMacro& macro_;
 		struct TextInputTag {
 			TextInputCommand* command;
-			ascension::OutputStringStream text;
+			basic_ostringstream<ascension::Char> text;
 		} * textInputTag_;
 	};
 
@@ -201,8 +201,8 @@ namespace {
 
 /// Constructor.
 TemporaryMacro::TemporaryMacro() throw() : state_(NEUTRAL), errorHandlingPolicy_(IGNORE_AND_CONTINUE),
-		definingIcon_(static_cast<HICON>(Alpha::getInstance().loadImage(IDR_ICON_TEMPMACRODEFINING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))),
-		pausingIcon_(static_cast<HICON>(Alpha::getInstance().loadImage(IDR_ICON_TEMPMACROPAUSING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))) {
+		definingIcon_(static_cast<HICON>(Alpha::instance().loadImage(IDR_ICON_TEMPMACRODEFINING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))),
+		pausingIcon_(static_cast<HICON>(Alpha::instance().loadImage(IDR_ICON_TEMPMACROPAUSING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))) {
 }
 
 /**
@@ -228,21 +228,21 @@ void TemporaryMacro::appendDefinition() {
  */
 void TemporaryMacro::changeState(State newState) throw() {
 	state_ = newState;
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 
 	// prohibit mouse
 	if(state_ == NEUTRAL || state_ == DEFINING) {
 		using ascension::presentation::Presentation;
-		BufferList& buffers = app.getBufferList();
-		for(size_t i = 0; i < buffers.getCount(); ++i) {
-			Presentation& p = buffers.getAt(i).getPresentation();
-			for(Presentation::TextViewerIterator it = p.getFirstTextViewer(); it != p.getLastTextViewer(); ++it)
+		BufferList& buffers = app.bufferList();
+		for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
+			Presentation& p = buffers.at(i).presentation();
+			for(Presentation::TextViewerIterator it = p.firstTextViewer(); it != p.lastTextViewer(); ++it)
 				(*it)->enableMouseInput(!isDefining());
 		}
 	}
 
 	// update the status bar
-	StatusBar& statusBar = app.getStatusBar();
+	StatusBar& statusBar = app.statusBar();
 	switch(getState()) {
 	case TemporaryMacro::DEFINING:
 		statusBar.setText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
@@ -293,7 +293,7 @@ void TemporaryMacro::execute(ulong repeatCount /* = 1 */) {
 			if(queryPoint != definition_.queryPoints.end() && *queryPoint == i) {
 				++queryPoint;
 				const int answer =
-					Alpha::getInstance().messageBox(MSG_OTHER__TEMPORARY_MACRO_QUERY, MB_YESNOCANCEL | MB_ICONQUESTION);
+					Alpha::instance().messageBox(MSG_OTHER__TEMPORARY_MACRO_QUERY, MB_YESNOCANCEL | MB_ICONQUESTION);
 				if(answer == IDNO)	// [いいえ] -> 残りをスキップして次のループに
 					break;
 				else if(answer == IDCANCEL) {	// [キャンセル] -> 中止
@@ -406,7 +406,7 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 		return false;
 
 	const wstring xml = output.str();
-	const size_t bufferSize = xml.length() * encoder->getMaximumNativeBytes();
+	const size_t bufferSize = xml.length() * encoder->maximumNativeBytes();
 	HGLOBAL data = ::GlobalAlloc(GHND, bufferSize);
 	uchar* buffer = static_cast<uchar*>(::GlobalLock(data));
 
@@ -426,13 +426,13 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 /// 一時マクロを読み込むためのダイアログを表示する
 void TemporaryMacro::showLoadDialog() {
 	LoadTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow().getHandle()) == IDOK)
+	if(dlg.doModal(Alpha::instance().getMainWindow().getHandle()) == IDOK)
 		load(dlg.getFileName());
 }
 
 /// 一時マクロを保存するためのダイアログを表示する
 void TemporaryMacro::showSaveDialog() {
 	SaveTemporaryMacroDlg dlg;
-	if(dlg.doModal(Alpha::getInstance().getMainWindow().getHandle()) == IDOK)
+	if(dlg.doModal(Alpha::instance().getMainWindow().getHandle()) == IDOK)
 		save(dlg.getFileName());
 }
