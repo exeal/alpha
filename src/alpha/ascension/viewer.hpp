@@ -302,7 +302,7 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-		/// Provides support for detecting hyperlinks in @c{TextViewer}s.
+		/// Provides support for detecting hyperlinks in @c TextViewer.
 		namespace hyperlink {
 			/// Represents a hyperlink.
 			class IHyperlink {
@@ -987,7 +987,7 @@ inline const Caret& TextViewer::caret() const throw() {return *caret_;}
 
 /**
  * Returns the general configuration.
- * @see #getVerticalRulerConfiguration, #setConfiguration
+ * @see #verticalRulerConfiguration, #setConfiguration
  */
 inline const TextViewer::Configuration& TextViewer::configuration() const throw() {return configuration_;}
 
@@ -1017,7 +1017,7 @@ inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) throw(
  *
  * These is no way to disable the scroll bars.
  * @param enable set false to increment the disabled count, true to decrement
- * @see #allowMouseInput
+ * @see #allowsMouseInput
  */
 inline void TextViewer::enableMouseInput(bool enable) {
 	if(mouseInputDisabledCount_ != 0 || !enable) mouseInputDisabledCount_ += !enable ? 1 : -1;}
@@ -1128,7 +1128,7 @@ inline const layout::TextRenderer& TextViewer::textRenderer() const throw() {ret
 
 /**
  * Returns the vertical ruler's configuration.
- * @see #getConfiguration, #setConfiguration
+ * @see #configuration, #setConfiguration
  */
 inline const TextViewer::VerticalRulerConfiguration& TextViewer::verticalRulerConfiguration() const throw() {return verticalRulerDrawer_->configuration();}
 

@@ -795,6 +795,7 @@ namespace ascension {
 		template<typename ForwardIterator>
 		length_t					getNumberOfLines(ForwardIterator first, ForwardIterator last);
 		length_t					getNumberOfLines(const String& text) throw();
+		bool						isLiteralNewline(Newline newline) throw();
 		std::basic_istream<Char>&	readDocumentFromStream(std::basic_istream<Char>& in, Document& document, const Position& at);
 		Position					updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
 		std::basic_ostream<Char>&	writeDocumentToStream(std::basic_ostream<Char>& out,
@@ -807,7 +808,7 @@ namespace ascension {
 		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value);
 
 		/// Provides features about file-bound document.
-		namespace files {
+		namespace fileio {
 			/// Character type for file names. This is equivalent to
 			/// @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
 			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
@@ -854,7 +855,7 @@ namespace ascension {
 				Type type_;
 			};
 
-			class FileBinder;
+			class TextFileDocumentInput;
 
 			/**
 			 * Interface for objects which are interested in getting informed about changes of @c FileBinder.
@@ -863,10 +864,10 @@ namespace ascension {
 			class IFilePropertyListener {
 			private:
 				/// The encoding or newline of the bound file was changed.
-				virtual void fileEncodingChanged(const FileBinder& fileBinder);
+				virtual void fileEncodingChanged(const TextFileDocumentInput& fileBinder);
 				/// The the name of the bound file was changed.
-				virtual void fileNameChanged(const FileBinder& fileBinder);
-				friend class FileBinder;
+				virtual void fileNameChanged(const TextFileDocumentInput& fileBinder);
+				friend class TextFileDocumentInput;
 			};
 
 			/// Interface for objects which should handle the unexpected time stamp of the file.
@@ -887,7 +888,7 @@ namespace ascension {
 				 * @retval false the process will be aborted
 				 */
 				virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) throw() = 0;
-				friend class FileBinder;
+				friend class TextFileDocumentInput;
 			};
 #if 0
 			/// Interface for objects which are interested in getting informed about progression of file IO.
@@ -909,7 +910,10 @@ namespace ascension {
 				friend class Document;
 			};
 #endif
-			/// @c std#basic_streambuf implementation of the text file with encoding conversion.
+			/**
+			 * @c std#basic_streambuf implementation of the text file with encoding conversion.
+			 * @note This class is not intended to be subclassed.
+			 */
 			class TextFileStreamBuffer : public std::basic_streambuf<ascension::Char> {
 				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
@@ -944,10 +948,9 @@ namespace ascension {
 				ascension::Char ucsBuffer_[8192];
 			};
 
-			/// 
-			class FileBinder : virtual public IDocumentInput,
+			class TextFileDocumentInput : virtual public IDocumentInput,
 					virtual public IDocumentListener, virtual public IDocumentStateListener {
-				MANAH_NONCOPYABLE_TAG(FileBinder);
+				MANAH_NONCOPYABLE_TAG(TextFileDocumentInput);
 			public:
 				/// The structure used to represent a file time.
 #ifdef ASCENSION_WINDOWS
@@ -978,8 +981,8 @@ namespace ascension {
 					bool onlyAsEditing;	///< If true, the lock will not be performed unless modification occurs.
 				};
 			public:
-				explicit FileBinder(Document& document);
-				~FileBinder() throw();
+				explicit TextFileDocumentInput(Document& document);
+				~TextFileDocumentInput() throw();
 				bool			checkTimeStamp();
 				const LockMode&	lockMode() const throw();
 				// listener
@@ -987,18 +990,17 @@ namespace ascension {
 				void	removeListener(IFilePropertyListener& listener);
 				// bound file name
 				String	extensionName() const throw();
-				bool	isBound() const throw();
+				bool	isOpen() const throw();
 				String	name() const throw();
 				String	pathName() const throw();
-				void	setPathName(const String& pathName);
 				// encodings
 				void	setEncoding(encoding::MIBenum mib);
 				void	setNewline(Newline newline);
 				// I/O
-				bool	bind(const String& fileName, const LockMode& lockMode,
+				void	close();
+				bool	open(const String& fileName, const LockMode& lockMode,
 							encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy,
 							IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
-				bool	unbind();
 				bool	write(const String& fileName, const WriteParameters& params);
 				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
 				// IDocumentInput
@@ -1038,7 +1040,7 @@ namespace ascension {
 			// free functions related file path name
 			String	canonicalizePathName(const Char* pathName);
 			bool	comparePathNames(const Char* s1, const Char* s2);
-		} // namespace files
+		} // namespace fileio
 
 
 // inline implementation ////////////////////////////////////////////////////
@@ -1159,6 +1161,9 @@ inline length_t getNumberOfLines(ForwardIterator first, ForwardIterator last) {
  * @return the number of lines
  */
 inline length_t getNumberOfLines(const String& text) throw() {return getNumberOfLines(text.begin(), text.end());}
+
+/// Returns true if the given newline value is a literal.
+inline bool isLiteralNewline(Newline newline) throw() {return newline >= NLF_LINE_FEED && newline <= NLF_PARAGRAPH_SEPARATOR;}
 
 /// Conversion operator for convenience.
 inline Point::operator Position() throw() {return position_;}
@@ -1317,8 +1322,8 @@ inline bool Document::isNarrowed() const throw() {return accessibleArea_ != 0;}
 inline bool Document::isReadOnly() const throw() {return readOnly_;}
 
 /**
- * 
- * @see #recordOperations, #undoHistoryLength
+ * Returns true if the document is recording the operations for undo/redo.
+ * @see #recordOperations, #numberOfUndoableEdits, #numberOfRedoableEdits
  */
 inline bool Document::isRecordingOperations() const throw() {return recordingOperations_;}
 
@@ -1506,19 +1511,19 @@ inline DocumentBuffer* DocumentOutputStream::rdbuf() const throw() {return const
 inline DocumentBuffer* DocumentStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
 
 /// @see IDocumentInput#encoding, #setEncoding
-inline encoding::MIBenum files::FileBinder::encoding() const throw() {return encoding_;}
+inline encoding::MIBenum fileio::TextFileDocumentInput::encoding() const throw() {return encoding_;}
 
 /// Returns true if the document is bound to any file.
-inline bool files::FileBinder::isBound() const throw() {return !fileName_.empty();}
+inline bool fileio::TextFileDocumentInput::isOpen() const throw() {return !fileName_.empty();}
 
 /// Returns the file lock mode.
-inline const files::FileBinder::LockMode& files::FileBinder::lockMode() const throw() {return lockMode_;}
+inline const fileio::TextFileDocumentInput::LockMode& fileio::TextFileDocumentInput::lockMode() const throw() {return lockMode_;}
 
 /// @see IDocumentInput#newline, #setNewline
-inline Newline files::FileBinder::newline() const throw() {return newline_;}
+inline Newline fileio::TextFileDocumentInput::newline() const throw() {return newline_;}
 
 /// Returns the file full name or an empty string if the document is not bound to any of the files.
-inline files::String files::FileBinder::pathName() const throw() {return fileName_;}
+inline fileio::String fileio::TextFileDocumentInput::pathName() const throw() {return fileName_;}
 
 }} // namespace ascension.kernel
 

@@ -107,7 +107,7 @@ namespace ascension {
 		 */
 		class IInteractiveReplacementCallback {
 		protected:
-			/// Reactions for @c #queryReplacementAction method.
+			/// Reactions for @c IInteractiveReplacementCallback#queryReplacementAction method.
 			enum Action {
 				REPLACE,			///< Replaces the matched region with the replacement, and continues.
 				SKIP,				///< Skips to the next without replacing.
@@ -147,9 +147,9 @@ namespace ascension {
 		 * @c TextSearcher has the list of patterns used for search. The pattern which is given by
 		 * #setPattern method is pushed into this list, and the client can reuse those patterns
 		 * later. @c IncrementalSearcher uses this list to get the pattern used previously. To get
-		 * this stored patterns, call #getPattern method. To get the length of the list, call
-		 * #getNumberOfStoredPatterns method. The maximum length of the list can be changed by
-		 * calling #setMaximumNumberOfStoredStrings method. Default length is 16 and the minimum
+		 * this stored patterns, call #pattern method. To get the length of the list, call
+		 * @c #numberOfStoredPatterns method. The maximum length of the list can be changed by
+		 * calling @c #setMaximumNumberOfStoredStrings method. Default length is 16 and the minimum
 		 * is 4.
 		 * @see texteditor#Session#getTextSearcher, texteditor#commands#FindAllCommand,
 		 * texteditor#commands#FindNextCommand
