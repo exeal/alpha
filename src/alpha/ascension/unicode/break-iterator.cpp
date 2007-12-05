@@ -8,9 +8,9 @@
 #include "../unicode-property.hpp"
 #include <memory>	// std.auto_ptr
 using namespace ascension;
-using namespace ascension::unicode;
-using namespace ascension::unicode::internal;
-using namespace ascension::unicode::ucd;
+using namespace ascension::text;
+using namespace ascension::text::internal;
+using namespace ascension::text::ucd;
 using namespace std;
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
@@ -24,7 +24,7 @@ using namespace std;
  * Protected constructor.
  * @param lc the locale
  */
-AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const locale& lc) throw() : BreakIterator(lc) {
+AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) throw() : BreakIterator(lc) {
 }
 
 void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
@@ -200,7 +200,7 @@ namespace {
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
@@ -221,18 +221,18 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		return;
 	auto_ptr<CharacterIterator> prevPrev, prev, nextNext;
 	CodePoint nextCP = i.current(), prevCP = INVALID_CODE_POINT;
-	int nextClass = WordBreak::of(nextCP, syntax_, getLocale()),
+	int nextClass = WordBreak::of(nextCP, syntax_, locale()),
 		prevClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
 		// 1 ‚Â‘O (B) ‚ð’²‚×‚é
 		assert(i.hasPrevious());
 		if(prev.get() == 0) {prev.reset(i.clone().release()); previousBase(*prev);}
 		if(prevCP == INVALID_CODE_POINT) prevCP = prev->current();
-		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, getLocale());
+		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, locale());
 		if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 			/* do nothing */;
 		else if(nextClass == WordBreak::A_LETTER && prevClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
-			if(!compareScripts(prevCP, nextCP, getLocale()))
+			if(!compareScripts(prevCP, nextCP, locale()))
 				TRY_RETURN()
 		} else if((nextClass == WordBreak::A_LETTER || nextClass == WordBreak::NUMERIC || nextClass == WordBreak::EXTEND_NUM_LET)
 				&& (prevClass == WordBreak::A_LETTER || prevClass == WordBreak::NUMERIC || prevClass == WordBreak::EXTEND_NUM_LET))	// (WB8, WB9, WB10, WB13a+, WB13b+)
@@ -242,7 +242,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			// 2 ‚ÂŽŸ (D) ‚ð’²‚×‚é
 			nextNext.reset(i.clone().release());
 			nextBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNext->current(), syntax_, getLocale());
+			nextNextClass = WordBreak::of(nextNext->current(), syntax_, locale());
 			if(!nextNext->hasNext())	// (WB14)
 				TRY_RETURN()
 			if(nextNextClass != prevClass	// (WB6, WB12)
@@ -261,7 +261,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 					prevPrev.reset(prev->clone().release());
 					previousBase(*prevPrev);
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
+				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
@@ -292,7 +292,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			nextClass = nextNextClass;
 			nextNextClass = NOT_PROPERTY;
 		} else
-			nextClass = WordBreak::of(nextCP, syntax_, getLocale());
+			nextClass = WordBreak::of(nextCP, syntax_, locale());
 	}
 #undef TRY_RETURN
 }
@@ -315,7 +315,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 		return;
 	auto_ptr<CharacterIterator> next, nextNext, prevPrev;
 	CodePoint prevCP = i.current(), nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
-	int prevClass = WordBreak::of(prevCP, syntax_, getLocale()),
+	int prevClass = WordBreak::of(prevCP, syntax_, locale()),
 		nextClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
 	while(true) {
 		// 1 ‚ÂŽŸ (B) ‚ð’²‚×‚é
@@ -325,11 +325,11 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			previousBase(*next);
 		}
 		if(nextCP == INVALID_CODE_POINT) nextCP = next->current();
-		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, syntax_, getLocale());
+		if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, syntax_, locale());
 		if(prevClass == GraphemeClusterBreak::LF && nextClass == GraphemeClusterBreak::CR)	// (WB3)
 			/* do nothing */;
 		else if(prevClass == WordBreak::A_LETTER && nextClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
-			if(!compareScripts(nextCP, prevCP, getLocale()))
+			if(!compareScripts(nextCP, prevCP, locale()))
 				TRY_RETURN()
 		} else if((prevClass == WordBreak::A_LETTER || prevClass == WordBreak::NUMERIC || prevClass == WordBreak::EXTEND_NUM_LET)
 				&& (nextClass == WordBreak::A_LETTER || nextClass == WordBreak::NUMERIC || nextClass == WordBreak::EXTEND_NUM_LET))	// (WB8, WB9, WB10, WB13a+, WB13b+)
@@ -346,7 +346,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 					TRY_RETURN()
 					break;
 				}
-				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, getLocale());
+				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
 			}
 			if(prevPrevClass != nextClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
@@ -361,7 +361,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			}
 			nextNext.reset(next->clone().release());
 			previousBase(*nextNext);
-			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, getLocale());
+			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, locale());
 			if(nextNextClass != prevClass
 					&& (!toBoolean(component_ & ALPHA_NUMERIC)
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
@@ -399,18 +399,18 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 		return true;
 
 	const CodePoint nextCP = at.current();
-	const int nextClass = WordBreak::of(nextCP, syntax_, getLocale());
+	const int nextClass = WordBreak::of(nextCP, syntax_, locale());
 	if(nextClass == WordBreak::OTHER)	// (WB14)
 		return true;
 	auto_ptr<CharacterIterator> i(at.clone());
 	previousBase(*i);
 	CodePoint prevCP = i->current();
-	int prevClass = WordBreak::of(prevCP, syntax_, getLocale());
+	int prevClass = WordBreak::of(prevCP, syntax_, locale());
 
 	if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 		return false;
 	else if(nextClass == WordBreak::A_LETTER && prevClass == WordBreak::A_LETTER)	// (WB5+, !WB13)
-		return !compareScripts(prevCP, nextCP, getLocale());
+		return !compareScripts(prevCP, nextCP, locale());
 	else if((nextClass == WordBreak::A_LETTER || nextClass == WordBreak::NUMERIC || nextClass == WordBreak::EXTEND_NUM_LET)
 			&& (prevClass == WordBreak::A_LETTER || prevClass == WordBreak::NUMERIC || prevClass == WordBreak::EXTEND_NUM_LET))	// (WB8, WB9, WB10, WB13a+, WB13b+)
 		return false;
@@ -423,7 +423,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 		while(true) {
 			if(!i->hasNext())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), syntax_, locale())))	// (WB4)
 				break;
 			nextBase(*i);
 		}
@@ -437,7 +437,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 			previousBase(*i);
 			if(!i->hasPrevious())	// (WB14)
 				return true;
-			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), syntax_, getLocale())))	// (WB4)
+			else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), syntax_, locale())))	// (WB4)
 				break;
 		}
 		return prevPrevClass != nextClass;	// (WB7, WB11)
@@ -467,7 +467,7 @@ namespace {
 			case SentenceBreak::SEP:
 				break;
 			case SentenceBreak::LOWER:
-				while(i.getOffset() < j->getOffset())
+				while(i.offset() < j->offset())
 					nextBase(i);
 				return false;	// (SB8)
 			default:
@@ -537,11 +537,11 @@ namespace {
 /**
  * Protected constructor.
  * @param component the sentence component to search
- * @param ctypes the character detector
+ * @param syntax the character detector
  * @param lc the locale
  */
 AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
@@ -599,13 +599,13 @@ bool AbstractSentenceBreakIterator::isBoundary(const CharacterIterator& at) cons
 	do {
 		switch(SentenceBreak::of(i->current())) {
 		case SentenceBreak::SEP:
-			return at.getOffset() - i->getOffset() == 1;	// (SB4)
+			return at.offset() - i->offset() == 1;	// (SB4)
 		case SentenceBreak::A_TERM:
 			nextBase(*i);
-			return tryToExtendTerm(*i, true) && i->getOffset() == at.getOffset();
+			return tryToExtendTerm(*i, true) && i->offset() == at.offset();
 		case SentenceBreak::S_TERM:
 			nextBase(*i);
-			return tryToExtendTerm(*i, false) && i->getOffset() == at.getOffset();
+			return tryToExtendTerm(*i, false) && i->offset() == at.offset();
 		default:
 			break;
 		}
@@ -629,7 +629,7 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
  * Protected constructor.
  * @param lc the locale
  */
-AbstractLineBreakIterator::AbstractLineBreakIterator(const locale& lc) throw() : BreakIterator(lc) {
+AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) throw() : BreakIterator(lc) {
 }
 
 /// @see BreakIterator#next

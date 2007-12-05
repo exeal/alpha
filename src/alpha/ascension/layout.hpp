@@ -665,7 +665,7 @@ inline length_t LineLayout::numberOfSublines() const throw() {return numberOfSub
  * @param y the y coordinate of the point
  * @param edge the edge of the column
  * @return the character offset
- * @see #getLocation
+ * @see #location
  */
 inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */) const throw() {
 	length_t trailing;
@@ -678,7 +678,7 @@ inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */) cons
  * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
  * @param edge the edge of the column
  * @return the character offset
- * @see #getLocation
+ * @see #location
  */
 inline length_t LineLayout::offset(const ::POINT& pt, Edge edge /* = LEADING */) const throw() {return offset(pt.x, pt.y, edge);}
 
@@ -687,7 +687,7 @@ inline length_t LineLayout::offset(const ::POINT& pt, Edge edge /* = LEADING */)
  * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
  * @param[out] trailing the trailing buffer
  * @return the character offset
- * @see #getLocation
+ * @see #location
  */
 inline length_t LineLayout::offset(const ::POINT& pt, length_t& trailing) const throw() {return offset(pt.x, pt.y, trailing);}
 
@@ -695,7 +695,7 @@ inline length_t LineLayout::offset(const ::POINT& pt, length_t& trailing) const 
  * Returns the wrapped line containing the specified column.
  * @param column the column
  * @return the wrapped line
- * @throw BadPositionException @a column is greater than the length of the line
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
 inline length_t LineLayout::subline(length_t column) const {
 	if(column > text().length())
@@ -728,7 +728,7 @@ inline length_t LineLayout::sublineOffset(length_t subline) const {
 /**
  * Returns the line offsets.
  * Each value in the array is the offset for the first character in a line.
- * @return the line offsets whose length is #getNumberOfSublines(), or @c null if the line is empty
+ * @return the line offsets whose length is #numberOfSublines(), or @c null if the line is empty
  */
 inline const length_t* LineLayout::sublineOffsets() const throw() {return sublineOffsets_;}
 

@@ -715,7 +715,7 @@ void TextSearcher::setOptions(const SearchOptions& options) throw() {
  * Sets the new pattern.
  * @param pattern the pattern string
  * @param dontRemember set true to not add the pattern into the stored list. in this case, the
- * following #getPattern call will not return the pattern set by this
+ * following #pattern call will not return the pattern set by this
  * @throw std#invalid_argument @a pattern is empty
  */
 void TextSearcher::setPattern(const String& pattern, bool dontRemember /* = false */) {

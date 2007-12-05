@@ -928,7 +928,7 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
  * @param nearestLeading if set false, the result is the position nearest @a pt.
  * otherwise the result is the position has leading nearest @a pt
  * @return returns the document position
- * @see #getClientXYForCharacter, #hitTest, LineLayout#getOffset
+ * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
 Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading) const {
 	assertValidAsWindow();
@@ -963,7 +963,7 @@ Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading
  * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
  * (for upward) or -32768 (for downward)
  * @throw BadPositionException @a position is outside of the document
- * @see #getCharacterForClientXY, #hitTest, layout#LineLayout#getLocation
+ * @see #characterForClientXY, #hitTest, layout#LineLayout#location
  */
 ::POINT TextViewer::clientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
 	assertValidAsWindow();

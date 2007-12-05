@@ -332,7 +332,7 @@ uchar LineLayout::bidiEmbeddingLevel(length_t column) const {
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line.
  * @return the size of the bounds
- * @see #getBounds(length_t, length_t), #getSublineBounds
+ * @see #bounds(length_t, length_t), #sublineBounds
  */
 ::SIZE LineLayout::bounds() const throw() {
 	::SIZE s;
@@ -348,7 +348,7 @@ uchar LineLayout::bidiEmbeddingLevel(length_t column) const {
  * @return the bounds
  * @throw kernel#BadPositionException @a first or @a last is greater than the length of the line
  * @throw std#invalid_argument @a first is greater than @a last
- * @see #getBounds(void), #getSublineBounds
+ * @see #bounds(void), #sublineBounds
  */
 ::RECT LineLayout::bounds(length_t first, length_t last) const {
 	if(first > last)
@@ -1107,7 +1107,7 @@ int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const throw() {
  * @param y the y coordinate of the point. distance from the top edge of the first subline
  * @param[out] trailing the trailing buffer
  * @return the character offset
- * @see #getLocation
+ * @see #location
  */
 length_t LineLayout::offset(int x, int y, length_t& trailing) const throw() {
 	if(text().empty())
@@ -1921,7 +1921,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
  * @param line the logical line
  * @return the first visual line of @a line
  * @throw kernel#BadPositionException @a line is outside of the document
- * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
+ * @see #mapLogicalPositionToVisualPosition
  */
 length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
 	if(line >= lip_->getPresentation().document().numberOfLines())
@@ -1944,7 +1944,7 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
  * @param[out] column the visual column of @a position. can be @c null if not needed
  * @return the visual line of @a position
  * @throw kernel#BadPositionException @a position is outside of the document
- * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
+ * @see #mapLogicalLineToVisualLine
  */
 length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
 	if(!lip_->getLayoutSettings().lineWrap.wraps()) {
@@ -2138,12 +2138,12 @@ namespace {
  * Default implementation of @c ISpecialCharacterRenderer interface. This renders special
  * characters with the glyphs provided by the standard international font "Lucida Sans Unicode".
  * The mapping special characters to characters provide glyphs are as follows:
- * - Horizontal tab (LTR) : U+2192 Rightwards Arrow (&#x2192)
- * - Horizontal tab (RTL) : U+2190 Leftwards Arrow (&#x2190)
- * - Line terminator : U+2193 Downwards Arrow (&#x2193)
- * - Line wrapping mark (LTR) : U+21A9 Leftwards Arrow With Hook (&#x21A9)
- * - Line wrapping mark (RTL) : U+21AA Rightwards Arrow With Hook (&#x21AA)
- * - White space : U+00B7 Middle Dot (&#x00B7)
+ * - Horizontal tab (LTR) : U+2192 Rightwards Arrow (&#x2192;)
+ * - Horizontal tab (RTL) : U+2190 Leftwards Arrow (&#x2190;)
+ * - Line terminator : U+2193 Downwards Arrow (&#x2193;)
+ * - Line wrapping mark (LTR) : U+21A9 Leftwards Arrow With Hook (&#x21A9;)
+ * - Line wrapping mark (RTL) : U+21AA Rightwards Arrow With Hook (&#x21AA;)
+ * - White space : U+00B7 Middle Dot (&#x00B7;)
  *
  * Default foreground colors of glyphs are as follows:
  * - Control characters : RGB(0x80, 0x80, 0x00)
@@ -2364,8 +2364,8 @@ FontSelector::~FontSelector() throw() {
 }
 
 /**
- * Enables or disables the font linking feature for CJK. When this method is called, #fontChanged
- * method of the derived class will be called.
+ * Enables or disables the font linking feature for CJK. When this method is called,
+ * @c #fontChanged method of the derived class will be called.
  * @param enable set true to enable
  */
 void FontSelector::enableFontLinking(bool enable /* = true */) throw() {
@@ -2477,7 +2477,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @param italic true to get the italic variant
  * @return the primary font if @a script is @c Script#COMMON. otherwise, a fallbacked font or @c null
  * @throw std#invalid_argument @a script is invalid
- * @see #getLinkedFont, #setFont
+ * @see #linkedFont, #setFont
  */
 ::HFONT FontSelector::font(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
 	if(script <= Script::FIRST_VALUE || script == Script::INHERITED
@@ -2537,7 +2537,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @param italic true to get the italic variant
  * @return the font
  * @throw IndexOutOfBoundsException @a index is invalid
- * @see #getFont, #getNumberOfLinkedFonts
+ * @see #font, #numberOfLinkedFonts
  */
 ::HFONT FontSelector::linkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
 	if(linkedFonts_ == 0)
