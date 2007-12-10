@@ -772,7 +772,8 @@ void LexicalPartitioner::documentAboutToBeChanged() throw() {
 
 /// @see kernel#DocumentPartitioner#documentChanged
 void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
-	assert(!change.region().isEmpty());
+	if(change.region().isEmpty())
+		return;
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& doc = *document();
 	const Position eof(doc.region().second);
@@ -922,7 +923,7 @@ inline size_t LexicalPartitioner::findClosestPartition(const Position& at) const
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return 0;
 	}
-	if(partitions_[result]->tokenStart == at && result > 0 && at.column == document()->lineLength(at.line))
+	if(at.line < document()->numberOfLines() && partitions_[result]->tokenStart == at && result > 0 && at.column == document()->lineLength(at.line))
 		--result;
 	if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
 		--result;

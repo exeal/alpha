@@ -370,14 +370,14 @@ namespace ascension {
 			/**
 			 * The document is about to be changed.
 			 * @param document the document
-			 * @param change the modification content
+			 * @param change the modification content. @c change.region() may return an empty
 			 * @return false to interrupt and cancel the modification
 			 */
 			virtual bool documentAboutToBeChanged(const Document& document, const DocumentChange& change) = 0;
 			/**
 			 * The text was deleted or inserted.
 			 * @param document the document
-			 * @param change the modification content
+			 * @param change the modification content. @c change.region() may return an empty
 			 */
 			virtual void documentChanged(const Document& document, const DocumentChange& change) = 0;
 			friend class Document;
@@ -826,8 +826,12 @@ namespace ascension {
 					INVALID_ENCODING,
 					/// The specified newline is based on Unicode but the encoding is not Unicode.
 					INVALID_NEWLINE,
-					/// The encoding failed (unmappable character or malformed input).
-					ENCODING_FAILURE,
+					/// The encoding failed for unmappable character.
+					/// @see encoding#Encoder#UNMAPPABLE_CHARACTER
+					UNMAPPABLE_CHARACTER,
+					/// The encoding failed for malformed input.
+					/// @see encoding#Encoder#MALFORMED_INPUT
+					MALFORMED_INPUT,
 					/// Failed for out of memory.
 					OUT_OF_MEMORY,
 					/// The file to be opend is too huge.
@@ -864,9 +868,9 @@ namespace ascension {
 			class IFilePropertyListener {
 			private:
 				/// The encoding or newline of the bound file was changed.
-				virtual void fileEncodingChanged(const TextFileDocumentInput& fileBinder);
+				virtual void fileEncodingChanged(const TextFileDocumentInput& textFile) = 0;
 				/// The the name of the bound file was changed.
-				virtual void fileNameChanged(const TextFileDocumentInput& fileBinder);
+				virtual void fileNameChanged(const TextFileDocumentInput& textFile) = 0;
 				friend class TextFileDocumentInput;
 			};
 
@@ -984,6 +988,7 @@ namespace ascension {
 				explicit TextFileDocumentInput(Document& document);
 				~TextFileDocumentInput() throw();
 				bool			checkTimeStamp();
+				const Document&	document() const throw();
 				const LockMode&	lockMode() const throw();
 				// listener
 				void	addListener(IFilePropertyListener& listener);
@@ -1509,6 +1514,9 @@ inline DocumentBuffer* DocumentOutputStream::rdbuf() const throw() {return const
 
 /// Returns the stored stream buffer.
 inline DocumentBuffer* DocumentStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+
+/// Returns the document.
+inline const Document& fileio::TextFileDocumentInput::document() const throw() {return document_;}
 
 /// @see IDocumentInput#encoding, #setEncoding
 inline encoding::MIBenum fileio::TextFileDocumentInput::encoding() const throw() {return encoding_;}

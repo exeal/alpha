@@ -82,7 +82,7 @@ basic_istream<Char>& kernel::readDocumentFromStream(basic_istream<Char>& in, Doc
 	do {
 		in.read(buffer, countof(buffer));
 		p = document.insert(p, buffer, buffer + in.gcount());
-	} while(static_cast<size_t>(in.gcount()) < countof(buffer));
+	} while(static_cast<size_t>(in.gcount()) > 0);
 	return in;
 }
 
@@ -1141,7 +1141,7 @@ void Document::resetContent() {
 			lines_.insert(lines_.begin(), new Line);
 			length_ = 0;
 			++revisionNumber_;
-		} else if(lines_.empty())
+		}
 		fireDocumentChanged(ca, false);
 	}
 

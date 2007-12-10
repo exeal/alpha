@@ -64,7 +64,7 @@ void BookmarkDialog::onBtnDelete() {
 
 /// ブックマークリストの更新
 void BookmarkDialog::updateList() {
-	const BufferList& buffers = Alpha::getInstance().getBufferList();
+	const BufferList& buffers = Alpha::instance().bufferList();
 	list<length_t> lines;
 	Char location[300];
 	int item = 0;
@@ -73,22 +73,22 @@ void BookmarkDialog::updateList() {
 	bookmarksList_.deleteAllItems();
 
 	if(isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) {	// 全てのドキュメントを扱う場合
-		for(size_t i = 0; i < buffers.getCount(); ++i) {
-			const Buffer& buffer = buffers.getAt(i);
-			const length_t lineOffset = buffers.getActiveView().verticalRulerConfiguration().lineNumbers.startValue;
+		for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
+			const Buffer& buffer = buffers.at(i);
+			const length_t lineOffset = buffers.activeView().verticalRulerConfiguration().lineNumbers.startValue;
 			const length_t topLine = buffer.accessibleRegion().first.line;
 			const length_t bottomLine = buffer.accessibleRegion().second.line;
 			length_t line = 0;
 
 			while((line = buffer.bookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
 				if(line >= topLine && line <= bottomLine) {
-					String s = buffer.getLine(line).substr(0, 100);
+					String s(buffer.line(line).substr(0, 100));
 					++item;
 					replace_if(s.begin(), s.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 					item = bookmarksList_.insertItem(item, s.c_str());
-					swprintf(location, L"%s(%lu)", buffer.getFileName(), line + lineOffset);
+					swprintf(location, L"%s(%lu)", buffer.name(), line + lineOffset);
 					bookmarksList_.setItemText(item, 1, location);
-					bookmarksList_.setItemData(item, static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(&buffer)));
+					bookmarksList_.setItemData(item, static_cast<::DWORD>(reinterpret_cast<::DWORD_PTR>(&buffer)));
 					bufferIndices_[const_cast<Buffer*>(&buffer)] = i;
 				}
 				if(++line > bottomLine)
@@ -97,26 +97,26 @@ void BookmarkDialog::updateList() {
 		}
 	} else {
 		// アクティブなドキュメントだけを対象にする場合
-		const Buffer& activeBuffer = buffers.getActive();
-		const length_t lineOffset = buffers.getActiveView().getVerticalRulerConfiguration().lineNumbers.startValue;
+		const Buffer& activeBuffer = buffers.active();
+		const length_t lineOffset = buffers.activeView().verticalRulerConfiguration().lineNumbers.startValue;
 		const length_t topLine = activeBuffer.accessibleRegion().first.line;
 		const length_t bottomLine = activeBuffer.accessibleRegion().second.line;
 		length_t line = 0;
 
-		while((line = activeBuffer.getBookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
+		while((line = activeBuffer.bookmarker().getNext(line, FORWARD)) != INVALID_INDEX) {
 			if(line >= topLine && line <= bottomLine) {
-				String s = activeBuffer.getLine(line).substr(0, 100);
+				String s = activeBuffer.line(line).substr(0, 100);
 				++item;
 				replace_if(s.begin(), s.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 				item = bookmarksList_.insertItem(item, s.c_str());
-				swprintf(location, L"%s(%lu)", activeBuffer.getFileName(), line + lineOffset);
+				swprintf(location, L"%s(%lu)", activeBuffer.name(), line + lineOffset);
 				bookmarksList_.setItemText(item, 1, location);
-				bookmarksList_.setItemData(item, static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(&activeBuffer)));
+				bookmarksList_.setItemData(item, static_cast<::DWORD>(reinterpret_cast<::DWORD_PTR>(&activeBuffer)));
 			}
 			if(++line > bottomLine)
 				break;
 		}
-		bufferIndices_[const_cast<Buffer*>(&activeBuffer)] = buffers.getActiveIndex();
+		bufferIndices_[const_cast<Buffer*>(&activeBuffer)] = buffers.activeIndex();
 	}
 
 	if(bookmarksList_.getItemCount() != 0) {
@@ -131,7 +131,7 @@ void BookmarkDialog::updateList() {
 
 /// @see Dialog#onClose
 void BookmarkDialog::onClose(bool&) {
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	app.writeIntegerProfile(L"Search", L"BookmarkDialog.autoClose", (isButtonChecked(IDC_CHK_AUTOCLOSE) == BST_CHECKED) ? 1 : 0);
 	app.writeIntegerProfile(L"Search", L"BookmarkDialog.allBuffers", (isButtonChecked(IDC_CHK_SHOWALLFILES) == BST_CHECKED) ? 1 : 0);
 }
@@ -140,8 +140,8 @@ void BookmarkDialog::onClose(bool&) {
 bool BookmarkDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	switch(id) {
 	case IDC_BTN_ADD: {	// [追加]
-		const BufferList& buffers = Alpha::getInstance().getBufferList();
-		buffers.getActive().getBookmarker().mark(buffers.getActiveView().getCaret().getLineNumber(), true);
+		const BufferList& buffers = Alpha::instance().bufferList();
+		buffers.active().bookmarker().mark(buffers.activeView().caret().lineNumber(), true);
 		updateList();
 		break;
 	}
@@ -161,7 +161,7 @@ void BookmarkDialog::onInitDialog(HWND focusWindow, bool&) {
 	modifyStyleEx(0, WS_EX_LAYERED);
 	setLayeredAttributes(0, 220, LWA_ALPHA);
 
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	bookmarksList_.modifyStyleEx(WS_EX_NOPARENTNOTIFY, 0);
 	bookmarksList_.setExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP);
 	bookmarksList_.insertColumn(0, app.loadMessage(MSG_DIALOG__BOOKMARKED_LINE).c_str(), LVCFMT_LEFT, 279, -1);
@@ -186,8 +186,8 @@ bool BookmarkDialog::onNotify(int id, ::NMHDR& nmhdr) {
 /// @see Dialog#OnOK
 void BookmarkDialog::onOK(bool& continueDialog) {
 	// 一時マクロ定義中は実行できない
-	Alpha& app = Alpha::getInstance();
-	if(app.getCommandManager().getTemporaryMacro().getState() == command::TemporaryMacro::DEFINING) {
+	Alpha& app = Alpha::instance();
+	if(app.commandManager().temporaryMacro().state() == command::TemporaryMacro::DEFINING) {
 		app.messageBox(MSG_ERROR__PROHIBITED_FOR_MACRO_DEFINING, MB_ICONEXCLAMATION);
 		continueDialog = true;
 		return;
@@ -205,8 +205,8 @@ void BookmarkDialog::onOK(bool& continueDialog) {
 		return;
 	}
 
-	app.getBufferList().getActiveView().getCaret().moveTo(text::Position(line, 0));
-	app.getBufferList().setActive(bufferIndices_[buffer]);
+	app.bufferList().activeView().caret().moveTo(kernel::Position(line, 0));
+	app.bufferList().setActive(bufferIndices_[buffer]);
 	getParent().setActive();
 
 	if(isButtonChecked(IDC_CHK_AUTOCLOSE) != BST_CHECKED)	// [自動的に閉じる]

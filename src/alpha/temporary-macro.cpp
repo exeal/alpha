@@ -95,7 +95,7 @@ namespace {
 			pLocator->getLineNumber(&line);
 			pLocator->getColumnNumber(&column);
 			Alpha::instance().messageBox(MSG_ERROR__FAILED_TO_LOAD_TEMP_MACRO, MB_ICONEXCLAMATION | MB_OK,
-				MARGS % macro_.getFileName() % line % column % reinterpret_cast<wchar_t*>(pwchErrorMessage));
+				MARGS % macro_.fileName() % line % column % reinterpret_cast<wchar_t*>(pwchErrorMessage));
 			return S_OK;
 		}
 		STDMETHODIMP fatalError(MSXML2::ISAXLocator* pLocator, unsigned short* pwchErrorMessage, HRESULT hrErrorCode) {
@@ -243,7 +243,7 @@ void TemporaryMacro::changeState(State newState) throw() {
 
 	// update the status bar
 	StatusBar& statusBar = app.statusBar();
-	switch(getState()) {
+	switch(state()) {
 	case TemporaryMacro::DEFINING:
 		statusBar.setText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());
 		statusBar.setTipText(2, app.loadMessage(MSG_STATUS__TEMP_MACRO_DEFINING).c_str());

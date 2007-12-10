@@ -29,11 +29,11 @@ MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCoun
  * @param mib the MIBenum value of the encoding
  */
 void MRUManager::add(const basic_string<::WCHAR>& fileName, MIBenum mib) {
-	const basic_string<::WCHAR> realName = ascension::kernel::files::canonicalizePathName(fileName.c_str());
+	const basic_string<::WCHAR> realName = ascension::kernel::fileio::canonicalizePathName(fileName.c_str());
 
 	// “¯‚¶‚à‚Ì‚ª‚ ‚é‚©’T‚·
 	for(list<MRU>::iterator i(fileNames_.begin()), e(fileNames_.end()); i != e; ++i) {
-		if(ascension::kernel::files::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
+		if(ascension::kernel::fileio::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// Œ©‚Â‚©‚Á‚½ -> æ“ª‚Éo‚·
 			MRU item = *i;
 			item.encoding = mib;
 			fileNames_.erase(i);

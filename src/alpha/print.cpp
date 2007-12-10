@@ -204,15 +204,15 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 
 	// start printing
 	dc.setAbortProc(abortProcedure);
+	const basic_string<::WCHAR> bufferName(buffer.textFile().isOpen() ? buffer.textFile().location() : buffer.name());
 	::DOCINFOW di;
 	memset(&di, 0, sizeof(::DOCINFOW));
-	di.lpszDocName = buffer.fileName().c_str();
+	di.lpszDocName = bufferName.c_str();
 	if(dc.startDoc(di) == SP_ERROR) {
 		printing_ = false;
 		return false;
 	}
-	const basic_string<::WCHAR> bufferName(buffer.isBound() ?
-		buffer.fileName() : Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
+
 	PrintingPrompt prompt(bufferName);
 	Alpha::instance().getMainWindow().enable(false);
 	prompt.doModeless(Alpha::instance().getMainWindow());

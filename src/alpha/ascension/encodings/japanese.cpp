@@ -71,7 +71,7 @@
 #include <algorithm>	// std.binary_search
 using namespace ascension;
 using namespace ascension::encoding;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
 
 // registry
@@ -1092,9 +1092,9 @@ Encoder::Result ShiftJISEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 				if(const uchar kana = ucsToJISX0201Kana(*from)) {	// try JIS X 0201 kana
 					*to = kana;
 					continue;
-				} else if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				} else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 					*to = NATIVE_REPLACEMENT_CHARACTER;
-				else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else {
 					toNext = to;
@@ -1115,7 +1115,7 @@ Encoder::Result ShiftJISEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& 
 /// @see Encoder#doToUnicode
 Encoder::Result ShiftJISEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
-	for(to < toEnd && from < fromEnd; ++to; ++from) {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)	// ascii
 			*to = *from;
 		else if(*from >= 0xA1 && *from <= 0xDF)	// 1-byte kana
@@ -1125,14 +1125,15 @@ Encoder::Result ShiftJISEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNex
 				if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xFC && from[1] != 0x7F) {
 					*to = jisX0208ToUCS(convertShiftJISDBCSToX0208(from));
 					if(*to == REPLACEMENT_CHARACTER) {
-						if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+						if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 							--to;
-						else if(getPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+						else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
 							toNext = to;
 							fromNext = from;
 							return UNMAPPABLE_CHARACTER;
 						}
 					}
+					++from;
 				} else {
 					toNext = to;
 					fromNext = from;
@@ -1174,9 +1175,9 @@ Encoder::Result EUCJPEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toN
 				*to = SS2;
 				*++to = kana;
 				continue;
-			} else if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			} else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
 				toNext = to;
@@ -1231,9 +1232,9 @@ Encoder::Result EUCJPEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			}
 
 			if(*to == REPLACEMENT_CHARACTER) {	// unmappable
-				if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(getPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;
@@ -1254,13 +1255,13 @@ Encoder::Result EUCJPEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 Encoder::Result ISO2022JPEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
 	// TODO: to~toEnd が足りないとエスケープシーケンスが正しく書き込まれない可能性がある
-	return convertUTF16ToISO2022JPX(standard::ISO_2022_JP, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(standard::ISO_2022_JP, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JPEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(standard::ISO_2022_JP, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(standard::ISO_2022_JP, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1269,13 +1270,13 @@ Encoder::Result ISO2022JPEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNe
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP2Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(standard::ISO_2022_JP_2, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(standard::ISO_2022_JP_2, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP2Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(standard::ISO_2022_JP_2, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(standard::ISO_2022_JP_2, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
@@ -1285,13 +1286,13 @@ Encoder::Result ISO2022JP2Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toN
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP1Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_1, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_1, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP1Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_1, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_1, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1300,13 +1301,13 @@ Encoder::Result ISO2022JP1Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toN
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP2004Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1315,13 +1316,13 @@ Encoder::Result ISO2022JP2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& 
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP2004StrictEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP2004StrictEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1330,13 +1331,13 @@ Encoder::Result ISO2022JP2004StrictEncoder::doToUnicode(Char* to, Char* toEnd, C
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP2004CompatibleEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_2004_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP2004CompatibleEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_2004_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1345,13 +1346,13 @@ Encoder::Result ISO2022JP2004CompatibleEncoder::doToUnicode(Char* to, Char* toEn
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP3Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP3Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1360,13 +1361,13 @@ Encoder::Result ISO2022JP3Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toN
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP3StrictEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP3StrictEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3_STRICT, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 
@@ -1375,13 +1376,13 @@ Encoder::Result ISO2022JP3StrictEncoder::doToUnicode(Char* to, Char* toEnd, Char
 /// @see Encoder#doFromUnicode
 Encoder::Result ISO2022JP3CompatibleEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const {
-	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertUTF16ToISO2022JPX(extended::ISO_2022_JP_3_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 
 /// @see Encoder#doToUnicode
 Encoder::Result ISO2022JP3CompatibleEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const {
-	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, getPolicy());
+	return convertISO2022JPXToUTF16(extended::ISO_2022_JP_3_COMPATIBLE, to, toEnd, toNext, from, fromEnd, fromNext, state, policy());
 }
 // Shift_JIS-2004 ///////////////////////////////////////////////////////////
 
@@ -1393,9 +1394,9 @@ Encoder::Result ShiftJIS2004Encoder::doFromUnicode(uchar* to, uchar* toEnd, ucha
 		utf16Length = (*from > 0x007F) ? (fromEnd - from) : 1;
 		ushort jis = (*from > 0x007F) ? ucsToJISX0213(from, utf16Length, plane2) : *from;
 		if(jis == UNMAPPABLE_NATIVE_CHARACTER && (jis = ucsToJISX0201Kana(*from)) == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
 				toNext = to;
@@ -1435,9 +1436,9 @@ Encoder::Result ShiftJIS2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& t
 		else if(*from >= 0xA1 && *from <= 0xDF)	// kana
 			*to = jisX0201KanaToUCS(*from);
 		else if(*from == 0xA0) {	// illegal byte
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
 				toNext = to;
@@ -1451,9 +1452,9 @@ Encoder::Result ShiftJIS2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& t
 				const CodePoint ucs = !plane2 ? jisX0213P1ToUCS(jis) : jisX0213P2ToUCS(jis);
 
 				if(ucs == REPLACEMENT_CHARACTER) {	// unmappable
-					if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+					if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 						--to;
-					else if(getPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+					else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
 						toNext = to;
 						fromNext = from;
 						return UNMAPPABLE_CHARACTER;
@@ -1508,9 +1509,9 @@ Encoder::Result EUCJIS2004Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*
 				}
 				*(to++) = SS2;
 			} else {	// unmappable
-				if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 					*to = NATIVE_REPLACEMENT_CHARACTER;
-				else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else {
 					toNext = to;
@@ -1596,9 +1597,9 @@ Encoder::Result EUCJIS2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toN
 				}
 			}
 			if(*to == REPLACEMENT_CHARACTER) {	// unmappable
-				if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(getPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;
