@@ -30,21 +30,21 @@ namespace alpha {
 			// constructor
 			CommandManager() throw();
 			// display names
-			std::wstring	getCaption(CommandID id) const;
-			std::wstring	getDescription(CommandID id) const;
-			std::wstring	getMenuName(command::CommandID id) const;
-			std::wstring	getName(CommandID id) const;
+			std::wstring	caption(CommandID id) const;
+			std::wstring	description(CommandID id) const;
+			std::wstring	menuName(command::CommandID id) const;
+			std::wstring	name(CommandID id) const;
 			// icons
 			bool								createImageList(const std::wstring& directory);
-			std::size_t							getIconIndex(CommandID id) const throw();
-			const manah::win32::ui::ImageList&	getImageList(IconState state) const throw();
+			std::size_t							iconIndex(CommandID id) const throw();
+			const manah::win32::ui::ImageList&	imageList(IconState state) const throw();
 			// states
 			bool		isChecked(CommandID id) const;
 			bool		isEnabled(CommandID id, bool userContext) const;
 			bool		isRecordable(CommandID id) const;
-			CommandID	getLastCommand() const throw();
+			CommandID	lastCommand() const throw();
 			// attribute
-			const TemporaryMacro&	getTemporaryMacro() const throw();
+			const TemporaryMacro&	temporaryMacro() const throw();
 			// operation
 			bool	executeCommand(CommandID id, bool userContext);
 
@@ -195,7 +195,7 @@ namespace alpha {
 		 * @param id the identifier of the command
 		 * @return the index or -1 if not found
 		 */
-		inline std::size_t CommandManager::getIconIndex(CommandID id) const throw() {
+		inline std::size_t CommandManager::iconIndex(CommandID id) const throw() {
 			std::map<CommandID, std::size_t>::const_iterator it;
 			return (iconIndices_.end() == (it = iconIndices_.find(id))) ? -1 : it->second;
 		}
@@ -205,13 +205,13 @@ namespace alpha {
 		 * @param state the state of the icons to retrieve
 		 * @return the image list contains icons
 		 */
-		inline const manah::win32::ui::ImageList& CommandManager::getImageList(CommandManager::IconState state) const throw() {return icons_[state];}
-
-		/// Returns the temporary macro manager.
-		inline const TemporaryMacro& CommandManager::getTemporaryMacro() const throw() {return temporaryMacro_;}
+		inline const manah::win32::ui::ImageList& CommandManager::imageList(CommandManager::IconState state) const throw() {return icons_[state];}
 
 		/// Returns the identifier of the command most recently used.
-		inline CommandID CommandManager::getLastCommand() const throw() {return lastCommandID_;}
+		inline CommandID CommandManager::lastCommand() const throw() {return lastCommandID_;}
+
+		/// Returns the temporary macro manager.
+		inline const TemporaryMacro& CommandManager::temporaryMacro() const throw() {return temporaryMacro_;}
 
 	} // namespace command
 } // namespace alpha

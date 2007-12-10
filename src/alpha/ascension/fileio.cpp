@@ -256,7 +256,7 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 	::HANDLE f1 = ::CreateFileW(s1, 0,
 		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	if(f1 != INVALID_HANDLE_VALUE) {
-		::HANDLE f2 = ::CreateFileW(s1, 0,
+		::HANDLE f2 = ::CreateFileW(s2, 0,
 			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 		if(f2 != INVALID_HANDLE_VALUE) {
 			::BY_HANDLE_FILE_INFORMATION fi1;
@@ -503,8 +503,8 @@ int TextFileStreamBuffer::sync() {
 
 /// @see std#basic_streambuf#underflow
 TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
-	if(inputMapping_.first == 0)
-		return traits_type::eof();	// not input mode
+	if(inputMapping_.first == 0 || inputMapping_.current >= inputMapping_.last)
+		return traits_type::eof();	// not input mode or reached EOF
 	ascension::Char* toNext;
 	const uchar* fromNext;
 	if((encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext,
@@ -617,6 +617,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
 
 /**
  * Closes the file and unbind from the document.
+ * @note This method does NOT reset the content of the document.
  * @throw IOException any I/O error occured
  */
 void TextFileDocumentInput::close() {
@@ -626,6 +627,8 @@ void TextFileDocumentInput::close() {
 		if(document_.input() == this)
 			document_.setInput(0, false);	// unbind
 		fileName_.erase();
+		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+		setEncoding(encoding::Encoder::getDefault());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
@@ -680,7 +683,7 @@ String TextFileDocumentInput::extensionName() const throw() {
 }
 
 /// @see IDocumentInput#location
-String TextFileDocumentInput::location() const throw() {
+a::String TextFileDocumentInput::location() const throw() {
 #ifdef ASCENSION_WINDOWS
 	return fileName_;
 #else // ASCENSION_POSIX
@@ -756,7 +759,14 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	try {
 		basic_istream<Char> in(&sb);
 		readDocumentFromStream(in, document_, document_.region().beginning());
+		switch(sb.lastEncodingError()) {
+		case a::encoding::Encoder::UNMAPPABLE_CHARACTER:
+			throw IOException(IOException::UNMAPPABLE_CHARACTER);
+		case a::encoding::Encoder::MALFORMED_INPUT:
+			throw IOException(IOException::MALFORMED_INPUT);
+		}
 	} catch(...) {
+		document_.resetContent();
 		document_.recordOperations(recorded);
 		throw;
 	}

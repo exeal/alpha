@@ -514,6 +514,25 @@ TextViewer::~TextViewer() {
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 }
 
+#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+/// Returns the accessible proxy of the viewer.
+::HRESULT TextViewer::accessibleObject(IAccessible*& acc) const throw() {
+	TextViewer& self = *const_cast<TextViewer*>(this);
+	acc = 0;
+	if(accessibleProxy_ == 0 && isWindow() && accLib.isAvailable()) {
+		if(self.accessibleProxy_ = new TextViewerAccessibleProxy(self)) {
+			self.accessibleProxy_->AddRef();
+//			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
+		} else
+			return E_OUTOFMEMORY;
+	}
+	if(accessibleProxy_ == 0)
+		return E_FAIL;
+	(acc = self.accessibleProxy_)->AddRef();
+	return S_OK;
+}
+#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+
 /// Starts the auto scroll.
 void TextViewer::beginAutoScroll() {
 	assertValidAsWindow();
@@ -586,6 +605,62 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 
 	if(changed && !isFrozen())
 		update();
+}
+
+/**
+ * Returns the document position nearest from the specified point.
+ * @param pt the coordinates of the point. can be outside of the window
+ * @param nearestLeading if set false, the result is the position nearest @a pt.
+ * otherwise the result is the position has leading nearest @a pt
+ * @return returns the document position
+ * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
+ */
+Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading) const {
+	assertValidAsWindow();
+
+	// determine the logical line
+	length_t line, subline;
+	mapClientYToLine(pt.y, &line, &subline);
+	const LineLayout& layout = renderer_->lineLayout(line);
+	// determine the column
+	const long x = pt.x - getDisplayXOffset(line);
+	length_t column;
+	if(!nearestLeading)
+		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline));
+	else {
+		length_t trailing;
+		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing);
+//		if(ascension::internal::advance(x, layout.location(column).x)
+//				> ascension::internal::advance(x, layout.location(column + trailing).x))
+			column += trailing;
+	}
+	return Position(line, column);
+}
+
+/**
+ * Returns the point nearest from the specified document position.
+ * @param position the document position. can be outside of the window
+ * @param fullSearchY if this is false, this method stops at top or bottom of the client area.
+ * otherwise, the calculation of y-coordinate is performed completely. but in this case, may be
+ * very slow. see the description of return value
+ * @param edge the edge of the character
+ * @return the client coordinates of the point. about the y-coordinate of the point, if
+ * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
+ * (for upward) or -32768 (for downward)
+ * @throw BadPositionException @a position is outside of the document
+ * @see #characterForClientXY, #hitTest, layout#LineLayout#location
+ */
+::POINT TextViewer::clientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
+	assertValidAsWindow();
+	const LineLayout& layout = renderer_->lineLayout(position.line);
+	::POINT pt = layout.location(position.column, edge);
+	pt.x += getDisplayXOffset(position.line);
+	const int y = mapLineToClientY(position.line, fullSearchY);
+	if(y == 32767 || y == -32768)
+		pt.y = y;
+	else
+		pt.y += y;
+	return pt;
 }
 
 /**
@@ -826,18 +901,27 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 
 /// @see kernel#IDocumentStateListener#documentModificationSignChanged
 void TextViewer::documentModificationSignChanged(const Document&) {
+	// do nothing
+}
+
+/// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
+void TextViewer::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
+	// do nothing
 }
 
 /// @see kernel#IDocumentStateListener#documentReadOnlySignChanged
 void TextViewer::documentReadOnlySignChanged(const Document&) {
+	// do nothing
 }
 
 /// @see kernel#ISequentialEditListener#documentSequentialEditStarted
 void TextViewer::documentSequentialEditStarted(const Document&) {
+	// do nothing
 }
 
 /// @see kernel#ISequentialEditListener#documentSequentialEditStopped
 void TextViewer::documentSequentialEditStopped(const Document&) {
+	// do nothing
 }
 
 /// @see kernel#ISequentialEditListener#documentUndoSequenceStarted
@@ -901,81 +985,6 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 		for(Presentation::TextViewerIterator i(presentation_.firstTextViewer()), e(presentation_.lastTextViewer()); i != e; ++i)
 			++(*i)->freezeInfo_.count;
 	}
-}
-
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-/// Returns the accessible proxy of the viewer.
-::HRESULT TextViewer::accessibleObject(IAccessible*& acc) const throw() {
-	TextViewer& self = *const_cast<TextViewer*>(this);
-	acc = 0;
-	if(accessibleProxy_ == 0 && isWindow() && accLib.isAvailable()) {
-		if(self.accessibleProxy_ = new TextViewerAccessibleProxy(self)) {
-			self.accessibleProxy_->AddRef();
-//			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
-		} else
-			return E_OUTOFMEMORY;
-	}
-	if(accessibleProxy_ == 0)
-		return E_FAIL;
-	(acc = self.accessibleProxy_)->AddRef();
-	return S_OK;
-}
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
-
-/**
- * Returns the document position nearest from the specified point.
- * @param pt the coordinates of the point. can be outside of the window
- * @param nearestLeading if set false, the result is the position nearest @a pt.
- * otherwise the result is the position has leading nearest @a pt
- * @return returns the document position
- * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
- */
-Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading) const {
-	assertValidAsWindow();
-
-	// determine the logical line
-	length_t line, subline;
-	mapClientYToLine(pt.y, &line, &subline);
-	const LineLayout& layout = renderer_->lineLayout(line);
-	// determine the column
-	const long x = pt.x - getDisplayXOffset(line);
-	length_t column;
-	if(!nearestLeading)
-		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline));
-	else {
-		length_t trailing;
-		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing);
-//		if(ascension::internal::advance(x, layout.location(column).x)
-//				> ascension::internal::advance(x, layout.location(column + trailing).x))
-			column += trailing;
-	}
-	return Position(line, column);
-}
-
-/**
- * Returns the point nearest from the specified document position.
- * @param position the document position. can be outside of the window
- * @param fullSearchY if this is false, this method stops at top or bottom of the client area.
- * otherwise, the calculation of y-coordinate is performed completely. but in this case, may be
- * very slow. see the description of return value
- * @param edge the edge of the character
- * @return the client coordinates of the point. about the y-coordinate of the point, if
- * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
- * (for upward) or -32768 (for downward)
- * @throw BadPositionException @a position is outside of the document
- * @see #characterForClientXY, #hitTest, layout#LineLayout#location
- */
-::POINT TextViewer::clientXYForCharacter(const Position& position, bool fullSearchY, LineLayout::Edge edge) const {
-	assertValidAsWindow();
-	const LineLayout& layout = renderer_->lineLayout(position.line);
-	::POINT pt = layout.location(position.column, edge);
-	pt.x += getDisplayXOffset(position.line);
-	const int y = mapLineToClientY(position.line, fullSearchY);
-	if(y == 32767 || y == -32768)
-		pt.y = y;
-	else
-		pt.y += y;
-	return pt;
 }
 
 /**

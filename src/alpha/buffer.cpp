@@ -24,6 +24,7 @@
 using namespace alpha;
 using namespace ascension;
 using namespace ascension::kernel;
+using namespace ascension::kernel::fileio;
 using namespace ascension::searcher;
 using namespace ascension::presentation;
 using namespace ascension::encoding;
@@ -73,18 +74,18 @@ namespace {
 /// Constructor.
 Buffer::Buffer() {
 	presentation_.reset(new Presentation(*this));
-	fileBinder_.reset(new files::FileBinder(*this));
+	textFile_.reset(new fileio::TextFileDocumentInput(*this));
 }
 
 /// Destructor.
 Buffer::~Buffer() {
 }
 
-/// Returns the file name of the buffer.
-const basic_string<::WCHAR> Buffer::fileName() const throw() {
+/// Returns the name of the buffer.
+const basic_string<::WCHAR> Buffer::name() const throw() {
 	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
-	if(fileBinder_->isBound())
-		return fileBinder_->location();
+	if(textFile_->isOpen())
+		return textFile_->name();
 	return untitled.c_str();
 }
 
@@ -164,9 +165,9 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 	Buffer* const buffer = new Buffer();
 	editorSession_.addDocument(*buffer);
 
-	buffer->fileBinder().setEncoding(encoding);
+	buffer->textFile().setEncoding(encoding);
 	if((newline & NLF_SPECIAL_VALUE_MASK) == 0)
-		buffer->fileBinder().setNewline(newline);
+		buffer->textFile().setNewline(newline);
 	buffers_.push_back(buffer);
 
 	// 現在のペインの数だけビューを作成する
@@ -189,17 +190,17 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 //	view.addEventListener(app_);
 	buffer->presentation().addTextViewerListListener(*this);
 	buffer->addStateListener(*this);
-	if(buffer->input() != 0)
-		buffer->input()->setUnexpectedFileTimeStampDirector(this);
+	buffer->textFile().addListener(*this);
 //	view.getLayoutSetter().setFont(lf);
 
 	// バッファバーにボタンを追加
+	const basic_string<::WCHAR> name(buffer->name());
 	MANAH_AUTO_STRUCT(::TBBUTTON, button);
-	button.idCommand = CMD_SPECIAL_BUFFERSSTART + bufferBar_.getButtonCount();
+	button.idCommand = CMD_SPECIAL_BUFFERSSTART + bufferBar_.getButtonCount() - CMD_SPECIAL_START;
 	button.iBitmap = static_cast<int>(buffers_.size() - 1);
 	button.fsState = TBSTATE_ENABLED;
 	button.fsStyle = BTNS_AUTOSIZE | BTNS_BUTTON | BTNS_GROUP | BTNS_NOPREFIX;
-	button.iString = reinterpret_cast<INT_PTR>(buffer->fileName().c_str());
+	button.iString = reinterpret_cast<::INT_PTR>(name.c_str());
 	bufferBar_.insertButton(bufferBar_.getButtonCount(), button);
 
 	resetResources();
@@ -233,7 +234,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 
 	if(queryUser && buffer.isModified()) {
 		setActive(buffer);	// 対象のバッファをユーザに見えるようにする
-		const int answer = app_.messageBox(MSG_BUFFER__BUFFER_IS_DIRTY, MB_YESNOCANCEL | MB_ICONEXCLAMATION, MARGS % buffer.fileName());
+		const int answer = app_.messageBox(MSG_BUFFER__BUFFER_IS_DIRTY, MB_YESNOCANCEL | MB_ICONEXCLAMATION, MARGS % buffer.name());
 		if(answer == IDCANCEL)
 			return false;
 		else if(answer == IDYES && !save(index, true))
@@ -246,20 +247,17 @@ bool BufferList::close(size_t index, bool queryUser) {
 			it.get().removeBuffer(buffer);
 		buffers_.erase(buffers_.begin() + index);
 		editorSession_.removeDocument(buffer);
+		buffer.textFile().close();
 		delete &buffer;
 
 		for(size_t i = index ; i < buffers_.size(); ++i)
-			bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + i), getDisplayName(*buffers_[i]).c_str());
+			bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START + i), getDisplayName(*buffers_[i]).c_str());
 		resetResources();
 		recalculateBufferBarSize();
 		fireActiveBufferSwitched();
 	} else {	// 最後の 1 つの場合
-		if(!buffer.isBoundToFile()) {
-			buffer.resetContent();			// 新規バッファの場合、resetContent() でもファイル名が変わらないため
-//			app_.applyDocumentType(buffer);	// 文書タイプの変更イベントが発行されない
-			// TODO: call mode-application.
-		} else
-			buffer.resetContent();
+		buffer.textFile().close();
+		buffer.resetContent();
 	}
 	return true;
 }
@@ -291,7 +289,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 			return true;
 	}
 
-	// 未保存のバッファが1つなら通常の確認ダイアログを出して終わり
+	// 未保存のバッファが 1 つなら通常の確認ダイアログを出して終わり
 	if(buffers_.size() - (exceptActive ? 1 : 0) == 1) {
 		const size_t dirty = !exceptActive ? 0 : ((active == 0) ? 1 : 0);
 
@@ -309,7 +307,7 @@ bool BufferList::closeAll(bool queryUser, bool exceptActive /* = false */) {
 			continue;
 		ui::DirtyFile df;
 		df.index = static_cast<uint>(i);
-		df.fileName = buffers_[i]->fileName().c_str();
+		df.fileName = buffers_[i]->name();
 		df.save = true;
 		dlg.files_.push_back(df);
 	}
@@ -352,7 +350,7 @@ bool BufferList::createBar(Rebar& rebar) {
 		bufferBarPager_.destroy();
 		return false;
 	}
-	HWND toolTips = bufferBar_.getToolTips();
+	::HWND toolTips = bufferBar_.getToolTips();
 	bufferBar_.setButtonStructSize();
 	::SetWindowLongPtrW(toolTips, GWL_STYLE, ::GetWindowLongPtrW(toolTips, GWL_STYLE) | TTS_NOPREFIX);
 	bufferBarPager_.setChild(bufferBar_.getHandle());
@@ -375,6 +373,44 @@ bool BufferList::createBar(Rebar& rebar) {
 	return true;
 }
 
+/// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
+void BufferList::documentAccessibleRegionChanged(const Document&) {
+	// do nothing
+}
+
+/// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
+void BufferList::documentModificationSignChanged(const Document& document) {
+	const Buffer& buffer = getConcreteDocument(document);
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer) - CMD_SPECIAL_START), getDisplayName(buffer).c_str());
+	recalculateBufferBarSize();
+}
+
+/// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
+void BufferList::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
+	// do nothing
+}
+
+/// @see ascension#text#IDocumentStateListenerdocumentReadOnlySignChanged
+void BufferList::documentReadOnlySignChanged(const Document& document) {
+	const Buffer& buffer = getConcreteDocument(document);
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer) - CMD_SPECIAL_START), getDisplayName(buffer).c_str());
+	recalculateBufferBarSize();
+}
+
+/// @see ascension#kernel#fileio#IFilePropertyListener#fileNameChanged
+void BufferList::fileNameChanged(const TextFileDocumentInput& textFile) {
+	const Buffer& buffer = getConcreteDocument(textFile.document());
+	// TODO: call mode-application.
+	resetResources();
+	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer) - CMD_SPECIAL_START), getDisplayName(buffer).c_str());
+	bufferBarPager_.recalcSize();
+}
+
+/// @see ascension#kernel#fileio#IFilePropertyListener#fileEncodingChanged
+void BufferList::fileEncodingChanged(const TextFileDocumentInput& textFile) {
+	// do nothing
+}
+
 /**
  * Finds the buffer in the list.
  * @param buffer the buffer to find
@@ -393,9 +429,9 @@ size_t BufferList::find(const Buffer& buffer) const {
  * @param fileName the name of the buffer to find
  * @return the index of the buffer or -1 if not found
  */
-size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
+size_t BufferList::find(const basic_string<::WCHAR>& fileName) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
-		if(buffers_[i]->isBoundToFile() && comparePathNames(buffers_[i]->getFilePathName(), fileName.c_str()))
+		if(buffers_[i]->textFile().isOpen() && comparePathNames(buffers_[i]->textFile().pathName().c_str(), fileName.c_str()))
 			return i;
 	}
 	return -1;
@@ -403,13 +439,13 @@ size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 
 /// IActiveBufferListener::activeBufferSwitched のトリガ
 void BufferList::fireActiveBufferSwitched() {
-	const size_t activeBuffer = activeIndex();
-	const EditorView& activeView = activeView();
+	const size_t buffer = activeIndex();
+	const EditorView& view = activeView();
 
-	bufferBar_.checkButton(static_cast<int>(activeBuffer) + CMD_SPECIAL_BUFFERSSTART);
-	for(EditorWindow::Iterator it = editorWindow_.enumeratePanes(); !it.isEnd(); it.next()) {
-		if(it.get().getCount() > 0 && &it.get().getVisibleView() == &activeView) {
-			editorWindow_.setDefaultActivePane(it.get());
+	bufferBar_.checkButton(static_cast<int>(buffer) + CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START);
+	for(EditorWindow::Iterator i(editorWindow_.enumeratePanes()); !i.isEnd(); i.next()) {
+		if(i.get().numberOfViews() > 0 && &i.get().visibleView() == &view) {
+			editorWindow_.setDefaultActivePane(i.get());
 			break;
 		}
 	}
@@ -417,8 +453,8 @@ void BufferList::fireActiveBufferSwitched() {
 	// アクティブなバッファのボタンが隠れていたらスクロールする
 	if(bufferBarPager_.isVisible()) {
 		const int pagerPos = bufferBarPager_.getPosition();
-		RECT buttonRect, pagerRect;
-		bufferBar_.getItemRect(static_cast<int>(activeBuffer), buttonRect);
+		::RECT buttonRect, pagerRect;
+		bufferBar_.getItemRect(static_cast<int>(buffer), buttonRect);
 		bufferBarPager_.getClientRect(pagerRect);
 		if(buttonRect.left < pagerPos)
 			bufferBarPager_.setPosition(buttonRect.left);
@@ -441,13 +477,18 @@ Buffer& BufferList::getConcreteDocument(Document& document) const {
 	throw invalid_argument("The specified document is not in the list.");
 }
 
+/// Const-version of @c #getConcreteDocument(Document&).
+const Buffer& BufferList::getConcreteDocument(const Document& document) const {
+	return getConcreteDocument(const_cast<Document&>(document));
+}
+
 /**
  * タイトルバーやバッファバーに表示するバッファの名前を返す
  * @param buffer the buffer
  * @return the name
  */
 wstring BufferList::getDisplayName(const Buffer& buffer) {
-	const std::wstring str(buffer.fileName());
+	const std::wstring str(buffer.name());
 	if(buffer.isModified())
 		return buffer.isReadOnly() ? str + L" * " + READ_ONLY_SIGNATURE_ : str + L" *";
 	else
@@ -461,20 +502,20 @@ LRESULT BufferList::handleBufferBarNotification(::NMTOOLBAR& nmhdr) {
 		if(mouse.dwItemSpec != -1) {
 			::POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
-			setActive(mouse.dwItemSpec - CMD_SPECIAL_BUFFERSSTART);
+			setActive(mouse.dwItemSpec - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START));
 			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::instance().getMainWindow().getHandle());
 			return true;
 		}
 	}
 
 	else if(nmhdr.hdr.code == TTN_GETDISPINFOW) {	// ツールチップ
-		assert(nmhdr.hdr.idFrom >= CMD_SPECIAL_BUFFERSSTART && nmhdr.hdr.idFrom < CMD_SPECIAL_BUFFERSEND);
+		assert(nmhdr.hdr.idFrom >= CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START && nmhdr.hdr.idFrom < CMD_SPECIAL_BUFFERSEND - CMD_SPECIAL_START);
 		static wchar_t tipText[500];
 		::NMTTDISPINFOW& nmttdi = *reinterpret_cast<::NMTTDISPINFOW*>(&nmhdr.hdr);
 
 //		nmttdi->hinst = getHandle();
-		const Buffer& buffer = at(nmttdi.hdr.idFrom - CMD_SPECIAL_BUFFERSSTART);
-		wcscpy(tipText, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : buffer.getFileName());
+		const Buffer& buffer = at(nmttdi.hdr.idFrom - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START));
+		wcscpy(tipText, (buffer.textFile().isOpen() ? buffer.textFile().location() : buffer.name()).c_str());
 		nmttdi.lpszText = tipText;
 		return true;
 	}
@@ -559,34 +600,37 @@ LRESULT BufferList::handleBufferBarPagerNotification(NMHDR& nmhdr) {
  * @param result エラー内容
  * @return 結果的にエラーである場合 false
  */
-bool BufferList::handleFileIOError(const WCHAR* fileName, bool forLoading, Document::FileIOResult result) {
+bool BufferList::handleFileIOError(const ::WCHAR* fileName, bool forLoading, IOException::Type result) {
 	assert(fileName != 0);
-	if(result == Document::FIR_OK)
-		return true;
-	else if(result == Document::FIR_STANDARD_WIN32_ERROR) {
+	if(result == IOException::FILE_NOT_FOUND) {
+		::SetLastError(ERROR_FILE_NOT_FOUND);
+		result = IOException::PLATFORM_DEPENDENT_ERROR;
+	}
+	if(result == IOException::PLATFORM_DEPENDENT_ERROR) {
 		void* buffer = 0;
-		wstring message = fileName;
+		wstring message(fileName);
 		::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			0, ::GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&buffer), 0, 0);
 		message += L"\n\n";
 		message += static_cast<wchar_t*>(buffer);
 		::LocalFree(buffer);
 		app_.getMainWindow().messageBox(message.c_str(), IDS_APPNAME, MB_ICONEXCLAMATION);
-	} else if(result != Document::FIR_ENCODING_FAILURE) {
-		DWORD messageID;
+	} else if(result != IOException::UNMAPPABLE_CHARACTER && result != IOException::MALFORMED_INPUT) {
+		::DWORD messageID;
 		switch(result) {
-		case Document::FIR_INVALID_ENCODING:				messageID = MSG_IO__INVALID_ENCODING; break;
-		case Document::FIR_INVALID_NEWLINE:					messageID = MSG_IO__INVALID_NEWLINE; break;
-		case Document::FIR_OUT_OF_MEMORY:					messageID = MSG_ERROR__OUT_OF_MEMORY; break;
-		case Document::FIR_HUGE_FILE:						messageID = MSG_IO__HUGE_FILE; break;
-		case Document::FIR_READ_ONLY_MODE:					messageID = MSG_IO__FAILED_TO_WRITE_FOR_READONLY; break;
-		case Document::FIR_CANNOT_CREATE_TEMPORARY_FILE:	messageID = MSG_IO__CANNOT_CREATE_TEMP_FILE; break;
-		case Document::FIR_LOST_DISK_FILE:					messageID = MSG_IO__LOST_DISK_FILE; break;
+		case IOException::INVALID_ENCODING:				messageID = MSG_IO__INVALID_ENCODING; break;
+		case IOException::INVALID_NEWLINE:				messageID = MSG_IO__INVALID_NEWLINE; break;
+		case IOException::OUT_OF_MEMORY:				messageID = MSG_ERROR__OUT_OF_MEMORY; break;
+		case IOException::HUGE_FILE:					messageID = MSG_IO__HUGE_FILE; break;
+		case IOException::READ_ONLY_MODE:
+		case IOException::UNWRITABLE_FILE:				messageID = MSG_IO__FAILED_TO_WRITE_FOR_READONLY; break;
+		case IOException::CANNOT_CREATE_TEMPORARY_FILE:	messageID = MSG_IO__CANNOT_CREATE_TEMP_FILE; break;
+		case IOException::LOST_DISK_FILE:				messageID = MSG_IO__LOST_DISK_FILE; break;
 		}
 		app_.messageBox(messageID, MB_ICONEXCLAMATION, MARGS % fileName);
 	}
 	if(forLoading)
-		close(getActiveIndex(), false);
+		close(activeIndex(), false);
 	return false;
 }
 
@@ -610,44 +654,9 @@ void BufferList::move(size_t from, size_t to) {
 	// バッファバーのボタンを並び替え
 	const int end = min(static_cast<int>(max(from, to)), bufferBar_.getButtonCount() - 1);
 	for(int i = static_cast<int>(min(from, to)); i <= end; ++i)
-		bufferBar_.setButtonText(CMD_SPECIAL_BUFFERSSTART + i, getDisplayName(*buffers_[i]).c_str());
+		bufferBar_.setButtonText(CMD_SPECIAL_BUFFERSSTART + i - CMD_SPECIAL_START, getDisplayName(*buffers_[i]).c_str());
 	setActive(*buffer);
 	resetResources();
-}
-
-/// @see ascension#presentation#ITextViewerListListener#textViewerListChanged
-void BufferList::textViewerListChanged(Presentation& presentation) {
-}
-
-/// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
-void BufferList::documentModificationSignChanged(Document& document) {
-	const Buffer& buffer = getConcreteDocument(document);
-	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
-	recalculateBufferBarSize();
-}
-
-/// @see ascension#text#IDocumentStateListener#documentFileNameChanged
-void BufferList::documentFileNameChanged(Document& document) {
-	Buffer& buffer = getConcreteDocument(document);
-	// TODO: call mode-application.
-	resetResources();
-	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
-	bufferBarPager_.recalcSize();
-}
-
-/// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
-void BufferList::documentAccessibleRegionChanged(Document& document) {
-}
-
-/// @see ascension#text#IDocumentStateListener#documentEncodingChanged
-void BufferList::documentEncodingChanged(Document& document) {
-}
-
-/// @see ascension#text#IDocumentStateListenerdocumentReadOnlySignChanged
-void BufferList::documentReadOnlySignChanged(Document& document) {
-	const Buffer& buffer = getConcreteDocument(document);
-	bufferBar_.setButtonText(static_cast<int>(CMD_SPECIAL_BUFFERSSTART + find(buffer)), getDisplayName(buffer).c_str());
-	recalculateBufferBarSize();
 }
 
 /**
@@ -698,19 +707,19 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 	}
 
 	Buffer* buffer = &active();
-	Document::FileLockMode lockMode;
+	TextFileDocumentInput::LockMode lockMode;
 	lockMode.onlyAsEditing = false;
 	switch(app_.readIntegerProfile(L"File", L"shareMode", 0)) {
-	case 0:	lockMode.type = Document::FileLockMode::LOCK_TYPE_NONE; break;
-	case 1:	lockMode.type = Document::FileLockMode::LOCK_TYPE_SHARED; break;
-	case 2:	lockMode.type = Document::FileLockMode::LOCK_TYPE_EXCLUSIVE; break;
+	case 0:	lockMode.type = TextFileDocumentInput::LockMode::DONT_LOCK; break;
+	case 1:	lockMode.type = TextFileDocumentInput::LockMode::SHARED_LOCK; break;
+	case 2:	lockMode.type = TextFileDocumentInput::LockMode::EXCLUSIVE_LOCK; break;
 	}
 
-	if(buffer->isModified() || buffer->getFilePathName() != 0) {	// 新しいコンテナで開く
+	if(buffer->isModified() || buffer->textFile().isOpen()) {	// 新しいコンテナで開く
 		addNew(encoding);
 		buffer = &active();
 	}
-
+/*
 	if(Encoder::supports(encoding)) {
 //		try {
 			buffer->setEncoding(encoding);
@@ -721,38 +730,54 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //			buffer->setCodePage(encoding);
 //		}
 	}
-
+*/
+	bool succeeded = true;
+	IOException::Type errorType;
 	const wstring s(app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName));
-	Document::FileIOResult result;
 	while(true) {
 		WaitCursor wc;
 		app_.setStatusText(s.c_str());
 		app_.getMainWindow().lockUpdate();
 
 		// 準備ができたのでファイルを開く
-		result = buffer->load(resolvedName, lockMode, encoding, Encoder::NO_POLICY);
+		try {
+			// TODO: 戻り値を調べる必要がある。
+			buffer->textFile().open(resolvedName, lockMode, encoding, Encoder::NO_POLICY);
+		} catch(IOException& e) {
+			succeeded = false;
+			errorType = e.type();
+		}
 		app_.setStatusText(0);
 		app_.getMainWindow().unlockUpdate();
-		if(result == Document::FIR_ENCODING_FAILURE) {
+		if(!succeeded) {
 			// alert the encoding error
-//			const DWORD id = (encoding_ < 0x10000) ?
-//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
-//			const int answer = app_.messageBox(forLoading_ ?
-//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-//				MARGS % resolvedName % Alpha::getInstance().loadMessage(id).c_str());
-			const int answer = Alpha::instance().messageBox(
-				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
-			if(answer == IDYES) {
+			int userAnswer;
+			if(errorType == IOException::UNMAPPABLE_CHARACTER)
+				userAnswer = Alpha::instance().messageBox(
+					MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+					MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
+			else if(errorType == IOException::MALFORMED_INPUT)
+				userAnswer = Alpha::instance().messageBox(
+					MSG_IO__MALFORMED_INPUT_FILE, MB_OKCANCEL | MB_ICONEXCLAMATION,
+					MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
+			else
+				break;
+			if(userAnswer == IDYES || userAnswer == IDOK) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);
 				if(dlg.doModal(app_.getMainWindow()) != IDOK)
 					return OPENRESULT_USERCANCELED;
 				encoding = dlg.resultEncoding();
 				continue;
-			} else if(answer == IDNO)
-				result = buffer->load(resolvedName, lockMode, encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
-			else
+			} else if(userAnswer == IDNO) {
+				succeeded = true;
+				try {
+					buffer->textFile().open(resolvedName, lockMode, encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+				} catch(IOException& e) {
+					succeeded = false;
+					errorType = e.type();
+				}
+			} else
 				return OPENRESULT_USERCANCELED;
 		}
 		break;
@@ -760,11 +785,11 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 
 	app_.getMainWindow().show(app_.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
-	if(handleFileIOError(resolvedName, true, result)) {
+	if(succeeded || handleFileIOError(resolvedName, true, errorType)) {
 		if(asReadOnly)
 			buffer->setReadOnly();
 		if(addToMRU)
-			app_.getMRUManager().add(buffer->getFilePathName(), buffer->getEncoding());
+			app_.mruManager().add(buffer->textFile().pathName(), buffer->textFile().encoding());
 		return OPENRESULT_SUCCEEDED;
 	}
 	return OPENRESULT_FAILED;
@@ -793,9 +818,9 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 	::GetVersionEx(&osVersion);
 
 	WCHAR* activeBufferDir = 0;
-	if(initialDirectory == 0 && getActive().getFilePathName() != 0) {
+	if(initialDirectory == 0 && active().textFile().isOpen()) {
 		activeBufferDir = new WCHAR[MAX_PATH];
-		wcscpy(activeBufferDir, getActive().getFilePathName());
+		wcscpy(activeBufferDir, active().textFile().pathName().c_str());
 		*::PathFindFileNameW(activeBufferDir) = 0;
 		if(activeBufferDir[0] == 0) {
 			delete[] activeBufferDir;
@@ -803,7 +828,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		}
 	}
 
-	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_AUTO};
+	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_RAW_VALUE};
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
@@ -858,7 +883,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 				break;
 			ComboBox encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
 
-			const wstring keepNLF = Alpha::getInstance().loadMessage(MSG_DIALOG__KEEP_NEWLINE);
+			const wstring keepNLF = Alpha::instance().loadMessage(MSG_DIALOG__KEEP_NEWLINE);
 			const MIBenum encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
@@ -868,22 +893,22 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 					|| encoding == extended::UTF_32LE || encoding == extended::UTF_32BE) {
 				if(newlineCombobox.getCount() != 7) {
 					newlineCombobox.resetContent();
-					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CRLF);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LF);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CR);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_NEL), NLF_NEL);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LS), NLF_LS);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_PS), NLF_PS);
+					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_RAW_VALUE);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CR_LF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LINE_FEED);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_NEL), NLF_NEXT_LINE);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LS), NLF_LINE_SEPARATOR);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_PS), NLF_PARAGRAPH_SEPARATOR);
 					newlineCombobox.setCurSel(newline);
 				}
 			} else {
 				if(newlineCombobox.getCount() != 4) {
 					newlineCombobox.resetContent();
-					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_AUTO);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CRLF);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LF);
-					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CR);
+					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_RAW_VALUE);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), NLF_CR_LF);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), NLF_LINE_FEED);
+					newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
 					newlineCombobox.setCurSel((newline < 4) ? newline : 0);
 				}
 			}
@@ -930,7 +955,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		}
 
 		vector<MIBenum> mibs;
-		Encoder::getAvailableMIBs(back_inserter(mibs));
+		Encoder::availableMIBs(back_inserter(mibs));
 		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 //			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
 //			const wstring name(Alpha::getInstance().loadMessage(id));
@@ -940,7 +965,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		}
 		if(!newlineCombobox.isWindow()) {
 			mibs.clear();
-			EncodingDetector::getAvailableIDs(back_inserter(mibs));
+			EncodingDetector::availableIDs(back_inserter(mibs));
 			for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
 				const wstring name(getEncodingDisplayName(*mib));
 				if(!name.empty())
@@ -958,13 +983,13 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 
 		if(newlineCombobox.isWindow()) {
 			switch(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->newline) {
-			case NLF_AUTO:	newlineCombobox.setCurSel(0);	break;
-			case NLF_CRLF:	newlineCombobox.setCurSel(1);	break;
-			case NLF_LF:	newlineCombobox.setCurSel(2);	break;
-			case NLF_CR:	newlineCombobox.setCurSel(3);	break;
-			case NLF_NEL:	newlineCombobox.setCurSel(4);	break;
-			case NLF_LS:	newlineCombobox.setCurSel(5);	break;
-			case NLF_PS:	newlineCombobox.setCurSel(6);	break;
+			case NLF_RAW_VALUE:				newlineCombobox.setCurSel(0);	break;
+			case NLF_CR_LF:					newlineCombobox.setCurSel(1);	break;
+			case NLF_LINE_FEED:				newlineCombobox.setCurSel(2);	break;
+			case NLF_CARRIAGE_RETURN:		newlineCombobox.setCurSel(3);	break;
+			case NLF_NEXT_LINE:				newlineCombobox.setCurSel(4);	break;
+			case NLF_LINE_SEPARATOR:		newlineCombobox.setCurSel(5);	break;
+			case NLF_PARAGRAPH_SEPARATOR:	newlineCombobox.setCurSel(6);	break;
 			}
 			::SendMessageW(window, WM_COMMAND, MAKEWPARAM(IDC_COMBO_ENCODING, CBN_SELCHANGE), 0);
 		}
@@ -981,13 +1006,13 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			format.encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			if(newlineCombobox.isWindow()) {
 				switch(newlineCombobox.getCurSel()) {
-				case 0:	format.newline = NLF_AUTO;	break;
-				case 1:	format.newline = NLF_CRLF;	break;
-				case 2:	format.newline = NLF_LF;	break;
-				case 3:	format.newline = NLF_CR;	break;
-				case 4:	format.newline = NLF_NEL;	break;
-				case 5:	format.newline = NLF_LS;	break;
-				case 6:	format.newline = NLF_PS;	break;
+				case 0:	format.newline = NLF_RAW_VALUE;				break;
+				case 1:	format.newline = NLF_CR_LF;					break;
+				case 2:	format.newline = NLF_LINE_FEED;				break;
+				case 3:	format.newline = NLF_CARRIAGE_RETURN;		break;
+				case 4:	format.newline = NLF_NEXT_LINE;				break;
+				case 5:	format.newline = NLF_LINE_SEPARATOR;		break;
+				case 6:	format.newline = NLF_PARAGRAPH_SEPARATOR;	break;
 				}
 			}
 			if(readOnlyCheckbox.isWindow()) {
@@ -1010,15 +1035,15 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 		Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
 	const Buffer& buffer = getConcreteDocument(document);
-	const size_t a = getActiveIndex();
+	const size_t a = activeIndex();
 	setActive(buffer);
 	switch(context) {
 	case IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION:
-		return app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.getFilePathName()) == IDYES;
+		return app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()) == IDYES;
 	case IUnexpectedFileTimeStampDirector::OVERWRITE_FILE:
-		return app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.getFilePathName()) == IDYES;
+		return app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()) == IDYES;
 	case IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION:
-		if(IDYES == app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.getFilePathName()))
+		if(IDYES == app_.messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN, MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()))
 			reopen(find(buffer), false);
 		else
 			setActive(a);
@@ -1051,10 +1076,10 @@ void BufferList::recalculateBufferBarSize() {
  * @throw std#out_of_range @a index is invalid
  */
 BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
-	Buffer& buffer = getAt(index);
+	Buffer& buffer = at(index);
 
 	// ファイルが存在するか?
-	if(!buffer.isBoundToFile())
+	if(!buffer.textFile().isOpen())
 		return OPENRESULT_FAILED;
 
 	// ユーザがキャンセル
@@ -1062,44 +1087,59 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 		return OPENRESULT_USERCANCELED;
 
 	// コードページを変更する場合はダイアログを出す
-	MIBenum encoding = buffer.getEncoding();
+	MIBenum encoding = buffer.textFile().encoding();
 	if(changeEncoding) {
 		ui::EncodingsDialog dlg(encoding, true);
 		if(dlg.doModal(app_.getMainWindow()) != IDOK)
 			return OPENRESULT_USERCANCELED;
-		encoding = dlg.getSelection();
+		encoding = dlg.resultEncoding();
 	}
 
-	Document::FileIOResult result;
+	bool succeeded = true;
+	IOException::Type errorType;
 	while(true) {
-		result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), encoding, Encoder::NO_POLICY);
-		if(result == Document::FIR_ENCODING_FAILURE) {
+		try {
+			buffer.textFile().open(buffer.textFile().pathName(), buffer.textFile().lockMode(), encoding, Encoder::NO_POLICY);
+		} catch(IOException& e) {
+			succeeded = false;
+			errorType = e.type();
+		}
+		if(!succeeded) {
 			// alert the encoding error
-//			const DWORD id = (encoding_ < 0x10000) ?
-//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
-//			const int answer = app_.messageBox(forLoading_ ?
-//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-//				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
-			const int answer = Alpha::getInstance().messageBox(
-				MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % buffer.getFilePathName() % getEncodingDisplayName(encoding).c_str());
-			if(answer == IDYES) {
+			int userAnswer;
+			if(errorType == IOException::UNMAPPABLE_CHARACTER)
+				userAnswer = Alpha::instance().messageBox(
+					MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
+					MARGS % buffer.textFile().pathName() % getEncodingDisplayName(encoding).c_str());
+			else if(errorType == IOException::MALFORMED_INPUT)
+				userAnswer = Alpha::instance().messageBox(
+					MSG_IO__MALFORMED_INPUT_FILE, MB_OKCANCEL | MB_ICONEXCLAMATION,
+					MARGS % buffer.textFile().pathName() % getEncodingDisplayName(encoding).c_str());
+			else
+				break;
+			if(userAnswer == IDYES || userAnswer == IDOK) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);
 				if(dlg.doModal(app_.getMainWindow()) != IDOK)
 					return OPENRESULT_USERCANCELED;
-				encoding = dlg.getSelection();
+				encoding = dlg.resultEncoding();
 				continue;
-			} else if(answer == IDNO)
-				result = buffer.load(buffer.getFilePathName(), buffer.getLockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
-			else
+			} else if(userAnswer == IDNO) {
+				succeeded = true;
+				try {
+					buffer.textFile().open(buffer.textFile().pathName(), buffer.textFile().lockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+				} catch(IOException& e) {
+					succeeded = false;
+					errorType = e.type();
+				}
+			} else
 				return OPENRESULT_USERCANCELED;
 		}
 		break;
 	}
 
-	if(handleFileIOError(buffer.getFilePathName(), true, result)) {
-		app_.getMRUManager().add(buffer.getFilePathName(), buffer.getEncoding());
+	if(succeeded || handleFileIOError(buffer.textFile().pathName().c_str(), true, errorType)) {
+		app_.mruManager().add(buffer.textFile().pathName(), buffer.textFile().encoding());
 		return OPENRESULT_SUCCEEDED;
 	} else
 		return OPENRESULT_FAILED;
@@ -1123,7 +1163,7 @@ void BufferList::resetResources() {
 	::SHFILEINFOW sfi;
 	for(size_t i = 0; i < buffers_.size(); ++i) {
 		::SHGetFileInfoW(
-			(buffers_[i]->getFilePathName() != 0) ? buffers_[i]->getFilePathName() : L"",
+			(buffers_[i]->textFile().isOpen()) ? buffers_[i]->textFile().pathName().c_str() : L"",
 			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
 		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i) + CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START);
@@ -1142,27 +1182,27 @@ void BufferList::resetResources() {
  * @throw std#out_of_range @a index is invalid
  */
 bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /* = true */) {
-	Buffer& buffer = getAt(index);
+	Buffer& buffer = at(index);
 
 	// 保存の必要があるか?
-	if(overwrite && buffer.isBoundToFile() && !buffer.isModified())
+	if(overwrite && buffer.textFile().isOpen() && !buffer.isModified())
 		return true;
 
-	WCHAR fileName[MAX_PATH + 1];
-	TextFileFormat format = {buffer.getEncoding(), NLF_AUTO};
+	::WCHAR fileName[MAX_PATH + 1];
+	TextFileFormat format = {buffer.textFile().encoding(), NLF_RAW_VALUE};
 	bool newName = false;
 
 	// 別名で保存 or ファイルが存在しない
-	if(!overwrite || buffer.getFilePathName() == 0 || !toBoolean(::PathFileExistsW(buffer.getFilePathName()))) {
+	if(!overwrite || !buffer.textFile().isOpen() || !toBoolean(::PathFileExistsW(buffer.textFile().pathName().c_str()))) {
 		MANAH_AUTO_STRUCT(::OSVERSIONINFOW, osVersion);
-		const wstring filterSource = app_.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER);
-		wchar_t* filter = new wchar_t[filterSource.length() + 6];
+		const wstring filterSource(app_.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER));
+		wchar_t* const filter = new wchar_t[filterSource.length() + 6];
 
 		osVersion.dwOSVersionInfoSize = sizeof(::OSVERSIONINFOW);
 		::GetVersionEx(&osVersion);
 		filterSource.copy(filter, filterSource.length());
 		wcsncpy(filter + filterSource.length(), L"\0*.*\0\0", 6);
-		wcscpy(fileName, (buffer.getFilePathName() != 0) ? buffer.getFilePathName() : L"");
+		wcscpy(fileName, (buffer.textFile().pathName().c_str()));
 
 		MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
 		MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
@@ -1192,7 +1232,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		}
 		newName = true;
 	} else
-		wcscpy(fileName, buffer.getFilePathName());
+		wcscpy(fileName, buffer.textFile().pathName().c_str());
 
 	const bool writeBOM =
 		(format.encoding == fundamental::UTF_8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
@@ -1200,37 +1240,44 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		|| (format.encoding == fundamental::UTF_16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
 		|| (format.encoding == extended::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
 		|| (format.encoding == extended::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
-	Document::FileIOResult result;
 
+	bool succeeded = true;
+	IOException::Type errorType;
 	while(true) {
-		Document::SaveParameters params;
+		TextFileDocumentInput::WriteParameters params;
 		params.encoding = format.encoding;
 		params.encodingPolicy = Encoder::NO_POLICY;
 		params.newline = format.newline;
 		if(writeBOM)
-			params.options = Document::SaveParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
+			params.options = TextFileDocumentInput::WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
 
-		result = buffer.save(fileName, params);
-		if(result == Document::FIR_ENCODING_FAILURE) {
+		try {
+			buffer.textFile().write(fileName, params);
+		} catch(IOException& e) {
+			succeeded = false;
+			errorType = e.type();
+		}
+		if(!succeeded && errorType == IOException::UNMAPPABLE_CHARACTER) {
 			// alert the encoding error
-//			const DWORD id = (encoding_ < 0x10000) ?
-//				(encoding_ + MSGID_ENCODING_START) : (encoding_ - 60000 + MSGID_EXTENDED_ENCODING_START);
-//			const int answer = app_.messageBox(forLoading_ ?
-//				MSG_IO__UNCONVERTABLE_NATIVE_CHAR : MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-//				MARGS % fileName_ % Alpha::getInstance().loadMessage(id).c_str());
-			const int answer = Alpha::getInstance().messageBox(
+			const int userAnswer = Alpha::instance().messageBox(
 				MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
 				MARGS % fileName % getEncodingDisplayName(params.encoding).c_str());
-			if(answer == IDYES) {
+			if(userAnswer == IDYES) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(params.encoding, false);
 				if(dlg.doModal(app_.getMainWindow()) != IDOK)
 					return false;
-				params.encoding = dlg.getSelection();
+				params.encoding = dlg.resultEncoding();
 				continue;
-			} else if(answer == IDNO) {
+			} else if(userAnswer == IDNO) {
+				succeeded = true;
 				params.encodingPolicy = Encoder::REPLACE_UNMAPPABLE_CHARACTER;
-				result = buffer.save(fileName, params);
+				try {
+					buffer.textFile().write(fileName, params);
+				} catch(IOException& e) {
+					succeeded = false;
+					errorType = e.type();
+				}
 				break;
 			} else
 				return false;
@@ -1238,9 +1285,9 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		break;
 	}
 
-	const bool succeeded = handleFileIOError(fileName, false, result);
+	succeeded = succeeded || handleFileIOError(fileName, false, errorType);
 	if(succeeded && addToMRU && newName)
-		app_.getMRUManager().add(fileName, format.encoding);
+		app_.mruManager().add(fileName, format.encoding);
 	return succeeded;
 }
 
@@ -1263,7 +1310,7 @@ bool BufferList::saveAll(bool addToMRU /* = true */) {
  * @throw std#out_of_range @a index is invalid
  */
 void BufferList::setActive(size_t index) {
-	editorWindow_.getActivePane().showBuffer(getAt(index));
+	editorWindow_.getActivePane().showBuffer(at(index));
 	fireActiveBufferSwitched();
 }
 
@@ -1277,12 +1324,16 @@ void BufferList::setActive(const Buffer& buffer) {
 	fireActiveBufferSwitched();
 }
 
+/// @see ascension#presentation#ITextViewerListListener#textViewerListChanged
+void BufferList::textViewerListChanged(Presentation& presentation) {
+}
+
 /// Reconstructs the context menu.
 void BufferList::updateContextMenu() {
 	while(contextMenu_.getNumberOfItems() > 0)
 		contextMenu_.erase<Menu::BY_POSITION>(0);
-	contextMenu_ << Menu::StringItem(CMD_FILE_CLOSE, app_.getCommandManager().getMenuName(CMD_FILE_CLOSE).c_str())
-		<< Menu::StringItem(CMD_FILE_CLOSEOTHERS, app_.getCommandManager().getMenuName(CMD_FILE_CLOSEOTHERS).c_str());
+	contextMenu_ << Menu::StringItem(CMD_FILE_CLOSE, app_.commandManager().menuName(CMD_FILE_CLOSE).c_str())
+		<< Menu::StringItem(CMD_FILE_CLOSEOTHERS, app_.commandManager().menuName(CMD_FILE_CLOSEOTHERS).c_str());
 	contextMenu_.setDefault<Menu::BY_COMMAND>(CMD_FILE_CLOSE);
 }
 
@@ -1302,7 +1353,7 @@ EditorPane::EditorPane(const EditorPane& rhs) {
 		const bool succeeded = view->create((*i)->getParent().getHandle(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
-		view->setConfiguration(&(*i)->getConfiguration(), 0);
+		view->setConfiguration(&(*i)->configuration(), 0);
 		view->scrollTo((*i)->getScrollPosition(SB_HORZ), (*i)->getScrollPosition(SB_VERT), false);
 		views_.insert(view);
 		if(*i == rhs.visibleView_)
@@ -1324,7 +1375,7 @@ EditorPane::~EditorPane() {
 void EditorPane::addView(EditorView& view) {
 	views_.insert(&view);
 	if(views_.size() == 1)
-		showBuffer(view.getDocument());
+		showBuffer(view.document());
 }
 
 /// Removes all viewers.
@@ -1341,7 +1392,7 @@ void EditorPane::removeAll() {
  */
 void EditorPane::removeBuffer(const Buffer& buffer) {
 	for(set<EditorView*>::iterator it = views_.begin(); it != views_.end(); ++it) {
-		if(&(*it)->getDocument() == &buffer) {
+		if(&(*it)->document() == &buffer) {
 			EditorView& removing = **it;
 			views_.erase(it);
 			if(&removing == visibleView_) {
@@ -1349,9 +1400,9 @@ void EditorPane::removeBuffer(const Buffer& buffer) {
 				if(&removing == lastVisibleView_)
 					lastVisibleView_ = 0;
 				if(views_.size() == 1 || lastVisibleView_ == 0)
-					showBuffer((*views_.begin())->getDocument());
+					showBuffer((*views_.begin())->document());
 				else if(!views_.empty()) {
-					showBuffer(lastVisibleView_->getDocument());
+					showBuffer(lastVisibleView_->document());
 					lastVisibleView_ = 0;
 				}
 			}
@@ -1367,14 +1418,14 @@ void EditorPane::removeBuffer(const Buffer& buffer) {
  * @throw std#invalid_argument @a buffer is not exist
  */
 void EditorPane::showBuffer(const Buffer& buffer) {
-	if(visibleView_ != 0 && &visibleView_->getDocument() == &buffer)
+	if(visibleView_ != 0 && &visibleView_->document() == &buffer)
 		return;
 	for(set<EditorView*>::iterator it = views_.begin(); it != views_.end(); ++it) {
-		if(&(*it)->getDocument() == &buffer) {
+		if(&(*it)->document() == &buffer) {
 			const bool hadFocus = visibleView_ == 0 || visibleView_->hasFocus();
 			lastVisibleView_ = visibleView_;
 			visibleView_ = *it;
-			Alpha::getInstance().getBufferList().getEditorWindow().adjustPanes();
+			Alpha::instance().bufferList().editorWindow().adjustPanes();
 			visibleView_->show(SW_SHOW);
 			if(lastVisibleView_ != 0)
 				lastVisibleView_->show(SW_HIDE);
@@ -1399,15 +1450,13 @@ Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
-	if(document().input() != 0)
-		document().input()->addListener(*this);
+	document().textFile().addListener(*this);
 	document().bookmarker().addListener(*this);
 }
 
 /// Copy-constructor.
 EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
-	if(document().input() != 0)
-		document().input()->addListener(*this);
+	document().textFile().addListener(*this);
 	document().bookmarker().addListener(*this);
 }
 
@@ -1418,8 +1467,8 @@ EditorView::~EditorView() {
 
 /// Begins incremental search.
 void EditorView::beginIncrementalSearch(SearchType type, Direction direction) {
-	TextSearcher& searcher = Alpha::getInstance().getBufferList().getEditorSession().getTextSearcher();
-	SearchOptions options = searcher.getOptions();
+	TextSearcher& searcher = Alpha::instance().bufferList().editorSession().textSearcher();
+	SearchOptions options = searcher.options();
 	options.type = type;
 	searcher.setOptions(options);
 	texteditor::commands::IncrementalSearchCommand(*this, direction, this).execute();
@@ -1442,30 +1491,24 @@ void EditorView::caretMoved(const Caret& self, const Region& oldRegion) {
 }
 
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
-void EditorView::documentAccessibleRegionChanged(Document& document) {
+void EditorView::documentAccessibleRegionChanged(const Document& document) {
 	TextViewer::documentAccessibleRegionChanged(document);
 	updateNarrowingOnStatusBar();
 }
 
-/// @see IDocumentStateListener#documentEncodingChanged
-void EditorView::documentEncodingChanged(Document& document) {
-	TextViewer::documentEncodingChanged(document);
-}
-
-/// @see IDocumentStateListener#documentFileNameChanged
-void EditorView::documentFileNameChanged(Document& document) {
-	TextViewer::documentFileNameChanged(document);
-	updateTitleBar();
-}
-
 /// @see IDocumentStateListener#documentModificationSignChanged
-void EditorView::documentModificationSignChanged(Document& document) {
+void EditorView::documentModificationSignChanged(const Document& document) {
 	TextViewer::documentModificationSignChanged(document);
 	updateTitleBar();
 }
 
+/// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
+void EditorView::documentPropertyChanged(const Document& document, const DocumentPropertyKey& key) {
+	TextViewer::documentPropertyChanged(document, key);
+}
+
 /// @see IDocumentStateListener#documentReadOnlySignChanged
-void EditorView::documentReadOnlySignChanged(Document& document) {
+void EditorView::documentReadOnlySignChanged(const Document& document) {
 	TextViewer::documentReadOnlySignChanged(document);
 	updateTitleBar();
 }
@@ -1497,6 +1540,16 @@ void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, c
 	}
 }
 
+/// @see IFilePropertyListener#fileEncodingChanged
+void EditorView::fileEncodingChanged(const TextFileDocumentInput&) {
+	// do nothing
+}
+
+/// @see IFilePropertyListener#fileNameChanged
+void EditorView::fileNameChanged(const TextFileDocumentInput&) {
+	updateTitleBar();
+}
+
 /// @see IIncrementalSearchListener#incrementalSearchAborted
 void EditorView::incrementalSearchAborted(const Position& initialPosition) {
 	incrementalSearchCompleted();
@@ -1516,7 +1569,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 	const bool forward = isearch.direction() == FORWARD;
 
 	if(result == IIncrementalSearchCallback::EMPTY_PATTERN) {
-		getCaret().select(isearch.matchedRegion());
+		caret().select(isearch.matchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
 		app.setStatusText(app.loadMessage(messageID).c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
@@ -1532,7 +1585,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 		beep();
 	}
 
-	String prompt(app.loadMessage(messageID, MARGS % isearch.pattern()));
+	ascension::String prompt(app.loadMessage(messageID, MARGS % isearch.pattern()));
 	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 	app.setStatusText(prompt.c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
@@ -1581,7 +1634,7 @@ void EditorView::selectionShapeChanged(const Caret&) {
 void EditorView::updateCurrentPositionOnStatusBar() {
 	if(hasFocus()) {
 		// build the current position indication string
-		static manah::AutoBuffer<WCHAR> message, messageFormat;
+		static manah::AutoBuffer<::WCHAR> message, messageFormat;
 		static size_t formatLength = 0;
 		if(messageFormat.get() == 0) {
 			void* messageBuffer;
@@ -1589,38 +1642,38 @@ void EditorView::updateCurrentPositionOnStatusBar() {
 					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
 					::GetModuleHandle(0), MSG_STATUS__CARET_POSITION, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 					reinterpret_cast<wchar_t*>(&messageBuffer), 0, 0)) {
-				formatLength = wcslen(static_cast<WCHAR*>(messageBuffer));
-				messageFormat.reset(new WCHAR[formatLength + 1]);
-				wcscpy(messageFormat.get(), static_cast<WCHAR*>(messageBuffer));
+				formatLength = wcslen(static_cast<::WCHAR*>(messageBuffer));
+				messageFormat.reset(new ::WCHAR[formatLength + 1]);
+				wcscpy(messageFormat.get(), static_cast<::WCHAR*>(messageBuffer));
 				::LocalFree(messageBuffer);
 			} else {
-				messageFormat.reset(new WCHAR[1]);
+				messageFormat.reset(new ::WCHAR[1]);
 				messageFormat[0] = 0;
 			}
-			message.reset(new WCHAR[formatLength + 100]);
+			message.reset(new ::WCHAR[formatLength + 100]);
 		}
 		if(formatLength != 0) {
 			length_t messageArguments[3];
 			MANAH_AUTO_STRUCT(::SCROLLINFO, si);
 			getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-			messageArguments[0] = getCaret().getLineNumber() + getVerticalRulerConfiguration().lineNumbers.startValue;
-			messageArguments[1] = getCaret().getVisualColumnNumber() + visualColumnStartValue_;
-			messageArguments[2] = getCaret().getColumnNumber() + visualColumnStartValue_;
+			messageArguments[0] = caret().lineNumber() + verticalRulerConfiguration().lineNumbers.startValue;
+			messageArguments[1] = caret().visualColumnNumber() + visualColumnStartValue_;
+			messageArguments[2] = caret().columnNumber() + visualColumnStartValue_;
 			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
-				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
+				0, 0, message.get(), static_cast<::DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
 			// show in the status bar
-			Alpha::getInstance().getStatusBar().setText(1, message.get());
+			Alpha::instance().statusBar().setText(1, message.get());
 		}
 	}
 }
 
 void EditorView::updateNarrowingOnStatusBar() {
 	if(hasFocus()) {
-		const bool narrow = getDocument().isNarrowed();
-		Alpha& app = Alpha::getInstance();
+		const bool narrow = document().isNarrowed();
+		Alpha& app = Alpha::instance();
 		if(narrowingIcon_.getHandle() == 0)
-			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
-		StatusBar& statusBar = app.getStatusBar();
+			narrowingIcon_.reset(static_cast<::HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
+		StatusBar& statusBar = app.statusBar();
 //		statusBar.setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		statusBar.setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
@@ -1629,17 +1682,17 @@ void EditorView::updateNarrowingOnStatusBar() {
 
 void EditorView::updateOvertypeModeOnStatusBar() {
 	if(hasFocus())
-		Alpha::getInstance().getStatusBar().setText(3,
-			Alpha::getInstance().loadMessage(getCaret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
+		Alpha::instance().statusBar().setText(3,
+			Alpha::instance().loadMessage(caret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
 }
 
 /// Updates the title bar text according to the current state.
 void EditorView::updateTitleBar() {
 	static wstring titleCache;
-	Window& mainWindow = Alpha::getInstance().getMainWindow();
+	Window& mainWindow = Alpha::instance().getMainWindow();
 	if(!mainWindow.isWindow())
 		return;
-	wstring title = BufferList::getDisplayName(getDocument());
+	wstring title(BufferList::getDisplayName(document()));
 	if(title != titleCache) {
 		titleCache = title;
 //		title += L" - " IDS_APPFULLVERSION;

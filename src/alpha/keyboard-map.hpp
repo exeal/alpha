@@ -47,13 +47,13 @@ namespace alpha {
 			KeyboardMap();
 			~KeyboardMap();
 			// attributes
-			KeyAssignableCommand*	getCommand(const KeyCombination& keys) const;
-			KeyAssignableCommand*	getCommand(const KeyCombination& firstKeys, const KeyCombination& secondKeys) const;
-			static std::wstring		getKeyName(VirtualKey key);
-			std::wstring			getKeyString(CommandID id) const;
-			static std::wstring		getStrokeString(const KeyCombination& keys);
-			static std::wstring		getStrokeString(const KeyCombination& firstKeys, const KeyCombination& secondKeys);
+			KeyAssignableCommand*	command(const KeyCombination& keys) const;
+			KeyAssignableCommand*	command(const KeyCombination& firstKeys, const KeyCombination& secondKeys) const;
 			bool					isDirty() const;
+			static std::wstring		keyName(VirtualKey key);
+			std::wstring			keyString(CommandID id) const;
+			static std::wstring		strokeString(const KeyCombination& keys);
+			static std::wstring		strokeString(const KeyCombination& firstKeys, const KeyCombination& secondKeys);
 			// operations
 			bool	assign(const KeyAssignableCommand& command, const KeyCombination& keys);
 			bool	assign(const KeyAssignableCommand& command, const KeyCombination& firstKeys, const KeyCombination& secondKeys);
@@ -81,7 +81,7 @@ namespace alpha {
 		 * @return the command or @c null if no command is assigned. if the first stroke, the 
 		 * @c BuiltInCommand corresponding to @c CMD_SPECIAL_WAITFOR2NDKEYS
 		 */
-		inline KeyAssignableCommand* KeyboardMap::getCommand(const KeyCombination& keys) const {
+		inline KeyAssignableCommand* KeyboardMap::command(const KeyCombination& keys) const {
 			return firstKeyMaps_[keys.modifiers][keys.key].command;}
 
 		/**
@@ -90,7 +90,7 @@ namespace alpha {
 		 * @param secondKeys the second key combination
 		 * @return the command or @c null if no command is assigned
 		 */
-		inline KeyAssignableCommand* KeyboardMap::getCommand(
+		inline KeyAssignableCommand* KeyboardMap::command(
 				const KeyCombination& firstKeys, const KeyCombination& secondKeys) const {
 			const FirstKeyMap& firstKeyMap = firstKeyMaps_[firstKeys.modifiers][firstKeys.key];
 			if(firstKeyMap.secondKeyMap == 0)
@@ -99,12 +99,15 @@ namespace alpha {
 				0 : firstKeyMap.secondKeyMap[secondKeys.modifiers][secondKeys.key];
 		}
 
+		/// Returns true if the keyboard map is not saved.
+		inline bool KeyboardMap::isDirty() const {return dirty_;}
+
 		/**
 		 * Returns the name of the virtual key.
 		 * @param key the virtual key code
 		 * @return the key name or an empty string if @a key is invalid
 		 */
-		inline std::wstring KeyboardMap::getKeyName(VirtualKey key) {
+		inline std::wstring KeyboardMap::keyName(VirtualKey key) {
 			UINT c = ::MapVirtualKeyW(key, 0) << 16;
 			switch(key) {
 			case VK_INSERT:	case VK_DELETE:	case VK_HOME:	case VK_END:
@@ -117,25 +120,22 @@ namespace alpha {
 		}
 
 		/// Returns the string expresses the specified key combinations.
-		inline std::wstring KeyboardMap::getStrokeString(const KeyCombination& keys) {
+		inline std::wstring KeyboardMap::strokeString(const KeyCombination& keys) {
 			std::wostringstream	s;
 			if(toBoolean(keys.modifiers & KM_CTRL))		s << L"Ctrl+";
 			if(toBoolean(keys.modifiers & KM_SHIFT))	s << L"Shift+";
 			if(toBoolean(keys.modifiers & KM_ALT))		s << L"Alt+";
-			s << getKeyName(keys.key);
+			s << keyName(keys.key);
 			return s.str();
 		}
 
 		/// Returns the string expresses the specified key combinations.
-		inline std::wstring KeyboardMap::getStrokeString(
+		inline std::wstring KeyboardMap::strokeString(
 				const KeyCombination& firstKeys, const KeyCombination& secondKeys) {
-			return getStrokeString(KeyCombination(firstKeys.key, firstKeys.modifiers))
-				+ L" " + getStrokeString(KeyCombination(secondKeys.key, secondKeys.modifiers));
+			return strokeString(KeyCombination(firstKeys.key, firstKeys.modifiers))
+				+ L" " + strokeString(KeyCombination(secondKeys.key, secondKeys.modifiers));
 		}
 
-		/// Returns true if the keyboard map is not saved.
-		inline bool KeyboardMap::isDirty() const {return dirty_;}
-
-}} // namespace alpha::command
+}} // namespace alpha.command
 
 #endif /* !ALPHA_KEYBOARD_MAP_HPP */

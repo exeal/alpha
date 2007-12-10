@@ -149,6 +149,19 @@ CommandManager::CommandManager() throw() : lastCommandID_(0) {
 }
 
 /**
+ * Returns the name of the specified command
+ * @param id the identifier of the command
+ * @return the human-readable name
+ */
+wstring CommandManager::caption(CommandID id) const {
+	wstring s(Alpha::instance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos)
+		s.resize(eol);
+	return s;
+}
+
+/**
  * Recreates the image list by load icons from the specified directory.
  * @param directory the directory name
  * @return true if succeeded
@@ -290,6 +303,21 @@ bool CommandManager::createImageList(const basic_string<WCHAR>& directory) {
 }
 
 /**
+ * Returns the description of the specified command.
+ * @param id the identifier of the command
+ * @return the description text
+ */
+wstring CommandManager::description(CommandID id) const {
+	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND) {
+		const Buffer& buffer = Alpha::instance().bufferList().at(id - CMD_SPECIAL_BUFFERSSTART);
+		return buffer.textFile().isOpen() ? buffer.textFile().location() : Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED);
+	}
+	const wstring s(Alpha::instance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	return (eol != wstring::npos) ? s.substr(eol + 1) : L"";
+}
+
+/**
  * Executes the specified command.
  * @param id th identifier of the command to execute
  * @param userContext set true if an end user executes. in this case, the command may not be executed
@@ -327,7 +355,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 	case CMD_FILE_REOPEN:				return app.bufferList().reopen(app.bufferList().activeIndex(), false) == BufferList::OPENRESULT_SUCCEEDED;
 	case CMD_FILE_REOPENWITHCODEPAGE:	return app.bufferList().reopen(app.bufferList().activeIndex(), true) == BufferList::OPENRESULT_SUCCEEDED;
 	case CMD_FILE_EXIT:					app.getMainWindow().postMessage(WM_CLOSE); return true;
-	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
+//	case CMD_FILE_SENDMAIL:				return buffer.sendFile(toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1)));
 	case CMD_FILE_CLOSEOTHERS:			return app.bufferList().closeAll(true, true);
 	case CMD_FILE_PRINT:				Printing::instance().print(buffer, true); return true;
 	case CMD_FILE_PRINTSETUP:			Printing::instance().setupPages(); return true;
@@ -356,7 +384,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		InputStatusToggleCommand(view, InputStatusToggleCommand::OVERTYPE_MODE).execute();
 		return true;
 	case CMD_EDIT_OPENCANDIDATEWINDOW:
-		if(temporaryMacro_.getState() == TemporaryMacro::DEFINING)
+		if(temporaryMacro_.state() == TemporaryMacro::DEFINING)
 			return false;
 		return CompletionProposalPopupCommand(view).execute() == 0;
 	case CMD_EDIT_HOME:			CaretMovementCommand(view, CaretMovementCommand::BEGINNING_OF_DOCUMENT, false).execute(); return true;
@@ -530,7 +558,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		if(app.bufferList().numberOfBuffers() > 1) {
 			size_t i = app.bufferList().activeIndex();
 			i = (i + 1 != app.bufferList().numberOfBuffers()) ? i + 1 : 0;
-			app.getBufferList().setActive(i);
+			app.bufferList().setActive(i);
 		}
 		return true;
 	case CMD_VIEW_PREVBUFFER:
@@ -606,12 +634,12 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 		return true;
 		
 	case CMD_WINDOW_SPLITNS: {
-		EditorPane& activePane = app.bufferList().editorWindow().activePane();
+		EditorPane& activePane = app.bufferList().editorWindow().getActivePane();
 		app.bufferList().editorWindow().splitNS(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
 	case CMD_WINDOW_SPLITWE: {
-		EditorPane& activePane = app.bufferList().editorWindow().activePane();
+		EditorPane& activePane = app.bufferList().editorWindow().getActivePane();
 		app.bufferList().editorWindow().splitWE(activePane, *(new EditorPane(activePane)));
 		return true;
 	}
@@ -667,114 +695,14 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 }
 
 /**
- * Returns the name of the specified command
- * @param id the identifier of the command
- * @return the human-readable name
- */
-wstring CommandManager::getCaption(CommandID id) const {
-	wstring s(Alpha::instance().loadMessage(id));
-	const size_t eol = s.find_first_of(L"\n\r");
-	if(eol != wstring::npos)
-		s.resize(eol);
-	return s;
-}
-
-/**
- * Returns the description of the specified command.
- * @param id the identifier of the command
- * @return the description text
- */
-wstring CommandManager::getDescription(CommandID id) const {
-	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND) {
-		const Buffer& buffer = Alpha::instance().bufferList().at(id - CMD_SPECIAL_BUFFERSSTART);
-		return buffer.isBoundToFile() ? buffer.fileName() : Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED);
-	}
-	const wstring s(Alpha::instance().loadMessage(id));
-	const size_t eol = s.find_first_of(L"\n\r");
-	return (eol != wstring::npos) ? s.substr(eol + 1) : L"";
-}
-
-/**
- * Returns the text of the command to display as a menu item.
- * @param id the identifier of the command
- */
-wstring CommandManager::getMenuName(CommandID id) const {
-	static wchar_t buffer[MAX_PATH * 2];
-
-	// [マクロ]
-/*	if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {
-		if(scriptMacroManager_->getCount() != 0) {
-			wcscpy(buffer, scriptMacroManager_->getName(id - CMD_EDIT_PLUGINLIST_START).c_str());
-			wcscat(buffer, L"\t");
-			wcscat(buffer, keyboardMap_.getKeyString(id, useShortKeyNames_).c_str());
-		} else
-			wcscpy(buffer, loadMessage(MSG_ERROR__FAILED_TO_LOAD_SOMETHING).c_str());
-		return buffer;
-	}
-	
-	else*/ if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {
-		const MRU& file = Alpha::getInstance().getMRUManager().getFileInfoAt(id - CMD_SPECIAL_MRUSTART);
-		swprintf(buffer, L"&%X  %s", id - CMD_SPECIAL_MRUSTART, file.fileName.c_str());
-		return buffer;
-	}
-	
-	else if(id >= CMD_SPECIAL_BUFFERSSTART && id <= CMD_SPECIAL_BUFFERSEND) {
-		const Buffer& document = Alpha::getInstance().getBufferList().getAt(id - CMD_SPECIAL_BUFFERSSTART);
-		if(id - CMD_SPECIAL_BUFFERSSTART < 0x10)
-			swprintf(buffer, L"&%X  ", id - CMD_SPECIAL_BUFFERSSTART);
-		else
-			buffer[0] = 0;
-		wcscat(buffer, document.isBoundToFile() ? document.getFileName() : Alpha::getInstance().loadMessage(MSG_BUFFER__UNTITLED).c_str());
-		return buffer;
-	}
-
-	wstring s(Alpha::getInstance().loadMessage(id));
-	const size_t eol = s.find_first_of(L"\n\r");
-	if(eol != wstring::npos)
-		s.resize(eol);
-	const wstring keys = Alpha::getInstance().getKeyboardMap().getKeyString(id);
-	if(!keys.empty()) {
-		s += L"\t";
-		s += keys;
-	}
-	return s;
-}
-
-/**
- * Returns the name of the specified command.
- * @param id the identifier of the command
- * @return the human-readable name
- */
-wstring CommandManager::getName(CommandID id) const {
-	wstring s(Alpha::getInstance().loadMessage(id));
-	const size_t eol = s.find_first_of(L"\n\r");
-	if(eol != wstring::npos) {
-		s.resize(eol);
-		// CJK アクセスキー
-		if(s[eol - 1] == L')' || (s.length() > 4 && s.compare(eol - 4, 4, L")...") == 0)) {
-			const size_t opener = s.rfind(L'(');
-			if(opener != wstring::npos)
-				s.resize(opener);
-		}
-	}
-
-	// '&' を取り除く
-	const size_t amp = s.find(L'&');
-	if(amp != wstring::npos)
-		return s.substr(0, amp) + s.substr(amp + 1);
-	else
-		return s;
-}
-
-/**
  * Returns true if the command is checked.
  * @param id the identifier of the command
  * @return true if checked
  */
 bool CommandManager::isChecked(CommandID id) const {
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	if(id >= CMD_SPECIAL_BUFFERSSTART && id < CMD_SPECIAL_BUFFERSEND)
-		return id - CMD_SPECIAL_BUFFERSSTART == app.getBufferList().getActiveIndex();
+		return id - CMD_SPECIAL_BUFFERSSTART == app.bufferList().activeIndex();
 
 	switch(id) {
 	case CMD_SEARCH_FIND:
@@ -793,15 +721,15 @@ bool CommandManager::isChecked(CommandID id) const {
 	case CMD_VIEW_STATUSBAR:
 		return app.statusBar_.isVisible();
 	case CMD_VIEW_WRAPNO:
-		return app.getBufferList().getActiveView().configuration().lineWrap.mode == layout::LineWrapConfiguration::NONE;
+		return app.bufferList().activeView().configuration().lineWrap.mode == layout::LineWrapConfiguration::NONE;
 //	case CMD_VIEW_WRAPBYSPECIFIEDWIDTH:
-//		return app.getBufferList().getActiveView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
+//		return app.bufferList().activeView().getLayoutSetter().getSettings().wrapMode == WPM_SPECIFIED;
 	case CMD_VIEW_WRAPBYWINDOWWIDTH:
-		return app.getBufferList().getActiveView().configuration().lineWrap.mode != layout::LineWrapConfiguration::NONE;
+		return app.bufferList().activeView().configuration().lineWrap.mode != layout::LineWrapConfiguration::NONE;
 
 	case CMD_MACRO_DEFINE:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_EXECUTE:			return temporaryMacro_.isExecuting();
-	case CMD_MACRO_PAUSERESTART:	return temporaryMacro_.getState() == TemporaryMacro::PAUSING;
+	case CMD_MACRO_PAUSERESTART:	return temporaryMacro_.state() == TemporaryMacro::PAUSING;
 
 	case CMD_WINDOW_TOPMOSTALWAYS:
 		return toBoolean(app.getMainWindow().getExStyle() & WS_EX_TOPMOST);
@@ -825,9 +753,9 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 //			&& (userContext || (id >= CMD_MACRO_DEFINE && id < CMD_MACRO_DEFINE + 1000)))
 //		return false;
 
-	Alpha& app = Alpha::getInstance();
-	const EditorView& view = app.getBufferList().getActiveView();
-	const Buffer& buffer = view.getDocument();
+	Alpha& app = Alpha::instance();
+	const EditorView& view = app.bufferList().activeView();
+	const Buffer& buffer = view.document();
 	const bool modified = buffer.isModified();
 	const bool readOnly = buffer.isReadOnly();
 	const bool hasSelection = !view.caret().isSelectionEmpty();
@@ -837,19 +765,19 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_FILE_SAVE:
 		return modified && !readOnly;
 	case CMD_FILE_SAVEALL:
-		for(size_t i = 0; i < app.getBufferList().getCount(); ++i) {
-			if(app.getBufferList().getAt(i).isModified())
+		for(size_t i = 0; i < app.bufferList().numberOfBuffers(); ++i) {
+			if(app.bufferList().at(i).isModified())
 				return true;
 		}
 		return false;
 	case CMD_FILE_REOPEN:
 	case CMD_FILE_REOPENWITHCODEPAGE:
-		return buffer.isBoundToFile();
+		return buffer.textFile().isOpen();
 	case CMD_FILE_SENDMAIL:
-		return buffer.isBoundToFile()
+		return buffer.textFile().isOpen()
 			|| !toBoolean(app.readIntegerProfile(L"File", L"sendMailAsAttachment", 1));
 	case CMD_FILE_CLOSEOTHERS:
-		return app.getBufferList().getCount() > 1;
+		return app.bufferList().numberOfBuffers() > 1;
 
 		// 編集
 	case CMD_EDIT_DELETE:
@@ -871,7 +799,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_EDIT_PASTE:
 		return !readOnly && view.caret().canPaste() != 0;
 	case CMD_EDIT_PASTEFROMCLIPBOARDRING:
-		return !readOnly && app.getBufferList().getEditorSession().clipboardRing().numberOfItems() != 0;
+		return !readOnly && app.bufferList().editorSession().clipboardRing().numberOfItems() != 0;
 	case CMD_EDIT_INSERTTAB:
 	case CMD_EDIT_DELETETAB:
 		return !readOnly;
@@ -895,7 +823,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		// 検索
 	case CMD_SEARCH_FINDNEXT:
 	case CMD_SEARCH_FINDPREV:
-		return app.getBufferList().getEditorSession().incrementalSearcher().isRunning()
+		return app.bufferList().editorSession().incrementalSearcher().isRunning()
 			|| (app.searchDialog_->isWindow() &&
 				::GetWindowTextLengthW(app.searchDialog_->getItem(IDC_COMBO_FINDWHAT)) != 0);
 	case CMD_SEARCH_REPLACEALLINTERACTIVE:
@@ -923,14 +851,14 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 		return true;
 	case CMD_VIEW_NEXTBUFFER:
 	case CMD_VIEW_PREVBUFFER:
-		return app.getBufferList().getCount() > 1;
+		return app.bufferList().numberOfBuffers() > 1;
 
 		// マクロ
 	case CMD_MACRO_DEFINE:			return !temporaryMacro_.isExecuting();
 	case CMD_MACRO_EXECUTE:
 	case CMD_MACRO_APPEND:			return !temporaryMacro_.isDefining() && !temporaryMacro_.isExecuting() && !temporaryMacro_.isEmpty();
 	case CMD_MACRO_PAUSERESTART:	return temporaryMacro_.isDefining();
-	case CMD_MACRO_INSERTQUERY:		return temporaryMacro_.getState() == TemporaryMacro::DEFINING;
+	case CMD_MACRO_INSERTQUERY:		return temporaryMacro_.state() == TemporaryMacro::DEFINING;
 	case CMD_MACRO_ABORT:			return temporaryMacro_.isDefining();
 	case CMD_MACRO_SAVEAS:			return !temporaryMacro_.isDefining() && !temporaryMacro_.isExecuting() && !temporaryMacro_.isEmpty();
 	case CMD_MACRO_LOAD:			return !temporaryMacro_.isDefining() && !temporaryMacro_.isExecuting();
@@ -946,7 +874,7 @@ bool CommandManager::isEnabled(CommandID id, bool userContext) const {
 	case CMD_WINDOW_UNSPLITOTHERS:
 	case CMD_WINDOW_NEXTPANE:
 	case CMD_WINDOW_PREVPANE:
-		return app.getBufferList().getEditorWindow().isSplit(app.getBufferList().getEditorWindow().getActivePane());
+		return app.bufferList().editorWindow().isSplit(app.bufferList().editorWindow().getActivePane());
 
 	default:
 		return true;
@@ -987,6 +915,78 @@ bool CommandManager::isRecordable(CommandID id) const {
 			return false;
 		return true;
 	}
+}
+
+/**
+ * Returns the text of the command to display as a menu item.
+ * @param id the identifier of the command
+ */
+wstring CommandManager::menuName(CommandID id) const {
+	static wchar_t buffer[MAX_PATH * 2];
+
+	// [マクロ]
+/*	if(id >= CMD_EDIT_PLUGINLIST_START && id < CMD_EDIT_PLUGINLIST_END) {
+		if(scriptMacroManager_->getCount() != 0) {
+			wcscpy(buffer, scriptMacroManager_->getName(id - CMD_EDIT_PLUGINLIST_START).c_str());
+			wcscat(buffer, L"\t");
+			wcscat(buffer, keyboardMap_.getKeyString(id, useShortKeyNames_).c_str());
+		} else
+			wcscpy(buffer, loadMessage(MSG_ERROR__FAILED_TO_LOAD_SOMETHING).c_str());
+		return buffer;
+	}
+	
+	else*/ if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {
+		const MRU& file = Alpha::instance().mruManager().at(id - CMD_SPECIAL_MRUSTART);
+		swprintf(buffer, L"&%X  %s", id - CMD_SPECIAL_MRUSTART, file.fileName.c_str());
+		return buffer;
+	}
+	
+	else if(id >= CMD_SPECIAL_BUFFERSSTART && id <= CMD_SPECIAL_BUFFERSEND) {
+		const Buffer& document = Alpha::instance().bufferList().at(id - CMD_SPECIAL_BUFFERSSTART);
+		if(id - CMD_SPECIAL_BUFFERSSTART < 0x10)
+			swprintf(buffer, L"&%X  ", id - CMD_SPECIAL_BUFFERSSTART);
+		else
+			buffer[0] = 0;
+		wcscat(buffer, document.name().c_str());
+		return buffer;
+	}
+
+	wstring s(Alpha::instance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos)
+		s.resize(eol);
+	const wstring keys = Alpha::instance().keyboardMap().keyString(id);
+	if(!keys.empty()) {
+		s += L"\t";
+		s += keys;
+	}
+	return s;
+}
+
+/**
+ * Returns the name of the specified command.
+ * @param id the identifier of the command
+ * @return the human-readable name
+ */
+wstring CommandManager::name(CommandID id) const {
+	wstring s(Alpha::instance().loadMessage(id));
+	const size_t eol = s.find_first_of(L"\n\r");
+	if(eol != wstring::npos) {
+		s.resize(eol);
+		// CJK アクセスキー
+		if(s[eol - 1] == L')' || (s.length() > 4 && s.compare(eol - 4, 4, L")...") == 0)) {
+			const size_t opener = s.rfind(L'(');
+			if(opener != wstring::npos)
+				s.resize(opener);
+		}
+	}
+
+	// '&' を取り除く
+	const size_t amp = s.find(L'&');
+	if(amp != wstring::npos)
+		return s.substr(0, amp) + s.substr(amp + 1);
+	else
+		return s;
 }
 
 #undef CHECK_REBAR_BAND_VISIBILITY

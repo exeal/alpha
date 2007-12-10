@@ -142,7 +142,7 @@ namespace {
 		if(message == WM_COMMAND && LOWORD(wParam) == psh3) {	// [適用] ボタン
 			::LOGFONTW lf;
 			::SendMessageW(dialog, WM_CHOOSEFONT_GETLOGFONT, 0, reinterpret_cast<LPARAM>(&lf));
-			Alpha::getInstance().setFont(lf);
+			Alpha::instance().setFont(lf);
 			return true;
 		} else if(message == WM_INITDIALOG) {
 			::EnableWindow(::GetDlgItem(dialog, stc2), false);	// [スタイル] を無効に
@@ -193,11 +193,11 @@ LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPA
 
 /// [フォント] ダイアログを表示してエディタのフォントを変更する
 void Alpha::changeFont() {
-	EditorView& activeView = buffers_->getActiveView();
+	EditorView& activeView = buffers_->activeView();
 	::LOGFONTW font;
 	MANAH_AUTO_STRUCT_SIZE(::CHOOSEFONTW, cf);
 
-	getTextEditorFont(font);
+	textEditorFont(font);
 	cf.hwndOwner = getMainWindow().getHandle();
 	cf.lpLogFont = &font;
 	cf.lpfnHook = chooseFontHookProc;
@@ -216,8 +216,8 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	switch(message) {
 	case WM_ACTIVATE:
 		if(wParam == WA_ACTIVE) {
-			for(size_t i = 0; i < buffers_->getCount(); ++i)
-				buffers_->getAt(i).checkTimeStamp();
+			for(size_t i = 0; i < buffers_->numberOfBuffers(); ++i)
+				buffers_->at(i).textFile().checkTimeStamp();
 		}
 		return 0L;
 	case WM_COMMAND:
@@ -273,7 +273,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 //		if(m_buffers.GetCount() != 0 && m_buffers.GetActiveDocumentIndex() != -1
 //				&& reinterpret_cast<HWND>(wParam) != m_documents.GetActiveDocument()->GetWindow())
 //			::SendMessage(m_documents.GetActiveDocument()->GetWindow(), message, wParam, lParam);
-		buffers_->getEditorWindow().setFocus();
+		buffers_->editorWindow().setFocus();
 		return 0L;
 	case WM_SETTINGCHANGE:
 		onSettingChange(static_cast<UINT>(wParam), reinterpret_cast<wchar_t*>(lParam));
@@ -287,13 +287,6 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	}
 	return ::DefWindowProc(window, message, wParam, lParam);
 }
-
-/// スクリプトシステムを返す
-void Alpha::getScriptSystem(ankh::ScriptSystem*& scriptSystem) throw() {(scriptSystem = scriptSystem_)->AddRef();}
-
-/// スクリプトシステムを返す
-void Alpha::getScriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw() {
-	const_cast<ankh::ScriptSystem*>(scriptSystem_)->AddRef(); (scriptSystem = scriptSystem_);}
 
 /**
  * キー組み合わせをコマンドに変換して実行する
@@ -309,27 +302,27 @@ bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
 		return false;
 
 	if(twoStroke1stKey_ == VK_NULL) {	// 1ストローク目
-		Command* command = keyboardMap_.getCommand(KeyCombination(key, modifiers));
+		Command* command = keyboardMap_.command(KeyCombination(key, modifiers));
 		if(command == 0)
 			return false;
 		else if(command->isBuiltIn() && command->getID() == CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION) {
 			twoStroke1stKey_ = key;
 			twoStroke1stModifiers_ = modifiers;
-			const wstring s = loadMessage(MSG_STATUS__WAITING_FOR_2ND_KEYS,
-				MARGS % KeyboardMap::getStrokeString(KeyCombination(key, modifiers)));
+			const wstring s(loadMessage(MSG_STATUS__WAITING_FOR_2ND_KEYS,
+				MARGS % KeyboardMap::strokeString(KeyCombination(key, modifiers))));
 			setStatusText(s.c_str());
 		} else
 			command->execute();
 	} else {	// 2ストローク目
-		Command* command = keyboardMap_.getCommand(
+		Command* command = keyboardMap_.command(
 			KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers));
 		if(command != 0) {
 			setStatusText(0);
 			command->execute();
 		} else {
-			const wstring s = loadMessage(MSG_STATUS__INVALID_2STROKE_COMBINATION,
-				MARGS % KeyboardMap::getStrokeString(
-					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers)));
+			const wstring s(loadMessage(MSG_STATUS__INVALID_2STROKE_COMBINATION,
+				MARGS % KeyboardMap::strokeString(
+					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers))));
 			::MessageBeep(MB_OK);
 			setStatusText(s.c_str());
 		}
@@ -384,16 +377,16 @@ bool Alpha::initInstance(int showCommand) {
 	// 既定の書式を読み込む
 	try {
 		kernel::Newline newline =
-			static_cast<kernel::Newline>(readIntegerProfile(L"File", L"defaultNewline", kernel::NLF_CRLF));
-		if(newline == kernel::NLF_AUTO)
-			newline = kernel::NLF_CRLF;
-		kernel::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
+			static_cast<kernel::Newline>(readIntegerProfile(L"File", L"defaultNewline", kernel::NLF_CR_LF));
+		if(newline == kernel::NLF_RAW_VALUE)
+			newline = kernel::NLF_CR_LF;
+//		kernel::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
 	} catch(invalid_argument&) {
 		// TODO: 設定が間違っていることをユーザに通知
 	}
 
 	// トップレベルウィンドウ
-	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(getHandle()),
+	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<::HWND>(getHandle()),
 			DefaultWindowRect(), 0, /*WS_VISIBLE |*/ WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW))
 		return false;
 	setMainWindow(applicationWindow);
@@ -519,7 +512,7 @@ void Alpha::loadINISettings() {
 			break;
 		replacesWiths.push_back(value);
 	}
-	searcher::TextSearcher& s = buffers_->getEditorSession().textSearcher();
+	searcher::TextSearcher& s = buffers_->editorSession().textSearcher();
 	s.setMaximumNumberOfStoredStrings(16);
 	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
 	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
@@ -589,7 +582,7 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 bool Alpha::preTranslateMessage(const MSG& msg) {
 	// コマンドに割り当てられているキー組み合わせをここで捕捉する
 	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
-		if(msg.hwnd == buffers_->getActiveView().getHandle()) {
+		if(msg.hwnd == buffers_->activeView().getHandle()) {
 			KeyModifier modifiers = 0;
 			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))
 				modifiers |= KM_CTRL;
@@ -600,7 +593,7 @@ bool Alpha::preTranslateMessage(const MSG& msg) {
 			return handleKeyDown(static_cast<VirtualKey>(msg.wParam), modifiers);
 		}
 	} else if(msg.message == WM_SYSCHAR) {
-		if(msg.hwnd == buffers_->getActiveView().getHandle()) {
+		if(msg.hwnd == buffers_->activeView().getHandle()) {
 			// キー組み合わせがキーボードスキームに登録されているか調べる。
 			// 登録されていれば既定の処理 (メニューのアクティベーション) を妨害
 			const VirtualKey key = LOBYTE(::VkKeyScanExW(static_cast<WCHAR>(msg.wParam), ::GetKeyboardLayout(0)));
@@ -609,9 +602,9 @@ bool Alpha::preTranslateMessage(const MSG& msg) {
 			if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))		modifiers |= KM_SHIFT;
 
 			if(twoStroke1stKey_ == VK_NULL)
-				return keyboardMap_.getCommand(KeyCombination(key, modifiers)) != 0;
+				return keyboardMap_.command(KeyCombination(key, modifiers)) != 0;
 			else
-				return keyboardMap_.getCommand(
+				return keyboardMap_.command(
 					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers)) != 0;
 		}
 	}
@@ -705,7 +698,7 @@ void Alpha::saveINISettings() {
 	mruManager_->save();
 
 	// 検索文字列履歴の保存
-	const searcher::TextSearcher& s = buffers_->getEditorSession().textSearcher();
+	const searcher::TextSearcher& s = buffers_->editorSession().textSearcher();
 	for(size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
 		swprintf(keyName, L"findWhat(%u)", i);
 		writeStringProfile(L"Find", keyName, s.pattern(i).c_str());
@@ -720,6 +713,13 @@ void Alpha::saveINISettings() {
 	writeStringProfile(L"Find", keyName, L"");
 }
 
+/// スクリプトシステムを返す
+void Alpha::scriptSystem(ankh::ScriptSystem*& scriptSystem) throw() {(scriptSystem = scriptSystem_)->AddRef();}
+
+/// スクリプトシステムを返す
+void Alpha::scriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw() {
+	const_cast<ankh::ScriptSystem*>(scriptSystem_)->AddRef(); (scriptSystem = scriptSystem_);}
+
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
 void Alpha::setFont(const ::LOGFONTW& font) {
 	::LOGFONTW lf = font;
@@ -729,8 +729,8 @@ void Alpha::setFont(const ::LOGFONTW& font) {
 	editorFont_ = ::CreateFontIndirectW(&lf);
 
 	// 全てのビューのフォントを更新
-	for(size_t i = 0; i < buffers_->getCount(); ++i) {
-		presentation::Presentation& p = buffers_->getAt(i).getPresentation();
+	for(size_t i = 0; i < buffers_->numberOfBuffers(); ++i) {
+		presentation::Presentation& p = buffers_->at(i).presentation();
 		for(presentation::Presentation::TextViewerIterator it = p.firstTextViewer(); it != p.lastTextViewer(); ++it)
 			(*it)->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 	}
@@ -774,8 +774,8 @@ void Alpha::setupMenus() {
 
 	const Menu::SeparatorItem sep;
 
-#define ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->getMenuName(id).c_str())
-#define RADIO_ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->getMenuName(id).c_str(), MFS_ENABLED, true)
+#define ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->menuName(id).c_str())
+#define RADIO_ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->menuName(id).c_str(), MFS_ENABLED, true)
 
 	// メニューバー
 	menuBar << Menu::StringItem(CMD_FILE_TOP - CMD_SPECIAL_START, loadMessage(CMD_FILE_TOP).c_str())
@@ -795,7 +795,7 @@ void Alpha::setupMenus() {
 		<< ITEM(CMD_FILE_SAVE) << ITEM(CMD_FILE_SAVEAS) << ITEM(CMD_FILE_SAVEALL) << sep
 		<< ITEM(CMD_FILE_PRINT) << /*ITEM(CMD_FILE_PRINTPREVIEW) <<*/ ITEM(CMD_FILE_PRINTSETUP) << sep
 		<< ITEM(CMD_FILE_SENDMAIL) << sep << ITEM(CMD_FILE_EXIT);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_MRU - CMD_SPECIAL_START, mruManager_->getPopupMenu());
+	popup->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_MRU - CMD_SPECIAL_START, mruManager_->popupMenu());
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_FILE_TOP - CMD_SPECIAL_START, popup);
 
 	// [編集]
@@ -831,7 +831,7 @@ void Alpha::setupMenus() {
 		<< sep << ITEM(CMD_VIEW_BUFFERS) << ITEM(CMD_VIEW_NEXTBUFFER) << ITEM(CMD_VIEW_PREVBUFFER)
 		<< sep << RADIO_ITEM(CMD_VIEW_WRAPNO) << RADIO_ITEM(CMD_VIEW_WRAPBYSPECIFIEDWIDTH)
 		<< RADIO_ITEM(CMD_VIEW_WRAPBYWINDOWWIDTH) << sep << ITEM(CMD_VIEW_REFRESH);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS - CMD_SPECIAL_START, buffers_->getListMenu());
+	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS - CMD_SPECIAL_START, buffers_->listMenu());
 	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP - CMD_SPECIAL_START, popup);
 
 	// [マクロ]
@@ -933,7 +933,7 @@ void Alpha::setupToolbar() {
 		if(commands[j] == 0)
 			buttons[i].fsStyle = BTNS_SEP;
 		else {
-			size_t icon = commandManager_->getIconIndex(commands[j] + CMD_SPECIAL_START);
+			size_t icon = commandManager_->iconIndex(commands[j] + CMD_SPECIAL_START);
 			if(icon == -1) {
 				--i;
 				--buttonCount;
@@ -972,9 +972,9 @@ void Alpha::setupToolbar() {
 	toolbar_.setBitmapSize(16, 16);
 	toolbar_.setButtonSize(22, 22);
 	toolbar_.addButtons(static_cast<int>(buttonCount), buttons);
-	toolbar_.setImageList(commandManager_->getImageList(CommandManager::ICONSTATE_NORMAL).getHandle());
-	toolbar_.setDisabledImageList(commandManager_->getImageList(CommandManager::ICONSTATE_DISABLED).getHandle());
-	toolbar_.setHotImageList(commandManager_->getImageList(CommandManager::ICONSTATE_HOT).getHandle());
+	toolbar_.setImageList(commandManager_->imageList(CommandManager::ICONSTATE_NORMAL).getHandle());
+	toolbar_.setDisabledImageList(commandManager_->imageList(CommandManager::ICONSTATE_DISABLED).getHandle());
+	toolbar_.setHotImageList(commandManager_->imageList(CommandManager::ICONSTATE_HOT).getHandle());
 //	toolbar_.setPadding(6, 6);
 
 	for(size_t i = 0; i < buttonCount; ++i) {
@@ -1013,7 +1013,7 @@ void Alpha::setupToolbar() {
 void Alpha::showSearchDialog() {
 	if(!searchDialog_->isVisible()) {
 		if(initializeFindTextFromEditor_) {	// アクティブなエディタから検索パターンを取り出す
-			Caret& caret = buffers_->getActiveView().caret();
+			Caret& caret = buffers_->activeView().caret();
 			if(caret.isSelectionEmpty()) {
 //				String s;
 //				// TODO: obtain the word nearest from the caret position.
@@ -1086,7 +1086,7 @@ bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
 		return true;
 	} else if(command >= CMD_SPECIAL_BUFFERSSTART && command <= CMD_SPECIAL_BUFFERSEND) {
 		if(commandManager_->isEnabled(command, true))
-			buffers_->setActive(buffers_->getAt(command - CMD_SPECIAL_BUFFERSSTART));
+			buffers_->setActive(buffers_->at(command - CMD_SPECIAL_BUFFERSSTART));
 	} else
 		commandManager_->executeCommand(command, true);
 	return true;
@@ -1115,7 +1115,7 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 	if(drawItem.CtlType != ODT_MENU)	// 現時点ではメニューの描画のみ
 		return;
 	if(drawItem.itemID != 0) {
-		const wstring text = commandManager_->getMenuName(drawItem.itemID + CMD_SPECIAL_START);
+		const wstring text(commandManager_->menuName(drawItem.itemID + CMD_SPECIAL_START));
 		manah::AutoBuffer<wchar_t> caption(new wchar_t[text.length() + 1]);
 		wcscpy(caption.get(), text.c_str());
 		wchar_t* accel = wcschr(caption.get(), L'\t');
@@ -1124,7 +1124,7 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 		else if(accel != 0)
 			*(accel++) = 0;
 		Menu::drawItem(drawItem, caption.get(), accel, 0, 0,
-			getBufferList().getBufferIcon(drawItem.itemID - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START)));
+			bufferList().bufferIcon(drawItem.itemID - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START)));
 	} else
 		Menu::drawItem(drawItem, 0);
 }
@@ -1143,7 +1143,7 @@ void Alpha::onDropFiles(HDROP drop) {
 	}
 	::DragFinish(drop);
 
-	EditorView& activeView = buffers_->getActiveView();
+	EditorView& activeView = buffers_->activeView();
 	if(activeView.isWindow())
 		activeView.setFocus();
 }
@@ -1197,7 +1197,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 		if(mi.itemID == 0)
 			Menu::measureItem(mi, 0);
 		else {
-			const wstring s = commandManager_->getMenuName(mi.itemID + CMD_SPECIAL_START);
+			const wstring s(commandManager_->menuName(mi.itemID + CMD_SPECIAL_START));
 			manah::AutoBuffer<wchar_t> caption(new wchar_t[s.length() + 1]);
 			wcscpy(caption.get(), s.c_str());
 			wchar_t* accel = wcschr(caption.get(), L'\t');
@@ -1225,9 +1225,9 @@ void Alpha::onMenuSelect(UINT itemID, UINT flags, HMENU) {
 			scriptMacroManager_->getDescription(command - CMD_EDIT_PLUGINLIST_START).c_str() : L"", SBT_NOBORDERS);
 	} else*/ if(command >= CMD_SPECIAL_BUFFERSSTART && command <= CMD_SPECIAL_BUFFERSEND)	// バッファ
 		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
-			buffers_->getAt(command - CMD_SPECIAL_BUFFERSSTART).getFilePathName(), SBT_NOBORDERS);
+			buffers_->at(command - CMD_SPECIAL_BUFFERSSTART).textFile().pathName().c_str(), SBT_NOBORDERS);
 	else {
-		const wstring prompt = (!toBoolean(flags & MF_POPUP) && !toBoolean(flags & MFT_SEPARATOR)) ? loadMessage(command) : L"";
+		const wstring prompt((!toBoolean(flags & MF_POPUP) && !toBoolean(flags & MFT_SEPARATOR)) ? loadMessage(command) : L"");
 		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
 			!prompt.empty() ? wcschr(prompt.data(), L'\n') + 1 : L"", SBT_NOBORDERS);
 	}
@@ -1269,7 +1269,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			newDocTypeMenu_->trackPopupMenu(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow());
 */			return true;
 		case CMD_FILE_OPEN:
-			mruManager_->getPopupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
+			mruManager_->popupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
 			return true;
 		}
 		break;
@@ -1285,8 +1285,8 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			static wchar_t tipText[1024];
 			::NMTTDISPINFOW& nmttdi = *reinterpret_cast<::NMTTDISPINFOW*>(&nmhdr);
 			nmttdi.hinst = getHandle();
-			wstring name = commandManager_->getName(id);
-			const wstring key = keyboardMap_.getKeyString(id);
+			wstring name(commandManager_->name(id));
+			const wstring key(keyboardMap_.keyString(id));
 			if(!key.empty()) {
 				name += L" (";
 				name += key;
@@ -1348,7 +1348,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 		if(toBoolean(tbbi.fsStyle & TBSTYLE_SEP))
 			popup << Menu::SeparatorItem();
 		else
-			popup << Menu::StringItem(tbbi.idCommand, commandManager_->getMenuName(tbbi.idCommand + CMD_SPECIAL_START).c_str(),
+			popup << Menu::StringItem(tbbi.idCommand, commandManager_->menuName(tbbi.idCommand + CMD_SPECIAL_START).c_str(),
 				(commandManager_->isEnabled(tbbi.idCommand + CMD_SPECIAL_START, true) ? MFS_ENABLED : MFS_DISABLED)
 				| ((commandManager_->isChecked(tbbi.idCommand + CMD_SPECIAL_START)) ? MFS_CHECKED : 0));
 	}
@@ -1423,8 +1423,8 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 		- (statusBar_.isVisible() ? statusBarRect.bottom - statusBarRect.top : 0);
 //	if(outputWindow.isWindow() && outputWindow.isVisible())
 //		editorRect.bottom -= outputWndHeight_;
-	if(buffers_->getEditorWindow().isWindow())
-		buffers_->getEditorWindow().move(editorRect, true);
+	if(buffers_->editorWindow().isWindow())
+		buffers_->editorWindow().move(editorRect, true);
 
 //	if(outputWindow_.isWindow()) {
 //		outputWindow_.move(0, editorRect.bottom + 2, cx, outputWndHeight_);
@@ -1434,7 +1434,7 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 
 /// @see WM_TIMER
 void Alpha::onTimer(UINT timerID) {
-	if(timerID == ID_TIMER_QUERYCOMMAND && buffers_->getCount() != 0) {
+	if(timerID == ID_TIMER_QUERYCOMMAND && buffers_->numberOfBuffers() != 0) {
 		// ツールバーアイテムの有効化/無効化
 		if(toolbar_.isVisible()) {
 			const size_t buttonCount = toolbar_.getButtonCount();

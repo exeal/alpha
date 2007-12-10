@@ -29,19 +29,19 @@ namespace alpha {
 		Buffer() throw();
 		~Buffer() throw();
 		// attributes
-		ascension::kernel::files::FileBinder&			fileBinder() throw();
-		const ascension::kernel::files::FileBinder&		fileBinder() const throw();
-		const std::basic_string<::WCHAR>				fileName() const;
-		ascension::presentation::Presentation&			presentation() throw();
-		const ascension::presentation::Presentation&	presentation() const throw();
+		ascension::kernel::fileio::TextFileDocumentInput&		textFile() throw();
+		const ascension::kernel::fileio::TextFileDocumentInput&	textFile() const throw();
+		const std::basic_string<::WCHAR>						name() const;
+		ascension::presentation::Presentation&					presentation() throw();
+		const ascension::presentation::Presentation&			presentation() const throw();
 
 	private:
 		std::auto_ptr<ascension::presentation::Presentation> presentation_;
-		std::auto_ptr<ascension::kernel::files::FileBinder> fileBinder_;
+		std::auto_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
 	};
 
 	/// A view of a text editor.
-	class EditorView : public ascension::viewers::TextViewer, virtual public ascension::kernel::files::IFilePropertyListener,
+	class EditorView : public ascension::viewers::TextViewer, virtual public ascension::kernel::fileio::IFilePropertyListener,
 		virtual public ascension::kernel::IBookmarkListener, virtual public ascension::searcher::IIncrementalSearchCallback {
 	public:
 		// constructors
@@ -69,9 +69,9 @@ namespace alpha {
 		void	documentModificationSignChanged(const ascension::kernel::Document& document);
 		void	documentPropertyChanged(const ascension::kernel::Document& document, const ascension::kernel::DocumentPropertyKey& key);
 		void	documentReadOnlySignChanged(const ascension::kernel::Document& document);
-		// ascension.kernel.files.IFilePropertyListener
-		void	fileEncodingChanged(const ascension::kernel::files::FileBinder& fileBinder);
-		void	fileNameChanged(const ascension::kernel::files::FileBinder& fileBinder);
+		// ascension.kernel.fileio.IFilePropertyListener
+		void	fileEncodingChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
+		void	fileNameChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
 		// ascension.viewers.ICaretListener (overrides)
 		void	caretMoved(const ascension::viewers::Caret& self, const ascension::kernel::Region& oldRegion);
 		void	characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
@@ -116,7 +116,7 @@ namespace alpha {
 		void	removeBuffer(const Buffer& buffer);
 		void	showBuffer(const Buffer& buffer);
 		// manah.win32.ui.AbstractPane
-		::HWND		getWindow() const throw();
+		::HWND	getWindow() const throw();
 	private:
 		std::set<EditorView*> views_;
 		EditorView* visibleView_;
@@ -133,7 +133,8 @@ namespace alpha {
 	 */
 	class BufferList :
 			virtual public ascension::kernel::IDocumentStateListener,
-			virtual public ascension::kernel::files::IUnexpectedFileTimeStampDirector,
+			virtual public ascension::kernel::fileio::IFilePropertyListener,
+			virtual public ascension::kernel::fileio::IUnexpectedFileTimeStampDirector,
 			virtual public ascension::presentation::ITextViewerListListener {
 		MANAH_NONCOPYABLE_TAG(BufferList);
 	public:
@@ -153,10 +154,10 @@ namespace alpha {
 		EditorView&								activeView() const;
 		Buffer&									at(std::size_t index) const;
 		::HICON									bufferIcon(std::size_t index) const;
-		static std::wstring						displayName(const Buffer& buffer);
 		ascension::texteditor::Session&			editorSession() throw();
 		const ascension::texteditor::Session&	editorSession() const throw();
 		EditorWindow&							editorWindow() const throw();
+		static std::wstring						getDisplayName(const Buffer& buffer);
 		const manah::win32::ui::Menu&			listMenu() const throw();
 		std::size_t								numberOfBuffers() const throw();
 		void									setActive(std::size_t index);
@@ -183,21 +184,24 @@ namespace alpha {
 		bool		saveAll(bool addToMRU = true);
 		void		updateContextMenu();
 		// ascension.kernel.IDocumentStateListener
-		void	documentAccessibleRegionChanged(ascension::kernel::Document& document);
-		void	documentEncodingChanged(ascension::kernel::Document& document);
-		void	documentFileNameChanged(ascension::kernel::Document& document);
-		void	documentModificationSignChanged(ascension::kernel::Document& document);
-		void	documentReadOnlySignChanged(ascension::kernel::Document& document);
-		// ascension.kernel.files.IUnexpectedFileTimeStampDerector
+		void	documentAccessibleRegionChanged(const ascension::kernel::Document& document);
+		void	documentModificationSignChanged(const ascension::kernel::Document& document);
+		void	documentPropertyChanged(const ascension::kernel::Document& document, const ascension::kernel::DocumentPropertyKey& key);
+		void	documentReadOnlySignChanged(const ascension::kernel::Document& document);
+		// ascension.kernel.fileio.IFilePropertyListener
+		void	fileEncodingChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
+		void	fileNameChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
+		// ascension.kernel.fileio.IUnexpectedFileTimeStampDerector
 		bool	queryAboutUnexpectedDocumentFileTimeStamp(ascension::kernel::Document& document,
-					ascension::kernel::files::IUnexpectedFileTimeStampDirector::Context context) throw();
+					ascension::kernel::fileio::IUnexpectedFileTimeStampDirector::Context context) throw();
 		// ascension.presentation.ITextViewerListListener
 		void	textViewerListChanged(ascension::presentation::Presentation& presentation);
 
 	private:
 		void						fireActiveBufferSwitched();
 		Buffer&						getConcreteDocument(ascension::kernel::Document& document) const;
-		bool						handleFileIOError(const ::WCHAR* fileName, bool forLoading, ascension::kernel::files::IOException::Type result);
+		const Buffer&				getConcreteDocument(const ascension::kernel::Document& document) const;
+		bool						handleFileIOError(const ::WCHAR* fileName, bool forLoading, ascension::kernel::fileio::IOException::Type result);
 		static ::UINT_PTR CALLBACK	openFileNameHookProc(::HWND window, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 		void						recalculateBufferBarSize();
 		void						resetResources();
@@ -214,7 +218,11 @@ namespace alpha {
 	};
 
 
-	/// Returns 
+	/// Returns the input text file.
+	inline ascension::kernel::fileio::TextFileDocumentInput& Buffer::textFile() throw() {return *textFile_;}
+
+	/// Returns the input text file.
+	inline const ascension::kernel::fileio::TextFileDocumentInput& Buffer::textFile() const throw() {return *textFile_;}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
 	inline ::HWND EditorPane::getWindow() const throw() {return (visibleView_ != 0) ? visibleView_->getHandle() : 0;}

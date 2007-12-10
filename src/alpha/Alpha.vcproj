@@ -44,7 +44,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib shlwapi.lib comctl32.lib imm32.lib"
+				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
 				OutputFile=".\Release/Alpha.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -115,7 +115,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib shlwapi.lib comctl32.lib imm32.lib"
+				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
 				ShowProgress="0"
 				OutputFile=".\Debug/Alpha.exe"
 				LinkIncremental="0"
@@ -366,6 +366,9 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath=".\ascension\fileio.cpp">
+				</File>
+				<File
 					RelativePath=".\Ascension\layout.cpp">
 					<FileConfiguration
 						Name="Debug|Win32">
@@ -481,11 +484,6 @@
 						<FileConfiguration
 							Name="Release|Win32"
 							ExcludedFromBuild="TRUE">
-							<Tool
-								Name="VCCLCompilerTool"/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32">
 							<Tool
 								Name="VCCLCompilerTool"/>
 						</FileConfiguration>
