@@ -16,6 +16,7 @@
 
 using namespace ascension::kernel;
 using namespace ascension::kernel::fileio;
+using namespace ascension::encoding;
 using namespace std;
 namespace a = ascension;
 
@@ -313,10 +314,8 @@ namespace {
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occured
  */
-TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
-		const a::encoding::MIBenum encoding, a::encoding::Encoder::Policy encodingPolicy, bool writeByteOrderMark) :
-		encoder_(encoding::Encoder::forMIB(encoding)), encodingError_(encoding::Encoder::COMPLETED) {
-	using namespace ascension::encoding;
+TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode, const MIBenum encoding,
+		Encoder::Policy encodingPolicy, bool writeByteOrderMark) :encoder_(Encoder::forMIB(encoding)), encodingError_(Encoder::COMPLETED) {
 	if(!fileExists(fileName.c_str()))
 		throw IOException(IOException::FILE_NOT_FOUND);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
@@ -396,17 +395,12 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			const uchar* bom = 0;
 			size_t bomLength;
 			switch(encoder_->mibEnum()) {
-			case encoding::fundamental::UTF_8:
-				bom = encoding::UTF8_BOM; bomLength = countof(encoding::UTF8_BOM); break;
-			case encoding::fundamental::UTF_16LE:
-				bom = encoding::UTF16LE_BOM; bomLength = countof(encoding::UTF16LE_BOM); break;
-			case encoding::fundamental::UTF_16BE:
-				bom = encoding::UTF16BE_BOM; bomLength = countof(encoding::UTF16BE_BOM); break;
+			case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
+			case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
+			case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-			case encoding::extended::UTF_32LE:
-				bom = encoding::UTF32LE_BOM; bomLength = countof(encoding::UTF32LE_BOM); break;
-			case encoding::extended::UTF_32BE:
-				bom = encoding::UTF32BE_BOM; bomLength = countof(encoding::UTF32BE_BOM); break;
+			case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+			case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 			}
 #ifdef ASCENSION_WINDOWS
@@ -415,6 +409,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			::write(fileDescriptor_, bom, bomLength);
 #endif
 		}
+		setp(ucsBuffer_, endof(ucsBuffer_));
 	} else
 		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
 	encoder_->setPolicy(encodingPolicy);
@@ -457,7 +452,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 }
 
 /// Returns the MIBenum value of the encoding.
-a::encoding::MIBenum TextFileStreamBuffer::encoding() const throw() {
+MIBenum TextFileStreamBuffer::encoding() const throw() {
 	return encoder_->mibEnum();
 }
 
@@ -471,13 +466,18 @@ bool TextFileStreamBuffer::isOpen() const throw() {
 }
 
 /// Returns the result of the previous encoding conversion.
-a::encoding::Encoder::Result TextFileStreamBuffer::lastEncodingError() const throw() {
+Encoder::Result TextFileStreamBuffer::lastEncodingError() const throw() {
 	return encodingError_;
 }
 
 /// @see std#basic_streambuf#overflow
 TextFileStreamBuffer::int_type TextFileStreamBuffer::overflow(int_type c) {
-	return traits_type::eof();
+	if(inputMapping_.first != 0 || sync() == -1)
+		return traits_type::eof();	// not output mode or can't synchronize
+
+	*pptr() = traits_type::to_char_type(c);
+	pbump(+1);
+	return traits_type::not_eof(c);
 }
 
 /// @see std#basic_streambuf#pbackfail
@@ -498,6 +498,38 @@ streamsize TextFileStreamBuffer::showmanyc() {
 
 /// std#basic_streambuf#sync
 int TextFileStreamBuffer::sync() {
+	// this method converts ucsBuffer_ into the native encoding and writes
+	if(inputMapping_.first == 0 && pptr() > pbase()) {
+		uchar* toNext;
+		const a::Char* fromNext;
+		uchar nativeBuffer[countof(ucsBuffer_)];
+		while(true) {
+			// conversion
+			encodingError_ = encoder_->fromUnicode(
+				nativeBuffer, endof(nativeBuffer), toNext, pbase(), pptr(), fromNext, &encodingState_);
+			if(encodingError_ == Encoder::UNMAPPABLE_CHARACTER || encodingError_ == Encoder::MALFORMED_INPUT)
+				return -1;
+
+			// write into the file
+#ifdef ASCENSION_WINDOWS
+			::DWORD writtenBytes;
+			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<::DWORD>::max());
+			const ::DWORD bytes = static_cast<::DWORD>(toNext - nativeBuffer);
+			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
+				return -1;	// error
+#else // ASCENSION_POSIX
+			const size_t bytes = toNext - nativeBuffer;
+			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
+			if(writtenBytes == -1 || writtenBytes != bytes)
+				return -1;	// error
+#endif
+
+			setp(ucsBuffer_ + (fromNext - ucsBuffer_), epptr());
+			if(encodingError_ == Encoder::COMPLETED)
+				break;
+		}
+		setp(ucsBuffer_, endof(ucsBuffer_));
+	}
 	return 0;
 }
 
@@ -505,17 +537,19 @@ int TextFileStreamBuffer::sync() {
 TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	if(inputMapping_.first == 0 || inputMapping_.current >= inputMapping_.last)
 		return traits_type::eof();	// not input mode or reached EOF
-	ascension::Char* toNext;
+
+	a::Char* toNext;
 	const uchar* fromNext;
-	if((encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext,
-			inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) == encoding::Encoder::COMPLETED)
-		inputMapping_.current = inputMapping_.last;
-	else
-		inputMapping_.current = fromNext;
-	if(encodingError_ == encoding::Encoder::INSUFFICIENT_BUFFER)
-		encodingError_ = encoding::Encoder::COMPLETED;
+	encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_),
+		toNext, inputMapping_.current, inputMapping_.last, fromNext, &encodingState_);
+	if(encodingError_ == Encoder::INSUFFICIENT_BUFFER)
+		encodingError_ = Encoder::COMPLETED;
+	else if(encodingError_ == Encoder::UNMAPPABLE_CHARACTER || Encoder::MALFORMED_INPUT)
+		return traits_type::eof();	// encoding error
+
+	inputMapping_.current = fromNext;
 	setg(ucsBuffer_, ucsBuffer_, toNext);
-	return (toNext > ucsBuffer_) ? *gptr() : traits_type::eof();
+	return (toNext > ucsBuffer_) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
 }
 
 
@@ -561,7 +595,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
  * @param document the document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) : document_(document),
-		encoding_(encoding::Encoder::getDefault()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
+		encoding_(Encoder::getDefault()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_POSIX
@@ -628,7 +662,7 @@ void TextFileDocumentInput::close() {
 			document_.setInput(0, false);	// unbind
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-		setEncoding(encoding::Encoder::getDefault());
+		setEncoding(Encoder::getDefault());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
@@ -687,8 +721,8 @@ a::String TextFileDocumentInput::location() const throw() {
 #ifdef ASCENSION_WINDOWS
 	return fileName_;
 #else // ASCENSION_POSIX
-	const codecvt<a::Char, Char>& converter = use_facet<codecvt<ascension::Char, Char> >(locale());
-	ascension::Char result[PATH_MAX * 2];
+	const codecvt<a::Char, Char>& converter = use_facet<codecvt<a::Char, Char> >(locale());
+	a::Char result[PATH_MAX * 2];
 	mbstate_t dummy;
 	const Char* fromNext;
 	a::Char* toNext;
@@ -745,8 +779,8 @@ String TextFileDocumentInput::name() const throw() {
  * @return true if succeeded to lock the file with the desired mode @a lockMode.type
  * @throw IOException any I/O error occured. in this case, the document's content will be lost
  */
-bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, a::encoding::MIBenum encoding,
-		a::encoding::Encoder::Policy encodingPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
+bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, MIBenum encoding,
+		Encoder::Policy encodingPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
 //	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
 	unlock();
 	document_.resetContent();
@@ -759,11 +793,15 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	try {
 		basic_istream<Char> in(&sb);
 		readDocumentFromStream(in, document_, document_.region().beginning());
-		switch(sb.lastEncodingError()) {
-		case a::encoding::Encoder::UNMAPPABLE_CHARACTER:
-			throw IOException(IOException::UNMAPPABLE_CHARACTER);
-		case a::encoding::Encoder::MALFORMED_INPUT:
-			throw IOException(IOException::MALFORMED_INPUT);
+		if(in.bad() || in.fail()) {
+			switch(sb.lastEncodingError()) {
+			case Encoder::UNMAPPABLE_CHARACTER:
+				throw IOException(IOException::UNMAPPABLE_CHARACTER);
+			case Encoder::MALFORMED_INPUT:
+				throw IOException(IOException::MALFORMED_INPUT);
+			default:
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			}
 		}
 	} catch(...) {
 		document_.resetContent();
@@ -830,8 +868,8 @@ void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
  * @throw std#invalid_argument @a mib is invalid
  * @see #encoding
  */
-void TextFileDocumentInput::setEncoding(a::encoding::MIBenum mib) {
-	if(!encoding::Encoder::supports(mib))
+void TextFileDocumentInput::setEncoding(MIBenum mib) {
+	if(!Encoder::supports(mib))
 		throw invalid_argument("the given encoding is not available.");
 	else if(mib != encoding_) {
 		encoding_ = mib;
@@ -913,14 +951,14 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) t
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
 	// check Unicode spcific newlines
 	if(params.newline == NLF_NEXT_LINE || params.newline == NLF_LINE_SEPARATOR || params.newline == NLF_PARAGRAPH_SEPARATOR) {
-		if(params.encoding != encoding::fundamental::UTF_8
-				&& params.encoding != encoding::fundamental::UTF_16LE
-				&& params.encoding != encoding::fundamental::UTF_16BE
+		if(params.encoding != fundamental::UTF_8
+				&& params.encoding != fundamental::UTF_16LE
+				&& params.encoding != fundamental::UTF_16BE
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-				&& params.encoding != encoding::extended::UTF_5
-				&& params.encoding != encoding::extended::UTF_7
-				&& params.encoding != encoding::extended::UTF_32LE
-				&& params.encoding != encoding::extended::UTF_32BE
+				&& params.encoding != extended::UTF_5
+				&& params.encoding != extended::UTF_7
+				&& params.encoding != extended::UTF_32LE
+				&& params.encoding != extended::UTF_32BE
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 			)
 			throw IOException(IOException::INVALID_NEWLINE);
@@ -959,9 +997,30 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	const String tempFileName(getTemporaryFileName(realName));
 	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
 		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
-	basic_ostream<ascension::Char> outputStream(&sb);
-	writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
-	sb.close();
+	basic_ostream<a::Char> outputStream(&sb);
+	try {
+		writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
+		sb.close();
+		if(outputStream.bad() || outputStream.fail()) {
+			switch(sb.lastEncodingError()) {
+			case Encoder::UNMAPPABLE_CHARACTER:
+				throw IOException(IOException::UNMAPPABLE_CHARACTER);
+			case Encoder::MALFORMED_INPUT:
+				throw IOException(IOException::MALFORMED_INPUT);
+			default:
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			}
+		}
+	} catch(...) {
+		// delete the temporary file...
+		SystemErrorSaver ses;
+#ifdef ASCENSION_WINDOWS
+		::DeleteFileW(tempFileName.c_str());
+#else // ASCENSION_POSIX
+		::remove(tempFileName.c_str());
+#endif
+		throw;
+	}
 
 	// copy file attributes (file mode) and delete the old file
 	unlock();
@@ -1054,7 +1113,6 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
  * @param fileName the file name
  * @param region the region to be written
  * @param params the options
- * the newlines
  * @param append true to append to the file
  * @return the result. @c FIR_OK if succeeded
  */

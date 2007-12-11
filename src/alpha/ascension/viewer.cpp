@@ -3192,7 +3192,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 
 /// Constructor.
 TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), true), viewer_(viewer) {
-#if 1
+#if 0
 	// for test
 	setSpecialCharacterRenderer(new DefaultSpecialCharacterRenderer, true);
 #endif
