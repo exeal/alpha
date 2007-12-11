@@ -10,7 +10,7 @@
 #include "../encoder.hpp"
 using namespace ascension;
 using namespace ascension::encoding;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace std;
 
 
@@ -163,7 +163,7 @@ namespace {
 			(*to++) = 0x80 | mask8Bit((cp & 0x3F03F000U) >> 12);
 			(*to++) = 0x80 | mask8Bit((cp & 0x3F000FC0U) >> 6);
 			(*to++) = 0x80 | mask8Bit((cp & 0x3F00003FU) >> 0);
-*/		}
+*/		} else
 			assert(false);
 		return to;
 	}
@@ -303,9 +303,9 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(cp)) {
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(getPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(policy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -344,9 +344,9 @@ Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(getPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(policy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -600,9 +600,9 @@ Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = NATIVE_REPLACEMENT_CHARACTER;
-			else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {
 				fromNext = from;
@@ -637,11 +637,11 @@ Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			toNext = to;
 			return MALFORMED_INPUT;
 		} else if(!isValidCodePoint(cp)) {
-			if(getPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				cp = REPLACEMENT_CHARACTER;
 				if(e == from)
 					e = from + 1;
-			} else if(getPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
+			} else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				++from;
 				continue;
 			} else {

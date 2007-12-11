@@ -143,10 +143,10 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 	const Position& beginning = region.beginning();
 	const Position end = min(region.end(), document.region().second);
 	if(beginning.line == end.line)	// shortcut for single-line
-		out << document.line(end.line).substr(beginning.column, end.column - beginning.column);
+		out.write(document.line(end.line).data() + beginning.column, end.column - beginning.column);
 	else {
 		newline = resolveNewline(document, newline);
-		String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
+		const String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
 		if(eol.empty() && newline != NLF_RAW_VALUE)
 			throw invalid_argument("newline");
 		for(length_t i = beginning.line; ; ++i) {
@@ -157,7 +157,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 			if(i == end.line)
 				break;
 			if(newline == NLF_RAW_VALUE)
-				out << getNewlineString(line.newline());
+				out.write(getNewlineString(line.newline()), getNewlineStringLength(line.newline()));
 			else
 				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}
