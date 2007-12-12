@@ -79,10 +79,12 @@ basic_istream<Char>& kernel::readDocumentFromStream(basic_istream<Char>& in, Doc
 
 	Position p(at);
 	Char buffer[8192];
-	do {
+	while(in) {
 		in.read(buffer, countof(buffer));
+		if(static_cast<size_t>(in.gcount()) == 0)
+			break;
 		p = document.insert(p, buffer, buffer + in.gcount());
-	} while(static_cast<size_t>(in.gcount()) > 0);
+	}
 	return in;
 }
 
@@ -142,14 +144,17 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		const Document& document, const Region& region, Newline newline /* = NLF_RAW_VALUE */) {
 	const Position& beginning = region.beginning();
 	const Position end = min(region.end(), document.region().second);
-	if(beginning.line == end.line)	// shortcut for single-line
-		out.write(document.line(end.line).data() + beginning.column, end.column - beginning.column);
-	else {
+	if(beginning.line == end.line) {	// shortcut for single-line
+		if(out) {
+			// TODO: this cast may be danger.
+			out.write(document.line(end.line).data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
+		}
+	} else {
 		newline = resolveNewline(document, newline);
 		const String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
 		if(eol.empty() && newline != NLF_RAW_VALUE)
 			throw invalid_argument("newline");
-		for(length_t i = beginning.line; ; ++i) {
+		for(length_t i = beginning.line; out; ++i) {
 			const Document::Line& line = document.getLineInformation(i);
 			const length_t first = (i == beginning.line) ? beginning.column : 0;
 			const length_t last = (i == end.line) ? end.column : line.text().length();
@@ -157,7 +162,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 			if(i == end.line)
 				break;
 			if(newline == NLF_RAW_VALUE)
-				out.write(getNewlineString(line.newline()), getNewlineStringLength(line.newline()));
+				out.write(getNewlineString(line.newline()), static_cast<streamsize>(getNewlineStringLength(line.newline())));
 			else
 				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}

@@ -927,13 +927,11 @@ namespace ascension {
 				TextFileStreamBuffer* close();
 				encoding::MIBenum encoding() const throw();
 				bool isOpen() const throw();
-				encoding::Encoder::Result lastEncodingError() const throw();
 			private:
-				int_type		overflow(int_type c /* = traits_type::eof() */);
-				int_type		pbackfail(int_type c /* = traits_type::eof() */);
-				std::streamsize	showmanyc();
-				int				sync();
-				int_type		underflow();
+				int_type	overflow(int_type c /* = traits_type::eof() */);
+				int_type	pbackfail(int_type c /* = traits_type::eof() */);
+				int			sync();
+				int_type	underflow();
 			private:
 				typedef std::basic_streambuf<ascension::Char> Base;
 #ifdef ASCENSION_WINDOWS
@@ -947,7 +945,6 @@ namespace ascension {
 					const uchar* current;
 				} inputMapping_;
 				encoding::Encoder* encoder_;
-				encoding::Encoder::Result encodingError_;
 				encoding::Encoder::State encodingState_;
 				ascension::Char ucsBuffer_[8192];
 			};
