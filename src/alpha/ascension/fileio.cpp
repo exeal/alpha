@@ -314,8 +314,8 @@ namespace {
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occured
  */
-TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode, const MIBenum encoding,
-		Encoder::Policy encodingPolicy, bool writeByteOrderMark) :encoder_(Encoder::forMIB(encoding)), encodingError_(Encoder::COMPLETED) {
+TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
+		const MIBenum encoding, Encoder::Policy encodingPolicy, bool writeByteOrderMark) :encoder_(Encoder::forMIB(encoding)) {
 	if(!fileExists(fileName.c_str()))
 		throw IOException(IOException::FILE_NOT_FOUND);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
@@ -465,11 +465,6 @@ bool TextFileStreamBuffer::isOpen() const throw() {
 #endif
 }
 
-/// Returns the result of the previous encoding conversion.
-Encoder::Result TextFileStreamBuffer::lastEncodingError() const throw() {
-	return encodingError_;
-}
-
 /// @see std#basic_streambuf#overflow
 TextFileStreamBuffer::int_type TextFileStreamBuffer::overflow(int_type c) {
 	if(inputMapping_.first != 0 || sync() == -1)
@@ -491,11 +486,6 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
 	return traits_type::eof();
 }
 
-/// @see std#basic_streambuf#showmanyc
-streamsize TextFileStreamBuffer::showmanyc() {
-	return static_cast<streamsize>(gptr() - egptr());
-}
-
 /// std#basic_streambuf#sync
 int TextFileStreamBuffer::sync() {
 	// this method converts ucsBuffer_ into the native encoding and writes
@@ -505,10 +495,12 @@ int TextFileStreamBuffer::sync() {
 		uchar nativeBuffer[countof(ucsBuffer_)];
 		while(true) {
 			// conversion
-			encodingError_ = encoder_->fromUnicode(
+			const Encoder::Result encodingResult = encoder_->fromUnicode(
 				nativeBuffer, endof(nativeBuffer), toNext, pbase(), pptr(), fromNext, &encodingState_);
-			if(encodingError_ == Encoder::UNMAPPABLE_CHARACTER || encodingError_ == Encoder::MALFORMED_INPUT)
-				return -1;
+			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
+				throw IOException(IOException::UNMAPPABLE_CHARACTER);
+			else if(encodingResult == Encoder::MALFORMED_INPUT)
+				throw IOException(IOException::MALFORMED_INPUT);
 
 			// write into the file
 #ifdef ASCENSION_WINDOWS
@@ -516,16 +508,16 @@ int TextFileStreamBuffer::sync() {
 			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<::DWORD>::max());
 			const ::DWORD bytes = static_cast<::DWORD>(toNext - nativeBuffer);
 			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
-				return -1;	// error
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #else // ASCENSION_POSIX
 			const size_t bytes = toNext - nativeBuffer;
 			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
 			if(writtenBytes == -1 || writtenBytes != bytes)
-				return -1;	// error
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #endif
 
 			setp(ucsBuffer_ + (fromNext - ucsBuffer_), epptr());
-			if(encodingError_ == Encoder::COMPLETED)
+			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
 		setp(ucsBuffer_, endof(ucsBuffer_));
@@ -540,12 +532,13 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 	a::Char* toNext;
 	const uchar* fromNext;
-	encodingError_ = encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_),
-		toNext, inputMapping_.current, inputMapping_.last, fromNext, &encodingState_);
-	if(encodingError_ == Encoder::INSUFFICIENT_BUFFER)
-		encodingError_ = Encoder::COMPLETED;
-	else if(encodingError_ == Encoder::UNMAPPABLE_CHARACTER || Encoder::MALFORMED_INPUT)
-		return traits_type::eof();	// encoding error
+	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_),
+			toNext, inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) {
+	case Encoder::UNMAPPABLE_CHARACTER:
+		throw IOException(IOException::UNMAPPABLE_CHARACTER);
+	case Encoder::MALFORMED_INPUT:
+		throw IOException(IOException::MALFORMED_INPUT);
+	}
 
 	inputMapping_.current = fromNext;
 	setg(ucsBuffer_, ucsBuffer_, toNext);
@@ -793,16 +786,6 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	try {
 		basic_istream<Char> in(&sb);
 		readDocumentFromStream(in, document_, document_.region().beginning());
-		if(in.bad() || in.fail()) {
-			switch(sb.lastEncodingError()) {
-			case Encoder::UNMAPPABLE_CHARACTER:
-				throw IOException(IOException::UNMAPPABLE_CHARACTER);
-			case Encoder::MALFORMED_INPUT:
-				throw IOException(IOException::MALFORMED_INPUT);
-			default:
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
-			}
-		}
 	} catch(...) {
 		document_.resetContent();
 		document_.recordOperations(recorded);
@@ -1001,16 +984,6 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	try {
 		writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
 		sb.close();
-		if(outputStream.bad() || outputStream.fail()) {
-			switch(sb.lastEncodingError()) {
-			case Encoder::UNMAPPABLE_CHARACTER:
-				throw IOException(IOException::UNMAPPABLE_CHARACTER);
-			case Encoder::MALFORMED_INPUT:
-				throw IOException(IOException::MALFORMED_INPUT);
-			default:
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
-			}
-		}
 	} catch(...) {
 		// delete the temporary file...
 		SystemErrorSaver ses;
