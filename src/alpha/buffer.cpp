@@ -247,6 +247,7 @@ bool BufferList::close(size_t index, bool queryUser) {
 			it.get().removeBuffer(buffer);
 		buffers_.erase(buffers_.begin() + index);
 		editorSession_.removeDocument(buffer);
+		buffer.textFile().removeListener(*this);
 		buffer.textFile().close();
 		delete &buffer;
 
@@ -762,6 +763,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 					MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
 			else
 				break;
+			succeeded = true;
 			if(userAnswer == IDYES || userAnswer == IDOK) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);
@@ -1117,6 +1119,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 					MARGS % buffer.textFile().pathName() % getEncodingDisplayName(encoding).c_str());
 			else
 				break;
+			succeeded = true;
 			if(userAnswer == IDYES || userAnswer == IDOK) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(encoding, true);

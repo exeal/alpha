@@ -122,8 +122,8 @@ namespace {
 				return 0;
 			else {
 				size_t bufferLength = encoder->maximumNativeBytes() * (last - first);
-				manah::AutoBuffer<uchar> buffer(new uchar[bufferLength + 1]);
-				uchar* toNext;
+				manah::AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
+				byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
 						buffer.get() + bufferLength, toNext, first, last, fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER)
@@ -140,7 +140,7 @@ namespace {
 			delete[] lastPattern_;
 			lastPattern_ = new Char[outputLength];
 			Char* toNext;
-			const uchar* fromNext;
+			const byte* fromNext;
 			encoder->setPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER).toUnicode(
 				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
 			outputLength = toNext - lastPattern_;

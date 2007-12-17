@@ -940,9 +940,9 @@ namespace ascension {
 				int fileDescriptor_;
 #endif
 				struct {
-					const uchar* first;
-					const uchar* last;
-					const uchar* current;
+					const byte* first;
+					const byte* last;
+					const byte* current;
 				} inputMapping_;
 				encoding::Encoder* encoder_;
 				encoding::Encoder::State encodingState_;

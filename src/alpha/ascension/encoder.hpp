@@ -145,28 +145,27 @@ namespace ascension {
 				MIB_MULTILINGUAL_ISO2022_7BITSISO	= 3122,	///< Multilingual (ISO-2022, 7-bit, SI/SO).
 				MIB_MULTILINGUAL_ISO2022_8BITSS2	= 3123,	///< Multilingual (ISO-2022, 8-bit, SS2).
 				// miscellaneous
-				BINARY	= 3900,	///< Binary.
 				NEXTSTEP	= 3901,	///< NEXTSTEP.
-				ATARIST	= 3902;	///< Atari ST/TT.
+				ATARIST		= 3902;	///< Atari ST/TT.
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 		// These data are not terminated by NUL.
-		const uchar	UTF8_BOM[] = {0xEF, 0xBB, 0xBF};	///< BOM of UTF-8.
-		const uchar	UTF16LE_BOM[] = {0xFF, 0xFE};		///< BOM of UTF-16 little endian.
-		const uchar	UTF16BE_BOM[] = {0xFE, 0xFF};		///< BOM of UTF-16 big endian.
+		const byte	UTF8_BOM[] = {0xEF, 0xBB, 0xBF};	///< BOM of UTF-8.
+		const byte	UTF16LE_BOM[] = {0xFF, 0xFE};		///< BOM of UTF-16 little endian.
+		const byte	UTF16BE_BOM[] = {0xFE, 0xFF};		///< BOM of UTF-16 big endian.
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		const uchar	UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 little endian.
-		const uchar	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 big endian.
+		const byte	UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 little endian.
+		const byte	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 		/// A replacement character used when unconvertable.
-		const uchar NATIVE_REPLACEMENT_CHARACTER = '?';
+		const byte NATIVE_REPLACEMENT_CHARACTER = '?';
 		/// A code value for an unmappable native character.
-		const uchar UNMAPPABLE_NATIVE_CHARACTER = 0x00;
+		const byte UNMAPPABLE_NATIVE_CHARACTER = 0x00;
 
-		template<typename T> inline uchar mask7Bit(T c) {return static_cast<uchar>(c) & 0x7FU;}
-		template<typename T> inline uchar mask8Bit(T c) {return static_cast<uchar>(c) & 0xFFU;}
+		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c) & 0x7FU;}
+		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c) & 0xFFU;}
 		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c) & 0xFFFFU;}
 		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c) & 0xFFFFU;}
 
@@ -232,8 +231,8 @@ namespace ascension {
 
 			/// Result of conversion.
 			enum Result {
-				/// The conversion fully succeeded. @a fromNext parameter of the conversion method
-				/// should equal @a fromEnd.
+				/// The conversion fully succeeded. If @a fromNext parameter of the conversion
+				/// method is less @a fromEnd, more input is required.
 				COMPLETED,
 				/// The conversion partially succeeded because the destination buffer was not large
 				/// enough.
@@ -288,11 +287,11 @@ namespace ascension {
 			bool		canEncode(CodePoint c) const;
 			bool		canEncode(const Char* first, const Char* last) const;
 			bool		canEncode(const String& s) const;
-			Result		fromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+			Result		fromUnicode(byte* to, byte* toEnd, byte*& toNext,
 							const Char* from, const Char* fromEnd, const Char*& fromNext, State* state = 0) const;
 			std::string	fromUnicode(const String& from) const;
 			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state = 0) const;
+							const byte* from, const byte* fromEnd, const byte*& fromNext, State* state = 0) const;
 			String		toUnicode(const std::string& from) const;
 			// factory
 			static Encoder*	forCCSID(int ccsid) throw();
@@ -322,7 +321,7 @@ namespace ascension {
 			 * @param[in,out] state the conversion state. may be @c null
 			 * @return the result of the conversion
 			 */
-			virtual Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+			virtual Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const = 0;
 			/**
 			 * Converts the given string from the native encoding into UTF-16.
@@ -336,7 +335,7 @@ namespace ascension {
 			 * @return the result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const = 0;
+				const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const = 0;
 		private:
 			static std::map<MIBenum, Encoder*>& registry();
 			Policy policy_;
@@ -378,7 +377,7 @@ namespace ascension {
 			/// Returns the name of the encoding detector.
 			std::string name() const throw() {return name_;}
 			// detection
-			MIBenum	detect(const uchar* first, const uchar* last, std::ptrdiff_t* convertibleBytes) const;
+			MIBenum	detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
 			static EncodingDetector*	forID(MIBenum id) throw();
 			static EncodingDetector*	forName(const std::string& name) throw();
@@ -401,7 +400,7 @@ namespace ascension {
 			 * detected. the value can't exceed the result of (@a last - @a first). may be @c null
 			 * @return the MIBenum value of the detected encoding
 			 */
-			virtual MIBenum doDetect(const uchar* first, const uchar* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
+			virtual MIBenum doDetect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
 		private:
 			static std::map<MIBenum, EncodingDetector*>& registry();
 			const MIBenum id_;
@@ -411,79 +410,77 @@ namespace ascension {
 
 		/// Supports implementation of encoder classes.
 		namespace implementation {
-			///
-			template<typename Concrete> class SBCSEncoder : public Encoder {
+			/// @c EncoderBase is a base implementation of @c Encoder, which defines the methods
+			/// describe the properties of the encoding.
+			class EncoderBase : public Encoder {
+			public:
+				virtual ~EncoderBase() throw();
+			protected:
+				EncoderBase(const std::string& name, MIBenum mib,
+					std::size_t maximumNativeBytes = 1, std::size_t maximumUCSLength = 1, const std::string& aliases = "");
+			protected:
+				virtual std::string	aliases() const throw();
+				virtual std::size_t	maximumNativeBytes() const throw();
+				virtual std::size_t	maximumUCSLength() const throw();
+				virtual MIBenum		mibEnum() const throw();
+				virtual std::string	name() const throw();
 			private:
-				Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(!static_cast<const Concrete*>(this)->doFromUnicode(*to, *from)) {
-							if(policy() == REPLACE_UNMAPPABLE_CHARACTER) *to = NATIVE_REPLACEMENT_CHARACTER;
-							else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
-							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
-					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
-				}
-				Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(!static_cast<const Concrete*>(this)->doToUnicode(*to, *from)) {
-							if(policy() == REPLACE_UNMAPPABLE_CHARACTER) *to = REPLACEMENT_CHARACTER;
-							else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) --to;
-							else {toNext = to; fromNext = from; return UNMAPPABLE_CHARACTER;}}}
-					toNext = to; fromNext = from; return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
-				}
-				std::size_t maximumNativeBytes() const throw() {return 1;}
+				const std::string aliases_, name_;
+				const std::size_t maximumNativeBytes_, maximumUCSLength_;
+				const MIBenum mib_;
+			};
+
+			/// Base class of single byte charset encoders.
+			class SingleByteEncoder : public EncoderBase {
+			public:
+				SingleByteEncoder(const std::string& name, MIBenum mib,
+					const std::string& aliases, const Char native8ToUnicode[0x80], const Char native7ToUnicode[0x80] = 0);
+				virtual ~SingleByteEncoder() throw();
+			private:
+				void	buildUnicodeToNativeTable();
+				// Encoder
+				Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
+				Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+			private:
+				const Char* const native7ToUnicode_;
+				const Char* const native8ToUnicode_;
+				byte* unicodeToNative_[0x100];
+				static const Char ASCII_TABLE[0x80];
+				static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
 			};
 		}
 
 
 		// implementation macros
 
-		/// Begins the definition of a class has the name @a className extends @c Encoder.
-#define ASCENSION_BEGIN_ENCODER_CLASS(className, mib, nameString)									\
-	class className : public ascension::encoding::Encoder {											\
-	private:																						\
-		Result doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,								\
-			const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;		\
-		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,									\
-			const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State* state) const;	\
-		MIBenum mibEnum() const throw() {return mib;}												\
-		std::string name() const throw() {return nameString;}
-		/// Enters the definition of @c Encoder#aliases method.
-#define ASCENSION_ENCODER_ALIASES(aliasesString)	\
-		std::string aliases() const throw() {static const char s[] = aliasesString; return std::string(s, countof(s) - 1);}
-		/// Enters the definition of @c Encoder#maximumNativeBytes method.
-#define ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(bytes)	\
-		std::size_t maximumNativeBytes() const throw() {return bytes;}
-		/// Enters the definition of @c Encoder#maximumUCSLength method.
-#define ASCENSION_ENCODER_MAXIMUM_UCS_LENGTH(length)	\
-		std::size_t maximumUCSLength() const throw() {return length;}
-		/// Ends the class definition opened by @c ASCENSION_BEGIN_ENCODER_CLASS or
-		/// @c ASCENSION_BEGIN_SBCS_ENCODER_CLASS.
-#define ASCENSION_END_ENCODER_CLASS()	\
-	};
-		/// Begins the definition of an encoder class for SBCS encoding.
-		/// @see ASCENSION_BEGIN_ENCODER_CLASS
-#define ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, nameString)						\
-	class className : public ascension::encoding::implementation::SBCSEncoder<className> {	\
-	public:																					\
-		bool doFromUnicode(uchar& to, Char from) const;										\
-		bool doToUnicode(Char& to, uchar from) const;										\
-		MIBenum mibEnum() const throw() {return mib;}										\
-		std::string name() const throw() {return nameString;}
-		/// Defines a SBCS encoder class.
-#define ASCENSION_DEFINE_SBCS_ENCODER(className, mib, nameString)	\
-	ASCENSION_BEGIN_SBCS_ENCODER_CLASS(className, mib, nameString)	\
-	ASCENSION_END_ENCODER_CLASS()
+#define ASCENSION_INCREMENTAL_BYTE_SEQUENCE_C0														\
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,	\
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F
 
-		/// This macro defines a class has the name @a name and the ID @a mib extends @c EncodingDetector.
-#define ASCENSION_DEFINE_ENCODING_DETECTOR(className, mib, nameString)						\
-		class className : public EncodingDetector {											\
-		public:																				\
-			className() : EncodingDetector(mib, nameString) {}								\
-		private:																			\
-			MIBenum doDetect(const uchar*, const uchar*, std::ptrdiff_t*) const throw();	\
-		}
+#define ASCENSION_INCREMENTAL_BYTE_SEQUENCE_C1														\
+	0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,	\
+	0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F
+
+#define ASCENSION_INCREMENTAL_BYTE_SEQUENCE_7BIT													\
+	ASCENSION_INCREMENTAL_BYTE_SEQUENCE_C0,															\
+	0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,	\
+	0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,	\
+	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,	\
+	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F,	\
+	0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F,	\
+	0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F
+
+#define ASCENSION_INCREMENTAL_BYTE_SEQUENCE_8BIT													\
+	ASCENSION_INCREMENTAL_BYTE_SEQUENCE_C1,															\
+	0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF,	\
+	0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,	\
+	0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,	\
+	0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,	\
+	0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,	\
+	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
+
 
 		/**
 		 * Returns MIBs for all available encodings.
@@ -515,7 +512,6 @@ namespace ascension {
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
 			for(std::map<MIBenum, EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = i->second->name();}
-
 	}
 } // namespace ascension.encoding
 
