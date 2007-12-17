@@ -339,7 +339,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
 		}
 		if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
-			inputMapping_.first = static_cast<const ::uchar*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
+			inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
 		if(inputMapping_.first == 0) {
 			SystemErrorSaver temp;
 			if(fileMapping_ != 0)
@@ -350,7 +350,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 #else // ASCENSION_POSIX
 		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY)))
 			throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
-		if(MAP_FAILED == (inputMapping_.first = static_cast<const uchar*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)))) {
+		if(MAP_FAILED == (inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)))) {
 			SystemErrorSaver temp;
 			inputMapping_.first = 0;
 			::close(fileDescriptor_);
@@ -366,7 +366,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
 		}
 		// skip Unicode byte order mark if necessary
-		const uchar* bom = 0;
+		const byte* bom = 0;
 		ptrdiff_t bomLength = 0;
 		switch(encoder_->mibEnum()) {
 		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
@@ -392,7 +392,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #endif
 		if(writeByteOrderMark) {
-			const uchar* bom = 0;
+			const byte* bom = 0;
 			size_t bomLength;
 			switch(encoder_->mibEnum()) {
 			case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
@@ -439,7 +439,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 	}
 #else // ASCENSION_POSIX
 	if(inputMapping_.first != 0) {
-		::munmap(const_cast<uchar*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
+		::munmap(const_cast<byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
 	if(fileDescriptor_ == -1) {
@@ -490,9 +490,9 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
 int TextFileStreamBuffer::sync() {
 	// this method converts ucsBuffer_ into the native encoding and writes
 	if(inputMapping_.first == 0 && pptr() > pbase()) {
-		uchar* toNext;
+		byte* toNext;
 		const a::Char* fromNext;
-		uchar nativeBuffer[countof(ucsBuffer_)];
+		byte nativeBuffer[countof(ucsBuffer_)];
 		while(true) {
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
@@ -531,7 +531,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 		return traits_type::eof();	// not input mode or reached EOF
 
 	a::Char* toNext;
-	const uchar* fromNext;
+	const byte* fromNext;
 	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_),
 			toNext, inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
@@ -600,6 +600,7 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) : document_(doc
 	memset(&userLastWriteTime_, 0, sizeof(Time));
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
 	document.addListener(*this);
+	document.setProperty(Document::TITLE_PROPERTY, L"");
 }
 
 /// Destructor.
@@ -815,6 +816,15 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	document_.setProperty(Document::TITLE_PROPERTY, name());
 #else // ASCENSION_POSIX
 	// TODO: convert name() into the 8-bit file system encoding.
+	const String title(name());
+	const codecvt<a::Char, Char, mbstate_t>& conv = use_facet<codecvt<a::Char, Char, mbstate_t> >(locale::global());
+	mbstate_t state;
+	AutoBuffer<a::Char> ucs(new a::Char[title.length() * 2]);
+	if(codecvt_base::ok == conv.in(state,
+			title.data(), title.data() + title.length(), fromEnd, ucs, ucs + title.length() * 2, ucsNext)) {
+		ucsNext = L'0';
+		document_.setProperty(Document::TITLE_PROPERTY, ucs);
+	}
 #endif
 	encoding_ = sb.encoding();
 	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line

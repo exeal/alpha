@@ -14,57 +14,30 @@
 #include "../encoder.hpp"
 using namespace ascension;
 using namespace ascension::encoding;
-using namespace std;
 
-// registry
 namespace {
-	ASCENSION_DEFINE_SBCS_ENCODER(IS434Encoder, extended::IS434, "I.S. 434")
+	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const Char IS434[0x80] = {
+		ASCENSION_INCREMENTAL_BYTE_SEQUENCE_C1,
+		0x00A0, RP__CH, RP__CH, 0x00A3, RP__CH, RP__CH, RP__CH, 0x00A7,	// 0xA0
+		RP__CH, 0x00A9, RP__CH, RP__CH, RP__CH, RP__CH, 0x00AE, RP__CH,
+		0x00B0, 0x00B1, RP__CH, RP__CH, RP__CH, RP__CH, 0x00B6, 0x00B7,	// 0xB0
+		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,
+		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,	// 0xC0
+		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,
+		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,	// 0xD0
+		RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH, RP__CH,
+		0x1680, 0x1681, 0x1682, 0x1683, 0x1684, 0x1685, 0x1686, 0x1687,	// 0xE0
+		0x1688, 0x1689, 0x168A, 0x168B, 0x168C, 0x168D, 0x168E, 0x168F,
+		0x1690, 0x1691, 0x1692, 0x1693, 0x1694, 0x1695, 0x1696, 0x1697,	// 0xF0
+		0x1698, 0x1699, 0x169A, 0x169B, 0x169C, 0x169D, 0x169E, 0x169F
+	};
 	struct Installer {
 		Installer() {
-			Encoder::registerEncoder(auto_ptr<Encoder>(new IS434Encoder));
+			Encoder::registerEncoder(std::auto_ptr<Encoder>(
+				new implementation::SingleByteEncoder("I.S. 434", extended::IS434, "", IS434)));
 		}
 	} installer;
 } // namespace @0
-
-
-// I.S. 434:1999 ////////////////////////////////////////////////////////////
-
-/// @see SBCSEncoder#doFromUnicode
-inline bool IS434Encoder::doFromUnicode(uchar& to, Char from) const {
-	if(from >= 0x1680 && from < 0x16A0)
-		to = mask8Bit(from - 0x15A0);
-	else if(from < 0xA0)
-		to = mask8Bit(from);
-	else {
-		switch(from) {
-		case 0x00A0:	case 0x00A3:	case 0x00A7:	case 0x00A9:	case 0x00AE:
-		case 0x00B0:	case 0x00B1:	case 0x00B6:	case 0x00B7:
-			to = mask8Bit(from);
-			break;
-		default:
-			return false;
-		}
-	}
-	return true;
-}
-
-/// @see SBCSEncoder#doToUnicode
-inline bool IS434Encoder::doToUnicode(Char& to, uchar from) const {
-	if(from >= 0xE0)
-		to = from + 0x15A0;
-	else if(from < 0xA0)
-		to = from;
-	else {
-		switch(from) {
-		case 0xA0:	case 0xA3:	case 0xA7:	case 0xA9:	case 0xAE:
-		case 0xB0:	case 0xB1:	case 0xB6:	case 0xB7:
-			to = from;
-			break;
-		default:
-			return false;
-		}
-	}
-	return true;
-}
 
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */

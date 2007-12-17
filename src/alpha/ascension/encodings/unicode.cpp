@@ -10,36 +10,84 @@
 #include "../encoder.hpp"
 using namespace ascension;
 using namespace ascension::encoding;
+using namespace ascension::encoding::implementation;
 using namespace ascension::text;
 using namespace std;
 
 
 // registry
 namespace {
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF8Encoder, fundamental::UTF_8, "UTF-8")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
-	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF16LittleEndianEncoder, fundamental::UTF_16LE, "UTF-16LE")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
-	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF16BigEndianEncoder, fundamental::UTF_16BE, "UTF-16BE")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(2)
-	ASCENSION_END_ENCODER_CLASS()
+	class UTF8Encoder : public EncoderBase {
+	public:
+		UTF8Encoder() : EncoderBase("UTF-8", fundamental::UTF_8, 4) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
+	class UTF16LittleEndianEncoder : public EncoderBase {
+	public:
+		UTF16LittleEndianEncoder() : EncoderBase("UTF-16LE", fundamental::UTF_16LE, 2) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
+	class UTF16BigEndianEncoder : public EncoderBase {
+	public:
+		UTF16BigEndianEncoder() : EncoderBase("UTF-16BE", fundamental::UTF_16BE, 2) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF5Encoder, extended::UTF_5, "UTF-5")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(6)
-	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF7Encoder, extended::UTF_7, "UTF-7")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(8)
-	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF32LittleEndianEncoder, extended::UTF_32LE, "UTF-32LE")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
-	ASCENSION_END_ENCODER_CLASS()
-	ASCENSION_BEGIN_ENCODER_CLASS(UTF32BigEndianEncoder, extended::UTF_32BE, "UTF-32BE")
-		ASCENSION_ENCODER_MAXIMUM_NATIVE_BYTES(4)
-	ASCENSION_END_ENCODER_CLASS()
+	class UTF5Encoder : public EncoderBase {
+	public:
+		UTF5Encoder() : EncoderBase("UTF-5", extended::UTF_5, 6) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
+	class UTF7Encoder : public EncoderBase {
+	public:
+		UTF7Encoder() : EncoderBase("UTF-7", extended::UTF_7, 8) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
+	class UTF32LittleEndianEncoder : public EncoderBase {
+	public:
+		UTF32LittleEndianEncoder() : EncoderBase("UTF-32LE", extended::UTF_32LE, 4) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
+	class UTF32BigEndianEncoder : public EncoderBase {
+	public:
+		UTF32BigEndianEncoder() : EncoderBase("UTF-32BE", extended::UTF_32BE, 4) {}
+	private:
+		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
+		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+	};
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-	ASCENSION_DEFINE_ENCODING_DETECTOR(UnicodeDetector, EncodingDetector::UNICODE_DETECTOR, "UnicodeAutoDetect");
+	class UnicodeDetector : public EncodingDetector {
+	public:
+		UnicodeDetector() : EncodingDetector(EncodingDetector::UNICODE_DETECTOR, "UnicodeAutoDetect") {}
+	private:
+		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const;
+	};
 
 	struct EncoderInstaller {
 		EncoderInstaller() throw() {
@@ -76,7 +124,7 @@ namespace {
 		48     F4         U+100000..10FFFF  4
 		09     otherwise  ill-formed        (0)
 	 */
-	const uchar UTF8_WELL_FORMED_FIRST_BYTES[] = {
+	const byte UTF8_WELL_FORMED_FIRST_BYTES[] = {
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x80
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x90
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0xA0
@@ -87,105 +135,50 @@ namespace {
 		0x46, 0x47, 0x47, 0x47, 0x48, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09	// 0xF0
 	};
 
-	/**
-	 * Transcodes the given UTF-8 sequence into a Unicode character.
-	 * @param first the beginning of the sequence
-	 * @param last the end of the sequence
-	 * @param[out] cp the code point of the decoded character
-	 * @return the end of the eaten subsequence
-	 */
-	inline const uchar* decodeUTF8Character(const uchar* first, const uchar* last, CodePoint& cp) throw() {
-		if((*first & 0x80) == 0)
-			return (cp = *first), first + 1;
-		const uchar v = UTF8_WELL_FORMED_FIRST_BYTES[*first - 0x80];
-		// check the source buffer length
-		const ptrdiff_t c = (v >> 4);
-		if(last - first < c)
-			return first;
-		// check the second byte
-		switch(v & 0x0F) {
-		case 1: case 3: case 5: case 7:
-			if(first[1] < 0x80 || first[1] > 0xBF) return first; break;
-		case 2:	if(first[1] < 0xA0 || first[1] > 0xBF) return first; break;
-		case 4: if(first[1] < 0x80 || first[1] > 0x9F) return first; break;
-		case 6: if(first[1] < 0x90 || first[1] > 0xBF) return first; break;
-		case 8: if(first[1] < 0x80 || first[1] > 0x8F) return first; break;
-		}
-		// check the third byte
-		if(c >= 3 && (first[2] < 0x80 || first[2] > 0xBF)) return first;
-		// check the forth byte
-		if(c >= 4 && (first[3] < 0x80 || first[3] > 0xBF)) return first;
-		// decode
-		switch(c) {
-		case 2:	// 110y yyyy  10zz zzzz -> 0000 0yyy yyzz zzzz
-			cp = ((first[0] & 0x1F) << 6) | ((first[1] & 0x3F) << 0); break;
-		case 3:	// 1110 xxxx  10yy yyyy  10zz zzzz -> xxxx yyyy yyzz zzzz
-			cp = ((first[0] & 0x0F) << 12) | ((first[1] & 0x3F) << 6) | ((first[2] & 0x3F) << 0); break;
-		case 4:	// 1111 0www  10xx xxxx  10yy yyyy  10zz zzzz -> 0000 0000 000w wwxx xxxx yyyy yyzz zzzz
-			cp = ((first[0] & 0x07) << 18) | ((first[1] & 0x3F) << 12) | ((first[2] & 0x3F) << 6) | ((first[3] & 0x3F) << 0); break;
-		}
-		return first + c;
-	}
-
-	/**
-	 * Transcodes the given Unicode character into UTF-8 sequence.
-	 * @param first the source buffer
-	 * @param len the length of the source buffer
-	 * @param[out] dest the destination UTF-8 buffer
-	 * @return the number of bytes written to @a dest, or 0 if @a src is invalid
-	 */
-	inline uchar* encodeUTF8Character(const Char* from, const Char* fromEnd, uchar* to) throw() {
-		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
-		if(cp <= 0x007FU)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
-			(*to++) = mask8Bit(cp);
-		else if(cp <= 0x07FFU) {	// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
-			(*to++) = 0xC0 | mask8Bit(cp >> 6);
-			(*to++) = 0x80 | mask8Bit(cp & 0x003FU);
-		} else if(cp <= 0xFFFFU) {	// xxxx yyyy  yyzz zzzz -> 1110 xxxx  10yy yyyy  10zz zzzz
-			(*to++) = 0xE0 | mask8Bit((cp & 0xF000U) >> 12);
-			(*to++) = 0x80 | mask8Bit((cp & 0x0FC0U) >> 6);
-			(*to++) = 0x80 | mask8Bit((cp & 0x003FU) >> 0);
-		} else if(cp <= 0x10FFFFU) {	// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
-			(*to++) = 0xF0 | mask8Bit((cp & 0x001C0000U) >> 18);
-			(*to++) = 0x80 | mask8Bit((cp & 0x0003F000U) >> 12);
-			(*to++) = 0x80 | mask8Bit((cp & 0x00000FC0U) >> 6);
-			(*to++) = 0x80 | mask8Bit((cp & 0x0000003FU) >> 0);
-/*		} else if(cp <= 0x03FFFFFFU) {	// 0000 00vv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 10vv  10ww wwww  ...  10zz zzzz
-			(*to++) = 0xF8 | mask8Bit((cp & 0x03000000U) >> 24);
-			(*to++) = 0x80 | mask8Bit((cp & 0x00FC0000U) >> 18);
-			(*to++) = 0x80 | mask8Bit((cp & 0x0003F000U) >> 12);
-			(*to++) = 0x80 | mask8Bit((cp & 0x00000FC0U) >> 6);
-			(*to++) = 0x80 | mask8Bit((cp & 0x0000003FU) >> 0);
-		} else if(cp <= 0x7FFFFFFFU) {	// 0uvv vvvv  wwww wwxx  xxxx yyyy  yyzz zzzz -> 1111 110u  10vv vvvv  ...  10zz zzzz
-			(*to++) = 0xFC | mask8Bit((cp & 0x40000000U) >> 30);
-			(*to++) = 0x80 | mask8Bit((cp & 0x3F000000U) >> 24);
-			(*to++) = 0x80 | mask8Bit((cp & 0x00FC0000U) >> 18);
-			(*to++) = 0x80 | mask8Bit((cp & 0x3F03F000U) >> 12);
-			(*to++) = 0x80 | mask8Bit((cp & 0x3F000FC0U) >> 6);
-			(*to++) = 0x80 | mask8Bit((cp & 0x3F00003FU) >> 0);
-*/		} else
-			assert(false);
-		return to;
+	inline bool writeSurrogatePair(byte*& to, byte* toEnd, Char high, Char low) {
+		if(to + 3 >= toEnd)
+			return false;
+		// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
+		const CodePoint c = surrogates::decode(high, low);
+		(*to++) = 0xF0 | mask8Bit((c & 0x001C0000U) >> 18);
+		(*to++) = 0x80 | mask8Bit((c & 0x0003F000U) >> 12);
+		(*to++) = 0x80 | mask8Bit((c & 0x00000FC0U) >> 6);
+		(*to++) = 0x80 | mask8Bit((c & 0x0000003FU) >> 0);
+		return true;
 	}
 } // namespace @0
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-	uchar temp[6];
-	uchar* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
-		e = encodeUTF8Character(from, fromEnd, temp);
-		assert(e != to);
-		if(e - temp > toEnd - to) {
-			fromNext = from;
-			toNext = to;
-			return INSUFFICIENT_BUFFER;
-		} else {
-			memcpy(to, temp, e - temp);
-			to += e - temp;
-			if(e - temp >= 4)
+		if(*from < 0x0080U)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
+			(*to++) = mask8Bit(*from);
+		else if(*from < 0x0800U) {	// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
+			if(to + 1 >= toEnd)
+				break;
+			(*to++) = 0xC0 | mask8Bit(*from >> 6);
+			(*to++) = 0x80 | mask8Bit(*from & 0x003FU);
+		} else if(surrogates::isHighSurrogate(*from)) {
+			if(from + 1 == fromEnd) {
+				toNext = to;
+				fromNext = from;
+				return COMPLETED;
+			} else if(surrogates::isLowSurrogate(from[1])) {
+				if(!writeSurrogatePair(to, toEnd, from[0], from[1]))
+					break;
 				++from;
+			} else {
+				toNext = to;
+				fromNext = from;
+				return MALFORMED_INPUT;
+			}
+		} else {	// xxxx yyyy  yyzz zzzz -> 1110 xxxx  10yy yyyy  10zz zzzz
+			if(to + 2 >= toEnd)
+				break;
+			(*to++) = 0xE0 | mask8Bit((*from & 0xF000U) >> 12);
+			(*to++) = 0x80 | mask8Bit((*from & 0x0FC0U) >> 6);
+			(*to++) = 0x80 | mask8Bit((*from & 0x003FU) >> 0);
 		}
 	}
 	fromNext = from;
@@ -195,24 +188,61 @@ Encoder::Result UTF8Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
-	const uchar* e;
-	CodePoint cp;
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	while(to < toEnd && from < fromEnd) {
-		e = decodeUTF8Character(from, fromEnd, cp);
-		if(e == from) {
-			fromNext = from;
-			toNext = to;
-			return MALFORMED_INPUT;
+		if(*from < 0x80)
+			*(to++) = *(from++);
+		else {
+			const byte v = UTF8_WELL_FORMED_FIRST_BYTES[*from - 0x80];
+			// check the source buffer length
+			ptrdiff_t bytes = (v >> 4);
+			if(fromEnd - from < bytes) {
+				toNext = to;
+				fromNext = from;
+				return COMPLETED;
+			}
+			// check the second byte
+			switch(v & 0x0F) {
+			case 1: case 3: case 5: case 7:
+				if(from[1] < 0x80 || from[1] > 0xBF) bytes = 0; break;
+			case 2:	if(from[1] < 0xA0 || from[1] > 0xBF) bytes = 0; break;
+			case 4: if(from[1] < 0x80 || from[1] > 0x9F) bytes = 0; break;
+			case 6: if(from[1] < 0x90 || from[1] > 0xBF) bytes = 0; break;
+			case 8: if(from[1] < 0x80 || from[1] > 0x8F) bytes = 0; break;
+			}
+			// check the third byte
+			if(bytes >= 3 && (from[2] < 0x80 || from[2] > 0xBF)) bytes = 0;
+			// check the forth byte
+			if(bytes >= 4 && (from[3] < 0x80 || from[3] > 0xBF)) bytes = 0;
+
+			if(bytes == 0) {
+				toNext = to;
+				fromNext = from;
+				return MALFORMED_INPUT;
+			}
+
+			// decode
+			CodePoint cp;
+			assert(bytes >= 2 && bytes <= 4);
+			switch(bytes) {
+			case 2:	// 110y yyyy  10zz zzzz -> 0000 0yyy yyzz zzzz
+				cp = ((from[0] & 0x1F) << 6) | ((from[1] & 0x3F) << 0); break;
+			case 3:	// 1110 xxxx  10yy yyyy  10zz zzzz -> xxxx yyyy yyzz zzzz
+				cp = ((from[0] & 0x0F) << 12) | ((from[1] & 0x3F) << 6) | ((from[2] & 0x3F) << 0); break;
+			case 4:	// 1111 0www  10xx xxxx  10yy yyyy  10zz zzzz -> 0000 0000 000w wwxx xxxx yyyy yyzz zzzz
+				cp = ((from[0] & 0x07) << 18) | ((from[1] & 0x3F) << 12) | ((from[2] & 0x3F) << 6) | ((from[3] & 0x3F) << 0); break;
+			}
+
+			if(to == toEnd - 1 && surrogates::isSupplemental(cp)) {
+				fromNext = from;
+				toNext = to;
+				return INSUFFICIENT_BUFFER;
+			}
+			surrogates::encode(cp, to);
+			to += surrogates::isSupplemental(cp) ? 2 : 1;
+			from += bytes;
 		}
-		if(to == toEnd - 1 && surrogates::isSupplemental(cp)) {
-			fromNext = from;
-			toNext = to;
-			return INSUFFICIENT_BUFFER;
-		}
-		from = e;
-		surrogates::encode(cp, to);
-		to += surrogates::isSupplemental(cp) ? 2 : 1;
+
 	}
 	fromNext = from;
 	toNext = to;
@@ -223,11 +253,11 @@ Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 // UTF16LittleEndianEncoder /////////////////////////////////////////////////
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
-		*(to++) = static_cast<uchar>((*from & 0x00FFU) >> 0);
-		*(to++) = static_cast<uchar>((*from & 0xFF00U) >> 8);
+		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
+		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
 	}
 	fromNext = from;
 	toNext = to;
@@ -236,7 +266,7 @@ Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd,
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = *from | maskUCS2(from[1] << 8);
 	fromNext = from;
@@ -251,11 +281,11 @@ Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 // UTF16BigEndianEncoder /////////////////////////////////////////////////
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF16BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF16BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
-		*(to++) = static_cast<uchar>((*from & 0xFF00U) >> 8);
-		*(to++) = static_cast<uchar>((*from & 0x00FFU) >> 0);
+		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
+		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
 	}
 	fromNext = from;
 	toNext = to;
@@ -264,7 +294,7 @@ Encoder::Result UTF16BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uc
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = maskUCS2(*from << 8) | from[1];
 	fromNext = from;
@@ -281,15 +311,22 @@ Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 // UTF32LittleEndianEncoder /////////////////////////////////////////////////
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
-		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
-		*(to++) = mask8Bit((cp & 0x000000FFU) >> 0);
-		*(to++) = mask8Bit((cp & 0x0000FF00U) >> 8);
-		*(to++) = mask8Bit((cp & 0x00FF0000U) >> 16);
-		*(to++) = mask8Bit((cp & 0xFF000000U) >> 24);
-		if(surrogates::isSupplemental(cp))
+		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
+		if(!isScalarValue(c)) {
+			toNext = to;
+			fromNext = from;
+			if(surrogates::isHighSurrogate(c) && from == fromEnd - 1)	// low surrogate may appear immediately
+				return COMPLETED;
+			return MALFORMED_INPUT;
+		}
+		*(to++) = mask8Bit((c & 0x000000FFU) >> 0);
+		*(to++) = mask8Bit((c & 0x0000FF00U) >> 8);
+		*(to++) = mask8Bit((c & 0x00FF0000U) >> 16);
+		*(to++) = mask8Bit((c & 0xFF000000U) >> 24);
+		if(surrogates::isSupplemental(c))
 			++from;
 	}
 	fromNext = from;
@@ -299,10 +336,10 @@ Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd,
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
-		const CodePoint cp = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
-		if(isValidCodePoint(cp)) {
+		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
+		if(isValidCodePoint(c)) {
 			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
 			else if(policy() != IGNORE_UNMAPPABLE_CHARACTER) {
@@ -311,7 +348,7 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 				return UNMAPPABLE_CHARACTER;
 			}
 		} else
-			to += surrogates::encode(cp, to);
+			to += surrogates::encode(c, to);
 	}
 	fromNext = from;
 	toNext = to;
@@ -322,15 +359,15 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 // UTF32BigEndianEncoder /////////////////////////////////////////////////
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF32BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF32BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
-		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
-		*(to++) = mask8Bit((cp & 0xFF000000U) >> 24);
-		*(to++) = mask8Bit((cp & 0x00FF0000U) >> 16);
-		*(to++) = mask8Bit((cp & 0x0000FF00U) >> 8);
-		*(to++) = mask8Bit((cp & 0x000000FFU) >> 0);
-		if(surrogates::isSupplemental(cp))
+		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
+		*(to++) = mask8Bit((c & 0xFF000000U) >> 24);
+		*(to++) = mask8Bit((c & 0x00FF0000U) >> 16);
+		*(to++) = mask8Bit((c & 0x0000FF00U) >> 8);
+		*(to++) = mask8Bit((c & 0x000000FFU) >> 0);
+		if(surrogates::isSupplemental(c))
 			++from;
 	}
 	fromNext = from;
@@ -340,7 +377,7 @@ Encoder::Result UTF32BigEndianEncoder::doFromUnicode(uchar* to, uchar* toEnd, uc
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
@@ -364,7 +401,7 @@ Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 
 namespace {
 	/// Returns true if the given character is in UTF-7 set B.
-	inline bool isUTF7SetB(uchar c) throw() {
+	inline bool isUTF7SetB(byte c) throw() {
 		return toBoolean(isalnum(c)) || c == '+' || c == '/';
 	}
 
@@ -380,9 +417,9 @@ namespace {
 } // namespace @0
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF7Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-	static const uchar base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	static const byte base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	while(true /* from < fromEnd */) {
 		// calculate the length of the substring to need to modified-BASE64 encode
 		const Char* base64End = from;
@@ -434,8 +471,8 @@ Encoder::Result UTF7Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 		
 /// @see Encoder#doToUnicode
 Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
-	static const uchar base64[] = {
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+	static const byte base64[] = {
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
@@ -469,7 +506,7 @@ Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				*(to++) = *(from++);
 		} else {
 			// calculate the length of the modified-BASE64 encoded subsequence
-			const uchar* base64End = from;
+			const byte* base64End = from;
 			while(base64End < fromEnd && isUTF7SetB(*base64End))
 				++base64End;
 
@@ -513,7 +550,7 @@ namespace {
 	 * @param[out] the code point of the decoded character
 	 * @return the end of the eaten subsequence
 	 */
-	inline const uchar* decodeUTF5Character(const uchar* first, const uchar* last, CodePoint& cp) throw() {
+	inline const byte* decodeUTF5Character(const byte* first, const byte* last, CodePoint& cp) throw() {
 		if(*first < 'G' || *first > 'V')
 			return 0;
 		cp = *first - 'G';
@@ -538,7 +575,7 @@ namespace {
 	 * @param[out] toEnd the end of the destination buffer
 	 * @return the end of the eaten subsequence
 	 */
-	inline uchar* encodeUTF5Character(const Char* from, const Char* fromEnd, uchar* to) {
+	inline byte* encodeUTF5Character(const Char* from, const Char* fromEnd, byte* to) {
 #define D2C(n) (mask8Bit(n) < 0x0A) ? (mask8Bit(n) + '0') : (mask8Bit(n) - 0x0A + 'A')
 
 		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
@@ -593,10 +630,10 @@ namespace {
 } // namespace @0
 
 /// @see Encoder#doFromUnicode
-Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNext,
+Encoder::Result UTF5Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-	uchar temp[8];
-	uchar* e;
+	byte temp[8];
+	byte* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
@@ -627,8 +664,8 @@ Encoder::Result UTF5Encoder::doFromUnicode(uchar* to, uchar* toEnd, uchar*& toNe
 
 /// @see Encoder#doToUnicode
 Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const uchar* from, const uchar* fromEnd, const uchar*& fromNext, State*) const {
-	const uchar* e;
+		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+	const byte* e;
 	CodePoint cp;
 	while(to < toEnd && from < fromEnd) {
 		e = decodeUTF5Character(from, fromEnd, cp);
@@ -667,7 +704,7 @@ Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
 namespace {
-	inline const uchar* maybeUTF8(const uchar* first, const uchar* last) throw() {
+	inline const byte* maybeUTF8(const byte* first, const byte* last) throw() {
 		while(first < last) {
 			if(*first == 0xC0 || *first == 0xC1 || *first >= 0xF5)
 				break;
@@ -676,7 +713,7 @@ namespace {
 		return first;
 	}
 
-	size_t UnicodeDetector(const uchar* first, const uchar* last, MIBenum& mib) {
+	size_t UnicodeDetector(const byte* first, const byte* last, MIBenum& mib) {
 		mib = 0;
 		if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
 			mib = 106;	// UTF-8
@@ -702,7 +739,7 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetect
-MIBenum UnicodeDetector::doDetect(const uchar* first, const uchar* last, ptrdiff_t* convertibleBytes) const {
+MIBenum UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const {
 	MIBenum result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
