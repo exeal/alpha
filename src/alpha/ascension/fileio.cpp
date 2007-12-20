@@ -309,20 +309,20 @@ namespace {
  * Constructor opens the specified file.
  * @param fileName the name of the file
  * @param mode the file open mode. must be either @c std#ios_base#in or @c std#ios_base#out
- * @param encoding the MIBenum value of the file encoding or auto detection identifier
+ * @param encoding the file encoding or auto detection name
  * @param encodingPolicy the policy about encoding conversion
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occured
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
-		const MIBenum encoding, Encoder::Policy encodingPolicy, bool writeByteOrderMark) :encoder_(Encoder::forMIB(encoding)) {
+		const string& encoding, Encoder::Policy encodingPolicy, bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
 	if(!fileExists(fileName.c_str()))
 		throw IOException(IOException::FILE_NOT_FOUND);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	if(mode == ios_base::in) {
 		EncodingDetector* encodingDetector = 0;
 		if(encoder_ == 0) {	// 'encoding' may be for auto-detection
-			encodingDetector = EncodingDetector::forID(encoding);
+			encodingDetector = EncodingDetector::forName(encoding);
 			if(encodingDetector == 0)
 				throw IOException(IOException::INVALID_ENCODING);
 		}
@@ -452,8 +452,8 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 }
 
 /// Returns the MIBenum value of the encoding.
-MIBenum TextFileStreamBuffer::encoding() const throw() {
-	return encoder_->mibEnum();
+string TextFileStreamBuffer::encoding() const throw() {
+	return encoder_->name();
 }
 
 /// Returns true if the file is open.
@@ -588,7 +588,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
  * @param document the document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) : document_(document),
-		encoding_(Encoder::getDefault()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
+		encoding_(Encoder::getDefault().name()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_POSIX
@@ -656,7 +656,7 @@ void TextFileDocumentInput::close() {
 			document_.setInput(0, false);	// unbind
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-		setEncoding(Encoder::getDefault());
+		setEncoding(Encoder::getDefault().name());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
@@ -767,13 +767,13 @@ String TextFileDocumentInput::name() const throw() {
  * @param fileName the file name. this method doesn't resolves the short cut
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
  * description of the return value
- * @param encoding the MIBenum value of the file encoding or auto detection identifier
+ * @param encoding the file encoding or auto detection name
  * @param encodingPolicy the policy about encoding conversion
  * @param unexpectedTimeStampDirector
  * @return true if succeeded to lock the file with the desired mode @a lockMode.type
  * @throw IOException any I/O error occured. in this case, the document's content will be lost
  */
-bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, MIBenum encoding,
+bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, const std::string& encoding,
 		Encoder::Policy encodingPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
 //	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
 	unlock();
@@ -857,17 +857,15 @@ void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
 
 /**
  * Sets the encoding.
- * @param mib the MIBenum value of the encoding
+ * @param encoding the encoding
  * @throw std#invalid_argument @a mib is invalid
  * @see #encoding
  */
-void TextFileDocumentInput::setEncoding(MIBenum mib) {
-	if(!Encoder::supports(mib))
+void TextFileDocumentInput::setEncoding(const string& encoding) {
+	if(!encoding.empty() && Encoder::forName(encoding) == 0)
 		throw invalid_argument("the given encoding is not available.");
-	else if(mib != encoding_) {
-		encoding_ = mib;
-		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
-	}
+	encoding_ = encoding;
+	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
 }
 
 /**
@@ -944,14 +942,15 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) t
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
 	// check Unicode spcific newlines
 	if(params.newline == NLF_NEXT_LINE || params.newline == NLF_LINE_SEPARATOR || params.newline == NLF_PARAGRAPH_SEPARATOR) {
-		if(params.encoding != fundamental::UTF_8
-				&& params.encoding != fundamental::UTF_16LE
-				&& params.encoding != fundamental::UTF_16BE
+		const Encoder* encoder = Encoder::forName(params.encoding);
+		if(encoder == 0)
+			throw IOException(IOException::INVALID_ENCODING);
+		const MIBenum mib = encoder->mibEnum();
+		if(mib != fundamental::UTF_8
+				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-				&& params.encoding != extended::UTF_5
-				&& params.encoding != extended::UTF_7
-				&& params.encoding != extended::UTF_32LE
-				&& params.encoding != extended::UTF_32BE
+				&& mib != extended::UTF_5 && mib != extended::UTF_7
+				&& mib != extended::UTF_32LE && mib != extended::UTF_32BE
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 			)
 			throw IOException(IOException::INVALID_NEWLINE);

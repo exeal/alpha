@@ -16,7 +16,7 @@ using namespace std;
 namespace {
 	class ARMSCII7Encoder : public implementation::EncoderBase {
 	public:
-		ARMSCII7Encoder() : implementation::EncoderBase("ARMSCII-7", extended::ARMSCII7, 1, 2) {}
+		ARMSCII7Encoder() : implementation::EncoderBase("ARMSCII-7", MIB_OTHER, 1, 2, "", 0x1A) {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -25,7 +25,7 @@ namespace {
 	};
 	class ARMSCII8Encoder : public implementation::EncoderBase {
 	public:
-		ARMSCII8Encoder() : implementation::EncoderBase("ARMSCII-8", extended::ARMSCII8, 1, 2) {}
+		ARMSCII8Encoder() : implementation::EncoderBase("ARMSCII-8", MIB_OTHER, 1, 2, "", 0x1A) {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -34,7 +34,7 @@ namespace {
 	};
 	class ARMSCII8AEncoder : public implementation::EncoderBase {
 	public:
-		ARMSCII8AEncoder() : implementation::EncoderBase("ARMSCII-8A", extended::ARMSCII8A, 1, 2) {}
+		ARMSCII8AEncoder() : implementation::EncoderBase("ARMSCII-8A", MIB_OTHER, 1, 2, "", 0x1A) {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -43,7 +43,7 @@ namespace {
 	};
 	class ArmenianDetector : public EncodingDetector {
 	public:
-		ArmenianDetector() : EncodingDetector(EncodingDetector::ARMSCII_DETECTOR, "ARMSCIIAutoDetect") {}
+		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
 		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
@@ -60,7 +60,7 @@ namespace {
 
 namespace {
 	const Char RP__CH = REPLACEMENT_CHARACTER;
-	const byte N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const byte N__A = 0x1A;
 	const Char ARMSCII78toUCS_20[] = {
 	/* 0x20 */	0x0020, RP__CH, 0x00A7, 0x0589, 0x0029, 0x0028, 0x00BB, 0x00AB,
 				0x2014, 0x002E, 0x055D, 0x002C, 0x002D, 0x058A, 0x2026, 0x055C,
@@ -198,17 +198,15 @@ Encoder::Result ARMSCII7Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toN
 			}
 			*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
 			*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
-			assert(to[-1] != UNMAPPABLE_NATIVE_CHARACTER && to[0] != UNMAPPABLE_NATIVE_CHARACTER);
+			assert(to[-1] != substitutionCharacter() && to[0] != substitutionCharacter());
 			continue;
 		} else
-			*to = UNMAPPABLE_NATIVE_CHARACTER;
+			*to = substitutionCharacter();
 
-		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+		if(*to == substitutionCharacter()) {
+			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
-			else {
+			else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -270,16 +268,13 @@ Encoder::Result ARMSCII8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toN
 			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			*to = UNMAPPABLE_NATIVE_CHARACTER;
+			*to = substitutionCharacter();
 
-		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
-				*to = NATIVE_REPLACEMENT_CHARACTER;
-				continue;
-			} else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) {
+		if(*to == substitutionCharacter()) {
+			if(policy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				--to;
 				continue;
-			} else {
+			} else if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -322,9 +317,9 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& to
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
-			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : UNMAPPABLE_NATIVE_CHARACTER;
+			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : substitutionCharacter();
 		} else if(*from < 0x00A8)
-			*to = UNMAPPABLE_NATIVE_CHARACTER;
+			*to = substitutionCharacter();
 		else if(*from < 0x00A8 + countof(UCStoARMSCII8A_00A8))
 			*to = UCStoARMSCII8A_00A8[*from - 0x00A8];
 		else if(*from < 0x0530 + countof(UCStoARMSCII8A_0530))
@@ -342,14 +337,12 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& to
 			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			*to = UNMAPPABLE_NATIVE_CHARACTER;
+			*to = substitutionCharacter();
 
-		if(*to == UNMAPPABLE_NATIVE_CHARACTER) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
-			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+		if(*to == substitutionCharacter()) {
+			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
-			else {
+			else if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -392,7 +385,7 @@ Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNe
 /// @see EncodingDetector#doDetect
 MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
 	// first, check if Unicode
-	if(const EncodingDetector* unicodeDetector = forID(UNICODE_DETECTOR)) {
+	if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 		ptrdiff_t temp;
 		MIBenum result = unicodeDetector->detect(first, last, &temp);
 		if(temp == last - first) {

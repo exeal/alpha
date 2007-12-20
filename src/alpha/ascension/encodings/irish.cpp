@@ -35,7 +35,7 @@ namespace {
 	struct Installer {
 		Installer() {
 			Encoder::registerEncoder(std::auto_ptr<Encoder>(
-				new implementation::SingleByteEncoder("I.S. 434", extended::IS434, "", IS434)));
+				new implementation::SingleByteEncoder("I.S. 434", MIB_OTHER, "", 0x1A, IS434)));
 		}
 	} installer;
 } // namespace @0

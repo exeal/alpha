@@ -24,10 +24,10 @@ using namespace std;
 namespace {
 	template<typename Element> struct Registry {
 		~Registry() {
-			for(map<MIBenum, Element*>::iterator i(registry.begin()), e(registry.end()); i != e; ++i)
-				delete i->second;
+			for(set<Element*>::iterator i(registry.begin()), e(registry.end()); i != e; ++i)
+				delete *i;
 		}
-		map<MIBenum, Element*> registry;
+		set<Element*> registry;
 	};
 } // namespace @0
 
@@ -50,12 +50,12 @@ String encoding::getEncodingDisplayName(MIBenum mib) {/*
 		String s(name.length(), L'x');
 		copy(name.begin(), name.end(), s.begin());
 		return s;
-	} else if(const EncodingDetector* detector = EncodingDetector::forID(mib)) {
+/*	} else if(const EncodingDetector* detector = EncodingDetector::forID(mib)) {
 		const string name(detector->name());
 		String s(name.length(), L'x');
 		copy(name.begin(), name.end(), s.begin());
 		return s;
-	}
+*/	}
 	return L"";
 }
 
@@ -96,7 +96,7 @@ MIBenum UnsupportedEncodingException::mibEnum() const throw() {
  *   <dd>Other minorities. Not available if @c ASCENSION_NO_EXTENDED_ENCODINGS symbol is defined.</dd>
  * </dl>
  *
- * In addition, the encodings supported by the system are available if the target is Win32.
+ * <del>In addition, the encodings supported by the system are available if the target is Win32.</del>
  *
  * @note This class is not compatible with C++ standard @c std#codecvt template class.
  *
@@ -164,8 +164,13 @@ bool Encoder::canEncode(const String& s) const {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forMIB(MIBenum mib) throw() {
-	map<MIBenum, Encoder*>::iterator i(registry().find(mib));
-	return (i != registry().end()) ? i->second : 0;
+	if(mib > MIB_UNKNOWN) {
+		for(set<Encoder*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
+			if((*i)->mibEnum() == mib)
+				return *i;
+		}
+	}
+	return 0;
 }
 
 /**
@@ -174,20 +179,20 @@ Encoder* Encoder::forMIB(MIBenum mib) throw() {
  * @return the encoder or @c null if not registered
  */
 Encoder* Encoder::forName(const string& name) throw() {
-	for(map<MIBenum, Encoder*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
+	for(set<Encoder*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
-		const string canonicalName = i->second->name();
+		const string canonicalName((*i)->name());
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
-			return i->second;
+			return *i;
 		// test aliases
-		const string aliases = i->second->aliases();
+		const string aliases((*i)->aliases());
 		for(size_t j = 0; ; ++j) {
 			size_t nul = aliases.find('\0', j);
 			if(nul == string::npos)
 				nul = aliases.length();
 			if(nul != j) {
 				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + nul))
-					return i->second;
+					return *i;
 				++nul;
 			}
 			if(nul == aliases.length())
@@ -257,31 +262,27 @@ string Encoder::fromUnicode(const String& from) const {
 	return string(temp.get(), toNext);
 }
 
-/// Returns the MIBenum value of the default encoding.
-MIBenum Encoder::getDefault() throw() {
-//#ifdef _WIN32
+/// Returns the default encoder.
+Encoder& Encoder::getDefault() throw() {
+//#ifdef ASCENSION_WINDOWS
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
-	return fundamental::UTF_8;
-//#endif /* _WIN32 */
+	return *forMIB(fundamental::UTF_8);
+//#endif /* ASCENSION_WINDOWS */
 }
 
 /**
  * Registers the new encoder.
  * @param producer the function produces an encoder
  * @throw NullPointerException @a producer is @c null
- * @throw std#invalid_argument @a mib is already registered
  */
 void Encoder::registerEncoder(std::auto_ptr<Encoder> encoder) {
 	if(encoder.get() == 0)
 		throw NullPointerException("encoder");
-	else if(registry().find(encoder->mibEnum()) != registry().end())
-//		throw invalid_argument("the encoder is already registered.");
-		return;
-	registry().insert(make_pair(encoder->mibEnum(), encoder.release()));
+	registry().insert(encoder.release());
 }
 
-map<MIBenum, Encoder*>& Encoder::registry() {
+set<Encoder*>& Encoder::registry() {
 	static Registry<Encoder> singleton;
 	return singleton.registry;
 }
@@ -297,11 +298,6 @@ Encoder& Encoder::setPolicy(Policy newPolicy) {
 		throw invalid_argument("the given policy is not supported.");
 	policy_ = newPolicy;
 	return *this;
-}
-
-/// Returns true if supports the specified encoding.
-bool Encoder::supports(MIBenum mib) throw() {
-	return registry().find(mib) != registry().end();
 }
 
 /**
@@ -357,13 +353,10 @@ String Encoder::toUnicode(const string& from) const {
 
 /**
  * Constructor.
- * @param id the identifier of the encoding detector
  * @param name the name of the encoding detector
  * @throw std#invalid_argument @a id is invalid
  */
-EncodingDetector::EncodingDetector(MIBenum id, const string& name) : id_(id), name_(name) {
-	if(id < MINIMUM_ID || id > MAXIMUM_ID)
-		throw invalid_argument("id");
+EncodingDetector::EncodingDetector(const string& name) : name_(name) {
 }
 
 /// Destructor.
@@ -390,25 +383,15 @@ MIBenum EncodingDetector::detect(const byte* first, const byte* last, ptrdiff_t*
 }
 
 /**
- * Returns the encoding detector which has the given identifier.
- * @param id the identifier
- * @return the encoding detectir or @c null if not registered
- */
-EncodingDetector* EncodingDetector::forID(MIBenum id) throw() {
-	map<MIBenum, EncodingDetector*>::iterator i(registry().find(id));
-	return (i != registry().end()) ? i->second : 0;
-}
-
-/**
  * Returns the encoding detector which matches the given name.
  * @param name the name
  * @return the encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forName(const string& name) throw() {
-	for(map<MIBenum, EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
-		const string canonicalName = i->second->name();
+	for(set<EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
+		const string canonicalName((*i)->name());
 		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
-			return i->second;
+			return *i;
 	}
 	return 0;
 }
@@ -421,15 +404,15 @@ EncodingDetector* EncodingDetector::forName(const string& name) throw() {
  */
 EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() {
 	switch(codePage) {
-	case 50001:	return forID(UNIVERSAL_DETECTOR);
-	case 50932:	return forID(JIS_DETECTOR);
-	case 50949:	return forID(KS_DETECTOR);
+	case 50001:	return forName("UniversalAutoDetect");
+	case 50932:	return forName("JISAutoDetect");
+	case 50949:	return forName("KSAutoDetect");
 	default:	return 0;
 	}
 }
 #endif /* ASCENSION_WINDOWS */
 
-map<MIBenum, EncodingDetector*>& EncodingDetector::registry() {
+set<EncodingDetector*>& EncodingDetector::registry() {
 	static Registry<EncodingDetector> singleton;
 	return singleton.registry;
 }
@@ -438,22 +421,11 @@ map<MIBenum, EncodingDetector*>& EncodingDetector::registry() {
  * Registers the new encoding detector.
  * @param newDetector the encoding detector
  * @throw NullPointerException @a detector is @c null
- * @throw std#invalid_argument @a detectorID is already registered
  */
 void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) {
 	if(newDetector.get() == 0)
 		throw NullPointerException("newDetector");
-	const MIBenum id(newDetector->id());
-	if(registry().find(id) != registry().end())
-//		throw invalid_argument("the same identifier is already registered.");
-		return;
-	registry().insert(make_pair(id, newDetector.release()));
-}
-
-/// Returns true if the encoding detector which has the specified identifier.
-bool EncodingDetector::supports(MIBenum detectorID) throw() {
-	return detectorID == UNIVERSAL_DETECTOR || detectorID == SYSTEM_LOCALE_DETECTOR
-		|| detectorID == USER_LOCALE_DETECTOR || registry().find(detectorID) != registry().end();
+	registry().insert(newDetector.release());
 }
 
 
@@ -462,24 +434,24 @@ bool EncodingDetector::supports(MIBenum detectorID) throw() {
 namespace {
 	class UniversalDetector : public EncodingDetector {
 	public:
-		UniversalDetector() : EncodingDetector(EncodingDetector::UNIVERSAL_DETECTOR, "UniversalAutoDetect") {}
+		UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 	private:
 		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
-//	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, EncodingDetector::SYSTEM_LOCALE_DETECTOR, "SystemLocaleAutoDetect");
-//	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, EncodingDetector::USER_LOCALE_DETECTOR, "UserLocaleAutoDetect");
+//	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
+//	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
 MIBenum UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
 	// try all detectors
-	vector<MIBenum> mibs;
-	availableIDs(back_inserter(mibs));
+	vector<string> names;
+	availableNames(back_inserter(names));
 
-	MIBenum result = Encoder::getDefault();
+	MIBenum result = Encoder::getDefault().mibEnum();
 	ptrdiff_t bestScore = 0, score;
-	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-		if(const EncodingDetector* detector = forID(*mib)) {
+	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
+		if(const EncodingDetector* detector = forName(*name)) {
 			const MIBenum detectedEncoding = detector->detect(first, last, &score);
 			if(score > bestScore) {
 				result = detectedEncoding;
@@ -554,7 +526,7 @@ namespace {
 				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-					*to = NATIVE_REPLACEMENT_CHARACTER;
+					*to = substitutionCharacter();
 				else {
 					toNext = to;
 					fromNext = from;
@@ -602,8 +574,10 @@ namespace {
  * @param aliases the encoding aliases returned by @c #aliases
  */
 EncoderBase::EncoderBase(const string& name, MIBenum mib,
-		size_t maximumNativeBytes /* = 1 */, size_t maximumUCSLength /* = 1 */, const string& aliases /* = "" */)
-		: name_(name), aliases_(aliases), maximumNativeBytes_(maximumNativeBytes), maximumUCSLength_(maximumUCSLength), mib_(mib) {
+		size_t maximumNativeBytes /* = 1 */, size_t maximumUCSLength /* = 1 */,
+		const string& aliases /* = "" */, byte substitutionCharacter /* = 0x1A */)
+		: name_(name), aliases_(aliases), maximumNativeBytes_(maximumNativeBytes),
+		maximumUCSLength_(maximumUCSLength), mib_(mib), substitutionCharacter_(substitutionCharacter) {
 }
 
 /// Destructor.
@@ -633,6 +607,11 @@ MIBenum EncoderBase::mibEnum() const throw() {
 /// @see Encoder#name
 string EncoderBase::name() const throw() {
 	return name_;
+}
+
+/// @see Encoder#substitutionCharacter
+byte EncoderBase::substitutionCharacter() const throw() {
+	return substitutionCharacter_;
 }
 
 
@@ -667,16 +646,21 @@ const byte SingleByteEncoder::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
+/// A substitution byte value in used in Unicode to native mapping table.
+const byte SingleByteEncoder::UNMAPPABLE_BYTE = 0x00;
+
 /**
  * Constructor.
  * @param name the name returned by @c #name
  * @param mib the MIBenum value returned by @c #mibEnum
  * @param aliases the encoding aliases returned by @c #aliases
+ * @param substitutionCharacter the native character returned by @c #substitutionCharacter
  * @param native8ToUnicode the table maps a native byte 0x80 through 0xFF into a UCS2
  * @param native7ToUnicode the table maps a native byte 0x00 through 0x7F into a UCS2
  */
 SingleByteEncoder::SingleByteEncoder(const string& name, MIBenum mib, const string& aliases,
-		const Char native8ToUnicode[0x80], const Char native7ToUnicode[0x80] /* = 0 */) : EncoderBase(name, mib, 1, 1, aliases),
+		byte substitutionCharacter, const Char native8ToUnicode[0x80], const Char native7ToUnicode[0x80] /* = 0 */)
+		: EncoderBase(name, mib, 1, 1, aliases, substitutionCharacter),
 		native7ToUnicode_((native7ToUnicode != 0) ? native7ToUnicode : ASCII_TABLE), native8ToUnicode_(native8ToUnicode) {
 	unicodeToNative_[0] = 0;
 }
@@ -698,7 +682,7 @@ void SingleByteEncoder::buildUnicodeToNativeTable() {
 		byte*& p = unicodeToNative_[ucs >> 8];
 		if(p == 0) {
 			p = new byte[0x100];
-			fill_n(p, 0x100, UNMAPPABLE_NATIVE_CHARACTER);
+			fill_n(p, 0x100, UNMAPPABLE_BYTE);
 		}
 		p[mask8Bit(ucs)] = static_cast<byte>(i);
 	}
@@ -711,11 +695,11 @@ Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& t
 		const_cast<SingleByteEncoder*>(this)->buildUnicodeToNativeTable();
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		*to = unicodeToNative_[*from >> 8][mask8Bit(*from)];
-		if(*to == UNMAPPABLE_NATIVE_CHARACTER && *from != UNMAPPABLE_NATIVE_CHARACTER) {
+		if(*to == UNMAPPABLE_BYTE && *from != UNMAPPABLE_BYTE) {
 			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
+				*to = substitutionCharacter();
 			else {
 				toNext = to;
 				fromNext = from;

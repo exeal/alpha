@@ -471,7 +471,7 @@ void EditPoint::previousLine(length_t offset /* = 1 */) {
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
 		EditPoint(viewer.document(), position, listener),viewer_(&viewer),
-		clipboardNativeEncoding_(encoding::Encoder::getDefault()),
+		clipboardNativeEncoding_(encoding::Encoder::getDefault().name()),
 		lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
 	static_cast<kernel::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().addVisualLinesListener(*this);
@@ -749,7 +749,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 	const String newline(getNewlineString((documentInput != 0) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
-		const Char* const eol = find_first_of(bol, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
 
 		// insert text if the source line is not empty
 		if(eol > bol) {

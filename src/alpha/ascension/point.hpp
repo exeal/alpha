@@ -152,7 +152,7 @@ namespace ascension {
 			virtual ~VisualPoint() throw();
 			// attributes
 			static ::UINT		canPaste() throw();
-			encoding::MIBenum	clipboardNativeEncoding() const throw();
+			std::string			clipboardNativeEncoding() const throw();
 			bool				isEndOfVisualLine() const;
 			bool				isFirstPrintableCharacterOfLine() const;
 			bool				isFirstPrintableCharacterOfVisualLine() const;
@@ -224,7 +224,7 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			encoding::MIBenum clipboardNativeEncoding_;
+			std::string clipboardNativeEncoding_;
 			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
 			bool crossingLines_;	// 行間移動中
 			length_t visualLine_, visualSubline_;	// 点の表示行

@@ -198,7 +198,7 @@ namespace {
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 	class JISAutoDetector : public EncodingDetector {
 	public:
-		JISAutoDetector() : EncodingDetector(EncodingDetector::JIS_DETECTOR, "JISAutoDetect") {}
+		JISAutoDetector() : EncodingDetector("JISAutoDetect") {}
 	private:
 		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
@@ -245,7 +245,7 @@ namespace {
 	const byte SS2 = static_cast<byte>(0x8EU);
 	const byte SS3 = static_cast<byte>(0x8FU);
 	const Char RP__CH = REPLACEMENT_CHARACTER;
-	const byte N__A = UNMAPPABLE_NATIVE_CHARACTER;
+	const byte N__A = 0x00;
 	const Char JISX0208toUCS_2121[] = {	// 0x2121-0x2840
 		#include "Jis\JISX0208toUCS_2121"
 	};
@@ -938,7 +938,7 @@ namespace {
 
 #define ASCENSION_HANDLE_UNMAPPABLE()							\
 	if(policy == Encoder::REPLACE_UNMAPPABLE_CHARACTER) {		\
-		jis = mbcs[0] = NATIVE_REPLACEMENT_CHARACTER;			\
+		jis = mbcs[0] = 0x1A;									\
 		mbcs[1] = 1;											\
 		charset = ASCII;										\
 	} else if(policy == Encoder::IGNORE_UNMAPPABLE_CHARACTER) {	\
@@ -970,13 +970,13 @@ namespace {
 				bool plane2;
 				jis = ucsToJISX0213(from, eaten, plane2);
 
-				if(jis != UNMAPPABLE_NATIVE_CHARACTER) {
+				if(jis != 0x00) {
 					charset = UNDESIGNATED;
 					if(!plane2) {
 						// try JIS X 0208 compatible sequence
 						if((mib == extended::ISO_2022_JP_3_COMPATIBLE
 								|| mib == extended::ISO_2022_JP_2004_COMPATIBLE)
-								&& ucsToJISX0208(*from) != UNMAPPABLE_NATIVE_CHARACTER)
+								&& ucsToJISX0208(*from) != 0x00)
 							charset = JIS_X_0208;
 						else if((mib == extended::ISO_2022_JP_3_STRICT
 								|| mib == extended::ISO_2022_JP_2004_STRICT)
@@ -1168,12 +1168,12 @@ Encoder::Result ShiftJISEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toN
 			*to = mask8Bit(*from);
 		else {
 			ushort jis = ucsToJISX0208(*from);	// try JIS X 0208
-			if(jis == UNMAPPABLE_NATIVE_CHARACTER) {
+			if(jis == 0x00) {
 				if(const byte kana = ucsToJISX0201Kana(*from)) {	// try JIS X 0201 kana
 					*to = kana;
 					continue;
 				} else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-					*to = NATIVE_REPLACEMENT_CHARACTER;
+					*to = substitutionCharacter();
 				else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else {
@@ -1241,8 +1241,8 @@ Encoder::Result EUCJPEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext
 
 		bool x0212 = false;
 		ushort jis = ucsToJISX0208(*from);
-		if(jis == UNMAPPABLE_NATIVE_CHARACTER) {
-			if((jis = ucsToJISX0212(*from)) != UNMAPPABLE_NATIVE_CHARACTER)
+		if(jis == 0x00) {
+			if((jis = ucsToJISX0212(*from)) != 0x00)
 				// JIS X 0212
 				x0212 = true;
 			else if(const byte kana = ucsToJISX0201Kana(*from)) {
@@ -1256,7 +1256,7 @@ Encoder::Result EUCJPEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext
 				*++to = kana;
 				continue;
 			} else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
+				*to = substitutionCharacter();
 			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
@@ -1473,9 +1473,9 @@ Encoder::Result ShiftJIS2004Encoder::doFromUnicode(byte* to, byte* toEnd, byte*&
 	for(ptrdiff_t utf16Length; to < toEnd && from < fromEnd; from += utf16Length) {
 		utf16Length = (*from > 0x007F) ? (fromEnd - from) : 1;
 		ushort jis = (*from > 0x007F) ? ucsToJISX0213(from, utf16Length, plane2) : *from;
-		if(jis == UNMAPPABLE_NATIVE_CHARACTER && (jis = ucsToJISX0201Kana(*from)) == UNMAPPABLE_NATIVE_CHARACTER) {
+		if(jis == 0x00 && (jis = ucsToJISX0201Kana(*from)) == 0x00) {
 			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
+				*to = substitutionCharacter();
 			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
@@ -1517,7 +1517,7 @@ Encoder::Result ShiftJIS2004Encoder::doToUnicode(Char* to, Char* toEnd, Char*& t
 			*to = jisX0201KanaToUCS(*from);
 		else if(*from == 0xA0) {	// illegal byte
 			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*to = NATIVE_REPLACEMENT_CHARACTER;
+				*to = substitutionCharacter();
 			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else {
@@ -1580,8 +1580,8 @@ Encoder::Result EUCJIS2004Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& t
 	for(ptrdiff_t utf16Length; to < toEnd && from < fromEnd; ++to, from += utf16Length) {
 		// UCS -> JIS
 		utf16Length = (*from >= 0x80) ? (fromEnd - from) : 1;
-		if((jis = (*from >= 0x80) ? ucsToJISX0213(from, utf16Length, plane2) : *from) == UNMAPPABLE_NATIVE_CHARACTER) {
-			if((jis = ucsToJISX0201Kana(*from)) != UNMAPPABLE_NATIVE_CHARACTER) {
+		if((jis = (*from >= 0x80) ? ucsToJISX0213(from, utf16Length, plane2) : *from) == 0x00) {
+			if((jis = ucsToJISX0201Kana(*from)) != 0x00) {
 				if(to + 1 >= toEnd) {
 					toNext = to;
 					fromNext = from;
@@ -1590,7 +1590,7 @@ Encoder::Result EUCJIS2004Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& t
 				*(to++) = SS2;
 			} else {	// unmappable
 				if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-					*to = NATIVE_REPLACEMENT_CHARACTER;
+					*to = substitutionCharacter();
 				else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else {
@@ -1796,7 +1796,7 @@ namespace {
 						jis2004 = true;
 					}
 				} else {	// Shift_JIS-2004
-					if(convertShiftJISDBCSToX0213(p, plane2) == UNMAPPABLE_NATIVE_CHARACTER)
+					if(convertShiftJISDBCSToX0213(p, plane2) == 0x00)
 						break;
 				}
 				++p;
@@ -1938,7 +1938,7 @@ MIBenum JISAutoDetector::doDetect(const byte* first, const byte* last, ptrdiff_t
 	ptrdiff_t cb = 0;
 
 	// first, test Unicode
-	if(const EncodingDetector* unicodeDetector = EncodingDetector::forID(UNICODE_DETECTOR)) {
+	if(const EncodingDetector* unicodeDetector = EncodingDetector::forName("UnicodeAutoDetect")) {
 		result = unicodeDetector->detect(first, last, &cb);
 		if(cb == last - first) {
 			if(convertibleBytes != 0)
