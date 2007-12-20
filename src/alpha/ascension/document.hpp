@@ -47,7 +47,8 @@ namespace ascension {
 		/**
 		 * Value represent a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
 		 * special values indicate how to interpret newlines during any text I/O.
-		 * @see getNewlineStringLength, getNewlineString, Document, ASCENSION_DEFAULT_NEWLINE
+		 * @see getNewlineStringLength, getNewlineString, Document, ASCENSION_DEFAULT_NEWLINE,
+		 * NEWLINE_CHARACTERS
 		 */
 		enum Newline {
 			NLF_LINE_FEED,				///< Line feed. Standard of Unix (Lf, U+000A).
@@ -351,8 +352,8 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~IDocumentInput() throw() {}
-			/// Returns the MIBenum value of the encoding of the document input.
-			virtual encoding::MIBenum encoding() const throw() = 0;
+			/// Returns the encoding of the document input.
+			virtual std::string encoding() const throw() = 0;
 			/// Returns the location of the document input or an empty string.
 			virtual String location() const throw() = 0;
 			/// Returns the default newline of the document. The returned value can be neighter
@@ -922,10 +923,10 @@ namespace ascension {
 				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
 				TextFileStreamBuffer(const String& fileName, std::ios_base::openmode mode,
-					encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy, bool writeByteOrderMark);
+					const std::string& encoding, encoding::Encoder::Policy encodingPolicy, bool writeByteOrderMark);
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
-				encoding::MIBenum encoding() const throw();
+				std::string encoding() const throw();
 				bool isOpen() const throw();
 			private:
 				int_type	overflow(int_type c /* = traits_type::eof() */);
@@ -962,7 +963,7 @@ namespace ascension {
 
 				/// Option flags for @c FileBinder#write and @c FileBinder#writeRegion.
 				struct WriteParameters {
-					encoding::MIBenum encoding;					///< The MIBenum value of the encoding.
+					std::string encoding;						///< The the encoding name.
 					Newline newline;							///< The newline.
 					encoding::Encoder::Policy encodingPolicy;	///< The policy of encodings.
 					enum Option {
@@ -996,17 +997,17 @@ namespace ascension {
 				String	name() const throw();
 				String	pathName() const throw();
 				// encodings
-				void	setEncoding(encoding::MIBenum mib);
+				void	setEncoding(const std::string& encoding);
 				void	setNewline(Newline newline);
 				// I/O
 				void	close();
 				bool	open(const String& fileName, const LockMode& lockMode,
-							encoding::MIBenum encoding, encoding::Encoder::Policy encodingPolicy,
+							const std::string& encoding, encoding::Encoder::Policy encodingPolicy,
 							IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				bool	write(const String& fileName, const WriteParameters& params);
 				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
 				// IDocumentInput
-				encoding::MIBenum	encoding() const throw();
+				std::string			encoding() const throw();
 				ascension::String	location() const throw();
 				Newline				newline() const throw();
 			private:
@@ -1024,7 +1025,7 @@ namespace ascension {
 			private:
 				Document& document_;
 				String fileName_;
-				encoding::MIBenum encoding_;
+				std::string encoding_;
 				Newline newline_;
 				LockMode lockMode_;
 #ifdef ASCENSION_WINDOWS
@@ -1142,7 +1143,7 @@ inline length_t getNumberOfLines(ForwardIterator first, ForwardIterator last) {
 		return 0;
 	length_t lines = 1;
 	while(true) {
-		first = std::find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
 		if(first == last)
 			break;
 		++lines;
@@ -1516,7 +1517,7 @@ inline DocumentBuffer* DocumentStream::rdbuf() const throw() {return const_cast<
 inline const Document& fileio::TextFileDocumentInput::document() const throw() {return document_;}
 
 /// @see IDocumentInput#encoding, #setEncoding
-inline encoding::MIBenum fileio::TextFileDocumentInput::encoding() const throw() {return encoding_;}
+inline std::string fileio::TextFileDocumentInput::encoding() const throw() {return encoding_;}
 
 /// Returns true if the document is bound to any file.
 inline bool fileio::TextFileDocumentInput::isOpen() const throw() {return !fileName_.empty();}

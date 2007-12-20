@@ -50,6 +50,8 @@ namespace ascension {
 	const Char CARRIAGE_RETURN = 0x000D;
 	/// Code point of NEXT LINE (U+0085).
 	const Char NEXT_LINE = 0x0085;
+	/// Code point of SUBSTITUTE (U+001A).
+	const Char C0_SUBSTITUTE = 0x001A;
 	/// Code point of ZERO WIDTH NON-JOINER (U+200C).
 	const Char ZERO_WIDTH_NON_JOINER = 0x200C;
 	/// Code point of ZERO WIDTH JOINER (U+200D).
@@ -64,8 +66,9 @@ namespace ascension {
 	const Char NONCHARACTER = 0xFFFF;
 	/// Invalid code point value.
 	const CodePoint INVALID_CODE_POINT = 0xFFFFFFFFUL;
-	/// Set of line break characters.
-	const Char LINE_BREAK_CHARACTERS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
+	/// Set of newline characters.
+	/// @see kernel#Newline
+	const Char NEWLINE_CHARACTERS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 
 	/**
 	 * Represents direction in a text or a document (not visual orientation. See @c #viewers#Orientation).

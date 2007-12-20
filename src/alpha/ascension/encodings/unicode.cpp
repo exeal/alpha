@@ -84,7 +84,7 @@ namespace {
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 	class UnicodeDetector : public EncodingDetector {
 	public:
-		UnicodeDetector() : EncodingDetector(EncodingDetector::UNICODE_DETECTOR, "UnicodeAutoDetect") {}
+		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 	private:
 		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const;
 	};
@@ -638,7 +638,7 @@ Encoder::Result UTF5Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
 			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*(to++) = NATIVE_REPLACEMENT_CHARACTER;
+				*(to++) = substitutionCharacter();
 			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {

@@ -45,9 +45,9 @@ namespace {
 	struct Installer {
 		Installer() {
 			using encoding::implementation::SingleByteEncoder;
-			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("MuleLao-1", extended::MULE_LAO, "", MULE_LAO_1)));
-//			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("CP1132", extended::CP1132, "", CP1132)));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("CP1133", extended::CP1133, "", CP1133)));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("MuleLao-1", MIB_OTHER, "", 0x1A, MULE_LAO_1)));
+//			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("CP1132", MIB_OTHER, "", 0x1A, CP1132)));
+			Encoder::registerEncoder(auto_ptr<Encoder>(new SingleByteEncoder("CP1133", MIB_OTHER, "", 0x1A, CP1133)));
 		}
 	} installer;
 } // namespace @0

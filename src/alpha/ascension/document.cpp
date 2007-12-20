@@ -910,7 +910,7 @@ Position Document::insert(const Position& position, const Char* first, const Cha
 
 Position Document::insertText(const Position& position, const Char* first, const Char* last) {
 	Position resultPosition(position.line, 0);
-	const Char* breakPoint = find_first_of(first, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+	const Char* breakPoint = find_first_of(first, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
 
 	if(breakPoint == last) {	// single-line
 		Line& line = const_cast<Line&>(getLineInformation(position.line));
@@ -926,7 +926,7 @@ Position Document::insertText(const Position& position, const Char* first, const
 
 		// 最後の改行位置を探し、resultPosition の文字位置も決定する
 		for(lastBreak = last - 1; ; --lastBreak) {
-			if(binary_search(LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS), *lastBreak))
+			if(binary_search(NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS), *lastBreak))
 				break;
 		}
 		resultPosition.column = static_cast<length_t>((last - first) - (lastBreak - first) - 1);
@@ -948,7 +948,7 @@ Position Document::insertText(const Position& position, const Char* first, const
 		while(true) {
 			if(breakPoint <= lastBreak) {
 				const Char* const nextBreak =
-					find_first_of(breakPoint, last, LINE_BREAK_CHARACTERS, endof(LINE_BREAK_CHARACTERS));
+					find_first_of(breakPoint, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
 				assert(nextBreak != last);
 				const Newline newline = eatNewline(nextBreak, last);
 
