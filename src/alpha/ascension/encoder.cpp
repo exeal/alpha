@@ -24,7 +24,7 @@ using namespace std;
 namespace {
 	template<typename Element> struct Registry {
 		~Registry() {
-			for(set<Element*>::iterator i(registry.begin()), e(registry.end()); i != e; ++i)
+			for(typename set<Element*>::iterator i(registry.begin()), e(registry.end()); i != e; ++i)
 				delete *i;
 		}
 		set<Element*> registry;
@@ -33,8 +33,8 @@ namespace {
 
 
 /// Returns the human-readable name of the encoding.
-String encoding::getEncodingDisplayName(MIBenum mib) {/*
-#ifdef ASCENSION_WINDOWS
+String encoding::getEncodingDisplayName(MIBenum mib) {
+#if defined(ASCENSION_WINDOWS) && 0
 	if(const uint cp = convertMIBtoWinCP(mib)) {
 		manah::com::ComPtr<::IMultiLanguage> mlang;
 		HRESULT hr = mlang.createInstance(::CLSID_CMultiLanguage, ::IID_IMultiLanguage, CLSCTX_INPROC);

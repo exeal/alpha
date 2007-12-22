@@ -1505,13 +1505,13 @@ inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
 inline const Position& DocumentCharacterIterator::tell() const throw() {return p_;}
 
 /// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentInputStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+inline DocumentBuffer* DocumentInputStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
 
 /// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentOutputStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+inline DocumentBuffer* DocumentOutputStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
 
 /// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentStream::rdbuf() const throw() {return const_cast<DocumentBuffer*>(&buffer_);}
+inline DocumentBuffer* DocumentStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
 
 /// Returns the document.
 inline const Document& fileio::TextFileDocumentInput::document() const throw() {return document_;}
