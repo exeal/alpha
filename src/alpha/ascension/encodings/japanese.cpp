@@ -793,7 +793,7 @@ namespace {
 				if(g2 == ISO_8859_1) {	// ISO-8859-1
 					if(iso88591Encoder == 0)
 						(iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1))->setPolicy(policy);
-					byte* next;
+					const byte* next;
 					const Encoder::Result r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 					if(r != Encoder::COMPLETED) {
 						fromNext = from;
@@ -804,7 +804,7 @@ namespace {
 				} else if(g2 == ISO_8859_7) {	// ISO-8859-7
 					if(iso88597Encoder == 0)
 						(iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7))->setPolicy(policy);
-					byte* next;
+					const byte* next;
 					const Encoder::Result r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 					if(r != Encoder::COMPLETED) {
 						fromNext = from;

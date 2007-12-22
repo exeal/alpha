@@ -512,7 +512,7 @@ int TextFileStreamBuffer::sync() {
 #else // ASCENSION_POSIX
 			const size_t bytes = toNext - nativeBuffer;
 			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
-			if(writtenBytes == -1 || writtenBytes != bytes)
+			if(writtenBytes == -1 || static_cast<size_t>(writtenBytes) != bytes)
 				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #endif
 
@@ -715,7 +715,7 @@ a::String TextFileDocumentInput::location() const throw() {
 #ifdef ASCENSION_WINDOWS
 	return fileName_;
 #else // ASCENSION_POSIX
-	const codecvt<a::Char, Char>& converter = use_facet<codecvt<a::Char, Char> >(locale());
+	const codecvt<a::Char, Char, mbstate_t>& converter = use_facet<codecvt<a::Char, Char, mbstate_t> >(locale());
 	a::Char result[PATH_MAX * 2];
 	mbstate_t dummy;
 	const Char* fromNext;
@@ -785,7 +785,7 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	const bool recorded = document_.isRecordingOperations();
 	document_.recordOperations(false);
 	try {
-		basic_istream<Char> in(&sb);
+		basic_istream<a::Char> in(&sb);
 		readDocumentFromStream(in, document_, document_.region().beginning());
 	} catch(...) {
 		document_.resetContent();
@@ -815,15 +815,17 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 #ifdef ASCENSION_WINDOWS
 	document_.setProperty(Document::TITLE_PROPERTY, name());
 #else // ASCENSION_POSIX
-	// TODO: convert name() into the 8-bit file system encoding.
 	const String title(name());
-	const codecvt<a::Char, Char, mbstate_t>& conv = use_facet<codecvt<a::Char, Char, mbstate_t> >(locale::global());
+	const locale lc("");
+	const codecvt<a::Char, Char, mbstate_t>& conv = use_facet<codecvt<a::Char, Char, mbstate_t> >(lc);
 	mbstate_t state;
-	AutoBuffer<a::Char> ucs(new a::Char[title.length() * 2]);
+	const Char* fromNext;
+	a::Char* ucsNext;
+	manah::AutoBuffer<a::Char> ucs(new a::Char[title.length() * 2]);
 	if(codecvt_base::ok == conv.in(state,
-			title.data(), title.data() + title.length(), fromEnd, ucs, ucs + title.length() * 2, ucsNext)) {
-		ucsNext = L'0';
-		document_.setProperty(Document::TITLE_PROPERTY, ucs);
+			title.data(), title.data() + title.length(), fromNext, ucs.get(), ucs.get() + title.length() * 2, ucsNext)) {
+		*ucsNext = L'0';
+		document_.setProperty(Document::TITLE_PROPERTY, ucs.get());
 	}
 #endif
 	encoding_ = sb.encoding();
@@ -1045,8 +1047,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 #endif
 
 	// TODO: support backup on writing.
-/*	// デバッグバージョンは常にバックアップを作る (上書きの場合のみ)
-	if(
+/*	if(
 #ifdef _DEBUG
 	true ||
 #endif
@@ -1059,7 +1060,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 		wcscat(backupPath, L".bak");
 		backupPath[wcslen(backupPath) + 1] = 0;
 		::CopyFileW(filePath.c_str(), backupPath, false);
-		::SHFileOperationW(&shfos);	// ごみ箱に持っていく
+		::SHFileOperationW(&shfos);
 	}
 */
 

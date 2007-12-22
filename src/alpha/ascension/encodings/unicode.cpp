@@ -86,7 +86,7 @@ namespace {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 	private:
-		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const;
+		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
 
 	struct EncoderInstaller {
@@ -714,32 +714,32 @@ namespace {
 	}
 
 	size_t UnicodeDetector(const byte* first, const byte* last, MIBenum& mib) {
-		mib = 0;
+		mib = MIB_UNKNOWN;
 		if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
-			mib = 106;	// UTF-8
+			mib = fundamental::UTF_8;
 		else if(last - first >= 2) {
 			if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
-				mib = 1014;	// UTF-16LE
+				mib = fundamental::UTF_16LE;
 			else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
-				mib = 1013;	// UTF-16BE
+				mib = fundamental::UTF_16BE;
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 			if(last - first >= 4) {
 				if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-					mib = 1019;	// UTF-32LE;
+					mib = extended::UTF_32LE;
 				else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-					mib = 1018;	// UTF-32BE
+					mib = extended::UTF_32BE;
 			}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 		}
-		if(mib != 0)
+		if(mib != MIB_UNKNOWN)
 			return last - first;
-		mib = 106;	// UTF-8
+		mib = fundamental::UTF_8;
 		return maybeUTF8(first, last) - first;
 	}
 }
 
 /// @see EncodingDetector#doDetect
-MIBenum UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const {
+MIBenum UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
 	MIBenum result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)

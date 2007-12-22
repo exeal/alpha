@@ -61,7 +61,7 @@ namespace manah {
 		ConstReverseIterator rend() const throw() {return ConstReverseIterator(begin());}
 		// attributes
 		Reference at(SizeType index) {if(index >= size()) throw std::out_of_range("index"); return operator[](index);}
-		ConstReference at(SizeType index) const {if(index >= getSize()) throw std::out_of_range("index"); return operator[](index);}
+		ConstReference at(SizeType index) const {if(index >= size()) throw std::out_of_range("index"); return operator[](index);}
 		Reference operator[](SizeType index) throw() {return first_[(first_ + index < gapFirst_) ? index : index + gap()];}
 		ConstReference operator[](SizeType index) const throw() {return first_[(first_ + index < gapFirst_) ? index : index + gap()];}
 		bool empty() const throw() {return size() == 0;}

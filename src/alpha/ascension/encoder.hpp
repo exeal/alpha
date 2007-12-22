@@ -387,7 +387,7 @@ namespace ascension {
 				virtual std::string	name() const throw();
 				virtual byte		substitutionCharacter() const throw();
 			private:
-				const std::string aliases_, name_;
+				const std::string name_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
 				const MIBenum mib_;
 				const byte substitutionCharacter_;
