@@ -538,6 +538,8 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);
 	case Encoder::MALFORMED_INPUT:
 		throw IOException(IOException::MALFORMED_INPUT);
+	default:
+		break;
 	}
 
 	inputMapping_.current = fromNext;
@@ -664,10 +666,10 @@ void TextFileDocumentInput::close() {
 
 /// @see IDocumentListener#documentAboutToBeChanged
 bool TextFileDocumentInput::documentAboutToBeChanged(const Document&, const DocumentChange&) {
-	// check the time stamp is this is the first modification
+	// check the time stamp if this is the first modification
 	if(timeStampDirector_ != 0 && !document_.isModified()) {
 		Time realTimeStamp;
-		if(!verifyTimeStamp(true, realTimeStamp)) {	// the other overwritten the file
+		if(!verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
 			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
 					document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
 				return false;
@@ -965,11 +967,13 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 		throw IOException(IOException::UNWRITABLE_FILE);
 #else // ASCENSION_POSIX
 	struct stat originalStat;
-	bool gotStat = false;
-	if(::stat(fileName_.c_str(), &originalStat) == 0) {
-		gotStat = true;
-		// TODO: check the permission.
-	}
+	bool gotStat = ::stat(fileName_.c_str(), &originalStat) == 0;
+#if 1
+	if(::euidaccess(fileName_.c_str(), 2) < 0)
+#else
+	if(::access(fileName_.c_str(), 2) < 0)
+#endif
+		throw IOException(IOException::UNWRITABLE_FILE);
 #endif
 
 	// check if the existing file was modified by others
