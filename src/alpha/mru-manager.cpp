@@ -11,7 +11,6 @@
 using namespace alpha;
 using namespace std;
 using manah::win32::ui::Menu;
-using ascension::encoding::MIBenum;
 
 
 /**
@@ -26,16 +25,14 @@ MRUManager::MRUManager(size_t limit, int startID) : startID_(startID), limitCoun
 /**
  * Adds the new file. If there is already in the list, moves to the top.
  * @param fileName the name of the file to add
- * @param mib the MIBenum value of the encoding
  */
-void MRUManager::add(const basic_string<::WCHAR>& fileName, MIBenum mib) {
-	const basic_string<::WCHAR> realName = ascension::kernel::fileio::canonicalizePathName(fileName.c_str());
+void MRUManager::add(const basic_string<::WCHAR>& fileName) {
+	const basic_string<WCHAR> realName(ascension::kernel::fileio::canonicalizePathName(fileName.c_str()));
 
 	// 同じものがあるか探す
-	for(list<MRU>::iterator i(fileNames_.begin()), e(fileNames_.end()); i != e; ++i) {
-		if(ascension::kernel::fileio::comparePathNames(realName.c_str(), i->fileName.c_str())) {	// 見つかった -> 先頭に出す
-			MRU item = *i;
-			item.encoding = mib;
+	for(list<basic_string<WCHAR> >::iterator i(fileNames_.begin()), e(fileNames_.end()); i != e; ++i) {
+		if(ascension::kernel::fileio::comparePathNames(realName.c_str(), i->c_str())) {	// 見つかった -> 先頭に出す
+			const basic_string<WCHAR> item(*i);
 			fileNames_.erase(i);
 			fileNames_.push_front(item);
 			updateMenu();
@@ -44,18 +41,17 @@ void MRUManager::add(const basic_string<::WCHAR>& fileName, MIBenum mib) {
 	}
 
 	// 先頭に追加する。総数が上限値を超える場合は一番古いものを削除する
-	MRU item = {fileName, mib};
-	fileNames_.push_front(item);
+	fileNames_.push_front(realName);
 	if(fileNames_.size() > limitCount_)
 		fileNames_.resize(limitCount_);
 	updateMenu();
 }
 
 /// Returns the item.
-const MRU& MRUManager::at(size_t index) const {
+const basic_string<WCHAR>& MRUManager::at(size_t index) const {
 	if(index >= fileNames_.size())
 		throw out_of_range("First argument is out of range!");
-	list<MRU>::const_iterator it = fileNames_.begin();
+	list<basic_string<WCHAR> >::const_iterator it = fileNames_.begin();
 	for(size_t i = 0; i < index; ++i)
 		++it;
 	return *it;
@@ -67,14 +63,11 @@ void MRUManager::load() {
 	wchar_t keyName[30];
 	fileNames_.clear();
 	for(uint i = 0; i < limitCount_; ++i) {
-		MRU file;
 		swprintf(keyName, L"pathName(%u)", i);
-		file.fileName = app.readStringProfile(L"MRU", keyName);
-		if(file.fileName.empty())
+		const basic_string<WCHAR> fileName(app.readStringProfile(L"MRU", keyName));
+		if(fileName.empty())
 			break;
-		swprintf(keyName, L"encoding(%u)", i);
-		file.encoding = app.readIntegerProfile(L"MRU", keyName, ascension::encoding::EncodingDetector::UNIVERSAL_DETECTOR);
-		fileNames_.push_back(file);
+		fileNames_.push_back(fileName);
 	}
 	updateMenu();
 }
@@ -83,7 +76,7 @@ void MRUManager::load() {
 void MRUManager::remove(size_t index) {
 	if(index >= fileNames_.size())
 		throw out_of_range("First argument is out of range!");
-	list<MRU>::iterator it = fileNames_.begin();
+	list<basic_string<WCHAR> >::iterator it = fileNames_.begin();
 	for(size_t i = 0; i < index; ++i)
 		++it;
 	fileNames_.erase(it);
@@ -94,12 +87,10 @@ void MRUManager::remove(size_t index) {
 void MRUManager::save() {
 	Alpha& app = Alpha::instance();
 	wchar_t keyName[30];
-	list<MRU>::const_iterator it(fileNames_.begin());
-	for(size_t i = 0; it != fileNames_.end(); ++i, ++it) {
-		swprintf(keyName, L"pathName(%u)", i);
-		app.writeStringProfile(L"MRU", keyName, it->fileName.c_str());
-		swprintf(keyName, L"encoding(%u)", i);
-		app.writeIntegerProfile(L"MRU", keyName, it->encoding);
+	list<basic_string<WCHAR> >::const_iterator i(fileNames_.begin());
+	for(size_t index = 0; i != fileNames_.end(); ++index, ++i) {
+		swprintf(keyName, L"pathName(%u)", index);
+		app.writeStringProfile(L"MRU", keyName, i->c_str());
 	}
 	app.writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
 }
@@ -123,20 +114,20 @@ void MRUManager::setLimit(size_t newLimit) {
 /// Reconstructs the menu according to the content of @c fileNames_.
 void MRUManager::updateMenu() {
 	size_t item = 0;
-	list<MRU>::const_iterator it = fileNames_.begin();
+	list<basic_string<WCHAR> >::const_iterator i(fileNames_.begin());
 	wchar_t caption[MAX_PATH + 100];
 
 	while(popupMenu_.getNumberOfItems() > 0)
 		popupMenu_.erase<Menu::BY_POSITION>(0);
 	if(fileNames_.empty()) {	// 履歴が空の場合
-		const wstring s = Alpha::instance().loadMessage(MSG_OTHER__EMPTY_MENU_CAPTION);
+		const wstring s(Alpha::instance().loadMessage(MSG_OTHER__EMPTY_MENU_CAPTION));
 		popupMenu_ << Menu::StringItem(0, s.c_str(), MFS_GRAYED);
 		return;
 	}
-	while(it != fileNames_.end()) {
-		swprintf(caption, L"&%x  %s", item, it->fileName.c_str());
+	while(i != fileNames_.end()) {
+		swprintf(caption, L"&%x  %s", item, i->c_str());
 		popupMenu_ << Menu::StringItem(static_cast<UINT>(startID_ + item), caption);
-		++it;
+		++i;
 		++item;
 	}
 }

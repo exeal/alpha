@@ -187,17 +187,18 @@ Encoder* Encoder::forName(const string& name) throw() {
 		// test aliases
 		const string aliases((*i)->aliases());
 		for(size_t j = 0; ; ++j) {
-			size_t nul = aliases.find('\0', j);
-			if(nul == string::npos)
-				nul = aliases.length();
-			if(nul != j) {
-				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + nul))
+			size_t delimiter = aliases.find('|', j);
+			if(delimiter == string::npos)
+				delimiter = aliases.length();
+			if(delimiter != j) {
+				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + delimiter))
 					return *i;
-				++nul;
+				else if(delimiter < aliases.length())
+					++delimiter;
 			}
-			if(nul == aliases.length())
+			if(delimiter == aliases.length())
 				break;
-			j = nul;
+			j = delimiter;
 		}
 	}
 	return 0;
@@ -489,27 +490,13 @@ namespace {
 	class US_ASCII : public BasicLatinEncoder {
 	public:
 		US_ASCII() : BasicLatinEncoder("US-ASCII", fundamental::US_ASCII,
-			"iso-ir-6\0"
-			"ANSI_X3.4-1986\0"
-			"ISO_646.irv:1991\0"
-			"ASCII\0"
-			"ISO646-US\0"
-			"us\0"
-			"IBM367\0"
-			"cp367\0"
-			"csASCII", 0x7F) {}
+			"iso-ir-6|ANSI_X3.4-1986|ISO_646.irv:1991|ASCII|ISO646-US|us|IBM367|cp367|csASCII", 0x7F) {}
 	};
 
 	class ISO_8859_1 : public BasicLatinEncoder {
 	public:
 		ISO_8859_1() : BasicLatinEncoder("ISO-8859-1", fundamental::ISO_8859_1,
-			"iso-ir-100\0"
-			"ISO_8859-1\0"
-			"latin1\0"
-			"l1\0"
-			"IBM819\0"
-			"CP819\0"
-			"csISOLatin1", 0xFF) {}
+			"iso-ir-100|ISO_8859-1|latin1|l1|IBM819|CP819|csISOLatin1", 0xFF) {}
 	};
 
 	struct Installer {
@@ -522,7 +509,7 @@ namespace {
 	Encoder::Result BasicLatinEncoder::doFromUnicode(
 			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
-			if((*from ^ mask_) != 0) {
+			if((*from & ~mask_) != 0) {
 				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
@@ -543,7 +530,7 @@ namespace {
 	Encoder::Result BasicLatinEncoder::doToUnicode(
 			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
-			if((*from ^ mask_) != 0) {
+			if((*from & ~mask_) != 0) {
 				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
 				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
@@ -662,7 +649,7 @@ SingleByteEncoder::SingleByteEncoder(const string& name, MIBenum mib, const stri
 		byte substitutionCharacter, const Char native8ToUnicode[0x80], const Char native7ToUnicode[0x80] /* = 0 */)
 		: EncoderBase(name, mib, 1, 1, aliases, substitutionCharacter),
 		native7ToUnicode_((native7ToUnicode != 0) ? native7ToUnicode : ASCII_TABLE), native8ToUnicode_(native8ToUnicode) {
-	unicodeToNative_[0] = 0;
+	fill_n(unicodeToNative_, countof(unicodeToNative_), static_cast<byte*>(0));
 }
 
 /// Destructor.

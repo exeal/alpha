@@ -17,10 +17,10 @@ namespace alpha {
 		/// "Select Encoding" dialog box.
 		class EncodingsDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_CODEPAGES> {
 		public:
-			EncodingsDialog(ascension::encoding::MIBenum mib, bool forReading) throw();
-			ascension::encoding::MIBenum	resultEncoding() const throw();
+			EncodingsDialog(const std::string& encoding, bool forReading) throw();
+			const std::string&	resultEncoding() const throw();
 		private:
-			ascension::encoding::MIBenum mib_;
+			std::string result_;
 			const bool forReading_;
 			manah::win32::ui::ListBox encodingList_;
 			MANAH_BEGIN_CONTROL_BINDING()
@@ -32,7 +32,7 @@ namespace alpha {
 		};
 
 		/// Returns the encoding the user selected.
-		inline ascension::encoding::MIBenum EncodingsDialog::resultEncoding() const throw() {return mib_;}
+		inline const std::string& EncodingsDialog::resultEncoding() const throw() {return result_;}
 	}
 }
 

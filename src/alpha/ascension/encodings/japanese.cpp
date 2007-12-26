@@ -79,7 +79,7 @@ using namespace std;
 namespace {
 	class ShiftJISEncoder : public EncoderBase {
 	public:
-		ShiftJISEncoder() : EncoderBase("Shift_JIS", standard::SHIFT_JIS, 2, 1, "MS_Kanji\0" "csShiftJIS\0") {}
+		ShiftJISEncoder() : EncoderBase("Shift_JIS", standard::SHIFT_JIS, 2, 1, "MS_Kanji|csShiftJIS") {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -88,7 +88,7 @@ namespace {
 	};
 	class EUCJPEncoder : public EncoderBase {
 	public:
-		EUCJPEncoder() : EncoderBase("EUC-JP", standard::EUC_JP, 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese\0" "csEUCPkdFmtJapanese\0") {}
+		EUCJPEncoder() : EncoderBase("EUC-JP", standard::EUC_JP, 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese") {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -97,7 +97,7 @@ namespace {
 	};
 	class ISO2022JPEncoder : public EncoderBase {
 	public:
-		ISO2022JPEncoder() : EncoderBase("ISO-2022-JP", standard::ISO_2022_JP, 8, 1, "csISO2022JP\0") {}
+		ISO2022JPEncoder() : EncoderBase("ISO-2022-JP", standard::ISO_2022_JP, 8, 1, "csISO2022JP") {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -106,7 +106,7 @@ namespace {
 	};
 	class ISO2022JP2Encoder : public EncoderBase {
 	public:
-		ISO2022JP2Encoder() : EncoderBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, 9, 1, "csISO2022JP2\0") {}
+		ISO2022JP2Encoder() : EncoderBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, 9, 1, "csISO2022JP2") {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
@@ -1163,7 +1163,7 @@ namespace {
 /// @see Encoder#doFromUnicode
 Encoder::Result ShiftJISEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-	for(; to < toEnd && from < from; ++to, ++from) {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)
 			*to = mask8Bit(*from);
 		else {

@@ -9,7 +9,7 @@
 #include "resource.h"
 #include "../manah/win32/ui/dialog.hpp"
 #include "../manah/win32/ui/standard-controls.hpp"
-#include "ascension/document.hpp"	// ascension::text::LineBreak
+#include "ascension/document.hpp"	// ascension.kernel.Newline
 
 
 namespace alpha {
@@ -17,14 +17,16 @@ namespace alpha {
 		/// "New with Format" dialog box.
 		class NewFileFormatDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_FILENEWWITHFORMAT> {
 		public:
-			NewFileFormatDialog(ascension::encoding::MIBenum encoding, ascension::kernel::Newline newline) throw();
-			ascension::encoding::MIBenum	encoding() const throw();
-			ascension::kernel::Newline		newline() const throw();
+			NewFileFormatDialog(const std::string& encoding, ascension::kernel::Newline newline) throw();
+			const std::string&			encoding() const throw();
+			ascension::kernel::Newline	newline() const throw();
+		private:
+			std::string	selectedEncoding() const throw();
 		private:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
 			void	onInitDialog(HWND focusWindow, bool& focusDefault);
 			void	onOK(bool& continueDialog);
-			ascension::encoding::MIBenum encoding_;
+			std::string encoding_;
 			ascension::kernel::Newline newline_;
 			manah::win32::ui::ComboBox encodingCombobox_;
 			manah::win32::ui::ComboBox newlineCombobox_;
@@ -35,7 +37,7 @@ namespace alpha {
 		};
 
 		/// Returns the encoding the user selected.
-		inline ascension::encoding::MIBenum NewFileFormatDialog::encoding() const throw() {return encoding_;}
+		inline const std::string& NewFileFormatDialog::encoding() const throw() {return encoding_;}
 
 		/// Returns the newline the user selected.
 		inline ascension::kernel::Newline NewFileFormatDialog::newline() const throw() {return newline_;}

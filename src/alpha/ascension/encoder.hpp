@@ -151,18 +151,18 @@ namespace ascension {
 		const byte	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-16 big endian.
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c) & 0x7FU;}
-		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c) & 0xFFU;}
-		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c) & 0xFFFFU;}
-		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c) & 0xFFFFU;}
+		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c & 0x7FU);}
+		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c & 0xFFU);}
+		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c & 0xFFFFU);}
+		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c & 0xFFFFU);}
 
 		/**
 		 * Compares the given two encoding (charset) names based on
 		 * <a href="http://www.unicode.org/reports/tr22/">UTS #22: CharMapML</a> 1.4 Charset Alias
 		 * Matching.
 		 */
-		template<typename CharacterSequence>
-		inline bool matchEncodingNames(CharacterSequence first1, CharacterSequence last1, CharacterSequence first2, CharacterSequence last2) {
+		template<typename CharacterSequence1, typename CharacterSequence2> inline bool
+		matchEncodingNames(CharacterSequence1 first1, CharacterSequence1 last1, CharacterSequence2 first2, CharacterSequence2 last2) {
 			const std::locale& lc = std::locale::classic();
 			bool precededByDigit[2] = {false, false};
 			while(first1 != last1 && first2 != last2) {
@@ -201,19 +201,14 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(Encoder);
 		public:
 			/**
-			 * A value represents intermediate states of a encoder. The sematics are defined by
-			 * each specific encoder implementations, but should treat zero as the initial state.
+			 * A value represents intermediate states of a encoder. The sematics depend on each
+			 * specific encoder implementations. But the all members are filled with zero initially.
 			 */
-			class State {
-			public:
+			struct State {
+				/// Implementation dependent data.
+				std::size_t states[4];
 				/// Constructor initializes the value with zero.
-				State() throw() : value_(0) {}
-				/// Conversion operator.
-				operator int() const throw() {return value_;}
-				/// Assignment operator takes an integer.
-				State& operator=(int newValue) throw() {value_ = newValue; return *this;}
-			private:
-				int value_;
+				State() throw() {std::memset(states, 0, sizeof(std::size_t) * countof(states));}
 			};
 
 			/// Result of conversion.
@@ -254,7 +249,7 @@ namespace ascension {
 			// abstract attributes
 			/**
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
-			 * @return a string contains aliases separated by NUL
+			 * @return a string contains aliases separated by vertical bar ('|')
 			 */
 			virtual std::string aliases() const throw() {return "";}
 			/// Returns the number of bytes represents a UCS character.
@@ -414,6 +409,31 @@ namespace ascension {
 				byte* unicodeToNative_[0x100];
 				static const Char ASCII_TABLE[0x80];
 				static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
+			};
+
+			/// Base class of 7-bit ISO-2022 encoders.
+			class ISO2022Encoder : public EncoderBase {
+			public:
+				virtual ~ISO2022Encoder() throw();
+			protected:
+				static const byte SO = 0x0E;	///< Shift out.
+				static const byte SI = 0x0F;	///< Shift in.
+				static const byte ESC = 0x1B;	///< Escape.
+				static const byte SS2 = 0x8E;	///< 8-bit single shift 2.
+				static const byte SS3 = 0x8F;	///< 8-bit single shift 3.
+			protected:
+				ISO2022Encoder(const std::string& name, MIBenum mib, const std::string& aliases, byte substitutionCharacter);
+				byte	currentState() const throw();
+				void	designate(std::size_t gn, byte charset);
+				void	shiftIn();
+				void	shiftOut();
+				void	ss2();
+				void	ss3();
+			private:
+				byte gl_, gr_;
+				byte g_[4];
+				bool shiftOuted_;
+				int currentState_;
 			};
 		}
 

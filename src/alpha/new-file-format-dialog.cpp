@@ -21,7 +21,7 @@ using namespace std;
  * @param encoding the encoding initially selected
  * @param newline the newline initially selected
  */
-NewFileFormatDialog::NewFileFormatDialog(MIBenum encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
+NewFileFormatDialog::NewFileFormatDialog(const string& encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
 }
 
 /// @see Dialog#onCommand
@@ -29,7 +29,9 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
 
-	const MIBenum mib = static_cast<MIBenum>(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()));
+	MIBenum mib = MIB_UNKNOWN;
+	if(const Encoder* const e = Encoder::forName(selectedEncoding()))
+		mib = e->mibEnum();
 
 	if(mib == extended::UTF_5 || mib == extended::UTF_7 || mib == fundamental::UTF_8
 			|| mib == fundamental::UTF_16LE || mib == fundamental::UTF_16BE
@@ -37,24 +39,21 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CR_LF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CRLF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LINE_FEED) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_CARRIAGE_RETURN) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CR);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_NEXT_LINE) ? IDS_BREAK_NEL L" *" : IDS_BREAK_NEL), NLF_NEL);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_LINE_SEPARATOR) ? IDS_BREAK_LS L" *" : IDS_BREAK_LS), NLF_LS);
-			newlineCombobox_.setItemData(newlineCombobox_.addString((newline_ == NLF_PARAGRAPH_SEPARATOR) ? IDS_BREAK_PS L" *" : IDS_BREAK_PS), NLF_PS);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_NEL), NLF_NEXT_LINE);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LS), NLF_LINE_SEPARATOR);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_PS), NLF_PARAGRAPH_SEPARATOR);
 			newlineCombobox_.setCurSel(org);
 		}
 	} else {
 		if(newlineCombobox_.getCount() != 3) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_CR_LF) ? IDS_BREAK_CRLF L" *" : IDS_BREAK_CRLF), NLF_CR_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_LINE_FEED) ? IDS_BREAK_LF L" *" : IDS_BREAK_LF), NLF_LINE_FEED);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(
-				(newline_ == NLF_CARRIAGE_RETURN) ? IDS_BREAK_CR L" *" : IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
 			newlineCombobox_.setCurSel((org < newlineCombobox_.getCount()) ? org : 0);
 		}
 	}
@@ -63,22 +62,20 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
-	// [コードページ]
-	vector<MIBenum> mibs;
-	Encoder::availableMIBs(back_inserter(mibs));
-	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-//		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-//		const wstring name(Alpha::getInstance().loadMessage(id));
-		const wstring name(getEncodingDisplayName(*mib));
-		if(!name.empty()) {
-			const int i = encodingCombobox_.addString((*mib == encoding_) ? (name + L" *").c_str() : name.c_str());
-			encodingCombobox_.setItemData(i, *mib);
-			if(*mib == encoding_)
+	// [Encoding]
+	vector<string> names;
+	Encoder::availableNames(back_inserter(names));
+	const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
+	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
+		const wstring s(asciiEncoder->toUnicode(*name));
+		if(!s.empty()) {
+			const int i = encodingCombobox_.addString(s.c_str());
+			if(i >= 0 && matchEncodingNames(s.begin(), s.end(), encoding_.begin(), encoding_.end()))
 				encodingCombobox_.setCurSel(i);
 		}
 	}
 
-	// [改行コード]
+	// [Newline]
 	onCommand(IDC_COMBO_ENCODING, CBN_SELCHANGE, 0);
 	for(int i = 0; i < 6; ++i) {
 		if(newline_ == static_cast<Newline>(newlineCombobox_.getItemData(i))) {
@@ -95,7 +92,11 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
-	encoding_ = static_cast<MIBenum>(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()));
+	encoding_ = selectedEncoding();
 	newline_ = static_cast<Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
+}
+
+inline string NewFileFormatDialog::selectedEncoding() const throw() {
+	return Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingCombobox_.getText());
 }

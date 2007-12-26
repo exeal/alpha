@@ -494,9 +494,11 @@ int TextFileStreamBuffer::sync() {
 		const a::Char* fromNext;
 		byte nativeBuffer[countof(ucsBuffer_)];
 		while(true) {
+			const Char* const fromEnd = pptr();
+
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
-				nativeBuffer, endof(nativeBuffer), toNext, pbase(), pptr(), fromNext, &encodingState_);
+				nativeBuffer, endof(nativeBuffer), toNext, pbase(), fromEnd, fromNext, &encodingState_);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw IOException(IOException::UNMAPPABLE_CHARACTER);
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
@@ -517,6 +519,7 @@ int TextFileStreamBuffer::sync() {
 #endif
 
 			setp(ucsBuffer_ + (fromNext - ucsBuffer_), epptr());
+			pbump(fromEnd - pbase());
 			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
@@ -788,6 +791,7 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	document_.recordOperations(false);
 	try {
 		basic_istream<a::Char> in(&sb);
+		in.exceptions(ios_base::badbit);
 		readDocumentFromStream(in, document_, document_.region().beginning());
 	} catch(...) {
 		document_.resetContent();
@@ -997,6 +1001,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
 	basic_ostream<a::Char> outputStream(&sb);
 	try {
+		outputStream.exceptions(ios_base::badbit);
 		writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
 		sb.close();
 	} catch(...) {
@@ -1010,12 +1015,15 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 		throw;
 	}
 
+	const bool makeBackup = false;
+
 	// copy file attributes (file mode) and delete the old file
 	unlock();
 #ifdef ASCENSION_WINDOWS
 	if(originalAttributes != INVALID_FILE_ATTRIBUTES) {
 		::SetFileAttributesW(tempFileName.c_str(), originalAttributes);
-		if(!toBoolean(::DeleteFileW(realName.c_str()))) {
+		if(makeBackup) {
+		} else if(!toBoolean(::DeleteFileW(realName.c_str()))) {
 			SystemErrorSaver ses;
 			if(::GetLastError() != ERROR_FILE_NOT_FOUND) {
 				::DeleteFileW(tempFileName.c_str());
@@ -1033,7 +1041,8 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 #else // ASCENSION_POSIX
 	if(gotStat) {
 		::chmod(tempFileName.c_str(), originalStat.st_mode);
-		if(::remove(realName.c_str()) != 0) {
+		if(makeBackup) {
+		} else if(::remove(realName.c_str()) != 0) {
 			SystemErrorSaver ses;
 			if(errno != ENOENT) {
 				::remove(tempFileName.c_str());
@@ -1083,10 +1092,14 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	document_.setModified(false);
 	document_.setReadOnly(false);
 	setEncoding(params.encoding);
+	if(fileName_ != realName) {
+		fileName_ = realName;
+		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	}
 
 	// update the internal time stamp
 	try {
-		getFileLastWriteTime(fileName_ = realName, internalLastWriteTime_);
+		getFileLastWriteTime(fileName_, internalLastWriteTime_);
 	} catch(IOException&) {
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}

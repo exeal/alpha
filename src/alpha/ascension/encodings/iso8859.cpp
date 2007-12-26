@@ -216,32 +216,32 @@ namespace {
 	struct Installer {
 		Installer() {
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-2", standard::ISO_8859_2, "iso-ir-101\0ISO_8859-2\0latin2\0l2\0csISOLatin2\0", 0x1A, ISO_8859_2)));
+				"ISO-8859-2", standard::ISO_8859_2, "iso-ir-101|ISO_8859-2|latin2|l2|csISOLatin2", 0x1A, ISO_8859_2)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-3", standard::ISO_8859_3, "iso-ir-109\0ISO_8859-3\0latin3\0l3\0csISOLatin3\0", 0x1A, ISO_8859_3)));
+				"ISO-8859-3", standard::ISO_8859_3, "iso-ir-109|ISO_8859-3|latin3|l3|csISOLatin3", 0x1A, ISO_8859_3)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-4", standard::ISO_8859_4, "iso-ir-110\0ISO_8859-4\0latin4\0l4\0csISOLatin4\0", 0x1A, ISO_8859_4)));
+				"ISO-8859-4", standard::ISO_8859_4, "iso-ir-110|ISO_8859-4|latin4|l4|csISOLatin4", 0x1A, ISO_8859_4)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-5", standard::ISO_8859_5, "iso-ir-144\0ISO_8859-5\0cyrillic\0csISOLatinCyrillic\0", 0x1A, ISO_8859_5)));
+				"ISO-8859-5", standard::ISO_8859_5, "iso-ir-144|ISO_8859-5|cyrillic|csISOLatinCyrillic", 0x1A, ISO_8859_5)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-6", standard::ISO_8859_6, "iso-ir-127\0ISO_8859-6\0ECMA-114\0ASMO-708\0arabic\0csISOLatinArabic\0", 0x1A, ISO_8859_6)));
+				"ISO-8859-6", standard::ISO_8859_6, "iso-ir-127|ISO_8859-6|ECMA-114|ASMO-708|arabic|csISOLatinArabic", 0x1A, ISO_8859_6)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-7", standard::ISO_8859_7, "iso-ir-126\0ISO_8859-7\0ELOT_928\0ECMA-118\0greek\0greek8\0csISOLatinGreek\0", 0x1A, ISO_8859_7)));
+				"ISO-8859-7", standard::ISO_8859_7, "iso-ir-126|ISO_8859-7|ELOT_928|ECMA-118|greek|greek8|csISOLatinGreek", 0x1A, ISO_8859_7)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-8", standard::ISO_8859_8, "iso-ir-138\0ISO_8859-8\0hebrew\0csISOLatinHebrew\0", 0x1A, ISO_8859_8)));
+				"ISO-8859-8", standard::ISO_8859_8, "iso-ir-138|ISO_8859-8|hebrew|csISOLatinHebrew", 0x1A, ISO_8859_8)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-9", standard::ISO_8859_9, "iso-ir-148\0ISO_8859-9\0latin5\0l5\0csISOLatin5\0", 0x1A, ISO_8859_9)));
+				"ISO-8859-9", standard::ISO_8859_9, "iso-ir-148|ISO_8859-9|latin5|l5|csISOLatin5", 0x1A, ISO_8859_9)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-10", standard::ISO_8859_10, "iso-ir-157\0l6\0ISO_8859-10:1992\0csISOLatin6\0latin6\0", 0x1A, ISO_8859_10)));
+				"ISO-8859-10", standard::ISO_8859_10, "iso-ir-157|l6|ISO_8859-10:1992|csISOLatin6|latin6", 0x1A, ISO_8859_10)));
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
 				"ISO-8859-13", extended::ISO_8859_13, "", 0x1A, ISO_8859_13)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-14", extended::ISO_8859_14, "iso-ir-199\0ISO_8859-14:1998\0ISO_8859-14\0latin8\0iso-celtic\0l8\0", 0x1A, ISO_8859_14)));
+				"ISO-8859-14", extended::ISO_8859_14, "iso-ir-199|ISO_8859-14:1998|ISO_8859-14|latin8|iso-celtic|l8", 0x1A, ISO_8859_14)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-15", extended::ISO_8859_15, "ISO_8859-15\0Latin-9\0", 0x1A, ISO_8859_15)));
+				"ISO-8859-15", extended::ISO_8859_15, "ISO_8859-15|Latin-9", 0x1A, ISO_8859_15)));
 			Encoder::registerEncoder(auto_ptr<Encoder>(new implementation::SingleByteEncoder(
-				"ISO-8859-16", extended::ISO_8859_16, "iso-ir-226\0ISO_8859-16:2001\0ISO_8859-16\0latin10\0l10\0", 0x1A, ISO_8859_16)));
+				"ISO-8859-16", extended::ISO_8859_16, "iso-ir-226|ISO_8859-16:2001|ISO_8859-16|latin10|l10", 0x1A, ISO_8859_16)));
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 		}
 	} installer;
