@@ -163,8 +163,7 @@ namespace alpha {
 		void									setActive(std::size_t index);
 		void									setActive(const Buffer& buffer);
 		// operations
-		void		addNew(
-						ascension::encoding::MIBenum encoding = ascension::encoding::fundamental::UTF_8,
+		void		addNew(const std::string& encoding = "UTF-8",
 						ascension::kernel::Newline newline = ascension::kernel::NLF_RAW_VALUE);
 		void		addNewDialog();
 		bool		close(std::size_t index, bool queryUser);
@@ -176,8 +175,7 @@ namespace alpha {
 		::LRESULT	handleBufferBarPagerNotification(::NMHDR& nmhdr);
 		void		move(std::size_t from, std::size_t to);
 		OpenResult	open(const std::basic_string<::WCHAR>& fileName,
-						ascension::encoding::MIBenum encoding = ascension::encoding::EncodingDetector::UNIVERSAL_DETECTOR,
-						bool asReadOnly = false, bool addToMRU = true);
+						const std::string& encoding = "UniversalAutoDetect", bool asReadOnly = false, bool addToMRU = true);
 		OpenResult	openDialog(const ::WCHAR* initialDirectory = 0);
 		OpenResult	reopen(std::size_t index, bool changeCodePage);
 		bool		save(std::size_t index, bool overwrite = true, bool addToMRU = true);

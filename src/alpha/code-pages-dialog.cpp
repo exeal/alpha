@@ -16,10 +16,10 @@ using namespace std;
 
 /**
  * Constructor.
- * @param mib the MIBenum value of the encoding initially selected
+ * @param encoding the encoding initially selected
  * @param forReading set true to enumelate encodings for read files
  */
-EncodingsDialog::EncodingsDialog(MIBenum mib, bool forReading) throw() : mib_(mib), forReading_(forReading) {
+EncodingsDialog::EncodingsDialog(const string& encoding, bool forReading) throw() : result_(encoding), forReading_(forReading) {
 }
 
 /// @see Dialog#onCommand
@@ -33,26 +33,31 @@ bool EncodingsDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
-	vector<MIBenum> mibs;
-	Encoder::availableMIBs(back_inserter(mibs));
-	for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-//		const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-//		const wstring name(Alpha::getInstance().loadMessage(id));
-		const wstring name(getEncodingDisplayName(*mib));
-		if(!name.empty())
-			encodingList_.setItemData(encodingList_.addString(((mib_ == *mib) ? name + L" *" : name).c_str()), *mib);
+	vector<string> names;
+	Encoder::availableNames(back_inserter(names));
+	const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
+	assert(asciiEncoder != 0);
+
+	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
+		const wstring s(asciiEncoder->toUnicode(*name));
+		if(!s.empty())
+			encodingList_.setItemData(encodingList_.addString(s.c_str()),
+				matchEncodingNames(s.begin(), s.end(), result_.begin(), result_.end()) ? 1 : 0);
 	}
 	if(forReading_) {
-		mibs.clear();
-		EncodingDetector::availableIDs(back_inserter(mibs));
-		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-			const wstring name(getEncodingDisplayName(*mib));
-			if(!name.empty())
-				encodingList_.setItemData(encodingList_.addString(name.c_str()), *mib);
+		names.clear();
+		EncodingDetector::availableNames(back_inserter(names));
+		for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
+			const wstring s(asciiEncoder->toUnicode(*name));
+			if(!s.empty())
+				encodingList_.setItemData(encodingList_.addString(s.c_str()),
+					matchEncodingNames(s.begin(), s.end(), result_.begin(), result_.end()) ? 1 : 0);
 		}
 	}
+
+	// highlight initially selected item
 	for(int i = 0, c = encodingList_.getCount(); i < c; ++i) {
-		if(mib_ == encodingList_.getItemData(i)) {
+		if(encodingList_.getItemData(i) == 1) {
 			encodingList_.setCurSel(i);
 			break;
 		}
@@ -61,5 +66,10 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 
 /// @see Dialog#onOK
 void EncodingsDialog::onOK(bool&) {
-	mib_ = static_cast<MIBenum>(encodingList_.getItemData(encodingList_.getCurSel()));
+	const int sel = encodingList_.getCurSel();
+	if(const int len = encodingList_.getTextLen(sel)) {
+		manah::AutoBuffer<wchar_t> name(new wchar_t[len + 1]);
+		encodingList_.getText(sel, name.get());
+		result_ = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(name.get());
+	}
 }

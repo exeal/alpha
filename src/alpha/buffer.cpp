@@ -37,7 +37,7 @@ using namespace std;
 
 namespace {
 	struct TextFileFormat {
-		MIBenum encoding;
+		std::string encoding;
 		Newline newline;
 	};
 /*	class FileIOCallback : virtual public IFileIOListener {
@@ -140,10 +140,10 @@ BufferList::~BufferList() {
 
 /**
  * Opens the new empty buffer.
- * @param encoding the encoding (code page)
+ * @param encoding the encoding
  * @param newline the newline
  */
-void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, Newline newline /* = NLF_AUTO */) {
+void BufferList::addNew(const string& encoding /* = "UTF-8" */, Newline newline /* = NLF_AUTO */) {
 /*	if(::GetCurrentThreadId() != app_.getMainWindow().getWindowThreadID()) {
 		// ウィンドウの作成をメインスレッドに委譲
 		struct X : virtual public ICallable {
@@ -159,7 +159,7 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 		return;
 	}
 */
-	if(!Encoder::supports(encoding))
+	if(Encoder::forName(encoding) == 0)
 		throw invalid_argument("unsupported encoding.");
 
 	Buffer* const buffer = new Buffer();
@@ -211,10 +211,10 @@ void BufferList::addNew(MIBenum encoding /* = fundamental::MIB_UNICODE_UTF8 */, 
 /// [書式を指定して新規] ダイアログを開き、バッファを新規作成する
 void BufferList::addNewDialog() {
 	TextFileFormat format;
-	format.encoding = app_.readIntegerProfile(L"File", L"defaultEncoding", Encoder::getDefault());
-	if(!Encoder::supports(format.encoding))
-		format.encoding = Encoder::getDefault();
-	format.newline= static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
+	format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(app_.readStringProfile(L"File", L"defaultEncoding"));
+	if(Encoder::forName(format.encoding) == 0)
+		format.encoding = Encoder::getDefault().name();
+	format.newline = static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
 	if(dlg.doModal(app_.getMainWindow()) != IDOK)
@@ -670,7 +670,7 @@ void BufferList::move(size_t from, size_t to) {
  * @return the result. see the description of @c BufferList#OpenResult
  */
 BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
-		MIBenum encoding /* = EncodingDetector::UNIVERSAL_DETECTOR */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
+		const string& encoding /* = "UTF-8" */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
 	WCHAR resolvedName[MAX_PATH];
 
 	// ショートカットの解決
@@ -732,6 +732,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 //		}
 	}
 */
+	string modifiedEncoding(encoding);
 	bool succeeded = true;
 	IOException::Type errorType;
 	const wstring s(app_.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName));
@@ -743,7 +744,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		// 準備ができたのでファイルを開く
 		try {
 			// TODO: 戻り値を調べる必要がある。
-			buffer->textFile().open(resolvedName, lockMode, encoding, Encoder::NO_POLICY);
+			buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::NO_POLICY);
 		} catch(IOException& e) {
 			succeeded = false;
 			errorType = e.type();
@@ -756,28 +757,33 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 			if(errorType == IOException::UNMAPPABLE_CHARACTER)
 				userAnswer = Alpha::instance().messageBox(
 					MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-					MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
+					MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
 			else if(errorType == IOException::MALFORMED_INPUT)
 				userAnswer = Alpha::instance().messageBox(
 					MSG_IO__MALFORMED_INPUT_FILE, MB_OKCANCEL | MB_ICONEXCLAMATION,
-					MARGS % resolvedName % getEncodingDisplayName(encoding).c_str());
+					MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
 			else
 				break;
 			succeeded = true;
 			if(userAnswer == IDYES || userAnswer == IDOK) {
 				// the user want to change the encoding
-				ui::EncodingsDialog dlg(encoding, true);
+				ui::EncodingsDialog dlg(modifiedEncoding, true);
 				if(dlg.doModal(app_.getMainWindow()) != IDOK)
 					return OPENRESULT_USERCANCELED;
-				encoding = dlg.resultEncoding();
+				modifiedEncoding = dlg.resultEncoding();
 				continue;
 			} else if(userAnswer == IDNO) {
 				succeeded = true;
 				try {
-					buffer->textFile().open(resolvedName, lockMode, encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+					buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
 				} catch(IOException& e) {
 					succeeded = false;
-					errorType = e.type();
+					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
+						Alpha::instance().messageBox(
+							MSG_IO__MALFORMED_INPUT_FILE, MB_OK | MB_ICONEXCLAMATION,
+							MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
+						return OPENRESULT_FAILED;
+					}
 				}
 			} else
 				return OPENRESULT_USERCANCELED;
@@ -791,7 +797,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		if(asReadOnly)
 			buffer->setReadOnly();
 		if(addToMRU)
-			app_.mruManager().add(buffer->textFile().pathName(), buffer->textFile().encoding());
+			app_.mruManager().add(buffer->textFile().pathName());
 		return OPENRESULT_SUCCEEDED;
 	}
 	return OPENRESULT_FAILED;
@@ -830,7 +836,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		}
 	}
 
-	TextFileFormat format = {EncodingDetector::UNIVERSAL_DETECTOR, NLF_RAW_VALUE};
+	TextFileFormat format = {Encoder::getDefault().name(), NLF_RAW_VALUE};
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
@@ -956,35 +962,39 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			newlineCombobox.setFont(guiFont);
 		}
 
-		vector<MIBenum> mibs;
-		Encoder::availableMIBs(back_inserter(mibs));
-		for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-//			const DWORD id = (*cp < 0x10000) ? (*cp + MSGID_ENCODING_START) : (*cp - 60000 + MSGID_EXTENDED_ENCODING_START);
-//			const wstring name(Alpha::getInstance().loadMessage(id));
-			const wstring name(getEncodingDisplayName(*mib));
+		const TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lCustData);
+		const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
+		assert(asciiEncoder != 0);
+		vector<string> encodings;
+		Encoder::availableNames(back_inserter(encodings));
+
+		for(vector<string>::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
+			const wstring name(asciiEncoder->toUnicode(*encoding));
 			if(!name.empty())
-				encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
+				encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()),
+					matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()) ? 1: 0);
 		}
 		if(!newlineCombobox.isWindow()) {
-			mibs.clear();
-			EncodingDetector::availableIDs(back_inserter(mibs));
-			for(vector<MIBenum>::const_iterator mib(mibs.begin()), e(mibs.end()); mib != e; ++mib) {
-				const wstring name(getEncodingDisplayName(*mib));
+			encodings.clear();
+			EncodingDetector::availableNames(back_inserter(encodings));
+			for(vector<string>::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
+				const wstring name(asciiEncoder->toUnicode(*encoding));
 				if(!name.empty())
-					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()), *mib);
+					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()),
+						matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()) ? 1: 0);
 			}
 		}
 
 		encodingCombobox.setCurSel(0);
 		for(::UINT i = 0, c = encodingCombobox.getCount(); i < c; ++i) {
-			if(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->encoding == encodingCombobox.getItemData(i)) {
+			if(encodingCombobox.getItemData(i) == 1) {
 				encodingCombobox.setCurSel(i);
 				break;
 			}
 		}
 
 		if(newlineCombobox.isWindow()) {
-			switch(reinterpret_cast<TextFileFormat*>(ofn.lCustData)->newline) {
+			switch(format.newline) {
 			case NLF_RAW_VALUE:				newlineCombobox.setCurSel(0);	break;
 			case NLF_CR_LF:					newlineCombobox.setCurSel(1);	break;
 			case NLF_LINE_FEED:				newlineCombobox.setCurSel(2);	break;
@@ -1005,7 +1015,14 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			Button readOnlyCheckbox(::GetDlgItem(::GetParent(window), chx1));
 			TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lpOFN->lCustData);
 
-			format.encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
+			wstring encodingName(encodingCombobox.getText());
+			format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingName);
+			if(Encoder::forName(format.encoding) == 0) {
+				// reject for invalid encoding name
+				Alpha::instance().messageBox(MSG_IO__UNSUPPORTED_ENCODING, MB_OK | MB_ICONEXCLAMATION);
+				::SetWindowLongPtrW(window, DWLP_MSGRESULT, true);
+				return true;
+			}
 			if(newlineCombobox.isWindow()) {
 				switch(newlineCombobox.getCurSel()) {
 				case 0:	format.newline = NLF_RAW_VALUE;				break;
@@ -1088,8 +1105,8 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 	else if(buffer.isModified() && IDNO == app_.messageBox(MSG_BUFFER__CONFIRM_REOPEN_EVEN_IF_DIRTY, MB_YESNO | MB_ICONQUESTION))
 		return OPENRESULT_USERCANCELED;
 
-	// コードページを変更する場合はダイアログを出す
-	MIBenum encoding = buffer.textFile().encoding();
+	// エンコードを変更する場合はダイアログを出す
+	string encoding(buffer.textFile().encoding());
 	if(changeEncoding) {
 		ui::EncodingsDialog dlg(encoding, true);
 		if(dlg.doModal(app_.getMainWindow()) != IDOK)
@@ -1112,11 +1129,11 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 			if(errorType == IOException::UNMAPPABLE_CHARACTER)
 				userAnswer = Alpha::instance().messageBox(
 					MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-					MARGS % buffer.textFile().pathName() % getEncodingDisplayName(encoding).c_str());
+					MARGS % buffer.textFile().pathName() % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(encoding).c_str());
 			else if(errorType == IOException::MALFORMED_INPUT)
 				userAnswer = Alpha::instance().messageBox(
 					MSG_IO__MALFORMED_INPUT_FILE, MB_OKCANCEL | MB_ICONEXCLAMATION,
-					MARGS % buffer.textFile().pathName() % getEncodingDisplayName(encoding).c_str());
+					MARGS % buffer.textFile().pathName() % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(encoding).c_str());
 			else
 				break;
 			succeeded = true;
@@ -1133,7 +1150,12 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 					buffer.textFile().open(buffer.textFile().pathName(), buffer.textFile().lockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
 				} catch(IOException& e) {
 					succeeded = false;
-					errorType = e.type();
+					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
+						Alpha::instance().messageBox(
+							MSG_IO__MALFORMED_INPUT_FILE, MB_OK | MB_ICONEXCLAMATION,
+							MARGS % buffer.textFile().pathName() % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(encoding).c_str());
+						return OPENRESULT_FAILED;
+					}
 				}
 			} else
 				return OPENRESULT_USERCANCELED;
@@ -1142,7 +1164,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 	}
 
 	if(succeeded || handleFileIOError(buffer.textFile().pathName().c_str(), true, errorType)) {
-		app_.mruManager().add(buffer.textFile().pathName(), buffer.textFile().encoding());
+		app_.mruManager().add(buffer.textFile().pathName());
 		return OPENRESULT_SUCCEEDED;
 	} else
 		return OPENRESULT_FAILED;
@@ -1237,12 +1259,15 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 	} else
 		wcscpy(fileName, buffer.textFile().pathName().c_str());
 
+	MIBenum encodingMIB = MIB_UNKNOWN;
+	if(const Encoder* encoder = Encoder::forName(format.encoding))
+		encodingMIB = encoder->mibEnum();
 	const bool writeBOM =
-		(format.encoding == fundamental::UTF_8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
-		|| (format.encoding == fundamental::UTF_16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
-		|| (format.encoding == fundamental::UTF_16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
-		|| (format.encoding == extended::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
-		|| (format.encoding == extended::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
+		(encodingMIB == fundamental::UTF_8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
+		|| (encodingMIB == fundamental::UTF_16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
+		|| (encodingMIB == fundamental::UTF_16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
+		|| (encodingMIB == extended::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
+		|| (encodingMIB == extended::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
 
 	bool succeeded = true;
 	IOException::Type errorType;
@@ -1264,7 +1289,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 			// alert the encoding error
 			const int userAnswer = Alpha::instance().messageBox(
 				MSG_IO__UNCONVERTABLE_UCS_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-				MARGS % fileName % getEncodingDisplayName(params.encoding).c_str());
+				MARGS % fileName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(params.encoding).c_str());
 			if(userAnswer == IDYES) {
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(params.encoding, false);
@@ -1290,7 +1315,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 
 	succeeded = succeeded || handleFileIOError(fileName, false, errorType);
 	if(succeeded && addToMRU && newName)
-		app_.mruManager().add(fileName, format.encoding);
+		app_.mruManager().add(fileName);
 	return succeeded;
 }
 

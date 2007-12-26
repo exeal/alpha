@@ -659,8 +659,7 @@ bool CommandManager::executeCommand(CommandID id, bool userContext) {
 
 	default:
 		if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {	// [最近使ったファイル]
-			const MRU& file = app.mruManager_->at(id - CMD_SPECIAL_MRUSTART);
-			if(app.bufferList().open(file.fileName, file.encoding) == BufferList::OPENRESULT_FAILED) {
+			if(app.bufferList().open(app.mruManager_->at(id - CMD_SPECIAL_MRUSTART)) == BufferList::OPENRESULT_FAILED) {
 				app.mruManager_->remove(id - CMD_SPECIAL_MRUSTART);
 				return false;
 			}
@@ -936,8 +935,8 @@ wstring CommandManager::menuName(CommandID id) const {
 	}
 	
 	else*/ if(id >= CMD_SPECIAL_MRUSTART && id <= CMD_SPECIAL_MRUEND) {
-		const MRU& file = Alpha::instance().mruManager().at(id - CMD_SPECIAL_MRUSTART);
-		swprintf(buffer, L"&%X  %s", id - CMD_SPECIAL_MRUSTART, file.fileName.c_str());
+		swprintf(buffer, L"&%X  %s", id - CMD_SPECIAL_MRUSTART,
+			Alpha::instance().mruManager().at(id - CMD_SPECIAL_MRUSTART).c_str());
 		return buffer;
 	}
 	

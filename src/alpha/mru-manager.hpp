@@ -13,12 +13,6 @@
 
 
 namespace alpha {
-	/// A most recently used file.
-	struct MRU {
-		std::basic_string<WCHAR> fileName;		///< The file name.
-		ascension::encoding::MIBenum encoding;	///< The encoding of the file.
-	};
-
 	/// Most recently used files.
 	class MRUManager {
 		MANAH_NONCOPYABLE_TAG(MRUManager);
@@ -26,12 +20,12 @@ namespace alpha {
 		// constructor
 		MRUManager(std::size_t limit, int startID);
 		// attributes
-		const MRU&						at(std::size_t index) const;
+		const std::basic_string<WCHAR>&	at(std::size_t index) const;
 		std::size_t						numberOfFiles() const throw();
 		const manah::win32::ui::Menu&	popupMenu() const throw();
 		void							setLimit(std::size_t newLimit);
 		// operations
-		void	add(const std::basic_string<WCHAR>& fileName, ascension::encoding::MIBenum mib);
+		void	add(const std::basic_string<WCHAR>& fileName);
 		void	clear();
 		void	remove(std::size_t index);
 		// persistent
@@ -41,10 +35,10 @@ namespace alpha {
 		void	updateMenu();
 
 	private:
-		const int startID_;						// メニュー ID の先頭の値
-		std::list<MRU> fileNames_;				// フルパスのリスト
-		manah::win32::ui::PopupMenu	popupMenu_;	// ポップアップメニュー
-		std::size_t limitCount_;				// 項目数の上限 (4 以上 16 以下)
+		const int startID_;									// メニュー ID の先頭の値
+		std::list<std::basic_string<WCHAR> > fileNames_;	// フルパスのリスト
+		manah::win32::ui::PopupMenu	popupMenu_;				// ポップアップメニュー
+		std::size_t limitCount_;							// 項目数の上限 (4 以上 16 以下)
 	};
 
 
