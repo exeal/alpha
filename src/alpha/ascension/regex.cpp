@@ -117,11 +117,11 @@ namespace {
 				throw invalid_argument("Invalid text.");
 
 			// convert the source text from UTF-16 to native Japanese encoding
-			encoding::Encoder* encoder = encoding::Encoder::forName("Shift_JIS");
-			if(encoder == 0)
+			auto_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
+			if(encoder.get() == 0)
 				return 0;
 			else {
-				size_t bufferLength = encoder->maximumNativeBytes() * (last - first);
+				size_t bufferLength = encoder->properties().maximumNativeBytes() * (last - first);
 				manah::AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
 				byte* toNext;
 				const Char* fromNext;
@@ -136,7 +136,7 @@ namespace {
 
 			// convert the result pattern from native Japanese encoding to UTF-16
 			const size_t nativePatternLength = strlen(reinterpret_cast<char*>(lastNativePattern_));
-			outputLength = encoder->maximumUCSLength() * (nativePatternLength + 1);
+			outputLength = encoder->properties().maximumUCSLength() * (nativePatternLength + 1);
 			delete[] lastPattern_;
 			lastPattern_ = new Char[outputLength];
 			Char* toNext;

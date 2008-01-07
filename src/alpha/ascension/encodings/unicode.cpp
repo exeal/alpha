@@ -1,10 +1,16 @@
 /**
  * @file unicode.cpp
- * This file defines seven UTF encoders. It includes: UTF-8, UTF-16 little endian, UTF-16 big
- * endian, UTF-32 little endian, UTF-32 big endian, UTF-7, and UTF-5. The last four will be
- * defined only if the configuration symbol @c ASCENSION_NO_EXTENDED_ENCODINGS is not defined.
+ * Implements Unicode encodings. This includes:
+ * - UTF-8
+ * - UTF-7
+ * - UTF-16BE
+ * - UTF-16LE
+ * - UTF-16
+ * - UTF-32
+ * - UTF-32BE
+ * - UTF-32LE
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2007.12.31
  */
 
 #include "../encoder.hpp"
@@ -17,71 +23,66 @@ using namespace std;
 
 // registry
 namespace {
-	class UTF8Encoder : public EncoderBase {
+	template<typename Factory>
+	class InternalEncoder : public Encoder {
 	public:
-		UTF8Encoder() : EncoderBase("UTF-8", fundamental::UTF_8, 4) {}
+		explicit InternalEncoder(const Factory& factory) throw() : props_(factory) {}
 	private:
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
 		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-	class UTF16LittleEndianEncoder : public EncoderBase {
-	public:
-		UTF16LittleEndianEncoder() : EncoderBase("UTF-16LE", fundamental::UTF_16LE, 2) {}
+		const IEncodingProperties& properties() const throw() {return props_;}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
+		const IEncodingProperties& props_;
 	};
-	class UTF16BigEndianEncoder : public EncoderBase {
+
+	class UTF_8 : public EncoderFactoryBase {
 	public:
-		UTF16BigEndianEncoder() : EncoderBase("UTF-16BE", fundamental::UTF_16BE, 2) {}
+		UTF_8() : EncoderFactoryBase("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-	class UTF5Encoder : public EncoderBase {
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_8>(*this));}
+	} utf8;
+	class UTF_16LE : public EncoderFactoryBase {
 	public:
-		UTF5Encoder() : EncoderBase("UTF-5", extended::UTF_5, 6) {}
+		UTF_16LE() : EncoderFactoryBase("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-	class UTF7Encoder : public EncoderBase {
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_16LE>(*this));}
+	} utf16le;
+	class UTF_16BE : public EncoderFactoryBase {
 	public:
-		UTF7Encoder() : EncoderBase("UTF-7", extended::UTF_7, 8) {}
+		UTF_16BE() : EncoderFactoryBase("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-	class UTF32LittleEndianEncoder : public EncoderBase {
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_16BE>(*this));}
+	} utf16be;
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+	class UTF_7 : public EncoderFactoryBase {
 	public:
-		UTF32LittleEndianEncoder() : EncoderBase("UTF-32LE", extended::UTF_32LE, 4) {}
+		UTF_7() : EncoderFactoryBase("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-	class UTF32BigEndianEncoder : public EncoderBase {
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_7>(*this));}
+	} utf7;
+	class UTF_32LE : public EncoderFactoryBase {
 	public:
-		UTF32BigEndianEncoder() : EncoderBase("UTF-32BE", extended::UTF_32BE, 4) {}
+		UTF_32LE() : EncoderFactoryBase("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const;
-	};
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_32LE>(*this));}
+	} utf32le;
+	class UTF_32BE : public EncoderFactoryBase {
+	public:
+		UTF_32BE() : EncoderFactoryBase("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
+	private:
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
+	} utf32be;
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+	class UTF_5 : public EncoderFactoryBase {
+	public:
+		UTF_5() : EncoderFactoryBase("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
+	private:
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
+	} utf5;
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 	class UnicodeDetector : public EncodingDetector {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
@@ -91,22 +92,24 @@ namespace {
 
 	struct EncoderInstaller {
 		EncoderInstaller() throw() {
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF8Encoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF16LittleEndianEncoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF16BigEndianEncoder));
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF5Encoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF7Encoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF32LittleEndianEncoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new UTF32BigEndianEncoder));
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+			Encoder::registerFactory(utf8);
+			Encoder::registerFactory(utf16le);
+			Encoder::registerFactory(utf16be);
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+			Encoder::registerFactory(utf7);
+			Encoder::registerFactory(utf32le);
+			Encoder::registerFactory(utf32be);
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+			Encoder::registerFactory(utf5);
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UnicodeDetector));
 		}
 	} installer;
 } // namespace @0
 
 
-// UTF8Encoder //////////////////////////////////////////////////////////////
+// UTF-8 ////////////////////////////////////////////////////////////////////
 
 namespace {
 	/*
@@ -148,9 +151,8 @@ namespace {
 	}
 } // namespace @0
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_8>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x0080U)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
 			(*to++) = mask8Bit(*from);
@@ -186,9 +188,8 @@ Encoder::Result UTF8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_8>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x80)
 			*(to++) = *(from++);
@@ -250,11 +251,10 @@ Encoder::Result UTF8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 }
 
 
-// UTF16LittleEndianEncoder /////////////////////////////////////////////////
+// UTF-16LE /////////////////////////////////////////////////////////////////
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_16LE>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
 		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
@@ -264,9 +264,8 @@ Encoder::Result UTF16LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, b
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_16LE>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = *from | maskUCS2(from[1] << 8);
 	fromNext = from;
@@ -278,11 +277,10 @@ Encoder::Result UTF16LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 }
 
 
-// UTF16BigEndianEncoder /////////////////////////////////////////////////
+// UTF-16BE /////////////////////////////////////////////////////////////////
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF16BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_16BE>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
 		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
@@ -292,9 +290,8 @@ Encoder::Result UTF16BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_16BE>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = maskUCS2(*from << 8) | from[1];
 	fromNext = from;
@@ -306,13 +303,12 @@ Encoder::Result UTF16BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 }
 
 
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
-// UTF32LittleEndianEncoder /////////////////////////////////////////////////
+// UTF-32LE /////////////////////////////////////////////////////////////////
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_32LE>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
 		if(!isScalarValue(c)) {
@@ -334,9 +330,8 @@ Encoder::Result UTF32LittleEndianEncoder::doFromUnicode(byte* to, byte* toEnd, b
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(c)) {
@@ -356,11 +351,10 @@ Encoder::Result UTF32LittleEndianEncoder::doToUnicode(Char* to, Char* toEnd, Cha
 }
 
 
-// UTF32BigEndianEncoder /////////////////////////////////////////////////
+// UTF-32BE /////////////////////////////////////////////////////////////////
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF32BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_32BE>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
 		*(to++) = mask8Bit((c & 0xFF000000U) >> 24);
@@ -375,9 +369,8 @@ Encoder::Result UTF32BigEndianEncoder::doFromUnicode(byte* to, byte* toEnd, byte
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
@@ -397,7 +390,7 @@ Encoder::Result UTF32BigEndianEncoder::doToUnicode(Char* to, Char* toEnd, Char*&
 }
 
 
-// UTF7Encoder //////////////////////////////////////////////////////////////
+// UTF-7 ////////////////////////////////////////////////////////////////////
 
 namespace {
 	/// Returns true if the given character is in UTF-7 set B.
@@ -416,9 +409,8 @@ namespace {
 	}
 } // namespace @0
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF7Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	static const byte base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	while(true /* from < fromEnd */) {
 		// calculate the length of the substring to need to modified-BASE64 encode
@@ -469,9 +461,8 @@ Encoder::Result UTF7Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 		
-/// @see Encoder#doToUnicode
-Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	static const byte base64[] = {
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
@@ -539,8 +530,11 @@ Encoder::Result UTF7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 
-// UTF5Encoder //////////////////////////////////////////////////////////////
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+
+// UTF-5 ////////////////////////////////////////////////////////////////////
 
 namespace {
 	/**
@@ -629,16 +623,15 @@ namespace {
 	}
 } // namespace @0
 
-/// @see Encoder#doFromUnicode
-Encoder::Result UTF5Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_5>::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	byte temp[8];
 	byte* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
 			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
-				*(to++) = substitutionCharacter();
+				*(to++) = properties().substitutionCharacter();
 			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {
@@ -662,9 +655,8 @@ Encoder::Result UTF5Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	const byte* e;
 	CodePoint cp;
 	while(to < toEnd && from < fromEnd) {
@@ -701,7 +693,7 @@ Encoder::Result UTF5Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 
 namespace {
 	inline const byte* maybeUTF8(const byte* first, const byte* last) throw() {
@@ -722,14 +714,14 @@ namespace {
 				mib = fundamental::UTF_16LE;
 			else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
 				mib = fundamental::UTF_16BE;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 			if(last - first >= 4) {
 				if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-					mib = extended::UTF_32LE;
+					mib = standard::UTF_32LE;
 				else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-					mib = extended::UTF_32BE;
+					mib = standard::UTF_32BE;
 			}
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 		}
 		if(mib != MIB_UNKNOWN)
 			return last - first;
@@ -749,14 +741,14 @@ MIBenum UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t
 			result = fundamental::UTF_16LE;
 		else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
 			result = fundamental::UTF_16BE;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 		if(last - first >= 4) {
 			if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-				result = extended::UTF_32LE;
+				result = standard::UTF_32LE;
 			else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-				result = extended::UTF_32BE;
+				result = standard::UTF_32BE;
 		}
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 	}
 	if(result != 0) {
 		if(convertibleBytes != 0)

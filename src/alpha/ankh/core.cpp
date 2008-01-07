@@ -31,69 +31,69 @@ namespace {
 	const HRESULT ANKH_E_AUTOMATIONUNCOMPATIBLECLASS = 0x800A01AE;
 
 	/// イベントシンク
-	class AdhocEventSinkBase : virtual public IDispatchEx {
+	class AdhocEventSinkBase : virtual public ::IDispatchEx {
 	public:
 		// コンストラクタ
-		explicit AdhocEventSinkBase(const IID& eventIID) throw();
+		explicit AdhocEventSinkBase(const ::IID& eventIID) throw();
 		virtual ~AdhocEventSinkBase() throw();
 		// メソッド
-		HRESULT			connect(IConnectionPoint& eventSource);
-		HRESULT			disconnect();
-		static HRESULT	findSourceConnectionPoint(IDispatch& source,
-							manah::com::ComPtr<IConnectionPoint>& connectionPoint, const CLSID& coclassID = CLSID_NULL);
+		::HRESULT			connect(::IConnectionPoint& eventSource);
+		::HRESULT			disconnect();
+		static ::HRESULT	findSourceConnectionPoint(::IDispatch& source,
+								manah::com::ComPtr<::IConnectionPoint>& connectionPoint, const ::CLSID& coclassID = ::CLSID_NULL);
 		// IUnknown
-		IMPLEMENT_UNKNOWN_MULTI_THREADED()
+		MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
 		STDMETHODIMP	QueryInterface(REFIID riid, void** ppvObject);
 		// IDispatch
-		STDMETHODIMP	GetTypeInfoCount(UINT* pcTypeInfo);
-		STDMETHODIMP	GetTypeInfo(UINT iTypeInfo, LCID lcid, ITypeInfo** ppTypeInfo);
+		STDMETHODIMP	GetTypeInfoCount(::UINT* pcTypeInfo);
+		STDMETHODIMP	GetTypeInfo(::UINT iTypeInfo, ::LCID lcid, ::ITypeInfo** ppTypeInfo);
 		STDMETHODIMP	GetIDsOfNames(REFIID riid,
-							OLECHAR** rgszNames, unsigned int cNames, LCID lcid, DISPID* rgDispId);
-		STDMETHODIMP	Invoke(DISPID dispidMember, REFIID riid, LCID lcid,
-							WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult,
-							EXCEPINFO* pExcepInfo, unsigned int* puArgErr);
+							::OLECHAR** rgszNames, unsigned int cNames, ::LCID lcid, ::DISPID* rgDispId);
+		STDMETHODIMP	Invoke(::DISPID dispidMember, REFIID riid, ::LCID lcid,
+							::WORD wFlags, ::DISPPARAMS* pDispParams, ::VARIANT* pVarResult,
+							::EXCEPINFO* pExcepInfo, unsigned int* puArgErr);
 		// IDispatchEx
-		STDMETHODIMP	GetDispID(BSTR bstrName, DWORD grfdex, DISPID* pid);
-		STDMETHODIMP	InvokeEx(DISPID id, LCID lcid, WORD wFlags,
-							DISPPARAMS* pdp, VARIANT* pvarRes, EXCEPINFO* pei, IServiceProvider* pspCaller);
-		STDMETHODIMP	DeleteMemberByName(BSTR bstrName, DWORD grfdex);
-		STDMETHODIMP	DeleteMemberByDispID(DISPID id);
-		STDMETHODIMP	GetMemberProperties(DISPID id, DWORD grfdexFetch, DWORD* pgrfdex);
-		STDMETHODIMP	GetMemberName(DISPID id, BSTR* pbstrName);
-		STDMETHODIMP	GetNextDispID(DWORD grfdex, DISPID id, DISPID* pid);
-		STDMETHODIMP	GetNameSpaceParent(IUnknown** ppunk);
+		STDMETHODIMP	GetDispID(::BSTR bstrName, ::DWORD grfdex, ::DISPID* pid);
+		STDMETHODIMP	InvokeEx(::DISPID id, ::LCID lcid, ::WORD wFlags,
+							::DISPPARAMS* pdp, ::VARIANT* pvarRes, ::EXCEPINFO* pei, ::IServiceProvider* pspCaller);
+		STDMETHODIMP	DeleteMemberByName(::BSTR bstrName, ::DWORD grfdex);
+		STDMETHODIMP	DeleteMemberByDispID(::DISPID id);
+		STDMETHODIMP	GetMemberProperties(::DISPID id, ::DWORD grfdexFetch, ::DWORD* pgrfdex);
+		STDMETHODIMP	GetMemberName(::DISPID id, ::BSTR* pbstrName);
+		STDMETHODIMP	GetNextDispID(::DWORD grfdex, ::DISPID id, ::DISPID* pid);
+		STDMETHODIMP	GetNameSpaceParent(::IUnknown** ppunk);
 	protected:
-		virtual HRESULT	fireEvent(const OLECHAR* name, LCID locale, WORD flags,
-			DISPPARAMS* params, VARIANT* result, EXCEPINFO* exception, IServiceProvider* serviceProvider) = 0;
+		virtual ::HRESULT	fireEvent(const ::OLECHAR* name, ::LCID locale, ::WORD flags,
+			::DISPPARAMS* params, ::VARIANT* result, ::EXCEPINFO* exception, ::IServiceProvider* serviceProvider) = 0;
 	private:
-		ComPtr<IConnectionPoint> eventSource_;
-		const IID eventIID_;
-		DWORD cookie_;
-		map<DISPID, basic_string<OLECHAR> > eventIDTable_;
+		ComPtr<::IConnectionPoint> eventSource_;
+		const ::IID eventIID_;
+		::DWORD cookie_;
+		map<::DISPID, basic_string<::OLECHAR> > eventIDTable_;
 	};
 } // namespace @0
 
 /// An adhoc event sink object to implement WScript-style event connections.
 class ScriptHost::LegacyAdhocEventSink : public AdhocEventSinkBase {
 public:
-	LegacyAdhocEventSink(IActiveScript& scriptEngine, const IID& eventIID, const std::wstring& prefix);
+	LegacyAdhocEventSink(::IActiveScript& scriptEngine, const ::IID& eventIID, const std::wstring& prefix);
 protected:
-	HRESULT	fireEvent(const OLECHAR* name, LCID locale, WORD flags,
-		DISPPARAMS* params, VARIANT* result, EXCEPINFO* exception, IServiceProvider* serviceProvider);
+	::HRESULT	fireEvent(const ::OLECHAR* name, ::LCID locale, ::WORD flags,
+		::DISPPARAMS* params, ::VARIANT* result, ::EXCEPINFO* exception, ::IServiceProvider* serviceProvider);
 private:
-	ComPtr<IActiveScript>		scriptEngine_;
-	const basic_string<OLECHAR>	prefix_;	// prefix of event names
+	ComPtr<::IActiveScript> scriptEngine_;
+	const basic_string<::OLECHAR> prefix_;	// prefix of event names
 };
 
 /// An event sink object to implement @c ScriptHost#ConnectObjectEx method.
 class ScriptHost::AdhocEventSink : public AdhocEventSinkBase {
 public:
-	AdhocEventSink(IDispatch& eventSink, const IID& eventIID);
+	AdhocEventSink(::IDispatch& eventSink, const ::IID& eventIID);
 protected:
-	HRESULT	fireEvent(const OLECHAR* name, LCID locale, WORD flags,
-		DISPPARAMS* params, VARIANT* result, EXCEPINFO* exception, IServiceProvider* serviceProvider);
+	::HRESULT	fireEvent(const ::OLECHAR* name, ::LCID locale, ::WORD flags,
+		::DISPPARAMS* params, ::VARIANT* result, ::EXCEPINFO* exception, ::IServiceProvider* serviceProvider);
 private:
-	ComPtr<IDispatch> sink_;
+	ComPtr<::IDispatch> sink_;
 };
 
 namespace {
@@ -107,12 +107,12 @@ namespace {
 		// メソッド
 		void	addProperty(const OLECHAR* name, long value);
 		// IUnknown
-		IMPLEMENT_UNKNOWN_MULTI_THREADED()
-		BEGIN_INTERFACE_TABLE()
-			IMPLEMENTS_LEFTMOST_INTERFACE(IDispatchEx)
-			IMPLEMENTS_INTERFACE(IDispatch)
-			IMPLEMENTS_INTERFACE(IObjectSafety)
-		END_INTERFACE_TABLE()
+		MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
+		MANAH_BEGIN_INTERFACE_TABLE()
+			MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IDispatchEx)
+			MANAH_IMPLEMENTS_INTERFACE(IDispatch)
+			MANAH_IMPLEMENTS_INTERFACE(IObjectSafety)
+		MANAH_END_INTERFACE_TABLE()
 		// IDispatch
 		STDMETHODIMP	GetTypeInfoCount(UINT* pcTypeInfo);
 		STDMETHODIMP	GetTypeInfo(UINT iTypeInfo, LCID lcid, ITypeInfo** ppTypeInfo);
@@ -153,14 +153,14 @@ STDMETHODIMP Arguments::Count(long* count) {
 
 /// @see IArguments#get__NewEnum
 STDMETHODIMP Arguments::get__NewEnum(IUnknown** enumerator) {
-	VERIFY_POINTER(enumerator);
+	MANAH_VERIFY_POINTER(enumerator);
 	*enumerator = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IArguments#get_Item
 STDMETHODIMP Arguments::get_Item(long index, VARIANT** value) {
-	VERIFY_POINTER(value);
+	MANAH_VERIFY_POINTER(value);
 	if(index < 0 || index >= static_cast<long>(arguments_.size()))
 		return 0x800A0009;
 	if(*value = static_cast<VARIANT*>(::CoTaskMemAlloc(sizeof(VARIANT)))) {
@@ -176,21 +176,21 @@ STDMETHODIMP Arguments::get_Item(long index, VARIANT** value) {
 
 /// @see IArguments#get_length
 STDMETHODIMP Arguments::get_length(long* count) {
-	VERIFY_POINTER(count);
+	MANAH_VERIFY_POINTER(count);
 	*count = static_cast<long>(arguments_.size());
 	return S_OK;
 }
 
 /// @see IArguments#get_Named
 STDMETHODIMP Arguments::get_Named(INamedArguments** named) {
-	VERIFY_POINTER(named);
+	MANAH_VERIFY_POINTER(named);
 	*named = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IArguments#get_Unnamed
 STDMETHODIMP Arguments::get_Unnamed(IUnnamedArguments** unnamed) {
-	VERIFY_POINTER(unnamed);
+	MANAH_VERIFY_POINTER(unnamed);
 	*unnamed = 0;
 	return E_NOTIMPL;
 }
@@ -452,28 +452,28 @@ STDMETHODIMP ScriptHost::EnableModeless(BOOL fEnable) {
 
 /// @see IScriptHost#get_Application
 STDMETHODIMP ScriptHost::get_Application(IDispatch** application) {
-	VERIFY_POINTER(application);
+	MANAH_VERIFY_POINTER(application);
 	(*application = this)->AddRef();
 	return S_OK;
 }
 
 /// @see IScriptHost#get_Arguments
 STDMETHODIMP ScriptHost::get_Arguments(IArguments** arguments) {
-	VERIFY_POINTER(arguments);
+	MANAH_VERIFY_POINTER(arguments);
 	*arguments = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_BuildVersion
 STDMETHODIMP ScriptHost::get_BuildVersion(int* version) {
-	VERIFY_POINTER(version);
+	MANAH_VERIFY_POINTER(version);
 	*version = BUILD_NUMBER;
 	return S_OK;
 }
 
 /// @see IScriptHost#get_FullName
 STDMETHODIMP ScriptHost::get_FullName(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	WCHAR pathName[MAX_PATH];
 	::GetModuleFileNameW(0, pathName, MAX_PATH);
 	*name = ::SysAllocString(pathName);
@@ -482,21 +482,21 @@ STDMETHODIMP ScriptHost::get_FullName(BSTR* name) {
 
 /// @see IScriptHost#get_Interactive
 STDMETHODIMP ScriptHost::get_Interactive(VARIANT_BOOL* interactive) {
-	VERIFY_POINTER(interactive);
+	MANAH_VERIFY_POINTER(interactive);
 	*interactive = toVariantBoolean(scriptSystem_.isInteractive());
 	return S_OK;
 }
 
 /// @see IScriptHost#get_Name
 STDMETHODIMP ScriptHost::get_Name(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	*name = ::SysAllocString(ScriptHost::NAME);
 	return (*name != 0) ? S_OK : E_OUTOFMEMORY;
 }
 
 /// @see IScriptHost#get_Path
 STDMETHODIMP ScriptHost::get_Path(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	WCHAR pathName[MAX_PATH];
 	::GetModuleFileNameW(0, pathName, MAX_PATH);
 	*name = ::SysAllocStringLen(pathName, static_cast<UINT>(::PathFindFileNameW(pathName) - pathName) - 1);
@@ -505,46 +505,46 @@ STDMETHODIMP ScriptHost::get_Path(BSTR* name) {
 
 /// @see IScriptHost#get_ScriptFullName
 STDMETHODIMP ScriptHost::get_ScriptFullName(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	*name = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_ScriptName
 STDMETHODIMP ScriptHost::get_ScriptName(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	*name = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_StdErr
 STDMETHODIMP ScriptHost::get_StdErr(IDispatch** stdErr) {
-	VERIFY_POINTER(stdErr);
+	MANAH_VERIFY_POINTER(stdErr);
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_StdIn
 STDMETHODIMP ScriptHost::get_StdIn(IDispatch** stdIn) {
-	VERIFY_POINTER(stdIn);
+	MANAH_VERIFY_POINTER(stdIn);
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_StdOut
 STDMETHODIMP ScriptHost::get_StdOut(IDispatch** stdOut) {
-	VERIFY_POINTER(stdOut);
+	MANAH_VERIFY_POINTER(stdOut);
 	return E_NOTIMPL;
 }
 
 /// @see IScriptHost#get_Timeout
 STDMETHODIMP ScriptHost::get_Timeout(long* timeout) {
-	VERIFY_POINTER(timeout);
+	MANAH_VERIFY_POINTER(timeout);
 	*timeout = timeout_;
 	return S_OK;
 }
 
 /// @see IScriptHost#get_Version
 STDMETHODIMP ScriptHost::get_Version(BSTR* version) {
-	VERIFY_POINTER(version);
+	MANAH_VERIFY_POINTER(version);
 	wchar_t buffer[10];
 	swprintf(buffer, L"%u.%u", MAJOR_VERSION, MINOR_VERSION);
 	*version = ::SysAllocString(buffer);
@@ -553,7 +553,7 @@ STDMETHODIMP ScriptHost::get_Version(BSTR* version) {
 
 /// @see IActiveScriptSite#GetDocVersionString
 STDMETHODIMP ScriptHost::GetDocVersionString(BSTR* pbstrVersion) {
-	VERIFY_POINTER(pbstrVersion);
+	MANAH_VERIFY_POINTER(pbstrVersion);
 	*pbstrVersion = 0;
 	return E_NOTIMPL;
 }
@@ -568,21 +568,21 @@ STDMETHODIMP ScriptHost::GetItemInfo(LPCOLESTR pstrName, DWORD dwReturnMask, IUn
 		object = this;
 	else if(!scriptSystem_.getTopLevelObject(pstrName, object)) {
 		if(toBoolean(dwReturnMask & SCRIPTINFO_IUNKNOWN)) {
-			VERIFY_POINTER(ppiunkItem);
+			MANAH_VERIFY_POINTER(ppiunkItem);
 			*ppiunkItem = 0;
 		}
 		if(toBoolean(dwReturnMask & SCRIPTINFO_ITYPEINFO)) {
-			VERIFY_POINTER(ppti);
+			MANAH_VERIFY_POINTER(ppti);
 			*ppti = 0;
 		}
 		return TYPE_E_ELEMENTNOTFOUND;
 	}
 	if(toBoolean(dwReturnMask & SCRIPTINFO_IUNKNOWN)) {
-		VERIFY_POINTER(ppiunkItem);
-		(*ppiunkItem = object)->AddRef();
+		MANAH_VERIFY_POINTER(ppiunkItem);
+		(*ppiunkItem = object.get())->AddRef();
 	}
 	if(toBoolean(dwReturnMask & SCRIPTINFO_ITYPEINFO)) {
-		VERIFY_POINTER(ppti);
+		MANAH_VERIFY_POINTER(ppti);
 		object->GetTypeInfo(0, 0, ppti);
 	}
 	return S_OK;
@@ -590,7 +590,7 @@ STDMETHODIMP ScriptHost::GetItemInfo(LPCOLESTR pstrName, DWORD dwReturnMask, IUn
 
 /// @see IActiveScriptSite#GetLCID
 STDMETHODIMP ScriptHost::GetLCID(LCID* plcid) {
-	VERIFY_POINTER(plcid);
+	MANAH_VERIFY_POINTER(plcid);
 	*plcid = LOCALE_INVARIANT;
 	return S_OK;
 }
@@ -623,11 +623,11 @@ STDMETHODIMP ScriptHost::GetObject(BSTR pathName, BSTR progID, BSTR prefix, IDis
 				if(FAILED(hr = ::CreateFileMoniker(pathName, &fileMoniker)))
 					throw InternalException(hr);
 				ComPtr<IBindCtx> bc;
-				if(FAILED(hr = ::CreateBindCtx(0, &bc)) || (FAILED(hr = fileMoniker->IsRunning(bc, 0, 0))))
+				if(FAILED(hr = ::CreateBindCtx(0, &bc)) || (FAILED(hr = fileMoniker->IsRunning(bc.get(), 0, 0))))
 					throw InternalException(hr);
 				if(hr == S_OK) {	// オブジェクトは既に起動している
 					ComQIPtr<IUnknown> temp;
-					if(FAILED(hr = fileMoniker->BindToObject(bc, 0, IID_IUnknown, &temp)))
+					if(FAILED(hr = fileMoniker->BindToObject(bc.get(), 0, IID_IUnknown, &temp)))
 						throw InternalException(hr);
 					else if(FAILED(temp->QueryInterface(IID_IDispatch, reinterpret_cast<void**>(newObject))))
 						throw AutomationUncompatibleClassException();
@@ -687,7 +687,7 @@ ComPtr<IActiveScript> ScriptHost::getScriptEngine() const throw() {
 
 /// @see IActiveScriptSiteWindow#GetWindow
 STDMETHODIMP ScriptHost::GetWindow(HWND* phwnd) {
-	VERIFY_POINTER(phwnd);
+	MANAH_VERIFY_POINTER(phwnd);
 	*phwnd = ownerWindow_;
 	return S_OK;
 }
@@ -750,11 +750,11 @@ bool ScriptHost::loadScript(const WCHAR* fileName) {
 
 		// UTF-8 から UTF-16 に変換
 		using namespace ascension::encoding;
-		Encoder* encoder = Encoder::forMIB(fundamental::MIB_UNICODE_UTF8);
+		auto_ptr<Encoder> encoder(Encoder::forMIB(fundamental::UTF_8));
 		::OLECHAR* toNext;
 		const uchar* fromNext;
-		const Encoder::Result r = encoder->toUnicode(source, source + fileSize,
-			toNext, buffer, buffer + fileSize, fromNext, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+		const Encoder::Result r = encoder->setPolicy(Encoder::REPLACE_UNMAPPABLE_CHARACTER).toUnicode(
+			source, source + fileSize, toNext, buffer, buffer + fileSize, fromNext);
 		::UnmapViewOfFile(buffer);
 		::CloseHandle(mappedFile);
 		::CloseHandle(file);
@@ -804,7 +804,7 @@ STDMETHODIMP ScriptHost::OnScriptError(IActiveScriptError* pscripterror) {
 		return S_OK;
 
 	// エラーメッセージを出す
-	Alpha& app = Alpha::getInstance();
+	Alpha& app = Alpha::instance();
 	DWORD srcContext;
 	unsigned long line;
 	long column;
@@ -853,7 +853,7 @@ STDMETHODIMP ScriptHost::QueryContinue() {
 
 /// @see IServiceProvider3QueryService
 STDMETHODIMP ScriptHost::QueryService(REFGUID guidService, REFIID riid, void** ppvObject) {
-	VERIFY_POINTER(ppvObject);
+	MANAH_VERIFY_POINTER(ppvObject);
 	if(guidService == SID_SInternetHostSecurityManager)
 		return scriptSystem_.QueryInterface(riid, ppvObject);
 	*ppvObject = 0;
@@ -943,14 +943,14 @@ FileBoundScriptHost::FileBoundScriptHost(
 
 /// @see IScriptHost#get_ScriptFullName
 STDMETHODIMP FileBoundScriptHost::get_ScriptFullName(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	*name = ::SysAllocString(fileName_.c_str());
 	return (*name != 0) ? S_OK : E_OUTOFMEMORY;
 }
 
 /// @see IScriptHost#get_ScriptName
 STDMETHODIMP FileBoundScriptHost::get_ScriptName(BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	*name = ::SysAllocString(::PathFindFileNameW(fileName_.c_str()));
 	return (*name != 0) ? S_OK : E_OUTOFMEMORY;
 }
@@ -1021,8 +1021,8 @@ bool ScriptSystem::associateEngine(const WCHAR* fileName, CLSID& clsid) const {
 	// それでも駄目な場合はエンドユーザに訊いてみる (対話モードの場合)
 	if(interactive_) {
 		alpha::ui::SelectLanguageDialog dialog(fileName);
-		if(IDOK == dialog.doModal(Alpha::getInstance().getMainWindow()))
-			return SUCCEEDED(::CLSIDFromProgID(dialog.getSelectedLanguage().c_str(), &clsid));
+		if(IDOK == dialog.doModal(Alpha::instance().getMainWindow()))
+			return SUCCEEDED(::CLSIDFromProgID(dialog.resultLanguage().c_str(), &clsid));
 	}
 	return false;
 }
@@ -1117,14 +1117,14 @@ STDMETHODIMP ScriptSystem::ExecuteScript(BSTR fileName) {
 
 /// @see IScriptSystem#get_Gns
 STDMETHODIMP ScriptSystem::get_Gns(INamespace** namespaceObject) {
-	VERIFY_POINTER(namespaceObject);
+	MANAH_VERIFY_POINTER(namespaceObject);
 	(*namespaceObject = globalNamespace_.get())->AddRef();
 	return S_OK;
 }
 
 /// @see IScriptSystem#get_SecurityLevel
 STDMETHODIMP ScriptSystem::get_SecurityLevel(short* level) {
-	VERIFY_POINTER(level);
+	MANAH_VERIFY_POINTER(level);
 	*level = 0;
 	return S_OK;
 }
@@ -1168,11 +1168,11 @@ HRESULT ScriptSystem::invokeTopLevelEntity(const OLECHAR* name, const CLSID& pre
 	else if(type == DISPATCH_PROPERTYGET) {
 		ComPtr<IDispatch> object;
 		if(getTopLevelObject(name, object)) {
-			VERIFY_POINTER(result);
+			MANAH_VERIFY_POINTER(result);
 			if(params != 0 && params->cArgs != 0)
 				return DISP_E_BADPARAMCOUNT;
 			result->vt = VT_DISPATCH;
-			(result->pdispVal = object)->AddRef();
+			(result->pdispVal = object.get())->AddRef();
 			return S_OK;
 		}
 	}
@@ -1213,14 +1213,14 @@ STDMETHODIMP ScriptSystem::IsScriptFileLoaded(BSTR fileName, VARIANT_BOOL* loade
 HRESULT ScriptSystem::launchNewEngine(const CLSID& engineID, ComPtr<ScriptHost>& newHost, bool addToList) {
 	HRESULT hr;
 	ComPtr<IActiveScript> newEngine;
-	if(FAILED(hr = newEngine.createInstance(engineID, 0, CLSCTX_INPROC)))
+	if(FAILED(hr = newEngine.createInstance(engineID, IID_IActiveScript, CLSCTX_INPROC)))
 		return hr;
-	if(ScriptHost* host = new(nothrow) ScriptHost(*this, *newEngine, Alpha::getInstance().getMainWindow().getHandle())) {
+	if(ScriptHost* host = new(nothrow) ScriptHost(*this, *newEngine, Alpha::instance().getMainWindow().getHandle())) {
 		host->AddRef();
 		newHost.reset(host);
 		// 管理リストに含める
 		if(addToList) {
-			scriptHosts_.insert(make_pair(engineID, newHost));
+			scriptHosts_.insert(make_pair(engineID, newHost.get()));
 			host->AddRef();
 		}
 		host->Release();
@@ -1358,7 +1358,7 @@ STDMETHODIMP ScriptSystem::LoadScript(BSTR fileName) {
 /// @see IInternetHostSecurityManager#ProcessUrlAction
 STDMETHODIMP ScriptSystem::ProcessUrlAction(DWORD dwAction,
 		BYTE* pPolicy, DWORD cbPolicy, BYTE* pContext, DWORD cbContext, DWORD dwFlags, DWORD dwReserved) {
-	VERIFY_POINTER(pPolicy);
+	MANAH_VERIFY_POINTER(pPolicy);
 	memset(pPolicy, 0, cbPolicy);
 	if(dwReserved != 0)
 		return (*pPolicy = URLPOLICY_DISALLOW), E_INVALIDARG;
@@ -1427,8 +1427,8 @@ STDMETHODIMP ScriptSystem::put_SecurityLevel(short) {
 /// @see IInternetHostSecurityManager#QueryCustomPolicy
 STDMETHODIMP ScriptSystem::QueryCustomPolicy(REFGUID guidKey,
 		BYTE** ppPolicy, DWORD* pcbPolicy, BYTE* pContext, DWORD cbContext, DWORD dwReserved) {
-	VERIFY_POINTER(ppPolicy);
-	VERIFY_POINTER(pcbPolicy);
+	MANAH_VERIFY_POINTER(ppPolicy);
+	MANAH_VERIFY_POINTER(pcbPolicy);
 
 	*ppPolicy = 0;
 	*pcbPolicy = 0;
@@ -1553,7 +1553,7 @@ STDMETHODIMP Namespace::get__NewEnum(IUnknown** enumerator) {
 
 /// @see INamespace#get_Child
 STDMETHODIMP Namespace::get_Child(::BSTR name, INamespace** namespaceObject) {
-	VERIFY_POINTER(namespaceObject);
+	MANAH_VERIFY_POINTER(namespaceObject);
 	*namespaceObject = 0;
 	if(isEmptyBSTR(name))
 		return E_INVALIDARG;
@@ -1567,28 +1567,28 @@ STDMETHODIMP Namespace::get_Child(::BSTR name, INamespace** namespaceObject) {
 
 /// @see INamespace#get_Defines
 STDMETHODIMP Namespace::get_Defines(::BSTR name, VARIANT_BOOL* defined) {
-	VERIFY_POINTER(defined);
+	MANAH_VERIFY_POINTER(defined);
 	*defined = toVariantBoolean(members_.find(name) != members_.end());
 	return S_OK;
 }
 
 /// @see INamespace#get_Empty
 STDMETHODIMP Namespace::get_Empty(VARIANT_BOOL* empty) {
-	VERIFY_POINTER(empty);
+	MANAH_VERIFY_POINTER(empty);
 	*empty = toVariantBoolean(children_.empty() && members_.empty());
 	return S_OK;
 }
 
 /// @see INamespace#get_Locked
 STDMETHODIMP Namespace::get_Locked(VARIANT_BOOL* locked) {
-	VERIFY_POINTER(locked);
+	MANAH_VERIFY_POINTER(locked);
 	*locked = toVariantBoolean(lockingCookie_ > 0);
 	return S_OK;
 }
 
 /// @see INamespace#get_Member
 STDMETHODIMP Namespace::get_Member(::BSTR name, ::VARIANT** member) {
-	VERIFY_POINTER(member);
+	MANAH_VERIFY_POINTER(member);
 	*member = 0;
 	if(isEmptyBSTR(name))
 		return E_INVALIDARG;
@@ -1605,34 +1605,34 @@ STDMETHODIMP Namespace::get_Member(::BSTR name, ::VARIANT** member) {
 
 /// @see INamespace#get_Name
 STDMETHODIMP Namespace::get_Name(::BSTR* name) {
-	VERIFY_POINTER(name);
+	MANAH_VERIFY_POINTER(name);
 	return (0 != (*name = ::SysAllocString(name_.c_str()))) ? S_OK : E_OUTOFMEMORY;
 }
 
 /// @see INamespace#get_NumberOfChildren
 STDMETHODIMP Namespace::get_NumberOfChildren(long* number) {
-	VERIFY_POINTER(number);
+	MANAH_VERIFY_POINTER(number);
 	*number = static_cast<long>(children_.size());
 	return S_OK;
 }
 
 /// @see INamespace#get_NumberOfMembers
 STDMETHODIMP Namespace::get_NumberOfMembers(long* number) {
-	VERIFY_POINTER(number);
+	MANAH_VERIFY_POINTER(number);
 	*number = static_cast<long>(members_.size());
 	return S_OK;
 }
 
 /// @see INamespace#get_Parent
 STDMETHODIMP Namespace::get_Parent(INamespace** parent) {
-	VERIFY_POINTER(parent);
+	MANAH_VERIFY_POINTER(parent);
 	(*parent = parent_)->AddRef();
 	return S_OK;
 }
 
 /// @see INamespace#Lock
 STDMETHODIMP Namespace::Lock(long* cookie) {
-	VERIFY_POINTER(cookie);
+	MANAH_VERIFY_POINTER(cookie);
 	*cookie = (lockingCookie_ > 0) ? 0 : ++lockingCookie_;
 	return S_OK;
 }
@@ -1704,7 +1704,7 @@ AdhocEventSinkBase::~AdhocEventSinkBase() throw() {
  * @return same as @c IConnectionPoint#Advise
  */
 HRESULT AdhocEventSinkBase::connect(IConnectionPoint& eventSource) {
-	if(!eventSource_.isNull())
+	if(eventSource_.get() != 0)
 		return E_UNEXPECTED;
 	HRESULT hr;
 	if(FAILED(hr = eventSource.Advise(this, &cookie_))) {
@@ -1767,7 +1767,7 @@ STDMETHODIMP AdhocEventSinkBase::DeleteMemberByName(BSTR bstrName, DWORD grfdex)
  */
 HRESULT AdhocEventSinkBase::disconnect() throw() {
 	HRESULT hr = S_OK;
-	if(!eventSource_.isNull() && SUCCEEDED(hr = eventSource_->Unadvise(cookie_))) {
+	if(eventSource_.get() != 0 && SUCCEEDED(hr = eventSource_->Unadvise(cookie_))) {
 		eventSource_.release();
 		eventIDTable_.clear();
 	}
@@ -1853,13 +1853,13 @@ STDMETHODIMP AdhocEventSinkBase::GetDispID(BSTR bstrName, DWORD, DISPID* pid) {
 STDMETHODIMP AdhocEventSinkBase::GetIDsOfNames(REFIID riid, OLECHAR**, unsigned int, LCID, DISPID* rgDispId) {
 	if(riid != IID_NULL)
 		return E_INVALIDARG;
-	VERIFY_POINTER(rgDispId);
+	MANAH_VERIFY_POINTER(rgDispId);
 	return (*rgDispId = DISPID_UNKNOWN), DISP_E_UNKNOWNNAME;
 }
 
 /// @see IDispatchEx#GetMemberName
 STDMETHODIMP AdhocEventSinkBase::GetMemberName(DISPID id, BSTR* pbstrName) {
-	VERIFY_POINTER(pbstrName);
+	MANAH_VERIFY_POINTER(pbstrName);
 	map<DISPID, basic_string<OLECHAR> >::const_iterator i = eventIDTable_.find(id);
 	if(i == eventIDTable_.end())
 		return DISP_E_UNKNOWNNAME;
@@ -1868,35 +1868,35 @@ STDMETHODIMP AdhocEventSinkBase::GetMemberName(DISPID id, BSTR* pbstrName) {
 
 /// @see IDispatchEx#GetMemberProperties
 STDMETHODIMP AdhocEventSinkBase::GetMemberProperties(DISPID, DWORD, DWORD* pgrfdex) {
-	VERIFY_POINTER(pgrfdex);
+	MANAH_VERIFY_POINTER(pgrfdex);
 	*pgrfdex = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IDispatchEx#GetNameSpaceParent
 STDMETHODIMP AdhocEventSinkBase::GetNameSpaceParent(IUnknown** ppunk) {
-	VERIFY_POINTER(ppunk);
+	MANAH_VERIFY_POINTER(ppunk);
 	*ppunk = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IDispatchEx#GetNextDispID
 STDMETHODIMP AdhocEventSinkBase::GetNextDispID(DWORD, DISPID, DISPID* pid) {
-	VERIFY_POINTER(pid);
+	MANAH_VERIFY_POINTER(pid);
 	*pid = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IDispatch#GetTypeInfo
 STDMETHODIMP AdhocEventSinkBase::GetTypeInfo(UINT iTypeInfo, LCID lcid, ITypeInfo** ppTypeInfo) {
-	VERIFY_POINTER(ppTypeInfo);
+	MANAH_VERIFY_POINTER(ppTypeInfo);
 	*ppTypeInfo = 0;
 	return TYPE_E_ELEMENTNOTFOUND;
 }
 
 /// @see IDispatch#GetTypeInfoCount
 STDMETHODIMP AdhocEventSinkBase::GetTypeInfoCount(UINT* pcTypeInfo) {
-	VERIFY_POINTER(pcTypeInfo);
+	MANAH_VERIFY_POINTER(pcTypeInfo);
 	*pcTypeInfo = 0;
 	return S_OK;
 }
@@ -1917,7 +1917,7 @@ STDMETHODIMP AdhocEventSinkBase::InvokeEx(DISPID id, LCID lcid, WORD wFlags,
 
 /// @see IUnknown#QueryInterface
 STDMETHODIMP AdhocEventSinkBase::QueryInterface(REFIID riid, void** ppv) {
-	VERIFY_POINTER(ppv);
+	MANAH_VERIFY_POINTER(ppv);
 	if(riid == eventIID_ || riid == IID_IDispatchEx || riid == IID_IDispatch || riid == IID_IUnknown)
 		*ppv = static_cast<IDispatchEx*>(this);
 	else
@@ -2025,7 +2025,7 @@ STDMETHODIMP AutomationEnumeration::DeleteMemberByName(BSTR bstrName, DWORD) {
 
 /// @see IDispatchEx#GetDispID
 STDMETHODIMP AutomationEnumeration::GetDispID(BSTR bstrName, DWORD grfdex, DISPID* pid) {
-	VERIFY_POINTER(pid);
+	MANAH_VERIFY_POINTER(pid);
 	*pid = DISPID_UNKNOWN;
 	if(bstrName == 0)
 		return E_INVALIDARG;
@@ -2036,7 +2036,7 @@ STDMETHODIMP AutomationEnumeration::GetDispID(BSTR bstrName, DWORD grfdex, DISPI
 /// @see IDispatch#GetIDsOfNames
 STDMETHODIMP AutomationEnumeration::GetIDsOfNames(
 		REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgDispId) {
-	VERIFY_POINTER(rgDispId);
+	MANAH_VERIFY_POINTER(rgDispId);
 	if(riid != IID_NULL || rgszNames == 0)
 		return E_INVALIDARG;
 	GetDispID(rgszNames[0], fdexNameCaseInsensitive, rgDispId);
@@ -2047,7 +2047,7 @@ STDMETHODIMP AutomationEnumeration::GetIDsOfNames(
 
 /// @see IDispatchEx#GetMemberName
 STDMETHODIMP AutomationEnumeration::GetMemberName(DISPID id, BSTR* pbstrName) {
-	VERIFY_POINTER(pbstrName);
+	MANAH_VERIFY_POINTER(pbstrName);
 	*pbstrName = 0;
 	for(NameToIDTable::const_iterator i = nameTable_.begin(); i != nameTable_.end(); ++i) {
 		if(i->second == id)
@@ -2058,7 +2058,7 @@ STDMETHODIMP AutomationEnumeration::GetMemberName(DISPID id, BSTR* pbstrName) {
 
 /// @see IDispatchEx#GetMemberProperties
 STDMETHODIMP AutomationEnumeration::GetMemberProperties(DISPID id, DWORD grfdexFetch, DWORD* pgrfdex) {
-	VERIFY_POINTER(pgrfdex);
+	MANAH_VERIFY_POINTER(pgrfdex);
 	*pgrfdex = 0;
 	if(idTable_.find(id) == idTable_.end())
 		return DISP_E_UNKNOWNNAME;
@@ -2070,14 +2070,14 @@ STDMETHODIMP AutomationEnumeration::GetMemberProperties(DISPID id, DWORD grfdexF
 
 /// @see IDispatchEx#GetNameSpaceParent
 STDMETHODIMP AutomationEnumeration::GetNameSpaceParent(IUnknown** ppunk) {
-	VERIFY_POINTER(ppunk);
+	MANAH_VERIFY_POINTER(ppunk);
 	*ppunk = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IDispatchEx#GetNextDispID
 STDMETHODIMP AutomationEnumeration::GetNextDispID(DWORD grfdex, DISPID id, DISPID* pid) {
-	VERIFY_POINTER(pid);
+	MANAH_VERIFY_POINTER(pid);
 	if(toBoolean(grfdex & fdexEnumDefault))
 		return (*pid = DISPID_UNKNOWN), S_FALSE;
 	if(id == DISPID_STARTENUM)
@@ -2090,14 +2090,14 @@ STDMETHODIMP AutomationEnumeration::GetNextDispID(DWORD grfdex, DISPID id, DISPI
 
 /// @see IDispatch#GetTypeInfo
 STDMETHODIMP AutomationEnumeration::GetTypeInfo(UINT iTypeInfo, LCID lcid, ITypeInfo** ppTypeInfo) {
-	VERIFY_POINTER(ppTypeInfo);
+	MANAH_VERIFY_POINTER(ppTypeInfo);
 	*ppTypeInfo = 0;
 	return E_NOTIMPL;
 }
 
 /// @see IDispatch#GetTypeInfoCount
 STDMETHODIMP AutomationEnumeration::GetTypeInfoCount(UINT* pcTypeInfo) {
-	VERIFY_POINTER(pcTypeInfo);
+	MANAH_VERIFY_POINTER(pcTypeInfo);
 	*pcTypeInfo = 0;
 	return S_OK;
 }

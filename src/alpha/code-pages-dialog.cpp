@@ -33,43 +33,51 @@ bool EncodingsDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
-	vector<string> names;
-	Encoder::availableNames(back_inserter(names));
-	const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
-	assert(asciiEncoder != 0);
+	vector<pair<size_t, const IEncodingProperties*> > encodings;
+	Encoder::availableEncodings(back_inserter(encodings));
+	const auto_ptr<Encoder> asciiEncoder(Encoder::forMIB(fundamental::US_ASCII));
+	assert(asciiEncoder.get() != 0);
 
-	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
-		const wstring s(asciiEncoder->toUnicode(*name));
-		if(!s.empty())
-			encodingList_.setItemData(encodingList_.addString(s.c_str()),
-				matchEncodingNames(s.begin(), s.end(), result_.begin(), result_.end()) ? 1 : 0);
+	for(vector<pair<size_t, const IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
+		const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
+		if(!name.empty()) {
+			const int item = encodingList_.addString(name.c_str());
+			if(item >= 0) {
+				encodingList_.setItemData(item, static_cast<DWORD>(encoding->first));
+				if(matchEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()))
+					encodingList_.setCurSel(item);
+			}
+		}
 	}
 	if(forReading_) {
-		names.clear();
-		EncodingDetector::availableNames(back_inserter(names));
-		for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
-			const wstring s(asciiEncoder->toUnicode(*name));
-			if(!s.empty())
-				encodingList_.setItemData(encodingList_.addString(s.c_str()),
-					matchEncodingNames(s.begin(), s.end(), result_.begin(), result_.end()) ? 1 : 0);
+		vector<string> detectors;
+		EncodingDetector::availableNames(back_inserter(detectors));
+		for(vector<string>::const_iterator detector(detectors.begin()), e(detectors.end()); detector != e; ++detector) {
+			const wstring name(asciiEncoder->toUnicode(*detector));
+			if(!name.empty()) {
+				const int item = encodingList_.addString(name.c_str());
+				if(item >= 0) {
+					encodingList_.setItemData(item, 0xFFFFFFFFU);
+					if(matchEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()))
+						encodingList_.setCurSel(item);
+				}
+			}
 		}
 	}
 
-	// highlight initially selected item
-	for(int i = 0, c = encodingList_.getCount(); i < c; ++i) {
-		if(encodingList_.getItemData(i) == 1) {
-			encodingList_.setCurSel(i);
-			break;
-		}
-	}
+	if(encodingList_.getCurSel() == LB_ERR)
+		encodingList_.setCurSel(0);
 }
 
 /// @see Dialog#onOK
 void EncodingsDialog::onOK(bool&) {
-	const int sel = encodingList_.getCurSel();
-	if(const int len = encodingList_.getTextLen(sel)) {
+	const int item = encodingList_.getCurSel();
+	const DWORD id = encodingList_.getItemData(item);
+	if(id != 0xFFFFFFFFU)
+		result_ = Encoder::forID(id)->properties().name();
+	else if(const int len = encodingList_.getTextLen(item)) {
 		manah::AutoBuffer<wchar_t> name(new wchar_t[len + 1]);
-		encodingList_.getText(sel, name.get());
+		encodingList_.getText(item, name.get());
 		result_ = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(name.get());
 	}
 }

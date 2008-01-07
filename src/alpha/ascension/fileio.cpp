@@ -321,7 +321,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	if(mode == ios_base::in) {
 		EncodingDetector* encodingDetector = 0;
-		if(encoder_ == 0) {	// 'encoding' may be for auto-detection
+		if(encoder_.get() == 0) {	// 'encoding' may be for auto-detection
 			encodingDetector = EncodingDetector::forName(encoding);
 			if(encodingDetector == 0)
 				throw IOException(IOException::INVALID_ENCODING);
@@ -362,26 +362,26 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		if(encodingDetector != 0) {
 			encoder_ = Encoder::forMIB(encodingDetector->detect(
 				inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), 0));
-			if(encoder_ == 0)
+			if(encoder_.get() == 0)
 				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
 		}
 		// skip Unicode byte order mark if necessary
 		const byte* bom = 0;
 		ptrdiff_t bomLength = 0;
-		switch(encoder_->mibEnum()) {
+		switch(encoder_->properties().mibEnum()) {
 		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
 		case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
 		case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-		case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+		case standard::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+		case standard::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 		}
 		if(bomLength >= fileSize && memcmp(inputMapping_.first, bom, bomLength) == 0)
 			inputMapping_.first += bomLength;
 		inputMapping_.current = inputMapping_.first;
 	} else if(mode == ios_base::out) {
-		if(encoder_ == 0)
+		if(encoder_.get() == 0)
 			throw IOException(IOException::INVALID_ENCODING);
 #ifdef ASCENSION_WINDOWS
 		if(INVALID_HANDLE_VALUE == (fileHandle_ =
@@ -394,14 +394,14 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		if(writeByteOrderMark) {
 			const byte* bom = 0;
 			size_t bomLength;
-			switch(encoder_->mibEnum()) {
+			switch(encoder_->properties().mibEnum()) {
 			case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
 			case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
 			case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-			case extended::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-			case extended::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+			case standard::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
+			case standard::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 			}
 #ifdef ASCENSION_WINDOWS
 			::WriteFile(fileHandle_, bom, static_cast<::DWORD>(bomLength), 0, 0);
@@ -453,7 +453,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 
 /// Returns the MIBenum value of the encoding.
 string TextFileStreamBuffer::encoding() const throw() {
-	return encoder_->name();
+	return encoder_->properties().name();
 }
 
 /// Returns true if the file is open.
@@ -519,7 +519,7 @@ int TextFileStreamBuffer::sync() {
 #endif
 
 			setp(ucsBuffer_ + (fromNext - ucsBuffer_), epptr());
-			pbump(fromEnd - pbase());
+			pbump(static_cast<int>(fromEnd - pbase()));	// TODO: this cast may be danger.
 			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
@@ -593,7 +593,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
  * @param document the document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) : document_(document),
-		encoding_(Encoder::getDefault().name()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
+		encoding_(Encoder::getDefault().properties().name()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_POSIX
@@ -661,7 +661,7 @@ void TextFileDocumentInput::close() {
 			document_.setInput(0, false);	// unbind
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-		setEncoding(Encoder::getDefault().name());
+		setEncoding(Encoder::getDefault().properties().name());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
@@ -870,7 +870,7 @@ void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
  * @see #encoding
  */
 void TextFileDocumentInput::setEncoding(const string& encoding) {
-	if(!encoding.empty() && Encoder::forName(encoding) == 0)
+	if(!encoding.empty() && !Encoder::supports(encoding))
 		throw invalid_argument("the given encoding is not available.");
 	encoding_ = encoding;
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
@@ -950,16 +950,18 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) t
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
 	// check Unicode spcific newlines
 	if(params.newline == NLF_NEXT_LINE || params.newline == NLF_LINE_SEPARATOR || params.newline == NLF_PARAGRAPH_SEPARATOR) {
-		const Encoder* encoder = Encoder::forName(params.encoding);
-		if(encoder == 0)
+		const auto_ptr<Encoder> encoder(Encoder::forName(params.encoding));
+		if(encoder.get() == 0)
 			throw IOException(IOException::INVALID_ENCODING);
-		const MIBenum mib = encoder->mibEnum();
+		const MIBenum mib = encoder->properties().mibEnum();
 		if(mib != fundamental::UTF_8
-				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-				&& mib != extended::UTF_5 && mib != extended::UTF_7
-				&& mib != extended::UTF_32LE && mib != extended::UTF_32BE
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE && fundamental::UTF_16
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+				&& mib != standard::UTF_7 && mib != standard::UTF_32 && mib != standard::UTF_32LE && mib != standard::UTF_32BE
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+				&& encoder->properties().name() == "UTF-5"
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 			)
 			throw IOException(IOException::INVALID_NEWLINE);
 	}

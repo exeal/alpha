@@ -1,46 +1,48 @@
 /**
  * @file armenian.cpp
- * @author exeal
- * @date 2004-2007
+ * Implements Armenian encodings. This includes:
+ * - ARMSCII-7
+ * - ARMSCII-8
+ * - ARMSCII-8A
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
+ * @author exeal
+ * @date 2004-2008
  */
 
-#ifndef ASCENSION_NO_EXTENDED_ENCODINGS
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
 #include "../encoder.hpp"
 #include <algorithm>	// std.binary_search
 using namespace ascension;
 using namespace ascension::encoding;
+using namespace ascension::encoding::implementation;
 using namespace std;
 
 // registry
 namespace {
-	class ARMSCII7Encoder : public implementation::EncoderBase {
+	template<int n> class ARMSCII : public EncoderFactoryBase {
 	public:
-		ARMSCII7Encoder() : implementation::EncoderBase("ARMSCII-7", MIB_OTHER, 1, 2, "", 0x1A) {}
+		ARMSCII() throw();
+		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder(*this));}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+		class InternalEncoder : public Encoder {
+		public:
+			explicit InternalEncoder(const IEncodingProperties& properties) throw() : props_(properties) {}
+		private:
+			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
+			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+				const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+			const IEncodingProperties& properties() const throw() {return props_;}
+		private:
+			const IEncodingProperties& props_;
+		};
 	};
-	class ARMSCII8Encoder : public implementation::EncoderBase {
-	public:
-		ARMSCII8Encoder() : implementation::EncoderBase("ARMSCII-8", MIB_OTHER, 1, 2, "", 0x1A) {}
-	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
-	};
-	class ARMSCII8AEncoder : public implementation::EncoderBase {
-	public:
-		ARMSCII8AEncoder() : implementation::EncoderBase("ARMSCII-8A", MIB_OTHER, 1, 2, "", 0x1A) {}
-	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
-	};
+	ARMSCII<8> ARMSCII_8;
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+	ARMSCII<7> ARMSCII_7;
+	ARMSCII<0x8A> ARMSCII_8A;
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+
 	class ArmenianDetector : public EncodingDetector {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
@@ -50,9 +52,11 @@ namespace {
 
 	struct Installer {
 		Installer() {
-			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII7Encoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII8Encoder));
-			Encoder::registerEncoder(auto_ptr<Encoder>(new ARMSCII8AEncoder));
+			Encoder::registerFactory(ARMSCII_8);
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+			Encoder::registerFactory(ARMSCII_7);
+			Encoder::registerFactory(ARMSCII_8A);
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new ArmenianDetector));
 		}
 	} installer;
@@ -75,9 +79,11 @@ namespace {
 	/* 0x70 */	0x0550, 0x0580, 0x0551, 0x0581, 0x0552, 0x0582, 0x0553, 0x0583,
 				0x0554, 0x0584, 0x0555, 0x0585, 0x0556, 0x0586, 0x055A, 0x007F
 	};
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	const byte UCStoARMSCII7_0028[] = {
 					0x25, 0x24, N__A, N__A, 0x2B, 0x2C, 0x29, N__A
 	};
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 	const byte UCStoARMSCII8_0028[] = {
 					0xA5, 0xA4, 0x2A, 0x2B, 0xAB, 0xAC, 0xA9, 0x2F
 	};
@@ -106,6 +112,7 @@ namespace {
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0x2E
 	};
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	const Char ARMSCII8AtoUCS_20[] = {
 	/* 0x20 */	0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x055B,
 				0x0028, 0x0029, 0x0030, 0x0031, 0x002C, 0x2014, 0x002E, 0x0032,
@@ -158,6 +165,7 @@ namespace {
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0xDE
 	};
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 
 	inline const Char* decomposeArmenianLigature(Char c) {
 		switch(c) {
@@ -173,78 +181,13 @@ namespace {
 } // namespace @0
 
 
-// ARMSCII7Encoder //////////////////////////////////////////////////////////
+// ARMSCII-8 ////////////////////////////////////////////////////////////////
 
-/// @see Encoder#doFromUnicode
-Encoder::Result ARMSCII7Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-	for(; to < toEnd && from < fromEnd; ++to, ++from) {
-		if(*from < 0x0028) {
-			*to = mask8Bit(*from);
-			continue;
-		} else if(*from < 0x0028 + countof(UCStoARMSCII7_0028))
-			*to = UCStoARMSCII7_0028[*from - 0x0028];
-		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
-			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
-		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
-			*to = UCStoARMSCII78_0530[*from - 0x0530];
-		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
-			*to = UCStoARMSCII78_2010[*from - 0x2010];
-		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
-			if(to + 1 < toEnd) {
-				toNext = to;
-				fromNext = from;
-				return INSUFFICIENT_BUFFER;
-			}
-			*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
-			*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
-			assert(to[-1] != substitutionCharacter() && to[0] != substitutionCharacter());
-			continue;
-		} else
-			*to = substitutionCharacter();
-
-		if(*to == substitutionCharacter()) {
-			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
-				--to;
-			else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
-				toNext = to;
-				fromNext = from;
-				return UNMAPPABLE_CHARACTER;
-			}
-		}
-	}
-	toNext = to;
-	fromNext = from;
-	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+template<> ARMSCII<8>::ARMSCII() : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1A) {
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result ARMSCII7Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
-	for(; to < toEnd && from < fromEnd; ++to, ++from) {
-		if(*from < 0x20)
-			*to = *from;
-		else if(*from < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
-			*to = ARMSCII78toUCS_20[*from - 0x20];
-		else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
-			--to;
-		else if(policy() == NO_POLICY) {
-			toNext = to;
-			fromNext = from;
-			return UNMAPPABLE_CHARACTER;
-		}
-	}
-	toNext = to;
-	fromNext = from;
-	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
-}
-
-
-// ARMSCII8Encoder //////////////////////////////////////////////////////////
-
-/// @see Encoder#doFromUnicode
-Encoder::Result ARMSCII8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -268,9 +211,9 @@ Encoder::Result ARMSCII8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toN
 			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			*to = substitutionCharacter();
+			*to = props_.substitutionCharacter();
 
-		if(*to == substitutionCharacter()) {
+		if(*to == props_.substitutionCharacter()) {
 			if(policy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				--to;
 				continue;
@@ -287,9 +230,8 @@ Encoder::Result ARMSCII8Encoder::doFromUnicode(byte* to, byte* toEnd, byte*& toN
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result ARMSCII8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0xA1)
 			*to = *from;
@@ -309,17 +251,89 @@ Encoder::Result ARMSCII8Encoder::doToUnicode(Char* to, Char* toEnd, Char*& toNex
 }
 
 
-// ARMSCII8AEncoder /////////////////////////////////////////////////////////
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
 
-/// @see Encoder#doFromUnicode
-Encoder::Result ARMSCII8AEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+// ARMSCII-7 ////////////////////////////////////////////////////////////////
+
+template<> ARMSCII<7>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1A) {
+}
+
+template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x0028) {
+			*to = mask8Bit(*from);
+			continue;
+		} else if(*from < 0x0028 + countof(UCStoARMSCII7_0028))
+			*to = UCStoARMSCII7_0028[*from - 0x0028];
+		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
+			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
+		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
+			*to = UCStoARMSCII78_0530[*from - 0x0530];
+		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
+			*to = UCStoARMSCII78_2010[*from - 0x2010];
+		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
+			if(to + 1 < toEnd) {
+				toNext = to;
+				fromNext = from;
+				return INSUFFICIENT_BUFFER;
+			}
+			*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
+			*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
+			assert(to[-1] != props_.substitutionCharacter() && to[0] != props_.substitutionCharacter());
+			continue;
+		} else
+			*to = props_.substitutionCharacter();
+
+		if(*to == props_.substitutionCharacter()) {
+			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+				--to;
+			else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
+		}
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+	for(; to < toEnd && from < fromEnd; ++to, ++from) {
+		if(*from < 0x20)
+			*to = *from;
+		else if(*from < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
+			*to = ARMSCII78toUCS_20[*from - 0x20];
+		else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+			--to;
+		else if(policy() == NO_POLICY) {
+			toNext = to;
+			fromNext = from;
+			return UNMAPPABLE_CHARACTER;
+		}
+	}
+	toNext = to;
+	fromNext = from;
+	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+}
+
+
+// ARMSCII-8A ///////////////////////////////////////////////////////////////
+
+template<> ARMSCII<0x8A>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1A) {
+}
+
+template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doFromUnicode(
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
-			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : substitutionCharacter();
+			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : props_.substitutionCharacter();
 		} else if(*from < 0x00A8)
-			*to = substitutionCharacter();
+			*to = props_.substitutionCharacter();
 		else if(*from < 0x00A8 + countof(UCStoARMSCII8A_00A8))
 			*to = UCStoARMSCII8A_00A8[*from - 0x00A8];
 		else if(*from < 0x0530 + countof(UCStoARMSCII8A_0530))
@@ -337,9 +351,9 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& to
 			assert(to[-1] != 0x80 && to[0] != 0x80);
 			continue;
 		} else
-			*to = substitutionCharacter();
+			*to = props_.substitutionCharacter();
 
-		if(*to == substitutionCharacter()) {
+		if(*to == props_.substitutionCharacter()) {
 			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
 				--to;
 			else if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
@@ -354,9 +368,8 @@ Encoder::Result ARMSCII8AEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& to
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-/// @see Encoder#doToUnicode
-Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
@@ -379,6 +392,8 @@ Encoder::Result ARMSCII8AEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNe
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+
 
 // ArmenianDetector /////////////////////////////////////////////////////////
 
@@ -398,6 +413,7 @@ MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_
 	if(convertibleBytes != 0)
 		*convertibleBytes = last - first;
 
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	bool b[3] = {true, true, true};	// 0:-7, 1:-8, 2:-8A
 	for(; first < last; ++first) {
 		const byte c = *first;
@@ -412,7 +428,8 @@ MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_
 		return extended::ARMSCII8A;
 	else if(!b[2] && !b[1])
 		return extended::ARMSCII7;
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 	return extended::ARMSCII8;	// most preferred encoding
 }
 
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */

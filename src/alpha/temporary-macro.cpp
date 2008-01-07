@@ -397,8 +397,8 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 	output << L"</temporary-macro>\n";
 
 	using namespace ascension::encoding;
-	Encoder* encoder = Encoder::forMIB(fundamental::UTF_8);
-	if(encoder == 0)
+	auto_ptr<Encoder> encoder(Encoder::forMIB(fundamental::UTF_8));
+	if(encoder.get() == 0)
 		return false;
 
 	File<true> file(fileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL);
@@ -406,7 +406,7 @@ bool TemporaryMacro::save(const basic_string<WCHAR>& fileName) {
 		return false;
 
 	const wstring xml = output.str();
-	const size_t bufferSize = xml.length() * encoder->maximumNativeBytes();
+	const size_t bufferSize = xml.length() * encoder->properties().maximumNativeBytes();
 	HGLOBAL data = ::GlobalAlloc(GHND, bufferSize);
 	uchar* buffer = static_cast<uchar*>(::GlobalLock(data));
 

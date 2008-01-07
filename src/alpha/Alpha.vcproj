@@ -462,19 +462,55 @@
 					Name="encodings"
 					Filter="">
 					<File
+						RelativePath=".\ascension\encodings\arabic.cpp">
+					</File>
+					<File
 						RelativePath=".\Ascension\encodings\armenian.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\encodings\chinese.cpp">
+						<FileConfiguration
+							Name="Debug|Win32"
+							ExcludedFromBuild="TRUE">
+							<Tool
+								Name="VCCLCompilerTool"/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath=".\ascension\encodings\cyrillic.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\encodings\greek.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\encodings\hebrew.cpp">
 					</File>
 					<File
 						RelativePath=".\Ascension\encodings\irish.cpp">
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\iso8859.cpp">
+						RelativePath=".\Ascension\encodings\japanese.cpp">
+						<FileConfiguration
+							Name="Debug|Win32"
+							ExcludedFromBuild="TRUE">
+							<Tool
+								Name="VCCLCompilerTool"/>
+						</FileConfiguration>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\japanese.cpp">
+						RelativePath=".\ascension\encodings\korean.cpp">
+						<FileConfiguration
+							Name="Debug|Win32"
+							ExcludedFromBuild="TRUE">
+							<Tool
+								Name="VCCLCompilerTool"/>
+						</FileConfiguration>
 					</File>
 					<File
 						RelativePath=".\Ascension\encodings\lao.cpp">
+					</File>
+					<File
+						RelativePath=".\ascension\encodings\latin.cpp">
 					</File>
 					<File
 						RelativePath=".\Ascension\encodings\thai.cpp">

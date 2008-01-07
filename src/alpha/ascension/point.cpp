@@ -471,7 +471,7 @@ void EditPoint::previousLine(length_t offset /* = 1 */) {
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
 		EditPoint(viewer.document(), position, listener),viewer_(&viewer),
-		clipboardNativeEncoding_(encoding::Encoder::getDefault().name()),
+		clipboardNativeEncoding_(encoding::Encoder::getDefault().properties().name()),
 		lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
 	static_cast<kernel::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().addVisualLinesListener(*this);
