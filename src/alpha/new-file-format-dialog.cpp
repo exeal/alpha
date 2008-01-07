@@ -29,13 +29,13 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
 
-	MIBenum mib = MIB_UNKNOWN;
-	if(const Encoder* const e = Encoder::forName(selectedEncoding()))
-		mib = e->mibEnum();
+	const auto_ptr<Encoder> encoder(Encoder::forID(encodingCombobox_.getItemData(encodingCombobox_.getCurSel())));
+	const MIBenum mib = (encoder.get() != 0) ? encoder->properties().mibEnum() : MIB_UNKNOWN;
 
-	if(mib == extended::UTF_5 || mib == extended::UTF_7 || mib == fundamental::UTF_8
-			|| mib == fundamental::UTF_16LE || mib == fundamental::UTF_16BE
-			|| mib == extended::UTF_32LE || mib == extended::UTF_32BE) {
+	if(mib == standard::UTF_7 || mib == fundamental::UTF_8
+			|| mib == fundamental::UTF_16LE || mib == fundamental::UTF_16BE || mib == fundamental::UTF_16
+			|| mib == standard::UTF_32 || mib == standard::UTF_32LE || mib == standard::UTF_32BE
+			|| encoder->properties().name() == "UTF-5") {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
@@ -63,15 +63,18 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 /// @see Dialog#onInitDialog
 void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	// [Encoding]
-	vector<string> names;
-	Encoder::availableNames(back_inserter(names));
-	const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
-	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
-		const wstring s(asciiEncoder->toUnicode(*name));
-		if(!s.empty()) {
-			const int i = encodingCombobox_.addString(s.c_str());
-			if(i >= 0 && matchEncodingNames(s.begin(), s.end(), encoding_.begin(), encoding_.end()))
-				encodingCombobox_.setCurSel(i);
+	vector<pair<size_t, const IEncodingProperties*> > encodings;
+	Encoder::availableEncodings(back_inserter(encodings));
+	const auto_ptr<Encoder> asciiEncoder(Encoder::forMIB(fundamental::US_ASCII));
+	for(vector<pair<size_t, const IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
+		const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
+		if(!name.empty()) {
+			const int item = encodingCombobox_.addString(name.c_str());
+			if(item >= 0) {
+				encodingCombobox_.setItemData(item, static_cast<DWORD>(encoding->first));
+				if(matchEncodingNames(name.begin(), name.end(), encoding_.begin(), encoding_.end()))
+					encodingCombobox_.setCurSel(item);
+			}
 		}
 	}
 
@@ -92,11 +95,7 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
-	encoding_ = selectedEncoding();
+	encoding_ = Encoder::forID(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()))->properties().name();
 	newline_ = static_cast<Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
-}
-
-inline string NewFileFormatDialog::selectedEncoding() const throw() {
-	return Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingCombobox_.getText());
 }

@@ -159,7 +159,7 @@ void BufferList::addNew(const string& encoding /* = "UTF-8" */, Newline newline 
 		return;
 	}
 */
-	if(Encoder::forName(encoding) == 0)
+	if(!Encoder::supports(encoding))
 		throw invalid_argument("unsupported encoding.");
 
 	Buffer* const buffer = new Buffer();
@@ -212,8 +212,8 @@ void BufferList::addNew(const string& encoding /* = "UTF-8" */, Newline newline 
 void BufferList::addNewDialog() {
 	TextFileFormat format;
 	format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(app_.readStringProfile(L"File", L"defaultEncoding"));
-	if(Encoder::forName(format.encoding) == 0)
-		format.encoding = Encoder::getDefault().name();
+	if(!Encoder::supports(format.encoding))
+		format.encoding = Encoder::getDefault().properties().name();
 	format.newline = static_cast<Newline>(app_.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
@@ -836,7 +836,7 @@ BufferList::OpenResult BufferList::openDialog(const WCHAR* initialDirectory /* =
 		}
 	}
 
-	TextFileFormat format = {Encoder::getDefault().name(), NLF_RAW_VALUE};
+	TextFileFormat format = {Encoder::getDefault().properties().name(), NLF_RAW_VALUE};
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAMEW, newOfn);
 	MANAH_AUTO_STRUCT_SIZE(::OPENFILENAME_NT4W, oldOfn);
 	::OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<::OPENFILENAMEW*>(&oldOfn);
@@ -895,10 +895,11 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			const MIBenum encoding = static_cast<MIBenum>(encodingCombobox.getItemData(encodingCombobox.getCurSel()));
 			const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
-			if(encoding == extended::UTF_5 || encoding == extended::UTF_7
+			// TODO:
+			if(/*encoding == minority::UTF_5 ||*/ encoding == standard::UTF_7
 					|| encoding == fundamental::UTF_8
-					|| encoding == fundamental::UTF_16LE || encoding == fundamental::UTF_16BE
-					|| encoding == extended::UTF_32LE || encoding == extended::UTF_32BE) {
+					|| encoding == fundamental::UTF_16LE || encoding == fundamental::UTF_16BE || encoding == fundamental::UTF_16
+					|| encoding == standard::UTF_32 || encoding == standard::UTF_32LE || encoding == standard::UTF_32BE) {
 				if(newlineCombobox.getCount() != 7) {
 					newlineCombobox.resetContent();
 					newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), NLF_RAW_VALUE);
@@ -963,35 +964,39 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 		}
 
 		const TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lCustData);
-		const Encoder* asciiEncoder = Encoder::forMIB(fundamental::US_ASCII);
-		assert(asciiEncoder != 0);
-		vector<string> encodings;
-		Encoder::availableNames(back_inserter(encodings));
+		const auto_ptr<Encoder> asciiEncoder(Encoder::forMIB(fundamental::US_ASCII));
+		assert(asciiEncoder.get() != 0);
 
-		for(vector<string>::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
-			const wstring name(asciiEncoder->toUnicode(*encoding));
-			if(!name.empty())
-				encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()),
-					matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()) ? 1: 0);
+		vector<pair<size_t, const IEncodingProperties*> > encodings;
+		Encoder::availableEncodings(back_inserter(encodings));
+		for(vector<pair<size_t, const IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
+			const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
+			if(!name.empty()) {
+				const int item = encodingCombobox.addString(name.c_str());
+				if(item >= 0) {
+					encodingCombobox.setItemData(item, static_cast<DWORD>(encoding->first));
+					if(matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()))
+						encodingCombobox.setCurSel(item);
+				}
+			}
 		}
+
 		if(!newlineCombobox.isWindow()) {
-			encodings.clear();
-			EncodingDetector::availableNames(back_inserter(encodings));
-			for(vector<string>::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
-				const wstring name(asciiEncoder->toUnicode(*encoding));
-				if(!name.empty())
-					encodingCombobox.setItemData(encodingCombobox.addString(name.c_str()),
-						matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()) ? 1: 0);
+			vector<string> detectors;
+			EncodingDetector::availableNames(back_inserter(detectors));
+			for(vector<string>::const_iterator detector(detectors.begin()), e(detectors.end()); detector != e; ++detector) {
+				const wstring name(asciiEncoder->toUnicode(*detector));
+				if(!name.empty()) {
+					const int item = encodingCombobox.addString(name.c_str());
+					encodingCombobox.setItemData(item, 0xFFFFFFFFU);
+					if(matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()))
+						encodingCombobox.setCurSel(item);
+				}
 			}
 		}
 
-		encodingCombobox.setCurSel(0);
-		for(::UINT i = 0, c = encodingCombobox.getCount(); i < c; ++i) {
-			if(encodingCombobox.getItemData(i) == 1) {
-				encodingCombobox.setCurSel(i);
-				break;
-			}
-		}
+		if(encodingCombobox.getCurSel() == CB_ERR)
+			encodingCombobox.setCurSel(0);
 
 		if(newlineCombobox.isWindow()) {
 			switch(format.newline) {
@@ -1015,9 +1020,18 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 			Button readOnlyCheckbox(::GetDlgItem(::GetParent(window), chx1));
 			TextFileFormat& format = *reinterpret_cast<TextFileFormat*>(ofn.lpOFN->lCustData);
 
-			wstring encodingName(encodingCombobox.getText());
-			format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingName);
-			if(Encoder::forName(format.encoding) == 0) {
+			format.encoding.erase();
+			const int encodingCurSel = encodingCombobox.getCurSel();
+			if(encodingCurSel != CB_ERR) {
+				const DWORD id = encodingCombobox.getItemData(encodingCurSel);
+				if(id != 0xFFFFFFFFU)
+					format.encoding = Encoder::forID(id)->properties().name();
+			}
+			if(format.encoding.empty()) {
+				const wstring encodingName(encodingCombobox.getText());
+				format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingName);
+			}
+			if(!Encoder::supports(format.encoding)) {
 				// reject for invalid encoding name
 				Alpha::instance().messageBox(MSG_IO__UNSUPPORTED_ENCODING, MB_OK | MB_ICONEXCLAMATION);
 				::SetWindowLongPtrW(window, DWLP_MSGRESULT, true);
@@ -1260,14 +1274,19 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcscpy(fileName, buffer.textFile().pathName().c_str());
 
 	MIBenum encodingMIB = MIB_UNKNOWN;
-	if(const Encoder* encoder = Encoder::forName(format.encoding))
-		encodingMIB = encoder->mibEnum();
+	{
+		const auto_ptr<Encoder> temp(Encoder::forName(format.encoding));
+		if(temp.get() != 0)
+			encodingMIB = temp->properties().mibEnum();
+	}
 	const bool writeBOM =
 		(encodingMIB == fundamental::UTF_8 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF8", 0)))
 		|| (encodingMIB == fundamental::UTF_16LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16LE", 1)))
 		|| (encodingMIB == fundamental::UTF_16BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16BE", 1)))
-		|| (encodingMIB == extended::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
-		|| (encodingMIB == extended::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
+		|| (encodingMIB == fundamental::UTF_16 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF16", 1)))
+		|| (encodingMIB == standard::UTF_32 && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32", 1)))
+		|| (encodingMIB == standard::UTF_32LE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32LE", 1)))
+		|| (encodingMIB == standard::UTF_32BE && toBoolean(app_.readIntegerProfile(L"File", L"writeBOMAsUTF32BE", 1)));
 
 	bool succeeded = true;
 	IOException::Type errorType;

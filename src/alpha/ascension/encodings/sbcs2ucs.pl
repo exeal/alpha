@@ -6,6 +6,8 @@ use strict;
 use warnings;
 use integer;
 
+print "reading...\n";
+
 my @table;
 while(<STDIN>) {
   $table[hex($1)] = hex($2) if(m/^(0x[0-9A-Fa-f]{2})\s+(0x[0-9A-Fa-f]{4})\s+.*$/);

@@ -21,8 +21,6 @@ namespace alpha {
 			const std::string&			encoding() const throw();
 			ascension::kernel::Newline	newline() const throw();
 		private:
-			std::string	selectedEncoding() const throw();
-		private:
 			bool	onCommand(WORD id, WORD notifyCode, HWND control);
 			void	onInitDialog(HWND focusWindow, bool& focusDefault);
 			void	onOK(bool& continueDialog);
