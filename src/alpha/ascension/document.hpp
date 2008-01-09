@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -639,8 +639,9 @@ namespace ascension {
 			// manipulations
 			Position	erase(const Region& region);
 			Position	erase(const Position& pos1, const Position& pos2);
-			Position	insert(const Position& position, const String& text);
-			Position	insert(const Position& position, const Char* first, const Char* last);
+			Position	insert(const Position& at, const String& text);
+			Position	insert(const Position& at, const Char* first, const Char* last);
+			Position	insert(const Position& at, std::basic_istream<Char>& in);
 			bool		isChanging() const throw();
 			// undo/redo
 			void		clearUndoBuffer();
@@ -797,7 +798,6 @@ namespace ascension {
 		length_t					getNumberOfLines(ForwardIterator first, ForwardIterator last);
 		length_t					getNumberOfLines(const String& text) throw();
 		bool						isLiteralNewline(Newline newline) throw();
-		std::basic_istream<Char>&	readDocumentFromStream(std::basic_istream<Char>& in, Document& document, const Position& at);
 		Position					updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
 		std::basic_ostream<Char>&	writeDocumentToStream(std::basic_ostream<Char>& out,
 										const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
@@ -1289,19 +1289,16 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 inline IDocumentInput* Document::input() const throw() {return input_.get();}
 
 /**
- * Inserts the text at the specified position.
- *
- * The modification flag is set when this method is called. However, if the position is inaccessible area
- * of the document, the insertion is not performed and the modification flag is not changed.
- *
- * This method calls listeners' @c IDocumentListener#documentChanged methods.
- * @param position the position
+ * Inserts the text at the specified position. For details, see the documentation of
+ * @c #insert(const Position&, const Char*, const Char*).
+ * @param at the position
  * @param text the text
- * @return the position to where the caret will move
+ * @return the result position
+ * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
  */
-inline Position Document::insert(const Position& position, const String& text) {
-	return insert(position, text.data(), text.data() + text.length());}
+inline Position Document::insert(const Position& at, const String& text) {
+	return insert(at, text.data(), text.data() + text.length());}
 
 /// Returns true if the document is in changing.
 inline bool Document::isChanging() const throw() {return changing_;}
