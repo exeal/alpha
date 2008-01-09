@@ -792,7 +792,7 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	try {
 		basic_istream<a::Char> in(&sb);
 		in.exceptions(ios_base::badbit);
-		readDocumentFromStream(in, document_, document_.region().beginning());
+		document_.insert(document_.region().beginning(), in);
 	} catch(...) {
 		document_.resetContent();
 		document_.recordOperations(recorded);

@@ -63,32 +63,6 @@ length_t kernel::getAbsoluteOffset(const Document& document, const Position& at,
 }
 
 /**
- * Reads the content of the specified input stream and write into the document.
- * @param in the input stream
- * @param document the document
- * @param at the position to which
- * @return @a in
- * @throw ReadOnlyDocumentException @a document is read only
- * @throw BadPositionException @a at is outside of the document
- */
-basic_istream<Char>& kernel::readDocumentFromStream(basic_istream<Char>& in, Document& document, const Position& at) {
-	if(document.isReadOnly())
-		throw ReadOnlyDocumentException();
-	if(at > document.region().end())
-		throw BadPositionException();
-
-	Position p(at);
-	Char buffer[8192];
-	while(in) {
-		in.read(buffer, countof(buffer));
-		if(static_cast<size_t>(in.gcount()) == 0)
-			break;
-		p = document.insert(p, buffer, buffer + in.gcount());
-	}
-	return in;
-}
-
-/**
  * Adapts the specified position to the document change.
  * @param position the original position
  * @param change the content of the document change
@@ -877,37 +851,80 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 		(*i)->documentChanged(*this, c);
 }
 
+#define ASCENSION_DOCUMENT_INSERT_PROLOGUE()								\
+	if(changing_ || isReadOnly())											\
+		throw ReadOnlyDocumentException();									\
+	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))	\
+		throw BadPositionException();										\
+	else if(isNarrowed() && !accessibleRegion().includes(at))				\
+		/* ignore the insertion position is out of the accessible region */	\
+		return at;															\
+	ModificationGuard guard(*this);											\
+	if(!fireDocumentAboutToBeChanged(DocumentChange(false, Region(at))))	\
+		return at;															\
+	Position resultPosition(at)
+
+#define ASCENSION_DOCUMENT_INSERT_EPILOGUE()														\
+	if(recordingOperations_)																		\
+		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(at, resultPosition))));	\
+	/* notify the change */																			\
+	++revisionNumber_;																				\
+	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));							\
+	setModified();																					\
+/*	assert(length_ == calculateDocumentLength(*this));	/* diagnose length_  */						\
+	return resultPosition
+
 /**
- * Inserts the text into the specified position. For detail, see two-parameter version of this method.
- *
- * This method sets the modification flag and calls the listeners'
- * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
- * @param position the position
+ * Inserts the text into the specified position.
+ * <p>The modification flag is set when this method is called. However, if the position is
+ * inaccessible area of the document, the insertion is not performed and the modification flag is
+ * not changed.</p>
+ * <p>This method sets the modification flag and calls the listeners'
+ * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.</p>
+ * @param at the position
  * @param first the start of the text
  * @param last the end of the text
  * @return the result position
+ * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
  * @throw NullPointerException either @a first or @a last is @c null
  * @throw std#invalid_argument either @a first is greater than @a last
  */
-Position Document::insert(const Position& position, const Char* first, const Char* last) {
-	if(changing_ || isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(first == 0 || last == 0)
-		throw NullPointerException("first and/or last are null.");
+Position Document::insert(const Position& at, const Char* first, const Char* last) {
+	if(first == 0)
+		throw NullPointerException("first");
+	if(last == 0)
+		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	else if(isNarrowed() && !accessibleRegion().includes(position))	// ignore the insertion position is out of the accessible region
-		return position;
-	else if(first == last)	// ignore if the input is empty
-		return position;
-
-	ModificationGuard guard(*this);
-	if(!fireDocumentAboutToBeChanged(DocumentChange(false, Region(position))))
-		return position;
-	return insertText(position, first, last);
+	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
+	resultPosition = insertText(at, first, last);
+	ASCENSION_DOCUMENT_INSERT_EPILOGUE();
 }
 
+/**
+ * Inserts the text provided by the given stream into the specified position. For details, see the
+ * documentation of @c #insert(const Position&, const Char*, const Char*)
+ * @param at the position
+ * @param in the input stream
+ * @return the position to where the caret will move
+ * @throw BadPositionException @a at is outside of the document
+ * @throw ReadOnlyDocumentException the document is read only
+ * @see writeDocumentToStream
+ */
+Position Document::insert(const Position& at, basic_istream<Char>& in) {
+	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
+	Char buffer[8192];
+	while(in) {
+		in.read(buffer, countof(buffer));
+		if(in.gcount() == 0)
+			break;
+		resultPosition = insertText(resultPosition, buffer, buffer + in.gcount());
+	}
+	ASCENSION_DOCUMENT_INSERT_EPILOGUE();
+}
+
+// called by insert(const Position&, const Char*, const Char*) and insert(const Position&, basic_istream<Char>&).
 Position Document::insertText(const Position& position, const Char* first, const Char* last) {
 	Position resultPosition(position.line, 0);
 	const Char* breakPoint = find_first_of(first, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
@@ -964,15 +981,6 @@ Position Document::insertText(const Position& position, const Char* first, const
 			}
 		}
 	}
-
-	if(recordingOperations_)
-		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(position, resultPosition))));
-
-	// notify the change
-	++revisionNumber_;
-	fireDocumentChanged(DocumentChange(false, Region(position, resultPosition)));
-	setModified();
-//	assert(length_ == calculateDocumentLength(*this));	// length_ メンバの診断
 
 	return resultPosition;
 }
