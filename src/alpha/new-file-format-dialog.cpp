@@ -28,8 +28,11 @@ NewFileFormatDialog::NewFileFormatDialog(const string& encoding, Newline newline
 bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
+	const int item = encodingCombobox_.getCurSel();
+	if(item == CB_ERR)
+		return Dialog::onCommand(id, notifyCode, control);
 
-	const auto_ptr<Encoder> encoder(Encoder::forID(encodingCombobox_.getItemData(encodingCombobox_.getCurSel())));
+	const auto_ptr<Encoder> encoder(Encoder::forID(encodingCombobox_.getItemData(item)));
 	const MIBenum mib = (encoder.get() != 0) ? encoder->properties().mibEnum() : MIB_UNKNOWN;
 
 	if(mib == standard::UTF_7 || mib == fundamental::UTF_8
@@ -72,11 +75,14 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 			const int item = encodingCombobox_.addString(name.c_str());
 			if(item >= 0) {
 				encodingCombobox_.setItemData(item, static_cast<DWORD>(encoding->first));
-				if(matchEncodingNames(name.begin(), name.end(), encoding_.begin(), encoding_.end()))
+				const string internalName(encoding->second->name());
+				if(compareEncodingNames(internalName.begin(), internalName.end(), encoding_.begin(), encoding_.end()) == 0)
 					encodingCombobox_.setCurSel(item);
 			}
 		}
 	}
+	if(encodingCombobox_.getCurSel() == CB_ERR)
+		encodingCombobox_.setCurSel(0);
 
 	// [Newline]
 	onCommand(IDC_COMBO_ENCODING, CBN_SELCHANGE, 0);

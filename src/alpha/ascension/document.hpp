@@ -813,7 +813,7 @@ namespace ascension {
 			/// Character type for file names. This is equivalent to
 			/// @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
 			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
-			/// 
+			/// String type for file names.
 			typedef std::basic_string<Char> String;
 
 			/// File I/O exception.
