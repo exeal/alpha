@@ -44,7 +44,8 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 			const int item = encodingList_.addString(name.c_str());
 			if(item >= 0) {
 				encodingList_.setItemData(item, static_cast<DWORD>(encoding->first));
-				if(matchEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()))
+				const string internalName(encoding->second->name());
+				if(compareEncodingNames(internalName.begin(), internalName.end(), result_.begin(), result_.end()) == 0)
 					encodingList_.setCurSel(item);
 			}
 		}
@@ -58,15 +59,14 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 				const int item = encodingList_.addString(name.c_str());
 				if(item >= 0) {
 					encodingList_.setItemData(item, 0xFFFFFFFFU);
-					if(matchEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()))
+					if(compareEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()) == 0)
 						encodingList_.setCurSel(item);
 				}
 			}
 		}
 	}
 
-	if(encodingList_.getCurSel() == LB_ERR)
-		encodingList_.setCurSel(0);
+	encodingList_.setCurSel((encodingList_.getCurSel() != LB_ERR) ? encodingList_.getCurSel() : 0);
 }
 
 /// @see Dialog#onOK

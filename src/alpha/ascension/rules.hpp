@@ -153,7 +153,7 @@ namespace ascension {
 			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
 		};
 
-		/// @c NullTokenScanner returns no tokens. @c #isDone returns always true.
+		/// @c NullTokenScanner returns no tokens. @c NullTokenScanner#isDone returns always true.
 		class NullTokenScanner : virtual public ITokenScanner {
 		public:
 			const text::IdentifierSyntax&	getIdentifierSyntax() const throw();

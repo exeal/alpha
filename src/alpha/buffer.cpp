@@ -975,7 +975,8 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 				const int item = encodingCombobox.addString(name.c_str());
 				if(item >= 0) {
 					encodingCombobox.setItemData(item, static_cast<DWORD>(encoding->first));
-					if(matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()))
+					const string internalName(encoding->second->name());
+					if(compareEncodingNames(internalName.begin(), internalName.end(), format.encoding.begin(), format.encoding.end()) == 0)
 						encodingCombobox.setCurSel(item);
 				}
 			}
@@ -989,7 +990,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 				if(!name.empty()) {
 					const int item = encodingCombobox.addString(name.c_str());
 					encodingCombobox.setItemData(item, 0xFFFFFFFFU);
-					if(matchEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()))
+					if(compareEncodingNames(name.begin(), name.end(), format.encoding.begin(), format.encoding.end()) == 0)
 						encodingCombobox.setCurSel(item);
 				}
 			}
@@ -1031,7 +1032,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 				const wstring encodingName(encodingCombobox.getText());
 				format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(encodingName);
 			}
-			if(!Encoder::supports(format.encoding)) {
+			if(!Encoder::supports(format.encoding) && EncodingDetector::forName(format.encoding) == 0) {
 				// reject for invalid encoding name
 				Alpha::instance().messageBox(MSG_IO__UNSUPPORTED_ENCODING, MB_OK | MB_ICONEXCLAMATION);
 				::SetWindowLongPtrW(window, DWLP_MSGRESULT, true);

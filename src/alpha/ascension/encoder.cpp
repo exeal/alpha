@@ -1,7 +1,7 @@
 /**
  * @file encoder.cpp
  * @author exeal
- * @date 2004-2006
+ * @date 2004-2008
  */
 
 #include "encoder.hpp"
@@ -125,7 +125,7 @@ EncoderFactory* Encoder::find(const string& name) throw() {
 	for(vector<EncoderFactory*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
 		const string canonicalName((*i)->name());
-		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
+		if(compareEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()) == 0)
 			return *i;
 		// test aliases
 		const string aliases((*i)->aliases());
@@ -134,7 +134,7 @@ EncoderFactory* Encoder::find(const string& name) throw() {
 			if(delimiter == string::npos)
 				delimiter = aliases.length();
 			if(delimiter != j) {
-				if(matchEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + delimiter))
+				if(compareEncodingNames(name.begin(), name.end(), aliases.begin() + j, aliases.begin() + delimiter) == 0)
 					return *i;
 				else if(delimiter < aliases.length())
 					++delimiter;
@@ -372,7 +372,7 @@ MIBenum EncodingDetector::detect(const byte* first, const byte* last, ptrdiff_t*
 EncodingDetector* EncodingDetector::forName(const string& name) throw() {
 	for(vector<EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		const string canonicalName((*i)->name());
-		if(matchEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()))
+		if(compareEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()) == 0)
 			return *i;
 	}
 	return 0;
@@ -440,6 +440,8 @@ MIBenum UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff
 	ptrdiff_t bestScore = 0, score;
 	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
 		if(const EncodingDetector* detector = forName(*name)) {
+			if(detector == this)
+				continue;
 			const MIBenum detectedEncoding = detector->detect(first, last, &score);
 			if(score > bestScore) {
 				result = detectedEncoding;
@@ -493,6 +495,7 @@ namespace {
 		Installer() throw() {
 			Encoder::registerFactory(US_ASCII);
 			Encoder::registerFactory(ISO_8859_1);
+			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UniversalDetector));
 		}
 	} unused;
 

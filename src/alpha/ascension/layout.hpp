@@ -242,10 +242,6 @@ namespace ascension {
 
 		class TextRenderer;
 
-		/**
-		 * Renders special characters don't have visible glyphs.
-		 * @see DefaultSpecialCharacterRenderer
-		 */
 		class ISpecialCharacterRenderer {
 		public:
 			/// Destructor.
@@ -321,7 +317,6 @@ namespace ascension {
 			friend class TextRenderer;
 		};
 
-		/// Default implementation of @c ISpecialCharacterRenderer interface.
 		class DefaultSpecialCharacterRenderer : virtual public ISpecialCharacterRenderer, virtual public IFontSelectorListener {
 		public:
 			// constructors
@@ -394,7 +389,7 @@ namespace ascension {
 				LEADING,	///< Leading edge of a character.
 				TRAILING	///< Trailing edge of a character.
 			};
-			/// Used for @c #draw methods.
+			/// Used for @c LineLayout#draw methods.
 			struct Selection {
 				MANAH_UNASSIGNABLE_TAG(Selection);
 			public:

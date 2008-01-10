@@ -175,8 +175,10 @@ namespace ascension {
 		 * <a href="http://www.unicode.org/reports/tr22/">UTS #22: CharMapML</a> 1.4 Charset Alias
 		 * Matching.
 		 */
-		template<typename CharacterSequence1, typename CharacterSequence2> inline bool
-		matchEncodingNames(CharacterSequence1 first1, CharacterSequence1 last1, CharacterSequence2 first2, CharacterSequence2 last2) {
+		template<typename CharacterSequence1, typename CharacterSequence2>
+		inline int compareEncodingNames(
+				CharacterSequence1 first1, CharacterSequence1 last1,
+				CharacterSequence2 first2, CharacterSequence2 last2) {
 			const std::locale& lc = std::locale::classic();
 			bool precededByDigit[2] = {false, false};
 			while(first1 != last1 && first2 != last2) {
@@ -185,13 +187,13 @@ namespace ascension {
 				else if(*first2 == '0' && !precededByDigit[1]) ++first2;
 				else if(!std::isalnum(*first2, lc)) {++first2; precededByDigit[1] = false;}
 				else {
-					if(std::tolower(*first1, lc) != std::tolower(*first2, lc))
-						return false;
+					if(const int d = std::tolower(*first1, lc) - std::tolower(*first2, lc)) return d;
 					precededByDigit[0] = std::isdigit(*(first1++), lc);
 					precededByDigit[1] = std::isdigit(*(first2++), lc);
 				}
 			}
-			return first1 == last1 && first2 == last2;
+			if(first1 != last1) return 1;
+			else return (first2 == last2) ? 0 : -1;
 		}
 
 		MIBenum	convertCCSIDtoMIB(uint ccsid) throw();

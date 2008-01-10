@@ -92,7 +92,7 @@ void MRUManager::save() {
 		swprintf(keyName, L"pathName(%u)", index);
 		app.writeStringProfile(L"MRU", keyName, i->c_str());
 	}
-	app.writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
+//	app.writeStringProfile(L"MRU", keyName, L"");	// リストの終端を表す
 }
 
 /// Sets the maximum number of items.

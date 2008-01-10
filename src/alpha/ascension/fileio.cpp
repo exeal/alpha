@@ -3,6 +3,7 @@
  * Implements @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2007 (separated from document.cpp)
+ * @date 2007-2008
  */
 
 #include "document.hpp"
