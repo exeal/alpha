@@ -946,7 +946,6 @@ namespace ascension {
 					const byte* current;
 				} inputMapping_;
 				std::auto_ptr<encoding::Encoder> encoder_;
-				encoding::Encoder::State encodingState_;
 				ascension::Char ucsBuffer_[8192];
 			};
 

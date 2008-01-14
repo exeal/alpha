@@ -254,63 +254,76 @@ namespace ascension {
 		class Encoder {
 			MANAH_NONCOPYABLE_TAG(Encoder);
 		public:
-			/**
-			 * A value represents intermediate states of a encoder. The sematics depend on each
-			 * specific encoder implementations. But the all members are filled with zero initially.
-			 */
-			struct State {
-				/// Implementation dependent data.
-				std::size_t states[4];
-				/// Constructor initializes the value with zero.
-				State() throw() {std::memset(states, 0, sizeof(std::size_t) * countof(states));}
-			};
-
 			/// Result of conversion.
 			enum Result {
-				/// The conversion fully succeeded. If @a fromNext parameter of the conversion
-				/// method is less @a fromEnd, more input is required.
+				/**
+				 * The conversion fully succeeded. If @a fromNext parameter of the conversion
+				 * method is less @a fromEnd, more input is required.
+				 */
 				COMPLETED,
-				/// The conversion partially succeeded because the destination buffer was not large
-				/// enough.
+				/**
+				 * The conversion partially succeeded because the destination buffer was not large
+				 * enough.
+				 */
 				INSUFFICIENT_BUFFER,
-				/// The conversion partially succeeded because encounted an unmappable character.
-				/// @c fromNext parameter of the conversion method should addresses the unmappable
-				/// character. If either @c REPLACE_UNMAPPABLE_CHARACTER or
-				/// @c IGNORE_UNMAPPABLE_CHARACTER is set, this value never be returned.
+				/**
+				 * The conversion partially succeeded because encounted an unmappable character.
+				 * @c fromNext parameter of the conversion method should addresses the unmappable
+				 * character. If either @c REPLACE_UNMAPPABLE_CHARACTER or
+				 * @c IGNORE_UNMAPPABLE_CHARACTER is set, this value never be returned.
+				 * @see #SubstitutionPolicy
+				 */
 				UNMAPPABLE_CHARACTER,
-				/// The conversion partially succeeded because detected malformed input.
-				/// @c fromNext parameter of the conversion method should addresses the unmappable
-				/// character. @c Encoder#fromUnicode should not return this value.
+				/**
+				 * The conversion partially succeeded because detected malformed input.
+				 * @c fromNext parameter of the conversion method should addresses the unmappable
+				 * character. @c Encoder#fromUnicode should not return this value.
+				 */
 				MALFORMED_INPUT
 			};
 
-			/// Conversion policies.
-			/// @see #policy, #setPolicy
-			enum Policy {
-				/// Nothing.
-				NO_POLICY,
-//				NO_UNICODE_BYTE_ORDER_SIGNATURE	= 0x8000,
-				/// Replaces a unmappable character with default replacement character.
+			/**
+			 * Specifies how to handle unmappable bytes/characters.
+			 * @see #substitutionPolicy, #setSubstitutionPolicy
+			 */
+			enum SubstitutionPolicy {
+				/// Aborts with @c UNMAPPABLE_CHARACTER return value.
+				DONT_SUBSTITUTE,
+				/// Replaces a unmappable byte/character with replacement character/byte.
 				REPLACE_UNMAPPABLE_CHARACTER,
-				/// Skips (ignores) unmappable characters.
+				/// Skips (ignores) unmappable bytes/characters.
 				IGNORE_UNMAPPABLE_CHARACTER
 			};
+
+			/// Miscellaneous conversion flag.
+			enum Flag {
+				/**
+				 * Indicates that @a fromEnd parameter of @c Encoder#fromUnicode or
+				 * @c Encoder#toUnicode is not the true end of the input sequence.
+				 */
+				CONTINUOUS_INPUT = 1
+			};
+
+			/// A set of @c Flag values.
+			typedef manah::Flags<Flag> Flags;
 		public:
 			virtual ~Encoder() throw();
 			// attributes
-			Policy								policy() const throw();
+			const Flags&						flags() const throw();
 			virtual const IEncodingProperties&	properties() const throw() = 0;
-			Encoder&							setPolicy(Policy newPolicy);
-			// operations
-			bool		canEncode(CodePoint c) const;
-			bool		canEncode(const Char* first, const Char* last) const;
-			bool		canEncode(const String& s) const;
-			Result		fromUnicode(byte* to, byte* toEnd, byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext, State* state = 0) const;
-			std::string	fromUnicode(const String& from) const;
-			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const byte* from, const byte* fromEnd, const byte*& fromNext, State* state = 0) const;
-			String		toUnicode(const std::string& from) const;
+			virtual Encoder&					resetDecodingState() throw();
+			virtual Encoder&					resetEncodingState() throw();
+			Encoder&							setFlags(const Flags& newFlags);
+			Encoder&							setSubstitutionPolicy(SubstitutionPolicy newPolicy);
+			SubstitutionPolicy					substitutionPolicy() const throw();
+			// conversion
+			bool		canEncode(CodePoint c);
+			bool		canEncode(const Char* first, const Char* last);
+			bool		canEncode(const String& s);
+			Result		fromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
+			std::string	fromUnicode(const String& from);
+			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
+			String		toUnicode(const std::string& from);
 			// factory
 			static std::auto_ptr<Encoder>	forCCSID(int ccsid) throw();
 			static std::auto_ptr<Encoder>	forCPGID(int cpgid) throw();
@@ -334,11 +347,10 @@ namespace ascension {
 			 * @param[in] from the beginning of the buffer to be converted
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @param[in,out] state the conversion state. may be @c null
 			 * @return the result of the conversion
 			 */
 			virtual Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const = 0;
+				const Char* from, const Char* fromEnd, const Char*& fromNext) = 0;
 			/**
 			 * Converts the given string from the native encoding into UTF-16.
 			 * @param[out] to the beginning of the destination buffer
@@ -347,16 +359,16 @@ namespace ascension {
 			 * @param[in] from the beginning of the buffer to be converted
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @param[in,out] state the conversion state. may be @c null
 			 * @return the result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const = 0;
+				const byte* from, const byte* fromEnd, const byte*& fromNext) = 0;
 		private:
 			static EncoderFactory* find(MIBenum mib) throw();
 			static EncoderFactory* find(const std::string& name) throw();
 			static std::vector<EncoderFactory*>& registry();
-			Policy policy_;
+			SubstitutionPolicy substitutionPolicy_;
+			Flags flags_;
 		};
 
 		/// A factory class creates @c Encoder instances.
@@ -437,12 +449,31 @@ namespace ascension {
 				const byte UNMAPPABLE_BYTE = 0x00;
 
 				/// A mapping table from bytes into characters.
+				/// @see BidirectionalMap
 				class ByteMap {
 				public:
+					/// Constructor takes a 16×16-character array defines character-to-byte mapping.
 					explicit ByteMap(const Char** values) : values_(values) {}
+					/// Returns a character corresponds to a byte.
 					Char operator[](byte c) const throw() {return values_[c >> 4][c & 0xF];}
 				private:
 					const Char** values_;
+				};
+
+				/// Provides bidirectional mapping between a byte and a character.
+				/// @see ByteMap
+				class BidirectionalMap {
+				public:
+					BidirectionalMap(const ByteMap& byteMap) throw();
+					~BidirectionalMap() throw();
+					byte	toByte(Char c) const;
+					Char	toCharacter(byte c) const;
+				private:
+					void	buildUnicodeToByteTable();
+				private:
+					const ByteMap byteToUnicode_;
+					byte* unicodeToByte_[0x100];
+					static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
 				};
 
 				/// Generates 16-character sequence.
@@ -503,9 +534,9 @@ namespace ascension {
 					ISO_IR_C0_LINE0, ISO_IR_C0_LINE1, Line2, Line3, Line4, Line5, Line6, Line7,
 					ISO_IR_C1_LINE8, ISO_IR_C1_LINE9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
-				/// Generates 16×16 character table compatible with ISO 646.
+				/// Generates 16×16 character table compatible with ISO 8859.
 				template<typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
-				class ISO646CompatibleByteTable : public ISOIRByteTable<
+				class ISO8859CompatibleByteTable : public ISOIRByteTable<
 					ByteLine<0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F>,
 					ByteLine<0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F>,
 					ByteLine<0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F>,
@@ -582,8 +613,11 @@ namespace ascension {
 		template<typename OutputIterator> inline void Encoder::availableEncodings(OutputIterator out) {
 			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out) *out = std::make_pair<std::size_t, const IEncodingProperties*>(i, registry()[i]);}
 
-		/// Returns the conversion policy.
-		inline Encoder::Policy Encoder::policy() const throw() {return policy_;}
+		/// Returns the miscellaneous flags.
+		inline const Encoder::Flags& Encoder::flags() const throw() {return flags_;}
+
+		/// Returns the substitution policy.
+		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const throw() {return substitutionPolicy_;}
 
 		/**
 		 * Returns names for all available encoding detectors.
@@ -591,6 +625,12 @@ namespace ascension {
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
 			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = (*i)->name();}
+
+		/// Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if umappable.
+		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const throw() {return unicodeToByte_[c >> 8][mask8Bit(c)];}
+
+		/// Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if umappable.
+		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const throw() {return byteToUnicode_[c];}
 
 		template<
 			Char c0, Char c1, Char c2, Char c3, Char c4, Char c5, Char c6, Char c7,

@@ -88,7 +88,8 @@ namespace {
 } // namespace @0
 
 namespace {
-	Position getForwardCharacterPosition(const Document& document, const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
+	Position getForwardCharacterPosition(const Document& document,
+			const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
 		if(offset == 0)
 			return position;
 		else if(cu == EditPoint::UTF16_CODE_UNIT) {
@@ -110,7 +111,8 @@ namespace {
 		}
 		throw invalid_argument("unknown character unit.");
 	}
-	Position getBackwardCharacterPosition(const Document& document, const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
+	Position getBackwardCharacterPosition(const Document& document,
+			const Position& position, EditPoint::CharacterUnit cu, length_t offset = 1) {
 		assert(cu != EditPoint::DEFAULT_UNIT);
 		if(offset == 0)
 			return position;
@@ -229,8 +231,11 @@ void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit
 	verifyDocument();
 	if(document()->isReadOnly() || length == 0)
 		return;
+	if(cu == DEFAULT_UNIT)
+		cu = characterUnit();
 	erase((length > 0) ?
-		getForwardCharacterPosition(*document(), *this, characterUnit(), length) : getBackwardCharacterPosition(*document(), *this, cu, -length));
+		getForwardCharacterPosition(*document(), *this, characterUnit(), length)
+		: getBackwardCharacterPosition(*document(), *this, cu, -length));
 }
 
 /**
