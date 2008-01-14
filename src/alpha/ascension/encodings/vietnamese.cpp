@@ -254,9 +254,9 @@ Encoder::Result VIQREncoder::doFromUnicode(byte* to, byte* toEnd,
 	for(; to < toEnd && from < fromEnd; ++from) {
 		byte viscii = table_->toByte(*from);
 		if(viscii == UNMAPPABLE_BYTE && *from != UNMAPPABLE_BYTE) {
-			if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
-			else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				viscii = properties().substitutionCharacter();
 			else {
 				toNext = to;
@@ -362,6 +362,10 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 			if(mnemonic != 0x80) {
 				// ... got the base character
 				if(from + 1 == fromEnd) {
+					if(!flags().has(CONTINUOUS_INPUT)) {
+						*to++ = *from++;
+						break;
+					}
 					toNext = to;
 					fromNext = from - (escaped ? 1 : 0);
 					return COMPLETED;	// more input is required
@@ -376,6 +380,10 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 					continue;
 				}
 				if(from + 2 == fromEnd) {
+					if(!flags().has(CONTINUOUS_INPUT)) {
+						*to++ = STATE_TABLE[state2][NONE];
+						break;
+					}
 					toNext = to;
 					fromNext = from - (escaped ? 1 : 0);
 					return COMPLETED;	// more input is required
