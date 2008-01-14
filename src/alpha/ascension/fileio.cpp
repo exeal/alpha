@@ -429,6 +429,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 	sync();
 #ifdef ASCENSION_WINDOWS
 	if(inputMapping_.first != 0) {
+		::UnmapViewOfFile(inputMapping_.first);
 		::CloseHandle(fileMapping_);
 		inputMapping_.first = 0;
 		fileMapping_ = 0;
@@ -499,7 +500,7 @@ int TextFileStreamBuffer::sync() {
 
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
-				nativeBuffer, endof(nativeBuffer), toNext, pbase(), fromEnd, fromNext, &encodingState_);
+				nativeBuffer, endof(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw IOException(IOException::UNMAPPABLE_CHARACTER);
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
@@ -536,8 +537,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 	a::Char* toNext;
 	const byte* fromNext;
-	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_),
-			toNext, inputMapping_.current, inputMapping_.last, fromNext, &encodingState_)) {
+	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);
 	case Encoder::MALFORMED_INPUT:

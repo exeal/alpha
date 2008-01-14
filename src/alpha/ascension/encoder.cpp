@@ -37,30 +37,66 @@ MIBenum UnsupportedEncodingException::mibEnum() const throw() {
  * preferred in many cases. Ascension provides a collection of @c Encoder classes to help with
  * converting non-Unicode formats to/from Unicode.
  *
- * Ascension provides @c Encoder classes implement the encodings in three groups:
- * <dl>
- *   <dt>@c fundamental</dt>
- *   <dd>The most fundamental encodings including US-ASCII, ISO-8859-1, UTF-8 and UTF-16.</dd>
- *   <dt>@c standard</dt>
- *   <dd>Major encodings including: most of ISO-8859-x, KOI-8, most of Windows-125x, ... These are
- *     not available if @c ASCENSION_NO_STANDARD_ENCODINGS symbol is defined.</dd>
- *   <dt>@c extended</dt>
- *   <dd>Other minorities. Not available if @c ASCENSION_NO_EXTENDED_ENCODINGS symbol is defined.</dd>
- * </dl>
+ * You can convert a native encoded string into Unicode by using @c #toUnicode method.
  *
- * <del>In addition, the encodings supported by the system are available if the target is Win32.</del>
+ * @code
+ * const std::string native(...);
+ * std::auto_ptr<Encoder> encoder(Encoder::forName("Shift_JIS"));
+ * if(encoder->get() != 0) {
+ *   const String unicode(encoder->toUnicode(native));
+ *   ...
+ * }
+ * @endcode
+ *
+ * Converting a string from Unicode into native encoded can be done by @c #fromUnicode method.
  *
  * @note This class is not compatible with C++ standard @c std#codecvt template class.
  *
- * <h3>Making user-defined @c Encoder classes</h3>
+ * <h3>Substitution Policy</h3>
+ *
+ * When an encoder encounters unmappable byte/character, its behavior depends on the substitution
+ * policy. Available policies are enumerated by @c #SubstitutionPolicy. You can get the current
+ * substitution policy by @c #substitutionPolicy, and can set by @c #setSubstitutionPolicy. Default
+ * policy is @c #SubstitutionPolicy#DONT_SUBSTITUTE.
+ *
+ * If you use @c #SubstitutionPolicy#DONT_SUBSTITUTE, the encoder returns @c UNMAPPABLE_CHARACTER
+ * when encountered an unmappable byte/character. In this case, @a fromNext parameter of the
+ * conversion method will address the unmappable byte/character.
+ *
+ * Substitution policy can't handle malformed input. See the next section.
+ *
+ * <h3>Malformed Input</h3>
+ *
+ * When an encoder encounters illegal byte/character sequence (malformed input), returns
+ * @c MALFORMED_INPUT. This behavior can't be changed by the caller. In this case, @a fromNext
+ * parameter of the conversion method will address the unmappable byte/character.
+ *
+ * <h3>Intermediate Conversion State of Encoder</h3>
+ *
+ * An encoder may have the own conversion state to implement stateful encoding. For streaming
+ * operation (ex. receiving data over a network), the conversion methods of @c Encoder accept a
+ * part of the entire input. An encoder keeps its own conversion state between the several
+ * invocations of the conversion methods. The following illustrates the case of ISO-2022-JP:
+ *
+ * @code
+ * std::auto_ptr<Encoder> encoder = Encoder::forName("ISO-2022-JP");
+ *
+ * // give an escape sequence to switch to JIS X 0208:1983
+ * encoder->toUnicode("\x1B$B"); 
+ *
+ * // this generates two kanji from 4 bytes
+ * const String s = encoder->toUnicode("4A;z");
+ * @endcode
+ *
+ * Conversion states can be cleared by @c #resetDecodingState and @c #resetEncodingState.
+ *
+ * <h3>Making User-Defined @c Encoder Classes</h3>
  *
  * You can create and add your own @c Encoder class.
- *
- * <h3>Important protocol of @c #fromUnicode and @c #toUnicode</h3>
  */
 
 /// Protected default constructor.
-Encoder::Encoder() throw() : policy_(NO_POLICY) {
+Encoder::Encoder() throw() : substitutionPolicy_(DONT_SUBSTITUTE) {
 }
 
 /// Destructor.
@@ -68,12 +104,13 @@ Encoder::~Encoder() throw() {
 }
 
 /**
- * Returns true if the given character can be fully encoded with this encoding.
+ * Returns true if the given character can be fully encoded with this encoding. This calls
+ * @c #resetEncodingState method.
  * @param c the code point of the character
  * @return succeeded or not
  * @throw std#invalid_argument @a c is not a Unicode scalar value
  */
-bool Encoder::canEncode(CodePoint c) const {
+bool Encoder::canEncode(CodePoint c) {
 	if(!text::isScalarValue(c))
 		throw invalid_argument("the code point is not a scalar value.");
 	Char temp[2];
@@ -81,12 +118,13 @@ bool Encoder::canEncode(CodePoint c) const {
 }
 
 /**
- * Returns true if the given string can be fully encoded with this encoding.
+ * Returns true if the given string can be fully encoded with this encoding. This calls
+ * @c #resetEncodingState method.
  * @param first the beginning of the string
  * @param last the end of the string
  * @return succeeded or not
  */
-bool Encoder::canEncode(const Char* first, const Char* last) const {
+bool Encoder::canEncode(const Char* first, const Char* last) {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -98,16 +136,18 @@ bool Encoder::canEncode(const Char* first, const Char* last) const {
 	manah::AutoBuffer<byte> temp(new byte[bytes]);
 	const Char* fromNext;
 	byte* toNext;
+	resetEncodingState();
 	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext) == COMPLETED;
 }
 
 
 /**
- * Returns true if the given string can be fully encoded with this encoding.
+ * Returns true if the given string can be fully encoded with this encoding. This calls
+ * @c #resetEncodingState method.
  * @param s the string
  * @return succeeded or not
  */
-bool Encoder::canEncode(const String& s) const {
+bool Encoder::canEncode(const String& s) {
 	return canEncode(s.data(), s.data() + s.length());
 }
 
@@ -197,11 +237,10 @@ auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) throw() {
  * @param[in] from the beginning of the buffer to be converted
  * @param[in] fromEnd the end of the buffer to be converted
  * @param[in] fromNext points to the first unconverted character after the conversion
- * @param[in,out] state the conversion state. can be @c null
  * @return the result of the conversion
  */
-Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd, byte*& toNext,
-		const Char* from, const Char* fromEnd, const Char*& fromNext, State* state /* = 0*/) const {
+Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
+		byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -210,20 +249,22 @@ Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd, byte*& toNext,
 		throw invalid_argument("from > fromEnd");
 	toNext = 0;
 	fromNext = 0;
-	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext, state);
+	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext);
 }
 
 /**
- * Converts the given string from UTF-16 into the native encoding.
+ * Converts the given string from UTF-16 into the native encoding. This calls
+ * @c #resetEncodingState method.
  * @param from the string to be converted
  * @return the converted string or an empty if encountered unconvertible character
  */
-string Encoder::fromUnicode(const String& from) const {
+string Encoder::fromUnicode(const String& from) {
 	size_t bytes = properties().maximumNativeBytes() * from.length();
 	manah::AutoBuffer<byte> temp(new byte[bytes]);
 	const Char* fromNext;
 	byte* toNext;
 	Result result;
+	resetEncodingState();
 	while(true) {
 		result = fromUnicode(temp.get(), temp.get() + bytes, toNext, from.data(), from.data() + from.length(), fromNext);
 		if(result == COMPLETED)
@@ -260,15 +301,35 @@ vector<EncoderFactory*>& Encoder::registry() {
 }
 
 /**
+ * Resets the intermediate conversion state for @c #toUnicode to the default. Derived class
+ * implements stateful encoding should override this. Default implementation does nothing.
+ * @return the encoder
+ * @see #resetEncodingState
+ */
+Encoder& Encoder::resetDecodingState() throw() {
+	return *this;
+}
+
+/**
+ * Resets the intermediate conversion state for @c #fromUnicode to the default. Derived class
+ * implements stateful encoding should override this. Default implementation does nothing.
+ * @return the encoder
+ * @see #resetDecodingState
+ */
+Encoder& Encoder::resetEncodingState() throw() {
+	return *this;
+}
+
+/**
  * Sets the conversion policy.
  * @param newPolicy the new policy
  * @return this encoder
  * @throw std#invalid_argument @a newPolicy is invalid
  */
-Encoder& Encoder::setPolicy(Policy newPolicy) {
-	if(newPolicy < NO_POLICY || newPolicy > IGNORE_UNMAPPABLE_CHARACTER)
+Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
+	if(newPolicy < DONT_SUBSTITUTE || newPolicy > IGNORE_UNMAPPABLE_CHARACTER)
 		throw invalid_argument("the given policy is not supported.");
-	policy_ = newPolicy;
+	substitutionPolicy_ = newPolicy;
 	return *this;
 }
 
@@ -290,11 +351,10 @@ bool Encoder::supports(const string& name) throw() {
  * @param[in] from the beginning of the buffer to be converted
  * @param[in] fromEnd the end of the buffer to be converted
  * @param[in] fromNext points to the first unconverted character after the conversion
- * @param[in,out] state the conversion state. can be @c null
  * @return the result of the conversion
  */
-Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
-		const byte* from, const byte* fromEnd, const byte*& fromNext, State* state /* = 0*/) const {
+Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
+		Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -303,7 +363,7 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
 		throw invalid_argument("from > fromEnd");
 	toNext = 0;
 	fromNext = 0;
-	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext, state);
+	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext);
 }
 
 /**
@@ -311,7 +371,7 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd, Char*& toNext,
  * @param from the string to be converted
  * @return the converted string or an empty if encountered unconvertible character
  */
-String Encoder::toUnicode(const string& from) const {
+String Encoder::toUnicode(const string& from) {
 	size_t chars = properties().maximumUCSLength() * from.length();
 	manah::AutoBuffer<Char> temp(new Char[chars]);
 	const byte* fromNext;
@@ -473,9 +533,9 @@ namespace {
 			InternalEncoder(ulong mask, const IEncodingProperties& properties) throw() : mask_(mask), props_(properties) {}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
+				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+				const byte* from, const byte* fromEnd, const byte*& fromNext);
 			const IEncodingProperties&	properties() const throw() {return props_;}
 		private:
 			const ulong mask_;
@@ -500,12 +560,12 @@ namespace {
 	} unused;
 
 	Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doFromUnicode(
-			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
-				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 					*to = properties().substitutionCharacter();
 				else {
 					toNext = to;
@@ -521,12 +581,12 @@ namespace {
 	}
 
 	Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doToUnicode(
-			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
-				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 					*to = REPLACEMENT_CHARACTER;
 				else {
 					toNext = to;
@@ -603,75 +663,81 @@ byte EncoderFactoryBase::substitutionCharacter() const throw() {
 }
 
 
+// implementation.sbcs.BidirectionalMap /////////////////////////////////////
+
+const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+/**
+ * Constructor.
+ * @param byteToUnicodeTable the table defines byte-to-unicode mapping
+ */
+sbcs::BidirectionalMap::BidirectionalMap(const ByteMap& byteToUnicodeTable) throw() : byteToUnicode_(byteToUnicodeTable) {
+	fill_n(unicodeToByte_, countof(unicodeToByte_), static_cast<byte*>(0));
+	buildUnicodeToByteTable();	// eager?
+}
+
+/// Destructor.
+sbcs::BidirectionalMap::~BidirectionalMap() throw() {
+	for(size_t i = 0; i < countof(unicodeToByte_); ++i) {
+		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
+			delete[] unicodeToByte_[i];
+	}
+}
+
+void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
+	assert(unicodeToByte_[0] == 0);
+	fill_n(unicodeToByte_, countof(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
+	for(int i = 0x00; i < 0xFF; ++i) {
+		const Char ucs = byteToUnicode_[i];
+		byte*& p = unicodeToByte_[ucs >> 8];
+		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {
+			p = new byte[0x100];
+			fill_n(p, 0x100, UNMAPPABLE_BYTE);
+		}
+		p[mask8Bit(ucs)] = static_cast<byte>(i);
+	}
+}
+
+
 // implementation.sbcs.SingleByteEncoderFactory /////////////////////////////
 
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
 		explicit SingleByteEncoder(const sbcs::ByteMap& table, const IEncodingProperties& properties) throw();
-		~SingleByteEncoder() throw();
 	private:
-		void	buildUnicodeToNativeTable();
 		// Encoder
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-			const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
+					const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+					const byte* from, const byte* fromEnd, const byte*& fromNext);
 		const IEncodingProperties&	properties() const throw() {return props_;}
 	private:
-		const sbcs::ByteMap& nativeToUnicode_;
+		const sbcs::BidirectionalMap table_;
 		const IEncodingProperties& props_;
-		byte* unicodeToNative_[0x100];
-		static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
 	};
 
-	const byte SingleByteEncoder::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	};
-
-	SingleByteEncoder::SingleByteEncoder(const sbcs::ByteMap& table, const IEncodingProperties& properties) throw() : nativeToUnicode_(table), props_(properties) {
-		fill_n(unicodeToNative_, countof(unicodeToNative_), static_cast<byte*>(0));
-	}
-	
-	SingleByteEncoder::~SingleByteEncoder() throw() {
-		for(size_t i = 0; i < countof(unicodeToNative_); ++i) {
-			if(unicodeToNative_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
-				delete[] unicodeToNative_[i];
-		}
+	SingleByteEncoder::SingleByteEncoder(const sbcs::ByteMap& table,
+			const IEncodingProperties& properties) throw() : table_(table), props_(properties) {
 	}
 
-	void SingleByteEncoder::buildUnicodeToNativeTable() {
-		assert(unicodeToNative_[0] == 0);
-		fill_n(unicodeToNative_, countof(unicodeToNative_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
-		unicodeToNative_[0] = new byte[0x100];
-		for(int i = 0x00; i < 0xFF; ++i) {
-			const Char ucs = nativeToUnicode_[i];
-			byte*& p = unicodeToNative_[ucs >> 8];
-			if(p == 0) {
-				p = new byte[0x100];
-				fill_n(p, 0x100, sbcs::UNMAPPABLE_BYTE);
-			}
-			p[mask8Bit(ucs)] = static_cast<byte>(i);
-		}
-	}
-
-	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-			const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
-		if(unicodeToNative_[0] == 0)
-			const_cast<SingleByteEncoder*>(this)->buildUnicodeToNativeTable();
+	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd,
+			byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
-			*to = unicodeToNative_[*from >> 8][mask8Bit(*from)];
+			*to = table_.toByte(*from);
 			if(*to == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
-				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 					*to = properties().substitutionCharacter();
 				else {
 					toNext = to;
@@ -685,14 +751,14 @@ namespace {
 		return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 	}
 
-	Encoder::Result SingleByteEncoder::doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+	Encoder::Result SingleByteEncoder::doToUnicode(Char* to, Char* toEnd,
+			Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
-			*to = nativeToUnicode_[*from];
+			*to = table_.toCharacter(*from);
 			if(*to == REPLACEMENT_CHARACTER) {
-				if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 					--to;
-				else if(policy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;

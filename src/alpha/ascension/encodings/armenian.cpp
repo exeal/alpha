@@ -29,9 +29,9 @@ namespace {
 			explicit InternalEncoder(const IEncodingProperties& properties) throw() : props_(properties) {}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-				const Char* from, const Char* fromEnd, const Char*& fromNext, State* state) const;
+				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const byte* from, const byte* fromEnd, const byte*& fromNext, State* state) const;
+				const byte* from, const byte* fromEnd, const byte*& fromNext);
 			const IEncodingProperties& properties() const throw() {return props_;}
 		private:
 			const IEncodingProperties& props_;
@@ -187,7 +187,7 @@ template<> ARMSCII<8>::ARMSCII() : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "A
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -231,7 +231,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0xA1)
 			*to = *from;
@@ -259,7 +259,7 @@ template<> ARMSCII<7>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-7", MIB_O
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -301,7 +301,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
@@ -327,7 +327,7 @@ template<> ARMSCII<0x8A>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-8A", M
 }
 
 template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext, State*) const {
+		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
@@ -369,7 +369,7 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext, State*) const {
+		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
