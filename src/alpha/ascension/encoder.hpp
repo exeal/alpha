@@ -1,7 +1,7 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2007
+ * @date 2004-2008
  */
 
 #ifndef ASCENSION_ENCODER_HPP
@@ -466,8 +466,8 @@ namespace ascension {
 				public:
 					BidirectionalMap(const ByteMap& byteMap) throw();
 					~BidirectionalMap() throw();
-					byte	toByte(Char c) const;
-					Char	toCharacter(byte c) const;
+					byte	toByte(Char c) const throw();
+					Char	toCharacter(byte c) const throw();
 				private:
 					void	buildUnicodeToByteTable();
 				private:

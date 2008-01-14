@@ -923,7 +923,8 @@ namespace ascension {
 				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
 				TextFileStreamBuffer(const String& fileName, std::ios_base::openmode mode,
-					const std::string& encoding, encoding::Encoder::Policy encodingPolicy, bool writeByteOrderMark);
+					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+					bool writeByteOrderMark);
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
 				std::string encoding() const throw();
@@ -962,9 +963,12 @@ namespace ascension {
 
 				/// Option flags for @c FileBinder#write and @c FileBinder#writeRegion.
 				struct WriteParameters {
-					std::string encoding;						///< The the encoding name.
-					Newline newline;							///< The newline.
-					encoding::Encoder::Policy encodingPolicy;	///< The policy of encodings.
+					/// The the encoding name.
+					std::string encoding;
+					/// The newline.
+					Newline newline;
+					/// The substituion policy of encoding.
+					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy;
 					enum Option {
 						WRITE_UNICODE_BYTE_ORDER_SIGNATURE	= 0x01,	///< Writes a UTF byte order signature.
 						BY_COPYING							= 0x02,	///< Not implemented.
@@ -1001,7 +1005,7 @@ namespace ascension {
 				// I/O
 				void	close();
 				bool	open(const String& fileName, const LockMode& lockMode,
-							const std::string& encoding, encoding::Encoder::Policy encodingPolicy,
+							const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 							IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				bool	write(const String& fileName, const WriteParameters& params);
 				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);

@@ -311,12 +311,13 @@ namespace {
  * @param fileName the name of the file
  * @param mode the file open mode. must be either @c std#ios_base#in or @c std#ios_base#out
  * @param encoding the file encoding or auto detection name
- * @param encodingPolicy the policy about encoding conversion
+ * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occured
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
-		const string& encoding, Encoder::Policy encodingPolicy, bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
+		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+		bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
 	if(!fileExists(fileName.c_str()))
 		throw IOException(IOException::FILE_NOT_FOUND);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
@@ -413,7 +414,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		setp(ucsBuffer_, endof(ucsBuffer_));
 	} else
 		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
-	encoder_->setPolicy(encodingPolicy);
+	encoder_->setSubstitutionPolicy(encodingSubstitutionPolicy);
 }
 
 /// Destructor.
@@ -450,6 +451,8 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 		return this;
 	}
 #endif
+	encoder_->resetEncodingState();
+	encoder_->resetDecodingState();
 	return 0;
 }
 
@@ -495,8 +498,9 @@ int TextFileStreamBuffer::sync() {
 		byte* toNext;
 		const a::Char* fromNext;
 		byte nativeBuffer[countof(ucsBuffer_)];
+		encoder_->setFlags(encoder_->flags() & ~Encoder::CONTINUOUS_INPUT);
 		while(true) {
-			const Char* const fromEnd = pptr();
+			const a::Char* const fromEnd = pptr();
 
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
@@ -537,6 +541,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 	a::Char* toNext;
 	const byte* fromNext;
+	encoder_->setFlags(encoder_->flags() & ~Encoder::CONTINUOUS_INPUT);
 	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);
@@ -774,20 +779,20 @@ String TextFileDocumentInput::name() const throw() {
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
  * description of the return value
  * @param encoding the file encoding or auto detection name
- * @param encodingPolicy the policy about encoding conversion
+ * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
  * @return true if succeeded to lock the file with the desired mode @a lockMode.type
  * @throw IOException any I/O error occured. in this case, the document's content will be lost
  */
 bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, const std::string& encoding,
-		Encoder::Policy encodingPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
+		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
 //	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
 	unlock();
 	document_.resetContent();
 	timeStampDirector_ = 0;
 
 	// read from the file
-	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingPolicy, false);
+	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingSubstitutionPolicy, false);
 	const bool recorded = document_.isRecordingOperations();
 	document_.recordOperations(false);
 	try {
@@ -1001,7 +1006,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	// create a temporary file and write into
 	const String tempFileName(getTemporaryFileName(realName));
 	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
-		params.encodingPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
+		params.encodingSubstitutionPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
 	basic_ostream<a::Char> outputStream(&sb);
 	try {
 		outputStream.exceptions(ios_base::badbit);
