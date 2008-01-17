@@ -304,6 +304,8 @@ namespace ascension {
 				CONTINUOUS_INPUT = 1
 			};
 
+			static const char ALIASES_SEPARATOR;
+
 			/// A set of @c Flag values.
 			typedef manah::Flags<Flag> Flags;
 		public:
@@ -444,120 +446,126 @@ namespace ascension {
 				const byte substitutionCharacter_;
 			};
 
+			/// A mapping table from bytes into codes.
+			template<typename Code> class CodeMap {
+			public:
+				/// Constructor takes a 16×16-code array defines character-to-code mapping.
+				explicit CodeMap(const Code** values) : values_(values) {}
+				/// Returns a character corresponds to a code.
+				Code operator[](byte c) const throw() {return values_[c >> 4][c & 0xF];}
+			private:
+				const Code** values_;
+			};
+
+			/// A mapping table from bytes into characters.
+			/// @see sbcs::BidirectionalMap
+			typedef CodeMap<Char> CharMap;
+
+			/// Generates 16-code sequence.
+			template<typename Code,
+				Code c0, Code c1, Code c2, Code c3, Code c4, Code c5, Code c6, Code c7,
+				Code c8, Code c9, Code cA, Code cB, Code cC, Code cD, Code cE, Code cF>
+			struct CodeLine {static const Code VALUES[16];};
+
+			/// Generates 16-character sequence.
+			template<
+				Char c0, Char c1, Char c2, Char c3, Char c4, Char c5, Char c6, Char c7,
+				Char c8, Char c9, Char cA, Char cB, Char cC, Char cD, Char cE, Char cF>
+			struct CharLine : public CodeLine<Char, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF> {};
+
+			/// Generates an incremental character sequence from @a start.
+			template<Char start> struct SequentialCharLine : public CharLine<
+				start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6, start + 7,
+				start + 8, start + 8, start + 10, start + 11, start + 12, start + 13, start + 14, start + 15> {};
+
+			/// Generates 16×16-code sequence.
+			template<typename Code,
+				typename Line0, typename Line1, typename Line2, typename Line3,
+				typename Line4, typename Line5, typename Line6, typename Line7,
+				typename Line8, typename Line9, typename LineA, typename LineB,
+				typename LineC, typename LineD, typename LineE, typename LineF>
+			class CodeWire : public CodeMap<Code> {
+			public:
+				CodeWire() throw() : CodeMap<Code>(values_) {}
+			private:
+				static const Code* values_[16];
+			};
+
+			/// Generates 16×16-character sequence.
+			template<
+				typename Line0, typename Line1, typename Line2, typename Line3,
+				typename Line4, typename Line5, typename Line6, typename Line7,
+				typename Line8, typename Line9, typename LineA, typename LineB,
+				typename LineC, typename LineD, typename LineE, typename LineF>
+			class CharWire : public CodeWire<Char, Line0, Line1, Line2, Line3,
+				Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
+
 			namespace sbcs {
 				/// A substitution byte value in used in Unicode to native mapping table.
 				const byte UNMAPPABLE_BYTE = 0x00;
 
-				/// A mapping table from bytes into characters.
-				/// @see BidirectionalMap
-				class ByteMap {
-				public:
-					/// Constructor takes a 16×16-character array defines character-to-byte mapping.
-					explicit ByteMap(const Char** values) : values_(values) {}
-					/// Returns a character corresponds to a byte.
-					Char operator[](byte c) const throw() {return values_[c >> 4][c & 0xF];}
-				private:
-					const Char** values_;
-				};
-
 				/// Provides bidirectional mapping between a byte and a character.
-				/// @see ByteMap
+				/// @see CharMap
 				class BidirectionalMap {
 				public:
-					BidirectionalMap(const ByteMap& byteMap) throw();
+					BidirectionalMap(const CharMap& charMap) throw();
 					~BidirectionalMap() throw();
 					byte	toByte(Char c) const throw();
 					Char	toCharacter(byte c) const throw();
 				private:
 					void	buildUnicodeToByteTable();
 				private:
-					const ByteMap byteToUnicode_;
+					const CharMap byteToUnicode_;
 					byte* unicodeToByte_[0x100];
 					static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
 				};
 
-				/// Generates 16-character sequence.
-				template<
-					Char c0, Char c1, Char c2, Char c3, Char c4, Char c5, Char c6, Char c7,
-					Char c8, Char c9, Char cA, Char cB, Char cC, Char cD, Char cE, Char cF>
-				struct ByteLine {static const Char values[16];};
-
-				/// Generates 16×16 character sequence.
-				template<
-					typename Line0, typename Line1, typename Line2, typename Line3,
-					typename Line4, typename Line5, typename Line6, typename Line7,
-					typename Line8, typename Line9, typename LineA, typename LineB,
-					typename LineC, typename LineD, typename LineE, typename LineF>
-				class ByteTable : public ByteMap {
-				public:
-					ByteTable() throw() : ByteMap(values_) {}
-				private:
-					static const Char* values_[16];
-				};
-
 				/// Generates ISO IR C0 character sequence 0x00 through 0x0F.
-				typedef ByteLine<
-					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-					0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F> ISO_IR_C0_LINE0;
+				typedef SequentialCharLine<0x0000U> ISO_IR_C0_LINE0;
 				/// Generates ISO IR C0 character sequence 0x10 through 0x1F.
-				typedef ByteLine<
-					0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-					0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F> ISO_IR_C0_LINE1;
+				typedef SequentialCharLine<0x0010U> ISO_IR_C0_LINE1;
 				/// Generates ISO IR C1 character sequence 0x80 through 0x8F.
-				typedef ByteLine<
-					0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
-					0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F> ISO_IR_C1_LINE8;
+				typedef SequentialCharLine<0x0080U> ISO_IR_C1_LINE8;
 				/// Generates ISO IR C1 character sequence 0x90 through 0x9F.
-				typedef ByteLine<
-					0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
-					0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F> ISO_IR_C1_LINE9;
+				typedef SequentialCharLine<0x0090U> ISO_IR_C1_LINE9;
 
 				/// Generates 16×16 character table compatible with ISO 646.
 				template<
 					typename Line8, typename Line9, typename LineA, typename LineB,
 					typename LineC, typename LineD, typename LineE, typename LineF>
-				class ASCIICompatibleByteTable : public ByteTable<
+				class ASCIICompatibleCharWire : public CharWire<
 					ISO_IR_C0_LINE0, ISO_IR_C0_LINE1,
-					ByteLine<0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F>,
-					ByteLine<0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F>,
-					ByteLine<0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F>,
-					ByteLine<0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F>,
-					ByteLine<0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F>,
-					ByteLine<0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F>,
+					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
+					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>, SequentialCharLine<0x0070U>,
 					Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Generates 16×16 character table compatible with ISO-IR.
 				template<
 					typename Line2, typename Line3, typename Line4, typename Line5, typename Line6, typename Line7,
 					typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
-				class ISOIRByteTable : public ByteTable<
+				class ISOIRCharWire : public CharWire<
 					ISO_IR_C0_LINE0, ISO_IR_C0_LINE1, Line2, Line3, Line4, Line5, Line6, Line7,
 					ISO_IR_C1_LINE8, ISO_IR_C1_LINE9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Generates 16×16 character table compatible with ISO 8859.
 				template<typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
-				class ISO8859CompatibleByteTable : public ISOIRByteTable<
-					ByteLine<0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F>,
-					ByteLine<0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F>,
-					ByteLine<0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F>,
-					ByteLine<0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F>,
-					ByteLine<0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F>,
-					ByteLine<0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F>,
+				class ISO8859CompatibleCharWire : public ISOIRCharWire<
+					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
+					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>, SequentialCharLine<0x0070U>,
 					LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Generates 16×16 character table compatible with IBM PC code page.
 				template<
 					typename Line8, typename Line9, typename LineA, typename LineB,
 					typename LineC, typename LineD, typename LineE, typename LineF>
-				class IBMPCCompatibleByteTable : public ByteTable<
-					ByteLine<0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F>,
-					ByteLine<0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1C, 0x1B, 0x7F, 0x1D, 0x1E, 0x1F>,
-					ByteLine<0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F>,
-					ByteLine<0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F>,
-					ByteLine<0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F>,
-					ByteLine<0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F>,
-					ByteLine<0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F>,
-					ByteLine<0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x1A>,
+				class IBMPCCompatibleCharWire : public CharWire<
+					SequentialCharLine<0x0000U>,
+					CharLine<0x0010U, 0x0011U, 0x0012U, 0x0013U, 0x0014U, 0x0015U,
+						0x0016U, 0x0017U, 0x0018U, 0x0019U, 0x001CU, 0x001BU, 0x007FU, 0x001DU, 0x001EU, 0x001FU>,
+					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
+					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>,
+					CharLine<0x0070U, 0x0071U, 0x0072U, 0x0073U, 0x0074U, 0x0075U,
+						0x0076U, 0x0077U, 0x0078U, 0x0079U, 0x007AU, 0x007BU, 0x007CU, 0x007DU, 0x007EU, 0x001AU>,
 					Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Base class of single byte charset encoder factories.
@@ -572,7 +580,8 @@ namespace ascension {
 				};
 
 				namespace internal {
-					std::auto_ptr<Encoder> createSingleByteEncoder(const sbcs::ByteMap& table, const IEncodingProperties& properties) throw();
+					std::auto_ptr<Encoder> createSingleByteEncoder(
+						const CodeMap<Char>& table, const IEncodingProperties& properties) throw();
 				}
 			} // namespace sbcs
 
@@ -626,25 +635,26 @@ namespace ascension {
 		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
 			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = (*i)->name();}
 
+		template<typename Code,
+			Code c0, Code c1, Code c2, Code c3, Code c4, Code c5, Code c6, Code c7,
+			Code c8, Code c9, Code cA, Code cB, Code cC, Code cD, Code cE, Code cF>
+		const Char implementation::CodeLine<Code,
+			c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF>::VALUES[16] = {
+			c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF};
+
+		template<typename Code,
+			typename Line0, typename Line1, typename Line2, typename Line3, typename Line4, typename Line5, typename Line6, typename Line7,
+			typename Line8, typename Line9, typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
+		const Char* implementation::CodeWire<Code,
+			Line0, Line1, Line2, Line3, Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB,LineC, LineD, LineE, LineF>::values_[16] = {
+			Line0::VALUES, Line1::VALUES, Line2::VALUES, Line3::VALUES, Line4::VALUES, Line5::VALUES, Line6::VALUES, Line7::VALUES,
+			Line8::VALUES, Line9::VALUES, LineA::VALUES, LineB::VALUES, LineC::VALUES, LineD::VALUES, LineE::VALUES, LineF::VALUES};
+
 		/// Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if umappable.
 		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const throw() {return unicodeToByte_[c >> 8][mask8Bit(c)];}
 
 		/// Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if umappable.
 		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const throw() {return byteToUnicode_[c];}
-
-		template<
-			Char c0, Char c1, Char c2, Char c3, Char c4, Char c5, Char c6, Char c7,
-			Char c8, Char c9, Char cA, Char cB, Char cC, Char cD, Char cE, Char cF>
-		const Char implementation::sbcs::ByteLine<c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF>::values[16] = {
-			c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF};
-
-		template<
-			typename Line0, typename Line1, typename Line2, typename Line3, typename Line4, typename Line5, typename Line6, typename Line7,
-			typename Line8, typename Line9, typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
-		const Char* implementation::sbcs::ByteTable<
-			Line0, Line1, Line2, Line3, Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB,LineC, LineD, LineE, LineF>::values_[16] = {
-			Line0::values, Line1::values, Line2::values, Line3::values, Line4::values, Line5::values, Line6::values, Line7::values,
-			Line8::values, Line9::values, LineA::values, LineB::values, LineC::values, LineD::values, LineE::values, LineF::values};
 
 		/**
 		 * Constructor.

@@ -95,6 +95,9 @@ MIBenum UnsupportedEncodingException::mibEnum() const throw() {
  * You can create and add your own @c Encoder class.
  */
 
+/// Character separates the string returns @c #aliases.
+const char Encoder::ALIASES_SEPARATOR = '|';
+
 /// Protected default constructor.
 Encoder::Encoder() throw() : substitutionPolicy_(DONT_SUBSTITUTE) {
 }
@@ -170,7 +173,7 @@ EncoderFactory* Encoder::find(const string& name) throw() {
 		// test aliases
 		const string aliases((*i)->aliases());
 		for(size_t j = 0; ; ++j) {
-			size_t delimiter = aliases.find('|', j);
+			size_t delimiter = aliases.find(ALIASES_SEPARATOR, j);
 			if(delimiter == string::npos)
 				delimiter = aliases.length();
 			if(delimiter != j) {
@@ -317,6 +320,19 @@ Encoder& Encoder::resetDecodingState() throw() {
  * @see #resetDecodingState
  */
 Encoder& Encoder::resetEncodingState() throw() {
+	return *this;
+}
+
+/**
+ * Sets the new miscellaneous flags.
+ * @param newFlags the flags to set
+ * @throw the encoder
+ * @throw invalid_argument @a newFlags includes unknown value
+ */
+Encoder& Encoder::setFlags(const Flags& newFlags) {
+	if((newFlags & ~CONTINUOUS_INPUT) != 0)
+		throw invalid_argument("newFlags");
+	flags_ = newFlags;
 	return *this;
 }
 
@@ -680,7 +696,7 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  * Constructor.
  * @param byteToUnicodeTable the table defines byte-to-unicode mapping
  */
-sbcs::BidirectionalMap::BidirectionalMap(const ByteMap& byteToUnicodeTable) throw() : byteToUnicode_(byteToUnicodeTable) {
+sbcs::BidirectionalMap::BidirectionalMap(const CharMap& byteToUnicodeTable) throw() : byteToUnicode_(byteToUnicodeTable) {
 	fill_n(unicodeToByte_, countof(unicodeToByte_), static_cast<byte*>(0));
 	buildUnicodeToByteTable();	// eager?
 }
@@ -713,7 +729,7 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
-		explicit SingleByteEncoder(const sbcs::ByteMap& table, const IEncodingProperties& properties) throw();
+		explicit SingleByteEncoder(const CharMap& table, const IEncodingProperties& properties) throw();
 	private:
 		// Encoder
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
@@ -726,7 +742,7 @@ namespace {
 		const IEncodingProperties& props_;
 	};
 
-	SingleByteEncoder::SingleByteEncoder(const sbcs::ByteMap& table,
+	SingleByteEncoder::SingleByteEncoder(const CharMap& table,
 			const IEncodingProperties& properties) throw() : table_(table), props_(properties) {
 	}
 
@@ -771,6 +787,6 @@ namespace {
 	}
 } // namespace @0
 
-auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(const sbcs::ByteMap& table, const IEncodingProperties& properties) throw() {
+auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(const CodeMap<Char>& table, const IEncodingProperties& properties) throw() {
 	return auto_ptr<Encoder>(new SingleByteEncoder(table, properties));
 }
