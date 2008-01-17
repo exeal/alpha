@@ -141,7 +141,7 @@ namespace {
 			lastPattern_ = new Char[outputLength];
 			Char* toNext;
 			const byte* fromNext;
-			encoder->setPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER).toUnicode(
+			encoder->setSubstitutionPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTER).toUnicode(
 				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
 			outputLength = toNext - lastPattern_;
 			return lastPattern_;

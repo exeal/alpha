@@ -10,10 +10,12 @@
  * - UTF-32BE
  * - UTF-32LE
  * @author exeal
- * @date 2003-2007.12.31
+ * @date 2003-2008
  */
 
 #include "../encoder.hpp"
+#include <algorithm>	// std.find_if
+#include <functional>	// std.bind1st, std.bind2nd, std.equal_to, std.logical_or
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -26,15 +28,18 @@ namespace {
 	template<typename Factory>
 	class InternalEncoder : public Encoder {
 	public:
-		explicit InternalEncoder(const Factory& factory) throw() : props_(factory) {}
+		explicit InternalEncoder(const Factory& factory) throw() : props_(factory), encodingState_(0), decodingState_(0) {}
 	private:
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext);
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext);
+		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+			const Char* from, const Char* fromEnd, const Char*& fromNext);
+		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+			const byte* from, const byte* fromEnd, const byte*& fromNext);
 		const IEncodingProperties& properties() const throw() {return props_;}
+		Encoder& resetDecodingState() throw() {decodingState_ = 0; return *this;}
+		Encoder& resetEncodingState() throw() {encodingState_ = 0; return *this;}
 	private:
 		const IEncodingProperties& props_;
+		byte encodingState_, decodingState_;
 	};
 
 	class UTF_8 : public EncoderFactoryBase {
@@ -335,9 +340,9 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(c)) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(policy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -374,9 +379,9 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(policy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -393,32 +398,36 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 // UTF-7 ////////////////////////////////////////////////////////////////////
 
 namespace {
-	/// Returns true if the given character is in UTF-7 set B.
-	inline bool isUTF7SetB(byte c) throw() {
-		return toBoolean(isalnum(c)) || c == '+' || c == '/';
-	}
+	const ctype<byte>& cctype = use_facet<ctype<byte> >(locale::classic());
 
-	/// Returns true if the given character is in UTF-7 set D.
-	inline bool isUTF7SetD(Char c) throw() {
-		if(c > L'z')
-			return false;
-		return toBoolean(isalpha(mask8Bit(c), locale::classic()))
-				|| (c >= L',' && c <= L':')
-				|| (c >= L'\'' && c <= L')')
-				|| c == L'\?' || c == L'\t' || c == L' ' || c == L'\r' || c == L'\n';
-	}
+	// Returns true if the given character is in UTF-7 set B.
+	struct IsUTF7SetB : public unary_function<byte, bool> {
+		bool operator()(byte c) const throw() {
+			return toBoolean(cctype.is(ctype_base::alnum, c)) || c == '+' || c == '/';
+		}
+	};
+
+	// Returns true if the given character is in UTF-7 set D or '+'.
+	struct IsUTF7SetDPlus : public unary_function<Char, bool> {
+		bool operator()(Char c) const throw() {
+			if(c > L'z')
+				return false;
+			return toBoolean(cctype.is(ctype_base::alpha, mask8Bit(c)))
+					|| (c >= L',' && c <= L':')
+					|| (c >= L'\'' && c <= L')')
+					|| c == L'\?' || c == L'\t' || c == L' ' || c == L'\r' || c == L'\n'
+					|| c == L'+';
+		}
+	};
 } // namespace @0
 
 template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	static const byte base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	// encodingState_ == 1 if in BASE64. 0 otherwise
 	while(true /* from < fromEnd */) {
 		// calculate the length of the substring to need to modified-BASE64 encode
-		const Char* base64End = from;
-		for(; base64End < fromEnd; ++base64End) {
-			if(isUTF7SetD(*base64End) || *base64End == L'+')
-				break;
-		}
+		const Char* const base64End = find_if(from, fromEnd, IsUTF7SetDPlus());
 
 		// modified-BASE64 encode
 		if(base64End != from) {
@@ -463,47 +472,37 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 		
 template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
-	static const byte base64[] = {
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	//  !"#$%&'
-		0xFF, 0xFF, 0xFF, 0x3E, 0xFF, 0xFF, 0xFF, 0x3F,	// ()*+,-./
-		0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B,	// 01234567
-		0x3C, 0x3D, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// 89:;<=>?
-		0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,	// @ABCDEFG
-		0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,	// HIJKLMNO
-		0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,	// PQRSTUVW
-		0x17, 0x18, 0x19, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// XYZ[\]^_
-		0xFF, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,	// `abcdefg
-		0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,	// hijklmno
-		0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30,	// pqrstuvw
-		0x31, 0x32, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// xyz{|}~
+	static const byte base64[0x80] = {
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// <00>
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// <10>
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x3E, 0xFF, 0xFF, 0xFF, 0x3F,	//  !"#$%&'()*+,-./
+		0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// 0123456789:;<=>?
+		0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,	// @ABCDEFGHIJKLMNO
+		0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// PQRSTUVWXYZ[\]^_
+		0xFF, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,	// `abcdefghijklmno
+		0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30,	0x31, 0x32, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF	// pqrstuvwxyz{|}~
 	};
 
-	bool inBase64 = false;
+	// decodingState_ == 1 if in BASE64. 0 otherwise
 	while(from < fromEnd) {
-		if(!inBase64) {
+		if(decodingState_ == 0) {
 			if(*from == '+') {
 				if(from + 1 < fromEnd && from[1] == '-') {	// "+-" -> "+"
 					*(to++) = L'+';
 					from += 2;
 				} else {
 					++from;
-					inBase64 = true;
+					decodingState_ = 1;
 				}
 			} else
 				*(to++) = *(from++);
 		} else {
 			// calculate the length of the modified-BASE64 encoded subsequence
-			const byte* base64End = from;
-			while(base64End < fromEnd && isUTF7SetB(*base64End))
-				++base64End;
+			const byte* const base64End = find_if(from, fromEnd, IsUTF7SetB());
 
 			// decode
 			while(from < base64End) {
-				const ptrdiff_t encodeChars = min<size_t>(base64End - from, 8);	// the number of bytes can be decoded at once
+				const ptrdiff_t encodeChars = min<ptrdiff_t>(base64End - from, 8);	// the number of bytes can be decoded at once
 											to[0]  = base64[from[0]] << 10;
 				if(from + 1 < base64End)	to[0] |= base64[from[1]] << 4;
 				if(from + 2 < base64End)	to[0] |= base64[from[2]] >> 2;
@@ -524,9 +523,11 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 			from = base64End;
 			if(from < fromEnd && *from == '-')
 				++from;
-			inBase64 = false;
+			decodingState_ = 0;
 		}
 	}
+	toNext = to;
+	fromNext = from;
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
@@ -630,9 +631,9 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doFromUnicode(
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*(to++) = properties().substitutionCharacter();
-			else if(policy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 				continue;
 			else {
 				fromNext = from;
@@ -666,11 +667,11 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
 			toNext = to;
 			return MALFORMED_INPUT;
 		} else if(!isValidCodePoint(cp)) {
-			if(policy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
 				cp = REPLACEMENT_CHARACTER;
 				if(e == from)
 					e = from + 1;
-			} else if(policy() == IGNORE_UNMAPPABLE_CHARACTER) {
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
 				++from;
 				continue;
 			} else {
