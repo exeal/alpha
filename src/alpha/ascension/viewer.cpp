@@ -625,14 +625,25 @@ Position TextViewer::characterForClientXY(const ::POINT& pt, bool nearestLeading
 	// determine the column
 	const long x = pt.x - getDisplayXOffset(line);
 	length_t column;
-	if(!nearestLeading)
+	if(nearestLeading)
 		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline));
 	else {
 		length_t trailing;
 		column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing);
-//		if(ascension::internal::advance(x, layout.location(column).x)
-//				> ascension::internal::advance(x, layout.location(column + trailing).x))
-			column += trailing;
+		column += trailing;
+	}
+	// check if the result column intervenes between surrogates
+	if(column != 0) {
+		const String& s = document().line(line);
+		if(text::surrogates::isLowSurrogate(s[column]) && text::surrogates::isHighSurrogate(s[column - 1])) {
+			if(nearestLeading)
+				--column;
+			else if(ascension::internal::distance(x, layout.location(column - 1).x)
+					<= ascension::internal::distance(x, layout.location(column + 1).x))
+				--column;
+			else
+				++column;
+		}
 	}
 	return Position(line, column);
 }
@@ -3651,7 +3662,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DW
 
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
-	const Position p(viewer_->characterForClientXY(caretPoint, true));
+	const Position p(viewer_->characterForClientXY(caretPoint, false));
 	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
 
 	// drop rectangle text into bidirectional line is not supported...
@@ -3686,7 +3697,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		::POINT caretPoint = {pt.x, pt.y};
 		endTimer();
 		viewer_->screenToClient(caretPoint);
-		const Position pos(viewer_->characterForClientXY(caretPoint, true));
+		const Position pos(viewer_->characterForClientXY(caretPoint, false));
 		ca.moveTo(pos);
 
 		bool rectangle;
@@ -3710,7 +3721,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		::POINT caretPoint = {pt.x, pt.y};
 
 		viewer_->screenToClient(caretPoint);
-		const Position pos(viewer_->characterForClientXY(caretPoint, true));
+		const Position pos(viewer_->characterForClientXY(caretPoint, false));
 
 		// can't drop into the selection
 		if(ca.isPointOverSelection(caretPoint)) {
@@ -3790,7 +3801,7 @@ void DefaultMouseInputStrategy::extendSelection() {
 	}
 	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
 	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
-	const Position dest(viewer_->characterForClientXY(p, true));
+	const Position dest(viewer_->characterForClientXY(p, false));
 	caret.extendSelection(dest);
 }
 
@@ -3815,7 +3826,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 		if(toBoolean(keyState & MK_CONTROL))	// 全行選択
 			texteditor::commands::SelectionCreationCommand(*viewer_, texteditor::commands::SelectionCreationCommand::ALL).execute();
 		else {
-			caret.moveTo(viewer_->characterForClientXY(position, false));
+			caret.moveTo(viewer_->characterForClientXY(position, true));
 			caret.beginLineSelection();
 		}
 		viewer_->setCapture();
@@ -3836,14 +3847,14 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	// 矩形選択開始
 	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
 		caret.beginBoxSelection();
-		caret.moveTo(viewer_->characterForClientXY(position, true));
+		caret.moveTo(viewer_->characterForClientXY(position, false));
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
 	// その他。線形選択開始、キャレット移動
 	else {
-		const Position p = viewer_->characterForClientXY(position, true);
+		const Position p = viewer_->characterForClientXY(position, false);
 		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
 			caret.moveTo(p);
 			caret.beginWordSelection();
@@ -3868,7 +3879,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position, uint) {
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
 		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
-		viewer_->caret().moveTo(viewer_->characterForClientXY(position, true));
+		viewer_->caret().moveTo(viewer_->characterForClientXY(position, false));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
 	}
 	endTimer();
@@ -4435,7 +4446,7 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 		::POINT cursorPoint;
 		::GetCursorPos(&cursorPoint);
 		viewer.screenToClient(cursorPoint);
-		const Position cursor = viewer.characterForClientXY(cursorPoint, false);
+		const Position cursor = viewer.characterForClientXY(cursorPoint, true);
 		if(source::getNearestIdentifier(viewer.document(), cursor,
 				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)
