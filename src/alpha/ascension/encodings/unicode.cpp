@@ -9,13 +9,13 @@
  * - UTF-32
  * - UTF-32BE
  * - UTF-32LE
+ * - UTF-5
  * @author exeal
  * @date 2003-2008
  */
 
 #include "../encoder.hpp"
 #include <algorithm>	// std.find_if
-#include <functional>	// std.bind1st, std.bind2nd, std.equal_to, std.logical_or
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -397,82 +397,101 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 
 // UTF-7 ////////////////////////////////////////////////////////////////////
 
-namespace {
-	const ctype<byte>& cctype = use_facet<ctype<byte> >(locale::classic());
-
-	// Returns true if the given character is in UTF-7 set B.
-	struct IsUTF7SetB : public unary_function<byte, bool> {
-		bool operator()(byte c) const throw() {
-			return toBoolean(cctype.is(ctype_base::alnum, c)) || c == '+' || c == '/';
-		}
-	};
-
-	// Returns true if the given character is in UTF-7 set D or '+'.
-	struct IsUTF7SetDPlus : public unary_function<Char, bool> {
-		bool operator()(Char c) const throw() {
-			if(c > L'z')
-				return false;
-			return toBoolean(cctype.is(ctype_base::alpha, mask8Bit(c)))
-					|| (c >= L',' && c <= L':')
-					|| (c >= L'\'' && c <= L')')
-					|| c == L'\?' || c == L'\t' || c == L' ' || c == L'\r' || c == L'\n'
-					|| c == L'+';
-		}
-	};
-} // namespace @0
-
 template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	static const byte base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	static const byte SET_D[0x80] = {
+		// 1 : in set D, 2 : '=', 3 : direct encodable but not set D, 0 : otherwise
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	// 0x10
+		3, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 2, 1, 1, 1, 1,	// 0x20
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1,	// 0x30
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x40
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,	// 0x50
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x60
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0	// 0x70
+	};
+	static const byte BASE64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
 	// encodingState_ == 1 if in BASE64. 0 otherwise
-	while(true /* from < fromEnd */) {
-		// calculate the length of the substring to need to modified-BASE64 encode
-		const Char* const base64End = find_if(from, fromEnd, IsUTF7SetDPlus());
-
-		// modified-BASE64 encode
-		if(base64End != from) {
-			*(to++) = '+';
-			while(from < base64End) {
-				*(to++) = base64[*from >> 10];
-				*(to++) = base64[(*from >> 4) & 0x3F];
-				if(from + 1 >= base64End)
-					*(to++) = base64[(*from << 2) & 0x3F];
-				else {
-					*(to++) = base64[((from[0] << 2) | (from[1] >> 14)) & 0x3F];
-					*(to++) = base64[(from[1] >> 8) & 0x3F];
-					*(to++) = base64[(from[1] >> 2) & 0x3F];
-					if(from + 2 >= base64End)
-						*(to++) = base64[(from[1] << 4) & 0x3F];
-					else {
-						*(to++) = base64[((from[1] << 4) | (from[2]) >> 12) & 0x3F];
-						*(to++) = base64[(from[2] >> 6) & 0x3F];
-						*(to++) = base64[(from[2] >> 0) & 0x3F];
-						++from;
-					}
-					++from;
-				}
-				++from;
+	for(; to < toEnd && from < fromEnd; ++from) {
+		const byte klass = (*from < 0x80) ? SET_D[*from] : 0;
+		if((klass & 1) == 1) {
+			// encode directly (ascension puts '-' explicitly even if klass is 3)
+			if(encodingState_ == 1) {
+				*to = '-';
+				encodingState_ = 0;
+				if(++to == toEnd)
+					break;	// the destination buffer is insufficient
 			}
+			*(to++) = mask8Bit(*from);
+		} else if(klass == 2) {
+			// '+' => '+-'
+			if(to + 1 == toEnd)
+				break;	// the destination buffer is insufficient
+			*(to++) = '+';
 			*(to++) = '-';
-		}
+		} else {
+			// modified BASE64 encode
+			if(encodingState_ == 0) {
+				*to = '+';
+				encodingState_ = 1;
+				if(++to == toEnd)
+					break;	// the destination buffer is insufficient
+			}
+			// first, determine how many source characters can be encoded
+			ptrdiff_t encodables = 1;
+			if(from + 1 < fromEnd && (from[1] >= 0x80 || SET_D[from[1]] == 0)) {
+				++encodables;
+				if(from + 2 < fromEnd && (from[2] >= 0x80 || SET_D[from[2]] == 0))
+					++encodables;
+			}
+			// check the size of the destination buffer
+			switch(encodables) {
+			case 3: if(to + 8 >= toEnd) encodables = 0; break;
+			case 2: if(to + 6 >= toEnd) encodables = 0; break;
+			case 1: if(to + 3 >= toEnd) encodables = 0; break;
+			}
+			if(encodables == 0)
+				break;	// the destination buffer is insufficient
 
-		from = base64End;
-		if(from < fromEnd) {
-			if(*from == L'+') {	// '+' -> '+-'
-				*(to++) = '+';
-				*(to++) = '-';
-				++from;
-			} else	// straightforward
-				*(to++) = mask8Bit(*(from++));
-		} else
-			break;
+			// encode
+			const Char utf16[3] = {from[0], (encodables > 1) ? from[1] : 0, (encodables > 2) ? from[2] : 0};
+			*(to++) = BASE64[utf16[0] >> 10];
+			*(to++) = BASE64[(utf16[0] >> 4) & 0x3F];
+			*(to++) = BASE64[(utf16[0] << 2 | utf16[1] >> 14) & 0x3F];
+			if(encodables >= 2) {
+				*(to++) = BASE64[(utf16[1] >> 8) & 0x3F];
+				*(to++) = BASE64[(utf16[1] >> 2) & 0x3F];
+				*(to++) = BASE64[(utf16[1] << 4 | utf16[2] >> 12) & 0x3F];
+				if(encodables >= 3) {
+					*(to++) = BASE64[(utf16[2] >> 6) & 0x3F];
+					*(to++) = BASE64[utf16[2] & 0x3F];
+				}
+			}
+			from += encodables - 1;
+		}
 	}
+	if(from == fromEnd && !flags().has(CONTINUOUS_INPUT) && to != toEnd)
+		*(to++) = '-';
+	toNext = to;
+	fromNext = from;
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 		
 template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
-	static const byte base64[0x80] = {
+	static const byte SET_B[0x80] = {
+		// 1 : in set B, 2 : '+', 3 : directly appearable in BASE64, 4 : '-', 0 : otherwise
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	// 0x10
+		3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 4, 0, 1,	// 0x20
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,	// 0x30
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x40
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,	// 0x50
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x60
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0	// 0x70
+	};
+	static const byte BASE64[0x80] = {
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// <00>
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// <10>
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x3E, 0xFF, 0xFF, 0xFF, 0x3F,	//  !"#$%&'()*+,-./
@@ -484,46 +503,75 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 	};
 
 	// decodingState_ == 1 if in BASE64. 0 otherwise
-	while(from < fromEnd) {
-		if(decodingState_ == 0) {
-			if(*from == '+') {
-				if(from + 1 < fromEnd && from[1] == '-') {	// "+-" -> "+"
-					*(to++) = L'+';
-					from += 2;
+	while(to < toEnd && from < fromEnd) {
+		if(*from >= 0x80 || SET_B[*from] == 0) {
+			toNext = to;
+			fromNext = from;
+			return MALFORMED_INPUT;
+		}
+		const byte klass = SET_B[*from];
+		if(klass == 2) {
+			// '+'
+			if(from + 1 == fromEnd) {	// the input is terminated by '+'...
+				if(!flags().has(CONTINUOUS_INPUT)) {
+					toNext = to;
+					fromNext = from;
+					return COMPLETED;
 				} else {
-					++from;
 					decodingState_ = 1;
+					++from;
+					break;
 				}
-			} else
-				*(to++) = *(from++);
+			} else if(from[1] == '-') {
+				// '+-' => '+'
+				*(to++) = L'+';
+				from += 2;
+			} else {
+				decodingState_ = 1;	// introduce modified BASE64 sequence
+				++from;
+			}
+		} else if(klass == 3) {
+			(*to++) = (*from++);
+			decodingState_ = 0;	// terminate modified BASE64 implicitly
+		} else if(klass == 4) {
+			// '-'
+			if(decodingState_ == 1)
+				decodingState_;
+			else {
+				toNext = to;
+				fromNext = from;
+				return MALFORMED_INPUT;	// '-' can't appear here
+				// ...this can't handle '-' appeared at the exact beginning of the input buffer
+			}
+			++from;
 		} else {
-			// calculate the length of the modified-BASE64 encoded subsequence
-			const byte* const base64End = find_if(from, fromEnd, IsUTF7SetB());
+			// first, determine how many bytes can be decoded
+			ptrdiff_t decodables = 1;
+			for(const ptrdiff_t minimum = min<ptrdiff_t>(fromEnd - from, 8); decodables < minimum; ++decodables) {
+				if(BASE64[from[decodables]] == 0xFF)
+					break;
+			}
+			// check the size of the destination buffer
+			switch(decodables) {
+			case 8: if(to + 2 >= toEnd) decodables = 0; break;
+			case 6: if(to + 1 >= toEnd) decodables = 0; break;
+			case 3: break;
+			default:
+				toNext = to;
+				fromNext = from;
+				return MALFORMED_INPUT;	// invalid modified BASE64 sequence
+			}
+			if(decodables == 0)
+				break;	// the destination buffer is insufficient
 
 			// decode
-			while(from < base64End) {
-				const ptrdiff_t encodeChars = min<ptrdiff_t>(base64End - from, 8);	// the number of bytes can be decoded at once
-											to[0]  = base64[from[0]] << 10;
-				if(from + 1 < base64End)	to[0] |= base64[from[1]] << 4;
-				if(from + 2 < base64End)	to[0] |= base64[from[2]] >> 2;
-				if(from + 3 < base64End) {	to[1]  = base64[from[2]] << 14;
-											to[1] |= base64[from[3]] << 8;}
-				if(from + 4 < base64End)	to[1] |= base64[from[4]] << 2;
-				if(from + 5 < base64End)	to[1] |= base64[from[5]] >> 4;
-				if(from + 6 < base64End) {	to[2]  = base64[from[5]] << 12;
-											to[2] |= base64[from[6]] << 6;}
-				if(from + 7 < base64End)	to[2] |= base64[from[7]] << 0;
-
-				from += encodeChars;
-				++to;
-				if(encodeChars > 3)	++to;
-				if(encodeChars > 6)	++to;
+			*(to++) = BASE64[from[0]] << 10 | BASE64[from[1]] << 4 | BASE64[from[2]] >> 2;
+			if(decodables >= 6) {
+				*(to++) = maskUCS2(BASE64[from[2]] << 14) | BASE64[from[3]] << 8 | BASE64[from[4]] << 2 | BASE64[from[5]] >> 4;
+				if(decodables >= 8)
+					*(to++) = BASE64[from[5]] << 12 | BASE64[from[6]] << 6 | BASE64[from[7]];
 			}
-
-			from = base64End;
-			if(from < fromEnd && *from == '-')
-				++from;
-			decodingState_ = 0;
+			from += decodables;			
 		}
 	}
 	toNext = to;
