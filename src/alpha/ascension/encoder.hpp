@@ -54,6 +54,7 @@ namespace ascension {
 				ISO_8859_10 = 13,	///< ISO-8859-10:1992.
 				SHIFT_JIS = 17,		///< Shift_JIS (JIS X 0208:1997).
 				EUC_JP = 18,		///< EUC-JP (JIS X 0208:1997 and JIS X 0212:1990).
+				UHC = 36,			///< UHC (windows-949).
 				ISO_2022_KR = 37,	///< ISO-2022-KR.
 				EUC_KR = 38,		///< EUC-KR.
 				ISO_2022_JP = 39,	///< ISO-2022-JP (RFC1468 and JIS X 0208:1997).
@@ -446,21 +447,6 @@ namespace ascension {
 				const byte substitutionCharacter_;
 			};
 
-			/// A mapping table from bytes into codes.
-			template<typename Code> class CodeMap {
-			public:
-				/// Constructor takes a 16×16-code array defines character-to-code mapping.
-				explicit CodeMap(const Code** values) : values_(values) {}
-				/// Returns a character corresponds to a code.
-				Code operator[](byte c) const throw() {return values_[c >> 4][c & 0xF];}
-			private:
-				const Code** values_;
-			};
-
-			/// A mapping table from bytes into characters.
-			/// @see sbcs::BidirectionalMap
-			typedef CodeMap<Char> CharMap;
-
 			/// Generates 16-code sequence.
 			template<typename Code,
 				Code c0, Code c1, Code c2, Code c3, Code c4, Code c5, Code c6, Code c7,
@@ -484,12 +470,11 @@ namespace ascension {
 				typename Line4, typename Line5, typename Line6, typename Line7,
 				typename Line8, typename Line9, typename LineA, typename LineB,
 				typename LineC, typename LineD, typename LineE, typename LineF>
-			class CodeWire : public CodeMap<Code> {
-			public:
-				CodeWire() throw() : CodeMap<Code>(values_) {}
-			private:
-				static const Code* values_[16];
-			};
+			struct CodeWire {static const Code* VALUES[16];};
+
+			/// Returns a code corresponds to a byte in the 16×16 wire.
+			/// @see CodeWire
+			template<typename Code> inline Code wireAt(const Code** wire, byte c) throw() {return wire[c >> 4][c & 0xF];}
 
 			/// Generates 16×16-character sequence.
 			template<
@@ -508,14 +493,14 @@ namespace ascension {
 				/// @see CharMap
 				class BidirectionalMap {
 				public:
-					BidirectionalMap(const CharMap& charMap) throw();
+					BidirectionalMap(const Char** byteToCharacterWire) throw();
 					~BidirectionalMap() throw();
 					byte	toByte(Char c) const throw();
 					Char	toCharacter(byte c) const throw();
 				private:
 					void	buildUnicodeToByteTable();
 				private:
-					const CharMap byteToUnicode_;
+					const Char** const byteToUnicode_;
 					byte* unicodeToByte_[0x100];
 					static const byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
 				};
@@ -581,9 +566,28 @@ namespace ascension {
 
 				namespace internal {
 					std::auto_ptr<Encoder> createSingleByteEncoder(
-						const CodeMap<Char>& table, const IEncodingProperties& properties) throw();
+						const Char** byteToCharacterWire, const IEncodingProperties& properties) throw();
 				}
 			} // namespace sbcs
+
+			namespace dbcs {
+				ASCENSION_STATIC_ASSERT(sizeof(ushort) == 2);
+
+				/// Generates 16-DBCS character sequence.
+				template<
+					ushort c0, ushort c1, ushort c2, ushort c3, ushort c4, ushort c5, ushort c6, ushort c7,
+					ushort c8, ushort c9, ushort cA, ushort cB, ushort cC, ushort cD, ushort cE, ushort cF>
+				struct DBCSLine : public CodeLine<ushort, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF> {};
+
+				/// Generates 16×16-DBCS character sequence.
+				template<
+					typename Line0, typename Line1, typename Line2, typename Line3,
+					typename Line4, typename Line5, typename Line6, typename Line7,
+					typename Line8, typename Line9, typename LineA, typename LineB,
+					typename LineC, typename LineD, typename LineE, typename LineF>
+				class DBCSWire : public CodeWire<ushort, Line0, Line1, Line2, Line3,
+					Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
+			} // namespace dbcs
 
 /*			/// Base class of 7-bit ISO-2022 encoders.
 			class ISO2022Encoder : public EncoderBase {
@@ -646,7 +650,7 @@ namespace ascension {
 			typename Line0, typename Line1, typename Line2, typename Line3, typename Line4, typename Line5, typename Line6, typename Line7,
 			typename Line8, typename Line9, typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
 		const Char* implementation::CodeWire<Code,
-			Line0, Line1, Line2, Line3, Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB,LineC, LineD, LineE, LineF>::values_[16] = {
+			Line0, Line1, Line2, Line3, Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB,LineC, LineD, LineE, LineF>::VALUES[16] = {
 			Line0::VALUES, Line1::VALUES, Line2::VALUES, Line3::VALUES, Line4::VALUES, Line5::VALUES, Line6::VALUES, Line7::VALUES,
 			Line8::VALUES, Line9::VALUES, LineA::VALUES, LineB::VALUES, LineC::VALUES, LineD::VALUES, LineE::VALUES, LineF::VALUES};
 
@@ -654,7 +658,7 @@ namespace ascension {
 		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const throw() {return unicodeToByte_[c >> 8][mask8Bit(c)];}
 
 		/// Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if umappable.
-		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const throw() {return byteToUnicode_[c];}
+		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const throw() {return wireAt(byteToUnicode_, c);}
 
 		/**
 		 * Constructor.
@@ -673,7 +677,7 @@ namespace ascension {
 
 		/// @see EncoderFactory#create
 		template<typename MappingTable> std::auto_ptr<Encoder> implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const throw() {
-			MappingTable table; return implementation::sbcs::internal::createSingleByteEncoder(table, *this);}
+			return implementation::sbcs::internal::createSingleByteEncoder(MappingTable::VALUES, *this);}
 	}
 } // namespace ascension.encoding
 

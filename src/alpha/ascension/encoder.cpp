@@ -694,9 +694,9 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
 
 /**
  * Constructor.
- * @param byteToUnicodeTable the table defines byte-to-unicode mapping
+ * @param byteToCharacterWire the table defines byte-to-character mapping consists of 16Å~16-characters
  */
-sbcs::BidirectionalMap::BidirectionalMap(const CharMap& byteToUnicodeTable) throw() : byteToUnicode_(byteToUnicodeTable) {
+sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) throw() : byteToUnicode_(byteToCharacterWire) {
 	fill_n(unicodeToByte_, countof(unicodeToByte_), static_cast<byte*>(0));
 	buildUnicodeToByteTable();	// eager?
 }
@@ -713,7 +713,7 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
 	fill_n(unicodeToByte_, countof(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
 	for(int i = 0x00; i < 0xFF; ++i) {
-		const Char ucs = byteToUnicode_[i];
+		const Char ucs = wireAt(byteToUnicode_, i);
 		byte*& p = unicodeToByte_[ucs >> 8];
 		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {
 			p = new byte[0x100];
@@ -729,7 +729,7 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
-		explicit SingleByteEncoder(const CharMap& table, const IEncodingProperties& properties) throw();
+		explicit SingleByteEncoder(const Char** byteToCharacterWire, const IEncodingProperties& properties) throw();
 	private:
 		// Encoder
 		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
@@ -742,8 +742,8 @@ namespace {
 		const IEncodingProperties& props_;
 	};
 
-	SingleByteEncoder::SingleByteEncoder(const CharMap& table,
-			const IEncodingProperties& properties) throw() : table_(table), props_(properties) {
+	SingleByteEncoder::SingleByteEncoder(const Char** byteToCharacterWire,
+			const IEncodingProperties& properties) throw() : table_(byteToCharacterWire), props_(properties) {
 	}
 
 	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd,
@@ -787,6 +787,7 @@ namespace {
 	}
 } // namespace @0
 
-auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(const CodeMap<Char>& table, const IEncodingProperties& properties) throw() {
-	return auto_ptr<Encoder>(new SingleByteEncoder(table, properties));
+auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(
+		const Char** byteToCharacterWire, const IEncodingProperties& properties) throw() {
+	return auto_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }
