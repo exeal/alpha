@@ -642,14 +642,14 @@ namespace ascension {
 		template<typename Code,
 			Code c0, Code c1, Code c2, Code c3, Code c4, Code c5, Code c6, Code c7,
 			Code c8, Code c9, Code cA, Code cB, Code cC, Code cD, Code cE, Code cF>
-		const Char implementation::CodeLine<Code,
+		const Code implementation::CodeLine<Code,
 			c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF>::VALUES[16] = {
 			c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF};
 
 		template<typename Code,
 			typename Line0, typename Line1, typename Line2, typename Line3, typename Line4, typename Line5, typename Line6, typename Line7,
 			typename Line8, typename Line9, typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
-		const Char* implementation::CodeWire<Code,
+		const Code* implementation::CodeWire<Code,
 			Line0, Line1, Line2, Line3, Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB,LineC, LineD, LineE, LineF>::VALUES[16] = {
 			Line0::VALUES, Line1::VALUES, Line2::VALUES, Line3::VALUES, Line4::VALUES, Line5::VALUES, Line6::VALUES, Line7::VALUES,
 			Line8::VALUES, Line9::VALUES, LineA::VALUES, LineB::VALUES, LineC::VALUES, LineD::VALUES, LineE::VALUES, LineF::VALUES};

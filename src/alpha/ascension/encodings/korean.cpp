@@ -13,11 +13,15 @@
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
+using namespace ascension::encoding::implementation::dbcs;
 using namespace std;
 
 namespace {
 	const Char** const UCS_TO_UHC[256] = {
-#include "windows-949.dat"
+#include "data/ucs-to-windows-949.dat"
+	};
+	const ushort** const UHC_TO_UCS[256] = {
+#include "data/windows-949-to-ucs.dat"
 	};
 
 	template<typename Factory>
@@ -67,8 +71,8 @@ template<> Encoder::Result InternalEncoder<UHC>::doFromUnicode(
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x80)
 			*(to++) = mask8Bit(*from);
-		else {
-			if(const Char** wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
+		else {	// double byte character
+			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
 				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
 					if(to + 1 >= toEnd)
 						break;	// the destnation buffer is insufficient
@@ -93,6 +97,34 @@ template<> Encoder::Result InternalEncoder<UHC>::doFromUnicode(
 		
 template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	while(to < toEnd && from < fromEnd) {
+		if(*from < 0x80)
+			*(to++) = *(from++);
+		else if(from + 1 >= fromEnd) {	// remaining lead byte
+			toNext = to;
+			fromNext = from;
+			return flags().has(CONTINUOUS_INPUT) ? COMPLETED : MALFORMED_INPUT;
+		} else {	// double byte character
+			if(const ushort** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
+				const Char ucs = wireAt(wire, mask8Bit(from[1]));
+				if(ucs != REPLACEMENT_CHARACTER) {
+					*(to++) = ucs;
+					from += 2;
+					continue;
+				}
+			}
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+				*(to++) = REPLACEMENT_CHARACTER;
+				from += 2;
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				from += 2;
+			else {
+				toNext = to;
+				fromNext = from;
+				return UNMAPPABLE_CHARACTER;
+			}
+		}
+	}
 	fromNext = from;
 	toNext = to;
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
