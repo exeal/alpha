@@ -498,7 +498,7 @@ int TextFileStreamBuffer::sync() {
 		byte* toNext;
 		const a::Char* fromNext;
 		byte nativeBuffer[countof(ucsBuffer_)];
-		encoder_->setFlags(encoder_->flags() & ~Encoder::CONTINUOUS_INPUT);
+		encoder_->setFlags(encoder_->flags() & ~(Encoder::FROM_IS_NOT_BOB | Encoder::FROMEND_IS_NOT_EOB));
 		while(true) {
 			const a::Char* const fromEnd = pptr();
 
@@ -541,7 +541,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 	a::Char* toNext;
 	const byte* fromNext;
-	encoder_->setFlags(encoder_->flags() & ~Encoder::CONTINUOUS_INPUT);
+	encoder_->setFlags(encoder_->flags() & ~(Encoder::FROM_IS_NOT_BOB | Encoder::FROMEND_IS_NOT_EOB));
 	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);

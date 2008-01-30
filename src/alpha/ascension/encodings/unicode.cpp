@@ -471,7 +471,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 			from += encodables - 1;
 		}
 	}
-	if(from == fromEnd && !flags().has(CONTINUOUS_INPUT) && to != toEnd)
+	if(from == fromEnd && !flags().has(FROMEND_IS_NOT_EOB) && to != toEnd)
 		*(to++) = '-';
 	toNext = to;
 	fromNext = from;
@@ -513,7 +513,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		if(klass == 2) {
 			// '+'
 			if(from + 1 == fromEnd) {	// the input is terminated by '+'...
-				if(!flags().has(CONTINUOUS_INPUT)) {
+				if(!flags().has(FROMEND_IS_NOT_EOB)) {
 					toNext = to;
 					fromNext = from;
 					return COMPLETED;

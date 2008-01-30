@@ -330,7 +330,7 @@ Encoder& Encoder::resetEncodingState() throw() {
  * @throw invalid_argument @a newFlags includes unknown value
  */
 Encoder& Encoder::setFlags(const Flags& newFlags) {
-	if((newFlags & ~CONTINUOUS_INPUT) != 0)
+	if((newFlags & ~(FROM_IS_NOT_BOB | FROMEND_IS_NOT_EOB)) != 0)
 		throw invalid_argument("newFlags");
 	flags_ = newFlags;
 	return *this;
