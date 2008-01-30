@@ -299,10 +299,15 @@ namespace ascension {
 			/// Miscellaneous conversion flag.
 			enum Flag {
 				/**
-				 * Indicates that @a fromEnd parameter of @c Encoder#fromUnicode or
-				 * @c Encoder#toUnicode is not the true end of the input sequence.
+				 * Indicates that @a from parameter of the conversion method addresses the
+				 * beginning of the entire input sequence.
 				 */
-				CONTINUOUS_INPUT = 1
+				FROM_IS_NOT_BOB = 1,
+				/**
+				 * Indicates that @a fromEnd parameter of the conversion method addresses the end
+				 * of the entire input sequence.
+				 */
+				FROMEND_IS_NOT_EOB = 2
 			};
 
 			static const char ALIASES_SEPARATOR;
@@ -422,6 +427,14 @@ namespace ascension {
 
 		/// Supports implementation of encoder classes.
 		namespace implementation {
+
+			// control codes
+			const byte SI = 0x0F;		// SI (Shift in).
+			const byte SO = 0x0E;		// SO (Shift out).
+			const byte ESC = 0x1B;		// Escape.
+			const byte SS2_8BIT = 0x8E;	// SS2 (Single shift two).
+			const byte SS3_8BIT = 0x8F;	// SS3 (Single shift three).
+
 			/// @c EncoderFactoryBase is a base implementation of @c EncoderFactory.
 			class EncoderFactoryBase : public EncoderFactory {
 			public:
@@ -463,6 +476,9 @@ namespace ascension {
 			template<Char start> struct SequentialCharLine : public CharLine<
 				start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6, start + 7,
 				start + 8, start + 8, start + 10, start + 11, start + 12, start + 13, start + 14, start + 15> {};
+
+			/// Generates an all NUL character sequence.
+			struct EmptyCharLine : public CharLine<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0> {};
 
 			/// Generates 16×16-code sequence.
 			template<typename Code,
@@ -578,6 +594,9 @@ namespace ascension {
 					ushort c0, ushort c1, ushort c2, ushort c3, ushort c4, ushort c5, ushort c6, ushort c7,
 					ushort c8, ushort c9, ushort cA, ushort cB, ushort cC, ushort cD, ushort cE, ushort cF>
 				struct DBCSLine : public CodeLine<ushort, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF> {};
+
+				/// Generates an all NUL value sequence.
+				struct EmptyDBCSLine : public DBCSLine<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0> {};
 
 				/// Generates 16×16-DBCS character sequence.
 				template<

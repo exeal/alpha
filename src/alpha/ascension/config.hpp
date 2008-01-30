@@ -87,12 +87,25 @@
 // about ascension.encodings ////////////////////////////////////////////////
 
 /**
- * @def ASCENSION_NO_EXTENDED_ENCODINGS
- * Define the symbol if you do not use extended encodings (UTF-8, UTF-16LE, UTF-16BE, and Windows
- * code pages are enabled even if defined).
- * @see ascension#encodings
+ * @def ASCENSION_NO_STANDARD_ENCODINGS
+ * Define the symbol if you do not use standard encodings.
+ * @see ascension#encodings#standard
  */
-// #define ASCENSION_NO_EXTENDED_ENCODINGS
+// #define ASCENSION_NO_STANDARD_ENCODINGS
+
+/**
+ * @def ASCENSION_NO_PROPRIETARY_ENCODINGS
+ * Define the symbol if you do not use proprietary encodings.
+ * @see ascension#encodings#proprietary
+ */
+// #define ASCENSION_NO_PROPRIETARY_ENCODINGS
+
+/**
+ * @def ASCENSION_NO_MINORITY_ENCODINGS
+ * Define the symbol if you do not use some minority encodings.
+ * @see ascension#encodings#minority
+ */
+// #define ASCENSION_NO_MINORITY_ENCODINGS
 
 
 // about ascension.regex ////////////////////////////////////////////////////
@@ -133,6 +146,13 @@
  * @c ascension#layout#LineLayoutBuffer class.
  */
 #define ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE 256
+
+/**
+ * @def ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+ * Define the symbol to enable Unicode Variation Selectors Supplement (U+E0100..E01EF) workaround.
+ * For more details, see the description of layout.cpp.
+ */
+#define ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 
 // about ascension.viewers //////////////////////////////////////////////////
