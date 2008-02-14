@@ -138,7 +138,7 @@ namespace ascension {
 			typedef typename std::list<Listener*>::iterator Iterator;
 		};
 
-#ifdef _WIN32
+#ifdef ASCENSION_WINDOWS
 		template<class ProcedureEntries> class SharedLibrary {
 			MANAH_NONCOPYABLE_TAG(SharedLibrary);
 		public:
