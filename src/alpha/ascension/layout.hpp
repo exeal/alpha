@@ -11,7 +11,10 @@
 #include "../../manah/win32/dc.hpp"
 #include "../../manah/win32/gdi-object.hpp"
 #include <vector>
-#include <usp10.h>
+
+// forward declaration
+struct tag_SCRIPT_ITEM;
+typedef tag_SCRIPT_ITEM SCRIPT_ITEM;
 
 namespace ascension {
 
@@ -465,7 +468,7 @@ namespace ascension {
 			const String&	text() const throw();
 			void			reorder() throw();
 //			void			rewrap();
-			void			shape(internal::Run& run) throw();
+			void			shape() throw();
 			int				nextTabStopBasedLeftEdge(int x, bool right) const throw();
 			void			wrap() throw();
 		private:
