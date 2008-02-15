@@ -1308,6 +1308,7 @@ inline const String& LineLayout::text() const throw() {
 	return lip_.getPresentation().document().line(lineNumber_);
 }
 
+// shaping stuffs
 namespace {
 	/**
 	 * Builds glyphs into the run structure.
@@ -1321,7 +1322,7 @@ namespace {
 	 * @retval E_OUTOFMEMORY failed to allocate buffer for glyph indices or visual attributes array
 	 * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
 	 */
-	HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) throw() {
+	::HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) throw() {
 		while(true) {
 			int numberOfGlyphs;
 			HRESULT hr = ::ScriptShape(dc.getHandle(), &run.shared->cache, text,
@@ -1330,8 +1331,8 @@ namespace {
 			if(SUCCEEDED(hr))
 				run.setNumberOfGlyphs(numberOfGlyphs);
 			if(hr == S_OK || hr == USP_E_SCRIPT_NOT_IN_FONT) {
-				static const OPENTYPE_TAG HAN = makeOpenTypeTag("hani"), JP90 = makeOpenTypeTag("jp90");
-				hr = uspLib->get<0>()(dc.getHandle(), &run.shared->cache, &run.analysis, HAN, 0, JP90, 1, run.glyphs()[0], run.shared->glyphs.get());
+//				static const OPENTYPE_TAG HAN = makeOpenTypeTag("hani"), JP90 = makeOpenTypeTag("jp90");
+//				hr = uspLib->get<0>()(dc.getHandle(), &run.shared->cache, &run.analysis, HAN, 0, JP90, 1, run.glyphs()[0], run.shared->glyphs.get());
 				return hr;
 			}
 			run.shared->glyphs.reset();
@@ -1424,6 +1425,23 @@ namespace {
 		}
 		return NOT_PROPERTY;
 	}
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	const OPENTYPE_TAG HANI_TAG = makeOpenTypeTag("hani");
+	const OPENTYPE_TAG JP78_TAG = makeOpenTypeTag("jp78");
+	const OPENTYPE_TAG JP90_TAG = makeOpenTypeTag("jp90");
+	const OPENTYPE_TAG JP04_TAG = makeOpenTypeTag("jp04");
+	struct IVStoOTFT {
+		ulong ivs;	// (base character) << 8 | (variation selector number)
+		OPENTYPE_TAG featureTag;
+	};
+	const IVStoOTFT IVS_TO_OTFT[] = {
+#include "ivs-otft.ipp"
+	};
+	struct GetIVS {
+		ulong operator()(size_t index) throw() {return IVS_TO_OTFT[index].ivs;}
+	};
+#endif /* ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND */
 } // namespace @0
 
 /// Generates the glyphs for the text.
@@ -1568,6 +1586,23 @@ void LineLayout::shape() throw() {
 				failedFonts.clear();
 			}
 		}
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+		if(runIndex + 1 < numberOfRuns_ && runs_[runIndex + 1]->length() > 1) {
+			const CodePoint vs = surrogates::decodeFirst(
+				textString + runs_[runIndex + 1]->column, textString + runs_[runIndex + 1]->column + 2);
+			if(vs >= 0xE0100 && vs <= 0xE01EF) {
+				const CodePoint baseCharacter = surrogates::decodeLast(textString, textString + runs_[runIndex + 1]->column);
+				const size_t i = ascension::internal::searchBound(
+					0U, countof(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
+				if(i != countof(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
+					// found valid IVS -> apply OpenType feature tag to obtain the variant
+					hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
+						HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, run->glyphs()[0], run->shared->glyphs.get());
+				}
+			}
+		}
+#endif /* ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND */
 
 		run->shared->advances.reset(new int[run->numberOfGlyphs()]);
 		run->shared->glyphOffsets.reset(new ::GOFFSET[run->numberOfGlyphs()]);
