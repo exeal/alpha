@@ -146,8 +146,10 @@ Run::Run(const TextStyle& textStyle) throw() : firstCharacter(0), firstGlyph(0),
 
 void Run::dispose() throw() {
 	if(--shared->numberOfReferences == 0) {
-		if(shared->cache != 0)
+		if(shared->cache != 0) {
 			::ScriptFreeCache(&shared->cache);
+			shared->cache = 0;
+		}
 		delete shared;
 	}
 	shared = 0;
@@ -273,7 +275,7 @@ bool layout::supportsComplexScripts() throw() {
 
 /// Returns true if OpenType features are supported.
 bool layout::supportsOpenTypeFeatures() throw() {
-	return false;
+	return uspLib->get<0>() != 0;
 }
 
 
@@ -1325,16 +1327,13 @@ namespace {
 	::HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) throw() {
 		while(true) {
 			int numberOfGlyphs;
-			HRESULT hr = ::ScriptShape(dc.getHandle(), &run.shared->cache, text,
+			::HRESULT hr = ::ScriptShape(dc.getHandle(), &run.shared->cache, text,
 				static_cast<int>(run.length()), static_cast<int>(expectedNumberOfGlyphs), &run.analysis,
 				run.shared->glyphs.get(), run.shared->clusters.get(), run.shared->visualAttributes.get(), &numberOfGlyphs);
 			if(SUCCEEDED(hr))
 				run.setNumberOfGlyphs(numberOfGlyphs);
-			if(hr == S_OK || hr == USP_E_SCRIPT_NOT_IN_FONT) {
-//				static const OPENTYPE_TAG HAN = makeOpenTypeTag("hani"), JP90 = makeOpenTypeTag("jp90");
-//				hr = uspLib->get<0>()(dc.getHandle(), &run.shared->cache, &run.analysis, HAN, 0, JP90, 1, run.glyphs()[0], run.shared->glyphs.get());
+			if(hr == S_OK || hr == USP_E_SCRIPT_NOT_IN_FONT)
 				return hr;
-			}
 			run.shared->glyphs.reset();
 			run.shared->visualAttributes.reset();
 			if(hr != E_OUTOFMEMORY)
@@ -1372,7 +1371,7 @@ namespace {
 		return false;
 	}
 	inline HRESULT generateGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs, bool checkMissingGlyphs) {
-		HRESULT hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs);
+		::HRESULT hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs);
 		if(SUCCEEDED(hr) && checkMissingGlyphs && includesMissingGlyphs(dc, run))
 			hr = S_FALSE;
 		return hr;
@@ -1441,6 +1440,18 @@ namespace {
 	struct GetIVS {
 		ulong operator()(size_t index) throw() {return IVS_TO_OTFT[index].ivs;}
 	};
+	inline bool uniscribeSupportsVSS() throw() {
+		static bool checked = false, supports = false;
+		if(!checked) {
+			static const ::WCHAR text[] = L"\x82A6\xDB40\xDD00";	// <芦, U+E0100>
+			::SCRIPT_ITEM items[4];
+			int numberOfItems;
+			if(SUCCEEDED(::ScriptItemize(text, countof(text) - 1, countof(items), 0, 0, items, &numberOfItems)) && numberOfItems == 1)
+				supports = true;
+			checked = true;
+		}
+		return supports;
+	}
 #endif /* ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND */
 } // namespace @0
 
@@ -1448,6 +1459,9 @@ namespace {
 void LineLayout::shape() throw() {
 	::HRESULT hr;
 	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	const Run* lastIVSProcessedRun = 0;
+#endif /* ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND */
 
 	// for each runs...
 	for(size_t runIndex = 0; runIndex < numberOfRuns_; ++runIndex) {
@@ -1487,7 +1501,7 @@ void LineLayout::shape() throw() {
 			run->shared->glyphs.reset(new ::WORD[expectedNumberOfGlyphs]);
 			run->shared->visualAttributes.reset(new ::SCRIPT_VISATTR[expectedNumberOfGlyphs]);
 			int script = NOT_PROPERTY;	// script of the run for fallback
-			set<HFONT> failedFonts;		// fonts failed to generate glyphs
+			set<::HFONT> failedFonts;		// fonts failed to generate glyphs
 
 			while(true) {
 				// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
@@ -1562,11 +1576,10 @@ void LineLayout::shape() throw() {
 							break;
 						}
 					}
-					if(run->font == 0 && runs_[0] != run) {
+					if(run->font == 0 && runIndex > 0) {
 						// use the previous run setting (but this will copy the style of the font...)
-						const Run& previous = *(&(run)[-1]);
-						run->analysis.eScript = previous.analysis.eScript;
-						run->font = previous.font;
+						run->analysis.eScript = runs_[runIndex - 1]->analysis.eScript;
+						run->font = runs_[runIndex - 1]->font;
 					}
 				}
 				if(run->font != 0 && failedFonts.find(run->font) == failedFonts.end()) {
@@ -1588,18 +1601,34 @@ void LineLayout::shape() throw() {
 		}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		if(runIndex + 1 < numberOfRuns_ && runs_[runIndex + 1]->length() > 1) {
-			const CodePoint vs = surrogates::decodeFirst(
-				textString + runs_[runIndex + 1]->column, textString + runs_[runIndex + 1]->column + 2);
-			if(vs >= 0xE0100 && vs <= 0xE01EF) {
-				const CodePoint baseCharacter = surrogates::decodeLast(textString, textString + runs_[runIndex + 1]->column);
-				const size_t i = ascension::internal::searchBound(
-					0U, countof(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
-				if(i != countof(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
-					// found valid IVS -> apply OpenType feature tag to obtain the variant
-					hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
-						HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, run->glyphs()[0], run->shared->glyphs.get());
+		if(!uniscribeSupportsVSS() && supportsOpenTypeFeatures()) {
+			if(runIndex + 1 < numberOfRuns_ && runs_[runIndex + 1]->length() > 1) {
+				const CodePoint vs = surrogates::decodeFirst(
+					textString + run->length(), textString + run->length() + 2);
+				if(vs >= 0xE0100 && vs <= 0xE01EF) {
+					const CodePoint baseCharacter = surrogates::decodeLast(textString, textString + run->length());
+					const size_t i = ascension::internal::searchBound(
+						0U, countof(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
+					if(i != countof(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
+						// found valid IVS -> apply OpenType feature tag to obtain the variant
+						hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
+							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, run->glyphs()[0], run->shared->glyphs.get());
+						lastIVSProcessedRun = run;
+					}
 				}
+			}
+
+			if(lastIVSProcessedRun == runs_[runIndex - 1]) {
+				// last character in the previous run and first character in this run are an IVS
+				// => so, remove glyphs correspond to the first character
+				::SCRIPT_FONTPROPERTIES fp;
+				fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
+				if(FAILED(::ScriptGetFontProperties(dc->getHandle(), &run->shared->cache, &fp)))
+					fp.wgBlank = 0;	// hmm...
+				run->shared->glyphs[run->clusters()[0]] = run->shared->glyphs[run->clusters()[1]] = fp.wgBlank;
+				::SCRIPT_VISATTR* va = run->shared->visualAttributes.get();
+				va[run->clusters()[0]].uJustification = va[run->clusters()[1]].uJustification = SCRIPT_JUSTIFY_BLANK;
+				va[run->clusters()[0]].fZeroWidth = va[run->clusters()[1]].fZeroWidth = 1;
 			}
 		}
 #endif /* ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND */
@@ -1607,7 +1636,7 @@ void LineLayout::shape() throw() {
 		run->shared->advances.reset(new int[run->numberOfGlyphs()]);
 		run->shared->glyphOffsets.reset(new ::GOFFSET[run->numberOfGlyphs()]);
 		hr = ::ScriptPlace(dc->getHandle(), &run->shared->cache, run->glyphs(), run->numberOfGlyphs(),
-				run->visualAttributes(), &run->analysis, run->shared->advances.get(), run->shared->glyphOffsets.get(), &run->width);
+			run->visualAttributes(), &run->analysis, run->shared->advances.get(), run->shared->glyphOffsets.get(), &run->width);
 
 		// query widths of C0 and C1 controls in this logical line
 		if(ISpecialCharacterRenderer* scr = lip_.getSpecialCharacterRenderer()) {
