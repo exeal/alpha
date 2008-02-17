@@ -581,7 +581,8 @@ namespace ascension {
 			bool	allowsMouseInput() const throw();
 			void	enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
-			kernel::Position	characterForClientXY(const ::POINT& pt, bool nearestLeading) const throw();
+			kernel::Position	characterForClientXY(const ::POINT& pt, layout::LineLayout::Edge,
+									kernel::EditPoint::CharacterUnit snapPolicy = kernel::EditPoint::DEFAULT_) const;
 			::POINT				clientXYForCharacter(const kernel::Position& position,
 									bool fullSearchY, layout::LineLayout::Edge edge = layout::LineLayout::LEADING) const;
 			// utilities

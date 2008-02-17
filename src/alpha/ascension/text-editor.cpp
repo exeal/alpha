@@ -443,10 +443,10 @@ ulong DeletionCommand::execute() {
 		viewer.unfreeze();
 	} else if(type_ == NEXT_CHARACTER) {
 		document.endSequentialEdit();
-		caret.erase(1);
+		caret.erase(1, EditPoint::GRAPHEME_CLUSTER);
 	} else if(type_ == PREVIOUS_CHARACTER) {
 		document.endSequentialEdit();
-		caret.erase(-1);
+		caret.erase(-1, EditPoint::UTF32_CODE_UNIT);
 	} else if(type_ == WHOLE_LINE) {
 		const length_t line = caret.lineNumber();
 		document.endSequentialEdit();
