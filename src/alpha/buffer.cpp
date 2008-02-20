@@ -670,7 +670,7 @@ void BufferList::move(size_t from, size_t to) {
  * @return the result. see the description of @c BufferList#OpenResult
  */
 BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
-		const string& encoding /* = "UTF-8" */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
+		const string& encoding /* = "UniversalAutoDetect" */, bool asReadOnly /* = false */, bool addToMRU /* = true */) {
 	WCHAR resolvedName[MAX_PATH];
 
 	// ショートカットの解決
@@ -717,7 +717,10 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 	}
 
 	if(buffer->isModified() || buffer->textFile().isOpen()) {	// 新しいコンテナで開く
-		addNew(encoding);
+		if(Encoder::supports(encoding))
+			addNew(encoding);
+		else
+			addNew();
 		buffer = &active();
 	}
 /*
@@ -744,7 +747,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		// 準備ができたのでファイルを開く
 		try {
 			// TODO: 戻り値を調べる必要がある。
-			buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::NO_POLICY);
+			buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::DONT_SUBSTITUTE);
 		} catch(IOException& e) {
 			succeeded = false;
 			errorType = e.type();
@@ -1133,7 +1136,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 	IOException::Type errorType;
 	while(true) {
 		try {
-			buffer.textFile().open(buffer.textFile().pathName(), buffer.textFile().lockMode(), encoding, Encoder::NO_POLICY);
+			buffer.textFile().open(buffer.textFile().pathName(), buffer.textFile().lockMode(), encoding, Encoder::DONT_SUBSTITUTE);
 		} catch(IOException& e) {
 			succeeded = false;
 			errorType = e.type();
@@ -1294,7 +1297,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 	while(true) {
 		TextFileDocumentInput::WriteParameters params;
 		params.encoding = format.encoding;
-		params.encodingPolicy = Encoder::NO_POLICY;
+		params.encodingSubstitutionPolicy = Encoder::DONT_SUBSTITUTE;
 		params.newline = format.newline;
 		if(writeBOM)
 			params.options = TextFileDocumentInput::WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
@@ -1319,7 +1322,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 				continue;
 			} else if(userAnswer == IDNO) {
 				succeeded = true;
-				params.encodingPolicy = Encoder::REPLACE_UNMAPPABLE_CHARACTER;
+				params.encodingSubstitutionPolicy = Encoder::REPLACE_UNMAPPABLE_CHARACTER;
 				try {
 					buffer.textFile().write(fileName, params);
 				} catch(IOException& e) {
@@ -1510,6 +1513,7 @@ EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnSta
 
 /// Destructor.
 EditorView::~EditorView() {
+	document().textFile().removeListener(*this);
 	document().bookmarker().removeListener(*this);
 }
 

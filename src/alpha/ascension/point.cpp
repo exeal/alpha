@@ -1839,7 +1839,7 @@ bool Caret::isPointOverSelection(const ::POINT& pt) const {
 		textViewer().getClientRect(rect);
 		if(pt.x > rect.right || pt.y > rect.bottom)
 			return false;
-		const Position pos(textViewer().characterForClientXY(pt, false));
+		const Position pos(textViewer().characterForClientXY(pt, LineLayout::TRAILING));
 		return pos >= beginning() && pos <= end();
 	}
 }
