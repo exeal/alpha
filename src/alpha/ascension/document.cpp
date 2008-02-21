@@ -821,7 +821,7 @@ Position Document::eraseText(const Region& region) {
 	// notify the change
 	++revisionNumber_;
 	fireDocumentChanged(DocumentChange(true, Region(beginning, end)));
-	setModified();
+	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 
 	return beginning;
 }
@@ -864,14 +864,14 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 		return at;															\
 	Position resultPosition(at)
 
-#define ASCENSION_DOCUMENT_INSERT_EPILOGUE()														\
-	if(recordingOperations_)																		\
-		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(at, resultPosition))));	\
-	/* notify the change */																			\
-	++revisionNumber_;																				\
-	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));							\
-	setModified();																					\
-/*	assert(length_ == calculateDocumentLength(*this));	/* diagnose length_  */						\
+#define ASCENSION_DOCUMENT_INSERT_EPILOGUE()																	\
+	if(recordingOperations_)																					\
+		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(at, resultPosition))));				\
+	/* notify the change */																						\
+	++revisionNumber_;																							\
+	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));										\
+	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);	\
+/*	assert(length_ == calculateDocumentLength(*this));	/* diagnose length_  */									\
 	return resultPosition
 
 /**
@@ -1040,6 +1040,17 @@ length_t Document::lineOffset(length_t line, Newline newline) const {
 }
 
 /**
+ * Marks the document modified. There is not a method like @c markModified.
+ * @see #isModified, IDocumentStateListener#documentModificationSignChanged
+ */
+void Document::markUnmodified() throw() {
+	if(isModified()) {
+		lastUnmodifiedRevisionNumber_ = revisionNumber();
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+	}
+}
+
+/**
  * Narrows the accessible area to the specified region.
  * @param region the region
  * @see #isNarrowed, #widen
@@ -1159,7 +1170,7 @@ void Document::resetContent() {
 	}
 
 	setReadOnly(false);
-	setModified(false);
+	markUnmodified();
 	clearUndoBuffer();
 	onceUndoBufferCleared_ = false;
 	doResetContent();
@@ -1249,21 +1260,6 @@ void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) throw(
 }
 
 /**
- * Sets the modification flag of the document.
- * @param modified set true to make the document modfied
- * @see #isModified, IDocumentStateListener#documentModificationSignChanged
- */
-void Document::setModified(bool modified /* = true */) throw() {
-	if(modified != isModified()) {
-		if(modified)
-			lastUnmodifiedRevisionNumber_ = numeric_limits<size_t>::max();
-		else
-			lastUnmodifiedRevisionNumber_ = revisionNumber();
-		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
-	}
-}
-
-/**
  * Sets the new document partitioner.
  * @param newPartitioner the new partitioner. the ownership will be transferred to the callee
  */
@@ -1349,6 +1345,8 @@ bool Document::undo() {
 	endSequentialEdit();
 
 	revisionNumber_ -= status.second;
+	if(!isModified())
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	return status.first;
 }
 

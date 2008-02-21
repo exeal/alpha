@@ -846,7 +846,7 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
 
 	document_.clearUndoBuffer();
-	document_.setModified(false);
+	document_.markUnmodified();
 
 	// update the internal time stamp
 	try {
@@ -1097,7 +1097,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 //			lines_[i]->operationHistory_ = 0;
 	}
 	savedDocumentRevision_ = document_.revisionNumber();
-	document_.setModified(false);
+	document_.markUnmodified();
 	document_.setReadOnly(false);
 	setEncoding(params.encoding);
 	if(fileName_ != realName) {
