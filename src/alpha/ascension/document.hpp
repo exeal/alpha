@@ -614,12 +614,12 @@ namespace ascension {
 			IDocumentInput*				input() const throw();
 			bool						isModified() const throw();
 			bool						isReadOnly() const throw();
+			void						markUnmodified() throw();
 			const DocumentPartitioner&	partitioner() const throw();
 			const String*				property(const DocumentPropertyKey& key) const throw();
 			texteditor::Session*		session() throw();
 			const texteditor::Session*	session() const throw();
 			void						setInput(IDocumentInput* newInput, bool delegateOwnership) throw();
-			void						setModified(bool modified = true) throw();
 			void						setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
 			void						setProperty(const DocumentPropertyKey& key, const String& property);
 			void						setReadOnly(bool readOnly = true);
