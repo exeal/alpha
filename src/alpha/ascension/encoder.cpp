@@ -428,11 +428,11 @@ EncodingDetector::~EncodingDetector() throw() {
  * @param last the end of the sequence
  * @param[out] convertibleBytes the number of bytes (from @a first) absolutely detected. the value
  * can't exceed the result of (@a last - @a first). can be @c null if not needed
- * @return the MIBenum of the detected encoding
+ * @return the MIBenum and the name of the detected encoding
  * @throw NullPointerException @a first or @last is @c null
  * @throw std#invalid_argument @c first is greater than @a last
  */
-MIBenum EncodingDetector::detect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const {
+pair<MIBenum, string> EncodingDetector::detect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const {
 	if(first == 0 || last == 0)
 		throw NullPointerException("first or last");
 	else if(first > last)
@@ -500,25 +500,26 @@ namespace {
 	public:
 		UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 	private:
-		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string>	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
-MIBenum UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+pair<MIBenum, string> UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
 	// try all detectors
 	vector<string> names;
 	availableNames(back_inserter(names));
 
-	MIBenum result = Encoder::getDefault().properties().mibEnum();
+	pair<MIBenum, string> result = make_pair(
+		Encoder::getDefault().properties().mibEnum(), Encoder::getDefault().properties().name());
 	ptrdiff_t bestScore = 0, score;
 	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
 		if(const EncodingDetector* detector = forName(*name)) {
 			if(detector == this)
 				continue;
-			const MIBenum detectedEncoding = detector->detect(first, last, &score);
+			const pair<MIBenum, string> detectedEncoding(detector->detect(first, last, &score));
 			if(score > bestScore) {
 				result = detectedEncoding;
 				if(score == last - first)

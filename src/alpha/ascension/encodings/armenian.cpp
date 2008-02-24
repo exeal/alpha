@@ -47,7 +47,7 @@ namespace {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
-		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
 
 	struct Installer {
@@ -398,11 +398,11 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
 // ArmenianDetector /////////////////////////////////////////////////////////
 
 /// @see EncodingDetector#doDetect
-MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
 	// first, check if Unicode
 	if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 		ptrdiff_t temp;
-		MIBenum result = unicodeDetector->detect(first, last, &temp);
+		pair<MIBenum, string> result(unicodeDetector->detect(first, last, &temp));
 		if(temp == last - first) {
 			if(convertibleBytes != 0)
 				*convertibleBytes = temp;
@@ -412,6 +412,7 @@ MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_
 
 	if(convertibleBytes != 0)
 		*convertibleBytes = last - first;
+	const IEncodingProperties* props = 0;
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	bool b[3] = {true, true, true};	// 0:-7, 1:-8, 2:-8A
@@ -421,15 +422,21 @@ MIBenum ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_
 		if(c >= 0x80 && c < 0xA0)	b[1] = false;	// 8-bit controls (but ARMSCII-8 may contain these)
 		if(c >= 0xB0 && c < 0xDC)	b[2] = false;
 
-		if(!b[0] && !b[2])
-			return extended::ARMSCII8;	// ARMSCII-8
+		if(!b[0] && !b[2]) {
+			props = &ARMSCII_8;	// ARMSCII-8
+			break;
+		}
 	}
-	if(!b[0] && !b[1])
-		return extended::ARMSCII8A;
-	else if(!b[2] && !b[1])
-		return extended::ARMSCII7;
+	if(props == 0) {
+		if(!b[0] && !b[1])
+			props = &ARMSCII_8A;
+		else if(!b[2] && !b[1])
+			props = &ARMSCII_7;
+	}
 #endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
-	return extended::ARMSCII8;	// most preferred encoding
+	if(props == 0)
+		props = &ARMSCII_8;	// most preferred encoding
+	return make_pair(props->mibEnum(), props->name());
 }
 
 #endif /* !ASCENSION_NO_STANDARD_ENCODINGS */

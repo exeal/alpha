@@ -399,7 +399,7 @@ namespace ascension {
 			/// Returns the name of the encoding detector.
 			std::string name() const throw() {return name_;}
 			// detection
-			MIBenum	detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
+			std::pair<MIBenum, std::string>	detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
 			static EncodingDetector*	forName(const std::string& name) throw();
 #ifdef ASCENSION_WINDOWS
@@ -416,9 +416,10 @@ namespace ascension {
 			 * @param last the end of the sequence
 			 * @param[out] convertibleBytes the number of bytes (from @a first) absolutely
 			 * detected. the value can't exceed the result of (@a last - @a first). may be @c null
-			 * @return the MIBenum value of the detected encoding
+			 * @return the MIBenum value and the name of the detected encoding
 			 */
-			virtual MIBenum doDetect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
+			virtual std::pair<MIBenum, std::string> doDetect(
+				const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
 		private:
 			static std::vector<EncodingDetector*>& registry();
 			const std::string name_;
@@ -473,12 +474,14 @@ namespace ascension {
 			struct CharLine : public CodeLine<Char, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF> {};
 
 			/// Generates an incremental character sequence from @a start.
-			template<Char start> struct SequentialCharLine : public CharLine<
-				start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6, start + 7,
-				start + 8, start + 8, start + 10, start + 11, start + 12, start + 13, start + 14, start + 15> {};
+			template<Char start, Char step = +1> struct SequentialCharLine : public CharLine<
+				start + step * 0, start + step * 1, start + step * 2, start + step * 3,
+				start + step * 4, start + step * 5, start + step * 6, start + step * 7,
+				start + step * 8, start + step * 8, start + step * 10, start + step * 11,
+				start + step * 12, start + step * 13, start + step * 14, start + step * 15> {};
 
 			/// Generates an all NUL character sequence.
-			struct EmptyCharLine : public CharLine<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0> {};
+			struct EmptyCharLine : public SequentialCharLine<0xFFFD, 0> {};
 
 			/// Generates 16×16-code sequence.
 			template<typename Code,
@@ -607,32 +610,7 @@ namespace ascension {
 				class DBCSWire : public CodeWire<ushort, Line0, Line1, Line2, Line3,
 					Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 			} // namespace dbcs
-
-/*			/// Base class of 7-bit ISO-2022 encoders.
-			class ISO2022Encoder : public EncoderBase {
-			public:
-				virtual ~ISO2022Encoder() throw();
-			protected:
-				static const byte SO = 0x0E;	///< Shift out.
-				static const byte SI = 0x0F;	///< Shift in.
-				static const byte ESC = 0x1B;	///< Escape.
-				static const byte SS2 = 0x8E;	///< 8-bit single shift 2.
-				static const byte SS3 = 0x8F;	///< 8-bit single shift 3.
-			protected:
-				ISO2022Encoder(const std::string& name, MIBenum mib, const std::string& aliases, byte substitutionCharacter);
-				byte	currentState() const throw();
-				void	designate(std::size_t gn, byte charset);
-				void	shiftIn();
-				void	shiftOut();
-				void	ss2();
-				void	ss3();
-			private:
-				byte gl_, gr_;
-				byte g_[4];
-				bool shiftOuted_;
-				int currentState_;
-			};
-*/		}
+		}
 
 
 		/**
