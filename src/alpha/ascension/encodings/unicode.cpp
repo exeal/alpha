@@ -92,7 +92,7 @@ namespace {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 	private:
-		MIBenum	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
 	};
 
 	struct EncoderInstaller {
@@ -780,32 +780,33 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetect
-MIBenum UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
-	MIBenum result = 0;
+pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+	const IEncodingProperties* result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, countof(UTF8_BOM)) == 0)
-		result = fundamental::UTF_8;
+		result = &utf8;
 	else if(last - first >= 2) {
 		if(memcmp(first, UTF16LE_BOM, countof(UTF16LE_BOM)) == 0)
-			result = fundamental::UTF_16LE;
+			result = &utf16le;
 		else if(memcmp(first, UTF16BE_BOM, countof(UTF16BE_BOM)) == 0)
-			result = fundamental::UTF_16BE;
+			result = &utf16be;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 		if(last - first >= 4) {
 			if(memcmp(first, UTF32LE_BOM, countof(UTF32LE_BOM)) == 0)
-				result = standard::UTF_32LE;
+				result = &utf32le;
 			else if(memcmp(first, UTF32BE_BOM, countof(UTF32BE_BOM)) == 0)
-				result = standard::UTF_32BE;
+				result = &utf32be;
 		}
 #endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
 	}
 	if(result != 0) {
 		if(convertibleBytes != 0)
 			*convertibleBytes = last - first;
-		return result;
+	} else {
+		// force into UTF-8
+		result = &utf8;
+		if(convertibleBytes != 0)
+			*convertibleBytes = maybeUTF8(first, last) - first;
 	}
-	// force into UTF-8
-	if(convertibleBytes != 0)
-		*convertibleBytes = maybeUTF8(first, last) - first;
-	return fundamental::UTF_8;
+	return make_pair(result->mibEnum(), result->name());
 }

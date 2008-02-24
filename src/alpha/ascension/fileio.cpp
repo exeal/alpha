@@ -362,8 +362,12 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		inputMapping_.last = inputMapping_.first + fileSize;
 		// detect input encoding if neccssary
 		if(encodingDetector != 0) {
-			encoder_ = Encoder::forMIB(encodingDetector->detect(
+			const pair<MIBenum, string> detected(encodingDetector->detect(
 				inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), 0));
+			if(detected.first != MIB_OTHER)
+				encoder_ = Encoder::forMIB(detected.first);
+			else
+				encoder_ = Encoder::forName(detected.second);
 			if(encoder_.get() == 0)
 				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
 		}
