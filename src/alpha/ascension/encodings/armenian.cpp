@@ -12,6 +12,9 @@
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 #include "../encoder.hpp"
 #include <algorithm>	// std.binary_search
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+#include <bitset>
+#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -410,32 +413,32 @@ pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* 
 		}
 	}
 
-	if(convertibleBytes != 0)
-		*convertibleBytes = last - first;
 	const IEncodingProperties* props = 0;
-
-#ifndef ASCENSION_NO_MINORITY_ENCODINGS
-	bool b[3] = {true, true, true};	// 0:-7, 1:-8, 2:-8A
+#ifdef ASCENSION_NO_MINORITY_ENCODINGS
+	props = &ARMSCII_8;
+	for(; first < last; ++first) {
+		if(*first >= 0x80 && *from < 0xA0)
+			break;
+	}
+#else
+	bitset<3> candidates;	// 0:-7, 1:-8, 2:-8A
+	candidates.set();
 	for(; first < last; ++first) {
 		const byte c = *first;
-		if(c >= 0x80)				b[0] = false;	// ARMSCII-7 consists of only 7-bits
-		if(c >= 0x80 && c < 0xA0)	b[1] = false;	// 8-bit controls (but ARMSCII-8 may contain these)
-		if(c >= 0xB0 && c < 0xDC)	b[2] = false;
-
-		if(!b[0] && !b[2]) {
-			props = &ARMSCII_8;	// ARMSCII-8
+		if(c >= 0x80)				candidates.reset(0);	// ARMSCII-7 consists of only 7-bits
+		if(c >= 0x80 && c < 0xA0)	candidates.reset(1);	// 8-bit controls (but ARMSCII-8 may contain these)
+		if(c >= 0xB0 && c < 0xDC)	candidates.reset(2);
+		if(candidates.none())
 			break;
-		}
 	}
-	if(props == 0) {
-		if(!b[0] && !b[1])
-			props = &ARMSCII_8A;
-		else if(!b[2] && !b[1])
-			props = &ARMSCII_7;
-	}
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
-	if(props == 0)
-		props = &ARMSCII_8;	// most preferred encoding
+	if(candidates.none() || candidates.test(1))
+		props = &ARMSCII_8;
+	else if(candidates.test(2))
+		props = &ARMSCII_8A;
+	else
+		props = &ARMSCII_7;
+#endif /* ASCENSION_NO_MINORITY_ENCODINGS */
+
 	return make_pair(props->mibEnum(), props->name());
 }
 
