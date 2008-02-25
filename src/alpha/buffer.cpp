@@ -757,6 +757,7 @@ BufferList::OpenResult BufferList::open(const basic_string<WCHAR>& fileName,
 		if(!succeeded) {
 			// alert the encoding error
 			int userAnswer;
+			modifiedEncoding = buffer->textFile().encoding();
 			if(errorType == IOException::UNMAPPABLE_CHARACTER)
 				userAnswer = Alpha::instance().messageBox(
 					MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
