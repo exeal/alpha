@@ -1,14 +1,13 @@
 /**
  * @file command.hpp
  * @author exeal
- * @date 2004-2007
+ * @date 2004-2008
  */
 
 #ifndef ALPHA_COMMAND_HPP
 #define ALPHA_COMMAND_HPP
 
 #include "application.hpp"
-#include "ankh/core.hpp"
 #include "temporary-macro.hpp"
 #include "../manah/win32/file.hpp"
 #include "../manah/win32/ui/common-controls.hpp"
@@ -121,7 +120,7 @@ namespace alpha {
 			explicit ScriptletCommand(IDispatch& function) : function_(function) {function.AddRef();}
 			~ScriptletCommand() {function_.Release();}
 			void copy(KeyAssignableCommand*& p) const {p = new ScriptletCommand(function_);}
-			bool execute() {return SUCCEEDED(ankh::ScriptSystem::callAnonymousFunction(function_));}
+			bool execute() {return false/*SUCCEEDED(ankh::ScriptSystem::callAnonymousFunction(function_))*/;}
 			CommandID getID() const {throw std::logic_error("This command is not built-in.");}
 			bool isBuiltIn() const {return false;}
 		private:

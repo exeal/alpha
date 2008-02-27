@@ -6,7 +6,6 @@
 
 #include "stdafx.h"
 #include "application.hpp"
-#include "ankh/core.hpp"
 #include "command.hpp"
 #include "mru-manager.hpp"
 #include "search-dialog.hpp"
@@ -14,7 +13,6 @@
 //#include "DebugDlg.h"
 #include "ascension/text-editor.hpp"
 #include "ascension/regex.hpp"
-#include "ankh/startup-handler.hpp"
 #include "resource/messages.h"
 #include "../manah/win32/dc.hpp"
 #include "../manah/win32/gdi-object.hpp"
@@ -158,14 +156,12 @@ namespace {
 Alpha* Alpha::instance_ = 0;
 
 /// コンストラクタ
-Alpha::Alpha() : editorFont_(0), scriptSystem_(new ankh::ScriptSystem), mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0) {
+Alpha::Alpha() : editorFont_(0), mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0) {
 	assert(Alpha::instance_ == 0);
 	Alpha::instance_ = this;
-	scriptSystem_->AddRef();
 	commandManager_.reset(new CommandManager);
 	searchDialog_.reset(new ui::SearchDialog);
 	bookmarkDialog_.reset(new ui::BookmarkDialog);
-	registerScriptEngineAssociations();
 	onSettingChange(0, 0);	// statusFont_ の初期化
 
 	// load startup.xml
@@ -174,15 +170,12 @@ Alpha::Alpha() : editorFont_(0), scriptSystem_(new ankh::ScriptSystem), mruManag
 	::WCHAR* const separator = wcsrchr(fileName, L'\\');
 	assert(separator != 0);
 	wcscpy(separator + 1, L"startup.xml");
-	ankh::StartupHandler sh(*scriptSystem_, fileName);
 }
 
 /// デストラクタ
 Alpha::~Alpha() {
 	buffers_.reset(0);	// 先に解体する
 	::DeleteObject(statusFont_);
-	scriptSystem_->shutdown();
-	scriptSystem_->Release();
 	Alpha::instance_ = 0;
 }
 
@@ -652,6 +645,7 @@ void Alpha::readProfileSet(const wchar_t* section,
 		items.insert(buffer);
 }
 
+#if 0
 /// スクリプトエンジンとファイルパターンの関連付けをする
 void Alpha::registerScriptEngineAssociations() {
 	// コンポーネントカテゴリからスクリプトエンジンを列挙し、INI から拡張子を拾う
@@ -680,6 +674,7 @@ void Alpha::registerScriptEngineAssociations() {
 		}
 	}
 }
+#endif /* 0 */
 
 /// INI ファイルに設定を保存する
 void Alpha::saveINISettings() {
@@ -712,13 +707,6 @@ void Alpha::saveINISettings() {
 	swprintf(keyName, L"replaceWith(%u)", s.numberOfStoredReplacements());
 	writeStringProfile(L"Find", keyName, L"");
 }
-
-/// スクリプトシステムを返す
-void Alpha::scriptSystem(ankh::ScriptSystem*& scriptSystem) throw() {(scriptSystem = scriptSystem_)->AddRef();}
-
-/// スクリプトシステムを返す
-void Alpha::scriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw() {
-	const_cast<ankh::ScriptSystem*>(scriptSystem_)->AddRef(); (scriptSystem = scriptSystem_);}
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
 void Alpha::setFont(const ::LOGFONTW& font) {
