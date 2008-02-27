@@ -37,9 +37,6 @@
 #define IDS_BREAK_LS	L"LS (U+2028)"
 #define IDS_BREAK_PS	L"PS (U+2029)"
 
-// INI sections
-#define INI_SECTION_SCRIPTENGINES	L"ScriptEngines"
-
 // Timer ID
 #define ID_TIMER_QUERYCOMMAND	1	// ツールバーアイテムの有効化
 #define ID_TIMER_MOUSEMOVE		2	// カーソル停止後1秒後に発生 (ヒント表示などに使用)
@@ -58,15 +55,8 @@
 
 
 namespace alpha {
-/*
-class ICallable {
-public:
-	virtual ~ICallable() {}
-	virtual void call() = 0;
-};
-*/
 
-	// 前方宣言
+	// fwd
 	class MRUManager;
 	namespace command {
 		class CommandManager;
@@ -75,12 +65,6 @@ public:
 	namespace ui {
 		class SearchDialog;
 		class BookmarkDialog;
-	}
-	namespace ambient {
-		class Application;
-	}
-	namespace ankh {
-		class ScriptSystem;
 	}
 
 	/// Alpha のアプリケーションクラス
@@ -98,8 +82,6 @@ public:
 		const command::KeyboardMap&		keyboardMap() const throw();
 		MRUManager&						mruManager() throw();
 		const MRUManager&				mruManager() const throw();
-		void							scriptSystem(ankh::ScriptSystem*& scriptSystem) throw();
-		void							scriptSystem(const ankh::ScriptSystem*& scriptSystem) const throw();
 		manah::win32::ui::StatusBar&	statusBar() throw();
 		// attributes
 		static Alpha&	instance();
@@ -124,7 +106,6 @@ public:
 		bool	preTranslateMessage(const ::MSG& msg);
 		void	readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
 		void	readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void	registerScriptEngineAssociations();
 		void	saveINISettings();
 		void	setupMenus();
 		void	setupToolbar();
@@ -172,7 +153,6 @@ public:
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
 		// features and commands
-		ankh::ScriptSystem* scriptSystem_;
 		std::auto_ptr<command::CommandManager> commandManager_;
 		command::KeyboardMap keyboardMap_;			// 使用中のキーボードマップ
 		MRUManager* mruManager_;
@@ -180,8 +160,6 @@ public:
 //		std::auto_ptr<ScriptMacroManager> scriptMacroManager_;	// スクリプトマクロの管理
 		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
 		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
-		// オートメーション用インターフェイス
-//		alpha::ambient::Application* automation_;
 		// オプション
 		bool showMessageBoxOnFind_;			// 検索処理でメッセージボックスを表示する
 		bool initializeFindTextFromEditor_;	// [検索と置換] ダイアログを開いたときに

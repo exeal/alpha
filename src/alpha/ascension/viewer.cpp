@@ -643,9 +643,12 @@ Position TextViewer::characterForClientXY(const ::POINT& pt,
 
 	// snap intervening position to the boundary
 	if(result.column != 0 && snapPolicy != EditPoint::UTF16_CODE_UNIT) {
+		using namespace text;
 		const String& s = document().line(result.line);
+		const bool interveningSurrogates =
+			surrogates::isLowSurrogate(s[result.column]) && surrogates::isHighSurrogate(s[result.column - 1]);
 		if(snapPolicy == EditPoint::UTF32_CODE_UNIT) {
-			if(text::surrogates::isLowSurrogate(s[result.column]) && text::surrogates::isHighSurrogate(s[result.column - 1])) {
+			if(interveningSurrogates) {
 				if(edge == LineLayout::LEADING)
 					--result.column;
 				else if(ascension::internal::distance(x, layout.location(result.column - 1).x)
@@ -655,9 +658,9 @@ Position TextViewer::characterForClientXY(const ::POINT& pt,
 					++result.column;
 			}
 		} else if(snapPolicy == EditPoint::GRAPHEME_CLUSTER) {
-			text::GraphemeBreakIterator<DocumentCharacterIterator> i(
+			GraphemeBreakIterator<DocumentCharacterIterator> i(
 				DocumentCharacterIterator(document(), Region(result.line, make_pair(0, s.length())), result));
-			if(!i.isBoundary(i.base())) {
+			if(interveningSurrogates || !i.isBoundary(i.base())) {
 				--i;
 				if(edge == LineLayout::LEADING)
 					result.column = i.base().tell().column;

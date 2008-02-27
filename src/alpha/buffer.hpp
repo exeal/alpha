@@ -1,7 +1,7 @@
 /**
  * @file buffer.hpp
  * @author exeal
- * @date 2003-2007 (was AlphaDoc.h and BufferList.h)
+ * @date 2003-2008 (was AlphaDoc.h and BufferList.h)
  */
 
 #ifndef ALPHA_BUFFER_HPP
@@ -10,7 +10,7 @@
 #include "ascension/viewer.hpp"
 #include "ascension/searcher.hpp"	// ascension.searcher.IIncrementalSearchListener
 #include "ascension/session.hpp"
-#include <objbase.h>
+//#include <objbase.h>
 #include "../manah/win32/ui/splitter.hpp"
 #include "../manah/win32/ui/menu.hpp"
 #include "../manah/win32/ui/common-controls.hpp"
@@ -20,7 +20,6 @@
 namespace alpha {
 	class Alpha;
 	class BufferList;
-	namespace ambient {class Buffer;}
 
 	/// A buffer.
 	class Buffer : public ascension::kernel::Document {

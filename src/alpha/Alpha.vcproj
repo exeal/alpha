@@ -490,21 +490,9 @@
 					</File>
 					<File
 						RelativePath=".\Ascension\encodings\japanese.cpp">
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="TRUE">
-							<Tool
-								Name="VCCLCompilerTool"/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath=".\ascension\encodings\korean.cpp">
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="TRUE">
-							<Tool
-								Name="VCCLCompilerTool"/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath=".\Ascension\encodings\lao.cpp">
@@ -604,43 +592,6 @@
 				</File>
 				<File
 					RelativePath=".\Ascension\viewer.hpp">
-				</File>
-			</Filter>
-		</Filter>
-		<Filter
-			Name="ankh"
-			Filter="">
-			<Filter
-				Name="Source Files"
-				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
-				<File
-					RelativePath=".\ankh\ankh.idl">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCMIDLTool"
-							WarningLevel="4"
-							TypeLibraryName="$(TargetDir)$(InputName).tlb"
-							OutputDirectory=""
-							HeaderFileName="$(InputDir)$(InputName).h"
-							DLLDataFileName="$(InputDir)dlldata.c"/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath=".\ankh\core.cpp">
-				</File>
-				<File
-					RelativePath=".\ankh\startup-handler.cpp">
-				</File>
-			</Filter>
-			<Filter
-				Name="Header Files"
-				Filter="h;hpp;hxx;hm;inl">
-				<File
-					RelativePath=".\ankh\core.hpp">
-				</File>
-				<File
-					RelativePath=".\ankh\startup-handler.hpp">
 				</File>
 			</Filter>
 		</Filter>
