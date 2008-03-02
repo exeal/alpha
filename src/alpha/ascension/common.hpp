@@ -16,10 +16,29 @@
 
 // platform
 #ifdef _WIN32
-#define ASCENSION_WINDOWS
+#	define ASCENSION_WINDOWS
 #else
-#define ASCENSION_POSIX
+#	define ASCENSION_POSIX
 #endif
+
+// compiler
+#if defined(_MSC_VER)
+#	define ASCENSION_MSVC
+#elif defined(__GNUC__)
+#	define ASCENSION_GCC
+#endif
+
+#ifdef __i386__
+#	if defined(ASCENSION_MSVC)
+#		define ASCENSION_FASTCALL __fastcall
+#	elif defined(ASCENSION_GCC)
+#		define ASCENSION_FASTCALL __attribute__(regparm(3))
+#	else
+#		define ASCENSION_FASTCALL
+#	endif
+#else
+#	define ASCENSION_FASTCALL
+#endif /* __i386__ */
 
 #include "config.hpp"
 #include <string>	// std.string
@@ -109,6 +128,25 @@ namespace ascension {
 		IndexOutOfBoundsException() : std::out_of_range("the index is out of range.") {}
 		/// Constructor.
 		explicit IndexOutOfBoundsException(const std::string& message) : std::out_of_range(message) {}
+	};
+
+	/// Represents an invariant range.
+	/// @note This class is not compatible with Boost.Range.
+	/// @see kernel#Region
+	template<typename T> class Range : protected std::pair<T, T> {
+	public:
+		typedef T ValueType;
+	public:
+		/// Constructor.
+		Range(ValueType v1, ValueType v2) : std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
+		/// Returns the beginning (minimum) of the range.
+		ValueType beginning() const {return first;}
+		/// Returns the end (maximum) of the range.
+		ValueType end() const {return second;}
+		/// Returns the given value is included by the range.
+		bool includes(ValueType v) const {return v >= first && v < second;}
+		/// Returns true if the range is empty.
+		bool isEmpty() const {return first == second;}
 	};
 
 	/**

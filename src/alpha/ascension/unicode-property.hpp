@@ -2,7 +2,7 @@
  * @file unicode-property.hpp
  * Defines Unicode property entries and provides methods to retrieve a property of character.
  * @author exeal
- * @date 2007
+ * @date 2007-2008
  */
 
 #ifndef ASCENSION_UNICODE_PROPERTY_HPP
@@ -63,16 +63,16 @@ namespace ascension {
 			public:
 				static int forName(const Char* name);
 			protected:
-#ifdef _MSC_VER
+#ifdef ASCENSION_MSVC
 #pragma warning(disable : 4510 4512 4610)
-#endif /* _MSC_VER */
+#endif /* ASCENSION_MSVC */
 				struct Names {
 					const Char* const shortName;
 					const Char* const longName;
 				};
-#ifdef _MSC_VER
+#ifdef ASCENSION_MSVC
 #pragma warning(default : 4510 4512 4610)
-#endif /* _MSC_VER */
+#endif /* ASCENSION_MSVC */
 			private:
 				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
 			};

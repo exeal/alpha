@@ -714,7 +714,7 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
 	fill_n(unicodeToByte_, countof(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
 	for(int i = 0x00; i < 0xFF; ++i) {
-		const Char ucs = wireAt(byteToUnicode_, i);
+		const Char ucs = wireAt(byteToUnicode_, static_cast<byte>(i));
 		byte*& p = unicodeToByte_[ucs >> 8];
 		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {
 			p = new byte[0x100];

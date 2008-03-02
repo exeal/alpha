@@ -253,7 +253,7 @@ bool layout::getDecorationLineMetrics(::HDC dc, int* baselineOffset,
 			return false;
 	} else if(!toBoolean(::GetTextMetricsW(dc, &tm)))
 		return false;
-	const int baseline = (otm != 0) ? otm->otmAscent : tm.tmAscent;
+	const int baseline = (otm != 0) ? otm->otmTextMetrics.tmAscent : tm.tmAscent;
 	if(baselineOffset != 0)
 		*baselineOffset = baseline;
 	if(underlineOffset != 0)

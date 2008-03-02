@@ -141,7 +141,7 @@
 #define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::layout::ALIGN_LEFT
 
 /**
- * @def ASCENSION_LINE_LAYOUT_CACHE_SIZE
+ * @def ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE
  * Default size of cache buffer of @c ascension#layout#LineLayoutBuffer. This value is used by
  * @c ascension#layout#LineLayoutBuffer class.
  */
@@ -153,6 +153,15 @@
  * For more details, see the description of layout.cpp.
  */
 #define ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+
+
+// about ascension.presentation /////////////////////////////////////////////
+
+/**
+ * @def ASCENSION_HYPERLINKS_CACHE_SIZE
+ * Size of cache buffer of @c ascension#presentation#Presentation#hyperlinks.
+ */
+#define ASCENSION_HYPERLINKS_CACHE_SIZE 256
 
 
 // about ascension.viewers //////////////////////////////////////////////////

@@ -96,7 +96,8 @@ namespace ascension {
 		 * A region consists of two positions and represents a linear range in a document. There
 		 * are no restriction about greater/less relationship between the two positions, but the
 		 * region is called "normalized" when the first position is less than or equal to the second.
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
+		 * @see Range
 		 */
 		class Region : public std::pair<Position, Position>, public manah::FastArenaObject<Region> {
 		public:
