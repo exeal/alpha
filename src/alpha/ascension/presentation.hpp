@@ -1,8 +1,9 @@
 /**
  * @file presentation.hpp
+ * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -97,6 +98,7 @@ namespace ascension {
 			friend class Presentation;
 		};
 
+		/// @internal
 		namespace internal {
 			class ITextViewerCollection {
 			private:
@@ -107,8 +109,74 @@ namespace ascension {
 		}
 
 		/**
+		 * Provides support for detecting and presenting hyperlinks in text editors. "Hyperlink" is
+		 * invokable text segment in the document.
+		 * @see Presentation#getHyperlinks, Presentation#setHyperlinkDetector
+		 */
+		namespace hyperlink {
+			/// Represents a hyperlink.
+			class IHyperlink {
+			public:
+				/// Destructor.
+				virtual ~IHyperlink() throw() {}
+				/// Returns the descriptive text of the hyperlink.
+				virtual String description() const throw() = 0;
+				/// Invokes the hyperlink.
+				virtual void invoke() throw() = 0;
+				/// Returns the region of the hyperlink.
+				const kernel::Region& region() const throw() {return region_;}
+			protected:
+				/// Protected constructor takes the region of the hyperlink.
+				explicit IHyperlink(const kernel::Region& region) throw() : region_(kernel::Region(region).normalize()) {}
+			private:
+				const kernel::Region region_;
+			};
+
+			/// A @c HyperlinkDetector finds the hyperlinks in the document.
+			class IHyperlinkDetector {
+			public:
+				/// Destructor.
+				virtual ~IHyperlinkDetector() throw() {}
+				/**
+				 * Returns the next hyperlink in the specified line.
+				 * @param document the document
+				 * @param line the line number
+				 * @param range the column range in the line to search. @a range.beginning() can be
+				 * the beginning of the found hyperlink
+				 * @return the found hyperlink, or @c null if not found
+				 */
+				virtual std::auto_ptr<IHyperlink> nextHyperlink(
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw() = 0;
+			};
+
+			/**
+			 * URL hyperlink detector.
+			 * @note This class is not intended to be subclassed.
+			 */
+			class URLHyperlinkDetector : virtual public IHyperlinkDetector {
+			public:
+				std::auto_ptr<IHyperlink> nextHyperlink(
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw();
+			};
+
+			/**
+			 * @note This class is not intended to be subclassed.
+			 */
+			class CompositeHyperlinkDetector : virtual public hyperlink::IHyperlinkDetector {
+			public:
+				~CompositeHyperlinkDetector() throw();
+				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::IHyperlinkDetector> detector);
+				// hyperlink.IHyperlinkDetector
+				std::auto_ptr<IHyperlink> nextHyperlink(
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw();
+			private:
+				std::map<kernel::ContentType, hyperlink::IHyperlinkDetector*> composites_;
+			};
+		} // namespace hyperlink
+
+		/**
 		 * A bridge between the document and visual styled text.
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
 		 * @see Document, DocumentPartitioner, TextViewer
 		 */
 		class Presentation : virtual public kernel::IDocumentListener, virtual public internal::ITextViewerCollection {
@@ -118,23 +186,28 @@ namespace ascension {
 			typedef std::set<viewers::TextViewer*>::const_iterator TextViewerConstIterator;
 			// constructors
 			explicit Presentation(kernel::Document& document) throw();
+			~Presentation() throw();
 			// attributes
-			void					addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
-			void					addTextViewerListListener(ITextViewerListListener& listener);
-			kernel::Document&		document() throw();
-			const kernel::Document&	document() const throw();
-			layout::Colors			getLineColor(length_t line) const;
-			const LineStyle&		getLineStyle(length_t line, bool& delegatedOwnership) const;
-			void					removeLineColorDirector(ILineColorDirector& director) throw();
-			void					removeTextViewerListListener(ITextViewerListListener& listener);
-			void					setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
-			// enumeration
+			void								addTextViewerListListener(ITextViewerListListener& listener);
+			kernel::Document&					document() throw();
+			const kernel::Document&				document() const throw();
+			const hyperlink::IHyperlink* const*	getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
+			layout::Colors						getLineColor(length_t line) const;
+			const LineStyle&					getLineStyle(length_t line, bool& delegatedOwnership) const;
+			void								removeTextViewerListListener(ITextViewerListListener& listener);
+			// strategies
+			void	addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
+			void	removeLineColorDirector(ILineColorDirector& director) throw();
+			void	setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) throw();
+			void	setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
+			// TextViewer enumeration
 			TextViewerIterator		firstTextViewer() throw();
 			TextViewerConstIterator	firstTextViewer() const throw();
 			TextViewerIterator		lastTextViewer() throw();
 			TextViewerConstIterator	lastTextViewer() const throw();
 			std::size_t				numberOfTextViewers() const throw();
 		private:
+			void	clearHyperlinksCache() throw();
 			// kernel.IDocumentListener
 			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -147,6 +220,9 @@ namespace ascension {
 			ASCENSION_SHARED_POINTER<ILineStyleDirector> lineStyleDirector_;
 			std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
+			ascension::internal::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
+			struct Hyperlinks;
+			mutable std::list<Hyperlinks*> hyperlinks_;
 		};
 
 		/**
@@ -190,13 +266,13 @@ namespace ascension {
 			explicit PresentationReconstructor(Presentation& presentation) throw();
 			~PresentationReconstructor() throw();
 			// attribute
-			void	setPartitionReconstructor(kernel::ContentType contentType,
-						std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
+			void setPartitionReconstructor(kernel::ContentType contentType,
+				std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
 		private:
 			// ILineStyleDirector
-		const LineStyle&	queryLineStyle(length_t line, bool& delegates) const;
+			const LineStyle& queryLineStyle(length_t line, bool& delegates) const;
 			// kernel.IDocumentPartitioningListener
-			void	documentPartitioningChanged(const kernel::Region& changedRegion);
+			void documentPartitioningChanged(const kernel::Region& changedRegion);
 		private:
 			Presentation& presentation_;
 			std::map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
@@ -240,15 +316,6 @@ namespace ascension {
 		 */
 		inline void Presentation::removeTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.remove(listener);}
 
-		/**
-		 * Sets the line style director.
-		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
-		 * @param newDirector the director. @c null to unregister
-		 * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
-		 */
-		inline void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector)
-			throw() {lineStyleDirector_ = newDirector;}
-
-}} // namespace ascension::presentation
+}} // namespace ascension.presentation
 
 #endif /* !ASCENSION_PRESENTATION_HPP */

@@ -2,7 +2,7 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 (was EditView.cpp and EditViewWindowMessages.cpp)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "viewer.hpp"
@@ -782,7 +782,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	TransitionRule* rules[12];
 	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
 	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
-	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/*");
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_COMMENT, L"/*");
 	rules[3] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
 	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SINGLELINE_COMMENT, L"//");
 	rules[5] = new LiteralTransitionRule(JS_SINGLELINE_COMMENT, DEFAULT_CONTENT_TYPE, L"", L'\\');
@@ -804,8 +804,10 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
+	scanner->addRule(auto_ptr<Rule>(new URIRule(219)));
 	map<Token::ID, const TextStyle> jsdocStyles;
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
+	jsdocStyles.insert(make_pair(219, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
 	jsdocStyles.insert(make_pair(220, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), true)));
 	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(
 		new LexicalPartitionPresentationReconstructor(document(), scanner, jsdocStyles));
@@ -840,6 +842,11 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(RGB(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_);
+
+	// URL hyperlinks test
+	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
+	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(new hyperlink::URLHyperlinkDetector));
+	presentation().setHyperlinkDetector(hld.release(), true);
 
 	// content assist test
 	class JSDocProposals : public IdentifiersProposalProcessor {
@@ -3851,9 +3858,9 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	endIncrementalSearch(*viewer_);
 	leftButtonPressed_ = true;
 
-	// 行選択
+	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
-		if(toBoolean(keyState & MK_CONTROL))	// 全行選択
+		if(toBoolean(keyState & MK_CONTROL))	// select all lines
 			texteditor::commands::SelectionCreationCommand(*viewer_, texteditor::commands::SelectionCreationCommand::ALL).execute();
 		else {
 			caret.moveTo(viewer_->characterForClientXY(position, LineLayout::LEADING));
@@ -3863,18 +3870,14 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
-	// OLE ドラッグ開始?
+	// begin OLE drag-and-drop
 	else if(oleDragAndDropEnabled_ && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
 		lastLeftButtonPressedPoint_ = position;
 		if(caret.isSelectionRectangle())
 			boxDragging = true;
 	}
 
-	// リンクの起動
-//	else if(toBoolean(keyState & MK_CONTROL) && linkTextStrategy_ != 0 && isOverInvokableLink(position, uri))
-//		linkTextStrategy_->invokeLink(..., uri.get());
-
-	// 矩形選択開始
+	// begin rectangular selection
 	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
 		caret.beginBoxSelection();
 		caret.moveTo(viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY));
@@ -3882,10 +3885,11 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
-	// その他。線形選択開始、キャレット移動
+	// begin linear selection, move caret or invoke hyperlink
 	else {
 		const Position p = viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY);
 		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
+//			if(!caret.isPointOverSelection(position) && 
 			caret.moveTo(p);
 			caret.beginWordSelection();
 		} else if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
@@ -4026,7 +4030,21 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	// on a draggable text selection?
 	else if(oleDragAndDropEnabled_ && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
 		::SetCursor(::LoadCursor(0, IDC_ARROW));
-	else
+	else if(toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
+		// on a hyperlink?
+		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, EditPoint::UTF16_CODE_UNIT));
+		size_t numberOfHyperlinks;
+		if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
+			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+				if(hyperlinks[i]->region().includes(p)) {
+					::SetCursor(static_cast<::HCURSOR>(::LoadImageA(
+						0, IDC_HAND, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+					return true;
+				}
+			}
+		}
+		return false;
+	} else
 		return false;
 	return true;
 }
@@ -4487,91 +4505,4 @@ bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosit
 		}
 	}
 	return false;
-}
-
-
-// hyperlink.URLHyperlinkDetector ///////////////////////////////////////////
-
-/// Constructor.
-hyperlink::URLHyperlinkDetector::URLHyperlinkDetector() throw() : textViewer_(0) {
-}
-
-/// Destructor.
-hyperlink::URLHyperlinkDetector::~URLHyperlinkDetector() throw() {
-}
-
-/// @see IHyperlinkDetector#detectHyperlink
-auto_ptr<hyperlink::IHyperlink> hyperlink::URLHyperlinkDetector::detectHyperlink(const Position& at) const {
-	// TODO: not implemented.
-	return auto_ptr<hyperlink::IHyperlink>(0);
-}
-
-/// @see IHyperlinkDetector#detectHyperlinks
-hyperlink::IHyperlink** hyperlink::URLHyperlinkDetector::detectHyperlinks(const Region& region, size_t& numberOfHyperlinks) const {
-	list<IHyperlink*> eaten;
-	DocumentCharacterIterator i(textViewer_->document(), region);
-	while(i.hasNext()) {
-		const Char* const bol = i.line().data();
-		const Char* const e = rules::URIDetector::eatURL(bol + i.tell().column, i.line().data() + i.line().length(), true);
-		if(e == bol + i.tell().column)
-			i.next();
-		else {
-			const Position next(i.tell().line, e - bol);
-			eaten.push_back(new Hyperlink(String(bol + i.tell().column, e), Region(i.tell(), next)));
-			i.seek(Position(next));
-		}
-	}
-	if(0 == (numberOfHyperlinks = eaten.size()))
-		return 0;
-	IHyperlink** result = new IHyperlink*[numberOfHyperlinks];
-	copy(eaten.begin(), eaten.end(), result);
-	return result;
-}
-
-/// @see IDocumentListener#documentAboutToBeChanged
-bool hyperlink::URLHyperlinkDetector::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
-	// TODO: not implemented.
-	return true;
-}
-
-/// @see IDocumentListener#documentChanged
-void hyperlink::URLHyperlinkDetector::documentChanged(const Document& document, const DocumentChange& change) {
-	// TODO: not implemented.
-}
-
-/// @see IHyperlinkDetector#install
-void hyperlink::URLHyperlinkDetector::install(TextViewer& textViewer) {
-	(textViewer_ = &textViewer)->document().addListener(*this);
-}
-
-/// @see IHyperlinkDetector#uninstall
-void hyperlink::URLHyperlinkDetector::uninstall() {
-	textViewer_->document().removeListener(*this);
-	textViewer_ = 0;
-}
-
-
-// hyperlink.URLHyperlinkDetector.Hyperlink /////////////////////////////////
-
-/**
- * Constructor.
- * @param uri the URI string of the hyperlink
- * @param region the region covers the hyperlink
- */
-hyperlink::URLHyperlinkDetector::Hyperlink::Hyperlink(const String& uri, const Region& region) throw() : uri_(uri), region_(region) {
-}
-
-/// @see IHyperlink#getDescription
-String hyperlink::URLHyperlinkDetector::Hyperlink::getDescription() const throw() {
-	return uri_;
-}
-
-/// @see IHyperlink#getRegion
-Region hyperlink::URLHyperlinkDetector::Hyperlink::getRegion() const throw() {
-	return region_;
-}
-
-/// @see IHyperlink#open
-void hyperlink::URLHyperlinkDetector::Hyperlink::open() {
-	::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
 }

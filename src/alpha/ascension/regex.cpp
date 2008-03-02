@@ -1,20 +1,20 @@
 /**
  * @file regex.cpp
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_NO_REGEX
 #include "regex.hpp"
 #include "internal.hpp"	// internal.SharedLibrary
 #include "encoder.hpp"
-#ifdef _MSC_VER
+#ifdef ASCENSION_MSVC
 #	ifdef _DEBUG
 #		pragma comment(lib, "libboost_regex-vc71-sgd-1_34_1.lib")
 #	else
 #		pragma comment(lib, "libboost_regex-vc71-s-1_34_1.lib")
 #	endif /* _DEBUG */
-#endif /* _MSC_VER */
+#endif /* ASCENSION_MSVC */
 
 using namespace ascension;
 using namespace ascension::regex;
