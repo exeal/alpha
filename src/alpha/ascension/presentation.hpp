@@ -123,13 +123,13 @@ namespace ascension {
 				virtual String description() const throw() = 0;
 				/// Invokes the hyperlink.
 				virtual void invoke() throw() = 0;
-				/// Returns the region of the hyperlink.
-				const kernel::Region& region() const throw() {return region_;}
+				/// Returns the columns of the region of the hyperlink.
+				const Range<length_t>& region() const throw() {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit IHyperlink(const kernel::Region& region) throw() : region_(kernel::Region(region).normalize()) {}
+				explicit IHyperlink(const Range<length_t>& region) throw() : region_(region) {}
 			private:
-				const kernel::Region region_;
+				const Range<length_t> region_;
 			};
 
 			/// A @c HyperlinkDetector finds the hyperlinks in the document.

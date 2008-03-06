@@ -136,10 +136,10 @@ const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numb
 		if(h.get() == 0)
 			break;
 		// check result
-		const Region r(h->region());
-		if(r.first.line != line || r.second.line != line || r.beginning().column < column)
+		const Range<length_t>& r(h->region());
+		if(r.beginning() < column)
 			break;
-		column = r.end().column;
+		column = r.end();
 		temp.push_back(h.release());
 	}
 	auto_ptr<Hyperlinks> newItem(new Hyperlinks);
@@ -349,7 +349,7 @@ void PresentationReconstructor::setPartitionReconstructor(
 namespace {
 	class URLHyperlink : virtual public IHyperlink {
 	public:
-		explicit URLHyperlink(const Region& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
+		explicit URLHyperlink(const Range<length_t>& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
 		String description() const throw() {return uri_ + L"\nCTRL + click to follow the link.";}
 		void invoke() throw() {
 #ifdef ASCENSION_WINDOWS
@@ -368,7 +368,7 @@ auto_ptr<IHyperlink> URLHyperlinkDetector::nextHyperlink(
 	for(text::StringCharacterIterator i(s + range.beginning(), s + range.end()); i.hasNext(); i.next()) {
 		const Char* const e = URIDetector::eatURL(i.tell(), i.end(), true);
 		if(e > i.tell()) {	// found
-			const Region r(line, make_pair(i.tell() - i.beginning(), e - i.beginning()));
+			const Range<length_t> r(i.tell() - i.beginning(), e - i.beginning());
 			return auto_ptr<IHyperlink>(new URLHyperlink(r, String(i.tell(), e)));
 		}
 	}

@@ -1315,10 +1315,10 @@ namespace {
 	/**
 	 * Builds glyphs into the run structure.
 	 * @param dc the device context
-	 * @param text to generate glyphs
+	 * @param text the text to generate glyphs
 	 * @param run the run to shape. if this function failed (except @c USP_E_SCRIPT_NOT_IN_FONT),
 	 * both @c glyphs and @c visualAttributes members will be null
-	 * @param[in,out] expectedNumberOfGlyphs the length of @a run.glyphs
+	 * @param[in,out] expectedNumberOfGlyphs the length of @a run.shared-&gt;glyphs
 	 * @retval S_OK succeeded
 	 * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
 	 * @retval E_OUTOFMEMORY failed to allocate buffer for glyph indices or visual attributes array
@@ -1350,30 +1350,43 @@ namespace {
 		}
 	}
 	/**
-	 * Returns true if the given run includes missing glyphs.
+	 * Returns the number of missing glyphs in the given run.
 	 * @param dc the device context
 	 * @param run the run
-	 * @return true if missing glyphs are presented
+	 * @return the number of missing glyphs
 	 */
-	inline bool includesMissingGlyphs(const DC& dc, Run& run) throw() {
+	inline int countMissingGlyphs(const DC& dc, Run& run) throw() {
 		::SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
 		if(FAILED(ScriptGetFontProperties(dc.getHandle(), &run.shared->cache, &fp)))
-			return false;
+			return 0;	// can't handle
 		// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
+		int result = 0;
 		for(int i = 0; i < run.numberOfGlyphs(); ++i) {
 			const ::WORD glyph = run.glyphs()[i];
 			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
-				return true;
+				++result;
 			else if(run.visualAttributes()[i].fZeroWidth == 1 && scriptProperties.get(run.analysis.eScript).fComplex == 0)
-				return true;
+				++result;
 		}
-		return false;
+		return result;
 	}
-	inline HRESULT generateGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs, bool checkMissingGlyphs) {
+	/**
+	 * @param dc the device context
+	 * @param text the text to generate glyphs
+	 * @param run the run
+	 * @param[in,out] expectedNumberOfGlyphs the length of @a run.shared-&gt;glyphs
+	 * @param[out] numberOfMissingGlyphs the number of the missing glyphs
+	 * @retval S_FALSE there are missing glyphs
+	 * @retval otherwise see @c buildGlyphs function
+	 */
+	inline ::HRESULT generateGlyphs(const DC& dc, const Char* text,
+			Run& run, size_t& expectedNumberOfGlyphs, int* numberOfMissingGlyphs) {
 		::HRESULT hr = buildGlyphs(dc, text, run, expectedNumberOfGlyphs);
-		if(SUCCEEDED(hr) && checkMissingGlyphs && includesMissingGlyphs(dc, run))
+		if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc, run)))
 			hr = S_FALSE;
+		else if(hr == USP_E_SCRIPT_NOT_IN_FONT && numberOfMissingGlyphs != 0)
+			*numberOfMissingGlyphs = static_cast<int>(expectedNumberOfGlyphs);
 		return hr;
 	}
 	/// Fills default glyphs into @a run instead of using @c ScriptShape.
@@ -1467,7 +1480,7 @@ void LineLayout::shape() throw() {
 	for(size_t runIndex = 0; runIndex < numberOfRuns_; ++runIndex) {
 		Run* const run = runs_[runIndex];
 		assert(run->shared->numberOfReferences == 1 && run->glyphs() == 0);
-		const Char* const textString = text().data() + run->column;
+		const Char* textString = text().data() + run->column;
 		run->shared->clusters.reset(new ::WORD[run->length()]);
 		if(lip_.getLayoutSettings().inhibitsShaping)
 			run->analysis.eScript = SCRIPT_UNDEFINED;
@@ -1488,75 +1501,97 @@ void LineLayout::shape() throw() {
 			}
 			dc->selectObject(oldFont);
 		} else {
+			// generateGlyphs() returns glyphs for the run. however it can contain missing glyphs.
 			// we try candidate fonts in following order:
 			//
 			// 1. the primary font
 			// 2. the national font for digit substitution
 			// 3. the linked fonts
 			// 4. the fallback font
-			// 5. the primary font without shaping
-			// 6. the linked fonts without shaping
-			// 7. the fallback font without shaping
+			//
+			// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
+			// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
+
 			expectedNumberOfGlyphs = run->length() * 3 / 2 + 16;
 			run->shared->glyphs.reset(new ::WORD[expectedNumberOfGlyphs]);
 			run->shared->visualAttributes.reset(new ::SCRIPT_VISATTR[expectedNumberOfGlyphs]);
+
 			int script = NOT_PROPERTY;	// script of the run for fallback
-			set<::HFONT> failedFonts;		// fonts failed to generate glyphs
+			vector<pair<::HFONT, int> > failedFonts;	// failed fonts (font handle vs. # of missings)
+			int numberOfMissingGlyphs;
 
-			while(true) {
-				// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
-				// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
-				manah::AutoBuffer<Char> safeText;
-				const bool textIsDanger = run->analysis.eScript == SCRIPT_UNDEFINED
-					&& find_if(textString, textString + run->length(), surrogates::isSurrogate) != textString + run->length();
-				if(textIsDanger) {
-					safeText.reset(new Char[run->length()]);
-					wmemcpy(safeText.get(), textString, run->length());
-					replace_if(safeText.get(), safeText.get() + run->length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);
-				}
-				const Char* p = !textIsDanger ? textString : safeText.get();
-				// 1/5. the primary font
-				oldFont = dc->selectObject(run->font = lip_.getFontSelector().font(Script::COMMON, run->style.bold, run->style.italic));
-				if(S_OK == (hr = generateGlyphs(*dc, p, *run, expectedNumberOfGlyphs, run->analysis.eScript != SCRIPT_UNDEFINED)))
-					break;
+#define ASCENSION_MAKE_TEXT_STRING_SAFE()													\
+	assert(safeText.get() == 0);															\
+	safeText.reset(new Char[run->length()]);												\
+	wmemcpy(safeText.get(), textString, run->length());										\
+	replace_if(safeText.get(),																\
+		safeText.get() + run->length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);	\
+	textString = safeText.get();
+
+#define ASCENSION_CHECK_FAILED_FONTS()										\
+	bool skip = false;														\
+	for(vector<pair<::HFONT, int> >::const_iterator							\
+			i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {	\
+		if(i->first == run->font) {											\
+			skip = true;													\
+			break;															\
+		}																	\
+	}
+
+			// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
+			// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
+			manah::AutoBuffer<Char> safeText;
+			if(run->analysis.eScript == SCRIPT_UNDEFINED
+					&& find_if(textString, textString + run->length(), surrogates::isSurrogate) != textString + run->length()) {
+				ASCENSION_MAKE_TEXT_STRING_SAFE();
+			}
+
+			// 1. the primary font
+			oldFont = dc->selectObject(run->font = lip_.getFontSelector().font(Script::COMMON, run->style.bold, run->style.italic));
+			hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, &numberOfMissingGlyphs);
+			if(hr != S_OK) {
 				::ScriptFreeCache(&run->shared->cache);
-				failedFonts.insert(run->font);
+				failedFonts.push_back(make_pair(run->font, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
+			}
 
-				// 2. the national font for digit substitution
-				if(hr == USP_E_SCRIPT_NOT_IN_FONT && run->analysis.eScript != SCRIPT_UNDEFINED && run->analysis.s.fDigitSubstitute != 0) {
-					script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(run->analysis.eScript).langid);
-					if(script != NOT_PROPERTY && 0 != (run->font = lip_.getFontSelector().font(script, run->style.bold, run->style.italic))) {
-						if(failedFonts.find(run->font) == failedFonts.end()) {
-							dc->selectObject(run->font);
-							if(S_OK == (hr = generateGlyphs(*dc, p, *run, expectedNumberOfGlyphs, true)))
-								break;
+			// 2. the national font for digit substitution
+			if(hr == USP_E_SCRIPT_NOT_IN_FONT && run->analysis.eScript != SCRIPT_UNDEFINED && run->analysis.s.fDigitSubstitute != 0) {
+				script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(run->analysis.eScript).langid);
+				if(script != NOT_PROPERTY && 0 != (run->font = lip_.getFontSelector().font(script, run->style.bold, run->style.italic))) {
+					ASCENSION_CHECK_FAILED_FONTS()
+					if(!skip) {
+						dc->selectObject(run->font);
+						hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, &numberOfMissingGlyphs);
+						if(hr != S_OK) {
 							::ScriptFreeCache(&run->shared->cache);
-							failedFonts.insert(run->font);
+							failedFonts.push_back(make_pair(run->font, numberOfMissingGlyphs));	// not material what hr is...
 						}
 					}
 				}
+			}
 
-				// 3/6. the linked fonts
+			// 3. the linked fonts
+			if(hr != S_OK) {
 				for(size_t i = 0; i < lip_.getFontSelector().numberOfLinkedFonts(); ++i) {
 					run->font = lip_.getFontSelector().linkedFont(i);
-					if(failedFonts.find(run->font) == failedFonts.end()) {
+					ASCENSION_CHECK_FAILED_FONTS()
+					if(!skip) {
 						dc->selectObject(run->font);
-						if(S_OK == (hr = generateGlyphs(*dc, p, *run, expectedNumberOfGlyphs, run->analysis.eScript != SCRIPT_UNDEFINED)))
+						if(S_OK == (hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, &numberOfMissingGlyphs)))
 							break;
 						::ScriptFreeCache(&run->shared->cache);
-						failedFonts.insert(run->font);
+						failedFonts.push_back(make_pair(run->font,
+							(hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
 					}
 				}
-				if(hr == S_OK)
-					break;
+			}
 
-				// 4/7. the fallback font
-				if(script == NOT_PROPERTY) {
-					for(StringCharacterIterator i(p, p + run->length()); i.hasNext(); i.next()) {
-						script = Script::of(i.current());
-						if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-							break;
-					}
+			// 4. the fallback font
+			if(hr != S_OK) {
+				for(StringCharacterIterator i(textString, textString + run->length()); i.hasNext(); i.next()) {
+					script = Script::of(i.current());
+					if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+						break;
 				}
 				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 					run->font = lip_.getFontSelector().font(script, run->style.bold, run->style.italic);
@@ -1564,7 +1599,7 @@ void LineLayout::shape() throw() {
 					run->font = 0;
 					// ambiguous CJK?
 					if(script == Script::COMMON && scriptProperties.get(run->analysis.eScript).fAmbiguousCharSet != 0) {
-						switch(CodeBlock::of(surrogates::decodeFirst(p, p + run->length()))) {
+						switch(CodeBlock::of(surrogates::decodeFirst(textString, textString + run->length()))) {
 						case CodeBlock::CJK_SYMBOLS_AND_PUNCTUATION:
 						case CodeBlock::ENCLOSED_CJK_LETTERS_AND_MONTHS:
 						case CodeBlock::CJK_COMPATIBILITY:
@@ -1582,22 +1617,62 @@ void LineLayout::shape() throw() {
 						run->font = runs_[runIndex - 1]->font;
 					}
 				}
-				if(run->font != 0 && failedFonts.find(run->font) == failedFonts.end()) {
-					dc->selectObject(run->font);
-					if(S_OK == (hr = generateGlyphs(*dc, p, *run, expectedNumberOfGlyphs, run->analysis.eScript != SCRIPT_UNDEFINED)))
-						break;
-					::ScriptFreeCache(&run->shared->cache);
+				if(run->font != 0) {
+					ASCENSION_CHECK_FAILED_FONTS()
+					if(!skip) {
+						dc->selectObject(run->font);
+						hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, &numberOfMissingGlyphs);
+						if(hr != S_OK) {
+							::ScriptFreeCache(&run->shared->cache);
+							failedFonts.push_back(make_pair(run->font,
+								(hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
+						}
+					}
 				}
-
-				if(run->analysis.eScript != SCRIPT_UNDEFINED)
-					run->analysis.eScript = SCRIPT_UNDEFINED;	// disable shaping
-				else {
-					// worst case... -> fill with default glyph
-					generateDefaultGlyphs(*dc, *run);
-					dc->selectObject(run->font = lip_.getFontSelector().font(Script::COMMON, run->style.bold, run->style.italic));
-				}
-				failedFonts.clear();
 			}
+
+			// retry without shaping
+			if(hr != S_OK) {
+				if(run->analysis.eScript != SCRIPT_UNDEFINED) {
+					const ::WORD oldScript = run->analysis.eScript;
+					run->analysis.eScript = SCRIPT_UNDEFINED;	// disable shaping
+					if(find_if(textString, textString + run->length(), surrogates::isSurrogate) != textString + run->length()) {
+						ASCENSION_MAKE_TEXT_STRING_SAFE();
+					}
+					for(vector<pair<::HFONT, int> >::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
+						if(i->second == numeric_limits<int>::max()) {
+							dc->selectObject(run->font = i->first);
+							hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, &numberOfMissingGlyphs);
+							if(hr == S_OK)
+								break;	// found the best
+							::ScriptFreeCache(&run->shared->cache);
+							if(hr == S_FALSE)
+								i->second = -numberOfMissingGlyphs;
+						}
+					}
+					run->analysis.eScript = oldScript;
+				}
+				if(hr != S_OK) {
+					// select the font which generated the least missing glyphs
+					assert(!failedFonts.empty());
+					vector<pair<::HFONT, int> >::const_iterator bestFont = failedFonts.begin();
+					for(vector<pair<::HFONT, int> >::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
+						if(i->second < bestFont->second)
+							bestFont = i;
+					}
+					dc->selectObject(run->font = bestFont->first);
+					if(bestFont->second < 0)
+						run->analysis.eScript = SCRIPT_UNDEFINED;
+					hr = generateGlyphs(*dc, textString, *run, expectedNumberOfGlyphs, 0);
+					if(FAILED(hr)) {
+						::ScriptFreeCache(&run->shared->cache);
+						generateDefaultGlyphs(*dc, *run);	// worst case...
+					}
+				}
+			}
+
+#undef ASCENSION_MAKE_TEXT_STRING_SAFE
+#undef ASCENSION_CHECK_FAILED_FONTS
 		}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -1611,6 +1686,7 @@ void LineLayout::shape() throw() {
 						0U, countof(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
 					if(i != countof(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
 						// found valid IVS -> apply OpenType feature tag to obtain the variant
+						// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
 						hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
 							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, run->glyphs()[0], run->shared->glyphs.get());
 						lastIVSProcessedRun = run;
@@ -1621,11 +1697,15 @@ void LineLayout::shape() throw() {
 			if(lastIVSProcessedRun == runs_[runIndex - 1]) {
 				// last character in the previous run and first character in this run are an IVS
 				// => so, remove glyphs correspond to the first character
-				::SCRIPT_FONTPROPERTIES fp;
-				fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
-				if(FAILED(::ScriptGetFontProperties(dc->getHandle(), &run->shared->cache, &fp)))
-					fp.wgBlank = 0;	// hmm...
-				run->shared->glyphs[run->clusters()[0]] = run->shared->glyphs[run->clusters()[1]] = fp.wgBlank;
+				::WORD blankGlyph;
+				if(S_OK != (hr = ::ScriptGetCMap(dc->getHandle(), &run->shared->cache, L"\x0020", 1, 0, &blankGlyph))) {
+					::SCRIPT_FONTPROPERTIES fp;
+					fp.cBytes = sizeof(::SCRIPT_FONTPROPERTIES);
+					if(FAILED(::ScriptGetFontProperties(dc->getHandle(), &run->shared->cache, &fp)))
+						fp.wgBlank = 0;	// hmm...
+					blankGlyph = fp.wgBlank;
+				}
+				run->shared->glyphs[run->clusters()[0]] = run->shared->glyphs[run->clusters()[1]] = blankGlyph;
 				::SCRIPT_VISATTR* va = run->shared->visualAttributes.get();
 				va[run->clusters()[0]].uJustification = va[run->clusters()[1]].uJustification = SCRIPT_JUSTIFY_BLANK;
 				va[run->clusters()[0]].fZeroWidth = va[run->clusters()[1]].fZeroWidth = 1;
@@ -2707,7 +2787,7 @@ void FontSelector::linkPrimaryFont() throw() {
 		delete *i;
 	linkedFonts_->clear();
 
-	// レジストリからフォントリンクの設定を読み込む
+	// read font link settings from registry
 	::HKEY key;
 	long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
 		L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
