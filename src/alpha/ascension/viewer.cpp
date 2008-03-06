@@ -4023,30 +4023,34 @@ STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DW
 
 /// @see IMouseInputStrategy#showCursor
 bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
+	::LPCTSTR cursorName = 0;
 	// on the vertical ruler?
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
-		::SetCursor(::LoadCursor(0, IDC_ARROW));
+		cursorName = IDC_ARROW;
 	// on a draggable text selection?
 	else if(oleDragAndDropEnabled_ && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
-		::SetCursor(::LoadCursor(0, IDC_ARROW));
+		cursorName = IDC_ARROW;
 	else if(toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
 		// on a hyperlink?
 		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, EditPoint::UTF16_CODE_UNIT));
 		size_t numberOfHyperlinks;
 		if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
 			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-				if(hyperlinks[i]->region().includes(p)) {
-					::SetCursor(static_cast<::HCURSOR>(::LoadImageA(
-						0, IDC_HAND, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
-					return true;
+				if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
+					cursorName = IDC_HAND;
+					viewer_->showToolTip(hyperlinks[i]->description(), 1000, 30000);
+					break;
 				}
 			}
 		}
-		return false;
-	} else
-		return false;
-	return true;
+	}
+	if(cursorName != 0) {
+		::SetCursor(static_cast<::HCURSOR>(::LoadImage(
+			0, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+		return true;
+	}
+	return false;
 }
 
 ///
