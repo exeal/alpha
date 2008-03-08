@@ -248,7 +248,8 @@ namespace ascension {
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy : virtual public IMouseInputStrategy, virtual public ::IDropSource, virtual public ::IDropTarget {
+		class DefaultMouseInputStrategy :
+				virtual public IMouseInputStrategy, virtual public ::IDropSource, virtual public ::IDropTarget {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
@@ -272,23 +273,24 @@ namespace ascension {
 			void					extendSelection();
 			void					handleLeftButtonPressed(const ::POINT& position, uint keyState);
 			void					handleLeftButtonReleased(const ::POINT& position, uint keyState);
-			static void CALLBACK	timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
+			static void CALLBACK	timeElapsed(::HWND window, ::UINT message, ::UINT_PTR eventID, ::DWORD time);
 			// IMouseInputStrategy
-			void					captureChanged();
-			void					install(TextViewer& viewer);
-			virtual bool			mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState);
-			virtual void			mouseMoved(const ::POINT& position, uint keyState);
-			virtual void			mouseWheelRotated(short delta, const ::POINT& position, uint keyState);
-			virtual bool			showCursor(const ::POINT& position);
-			void					uninstall();
+			void			captureChanged();
+			void			install(TextViewer& viewer);
+			virtual bool	mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState);
+			virtual void	mouseMoved(const ::POINT& position, uint keyState);
+			virtual void	mouseWheelRotated(short delta, const ::POINT& position, uint keyState);
+			virtual bool	showCursor(const ::POINT& position);
+			void			uninstall();
 		private:
 			TextViewer* viewer_;
 			const bool oleDragAndDropEnabled_;
 			bool leftButtonPressed_, oleDragging_;
 			::POINT lastLeftButtonPressedPoint_;
 			length_t numberOfDraggedRectangleLines_;
-			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
-			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
+			const presentation::hyperlink::IHyperlink* lastHoveredHyperlink_;
+			static std::map<::UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
+			static const ::UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
 		};
 
 		/**

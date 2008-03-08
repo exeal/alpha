@@ -113,6 +113,33 @@ namespace {
 	} installer;
 } // namespace @0
 
+namespace {
+	const byte UTF8_BOM[] = {0xEF, 0xBB, 0xBF};
+	const byte UTF16LE_BOM[] = {0xFF, 0xFE};
+	const byte UTF16BE_BOM[] = {0xFE, 0xFF};
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+	const byte UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};
+	const byte UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};
+#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+} // namespace @0
+
+#define ASCENSION_ENCODE_BOM(encoding)												\
+	if(flags().has(BEGINNING_OF_BUFFER) && flags().has(UNICODE_BYTE_ORDER_MARK)) {	\
+		if(to + countof(encoding##_BOM) >= toEnd)									\
+			return INSUFFICIENT_BUFFER;												\
+		memcpy(to, encoding##_BOM, countof(encoding##_BOM));						\
+		to += countof(encoding##_BOM);												\
+	}
+
+#define ASCENSION_DECODE_BOM(encoding)															\
+	if(flags().has(BEGINNING_OF_BUFFER)) {														\
+		if(fromEnd - from >= 3 && memcmp(from, encoding##_BOM, countof(encoding##_BOM)) == 0) {	\
+			setFlags(flags() | UNICODE_BYTE_ORDER_MARK);										\
+			from += countof(encoding##_BOM);													\
+		} else																					\
+			setFlags(flags() & ~UNICODE_BYTE_ORDER_MARK);										\
+	}
+
 
 // UTF-8 ////////////////////////////////////////////////////////////////////
 
@@ -158,6 +185,7 @@ namespace {
 
 template<> Encoder::Result InternalEncoder<UTF_8>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	ASCENSION_ENCODE_BOM(UTF8)
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x0080U)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
 			(*to++) = mask8Bit(*from);
@@ -195,6 +223,7 @@ template<> Encoder::Result InternalEncoder<UTF_8>::doFromUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_8>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	ASCENSION_DECODE_BOM(UTF8)
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x80)
 			*(to++) = *(from++);
@@ -260,6 +289,7 @@ template<> Encoder::Result InternalEncoder<UTF_8>::doToUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_16LE>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	ASCENSION_ENCODE_BOM(UTF16LE)
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
 		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
@@ -271,6 +301,7 @@ template<> Encoder::Result InternalEncoder<UTF_16LE>::doFromUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_16LE>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	ASCENSION_DECODE_BOM(UTF16LE)
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = *from | maskUCS2(from[1] << 8);
 	fromNext = from;
@@ -286,6 +317,7 @@ template<> Encoder::Result InternalEncoder<UTF_16LE>::doToUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_16BE>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	ASCENSION_ENCODE_BOM(UTF16BE)
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
 		*(to++) = static_cast<byte>((*from & 0xFF00U) >> 8);
 		*(to++) = static_cast<byte>((*from & 0x00FFU) >> 0);
@@ -297,6 +329,7 @@ template<> Encoder::Result InternalEncoder<UTF_16BE>::doFromUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_16BE>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	ASCENSION_DECODE_BOM(UTF16BE)
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = maskUCS2(*from << 8) | from[1];
 	fromNext = from;
@@ -314,6 +347,7 @@ template<> Encoder::Result InternalEncoder<UTF_16BE>::doToUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_32LE>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	ASCENSION_ENCODE_BOM(UTF32LE)
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
 		if(!isScalarValue(c)) {
@@ -337,6 +371,7 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doFromUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	ASCENSION_DECODE_BOM(UTF32LE)
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(c)) {
@@ -360,6 +395,7 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_32BE>::doFromUnicode(
 		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	ASCENSION_ENCODE_BOM(UTF32BE)
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
 		*(to++) = mask8Bit((c & 0xFF000000U) >> 24);
@@ -376,6 +412,7 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doFromUnicode(
 
 template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+	ASCENSION_DECODE_BOM(UTF32BE)
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
@@ -471,7 +508,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 			from += encodables - 1;
 		}
 	}
-	if(from == fromEnd && !flags().has(FROMEND_IS_NOT_EOB) && to != toEnd)
+	if(from == fromEnd && flags().has(END_OF_BUFFER) && to != toEnd)
 		*(to++) = '-';
 	toNext = to;
 	fromNext = from;
@@ -513,7 +550,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		if(klass == 2) {
 			// '+'
 			if(from + 1 == fromEnd) {	// the input is terminated by '+'...
-				if(!flags().has(FROMEND_IS_NOT_EOB)) {
+				if(flags().has(END_OF_BUFFER)) {
 					toNext = to;
 					fromNext = from;
 					return COMPLETED;
@@ -810,3 +847,6 @@ pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* l
 	}
 	return make_pair(result->mibEnum(), result->name());
 }
+
+#undef ASCENSION_ENCODE_BOM
+#undef ASCENSION_DECODE_BOM

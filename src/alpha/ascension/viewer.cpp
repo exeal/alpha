@@ -804,7 +804,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
-	scanner->addRule(auto_ptr<Rule>(new URIRule(219)));
+	scanner->addRule(auto_ptr<Rule>(new URIRule(219, auto_ptr<const URIDetector>(new URIDetector()))));
 	map<Token::ID, const TextStyle> jsdocStyles;
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
 	jsdocStyles.insert(make_pair(219, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
@@ -2035,7 +2035,7 @@ bool TextViewer::onNcCreate(::CREATESTRUCTW&) {
 /// @see WM_NOTIFY
 bool TextViewer::onNotify(int, ::NMHDR& nmhdr) {
 	// tooltip text
-	if(nmhdr.hwndFrom == toolTip_ && nmhdr.code == TTN_GETDISPINFO) {
+	if(nmhdr.hwndFrom == toolTip_ && nmhdr.code == TTN_GETDISPINFOW) {
 		::SendMessageW(toolTip_, TTM_SETMAXTIPWIDTH, 0, 1000);	// make line breaks effective
 		reinterpret_cast<::LPNMTTDISPINFOW>(&nmhdr)->lpszText = tipText_;
 		return false;
@@ -2288,8 +2288,8 @@ void TextViewer::onThemeChanged() {
 #endif /* WM_THEMECHANGED */
 
 /// @see WM_TIMER
-void TextViewer::onTimer(UINT_PTR eventID, ::TIMERPROC) {
-	if(eventID == TIMERID_CALLTIP) {	// ツールチップを表示
+void TextViewer::onTimer(::UINT_PTR eventID, ::TIMERPROC) {
+	if(eventID == TIMERID_CALLTIP) {	// show the tooltip
 		killTimer(TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 	} else if(eventID == TIMERID_AUTOSCROLL) {	// 自動スクロール
@@ -3581,7 +3581,7 @@ namespace {
 			*resultLength = c;
 		return buffer;
 	}
-	auto_ptr<String> getTextData(IDataObject& data, bool* rectangle = 0) {
+	auto_ptr<String> getTextData(::IDataObject& data, bool* rectangle = 0) {
 		auto_ptr<String> result;
 		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 		::STGMEDIUM stm = {TYMED_HGLOBAL, 0};
@@ -3620,23 +3620,23 @@ namespace {
 	}
 } // namespace @0
 
-map<UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
-const UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
-const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
+map<::UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
+const ::UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
+const ::UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
 
 /**
  * Constructor.
  * @param enableOLEDragAndDrop set true to enable OLE Drag-and-Drop feature.
  */
-DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop)
-		: oleDragAndDropEnabled_(enableOLEDragAndDrop), leftButtonPressed_(false), oleDragging_(false) {
+DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop) : viewer_(0),
+		oleDragAndDropEnabled_(enableOLEDragAndDrop), leftButtonPressed_(false), oleDragging_(false), lastHoveredHyperlink_(0) {
 	lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
 }
 
 /// 
-void DefaultMouseInputStrategy::beginTimer(UINT interval) {
+void DefaultMouseInputStrategy::beginTimer(::UINT interval) {
 	endTimer();
-	if(const UINT_PTR id = ::SetTimer(0, 0, interval, timeElapsed))
+	if(const ::UINT_PTR id = ::SetTimer(0, 0, interval, timeElapsed))
 		timerTable_[id] = this;
 }
 
@@ -3648,7 +3648,7 @@ void DefaultMouseInputStrategy::captureChanged() {
 }
 
 /// @see IDropTarget#DragEnter
-STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, ::POINTL pt, DWORD* effect) {
+STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD keyState, ::POINTL pt, ::DWORD* effect) {
 	if(data == 0)
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
@@ -3690,7 +3690,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
 }
 
 /// @see IDropTarget#DragOver
-STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DWORD* effect) {
+STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, ::DWORD* effect) {
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
@@ -3719,7 +3719,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, ::POINTL pt, DW
 }
 
 /// @see IDropTarget#Drop
-STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keyState, ::POINTL pt, ::DWORD* effect) {
 	if(data == 0)
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
@@ -3815,7 +3815,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 
 ///
 void DefaultMouseInputStrategy::endTimer() {
-	for(map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.begin(); i != timerTable_.end(); ++i) {
+	for(map<::UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.begin(); i != timerTable_.end(); ++i) {
 		if(i->second == this) {
 			::KillTimer(0, i->first);
 			timerTable_.erase(i);
@@ -3843,7 +3843,7 @@ void DefaultMouseInputStrategy::extendSelection() {
 }
 
 /// @see IDropSource#GiveFeedback
-STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
+STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(::DWORD) {
 	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
 }
 
@@ -3888,10 +3888,23 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	// begin linear selection, move caret or invoke hyperlink
 	else {
 		const Position p = viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY);
+		bool hyperlinkInvoked = false;
 		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
-//			if(!caret.isPointOverSelection(position) && 
-			caret.moveTo(p);
-			caret.beginWordSelection();
+			if(!caret.isPointOverSelection(position)) {
+				size_t numberOfHyperlinks;
+				if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
+					for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+						if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
+							hyperlinks[i]->invoke();
+							hyperlinkInvoked = true;
+						}
+					}
+				}
+			}
+			if(!hyperlinkInvoked) {
+				caret.moveTo(p);
+				caret.beginWordSelection();
+			}
 		} else if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
 			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// Shift+Alt -> select to the cursor (rectangle)
 				caret.beginBoxSelection();
@@ -3901,7 +3914,8 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 			caret.endBoxSelection();
 		}
 		viewer_->setCapture();
-		beginTimer(SELECTION_EXPANSION_INTERVAL);
+		if(!hyperlinkInvoked)
+			beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
 //	if(!caret.isSelectionRectangle() && !boxDragging)
@@ -3927,6 +3941,8 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position
 
 /// @see IMouseInputStrategy#install
 void DefaultMouseInputStrategy::install(TextViewer& viewer) {
+	if(viewer_ != 0)
+		uninstall();
 	(viewer_ = &viewer)->registerDragDrop(*this);
 }
 
@@ -4013,7 +4029,7 @@ void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const ::POINT&, u
 }
 
 /// @see IDropSource#QueryContinueDrag
-STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(::BOOL escapePressed, ::DWORD keyState) {
 	if(toBoolean(escapePressed) || toBoolean(keyState & MK_RBUTTON))	// cancel
 		return DRAGDROP_S_CANCEL;
 	if(!toBoolean(keyState & MK_LBUTTON))	// drop
@@ -4021,9 +4037,12 @@ STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DW
 	return S_OK;
 }
 
-/// @see IMouseInputStrategy#showCursor
+/// @see IMouseInputStrategy#showCursor ftp://a
 bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
+	using namespace hyperlink;
 	::LPCTSTR cursorName = 0;
+	const IHyperlink* newlyHoveredHyperlink = 0;
+
 	// on the vertical ruler?
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
@@ -4031,31 +4050,39 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	// on a draggable text selection?
 	else if(oleDragAndDropEnabled_ && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
 		cursorName = IDC_ARROW;
-	else if(toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
+	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
 		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, EditPoint::UTF16_CODE_UNIT));
 		size_t numberOfHyperlinks;
 		if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
 			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
 				if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
-					cursorName = IDC_HAND;
-					viewer_->showToolTip(hyperlinks[i]->description(), 1000, 30000);
+					newlyHoveredHyperlink = hyperlinks[i];
 					break;
 				}
 			}
 		}
+		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
+			cursorName = IDC_HAND;
 	}
+
 	if(cursorName != 0) {
 		::SetCursor(static_cast<::HCURSOR>(::LoadImage(
 			0, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
 		return true;
 	}
+	if(newlyHoveredHyperlink != 0) {
+		if(newlyHoveredHyperlink != lastHoveredHyperlink_)
+			viewer_->showToolTip(newlyHoveredHyperlink->description(), 1000, 30000);
+	} else
+		viewer_->hideToolTip();
+	lastHoveredHyperlink_ = newlyHoveredHyperlink;
 	return false;
 }
 
 ///
-void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD) {
-	map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.find(eventID);
+void CALLBACK DefaultMouseInputStrategy::timeElapsed(::HWND, ::UINT, ::UINT_PTR eventID, ::DWORD) {
+	map<::UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.find(eventID);
 	if(i == timerTable_.end())
 		return;
 	DefaultMouseInputStrategy& self = *i->second;

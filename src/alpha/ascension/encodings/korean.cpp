@@ -114,7 +114,7 @@ template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 		else if(from + 1 >= fromEnd) {	// remaining lead byte
 			toNext = to;
 			fromNext = from;
-			return flags().has(FROMEND_IS_NOT_EOB) ? COMPLETED : MALFORMED_INPUT;
+			return flags().has(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
 			if(const ushort** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1]));
@@ -185,7 +185,7 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 		else if(from + 1 >= fromEnd) {	// remaining lead byte
 			toNext = to;
 			fromNext = from;
-			return flags().has(FROMEND_IS_NOT_EOB) ? COMPLETED : MALFORMED_INPUT;
+			return flags().has(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
 			if(from[0] - 0xA1U > 0x5DU || from[1] - 0xA1U > 0x5DU) {
 //			if(!(from[0] >= 0xA1 && from[0] <= 0xFE) || !(from[1] >= 0xA1 && from[1] <= 0xFE)) {
@@ -312,7 +312,7 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
 		else if(from + 1 >= fromEnd) {	// remaining lead byte
 			toNext = to;
 			fromNext = from;
-			return flags().has(FROMEND_IS_NOT_EOB) ? COMPLETED : MALFORMED_INPUT;
+			return flags().has(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
 			if(from[0] - 0x21U > 0x5DU || from[1] - 0x21U > 0x5DU) {
 //			if(!(from[0] >= 0x21 && from[0] <= 0x7E) || !(from[1] >= 0x21 && from[1] <= 0x7E)) {

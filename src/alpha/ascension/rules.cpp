@@ -36,9 +36,10 @@ namespace ascension {
 				template<typename StringSequence>
 				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
 				~HashTable() throw();
-				bool find(const Char* first, const Char* last) const;
 				template<typename CharacterSequence>
-				static ulong getHashCode(CharacterSequence first, CharacterSequence last);
+				static ulong hashCode(CharacterSequence first, CharacterSequence last);
+				bool matches(const Char* first, const Char* last) const;
+				size_t maximumLength() const throw() {return maxLength_;}
 			private:
 				struct Entry {
 					String data;
@@ -47,8 +48,8 @@ namespace ascension {
 					~Entry() throw() {delete next;}
 				};
 				Entry** entries_;
-				std::size_t numberOfEntries_;
-				std::size_t maxLength_;	// the length of the longest keyword
+				size_t numberOfEntries_;
+				size_t maxLength_;	// the length of the longest keyword
 				const bool caseSensitive_;
 			};
 		}
@@ -68,7 +69,7 @@ HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensiti
 	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(0));
 	while(first != last) {
 		const String folded(caseSensitive_ ? *first : CaseFolder::fold(*first));
-		const size_t h = getHashCode(folded.begin(), folded.end());
+		const size_t h = hashCode(folded.begin(), folded.end());
 		Entry* const newEntry = new Entry(folded);
 		if(folded.length() > maxLength_)
 			maxLength_ = folded.length();
@@ -86,32 +87,6 @@ HashTable::~HashTable() {
 }
 
 /**
- * Searches the specified string.
- * @param first the start of the string
- * @param last the end of the string
- * @return true if the specified string is found
- */
-bool HashTable::find(const Char* first, const Char* last) const {
-	if(caseSensitive_) {
-		if(static_cast<size_t>(last - first) > maxLength_)
-			return false;
-		const size_t h = getHashCode(first, last);
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
-			if(entry->data.length() == static_cast<size_t>(last - first) && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
-				return true;
-		}
-	} else {
-		const String folded(CaseFolder::fold(String(first, last)));
-		const size_t h = getHashCode(folded.begin(), folded.end());
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
-			if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
-				return true;
-		}
-	}
-	return false;
-}
-
-/**
  * Returns the hash value of the specified string. @a CharacterSequence must represent UTF-16
  * character sequence.
  * @param first the start of the character sequence
@@ -119,7 +94,7 @@ bool HashTable::find(const Char* first, const Char* last) const {
  * @return the hash value
  */
 template<typename CharacterSequence>
-inline ulong HashTable::getHashCode(CharacterSequence first, CharacterSequence last) {
+inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
 	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
 	ulong h = 0;
 	while(first < last) {
@@ -130,9 +105,36 @@ inline ulong HashTable::getHashCode(CharacterSequence first, CharacterSequence l
 	return h;
 }
 
+/**
+ * Searches the specified string.
+ * @param first the start of the string
+ * @param last the end of the string
+ * @return true if the specified string is found
+ */
+bool HashTable::matches(const Char* first, const Char* last) const {
+	if(caseSensitive_) {
+		if(static_cast<size_t>(last - first) > maxLength_)
+			return false;
+		const size_t h = hashCode(first, last);
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+			if(entry->data.length() == static_cast<size_t>(last - first) && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
+				return true;
+		}
+	} else {
+		const String folded(CaseFolder::fold(String(first, last)));
+		const size_t h = hashCode(folded.begin(), folded.end());
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+			if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
+				return true;
+		}
+	}
+	return false;
+}
+
 
 // URIDetector //////////////////////////////////////////////////////////////
 
+#if 0
 /**
  * 文字列がメールアドレスかを調べる
  * @param first, last 調べる文字列
@@ -193,65 +195,97 @@ const Char* URIDetector::eatMailAddress(const Char* first, const Char* last, boo
 	}
 	return (dotAppeared && (first - atMark > 2)) ? first : originalFirst;
 }
+#endif /* 0 */
+
+namespace {
+	// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+	const Char* ASCENSION_FASTCALL handleScheme(const Char* first, const Char* last) {
+		// from RFC2234:
+		// ALPHA =  %x41-5A / %x61-7A	; A-Z / a-z
+		// DIGIT =  %x30-39				; 0-9
+		const locale& cLocale = locale::classic();
+		if(isalpha(*first, cLocale)) {
+			while(++first != last) {
+				if(!isalnum(*first, cLocale) && *first != L'+' && *first != L'-' && *first != L'.')
+					return first;
+			}
+			return last;
+		}
+		return first;
+	}
+} // namespace @0
 
 /**
- * @brief URL 文字列を調べる
- *
- * 現時点では以下の文字列を URL の開始とみなす:
- * <ul>
- *   <li>file://</li><li>ftp://</li><li>gopher://</li><li>http://</li><li>https://</li>
- *   <li>mailto://</li><li>news://</li><li>nntp://</li><li>telnet://</li><li>wais://</li>
- * </ul>
- *
- * @param first, last 調べる文字列
- * @param asIRI UCS 文字を認めるか (未実装)
- * @return URL の終端
+ * Returns the end of a URL begins at the given position.
+ * @param first the beginning of the character sequence
+ * @param last the end of the character sequence
+ * @return the end of the detected URI, or @a first (not @c null) if not matched
+ * @throw NullPointerException @a first and/or @a last are @c null
  */
-const Char* URIDetector::eatURL(const Char* first, const Char* last, bool) {
-#define STARTS_WITH(prefix, len)	\
-	(len < last - first && wmemcmp(first, prefix, len) == 0 && (0 != (urlLength = len - 1)))
-
-	static const bool urlChars[] = {	// URI 構成文字か
-		false,	false,	false,	false,	false,	false,	false,	false,	// 0x00
-		false,	false,	false,	false,	false,	false,	false,	false,
-		false,	false,	false,	false,	false,	false,	false,	false,	// 0x10
-		false,	false,	false,	false,	false,	false,	false,	false,
-		false,	true,	false,	true,	true,	true,	true,	false,	// 0x20
-		false,	false,	false,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x30
-		true,	true,	true,	true,	false,	true,	false,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x40
-		true,	true,	true,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x50
-		true,	true,	true,	false,	true,	false,	false,	true,
-		false,	true,	true,	true,	true,	true,	true,	true,	// 0x60
-		true,	true,	true,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x70
-		true,	true,	true,	false,	false,	false,	true,	false
-	};
-
-	if(!urlChars[first[0] & 0x00FF] || last - first < 6)
+const Char* URIDetector::detect(const Char* first, const Char* last) const {
+	if(first == 0)
+		throw NullPointerException("first");
+	else if(last == 0)
+		throw NullPointerException("last");
+	else if(first >= last)
 		return first;
-	length_t urlLength;
-	if(STARTS_WITH(L"file://", 7)
-			|| STARTS_WITH(L"ftp://", 6)
-			|| STARTS_WITH(L"gopher://", 9)
-			|| STARTS_WITH(L"http://", 7)
-			|| STARTS_WITH(L"https://", 8)
-			|| STARTS_WITH(L"mailto://", 9)
-			|| STARTS_WITH(L"news://", 7)
-			|| STARTS_WITH(L"nntp://", 7)
-			|| STARTS_WITH(L"telnet://", 9)
-			|| STARTS_WITH(L"wais://", 7)) {
-		for(++urlLength; urlLength < static_cast<String::size_type>(last - first); ++urlLength) {
-			if(first[urlLength] > 0x007F || !urlChars[first[urlLength] & 0x00FF])
-				return first + urlLength;
+
+	// check scheme
+	const Char* const endOfScheme = wmemchr(first + 1, ':',
+		min<size_t>(last - first - 1, (validSchemes_ != 0) ? validSchemes_->maximumLength() : (last - first - 1)));
+	if(endOfScheme == 0 || !validSchemes_->matches(first, endOfScheme))
+		return first;
+	else if(endOfScheme == last - 1)	// terminated with <ipath-empty>
+		return last;
+
+	if(parsingMode() == TOLERANT_MODE) {
+		static const bool URI_CHARS[] = {
+			false,	false,	false,	false,	false,	false,	false,	false,	// 0x00
+			false,	false,	false,	false,	false,	false,	false,	false,
+			false,	false,	false,	false,	false,	false,	false,	false,	// 0x10
+			false,	false,	false,	false,	false,	false,	false,	false,
+			false,	true,	false,	true,	true,	true,	true,	false,	// 0x20
+			false,	false,	false,	true,	true,	true,	true,	true,
+			true,	true,	true,	true,	true,	true,	true,	true,	// 0x30
+			true,	true,	true,	true,	false,	true,	false,	true,
+			true,	true,	true,	true,	true,	true,	true,	true,	// 0x40
+			true,	true,	true,	true,	true,	true,	true,	true,
+			true,	true,	true,	true,	true,	true,	true,	true,	// 0x50
+			true,	true,	true,	false,	true,	false,	false,	true,
+			false,	true,	true,	true,	true,	true,	true,	true,	// 0x60
+			true,	true,	true,	true,	true,	true,	true,	true,
+			true,	true,	true,	true,	true,	true,	true,	true,	// 0x70
+			true,	true,	true,	false,	false,	false,	true,	false
+		};
+		for(first = endOfScheme + 1; first < last; ++first) {
+			if(*first > 0x007F || !URI_CHARS[*first])
+				return first;
 		}
 		return last;
+	} else {
 	}
-	return first;
+}
 
-#undef STARTS_WITH
+/**
+ * Sets the valid schemes.
+ * @param scheme the set of the schemes to set
+ * @return the detector
+ * @throw invalid_argument invalid name as a scheme was found
+ */
+URIDetector& URIDetector::setValidSchemes(const set<String>& schemes /* = set<String>() */) {
+	// validation
+	for(set<String>::const_iterator i(schemes.begin()), e(schemes.end()); i != e; ++i) {
+		const Char* const p = i->data();
+		if(handleScheme(p, p + i->length()) != p + i->length())
+			throw invalid_argument("schemes");
+	}
+
+	// rebuild hash table
+	HashTable* newSchemes = new HashTable(schemes.begin(), schemes.end(), true);
+	delete validSchemes_;
+	validSchemes_ = newSchemes;
+
+	return *this;
 }
 
 
@@ -396,14 +430,18 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 /**
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
+ * @param uriDetector the URI detector
+ * @throw NullPointerException @a uriDetector is @c null
  */
-URIRule::URIRule(Token::ID id) throw() : Rule(id, true) {
+URIRule::URIRule(Token::ID id, auto_ptr<const URIDetector> uriDetector) : Rule(id, true), uriDetector_(uriDetector) {
+	if(uriDetector_.get() == 0)
+		throw NullPointerException("uriDetector");
 }
 
 /// @see Rule#parse
 auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
 	assert(first < last);
-	const Char* const e = URIDetector::eatURL(first, last, true);
+	const Char* const e = uriDetector_->detect(first, last);
 	if(e == first)
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> temp(new Token);
@@ -468,7 +506,7 @@ WordRule::~WordRule() throw() {
 
 /// @see Rule#parse
 auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
-	if(!words_->find(first, last))
+	if(!words_->matches(first, last))
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> result(new Token);
 	result->id = getTokenID();

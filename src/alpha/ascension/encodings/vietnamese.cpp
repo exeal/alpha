@@ -360,7 +360,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 			if(mnemonic != 0x80) {
 				// ... got the base character
 				if(from + 1 == fromEnd) {
-					if(!flags().has(FROMEND_IS_NOT_EOB)) {
+					if(flags().has(END_OF_BUFFER)) {
 						*to++ = *from++;
 						break;
 					}
@@ -378,7 +378,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 					continue;
 				}
 				if(from + 2 == fromEnd) {
-					if(!flags().has(FROMEND_IS_NOT_EOB)) {
+					if(flags().has(END_OF_BUFFER)) {
 						*to++ = STATE_TABLE[state2][NONE];
 						break;
 					}
