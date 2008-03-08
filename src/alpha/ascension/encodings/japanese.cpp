@@ -1051,7 +1051,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doToUnicode(
 			} else {
 				toNext = to;
 				fromNext = from;
-				return (from + 1 == fromEnd && flags().has(FROMEND_IS_NOT_EOB)) ? COMPLETED : MALFORMED_INPUT;
+				return (from + 1 == fromEnd && !flags().has(END_OF_BUFFER)) ? COMPLETED : MALFORMED_INPUT;
 			}
 		}
 	}
@@ -1072,10 +1072,10 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doFromUnicode(
 			*to++ = mask8Bit(*from++);
 			continue;
 		}
-		switch(convertUCStoX0213(from, fromEnd, fromNext, !flags().has(FROMEND_IS_NOT_EOB), jis, plane2)) {
+		switch(convertUCStoX0213(from, fromEnd, fromNext, flags().has(END_OF_BUFFER), jis, plane2)) {
 		case COMPLETED:
 			if(fromNext == from) {
-				assert(flags().has(FROMEND_IS_NOT_EOB));	// pending...
+				assert(!flags().has(END_OF_BUFFER));	// pending...
 				toNext = to;
 				return COMPLETED;
 			}
@@ -1292,10 +1292,10 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doFromUnicode(
 			break;
 
 		// UCS -> JIS
-		switch(convertUCStoX0213(from, fromEnd, fromNext, !flags().has(FROMEND_IS_NOT_EOB), jis, plane2)) {
+		switch(convertUCStoX0213(from, fromEnd, fromNext, flags().has(END_OF_BUFFER), jis, plane2)) {
 		case COMPLETED:
 			if(fromNext == from) {
-				assert(flags().has(FROMEND_IS_NOT_EOB));	// pending...
+				assert(!flags().has(END_OF_BUFFER));	// pending...
 				toNext = to;
 				return COMPLETED;
 			}
@@ -1415,12 +1415,12 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 	template<> Encoder::Result InternalEncoder<ISO_2022_##suffix>::doFromUnicode(									\
 			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {	\
 		return convertUTF16toISO2022JPX(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			encodingState_,	!flags().has(FROMEND_IS_NOT_EOB), substitutionPolicy());								\
+			encodingState_,	flags().has(END_OF_BUFFER), substitutionPolicy());										\
 	}																												\
 	template<> Encoder::Result InternalEncoder<ISO_2022_##suffix>::doToUnicode(										\
 			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {	\
 		return convertISO2022JPXtoUTF16(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			decodingState_, !flags().has(FROMEND_IS_NOT_EOB), substitutionPolicy());								\
+			decodingState_, flags().has(END_OF_BUFFER), substitutionPolicy());										\
 	}
 
 // ISO-2022-JP //////////////////////////////////////////////////////////////

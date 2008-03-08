@@ -157,15 +157,6 @@ namespace ascension {
 		}
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
 
-		// These data are not terminated by NUL.
-		const byte	UTF8_BOM[] = {0xEF, 0xBB, 0xBF};	///< BOM of UTF-8.
-		const byte	UTF16LE_BOM[] = {0xFF, 0xFE};		///< BOM of UTF-16 little endian.
-		const byte	UTF16BE_BOM[] = {0xFE, 0xFF};		///< BOM of UTF-16 big endian.
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-		const byte	UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};	///< BOM of UTF-32 little endian.
-		const byte	UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};	///< BOM of UTF-32 big endian.
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
-
 		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c & 0x7FU);}
 		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c & 0xFFU);}
 		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c & 0xFFFFU);}
@@ -208,10 +199,7 @@ namespace ascension {
 		/// Thrown if the specified encoding is not supported.
 		class UnsupportedEncodingException : public std::invalid_argument {
 		public:
-			explicit UnsupportedEncodingException(MIBenum mib);
-			MIBenum mibEnum() const throw();
-		private:
-			const MIBenum mib_;
+			explicit UnsupportedEncodingException(const std::string& message);
 		};
 
 		class IEncodingProperties {
@@ -300,14 +288,23 @@ namespace ascension {
 			enum Flag {
 				/**
 				 * Indicates that @a from parameter of the conversion method addresses the
-				 * beginning of the entire input sequence.
+				 * beginning of the entire input sequence and @a to parameter addresses the
+				 * beginning of the entire output sequence.
 				 */
-				FROM_IS_NOT_BOB = 1,
+				BEGINNING_OF_BUFFER = 0x01,
 				/**
 				 * Indicates that @a fromEnd parameter of the conversion method addresses the end
 				 * of the entire input sequence.
 				 */
-				FROMEND_IS_NOT_EOB = 2
+				END_OF_BUFFER = 0x02,
+				/**
+				 * Indicates that incoming or outgoing buffer contains a Unicode byte order mark
+				 * (BOM). If you set this flag without @c FROM_IS_NOT_BOB when encoding, the
+				 * encoder writes BOM into the beginning of the output byte sequence. And the
+				 * decoder sets this flag if the input byte sequence contained BOM and the other
+				 * flag @c FROM_IS_NOT_BOB was not set.
+				 */
+				UNICODE_BYTE_ORDER_MARK = 0x04
 			};
 
 			static const char ALIASES_SEPARATOR;

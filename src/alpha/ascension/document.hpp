@@ -930,6 +930,7 @@ namespace ascension {
 				TextFileStreamBuffer* close();
 				std::string encoding() const throw();
 				bool isOpen() const throw();
+				bool unicodeByteOrderMark() const throw();
 			private:
 				int_type	overflow(int_type c /* = traits_type::eof() */);
 				int_type	pbackfail(int_type c /* = traits_type::eof() */);
@@ -1003,6 +1004,7 @@ namespace ascension {
 				// encodings
 				void	setEncoding(const std::string& encoding);
 				void	setNewline(Newline newline);
+				bool	unicodeByteOrderMark() const throw();
 				// I/O
 				void	close();
 				bool	open(const String& fileName, const LockMode& lockMode,
@@ -1030,6 +1032,7 @@ namespace ascension {
 				Document& document_;
 				String fileName_;
 				std::string encoding_;
+				bool unicodeByteOrderMark_;
 				Newline newline_;
 				LockMode lockMode_;
 #ifdef ASCENSION_WINDOWS
@@ -1531,6 +1534,10 @@ inline Newline fileio::TextFileDocumentInput::newline() const throw() {return ne
 
 /// Returns the file full name or an empty string if the document is not bound to any of the files.
 inline fileio::String fileio::TextFileDocumentInput::pathName() const throw() {return fileName_;}
+
+/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
+/// the last output file.
+inline bool fileio::TextFileDocumentInput::unicodeByteOrderMark() const throw() {return unicodeByteOrderMark_;}
 
 }} // namespace ascension.kernel
 

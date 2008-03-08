@@ -122,7 +122,7 @@ namespace ascension {
 				/// Returns the descriptive text of the hyperlink.
 				virtual String description() const throw() = 0;
 				/// Invokes the hyperlink.
-				virtual void invoke() throw() = 0;
+				virtual void invoke() const throw() = 0;
 				/// Returns the columns of the region of the hyperlink.
 				const Range<length_t>& region() const throw() {return region_;}
 			protected:

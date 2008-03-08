@@ -46,8 +46,11 @@ void Presentation::addTextViewer(TextViewer& textViewer) throw() {
 }
 
 void Presentation::clearHyperlinksCache() throw() {
-	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i)
+	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i) {
+		for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
+			delete (*i)->hyperlinks[j];
 		delete *i;
+	}
 	hyperlinks_.clear();
 }
 
@@ -73,6 +76,8 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ) {
 		const length_t line = (*i)->lineNumber;
 		if(line == lines.beginning() || (change.isDeletion() && lines.includes(line))) {
+			for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
+				delete (*i)->hyperlinks[j];
 			delete *i;
 			i = hyperlinks_.erase(i);
 			continue;
@@ -350,10 +355,11 @@ namespace {
 	class URLHyperlink : virtual public IHyperlink {
 	public:
 		explicit URLHyperlink(const Range<length_t>& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
-		String description() const throw() {return uri_ + L"\nCTRL + click to follow the link.";}
-		void invoke() throw() {
+		String description() const throw() {return L"\x202A" + uri_ + L"\x202C\nCTRL + click to follow the link.";}
+		void invoke() const throw() {
 #ifdef ASCENSION_WINDOWS
 			::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
+#else
 #endif
 		}
 	private:

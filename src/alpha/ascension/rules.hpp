@@ -2,7 +2,7 @@
  * @file rules.hpp
  * @author exeal
  * @date 2004-2006 (was Lexer.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -20,14 +20,28 @@ namespace ascension {
 		namespace internal {class HashTable;}
 
 		/**
-		 * @c URIDetector detects and searches URI.
-		 * Although this should conform to the syntaxes of RFC 3986 and RFC 3987, currently not.
+		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
+		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC3986</a> and
+		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC3987</a>.
 		 */
 		class URIDetector {
 		public:
-			static const Char*	eatMailAddress(const Char* first, const Char* last, bool asIRI);
-			static const Char*	eatURL(const Char* first, const Char* last, bool asIRI);
-			static void			setSchemes(const std::set<String>& schemes);
+			/// Controls how the detector parses URIs.
+			enum ParsingMode {
+				STRICT_MODE,	///< Parses conforming to RFC3986 and RFC3987.
+				TOLERANT_MODE	///< Uses loose matches.
+			};
+		public:
+			explicit URIDetector(const std::set<String>& schemes = std::set<String>(), ParsingMode parsingMode = TOLERANT_MODE);
+			const Char*			detect(const Char* first, const Char* last) const;
+			Range<const Char*>	search(const Char* first, const Char* last) const;
+			// attribute
+			ParsingMode		parsingMode() const throw();
+			URIDetector&	setParsingMode(ParsingMode mode);
+			URIDetector&	setValidSchemes(const std::set<String>& schemes);
+		private:
+			internal::HashTable* validSchemes_;
+			ParsingMode parsingMode_;
 		};
 
 		/**
@@ -89,15 +103,17 @@ namespace ascension {
 		/// A concrete rule detects numeric tokens.
 		class NumberRule : public Rule {
 		public:
-			NumberRule(Token::ID id) throw();
-			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			explicit NumberRule(Token::ID id) throw();
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::ID id) throw();
-			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			URIRule(Token::ID id, std::auto_ptr<const URIDetector> uriDetector);
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+		private:
+			std::auto_ptr<const URIDetector> uriDetector_;
 		};
 
 		/// A concrete rule detects the registered words.
@@ -106,7 +122,7 @@ namespace ascension {
 			WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
 			~WordRule() throw();
-			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
 			internal::HashTable* words_;
 		};
@@ -116,7 +132,7 @@ namespace ascension {
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::ID id, const String& pattern, bool caseSensitive = true);
-			std::auto_ptr<Token>	parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};

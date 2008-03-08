@@ -371,20 +371,6 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			if(encoder_.get() == 0)
 				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
 		}
-		// skip Unicode byte order mark if necessary
-		const byte* bom = 0;
-		ptrdiff_t bomLength = 0;
-		switch(encoder_->properties().mibEnum()) {
-		case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
-		case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
-		case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-		case standard::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-		case standard::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
-		}
-		if(bomLength >= fileSize && memcmp(inputMapping_.first, bom, bomLength) == 0)
-			inputMapping_.first += bomLength;
 		inputMapping_.current = inputMapping_.first;
 	} else if(mode == ios_base::out) {
 		if(encoder_.get() == 0)
@@ -397,24 +383,8 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT)))
 			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #endif
-		if(writeByteOrderMark) {
-			const byte* bom = 0;
-			size_t bomLength;
-			switch(encoder_->properties().mibEnum()) {
-			case fundamental::UTF_8:	bom = UTF8_BOM; bomLength = countof(UTF8_BOM); break;
-			case fundamental::UTF_16LE:	bom = UTF16LE_BOM; bomLength = countof(UTF16LE_BOM); break;
-			case fundamental::UTF_16BE:	bom = UTF16BE_BOM; bomLength = countof(UTF16BE_BOM); break;
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-			case standard::UTF_32LE:	bom = UTF32LE_BOM; bomLength = countof(UTF32LE_BOM); break;
-			case standard::UTF_32BE:	bom = UTF32BE_BOM; bomLength = countof(UTF32BE_BOM); break;
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
-			}
-#ifdef ASCENSION_WINDOWS
-			::WriteFile(fileHandle_, bom, static_cast<::DWORD>(bomLength), 0, 0);
-#else // ASCENSION_POSIX
-			::write(fileDescriptor_, bom, bomLength);
-#endif
-		}
+		if(writeByteOrderMark)
+			encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
 		setp(ucsBuffer_, endof(ucsBuffer_));
 	} else
 		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
@@ -502,7 +472,7 @@ int TextFileStreamBuffer::sync() {
 		byte* toNext;
 		const a::Char* fromNext;
 		byte nativeBuffer[countof(ucsBuffer_)];
-		encoder_->setFlags(encoder_->flags() & ~(Encoder::FROM_IS_NOT_BOB | Encoder::FROMEND_IS_NOT_EOB));
+		encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 		while(true) {
 			const a::Char* const fromEnd = pptr();
 
@@ -545,7 +515,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 	a::Char* toNext;
 	const byte* fromNext;
-	encoder_->setFlags(encoder_->flags() & ~(Encoder::FROM_IS_NOT_BOB | Encoder::FROMEND_IS_NOT_EOB));
+	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);
@@ -558,6 +528,11 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	inputMapping_.current = fromNext;
 	setg(ucsBuffer_, ucsBuffer_, toNext);
 	return (toNext > ucsBuffer_) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
+}
+
+/// Returns true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
+bool TextFileStreamBuffer::unicodeByteOrderMark() const throw() {
+	return encoder_->flags().has(Encoder::UNICODE_BYTE_ORDER_MARK);
 }
 
 
@@ -602,8 +577,9 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
  * Constructor.
  * @param document the document
  */
-TextFileDocumentInput::TextFileDocumentInput(Document& document) : document_(document),
-		encoding_(Encoder::getDefault().properties().name()), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
+TextFileDocumentInput::TextFileDocumentInput(Document& document) :
+		document_(document), encoding_(Encoder::getDefault().properties().name()),
+		unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_POSIX
@@ -809,6 +785,7 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 		throw;
 	}
 	document_.recordOperations(recorded);
+	unicodeByteOrderMark_ = sb.unicodeByteOrderMark();
 	sb.close();
 
 	// lock the file
@@ -876,12 +853,12 @@ void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
 /**
  * Sets the encoding.
  * @param encoding the encoding
- * @throw std#invalid_argument @a mib is invalid
+ * @throw encoding#UnsupportedEncodingException @a encoding is not supported
  * @see #encoding
  */
 void TextFileDocumentInput::setEncoding(const string& encoding) {
 	if(!encoding.empty() && !Encoder::supports(encoding))
-		throw invalid_argument("the given encoding is not available.");
+		throw UnsupportedEncodingException("encoding");
 	encoding_ = encoding;
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
 }
@@ -1026,6 +1003,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 #endif
 		throw;
 	}
+	unicodeByteOrderMark_ = sb.unicodeByteOrderMark();
 
 	const bool makeBackup = false;
 

@@ -16,14 +16,9 @@ using namespace std;
 
 /**
  * Constructor.
- * @param mib the MIBenum vaule of the encoding
+ * @param message the message string
  */
-UnsupportedEncodingException::UnsupportedEncodingException(MIBenum mib) : invalid_argument("unsupported encoding."), mib_(mib) {
-}
-
-/// Returns the MIBenum value of the encoding
-MIBenum UnsupportedEncodingException::mibEnum() const throw() {
-	return mib_;
+UnsupportedEncodingException::UnsupportedEncodingException(const string& message) : invalid_argument(message) {
 }
 
 
@@ -90,6 +85,11 @@ MIBenum UnsupportedEncodingException::mibEnum() const throw() {
  *
  * Conversion states can be cleared by @c #resetDecodingState and @c #resetEncodingState.
  *
+ * <h3>Miscellaneous Flags</h3>
+ *
+ * An encodoer has flags represented by @c Flags. The initial value is @c BEGINNING_OF_BUFFER |
+ * @c END_OF_BUFFER.
+ *
  * <h3>Making User-Defined @c Encoder Classes</h3>
  *
  * You can create and add your own @c Encoder class.
@@ -99,7 +99,7 @@ MIBenum UnsupportedEncodingException::mibEnum() const throw() {
 const char Encoder::ALIASES_SEPARATOR = '|';
 
 /// Protected default constructor.
-Encoder::Encoder() throw() : substitutionPolicy_(DONT_SUBSTITUTE) {
+Encoder::Encoder() throw() : substitutionPolicy_(DONT_SUBSTITUTE), flags_(BEGINNING_OF_BUFFER | END_OF_BUFFER) {
 }
 
 /// Destructor.
@@ -330,7 +330,7 @@ Encoder& Encoder::resetEncodingState() throw() {
  * @throw invalid_argument @a newFlags includes unknown value
  */
 Encoder& Encoder::setFlags(const Flags& newFlags) {
-	if((newFlags & ~(FROM_IS_NOT_BOB | FROMEND_IS_NOT_EOB)) != 0)
+	if((newFlags & ~(BEGINNING_OF_BUFFER | END_OF_BUFFER | UNICODE_BYTE_ORDER_MARK)) != 0)
 		throw invalid_argument("newFlags");
 	flags_ = newFlags;
 	return *this;
