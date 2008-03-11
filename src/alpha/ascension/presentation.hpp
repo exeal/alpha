@@ -14,7 +14,10 @@ namespace ascension {
 
 	namespace viewers {class TextViewer;}
 
-	namespace rules {class Scanner;}
+	namespace rules {
+		class Scanner;
+		class URIDetector;
+	}
 
 	namespace presentation {
 
@@ -150,13 +153,19 @@ namespace ascension {
 			};
 
 			/**
-			 * URL hyperlink detector.
+			 * URI hyperlink detector.
+			 * @see rules#URIDetector, rules#URIRule
 			 * @note This class is not intended to be subclassed.
 			 */
-			class URLHyperlinkDetector : virtual public IHyperlinkDetector {
+			class URIHyperlinkDetector : virtual public IHyperlinkDetector {
 			public:
+				URIHyperlinkDetector(const rules::URIDetector& uriDetector, bool delegateOwnership) throw();
+				~URIHyperlinkDetector() throw();
+				// IHyperlinkDetector
 				std::auto_ptr<IHyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw();
+			private:
+				ascension::internal::StrategyPointer<const rules::URIDetector> uriDetector_;
 			};
 
 			/**

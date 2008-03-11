@@ -804,7 +804,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
-	scanner->addRule(auto_ptr<Rule>(new URIRule(219, auto_ptr<const URIDetector>(new URIDetector()))));
+	scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultGenericInstance(), false)));
 	map<Token::ID, const TextStyle> jsdocStyles;
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
 	jsdocStyles.insert(make_pair(219, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
@@ -845,7 +845,8 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 
 	// URL hyperlinks test
 	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
-	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(new hyperlink::URLHyperlinkDetector));
+	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(
+		new hyperlink::URIHyperlinkDetector(URIDetector::defaultGenericInstance(), false)));
 	presentation().setHyperlinkDetector(hld.release(), true);
 
 	// content assist test

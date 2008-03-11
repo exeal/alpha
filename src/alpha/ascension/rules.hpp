@@ -21,27 +21,22 @@ namespace ascension {
 
 		/**
 		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
-		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC3986</a> and
-		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC3987</a>.
+		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a> and
+		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC 3987</a>.
 		 */
 		class URIDetector {
+			MANAH_NONCOPYABLE_TAG(URIDetector);
 		public:
-			/// Controls how the detector parses URIs.
-			enum ParsingMode {
-				STRICT_MODE,	///< Parses conforming to RFC3986 and RFC3987.
-				TOLERANT_MODE	///< Uses loose matches.
-			};
-		public:
-			explicit URIDetector(const std::set<String>& schemes = std::set<String>(), ParsingMode parsingMode = TOLERANT_MODE);
-			const Char*			detect(const Char* first, const Char* last) const;
-			Range<const Char*>	search(const Char* first, const Char* last) const;
+			explicit URIDetector() throw();
+			~URIDetector() throw();
+			const Char*	detect(const Char* first, const Char* last) const;
+			bool		search(const Char* first, const Char* last, std::pair<const Char*, const Char*>& result) const;
 			// attribute
-			ParsingMode		parsingMode() const throw();
-			URIDetector&	setParsingMode(ParsingMode mode);
 			URIDetector&	setValidSchemes(const std::set<String>& schemes);
+			// singleton
+			static const URIDetector&	defaultGenericInstance() throw();
 		private:
 			internal::HashTable* validSchemes_;
-			ParsingMode parsingMode_;
 		};
 
 		/**
@@ -110,10 +105,10 @@ namespace ascension {
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::ID id, std::auto_ptr<const URIDetector> uriDetector);
+			URIRule(Token::ID id, const URIDetector& uriDetector, bool delegateOwnership) throw();
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
 		private:
-			std::auto_ptr<const URIDetector> uriDetector_;
+			ascension::internal::StrategyPointer<const URIDetector> uriDetector_;
 		};
 
 		/// A concrete rule detects the registered words.
