@@ -349,12 +349,12 @@ void PresentationReconstructor::setPartitionReconstructor(
 }
 
 
-// hyperlink.URLHyperlinkDetector ///////////////////////////////////////////
+// hyperlink.URIHyperlinkDetector ///////////////////////////////////////////
 
 namespace {
-	class URLHyperlink : virtual public IHyperlink {
+	class URIHyperlink : virtual public IHyperlink {
 	public:
-		explicit URLHyperlink(const Range<length_t>& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
+		explicit URIHyperlink(const Range<length_t>& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
 		String description() const throw() {return L"\x202A" + uri_ + L"\x202C\nCTRL + click to follow the link.";}
 		void invoke() const throw() {
 #ifdef ASCENSION_WINDOWS
@@ -367,18 +367,30 @@ namespace {
 	};
 } // namespace @0
 
+/**
+ * Constructor.
+ * @param uriDetector
+ * @param delegateOwnership
+ */
+URIHyperlinkDetector::URIHyperlinkDetector(const URIDetector& uriDetector,
+		bool delegateOwnership) : uriDetector_(&uriDetector, delegateOwnership) {
+}
+
+/// Destructor.
+URIHyperlinkDetector::~URIHyperlinkDetector() throw() {
+}
+
 /// @see IHyperlinkDetector#nextHyperlink
-auto_ptr<IHyperlink> URLHyperlinkDetector::nextHyperlink(
+auto_ptr<IHyperlink> URIHyperlinkDetector::nextHyperlink(
 		const Document& document, length_t line, const Range<length_t>& range) const throw() {
-	const Char* const s = document.line(line).data();
-	for(text::StringCharacterIterator i(s + range.beginning(), s + range.end()); i.hasNext(); i.next()) {
-		const Char* const e = URIDetector::eatURL(i.tell(), i.end(), true);
-		if(e > i.tell()) {	// found
-			const Range<length_t> r(i.tell() - i.beginning(), e - i.beginning());
-			return auto_ptr<IHyperlink>(new URLHyperlink(r, String(i.tell(), e)));
-		}
-	}
-	return auto_ptr<IHyperlink>(0);
+	const String& s = document.line(line);
+	const Char* p = s.data();
+	pair<const Char*, const Char*> result;
+	if(uriDetector_->search(p, p + s.length(), result))
+		return auto_ptr<IHyperlink>(new URIHyperlink(
+			Range<length_t>(result.first - p, result.second - p), String(result.first, result.second)));
+	else
+		return auto_ptr<IHyperlink>(0);
 }
 
 
