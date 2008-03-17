@@ -297,6 +297,8 @@ const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& 
 		} else
 			++column;
 	}
+	if(partitions.empty())	// rare case
+		partitions.push_back(DocumentPartition(DEFAULT_CONTENT_TYPE, presentation_.document().region()));
 	partitions.front().region.first = max(Position(line, 0), partitions.front().region.first);
 	partitions.back().region.second = min(Position(line, lineLength), partitions.back().region.second);
 

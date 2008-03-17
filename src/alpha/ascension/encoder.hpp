@@ -188,13 +188,13 @@ namespace ascension {
 			else return (first2 == last2) ? 0 : -1;
 		}
 
-		MIBenum	convertCCSIDtoMIB(uint ccsid) throw();
-		uint	convertMIBtoCCSID(MIBenum mib) throw();
+		MIBenum convertCCSIDtoMIB(uint ccsid) throw();
+		uint convertMIBtoCCSID(MIBenum mib) throw();
 #ifdef ASCENSION_WINDOWS
-		uint	convertMIBtoWinCP(MIBenum mib) throw();
-		MIBenum	convertWinCPtoMIB(uint codePage) throw();
+		uint convertMIBtoWinCP(MIBenum mib) throw();
+		MIBenum convertWinCPtoMIB(uint codePage) throw();
 #endif /* ASCENSION_WINDOWS */
-		String	getEncodingDisplayName(MIBenum mib);
+		String getEncodingDisplayName(MIBenum mib);
 
 		/// Thrown if the specified encoding is not supported.
 		class UnsupportedEncodingException : public std::invalid_argument {
@@ -313,35 +313,37 @@ namespace ascension {
 			typedef manah::Flags<Flag> Flags;
 		public:
 			virtual ~Encoder() throw();
+
 			// attributes
-			const Flags&						flags() const throw();
-			virtual const IEncodingProperties&	properties() const throw() = 0;
-			virtual Encoder&					resetDecodingState() throw();
-			virtual Encoder&					resetEncodingState() throw();
-			Encoder&							setFlags(const Flags& newFlags);
-			Encoder&							setSubstitutionPolicy(SubstitutionPolicy newPolicy);
-			SubstitutionPolicy					substitutionPolicy() const throw();
+			const Flags& flags() const throw();
+			virtual const IEncodingProperties& properties() const throw() = 0;
+			virtual Encoder& resetDecodingState() throw();
+			virtual Encoder& resetEncodingState() throw();
+			Encoder& setFlags(const Flags& newFlags);
+			Encoder& setSubstitutionPolicy(SubstitutionPolicy newPolicy);
+			SubstitutionPolicy substitutionPolicy() const throw();
+
 			// conversion
-			bool		canEncode(CodePoint c);
-			bool		canEncode(const Char* first, const Char* last);
-			bool		canEncode(const String& s);
-			Result		fromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
-			std::string	fromUnicode(const String& from);
-			Result		toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
-			String		toUnicode(const std::string& from);
+			bool canEncode(CodePoint c);
+			bool canEncode(const Char* first, const Char* last);
+			bool canEncode(const String& s);
+			Result fromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
+			std::string fromUnicode(const String& from);
+			Result toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
+			String toUnicode(const std::string& from);
+
 			// factory
-			static std::auto_ptr<Encoder>	forCCSID(int ccsid) throw();
-			static std::auto_ptr<Encoder>	forCPGID(int cpgid) throw();
-			static std::auto_ptr<Encoder>	forID(std::size_t id) throw();
-			static std::auto_ptr<Encoder>	forMIB(MIBenum mib) throw();
-			static std::auto_ptr<Encoder>	forName(const std::string& name) throw();
-			static std::auto_ptr<Encoder>	forWindowsCodePage(uint codePage) throw();
-			static bool						supports(MIBenum mib) throw();
-			static bool						supports(const std::string& name) throw();
-			template<typename OutputIterator>
-			static void		availableEncodings(OutputIterator out);
-			static Encoder&	getDefault() throw();
-			static void		registerFactory(EncoderFactory& newFactory);
+			static std::auto_ptr<Encoder> forCCSID(int ccsid) throw();
+			static std::auto_ptr<Encoder> forCPGID(int cpgid) throw();
+			static std::auto_ptr<Encoder> forID(std::size_t id) throw();
+			static std::auto_ptr<Encoder> forMIB(MIBenum mib) throw();
+			static std::auto_ptr<Encoder> forName(const std::string& name) throw();
+			static std::auto_ptr<Encoder> forWindowsCodePage(uint codePage) throw();
+			static bool supports(MIBenum mib) throw();
+			static bool supports(const std::string& name) throw();
+			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
+			static Encoder& getDefault() throw();
+			static void registerFactory(EncoderFactory& newFactory);
 		protected:
 			Encoder() throw();
 			/**
@@ -396,15 +398,14 @@ namespace ascension {
 			/// Returns the name of the encoding detector.
 			std::string name() const throw() {return name_;}
 			// detection
-			std::pair<MIBenum, std::string>	detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
+			std::pair<MIBenum, std::string> detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
-			static EncodingDetector*	forName(const std::string& name) throw();
+			static EncodingDetector* forName(const std::string& name) throw();
 #ifdef ASCENSION_WINDOWS
-			static EncodingDetector*	forWindowsCodePage(::UINT codePage) throw();
+			static EncodingDetector* forWindowsCodePage(::UINT codePage) throw();
 #endif /* ASCENSION_WINDOWS */
-			template<typename OutputIterator>
-			static void		availableNames(OutputIterator out);
-			static void		registerDetector(std::auto_ptr<EncodingDetector> newDetector);
+			template<typename OutputIterator> static void availableNames(OutputIterator out);
+			static void registerDetector(std::auto_ptr<EncodingDetector> newDetector);
 		protected:
 			explicit EncodingDetector(const std::string& name);
 			/**
@@ -444,13 +445,13 @@ namespace ascension {
 					const std::string& aliases = "", byte substitutionCharacter = 0x1A);
 			protected:
 				// IEncodingProperties
-				virtual std::string	aliases() const throw();
-				virtual std::string	displayName(const std::locale& lc) const throw();
-				virtual std::size_t	maximumNativeBytes() const throw();
-				virtual std::size_t	maximumUCSLength() const throw();
-				virtual MIBenum		mibEnum() const throw();
-				virtual std::string	name() const throw();
-				virtual byte		substitutionCharacter() const throw();
+				virtual std::string aliases() const throw();
+				virtual std::string displayName(const std::locale& lc) const throw();
+				virtual std::size_t maximumNativeBytes() const throw();
+				virtual std::size_t maximumUCSLength() const throw();
+				virtual MIBenum mibEnum() const throw();
+				virtual std::string name() const throw();
+				virtual byte substitutionCharacter() const throw();
 			private:
 				const std::string name_, displayName_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
@@ -511,10 +512,10 @@ namespace ascension {
 				public:
 					BidirectionalMap(const Char** byteToCharacterWire) throw();
 					~BidirectionalMap() throw();
-					byte	toByte(Char c) const throw();
-					Char	toCharacter(byte c) const throw();
+					byte toByte(Char c) const throw();
+					Char toCharacter(byte c) const throw();
 				private:
-					void	buildUnicodeToByteTable();
+					void buildUnicodeToByteTable();
 				private:
 					const Char** const byteToUnicode_;
 					byte* unicodeToByte_[0x100];

@@ -134,69 +134,6 @@ bool HashTable::matches(const Char* first, const Char* last) const {
 
 // URIDetector //////////////////////////////////////////////////////////////
 
-#if 0
-/**
- * 文字列がメールアドレスかを調べる
- * @param first, last 調べる文字列
- * @param asIRI UCS 文字を認めるか (未実装)
- * @return メールアドレスの終端
- */
-const Char* URIDetector::eatMailAddress(const Char* first, const Char* last, bool) {
-//	p.matches(first, last);
-/*
-	namespace xp = boost::xpressive;
-	static const xp::wcregex pattern = xp::bos
-		>> xp::set[xp::_w | xp::_d]
-		>> *xp::set[xp::_w | xp::_d | '.' | '-' | '_']
-		>> '@'
-		>> +xp::set[xp::_w | xp::_d | '-' | '_']
-		>> +('.' >> +xp::set[xp::_w | xp::_d | '-' | '_']);
-	xp::match_results<const Char*> m;
-	if(!xp::regex_search(first, last, m, pattern))
-		return first;
-	return first + m.length();
-*/
-	// このメソッドは "/[\w\d][\w\d\.\-_]*@[\w\d\-_]+(?:\.[\w\d\-_]+)+/" のようなパターンマッチを行う
-#define IS_ALNUM(ch)					\
-	(((ch) >= L'A' && (ch) <= L'Z')		\
-	|| ((ch) >= L'a' && (ch) <= L'z')	\
-	|| ((ch) >= L'0' && (ch) <= L'9'))
-#define IS_ALNUMBAR(ch)	\
-	(IS_ALNUM(ch) || ch == L'-' || ch == L'_')
-
-	if(last - first < 5)
-		return first;
-
-	// 1 文字目
-	if(!IS_ALNUM(*first))
-		return first;
-
-	// 2 文字目から '@'
-	const Char* const originalFirst = first++;
-	for(; first < last - 3; ++first) {
-		if(!IS_ALNUMBAR(*first) && *first != L'.')
-			break;
-	}
-	if(*first != L'@' || last - first == 3)
-		return originalFirst;
-
-	// '@' の後ろ
-	const Char* const atMark = first;
-	bool dotAppeared = false;
-	for(first = atMark + 1; first < last; ++first) {
-		if(IS_ALNUMBAR(*first))
-			continue;
-		else if(*first == L'.') {
-			if(first[-1] == L'.')
-				return originalFirst;
-			dotAppeared = true;
-		} else
-			break;
-	}
-	return (dotAppeared && (first - atMark > 2)) ? first : originalFirst;
-}
-#endif /* 0 */
-
 namespace {
 	// Procedures implement productions of RFC 3986 and RFC 3987.
 	// Each procedures take two parameter represent the parsed character sequence. These must be
@@ -234,14 +171,14 @@ namespace {
 	}
 
 	// IPv6address =                            6( h16 ":" ) ls32
-    //             /                       "::" 5( h16 ":" ) ls32
-    //             / [               h16 ] "::" 4( h16 ":" ) ls32
-    //             / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
-    //             / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
-    //             / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
-    //             / [ *4( h16 ":" ) h16 ] "::"              ls32
-    //             / [ *5( h16 ":" ) h16 ] "::"              h16
-    //             / [ *6( h16 ":" ) h16 ] "::"
+	//             /                       "::" 5( h16 ":" ) ls32
+	//             / [               h16 ] "::" 4( h16 ":" ) ls32
+	//             / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+	//             / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+	//             / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+	//             / [ *4( h16 ":" ) h16 ] "::"              ls32
+	//             / [ *5( h16 ":" ) h16 ] "::"              h16
+	//             / [ *6( h16 ":" ) h16 ] "::"
 	const Char* ASCENSION_FASTCALL handleIPv6address(const Char* first, const Char* last) {return 0;}
 
 	// IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
@@ -287,10 +224,10 @@ namespace {
 	}
 	
 	// dec-octet = DIGIT             ; 0-9
-    //           / %x31-39 DIGIT     ; 10-99
-    //           / "1" 2DIGIT        ; 100-199
-    //           / "2" %x30-34 DIGIT ; 200-249
-    //           / "25" %x30-35      ; 250-255
+	//           / %x31-39 DIGIT     ; 10-99
+	//           / "1" 2DIGIT        ; 100-199
+	//           / "2" %x30-34 DIGIT ; 200-249
+	//           / "25" %x30-35      ; 250-255
 	const Char* ASCENSION_FASTCALL handleDecOctet(const Char* first, const Char* last) {
 		if(first < last) {
 			if(*first == L'0')
@@ -369,11 +306,11 @@ namespace {
 	}
 
 	// ucschar = %xA0-D7FF / %xF900-FDCF / %xFDF0-FFEF
-    //         / %x10000-1FFFD / %x20000-2FFFD / %x30000-3FFFD
-    //         / %x40000-4FFFD / %x50000-5FFFD / %x60000-6FFFD
-    //         / %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
-    //         / %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
-    //         / %xD0000-DFFFD / %xE1000-EFFFD
+	//         / %x10000-1FFFD / %x20000-2FFFD / %x30000-3FFFD
+	//         / %x40000-4FFFD / %x50000-5FFFD / %x60000-6FFFD
+	//         / %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
+	//         / %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
+	//         / %xD0000-DFFFD / %xE1000-EFFFD
 	inline const Char* handleUcschar(const Char* first, const Char* last) {
 		if(first < last) {
 			if((*first >= 0x00A0 && *first <= 0xD7FF) || (*first >= 0xF900 && *first <= 0xFDCF) || (*first >= 0xFDF0 && *first <= 0xFFEF))
@@ -443,7 +380,7 @@ namespace {
 
 	// ipath-abempty = *( "/" isegment )
 	const Char* ASCENSION_FASTCALL handlePathAbempty(const Char* first, const Char* last) {	// [nullable]
-		while(first < last && *first != L'/')
+		while(first < last && *first == L'/')
 			first = handleSegment(first + 1, last);
 		return first;
 	}
@@ -499,12 +436,14 @@ namespace {
 
 	// iauthority = [ iuserinfo "@" ] ihost [ ":" port ]
 	const Char* ASCENSION_FASTCALL handleAuthority(const Char* first, const Char* last) {	// [nullable]
+		const Char* const beginning = first;
 		first = handleUserinfo(first, last);
 		assert(first != 0);
-		if(first == last)
-			return 0;
-		else if(*first == L'@')
-			++first;
+		if(first > beginning) {
+			if(first >= last || *++first != L'@')
+				first = beginning;
+		} else if(first < last && *++first != L'@')
+			--first;
 		if(0 != (first = handleHost(first, last))) {
 			if(first != last) {
 				if(*first == L':')
@@ -572,25 +511,6 @@ namespace {
 		}
 		return 0;
 	}
-
-	const bool URI_CHARS[] = {
-		false,	false,	false,	false,	false,	false,	false,	false,	// 0x00
-		false,	false,	false,	false,	false,	false,	false,	false,
-		false,	false,	false,	false,	false,	false,	false,	false,	// 0x10
-		false,	false,	false,	false,	false,	false,	false,	false,
-		false,	true,	false,	true,	true,	true,	true,	false,	// 0x20
-		false,	false,	false,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x30
-		true,	true,	true,	true,	false,	true,	false,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x40
-		true,	true,	true,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x50
-		true,	true,	true,	false,	true,	false,	false,	true,
-		false,	true,	true,	true,	true,	true,	true,	true,	// 0x60
-		true,	true,	true,	true,	true,	true,	true,	true,
-		true,	true,	true,	true,	true,	true,	true,	true,	// 0x70
-		true,	true,	true,	false,	false,	false,	true,	false
-	};
 } // namespace @0
 
 /// Constructor. The set of the valid schemes is empty.
@@ -605,6 +525,27 @@ URIDetector::~URIDetector() throw() {
 /// Returns the default generic instance.
 const URIDetector& URIDetector::defaultGenericInstance() throw() {
 	static URIDetector singleton;
+	return singleton;
+}
+
+/**
+ * Returns the default instance accepts URI schemes defined by IANA
+ * (http://www.iana.org/assignments/uri-schemes.html).
+ */
+const URIDetector& URIDetector::defaultIANAURIInstance() throw() {
+	static URIDetector singleton;
+	if(singleton.validSchemes_ == 0)
+		singleton.setValidSchemes(
+			// permanent URI schemes
+			L"aaa|aaas|acap|cap|cid|crid|data|dav|dict|dns|fax|file|ftp|go|gopher|h323"
+			L"|http|https|icap|im|imap|info|ipp|iris|iris.beep|iris.xpc|iris.xpcs|iris.lwz|ldap|mailto|mid|modem"
+			L"|msrp|msrps|mtqp|mupdate|news|nfs|nntp|opaquelocktoken|pop|pres|rtsp|service|shttp|sip|sips|snmp"
+			L"|soap.beep|soap.beeps|tag|tel|telnet|tftp|thismessage|tip|tv|urn|vemmi|xmlrpc.beep|xmlrpc.beeps|xmpp|z39.50r"
+			// provisional URI schemes
+			L"|afs|dtn|iax2|mailserver|pack|tn3270"
+			// historical URI schemes
+			L"prospero|wais",
+			L'|');
 	return singleton;
 }
 
@@ -683,10 +624,12 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
 /**
  * Sets the valid schemes.
  * @param scheme the set of the schemes to set
+ * @param caseSensitive set true to use case-sensitive comparison for scheme name matching.
+ * However, RFC 3986 Section 3.1 says that schemes are case-insensitive
  * @return the detector
  * @throw invalid_argument invalid name as a scheme was found
  */
-URIDetector& URIDetector::setValidSchemes(const set<String>& schemes) {
+URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseSensitive /* = false */) {
 	// validation
 	for(set<String>::const_iterator i(schemes.begin()), e(schemes.end()); i != e; ++i) {
 		const Char* const p = i->data();
@@ -695,11 +638,31 @@ URIDetector& URIDetector::setValidSchemes(const set<String>& schemes) {
 	}
 
 	// rebuild hash table
-	HashTable* newSchemes = new HashTable(schemes.begin(), schemes.end(), true);
+	HashTable* newSchemes = new HashTable(schemes.begin(), schemes.end(), !caseSensitive);
 	delete validSchemes_;
 	validSchemes_ = newSchemes;
 
 	return *this;
+}
+
+/**
+ * Sets the valid schemes.
+ * @param scheme the string contains the schemes separated by @a separator
+ * @param caseSensitive set true to use case-sensitive comparison for scheme name matching
+ * @param separator the character delimits scheme names in @a schemes. this can be a surrogate
+ * @return the detector
+ * @throw invalid_argument invalid name as a scheme was found
+ */
+URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator, bool caseSensitive /* = false */) {
+	set<String> container;
+	for(length_t previous = 0, next; previous < schemes.length(); previous = next + 1) {
+		next = schemes.find(separator, previous);
+		if(next == String::npos)
+			next = schemes.length();
+		if(next > previous)
+			container.insert(schemes.substr(previous, next - previous));
+	}
+	return setValidSchemes(container, caseSensitive);
 }
 
 
@@ -1115,11 +1078,13 @@ TransitionRule::~TransitionRule() throw() {
 
 /**
  * @fn TransitionRule::matches
- * Returns true if the rule matches the specified text.
+ * Returns true if the rule matches the specified text. Note that an implementation can't use the
+ * partitioning of the document to generate the new partition.
  * @param line the target line text
  * @param column the column number at which match starts
  * @return the length of the matched pattern. if and only if the match failed, returns 0.
  * if matched zero width text, returns 1
+ * @todo this documentation is confusable.
  */
 
 
@@ -1222,80 +1187,83 @@ void LexicalPartitioner::documentAboutToBeChanged() throw() {
 
 /// @see kernel#DocumentPartitioner#documentChanged
 void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
+	// this code reconstructs partitions in the region changed by the document modification using
+	// the registered partitioning rules
+
 	if(change.region().isEmpty())
 		return;
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& doc = *document();
-	const Position eof(doc.region().second);
 
-	// delete the partitions encompassed by the deleted region
-	if(change.isDeletion())
-		erasePartitions(change.region().beginning(), change.region().end());
+//	// delete the partitions encompassed with the deleted region
+//	if(change.isDeletion()) {
+//		erasePartitions(change.region().beginning(), change.region().end());
+//	}
 
 	// move the partitions adapting to the document change
-	for(size_t i = 0, c = partitions_.size(); i < c; ++i) {
-		partitions_[i]->start = updatePosition(partitions_[i]->start, change, FORWARD);
-		partitions_[i]->tokenStart = updatePosition(partitions_[i]->tokenStart, change, FORWARD);
+	for(size_t p = 0, c = partitions_.size(); p < c; ++p) {
+		partitions_[p]->start = updatePosition(partitions_[p]->start, change, FORWARD);
+		partitions_[p]->tokenStart = updatePosition(partitions_[p]->tokenStart, change, FORWARD);
 	}
 
-	// delete the partitions start at the deleted region
-	DocumentCharacterIterator p(doc, Position(change.region().beginning().line, 0));
-	Position eol(change.isDeletion() ? change.region().beginning() : change.region().end());
-	eol.column = doc.lineLength(eol.line);
-	erasePartitions(p.tell(), eol);
-
-	// reconstruct partitions in the affected region
-	const Position bof(doc.region().first);
-	const String* line = &doc.line(p.tell().line);
-	ContentType eolContentType = getTransitionStateAt(eol);
-	size_t partition = findClosestPartition(p.tell());
-	ContentType contentType = partitions_[partition]->contentType, destination;
-	while(true) {	// scan and tokenize into partitions...
-		const bool isEOL = p.tell().column == line->length();
-		length_t tokenLength = tryTransition(*line, p.tell().column, contentType, destination);
+	// compute partitioning for the affected region using the registered rules
+	vector<Partition*> newPartitions;	// newly computed partitions for the affected region
+	DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
+		Region(Position(change.region().beginning().line, 0), doc.region().end()));
+//	size_t partition = partitionAt(p.tell());	// the partition in which 'p' walks
+//	const Partition* nextPartition = (partition + 1 < partitions_.size()) ? partitions_[partition + 1] : 0;
+	ContentType contentType, destination;
+	contentType = (i.tell().line == 0) ? DEFAULT_CONTENT_TYPE
+		: partitions_[partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1)))]->contentType;
+	for(const String* line = &doc.line(i.tell().line); ; ) {	// scan and tokenize into partitions...
+		const bool atEOL = i.tell().column == line->length();
+		length_t tokenLength = tryTransition(*line, i.tell().column, contentType, destination);
 		if(tokenLength != 0) {	// a token was found
-			if(isEOL)
+			if(atEOL)
 				tokenLength = 0;	// a line terminator is zero-length...
-			const Position tokenEnd(p.tell().line, p.tell().column + tokenLength);
+			const Position tokenEnd(i.tell().line, i.tell().column + tokenLength);
 			// insert the new partition behind the current
 			assert(destination != contentType);
-			if(partition > 0 || p.tell() > bof)
-				partitions_.insert(++partition,
-					new Partition(destination, (destination > contentType) ? p.tell() : tokenEnd, p.tell(), tokenLength));
-			else {
-				Partition& pa = *partitions_[0];
-				pa.contentType = destination;
-				pa.start = (destination > contentType) ? p.tell() : tokenEnd;
-				pa.tokenLength = tokenLength;
-				pa.tokenStart = p.tell();
-			}
+			newPartitions.push_back(new Partition(
+				destination, (destination > contentType) ? i.tell() : tokenEnd, i.tell(), tokenLength));
 			contentType = destination;
 			// go to the end of the found token
-			if(!isEOL)
-				p.seek(tokenEnd);
+			if(!atEOL)
+				i.seek(tokenEnd);
 		}
-		// if reached the end of the affected region and content types are same, we are done
-		if(p.tell() == eof || (isEOL && p.tell() == eol && contentType == eolContentType))
-			break;
+		// this loop can end at only EOL
+		if(atEOL) {
+			// the end of the document
+			if(!i.hasNext())
+				break;
+			// if reached the end of the affected region and content types are same, we are done
+			else if(i.tell() >= change.region().second && transitionStateAt(i.tell()) == contentType)
+				break;
+		}
 		// go to the next character if no transition occured
 		if(tokenLength == 0) {
-			p.next();
-			if(p.tell().column == 0) {	// entered the next line
-				line = &doc.line(p.tell().line);
-				if(p.tell().line > eol.line) {
-					eol = Position(p.tell().line, doc.lineLength(p.tell().line));
-					eolContentType = getTransitionStateAt(eol);
-				}
-			}
+			i.next();
+			if(i.tell().column == 0)	// entered the next line
+				line = &doc.line(i.tell().line);
 		}
 	}
+
+	// replace partitions encompassed with the affected region
+	erasePartitions(i.region().beginning(), i.tell());
+	partitions_.insert(partitionAt(i.region().beginning()) + 1, newPartitions.begin(), newPartitions.end());
+
+#ifdef _DEBUG
+	static bool trace = false;
+	if(trace)
+		dump();
+#endif
 	verify();
-	notifyDocument(Region(Position(change.region().beginning().line, 0), p.tell()));
+	notifyDocument(Region(Position(change.region().beginning().line, 0), i.tell()));
 }
 
 /// @see kernel#DocumentPartitioner#doGetPartition
 void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const throw() {
-	const size_t i = findClosestPartition(at);
+	const size_t i = partitionAt(at);
 	const Partition& p = *partitions_[i];
 	partition.contentType = p.contentType;
 	partition.region.first = p.start;
@@ -1324,16 +1292,16 @@ void LexicalPartitioner::dump() const {
 #endif /* _DEBUG */
 }
 
-/***/
+// erases partitions encompassed with the region between the given two positions.
 void LexicalPartitioner::erasePartitions(const Position& first, const Position& last) {
 	// locate the first partition to delete
-	size_t deletedFirst = findClosestPartition(first);
+	size_t deletedFirst = partitionAt(first);
 	if(first >= partitions_[deletedFirst]->getTokenEnd())
 		++deletedFirst;	// do not delete this partition
 //	else if(deletedFirst < partitions_.getSize() - 1 && partitions_[deletedFirst + 1]->tokenStart < change.getRegion().getBottom())
 //		++deletedFirst;	// delete from the next partition
 	// locate the last partition to delete
-	size_t deletedLast = findClosestPartition(last) + 1;	// exclusive
+	size_t deletedLast = partitionAt(last) + 1;	// exclusive
 	if(deletedLast < partitions_.size() && partitions_[deletedLast]->tokenStart < last)
 		++deletedLast;
 //	else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
@@ -1361,29 +1329,29 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 		partitions_.erase(partitions_.size() - 1);
 }
 
-/**
- * Returns a partition closest to the given position.
- * @param at the position
- * @return the index of the partition
- */
-inline size_t LexicalPartitioner::findClosestPartition(const Position& at) const throw() {
+// returns the index of the partition encompasses the given position.
+inline size_t LexicalPartitioner::partitionAt(const Position& at) const throw() {
 	size_t result = ascension::internal::searchBound(
 		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
 	if(result == partitions_.size()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return 0;
 	}
-	if(at.line < document()->numberOfLines() && partitions_[result]->tokenStart == at && result > 0 && at.column == document()->lineLength(at.line))
+	if(at.line < document()->numberOfLines()
+			&& partitions_[result]->tokenStart == at && result > 0 && at.column == document()->lineLength(at.line))
 		--result;
-	if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
-		--result;
+//	if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
+//		--result;
+	while(result + 1 < partitions_.size() && partitions_[result + 1]->start == partitions_[result]->start)
+		++result;
 	return result;
 }
 
-inline ContentType LexicalPartitioner::getTransitionStateAt(const Position& at) const throw() {
+// returns the transition state (corresponding content type) at the given position.
+inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const throw() {
 	if(at == Position::ZERO_POSITION)
 		return DEFAULT_CONTENT_TYPE;
-	size_t i = findClosestPartition(at);
+	size_t i = partitionAt(at);
 	if(partitions_[i]->start == at)
 		--i;
 	return partitions_[i]->contentType;

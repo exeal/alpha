@@ -67,11 +67,11 @@ namespace ascension {
 			CompletionProposal(const String& replacementString, const String& displayString,
 				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
 		public:
-			String	getDescription() const throw();
-			String	getDisplayString() const throw();
-			HICON	getIcon() const throw();
-			bool	isAutoInsertable() const throw();
-			void	replace(kernel::Document& document, const kernel::Region& replacementRegion);
+			String getDescription() const throw();
+			String getDisplayString() const throw();
+			::HICON getIcon() const throw();
+			bool isAutoInsertable() const throw();
+			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
 			::HICON icon_;
@@ -232,36 +232,36 @@ namespace ascension {
 			ContentAssistant() throw();
 			~ContentAssistant() throw();
 			// attributes
-			ulong	autoActivationDelay() const throw();
-			void	enablePrefixCompletion(bool enable);
-			void	setAutoActivationDelay(ulong milliseconds);
-			void	setContentAssistProcessor(kernel::ContentType contentType, std::auto_ptr<IContentAssistProcessor> processor);
+			ulong autoActivationDelay() const throw();
+			void enablePrefixCompletion(bool enable);
+			void setAutoActivationDelay(ulong milliseconds);
+			void setContentAssistProcessor(kernel::ContentType contentType, std::auto_ptr<IContentAssistProcessor> processor);
 			// operation
-			void	showPossibleCompletions();
+			void showPossibleCompletions();
 		private:
-			void					startPopup();
-			static void CALLBACK	timeElapsed(HWND, UINT, ::UINT_PTR eventID, DWORD);
-			void					updatePopupPositions();
+			void startPopup();
+			static void CALLBACK timeElapsed(::HWND, ::UINT, ::UINT_PTR eventID, ::DWORD);
+			void updatePopupPositions();
 			// IContentAssistant
-			ICompletionProposalsUI*			getCompletionProposalsUI() const throw();
-			const IContentAssistProcessor*	getContentAssistProcessor(kernel::ContentType contentType) const throw();
-			void							install(viewers::TextViewer& viewer);
-			void							uninstall();
+			ICompletionProposalsUI* getCompletionProposalsUI() const throw();
+			const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const throw();
+			void install(viewers::TextViewer& viewer);
+			void uninstall();
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// viewers.ICaretListener
-			void	caretMoved(const viewers::Caret& self, const kernel::Region& oldRegion);
+			void caretMoved(const viewers::Caret& self, const kernel::Region& oldRegion);
 			// viewers.ICharacterInputListener
-			void	characterInputted(const viewers::Caret& self, CodePoint c);
+			void characterInputted(const viewers::Caret& self, CodePoint c);
 			// viewers.IViewportListener
-			void	viewportChanged(bool horizontal, bool vertical);
+			void viewportChanged(bool horizontal, bool vertical);
 			// IContentAssistant.ICompletionProposalsUI
-			void	close();
-			bool	complete();
-			bool	hasSelection() const throw();
-			void	nextPage(int pages);
-			void	nextProposal(int proposals);
+			void close();
+			bool complete();
+			bool hasSelection() const throw();
+			void nextPage(int pages);
+			void nextProposal(int proposals);
 		private:
 			viewers::TextViewer* textViewer_;
 			std::map<kernel::ContentType, IContentAssistProcessor*> processors_;

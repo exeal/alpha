@@ -733,10 +733,10 @@ namespace {
 		explicit SingleByteEncoder(const Char** byteToCharacterWire, const IEncodingProperties& properties) throw();
 	private:
 		// Encoder
-		Result	doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
-					const Char* from, const Char* fromEnd, const Char*& fromNext);
-		Result	doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-					const byte* from, const byte* fromEnd, const byte*& fromNext);
+		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+			const Char* from, const Char* fromEnd, const Char*& fromNext);
+		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+			const byte* from, const byte* fromEnd, const byte*& fromNext);
 		const IEncodingProperties&	properties() const throw() {return props_;}
 	private:
 		const sbcs::BidirectionalMap table_;

@@ -133,7 +133,7 @@ public:
 	// コンストラクタ
 	TextViewerAccessibleProxy(TextViewer& view);
 	// メソッド
-	void	dispose();
+	void dispose();
 	// IUnknown
 	MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
 	MANAH_BEGIN_INTERFACE_TABLE()
@@ -141,31 +141,31 @@ public:
 		MANAH_IMPLEMENTS_INTERFACE(IDispatch)
 	MANAH_END_INTERFACE_TABLE()
 	// IAccessible
-	STDMETHODIMP	get_accParent(IDispatch** ppdispParent);
-	STDMETHODIMP	get_accChildCount(long* pcountChildren);
-	STDMETHODIMP	get_accChild(VARIANT varChild, IDispatch** ppdispChild);
-	STDMETHODIMP	get_accName(VARIANT varChild, BSTR* pszName);
-	STDMETHODIMP	get_accValue(VARIANT varChild, BSTR* pszValue);
-	STDMETHODIMP	get_accDescription(VARIANT varChild, BSTR* pszDescription);
-	STDMETHODIMP	get_accRole(VARIANT varChild, VARIANT* pvarRole);
-	STDMETHODIMP	get_accState(VARIANT varChild, VARIANT* pvarState);
-	STDMETHODIMP	get_accHelp(VARIANT varChild, BSTR* pszHelp);
-	STDMETHODIMP	get_accHelpTopic(BSTR* pszHelpFile, VARIANT varChild, long* pidTopic);
-	STDMETHODIMP	get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut);
-	STDMETHODIMP	get_accFocus(VARIANT* pvarChild);
-	STDMETHODIMP	get_accSelection(VARIANT* pvarChildren);
-	STDMETHODIMP	get_accDefaultAction(VARIANT varChild, BSTR* pszDefaultAction);
-	STDMETHODIMP	accSelect(long flagsSelect, VARIANT varChild);
-	STDMETHODIMP	accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild);
-	STDMETHODIMP	accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt);
-	STDMETHODIMP	accHitTest(long xLeft, long yTop, VARIANT* pvarChild);
-	STDMETHODIMP	accDoDefaultAction(VARIANT varChild);
-	STDMETHODIMP	put_accName(VARIANT varChild, BSTR szName);
-	STDMETHODIMP	put_accValue(VARIANT varChild, BSTR szValue);
+	STDMETHODIMP get_accParent(::IDispatch** ppdispParent);
+	STDMETHODIMP get_accChildCount(long* pcountChildren);
+	STDMETHODIMP get_accChild(::VARIANT varChild, ::IDispatch** ppdispChild);
+	STDMETHODIMP get_accName(::VARIANT varChild, ::BSTR* pszName);
+	STDMETHODIMP get_accValue(::VARIANT varChild, ::BSTR* pszValue);
+	STDMETHODIMP get_accDescription(::VARIANT varChild, ::BSTR* pszDescription);
+	STDMETHODIMP get_accRole(::VARIANT varChild, ::VARIANT* pvarRole);
+	STDMETHODIMP get_accState(::VARIANT varChild, ::VARIANT* pvarState);
+	STDMETHODIMP get_accHelp(::VARIANT varChild, ::BSTR* pszHelp);
+	STDMETHODIMP get_accHelpTopic(::BSTR* pszHelpFile, ::VARIANT varChild, long* pidTopic);
+	STDMETHODIMP get_accKeyboardShortcut(::VARIANT varChild, ::BSTR* pszKeyboardShortcut);
+	STDMETHODIMP get_accFocus(::VARIANT* pvarChild);
+	STDMETHODIMP get_accSelection(::VARIANT* pvarChildren);
+	STDMETHODIMP get_accDefaultAction(::VARIANT varChild, ::BSTR* pszDefaultAction);
+	STDMETHODIMP accSelect(long flagsSelect, ::VARIANT varChild);
+	STDMETHODIMP accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, ::VARIANT varChild);
+	STDMETHODIMP accNavigate(long navDir, ::VARIANT varStart, ::VARIANT* pvarEndUpAt);
+	STDMETHODIMP accHitTest(long xLeft, long yTop, ::VARIANT* pvarChild);
+	STDMETHODIMP accDoDefaultAction(::VARIANT varChild);
+	STDMETHODIMP put_accName(::VARIANT varChild, ::BSTR szName);
+	STDMETHODIMP put_accValue(::VARIANT varChild, ::BSTR szValue);
 private:
 	// IDocumentListener
-	bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
-	void	documentChanged(const Document& document, const DocumentChange& change);
+	bool documentAboutToBeChanged(const Document& document, const DocumentChange& change);
+	void documentChanged(const Document& document, const DocumentChange& change);
 private:
 	TextViewer& view_;
 	bool available_;
@@ -225,38 +225,36 @@ namespace {
 			IMPLEMENTS_INTERFACE(ITextStoreAnchor)
 		END_INTERFACE_TABLE()
 		// ITextStoreACP
-		STDMETHODIMP	AdviseSink(REFIID riid, IUnknown* punk, DWORD dwMask);
-		STDMETHODIMP	UnadviseSink(IUnknown* punk);
-		STDMETHODIMP	RequestLock(DWORD dwLockFlags, HRESULT* phrSession);
-		STDMETHODIMP	GetStatus(TS_STATUS* pdcs);
-		STDMETHODIMP	QueryInsert(LONG acpTestStart, LONG acpTestEnd, ULONG cch, LONG* pacpResultStart, LONG* pacpResultEnd);
-		STDMETHODIMP	GetSelection(ULONG ulIndex, ULONG ulCount, TS_SELECTION_ACP* pSelection, ULONG* pcFetched);
-		STDMETHODIMP	SetSelection(ULONG ulCount, const TS_SELECTION_ACP* pSelection);
-		STDMETHODIMP	GetText(LONG acpStart, LONG acpEnd,
-							WCHAR* pchPlain, ULONG cchPlainReq, ULONG* pcchPlainRet,
-							TS_RUNINFO* prgRunInfo, ULONG cRunInfoReq, ULONG* pcRunInfoRet, LONG* pacpNext);
-		STDMETHODIMP	SetText(DWORD dwFlags, LONG acpStart, LONG acpEnd, const WCHAR* pchText, ULONG cch, TS_TEXTCHANGE* pChange);
-		STDMETHODIMP	GetFormattedText(LONG acpStart, LONG acpEnd, IDataObject** ppDataObject);
-		STDMETHODIMP	GetEmbedded(LONG acpPos, REFGUID rguidService, REFIID riid, IUnknown** ppunk);
-		STDMETHODIMP	QueryInsertEmbedded(const GUID* pguidService, const FORMATETC* pFormatEtc, BOOL* pfInsertable);
-		STDMETHODIMP	InsertEmbedded(DWORD dwFlags, LONG acpStart, LONG acpEnd, IDataObject* pDataObject, TS_TEXTCHANGE* pChange);
-		STDMETHODIMP	InsertTextAtSelection(DWORD dwFlags,
-							const WCHAR* pchText, ULONG cch, LONG* pacpStart, LONG* pacpEnd, TS_TEXTCHANGE* pChange);
-		STDMETHODIMP	InsertEmbeddedAtSelection(DWORD dwFlags,
-							IDataObject* pDataObject, LONG* pacpStart, LONG* pacpEnd, TS_TEXTCHANGE* pChange);
-		STDMETHODIMP	RequestSupportedAttrs(DWORD dwFlags, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs);
-		STDMETHODIMP	RequestAttrsAtPosition(LONG acpPos, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs, DWORD dwFlags);
-		STDMETHODIMP	RequestAttrsTransitioningAtPosition(LONG acpPos, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs, DWORD dwFlags);
-		STDMETHODIMP	FindNextAttrTransition(LONG acpStart, LONG acpHalt,
-							ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs, DWORD dwFlags,
-							LONG* pacpNext, BOOL* pfFound, LONG* plFoundOffset);
-		STDMETHODIMP	RetrieveRequestedAttrs(ULONG ulCount, TS_ATTRVAL* paAttrVals, ULONG* pcFetched);
-		STDMETHODIMP	GetEndACP(LONG* pacp);
-		STDMETHODIMP	GetActiveView(TsViewCookie* pvcView);
-		STDMETHODIMP	GetACPFromPoint(TsViewCookie vcView, const POINT* ptScreen, DWORD dwFlags, LONG* pacp);
-		STDMETHODIMP	GetTextExt(TsViewCookie vcView, LONG acpStart, LONG acpEnd, RECT* prc, BOOL* pfClipped);
-		STDMETHODIMP	GetScreenExt(TsViewCookie vcView, RECT* prc);
-		STDMETHODIMP	GetWnd(TsViewCookie vcView, HWND* phwnd);
+		STDMETHODIMP AdviseSink(REFIID riid, IUnknown* punk, DWORD dwMask);
+		STDMETHODIMP UnadviseSink(IUnknown* punk);
+		STDMETHODIMP RequestLock(DWORD dwLockFlags, HRESULT* phrSession);
+		STDMETHODIMP GetStatus(TS_STATUS* pdcs);
+		STDMETHODIMP QueryInsert(LONG acpTestStart, LONG acpTestEnd, ULONG cch, LONG* pacpResultStart, LONG* pacpResultEnd);
+		STDMETHODIMP GetSelection(ULONG ulIndex, ULONG ulCount, TS_SELECTION_ACP* pSelection, ULONG* pcFetched);
+		STDMETHODIMP SetSelection(ULONG ulCount, const TS_SELECTION_ACP* pSelection);
+		STDMETHODIMP GetText(LONG acpStart, LONG acpEnd, WCHAR* pchPlain, ULONG cchPlainReq,
+			ULONG* pcchPlainRet, TS_RUNINFO* prgRunInfo, ULONG cRunInfoReq, ULONG* pcRunInfoRet, LONG* pacpNext);
+		STDMETHODIMP SetText(DWORD dwFlags, LONG acpStart, LONG acpEnd, const WCHAR* pchText, ULONG cch, TS_TEXTCHANGE* pChange);
+		STDMETHODIMP GetFormattedText(LONG acpStart, LONG acpEnd, IDataObject** ppDataObject);
+		STDMETHODIMP GetEmbedded(LONG acpPos, REFGUID rguidService, REFIID riid, IUnknown** ppunk);
+		STDMETHODIMP QueryInsertEmbedded(const GUID* pguidService, const FORMATETC* pFormatEtc, BOOL* pfInsertable);
+		STDMETHODIMP InsertEmbedded(DWORD dwFlags, LONG acpStart, LONG acpEnd, IDataObject* pDataObject, TS_TEXTCHANGE* pChange);
+		STDMETHODIMP InsertTextAtSelection(DWORD dwFlags,
+			const WCHAR* pchText, ULONG cch, LONG* pacpStart, LONG* pacpEnd, TS_TEXTCHANGE* pChange);
+		STDMETHODIMP InsertEmbeddedAtSelection(DWORD dwFlags,
+			IDataObject* pDataObject, LONG* pacpStart, LONG* pacpEnd, TS_TEXTCHANGE* pChange);
+		STDMETHODIMP RequestSupportedAttrs(DWORD dwFlags, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs);
+		STDMETHODIMP RequestAttrsAtPosition(LONG acpPos, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs, DWORD dwFlags);
+		STDMETHODIMP RequestAttrsTransitioningAtPosition(LONG acpPos, ULONG cFilterAttrs, const TS_ATTRID* paFilterAttrs, DWORD dwFlags);
+		STDMETHODIMP FindNextAttrTransition(LONG acpStart, LONG acpHalt, ULONG cFilterAttrs,
+			const TS_ATTRID* paFilterAttrs, DWORD dwFlags, LONG* pacpNext, BOOL* pfFound, LONG* plFoundOffset);
+		STDMETHODIMP RetrieveRequestedAttrs(ULONG ulCount, TS_ATTRVAL* paAttrVals, ULONG* pcFetched);
+		STDMETHODIMP GetEndACP(LONG* pacp);
+		STDMETHODIMP GetActiveView(TsViewCookie* pvcView);
+		STDMETHODIMP GetACPFromPoint(TsViewCookie vcView, const POINT* ptScreen, DWORD dwFlags, LONG* pacp);
+		STDMETHODIMP GetTextExt(TsViewCookie vcView, LONG acpStart, LONG acpEnd, RECT* prc, BOOL* pfClipped);
+		STDMETHODIMP GetScreenExt(TsViewCookie vcView, RECT* prc);
+		STDMETHODIMP GetWnd(TsViewCookie vcView, HWND* phwnd);
 	};
 } // namespace @0
 #endif /* !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK */
@@ -612,14 +610,17 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
  * @param pt the coordinates of the point. can be outside of the window
  * @param edge if set @c LineLayout#LEADING, the result is the leading of the character at @a pt.
  * otherwise the result is the position nearest @a pt
+ * @param abortNoCharacter if set to true, this method returns @c Position#INVALID_POSITION
+ * immediately when @a pt hovered outside of the text layout (e.g. far left or right of the line,
+ * beyond the last line, ...).
  * @param snapPolicy which character boundary the returned position snapped to. if
  * EditPoint#DEFAULT_UNIT is set, obtains by Caret#characterUnit()
  * @return returns the document position
  * @throw std#invalid_argument @a edge and/or snapPolicy are invalid
  * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
-Position TextViewer::characterForClientXY(const ::POINT& pt,
-		LineLayout::Edge edge, EditPoint::CharacterUnit snapPolicy /* = EditPoint::DEFAULT_UNIT */) const {
+Position TextViewer::characterForClientXY(const ::POINT& pt, LineLayout::Edge edge,
+		bool abortNoCharacter /* = false */, EditPoint::CharacterUnit snapPolicy /* = EditPoint::DEFAULT_UNIT */) const {
 	assertValidAsWindow();
 	if(snapPolicy == EditPoint::DEFAULT_UNIT)
 		snapPolicy = caret().characterUnit();
@@ -627,19 +628,24 @@ Position TextViewer::characterForClientXY(const ::POINT& pt,
 
 	// determine the logical line
 	length_t subline;
-	mapClientYToLine(pt.y, &result.line, &subline);
+	bool outside;
+	mapClientYToLine(pt.y, &result.line, &subline, &outside);
+	if(abortNoCharacter && outside)
+		return Position::INVALID_POSITION;
 	const LineLayout& layout = renderer_->lineLayout(result.line);
 
 	// determine the column
 	const long x = pt.x - getDisplayXOffset(result.line);
 	if(edge == LineLayout::LEADING)
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline));
+		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), LineLayout::LEADING, &outside);
 	else if(edge == LineLayout::TRAILING) {
 		length_t trailing;
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing);
+		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing, &outside);
 		result.column += trailing;
 	} else
 		throw invalid_argument("edge");
+	if(abortNoCharacter && outside)
+		return Position::INVALID_POSITION;
 
 	// snap intervening position to the boundary
 	if(result.column != 0 && snapPolicy != EditPoint::UTF16_CODE_UNIT) {
@@ -783,7 +789,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
 	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
 	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_COMMENT, L"/*");
-	rules[3] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[3] = new LiteralTransitionRule(JS_MULTILINE_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
 	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SINGLELINE_COMMENT, L"//");
 	rules[5] = new LiteralTransitionRule(JS_SINGLELINE_COMMENT, DEFAULT_CONTENT_TYPE, L"", L'\\');
 	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_DQ_STRING, L"\"");
@@ -804,7 +810,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
-	scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultGenericInstance(), false)));
+	scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
 	map<Token::ID, const TextStyle> jsdocStyles;
 	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(RGB(0x00, 0x80, 0x00)))));
 	jsdocStyles.insert(make_pair(219, TextStyle(Colors(RGB(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
@@ -846,7 +852,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// URL hyperlinks test
 	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
 	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(
-		new hyperlink::URIHyperlinkDetector(URIDetector::defaultGenericInstance(), false)));
+		new hyperlink::URIHyperlinkDetector(URIDetector::defaultIANAURIInstance(), false)));
 	presentation().setHyperlinkDetector(hld.release(), true);
 
 	// content assist test
@@ -1369,15 +1375,22 @@ inline void TextViewer::internalUnfreeze() {
  * @param y the distance
  * @param[out] logicalLine the logical line index. can be @c null if not needed
  * @param[out] visualSublineOffset the offset from the first line in @a logicalLine. can be @c null if not needed
+ * @param[out] snapped true if there was not a line at @a y. optional
  * @see #mapLineToClientY, TextRenderer#offsetVisualLine
  */
-void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset) const throw() {
+void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped /* = 0 */) const throw() {
 	if(logicalLine == 0 && visualSublineOffset == 0)
 		return;
-	y -= textAreaMargins().top;
+	const ::RECT margins = textAreaMargins();
+	if(snapped != 0) {
+		::RECT clientRect;
+		getClientRect(clientRect);
+		*snapped = y < clientRect.top + margins.top || y >= clientRect.bottom - margins.bottom;
+	}
+	y -= margins.top;
 	length_t line, subline;
 	firstVisibleLine(&line, 0, &subline);
-	renderer_->offsetVisualLine(line, subline, y / renderer_->linePitch());
+	renderer_->offsetVisualLine(line, subline, y / renderer_->linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
 	if(logicalLine != 0)
 		*logicalLine = line;
 	if(visualSublineOffset != 0)
@@ -2685,7 +2698,7 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
 /**
  * Updates the configurations.
  * @param general the general configurations. @c null to unchange
- * @param verticalRuler	the configurations about the vertical ruler. @c null to unchange
+ * @param verticalRuler the configurations about the vertical ruler. @c null to unchange
  * @throw std#invalid_argument the content of @a verticalRuler is invalid
  */
 void TextViewer::setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler) {
@@ -3570,7 +3583,6 @@ void VirtualBox::update(const Region& region) throw() {
 // DefaultMouseInputStrategy ////////////////////////////////////////////////
 
 namespace {
-	const LineLayout::Edge MOUSE_CHARACTER_SNAP_POLICY = LineLayout::TRAILING;
 	inline AutoBuffer<wchar_t> a2u(const char* src, size_t length, size_t* resultLength = 0) {
 		const int c = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), 0, 0);
 		if(c == 0)
@@ -3700,7 +3712,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
-	const Position p(viewer_->characterForClientXY(caretPoint, MOUSE_CHARACTER_SNAP_POLICY));
+	const Position p(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
 	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
 
 	// drop rectangle text into bidirectional line is not supported...
@@ -3735,7 +3747,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		::POINT caretPoint = {pt.x, pt.y};
 		endTimer();
 		viewer_->screenToClient(caretPoint);
-		const Position pos(viewer_->characterForClientXY(caretPoint, MOUSE_CHARACTER_SNAP_POLICY));
+		const Position pos(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
 		ca.moveTo(pos);
 
 		bool rectangle;
@@ -3759,7 +3771,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		::POINT caretPoint = {pt.x, pt.y};
 
 		viewer_->screenToClient(caretPoint);
-		const Position pos(viewer_->characterForClientXY(caretPoint, MOUSE_CHARACTER_SNAP_POLICY));
+		const Position pos(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
 
 		// can't drop into the selection
 		if(ca.isPointOverSelection(caretPoint)) {
@@ -3839,7 +3851,7 @@ void DefaultMouseInputStrategy::extendSelection() {
 	}
 	p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
 	p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
-	const Position dest(viewer_->characterForClientXY(p, MOUSE_CHARACTER_SNAP_POLICY));
+	const Position dest(viewer_->characterForClientXY(p, LineLayout::TRAILING));
 	caret.extendSelection(dest);
 }
 
@@ -3881,38 +3893,47 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 	// begin rectangular selection
 	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
 		caret.beginBoxSelection();
-		caret.moveTo(viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY));
+		caret.moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
 	// begin linear selection, move caret or invoke hyperlink
 	else {
-		const Position p = viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY);
+		Position p(Position::INVALID_POSITION);	// obtained by characterForClientXY(position, LineLayout::TRAILING, ...)
 		bool hyperlinkInvoked = false;
 		if(toBoolean(keyState & MK_CONTROL)) {	// Ctrl -> select the current word
 			if(!caret.isPointOverSelection(position)) {
-				size_t numberOfHyperlinks;
-				if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
-					for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-						if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
-							hyperlinks[i]->invoke();
-							hyperlinkInvoked = true;
+				p = viewer_->characterForClientXY(position, LineLayout::TRAILING, true);
+				if(p != Position::INVALID_POSITION) {
+					size_t numberOfHyperlinks;
+					if(const hyperlink::IHyperlink* const* hyperlinks =
+							viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
+						for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+							if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
+								hyperlinks[i]->invoke();
+								hyperlinkInvoked = true;
+							}
 						}
 					}
 				}
 			}
 			if(!hyperlinkInvoked) {
+				if(p == Position::INVALID_POSITION)
+					p = viewer_->characterForClientXY(position, LineLayout::TRAILING);
 				caret.moveTo(p);
 				caret.beginWordSelection();
 			}
-		} else if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
-			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// Shift+Alt -> select to the cursor (rectangle)
-				caret.beginBoxSelection();
-			caret.extendSelection(p);
 		} else {
-			caret.moveTo(p);
-			caret.endBoxSelection();
+			p = viewer_->characterForClientXY(position, LineLayout::TRAILING);
+			if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
+				if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// Shift+Alt -> select to the cursor (rectangle)
+					caret.beginBoxSelection();
+				caret.extendSelection(p);
+			} else {
+				caret.moveTo(p);
+				caret.endBoxSelection();
+			}
 		}
 		viewer_->setCapture();
 		if(!hyperlinkInvoked)
@@ -3928,7 +3949,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position, uint) {
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
 		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
-		viewer_->caret().moveTo(viewer_->characterForClientXY(position, MOUSE_CHARACTER_SNAP_POLICY));
+		viewer_->caret().moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
 	}
 	endTimer();
@@ -4038,7 +4059,7 @@ STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(::BOOL escapePressed, 
 	return S_OK;
 }
 
-/// @see IMouseInputStrategy#showCursor ftp://a
+/// @see IMouseInputStrategy#showCursor
 bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	using namespace hyperlink;
 	::LPCTSTR cursorName = 0;
@@ -4053,13 +4074,15 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
-		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, EditPoint::UTF16_CODE_UNIT));
-		size_t numberOfHyperlinks;
-		if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
-			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-				if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
-					newlyHoveredHyperlink = hyperlinks[i];
-					break;
+		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, EditPoint::UTF16_CODE_UNIT));
+		if(p != Position::INVALID_POSITION) {
+			size_t numberOfHyperlinks;
+			if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
+				for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+					if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
+						newlyHoveredHyperlink = hyperlinks[i];
+						break;
+					}
 				}
 			}
 		}

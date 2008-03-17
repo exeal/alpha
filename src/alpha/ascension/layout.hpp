@@ -1,7 +1,7 @@
 /**
  * @file layout.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_LAYOUT_HPP
@@ -29,10 +29,10 @@ namespace ascension {
 	namespace layout {
 
 		// free functions
-		bool	getDecorationLineMetrics(::HDC dc, int* baselineOffset,
-					int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) throw();
-		bool	supportsComplexScripts() throw();
-		bool	supportsOpenTypeFeatures() throw();
+		bool getDecorationLineMetrics(::HDC dc, int* baselineOffset,
+			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) throw();
+		bool supportsComplexScripts() throw();
+		bool supportsOpenTypeFeatures() throw();
 
 		/// Standard color (This value introduces any fallback).
 		const ::COLORREF STANDARD_COLOR = 0xFFFFFFFFUL;
@@ -201,39 +201,46 @@ namespace ascension {
 		public:
 			/// Font association table consists of pairs of a script and a font familiy name.
 			typedef std::map<int, std::basic_string<::WCHAR> > FontAssociations;
+
 			// device context
-			std::auto_ptr<manah::win32::gdi::DC>	deviceContext() const;
+			std::auto_ptr<manah::win32::gdi::DC> deviceContext() const;
+
 			// metrics
-			int	ascent() const throw();
-			int	averageCharacterWidth() const throw();
-			int	descent() const throw();
-			int	lineHeight() const throw();
+			int ascent() const throw();
+			int averageCharacterWidth() const throw();
+			int descent() const throw();
+			int lineHeight() const throw();
+
 			// primary font and alternatives
-			::HFONT	font(int script = text::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
-			::HFONT	fontForShapingControls() const throw();
-			void	setFont(const ::WCHAR* faceName, int height, const FontAssociations* associations);
+			::HFONT font(int script = text::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
+			::HFONT fontForShapingControls() const throw();
+			void setFont(const ::WCHAR* faceName, int height, const FontAssociations* associations);
+
 			// default settings
-			static const FontAssociations&	getDefaultFontAssociations() throw();
+			static const FontAssociations& getDefaultFontAssociations() throw();
+
 			// font linking
-			void		enableFontLinking(bool enable = true) throw();
-			bool		enablesFontLinking() const throw();
-			::HFONT		linkedFont(std::size_t index, bool bold = false, bool italic = false) const;
-			std::size_t	numberOfLinkedFonts() const throw();
+			void enableFontLinking(bool enable = true) throw();
+			bool enablesFontLinking() const throw();
+			::HFONT linkedFont(std::size_t index, bool bold = false, bool italic = false) const;
+			std::size_t numberOfLinkedFonts() const throw();
+
 			// listener
-			void	addFontListener(IFontSelectorListener& listener);
-			void	removeFontListener(IFontSelectorListener& listener);
+			void addFontListener(IFontSelectorListener& listener);
+			void removeFontListener(IFontSelectorListener& listener);
+
 		protected:
 			FontSelector();
 			FontSelector(const FontSelector& rhs);
 			virtual ~FontSelector() throw();
-			virtual std::auto_ptr<manah::win32::gdi::DC>	getDeviceContext() const = 0;
-			virtual void									fontChanged() = 0;
+			virtual std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const = 0;
+			virtual void fontChanged() = 0;
 		private:
 			struct Fontset;
-			void	fireFontChanged();
-			::HFONT	fontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
-			void	linkPrimaryFont() throw();
-			void	resetPrimaryFont(manah::win32::gdi::DC& dc, ::HFONT font);
+			void fireFontChanged();
+			::HFONT fontInFontset(const Fontset& fontset, bool bold, bool italic) const throw();
+			void linkPrimaryFont() throw();
+			void resetPrimaryFont(manah::win32::gdi::DC& dc, ::HFONT font);
 			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
 			Fontset* primaryFont_;
 			std::map<int, Fontset*> associations_;
@@ -326,31 +333,31 @@ namespace ascension {
 			DefaultSpecialCharacterRenderer() throw();
 			~DefaultSpecialCharacterRenderer() throw();
 			// attributes
-			::COLORREF	controlCharacterColor() const throw();
-			::COLORREF	lineTerminatorColor() const throw();
-			::COLORREF	lineWrappingMarkColor() const throw();
-			void		setControlCharacterColor(::COLORREF color) throw();
-			void		setLineTerminatorColor(::COLORREF color) throw();
-			void		setLineWrappingMarkColor(::COLORREF color) throw();
-			void		setWhiteSpaceColor(::COLORREF color) throw();
-			void		showLineTerminators(bool show) throw();
-			void		showWhiteSpaces(bool show) throw();
-			bool		showsLineTerminators() const throw();
-			bool		showsWhiteSpaces() const throw();
-			::COLORREF	whiteSpaceColor() const throw();
+			::COLORREF controlCharacterColor() const throw();
+			::COLORREF lineTerminatorColor() const throw();
+			::COLORREF lineWrappingMarkColor() const throw();
+			void setControlCharacterColor(::COLORREF color) throw();
+			void setLineTerminatorColor(::COLORREF color) throw();
+			void setLineWrappingMarkColor(::COLORREF color) throw();
+			void setWhiteSpaceColor(::COLORREF color) throw();
+			void showLineTerminators(bool show) throw();
+			void showWhiteSpaces(bool show) throw();
+			bool showsLineTerminators() const throw();
+			bool showsWhiteSpaces() const throw();
+			::COLORREF whiteSpaceColor() const throw();
 		private:
 			// ISpecialCharacterRenderer
-			void	drawControlCharacter(const DrawingContext& context, CodePoint c) const;
-			void	drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const;
-			void	drawLineWrappingMark(const DrawingContext& context) const;
-			void	drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
-			int		getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
-			int		getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const;
-			int		getLineWrappingMarkWidth(const LayoutContext& context) const;
-			void	install(TextRenderer& textRenderer);
-			void	uninstall();
+			void drawControlCharacter(const DrawingContext& context, CodePoint c) const;
+			void drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const;
+			void drawLineWrappingMark(const DrawingContext& context) const;
+			void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
+			int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
+			int getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const;
+			int getLineWrappingMarkWidth(const LayoutContext& context) const;
+			void install(TextRenderer& textRenderer);
+			void uninstall();
 			// IFontSelectorListener
-			void	fontChanged();
+			void fontChanged();
 		private:
 			TextRenderer* renderer_;
 			::COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
@@ -407,12 +414,12 @@ namespace ascension {
 				// constructors
 				StyledSegmentIterator(const StyledSegmentIterator& rhs) throw();
 				// operators
-				StyledSegmentIterator&	operator=(const StyledSegmentIterator& rhs) throw();
+				StyledSegmentIterator& operator=(const StyledSegmentIterator& rhs) throw();
 				// methods
-				const presentation::StyledText&	current() const throw();
-				bool							equals(const StyledSegmentIterator& rhs) const throw();
-				StyledSegmentIterator&			next() throw();
-				StyledSegmentIterator&			previous() throw();
+				const presentation::StyledText& current() const throw();
+				bool equals(const StyledSegmentIterator& rhs) const throw();
+				StyledSegmentIterator& next() throw();
+				StyledSegmentIterator& previous() throw();
 			private:
 				explicit StyledSegmentIterator(const internal::Run*& start) throw();
 				const internal::Run** p_;
@@ -422,55 +429,62 @@ namespace ascension {
 			// constructors
 			LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line);
 			~LineLayout() throw();
-			// attributes
-			uchar			bidiEmbeddingLevel(length_t column) const;
-			::SIZE			bounds() const throw();
-			::RECT			bounds(length_t first, length_t last) const;
-			bool			isBidirectional() const throw();
-			bool			isDisposed() const throw();
-			length_t		lineNumber() const throw();
-			::POINT			location(length_t column, Edge edge = LEADING) const;
-			int				longestSublineWidth() const throw();
-			length_t		numberOfSublines() const throw();
-			length_t		offset(int x, int y, Edge edge = LEADING) const throw();
-			length_t		offset(int x, int y, length_t& trailing) const throw();
-			length_t		offset(const ::POINT& pt, Edge edge = LEADING) const throw();
-			length_t		offset(const ::POINT& pt, length_t& trailing) const throw();
-			length_t		subline(length_t column) const;
-			::RECT			sublineBounds(length_t subline) const;
-			int				sublineIndent(length_t subline) const;
-			length_t		sublineLength(length_t subline) const;
-			length_t		sublineOffset(length_t subline) const;
-			const length_t*	sublineOffsets() const throw();
-			int				sublineWidth(length_t subline) const;
+
+			// general attributes
+			byte bidiEmbeddingLevel(length_t column) const;
+			bool isBidirectional() const throw();
+			bool isDisposed() const throw();
+			length_t lineNumber() const throw();
+
+			// subline accesses
+			length_t numberOfSublines() const throw();
+			length_t subline(length_t column) const;
+			length_t sublineLength(length_t subline) const;
+			length_t sublineOffset(length_t subline) const;
+			const length_t* sublineOffsets() const throw();
+
+			// coordinates
+			::SIZE bounds() const throw();
+			::RECT bounds(length_t first, length_t last) const;
+			::POINT location(length_t column, Edge edge = LEADING) const;
+			int longestSublineWidth() const throw();
+			length_t offset(int x, int y, Edge edge = LEADING, bool* outside = 0) const throw();
+			length_t offset(int x, int y, length_t& trailing, bool* outside = 0) const throw();
+			length_t offset(const ::POINT& pt, Edge edge = LEADING, bool* outside = 0) const throw();
+			length_t offset(const ::POINT& pt, length_t& trailing, bool* outside = 0) const throw();
+			::RECT sublineBounds(length_t subline) const;
+			int sublineIndent(length_t subline) const;
+			int sublineWidth(length_t subline) const;
+
 			// styled segments
-			StyledSegmentIterator			firstStyledSegment() const throw();
-			StyledSegmentIterator			lastStyledSegment() const throw();
-			const presentation::StyledText&	styledSegment(length_t column) const;
+			StyledSegmentIterator firstStyledSegment() const throw();
+			StyledSegmentIterator lastStyledSegment() const throw();
+			const presentation::StyledText& styledSegment(length_t column) const;
+
 			// operations
-			void	draw(manah::win32::gdi::DC& dc, int x, int y,
-						const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const throw();
-			void	draw(length_t subline, manah::win32::gdi::DC& dc, int x, int y,
-						const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const;
-			String	fillToX(int x) const;
+			void draw(manah::win32::gdi::DC& dc, int x, int y,
+				const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const throw();
+			void draw(length_t subline, manah::win32::gdi::DC& dc, int x, int y,
+				const ::RECT& paintRect, const ::RECT& clipRect, const Selection* selection) const;
+			String fillToX(int x) const;
 #ifdef _DEBUG
-			void	dumpRuns(std::ostream& out) const;
+			void dumpRuns(std::ostream& out) const;
 #endif /* _DEBUG */
 		private:
-			void			dispose() throw();
-			void			expandTabsWithoutWrapping() throw();
-			std::size_t		findRunForPosition(length_t column) const throw();
-			void			itemize(length_t lineNumber) throw();
-			void			justify() throw();
-			int				linePitch() const throw();
-			void			merge(const ::SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
-			int				nextTabStop(int x, Direction direction) const throw();
-			const String&	text() const throw();
-			void			reorder() throw();
-//			void			rewrap();
-			void			shape() throw();
-			int				nextTabStopBasedLeftEdge(int x, bool right) const throw();
-			void			wrap() throw();
+			void dispose() throw();
+			void expandTabsWithoutWrapping() throw();
+			std::size_t findRunForPosition(length_t column) const throw();
+			void itemize(length_t lineNumber) throw();
+			void justify() throw();
+			int linePitch() const throw();
+			void merge(const ::SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) throw();
+			int nextTabStop(int x, Direction direction) const throw();
+			const String& text() const throw();
+			void reorder() throw();
+//			void rewrap();
+			void shape() throw();
+			int nextTabStopBasedLeftEdge(int x, bool right) const throw();
+			void wrap() throw();
 		private:
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
@@ -531,44 +545,46 @@ namespace ascension {
 			LineLayoutBuffer(kernel::Document& document, length_t bufferSize, bool autoRepair);
 			virtual ~LineLayoutBuffer() throw();
 			// attributes
-			const kernel::Document&	document() const throw();
-			const LineLayout&		lineLayout(length_t line) const;
-			const LineLayout*		lineLayoutIfCached(length_t line) const throw();
-			int						longestLineWidth() const throw();
-			length_t				numberOfSublinesOfLine(length_t) const;
-			length_t				numberOfVisualLines() const throw();
+			const kernel::Document& document() const throw();
+			const LineLayout& lineLayout(length_t line) const;
+			const LineLayout* lineLayoutIfCached(length_t line) const throw();
+			int longestLineWidth() const throw();
+			length_t numberOfSublinesOfLine(length_t) const;
+			length_t numberOfVisualLines() const throw();
 			// listeners
-			void	addVisualLinesListener(IVisualLinesListener& listener);
-			void	removeVisualLinesListener(IVisualLinesListener& listener);
+			void addVisualLinesListener(IVisualLinesListener& listener);
+			void removeVisualLinesListener(IVisualLinesListener& listener);
 			// strategy
 			void	setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
 			// position translations
-			length_t			mapLogicalLineToVisualLine(length_t line) const;
-			length_t			mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
-//			length_t			mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
-//			kernel::Position	mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
-			void				offsetVisualLine(length_t& line, length_t& subline, signed_length_t offset) const throw();
+			length_t mapLogicalLineToVisualLine(length_t line) const;
+			length_t mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
+//			length_t mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
+//			kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
+			void offsetVisualLine(length_t& line, length_t& subline,
+				signed_length_t offset, bool* overflowedOrUnderflowed = 0) const throw();
 			// operations
-			void	invalidate() throw();
-			void	invalidate(length_t first, length_t last);
+			void invalidate() throw();
+			void invalidate(length_t first, length_t last);
 		protected:
-			void	invalidate(length_t line);
+			void invalidate(length_t line);
 			// enumeration
 			typedef std::list<LineLayout*>::const_iterator Iterator;
-			Iterator	firstCachedLine() const throw();
-			Iterator	lastCachedLine() const throw();
+			Iterator firstCachedLine() const throw();
+			Iterator lastCachedLine() const throw();
 		private:
-			void	clearCaches(length_t first, length_t last, bool repair);
-			void	createLineLayout(length_t line) throw();
-			void	deleteLineLayout(length_t line, LineLayout* newLayout = 0) throw();
-			void	fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
-			void	fireVisualLinesInserted(length_t first, length_t last);
-			void	fireVisualLinesModified(length_t first, length_t last, length_t newSublines, length_t oldSublines, bool documentChanged);
-			void	presentationStylistChanged();
-			void	updateLongestLine(length_t line, int width) throw();
+			void clearCaches(length_t first, length_t last, bool repair);
+			void createLineLayout(length_t line) throw();
+			void deleteLineLayout(length_t line, LineLayout* newLayout = 0) throw();
+			void fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
+			void fireVisualLinesInserted(length_t first, length_t last);
+			void fireVisualLinesModified(length_t first, length_t last,
+				length_t newSublines, length_t oldSublines, bool documentChanged);
+			void presentationStylistChanged();
+			void updateLongestLine(length_t line, int width) throw();
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			struct CachedLineComparer {
 				bool operator()(const LineLayout*& lhs, length_t rhs) const throw() {return lhs->lineNumber() < rhs;}
@@ -603,23 +619,23 @@ namespace ascension {
 			TextRenderer(const TextRenderer& rhs);
 			virtual ~TextRenderer() throw();
 			// attributes
-			int	linePitch() const throw();
-			int	lineIndent(length_t line, length_t subline = 0) const;
+			int linePitch() const throw();
+			int lineIndent(length_t line, length_t subline = 0) const;
 			// strategy
-			void	setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+			void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 			// operation
-			void	renderLine(length_t line, manah::win32::gdi::DC& dc,
+			void renderLine(length_t line, manah::win32::gdi::DC& dc,
 				int x, int y, const ::RECT& paintRect, const ::RECT& clipRect, const LineLayout::Selection* selection) const throw();
 		private:
 			// FontSelector
-//			std::auto_ptr<manah::win32::gdi::DC>	getDeviceContext() const;
-			void									fontChanged();
+//			std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const;
+			void fontChanged();
 			// ILayoutInformation
-			const FontSelector&					getFontSelector() const throw();
-//			const LayoutSettings&				getLayoutSettings() const throw();
-			const presentation::Presentation&	getPresentation() const throw();
-			ISpecialCharacterRenderer*			getSpecialCharacterRenderer() const throw();
-//			int									getWidth() const throw();
+			const FontSelector& getFontSelector() const throw();
+//			const LayoutSettings& getLayoutSettings() const throw();
+			const presentation::Presentation& getPresentation() const throw();
+			ISpecialCharacterRenderer* getSpecialCharacterRenderer() const throw();
+//			int getWidth() const throw();
 		private:
 			presentation::Presentation& presentation_;
 			const bool enablesDoubleBuffering_;
@@ -662,12 +678,13 @@ inline length_t LineLayout::numberOfSublines() const throw() {return numberOfSub
  * @param x the x coordinate of the point. distance from the left edge of the renderer (not of the line)
  * @param y the y coordinate of the point
  * @param edge the edge of the column
+ * @param[out] outside true if the specified point is outside of the layout. optional
  * @return the character offset
  * @see #location
  */
-inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */) const throw() {
+inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */, bool* outside /* = 0 */) const throw() {
 	length_t trailing;
-	const length_t o = offset(x, y, trailing);
+	const length_t o = offset(x, y, trailing, outside);
 	return (edge == LEADING) ? o : o + trailing;
 }
 
@@ -675,19 +692,23 @@ inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */) cons
  * Returns the character column (offset) for the specified point.
  * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
  * @param edge the edge of the column
+ * @param[out] outside true if the specified point is outside of the layout. optional
  * @return the character offset
  * @see #location
  */
-inline length_t LineLayout::offset(const ::POINT& pt, Edge edge /* = LEADING */) const throw() {return offset(pt.x, pt.y, edge);}
+inline length_t LineLayout::offset(const ::POINT& pt,
+	Edge edge /* = LEADING */, bool* outside /* = 0 */) const throw() {return offset(pt.x, pt.y, edge);}
 
 /**
  * Returns the character column (offset) for the specified point.
  * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
  * @param[out] trailing the trailing buffer
+ * @param[out] outside true if the specified point is outside of the layout. optional
  * @return the character offset
  * @see #location
  */
-inline length_t LineLayout::offset(const ::POINT& pt, length_t& trailing) const throw() {return offset(pt.x, pt.y, trailing);}
+inline length_t LineLayout::offset(const ::POINT& pt,
+	length_t& trailing, bool* outside /* = 0 */) const throw() {return offset(pt.x, pt.y, trailing);}
 
 /**
  * Returns the wrapped line containing the specified column.

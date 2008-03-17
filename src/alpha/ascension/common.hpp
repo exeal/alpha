@@ -2,7 +2,7 @@
  * @file common.hpp
  * @brief Common header file used by Ascension library.
  * @author exeal
- * @date 2004-2007
+ * @date 2004-2008
  */
 
 #ifndef ASCENSION_COMMON_HPP
@@ -54,9 +54,9 @@ using manah::win32::Timer;
 namespace ascension {
 
 	// character and string
-	typedef wchar_t					Char;		///< Type for characters as UTF-16 code unit.
-	typedef std::basic_string<Char>	String;		///< Type for strings as UTF-16.
-	typedef std::size_t				length_t;	///< Length of string or index.
+	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
+	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
+	typedef std::size_t length_t;			///< Length of string or index.
 
 	/// Invalid value of @c length_t.
 	const length_t INVALID_INDEX = 0xFFFFFFFFUL;
