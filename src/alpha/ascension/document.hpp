@@ -239,44 +239,51 @@ namespace ascension {
 			explicit Point(Document& document, const Position& position = Position());
 			Point(const Point& rhs);
 			virtual ~Point() throw();
+
 			// operators
 			operator Position() throw();
 			operator const Position() const throw();
-			bool	operator==(const Point& rhs) const throw();
-			bool	operator!=(const Point& rhs) const throw();
-			bool	operator<(const Point& rhs) const throw();
-			bool	operator<=(const Point& rhs) const throw();
-			bool	operator>(const Point& rhs) const throw();
-			bool	operator>=(const Point& rhs) const throw();
-			// attributes
-			bool			adaptsToDocument() const throw();
-			void			adaptToDocument(bool adapt) throw();
-			void			excludeFromRestriction(bool exclude);
-			Document*		document() throw();
-			const Document*	document() const throw();
-			Direction		gravity() const throw();
-			bool			isDocumentDisposed() const throw();
-			bool			isExcludedFromRestriction() const throw();
-			const Position&	position() const throw();
-			void			setGravity(Direction gravity) throw();
+			bool operator==(const Point& rhs) const throw();
+			bool operator!=(const Point& rhs) const throw();
+			bool operator<(const Point& rhs) const throw();
+			bool operator<=(const Point& rhs) const throw();
+			bool operator>(const Point& rhs) const throw();
+			bool operator>=(const Point& rhs) const throw();
+
+			// core attributes
+			Document* document() throw();
+			const Document* document() const throw();
+			bool isDocumentDisposed() const throw();
+			const Position& position() const throw();
+
+			// behaviors
+			bool adaptsToDocument() const throw();
+			void adaptToDocument(bool adapt) throw();
+			void excludeFromRestriction(bool exclude);
+			Direction gravity() const throw();
+			bool isExcludedFromRestriction() const throw();
+			void setGravity(Direction gravity) throw();
+
 			// listeners
-			void	addLifeCycleListener(IPointLifeCycleListener& listener);
-			void	removeLifeCycleListener(IPointLifeCycleListener& listener);
+			void addLifeCycleListener(IPointLifeCycleListener& listener);
+			void removeLifeCycleListener(IPointLifeCycleListener& listener);
+
 			// short-circuits
-			length_t	columnNumber() const throw();
-			ContentType	getContentType() const;
-			length_t	lineNumber() const throw();
+			length_t columnNumber() const throw();
+			ContentType getContentType() const;
+			length_t lineNumber() const throw();
+
 			// operations
-			void	moveTo(const Position& to);
-			void	moveTo(length_t line, length_t column);
+			void moveTo(const Position& to);
+			void moveTo(length_t line, length_t column);
 
 		protected:
-			Point&			operator=(const Position& rhs) throw();
-			void			documentDisposed() throw();
-			virtual void	doMoveTo(const Position& to);
-			virtual void	normalize() const;
-			virtual void	update(const DocumentChange& change);
-			void			verifyDocument() const;
+			Point& operator=(const Position& rhs) throw();
+			void documentDisposed() throw();
+			virtual void doMoveTo(const Position& to);
+			virtual void normalize() const;
+			virtual void update(const DocumentChange& change);
+			void verifyDocument() const;
 
 		private:
 			Document* document_;
@@ -331,13 +338,13 @@ namespace ascension {
 		class Bookmarker {
 			MANAH_NONCOPYABLE_TAG(Bookmarker);
 		public:
-			void		addListener(IBookmarkListener& listener);
-			void		clear() throw();
-			length_t	getNext(length_t startLine, Direction direction) const;
-			bool		isMarked(length_t line) const;
-			void		mark(length_t line, bool set = true);
-			void		removeListener(IBookmarkListener& listener);
-			void		toggle(length_t line);
+			void addListener(IBookmarkListener& listener);
+			void clear() throw();
+			length_t getNext(length_t startLine, Direction direction) const;
+			bool isMarked(length_t line) const;
+			void mark(length_t line, bool set = true);
+			void removeListener(IBookmarkListener& listener);
+			void toggle(length_t line);
 		private:
 			explicit Bookmarker(Document& document) throw();
 			Document& document_;
@@ -470,14 +477,14 @@ namespace ascension {
 		 */
 		class DocumentPartitioner {
 		public:
-			virtual			~DocumentPartitioner() throw();
-			ContentType		contentType(const Position& at) const;
-			Document*		document() throw();
-			const Document*	document() const throw();
-			void			partition(const Position& at, DocumentPartition& partition) const;
+			virtual ~DocumentPartitioner() throw();
+			ContentType contentType(const Position& at) const;
+			Document* document() throw();
+			const Document* document() const throw();
+			void partition(const Position& at, DocumentPartition& partition) const;
 		protected:
 			DocumentPartitioner() throw();
-			void	notifyDocument(const Region& changedRegion);
+			void notifyDocument(const Region& changedRegion);
 		private:
 			/// The document is about to be changed.
 			virtual void documentAboutToBeChanged() throw() = 0;
@@ -509,10 +516,10 @@ namespace ascension {
 		public:
 			NullPartitioner() throw();
 		private:
-			void	documentAboutToBeChanged() throw();
-			void	documentChanged(const DocumentChange& change) throw();
-			void	doGetPartition(const Position& at, DocumentPartition& partition) const throw();
-			void	doInstall() throw();
+			void documentAboutToBeChanged() throw();
+			void documentChanged(const DocumentChange& change) throw();
+			void doGetPartition(const Position& at, DocumentPartition& partition) const throw();
+			void doInstall() throw();
 		private:
 			DocumentPartition p_;
 		};
@@ -527,27 +534,26 @@ namespace ascension {
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw();
 			// attributes
-			const Document*	document() const throw();
-			const String&	line() const throw();
-			const Region&	region() const throw();
-			void			setRegion(const Region& newRegion);
-			const Position&	tell() const throw();
+			const Document* document() const throw();
+			const String& line() const throw();
+			const Region& region() const throw();
+			void setRegion(const Region& newRegion);
+			const Position& tell() const throw();
 			// operation
 			DocumentCharacterIterator&	seek(const Position& to);
-
 			// CharacterIterator
-			CodePoint	current() const throw();
-			bool		hasNext() const throw();
-			bool		hasPrevious() const throw();
+			CodePoint current() const throw();
+			bool hasNext() const throw();
+			bool hasPrevious() const throw();
 		private:
-			void								doAssign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	doClone() const;
-			void								doFirst();
-			void								doLast();
-			bool								doEquals(const CharacterIterator& rhs) const;
-			bool								doLess(const CharacterIterator& rhs) const;
-			void								doNext();
-			void								doPrevious();
+			void doAssign(const CharacterIterator& rhs);
+			std::auto_ptr<CharacterIterator> doClone() const;
+			void doFirst();
+			void doLast();
+			bool doEquals(const CharacterIterator& rhs) const;
+			bool doLess(const CharacterIterator& rhs) const;
+			void doNext();
+			void doPrevious();
 		private:
 			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Document* document_;
@@ -596,95 +602,105 @@ namespace ascension {
 			// constructors
 			Document();
 			virtual ~Document();
+
 			// reconstruct
-			virtual void	resetContent();
+			virtual void resetContent();
+
 			// listeners and strategies
-			void	addListener(IDocumentListener& listener);
-			void	addPartitioningListener(IDocumentPartitioningListener& listener);
-			void	addPrenotifiedListener(IDocumentListener& listener);
-			void	addStateListener(IDocumentStateListener& listener);
-			void	addSequentialEditListener(ISequentialEditListener& listener);
-			void	removeListener(IDocumentListener& listener);
-			void	removePartitioningListener(IDocumentPartitioningListener& listener);
-			void	removePrenotifiedListener(IDocumentListener& listener);
-			void	removeStateListener(IDocumentStateListener& listener);
-			void	removeSequentialEditListener(ISequentialEditListener& listener);
+			void addListener(IDocumentListener& listener);
+			void addPartitioningListener(IDocumentPartitioningListener& listener);
+			void addPrenotifiedListener(IDocumentListener& listener);
+			void addStateListener(IDocumentStateListener& listener);
+			void addSequentialEditListener(ISequentialEditListener& listener);
+			void removeListener(IDocumentListener& listener);
+			void removePartitioningListener(IDocumentPartitioningListener& listener);
+			void removePrenotifiedListener(IDocumentListener& listener);
+			void removeStateListener(IDocumentStateListener& listener);
+			void removeSequentialEditListener(ISequentialEditListener& listener);
+
 			// attributes
-			Bookmarker&					bookmarker() throw();
-			const Bookmarker&			bookmarker() const throw();
-			IDocumentInput*				input() const throw();
-			bool						isModified() const throw();
-			bool						isReadOnly() const throw();
-			void						markUnmodified() throw();
-			const DocumentPartitioner&	partitioner() const throw();
-			const String*				property(const DocumentPropertyKey& key) const throw();
-			texteditor::Session*		session() throw();
-			const texteditor::Session*	session() const throw();
-			void						setInput(IDocumentInput* newInput, bool delegateOwnership) throw();
-			void						setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
-			void						setProperty(const DocumentPropertyKey& key, const String& property);
-			void						setReadOnly(bool readOnly = true);
+			Bookmarker& bookmarker() throw();
+			const Bookmarker& bookmarker() const throw();
+			IDocumentInput* input() const throw();
+			bool isModified() const throw();
+			bool isReadOnly() const throw();
+			void markUnmodified() throw();
+			const DocumentPartitioner& partitioner() const throw();
+			const String* property(const DocumentPropertyKey& key) const throw();
+			texteditor::Session* session() throw();
+			const texteditor::Session* session() const throw();
+			void setInput(IDocumentInput* newInput, bool delegateOwnership) throw();
+			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) throw();
+			void setProperty(const DocumentPropertyKey& key, const String& property);
+			void setReadOnly(bool readOnly = true);
+
 			// contents
-			Region			accessibleRegion() const throw();
-			const Line&		getLineInformation(length_t line) const;
-			length_t		length(Newline newline = NLF_RAW_VALUE) const;
-			const String&	line(length_t line) const;
-			length_t		lineLength(length_t line) const;
-			length_t		lineOffset(length_t line, Newline newline = NLF_RAW_VALUE) const;
-			length_t		numberOfLines() const throw();
-			Region			region() const throw();
-			std::size_t		revisionNumber() const throw();
+			Region accessibleRegion() const throw();
+			const Line& getLineInformation(length_t line) const;
+			length_t length(Newline newline = NLF_RAW_VALUE) const;
+			const String& line(length_t line) const;
+			length_t lineLength(length_t line) const;
+			length_t lineOffset(length_t line, Newline newline = NLF_RAW_VALUE) const;
+			length_t numberOfLines() const throw();
+			Region region() const throw();
+			std::size_t revisionNumber() const throw();
+
 			// content type information
-			IContentTypeInformationProvider&	contentTypeInformation() const throw();
-			void								setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw();
+			IContentTypeInformationProvider& contentTypeInformation() const throw();
+			void setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw();
+
 			// manipulations
-			Position	erase(const Region& region);
-			Position	erase(const Position& pos1, const Position& pos2);
-			Position	insert(const Position& at, const String& text);
-			Position	insert(const Position& at, const Char* first, const Char* last);
-			Position	insert(const Position& at, std::basic_istream<Char>& in);
-			bool		isChanging() const throw();
+			Position erase(const Region& region);
+			Position erase(const Position& pos1, const Position& pos2);
+			Position insert(const Position& at, const String& text);
+			Position insert(const Position& at, const Char* first, const Char* last);
+			Position insert(const Position& at, std::basic_istream<Char>& in);
+			bool isChanging() const throw();
+
 			// undo/redo
-			void		clearUndoBuffer();
-			bool		isRecordingOperations() const throw();
-			std::size_t	numberOfUndoableEdits() const throw();
-			std::size_t	numberOfRedoableEdits() const throw();
-			void		recordOperations(bool record);
-			bool		redo();
-			bool		undo();
+			void clearUndoBuffer();
+			bool isRecordingOperations() const throw();
+			std::size_t numberOfUndoableEdits() const throw();
+			std::size_t numberOfRedoableEdits() const throw();
+			void recordOperations(bool record);
+			bool redo();
+			bool undo();
+
 			// sequential edit
-			void	beginSequentialEdit() throw();
-			void	endSequentialEdit() throw();
-			bool	isSequentialEditing() const throw();
+			void beginSequentialEdit() throw();
+			void endSequentialEdit() throw();
+			bool isSequentialEditing() const throw();
+
 			// narrowing
-			bool	isNarrowed() const throw();
-			void	narrow(const Region& region);
-			void	widen();
+			bool isNarrowed() const throw();
+			void narrow(const Region& region);
+			void widen();
+
 			// iterations
-			DocumentCharacterIterator	begin() const throw();
-			DocumentCharacterIterator	end() const throw();
+			DocumentCharacterIterator begin() const throw();
+			DocumentCharacterIterator end() const throw();
 
 			// overridables
 		protected:
-			virtual void	doResetContent();
+			virtual void doResetContent();
 
 		private:
-			void		doSetModified(bool modified) throw();
-			Position	eraseText(const Region& region);
-			bool		fireDocumentAboutToBeChanged(const DocumentChange& c) throw();
-			void		fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) throw();
-			void		initialize();
-			Position	insertText(const Position& position, const Char* first, const Char* last);
-			void		partitioningChanged(const Region& changedRegion) throw();
-			void		updatePoints(const DocumentChange& change) throw();
+			void doSetModified(bool modified) throw();
+			Position eraseText(const Region& region);
+			bool fireDocumentAboutToBeChanged(const DocumentChange& c) throw();
+			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) throw();
+			void initialize();
+			Position insertText(const Position& position, const Char* first, const Char* last);
+			void partitioningChanged(const Region& changedRegion) throw();
+			void updatePoints(const DocumentChange& change) throw();
 #ifdef ASCENSION_WINDOWS
-			static ::UINT	translateSpecialCodePage(::UINT codePage);
+			static ::UINT translateSpecialCodePage(::UINT codePage);
 #endif /* ASCENSION_WINDOWS */
-			// internal::ISessionElement
-			void	setSession(texteditor::Session& session) throw() {session_ = &session;}
-			// internal::IPointCollection<Point>
-			void	addNewPoint(Point& point) {points_.insert(&point);}
-			void	removePoint(Point& point) {points_.erase(&point);}
+			// internal.ISessionElement
+			void setSession(texteditor::Session& session) throw() {session_ = &session;}
+			// internal.IPointCollection<Point>
+			void addNewPoint(Point& point) {points_.insert(&point);}
+			void removePoint(Point& point) {points_.erase(&point);}
 
 		private:
 			class UndoManager;
@@ -747,10 +763,10 @@ namespace ascension {
 			~DocumentBuffer() throw();
 			const Position&	tell() const throw();
 		private:
-			int_type	overflow(int_type c);
-			int			sync();
-			int_type	uflow();
-			int_type	underflow();
+			int_type overflow(int_type c);
+			int sync();
+			int_type uflow();
+			int_type underflow();
 		private:
 			Document& document_;
 			const Newline newline_;
@@ -789,19 +805,19 @@ namespace ascension {
 			DocumentBuffer buffer_;
 		};
 
-		// free functions related to document
-		template<typename ForwardIterator>
-		Newline						eatNewline(ForwardIterator first, ForwardIterator last);
-		length_t					getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
-		const Char*					getNewlineString(Newline newline);
-		length_t					getNewlineStringLength(Newline newline);
-		template<typename ForwardIterator>
-		length_t					getNumberOfLines(ForwardIterator first, ForwardIterator last);
-		length_t					getNumberOfLines(const String& text) throw();
-		bool						isLiteralNewline(Newline newline) throw();
-		Position					updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
-		std::basic_ostream<Char>&	writeDocumentToStream(std::basic_ostream<Char>& out,
-										const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
+		// free functions about newlines
+		template<typename ForwardIterator> Newline eatNewline(ForwardIterator first, ForwardIterator last);
+		const Char* getNewlineString(Newline newline);
+		length_t getNewlineStringLength(Newline newline);
+		template<typename ForwardIterator> length_t getNumberOfLines(ForwardIterator first, ForwardIterator last);
+		length_t getNumberOfLines(const String& text) throw();
+		bool isLiteralNewline(Newline newline) throw();
+
+		// other free functions related to document
+		length_t getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
+		Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw();
+		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
+			const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
 
 		// free functions output a primitive into stream
 		template<typename Element, typename Traits>
@@ -932,10 +948,10 @@ namespace ascension {
 				bool isOpen() const throw();
 				bool unicodeByteOrderMark() const throw();
 			private:
-				int_type	overflow(int_type c /* = traits_type::eof() */);
-				int_type	pbackfail(int_type c /* = traits_type::eof() */);
-				int			sync();
-				int_type	underflow();
+				int_type overflow(int_type c /* = traits_type::eof() */);
+				int_type pbackfail(int_type c /* = traits_type::eof() */);
+				int sync();
+				int_type underflow();
 			private:
 				typedef std::basic_streambuf<ascension::Char> Base;
 #ifdef ASCENSION_WINDOWS
@@ -990,44 +1006,44 @@ namespace ascension {
 			public:
 				explicit TextFileDocumentInput(Document& document);
 				~TextFileDocumentInput() throw();
-				bool			checkTimeStamp();
-				const Document&	document() const throw();
-				const LockMode&	lockMode() const throw();
+				bool checkTimeStamp();
+				const Document& document() const throw();
+				const LockMode& lockMode() const throw();
 				// listener
-				void	addListener(IFilePropertyListener& listener);
-				void	removeListener(IFilePropertyListener& listener);
+				void addListener(IFilePropertyListener& listener);
+				void removeListener(IFilePropertyListener& listener);
 				// bound file name
-				String	extensionName() const throw();
-				bool	isOpen() const throw();
-				String	name() const throw();
-				String	pathName() const throw();
+				String extensionName() const throw();
+				bool isOpen() const throw();
+				String name() const throw();
+				String pathName() const throw();
 				// encodings
-				void	setEncoding(const std::string& encoding);
-				void	setNewline(Newline newline);
-				bool	unicodeByteOrderMark() const throw();
+				void setEncoding(const std::string& encoding);
+				void setNewline(Newline newline);
+				bool unicodeByteOrderMark() const throw();
 				// I/O
-				void	close();
-				bool	open(const String& fileName, const LockMode& lockMode,
-							const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-							IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
-				bool	write(const String& fileName, const WriteParameters& params);
-				bool	writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
+				void close();
+				bool open(const String& fileName, const LockMode& lockMode,
+					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
+				bool write(const String& fileName, const WriteParameters& params);
+				bool writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
 				// IDocumentInput
-				std::string			encoding() const throw();
-				ascension::String	location() const throw();
-				Newline				newline() const throw();
+				std::string encoding() const throw();
+				ascension::String location() const throw();
+				Newline newline() const throw();
 			private:
-				bool	lock() throw();
-				bool	unlock() throw();
-				bool	verifyTimeStamp(bool internal, Time& newTimeStamp) throw();
+				bool lock() throw();
+				bool unlock() throw();
+				bool verifyTimeStamp(bool internal, Time& newTimeStamp) throw();
 				// IDocumentListener
-				bool	documentAboutToBeChanged(const Document& document, const DocumentChange& change);
-				void	documentChanged(const Document& document, const DocumentChange& change);
+				bool documentAboutToBeChanged(const Document& document, const DocumentChange& change);
+				void documentChanged(const Document& document, const DocumentChange& change);
 				// IDocumentStateListener
-				void	documentAccessibleRegionChanged(const Document& document);
-				void	documentModificationSignChanged(const Document& document);
-				void	documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
-				void	documentReadOnlySignChanged(const Document& document);
+				void documentAccessibleRegionChanged(const Document& document);
+				void documentModificationSignChanged(const Document& document);
+				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
+				void documentReadOnlySignChanged(const Document& document);
 			private:
 				Document& document_;
 				String fileName_;
@@ -1047,9 +1063,9 @@ namespace ascension {
 				IUnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
 
-			// free functions related file path name
-			String	canonicalizePathName(const Char* pathName);
-			bool	comparePathNames(const Char* s1, const Char* s2);
+			// free functions related to file path name
+			String canonicalizePathName(const Char* pathName);
+			bool comparePathNames(const Char* s1, const Char* s2);
 		} // namespace fileio
 
 

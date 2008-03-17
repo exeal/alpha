@@ -483,17 +483,16 @@ public:
 	UndoManager(Document& document) throw();
 	virtual ~UndoManager() throw();
 	// attributes
-	size_t	numberOfRedoableCompoundOperations() const throw();
-	size_t	numberOfUndoableCompoundOperations() const throw();
-	bool	isStackingCompoundOperation() const throw();
+	size_t numberOfRedoableCompoundOperations() const throw();
+	size_t numberOfUndoableCompoundOperations() const throw();
+	bool isStackingCompoundOperation() const throw();
 	// operations
-	void				beginCompoundOperation() throw();
-	void				clear() throw();
-	void				endCompoundOperation() throw();
-	template<typename Operation>
-	void				pushUndoableOperation(Operation& operation);
-	pair<bool, size_t>	redo(Position& resultPosition);
-	pair<bool, size_t>	undo(Position& resultPosition);
+	void beginCompoundOperation() throw();
+	void clear() throw();
+	void endCompoundOperation() throw();
+	template<typename Operation> void pushUndoableOperation(Operation& operation);
+	pair<bool, size_t> redo(Position& resultPosition);
+	pair<bool, size_t> undo(Position& resultPosition);
 private:
 	Document& document_;
 	stack<CompoundOperation*> undoStack_, redoStack_;

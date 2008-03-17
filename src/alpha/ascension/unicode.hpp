@@ -1,7 +1,7 @@
 /**
  * @file unicode.hpp
  * @author exeal
- * @date 2005-2007
+ * @date 2005-2008
  * @see ascension#unicode, break-iterator.cpp, collator.cpp, identifier-syntax.cpp, normalizer.cpp
  */
 
@@ -22,9 +22,9 @@
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 /// Tracking revision number of UAX #14 ("Line Breaking Properties")
-#define ASCENSION_UAX14_REVISION_NUMBER	19	// 2006-05-23
+#define ASCENSION_UAX14_REVISION_NUMBER 19	// 2006-05-23
 /// Tracking revision number of UAX #29 ("Text Boundary")
-#define ASCENSION_UAX29_REVISION_NUMBER	11	// 2006-10-12
+#define ASCENSION_UAX29_REVISION_NUMBER 11	// 2006-10-12
 #define CASE_FOLDING_EXPANSION_MAX_CHARS 3
 
 namespace ascension {
@@ -189,16 +189,16 @@ namespace ascension {
 		public:
 			virtual ~CharacterIterator() throw();
 			// attributes
-			bool			equals(const CharacterIterator& rhs) const;
-			bool			less(const CharacterIterator& rhs) const;
-			std::ptrdiff_t	offset() const throw();
+			bool equals(const CharacterIterator& rhs) const;
+			bool less(const CharacterIterator& rhs) const;
+			std::ptrdiff_t offset() const throw();
 			// operations
-			CharacterIterator&					assign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	clone() const;
-			CharacterIterator&					first();
-			CharacterIterator&					last();
-			CharacterIterator&					next();
-			CharacterIterator&					previous();
+			CharacterIterator& assign(const CharacterIterator& rhs);
+			std::auto_ptr<CharacterIterator> clone() const;
+			CharacterIterator& first();
+			CharacterIterator& last();
+			CharacterIterator& next();
+			CharacterIterator& previous();
 
 			// virtual methods the concrete class should implement
 		public:
@@ -255,18 +255,18 @@ namespace ascension {
 			const Char*	end() const throw();
 			const Char*	tell() const throw();
 			// CharacterIterator
-			CodePoint	current() const throw();
-			bool		hasNext() const throw();
-			bool		hasPrevious() const throw();
+			CodePoint current() const throw();
+			bool hasNext() const throw();
+			bool hasPrevious() const throw();
 		private:
-			void 								doAssign(const CharacterIterator& rhs);
-			std::auto_ptr<CharacterIterator>	doClone() const;
-			void								doFirst();
-			bool 								doEquals(const CharacterIterator& rhs) const;
-			void								doLast();
-			bool 								doLess(const CharacterIterator& rhs) const;
-			void								doNext();
-			void								doPrevious();
+			void doAssign(const CharacterIterator& rhs);
+			std::auto_ptr<CharacterIterator> doClone() const;
+			void doFirst();
+			bool doEquals(const CharacterIterator& rhs) const;
+			void doLast();
+			bool doLess(const CharacterIterator& rhs) const;
+			void doNext();
+			void doPrevious();
 		private:
 			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Char* current_;
@@ -494,21 +494,21 @@ namespace ascension {
 			// operator
 			Normalizer&	operator=(const Normalizer& rhs);
 			// attributes
-			bool			hasNext() const throw();
-			bool			hasPrevious() const throw();
-			std::ptrdiff_t	offset() const throw();
+			bool hasNext() const throw();
+			bool hasPrevious() const throw();
+			std::ptrdiff_t offset() const throw();
 			// class operations
-			static int		compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
-			static Form		formForName(const Char* name);
-			static String	normalize(CodePoint c, Form form);
-			static String	normalize(const CharacterIterator& text, Form form);
+			static int compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
+			static Form formForName(const Char* name);
+			static String normalize(CodePoint c, Form form);
+			static String normalize(const CharacterIterator& text, Form form);
 			// methods
-			const CodePoint&	current() const throw();
-			bool				equals(const Normalizer& rhs) const throw();
-			Normalizer&			next();
-			Normalizer&			previous();
+			const CodePoint& current() const throw();
+			bool equals(const Normalizer& rhs) const throw();
+			Normalizer& next();
+			Normalizer& previous();
 		private:
-			void	nextClosure(Direction direction, bool initialize);
+			void nextClosure(Direction direction, bool initialize);
 		private:
 			Form form_;
 			std::auto_ptr<CharacterIterator> current_;
@@ -535,23 +535,23 @@ namespace ascension {
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
 			) throw();
 			IdentifierSyntax(const IdentifierSyntax& rhs) throw();
-			IdentifierSyntax&	operator=(const IdentifierSyntax& rhs) throw();
+			IdentifierSyntax& operator=(const IdentifierSyntax& rhs) throw();
 			// singleton
 			static const IdentifierSyntax&	defaultInstance() throw();
 			// classification for character
-			bool	isIdentifierStartCharacter(CodePoint cp) const throw();
-			bool	isIdentifierContinueCharacter(CodePoint cp) const throw();
-			bool	isWhiteSpace(CodePoint cp, bool includeTab) const throw();
+			bool isIdentifierStartCharacter(CodePoint cp) const throw();
+			bool isIdentifierContinueCharacter(CodePoint cp) const throw();
+			bool isWhiteSpace(CodePoint cp, bool includeTab) const throw();
 			// classification for sequence
 			template<typename CharacterSequence>
-			CharacterSequence	eatIdentifier(CharacterSequence first, CharacterSequence last) const throw();
+			CharacterSequence eatIdentifier(CharacterSequence first, CharacterSequence last) const throw();
 			template<typename CharacterSequence>
-			CharacterSequence	eatWhiteSpaces(CharacterSequence, CharacterSequence last, bool includeTab) const throw();
+			CharacterSequence eatWhiteSpaces(CharacterSequence, CharacterSequence last, bool includeTab) const throw();
 			// attributes
-			void	overrideIdentifierStartCharacters(const String& adding, const String& subtracting);
-			void	overrideIdentifierStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
-			void	overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting);
-			void	overrideIdentifierNonStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
+			void overrideIdentifierStartCharacters(const String& adding, const String& subtracting);
+			void overrideIdentifierStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
+			void overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting);
+			void overrideIdentifierNonStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
 		private:
 			CharacterClassification type_;
 			bool caseSensitive_;
@@ -619,15 +619,15 @@ namespace ascension {
 		/// Base class of @c GraphemeBreakIterator.
 		class AbstractGraphemeBreakIterator : public BreakIterator {
 		public:
-			bool	isBoundary(const CharacterIterator& at) const;
-			void	next(std::ptrdiff_t amount);
+			bool isBoundary(const CharacterIterator& at) const;
+			void next(std::ptrdiff_t amount);
 		protected:
 			AbstractGraphemeBreakIterator(const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
 			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
 		private:
-			void	doNext(std::ptrdiff_t amount);
-			void	doPrevious(std::ptrdiff_t amount);
+			void doNext(std::ptrdiff_t amount);
+			void doPrevious(std::ptrdiff_t amount);
 		};
 
 		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
@@ -676,17 +676,17 @@ namespace ascension {
 				/// Start or end of word consists of alpha-numerics.
 				BOUNDARY_OF_ALPHANUMERICS	= BOUNDARY_OF_SEGMENT | ALPHA_NUMERIC
 			};
-			Component	getComponent() const throw();
-			bool		isBoundary(const CharacterIterator& at) const;
-			void		next(std::ptrdiff_t amount);
-			void		setComponent(Component component) throw();
+			Component getComponent() const throw();
+			bool isBoundary(const CharacterIterator& at) const;
+			void next(std::ptrdiff_t amount);
+			void setComponent(Component component) throw();
 		protected:
 			AbstractWordBreakIterator(Component component, const IdentifierSyntax& syntax, const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
 			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
 		private:
-			void	doNext(std::ptrdiff_t amount);
-			void	doPrevious(std::ptrdiff_t amount);
+			void doNext(std::ptrdiff_t amount);
+			void doPrevious(std::ptrdiff_t amount);
 			Component component_;
 			const IdentifierSyntax& syntax_;
 		};
@@ -731,17 +731,17 @@ namespace ascension {
 				/// Breaks at each starts and ends of segments.
 				BOUNDARY_OF_SEGMENT	= START_OF_SEGMENT | END_OF_SEGMENT,
 			};
-			Component	getComponent() const throw();
-			bool		isBoundary(const CharacterIterator& at) const;
-			void		next(std::ptrdiff_t amount);
-			void		setComponent(Component component) throw();
+			Component getComponent() const throw();
+			bool isBoundary(const CharacterIterator& at) const;
+			void next(std::ptrdiff_t amount);
+			void setComponent(Component component) throw();
 		protected:
 			AbstractSentenceBreakIterator(Component component, const IdentifierSyntax& syntax, const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
 			virtual const CharacterIterator& getCharacterIterator() const throw() = 0;
 		private:
-			void	doNext(std::ptrdiff_t amount);
-			void	doPrevious(std::ptrdiff_t amount);
+			void doNext(std::ptrdiff_t amount);
+			void doPrevious(std::ptrdiff_t amount);
 			Component component_;
 			const IdentifierSyntax& syntax_;
 		};
@@ -773,8 +773,8 @@ namespace ascension {
 		/// Base class of @c LineBreakIterator.
 		class AbstractLineBreakIterator : public BreakIterator {
 		public:
-			bool	isBoundary(const CharacterIterator& at) const;
-			void	next(std::ptrdiff_t amount);
+			bool isBoundary(const CharacterIterator& at) const;
+			void next(std::ptrdiff_t amount);
 		protected:
 			AbstractLineBreakIterator(const std::locale& lc) throw();
 			virtual CharacterIterator& getCharacterIterator() throw() = 0;
@@ -810,17 +810,17 @@ namespace ascension {
 		class CaseFolder {
 			MANAH_NONCOPYABLE_TAG(CaseFolder);
 		public:
-			static const length_t	MAXIMUM_EXPANSION_CHARACTERS;
-			static int			compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI = false);
-			static int			compare(const String& s1, const String& s2, bool excludeTurkishI = false);
-			static CodePoint	fold(CodePoint c, bool excludeTurkishI = false) throw();
+			static const length_t MAXIMUM_EXPANSION_CHARACTERS;
+			static int compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI = false);
+			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false);
+			static CodePoint fold(CodePoint c, bool excludeTurkishI = false) throw();
 			template<typename CharacterSequence>
-			static String		fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
-			static String		fold(const String& text, bool excludeTurkishI = false);
+			static String fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
+			static String fold(const String& text, bool excludeTurkishI = false);
 		private:
-			static CodePoint	foldCommon(CodePoint c) throw();
-			static std::size_t	foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw();
-			static CodePoint	foldTurkishI(CodePoint c) throw();
+			static CodePoint foldCommon(CodePoint c) throw();
+			static std::size_t foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw();
+			static CodePoint foldTurkishI(CodePoint c) throw();
 			static const Char COMMON_CASED[], COMMON_FOLDED[], SIMPLE_CASED[], SIMPLE_FOLDED[], FULL_CASED[];
 			static const Char* FULL_FOLDED[];
 			static const std::size_t NUMBER_OF_COMMON_CASED, NUMBER_OF_SIMPLE_CASED, NUMBER_OF_FULL_CASED;
@@ -831,13 +831,13 @@ namespace ascension {
 			CollationKey() throw() : length_(0) {}
 			CollationKey(manah::AutoBuffer<const uchar> keyValues, std::size_t length) : keyValues_(keyValues), length_(length) {}
 			CollationKey(const CollationKey& rhs);
-			CollationKey&	operator=(const CollationKey& rhs);
-			bool			operator==(const CollationKey& rhs) const throw();
-			bool			operator!=(const CollationKey& rhs) const throw();
-			bool			operator<(const CollationKey& rhs) const throw();
-			bool			operator<=(const CollationKey& rhs) const throw();
-			bool			operator>(const CollationKey& rhs) const throw();
-			bool			operator>=(const CollationKey& rhs) const throw();
+			CollationKey&operator=(const CollationKey& rhs);
+			bool operator==(const CollationKey& rhs) const throw();
+			bool operator!=(const CollationKey& rhs) const throw();
+			bool operator<(const CollationKey& rhs) const throw();
+			bool operator<=(const CollationKey& rhs) const throw();
+			bool operator>(const CollationKey& rhs) const throw();
+			bool operator>=(const CollationKey& rhs) const throw();
 		private:
 			const manah::AutoBuffer<const uchar> keyValues_;
 			const std::size_t length_;
@@ -871,16 +871,16 @@ namespace ascension {
 			// constructor
 			virtual ~Collator() throw();
 			// attributes
-			Decomposition	decomposition() const throw();
-			void			setDecomposition(Decomposition newDecomposition);
-			void			setStrength(Strength newStrength);
-			Strength		strength() const throw();
+			Decomposition decomposition() const throw();
+			void setDecomposition(Decomposition newDecomposition);
+			void setStrength(Strength newStrength);
+			Strength strength() const throw();
 			// operations
-			virtual std::auto_ptr<CollationKey>				collationKey(const String& s) const = 0;
-			int												compare(const String& s1, const String& s2) const;
-			virtual int										compare(const CharacterIterator& s1, const CharacterIterator& s2) const = 0;
-			std::auto_ptr<CollationElementIterator>			createCollationElementIterator(const String& source) const;
-			virtual std::auto_ptr<CollationElementIterator>	createCollationElementIterator(const CharacterIterator& source) const = 0;
+			virtual std::auto_ptr<CollationKey> collationKey(const String& s) const = 0;
+			int compare(const String& s1, const String& s2) const;
+			virtual int compare(const CharacterIterator& s1, const CharacterIterator& s2) const = 0;
+			std::auto_ptr<CollationElementIterator> createCollationElementIterator(const String& source) const;
+			virtual std::auto_ptr<CollationElementIterator> createCollationElementIterator(const CharacterIterator& source) const = 0;
 		protected:
 			Collator() throw() : strength_(IDENTICAL), decomposition_(NO_DECOMPOSITION) {}
 		private:
@@ -892,9 +892,9 @@ namespace ascension {
 		class NullCollator : public Collator {
 		public:
 			NullCollator() throw();
-			std::auto_ptr<CollationKey>				collationKey(const String& s) const;
-			int										compare(const CharacterIterator& s1, const CharacterIterator& s2) const;
-			std::auto_ptr<CollationElementIterator>	createCollationElementIterator(const CharacterIterator& source) const;
+			std::auto_ptr<CollationKey> collationKey(const String& s) const;
+			int compare(const CharacterIterator& s1, const CharacterIterator& s2) const;
+			std::auto_ptr<CollationElementIterator> createCollationElementIterator(const CharacterIterator& source) const;
 		private:
 			class ElementIterator : public CollationElementIterator {
 			public:

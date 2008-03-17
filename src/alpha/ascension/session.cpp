@@ -1,7 +1,7 @@
 /**
  * @file session.cpp
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "session.hpp"
@@ -47,7 +47,7 @@ void ClipboardRing::add(const String& text, bool rectangle) {
 /**
  * Removes the specified text.
  * @param index the index of the text
- * @throw IndexOutOfBoundsException	@a index is invalid
+ * @throw IndexOutOfBoundsException @a index is invalid
  */
 void ClipboardRing::remove(size_t index) {
 	if(index >= datas_.size())
@@ -86,7 +86,7 @@ void ClipboardRing::setCapacity(size_t capacity) {
 /**
  * Returns the content of the specified index.
  * @param index the index
- * @param[out] text	the text content
+ * @param[out] text the text content
  * @param[out] rectangle true if the text is rectangle
  * @throw IndexOutOfBoundsException @a index is out of range
  */

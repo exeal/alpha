@@ -1,7 +1,7 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2008
  */
 
 #ifndef ASCENSION_POINT_HPP
@@ -69,44 +69,48 @@ namespace ascension {
 				GLYPH_CLUSTER,		///< A glyph is a character. (not implemented).
 				DEFAULT_UNIT,		///< Default behavior (used by only @c EditPoint#erase method).
 			};
+
 			// constructors
 			explicit EditPoint(Document& document, const Position& position = Position(), IPointListener* listener = 0);
 			EditPoint(const EditPoint& rhs);
 			virtual ~EditPoint() throw();
+
 			// attributes
-			CharacterUnit	characterUnit() const throw();
-			CodePoint		getCodePoint(bool useLineFeed = false) const;
-			bool			isBeginningOfDocument() const;
-			bool			isBeginningOfLine() const;
-			bool			isEndOfDocument() const;
-			bool			isEndOfLine() const;
-			void			setCharacterUnit(CharacterUnit unit) throw();
+			CharacterUnit characterUnit() const throw();
+			CodePoint getCodePoint(bool useLineFeed = false) const;
+			bool isBeginningOfDocument() const;
+			bool isBeginningOfLine() const;
+			bool isEndOfDocument() const;
+			bool isEndOfLine() const;
+			void setCharacterUnit(CharacterUnit unit) throw();
+
 			// movement
-			void	backwardCharacter(length_t offset = 1);
-			void	beginningOfDocument();
-			void	beginningOfLine();
-			void	endOfDocument();
-			void	endOfLine();
-			void	forwardCharacter(length_t offset = 1);
-			void	moveToAbsoluteCharacterOffset(length_t offset);
-			bool	nextBookmark();
-			void	nextLine(length_t offset = 1);
-			bool	previousBookmark();
-			void	previousLine(length_t offset = 1);
+			void backwardCharacter(length_t offset = 1);
+			void beginningOfDocument();
+			void beginningOfLine();
+			void endOfDocument();
+			void endOfLine();
+			void forwardCharacter(length_t offset = 1);
+			void moveToAbsoluteCharacterOffset(length_t offset);
+			bool nextBookmark();
+			void nextLine(length_t offset = 1);
+			bool previousBookmark();
+			void previousLine(length_t offset = 1);
+
 			// text manipulations
-			void			destructiveInsert(const String& text);
-			void			destructiveInsert(const Char* first, const Char* last);
-			void			erase(signed_length_t length = 1, CharacterUnit cu = DEFAULT_UNIT);
-			void			erase(const Position& other);
-			void			insert(const String& text);
-			void			insert(const Char* first, const Char* last);
-			virtual void	newLine();
+			void destructiveInsert(const String& text);
+			void destructiveInsert(const Char* first, const Char* last);
+			void erase(signed_length_t length = 1, CharacterUnit cu = DEFAULT_UNIT);
+			void erase(const Position& other);
+			void insert(const String& text);
+			void insert(const Char* first, const Char* last);
+			virtual void newLine();
 
 		protected:
-			virtual void	doMoveTo(const Position& to);
-			IPointListener*	getListener() const throw();
-			String			getText(signed_length_t length, Newline newline = NLF_RAW_VALUE) const;
-			String			getText(const Position& other, Newline newline = NLF_RAW_VALUE) const;
+			virtual void doMoveTo(const Position& to);
+			IPointListener* getListener() const throw();
+			String getText(signed_length_t length, Newline newline = NLF_RAW_VALUE) const;
+			String getText(const Position& other, Newline newline = NLF_RAW_VALUE) const;
 		private:
 			IPointListener* listener_;
 			CharacterUnit characterUnit_;
@@ -150,77 +154,81 @@ namespace ascension {
 				const kernel::Position& position = kernel::Position(), kernel::IPointListener* listener = 0);
 			VisualPoint(const VisualPoint& rhs);
 			virtual ~VisualPoint() throw();
+
 			// attributes
-			static ::UINT		canPaste() throw();
-			std::string			clipboardNativeEncoding() const throw();
-			bool				isEndOfVisualLine() const;
-			bool				isFirstPrintableCharacterOfLine() const;
-			bool				isFirstPrintableCharacterOfVisualLine() const;
-			bool				isLastPrintableCharacterOfLine() const;
-			bool				isLastPrintableCharacterOfVisualLine() const;
-			bool				isBeginningOfVisualLine() const;
-			void				setClipboardNativeEncoding(encoding::MIBenum mib);
-			TextViewer&			textViewer();
-			const TextViewer&	textViewer() const;
-			length_t			visualColumnNumber() const;
+			static ::UINT canPaste() throw();
+			std::string clipboardNativeEncoding() const throw();
+			bool isEndOfVisualLine() const;
+			bool isFirstPrintableCharacterOfLine() const;
+			bool isFirstPrintableCharacterOfVisualLine() const;
+			bool isLastPrintableCharacterOfLine() const;
+			bool isLastPrintableCharacterOfVisualLine() const;
+			bool isBeginningOfVisualLine() const;
+			void setClipboardNativeEncoding(encoding::MIBenum mib);
+			TextViewer& textViewer();
+			const TextViewer& textViewer() const;
+			length_t visualColumnNumber() const;
+
 			// movement
-			void	beginningOfVisualLine();
-			void	endOfVisualLine();
-			void	firstPrintableCharacterOfLine();
-			void	firstPrintableCharacterOfVisualLine();
-			void	lastPrintableCharacterOfLine();
-			void	lastPrintableCharacterOfVisualLine();
-			void	leftCharacter(length_t offset = 1);
-			void	leftWord(length_t offset = 1);
-			void	leftWordEnd(length_t offset = 1);
-			void	nextPage(length_t offset = 1);
-			void	nextVisualLine(length_t offset = 1);
-			void	nextWord(length_t offset = 1);
-			void	nextWordEnd(length_t offset = 1);
-			void	previousPage(length_t offset = 1);
-			void	previousVisualLine(length_t offset = 1);
-			void	previousWord(length_t offset = 1);
-			void	previousWordEnd(length_t offset = 1);
-			void	rightCharacter(length_t offset = 1);
-			void	rightWord(length_t offset = 1);
-			void	rightWordEnd(length_t offset = 1);
+			void beginningOfVisualLine();
+			void endOfVisualLine();
+			void firstPrintableCharacterOfLine();
+			void firstPrintableCharacterOfVisualLine();
+			void lastPrintableCharacterOfLine();
+			void lastPrintableCharacterOfVisualLine();
+			void leftCharacter(length_t offset = 1);
+			void leftWord(length_t offset = 1);
+			void leftWordEnd(length_t offset = 1);
+			void nextPage(length_t offset = 1);
+			void nextVisualLine(length_t offset = 1);
+			void nextWord(length_t offset = 1);
+			void nextWordEnd(length_t offset = 1);
+			void previousPage(length_t offset = 1);
+			void previousVisualLine(length_t offset = 1);
+			void previousWord(length_t offset = 1);
+			void previousWordEnd(length_t offset = 1);
+			void rightCharacter(length_t offset = 1);
+			void rightWord(length_t offset = 1);
+			void rightWordEnd(length_t offset = 1);
+
 			// scroll
-			bool	recenter(signed_length_t length = 0);
-			bool	recenter(const kernel::Position& other);
-			bool	show(signed_length_t length = 0);
-			bool	show(const kernel::Position& other);
+			bool recenter(signed_length_t length = 0);
+			bool recenter(const kernel::Position& other);
+			bool show(signed_length_t length = 0);
+			bool show(const kernel::Position& other);
+
 			// text manipulations
-			void				copy(signed_length_t length);
-			void				copy(const kernel::Position& other);
-			void				cut(signed_length_t length);
-			void				cut(const kernel::Position& other);
-			void				insertBox(const String& text);
-			void				insertBox(const Char* first, const Char* last);
-			void				newLine(bool inheritIndent);
-			void				paste(signed_length_t length = 0);
-			void				paste(const kernel::Position& other);
-			kernel::Position	spaceIndent(const kernel::Position& other, bool box, long level = 1);
-			kernel::Position	tabIndent(const kernel::Position& other, bool box, long level = 1);
-			bool				transposeCharacters();
-			bool				transposeLines();
-//			bool				transposeParagraphs();
-//			bool				transposeSentences();
-			bool				transposeWords();
+			void copy(signed_length_t length);
+			void copy(const kernel::Position& other);
+			void cut(signed_length_t length);
+			void cut(const kernel::Position& other);
+			void insertBox(const String& text);
+			void insertBox(const Char* first, const Char* last);
+			void newLine(bool inheritIndent);
+			void paste(signed_length_t length = 0);
+			void paste(const kernel::Position& other);
+			kernel::Position spaceIndent(const kernel::Position& other, bool box, long level = 1);
+			kernel::Position tabIndent(const kernel::Position& other, bool box, long level = 1);
+			bool transposeCharacters();
+			bool transposeLines();
+//			bool transposeParagraphs();
+//			bool transposeSentences();
+			bool transposeWords();
 
 		protected:
-			virtual void					doMoveTo(const kernel::Position& to);
-			const text::IdentifierSyntax&	identifierSyntax() const throw();
-			void							verifyViewer() const;
+			virtual void doMoveTo(const kernel::Position& to);
+			const text::IdentifierSyntax& identifierSyntax() const throw();
+			void verifyViewer() const;
 		private:
 			using kernel::EditPoint::newLine;	// 明示的な隠蔽
-			kernel::Position	doIndent(const kernel::Position& other, Char character, bool box, long level);
-			void				updateLastX();
-			void				viewerDisposed() throw();
+			kernel::Position doIndent(const kernel::Position& other, Char character, bool box, long level);
+			void updateLastX();
+			void viewerDisposed() throw();
 			// layout.IVisualLinesListener
-			void	visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
-			void	visualLinesInserted(length_t first, length_t last) throw();
-			void	visualLinesModified(length_t first, length_t last,
-						signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
+			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
+			void visualLinesInserted(length_t first, length_t last) throw();
+			void visualLinesModified(length_t first, length_t last,
+				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
 
 		private:
 			TextViewer* viewer_;
@@ -327,81 +335,90 @@ namespace ascension {
 				LINE,		///< Line selection mode.
 				WORD		///< Word selection mode.
 			};
+
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
 				DONT_TRACK,						///< Does not track.
 				TRACK_FOR_FORWARD_CHARACTER,	///< Tracks the bracket matches forward character.
 				TRACK_FOR_SURROUND_CHARACTERS	///< Tracks the bracket matches backward character.
 			};
+
 			// constructor
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position());
 			~Caret();
+
 			// listeners
-			void	addListener(ICaretListener& listener);
-			void	addCharacterInputListener(ICharacterInputListener& listener);
-			void	addStateListener(ICaretStateListener& listener);
-			void	removeListener(ICaretListener& listener);
-			void	removeCharacterInputListener(ICharacterInputListener& listener);
-			void	removeStateListener(ICaretStateListener& listener);
+			void addListener(ICaretListener& listener);
+			void addCharacterInputListener(ICharacterInputListener& listener);
+			void addStateListener(ICaretStateListener& listener);
+			void removeListener(ICaretListener& listener);
+			void removeCharacterInputListener(ICharacterInputListener& listener);
+			void removeStateListener(ICaretStateListener& listener);
+
 			// attributes : the anchor and the caret
-			const VisualPoint&	anchor() const throw();
-			const VisualPoint&	beginning() const throw();
-			void				enableAutoShow(bool enable = true) throw();
-			const VisualPoint&	end() const throw();
-			bool				isAutoShowEnabled() const throw();
+			const VisualPoint& anchor() const throw();
+			const VisualPoint& beginning() const throw();
+			void enableAutoShow(bool enable = true) throw();
+			const VisualPoint& end() const throw();
+			bool isAutoShowEnabled() const throw();
+
 			// attributes : selection
-			const VirtualBox&	boxForRectangleSelection() const;
-			bool				isPointOverSelection(const ::POINT& pt) const;
-			bool				isSelectionEmpty() const throw();
-			bool				isSelectionRectangle() const throw();
-			bool				selectedRangeOnLine(length_t line, length_t& first, length_t& last) const;
-			bool				selectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
-			SelectionMode		selectionMode() const throw();
-			kernel::Region		selectionRegion() const throw();
-			String				selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
+			const VirtualBox& boxForRectangleSelection() const;
+			bool isPointOverSelection(const ::POINT& pt) const;
+			bool isSelectionEmpty() const throw();
+			bool isSelectionRectangle() const throw();
+			bool selectedRangeOnLine(length_t line, length_t& first, length_t& last) const;
+			bool selectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
+			SelectionMode selectionMode() const throw();
+			kernel::Region selectionRegion() const throw();
+			String selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
+
 			// attributes : character input
-			bool	isOvertypeMode() const throw();
-			void	setOvertypeMode(bool overtype) throw();
+			bool isOvertypeMode() const throw();
+			void setOvertypeMode(bool overtype) throw();
+
 			// attributes : matched braces
-			const std::pair<kernel::Position, kernel::Position>&	matchBrackets() const;
-			MatchBracketsTrackingMode								matchBracketsTrackingMode() const throw();
-			void													trackMatchBrackets(MatchBracketsTrackingMode mode);
+			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const;
+			MatchBracketsTrackingMode matchBracketsTrackingMode() const throw();
+			void trackMatchBrackets(MatchBracketsTrackingMode mode);
+
 			// selection manipulations
-			void	beginBoxSelection();
-			void	beginLineSelection();
-			void	beginWordSelection();
-			void	clearSelection();
-			void	copySelection(bool alsoSendToClipboardRing);
-			void	cutSelection(bool alsoSendToClipboardRing);
-			void	endBoxSelection();
-			void	extendSelection(const kernel::Position& to);
-			void	extendSelection(std::mem_fun_t<void, kernel::EditPoint>& algorithm);
-			void	extendSelection(std::mem_fun_t<void, VisualPoint>& algorithm);
-			void	extendSelection(std::mem_fun1_t<void, kernel::EditPoint, length_t>& algorithm, length_t offset);
-			void	extendSelection(std::mem_fun1_t<void, VisualPoint, length_t>& algorithm, length_t offset);
-			void	eraseSelection();
-			void	pasteToSelection(bool fromClipboardRing);
-			void	replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
-			void	replaceSelection(const String& text, bool rectangleInsertion = false);
-			void	restoreSelectionMode();
-			void	select(const kernel::Region& region);
-			void	select(const kernel::Position& anchor, const kernel::Position& caret);
-			void	selectWord();
+			void beginBoxSelection();
+			void beginLineSelection();
+			void beginWordSelection();
+			void clearSelection();
+			void copySelection(bool alsoSendToClipboardRing);
+			void cutSelection(bool alsoSendToClipboardRing);
+			void endBoxSelection();
+			void extendSelection(const kernel::Position& to);
+			void extendSelection(std::mem_fun_t<void, kernel::EditPoint>& algorithm);
+			void extendSelection(std::mem_fun_t<void, VisualPoint>& algorithm);
+			void extendSelection(std::mem_fun1_t<void, kernel::EditPoint, length_t>& algorithm, length_t offset);
+			void extendSelection(std::mem_fun1_t<void, VisualPoint, length_t>& algorithm, length_t offset);
+			void eraseSelection();
+			void pasteToSelection(bool fromClipboardRing);
+			void replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
+			void replaceSelection(const String& text, bool rectangleInsertion = false);
+			void restoreSelectionMode();
+			void select(const kernel::Region& region);
+			void select(const kernel::Position& anchor, const kernel::Position& caret);
+			void selectWord();
+
 			// text manipulation
-			bool	inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
+			bool inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
 
 		private:
-			void	checkMatchBrackets();
-			void	internalExtendSelection(void (*algorithm)(void));
-			void	update(const kernel::DocumentChange& change);
-			void	updateVisualAttributes();
+			void checkMatchBrackets();
+			void internalExtendSelection(void (*algorithm)(void));
+			void update(const kernel::DocumentChange& change);
+			void updateVisualAttributes();
 			// VisualPoint
-			void	doMoveTo(const kernel::Position& position);
+			void doMoveTo(const kernel::Position& position);
 			// kernel.IPointListener
-			void	pointMoved(const kernel::EditPoint& self, const kernel::Position& oldPosition);
+			void pointMoved(const kernel::EditPoint& self, const kernel::Position& oldPosition);
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			using kernel::EditPoint::getListener;
 		private:
 			class SelectionAnchor : public VisualPoint {

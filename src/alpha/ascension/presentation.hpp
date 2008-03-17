@@ -197,32 +197,32 @@ namespace ascension {
 			explicit Presentation(kernel::Document& document) throw();
 			~Presentation() throw();
 			// attributes
-			void								addTextViewerListListener(ITextViewerListListener& listener);
-			kernel::Document&					document() throw();
-			const kernel::Document&				document() const throw();
-			const hyperlink::IHyperlink* const*	getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
-			layout::Colors						getLineColor(length_t line) const;
-			const LineStyle&					getLineStyle(length_t line, bool& delegatedOwnership) const;
-			void								removeTextViewerListListener(ITextViewerListListener& listener);
+			void addTextViewerListListener(ITextViewerListListener& listener);
+			kernel::Document& document() throw();
+			const kernel::Document& document() const throw();
+			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
+			layout::Colors getLineColor(length_t line) const;
+			const LineStyle& getLineStyle(length_t line, bool& delegatedOwnership) const;
+			void removeTextViewerListListener(ITextViewerListListener& listener);
 			// strategies
-			void	addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
-			void	removeLineColorDirector(ILineColorDirector& director) throw();
-			void	setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) throw();
-			void	setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
+			void addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
+			void removeLineColorDirector(ILineColorDirector& director) throw();
+			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) throw();
+			void setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
 			// TextViewer enumeration
-			TextViewerIterator		firstTextViewer() throw();
-			TextViewerConstIterator	firstTextViewer() const throw();
-			TextViewerIterator		lastTextViewer() throw();
-			TextViewerConstIterator	lastTextViewer() const throw();
-			std::size_t				numberOfTextViewers() const throw();
+			TextViewerIterator firstTextViewer() throw();
+			TextViewerConstIterator firstTextViewer() const throw();
+			TextViewerIterator lastTextViewer() throw();
+			TextViewerConstIterator lastTextViewer() const throw();
+			std::size_t numberOfTextViewers() const throw();
 		private:
-			void	clearHyperlinksCache() throw();
+			void clearHyperlinksCache() throw();
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// internal.ITextViewerCollection
-			void	addTextViewer(viewers::TextViewer& viewer) throw();
-			void	removeTextViewer(viewers::TextViewer& viewer) throw();
+			void addTextViewer(viewers::TextViewer& viewer) throw();
+			void removeTextViewer(viewers::TextViewer& viewer) throw();
 		private:
 			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;

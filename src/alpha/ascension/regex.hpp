@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_NO_REGEX
@@ -116,7 +116,7 @@ namespace ascension {
 			public:
 				// original interface
 				RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
-				static bool	unixLineMode, usesExtendedProperties;
+				static bool unixLineMode, usesExtendedProperties;
 				// minimal requirements for traits
 				typedef CodePoint char_type;
 				typedef std::size_t size_type;
@@ -152,37 +152,39 @@ namespace ascension {
 		private:
 			typedef typename regex::internal::MatchResultImpl<CodePointIterator> Base;
 		public:
-			// attributes
-			bool						hasAnchoringBounds() const throw();
-			bool						hasTransparentBounds() const throw();
-			const Pattern&				pattern() const throw();
-			Matcher&					region(CodePointIterator start, CodePointIterator end);
-			const CodePointIterator&	regionEnd() const throw();
-			const CodePointIterator&	regionStart() const throw();
-			Matcher&					useAnchoringBounds(bool b) throw();
-			Matcher&					usePattern(const Pattern& newPattern);
-			Matcher&					useTransparentBounds(bool b) throw();
+			// patterns
+			const Pattern& pattern() const throw();
+			Matcher& usePattern(const Pattern& newPattern);
+			// region
+			Matcher& region(CodePointIterator start, CodePointIterator end);
+			const CodePointIterator& regionEnd() const throw();
+			const CodePointIterator& regionStart() const throw();
+			// restrictions
+			bool hasAnchoringBounds() const throw();
+			bool hasTransparentBounds() const throw();
+			Matcher& useAnchoringBounds(bool b) throw();
+			Matcher& useTransparentBounds(bool b) throw();
 			// search
-			bool	find();
-			bool	find(CodePointIterator start);
-			bool	lookingAt();
-			bool	matches();
+			bool find();
+			bool find(CodePointIterator start);
+			bool lookingAt();
+			bool matches();
 			// replacement
 			template<typename OutputIterator>
-			Matcher&		appendReplacement(OutputIterator out, const String& replacement);
+			Matcher& appendReplacement(OutputIterator out, const String& replacement);
 			template<typename OutputIterator>
-			OutputIterator	appendTail(OutputIterator out) const;
-			String			replaceAll(const String& replacement);
-			String			replaceFirst(const String& replacement);
+			OutputIterator appendTail(OutputIterator out) const;
+			String replaceAll(const String& replacement);
+			String replaceFirst(const String& replacement);
 			// in-place replacement
-			Matcher&	endInplaceReplacement(CodePointIterator first, CodePointIterator last,
-							CodePointIterator regionFirst, CodePointIterator regionLast, CodePointIterator next);
-			String		replaceInplace(const String& replacement);
+			Matcher& endInplaceReplacement(CodePointIterator first, CodePointIterator last,
+				CodePointIterator regionFirst, CodePointIterator regionLast, CodePointIterator next);
+			String replaceInplace(const String& replacement);
 			// explicit reset
-			Matcher&	reset();
-			Matcher&	reset(CodePointIterator first, CodePointIterator last);
+			Matcher& reset();
+			Matcher& reset(CodePointIterator first, CodePointIterator last);
 			// result
-			std::auto_ptr<MatchResult<CodePointIterator> >	toMatchResult() const;
+			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const;
 		private:
 			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last);
 			template<typename OI> void appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&);
@@ -258,18 +260,18 @@ namespace ascension {
 		public:
 			virtual ~Pattern() throw();
 			// attributes
-			int		flags() const throw();
-			String	pattern() const;
+			int flags() const throw();
+			String pattern() const;
 			// compilation
-			static std::auto_ptr<const Pattern>			compile(const String& regex, int flags = 0);
+			static std::auto_ptr<const Pattern> compile(const String& regex, int flags = 0);
 			template<typename CodePointIterator>
-			std::auto_ptr<Matcher<CodePointIterator> >	matcher(CodePointIterator first, CodePointIterator last) const;
+			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const;
 			// tools
-			static bool	matches(const String& regex, const String& input);
+			static bool matches(const String& regex, const String& input);
 			template<typename CodePointIterator>
-			static bool	matches(const String& regex, CodePointIterator first, CodePointIterator last);
+			static bool matches(const String& regex, CodePointIterator first, CodePointIterator last);
 //			template<typename CodePointIterator, typename OutputIterator>
-//			std::size_t	split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
+//			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
 		protected:
 			Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax);
 		private:
@@ -284,12 +286,12 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 			MANAH_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
-			static std::auto_ptr<MigemoPattern>	compile(const Char* first, const Char* last, bool ignoreCase);
-			static void							initialize(const char* runtimePathName, const char* dictionaryPathName);
-			static bool							isMigemoInstalled() throw();
+			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool ignoreCase);
+			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
+			static bool isMigemoInstalled() throw();
 		private:
 			MigemoPattern(const Char* first, const Char* last, bool ignoreCase);
-			static void	install();
+			static void install();
 			static manah::AutoBuffer<char> runtimePathName_, dictionaryPathName_;
 		};
 #endif /* !ASCENSION_NO_MIGEMO */

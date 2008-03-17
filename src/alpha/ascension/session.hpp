@@ -39,20 +39,21 @@ namespace ascension {
 		public:
 			// constructor
 			ClipboardRing() throw();
-			// attributes
-			std::size_t	activeItem() const;
-			void		addListener(IClipboardRingListener& listener);
-			std::size_t	capacity() const throw();
-			bool		isEmpty() const throw();
-			std::size_t	numberOfItems() const throw();
-			void		removeListener(IClipboardRingListener& listener);
-			void		setActiveItem(std::size_t index);
-			void		setCapacity(std::size_t limit);
-			void		text(std::size_t index, String& text, bool& box) const;
+			// listeners
+			void addListener(IClipboardRingListener& listener);
+			void removeListener(IClipboardRingListener& listener);
+			// contents
+			std::size_t activeItem() const;
+			std::size_t capacity() const throw();
+			bool isEmpty() const throw();
+			std::size_t numberOfItems() const throw();
+			void setActiveItem(std::size_t index);
+			void setCapacity(std::size_t limit);
+			void text(std::size_t index, String& text, bool& box) const;
 			// operations
-			void	add(const String& text, bool box);
-			void	remove(std::size_t index);
-			void	removeAll();
+			void add(const String& text, bool box);
+			void remove(std::size_t index);
+			void removeAll();
 
 		private:
 			struct ClipText {
@@ -94,11 +95,11 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(InputSequenceCheckers);
 		public:
 			~InputSequenceCheckers();
-			void	add(std::auto_ptr<InputSequenceChecker> checker);
-			bool	check(const Char* first, const Char* last, CodePoint cp) const;
-			void	clear();
-			bool	isEmpty() const throw();
-			void	setKeyboardLayout(::HKL keyboardLayout) throw();
+			void add(std::auto_ptr<InputSequenceChecker> checker);
+			bool check(const Char* first, const Char* last, CodePoint cp) const;
+			void clear();
+			bool isEmpty() const throw();
+			void setKeyboardLayout(::HKL keyboardLayout) throw();
 		private:
 			std::list<InputSequenceChecker*> strategies_;
 			::HKL keyboardLayout_;
@@ -115,25 +116,25 @@ namespace ascension {
 			Session() throw();
 			~Session() throw();
 			// attributes
-			ClipboardRing&							clipboardRing() throw();
-			const ClipboardRing&					clipboardRing() const throw();
-			const std::vector<kernel::Document*>	documents() const throw();
-			searcher::IncrementalSearcher&			incrementalSearcher() throw();
-			const searcher::IncrementalSearcher&	incrementalSearcher() const throw();
-			InputSequenceCheckers*					inputSequenceCheckers() throw();
-			const InputSequenceCheckers*			inputSequenceCheckers() const throw();
+			ClipboardRing& clipboardRing() throw();
+			const ClipboardRing& clipboardRing() const throw();
+			const std::vector<kernel::Document*> documents() const throw();
+			searcher::IncrementalSearcher& incrementalSearcher() throw();
+			const searcher::IncrementalSearcher& incrementalSearcher() const throw();
+			InputSequenceCheckers* inputSequenceCheckers() throw();
+			const InputSequenceCheckers* inputSequenceCheckers() const throw();
 #ifndef ASCENSION_NO_MIGEMO
-			const WCHAR*							migemoPathName(bool runtime) throw();
+			const ::WCHAR* migemoPathName(bool runtime) throw();
 #endif /* !ASCENSION_NO_MIGEMO */
-			searcher::TextSearcher&					textSearcher() throw();
-			const searcher::TextSearcher&			textSearcher() const throw();
-			void									setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) throw();
+			searcher::TextSearcher& textSearcher() throw();
+			const searcher::TextSearcher& textSearcher() const throw();
+			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) throw();
 #ifndef ASCENSION_NO_MIGEMO
-			void									setMigemoPathName(const WCHAR* pathName, bool runtime);
+			void setMigemoPathName(const ::WCHAR* pathName, bool runtime);
 #endif /* !ASCENSION_NO_MIGEMO */
 			// operations
-			void	addDocument(kernel::Document& document);
-			void	removeDocument(kernel::Document& document);
+			void addDocument(kernel::Document& document);
+			void removeDocument(kernel::Document& document);
 
 		private:
 			std::vector<kernel::Document*> documents_;

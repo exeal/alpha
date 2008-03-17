@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -36,16 +36,15 @@ namespace ascension {
 			LiteralPattern(const String& pattern, Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
 			~LiteralPattern() throw();
 			// attributes
-			Direction	direction() const throw();
-			bool		isCaseSensitive() const throw();
+			Direction direction() const throw();
+			bool isCaseSensitive() const throw();
 			// operation
-			void	compile(const Char* first, const Char* last,
-						Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
-			void	compile(const String& pattern, Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
-			bool	matches(const text::CharacterIterator& target) const;
-			bool	search(const text::CharacterIterator& target,
-						std::auto_ptr<text::CharacterIterator>& matchedFirst,
-						std::auto_ptr<text::CharacterIterator>& matchedLast) const;
+			void compile(const Char* first, const Char* last,
+				Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
+			void compile(const String& pattern, Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
+			bool matches(const text::CharacterIterator& target) const;
+			bool search(const text::CharacterIterator& target,
+				std::auto_ptr<text::CharacterIterator>& matchedFirst, std::auto_ptr<text::CharacterIterator>& matchedLast) const;
 		private:
 			Direction direction_;
 			bool caseSensitive_;
@@ -160,32 +159,35 @@ namespace ascension {
 			// constructors.
 			TextSearcher();
 			virtual ~TextSearcher();
-			// attributes
-			bool					isLastPatternMatched() const throw();
-			bool					isMigemoAvailable() const throw();
-			static bool				isRegexAvailable() throw();
-			std::size_t				numberOfStoredPatterns() const throw();
-			std::size_t				numberOfStoredReplacements() const throw();
-			const SearchOptions&	options() const throw();
-			const String&			pattern(std::size_t index = 0) const;
-			const String&			replacement(std::size_t index = 0) const;
-			void					setMaximumNumberOfStoredStrings(std::size_t number) throw();
-			void					setOptions(const SearchOptions& options) throw();
-			void					setPattern(const String& pattern, bool dontRemember = false);
-			void					setReplacement(const String& replacement);
+			// pattern/replacement
+			std::size_t numberOfStoredPatterns() const throw();
+			std::size_t numberOfStoredReplacements() const throw();
+			const String& pattern(std::size_t index = 0) const;
+			const String& replacement(std::size_t index = 0) const;
+			void setMaximumNumberOfStoredStrings(std::size_t number) throw();
+			void setPattern(const String& pattern, bool dontRemember = false);
+			void setReplacement(const String& replacement);
+			// options
+			// result
+			bool isLastPatternMatched() const throw();
+			// services
+			bool isMigemoAvailable() const throw();
+			static bool isRegexAvailable() throw();
+			const SearchOptions& options() const throw();
+			void setOptions(const SearchOptions& options) throw();
 			// operations
-			void		abortInteractiveReplacement();
-			std::size_t	replaceAll(kernel::Document& document,
-							const kernel::Region& scope, IInteractiveReplacementCallback* callback) const;
-			bool		search(const kernel::Document& document, const kernel::Position& from,
-							const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
+			void abortInteractiveReplacement();
+			std::size_t replaceAll(kernel::Document& document,
+				const kernel::Region& scope, IInteractiveReplacementCallback* callback) const;
+			bool search(const kernel::Document& document, const kernel::Position& from,
+				const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
 			template<typename InputIterator>
-			void		setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
+			void setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
 		private:
-			bool	checkBoundary(const kernel::DocumentCharacterIterator& first, const kernel::DocumentCharacterIterator& last) const;
-			void	clearPatternCache();
-			void	compilePattern(Direction direction) const;
-			void	pushHistory(const String& s, bool forReplacements);
+			bool checkBoundary(const kernel::DocumentCharacterIterator& first, const kernel::DocumentCharacterIterator& last) const;
+			void clearPatternCache();
+			void compilePattern(Direction direction) const;
+			void pushHistory(const String& s, bool forReplacements);
 		private:
 			std::auto_ptr<LiteralPattern> literalPattern_;
 #ifndef ASCENSION_NO_REGEX
@@ -270,28 +272,28 @@ namespace ascension {
 			// constructor
 			IncrementalSearcher() throw();
 			// attributes
-			bool					canUndo() const throw();
-			Direction				direction() const;
-			bool					isRunning() const throw();
-			const kernel::Region&	matchedRegion() const;
-			const String&			pattern() const;
+			bool canUndo() const throw();
+			Direction direction() const;
+			bool isRunning() const throw();
+			const kernel::Region& matchedRegion() const;
+			const String& pattern() const;
 			// operations
-			void	abort();
-			bool	addCharacter(Char c);
-			bool	addCharacter(CodePoint c);
-			bool	addString(const Char* first, const Char* last);
-			bool	addString(const String& text);
-			void	end();
-			bool	next(Direction direction);
-			void	reset();
-			void	start(kernel::Document& document, const kernel::Position& from,
-						TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
-			bool	undo();
+			void abort();
+			bool addCharacter(Char c);
+			bool addCharacter(CodePoint c);
+			bool addString(const Char* first, const Char* last);
+			bool addString(const String& text);
+			void end();
+			bool next(Direction direction);
+			void reset();
+			void start(kernel::Document& document, const kernel::Position& from,
+				TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
+			bool undo();
 		private:
-			bool	update();
+			bool update();
 			// kernel.IDocumentListener
-			bool	documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			void	documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 
 		private:
 			void checkRunning() const;

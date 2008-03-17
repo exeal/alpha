@@ -51,8 +51,8 @@ namespace ascension {
 			 */
 			template<typename CharType>
 			struct PropertyNameComparer {
-				bool		operator()(const CharType* p1, const CharType* p2) const;
-				static int	compare(const CharType* p1, const CharType* p2);
+				bool operator()(const CharType* p1, const CharType* p2) const;
+				static int compare(const CharType* p1, const CharType* p2);
 			};
 
 			/// An invalid property value.
@@ -129,8 +129,8 @@ namespace ascension {
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
 				template<int superCategory>
-				static bool	is(int subCategory);
-				static int	of(CodePoint cp) throw();
+				static bool is(int subCategory);
+				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
@@ -198,7 +198,7 @@ namespace ascension {
 					SUPPLEMENTARY_PRIVATE_USE_AREA_A, SUPPLEMENTARY_PRIVATE_USE_AREA_B, LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
@@ -240,8 +240,8 @@ namespace ascension {
 					IOTA_SUBSCRIPT			= 240	///< Below (iota subscript) (240).
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	forName(const Char* name);
-				static int	of(CodePoint cp) throw();
+				static int forName(const Char* name);
+				static int of(CodePoint cp) throw();
 			private:
 				static const Char SRC_UCS2[];
 				static const CodePoint SRC_UCS4[];
@@ -279,7 +279,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
@@ -301,7 +301,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const Names names_[];
 				friend class PropertyBase<HangulSyllableType>;
@@ -327,9 +327,9 @@ namespace ascension {
 					TERMINAL_PUNCTUATION, UNIFIED_IDEOGRAPH, UPPERCASE, VARIATION_SELECTOR, WHITE_SPACE,
 					XID_CONTINUE, XID_START, LAST_VALUE
 				};
-				static bool	is(CodePoint cp, int property);
+				static bool is(CodePoint cp, int property);
 				template<int property>
-				static bool	is(CodePoint cp) throw();
+				static bool is(CodePoint cp) throw();
 			private:
 				static const Names names_[];
 				friend class PropertyBase<BinaryProperty>;
@@ -402,7 +402,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
@@ -463,7 +463,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
@@ -480,7 +480,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const Names names_[];
 				friend class PropertyBase<GraphemeClusterBreak>;
@@ -495,9 +495,9 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp,
-								const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
-								const std::locale& lc = std::locale::classic()) throw();
+				static int of(CodePoint cp,
+					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
+					const std::locale& lc = std::locale::classic()) throw();
 			private:
 				static const Names names_[];
 				friend class PropertyBase<WordBreak>;
@@ -512,7 +512,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int	of(CodePoint cp) throw();
+				static int of(CodePoint cp) throw();
 			private:
 				static const Names names_[];
 				friend class PropertyBase<SentenceBreak>;
