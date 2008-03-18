@@ -209,6 +209,7 @@ namespace ascension {
 			int ascent() const throw();
 			int averageCharacterWidth() const throw();
 			int descent() const throw();
+			int lineGap() const throw();
 			int lineHeight() const throw();
 
 			// primary font and alternatives
@@ -886,6 +887,12 @@ inline std::auto_ptr<manah::win32::gdi::DC> FontSelector::deviceContext() const 
 
 /// Returns the font linking is enabled.
 inline bool FontSelector::enablesFontLinking() const throw() {return linkedFonts_ != 0;}
+
+/**
+ * Returns the ideal line gap (external leading of the primary font).
+ * @see LayoutSettings#lineSpacing
+ */
+inline int FontSelector::lineGap() const throw() {return externalLeading_;}
 
 /**
  * Returns the height of the lines.

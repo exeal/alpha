@@ -54,7 +54,7 @@ namespace {
 	}
 } // namespace @0
 
-::LANGID ascension::getUserDefaultUILanguage() throw() {
+::LANGID ASCENSION_FASTCALL ascension::getUserDefaultUILanguage() throw() {
 	// 参考 (いずれも Global Dev)
 	// Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
 	// Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
@@ -117,8 +117,8 @@ const LineStyle LineStyle::NULL_STYLE = {0, 0};
 class viewers::internal::TextViewerAccessibleProxy :
 		virtual public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
-			::IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&::LIBID_Accessibility, &::IID_IAccessible>
-		> {
+			::IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&::LIBID_Accessibility, &::IID_IAccessible> >,
+		virtual public ::IOleWindow {
 	// IAccessible の実装については以下を参考にした:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
 	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
@@ -139,6 +139,7 @@ public:
 	MANAH_BEGIN_INTERFACE_TABLE()
 		MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IAccessible)
 		MANAH_IMPLEMENTS_INTERFACE(IDispatch)
+		MANAH_IMPLEMENTS_INTERFACE(IOleWindow)
 	MANAH_END_INTERFACE_TABLE()
 	// IAccessible
 	STDMETHODIMP get_accParent(::IDispatch** ppdispParent);
@@ -162,6 +163,9 @@ public:
 	STDMETHODIMP accDoDefaultAction(::VARIANT varChild);
 	STDMETHODIMP put_accName(::VARIANT varChild, ::BSTR szName);
 	STDMETHODIMP put_accValue(::VARIANT varChild, ::BSTR szValue);
+	// IOleWindow
+	STDMETHODIMP GetWindow(::HWND* phwnd);
+	STDMETHODIMP ContextSensitiveHelp(::BOOL fEnterMode);
 private:
 	// IDocumentListener
 	bool documentAboutToBeChanged(const Document& document, const DocumentChange& change);
@@ -3084,6 +3088,11 @@ STDMETHODIMP TextViewerAccessibleProxy::accSelect(long flagsSelect, VARIANT varC
 		defaultServer_->accSelect(flagsSelect, varChild) : E_INVALIDARG;
 }
 
+/// @see IOleWindow#ContextSensitiveHelp
+STDMETHODIMP TextViewerAccessibleProxy::ContextSensitiveHelp(::BOOL fEnterMode) {
+	return S_OK;	// not supported
+}
+
 /// Informs that the viewer is inavailable to the proxy.
 void TextViewerAccessibleProxy::dispose() {
 	if(!available_)
@@ -3226,6 +3235,14 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* psz
 	writeDocumentToStream(s, view_.document(), view_.document().region());
 	*pszValue = ::SysAllocString(s.str().c_str());
 	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
+}
+
+/// @see IOleWindow#GetWindow
+STDMETHODIMP TextViewerAccessibleProxy::GetWindow(::HWND* phwnd) {
+	VERIFY_AVAILABILITY();
+	MANAH_VERIFY_POINTER(phwnd);
+	*phwnd = view_.getHandle();
+	return S_OK;
 }
 
 /// @see IAccessible#put_accName
@@ -3456,9 +3473,9 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
 		const Alignment alignment = viewer.configuration().alignment;
-		const ulong columns =
-			(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ?
-				viewer.textRenderer().longestLineWidth() / viewer.textRenderer().averageCharacterWidth() : 0;
+		const int dx = viewer.textRenderer().averageCharacterWidth();
+		assert(dx > 0);
+		const ulong columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ? viewer.textRenderer().longestLineWidth() / dx : 0;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
 //		assert(horizontal.rate != 0);
 		const int oldMaximum = horizontal.maximum;

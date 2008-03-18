@@ -1195,23 +1195,30 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& doc = *document();
 
-//	// delete the partitions encompassed with the deleted region
-//	if(change.isDeletion()) {
-//		erasePartitions(change.region().beginning(), change.region().end());
-//	}
-
 	// move the partitions adapting to the document change
-	for(size_t p = 0, c = partitions_.size(); p < c; ++p) {
-		partitions_[p]->start = updatePosition(partitions_[p]->start, change, FORWARD);
-		partitions_[p]->tokenStart = updatePosition(partitions_[p]->tokenStart, change, FORWARD);
+	{
+		bool previousWasEmpty = false;
+		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
+			Partition& p = *partitions_[i];
+			p.start = updatePosition(p.start, change, FORWARD);
+			p.tokenStart = updatePosition(p.tokenStart, change, FORWARD);
+			if(p.start == partitions_[i - 1]->start) {
+				if(previousWasEmpty) {	// empty partitions were continued
+					partitions_.erase(i - 1);
+					--i;
+					--c;
+				}
+				previousWasEmpty = true;
+			} else
+				previousWasEmpty = false;
+		}
 	}
+	verify();
 
 	// compute partitioning for the affected region using the registered rules
 	vector<Partition*> newPartitions;	// newly computed partitions for the affected region
 	DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
 		Region(Position(change.region().beginning().line, 0), doc.region().end()));
-//	size_t partition = partitionAt(p.tell());	// the partition in which 'p' walks
-//	const Partition* nextPartition = (partition + 1 < partitions_.size()) ? partitions_[partition + 1] : 0;
 	ContentType contentType, destination;
 	contentType = (i.tell().line == 0) ? DEFAULT_CONTENT_TYPE
 		: partitions_[partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1)))]->contentType;
