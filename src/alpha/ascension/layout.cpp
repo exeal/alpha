@@ -2,7 +2,7 @@
  * @file layout.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "layout.hpp"
@@ -344,7 +344,7 @@ namespace {
  * rendered incorrectly if it is presented at the boundary. The maximum length of a run is 1024.
  *
  * @note This class is not intended to derive.
- * @see LineLayoutBuffer#getLineLayout, LineLayoutBuffer::getLineLayoutIfCached
+ * @see LineLayoutBuffer#lineLayout, LineLayoutBuffer::lineLayoutIfCached
  */
 
 /**
@@ -399,7 +399,7 @@ LineLayout::~LineLayout() throw() {
  * @return the embedding level
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-uchar LineLayout::bidiEmbeddingLevel(length_t column) const {
+byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
 			throw kernel::BadPositionException();
@@ -1006,7 +1006,7 @@ LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const throw() 
 
 /// Returns the line pitch in pixels.
 inline int LineLayout::linePitch() const throw() {
-	return lip_.getFontSelector().lineHeight() + lip_.getLayoutSettings().lineSpacing;
+	return lip_.getFontSelector().lineHeight() + max(lip_.getLayoutSettings().lineSpacing, lip_.getFontSelector().lineGap());
 }
 
 /**
@@ -1191,10 +1191,11 @@ int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const throw() {
  * @param x the x coordinate of the point. distance from the left edge of the first subline
  * @param y the y coordinate of the point. distance from the top edge of the first subline
  * @param[out] trailing the trailing buffer
+ * @param[out] outside true if the specified point is outside of the layout. optional
  * @return the character offset
  * @see #location
  */
-length_t LineLayout::offset(int x, int y, length_t& trailing) const throw() {
+length_t LineLayout::offset(int x, int y, length_t& trailing, bool* outside /* = 0 */) const throw() {
 	if(text().empty())
 		return trailing = 0;
 
@@ -1211,6 +1212,8 @@ length_t LineLayout::offset(int x, int y, length_t& trailing) const throw() {
 	int cx = sublineIndent(subline);
 	if(x <= cx) {	// on the left margin
 		trailing = 0;
+		if(outside != 0)
+			*outside = true;
 		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
 		return firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length());
 	}
@@ -1221,11 +1224,15 @@ length_t LineLayout::offset(int x, int y, length_t& trailing) const throw() {
 			::ScriptXtoCP(x - cx, static_cast<int>(run.length()), run.numberOfGlyphs(), run.clusters(),
 				run.visualAttributes(), (run.justifiedAdvances() == 0) ? run.advances() : run.justifiedAdvances(), &run.analysis, &cp, &t);
 			trailing = static_cast<length_t>(t);
+			if(outside != 0)
+				*outside = false;
 			return run.column + static_cast<length_t>(cp);
 		}
 		cx += run.totalWidth();
 	}
 	trailing = 0;	// on the right margin
+	if(outside != 0)
+		*outside = true;
 	return runs_[lastRun - 1]->column + ((runs_[lastRun - 1]->analysis.fRTL == 0) ? runs_[lastRun - 1]->length() : 0);
 }
 
@@ -2244,9 +2251,12 @@ Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& po
  * Offsets visual line.
  * @param[in,out] line the logical line
  * @param[in,out] subline the visual subline
- * @param offset the offset
+ * @param[in] offset the offset
+ * @param[out] overflowedOrUnderflowed true if absolute value of @a offset is too large so that
+ * the results were snapped to the beginning or the end of the document. optional
  */
-void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline, signed_length_t offset) const throw() {
+void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline,
+		signed_length_t offset, bool* overflowedOrUnderflowed) const throw() {
 	if(offset > 0) {
 		if(subline + offset < numberOfSublinesOfLine(line))
 			subline += offset;
@@ -2258,6 +2268,8 @@ void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline, signe
 			subline = numberOfSublinesOfLine(line) - 1;
 			if(offset < 0)
 				subline += offset;
+			if(overflowedOrUnderflowed != 0)
+				*overflowedOrUnderflowed = offset > 0;
 		}
 	} else if(offset < 0) {
 		if(static_cast<length_t>(-offset) <= subline)
@@ -2267,6 +2279,8 @@ void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline, signe
 			while(offset < 0 && line > 0)
 				offset += static_cast<signed_length_t>(numberOfSublinesOfLine(--line));
 			subline = (offset > 0) ? offset : 0;
+			if(overflowedOrUnderflowed != 0)
+				*overflowedOrUnderflowed = offset > 0;
 		}
 	}
 }
@@ -2730,7 +2744,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 ::HFONT FontSelector::fontForShapingControls() const throw() {
 	if(shapingControlsFont_ == 0)
 		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
-			ascent_ + descent_, 0, 0, 0, FW_REGULAR, false, false, false,
+			-(ascent_ + descent_ - internalLeading_), 0, 0, 0, FW_REGULAR, false, false, false,
 			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
 	return shapingControlsFont_;
 }
@@ -2746,7 +2760,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 	Fontset& fs = const_cast<Fontset&>(fontset);
 	::HFONT& font = bold ? (italic ? fs.boldItalic : fs.bold) : (italic ? fs.italic : fs.regular);
 	if(font == 0) {
-		font = ::CreateFontW(-(ascent_ + descent_),
+		font = ::CreateFontW(-(ascent_ + descent_ - internalLeading_),
 			0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
 			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
 		auto_ptr<DC> dc = deviceContext();
@@ -2757,7 +2771,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		// adjust to the primary ascent and descent
 		if(tm.tmAscent > ascent_ && tm.tmAscent > 0) {	// we don't consider the descents...
 			::DeleteObject(font);
-			font = ::CreateFontW(-::MulDiv(ascent_ + descent_, ascent_, tm.tmAscent),
+			font = ::CreateFontW(-::MulDiv(ascent_ + descent_ - internalLeading_, ascent_, tm.tmAscent),
 				0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
 				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
 		}
@@ -2817,6 +2831,7 @@ void FontSelector::linkPrimaryFont() throw() {
 
 void FontSelector::resetPrimaryFont(DC& dc, ::HFONT font) {
 	assert(font != 0);
+	// update the font metrics
 	::TEXTMETRICW tm;
 	HFONT oldFont = dc.selectObject(primaryFont_->regular = font);
 	dc.getTextMetrics(tm);
@@ -2824,7 +2839,7 @@ void FontSelector::resetPrimaryFont(DC& dc, ::HFONT font) {
 	descent_ = tm.tmDescent;
 	internalLeading_ = tm.tmInternalLeading;
 	externalLeading_ = tm.tmExternalLeading;
-	averageCharacterWidth_ = tm.tmAveCharWidth;
+	averageCharacterWidth_ = (tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100);
 	dc.selectObject(oldFont);
 	// real name is needed for font linking
 	::LOGFONTW lf;
@@ -2985,10 +3000,10 @@ int TextRenderer::lineIndent(length_t line, length_t subline) const {
 
 /**
  * Returns the pitch of each lines (height + space).
- * @see FontSelector#getLineHeight
+ * @see FontSelector#lineHeight
  */
 int TextRenderer::linePitch() const throw() {
-	return lineHeight() + getLayoutSettings().lineSpacing;
+	return lineHeight() + max(getLayoutSettings().lineSpacing, lineGap());
 }
 
 /**
