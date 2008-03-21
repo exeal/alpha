@@ -1580,7 +1580,7 @@ void LineLayout::shape() throw() {
 			// 3. the linked fonts
 			if(hr != S_OK) {
 				for(size_t i = 0; i < lip_.getFontSelector().numberOfLinkedFonts(); ++i) {
-					run->font = lip_.getFontSelector().linkedFont(i);
+					run->font = lip_.getFontSelector().linkedFont(i, run->style.bold, run->style.italic);
 					ASCENSION_CHECK_FAILED_FONTS()
 					if(!skip) {
 						dc->selectObject(run->font);
@@ -2558,9 +2558,11 @@ namespace {
 struct FontSelector::Fontset {
 	MANAH_UNASSIGNABLE_TAG(Fontset);
 public:
-	WCHAR faceName[LF_FACESIZE];
-	HFONT regular, bold, italic, boldItalic;
-	explicit Fontset(const WCHAR* name) throw() : regular(0), bold(0), italic(0), boldItalic(0) {
+	::WCHAR faceName[LF_FACESIZE];
+	::HFONT regular, bold, italic, boldItalic;
+	explicit Fontset(const ::WCHAR* name) : regular(0), bold(0), italic(0), boldItalic(0) {
+		if(wcslen(name) >= LF_FACESIZE)
+			throw length_error("name");
 		wcscpy(faceName, name);
 	}
 	Fontset(const Fontset& rhs) throw() : regular(0), bold(0), italic(0), boldItalic(0) {
@@ -2569,7 +2571,9 @@ public:
 	~Fontset() throw() {
 		clear(L"");
 	}
-	void clear(const WCHAR* newName = 0) throw() {
+	void clear(const WCHAR* newName = 0) {
+		if(newName != 0 && wcslen(newName) >= LF_FACESIZE)
+			throw length_error("newName");
 		::DeleteObject(regular);
 		::DeleteObject(bold);
 		::DeleteObject(italic);
@@ -2794,6 +2798,41 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 	return fontInFontset(*linkedFonts_->at(index), bold, italic);
 }
 
+namespace {
+	manah::AutoBuffer<::WCHAR> ASCENSION_FASTCALL mapFontFileNameToTypeface(const ::WCHAR* fileName) {
+		assert(fileName != 0);
+		::HKEY key;
+		long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
+			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_QUERY_VALUE, &key);
+		if(e != ERROR_SUCCESS)
+			e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+				L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_QUERY_VALUE, &key);
+		if(e == ERROR_SUCCESS) {
+			::DWORD maximumValueNameLength, maximumValueBytes;
+			e = ::RegQueryInfoKeyW(key, 0, 0, 0, 0, 0, 0, 0, &maximumValueNameLength, &maximumValueBytes, 0, 0);
+			if(e == ERROR_SUCCESS) {
+				const size_t fileNameLength = wcslen(fileName);
+				manah::AutoBuffer<::WCHAR> valueName(new ::WCHAR[maximumValueNameLength + 1]);
+				manah::AutoBuffer<::BYTE> value(new ::BYTE[maximumValueBytes]);
+				::DWORD valueNameLength, valueBytes, type;
+				for(::DWORD index = 0; ; ++index) {
+					e = ::RegEnumValueW(key, index, valueName.get(), &valueNameLength, 0, &type, value.get(), &valueBytes);
+					if(e == ERROR_SUCCESS) {
+						if(type == REG_SZ) {
+							::RegCloseKey(key);
+							manah::AutoBuffer<::WCHAR> temp(new ::WCHAR[valueBytes]);
+							memcpy(reinterpret_cast<::BYTE*>(temp.get()), value.get(), valueBytes);
+							return temp;
+						}
+					} else	// ERROR_NO_MORE_ITEMS
+						break;
+				}
+			}
+		}
+		return manah::AutoBuffer<::WCHAR>(0);
+	}
+} // namespace @0
+
 ///
 void FontSelector::linkPrimaryFont() throw() {
 	assert(linkedFonts_ != 0);
@@ -2813,14 +2852,17 @@ void FontSelector::linkPrimaryFont() throw() {
 		if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_->faceName, 0, &type, 0, &bytes)) {
 			manah::AutoBuffer<::BYTE> data(new ::BYTE[bytes]);
 			if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_->faceName, 0, &type, data.get(), &bytes)) {
-				const wchar_t* p = reinterpret_cast<wchar_t*>(data.get());
-				const wchar_t* const last = p + bytes / sizeof(wchar_t);
-				while(true) {
-					p = find(p, last, L',');
-					if(p == last)
-						break;
-					linkedFonts_->push_back(new Fontset(++p));
-					p = find(p, last, 0);
+				const ::WCHAR* sz = reinterpret_cast<::WCHAR*>(data.get());
+				const ::WCHAR* const e = sz + bytes / sizeof(::WCHAR);
+				for(; sz < e; sz += wcslen(sz) + 1) {
+					const ::WCHAR* comma = wcschr(sz, L',');
+					if(comma != 0 && comma[1] != 0)	// "<file-name>,<typeface>"
+						linkedFonts_->push_back(new Fontset(comma + 1));
+					else {	// "<file-name>"
+						manah::AutoBuffer<::WCHAR> typeface(mapFontFileNameToTypeface(sz));
+						if(typeface.get() != 0)
+							linkedFonts_->push_back(new Fontset(typeface.get()));
+					}
 				}
 			}
 		}

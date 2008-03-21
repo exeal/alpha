@@ -1195,22 +1195,33 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& doc = *document();
 
-	// move the partitions adapting to the document change
-	{
-		bool previousWasEmpty = false;
+	// move the partitions adapting to the document change. this does not affect partitions out of
+	// the deleted region
+	if(change.isDeletion()) {
+		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
+			Partition& p = *partitions_[i];
+			if(p.start < change.region().beginning())
+				continue;
+			else if(p.start > change.region().end()) {
+				p.start = updatePosition(p.start, change, FORWARD);
+				p.tokenStart = updatePosition(p.tokenStart, change, FORWARD);
+			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.region().end()) {
+				// this partition is encompassed with the deleted region
+				partitions_.erase(i);
+				if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
+					partitions_.erase(i);
+					--i, --c;
+				}
+				--i, --c;
+			} else
+				// this partition will be erased later
+				p.start = p.tokenStart = change.region().beginning();
+		}
+	} else {
 		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
 			Partition& p = *partitions_[i];
 			p.start = updatePosition(p.start, change, FORWARD);
 			p.tokenStart = updatePosition(p.tokenStart, change, FORWARD);
-			if(p.start == partitions_[i - 1]->start) {
-				if(previousWasEmpty) {	// empty partitions were continued
-					partitions_.erase(i - 1);
-					--i;
-					--c;
-				}
-				previousWasEmpty = true;
-			} else
-				previousWasEmpty = false;
 		}
 	}
 	verify();
