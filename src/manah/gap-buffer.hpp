@@ -93,13 +93,7 @@ namespace manah {
 		}
 		void insert(Iterator position, SizeType count, ConstReference value) {insert(position.offset(), count, value);}
 		template<typename InputIterator> void insert(SizeType index, InputIterator first, InputIterator last) {
-			makeGapAt(first_ + size());
-			makeGapAt(first_ + index);
-			if(gap() <= last - first)
-				reallocate(std::max(capacity() + (last - first) + 1, capacity() * 2));
-			std::memcpy(gapFirst_, first, (last - first) * sizeof(ValueType));
-			gapFirst_ += last - first;
-		}
+			return insert(index, first, last, PointerType<InputIterator>::Tag());}
 		template<typename InputIterator>
 		void insert(ConstIterator position, InputIterator first, InputIterator last) {insert(position.offset(), first, last);}
 		void clear() {erase(begin(), end());}
@@ -200,7 +194,27 @@ namespace manah {
 		};
 	private:
 		// helpers
+		template<typename U> struct PointerType {typedef void* Tag;};
+		template<typename U> struct PointerType<U*> {typedef int Tag;};
 		DifferenceType gap() const throw() {return gapLast_ - gapFirst_;}
+		template<typename InputIterator> void insert(SizeType index, InputIterator first, InputIterator last, int) {
+			makeGapAt(first_ + size());
+			makeGapAt(first_ + index);
+			const SizeType c = last - first;
+			if(gap() <= c)
+				reallocate(std::max(capacity() + c + 1, capacity() * 2));
+			std::memcpy(gapFirst_, first, c * sizeof(ValueType));
+			gapFirst_ += c;
+		}
+		template<typename InputIterator> void insert(SizeType index, InputIterator first, InputIterator last, void*) {
+			makeGapAt(first_ + size());
+			makeGapAt(first_ + index);
+			const DifferenceType c = std::distance(first, last);
+			if(gap() <= c)
+				reallocate(std::max(capacity() + c + 1, capacity() * 2));
+			std::copy(first, first + c, gapFirst_);
+			gapFirst_ += c;
+		}
 		void makeGapAt(Pointer position) {
 			if(position < gapFirst_) {
 				gapLast_ -= gapFirst_ - position;
