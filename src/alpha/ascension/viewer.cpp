@@ -2106,26 +2106,13 @@ void TextViewer::onPaint(PaintDC& dc) {
 	mapClientYToLine(paintRect.top, &line, &subline);
 	int y = mapLineToClientY(line, true);
 	if(line < lines) {
-#ifdef _DEBUG
-		DumpContext dout;
-		if(DIAGNOSE_INHERENT_DRAWING)
-			dout << L"lines : ";
-#endif /* _DEBUG */
 		while(y < paintRect.bottom && line < lines) {
 			// draw a logical line
-#ifdef _DEBUG
-			if(DIAGNOSE_INHERENT_DRAWING)
-				dout << static_cast<ulong>(line) << ",";
-#endif /* _DEBUG */
 			LineLayout::Selection selection(*caret_, selectionColor);
 			renderer_->renderLine(line, dc, getDisplayXOffset(line), y, dc.getPaintStruct().rcPaint, lineRect, &selection);
 			y += linePitch * static_cast<int>(renderer_->numberOfSublinesOfLine(line++));
 			subline = 0;
 		}
-#ifdef _DEBUG
-		if(DIAGNOSE_INHERENT_DRAWING)
-			dout << L"\n";
-#endif /* _DEBUG */
 	}
 
 	// paint behind the last
@@ -2536,7 +2523,8 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		DumpContext() << L"inv : " << static_cast<ulong>(first) << L".." << static_cast<ulong>(last) << L"\n";
+		DumpContext() << L"@TextViewer.redrawLines invalidates lines ["
+			<< static_cast<ulong>(first) << L".." << static_cast<ulong>(last) << L"]\n";
 #endif /* _DEBUG */
 
 	::RECT rect;
@@ -2840,7 +2828,7 @@ void TextViewer::updateCaretPosition() {
 	if(!hasFocus() || isFrozen())
 		return;
 
-	::POINT pt = clientXYForCharacter(caret(), true, LineLayout::LEADING);
+	::POINT pt = clientXYForCharacter(caret(), false, LineLayout::LEADING);
 	const ::RECT margins = textAreaMargins();
 	::RECT textArea;
 	getClientRect(textArea);

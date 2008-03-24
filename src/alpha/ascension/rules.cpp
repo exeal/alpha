@@ -1210,9 +1210,11 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 				partitions_.erase(i);
 				if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
 					partitions_.erase(i);
-					--i, --c;
+					--c;
 				}
-				--i, --c;
+				--i;
+				if(--c == 1)
+					break;
 			} else
 				// this partition will be erased later
 				p.start = p.tokenStart = change.region().beginning();

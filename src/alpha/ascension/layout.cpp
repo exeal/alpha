@@ -554,6 +554,11 @@ void LineLayout::draw(length_t subline, DC& dc,
 	if(subline >= numberOfSublines_)
 		throw BadPositionException();
 
+#ifdef _DEBUG
+	if(DIAGNOSE_INHERENT_DRAWING)
+		manah::win32::DumpContext() << L"@LineLayout.draw draws line " << lineNumber_ << L" (" << subline << L")\n";
+#endif /* _DEBUG */
+
 	// クリッピングによるマスキングを利用した選択テキストの描画は以下の記事を参照
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
@@ -584,8 +589,10 @@ void LineLayout::draw(length_t subline, DC& dc,
 		const String& line = text();
 		::HRESULT hr;
 		length_t selStart, selEnd;
-		const bool sel = (selection != 0) ?
-			selection->caret.selectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd) : false;
+		if(selection != 0) {
+			if(!selection->caret.selectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd))
+				selection = 0;
+		}
 
 		// paint between sublines
 		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + dy, clipRect.bottom)));
@@ -613,13 +620,15 @@ void LineLayout::draw(length_t subline, DC& dc,
 			} else {
 				const ::COLORREF bgColor = (lineColor.background == STANDARD_COLOR) ?
 					internal::systemColors.getReal(run.style.color.background, SYSTEM_COLOR_MASK | COLOR_WINDOW) : marginColor;
-				if(!sel || run.column >= selEnd || run.column + run.length() <= selStart)	// no selection in this run
+				if(selection == 0 || run.column >= selEnd || run.column + run.length() <= selStart)
+					// no selection in this run
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, bgColor);
-				else if(sel && run.column >= selStart && run.column + run.length() <= selEnd) {	// this run is selected entirely
-					assert(selection != 0);
+				else if(selection != 0 && run.column >= selStart && run.column + run.length() <= selEnd) {
+					// this run is selected entirely
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, selection->color.background);
 					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
-				} else {	// selected partially
+				} else {
+					// selected partially
 					int left, right;
 					hr = run.x(max(selStart, run.column) - run.column, false, left);
 					hr = run.x(min(selEnd, run.column + run.length()) - 1 - run.column, true, right);
@@ -659,7 +668,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 				internal::systemColors.getReal((lineColor.foreground == STANDARD_COLOR) ?
 					run.style.color.foreground : lineColor.foreground, COLOR_WINDOWTEXT | SYSTEM_COLOR_MASK);
 			if(line[run.column] != L'\t') {
-				if(!sel || run.overhangs() || !(run.column >= selStart && run.column + run.length() <= selEnd)) {
+				if(selection == 0 || run.overhangs() || !(run.column >= selStart && run.column + run.length() <= selEnd)) {
 					dc.selectObject(run.font);
 					dc.setTextColor(foregroundColor);
 					runRect.left = x;
@@ -683,7 +692,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
 				// text
-				if(sel && line[run.column] != L'\t'
+				if(selection != 0 && line[run.column] != L'\t'
 						&& (run.overhangs() || (run.column < selEnd && run.column + run.length() > selStart))) {
 					dc.selectObject(run.font);
 					dc.setTextColor(selection->color.foreground);
@@ -936,17 +945,27 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	}
 
 	// itemize
+	static ::SCRIPT_ITEM fastItems[128];
 	int expectedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2);
 	::SCRIPT_ITEM* items;
 	int numberOfItems;
-	while(true) {
-		items = new ::SCRIPT_ITEM[expectedNumberOfRuns];
+	if(expectedNumberOfRuns <= countof(fastItems)) {
 		hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
-			expectedNumberOfRuns, &control, &initialState, items, &numberOfItems);
-		if(hr != E_OUTOFMEMORY)	// expectedNumberOfRuns was enough...
-			break;
-		delete[] items;
-		expectedNumberOfRuns *= 2;
+			expectedNumberOfRuns = countof(fastItems), &control, &initialState, items = fastItems, &numberOfItems);
+		if(hr == E_OUTOFMEMORY)
+			expectedNumberOfRuns *= 2;
+	} else
+		hr = E_OUTOFMEMORY;
+	if(hr == E_OUTOFMEMORY) {
+		while(true) {
+			items = new ::SCRIPT_ITEM[expectedNumberOfRuns];
+			hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
+				expectedNumberOfRuns, &control, &initialState, items, &numberOfItems);
+			if(hr != E_OUTOFMEMORY)	// expectedNumberOfRuns was enough...
+				break;
+			delete[] items;
+			expectedNumberOfRuns *= 2;
+		}
 	}
 	if(c.disablesDeprecatedFormatCharacters) {
 		for(int i = 0; i < numberOfItems; ++i) {
@@ -977,7 +996,9 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 		simpleStyle.count = 1;
 		merge(items, numberOfItems, simpleStyle);
 	}
-	delete[] items;
+
+	if(items != fastItems)
+		delete[] items;
 }
 
 /// Justifies the wrapped visual lines.
@@ -2117,6 +2138,7 @@ inline void LineLayoutBuffer::invalidate(length_t line) throw() {
  */
 const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 #ifdef TRACE_LAYOUT_CACHES
+	manah::win32::DumpContext dout;
 	dout << "finding layout for line " << line;
 #endif
 	if(line > lip_->getPresentation().document().numberOfLines())
@@ -2801,53 +2823,64 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 namespace {
 	manah::AutoBuffer<::WCHAR> ASCENSION_FASTCALL mapFontFileNameToTypeface(const ::WCHAR* fileName) {
 		assert(fileName != 0);
+		static const ::WCHAR KEY_NAME[] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
 		::HKEY key;
-		long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
-			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_QUERY_VALUE, &key);
+		long e = ::RegOpenKeyExW(HKEY_CURRENT_USER, KEY_NAME, 0, KEY_QUERY_VALUE, &key);
 		if(e != ERROR_SUCCESS)
-			e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-				L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_QUERY_VALUE, &key);
+			e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, KEY_NAME, 0, KEY_QUERY_VALUE, &key);
 		if(e == ERROR_SUCCESS) {
+			const size_t fileNameLength = wcslen(fileName);
 			::DWORD maximumValueNameLength, maximumValueBytes;
 			e = ::RegQueryInfoKeyW(key, 0, 0, 0, 0, 0, 0, 0, &maximumValueNameLength, &maximumValueBytes, 0, 0);
-			if(e == ERROR_SUCCESS) {
+			if(e == ERROR_SUCCESS && (maximumValueBytes / sizeof(::WCHAR)) - 1 >= fileNameLength) {
 				const size_t fileNameLength = wcslen(fileName);
 				manah::AutoBuffer<::WCHAR> valueName(new ::WCHAR[maximumValueNameLength + 1]);
 				manah::AutoBuffer<::BYTE> value(new ::BYTE[maximumValueBytes]);
-				::DWORD valueNameLength, valueBytes, type;
-				for(::DWORD index = 0; ; ++index) {
+				::DWORD valueNameLength = maximumValueNameLength + 1, valueBytes = maximumValueBytes, type;
+				for(::DWORD index = 0; ; ++index, valueNameLength = maximumValueNameLength + 1, valueBytes = maximumValueBytes) {
 					e = ::RegEnumValueW(key, index, valueName.get(), &valueNameLength, 0, &type, value.get(), &valueBytes);
 					if(e == ERROR_SUCCESS) {
-						if(type == REG_SZ) {
+						if(type == REG_SZ && (valueBytes / sizeof(::WCHAR)) - 1 == fileNameLength
+								&& wmemcmp(fileName, reinterpret_cast<::WCHAR*>(value.get()), fileNameLength) == 0) {
 							::RegCloseKey(key);
-							manah::AutoBuffer<::WCHAR> temp(new ::WCHAR[valueBytes]);
-							memcpy(reinterpret_cast<::BYTE*>(temp.get()), value.get(), valueBytes);
-							return temp;
+							size_t nameLength = valueNameLength;
+							if(valueName[nameLength - 1] == L')') {
+								if(const ::WCHAR* const opening = wcsrchr(valueName.get(), L'(')) {
+									nameLength = opening - valueName.get();
+									if(nameLength > 1 && valueName[nameLength - 1] == L' ')
+										--nameLength;
+								}
+							}
+							if(nameLength > 0) {
+								manah::AutoBuffer<::WCHAR> temp(new ::WCHAR[nameLength + 1]);
+								wmemcpy(temp.get(), valueName.get(), nameLength);
+								temp[nameLength] = 0;
+								return temp;
+							} else
+								return manah::AutoBuffer<::WCHAR>(0);
 						}
 					} else	// ERROR_NO_MORE_ITEMS
 						break;
 				}
 			}
+			::RegCloseKey(key);
 		}
 		return manah::AutoBuffer<::WCHAR>(0);
 	}
 } // namespace @0
 
-///
 void FontSelector::linkPrimaryFont() throw() {
+	// TODO: this does not support nested font linking.
 	assert(linkedFonts_ != 0);
-	for(vector<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
+	for(vector<Fontset*>::iterator i(linkedFonts_->begin()), e(linkedFonts_->end()); i != e; ++i)
 		delete *i;
 	linkedFonts_->clear();
 
 	// read font link settings from registry
+	static const ::WCHAR KEY_NAME[] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink";
 	::HKEY key;
-	long e = ::RegOpenKeyExW(HKEY_CURRENT_USER,
-		L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
-	if(e != ERROR_SUCCESS)
-		e = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-			L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &key);
-	if(e == ERROR_SUCCESS) {
+	if(ERROR_SUCCESS == ::RegOpenKeyExW(HKEY_CURRENT_USER, KEY_NAME, 0, KEY_QUERY_VALUE, &key)
+			|| ERROR_SUCCESS == ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, KEY_NAME, 0, KEY_QUERY_VALUE, &key)) {
 		::DWORD type, bytes;
 		if(ERROR_SUCCESS == ::RegQueryValueExW(key, primaryFont_->faceName, 0, &type, 0, &bytes)) {
 			manah::AutoBuffer<::BYTE> data(new ::BYTE[bytes]);
@@ -3142,7 +3175,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		manah::win32::DumpContext() << L"ruler rect : " << paintRect.top << L" ... " << paintRect.bottom << L"\n";
+		manah::win32::DumpContext() << L"@VerticalRulerDrawer.draw draws y = " << paintRect.top << L" ~ " << paintRect.bottom << L"\n";
 #endif /* _DEBUG */
 
 	const int savedCookie = dc.save();
