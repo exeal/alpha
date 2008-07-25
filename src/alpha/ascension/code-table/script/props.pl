@@ -105,7 +105,7 @@ sub processGeneralCategories() {
 		}
 	}
 	printf OUTPUT_TABLE "{0x%X,0x%X,%d}};\n", $first, $last, $categoryMap{$continuedGc};
-	print OUTPUT_TABLE 'const size_t GeneralCategory::count_ = countof(GeneralCategory::ranges_);' . "\n";
+	print OUTPUT_TABLE 'const size_t GeneralCategory::count_ = MANAH_COUNTOF(GeneralCategory::ranges_);' . "\n";
 	close INPUT;
 }
 
@@ -123,7 +123,7 @@ sub processCodeBlocks() {
 	}
 	close INPUT;
 	print OUTPUT_TABLE "};\n";
-	print OUTPUT_TABLE 'const size_t CodeBlock::count_ = countof(CodeBlock::ranges_);' . "\n";
+	print OUTPUT_TABLE 'const size_t CodeBlock::count_ = MANAH_COUNTOF(CodeBlock::ranges_);' . "\n";
 }
 
 # generate two arrays table for Canonical_Combining_Class
@@ -195,7 +195,7 @@ sub processScripts() {
 		printf OUTPUT_TABLE '{0x%X,0x%X,%d},', $_->{first}, $_->{last}, $_->{script};
 	}
 	print OUTPUT_TABLE "};\n";
-	print OUTPUT_TABLE 'const size_t Script::count_ = countof(Script::ranges_);' . "\n";
+	print OUTPUT_TABLE 'const size_t Script::count_ = MANAH_COUNTOF(Script::ranges_);' . "\n";
 	close INPUT;
 }
 
@@ -234,11 +234,13 @@ sub processBinaryProperties() {
 					printf OUTPUT_TABLE '0x%04X,', $ranges[$i];
 				}
 				print OUTPUT_IMPL 'template<> inline bool BinaryProperty::is<BinaryProperty::' . uc($propertyName) . '>(CodePoint cp) {';
-				print OUTPUT_IMPL 'return std::binary_search(tableOfBp__' . $propertyName
-					. '_,tableOfBp__' . $propertyName
-					. '_+' . ($#ranges + 1) / 2 . ','
-					. ($ucs4 ? 'cp);' : 'static_cast<Char>(cp));')
-					. "}\n";
+				if($ucs4) {
+					print OUTPUT_IMPL 'return std::binary_search(tableOfBp__' . $propertyName
+						. '_,tableOfBp__' . $propertyName . '_+' . ($#ranges + 1) / 2 . ",cp);}\n";
+				} else {
+					print OUTPUT_IMPL 'return (cp > 0xFFFF) ? false : std::binary_search(tableOfBp__' . $propertyName
+						. '_,tableOfBp__' . $propertyName . '_+' . ($#ranges + 1) / 2 . ",static_cast<Char>(cp));}\n";
+				}
 			} else {	# range based array
 				my $i;
 				print BP_TABLE_DEFINITION $ucs4 ? 'static const internal::CodeRange<CodePoint> ' : 'static const internal::CodeRange<Char> ';
@@ -358,7 +360,7 @@ sub processEastAsianWidths() {
 		$isRange = 0;
 	}
 	printf OUTPUT_TABLE '{0x%X,0x%X,%d}};', $first, $last, $eastAsianWidthMap{$ea};
-	print OUTPUT_TABLE "\nconst size_t EastAsianWidth::count_ = countof(EastAsianWidth::ranges_);\n";
+	print OUTPUT_TABLE "\nconst size_t EastAsianWidth::count_ = MANAH_COUNTOF(EastAsianWidth::ranges_);\n";
 	$input->close;
 }
 
@@ -385,7 +387,7 @@ sub processLineBreaks() {
 		$isRange = 0;
 	}
 	printf OUTPUT_TABLE '{0x%X,0x%X,%d}};', $first, $last, $lineBreakMap{$lb};
-	print OUTPUT_TABLE "\nconst size_t LineBreak::count_ = countof(LineBreak::ranges_);\n";
+	print OUTPUT_TABLE "\nconst size_t LineBreak::count_ = MANAH_COUNTOF(LineBreak::ranges_);\n";
 	$input->close;
 }
 

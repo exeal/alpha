@@ -211,7 +211,7 @@ namespace {
 	bool isQU(CodePoint cp, int gc) throw() {
 		return gc == GeneralCategory::PUNCTUATION_FINAL_QUOTE
 			|| gc == GeneralCategory::PUNCTUATION_INITIAL_QUOTE
-			|| binary_search(QU, endof(QU), cp);
+			|| binary_search(QU, MANAH_ENDOF(QU), cp);
 	}
 } // namespace @0
 
@@ -867,7 +867,7 @@ int WordBreak::of(CodePoint cp,
 	if(gc == GeneralCategory::OTHER_FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
 		return FORMAT;
 	else if(Script::of(cp) == Script::KATAKANA
-			|| binary_search(KATAKANAS, endof(KATAKANAS), cp))
+			|| binary_search(KATAKANAS, MANAH_ENDOF(KATAKANAS), cp))
 		return KATAKANA;
 	else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 		return GraphemeClusterBreak::EXTEND;
@@ -875,10 +875,10 @@ int WordBreak::of(CodePoint cp,
 			|| cp == 0x00A0		// No-Break Space
 			|| cp == 0x05F3))	// Hebrew Punctuation Geresh
 		return A_LETTER;
-	else if(binary_search(MID_LETTERS, endof(MID_LETTERS), cp)
+	else if(binary_search(MID_LETTERS, MANAH_ENDOF(MID_LETTERS), cp)
 			|| (cp == 0x003A && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
 		return MID_LETTER;
-	else if(binary_search(MID_NUMS, endof(MID_NUMS), cp))
+	else if(binary_search(MID_NUMS, MANAH_ENDOF(MID_NUMS), cp))
 		return MID_NUM;
 	else if(isNU(cp, gc))
 		return NUMERIC;
@@ -914,7 +914,7 @@ int SentenceBreak::of(CodePoint cp) throw() {
 	static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 		return GraphemeClusterBreak::EXTEND;
-	else if(binary_search(SEPS, endof(SEPS), cp))
+	else if(binary_search(SEPS, MANAH_ENDOF(SEPS), cp))
 		return SEP;
 	const int gc = GeneralCategory::of(cp);
 	if(gc == GeneralCategory::OTHER_FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)

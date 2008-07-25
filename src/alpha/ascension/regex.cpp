@@ -22,6 +22,7 @@ using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
 using regex::internal::RegexTraits;
+using manah::toBoolean;
 
 
 #ifndef ASCENSION_NO_MIGEMO

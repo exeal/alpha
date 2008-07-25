@@ -202,9 +202,9 @@ inline void Splitter<Pane, cdp>::drawSizingSplitterXorBar() {
 
 	// create half tone brush (from MFC)
 	ushort grayPattern[8];
-	for(int i = 0; i < countof(grayPattern); ++i)
+	for(int i = 0; i < MANAH_COUNTOF(grayPattern); ++i)
 		grayPattern[i] = static_cast<ushort>(0x5555 << (i & 1));
-	HBITMAP bitmap = ::CreateBitmap(countof(grayPattern), countof(grayPattern), 1, 1, grayPattern);
+	HBITMAP bitmap = ::CreateBitmap(MANAH_COUNTOF(grayPattern), MANAH_COUNTOF(grayPattern), 1, 1, grayPattern);
 	HBRUSH brush = ::CreatePatternBrush(bitmap), oldBrush;
 
 	assert(draggingSplitter_ != 0 && sizingFirstPaneSize_ != -1);

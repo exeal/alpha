@@ -1,6 +1,7 @@
 /**
  * @file fileio.cpp
  * Implements @c ascension#kernel#fileio namespace.
+ * @note Currently, this implementation does not support OpenVMS.
  * @author exeal
  * @date 2007 (separated from document.cpp)
  * @date 2007-2008
@@ -20,32 +21,37 @@ using namespace ascension::kernel::fileio;
 using namespace ascension::encoding;
 using namespace std;
 namespace a = ascension;
+using manah::toBoolean;
 
 
 // free function ////////////////////////////////////////////////////////////
 
 namespace {
 #ifdef ASCENSION_WINDOWS
-	static const Char PATH_SEPARATORS[] = {'/', '\\', 0};
+	static const Char PATH_SEPARATORS[] = L"\\/";
 #else // ASCENSION_POSIX
-	static const Char PATH_SEPARATORS[] = {'/', 0};
+	static const Char PATH_SEPARATORS[] = "/";
 #endif
+	static const Char PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
+	/// Returns true if the given character is a path separator.
+	inline bool isPathSeparator(Char c) throw() {
+		return find(PATH_SEPARATORS, MANAH_ENDOF(PATH_SEPARATORS) - 1, c) != MANAH_ENDOF(PATH_SEPARATORS) - 1;}
 	/**
-	 * Returns true if the specified file exists.
-	 * @param fileName the name of the file
+	 * Returns true if the specified file or directory exists.
+	 * @param name the name of the file
 	 * @return if the file exists
 	 * @throw NullPointerException @a fileName is @c null
 	 * @throw IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occured. for
 	 * details, use POSIX @c errno or Win32 @c GetLastError
 	 */
-	bool fileExists(const Char* fileName) {
-		if(fileName == 0)
-			throw a::NullPointerException("fileName");
+	bool pathExists(const Char* name) {
+		if(name == 0)
+			throw a::NullPointerException("name");
 #ifdef ASCENSION_WINDOWS
 #ifdef PathFileExists
-		return toBoolean(::PathFileExistsW(fileName));
+		return toBoolean(::PathFileExistsW(name));
 #else
-		if(::GetFileAttributesW(fileName) != INVALID_FILE_ATTRIBUTES)
+		if(::GetFileAttributesW(name) != INVALID_FILE_ATTRIBUTES)
 			return true;
 		const ::DWORD e = ::GetLastError();
 		if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
@@ -54,7 +60,7 @@ namespace {
 #endif /* PathFileExists */
 #else // ASCENSION_POSIX
 		struct stat s;
-		if(::stat(fileName, &s) == 0)
+		if(::stat(name, &s) == 0)
 			return true;
 		else if(errno == ENOENT)
 			return false;
@@ -111,7 +117,7 @@ namespace {
 				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
 		}
 		return (attributes.nFileSizeHigh == 0
-			&& attributes.nFileSizeLow <= static_cast<::DWORD>(numeric_limits<ptrdiff_t>::max())) ?
+			&& attributes.nFileSizeLow <= static_cast<DWORD>(numeric_limits<ptrdiff_t>::max())) ?
 				static_cast<ptrdiff_t>(attributes.nFileSizeLow) : -1;
 #else // ASCENSION_POSIX
 		struct stat s;
@@ -170,7 +176,7 @@ String fileio::canonicalizePathName(const Char* pathName) {
 	// resolve relative path name
 	::WCHAR path[MAX_PATH];
 	::WCHAR* dummy;
-	if(::GetFullPathNameW(pathName, countof(path), path, &dummy) == 0)
+	if(::GetFullPathNameW(pathName, MANAH_COUNTOF(path), path, &dummy) == 0)
 		wcscpy(path, pathName);
 
 	// get real component names (from Ftruename implementation in xyzzy)
@@ -178,14 +184,14 @@ String fileio::canonicalizePathName(const Char* pathName) {
 	result.reserve(MAX_PATH);
 	const Char* p = path;
 	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
-			&& p[1] == L':' && (p[2] == L'\\' || p[2] == L'/')) {	// drive letter
+			&& p[1] == L':' && isPathSeparator(p[2])) {	// drive letter
 		result.append(path, 3);
 		result[0] = towupper(path[0]);	// unify with uppercase letters...
 		p += 3;
-	} else if((p[0] == L'\\' || p[0] == L'/') && (p[1] == L'\\' || p[1] == L'/')) {	// UNC?
-		if((p = wcspbrk(p + 2, L"\\/")) == 0)	// server name
+	} else if(isPathSeparator(p[0]) && isPathSeparator(p[1])) {	// UNC?
+		if((p = wcspbrk(p + 2, PATH_SEPARATORS)) == 0)	// server name
 			return false;
-		if((p = wcspbrk(p + 1, L"\\/")) == 0)	// shared name
+		if((p = wcspbrk(p + 1, PATH_SEPARATORS)) == 0)	// shared name
 			return false;
 		result.append(path, ++p - path);
 	} else	// not absolute name
@@ -193,7 +199,7 @@ String fileio::canonicalizePathName(const Char* pathName) {
 
 	::WIN32_FIND_DATAW wfd;
 	while(true) {
-		if(Char* next = wcspbrk(p, L"\\/")) {
+		if(Char* next = wcspbrk(p, PATH_SEPARATORS)) {
 			const Char c = *next;
 			*next = 0;
 			::HANDLE h = ::FindFirstFileW(path, &wfd);
@@ -203,7 +209,7 @@ String fileio::canonicalizePathName(const Char* pathName) {
 			} else
 				result += p;
 			*next = c;
-			result += L'\\';
+			result += PREFERRED_PATH_SEPARATOR;
 			p = next + 1;
 		} else {
 			::HANDLE h = ::FindFirstFileW(path, &wfd);
@@ -251,7 +257,7 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
-			return fileExists(s1);
+			return pathExists(s1);
 	}
 	// by volume information
 	bool eq = false;
@@ -318,7 +324,7 @@ namespace {
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 		bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
-	if(!fileExists(fileName.c_str()))
+	if(!pathExists(fileName.c_str()))
 		throw IOException(IOException::FILE_NOT_FOUND);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	if(mode == ios_base::in) {
@@ -385,7 +391,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 #endif
 		if(writeByteOrderMark)
 			encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
-		setp(ucsBuffer_, endof(ucsBuffer_));
+		setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
 	} else
 		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
 	encoder_->setSubstitutionPolicy(encodingSubstitutionPolicy);
@@ -393,7 +399,10 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 
 /// Destructor.
 TextFileStreamBuffer::~TextFileStreamBuffer() {
-	close();
+	try {
+		close();	// this may throw
+	} catch(const IOException&) {
+	}
 }
 
 /**
@@ -404,7 +413,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 	sync();
 #ifdef ASCENSION_WINDOWS
 	if(inputMapping_.first != 0) {
-		::UnmapViewOfFile(inputMapping_.first);
+		::UnmapViewOfFile(const_cast<byte*>(inputMapping_.first));
 		::CloseHandle(fileMapping_);
 		inputMapping_.first = 0;
 		fileMapping_ = 0;
@@ -471,14 +480,14 @@ int TextFileStreamBuffer::sync() {
 	if(inputMapping_.first == 0 && pptr() > pbase()) {
 		byte* toNext;
 		const a::Char* fromNext;
-		byte nativeBuffer[countof(ucsBuffer_)];
+		byte nativeBuffer[MANAH_COUNTOF(ucsBuffer_)];
 		encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 		while(true) {
 			const a::Char* const fromEnd = pptr();
 
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
-				nativeBuffer, endof(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
+				nativeBuffer, MANAH_ENDOF(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw IOException(IOException::UNMAPPABLE_CHARACTER);
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
@@ -487,8 +496,8 @@ int TextFileStreamBuffer::sync() {
 			// write into the file
 #ifdef ASCENSION_WINDOWS
 			::DWORD writtenBytes;
-			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<::DWORD>::max());
-			const ::DWORD bytes = static_cast<::DWORD>(toNext - nativeBuffer);
+			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<DWORD>::max());
+			const ::DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
 			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
 				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #else // ASCENSION_POSIX
@@ -503,7 +512,7 @@ int TextFileStreamBuffer::sync() {
 			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
-		setp(ucsBuffer_, endof(ucsBuffer_));
+		setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
 	}
 	return 0;
 }
@@ -516,7 +525,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	a::Char* toNext;
 	const byte* fromNext;
 	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
-	switch(encoder_->toUnicode(ucsBuffer_, endof(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
+	switch(encoder_->toUnicode(ucsBuffer_, MANAH_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw IOException(IOException::UNMAPPABLE_CHARACTER);
 	case Encoder::MALFORMED_INPUT:
@@ -755,7 +764,7 @@ String TextFileDocumentInput::name() const throw() {
 
 /**
  * Binds the document to the specified file. This method call document's @c Document#setInput.
- * @param fileName the file name. this method doesn't resolves the short cut
+ * @param fileName the file name. this method doesn't resolve the short cut
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
  * description of the return value
  * @param encoding the file encoding or auto detection name
@@ -1110,3 +1119,236 @@ bool TextFileDocumentInput::writeRegion(const String& fileName, const Region& re
 	// TODO: not implemented.
 	return false;
 }
+
+
+#ifndef ASCENSION_NO_GREP
+
+// DirectoryIteratorBase ////////////////////////////////////////////////////////
+
+/// Protected default constructor.
+DirectoryIteratorBase::DirectoryIteratorBase() throw() {
+}
+
+/// Destructor.
+DirectoryIteratorBase::~DirectoryIteratorBase() throw() {
+}
+
+
+// DirectoryIterator ////////////////////////////////////////////////////////
+
+namespace {
+	inline bool isDotOrDotDot(const String& s) {
+		return !s.empty() && s[0] == '.' && (s.length() == 1 || (s.length() == 2 && s[1] == '.'));
+	}
+} // namespace @0
+
+/**
+ * Constructor.
+ * @param directoryName the directory to traverse
+ * @throw NullPointerException @a directoryName is @c null
+ * @throw IOException can be @c IOException#FILE_NOT_FOUND or @c IOException#PLATFORM_DEPENDENT_ERROR
+ */
+DirectoryIterator::DirectoryIterator(const Char* directoryName) :
+#ifdef ASCENSION_WINDOWS
+		handle_(INVALID_HANDLE_VALUE),
+#else // ASCENSION_POSIX
+		handle_(0),
+#endif
+		done_(false) {
+	if(directoryName == 0)
+		throw a::NullPointerException("directoryName");
+	else if(directoryName[0] == 0)
+		throw IOException(IOException::FILE_NOT_FOUND);
+
+#ifdef ASCENSION_WINDOWS
+	if(!pathExists(directoryName))
+		throw IOException(IOException::FILE_NOT_FOUND);
+	const size_t len = wcslen(directoryName);
+	assert(len > 0);
+	manah::AutoBuffer<Char> pattern(new Char[len + 3]);
+	wmemcpy(pattern.get(), directoryName, len);
+	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
+	::WIN32_FIND_DATAW data;
+	handle_ = ::FindFirstFileW(pattern.get(), &data);
+	if(handle_ == INVALID_HANDLE_VALUE)
+		throw IOException((::GetLastError() == ERROR_FILE_NOT_FOUND) ?
+			IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+	update(&data);
+	directory_.assign(pattern.get(), isPathSeparator(pattern[len - 1]) ? len - 1 : len);
+#else // ASCENSION_POSIX
+	handle_ = ::opendir(directoryName);
+	if(handle_ == 0)
+		throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+	update(0);
+	directory_.assign(pattern.get());
+	if(isPathSeparator(directory_[directory_.length() - 1]))
+		directory_.resize(directory_.length() - 1);
+#endif
+
+	if(!done_ && currentIsDirectory_ && isDotOrDotDot(current_))
+		next();
+}
+
+/// Destructor.
+DirectoryIterator::~DirectoryIterator() throw() {
+#ifdef ASCENSION_WINDOWS
+	if(handle_ != INVALID_HANDLE_VALUE)
+		::FindClose(handle_);
+#else // ASCENSION_POSIX
+	if(handle_ != 0)
+		::closedir(handle_);
+#endif
+}
+
+/// @see DirectoryIteratorBase#current
+const String& DirectoryIterator::current() const {
+	if(done_)
+		throw NoSuchElementException();
+	return current_;
+}
+
+/// @see DirectoryIteratorBase#directory
+const String& DirectoryIterator::directory() const {
+	return directory_;
+}
+
+/// @see DirectoryIteratorBase#isDirectory
+bool DirectoryIterator::isDirectory() const {
+	if(done_)
+		throw NoSuchElementException();
+	return currentIsDirectory_;
+}
+
+/// @see DirectoryIteratorBase#isDone
+bool DirectoryIterator::isDone() const throw() {
+	return done_;
+}
+
+/// @see DirectoryIteratorBase#next
+void DirectoryIterator::next() {
+	if(!done_) {
+#ifdef ASCENSION_WINDOWS
+		::WIN32_FIND_DATAW data;
+		if(::FindNextFileW(handle_, &data) == 0) {
+			if(::GetLastError() == ERROR_NO_MORE_FILES)
+				done_ = true;
+			else
+				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		} else
+			update(&data);
+#else // ASCENSION_POSIX
+		update(0);
+#endif
+	}
+	if(!done_ && currentIsDirectory_ && isDotOrDotDot(current_))
+		next();
+}
+
+void DirectoryIterator::update(const void* info) {
+#ifdef ASCENSION_WINDOWS
+	const ::WIN32_FIND_DATAW& data = *static_cast<const ::WIN32_FIND_DATAW*>(info);
+	current_ = data.cFileName;
+	currentIsDirectory_ = toBoolean(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+#else // ASCENSION_POSIX
+	if(dirent* entry = ::readdir(handle_)) {
+		current_ = entry->d_name;
+		currentIsDirectory_ = entry->d_type == DT_DIR;
+	} else
+		done_ = true;
+#endif
+}
+
+
+// RecursiveDirectoryIterator ///////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param directoryName the directory to traverse
+ * @throw NullPointerException @a directoryName is @c null
+ * @throw IOException can be @c IOException#FILE_NOT_FOUND or @c IOException#PLATFORM_DEPENDENT_ERROR
+ */
+RecursiveDirectoryIterator::RecursiveDirectoryIterator(const Char* directoryName) : doesntPushNext_(false) {
+	stack_.push(new DirectoryIterator(directoryName));
+}
+
+/// Destructor.
+RecursiveDirectoryIterator::~RecursiveDirectoryIterator() throw() {
+	while(!stack_.empty()) {
+		delete stack_.top();
+		stack_.pop();
+	}
+}
+
+/// @see DirectoryIteratorBase#current
+const String& RecursiveDirectoryIterator::current() const {
+	if(isDone())
+		throw NoSuchElementException();
+	return stack_.top()->current();
+}
+
+/// @see DirectoryIteratorBase#directory
+const String& RecursiveDirectoryIterator::directory() const throw() {
+	return stack_.top()->directory();
+}
+
+/// 
+void RecursiveDirectoryIterator::dontPush() {
+	if(isDone())
+		throw NoSuchElementException();
+	doesntPushNext_ = true;
+}
+
+/// @see DirectoryIteratorBase#isDirectory
+bool RecursiveDirectoryIterator::isDirectory() const {
+	if(isDone())
+		throw NoSuchElementException();
+	return stack_.top()->isDirectory();
+}
+
+/// @see DirectoryIteratorBase#isDone
+bool RecursiveDirectoryIterator::isDone() const throw() {
+	return stack_.size() == 1 && stack_.top()->isDone();
+}
+
+/// Returns the depth of the recursion.
+size_t RecursiveDirectoryIterator::level() const throw() {
+	return stack_.size() - 1;
+}
+
+/// @see DirectoryIteratorBase#next
+void RecursiveDirectoryIterator::next() {
+	if(isDone())
+		throw NoSuchElementException();
+	if(doesntPushNext_)
+		doesntPushNext_ = false;
+	else if(stack_.top()->isDirectory()) {
+		String subdir(directory());
+		subdir += PATH_SEPARATORS[0];
+		subdir += current();
+		auto_ptr<DirectoryIterator> sub(new DirectoryIterator(subdir.c_str()));
+		if(!sub->isDone()) {
+			stack_.push(sub.release());
+			return;
+		}
+	}
+	stack_.top()->next();
+	while(stack_.top()->isDone() && stack_.size() > 1) {
+		delete stack_.top();
+		stack_.pop();
+		assert(!stack_.top()->isDone());
+		stack_.top()->next();
+	}
+}
+
+/// 
+void RecursiveDirectoryIterator::pop() {
+	while(!stack_.empty()) {
+		stack_.top()->next();
+		if(!stack_.top()->isDone())
+			break;
+		delete stack_.top();
+		stack_.pop();
+	}
+}
+
+#endif /* !ASCENSION_NO_GREP */

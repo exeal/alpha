@@ -21,7 +21,7 @@ namespace ascension {
 		 */
 		namespace ucd {
 
-			///@ internal
+			/// @internal
 			namespace internal {
 				// helpers for Unicode properties implementation
 				template<typename Code> struct CodeRange {
@@ -76,12 +76,17 @@ namespace ascension {
 			private:
 				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
 			};
-
 			template<typename ConcreteProperty>
 			std::map<const Char*, int, PropertyNameComparer<Char> > PropertyBase<ConcreteProperty>::names_;
 
+			/// Base type for all enumeration property classes.
+			template<typename ConcreteProperty> class EnumerationProperty : public PropertyBase<ConcreteProperty> {
+			public:
+				static int of(CodePoint c) throw();
+			};
+
 			/// General categories. These values are based on Unicode standard 5.0.0 "4.5 General Category".
-			class GeneralCategory : public PropertyBase<GeneralCategory> {
+			class GeneralCategory : public EnumerationProperty<GeneralCategory> {
 			public:
 				enum {
 					FIRST_VALUE = NOT_PROPERTY + 1,
@@ -128,14 +133,14 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				template<int superCategory>
-				static bool is(int subCategory);
-				static int of(CodePoint cp) throw();
+				template<int superCategory> static bool is(int subCategory);
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
 				static const Names names_[];
+				static const int DEFAULT_VALUE = OTHER_UNASSIGNED;
 				friend class PropertyBase<GeneralCategory>;
+				friend class EnumerationProperty<GeneralCategory>;
 			};
 			
 			/// Returns true if the specified character is a letter.
@@ -156,7 +161,7 @@ namespace ascension {
 			template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {return gc >= OTHER_CONTROL && gc <= OTHER_UNASSIGNED;}
 		
 			/// Code blocks. These values are based on Blocks.txt obtained from UCD.
-			class CodeBlock : public PropertyBase<CodeBlock> {
+			class CodeBlock : public EnumerationProperty<CodeBlock> {
 			public:
 				enum {
 					FIRST_VALUE = GeneralCategory::LAST_VALUE,
@@ -198,12 +203,13 @@ namespace ascension {
 					SUPPLEMENTARY_PRIVATE_USE_AREA_A, SUPPLEMENTARY_PRIVATE_USE_AREA_B, LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
 				static const Names names_[];
+				static const int DEFAULT_VALUE = NO_BLOCK;
 				friend class PropertyBase<CodeBlock>;
+				friend class EnumerationProperty<CodeBlock>;
 			};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -257,7 +263,7 @@ namespace ascension {
 			 * <a href="http://www.unicode.org/reports/tr24/">UAX #24: Script Names</a> revision 9
 			 * and Scripts.txt obtained from UCD.
 			 */
-			class Script : public PropertyBase<Script> {
+			class Script : public EnumerationProperty<Script> {
 			public:
 				enum {
 					FIRST_VALUE = CodeBlock::LAST_VALUE, UNKNOWN = FIRST_VALUE, COMMON,
@@ -279,11 +285,12 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
 				static const Names names_[];
+				static const int DEFAULT_VALUE = UNKNOWN;
+				friend class EnumerationProperty<Script>;
 				friend class PropertyBase<Script>;
 			};
 
@@ -389,7 +396,7 @@ namespace ascension {
 				return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || is<OTHER_UPPERCASE>(cp);}
 
 			/// East_Asian_Width property. These values are based on UAX #11.
-			class EastAsianWidth : public PropertyBase<EastAsianWidth> {
+			class EastAsianWidth : public EnumerationProperty<EastAsianWidth> {
 			public:
 				enum {
 					FIRST_VALUE = BinaryProperty::LAST_VALUE,
@@ -402,19 +409,20 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
 				static const Names names_[];
+				static const int DEFAULT_VALUE = NEUTRAL;
 				friend class PropertyBase<EastAsianWidth>;
+				friend class EnumerationProperty<EastAsianWidth>;
 			};
 
 			/**
 			 * Line_Break property. These values are based on UAX #14.
 			 * @see AbstractLineBreakIterator, LineBreakIterator
 			 */
-			class LineBreak : public PropertyBase<LineBreak> {
+			class LineBreak : public EnumerationProperty<LineBreak> {
 			public:
 				// these identifier are based on PropertyValueAliases.txt. there are some variations
 				enum {
@@ -463,12 +471,13 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
 			private:
 				static const internal::PropertyRange ranges_[];
 				static const std::size_t count_;
 				static const Names names_[];
+				static const int DEFAULT_VALUE = UNKNOWN;
 				friend class PropertyBase<LineBreak>;
+				friend class EnumerationProperty<LineBreak>;
 			};
 
 			/// Grapheme_Cluster_Break property. These values are based on UAX #29.
@@ -621,18 +630,12 @@ inline int PropertyBase<ConcreteProperty>::forName(const Char* name) {
 	return (i != names_.end()) ? i->second : NOT_PROPERTY;
 }
 
-/// Returns General_Category value of the specified character.
-inline int GeneralCategory::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
+/// Returns property value of the specified character.
+template<typename ConcreteProperty>
+inline int EnumerationProperty<ConcreteProperty>::of(CodePoint cp) throw() {
+	if(const internal::PropertyRange* p = internal::findInRange(ConcreteProperty::ranges_, ConcreteProperty::ranges_ + ConcreteProperty::count_, cp))
 		return p->property;
-	return OTHER_UNASSIGNED;
-}
-
-/// Returns Block value of the specified character.
-inline int CodeBlock::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
-		return p->property;
-	return NO_BLOCK;
+	return ConcreteProperty::DEFAULT_VALUE;
 }
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -658,13 +661,6 @@ inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
 }
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
 
-/// Returns Script value of the specified character.
-inline int Script::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
-		return p->property;
-	return UNKNOWN;
-}
-
 /// Returns the Hangul_Syllable_Type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint cp) throw() {
 	if(cp >= 0x1100 && cp <= 0x1159 || cp == 0x115F)
@@ -678,22 +674,6 @@ inline int HangulSyllableType::of(CodePoint cp) throw() {
 	else
 		return NOT_APPLICABLE;
 }
-
-/// Returns the East_Asian_Width property value of @a cp.
-inline int EastAsianWidth::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
-		return p->property;
-	return NEUTRAL;
-}
-
-/// Returns the Line_Break property value of @a cp.
-inline int LineBreak::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ranges_, ranges_ + count_, cp))
-		return p->property;
-	return UNKNOWN;
-}
-
-#undef IMPLEMENT_FORNAME
 
 }}} // namespace ascension.text.ucd
 

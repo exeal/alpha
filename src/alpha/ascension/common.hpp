@@ -40,6 +40,7 @@
 #	define ASCENSION_FASTCALL
 #endif /* __i386__ */
 
+#include "../../manah/object.hpp"
 #include "config.hpp"
 #include <string>	// std.string
 #include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
@@ -52,6 +53,13 @@ using manah::win32::Timer;
 #endif /* defined(ASCENSION_WINDOWS) && defined(_DEBUG) */
 
 namespace ascension {
+
+	// shorten type names
+	using manah::byte;
+	using manah::uchar;
+	using manah::ushort;
+	using manah::uint;
+	using manah::ulong;
 
 	// character and string
 	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
@@ -130,6 +138,18 @@ namespace ascension {
 		explicit IndexOutOfBoundsException(const std::string& message) : std::out_of_range(message) {}
 	};
 
+	/**
+	 * The iterator has reached the end of the enumeration.
+	 * @note Not all iterator classes defined in Ascension throw this exception.
+	 */
+	class NoSuchElementException : public std::runtime_error {
+	public:
+		/// Default constructor.
+		NoSuchElementException() : std::runtime_error("the iterator is end.") {}
+		/// Constructor takes an error message.
+		explicit NoSuchElementException(const std::string& message) : std::runtime_error(message) {}
+	};
+
 	/// Represents an invariant range.
 	/// @note This class is not compatible with Boost.Range.
 	/// @see kernel#Region
@@ -140,13 +160,13 @@ namespace ascension {
 		/// Constructor.
 		Range(ValueType v1, ValueType v2) : std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
 		/// Returns the beginning (minimum) of the range.
-		ValueType beginning() const {return first;}
+		ValueType beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
-		ValueType end() const {return second;}
+		ValueType end() const {return std::pair<T, T>::second;}
 		/// Returns the given value is included by the range.
-		bool includes(ValueType v) const {return v >= first && v < second;}
+		bool includes(ValueType v) const {return v >= std::pair<T, T>::first && v < std::pair<T, T>::second;}
 		/// Returns true if the range is empty.
-		bool isEmpty() const {return first == second;}
+		bool isEmpty() const {return std::pair<T, T>::first == std::pair<T, T>::second;}
 	};
 
 	/**

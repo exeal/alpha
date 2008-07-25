@@ -299,7 +299,7 @@ namespace {
 	// UCS to JIS X 0213:2004
 	Encoder::Result convertUCStoX0213(const Char* first, const Char* last, const Char*& next, bool eob, ushort& jis, bool& plane2) throw() {
 		jis = 0;
-		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, endof(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
+		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, MANAH_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
 			if(first + 1 == last) {
 				if(!eob) {
 					// pending
@@ -369,10 +369,12 @@ namespace {
 				next = first;
 				return Encoder::MALFORMED_INPUT;
 			} else if(c >= 0x20000U && c < 0x30000U) {
-				if(const ushort** const wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000U) >> 8)]) {
+				const ushort** wire;
+				if(0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000U) >> 8)])) {
 					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000U))))
 						plane2 = false;
-				} else if(const ushort** const wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000U) >> 8)]) {
+				}
+				if(jis == 0 && 0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000U) >> 8)])) {
 					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000U))))
 						plane2 = true;
 				}
@@ -380,22 +382,29 @@ namespace {
 					next = first + 2;
 					return Encoder::COMPLETED;
 				}
-			} else {
+			}
+			if(jis == 0) {
 				next = first;
 				return Encoder::UNMAPPABLE_CHARACTER;
 			}
-		} else if(const ushort** const wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)]) {
-			if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
-				plane2 = false;
-		} else if(const ushort** const wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(first[0] >> 8)]) {
-			if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
-				plane2 = true;
-		} else if(const ushort** const wire = UCS_TO_JIS_X_0208[mask8Bit(first[0])]) {
-			if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
-				plane2 = false;
 		} else {
-			next = first;
-			return Encoder::UNMAPPABLE_CHARACTER;
+			const ushort** wire;
+			if(0 != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)])) {
+				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+					plane2 = false;
+			}
+			if(jis == 0 && 0 != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(first[0] >> 8)])) {
+				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+					plane2 = true;
+			}
+			if(jis == 0 && 0 != (wire = UCS_TO_JIS_X_0208[mask8Bit(first[0] >> 8)])) {
+				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+					plane2 = false;
+			}
+			if(jis == 0) {
+				next = first;
+				return Encoder::UNMAPPABLE_CHARACTER;
+			}
 		}
 		next = first + 1;
 		return Encoder::COMPLETED;
@@ -473,11 +482,11 @@ namespace {
 			|| (jis >= jk(14, 2) && jis <= jk(15, 93))
 			|| (jis >= jk(47, 53) && jis <= jk(47, 93))
 			|| (jis >= jk(84, 8) && jis <= jk(94, 89))
-			|| binary_search(PROHIBITED_IDEOGRAPHS_2000, endof(PROHIBITED_IDEOGRAPHS_2000), jis);
+			|| binary_search(PROHIBITED_IDEOGRAPHS_2000, MANAH_ENDOF(PROHIBITED_IDEOGRAPHS_2000), jis);
 	}
 	// returns true if is "禁止漢字" added by JIS X 0213:2004.
 	inline bool isISO2022JP2004ProhibitedIdeograph(ushort jis) {
-		return binary_search(PROHIBITED_IDEOGRAPHS_2004, endof(PROHIBITED_IDEOGRAPHS_2004), jis);
+		return binary_search(PROHIBITED_IDEOGRAPHS_2004, MANAH_ENDOF(PROHIBITED_IDEOGRAPHS_2004), jis);
 	}
 
 	// converts from ISO-2022-JP-X into UTF-16.
@@ -696,7 +705,7 @@ namespace {
 				++from;
 			} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
 				const byte buffer[2] = {*from | 0x80, from[1] | 0x80};
-				const byte* const bufferEnd = endof(buffer);
+				const byte* const bufferEnd = MANAH_ENDOF(buffer);
 				const byte* next;
 				const Encoder::Result r = ((state.g0 == EncodingState::GB2312) ?
 					gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
@@ -828,19 +837,19 @@ namespace {
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 					|| x == '1'
 #endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
-					) && toBoolean(jis = convertUCStoX0212(*from)))
+					) && manah::toBoolean(jis = convertUCStoX0212(*from)))
 				charset = EncodingState::JIS_X_0212;
 			else if(/*x == '2' &&*/ gb2312Encoder.get() != 0
-					&& gb2312Encoder->fromUnicode(mbcs, endof(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& gb2312Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::GB2312;
 			else if(/*x == '2' &&*/ ksc5601Encoder.get() != 0
-					&& ksc5601Encoder->fromUnicode(mbcs, endof(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& ksc5601Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::KS_C_5601;
 			else if(x == '2'
-					&& iso88591Encoder->fromUnicode(mbcs, endof(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& iso88591Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::ISO_8859_1;
 			else if(x == '2'
-					&& iso88597Encoder->fromUnicode(mbcs, endof(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& iso88597Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::ISO_8859_7;
 			else 
 				ASCENSION_HANDLE_UNMAPPABLE()

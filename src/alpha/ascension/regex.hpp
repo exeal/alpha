@@ -302,7 +302,7 @@ namespace ascension {
 		inline internal::RegexTraits::char_type internal::RegexTraits::translate(char_type c) const {
 			if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
 			return (c < 0x10000 && std::binary_search(NEWLINE_CHARACTERS,
-				endof(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xFFFF))) ? LINE_SEPARATOR : c;
+				MANAH_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xFFFF))) ? LINE_SEPARATOR : c;
 		}
 
 		inline int internal::RegexTraits::value(char_type c, int radix) const {

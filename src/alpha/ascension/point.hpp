@@ -12,6 +12,8 @@
 #include <functional>	// std.mem_fun_t
 
 
+struct IDataObject;
+
 namespace ascension {
 
 	namespace viewers {
@@ -118,6 +120,9 @@ namespace ascension {
 	}
 
 	namespace viewers {
+
+		void makeRegionTextObject(const TextViewer& viewer,
+			const kernel::Region& region, bool rectangle, bool rtf, ::IDataObject*& content);
 
 		/**
 		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
