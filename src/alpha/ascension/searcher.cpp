@@ -101,7 +101,7 @@ void LiteralPattern::compile(const Char* first, const Char* last,
 	for(UTF16To32Iterator<const Char*> i(first, last); i.hasNext(); ++i, ++last_)
 		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
 	// build BM shift table
-	fill(lastOccurences_, endof(lastOccurences_), last_ - first_);
+	fill(lastOccurences_, MANAH_ENDOF(lastOccurences_), last_ - first_);
 	if(direction == FORWARD) {
 		for(const int* e = first_; e < last_; ++e)
 			lastOccurences_[*e] = last_ - e - 1;

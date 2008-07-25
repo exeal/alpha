@@ -757,8 +757,8 @@ ulong RowSelectionExtensionCommand::execute() {
 
 	if(caret.isSelectionEmpty() && !caret.isSelectionRectangle())
 		caret.beginBoxSelection();
-	assert(type_ >= 0 && type_ < countof(commandMap));
-	for(int i = 0; i < countof(commandMap); i += 2) {
+	assert(type_ >= 0 && type_ < MANAH_COUNTOF(commandMap));
+	for(int i = 0; i < MANAH_COUNTOF(commandMap); i += 2) {
 		if(commandMap[i] == type_) {
 			CaretMovementCommand(target(), static_cast<CaretMovementCommand::Type>(commandMap[i + 1]), true).execute();
 			break;
@@ -959,7 +959,7 @@ bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const Char* first
 	using std::binary_search;
 	if(PRIMARYLANGID(LOWORD(keyboardLayout)) != LANG_VIETNAMESE)
 		return true;
-	else if(first < last && binary_search(TONE_MARKS, endof(TONE_MARKS), cp))
-		return binary_search(VOWELS, endof(VOWELS), last[-1]);
+	else if(first < last && binary_search(TONE_MARKS, MANAH_ENDOF(TONE_MARKS), cp))
+		return binary_search(VOWELS, MANAH_ENDOF(VOWELS), last[-1]);
 	return true;
 }

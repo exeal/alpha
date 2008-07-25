@@ -1,7 +1,7 @@
 /**
  * @file break-iterator.cpp
  * @date 2006-2007 (was iterator.cpp)
- * @date 2007
+ * @date 2007-2008
  * @author exeal
  */
 
@@ -12,6 +12,7 @@ using namespace ascension::text;
 using namespace ascension::text::internal;
 using namespace ascension::text::ucd;
 using namespace std;
+using manah::toBoolean;
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
 #error "These codes are based on old version of UAX #29"

@@ -107,6 +107,7 @@ Position kernel::updatePosition(const Position& position, const DocumentChange& 
 /**
  * Writes the content of the document to the specified output stream.
  * <p>This method does not write Unicode byte order mark.</p>
+ * <p>This method explicitly flushes te output stream.</p>
  * @param out the output stream
  * @param document the document
  * @param region the region to be written (this region is not restricted with narrowing)
@@ -141,7 +142,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}
 	}
-	return out;
+	return out.flush();
 }
 
 namespace {
@@ -915,7 +916,7 @@ Position Document::insert(const Position& at, basic_istream<Char>& in) {
 	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
 	Char buffer[8192];
 	while(in) {
-		in.read(buffer, countof(buffer));
+		in.read(buffer, MANAH_COUNTOF(buffer));
 		if(in.gcount() == 0)
 			break;
 		resultPosition = insertText(resultPosition, buffer, buffer + in.gcount());
@@ -926,7 +927,7 @@ Position Document::insert(const Position& at, basic_istream<Char>& in) {
 // called by insert(const Position&, const Char*, const Char*) and insert(const Position&, basic_istream<Char>&).
 Position Document::insertText(const Position& position, const Char* first, const Char* last) {
 	Position resultPosition(position.line, 0);
-	const Char* breakPoint = find_first_of(first, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
+	const Char* breakPoint = find_first_of(first, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 
 	if(breakPoint == last) {	// single-line
 		Line& line = const_cast<Line&>(getLineInformation(position.line));
@@ -942,7 +943,7 @@ Position Document::insertText(const Position& position, const Char* first, const
 
 		// 最後の改行位置を探し、resultPosition の文字位置も決定する
 		for(lastBreak = last - 1; ; --lastBreak) {
-			if(binary_search(NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS), *lastBreak))
+			if(binary_search(NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS), *lastBreak))
 				break;
 		}
 		resultPosition.column = static_cast<length_t>((last - first) - (lastBreak - first) - 1);
@@ -964,7 +965,7 @@ Position Document::insertText(const Position& position, const Char* first, const
 		while(true) {
 			if(breakPoint <= lastBreak) {
 				const Char* const nextBreak =
-					find_first_of(breakPoint, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
+					find_first_of(breakPoint, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 				assert(nextBreak != last);
 				const Newline newline = eatNewline(nextBreak, last);
 
@@ -1536,7 +1537,7 @@ DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPositi
 		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
 		throw invalid_argument("the given mode is invalid.");
-	setp(buffer_, endof(buffer_) - 1);
+	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
 }
 
 /// Destructor.
@@ -1556,7 +1557,7 @@ DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
 	char_type* p = pptr();
 	if(!traits_type::eq_int_type(c, traits_type::eof()))
 		*p++ = traits_type::to_char_type(c);
-	setp(buffer_, endof(buffer_) - 1);
+	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
 	if(buffer_ < p)
 		current_ = document_.insert(current_, buffer_, p);
 	return traits_type::not_eof(c);

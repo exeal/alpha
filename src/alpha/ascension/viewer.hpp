@@ -356,12 +356,14 @@ namespace ascension {
 				int topMargin;
 				/// Set true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
+				/// Set true to use also Rich Text Format for clipboard operations. Default value is false.
+				bool usesRichTextClipboardFormat;
 				/// Constructor.
-				Configuration() throw() : leadingMargin(5), topMargin(1) {
+				Configuration() throw() : leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
 					::BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
-					vanishesCursor = toBoolean(b);
+					vanishesCursor = manah::toBoolean(b);
 #else
 					vanishesCursor = false;
 #endif
@@ -669,8 +671,16 @@ namespace ascension {
 					cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 				}
 			public:
+				/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
+				enum CursorType {
+					CURSOR_NEUTRAL,	///< Indicates no scrolling.
+					CURSOR_UPWARD,	///< Indicates scrolling upward.
+					CURSOR_DOWNWARD	///< Indicates scrolling downward.
+				};
+			public:
 				AutoScrollOriginMark() throw();
 				bool create(const TextViewer& view);
+				static ::HCURSOR cursorForScrolling(CursorType type);
 			protected:
 				void onPaint(manah::win32::gdi::PaintDC& dc);
 			private:
@@ -764,6 +774,8 @@ namespace ascension {
 				ID_INSERT_NEL,		// NEL (Next Line)
 				ID_INSERT_LS,		// LS (Line Separator)
 				ID_INSERT_PS,		// PS (Paragraph Separator)
+
+				ID_INVOKE_HYPERLINK	// Open <hyperlink>
 			};
 
 			// data members

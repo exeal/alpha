@@ -1,7 +1,7 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2008
  */
 
 #include "viewer.hpp"
@@ -17,6 +17,7 @@ using namespace ascension::text::ucd;
 //using namespace ascension::internal;
 using namespace manah::win32;
 using namespace std;
+using manah::toBoolean;
 
 
 namespace {
@@ -30,14 +31,14 @@ namespace {
 			Text(::HGLOBAL handle, const Char* text) throw() : handle_(handle), text_(text) {}
 			Text(const Text& rhs) throw() : handle_(rhs.handle_), text_(rhs.text_) {const_cast<Text&>(rhs).handle_ = 0;}
 			~Text() throw() {if(handle_ != 0) ::GlobalUnlock(handle_);}
-			const Char* getData() const throw() {return text_;}
-			length_t getRawSize() const throw() {return (handle_ != 0) ? ::GlobalSize(handle_) : 0;}
+			const Char* data() const throw() {return text_;}
+			length_t rawSize() const throw() {return (handle_ != 0) ? ::GlobalSize(handle_) : 0;}
 			operator bool() const throw() {return handle_ != 0 && text_ != 0;}
 		private:
 			::HGLOBAL handle_;
 			const Char* const text_;
 		};
-		Clipboard(::HWND window) throw() : opened_(toBoolean(::OpenClipboard(window))) {}
+		Clipboard(::HWND window) throw();
 		~Clipboard() throw() {if(opened_) ::CloseClipboard();}
 		bool isOpen() const throw() {return opened_;}
 		Text read() throw();
@@ -48,12 +49,24 @@ namespace {
 	};
 
 	/**
+	 * Constructor opens the clipboard.
+	 * @param window the owner of the clipboard
+	 */
+	Clipboard::Clipboard(::HWND window) throw() : opened_(false) {
+		for(int i = 0; i < 100; ++i) {
+			if(opened_ = toBoolean(::OpenClipboard(window)))
+				break;
+			::Sleep(0);
+		}
+	}
+
+	/**
 	 * Reads the text from the clipboard.
 	 * @return the text
 	 */
 	Clipboard::Text Clipboard::read() throw() {
 		assert(isOpen());
-		if(HGLOBAL data = ::GetClipboardData(CF_UNICODETEXT))
+		if(::HGLOBAL data = ::GetClipboardData(CF_UNICODETEXT))
 			return Text(data, static_cast<Char*>(::GlobalLock(data)));
 		return Text(0, 0);
 	}
@@ -136,6 +149,221 @@ namespace {
 		throw invalid_argument("unknown character unit.");
 	}
 } // namespace @0
+
+namespace {
+	class TextObject : virtual public ::IDataObject {
+	public:
+		// constructor
+		TextObject(const String& plainContent, bool rectangle, const string& rtfContent);
+		// IUnknown
+		MANAH_IMPLEMENT_UNKNOWN_SINGLE_THREADED()
+		MANAH_BEGIN_INTERFACE_TABLE()
+			MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IDataObject)
+		MANAH_END_INTERFACE_TABLE()
+		// IDataObject
+		STDMETHODIMP GetData(::LPFORMATETC pformatetcIn, ::LPSTGMEDIUM pmedium);
+		STDMETHODIMP GetDataHere(::LPFORMATETC, ::LPSTGMEDIUM) {return E_NOTIMPL;}
+		STDMETHODIMP QueryGetData(::LPFORMATETC pformatetc);
+		STDMETHODIMP GetCanonicalFormatEtc(::LPFORMATETC, ::LPFORMATETC) {return DATA_S_SAMEFORMATETC;}
+		STDMETHODIMP SetData(::LPFORMATETC, ::LPSTGMEDIUM, ::BOOL) {return E_NOTIMPL;}
+		STDMETHODIMP EnumFormatEtc(::DWORD dwDirection, ::LPENUMFORMATETC* ppenumFormatEtc);
+		STDMETHODIMP DAdvise(::LPFORMATETC, ::DWORD, ::LPADVISESINK, ::LPDWORD) {return OLE_E_ADVISENOTSUPPORTED;}
+		STDMETHODIMP DUnadvise(::DWORD) {return OLE_E_ADVISENOTSUPPORTED;}
+		STDMETHODIMP EnumDAdvise(::LPENUMSTATDATA*) {return OLE_E_ADVISENOTSUPPORTED;}
+	private:
+		class FormatEnumerator : virtual public IEnumFORMATETC {
+		public:
+			explicit FormatEnumerator(const list<::CLIPFORMAT>& formats) : formats_(formats) {Reset();}
+			// IUnknown
+			MANAH_IMPLEMENT_UNKNOWN_SINGLE_THREADED()
+			MANAH_BEGIN_INTERFACE_TABLE()
+				MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IEnumFORMATETC)
+			MANAH_END_INTERFACE_TABLE()
+			// IEnumFORMATETC
+			STDMETHODIMP Next(::ULONG celt, ::FORMATETC* rgelt, ::ULONG* pceltFetched);
+			STDMETHODIMP Skip(::ULONG celt);
+			STDMETHODIMP Reset() {current_ = formats_.begin(); return S_OK;}
+			STDMETHODIMP Clone(::IEnumFORMATETC** ppenum);
+		private:
+			const list<::CLIPFORMAT> formats_;
+			list<::CLIPFORMAT>::const_iterator current_;
+		};
+	private:
+		const String unicodeContent_;
+		auto_ptr<string> ansiContent_;
+		auto_ptr<const string> rtfContent_;
+		bool rectangle_;
+		static ::CLIPFORMAT rectangleFormatInteger_, rtfInteger_, rtfWithoutObjectsInteger_;
+	};
+
+	::CLIPFORMAT TextObject::rectangleFormatInteger_, TextObject::rtfInteger_, TextObject::rtfWithoutObjectsInteger_;
+
+	TextObject::TextObject(const String& plainContent, bool rectangle, const string& rtfContent)
+			: unicodeContent_(plainContent), rtfContent_(new string(rtfContent)), rectangle_(rectangle) {
+		if(rectangleFormatInteger_ == 0) {
+			rectangleFormatInteger_ = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+			rtfInteger_ = ::RegisterClipboardFormatW(L"Rich Text Format");									// CF_RTF
+			rtfWithoutObjectsInteger_ = ::RegisterClipboardFormatW(L"Rich Text Format Without Objects");	// CF_RTFNOOBJS
+		}
+	}
+
+	STDMETHODIMP TextObject::EnumFormatEtc(::DWORD dwDirection, ::LPENUMFORMATETC* ppenumFormatEtc) {
+		if(dwDirection == DATADIR_SET)
+			return E_NOTIMPL;
+		else if(dwDirection != DATADIR_GET)
+			return E_INVALIDARG;
+		else if(ppenumFormatEtc == 0)
+			return E_INVALIDARG;
+		list<::CLIPFORMAT> formats;
+		formats.push_back(CF_UNICODETEXT);
+		formats.push_back(CF_TEXT);
+		formats.push_back(CF_LOCALE);
+		if(rectangle_)
+			formats.push_back(rectangleFormatInteger_);
+		if(rtfContent_.get() != 0) {
+			formats.push_back(rtfInteger_);
+			formats.push_back(rtfWithoutObjectsInteger_);
+		}
+		if(*ppenumFormatEtc = new(nothrow) FormatEnumerator(formats))
+			return (*ppenumFormatEtc)->AddRef(), S_OK;
+		return E_OUTOFMEMORY;
+	}
+
+	STDMETHODIMP TextObject::GetData(::LPFORMATETC pformatetcIn, ::LPSTGMEDIUM pmedium) {
+		if(pformatetcIn == 0 || pmedium == 0)
+			return E_INVALIDARG;
+		if(pformatetcIn->dwAspect != DVASPECT_CONTENT
+				|| pformatetcIn->lindex != -1
+				|| !toBoolean(pformatetcIn->tymed & TYMED_HGLOBAL))
+			return DV_E_FORMATETC;
+
+		if(pformatetcIn->cfFormat == CF_UNICODETEXT || pformatetcIn->cfFormat == rectangleFormatInteger_) {
+			if(0 == (pmedium->hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (unicodeContent_.length() + 1))))
+				return E_OUTOFMEMORY;
+			wcscpy(static_cast<wchar_t*>(::GlobalLock(pmedium->hGlobal)), unicodeContent_.c_str());
+			::GlobalUnlock(pmedium->hGlobal);
+		} else if(pformatetcIn->cfFormat == CF_TEXT) {
+			if(ansiContent_.get() == 0) {
+				// convert Unicode content into ANSI one
+				int ansiLength = ::WideCharToMultiByte(CP_ACP, WC_SEPCHARS | WC_DEFAULTCHAR,
+					unicodeContent_.data(), static_cast<int>(unicodeContent_.length()), 0, 0, 0, 0);
+				if(ansiLength == 0)
+					return DV_E_FORMATETC;
+				manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
+				if(ansiBuffer.get() == 0)
+					return E_OUTOFMEMORY;
+				ansiLength = ::WideCharToMultiByte(CP_ACP, WC_SEPCHARS | WC_DEFAULTCHAR,
+					unicodeContent_.data(), static_cast<int>(unicodeContent_.length()), ansiBuffer.get(), ansiLength, 0, 0);
+				try {
+					ansiContent_.reset(new string(ansiBuffer.get(), ansiLength));
+				} catch(bad_alloc&) {
+					return E_OUTOFMEMORY;
+				} catch(...) {
+				}
+				if(ansiContent_.get() == 0)
+					return DV_E_FORMATETC;
+			}
+			if(0 == (pmedium->hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiContent_->length() + 1))))
+				return E_OUTOFMEMORY;
+			strcpy(static_cast<char*>(::GlobalLock(pmedium->hGlobal)), ansiContent_->c_str());
+			::GlobalUnlock(pmedium->hGlobal);
+		} else if(pformatetcIn->cfFormat == CF_LOCALE) {
+			if(0 == (pmedium->hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(::LCID))))
+				return E_OUTOFMEMORY;
+			*static_cast<::LCID*>(::GlobalLock(pmedium->hGlobal)) = ::GetUserDefaultLCID();
+			::GlobalUnlock(pmedium->hGlobal);
+		} else if(pformatetcIn->cfFormat == rtfInteger_) {
+			// TODO: implement.
+		} else if(pformatetcIn->cfFormat == rtfWithoutObjectsInteger_) {
+			// TODO: implement.
+		}
+
+		pmedium->tymed = TYMED_HGLOBAL;
+		pmedium->pUnkForRelease = 0;
+
+		return S_OK;
+	}
+
+
+	STDMETHODIMP TextObject::QueryGetData(::LPFORMATETC pformatetc) {
+		if(pformatetc == 0)
+			return E_INVALIDARG;
+		else if(pformatetc->lindex != -1)
+			return DV_E_LINDEX;
+		else if(!toBoolean(pformatetc->tymed & TYMED_HGLOBAL))
+			return DV_E_TYMED;
+		else if(pformatetc->dwAspect != DVASPECT_CONTENT)
+			return DV_E_DVASPECT;
+		switch(pformatetc->cfFormat) {
+		case CF_TEXT:
+		case CF_LOCALE:
+		case CF_UNICODETEXT:
+			break;
+		default:
+			if(pformatetc->cfFormat == rectangleFormatInteger_ && !rectangle_
+					|| pformatetc->cfFormat == rtfInteger_ && rtfContent_.get() == 0
+					|| pformatetc->cfFormat == rtfWithoutObjectsInteger_ && rtfContent_.get() == 0)
+				return DV_E_FORMATETC;
+		}
+		return S_OK;
+	}
+
+	STDMETHODIMP TextObject::FormatEnumerator::Clone(IEnumFORMATETC** ppenum) {
+		MANAH_VERIFY_POINTER(ppenum);
+		if(*ppenum = new(nothrow) FormatEnumerator(formats_))
+			return (*ppenum)->AddRef(), S_OK;
+		return E_OUTOFMEMORY;
+	}
+
+	STDMETHODIMP TextObject::FormatEnumerator::Next(::ULONG celt, ::FORMATETC* rgelt, ::ULONG* pceltFetched) {
+		if(celt > 1 && pceltFetched == 0)
+			return E_INVALIDARG;
+
+		::ULONG fetched = 0;
+		for(list<::CLIPFORMAT>::const_iterator e(formats_.end()); fetched < celt && current_ != e; ++fetched, ++current_) {
+			rgelt[fetched].cfFormat = *current_;
+			rgelt[fetched].ptd = 0;
+			rgelt[fetched].dwAspect = DVASPECT_CONTENT;
+			rgelt[fetched].lindex = -1;
+			rgelt[fetched].tymed = TYMED_HGLOBAL;
+			
+		}
+		if(pceltFetched != 0)
+			*pceltFetched = fetched;
+
+		return (fetched == celt) ? S_OK : S_FALSE;
+	}
+
+	STDMETHODIMP TextObject::FormatEnumerator::Skip(::ULONG celt) {
+		for(list<::CLIPFORMAT>::const_iterator e(formats_.end()); celt != 0 && current_ != e; ++current_)
+			--celt;
+		return celt == 0 ? S_OK : S_FALSE;
+	}
+} // namespace @0
+
+/**
+ * Creates an IDataObject represents the specified region.
+ * @param viewer the text viewer
+ * @param region the region
+ * @param rectangle set true if the content is rectangle
+ * @param rtf set true if the content is available as Rich Text Format
+ * @param[out] content
+ */
+void viewers::makeRegionTextObject(const TextViewer& viewer, const Region& region, bool rectangle, bool rtf, ::IDataObject*& content) {
+	basic_ostringstream<Char> s;
+	writeDocumentToStream(s, viewer.document(), region, NLF_CR_LF);
+	const String text(s.str());
+
+	// 
+	::HGLOBAL richContent = 0;
+	if(rtf) {
+	}
+
+//	if(content = new(nothrow) TextObject(text, rectangle, richContent))
+//		content->AddRef();
+//	else
+//		throw bad_alloc();
+}
 
 
 // EditPoint ////////////////////////////////////////////////////////////////
@@ -754,7 +982,7 @@ void VisualPoint::insertBox(const Char* first, const Char* last) {
 	const String newline(getNewlineString((documentInput != 0) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
-		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
+		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 
 		// insert text if the source line is not empty
 		if(eol > bol) {
@@ -993,7 +1221,7 @@ void VisualPoint::paste(const Position& other) {
 
 		Clipboard clipboard(viewer_->getHandle());
 		if(Clipboard::Text text = clipboard.read()) {
-			const Char* const data = text.getData();
+			const Char* const data = text.data();
 			if(availableClipFormat == ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))
 				insertBox(data, data + wcslen(data));
 			else

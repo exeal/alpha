@@ -19,6 +19,7 @@ using namespace ascension::text::ucd;
 using namespace manah::win32;
 using namespace manah::win32::gdi;
 using namespace std;
+using manah::toBoolean;
 
 #pragma comment(lib, "usp10.lib")
 
@@ -78,13 +79,13 @@ namespace {
 		// this code is preliminary...
 		static const ::WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
 		::LANGID result = getUserDefaultUILanguage();
-		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
 			return result;
 		result = ::GetUserDefaultLangID();
-		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
 			return result;
 		result = ::GetSystemDefaultLangID();
-		if(find(CJK_LANGUAGES, endof(CJK_LANGUAGES), PRIMARYLANGID(result)) != endof(CJK_LANGUAGES))
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
 			return result;
 		switch(::GetACP()) {
 		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
@@ -399,7 +400,7 @@ LineLayout::~LineLayout() throw() {
  * @return the embedding level
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-byte LineLayout::bidiEmbeddingLevel(length_t column) const {
+ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
 			throw kernel::BadPositionException();
@@ -949,9 +950,9 @@ inline void LineLayout::itemize(length_t lineNumber) throw() {
 	int expectedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2);
 	::SCRIPT_ITEM* items;
 	int numberOfItems;
-	if(expectedNumberOfRuns <= countof(fastItems)) {
+	if(expectedNumberOfRuns <= MANAH_COUNTOF(fastItems)) {
 		hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
-			expectedNumberOfRuns = countof(fastItems), &control, &initialState, items = fastItems, &numberOfItems);
+			expectedNumberOfRuns = MANAH_COUNTOF(fastItems), &control, &initialState, items = fastItems, &numberOfItems);
 		if(hr == E_OUTOFMEMORY)
 			expectedNumberOfRuns *= 2;
 	} else
@@ -1487,7 +1488,8 @@ namespace {
 			static const ::WCHAR text[] = L"\x82A6\xDB40\xDD00";	// <芦, U+E0100>
 			::SCRIPT_ITEM items[4];
 			int numberOfItems;
-			if(SUCCEEDED(::ScriptItemize(text, countof(text) - 1, countof(items), 0, 0, items, &numberOfItems)) && numberOfItems == 1)
+			if(SUCCEEDED(::ScriptItemize(text, MANAH_COUNTOF(text) - 1,
+					MANAH_COUNTOF(items), 0, 0, items, &numberOfItems)) && numberOfItems == 1)
 				supports = true;
 			checked = true;
 		}
@@ -1711,8 +1713,8 @@ void LineLayout::shape() throw() {
 				if(vs >= 0xE0100 && vs <= 0xE01EF) {
 					const CodePoint baseCharacter = surrogates::decodeLast(textString, textString + run->length());
 					const size_t i = ascension::internal::searchBound(
-						0U, countof(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
-					if(i != countof(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
+						0U, MANAH_COUNTOF(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xE0100), GetIVS());
+					if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
 						// found valid IVS -> apply OpenType feature tag to obtain the variant
 						// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
 						hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
@@ -2503,24 +2505,24 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 	// using the primary font
 	ScreenDC dc;
 	::HFONT oldFont = dc.selectObject(renderer_->font());
-	dc.getGlyphIndices(codes, countof(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
-	dc.getCharWidthI(glyphs_, countof(codes), glyphWidths_);
+	dc.getGlyphIndices(codes, MANAH_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
+	dc.getCharWidthI(glyphs_, MANAH_COUNTOF(codes), glyphWidths_);
 
 	// using the fallback font
 	::DeleteObject(font_);
 	font_ = 0;
-	if(find(glyphs_, endof(glyphs_), 0xFFFF) != endof(glyphs_)) {
+	if(find(glyphs_, MANAH_ENDOF(glyphs_), 0xFFFF) != MANAH_ENDOF(glyphs_)) {
 		::LOGFONTW lf;
 		::GetObject(renderer_->font(), sizeof(::LOGFONTW), &lf);
 		lf.lfWeight = FW_REGULAR;
 		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
 		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");
 		dc.selectObject(font_ = ::CreateFontIndirectW(&lf));
-		::WORD g[countof(glyphs_)];
-		int w[countof(glyphWidths_)];
-		dc.getGlyphIndices(codes, countof(codes), g, GGI_MARK_NONEXISTING_GLYPHS);
-		dc.getCharWidthI(g, countof(codes), w);
-		for(int i = 0; i < countof(glyphs_); ++i) {
+		::WORD g[MANAH_COUNTOF(glyphs_)];
+		int w[MANAH_COUNTOF(glyphWidths_)];
+		dc.getGlyphIndices(codes, MANAH_COUNTOF(codes), g, GGI_MARK_NONEXISTING_GLYPHS);
+		dc.getCharWidthI(g, MANAH_COUNTOF(codes), w);
+		for(int i = 0; i < MANAH_COUNTOF(glyphs_); ++i) {
 			if(glyphs_[i] == 0xFFFF) {
 				if(g[i] != 0xFFFF) {
 					glyphs_[i] = g[i];
@@ -3335,7 +3337,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() throw() {
 			dc.selectObject(oldFont);
 			int glyphWidths[10];
 			hr = ::ScriptStringGetLogicalWidths(ssa, glyphWidths);
-			int maxGlyphWidth = *max_element(glyphWidths, endof(glyphWidths));
+			int maxGlyphWidth = *max_element(glyphWidths, MANAH_ENDOF(glyphWidths));
 			lineNumberDigitsCache_ = newLineNumberDigits;
 			if(maxGlyphWidth != 0) {
 				newWidth += max<uchar>(newLineNumberDigits, configuration_.lineNumbers.minimumDigits) * maxGlyphWidth;

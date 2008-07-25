@@ -698,13 +698,13 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  * @param byteToCharacterWire the table defines byte-to-character mapping consists of 16Å~16-characters
  */
 sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) throw() : byteToUnicode_(byteToCharacterWire) {
-	fill_n(unicodeToByte_, countof(unicodeToByte_), static_cast<byte*>(0));
+	fill_n(unicodeToByte_, MANAH_COUNTOF(unicodeToByte_), static_cast<byte*>(0));
 	buildUnicodeToByteTable();	// eager?
 }
 
 /// Destructor.
 sbcs::BidirectionalMap::~BidirectionalMap() throw() {
-	for(size_t i = 0; i < countof(unicodeToByte_); ++i) {
+	for(size_t i = 0; i < MANAH_COUNTOF(unicodeToByte_); ++i) {
 		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
 			delete[] unicodeToByte_[i];
 	}
@@ -712,7 +712,7 @@ sbcs::BidirectionalMap::~BidirectionalMap() throw() {
 
 void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
-	fill_n(unicodeToByte_, countof(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
+	fill_n(unicodeToByte_, MANAH_COUNTOF(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
 	for(int i = 0x00; i < 0xFF; ++i) {
 		const Char ucs = wireAt(byteToUnicode_, static_cast<byte>(i));
 		byte*& p = unicodeToByte_[ucs >> 8];

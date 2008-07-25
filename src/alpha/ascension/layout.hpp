@@ -651,12 +651,12 @@ namespace ascension {
 			static class SystemColors {
 			public:
 				SystemColors() throw() {update();}
-				::COLORREF get(int index) const {assert(index >= 0 && index < countof(c_)); return c_[index];}
+				::COLORREF get(int index) const {assert(index >= 0 && index < MANAH_COUNTOF(c_)); return c_[index];}
 				::COLORREF getReal(::COLORREF color, ::COLORREF defaultColor) const {
 					assert(defaultColor != layout::STANDARD_COLOR);
 					if(color == layout::STANDARD_COLOR) color = defaultColor;
-					return toBoolean(color & layout::SYSTEM_COLOR_MASK) ? get(color & ~layout::SYSTEM_COLOR_MASK) : color;}
-				void update() throw() {for(int i = 0; i < countof(c_); ++i) c_[i] = ::GetSysColor(i);}
+					return manah::toBoolean(color & layout::SYSTEM_COLOR_MASK) ? get(color & ~layout::SYSTEM_COLOR_MASK) : color;}
+				void update() throw() {for(int i = 0; i < MANAH_COUNTOF(c_); ++i) c_[i] = ::GetSysColor(i);}
 			private:
 				::COLORREF c_[128];
 			} systemColors;

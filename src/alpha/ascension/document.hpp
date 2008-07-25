@@ -8,13 +8,16 @@
 #ifndef ASCENSION_DOCUMENT_HPP
 #define ASCENSION_DOCUMENT_HPP
 
-#include <set>
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
 #include "encoder.hpp"
 #include "../../manah/memory.hpp"		// manah.FastArenaObject
 #include "../../manah/gap-buffer.hpp"	// manah.GapBuffer
+#include <set>
+#ifndef ASCENSION_NO_GREP
+#	include <stack>
+#endif /* !ASCENSION_NO_GREP */
 
 
 namespace ascension {
@@ -1052,16 +1055,97 @@ namespace ascension {
 				Newline newline_;
 				LockMode lockMode_;
 #ifdef ASCENSION_WINDOWS
-				::HANDLE
+				::HANDLE lockingFile_;
 #else // ASCENSION_POSIX
-				int
+				int lockingFile_;
 #endif
-					lockingFile_;
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
 				ascension::internal::Listeners<IFilePropertyListener> listeners_;
 				IUnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
+
+#ifndef ASCENSION_NO_GREP
+			class DirectoryIteratorBase {
+				MANAH_NONCOPYABLE_TAG(DirectoryIteratorBase);
+			public:
+				virtual ~DirectoryIteratorBase() throw();
+				/**
+				 * Returns the current entry name.
+				 * @throw NoSuchElementException the iteration has already ended
+				 */
+				virtual const String& current() const = 0;
+				/**
+				 * Returns the directory name this iterator traverses. This value does not end
+				 * with path-separator.
+				 */
+				virtual const String& directory() const throw() = 0;
+				/**
+				 * Returns true if the current entry is directory.
+				 * @throw NoSuchElementException the iteration has already ended
+				 */
+				virtual bool isDirectory() const = 0;
+				/**
+				 * Returns true if the iterator is end.
+				 * @throw NoSuchElementException the iteration has already ended
+				 */
+				virtual bool isDone() const throw() = 0;
+				/**
+				 * Moves to the next entry. If the iterator has already reached at the end, does
+				 * nothing.
+				 * @throw IOException any I/O error occured
+				 */
+				virtual void next() = 0;
+			protected:
+				DirectoryIteratorBase() throw();
+			};
+
+			/// Traverses entries in the specified directory.
+			class DirectoryIterator : virtual public DirectoryIteratorBase {
+			public:
+				// constructors
+				DirectoryIterator(const Char* directoryName);
+				~DirectoryIterator() throw();
+				// DirectoryIteratorBase
+				const String& current() const;
+				const String& directory() const throw();
+				bool isDirectory() const;
+				bool isDone() const throw();
+				void next();
+			private:
+				void update(const void* info);
+			private:
+#ifdef ASCENSION_WINDOWS
+				::HANDLE handle_;
+#else // ASCENSION_POSIX
+				DIR* handle_;
+#endif
+				String current_, directory_;
+				bool currentIsDirectory_, done_;
+			};
+
+			/// Recursive version of @c DirectoryIterator.
+			class RecursiveDirectoryIterator : virtual public DirectoryIteratorBase {
+			public:
+				// constructors
+				RecursiveDirectoryIterator(const Char* directoryName);
+				~RecursiveDirectoryIterator() throw();
+				// attributes
+				void dontPush();
+				std::size_t level() const throw();
+				void pop();
+				// DirectoryIteratorBase
+				const String& current() const;
+				const String& directory() const throw();
+				bool isDirectory() const;
+				bool isDone() const throw();
+				void next();
+			private:
+				std::stack<DirectoryIterator*> stack_;
+				String directory_;
+				bool doesntPushNext_;
+			};
+#endif /* !ASCENSION_NO_GREP */
 
 			// free functions related to file path name
 			String canonicalizePathName(const Char* pathName);
@@ -1166,7 +1250,7 @@ inline length_t getNumberOfLines(ForwardIterator first, ForwardIterator last) {
 		return 0;
 	length_t lines = 1;
 	while(true) {
-		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, endof(NEWLINE_CHARACTERS));
+		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 		if(first == last)
 			break;
 		++lines;

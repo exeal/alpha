@@ -195,13 +195,13 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
 			continue;
-		} else if(*from < 0x0028 + countof(UCStoARMSCII8_0028))
+		} else if(*from < 0x0028 + MANAH_COUNTOF(UCStoARMSCII8_0028))
 			*to = UCStoARMSCII8_0028[*from - 0x0028];
-		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
+		else if(*from < 0x00A0 + MANAH_COUNTOF(UCStoARMSCII78_00A0))
 			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
-		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
+		else if(*from < 0x0530 + MANAH_COUNTOF(UCStoARMSCII78_0530))
 			*to = UCStoARMSCII78_0530[*from - 0x0530];
-		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
+		else if(*from < 0x2010 + MANAH_COUNTOF(UCStoARMSCII78_2010))
 			*to = UCStoARMSCII78_2010[*from - 0x2010];
 		else if(const Char* decomposed = decomposeArmenianLigature(*from)) {
 			if(to + 1 < toEnd) {
@@ -267,13 +267,13 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
 			continue;
-		} else if(*from < 0x0028 + countof(UCStoARMSCII7_0028))
+		} else if(*from < 0x0028 + MANAH_COUNTOF(UCStoARMSCII7_0028))
 			*to = UCStoARMSCII7_0028[*from - 0x0028];
-		else if(*from < 0x00A0 + countof(UCStoARMSCII78_00A0))
+		else if(*from < 0x00A0 + MANAH_COUNTOF(UCStoARMSCII78_00A0))
 			*to = UCStoARMSCII78_00A0[*from - 0x00A0];
-		else if(*from < 0x0530 + countof(UCStoARMSCII78_0530))
+		else if(*from < 0x0530 + MANAH_COUNTOF(UCStoARMSCII78_0530))
 			*to = UCStoARMSCII78_0530[*from - 0x0530];
-		else if(*from < 0x2010 + countof(UCStoARMSCII78_2010))
+		else if(*from < 0x2010 + MANAH_COUNTOF(UCStoARMSCII78_2010))
 			*to = UCStoARMSCII78_2010[*from - 0x2010];
 		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
 			if(to + 1 < toEnd) {
@@ -308,7 +308,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
-		else if(*from < 0x20 + countof(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
+		else if(*from < 0x20 + MANAH_COUNTOF(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20];
 		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
 			--to;
@@ -334,14 +334,14 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doFromUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003A, 0x005F, 0x0060, 0x007E};
-			*to = binary_search(invChars, invChars + countof(invChars), *from) ? mask8Bit(*from) : props_.substitutionCharacter();
+			*to = binary_search(invChars, MANAH_ENDOF(invChars), *from) ? mask8Bit(*from) : props_.substitutionCharacter();
 		} else if(*from < 0x00A8)
 			*to = props_.substitutionCharacter();
-		else if(*from < 0x00A8 + countof(UCStoARMSCII8A_00A8))
+		else if(*from < 0x00A8 + MANAH_COUNTOF(UCStoARMSCII8A_00A8))
 			*to = UCStoARMSCII8A_00A8[*from - 0x00A8];
-		else if(*from < 0x0530 + countof(UCStoARMSCII8A_0530))
+		else if(*from < 0x0530 + MANAH_COUNTOF(UCStoARMSCII8A_0530))
 			*to = UCStoARMSCII8A_0530[*from - 0x0530];
-		else if(*from < 0x2010 + countof(UCStoARMSCII8A_2010))
+		else if(*from < 0x2010 + MANAH_COUNTOF(UCStoARMSCII8A_2010))
 			*to = UCStoARMSCII8A_2010[*from - 0x2010];
 		else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
 			if(to + 1 < toEnd) {
@@ -376,7 +376,7 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
-		else if(*from < 0x20 + countof(ARMSCII8AtoUCS_20))
+		else if(*from < 0x20 + MANAH_COUNTOF(ARMSCII8AtoUCS_20))
 			*to = ARMSCII8AtoUCS_20[*from - 0x20];
 		else
 			*to = ARMSCII8AtoUCS_D8[*from - 0xD8];

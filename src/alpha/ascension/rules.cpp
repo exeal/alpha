@@ -17,10 +17,11 @@ using rules::internal::HashTable;
 
 
 namespace {
+	template<typename T> inline bool inRange(T v, T b, T e) {return v >= b && v <= e;}
 	template<typename T>
 	struct InRange : unary_function<T, bool> {
 		InRange(T first, T last) : f(first), l(last) {}
-		bool operator()(T v) const throw() {return v >= f && v <= l;}
+		bool operator()(T v) const throw() {return inRange(v, f, l);}
 		T f, l;
 	};
 }
@@ -236,16 +237,16 @@ namespace {
 				return (++first < last && isdigit(*first, cl) && ++first < last && isdigit(*first, cl)) ? ++first : first;
 			else if(*first == L'2') {
 				if(++first < last) {
-					if(*first >= L'0' && *first <= L'4') {
+					if(inRange(*first, L'0', L'4')) {
 						if(isdigit(*++first, cl))
 							++first;
 					} else if(*first == L'5') {
-						if(*first >= L'0' && *first <= L'5')
+						if(inRange(*first, L'0', L'5'))
 							++first;
 					}
 				}
 				return first;
-			} else if(*first >= L'3' && *first <= L'9')
+			} else if(inRange(*first, L'3', L'9'))
 				return (++first < last && isdigit(*first, cl)) ? ++first : first;
 		}
 		return 0;
@@ -296,10 +297,10 @@ namespace {
 	// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
 	inline const Char* handlePrivate(const Char* first, const Char* last) {
 		if(first < last) {
-			if(*first >= 0xE000 && *first <= 0xF8FF)
+			if(inRange<Char>(*first, 0xE000, 0xF8FF))
 				return ++first;
 			const CodePoint c = surrogates::decodeFirst(first, last);
-			if((c >= 0xF0000 && c <= 0xFFFFD) || (c >= 0x100000 && c <= 0x10FFFD))
+			if(inRange<CodePoint>(c, 0xF0000U, 0xFFFFDU) || inRange<CodePoint>(c, 0x100000U, 0x10FFFDU))
 				return first += 2;
 		}
 		return 0;
@@ -313,7 +314,7 @@ namespace {
 	//         / %xD0000-DFFFD / %xE1000-EFFFD
 	inline const Char* handleUcschar(const Char* first, const Char* last) {
 		if(first < last) {
-			if((*first >= 0x00A0 && *first <= 0xD7FF) || (*first >= 0xF900 && *first <= 0xFDCF) || (*first >= 0xFDF0 && *first <= 0xFFEF))
+			if(inRange<Char>(*first, 0x00A0, 0xD7FF) || inRange<Char>(*first, 0xF900, 0xFDCF) || inRange<Char>(*first, 0xFDF0, 0xFFEF))
 				return ++first;
 			const CodePoint c = surrogates::decodeFirst(first, last);
 			if(c >= 0x10000 && c < 0xF0000 && (c & 0xFFFF) >= 0x0000 && (c & 0xFFFF) <= 0xFFFD) {
@@ -750,10 +751,13 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 		Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
 	*/
 	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
+	if(scanner.getPosition().column > 0	// see below
+			&& (inRange(first[-1], L'0', L'9') || inRange(first[-1], L'A', L'F') || inRange(first[-1], L'a', L'f')))
+		return auto_ptr<Token>(0);
 	const Char* e;
 	if(last - first > 2 && first[0] == L'0' && (first[1] == L'x' || first[1] == L'X')) {	// HexIntegerLiteral?
 		for(e = first + 2; e < last; ++e) {
-			if((*e >= L'0' && *e <= L'9') || (*e >= L'A' && *e <= L'F') || (*e >= L'a' && *e <= L'f'))
+			if(inRange(*e, L'0', L'9') || inRange(*e, L'A', L'F') || inRange(*e, L'a', L'f'))
 				continue;
 			break;
 		}
@@ -761,7 +765,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 			return auto_ptr<Token>(0);
 	} else {	// DecimalLiteral?
 		bool foundDecimalIntegerLiteral = false, foundDot = false;
-		if(first[0] >= L'0' && first[0] <= L'9') {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+		if(inRange(first[0], L'0', L'9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
 			e = first + 1;
 			foundDecimalIntegerLiteral = true;
 			if(first[0] != L'0')
@@ -790,7 +794,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 	// e points the end of the found token
 	assert(e > first);
 	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-	if(e < last && ((*e >= L'0' && *e <= L'9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
+	if(e < last && (inRange(*e, L'0', L'9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
 		return auto_ptr<Token>(0);
 
 	auto_ptr<Token> temp(new Token);

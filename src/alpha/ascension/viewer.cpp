@@ -32,6 +32,7 @@ using namespace manah::win32::gdi;
 using namespace manah::com;
 #endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
 using namespace std;
+using manah::toBoolean;
 using manah::AutoBuffer;
 using manah::com::ole::TextDataObject;
 
@@ -55,9 +56,9 @@ namespace {
 } // namespace @0
 
 ::LANGID ASCENSION_FASTCALL ascension::getUserDefaultUILanguage() throw() {
-	// 参考 (いずれも Global Dev)
-	// Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
-	// Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
+	// references (from Global Dev)
+	// - Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
+	// - Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
 	static ::LANGID id = 0;
 	if(id != 0)
 		return id;
@@ -130,9 +131,9 @@ class viewers::internal::TextViewerAccessibleProxy :
 	//   (http://www.gotdotnet.com/workspaces/workspace.aspx?id=4b5530a0-c900-421b-8ed6-7407997fa979)
 	MANAH_UNASSIGNABLE_TAG(TextViewerAccessibleProxy);
 public:
-	// コンストラクタ
+	// constructor
 	TextViewerAccessibleProxy(TextViewer& view);
-	// メソッド
+	// method
 	void dispose();
 	// IUnknown
 	MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
@@ -220,7 +221,7 @@ namespace {
 namespace {
 	class TextServiceApplicationAdapter : virtual public ITextStoreACP, virtual public ITextStoreAnchor {
 	public:
-		// コンストラクタ
+		// constructor
 		explicit TextServiceApplicationAdapter(Viewer& view);
 		// IUnknown
 		IMPLEMENT_UNKNOWN_NO_REF_COUNT()
@@ -348,6 +349,16 @@ namespace {
 			if(session->incrementalSearcher().isRunning())
 				session->incrementalSearcher().end();
 		}
+	}
+	inline const hyperlink::IHyperlink* getPointedHyperlink(const TextViewer& viewer, const Position& at) {
+		size_t numberOfHyperlinks;
+		if(const hyperlink::IHyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
+			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+				if(at.column >= hyperlinks[i]->region().beginning() && at.column <= hyperlinks[i]->region().end())
+					return hyperlinks[i];
+			}
+		}
+		return 0;
 	}
 	inline void toggleOrientation(TextViewer& viewer) throw() {
 		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
@@ -562,32 +573,32 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	const Region newRegion = self.selectionRegion();
 	bool changed = false;
 
-	// キャレットの調整
+	// adjust the caret
 	if(!isFrozen() && (hasFocus() /*|| completionWindow_->hasFocus()*/))
 		updateCaretPosition();
 
-	// 選択の強調表示の再描画
-	if(self.isSelectionRectangle()) {	// 矩形選択の場合
+	// redraw the selected region
+	if(self.isSelectionRectangle()) {	// rectangle
 		if(!oldRegion.isEmpty())
 			redrawLines(oldRegion.beginning().line, oldRegion.end().line);
 		if(!newRegion.isEmpty())
 			redrawLines(newRegion.beginning().line, newRegion.end().line);
-	} else if(newRegion != oldRegion) {	// 本当に範囲が変化した
-		if(oldRegion.isEmpty()) {	// 元々選択が空だった場合
-			if(!newRegion.isEmpty())	// 選択を作成した
+	} else if(newRegion != oldRegion) {	// the selection actually changed
+		if(oldRegion.isEmpty()) {	// the selection was empty...
+			if(!newRegion.isEmpty())	// the selection is not empty now
 				redrawLines(newRegion.beginning().line, newRegion.end().line);
-		} else {	// 元々選択があった場合
-			if(newRegion.isEmpty()) {	// 選択を解除した
+		} else {	// ...if the there is selection
+			if(newRegion.isEmpty()) {	// the selection became empty
 				redrawLines(oldRegion.beginning().line, oldRegion.end().line);
 				if(!isFrozen())
 					update();
-			} else if(oldRegion.beginning() == newRegion.beginning()) {	// 始点固定
+			} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
 				const length_t i[2] = {oldRegion.end().line, newRegion.end().line};
 				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
-			} else if(oldRegion.end() == newRegion.end()) {	// 終点固定
+			} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
 				const length_t i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
 				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
-			} else {	// いずれも変化
+			} else {	// the both points changed
 				if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
 						|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
 					const length_t i[2] = {
@@ -734,7 +745,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	scrollInfo_.updateVertical(*this);
 	updateScrollBars();
 
-	// ツールチップの作成
+	// create the tooltip belongs to the window
 	toolTip_ = ::CreateWindowExW(
 		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, getHandle(), 0,
@@ -754,7 +765,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
 	}
 
-	// 自動スクロールの原点ウィンドウの作成
+	// create the window for the auto scroll origin mark
 	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
 	autoScrollOriginMark_->create(*this);
 
@@ -803,7 +814,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	rules[10] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
 	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
 	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
-	p->setRules(rules, endof(rules));
+	p->setRules(rules, MANAH_ENDOF(rules));
 	document().setPartitioner(p);
 
 	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
@@ -811,7 +822,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	// JSDoc syntax highlight test
 	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
 		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
-	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, endof(JSDOC_ATTRIBUTES) - 1, L' ', true));
+	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, MANAH_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
 	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 	scanner->addWordRule(jsdocAttributes);
 	scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
@@ -828,8 +839,8 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
 	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
 		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
-	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, endof(JS_KEYWORDS) - 1, L' ', true));
-	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, endof(JS_FUTURE_KEYWORDS) - 1, L' ', true));
+	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, MANAH_ENDOF(JS_KEYWORDS) - 1, L' ', true));
+	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, MANAH_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
 	scanner.reset(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
 	scanner->addWordRule(jsKeywords);
 	scanner->addWordRule(jsFutureKeywords);
@@ -896,7 +907,7 @@ bool TextViewer::create(HWND parent, const ::RECT& rect, DWORD style, DWORD exSt
 	renderer_->addFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
 
-	// 位置決めと表示
+	// placement and display
 	move(rect, false);
 	if(visible)
 		show(SW_SHOW);
@@ -923,8 +934,8 @@ bool TextViewer::documentAboutToBeChanged(const Document&, const DocumentChange&
 
 /// @see kernel#IDocumentListener#documentChanged
 void TextViewer::documentChanged(const Document&, const DocumentChange& change) {
-	// インクリメンタル検索中であればやめさせる
-	if(texteditor::Session* session = document().session()) {
+	// cancel the active incremental search
+	if(texteditor::Session* session = document().session()) {	// TODO: why is the code here?
 		if(session->incrementalSearcher().isRunning())
 			session->incrementalSearcher().abort();
 	}
@@ -932,7 +943,7 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 	const Region& region = change.region();
 	const bool multiLine = region.beginning().line != region.end().line;
 	if(isFrozen() && multiLine && freezeInfo_.invalidLines.first != INVALID_INDEX) {
-		// 凍結中の描画待ち行のずらす
+		// slide the frozen lines to be drawn
 		const length_t first = region.beginning().line + 1, last = region.end().line;
 		if(change.isDeletion()) {
 			if(freezeInfo_.invalidLines.first > last)
@@ -953,6 +964,8 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 		}
 	}
 //	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
+	if(!isFrozen())
+		verticalRulerDrawer_->update();
 	if(scrollInfo_.changed)
 		updateScrollBars();
 }
@@ -1136,12 +1149,12 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
-	// GUI ユーザが文字の入力を開始したらカーソルを消す
+	// vanish the cursor when the GUI user began typing
 	if(texteditor::commands::CharacterInputCommand(*this, c).execute() != 0
 			&& !modeState_.cursorVanished
 			&& configuration_.vanishesCursor
 			&& hasFocus()) {
-		// カーソルが同一スレッドのウィンドウ上に無いと駄目
+		// ignore if the cursor is not over a window belongs to the same thread
 		::POINT pt;
 		::GetCursorPos(&pt);
 		Window pointedWindow(Window::fromPoint(pt));
@@ -1370,6 +1383,8 @@ inline void TextViewer::internalUnfreeze() {
 		redrawLines(freezeInfo_.invalidLines.first, freezeInfo_.invalidLines.second);
 	freezeInfo_.invalidLines.first = freezeInfo_.invalidLines.second = INVALID_INDEX;
 
+	verticalRulerDrawer_->update();
+
 	caretMoved(caret(), caret().selectionRegion());
 	update();
 }
@@ -1458,7 +1473,7 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 			if(!isFrozen())
 				update();
 		}
-		if(oldPair.first != Position::INVALID_POSITION	// 前回分を削除
+		if(oldPair.first != Position::INVALID_POSITION	// clear the previous highlight
 				&& oldPair.first.line != newPair.first.line && oldPair.first.line != newPair.second.line) {
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
@@ -1468,7 +1483,7 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 				&& oldPair.second.line != newPair.second.line && oldPair.second.line != oldPair.first.line)
 			redrawLine(oldPair.second.line);
 	} else {
-		if(oldPair.first != Position::INVALID_POSITION) {	// 前回分を削除
+		if(oldPair.first != Position::INVALID_POSITION) {	// clear the previous highlight
 			assert(oldPair.second != Position::INVALID_POSITION);
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
@@ -1495,31 +1510,31 @@ void TextViewer::onChar(UINT ch, UINT) {
 bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	using namespace ascension::texteditor::commands;
 	switch(id) {
-	case WM_UNDO:	// [元に戻す]
+	case WM_UNDO:	// "Undo"
 		UndoCommand(*this, true).execute();
 		break;
-	case WM_REDO:	// [やり直し]
+	case WM_REDO:	// "Redo"
 		UndoCommand(*this, false).execute();
 		break;
-	case WM_CUT:	// [切り取り]
+	case WM_CUT:	// "Cut"
 		ClipboardCommand(*this, ClipboardCommand::CUT, true).execute();
 		break;
-	case WM_COPY:	// [コピー]
+	case WM_COPY:	// "Copy"
 		ClipboardCommand(*this, ClipboardCommand::COPY, true).execute();
 		break;
-	case WM_PASTE:	// [貼り付け]
+	case WM_PASTE:	// "Paste"
 		ClipboardCommand(*this, ClipboardCommand::PASTE, false).execute();
 		break;
-	case WM_CLEAR:	// [削除]
+	case WM_CLEAR:	// "Delete"
 		DeletionCommand(*this, DeletionCommand::NEXT_CHARACTER).execute();
 		break;
-	case WM_SELECTALL:	// [すべて選択]
+	case WM_SELECTALL:	// "Select All"
 		SelectionCreationCommand(*this, SelectionCreationCommand::ALL).execute();
 		break;
-	case ID_RTLREADING:	// [右から左に読む]
+	case ID_RTLREADING:	// "Right to left Reading order"
 		toggleOrientation(*this);
 		break;
-	case ID_DISPLAYSHAPINGCONTROLS: {	// [Unicode 制御文字の表示]
+	case ID_DISPLAYSHAPINGCONTROLS: {	// "Show Unicode control characters"
 		Configuration c(configuration());
 		c.displaysShapingControls = !c.displaysShapingControls;
 		setConfiguration(&c, 0);
@@ -1568,14 +1583,18 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	case ID_INSERT_NEL:		CharacterInputCommand(*this, NEXT_LINE).execute();	break;
 	case ID_INSERT_LS:		CharacterInputCommand(*this, LINE_SEPARATOR).execute();	break;
 	case ID_INSERT_PS:		CharacterInputCommand(*this, PARAGRAPH_SEPARATOR).execute();	break;
-	case ID_TOGGLEIMESTATUS:	// [IME を開く] / [IME を閉じる]
+	case ID_TOGGLEIMESTATUS:	// "Open IME" / "Close IME"
 		InputStatusToggleCommand(*this, InputStatusToggleCommand::IME_STATUS).execute();
 		break;
-	case ID_TOGGLESOFTKEYBOARD:	// [ソフトキーボードを開く] / [ソフトキーボードを閉じる]
+	case ID_TOGGLESOFTKEYBOARD:	// "Open soft keyboard" / "Close soft keyboard"
 		InputStatusToggleCommand(*this, InputStatusToggleCommand::SOFT_KEYBOARD).execute();
 		break;
-	case ID_RECONVERT:	// [再変換]
+	case ID_RECONVERT:	// "Reconvert"
 		ReconversionCommand(*this).execute();
+		break;
+	case ID_INVOKE_HYPERLINK:	// "Open <hyperlink>"
+		if(const hyperlink::IHyperlink* const link = getPointedHyperlink(*this, caret()))
+			link->invoke();
 		break;
 	default:
 //		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
@@ -1585,22 +1604,38 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	return false;
 }
 
+namespace {
+	// replaces single "&" with "&&".
+	template<typename CharType>
+	basic_string<CharType> escapeAmpersands(const basic_string<CharType>& s) {
+		static const ctype<CharType>& ct = use_facet<ctype<CharType> >(locale::classic());
+		basic_string<CharType> result;
+		result.reserve(s.length() * 2);
+		for(basic_string<CharType>::size_type i = 0; i < s.length(); ++i) {
+			result += s[i];
+			if(s[i] == ct.widen('&'))
+				result += s[i];
+		}
+		return result;
+	}
+} // namespace 0@
+
 /// @see WM_CONTEXTMENU
 bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 	using manah::win32::ui::Menu;
 
-	if(!allowsMouseInput())	// マウス操作とは限らないが...
+	if(!allowsMouseInput())	// however, may be invoked by other than the mouse...
 		return true;
 	closeCompletionProposalsPopup(*this);
 	abortIncrementalSearch(*this);
 
-	// キーボードによる場合
+	// invoked by the keyboard
 	if(pt.x == 0xFFFF && pt.y == 0xFFFF) {
-		const_cast<::POINT&>(pt).x = const_cast<::POINT&>(pt).y = 1;	// 適当に...
+		const_cast<::POINT&>(pt).x = const_cast<::POINT&>(pt).y = 1;	// hmm...
 		clientToScreen(const_cast<::POINT&>(pt));
 	}
 
-	// スクロールバー上であれば処理しない
+	// ignore if the point is over the scroll bars
 	::RECT rect;
 	getClientRect(rect);
 	clientToScreen(rect);
@@ -1614,24 +1649,24 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 
 	static ui::PopupMenu menu;
 	static const ::WCHAR* captions[] = {
-		L"&Undo",								L"\x5143\x306B\x623B\x3059(&U)",
-		L"&Redo",								L"\x3084\x308A\x76F4\x3057(&R)",
-		0,										0,
-		L"Cu&t",								L"\x5207\x308A\x53D6\x308A(&T)",
-		L"&Copy",								L"\x30B3\x30D4\x30FC(&C)",
-		L"&Paste",								L"\x8CBC\x308A\x4ED8\x3051(&P)",
-		L"&Delete",								L"\x524A\x9664(&D)",
-		0,										0,
-		L"Select &All",							L"\x3059\x3079\x3066\x9078\x629E(&A)",
-		0,										0,
-		L"&Right to left Reading order",		L"\x53F3\x304B\x3089\x5DE6\x306B\x8AAD\x3080(&R)",
-		L"&Show Unicode control characters",	L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x8868\x793A(&S)",
-		L"&Insert Unicode control character",	L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x633F\x5165(&I)",
-		L"Insert Unicode &whitespace character",L"Unicode \x7A7A\x767D\x6587\x5B57\x306E\x633F\x5165(&W)",
+		L"&Undo",									L"\x5143\x306B\x623B\x3059(&U)",
+		L"&Redo",									L"\x3084\x308A\x76F4\x3057(&R)",
+		0,											0,
+		L"Cu&t",									L"\x5207\x308A\x53D6\x308A(&T)",
+		L"&Copy",									L"\x30B3\x30D4\x30FC(&C)",
+		L"&Paste",									L"\x8CBC\x308A\x4ED8\x3051(&P)",
+		L"&Delete",									L"\x524A\x9664(&D)",
+		0,											0,
+		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629E(&A)",
+		0,											0,
+		L"&Right to left Reading order",			L"\x53F3\x304B\x3089\x5DE6\x306B\x8AAD\x3080(&R)",
+		L"&Show Unicode control characters",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x8868\x793A(&S)",
+		L"&Insert Unicode control character",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x633F\x5165(&I)",
+		L"Insert Unicode &white space character",	L"Unicode \x7A7A\x767D\x6587\x5B57\x306E\x633F\x5165(&W)",
 	};																	
 #define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
 
-	if(menu.getNumberOfItems() == 0) {	// 初期化
+	if(menu.getNumberOfItems() == 0) {	// first initialization
 		menu << Menu::StringItem(WM_UNDO, GET_CAPTION(0))
 			<< Menu::StringItem(WM_REDO, GET_CAPTION(1))
 			<< Menu::SeparatorItem()
@@ -1647,7 +1682,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 			<< Menu::StringItem(0, GET_CAPTION(12))
 			<< Menu::StringItem(0, GET_CAPTION(13));
 
-		// [Unicode 制御文字の挿入] 以下
+		// under "Insert Unicode control character"
 		auto_ptr<Menu> subMenu(new ui::PopupMenu);
 		*subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
 			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
@@ -1673,7 +1708,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 			<< Menu::StringItem(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator");
 		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
 
-		// [Unicode 空白文字の挿入] 以下
+		// under "Insert Unicode white space character"
 		subMenu.reset(new ui::PopupMenu);
 		*subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
 			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
@@ -1700,7 +1735,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 			<< Menu::StringItem(ID_INSERT_PS, L"PS\tParagraph Separator");
 		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
 
-		// bidi サポートがあるか?
+		// check if the system supports bidi
 		if(!supportsComplexScripts()) {
 			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
 			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
@@ -1710,7 +1745,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 	}
 #undef GET_CAPTION
 
-	// メニュー項目の修正
+	// modify menu items
 	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && doc.numberOfUndoableEdits() != 0);
 	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableEdits() != 0);
 	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
@@ -1721,7 +1756,7 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
 	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
 
-	// IME 関連
+	// IME commands
 	::HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
@@ -1746,9 +1781,20 @@ bool TextViewer::onContextMenu(HWND, const ::POINT& pt) {
 
 		::ImmReleaseContext(getHandle(), imc);
 	}
+
+	// hyperlink
+	if(const hyperlink::IHyperlink* link = getPointedHyperlink(*this, caret())) {
+		AutoBuffer<::WCHAR> caption(	// TODO: this code can have buffer overflow in future
+			new ::WCHAR[(link->region().end() - link->region().beginning()) * 2 + 8]);
+		swprintf(caption.get(),
+			japanese ? L"\x202A%s\x202C \x3092\x958B\x304F" : L"Open \x202A%s\x202C", escapeAmpersands(doc.line(
+				caret().lineNumber()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
+	}
+
 	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, getHandle());
 
-	// 消しとく
+	// ...finally erase all items
 	int c = menu.getNumberOfItems();
 	while(c > 13)
 		menu.erase<Menu::BY_POSITION>(c--);
@@ -1764,7 +1810,7 @@ void TextViewer::onDestroy() {
 		mouseInputStrategy_.reset();
 	}
 
-	// 従属ウィンドウを削除
+	// destroy children
 	::DestroyWindow(toolTip_);
 	if(autoScrollOriginMark_.get() != 0)
 		autoScrollOriginMark_->destroy();
@@ -2297,7 +2343,7 @@ void TextViewer::onTimer(::UINT_PTR eventID, ::TIMERPROC) {
 	if(eventID == TIMERID_CALLTIP) {	// show the tooltip
 		killTimer(TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
-	} else if(eventID == TIMERID_AUTOSCROLL) {	// 自動スクロール
+	} else if(eventID == TIMERID_AUTOSCROLL) {	// auto-scroll
 		killTimer(TIMERID_AUTOSCROLL);
 		const ::POINT pt = getCursorPosition();
 		const long yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->linePitch();
@@ -2309,10 +2355,14 @@ void TextViewer::onTimer(::UINT_PTR eventID, ::TIMERPROC) {
 //		else if(xScrollDegree != 0)
 //			scroll(xScrollDegree > 0 ? +1 : -1, 0, true);
 
-		if(yScrollDegree != 0)
+		if(yScrollDegree != 0) {
 			setTimer(TIMERID_AUTOSCROLL, 500 / static_cast<uint>((pow(2, abs(yScrollDegree) / 2))), 0);
-		else
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
+				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD));
+		} else {
 			setTimer(TIMERID_AUTOSCROLL, 300, 0);
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL));
+		}
 	}
 }
 
@@ -3343,6 +3393,97 @@ bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
 	return true;
 }
 
+/**
+ * Returns the cursor should be shown when the auto-scroll is active.
+ * @param type the type of the cursor to obtain
+ * @return the cursor. do not destroy the returned value
+ * @throw std#invalid_argument @a type is unknown
+ */
+::HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static Handle<::HCURSOR, ::DestroyCursor> instances[3];
+	if(type >= MANAH_COUNTOF(instances))
+		throw invalid_argument("type");
+	if(instances[type].getHandle() == 0) {
+		static const byte AND_LINE_3_TO_11[] = {
+			0xFF, 0xFE, 0x7F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xF0, 0x0F, 0xFF,
+			0xFF, 0xE0, 0x07, 0xFF,
+			0xFF, 0xC0, 0x03, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0x00, 0x00, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF
+		};
+		static const byte XOR_LINE_3_TO_11[] = {
+			0x00, 0x01, 0x80, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x08, 0x10, 0x00,
+			0x00, 0x10, 0x08, 0x00,
+			0x00, 0x20, 0x04, 0x00,
+			0x00, 0x40, 0x02, 0x00,
+			0x00, 0x80, 0x01, 0x00,
+			0x00, 0x7F, 0xFE, 0x00
+		};
+		static const byte AND_LINE_13_TO_18[] = {
+			0xFF, 0xFE, 0x7F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xFE, 0x7F, 0xFF,
+		};
+		static const byte XOR_LINE_13_TO_18[] = {
+			0x00, 0x01, 0x80, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x01, 0x80, 0x00
+		};
+		static const byte AND_LINE_20_TO_28[] = {
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0x00, 0x00, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0xC0, 0x03, 0xFF,
+			0xFF, 0xE0, 0x07, 0xFF,
+			0xFF, 0xF0, 0x0F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xFE, 0x7F, 0xFF
+		};
+		static const byte XOR_LINE_20_TO_28[] = {
+			0x00, 0x7F, 0xFE, 0x00,
+			0x00, 0x80, 0x01, 0x00,
+			0x00, 0x40, 0x02, 0x00,
+			0x00, 0x20, 0x04, 0x00,
+			0x00, 0x10, 0x08, 0x00,
+			0x00, 0x08, 0x10, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x01, 0x80, 0x00
+		};
+		byte andBits[4 * 32], xorBits[4 * 32];
+		// fill canvases
+		memset(andBits, 0xFF, 4 * 32);
+		memset(xorBits, 0x00, 4 * 32);
+		// draw lines
+		if(type == CURSOR_NEUTRAL || type == CURSOR_UPWARD) {
+			memcpy(andBits + 4 * 3, AND_LINE_3_TO_11, sizeof(AND_LINE_3_TO_11));
+			memcpy(xorBits + 4 * 3, XOR_LINE_3_TO_11, sizeof(XOR_LINE_3_TO_11));
+		}
+		memcpy(andBits + 4 * 13, AND_LINE_13_TO_18, sizeof(AND_LINE_13_TO_18));
+		memcpy(xorBits + 4 * 13, XOR_LINE_13_TO_18, sizeof(XOR_LINE_13_TO_18));
+		if(type == CURSOR_NEUTRAL || type == CURSOR_DOWNWARD) {
+			memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
+			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
+		}
+		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits));
+	}
+	return instances[type].getHandle();
+}
+
 /// @see Window#onPaint
 void TextViewer::AutoScrollOriginMark::onPaint(PaintDC& dc) {
 	const COLORREF color = ::GetSysColor(COLOR_APPWORKSPACE);
@@ -3588,17 +3729,6 @@ void VirtualBox::update(const Region& region) throw() {
 // DefaultMouseInputStrategy ////////////////////////////////////////////////
 
 namespace {
-	inline AutoBuffer<wchar_t> a2u(const char* src, size_t length, size_t* resultLength = 0) {
-		const int c = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), 0, 0);
-		if(c == 0)
-			throw invalid_argument("Unconvertible character sequence.");
-		AutoBuffer<wchar_t> buffer(new wchar_t[c]);
-		if(0 == ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, src, static_cast<int>(length), buffer.get(), c))
-			throw invalid_argument("Unconvertible character sequence.");
-		if(resultLength != 0)
-			*resultLength = c;
-		return buffer;
-	}
 	auto_ptr<String> getTextData(::IDataObject& data, bool* rectangle = 0) {
 		auto_ptr<String> result;
 		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
@@ -3606,7 +3736,10 @@ namespace {
 		if(data.QueryGetData(&fe) == S_OK) {	// the data suppports CF_UNICODETEXT ?
 			if(SUCCEEDED(data.GetData(&fe, &stm))) {
 				if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
-					result.reset(new String(buffer));
+					try {
+						result.reset(new String(buffer));
+					} catch(...) {
+					}
 					::GlobalUnlock(stm.hGlobal);
 					::ReleaseStgMedium(&stm);
 				}
@@ -3618,12 +3751,40 @@ namespace {
 			if(data.QueryGetData(&fe) == S_OK) {	// the data supports CF_TEXT ?
 				if(SUCCEEDED(data.GetData(&fe, &stm))) {
 					if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
-						const length_t nativeLength = min<length_t>(strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
-						length_t len;
-						AutoBuffer<Char> buffer(a2u(nativeBuffer, nativeLength, &len));
+						// determine the encoding of the content of the clipboard
+						::UINT codePage = ::GetACP();
+						fe.cfFormat = CF_LOCALE;
+						if(S_OK == data.QueryGetData(&fe)) {
+							::STGMEDIUM locale = {TYMED_HGLOBAL, 0};
+							if(S_OK == data.GetData(&fe, &locale)) {
+								wchar_t buffer[6];
+								if(0 != ::GetLocaleInfoW(*static_cast<ushort*>(::GlobalLock(locale.hGlobal)),
+										LOCALE_IDEFAULTANSICODEPAGE, buffer, MANAH_COUNTOF(buffer))) {
+									wchar_t* eob;
+									codePage = wcstoul(buffer, &eob, 10);
+								}
+							}
+							::ReleaseStgMedium(&locale);
+						}
+						// convert ANSI text into Unicode by the code page
+						const length_t nativeLength = min<length_t>(
+							strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
+						const length_t ucsLength = ::MultiByteToWideChar(
+							codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
+						if(ucsLength != 0) {
+							AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
+							if(ucsBuffer.get() != 0) {
+								if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
+										nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
+									try {
+										result.reset(new String(ucsBuffer.get(), ucsLength - 1));
+									} catch(...) {
+									}
+								}
+							}
+						}
 						::GlobalUnlock(stm.hGlobal);
 						::ReleaseStgMedium(&stm);
-						result.reset(new String(buffer.get(), len));
 					}
 				}
 			}
@@ -3742,6 +3903,17 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
+
+	//
+	::FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	::STGMEDIUM stg;
+	data->GetData(&fe, &stg);
+	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
+	manah::win32::DumpContext dout;
+	dout << bytes;
+	::GlobalUnlock(stg.hGlobal);
+	::ReleaseStgMedium(&stg);
+	//
 
 	Document& document = viewer_->document();
 	if(!oleDragAndDropEnabled_ || document.isReadOnly() || !viewer_->allowsMouseInput())
@@ -3911,15 +4083,9 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 			if(!caret.isPointOverSelection(position)) {
 				p = viewer_->characterForClientXY(position, LineLayout::TRAILING, true);
 				if(p != Position::INVALID_POSITION) {
-					size_t numberOfHyperlinks;
-					if(const hyperlink::IHyperlink* const* hyperlinks =
-							viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
-						for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-							if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
-								hyperlinks[i]->invoke();
-								hyperlinkInvoked = true;
-							}
-						}
+					if(const hyperlink::IHyperlink* link = getPointedHyperlink(*viewer_, p)) {
+						link->invoke();
+						hyperlinkInvoked = true;
 					}
 				}
 			}
@@ -3955,7 +4121,7 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position
 	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
 		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
 		viewer_->caret().moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
-		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// うーむ
+		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
 	}
 	endTimer();
 	if(leftButtonPressed_) {
@@ -4080,17 +4246,8 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
 		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, EditPoint::UTF16_CODE_UNIT));
-		if(p != Position::INVALID_POSITION) {
-			size_t numberOfHyperlinks;
-			if(const hyperlink::IHyperlink* const* hyperlinks = viewer_->presentation().getHyperlinks(p.line, numberOfHyperlinks)) {
-				for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-					if(p.column >= hyperlinks[i]->region().beginning() && p.column <= hyperlinks[i]->region().end()) {
-						newlyHoveredHyperlink = hyperlinks[i];
-						break;
-					}
-				}
-			}
-		}
+		if(p != Position::INVALID_POSITION)
+			newlyHoveredHyperlink = getPointedHyperlink(*viewer_, p);
 		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}
@@ -4321,9 +4478,9 @@ void LocaleSensitiveCaretShaper::getCaretShape(auto_ptr<Bitmap>& bitmap, ::SIZE&
 	const bool overtype = caret.isOvertypeMode() && caret.isSelectionEmpty();
 
 	if(!overtype) {
-		solidSize.cx = bold_ ? 2 : 1;	// 本当はシステムの設定値を使わなければならない
+		solidSize.cx = bold_ ? 2 : 1;	// this ignores the system setting...
 		solidSize.cy = updater_->textViewer().textRenderer().lineHeight();
-	} else	// 上書きモードのときはキャレットを次のグリフと同じ幅にする
+	} else	// use the width of the glyph when overtype mode
 		getCurrentCharacterSize(updater_->textViewer(), solidSize);
 	orientation = LEFT_TO_RIGHT;
 
