@@ -2513,7 +2513,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 	font_ = 0;
 	if(find(glyphs_, MANAH_ENDOF(glyphs_), 0xFFFF) != MANAH_ENDOF(glyphs_)) {
 		::LOGFONTW lf;
-		::GetObject(renderer_->font(), sizeof(::LOGFONTW), &lf);
+		::GetObjectW(renderer_->font(), sizeof(::LOGFONTW), &lf);
 		lf.lfWeight = FW_REGULAR;
 		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
 		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");

@@ -1,5 +1,5 @@
 // common-controls.inl
-// (c) 2002-2007 exeal
+// (c) 2002-2008 exeal
 
 
 namespace manah {
@@ -12,7 +12,7 @@ namespace ui {
 inline bool AnimateCtrl::close() {return open(ResourceID(0U));}
 
 inline bool AnimateCtrl::open(const ResourceID& id, ::HINSTANCE hinstance /* = 0 */) {
-	return sendMessageR<bool>(ACM_OPEN, reinterpret_cast<::WPARAM>(hinstance), reinterpret_cast<::LPARAM>(id.name));}
+	return sendMessageR<bool>(ACM_OPENW, reinterpret_cast<::WPARAM>(hinstance), reinterpret_cast<::LPARAM>(id.name));}
 
 inline bool AnimateCtrl::play(::UINT from, ::UINT to, ::UINT repeatCount) {return sendMessageR<bool>(ACM_PLAY, repeatCount, MAKELONG(from, to));}
 
@@ -36,7 +36,7 @@ inline ::DWORD DateTimePickerCtrl::getRange(::SYSTEMTIME times[]) const {
 inline ::DWORD DateTimePickerCtrl::getSystemTime(::SYSTEMTIME& time) const {
 	return sendMessageC<::DWORD>(DTM_GETSYSTEMTIME, 0, reinterpret_cast<::LPARAM>(&time));}
 
-inline bool DateTimePickerCtrl::setFormat(const ::WCHAR* format) {return sendMessageR<bool>(DTM_SETFORMAT, 0, reinterpret_cast<::LPARAM>(format));}
+inline bool DateTimePickerCtrl::setFormat(const ::WCHAR* format) {return sendMessageR<bool>(DTM_SETFORMATW, 0, reinterpret_cast<::LPARAM>(format));}
 
 inline ::COLORREF DateTimePickerCtrl::setMonthCalendarColor(int colorType, ::COLORREF color) {
 	return sendMessageR<::COLORREF>(DTM_SETMCCOLOR, colorType, color);}
@@ -121,7 +121,7 @@ inline bool ImageList::create(int cx, int cy, ::UINT flags, int initial, int gro
 inline bool ImageList::create(::HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, ::COLORREF maskColor) {
 	if(isImageList())
 		return false;
-	reset(ImageList_LoadBitmap(hinstance, bitmapName.name, cx, grow, maskColor));
+	reset(ImageList_LoadImageW(hinstance, bitmapName.name, cx, grow, maskColor, IMAGE_BITMAP, 0));
 	return getHandle() != 0;
 }
 
@@ -129,7 +129,7 @@ inline bool ImageList::createFromImage(::HINSTANCE hinstance, const ResourceID& 
 		int cx, int grow, ::COLORREF maskColor, ::UINT type, ::UINT flags /* = LR_DEFAULTCOLOR | LR_DEFAULTSIZE */) {
 	if(isImageList())
 		return false;
-	reset(::ImageList_LoadImage(hinstance, imageName.name, cx, grow, maskColor, type, flags));
+	reset(::ImageList_LoadImageW(hinstance, imageName.name, cx, grow, maskColor, type, flags));
 	return getHandle() != 0;
 }
 
@@ -287,22 +287,22 @@ inline ::HWND ListCtrl::editLabel(int index) {return reinterpret_cast<::HWND>(se
 inline bool ListCtrl::ensureVisible(int index, bool partialOK) {return sendMessageR<bool>(LVM_ENSUREVISIBLE, index, partialOK);}
 
 inline int ListCtrl::findItem(::LVFINDINFOW& findInfo, int start /* = -1 */) const {
-	return sendMessageC<int>(LVM_FINDITEM, start, reinterpret_cast<::LPARAM>(&findInfo));}
+	return sendMessageC<int>(LVM_FINDITEMW, start, reinterpret_cast<::LPARAM>(&findInfo));}
 
 inline ::COLORREF ListCtrl::getBkColor() const {return sendMessageC<::COLORREF>(LVM_GETBKCOLOR);}
 
-inline bool ListCtrl::getBkImage(::LVBKIMAGE& image) const {return sendMessageC<bool>(LVM_GETBKIMAGE, 0, reinterpret_cast<::LPARAM>(&image));}
+inline bool ListCtrl::getBkImage(::LVBKIMAGEW& image) const {return sendMessageC<bool>(LVM_GETBKIMAGEW, 0, reinterpret_cast<::LPARAM>(&image));}
 
 inline ::UINT ListCtrl::getCallbackMask() const {return sendMessageC<::UINT>(LVM_GETCALLBACKMASK);}
 
 inline bool ListCtrl::getCheck(int index) const {return toBoolean(((sendMessageC<::UINT>(LVM_GETITEMSTATE, index, LVIS_STATEIMAGEMASK) >> 12) - 1));}
 
-inline bool ListCtrl::getColumn(int index, ::LVCOLUMN& column) const {
-	return sendMessageC<bool>(LVM_GETCOLUMN, index, reinterpret_cast<::LPARAM>(&column));}
+inline bool ListCtrl::getColumn(int index, ::LVCOLUMNW& column) const {
+	return sendMessageC<bool>(LVM_GETCOLUMNW, index, reinterpret_cast<::LPARAM>(&column));}
 
 inline bool ListCtrl::getColumnOrderArray(::LPINT array, int count /* = -1 */) const {
 	if(count == -1)
-		count = static_cast<int>(::SendMessage(getHeaderControl(), HDM_GETITEMCOUNT, 0, 0L));
+		count = static_cast<int>(::SendMessageW(getHeaderControl(), HDM_GETITEMCOUNT, 0, 0L));
 	return sendMessageC<bool>(LVM_GETCOLUMNORDERARRAY, count, reinterpret_cast<::LPARAM>(array));
 }
 
@@ -325,7 +325,7 @@ inline ::DWORD ListCtrl::getHoverTime() const {return sendMessageC<::DWORD>(LVM_
 inline ::HIMAGELIST ListCtrl::getImageList(int imageListType) const {
 	return reinterpret_cast<::HIMAGELIST>(sendMessageC<::LRESULT>(LVM_GETIMAGELIST, imageListType));}
 
-inline bool ListCtrl::getItem(::LVITEMW& item) const {return sendMessageC<bool>(LVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline bool ListCtrl::getItem(::LVITEMW& item) const {return sendMessageC<bool>(LVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
 inline int ListCtrl::getItemCount() const {return sendMessageC<int>(LVM_GETITEMCOUNT);}
 
@@ -353,7 +353,7 @@ inline int ListCtrl::getItemText(int index, int subItem, ::WCHAR* text, int maxL
 	item.iSubItem = subItem;
 	item.pszText = text;
 	item.cchTextMax = maxLength;
-	return sendMessageC<int>(LVM_GETITEMTEXT, index, reinterpret_cast<::LPARAM>(&item));
+	return sendMessageC<int>(LVM_GETITEMTEXTW, index, reinterpret_cast<::LPARAM>(&item));
 }
 
 inline std::wstring ListCtrl::getItemText(int index, int subItem) const {
@@ -379,7 +379,7 @@ inline ::UINT ListCtrl::getSelectedCount() const {return sendMessageC<::UINT>(LV
 
 inline int ListCtrl::getSelectionMark() const {return sendMessageC<int>(LVM_GETSELECTIONMARK);}
 
-inline int ListCtrl::getStringWidth(const ::WCHAR* text) const {return sendMessageC<int>(LVM_GETSTRINGWIDTH, 0, reinterpret_cast<::LPARAM>(text));}
+inline int ListCtrl::getStringWidth(const ::WCHAR* text) const {return sendMessageC<int>(LVM_GETSTRINGWIDTHW, 0, reinterpret_cast<::LPARAM>(text));}
 
 inline bool ListCtrl::getSubItemRect(int index, int subItem, int area, ::RECT& rect) const {
 	rect.left = area;
@@ -407,7 +407,7 @@ inline int ListCtrl::hitTest(const ::POINT& pt, ::UINT* flags /* = 0 */) const {
 }
 
 inline int ListCtrl::insertColumn(int index, const ::LVCOLUMNW& column) {
-	return sendMessageR<int>(LVM_INSERTCOLUMN, index, reinterpret_cast<::LPARAM>(&column));}
+	return sendMessageR<int>(LVM_INSERTCOLUMNW, index, reinterpret_cast<::LPARAM>(&column));}
 
 inline int ListCtrl::insertColumn(int position,
 		const ::WCHAR* columnHeading, int format /* = LVCFMT_LEFT */, int width /* = -1 */, int subItem /* = -1 */) {
@@ -418,7 +418,7 @@ inline int ListCtrl::insertColumn(int position,
 	return insertColumn(position, lvcol);
 }
 
-inline int ListCtrl::insertItem(const ::LVITEMW& item) {return sendMessageR<int>(LVM_INSERTITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline int ListCtrl::insertItem(const ::LVITEMW& item) {return sendMessageR<int>(LVM_INSERTITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
 inline int ListCtrl::insertItem(int index, const ::WCHAR* text) {
 	MANAH_AUTO_STRUCT(::LVITEMW, item);
@@ -448,7 +448,7 @@ inline bool ListCtrl::scroll(const ::SIZE& size) {return sendMessageR<bool>(LVM_
 
 inline bool ListCtrl::setBkColor(::COLORREF color) {return sendMessageR<bool>(LVM_SETBKCOLOR, 0, color);}
 
-inline bool ListCtrl::setBkImage(const ::LVBKIMAGEW& image) {return sendMessageR<bool>(LVM_SETBKIMAGE, 0, reinterpret_cast<::LPARAM>(&image));}
+inline bool ListCtrl::setBkImage(const ::LVBKIMAGEW& image) {return sendMessageR<bool>(LVM_SETBKIMAGEW, 0, reinterpret_cast<::LPARAM>(&image));}
 
 inline bool ListCtrl::setBkImage(::HBITMAP bitmap, bool tile /* = true */, int xOffsetPercent /* = 0 */, int yOffsetPercent /* = 0 */) {
 	::LVBKIMAGEW bkImage = {
@@ -475,8 +475,8 @@ inline bool ListCtrl::setCheck(int index, bool check /* = true */) {
 	return sendMessageR<bool>(LVM_SETITEMSTATE, index, reinterpret_cast<::LPARAM>(&item));
 }
 
-inline bool ListCtrl::setColumn(int index, const ::LVCOLUMN& column) {
-	return sendMessageR<bool>(LVM_SETCOLUMN, index, reinterpret_cast<::LPARAM>(&column));}
+inline bool ListCtrl::setColumn(int index, const ::LVCOLUMNW& column) {
+	return sendMessageR<bool>(LVM_SETCOLUMNW, index, reinterpret_cast<::LPARAM>(&column));}
 
 inline bool ListCtrl::setColumnOrderArray(int count, ::INT array[]) {
 	return sendMessageR<bool>(LVM_SETCOLUMNORDERARRAY, count, reinterpret_cast<::LPARAM>(array));}
@@ -525,20 +525,20 @@ inline bool ListCtrl::setItemData(int index, ::DWORD data) {
 
 inline bool ListCtrl::setItem(int index, int subItem, ::UINT mask, const ::WCHAR* text, int image, ::UINT state, ::UINT stateMask, ::LPARAM lParam) {
 	::LVITEMW item = {mask, index, subItem, state, stateMask, const_cast<::WCHAR*>(text), 0, image};
-	return sendMessageR<bool>(LVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&item));
+	return sendMessageR<bool>(LVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&item));
 }
 
 inline bool ListCtrl::setItemPosition(int index, const ::POINT& pt) {
 	return sendMessageR<bool>(LVM_SETITEMPOSITION32, index, MAKELPARAM(pt.x, pt.y));}
 
-inline bool ListCtrl::setItemState(int index, const ::LVITEM& item) {
+inline bool ListCtrl::setItemState(int index, const ::LVITEMW& item) {
 	return sendMessageR<bool>(LVM_SETITEMSTATE, index, reinterpret_cast<::LPARAM>(&item));}
 
 inline bool ListCtrl::setItemText(int index, int subItem, const ::WCHAR* text) {
 	::LVITEMW item;
 	item.iSubItem = subItem;
 	item.pszText = const_cast<::WCHAR*>(text);
-	return sendMessageR<bool>(LVM_SETITEMTEXT, index, reinterpret_cast<::LPARAM>(&item));
+	return sendMessageR<bool>(LVM_SETITEMTEXTW, index, reinterpret_cast<::LPARAM>(&item));
 }
 
 inline int ListCtrl::setSelectionMark(int index) {return sendMessageR<int>(LVM_SETSELECTIONMARK, 0, index);}
@@ -715,7 +715,7 @@ inline void Rebar::getBandBorders(int band, ::RECT& rect) const {sendMessageC<in
 inline ::UINT Rebar::getBandCount() const {return sendMessageC<::UINT>(RB_GETBANDCOUNT);}
 
 inline bool Rebar::getBandInfo(int band, ::REBARBANDINFOW& info) const {
-	return sendMessageC<bool>(RB_GETBANDINFO, band, reinterpret_cast<::LPARAM>(&info));}
+	return sendMessageC<bool>(RB_GETBANDINFOW, band, reinterpret_cast<::LPARAM>(&info));}
 
 inline ::UINT Rebar::getBarHeight() const {return sendMessageC<::UINT>(RB_GETBARHEIGHT);}
 
@@ -752,7 +752,7 @@ inline int Rebar::hitTest(::RBHITTESTINFO& info) {return sendMessageC<int>(RB_HI
 inline int Rebar::idToIndex(::UINT id) const {return sendMessageC<int>(RB_IDTOINDEX, id);}
 
 inline bool Rebar::insertBand(::UINT band, const ::REBARBANDINFOW& info) {
-	return sendMessageC<bool>(RB_INSERTBAND, band, reinterpret_cast<::LPARAM>(&info));}
+	return sendMessageC<bool>(RB_INSERTBANDW, band, reinterpret_cast<::LPARAM>(&info));}
 
 inline void Rebar::lockBands(bool lock) {
 	const ::UINT count = getBandCount();
@@ -791,7 +791,7 @@ inline void Rebar::pushChevron(::UINT band, ::LPARAM lParam) {
 inline void Rebar::restoreBand(::UINT band) {sendMessage(RB_MAXIMIZEBAND, band, true);}
 
 inline bool Rebar::setBandInfo(::UINT band, const ::REBARBANDINFOW& info) {
-	return sendMessageR<bool>(RB_SETBANDINFO, band, reinterpret_cast<::LPARAM>(&info));}
+	return sendMessageR<bool>(RB_SETBANDINFOW, band, reinterpret_cast<::LPARAM>(&info));}
 
 inline bool Rebar::setBarInfo(const ::REBARINFO& info) {return sendMessageR<bool>(RB_SETBARINFO, 0, reinterpret_cast<::LPARAM>(&info));}
 
@@ -822,9 +822,9 @@ inline bool Rebar::showBand(::UINT band, bool show) {return sendMessageR<bool>(R
 inline bool Rebar::sizeToRect(const ::RECT& rect) {return sendMessageR<bool>(RB_SIZETORECT, 0, reinterpret_cast<::LPARAM>(&rect));}
 
 #ifdef RB_GETMARGINS
-inline void Rebar::getBandMargins(::MARGINS& margins) const {SendMessage(RB_GETBANDMARGINS, 0, reinterpret_cast<::LPARAM>(&margins));}
+inline void Rebar::getBandMargins(::MARGINS& margins) const {::SendMessageW(RB_GETBANDMARGINS, 0, reinterpret_cast<::LPARAM>(&margins));}
 
-inline void Rebar::setWindowTheme(const ::WCHAR* styleName) {SendMessage(RB_SETWINDOWTHEME, 0, reinterpret_cast<::LPARAM>(styleName));}
+inline void Rebar::setWindowTheme(const ::WCHAR* styleName) {::SendMessageW(RB_SETWINDOWTHEME, 0, reinterpret_cast<::LPARAM>(styleName));}
 #endif /* RB_GETMARGINS */
 
 
@@ -852,21 +852,21 @@ inline int StatusBar::getParts(int count, int parts[]) const {
 inline bool StatusBar::getRect(int pane, ::RECT& rect) const {return sendMessageC<bool>(SB_GETRECT, pane, reinterpret_cast<LPARAM>(&rect));}
 
 inline int StatusBar::getText(int pane, ::WCHAR* text, int* type /* = 0 */) const {
-	const ::DWORD temp = sendMessageC<::DWORD>(SB_GETTEXT, pane, reinterpret_cast<::LPARAM>(text));
+	const ::DWORD temp = sendMessageC<::DWORD>(SB_GETTEXTW, pane, reinterpret_cast<::LPARAM>(text));
 	if(type != 0)
 		*type = HIWORD(temp);
 	return LOWORD(temp);
 }
 
 inline int StatusBar::getTextLength(int pane, int* type /* = 0 */) const {
-	const ::DWORD temp = sendMessageC<DWORD>(SB_GETTEXT, pane);
+	const ::DWORD temp = sendMessageC<DWORD>(SB_GETTEXTW, pane);
 	if(type != 0)
 		*type = HIWORD(temp);
 	return LOWORD(temp);
 }
 
 inline void StatusBar::getTipText(int pane, ::WCHAR* text, int maxLength) const {
-	sendMessageC<int>(SB_GETTIPTEXT, MAKEWPARAM(pane, maxLength), reinterpret_cast<::LPARAM>(text));}
+	sendMessageC<int>(SB_GETTIPTEXTW, MAKEWPARAM(pane, maxLength), reinterpret_cast<::LPARAM>(text));}
 
 inline bool StatusBar::getUnicodeFormat() const {return sendMessageC<bool>(SB_GETUNICODEFORMAT);}
 
@@ -892,9 +892,9 @@ inline bool StatusBar::setParts(int count, int parts[]) {return sendMessageR<boo
 inline bool StatusBar::setSimple(bool simple /* = true */) {restoreTemporaryText(); return sendMessageR<bool>(SB_SIMPLE, simple);}
 
 inline bool StatusBar::setText(int pane, const ::WCHAR* text, int type /* = 0 */) {
-	if(pane == 0) restoreTemporaryText(); return sendMessageR<bool>(SB_SETTEXT, pane | type, reinterpret_cast<::LPARAM>(text));}
+	if(pane == 0) restoreTemporaryText(); return sendMessageR<bool>(SB_SETTEXTW, pane | type, reinterpret_cast<::LPARAM>(text));}
 
-inline void StatusBar::setTipText(int pane, const ::WCHAR* text) {sendMessage(SB_SETTIPTEXT, pane, reinterpret_cast<::LPARAM>(text));}
+inline void StatusBar::setTipText(int pane, const ::WCHAR* text) {sendMessage(SB_SETTIPTEXTW, pane, reinterpret_cast<::LPARAM>(text));}
 
 inline bool StatusBar::setUnicodeFormat(bool unicode /* = true */) {return sendMessageR<bool>(SB_SETUNICODEFORMAT, unicode);}
 
@@ -943,7 +943,7 @@ inline ::DWORD TabCtrl::getExtendedStyle() const {return sendMessageC<::DWORD>(T
 
 inline ::HIMAGELIST TabCtrl::getImageList() const {return reinterpret_cast<::HIMAGELIST>(sendMessageC<::LRESULT>(TCM_GETIMAGELIST));}
 
-inline bool TabCtrl::getItem(int index, ::TCITEM& item) const {return sendMessageC<bool>(TCM_GETITEM, index, reinterpret_cast<::LPARAM>(&item));}
+inline bool TabCtrl::getItem(int index, ::TCITEMW& item) const {return sendMessageC<bool>(TCM_GETITEMW, index, reinterpret_cast<::LPARAM>(&item));}
 
 inline int TabCtrl::getItemCount() const {return sendMessageC<int>(TCM_GETITEMCOUNT);}
 
@@ -951,7 +951,7 @@ inline bool TabCtrl::getItemRect(int index, ::RECT& rect) const {return sendMess
 
 inline bool TabCtrl::getItemState(int index, ::DWORD mask, ::DWORD& state) const {
 	assertValidAsWindow();
-	::TCITEM item;
+	::TCITEMW item;
 	item.mask = TCIF_STATE;
 	item.dwStateMask = mask;
 	if(!getItem(index, item))
@@ -968,17 +968,17 @@ inline bool TabCtrl::highlightItem(int index, bool highlight /* = true */) {retu
 
 inline int TabCtrl::hitTest(::TCHITTESTINFO& info) const {return sendMessageC<int>(TCM_HITTEST, 0, reinterpret_cast<::LPARAM>(&info));}
 
-inline bool TabCtrl::insertItem(int index, const ::TCITEM& item) {return sendMessageR<bool>(TCM_INSERTITEM, index, reinterpret_cast<::LPARAM>(&item));}
+inline bool TabCtrl::insertItem(int index, const ::TCITEMW& item) {return sendMessageR<bool>(TCM_INSERTITEMW, index, reinterpret_cast<::LPARAM>(&item));}
 
 inline bool TabCtrl::insertItem(int index, const ::WCHAR* text) {
-	::TCITEM item;
+	::TCITEMW item;
 	item.mask = TCIF_TEXT;
 	item.pszText = const_cast<::WCHAR*>(text);
 	return insertItem(index, item);
 }
 
 inline bool TabCtrl::insertItem(int index, const ::WCHAR* text, int image) {
-	::TCITEM item;
+	::TCITEMW item;
 	item.mask = TCIF_IMAGE | TCIF_TEXT;
 	item.pszText = const_cast<::WCHAR*>(text);
 	item.iImage = image;
@@ -986,7 +986,7 @@ inline bool TabCtrl::insertItem(int index, const ::WCHAR* text, int image) {
 }
 
 inline bool TabCtrl::insertItem(::UINT mask, int index, const ::WCHAR* text, int image, ::LPARAM lParam) {
-	::TCITEM item;
+	::TCITEMW item;
 	item.mask = mask;
 	item.pszText = const_cast<::WCHAR*>(text);
 	item.iImage = image;
@@ -1006,7 +1006,7 @@ inline ::DWORD TabCtrl::setExtendedStyle(::DWORD newStyle, ::DWORD exMask /* = 0
 inline ::HIMAGELIST TabCtrl::setImageList(::HIMAGELIST imageList) {
 	return reinterpret_cast<::HIMAGELIST>(sendMessage(TCM_SETIMAGELIST, 0, reinterpret_cast<::LPARAM>(imageList)));}
 
-inline bool TabCtrl::setItem(int index, const ::TCITEM& item) {return sendMessageR<bool>(TCM_SETITEM, index, reinterpret_cast<::LPARAM>(&item));}
+inline bool TabCtrl::setItem(int index, const ::TCITEMW& item) {return sendMessageR<bool>(TCM_SETITEMW, index, reinterpret_cast<::LPARAM>(&item));}
 
 inline bool TabCtrl::setItemExtra(int bytes) {return sendMessageR<bool>(TCM_SETITEMEXTRA, bytes);}
 
@@ -1017,7 +1017,7 @@ inline ::SIZE TabCtrl::setItemSize(const ::SIZE& size) {
 }
 
 inline bool TabCtrl::setItemState(int index, ::DWORD mask, ::DWORD state) {
-	::TCITEM item;
+	::TCITEMW item;
 	item.mask = TCIF_STATE;
 	item.dwState = state;
 	item.dwStateMask = mask;
@@ -1051,9 +1051,9 @@ inline bool Toolbar::addButtons(int count, const ::TBBUTTON buttons[]) {
 	return sendMessageR<bool>(TB_ADDBUTTONS, count, reinterpret_cast<::LPARAM>(buttons));}
 
 inline int Toolbar::addString(::UINT stringID) {
-	return sendMessageR<int>(TB_ADDSTRING, reinterpret_cast<::WPARAM>(::GetModuleHandleW(0)), stringID);}
+	return sendMessageR<int>(TB_ADDSTRINGW, reinterpret_cast<::WPARAM>(::GetModuleHandleW(0)), stringID);}
 
-inline int Toolbar::addStrings(const ::WCHAR* strings) {return sendMessageR<int>(TB_ADDSTRING, 0, reinterpret_cast<::LPARAM>(strings));}
+inline int Toolbar::addStrings(const ::WCHAR* strings) {return sendMessageR<int>(TB_ADDSTRINGW, 0, reinterpret_cast<::LPARAM>(strings));}
 
 inline void Toolbar::autoSize() {sendMessage(TB_AUTOSIZE);}
 
@@ -1079,8 +1079,8 @@ inline bool Toolbar::getButton(int index, ::TBBUTTON& button) const {return send
 
 inline int Toolbar::getButtonCount() const {return sendMessageC<int>(TB_BUTTONCOUNT);}
 
-inline bool Toolbar::getButtonInfo(int id, ::TBBUTTONINFO& info) const {
-	return sendMessageC<bool>(TB_GETBUTTONINFO, id, reinterpret_cast<::LPARAM>(&info));}
+inline bool Toolbar::getButtonInfo(int id, ::TBBUTTONINFOW& info) const {
+	return sendMessageC<bool>(TB_GETBUTTONINFOW, id, reinterpret_cast<::LPARAM>(&info));}
 
 inline ::SIZE Toolbar::getButtonSize() const {
 	const ::DWORD temp = sendMessageC<::DWORD>(TB_GETBUTTONSIZE);
@@ -1088,7 +1088,7 @@ inline ::SIZE Toolbar::getButtonSize() const {
 	return size;
 }
 
-inline int Toolbar::getButtonText(int id, ::WCHAR* text) const {return sendMessageC<int>(TB_GETBUTTONTEXT, id, reinterpret_cast<::LPARAM>(text));}
+inline int Toolbar::getButtonText(int id, ::WCHAR* text) const {return sendMessageC<int>(TB_GETBUTTONTEXTW, id, reinterpret_cast<::LPARAM>(text));}
 
 inline int Toolbar::getButtonTextLength(int id) const {return sendMessageC<int>(TB_GETBUTTONTEXT, id);}
 
@@ -1132,7 +1132,7 @@ inline int Toolbar::getState(int id) const {return sendMessageC<int>(TB_GETSTATE
 
 #ifdef TB_GETSTRING
 inline int Toolbar::getString(int index, ::WCHAR* text, int maxLength) const {
-	return sendMessageC<int>(TB_GETSTRING, MAKEWPARAM(maxLength, index), reinterpret_cast<::LPARAM>(text));}
+	return sendMessageC<int>(TB_GETSTRINGW, MAKEWPARAM(maxLength, index), reinterpret_cast<::LPARAM>(text));}
 #endif
 
 inline ::DWORD Toolbar::getStyle() const {return sendMessageC<::DWORD>(TB_GETSTYLE);}
@@ -1148,7 +1148,7 @@ inline int Toolbar::hitTest(const ::POINT& pt) const {return sendMessageC<int>(T
 inline bool Toolbar::indeterminate(int id, bool isIndeterminate /* = true */) {return sendMessageC<bool>(TB_INDETERMINATE, id, isIndeterminate);}
 
 inline bool Toolbar::insertButton(int index, const ::TBBUTTON& button) {
-	return sendMessageC<bool>(TB_INSERTBUTTON, index, reinterpret_cast<::LPARAM>(&button));}
+	return sendMessageC<bool>(TB_INSERTBUTTONW, index, reinterpret_cast<::LPARAM>(&button));}
 
 inline bool Toolbar::insertMarkHitTest(const ::POINT& pt, const ::TBINSERTMARK& mark) const {
 	return sendMessageC<bool>(TB_INSERTMARKHITTEST, reinterpret_cast<::WPARAM>(&pt), reinterpret_cast<::LPARAM>(&mark));}
@@ -1169,7 +1169,7 @@ inline void Toolbar::loadImages(int imageID) {sendMessage(TB_LOADIMAGES, imageID
 
 inline void Toolbar::loadStdImages(int imageID) {sendMessage(TB_LOADIMAGES, imageID, reinterpret_cast<::LPARAM>(HINST_COMMCTRL));}
 
-inline bool Toolbar::mapAccelerator(::TCHAR ch, ::UINT& id) {return sendMessageR<bool>(TB_MAPACCELERATOR, ch, reinterpret_cast<::LPARAM>(&id));}
+inline bool Toolbar::mapAccelerator(::WCHAR ch, ::UINT& id) {return sendMessageR<bool>(TB_MAPACCELERATORW, ch, reinterpret_cast<::LPARAM>(&id));}
 
 inline bool Toolbar::markButton(int id, bool highlight /* = true */) {return sendMessageR<bool>(TB_MARKBUTTON, id, highlight);}
 
@@ -1182,12 +1182,12 @@ inline bool Toolbar::replaceBitmap(const ::TBREPLACEBITMAP& bitmap) {
 
 inline void Toolbar::restoreState(::HKEY keyRoot, const ::WCHAR* subKey, const ::WCHAR* valueName) {
 	::TBSAVEPARAMSW tbsp = {keyRoot, subKey, valueName};
-	sendMessage(TB_SAVERESTORE, false, reinterpret_cast<::LPARAM>(&tbsp));
+	sendMessage(TB_SAVERESTOREW, false, reinterpret_cast<::LPARAM>(&tbsp));
 }
 
 inline void Toolbar::saveState(::HKEY keyRoot, const ::WCHAR* subKey, const ::WCHAR* valueName) {
 	::TBSAVEPARAMSW tbsp = {keyRoot, subKey, valueName};
-	sendMessage(TB_SAVERESTORE, true, reinterpret_cast<::LPARAM>(&tbsp));
+	sendMessage(TB_SAVERESTOREW, true, reinterpret_cast<::LPARAM>(&tbsp));
 }
 
 inline bool Toolbar::setAnchorHighlight(bool enable /* = true */) {return sendMessageR<bool>(TB_SETANCHORHIGHLIGHT, enable);}
@@ -1196,8 +1196,8 @@ inline bool Toolbar::setBitmapSize(const ::SIZE& size) {return setBitmapSize(siz
 
 inline bool Toolbar::setBitmapSize(int cx, int cy) {return sendMessageR<bool>(TB_SETBITMAPSIZE, 0, MAKELPARAM(cx, cy));}
 
-inline bool Toolbar::setButtonInfo(int id, const ::TBBUTTONINFO& info) {
-	return sendMessageR<bool>(TB_SETBUTTONINFO, id, reinterpret_cast<::LPARAM>(&info));}
+inline bool Toolbar::setButtonInfo(int id, const ::TBBUTTONINFOW& info) {
+	return sendMessageR<bool>(TB_SETBUTTONINFOW, id, reinterpret_cast<::LPARAM>(&info));}
 
 inline bool Toolbar::setButtonSize(const ::SIZE& size) {return sendMessageR<bool>(TB_SETBUTTONSIZE, 0, MAKELPARAM(size.cx, size.cy));}
 
@@ -1206,7 +1206,7 @@ inline bool Toolbar::setButtonSize(int cx, int cy) {return sendMessageR<bool>(TB
 inline void Toolbar::setButtonStructSize(std::size_t size /* = sizeof(::TBBUTTON) */) {sendMessage(TB_BUTTONSTRUCTSIZE, size);}
 
 inline void Toolbar::setButtonText(int id, const ::WCHAR* text) {
-	MANAH_AUTO_STRUCT_SIZE(::TBBUTTONINFO, tbi);
+	MANAH_AUTO_STRUCT_SIZE(::TBBUTTONINFOW, tbi);
 	tbi.dwMask = TBIF_TEXT;
 	tbi.pszText = const_cast<::WCHAR*>(text);
 	setButtonInfo(id, tbi);
@@ -1275,7 +1275,7 @@ inline void Toolbar::setWindowTheme(const ::WCHAR* styleName) {sendMessage(TB_SE
 
 inline bool ToolTipCtrl::activate(bool active) {return sendMessageR<bool>(TTM_ACTIVATE, active);}
 
-inline bool ToolTipCtrl::addTool(const ::TOOLINFO& toolInfo) {return sendMessageR<bool>(TTM_ADDTOOL, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
+inline bool ToolTipCtrl::addTool(const ::TOOLINFOW& toolInfo) {return sendMessageR<bool>(TTM_ADDTOOLW, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
 
 inline bool ToolTipCtrl::addTool(::HWND container, ::UINT id,
 		::UINT flags, const ::RECT& toolRect, const ::WCHAR* text /* = LPSTR_TEXTCALLBACKW */, ::LPARAM lParam /* = 0 */) {
@@ -1332,17 +1332,17 @@ inline void ToolTipCtrl::deleteTool(::HWND window, ::HWND control) {
 	sendMessage(TTM_DELTOOL, 0, reinterpret_cast<::LPARAM>(&ti));
 }
 
-inline bool ToolTipCtrl::enumTools(::UINT index, ::TOOLINFO& toolInfo) const {
-	return sendMessageC<bool>(TTM_ENUMTOOLS, index, reinterpret_cast<::LPARAM>(&toolInfo));}
+inline bool ToolTipCtrl::enumTools(::UINT index, ::TOOLINFOW& toolInfo) const {
+	return sendMessageC<bool>(TTM_ENUMTOOLSW, index, reinterpret_cast<::LPARAM>(&toolInfo));}
 
-inline ::SIZE ToolTipCtrl::getBubbleSize(const ::TOOLINFO& toolInfo) const {
+inline ::SIZE ToolTipCtrl::getBubbleSize(const ::TOOLINFOW& toolInfo) const {
 	const ::DWORD temp = sendMessageC<::DWORD>(TTM_GETBUBBLESIZE, 0, reinterpret_cast<::LPARAM>(&toolInfo));
 	const ::SIZE size = {LOWORD(temp), HIWORD(temp)};
 	return size;
 }
 
-inline bool ToolTipCtrl::getCurrentTool(::TOOLINFO& toolInfo) const {
-	return sendMessageC<bool>(TTM_GETCURRENTTOOL, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
+inline bool ToolTipCtrl::getCurrentTool(::TOOLINFOW& toolInfo) const {
+	return sendMessageC<bool>(TTM_GETCURRENTTOOLW, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
 
 inline int ToolTipCtrl::getDelayTime(::DWORD duration) const {return sendMessageC<int>(TTM_GETDELAYTIME, duration);}
 
@@ -1352,11 +1352,11 @@ inline int ToolTipCtrl::getMaxTipWidth() const {return sendMessageC<int>(TTM_GET
 
 inline void ToolTipCtrl::getText(::WCHAR* text, ::HWND window, ::UINT toolID /* = 0 */) const {
 	assertValidAsWindow();
-	MANAH_AUTO_STRUCT_SIZE(::TOOLINFO, ti);
+	MANAH_AUTO_STRUCT_SIZE(::TOOLINFOW, ti);
 	ti.hwnd = window;
 	ti.uId = toolID;
 	ti.lpszText = text;
-	sendMessageC<int>(TTM_GETTEXT, 0, reinterpret_cast<::LPARAM>(&ti));
+	sendMessageC<int>(TTM_GETTEXTW, 0, reinterpret_cast<::LPARAM>(&ti));
 }
 
 inline ::COLORREF ToolTipCtrl::getTipBkColor() const {return sendMessageC<::COLORREF>(TTM_GETTIPBKCOLOR);}
@@ -1369,18 +1369,18 @@ inline void ToolTipCtrl::getTitle(::TTGETTITLE& title) const {sendMessageC<LRESU
 
 inline int ToolTipCtrl::getToolCount() const {return sendMessageC<int>(TTM_GETTOOLCOUNT);}
 
-inline bool ToolTipCtrl::getToolInfo(::TOOLINFO& toolInfo, ::HWND window, ::UINT toolID /* = 0 */) const {
-	std::memset(&toolInfo, 0, sizeof(::TOOLINFO));
-	toolInfo.cbSize = sizeof(::TOOLINFO);
+inline bool ToolTipCtrl::getToolInfo(::TOOLINFOW& toolInfo, ::HWND window, ::UINT toolID /* = 0 */) const {
+	std::memset(&toolInfo, 0, sizeof(::TOOLINFOW));
+	toolInfo.cbSize = sizeof(::TOOLINFOW);
 	toolInfo.uId = toolID;
 	toolInfo.hwnd = window;
-	return sendMessageC<bool>(TTM_GETTOOLINFO, 0, reinterpret_cast<::LPARAM>(&toolInfo));
+	return sendMessageC<bool>(TTM_GETTOOLINFOW, 0, reinterpret_cast<::LPARAM>(&toolInfo));
 }
 
-inline bool ToolTipCtrl::hitTest(::TTHITTESTINFO& hitTest) const {return sendMessageC<bool>(TTM_HITTEST, 0, reinterpret_cast<::LPARAM>(&hitTest));}
+inline bool ToolTipCtrl::hitTest(::TTHITTESTINFOW& hitTest) const {return sendMessageC<bool>(TTM_HITTESTW, 0, reinterpret_cast<::LPARAM>(&hitTest));}
 
-inline bool ToolTipCtrl::hitTest(::HWND window, const ::POINT& pt, ::TOOLINFO& toolInfo) const {
-	::TTHITTESTINFO tthi;
+inline bool ToolTipCtrl::hitTest(::HWND window, const ::POINT& pt, ::TOOLINFOW& toolInfo) const {
+	::TTHITTESTINFOW tthi;
 	tthi.hwnd = window;
 	tthi.pt = pt;
 	tthi.ti = toolInfo;
@@ -1407,24 +1407,24 @@ inline void ToolTipCtrl::setTipBkColor(::COLORREF color) {sendMessage(TTM_SETTIP
 
 inline void ToolTipCtrl::setTipTextColor(::COLORREF color) {sendMessage(TTM_SETTIPTEXTCOLOR, color);}
 
-inline bool ToolTipCtrl::setTitle(::UINT icon, const ::WCHAR* title) {return sendMessageR<bool>(TTM_SETTITLE, icon, reinterpret_cast<::LPARAM>(title));}
+inline bool ToolTipCtrl::setTitle(::UINT icon, const ::WCHAR* title) {return sendMessageR<bool>(TTM_SETTITLEW, icon, reinterpret_cast<::LPARAM>(title));}
 
-inline void ToolTipCtrl::setToolInfo(const ::TOOLINFO& toolInfo) {sendMessage(TTM_SETTOOLINFO, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
+inline void ToolTipCtrl::setToolInfo(const ::TOOLINFOW& toolInfo) {sendMessage(TTM_SETTOOLINFOW, 0, reinterpret_cast<::LPARAM>(&toolInfo));}
 
 inline void ToolTipCtrl::setToolRect(::HWND window, ::UINT toolID, const ::RECT& rect) {
 	MANAH_AUTO_STRUCT_SIZE(::TOOLINFOW, ti);
 	ti.uId = toolID;
 	ti.hwnd = window;
-	sendMessage(TTM_GETTOOLINFO, 0, reinterpret_cast<::LPARAM>(&ti));
+	sendMessage(TTM_GETTOOLINFOW, 0, reinterpret_cast<::LPARAM>(&ti));
 	ti.rect = rect;
-	sendMessage(TTM_SETTOOLINFO, 0, reinterpret_cast<::LPARAM>(&ti));
+	sendMessage(TTM_SETTOOLINFOW, 0, reinterpret_cast<::LPARAM>(&ti));
 }
 
 #if(_WIN32_WINNT >= 0x0501)
 inline void ToolTipCtrl::setWindowTheme(const ::WCHAR* theme) {sendMessage(TTM_SETWINDOWTHEME, 0, reinterpret_cast<::LPARAM>(theme));}
 #endif /* _WIN32_WINNT >= 0x0501 */
 
-inline void ToolTipCtrl::trackActivate(const ::TOOLINFO& toolInfo, bool activate) {
+inline void ToolTipCtrl::trackActivate(const ::TOOLINFOW& toolInfo, bool activate) {
 	sendMessage(TTM_TRACKACTIVATE, activate, reinterpret_cast<::LPARAM>(&toolInfo));}
 
 inline void ToolTipCtrl::trackPosition(int x, int y) {sendMessage(TTM_TRACKPOSITION, 0, MAKELPARAM(x, y));}
@@ -1437,7 +1437,7 @@ inline void ToolTipCtrl::updateTipText(const ::WCHAR* text, ::HWND window, ::UIN
 	ti.uId = toolID;
 	ti.hwnd = window;
 	ti.lpszText = const_cast<::WCHAR*>(text);
-	sendMessage(TTM_UPDATETIPTEXT, 0, reinterpret_cast<::LPARAM>(&ti));
+	sendMessage(TTM_UPDATETIPTEXTW, 0, reinterpret_cast<::LPARAM>(&ti));
 }
 
 inline void ToolTipCtrl::updateTipText(const ::WCHAR* text, ::HWND window, ::HWND control) {
@@ -1447,7 +1447,7 @@ inline void ToolTipCtrl::updateTipText(const ::WCHAR* text, ::HWND window, ::HWN
 	ti.uId = reinterpret_cast<::UINT_PTR>(control);
 	ti.hwnd = window;
 	ti.lpszText = const_cast<::WCHAR*>(text);
-	sendMessage(TTM_UPDATETIPTEXT, 0, reinterpret_cast<::LPARAM>(&ti));
+	sendMessage(TTM_UPDATETIPTEXTW, 0, reinterpret_cast<::LPARAM>(&ti));
 }
 
 
@@ -1472,7 +1472,7 @@ inline bool TreeCtrl::itemHasChildren(::HTREEITEM item) const {
 	::TVITEMW tvi;
 	tvi.hItem = item;
 	tvi.mask = TVIF_CHILDREN;
-	sendMessageC<int>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	sendMessageC<int>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 	return tvi.cChildren != 0;
 }
 
@@ -1498,13 +1498,13 @@ inline ::HTREEITEM TreeCtrl::getDropHilightItem() const {return getNextItem(0, T
 
 inline ::HTREEITEM TreeCtrl::getRootItem() const {return getNextItem(0, TVGN_ROOT);}
 
-inline bool TreeCtrl::getItem(::TVITEMW& item) const {return sendMessageC<bool>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline bool TreeCtrl::getItem(::TVITEMW& item) const {return sendMessageC<bool>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
-inline bool TreeCtrl::getItem(::TVITEMEXW& item) const {return sendMessageC<bool>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline bool TreeCtrl::getItem(::TVITEMEXW& item) const {return sendMessageC<bool>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
-inline bool TreeCtrl::setItem(const ::TVITEMW& item) {return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline bool TreeCtrl::setItem(const ::TVITEMW& item) {return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
-inline bool TreeCtrl::setItem(const ::TVITEMEXW& item) {return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&item));}
+inline bool TreeCtrl::setItem(const ::TVITEMEXW& item) {return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&item));}
 
 inline bool TreeCtrl::setItem(::HTREEITEM item, ::UINT mask,
 		const ::WCHAR* text, int image, int selectedImage, ::UINT state, ::UINT stateMask, ::LPARAM lParam) {
@@ -1517,7 +1517,7 @@ inline bool TreeCtrl::setItem(::HTREEITEM item, ::UINT mask,
 	tvi.state = state;
 	tvi.stateMask = stateMask;
 	tvi.lParam = lParam;
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline ::UINT TreeCtrl::getItemState(::HTREEITEM item, ::UINT stateMask) const {
@@ -1526,7 +1526,7 @@ inline ::UINT TreeCtrl::getItemState(::HTREEITEM item, ::UINT stateMask) const {
 	tvi.mask = TVIF_STATE;
 	tvi.stateMask = stateMask;
 	tvi.state = 0;
-	sendMessageC<int>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	sendMessageC<int>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 	return tvi.state;
 }
 
@@ -1536,14 +1536,14 @@ inline bool TreeCtrl::setItemState(::HTREEITEM item, ::UINT state, ::UINT stateM
 	tvi.mask = TVIF_STATE;
 	tvi.stateMask = stateMask;
 	tvi.state = state;
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline bool TreeCtrl::getItemImage(::HTREEITEM item, int& image, int& selectedImage) const {
 	::TVITEMW tvi;
 	tvi.hItem = item;
 	tvi.mask = TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-	if(sendMessageC<bool>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi))) {
+	if(sendMessageC<bool>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi))) {
 		image = tvi.iImage;
 		selectedImage = tvi.iSelectedImage;
 		return true;
@@ -1557,7 +1557,7 @@ inline bool TreeCtrl::setItemImage(::HTREEITEM item, int image, int selectedImag
 	tvi.mask = TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 	tvi.iImage = image;
 	tvi.iSelectedImage = selectedImage;
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline bool TreeCtrl::getItemText(::HTREEITEM item, ::WCHAR* text, int maxLength) const {
@@ -1566,7 +1566,7 @@ inline bool TreeCtrl::getItemText(::HTREEITEM item, ::WCHAR* text, int maxLength
 	tvi.mask = TVIF_TEXT;
 	tvi.pszText = text;
 	tvi.cchTextMax = maxLength;
-	return sendMessageC<bool>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageC<bool>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline bool TreeCtrl::setItemText(::HTREEITEM item, const ::WCHAR* text) {
@@ -1574,14 +1574,14 @@ inline bool TreeCtrl::setItemText(::HTREEITEM item, const ::WCHAR* text) {
 	tvi.hItem = item;
 	tvi.mask = TVIF_TEXT;
 	tvi.pszText = const_cast<::WCHAR*>(text);
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline ::LPARAM TreeCtrl::getItemData(::HTREEITEM item) const {
 	::TVITEMW tvi;
 	tvi.hItem = item;
 	tvi.mask = TVIF_PARAM;
-	sendMessageC<int>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	sendMessageC<int>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 	return tvi.lParam;
 }
 
@@ -1590,7 +1590,7 @@ inline bool TreeCtrl::setItemData(::HTREEITEM item, ::DWORD data) {
 	tvi.hItem = item;
 	tvi.mask = TVIF_PARAM;
 	tvi.lParam = data;
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline bool TreeCtrl::getItemRect(::HTREEITEM item, ::RECT& rect, bool textOnly) {
@@ -1627,7 +1627,7 @@ inline bool TreeCtrl::getCheck(::HTREEITEM item) const {
 	tvi.mask = TVIF_HANDLE | TVIF_STATE;
 	tvi.hItem = item;
 	tvi.stateMask = TVIS_STATEIMAGEMASK;
-	sendMessageC<int>(TVM_GETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	sendMessageC<int>(TVM_GETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 	return toBoolean(static_cast<::UINT>(tvi.state >> 12) -1);
 }
 
@@ -1637,7 +1637,7 @@ inline bool TreeCtrl::setCheck(::HTREEITEM item, bool check /* = true */) {
 	tvi.hItem = item;
 	tvi.stateMask = TVIS_STATEIMAGEMASK;
 	tvi.state = INDEXTOSTATEIMAGEMASK((check ? 2 : 1));
-	return sendMessageR<bool>(TVM_SETITEM, 0, reinterpret_cast<::LPARAM>(&tvi));
+	return sendMessageR<bool>(TVM_SETITEMW, 0, reinterpret_cast<::LPARAM>(&tvi));
 }
 
 inline ::COLORREF TreeCtrl::getInsertMarkColor() const {return sendMessageC<::COLORREF>(TVM_GETINSERTMARKCOLOR);}
@@ -1645,7 +1645,7 @@ inline ::COLORREF TreeCtrl::getInsertMarkColor() const {return sendMessageC<::CO
 inline ::COLORREF TreeCtrl::setInsertMarkColor(::COLORREF color) {return sendMessageR<::COLORREF>(TVM_SETINSERTMARKCOLOR, color);}
 
 inline ::HTREEITEM TreeCtrl::insertItem(const ::TVINSERTSTRUCTW& insertStruct) {
-	return reinterpret_cast<::HTREEITEM>(sendMessage(TVM_INSERTITEM, 0, reinterpret_cast<::LPARAM>(&insertStruct)));}
+	return reinterpret_cast<::HTREEITEM>(sendMessage(TVM_INSERTITEMW, 0, reinterpret_cast<::LPARAM>(&insertStruct)));}
 
 inline ::HTREEITEM TreeCtrl::insertItem(::UINT mask, const ::WCHAR* text, int image, int selectedImage,
 		::UINT state, ::UINT stateMask, ::LPARAM lParam, ::HTREEITEM parent, ::HTREEITEM insertAfter) {
@@ -1724,7 +1724,7 @@ inline bool TreeCtrl::sortChildrenCB(const ::TVSORTCB& sort, bool recurse /* = f
 
 inline bool TreeCtrl::endEditLabelNow() {return sendMessageR<bool>(TVM_ENDEDITLABELNOW);}
 
-inline ::UINT TreeCtrl::getISearchString(::WCHAR* text) {return sendMessageC<::UINT>(TVM_GETISEARCHSTRING, 0, reinterpret_cast<::LPARAM>(text));}
+inline ::UINT TreeCtrl::getISearchString(::WCHAR* text) {return sendMessageC<::UINT>(TVM_GETISEARCHSTRINGW, 0, reinterpret_cast<::LPARAM>(text));}
 
 inline ::UINT TreeCtrl::getScrollTime() const {return sendMessageC<::UINT>(TVM_GETSCROLLTIME);}
 

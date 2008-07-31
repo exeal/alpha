@@ -31,8 +31,8 @@ public:
 	bool		doModeless(Window& parent, bool show = true) {return doModeless(parent.getHandle(), show);}
 	void		end(int result);
 	// control attributes
-	bool		addToolTip(::HWND control, const ::WCHAR* text = LPSTR_TEXTCALLBACK);
-	bool		addToolTip(::UINT controlID, const ::WCHAR* text = LPSTR_TEXTCALLBACK);
+	bool		addToolTip(::HWND control, const ::WCHAR* text = LPSTR_TEXTCALLBACKW);
+	bool		addToolTip(::UINT controlID, const ::WCHAR* text = LPSTR_TEXTCALLBACKW);
 	bool		check2StateButton(int buttonID, bool check = true);
 	bool		checkButton(int buttonID, ::UINT check);
 	bool		checkRadioButton(int firstButtonID, int lastButtonID, int buttonID);
@@ -125,7 +125,7 @@ inline bool Dialog::checkRadioButton(int firstButtonID, int lastButtonID, int bu
 	assertValidAsWindow(); return toBoolean(::CheckRadioButton(getHandle(), firstButtonID, lastButtonID, buttonID));}
 
 inline ::INT_PTR Dialog::doModal(::HWND parent) {
-	modeless_ = false; return ::DialogBoxParam(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));}
+	modeless_ = false; return ::DialogBoxParamW(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<LPARAM>(this));}
 
 inline bool Dialog::doModeless(::HWND parent, bool show /* = true */) {
 	if(::HWND handle = ::CreateDialogParamW(hinstance_, templateName_, parent, Dialog::windowProcedure, reinterpret_cast<::LPARAM>(this))) {
