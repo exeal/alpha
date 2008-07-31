@@ -1,5 +1,5 @@
 // splitter.hpp
-// (c) 2005-2007 exeal
+// (c) 2005-2008 exeal
 
 #ifndef MANAH_SPLITTER_HPP
 #define MANAH_SPLITTER_HPP
@@ -767,11 +767,11 @@ inline void internal::SplitterItem<Pane, cdp>::sendMessageToChildren(UINT messag
 	Child& rightBottom = children_[RIGHT];
 
 	if(leftTop.type == PANETYPE_SINGLE)
-		::SendMessage(static_cast<AbstractPane*>(leftTop.body.pane)->getWindow(), message, 0, 0L);
+		::SendMessageW(static_cast<AbstractPane*>(leftTop.body.pane)->getWindow(), message, 0, 0L);
 	else if(leftTop.type == PANETYPE_SPLITTER)
 		leftTop.body.splitter->sendMessageToChildren(message);
 	if(rightBottom.type == PANETYPE_SINGLE)
-		::SendMessage(static_cast<AbstractPane*>(rightBottom.body.pane)->getWindow(), message, 0, 0L);
+		::SendMessageW(static_cast<AbstractPane*>(rightBottom.body.pane)->getWindow(), message, 0, 0L);
 	else if(rightBottom.type == PANETYPE_SPLITTER)
 		rightBottom.body.splitter->sendMessageToChildren(message);
 }

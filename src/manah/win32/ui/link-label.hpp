@@ -17,7 +17,7 @@ class LinkLabel : public CustomControl<LinkLabel> {
 	DEFINE_WINDOW_CLASS() {
 		name = L"ManahLinkLabel";
 		style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
-		cursor = MAKEINTRESOURCE(32649);	// IDC_HAND
+		cursor = MAKEINTRESOURCEW(32649);	// IDC_HAND
 	}
 
 public:
@@ -42,7 +42,7 @@ protected:
 	void	onSettingChange(::UINT flags, const ::WCHAR* sectionName);	// WM_SETTINGCHANGE
 private:
 	void recreateFont();
-	AutoBuffer<TCHAR> tipText_;
+	AutoBuffer<::WCHAR> tipText_;
 	::HFONT font_;
 };
 
@@ -179,7 +179,7 @@ inline void LinkLabel::recreateFont() {
 	font_ = getParent().getFont();
 	::LOGFONTW lf;
 	if(font_ != 0)
-		::GetObject(font_, sizeof(::LOGFONTW), &lf);
+		::GetObjectW(font_, sizeof(::LOGFONTW), &lf);
 	else {
 		MANAH_AUTO_STRUCT_SIZE(::NONCLIENTMETRICSW, ncm);
 		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(::NONCLIENTMETRICSW), &ncm, 0);

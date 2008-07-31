@@ -1,5 +1,5 @@
 // window.hpp
-// (c) 2002-2007
+// (c) 2002-2008
 
 #ifndef MANAH_WINDOW_HPP
 #define MANAH_WINDOW_HPP
@@ -836,9 +836,9 @@ inline void Window::move(int x, int y, int width, int height, bool repaint /* = 
 inline void Window::move(const ::RECT& rect, bool repaint /* = true */) {
 	assertValidAsWindow(); ::MoveWindow(getHandle(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, repaint);}
 
-inline void Window::print(::HDC dc, ::DWORD flags) const {::SendMessage(getHandle(), WM_PRINT, reinterpret_cast<WPARAM>(dc), flags);}
+inline void Window::print(::HDC dc, ::DWORD flags) const {::SendMessageW(getHandle(), WM_PRINT, reinterpret_cast<WPARAM>(dc), flags);}
 
-inline void Window::printClient(::HDC dc, ::DWORD flags) const {::SendMessage(getHandle(), WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), flags);}
+inline void Window::printClient(::HDC dc, ::DWORD flags) const {::SendMessageW(getHandle(), WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), flags);}
 
 inline LRESULT Window::postMessage(::UINT message, ::WPARAM wParam /* = 0 */, ::LPARAM lParam /* = 0L */) {
 	assertValidAsWindow(); return ::PostMessageW(getHandle(), message, wParam, lParam);}
