@@ -595,8 +595,7 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 		-1
 #endif
 		), savedDocumentRevision_(0), timeStampDirector_(0) {
-	lockMode_.type = LockMode::DONT_LOCK;
-	lockMode_.onlyAsEditing = true;
+	lockMode_ = DONT_LOCK | LOCK_ONLY_AS_EDITING;
 	memset(&userLastWriteTime_, 0, sizeof(Time));
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
 	document.addListener(*this);
@@ -687,7 +686,7 @@ void TextFileDocumentInput::documentChanged(const Document&, const DocumentChang
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(lockMode_.onlyAsEditing && isOpen()) {
+	if(toBoolean(lockMode_ & LOCK_ONLY_AS_EDITING) && isOpen()) {
 		if(document_.isModified())
 			lock();
 		else
@@ -727,15 +726,15 @@ a::String TextFileDocumentInput::location() const throw() {
 
 /**
  * Locks the file.
- * @return true if locked successfully or the lock mode is @c LockMode#DONT_LOCK
+ * @return true if locked successfully or the lock mode is @c DONT_LOCK
  */
 bool TextFileDocumentInput::lock() throw() {
 	unlock();
-	if(lockMode_.type != LockMode::DONT_LOCK && isOpen()) {
+	if((lockMode_ & LOCK_TYPE_MASK) == DONT_LOCK && isOpen()) {
 #ifdef ASCENSION_WINDOWS
 		assert(lockingFile_ == INVALID_HANDLE_VALUE);
 		lockingFile_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ,
-			(lockMode_.type == LockMode::SHARED_LOCK) ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			((lockMode_ & LOCK_TYPE_MASK) == SHARED_LOCK) ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 		if(lockingFile_ == INVALID_HANDLE_VALUE)
 			return false;
 #else // ASCENSION_POSIX
@@ -746,7 +745,7 @@ bool TextFileDocumentInput::lock() throw() {
 		fl.l_whence = SEEK_SET;
 		fl.l_start = 0;
 		fl.l_len = 0;
-		fl.l_type = (lockMode_.type == LockMode::SHARED_LOCK) ? F_RDLCK : F_WRLCK;
+		fl.l_type = ((lockMode_ & LOCK_TYPE_MASK) == SHARED_LOCK) ? F_RDLCK : F_WRLCK;
 		if(::fcntl(lockingFile_, F_SETLK, &fl) == 0) {
 			::close(lockingFile_);
 			lockingFile_ = -1;
@@ -770,10 +769,10 @@ String TextFileDocumentInput::name() const throw() {
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
- * @return true if succeeded to lock the file with the desired mode @a lockMode.type
+ * @return true if succeeded to lock the file with the desired mode @a lockMode
  * @throw IOException any I/O error occured. in this case, the document's content will be lost
  */
-bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMode, const std::string& encoding,
+bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, const std::string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
 //	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
 	unlock();
@@ -800,12 +799,15 @@ bool TextFileDocumentInput::open(const String& fileName, const LockMode& lockMod
 	// lock the file
 	bool lockSucceeded = true;
 	lockMode_ = lockMode;
-	if(lockMode_.type != LockMode::DONT_LOCK && !lockMode_.onlyAsEditing) {
+	if((lockMode_ & LOCK_TYPE_MASK) != DONT_LOCK && !toBoolean(lockMode_ & LOCK_ONLY_AS_EDITING)) {
 		if(!(lockSucceeded = lock())) {
-			if(lockMode_.type == LockMode::EXCLUSIVE_LOCK) {
-				lockMode_.type = LockMode::SHARED_LOCK;
-				if(!lock())
-					lockMode_.type = LockMode::DONT_LOCK;
+			if((lockMode_ & LOCK_TYPE_MASK) == EXCLUSIVE_LOCK) {
+				lockMode_ &= ~LOCK_TYPE_MASK;
+				lockMode_ |= SHARED_LOCK;
+				if(!lock()) {
+					lockMode_ &= ~LOCK_TYPE_MASK;
+					lockMode_ |= DONT_LOCK;
+				}
 			}
 		}
 	}
@@ -922,7 +924,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) t
 	const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
 	if(!isOpen()
 			|| memcmp(&about, &uninitialized, sizeof(Time)) == 0
-			|| lockMode_.type != LockMode::DONT_LOCK)
+			|| (lockMode_ & LOCK_TYPE_MASK) != DONT_LOCK)
 		return true;	// not managed
 
 	try {
