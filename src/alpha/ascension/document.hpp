@@ -981,7 +981,14 @@ namespace ascension {
 #else // ASCENSION_POSIX
 				typedef ::time_t Time;
 #endif
-
+				/// Lock modes for opened file.
+				typedef byte LockMode;
+				static const LockMode
+					DONT_LOCK				= 0x00,	///< Does not lock.
+					SHARED_LOCK				= 0x01,	///< Uses shared lock.
+					EXCLUSIVE_LOCK			= 0x02,	///< Uses exclusive lock.
+					LOCK_TYPE_MASK			= 0x03,	///< A bit mask for lock type.
+					LOCK_ONLY_AS_EDITING	= 0x08;	///< The lock will not be performed unless modification occurs.
 				/// Option flags for @c FileBinder#write and @c FileBinder#writeRegion.
 				struct WriteParameters {
 					/// The the encoding name.
@@ -997,21 +1004,12 @@ namespace ascension {
 					};
 					manah::Flags<Option> options;	///< Miscellaneous options.
 				};
-				/// Lock modes for opened file.
-				struct LockMode {
-					enum {
-						DONT_LOCK		= 0x00,	///< Does not lock.
-						SHARED_LOCK		= 0x01,	///< Uses shared lock.
-						EXCLUSIVE_LOCK	= 0x02	///< Uses exclusive lock.
-					} type;
-					bool onlyAsEditing;	///< If true, the lock will not be performed unless modification occurs.
-				};
 			public:
 				explicit TextFileDocumentInput(Document& document);
 				~TextFileDocumentInput() throw();
 				bool checkTimeStamp();
 				const Document& document() const throw();
-				const LockMode& lockMode() const throw();
+				LockMode lockMode() const throw();
 				// listener
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
@@ -1026,7 +1024,7 @@ namespace ascension {
 				bool unicodeByteOrderMark() const throw();
 				// I/O
 				void close();
-				bool open(const String& fileName, const LockMode& lockMode,
+				bool open(const String& fileName, LockMode lockMode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				bool write(const String& fileName, const WriteParameters& params);
@@ -1627,7 +1625,7 @@ inline std::string fileio::TextFileDocumentInput::encoding() const throw() {retu
 inline bool fileio::TextFileDocumentInput::isOpen() const throw() {return !fileName_.empty();}
 
 /// Returns the file lock mode.
-inline const fileio::TextFileDocumentInput::LockMode& fileio::TextFileDocumentInput::lockMode() const throw() {return lockMode_;}
+inline fileio::TextFileDocumentInput::LockMode fileio::TextFileDocumentInput::lockMode() const throw() {return lockMode_;}
 
 /// @see IDocumentInput#newline, #setNewline
 inline Newline fileio::TextFileDocumentInput::newline() const throw() {return newline_;}
