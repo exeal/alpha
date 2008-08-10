@@ -29,23 +29,23 @@ struct SplitterBase {
 	};
 };
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp> class Splitter;
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp> class Splitter;
 
 namespace internal {
-	template<class Pane /* implements AbstractPane */, SplitterBase::ChildrenDestructionPolicy cdp>
+	template<typename Pane /* implements AbstractPane */, SplitterBase::ChildrenDestructionPolicy cdp>
 	class SplitterItem : public SplitterBase {
 		MANAH_NONCOPYABLE_TAG(SplitterItem);
 	public:
 		enum PaneType {PANETYPE_EMPTY, PANETYPE_SINGLE, PANETYPE_SPLITTER};
 		SplitterItem() throw() : parent_(0), direction_(NO_SPLIT), firstPaneSizeRatio_(0.5F) {}
 		~SplitterItem() throw();
-		void						adjustPanes(const ::RECT& newRect, uint frameWidth, uint frameHeight);
-		void						draw(gdi::PaintDC& dc, uint frameWidth, uint frameHeight);
-		void						getFirstPane(bool leftTop, Pane*& pane, SplitterItem<Pane, cdp>** parent = 0) const;
-		bool						getNextPane(const Pane& pane, bool next, Pane*& nextPane, SplitterItem<Pane, cdp>** parent = 0) const;
-		SplitterItem<Pane, cdp>*	getParent() const throw() {return parent_;}
-		SplitterItem<Pane, cdp>*	hitTest(const ::POINT& pt) const;
-		void						sendMessageToChildren(UINT message);
+		void adjustPanes(const RECT& newRect, uint frameWidth, uint frameHeight);
+		void draw(gdi::PaintDC& dc, uint frameWidth, uint frameHeight);
+		void firstPane(bool leftTop, Pane*& pane, SplitterItem<Pane, cdp>** parent = 0) const;
+		bool nextPane(const Pane& pane, bool next, Pane*& nextPane, SplitterItem<Pane, cdp>** parent = 0) const;
+		SplitterItem<Pane, cdp>* parent() const throw() {return parent_;}
+		SplitterItem<Pane, cdp>* hitTest(const POINT& pt) const;
+		void sendMessageToChildren(UINT message);
 	private:
 		struct Child {
 			PaneType type;
@@ -58,13 +58,13 @@ namespace internal {
 		} children_[2];						// children ([RIGHT] is EMPTY if this pane is not split)
 		SplitterItem<Pane, cdp>* parent_;	// parent splitter
 		Direction direction_;				// NO_SPLIT for only root
-		::RECT rect_;
+		RECT rect_;
 		double firstPaneSizeRatio_;			// (left or top pane's size) / (whole splitter size)
 		friend Splitter<Pane, cdp>;
 	};
 } // namespace internal
 
-template<class Pane /* implements AbstractPane*/, SplitterBase::ChildrenDestructionPolicy cdp = SplitterBase::STANDARD_DELETE>
+template<typename Pane /* implements AbstractPane*/, SplitterBase::ChildrenDestructionPolicy cdp = SplitterBase::STANDARD_DELETE>
 /* final */ class Splitter : public CustomControl<Splitter>, public SplitterBase {
 	MANAH_NONCOPYABLE_TAG(Splitter);
 public:
@@ -72,10 +72,10 @@ public:
 		MANAH_UNASSIGNABLE_TAG(Iterator);
 	public:
 		Iterator(const Iterator& rhs) throw() : parent_(rhs.parent_), pane_(rhs.pane_) {}
-		Pane&	get() const {if(pane_ == 0) throw std::logic_error(""); return *pane_;}
-		bool	isEnd() const throw() {return pane_ == 0;}
-		void	next() throw();
-		void	reset() throw();
+		bool done() const throw() {return pane_ == 0;}
+		Pane& get() const {if(pane_ == 0) throw std::logic_error(""); return *pane_;}
+		void next() throw();
+		void reset() throw();
 	private:
 		typedef internal::SplitterItem<Pane, cdp> SplitterItem;
 		explicit Iterator(const SplitterItem& root) throw() : parent_(&root) {reset();}
@@ -98,41 +98,41 @@ public:
 			draggingSplitter_(0) {}
 public:
 	// attributes
-	Iterator	enumeratePanes() const throw() {return Iterator(root_);}
-	Pane&		getActivePane() const;
-	uint		getSplitterSize(uint& width, uint& height) const throw() {width = splitterWidth_; height = splitterHeight_;}
-	bool		isSplit(const Pane& pane) const;
-	void		setDefaultActivePane(Pane& pane);
-	void		setPaneMinimumSize(uint width, uint height) throw() {minimumPaneWidth_ = width; minimumPaneHeight_ = height;}
-	void		setSplitterSize(uint width, uint height);
+	Pane& activePane() const;
+	Iterator enumeratePanes() const throw() {return Iterator(root_);}
+	uint splitterSize(uint& width, uint& height) const throw() {width = splitterWidth_; height = splitterHeight_;}
+	void setDefaultActivePane(Pane& pane);
+	void setPaneMinimumSize(uint width, uint height) throw() {minimumPaneWidth_ = width; minimumPaneHeight_ = height;}
+	void setSplitterSize(uint width, uint height);
+	bool isSplit(const Pane& pane) const;
 	// operations
-	void		activateNextPane() {doActivateNextPane(true);}
-	void		activatePreviousPane() {doActivateNextPane(false);}
-	void		adjustPanes() throw();
-	bool		create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle, Pane& initialPane) throw();
-	void		removeActivePane() {unsplit(getActivePane());}
-	void		removeInactivePanes();
-	void		splitNS(Pane& pane, Pane& clone) {split(pane, clone, true);}
-	void		splitWE(Pane& pane, Pane& clone) {split(pane, clone, false);}
-	void		unsplit(Pane& pane);
+	void activateNextPane() {doActivateNextPane(true);}
+	void activatePreviousPane() {doActivateNextPane(false);}
+	void adjustPanes() throw();
+	bool create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle, Pane& initialPane) throw();
+	void removeActivePane() {unsplit(activePane());}
+	void removeInactivePanes();
+	void splitNS(Pane& pane, Pane& clone) {split(pane, clone, true);}
+	void splitWE(Pane& pane, Pane& clone) {split(pane, clone, false);}
+	void unsplit(Pane& pane);
 protected:
 	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(Splitter);
-	void	onCaptureChanged(HWND newWindow);
-	void	onDestroy();
-	void	onLButtonDown(UINT, const ::POINT& pt);
-	void	onLButtonDblClk(UINT, const ::POINT& pt);
-	void	onLButtonUp(UINT, const ::POINT&) {releaseCapture();}
-	void	onMouseMove(UINT, const ::POINT& pt);
-	void	onPaint(gdi::PaintDC& dc) {root_.draw(dc, frameWidth_, frameHeight_);}
-	bool	onSetCursor(HWND window, UINT hitTest, UINT);
-	void	onSetFocus(HWND);
-	void	onSize(UINT, int cx, int cy);
+	void onCaptureChanged(HWND newWindow);
+	void onDestroy();
+	void onLButtonDown(UINT, const POINT& pt);
+	void onLButtonDblClk(UINT, const POINT& pt);
+	void onLButtonUp(UINT, const POINT&) {releaseCapture();}
+	void onMouseMove(UINT, const POINT& pt);
+	void onPaint(gdi::PaintDC& dc) {root_.draw(dc, frameWidth_, frameHeight_);}
+	bool onSetCursor(HWND window, UINT hitTest, UINT);
+	void onSetFocus(HWND);
+	void onSize(UINT, int cx, int cy);
 private:
-	typedef internal::SplitterItem<Pane, cdp>	SplitterItem;
-	void					doActivateNextPane(bool next);
-	void					drawSizingSplitterXorBar();
-	static SplitterItem*	findPane(const SplitterItem& splitter, const Pane& pane);	// recursive method which returns pane's parent
-	void					split(Pane& pane, Pane& clone, bool ns);
+	typedef internal::SplitterItem<Pane, cdp> SplitterItem;
+	void doActivateNextPane(bool next);
+	void drawSizingSplitterXorBar();
+	static SplitterItem* findPane(const SplitterItem& splitter, const Pane& pane);	// recursive method which returns pane's parent
+	void split(Pane& pane, Pane& clone, bool ns);
 private:
 	SplitterItem root_;
 	Pane* defaultActivePane_;
@@ -142,7 +142,7 @@ private:
 	uint sizingFirstPaneSize_;	// first pane size of m_pDraggingSplitter (-1 when full dragging is enabled)
 };
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline LRESULT Splitter<Pane, cdp>::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
 	typedef Splitter Klass; typedef CustomControl<Splitter> BaseKlass; LRESULT result;
 	switch(message) {
@@ -160,16 +160,16 @@ MANAH_END_WINDOW_MESSAGE_MAP()
 
 // implementation ///////////////////////////////////////////////////////////
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::adjustPanes() throw() {
-	::RECT rect;
+	RECT rect;
 	getRect(rect);
 	::OffsetRect(&rect, -rect.left, -rect.top);
 	root_.adjustPanes(rect, frameWidth_, frameHeight_);
 	invalidateRect(0);
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline bool Splitter<Pane, cdp>::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle, Pane& initialPane) throw() {
 	assert(parent == 0 || toBoolean(::IsWindow(parent)));
 	if(!CustomControl<Splitter>::create(parent, rect, 0, style, exStyle))
@@ -180,12 +180,12 @@ inline bool Splitter<Pane, cdp>::create(HWND parent, const RECT& rect, DWORD sty
 	return true;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::doActivateNextPane(bool next) {
-	Pane& activePane = getActivePane();
-	if(SplitterItem* parent = findPane(root_, activePane)) {
+	Pane& active = activePane();
+	if(SplitterItem* parent = findPane(root_, active)) {
 		Pane* nextPane = 0;
-		if(parent->getNextPane(activePane, next, nextPane))
+		if(parent->getNextPane(active, next, nextPane))
 			defaultActivePane_ = nextPane;
 		else	// current active pane is end/first
 			root_.getFirstPane(next, defaultActivePane_);
@@ -194,10 +194,10 @@ inline void Splitter<Pane, cdp>::doActivateNextPane(bool next) {
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::drawSizingSplitterXorBar() {
-	::RECT rect;
-	const ::RECT& splitterRect = draggingSplitter_->rect_;
+	RECT rect;
+	const RECT& splitterRect = draggingSplitter_->rect_;
 	manah::win32::gdi::WindowDC dc = getWindowDC();
 
 	// create half tone brush (from MFC)
@@ -223,7 +223,7 @@ inline void Splitter<Pane, cdp>::drawSizingSplitterXorBar() {
 	::DeleteObject(grayPattern);
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline internal::SplitterItem<Pane, cdp>* Splitter<Pane, cdp>::findPane(const SplitterItem& splitter, const Pane& pane) {
 	const SplitterItem::Child& leftTop = splitter.children_[LEFT];
 	const SplitterItem::Child& rightBottom = splitter.children_[RIGHT];
@@ -249,12 +249,12 @@ inline internal::SplitterItem<Pane, cdp>* Splitter<Pane, cdp>::findPane(const Sp
 	return 0;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline Pane& Splitter<Pane, cdp>::getActivePane() const {
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline Pane& Splitter<Pane, cdp>::activePane() const {
 	HWND focused = ::GetFocus();
-	for(Iterator it = enumeratePanes(); !it.isEnd(); it.next()) {
-		if(static_cast<AbstractPane&>(it.get()).getWindow() == focused)
-			return it.get();
+	for(Iterator i = enumeratePanes(); !i.done(); i.next()) {
+		if(static_cast<AbstractPane&>(i.get()).getWindow() == focused)
+			return i.get();
 	}
 	if(defaultActivePane_ != 0)
 		return *defaultActivePane_;
@@ -262,7 +262,7 @@ inline Pane& Splitter<Pane, cdp>::getActivePane() const {
 		throw std::logic_error("There are no panes.");
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline bool Splitter<Pane, cdp>::isSplit(const Pane& pane) const {
 	if(SplitterItem* parent = findPane(root_, pane))
 		return parent->direction_ != NO_SPLIT;
@@ -270,7 +270,7 @@ inline bool Splitter<Pane, cdp>::isSplit(const Pane& pane) const {
 		throw std::invalid_argument("The specified pane does not belong to this splitter.");
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::onCaptureChanged(HWND newWindow) {
 	if(draggingSplitter_ != 0) {
 		root_.sendMessageToChildren(WM_EXITSIZEMOVE);
@@ -287,21 +287,21 @@ inline void Splitter<Pane, cdp>::onCaptureChanged(HWND newWindow) {
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::onDestroy() {
 	if(cdp == DONT_DELETE_AND_SET_PARENT_TO_NULL) {
-		for(Iterator it = enumeratePanes(); !it.isEnd(); it.next())
-			::SetParent(static_cast<AbstractPane&>(it.get()).getWindow(), 0);
+		for(Iterator i(enumeratePanes()); !i.done(); i.next())
+			::SetParent(static_cast<AbstractPane&>(i.get()).getWindow(), 0);
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline void Splitter<Pane, cdp>::onLButtonDown(UINT, const ::POINT& pt) {
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline void Splitter<Pane, cdp>::onLButtonDown(UINT, const POINT& pt) {
 	// begin sizing
 	if(root_.direction_ == NO_SPLIT)
 		return;
 	else if(draggingSplitter_ = root_.hitTest(pt)) {
-		const ::RECT& rect = draggingSplitter_->rect_;
+		const RECT& rect = draggingSplitter_->rect_;
 		BOOL fullDraggingEnabled;
 
 		::SystemParametersInfo(SPI_GETDRAGFULLWINDOWS, 0, &fullDraggingEnabled, 0);
@@ -324,8 +324,8 @@ inline void Splitter<Pane, cdp>::onLButtonDown(UINT, const ::POINT& pt) {
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline void Splitter<Pane, cdp>::onLButtonDblClk(UINT, const ::POINT& pt) {
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline void Splitter<Pane, cdp>::onLButtonDblClk(UINT, const POINT& pt) {
 	// double click splitter bar to unsplit
 	if(root_.direction_ == NO_SPLIT)
 		return;
@@ -337,11 +337,11 @@ inline void Splitter<Pane, cdp>::onLButtonDblClk(UINT, const ::POINT& pt) {
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline void Splitter<Pane, cdp>::onMouseMove(UINT, const ::POINT& pt) {
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline void Splitter<Pane, cdp>::onMouseMove(UINT, const POINT& pt) {
 	if(draggingSplitter_ == 0)
 		return;
-	const ::RECT& rect = draggingSplitter_->rect_;
+	const RECT& rect = draggingSplitter_->rect_;
 	double ratio;
 
 	if(draggingSplitter_->direction_ == NS) {
@@ -377,10 +377,10 @@ inline void Splitter<Pane, cdp>::onMouseMove(UINT, const ::POINT& pt) {
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline bool Splitter<Pane, cdp>::onSetCursor(HWND window, UINT hitTest, UINT) {
 	if(window == getHandle() && hitTest == HTCLIENT) {
-		const ::POINT pt = getCursorPosition();
+		const POINT pt = getCursorPosition();
 		if(SplitterItem* splitter = root_.hitTest(pt)) {
 			if(splitter->direction_ != NO_SPLIT) {
 				::SetCursor(::LoadCursor(0, (splitter->direction_ == NS) ? IDC_SIZENS : IDC_SIZEWE));
@@ -391,13 +391,13 @@ inline bool Splitter<Pane, cdp>::onSetCursor(HWND window, UINT hitTest, UINT) {
 	return false;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::onSetFocus(HWND) {
 	if(defaultActivePane_ != 0)
 		::SetFocus(static_cast<AbstractPane*>(defaultActivePane_)->getWindow());
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::onSize(UINT, int cx, int cy) {
 	HWND window = getHandle(), parent = ::GetParent(getHandle());
 	do {
@@ -407,25 +407,25 @@ inline void Splitter<Pane, cdp>::onSize(UINT, int cx, int cy) {
 		parent = ::GetParent(window);
 	} while(parent != 0);
 
-	::RECT rect = {0, 0, cx, cy};
+	RECT rect = {0, 0, cx, cy};
 	root_.adjustPanes(rect, frameWidth_, frameHeight_);
 	invalidateRect(0);
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::removeInactivePanes() {
-	Pane& activePane = getActivePane();
-	SplitterItem* parent = findPane(root_, activePane);
+	Pane& active = activePane();
+	SplitterItem* parent = findPane(root_, active);
 	const bool hasFocus = isChild(::GetFocus());
 
 	// prevent active pane from deletion
 	assert(parent != 0);
 	if(parent->children_[LEFT].type == SplitterItem::PANETYPE_SINGLE
-			&& parent->children_[LEFT].body.pane == &activePane)
+			&& parent->children_[LEFT].body.pane == &active)
 		parent->children_[LEFT].type = SplitterItem::PANETYPE_EMPTY;
 	else {
 		assert(parent->children_[RIGHT].type == SplitterItem::PANETYPE_SINGLE
-			&& parent->children_[RIGHT].body.pane == &activePane);
+			&& parent->children_[RIGHT].body.pane == &active);
 		parent->children_[RIGHT].type = SplitterItem::PANETYPE_EMPTY;
 	}
 
@@ -444,28 +444,28 @@ inline void Splitter<Pane, cdp>::removeInactivePanes() {
 	root_.children_[RIGHT].type = SplitterItem::PANETYPE_EMPTY;
 	root_.direction_ = NO_SPLIT;
 	root_.firstPaneSizeRatio_ = 0.5F;
-	root_.children_[LEFT] = SplitterItem::Child(activePane);
-	defaultActivePane_ = &activePane;
-	if(hasFocus && static_cast<AbstractPane&>(activePane).getWindow() != ::GetFocus())
-		::SetFocus(static_cast<AbstractPane&>(activePane).getWindow());
+	root_.children_[LEFT] = SplitterItem::Child(active);
+	defaultActivePane_ = &active;
+	if(hasFocus && static_cast<AbstractPane&>(active).getWindow() != ::GetFocus())
+		::SetFocus(static_cast<AbstractPane&>(active).getWindow());
 	adjustPanes();
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::setDefaultActivePane(Pane& pane) {
 	if(findPane(root_, pane) == 0)
 		throw std::invalid_argument("Specified pane does not belong to this splitter.");
 	defaultActivePane_ = &pane;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::setSplitterSize(uint width, uint height) {
 	splitterWidth_ = width;
 	splitterHeight_ = height;
 	adjustPanes();
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::split(Pane& pane, Pane& clone, bool ns) {
 	SplitterItem* const parent = findPane(root_, pane);
 	const pos1 = ns ? TOP : LEFT;	// no matter...
@@ -502,7 +502,7 @@ inline void Splitter<Pane, cdp>::split(Pane& pane, Pane& clone, bool ns) {
 	adjustPanes();
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::unsplit(Pane& pane) {
 	SplitterItem* parent = findPane(root_, pane);
 
@@ -526,7 +526,7 @@ inline void Splitter<Pane, cdp>::unsplit(Pane& pane) {
 		if(leftTop.type == SplitterItem::PANETYPE_SINGLE)
 			nextFirstPane = leftTop.body.pane;
 		else
-			leftTop.body.splitter->getFirstPane(true, nextFirstPane);
+			leftTop.body.splitter->firstPane(true, nextFirstPane);
 	}
 
 	if(cdp == STANDARD_DELETE)
@@ -573,29 +573,31 @@ inline void Splitter<Pane, cdp>::unsplit(Pane& pane) {
 
 	adjustPanes();
 
-	if(removedPaneWasDefaultActive)	defaultActivePane_ = nextFirstPane;
-	if(removedPaneHadFocus)			::SetFocus(static_cast<AbstractPane*>(nextFirstPane)->getWindow());
+	if(removedPaneWasDefaultActive)
+		defaultActivePane_ = nextFirstPane;
+	if(removedPaneHadFocus)
+		::SetFocus(static_cast<AbstractPane*>(nextFirstPane)->getWindow());
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::Iterator::next() throw() {
 	Pane* next = 0;
 	SplitterItem* parent = 0;
-	if(parent_->getNextPane(*pane_, true, next, &parent)) {
+	if(parent_->nextPane(*pane_, true, next, &parent)) {
 		parent_ = parent;
 		pane_ = next;
 	} else	// at end
 		pane_ = 0;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void Splitter<Pane, cdp>::Iterator::reset() throw() {
-	while(parent_->getParent() != 0)
-		parent_ = parent_->getParent();
-	parent_->getFirstPane(true, pane_, const_cast<SplitterItem**>(&parent_));
+	while(parent_->parent() != 0)
+		parent_ = parent_->parent();
+	parent_->firstPane(true, pane_, const_cast<SplitterItem**>(&parent_));
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline internal::SplitterItem<Pane, cdp>::~SplitterItem() throw() {
 	Child& leftTop = children_[LEFT];
 	Child& rightBottom = children_[RIGHT];
@@ -616,7 +618,7 @@ inline internal::SplitterItem<Pane, cdp>::~SplitterItem() throw() {
 		delete rightBottom.body.splitter;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void internal::SplitterItem<Pane, cdp>::adjustPanes(const RECT& newRect, uint frameWidth, uint frameHeight) {
 	rect_ = newRect;
 	if(direction_ == NO_SPLIT) {	// is not split
@@ -626,7 +628,7 @@ inline void internal::SplitterItem<Pane, cdp>::adjustPanes(const RECT& newRect, 
 				newRect.left, newRect.top,
 				newRect.right - newRect.left, newRect.bottom - newRect.top, true);
 	} else {
-		::RECT rect = newRect;
+		RECT rect = newRect;
 
 		if(direction_ == NS)
 			rect.bottom = newRect.top +
@@ -655,12 +657,12 @@ inline void internal::SplitterItem<Pane, cdp>::adjustPanes(const RECT& newRect, 
 	}
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void internal::SplitterItem<Pane, cdp>::draw(gdi::PaintDC& dc, uint frameWidth, uint frameHeight) {
 	if(direction_ == NO_SPLIT)
 		return;
 
-	::RECT rect;
+	RECT rect;
 	rect.left = (direction_ == NS) ? rect_.left :
 		rect_.left + static_cast<long>((rect_.right - rect_.left) * firstPaneSizeRatio_) - frameWidth / 2;
 	rect.top = (direction_ == WE) ? rect_.top :
@@ -675,8 +677,8 @@ inline void internal::SplitterItem<Pane, cdp>::draw(gdi::PaintDC& dc, uint frame
 		children_[RIGHT].body.splitter->draw(dc, frameWidth, frameHeight);
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline void internal::SplitterItem<Pane, cdp>::getFirstPane(bool leftTop, Pane*& pane, SplitterItem<Pane, cdp>** parent = 0) const {
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline void internal::SplitterItem<Pane, cdp>::firstPane(bool leftTop, Pane*& pane, SplitterItem<Pane, cdp>** parent = 0) const {
 	SplitterItem<Pane, cdp>* p = const_cast<SplitterItem<Pane, cdp>*>(this);
 	const PanePosition seekDirection = leftTop ? LEFT : RIGHT;
 	pane = 0;
@@ -693,8 +695,23 @@ inline void internal::SplitterItem<Pane, cdp>::getFirstPane(bool leftTop, Pane*&
 		*parent = p;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline bool internal::SplitterItem<Pane, cdp>::getNextPane(
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline internal::SplitterItem<Pane, cdp>* internal::SplitterItem<Pane, cdp>::hitTest(const POINT& pt) const {
+	if(!toBoolean(::PtInRect(&rect_, pt)))
+		return 0;
+	if(children_[LEFT].type == PANETYPE_SPLITTER) {
+		if(SplitterItem<Pane, cdp>* p = children_[LEFT].body.splitter->hitTest(pt))
+			return p;
+	}
+	if(children_[RIGHT].type == PANETYPE_SPLITTER) {
+		if(SplitterItem<Pane, cdp>* p = children_[RIGHT].body.splitter->hitTest(pt))
+			return p;
+	}
+	return const_cast<SplitterItem<Pane, cdp>*>(this);
+}
+
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline bool internal::SplitterItem<Pane, cdp>::nextPane(
 		const Pane& pane, bool next, Pane*& nextPane, SplitterItem<Pane, cdp>** parent = 0) const {
 	// returns false if pane is rightmost
 	const PanePosition forwardPosition = next ? RIGHT : LEFT;
@@ -706,7 +723,7 @@ inline bool internal::SplitterItem<Pane, cdp>::getNextPane(
 			if(parent != 0)	*parent = const_cast<SplitterItem<Pane, cdp>*>(this);
 			return true;
 		} else if(children_[forwardPosition].type == PANETYPE_SPLITTER) {
-			children_[forwardPosition].body.splitter->getFirstPane(next, nextPane, parent);
+			children_[forwardPosition].body.splitter->firstPane(next, nextPane, parent);
 			return true;
 		} else {
 			assert(children_[forwardPosition].type == PANETYPE_EMPTY);
@@ -729,7 +746,7 @@ inline bool internal::SplitterItem<Pane, cdp>::getNextPane(
 				if(parent != 0)	*parent = p;
 				return true;
 			} else if(p->children_[forwardPosition].type == PANETYPE_SPLITTER) {
-				p->children_[forwardPosition].body.splitter->getFirstPane(next, nextPane, parent);
+				p->children_[forwardPosition].body.splitter->firstPane(next, nextPane, parent);
 				return true;
 			} else {
 				assert(p->children_[forwardPosition].type == PANETYPE_EMPTY);
@@ -746,22 +763,7 @@ inline bool internal::SplitterItem<Pane, cdp>::getNextPane(
 	return false;
 }
 
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
-inline internal::SplitterItem<Pane, cdp>* internal::SplitterItem<Pane, cdp>::hitTest(const ::POINT& pt) const {
-	if(!toBoolean(::PtInRect(&rect_, pt)))
-		return 0;
-	if(children_[LEFT].type == PANETYPE_SPLITTER) {
-		if(SplitterItem<Pane, cdp>* p = children_[LEFT].body.splitter->hitTest(pt))
-			return p;
-	}
-	if(children_[RIGHT].type == PANETYPE_SPLITTER) {
-		if(SplitterItem<Pane, cdp>* p = children_[RIGHT].body.splitter->hitTest(pt))
-			return p;
-	}
-	return const_cast<SplitterItem<Pane, cdp>*>(this);
-}
-
-template<class Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
 inline void internal::SplitterItem<Pane, cdp>::sendMessageToChildren(UINT message) {
 	Child& leftTop = children_[LEFT];
 	Child& rightBottom = children_[RIGHT];
@@ -776,6 +778,6 @@ inline void internal::SplitterItem<Pane, cdp>::sendMessageToChildren(UINT messag
 		rightBottom.body.splitter->sendMessageToChildren(message);
 }
 
-}}} // namespace manah::win32::ui
+}}} // namespace manah.win32.ui
 
-#endif /* !MANAH_SPLITTER_HPP */
+#endif // !MANAH_SPLITTER_HPP
