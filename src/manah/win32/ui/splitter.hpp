@@ -4,6 +4,7 @@
 #ifndef MANAH_SPLITTER_HPP
 #define MANAH_SPLITTER_HPP
 #include "window.hpp"
+#include <stack>
 
 namespace manah {
 namespace win32 {
@@ -92,14 +93,16 @@ public:
 	}
 
 public:
-	Splitter() throw() : defaultActivePane_(0),
+	Splitter() throw() : defaultActivePane_(0), numberOfPanes_(0),
 			frameWidth_(::GetSystemMetrics(SM_CXSIZEFRAME)), frameHeight_(::GetSystemMetrics(SM_CYSIZEFRAME)),
 			minimumPaneWidth_(::GetSystemMetrics(SM_CXMIN)), minimumPaneHeight_(::GetSystemMetrics(SM_CYMIN)),
 			draggingSplitter_(0) {}
+	virtual ~Splitter() throw() {}
 public:
 	// attributes
 	Pane& activePane() const;
 	Iterator enumeratePanes() const throw() {return Iterator(root_);}
+	std::size_t numberOfPanes() const throw();
 	uint splitterSize(uint& width, uint& height) const throw() {width = splitterWidth_; height = splitterHeight_;}
 	void setDefaultActivePane(Pane& pane);
 	void setPaneMinimumSize(uint width, uint height) throw() {minimumPaneWidth_ = width; minimumPaneHeight_ = height;}
@@ -135,11 +138,12 @@ private:
 	void split(Pane& pane, Pane& clone, bool ns);
 private:
 	SplitterItem root_;
+	std::size_t numberOfPanes_;
 	Pane* defaultActivePane_;
 	uint frameWidth_, frameHeight_;
 	uint minimumPaneWidth_, minimumPaneHeight_;
 	SplitterItem* draggingSplitter_;	// sizing splitter
-	uint sizingFirstPaneSize_;	// first pane size of m_pDraggingSplitter (-1 when full dragging is enabled)
+	uint sizingFirstPaneSize_;	// first pane size of draggingSplitter (-1 when full dragging is enabled)
 };
 
 template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
@@ -177,6 +181,7 @@ inline bool Splitter<Pane, cdp>::create(HWND parent, const RECT& rect, DWORD sty
 	::SetParent(static_cast<AbstractPane&>(initialPane).getWindow(), getHandle());
 	root_.children_[LEFT].type = SplitterItem::PANETYPE_SINGLE;
 	root_.children_[LEFT].body.pane = defaultActivePane_ = &initialPane;
+	numberOfPanes_ = 1;
 	return true;
 }
 
@@ -268,6 +273,16 @@ inline bool Splitter<Pane, cdp>::isSplit(const Pane& pane) const {
 		return parent->direction_ != NO_SPLIT;
 	else
 		throw std::invalid_argument("The specified pane does not belong to this splitter.");
+}
+
+template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
+inline std::size_t Splitter<Pane, cdp>::numberOfPanes() const throw() {
+	if(numberOfPanes_ == -1) {
+		numberOfPanes_ = 0;
+		for(Iterator i(enumeratePanes()); !i.done(); i.next())
+			++numberOfPanes_;
+	}
+	return numberOfPanes_;
 }
 
 template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
@@ -446,6 +461,7 @@ inline void Splitter<Pane, cdp>::removeInactivePanes() {
 	root_.firstPaneSizeRatio_ = 0.5F;
 	root_.children_[LEFT] = SplitterItem::Child(active);
 	defaultActivePane_ = &active;
+	numberOfPanes_ = 1;
 	if(hasFocus && static_cast<AbstractPane&>(active).getWindow() != ::GetFocus())
 		::SetFocus(static_cast<AbstractPane&>(active).getWindow());
 	adjustPanes();
@@ -499,6 +515,7 @@ inline void Splitter<Pane, cdp>::split(Pane& pane, Pane& clone, bool ns) {
 		child->body.splitter->children_[LEFT] = SplitterItem::Child(pane);
 		child->body.splitter->children_[RIGHT] = SplitterItem::Child(clone);
 	}
+	++numberOfPanes_;
 	adjustPanes();
 }
 
@@ -577,6 +594,7 @@ inline void Splitter<Pane, cdp>::unsplit(Pane& pane) {
 		defaultActivePane_ = nextFirstPane;
 	if(removedPaneHadFocus)
 		::SetFocus(static_cast<AbstractPane*>(nextFirstPane)->getWindow());
+	numberOfPanes_ = -1;	// make uncalculated
 }
 
 template<typename Pane, SplitterBase::ChildrenDestructionPolicy cdp>
