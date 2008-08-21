@@ -1,7 +1,7 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_SESSION_HPP
@@ -49,9 +49,9 @@ namespace ascension {
 			std::size_t numberOfItems() const throw();
 			void setActiveItem(std::size_t index);
 			void setCapacity(std::size_t limit);
-			void text(std::size_t index, String& text, bool& box) const;
+			void text(std::size_t index, String& text, bool& rectangle) const;
 			// operations
-			void add(const String& text, bool box);
+			void add(const String& text, bool rectangle);
 			void remove(std::size_t index);
 			void removeAll();
 

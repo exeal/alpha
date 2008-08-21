@@ -136,7 +136,7 @@ ulong CaretMovementCommand::execute() {
 				}
 			}
 		}
-		caret.endBoxSelection();
+		caret.endRectangleSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
 			const bool rtl = target().configuration().orientation == layout::RIGHT_TO_LEFT;
 			if(type_ == FORWARD_CHARACTER
@@ -756,7 +756,7 @@ ulong RowSelectionExtensionCommand::execute() {
 	};
 
 	if(caret.isSelectionEmpty() && !caret.isSelectionRectangle())
-		caret.beginBoxSelection();
+		caret.beginRectangleSelection();
 	assert(type_ >= 0 && type_ < MANAH_COUNTOF(commandMap));
 	for(int i = 0; i < MANAH_COUNTOF(commandMap); i += 2) {
 		if(commandMap[i] == type_) {
@@ -774,7 +774,7 @@ ulong RowSelectionExtensionCommand::execute() {
 ulong SelectionCreationCommand::execute() {
 	END_ISEARCH();
 
-	target().caret().endBoxSelection();
+	target().caret().endRectangleSelection();
 	if(type_ == ALL)
 		target().caret().select(target().document().accessibleRegion());
 	else if(type_ == CURRENT_WORD)

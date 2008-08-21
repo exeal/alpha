@@ -56,7 +56,7 @@ namespace ascension {
 		/**
 		 * A virtual rectangle placed in the viewer.
 		 * @note This feature is not fully available on bidirectional texts.
-		 * @see Caret#getBoxForRectangleSelection
+		 * @see Caret#boxForRectangleSelection
 		 */
 		class VirtualBox {
 			MANAH_UNASSIGNABLE_TAG(VirtualBox);
