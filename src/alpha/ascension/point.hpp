@@ -207,13 +207,13 @@ namespace ascension {
 			void copy(const kernel::Position& other);
 			void cut(signed_length_t length);
 			void cut(const kernel::Position& other);
-			void insertBox(const String& text);
-			void insertBox(const Char* first, const Char* last);
+			void insertRectangle(const String& text);
+			void insertRectangle(const Char* first, const Char* last);
 			void newLine(bool inheritIndent);
 			void paste(signed_length_t length = 0);
 			void paste(const kernel::Position& other);
-			kernel::Position spaceIndent(const kernel::Position& other, bool box, long level = 1);
-			kernel::Position tabIndent(const kernel::Position& other, bool box, long level = 1);
+			kernel::Position spaceIndent(const kernel::Position& other, bool rectangle, long level = 1);
+			kernel::Position tabIndent(const kernel::Position& other, bool rectangle, long level = 1);
 			bool transposeCharacters();
 			bool transposeLines();
 //			bool transposeParagraphs();
@@ -226,7 +226,7 @@ namespace ascension {
 			void verifyViewer() const;
 		private:
 			using kernel::EditPoint::newLine;	// 明示的な隠蔽
-			kernel::Position doIndent(const kernel::Position& other, Char character, bool box, long level);
+			kernel::Position doIndent(const kernel::Position& other, Char character, bool rectangle, long level);
 			void updateLastX();
 			void viewerDisposed() throw();
 			// layout.IVisualLinesListener
@@ -324,9 +324,9 @@ namespace ascension {
 		 * 対括弧の検索はプログラムを編集しているときに役立つ機能で、キャレット位置に括弧があれば対応する括弧を検索する。
 		 * 括弧のペアを強調表示するのは、現時点ではビューの責任である
 		 *
-		 * To enter rectangle selection mode, call @c #beginBoxSelection method. To exit, call
-		 * @c #endBoxSelection method. You can get the information of the current rectangle
-		 * selection by using @c #getBoxForRectangleSelection method.
+		 * To enter rectangle selection mode, call @c #beginRectangleSelection method. To exit,
+		 * call @c #endRectangleSelection method. You can get the information of the current
+		 * rectangle selection by using @c #boxForRectangleSelection method.
 		 *
 		 * This class does not accept @c IPointListener. Use @c ICaretListener interface instead.
 		 *
@@ -388,13 +388,13 @@ namespace ascension {
 			void trackMatchBrackets(MatchBracketsTrackingMode mode);
 
 			// selection manipulations
-			void beginBoxSelection();
 			void beginLineSelection();
+			void beginRectangleSelection();
 			void beginWordSelection();
 			void clearSelection();
 			void copySelection(bool alsoSendToClipboardRing);
 			void cutSelection(bool alsoSendToClipboardRing);
-			void endBoxSelection();
+			void endRectangleSelection();
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(std::mem_fun_t<void, kernel::EditPoint>& algorithm);
 			void extendSelection(std::mem_fun_t<void, VisualPoint>& algorithm);
@@ -492,7 +492,7 @@ namespace viewers {
  * @param text the text to insert
  * @see EditPoint#insert(const String&)
  */
-inline void VisualPoint::insertBox(const String& text) {insertBox(text.data(), text.data() + text.length());}
+inline void VisualPoint::insertRectangle(const String& text) {insertRectangle(text.data(), text.data() + text.length());}
 /// Returns the text viewer.
 inline TextViewer& VisualPoint::textViewer() {verifyViewer(); return *viewer_;}
 /// Returns the text viewer.

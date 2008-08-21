@@ -3934,9 +3934,9 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			viewer_->freeze();
 			if(rectangle) {
 				document.beginSequentialEdit();
-				ca.insertBox(*text);
+				ca.insertRectangle(*text);
 				document.endSequentialEdit();
-				ca.beginBoxSelection();
+				ca.beginRectangleSelection();
 			} else
 				ca.insert(*text);
 			ca.select(pos, ca);
@@ -3965,7 +3965,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			ca.enableAutoShow(false);
 			ca.moveTo(pos);
 			if(rectangle)	// copy as a rectangle
-				ca.insertBox(text);
+				ca.insertRectangle(text);
 			else	// copy as linear
 				ca.insert(text);
 			ca.enableAutoShow(true);
@@ -3978,7 +3978,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			p.adaptToDocument(false);
 			ca.enableAutoShow(false);
 			ca.extendSelection(p);
-			ca.insertBox(text);
+			ca.insertRectangle(text);
 			ca.enableAutoShow(true);
 			ca.select(p, ca);
 			*effect = DROPEFFECT_MOVE;
@@ -3990,7 +3990,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			ca.moveTo(pos);
 			activePointOrg.erase(anchorPointOrg);
 			const Position temp = ca;
-			ca.endBoxSelection();
+			ca.endRectangleSelection();
 			ca.insert(text);
 			ca.enableAutoShow(true);
 			ca.select(temp, ca);
@@ -4069,7 +4069,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 
 	// begin rectangular selection
 	else if(!toBoolean(keyState & MK_SHIFT) && toBoolean(::GetKeyState(VK_MENU) & 0x8000)) {
-		caret.beginBoxSelection();
+		caret.beginRectangleSelection();
 		caret.moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
@@ -4099,11 +4099,11 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 			p = viewer_->characterForClientXY(position, LineLayout::TRAILING);
 			if(toBoolean(keyState & MK_SHIFT)) {	// Shift -> extend the selection to the cursor
 				if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// Shift+Alt -> select to the cursor (rectangle)
-					caret.beginBoxSelection();
+					caret.beginRectangleSelection();
 				caret.extendSelection(p);
 			} else {
 				caret.moveTo(p);
-				caret.endBoxSelection();
+				caret.endRectangleSelection();
 			}
 		}
 		viewer_->setCapture();

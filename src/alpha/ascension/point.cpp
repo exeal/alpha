@@ -516,7 +516,7 @@ inline String EditPoint::getText(const Position& other, Newline newline /* = NLF
  * Inserts the spcified text at the current position.
  * @param first the start of the text
  * @param last the end of the text
- * @see viewers#VisualPoint#insertBox
+ * @see viewers#VisualPoint#insertRectangle
  */
 void EditPoint::insert(const Char* first, const Char* last) {
 	verifyDocument();
@@ -742,9 +742,9 @@ void VisualPoint::beginningOfVisualLine() {
  * @return the pastable clipboard format or 0
  */
 UINT VisualPoint::canPaste() {
-	const UINT boxClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
-	if(boxClipFormat != 0 && toBoolean(::IsClipboardFormatAvailable(boxClipFormat)))
-		return boxClipFormat;
+	const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+	if(rectangleClipFormat != 0 && toBoolean(::IsClipboardFormatAvailable(rectangleClipFormat)))
+		return rectangleClipFormat;
 	if(toBoolean(::IsClipboardFormatAvailable(CF_UNICODETEXT)))
 		return CF_UNICODETEXT;
 	if(toBoolean(::IsClipboardFormatAvailable(CF_TEXT)))
@@ -799,14 +799,14 @@ void VisualPoint::cut(const Position& other) {
 }
 
 /**
- * 範囲内のテキストをインデント
+ * Indents the specified region.
  * @param other もう1つの位置
- * @param character インデントに使う文字
- * @param box 矩形インデントか (インデントレベルが負のときは無視される)
- * @param level インデントレベル
+ * @param character a character to make indents
+ * @param rectangle set true for rectangular indents (will be ignored level is negative)
+ * @param level the level of the indentation
  * @return 操作の結果 @a pos が移動するとよい位置
  */
-Position VisualPoint::doIndent(const Position& other, Char character, bool box, long level) {
+Position VisualPoint::doIndent(const Position& other, Char character, bool rectangle, long level) {
 	verifyViewer();
 
 	Document& doc = *document();
@@ -832,7 +832,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 
 	// 最初の行を (逆) インデント
 	if(level > 0) {
-		doc.insert(Position(line, box ? region.beginning().column : 0), indent);
+		doc.insert(Position(line, rectangle ? region.beginning().column : 0), indent);
 		if(line == otherResult.line && otherResult.column != 0)
 			otherResult.column += level;
 		if(line == lineNumber() && columnNumber() != 0)
@@ -860,7 +860,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool box, 
 		for(++line; line <= region.end().line; ++line) {
 			if(doc.lineLength(line) != 0 && (line != region.end().line || region.end().column > 0)) {
 				length_t insertPosition = 0;
-				if(box) {
+				if(rectangle) {
 					length_t dummy;
 					viewer_->caret().boxForRectangleSelection().overlappedSubline(line, 0, insertPosition, dummy);	// TODO: recognize wrap (second parameter).
 				}
@@ -963,7 +963,7 @@ inline const IdentifierSyntax& VisualPoint::identifierSyntax() const {
  * @param last the end of the text
  * @see kernel#EditPoint#insert
  */
-void VisualPoint::insertBox(const Char* first, const Char* last) {
+void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	verifyViewer();
 
 	// HACK: 
@@ -1223,7 +1223,7 @@ void VisualPoint::paste(const Position& other) {
 		if(Clipboard::Text text = clipboard.read()) {
 			const Char* const data = text.data();
 			if(availableClipFormat == ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))
-				insertBox(data, data + wcslen(data));
+				insertRectangle(data, data + wcslen(data));
 			else
 				insert(data, data + wcslen(data));
 		}
@@ -1401,25 +1401,25 @@ bool VisualPoint::show(const Position& other) {
 /**
  * Indents the specified region by using horizontal tabs.
  * @param other もう1つの位置
- * @param box 矩形インデントか (インデントレベルが負であれば無視される)
- * @param level インデントレベル
+ * @param rectangle set true for rectangular indents (will be ignored level is negative)
+ * @param level the level of the indentation
  * @return インデント後に @a pos が移動すべき位置
  */
-Position VisualPoint::spaceIndent(const Position& other, bool box, long level /* = 1 */) {
+Position VisualPoint::spaceIndent(const Position& other, bool rectangle, long level /* = 1 */) {
 	verifyViewer();
-	return doIndent(other, L' ', box, level);
+	return doIndent(other, L' ', rectangle, level);
 }
 
 /**
  * Indents the specified region by using horizontal tabs.
  * @param other もう1つの位置
- * @param box 矩形インデントか (インデントレベルが負であれば無視される)
- * @param level インデントレベル
+ * @param rectangle set true for rectangular indents (will be ignored level is negative)
+ * @param level the level of the indentation
  * @return インデント後に @a pos が移動すべき位置
  */
-Position VisualPoint::tabIndent(const Position& other, bool box, long level /* = 1 */) {
+Position VisualPoint::tabIndent(const Position& other, bool rectangle, long level /* = 1 */) {
 	verifyViewer();
-	return doIndent(other, L'\t', box, level);
+	return doIndent(other, L'\t', rectangle, level);
 }
 
 /**
@@ -1671,30 +1671,30 @@ Caret::~Caret() throw() {
 }
 
 /**
- * Starts rectangular selection.
- * @see #endBoxSelection, #isSelectionRectangle
- */
-void Caret::beginBoxSelection() {
-	verifyViewer();
-	if(box_ == 0) {
-		box_ = new VirtualBox(textViewer(), selectionRegion());
-		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
-	}
-}
-
-/**
  * Starts line selection mode.
  * The rectangular selection will be revoked automatically.
  * @see #beginWordSelection, #restoreSelectionMode
  */
 void Caret::beginLineSelection() {
 	verifyViewer();
-	endBoxSelection();
+	endRectangleSelection();
 	pastingFromClipboardRing_ = false;
 	if(selectionMode_ == LINE)
 		return;
 	selectionMode_ = LINE;
 	extendSelection(Position(modeInitialAnchorLine_ = anchor_->lineNumber(), 0));
+}
+
+/**
+ * Starts rectangular selection.
+ * @see #endRectangleSelection, #isSelectionRectangle
+ */
+void Caret::beginRectangleSelection() {
+	verifyViewer();
+	if(box_ == 0) {
+		box_ = new VirtualBox(textViewer(), selectionRegion());
+		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
+	}
 }
 
 /**
@@ -1704,7 +1704,7 @@ void Caret::beginLineSelection() {
  */
 void Caret::beginWordSelection() {
 	verifyViewer();
-	endBoxSelection();
+	endRectangleSelection();
 	pastingFromClipboardRing_ = false;
 	if(selectionMode_ == WORD)
 		return;
@@ -1740,7 +1740,7 @@ void Caret::checkMatchBrackets() {
 
 /// Clears the selection.
 void Caret::clearSelection() {
-	endBoxSelection();
+	endRectangleSelection();
 	restoreSelectionMode();
 	leaveAnchorNext_ = false;
 	moveTo(*this);
@@ -1811,9 +1811,9 @@ void Caret::doMoveTo(const Position& to) {
 
 /**
  * Ends the rectangular selection.
- * @see #beginBoxSelection, #isSelectionRectangle
+ * @see #beginRectangleSelection, #isSelectionRectangle
  */
-void Caret::endBoxSelection() {
+void Caret::endRectangleSelection() {
 	verifyViewer();
 	if(box_ != 0) {
 		delete box_;
@@ -1868,7 +1868,7 @@ void Caret::eraseSelection() {
 			}
 		}
 
-		endBoxSelection();
+		endRectangleSelection();
 		adaptToDocument(adapts);
 		moveTo(resultPosition);
 	}
@@ -2096,8 +2096,8 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 			activeItem = 0;
 
 		String str;
-		bool box;
-		session->clipboardRing().text(activeItem, str, box);
+		bool rectangle;
+		session->clipboardRing().text(activeItem, str, rectangle);
 		session->clipboardRing().setActiveItem(activeItem);
 		if(!isSelectionEmpty()) {
 			if(pastingFromClipboardRing_)
@@ -2105,12 +2105,12 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 			eraseSelection();
 		}
 		const Position p(position());
-		if(!box) {
+		if(!rectangle) {
 			insert(str);
-			endBoxSelection();
+			endRectangleSelection();
 		} else {
-			insertBox(str);
-			beginBoxSelection();
+			insertRectangle(str);
+			beginRectangleSelection();
 		}
 		select(p, position());
 		pastingFromClipboardRing_ = true;
@@ -2147,9 +2147,9 @@ void Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 	if(!isSelectionEmpty())
 		eraseSelection();
 	else if(isSelectionRectangle())
-		endBoxSelection();
+		endRectangleSelection();
 	if(rectangleInsertion)
-		insertBox(first, last);
+		insertRectangle(first, last);
 	else
 		insert(first, last);
 	textViewer().unfreeze(true);
@@ -2273,7 +2273,7 @@ void Caret::selectWord() {
 
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, identifierSyntax());
-	endBoxSelection();
+	endRectangleSelection();
 	if(isEndOfLine()) {
 		if(isBeginningOfLine())	// an empty line
 			moveTo(*this);
