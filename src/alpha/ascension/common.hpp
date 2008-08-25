@@ -150,6 +150,13 @@ namespace ascension {
 		explicit NoSuchElementException(const std::string& message) : std::runtime_error(message) {}
 	};
 
+	/// Specified value is invalid for enumeration or constant.
+	class UnknownValueException : public std::invalid_argument {
+	public:
+		/// Constructor.
+		explicit UnknownValueException(const std::string& message) : invalid_argument(message) {}
+	};
+
 	/// Represents an invariant range.
 	/// @note This class is not compatible with Boost.Range.
 	/// @see kernel#Region

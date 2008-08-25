@@ -2,7 +2,7 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "rules.hpp"
@@ -628,7 +628,7 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
  * @param caseSensitive set true to use case-sensitive comparison for scheme name matching.
  * However, RFC 3986 Section 3.1 says that schemes are case-insensitive
  * @return the detector
- * @throw invalid_argument invalid name as a scheme was found
+ * @throw std#invalid_argument invalid name as a scheme was found
  */
 URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseSensitive /* = false */) {
 	// validation
@@ -652,7 +652,7 @@ URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseS
  * @param caseSensitive set true to use case-sensitive comparison for scheme name matching
  * @param separator the character delimits scheme names in @a schemes. this can be a surrogate
  * @return the detector
- * @throw invalid_argument invalid name as a scheme was found
+ * @throw std#invalid_argument invalid name as a scheme was found
  */
 URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator, bool caseSensitive /* = false */) {
 	set<String> container;
@@ -840,11 +840,16 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
  * @param first the start of the words
  * @param last the end of the words
  * @param caseSensitive set false to enable caseless match
- * @throw std#invalid_argument @a first and/or @a last are @c null
+ * @throw NullPointerException @a first and/or @a last are @c null
+ * @throw std#invalid_argument @a first &gt;= @a last
  */
 WordRule::WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id, caseSensitive) {
-	if(first == 0 || last == 0 || first >= last)
-		throw invalid_argument("the input string list is invalid.");
+	if(first == 0)
+		throw NullPointerException("first");
+	else if(last == 0)
+		throw NullPointerException("last");
+	else if(first >= last)
+		throw invalid_argument("first >= last");
 	words_ = new HashTable(first, last, caseSensitive);
 }
 
@@ -856,13 +861,15 @@ WordRule::WordRule(Token::ID id, const String* first, const String* last, bool c
  * @param separator the separator character in the string
  * @param caseSensitive set false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
- * @throw std#invalid_argument @a separator is a surrogate
+ * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
  */
 WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id, caseSensitive) {
-	if(first == 0 || last == 0)
-		throw NullPointerException("first and/or last is null.");
+	if(first == 0)
+		throw NullPointerException("first");
+	if(last == 0)
+		throw NullPointerException("last");
 	else if(first >= last)
-		throw invalid_argument("the input string list is invalid.");
+		throw invalid_argument("first >= last");
 	else if(surrogates::isSurrogate(separator))
 		throw invalid_argument("the separator is a surrogate character.");
 	list<String> words;

@@ -490,7 +490,7 @@ namespace ascension {
 		 * Compiles the given regular expression into a pattern with the given flags.
 		 * @param regex the expression to be compiled
 		 * @param flags match flags
-		 * @throw std#invalid_argument bit values other than those corresponding to the defined match flags are set in @a flags
+		 * @throw UnknownValueException bit values other than those corresponding to the defined match flags are set in @a flags
 		 * @throw PatternSyntaxException the expression's syntax is invalid
 		 */
 		inline std::auto_ptr<const Pattern> Pattern::compile(

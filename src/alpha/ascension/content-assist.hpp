@@ -2,12 +2,12 @@
  * @file content-assist.hpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
-#include "point.hpp"
+#include "caret.hpp"
 #include <set>
 
 

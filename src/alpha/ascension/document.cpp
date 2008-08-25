@@ -2,10 +2,11 @@
  * @file document.cpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "document.hpp"
+#include "point.hpp"
 //#include <shlwapi.h>	// PathXxxx
 //#include <shlobj.h>	// SHGetDesktopFolder, IShellFolder, ...
 //#include <MAPI.h>		// MAPISendMail
@@ -128,7 +129,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		newline = resolveNewline(document, newline);
 		const String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
 		if(eol.empty() && newline != NLF_RAW_VALUE)
-			throw invalid_argument("newline");
+			throw UnknownValueException("newline");
 		for(length_t i = beginning.line; out; ++i) {
 			const Document::Line& line = document.getLineInformation(i);
 			const length_t first = (i == beginning.line) ? beginning.column : 0;
@@ -157,109 +158,6 @@ namespace {
 	}
 #endif /* _DEBUG */
 } // namespace @0
-
-
-// Point ////////////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param document the document to which the point attaches
- * @param position the initial position of the point
- * @throw BadPositionException @a position is outside of the document
- */
-Point::Point(Document& document, const Position& position /* = Position() */) :
-		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(FORWARD) {
-	if(!document.region().includes(position))
-		throw BadPositionException();
-	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
-}
-
-/// Copy-constructor.
-Point::Point(const Point& rhs) :
-		document_(rhs.document_), position_(rhs.position_), adapting_(rhs.adapting_),
-		excludedFromRestriction_(rhs.excludedFromRestriction_), gravity_(rhs.gravity_) {
-	if(document_ == 0)
-		throw DisposedDocumentException();
-	static_cast<internal::IPointCollection<Point>*>(document_)->addNewPoint(*this);
-}
-
-/// Destructor.
-Point::~Point() throw() {
-	lifeCycleListeners_.notify(&IPointLifeCycleListener::pointDestroyed);
-	if(document_ != 0)
-		static_cast<internal::IPointCollection<Point>*>(document_)->removePoint(*this);
-}
-
-/**
- * Registers the lifecycle listener.
- * @param listener the listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-void Point::addLifeCycleListener(IPointLifeCycleListener& listener) {
-	lifeCycleListeners_.add(listener);
-}
-
-/**
- * Moves to the specified position.
- * Derived classes can override this method to hook all movement of the point.
- * @param to the position
- */
-void Point::doMoveTo(const Position& to) {
-	verifyDocument();
-	if(position_ != to) {
-		position_ = to;
-		normalize();
-	}
-}
-
-/**
- * Moves to the specified position.
- * @param to the position
- */
-void Point::moveTo(const Position& to) {
-	verifyDocument();
-	doMoveTo(to);
-}
-
-/**
- * Normalizes the position of the point.
- * This method does <strong>not</strong> inform to the listeners about any movement.
- */
-void Point::normalize() const {
-	verifyDocument();
-	Position& position = const_cast<Point*>(this)->position_;
-	position.line = min(position.line, document_->numberOfLines() - 1);
-	position.column = min(position.column, document_->lineLength(position.line));
-	if(document_->isNarrowed() && excludedFromRestriction_) {
-		const Region r(document_->accessibleRegion());
-		position = max(position_, r.first);
-		position = min(position_, r.second);
-	}
-}
-
-/**
- * Removes the lifecycle listener
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-void Point::removeLifeCycleListener(IPointLifeCycleListener& listener) {
-	lifeCycleListeners_.remove(listener);
-}
-
-/**
- * Called when the document was changed.
- * @param change the content of the document change
- */
-void Point::update(const DocumentChange& change) {
-	if(document_ == 0 || !adapting_)
-		return;
-
-//	normalize();
-	const Position newPosition = updatePosition(position_, change, gravity_);
-	if(newPosition == position_)
-		return;
-	doMoveTo(newPosition);
-}
 
 
 // Bookmarker ///////////////////////////////////////////////////////////////
@@ -684,6 +582,14 @@ Document::~Document() {
 }
 
 /**
+ * Returns the accessible region of the document. The returned region is normalized.
+ * @see #region
+ */
+Region Document::accessibleRegion() const throw() {
+	return (accessibleArea_ != 0) ? Region(accessibleArea_->first, *accessibleArea_->second) : region();
+}
+
+/**
  * Registers the document listener with the document. After registration @a listener is notified
  * about each modification of this document.
  * @param listener the listener to be registered
@@ -997,7 +903,7 @@ bool Document::isSequentialEditing() const throw() {
  * Returns the number of characters (UTF-16 code units) in the document.
  * @param newline the method to count newlines
  * @return the number of characters
- * @throw std#invalid_argument @a nlr is invalid
+ * @throw UnknownValueException @a newline is invalid
  */
 length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
 	newline = resolveNewline(*this, newline);
@@ -1011,7 +917,7 @@ length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
 			len += getNewlineStringLength(lines_[i]->newline_);
 		return len;
 	} else
-		throw invalid_argument("newline");
+		throw UnknownValueException("newline");
 }
 
 /**
@@ -1019,6 +925,7 @@ length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
  * @param line the line
  * @param newline the line representation policy for character counting
  * @throw BadPostionException @a line is outside of the document
+ * @throw UnknownValueException @a newline is invalid
  */
 length_t Document::lineOffset(length_t line, Newline newline) const {
 	if(line >= numberOfLines())
@@ -1027,7 +934,7 @@ length_t Document::lineOffset(length_t line, Newline newline) const {
 
 	length_t offset = 0, eolLength = isLiteralNewline(newline) ? getNewlineStringLength(newline) : 0;
 	if(eolLength == 0 && newline != NLF_RAW_VALUE)
-		throw invalid_argument("newline");
+		throw UnknownValueException("newline");
 	for(length_t i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
@@ -1530,13 +1437,13 @@ void DocumentCharacterIterator::doPrevious() {
  * @param initialPosition the initial position of streams
  * @param nlr the newline representation
  * @param streamMode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
- * @throw std#invalid_argument @a mode is invalid
+ * @throw UnknownValueException @a streamMode is invalid
  */
 DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
 		Newline newline /* = NLF_RAW_VALUE */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
 		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
-		throw invalid_argument("the given mode is invalid.");
+		throw UnknownValueException("streamMode");
 	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
 }
 

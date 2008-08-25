@@ -320,6 +320,7 @@ namespace {
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occured
+ * @throw UnknownValueException<std#iose_base#openmode> @a mode is neigher @c in nor @c out
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
@@ -393,7 +394,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
 		setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
 	} else
-		throw invalid_argument("the mode must be either std.ios_base.in or std.ios_base.out.");
+		throw UnknownValueException("mode");
 	encoder_->setSubstitutionPolicy(encodingSubstitutionPolicy);
 }
 
@@ -877,11 +878,11 @@ void TextFileDocumentInput::setEncoding(const string& encoding) {
 /**
  * Sets the newline.
  * @param newline the newline
- * @throw std#invalid_argument @a newline is invalid
+ * @throw UnknownValueException<Newline> @a newline is invalid
  */
 void TextFileDocumentInput::setNewline(Newline newline) {
 	if(!isLiteralNewline(newline))
-		throw invalid_argument("unknown newline specified.");
+		throw UnknownValueException("newline");
 	else if(newline != newline_) {
 		newline_ = newline;
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);

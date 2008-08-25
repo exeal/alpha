@@ -297,7 +297,7 @@ namespace {
 		case 3:	// dotted
 			return ::ExtCreatePen(PS_GEOMETRIC | PS_DOT | PS_ENDCAP_FLAT, width, &brush, 0, 0);
 		}
-		throw invalid_argument("Unknown style value.");
+		throw UnknownValueException("style");
 	}
 	inline void drawDecorationLines(DC& dc, const TextStyle& style, COLORREF foregroundColor, int x, int y, int width, int height) {
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
@@ -2753,13 +2753,13 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * @param bold true to get the bold variant
  * @param italic true to get the italic variant
  * @return the primary font if @a script is @c Script#COMMON. otherwise, a fallbacked font or @c null
- * @throw std#invalid_argument @a script is invalid
+ * @throw UnknownValueException<int> @a script is invalid
  * @see #linkedFont, #setFont
  */
 ::HFONT FontSelector::font(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
 	if(script <= Script::FIRST_VALUE || script == Script::INHERITED
 			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
-		throw invalid_argument("invalid script value.");
+		throw UnknownValueException("script");
 	if(script == Script::COMMON)
 		return fontInFontset(*const_cast<FontSelector*>(this)->primaryFont_, bold, italic);
 	else {
@@ -2933,7 +2933,7 @@ void FontSelector::resetPrimaryFont(DC& dc, ::HFONT font) {
  * @param associations the association table. script values @c Script#COMMON, @c Script#UNKNOWN,
  * @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set. if this value is @c null,
  * the current associations will not be changed
- * @throw std#invalid_argument any script of @a associations is invalid
+ * @throw UnknownValueException<int> any script of @a associations is invalid
  * @throw std#length_error the length of @a faceName or any typeface name of @a associations
  * exceeds @c LF_FACESIZE
  */
@@ -2945,7 +2945,7 @@ void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociat
 		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i) {
 			if(i->first == Script::COMMON || i->first == Script::UNKNOWN
 					|| i->first == Script::INHERITED || i->first == Script::KATAKANA_OR_HIRAGANA)
-				throw invalid_argument("the association script is invalid.");
+				throw UnknownValueException("the association script is invalid.");
 			else if(i->second.length() >= LF_FACESIZE)
 				throw length_error("the association font name is too long.");
 		}
