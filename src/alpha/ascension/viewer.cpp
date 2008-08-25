@@ -631,7 +631,7 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
  * @param snapPolicy which character boundary the returned position snapped to. if
  * EditPoint#DEFAULT_UNIT is set, obtains by Caret#characterUnit()
  * @return returns the document position
- * @throw std#invalid_argument @a edge and/or snapPolicy are invalid
+ * @throw UnknownValueException @a edge and/or snapPolicy are invalid
  * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
 Position TextViewer::characterForClientXY(const ::POINT& pt, LineLayout::Edge edge,
@@ -658,7 +658,7 @@ Position TextViewer::characterForClientXY(const ::POINT& pt, LineLayout::Edge ed
 		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing, &outside);
 		result.column += trailing;
 	} else
-		throw invalid_argument("edge");
+		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
 		return Position::INVALID_POSITION;
 
@@ -693,7 +693,7 @@ Position TextViewer::characterForClientXY(const ::POINT& pt, LineLayout::Edge ed
 				}
 			}
 		} else
-			throw invalid_argument("snapPolicy");
+			throw UnknownValueException("snapPolicy");
 	}
 	return result;
 }
@@ -2798,7 +2798,7 @@ void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool de
 	if(newStrategy != 0)
 		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true), true);
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true, true), true);	// TODO: the two parameters don't have rationales.
 	mouseInputStrategy_->install(*this);
 }
 
@@ -3397,12 +3397,12 @@ bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
  * Returns the cursor should be shown when the auto-scroll is active.
  * @param type the type of the cursor to obtain
  * @return the cursor. do not destroy the returned value
- * @throw std#invalid_argument @a type is unknown
+ * @throw UnknownValueException @a type is unknown
  */
 ::HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 	static Handle<::HCURSOR, ::DestroyCursor> instances[3];
 	if(type >= MANAH_COUNTOF(instances))
-		throw invalid_argument("type");
+		throw UnknownValueException("type");
 	if(instances[type].getHandle() == 0) {
 		static const byte AND_LINE_3_TO_11[] = {
 			0xFF, 0xFE, 0x7F, 0xFF,
@@ -3729,6 +3729,155 @@ void VirtualBox::update(const Region& region) throw() {
 // DefaultMouseInputStrategy ////////////////////////////////////////////////
 
 namespace {
+	// from ""
+	// and Japanese translation, "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
+	// (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
+	class GenericDataObject : virtual public IDataObject {
+	public:
+		~GenericDataObject() throw();
+		// IDataObject
+		STDMETHODIMP GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium);
+		STDMETHODIMP GetDataHere(LPFORMATETC, LPSTGMEDIUM) {return E_NOTIMPL;}
+		STDMETHODIMP QueryGetData(LPFORMATETC pformatetc);
+		STDMETHODIMP GetCanonicalFormatEtc(LPFORMATETC, LPFORMATETC) {return DATA_S_SAMEFORMATETC;}
+		STDMETHODIMP SetData(LPFORMATETC, LPSTGMEDIUM, BOOL);
+		STDMETHODIMP EnumFormatEtc(DWORD dwDirection, LPENUMFORMATETC* ppenumFormatEtc);
+		STDMETHODIMP DAdvise(LPFORMATETC, DWORD, LPADVISESINK, LPDWORD) {return OLE_E_ADVISENOTSUPPORTED;}
+		STDMETHODIMP DUnadvise(DWORD) {return OLE_E_ADVISENOTSUPPORTED;}
+		STDMETHODIMP EnumDAdvise(LPENUMSTATDATA*) {return OLE_E_ADVISENOTSUPPORTED;}
+	private:
+		typedef pair<FORMATETC, STGMEDIUM> DataEntry;
+		HRESULT addRefSTGMEDIUM(const STGMEDIUM& input, STGMEDIUM& out, bool copyInput);
+		static HGLOBAL cloneGlobal(HGLOBAL handle) throw();
+		HRESULT findFORMATETC(const FORMATETC& format, DataEntry*& data, bool add);
+		static IUnknown* getCanonicalUnknown(IUnknown* p) throw();
+	private:
+		vector<DataEntry*> dataEntries_;
+	};
+
+	GenericDataObject::~GenericDataObject() throw() {
+		for(vector<DataEntry*>::iterator i(dataEntries_.begin()), e(dataEntries_.end()); i != e; ++i) {
+			::CoTaskMemFree((*i)->first.ptd);
+			::ReleaseStgMedium(&(*i)->second);
+		}
+	}
+
+	HRESULT GenericDataObject::addRefSTGMEDIUM(const STGMEDIUM& input, STGMEDIUM& output, bool copyInput) {
+		HRESULT result = S_OK;
+		STGMEDIUM out(input);
+		if(input.pUnkForRelease == 0 && (input.tymed & (TYMED_ISTREAM | TYMED_ISTORAGE)) == 0) {
+			if(copyInput) {
+				if(input.tymed == TYMED_HGLOBAL) {
+					out.hGlobal = cloneGlobal(input.hGlobal);
+					if(out.hGlobal == 0)
+						result = E_OUTOFMEMORY;
+				} else
+					result = DV_E_TYMED;
+			} else
+				out.pUnkForRelease = this;
+		}
+		if(SUCCEEDED(result)) {
+			if(out.tymed == TYMED_ISTREAM)
+				out.pstm->AddRef();
+			else if(out.tymed == TYMED_ISTORAGE)
+				out.pstg->AddRef();
+			if(out.pUnkForRelease != 0)
+				out.pUnkForRelease->AddRef();
+			output = out;
+		}
+		return result;
+	}
+
+	HGLOBAL cloneGlobal(HGLOBAL handle) throw() {
+		if(void* const p = ::GlobalLock(handle)) {
+			const size_t bytes = ::GlobalSize(handle);
+			HGLOBAL clone = ::GlobalAlloc(GMEM_FIXED, bytes);
+			if(clone != 0)
+				::CopyMemory(clone, p, bytes);
+			::GlobalUnlock(handle);
+			return clone;
+		}
+		return 0;
+	}
+
+	HRESULT GenericDataObject::findFORMATETC(const FORMATETC& format, DataEntry*& data, bool addIfNotExist) {
+		data = 0;
+		if(format.ptd != 0)
+			return DV_E_DVTARGETDEVICE;
+		for(vector<DataEntry*>::const_iterator i(dataEntries_.begin()), e(dataEntries_.end()); i != e; ++i) {
+			const FORMATETC& other = (*i)->first;
+			if(other.cfFormat == format.cfFormat && other.dwAspect == format.dwAspect && other.lindex == format.lindex) {
+				if(addIfNotExist || (other.tymed & format.tymed) != 0)
+					return data = *i, S_OK;
+				return DV_E_TYMED;
+			}
+		}
+		if(!addIfNotExist)
+			return DV_E_FORMATETC;
+		if(DataEntry* const newEntry = static_cast<DataEntry*>(::CoTaskMemAlloc(sizeof(DataEntry)))) {
+			newEntry->first = format;
+			memset(&newEntry->second, 0, sizeof(STGMEDIUM));
+			dataEntries_.push_back(newEntry);
+			data = dataEntries_.back();
+			return S_OK;
+		}
+		return E_OUTOFMEMORY;
+	}
+	IUnknown* getCanonicalUnknown(IUnknown* p) throw() {
+		if(p != 0) {
+			IUnknown* canonical;
+			if(SUCCEEDED(p->QueryInterface(IID_IUnknown, reinterpret_cast<void**>(&canonical))))
+				canonical->Release();
+			else
+				canonical = p;
+			return canonical;
+		}
+		return 0;
+	}
+
+	STDMETHODIMP GenericDataObject::GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium) {
+		if(pformatetcIn == 0 || pmedium == 0)
+			return E_INVALIDARG;
+		DataEntry* entry;
+		HRESULT hr = findFORMATETC(*pformatetcIn, entry, false);
+		if(SUCCEEDED(hr))
+			hr = addRefSTGMEDIUM(entry->second, *pmedium, false);
+		return hr;
+	}
+	STDMETHODIMP GenericDataObject::QueryGetData(LPFORMATETC pformatetc) {
+		if(pformatetc == 0)
+			return E_INVALIDARG;
+		DataEntry* dummy;
+		return findFORMATETC(*pformatetc, dummy, false);
+	}
+	STDMETHODIMP GenericDataObject::SetData(FORMATETC* pformatetc, STGMEDIUM* pmedium, BOOL fRelease) {
+		if(pformatetc == 0 || pmedium == 0)
+			return E_INVALIDARG;
+		if(!toBoolean(fRelease))
+			return E_NOTIMPL;
+		DataEntry* entry;
+		HRESULT hr = findFORMATETC(*pformatetc, entry, true);
+		if(SUCCEEDED(hr)) {
+			if(entry->second.tymed != 0) {
+				::ReleaseStgMedium(&entry->second);
+				memset(&entry->second, 0, sizeof(STGMEDIUM));
+			}
+			if(toBoolean(fRelease)) {
+				entry->second = *pmedium;
+				hr = S_OK;
+			} else
+				hr = addRefSTGMEDIUM(*pmedium, entry->second, true);
+			entry->first.tymed = entry->second.tymed;
+			if(getCanonicalUnknown(entry->second.pUnkForRelease) == getCanonicalUnknown(static_cast<IDataObject*>(this))) {
+				entry->second.pUnkForRelease->Release();
+				entry->second.pUnkForRelease = 0;
+			}
+		}
+		return hr;
+	}
+} // namespace @0
+
+namespace {
 	auto_ptr<String> getTextData(::IDataObject& data, bool* rectangle = 0) {
 		auto_ptr<String> result;
 		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
@@ -3806,10 +3955,17 @@ const ::UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
 /**
  * Constructor.
  * @param enableOLEDragAndDrop set true to enable OLE Drag-and-Drop feature.
+ * @param showDraggingImage set true to display OLE dragging image
  */
-DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop) : viewer_(0),
-		oleDragAndDropEnabled_(enableOLEDragAndDrop), leftButtonPressed_(false), oleDragging_(false), lastHoveredHyperlink_(0) {
-	lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
+		bool showDraggingImage) : viewer_(0), leftButtonPressed_(false), lastHoveredHyperlink_(0) {
+	if(dnd_.enabled = enableOLEDragAndDrop && showDraggingImage) {
+		if(S_OK == dnd_.dragSourceHelper.createInstance(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER)) {
+			if(S_OK != dnd_.dropTargetHelper.createInstance(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER))
+				dnd_.dragSourceHelper.release();
+		}
+	}
+	dnd_.state = DragAndDrop::INACTIVE;
 }
 
 /// 
@@ -3833,7 +3989,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD k
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!oleDragAndDropEnabled_ || viewer_->document().isReadOnly()
+	if(!dnd_.enabled || viewer_->document().isReadOnly()
 			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
 		return S_OK;
 
@@ -3845,18 +4001,25 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD k
 			return S_OK;	// can't accept
 	}
 
-	// retrieve number of lines if text is rectangle
-	numberOfDraggedRectangleLines_ = 0;
-	fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-	if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
-		auto_ptr<String> s = getTextData(*data);
-		if(s.get() != 0)
-			numberOfDraggedRectangleLines_ = getNumberOfLines(*s) - 1;
+	if(dnd_.state != DragAndDrop::DRAGGING_BY_SELF) {
+		assert(dnd_.state == DragAndDrop::INACTIVE);
+		// retrieve number of lines if text is rectangle
+		dnd_.numberOfRectangleLines = 0;
+		fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+			auto_ptr<String> s = getTextData(*data);
+			if(s.get() != 0)
+				dnd_.numberOfRectangleLines = getNumberOfLines(*s) - 1;
+		}
+		dnd_.state = DragAndDrop::DRAGGING_FROM_OTHER;
 	}
 
-	oleDragging_ = true;
 	viewer_->setFocus();
 	beginTimer(OLE_DRAGGING_TRACK_INTERVAL);
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->DragEnter(viewer_->getHandle(), data, &p, *effect);
+	}
 	return DragOver(keyState, pt, effect);
 }
 
@@ -3864,7 +4027,12 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD k
 STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
 	::SetFocus(0);
 	endTimer();
-	oleDragging_ = false;
+	if(dnd_.enabled) {
+		if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER)
+			dnd_.state = DragAndDrop::INACTIVE;
+		if(dnd_.dropTargetHelper.get() != 0)
+			dnd_.dropTargetHelper->DragLeave();
+	}
 	return S_OK;
 }
 
@@ -3873,8 +4041,9 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!oleDragAndDropEnabled_ || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+	if(!dnd_.enabled || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
+	assert(dnd_.isDragging());
 
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
@@ -3882,7 +4051,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
 
 	// drop rectangle text into bidirectional line is not supported...
-	const length_t lines = min(viewer_->document().numberOfLines(), p.line + numberOfDraggedRectangleLines_);
+	const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
 	for(length_t line = p.line; line < lines; ++line) {
 		if(viewer_->textRenderer().lineLayout(line).isBidirectional()) {
 			*effect = DROPEFFECT_NONE;
@@ -3894,6 +4063,10 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 		*effect = DROPEFFECT_NONE;
 	else
 		*effect = (!leftButtonPressed_ || toBoolean(keyState & MK_CONTROL)) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->DragOver(&p, *effect);
+	}
 	return S_OK;
 }
 
@@ -3903,8 +4076,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
-
-	//
+/*
 	::FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 	::STGMEDIUM stg;
 	data->GetData(&fe, &stg);
@@ -3913,14 +4085,13 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 	dout << bytes;
 	::GlobalUnlock(stg.hGlobal);
 	::ReleaseStgMedium(&stg);
-	//
-
+*/
 	Document& document = viewer_->document();
-	if(!oleDragAndDropEnabled_ || document.isReadOnly() || !viewer_->allowsMouseInput())
+	if(!dnd_.enabled || document.isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
 	Caret& ca = viewer_->caret();
 
-	if(!leftButtonPressed_) {	// dropped from the other widget
+	if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER) {	// dropped from the other widget
 		::POINT caretPoint = {pt.x, pt.y};
 		endTimer();
 		viewer_->screenToClient(caretPoint);
@@ -3943,7 +4114,10 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			viewer_->unfreeze();
 			*effect = DROPEFFECT_COPY;
 		}
+		dnd_.state = DragAndDrop::INACTIVE;
 	} else {	// drop from the same widget
+		assert(dnd_.state == DragAndDrop::DRAGGING_BY_SELF);
+
 		String text(ca.selectionText(NLF_RAW_VALUE));
 		::POINT caretPoint = {pt.x, pt.y};
 
@@ -3953,53 +4127,57 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		// can't drop into the selection
 		if(ca.isPointOverSelection(caretPoint)) {
 			ca.moveTo(pos);
-			oleDragging_ = false;
+			dnd_.state = DragAndDrop::INACTIVE;
 			return S_OK;
-		}
-
-		const bool rectangle = ca.isSelectionRectangle();
-		document.beginSequentialEdit();
-		viewer_->freeze();
-		if(toBoolean(keyState & MK_CONTROL)) {	// copy
-//			viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
-			ca.enableAutoShow(false);
-			ca.moveTo(pos);
-			if(rectangle)	// copy as a rectangle
+		} else {
+			const bool rectangle = ca.isSelectionRectangle();
+			document.beginSequentialEdit();
+			viewer_->freeze();
+			if(toBoolean(keyState & MK_CONTROL)) {	// copy
+//				viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
+				ca.enableAutoShow(false);
+				ca.moveTo(pos);
+				if(rectangle)	// copy as a rectangle
+					ca.insertRectangle(text);
+				else	// copy as linear
+					ca.insert(text);
+				ca.enableAutoShow(true);
+				ca.select(pos, ca);
+				*effect = DROPEFFECT_COPY;
+			} else if(rectangle) {	// move as a rectangle
+				kernel::Point p(document);
+				p.moveTo(pos);
+				ca.eraseSelection();
+				p.adaptToDocument(false);
+				ca.enableAutoShow(false);
+				ca.extendSelection(p);
 				ca.insertRectangle(text);
-			else	// copy as linear
+				ca.enableAutoShow(true);
+				ca.select(p, ca);
+				*effect = DROPEFFECT_MOVE;
+			} else {	// move as linear
+				VisualPoint activePointOrg(*viewer_);
+				const Position anchorPointOrg = ca.anchor();
+				activePointOrg.moveTo(ca);
+				ca.enableAutoShow(false);
+				ca.moveTo(pos);
+				activePointOrg.erase(anchorPointOrg);
+				const Position temp = ca;
+				ca.endRectangleSelection();
 				ca.insert(text);
-			ca.enableAutoShow(true);
-			ca.select(pos, ca);
-			*effect = DROPEFFECT_COPY;
-		} else if(rectangle) {	// move as a rectangle
-			kernel::Point p(document);
-			p.moveTo(pos);
-			ca.eraseSelection();
-			p.adaptToDocument(false);
-			ca.enableAutoShow(false);
-			ca.extendSelection(p);
-			ca.insertRectangle(text);
-			ca.enableAutoShow(true);
-			ca.select(p, ca);
-			*effect = DROPEFFECT_MOVE;
-		} else {	// move as linear
-			VisualPoint activePointOrg(*viewer_);
-			const Position anchorPointOrg = ca.anchor();
-			activePointOrg.moveTo(ca);
-			ca.enableAutoShow(false);
-			ca.moveTo(pos);
-			activePointOrg.erase(anchorPointOrg);
-			const Position temp = ca;
-			ca.endRectangleSelection();
-			ca.insert(text);
-			ca.enableAutoShow(true);
-			ca.select(temp, ca);
-			*effect = DROPEFFECT_MOVE;
+				ca.enableAutoShow(true);
+				ca.select(temp, ca);
+				*effect = DROPEFFECT_MOVE;
+			}
+			viewer_->unfreeze();
+			document.endSequentialEdit();
 		}
-		viewer_->unfreeze();
-		document.endSequentialEdit();
 	}
-	oleDragging_ = false;
+
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->Drop(data, &p, *effect);
+	}
 	return S_OK;
 }
 
@@ -4060,9 +4238,10 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
 	}
 
-	// begin OLE drag-and-drop
-	else if(oleDragAndDropEnabled_ && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
-		lastLeftButtonPressedPoint_ = position;
+	// approach OLE drag-and-drop
+	else if(dnd_.enabled && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
+		dnd_.state = DragAndDrop::APPROACHING;
+		dnd_.approachedPosition = position;
 		if(caret.isSelectionRectangle())
 			boxDragging = true;
 	}
@@ -4118,11 +4297,15 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const ::POINT& position,
 
 /// Handles @c WM_LBUTTONUP.
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const ::POINT& position, uint) {
-	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE ドラッグ開始か -> キャンセル
-		lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+	// OLE ドラッグ開始か -> キャンセル
+	if(dnd_.enabled
+			&& (dnd_.state == DragAndDrop::APPROACHING
+			|| dnd_.state == DragAndDrop::DRAGGING_BY_SELF)) {	// TODO: this should handle only case APPROACHING?
+		dnd_.state = DragAndDrop::INACTIVE;
 		viewer_->caret().moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
 	}
+
 	endTimer();
 	if(leftButtonPressed_) {
 		leftButtonPressed_ = false;
@@ -4171,34 +4354,57 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 
 /// @see IMouseInputStrategy#mouseMoved
 void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
-	if(lastLeftButtonPressedPoint_.x != -1) {	// OLE dragging starts?
-		if(!oleDragAndDropEnabled_ || viewer_->caret().isSelectionEmpty())
-			lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
+	if(dnd_.enabled && dnd_.state == DragAndDrop::APPROACHING) {	// OLE dragging starts?
+		if(viewer_->caret().isSelectionEmpty())
+			dnd_.state = DragAndDrop::INACTIVE;	// approaching... => cancel
 		else {
 			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
 			const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
-			if((position.x > lastLeftButtonPressedPoint_.x + cxDragBox / 2)
-					|| (position.x < lastLeftButtonPressedPoint_.x - cxDragBox / 2)
-					|| (position.y > lastLeftButtonPressedPoint_.y + cyDragBox / 2)
-					|| (position.y < lastLeftButtonPressedPoint_.y - cyDragBox / 2)) {
-				const bool box = viewer_->caret().isSelectionRectangle();
+			if((position.x > dnd_.approachedPosition.x + cxDragBox / 2)
+					|| (position.x < dnd_.approachedPosition.x - cxDragBox / 2)
+					|| (position.y > dnd_.approachedPosition.y + cyDragBox / 2)
+					|| (position.y < dnd_.approachedPosition.y - cyDragBox / 2)) {
+				const bool rectangle = viewer_->caret().isSelectionRectangle();
 				const String selection(viewer_->caret().selectionText(NLF_CR_LF));
 				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
 
-				if(box) {
+				dnd_.numberOfRectangleLines = 0;
+				if(rectangle) {
 					set<::CLIPFORMAT> clipFormats;
 					clipFormats.insert(CF_UNICODETEXT);
 					clipFormats.insert(static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT)));
 					draggingText->setAvailableFormatSet(clipFormats.begin(), clipFormats.end());
+
+					const Region sel(viewer_->caret().selectionRegion());
+					dnd_.numberOfRectangleLines = sel.end().line - sel.beginning().line + 1;
 				}
 				draggingText->setTextData(selection.c_str());
 				assert(leftButtonPressed_);
-				beginTimer(box ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+				beginTimer(rectangle ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+
+				if(dnd_.dragSourceHelper.get() != 0) {
+					HDC dc = ::CreateCompatibleDC(::GetDC(0));
+					SHDRAGIMAGE image;
+					image.sizeDragImage.cx = image.sizeDragImage.cy = 100;
+					image.ptOffset.x = image.ptOffset.y = 0;
+					image.hbmpDragImage = ::CreateCompatibleBitmap(dc, image.sizeDragImage.cx, image.sizeDragImage.cy);
+					image.crColorKey = RGB(0xFF, 0xFF, 0xFF);
+					HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc, image.hbmpDragImage));
+					RECT rc;
+					rc.left = rc.top = 0;
+					rc.right = rc.bottom = 100;
+					::FillRect(dc, &rc, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+					::SelectObject(dc, oldBitmap);
+					::DeleteDC(dc);
+					dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingText.get());
+					::DeleteObject(image.hbmpDragImage);
+				}
+
+				dnd_.state = DragAndDrop::DRAGGING_BY_SELF;
 				draggingText->doDragDrop(DROPEFFECT_COPY | DROPEFFECT_MOVE);
 				endTimer();
+				dnd_.state = DragAndDrop::INACTIVE;
 				leftButtonPressed_ = false;
-				lastLeftButtonPressedPoint_.x = lastLeftButtonPressedPoint_.y = -1;
-				oleDragging_ = false;
 				if(viewer_->isVisible())
 					viewer_->setFocus();
 			}
@@ -4241,7 +4447,7 @@ bool DefaultMouseInputStrategy::showCursor(const ::POINT& position) {
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
 		cursorName = IDC_ARROW;
 	// on a draggable text selection?
-	else if(oleDragAndDropEnabled_ && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
+	else if(dnd_.enabled && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
@@ -4272,7 +4478,7 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(::HWND, ::UINT, ::UINT_PTR 
 	if(i == timerTable_.end())
 		return;
 	DefaultMouseInputStrategy& self = *i->second;
-	if(self.oleDragging_) {	// scroll automatically during OLE dragging
+	if(self.dnd_.enabled && self.dnd_.isDragging()) {	// scroll automatically during OLE dragging
 		const ::POINT pt = self.viewer_->getCursorPosition();
 		::RECT clientRect;
 		self.viewer_->getClientRect(clientRect);

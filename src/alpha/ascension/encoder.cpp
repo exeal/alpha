@@ -327,11 +327,11 @@ Encoder& Encoder::resetEncodingState() throw() {
  * Sets the new miscellaneous flags.
  * @param newFlags the flags to set
  * @throw the encoder
- * @throw invalid_argument @a newFlags includes unknown value
+ * @throw UnknownValueException<Flag> @a newFlags includes unknown value
  */
 Encoder& Encoder::setFlags(const Flags& newFlags) {
 	if((newFlags & ~(BEGINNING_OF_BUFFER | END_OF_BUFFER | UNICODE_BYTE_ORDER_MARK)) != 0)
-		throw invalid_argument("newFlags");
+		throw UnknownValueException("newFlags");
 	flags_ = newFlags;
 	return *this;
 }
@@ -340,11 +340,11 @@ Encoder& Encoder::setFlags(const Flags& newFlags) {
  * Sets the conversion policy.
  * @param newPolicy the new policy
  * @return this encoder
- * @throw std#invalid_argument @a newPolicy is invalid
+ * @throw UnknownValueException<SubstitutionPolicy> @a newPolicy is invalid
  */
 Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
 	if(newPolicy < DONT_SUBSTITUTE || newPolicy > IGNORE_UNMAPPABLE_CHARACTER)
-		throw invalid_argument("the given policy is not supported.");
+		throw UnknownValueException("newPolicy");
 	substitutionPolicy_ = newPolicy;
 	return *this;
 }
@@ -412,7 +412,7 @@ String Encoder::toUnicode(const string& from) {
 /**
  * Constructor.
  * @param name the name of the encoding detector
- * @throw std#invalid_argument @a id is invalid
+ * @throw std#invalid_argument @a name is invalid
  */
 EncodingDetector::EncodingDetector(const string& name) : name_(name) {
 }

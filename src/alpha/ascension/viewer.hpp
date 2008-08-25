@@ -15,6 +15,7 @@
 #include "../../manah/com/text-data-object.hpp"
 #include <set>
 #include <algorithm>
+#include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 #include <dimm.h>
@@ -254,7 +255,7 @@ namespace ascension {
 				virtual public IMouseInputStrategy, virtual public ::IDropSource, virtual public ::IDropTarget {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
-			explicit DefaultMouseInputStrategy(bool enableOLEDragAndDrop);
+			DefaultMouseInputStrategy(bool enableOLEDragAndDrop, bool showDraggingImage);
 			// IUnknown
 			MANAH_IMPLEMENT_UNKNOWN_NO_REF_COUNT()
 			MANAH_BEGIN_INTERFACE_TABLE()
@@ -286,10 +287,16 @@ namespace ascension {
 			void uninstall();
 		private:
 			TextViewer* viewer_;
-			const bool oleDragAndDropEnabled_;
-			bool leftButtonPressed_, oleDragging_;
-			::POINT lastLeftButtonPressedPoint_;
-			length_t numberOfDraggedRectangleLines_;
+			bool leftButtonPressed_;
+			struct DragAndDrop {
+				bool enabled;
+				enum State {INACTIVE, APPROACHING, DRAGGING_BY_SELF, DRAGGING_FROM_OTHER} state;
+				POINT approachedPosition;
+				length_t numberOfRectangleLines;
+				manah::com::ComPtr<IDragSourceHelper> dragSourceHelper;
+				manah::com::ComPtr<IDropTargetHelper> dropTargetHelper;
+				bool isDragging() const throw() {return state == DRAGGING_BY_SELF || state == DRAGGING_FROM_OTHER;}
+			} dnd_;
 			const presentation::hyperlink::IHyperlink* lastHoveredHyperlink_;
 			static std::map<::UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
 			static const ::UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;

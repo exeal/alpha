@@ -321,7 +321,7 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
 /// @internal Private constructor.
 Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
 	if((flags & ~(CANON_EQ | CASE_INSENSITIVE | COMMENTS | DOTALL | LITERAL | MULTILINE | UNICODE_CASE | UNIX_LINES)) != 0)
-		throw invalid_argument("flags includes illegal bit values.");
+		throw UnknownValueException("flags includes illegal bit values.");
 	try {
 		impl_.assign(UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end()),
 			UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end(), regex.end()),
@@ -539,11 +539,13 @@ auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* la
  * Initializes the library.
  * @param runtimePathName
  * @param dictionaryPathName
- * @throw std#invalid_argument
+ * @throw NullPointerException @a runtimePathName and/or @a dictionaryPathName is @c null
  */
 void MigemoPattern::initialize(const char* runtimePathName, const char* dictionaryPathName) {
-	if(runtimePathName == 0 || dictionaryPathName == 0)
-		throw invalid_argument("path is invalid.");
+	if(runtimePathName == 0)
+		throw invalid_argument("runtimePathName");
+	else if(dictionaryPathName == 0)
+		throw invalid_argument("dictionaryPathName");
 	runtimePathName_.reset(new char[strlen(runtimePathName) + 1]);
 	strcpy(runtimePathName_.get(), runtimePathName);
 	dictionaryPathName_.reset(new char[strlen(dictionaryPathName) + 1]);
