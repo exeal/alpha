@@ -34,7 +34,6 @@ using namespace manah::com;
 using namespace std;
 using manah::toBoolean;
 using manah::AutoBuffer;
-using manah::com::ole::TextDataObject;
 
 #pragma comment(lib, "version.lib")
 
@@ -3728,226 +3727,6 @@ void VirtualBox::update(const Region& region) throw() {
 
 // DefaultMouseInputStrategy ////////////////////////////////////////////////
 
-namespace {
-	// from ""
-	// and Japanese translation, "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
-	// (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
-	class GenericDataObject : virtual public IDataObject {
-	public:
-		~GenericDataObject() throw();
-		// IDataObject
-		STDMETHODIMP GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium);
-		STDMETHODIMP GetDataHere(LPFORMATETC, LPSTGMEDIUM) {return E_NOTIMPL;}
-		STDMETHODIMP QueryGetData(LPFORMATETC pformatetc);
-		STDMETHODIMP GetCanonicalFormatEtc(LPFORMATETC, LPFORMATETC) {return DATA_S_SAMEFORMATETC;}
-		STDMETHODIMP SetData(LPFORMATETC, LPSTGMEDIUM, BOOL);
-		STDMETHODIMP EnumFormatEtc(DWORD dwDirection, LPENUMFORMATETC* ppenumFormatEtc);
-		STDMETHODIMP DAdvise(LPFORMATETC, DWORD, LPADVISESINK, LPDWORD) {return OLE_E_ADVISENOTSUPPORTED;}
-		STDMETHODIMP DUnadvise(DWORD) {return OLE_E_ADVISENOTSUPPORTED;}
-		STDMETHODIMP EnumDAdvise(LPENUMSTATDATA*) {return OLE_E_ADVISENOTSUPPORTED;}
-	private:
-		typedef pair<FORMATETC, STGMEDIUM> DataEntry;
-		HRESULT addRefSTGMEDIUM(const STGMEDIUM& input, STGMEDIUM& out, bool copyInput);
-		static HGLOBAL cloneGlobal(HGLOBAL handle) throw();
-		HRESULT findFORMATETC(const FORMATETC& format, DataEntry*& data, bool add);
-		static IUnknown* getCanonicalUnknown(IUnknown* p) throw();
-	private:
-		vector<DataEntry*> dataEntries_;
-	};
-
-	GenericDataObject::~GenericDataObject() throw() {
-		for(vector<DataEntry*>::iterator i(dataEntries_.begin()), e(dataEntries_.end()); i != e; ++i) {
-			::CoTaskMemFree((*i)->first.ptd);
-			::ReleaseStgMedium(&(*i)->second);
-		}
-	}
-
-	HRESULT GenericDataObject::addRefSTGMEDIUM(const STGMEDIUM& input, STGMEDIUM& output, bool copyInput) {
-		HRESULT result = S_OK;
-		STGMEDIUM out(input);
-		if(input.pUnkForRelease == 0 && (input.tymed & (TYMED_ISTREAM | TYMED_ISTORAGE)) == 0) {
-			if(copyInput) {
-				if(input.tymed == TYMED_HGLOBAL) {
-					out.hGlobal = cloneGlobal(input.hGlobal);
-					if(out.hGlobal == 0)
-						result = E_OUTOFMEMORY;
-				} else
-					result = DV_E_TYMED;
-			} else
-				out.pUnkForRelease = this;
-		}
-		if(SUCCEEDED(result)) {
-			if(out.tymed == TYMED_ISTREAM)
-				out.pstm->AddRef();
-			else if(out.tymed == TYMED_ISTORAGE)
-				out.pstg->AddRef();
-			if(out.pUnkForRelease != 0)
-				out.pUnkForRelease->AddRef();
-			output = out;
-		}
-		return result;
-	}
-
-	HGLOBAL cloneGlobal(HGLOBAL handle) throw() {
-		if(void* const p = ::GlobalLock(handle)) {
-			const size_t bytes = ::GlobalSize(handle);
-			HGLOBAL clone = ::GlobalAlloc(GMEM_FIXED, bytes);
-			if(clone != 0)
-				::CopyMemory(clone, p, bytes);
-			::GlobalUnlock(handle);
-			return clone;
-		}
-		return 0;
-	}
-
-	HRESULT GenericDataObject::findFORMATETC(const FORMATETC& format, DataEntry*& data, bool addIfNotExist) {
-		data = 0;
-		if(format.ptd != 0)
-			return DV_E_DVTARGETDEVICE;
-		for(vector<DataEntry*>::const_iterator i(dataEntries_.begin()), e(dataEntries_.end()); i != e; ++i) {
-			const FORMATETC& other = (*i)->first;
-			if(other.cfFormat == format.cfFormat && other.dwAspect == format.dwAspect && other.lindex == format.lindex) {
-				if(addIfNotExist || (other.tymed & format.tymed) != 0)
-					return data = *i, S_OK;
-				return DV_E_TYMED;
-			}
-		}
-		if(!addIfNotExist)
-			return DV_E_FORMATETC;
-		if(DataEntry* const newEntry = static_cast<DataEntry*>(::CoTaskMemAlloc(sizeof(DataEntry)))) {
-			newEntry->first = format;
-			memset(&newEntry->second, 0, sizeof(STGMEDIUM));
-			dataEntries_.push_back(newEntry);
-			data = dataEntries_.back();
-			return S_OK;
-		}
-		return E_OUTOFMEMORY;
-	}
-	IUnknown* getCanonicalUnknown(IUnknown* p) throw() {
-		if(p != 0) {
-			IUnknown* canonical;
-			if(SUCCEEDED(p->QueryInterface(IID_IUnknown, reinterpret_cast<void**>(&canonical))))
-				canonical->Release();
-			else
-				canonical = p;
-			return canonical;
-		}
-		return 0;
-	}
-
-	STDMETHODIMP GenericDataObject::GetData(LPFORMATETC pformatetcIn, LPSTGMEDIUM pmedium) {
-		if(pformatetcIn == 0 || pmedium == 0)
-			return E_INVALIDARG;
-		DataEntry* entry;
-		HRESULT hr = findFORMATETC(*pformatetcIn, entry, false);
-		if(SUCCEEDED(hr))
-			hr = addRefSTGMEDIUM(entry->second, *pmedium, false);
-		return hr;
-	}
-	STDMETHODIMP GenericDataObject::QueryGetData(LPFORMATETC pformatetc) {
-		if(pformatetc == 0)
-			return E_INVALIDARG;
-		DataEntry* dummy;
-		return findFORMATETC(*pformatetc, dummy, false);
-	}
-	STDMETHODIMP GenericDataObject::SetData(FORMATETC* pformatetc, STGMEDIUM* pmedium, BOOL fRelease) {
-		if(pformatetc == 0 || pmedium == 0)
-			return E_INVALIDARG;
-		if(!toBoolean(fRelease))
-			return E_NOTIMPL;
-		DataEntry* entry;
-		HRESULT hr = findFORMATETC(*pformatetc, entry, true);
-		if(SUCCEEDED(hr)) {
-			if(entry->second.tymed != 0) {
-				::ReleaseStgMedium(&entry->second);
-				memset(&entry->second, 0, sizeof(STGMEDIUM));
-			}
-			if(toBoolean(fRelease)) {
-				entry->second = *pmedium;
-				hr = S_OK;
-			} else
-				hr = addRefSTGMEDIUM(*pmedium, entry->second, true);
-			entry->first.tymed = entry->second.tymed;
-			if(getCanonicalUnknown(entry->second.pUnkForRelease) == getCanonicalUnknown(static_cast<IDataObject*>(this))) {
-				entry->second.pUnkForRelease->Release();
-				entry->second.pUnkForRelease = 0;
-			}
-		}
-		return hr;
-	}
-} // namespace @0
-
-namespace {
-	auto_ptr<String> getTextData(::IDataObject& data, bool* rectangle = 0) {
-		auto_ptr<String> result;
-		::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-		::STGMEDIUM stm = {TYMED_HGLOBAL, 0};
-		if(data.QueryGetData(&fe) == S_OK) {	// the data suppports CF_UNICODETEXT ?
-			if(SUCCEEDED(data.GetData(&fe, &stm))) {
-				if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
-					try {
-						result.reset(new String(buffer));
-					} catch(...) {
-					}
-					::GlobalUnlock(stm.hGlobal);
-					::ReleaseStgMedium(&stm);
-				}
-			}
-		}
-
-		if(result.get() == 0) {
-			fe.cfFormat = CF_TEXT;
-			if(data.QueryGetData(&fe) == S_OK) {	// the data supports CF_TEXT ?
-				if(SUCCEEDED(data.GetData(&fe, &stm))) {
-					if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
-						// determine the encoding of the content of the clipboard
-						::UINT codePage = ::GetACP();
-						fe.cfFormat = CF_LOCALE;
-						if(S_OK == data.QueryGetData(&fe)) {
-							::STGMEDIUM locale = {TYMED_HGLOBAL, 0};
-							if(S_OK == data.GetData(&fe, &locale)) {
-								wchar_t buffer[6];
-								if(0 != ::GetLocaleInfoW(*static_cast<ushort*>(::GlobalLock(locale.hGlobal)),
-										LOCALE_IDEFAULTANSICODEPAGE, buffer, MANAH_COUNTOF(buffer))) {
-									wchar_t* eob;
-									codePage = wcstoul(buffer, &eob, 10);
-								}
-							}
-							::ReleaseStgMedium(&locale);
-						}
-						// convert ANSI text into Unicode by the code page
-						const length_t nativeLength = min<length_t>(
-							strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
-						const length_t ucsLength = ::MultiByteToWideChar(
-							codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
-						if(ucsLength != 0) {
-							AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
-							if(ucsBuffer.get() != 0) {
-								if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
-										nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
-									try {
-										result.reset(new String(ucsBuffer.get(), ucsLength - 1));
-									} catch(...) {
-									}
-								}
-							}
-						}
-						::GlobalUnlock(stm.hGlobal);
-						::ReleaseStgMedium(&stm);
-					}
-				}
-			}
-		}
-
-		if(result.get() != 0 && rectangle != 0) {
-			fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-			*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
-		}
-
-		return result;
-	}
-} // namespace @0
-
 map<::UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
 const ::UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
 const ::UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
@@ -3982,6 +3761,88 @@ void DefaultMouseInputStrategy::captureChanged() {
 	leftButtonPressed_ = false;
 }
 
+///
+void DefaultMouseInputStrategy::doDragAndDrop() {
+	ComPtr<IDataObject> draggingContent;
+	const Region selection(viewer_->caret().selectionRegion());
+
+	if(FAILED(viewer_->caret().createTextObject(true, *draggingContent.initialize())))
+		return;
+	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+
+	// setup dragging ghost ixyzzymage
+	if(dnd_.dragSourceHelper.get() != 0) {
+		MANAH_AUTO_STRUCT(BITMAPV5HEADER, bh);
+		bh.bV5Size = sizeof(BITMAPV5HEADER);
+		bh.bV5Width = 40;
+		bh.bV5Height = 40;
+		bh.bV5Planes = 1;
+		bh.bV5BitCount = 32;
+		bh.bV5Compression = BI_BITFIELDS;
+		bh.bV5RedMask = 0x00FF0000;
+		bh.bV5GreenMask = 0x0000FF00;
+		bh.bV5BlueMask = 0x000000FF;
+		bh.bV5AlphaMask = 0xFF000000;
+
+		SHDRAGIMAGE image;
+		image.sizeDragImage.cx = bh.bV5Width;
+		image.sizeDragImage.cy = bh.bV5Height;
+		image.ptOffset.x = image.sizeDragImage.cx / 2;
+		image.ptOffset.y = image.sizeDragImage.cy / 2;
+		image.crColorKey = CLR_NONE;
+
+		if(HDC dc = ::CreateCompatibleDC(0)) {
+			void* bits;
+			HBITMAP bitmap = ::CreateDIBSection(dc, reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, 0, 0);
+			if(bitmap != 0 && bits != 0) {
+				HBITMAP memoryBitmap = ::CreateCompatibleBitmap(viewer_->getDC().getHandle(), bh.bV5Width, bh.bV5Height);
+				HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc, memoryBitmap));
+				::SetTextColor(dc, ::GetSysColor(COLOR_HIGHLIGHTTEXT));
+				::SetBkColor(dc, ::GetSysColor(COLOR_HIGHLIGHT));
+				::SetBkMode(dc, OPAQUE);
+				RECT rc;
+				rc.left = rc.top = 0;
+				rc.right = bh.bV5Width;
+				rc.bottom = bh.bV5Height;
+				::ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc, L"xyzzy", 5, 0);
+
+				MANAH_AUTO_STRUCT(BITMAPINFOHEADER, bih);
+				bih.biSize = sizeof(BITMAPINFOHEADER);
+				::GetDIBits(dc, memoryBitmap, 0, bh.bV5Height, 0, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
+				byte* memoryBits = new byte[bih.biWidth * bih.biHeight * bih.biBitCount / 8];
+				bih.biCompression = BI_RGB;
+				::GetDIBits(dc, memoryBitmap, 0, bih.biHeight, memoryBits, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
+				::SelectObject(dc, oldBitmap);
+				for(int x = 0; x < bih.biWidth; ++x) {
+					for(int y = 0; y < bih.biHeight; ++y) {
+						const byte* pixel = memoryBits + (x + y * bih.biWidth) * 3;
+						static_cast<ulong*>(bits)[x + y * bih.biWidth] = RGB(pixel[0], pixel[1], pixel[2]) + 0xFF000000;
+					}
+				}
+				delete[] memoryBits;
+
+				image.hbmpDragImage = bitmap;
+				dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get());
+				::DeleteObject(memoryBitmap);
+				::DeleteObject(bitmap);
+			}
+			::DeleteDC(dc);
+		}
+	}
+
+	// operation
+	assert(leftButtonPressed_);
+	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+	dnd_.state = DragAndDrop::DRAGGING_BY_SELF;
+	DWORD effectOwn;	// dummy
+	::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+	endTimer();
+	dnd_.state = DragAndDrop::INACTIVE;
+	leftButtonPressed_ = false;
+	if(viewer_->isVisible())
+		viewer_->setFocus();
+}
+
 /// @see IDropTarget#DragEnter
 STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD keyState, ::POINTL pt, ::DWORD* effect) {
 	if(data == 0)
@@ -4007,9 +3868,9 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, ::DWORD k
 		dnd_.numberOfRectangleLines = 0;
 		fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
-			auto_ptr<String> s = getTextData(*data);
-			if(s.get() != 0)
-				dnd_.numberOfRectangleLines = getNumberOfLines(*s) - 1;
+			pair<HRESULT, String> text(getTextFromDataObject(*data));
+			if(SUCCEEDED(text.first))
+				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
 		}
 		dnd_.state = DragAndDrop::DRAGGING_FROM_OTHER;
 	}
@@ -4041,9 +3902,8 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!dnd_.enabled || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+	if(!dnd_.isDragging() || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
-	assert(dnd_.isDragging());
 
 	::POINT caretPoint = {pt.x, pt.y};
 	viewer_->screenToClient(caretPoint);
@@ -4072,6 +3932,10 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(::DWORD keyState, ::POINTL pt, 
 
 /// @see IDropTarget#Drop
 STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keyState, ::POINTL pt, ::DWORD* effect) {
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->Drop(data, &p, *effect);
+	}
 	if(data == 0)
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
@@ -4099,17 +3963,17 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		ca.moveTo(pos);
 
 		bool rectangle;
-		auto_ptr<String> text = getTextData(*data, &rectangle);
-		if(text.get() != 0) {
+		pair<HRESULT, String> text(getTextFromDataObject(*data, &rectangle));
+		if(SUCCEEDED(text.first)) {
 			document.endSequentialEdit();
 			viewer_->freeze();
 			if(rectangle) {
 				document.beginSequentialEdit();
-				ca.insertRectangle(*text);
+				ca.insertRectangle(text.second);
 				document.endSequentialEdit();
 				ca.beginRectangleSelection();
 			} else
-				ca.insert(*text);
+				ca.insert(text.second);
 			ca.select(pos, ca);
 			viewer_->unfreeze();
 			*effect = DROPEFFECT_COPY;
@@ -4128,7 +3992,6 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 		if(ca.isPointOverSelection(caretPoint)) {
 			ca.moveTo(pos);
 			dnd_.state = DragAndDrop::INACTIVE;
-			return S_OK;
 		} else {
 			const bool rectangle = ca.isSelectionRectangle();
 			document.beginSequentialEdit();
@@ -4172,11 +4035,6 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, ::DWORD keySta
 			viewer_->unfreeze();
 			document.endSequentialEdit();
 		}
-	}
-
-	if(dnd_.dropTargetHelper.get() != 0) {
-		POINT p = {pt.x, pt.y};
-		dnd_.dropTargetHelper->Drop(data, &p, *effect);
 	}
 	return S_OK;
 }
@@ -4363,51 +4221,8 @@ void DefaultMouseInputStrategy::mouseMoved(const ::POINT& position, uint) {
 			if((position.x > dnd_.approachedPosition.x + cxDragBox / 2)
 					|| (position.x < dnd_.approachedPosition.x - cxDragBox / 2)
 					|| (position.y > dnd_.approachedPosition.y + cyDragBox / 2)
-					|| (position.y < dnd_.approachedPosition.y - cyDragBox / 2)) {
-				const bool rectangle = viewer_->caret().isSelectionRectangle();
-				const String selection(viewer_->caret().selectionText(NLF_CR_LF));
-				ComPtr<TextDataObject> draggingText(new TextDataObject(*this));
-
-				dnd_.numberOfRectangleLines = 0;
-				if(rectangle) {
-					set<::CLIPFORMAT> clipFormats;
-					clipFormats.insert(CF_UNICODETEXT);
-					clipFormats.insert(static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT)));
-					draggingText->setAvailableFormatSet(clipFormats.begin(), clipFormats.end());
-
-					const Region sel(viewer_->caret().selectionRegion());
-					dnd_.numberOfRectangleLines = sel.end().line - sel.beginning().line + 1;
-				}
-				draggingText->setTextData(selection.c_str());
-				assert(leftButtonPressed_);
-				beginTimer(rectangle ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
-
-				if(dnd_.dragSourceHelper.get() != 0) {
-					HDC dc = ::CreateCompatibleDC(::GetDC(0));
-					SHDRAGIMAGE image;
-					image.sizeDragImage.cx = image.sizeDragImage.cy = 100;
-					image.ptOffset.x = image.ptOffset.y = 0;
-					image.hbmpDragImage = ::CreateCompatibleBitmap(dc, image.sizeDragImage.cx, image.sizeDragImage.cy);
-					image.crColorKey = RGB(0xFF, 0xFF, 0xFF);
-					HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc, image.hbmpDragImage));
-					RECT rc;
-					rc.left = rc.top = 0;
-					rc.right = rc.bottom = 100;
-					::FillRect(dc, &rc, ::GetSysColorBrush(COLOR_HIGHLIGHT));
-					::SelectObject(dc, oldBitmap);
-					::DeleteDC(dc);
-					dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingText.get());
-					::DeleteObject(image.hbmpDragImage);
-				}
-
-				dnd_.state = DragAndDrop::DRAGGING_BY_SELF;
-				draggingText->doDragDrop(DROPEFFECT_COPY | DROPEFFECT_MOVE);
-				endTimer();
-				dnd_.state = DragAndDrop::INACTIVE;
-				leftButtonPressed_ = false;
-				if(viewer_->isVisible())
-					viewer_->setFocus();
-			}
+					|| (position.y < dnd_.approachedPosition.y - cyDragBox / 2))
+				doDragAndDrop();
 		}
 	} else if(leftButtonPressed_)
 		extendSelection();

@@ -1,7 +1,7 @@
 /**
  * @file text-editor.cpp
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #include "text-editor.hpp"
@@ -366,12 +366,16 @@ ulong ClipboardCommand::execute() {
 		if(type_ == CUT)
 			ABORT_ISEARCH();
 	}
-	if(type_ == COPY)
-		target().caret().copySelection(performClipboardRing_);
-	else if(type_ == CUT)
-		target().caret().cutSelection(performClipboardRing_);
-	else if(type_ == PASTE)
-		target().caret().pasteToSelection(performClipboardRing_);
+	try {
+		if(type_ == COPY)
+			target().caret().copySelection(performClipboardRing_);
+		else if(type_ == CUT)
+			target().caret().cutSelection(performClipboardRing_);
+		else if(type_ == PASTE)
+			target().caret().pasteToSelection(performClipboardRing_);
+	} catch(...) {
+		return 1;
+	}
 	return 0;
 }
 
@@ -940,7 +944,7 @@ bool ThaiInputSequenceChecker::check(HKL, const Char* first, const Char* last, C
 }
 
 
-// isc::VietnameseInputSequenceChecker //////////////////////////////////////
+// isc.VietnameseInputSequenceChecker ///////////////////////////////////////
 
 /// @see InputSequenceChecker#check
 bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const {
