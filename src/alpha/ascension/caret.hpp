@@ -12,8 +12,7 @@
 #include "layout.hpp"	// layout.IVisualLinesListener
 #include "unicode.hpp"	// text.IdentifierSyntax
 #include <functional>	// std.mem_fun_t
-
-struct IDataObject;
+#include <objidl.h>		// IDataObject
 
 namespace ascension {
 
@@ -22,8 +21,7 @@ namespace ascension {
 		class VirtualBox;
 		class VisualPoint;
 
-		void makeRegionTextObject(const TextViewer& viewer,
-			const kernel::Region& region, bool rectangle, bool rtf, ::IDataObject*& content);
+		std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = 0);
 
 		/**
 		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
@@ -48,6 +46,12 @@ namespace ascension {
 				std::runtime_error("Target viewer is already inavailable. This object is no longer able to be used anyway.") {}
 		};
 
+		/// Clipboard Win32 API was failed.
+		class ClipboardException : public std::runtime_error {
+		public:
+			explicit ClipboardException(HRESULT hr);
+		};
+
 		/**
 		 * Extension of @c EditPoint for viewer and layout.
 		 * @see kernel#EditPoint, kernel#IPointListener, kernel#DisposedViewException
@@ -62,15 +66,13 @@ namespace ascension {
 			virtual ~VisualPoint() throw();
 
 			// attributes
-			static ::UINT canPaste() throw();
-			std::string clipboardNativeEncoding() const throw();
+			static bool canPaste() throw();
 			bool isEndOfVisualLine() const;
 			bool isFirstPrintableCharacterOfLine() const;
 			bool isFirstPrintableCharacterOfVisualLine() const;
 			bool isLastPrintableCharacterOfLine() const;
 			bool isLastPrintableCharacterOfVisualLine() const;
 			bool isBeginningOfVisualLine() const;
-			void setClipboardNativeEncoding(encoding::MIBenum mib);
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
 			length_t visualColumnNumber() const;
@@ -104,10 +106,6 @@ namespace ascension {
 			bool show(const kernel::Position& other);
 
 			// text manipulations
-			void copy(signed_length_t length);
-			void copy(const kernel::Position& other);
-			void cut(signed_length_t length);
-			void cut(const kernel::Position& other);
 			void insertRectangle(const String& text);
 			void insertRectangle(const Char* first, const Char* last);
 			void newLine(bool inheritIndent);
@@ -124,6 +122,7 @@ namespace ascension {
 		protected:
 			virtual void doMoveTo(const kernel::Position& to);
 			const text::IdentifierSyntax& identifierSyntax() const throw();
+			kernel::Position offsetPosition(signed_length_t offset) const;
 			void verifyViewer() const;
 		private:
 			using kernel::EditPoint::newLine;	// 明示的な隠蔽
@@ -138,7 +137,6 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			std::string clipboardNativeEncoding_;
 			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
 			bool crossingLines_;	// 行間移動中
 			length_t visualLine_, visualSubline_;	// 点の表示行
@@ -270,6 +268,7 @@ namespace ascension {
 
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
+			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
 			bool isPointOverSelection(const ::POINT& pt) const;
 			bool isSelectionEmpty() const throw();
 			bool isSelectionRectangle() const throw();

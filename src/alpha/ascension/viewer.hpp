@@ -12,7 +12,8 @@
 #include "point.hpp"
 #include "presentation.hpp"
 #include "content-assist.hpp"
-#include "../../manah/com/text-data-object.hpp"
+#include "../../manah/win32/ui/window.hpp"
+#include "../../manah/com/unknown-impl.hpp"
 #include <set>
 #include <algorithm>
 #include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
@@ -272,6 +273,7 @@ namespace ascension {
 			STDMETHODIMP Drop(::IDataObject* pDataObj, ::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
 		private:
 			void beginTimer(UINT interval);
+			void doDragAndDrop();
 			void endTimer();
 			void extendSelection();
 			void handleLeftButtonPressed(const ::POINT& position, uint keyState);
