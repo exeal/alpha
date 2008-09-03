@@ -194,43 +194,7 @@ namespace ascension {
 			friend class Caret;
 		};
 
-		/**
-		 * @c Caret is an extension of @c VisualPoint. A caret has a selection on the text viewer.
-		 * And supports line selection, word selection, rectangle (box) selection, tracking match
-		 * brackets, and clipboard enhancement.
-		 *
-		 * A caret has one another point called "anchor" (or "mark"). The selection is a region
-		 * between the caret and the anchor. Anchor is @c VisualPoint but client can't operate
-		 * this directly.
-		 *
-		 * Usually, the anchor will move adapting to the caret automatically. If you want to move
-		 * the anchor isolately, create the selection by using @c #select method or call
-		 * @c #extendSelection method.
-		 *
-		 * When the caret moves, the text viewer will scroll automatically to show the caret. See
-		 * the description of @c #enableAutoShow and @c #isAutoShowEnabled.
-		 *
-		 * このクラスの編集用のメソッドは @c EditPoint 、@c VisualPoint の編集用メソッドと異なり、
-		 * 積極的に連続編集とビューの凍結を使用する
-		 *
-		 * 行選択および単語選択は、選択の作成および拡張時にアンカーとキャレットを行境界や単語境界に束縛する機能で、
-		 * @c #extendSelection メソッドで実際にこれらの点が移動する位置を制限する。
-		 * また、この場合 @c #extendSelection を呼び出すとアンカーが自動的に移動する。
-		 * @c #beginLineSelection 、@c #beginWordSelection でこれらのモードに入ることができ、
-		 * @c #restoreSelectionMode で通常状態に戻ることができる。
-		 * また、これらのモードで @c #moveTo か @c #select を使っても通常状態に戻る
-		 *
-		 * 対括弧の検索はプログラムを編集しているときに役立つ機能で、キャレット位置に括弧があれば対応する括弧を検索する。
-		 * 括弧のペアを強調表示するのは、現時点ではビューの責任である
-		 *
-		 * To enter rectangle selection mode, call @c #beginRectangleSelection method. To exit,
-		 * call @c #endRectangleSelection method. You can get the information of the current
-		 * rectangle selection by using @c #boxForRectangleSelection method.
-		 *
-		 * This class does not accept @c IPointListener. Use @c ICaretListener interface instead.
-		 *
-		 * @note This class is not intended to subclass.
-		 */
+		// documentation is caret.cpp
 		class Caret : public VisualPoint, virtual public kernel::IPointListener, virtual public kernel::IDocumentListener {
 		public:
 			/// Mode of selection.
@@ -265,7 +229,6 @@ namespace ascension {
 			void enableAutoShow(bool enable = true) throw();
 			const VisualPoint& end() const throw();
 			bool isAutoShowEnabled() const throw();
-
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
 			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
@@ -277,11 +240,12 @@ namespace ascension {
 			SelectionMode selectionMode() const throw();
 			kernel::Region selectionRegion() const throw();
 			String selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
-
 			// attributes : character input
 			bool isOvertypeMode() const throw();
 			void setOvertypeMode(bool overtype) throw();
-
+			// attributes : clipboard
+			LCID clipboardLocale() const throw();
+			LCID setClipboardLocale(LCID newLocale);
 			// attributes : matched braces
 			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const;
 			MatchBracketsTrackingMode matchBracketsTrackingMode() const throw();
@@ -341,19 +305,20 @@ namespace ascension {
 				kernel::Position posBeforeUpdate_;
 			} * anchor_;
 			SelectionMode selectionMode_;
-			length_t modeInitialAnchorLine_;	// 選択モードに入ったときのアンカーの行
+			length_t modeInitialAnchorLine_;	// line number of the anchor when entered the selection mode
 			length_t wordSelectionChars_[2];	// 単語選択モードで最初に選択されていた単語の前後の文字位置
+			LCID clipboardLocale_;
 			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
 			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
 			bool pastingFromClipboardRing_;		// クリップボードリングから貼り付けた直後でリング循環のため待機中
 			bool leaveAnchorNext_;				// true if should leave the anchor at the next movement
-			bool leadingAnchor_;				// anchor_->moveTo 呼び出し中なので pointMoved を無視
+			bool leadingAnchor_;				// true if in anchor_->moveTo calling, and ignore pointMoved
 			bool autoShow_;						// true if show itself when movements
 			VirtualBox* box_;					// for rectangular selection. null when the selection is linear
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			bool overtypeMode_;
-			bool editingByThis_;				// このインスタンスが編集操作中
+			bool editingByThis_;				// true if this instance is editing
 			bool othersEditedFromLastInputChar_;	// このインスタンスが文字を入力して以降他の編集操作が行われたか?
 			kernel::Region regionBeforeMoved_;
 			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
@@ -406,6 +371,8 @@ namespace ascension {
 		 */
 		inline const VirtualBox& Caret::boxForRectangleSelection() const {
 			if(!isSelectionRectangle()) throw IllegalStateException("The selection is not rectangle.") ; return *box_;}
+		/// Returns the locale identifier used to convert non-Unicode text.
+		inline LCID Caret::clipboardLocale() const throw() {return clipboardLocale_;}
 		/**
 		 * Sets the new auto-show mode.
 		 * @param enable set true to enable the mode

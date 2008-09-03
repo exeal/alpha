@@ -174,8 +174,8 @@ namespace {
 
 /**
  * Returns the text content from the given data object.
- * @param data
- * @param[out] rectangle
+ * @param data the data object
+ * @param[out] rectangle true if the data is rectangle format. can be @c null
  * @return a pair of the result HRESULT and the text content. SCODE is one of S_OK, E_OUTOFMEMORY and DV_E_FORMATETC
  */
 pair<HRESULT, String> viewers::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
@@ -274,13 +274,18 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
  * @throw BadPositionException @a position is outside of the document
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
-		EditPoint(viewer.document(), position, listener),viewer_(&viewer),
+		EditPoint(viewer.document(), position, listener), viewer_(&viewer),
 		lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
 	static_cast<kernel::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().addVisualLinesListener(*this);
 }
 
-/// Copy-constructor.
+/**
+ * Copy-constructor.
+ * @param rhs the source object
+ * @throw DisposedDocumentException the document to which @a rhs belongs had been disposed
+ * @throw DisposedViewerException the text viewer to which @a rhs belongs had been disposed
+ */
 VisualPoint::VisualPoint(const VisualPoint& rhs) : EditPoint(rhs), viewer_(rhs.viewer_),
 		lastX_(rhs.lastX_), crossingLines_(false), visualLine_(rhs.visualLine_), visualSubline_(rhs.visualSubline_) {
 	if(viewer_ == 0)
@@ -1197,16 +1202,56 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 // Caret ////////////////////////////////////////////////////////////////////
 
 /**
+ * @class ascension::viewers::Caret
+ *
+ * @c Caret is an extension of @c VisualPoint. A caret has a selection on the text viewer.
+ * And supports line selection, word selection, rectangle (box) selection, tracking match
+ * brackets, and clipboard enhancement.
+ *
+ * A caret has one another point called "anchor" (or "mark"). The selection is a region
+ * between the caret and the anchor. Anchor is @c VisualPoint but client can't operate
+ * this directly.
+ *
+ * Usually, the anchor will move adapting to the caret automatically. If you want to move
+ * the anchor isolately, create the selection by using @c #select method or call
+ * @c #extendSelection method.
+ *
+ * When the caret moves, the text viewer will scroll automatically to show the caret. See
+ * the description of @c #enableAutoShow and @c #isAutoShowEnabled.
+ *
+ * このクラスの編集用のメソッドは @c EditPoint 、@c VisualPoint の編集用メソッドと異なり、
+ * 積極的に連続編集とビューの凍結を使用する
+ *
+ * 行選択および単語選択は、選択の作成および拡張時にアンカーとキャレットを行境界や単語境界に束縛する機能で、
+ * @c #extendSelection メソッドで実際にこれらの点が移動する位置を制限する。
+ * また、この場合 @c #extendSelection を呼び出すとアンカーが自動的に移動する。
+ * @c #beginLineSelection 、@c #beginWordSelection でこれらのモードに入ることができ、
+ * @c #restoreSelectionMode で通常状態に戻ることができる。
+ * また、これらのモードで @c #moveTo か @c #select を使っても通常状態に戻る
+ *
+ * 対括弧の検索はプログラムを編集しているときに役立つ機能で、キャレット位置に括弧があれば対応する括弧を検索する。
+ * 括弧のペアを強調表示するのは、現時点ではビューの責任である
+ *
+ * To enter rectangle selection mode, call @c #beginRectangleSelection method. To exit,
+ * call @c #endRectangleSelection method. You can get the information of the current
+ * rectangle selection by using @c #boxForRectangleSelection method.
+ *
+ * This class does not accept @c IPointListener. Use @c ICaretListener interface instead.
+ *
+ * @note This class is not intended to subclass.
+ */
+
+/**
  * Constructor.
  * @param viewer the viewer
  * @param position the initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) throw() : VisualPoint(viewer, position, 0),
-		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), pastingFromClipboardRing_(false),
-		leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0), matchBracketsTrackingMode_(DONT_TRACK),
-		overtypeMode_(false), editingByThis_(false), othersEditedFromLastInputChar_(false),
-		regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
+		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), clipboardLocale_(::GetUserDefaultLCID()),
+		pastingFromClipboardRing_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
+		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), editingByThis_(false),
+		othersEditedFromLastInputChar_(false), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
 	document()->addListener(*this);
 	excludeFromRestriction(true);
@@ -1381,30 +1426,37 @@ HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
 
 	// ANSI text format and locale
 	hr = S_OK;
-	format.cfFormat = CF_TEXT;
-	if(int ansiLength = ::WideCharToMultiByte(CP_ACP, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
-		manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
-		if(ansiBuffer.get() != 0) {
-			ansiLength = ::WideCharToMultiByte(CP_ACP, 0, text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
-			if(ansiLength != 0) {
-				if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
-					if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
-						memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
-						temp[ansiLength] = 0;
-						::GlobalUnlock(medium.hGlobal);
-						hr = o->SetData(&format, &medium, false);
-					} else
-						hr = E_FAIL;
-					::GlobalFree(medium.hGlobal);
-					if(SUCCEEDED(hr)) {
-						format.cfFormat = CF_LOCALE;
-						if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(::LCID)))) {
-							if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
-								*lcid = ::GetUserDefaultLCID();
-								hr = o->SetData(&format, &medium, false);
-							}
+	UINT codePage = CP_ACP;
+	wchar_t codePageString[6];
+	if(0 != ::GetLocaleInfoW(clipboardLocale_, LOCALE_IDEFAULTANSICODEPAGE, codePageString, MANAH_COUNTOF(codePageString))) {
+		wchar_t* eob;
+		codePage = wcstoul(codePageString, &eob, 10);
+		format.cfFormat = CF_TEXT;
+		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
+			manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
+			if(ansiBuffer.get() != 0) {
+				ansiLength = ::WideCharToMultiByte(codePage, 0,
+					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
+				if(ansiLength != 0) {
+					if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
+						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
+							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
+							temp[ansiLength] = 0;
 							::GlobalUnlock(medium.hGlobal);
-							::GlobalFree(medium.hGlobal);
+							hr = o->SetData(&format, &medium, false);
+						} else
+							hr = E_FAIL;
+						::GlobalFree(medium.hGlobal);
+						if(SUCCEEDED(hr)) {
+							format.cfFormat = CF_LOCALE;
+							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(::LCID)))) {
+								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
+									*lcid = clipboardLocale_;
+									hr = o->SetData(&format, &medium, false);
+								}
+								::GlobalUnlock(medium.hGlobal);
+								::GlobalFree(medium.hGlobal);
+							}
 						}
 					}
 				}
@@ -1951,6 +2003,19 @@ void Caret::selectWord() {
 		i.base().seek(Position(lineNumber(), columnNumber() + 1));
 		select((--i).base().tell(), p);
 	}
+}
+
+/**
+ * Sets the locale used to convert non-Unicode data in the clipboard.
+ * @param newLocale the locale identifier
+ * @return the identifier of the locale set by the caret
+ * @throw std#invalid_argument @a newLocale is not installed on the system
+ */
+LCID Caret::setClipboardLocale(LCID newLocale) {
+	if(!toBoolean(::IsValidLocale(newLocale, LCID_INSTALLED)))
+		throw invalid_argument("newLocale");
+	swap(clipboardLocale_, newLocale);
+	return newLocale;
 }
 
 /**
