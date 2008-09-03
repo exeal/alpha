@@ -27,7 +27,11 @@ Point::Point(Document& document, const Position& position /* = Position() */) :
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
 
-/// Copy-constructor.
+/**
+ * Copy-constructor.
+ * @param rhs the source object
+ * @throw DisposedDocumentException the document to which @a rhs belongs had been disposed
+ */
 Point::Point(const Point& rhs) :
 		document_(rhs.document_), position_(rhs.position_), adapting_(rhs.adapting_),
 		excludedFromRestriction_(rhs.excludedFromRestriction_), gravity_(rhs.gravity_) {
@@ -117,9 +121,6 @@ void Point::update(const DocumentChange& change) {
 
 // EditPoint ////////////////////////////////////////////////////////////////
 
-namespace {
-} // namespace @0
-
 /**
  * Constructor.
  * @param document the document
@@ -131,8 +132,12 @@ EditPoint::EditPoint(Document& document, const Position& position /* = Position(
 	: Point(document, position), listener_(listener), characterUnit_(GRAPHEME_CLUSTER) {
 }
 
-/// Copy-constructor.
-EditPoint::EditPoint(const EditPoint& rhs) throw() : Point(rhs), listener_(rhs.listener_), characterUnit_(rhs.characterUnit_) {
+/**
+ * Copy-constructor.
+ * @param rhs the source object
+ * @throw DisposedDocumentException the document to which @a rhs belongs had been disposed
+ */
+EditPoint::EditPoint(const EditPoint& rhs) : Point(rhs), listener_(rhs.listener_), characterUnit_(rhs.characterUnit_) {
 }
 
 /// Destructor.
