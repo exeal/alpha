@@ -262,11 +262,12 @@ namespace ascension {
 		/**
 		 * @c IncrementalSearcher performs incremental search on a document. A session holds an
 		 * instance of this class, while client can create instances.
-		 * The search will abort automatically when the document was changed.
+		 * The search will abort automatically when the content or the bookmark of the document
+		 * was changed.
 		 * @see TextSearcher, texteditor#Session#getIncrementalSearcher,
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
-		class IncrementalSearcher : virtual public kernel::IDocumentListener {
+		class IncrementalSearcher : virtual public kernel::IDocumentListener, virtual public kernel::IBookmarkListener {
 			MANAH_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
 			// constructor
@@ -294,6 +295,9 @@ namespace ascension {
 			// kernel.IDocumentListener
 			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			// kernel.IBookmarkListener
+			void bookmarkChanged(length_t line);
+			void bookmarkCleared();
 
 		private:
 			void checkRunning() const;

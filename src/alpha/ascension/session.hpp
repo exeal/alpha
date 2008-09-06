@@ -12,7 +12,10 @@
 
 namespace ascension {
 
-	namespace kernel {class Document;}
+	namespace kernel {
+		class Region;
+		class Document;
+	}
 
 	namespace searcher {
 		class IncrementalSearcher;
@@ -22,49 +25,49 @@ namespace ascension {
 	namespace texteditor {
 
 		/**
-		 * Interface for objects which are interested in changes of the clipboard ring.
-		 * @see ClipboardRing
+		 * Interface for objects which are interested in changes of the kill ring.
+		 * @see KillRing
 		 */
-		class IClipboardRingListener {
+		class IKillRingListener {
 		private:
-			/// The content of the clipboard ring is changed.
+			/// The content of the kill ring was changed.
 			virtual void clipboardRingChanged() = 0;
-			/// The text which are added to the clipboard ring is denied.
-			virtual void clipboardRingAddingDenied() = 0;
-			friend class ClipboardRing;
+			friend class KillRing;
 		};
 
-		/// A clipboard ring.
-		class ClipboardRing {
+		// documentation is session.cpp
+		class KillRing {
 		public:
 			// constructor
-			ClipboardRing() throw();
+			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) throw();
 			// listeners
-			void addListener(IClipboardRingListener& listener);
-			void removeListener(IClipboardRingListener& listener);
-			// contents
-			std::size_t activeItem() const;
-			std::size_t capacity() const throw();
-			bool isEmpty() const throw();
-			std::size_t numberOfItems() const throw();
-			void setActiveItem(std::size_t index);
-			void setCapacity(std::size_t limit);
-			void text(std::size_t index, String& text, bool& rectangle) const;
-			// operations
-			void add(const String& text, bool rectangle);
-			void remove(std::size_t index);
-			void removeAll();
-
+			void addListener(IKillRingListener& listener);
+			void removeListener(IKillRingListener& listener);
+/*			// kill
+			void copyRegion(const kernel::Document& document, const kernel::Region& region);
+			void killRegion(kernel::Document& document, const kernel::Region& region);
+			// yank
+			void yank(std::size_t index = 0);
+			void yankPop(std::size_t index = -1);
+*/			// low level accesses
+			void addNew(const String& text, bool rectangle, bool replace = false);
+			void append(const String& text, bool prepend);
+			const std::pair<String, bool>& get(std::ptrdiff_t places = 0) const;
+			const std::pair<String, bool>& setCurrent(std::ptrdiff_t places);
+			// number
+			std::size_t maximumNumberOfKills() const throw();
+			std::size_t numberOfKills() const throw();
+//			void setMaximumNumberOfKills(std::size_t capacity) throw();
 		private:
-			struct ClipText {
-				String text;	// the text data
-				bool rectangle;	// true if the text is rectangle
-			};
-			std::list<ClipText> datas_;
-			std::size_t capacity_;
-			ulong maximumBytes_;
-			std::size_t activeItem_;
-			ascension::internal::Listeners<IClipboardRingListener> listeners_;
+			typedef std::list<std::pair<String, bool> > Contents;
+			Contents::iterator at(ptrdiff_t index) const;
+			void interprogramCopy(const String& text, bool rectangle);
+			std::pair<String, bool> interprogramPaste();
+		private:
+			Contents contents_;	// plain-text vs. rectangle-flag
+			Contents::iterator yankPointer_;
+			const std::size_t maximumNumberOfKills_;
+			ascension::internal::Listeners<IKillRingListener> listeners_;
 		};
 
 #ifdef ASCENSION_WINDOWS
@@ -116,13 +119,13 @@ namespace ascension {
 			Session() throw();
 			~Session() throw();
 			// attributes
-			ClipboardRing& clipboardRing() throw();
-			const ClipboardRing& clipboardRing() const throw();
 			const std::vector<kernel::Document*> documents() const throw();
 			searcher::IncrementalSearcher& incrementalSearcher() throw();
 			const searcher::IncrementalSearcher& incrementalSearcher() const throw();
 			InputSequenceCheckers* inputSequenceCheckers() throw();
 			const InputSequenceCheckers* inputSequenceCheckers() const throw();
+			KillRing& killRing() throw();
+			const KillRing& killRing() const throw();
 #ifndef ASCENSION_NO_MIGEMO
 			const ::WCHAR* migemoPathName(bool runtime) throw();
 #endif /* !ASCENSION_NO_MIGEMO */
@@ -138,7 +141,7 @@ namespace ascension {
 
 		private:
 			std::vector<kernel::Document*> documents_;
-			ClipboardRing clipboardRing_;
+			KillRing killRing_;
 			searcher::IncrementalSearcher* isearch_;
 			searcher::TextSearcher* textSearcher_;
 			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
@@ -147,43 +150,6 @@ namespace ascension {
 #endif /* !ASCENSION_NO_MIGEMO */
 		};
 
-
-		/**
-		 * Returns the index of the active content in the ring.
-		 * @return the active index
-		 * @throw IllegalStateException the ring is empty
-		 */
-		inline std::size_t ClipboardRing::activeItem() const {if(isEmpty()) throw IllegalStateException("the ring is empty."); return activeItem_;}
-
-		/**
-		 * Registers the listener.
-		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		inline void ClipboardRing::addListener(IClipboardRingListener& listener) {listeners_.add(listener);}
-
-		/// Returns the number of texts than the ring can contain.
-		inline std::size_t ClipboardRing::capacity() const throw() {return capacity_;}
-
-		/// Returns true if the ring is empty.
-		inline bool ClipboardRing::isEmpty() const throw() {return datas_.empty();}
-
-		/// Returns the count of the stored texts.
-		inline std::size_t ClipboardRing::numberOfItems() const throw() {return datas_.size();}
-
-		/**
-		 * Removes the listener.
-		 * @param listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		inline void ClipboardRing::removeListener(IClipboardRingListener& listener) {listeners_.remove(listener);}
-
-		/**
-		 * Sets the active content.
-		 * @param index the index of the content to be activated
-		 * @throw IndexOutOfBoundsException @a index is out of range
-		 */
-		inline void ClipboardRing::setActiveItem(std::size_t index) {if(index >= datas_.size()) throw IndexOutOfBoundsException(); activeItem_ = index;}
 
 		/// Returns the input sequence checkers.
 		inline InputSequenceCheckers* Session::inputSequenceCheckers() throw() {return inputSequenceCheckers_.get();}
@@ -195,4 +161,4 @@ namespace ascension {
 
 } // namespace ascension
 
-#endif /* !ASCENSION_SESSION_HPP */
+#endif // !ASCENSION_SESSION_HPP

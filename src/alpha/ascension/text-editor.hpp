@@ -14,69 +14,55 @@ namespace ascension {
 
 	namespace texteditor {
 
-		class TextEditor {};
-
 		/**
 		 * Abstract class for the editor commands.
-		 * @see ascension#commands
+		 * @see ascension#texteditor#commands
 		 */
-		class EditorCommand {
+		class Command {
 		public:
-			/// Constructor.
-			EditorCommand(viewers::TextViewer& view) throw() : view_(&view) {}
-			/// Destructor.
-			virtual ~EditorCommand() throw() {}
-			/// Executes the command and returns the command-specific result value.
-			virtual ulong execute() = 0;
-			/// Changes the command target.
-			void retarget(viewers::TextViewer& view) throw() {view_ = &view;}
+			virtual ~Command() throw();
+			Command& beepOnError(bool enable = true) throw();
+			bool beepsOnError() const throw();
+			ulong execute();
+			long numericPrefix() const throw();
+			Command& retarget(viewers::TextViewer& viewer) throw();
+			Command& setNumericPrefix(long number) throw();
 		protected:
+			explicit Command(viewers::TextViewer& viewer) throw();
+			/// Called by @c #execute public method.
+			virtual ulong doExecute() = 0;
 			/// Returns the command target.
-			viewers::TextViewer& target() const throw() {return *view_;}
+			viewers::TextViewer& target() const throw() {return *viewer_;}
 		private:
-			viewers::TextViewer* view_;
+			viewers::TextViewer* viewer_;
+			long numericPrefix_;
+			bool beepsOnError_;
 		};
 
-		/// @internal
-		namespace internal {
-			template<typename Parameter> class EditorCommandBase : public EditorCommand {
-			public:
-				EditorCommandBase(viewers::TextViewer& view, Parameter param) : EditorCommand(view), param_(param) {}
-				virtual ~EditorCommandBase() {}
-			protected:
-				Parameter param_;
-			};
-		} // namespace internal
-
-		/// Implementations of the standard commands.
+		/**
+		 * Implementations of the standard commands. These classes extends @c Command class.
+		 *
+		 * These commands are very common for text editors, but somewhat complex to implement. Use
+		 * these classes, rather than write your own code implements same feature.
+		 */
 		namespace commands {
 			/// Searches and bookmarks all matched lines.
-			class BookmarkAllCommand : public internal::EditorCommandBase<bool> {
+			class BookmarkMatchLinesCommand : public Command {
 			public:
-				explicit BookmarkAllCommand(viewers::TextViewer& viewer,
-					bool onlySelection) throw() : internal::EditorCommandBase<bool>(viewer, onlySelection) {}
-				ulong execute();
-			};
-			/// Bookmark operations.
-			class BookmarkCommand : public EditorCommand {
-			public:
-				enum Type {
-					CLEAR_ALL,			///< Removes all bookmarks.
-					TOGGLE_CURRENT_LINE	///< Toggles the current bookmark.
-				};
-				BookmarkCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
+				BookmarkMatchLinesCommand(viewers::TextViewer& viewer, bool onlySelection) throw();
 			private:
-				Type type_;
+				ulong doExecute();
+				const bool onlySelection_;
 			};
-			/// Clears the selection or cancels incremental search.
-			class CancelCommand : public EditorCommand {
+			/// Clears the selection, or aborts the active incremental search and exits the content assist.
+			class CancelCommand : public Command {
 			public:
-				explicit CancelCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
-				ulong execute();
+				explicit CancelCommand(viewers::TextViewer& viewer) throw();
+			private:
+				ulong doExecute();
 			};
 			/// Moves the caret or extends the selection.
-			class CaretMovementCommand : public EditorCommand {
+			class CaretMovementCommand : public Command {
 			public:
 				/// Types of movement.
 				enum Type {
@@ -124,129 +110,161 @@ namespace ascension {
 				bool extend_;
 				length_t offset_;
 			};
-			/// Exchanges a character and a text represents a code value.
-			class CharacterCodePointConversionCommand : public internal::EditorCommandBase<bool> {
+			/**
+			 * Deletes the forward/backward N character(s). If the incremental search is active,
+			 * deletes the entire pattern (direction is @c FORWARD) or the last N character(s)
+			 * (direction is @c BACKWARD).
+			 * @see WordDeletionCommand
+			 */
+			class CharacterDeletionCommand : public Command {
 			public:
-				CharacterCodePointConversionCommand(viewers::TextViewer& view, bool charToCp) throw() :
-					internal::EditorCommandBase<bool>(view, charToCp) {}
-				ulong execute();
+				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) throw();
+			private:
+				ulong doExecute();
+				const Direction direction_;
 			};
-			/// Inputs a character.
-			class CharacterInputCommand : public internal::EditorCommandBase<CodePoint> {
+			/// Converts a character into the text represents the code value of the character.
+			class CharacterToCodePointConversionCommand : public Command {
 			public:
-				CharacterInputCommand(viewers::TextViewer& view, CodePoint cp) throw() : internal::EditorCommandBase<CodePoint>(view, cp) {}
-				ulong execute();
+				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) throw();
+			private:
+				ulong doExecute();
 			};
-			/// Inputs a character is at same position in the next/previous line.
-			class CharacterInputFromNextLineCommand : internal::EditorCommandBase<bool> {
+			/**
+			 * Inputs a character on the caret position, or appends to the end of the active
+			 * incremental search pattern.
+			 * @see viewers#Caret#inputCharacter
+			 */
+			class CharacterInputCommand : public Command {
 			public:
-				CharacterInputFromNextLineCommand(viewers::TextViewer& view, bool fromNextLine) throw() :
-					internal::EditorCommandBase<bool>(view, fromNextLine) {}
-				ulong execute();
+				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c) throw();
+			private:
+				ulong doExecute();
+				const CodePoint c_;
 			};
-			/// Operates the clipboard.
-			class ClipboardCommand : public EditorCommand {
+			/// Inputs a character is at same position in the next/previous visual line.
+			class CharacterInputFromNextLineCommand : public Command {
 			public:
-				enum Type {
-					COPY,	///< Copy the selection into the clipboard.
-					CUT,	///< Cuts the selection and copys.
-					PASTE	///< Pastes the content of the clipboard at the caret.
-				};
-				ClipboardCommand(viewers::TextViewer& view, Type type, bool performClipboardRing) throw()
-					: EditorCommand(view), type_(type), performClipboardRing_(performClipboardRing) {}
+				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) throw();
+			private:
+				ulong doExecute();
+				const bool fromPreviousLine_;
+			};
+			/// Converts a text represents a code value into the character has the code value.
+			class CodePointToCharacterConversionCommand : public Command {
+			public:
+				CodePointToCharacterConversionCommand(viewers::TextViewer& view) throw();
+			private:
+				ulong doExecute();
+			};
+			/**
+			 * Shows completion proposals and aborts the active incremental search.
+			 * @see contentassist#ContentAssistant#showPossibleCompletions
+			 */
+			class CompletionProposalPopupCommand : public Command {
+			public:
+				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) throw();
+			private:
+				ulong doExecute();
+			};
+			/**
+			 * Searches the next/previous or the previous match and selects matched region. The
+			 * search performs using the current search conditions.
+			 *
+			 * To find the next/previous for the incremental search, use
+			 * @c IncrementalSearchCommand instead.
+			 */
+			class FindNextCommand : public Command {
+			public:
+				FindNextCommand(viewers::TextViewer& viewer, Direction direction) throw();
+			private:
+				ulong doExecute();
+				const Direction direction_;
+			};
+			/**
+			 * Begins the incremental search. If the search is already running, jumps to the
+			 * next/previous match.
+			 */
+			class IncrementalFindCommand : public Command {
+			public:
+				IncrementalFindCommand(viewers::TextViewer& view,
+					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) throw();
+			private:
+				ulong doExecute();
+				const Direction direction_;
+				searcher::IIncrementalSearchCallback* const callback_;
+			};
+			/**
+			 * Makes/Deletes indents of the selected non-blank lines.
+			 * @see viewers#Caret#spaceIndent, viewers#Caret#tabIndent
+			 */
+			class IndentationCommand : public Command {
+			public:
+				IndentationCommand(viewers::TextViewer& view, bool increase) throw();
+			private:
+				ulong doExecute();
+				bool increases_;
+			};
+			/// Toggles the input method's open status.
+			class InputMethodOpenStatusToggleCommand : public Command {
+			public:
+				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) throw();
+			private:
+				ulong doExecute();
+			};
+			/// Toggles Soft Keyboard mode of the input method.
+			class InputMethodSoftKeyboardModeToggleCommand : public Command {
+			public:
+				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) throw();
+			private:
+				ulong doExecute();
+			};
+			/**
+			 * Inserts a newline, or exits a mode.
+			 * If the incremental search is running, exits the search. If the content assist is
+			 * active, completes or aborts and breaks the line if no candidate matches exactly.
+			 */
+			class NewlineCommand : public Command {
+			public:
+				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) throw();
+			private:
+				ulong doExecute();
+				const bool insertsPrevious_;
+			};
+			/// Toggles overtype mode of the caret.
+			class OvertypeModeToggleCommand : public Command {
+			public:
+				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) throw();
+			private:
+				ulong doExecute();
+			};
+			/// Inserts the content of the kill ring or the clipboard at the caret position.
+			class PasteCommand : public Command {
+			public:
+				PasteCommand(viewers::TextViewer& view, bool useKillRing) throw();
 				ulong execute();
 			private:
-				Type type_;
-				bool performClipboardRing_;
+				const bool usesKillRing_;
 			};
-			/// Shows completion proposals.
-			class CompletionProposalPopupCommand : public EditorCommand {
+			/// Reconverts by using the input method editor.
+			class ReconversionCommand : public Command {
 			public:
-				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
-				ulong execute();
-			};
-			/// Erases the text in the document.
-			class DeletionCommand : public EditorCommand {
-			public:
-				enum Type {
-					NEXT_CHARACTER,		///< Erases the next character. Or resets the pattern in incremental search.
-					PREVIOUS_CHARACTER,	///< Erases the previous character. Or undos the last operation in incremental search.
-					NEXT_WORD,			///< Erases to the start of the next word.
-					PREVIOUS_WORD,		///< Erases to the start of the previous word.
-					WHOLE_LINE			///< Erases the whole line.
-				};
-				DeletionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
+				explicit ReconversionCommand(viewers::TextViewer& view) throw();
 			private:
-				Type type_;
-			};
-			/// Searches the next or the previous.
-			class FindNextCommand : public internal::EditorCommandBase<Direction> {
-			public:
-				FindNextCommand(viewers::TextViewer& viewer, Direction direction) throw()
-					: internal::EditorCommandBase<Direction>(viewer, direction) {}
-				ulong execute();
-			};
-			/// Begins the incremental search.
-			class IncrementalSearchCommand : public EditorCommand {
-			public:
-				IncrementalSearchCommand(viewers::TextViewer& view,
-					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) throw()
-					: EditorCommand(view), direction_(direction), callback_(callback) {}
-				ulong execute();
-			private:
-				Direction direction_;
-				searcher::IIncrementalSearchCallback* callback_;
-			};
-			/// Makes/Deletes indents.
-			class IndentationCommand : public EditorCommand {
-			public:
-				IndentationCommand(viewers::TextViewer& view, bool indent, bool tabIndent, ushort level) throw()
-					: EditorCommand(view), indent_(indent), tabIndent_(tabIndent), level_(level) {}
-				ulong execute();
-			private:
-				bool indent_;
-				bool tabIndent_;
-				ushort level_;
-			};
-			/// Toggles the input status.
-			class InputStatusToggleCommand : public EditorCommand {
-			public:
-				enum Type {
-					IME_STATUS,		///< About IME.
-					OVERTYPE_MODE,	///< About insertion/overtype mode.
-					SOFT_KEYBOARD	///< About soft keyboard.
-				};
-				InputStatusToggleCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
-			private:
-				Type type_;
-			};
-			/// Inserts a newline.
-			class NewlineCommand : public internal::EditorCommandBase<bool> {
-			public:
-				NewlineCommand(viewers::TextViewer& view, bool previousLine) throw() : internal::EditorCommandBase<bool>(view, previousLine) {}
-				ulong execute();
-			};
-			/// Reconverts by using IME.
-			class ReconversionCommand : public EditorCommand {
-			public:
-				explicit ReconversionCommand(viewers::TextViewer& view) throw() : EditorCommand(view) {}
-				ulong execute();
+				ulong doExecute();
 			};
 			/// Replaces all matched texts.
-			class ReplaceAllCommand : public EditorCommand {
+			class ReplaceAllCommand : public Command {
 			public:
-				explicit ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
-					searcher::IInteractiveReplacementCallback* callback) throw() : EditorCommand(viewer),
-					onlySelection_(onlySelection), callback_(callback) {}
-				ulong execute();
+				ReplaceAllCommand(viewers::TextViewer& viewer,
+					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) throw();
 			private:
-				bool onlySelection_;
-				searcher::IInteractiveReplacementCallback* callback_;
+				ulong doExecute();
+				const bool onlySelection_;
+				searcher::IInteractiveReplacementCallback* const callback_;
 			};
 			/// Extends the selection and begins rectangular selection.
-			class RowSelectionExtensionCommand : public EditorCommand {
+			class RowSelectionExtensionCommand : public Command {
 			public:
 				enum Type {
 					FORWARD_CHARACTER,							///< Extends to the next (forward) character.
@@ -323,10 +341,20 @@ namespace ascension {
 				Type type_;
 			};
 			/// Performs undo or redo.
-			class UndoCommand : public internal::EditorCommandBase<bool> {
+			class UndoCommand : public Command {
 			public:
-				UndoCommand(viewers::TextViewer& view, bool undo) throw() : internal::EditorCommandBase<bool>(view, undo) {}
-				ulong execute();
+				UndoCommand(viewers::TextViewer& view, bool redo) throw();
+			private:
+				ulong doExecute();
+				const bool redo_;
+			};
+			/// Deletes the forward/backward N word(s).
+			class WordDeletionCommand : public Command {
+			public:
+				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) throw();
+			private:
+				ulong doExecute();
+				const Direction direction_;
 			};
 		} // namespace commands
 
@@ -382,4 +410,4 @@ namespace ascension {
 
 } // namespace ascension
 
-#endif /* !ASCENSION_TEXT_EDITOR_HPP */
+#endif // !ASCENSION_TEXT_EDITOR_HPP

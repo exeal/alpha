@@ -199,7 +199,7 @@ namespace ascension {
 			void erase(const Position& other);
 			void insert(const String& text);
 			void insert(const Char* first, const Char* last);
-			virtual void newLine();
+			virtual void newLine(std::size_t newlines = 1);
 
 		protected:
 			virtual void doMoveTo(const Position& to);
