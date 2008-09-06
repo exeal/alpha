@@ -419,14 +419,22 @@ void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 
 /**
  * Breaks the line.
+ * @param newlines how many times to insert a newline
  * @note This method is hidden by @c VisualPoint#newLine (C++ rule).
  */
-void EditPoint::newLine() {
+void EditPoint::newLine(size_t newlines /* = 1 */) {
 	verifyDocument();
-	if(document()->isReadOnly())
+	if(document()->isReadOnly() || newlines == 0)
 		return;
 	const IDocumentInput* const di = document()->input();
-	insert(getNewlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
+	String s(getNewlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
+	if(newlines > 1) {
+		basic_stringbuf<Char> b;
+		for(size_t i = 0; i < newlines; ++i)
+			b.sputn(s.data(), s.length());
+		s = b.str();
+	}
+	insert(s);
 }
 
 /**

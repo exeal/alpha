@@ -38,7 +38,7 @@
 #	endif
 #else
 #	define ASCENSION_FASTCALL
-#endif /* __i386__ */
+#endif // __i386__
 
 #include "../../manah/object.hpp"
 #include "config.hpp"
@@ -50,7 +50,7 @@
 #if defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 #include "../../manah/win32/timer.hpp"
 using manah::win32::Timer;
-#endif /* defined(ASCENSION_WINDOWS) && defined(_DEBUG) */
+#endif // defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 
 namespace ascension {
 
@@ -105,6 +105,9 @@ namespace ascension {
 		FORWARD,	///< Direction to the end.
 		BACKWARD	///< Direction to the start.
 	};
+
+	/// Negation operator for @c Direction value.
+	inline Direction operator!(Direction v) throw() {return (v == FORWARD) ? BACKWARD : FORWARD;}
 
 	/**
 	 * Notifies about the system parameter changes.
@@ -281,6 +284,6 @@ namespace std {
 		return out;
 	}
 }
-#endif /* ASCENSION_TEST */
+#endif // ASCENSION_TEST
 
-#endif /* !ASCENSION_COMMON_HPP */
+#endif // !ASCENSION_COMMON_HPP

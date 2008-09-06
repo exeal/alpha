@@ -12,91 +12,122 @@ using namespace ascension::texteditor;
 using namespace std;
 
 
-// ClipboardRing ////////////////////////////////////////////////////////////
+// KillRing /////////////////////////////////////////////////////////////////
 
-/// Constructor.
-ClipboardRing::ClipboardRing() throw() : capacity_(16), maximumBytes_(100 * 1024), activeItem_(static_cast<size_t>(-1)) {
+/**
+ * @class ascension::texteditor::KillRing
+ */
+
+/**
+ * Constructor.
+ * @param maximumNumberOfKills initial maximum number of kills. this setting can be change by
+ * @c #setMaximumNumberOfKills later
+ */
+KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) throw()
+		: yankPointer_(contents_.end()), maximumNumberOfKills_(maximumNumberOfKills) {
 }
 
 /**
- * Adds the new text to the ring.
- *
- * If the count of texts is over the limit, the oldest content is deleted.
- *
- * If the specified text is too long, listeners' IClipboardRingListener#clipboardRingAddingDenied are invoked.
- * @param text the text to be added. this can't be empty
- * @param rectangle true if the text is rectangle
+ * Registers the listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
  */
-void ClipboardRing::add(const String& text, bool rectangle) {
-	assert(!text.empty());
-	if(text.length() * sizeof(Char) > maximumBytes_) {
-		listeners_.notify(&IClipboardRingListener::clipboardRingAddingDenied);
-		return;
+void KillRing::addListener(IKillRingListener& listener) {
+	listeners_.add(listener);
+}
+
+/**
+ * Makes the given content tha latest kill in the kill ring.
+ * @param text the content
+ * @param rectangle true if the content is a rectangle
+ * @param replace set true to replace the front of the kill ring. otherwise the new content will be
+ * added
+ */
+void KillRing::addNew(const String& text, bool rectangle, bool replace /* = false */) {
+	if(!contents_.empty() && replace)
+		contents_.front() = make_pair(text, rectangle);
+	else {
+		contents_.push_front(make_pair(text, rectangle));
+		if(contents_.size() > maximumNumberOfKills_)
+			contents_.pop_back();
 	}
-
-	ClipText ct;
-	ct.text = text;
-	ct.rectangle = rectangle;
-	datas_.push_front(ct);
-	if(datas_.size() > capacity_)
-		datas_.pop_back();
-	activeItem_ = 0;
-	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
+	yankPointer_ = contents_.begin();
+	listeners_.notify(&IKillRingListener::clipboardRingChanged);
 }
 
 /**
- * Removes the specified text.
- * @param index the index of the text
- * @throw IndexOutOfBoundsException @a index is invalid
- */
-void ClipboardRing::remove(size_t index) {
-	if(index >= datas_.size())
-		throw IndexOutOfBoundsException();
-	list<ClipText>::iterator it = datas_.begin();
-	for(size_t i = 0; i < index; ++i, ++it);
-	datas_.erase(it);
-	if(index == datas_.size() && index == activeItem_)
-		--activeItem_;
-	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
-}
-
-/// Removes all the stored texts.
-void ClipboardRing::removeAll() {
-	datas_.clear();
-	listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
-}
-
-/**
- * Sets the number of texts than the ring can contain.
  *
- * If the specified capacity is less than the current one, the contents closest to the end are removed.
- * @param capacity the new capacity
- * @throw std#invalid_argument @a capacity is zero
+ * @param text
+ * @param prepend
  */
-void ClipboardRing::setCapacity(size_t capacity) {
-	if(capacity == 0)
-		throw invalid_argument("the capacity must not be zero.");
-	capacity_ = capacity;
-	if(datas_.size() > capacity_) {
-		datas_.resize(capacity_);
-		listeners_.notify(&IClipboardRingListener::clipboardRingChanged);
+void KillRing::append(const String& text, bool prepend) {
+	if(contents_.empty())
+		return addNew(text, false, true);
+	else if(!prepend)
+		contents_.front().first.append(text);
+	else
+		contents_.front().first.insert(0, text);
+	yankPointer_ = contents_.begin();
+	listeners_.notify(&IKillRingListener::clipboardRingChanged);
+}
+
+KillRing::Contents::iterator KillRing::at(ptrdiff_t index) const {
+	if(contents_.empty())
+		throw IllegalStateException("the kill ring is empty.");
+	Contents::iterator i(const_cast<KillRing*>(this)->yankPointer_);
+	if(index >= 0) {
+		for(index -= index - (index % contents_.size()); index > 0; --index) {
+			if(++i == contents_.end())
+				i = const_cast<KillRing*>(this)->contents_.begin();
+		}
+	} else {
+		for(index += -index -(-index % contents_.size()); index < 0; ++index) {
+			if(i == contents_.begin())
+				i = const_cast<KillRing*>(this)->contents_.end();
+			--i;
+		}
 	}
+	return i;
 }
 
 /**
- * Returns the content of the specified index.
- * @param index the index
- * @param[out] text the text content
- * @param[out] rectangle true if the text is rectangle
- * @throw IndexOutOfBoundsException @a index is out of range
+ * Returns the content.
+ * @param places
+ * @return the content
+ * @throw IllegalStateException the kill ring is empty
  */
-void ClipboardRing::text(size_t index, String& text, bool& rectangle) const {
-	if(index >= datas_.size())
-		throw IndexOutOfBoundsException();
-	list<ClipText>::const_iterator i(datas_.begin());
-	advance(i, index);
-	text = i->text;
-	rectangle = i->rectangle;
+const pair<String, bool>& KillRing::get(ptrdiff_t places /* = 0 */) const {
+	return *at(places);
+}
+
+/// Returns the maximum number of kills.
+size_t KillRing::maximumNumberOfKills() const throw() {
+	return maximumNumberOfKills_;
+}
+
+/// Returns the number of kills.
+size_t KillRing::numberOfKills() const throw() {
+	return contents_.size();
+}
+
+/**
+ * Removes the listener.
+ * @param listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void KillRing::removeListener(IKillRingListener& listener) {
+	listeners_.remove(listener);
+}
+
+/**
+ * Rotates the yanking point by the given number of places.
+ * @param places
+ * @return the content
+ * @throw IllegalStateException the kill ring is empty
+ */
+const pair<String, bool>& KillRing::setCurrent(ptrdiff_t places) {
+	yankPointer_ = at(places);
+	return *yankPointer_;
 }
 
 
@@ -184,16 +215,6 @@ void Session::addDocument(kernel::Document& document) {
 	static_cast<internal::ISessionElement&>(document).setSession(*this);
 }
 
-/// Returns the clipboard ring.
-ClipboardRing& Session::clipboardRing() throw() {
-	return clipboardRing_;
-}
-
-/// Returns the clipboard ring.
-const ClipboardRing& Session::clipboardRing() const throw() {
-	return clipboardRing_;
-}
-
 /// Returns the incremental searcher.
 searcher::IncrementalSearcher& Session::incrementalSearcher() throw() {
 	if(isearch_ == 0)
@@ -206,6 +227,16 @@ const searcher::IncrementalSearcher& Session::incrementalSearcher() const throw(
 	if(isearch_ == 0)
 		const_cast<searcher::IncrementalSearcher*&>(isearch_) = new searcher::IncrementalSearcher();
 	return *isearch_;
+}
+
+/// Returns the kill ring.
+KillRing& Session::killRing() throw() {
+	return killRing_;
+}
+
+/// Returns the kill ring.
+const KillRing& Session::killRing() const throw() {
+	return killRing_;
 }
 
 #ifndef ASCENSION_NO_MIGEMO

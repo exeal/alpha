@@ -599,7 +599,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
  * @param from the position where the search begins
  * @param scope the region to search
  * @param direction the direction to search
- * @param[out] matchedRegion the matched region
+ * @param[out] matchedRegion the matched region. the value is not changed unless the process successes
  * @return true if the pattern is found
  * @throw IllegalStateException the pattern is not specified
  * @throw kernel#BadPositionException @a from is outside of @a scope
@@ -806,6 +806,16 @@ bool IncrementalSearcher::addString(const Char* first, const Char* last) {
 	return update();
 }
 
+/// @see kernel#IBookmarkListener#bookmarkChanged
+void IncrementalSearcher::bookmarkChanged(length_t) {
+	abort();
+}
+
+/// @see kernel#IBookmarkListener#bookmarkCleared
+void IncrementalSearcher::bookmarkCleared() {
+	abort();
+}
+
 /// @internal Throws an @c IllegalStateException if not in running.
 void IncrementalSearcher::checkRunning() const {
 	if(!isRunning())
@@ -826,6 +836,7 @@ void IncrementalSearcher::documentChanged(const Document&, const DocumentChange&
 void IncrementalSearcher::end() {
 	if(isRunning()) {
 		document_->removeListener(*this);
+		document_->bookmarker().removeListener(*this);
 		while(!statusHistory_.empty())
 			statusHistory_.pop();
 		if(callback_ != 0)
@@ -902,6 +913,7 @@ void IncrementalSearcher::start(Document& document, const Position& from,
 	assert(statusHistory_.empty() && pattern_.empty());
 	statusHistory_.push(s);
 	(document_ = &document)->addListener(*this);
+	document_->bookmarker().addListener(*this);
 	searcher_ = &searcher;
 	matchedRegion_ = statusHistory_.top().matchedRegion;
 	if(0 != (callback_ = callback)) {

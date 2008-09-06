@@ -108,7 +108,7 @@ namespace ascension {
 			// text manipulations
 			void insertRectangle(const String& text);
 			void insertRectangle(const Char* first, const Char* last);
-			void newLine(bool inheritIndent);
+			void newLine(bool inheritIndent, size_t newlines = 1);
 			void paste(signed_length_t length = 0);
 			void paste(const kernel::Position& other);
 			kernel::Position spaceIndent(const kernel::Position& other, bool rectangle, long level = 1);
@@ -256,8 +256,8 @@ namespace ascension {
 			void beginRectangleSelection();
 			void beginWordSelection();
 			void clearSelection();
-			void copySelection(bool alsoSendToClipboardRing);
-			void cutSelection(bool alsoSendToClipboardRing);
+			void copySelection(bool useKillRing);
+			void cutSelection(bool useKillRing);
 			void endRectangleSelection();
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(std::mem_fun_t<void, kernel::EditPoint>& algorithm);
@@ -265,7 +265,7 @@ namespace ascension {
 			void extendSelection(std::mem_fun1_t<void, kernel::EditPoint, length_t>& algorithm, length_t offset);
 			void extendSelection(std::mem_fun1_t<void, VisualPoint, length_t>& algorithm, length_t offset);
 			void eraseSelection();
-			void pasteToSelection(bool fromClipboardRing);
+			void pasteToSelection(bool useKillRing);
 			void replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
 			void replaceSelection(const String& text, bool rectangleInsertion = false);
 			void restoreSelectionMode();
@@ -311,11 +311,11 @@ namespace ascension {
 			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
 			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
-			bool pastingFromClipboardRing_;		// クリップボードリングから貼り付けた直後でリング循環のため待機中
-			bool leaveAnchorNext_;				// true if should leave the anchor at the next movement
-			bool leadingAnchor_;				// true if in anchor_->moveTo calling, and ignore pointMoved
-			bool autoShow_;						// true if show itself when movements
-			VirtualBox* box_;					// for rectangular selection. null when the selection is linear
+			bool yanking_;			// クリップボードリングから貼り付けた直後でリング循環のため待機中
+			bool leaveAnchorNext_;	// true if should leave the anchor at the next movement
+			bool leadingAnchor_;	// true if in anchor_->moveTo calling, and ignore pointMoved
+			bool autoShow_;			// true if show itself when movements
+			VirtualBox* box_;		// for rectangular selection. null when the selection is linear
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			bool overtypeMode_;
 			bool editingByThis_;				// true if this instance is editing

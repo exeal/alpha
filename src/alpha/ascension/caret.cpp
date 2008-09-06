@@ -641,10 +641,11 @@ void VisualPoint::leftWordEnd(length_t offset /* = 1 */) {
  * Breaks the line.
  * @note This methos hides @c EditPoint#newLine (C++ rule).
  * @param inheritIndent true to inherit the indent of the previous line
+ * @param newlines the number of newlines to insert
  */
-void VisualPoint::newLine(bool inheritIndent) {
+void VisualPoint::newLine(bool inheritIndent, size_t newlines /* = 1 */) {
 	verifyViewer();
-	if(document()->isReadOnly())
+	if(document()->isReadOnly() || newlines == 0)
 		return;
 
 	const IDocumentInput* di = document()->input();
@@ -655,6 +656,13 @@ void VisualPoint::newLine(bool inheritIndent) {
 		const length_t len = identifierSyntax().eatWhiteSpaces(
 			currentLine.data(), currentLine.data() + columnNumber(), true) - currentLine.data();
 		s += currentLine.substr(0, len);
+	}
+
+	if(newlines > 1) {
+		basic_stringbuf<Char> b;
+		for(size_t i = 0; i < newlines; ++i)
+			b.putn(s.data(), s.length());
+		s = b.str();
 	}
 	insert(s);
 }
@@ -1249,7 +1257,7 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
  */
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) throw() : VisualPoint(viewer, position, 0),
 		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), clipboardLocale_(::GetUserDefaultLCID()),
-		pastingFromClipboardRing_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
+		yanking_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
 		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), editingByThis_(false),
 		othersEditedFromLastInputChar_(false), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
@@ -1274,7 +1282,7 @@ Caret::~Caret() throw() {
 void Caret::beginLineSelection() {
 	verifyViewer();
 	endRectangleSelection();
-	pastingFromClipboardRing_ = false;
+	yanking_ = false;
 	if(selectionMode_ == LINE)
 		return;
 	selectionMode_ = LINE;
@@ -1301,7 +1309,7 @@ void Caret::beginRectangleSelection() {
 void Caret::beginWordSelection() {
 	verifyViewer();
 	endRectangleSelection();
-	pastingFromClipboardRing_ = false;
+	yanking_ = false;
 	if(selectionMode_ == WORD)
 		return;
 	selectWord();
@@ -1344,11 +1352,11 @@ void Caret::clearSelection() {
 
 /**
  * Copies the selected content to the clipboard.
- * @param alsoSendToClipboardRing true to send also the clipboard ring
+ * @param useKillRing true to send to also the kill ring
  * @throw ClipboardException the clipboard operation failed
  * @throw bad_alloc internal memory allocation failed
  */
-void Caret::copySelection(bool alsoSendToClipboardRing) {
+void Caret::copySelection(bool useKillRing) {
 	verifyViewer();
 	if(isSelectionEmpty())
 		return;
@@ -1372,9 +1380,9 @@ void Caret::copySelection(bool alsoSendToClipboardRing) {
 		::Sleep(0);
 	}
 	data->Release();
-	if(alsoSendToClipboardRing) {
+	if(useKillRing) {
 		if(texteditor::Session* const session = document()->session())
-			session->clipboardRing().add(selectionText(NLF_RAW_VALUE), isSelectionRectangle());
+			session->killRing().addNew(selectionText(NLF_RAW_VALUE), isSelectionRectangle());
 	}
 }
 
@@ -1476,18 +1484,18 @@ HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
 
 /**
  * Copies and deletes the selected text.
- * @param alsoSendToClipboardRing true to send also the clipboard ring
+ * @param useKillRing true to send also the kill ring
  * @throw ClipboardException the clipboard operation failed
  * @throw ReadOnlyDocumentException the document is read only
  * @throw bad_alloc internal memory allocation failed
  */
-void Caret::cutSelection(bool alsoSendToClipboardRing) {
+void Caret::cutSelection(bool useKillRing) {
 	verifyViewer();
 	if(isSelectionEmpty())
 		return;
 	else if(document()->isReadOnly())
 		throw ReadOnlyDocumentException();
-	copySelection(alsoSendToClipboardRing);	// this may throw
+	copySelection(useKillRing);	// this may throw
 	textViewer().freeze(true);
 	document()->beginSequentialEdit();
 	eraseSelection();
@@ -1791,46 +1799,41 @@ bool Caret::isPointOverSelection(const ::POINT& pt) const {
 
 /**
  * Replaces the selected text by the content of the clipboard.
- * @param fromClipboardRing true to use the clipboard ring
+ * @param useKillRing true to use the kill ring
  */
-void Caret::pasteToSelection(bool fromClipboardRing) {
+void Caret::pasteToSelection(bool useKillRing) {
 	verifyViewer();
 	if(document()->isReadOnly())
 		return;
 	texteditor::Session* const session = document()->session();
-	if(fromClipboardRing && (session == 0 || session->clipboardRing().numberOfItems() == 0))
+	if(useKillRing && (session == 0 || session->killRing().numberOfKills() == 0))
 		return;
 
 	document()->beginSequentialEdit();
 	textViewer().freeze(true);
-	if(!fromClipboardRing) {
+	if(!useKillRing) {
 		if(!isSelectionEmpty())
 			eraseSelection();
 		paste();	// TODO: this may throw.
 	} else {
-		size_t activeItem = session->clipboardRing().activeItem();
-		if(pastingFromClipboardRing_ && ++activeItem == session->clipboardRing().numberOfItems())
-			activeItem = 0;
+		texteditor::KillRing& killRing = session->killRing();
+		const pair<String, bool>& text = yanking_ ? killRing.setCurrent(+1) : killRing.get();
 
-		String str;
-		bool rectangle;
-		session->clipboardRing().text(activeItem, str, rectangle);
-		session->clipboardRing().setActiveItem(activeItem);
 		if(!isSelectionEmpty()) {
-			if(pastingFromClipboardRing_)
+			if(yanking_)
 				document()->undo();
 			eraseSelection();
 		}
 		const Position p(position());
-		if(!rectangle) {
-			insert(str);
+		if(!text.second) {
+			insert(text.first);
 			endRectangleSelection();
 		} else {
-			insertRectangle(str);
+			insertRectangle(text.first);
 			beginRectangleSelection();
 		}
 		select(p, position());
-		pastingFromClipboardRing_ = true;
+		yanking_ = true;
 	}
 	document()->endSequentialEdit();
 	textViewer().unfreeze(true);
@@ -1839,7 +1842,7 @@ void Caret::pasteToSelection(bool fromClipboardRing) {
 /// @see IPointListener#pointMoved
 void Caret::pointMoved(const EditPoint& self, const Position& oldPosition) {
 	assert(&self == &*anchor_);
-	pastingFromClipboardRing_ = false;
+	yanking_ = false;
 	if(leadingAnchor_)	// doMoveTo で anchor_->moveTo 呼び出し中
 		return;
 	if((oldPosition == position()) != isSelectionEmpty())
@@ -1879,7 +1882,7 @@ void Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
  */
 void Caret::restoreSelectionMode() {
 	verifyViewer();
-	pastingFromClipboardRing_ = false;
+	yanking_ = false;
 	selectionMode_ = CHARACTER;
 }
 
@@ -1892,7 +1895,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 	verifyViewer();
 	if(selectionMode_ != CHARACTER)
 		restoreSelectionMode();
-	pastingFromClipboardRing_ = false;
+	yanking_ = false;
 	if(anchor != anchor_->position() || caret != position()) {
 		const Region oldRegion(selectionRegion());
 		if(selectionMode_ == CHARACTER) {

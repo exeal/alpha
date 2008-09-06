@@ -2,7 +2,7 @@
  *	@file config.hpp
  *	@brief Configure Ascension build settings using this file.
  *	@author exeal
- *	@date 2005-2007
+ *	@date 2005-2008
  */
 
 #ifndef ASCENSION_CONFIG_HPP
@@ -32,13 +32,19 @@
 #endif
 
 
-// about ascension.kernel.files /////////////////////////////////////////////
+// about ascension.kernel.fileio /////////////////////////////////////////////
 
 #ifdef _WIN32
 #	define ASCENSION_FILE_NAME_CHARACTER_TYPE ::WCHAR
 #else
 #	define ASCENSION_FILE_NAME_CHARACTER_TYPE char
 #endif
+
+/**
+ * @def ASCENSION_NO_GREP
+ * Define the symbol if you do not use grep-related features.
+ */
+//#define ASCENSION_NO_GREP
 
 
 // about ascension.text //////////////////////////////////////////////////
@@ -162,6 +168,15 @@
  * Size of cache buffer of @c ascension#presentation#Presentation#hyperlinks.
  */
 #define ASCENSION_HYPERLINKS_CACHE_SIZE 256
+
+
+// about ascension.texteditor ///////////////////////////////////////////////
+
+/**
+ * @def ASCENSION_DEFAULT_MAXIMUM_KILLS
+ * The default value of the parameter of @c ascension#texteditor#KillRing constructor.
+ */
+#define ASCENSION_DEFAULT_MAXIMUM_KILLS 30
 
 
 // about ascension.viewers //////////////////////////////////////////////////

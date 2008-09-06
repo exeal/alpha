@@ -998,7 +998,7 @@ void Document::recordOperations(bool record) {
 }
 
 /**
- * Performs the redo.
+ * Performs the redo. Does nothing if the target region is inaccessible.
  * @return false if the redo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
  * @see #undo
@@ -1229,10 +1229,8 @@ void Document::setReadOnly(bool readOnly /* = true */) {
 #endif /* 0 */
 
 /**
- * @brief アンドゥの実行
- *
- * 操作対象がアクセス不能であればリドゥは行われない
- * @return アンドゥできなかった場合は false を返す
+ * Performs the undo. Does nothing if the target region is inaccessible.
+ * @return false if the undo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
  * @see #redo
  */
