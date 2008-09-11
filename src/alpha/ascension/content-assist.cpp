@@ -69,10 +69,10 @@ bool CompletionProposal::isAutoInsertable() const throw() {
 
 /// @see ICompletionProposal#replace
 void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
-	document.beginSequentialEdit();
+	document.beginCompoundChange();
 	document.erase(replacementRegion);
 	document.insert(replacementRegion.beginning(), replacementString_);
-	document.endSequentialEdit();
+	document.endCompoundChange();
 }
 
 
@@ -415,9 +415,9 @@ void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 			if(!completionSession_->incremental)
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
-				textViewer_->document().beginSequentialEdit();
+				textViewer_->document().beginCompoundChange();
 				textViewer_->caret().erase(-1, EditPoint::UTF32_CODE_UNIT);
-				textViewer_->document().endSequentialEdit();
+				textViewer_->document().endCompoundChange();
 				complete();
 			}
 		} else {
@@ -458,9 +458,9 @@ bool ContentAssistant::complete() {
 				auto_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
 				Document& document = textViewer_->document();
 				if(!document.isReadOnly()) {
-					document.beginSequentialEdit();
+					document.beginCompoundChange();
 					p->replace(document, temp->replacementRegion);
-					document.endSequentialEdit();
+					document.endCompoundChange();
 				}
 				completionSession_ = temp;
 				close();

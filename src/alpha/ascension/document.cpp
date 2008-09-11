@@ -18,6 +18,7 @@ using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::text;
 using namespace std;
+using manah::GapBuffer;
 
 
 namespace {
@@ -160,6 +161,29 @@ namespace {
 } // namespace @0
 
 
+// exception classes ////////////////////////////////////////////////////////
+
+/// Default constructor.
+DisposedDocumentException::DisposedDocumentException() :
+	runtime_error("The document the object connecting to has been already disposed.") {
+}
+
+/// Default constructor.
+ReadOnlyDocumentException::ReadOnlyDocumentException() :
+	IllegalStateException("The document is readonly. Any edit process is denied.") {
+}
+
+/// Default constructor.
+DocumentAccessViolationException::DocumentAccessViolationException() :
+	invalid_argument("The specified position or region is inaccessible.") {
+}
+
+/// Default constructor.
+BadPositionException::BadPositionException() :
+	invalid_argument("The position is outside of the document.") {
+}
+
+
 // Bookmarker ///////////////////////////////////////////////////////////////
 
 /**
@@ -167,6 +191,12 @@ namespace {
  * @param document the document
  */
 Bookmarker::Bookmarker(Document& document) throw() : document_(document) {
+	document.addListener(*this);
+}
+
+/// Destructor.
+Bookmarker::~Bookmarker() throw() {
+	document_.removeListener(*this);
 }
 
 /**
@@ -180,42 +210,26 @@ void Bookmarker::addListener(IBookmarkListener& listener) {
 
 /// Deletes all bookmarks.
 void Bookmarker::clear() throw() {
-	const length_t lines = document_.numberOfLines();
-	bool clearedOnce = false;
-	for(length_t i = 0; i < lines; ++i) {
-		const Document::Line& line = document_.getLineInformation(i);
-		if(line.bookmarked_) {
-			line.bookmarked_ = false;
-			clearedOnce = true;
-		}
-	}
-	if(clearedOnce)
+	if(!markedLines_.empty()) {
+		markedLines_.clear();
 		listeners_.notify(&IBookmarkListener::bookmarkCleared);
+	}
 }
 
-/**
- * Returns the line number of the next bookmarked line.
- * @param startLine the start line number to search. this line may be the result
- * @param direction direction to search
- * @return the next bookmarked line or @c INVALID_INDEX if not found
- * @throw BadPositionException @a line is outside of the document
- */
-length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
-	const length_t lines = document_.numberOfLines();
-	if(startLine >= lines)
-		throw BadPositionException();
-	else if(direction == FORWARD) {
-		for(length_t line = startLine; line < lines; ++line) {
-			if(document_.getLineInformation(line).bookmarked_)
-				return line;
-		}
-	} else {
-		for(length_t line = startLine + 1; line >= 0; --line) {
-			if(document_.getLineInformation(line - 1).bookmarked_)
-				return line - 1;
-		}
-	}
-	return INVALID_INDEX;
+/// @see IDocumentListener#documentAboutToBeChanged
+bool Bookmarker::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
+	return true;
+}
+
+/// @see IDocumentListener#documentChanged
+void Bookmarker::documentChanged(const Document& document, const DocumentChange& change) {
+}
+
+inline GapBuffer<length_t>::Iterator Bookmarker::find(length_t line) const throw() {
+	assert(line < document_.numberOfLines());
+	// TODO: can write faster implementation (and design) by internal.searchBound().
+	Bookmarker& self = const_cast<Bookmarker&>(*this);
+	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
 }
 
 /**
@@ -224,7 +238,10 @@ length_t Bookmarker::getNext(length_t startLine, Direction direction) const {
  * @throw BadPositionException @a line is outside of the document
  */
 bool Bookmarker::isMarked(length_t line) const {
-	return document_.getLineInformation(line).bookmarked_;
+	if(line >= document_.numberOfLines())
+		throw BadPositionException();
+	const GapBuffer<length_t>::ConstIterator i(find(line));
+	return i != markedLines_.end() && *i == line;
 }
 
 /**
@@ -234,11 +251,41 @@ bool Bookmarker::isMarked(length_t line) const {
  * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::mark(length_t line, bool set) {
-	const Document::Line& l = document_.getLineInformation(line);
-	if(l.bookmarked_ != set) {
-		l.bookmarked_ = set;
-		listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
+	if(line >= document_.numberOfLines())
+		throw BadPositionException();
+	const GapBuffer<length_t>::Iterator i(find(line));
+	if(i != markedLines_.end() && *i == line) {
+		if(!set) {
+			markedLines_.erase(i);
+			listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
+		}
+	} else {
+		if(set) {
+			markedLines_.insert(i, line);
+			listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
+		}
 	}
+}
+
+/**
+ * Returns the line number of the next/previous bookmarked line.
+ * @param from the start line number to search. this line may be the result
+ * @param direction direction to search
+ * @param marks
+ * @return the next bookmarked line or @c INVALID_INDEX if not found
+ * @throw BadPositionException @a line is outside of the document
+ */
+length_t Bookmarker::next(length_t from, Direction direction, size_t marks /* = 1 */) const {
+	if(from >= document_.numberOfLines())
+		throw BadPositionException();
+	else if(marks == 0 || markedLines_.empty())
+		return INVALID_INDEX;
+	else if(marks > markedLines_.size()) {
+		marks = marks % markedLines_.size();
+		if(marks == 0)
+			marks = markedLines_.size();
+	}
+	return INVALID_INDEX;
 }
 
 /**
@@ -256,8 +303,13 @@ void Bookmarker::removeListener(IBookmarkListener& listener) {
  * @throw BadPositionException @a line is outside of the document
  */
 void Bookmarker::toggle(length_t line) {
-	const Document::Line& l = document_.getLineInformation(line);
-	l.bookmarked_ = !l.bookmarked_;
+	if(line >= document_.numberOfLines())
+		throw BadPositionException();
+	const GapBuffer<length_t>::Iterator i(find(line));
+	if(i == markedLines_.end() || *i != line)
+		markedLines_.insert(i, line);
+	else
+		markedLines_.erase(i);
 	listeners_.notify<length_t>(&IBookmarkListener::bookmarkChanged, line);
 }
 
@@ -305,7 +357,7 @@ namespace {
 		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().includes(position_);}
 		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
 		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
-		Position execute(Document& document) {return document.insert(position_, text_);}
+		Position execute(Document& document) {Position p; return document.insert(position_, text_, &p) ? p : Position::INVALID_POSITION;}
 	private:
 		Position position_;
 		String text_;
@@ -322,7 +374,7 @@ namespace {
 			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
 			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
 		}
-		Position execute(Document& document) {return document.erase(region_);}
+		Position execute(Document& document) {return document.erase(region_) ? region_.beginning() : Position::INVALID_POSITION;}
 	private:
 		Region region_;
 	};
@@ -553,7 +605,7 @@ pair<bool, size_t> Document::UndoManager::undo(Position& resultPosition) {
  * To set the new partitioner, use @c #setPartitioner method. The partitioner's ownership
  * will be transferred to the document.
  *
- * @see Viewer, IDocumentPartitioner, Point, EditPoint
+ * @see IDocumentPartitioner, Point, EditPoint
  */
 
 const DocumentPropertyKey Document::TITLE_PROPERTY;
@@ -579,14 +631,24 @@ Document::~Document() {
 	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
 		delete i->second;
 	delete undoManager_;
+	bookmarker_.reset(0);	// Bookmarker.~Bookmarker() calls Document...
 }
 
 /**
  * Returns the accessible region of the document. The returned region is normalized.
- * @see #region
+ * @see #region, DocumentAccessViolationException
  */
 Region Document::accessibleRegion() const throw() {
 	return (accessibleArea_ != 0) ? Region(accessibleArea_->first, *accessibleArea_->second) : region();
+}
+
+/**
+ * Registers the compound change listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addCompoundChangeListener(ICompoundChangeListener& listener) {
+	compoundChangeListeners_.add(listener);
 }
 
 /**
@@ -599,6 +661,15 @@ void Document::addListener(IDocumentListener& listener) {
 	if(find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
 		throw invalid_argument("the listener already has been registered.");
 	listeners_.push_back(&listener);
+}
+
+/**
+ * Registers the document partitioning listener with the document.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addPartitioningListener(IDocumentPartitioningListener& listener) {
+	partitioningListeners_.add(listener);
 }
 
 /**
@@ -615,14 +686,32 @@ void Document::addPrenotifiedListener(IDocumentListener& listener) {
 }
 
 /**
+ * Registers the rollback listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addRollbackListener(IDocumentRollbackListener& listener) {
+	rollbackListeners_.add(listener);
+}
+
+/**
+ * Registers the state listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Document::addStateListener(IDocumentStateListener& listener) {
+	stateListeners_.add(listener);
+}
+
+/**
  * Starts the sequential edit. Restarts if the sequential edit is already running.
  * @see #endSequentialEdit, #isSequentialEditing
  */
-void Document::beginSequentialEdit() throw() {
-	if(isSequentialEditing())
-		endSequentialEdit();
+void Document::beginCompoundChange() throw() {
+	if(isCompoundChanging())
+		endCompoundChange();
 	undoManager_->beginCompoundOperation();
-	sequentialEditListeners_.notify<const Document&>(&ISequentialEditListener::documentSequentialEditStarted, *this);
+	compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStarted, *this);
 }
 
 /// Clears the undo/redo stacks and deletes the history.
@@ -636,47 +725,41 @@ void Document::doResetContent() {
 }
 
 /**
- * Ends the active sequential edit.
- * @see #beginSequentialEdit, #isSequentialEditing
+ * Ends the active compound change.
+ * @see #beginCompoundChange, #isCompoundChanging
  */
-void Document::endSequentialEdit() throw() {
+void Document::endCompoundChange() throw() {
 	undoManager_->endCompoundOperation();
-	sequentialEditListeners_.notify<const Document&>(&ISequentialEditListener::documentSequentialEditStopped, *this);
+	compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStopped, *this);
 }
 
 /**
  * Deletes the specified region of the document.
- *
  * This method sets the modification flag and calls the listeners'
  * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
- *
- * If the specified region intersects the inaccessible region, the union is not deleted.
- * @param region the region to be deleted
+ * @param region the region to be deleted. if empty, this method does nothing
  * @return the position where the point which deletes the text will move to
  * @throw ReadOnlyDocumentException the document is read only
+ * @throw DocumentAccessViolationException @a region intersects the inaccesible region
  */
-Position Document::erase(const Region& region) {
+bool Document::erase(const Region& region) {
 	if(changing_ || isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(region.isEmpty())	// empty -> ignore
-		return region.beginning();
-	else if(isNarrowed()) {
-		const Region r(accessibleRegion());
-		if(region.end() <= r.first)
-			return region.end();
-		else if(region.beginning() >= r.second)
-			return region.beginning();
-	}
+		return true;
+	else if(isNarrowed() && !accessibleRegion().encompasses(region))
+		throw DocumentAccessViolationException();
 
 	ModificationGuard guard(*this);
 	if(!fireDocumentAboutToBeChanged(DocumentChange(true, region)))
-		return region.beginning();
-	return eraseText(region);
+		return false;
+	return eraseText(region), true;
 }
 
-Position Document::eraseText(const Region& region) {
-	const Position beginning(isNarrowed() ? max(region.beginning(), accessibleRegion().first) : region.beginning());
-	const Position end(isNarrowed() ? min(region.end(), accessibleRegion().second) : region.end());
+void Document::eraseText(const Region& region) {
+	assert(!isNarrowed() || accessibleRegion().encompasses(region));
+	const Position& beginning = region.beginning();
+	const Position& end = region.end();
 	basic_stringbuf<Char> deletedString;
 
 	if(beginning.line == end.line) {	// region is single line
@@ -729,7 +812,7 @@ Position Document::eraseText(const Region& region) {
 	fireDocumentChanged(DocumentChange(true, Region(beginning, end)));
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 
-	return beginning;
+//	return beginning;
 }
 
 bool Document::fireDocumentAboutToBeChanged(const DocumentChange& c) throw() {
@@ -763,11 +846,10 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))	\
 		throw BadPositionException();										\
 	else if(isNarrowed() && !accessibleRegion().includes(at))				\
-		/* ignore the insertion position is out of the accessible region */	\
-		return at;															\
+		throw DocumentAccessViolationException();							\
 	ModificationGuard guard(*this);											\
 	if(!fireDocumentAboutToBeChanged(DocumentChange(false, Region(at))))	\
-		return at;															\
+		return false;														\
 	Position resultPosition(at)
 
 #define ASCENSION_DOCUMENT_INSERT_EPILOGUE()																	\
@@ -778,28 +860,28 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));										\
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);	\
 /*	assert(length_ == calculateDocumentLength(*this));	/* diagnose length_  */									\
-	return resultPosition
+	if(eos != 0)																								\
+		*eos = resultPosition;																					\
+	return true
 
 /**
  * Inserts the text into the specified position.
- * <p>The modification flag is set when this method is called. However, if the position is
- * inaccessible area of the document, the insertion is not performed and the modification flag is
- * not changed.</p>
- * <p>This method sets the modification flag and calls the listeners'
- * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.</p>
+ * This method sets the modification flag and calls the listeners'
+ * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
  * @param at the position
  * @param first the start of the text
  * @param last the end of the text
  * @return the result position
  * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
+ * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
  * @throw NullPointerException either @a first or @a last is @c null
  * @throw std#invalid_argument either @a first is greater than @a last
  */
-Position Document::insert(const Position& at, const Char* first, const Char* last) {
+bool Document::insert(const Position& at, const Char* first, const Char* last, Position* eos /* = 0 */) {
 	if(first == 0)
 		throw NullPointerException("first");
-	if(last == 0)
+	else if(last == 0)
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
@@ -816,9 +898,10 @@ Position Document::insert(const Position& at, const Char* first, const Char* las
  * @return the position to where the caret will move
  * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
+ * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
  * @see writeDocumentToStream
  */
-Position Document::insert(const Position& at, basic_istream<Char>& in) {
+bool Document::insert(const Position& at, basic_istream<Char>& in, Position* eos /* = 0 */) {
 	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
 	Char buffer[8192];
 	while(in) {
@@ -892,10 +975,10 @@ Position Document::insertText(const Position& position, const Char* first, const
 }
 
 /**
- * Returns true if the document is sequential editing.
+ * Returns true if the document is compound changing.
  * @see #beginSequentialEdit, #endSequentialEdit
  */
-bool Document::isSequentialEditing() const throw() {
+bool Document::isCompoundChanging() const throw() {
 	return undoManager_->isStackingCompoundOperation();
 }
 
@@ -1009,15 +1092,23 @@ bool Document::redo() {
 	else if(numberOfRedoableEdits() == 0)
 		return false;
 
-	beginSequentialEdit();
-	sequentialEditListeners_.notify<const Document&>(
-		&ISequentialEditListener::documentUndoSequenceStarted, *this);
+	beginCompoundChange();
+	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const bool succeeded = undoManager_->redo(resultPosition).first;
-	sequentialEditListeners_.notify<const Document&, const Position&>(
-		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
-	endSequentialEdit();
+	rollbackListeners_.notify<const Document&, const Position&>(
+		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, resultPosition);
+	endCompoundChange();
 	return succeeded;
+}
+
+/**
+ * Removes the compound change listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
+	compoundChangeListeners_.remove(listener);
 }
 
 /**
@@ -1033,6 +1124,15 @@ void Document::removeListener(IDocumentListener& listener) {
 }
 
 /**
+ * Removes the document partitioning listener from the document.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Document::removePartitioningListener(IDocumentPartitioningListener& listener) {
+	partitioningListeners_.remove(listener);
+}
+
+/**
  * Removes the pre-notified document listener from the document.
  * @internal This method is not for public use.
  * @param listener the listener to be removed
@@ -1043,6 +1143,24 @@ void Document::removePrenotifiedListener(IDocumentListener& listener) {
 	if(i == prenotifiedListeners_.end())
 		throw invalid_argument("the listener is not registered.");
 	prenotifiedListeners_.erase(i);
+}
+
+/**
+ * Removes the rollback listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Document::removeRollbackListener(IDocumentRollbackListener& listener) {
+	rollbackListeners_.remove(listener);
+}
+
+/**
+ * Removes the state listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Document::removeStateListener(IDocumentStateListener& listener) {
+	stateListeners_.remove(listener);
 }
 
 /**
@@ -1240,14 +1358,13 @@ bool Document::undo() {
 	else if(numberOfUndoableEdits() == 0)
 		return false;
 
-	beginSequentialEdit();
-	sequentialEditListeners_.notify<const Document&>(
-		&ISequentialEditListener::documentUndoSequenceStarted, *this);
+	beginCompoundChange();
+	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
 	Position resultPosition;
 	const pair<bool, size_t> status(undoManager_->undo(resultPosition));
-	sequentialEditListeners_.notify<const Document&, const Position&>(
-		&ISequentialEditListener::documentUndoSequenceStopped, *this, resultPosition);
-	endSequentialEdit();
+	rollbackListeners_.notify<const Document&, const Position&>(
+		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, resultPosition);
+	endCompoundChange();
 
 	revisionNumber_ -= status.second;
 	if(!isModified())
@@ -1464,7 +1581,7 @@ DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
 		*p++ = traits_type::to_char_type(c);
 	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
 	if(buffer_ < p)
-		current_ = document_.insert(current_, buffer_, p);
+		document_.insert(current_, buffer_, p, &current_);
 	return traits_type::not_eof(c);
 }
 

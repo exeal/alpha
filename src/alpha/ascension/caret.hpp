@@ -78,23 +78,23 @@ namespace ascension {
 			length_t visualColumnNumber() const;
 
 			// movement
+			void backwardPage(length_t offset = 1);
+			void backwardVisualLine(length_t offset = 1);
 			void beginningOfVisualLine();
+			void contextualBeginningOfLine();
+			void contextualBeginningOfVisualLine();
+			void contextualEndOfLine();
+			void contextualEndOfVisualLine();
 			void endOfVisualLine();
 			void firstPrintableCharacterOfLine();
 			void firstPrintableCharacterOfVisualLine();
+			void forwardPage(length_t offset = 1);
+			void forwardVisualLine(length_t offset = 1);
 			void lastPrintableCharacterOfLine();
 			void lastPrintableCharacterOfVisualLine();
 			void leftCharacter(length_t offset = 1);
 			void leftWord(length_t offset = 1);
 			void leftWordEnd(length_t offset = 1);
-			void nextPage(length_t offset = 1);
-			void nextVisualLine(length_t offset = 1);
-			void nextWord(length_t offset = 1);
-			void nextWordEnd(length_t offset = 1);
-			void previousPage(length_t offset = 1);
-			void previousVisualLine(length_t offset = 1);
-			void previousWord(length_t offset = 1);
-			void previousWordEnd(length_t offset = 1);
 			void rightCharacter(length_t offset = 1);
 			void rightWord(length_t offset = 1);
 			void rightWordEnd(length_t offset = 1);
@@ -113,11 +113,6 @@ namespace ascension {
 			void paste(const kernel::Position& other);
 			kernel::Position spaceIndent(const kernel::Position& other, bool rectangle, long level = 1);
 			kernel::Position tabIndent(const kernel::Position& other, bool rectangle, long level = 1);
-			bool transposeCharacters();
-			bool transposeLines();
-//			bool transposeParagraphs();
-//			bool transposeSentences();
-			bool transposeWords();
 
 		protected:
 			virtual void doMoveTo(const kernel::Position& to);

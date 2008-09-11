@@ -63,9 +63,7 @@ Command& Command::retarget(TextViewer& viewer) throw() {
 }
 
 /// Sets the numeric prefix for the next execution.
-Command& Command::setNumericPrefix(long number) {
-	if(number == 0)
-		throw invalid_argument("number");
+Command& Command::setNumericPrefix(long number) throw() {
 	numericPrefix_ = number;
 	return *this;
 }
@@ -95,6 +93,25 @@ Command& Command::setNumericPrefix(long number) {
 #define ABORT_MODES()					\
 	CLOSE_COMPLETION_PROPOSAL_POPUP();	\
 	ABORT_ISEARCH()
+
+namespace {
+	typedef void(Caret::*const MovementProcedure0)(void);
+	static MovementProcedure0 MOVEMENT_PROCEDURES_0[] = {
+		&Caret::beginningOfDocument, &Caret::beginningOfLine, &Caret::beginningOfVisualLine,
+		&Caret::contextualBeginningOfLine, &Caret::contextualBeginningOfVisualLine, &Caret::contextualEndOfVisualLine,
+		&Caret::contextualEndOfLine, &Caret::endOfDocument, &Caret::endOfLine, &Caret::endOfVisualLine,
+		&Caret::firstPrintableCharacterOfLine, &Caret::firstPrintableCharacterOfVisualLine,
+		&Caret::lastPrintableCharacterOfLine, &Caret::lastPrintableCharacterOfVisualLine
+	};
+	typedef void(Caret::*const MovementProcedure1)(length_t);
+	static MovementProcedure1 MOVEMENT_PROCEDURES_1[] = {
+		&Caret::backwardBookmark, &Caret::backwardCharacter, &Caret::backwardLine, &Caret::backwardPage,
+		&Caret::backwardVisualLine, &Caret::backwardWord, &Caret::backwardWordEnd, &Caret::forwardBookmark,
+		&Caret::forwardCharacter, &Caret::forwardLine, &Caret::forwardPage, &Caret::forwardVisualLine,
+		&Caret::forwardWord, &Caret::forwardWordEnd, &Caret::leftCharacter, &Caret::leftWord, &Caret::leftWordEnd,
+		&Caret::rightCharacter, &Caret::rightWord, &Caret::rightWordEnd
+	};
+}
 
 /**
  * Constructor.
@@ -160,27 +177,55 @@ ulong CancelCommand::doExecute() {
 }
 
 /**
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param procedure a pointer to the member function defines the destination
+ * @param extendSelection set true to extend selection
+ */
+CaretMovementCommand::CaretMovementCommand(TextViewer& viewer, void(Caret::*procedure)(void),
+		bool extendSelection /* = false */) : Command(viewer), extends_(extendSelection), procedure0_(procedure), procedure1_(0) {
+	if(procedure == 0 || find(MOVEMENT_PROCEDURES_0, MANAH_ENDOF(MOVEMENT_PROCEDURES_0), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_0))
+		throw invalid_argument("procedure");
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param procedure a pointer to the member function defines the destination
+ * @param extendSelection set true to extend selection
+ */
+CaretMovementCommand::CaretMovementCommand(TextViewer& viewer, void(Caret::*procedure)(length_t),
+		bool extendSelection /* = false */) : Command(viewer), extends_(extendSelection), procedure0_(0), procedure1_(procedure) {
+	if(procedure == 0 || find(MOVEMENT_PROCEDURES_1, MANAH_ENDOF(MOVEMENT_PROCEDURES_1), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_1))
+		throw invalid_argument("procedure");
+}
+
+/**
  * Moves the caret or extends the selection.
  * @retval 1 the type is any of @c MATCH_BRACKET, @c NEXT_BOOKMARK, or @c PREVIOUS_BOOKMARK and the next mark not found
  * @retval 0 otherwise
  */
 ulong CaretMovementCommand::doExecute() {
+	const long n = numericPrefix();
 	END_ISEARCH();
+	if(n == 0)
+		return 0;
 	Caret& caret = target().caret();
 
-	if(!extend_) {
-		if(type_ == NEXT_LINE || type_ == NEXT_VISUAL_LINE || type_ == PREVIOUS_LINE
-				|| type_ == PREVIOUS_VISUAL_LINE || type_ == NEXT_PAGE || type_ == PREVIOUS_PAGE) {
+	if(!extends_) {
+		if(procedure1_ == &Caret::forwardLine || procedure1_ == &Caret::backwardLine
+				|| procedure1_ == &Caret::forwardVisualLine || procedure1_ == &Caret::backwardVisualLine
+				|| procedure1_ == &Caret::forwardPage || procedure1_ == &Caret::backwardPage) {
 			if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {
 				if(contentassist::IContentAssistant::ICompletionProposalsUI* const cpui = ca->getCompletionProposalsUI()) {
-					switch(type_) {
-					case NEXT_LINE:
-					case NEXT_VISUAL_LINE:		cpui->nextProposal(+1); break;
-					case PREVIOUS_LINE:
-					case PREVIOUS_VISUAL_LINE:	cpui->nextProposal(-1); break;
-					case NEXT_PAGE:				cpui->nextPage(+1); break;
-					case PREVIOUS_PAGE:			cpui->nextPage(-1); break;
-					}
+					if(procedure1_ == &Caret::forwardLine || procedure1_ == &Caret::forwardVisualLine)
+						cpui->nextProposal(n);
+					else if(procedure1_ == &Caret::backwardLine || procedure1_ == &Caret::backwardVisualLine)
+						cpui->nextProposal(n);
+					else if(procedure1_ == &Caret::forwardPage)
+						cpui->nextPage(n);
+					else if(procedure1_ == &Caret::backwardPage)
+						cpui->nextPage(n);
 					return 0;
 				}
 			}
@@ -188,92 +233,30 @@ ulong CaretMovementCommand::doExecute() {
 		caret.endRectangleSelection();
 		if(!caret.isSelectionEmpty()) {	// just clear the selection
 			const bool rtl = target().configuration().orientation == layout::RIGHT_TO_LEFT;
-			if(type_ == FORWARD_CHARACTER
-					|| (type_ == RIGHT_CHARACTER && !rtl)
-					|| (type_ == LEFT_CHARACTER && rtl)) {
+			if(procedure1_ == &Caret::forwardCharacter
+					|| (procedure1_ == &Caret::rightCharacter && !rtl)
+					|| (procedure1_ == &Caret::leftCharacter && rtl)) {
 				caret.moveTo(caret.end());
 				return 0;
-			} else if(type_ == BACKWARD_CHARACTER
-					|| (type_ == LEFT_CHARACTER && !rtl)
-					|| (type_ == RIGHT_CHARACTER && rtl)) {
+			} else if(procedure1_ == &Caret::backwardCharacter
+					|| (procedure1_ == &Caret::leftCharacter && !rtl)
+					|| (procedure1_ == &Caret::rightCharacter && rtl)) {
 				caret.moveTo(caret.beginning());
 				return 0;
 			}
 		}
 	}
 
-	if(type_ == MATCH_BRACKET) {
-		Position foundPosition(caret.matchBrackets().first);
+	// TODO: consider the numeric prefix.
+	if(procedure1_ == &Caret::forwardPage)
+		target().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
+	else if(procedure1_ == &Caret::backwardPage)
+		target().sendMessage(WM_VSCROLL, SB_PAGEUP);
 
-		if(foundPosition == Position::INVALID_POSITION) {
-			target().beep();	// not found
-			return 1;
-		}
-		if(!extend_)
-			caret.moveTo(foundPosition);
-		else if(foundPosition > caret)
-			caret.select(caret, Position(foundPosition.line, foundPosition.column + 1));
-		else
-			caret.select(Position(caret.lineNumber(), caret.columnNumber() + 1), foundPosition);
-	} else {
-		int type = type_;
-		switch(type) {
-		case CONTEXTUAL_BEGINNING_OF_LINE:
-			type = caret.isFirstPrintableCharacterOfLine() ? BEGINNING_OF_LINE : FIRST_PRINTABLE_CHARACTER_OF_LINE; break;
-		case CONTEXTUAL_END_OF_LINE:
-			type = caret.isLastPrintableCharacterOfLine() ? END_OF_LINE : LAST_PRINTABLE_CHARACTER_OF_LINE; break;
-		case CONTEXTUAL_BEGINNING_OF_VISUAL_LINE:
-			type = caret.isFirstPrintableCharacterOfVisualLine() ? BEGINNING_OF_VISUAL_LINE : FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE; break;
-		case CONTEXTUAL_END_OF_VISUAL_LINE:
-			type = caret.isLastPrintableCharacterOfVisualLine() ? END_OF_VISUAL_LINE : LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE; break;
-		}
-		switch(type) {
-#define ASCENSION_HANDLE_CARET_MOVEMENT(commandType, className, methodName)	\
-	case commandType: extend_ ? caret.extendSelection(mem_fun(className::methodName), offset_) : caret.methodName(offset_); break
-			ASCENSION_HANDLE_CARET_MOVEMENT(FORWARD_CHARACTER, EditPoint, forwardCharacter);
-			ASCENSION_HANDLE_CARET_MOVEMENT(BACKWARD_CHARACTER, EditPoint, backwardCharacter);
-			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_CHARACTER, VisualPoint, leftCharacter);
-			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_CHARACTER, VisualPoint, rightCharacter);
-			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_WORD, VisualPoint, nextWord);
-			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_WORD, VisualPoint, previousWord);
-			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_WORD, VisualPoint, leftWord);
-			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_WORD, VisualPoint, rightWord);
-			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_WORDEND, VisualPoint, nextWordEnd);
-			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_WORDEND, VisualPoint, previousWordEnd);
-			ASCENSION_HANDLE_CARET_MOVEMENT(LEFT_WORDEND, VisualPoint, leftWordEnd);
-			ASCENSION_HANDLE_CARET_MOVEMENT(RIGHT_WORDEND, VisualPoint, rightWordEnd);
-			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_LINE, VisualPoint, nextLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_LINE, VisualPoint, previousLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(NEXT_VISUAL_LINE, VisualPoint, nextVisualLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(PREVIOUS_VISUAL_LINE, VisualPoint, previousVisualLine);
-#undef ASCENSION_HANDLE_CARET_MOVEMENT
-		case NEXT_PAGE:
-			target().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::nextPage), offset_) : caret.nextPage(offset_);
-			break;
-		case PREVIOUS_PAGE:
-			target().sendMessage(WM_VSCROLL, SB_PAGEUP);
-			extend_ ? caret.extendSelection(mem_fun(VisualPoint::previousPage), offset_) : caret.previousPage(offset_);
-			break;
-#define ASCENSION_HANDLE_CARET_MOVEMENT(commandType, className, methodName)	\
-	case commandType: extend_ ? caret.extendSelection(mem_fun(className::methodName)) : caret.methodName(); break
-			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_LINE, EditPoint, beginningOfLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_LINE, EditPoint, endOfLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(FIRST_PRINTABLE_CHARACTER_OF_LINE, VisualPoint, firstPrintableCharacterOfLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(LAST_PRINTABLE_CHARACTER_OF_LINE, VisualPoint, lastPrintableCharacterOfLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_VISUAL_LINE, VisualPoint, beginningOfVisualLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_VISUAL_LINE, VisualPoint, endOfVisualLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, VisualPoint, firstPrintableCharacterOfVisualLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, VisualPoint, lastPrintableCharacterOfVisualLine);
-			ASCENSION_HANDLE_CARET_MOVEMENT(BEGINNING_OF_DOCUMENT, EditPoint, beginningOfDocument);
-			ASCENSION_HANDLE_CARET_MOVEMENT(END_OF_DOCUMENT, EditPoint ,endOfDocument);
-#undef ASCENSION_HANDLE_CARET_MOVEMENT
-		case NEXT_BOOKMARK:
-			return caret.nextBookmark() ? 0 : 1;
-		case PREVIOUS_BOOKMARK:
-			return caret.previousBookmark() ? 0 : 1;
-		}
-	}
+	if(procedure0_ != 0)
+		!extends_ ? (caret.*procedure0_)() : caret.extendSelection(mem_fun(reinterpret_cast<void(VisualPoint::*)(void)>(procedure0_)));
+	else
+		!extends_ ? (caret.*procedure1_)(n) : caret.extendSelection(mem_fun(reinterpret_cast<void(VisualPoint::*)(length_t)>(procedure1_)), n);
 	return 0;
 }
 
@@ -321,11 +304,11 @@ ulong CharacterDeletionCommand::doExecute() {
 			}
 		}
 	} else {
-		document.endSequentialEdit();
+		document.endCompoundChange();
 		const bool composite = !caret.isSelectionEmpty() || n > 1;
 		if(composite) {
 			viewer.freeze();
-			document.beginSequentialEdit();
+			document.beginCompoundChange();
 		}
 
 		try {
@@ -344,7 +327,7 @@ ulong CharacterDeletionCommand::doExecute() {
 		}
 
 		if(composite) {
-			document.endSequentialEdit();
+			document.endCompoundChange();
 			viewer.unfreeze();
 		}
 	}
@@ -412,15 +395,24 @@ CharacterInputCommand::CharacterInputCommand(TextViewer& viewer, CodePoint c) : 
  * @see Caret#inputCharacter, TextViewer#onChar, TextViewer#onUniChar
  */
 ulong CharacterInputCommand::doExecute() {
-	if(Session* const session = target().document().session()) {
-		if(session->incrementalSearcher().isRunning()) {
-			CLOSE_COMPLETION_PROPOSAL_POPUP();
-			if(c_ == 0x0009 || !toBoolean(iswcntrl(static_cast<wint_t>(c_))))
-				session->incrementalSearcher().addCharacter(param_);
-			return 0;
+	const long n = numericPrefix();
+	if(n <= 0)
+		return 0;
+	else if(n == 1) {
+		if(Session* const session = target().document().session()) {
+			if(session->incrementalSearcher().isRunning()) {
+				CLOSE_COMPLETION_PROPOSAL_POPUP();
+				if(c_ == 0x0009 || !toBoolean(iswcntrl(static_cast<wint_t>(c_))))
+					session->incrementalSearcher().addCharacter(c_);
+				return 0;
+			}
 		}
+		return target().caret().inputCharacter(c_) ? 1 : 0;
+	} else {
+		String s;
+		text::surrogates::encode(c_, back_inserter(s));
+		return TextInputCommand(target(), s).setNumericPrefix(numericPrefix()).execute();
 	}
-	return target().caret().inputCharacter(c_) ? 1 : 0;
 }
 
 /**
@@ -430,7 +422,7 @@ ulong CharacterInputCommand::doExecute() {
  * on the next visual line is used
  */
 CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(TextViewer& viewer,
-		bool fromPreviousLine) throw() : Command(viewer_), fromPreviousLine_(fromPreviousLine) {
+		bool fromPreviousLine) throw() : Command(viewer), fromPreviousLine_(fromPreviousLine) {
 }
 
 /**
@@ -453,9 +445,9 @@ ulong CharacterInputFromNextLineCommand::doExecute() {
 		VisualPoint p(caret);
 		p.adaptToDocument(false);
 		if(fromPreviousLine_)
-			p.previousVisualLine();
+			p.backwardVisualLine();
 		else
-			p.nextVisualLine();
+			p.forwardVisualLine();
 
 		const length_t column = p.columnNumber();
 		const String& line = document.line(caret.lineNumber() + (fromPreviousLine_ ? -1 : 1));
@@ -565,6 +557,24 @@ ulong CompletionProposalPopupCommand::doExecute() {
 /**
  * Constructor.
  * @param viewer the target text viewer
+ */
+EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(TextViewer& viewer) throw() : Command(viewer) {
+}
+
+/**
+ * @see Command#doExecute
+ * @return 0
+ */
+ulong EntireDocumentSelectionCreationCommand::doExecute() {
+	END_ISEARCH();
+	target().caret().endRectangleSelection();
+	target().caret().select(target().document().accessibleRegion());
+	return 0;
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
  * @param direction the direction to search
  */
 FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) throw() : Command(viewer), direction_(direction) {
@@ -664,7 +674,7 @@ IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) throw(
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong IndentationCommand::execute() {
+ulong IndentationCommand::doExecute() {
 	const long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -675,10 +685,10 @@ ulong IndentationCommand::execute() {
 
 	TextViewer& viewer = target();
 	Caret& caret = viewer.caret();
-	viewer.document().beginSequentialEdit();
+	viewer.document().beginCompoundChange();
 	viewer.freeze();
 	const Position anchorResult(caret.tabIndent(caret.anchor(), caret.isSelectionRectangle(), n));
-	viewer.document().endSequentialEdit();
+	viewer.document().endCompoundChange();
 	caret.select(anchorResult, caret);
 	viewer.unfreeze();
 
@@ -735,6 +745,38 @@ ulong InputMethodSoftKeyboardModeToggleCommand::doExecute() {
 /**
  * Constructor.
  * @param viewer the target text viewer
+ * @param extendSelection set true to extend the selection
+ */
+MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelection) throw() : Command(viewer), extends_(extendSelection) {
+}
+
+/**
+ * @see Command#doExecute
+ * @retval 0 succeeded
+ * @retval 1 failed
+ */
+ulong MatchBracketCommand::doExecute() {
+	END_ISEARCH();
+	Caret& caret = target().caret();
+	const Position matchBracket(caret.matchBrackets().first);
+	if(matchBracket == Position::INVALID_POSITION) {
+		if(beepsOnError())
+			target().beep();	// not found
+		return 1;
+	}
+	caret.endRectangleSelection();
+	if(!extends_)
+		caret.moveTo(matchBracket);
+	else if(matchBracket > caret)
+		caret.select(caret, Position(matchBracket.line, matchBracket.column + 1));
+	else
+		caret.select(Position(caret.lineNumber(), caret.columnNumber() + 1), matchBracket);
+	return 0;
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
  * @param insertPrevious set true to insert on previous line. otherwise on the current line
  */
 NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) throw() : Command(viewer), insertsPrevious_(insertPrevious) {
@@ -745,7 +787,7 @@ NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) throw() 
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong NewlineCommand::execute() {
+ulong NewlineCommand::doExecute() {
 	if(numericPrefix() <= 0)
 		return 0;
 	TextViewer& viewer = target();
@@ -779,11 +821,11 @@ ulong NewlineCommand::execute() {
 	}
 
 	viewer.freeze();
-	viewer.document().beginSequentialEdit();
+	viewer.document().beginCompoundChange();
 	if(!caret.isSelectionEmpty())
 		caret.eraseSelection();
 	caret.newLine(false, numericPrefix());
-	viewer.document().endSequentialEdit();
+	viewer.document().endCompoundChange();
 	caret.moveTo(caret.anchor());
 	viewer.unfreeze();
 	return 0;
@@ -828,7 +870,7 @@ ulong PasteCommand::doExecute() {
 		target().caret().pasteToSelection(usesKillRing_);
 	} catch(...) {
 		if(beepsOnError())
-			beeps();
+			target().beep();
 		return 1;
 	}
 	return 0;
@@ -903,14 +945,14 @@ ulong ReconversionCommand::doExecute() {
  * @param callback
  */
 ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
-		IInteractiveReplacementCallback* callback) throw() : Command(viewer), onlySelection_(onlySelection), callback_(callback) {
+		searcher::IInteractiveReplacementCallback* callback) throw() : Command(viewer), onlySelection_(onlySelection), callback_(callback) {
 }
 
 /**
  * Replaces all matched texts. This does not freeze the text viewer.
  * @return the number of replced strings
  */
-ulong ReplaceAllCommand::execute() {
+ulong ReplaceAllCommand::doExecute() {
 	ABORT_MODES();
     if(onlySelection_ && target().caret().isSelectionEmpty())
 		return 0;
@@ -949,80 +991,58 @@ ulong ReplaceAllCommand::execute() {
 }
 
 /**
- * Starts box selection, or extends the selection if the selection is exist.
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param procedure a pointer to the member function defines the destination
+ */
+RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
+		void(Caret::*procedure)(void)) : Command(viewer), procedure0_(procedure), procedure1_(0) {
+	if(procedure == 0 || find(MOVEMENT_PROCEDURES_0, MANAH_ENDOF(MOVEMENT_PROCEDURES_0), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_0))
+		throw invalid_argument("procedure");
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param procedure a pointer to the member function defines the destination
+ */
+RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
+		void(Caret::*procedure)(length_t)) : Command(viewer), procedure0_(0), procedure1_(procedure) {
+	if(procedure == 0 || find(MOVEMENT_PROCEDURES_1, MANAH_ENDOF(MOVEMENT_PROCEDURES_1), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_1))
+		throw invalid_argument("procedure");
+}
+
+/**
+ * @see Command#doExecute
  * @return 0
  */
-ulong RowSelectionExtensionCommand::execute() {
+ulong RowSelectionExtensionCommand::doExecute() {
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	END_ISEARCH();
 
 	Caret& caret = target().caret();
-	static const int commandMap[] = {
-		FORWARD_CHARACTER, CaretMovementCommand::FORWARD_CHARACTER,
-		BACKWARD_CHARACTER, CaretMovementCommand::BACKWARD_CHARACTER,
-		LEFT_CHARACTER, CaretMovementCommand::LEFT_CHARACTER,
-		RIGHT_CHARACTER, CaretMovementCommand::RIGHT_CHARACTER,
-		NEXT_WORD, CaretMovementCommand::NEXT_WORD,
-		PREVIOUS_WORD, CaretMovementCommand::PREVIOUS_WORD,
-		LEFT_WORD, CaretMovementCommand::LEFT_WORD,
-		RIGHT_WORD, CaretMovementCommand::RIGHT_WORD,
-		NEXT_WORDEND, CaretMovementCommand::NEXT_WORDEND,
-		PREVIOUS_WORDEND, CaretMovementCommand::PREVIOUS_WORDEND,
-		LEFT_WORDEND, CaretMovementCommand::LEFT_WORDEND,
-		RIGHT_WORDEND, CaretMovementCommand::RIGHT_WORDEND,
-		NEXT_LINE, CaretMovementCommand::NEXT_LINE,
-		PREVIOUS_LINE, CaretMovementCommand::PREVIOUS_LINE,
-		NEXT_VISUAL_LINE, CaretMovementCommand::NEXT_VISUAL_LINE,
-		PREVIOUS_VISUAL_LINE, CaretMovementCommand::PREVIOUS_VISUAL_LINE,
-		BEGINNING_OF_LINE, CaretMovementCommand::BEGINNING_OF_LINE,
-		END_OF_LINE, CaretMovementCommand::END_OF_LINE,
-		FIRST_PRINTABLE_CHARACTER_OF_LINE, CaretMovementCommand::FIRST_PRINTABLE_CHARACTER_OF_LINE,
-		LAST_PRINTABLE_CHARACTER_OF_LINE, CaretMovementCommand::LAST_PRINTABLE_CHARACTER_OF_LINE,
-		CONTEXTUAL_BEGINNING_OF_LINE, CaretMovementCommand::CONTEXTUAL_BEGINNING_OF_LINE,
-		CONTEXTUAL_END_OF_LINE, CaretMovementCommand::CONTEXTUAL_END_OF_LINE,
-		BEGINNING_OF_VISUAL_LINE, CaretMovementCommand::BEGINNING_OF_VISUAL_LINE,
-		END_OF_VISUAL_LINE, CaretMovementCommand::END_OF_VISUAL_LINE,
-		FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, CaretMovementCommand::FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,
-		LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE, CaretMovementCommand::LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,
-		CONTEXTUAL_BEGINNING_OF_VISUAL_LINE, CaretMovementCommand::CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,
-		CONTEXTUAL_END_OF_VISUAL_LINE, CaretMovementCommand::CONTEXTUAL_END_OF_VISUAL_LINE
-	};
-
 	if(caret.isSelectionEmpty() && !caret.isSelectionRectangle())
 		caret.beginRectangleSelection();
-	assert(type_ >= 0 && type_ < MANAH_COUNTOF(commandMap));
-	for(int i = 0; i < MANAH_COUNTOF(commandMap); i += 2) {
-		if(commandMap[i] == type_) {
-			CaretMovementCommand(target(), static_cast<CaretMovementCommand::Type>(commandMap[i + 1]), true).execute();
-			break;
-		}
-	}
-	return 0;
-}
-
-/**
- * Selects a whole document, or selects the word near the caret.
- * @return 0
- */
-ulong SelectionCreationCommand::execute() {
-	END_ISEARCH();
-
-	target().caret().endRectangleSelection();
-	if(type_ == ALL)
-		target().caret().select(target().document().accessibleRegion());
-	else if(type_ == CURRENT_WORD)
-		target().caret().selectWord();
+	if(procedure0_ != 0)
+		return CaretMovementCommand(target(), procedure0_, true).execute();
 	else
-		assert(false);
-	return 0;
+		return CaretMovementCommand(target(), procedure1_, true).execute();
 }
 
 /**
- * Tabifies or untabifies.
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param untabify set true to untabify rather than tabify
+ */
+TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) throw() : Command(viewer), untabify_(untabify) {
+}
+
+/**
+ * @see Command#doExecute
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong TabifyCommand::execute() {
+ulong TabifyCommand::doExecute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	ABORT_MODES();
@@ -1031,33 +1051,68 @@ ulong TabifyCommand::execute() {
 }
 
 /**
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param text the text to input. this can be empty or ill-formed UTF-16 sequence
+ */
+TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) throw() : Command(viewer), text_(text) {
+}
+
+/**
  * Inserts a text. If the incremental search is active, appends a string to the end of the pattern.
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong TextInputCommand::execute() {
-	// インクリメンタル検索中 -> 検索式に追加
+ulong TextInputCommand::doExecute() {
+	const long n = numericPrefix();
+	if(n <= 0)
+		return 0;
+
 	if(Session* const session = target().document().session()) {
 		if(session->incrementalSearcher().isRunning()) {
-			session->incrementalSearcher().addString(param_);
+			if(n > 1) {
+				basic_stringbuf<Char> b;
+				for(long i = 0; i < n; ++i)
+					b.sputn(text_.data(), static_cast<streamsize>(text_.length()));
+				session->incrementalSearcher().addString(b.str());
+			} else
+				session->incrementalSearcher().addString(text_);
 			return 0;
 		}
 	}
 
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
-	target().caret().replaceSelection(param_);
+	if(n > 1) {
+		basic_stringbuf<Char> b;
+		for(long i = 0; i < n; ++i)
+			b.sputn(text_.data(), static_cast<streamsize>(text_.length()));
+		target().caret().replaceSelection(b.str());
+	} else
+		target().caret().replaceSelection(text_);
 	return 0;
 }
 
 /**
- * Transposes two characters, words, lines, paragraphs, or sentences.
+ * Constructor.
+ * @param viewer the target text viewer
+ * @param procedure indicates what to transpose. this must be one of:
+ * @c EditPoint#transposeCharacters, @c EditPoint#transposeWords, @c EditPoint#transposeLines
+ * @throw std#invalid_argument
+ */
+TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(EditPoint::*procedure)(void)) : Command(viewer), procedure_(procedure) {
+	if(procedure_ != EditPoint::transposeCharacters
+			&& procedure_ != EditPoint::transposeWords
+			&& procedure_ != EditPoint::transposeLines)
+		throw invalid_argument("procedure");
+}
+
+/**
+ * @see Command#doExecute
  * @retval 0 succeeded
  * @retval 1 failed
- * @see VisualPoint#transposeCharacters, VisualPoint#transposeWords,
- * VisualPoint#transposeLines, VisualPoint#transposeParagraphs, VisualPoint#transposeSentences
  */
-ulong TranspositionCommand::execute() {
+ulong TranspositionCommand::doExecute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	END_ISEARCH();
@@ -1065,51 +1120,45 @@ ulong TranspositionCommand::execute() {
 
 	TextViewer& viewer = target();
 	Caret& caret = viewer.caret();
-	bool succeeded = false;
 	viewer.freeze();
-	viewer.document().beginSequentialEdit();
-	switch(type_) {
-	case CHARACTERS:	succeeded = caret.transposeCharacters();	break;
-	case WORDS:			succeeded = caret.transposeWords();			break;
-	case LINES:			succeeded = caret.transposeLines();			break;
-//	case SENTENCES:		succeeded = caret.transposeSentences();		break;
-//	case PARAGRAPHS:	succeeded = caret.transposeParagraphs();	break;
-	}
-	if(!succeeded)
-		viewer.beep();
-	viewer.document().endSequentialEdit();
+	viewer.document().beginCompoundChange();
+	const bool succeeded = (caret.*procedure_)();
+	viewer.document().endCompoundChange();
 	viewer.unfreeze();
 
-	return succeeded ? 0 : 1;
+	if(succeeded) {
+		if(beepsOnError())
+			viewer.beep();
+		return 0;
+	}
+	return 1;
 }
 
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param redo set true to perform redo. otherwise undo
+ * @param redo set true to perform redo, rather than undo
  */
-UndoCommand::UndoCommand(TextViewer& viewer,
-		Direction direction) throw() : Command(viewer), direction_(direction) {
+UndoCommand::UndoCommand(TextViewer& viewer, bool redo) throw() : Command(viewer), redo_(redo) {
 }
 
 /**
  * Undo or redo.
  * @retval 0 succeeded
  * @retval 1 failed
+ * @retval 2 partialy done
  * @see Document#undo, Document#redo
  */
-ulong UndoCommand::execute() {
+ulong UndoCommand::doExecute() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
-	if((param_ && target().document().numberOfUndoableEdits() == 0)
-			|| (!param_ && target().document().numberOfRedoableEdits() == 0))
+	if((!redo_ && target().document().numberOfUndoableEdits() == 0)
+			|| (redo_ && target().document().numberOfRedoableEdits() == 0))
 		return 1;
 
 	WaitCursor wc;
-	if(param_)	target().document().undo();
-	else		target().document().redo();
-	return 0;
+	return (!redo_ ? target().document().undo() : target().document().redo()) ? 0 : 2;
 }
 
 /**
@@ -1153,14 +1202,30 @@ ulong WordDeletionCommand::doExecute() {
 	}
 	if(to.base().tell() != from) {
 		viewer.freeze();
-		document.beginSequentialEdit();
-		try {
-			caret.moveTo(document.erase(from, to.base().tell()));
-		} catch(...) {
-		}
-		document.endSequentialEdit();
+		document.beginCompoundChange();
+		document.erase(from, to.base().tell());
+		caret.moveTo(min(from, to.base().tell()));
+		document.endCompoundChange();
 		viewer.unfreeze();
 	}
+	return 0;
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
+ */
+WordSelectionCreationCommand::WordSelectionCreationCommand(TextViewer& viewer) throw() : Command(viewer) {
+}
+
+/**
+ * @see Command#doExecute
+ * @return 0
+ */
+ulong WordSelectionCreationCommand::doExecute() {
+	END_ISEARCH();
+	target().caret().endRectangleSelection();
+	target().caret().selectWord();
 	return 0;
 }
 

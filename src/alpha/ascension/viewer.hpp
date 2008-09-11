@@ -323,7 +323,7 @@ namespace ascension {
 				public manah::win32::ui::CustomControl<TextViewer>,
 				virtual public kernel::IDocumentListener,
 				virtual public kernel::IDocumentStateListener,
-				virtual public kernel::ISequentialEditListener,
+				virtual public kernel::IDocumentRollbackListener,
 				virtual public layout::IFontSelectorListener,
 				virtual public layout::IVisualLinesListener,
 				virtual public ICaretListener,
@@ -578,9 +578,7 @@ namespace ascension {
 			// kernel.IDocumentListener
 			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// kernel.ISequentialEditListener
-			void documentSequentialEditStarted(const kernel::Document& document);
-			void documentSequentialEditStopped(const kernel::Document& document);
+			// kernel.IDocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document);
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
 			// layout.IFontSelectorListener

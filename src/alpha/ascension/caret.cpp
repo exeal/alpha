@@ -303,6 +303,39 @@ VisualPoint::~VisualPoint() throw() {
 }
 
 /**
+ * Moves to the previous page.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::backwardPage(length_t offset /* = 1 */) {
+	verifyViewer();
+	// TODO: calculate exact number of visual lines.
+	backwardVisualLine(viewer_->numberOfVisibleLines() * offset);
+}
+
+/**
+ * Moves to the previous visual line.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::backwardVisualLine(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	const TextRenderer& renderer = viewer_->textRenderer();
+	length_t line = lineNumber(), subline = renderer.lineLayout(line).subline(columnNumber());
+	if(line == 0 && subline == 0)
+		return;
+	if(lastX_ == -1)
+		updateLastX();
+	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
+	const LineLayout& layout = renderer.lineLayout(line);
+	Position newPosition(line, layout.offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
+	if(layout.subline(newPosition.column) != subline)
+		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
+	crossingLines_ = true;
+	moveTo(newPosition);
+	crossingLines_ = false;
+}
+
+/**
  * Moves to the beginning of the visual line.
  * @see EditPoint#beginningOfLine
  */
@@ -323,6 +356,28 @@ bool VisualPoint::canPaste() {
 	else if(toBoolean(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || toBoolean(::IsClipboardFormatAvailable(CF_TEXT)))
 		return true;
 	return false;
+}
+
+/// Moves to the beginning of the line or the first printable character in the line by context.
+void VisualPoint::contextualBeginningOfLine() {
+	isFirstPrintableCharacterOfLine() ? beginningOfLine() : firstPrintableCharacterOfLine();
+}
+
+/// Moves to the beginning of the visual line or the first printable character in the visual line
+/// by context.
+void VisualPoint::contextualBeginningOfVisualLine() {
+	isFirstPrintableCharacterOfLine() ? beginningOfVisualLine() : firstPrintableCharacterOfVisualLine();
+}
+
+/// Moves to the end of the line or the last printable character in the line by context.
+void VisualPoint::contextualEndOfLine() {
+	isLastPrintableCharacterOfLine() ? endOfLine() : lastPrintableCharacterOfLine();
+}
+
+/// Moves to the end of the visual line or the last printable character in the visual line by
+/// context.
+void VisualPoint::contextualEndOfVisualLine() {
+	isLastPrintableCharacterOfLine() ? endOfVisualLine() : lastPrintableCharacterOfVisualLine();
 }
 
 /**
@@ -450,7 +505,7 @@ void VisualPoint::endOfVisualLine() {
 	Position newPosition(lineNumber(), (subline < layout.numberOfSublines() - 1) ?
 		layout.sublineOffset(subline + 1) : document()->lineLength(lineNumber()));
 	if(layout.subline(newPosition.column) != subline)
-		newPosition = getBackwardCharacterPosition(*document(), newPosition, characterUnit());
+		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
 	moveTo(newPosition);
 }
 
@@ -474,6 +529,40 @@ void VisualPoint::firstPrintableCharacterOfVisualLine() {
 	moveTo(Position(line,
 		identifierSyntax().eatWhiteSpaces(s.begin() + layout.sublineOffset(subline),
 			s.begin() + ((subline < layout.numberOfSublines() - 1) ? layout.sublineOffset(subline + 1) : s.length()), true) - s.begin()));
+}
+
+/**
+ * Moves to the next page.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::forwardPage(length_t offset /* = 1 */) {
+	verifyViewer();
+	// TODO: calculate exact number of visual lines.
+	forwardVisualLine(viewer_->numberOfVisibleLines() * offset);
+}
+
+/**
+ * Moves to the next visual line.
+ * @param offset the offset of the movement
+ */
+void VisualPoint::forwardVisualLine(length_t offset /* = 1 */) {
+	verifyViewer();
+	normalize();
+	const TextRenderer& renderer = viewer_->textRenderer();
+	const LineLayout* layout = &renderer.lineLayout(lineNumber());
+	length_t line = lineNumber(), subline = layout->subline(columnNumber());
+	if(line == document()->numberOfLines() - 1 && subline == layout->numberOfSublines() - 1)
+		return;
+	if(lastX_ == -1)
+		updateLastX();
+	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
+	layout = &renderer.lineLayout(line);
+	Position newPosition(line, layout->offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
+	if(layout->subline(newPosition.column) != subline)
+		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
+	crossingLines_ = true;
+	moveTo(newPosition);
+	crossingLines_ = false;
 }
 
 /// 
@@ -625,7 +714,7 @@ void VisualPoint::leftCharacter(length_t offset /* = 1 */) {
  */
 void VisualPoint::leftWord(length_t offset /* = 1 */) {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? previousWord(offset) : nextWord(offset);
+	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWord(offset) : forwardWord(offset);
 }
 
 /**
@@ -634,7 +723,7 @@ void VisualPoint::leftWord(length_t offset /* = 1 */) {
  */
 void VisualPoint::leftWordEnd(length_t offset /* = 1 */) {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? previousWordEnd(offset) : nextWordEnd(offset);
+	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWordEnd(offset) : forwardWordEnd(offset);
 }
 
 /**
@@ -661,76 +750,15 @@ void VisualPoint::newLine(bool inheritIndent, size_t newlines /* = 1 */) {
 	if(newlines > 1) {
 		basic_stringbuf<Char> b;
 		for(size_t i = 0; i < newlines; ++i)
-			b.putn(s.data(), s.length());
+			b.sputn(s.data(), static_cast<streamsize>(s.length()));
 		s = b.str();
 	}
 	insert(s);
 }
 
-/**
- * Moves to the next page.
- * @param offset the offset of the movement
- */
-void VisualPoint::nextPage(length_t offset /* = 1 */) {
-	verifyViewer();
-	// TODO: calculate exact number of visual lines.
-	nextVisualLine(viewer_->numberOfVisibleLines() * offset);
-}
-
-/**
- * Moves to the next visual line.
- * @param offset the offset of the movement
- */
-void VisualPoint::nextVisualLine(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	const TextRenderer& renderer = viewer_->textRenderer();
-	const LineLayout* layout = &renderer.lineLayout(lineNumber());
-	length_t line = lineNumber(), subline = layout->subline(columnNumber());
-	if(line == document()->numberOfLines() - 1 && subline == layout->numberOfSublines() - 1)
-		return;
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
-	layout = &renderer.lineLayout(line);
-	Position newPosition(line, layout->offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
-	if(layout->subline(newPosition.column) != subline)
-		newPosition = getBackwardCharacterPosition(*document(), newPosition, characterUnit());
-	crossingLines_ = true;
-	moveTo(newPosition);
-	crossingLines_ = false;
-}
-
-/**
- * Moves to the beginning of the next word.
- * @param offset the number of words
- */
-void VisualPoint::nextWord(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the end of the next word.
- * @param offset the number of words
- */
-void VisualPoint::nextWordEnd(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
-}
-
 inline Position VisualPoint::offsetPosition(signed_length_t offset) const {
-	return (offset >= 0) ?
-		getForwardCharacterPosition(*document(), position(), characterUnit(), offset)
-		: getBackwardCharacterPosition(*document(), position(), characterUnit(), offset);
+	return offsetCharacterPosition(*document(), position(),
+		(offset >= 0) ? FORWARD : BACKWARD, characterUnit(), (offset >= 0) ? offset : -offset);
 }
 
 /**
@@ -746,9 +774,7 @@ void VisualPoint::paste(signed_length_t length /* = 0 */) {
 	if(document()->isReadOnly() || length == 0)
 		paste(position());
 	else
-		paste((length > 0) ?
-			getForwardCharacterPosition(*document(), *this, characterUnit(), length)
-			: getBackwardCharacterPosition(*document(), *this, UTF16_CODE_UNIT, -length));
+		paste(offsetPosition(length));
 }
 
 /**
@@ -795,74 +821,13 @@ void VisualPoint::paste(const Position& other) {
 }
 
 /**
- * Moves to the previous page.
- * @param offset the offset of the movement
- */
-void VisualPoint::previousPage(length_t offset /* = 1 */) {
-	verifyViewer();
-	// TODO: calculate exact number of visual lines.
-	previousVisualLine(viewer_->numberOfVisibleLines() * offset);
-}
-
-/**
- * Moves to the previous visual line.
- * @param offset the offset of the movement
- */
-void VisualPoint::previousVisualLine(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	const TextRenderer& renderer = viewer_->textRenderer();
-	length_t line = lineNumber(), subline = renderer.lineLayout(line).subline(columnNumber());
-	if(line == 0 && subline == 0)
-		return;
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
-	const LineLayout& layout = renderer.lineLayout(line);
-	Position newPosition(line, layout.offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
-	if(layout.subline(newPosition.column) != subline)
-		newPosition = getBackwardCharacterPosition(*document(), newPosition, characterUnit());
-	crossingLines_ = true;
-	moveTo(newPosition);
-	crossingLines_ = false;
-}
-
-/**
- * Moves to the beginning of the previous word.
- * @param offset the number of words
- */
-void VisualPoint::previousWord(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
-}
-
-/**
- * Moves to the end of the previous word.
- * @param offset the number of words
- */
-void VisualPoint::previousWordEnd(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
-}
-
-/**
  * 指定範囲がビューの中央になるようにスクロールする。ただし既に可視なら何もしない
  * @param length 範囲を構成するもう一方の点までの文字数
  * @return 範囲がビューに納まる場合は true を返す
  */
 bool VisualPoint::recenter(signed_length_t length /* = 0 */) {
 	verifyViewer();
-	return recenter((length >= 0) ?
-		getForwardCharacterPosition(*document(), *this, characterUnit(), length)
-		: getBackwardCharacterPosition(*document(), *this, characterUnit(), -length));
+	return recenter(offsetPosition(length));
 }
 
 /**
@@ -891,7 +856,7 @@ void VisualPoint::rightCharacter(length_t offset /* = 1 */) {
  */
 void VisualPoint::rightWord(length_t offset /* = 1 */) {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? nextWord(offset) : previousWord(offset);
+	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWord(offset) : backwardWord(offset);
 }
 
 /**
@@ -900,7 +865,7 @@ void VisualPoint::rightWord(length_t offset /* = 1 */) {
  */
 void VisualPoint::rightWordEnd(length_t offset /* = 1 */) {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? nextWordEnd(offset) : previousWordEnd(offset);
+	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWordEnd(offset) : backwardWordEnd(offset);
 }
 
 /**
@@ -910,9 +875,7 @@ void VisualPoint::rightWordEnd(length_t offset /* = 1 */) {
  */
 bool VisualPoint::show(signed_length_t length /* = 0 */) {
 	verifyDocument();
-	return show((length >= 0) ?
-		getForwardCharacterPosition(*document(), *this, characterUnit(), length)
-		: getBackwardCharacterPosition(*document(), *this, characterUnit(), -length));
+	return show(offsetPosition(length));
 }
 
 /**
@@ -984,176 +947,6 @@ Position VisualPoint::spaceIndent(const Position& other, bool rectangle, long le
 Position VisualPoint::tabIndent(const Position& other, bool rectangle, long level /* = 1 */) {
 	verifyViewer();
 	return doIndent(other, L'\t', rectangle, level);
-}
-
-/**
- * Transposes the two grapheme clusters on either side of the point.
- * If the point is not start of a cluster, this method fails.
- * If the transposing target is not in the current line, this method fails.
- * @return false if failed
- */
-bool VisualPoint::transposeCharacters() {
-	verifyViewer();
-	if(document()->isReadOnly())
-		return false;
-
-	// As transposing characters in string "ab":
-	//
-	//  a b -- transposing clusters 'a' and 'b'. result is "ba"
-	// ^ ^ ^
-	// | | next-cluster (named pos[2])
-	// | middle-cluster (named pos[1]; usually current-position)
-	// previous-cluster (named pos[0])
-
-	Position pos[3];
-	const Region region(document()->accessibleRegion());
-
-	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(getCodePoint()))	// not the start of a grapheme
-		return false;
-	else if(!region.includes(position()))	// inaccessible
-		return false;
-
-	if(columnNumber() == 0 || position() == region.first) {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(), pos[0] = position()));
-		pos[1] = (++i).base().tell();
-		if(pos[1].line != pos[0].line || pos[1] == pos[0] || !region.includes(pos[1]))
-			return false;
-		pos[2] = (++i).base().tell();
-		if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
-			return false;
-	} else if(columnNumber() == document()->lineLength(lineNumber()) || position() == region.second) {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(), pos[2] = position()));
-		pos[1] = (--i).base().tell();
-		if(pos[1].line != pos[2].line || pos[1] == pos[2] || !region.includes(pos[1]))
-			return false;
-		pos[0] = (--i).base().tell();
-		if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
-			return false;
-	} else {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(), pos[1] = position()));
-		pos[2] = (++i).base().tell();
-		if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
-			return false;
-		i.base().seek(pos[1]);
-		pos[0] = (--i).base().tell();
-		if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
-			return false;
-	}
-
-	moveTo(lineNumber(), pos[1].column);
-	String s = getText(pos[2]);
-	moveTo(lineNumber(), pos[0].column);
-	s += getText(pos[1]);
-	erase(pos[2]);
-	insert(s);
-
-	return true;
-
-#undef IS_RESTRICTION
-}
-
-/**
- * Transposes the current line and the previous line.
- * If the current line is the first line, transposes with the next line.
- * The line breaks will not be exchanged.
- * @return false if failed
- */
-bool VisualPoint::transposeLines() {
-	verifyViewer();
-
-	if(document()->isReadOnly())
-		return false;
-
-	const Region region(document()->accessibleRegion());
-	if(region.first.line == region.second.line)	// there is just one line
-		return false;
-
-	if(lineNumber() == region.first.line)
-		moveTo(lineNumber() + 1, columnNumber());
-
-	const String str1 = (lineNumber() - 1 == region.first.line) ?
-		document()->line(lineNumber() - 1).substr(region.first.column) : document()->line(lineNumber() - 1);
-	const String str2 = (lineNumber() == region.second.line) ?
-		document()->line(lineNumber()).substr(0, region.second.column) : document()->line(lineNumber());
-
-	// make the two lines empty
-	if(!str2.empty()) {
-		beginningOfLine();
-		erase(static_cast<signed_length_t>(str2.length()), UTF16_CODE_UNIT);
-	}
-	if(!str1.empty()) {
-		moveTo(lineNumber() - 1, (lineNumber() == region.first.line) ? region.first.column : 0);
-		erase(static_cast<signed_length_t>(str1.length()), UTF16_CODE_UNIT);
-		moveTo(lineNumber() + 1, columnNumber());
-	}
-
-	// insert into the two lines
-	if(!str1.empty()) {
-		beginningOfLine();
-		insert(str1);
-	}
-	moveTo(lineNumber() - 1, columnNumber());
-	if(!str2.empty()) {
-		moveTo(lineNumber(), (lineNumber() == region.first.line) ? region.first.column : 0);
-		insert(str2);
-	}
-	moveTo(Position(lineNumber() + 2, 0));
-
-	return true;
-}
-
-/**
- * Transposes the two words on either side of the point.
- * @return false if failed
- */
-bool VisualPoint::transposeWords() {
-	verifyViewer();
-
-	if(document()->isReadOnly())
-		return false;
-
-	// As transposing words in string "(\w+)[^\w*](\w+)":
-	//
-	//  abc += xyz -- transposing words "abc" and "xyz". result is "xyz+=abc"
-	// ^   ^  ^   ^
-	// |   |  |   2nd-word-end (named pos[3])
-	// |   |  2nd-word-start (named pos[2])
-	// |   1st-word-end (named pos[1])
-	// 1st-word-start (named pos[0])
-
-	const Region region(document()->accessibleRegion());
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, identifierSyntax());
-	Position pos[4];
-
-	// find the backward word (1st-word-*)...
-	pos[0] = (--i).base().tell();
-	i.setComponent(AbstractWordBreakIterator::END_OF_ALPHANUMERICS);
-	pos[1] = (++i).base().tell();
-	if(pos[1] == pos[0])	// the word is empty
-		return false;
-
-	// ...and then backward one (2nd-word-*)
-	i.base().seek(*this);
-	i.setComponent(AbstractWordBreakIterator::START_OF_ALPHANUMERICS);
-	pos[2] = (++i).base().tell();
-	if(pos[2] == position())
-		return false;
-	pos[3] = (++i).base().tell();
-	if(pos[2] == pos[3])	// the word is empty
-		return false;
-
-	// replace
-	moveTo(pos[2]);
-	String str = getText(pos[3]);
-	moveTo(pos[1]);
-	str += getText(pos[2]);
-	moveTo(pos[0]);
-	str += getText(pos[1]);
-	erase(pos[3]);
-	insert(str);
-
-	return true;
 }
 
 /// Updates @c lastX_ with the current position.
@@ -1262,8 +1055,6 @@ Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) th
 		othersEditedFromLastInputChar_(false), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
 	document()->addListener(*this);
-	excludeFromRestriction(true);
-	anchor_->excludeFromRestriction(true);
 }
 
 /// Destructor.
@@ -1497,9 +1288,9 @@ void Caret::cutSelection(bool useKillRing) {
 		throw ReadOnlyDocumentException();
 	copySelection(useKillRing);	// this may throw
 	textViewer().freeze(true);
-	document()->beginSequentialEdit();
+	document()->beginCompoundChange();
 	eraseSelection();
-	document()->endSequentialEdit();
+	document()->endCompoundChange();
 	textViewer().unfreeze(true);
 }
 
@@ -1556,9 +1347,11 @@ void Caret::eraseSelection() {
 	Document& doc = *document();
 	if(doc.isReadOnly() || isSelectionEmpty())
 		return;
-	else if(!isSelectionRectangle())	// the selection is linear
-		moveTo(doc.erase(*anchor_, *this));
-	else {	// the selection is rectangle
+	else if(!isSelectionRectangle()) {	// the selection is linear
+		const Position to(min<Position>(*anchor_, *this));
+		doc.erase(*anchor_, *this);
+		moveTo(to);
+	} else {	// the selection is rectangle
 		const Position resultPosition(beginning());
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
@@ -1744,8 +1537,8 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 	if(!isSelectionEmpty())	// just replace if the selection is not empty
 		replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 	else if(overtypeMode_) {
-		if(!doc.isSequentialEditing())
-			doc.beginSequentialEdit();
+		if(!doc.isCompoundChanging())
+			doc.beginCompoundChange();
 		textViewer().freeze(true);
 		destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		textViewer().unfreeze(true);
@@ -1759,9 +1552,9 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 
 		// prepare a packing the following multiple inputs
 		if(othersEditedFromLastInputChar_ || !alpha)
-			doc.endSequentialEdit();
-		if(alpha && !doc.isSequentialEditing()) {
-			doc.beginSequentialEdit();
+			doc.endCompoundChange();
+		if(alpha && !doc.isCompoundChanging()) {
+			doc.beginCompoundChange();
 			othersEditedFromLastInputChar_ = false;
 		}
 
@@ -1809,7 +1602,7 @@ void Caret::pasteToSelection(bool useKillRing) {
 	if(useKillRing && (session == 0 || session->killRing().numberOfKills() == 0))
 		return;
 
-	document()->beginSequentialEdit();
+	document()->beginCompoundChange();
 	textViewer().freeze(true);
 	if(!useKillRing) {
 		if(!isSelectionEmpty())
@@ -1835,7 +1628,7 @@ void Caret::pasteToSelection(bool useKillRing) {
 		select(p, position());
 		yanking_ = true;
 	}
-	document()->endSequentialEdit();
+	document()->endCompoundChange();
 	textViewer().unfreeze(true);
 }
 
@@ -1862,7 +1655,7 @@ void Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 	if(document()->isReadOnly())
 		return;
 	const Region oldRegion(selectionRegion());
-	document()->beginSequentialEdit();
+	document()->beginCompoundChange();
 	textViewer().freeze(true);
 	if(!isSelectionEmpty())
 		eraseSelection();
@@ -1873,7 +1666,7 @@ void Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 	else
 		insert(first, last);
 	textViewer().unfreeze(true);
-	document()->endSequentialEdit();
+	document()->endCompoundChange();
 }
 
 /**
