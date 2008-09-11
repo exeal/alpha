@@ -64,51 +64,13 @@ namespace ascension {
 			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public Command {
 			public:
-				/// Types of movement.
-				enum Type {
-					FORWARD_CHARACTER,							///< Moves or extends to the next (forward) character.
-					BACKWARD_CHARACTER,							///< Moves or extends to the previous (backward) character.
-					LEFT_CHARACTER,								///< Moves or extends to the left character.
-					RIGHT_CHARACTER,							///< Moves or extends to the right character.
-					NEXT_WORD,									///< Moves or extends to the start of the next word.
-					PREVIOUS_WORD,								///< Moves or extends to the start of the previous word.
-					LEFT_WORD,									///< Moves or extends to the start of the left word.
-					RIGHT_WORD,									///< Moves or extends to the start of the right word.
-					NEXT_WORDEND,								///< Moves or extends to the end of the next word.
-					PREVIOUS_WORDEND,							///< Moves or extends to the end of the previous word.
-					LEFT_WORDEND,								///< Moves or extends to the end of the left word.
-					RIGHT_WORDEND,								///< Moves or extends to the end of the right word.
-					NEXT_LINE,									///< Moves or extends to the next logical line.
-					PREVIOUS_LINE,								///< Moves or extends to the previous logical line.
-					NEXT_VISUAL_LINE,							///< Moves or extends to the next visual line.
-					PREVIOUS_VISUAL_LINE,						///< Moves or extends to the previous visual line.
-					NEXT_PAGE,									///< Moves or extends to the next page.
-					PREVIOUS_PAGE,								///< Moves or extends to the previous page.
-					BEGINNING_OF_LINE,							///< Moves or extends to the beginning of the logical line.
-					END_OF_LINE,								///< Moves or extends to the end of the logical line.
-					FIRST_PRINTABLE_CHARACTER_OF_LINE,			///< Moves or extends to the first printable character in the logical line.
-					LAST_PRINTABLE_CHARACTER_OF_LINE,			///< Moves or extends to the last printable character in the logical line.
-					CONTEXTUAL_BEGINNING_OF_LINE,				///< Moves or extends to the beginning of the line or the first printable character in the logical line by context.
-					CONTEXTUAL_END_OF_LINE,						///< Moves or extends to the end of the line or the last printable character in the logical line by context.
-					BEGINNING_OF_VISUAL_LINE,					///< Moves or extends to the start of the visual line.
-					END_OF_VISUAL_LINE,							///< Moves or extends to the end of the visual line.
-					FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Moves or extends to the first printable character in the visual line.
-					LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Moves or extends to the last printable character in the visual line.
-					CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,		///< Moves or extends to the beginning of the line or the first printable character in the visual line by context.
-					CONTEXTUAL_END_OF_VISUAL_LINE,				///< Moves or extends to the end of the line or the last printable character in the visual line by context.
-					BEGINNING_OF_DOCUMENT,						///< Moves or extends to the beginning of the document.
-					END_OF_DOCUMENT,							///< Moves or extends to the end of the document.
-					NEXT_BOOKMARK,								///< Moves or extends to the next bookmark.
-					PREVIOUS_BOOKMARK,							///< Moves or extends to the previous bookmark.
-					MATCH_BRACKET,								///< Moves or extends to the match bracket.
-				};
-				CaretMovementCommand(viewers::TextViewer& view, Type type, bool extend = false, length_t offset = 1) throw()
-						: EditorCommand(view), type_(type), extend_(extend), offset_(offset) {}
-				ulong execute();
+				CaretMovementCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(void), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(length_t), bool extendSelection = false);
 			private:
-				Type type_;
-				bool extend_;
-				length_t offset_;
+				ulong doExecute();
+				void(viewers::Caret::*const procedure0_)(void);
+				void(viewers::Caret::*const procedure1_)(length_t);
+				const bool extends_;
 			};
 			/**
 			 * Deletes the forward/backward N character(s). If the incremental search is active,
@@ -137,7 +99,7 @@ namespace ascension {
 			 */
 			class CharacterInputCommand : public Command {
 			public:
-				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c) throw();
+				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c);
 			private:
 				ulong doExecute();
 				const CodePoint c_;
@@ -164,6 +126,13 @@ namespace ascension {
 			class CompletionProposalPopupCommand : public Command {
 			public:
 				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) throw();
+			private:
+				ulong doExecute();
+			};
+			/// Selects the entire document.
+			class EntireDocumentSelectionCreationCommand : public Command {
+			public:
+				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) throw();
 			private:
 				ulong doExecute();
 			};
@@ -219,6 +188,14 @@ namespace ascension {
 			private:
 				ulong doExecute();
 			};
+			/// Moves the caret or extends the selection to the match bracket.
+			class MatchBracketCommand : public Command {
+			public:
+				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) throw();
+			private:
+				ulong doExecute();
+				const bool extends_;
+			};
 			/**
 			 * Inserts a newline, or exits a mode.
 			 * If the incremental search is running, exits the search. If the content assist is
@@ -242,7 +219,7 @@ namespace ascension {
 			class PasteCommand : public Command {
 			public:
 				PasteCommand(viewers::TextViewer& view, bool useKillRing) throw();
-				ulong execute();
+				ulong doExecute();
 			private:
 				const bool usesKillRing_;
 			};
@@ -266,79 +243,36 @@ namespace ascension {
 			/// Extends the selection and begins rectangular selection.
 			class RowSelectionExtensionCommand : public Command {
 			public:
-				enum Type {
-					FORWARD_CHARACTER,							///< Extends to the next (forward) character.
-					BACKWARD_CHARACTER,							///< Extends to the previous (backward) character.
-					LEFT_CHARACTER,								///< Extends to the left character.
-					RIGHT_CHARACTER,							///< Extends to the right character.
-					NEXT_WORD,									///< Extends to the start of the next word.
-					PREVIOUS_WORD,								///< Extends to the start of the previous word.
-					LEFT_WORD,									///< Extends to the start of the left word.
-					RIGHT_WORD,									///< Extends to the start of the right word.
-					NEXT_WORDEND,								///< Extends to the end of the next word.
-					PREVIOUS_WORDEND,							///< Extends to the end of the previous word.
-					LEFT_WORDEND,								///< Extends to the end of the left word.
-					RIGHT_WORDEND,								///< Extends to the end of the right word.
-					NEXT_LINE,									///< Extends to the next logical line.
-					PREVIOUS_LINE,								///< Extends to the previous logical line.
-					NEXT_VISUAL_LINE,							///< Extends to the next visual line.
-					PREVIOUS_VISUAL_LINE,						///< Extends to the previous visual line.
-					BEGINNING_OF_LINE,							///< Extends to the beginning of the line.
-					END_OF_LINE,								///< Extends to the end of the line.
-					FIRST_PRINTABLE_CHARACTER_OF_LINE,			///< Extends to the first printable character in the line.
-					LAST_PRINTABLE_CHARACTER_OF_LINE,			///< Extends to the last printable character in the line.
-					CONTEXTUAL_BEGINNING_OF_LINE,				///< Extends to the beginning of the line or first printable character in the line by context.
-					CONTEXTUAL_END_OF_LINE,						///< Extends to the end of the line or last printable character in the line by context.
-					BEGINNING_OF_VISUAL_LINE,					///< Extends to the beginning of the visual line.
-					END_OF_VISUAL_LINE,							///< Extends to the end of the visual line.
-					FIRST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Extends to the first printable character in the visual line.
-					LAST_PRINTABLE_CHARACTER_OF_VISUAL_LINE,	///< Extends to the last printable character in the visual line.
-					CONTEXTUAL_BEGINNING_OF_VISUAL_LINE,		///< Extends to the beginning of the visual line or first printable character in the visual line by context.
-					CONTEXTUAL_END_OF_VISUAL_LINE,				///< Extends to the end of the visual line or last printable character in the visual line by context.
-				};
-				RowSelectionExtensionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
+				RowSelectionExtensionCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(void));
+				RowSelectionExtensionCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(length_t));
+				ulong doExecute();
 			private:
-				Type type_;
-			};
-			/// Creates the selection.
-			class SelectionCreationCommand : public EditorCommand {
-			public:
-				enum Type {
-					ALL,			///< Selects the all of the document.
-					CURRENT_WORD	///< Selects the current word.
-				};
-				SelectionCreationCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
-			private:
-				Type type_;
+				void(viewers::Caret::*const procedure0_)(void);
+				void(viewers::Caret::*const procedure1_)(length_t);
 			};
 			/// Tabifies (exchanges tabs and spaces).
-			class TabifyCommand : public internal::EditorCommandBase<bool> {
+			class TabifyCommand : public Command {
 			public:
-				TabifyCommand(viewers::TextViewer& view, bool tabify) throw() : internal::EditorCommandBase<bool>(view, tabify) {}
-				ulong execute();
+				TabifyCommand(viewers::TextViewer& view, bool untabify) throw();
+			private:
+				ulong doExecute();
+				bool untabify_;
 			};
 			/// Inputs a text.
-			class TextInputCommand : public internal::EditorCommandBase<String> {
+			class TextInputCommand : public Command {
 			public:
-				TextInputCommand(viewers::TextViewer& view, const String& text) throw() : internal::EditorCommandBase<String>(view, text) {}
-				ulong execute();
+				TextInputCommand(viewers::TextViewer& view, const String& text) throw();
+			private:
+				ulong doExecute();
+				String text_;
 			};
 			/// Transposes (swaps) the two text elements.
-			class TranspositionCommand : public EditorCommand {
+			class TranspositionCommand : public Command {
 			public:
-				enum Type {
-					CHARACTERS,	///< Transposes the characters.
-					LINES,		///< Transposes the lines.
-					WORDS,		///< Transposes the words.
-//					SENTENCES,	///< Transposes the sentences.
-//					PARAGRAPHS	///< Transposes the paragraphs.
-				};
-				TranspositionCommand(viewers::TextViewer& view, Type type) throw() : EditorCommand(view), type_(type) {}
-				ulong execute();
+				TranspositionCommand(viewers::TextViewer& view, bool(kernel::EditPoint::*procedure)(void));
 			private:
-				Type type_;
+				ulong doExecute();
+				bool(kernel::EditPoint::*const procedure_)(void);
 			};
 			/// Performs undo or redo.
 			class UndoCommand : public Command {
@@ -355,6 +289,13 @@ namespace ascension {
 			private:
 				ulong doExecute();
 				const Direction direction_;
+			};
+			/// Selects the current word.
+			class WordSelectionCreationCommand : public Command {
+			public:
+				explicit WordSelectionCreationCommand(viewers::TextViewer& view) throw();
+			private:
+				ulong doExecute();
 			};
 		} // namespace commands
 

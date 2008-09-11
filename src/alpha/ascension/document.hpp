@@ -184,8 +184,7 @@ namespace ascension {
 		 */
 		class DisposedDocumentException : public std::runtime_error {
 		public:
-			DisposedDocumentException() :
-				std::runtime_error("The document the object connecting to has been already disposed.") {}
+			DisposedDocumentException();
 		};
 
 		/**
@@ -202,8 +201,16 @@ namespace ascension {
 		/// Thrown when the read only document is about to be modified.
 		class ReadOnlyDocumentException : public IllegalStateException {
 		public:
-			/// Constructor.
-			ReadOnlyDocumentException() : IllegalStateException("The document is readonly. Any edit process is denied.") {}
+			ReadOnlyDocumentException();
+		};
+
+		/**
+		 * Thrown when the caller accessed inaccessible region of the document.
+		 * Document#accessibleRegion, Document#erase, Document#insert
+		 */
+		class DocumentAccessViolationException : public std::invalid_argument {
+		public:
+			DocumentAccessViolationException();
 		};
 
 		/**
@@ -212,8 +219,7 @@ namespace ascension {
 		 */
 		class BadPositionException : public std::invalid_argument {
 		public:
-			/// Constructor.
-			BadPositionException() : std::invalid_argument("The position is outside of the document.") {}
+			BadPositionException();
 		};
 
 		/**
@@ -221,40 +227,6 @@ namespace ascension {
 		 * @see BadPositionException
 		 */
 		class BadRegionException : public BadPositionException {};
-
-		/**
-		 * Interface for objects which are interested in getting informed about change of bookmarks of the document.
-		 * @see Bookmarker, Bookmarker#addListener, Bookmarker#removeListener
-		 */
-		class IBookmarkListener {
-		private:
-			/// The bookmark on @a line was set or removed.
-			virtual void bookmarkChanged(length_t line) = 0;
-			/// All bookmarks were removed.
-			virtual void bookmarkCleared() = 0;
-			friend class Bookmarker;
-		};
-
-		/**
-		 * @c Bookmark manages bookmarks of the document.
-		 * @see Document#bookmarker, Document#Line#isBookmarked
-		 */
-		class Bookmarker {
-			MANAH_NONCOPYABLE_TAG(Bookmarker);
-		public:
-			void addListener(IBookmarkListener& listener);
-			void clear() throw();
-			length_t getNext(length_t startLine, Direction direction) const;
-			bool isMarked(length_t line) const;
-			void mark(length_t line, bool set = true);
-			void removeListener(IBookmarkListener& listener);
-			void toggle(length_t line);
-		private:
-			explicit Bookmarker(Document& document) throw();
-			Document& document_;
-			ascension::internal::Listeners<IBookmarkListener> listeners_;
-			friend class Document;
-		};
 
 		/**
 		 * Provides information about a document input.
@@ -315,28 +287,38 @@ namespace ascension {
 
 		/**
 		 * Interface for objects which are interested in getting informed about changes of a
-		 * document's sequential edit.
-		 * @see Document#EditSequence, Document#undo, Document#redo
+		 * document's compound change.
+		 * @see Document#beginCompoundChange
 		 */
-		class ISequentialEditListener {
+		class ICompoundChangeListener {
 		private:
 			/**
-			 * The sequential is started.
+			 * The compound change started.
 			 * @param document the document
 			 */
-			virtual void documentSequentialEditStarted(const Document& document) = 0;
+			virtual void documentCompoundChangeStarted(const Document& document) = 0;
 			/**
-			 * The sequential edit is stopped.
+			 * The compound change stopped.
 			 * @param document the document
 			 */
-			virtual void documentSequentialEditStopped(const Document& document) = 0;
+			virtual void documentCompoundChangeStopped(const Document& document) = 0;
+			friend class Document;
+		};
+
+		/**
+		 * Interface for objects which are interested in getting informed about undo/redo operation
+		 * invocation of document.
+		 * @see Document#beginCompoundChange, Document#undo
+		 */
+		class IDocumentRollbackListener {
+		private:
 			/**
-			 * The undo/redo operation is started.
+			 * The undo/redo operation started.
 			 * @param document the document
 			 */
 			virtual void documentUndoSequenceStarted(const Document& document) = 0;
 			/**
-			 * The undo/redo operation is stopped.
+			 * The undo/redo operation stopped.
 			 * @param document the document
 			 * @param resultPosition preferable position to put the caret
 			 */
@@ -428,6 +410,47 @@ namespace ascension {
 			DocumentPartition p_;
 		};
 
+		/**
+		 * Interface for objects which are interested in getting informed about change of bookmarks of the document.
+		 * @see Bookmarker, Bookmarker#addListener, Bookmarker#removeListener
+		 */
+		class IBookmarkListener {
+		private:
+			/// The bookmark on @a line was set or removed.
+			virtual void bookmarkChanged(length_t line) = 0;
+			/// All bookmarks were removed.
+			virtual void bookmarkCleared() = 0;
+			friend class Bookmarker;
+		};
+
+		/**
+		 * A @c Bookmarker manages bookmarks of the document.
+		 * @see Document#bookmarker, EditPoint#forwardBookmark, EditPoint#backwardBookmark
+		 */
+		class Bookmarker : virtual public IDocumentListener {
+			MANAH_NONCOPYABLE_TAG(Bookmarker);
+		public:
+			~Bookmarker() throw();
+			void addListener(IBookmarkListener& listener);
+			void clear() throw();
+			length_t next(length_t from, Direction direction, std::size_t marks = 1) const;
+			bool isMarked(length_t line) const;
+			void mark(length_t line, bool set = true);
+			void removeListener(IBookmarkListener& listener);
+			void toggle(length_t line);
+		private:
+			manah::GapBuffer<length_t>::Iterator find(length_t line) const throw();
+			// IDocumentListener
+			bool documentAboutToBeChanged(const Document& document, const DocumentChange& change);
+			void documentChanged(const Document& document, const DocumentChange& change);
+		private:
+			explicit Bookmarker(Document& document) throw();
+			Document& document_;
+			manah::GapBuffer<length_t> markedLines_;
+			ascension::internal::Listeners<IBookmarkListener> listeners_;
+			friend class Document;
+		};
+
 		class DocumentCharacterIterator : public text::CharacterIterator,
 			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
 		public:
@@ -476,9 +499,6 @@ namespace ascension {
 			/// Content of a line.
 			class Line : public manah::FastArenaObject<Line> {
 			public:
-				/// Returns true if the line is bookmarked.
-				/// @deprecated 0.8
-				bool isBookmarked() const throw() {return bookmarked_;}
 				/// Returns true if the line has been changed.
 				/// @deprecated 0.8
 				bool isModified() const throw() {return operationHistory_ != 0;}
@@ -487,18 +507,13 @@ namespace ascension {
 				/// Returns the text of the line.
 				const String& text() const throw() {return text_;}
 			private:
-				Line() throw() : operationHistory_(0), newline_(ASCENSION_DEFAULT_NEWLINE), bookmarked_(false) {}
+				Line() throw() : operationHistory_(0), newline_(ASCENSION_DEFAULT_NEWLINE) {}
 				explicit Line(const String& text, Newline newline = ASCENSION_DEFAULT_NEWLINE, bool modified = false)
-					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline), bookmarked_(false) {}
+					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline) {}
 				String text_;
-				ulong operationHistory_ : 28;
-				Newline newline_ : 3;
-				mutable bool bookmarked_ : 1;	// true if the line is bookmarked
-#if (3 < 2 << NLF_COUNT)
-#error "newline_ member is not allocated efficient buffer."
-#endif
+				ulong operationHistory_;
+				Newline newline_;
 				friend class Document;
-				friend class Bookmarker;
 			};
 			typedef manah::GapBuffer<Line*,
 				manah::GapBuffer_DeletePointer<Line*> >	LineList;	///< List of lines.
@@ -511,16 +526,18 @@ namespace ascension {
 			virtual void resetContent();
 
 			// listeners and strategies
+			void addCompoundChangeListener(ICompoundChangeListener& listener);
 			void addListener(IDocumentListener& listener);
 			void addPartitioningListener(IDocumentPartitioningListener& listener);
 			void addPrenotifiedListener(IDocumentListener& listener);
+			void addRollbackListener(IDocumentRollbackListener& listener);
 			void addStateListener(IDocumentStateListener& listener);
-			void addSequentialEditListener(ISequentialEditListener& listener);
+			void removeCompoundChangeListener(ICompoundChangeListener& listener);
 			void removeListener(IDocumentListener& listener);
 			void removePartitioningListener(IDocumentPartitioningListener& listener);
 			void removePrenotifiedListener(IDocumentListener& listener);
+			void removeRollbackListener(IDocumentRollbackListener& listener);
 			void removeStateListener(IDocumentStateListener& listener);
-			void removeSequentialEditListener(ISequentialEditListener& listener);
 
 			// attributes
 			Bookmarker& bookmarker() throw();
@@ -554,11 +571,11 @@ namespace ascension {
 			void setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) throw();
 
 			// manipulations
-			Position erase(const Region& region);
-			Position erase(const Position& pos1, const Position& pos2);
-			Position insert(const Position& at, const String& text);
-			Position insert(const Position& at, const Char* first, const Char* last);
-			Position insert(const Position& at, std::basic_istream<Char>& in);
+			bool erase(const Region& region);
+			bool erase(const Position& pos1, const Position& pos2);
+			bool insert(const Position& at, const String& text, Position* eos = 0);
+			bool insert(const Position& at, const Char* first, const Char* last, Position* eos = 0);
+			bool insert(const Position& at, std::basic_istream<Char>& in, Position* eos = 0);
 			bool isChanging() const throw();
 
 			// undo/redo
@@ -570,10 +587,10 @@ namespace ascension {
 			bool redo();
 			bool undo();
 
-			// sequential edit
-			void beginSequentialEdit() throw();
-			void endSequentialEdit() throw();
-			bool isSequentialEditing() const throw();
+			// compound change
+			void beginCompoundChange() throw();
+			void endCompoundChange() throw();
+			bool isCompoundChanging() const throw();
 
 			// narrowing
 			bool isNarrowed() const throw();
@@ -590,7 +607,7 @@ namespace ascension {
 
 		private:
 			void doSetModified(bool modified) throw();
-			Position eraseText(const Region& region);
+			void eraseText(const Region& region);
 			bool fireDocumentAboutToBeChanged(const DocumentChange& c) throw();
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) throw();
 			void initialize();
@@ -644,7 +661,8 @@ namespace ascension {
 
 			std::list<IDocumentListener*> listeners_, prenotifiedListeners_;
 			ascension::internal::Listeners<IDocumentStateListener> stateListeners_;
-			ascension::internal::Listeners<ISequentialEditListener> sequentialEditListeners_;
+			ascension::internal::Listeners<ICompoundChangeListener> compoundChangeListeners_;
+			ascension::internal::Listeners<IDocumentRollbackListener> rollbackListeners_;
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
@@ -1174,27 +1192,6 @@ inline length_t getNumberOfLines(const String& text) throw() {return getNumberOf
 /// Returns true if the given newline value is a literal.
 inline bool isLiteralNewline(Newline newline) throw() {return newline >= NLF_LINE_FEED && newline <= NLF_PARAGRAPH_SEPARATOR;}
 
-/**
- * Registers the document partitioning listener with the document.
- * @param listener the listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void Document::addPartitioningListener(IDocumentPartitioningListener& listener) {partitioningListeners_.add(listener);}
-
-/**
- * Registers the sequential edit listener.
- * @param listener the listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void Document::addSequentialEditListener(ISequentialEditListener& listener) {sequentialEditListeners_.add(listener);}
-
-/**
- * Registers the state listener.
- * @param listener the listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void Document::addStateListener(IDocumentStateListener& listener) {stateListeners_.add(listener);}
-
 /// Returns the @c DocumentCharacterIterator addresses the beginning of the document.
 inline DocumentCharacterIterator Document::begin() const throw() {return DocumentCharacterIterator(*this, Position::ZERO_POSITION);}
 
@@ -1211,7 +1208,7 @@ inline IContentTypeInformationProvider& Document::contentTypeInformation() const
 inline DocumentCharacterIterator Document::end() const throw() {return DocumentCharacterIterator(*this, region().second);}
 
 /// @see #erase(const Region&)
-inline Position Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
+inline bool Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
 
 /**
  * Returns the information of the specified line.
@@ -1243,8 +1240,8 @@ inline IDocumentInput* Document::input() const throw() {return input_.get();}
  * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
  */
-inline Position Document::insert(const Position& at, const String& text) {
-	return insert(at, text.data(), text.data() + text.length());}
+inline bool Document::insert(const Position& at, const String& text, Position* eos /* = 0 */) {
+	return insert(at, text.data(), text.data() + text.length(), eos);}
 
 /// Returns true if the document is in changing.
 inline bool Document::isChanging() const throw() {return changing_;}
@@ -1324,27 +1321,6 @@ inline const String* Document::property(const DocumentPropertyKey& key) const th
 /// @see #accessibleRegion
 inline Region Document::region() const throw() {
 	return Region(Position::ZERO_POSITION, Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));}
-
-/**
- * Removes the document partitioning listener from the document.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void Document::removePartitioningListener(IDocumentPartitioningListener& listener) {partitioningListeners_.remove(listener);}
-
-/**
- * Removes the sequential edit listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void Document::removeSequentialEditListener(ISequentialEditListener& listener) {sequentialEditListeners_.remove(listener);}
-
-/**
- * Removes the state listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void Document::removeStateListener(IDocumentStateListener& listener) {stateListeners_.remove(listener);}
 
 /// Returns the revision number.
 inline std::size_t Document::revisionNumber() const throw() {return revisionNumber_;}

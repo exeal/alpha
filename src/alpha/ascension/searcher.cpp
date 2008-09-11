@@ -489,10 +489,15 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				if(action == IInteractiveReplacementCallback::REPLACE_ALL)
 					callback = 0;
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
-					if(!matchedRegion.isEmpty())
-						i.seek(document.erase(matchedRegion));
-					if(!replacement.empty())
-						i.seek(document.insert(matchedRegion.first, replacement));
+					if(!matchedRegion.isEmpty()) {
+						document.erase(matchedRegion);
+						i.seek(matchedRegion.beginning());
+					}
+					if(!replacement.empty()) {
+						Position p;
+						document.insert(matchedRegion.first, replacement, &p);	// TODO: this may return false.
+						i.seek(p);
+					}
 					i.setRegion(Region(scope.beginning(), endOfScope));
 					documentRevision = document.revisionNumber();
 				}
@@ -558,12 +563,14 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 					if(action == IInteractiveReplacementCallback::REPLACE_ALL)
 						callback = 0;
 					history.push(matchedRegion);
-					if(!matchedRegion.isEmpty())
-						next = document.erase(matchedRegion);
+					if(!matchedRegion.isEmpty()) {
+						document.erase(matchedRegion);
+						next = matchedRegion.beginning();
+					}
 					if(!replacement.empty()) {
 						const String r(matcher->replaceInplace(replacement));
 						if(!r.empty())
-							next = document.insert(matchedRegion.beginning(), r);
+							document.insert(matchedRegion.beginning(), r, &next);	// TODO: this may return false.
 						matcher->endInplaceReplacement(document.begin(), document.end(),
 							DocumentCharacterIterator(document, scope.beginning()), DocumentCharacterIterator(document, endOfScope),
 							DocumentCharacterIterator(document, next));

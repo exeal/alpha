@@ -134,26 +134,7 @@ namespace ascension {
 			friend class ascension::viewers::VisualPoint;
 		};
 
-		/**
-		 * Extension of @c Point. Editable and movable in the document.
-		 *
-		 * @c Viewer のクライアントは選択範囲やキャレットを位置情報としてテキストを編集できるが、
-		 * このクラスにより任意の場所の編集が可能となる。クライアントは点を編集箇所に移動させ、
-		 * @c Viewer の操作と似た方法で編集を行う
-		 *
-		 * 編集点は他の編集操作でその位置が変更される。親クラスの @c Point を見よ
-		 *
-		 * 文字単位、単語単位で編集点の移動を行うメソッドのうち、名前が @c Left 及び @c Right
-		 * で終わっているものは、論理順ではなく、視覚上の方向を指定する。
-		 * 具体的にはビューのテキスト方向が左から右であれば @c xxxxLeft は @c xxxxPrev に、方向が右から左であれば
-		 * @c xxxxLeft は @c xxxxNext にマップされる。これら視覚上の方向をベースにしたメソッドは、
-		 * キーボードなどのユーザインターフェイスから移動を行うことを考えて提供されている
-		 *
-		 * EditPoint <strong>never</strong> uses sequential edit of the document and freeze of the
-		 * viewer. Client is responsible for the usage of these features.
-		 *
-		 * @see Point, Document, IPointListener, DisposedDocumentException
-		 */
+		// document is point.cpp
 		class EditPoint : public Point {
 		public:
 			/// Character unit defines what is one character.
@@ -171,8 +152,8 @@ namespace ascension {
 			virtual ~EditPoint() throw();
 
 			// attributes
+			CodePoint character(bool useLineFeed = false) const;
 			CharacterUnit characterUnit() const throw();
-			CodePoint getCodePoint(bool useLineFeed = false) const;
 			bool isBeginningOfDocument() const;
 			bool isBeginningOfLine() const;
 			bool isEndOfDocument() const;
@@ -180,17 +161,21 @@ namespace ascension {
 			void setCharacterUnit(CharacterUnit unit) throw();
 
 			// movement
+			void backwardBookmark(length_t marks = 1);
 			void backwardCharacter(length_t offset = 1);
+			void backwardLine(length_t lines = 1);
+			void backwardWord(length_t words = 1);
+			void backwardWordEnd(length_t words = 1);
 			void beginningOfDocument();
 			void beginningOfLine();
 			void endOfDocument();
 			void endOfLine();
+			void forwardBookmark(length_t marks = 1);
 			void forwardCharacter(length_t offset = 1);
+			void forwardLine(length_t lines = 1);
+			void forwardWord(length_t words = 1);
+			void forwardWordEnd(length_t words = 1);
 			void moveToAbsoluteCharacterOffset(length_t offset);
-			bool nextBookmark();
-			void nextLine(length_t offset = 1);
-			bool previousBookmark();
-			void previousLine(length_t offset = 1);
 
 			// text manipulations
 			void destructiveInsert(const String& text);
@@ -200,16 +185,22 @@ namespace ascension {
 			void insert(const String& text);
 			void insert(const Char* first, const Char* last);
 			virtual void newLine(std::size_t newlines = 1);
+			bool transposeCharacters();
+			bool transposeLines();
+//			bool transposeParagraphs();
+//			bool transposeSentences();
+			bool transposeWords();
 
 		protected:
 			virtual void doMoveTo(const Position& to);
-			static Position getBackwardCharacterPosition(
-				const Document& document, const Position& position, CharacterUnit cu, length_t offset = 1);
-			static Position getForwardCharacterPosition(
-				const Document& document, const Position& position, CharacterUnit cu, length_t offset = 1);
+			const text::IdentifierSyntax& identifierSyntax() const throw();
+			static Position offsetCharacterPosition(const Document& document,
+				const Position& position, Direction direction, CharacterUnit cu, length_t offset = 1);
 			IPointListener* getListener() const throw();
 			String getText(signed_length_t length, Newline newline = NLF_RAW_VALUE) const;
 			String getText(const Position& other, Newline newline = NLF_RAW_VALUE) const;
+		private:
+			using Point::excludeFromRestriction;	// explicit hide
 		private:
 			IPointListener* listener_;
 			CharacterUnit characterUnit_;
@@ -281,6 +272,8 @@ namespace ascension {
 		inline void EditPoint::destructiveInsert(const String& text) {destructiveInsert(text.data(), text.data() + text.length());}
 		/// Returns the listener.
 		inline IPointListener* EditPoint::getListener() const throw() {return const_cast<EditPoint*>(this)->listener_;}
+		inline const text::IdentifierSyntax& EditPoint::identifierSyntax() const {
+			return document()->contentTypeInformation().getIdentifierSyntax(getContentType());}
 		/**
 		 * Inserts the specified text at the current position.
 		 * @param text the text to be inserted

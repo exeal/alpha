@@ -163,8 +163,8 @@ namespace manah {
 		public:
 			typedef Pointer pointer;
 			typedef Reference reference;
-			Reference operator*() throw() {return *current_;}
-			Reference operator->() throw() {return **this;}
+			Reference operator*() const throw() {return *current_;}
+			Reference operator->() const throw() {return **this;}
 			Iterator& operator++() throw() {if(++current_ == target_->gapFirst_) current_ = target_->gapLast_; return *this;}
 			Iterator operator++(int) throw() {Iterator temp(*this); ++*this; return temp;}
 			Iterator& operator--() throw() {if(--current_ == target_->gapLast_ - 1) current_ = target_->gapFirst_ - 1; return *this;}
