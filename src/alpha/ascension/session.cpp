@@ -23,7 +23,7 @@ using namespace std;
  * @param maximumNumberOfKills initial maximum number of kills. this setting can be change by
  * @c #setMaximumNumberOfKills later
  */
-KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) throw()
+KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) /*throw()*/
 		: yankPointer_(contents_.end()), maximumNumberOfKills_(maximumNumberOfKills) {
 }
 
@@ -52,7 +52,7 @@ void KillRing::addNew(const String& text, bool rectangle, bool replace /* = fals
 			contents_.pop_back();
 	}
 	yankPointer_ = contents_.begin();
-	listeners_.notify(&IKillRingListener::clipboardRingChanged);
+	listeners_.notify(&IKillRingListener::killRingChanged);
 }
 
 /**
@@ -68,7 +68,7 @@ void KillRing::append(const String& text, bool prepend) {
 	else
 		contents_.front().first.insert(0, text);
 	yankPointer_ = contents_.begin();
-	listeners_.notify(&IKillRingListener::clipboardRingChanged);
+	listeners_.notify(&IKillRingListener::killRingChanged);
 }
 
 KillRing::Contents::iterator KillRing::at(ptrdiff_t index) const {
@@ -101,12 +101,12 @@ const pair<String, bool>& KillRing::get(ptrdiff_t places /* = 0 */) const {
 }
 
 /// Returns the maximum number of kills.
-size_t KillRing::maximumNumberOfKills() const throw() {
+size_t KillRing::maximumNumberOfKills() const /*throw()*/ {
 	return maximumNumberOfKills_;
 }
 
 /// Returns the number of kills.
-size_t KillRing::numberOfKills() const throw() {
+size_t KillRing::numberOfKills() const /*throw()*/ {
 	return contents_.size();
 }
 
@@ -174,7 +174,7 @@ void InputSequenceCheckers::clear() {
 }
 
 /// Returns if no checker is registerd.
-bool InputSequenceCheckers::isEmpty() const throw() {
+bool InputSequenceCheckers::isEmpty() const /*throw()*/ {
 	return strategies_.empty();
 }
 
@@ -182,7 +182,7 @@ bool InputSequenceCheckers::isEmpty() const throw() {
  * Activates the specified keyboard layout.
  * @param keyboardLayout the keyboard layout
  */
-void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) throw() {
+void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) /*throw()*/ {
 	keyboardLayout_ = keyboardLayout;
 }
 
@@ -190,15 +190,15 @@ void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) throw() {
 // Session //////////////////////////////////////////////////////////////////
 
 /// Constructor.
-Session::Session() throw() : isearch_(0), textSearcher_(0) {
+Session::Session() /*throw()*/ : isearch_(0), textSearcher_(0) {
 #ifndef ASCENSION_NO_MIGEMO
 	wcscpy(migemoRuntimePathName_, L"");
 	wcscpy(migemoDictionaryPathName_, L"");
-#endif /* !ASCENSION_NO_MIGEMO */
+#endif // !ASCENSION_NO_MIGEMO
 }
 
 /// Destructor.
-Session::~Session() throw() {
+Session::~Session() /*throw()*/ {
 	delete textSearcher_;
 	delete isearch_;
 }
@@ -216,26 +216,26 @@ void Session::addDocument(kernel::Document& document) {
 }
 
 /// Returns the incremental searcher.
-searcher::IncrementalSearcher& Session::incrementalSearcher() throw() {
+searcher::IncrementalSearcher& Session::incrementalSearcher() /*throw()*/ {
 	if(isearch_ == 0)
 		isearch_ = new searcher::IncrementalSearcher();
 	return *isearch_;
 }
 
 /// Returns the incremental searcher.
-const searcher::IncrementalSearcher& Session::incrementalSearcher() const throw() {
+const searcher::IncrementalSearcher& Session::incrementalSearcher() const /*throw()*/ {
 	if(isearch_ == 0)
 		const_cast<searcher::IncrementalSearcher*&>(isearch_) = new searcher::IncrementalSearcher();
 	return *isearch_;
 }
 
 /// Returns the kill ring.
-KillRing& Session::killRing() throw() {
+KillRing& Session::killRing() /*throw()*/ {
 	return killRing_;
 }
 
 /// Returns the kill ring.
-const KillRing& Session::killRing() const throw() {
+const KillRing& Session::killRing() const /*throw()*/ {
 	return killRing_;
 }
 
@@ -245,10 +245,10 @@ const KillRing& Session::killRing() const throw() {
  * @param runtime true to get about DLL, false to get about dictionary
  * @return the path name of the directory
  */
-const ::WCHAR* Session::migemoPathName(bool runtime) throw() {
+const WCHAR* Session::migemoPathName(bool runtime) /*throw()*/ {
 	return runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_;
 }
-#endif /* !ASCENSION_NO_MIGEMO */
+#endif // !ASCENSION_NO_MIGEMO
 
 /**
  * Removes the document.
@@ -267,26 +267,27 @@ void Session::removeDocument(kernel::Document& document) {
  * Sets the directory of C/Migemo DLL or dictionary.
  * @param pathName the path name of the directory or @c null
  * @param runtime true to set about DLL, false to set about dictionary
+ * @param std#length_error @a @pathName is too long
  */
 void Session::setMigemoPathName(const WCHAR* pathName, bool runtime) {
 	if(pathName == 0)
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, L"");
 	else if(wcslen(pathName) > MAX_PATH - 1)
-		throw overflow_error("Too long path name.");
+		throw length_error("pathName");
 	else
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
 }
-#endif /* !ASCENSION_NO_MIGEMO */
+#endif // !ASCENSION_NO_MIGEMO
 
 /// Returns the text searcher.
-searcher::TextSearcher& Session::textSearcher() throw() {
+searcher::TextSearcher& Session::textSearcher() /*throw()*/ {
 	if(textSearcher_ == 0)
 		textSearcher_ = new searcher::TextSearcher();
 	return *textSearcher_;
 }
 
 /// Returns the text searcher.
-const searcher::TextSearcher& Session::textSearcher() const throw() {
+const searcher::TextSearcher& Session::textSearcher() const /*throw()*/ {
 	if(textSearcher_ == 0)
 		const_cast<searcher::TextSearcher*&>(textSearcher_) = new searcher::TextSearcher();
 	return *textSearcher_;

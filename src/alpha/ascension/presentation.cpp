@@ -15,7 +15,7 @@ using namespace ascension::presentation::hyperlink;
 using namespace ascension::rules;
 using namespace ascension::viewers;
 using namespace std;
-using ascension::layout::Colors;
+using ascension::presentation::Colors;
 
 
 // Presentation /////////////////////////////////////////////////////////////
@@ -30,22 +30,22 @@ struct Presentation::Hyperlinks {
  * Constructor.
  * @param document the target document
  */
-Presentation::Presentation(Document& document) throw() : document_(document) {
+Presentation::Presentation(Document& document) /*throw()*/ : document_(document) {
 	document_.addListener(*this);
 }
 
 /// Destructor.
-Presentation::~Presentation() throw() {
+Presentation::~Presentation() /*throw()*/ {
 	document_.removeListener(*this);
 	clearHyperlinksCache();
 }
 
 /// @see internal#ITextViewerCollection#addTextViewer
-void Presentation::addTextViewer(TextViewer& textViewer) throw() {
+void Presentation::addTextViewer(TextViewer& textViewer) /*throw()*/ {
 	textViewers_.insert(&textViewer);
 }
 
-void Presentation::clearHyperlinksCache() throw() {
+void Presentation::clearHyperlinksCache() /*throw()*/ {
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i) {
 		for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 			delete (*i)->hyperlinks[j];
@@ -55,19 +55,18 @@ void Presentation::clearHyperlinksCache() throw() {
 }
 
 /// Returns the document to which the presentation connects.
-const Document& Presentation::document() const throw() {
+const Document& Presentation::document() const /*throw()*/ {
 	return document_;
 }
 
 /// Returns the document to which the presentation connects.
-Document& Presentation::document() throw() {
+Document& Presentation::document() /*throw()*/ {
 	return document_;
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-bool Presentation::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
+void Presentation::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
 	// TODO: not implemented.
-	return true;
 }
 
 /// @see kernel#IDocumentListener#documentChanged
@@ -92,12 +91,12 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 }
 
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::iterator Presentation::firstTextViewer() throw() {
+set<TextViewer*>::iterator Presentation::firstTextViewer() /*throw()*/ {
 	return textViewers_.begin();
 }
 
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::const_iterator Presentation::firstTextViewer() const throw() {
+set<TextViewer*>::const_iterator Presentation::firstTextViewer() const /*throw()*/ {
 	return textViewers_.begin();
 }
 
@@ -165,7 +164,7 @@ Colors Presentation::getLineColor(length_t line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException();
 	ILineColorDirector::Priority highestPriority = 0, p;
-	Colors result = Colors::STANDARD, c;
+	Colors result, c;
 	for(list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::const_iterator
 			i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
 		p = (*i)->queryLineColor(line, c);
@@ -195,17 +194,17 @@ const LineStyle& Presentation::getLineStyle(length_t line, bool& delegatedOwners
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::iterator Presentation::lastTextViewer() throw() {
+set<TextViewer*>::iterator Presentation::lastTextViewer() /*throw()*/ {
 	return textViewers_.end();
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::const_iterator Presentation::lastTextViewer() const throw() {
+set<TextViewer*>::const_iterator Presentation::lastTextViewer() const /*throw()*/ {
 	return textViewers_.end();
 }
 
 /// @see internal#ITextViewerCollection#removeTextViewer
-void Presentation::removeTextViewer(TextViewer& textViewer) throw() {
+void Presentation::removeTextViewer(TextViewer& textViewer) /*throw()*/ {
 	textViewers_.erase(&textViewer);
 }
 
@@ -214,7 +213,7 @@ void Presentation::removeTextViewer(TextViewer& textViewer) throw() {
  * @param newDirector the director. @c null to unregister
  * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
  */
-void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool delegateOwnership) throw() {
+void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/ {
 	hyperlinkDetector_.reset(newDetector, delegateOwnership);
 	clearHyperlinksCache();
 }
@@ -225,7 +224,7 @@ void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool de
  * @param newDirector the director. @c null to unregister
  * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
  */
-void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw() {
+void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) /*throw()*/ {
 	lineStyleDirector_ = newDirector;
 }
 
@@ -236,11 +235,11 @@ void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirec
  * Constructor.
  * @param style the style
  */
-SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw() : style_(style) {
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(const TextStyle& style) /*throw()*/ : style_(style) {
 }
 
 /// @see IPartitionPresentationReconstructor#getPresentation
-auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
+auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
 	auto_ptr<LineStyle> result(new LineStyle);
 	result->array = new StyledText[result->count = 1];
 	result->array[0].column = region.beginning().column;
@@ -261,7 +260,7 @@ PresentationReconstructor::PresentationReconstructor(Presentation& presentation)
 }
 
 /// Destructor.
-PresentationReconstructor::~PresentationReconstructor() throw() {
+PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 //	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(0));
 	presentation_.document().removePartitioningListener(*this);
 	for(map<ContentType, IPartitionPresentationReconstructor*>::iterator i(reconstructors_.begin()); i != reconstructors_.end(); ++i)
@@ -354,11 +353,11 @@ void PresentationReconstructor::setPartitionReconstructor(
 // hyperlink.URIHyperlinkDetector ///////////////////////////////////////////
 
 namespace {
-	class URIHyperlink : virtual public IHyperlink {
+	class URIHyperlink : public IHyperlink {
 	public:
-		explicit URIHyperlink(const Range<length_t>& region, const String& uri) throw() : IHyperlink(region), uri_(uri) {}
-		String description() const throw() {return L"\x202A" + uri_ + L"\x202C\nCTRL + click to follow the link.";}
-		void invoke() const throw() {
+		explicit URIHyperlink(const Range<length_t>& region, const String& uri) /*throw()*/ : IHyperlink(region), uri_(uri) {}
+		String description() const /*throw()*/ {return L"\x202A" + uri_ + L"\x202C\nCTRL + click to follow the link.";}
+		void invoke() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 			::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
 #else
@@ -379,12 +378,12 @@ URIHyperlinkDetector::URIHyperlinkDetector(const URIDetector& uriDetector,
 }
 
 /// Destructor.
-URIHyperlinkDetector::~URIHyperlinkDetector() throw() {
+URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
 }
 
 /// @see IHyperlinkDetector#nextHyperlink
 auto_ptr<IHyperlink> URIHyperlinkDetector::nextHyperlink(
-		const Document& document, length_t line, const Range<length_t>& range) const throw() {
+		const Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ {
 	const String& s = document.line(line);
 	const Char* p = s.data();
 	pair<const Char*, const Char*> result;
@@ -399,14 +398,14 @@ auto_ptr<IHyperlink> URIHyperlinkDetector::nextHyperlink(
 // hyperlink.CompositeHyperlinkDetector /////////////////////////////////////
 
 /// Destructor.
-CompositeHyperlinkDetector::~CompositeHyperlinkDetector() throw() {
+CompositeHyperlinkDetector::~CompositeHyperlinkDetector() /*throw()*/ {
 	for(map<ContentType, IHyperlinkDetector*>::iterator i(composites_.begin()), e(composites_.end()); i != e; ++i)
 		delete i->second;
 }
 
 /// @see IHyperlinkDetector#nextHyperlink
 auto_ptr<IHyperlink> CompositeHyperlinkDetector::nextHyperlink(
-		const Document& document, length_t line, const Range<length_t>& range) const throw() {
+		const Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ {
 	const DocumentPartitioner& partitioner = document.partitioner();
 	DocumentPartition partition;
 	for(Position p(line, range.beginning()), e(line, range.end()); p < e;) {

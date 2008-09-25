@@ -14,7 +14,7 @@
 #	include <fcntl.h>		// fcntl
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
-#endif /* !ASCENSION_POSIX */
+#endif // !ASCENSION_POSIX
 
 using namespace ascension::kernel;
 using namespace ascension::kernel::fileio;
@@ -34,7 +34,7 @@ namespace {
 #endif
 	static const Char PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
 	/// Returns true if the given character is a path separator.
-	inline bool isPathSeparator(Char c) throw() {
+	inline bool isPathSeparator(Char c) /*throw()*/ {
 		return find(PATH_SEPARATORS, MANAH_ENDOF(PATH_SEPARATORS) - 1, c) != MANAH_ENDOF(PATH_SEPARATORS) - 1;}
 	/**
 	 * Returns true if the specified file or directory exists.
@@ -53,7 +53,7 @@ namespace {
 #else
 		if(::GetFileAttributesW(name) != INVALID_FILE_ATTRIBUTES)
 			return true;
-		const ::DWORD e = ::GetLastError();
+		const DWORD e = ::GetLastError();
 		if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
 				|| e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
 			return false;
@@ -82,11 +82,11 @@ namespace {
 	 */
 	void getFileLastWriteTime(const String& fileName, TextFileDocumentInput::Time& timeStamp) {
 #ifdef ASCENSION_WINDOWS
-		::WIN32_FILE_ATTRIBUTE_DATA attributes;
+		WIN32_FILE_ATTRIBUTE_DATA attributes;
 		if(::GetFileAttributesExW(fileName.c_str(), GetFileExInfoStandard, &attributes) != 0)
 			timeStamp = attributes.ftLastWriteTime;
 		else {
-			const ::DWORD e = ::GetLastError();
+			const DWORD e = ::GetLastError();
 			throw IOException((e == ERROR_FILE_NOT_FOUND
 				|| e == ERROR_PATH_NOT_FOUND) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
 		}
@@ -110,9 +110,9 @@ namespace {
 		if(fileName == 0)
 			throw a::NullPointerException("fileName");
 #ifdef ASCENSION_WINDOWS
-		::WIN32_FILE_ATTRIBUTE_DATA attributes;
+		WIN32_FILE_ATTRIBUTE_DATA attributes;
 		if(::GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes) == 0) {
-			::DWORD e = ::GetLastError();
+			DWORD e = ::GetLastError();
 			throw IOException((e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME
 				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
 		}
@@ -141,7 +141,7 @@ namespace {
 		if(name != s.get())
 			name[-1] = 0;
 #ifdef ASCENSION_WINDOWS
-		::WCHAR result[MAX_PATH];
+		WCHAR result[MAX_PATH];
 		if(::GetTempFileNameW(s.get(), name, 0, result) != 0)
 			return result;
 #else // ASCENSION_POSIX
@@ -174,8 +174,8 @@ String fileio::canonicalizePathName(const Char* pathName) {
 		return pathName;
 
 	// resolve relative path name
-	::WCHAR path[MAX_PATH];
-	::WCHAR* dummy;
+	WCHAR path[MAX_PATH];
+	WCHAR* dummy;
 	if(::GetFullPathNameW(pathName, MANAH_COUNTOF(path), path, &dummy) == 0)
 		wcscpy(path, pathName);
 
@@ -197,12 +197,12 @@ String fileio::canonicalizePathName(const Char* pathName) {
 	} else	// not absolute name
 		return pathName;
 
-	::WIN32_FIND_DATAW wfd;
+	WIN32_FIND_DATAW wfd;
 	while(true) {
 		if(Char* next = wcspbrk(p, PATH_SEPARATORS)) {
 			const Char c = *next;
 			*next = 0;
-			::HANDLE h = ::FindFirstFileW(path, &wfd);
+			HANDLE h = ::FindFirstFileW(path, &wfd);
 			if(h != INVALID_HANDLE_VALUE) {
 				::FindClose(h);
 				result += wfd.cFileName;
@@ -212,7 +212,7 @@ String fileio::canonicalizePathName(const Char* pathName) {
 			result += PREFERRED_PATH_SEPARATOR;
 			p = next + 1;
 		} else {
-			::HANDLE h = ::FindFirstFileW(path, &wfd);
+			HANDLE h = ::FindFirstFileW(path, &wfd);
 			if(h != INVALID_HANDLE_VALUE) {
 				::FindClose(h);
 				result += wfd.cFileName;
@@ -250,21 +250,21 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 #endif /* PathMatchSpec */
 	// by lexicographical comparison
 	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
-	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
-	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
+	const int fc1 = LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
+	const int fc2 = LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
-		manah::AutoBuffer<WCHAR> fs1(new ::WCHAR[fc1]), fs2(new ::WCHAR[fc2]);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
+		LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
+		LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
 			return pathExists(s1);
 	}
 	// by volume information
 	bool eq = false;
-	::HANDLE f1 = ::CreateFileW(s1, 0,
+	HANDLE f1 = ::CreateFileW(s1, 0,
 		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	if(f1 != INVALID_HANDLE_VALUE) {
-		::HANDLE f2 = ::CreateFileW(s2, 0,
+		HANDLE f2 = ::CreateFileW(s2, 0,
 			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 		if(f2 != INVALID_HANDLE_VALUE) {
 			::BY_HANDLE_FILE_INFORMATION fi1;
@@ -299,13 +299,13 @@ namespace {
 	class SystemErrorSaver {
 	public:
 #ifdef ASCENSION_WINDOWS
-		SystemErrorSaver() throw() : e_(::GetLastError()) {}
-		~SystemErrorSaver() throw() {::SetLastError(e_);}
+		SystemErrorSaver() /*throw()*/ : e_(::GetLastError()) {}
+		~SystemErrorSaver() /*throw()*/ {::SetLastError(e_);}
 	private:
-		::DWORD e_;
+		DWORD e_;
 #else // ASCENSION_POSIX
-		SystemErrorSaver() throw() : e_(errno) {}
-		~SystemErrorSaver() throw() {errno = e_;}
+		SystemErrorSaver() /*throw()*/ : e_(errno) {}
+		~SystemErrorSaver() /*throw()*/ {errno = e_;}
 	private:
 		int e_;
 #endif
@@ -343,7 +343,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 		fileHandle_ = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 			FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE) {
-			const ::DWORD e = ::GetLastError();
+			const DWORD e = ::GetLastError();
 			throw IOException((e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER
 				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
 		}
@@ -441,12 +441,12 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 }
 
 /// Returns the MIBenum value of the encoding.
-string TextFileStreamBuffer::encoding() const throw() {
+string TextFileStreamBuffer::encoding() const /*throw()*/ {
 	return encoder_->properties().name();
 }
 
 /// Returns true if the file is open.
-bool TextFileStreamBuffer::isOpen() const throw() {
+bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 	return fileHandle_ != INVALID_HANDLE_VALUE;
 #else // ASCENSION_POSIX
@@ -496,9 +496,9 @@ int TextFileStreamBuffer::sync() {
 
 			// write into the file
 #ifdef ASCENSION_WINDOWS
-			::DWORD writtenBytes;
+			DWORD writtenBytes;
 			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<DWORD>::max());
-			const ::DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
+			const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
 			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
 				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 #else // ASCENSION_POSIX
@@ -541,7 +541,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 }
 
 /// Returns true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
-bool TextFileStreamBuffer::unicodeByteOrderMark() const throw() {
+bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 	return encoder_->flags().has(Encoder::UNICODE_BYTE_ORDER_MARK);
 }
 
@@ -599,12 +599,11 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 	lockMode_ = DONT_LOCK | LOCK_ONLY_AS_EDITING;
 	memset(&userLastWriteTime_, 0, sizeof(Time));
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
-	document.addListener(*this);
 	document.setProperty(Document::TITLE_PROPERTY, L"");
 }
 
 /// Destructor.
-TextFileDocumentInput::~TextFileDocumentInput() throw() {
+TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
 	try {
 		close();
 	} catch(IOException&) {
@@ -662,27 +661,8 @@ void TextFileDocumentInput::close() {
 	}
 }
 
-/// @see IDocumentListener#documentAboutToBeChanged
-bool TextFileDocumentInput::documentAboutToBeChanged(const Document&, const DocumentChange&) {
-	// check the time stamp if this is the first modification
-	if(timeStampDirector_ != 0 && !document_.isModified()) {
-		Time realTimeStamp;
-		if(!verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
-			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
-					document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
-				return false;
-			internalLastWriteTime_ = userLastWriteTime_ = realTimeStamp;
-		}
-	}
-	return true;
-}
-
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
 void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
-}
-
-/// @see IDocumentListener#documentChanged
-void TextFileDocumentInput::documentChanged(const Document&, const DocumentChange&) {
 }
 
 /// @see IDocumentStateListener#documentModificationSignChanged
@@ -704,14 +684,30 @@ void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
 }
 
 /// Returns the file extension name or an ampty string if the document is not bound to any of the files.
-String TextFileDocumentInput::extensionName() const throw() {
+String TextFileDocumentInput::extensionName() const /*throw()*/ {
 	const String s(pathName());
 	const String::size_type dot = s.rfind('.');
 	return (dot != String::npos) ? s.substr(dot + 1) : String();
 }
 
+/// @see IDocumentInput#isChangeable
+bool TextFileDocumentInput::isChangeable() const {
+	// check the time stamp if this is the first modification
+	if(timeStampDirector_ != 0 && !document_.isModified()) {
+		Time realTimeStamp;
+		TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
+		if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
+			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
+					document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
+				return false;
+			self.internalLastWriteTime_ = self.userLastWriteTime_ = realTimeStamp;
+		}
+	}
+	return true;
+}
+
 /// @see IDocumentInput#location
-a::String TextFileDocumentInput::location() const throw() {
+a::String TextFileDocumentInput::location() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 	return fileName_;
 #else // ASCENSION_POSIX
@@ -729,7 +725,7 @@ a::String TextFileDocumentInput::location() const throw() {
  * Locks the file.
  * @return true if locked successfully or the lock mode is @c DONT_LOCK
  */
-bool TextFileDocumentInput::lock() throw() {
+bool TextFileDocumentInput::lock() /*throw()*/ {
 	unlock();
 	if((lockMode_ & LOCK_TYPE_MASK) == DONT_LOCK && isOpen()) {
 #ifdef ASCENSION_WINDOWS
@@ -757,7 +753,7 @@ bool TextFileDocumentInput::lock() throw() {
 }
 
 /// Returns the file name or an empty string if the document is not bound to any of the files.
-String TextFileDocumentInput::name() const throw() {
+String TextFileDocumentInput::name() const /*throw()*/ {
 	const String::const_iterator p = findFileName(fileName_);
 	return fileName_.substr(p - fileName_.begin());
 }
@@ -782,18 +778,18 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 
 	// read from the file
 	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingSubstitutionPolicy, false);
-	const bool recorded = document_.isRecordingOperations();
-	document_.recordOperations(false);
+	const bool recorded = document_.isRecordingChanges();
+	document_.recordChanges(false);
 	try {
 		basic_istream<a::Char> in(&sb);
 		in.exceptions(ios_base::badbit);
 		document_.insert(document_.region().beginning(), in);
 	} catch(...) {
 		document_.resetContent();
-		document_.recordOperations(recorded);
+		document_.recordChanges(recorded);
 		throw;
 	}
-	document_.recordOperations(recorded);
+	document_.recordChanges(recorded);
 	unicodeByteOrderMark_ = sb.unicodeByteOrderMark();
 	sb.close();
 
@@ -878,7 +874,7 @@ void TextFileDocumentInput::setEncoding(const string& encoding) {
 /**
  * Sets the newline.
  * @param newline the newline
- * @throw UnknownValueException<Newline> @a newline is invalid
+ * @throw UnknownValueException @a newline is invalid
  */
 void TextFileDocumentInput::setNewline(Newline newline) {
 	if(!isLiteralNewline(newline))
@@ -893,7 +889,7 @@ void TextFileDocumentInput::setNewline(Newline newline) {
  * Unlocks the file.
  * @return succeeded or not
  */
-bool TextFileDocumentInput::unlock() throw() {
+bool TextFileDocumentInput::unlock() /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 	if(lockingFile_ != INVALID_HANDLE_VALUE) {
 		if(!toBoolean(::CloseHandle(lockingFile_)))
@@ -916,7 +912,7 @@ bool TextFileDocumentInput::unlock() throw() {
  * @param[out] newTimeStamp the actual time stamp
  * @return false if not match
  */
-bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) throw() {
+bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/ {
 	static Time uninitialized;
 	static bool initializedUninitialized = false;
 	if(!initializedUninitialized)
@@ -945,6 +941,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) t
  * @param fileName the file name
  * @param params the options
  * @return true if succeeded
+ * @throw IOException any I/O error occured
  */
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
 	// check Unicode spcific newlines
@@ -957,17 +954,17 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE && fundamental::UTF_16
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 				&& mib != standard::UTF_7 && mib != standard::UTF_32 && mib != standard::UTF_32LE && mib != standard::UTF_32BE
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 				&& encoder->properties().name() == "UTF-5"
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			)
 			throw IOException(IOException::INVALID_NEWLINE);
 	}
 
 	// check if writable
 #ifdef ASCENSION_WINDOWS
-	const ::DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
+	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
 	if(originalAttributes != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttributes & FILE_ATTRIBUTE_READONLY))
 		throw IOException(IOException::UNWRITABLE_FILE);
 #else // ASCENSION_POSIX
@@ -1117,6 +1114,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
  * @param params the options
  * @param append true to append to the file
  * @return the result. @c FIR_OK if succeeded
+ * @throw IOException any I/O error occured
  */
 bool TextFileDocumentInput::writeRegion(const String& fileName, const Region& region, const TextFileDocumentInput::WriteParameters& params, bool append) {
 	// TODO: not implemented.
@@ -1129,11 +1127,11 @@ bool TextFileDocumentInput::writeRegion(const String& fileName, const Region& re
 // DirectoryIteratorBase ////////////////////////////////////////////////////////
 
 /// Protected default constructor.
-DirectoryIteratorBase::DirectoryIteratorBase() throw() {
+DirectoryIteratorBase::DirectoryIteratorBase() /*throw()*/ {
 }
 
 /// Destructor.
-DirectoryIteratorBase::~DirectoryIteratorBase() throw() {
+DirectoryIteratorBase::~DirectoryIteratorBase() /*throw()*/ {
 }
 
 
@@ -1171,7 +1169,7 @@ DirectoryIterator::DirectoryIterator(const Char* directoryName) :
 	manah::AutoBuffer<Char> pattern(new Char[len + 3]);
 	wmemcpy(pattern.get(), directoryName, len);
 	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
-	::WIN32_FIND_DATAW data;
+	WIN32_FIND_DATAW data;
 	handle_ = ::FindFirstFileW(pattern.get(), &data);
 	if(handle_ == INVALID_HANDLE_VALUE)
 		throw IOException((::GetLastError() == ERROR_FILE_NOT_FOUND) ?
@@ -1193,7 +1191,7 @@ DirectoryIterator::DirectoryIterator(const Char* directoryName) :
 }
 
 /// Destructor.
-DirectoryIterator::~DirectoryIterator() throw() {
+DirectoryIterator::~DirectoryIterator() /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 	if(handle_ != INVALID_HANDLE_VALUE)
 		::FindClose(handle_);
@@ -1223,7 +1221,7 @@ bool DirectoryIterator::isDirectory() const {
 }
 
 /// @see DirectoryIteratorBase#isDone
-bool DirectoryIterator::isDone() const throw() {
+bool DirectoryIterator::isDone() const /*throw()*/ {
 	return done_;
 }
 
@@ -1231,7 +1229,7 @@ bool DirectoryIterator::isDone() const throw() {
 void DirectoryIterator::next() {
 	if(!done_) {
 #ifdef ASCENSION_WINDOWS
-		::WIN32_FIND_DATAW data;
+		WIN32_FIND_DATAW data;
 		if(::FindNextFileW(handle_, &data) == 0) {
 			if(::GetLastError() == ERROR_NO_MORE_FILES)
 				done_ = true;
@@ -1249,7 +1247,7 @@ void DirectoryIterator::next() {
 
 void DirectoryIterator::update(const void* info) {
 #ifdef ASCENSION_WINDOWS
-	const ::WIN32_FIND_DATAW& data = *static_cast<const ::WIN32_FIND_DATAW*>(info);
+	const WIN32_FIND_DATAW& data = *static_cast<const WIN32_FIND_DATAW*>(info);
 	current_ = data.cFileName;
 	currentIsDirectory_ = toBoolean(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 #else // ASCENSION_POSIX
@@ -1275,7 +1273,7 @@ RecursiveDirectoryIterator::RecursiveDirectoryIterator(const Char* directoryName
 }
 
 /// Destructor.
-RecursiveDirectoryIterator::~RecursiveDirectoryIterator() throw() {
+RecursiveDirectoryIterator::~RecursiveDirectoryIterator() /*throw()*/ {
 	while(!stack_.empty()) {
 		delete stack_.top();
 		stack_.pop();
@@ -1290,11 +1288,13 @@ const String& RecursiveDirectoryIterator::current() const {
 }
 
 /// @see DirectoryIteratorBase#directory
-const String& RecursiveDirectoryIterator::directory() const throw() {
+const String& RecursiveDirectoryIterator::directory() const /*throw()*/ {
 	return stack_.top()->directory();
 }
 
-/// 
+/**
+ * @throw NoSuchElementException
+ */
 void RecursiveDirectoryIterator::dontPush() {
 	if(isDone())
 		throw NoSuchElementException();
@@ -1309,12 +1309,12 @@ bool RecursiveDirectoryIterator::isDirectory() const {
 }
 
 /// @see DirectoryIteratorBase#isDone
-bool RecursiveDirectoryIterator::isDone() const throw() {
+bool RecursiveDirectoryIterator::isDone() const /*throw()*/ {
 	return stack_.size() == 1 && stack_.top()->isDone();
 }
 
 /// Returns the depth of the recursion.
-size_t RecursiveDirectoryIterator::level() const throw() {
+size_t RecursiveDirectoryIterator::level() const /*throw()*/ {
 	return stack_.size() - 1;
 }
 
@@ -1354,4 +1354,4 @@ void RecursiveDirectoryIterator::pop() {
 	}
 }
 
-#endif /* !ASCENSION_NO_GREP */
+#endif // !ASCENSION_NO_GREP

@@ -11,7 +11,9 @@
 #include "point.hpp"
 #include "layout.hpp"	// layout.IVisualLinesListener
 #include "unicode.hpp"	// text.IdentifierSyntax
-#include <functional>	// std.mem_fun_t
+#ifdef ASCENSION_GCC
+#	include <unknwn.h>	// IUnknown, OLESTR, ...
+#endif // ASCENSION_GCC
 #include <objidl.h>		// IDataObject
 
 namespace ascension {
@@ -52,21 +54,29 @@ namespace ascension {
 			explicit ClipboardException(HRESULT hr);
 		};
 
+		/// 
+		class VerticalDestinationProxy : private kernel::Position {
+		public:
+			const kernel::Position& position() const {return static_cast<const kernel::Position&>(*this);}
+		private:
+			explicit VerticalDestinationProxy(const kernel::Position& p) : Position(p) {}
+			friend class VisualPoint;
+		};
+
 		/**
 		 * Extension of @c EditPoint for viewer and layout.
 		 * @see kernel#EditPoint, kernel#IPointListener, kernel#DisposedViewException
 		 */
-		class VisualPoint : public kernel::EditPoint, virtual public layout::IVisualLinesListener {
+		class VisualPoint : public kernel::EditPoint, public layout::IVisualLinesListener {
 			MANAH_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
 				const kernel::Position& position = kernel::Position(), kernel::IPointListener* listener = 0);
 			VisualPoint(const VisualPoint& rhs);
-			virtual ~VisualPoint() throw();
-
+			virtual ~VisualPoint() /*throw()*/;
 			// attributes
-			static bool canPaste() throw();
+			static bool canPaste() /*throw()*/;
 			bool isEndOfVisualLine() const;
 			bool isFirstPrintableCharacterOfLine() const;
 			bool isFirstPrintableCharacterOfVisualLine() const;
@@ -76,59 +86,54 @@ namespace ascension {
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
 			length_t visualColumnNumber() const;
-
+			// destination calculations
+			VerticalDestinationProxy backwardPage(length_t pages = 1) const;
+			VerticalDestinationProxy backwardVisualLine(length_t lines = 1) const;
+			kernel::Position beginningOfVisualLine() const;
+			kernel::Position contextualBeginningOfLine() const;
+			kernel::Position contextualBeginningOfVisualLine() const;
+			kernel::Position contextualEndOfLine() const;
+			kernel::Position contextualEndOfVisualLine() const;
+			kernel::Position endOfVisualLine() const;
+			kernel::Position firstPrintableCharacterOfLine() const;
+			kernel::Position firstPrintableCharacterOfVisualLine() const;
+			VerticalDestinationProxy forwardPage(length_t pages = 1) const;
+			VerticalDestinationProxy forwardVisualLine(length_t lines = 1) const;
+			kernel::Position lastPrintableCharacterOfLine() const;
+			kernel::Position lastPrintableCharacterOfVisualLine() const;
+			kernel::Position leftCharacter(length_t characters = 1) const;
+			kernel::Position leftWord(length_t words = 1) const;
+			kernel::Position leftWordEnd(length_t words = 1) const;
+			kernel::Position rightCharacter(length_t characters = 1) const;
+			kernel::Position rightWord(length_t words = 1) const;
+			kernel::Position rightWordEnd(length_t words = 1) const;
 			// movement
-			void backwardPage(length_t offset = 1);
-			void backwardVisualLine(length_t offset = 1);
-			void beginningOfVisualLine();
-			void contextualBeginningOfLine();
-			void contextualBeginningOfVisualLine();
-			void contextualEndOfLine();
-			void contextualEndOfVisualLine();
-			void endOfVisualLine();
-			void firstPrintableCharacterOfLine();
-			void firstPrintableCharacterOfVisualLine();
-			void forwardPage(length_t offset = 1);
-			void forwardVisualLine(length_t offset = 1);
-			void lastPrintableCharacterOfLine();
-			void lastPrintableCharacterOfVisualLine();
-			void leftCharacter(length_t offset = 1);
-			void leftWord(length_t offset = 1);
-			void leftWordEnd(length_t offset = 1);
-			void rightCharacter(length_t offset = 1);
-			void rightWord(length_t offset = 1);
-			void rightWordEnd(length_t offset = 1);
-
+			using EditPoint::moveTo;
+			void moveTo(const VerticalDestinationProxy& to);
 			// scroll
-			bool recenter(signed_length_t length = 0);
-			bool recenter(const kernel::Position& other);
-			bool show(signed_length_t length = 0);
-			bool show(const kernel::Position& other);
-
+			void recenter();
+			void show();
 			// text manipulations
-			void insertRectangle(const String& text);
-			void insertRectangle(const Char* first, const Char* last);
-			void newLine(bool inheritIndent, size_t newlines = 1);
-			void paste(signed_length_t length = 0);
-			void paste(const kernel::Position& other);
+			bool insertRectangle(const String& text);
+			bool insertRectangle(const Char* first, const Char* last);
+			bool newLine(bool inheritIndent, size_t newlines = 1);
+			bool paste();
 			kernel::Position spaceIndent(const kernel::Position& other, bool rectangle, long level = 1);
 			kernel::Position tabIndent(const kernel::Position& other, bool rectangle, long level = 1);
 
 		protected:
 			virtual void doMoveTo(const kernel::Position& to);
-			const text::IdentifierSyntax& identifierSyntax() const throw();
-			kernel::Position offsetPosition(signed_length_t offset) const;
 			void verifyViewer() const;
 		private:
 			using kernel::EditPoint::newLine;	// 明示的な隠蔽
 			kernel::Position doIndent(const kernel::Position& other, Char character, bool rectangle, long level);
 			void updateLastX();
-			void viewerDisposed() throw();
+			void viewerDisposed() /*throw()*/;
 			// layout.IVisualLinesListener
-			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
-			void visualLinesInserted(length_t first, length_t last) throw();
+			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(length_t first, length_t last) /*throw()*/;
 			void visualLinesModified(length_t first, length_t last,
-				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
+				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 
 		private:
 			TextViewer* viewer_;
@@ -190,15 +195,8 @@ namespace ascension {
 		};
 
 		// documentation is caret.cpp
-		class Caret : public VisualPoint, virtual public kernel::IPointListener, virtual public kernel::IDocumentListener {
+		class Caret : public VisualPoint, public kernel::IPointListener, public kernel::IDocumentListener {
 		public:
-			/// Mode of selection.
-			enum SelectionMode {
-				CHARACTER,	///< Character selection mode. This is default.
-				LINE,		///< Line selection mode.
-				WORD		///< Word selection mode.
-			};
-
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
 				DONT_TRACK,						///< Does not track.
@@ -209,7 +207,6 @@ namespace ascension {
 			// constructor
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position());
 			~Caret();
-
 			// listeners
 			void addListener(ICaretListener& listener);
 			void addCharacterInputListener(ICharacterInputListener& listener);
@@ -217,57 +214,47 @@ namespace ascension {
 			void removeListener(ICaretListener& listener);
 			void removeCharacterInputListener(ICharacterInputListener& listener);
 			void removeStateListener(ICaretStateListener& listener);
-
 			// attributes : the anchor and the caret
-			const VisualPoint& anchor() const throw();
-			const VisualPoint& beginning() const throw();
-			void enableAutoShow(bool enable = true) throw();
-			const VisualPoint& end() const throw();
-			bool isAutoShowEnabled() const throw();
+			const VisualPoint& anchor() const /*throw()*/;
+			const VisualPoint& beginning() const /*throw()*/;
+			void enableAutoShow(bool enable = true) /*throw()*/;
+			const VisualPoint& end() const /*throw()*/;
+			bool isAutoShowEnabled() const /*throw()*/;
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
 			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
-			bool isPointOverSelection(const ::POINT& pt) const;
-			bool isSelectionEmpty() const throw();
-			bool isSelectionRectangle() const throw();
+			bool isPointOverSelection(const POINT& pt) const;
+			bool isSelectionEmpty() const /*throw()*/;
+			bool isSelectionRectangle() const /*throw()*/;
 			bool selectedRangeOnLine(length_t line, length_t& first, length_t& last) const;
 			bool selectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
-			SelectionMode selectionMode() const throw();
-			kernel::Region selectionRegion() const throw();
+			kernel::Region selectionRegion() const /*throw()*/;
 			String selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
 			// attributes : character input
-			bool isOvertypeMode() const throw();
-			void setOvertypeMode(bool overtype) throw();
+			bool isOvertypeMode() const /*throw()*/;
+			void setOvertypeMode(bool overtype) /*throw()*/;
 			// attributes : clipboard
-			LCID clipboardLocale() const throw();
+			LCID clipboardLocale() const /*throw()*/;
 			LCID setClipboardLocale(LCID newLocale);
 			// attributes : matched braces
-			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const;
-			MatchBracketsTrackingMode matchBracketsTrackingMode() const throw();
+			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const /*throw()*/;
+			MatchBracketsTrackingMode matchBracketsTrackingMode() const /*throw()*/;
 			void trackMatchBrackets(MatchBracketsTrackingMode mode);
-
 			// selection manipulations
-			void beginLineSelection();
 			void beginRectangleSelection();
-			void beginWordSelection();
 			void clearSelection();
 			void copySelection(bool useKillRing);
-			void cutSelection(bool useKillRing);
+			bool cutSelection(bool useKillRing);
 			void endRectangleSelection();
+			bool eraseSelection();
 			void extendSelection(const kernel::Position& to);
-			void extendSelection(std::mem_fun_t<void, kernel::EditPoint>& algorithm);
-			void extendSelection(std::mem_fun_t<void, VisualPoint>& algorithm);
-			void extendSelection(std::mem_fun1_t<void, kernel::EditPoint, length_t>& algorithm, length_t offset);
-			void extendSelection(std::mem_fun1_t<void, VisualPoint, length_t>& algorithm, length_t offset);
-			void eraseSelection();
-			void pasteToSelection(bool useKillRing);
-			void replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
-			void replaceSelection(const String& text, bool rectangleInsertion = false);
-			void restoreSelectionMode();
+			void extendSelection(const VerticalDestinationProxy& to);
+			bool pasteToSelection(bool useKillRing);
+			bool replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
+			bool replaceSelection(const String& text, bool rectangleInsertion = false);
 			void select(const kernel::Region& region);
 			void select(const kernel::Position& anchor, const kernel::Position& caret);
 			void selectWord();
-
 			// text manipulation
 			bool inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
 
@@ -281,27 +268,26 @@ namespace ascension {
 			// kernel.IPointListener
 			void pointMoved(const kernel::EditPoint& self, const kernel::Position& oldPosition);
 			// kernel.IDocumentListener
-			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			using kernel::EditPoint::getListener;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
-				SelectionAnchor(TextViewer& viewer) throw() :
+				SelectionAnchor(TextViewer& viewer) /*throw()*/ :
 					VisualPoint(viewer), posBeforeUpdate_(kernel::Position::INVALID_POSITION) {adaptToDocument(false);}
-				void beginInternalUpdate(const kernel::DocumentChange& change) throw() {
+				void beginInternalUpdate(const kernel::DocumentChange& change) /*throw()*/ {
 					assert(!isInternalUpdating()); posBeforeUpdate_ = position();
 					adaptToDocument(true); update(change); adaptToDocument(false);}
-				void endInternalUpdate() throw() {assert(isInternalUpdating()); posBeforeUpdate_ = kernel::Position::INVALID_POSITION;}
-				bool isInternalUpdating() const throw() {return posBeforeUpdate_ != kernel::Position::INVALID_POSITION;}
-				const kernel::Position& positionBeforeInternalUpdate() const throw() {assert(isInternalUpdating()); return posBeforeUpdate_;}
+				void endInternalUpdate() /*throw()*/ {
+					assert(isInternalUpdating()); posBeforeUpdate_ = kernel::Position::INVALID_POSITION;}
+				bool isInternalUpdating() const /*throw()*/ {return posBeforeUpdate_ != kernel::Position::INVALID_POSITION;}
+				const kernel::Position& positionBeforeInternalUpdate() const /*throw()*/ {
+					assert(isInternalUpdating()); return posBeforeUpdate_;}
 			private:
 				using Point::adaptToDocument;
 				kernel::Position posBeforeUpdate_;
 			} * anchor_;
-			SelectionMode selectionMode_;
-			length_t modeInitialAnchorLine_;	// line number of the anchor when entered the selection mode
-			length_t wordSelectionChars_[2];	// 単語選択モードで最初に選択されていた単語の前後の文字位置
 			LCID clipboardLocale_;
 			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
@@ -325,9 +311,11 @@ namespace ascension {
 		/**
 		 * Inserts the specified text at the current position as a rectangle.
 		 * @param text the text to insert
+		 * @return false if the change was interrupted
+		 * @throw ReadOnlyDocumentException the document is read only
 		 * @see EditPoint#insert(const String&)
 		 */
-		inline void VisualPoint::insertRectangle(const String& text) {insertRectangle(text.data(), text.data() + text.length());}
+		inline bool VisualPoint::insertRectangle(const String& text) {return insertRectangle(text.data(), text.data() + text.length());}
 		/// Returns the text viewer.
 		inline TextViewer& VisualPoint::textViewer() {verifyViewer(); return *viewer_;}
 		/// Returns the text viewer.
@@ -335,29 +323,11 @@ namespace ascension {
 		/// Throws @c DisposedViewerException if the text viewer is already disposed.
 		inline void VisualPoint::verifyViewer() const {verifyDocument(); if(viewer_ == 0) throw DisposedViewerException();}
 		/// Called when the text viewer is disposed.
-		inline void VisualPoint::viewerDisposed() throw() {viewer_ = 0;}
-		/**
-		 * Registers the listener.
-		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		inline void Caret::addListener(ICaretListener& listener) {listeners_.add(listener);}
-		/**
-		 * Registers the character input listener.
-		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		inline void Caret::addCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.add(listener);}
-		/**
-		 * Registers the state listener.
-		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		inline void Caret::addStateListener(ICaretStateListener& listener) {stateListeners_.add(listener);}
+		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = 0;}
 		/// Returns the anchor of the selection.
-		inline const VisualPoint& Caret::anchor() const throw() {return *anchor_;}
-		/// アンカーと自身の内、ドキュメントの先頭に近い方を返す
-		inline const VisualPoint& Caret::beginning() const throw() {
+		inline const VisualPoint& Caret::anchor() const /*throw()*/ {return *anchor_;}
+		/// Returns the neighborhood to the beginning of the document among the anchor and this point.
+		inline const VisualPoint& Caret::beginning() const /*throw()*/ {
 			return std::min(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));}
 		/**
 		 * Returns the rectangle selection.
@@ -367,67 +337,49 @@ namespace ascension {
 		inline const VirtualBox& Caret::boxForRectangleSelection() const {
 			if(!isSelectionRectangle()) throw IllegalStateException("The selection is not rectangle.") ; return *box_;}
 		/// Returns the locale identifier used to convert non-Unicode text.
-		inline LCID Caret::clipboardLocale() const throw() {return clipboardLocale_;}
+		inline LCID Caret::clipboardLocale() const /*throw()*/ {return clipboardLocale_;}
 		/**
 		 * Sets the new auto-show mode.
 		 * @param enable set true to enable the mode
 		 * @see #isAutoShowEnabled
 		 */
-		inline void Caret::enableAutoShow(bool enable /* = true */) throw() {autoShow_ = enable;}
-		/// アンカーと自身の内、ドキュメントの終端に近い方を返す
-		inline const VisualPoint& Caret::end() const throw() {
+		inline void Caret::enableAutoShow(bool enable /* = true */) /*throw()*/ {autoShow_ = enable;}
+		/// Returns the neighborhood to the end of the document among the anchor and this point.
+		inline const VisualPoint& Caret::end() const /*throw()*/ {
 			return std::max(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));}
 		/// Returns true if the point will be shown automatically when moved. Default is true.
-		inline bool Caret::isAutoShowEnabled() const throw() {return autoShow_;}
+		inline bool Caret::isAutoShowEnabled() const /*throw()*/ {return autoShow_;}
 		/// Returns true if the caret is in overtype mode.
-		inline bool Caret::isOvertypeMode() const throw() {return overtypeMode_;}
+		inline bool Caret::isOvertypeMode() const /*throw()*/ {return overtypeMode_;}
 		/// Returns true if the selection is empty.
-		inline bool Caret::isSelectionEmpty() const throw() {return anchor_->position() == position();}
+		inline bool Caret::isSelectionEmpty() const /*throw()*/ {return anchor_->position() == position();}
 		/// Returns true if the selection is rectangle.
-		inline bool Caret::isSelectionRectangle() const throw() {return box_ != 0;}
+		inline bool Caret::isSelectionRectangle() const /*throw()*/ {return box_ != 0;}
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
-		inline const std::pair<kernel::Position, kernel::Position>& Caret::matchBrackets() const throw() {return matchBrackets_;}
+		inline const std::pair<kernel::Position, kernel::Position>& Caret::matchBrackets() const /*throw()*/ {return matchBrackets_;}
 		/// Returns the matched braces tracking mode.
-		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const throw() {return matchBracketsTrackingMode_;}
-		/**
-		 * Removes the listener
-		 * @param listener the listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		inline void Caret::removeListener(ICaretListener& listener) {listeners_.remove(listener);}
-		/**
-		 * Removes the character input listener
-		 * @param listener the listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		inline void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {characterInputListeners_.remove(listener);}
-		/**
-		 * Removes the state listener
-		 * @param listener the listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		inline void Caret::removeStateListener(ICaretStateListener& listener) {stateListeners_.remove(listener);}
+		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {return matchBracketsTrackingMode_;}
 		/**
 		 * Replaces the selected region with the specified text.
 		 * @param text the text
 		 * @param rectangleInsertion if set to true, @a text is inserted as rectangle
+		 * @return false if the change was interrupted
+		 * @throw ReadOnlyDocumentException the document is read only
 		 */
-		inline void Caret::replaceSelection(const String& text, bool rectangleInsertion /* = false */) {
-			replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);}
+		inline bool Caret::replaceSelection(const String& text, bool rectangleInsertion /* = false */) {
+			return replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);}
 		/**
 		 * Selects the specified region.
 		 * @param region the region. @a pos1 member is the anchor, @a pos2 member is the caret
 		 */
 		inline void Caret::select(const kernel::Region& region) {select(region.first, region.second);}
-		/// Returns the selection mode.
-		inline Caret::SelectionMode Caret::selectionMode() const throw() {return selectionMode_;}
 		/// Returns the selected region.
-		inline kernel::Region Caret::selectionRegion() const throw() {return kernel::Region(*anchor_, position());}
+		inline kernel::Region Caret::selectionRegion() const /*throw()*/ {return kernel::Region(*anchor_, position());}
 		/**
 		 * Tracks the match bracket.
 		 * @param mode the tracking mode
 		 */
-		inline void Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) throw() {
+		inline void Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
 			if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();}}
 
 	} // namespace viewers

@@ -20,19 +20,20 @@ namespace ascension {
 		 */
 		class Command {
 		public:
-			virtual ~Command() throw();
-			Command& beepOnError(bool enable = true) throw();
-			bool beepsOnError() const throw();
+			virtual ~Command() /*throw()*/;
+			Command& beepOnError(bool enable = true) /*throw()*/;
+			bool beepsOnError() const /*throw()*/;
 			ulong execute();
-			long numericPrefix() const throw();
-			Command& retarget(viewers::TextViewer& viewer) throw();
-			Command& setNumericPrefix(long number) throw();
+			long numericPrefix() const /*throw()*/;
+			Command& retarget(viewers::TextViewer& viewer) /*throw()*/;
+			Command& setNumericPrefix(long number) /*throw()*/;
 		protected:
-			explicit Command(viewers::TextViewer& viewer) throw();
+			explicit Command(viewers::TextViewer& viewer) /*throw()*/;
+			/// Returns the command target.
+			viewers::TextViewer& target() const /*throw()*/ {return *viewer_;}
+		private:
 			/// Called by @c #execute public method.
 			virtual ulong doExecute() = 0;
-			/// Returns the command target.
-			viewers::TextViewer& target() const throw() {return *viewer_;}
 		private:
 			viewers::TextViewer* viewer_;
 			long numericPrefix_;
@@ -49,7 +50,7 @@ namespace ascension {
 			/// Searches and bookmarks all matched lines.
 			class BookmarkMatchLinesCommand : public Command {
 			public:
-				BookmarkMatchLinesCommand(viewers::TextViewer& viewer, bool onlySelection) throw();
+				BookmarkMatchLinesCommand(viewers::TextViewer& viewer, bool onlySelection) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool onlySelection_;
@@ -57,19 +58,24 @@ namespace ascension {
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {
 			public:
-				explicit CancelCommand(viewers::TextViewer& viewer) throw();
+				explicit CancelCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
 			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public Command {
 			public:
-				CaretMovementCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(void), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(length_t), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					kernel::Position(viewers::Caret::*procedure)(void) const, bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					kernel::Position(viewers::Caret::*procedure)(length_t) const, bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const, bool extendSelection = false);
 			private:
 				ulong doExecute();
-				void(viewers::Caret::*const procedure0_)(void);
-				void(viewers::Caret::*const procedure1_)(length_t);
+				kernel::Position(viewers::Caret::*const procedure0_)(void) const;
+				kernel::Position(viewers::Caret::*const procedure1_)(length_t) const;
+				viewers::VerticalDestinationProxy(viewers::Caret::*const procedureV1_)(length_t) const;
 				const bool extends_;
 			};
 			/**
@@ -80,7 +86,7 @@ namespace ascension {
 			 */
 			class CharacterDeletionCommand : public Command {
 			public:
-				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) throw();
+				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
 				ulong doExecute();
 				const Direction direction_;
@@ -88,7 +94,7 @@ namespace ascension {
 			/// Converts a character into the text represents the code value of the character.
 			class CharacterToCodePointConversionCommand : public Command {
 			public:
-				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) throw();
+				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
@@ -107,7 +113,7 @@ namespace ascension {
 			/// Inputs a character is at same position in the next/previous visual line.
 			class CharacterInputFromNextLineCommand : public Command {
 			public:
-				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) throw();
+				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool fromPreviousLine_;
@@ -115,7 +121,7 @@ namespace ascension {
 			/// Converts a text represents a code value into the character has the code value.
 			class CodePointToCharacterConversionCommand : public Command {
 			public:
-				CodePointToCharacterConversionCommand(viewers::TextViewer& view) throw();
+				CodePointToCharacterConversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
@@ -125,14 +131,14 @@ namespace ascension {
 			 */
 			class CompletionProposalPopupCommand : public Command {
 			public:
-				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) throw();
+				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
 			/// Selects the entire document.
 			class EntireDocumentSelectionCreationCommand : public Command {
 			public:
-				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) throw();
+				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
@@ -145,7 +151,7 @@ namespace ascension {
 			 */
 			class FindNextCommand : public Command {
 			public:
-				FindNextCommand(viewers::TextViewer& viewer, Direction direction) throw();
+				FindNextCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
 				ulong doExecute();
 				const Direction direction_;
@@ -157,7 +163,7 @@ namespace ascension {
 			class IncrementalFindCommand : public Command {
 			public:
 				IncrementalFindCommand(viewers::TextViewer& view,
-					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) throw();
+					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) /*throw()*/;
 			private:
 				ulong doExecute();
 				const Direction direction_;
@@ -169,7 +175,7 @@ namespace ascension {
 			 */
 			class IndentationCommand : public Command {
 			public:
-				IndentationCommand(viewers::TextViewer& view, bool increase) throw();
+				IndentationCommand(viewers::TextViewer& view, bool increase) /*throw()*/;
 			private:
 				ulong doExecute();
 				bool increases_;
@@ -177,21 +183,21 @@ namespace ascension {
 			/// Toggles the input method's open status.
 			class InputMethodOpenStatusToggleCommand : public Command {
 			public:
-				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) throw();
+				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
 			/// Toggles Soft Keyboard mode of the input method.
 			class InputMethodSoftKeyboardModeToggleCommand : public Command {
 			public:
-				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) throw();
+				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
 			/// Moves the caret or extends the selection to the match bracket.
 			class MatchBracketCommand : public Command {
 			public:
-				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) throw();
+				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool extends_;
@@ -203,7 +209,7 @@ namespace ascension {
 			 */
 			class NewlineCommand : public Command {
 			public:
-				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) throw();
+				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool insertsPrevious_;
@@ -211,14 +217,14 @@ namespace ascension {
 			/// Toggles overtype mode of the caret.
 			class OvertypeModeToggleCommand : public Command {
 			public:
-				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) throw();
+				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
 			/// Inserts the content of the kill ring or the clipboard at the caret position.
 			class PasteCommand : public Command {
 			public:
-				PasteCommand(viewers::TextViewer& view, bool useKillRing) throw();
+				PasteCommand(viewers::TextViewer& view, bool useKillRing) /*throw()*/;
 				ulong doExecute();
 			private:
 				const bool usesKillRing_;
@@ -226,7 +232,7 @@ namespace ascension {
 			/// Reconverts by using the input method editor.
 			class ReconversionCommand : public Command {
 			public:
-				explicit ReconversionCommand(viewers::TextViewer& view) throw();
+				explicit ReconversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
@@ -234,7 +240,7 @@ namespace ascension {
 			class ReplaceAllCommand : public Command {
 			public:
 				ReplaceAllCommand(viewers::TextViewer& viewer,
-					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) throw();
+					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool onlySelection_;
@@ -243,17 +249,22 @@ namespace ascension {
 			/// Extends the selection and begins rectangular selection.
 			class RowSelectionExtensionCommand : public Command {
 			public:
-				RowSelectionExtensionCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(void));
-				RowSelectionExtensionCommand(viewers::TextViewer& view, void(viewers::Caret::*procedure)(length_t));
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					kernel::Position(viewers::Caret::*procedure)(void) const);
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					kernel::Position(viewers::Caret::*procedure)(length_t) const);
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const);
 				ulong doExecute();
 			private:
-				void(viewers::Caret::*const procedure0_)(void);
-				void(viewers::Caret::*const procedure1_)(length_t);
+				kernel::Position(viewers::Caret::*procedure0_)(void) const;
+				kernel::Position(viewers::Caret::*procedure1_)(length_t) const;
+				viewers::VerticalDestinationProxy(viewers::Caret::*procedureV1_)(length_t) const;
 			};
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
 			public:
-				TabifyCommand(viewers::TextViewer& view, bool untabify) throw();
+				TabifyCommand(viewers::TextViewer& view, bool untabify) /*throw()*/;
 			private:
 				ulong doExecute();
 				bool untabify_;
@@ -261,7 +272,7 @@ namespace ascension {
 			/// Inputs a text.
 			class TextInputCommand : public Command {
 			public:
-				TextInputCommand(viewers::TextViewer& view, const String& text) throw();
+				TextInputCommand(viewers::TextViewer& view, const String& text) /*throw()*/;
 			private:
 				ulong doExecute();
 				String text_;
@@ -277,7 +288,7 @@ namespace ascension {
 			/// Performs undo or redo.
 			class UndoCommand : public Command {
 			public:
-				UndoCommand(viewers::TextViewer& view, bool redo) throw();
+				UndoCommand(viewers::TextViewer& view, bool redo) /*throw()*/;
 			private:
 				ulong doExecute();
 				const bool redo_;
@@ -285,7 +296,7 @@ namespace ascension {
 			/// Deletes the forward/backward N word(s).
 			class WordDeletionCommand : public Command {
 			public:
-				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) throw();
+				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
 				ulong doExecute();
 				const Direction direction_;
@@ -293,7 +304,7 @@ namespace ascension {
 			/// Selects the current word.
 			class WordSelectionCreationCommand : public Command {
 			public:
-				explicit WordSelectionCreationCommand(viewers::TextViewer& view) throw();
+				explicit WordSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
 				ulong doExecute();
 			};
@@ -302,16 +313,16 @@ namespace ascension {
 		/// Standard input sequence checkers.
 		namespace isc {
 			/// I.S.C. for Ainu.
-			class AinuInputSequenceChecker : virtual public InputSequenceChecker {
+			class AinuInputSequenceChecker : public InputSequenceChecker {
 			public:
 				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
 			};
 			/// I.S.C. for Thai.
-			class ThaiInputSequenceChecker : virtual public InputSequenceChecker {
+			class ThaiInputSequenceChecker : public InputSequenceChecker {
 				MANAH_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
-				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) throw() : mode_(mode) {}
+				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}
 				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
 			private:
 				enum CharacterClass {
@@ -324,13 +335,13 @@ namespace ascension {
 				const Mode mode_;
 				static const CharacterClass charClasses_[];
 				static const char checkMap_[];
-				static CharacterClass getCharacterClass(CodePoint cp) throw() {
+				static CharacterClass getCharacterClass(CodePoint cp) /*throw()*/ {
 					if(cp < 0x0020 || cp == 0x007F)			return CTRL;
 					else if(cp >= 0x0E00 && cp < 0x0E60)	return charClasses_[cp - 0x0E00];
 					else if(cp >= 0x0E60 && cp < 0x0E80)	return CTRL;
 					else									return NON;
 				}
-				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) throw() {
+				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) /*throw()*/ {
 					const char result = checkMap_[lead * CHARCLASS_COUNT + follow];
 					if(result == 'A' || result == 'C' || result == 'X')
 						return true;
@@ -341,7 +352,7 @@ namespace ascension {
 				}
 			};
 			/// I.S.C. for Vietnamese.
-			class VietnameseInputSequenceChecker : virtual public InputSequenceChecker {
+			class VietnameseInputSequenceChecker : public InputSequenceChecker {
 			public:
 				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
 			};

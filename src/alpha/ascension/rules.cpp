@@ -18,10 +18,9 @@ using rules::internal::HashTable;
 
 namespace {
 	template<typename T> inline bool inRange(T v, T b, T e) {return v >= b && v <= e;}
-	template<typename T>
-	struct InRange : unary_function<T, bool> {
+	template<typename T> struct InRange : unary_function<T, bool> {
 		InRange(T first, T last) : f(first), l(last) {}
-		bool operator()(T v) const throw() {return inRange(v, f, l);}
+		bool operator()(T v) const {return inRange(v, f, l);}
 		T f, l;
 	};
 }
@@ -36,17 +35,17 @@ namespace ascension {
 			public:
 				template<typename StringSequence>
 				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
-				~HashTable() throw();
+				~HashTable() /*throw()*/;
 				template<typename CharacterSequence>
 				static ulong hashCode(CharacterSequence first, CharacterSequence last);
 				bool matches(const Char* first, const Char* last) const;
-				size_t maximumLength() const throw() {return maxLength_;}
+				size_t maximumLength() const /*throw()*/ {return maxLength_;}
 			private:
 				struct Entry {
 					String data;
 					Entry* next;
-					explicit Entry(const String& str) throw() : data(str) {}
-					~Entry() throw() {delete next;}
+					explicit Entry(const String& str) /*throw()*/ : data(str) {}
+					~Entry() /*throw()*/ {delete next;}
 				};
 				Entry** entries_;
 				size_t numberOfEntries_;
@@ -81,7 +80,7 @@ HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensiti
 }
 
 /// Destructor.
-HashTable::~HashTable() {
+HashTable::~HashTable() /*throw()*/ {
 	for(size_t i = 0; i < numberOfEntries_; ++i)
 		delete entries_[i];
 	delete[] entries_;
@@ -515,16 +514,16 @@ namespace {
 } // namespace @0
 
 /// Constructor. The set of the valid schemes is empty.
-URIDetector::URIDetector() throw() : validSchemes_(0) {
+URIDetector::URIDetector() /*throw()*/ : validSchemes_(0) {
 }
 
 /// Destructor.
-URIDetector::~URIDetector() throw() {
+URIDetector::~URIDetector() /*throw()*/ {
 	delete validSchemes_;
 }
 
 /// Returns the default generic instance.
-const URIDetector& URIDetector::defaultGenericInstance() throw() {
+const URIDetector& URIDetector::defaultGenericInstance() /*throw()*/ {
 	static URIDetector singleton;
 	return singleton;
 }
@@ -533,7 +532,7 @@ const URIDetector& URIDetector::defaultGenericInstance() throw() {
  * Returns the default instance accepts URI schemes defined by IANA
  * (http://www.iana.org/assignments/uri-schemes.html).
  */
-const URIDetector& URIDetector::defaultIANAURIInstance() throw() {
+const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 	static URIDetector singleton;
 	if(singleton.validSchemes_ == 0)
 		singleton.setValidSchemes(
@@ -680,7 +679,7 @@ const Token::ID Token::UNCALCULATED = static_cast<Token::ID>(-1);
  * @param tokenID the identifier of the token which will be returned by the rule. can be @c Token#NULL_ID
  * @param caseSensitive set false to enable caseless match
  */
-Rule::Rule(Token::ID tokenID, bool caseSensitive) throw() : id_(tokenID), caseSensitive_(caseSensitive) {
+Rule::Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/ : id_(tokenID), caseSensitive_(caseSensitive) {
 }
 
 
@@ -703,7 +702,7 @@ RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& 
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	// match the start sequence
 	if(first[0] != startSequence_[0]
 			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
@@ -736,11 +735,11 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
  */
-NumberRule::NumberRule(Token::ID id) throw() : Rule(id, true) {
+NumberRule::NumberRule(Token::ID id) /*throw()*/ : Rule(id, true) {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	/*
 		This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
@@ -814,11 +813,11 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
  * @param uriDetector the URI detector
  */
 URIRule::URIRule(Token::ID id, const URIDetector& uriDetector,
-		bool delegateOwnership) throw() : Rule(id, true), uriDetector_(&uriDetector, delegateOwnership) {
+		bool delegateOwnership) /*throw()*/ : Rule(id, true), uriDetector_(&uriDetector, delegateOwnership) {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() {
+auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	const Char* const e = uriDetector_->detect(first, last);
 	if(e == first)
@@ -886,7 +885,7 @@ WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separ
 }
 
 /// Destructor.
-WordRule::~WordRule() throw() {
+WordRule::~WordRule() /*throw()*/ {
 	delete words_;
 }
 
@@ -932,23 +931,23 @@ auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first
 	return token;
 }
 
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_REGEX
 
 
 // NullTokenScanner /////////////////////////////////////////////////////////
 
 /// @see ITokenScanner#getIdentifierSyntax
-const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const throw() {
+const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*/ {
 	return IdentifierSyntax::defaultInstance();
 }
 
 /// @see ITokenScanner#getPosition
-Position NullTokenScanner::getPosition() const throw() {
+Position NullTokenScanner::getPosition() const /*throw()*/ {
 	return Position::INVALID_POSITION;
 }
 
 /// @see ITokenScanner#isDone
-bool NullTokenScanner::isDone() const throw() {
+bool NullTokenScanner::isDone() const /*throw()*/ {
 	return true;
 }
 
@@ -968,11 +967,11 @@ void NullTokenScanner::parse(const Document&, const Region&) {
  * Constructor.
  * @param contentType the content the scanner parses
  */
-LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) throw() : contentType_(contentType), current_() {
+LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) /*throw()*/ : contentType_(contentType), current_() {
 }
 
 /// Destructor.
-LexicalTokenScanner::~LexicalTokenScanner() throw() {
+LexicalTokenScanner::~LexicalTokenScanner() /*throw()*/ {
 	for(list<const Rule*>::iterator i = rules_.begin(); i != rules_.end(); ++i)
 		delete *i;
 	for(list<const WordRule*>::iterator i = wordRules_.begin(); i != wordRules_.end(); ++i)
@@ -980,7 +979,7 @@ LexicalTokenScanner::~LexicalTokenScanner() throw() {
 }
 
 /// @see ITokenScanner#getIdentifierSyntax
-const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const throw() {
+const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw()*/ {
 	return current_.document()->contentTypeInformation().getIdentifierSyntax(contentType_);
 }
 
@@ -1019,12 +1018,12 @@ void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 }
 
 /// @see ITokenScanner#getPosition
-Position LexicalTokenScanner::getPosition() const throw() {
+Position LexicalTokenScanner::getPosition() const /*throw()*/ {
 	return current_.tell();
 }
 
 /// @see ITokenScanner#isDone
-bool LexicalTokenScanner::isDone() const throw() {
+bool LexicalTokenScanner::isDone() const /*throw()*/ {
 	return !current_.hasNext();
 }
 
@@ -1080,11 +1079,12 @@ void LexicalTokenScanner::parse(const Document& document, const Region& region) 
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
  */
-TransitionRule::TransitionRule(ContentType contentType, ContentType destination) throw() : contentType_(contentType), destination_(destination) {
+TransitionRule::TransitionRule(ContentType contentType,
+		ContentType destination) : contentType_(contentType), destination_(destination) /*throw()*/ {
 }
 
 /// Destructor.
-TransitionRule::~TransitionRule() throw() {
+TransitionRule::~TransitionRule() /*throw()*/ {
 }
 
 /**
@@ -1161,22 +1161,22 @@ length_t RegexTransitionRule::matches(const String& line, length_t column) const
 	}
 }
 
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_REGEX
 
 
 // LexicalPartitioner ///////////////////////////////////////////////////////
 
 /// Constructor.
-LexicalPartitioner::LexicalPartitioner() throw() {
+LexicalPartitioner::LexicalPartitioner() /*throw()*/ {
 }
 
 /// Destructor.
-LexicalPartitioner::~LexicalPartitioner() throw() {
+LexicalPartitioner::~LexicalPartitioner() /*throw()*/ {
 	clearRules();
 }
 
 /// Deletes all the transition rules.
-void LexicalPartitioner::clearRules() throw() {
+void LexicalPartitioner::clearRules() /*throw()*/ {
 	for(list<const TransitionRule*>::const_iterator i(rules_.begin()); i != rules_.end(); ++i)
 		delete *i;
 	rules_.clear();
@@ -1193,11 +1193,11 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 }
 
 /// @see kernel#DocumentPartitioner#documentAboutToBeChanged
-void LexicalPartitioner::documentAboutToBeChanged() throw() {
+void LexicalPartitioner::documentAboutToBeChanged() /*throw()*/ {
 }
 
 /// @see kernel#DocumentPartitioner#documentChanged
-void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
+void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()*/ {
 	// this code reconstructs partitions in the region changed by the document modification using
 	// the registered partitioning rules
 
@@ -1214,8 +1214,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 			if(p.start < change.region().beginning())
 				continue;
 			else if(p.start > change.region().end()) {
-				p.start = updatePosition(p.start, change, FORWARD);
-				p.tokenStart = updatePosition(p.tokenStart, change, FORWARD);
+				p.start = updatePosition(p.start, change, Direction::FORWARD);
+				p.tokenStart = updatePosition(p.tokenStart, change, Direction::FORWARD);
 			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.region().end()) {
 				// this partition is encompassed with the deleted region
 				partitions_.erase(i);
@@ -1233,8 +1233,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 	} else {
 		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
 			Partition& p = *partitions_[i];
-			p.start = updatePosition(p.start, change, FORWARD);
-			p.tokenStart = updatePosition(p.tokenStart, change, FORWARD);
+			p.start = updatePosition(p.start, change, Direction::FORWARD);
+			p.tokenStart = updatePosition(p.tokenStart, change, Direction::FORWARD);
 		}
 	}
 	verify();
@@ -1293,7 +1293,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) throw() {
 }
 
 /// @see kernel#DocumentPartitioner#doGetPartition
-void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const throw() {
+void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const /*throw()*/ {
 	const size_t i = partitionAt(at);
 	const Partition& p = *partitions_[i];
 	partition.contentType = p.contentType;
@@ -1302,7 +1302,7 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 }
 
 /// @see kernel#DocumentPartitioner#doInstall
-void LexicalPartitioner::doInstall() throw() {
+void LexicalPartitioner::doInstall() /*throw()*/ {
 	partitions_.clear();
 	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
 	Region dummy;
@@ -1361,9 +1361,9 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 }
 
 // returns the index of the partition encompasses the given position.
-inline size_t LexicalPartitioner::partitionAt(const Position& at) const throw() {
+inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
 	size_t result = ascension::internal::searchBound(
-		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(LexicalPartitioner::getPartitionStart), this));
+		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(&LexicalPartitioner::getPartitionStart), this));
 	if(result == partitions_.size()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return 0;
@@ -1379,7 +1379,7 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const throw() 
 }
 
 // returns the transition state (corresponding content type) at the given position.
-inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const throw() {
+inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
 	if(at == Position::ZERO_POSITION)
 		return DEFAULT_CONTENT_TYPE;
 	size_t i = partitionAt(at);
@@ -1397,7 +1397,7 @@ inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) con
  * @return the length of the pattern matched or 0 if the all rules did not matched
  */
 inline length_t LexicalPartitioner::tryTransition(
-		const String& line, length_t column, ContentType contentType, ContentType& destination) const throw() {
+		const String& line, length_t column, ContentType contentType, ContentType& destination) const /*throw()*/ {
 	for(TransitionRules::const_iterator rule(rules_.begin()), e(rules_.end()); rule != e; ++rule) {
 		if((*rule)->contentType() == contentType) {
 			if(const length_t c = (*rule)->matches(line, column)) {
@@ -1428,7 +1428,7 @@ inline void LexicalPartitioner::verify() const {
 		}
 	}
 //	assert(partitions_.back()->start < getDocument()->getEndPosition(false) || partitions_.getSize() == 1);
-#endif /* _DEBUG */
+#endif // _DEBUG
 }
 
 
@@ -1450,7 +1450,7 @@ LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstru
 }
 
 /// @see presentation#IPartitionPresentationReconstructor#getPresentation
-auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const throw() {
+auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
 	list<StyledText> result;
 	Position lastTokenEnd = region.beginning();	// the end of the last token
 	tokenScanner_->parse(document_, region);

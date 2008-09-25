@@ -1,21 +1,21 @@
 /**
  * @file identifier-syntax.cpp
  * @author exeal
- * @date 2007
+ * @date 2007-2008
  */
 
 #include "../unicode-property.hpp"
 #include <vector>
 using namespace ascension;
-using namespace ascension::unicode;
-using namespace ascension::unicode::ucd;
+using namespace ascension::text;
+using namespace ascension::text::ucd;
 using namespace std;
 
 
 // IdentifierSyntax /////////////////////////////////////////////////////////
 
 /**
- * @class ascension::unicode::IdentifierSyntax ../unicode.hpp
+ * @class ascension::text::IdentifierSyntax ../unicode.hpp
  * An @c IdentifierSyntax classifies characters and detects identifiers based on
  * <a href="http://www.unicode.org/reports/tr31/">UAX #31: Identifier and Pattern Syntax</a>.
  *
@@ -50,7 +50,7 @@ using namespace std;
  * is.overrideIDNonStartCharacters(L"_", L"");
  * @endcode
  *
- * @see text#IContentTypeInformationProvider#getIdentifierSyntax
+ * @see kernel#IContentTypeInformationProvider#getIdentifierSyntax
  */
 
 namespace {
@@ -79,7 +79,7 @@ namespace {
  * Default constructor.
  * The character classification type is initialized to @c ASCENSION_DEFAULT_CHARACTER_DETECTION_TYPE.
  */
-IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
+IdentifierSyntax::IdentifierSyntax() /*throw()*/ : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, equivalenceType_(NO_DECOMPOSITION)
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -87,7 +87,7 @@ IdentifierSyntax::IdentifierSyntax() throw() : type_(ASCENSION_DEFAULT_CHARACTER
 }
 
 /// Copy-constructor.
-IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) throw() : type_(rhs.type_), caseSensitive_(rhs.caseSensitive_),
+IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) /*throw()*/ : type_(rhs.type_), caseSensitive_(rhs.caseSensitive_),
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		equivalenceType_(rhs.equivalenceType_),
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -106,7 +106,7 @@ IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, Decomposition equivalenceType /* = NO_DECOMPOSITION */
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
-) throw() : type_(type), caseSensitive_(ignoreCase)
+) /*throw()*/ : type_(type), caseSensitive_(ignoreCase)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, equivalenceType_(equivalenceType)
 #endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
@@ -117,9 +117,9 @@ IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase
  * Returns the default @c IdentifierSyntax singleton instance. This instance has
  * @c UNICODE_DEFAULT character classification type.
  */
-const IdentifierSyntax& IdentifierSyntax::getDefaultInstance() throw() {
-	static const IdentifierSyntax defaultInstance(UNICODE_DEFAULT);
-	return defaultInstance;
+const IdentifierSyntax& IdentifierSyntax::defaultInstance() /*throw()*/ {
+	static const IdentifierSyntax instance(UNICODE_DEFAULT);
+	return instance;
 }
 
 /**
@@ -127,7 +127,7 @@ const IdentifierSyntax& IdentifierSyntax::getDefaultInstance() throw() {
  * @param cp the code point of the character
  * @return true if @a cp is identifier continue character
  */
-bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const throw() {
+bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw()*/ {
 	if(binary_search(addedIDNonStartCharacters_.begin(), addedIDNonStartCharacters_.end(), cp)
 			|| binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), cp))
 		return true;
@@ -153,7 +153,7 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const throw()
  * @param cp the code point of the character
  * @return true if @a cp is an identifier start character
  */
-bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const throw() {
+bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*/ {
 	if(binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), cp))
 		return true;
 	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), cp))
@@ -178,7 +178,7 @@ bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const throw() {
  * @param includeTab set true to treat a horizontal tab as a white space
  * @return true if @a cp is a white space
  */
-bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const throw() {
+bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw()*/ {
 	if(includeTab && cp == 0x0009)
 		return true;
 	switch(type_) {

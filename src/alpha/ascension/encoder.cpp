@@ -99,11 +99,11 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
 const char Encoder::ALIASES_SEPARATOR = '|';
 
 /// Protected default constructor.
-Encoder::Encoder() throw() : substitutionPolicy_(DONT_SUBSTITUTE), flags_(BEGINNING_OF_BUFFER | END_OF_BUFFER) {
+Encoder::Encoder() /*throw()*/ : substitutionPolicy_(DONT_SUBSTITUTE), flags_(BEGINNING_OF_BUFFER | END_OF_BUFFER) {
 }
 
 /// Destructor.
-Encoder::~Encoder() throw() {
+Encoder::~Encoder() /*throw()*/ {
 }
 
 /**
@@ -154,7 +154,7 @@ bool Encoder::canEncode(const String& s) {
 	return canEncode(s.data(), s.data() + s.length());
 }
 
-EncoderFactory* Encoder::find(MIBenum mib) throw() {
+EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
 	if(mib > MIB_UNKNOWN) {
 		for(vector<EncoderFactory*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 			if((*i)->mibEnum() == mib)
@@ -164,7 +164,7 @@ EncoderFactory* Encoder::find(MIBenum mib) throw() {
 	return 0;
 }
 
-EncoderFactory* Encoder::find(const string& name) throw() {
+EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
 	for(vector<EncoderFactory*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
 		const string canonicalName((*i)->name());
@@ -196,7 +196,7 @@ EncoderFactory* Encoder::find(const string& name) throw() {
  * @return the encoder or @c null if not registered
  * @see #availableNames
  */
-auto_ptr<Encoder> Encoder::forID(size_t id) throw() {
+auto_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
 	return (id < registry().size()) ? registry()[id]->create() : auto_ptr<Encoder>(0);
 }
 
@@ -205,7 +205,7 @@ auto_ptr<Encoder> Encoder::forID(size_t id) throw() {
  * @param mib the MIBenum value
  * @return the encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) throw() {
+auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
 	EncoderFactory* const factory = find(mib);
 	return (factory != 0) ? factory->create() : auto_ptr<Encoder>(0);
 }
@@ -215,7 +215,7 @@ auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) throw() {
  * @param name the name
  * @return the encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forName(const string& name) throw() {
+auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 	EncoderFactory* const factory = find(name);
 	return (factory != 0) ? factory->create() : auto_ptr<Encoder>(0);
 }
@@ -226,11 +226,11 @@ auto_ptr<Encoder> Encoder::forName(const string& name) throw() {
  * @param codePage the code page
  * @return the encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) throw() {
+auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
 	// TODO: not implemented.
 	return auto_ptr<Encoder>(0);
 }
-#endif /* ASCENSION_WINDOWS */
+#endif // ASCENSION_WINDOWS
 
 /**
  * Converts the given string from UTF-16 into the native encoding.
@@ -241,6 +241,8 @@ auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) throw() {
  * @param[in] fromEnd the end of the buffer to be converted
  * @param[in] fromNext points to the first unconverted character after the conversion
  * @return the result of the conversion
+ * @throw NullPointerException @a to, @a toEnd, @a from and/or @a fromEnd is @c null
+ * @throw std#invalid_argument @a to &gt; @a toEnd or @a from &gt; @a fromEnd
  */
 Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
 		byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
@@ -260,6 +262,7 @@ Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
  * @c #resetEncodingState method.
  * @param from the string to be converted
  * @return the converted string or an empty if encountered unconvertible character
+ * @throw std#bad_alloc
  */
 string Encoder::fromUnicode(const String& from) {
 	size_t bytes = properties().maximumNativeBytes() * from.length();
@@ -272,16 +275,18 @@ string Encoder::fromUnicode(const String& from) {
 		result = fromUnicode(temp.get(), temp.get() + bytes, toNext, from.data(), from.data() + from.length(), fromNext);
 		if(result == COMPLETED)
 			break;
-		else if(result == INSUFFICIENT_BUFFER)
-			temp.reset(new byte[bytes *= 2]);
-		else
+		else if(result == INSUFFICIENT_BUFFER) {
+			temp.reset(new(nothrow) byte[bytes *= 2]);
+			if(temp.get() == 0)
+				throw bad_alloc();
+		} else
 			return "";
 	}
 	return string(temp.get(), toNext);
 }
 
 /// Returns the default encoder.
-Encoder& Encoder::getDefault() throw() {
+Encoder& Encoder::getDefault() /*throw()*/ {
 //#ifdef ASCENSION_WINDOWS
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
@@ -309,7 +314,7 @@ vector<EncoderFactory*>& Encoder::registry() {
  * @return the encoder
  * @see #resetEncodingState
  */
-Encoder& Encoder::resetDecodingState() throw() {
+Encoder& Encoder::resetDecodingState() /*throw()*/ {
 	return *this;
 }
 
@@ -319,7 +324,7 @@ Encoder& Encoder::resetDecodingState() throw() {
  * @return the encoder
  * @see #resetDecodingState
  */
-Encoder& Encoder::resetEncodingState() throw() {
+Encoder& Encoder::resetEncodingState() /*throw()*/ {
 	return *this;
 }
 
@@ -350,12 +355,12 @@ Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
 }
 
 /// Returns true if supports the encoding has the given MIBenum value.
-bool Encoder::supports(MIBenum mib) throw() {
+bool Encoder::supports(MIBenum mib) /*throw()*/ {
 	return find(mib) != 0;
 }
 
 /// Returns true if supports the encoding has to the given name or alias.
-bool Encoder::supports(const string& name) throw() {
+bool Encoder::supports(const string& name) /*throw()*/ {
 	return find(name) != 0;
 }
 
@@ -418,7 +423,7 @@ EncodingDetector::EncodingDetector(const string& name) : name_(name) {
 }
 
 /// Destructor.
-EncodingDetector::~EncodingDetector() throw() {
+EncodingDetector::~EncodingDetector() /*throw()*/ {
 }
 
 /**
@@ -445,7 +450,7 @@ pair<MIBenum, string> EncodingDetector::detect(const byte* first, const byte* la
  * @param name the name
  * @return the encoding detector or @c null if not registered
  */
-EncodingDetector* EncodingDetector::forName(const string& name) throw() {
+EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
 	for(vector<EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		const string canonicalName((*i)->name());
 		if(compareEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()) == 0)
@@ -460,7 +465,7 @@ EncodingDetector* EncodingDetector::forName(const string& name) throw() {
  * @param codePage the code page
  * @return the encoding detector or @c null if not registered
  */
-EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() {
+EncodingDetector* EncodingDetector::forWindowsCodePage(UINT codePage) /*throw()*/ {
 	switch(codePage) {
 	case 50001:	return forName("UniversalAutoDetect");
 	case 50932:	return forName("JISAutoDetect");
@@ -468,7 +473,7 @@ EncodingDetector* EncodingDetector::forWindowsCodePage(::UINT codePage) throw() 
 	default:	return 0;
 	}
 }
-#endif /* ASCENSION_WINDOWS */
+#endif // ASCENSION_WINDOWS
 
 vector<EncodingDetector*>& EncodingDetector::registry() {
 	static struct Registry {
@@ -500,14 +505,14 @@ namespace {
 	public:
 		UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 	private:
-		pair<MIBenum, string>	doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+pair<MIBenum, string> UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	// try all detectors
 	vector<string> names;
 	availableNames(back_inserter(names));
@@ -542,18 +547,18 @@ namespace {
 	public:
 		BasicLatinEncoderFactory(const string& name, MIBenum mib, const string& displayName,
 			const string& aliases, ulong mask) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
-		virtual ~BasicLatinEncoderFactory() throw() {}
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder(mask_, *this));}
+		virtual ~BasicLatinEncoderFactory() /*throw()*/ {}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder(mask_, *this));}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			InternalEncoder(ulong mask, const IEncodingProperties& properties) throw() : mask_(mask), props_(properties) {}
+			InternalEncoder(ulong mask, const IEncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext);
-			const IEncodingProperties&	properties() const throw() {return props_;}
+			const IEncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
 			const ulong mask_;
 			const IEncodingProperties& props_;
@@ -569,7 +574,7 @@ namespace {
 			"iso-ir-100|ISO_8859-1|latin1|l1|IBM819|CP819|csISOLatin1" "\0ibm-819|8859_1|819", 0xFF);
 
 	struct Installer {
-		Installer() throw() {
+		Installer() /*throw()*/ {
 			Encoder::registerFactory(US_ASCII);
 			Encoder::registerFactory(ISO_8859_1);
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UniversalDetector));
@@ -641,41 +646,41 @@ EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 }
 
 /// Destructor.
-EncoderFactoryBase::~EncoderFactoryBase() throw() {
+EncoderFactoryBase::~EncoderFactoryBase() /*throw()*/ {
 }
 
 /// @see IEncodingProperties#aliases
-string EncoderFactoryBase::aliases() const throw() {
+string EncoderFactoryBase::aliases() const /*throw()*/ {
 	return aliases_;
 }
 
 /// @see IEncodingProperties#displayName
-string EncoderFactoryBase::displayName(const locale&) const throw() {
+string EncoderFactoryBase::displayName(const locale&) const /*throw()*/ {
 	return displayName_;
 }
 
 /// @see IEncodingProperties#maximumNativeBytes
-size_t EncoderFactoryBase::maximumNativeBytes() const throw() {
+size_t EncoderFactoryBase::maximumNativeBytes() const /*throw()*/ {
 	return maximumNativeBytes_;
 }
 
 /// @see IEncodingProperties#maximumUCSLength
-size_t EncoderFactoryBase::maximumUCSLength() const throw() {
+size_t EncoderFactoryBase::maximumUCSLength() const /*throw()*/ {
 	return maximumUCSLength_;
 }
 
 /// @see IEncodingProperties#mibEnum
-MIBenum EncoderFactoryBase::mibEnum() const throw() {
+MIBenum EncoderFactoryBase::mibEnum() const /*throw()*/ {
 	return mib_;
 }
 
 /// @see IEncodingProperties#name
-string EncoderFactoryBase::name() const throw() {
+string EncoderFactoryBase::name() const /*throw()*/ {
 	return name_;
 }
 
 /// @see IEncodingProperties#substitutionCharacter
-byte EncoderFactoryBase::substitutionCharacter() const throw() {
+byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
 	return substitutionCharacter_;
 }
 
@@ -697,13 +702,13 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  * Constructor.
  * @param byteToCharacterWire the table defines byte-to-character mapping consists of 16Å~16-characters
  */
-sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) throw() : byteToUnicode_(byteToCharacterWire) {
+sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/ : byteToUnicode_(byteToCharacterWire) {
 	fill_n(unicodeToByte_, MANAH_COUNTOF(unicodeToByte_), static_cast<byte*>(0));
 	buildUnicodeToByteTable();	// eager?
 }
 
 /// Destructor.
-sbcs::BidirectionalMap::~BidirectionalMap() throw() {
+sbcs::BidirectionalMap::~BidirectionalMap() /*throw()*/ {
 	for(size_t i = 0; i < MANAH_COUNTOF(unicodeToByte_); ++i) {
 		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
 			delete[] unicodeToByte_[i];
@@ -730,21 +735,21 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
-		explicit SingleByteEncoder(const Char** byteToCharacterWire, const IEncodingProperties& properties) throw();
+		explicit SingleByteEncoder(const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/;
 	private:
 		// Encoder
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties&	properties() const throw() {return props_;}
+		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
 	private:
 		const sbcs::BidirectionalMap table_;
 		const IEncodingProperties& props_;
 	};
 
 	SingleByteEncoder::SingleByteEncoder(const Char** byteToCharacterWire,
-			const IEncodingProperties& properties) throw() : table_(byteToCharacterWire), props_(properties) {
+			const IEncodingProperties& properties) /*throw()*/ : table_(byteToCharacterWire), props_(properties) {
 	}
 
 	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd,
@@ -789,6 +794,6 @@ namespace {
 } // namespace @0
 
 auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(
-		const Char** byteToCharacterWire, const IEncodingProperties& properties) throw() {
+		const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/ {
 	return auto_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }

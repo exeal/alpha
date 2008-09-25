@@ -41,9 +41,9 @@ namespace {
 	// - "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
 	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
 	// ...but these documents have many bugs. Well, there is no interface named "IDropSourceHelper".
-	class GenericDataObject : virtual public IDataObject {
+	class GenericDataObject : public IDataObject {
 	public:
-		virtual ~GenericDataObject() throw();
+		virtual ~GenericDataObject() /*throw()*/;
 		// IUnknown
 		MANAH_IMPLEMENT_UNKNOWN_SINGLE_THREADED()
 		MANAH_BEGIN_INTERFACE_TABLE()
@@ -64,19 +64,19 @@ namespace {
 			FORMATETC format;
 			STGMEDIUM medium;
 		};
-		list<Entry*>::iterator find(const FORMATETC& format, list<Entry*>::iterator initial) const throw();
+		list<Entry*>::iterator find(const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/;
 	private:
 		list<Entry*> entries_;
 	};
 
-	GenericDataObject::~GenericDataObject() throw() {
+	GenericDataObject::~GenericDataObject() /*throw()*/ {
 		for(list<Entry*>::iterator i(entries_.begin()), e(entries_.end()); i != e; ++i) {
 			::CoTaskMemFree((*i)->format.ptd);
 			::ReleaseStgMedium(&(*i)->medium);
 		}
 	}
 	list<GenericDataObject::Entry*>::iterator GenericDataObject::find(
-			const FORMATETC& format, list<Entry*>::iterator initial) const throw() {
+			const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/ {
 		const list<Entry*>::iterator e(const_cast<GenericDataObject*>(this)->entries_.end());
 		if(format.ptd == 0) {	// this does not support DVTARGETDEVICE
 			for(list<Entry*>::iterator i(initial); i != e; ++i) {
@@ -170,6 +170,27 @@ namespace {
 		::CoTaskMemFree(buffer);
 		return hr;
 	}
+
+	template<typename Procedure>
+	inline HRESULT tryOleClipboard(Procedure procedure) {
+		HRESULT hr;
+		for(int i = 0; i < 100; ++i) {
+			if(CLIPBRD_E_CANT_OPEN != (hr = procedure()))
+				break;
+			::Sleep(0);
+		}
+		return hr;
+	}
+	template<typename Procedure, typename Parameter>
+	inline HRESULT tryOleClipboard(Procedure procedure, Parameter parameter) {
+		HRESULT hr;
+		for(int i = 0; i < 100; ++i) {
+			if(CLIPBRD_E_CANT_OPEN != (hr = procedure(parameter)))
+				break;
+			::Sleep(0);
+		}
+		return hr;
+	}
 } // namespace @0
 
 /**
@@ -180,8 +201,8 @@ namespace {
  */
 pair<HRESULT, String> viewers::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
 	pair<HRESULT, String> result;
-	::FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	::STGMEDIUM stm = {TYMED_HGLOBAL, 0};
+	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	STGMEDIUM stm = {TYMED_HGLOBAL, 0};
 	if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data suppports CF_UNICODETEXT ?
 		if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
 			if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
@@ -244,7 +265,7 @@ pair<HRESULT, String> viewers::getTextFromDataObject(IDataObject& data, bool* re
 	if(FAILED(result.first))
 		result.first = DV_E_FORMATETC;
 	if(SUCCEEDED(result.first) && rectangle != 0) {
-		fe.cfFormat = static_cast<::CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 		*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
 	}
 
@@ -295,7 +316,7 @@ VisualPoint::VisualPoint(const VisualPoint& rhs) : EditPoint(rhs), viewer_(rhs.v
 }
 
 /// Destructor.
-VisualPoint::~VisualPoint() throw() {
+VisualPoint::~VisualPoint() /*throw()*/ {
 	if(viewer_ != 0) {
 		static_cast<kernel::internal::IPointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
 		viewer_->textRenderer().removeVisualLinesListener(*this);
@@ -303,50 +324,45 @@ VisualPoint::~VisualPoint() throw() {
 }
 
 /**
- * Moves to the previous page.
- * @param offset the offset of the movement
+ * Returns the position returned by N pages.
+ * @param pages the number of pages to return
  */
-void VisualPoint::backwardPage(length_t offset /* = 1 */) {
-	verifyViewer();
+VerticalDestinationProxy VisualPoint::backwardPage(length_t pages /* = 1 */) const {
 	// TODO: calculate exact number of visual lines.
-	backwardVisualLine(viewer_->numberOfVisibleLines() * offset);
+	return backwardVisualLine(viewer_->numberOfVisibleLines() * pages);
 }
 
 /**
- * Moves to the previous visual line.
- * @param offset the offset of the movement
+ * Returns the position returned by N visual lines.
+ * @param lines the number of the visual lines to return
  */
-void VisualPoint::backwardVisualLine(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
+VerticalDestinationProxy VisualPoint::backwardVisualLine(length_t lines /* = 1 */) const {
+	Position p(normalized());
 	const TextRenderer& renderer = viewer_->textRenderer();
-	length_t line = lineNumber(), subline = renderer.lineLayout(line).subline(columnNumber());
-	if(line == 0 && subline == 0)
-		return;
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, -static_cast<signed_length_t>(offset));
-	const LineLayout& layout = renderer.lineLayout(line);
-	Position newPosition(line, layout.offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
-	if(layout.subline(newPosition.column) != subline)
-		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
-	crossingLines_ = true;
-	moveTo(newPosition);
-	crossingLines_ = false;
+	length_t subline = renderer.lineLayout(p.line).subline(p.column);
+	if(p.line == 0 && subline == 0)
+		return VerticalDestinationProxy(p);
+	renderer.offsetVisualLine(p.line, subline, -static_cast<signed_length_t>(lines));
+	const LineLayout& layout = renderer.lineLayout(p.line);
+	p.column = layout.offset(lastX_ - renderer.lineIndent(p.line), renderer.linePitch() * static_cast<long>(subline));
+	if(layout.subline(p.column) != subline)
+		p = offsetCharacterPosition(*document(), p, Direction::BACKWARD, characterUnit());
+	return VerticalDestinationProxy(p);
 }
 
 /**
- * Moves to the beginning of the visual line.
+ * Returns the beginning of the visual line.
  * @see EditPoint#beginningOfLine
  */
-void VisualPoint::beginningOfVisualLine() {
+Position VisualPoint::beginningOfVisualLine() const {
 	verifyViewer();
-	const LineLayout& layout = textViewer().textRenderer().lineLayout(lineNumber());
-	moveTo(Position(lineNumber(), layout.sublineOffset(layout.subline(columnNumber()))));
+	const Position p(normalized());
+	const LineLayout& layout = textViewer().textRenderer().lineLayout(p.line);
+	return Position(p.line, layout.sublineOffset(layout.subline(p.column)));
 }
 
 /**
- * Returns if a paste operation can be performed.
+ * Returns true if a paste operation can be performed.
  * @return true if the clipboard data is pastable
  */
 bool VisualPoint::canPaste() {
@@ -358,26 +374,26 @@ bool VisualPoint::canPaste() {
 	return false;
 }
 
-/// Moves to the beginning of the line or the first printable character in the line by context.
-void VisualPoint::contextualBeginningOfLine() {
-	isFirstPrintableCharacterOfLine() ? beginningOfLine() : firstPrintableCharacterOfLine();
+/// Returns the beginning of the line or the first printable character in the line by context.
+Position VisualPoint::contextualBeginningOfLine() const {
+	return isFirstPrintableCharacterOfLine() ? beginningOfLine() : firstPrintableCharacterOfLine();
 }
 
 /// Moves to the beginning of the visual line or the first printable character in the visual line
 /// by context.
-void VisualPoint::contextualBeginningOfVisualLine() {
-	isFirstPrintableCharacterOfLine() ? beginningOfVisualLine() : firstPrintableCharacterOfVisualLine();
+Position VisualPoint::contextualBeginningOfVisualLine() const {
+	return isFirstPrintableCharacterOfLine() ? beginningOfVisualLine() : firstPrintableCharacterOfVisualLine();
 }
 
 /// Moves to the end of the line or the last printable character in the line by context.
-void VisualPoint::contextualEndOfLine() {
-	isLastPrintableCharacterOfLine() ? endOfLine() : lastPrintableCharacterOfLine();
+Position VisualPoint::contextualEndOfLine() const {
+	return isLastPrintableCharacterOfLine() ? endOfLine() : lastPrintableCharacterOfLine();
 }
 
 /// Moves to the end of the visual line or the last printable character in the visual line by
 /// context.
-void VisualPoint::contextualEndOfVisualLine() {
-	isLastPrintableCharacterOfLine() ? endOfVisualLine() : lastPrintableCharacterOfVisualLine();
+Position VisualPoint::contextualEndOfVisualLine() const {
+	return isLastPrintableCharacterOfLine() ? endOfVisualLine() : lastPrintableCharacterOfVisualLine();
 }
 
 /**
@@ -387,6 +403,7 @@ void VisualPoint::contextualEndOfVisualLine() {
  * @param rectangle set true for rectangular indents (will be ignored level is negative)
  * @param level the level of the indentation
  * @return 操作の結果 @a pos が移動するとよい位置
+ * @deprecated 0.8
  */
 Position VisualPoint::doIndent(const Position& other, Char character, bool rectangle, long level) {
 	verifyViewer();
@@ -495,79 +512,67 @@ void VisualPoint::doMoveTo(const Position& to) {
 }
 
 /**
- * Moves to the end of the visual line.
+ * Returns the end of the visual line.
  * @see EditPoint#endOfLine
  */
-void VisualPoint::endOfVisualLine() {
-	verifyViewer();
-	const LineLayout& layout = textViewer().textRenderer().lineLayout(lineNumber());
-	const length_t subline = layout.subline(columnNumber());
-	Position newPosition(lineNumber(), (subline < layout.numberOfSublines() - 1) ?
-		layout.sublineOffset(subline + 1) : document()->lineLength(lineNumber()));
-	if(layout.subline(newPosition.column) != subline)
-		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
-	moveTo(newPosition);
+Position VisualPoint::endOfVisualLine() const {
+	Position p(normalized());
+	const LineLayout& layout = textViewer().textRenderer().lineLayout(p.line);
+	const length_t subline = layout.subline(p.column);
+	p.column = (subline < layout.numberOfSublines() - 1) ?
+		layout.sublineOffset(subline + 1) : document()->lineLength(p.line);
+	if(layout.subline(p.column) != subline)
+		p = offsetCharacterPosition(*document(), p, Direction::BACKWARD, characterUnit());
+	return p;
 }
 
-/// Moves to the first printable character in the line.
-void VisualPoint::firstPrintableCharacterOfLine() {
-	verifyViewer();
-	const length_t line = min(lineNumber(),
-		(isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).second.line);
-	const Char* const p = document()->line(line).data();
-	moveTo(Position(line, identifierSyntax().eatWhiteSpaces(p, p + document()->lineLength(line), true) - p));
+/// Returns the first printable character in the line.
+Position VisualPoint::firstPrintableCharacterOfLine() const {
+	Position p(normalized());
+	const Char* const s = document()->line(p.line).data();
+	p.column = identifierSyntax().eatWhiteSpaces(s, s + document()->lineLength(p.line), true) - s;
+	return p;
 }
 
-/// Moves to the first printable character in the visual line.
-void VisualPoint::firstPrintableCharacterOfVisualLine() {
-	verifyViewer();
-	const length_t line = min(lineNumber(),
-		(isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).second.line);
-	const String& s = document()->line(line);
-	const LineLayout& layout = viewer_->textRenderer().lineLayout(line);
-	const length_t subline = layout.subline(columnNumber());
-	moveTo(Position(line,
-		identifierSyntax().eatWhiteSpaces(s.begin() + layout.sublineOffset(subline),
-			s.begin() + ((subline < layout.numberOfSublines() - 1) ? layout.sublineOffset(subline + 1) : s.length()), true) - s.begin()));
+/// Returns the first printable character in the visual line.
+Position VisualPoint::firstPrintableCharacterOfVisualLine() const {
+	Position p(normalized());
+	const String& s = document()->line(p.line);
+	const LineLayout& layout = viewer_->textRenderer().lineLayout(p.line);
+	const length_t subline = layout.subline(p.column);
+	p.column = identifierSyntax().eatWhiteSpaces(
+		s.begin() + layout.sublineOffset(subline),
+		s.begin() + ((subline < layout.numberOfSublines() - 1) ?
+			layout.sublineOffset(subline + 1) : s.length()), true) - s.begin();
+	return p;
 }
 
 /**
- * Moves to the next page.
- * @param offset the offset of the movement
+ * Returns the position advanced by N pages.
+ * @param pages the number of pages to advance
  */
-void VisualPoint::forwardPage(length_t offset /* = 1 */) {
-	verifyViewer();
+VerticalDestinationProxy VisualPoint::forwardPage(length_t pages /* = 1 */) const {
 	// TODO: calculate exact number of visual lines.
-	forwardVisualLine(viewer_->numberOfVisibleLines() * offset);
+	return forwardVisualLine(viewer_->numberOfVisibleLines() * pages);
 }
 
 /**
- * Moves to the next visual line.
- * @param offset the offset of the movement
+ * Returns the position advanced by N visual lines.
+ * @param lines the number of the visual lines to advance
  */
-void VisualPoint::forwardVisualLine(length_t offset /* = 1 */) {
-	verifyViewer();
-	normalize();
+VerticalDestinationProxy VisualPoint::forwardVisualLine(length_t lines /* = 1 */) const {
+	Position p(normalized());
 	const TextRenderer& renderer = viewer_->textRenderer();
-	const LineLayout* layout = &renderer.lineLayout(lineNumber());
-	length_t line = lineNumber(), subline = layout->subline(columnNumber());
-	if(line == document()->numberOfLines() - 1 && subline == layout->numberOfSublines() - 1)
-		return;
-	if(lastX_ == -1)
-		updateLastX();
-	renderer.offsetVisualLine(line, subline, static_cast<signed_length_t>(offset));
-	layout = &renderer.lineLayout(line);
-	Position newPosition(line, layout->offset(lastX_ - renderer.lineIndent(line), renderer.linePitch() * static_cast<long>(subline)));
-	if(layout->subline(newPosition.column) != subline)
-		newPosition = offsetCharacterPosition(*document(), newPosition, BACKWARD, characterUnit());
-	crossingLines_ = true;
-	moveTo(newPosition);
-	crossingLines_ = false;
-}
-
-/// 
-inline const IdentifierSyntax& VisualPoint::identifierSyntax() const {
-	return document()->contentTypeInformation().getIdentifierSyntax(getContentType());
+	const LineLayout* layout = &renderer.lineLayout(p.line);
+	length_t subline = layout->subline(p.column);
+	if(p.line == document()->numberOfLines() - 1 && subline == layout->numberOfSublines() - 1)
+		return VerticalDestinationProxy(p);
+	renderer.offsetVisualLine(p.line, subline, static_cast<signed_length_t>(lines));
+	layout = &renderer.lineLayout(p.line);
+	p.column = layout->offset(lastX_ - renderer.lineIndent(p.line), renderer.linePitch() * static_cast<long>(subline));
+	if(layout->subline(p.column) != subline)
+		p = offsetCharacterPosition(*document(), p, Direction::BACKWARD, characterUnit());
+	return VerticalDestinationProxy(p);
 }
 
 /**
@@ -577,18 +582,31 @@ inline const IdentifierSyntax& VisualPoint::identifierSyntax() const {
  * - If the destination line is bidirectional, the insertion may be performed incorrectly.
  * @param first the start of the text
  * @param last the end of the text
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw NullPointerException @a first and/or @a last are @c null
+ * @throw std#invalid_argument @a first &gt; @a last
  * @see kernel#EditPoint#insert
  */
-void VisualPoint::insertRectangle(const Char* first, const Char* last) {
+bool VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	verifyViewer();
 
 	// HACK: 
 	if(textViewer().configuration().lineWrap.wraps())
 		return insert(first, last);
 
+	if(first == 0)
+		throw NullPointerException("first");
+	else if(last == 0)
+		throw NullPointerException("last");
+	else if(first > last)
+		throw invalid_argument("first > last");
+
 	Document& doc = *document();
-	if(doc.isReadOnly() || first == last)
-		return;
+	if(doc.isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(first == last)
+		return true;
 
 	const length_t numberOfLines = doc.numberOfLines();
 	length_t line = lineNumber();
@@ -596,6 +614,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	const int x = renderer.lineLayout(line).location(columnNumber()).x + renderer.lineIndent(line, 0);
 	const IDocumentInput* const documentInput = doc.input();
 	const String newline(getNewlineString((documentInput != 0) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
+	// TODO: guarentee complete rollback when failed.
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
 		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
@@ -608,13 +627,15 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 			s.append(bol, eol);
 			if(line >= numberOfLines - 1)
 				s.append(newline);
-			doc.insert(Position(line, column), s);
+			if(!doc.insert(Position(line, column), s))
+				return false;
 		}
 
 		if(eol == last)
 			break;
 		bol = eol + ((eol[0] == CARRIAGE_RETURN && eol < last - 1 && eol[1] == LINE_FEED) ? 2 : 1);
 	}
+	return true;
 }
 
 /**
@@ -623,7 +644,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
  */
 bool VisualPoint::isBeginningOfVisualLine() const {
 	verifyViewer();
-	if(isBeginningOfLine())
+	if(isBeginningOfLine())	// this considers narrowing
 		return true;
 	const LineLayout& layout = textViewer().textRenderer().lineLayout(lineNumber());
 	return columnNumber() == layout.sublineOffset(layout.subline(columnNumber()));
@@ -635,7 +656,7 @@ bool VisualPoint::isBeginningOfVisualLine() const {
  */
 bool VisualPoint::isEndOfVisualLine() const {
 	verifyViewer();
-	if(isEndOfLine())
+	if(isEndOfLine())	// this considers narrowing
 		return true;
 	const LineLayout& layout = textViewer().textRenderer().lineLayout(lineNumber());
 	const length_t subline = layout.subline(columnNumber());
@@ -646,7 +667,7 @@ bool VisualPoint::isEndOfVisualLine() const {
 bool VisualPoint::isFirstPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
-	const Position start((isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).first);
+	const Position start(document()->accessibleRegion().first);
 	const length_t offset = (start.line == lineNumber()) ? start.column : 0;
 	const String& line = document()->line(lineNumber());
 	return line.data() + columnNumber() - offset
@@ -663,7 +684,7 @@ bool VisualPoint::isFirstPrintableCharacterOfVisualLine() const {
 bool VisualPoint::isLastPrintableCharacterOfLine() const {
 	verifyViewer();
 	normalize();
-	const Position end((isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).second);
+	const Position end(document()->accessibleRegion().second);
 	const String& line = document()->line(lineNumber());
 	const length_t lineLength = (end.line == lineNumber()) ? end.column : line.length();
 	return line.data() + lineLength - columnNumber()
@@ -676,54 +697,64 @@ bool VisualPoint::isLastPrintableCharacterOfVisualLine() const {
 	return false;
 }
 
-/// Moves to the last printable character in the line.
-void VisualPoint::lastPrintableCharacterOfLine() {
-	verifyViewer();
-	const length_t line = min(lineNumber(),
-		(isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).second.line);
-	const length_t lineLength = document()->lineLength(line);
-	const Char* const p = document()->line(line).data();
+/// Returns the last printable character in the line.
+Position VisualPoint::lastPrintableCharacterOfLine() const {
+	Position p(normalized());
+	const String& s(document()->line(p.line));
 	const IdentifierSyntax& syntax = identifierSyntax();
-
-	for(length_t spaceLength = 0; spaceLength < lineLength; ++spaceLength) {
-		if(syntax.isWhiteSpace(p[lineLength - spaceLength - 1], true)) {
-			moveTo(Position(line, lineLength - spaceLength));
-			return;
-		}
+	for(length_t spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
+		if(syntax.isWhiteSpace(s[s.length() - spaceLength - 1], true))
+			return p.column = s.length() - spaceLength, p;
 	}
-	moveTo(Position(line, lineLength));
+	return p.column = s.length(), p;
 }
 
 /// Moves to the last printable character in the visual line.
-void VisualPoint::lastPrintableCharacterOfVisualLine() {
+Position VisualPoint::lastPrintableCharacterOfVisualLine() const {
 	// TODO: not implemented.
+	return normalized();
 }
 
 /**
- * Moves to left character.
- * @param offset the offset of the movement
+ * Returns the position advanced to the left by N characters.
+ * @param characters the number of characters to adavance
  */
-void VisualPoint::leftCharacter(length_t offset /* = 1 */) {
+Position VisualPoint::leftCharacter(length_t characters /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardCharacter(offset) : forwardCharacter(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ?
+		backwardCharacter(characters) : forwardCharacter(characters);
 }
 
 /**
- * Moves to the beginning of the left word.
- * @param offset the number of words
+ * Returns the beginning of the left N words.
+ * @param words the number of words to adavance
  */
-void VisualPoint::leftWord(length_t offset /* = 1 */) {
+Position VisualPoint::leftWord(length_t words /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWord(offset) : forwardWord(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWord(words) : forwardWord(words);
 }
 
 /**
- * Moves to the end of the left word.
- * @param offset the number of words
+ * Returns the end of the left N words.
+ * @param words the number of words to advance
  */
-void VisualPoint::leftWordEnd(length_t offset /* = 1 */) {
+Position VisualPoint::leftWordEnd(length_t words /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWordEnd(offset) : forwardWordEnd(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ? backwardWordEnd(words) : forwardWordEnd(words);
+}
+
+/// @internal @c Point#moveTo for @c PositionProxy.
+void VisualPoint::moveTo(const VerticalDestinationProxy& to) {
+	if(lastX_ == -1)
+		updateLastX();
+	crossingLines_ = true;
+	try {
+		moveTo(to.position());
+	} catch(...) {
+		crossingLines_ = false;
+		throw;
+	}
+	crossingLines_ = false;
 }
 
 /**
@@ -731,16 +762,20 @@ void VisualPoint::leftWordEnd(length_t offset /* = 1 */) {
  * @note This methos hides @c EditPoint#newLine (C++ rule).
  * @param inheritIndent true to inherit the indent of the previous line
  * @param newlines the number of newlines to insert
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  */
-void VisualPoint::newLine(bool inheritIndent, size_t newlines /* = 1 */) {
+bool VisualPoint::newLine(bool inheritIndent, size_t newlines /* = 1 */) {
 	verifyViewer();
-	if(document()->isReadOnly() || newlines == 0)
-		return;
+	if(document()->isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(newlines == 0)
+		return true;
 
 	const IDocumentInput* di = document()->input();
 	String s(getNewlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
 
-	if(inheritIndent) {	// 自動インデント
+	if(inheritIndent) {	// simple auto-indent
 		const String& currentLine = document()->line(lineNumber());
 		const length_t len = identifierSyntax().eatWhiteSpaces(
 			currentLine.data(), currentLine.data() + columnNumber(), true) - currentLine.data();
@@ -753,143 +788,81 @@ void VisualPoint::newLine(bool inheritIndent, size_t newlines /* = 1 */) {
 			b.sputn(s.data(), static_cast<streamsize>(s.length()));
 		s = b.str();
 	}
-	insert(s);
-}
-
-inline Position VisualPoint::offsetPosition(signed_length_t offset) const {
-	return offsetCharacterPosition(*document(), position(),
-		(offset >= 0) ? FORWARD : BACKWARD, characterUnit(), (offset >= 0) ? offset : -offset);
+	return insert(s);
 }
 
 /**
- * Replaces the specified region by the content of the clipboard. If the current clipboard format
- * is not supported, this method does nothing
- * @param length the number of characters to be replaced
+ * Inserts the content of the clipboard at the current position.
+ * @return false if the change was interrupted
  * @throw ClipboardException the clipboard operation failed
+ * @throw ClipboardException(DV_E_FORMATETC) the current clipboard format is not supported
  * @throw ReadOnlyDocumentException the document is read only
  * @throw bad_alloc internal memory allocation failed
  */
-void VisualPoint::paste(signed_length_t length /* = 0 */) {
+bool VisualPoint::paste() {
 	verifyViewer();
-	if(document()->isReadOnly() || length == 0)
-		paste(position());
-	else
-		paste(offsetPosition(length));
-}
-
-/**
- * Replaces the specified region by the content of the clipboard. If the current clipboard format
- * is not supported, this method does nothing
- * @param other もう1つの位置
- * @throw ClipboardException the clipboard operation failed
- * @throw ReadOnlyDocumentException the document is read only
- * @throw bad_alloc internal memory allocation failed
- */
-void VisualPoint::paste(const Position& other) {
-	verifyViewer();
-
 	if(document()->isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(canPaste()) {
-		IDataObject* content;
-		HRESULT hr;
-		for(int i = 0; i < 100; ++i) {
-			if(CLIPBRD_E_CANT_OPEN != (hr = ::OleGetClipboard(&content)))
-				break;
-			::Sleep(0);
-		}
-		if(hr == E_OUTOFMEMORY)
-			throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
-		else if(FAILED(hr))
-			throw ClipboardException(hr);
-		bool rectangle;
-		const pair<HRESULT, String> text(getTextFromDataObject(*content, &rectangle));
-		if(text.first == E_OUTOFMEMORY) {
-			content->Release();
-			throw bad_alloc("getTextFromDataObject returned E_OUTOFMEMORY.");
-		}
-		if(SUCCEEDED(text.first)) {
-			if(other != position())
-				erase(other);
-			if(rectangle)
-				insertRectangle(text.second);
-			else
-				insert(text.second);
-		}
-		content->Release();
-	}
+	else if(canPaste())
+		throw ClipboardException(DV_E_FORMATETC);
+
+	IDataObject* content;
+	HRESULT hr = tryOleClipboard(::OleGetClipboard, &content);
+	if(hr == E_OUTOFMEMORY)
+		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
+	else if(FAILED(hr))
+		throw ClipboardException(hr);
+	bool rectangle;
+	const pair<HRESULT, String> text(getTextFromDataObject(*content, &rectangle));
+	content->Release();
+	if(text.first == E_OUTOFMEMORY)
+		throw bad_alloc("getTextFromDataObject returned E_OUTOFMEMORY.");
+	else if(SUCCEEDED(text.first))
+		throw ClipboardException(text.first);
+	return rectangle ? insertRectangle(text.second) : insert(text.second);
 }
 
-/**
- * 指定範囲がビューの中央になるようにスクロールする。ただし既に可視なら何もしない
- * @param length 範囲を構成するもう一方の点までの文字数
- * @return 範囲がビューに納まる場合は true を返す
- */
-bool VisualPoint::recenter(signed_length_t length /* = 0 */) {
-	verifyViewer();
-	return recenter(offsetPosition(length));
-}
-
-/**
- * 指定範囲がビューの中央になるようにスクロールする。ただし既に可視なら何もしない
- * @param other 範囲を構成するもう一方の点
- * @return 範囲がビューに納まる場合は true を返す (未実装につき常に true)
- */
-bool VisualPoint::recenter(const Position& other) {
+/// Centers the current visual line in the viewer by vertical scrolling the window.
+void VisualPoint::recenter() {
 	verifyViewer();
 	// TODO: not implemented.
-	return true;
 }
 
 /**
- * Moves to the right character.
- * @param offset the offset of the movement
+ * Returns the right N characters.
+ * @param words the number of characters to advance
  */
-void VisualPoint::rightCharacter(length_t offset /* = 1 */) {
+Position VisualPoint::rightCharacter(length_t characters /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardCharacter(offset) : backwardCharacter(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ?
+		forwardCharacter(characters) : backwardCharacter(characters);
 }
 
 /**
- * Moves to the beginning of the right word.
- * @param offset the number of words
+ * Returns the beginning of the right N words.
+ * @param words the number of words to advance
  */
-void VisualPoint::rightWord(length_t offset /* = 1 */) {
+Position VisualPoint::rightWord(length_t words /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWord(offset) : backwardWord(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWord(words) : backwardWord(words);
 }
 
 /**
- * Moves to the end of the right word.
- * @param offset the number of words
+ * Returns the end of the right N words.
+ * @param words the number of words to advance
  */
-void VisualPoint::rightWordEnd(length_t offset /* = 1 */) {
+Position VisualPoint::rightWordEnd(length_t words /* = 1 */) const {
 	verifyViewer();
-	(viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWordEnd(offset) : backwardWordEnd(offset);
+	return (viewer_->configuration().orientation == LEFT_TO_RIGHT) ? forwardWordEnd(words) : backwardWordEnd(words);
 }
 
-/**
- * 指定範囲が可視になるようにビューをスクロールする
- * @param length 範囲を構成するもう一方の点までの文字数
- * @return 範囲がビューに納まる場合は true を返す (未実装につき常に true)
- */
-bool VisualPoint::show(signed_length_t length /* = 0 */) {
-	verifyDocument();
-	return show(offsetPosition(length));
-}
-
-/**
- * 点が可視になるようにビューをスクロールする
- * @param other 範囲を構成するもう一方の点
- * @return 範囲がビューに納まる場合は true を返す (未実装につき常に true)
- */
-bool VisualPoint::show(const Position& other) {
+/// Scrolls the text viewer until the point is visible in the window.
+void VisualPoint::show() {
 	verifyViewer();
-
 	const TextRenderer& renderer = viewer_->textRenderer();
 	const length_t visibleLines = viewer_->numberOfVisibleLines();
-	MANAH_AUTO_STRUCT_SIZE(::SCROLLINFO, si);
-	::POINT to = {-1, -1};
+	MANAH_AUTO_STRUCT_SIZE(SCROLLINFO, si);
+	POINT to = {-1, -1};
 
 	// for vertical direction
 	if(visualLine_ == INVALID_INDEX) {
@@ -921,8 +894,6 @@ bool VisualPoint::show(const Position& other) {
 	}
 	if(to.x >= -1 || to.y != -1)
 		viewer_->scrollTo(to.x, to.y, true);
-
-	return true;
 }
 
 /**
@@ -931,6 +902,9 @@ bool VisualPoint::show(const Position& other) {
  * @param rectangle set true for rectangular indents (will be ignored level is negative)
  * @param level the level of the indentation
  * @return インデント後に @a pos が移動すべき位置
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @deprecated 0.8
  */
 Position VisualPoint::spaceIndent(const Position& other, bool rectangle, long level /* = 1 */) {
 	verifyViewer();
@@ -943,6 +917,9 @@ Position VisualPoint::spaceIndent(const Position& other, bool rectangle, long le
  * @param rectangle set true for rectangular indents (will be ignored level is negative)
  * @param level the level of the indentation
  * @return インデント後に @a pos が移動すべき位置
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @deprecated 0.8
  */
 Position VisualPoint::tabIndent(const Position& other, bool rectangle, long level /* = 1 */) {
 	verifyViewer();
@@ -973,19 +950,19 @@ length_t VisualPoint::visualColumnNumber() const {
 }
 
 /// @see IVisualLinesListener#visualLinesDeleted
-void VisualPoint::visualLinesDeleted(length_t first, length_t last, length_t, bool) throw() {
+void VisualPoint::visualLinesDeleted(length_t first, length_t last, length_t, bool) /*throw()*/ {
 	if(!adaptsToDocument() && lineNumber() >= first && lineNumber() < last)
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see IVisualLinesListener#visualLinesInserted
-void VisualPoint::visualLinesInserted(length_t first, length_t last) throw() {
+void VisualPoint::visualLinesInserted(length_t first, length_t last) /*throw()*/ {
 	if(!adaptsToDocument() && lineNumber() >= first && lineNumber() < last)
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see IVisualLinesListener#visualLinesModified
-void VisualPoint::visualLinesModified(length_t first, length_t last, signed_length_t sublineDifference, bool, bool) throw() {
+void VisualPoint::visualLinesModified(length_t first, length_t last, signed_length_t sublineDifference, bool, bool) /*throw()*/ {
 	if(visualLine_ != INVALID_INDEX) {
 		// adjust visualLine_ and visualSubine_ according to the visual lines modification
 		if(last <= lineNumber())
@@ -1048,8 +1025,8 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
  * @param position the initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
-Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) throw() : VisualPoint(viewer, position, 0),
-		anchor_(new SelectionAnchor(viewer)), selectionMode_(CHARACTER), clipboardLocale_(::GetUserDefaultLCID()),
+Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) /*throw()*/ : VisualPoint(viewer, position, 0),
+		anchor_(new SelectionAnchor(viewer)), clipboardLocale_(::GetUserDefaultLCID()),
 		yanking_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
 		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), editingByThis_(false),
 		othersEditedFromLastInputChar_(false), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
@@ -1058,7 +1035,7 @@ Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) th
 }
 
 /// Destructor.
-Caret::~Caret() throw() {
+Caret::~Caret() /*throw()*/ {
 	if(Document* const d = document())
 		d->removeListener(*this);
 	delete anchor_;
@@ -1066,18 +1043,30 @@ Caret::~Caret() throw() {
 }
 
 /**
- * Starts line selection mode.
- * The rectangular selection will be revoked automatically.
- * @see #beginWordSelection, #restoreSelectionMode
+ * Registers the listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
  */
-void Caret::beginLineSelection() {
-	verifyViewer();
-	endRectangleSelection();
-	yanking_ = false;
-	if(selectionMode_ == LINE)
-		return;
-	selectionMode_ = LINE;
-	extendSelection(Position(modeInitialAnchorLine_ = anchor_->lineNumber(), 0));
+void Caret::addListener(ICaretListener& listener) {
+	listeners_.add(listener);
+}
+
+/**
+ * Registers the character input listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Caret::addCharacterInputListener(ICharacterInputListener& listener) {
+	characterInputListeners_.add(listener);
+}
+
+/**
+ * Registers the state listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Caret::addStateListener(ICaretStateListener& listener) {
+	stateListeners_.add(listener);
 }
 
 /**
@@ -1090,24 +1079,6 @@ void Caret::beginRectangleSelection() {
 		box_ = new VirtualBox(textViewer(), selectionRegion());
 		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
 	}
-}
-
-/**
- * Starts word selection mode.
- * The rectangular selection will be revoked automatically.
- * @see #beginLineSelection, #restoreSelectionMode
- */
-void Caret::beginWordSelection() {
-	verifyViewer();
-	endRectangleSelection();
-	yanking_ = false;
-	if(selectionMode_ == WORD)
-		return;
-	selectWord();
-	selectionMode_ = WORD;
-	modeInitialAnchorLine_ = lineNumber();
-	wordSelectionChars_[0] = anchor_->columnNumber();
-	wordSelectionChars_[1] = columnNumber();
 }
 
 /// 対括弧の追跡を更新する
@@ -1133,10 +1104,9 @@ void Caret::checkMatchBrackets() {
 			Position>&, bool>(&ICaretStateListener::matchBracketsChanged, *this, oldPair, false);
 }
 
-/// Clears the selection.
+/// Clears the selection. The anchor will move to the caret.
 void Caret::clearSelection() {
 	endRectangleSelection();
-	restoreSelectionMode();
 	leaveAnchorNext_ = false;
 	moveTo(*this);
 }
@@ -1156,20 +1126,12 @@ void Caret::copySelection(bool useKillRing) {
 	HRESULT hr = createTextObject(true, data);
 	if(hr == E_OUTOFMEMORY)
 		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
-	for(int i = 0; i < 100; ++i) {
-		if(CLIPBRD_E_CANT_OPEN != (hr = ::OleSetClipboard(data)))
-			break;
-		::Sleep(0);
-	}
+	hr = tryOleClipboard(::OleSetClipboard, data);
 	if(FAILED(hr)) {
 		data->Release();
 		throw ClipboardException(hr);
 	}
-	for(int i = 0; i < 100; ++i) {
-		if(CLIPBRD_E_CANT_OPEN != (hr = ::OleFlushClipboard()))
-			break;
-		::Sleep(0);
-	}
+	hr = tryOleClipboard(::OleFlushClipboard);
 	data->Release();
 	if(useKillRing) {
 		if(texteditor::Session* const session = document()->session())
@@ -1248,7 +1210,7 @@ HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
 						::GlobalFree(medium.hGlobal);
 						if(SUCCEEDED(hr)) {
 							format.cfFormat = CF_LOCALE;
-							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(::LCID)))) {
+							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
 								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
 									*lcid = clipboardLocale_;
 									hr = o->SetData(&format, &medium, false);
@@ -1274,30 +1236,37 @@ HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
 }
 
 /**
- * Copies and deletes the selected text.
+ * Copies and deletes the selected text. If the selection is empty, this method does nothing.
  * @param useKillRing true to send also the kill ring
+ * @return false if the change was interrupted
  * @throw ClipboardException the clipboard operation failed
  * @throw ReadOnlyDocumentException the document is read only
  * @throw bad_alloc internal memory allocation failed
  */
-void Caret::cutSelection(bool useKillRing) {
+bool Caret::cutSelection(bool useKillRing) {
 	verifyViewer();
 	if(isSelectionEmpty())
-		return;
+		return true;
 	else if(document()->isReadOnly())
 		throw ReadOnlyDocumentException();
+
+	manah::com::ComPtr<IDataObject> previousData;
+	HRESULT hr = tryOleClipboard(::OleGetClipboard, previousData.initialize());
+	if(hr == E_OUTOFMEMORY)
+		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
+	else if(FAILED(hr))
+		throw ClipboardException(hr);
 	copySelection(useKillRing);	// this may throw
-	textViewer().freeze(true);
-	document()->beginCompoundChange();
-	eraseSelection();
-	document()->endCompoundChange();
-	textViewer().unfreeze(true);
+	if(!eraseSelection()) {
+		hr = tryOleClipboard(::OleSetClipboard, previousData.get());
+		return false;
+	}
+	return true;
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-bool Caret::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void Caret::documentAboutToBeChanged(const Document&, const DocumentChange&) {
 	// do nothing
-	return true;
 }
 
 /// @see kernel#IDocumentListener#documentChanged
@@ -1310,7 +1279,6 @@ void Caret::documentChanged(const Document&, const DocumentChange&) {
 void Caret::doMoveTo(const Position& to) {
 	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
 		anchor_->positionBeforeInternalUpdate() : anchor_->position(), position());
-	restoreSelectionMode();
 	if(!editingByThis_)
 		othersEditedFromLastInputChar_ = true;
 	if(leaveAnchorNext_)
@@ -1340,24 +1308,30 @@ void Caret::endRectangleSelection() {
 
 /**
  * Deletes the selected text.
- * This method does not freeze the viewer and not begin the sequential edit.
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  */
-void Caret::eraseSelection() {
+bool Caret::eraseSelection() {
 	verifyViewer();
 	Document& doc = *document();
-	if(doc.isReadOnly() || isSelectionEmpty())
-		return;
+	if(doc.isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(isSelectionEmpty())
+		return true;
 	else if(!isSelectionRectangle()) {	// the selection is linear
 		const Position to(min<Position>(*anchor_, *this));
-		doc.erase(*anchor_, *this);
+		if(!doc.erase(*anchor_, *this))
+			return false;
 		moveTo(to);
-	} else {	// the selection is rectangle
+		return true;
+	} else if(doc.beginCompoundChange()) {	// the selection is rectangle
 		const Position resultPosition(beginning());
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
 		const length_t firstLine = beginning().lineNumber(), lastLine = end().lineNumber();
 		pair<length_t, length_t> rangeInLine;;
 
+		textViewer().freeze();
 		if(textViewer().configuration().lineWrap.wraps()) {	// ...and the lines are wrapped
 			// hmmm..., this is heavy work
 			vector<Point*> points;
@@ -1385,11 +1359,14 @@ void Caret::eraseSelection() {
 				doc.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
 			}
 		}
+		textViewer().unfreeze();
 
 		endRectangleSelection();
 		adaptToDocument(adapts);
 		moveTo(resultPosition);
-	}
+		return true;
+	} else
+		return false;
 }
 
 /**
@@ -1398,106 +1375,9 @@ void Caret::eraseSelection() {
  */
 void Caret::extendSelection(const Position& to) {
 	verifyViewer();
-	if(selectionMode_ == CHARACTER) {
-		leaveAnchorNext_ = true;
-		moveTo(to);
-		leaveAnchorNext_ = false;
-	} else if(selectionMode_ == LINE) {
-		const length_t lc = document()->numberOfLines();
-		Region s;
-		s.first.line = (to.line >= modeInitialAnchorLine_) ? modeInitialAnchorLine_ : modeInitialAnchorLine_ + 1;
-		s.first.column = (s.first.line > lc - 1) ? document()->lineLength(--s.first.line) : 0;
-		s.second.line = (to.line >= modeInitialAnchorLine_) ? to.line + 1 : to.line;
-		s.second.column = (s.second.line > lc - 1) ? document()->lineLength(--s.second.line) : 0;
-		select(s);
-		selectionMode_ = LINE;
-	} else if(selectionMode_ == WORD) {
-		if(to.line < modeInitialAnchorLine_ || (to.line == modeInitialAnchorLine_ && to.column < wordSelectionChars_[0])) {
-			WordBreakIterator<DocumentCharacterIterator> i(
-				DocumentCharacterIterator(*document(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, identifierSyntax());
-			--i;
-			select(Position(modeInitialAnchorLine_, wordSelectionChars_[1]),
-				(i.base().tell().line == to.line) ? i.base().tell() : Position(to.line, 0));
-		} else if(to.line > modeInitialAnchorLine_ || (to.line == modeInitialAnchorLine_ && to.column > wordSelectionChars_[1])) {
-			WordBreakIterator<DocumentCharacterIterator> i(
-				DocumentCharacterIterator(*document(), to), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, identifierSyntax());
-			++i;
-			select(Position(modeInitialAnchorLine_, wordSelectionChars_[0]),
-				(i.base().tell().line == to.line) ? i.base().tell() : Position(to.line, document()->lineLength(to.line)));
-		} else
-			select(Position(modeInitialAnchorLine_, wordSelectionChars_[0]), Position(modeInitialAnchorLine_, wordSelectionChars_[1]));
-		selectionMode_ = WORD;
-	}
-}
-
-/**
- * Moves the caret without the anchor movement.
- * @param algorithm the movement algorithm
- */
-void Caret::extendSelection(mem_fun_t<void, EditPoint>& algorithm) {
-	verifyViewer();
-	if(selectionMode_ == CHARACTER) {
-		leaveAnchorNext_ = true;
-		algorithm(this);
-		leaveAnchorNext_ = false;
-	} else {
-		EditPoint temp(*this);
-		algorithm(&temp);
-		extendSelection(temp);
-	}
-}
-
-/**
- * Moves the caret without the anchor movement.
- * @param algorithm the movement algorithm
- */
-void Caret::extendSelection(mem_fun_t<void, VisualPoint>& algorithm) {
-	verifyViewer();
-	if(selectionMode_ == CHARACTER) {
-		leaveAnchorNext_ = true;
-		algorithm(this);
-		leaveAnchorNext_ = false;
-	} else {
-		VisualPoint temp(*this);
-		algorithm(&temp);
-		extendSelection(temp);
-	}
-}
-
-/**
- * Moves the caret without the anchor movement.
- * @param algorithm the movement algorithm
- * @param offset the number to apply the algorithm
- */
-void Caret::extendSelection(mem_fun1_t<void, EditPoint, length_t>& algorithm, length_t offset) {
-	verifyViewer();
-	if(selectionMode_ == CHARACTER) {
-		leaveAnchorNext_ = true;
-		algorithm(this, offset);
-		leaveAnchorNext_ = false;
-	} else {
-		EditPoint temp(*this);
-		algorithm(&temp, offset);
-		extendSelection(temp);
-	}
-}
-
-/**
- * Moves the caret without the anchor movement.
- * @param algorithm the movement algorithm
- * @param offset the number to apply the algorithm
- */
-void Caret::extendSelection(mem_fun1_t<void, VisualPoint, length_t>& algorithm, length_t offset) {
-	verifyViewer();
-	if(selectionMode_ == CHARACTER) {
-		leaveAnchorNext_ = true;
-		algorithm(this, offset);
-		leaveAnchorNext_ = false;
-	} else {
-		VisualPoint temp(*this);
-		algorithm(&temp, offset);
-		extendSelection(temp);
-	}
+	leaveAnchorNext_ = true;
+	moveTo(to);
+	leaveAnchorNext_ = false;
 }
 
 /**
@@ -1506,8 +1386,11 @@ void Caret::extendSelection(mem_fun1_t<void, VisualPoint, length_t>& algorithm, 
  * Otherwise if in overtype mode, replaces a character at current position.
  * @param cp the code point of the character to be input
  * @param validateSequence true to perform input sequence check using the active ISC
- * @param blockControls true to refuse any ASCII control characters except HT (U+0009), RS (U+001E) and US (U+001F)
- * @return false if the input was refused
+ * @param blockControls true to refuse any ASCII control characters except HT (U+0009), RS (U+001E)
+ * and US (U+001F)
+ * @return false if the input was refused because of @a validateSequence or @a blockControls, or 
+ * the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  * @see #isOvertypeMode, #setOvertypeMode, texteditor#commands#TextInputCommand
  */
 bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, bool blockControls /* = true */) {
@@ -1515,7 +1398,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 
 	Document& doc = *document();
 	if(doc.isReadOnly())
-		return false;
+		throw ReadOnlyDocumentException();
 	else if(blockControls && cp <= 0xFF && cp != 0x09 && cp != 0x1E && cp != 0x1F && toBoolean(iscntrl(static_cast<int>(cp))))
 		return false;
 
@@ -1526,21 +1409,22 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 				const Char* const line = doc.line(beginning().lineNumber()).data();
 				if(!checker->check(line, line + beginning().columnNumber(), cp)) {
 					eraseSelection();
-					return false;
+					return false;	// invalid sequence
 				}
 			}
 		}
 	}
 
+	bool interrupted;
 	Char buffer[2];
 	surrogates::encode(cp, buffer);
 	if(!isSelectionEmpty())	// just replace if the selection is not empty
-		replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
+		interrupted = !replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 	else if(overtypeMode_) {
 		if(!doc.isCompoundChanging())
 			doc.beginCompoundChange();
 		textViewer().freeze(true);
-		destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
+		interrupted = !destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		textViewer().unfreeze(true);
 	} else {
 		const IdentifierSyntax& ctypes = identifierSyntax();
@@ -1559,11 +1443,13 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 		}
 
 		editingByThis_ = true;
-		insert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
+		interrupted = !insert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
 		editingByThis_ = false;
 	}
-	characterInputListeners_.notify<const Caret&, CodePoint>(&ICharacterInputListener::characterInputted, *this, cp);
 
+	if(interrupted)
+		return false;
+	characterInputListeners_.notify<const Caret&, CodePoint>(&ICharacterInputListener::characterInputted, *this, cp);
 	return true;
 }
 
@@ -1572,7 +1458,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
  * @param pt the client coordinates of the point
  * @return true if the point is over the selection
  */
-bool Caret::isPointOverSelection(const ::POINT& pt) const {
+bool Caret::isPointOverSelection(const POINT& pt) const {
 	verifyViewer();
 	if(isSelectionEmpty())
 		return false;
@@ -1581,7 +1467,7 @@ bool Caret::isPointOverSelection(const ::POINT& pt) const {
 	else {
 		if(textViewer().hitTest(pt) != TextViewer::TEXT_AREA)	// ignore if on the margin
 			return false;
-		::RECT rect;
+		RECT rect;
 		textViewer().getClientRect(rect);
 		if(pt.x > rect.right || pt.y > rect.bottom)
 			return false;
@@ -1593,21 +1479,26 @@ bool Caret::isPointOverSelection(const ::POINT& pt) const {
 /**
  * Replaces the selected text by the content of the clipboard.
  * @param useKillRing true to use the kill ring
+ * @return false if the change was interrupted
+ * @throw ClipboardException the clipboard operation failed
+ * @throw ClipboardException(DV_E_FORMATETC) the current clipboard format is not supported
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw bad_alloc internal memory allocation failed
  */
-void Caret::pasteToSelection(bool useKillRing) {
+bool Caret::pasteToSelection(bool useKillRing) {
 	verifyViewer();
 	if(document()->isReadOnly())
-		return;
+		throw ReadOnlyDocumentException();
 	texteditor::Session* const session = document()->session();
 	if(useKillRing && (session == 0 || session->killRing().numberOfKills() == 0))
-		return;
+		return true;
 
 	document()->beginCompoundChange();
 	textViewer().freeze(true);
 	if(!useKillRing) {
 		if(!isSelectionEmpty())
 			eraseSelection();
-		paste();	// TODO: this may throw.
+		return paste();	// TODO: this may throw.
 	} else {
 		texteditor::KillRing& killRing = session->killRing();
 		const pair<String, bool>& text = yanking_ ? killRing.setCurrent(+1) : killRing.get();
@@ -1630,6 +1521,7 @@ void Caret::pasteToSelection(bool useKillRing) {
 	}
 	document()->endCompoundChange();
 	textViewer().unfreeze(true);
+	return true;
 }
 
 /// @see IPointListener#pointMoved
@@ -1644,39 +1536,70 @@ void Caret::pointMoved(const EditPoint& self, const Position& oldPosition) {
 }
 
 /**
+ * Removes the listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Caret::removeListener(ICaretListener& listener) {
+	listeners_.remove(listener);
+}
+
+/**
+ * Removes the character input listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {
+	characterInputListeners_.remove(listener);
+}
+
+/**
+ * Removes the state listener
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Caret::removeStateListener(ICaretStateListener& listener) {
+	stateListeners_.remove(listener);
+}
+
+/**
  * Replaces the selected region with the specified text.
  * If the selection is empty, inserts the text at current position.
  * @param first the start of the text
  * @param last the end of the text
  * @param rectangleInsertion true to insert text as rectangle
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw NullPointerException @a first and/or @last is @c null
+ * @throw std#invalid_argument @a first &gt; @a last
  */
-void Caret::replaceSelection(const Char* first, const Char* last, bool rectangleInsertion /* = false */) {
+bool Caret::replaceSelection(const Char* first, const Char* last, bool rectangleInsertion /* = false */) {
 	verifyViewer();
 	if(document()->isReadOnly())
-		return;
+		throw ReadOnlyDocumentException();
+	else if(first == 0)
+		throw NullPointerException("first");
+	else if(last == 0)
+		throw NullPointerException("last");
+	else if(first > last)
+		throw invalid_argument("first > last");
+	if(!document()->beginCompoundChange())
+		return false;
 	const Region oldRegion(selectionRegion());
-	document()->beginCompoundChange();
 	textViewer().freeze(true);
-	if(!isSelectionEmpty())
-		eraseSelection();
-	else if(isSelectionRectangle())
+	if(!isSelectionEmpty()) {
+		const bool succeeded = eraseSelection();
+		assert(succeeded);
+	} else if(isSelectionRectangle())
 		endRectangleSelection();
+	// TODO: insert and insertRectangle may throw and breaks strong guarentee for exception^safety.
 	if(rectangleInsertion)
 		insertRectangle(first, last);
 	else
 		insert(first, last);
 	textViewer().unfreeze(true);
 	document()->endCompoundChange();
-}
-
-/**
- * Revokes the current selection mode.
- * @see #beginLineSelection, #beginWordSelection
- */
-void Caret::restoreSelectionMode() {
-	verifyViewer();
-	yanking_ = false;
-	selectionMode_ = CHARACTER;
+	return true;
 }
 
 /**
@@ -1686,16 +1609,12 @@ void Caret::restoreSelectionMode() {
  */
 void Caret::select(const Position& anchor, const Position& caret) {
 	verifyViewer();
-	if(selectionMode_ != CHARACTER)
-		restoreSelectionMode();
 	yanking_ = false;
 	if(anchor != anchor_->position() || caret != position()) {
 		const Region oldRegion(selectionRegion());
-		if(selectionMode_ == CHARACTER) {
-			leadingAnchor_ = true;
-			anchor_->moveTo(anchor);
-			leadingAnchor_ = false;
-		}
+		leadingAnchor_ = true;
+		anchor_->moveTo(anchor);
+		leadingAnchor_ = false;
 		VisualPoint::doMoveTo(caret);
 		if(isSelectionRectangle())
 			box_->update(selectionRegion());
@@ -1780,7 +1699,7 @@ String Caret::selectionText(Newline newline /* = NLF_RAW_VALUE */) const {
 	return s.str();
 }
 
-/// Selects the word at the caret position.
+/// Selects the word at the caret position. This creates a linear selection.
 void Caret::selectWord() {
 	verifyViewer();
 
@@ -1819,7 +1738,7 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
  * @param overtype true to set to overtype mode, false to set to insert mode
  * @see #inputCharacter, #isOvertypeMode
  */
-void Caret::setOvertypeMode(bool overtype) throw() {
+void Caret::setOvertypeMode(bool overtype) /*throw()*/ {
 	if(overtype != overtypeMode_) {
 		overtypeMode_ = overtype;
 		stateListeners_.notify<const Caret&>(&ICaretStateListener::overtypeModeChanged, *this);

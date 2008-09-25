@@ -31,7 +31,7 @@ namespace ascension {
 		class IKillRingListener {
 		private:
 			/// The content of the kill ring was changed.
-			virtual void clipboardRingChanged() = 0;
+			virtual void killRingChanged() = 0;
 			friend class KillRing;
 		};
 
@@ -39,7 +39,7 @@ namespace ascension {
 		class KillRing {
 		public:
 			// constructor
-			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) throw();
+			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) /*throw()*/;
 			// listeners
 			void addListener(IKillRingListener& listener);
 			void removeListener(IKillRingListener& listener);
@@ -55,9 +55,9 @@ namespace ascension {
 			const std::pair<String, bool>& get(std::ptrdiff_t places = 0) const;
 			const std::pair<String, bool>& setCurrent(std::ptrdiff_t places);
 			// number
-			std::size_t maximumNumberOfKills() const throw();
-			std::size_t numberOfKills() const throw();
-//			void setMaximumNumberOfKills(std::size_t capacity) throw();
+			std::size_t maximumNumberOfKills() const /*throw()*/;
+			std::size_t numberOfKills() const /*throw()*/;
+//			void setMaximumNumberOfKills(std::size_t capacity) /*throw()*/;
 		private:
 			typedef std::list<std::pair<String, bool> > Contents;
 			Contents::iterator at(ptrdiff_t index) const;
@@ -78,7 +78,7 @@ namespace ascension {
 		class InputSequenceChecker {
 		public:
 			/// Destructor.
-			virtual ~InputSequenceChecker() throw() {}
+			virtual ~InputSequenceChecker() /*throw()*/ {}
 			/**
 			 * Checks the sequence.
 			 * @param keyboardLayout the active keyboard layout
@@ -87,7 +87,7 @@ namespace ascension {
 			 * @param cp the code point of the character to be input
 			 * @return true if the input is acceptable
 			 */
-			virtual bool check(::HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const = 0;
+			virtual bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const = 0;
 		};
 
 		/**
@@ -101,11 +101,11 @@ namespace ascension {
 			void add(std::auto_ptr<InputSequenceChecker> checker);
 			bool check(const Char* first, const Char* last, CodePoint cp) const;
 			void clear();
-			bool isEmpty() const throw();
-			void setKeyboardLayout(::HKL keyboardLayout) throw();
+			bool isEmpty() const /*throw()*/;
+			void setKeyboardLayout(HKL keyboardLayout) /*throw()*/;
 		private:
 			std::list<InputSequenceChecker*> strategies_;
-			::HKL keyboardLayout_;
+			HKL keyboardLayout_;
 		};
 #endif /* ASCENSION_WINDOWS */
 
@@ -116,25 +116,25 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(Session);
 		public:
 			// constructor
-			Session() throw();
-			~Session() throw();
+			Session() /*throw()*/;
+			~Session() /*throw()*/;
 			// attributes
-			const std::vector<kernel::Document*> documents() const throw();
-			searcher::IncrementalSearcher& incrementalSearcher() throw();
-			const searcher::IncrementalSearcher& incrementalSearcher() const throw();
-			InputSequenceCheckers* inputSequenceCheckers() throw();
-			const InputSequenceCheckers* inputSequenceCheckers() const throw();
-			KillRing& killRing() throw();
-			const KillRing& killRing() const throw();
+			const std::vector<kernel::Document*> documents() const /*throw()*/;
+			searcher::IncrementalSearcher& incrementalSearcher() /*throw()*/;
+			const searcher::IncrementalSearcher& incrementalSearcher() const /*throw()*/;
+			InputSequenceCheckers* inputSequenceCheckers() /*throw()*/;
+			const InputSequenceCheckers* inputSequenceCheckers() const /*throw()*/;
+			KillRing& killRing() /*throw()*/;
+			const KillRing& killRing() const /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			const ::WCHAR* migemoPathName(bool runtime) throw();
-#endif /* !ASCENSION_NO_MIGEMO */
-			searcher::TextSearcher& textSearcher() throw();
-			const searcher::TextSearcher& textSearcher() const throw();
-			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) throw();
+			const WCHAR* migemoPathName(bool runtime) /*throw()*/;
+#endif // !ASCENSION_NO_MIGEMO
+			searcher::TextSearcher& textSearcher() /*throw()*/;
+			const searcher::TextSearcher& textSearcher() const /*throw()*/;
+			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			void setMigemoPathName(const ::WCHAR* pathName, bool runtime);
-#endif /* !ASCENSION_NO_MIGEMO */
+			void setMigemoPathName(const WCHAR* pathName, bool runtime);
+#endif // !ASCENSION_NO_MIGEMO
 			// operations
 			void addDocument(kernel::Document& document);
 			void removeDocument(kernel::Document& document);
@@ -146,16 +146,16 @@ namespace ascension {
 			searcher::TextSearcher* textSearcher_;
 			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			::WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
-#endif /* !ASCENSION_NO_MIGEMO */
+			WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
+#endif // !ASCENSION_NO_MIGEMO
 		};
 
 
 		/// Returns the input sequence checkers.
-		inline InputSequenceCheckers* Session::inputSequenceCheckers() throw() {return inputSequenceCheckers_.get();}
+		inline InputSequenceCheckers* Session::inputSequenceCheckers() /*throw()*/ {return inputSequenceCheckers_.get();}
 
 		/// Returns the input sequence checkers.
-		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const throw() {return inputSequenceCheckers_.get();}
+		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const /*throw()*/ {return inputSequenceCheckers_.get();}
 
 	} // namespace texteditor
 

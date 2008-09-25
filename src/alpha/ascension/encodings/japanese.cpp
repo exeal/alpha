@@ -97,21 +97,21 @@ namespace {
 			UNDESIGNATED = KS_C_5601 + 1, ISO_8859_1, ISO_8859_7
 		} g2;
 		bool invokedG2;	// true if invoked by SS2
-		EncodingState() throw() {reset();}
-		void reset() throw() {g0 = ASCII; g2 = UNDESIGNATED; invokedG2 = false;}
+		EncodingState() ASC_NOFAIL {reset();}
+		void reset() ASC_NOFAIL {g0 = ASCII; g2 = UNDESIGNATED; invokedG2 = false;}
 	};
 	template<typename Factory>
 	class InternalEncoder : public Encoder {
 	public:
-		explicit InternalEncoder(const Factory& factory) throw() : props_(factory) {}
+		explicit InternalEncoder(const Factory& factory) ASC_NOFAIL : props_(factory) {}
 	private:
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const throw() {return props_;}
-		Encoder& resetDecodingState() throw() {decodingState_.reset(); return *this;}
-		Encoder& resetEncodingState() throw() {encodingState_.reset(); return *this;}
+		const IEncodingProperties& properties() const ASC_NOFAIL {return props_;}
+		Encoder& resetDecodingState() ASC_NOFAIL {decodingState_.reset(); return *this;}
+		Encoder& resetEncodingState() ASC_NOFAIL {encodingState_.reset(); return *this;}
 	private:
 		const IEncodingProperties& props_;
 		EncodingState encodingState_, decodingState_;
@@ -119,80 +119,80 @@ namespace {
 
 	class SHIFT_JIS : public EncoderFactoryBase {
 	public:
-		SHIFT_JIS() throw() : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3F) {}
+		SHIFT_JIS() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS>(*this));}
 	} shiftjis;
 
 	class SHIFT_JIS_2004 : public EncoderFactoryBase {
 	public:
-		SHIFT_JIS_2004() throw() : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3F) {}
+		SHIFT_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS_2004>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS_2004>(*this));}
 	} shiftjis2004;
 
 	class EUC_JP : public EncoderFactoryBase {
 	public:
-		EUC_JP() throw() : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3F) {}
+		EUC_JP() ASC_NOFAIL : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<EUC_JP>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<EUC_JP>(*this));}
 	} eucjp;
 
 	class EUC_JIS_2004 : public EncoderFactoryBase {
 	public:
-		EUC_JIS_2004() throw() : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3F) {}
+		EUC_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<EUC_JIS_2004>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<EUC_JIS_2004>(*this));}
 	} eucjis2004;
 
 	class ISO_2022_JP : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP() throw() : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3F) {}
+		ISO_2022_JP() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP>(*this));}
 	} iso2022jp;
 
 	class ISO_2022_JP_2 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2() throw() : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3F) {}
+		ISO_2022_JP_2() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2>(*this));}
 	} iso2022jp2;
 
 	class ISO_2022_JP_2004 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004() throw() : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004>(*this));}
 	} iso2022jp2004;
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	class ISO_2022_JP_1 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_1() throw() : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_1() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_1>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_1>(*this));}
 	} iso2022jp1;
 
 	class ISO_2022_JP_2004_STRICT : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004_STRICT() throw() : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004_STRICT() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_STRICT>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_STRICT>(*this));}
 	} iso2022jp2004strict;
 
 	class ISO_2022_JP_2004_COMPATIBLE : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004_COMPATIBLE() throw() : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004_COMPATIBLE() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3F) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
 	} iso2022jp2004compatible;
 #endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
 	class JISAutoDetector : public EncodingDetector {
 	public:
 		JISAutoDetector() : EncodingDetector("JISAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL;
 	};
 
 	struct Installer {
@@ -231,13 +231,13 @@ namespace {
 #include "data/jis.ipp"
 
 	// JIS X 0201 Roman
-	inline Char convertROMANtoUCS(byte c) throw() {
+	inline Char convertROMANtoUCS(byte c) ASC_NOFAIL {
 		if(c == 0x5C)					return 0x00A5;					// Yen Sign
 		else if(c == 0x7E)				return 0x203E;					// Overline
 		else if(c >= 0x20 && c <= 0x7D)	return c;						// 7-bit
 		else							return REPLACEMENT_CHARACTER;	// unmappable
 	}
-	inline byte convertUCStoROMAN(Char c) throw() {
+	inline byte convertUCStoROMAN(Char c) ASC_NOFAIL {
 		if(c >= 0x0020 && c <= 0x005B)		return mask8Bit(c);	// 7-bit
 		else if(c >= 0x005D && c <= 0x007D)	return mask8Bit(c);	// 7-bit
 		else if(c == 0x00A5)				return 0x5C;		// Yen Sign
@@ -246,21 +246,21 @@ namespace {
 	}
 
 	// JIS X 0201 Kana
-	inline Char convertKANAtoUCS(byte c) throw() {
+	inline Char convertKANAtoUCS(byte c) ASC_NOFAIL {
 		return (c >= 0xA1 && c <= 0xDF) ? c + 0xFEC0 : REPLACEMENT_CHARACTER;
 	}
-	inline byte convertUCStoKANA(Char c) throw() {
+	inline byte convertUCStoKANA(Char c) ASC_NOFAIL {
 		return (c >= 0xFF61 && c <= 0xFF9F) ? mask8Bit(c - 0xFEC0) : 0x00;
 	}
 
 	// JIS X 0208:1997
-	inline Char convertX0208toUCS(ushort c) throw() {
+	inline Char convertX0208toUCS(ushort c) ASC_NOFAIL {
 		if(const Char** const wire = JIS_X_0208_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return REPLACEMENT_CHARACTER;
 	}
-	inline ushort convertUCStoX0208(Char c) throw() {
+	inline ushort convertUCStoX0208(Char c) ASC_NOFAIL {
 		if(const ushort** const wire = UCS_TO_JIS_X_0208[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
@@ -268,20 +268,20 @@ namespace {
 	}
 
 	// JIS X 0212:1990
-	inline Char convertX0212toUCS(ushort c) throw() {
+	inline Char convertX0212toUCS(ushort c) ASC_NOFAIL {
 		if(const Char** const wire = JIS_X_0212_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return REPLACEMENT_CHARACTER;
 	}
-	inline ushort convertUCStoX0212(Char c) throw() {
+	inline ushort convertUCStoX0212(Char c) ASC_NOFAIL {
 		if(const ushort** const wire = UCS_TO_JIS_X_0212[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return 0x0000;
 	}
 	// JIS X 0213:2004 plane 1 to UCS
-	inline CodePoint convertX0213Plane1toUCS(ushort c) throw() {
+	inline CodePoint convertX0213Plane1toUCS(ushort c) ASC_NOFAIL {
 		const CodePoint ucs = convertX0208toUCS(c);
 		if(ucs == REPLACEMENT_CHARACTER) {
 			if(const CodePoint** const wire = JIS_X_0213_PLANE_1_TO_UCS[mask8Bit(c >> 8)])
@@ -290,14 +290,15 @@ namespace {
 		return convertX0208toUCS(c);
 	}
 	// JIS X 0213:2000 plane 2 to UCS
-	inline CodePoint convertX0213Plane2toUCS(ushort c) throw() {
+	inline CodePoint convertX0213Plane2toUCS(ushort c) ASC_NOFAIL {
 		if(const CodePoint** const wire = JIS_X_0213_PLANE_2_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return REPLACEMENT_CHARACTER;
 	}
 	// UCS to JIS X 0213:2004
-	Encoder::Result convertUCStoX0213(const Char* first, const Char* last, const Char*& next, bool eob, ushort& jis, bool& plane2) throw() {
+	Encoder::Result convertUCStoX0213(const Char* first, const Char* last,
+			const Char*& next, bool eob, ushort& jis, bool& plane2) ASC_NOFAIL {
 		jis = 0;
 		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, MANAH_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
 			if(first + 1 == last) {
@@ -413,7 +414,7 @@ namespace {
 
 namespace {
 	// makes JIS code from ku and ten numbers.
-	inline ushort jk(byte ku, byte ten) throw() {return ((ku << 8) | ten) + 0x2020;}
+	inline ushort jk(byte ku, byte ten) ASC_NOFAIL {return ((ku << 8) | ten) + 0x2020;}
 
 	// "禁止漢字" of ISO-2022-JP-3 (from JIS X 0213:2000 附属書 2 表 1)
 	const ushort PROHIBITED_IDEOGRAPHS_2000[] = {
@@ -1656,7 +1657,7 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetector
-pair<MIBenum, string> JISAutoDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+pair<MIBenum, string> JISAutoDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL {
 	pair<MIBenum, string> result(make_pair(fundamental::UTF_8, "UTF-8"));
 	ptrdiff_t cb = 0;
 

@@ -1,13 +1,13 @@
 /**
  * @file collator.cpp
  * @author exeal
- * @date 2007
+ * @date 2007-2008
  */
 
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 #include "../unicode-property.hpp"
 using namespace ascension;
-using namespace ascension::unicode;
+using namespace ascension::text;
 using namespace manah;
 using namespace std;
 
@@ -15,7 +15,7 @@ using namespace std;
 // Collator /////////////////////////////////////////////////////////////////
 
 /// Destructor.
-Collator::~Collator() throw() {
+Collator::~Collator() /*throw()*/ {
 }
 
 
@@ -24,18 +24,18 @@ Collator::~Collator() throw() {
 const int CollationElementIterator::NULL_ORDER = 0xFFFFFFFFU;
 
 /// Protected default constructor.
-CollationElementIterator::CollationElementIterator() throw() {
+CollationElementIterator::CollationElementIterator() /*throw()*/ {
 }
 
 /// Destructor.
-CollationElementIterator::~CollationElementIterator() throw() {
+CollationElementIterator::~CollationElementIterator() /*throw()*/ {
 }
 
 
 // NullCollator /////////////////////////////////////////////////////////////
 
 /// Constructor.
-NullCollator::NullCollator() throw() {
+NullCollator::NullCollator() /*throw()*/ {
 }
 
 /// @see Collator#compare
@@ -54,18 +54,18 @@ int NullCollator::compare(const CharacterIterator& s1, const CharacterIterator& 
 	return 0;
 }
 
-/// @see Collator#createCollationElementIterator
-std::auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
-	return auto_ptr<CollationElementIterator>(new ElementIterator(source.clone()));
-}
-
 /// @see Collator#getCollationKey
-std::auto_ptr<CollationKey> NullCollator::getCollationKey(const String& s) const {
+std::auto_ptr<CollationKey> NullCollator::collationKey(const String& s) const {
 	const size_t len = s.length() * sizeof(Char) / sizeof(uchar);
 	AutoBuffer<uchar> temp(new uchar[len]);
 	memcpy(temp.get(), s.data(), len);
 	AutoBuffer<const uchar> buffer(temp);
 	return auto_ptr<CollationKey>(new CollationKey(buffer, len));
+}
+
+/// @see Collator#createCollationElementIterator
+std::auto_ptr<CollationElementIterator> NullCollator::createCollationElementIterator(const CharacterIterator& source) const {
+	return auto_ptr<CollationElementIterator>(new ElementIterator(source.clone()));
 }
 
 #endif /* !ASCENSION_NO_UNICODE_COLLATION */

@@ -24,18 +24,18 @@ using namespace std;
 namespace {
 	template<int n> class ARMSCII : public EncoderFactoryBase {
 	public:
-		ARMSCII() throw();
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new InternalEncoder(*this));}
+		ARMSCII() ASC_NOFAIL;
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder(*this));}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			explicit InternalEncoder(const IEncodingProperties& properties) throw() : props_(properties) {}
+			explicit InternalEncoder(const IEncodingProperties& properties) ASC_NOFAIL : props_(properties) {}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext);
-			const IEncodingProperties& properties() const throw() {return props_;}
+			const IEncodingProperties& properties() const ASC_NOFAIL {return props_;}
 		private:
 			const IEncodingProperties& props_;
 		};
@@ -50,7 +50,7 @@ namespace {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw();
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL;
 	};
 
 	struct Installer {
@@ -186,7 +186,7 @@ namespace {
 
 // ARMSCII-8 ////////////////////////////////////////////////////////////////
 
-template<> ARMSCII<8>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1A) {
+template<> ARMSCII<8>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1A) {
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
@@ -258,7 +258,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
 
 // ARMSCII-7 ////////////////////////////////////////////////////////////////
 
-template<> ARMSCII<7>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1A) {
+template<> ARMSCII<7>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1A) {
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
@@ -326,7 +326,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
 
 // ARMSCII-8A ///////////////////////////////////////////////////////////////
 
-template<> ARMSCII<0x8A>::ARMSCII() throw() : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1A) {
+template<> ARMSCII<0x8A>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1A) {
 }
 
 template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doFromUnicode(
@@ -401,7 +401,7 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
 // ArmenianDetector /////////////////////////////////////////////////////////
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const throw() {
+pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL {
 	// first, check if Unicode
 	if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 		ptrdiff_t temp;

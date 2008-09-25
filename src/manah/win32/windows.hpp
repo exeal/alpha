@@ -56,13 +56,13 @@ namespace manah {
 		struct ResourceID {
 			MANAH_NONCOPYABLE_TAG(ResourceID);
 		public:
-			ResourceID(const ::WCHAR* nameString) throw() : name(nameString) {}
-			ResourceID(::UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
-			const ::WCHAR* const name;
+			ResourceID(const WCHAR* nameString) throw() : name(nameString) {}
+			ResourceID(UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
+			const WCHAR* const name;
 		};
 
 		// base class for handle-wrapper classes
-		template<typename HandleType = ::HANDLE, ::BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
+		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
 		class Handle {
 		public:
 			Handle(HandleType handle = 0) : handle_(handle), attached_(handle != 0) {}
@@ -90,58 +90,42 @@ namespace manah {
 
 		// convenient types from ATL
 		struct MenuHandleOrControlID {
-			MenuHandleOrControlID(::HMENU handle) throw() : menu(handle) {}
-			MenuHandleOrControlID(::UINT_PTR id) throw() : menu(reinterpret_cast<HMENU>(id)) {}
-			::HMENU menu;
+			MenuHandleOrControlID(HMENU handle) throw() : menu(handle) {}
+			MenuHandleOrControlID(UINT_PTR id) throw() : menu(reinterpret_cast<HMENU>(id)) {}
+			HMENU menu;
 		};
 
 		// others used by (CCustomControl derevied)::GetWindowClass
 		struct BrushHandleOrColor {
 			BrushHandleOrColor() throw() : brush(0) {}
-			BrushHandleOrColor(::HBRUSH handle) throw() : brush(handle) {}
-			BrushHandleOrColor(::COLORREF color) throw() : brush(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(color + 1))) {}
-			BrushHandleOrColor& operator=(::HBRUSH rhs) throw() {brush = rhs; return *this;}
-			BrushHandleOrColor& operator=(::COLORREF rhs) throw() {brush = reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(rhs + 1)); return *this;}
-			::HBRUSH brush;
+			BrushHandleOrColor(HBRUSH handle) throw() : brush(handle) {}
+			BrushHandleOrColor(COLORREF color) throw() : brush(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(color + 1))) {}
+			BrushHandleOrColor& operator=(HBRUSH rhs) throw() {brush = rhs; return *this;}
+			BrushHandleOrColor& operator=(COLORREF rhs) throw() {brush = reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(rhs + 1)); return *this;}
+			HBRUSH brush;
 		};
 		struct CursorHandleOrID {
 			CursorHandleOrID() throw() : cursor(0) {}
-			CursorHandleOrID(::HCURSOR handle) throw() : cursor(handle) {}
-			CursorHandleOrID(const ::WCHAR* systemCursorID) : cursor(::LoadCursorW(0, systemCursorID)) {}
-			CursorHandleOrID& operator=(::HCURSOR rhs) {cursor = rhs; return *this;}
-			CursorHandleOrID& operator=(const ::WCHAR* rhs) {cursor = ::LoadCursorW(0, rhs); return *this;}
-			::HCURSOR cursor;
+			CursorHandleOrID(HCURSOR handle) throw() : cursor(handle) {}
+			CursorHandleOrID(const WCHAR* systemCursorID) : cursor(::LoadCursorW(0, systemCursorID)) {}
+			CursorHandleOrID& operator=(HCURSOR rhs) {cursor = rhs; return *this;}
+			CursorHandleOrID& operator=(const WCHAR* rhs) {cursor = ::LoadCursorW(0, rhs); return *this;}
+			HCURSOR cursor;
 		};
 
 		class DumpContext {
 		public:
-			// constructor
-			DumpContext(const ::WCHAR* fileName = 0);
-			// operators
 			template<typename T>
 			DumpContext& operator<<(const T& rhs) throw();
-			// methods
-			void	flush() throw();
-			void	hexDump(const ::WCHAR* line, byte* pb, int bytes, int width = 0x10) throw();
-
-			// data member
-		private:
-			::WCHAR* fileName_;	// error log
+			void hexDump(const WCHAR* line, byte* pb, int bytes, int width = 0x10) throw();
 		};
 
-		inline DumpContext::DumpContext(const ::WCHAR* fileName /* = 0 */) {
-			if(fileName != 0)
-				throw std::exception("File log is not supported!");
-		}
-
-		inline void DumpContext::flush() throw() {/* not implemented */}
-
-		inline void DumpContext::hexDump(const ::WCHAR* line, byte* pb, int bytes, int width /* = 0x10 */) throw() {
-			::WCHAR* const output = new ::WCHAR[static_cast<std::size_t>(
+		inline void DumpContext::hexDump(const WCHAR* line, byte* pb, int bytes, int width /* = 0x10 */) throw() {
+			WCHAR* const output = new WCHAR[static_cast<std::size_t>(
 				(std::wcslen(line) + 3 * width + 2) * static_cast<float>(bytes / width))];
 			std::wcscpy(output, line);
 
-			::WCHAR buffer[4];
+			WCHAR buffer[4];
 			for(int i = 0; i < bytes; ++i){
 				::wsprintfW(buffer, L" %d", pb);
 				std::wcscat(output, buffer);

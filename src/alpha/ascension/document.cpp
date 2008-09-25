@@ -32,6 +32,8 @@ namespace {
 	}
 } // namespace @0
 
+const Direction Direction::FORWARD(true);
+const Direction Direction::BACKWARD(false);
 
 const Position Position::ZERO_POSITION(0, 0);
 const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
@@ -73,12 +75,12 @@ length_t kernel::getAbsoluteOffset(const Document& document, const Position& at,
  * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
  * @return the result position
  */
-Position kernel::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) throw() {
+Position kernel::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/ {
 	Position newPosition(position);
 	if(!change.isDeletion()) {	// insertion
 		if(position < change.region().first)	// behind the current position
 			return newPosition;
-		else if(position == change.region().first && gravity == BACKWARD) // the current position + backward gravity
+		else if(position == change.region().first && gravity == Direction::BACKWARD) // the current position + backward gravity
 			return newPosition;
 		else if(position.line > change.region().first.line)	// in front of the current line
 			newPosition.line += change.region().second.line - change.region().first.line;
@@ -190,12 +192,12 @@ BadPositionException::BadPositionException() :
  * Private constructor.
  * @param document the document
  */
-Bookmarker::Bookmarker(Document& document) throw() : document_(document) {
+Bookmarker::Bookmarker(Document& document) /*throw()*/ : document_(document) {
 	document.addListener(*this);
 }
 
 /// Destructor.
-Bookmarker::~Bookmarker() throw() {
+Bookmarker::~Bookmarker() /*throw()*/ {
 	document_.removeListener(*this);
 }
 
@@ -209,7 +211,7 @@ void Bookmarker::addListener(IBookmarkListener& listener) {
 }
 
 /// Deletes all bookmarks.
-void Bookmarker::clear() throw() {
+void Bookmarker::clear() /*throw()*/ {
 	if(!markedLines_.empty()) {
 		markedLines_.clear();
 		listeners_.notify(&IBookmarkListener::bookmarkCleared);
@@ -217,15 +219,15 @@ void Bookmarker::clear() throw() {
 }
 
 /// @see IDocumentListener#documentAboutToBeChanged
-bool Bookmarker::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
-	return true;
+void Bookmarker::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
+	// do nothing
 }
 
 /// @see IDocumentListener#documentChanged
 void Bookmarker::documentChanged(const Document& document, const DocumentChange& change) {
 }
 
-inline GapBuffer<length_t>::Iterator Bookmarker::find(length_t line) const throw() {
+inline GapBuffer<length_t>::Iterator Bookmarker::find(length_t line) const /*throw()*/ {
 	assert(line < document_.numberOfLines());
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
@@ -317,11 +319,11 @@ void Bookmarker::toggle(length_t line) {
 // DocumentPartitioner //////////////////////////////////////////////////////
 
 /// Constructor.
-DocumentPartitioner::DocumentPartitioner() throw() : document_(0) {
+DocumentPartitioner::DocumentPartitioner() /*throw()*/ : document_(0) {
 }
 
 /// Destructor.
-DocumentPartitioner::~DocumentPartitioner() throw() {
+DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
 }
 
 
@@ -333,7 +335,7 @@ namespace {
 	class DeleteOperation;
 
 	/**
-	 * An abstract edit operation.
+	 * @internal An abstract edit operation.
 	 * @see DeleteOperation, InsertOperation
 	 */
 	class IOperation {
@@ -350,26 +352,26 @@ namespace {
 		virtual Position execute(Document& document) = 0;
 	};
 
-	/// An insertion operation.
-	class InsertOperation : virtual public IOperation, public manah::FastArenaObject<InsertOperation> {
+	/// @internal An insertion operation.
+	class InsertOperation : public IOperation, public manah::FastArenaObject<InsertOperation> {
 	public:
 		InsertOperation(const Position& pos, const String& text) : position_(pos), text_(text) {}
-		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().includes(position_);}
-		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation&, const Document&) const throw() {return false;}
+		bool canExecute(Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().includes(position_);}
+		bool isConcatenatable(InsertOperation&, const Document&) const /*throw()*/ {return false;}
+		bool isConcatenatable(DeleteOperation&, const Document&) const /*throw()*/ {return false;}
 		Position execute(Document& document) {Position p; return document.insert(position_, text_, &p) ? p : Position::INVALID_POSITION;}
 	private:
 		Position position_;
 		String text_;
 	};
 
-	/// An deletion operation.
-	class DeleteOperation : virtual public IOperation, public manah::FastArenaObject<DeleteOperation> {
+	/// @internal An deletion operation.
+	class DeleteOperation : public IOperation, public manah::FastArenaObject<DeleteOperation> {
 	public:
-		DeleteOperation(const Region& region) throw() : region_(region) {}
-		bool canExecute(Document& document) const throw() {return !document.isNarrowed() || document.region().encompasses(region_);}
-		bool isConcatenatable(InsertOperation&, const Document&) const throw() {return false;}
-		bool isConcatenatable(DeleteOperation& postOperation, const Document&) const throw() {
+		DeleteOperation(const Region& region) /*throw()*/ : region_(region) {}
+		bool canExecute(Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
+		bool isConcatenatable(InsertOperation&, const Document&) const /*throw()*/ {return false;}
+		bool isConcatenatable(DeleteOperation& postOperation, const Document&) const /*throw()*/ {
 			const Position& bottom = region_.end();
 			if(bottom.column == 0 || bottom != postOperation.region_.beginning()) return false;
 			else {const_cast<DeleteOperation*>(this)->region_.end() = postOperation.region_.end(); return true;}
@@ -379,10 +381,10 @@ namespace {
 		Region region_;
 	};
 
-	/// A compound operation.
+	/// @internal A compound operation.
 	class CompoundOperation : public manah::FastArenaObject<CompoundOperation> {
 	public:
-		~CompoundOperation() throw();
+		~CompoundOperation() /*throw()*/;
 		pair<bool, size_t> execute(Document& document, Position& resultPosition);
 		void pop() {operations_.pop(); numbersOfOperations_.pop();}
 		void push(InsertOperation& operation, const Document&) {operations_.push(&operation); numbersOfOperations_.push(1);}
@@ -394,7 +396,7 @@ namespace {
 	};
 } // namespace @0
 
-CompoundOperation::~CompoundOperation() throw() {
+CompoundOperation::~CompoundOperation() /*throw()*/ {
 	while(!operations_.empty()) {
 		delete operations_.top();
 		operations_.pop();
@@ -426,21 +428,21 @@ inline void CompoundOperation::push(DeleteOperation& operation, const Document& 
 	}
 }
 
-/// Manages undo/redo of the document.
+/// @internal Manages undo/redo of the document.
 class Document::UndoManager {
 	MANAH_NONCOPYABLE_TAG(UndoManager);
 public:
 	// constructors
-	UndoManager(Document& document) throw();
-	virtual ~UndoManager() throw();
+	UndoManager(Document& document) /*throw()*/;
+	virtual ~UndoManager() /*throw()*/;
 	// attributes
-	size_t numberOfRedoableCompoundOperations() const throw();
-	size_t numberOfUndoableCompoundOperations() const throw();
-	bool isStackingCompoundOperation() const throw();
+	size_t numberOfRedoableCompoundOperations() const /*throw()*/;
+	size_t numberOfUndoableCompoundOperations() const /*throw()*/;
+	bool isStackingCompoundOperation() const /*throw()*/;
 	// operations
-	void beginCompoundOperation() throw();
-	void clear() throw();
-	void endCompoundOperation() throw();
+	void beginCompoundOperation() /*throw()*/;
+	void clear() /*throw()*/;
+	void endCompoundOperation() /*throw()*/;
 	template<typename Operation> void pushUndoableOperation(Operation& operation);
 	pair<bool, size_t> redo(Position& resultPosition);
 	pair<bool, size_t> undo(Position& resultPosition);
@@ -450,6 +452,7 @@ private:
 	enum {
 		NONE, WAIT_FOR_FIRST_PUSH, WAIT_FOR_CONTINUATION
 	} compoundOperationStackingState_;
+	size_t compoundOperationDepth_;
 	bool virtualOperation_;
 	CompoundOperation* virtualUnit_;
 	CompoundOperation* lastUnit_;
@@ -460,25 +463,28 @@ private:
  * Constructor.
  * @param document the target document
  */
-Document::UndoManager::UndoManager(Document& document) throw()
-		: document_(document), compoundOperationStackingState_(NONE),
+Document::UndoManager::UndoManager(Document& document) /*throw()*/
+		: document_(document), compoundOperationStackingState_(NONE), compoundOperationDepth_(0),
 		virtualOperation_(false), virtualUnit_(0), lastUnit_(0), savedOperation_(0) {
 }
 
 /// Destructor.
-Document::UndoManager::~UndoManager() throw() {
+Document::UndoManager::~UndoManager() /*throw()*/ {
 	clear();
 }
 
 /// Starts the compound operation.
-inline void Document::UndoManager::beginCompoundOperation() throw() {
-	assert(compoundOperationStackingState_ == NONE);
-	compoundOperationStackingState_ = WAIT_FOR_FIRST_PUSH;
+inline void Document::UndoManager::beginCompoundOperation() /*throw()*/ {
+	if(compoundOperationDepth_++ == 0) {
+		assert(compoundOperationStackingState_ == NONE);
+		compoundOperationStackingState_ = WAIT_FOR_FIRST_PUSH;
+	}
 }
 
 /// Clears the stacks.
-inline void Document::UndoManager::clear() throw() {
+inline void Document::UndoManager::clear() /*throw()*/ {
 	compoundOperationStackingState_ = NONE;
+	compoundOperationDepth_ = 0;
 	lastUnit_ = 0;
 	while(!undoStack_.empty()) {
 		delete undoStack_.top();
@@ -491,22 +497,25 @@ inline void Document::UndoManager::clear() throw() {
 }
 
 /// Ends the compound operation.
-inline void Document::UndoManager::endCompoundOperation() throw() {
-	compoundOperationStackingState_ = NONE;
+inline void Document::UndoManager::endCompoundOperation() /*throw()*/ {
+	if(compoundOperationDepth_ == 0)
+		throw IllegalStateException("there is no compound change in this document.");
+	if(--compoundOperationDepth_ == 0)
+		compoundOperationStackingState_ = NONE;
 }
 
 /// Returns true if the compound operation is running.
-inline bool Document::UndoManager::isStackingCompoundOperation() const throw() {
+inline bool Document::UndoManager::isStackingCompoundOperation() const /*throw()*/ {
 	return compoundOperationStackingState_ != NONE;
 }
 
 /// Returns the number of the redoable operations.
-inline size_t Document::UndoManager::numberOfRedoableCompoundOperations() const throw() {
+inline size_t Document::UndoManager::numberOfRedoableCompoundOperations() const /*throw()*/ {
 	return redoStack_.size();
 }
 
 /// Returns the number of the undoable operations.
-inline size_t Document::UndoManager::numberOfUndoableCompoundOperations() const throw() {
+inline size_t Document::UndoManager::numberOfUndoableCompoundOperations() const /*throw()*/ {
 	return undoStack_.size();
 }
 
@@ -555,6 +564,8 @@ pair<bool, size_t> Document::UndoManager::redo(Position& resultPosition) {
 	virtualOperation_ = false;			// 仮想操作終了
 	if(status.first)
 		delete unit;
+	compoundOperationStackingState_ = NONE;
+	compoundOperationDepth_ = 0;
 	return status;
 }
 
@@ -574,6 +585,8 @@ pair<bool, size_t> Document::UndoManager::undo(Position& resultPosition) {
 	virtualOperation_ = false;			// 仮想操作終了
 	if(status.first)
 		delete unit;
+	compoundOperationStackingState_ = NONE;
+	compoundOperationDepth_ = 0;
 	return status;
 }
 
@@ -614,7 +627,7 @@ const DocumentPropertyKey Document::TITLE_PROPERTY;
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
-		onceUndoBufferCleared_(false), recordingOperations_(true), changing_(false), accessibleArea_(0) {
+		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), accessibleArea_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_ = new UndoManager(*this);
 	resetContent();
@@ -638,7 +651,7 @@ Document::~Document() {
  * Returns the accessible region of the document. The returned region is normalized.
  * @see #region, DocumentAccessViolationException
  */
-Region Document::accessibleRegion() const throw() {
+Region Document::accessibleRegion() const /*throw()*/ {
 	return (accessibleArea_ != 0) ? Region(accessibleArea_->first, *accessibleArea_->second) : region();
 }
 
@@ -704,18 +717,23 @@ void Document::addStateListener(IDocumentStateListener& listener) {
 }
 
 /**
- * Starts the sequential edit. Restarts if the sequential edit is already running.
- * @see #endSequentialEdit, #isSequentialEditing
+ * Starts the compound change.
+ * @return false if the document input refused
+ * @throw ReadOnlyDocumentException the document is read only
+ * @see #endCompoundChange, #isCompoundChanging
  */
-void Document::beginCompoundChange() throw() {
-	if(isCompoundChanging())
-		endCompoundChange();
+bool Document::beginCompoundChange() {
+	if(input_.get() != 0 && !input_->isChangeable())
+		return false;
+	const bool init = !undoManager_->isStackingCompoundOperation();
 	undoManager_->beginCompoundOperation();
-	compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStarted, *this);
+	if(init)
+		compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStarted, *this);
+	return true;
 }
 
 /// Clears the undo/redo stacks and deletes the history.
-void Document::clearUndoBuffer() {
+void Document::clearUndoBuffer() /*throw()*/ {
 	undoManager_->clear();
 	onceUndoBufferCleared_ = true;
 }
@@ -726,11 +744,13 @@ void Document::doResetContent() {
 
 /**
  * Ends the active compound change.
+ * @throw IllegalStateException there is no compound change in this document
  * @see #beginCompoundChange, #isCompoundChanging
  */
-void Document::endCompoundChange() throw() {
-	undoManager_->endCompoundOperation();
-	compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStopped, *this);
+void Document::endCompoundChange() {
+	undoManager_->endCompoundOperation();	// this may throw IllegalStateException
+	if(!undoManager_->isStackingCompoundOperation())
+		compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStopped, *this);
 }
 
 /**
@@ -738,7 +758,7 @@ void Document::endCompoundChange() throw() {
  * This method sets the modification flag and calls the listeners'
  * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
  * @param region the region to be deleted. if empty, this method does nothing
- * @return the position where the point which deletes the text will move to
+ * @return false if the document input refused
  * @throw ReadOnlyDocumentException the document is read only
  * @throw DocumentAccessViolationException @a region intersects the inaccesible region
  */
@@ -749,10 +769,11 @@ bool Document::erase(const Region& region) {
 		return true;
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
+	else if(!undoManager_->isStackingCompoundOperation() && input_.get() != 0 && !input_->isChangeable())
+		return false;
 
 	ModificationGuard guard(*this);
-	if(!fireDocumentAboutToBeChanged(DocumentChange(true, region)))
-		return false;
+	fireDocumentAboutToBeChanged(DocumentChange(true, region));
 	return eraseText(region), true;
 }
 
@@ -804,7 +825,7 @@ void Document::eraseText(const Region& region) {
 		}
 	}
 
-	if(recordingOperations_)
+	if(isRecordingChanges())
 		undoManager_->pushUndoableOperation(*(new InsertOperation(beginning, deletedString.str())));
 
 	// notify the change
@@ -815,21 +836,16 @@ void Document::eraseText(const Region& region) {
 //	return beginning;
 }
 
-bool Document::fireDocumentAboutToBeChanged(const DocumentChange& c) throw() {
+void Document::fireDocumentAboutToBeChanged(const DocumentChange& c) /*throw()*/ {
 	if(partitioner_.get() != 0)
 		partitioner_->documentAboutToBeChanged();
-	for(list<IDocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i) {
-		if(!(*i)->documentAboutToBeChanged(*this, c))
-			return false;
-	}
-	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i) {
-		if(!(*i)->documentAboutToBeChanged(*this, c))
-			return false;
-	}
-	return true;
+	for(list<IDocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
+		(*i)->documentAboutToBeChanged(*this, c);
+	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
+		(*i)->documentAboutToBeChanged(*this, c);
 }
 
-void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) throw() {
+void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) /*throw()*/ {
 	if(partitioner_.get() != 0)
 		partitioner_->documentChanged(c);
 	if(updateAllPoints)
@@ -840,26 +856,28 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 		(*i)->documentChanged(*this, c);
 }
 
-#define ASCENSION_DOCUMENT_INSERT_PROLOGUE()								\
-	if(changing_ || isReadOnly())											\
-		throw ReadOnlyDocumentException();									\
-	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))	\
-		throw BadPositionException();										\
-	else if(isNarrowed() && !accessibleRegion().includes(at))				\
-		throw DocumentAccessViolationException();							\
-	ModificationGuard guard(*this);											\
-	if(!fireDocumentAboutToBeChanged(DocumentChange(false, Region(at))))	\
-		return false;														\
+#define ASCENSION_DOCUMENT_INSERT_PROLOGUE()																\
+	if(changing_ || isReadOnly())																			\
+		throw ReadOnlyDocumentException();																	\
+	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))									\
+		throw BadPositionException();																		\
+	else if(isNarrowed() && !accessibleRegion().includes(at))												\
+		throw DocumentAccessViolationException();															\
+	else if(!undoManager_->isStackingCompoundOperation() && input_.get() != 0 && !input_->isChangeable())	\
+		return false;																						\
+	ModificationGuard guard(*this);																			\
+	fireDocumentAboutToBeChanged(DocumentChange(false, Region(at)));										\
 	Position resultPosition(at)
 
 #define ASCENSION_DOCUMENT_INSERT_EPILOGUE()																	\
-	if(recordingOperations_)																					\
+	if(isRecordingChanges())																					\
 		undoManager_->pushUndoableOperation(*(new DeleteOperation(Region(at, resultPosition))));				\
 	/* notify the change */																						\
 	++revisionNumber_;																							\
 	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));										\
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);	\
-/*	assert(length_ == calculateDocumentLength(*this));	/* diagnose length_  */									\
+	/* diagnose length_  */																						\
+/*	assert(length_ == calculateDocumentLength(*this)); */														\
 	if(eos != 0)																								\
 		*eos = resultPosition;																					\
 	return true
@@ -871,7 +889,8 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
  * @param at the position
  * @param first the start of the text
  * @param last the end of the text
- * @return the result position
+ * @param[out] eos the position of the end of the inserted text. can be @c null if not needed
+ * @return false if the document input refused
  * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
  * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
@@ -895,7 +914,8 @@ bool Document::insert(const Position& at, const Char* first, const Char* last, P
  * documentation of @c #insert(const Position&, const Char*, const Char*)
  * @param at the position
  * @param in the input stream
- * @return the position to where the caret will move
+ * @param[out] eos the position of the end of the inserted text. can be @c null if not needed
+ * @return false if the document input refused
  * @throw BadPositionException @a at is outside of the document
  * @throw ReadOnlyDocumentException the document is read only
  * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
@@ -976,9 +996,9 @@ Position Document::insertText(const Position& position, const Char* first, const
 
 /**
  * Returns true if the document is compound changing.
- * @see #beginSequentialEdit, #endSequentialEdit
+ * @see #beginCompoundChange, #endCompoundChange
  */
-bool Document::isCompoundChanging() const throw() {
+bool Document::isCompoundChanging() const /*throw()*/ {
 	return undoManager_->isStackingCompoundOperation();
 }
 
@@ -1033,7 +1053,7 @@ length_t Document::lineOffset(length_t line, Newline newline) const {
  * Marks the document modified. There is not a method like @c markModified.
  * @see #isModified, IDocumentStateListener#documentModificationSignChanged
  */
-void Document::markUnmodified() throw() {
+void Document::markUnmodified() /*throw()*/ {
 	if(isModified()) {
 		lastUnmodifiedRevisionNumber_ = revisionNumber();
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
@@ -1045,7 +1065,7 @@ void Document::markUnmodified() throw() {
  * @param region the region
  * @see #isNarrowed, #widen
  */
-void Document::narrow(const Region& region) {
+void Document::narrow(const Region& region) /*throw()*/ {
 	if(accessibleArea_ == 0)
 		accessibleArea_ = new pair<Position, Point*>;
 	accessibleArea_->first = region.beginning();
@@ -1058,25 +1078,24 @@ void Document::narrow(const Region& region) {
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 }
 
-/// Returns the number of undoable edits.
-size_t Document::numberOfUndoableEdits() const throw() {
+/// Returns the number of undoable changes.
+size_t Document::numberOfUndoableChanges() const /*throw()*/ {
 	return undoManager_->numberOfUndoableCompoundOperations();
 }
 
-/// Returns the number of redoable edits.
-size_t Document::numberOfRedoableEdits() const throw() {
+/// Returns the number of redoable changes.
+size_t Document::numberOfRedoableChanges() const /*throw()*/ {
 	return undoManager_->numberOfRedoableCompoundOperations();
 }
 
 /**
- * Sets whether the document records or not the operations for undo/redo.
- *
+ * Sets whether the document records or not the changes for undo/redo.
  * The default is true. If change the setting, recorded contents will be disposed.
  * @param record set true to record
- * @see #isRecordingOperations, #undo, #redo
+ * @see #isRecordingChanges, #undo, #redo
  */
-void Document::recordOperations(bool record) {
-	if(!(recordingOperations_ = record))
+void Document::recordChanges(bool record) /*throw()*/ {
+	if(!(recordingChanges_ = record))
 		clearUndoBuffer();
 }
 
@@ -1089,7 +1108,7 @@ void Document::recordOperations(bool record) {
 bool Document::redo() {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(numberOfRedoableEdits() == 0)
+	else if(numberOfRedoableChanges() == 0)
 		return false;
 
 	beginCompoundChange();
@@ -1280,7 +1299,7 @@ bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
  * @param newInput the new document input. can be @c null
  * @param delegateOwnership set true to transfer the ownership into the callee
  */
-void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) throw() {
+void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) /*throw()*/ {
 	input_.reset(newInput, delegateOwnership);
 }
 
@@ -1288,7 +1307,7 @@ void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) throw(
  * Sets the new document partitioner.
  * @param newPartitioner the new partitioner. the ownership will be transferred to the callee
  */
-void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) throw() {
+void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/ {
 	partitioner_ = newPartitioner;
 	if(partitioner_.get() != 0)
 		partitioner_->install(*this);
@@ -1314,7 +1333,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
  * Makes the document read only or not.
  * @see ReadOnlyDocumentException, #isReadOnly
  */
-void Document::setReadOnly(bool readOnly /* = true */) {
+void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
 	if(readOnly != isReadOnly()) {
 		readOnly_ = readOnly;
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentReadOnlySignChanged, *this);
@@ -1328,7 +1347,7 @@ void Document::setReadOnly(bool readOnly /* = true */) {
  * @return the concrete code page
  * @deprecated 0.8
  */
-::UINT Document::translateSpecialCodePage(::UINT codePage) {
+UINT Document::translateSpecialCodePage(UINT codePage) {
 	if(codePage == CP_ACP)
 		return ::GetACP();
 	else if(codePage == CP_OEMCP)
@@ -1355,7 +1374,7 @@ void Document::setReadOnly(bool readOnly /* = true */) {
 bool Document::undo() {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(numberOfUndoableEdits() == 0)
+	else if(numberOfUndoableChanges() == 0)
 		return false;
 
 	beginCompoundChange();
@@ -1376,7 +1395,7 @@ bool Document::undo() {
  * Informs the document change to the adapting points.
  * @param change the document change
  */
-inline void Document::updatePoints(const DocumentChange& change) throw() {
+inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
 	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
 		if((*i)->adaptsToDocument())
 			(*i)->update(change);
@@ -1387,7 +1406,7 @@ inline void Document::updatePoints(const DocumentChange& change) throw() {
  * Revokes the narrowing.
  * @see #isNarrowed, #narrow
  */
-void Document::widen() {
+void Document::widen() /*throw()*/ {
 	if(accessibleArea_ != 0) {
 		delete accessibleArea_->second;
 		delete accessibleArea_;
@@ -1420,7 +1439,7 @@ void Document::widen() {
 const CharacterIterator::ConcreteTypeTag DocumentCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
-DocumentCharacterIterator::DocumentCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_), document_(0), line_(0) {
+DocumentCharacterIterator::DocumentCharacterIterator() /*throw()*/ : CharacterIterator(CONCRETE_TYPE_TAG_), document_(0), line_(0) {
 }
 
 /**
@@ -1468,12 +1487,12 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 }
 
 /// Copy-constructor.
-DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) throw() :
+DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& rhs) /*throw()*/ :
 		text::CharacterIterator(rhs), document_(rhs.document_), region_(rhs.region_), line_(rhs.line_), p_(rhs.p_) {
 }
 
 /// @see text#CharacterIterator#current
-CodePoint DocumentCharacterIterator::current() const throw() {
+CodePoint DocumentCharacterIterator::current() const /*throw()*/ {
 	if(p_ == region_.second)
 		return DONE;
 	else if(p_.column == line_->length())
@@ -1563,12 +1582,12 @@ DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPositi
 }
 
 /// Destructor.
-DocumentBuffer::~DocumentBuffer() throw() {
+DocumentBuffer::~DocumentBuffer() /*throw()*/ {
 	sync();
 }
 
 /// Returns the current position in the document.
-const Position& DocumentBuffer::tell() const throw() {
+const Position& DocumentBuffer::tell() const /*throw()*/ {
 	return current_;
 }
 
@@ -1630,26 +1649,26 @@ DocumentStream::DocumentStream(Document& document, const Position& initialPositi
 // NullPartitioner //////////////////////////////////////////////////////////
 
 /// Constructor.
-NullPartitioner::NullPartitioner() throw() : p_(DEFAULT_CONTENT_TYPE, Region(Position::ZERO_POSITION, Position::INVALID_POSITION)) {
+NullPartitioner::NullPartitioner() /*throw()*/ : p_(DEFAULT_CONTENT_TYPE, Region(Position::ZERO_POSITION, Position::INVALID_POSITION)) {
 }
 
 /// @see DocumentPartitioner#documentAboutToBeChanged
-void NullPartitioner::documentAboutToBeChanged() throw() {
+void NullPartitioner::documentAboutToBeChanged() /*throw()*/ {
 }
 
 /// @see DocumentPartitioner#documentChanged
-void NullPartitioner::documentChanged(const DocumentChange&) throw() {
+void NullPartitioner::documentChanged(const DocumentChange&) /*throw()*/ {
 	p_.region.second.line = INVALID_INDEX;
 }
 
 /// @see DocumentPartitioner#doGetPartition
-void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const throw() {
+void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const /*throw()*/ {
 	if(p_.region.second.line == INVALID_INDEX)
 		const_cast<NullPartitioner*>(this)->p_.region.second = document()->region().second;
 	partition = p_;
 }
 
 /// @see DocumentPartitioner#doInstall
-void NullPartitioner::doInstall() throw() {
+void NullPartitioner::doInstall() /*throw()*/ {
 	p_.region.second.line = INVALID_INDEX;
 }

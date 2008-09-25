@@ -79,7 +79,7 @@ namespace ascension {
 				KOI8_U = 2088,		///< KOI8-U.
 				TIS_620 = 2259;		///< TIS 620-2533:1999.
 		}
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 		/// MIBenum values of the proprietary encodings registered by IANA.
@@ -96,7 +96,7 @@ namespace ascension {
 				WINDOWS_1257 = 2257,	///< windows-1257.
 				WINDOWS_1258 = 2258;	///< windows-1258.
 		}
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 		/// MIBenum values of the extended encodings.
@@ -155,7 +155,7 @@ namespace ascension {
 				NEXTSTEP	= 3901,	///< NEXTSTEP.
 				ATARIST		= 3902;	///< Atari ST/TT.
 		}
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif // !ASCENSION_NO_EXTENDED_ENCODINGS
 
 		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c & 0x7FU);}
 		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c & 0xFFU);}
@@ -188,11 +188,11 @@ namespace ascension {
 			else return (first2 == last2) ? 0 : -1;
 		}
 
-		MIBenum convertCCSIDtoMIB(uint ccsid) throw();
-		uint convertMIBtoCCSID(MIBenum mib) throw();
+		MIBenum convertCCSIDtoMIB(uint ccsid) /*throw()*/;
+		uint convertMIBtoCCSID(MIBenum mib) /*throw()*/;
 #ifdef ASCENSION_WINDOWS
-		uint convertMIBtoWinCP(MIBenum mib) throw();
-		MIBenum convertWinCPtoMIB(uint codePage) throw();
+		uint convertMIBtoWinCP(MIBenum mib) /*throw()*/;
+		MIBenum convertWinCPtoMIB(uint codePage) /*throw()*/;
 #endif /* ASCENSION_WINDOWS */
 		String getEncodingDisplayName(MIBenum mib);
 
@@ -208,34 +208,34 @@ namespace ascension {
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
 			 * @return a string contains aliases separated by vertical bar ('|')
 			 */
-			virtual std::string aliases() const throw() {return "";}
+			virtual std::string aliases() const /*throw()*/ {return "";}
 			/**
 			 * Returns the human-readable name of the encoding. Default implementation calls
 			 * @c #name method.
 			 * @param locale the locale used to localize the name
 			 * @see #name
 			 */
-			virtual std::string displayName(const std::locale& locale) const throw() {return name();}
+			virtual std::string displayName(const std::locale& locale) const /*throw()*/ {return name();}
 			/// Returns the number of bytes represents a UCS character.
-			virtual std::size_t maximumNativeBytes() const throw() = 0;
+			virtual std::size_t maximumNativeBytes() const /*throw()*/ = 0;
 			/// Returns the number of UCS characters represents a native character. Default
 			/// implementation returns 1.
-			virtual std::size_t maximumUCSLength() const throw() {return 1;}
+			virtual std::size_t maximumUCSLength() const /*throw()*/ {return 1;}
 			/// Returns the MIBenum value of the encoding.
-			virtual MIBenum mibEnum() const throw() = 0;
+			virtual MIBenum mibEnum() const /*throw()*/ = 0;
 			/**
 			 * Returns the name of the encoding. If the encoding is registered as a character set
 			 * in <a href="http://www.iana.org/assignments/character-sets">IANA character-sets
 			 * encoding file</a>, should return the preferred mime name.
 			 * @see #displayName
 			 */
-			virtual std::string name() const throw() = 0;
+			virtual std::string name() const /*throw()*/ = 0;
 			/**
 			 * Returns an native character which indicates that the given Unicode character can't
 			 * map. If @c #policy returns @c REPLACE_UNMAPPABLE_CHARACTER, the encoder should use
 			 * this character. Default implementation returns 0x1A.
 			 */
-			virtual byte substitutionCharacter() const throw() {return 0x1A;}
+			virtual byte substitutionCharacter() const /*throw()*/ {return 0x1A;}
 		};
 
 		class EncoderFactory;
@@ -312,17 +312,15 @@ namespace ascension {
 			/// A set of @c Flag values.
 			typedef manah::Flags<Flag> Flags;
 		public:
-			virtual ~Encoder() throw();
-
+			virtual ~Encoder() /*throw()*/;
 			// attributes
-			const Flags& flags() const throw();
-			virtual const IEncodingProperties& properties() const throw() = 0;
-			virtual Encoder& resetDecodingState() throw();
-			virtual Encoder& resetEncodingState() throw();
+			const Flags& flags() const /*throw()*/;
+			virtual const IEncodingProperties& properties() const /*throw()*/ = 0;
+			virtual Encoder& resetDecodingState() /*throw()*/;
+			virtual Encoder& resetEncodingState() /*throw()*/;
 			Encoder& setFlags(const Flags& newFlags);
 			Encoder& setSubstitutionPolicy(SubstitutionPolicy newPolicy);
-			SubstitutionPolicy substitutionPolicy() const throw();
-
+			SubstitutionPolicy substitutionPolicy() const /*throw()*/;
 			// conversion
 			bool canEncode(CodePoint c);
 			bool canEncode(const Char* first, const Char* last);
@@ -331,21 +329,22 @@ namespace ascension {
 			std::string fromUnicode(const String& from);
 			Result toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
 			String toUnicode(const std::string& from);
-
 			// factory
-			static std::auto_ptr<Encoder> forCCSID(int ccsid) throw();
-			static std::auto_ptr<Encoder> forCPGID(int cpgid) throw();
-			static std::auto_ptr<Encoder> forID(std::size_t id) throw();
-			static std::auto_ptr<Encoder> forMIB(MIBenum mib) throw();
-			static std::auto_ptr<Encoder> forName(const std::string& name) throw();
-			static std::auto_ptr<Encoder> forWindowsCodePage(uint codePage) throw();
-			static bool supports(MIBenum mib) throw();
-			static bool supports(const std::string& name) throw();
+			static std::auto_ptr<Encoder> forCCSID(int ccsid) /*throw()*/;
+			static std::auto_ptr<Encoder> forCPGID(int cpgid) /*throw()*/;
+			static std::auto_ptr<Encoder> forID(std::size_t id) /*throw()*/;
+			static std::auto_ptr<Encoder> forMIB(MIBenum mib) /*throw()*/;
+			static std::auto_ptr<Encoder> forName(const std::string& name) /*throw()*/;
+			static std::auto_ptr<Encoder> forWindowsCodePage(uint codePage) /*throw()*/;
+			static bool supports(MIBenum mib) /*throw()*/;
+			static bool supports(const std::string& name) /*throw()*/;
 			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
-			static Encoder& getDefault() throw();
+			static Encoder& getDefault() /*throw()*/;
 			static void registerFactory(EncoderFactory& newFactory);
+
 		protected:
-			Encoder() throw();
+			Encoder() /*throw()*/;
+		private:
 			/**
 			 * Converts the given string from UTF-16 into the native encoding.
 			 * @param[out] to the beginning of the destination buffer
@@ -371,8 +370,8 @@ namespace ascension {
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext) = 0;
 		private:
-			static EncoderFactory* find(MIBenum mib) throw();
-			static EncoderFactory* find(const std::string& name) throw();
+			static EncoderFactory* find(MIBenum mib) /*throw()*/;
+			static EncoderFactory* find(const std::string& name) /*throw()*/;
 			static std::vector<EncoderFactory*>& registry();
 			SubstitutionPolicy substitutionPolicy_;
 			Flags flags_;
@@ -382,10 +381,10 @@ namespace ascension {
 		class EncoderFactory : public IEncodingProperties {
 		public:
 			/// Destructor.
-			virtual ~EncoderFactory() throw() {}
+			virtual ~EncoderFactory() /*throw()*/ {}
 		protected:
 			/// Returns the @c Encoder instance.
-			virtual std::auto_ptr<Encoder>	create() const throw() = 0;
+			virtual std::auto_ptr<Encoder> create() const /*throw()*/ = 0;
 			friend class Encoder;
 		};
 
@@ -393,21 +392,22 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(EncodingDetector);
 		public:
 			// constructors
-			virtual ~EncodingDetector() throw();
+			virtual ~EncodingDetector() /*throw()*/;
 			// attributes
 			/// Returns the name of the encoding detector.
-			std::string name() const throw() {return name_;}
+			std::string name() const /*throw()*/ {return name_;}
 			// detection
 			std::pair<MIBenum, std::string> detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
-			static EncodingDetector* forName(const std::string& name) throw();
+			static EncodingDetector* forName(const std::string& name) /*throw()*/;
 #ifdef ASCENSION_WINDOWS
-			static EncodingDetector* forWindowsCodePage(::UINT codePage) throw();
+			static EncodingDetector* forWindowsCodePage(UINT codePage) /*throw()*/;
 #endif /* ASCENSION_WINDOWS */
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
 			static void registerDetector(std::auto_ptr<EncodingDetector> newDetector);
 		protected:
 			explicit EncodingDetector(const std::string& name);
+		private:
 			/**
 			 * Detects the encoding of the given character sequence.
 			 * @param first the beginning of the sequence
@@ -417,7 +417,7 @@ namespace ascension {
 			 * @return the MIBenum value and the name of the detected encoding
 			 */
 			virtual std::pair<MIBenum, std::string> doDetect(
-				const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const throw() = 0;
+				const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const /*throw()*/ = 0;
 		private:
 			static std::vector<EncodingDetector*>& registry();
 			const std::string name_;
@@ -437,7 +437,7 @@ namespace ascension {
 			/// @c EncoderFactoryBase is a base implementation of @c EncoderFactory.
 			class EncoderFactoryBase : public EncoderFactory {
 			public:
-				virtual ~EncoderFactoryBase() throw();
+				virtual ~EncoderFactoryBase() /*throw()*/;
 			protected:
 				EncoderFactoryBase(const std::string& name,
 					MIBenum mib, const std::string& displayName = "",
@@ -445,13 +445,13 @@ namespace ascension {
 					const std::string& aliases = "", byte substitutionCharacter = 0x1A);
 			protected:
 				// IEncodingProperties
-				virtual std::string aliases() const throw();
-				virtual std::string displayName(const std::locale& lc) const throw();
-				virtual std::size_t maximumNativeBytes() const throw();
-				virtual std::size_t maximumUCSLength() const throw();
-				virtual MIBenum mibEnum() const throw();
-				virtual std::string name() const throw();
-				virtual byte substitutionCharacter() const throw();
+				virtual std::string aliases() const /*throw()*/;
+				virtual std::string displayName(const std::locale& lc) const /*throw()*/;
+				virtual std::size_t maximumNativeBytes() const /*throw()*/;
+				virtual std::size_t maximumUCSLength() const /*throw()*/;
+				virtual MIBenum mibEnum() const /*throw()*/;
+				virtual std::string name() const /*throw()*/;
+				virtual byte substitutionCharacter() const /*throw()*/;
 			private:
 				const std::string name_, displayName_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
@@ -491,7 +491,7 @@ namespace ascension {
 
 			/// Returns a code corresponds to a byte in the 16×16 wire.
 			/// @see CodeWire
-			template<typename Code> inline Code wireAt(const Code** wire, byte c) throw() {return wire[c >> 4][c & 0xF];}
+			template<typename Code> inline Code wireAt(const Code** wire, byte c) /*throw()*/ {return wire[c >> 4][c & 0xF];}
 
 			/// Generates 16×16-character sequence.
 			template<
@@ -510,10 +510,10 @@ namespace ascension {
 				/// @see CharMap
 				class BidirectionalMap {
 				public:
-					BidirectionalMap(const Char** byteToCharacterWire) throw();
-					~BidirectionalMap() throw();
-					byte toByte(Char c) const throw();
-					Char toCharacter(byte c) const throw();
+					BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/;
+					~BidirectionalMap() /*throw()*/;
+					byte toByte(Char c) const /*throw()*/;
+					Char toCharacter(byte c) const /*throw()*/;
 				private:
 					void buildUnicodeToByteTable();
 				private:
@@ -576,14 +576,14 @@ namespace ascension {
 				public:
 					SingleByteEncoderFactory(const std::string& name, MIBenum mib,
 						const std::string& displayName, const std::string& aliases, byte substitutionCharacter);
-					virtual ~SingleByteEncoderFactory() throw();
+					virtual ~SingleByteEncoderFactory() /*throw()*/;
 				private:
-					std::auto_ptr<Encoder>	create() const throw();
+					std::auto_ptr<Encoder> create() const /*throw()*/;
 				};
 
 				namespace internal {
 					std::auto_ptr<Encoder> createSingleByteEncoder(
-						const Char** byteToCharacterWire, const IEncodingProperties& properties) throw();
+						const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/;
 				}
 			} // namespace sbcs
 
@@ -622,10 +622,10 @@ namespace ascension {
 			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out) *out = std::make_pair<std::size_t, const IEncodingProperties*>(i, registry()[i]);}
 
 		/// Returns the miscellaneous flags.
-		inline const Encoder::Flags& Encoder::flags() const throw() {return flags_;}
+		inline const Encoder::Flags& Encoder::flags() const /*throw()*/ {return flags_;}
 
 		/// Returns the substitution policy.
-		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const throw() {return substitutionPolicy_;}
+		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const /*throw()*/ {return substitutionPolicy_;}
 
 		/**
 		 * Returns names for all available encoding detectors.
@@ -650,10 +650,10 @@ namespace ascension {
 			Line8::VALUES, Line9::VALUES, LineA::VALUES, LineB::VALUES, LineC::VALUES, LineD::VALUES, LineE::VALUES, LineF::VALUES};
 
 		/// Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if umappable.
-		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const throw() {return unicodeToByte_[c >> 8][mask8Bit(c)];}
+		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const /*throw()*/ {return unicodeToByte_[c >> 8][mask8Bit(c)];}
 
 		/// Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if umappable.
-		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const throw() {return wireAt(byteToUnicode_, c);}
+		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const /*throw()*/ {return wireAt(byteToUnicode_, c);}
 
 		/**
 		 * Constructor.
@@ -668,12 +668,12 @@ namespace ascension {
 			const std::string& displayName, const std::string& aliases, byte substitutionCharacter) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases, substitutionCharacter) {}
 
 		/// Destructor.
-		template<typename MappingTable> inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() throw() {}
+		template<typename MappingTable> inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() /*throw()*/ {}
 
 		/// @see EncoderFactory#create
-		template<typename MappingTable> std::auto_ptr<Encoder> implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const throw() {
+		template<typename MappingTable> std::auto_ptr<Encoder> implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*throw()*/ {
 			return implementation::sbcs::internal::createSingleByteEncoder(MappingTable::VALUES, *this);}
 	}
 } // namespace ascension.encoding
 
-#endif /* !ASCENSION_ENCODER_HPP */
+#endif // !ASCENSION_ENCODER_HPP

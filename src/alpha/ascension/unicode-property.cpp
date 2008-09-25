@@ -1,7 +1,7 @@
 /**
  * @file unicode-property.cpp
  * @author exeal
- * @date 2005-2007
+ * @date 2005-2008
  */
 
 #include "unicode-property.hpp"
@@ -66,7 +66,7 @@ using namespace std;
  *
  * <h3>Implementation of @c CharacterIterator class</h3>
  *
- * A concrete iterator class must implement the following protected methods:
+ * A concrete iterator class must implement the following private methods:
  *
  * - @c #doAssign for @c #assign.
  * - @c #doClone for @c #clone.
@@ -106,7 +106,7 @@ const CodePoint CharacterIterator::DONE = 0xFFFFFFFFUL;
 const CharacterIterator::ConcreteTypeTag StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
-StringCharacterIterator::StringCharacterIterator() throw() : CharacterIterator(CONCRETE_TYPE_TAG_) {
+StringCharacterIterator::StringCharacterIterator() /*throw()*/ : CharacterIterator(CONCRETE_TYPE_TAG_) {
 }
 
 StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last) :
@@ -134,11 +134,12 @@ StringCharacterIterator::StringCharacterIterator(const String& s, String::const_
 }
 
 /// Copy-constructor.
-StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& rhs) throw() :
-	CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {}
+StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& rhs) /*throw()*/
+		: CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {
+}
 
 /// @see CharacterIterator#current
-CodePoint StringCharacterIterator::current() const throw() {
+CodePoint StringCharacterIterator::current() const /*throw()*/ {
 	return (current_ != last_) ? surrogates::decodeFirst(current_, last_) : DONE;
 }
 
@@ -194,7 +195,7 @@ void StringCharacterIterator::doPrevious() {
 
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
-	bool isNU(CodePoint cp, int gc) throw() {
+	bool isNU(CodePoint cp, int gc) /*throw()*/ {
 		return (gc == GeneralCategory::NUMBER_DECIMAL_DIGIT && cp < 0xFF00 || cp > 0xFFEF)
 			|| cp == 0x066B		// Arabic Decimal Separator
 			|| cp == 0x066C;	// Arabic Thousands Separator
@@ -208,7 +209,7 @@ namespace {
 		0x275E	// Heavy Double Comma Quotation Mark Ornament
 	};
 	/// Returns true if the specified character is Line_Break=QU.
-	bool isQU(CodePoint cp, int gc) throw() {
+	bool isQU(CodePoint cp, int gc) /*throw()*/ {
 		return gc == GeneralCategory::PUNCTUATION_FINAL_QUOTE
 			|| gc == GeneralCategory::PUNCTUATION_INITIAL_QUOTE
 			|| binary_search(QU, MANAH_ENDOF(QU), cp);
@@ -464,7 +465,7 @@ void CanonicalCombiningClass::buildNames() {
 	names_[L"IS"] = names_[L"Iota_Subscript"] = 240;
 }
 
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 
 
 // Script ///////////////////////////////////////////////////////////////////
@@ -763,7 +764,7 @@ const GraphemeClusterBreak::Names GraphemeClusterBreak::names_[GraphemeClusterBr
 };
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
-int GraphemeClusterBreak::of(CodePoint cp) throw() {
+int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
 	if(cp == CARRIAGE_RETURN)
 		return CR;
 	else if(cp == LINE_FEED)
@@ -814,7 +815,7 @@ const WordBreak::Names WordBreak::names_[WordBreak::LAST_VALUE - WordBreak::FIRS
  */
 int WordBreak::of(CodePoint cp,
 		const IdentifierSyntax& syntax /* = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT) */,
-		const locale& lc /* = locale::classic() */) throw() {
+		const locale& lc /* = locale::classic() */) /*throw()*/ {
 	static const CodePoint KATAKANAS[] = {
 		0x3031,	// Vertical Kana Repeat Mark
 		0x3032,	// Vertical Kana Repeat With Voiced Sound Mark
@@ -910,7 +911,7 @@ const SentenceBreak::Names SentenceBreak::names_[SentenceBreak::LAST_VALUE - Sen
 };
 
 /// Returns Sentence_Break value of the specified character.
-int SentenceBreak::of(CodePoint cp) throw() {
+int SentenceBreak::of(CodePoint cp) /*throw()*/ {
 	static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 		return GraphemeClusterBreak::EXTEND;
