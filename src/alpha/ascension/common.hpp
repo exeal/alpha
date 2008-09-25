@@ -32,7 +32,7 @@
 #	if defined(ASCENSION_MSVC)
 #		define ASCENSION_FASTCALL __fastcall
 #	elif defined(ASCENSION_GCC)
-#		define ASCENSION_FASTCALL __attribute__(regparm(3))
+#		define ASCENSION_FASTCALL __attribute__((regparm(3)))
 #	else
 #		define ASCENSION_FASTCALL
 #	endif
@@ -40,9 +40,23 @@
 #	define ASCENSION_FASTCALL
 #endif // __i386__
 
+/**
+ * @def ASCENSION_NOFAIL The method which has this tag guarentees "no-fail".
+ * On debug releaese, this symbol is replaced with "throw()" empty exception-specification.
+ * However, see "Exceptional C++ Style" Item 13 about guideline for exception-specifications.
+ * @note Because some parsers (including MSVC Class View) confuse, this symbol is now not used.
+ */
+#ifdef _DEBUG
+#	define ASCENSION_NOFAIL /*throw()*/
+#else
+#	define ASCENSION_NOFAIL
+#endif // _DEBUG
+/// @def ASC_NOFAIL Short version of @c ASCENSION_NOFAIL.
+#define ASC_NOFAIL ASCENSION_NOFAIL
+
 #include "../../manah/object.hpp"
 #include "config.hpp"
-#include <string>	// std.string
+#include <string>	// std.basic_string
 #include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
 #include <iterator>
 #include <stdexcept>
@@ -101,20 +115,31 @@ namespace ascension {
 	 * Represents direction in a text or a document (not visual orientation. See @c #viewers#Orientation).
 	 * @see ascension#text, ascension#searcher
 	 */
-	enum Direction {
-		FORWARD,	///< Direction to the end.
-		BACKWARD	///< Direction to the start.
+	class Direction {
+	public:
+		static const Direction FORWARD;		///< Direction to the end.
+		static const Direction BACKWARD;	///< Direction to the start.
+		/// Copy-constructor.
+		Direction(const Direction& rhs) /*throw()*/ : value_(rhs.value_) {}
+		/// Assignment operator.
+		Direction& operator=(const Direction& rhs) /*throw()*/ {value_ = rhs.value_; return *this;}
+		/// Negation operator returns the complement of this.
+		Direction operator!() const /*throw()*/ {return (*this == FORWARD) ? BACKWARD : FORWARD;}
+		/// Equality operator.
+		bool operator==(const Direction& rhs) const /*throw()*/ {return value_ == rhs.value_;}
+		/// Inequality operator.
+		bool operator!=(const Direction& rhs) const /*throw()*/ {return !(*this == rhs);}
+	private:
+		explicit Direction(bool value) /*throw()*/ : value_(value) {}
+		bool value_;
 	};
-
-	/// Negation operator for @c Direction value.
-	inline Direction operator!(Direction v) throw() {return (v == FORWARD) ? BACKWARD : FORWARD;}
 
 	/**
 	 * Notifies about the system parameter changes.
 	 * Clients of Ascension should call this function when the system settings are changed
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 */
-	void updateSystemSettings() throw();
+	void updateSystemSettings() /*throw()*/;
 
 	/// Pointer argument is @c null but that is not allowed.
 	class NullPointerException : public std::invalid_argument {
@@ -244,8 +269,8 @@ namespace ascension {
 		/// Relational operator.
 		bool operator>=(const ConcreteIterator& rhs) const {return !operator<(rhs);}
 	private:
-		ConcreteIterator& concrete() throw() {return static_cast<ConcreteIterator&>(*this);}
-		const ConcreteIterator& concrete() const throw() {return static_cast<const ConcreteIterator&>(*this);}
+		ConcreteIterator& concrete() /*throw()*/ {return static_cast<ConcreteIterator&>(*this);}
+		const ConcreteIterator& concrete() const /*throw()*/ {return static_cast<const ConcreteIterator&>(*this);}
 	};
 
 	namespace texteditor {	// see session.hpp
@@ -253,7 +278,7 @@ namespace ascension {
 		namespace internal {
 			class ISessionElement {
 			protected:
-				virtual void setSession(Session& session) throw() = 0;
+				virtual void setSession(Session& session) /*throw()*/ = 0;
 				friend class Session;
 			};
 		}

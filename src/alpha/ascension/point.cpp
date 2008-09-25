@@ -16,13 +16,39 @@ using namespace std;
 // Point ////////////////////////////////////////////////////////////////////
 
 /**
+ * @class ascension::kernel::Point
+ *
+ * A point represents a document position and adapts to the document change.
+ *
+ * When the document change occured, @c Point moves automatically as follows:
+ *
+ * - If text was inserted or deleted before the point, the point will move accordingly.
+ * - If text was inserted or deleted after the point, the point will not move.
+ * - If region includes the point was deleted, the point will move to the start (= end) of
+ *   the region.
+ * - If text was inserted at the point, the point will or will not move according to the
+ *   gravity.
+ *
+ * For details of gravity, see the description of @c updatePosition function.
+ *
+ * When the document was reset (by @c Document#resetContent), the all points move to the
+ * start of the document.
+ *
+ * Almost all methods of this or derived classes will throw @c DisposedDocumentException if
+ * the document is already disposed. Call @c #isDocumentDisposed to check if the document
+ * is exist or not.
+ *
+ * @see Position, Document, EditPoint, viewers#VisualPoint, viewers#Caret
+ */
+
+/**
  * Constructor.
  * @param document the document to which the point attaches
  * @param position the initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
 Point::Point(Document& document, const Position& position /* = Position() */) :
-		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(FORWARD) {
+		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(Direction::FORWARD) {
 	if(!document.region().includes(position))
 		throw BadPositionException();
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
@@ -42,7 +68,7 @@ Point::Point(const Point& rhs) :
 }
 
 /// Destructor.
-Point::~Point() throw() {
+Point::~Point() /*throw()*/ {
 	lifeCycleListeners_.notify(&IPointLifeCycleListener::pointDestroyed);
 	if(document_ != 0)
 		static_cast<internal::IPointCollection<Point>*>(document_)->removePoint(*this);
@@ -88,22 +114,6 @@ void Point::moveTo(const Position& to) {
 	if(to > document_->region().end())
 		throw BadPositionException();
 	doMoveTo(to);
-}
-
-/**
- * Normalizes the position of the point.
- * This method does <strong>not</strong> inform to the listeners about any movement.
- */
-void Point::normalize() const {
-	verifyDocument();
-	Position& position = const_cast<Point*>(this)->position_;
-	position.line = min(position.line, document_->numberOfLines() - 1);
-	position.column = min(position.column, document_->lineLength(position.line));
-	if(document_->isNarrowed() && excludedFromRestriction_) {
-		const Region r(document_->accessibleRegion());
-		position = max(position_, r.first);
-		position = min(position_, r.second);
-	}
 }
 
 /**
@@ -154,7 +164,7 @@ void Point::update(const DocumentChange& change) {
  *
  * EditPoint throws @c ReadOnlyDocumentException when tried to change the read-only document.
  *
- * EditPoint <strong>never</strong> uses sequential edit of the document and freeze of the
+ * EditPoint <strong>never</strong> uses compound change of the document and freeze of the
  * viewer. Client is responsible for the usage of these features.
  *
  * @see Point, Document, IPointListener, DisposedDocumentException
@@ -181,82 +191,75 @@ EditPoint::EditPoint(const EditPoint& rhs) : Point(rhs), listener_(rhs.listener_
 }
 
 /// Destructor.
-EditPoint::~EditPoint() throw() {
+EditPoint::~EditPoint() /*throw()*/ {
 }
 
 /**
- * Moves to the beginning of the previous bookmarked line. If there is no bookmark in the document,
- * this method does nothing.
- * @return false if the bookmark is not found
+ * Returns the beginning of the previous bookmarked line.
+ * @return the beginning of the backward bookmarked line or @c Position#INVALID_POSITION if there
+ * is no bookmark in the document
  */
-void EditPoint::backwardBookmark(length_t marks /* = 1 */) {
-	verifyDocument();
-	const length_t line = document()->bookmarker().next(lineNumber(), BACKWARD, marks);
-	if(line != INVALID_INDEX)
-		moveTo(Position(line, 0));
+Position EditPoint::backwardBookmark(length_t marks /* = 1 */) const {
+	const length_t line = document()->bookmarker().next(normalized().line, Direction::BACKWARD, marks);
+	return (line != INVALID_INDEX) ? Position(line, 0) : Position::INVALID_POSITION;
 }
 
 /**
- * Moves to the previous (backward) character.
- * @param characters the number of the characters to move. what is a character depends on the
+ * Returns the position returned by N characters.
+ * @param characters the number of the characters to return. "what a character" is depends on the
  * character unit the point uses
+ * @return the position of the previous character
  */
-void EditPoint::backwardCharacter(length_t characters /* = 1 */) {
-	verifyDocument();
-	normalize();
-	moveTo(offsetCharacterPosition(*document(), *this, BACKWARD, characterUnit(), characters));
+Position EditPoint::backwardCharacter(length_t characters /* = 1 */) const {
+	return offsetCharacterPosition(*document(), normalized(), Direction::BACKWARD, characterUnit(), characters);
 }
 
 /**
- * Moves to the previous line. If the destination position is outside of the inaccessible region,
- * moves to the last line whose column is accessible, rather than to the beginning of the
- * accessible region.
- * @param lines the number of the lines to move
+ * Returns the position returned by N lines. If the destination position is outside of the
+ * accessible region, returns the first line whose column is accessible, rather than the beginning
+ * of the accessible region.
+ * @param lines the number of the lines to return
  */
-void EditPoint::backwardLine(length_t lines /* = 1 */) {
-	verifyDocument();
-	normalize();
-	const length_t newLine = (lineNumber() > lines) ?
-		max(lineNumber() - lines,
-			(isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).first.line) : 0;
-	if(newLine != lineNumber())
-		moveTo(Position(newLine, columnNumber()));
+Position EditPoint::backwardLine(length_t lines /* = 1 */) const {
+	Position p(normalized());
+	const Position bob(document()->accessibleRegion().first);
+	length_t line = (p.line > bob.line + lines) ? p.line - lines : bob.line;
+	if(line == bob.line && p.column < bob.column)
+		++line;
+	return p.line = line, p;
 }
 
 /**
- * Moves to the beginning of the previous word.
- * @param offset the number of words
+ * Returns the beginning of the backward N words.
+ * @param words the number of words to traverse
+ * @return the destination
  */
-void EditPoint::backwardWord(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
+Position EditPoint::backwardWord(length_t words /* = 1 */) const {
+	WordBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(),
+		document()->accessibleRegion(), normalized()), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
+	return (i -= words).base().tell();
 }
 
 /**
- * Moves to the end of the previous word.
- * @param offset the number of words
+ * Returns the the end of the backward N words.
+ * @param words the number of words to traverse
+ * @return the destination
  */
-void EditPoint::backwardWordEnd(length_t offset /* = 1 */) {
+Position EditPoint::backwardWordEnd(length_t words /* = 1 */) const {
+	WordBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(),
+		document()->accessibleRegion(), normalized()), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
+	return (i -= words).base().tell();
+}
+
+/// Returns the beginning of the document.
+Position EditPoint::beginningOfDocument() const {
 	verifyDocument();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
-	i -= offset;
-	moveTo(i.base().tell());
+	return document()->accessibleRegion().first;
 }
 
-/// Moves to the beginning of the document.
-void EditPoint::beginningOfDocument() {
-	moveTo(Position::ZERO_POSITION);
-}
-
-/// Moves to the beginning of the line.
-void EditPoint::beginningOfLine() {
-	moveTo(Position(min(lineNumber(), document()->numberOfLines() - 1), 0));
+/// Returns the beginning of the current line.
+Position EditPoint::beginningOfLine() const {
+	return max(Position(normalized().line, 0), document()->accessibleRegion().first);
 }
 
 /**
@@ -276,19 +279,31 @@ CodePoint EditPoint::character(bool useLineFeed /* = false */) const {
  * Deletes the current character and inserts the specified text.
  * @param first the start of the text
  * @param last the end of the text
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw NullPointerException @a first and/or @a last are @c null
+ * @throw std#invalid_argument @a first &gt; @a last
  */
-void EditPoint::destructiveInsert(const Char* first, const Char* last) {
+bool EditPoint::destructiveInsert(const Char* first, const Char* last) {
 	verifyDocument();
 	if(document()->isReadOnly())
-		return;
-	Position next(offsetCharacterPosition(*document(), *this, FORWARD, characterUnit()));
+		throw ReadOnlyDocumentException();
+	else if(first == 0)
+		throw NullPointerException("first");
+	else if(last == 0)
+		throw NullPointerException("last");
+	else if(first > last)
+		throw invalid_argument("first > last");
+	else if(!document()->beginCompoundChange())
+		return false;
+	Position next(offsetCharacterPosition(Direction::FORWARD));
 	const bool adapts = adaptsToDocument();
 	adaptToDocument(false);
-	if(document()->erase(Region(*this, next))) {	// TODO: guarantee complete rollback.
-		if(document()->insert(*this, first, last, &next))
-			moveTo(next);
-	}
+	document()->erase(Region(*this, next));
+	document()->insert(*this, first, last, &next);
+	moveTo(next);
 	adaptToDocument(adapts);
+	document()->endCompoundChange();
+	return true;
 }
 
 /**
@@ -298,113 +313,101 @@ void EditPoint::destructiveInsert(const Char* first, const Char* last) {
 void EditPoint::doMoveTo(const Position& to) {
 	verifyDocument();
 	if(to != position()) {
-		const Position oldPosition = position();
+		const Position oldPosition(position());
 		Point::doMoveTo(to);
 		if(listener_ != 0)
 			listener_->pointMoved(*this, oldPosition);
 	}
 }
 
-/// Moves to the end of the document.
-void EditPoint::endOfDocument() {
-	moveTo(isExcludedFromRestriction() ? document()->accessibleRegion().end() : document()->region().end());
-}
-
-/// Moves to the end of the line.
-void EditPoint::endOfLine() {
-	moveTo(Position(min(lineNumber(), document()->numberOfLines() - 1), document()->lineLength(lineNumber())));
-}
-
-/**
- * 指定位置までのテキストを削除
- * @param length もう1つの位置までの文字数 (負でもよい)
- * @param cu 文字数の計算方法。@c DEFAULT_UNIT を指定すると現在の設定が使用される
- */
-void EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit cu /* = DEFAULT_UNIT */) {
+/// Returns the end of the document.
+Position EditPoint::endOfDocument() const {
 	verifyDocument();
-	if(document()->isReadOnly() || length == 0)
-		return;
-	if(cu == DEFAULT_UNIT)
-		cu = characterUnit();
-	erase(offsetCharacterPosition(*document(), *this, (length > 0) ? FORWARD : BACKWARD, cu, (length > 0) ? length : -length));
+	return document()->accessibleRegion().end();
+}
+
+/// Returns the end of the current line.
+Position EditPoint::endOfLine() const {
+	const Position p(normalized());
+	return min(Position(p.line, document()->lineLength(p.line)), document()->accessibleRegion().second);
 }
 
 /**
- * Erase the region between the point and the other specified point.
- * @param other the other point
+ * Erases the forward/backward character(s).
+ * @param length the number of the forward characters to erase. if negative, the backward
+ * characters is erased
+ * @param cu indicates what a character is. if this is @c DEFAULT_UNIT, the current unit is used
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw UnknownValueException @a cu is invalid
  */
-void EditPoint::erase(const Position& other) {
+bool EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit cu /* = DEFAULT_UNIT */) {
 	verifyDocument();
-	if(document()->isReadOnly() || other == position())
-		return;
-	document()->erase(Region(*this, other));
+	if(document()->isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(length == 0)
+		return true;	// does nothing
+	return document()->erase(position(), offsetCharacterPosition(
+		(length > 0) ? Direction::FORWARD : Direction::BACKWARD, (length > 0) ? length : -length, cu));
 }
 
 /**
- * Moves to the beginning of the next bookmarked line. If there is no bookmark in the document,
- * this method does nothing.
+ * Returns the beginning of the forward N bookmarked lines. If there is no bookmark in the
+ * document, returns the current position.
  */
-void EditPoint::forwardBookmark(length_t marks /* = 1 */) {
-	verifyDocument();
-	const length_t line = document()->bookmarker().next(lineNumber(), FORWARD, marks);
-	if(line != INVALID_INDEX)
-		moveTo(Position(line, 0));
+Position EditPoint::forwardBookmark(length_t marks /* = 1 */) const {
+	const Position p(normalized());
+	const length_t line = document()->bookmarker().next(p.line, Direction::FORWARD, marks);
+	return (line != INVALID_INDEX) ? Position(line, 0) : p;
 }
 
 /**
- * Moves to the next (forward) character.
- * @param characters the number of the characters to move. what is a character depends on the
+ * Returns the position advanced by N characters.
+ * @param characters the number of the characters to advance. "what a character is" depends on the
  * character unit the point uses
  */
-void EditPoint::forwardCharacter(length_t characters /* = 1 */) {
-	verifyDocument();
-	normalize();
-	moveTo(offsetCharacterPosition(*document(), *this, FORWARD, characterUnit(), characters));
+Position EditPoint::forwardCharacter(length_t characters /* = 1 */) const {
+	return offsetCharacterPosition(*document(), normalized(), Direction::FORWARD, characterUnit(), characters);
 }
 
 /**
- * Moves to the next line. If the destination position is outside of the inaccessible region, moves
- * to the last line whose column is accessible, rather than to the end of the accessible region.
- * @param lines the number of the lines to move
+ * Returns the position advanced by N lines. If the destination position is outside of the
+ * inaccessible region, returns the last line whose column is accessible, rather than to the end of
+ * the accessible region.
+ * @param lines the number of the lines to advance
  */
-void EditPoint::forwardLine(length_t lines /* = 1 */) {
-	verifyDocument();
-	normalize();
-	const length_t newLine = min(lineNumber() + lines,
-		(isExcludedFromRestriction() ? document()->accessibleRegion() : document()->region()).second.line);
-	if(newLine != lineNumber())
-		moveTo(Position(newLine, columnNumber()));
+Position EditPoint::forwardLine(length_t lines /* = 1 */) const {
+	Position p(normalized());
+	const Position eob(document()->accessibleRegion().second);
+	length_t line = (p.line + lines < eob.line) ? p.line + lines : eob.line;
+	if(line == eob.line && p.column > eob.column)
+		--line;
+	return p.line = line, p;
 }
 
 /**
- * Moves to the beginning of the next word.
- * @param offset the number of words
+ * Returns the beginning of the forward N words.
+ * @param words the number of words to traverse
  */
-void EditPoint::forwardWord(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
+Position EditPoint::forwardWord(length_t words /* = 1 */) const {
+	WordBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(),
+		document()->accessibleRegion(), normalized()), AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax());
+	return (i += words).base().tell();
 }
 
 /**
- * Moves to the end of the next word.
- * @param offset the number of words
+ * Returns the end of the forward N words.
+ * @param words the number of words to traverse
  */
-void EditPoint::forwardWordEnd(length_t offset /* = 1 */) {
-	verifyDocument();
-	normalize();
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
-	i += offset;
-	moveTo(i.base().tell());
+Position EditPoint::forwardWordEnd(length_t words /* = 1 */) const {
+	WordBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(),
+		document()->accessibleRegion(), normalized()), AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax());
+	return (i += words).base().tell();
 }
 
 String EditPoint::getText(signed_length_t length, Newline newline /* = NLF_RAW_VALUE */) const {
-	return getText(offsetCharacterPosition(*document(), *this,
-		(length >= 0) ? FORWARD : BACKWARD, characterUnit(), (length >= 0) ? length : -length), newline);
+	return getText(offsetCharacterPosition(
+		(length >= 0) ? Direction::FORWARD : Direction::BACKWARD, (length >= 0) ? length : -length), newline);
 }
 
 String EditPoint::getText(const Position& other, Newline newline /* = NLF_RAW_VALUE */) const {
@@ -417,11 +420,13 @@ String EditPoint::getText(const Position& other, Newline newline /* = NLF_RAW_VA
  * Inserts the spcified text at the current position.
  * @param first the start of the text
  * @param last the end of the text
- * @throw NullPointerException @a first or @a last is @c null
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; @a last
  * @see viewers#VisualPoint#insertRectangle
  */
-void EditPoint::insert(const Char* first, const Char* last) {
+bool EditPoint::insert(const Char* first, const Char* last) {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -429,54 +434,49 @@ void EditPoint::insert(const Char* first, const Char* last) {
 	else if(first > last)
 		throw invalid_argument("first > last");
 	verifyDocument();
-	if(document()->isReadOnly() || first == last)
-		return;
+	if(document()->isReadOnly())
+		throw ReadOnlyDocumentException();
+	if(first == last)
+		return true;
 	const bool adapts = adaptsToDocument();
 	adaptToDocument(false);
 	Position p;
-	if(document()->insert(*this, first, last, &p))
+	const bool interrupted = !document()->insert(*this, first, last, &p);
+	if(!interrupted)
 		moveTo(p);
 	adaptToDocument(adapts);
+	return !interrupted;
 }
 
 /// Returns true if the point is the beginning of the document.
 bool EditPoint::isBeginningOfDocument() const {
 	verifyDocument();
 	normalize();
-	return isExcludedFromRestriction() ? position() == document()->region().first : position() == Position::ZERO_POSITION;
+	return position() == document()->accessibleRegion().first;
 }
 
 /// Returns true if the point is the beginning of the line.
 bool EditPoint::isBeginningOfLine() const {
 	verifyDocument();
 	normalize();
-	if(isExcludedFromRestriction()) {
-		const Position start(document()->region().first);
-		return (start.line == lineNumber()) ? start.column == columnNumber() : columnNumber() == 0;
-	} else
-		return columnNumber() == 0;
+	return columnNumber() == 0 || (document()->isNarrowed() && position() == document()->accessibleRegion().first);
 }
 
 /// Returns true if the point is the end of the document.
 bool EditPoint::isEndOfDocument() const {
 	verifyDocument();
 	normalize();
-	return isExcludedFromRestriction() ? position() == document()->region().second
-		: lineNumber() == document()->numberOfLines() - 1 && columnNumber() == document()->lineLength(lineNumber());
+	return position() == document()->accessibleRegion().second;
 }
 
 /// Returns true if the point is the end of the line.
 bool EditPoint::isEndOfLine() const {
 	verifyDocument();
 	normalize();
-	if(isExcludedFromRestriction()) {
-		const Position end = document()->region().second;
-		return (end.line == lineNumber()) ?
-			columnNumber() == end.column : columnNumber() == document()->lineLength(lineNumber());
-	} else
-		return columnNumber() == document()->lineLength(lineNumber());
+	return columnNumber() == document()->lineLength(lineNumber()) || position() == document()->accessibleRegion().second;
 }
 
+#if 0
 /**
  * Moves to the specified offset.
  * @param offset the offset from the start of the document.
@@ -503,16 +503,21 @@ void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 	}
 	moveTo(Position(region.second.line, document()->lineLength(region.second.line)));
 }
+#endif
 
 /**
  * Inserts the newline(s).
  * @param newlines how many times to insert a newline
+ * @return false if the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  * @note This method is hidden by @c VisualPoint#newLine (C++ rule).
  */
-void EditPoint::newLine(size_t newlines /* = 1 */) {
+bool EditPoint::newLine(size_t newlines /* = 1 */) {
 	verifyDocument();
-	if(document()->isReadOnly() || newlines == 0)
-		return;
+	if(document()->isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(newlines == 0)
+		return true;
 	const IDocumentInput* const di = document()->input();
 	String s(getNewlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
 	if(newlines > 1) {
@@ -521,18 +526,17 @@ void EditPoint::newLine(size_t newlines /* = 1 */) {
 			b.sputn(s.data(), static_cast<streamsize>(s.length()));
 		s = b.str();
 	}
-	insert(s);
+	return insert(s);
 }
 
 /**
  * Offsets the given position with the given character unit and returns.
- * This method does not consider the inaccessible region of the document.
  * @param document the document
  * @param position the origin
  * @param direction the direction to offset
  * @param cu the character unit
  * @param offset the amount to offset
- * @return the result position
+ * @return the result position. this must be inside of the accessible region of the document
  * @throw UnknownValueException @a cu is invalid
  */
 Position EditPoint::offsetCharacterPosition(const Document& document,
@@ -540,22 +544,39 @@ Position EditPoint::offsetCharacterPosition(const Document& document,
 	if(offset == 0)
 		return position;
 	else if(cu == UTF16_CODE_UNIT) {
-		UTF32To16Iterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
-		if(direction == FORWARD)
-			while(offset-- > 0) ++i;
-		else
-			while(offset-- > 0) --i;
-		return i.tell().tell();
+		if(direction == Direction::FORWARD) {
+			const Position e(document.accessibleRegion().second);
+			if(position >= e)
+				return e;
+			for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.column = 0) {
+				if(p.line == e.line)
+					return min(Position(p.line, p.column + offset), e);
+				else if(p.column + offset <= document.lineLength(p.line))
+					return p.column += offset, p;
+			}
+		} else {
+			const Position e(document.accessibleRegion().first);
+			if(position <= e)
+				return e;
+			for(Position p(position); ; offset -= document.lineLength(p.line) + 1, p.column = document.lineLength(--p.line)) {
+				if(p.line == e.line)
+					return (p.column <= e.column + offset) ? e : (p.column -= offset, p);
+				else if(p.column >= offset)
+					return p.column -= offset, p;
+			}
+		}
 	} else if(cu == UTF32_CODE_UNIT) {
+		// TODO: there is more efficient implementation.
 		DocumentCharacterIterator i(document, position);
-		if(direction == FORWARD)
+		if(direction == Direction::FORWARD)
 			while(offset-- > 0) i.next();
 		else
 			while(offset-- > 0) i.previous();
 		return i.tell();
 	} else if(cu == GRAPHEME_CLUSTER) {
-		GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document, position));
-		i.next((direction == FORWARD) ? offset : -static_cast<signed_length_t>(offset));
+		GraphemeBreakIterator<DocumentCharacterIterator> i(
+			DocumentCharacterIterator(document, document.accessibleRegion(), position));
+		i.next((direction == Direction::FORWARD) ? offset : -static_cast<signed_length_t>(offset));
 		return i.base().tell();
 	} else if(cu == GLYPH_CLUSTER) {
 		// TODO: not implemented.
@@ -564,15 +585,29 @@ Position EditPoint::offsetCharacterPosition(const Document& document,
 }
 
 /**
+ * Sets the new character unit.
+ * @param unit the new character unit the point uses
+ * @return this object
+ * @throw UnknownValueException @a unit is invalid
+ */
+EditPoint& EditPoint::setCharacterUnit(EditPoint::CharacterUnit unit) {
+	if(unit >= DEFAULT_UNIT)
+		throw UnknownValueException("unit");
+	characterUnit_ = unit;
+	return *this;
+}
+
+/**
  * Transposes the two grapheme clusters on either side of the point.
  * If the point is not start of a cluster, this method fails.
  * If the transposing target is not in the current line, this method fails.
- * @return false if failed
+ * @return false if there is not a character to transpose or the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  */
 bool EditPoint::transposeCharacters() {
 	verifyDocument();
 	if(document()->isReadOnly())
-		return false;
+		throw ReadOnlyDocumentException();
 
 	// As transposing characters in string "ab":
 	//
@@ -618,28 +653,25 @@ bool EditPoint::transposeCharacters() {
 	}
 
 	moveTo(lineNumber(), pos[1].column);
-	String s = getText(pos[2]);
+	String s(getText(pos[2]));
 	moveTo(lineNumber(), pos[0].column);
 	s += getText(pos[1]);
-	erase(pos[2]);
-	insert(s);
-
-	return true;
-
-#undef IS_RESTRICTION
+	if(!document()->erase(position(), pos[2]))	// TODO: guarentee the complete rollback.
+		return false;
+	return insert(s);
 }
 
 /**
  * Transposes the current line and the previous line.
  * If the current line is the first line, transposes with the next line.
  * The line breaks will not be exchanged.
- * @return false if failed
+ * @return false if there is not a character to transpose or the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  */
 bool EditPoint::transposeLines() {
 	verifyDocument();
-
 	if(document()->isReadOnly())
-		return false;
+		throw ReadOnlyDocumentException();
 
 	const Region region(document()->accessibleRegion());
 	if(region.first.line == region.second.line)	// there is just one line
@@ -656,23 +688,27 @@ bool EditPoint::transposeLines() {
 	// make the two lines empty
 	if(!str2.empty()) {
 		beginningOfLine();
-		erase(static_cast<signed_length_t>(str2.length()), UTF16_CODE_UNIT);
+		if(!erase(static_cast<signed_length_t>(str2.length()), UTF16_CODE_UNIT))
+			return false;
 	}
 	if(!str1.empty()) {
 		moveTo(lineNumber() - 1, (lineNumber() == region.first.line) ? region.first.column : 0);
-		erase(static_cast<signed_length_t>(str1.length()), UTF16_CODE_UNIT);
+		if(!erase(static_cast<signed_length_t>(str1.length()), UTF16_CODE_UNIT))
+			return false;
 		moveTo(lineNumber() + 1, columnNumber());
 	}
 
 	// insert into the two lines
+	// TODO: guarentee the complete rollback.
+	bool succeeded = true;
 	if(!str1.empty()) {
 		beginningOfLine();
-		insert(str1);
+		succeeded = insert(str1);
 	}
 	moveTo(lineNumber() - 1, columnNumber());
 	if(!str2.empty()) {
 		moveTo(lineNumber(), (lineNumber() == region.first.line) ? region.first.column : 0);
-		insert(str2);
+		succeeded = insert(str2);
 	}
 	moveTo(Position(lineNumber() + 2, 0));
 
@@ -681,13 +717,13 @@ bool EditPoint::transposeLines() {
 
 /**
  * Transposes the two words on either side of the point.
- * @return false if failed
+ * @return false if there is not a character to transpose or the change was interrupted
+ * @throw ReadOnlyDocumentException the document is read only
  */
 bool EditPoint::transposeWords() {
 	verifyDocument();
-
 	if(document()->isReadOnly())
-		return false;
+		throw ReadOnlyDocumentException();
 
 	// As transposing words in string "(\w+)[^\w*](\w+)":
 	//
@@ -699,8 +735,8 @@ bool EditPoint::transposeWords() {
 	// 1st-word-start (named pos[0])
 
 	const Region region(document()->accessibleRegion());
-	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(*document(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, identifierSyntax());
+	WordBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(*document(),
+		document()->accessibleRegion(), *this), AbstractWordBreakIterator::START_OF_ALPHANUMERICS, identifierSyntax());
 	Position pos[4];
 
 	// find the backward word (1st-word-*)...
@@ -722,13 +758,12 @@ bool EditPoint::transposeWords() {
 
 	// replace
 	moveTo(pos[2]);
-	String str = getText(pos[3]);
+	String s(getText(pos[3]));
 	moveTo(pos[1]);
-	str += getText(pos[2]);
+	s += getText(pos[2]);
 	moveTo(pos[0]);
-	str += getText(pos[1]);
-	erase(pos[3]);
-	insert(str);
-
-	return true;
+	s += getText(pos[1]);
+	if(!document()->erase(position(), pos[3]))
+		return false;
+	return insert(s);	// TODO: guarentee the complete rollback.
 }

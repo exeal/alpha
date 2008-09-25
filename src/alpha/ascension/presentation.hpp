@@ -8,7 +8,10 @@
 
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
-#include "layout.hpp"
+#include "document.hpp"
+#ifdef ASCENSION_WINDOWS
+#	include "../../manah/win32/windows.hpp"	// COLORREF
+#endif // ASCENSION_WINDOWS
 
 namespace ascension {
 
@@ -21,23 +24,84 @@ namespace ascension {
 
 	namespace presentation {
 
+		/// @c Color provides colors based on RGB values.
+		class Color : public manah::FastArenaObject<Color> {
+		public:
+			Color() /*throw()*/ : valid_(false) {}
+			Color(byte red, byte green, byte blue) /*throw()*/ : r_(red), g_(green), b_(blue), valid_(true) {}
+#ifdef ASCENSION_WINDOWS
+			static Color fromCOLORREF(COLORREF value) /*throw()*/ {
+				return Color(GetRValue(value), GetGValue(value), GetBValue(value));}
+			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
+#endif // ASCENSION_WINDOWS
+			/// Returns the blue color component of this color.
+			byte blue() const /*throw()*/ {return b_ >> 8;}
+			/// Returns the green color component of this color.
+			byte green() const /*throw()*/ {return g_ >> 8;}
+			/// Returns the red color component of this color.
+			byte red() const /*throw()*/ {return r_ >> 8;}
+			/// Returns true if this is valid.
+			bool isValid() const /*throw()*/ {return valid_;}
+		private:
+			ushort r_, g_, b_;
+			bool valid_;
+		};
+
+		/// Foreground color and background.
+		struct Colors {
+			Color foreground;	///< Color of foreground (text).
+			Color background;	///< Color of background.
+			/**
+			 * Constructor initializes the each colors.
+			 * @param foregroundColor foreground color
+			 * @param backgroundColor background color
+			 */
+			explicit Colors(const Color& foregroundColor = Color(),
+				const Color& backgroundColor = Color()) /*throw()*/ : foreground(foregroundColor), background(backgroundColor) {}
+		};
+
+		/// Style of the underline.
+		enum UnderlineStyle {
+			NO_UNDERLINE,		///< Does not display underline.
+			SOLID_UNDERLINE,	///< Solid underline.
+			DASHED_UNDERLINE,	///< Dashed underline.
+			DOTTED_UNDERLINE	///< Dotted underline.
+		};
+
+		/// Type of the border and underline.
+		enum BorderStyle {
+			NO_BORDER,		///< Does not display border.
+			SOLID_BORDER,	///< Solid border.
+			DASHED_BORDER,	///< Dashed border.
+			DOTTED_BORDER	///< Dotted border.
+		};
+
 		/// Visual attributes of a text segment.
 		struct TextStyle : public manah::FastArenaObject<TextStyle> {
-			layout::Colors color;				///< Color of the text.
-			bool bold;							///< True if the font is bold.
-			bool italic;						///< True if the font is italic.
-			bool strikeout;						///< True if the font is strokeout.
-			layout::UnderlineStyle underlineStyle;	///< Style of the underline.
-			COLORREF underlineColor;				///< Color of the underline. @c STANDARD_COLOR indicates @c color.background.
-			layout::BorderStyle borderStyle;		///< Style of the border.
-			COLORREF borderColor;					///< Color of the border. @c STANDARD_COLOR indicates @c color.background.
+			/// Color of the text.
+			Colors color;
+			/// True if the font is bold.
+			bool bold;
+			/// True if the font is italic.
+			bool italic;
+			/// True if the font is strokeout.
+			bool strikeout;
+			/// Style of the underline.
+			UnderlineStyle underlineStyle;
+			/// Color of the underline. @c STANDARD_COLOR indicates @c color.background.
+			Color underlineColor;
+			/// Style of the border.
+			BorderStyle borderStyle;
+			/// Color of the border. @c STANDARD_COLOR indicates @c color.background.
+			Color borderColor;
 			/// Constructor.
-			explicit TextStyle(const layout::Colors& textColor = layout::Colors(),
+			explicit TextStyle(const Colors& textColor = Colors(),
 				bool boldFont = false, bool italicFont = false, bool strikeoutFont = false,
-				layout::UnderlineStyle styleOfUnderline = layout::NO_UNDERLINE, COLORREF colorOfUnderline = layout::STANDARD_COLOR,
-				layout::BorderStyle styleOfBorder = layout::NO_BORDER, COLORREF colorOfBorder = layout::STANDARD_COLOR) throw()
+				UnderlineStyle styleOfUnderline = NO_UNDERLINE, Color colorOfUnderline = Color(),
+				BorderStyle styleOfBorder = NO_BORDER, Color colorOfBorder = Color()) /*throw()*/
 				: color(textColor), bold(boldFont), italic(italicFont), strikeout(strikeoutFont),
-				underlineStyle(styleOfUnderline), underlineColor(colorOfUnderline), borderStyle(styleOfBorder), borderColor(colorOfBorder) {}
+				underlineStyle(styleOfUnderline), underlineColor(colorOfUnderline),
+				borderStyle(styleOfBorder), borderColor(colorOfBorder) {}
 		};
 
 		/// A styled text segment.
@@ -60,7 +124,7 @@ namespace ascension {
 		class ILineStyleDirector {
 		public:
 			/// Destructor.
-			virtual ~ILineStyleDirector() throw() {}
+			virtual ~ILineStyleDirector() /*throw()*/ {}
 		private:
 			/**
 			 * Queries the style of the line.
@@ -81,15 +145,15 @@ namespace ascension {
 			/// Priority.
 			typedef uchar Priority;
 			/// Destructor.
-			virtual ~ILineColorDirector() throw() {}
+			virtual ~ILineColorDirector() /*throw()*/ {}
 		private:
 			/**
 			 * Queries the color of the line.
 			 * @param line the line to be queried
-			 * @param[out] the color of the line or @c Colors#STANDARD
+			 * @param[out] the color of the line. if this is invalid color, line color is not set
 			 * @return the priority
 			 */
-			virtual Priority queryLineColor(length_t line, layout::Colors& color) const = 0;
+			virtual Priority queryLineColor(length_t line, Colors& color) const = 0;
 			friend class Presentation;
 		};
 
@@ -105,8 +169,8 @@ namespace ascension {
 		namespace internal {
 			class ITextViewerCollection {
 			private:
-				virtual void addTextViewer(viewers::TextViewer& viewer) throw() = 0;
-				virtual void removeTextViewer(viewers::TextViewer& viewer) throw() = 0;
+				virtual void addTextViewer(viewers::TextViewer& viewer) /*throw()*/ = 0;
+				virtual void removeTextViewer(viewers::TextViewer& viewer) /*throw()*/ = 0;
 				friend class viewers::TextViewer;
 			};
 		}
@@ -121,16 +185,16 @@ namespace ascension {
 			class IHyperlink {
 			public:
 				/// Destructor.
-				virtual ~IHyperlink() throw() {}
+				virtual ~IHyperlink() /*throw()*/ {}
 				/// Returns the descriptive text of the hyperlink.
-				virtual String description() const throw() = 0;
+				virtual String description() const /*throw()*/ = 0;
 				/// Invokes the hyperlink.
-				virtual void invoke() const throw() = 0;
+				virtual void invoke() const /*throw()*/ = 0;
 				/// Returns the columns of the region of the hyperlink.
-				const Range<length_t>& region() const throw() {return region_;}
+				const Range<length_t>& region() const /*throw()*/ {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit IHyperlink(const Range<length_t>& region) throw() : region_(region) {}
+				explicit IHyperlink(const Range<length_t>& region) /*throw()*/ : region_(region) {}
 			private:
 				const Range<length_t> region_;
 			};
@@ -139,7 +203,7 @@ namespace ascension {
 			class IHyperlinkDetector {
 			public:
 				/// Destructor.
-				virtual ~IHyperlinkDetector() throw() {}
+				virtual ~IHyperlinkDetector() /*throw()*/ {}
 				/**
 				 * Returns the next hyperlink in the specified line.
 				 * @param document the document
@@ -149,7 +213,7 @@ namespace ascension {
 				 * @return the found hyperlink, or @c null if not found
 				 */
 				virtual std::auto_ptr<IHyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw() = 0;
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ = 0;
 			};
 
 			/**
@@ -157,13 +221,13 @@ namespace ascension {
 			 * @see rules#URIDetector, rules#URIRule
 			 * @note This class is not intended to be subclassed.
 			 */
-			class URIHyperlinkDetector : virtual public IHyperlinkDetector {
+			class URIHyperlinkDetector : public IHyperlinkDetector {
 			public:
-				URIHyperlinkDetector(const rules::URIDetector& uriDetector, bool delegateOwnership) throw();
-				~URIHyperlinkDetector() throw();
+				URIHyperlinkDetector(const rules::URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+				~URIHyperlinkDetector() /*throw()*/;
 				// IHyperlinkDetector
 				std::auto_ptr<IHyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw();
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
 				ascension::internal::StrategyPointer<const rules::URIDetector> uriDetector_;
 			};
@@ -171,13 +235,13 @@ namespace ascension {
 			/**
 			 * @note This class is not intended to be subclassed.
 			 */
-			class CompositeHyperlinkDetector : virtual public hyperlink::IHyperlinkDetector {
+			class CompositeHyperlinkDetector : public hyperlink::IHyperlinkDetector {
 			public:
-				~CompositeHyperlinkDetector() throw();
+				~CompositeHyperlinkDetector() /*throw()*/;
 				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::IHyperlinkDetector> detector);
 				// hyperlink.IHyperlinkDetector
 				std::auto_ptr<IHyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const throw();
+					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
 				std::map<kernel::ContentType, hyperlink::IHyperlinkDetector*> composites_;
 			};
@@ -188,41 +252,41 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Document, DocumentPartitioner, TextViewer
 		 */
-		class Presentation : virtual public kernel::IDocumentListener, virtual public internal::ITextViewerCollection {
+		class Presentation : public kernel::IDocumentListener, public internal::ITextViewerCollection {
 			MANAH_NONCOPYABLE_TAG(Presentation);
 		public:
 			typedef std::set<viewers::TextViewer*>::iterator TextViewerIterator;
 			typedef std::set<viewers::TextViewer*>::const_iterator TextViewerConstIterator;
 			// constructors
-			explicit Presentation(kernel::Document& document) throw();
-			~Presentation() throw();
+			explicit Presentation(kernel::Document& document) /*throw()*/;
+			~Presentation() /*throw()*/;
 			// attributes
 			void addTextViewerListListener(ITextViewerListListener& listener);
-			kernel::Document& document() throw();
-			const kernel::Document& document() const throw();
+			kernel::Document& document() /*throw()*/;
+			const kernel::Document& document() const /*throw()*/;
 			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
-			layout::Colors getLineColor(length_t line) const;
+			Colors getLineColor(length_t line) const;
 			const LineStyle& getLineStyle(length_t line, bool& delegatedOwnership) const;
 			void removeTextViewerListListener(ITextViewerListListener& listener);
 			// strategies
 			void addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
-			void removeLineColorDirector(ILineColorDirector& director) throw();
-			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) throw();
-			void setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) throw();
+			void removeLineColorDirector(ILineColorDirector& director) /*throw()*/;
+			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
+			void setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) /*throw()*/;
 			// TextViewer enumeration
-			TextViewerIterator firstTextViewer() throw();
-			TextViewerConstIterator firstTextViewer() const throw();
-			TextViewerIterator lastTextViewer() throw();
-			TextViewerConstIterator lastTextViewer() const throw();
-			std::size_t numberOfTextViewers() const throw();
+			TextViewerIterator firstTextViewer() /*throw()*/;
+			TextViewerConstIterator firstTextViewer() const /*throw()*/;
+			TextViewerIterator lastTextViewer() /*throw()*/;
+			TextViewerConstIterator lastTextViewer() const /*throw()*/;
+			std::size_t numberOfTextViewers() const /*throw()*/;
 		private:
-			void clearHyperlinksCache() throw();
+			void clearHyperlinksCache() /*throw()*/;
 			// kernel.IDocumentListener
-			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// internal.ITextViewerCollection
-			void addTextViewer(viewers::TextViewer& viewer) throw();
-			void removeTextViewer(viewers::TextViewer& viewer) throw();
+			void addTextViewer(viewers::TextViewer& viewer) /*throw()*/;
+			void removeTextViewer(viewers::TextViewer& viewer) /*throw()*/;
 		private:
 			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
@@ -242,25 +306,25 @@ namespace ascension {
 		class IPartitionPresentationReconstructor {
 		public:
 			/// Destructor.
-			virtual ~IPartitionPresentationReconstructor() throw() {}
+			virtual ~IPartitionPresentationReconstructor() /*throw()*/ {}
 		private:
 			/**
 			 * Returns the styled text segments for the specified document region.
 			 * @param region the region to reconstruct the new presentation
 			 * @return the presentation. the ownership will be transferred to the caller
 			 */
-			virtual std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const throw() = 0;
+			virtual std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
 			friend class PresentationReconstructor;
 		};
 
 		/// Reconstructs document presentation with single text style.
-		class SingleStyledPartitionPresentationReconstructor : virtual public IPartitionPresentationReconstructor {
+		class SingleStyledPartitionPresentationReconstructor : public IPartitionPresentationReconstructor {
 			MANAH_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) throw();
+			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) /*throw()*/;
 		private:
 			// IPartitionPresentationReconstructor
-			std::auto_ptr<LineStyle>	getPresentation(const kernel::Region& region) const throw();
+			std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
 			const TextStyle style_;
 		};
@@ -268,12 +332,12 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : virtual public ILineStyleDirector, virtual public kernel::IDocumentPartitioningListener {
+		class PresentationReconstructor : public ILineStyleDirector, public kernel::IDocumentPartitioningListener {
 			MANAH_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
-			explicit PresentationReconstructor(Presentation& presentation) throw();
-			~PresentationReconstructor() throw();
+			explicit PresentationReconstructor(Presentation& presentation) /*throw()*/;
+			~PresentationReconstructor() /*throw()*/;
 			// attribute
 			void setPartitionReconstructor(kernel::ContentType contentType,
 				std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
@@ -305,13 +369,13 @@ namespace ascension {
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
 
 		/// Returns the number of text viewers.
-		inline std::size_t Presentation::numberOfTextViewers() const throw() {return textViewers_.size();}
+		inline std::size_t Presentation::numberOfTextViewers() const /*throw()*/ {return textViewers_.size();}
 
 		/**
 		 * Removes the specified line color director.
 		 * @param director the director to remove
 		 */
-		inline void Presentation::removeLineColorDirector(ILineColorDirector& director) throw() {
+		inline void Presentation::removeLineColorDirector(ILineColorDirector& director) /*throw()*/ {
 			for(std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::iterator
 					i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
 				if(i->get() == &director) {lineColorDirectors_.erase(i); return;}
@@ -327,4 +391,4 @@ namespace ascension {
 
 }} // namespace ascension.presentation
 
-#endif /* !ASCENSION_PRESENTATION_HPP */
+#endif // !ASCENSION_PRESENTATION_HPP

@@ -161,7 +161,7 @@ namespace {
 			lastPattern_ = 0;
 		}
 		/// Returns true if the library is enable.
-		bool isEnable() const throw() {
+		bool isEnable() const {
 			if(instance_ == 0)
 				return false;
 			else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
@@ -352,7 +352,7 @@ Pattern::Pattern(const Char* first, const Char* last, boost::regex_constants::sy
 }
 
 /// Destructor.
-Pattern::~Pattern() throw() {
+Pattern::~Pattern() /*throw()*/ {
 }
 
 
@@ -562,9 +562,9 @@ inline void MigemoPattern::install() {
 }
 
 /// Returns true if Migemo is installed.
-bool MigemoPattern::isMigemoInstalled() throw() {
+bool MigemoPattern::isMigemoInstalled() /*throw()*/ {
 	return migemoLib.get() != 0 && migemoLib->isEnable();
 }
 
-#endif /* !ASCENSION_NO_MIGEMO */
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_MIGEMO
+#endif // !ASCENSION_NO_REGEX

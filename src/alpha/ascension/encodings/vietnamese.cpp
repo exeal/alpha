@@ -151,13 +151,13 @@ namespace {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class VIQREncoder : public Encoder {
 	public:
-		VIQREncoder() throw();
+		VIQREncoder() ASC_NOFAIL;
 	private:
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const throw();
-		Encoder& resetDecodingState() throw();
-		Encoder& resetEncodingState() throw();
+		const IEncodingProperties& properties() const ASC_NOFAIL;
+		Encoder& resetDecodingState() ASC_NOFAIL;
+		Encoder& resetEncodingState() ASC_NOFAIL;
 	private:
 		enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
 		static const byte CLS = 0x01, COM = 0x5C;
@@ -165,11 +165,11 @@ namespace {
 	};
 	class VIQRFactory : public implementation::EncoderFactoryBase {
 	public:
-		VIQRFactory() throw() : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1A) {}
+		VIQRFactory() ASC_NOFAIL : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1A) {}
 	private:
-		auto_ptr<Encoder> create() const throw() {return auto_ptr<Encoder>(new VIQREncoder);}
+		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new VIQREncoder);}
 	} VIQR;
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 	struct Installer {
 		Installer() {
@@ -177,16 +177,16 @@ namespace {
 			Encoder::registerFactory(VISCII);
 			Encoder::registerFactory(VIQR);
 			Encoder::registerFactory(TCVN);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM1164);
 			Encoder::registerFactory(IBM1165);
 			Encoder::registerFactory(WINDOWS_1258);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(VPS);
 			Encoder::registerFactory(IBM1163);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
 	} installer;
 } // namespace @0
@@ -195,7 +195,7 @@ namespace {
 
 auto_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
-VIQREncoder::VIQREncoder() throw() : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
+VIQREncoder::VIQREncoder() ASC_NOFAIL : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
 	if(table_.get() == 0)
 		table_.reset(new sbcs::BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 }
@@ -402,18 +402,18 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-const IEncodingProperties& VIQREncoder::properties() const throw() {
+const IEncodingProperties& VIQREncoder::properties() const ASC_NOFAIL {
 	return VIQR;
 }
 
-Encoder& VIQREncoder::resetDecodingState() throw() {
+Encoder& VIQREncoder::resetDecodingState() ASC_NOFAIL {
 	decodingState_ = VIETNAMESE_STATE;
 	return *this;
 }
 
-Encoder& VIQREncoder::resetEncodingState() throw() {
+Encoder& VIQREncoder::resetEncodingState() ASC_NOFAIL {
 	encodingState_ = VIETNAMESE_STATE;
 	return *this;
 }
 
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS

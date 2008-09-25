@@ -25,7 +25,7 @@ using manah::toBoolean;
  * Protected constructor.
  * @param lc the locale
  */
-AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) throw() : BreakIterator(lc) {
+AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
 }
 
 void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
@@ -178,7 +178,7 @@ namespace {
 	 * @param lc the locale to detect script of a character
 	 * @return true if @a preceding and @a following have same script
 	 */
-	bool compareScripts(CodePoint preceding, CodePoint following, const locale& lc) throw() {
+	bool compareScripts(CodePoint preceding, CodePoint following, const locale& lc) {
 		const int s1 = Script::of(preceding), s2 = Script::of(following);
 		if(s1 == s2 || s1 == Script::COMMON || s2 == Script::COMMON || s1 == Script::INHERITED || s2 == Script::INHERITED)
 			return true;
@@ -201,7 +201,7 @@ namespace {
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const std::locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/ : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
@@ -454,12 +454,23 @@ void AbstractWordBreakIterator::next(ptrdiff_t amount) {
 		doPrevious(-amount);
 }
 
+/**
+ * Sets the word component to search.
+ * @param component the new component to set
+ * @throw UnknownValueException @a component is invalid
+ */
+void AbstractWordBreakIterator::setComponent(Component component) {
+	if((component & ~BOUNDARY_OF_ALPHANUMERICS) != 0)
+		throw UnknownValueException("component");
+	component_ = component;
+}
+
 
 // AbstractSentenceBreakIterator ////////////////////////////////////////////
 
 namespace {
 	/// Tries SB8 rule.
-	bool trySB8(CharacterIterator& i) throw() {
+	bool trySB8(CharacterIterator& i) {
 		auto_ptr<CharacterIterator> j(i.clone());
 		for(; j->hasNext(); nextBase(*j)) {
 			switch(SentenceBreak::of(j->current())) {
@@ -481,7 +492,7 @@ namespace {
 	}
 
 	/// Handles after (STerm|ATerm).
-	bool tryToExtendTerm(CharacterIterator& i, bool aTerm) throw() {
+	bool tryToExtendTerm(CharacterIterator& i, bool aTerm) {
 		assert(i.hasPrevious());
 		bool closeOccured = false;	// true if (STerm|ATerm) Close+
 		bool spOccured = false;		// true if (STerm|ATerm) Sp+ or (STerm|ATerm) Close+ Sp+
@@ -542,7 +553,7 @@ namespace {
  * @param lc the locale
  */
 AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const std::locale& lc) throw() : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/ : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
@@ -623,6 +634,17 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
 		doPrevious(-amount);
 }
 
+/**
+ * Sets the word component to search.
+ * @param component the new component to set
+ * @throw UnknownValueException @a component is invalid
+ */
+void AbstractSentenceBreakIterator::setComponent(Component component) {
+	if((component & ~BOUNDARY_OF_SEGMENT) != 0)
+		throw UnknownValueException("component");
+	component_ = component;
+}
+
 
 // AbstractLineBreakIterator ////////////////////////////////////////////////
 
@@ -630,7 +652,7 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
  * Protected constructor.
  * @param lc the locale
  */
-AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) throw() : BreakIterator(lc) {
+AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
 }
 
 /// @see BreakIterator#next

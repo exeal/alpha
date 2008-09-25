@@ -35,7 +35,7 @@
 // about ascension.kernel.fileio /////////////////////////////////////////////
 
 #ifdef _WIN32
-#	define ASCENSION_FILE_NAME_CHARACTER_TYPE ::WCHAR
+#	define ASCENSION_FILE_NAME_CHARACTER_TYPE WCHAR
 #else
 #	define ASCENSION_FILE_NAME_CHARACTER_TYPE char
 #endif
@@ -230,7 +230,7 @@
 #ifdef ASCENSION_NO_REGEX
 #ifndef ASCENSION_NO_MIGEMO
 #error "conflicted configuration: Migemo support requires the regular expression engine"
-#endif /* !ASCENSION_NO_MIGEMO */
-#endif /* ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_MIGEMO
+#endif // ASCENSION_NO_REGEX
 
-#endif /* !ASCENSION_CONFIG_HPP */
+#endif // !ASCENSION_CONFIG_HPP

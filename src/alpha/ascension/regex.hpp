@@ -73,7 +73,7 @@ namespace ascension {
 		namespace internal {
 			/// @internal
 			template<typename CodePointIterator>
-			class MatchResultImpl : virtual public MatchResult<CodePointIterator> {
+			class MatchResultImpl : public MatchResult<CodePointIterator> {
 			public:
 				MatchResultImpl() {}
 				explicit MatchResultImpl(const boost::match_results<CodePointIterator>& src) : impl_(src) {}
@@ -85,8 +85,8 @@ namespace ascension {
 				const CodePointIterator& start() const {return start(0);}
 				const CodePointIterator& start(int group) const {return get(group).first;}
 			protected:
-				boost::match_results<CodePointIterator>& impl() throw() {return impl_;}
-				const boost::match_results<CodePointIterator>& impl() const throw() {return impl_;}
+				boost::match_results<CodePointIterator>& impl() /*throw()*/ {return impl_;}
+				const boost::match_results<CodePointIterator>& impl() const /*throw()*/ {return impl_;}
 			private:
 				const boost::sub_match<CodePointIterator>& get(int group) const {
 					const boost::sub_match<CodePointIterator>& s = impl_[group];
@@ -153,17 +153,17 @@ namespace ascension {
 			typedef typename regex::internal::MatchResultImpl<CodePointIterator> Base;
 		public:
 			// patterns
-			const Pattern& pattern() const throw();
+			const Pattern& pattern() const /*throw()*/;
 			Matcher& usePattern(const Pattern& newPattern);
 			// region
 			Matcher& region(CodePointIterator start, CodePointIterator end);
-			const CodePointIterator& regionEnd() const throw();
-			const CodePointIterator& regionStart() const throw();
+			const CodePointIterator& regionEnd() const /*throw()*/;
+			const CodePointIterator& regionStart() const /*throw()*/;
 			// restrictions
-			bool hasAnchoringBounds() const throw();
-			bool hasTransparentBounds() const throw();
-			Matcher& useAnchoringBounds(bool b) throw();
-			Matcher& useTransparentBounds(bool b) throw();
+			bool hasAnchoringBounds() const /*throw()*/;
+			bool hasTransparentBounds() const /*throw()*/;
+			Matcher& useAnchoringBounds(bool b) /*throw()*/;
+			Matcher& useTransparentBounds(bool b) /*throw()*/;
 			// search
 			bool find();
 			bool find(CodePointIterator start);
@@ -194,7 +194,7 @@ namespace ascension {
 			bool acceptResult() {const bool b(Base::impl()[0].matched); matchedZeroWidth_ = b && Base::impl().length() == 0; if(b) current_ = Base::end(); return b;}
 			void checkInplaceReplacement() const {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
 			void checkPreviousMatch() const {if(!Base::impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
-			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const throw();
+			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const /*throw()*/;
 			const Pattern* pattern_;
 			CodePointIterator current_;
 			std::pair<CodePointIterator, CodePointIterator> input_, region_;
@@ -238,7 +238,7 @@ namespace ascension {
 			/// Retrieves the error index.
 			std::ptrdiff_t getIndex() const {return impl_.position();}
 			/// Retrieves the erroneous regular-expression pattern.
-			String getPattern() const throw() {return pattern_;}
+			String getPattern() const /*throw()*/ {return pattern_;}
 		private:
 			const boost::regex_error impl_;
 			const String pattern_;
@@ -258,9 +258,9 @@ namespace ascension {
 				CANON_EQ = 0x80				///< Enables canonical equivalence (not implemented).
 			};
 		public:
-			virtual ~Pattern() throw();
+			virtual ~Pattern() /*throw()*/;
 			// attributes
-			int flags() const throw();
+			int flags() const /*throw()*/;
 			String pattern() const;
 			// compilation
 			static std::auto_ptr<const Pattern> compile(const String& regex, int flags = 0);
@@ -288,13 +288,13 @@ namespace ascension {
 		public:
 			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool ignoreCase);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
-			static bool isMigemoInstalled() throw();
+			static bool isMigemoInstalled() /*throw()*/;
 		private:
 			MigemoPattern(const Char* first, const Char* last, bool ignoreCase);
 			static void install();
 			static manah::AutoBuffer<char> runtimePathName_, dictionaryPathName_;
 		};
-#endif /* !ASCENSION_NO_MIGEMO */
+#endif // !ASCENSION_NO_MIGEMO
 
 
 		// internal.RegexTraits /////////////////////////////////////////////
@@ -385,7 +385,7 @@ namespace ascension {
 			start, input_.second, Base::impl(), pattern_->impl_, getNativeFlags(start, input_.second, true)); return acceptResult();}
 
 		template<typename CPI> inline boost::match_flag_type
-		Matcher<CPI>::getNativeFlags(const CPI& first, const CPI& last, bool continuous) const throw() {
+		Matcher<CPI>::getNativeFlags(const CPI& first, const CPI& last, bool continuous) const /*throw()*/ {
 			boost::match_flag_type f(boost::regex_constants::match_default);
 			if((pattern_->flags() & Pattern::DOTALL) == 0) f |= boost::regex_constants::match_not_dot_newline;
 			if((pattern_->flags() & Pattern::MULTILINE) == 0) f |= boost::regex_constants::match_single_line;
@@ -400,12 +400,12 @@ namespace ascension {
 
 		/// Queries the anchoring of region bounds for the matcher.
 		/// @return true the matcher uses <em>anchoring</em> bounds. false otherwise
-		template<typename CPI> inline bool Matcher<CPI>::hasAnchoringBounds() const throw() {return usesAnchoringBounds_;}
+		template<typename CPI> inline bool Matcher<CPI>::hasAnchoringBounds() const /*throw()*/ {return usesAnchoringBounds_;}
 
 		/// Queries the transparency of the region bounds for the matcher.
 		/// @retval true the matcher uses <em>transparent</em> bounds
 		/// @retval false the matcher uses <em>opaque</em> bounds
-		template<typename CPI> inline bool Matcher<CPI>::hasTransparentBounds() const throw() {return usesTransparentBounds_;}
+		template<typename CPI> inline bool Matcher<CPI>::hasTransparentBounds() const /*throw()*/ {return usesTransparentBounds_;}
 
 		/// Attempts to match the input sequence, starting at the beginning of the region, against
 		/// the pattern. Like the @c matches method, this method always starts at the beginning of
@@ -420,17 +420,17 @@ namespace ascension {
 				getNativeFlags(region_.first, region_.second, false)); return acceptResult();}
 
 		/// Returns the pattern interpreted by the matcher.
-		template<typename CPI> inline const Pattern& Matcher<CPI>::pattern() const throw() {return *pattern_;}
+		template<typename CPI> inline const Pattern& Matcher<CPI>::pattern() const /*throw()*/ {return *pattern_;}
 
 		/// Sets the limits of the matcher's region. Invoking this method resets the matcher.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::region(
 			CPI start, CPI end) {reset(); current_ = region_.first = start; region_.second = end; return *this;}
 
 		/// Reports the end of the matcher's region.
-		template<typename CPI> inline const CPI& Matcher<CPI>::regionEnd() const throw() {return region_.second;}
+		template<typename CPI> inline const CPI& Matcher<CPI>::regionEnd() const /*throw()*/ {return region_.second;}
 
 		/// Reports the beginning of the matcher's region.
-		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const throw() {return region_.first;}
+		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const /*throw()*/ {return region_.first;}
 
 		/// ...
 		template<typename CPI> inline String Matcher<CPI>::replaceInplace(const String& replacement) {
@@ -461,7 +461,7 @@ namespace ascension {
 
 		/// Resets the matcher with a new input sequence.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset(
-			CPI first, CPI last) {input_.first = first; input_.second; return reset();}
+			CPI first, CPI last) {input_.first = first; input_.second = last; return reset();}
 
 		/// Returns the match state of the matcher as a @c MatchResult.
 		/// This result is unaffected by subsequent operations performed upon the matcher.
@@ -470,8 +470,7 @@ namespace ascension {
 
 		/// Sets the anchoring of region bounds for the matcher.
 		/// @param b true to use <em>anchoring</em> bounds
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) throw() {
-			usesAnchoringBounds_ = b; return *this;}
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) /*throw()*/ {usesAnchoringBounds_ = b; return *this;}
 
 		/// Changes the pattern the matcher uses to find matches with. This method causes the
 		/// matcher to lose information about the groups of the last match that occured. The
@@ -481,8 +480,7 @@ namespace ascension {
 
 		/// Sets the transparency of region bounds for the matcher.
 		/// @param b true to use <em>transparent</em> bounds
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useTransparentBounds(bool b) throw() {
-			usesTransparentBounds_ = b; return *this;}
+		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useTransparentBounds(bool b) /*throw()*/ {usesTransparentBounds_ = b; return *this;}
 
 		// Pattern //////////////////////////////////////////////////////////
 
@@ -497,7 +495,7 @@ namespace ascension {
 			const String& regex, int flags /* = 0 */) {return std::auto_ptr<const Pattern>(new Pattern(regex, flags));}
 
 		/// Returns this pattern's match flags.
-		inline int Pattern::flags() const throw() {return flags_;}
+		inline int Pattern::flags() const /*throw()*/ {return flags_;}
 
 		/// Creates a matcher that will match the given input against this pattern.
 		template<typename CPI> inline std::auto_ptr<Matcher<CPI> > Pattern::matcher(
@@ -528,5 +526,5 @@ namespace ascension {
 
 }}	// namespace ascension.regex
 
-#endif /* !ASCENSION_REGEX_HPP */
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_REGEX_HPP
+#endif // !ASCENSION_NO_REGEX

@@ -28,8 +28,8 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(URIDetector);
 		public:
 			// constructors
-			explicit URIDetector() throw();
-			~URIDetector() throw();
+			explicit URIDetector() /*throw()*/;
+			~URIDetector() /*throw()*/;
 			// parsing
 			const Char* detect(const Char* first, const Char* last) const;
 			bool search(const Char* first, const Char* last, std::pair<const Char*, const Char*>& result) const;
@@ -37,8 +37,8 @@ namespace ascension {
 			URIDetector& setValidSchemes(const std::set<String>& schemes, bool caseSensitive = false);
 			URIDetector& setValidSchemes(const String& schemes, Char separator, bool caseSensitive = false);
 			// singleton
-			static const URIDetector& defaultGenericInstance() throw();
-			static const URIDetector& defaultIANAURIInstance() throw();
+			static const URIDetector& defaultGenericInstance() /*throw()*/;
+			static const URIDetector& defaultIANAURIInstance() /*throw()*/;
 		private:
 			internal::HashTable* validSchemes_;
 		};
@@ -69,10 +69,12 @@ namespace ascension {
 		class Rule {
 			MANAH_UNASSIGNABLE_TAG(Rule);
 		public:
+			/// Destructor.
+			virtual ~Rule() /*throw()*/ {}
 			/// Returns the identifier of the token.
-			Token::ID getTokenID() const throw() {return id_;}
+			Token::ID getTokenID() const /*throw()*/ {return id_;}
 			/// Returns true if the match is case sensitive.
-			bool isCaseSensitive() const throw() {return caseSensitive_;}
+			bool isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
 			/**
 			 * 
 			 * @param scanner the scanner
@@ -80,9 +82,10 @@ namespace ascension {
 			 * @param last the end of the text to parse
 			 * @return the found token or @c null
 			 */
-			virtual std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw() = 0;
+			virtual std::auto_ptr<Token> parse(
+				const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
 		protected:
-			explicit Rule(Token::ID tokenID, bool caseSensitive) throw();
+			explicit Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/;
 		private:
 			const Token::ID id_;
 			const bool caseSensitive_;
@@ -93,7 +96,7 @@ namespace ascension {
 		public:
 			RegionRule(Token::ID id, const String& startSequence,
 				const String& endSequence, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -102,15 +105,15 @@ namespace ascension {
 		/// A concrete rule detects numeric tokens.
 		class NumberRule : public Rule {
 		public:
-			explicit NumberRule(Token::ID id) throw();
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			explicit NumberRule(Token::ID id) /*throw()*/;
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::ID id, const URIDetector& uriDetector, bool delegateOwnership) throw();
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			URIRule(Token::ID id, const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			ascension::internal::StrategyPointer<const URIDetector> uriDetector_;
 		};
@@ -120,8 +123,8 @@ namespace ascension {
 		public:
 			WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
-			~WordRule() throw();
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			~WordRule() /*throw()*/;
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			internal::HashTable* words_;
 		};
@@ -131,11 +134,11 @@ namespace ascension {
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::ID id, const String& pattern, bool caseSensitive = true);
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const throw();
+			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_REGEX
 
 		/**
 		 * @c ITokenScanner scans a range of document and returns the tokens it finds. To start
@@ -146,13 +149,13 @@ namespace ascension {
 		class ITokenScanner {
 		public:
 			/// Destructor.
-			virtual ~ITokenScanner() throw() {}
+			virtual ~ITokenScanner() /*throw()*/ {}
 			/// Returns the identifier syntax.
-			virtual const text::IdentifierSyntax& getIdentifierSyntax() const throw() = 0;
+			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
 			/// Returns the current position.
-			virtual kernel::Position getPosition() const throw() = 0;
+			virtual kernel::Position getPosition() const /*throw()*/ = 0;
 			/// Returns true if the scanning is done.
-			virtual bool isDone() const throw() = 0;
+			virtual bool isDone() const /*throw()*/ = 0;
 			/**
 			 * Moves to the next token and returns it.
 			 * @return the token or @c null if the scanning was done.
@@ -169,11 +172,11 @@ namespace ascension {
 		};
 
 		/// @c NullTokenScanner returns no tokens. @c NullTokenScanner#isDone returns always true.
-		class NullTokenScanner : virtual public ITokenScanner {
+		class NullTokenScanner : public ITokenScanner {
 		public:
-			const text::IdentifierSyntax& getIdentifierSyntax() const throw();
-			kernel::Position getPosition() const throw();
-			bool isDone() const throw();
+			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
+			kernel::Position getPosition() const /*throw()*/;
+			bool isDone() const /*throw()*/;
 			std::auto_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		};
@@ -185,19 +188,19 @@ namespace ascension {
 		 * not supported by this class.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalTokenScanner : virtual public ITokenScanner {
+		class LexicalTokenScanner : public ITokenScanner {
 			MANAH_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
-			explicit LexicalTokenScanner(kernel::ContentType contentType) throw();
-			~LexicalTokenScanner() throw();
+			explicit LexicalTokenScanner(kernel::ContentType contentType) /*throw()*/;
+			~LexicalTokenScanner() /*throw()*/;
 			// attributes
 			void addRule(std::auto_ptr<const Rule> rule);
 			void addWordRule(std::auto_ptr<const WordRule> rule);
 			// ITokenScanner
-			const text::IdentifierSyntax& getIdentifierSyntax() const throw();
-			kernel::Position getPosition() const throw();
-			bool isDone() const throw();
+			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
+			kernel::Position getPosition() const /*throw()*/;
+			bool isDone() const /*throw()*/;
 			std::auto_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		private:
@@ -215,12 +218,12 @@ namespace ascension {
 		class TransitionRule {
 			MANAH_UNASSIGNABLE_TAG(TransitionRule);
 		public:
-			virtual ~TransitionRule() throw();
-			kernel::ContentType contentType() const throw();
-			kernel::ContentType destination() const throw();
+			virtual ~TransitionRule() /*throw()*/;
+			kernel::ContentType contentType() const /*throw()*/;
+			kernel::ContentType destination() const /*throw()*/;
 			virtual length_t matches(const String& line, length_t column) const = 0;
 		protected:
-			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) throw();
+			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) /*throw()*/;
 		private:
 			const kernel::ContentType contentType_, destination_;
 		};
@@ -247,7 +250,7 @@ namespace ascension {
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
-#endif /* !ASCENSION_NO_REGEX */
+#endif // !ASCENSION_NO_REGEX
 
 		/**
 		 * @c LexicalPartitioner makes document partitions by using the specified lexical rules.
@@ -257,37 +260,38 @@ namespace ascension {
 		class LexicalPartitioner : public kernel::DocumentPartitioner {
 		public:
 			// constructor
-			LexicalPartitioner() throw();
-			~LexicalPartitioner() throw();
+			LexicalPartitioner() /*throw()*/;
+			~LexicalPartitioner() /*throw()*/;
 			// attribute
 			template<typename InputIterator>
 			void setRules(InputIterator first, InputIterator last);
 		private:
-			void clearRules() throw();
+			void clearRules() /*throw()*/;
 			void computePartitioning(const kernel::Position& start,
 				const kernel::Position& minimalLast, kernel::Region& changedRegion);
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
-			std::size_t partitionAt(const kernel::Position& at) const throw();
-			kernel::ContentType transitionStateAt(const kernel::Position& at) const throw();
+			std::size_t partitionAt(const kernel::Position& at) const /*throw()*/;
+			kernel::ContentType transitionStateAt(const kernel::Position& at) const /*throw()*/;
 			length_t tryTransition(const String& line, length_t column,
-				kernel::ContentType contentType, kernel::ContentType& destination) const throw();
+				kernel::ContentType contentType, kernel::ContentType& destination) const /*throw()*/;
 			void verify() const;
 			// DocumentPartitioner
-			void documentAboutToBeChanged() throw();
-			void documentChanged(const kernel::DocumentChange& change) throw();
-			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const throw();
-			void doInstall() throw();
+			void documentAboutToBeChanged() /*throw()*/;
+			void documentChanged(const kernel::DocumentChange& change) /*throw()*/;
+			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const /*throw()*/;
+			void doInstall() /*throw()*/;
 		private:
 			struct Partition {
 				kernel::ContentType contentType;
 				kernel::Position start, tokenStart;
 				length_t tokenLength;
-				Partition(kernel::ContentType type, const kernel::Position& p, const kernel::Position& startOfToken,
-					length_t lengthOfToken) throw() : contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
-				kernel::Position getTokenEnd() const throw() {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
+				Partition(kernel::ContentType type, const kernel::Position& p,
+					const kernel::Position& startOfToken, length_t lengthOfToken) /*throw()*/
+					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
+				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
-			const kernel::Position& getPartitionStart(size_t partition) const throw() {return partitions_[partition]->start;}
+			const kernel::Position& getPartitionStart(size_t partition) const /*throw()*/ {return partitions_[partition]->start;}
 			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
@@ -298,14 +302,14 @@ namespace ascension {
 		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalPartitionPresentationReconstructor : virtual public presentation::IPartitionPresentationReconstructor {
+		class LexicalPartitionPresentationReconstructor : public presentation::IPartitionPresentationReconstructor {
 			MANAH_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(const kernel::Document& document,
 				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);
 		private:
 			// IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::LineStyle> getPresentation(const kernel::Region& region) const throw();
+			std::auto_ptr<presentation::LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
 			const kernel::Document& document_;
 			std::auto_ptr<ITokenScanner> tokenScanner_;
@@ -314,10 +318,10 @@ namespace ascension {
 
 
 		/// Returns the content type.
-		inline kernel::ContentType TransitionRule::contentType() const throw() {return contentType_;}
+		inline kernel::ContentType TransitionRule::contentType() const /*throw()*/ {return contentType_;}
 
 		/// Returns the content type of the transition destination.
-		inline kernel::ContentType TransitionRule::destination() const throw() {return destination_;}
+		inline kernel::ContentType TransitionRule::destination() const /*throw()*/ {return destination_;}
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(document() != 0)
@@ -328,4 +332,4 @@ namespace ascension {
 
 }} // namespace ascension.rules
 
-#endif /* !ASCENSION_RULES_HPP */
+#endif // !ASCENSION_RULES_HPP

@@ -20,16 +20,16 @@
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 #include <dimm.h>
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 #include <Oleacc.h>
 #include <MSAAtext.h>
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 #ifndef ASCENSION_NO_TEXT_OBJECT_MODEL
 #include <tom.h>
-#endif /* !ASCENSION_NO_TEXT_OBJECT_MODEL */
+#endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 
 
 namespace ascension {
@@ -38,7 +38,7 @@ namespace ascension {
 	 * Returns default UI language.
 	 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
 	 */
-	::LANGID getUserDefaultUILanguage() throw();
+	LANGID getUserDefaultUILanguage() /*throw()*/;
 
 	namespace texteditor {class EditorCommand;}
 
@@ -63,10 +63,10 @@ namespace ascension {
 		class VirtualBox {
 			MANAH_UNASSIGNABLE_TAG(VirtualBox);
 		public:
-			VirtualBox(const TextViewer& view, const kernel::Region& region) throw();
-			bool isPointOver(const POINT& pt) const throw();
-			bool overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const throw();
-			void update(const kernel::Region& region) throw();
+			VirtualBox(const TextViewer& view, const kernel::Region& region) /*throw()*/;
+			bool isPointOver(const POINT& pt) const /*throw()*/;
+			bool overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const /*throw()*/;
+			void update(const kernel::Region& region) /*throw()*/;
 		private:
 			struct Point {
 				length_t line;		// logical line number
@@ -74,12 +74,12 @@ namespace ascension {
 				int x;				// distance from left side of layout
 			} points_[2];
 			const TextViewer& view_;
-			const Point& beginning() const throw() {
+			const Point& beginning() const /*throw()*/ {
 				return points_[(points_[0].line < points_[1].line
 					|| (points_[0].line == points_[1].line && points_[0].subline <= points_[1].subline)) ? 0 : 1];}
-			const Point& end() const throw() {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
-			int left() const throw() {return std::min(points_[0].x, points_[1].x);}
-			int right() const throw() {return std::max(points_[0].x, points_[1].x);}
+			const Point& end() const /*throw()*/ {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
+			int left() const /*throw()*/ {return std::min(points_[0].x, points_[1].x);}
+			int right() const /*throw()*/ {return std::max(points_[0].x, points_[1].x);}
 		};
 
 		/**
@@ -89,9 +89,9 @@ namespace ascension {
 		class ITextViewerInputStatusListener {
 		private:
 			/// The text viewer's IME open status has been changed.
-			virtual void textViewerIMEOpenStatusChanged() throw() = 0;
+			virtual void textViewerIMEOpenStatusChanged() /*throw()*/ = 0;
 			/// The text viewer's input language has been changed (@c WM_INPUTLANGCHANGE).
-			virtual void textViewerInputLanguageChanged() throw() = 0;
+			virtual void textViewerInputLanguageChanged() /*throw()*/ = 0;
 			friend class TextViewer;
 		};
 
@@ -102,10 +102,10 @@ namespace ascension {
 		class CaretShapeUpdater {
 			MANAH_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
-			TextViewer& textViewer() throw();
-			void update() throw();
+			TextViewer& textViewer() /*throw()*/;
+			void update() /*throw()*/;
 		private:
-			CaretShapeUpdater(TextViewer& viewer) throw();
+			CaretShapeUpdater(TextViewer& viewer) /*throw()*/;
 			TextViewer& viewer_;
 			friend class TextViewer;
 		};
@@ -117,7 +117,7 @@ namespace ascension {
 		class ICaretShapeProvider {
 		public:
 			/// Destructor.
-			virtual ~ICaretShapeProvider() throw() {}
+			virtual ~ICaretShapeProvider() /*throw()*/ {}
 		private:
 			/**
 			 * Returns the bitmap or the solid size defines caret shape.
@@ -125,15 +125,15 @@ namespace ascension {
 			 * @param[out] solidSize the size of solid caret. if @a bitmap is not @c null, this parameter is ignored
 			 * @param[out] orientation the orientation of the caret. this value is used for hot spot calculation
 			 */
-			virtual void getCaretShape(
-				std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap, ::SIZE& solidSize, layout::Orientation& orientation) throw() = 0;
+			virtual void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
+				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/ = 0;
 			/**
 			 * Installs the provider.
 			 * @param updater the caret updator which notifies the text viewer to update the caret
 			 */
-			virtual void install(CaretShapeUpdater& updater) throw() = 0;
+			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
 			/// Uninstalls the provider.
-			virtual void uninstall() throw() = 0;
+			virtual void uninstall() /*throw()*/ = 0;
 			friend class TextViewer;
 		};
 
@@ -141,14 +141,14 @@ namespace ascension {
 		 * Default implementation of @c ICaretShapeProvider.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultCaretShaper : virtual public ICaretShapeProvider {
+		class DefaultCaretShaper : public ICaretShapeProvider {
 		public:
-			DefaultCaretShaper() throw();
+			DefaultCaretShaper() /*throw()*/;
 		private:
 			void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
-				::SIZE& solidSize, layout::Orientation& orientation) throw();
-			void install(CaretShapeUpdater& updater) throw();
-			void uninstall() throw();
+				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/;
+			void install(CaretShapeUpdater& updater) /*throw()*/;
+			void uninstall() /*throw()*/;
 		private:
 			const TextViewer* viewer_;
 		};
@@ -157,16 +157,16 @@ namespace ascension {
 		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LocaleSensitiveCaretShaper : virtual public ICaretShapeProvider,
-			virtual public ICaretListener, virtual public ICaretStateListener, virtual public ITextViewerInputStatusListener {
+		class LocaleSensitiveCaretShaper : public ICaretShapeProvider,
+			public ICaretListener, public ICaretStateListener, public ITextViewerInputStatusListener {
 		public:
-			explicit LocaleSensitiveCaretShaper(bool bold = false) throw();
+			explicit LocaleSensitiveCaretShaper(bool bold = false) /*throw()*/;
 		private:
 			// ICaretShapeProvider
 			void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
-				::SIZE& solidSize, layout::Orientation& orientation) throw();
-			void install(CaretShapeUpdater& updater) throw();
-			void uninstall() throw();
+				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/;
+			void install(CaretShapeUpdater& updater) /*throw()*/;
+			void uninstall() /*throw()*/;
 			// ICaretListener
 			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);
 			// ICaretStateListener
@@ -175,8 +175,8 @@ namespace ascension {
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
 			// ITextViewerInputStatusListener
-			void textViewerIMEOpenStatusChanged() throw();
-			void textViewerInputLanguageChanged() throw();
+			void textViewerIMEOpenStatusChanged() /*throw()*/;
+			void textViewerInputLanguageChanged() /*throw()*/;
 		private:
 			CaretShapeUpdater* updater_;
 			bool bold_;
@@ -190,7 +190,7 @@ namespace ascension {
 		class IMouseInputStrategy {
 		public:
 			/// Destructor.
-			virtual ~IMouseInputStrategy() throw() {}
+			virtual ~IMouseInputStrategy() /*throw()*/ {}
 		protected:
 			/// Buttons of the mouse.
 			enum Button {
@@ -222,28 +222,28 @@ namespace ascension {
 			 * @param keyState indicates whether various key are pressed. this value is same as Win32 WM_*BUTTON*
 			 * @return true if the strategy processed
 			 */
-			virtual bool mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState) = 0;
+			virtual bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState) = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
 			 * @param position the mouse position (client coordinates)
 			 * @param keyState indicates whether various key are pressed. this value is same as Win32 @c WM_MOSEMOVE
 			 * @return true if the strategy processed
 			 */
-			virtual void mouseMoved(const ::POINT& position, uint keyState) = 0;
+			virtual void mouseMoved(const POINT& position, uint keyState) = 0;
 			/**
 			 * The mouse wheel was rolated and the viewer had focus.
 			 * @param delta the distance the wheel was rotated
 			 * @param position the mouse position (client coordinates)
 			 * @param keyState indicates whether various key are pressed. this value is same as Win32 WM_*BUTTON*
 			 */
-			virtual void mouseWheelRotated(short delta, const ::POINT& position, uint keyState) = 0;
+			virtual void mouseWheelRotated(short delta, const POINT& position, uint keyState) = 0;
 			/**
 			 * Shows a cursor on the viewer.
 			 * @param position the cursor position (client coordinates)
 			 * @retval true if the callee showed a cursor
 			 * @retval false if the callee did not know the appropriate cursor
 			 */
-			virtual bool showCursor(const ::POINT& position) = 0;
+			virtual bool showCursor(const POINT& position) = 0;
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 			friend class TextViewer;
@@ -252,8 +252,7 @@ namespace ascension {
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy :
-				virtual public IMouseInputStrategy, virtual public ::IDropSource, virtual public ::IDropTarget {
+		class DefaultMouseInputStrategy : public IMouseInputStrategy, public IDropSource, public IDropTarget {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			DefaultMouseInputStrategy(bool enableOLEDragAndDrop, bool showDraggingImage);
@@ -264,32 +263,35 @@ namespace ascension {
 				MANAH_IMPLEMENTS_INTERFACE(IDropTarget)
 			MANAH_END_INTERFACE_TABLE()
 			// IDropSource
-			STDMETHODIMP QueryContinueDrag(::BOOL fEscapePressed, ::DWORD grfKeyState);
-			STDMETHODIMP GiveFeedback(::DWORD dwEffect);
+			STDMETHODIMP QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
+			STDMETHODIMP GiveFeedback(DWORD dwEffect);
 			// IDropTarget
-			STDMETHODIMP DragEnter(::IDataObject* pDataObj, ::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
-			STDMETHODIMP DragOver(::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
+			STDMETHODIMP DragEnter(::IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+			STDMETHODIMP DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
 			STDMETHODIMP DragLeave();
-			STDMETHODIMP Drop(::IDataObject* pDataObj, ::DWORD grfKeyState, ::POINTL pt, ::DWORD* pdwEffect);
+			STDMETHODIMP Drop(::IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
 		private:
 			void beginTimer(UINT interval);
 			void doDragAndDrop();
 			void endTimer();
-			void extendSelection();
-			void handleLeftButtonPressed(const ::POINT& position, uint keyState);
-			void handleLeftButtonReleased(const ::POINT& position, uint keyState);
-			static void CALLBACK timeElapsed(::HWND window, ::UINT message, ::UINT_PTR eventID, ::DWORD time);
+			void extendSelection(const kernel::Position* to = 0);
+			void handleLeftButtonPressed(const POINT& position, uint keyState);
+			void handleLeftButtonReleased(const POINT& position, uint keyState);
+			static void CALLBACK timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
 			// IMouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
-			virtual bool mouseButtonInput(Button button, Action action, const ::POINT& position, uint keyState);
-			virtual void mouseMoved(const ::POINT& position, uint keyState);
-			virtual void mouseWheelRotated(short delta, const ::POINT& position, uint keyState);
-			virtual bool showCursor(const ::POINT& position);
+			virtual bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState);
+			virtual void mouseMoved(const POINT& position, uint keyState);
+			virtual void mouseWheelRotated(short delta, const POINT& position, uint keyState);
+			virtual bool showCursor(const POINT& position);
 			void uninstall();
 		private:
 			TextViewer* viewer_;
 			bool leftButtonPressed_;
+			enum {CHARACTERS, WORDS, LINES} selectionExtendingUnit_;
+			length_t noncharacterSelectionExtendingInitialLine_;	// line of the anchor when entered the selection extending
+			std::pair<length_t, length_t> wordSelectionInitialColumns_;
 			struct DragAndDrop {
 				bool enabled;
 				enum State {INACTIVE, APPROACHING, DRAGGING_BY_SELF, DRAGGING_FROM_OTHER} state;
@@ -297,11 +299,11 @@ namespace ascension {
 				length_t numberOfRectangleLines;
 				manah::com::ComPtr<IDragSourceHelper> dragSourceHelper;
 				manah::com::ComPtr<IDropTargetHelper> dropTargetHelper;
-				bool isDragging() const throw() {return state == DRAGGING_BY_SELF || state == DRAGGING_FROM_OTHER;}
+				bool isDragging() const /*throw()*/ {return state == DRAGGING_BY_SELF || state == DRAGGING_FROM_OTHER;}
 			} dnd_;
 			const presentation::hyperlink::IHyperlink* lastHoveredHyperlink_;
-			static std::map<::UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
-			static const ::UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
+			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
+			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
 		};
 
 		/**
@@ -317,18 +319,14 @@ namespace ascension {
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		namespace internal {class TextViewerAccessibleProxy;}
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 		class TextViewer :
 				public manah::win32::ui::CustomControl<TextViewer>,
-				virtual public kernel::IDocumentListener,
-				virtual public kernel::IDocumentStateListener,
-				virtual public kernel::IDocumentRollbackListener,
-				virtual public layout::IFontSelectorListener,
-				virtual public layout::IVisualLinesListener,
-				virtual public ICaretListener,
-				virtual public ICaretStateListener,
-				virtual public ascension::kernel::internal::IPointCollection<VisualPoint> {
+				public kernel::IDocumentListener, public kernel::IDocumentStateListener,
+				public kernel::IDocumentRollbackListener, public layout::IFontSelectorListener,
+				public layout::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
+				public ascension::kernel::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
 			DEFINE_WINDOW_CLASS() {
 				name = L"ascension:text-viewer";
@@ -354,11 +352,11 @@ namespace ascension {
 			 */
 			struct Configuration : public layout::LayoutSettings {
 				/// Color of active selected text. Standard setting is {@c COLOR_HIGHLIGHTTEXT, @c COLOR_HIGHLIGHT}.
-				layout::Colors selectionColor;
+				presentation::Colors selectionColor;
 				/// Color of inactive selected text. Standard setting is {@c COLOR_INACTIVECAPTIONTEXT, @c COLOR_INACTIVECAPTION}.
-				layout::Colors inactiveSelectionColor;
+				presentation::Colors inactiveSelectionColor;
 				/// Color of the inaccessible area. Standard setting is {@c COLOR_GRAYTEXT, @c color.background}.
-				layout::Colors restrictionColor;
+				presentation::Colors restrictionColor;
 				/// The amount of the leading margin in pixels. Default value is 5. This member will be ignored if the text is center-aligned.
 				int leadingMargin;
 				/// The amount of the top margin in pixels. Default value is 1.
@@ -368,14 +366,14 @@ namespace ascension {
 				/// Set true to use also Rich Text Format for clipboard operations. Default value is false.
 				bool usesRichTextClipboardFormat;
 				/// Constructor.
-				Configuration() throw() : leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
+				Configuration() /*throw()*/ : leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
-					::BOOL b;
+					BOOL b;
 					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
 					vanishesCursor = manah::toBoolean(b);
 #else
 					vanishesCursor = false;
-#endif
+#endif // _WIN32_WINNT >= 0x0501
 				}
 			};
 
@@ -399,12 +397,12 @@ namespace ascension {
 					int leadingMargin;
 					/// Trailing margin in pixels. Default value is 1.
 					int trailingMargin;
-					/// Color of the text. Default value is @c presentation#Colors#STANDARD.
-					/// @c presentation#Colors#STANDARD is fallbacked to the color of the system normal text.
-					layout::Colors textColor;
-					/// Color of the border. Default value is @c presentation#STANDARD_COLOR.
-					/// @c presentation#STANDARD_COLOR is fallbacked to the color of the system normal text.
-					COLORREF borderColor;
+					/// Color of the text. Default value is invalid color which is fallbacked to
+					/// the color of the system normal text.
+					presentation::Colors textColor;
+					/// Color of the border. Default value is invalid color which is fallbacked to
+					/// the color of the system normal text.
+					presentation::Color borderColor;
 					/// Width of the border. Default value is 1.
 					uchar borderWidth;
 					/// Style of the border. Default value is @c SOLID.
@@ -417,12 +415,12 @@ namespace ascension {
 					} borderStyle;
 					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 					layout::DigitSubstitutionType digitSubstitution;
-					/// Constructor.
-					LineNumbers() throw() : visible(false), alignment(layout::ALIGN_AUTO), startValue(1),
-						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(layout::STANDARD_COLOR),
+					/// Constructor initializes the all members to their default values.
+					LineNumbers() /*throw()*/ : visible(false), alignment(layout::ALIGN_AUTO), startValue(1),
+						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(presentation::Color()),
 						borderWidth(1), borderStyle(SOLID), digitSubstitution(layout::DST_USER_DEFAULT) {}
-					/// Returns true if the all members are valid.
-					bool verify() const throw() {return leadingMargin >= 0 && trailingMargin >= 0;}
+					/// Returns true if one of the all members are valid.
+					bool verify() const /*throw()*/ {return leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
 				/// Configuration about an indicator margin.
 				struct IndicatorMargin {
@@ -430,25 +428,25 @@ namespace ascension {
 					bool visible;
 					/// Width of the indicator margin. Default value is 15.
 					ushort width;
-					/// Background color. Default value is @c presentation#STANDARD_COLOR.
-					/// @c presentation#STANDARD_COLOR is fallbacked to the system color @c COLOR_3DFACE.
-					::COLORREF color;
-					/// Color of the border. Default value is @c presentation#STANDARD_COLOR.
-					/// @c presentation#STANDARD_COLOR is fallbacked to the system color @c COLOR_3DSHADOW.
-					::COLORREF borderColor;
-					/// Constructor.
-					IndicatorMargin() throw() : visible(false), width(15), color(layout::STANDARD_COLOR), borderColor(layout::STANDARD_COLOR) {}
-					/// Returns true if the all members are valid.
-					bool verify() const throw() {return width >= 0;}
+					/// Background color. Default value is invalid color which is fallbacked to the
+					/// system color @c COLOR_3DFACE.
+					presentation::Color color;
+					/// Color of the border. Default value is invalid color which is fallbacked to
+					/// the system color @c COLOR_3DSHADOW.
+					presentation::Color borderColor;
+					/// Constructor initializes the all members to their default values.
+					IndicatorMargin() /*throw()*/ : visible(false), width(15) {}
+					/// Returns true if one of the all members are valid.
+					bool verify() const /*throw()*/ {return width >= 0;}
 				} indicatorMargin;	/// Configuration about the indicator margin.
 				/// Alignment of the vertical ruler. Can be either @c layout#ALIGN_LEFT or
 				/// @c layout#ALIGN_RIGHT. Default value is determined based on @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
 				layout::Alignment alignment;
 				/// Constructor.
-				VerticalRulerConfiguration() throw() :
+				VerticalRulerConfiguration() /*throw()*/ :
 					alignment(ASCENSION_DEFAULT_TEXT_ORIENTATION == layout::LEFT_TO_RIGHT ? layout::ALIGN_LEFT : layout::ALIGN_RIGHT) {}
-				/// Returns true if the all members are valid.
-				bool verify() const throw() {return lineNumbers.verify()
+				/// Returns true if one of the all members are valid.
+				bool verify() const /*throw()*/ {return lineNumbers.verify()
 					&& indicatorMargin.verify() && (alignment == layout::ALIGN_LEFT || alignment == layout::ALIGN_RIGHT);}
 			};
 
@@ -456,10 +454,8 @@ namespace ascension {
 			explicit TextViewer(presentation::Presentation& presentation);
 			TextViewer(const TextViewer& rhs);
 			virtual ~TextViewer();
-
 			// window creation
-			virtual bool create(HWND parent, const ::RECT& rect, DWORD style, DWORD exStyle);
-
+			virtual bool create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle);
 			// listeners and strategies
 			void addDisplaySizeListener(IDisplaySizeListener& listener);
 			void addInputStatusListener(ITextViewerInputStatusListener& listener);
@@ -467,92 +463,81 @@ namespace ascension {
 			void removeDisplaySizeListener(IDisplaySizeListener& listener);
 			void removeInputStatusListener(ITextViewerInputStatusListener& listener);
 			void removeViewportListener(IViewportListener& listener);
-			void setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) throw();
+			void setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) /*throw()*/;
 			void setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
-
 			// attributes
-			const Configuration& configuration() const throw();
+			const Configuration& configuration() const /*throw()*/;
 			kernel::Document& document();
 			const kernel::Document& document() const;
-			presentation::Presentation& presentation() throw();
-			const presentation::Presentation& presentation() const throw();
-			ulong scrollRate(bool horizontal) const throw();
-			layout::TextRenderer& textRenderer() throw();
-			const layout::TextRenderer& textRenderer() const throw();
+			presentation::Presentation& presentation() /*throw()*/;
+			const presentation::Presentation& presentation() const /*throw()*/;
+			ulong scrollRate(bool horizontal) const /*throw()*/;
+			layout::TextRenderer& textRenderer() /*throw()*/;
+			const layout::TextRenderer& textRenderer() const /*throw()*/;
 			void setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler);
-			const VerticalRulerConfiguration& verticalRulerConfiguration() const throw();
-
+			const VerticalRulerConfiguration& verticalRulerConfiguration() const /*throw()*/;
 			// auto scroll
 			void beginAutoScroll();
 			bool endAutoScroll();
-			bool isAutoScrolling() const throw();
-
+			bool isAutoScrolling() const /*throw()*/;
 			// caret
-			Caret& caret() throw();
-			const Caret& caret() const throw();
-
+			Caret& caret() /*throw()*/;
+			const Caret& caret() const /*throw()*/;
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 			// Global IME
-			void enableActiveInputMethod(bool enable = true) throw();
-			bool isActiveInputMethodEnabled() const throw();
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
-
+			void enableActiveInputMethod(bool enable = true) /*throw()*/;
+			bool isActiveInputMethodEnabled() const /*throw()*/;
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 			// UI
-			void beep() throw();
+			void beep() /*throw()*/;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			::HRESULT accessibleObject(::IAccessible*& acc) const throw();
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+			HRESULT accessibleObject(::IAccessible*& acc) const /*throw()*/;
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			void hideToolTip();
 			void scroll(int dx, int dy, bool redraw);
 			void scrollTo(int x, int y, bool redraw);
 			void scrollTo(length_t line, bool redraw);
 			void showToolTip(const String& text, ulong timeToWait = -1, ulong timeRemainsVisible = -1);
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
-			::HRESULT startTextServices();
-#endif /* !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK */
-
+			HRESULT startTextServices();
+#endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			// content assist
-			contentassist::IContentAssistant* contentAssistant() const throw();
-			void setContentAssistant(std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) throw();
-
+			contentassist::IContentAssistant* contentAssistant() const /*throw()*/;
+			void setContentAssistant(std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) /*throw()*/;
 			// redraw
 			void redrawLine(length_t line, bool following = false);
 			void redrawLines(length_t first, length_t last);
-
 			// freeze
 			void freeze(bool forAllClones = true);
-			bool isFrozen() const throw();
+			bool isFrozen() const /*throw()*/;
 			void unfreeze(bool forAllClones = true);
-
 			// mouse input
-			bool allowsMouseInput() const throw();
+			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
-
 			// client coordinates vs. character position mappings
-			kernel::Position characterForClientXY(const ::POINT& pt,
+			kernel::Position characterForClientXY(const POINT& pt,
 				layout::LineLayout::Edge, bool abortNoCharacter = false,
 				kernel::EditPoint::CharacterUnit snapPolicy = kernel::EditPoint::DEFAULT_UNIT) const;
-			::POINT clientXYForCharacter(const kernel::Position& position,
+			POINT clientXYForCharacter(const kernel::Position& position,
 				bool fullSearchY, layout::LineLayout::Edge edge = layout::LineLayout::LEADING) const;
-
 			// utilities
-			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw();
-			HitTestResult hitTest(const ::POINT& pt) const;
-			length_t numberOfVisibleLines() const throw();
-			length_t numberOfVisibleColumns() const throw();
-			::RECT textAreaMargins() const throw();
+			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
+			HitTestResult hitTest(const POINT& pt) const;
+			length_t numberOfVisibleLines() const /*throw()*/;
+			length_t numberOfVisibleColumns() const /*throw()*/;
+			RECT textAreaMargins() const /*throw()*/;
 
 		protected:
-			virtual void doBeep() throw();
-			virtual void drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
-			bool handleKeyDown(::UINT key, bool controlPressed, bool shiftPressed, bool altPressed) throw();
+			virtual void doBeep() /*throw()*/;
+			virtual void drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const RECT& rect);
+			bool handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) /*throw()*/;
 
 			// helpers
 		private:
 			int getDisplayXOffset(length_t line) const;
 			void handleGUICharacterInput(CodePoint c);
 			void internalUnfreeze();
-			void mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const throw();
+			void mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const /*throw()*/;
 			int mapLineToClientY(length_t line, bool fullSearch) const;
 			void recreateCaret();
 			void redrawVerticalRuler();
@@ -576,18 +561,18 @@ namespace ascension {
 			virtual void selectionShapeChanged(const Caret& self);
 		private:
 			// kernel.IDocumentListener
-			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.IDocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document);
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
 			// layout.IFontSelectorListener
-			void fontChanged() throw();
+			void fontChanged() /*throw()*/;
 			// layout.IVisualLinesListener
-			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) throw();
-			void visualLinesInserted(length_t first, length_t last) throw();
+			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(length_t first, length_t last) /*throw()*/;
 			void visualLinesModified(length_t first, length_t last,
-				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) throw();
+				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 			// internal.IPointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
@@ -595,60 +580,60 @@ namespace ascension {
 			// message handlers
 			MANAH_DECLEAR_WINDOW_MESSAGE_MAP(TextViewer);
 		protected:
-			virtual ::LRESULT preTranslateWindowMessage(::UINT message, ::WPARAM wParam, ::LPARAM lParam, bool& handled);
-			void onCaptureChanged(::HWND newWindow);
-			void onChar(::UINT ch, ::UINT flags);
-			bool onCommand(::WORD id, ::WORD notifyCode, ::HWND control);
-			bool onContextMenu(::HWND window, const ::POINT& pt);
+			virtual LRESULT preTranslateWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled);
+			void onCaptureChanged(HWND newWindow);
+			void onChar(UINT ch, UINT flags);
+			bool onCommand(WORD id, WORD notifyCode, HWND control);
+			bool onContextMenu(HWND window, const POINT& pt);
 			void onDestroy();
-			bool onEraseBkgnd(::HDC dc);
-			::HFONT onGetFont();
-			void onHScroll(::UINT sbCode, ::UINT pos, ::HWND scrollBar);
-			void onIMEComposition(::WPARAM wParam, ::LPARAM lParam, bool& handled);
+			bool onEraseBkgnd(HDC dc);
+			HFONT onGetFont();
+			void onHScroll(UINT sbCode, UINT pos, HWND scrollBar);
+			void onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled);
 			void onIMEEndComposition();
-			::LRESULT onIMENotify(::WPARAM command, ::LPARAM lParam, bool& handled);
-			::LRESULT onIMERequest(::WPARAM command, ::LPARAM lParam, bool& handled);
+			LRESULT onIMENotify(WPARAM command, LPARAM lParam, bool& handled);
+			LRESULT onIMERequest(WPARAM command, LPARAM lParam, bool& handled);
 			void onIMEStartComposition();
-			void onKeyDown(::UINT ch, ::UINT flags, bool& handled);
-			void onKillFocus(::HWND newWindow);
-			void onLButtonDblClk(::UINT keyState, const ::POINT& pt);
-			void onLButtonDown(::UINT keyState, const ::POINT& pt);
-			void onLButtonUp(::UINT keyState, const ::POINT& pt);
-			void onMButtonDblClk(::UINT keyState, const ::POINT& pt);
-			void onMButtonDown(::UINT keyState, const ::POINT& pt);
-			void onMButtonUp(::UINT keyState, const ::POINT& pt);
-			void onMouseMove(::UINT keyState, const ::POINT& pt);
+			void onKeyDown(UINT ch, UINT flags, bool& handled);
+			void onKillFocus(HWND newWindow);
+			void onLButtonDblClk(UINT keyState, const POINT& pt);
+			void onLButtonDown(UINT keyState, const POINT& pt);
+			void onLButtonUp(UINT keyState, const POINT& pt);
+			void onMButtonDblClk(UINT keyState, const POINT& pt);
+			void onMButtonDown(UINT keyState, const POINT& pt);
+			void onMButtonUp(UINT keyState, const POINT& pt);
+			void onMouseMove(UINT keyState, const POINT& pt);
 #ifdef WM_MOUSEWHEEL
-			void onMouseWheel(::UINT flags, short zDelta, const ::POINT& pt);
-#endif /* WM_MOUSEWHEEL */
-			bool onNcCreate(::CREATESTRUCTW& cs);
-			bool onNotify(int id, ::NMHDR& nmhdr);
+			void onMouseWheel(UINT flags, short zDelta, const POINT& pt);
+#endif // WM_MOUSEWHEEL
+			bool onNcCreate(CREATESTRUCTW& cs);
+			bool onNotify(int id, NMHDR& nmhdr);
 			void onPaint(manah::win32::gdi::PaintDC& dc);
-			void onRButtonDblClk(::UINT keyState, const ::POINT& pt);
-			void onRButtonDown(::UINT keyState, const ::POINT& pt);
-			void onRButtonUp(::UINT keyState, const ::POINT& pt);
-			bool onSetCursor(::HWND window, ::UINT hitTest, ::UINT message);
-			void onSetFocus(::HWND oldWindow);
-			void onSize(::UINT type, int cx, int cy);
-			void onStyleChanged(int type, const ::STYLESTRUCT& style);
-			void onStyleChanging(int type, ::STYLESTRUCT& style);
-			void onSysChar(::UINT ch, ::UINT flags);
+			void onRButtonDblClk(UINT keyState, const POINT& pt);
+			void onRButtonDown(UINT keyState, const POINT& pt);
+			void onRButtonUp(UINT keyState, const POINT& pt);
+			bool onSetCursor(HWND window, UINT hitTest, UINT message);
+			void onSetFocus(HWND oldWindow);
+			void onSize(UINT type, int cx, int cy);
+			void onStyleChanged(int type, const STYLESTRUCT& style);
+			void onStyleChanging(int type, STYLESTRUCT& style);
+			void onSysChar(UINT ch, UINT flags);
 			void onSysColorChange();
-			bool onSysKeyDown(::UINT ch, ::UINT flags);
-			bool onSysKeyUp(::UINT ch, ::UINT flags);
+			bool onSysKeyDown(UINT ch, UINT flags);
+			bool onSysKeyUp(UINT ch, UINT flags);
 #ifdef WM_THEMECHANGED
 			void onThemeChanged();
-#endif /* WM_THEMECHANGED */
-			void onTimer(::UINT_PTR eventId, ::TIMERPROC timerProc);
+#endif // WM_THEMECHANGED
+			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
 #ifdef WM_UNICHAR
-			void onUniChar(::UINT ch, ::UINT flags);
-#endif /* WM_UNICHAR */
-			void onVScroll(::UINT sbCode, ::UINT pos, ::HWND scrollBar);
+			void onUniChar(UINT ch, UINT flags);
+#endif // WM_UNICHAR
+			void onVScroll(UINT sbCode, UINT pos, HWND scrollBar);
 #ifdef WM_XBUTTONDBLCLK
-			bool onXButtonDblClk(::WORD xButton, ::WORD keyState, const ::POINT& pt);
-			bool onXButtonDown(::WORD xButton, ::WORD keyState, const ::POINT& pt);
-			bool onXButtonUp(::WORD xButton, ::WORD keyState, const ::POINT& pt);
-#endif /* WM_XBUTTONDBLCLK */
+			bool onXButtonDblClk(WORD xButton, WORD keyState, const POINT& pt);
+			bool onXButtonDown(WORD xButton, WORD keyState, const POINT& pt);
+			bool onXButtonUp(WORD xButton, WORD keyState, const POINT& pt);
+#endif // WM_XBUTTONDBLCLK
 
 			// internal classes
 		private:
@@ -663,8 +648,8 @@ namespace ascension {
 				// FontSelector
 				std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const;
 				// ILayoutInformationProvider
-				const layout::LayoutSettings& getLayoutSettings() const throw();
-				int getWidth() const throw();
+				const layout::LayoutSettings& getLayoutSettings() const /*throw()*/;
+				int getWidth() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
 			};
@@ -685,9 +670,9 @@ namespace ascension {
 					CURSOR_DOWNWARD	///< Indicates scrolling downward.
 				};
 			public:
-				AutoScrollOriginMark() throw();
+				AutoScrollOriginMark() /*throw()*/;
 				bool create(const TextViewer& view);
-				static ::HCURSOR cursorForScrolling(CursorType type);
+				static HCURSOR cursorForScrolling(CursorType type);
 			protected:
 				void onPaint(manah::win32::gdi::PaintDC& dc);
 			private:
@@ -697,16 +682,16 @@ namespace ascension {
 			class VerticalRulerDrawer {
 				MANAH_NONCOPYABLE_TAG(VerticalRulerDrawer);
 			public:
-				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) throw();
-				const VerticalRulerConfiguration& configuration() const throw();
+				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
+				const VerticalRulerConfiguration& configuration() const /*throw()*/;
 				void draw(manah::win32::gdi::PaintDC& dc);
 				void setConfiguration(const VerticalRulerConfiguration& configuration);
-				void update() throw();
-				int width() const throw();
+				void update() /*throw()*/;
+				int width() const /*throw()*/;
 			private:
-				uchar getLineNumberMaxDigits() const throw();
-				void recalculateWidth() throw();
-				void updateGDIObjects() throw();
+				uchar getLineNumberMaxDigits() const /*throw()*/;
+				void recalculateWidth() /*throw()*/;
+				void updateGDIObjects() /*throw()*/;
 				TextViewer& viewer_;
 				VerticalRulerConfiguration configuration_;
 				int width_;
@@ -793,7 +778,7 @@ namespace ascension {
 			std::auto_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
-			::HWND toolTip_;
+			HWND toolTip_;
 			Char* tipText_;
 			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
@@ -804,19 +789,19 @@ namespace ascension {
 			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			internal::TextViewerAccessibleProxy* accessibleProxy_;
-#endif /* !ASCENSION_NO_ACTIVE_ACCESSIBILITY */
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 			// modes
 			struct ModeState {
 				bool cursorVanished;			// the cursor is vanished for user is inputting
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
-				ModeState() throw() : cursorVanished(false)
+				ModeState() /*throw()*/ : cursorVanished(false)
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 					, activeInputMethodEnabled(true)
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 				{}
 			} modeState_;
 
@@ -825,26 +810,26 @@ namespace ascension {
 				struct {
 					int position;		// SCROLLINFO.nPos
 					int maximum;		// SCROLLINFO.nMax
-					::UINT pageSize;	// SCROLLINFO.nPage
+					UINT pageSize;	// SCROLLINFO.nPage
 //					ulong rate;			// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				} horizontal, vertical;
 				length_t firstVisibleLine, firstVisibleSubline;
 				bool changed;
-				ScrollInfo() throw() : firstVisibleLine(0), firstVisibleSubline(0), changed(false) {
+				ScrollInfo() /*throw()*/ : firstVisibleLine(0), firstVisibleSubline(0), changed(false) {
 					horizontal.position = vertical.position = 0;
 //					horizontal.rate = vertical.rate = 1;
 				}
-				ulong x() const throw() {return horizontal.position/* * horizontal.rate*/;}
-				ulong y() const throw() {return vertical.position/* * vertical.rate*/;}
-				void resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) throw();
-				void updateVertical(const TextViewer& viewer) throw();
+				ulong x() const /*throw()*/ {return horizontal.position/* * horizontal.rate*/;}
+				ulong y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
+				void resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) /*throw()*/;
+				void updateVertical(const TextViewer& viewer) /*throw()*/;
 			} scrollInfo_;
 
 			// freeze information
 			struct FreezeInfo {
 				ulong count;								// zero for not frozen
 				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
-				FreezeInfo() throw() : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
+				FreezeInfo() /*throw()*/ : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
 			} freezeInfo_;
 
 			// a bitmap for caret presentation
@@ -853,7 +838,7 @@ namespace ascension {
 				layout::Orientation orientation;
 				int width;
 				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
-				CaretShape() throw() : orientation(layout::LEFT_TO_RIGHT), width(0) {}
+				CaretShape() /*throw()*/ : orientation(layout::LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 
 			// input state
@@ -862,9 +847,9 @@ namespace ascension {
 
 			// automatic scroll
 			struct AutoScroll {
-				::POINT indicatorPosition;	// position of the indicator margin (in client coodinates)
+				POINT indicatorPosition;	// position of the indicator margin (in client coodinates)
 				bool scrolling;				// true if the viewer is scrolling
-				AutoScroll() throw() : scrolling(false) {}
+				AutoScroll() /*throw()*/ : scrolling(false) {}
 			} autoScroll_;
 
 			friend class VisualPoint;
@@ -875,22 +860,22 @@ namespace ascension {
 		};
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : virtual public presentation::ILineColorDirector,
-				virtual public ICaretListener, virtual public ICaretStateListener, virtual public kernel::IPointLifeCycleListener {
+		class CurrentLineHighlighter : public presentation::ILineColorDirector,
+				public ICaretListener, public ICaretStateListener, public kernel::IPointLifeCycleListener {
 			MANAH_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
-			CurrentLineHighlighter(Caret& caret,
-				const layout::Colors& color = layout::Colors(layout::STANDARD_COLOR, COLOR_INFOBK | layout::SYSTEM_COLOR_MASK));
-			~CurrentLineHighlighter() throw();
+			CurrentLineHighlighter(Caret& caret, const presentation::Colors& color =
+				presentation::Colors(presentation::Color(), presentation::Color::fromCOLORREF(COLOR_INFOBK)));
+			~CurrentLineHighlighter() /*throw()*/;
 			// attributes
-			const layout::Colors& color() const throw();
-			void setColor(const layout::Colors& color) throw();
+			const presentation::Colors& color() const /*throw()*/;
+			void setColor(const presentation::Colors& color) /*throw()*/;
 		private:
 			// presentation.ILineColorDirector
-			ILineColorDirector::Priority queryLineColor(length_t line, layout::Colors& color) const;
+			ILineColorDirector::Priority queryLineColor(length_t line, presentation::Colors& color) const;
 			// ICaretListener
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// ICaretStateListener
@@ -901,7 +886,7 @@ namespace ascension {
 			void pointDestroyed();
 		private:
 			Caret* caret_;
-			layout::Colors color_;
+			presentation::Colors color_;
 		};
 
 
@@ -932,25 +917,25 @@ inline void TextViewer::addViewportListener(IViewportListener& listener) {viewpo
  * Returns true if the viewer allows the mouse operations.
  * @see #enableMouseInput
  */
-inline bool TextViewer::allowsMouseInput() const throw() {return mouseInputDisabledCount_ == 0;} 
+inline bool TextViewer::allowsMouseInput() const /*throw()*/ {return mouseInputDisabledCount_ == 0;} 
 
 /// Informs the end user of <strong>safe</strong> error.
-inline void TextViewer::beep() throw() {doBeep();}
+inline void TextViewer::beep() /*throw()*/ {doBeep();}
 
 /// Returns the caret.
-inline Caret& TextViewer::caret() throw() {return *caret_;}
+inline Caret& TextViewer::caret() /*throw()*/ {return *caret_;}
 
 /// Returns the caret.
-inline const Caret& TextViewer::caret() const throw() {return *caret_;}
+inline const Caret& TextViewer::caret() const /*throw()*/ {return *caret_;}
 
 /**
  * Returns the general configuration.
  * @see #verticalRulerConfiguration, #setConfiguration
  */
-inline const TextViewer::Configuration& TextViewer::configuration() const throw() {return configuration_;}
+inline const TextViewer::Configuration& TextViewer::configuration() const /*throw()*/ {return configuration_;}
 
 /// Returns the content assistant or @c null if not registered.
-inline contentassist::IContentAssistant* TextViewer::contentAssistant() const throw() {return contentAssistant_.get();}
+inline contentassist::IContentAssistant* TextViewer::contentAssistant() const /*throw()*/ {return contentAssistant_.get();}
 
 /// Returns the document.
 inline kernel::Document& TextViewer::document() {return presentation_.document();}
@@ -964,8 +949,8 @@ inline const kernel::Document& TextViewer::document() const {return presentation
  * This setting effects under only Windows NT 4.0. Otherwise, Ascension does not use Global IME.
  * @deprecated 0.8
  */
-inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) throw() {modeState_.activeInputMethodEnabled = enable;}
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) /*throw()*/ {modeState_.activeInputMethodEnabled = enable;}
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
 /**
  * Enables/disables the mouse operations.
@@ -986,7 +971,7 @@ inline void TextViewer::enableMouseInput(bool enable) {
  * @param[out] visualLine the visual index of the line. can be @c null if not needed
  * @param[out] visualSubline the offset of @a visualLine from the first line in @a logicalLine. can be @c null if not needed
  */
-inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const throw() {
+inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/ {
 	if(logicalLine != 0)
 		*logicalLine = scrollInfo_.firstVisibleLine;
 	if(visualSubline != 0)
@@ -997,21 +982,21 @@ inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visual
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 /// Returns true if Global IME is enabled.
-inline bool TextViewer::isActiveInputMethodEnabled() const throw() {return modeState_.activeInputMethodEnabled;}
-#endif /* !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER */
+inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return modeState_.activeInputMethodEnabled;}
+#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
 /// Returns true if the viewer is auto-scrolling.
-inline bool TextViewer::isAutoScrolling() const throw() {return autoScroll_.scrolling;}
+inline bool TextViewer::isAutoScrolling() const /*throw()*/ {return autoScroll_.scrolling;}
 
 /// Returns true if the viewer is frozen.
-inline bool TextViewer::isFrozen() const throw() {return freezeInfo_.count != 0;}
+inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count != 0;}
 
 /**
  * Returns the number of the drawable columns in the window.
  * @return the number of columns
  */
-inline length_t TextViewer::numberOfVisibleColumns() const throw() {
-	::RECT r;
+inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
+	RECT r;
 	getClientRect(r);
 	return (r.left == r.right) ? 0 :
 		(r.right - r.left - configuration_.leadingMargin - verticalRulerDrawer_->width()) / renderer_->averageCharacterWidth();
@@ -1021,17 +1006,17 @@ inline length_t TextViewer::numberOfVisibleColumns() const throw() {
  * Returns the number of the drawable lines in the window.
  * @return the number of lines
  */
-inline length_t TextViewer::numberOfVisibleLines() const throw() {
-	::RECT r;
+inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
+	RECT r;
 	getClientRect(r);
 	return (r.top == r.bottom) ? 0 : (r.bottom - r.top - configuration_.topMargin) / renderer_->lineHeight();
 }
 
 /// Returns the presentation object. 
-inline presentation::Presentation& TextViewer::presentation() throw() {return presentation_;}
+inline presentation::Presentation& TextViewer::presentation() /*throw()*/ {return presentation_;}
 
 /// Returns the presentation object. 
-inline const presentation::Presentation& TextViewer::presentation() const throw() {return presentation_;}
+inline const presentation::Presentation& TextViewer::presentation() const /*throw()*/ {return presentation_;}
 
 /**
  * Removes the display size listener.
@@ -1055,11 +1040,11 @@ inline void TextViewer::removeInputStatusListener(ITextViewerInputStatusListener
 inline void TextViewer::removeViewportListener(IViewportListener& listener) {viewportListeners_.remove(listener);}
 
 /**
- * スクロール量の対する行数、文字数の比率を返す
- * @param horizontal 水平スクロールバーについて調べる場合 true。垂直スクロールバーの場合 false
- * @return 比率
+ * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
+ * @param horizontal set true for horizontal, false for vertical
+ * @return the rate
  */
-inline ulong TextViewer::scrollRate(bool horizontal) const throw() {
+inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 	assertValidAsWindow(); return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
 
 /**
@@ -1069,23 +1054,25 @@ inline ulong TextViewer::scrollRate(bool horizontal) const throw() {
 inline void TextViewer::setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
-inline layout::TextRenderer& TextViewer::textRenderer() throw() {return *renderer_;}
+inline layout::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
 
 /// Returns the text renderer.
-inline const layout::TextRenderer& TextViewer::textRenderer() const throw() {return *renderer_;}
+inline const layout::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
 
 /**
  * Returns the vertical ruler's configuration.
  * @see #configuration, #setConfiguration
  */
-inline const TextViewer::VerticalRulerConfiguration& TextViewer::verticalRulerConfiguration() const throw() {return verticalRulerDrawer_->configuration();}
+inline const TextViewer::VerticalRulerConfiguration&
+	TextViewer::verticalRulerConfiguration() const /*throw()*/ {return verticalRulerDrawer_->configuration();}
 
 /// Returns the vertical ruler's configurations.
-inline const TextViewer::VerticalRulerConfiguration& TextViewer::VerticalRulerDrawer::configuration() const throw() {return configuration_;}
+inline const TextViewer::VerticalRulerConfiguration&
+	TextViewer::VerticalRulerDrawer::configuration() const /*throw()*/ {return configuration_;}
 
 /// Returns the width of the vertical ruler.
-inline int TextViewer::VerticalRulerDrawer::width() const throw() {return width_;}
+inline int TextViewer::VerticalRulerDrawer::width() const /*throw()*/ {return width_;}
 
 }} // namespace ascension.viewers
 
-#endif /* ASCENSION_VIEWER_HPP */
+#endif // !ASCENSION_VIEWER_HPP

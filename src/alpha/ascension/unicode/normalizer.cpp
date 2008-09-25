@@ -1,7 +1,7 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007
+ * @date 2007-2008
  */
 
 #include "../unicode-property.hpp"
@@ -81,7 +81,7 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 	}
 }
 
-inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) throw() {
+inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) /*throw()*/ {
 	if(!excludeTurkishI || c == (*dest = foldTurkishI(c)))
 		*dest = foldCommon(c);
 	if(*dest != c || c >= 0x010000)
@@ -234,7 +234,7 @@ namespace {
 
 #include "../code-table/uprops-decomposition-mapping-table"
 
-	inline void splice(Char* at, Char*& last, size_t eraseLength, const Char* replacement, size_t replacementLength) throw() {
+	inline void splice(Char* at, Char*& last, size_t eraseLength, const Char* replacement, size_t replacementLength) {
 		last += replacementLength - eraseLength;
 		if(eraseLength < replacementLength) {
 			for(Char* p = last - 1; p >= at + replacementLength; --p)
@@ -420,7 +420,7 @@ Normalizer::Normalizer() {
  * @param form the normalization form
  */
 Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), current_(text.clone()) {
-	nextClosure(FORWARD, true);
+	nextClosure(Direction::FORWARD, true);
 }
 
 /// Copy-constructor.
@@ -429,7 +429,7 @@ Normalizer::Normalizer(const Normalizer& rhs) : form_(rhs.form_),
 }
 
 /// Destructor.
-Normalizer::~Normalizer() throw() {
+Normalizer::~Normalizer() /*throw()*/ {
 }
 
 /// Assignment operator.
@@ -464,7 +464,7 @@ int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity case
 /// Normalizes the next or previous closure for the following iteration.
 void Normalizer::nextClosure(Direction direction, bool initialize) {
 	auto_ptr<CharacterIterator> next;
-	if(direction == FORWARD) {
+	if(direction == Direction::FORWARD) {
 		if(!initialize) {
 			do {
 				current_->next();
@@ -493,7 +493,7 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 		}
 	}
 	normalizedBuffer_ = internalNormalize(*current_, *next, form_);
-	indexInBuffer_ = (direction == FORWARD) ? 0 : normalizedBuffer_.length() - 1;
+	indexInBuffer_ = (direction == Direction::FORWARD) ? 0 : normalizedBuffer_.length() - 1;
 }
 
 /**

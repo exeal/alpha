@@ -2,7 +2,7 @@
  * @file internal.hpp
  * @brief Private entries used by Ascension internally.
  * @author exeal
- * @date 2006-2007
+ * @date 2006-2008
  */
 
 #ifndef ASCENSION_INTERNAL_HPP
@@ -53,7 +53,7 @@ namespace ascension {
 		 * @return the bound
 		 */
 		template<typename Index, typename Value, typename Getter, typename Comparer>
-		inline Index searchBound(Index first, Index last, const Value& value, Getter get, Comparer comp) throw() {
+		inline Index searchBound(Index first, Index last, const Value& value, Getter get, Comparer comp) {
 			assert(first <= last);
 			Index c1 = last - first, c2, mid, p = first;
 			while(c1 > 0) {
@@ -75,7 +75,7 @@ namespace ascension {
 		 * @return the bound
 		 */
 		template<typename Index, typename Value, typename Getter>
-		inline Index searchBound(Index first, Index last, const Value& value, Getter get) throw() {
+		inline Index searchBound(Index first, Index last, const Value& value, Getter get) {
 			return searchBound(first, last, value, get, std::less_equal<Value>());
 		}
 
@@ -86,13 +86,13 @@ namespace ascension {
 		template<typename Strategy> class StrategyPointer {
 			MANAH_NONCOPYABLE_TAG(StrategyPointer);
 		public:
-			StrategyPointer() throw() : pointee_(0), manages_(false) {}
-			StrategyPointer(Strategy* pointee, bool manage) throw() : pointee_(pointee), manages_(manage) {}
-			~StrategyPointer() {if(manages_) delete pointee_;}
-			Strategy& operator*() const throw() {return *pointee_;}
-			Strategy* operator->() const throw() {return get();}
-			Strategy* get() const throw() {return pointee_;}
-			void reset(Strategy* newValue, bool manage) {
+			StrategyPointer() /*throw()*/ : pointee_(0), manages_(false) {}
+			StrategyPointer(Strategy* pointee, bool manage) /*throw()*/ : pointee_(pointee), manages_(manage) {}
+			~StrategyPointer() /*throw()*/ {if(manages_) delete pointee_;}
+			Strategy& operator*() const /*throw()*/ {return *pointee_;}
+			Strategy* operator->() const /*throw()*/ {return get();}
+			Strategy* get() const /*throw()*/ {return pointee_;}
+			void reset(Strategy* newValue, bool manage) /*throw()*/ {
 				if(manages_ && newValue != pointee_) delete pointee_; pointee_ = newValue; manages_ = manage;}
 			void reset() {reset(0, false);}
 		private:
@@ -104,7 +104,7 @@ namespace ascension {
 		template<class Listener> class Listeners {
 			MANAH_NONCOPYABLE_TAG(Listeners);
 		public:
-			Listeners() throw() {}
+			Listeners() /*throw()*/ {}
 			void add(Listener& listener) {
 				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
 					throw std::invalid_argument("The listener already has been registered.");
@@ -115,8 +115,8 @@ namespace ascension {
 				if(i == listeners_.end()) throw std::invalid_argument("The listener is not registered.");
 				listeners_.erase(i);
 			}
-			void clear() throw() {listeners_.clear();}
-			bool isEmpty() const throw() {return listeners_.empty();}
+			void clear() /*throw()*/ {listeners_.clear();}
+			bool isEmpty() const /*throw()*/ {return listeners_.empty();}
 			void notify(void(Listener::*method)()) {
 				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {next = i; ++next; ((*i)->*method)();}}
 			template<typename Argument> void notify(void(Listener::*method)(Argument), Argument argument) {
@@ -147,16 +147,16 @@ namespace ascension {
 					throw std::runtime_error("Cannot open the library.");
 				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<FARPROC>(1));
 			}
-			~SharedLibrary() throw() {::FreeLibrary(dll_);}
-			template<std::size_t index> typename ProcedureEntries::template Procedure<index>::signature get() const throw() {
+			~SharedLibrary() /*throw()*/ {::FreeLibrary(dll_);}
+			template<std::size_t index> typename ProcedureEntries::template Procedure<index>::signature get() const /*throw()*/ {
 				typedef typename ProcedureEntries::template Procedure<index> Procedure;
 				if(procedures_[index] == reinterpret_cast<FARPROC>(1))
 					procedures_[index] = ::GetProcAddress(dll_, Procedure::name());
 				return reinterpret_cast<typename Procedure::signature>(procedures_[index]);
 			}
 		private:
-			::HMODULE dll_;
-			mutable ::FARPROC procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
+			HMODULE dll_;
+			mutable FARPROC procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
 		};
 #else
 #endif
@@ -179,4 +179,4 @@ namespace ascension {
 
 } // namespace ascension
 
-#endif /* !ASCENSION_INTERNAL_HPP */
+#endif // !ASCENSION_INTERNAL_HPP

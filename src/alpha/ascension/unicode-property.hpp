@@ -65,14 +65,14 @@ namespace ascension {
 			protected:
 #ifdef ASCENSION_MSVC
 #pragma warning(disable : 4510 4512 4610)
-#endif /* ASCENSION_MSVC */
+#endif // ASCENSION_MSVC
 				struct Names {
 					const Char* const shortName;
 					const Char* const longName;
 				};
 #ifdef ASCENSION_MSVC
 #pragma warning(default : 4510 4512 4610)
-#endif /* ASCENSION_MSVC */
+#endif // ASCENSION_MSVC
 			private:
 				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
 			};
@@ -82,7 +82,7 @@ namespace ascension {
 			/// Base type for all enumeration property classes.
 			template<typename ConcreteProperty> class EnumerationProperty : public PropertyBase<ConcreteProperty> {
 			public:
-				static int of(CodePoint c) throw();
+				static int of(CodePoint c) /*throw()*/;
 			};
 
 			/// General categories. These values are based on Unicode standard 5.0.0 "4.5 General Category".
@@ -247,7 +247,7 @@ namespace ascension {
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int forName(const Char* name);
-				static int of(CodePoint cp) throw();
+				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const Char SRC_UCS2[];
 				static const CodePoint SRC_UCS4[];
@@ -256,7 +256,7 @@ namespace ascension {
 				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
 				static void buildNames();
 			};
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 
 			/**
 			 * Scripts. These are based on
@@ -308,7 +308,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
+				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const Names names_[];
 				friend class PropertyBase<HangulSyllableType>;
@@ -336,7 +336,7 @@ namespace ascension {
 				};
 				static bool is(CodePoint cp, int property);
 				template<int property>
-				static bool is(CodePoint cp) throw();
+				static bool is(CodePoint cp) /*throw()*/;
 			private:
 				static const Names names_[];
 				friend class PropertyBase<BinaryProperty>;
@@ -489,7 +489,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
+				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const Names names_[];
 				friend class PropertyBase<GraphemeClusterBreak>;
@@ -506,7 +506,7 @@ namespace ascension {
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp,
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
-					const std::locale& lc = std::locale::classic()) throw();
+					const std::locale& lc = std::locale::classic()) /*throw()*/;
 			private:
 				static const Names names_[];
 				friend class PropertyBase<WordBreak>;
@@ -521,7 +521,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) throw();
+				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const Names names_[];
 				friend class PropertyBase<SentenceBreak>;
@@ -632,8 +632,9 @@ inline int PropertyBase<ConcreteProperty>::forName(const Char* name) {
 
 /// Returns property value of the specified character.
 template<typename ConcreteProperty>
-inline int EnumerationProperty<ConcreteProperty>::of(CodePoint cp) throw() {
-	if(const internal::PropertyRange* p = internal::findInRange(ConcreteProperty::ranges_, ConcreteProperty::ranges_ + ConcreteProperty::count_, cp))
+inline int EnumerationProperty<ConcreteProperty>::of(CodePoint cp) /*throw()*/ {
+	if(const internal::PropertyRange* p =
+			internal::findInRange(ConcreteProperty::ranges_, ConcreteProperty::ranges_ + ConcreteProperty::count_, cp))
 		return p->property;
 	return ConcreteProperty::DEFAULT_VALUE;
 }
@@ -650,7 +651,7 @@ inline int CanonicalCombiningClass::forName(const Char* name) {
 }
 
 /// Returns the Canonical_Combining_Class of the specified character.
-inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
+inline int CanonicalCombiningClass::of(CodePoint cp) /*throw()*/ {
 	if(cp < 0x10000) {
 		const Char* const p = std::lower_bound(SRC_UCS2, SRC_UCS2 + UCS2_COUNT, static_cast<Char>(cp & 0xFFFFU));
 		return (*p == cp) ? DEST_UCS2[p - SRC_UCS2] : NOT_REORDERED;
@@ -659,10 +660,10 @@ inline int CanonicalCombiningClass::of(CodePoint cp) throw() {
 		return (*p != cp) ? DEST_UCS4[p - SRC_UCS4] : NOT_REORDERED;
 	}
 }
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
-inline int HangulSyllableType::of(CodePoint cp) throw() {
+inline int HangulSyllableType::of(CodePoint cp) /*throw()*/ {
 	if(cp >= 0x1100 && cp <= 0x1159 || cp == 0x115F)
 		return LEADING_JAMO;
 	else if(cp >= 0x1160 && cp <= 0x11A2)
@@ -677,4 +678,4 @@ inline int HangulSyllableType::of(CodePoint cp) throw() {
 
 }}} // namespace ascension.text.ucd
 
-#endif /* !ASCENSION_UNICODE_PROPERTY_HPP */
+#endif // !ASCENSION_UNICODE_PROPERTY_HPP

@@ -29,23 +29,23 @@ namespace ascension {
 		class ICompletionProposal {
 		public:
 			/// Destructor.
-			virtual ~ICompletionProposal() throw() {}
+			virtual ~ICompletionProposal() /*throw()*/ {}
 			/// Returns the string to provide a description of the proposal. May be empty.
-			virtual String getDescription() const throw() = 0;
+			virtual String getDescription() const /*throw()*/ = 0;
 			/// Returns the string to be display in the completion proposal list.
-			virtual String getDisplayString() const throw() = 0;
+			virtual String getDisplayString() const /*throw()*/ = 0;
 			/**
 			 * Returns the icon to be display in the completion proposal list. The icon would be
 			 * shown to the leading of the display string.
 			 * @return the icon or @c null if no image is desired
 			 */
-			virtual HICON getIcon() const throw() = 0;
+			virtual HICON getIcon() const /*throw()*/ = 0;
 			/**
 			 * Returns true if the proposal may be automatically inserted if the proposal is the
 			 * only one. In this case, completion proposals will not displayed but the single
 			 * proposal will be inserted if auto insertion is enabled.
 			 */
-			virtual bool isAutoInsertable() const throw() = 0;
+			virtual bool isAutoInsertable() const /*throw()*/ = 0;
 			/**
 			 * Inserts the proposed completion into the given document.
 			 * @param document the document
@@ -59,7 +59,7 @@ namespace ascension {
 		};
 
 		/// Default implementation of @c ICompletionalProposal.
-		class CompletionProposal : virtual public ICompletionProposal {
+		class CompletionProposal : public ICompletionProposal {
 			MANAH_UNASSIGNABLE_TAG(CompletionProposal);
 		public:
 			explicit CompletionProposal(const String& replacementString,
@@ -67,14 +67,14 @@ namespace ascension {
 			CompletionProposal(const String& replacementString, const String& displayString,
 				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
 		public:
-			String getDescription() const throw();
-			String getDisplayString() const throw();
-			::HICON getIcon() const throw();
-			bool isAutoInsertable() const throw();
+			String getDescription() const /*throw()*/;
+			String getDisplayString() const /*throw()*/;
+			HICON getIcon() const /*throw()*/;
+			bool isAutoInsertable() const /*throw()*/;
 			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
-			::HICON icon_;
+			HICON icon_;
 			const bool autoInsertable_;
 		};
 
@@ -85,9 +85,9 @@ namespace ascension {
 		class IContentAssistProcessor {
 		public:
 			/// Destructor.
-			virtual ~IContentAssistProcessor() throw() {}
+			virtual ~IContentAssistProcessor() /*throw()*/ {}
 			/// The completion session was closed.
-			virtual void completionSessionClosed() throw() {};
+			virtual void completionSessionClosed() /*throw()*/ {};
 			/**
 			 * Returns a list of completion proposals.
 			 * @param caret the caret whose document is used to compute the proposals and has
@@ -111,21 +111,21 @@ namespace ascension {
 			 */
 			virtual const ICompletionProposal* getActiveCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const throw() = 0;
+				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/ = 0;
 			/**
 			 * Returns true if the given character automatically activates the completion when the
 			 * user entered.
 			 * @param c the code point of the character
 			 * @return true if @a c automatically activates the completion
 			 */
-			virtual bool isCompletionProposalAutoActivationCharacter(CodePoint c) const throw() = 0;
+			virtual bool isCompletionProposalAutoActivationCharacter(CodePoint c) const = 0;
 			/**
 			 * Returns true if the given character automatically terminates (completes) the active
 			 * incremental completion session.
 			 * @param c the code point of the character
 			 * @return true if @a c automatically terminates the incremental completion
 			 */
-			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw() = 0;
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/ = 0;
 			/**
 			 * Returns a list of the running incremental completion proposals.
 			 * @param textViewer the text viewer
@@ -146,22 +146,22 @@ namespace ascension {
 		 * An abstract implementation of @c IContentAssistProcessor builds completion proposals by
 		 * collecting identifiers in the document.
 		 */
-		class IdentifiersProposalProcessor : virtual public IContentAssistProcessor {
+		class IdentifiersProposalProcessor : public IContentAssistProcessor {
 			MANAH_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
-			IdentifiersProposalProcessor(kernel::ContentType contentType, const text::IdentifierSyntax& syntax) throw();
-			virtual ~IdentifiersProposalProcessor() throw();
+			IdentifiersProposalProcessor(kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
+			virtual ~IdentifiersProposalProcessor() /*throw()*/;
 			// attributes
-			kernel::ContentType contentType() const throw();
-			const text::IdentifierSyntax& identifierSyntax() const throw();
+			kernel::ContentType contentType() const /*throw()*/;
+			const text::IdentifierSyntax& identifierSyntax() const /*throw()*/;
 			// IContentAssistProcessor
 			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
 				kernel::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const;
 			virtual const ICompletionProposal* getActiveCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const throw();
-			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const throw();
+				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/;
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/;
 			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
 				const kernel::Region& replacementRegion, ICompletionProposal* const currentProposals[],
 				std::size_t numberOfCurrentProposals, std::set<ICompletionProposal*>& newProposals) const;
@@ -187,25 +187,25 @@ namespace ascension {
 				/// Completes and closes. Returns true if the completion was succeeded.
 				virtual bool complete() = 0;
 				/// Returns true if the list has a selection.
-				virtual bool hasSelection() const throw() = 0;
+				virtual bool hasSelection() const /*throw()*/ = 0;
 				/// Selects the proposal in the next/previous page.
 				virtual void nextPage(int pages) = 0;
 				/// Selects the next/previous proposal.
 				virtual void nextProposal(int proposals) = 0;
 			protected:
 				/// Destructor.
-				virtual ~ICompletionProposalsUI() throw() {}
+				virtual ~ICompletionProposalsUI() /*throw()*/ {}
 			};
 			/// Destructor.
-			virtual ~IContentAssistant() throw() {}
+			virtual ~IContentAssistant() /*throw()*/ {}
 			/// Returns the user interface of the completion proposal list or @c null.
-			virtual ICompletionProposalsUI* getCompletionProposalsUI() const throw() = 0;
+			virtual ICompletionProposalsUI* getCompletionProposalsUI() const /*throw()*/ = 0;
 			/**
 			 * Returns the content assist processor to be used for the specified content type.
 			 * @param contentType the content type
 			 * @return the content assist processor or @c null if none corresponds to @a contentType
 			 */
-			virtual const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const throw() = 0;
+			virtual const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const /*throw()*/ = 0;
 			/// Shows all possible completions on the current context.
 			virtual void showPossibleCompletions() = 0;
 		protected:
@@ -220,19 +220,15 @@ namespace ascension {
 		 * Default implementation of @c IContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class ContentAssistant :
-			virtual public IContentAssistant,
-			virtual public kernel::IDocumentListener,
-			virtual public viewers::ICaretListener,
-			virtual public viewers::ICharacterInputListener,
-			virtual public viewers::IViewportListener,
-			virtual private IContentAssistant::ICompletionProposalsUI {
+		class ContentAssistant : public IContentAssistant, public kernel::IDocumentListener,
+			public viewers::ICaretListener, public viewers::ICharacterInputListener,
+			public viewers::IViewportListener, private IContentAssistant::ICompletionProposalsUI {
 		public:
 			// constructors
-			ContentAssistant() throw();
-			~ContentAssistant() throw();
+			ContentAssistant() /*throw()*/;
+			~ContentAssistant() /*throw()*/;
 			// attributes
-			ulong autoActivationDelay() const throw();
+			ulong autoActivationDelay() const /*throw()*/;
 			void enablePrefixCompletion(bool enable);
 			void setAutoActivationDelay(ulong milliseconds);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::auto_ptr<IContentAssistProcessor> processor);
@@ -240,15 +236,15 @@ namespace ascension {
 			void showPossibleCompletions();
 		private:
 			void startPopup();
-			static void CALLBACK timeElapsed(::HWND, ::UINT, ::UINT_PTR eventID, ::DWORD);
+			static void CALLBACK timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD);
 			void updatePopupPositions();
 			// IContentAssistant
-			ICompletionProposalsUI* getCompletionProposalsUI() const throw();
-			const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const throw();
+			IContentAssistant::ICompletionProposalsUI* getCompletionProposalsUI() const /*throw()*/;
+			const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const /*throw()*/;
 			void install(viewers::TextViewer& viewer);
 			void uninstall();
 			// kernel.IDocumentListener
-			bool documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// viewers.ICaretListener
 			void caretMoved(const viewers::Caret& self, const kernel::Region& oldRegion);
@@ -259,7 +255,7 @@ namespace ascension {
 			// IContentAssistant.ICompletionProposalsUI
 			void close();
 			bool complete();
-			bool hasSelection() const throw();
+			bool hasSelection() const /*throw()*/;
 			void nextPage(int pages);
 			void nextProposal(int proposals);
 		private:
@@ -268,15 +264,15 @@ namespace ascension {
 			class CompletionProposalPopup;
 			CompletionProposalPopup* proposalPopup_;
 			ulong autoActivationDelay_;
-			static std::map<::UINT_PTR, ContentAssistant*> timerIDs_;
+			static std::map<UINT_PTR, ContentAssistant*> timerIDs_;
 			struct CompletionSession {
 				const IContentAssistProcessor* processor;
 				bool incremental;
 				kernel::Region replacementRegion;
 				manah::AutoBuffer<ICompletionProposal*> proposals;
 				std::size_t numberOfProposals;
-				CompletionSession() throw() : processor(0), numberOfProposals(0) {}
-				~CompletionSession() throw() {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}
+				CompletionSession() /*throw()*/ : processor(0), numberOfProposals(0) {}
+				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}
 			};
 			std::auto_ptr<CompletionSession> completionSession_;
 		};

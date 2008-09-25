@@ -1,5 +1,5 @@
 // timer.hpp
-// (c) 2003-2007 exeal
+// (c) 2003-2008 exeal
 
 #ifndef MANAH_TIMER_HPP
 #define MANAH_TIMER_HPP
@@ -9,9 +9,8 @@ namespace manah {
 namespace win32 {
 
 class Timer {
-	// コンストラクタ
 public:
-	Timer(const ::WCHAR* name = 0) : name_((name != 0) ? new ::WCHAR[std::wcslen(name) + 1] : 0) {
+	Timer(const WCHAR* name = 0) : name_((name != 0) ? new WCHAR[std::wcslen(name) + 1] : 0) {
 		if(name_ != 0)
 			std::wcscpy(name_, name);
 		reset();
@@ -26,17 +25,15 @@ public:
 		delete[] name_;
 	}
 
-	// メソッド
 public:
-	::DWORD read() const throw() {return ::GetTickCount() - count_;}
+	DWORD read() const throw() {return ::GetTickCount() - count_;}
 	void reset() throw() {count_ = ::GetTickCount();}
 
-	// データメンバ
 private:
-	::WCHAR* name_;	// timer's name
-	::DWORD count_;
+	WCHAR* name_;	// timer's name
+	DWORD count_;
 };
 
 }} // namespace manah.win32
 
-#endif	/* !MANAH_TIMER_HPP */
+#endif	// !MANAH_TIMER_HPP

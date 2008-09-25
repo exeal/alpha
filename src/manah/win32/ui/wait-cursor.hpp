@@ -1,5 +1,5 @@
 // wait-cursor.hpp
-// (C) 2003-2007 exeal
+// (C) 2003-2008 exeal
 
 #ifndef MANAH_WAIT_CURSOR_HPP
 #define MANAH_WAIT_CURSOR_HPP
@@ -10,13 +10,13 @@ namespace manah {
 		namespace ui {
 			class WaitCursor {
 			public:
-				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursorW(0, IDC_WAIT));}
+				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursorW(0, MAKEINTRESOURCEW(32514)));}
 				virtual ~WaitCursor() throw() {::SetCursor(originalCursor_);}
 			private:
-				::HCURSOR	originalCursor_;
+				HCURSOR originalCursor_;
 			};
 		}
 	}
 } // namespace manah.win32.ui
 
-#endif /* !MANAH_WAIT_CURSOR_HPP */
+#endif // !MANAH_WAIT_CURSOR_HPP
