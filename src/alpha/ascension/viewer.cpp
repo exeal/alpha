@@ -1854,13 +1854,16 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				text[len] = 0;
 				if(!imeComposingCharacter_)
 					texteditor::commands::TextInputCommand(*this, text.get()).execute();
-				else if(document().beginCompoundChange()) {
-					document().erase(*caret_,
-						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(document(), caret()).next()).tell());
-					document().insert(*caret_, String(1, static_cast<Char>(wParam)));
-					document().endCompoundChange();
-					imeComposingCharacter_ = false;
-					recreateCaret();
+				else {
+					Document& doc = document();
+					doc.insertUndoBoundary();
+					if(doc.erase(*caret_, static_cast<DocumentCharacterIterator&>(
+							DocumentCharacterIterator(doc, caret()).next()).tell())) {
+						doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
+						doc.insertUndoBoundary();
+						imeComposingCharacter_ = false;
+						recreateCaret();
+					}
 				}
 			}
 //			updateIMECompositionWindowPosition();
@@ -1873,9 +1876,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 			if(imeComposingCharacter_)
 				doc.erase(*caret_,
 					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell());
-			else
-				doc.beginCompoundChange();			
-			doc.insert(*caret_, String(1, static_cast<Char>(wParam)));	
+			doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
 			imeComposingCharacter_ = true;
 			handled = true;
 			if(toBoolean(lParam & CS_NOMOVECARET))
@@ -3941,8 +3942,9 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, DWORD keyState
 		if(ca.isPointOverSelection(caretPoint)) {
 			ca.moveTo(destination);
 			dnd_.state = DragAndDrop::INACTIVE;
-		} else if(document.beginCompoundChange()) {
+		} else {
 			const bool rectangle = ca.isSelectionRectangle();
+			document.insertUndoBoundary();
 			viewer_->freeze();
 			if(toBoolean(keyState & MK_CONTROL)) {	// copy
 //				viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
@@ -3958,30 +3960,32 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, DWORD keyState
 			} else if(rectangle) {	// move as a rectangle
 				kernel::Point p(document);
 				p.moveTo(destination);
-				ca.eraseSelection();
-				p.adaptToDocument(false);
-				ca.enableAutoShow(false);
-				ca.extendSelection(p);
-				ca.insertRectangle(text);
-				ca.enableAutoShow(true);
-				ca.select(p, ca);
-				*effect = DROPEFFECT_MOVE;
+				if(ca.eraseSelection()) {
+					p.adaptToDocument(false);
+					ca.enableAutoShow(false);
+					ca.extendSelection(p);
+					ca.insertRectangle(text);
+					ca.enableAutoShow(true);
+					ca.select(p, ca);
+					*effect = DROPEFFECT_MOVE;
+				}
 			} else {	// move as linear
 				VisualPoint activePointOrg(*viewer_);
 				const Position anchorPointOrg = ca.anchor();
 				activePointOrg.moveTo(ca);
 				ca.enableAutoShow(false);
 				ca.moveTo(destination);
-				document.erase(anchorPointOrg, activePointOrg);
-				const Position temp = ca;
-				ca.endRectangleSelection();
-				ca.insert(text);
-				ca.enableAutoShow(true);
-				ca.select(temp, ca);
-				*effect = DROPEFFECT_MOVE;
+				if(document.erase(anchorPointOrg, activePointOrg)) {
+					const Position temp = ca;
+					ca.endRectangleSelection();
+					ca.insert(text);
+					ca.enableAutoShow(true);
+					ca.select(temp, ca);
+					*effect = DROPEFFECT_MOVE;
+				}
 			}
 			viewer_->unfreeze();
-			document.endCompoundChange();
+			document.insertUndoBoundary();
 		}
 	}
 	return S_OK;

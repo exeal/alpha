@@ -217,7 +217,7 @@ namespace ascension {
 			// attributes : the anchor and the caret
 			const VisualPoint& anchor() const /*throw()*/;
 			const VisualPoint& beginning() const /*throw()*/;
-			void enableAutoShow(bool enable = true) /*throw()*/;
+			Caret& enableAutoShow(bool enable = true) /*throw()*/;
 			const VisualPoint& end() const /*throw()*/;
 			bool isAutoShowEnabled() const /*throw()*/;
 			// attributes : selection
@@ -232,14 +232,14 @@ namespace ascension {
 			String selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
 			// attributes : character input
 			bool isOvertypeMode() const /*throw()*/;
-			void setOvertypeMode(bool overtype) /*throw()*/;
+			Caret& setOvertypeMode(bool overtype) /*throw()*/;
 			// attributes : clipboard
 			LCID clipboardLocale() const /*throw()*/;
 			LCID setClipboardLocale(LCID newLocale);
 			// attributes : matched braces
 			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const /*throw()*/;
 			MatchBracketsTrackingMode matchBracketsTrackingMode() const /*throw()*/;
-			void trackMatchBrackets(MatchBracketsTrackingMode mode);
+			Caret& trackMatchBrackets(MatchBracketsTrackingMode mode);
 			// selection manipulations
 			void beginRectangleSelection();
 			void clearSelection();
@@ -299,8 +299,8 @@ namespace ascension {
 			VirtualBox* box_;		// for rectangular selection. null when the selection is linear
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			bool overtypeMode_;
-			bool editingByThis_;				// true if this instance is editing
-			bool othersEditedFromLastInputChar_;	// このインスタンスが文字を入力して以降他の編集操作が行われたか?
+			bool callingDocumentInsertForTyping_;	// true during call Document.insert in inputCharacter
+			kernel::Position lastTypedPosition_;	// the position the caret input character previously or INVALID_POSITION
 			kernel::Region regionBeforeMoved_;
 			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
 		};
@@ -341,9 +341,10 @@ namespace ascension {
 		/**
 		 * Sets the new auto-show mode.
 		 * @param enable set true to enable the mode
+		 * @return this caret
 		 * @see #isAutoShowEnabled
 		 */
-		inline void Caret::enableAutoShow(bool enable /* = true */) /*throw()*/ {autoShow_ = enable;}
+		inline Caret& Caret::enableAutoShow(bool enable /* = true */) /*throw()*/ {autoShow_ = enable; return *this;}
 		/// Returns the neighborhood to the end of the document among the anchor and this point.
 		inline const VisualPoint& Caret::end() const /*throw()*/ {
 			return std::max(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));}
@@ -378,9 +379,10 @@ namespace ascension {
 		/**
 		 * Tracks the match bracket.
 		 * @param mode the tracking mode
+		 * @return this caret
 		 */
-		inline void Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
-			if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();}}
+		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
+			if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();} return *this;}
 
 	} // namespace viewers
 } // namespace ascension

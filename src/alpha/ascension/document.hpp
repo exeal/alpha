@@ -288,7 +288,7 @@ namespace ascension {
 			virtual void documentReadOnlySignChanged(const Document& document) = 0;
 			friend class Document;
 		};
-
+#if 0
 		/**
 		 * Interface for objects which are interested in getting informed about changes of a
 		 * document's compound change.
@@ -308,7 +308,7 @@ namespace ascension {
 			virtual void documentCompoundChangeStopped(const Document& document) = 0;
 			friend class Document;
 		};
-
+#endif
 		/**
 		 * Interface for objects which are interested in getting informed about undo/redo operation
 		 * invocation of document.
@@ -528,13 +528,13 @@ namespace ascension {
 			// reconstruct
 			virtual void resetContent();
 			// listeners and strategies
-			void addCompoundChangeListener(ICompoundChangeListener& listener);
+//			void addCompoundChangeListener(ICompoundChangeListener& listener);
 			void addListener(IDocumentListener& listener);
 			void addPartitioningListener(IDocumentPartitioningListener& listener);
 			void addPrenotifiedListener(IDocumentListener& listener);
 			void addRollbackListener(IDocumentRollbackListener& listener);
 			void addStateListener(IDocumentStateListener& listener);
-			void removeCompoundChangeListener(ICompoundChangeListener& listener);
+//			void removeCompoundChangeListener(ICompoundChangeListener& listener);
 			void removeListener(IDocumentListener& listener);
 			void removePartitioningListener(IDocumentPartitioningListener& listener);
 			void removePrenotifiedListener(IDocumentListener& listener);
@@ -575,18 +575,18 @@ namespace ascension {
 			bool insert(const Position& at, const Char* first, const Char* last, Position* eos = 0);
 			bool insert(const Position& at, std::basic_istream<Char>& in, Position* eos = 0);
 			bool isChanging() const /*throw()*/;
-			// undo/redo
+			// undo/redo & compound changes
+			void beginCompoundChange();
 			void clearUndoBuffer() /*throw()*/;
+			void endCompoundChange();
+			void insertUndoBoundary();
+			bool isCompoundChanging() const /*throw()*/;
 			bool isRecordingChanges() const /*throw()*/;
 			std::size_t numberOfUndoableChanges() const /*throw()*/;
 			std::size_t numberOfRedoableChanges() const /*throw()*/;
 			void recordChanges(bool record) /*throw()*/;
 			bool redo();
 			bool undo();
-			// compound change
-			bool beginCompoundChange();
-			void endCompoundChange();
-			bool isCompoundChanging() const /*throw()*/;
 			// narrowing
 			bool isNarrowed() const /*throw()*/;
 			void narrow(const Region& region) /*throw()*/;
@@ -654,7 +654,7 @@ namespace ascension {
 
 			std::list<IDocumentListener*> listeners_, prenotifiedListeners_;
 			ascension::internal::Listeners<IDocumentStateListener> stateListeners_;
-			ascension::internal::Listeners<ICompoundChangeListener> compoundChangeListeners_;
+//			ascension::internal::Listeners<ICompoundChangeListener> compoundChangeListeners_;
 			ascension::internal::Listeners<IDocumentRollbackListener> rollbackListeners_;
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
