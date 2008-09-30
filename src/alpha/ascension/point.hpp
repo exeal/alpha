@@ -147,8 +147,8 @@ namespace ascension {
 			Position forwardWordEnd(length_t words = 1) const;
 //			void moveToAbsoluteCharacterOffset(length_t offset);
 			// text manipulations
-			bool destructiveInsert(const String& text);
-			bool destructiveInsert(const Char* first, const Char* last);
+			bool destructiveInsert(const String& text, bool keepNewline = true);
+			bool destructiveInsert(const Char* first, const Char* last, bool keepNewline = true);
 			bool erase(signed_length_t length = 1, CharacterUnit cu = DEFAULT_UNIT);
 			bool insert(const String& text);
 			bool insert(const Char* first, const Char* last);
@@ -251,10 +251,12 @@ namespace ascension {
 		/**
 		 * Deletes the current character and inserts the specified text.
 		 * @param text the text to be inserted
+		 * @param keepNewline set false to overwrite a newline characer
 		 * @return false if the change was interrupted
 		 * @throw ReadOnlyDocumentException the document is read-only
 		 */
-		inline bool EditPoint::destructiveInsert(const String& text) {return destructiveInsert(text.data(), text.data() + text.length());}
+		inline bool EditPoint::destructiveInsert(const String& text, bool keepNewline /* = true */) {
+			return destructiveInsert(text.data(), text.data() + text.length(), keepNewline);}
 		/// Returns the listener.
 		inline IPointListener* EditPoint::getListener() const /*throw()*/ {return const_cast<EditPoint*>(this)->listener_;}
 		inline const text::IdentifierSyntax& EditPoint::identifierSyntax() const {

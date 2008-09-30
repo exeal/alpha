@@ -333,33 +333,33 @@ ulong CharacterDeletionCommand::doExecute() {
 					isearch->undo();
 			}
 		}
-	} else if(n == 1 && !caret.isSelectionEmpty())
-		return caret.eraseSelection() ? 0 : 1;
-	else {
-		const bool composite = !caret.isSelectionEmpty() || n > 1;
-		if(composite) {
-			viewer.freeze();
-			document.beginCompoundChange();
-		}
+	} else {
+		bool succeeded;
+		document.insertUndoBoundary();
+		if(n == 1 && !caret.isSelectionEmpty())
+			succeeded = caret.eraseSelection();
+		else {
+			const bool frozen = !caret.isSelectionEmpty() || n > 1;
+			if(frozen)
+				viewer.freeze();
 
-		try {
-			// first of all, delete the selected text
-			if(!caret.isSelectionEmpty()) {
-				caret.eraseSelection();
-				--n;
+			try {
+				// first of all, delete the selected text
+				if(!caret.isSelectionEmpty()) {
+					caret.eraseSelection();
+					--n;
+				}
+				if(n > 0) {
+					if(forward)
+						caret.erase(n, EditPoint::GRAPHEME_CLUSTER);
+					else
+						caret.erase(-1, EditPoint::UTF32_CODE_UNIT);
+				}
+			} catch(...) {
 			}
-			if(n > 0) {
-				if(forward)
-					caret.erase(n, EditPoint::GRAPHEME_CLUSTER);
-				else
-					caret.erase(-1, EditPoint::UTF32_CODE_UNIT);
-			}
-		} catch(...) {
-		}
 
-		if(composite) {
-			document.endCompoundChange();
-			viewer.unfreeze();
+			if(frozen)
+				viewer.unfreeze();
 		}
 	}
 	return 0;
@@ -716,10 +716,10 @@ ulong IndentationCommand::doExecute() {
 
 	TextViewer& viewer = target();
 	Caret& caret = viewer.caret();
-	viewer.document().beginCompoundChange();
+	viewer.document().insertUndoBoundary();
 	viewer.freeze();
 	const Position anchorResult(caret.tabIndent(caret.anchor(), caret.isSelectionRectangle(), n));
-	viewer.document().endCompoundChange();
+	viewer.document().insertUndoBoundary();
 	caret.select(anchorResult, caret);
 	viewer.unfreeze();
 
@@ -852,11 +852,11 @@ ulong NewlineCommand::doExecute() {
 	}
 
 	viewer.freeze();
-	viewer.document().beginCompoundChange();
+	viewer.document().insertUndoBoundary();
 	if(!caret.isSelectionEmpty())
 		caret.eraseSelection();
 	caret.newLine(false, numericPrefix());
-	viewer.document().endCompoundChange();
+	viewer.document().insertUndoBoundary();
 	caret.moveTo(caret.anchor());
 	viewer.unfreeze();
 	return 0;
@@ -1170,9 +1170,9 @@ ulong TranspositionCommand::doExecute() {
 	TextViewer& viewer = target();
 	Caret& caret = viewer.caret();
 	viewer.freeze();
-	viewer.document().beginCompoundChange();
+	viewer.document().insertUndoBoundary();
 	const bool succeeded = (caret.*procedure_)();
-	viewer.document().endCompoundChange();
+	viewer.document().insertUndoBoundary();
 	viewer.unfreeze();
 
 	if(succeeded) {
@@ -1250,10 +1250,10 @@ ulong WordDeletionCommand::doExecute() {
 	}
 	if(to.base().tell() != from) {
 		viewer.freeze();
-		document.beginCompoundChange();
+		document.insertUndoBoundary();
 		document.erase(from, to.base().tell());
 		caret.moveTo(min(from, to.base().tell()));
-		document.endCompoundChange();
+		document.insertUndoBoundary();
 		viewer.unfreeze();
 	}
 	return 0;

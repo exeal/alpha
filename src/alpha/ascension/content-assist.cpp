@@ -69,13 +69,14 @@ bool CompletionProposal::isAutoInsertable() const /*throw()*/ {
 
 /// @see ICompletionProposal#replace
 void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
-	if(!document.isReadOnly() && document.beginCompoundChange()) {
+	if(!document.isReadOnly()) {
+		document.insertUndoBoundary();
 		try {
-			document.erase(replacementRegion);
-			document.insert(replacementRegion.beginning(), replacementString_);
+			if(document.erase(replacementRegion))
+				document.insert(replacementRegion.beginning(), replacementString_);
 		} catch(const DocumentAccessViolationException&) {
 		}
-		document.endCompoundChange();
+		document.insertUndoBoundary();
 	}
 }
 
@@ -421,10 +422,12 @@ void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
 				Document& document = textViewer_->document();
-				if(!document.isReadOnly() && document.beginCompoundChange()) {
-					textViewer_->caret().erase(-1, EditPoint::UTF32_CODE_UNIT);
-					document.endCompoundChange();
-					complete();
+				if(!document.isReadOnly()) {
+					document.insertUndoBoundary();
+					if(textViewer_->caret().erase(-1, EditPoint::UTF32_CODE_UNIT)) {
+						document.insertUndoBoundary();
+						complete();
+					}
 				}
 			}
 		} else {
@@ -465,9 +468,9 @@ bool ContentAssistant::complete() {
 				auto_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
 				Document& document = textViewer_->document();
 				if(!document.isReadOnly()) {
-					document.beginCompoundChange();
+					document.insertUndoBoundary();
 					p->replace(document, temp->replacementRegion);
-					document.endCompoundChange();
+					document.insertUndoBoundary();
 				}
 				completionSession_ = temp;
 				close();

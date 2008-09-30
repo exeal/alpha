@@ -1028,8 +1028,8 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) /*throw()*/ : VisualPoint(viewer, position, 0),
 		anchor_(new SelectionAnchor(viewer)), clipboardLocale_(::GetUserDefaultLCID()),
 		yanking_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
-		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), editingByThis_(false),
-		othersEditedFromLastInputChar_(false), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
+		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), callingDocumentInsertForTyping_(false),
+		lastTypedPosition_(Position::INVALID_POSITION), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
 	document()->addListener(*this);
 }
@@ -1266,11 +1266,15 @@ bool Caret::cutSelection(bool useKillRing) {
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
 void Caret::documentAboutToBeChanged(const Document&, const DocumentChange&) {
-	// do nothing
+	if(lastTypedPosition_ != Position::INVALID_POSITION && !callingDocumentInsertForTyping_) {
+		document()->insertUndoBoundary();
+		lastTypedPosition_ = Position::INVALID_POSITION;
+	}
 }
 
 /// @see kernel#IDocumentListener#documentChanged
 void Caret::documentChanged(const Document&, const DocumentChange&) {
+	yanking_ = false;
 	if(regionBeforeMoved_.first != Position::INVALID_POSITION)
 		updateVisualAttributes();
 }
@@ -1279,8 +1283,6 @@ void Caret::documentChanged(const Document&, const DocumentChange&) {
 void Caret::doMoveTo(const Position& to) {
 	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
 		anchor_->positionBeforeInternalUpdate() : anchor_->position(), position());
-	if(!editingByThis_)
-		othersEditedFromLastInputChar_ = true;
 	if(leaveAnchorNext_)
 		leaveAnchorNext_ = false;
 	else {
@@ -1307,7 +1309,7 @@ void Caret::endRectangleSelection() {
 }
 
 /**
- * Deletes the selected text.
+ * Deletes the selected text. This method ends the rectangle selection mode.
  * @return false if the change was interrupted
  * @throw ReadOnlyDocumentException the document is read only
  */
@@ -1324,12 +1326,15 @@ bool Caret::eraseSelection() {
 			return false;
 		moveTo(to);
 		return true;
-	} else if(doc.beginCompoundChange()) {	// the selection is rectangle
+	} else {	// the selection is rectangle
 		const Position resultPosition(beginning());
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
 		const length_t firstLine = beginning().lineNumber(), lastLine = end().lineNumber();
-		pair<length_t, length_t> rangeInLine;;
+		pair<length_t, length_t> rangeInLine;
+		bool interrupted = false;
+
+		// rectangle deletion can't delete newline characters
 
 		textViewer().freeze();
 		if(textViewer().configuration().lineWrap.wraps()) {	// ...and the lines are wrapped
@@ -1349,24 +1354,32 @@ bool Caret::eraseSelection() {
 			}
 			const size_t sublines = points.size();
 			for(size_t i = 0; i < sublines; ++i) {
-				doc.erase(Position(points[i]->lineNumber(), points[i]->columnNumber()),
-					Position(points[i]->lineNumber(), points[i]->columnNumber() + sizes[i]));
+				if(!interrupted) {
+					const bool temp = !doc.erase(Position(points[i]->lineNumber(), points[i]->columnNumber()),
+						Position(points[i]->lineNumber(), points[i]->columnNumber() + sizes[i]));
+					if(i == 0 && !temp)
+						interrupted = true;
+				}
 				delete points[i];
 			}
 		} else {
 			for(length_t line = resultPosition.line; line <= lastLine; ++line) {
 				box_->overlappedSubline(line, 0, rangeInLine.first, rangeInLine.second);
-				doc.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
+				const bool temp = doc.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
+				if(line == resultPosition.line && !temp) {
+					interrupted = true;
+					break;
+				}
 			}
 		}
 		textViewer().unfreeze();
-
-		endRectangleSelection();
 		adaptToDocument(adapts);
-		moveTo(resultPosition);
-		return true;
-	} else
-		return false;
+		if(!interrupted) {
+			endRectangleSelection();
+			moveTo(resultPosition);
+		}
+		return !interrupted;
+	}
 }
 
 /**
@@ -1381,9 +1394,21 @@ void Caret::extendSelection(const Position& to) {
 }
 
 /**
+ * Moves to the specified position without the anchor adapting.
+ * @param to the destination position
+ */
+void Caret::extendSelection(const VerticalDestinationProxy& to) {
+	verifyViewer();
+	leaveAnchorNext_ = true;
+	moveTo(to);
+	leaveAnchorNext_ = false;
+}
+
+/**
  * Inputs the specified character at current position.
- * If the selection is not empty, replaces the selected region.
- * Otherwise if in overtype mode, replaces a character at current position.
+ * <p>If the selection is not empty, replaces the selected region. Otherwise if in overtype mode,
+ * replaces a character at current position (but this does not erase newline character).</p>
+ * <p>This method may insert undo boundaries for compound typing.</p>
  * @param cp the code point of the character to be input
  * @param validateSequence true to perform input sequence check using the active ISC
  * @param blockControls true to refuse any ASCII control characters except HT (U+0009), RS (U+001E)
@@ -1418,33 +1443,32 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 	bool interrupted;
 	Char buffer[2];
 	surrogates::encode(cp, buffer);
-	if(!isSelectionEmpty())	// just replace if the selection is not empty
-		interrupted = !replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
-	else if(overtypeMode_) {
-		if(!doc.isCompoundChanging())
-			doc.beginCompoundChange();
+	if(!isSelectionEmpty()) {	// just replace if the selection is not empty
+		doc.insertUndoBoundary();
+		if(!(interrupted = !replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2))))
+			doc.insertUndoBoundary();
+	} else if(overtypeMode_) {
 		textViewer().freeze(true);
-		interrupted = !destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
+		doc.insertUndoBoundary();
+		if(!(interrupted = !destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2))))
+			doc.insertUndoBoundary();
 		textViewer().unfreeze(true);
 	} else {
-		const IdentifierSyntax& ctypes = identifierSyntax();
-		const bool alpha = ctypes.isIdentifierContinueCharacter(cp);
-
-//		// exit the completion mode if the character is not ID_Start or ID_Continue
-//		if(!alpha && completionWindow_.isRunning())
-//			completionWindow_.complete();
-
-		// prepare a packing the following multiple inputs
-		if(othersEditedFromLastInputChar_ || !alpha)
-			doc.endCompoundChange();
-		if(alpha && !doc.isCompoundChanging()) {
-			doc.beginCompoundChange();
-			othersEditedFromLastInputChar_ = false;
+		const bool alpha = identifierSyntax().isIdentifierContinueCharacter(cp);
+		if(lastTypedPosition_ != Position::INVALID_POSITION && (!alpha || lastTypedPosition_ != position())) {
+			// end sequential typing
+			doc.insertUndoBoundary();
+			lastTypedPosition_ = Position::INVALID_POSITION;
 		}
+		if(alpha && lastTypedPosition_ == Position::INVALID_POSITION)
+			// (re)start sequential typing
+			doc.insertUndoBoundary();
 
-		editingByThis_ = true;
+		callingDocumentInsertForTyping_ = true;
 		interrupted = !insert(buffer, buffer + ((cp < 0x10000) ? 1 : 2));
-		editingByThis_ = false;
+		callingDocumentInsertForTyping_ = false;
+		if(!interrupted && alpha)
+			lastTypedPosition_ = position();
 	}
 
 	if(interrupted)
@@ -1478,6 +1502,7 @@ bool Caret::isPointOverSelection(const POINT& pt) const {
 
 /**
  * Replaces the selected text by the content of the clipboard.
+ * This method inserts undo boundaries at the beginning and the end.
  * @param useKillRing true to use the kill ring
  * @return false if the change was interrupted
  * @throw ClipboardException the clipboard operation failed
@@ -1493,12 +1518,18 @@ bool Caret::pasteToSelection(bool useKillRing) {
 	if(useKillRing && (session == 0 || session->killRing().numberOfKills() == 0))
 		return true;
 
-	document()->beginCompoundChange();
 	textViewer().freeze(true);
+	document()->insertUndoBoundary();
+	bool failed = true;
 	if(!useKillRing) {
-		if(!isSelectionEmpty())
-			eraseSelection();
-		return paste();	// TODO: this may throw.
+		if(!(failed = !eraseSelection())) {	// if there is no selection, this does nothing
+			try {
+				failed = !paste();	// TODO: if threw, deleted content is lost.
+			} catch(ClipboardException&) {
+				textViewer().unfreeze(true);
+				throw;
+			}
+		}
 	} else {
 		texteditor::KillRing& killRing = session->killRing();
 		const pair<String, bool>& text = yanking_ ? killRing.setCurrent(+1) : killRing.get();
@@ -1506,22 +1537,24 @@ bool Caret::pasteToSelection(bool useKillRing) {
 		if(!isSelectionEmpty()) {
 			if(yanking_)
 				document()->undo();
-			eraseSelection();
+			failed = !eraseSelection();
 		}
-		const Position p(position());
-		if(!text.second) {
-			insert(text.first);
-			endRectangleSelection();
-		} else {
-			insertRectangle(text.first);
-			beginRectangleSelection();
+		if(!failed) {
+			const Position p(position());
+			if(!text.second) {
+				if(!(failed = !insert(text.first)))
+					endRectangleSelection();
+			} else {
+				if(!(failed = !insertRectangle(text.first)))
+					beginRectangleSelection();
+			}
+			select(p, position());
+			yanking_ = true;
 		}
-		select(p, position());
-		yanking_ = true;
 	}
-	document()->endCompoundChange();
+	document()->insertUndoBoundary();
 	textViewer().unfreeze(true);
-	return true;
+	return !failed;
 }
 
 /// @see IPointListener#pointMoved
@@ -1583,23 +1616,18 @@ bool Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	if(!document()->beginCompoundChange())
-		return false;
 	const Region oldRegion(selectionRegion());
 	textViewer().freeze(true);
-	if(!isSelectionEmpty()) {
-		const bool succeeded = eraseSelection();
-		assert(succeeded);
-	} else if(isSelectionRectangle())
-		endRectangleSelection();
-	// TODO: insert and insertRectangle may throw and breaks strong guarentee for exception^safety.
-	if(rectangleInsertion)
-		insertRectangle(first, last);
-	else
-		insert(first, last);
+	const bool interrupted = !eraseSelection();
+	if(!interrupted) {
+		// TODO: insert and insertRectangle may throw and breaks strong guarentee for exception^safety.
+		if(rectangleInsertion)
+			insertRectangle(first, last);
+		else
+			insert(first, last);
+	}
 	textViewer().unfreeze(true);
-	document()->endCompoundChange();
-	return true;
+	return !interrupted;
 }
 
 /**
@@ -1736,13 +1764,15 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
 /**
  * Sets character input mode.
  * @param overtype true to set to overtype mode, false to set to insert mode
+ * @return this caret
  * @see #inputCharacter, #isOvertypeMode
  */
-void Caret::setOvertypeMode(bool overtype) /*throw()*/ {
+Caret& Caret::setOvertypeMode(bool overtype) /*throw()*/ {
 	if(overtype != overtypeMode_) {
 		overtypeMode_ = overtype;
 		stateListeners_.notify<const Caret&>(&ICaretStateListener::overtypeModeChanged, *this);
 	}
+	return *this;
 }
 
 /// @see Point#update

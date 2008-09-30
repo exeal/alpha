@@ -279,11 +279,12 @@ CodePoint EditPoint::character(bool useLineFeed /* = false */) const {
  * Deletes the current character and inserts the specified text.
  * @param first the start of the text
  * @param last the end of the text
+ * @param keepNewline set false to overwrite a newline characer
  * @throw ReadOnlyDocumentException the document is read only
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; @a last
  */
-bool EditPoint::destructiveInsert(const Char* first, const Char* last) {
+bool EditPoint::destructiveInsert(const Char* first, const Char* last, bool keepNewline /* = true */) {
 	verifyDocument();
 	if(document()->isReadOnly())
 		throw ReadOnlyDocumentException();
@@ -293,17 +294,18 @@ bool EditPoint::destructiveInsert(const Char* first, const Char* last) {
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
-	else if(!document()->beginCompoundChange())
-		return false;
-	Position next(offsetCharacterPosition(Direction::FORWARD));
+
 	const bool adapts = adaptsToDocument();
 	adaptToDocument(false);
-	document()->erase(Region(*this, next));
-	document()->insert(*this, first, last, &next);
-	moveTo(next);
+
+	Position e((keepNewline && isEndOfLine()) ? position() : forwardCharacter());
+	const bool interrupted = (e != position()) ? !document()->erase(Region(position(), e)) : false;
+	if(!interrupted) {
+		document()->insert(*this, first, last, &e);
+		moveTo(e);
+	}
 	adaptToDocument(adapts);
-	document()->endCompoundChange();
-	return true;
+	return !interrupted;
 }
 
 /**
