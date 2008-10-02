@@ -403,8 +403,9 @@ namespace {
 		vector<IAtomicChange*> changes_;
 	};
 
-	const IAtomicChange::TypeTag InsertionChange::type_;
-	const IAtomicChange::TypeTag DeletionChange::type_;
+	// static members initialization (inherent parens? see "Exceptional C++ Style" item 29)
+	const IAtomicChange::TypeTag InsertionChange::type_((IAtomicChange::TypeTag()));
+	const IAtomicChange::TypeTag DeletionChange::type_((IAtomicChange::TypeTag()));
 
 	inline void InsertionChange::perform(Document& document, Result& result) {
 		result.numberOfRevisions = (result.completed = document.insert(position_, text_, &result.endOfChange)) ? 1 : 0;

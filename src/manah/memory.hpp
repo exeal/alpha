@@ -116,7 +116,7 @@ namespace manah {
 
 	template<typename T> /* final */ class FastArenaObject {
 	public:
-		static void* operator new(std::size_t bytes) {
+		static void* operator new(std::size_t bytes) /*throw(std::bad_alloc)*/ {
 			if(pool_.get() == 0) {
 				pool_.reset(new(std::nothrow) MemoryPool(std::max(sizeof(T), bytes)));
 				if(pool_.get() == 0)
@@ -131,6 +131,7 @@ namespace manah {
 				pool_.reset(new(std::nothrow) MemoryPool(sizeof(T)));
 			return (pool_.get() != 0) ? pool_->allocate() : 0;
 		}
+		static void* operator new(std::size_t bytes, void* p) /*throw()*/ {return ::operator new(bytes, p);}
 		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != 0) pool_->deallocate(p);}
 	private:
 		static std::auto_ptr<MemoryPool> pool_;

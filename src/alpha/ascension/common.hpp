@@ -40,6 +40,13 @@
 #	define ASCENSION_FASTCALL
 #endif // __i386__
 
+#ifndef _GLIBCXX_USE_WCHAR_T
+#	define _GLIBCXX_USE_WCHAR_T 1
+#endif
+#ifndef _GLIBCXX_USE_WSTRING
+#	define _GLIBCXX_USE_WSTRING 1
+#endif
+
 /**
  * @def ASCENSION_NOFAIL The method which has this tag guarentees "no-fail".
  * On debug releaese, this symbol is replaced with "throw()" empty exception-specification.
@@ -56,6 +63,7 @@
 
 #include "../../manah/object.hpp"
 #include "config.hpp"
+#include <new>
 #include <string>	// std.basic_string
 #include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
 #include <iterator>
