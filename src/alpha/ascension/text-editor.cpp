@@ -33,6 +33,13 @@ Command::Command(TextViewer& viewer) /*throw()*/ : viewer_(&viewer), numericPref
 Command::~Command() /*throw()*/ {
 }
 
+/// Performs the command and returns the command-specific result value.
+ulong Command::operator()() {
+	const ulong result = perform();
+	numericPrefix_ = 1;
+	return result;
+}
+
 /// Sets beep-on-error mode.
 Command& Command::beepOnError(bool enable /* = true */) /*throw()*/ {
 	beepsOnError_ = enable;
@@ -42,13 +49,6 @@ Command& Command::beepOnError(bool enable /* = true */) /*throw()*/ {
 /// Returns true if the command beeps when error occured.
 bool Command::beepsOnError() const /*throw()*/ {
 	return beepsOnError_;
-}
-
-/// Executes the command and returns the command-specific result value.
-ulong Command::execute() {
-	const ulong result = doExecute();
-	numericPrefix_ = 1;
-	return result;
 }
 
 /// Returns the numeric prefix for the next execution.
@@ -126,10 +126,10 @@ BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return the number of marked lines
  */
-ulong BookmarkMatchLinesCommand::doExecute() {
+ulong BookmarkMatchLinesCommand::perform() {
     if(onlySelection_ && target().caret().isSelectionEmpty())
 		return 0;
 
@@ -170,10 +170,10 @@ CancelCommand::CancelCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return 0
  */
-ulong CancelCommand::doExecute() {
+ulong CancelCommand::perform() {
 	ASSERT_IFISWINDOW();
 	ABORT_MODES();
 	target().caret().clearSelection();
@@ -227,7 +227,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @retval 1 the type is any of @c MATCH_BRACKET, @c NEXT_BOOKMARK, or @c PREVIOUS_BOOKMARK and the next mark not found
  * @retval 0 otherwise
  */
-ulong CaretMovementCommand::doExecute() {
+ulong CaretMovementCommand::perform() {
 	const long n = numericPrefix();
 	END_ISEARCH();
 	if(n == 0)
@@ -300,11 +300,11 @@ CharacterDeletionCommand::CharacterDeletionCommand(TextViewer& viewer,
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong CharacterDeletionCommand::doExecute() {
+ulong CharacterDeletionCommand::perform() {
 	long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -373,11 +373,11 @@ CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(Tex
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong CharacterToCodePointConversionCommand::doExecute() {
+ulong CharacterToCodePointConversionCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 	ABORT_MODES();
 
@@ -420,12 +420,12 @@ CharacterInputCommand::CharacterInputCommand(TextViewer& viewer, CodePoint c) : 
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 1 failed and the incremental search is not active
  * @retval 0 otherwise
  * @see Caret#inputCharacter, TextViewer#onChar, TextViewer#onUniChar
  */
-ulong CharacterInputCommand::doExecute() {
+ulong CharacterInputCommand::perform() {
 	const long n = numericPrefix();
 	if(n <= 0)
 		return 0;
@@ -442,7 +442,7 @@ ulong CharacterInputCommand::doExecute() {
 	} else {
 		String s;
 		text::surrogates::encode(c_, back_inserter(s));
-		return TextInputCommand(target(), s).setNumericPrefix(numericPrefix()).execute();
+		return TextInputCommand(target(), s).setNumericPrefix(numericPrefix())();
 	}
 }
 
@@ -461,7 +461,7 @@ CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong CharacterInputFromNextLineCommand::doExecute() {
+ulong CharacterInputFromNextLineCommand::perform() {
 	ABORT_ISEARCH();
 	CHECK_DOCUMENT_READONLY(1);
 
@@ -483,7 +483,7 @@ ulong CharacterInputFromNextLineCommand::doExecute() {
 		const length_t column = p.columnNumber();
 		const String& line = document.line(caret.lineNumber() + (fromPreviousLine_ ? -1 : 1));
 		if(column < line.length())
-			return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + column, line.end())).execute();
+			return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + column, line.end()))();
 	}
 	if(beepsOnError())
 		target().beep();
@@ -498,11 +498,11 @@ CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(Tex
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong CodePointToCharacterConversionCommand::doExecute() {
+ulong CodePointToCharacterConversionCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 	ABORT_MODES();
 
@@ -568,11 +568,11 @@ CompletionProposalPopupCommand::CompletionProposalPopupCommand(TextViewer& viewe
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong CompletionProposalPopupCommand::doExecute() {
+ulong CompletionProposalPopupCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	ABORT_ISEARCH();
@@ -593,10 +593,10 @@ EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(T
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return 0
  */
-ulong EntireDocumentSelectionCreationCommand::doExecute() {
+ulong EntireDocumentSelectionCreationCommand::perform() {
 	END_ISEARCH();
 	target().caret().endRectangleSelection();
 	target().caret().select(target().document().accessibleRegion());
@@ -612,10 +612,10 @@ FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) /*thro
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return 1 if no text matched or the command failed. otherwise 0
  */
-ulong FindNextCommand::doExecute() {
+ulong FindNextCommand::perform() {
 	long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -665,10 +665,10 @@ IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, Direction dir
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0
  */
-ulong IncrementalFindCommand::doExecute() {
+ulong IncrementalFindCommand::perform() {
 	long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -701,11 +701,11 @@ IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*thro
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong IndentationCommand::doExecute() {
+ulong IndentationCommand::perform() {
 	const long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -734,11 +734,11 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong InputMethodOpenStatusToggleCommand::doExecute() {
+ulong InputMethodOpenStatusToggleCommand::perform() {
 	if(HIMC imc = ::ImmGetContext(target().getHandle())) {
 		const bool succeeded = toBoolean(::ImmSetOpenStatus(imc, !toBoolean(::ImmGetOpenStatus(imc))));
 		::ImmReleaseContext(target().getHandle(), imc);
@@ -755,11 +755,11 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong InputMethodSoftKeyboardModeToggleCommand::doExecute() {
+ulong InputMethodSoftKeyboardModeToggleCommand::perform() {
 	if(HIMC imc = ::ImmGetContext(target().getHandle())) {
 		DWORD conversionMode, sentenceMode;
 		if(toBoolean(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
@@ -782,11 +782,11 @@ MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelectio
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong MatchBracketCommand::doExecute() {
+ulong MatchBracketCommand::perform() {
 	END_ISEARCH();
 	Caret& caret = target().caret();
 	const Position matchBracket(caret.matchBrackets().first);
@@ -814,11 +814,11 @@ NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) /*throw(
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong NewlineCommand::doExecute() {
+ulong NewlineCommand::perform() {
 	if(numericPrefix() <= 0)
 		return 0;
 	TextViewer& viewer = target();
@@ -870,11 +870,11 @@ OvertypeModeToggleCommand::OvertypeModeToggleCommand(TextViewer& viewer) /*throw
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong OvertypeModeToggleCommand::doExecute() {
+ulong OvertypeModeToggleCommand::perform() {
 	Caret& caret = target().caret();
 	caret.setOvertypeMode(!caret.isOvertypeMode());
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
@@ -889,11 +889,11 @@ PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) /*throw()*/ : C
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong PasteCommand::doExecute() {
+ulong PasteCommand::perform() {
 	ASSERT_IFISWINDOW();
 	CHECK_DOCUMENT_READONLY(1);
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
@@ -919,7 +919,7 @@ ReconversionCommand::ReconversionCommand(TextViewer& viewer) /*throw()*/ : Comma
  * @retval 1 the command failed because of the empty or rectangle selection or system error
  * @see viewers#TextViewer#onIMERequest
  */
-ulong ReconversionCommand::doExecute() {
+ulong ReconversionCommand::perform() {
 	END_ISEARCH();
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
@@ -984,7 +984,7 @@ ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
  * Replaces all matched texts. This does not freeze the text viewer.
  * @return the number of replced strings
  */
-ulong ReplaceAllCommand::doExecute() {
+ulong ReplaceAllCommand::perform() {
 	ABORT_MODES();
     if(onlySelection_ && target().caret().isSelectionEmpty())
 		return 0;
@@ -1060,10 +1060,10 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return 0
  */
-ulong RowSelectionExtensionCommand::doExecute() {
+ulong RowSelectionExtensionCommand::perform() {
 	CLOSE_COMPLETION_PROPOSAL_POPUP();
 	END_ISEARCH();
 
@@ -1071,11 +1071,11 @@ ulong RowSelectionExtensionCommand::doExecute() {
 	if(caret.isSelectionEmpty() && !caret.isSelectionRectangle())
 		caret.beginRectangleSelection();
 	if(procedure0_ != 0)
-		return CaretMovementCommand(target(), procedure0_, true).execute();
+		return CaretMovementCommand(target(), procedure0_, true)();
 	else if(procedureV1_ != 0)
-		return CaretMovementCommand(target(), procedure1_, true).execute();
+		return CaretMovementCommand(target(), procedure1_, true)();
 	else
-		return CaretMovementCommand(target(), procedureV1_, true).execute();
+		return CaretMovementCommand(target(), procedureV1_, true)();
 }
 
 /**
@@ -1087,11 +1087,11 @@ TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) /*throw()*/ : Co
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong TabifyCommand::doExecute() {
+ulong TabifyCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	ABORT_MODES();
@@ -1112,7 +1112,7 @@ TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) /*thr
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong TextInputCommand::doExecute() {
+ulong TextInputCommand::perform() {
 	const long n = numericPrefix();
 	if(n <= 0)
 		return 0;
@@ -1157,11 +1157,11 @@ TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(EditPoint::*
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong TranspositionCommand::doExecute() {
+ulong TranspositionCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 	END_ISEARCH();
@@ -1198,7 +1198,7 @@ UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(vi
  * @retval 2 partialy done
  * @see Document#undo, Document#redo
  */
-ulong UndoCommand::doExecute() {
+ulong UndoCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
@@ -1219,11 +1219,11 @@ WordDeletionCommand::WordDeletionCommand(TextViewer& viewer, Direction direction
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @retval 0 succeeded
  * @retval 1 failed
  */
-ulong WordDeletionCommand::doExecute() {
+ulong WordDeletionCommand::perform() {
 	long n = numericPrefix();
 	if(n == 0)
 		return 0;
@@ -1267,10 +1267,10 @@ WordSelectionCreationCommand::WordSelectionCreationCommand(TextViewer& viewer) /
 }
 
 /**
- * @see Command#doExecute
+ * @see Command#perform
  * @return 0
  */
-ulong WordSelectionCreationCommand::doExecute() {
+ulong WordSelectionCreationCommand::perform() {
 	END_ISEARCH();
 	target().caret().endRectangleSelection();
 	target().caret().selectWord();
