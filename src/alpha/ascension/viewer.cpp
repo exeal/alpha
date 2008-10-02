@@ -1134,7 +1134,7 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
 	// vanish the cursor when the GUI user began typing
-	if(texteditor::commands::CharacterInputCommand(*this, c).execute() != 0
+	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0
 			&& !modeState_.cursorVanished
 			&& configuration_.vanishesCursor
 			&& hasFocus()) {
@@ -1174,18 +1174,18 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 	case VK_BACK:	// [BackSpace]
 	case VK_F16:	// [F16]
 		if(controlPressed)
-			WordDeletionCommand(*this, Direction::BACKWARD).execute();
+			WordDeletionCommand(*this, Direction::BACKWARD)();
 		else
-			CharacterDeletionCommand(*this, Direction::BACKWARD).execute();
+			CharacterDeletionCommand(*this, Direction::BACKWARD)();
 		return true;
 	case VK_CLEAR:	// [Clear]
 		if(controlPressed) {
-			EntireDocumentSelectionCreationCommand(*this).execute();
+			EntireDocumentSelectionCreationCommand(*this)();
 			return true;
 		}
 		break;
 	case VK_RETURN:	// [Enter]
-		NewlineCommand(*this, controlPressed).execute();
+		NewlineCommand(*this, controlPressed)();
 		return true;
 	case VK_SHIFT:	// [Shift]
 		if(controlPressed
@@ -1196,71 +1196,71 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		}
 		return false;
 	case VK_ESCAPE:	// [Esc]
-		CancelCommand(*this).execute();
+		CancelCommand(*this)();
 		return true;
 	case VK_PRIOR:	// [PageUp]
 		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
-		else				CaretMovementCommand(*this, &Caret::backwardPage, shiftPressed).execute();
+		else				CaretMovementCommand(*this, &Caret::backwardPage, shiftPressed)();
 		return true;
 	case VK_NEXT:	// [PageDown]
 		if(controlPressed)	onVScroll(SB_PAGEDOWN, 0, 0);
-		else				CaretMovementCommand(*this, &Caret::forwardPage, shiftPressed).execute();
+		else				CaretMovementCommand(*this, &Caret::forwardPage, shiftPressed)();
 		return true;
 	case VK_HOME:	// [Home]
 		CaretMovementCommand(*this, controlPressed ?
-			&Caret::beginningOfDocument : &Caret::beginningOfVisualLine, shiftPressed).execute();
+			&Caret::beginningOfDocument : &Caret::beginningOfVisualLine, shiftPressed)();
 		return true;
 	case VK_END:	// [End]
 		CaretMovementCommand(*this, controlPressed ?
-			&Caret::endOfDocument : &Caret::endOfVisualLine, shiftPressed).execute();
+			&Caret::endOfDocument : &Caret::endOfVisualLine, shiftPressed)();
 		return true;
 	case VK_LEFT:	// [Left]
 		if(altPressed && shiftPressed)
-			RowSelectionExtensionCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter).execute();
+			RowSelectionExtensionCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter)();
 		else
-			CaretMovementCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter, shiftPressed).execute();
+			CaretMovementCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter, shiftPressed)();
 		return true;
 	case VK_UP:		// [Up]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &Caret::backwardVisualLine).execute();
+			RowSelectionExtensionCommand(*this, &Caret::backwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			scroll(0, -1, true);
 		else
-			CaretMovementCommand(*this, &Caret::backwardVisualLine, shiftPressed).execute();
+			CaretMovementCommand(*this, &Caret::backwardVisualLine, shiftPressed)();
 		return true;
 	case VK_RIGHT:	// [Right]
 		if(altPressed) {
 			if(shiftPressed)
-				RowSelectionExtensionCommand(*this, controlPressed ? &Caret::rightWord : &Caret::rightCharacter).execute();
+				RowSelectionExtensionCommand(*this, controlPressed ? &Caret::rightWord : &Caret::rightCharacter)();
 			else
-				CompletionProposalPopupCommand(*this).execute();
+				CompletionProposalPopupCommand(*this)();
 		} else
-			CaretMovementCommand(*this, controlPressed ? &Caret::rightWord: &Caret::rightCharacter, shiftPressed).execute();
+			CaretMovementCommand(*this, controlPressed ? &Caret::rightWord: &Caret::rightCharacter, shiftPressed)();
 		return true;
 	case VK_DOWN:	// [Down]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &Caret::forwardVisualLine).execute();
+			RowSelectionExtensionCommand(*this, &Caret::forwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			onVScroll(SB_LINEDOWN, 0, 0);
 		else
-			CaretMovementCommand(*this, &Caret::forwardVisualLine, shiftPressed).execute();
+			CaretMovementCommand(*this, &Caret::forwardVisualLine, shiftPressed)();
 		return true;
 	case VK_INSERT:	// [Insert]
 		if(altPressed)
 			break;
 		else if(!shiftPressed) {
 			if(controlPressed)	caret().copySelection(true);
-			else				OvertypeModeToggleCommand(*this).execute();
+			else				OvertypeModeToggleCommand(*this)();
 		} else if(controlPressed)
-			PasteCommand(*this, false).execute();
+			PasteCommand(*this, false)();
 		else						break;
 		return true;
 	case VK_DELETE:	// [Delete]
 		if(!shiftPressed) {
 			if(controlPressed)
-				WordDeletionCommand(*this, Direction::FORWARD).execute();
+				WordDeletionCommand(*this, Direction::FORWARD)();
 			else
-				CharacterDeletionCommand(*this, Direction::FORWARD).execute();
+				CharacterDeletionCommand(*this, Direction::FORWARD)();
 		} else if(!controlPressed)
 			caret().cutSelection(true);
 		else
@@ -1268,7 +1268,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case 'A':	// ^A -> Select All
 		if(controlPressed)
-			return EntireDocumentSelectionCreationCommand(*this).execute(), true;
+			return EntireDocumentSelectionCreationCommand(*this)(), true;
 		break;
 	case 'C':	// ^C -> Copy
 		if(controlPressed)
@@ -1276,20 +1276,20 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		break;
 	case 'H':	// ^H -> Backspace
 		if(controlPressed)
-			CharacterDeletionCommand(*this, Direction::BACKWARD).execute(), true;
+			CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;
 		break;
 	case 'I':	// ^I -> Tab
 		if(controlPressed)
-			return CharacterInputCommand(*this, 0x0009).execute(), true;
+			return CharacterInputCommand(*this, 0x0009)(), true;
 		break;
 	case 'J':	// ^J -> New Line
 	case 'M':	// ^M -> New Line
 		if(controlPressed)
-			return NewlineCommand(*this, false).execute(), true;
+			return NewlineCommand(*this, false)(), true;
 		break;
 	case 'V':	// ^V -> Paste
 		if(controlPressed)
-			return PasteCommand(*this, false).execute(), true;
+			return PasteCommand(*this, false)(), true;
 		break;
 	case 'X':	// ^X -> Cut
 		if(controlPressed)
@@ -1297,19 +1297,19 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		break;
 	case 'Y':	// ^Y -> Redo
 		if(controlPressed)
-			return UndoCommand(*this, true).execute(), true;
+			return UndoCommand(*this, true)(), true;
 		break;
 	case 'Z':	// ^Z -> Undo
 		if(controlPressed)
-			return UndoCommand(*this, false).execute(), true;
+			return UndoCommand(*this, false)(), true;
 		break;
 	case VK_NUMPAD5:	// [Number Pad 5]
 		if(controlPressed)
-			return EntireDocumentSelectionCreationCommand(*this).execute(), true;
+			return EntireDocumentSelectionCreationCommand(*this)(), true;
 		break;
 	case VK_F12:	// [F12]
 		if(controlPressed && shiftPressed)
-			return CodePointToCharacterConversionCommand(*this).execute(), true;
+			return CodePointToCharacterConversionCommand(*this)(), true;
 		break;
 	}
 	return false;
@@ -1497,10 +1497,10 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	using namespace ascension::texteditor::commands;
 	switch(id) {
 	case WM_UNDO:	// "Undo"
-		UndoCommand(*this, false).execute();
+		UndoCommand(*this, false)();
 		break;
 	case WM_REDO:	// "Redo"
-		UndoCommand(*this, true).execute();
+		UndoCommand(*this, true)();
 		break;
 	case WM_CUT:	// "Cut"
 		caret().cutSelection(true);
@@ -1509,13 +1509,13 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 		caret().copySelection(true);
 		break;
 	case WM_PASTE:	// "Paste"
-		PasteCommand(*this, false).execute();
+		PasteCommand(*this, false)();
 		break;
 	case WM_CLEAR:	// "Delete"
-		CharacterDeletionCommand(*this, Direction::FORWARD).execute();
+		CharacterDeletionCommand(*this, Direction::FORWARD)();
 		break;
 	case WM_SELECTALL:	// "Select All"
-		EntireDocumentSelectionCreationCommand(*this).execute();
+		EntireDocumentSelectionCreationCommand(*this)();
 		break;
 	case ID_RTLREADING:	// "Right to left Reading order"
 		toggleOrientation(*this);
@@ -1526,57 +1526,57 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 		setConfiguration(&c, 0);
 		break;
 	}
-	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200E).execute();	break;
-	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200F).execute();	break;
-	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200D).execute();	break;
-	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200C).execute();	break;
-	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202A).execute();	break;
-	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202B).execute();	break;
-	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202D).execute();	break;
-	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202E).execute();	break;
-	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202C).execute();	break;
-	case ID_INSERT_WJ:		CharacterInputCommand(*this, 0x2060).execute();	break;
-	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206E).execute();	break;
-	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206F).execute();	break;
-	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206B).execute();	break;
-	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206A).execute();	break;
-	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206D).execute();	break;
-	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206C).execute();	break;
-	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001E).execute();	break;
-	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001F).execute();	break;
-	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xFFF9).execute();	break;
-	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xFFFA).execute();	break;
-	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xFFFB).execute();	break;
-	case ID_INSERT_U0020:	CharacterInputCommand(*this, 0x0020).execute();	break;
-	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00A0).execute();	break;
-	case ID_INSERT_U1680:	CharacterInputCommand(*this, 0x1680).execute();	break;
-	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180E).execute();	break;
-	case ID_INSERT_U2000:	CharacterInputCommand(*this, 0x2000).execute();	break;
-	case ID_INSERT_U2001:	CharacterInputCommand(*this, 0x2001).execute();	break;
-	case ID_INSERT_U2002:	CharacterInputCommand(*this, 0x2002).execute();	break;
-	case ID_INSERT_U2003:	CharacterInputCommand(*this, 0x2003).execute();	break;
-	case ID_INSERT_U2004:	CharacterInputCommand(*this, 0x2004).execute();	break;
-	case ID_INSERT_U2005:	CharacterInputCommand(*this, 0x2005).execute();	break;
-	case ID_INSERT_U2006:	CharacterInputCommand(*this, 0x2006).execute();	break;
-	case ID_INSERT_U2007:	CharacterInputCommand(*this, 0x2007).execute();	break;
-	case ID_INSERT_U2008:	CharacterInputCommand(*this, 0x2008).execute();	break;
-	case ID_INSERT_U2009:	CharacterInputCommand(*this, 0x2009).execute();	break;
-	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200A).execute();	break;
-	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200B).execute();	break;
-	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202F).execute();	break;
-	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205F).execute();	break;
-	case ID_INSERT_U3000:	CharacterInputCommand(*this, 0x3000).execute();	break;
-	case ID_INSERT_NEL:		CharacterInputCommand(*this, NEXT_LINE).execute();	break;
-	case ID_INSERT_LS:		CharacterInputCommand(*this, LINE_SEPARATOR).execute();	break;
-	case ID_INSERT_PS:		CharacterInputCommand(*this, PARAGRAPH_SEPARATOR).execute();	break;
+	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200E)();	break;
+	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200F)();	break;
+	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200D)();	break;
+	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200C)();	break;
+	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202A)();	break;
+	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202B)();	break;
+	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202D)();	break;
+	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202E)();	break;
+	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202C)();	break;
+	case ID_INSERT_WJ:		CharacterInputCommand(*this, 0x2060)();	break;
+	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206E)();	break;
+	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206F)();	break;
+	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206B)();	break;
+	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206A)();	break;
+	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206D)();	break;
+	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206C)();	break;
+	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001E)();	break;
+	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001F)();	break;
+	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xFFF9)();	break;
+	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xFFFA)();	break;
+	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xFFFB)();	break;
+	case ID_INSERT_U0020:	CharacterInputCommand(*this, 0x0020)();	break;
+	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00A0)();	break;
+	case ID_INSERT_U1680:	CharacterInputCommand(*this, 0x1680)();	break;
+	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180E)();	break;
+	case ID_INSERT_U2000:	CharacterInputCommand(*this, 0x2000)();	break;
+	case ID_INSERT_U2001:	CharacterInputCommand(*this, 0x2001)();	break;
+	case ID_INSERT_U2002:	CharacterInputCommand(*this, 0x2002)();	break;
+	case ID_INSERT_U2003:	CharacterInputCommand(*this, 0x2003)();	break;
+	case ID_INSERT_U2004:	CharacterInputCommand(*this, 0x2004)();	break;
+	case ID_INSERT_U2005:	CharacterInputCommand(*this, 0x2005)();	break;
+	case ID_INSERT_U2006:	CharacterInputCommand(*this, 0x2006)();	break;
+	case ID_INSERT_U2007:	CharacterInputCommand(*this, 0x2007)();	break;
+	case ID_INSERT_U2008:	CharacterInputCommand(*this, 0x2008)();	break;
+	case ID_INSERT_U2009:	CharacterInputCommand(*this, 0x2009)();	break;
+	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200A)();	break;
+	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200B)();	break;
+	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202F)();	break;
+	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205F)();	break;
+	case ID_INSERT_U3000:	CharacterInputCommand(*this, 0x3000)();	break;
+	case ID_INSERT_NEL:		CharacterInputCommand(*this, NEXT_LINE)();	break;
+	case ID_INSERT_LS:		CharacterInputCommand(*this, LINE_SEPARATOR)();	break;
+	case ID_INSERT_PS:		CharacterInputCommand(*this, PARAGRAPH_SEPARATOR)();	break;
 	case ID_TOGGLEIMESTATUS:	// "Open IME" / "Close IME"
-		InputMethodOpenStatusToggleCommand(*this).execute();
+		InputMethodOpenStatusToggleCommand(*this)();
 		break;
 	case ID_TOGGLESOFTKEYBOARD:	// "Open soft keyboard" / "Close soft keyboard"
-		InputMethodSoftKeyboardModeToggleCommand(*this).execute();
+		InputMethodSoftKeyboardModeToggleCommand(*this)();
 		break;
 	case ID_RECONVERT:	// "Reconvert"
-		ReconversionCommand(*this).execute();
+		ReconversionCommand(*this)();
 		break;
 	case ID_INVOKE_HYPERLINK:	// "Open <hyperlink>"
 		if(const hyperlink::IHyperlink* const link = getPointedHyperlink(*this, caret()))
@@ -1853,7 +1853,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
 				text[len] = 0;
 				if(!imeComposingCharacter_)
-					texteditor::commands::TextInputCommand(*this, text.get()).execute();
+					texteditor::commands::TextInputCommand(*this, text.get())();
 				else {
 					Document& doc = document();
 					doc.insertUndoBoundary();
@@ -2427,7 +2427,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
 			caret().cutSelection(true);
 		else
-			CharacterDeletionCommand(*this, Direction::FORWARD).execute();
+			CharacterDeletionCommand(*this, Direction::FORWARD)();
 		handled = true;
 		return 0L;
 	case WM_COPY:
@@ -2472,18 +2472,18 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 //		return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_PASTE:
-		PasteCommand(*this, false).execute();
+		PasteCommand(*this, false)();
 		handled = true;
 		return 0L;
 #endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
 	case WM_SETTEXT:
-		EntireDocumentSelectionCreationCommand(*this).execute();
+		EntireDocumentSelectionCreationCommand(*this)();
 		caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
 		handled = true;
 		return 0L;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_UNDO:
-		UndoCommand(*this, false).execute();
+		UndoCommand(*this, false)();
 		handled = true;
 		return 0L;
 #endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */

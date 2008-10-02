@@ -21,9 +21,9 @@ namespace ascension {
 		class Command {
 		public:
 			virtual ~Command() /*throw()*/;
+			ulong operator()();
 			Command& beepOnError(bool enable = true) /*throw()*/;
 			bool beepsOnError() const /*throw()*/;
-			ulong execute();
 			long numericPrefix() const /*throw()*/;
 			Command& retarget(viewers::TextViewer& viewer) /*throw()*/;
 			Command& setNumericPrefix(long number) /*throw()*/;
@@ -32,8 +32,8 @@ namespace ascension {
 			/// Returns the command target.
 			viewers::TextViewer& target() const /*throw()*/ {return *viewer_;}
 		private:
-			/// Called by @c #execute public method.
-			virtual ulong doExecute() = 0;
+			/// Called by @c #operator().
+			virtual ulong perform() = 0;
 		private:
 			viewers::TextViewer* viewer_;
 			long numericPrefix_;
@@ -52,7 +52,7 @@ namespace ascension {
 			public:
 				BookmarkMatchLinesCommand(viewers::TextViewer& viewer, bool onlySelection) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool onlySelection_;
 			};
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
@@ -60,7 +60,7 @@ namespace ascension {
 			public:
 				explicit CancelCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public Command {
@@ -72,7 +72,7 @@ namespace ascension {
 				CaretMovementCommand(viewers::TextViewer& viewer,
 					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const, bool extendSelection = false);
 			private:
-				ulong doExecute();
+				ulong perform();
 				kernel::Position(viewers::Caret::*const procedure0_)(void) const;
 				kernel::Position(viewers::Caret::*const procedure1_)(length_t) const;
 				viewers::VerticalDestinationProxy(viewers::Caret::*const procedureV1_)(length_t) const;
@@ -88,7 +88,7 @@ namespace ascension {
 			public:
 				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const Direction direction_;
 			};
 			/// Converts a character into the text represents the code value of the character.
@@ -96,7 +96,7 @@ namespace ascension {
 			public:
 				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/**
 			 * Inputs a character on the caret position, or appends to the end of the active
@@ -107,7 +107,7 @@ namespace ascension {
 			public:
 				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c);
 			private:
-				ulong doExecute();
+				ulong perform();
 				const CodePoint c_;
 			};
 			/// Inputs a character is at same position in the next/previous visual line.
@@ -115,7 +115,7 @@ namespace ascension {
 			public:
 				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool fromPreviousLine_;
 			};
 			/// Converts a text represents a code value into the character has the code value.
@@ -123,7 +123,7 @@ namespace ascension {
 			public:
 				CodePointToCharacterConversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/**
 			 * Shows completion proposals and aborts the active incremental search.
@@ -133,14 +133,14 @@ namespace ascension {
 			public:
 				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Selects the entire document.
 			class EntireDocumentSelectionCreationCommand : public Command {
 			public:
 				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/**
 			 * Searches the next/previous or the previous match and selects matched region. The
@@ -153,7 +153,7 @@ namespace ascension {
 			public:
 				FindNextCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const Direction direction_;
 			};
 			/**
@@ -165,7 +165,7 @@ namespace ascension {
 				IncrementalFindCommand(viewers::TextViewer& view,
 					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const Direction direction_;
 				searcher::IIncrementalSearchCallback* const callback_;
 			};
@@ -177,7 +177,7 @@ namespace ascension {
 			public:
 				IndentationCommand(viewers::TextViewer& view, bool increase) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				bool increases_;
 			};
 			/// Toggles the input method's open status.
@@ -185,21 +185,21 @@ namespace ascension {
 			public:
 				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Toggles Soft Keyboard mode of the input method.
 			class InputMethodSoftKeyboardModeToggleCommand : public Command {
 			public:
 				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Moves the caret or extends the selection to the match bracket.
 			class MatchBracketCommand : public Command {
 			public:
 				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool extends_;
 			};
 			/**
@@ -211,7 +211,7 @@ namespace ascension {
 			public:
 				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool insertsPrevious_;
 			};
 			/// Toggles overtype mode of the caret.
@@ -219,13 +219,13 @@ namespace ascension {
 			public:
 				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Inserts the content of the kill ring or the clipboard at the caret position.
 			class PasteCommand : public Command {
 			public:
 				PasteCommand(viewers::TextViewer& view, bool useKillRing) /*throw()*/;
-				ulong doExecute();
+				ulong perform();
 			private:
 				const bool usesKillRing_;
 			};
@@ -234,7 +234,7 @@ namespace ascension {
 			public:
 				explicit ReconversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 			/// Replaces all matched texts.
 			class ReplaceAllCommand : public Command {
@@ -242,7 +242,7 @@ namespace ascension {
 				ReplaceAllCommand(viewers::TextViewer& viewer,
 					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool onlySelection_;
 				searcher::IInteractiveReplacementCallback* const callback_;
 			};
@@ -255,7 +255,7 @@ namespace ascension {
 					kernel::Position(viewers::Caret::*procedure)(length_t) const);
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
 					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const);
-				ulong doExecute();
+				ulong perform();
 			private:
 				kernel::Position(viewers::Caret::*procedure0_)(void) const;
 				kernel::Position(viewers::Caret::*procedure1_)(length_t) const;
@@ -266,7 +266,7 @@ namespace ascension {
 			public:
 				TabifyCommand(viewers::TextViewer& view, bool untabify) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				bool untabify_;
 			};
 			/// Inputs a text.
@@ -274,7 +274,7 @@ namespace ascension {
 			public:
 				TextInputCommand(viewers::TextViewer& view, const String& text) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				String text_;
 			};
 			/// Transposes (swaps) the two text elements.
@@ -282,7 +282,7 @@ namespace ascension {
 			public:
 				TranspositionCommand(viewers::TextViewer& view, bool(kernel::EditPoint::*procedure)(void));
 			private:
-				ulong doExecute();
+				ulong perform();
 				bool(kernel::EditPoint::*const procedure_)(void);
 			};
 			/// Performs undo or redo.
@@ -290,7 +290,7 @@ namespace ascension {
 			public:
 				UndoCommand(viewers::TextViewer& view, bool redo) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const bool redo_;
 			};
 			/// Deletes the forward/backward N word(s).
@@ -298,7 +298,7 @@ namespace ascension {
 			public:
 				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 				const Direction direction_;
 			};
 			/// Selects the current word.
@@ -306,7 +306,7 @@ namespace ascension {
 			public:
 				explicit WordSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong doExecute();
+				ulong perform();
 			};
 		} // namespace commands
 
