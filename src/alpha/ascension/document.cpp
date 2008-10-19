@@ -818,6 +818,13 @@ void Document::eraseText(const Region& region) {
 	const Position& end = region.end();
 	basic_stringbuf<Char> deletedString;
 
+	// this does the followings:
+	// - save deleted content (into 'deletedString') for undo information (optional)
+	// - delete substring of a line
+	// - destruct whole line(s) and remove line(s) from line list ('lines_')
+	// - update 'length_'
+	// - increment 'revisionNumber_'
+
 	if(beginning.line == end.line) {	// region is single line
 		const Line&	lineInfo = getLineInformation(end.line);
 		String&	line = const_cast<String&>(this->line(end.line));
@@ -1148,23 +1155,31 @@ void Document::recordChanges(bool record) /*throw()*/ {
 
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.
+ * @param n the repeat count
  * @return false if the redo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
+ * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
  * @see #undo
  */
-bool Document::redo() {
+bool Document::redo(size_t n /* = 1 */) {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(numberOfRedoableChanges() == 0)
-		return false;
+	else if(n > numberOfUndoableChanges())
+		throw invalid_argument("n");
 
-	beginCompoundChange();
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
 	IUndoableChange::Result result;
-	undoManager_->redo(result);
+	result.completed = true;
+	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
+
+	for(; n > 0 && result.completed; --n) {
+		beginCompoundChange();
+		undoManager_->redo(result);
+		endCompoundChange();
+	}
+	assert(n == 0 || !result.completed);
+
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
-	endCompoundChange();
 	return result.completed;
 }
 
@@ -1416,26 +1431,33 @@ UINT Document::translateSpecialCodePage(UINT codePage) {
 
 /**
  * Performs the undo. Does nothing if the target region is inaccessible.
+ * @param n the repeat count
  * @return false if the undo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
+ * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
  * @see #redo
  */
-bool Document::undo() {
+bool Document::undo(size_t n /* = 1 */) {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(numberOfUndoableChanges() == 0)
-		return false;
+	else if(n > numberOfUndoableChanges())
+		throw invalid_argument("n");
 
 	const size_t oldRevisionNumber = revisionNumber_;
-	beginCompoundChange();
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
 	IUndoableChange::Result result;
-	undoManager_->undo(result);
+	result.completed = true;
+	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
+
+	for(; n > 0 && result.completed; --n) {
+		beginCompoundChange();
+		undoManager_->undo(result);
+		endCompoundChange();
+		revisionNumber_ = oldRevisionNumber - result.numberOfRevisions;
+	}
+	assert(n == 0 || !result.completed);
+
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
-	endCompoundChange();
-
-	revisionNumber_ = oldRevisionNumber - result.numberOfRevisions;
 	if(!isModified())
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	return result.completed;

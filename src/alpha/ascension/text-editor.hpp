@@ -50,10 +50,11 @@ namespace ascension {
 			/// Searches and bookmarks all matched lines.
 			class BookmarkMatchLinesCommand : public Command {
 			public:
-				BookmarkMatchLinesCommand(viewers::TextViewer& viewer, bool onlySelection) /*throw()*/;
+				explicit BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
+					const kernel::Region& region = kernel::Region()) /*throw()*/;
 			private:
 				ulong perform();
-				const bool onlySelection_;
+				const kernel::Region region_;
 			};
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {

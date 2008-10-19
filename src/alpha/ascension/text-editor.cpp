@@ -119,10 +119,11 @@ namespace {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param onlySelection set true to limit the match target to the selected region
+ * @param region the region to operate on. if empty, the accessible region of the document. this
+ * region will be shrunk to the accessible region when the command performed
  */
-BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(
-		TextViewer& viewer, bool onlySelection) /*throw()*/ : Command(viewer), onlySelection_(onlySelection) {
+BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(TextViewer& viewer,
+		const Region& region /* = Region() */) /*throw()*/ : Command(viewer), region_(region) {
 }
 
 /**
@@ -130,9 +131,6 @@ BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(
  * @return the number of marked lines
  */
 ulong BookmarkMatchLinesCommand::perform() {
-    if(onlySelection_ && target().caret().isSelectionEmpty())
-		return 0;
-
 	WaitCursor wc;
 	TextViewer& viewer = target();
 	Document& document = viewer.document();
@@ -143,11 +141,7 @@ ulong BookmarkMatchLinesCommand::perform() {
 		return 0;	// TODO: prepares a default text searcher.
 
 	ulong count = 0;
-	Region scope(
-		onlySelection_ ? max<Position>(viewer.caret().beginning(),
-			document.accessibleRegion().first) : document.accessibleRegion().first,
-		onlySelection_ ? min<Position>(viewer.caret().end(),
-			document.accessibleRegion().second) : document.accessibleRegion().second);
+	Region scope(region_.isEmpty() ? document.accessibleRegion() : region_.getIntersection(document.accessibleRegion()));
 
 	Bookmarker& bookmarker = document.bookmarker();
 	Region matchedRegion;
@@ -1202,12 +1196,15 @@ ulong UndoCommand::perform() {
 	CHECK_DOCUMENT_READONLY(1);
 //	CHECK_GUI_EDITABILITY(1);
 
-	if((!redo_ && target().document().numberOfUndoableChanges() == 0)
-			|| (redo_ && target().document().numberOfRedoableChanges() == 0))
-		return 1;
+	if(numericPrefix() < 0)
+		setNumericPrefix(0);	// currently, this is no-op
 
 	WaitCursor wc;
-	return (!redo_ ? target().document().undo() : target().document().redo()) ? 0 : 2;
+	Document& document = target().document();
+	if(!redo_)
+		return document.undo(min(static_cast<size_t>(numericPrefix()), document.numberOfUndoableChanges())) ? 0 : 2;
+	else
+		return document.redo(min(static_cast<size_t>(numericPrefix()), document.numberOfRedoableChanges())) ? 0 : 2;
 }
 
 /**

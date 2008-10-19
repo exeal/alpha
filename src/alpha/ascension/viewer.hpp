@@ -867,8 +867,7 @@ namespace ascension {
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
-			CurrentLineHighlighter(Caret& caret, const presentation::Colors& color =
-				presentation::Colors(presentation::Color(), presentation::Color::fromCOLORREF(COLOR_INFOBK)));
+			CurrentLineHighlighter(Caret& caret, const presentation::Colors& color);
 			~CurrentLineHighlighter() /*throw()*/;
 			// attributes
 			const presentation::Colors& color() const /*throw()*/;
