@@ -636,6 +636,7 @@ ulong FindNextCommand::perform() {
 				: min<Position>(matchedRegion.beginning(), scope.second),
 				scope, forward ? Direction::FORWARD : Direction::BACKWARD, matchedRegion))
 			break;
+		foundOnce = true;
 	}
 
 	if(foundOnce) {
