@@ -856,7 +856,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
 	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
-	new CurrentLineHighlighter(*caret_);
+	new CurrentLineHighlighter(*caret_, Colors(Color(), Color::fromCOLORREF(::GetSysColor(COLOR_INFOBK))));
 
 	// URL hyperlinks test
 	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
@@ -4577,8 +4577,7 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
  * @param caret the caret
  * @param color the initial color
  */
-CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
-		const Colors& color /* = Colors(STANDARD_COLOR, COLOR_INFOBK | SYSTEM_COLOR_MASK) */) : caret_(&caret), color_(color) {
+CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret, const Colors& color) : caret_(&caret), color_(color) {
 	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
 	caret.textViewer().presentation().addLineColorDirector(temp);
 	caret.addListener(*this);

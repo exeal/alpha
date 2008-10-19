@@ -105,7 +105,7 @@ namespace ascension {
 		 */
 		class Region : public std::pair<Position, Position>, public manah::FastArenaObject<Region> {
 		public:
-			/// Default constructor.
+			/// Default constructor. Equals to "Region(Position(), Position())".
 			Region() /*throw()*/ {}
 			/// Constructor.
 			Region(const Position& one, const Position& other) /*throw()*/ : std::pair<Position, Position>(one, other) {}
@@ -585,8 +585,8 @@ namespace ascension {
 			std::size_t numberOfUndoableChanges() const /*throw()*/;
 			std::size_t numberOfRedoableChanges() const /*throw()*/;
 			void recordChanges(bool record) /*throw()*/;
-			bool redo();
-			bool undo();
+			bool redo(std::size_t n = 1);
+			bool undo(std::size_t n = 1);
 			// narrowing
 			bool isNarrowed() const /*throw()*/;
 			void narrow(const Region& region) /*throw()*/;
