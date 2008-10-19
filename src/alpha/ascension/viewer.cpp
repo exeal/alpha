@@ -4118,16 +4118,19 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
 			const Position to(viewer_->characterForClientXY(position, LineLayout::TRAILING));
-			if(toBoolean(keyState & MK_CONTROL)) {
-				// begin word selection
-				selectionExtendingUnit_ = WORDS;
-				caret.moveTo(toBoolean(keyState & MK_SHIFT) ? caret.anchor() : to);
-				caret.selectWord();
-				noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
-				wordSelectionInitialColumns_ = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
-			}
-			if(toBoolean(keyState & MK_SHIFT))
-				extendSelection(&to);
+			if(toBoolean(keyState & (MK_CONTROL | MK_SHIFT))) {
+				if(toBoolean(keyState & MK_CONTROL)) {
+					// begin word selection
+					selectionExtendingUnit_ = WORDS;
+					caret.moveTo(toBoolean(keyState & MK_SHIFT) ? caret.anchor() : to);
+					caret.selectWord();
+					noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
+					wordSelectionInitialColumns_ = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
+				}
+				if(toBoolean(keyState & MK_SHIFT))
+					extendSelection(&to);
+			} else
+				caret.moveTo(to);
 			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// make the selection reactangle
 				caret.beginRectangleSelection();
 			viewer_->setCapture();
