@@ -33,7 +33,7 @@ void testDocument() {
 	BOOST_CHECK(!d.isModified());
 	BOOST_CHECK(!d.isNarrowed());
 	BOOST_CHECK(!d.isReadOnly());
-	BOOST_CHECK(!d.isSequentialEditing());
+	BOOST_CHECK(!d.isCompoundChanging());
 	BOOST_CHECK(d.line(0).empty());
 	BOOST_CHECK_EQUAL(d.lineLength(0), 0);
 	BOOST_CHECK_EQUAL(d.lineOffset(0), 0);
@@ -47,38 +47,53 @@ void testDocument() {
 	BOOST_CHECK_EQUAL(d.length(), 5);
 	BOOST_CHECK_EQUAL(d.region(), k::Region(k::Position(0, 0), k::Position(0, 5)));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 1);
-	BOOST_CHECK_EQUAL(d.numberOfUndoableEdits(), 1);
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.erase(k::Position(0, 0), k::Position(0, 3));
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"de"));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
-	BOOST_CHECK_EQUAL(d.numberOfUndoableEdits(), 2);
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.undo();
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"abcde"));
-	BOOST_CHECK_EQUAL(d.revisionNumber(), 1);
-	d.undo();
-	BOOST_CHECK_EQUAL(d.length(), 0);
+	BOOST_CHECK_EQUAL(d.line(0), a::String(L""));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
 	BOOST_CHECK(!d.isModified());
-	BOOST_CHECK_EQUAL(d.numberOfUndoableEdits(), 0);
-	BOOST_CHECK_EQUAL(d.numberOfRedoableEdits(), 2);
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
+	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 1);
 	d.redo();
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"abcde"));
-	BOOST_CHECK_EQUAL(d.numberOfRedoableEdits(), 1);
+	BOOST_CHECK_EQUAL(d.line(0), a::String(L"de"));
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
+	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 0);
 	d.undo();
 
+	// undo boundary
+	d.insert(k::Position(), a::String(L"a"));
+	d.insert(k::Position(0, 1), a::String(L"b"));
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
+	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
+	d.undo();
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
+	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
+	d.insert(k::Position(), a::String(L"a"));
+	d.insertUndoBoundary();
+	d.insert(k::Position(0, 1), a::String(L"b"));
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 2);
+	d.undo();
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
+	d.undo();
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
+
 	// compound modification
-	d.beginSequentialEdit();
+	d.beginCompoundChange();
 	d.insert(d.region().end(), a::String(L"This "));
 	d.insert(d.region().end(), a::String(L"is a "));
 	d.insert(d.region().end(), a::String(L"compound."));
-	d.endSequentialEdit();
+	d.endCompoundChange();
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"This is a compound."));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 3);
-	BOOST_CHECK_EQUAL(d.numberOfUndoableEdits(), 1);
+	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.length(), 0);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
-	BOOST_CHECK_EQUAL(d.numberOfRedoableEdits(), 1);
+	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 1);
 	d.redo();
 	BOOST_CHECK_EQUAL(d.length(), 19);
 }
@@ -117,10 +132,95 @@ void testStreams() {
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"012"));
 }
 
+void testBookmarks() {
+	k::Document d;
+	d.insert(d.region().end(),
+		L"m\n"
+		L"\n"
+		L"m\n"
+		L"m\n"
+		L"\n"
+		L"\n"
+		L"m\n"
+		L"");
+	// this document has bookmarks at lines: 0, 2, 3, 6
+	k::Bookmarker& b = d.bookmarker();
+	b.mark(0);
+	b.mark(2);
+	b.toggle(3);
+	b.toggle(6);
+
+	BOOST_CHECK(b.isMarked(0));
+	BOOST_CHECK(!b.isMarked(1));
+	BOOST_CHECK(b.isMarked(2));
+	BOOST_CHECK(b.isMarked(3));
+	BOOST_CHECK(!b.isMarked(4));
+	BOOST_CHECK(!b.isMarked(5));
+	BOOST_CHECK(b.isMarked(6));
+	BOOST_CHECK(!b.isMarked(7));
+	BOOST_CHECK_EQUAL(b.numberOfMarks(), 4);
+
+	// iterator
+	k::Bookmarker::Iterator i(b.begin());
+	BOOST_CHECK_EQUAL(*i, 0);
+	BOOST_CHECK_EQUAL(*++i, 2);
+	BOOST_CHECK_EQUAL(*++i, 3);
+	BOOST_CHECK_EQUAL(*++i, 6);
+	BOOST_CHECK(++i == b.end());
+	BOOST_CHECK_EQUAL(*--i, 6);
+	BOOST_CHECK_EQUAL(*--i, 3);
+	BOOST_CHECK_EQUAL(*--i, 2);
+	BOOST_CHECK_EQUAL(*--i, 0);
+	BOOST_CHECK(i == b.begin());
+
+	// Bookmarker.next
+	BOOST_CHECK_EQUAL(b.next(0, a::Direction::FORWARD), 2);
+	BOOST_CHECK_EQUAL(b.next(1, a::Direction::FORWARD), 2);
+	BOOST_CHECK_EQUAL(b.next(7, a::Direction::FORWARD, true), 0);
+	BOOST_CHECK_EQUAL(b.next(7, a::Direction::FORWARD, false), a::INVALID_INDEX);
+	BOOST_CHECK_EQUAL(b.next(0, a::Direction::FORWARD, true, 8), 0);	// 4n
+	BOOST_CHECK_EQUAL(b.next(0, a::Direction::FORWARD, true, 1002), 3);	// 4n + 2
+
+	BOOST_CHECK_EQUAL(b.next(3, a::Direction::BACKWARD), 2);
+	BOOST_CHECK_EQUAL(b.next(5, a::Direction::BACKWARD), 3);
+	BOOST_CHECK_EQUAL(b.next(0, a::Direction::BACKWARD, true), 6);
+	BOOST_CHECK_EQUAL(b.next(0, a::Direction::BACKWARD, false), a::INVALID_INDEX);
+	BOOST_CHECK_EQUAL(b.next(1, a::Direction::BACKWARD, true, 2), 6);
+	BOOST_CHECK_EQUAL(b.next(1, a::Direction::BACKWARD, true, 5), 0);
+	BOOST_CHECK_EQUAL(b.next(2, a::Direction::BACKWARD, true, 1003), 3);	// 4n + 3
+	
+	BOOST_CHECK_EQUAL(b.next(1, a::Direction::FORWARD, true, 0), a::INVALID_INDEX);
+	BOOST_CHECK_EQUAL(b.next(1, a::Direction::BACKWARD, true, 0), a::INVALID_INDEX);
+
+	// update
+	d.insert(d.region().beginning(), L"\n");
+	BOOST_CHECK(!b.isMarked(0));
+	BOOST_CHECK(b.isMarked(1));
+	BOOST_CHECK(!b.isMarked(2));
+	BOOST_CHECK(b.isMarked(3));
+	BOOST_CHECK(b.isMarked(4));
+	BOOST_CHECK(!b.isMarked(5));
+	BOOST_CHECK(!b.isMarked(6));
+	BOOST_CHECK(b.isMarked(7));
+	BOOST_CHECK(!b.isMarked(8));
+
+	d.erase(k::Position(1, 0), k::Position(5, 0));
+	BOOST_CHECK(!b.isMarked(0));
+	BOOST_CHECK(b.isMarked(1));
+	BOOST_CHECK(!b.isMarked(2));
+	BOOST_CHECK(b.isMarked(3));
+	BOOST_CHECK(!b.isMarked(4));
+
+	d.resetContent();
+	BOOST_CHECK(!b.isMarked(0));	// Document.resetContent removes all the bookmarks
+	BOOST_CHECK_EQUAL(b.numberOfMarks(), 0);
+}
+
 int test_main(int, char*[]) {
 	testMiscellaneousFunctions();
 	testDocument();
 	testIterators();
 	testStreams();
+	testBookmarks();
 	return 0;
 }

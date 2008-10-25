@@ -210,6 +210,14 @@ void Bookmarker::addListener(IBookmarkListener& listener) {
 	listeners_.add(listener);
 }
 
+/**
+ * Returns a bidirectional iterator to addresses the first marked line.
+ * @see #end, #next
+ */
+Bookmarker::Iterator Bookmarker::begin() const {
+	return Iterator(markedLines_.begin());
+}
+
 /// Deletes all bookmarks.
 void Bookmarker::clear() /*throw()*/ {
 	if(!markedLines_.empty()) {
@@ -219,16 +227,53 @@ void Bookmarker::clear() /*throw()*/ {
 }
 
 /// @see IDocumentListener#documentAboutToBeChanged
-void Bookmarker::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
+void Bookmarker::documentAboutToBeChanged(const Document&, const DocumentChange&) {
 	// do nothing
 }
 
 /// @see IDocumentListener#documentChanged
 void Bookmarker::documentChanged(const Document& document, const DocumentChange& change) {
+	// update markedLines_ based on the change
+	if(&document_ != &document || markedLines_.empty() || change.region().first.line == change.region().second.line)
+		return;
+	const length_t lines = change.region().second.line - change.region().first.line;
+	if(change.isDeletion()) {
+		// remove the marks on the deleted lines
+		const GapBuffer<length_t>::Iterator e(markedLines_.end());
+		GapBuffer<length_t>::Iterator top(find(change.region().first.line));
+		if(top != e) {
+			if(*top == change.region().first.line)
+				++top;
+			GapBuffer<length_t>::Iterator bottom(find(change.region().second.line));
+			if(bottom != e && *bottom == change.region().second.line)
+				++bottom;
+			// slide the following lines before removing
+			if(bottom != e) {
+				for(GapBuffer<length_t>::Iterator i(bottom); i != e; ++i)
+					*i -= lines;
+			}
+			markedLines_.erase(top, bottom);	// GapBuffer<>.erase does not return an iterator
+		}
+	} else {
+		GapBuffer<length_t>::Iterator i(find(change.region().first.line));
+		if(i != markedLines_.end()) {
+			if(*i == change.region().first.line && change.region().first.column != 0)
+				++i;
+			for(const GapBuffer<length_t>::Iterator e(markedLines_.end()); i != e; ++i)
+				*i += lines;
+		}
+	}
+}
+
+/**
+ * Returns a bidirectional iterator to addresses just beyond the last marked line.
+ * @see #begin, #next
+ */
+Bookmarker::Iterator Bookmarker::end() const {
+	return Iterator(markedLines_.end());
 }
 
 inline GapBuffer<length_t>::Iterator Bookmarker::find(length_t line) const /*throw()*/ {
-	assert(line < document_.numberOfLines());
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
 	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
@@ -271,23 +316,60 @@ void Bookmarker::mark(length_t line, bool set) {
 
 /**
  * Returns the line number of the next/previous bookmarked line.
- * @param from the start line number to search. this line may be the result
+ * @param from the start line number to search
  * @param direction direction to search
- * @param marks
+ * @param wrapAround set true to enable "wrapping around". if set, this method starts again from
+ * the end (in forward case) or beginning (in backward case) of the document when the reached the
+ * end or beginning of the document
+ * @param marks 
  * @return the next bookmarked line or @c INVALID_INDEX if not found
  * @throw BadPositionException @a line is outside of the document
+ * @see #begin, #end
  */
-length_t Bookmarker::next(length_t from, Direction direction, size_t marks /* = 1 */) const {
+length_t Bookmarker::next(length_t from, Direction direction, bool wrapAround /* = true */, size_t marks /* = 1 */) const {
+	// this code is tested by 'test/document-test.cpp'
 	if(from >= document_.numberOfLines())
 		throw BadPositionException();
 	else if(marks == 0 || markedLines_.empty())
 		return INVALID_INDEX;
 	else if(marks > markedLines_.size()) {
+		if(!wrapAround)
+			return INVALID_INDEX;
 		marks = marks % markedLines_.size();
 		if(marks == 0)
 			marks = markedLines_.size();
 	}
-	return INVALID_INDEX;
+
+	size_t i = static_cast<GapBuffer<length_t>::ConstIterator>(find(from)) - markedLines_.begin();
+	if(direction == Direction::FORWARD) {
+		if(i == markedLines_.size()) {
+			if(!wrapAround)
+				return INVALID_INDEX;
+			i = 0;
+			--marks;
+		} else if(markedLines_[i] != from)
+			--marks;
+		if((i += marks) >= markedLines_.size()) {
+			if(wrapAround)
+				i -= markedLines_.size();
+			else
+				return INVALID_INDEX;
+		}
+	} else {
+		if(i < marks) {
+			if(wrapAround)
+				i += markedLines_.size();
+			else
+				return INVALID_INDEX;
+		}
+		i -= marks;
+	}
+	return markedLines_[i];
+}
+
+/// Returns the number of the lines bookmarked.
+size_t Bookmarker::numberOfMarks() const /*throw()*/ {
+	return markedLines_.size();
 }
 
 /**
@@ -411,7 +493,7 @@ namespace {
 		result.numberOfRevisions = (result.completed = document.insert(position_, text_, &result.endOfChange)) ? 1 : 0;
 	}
 
-	inline bool DeletionChange::appendChange(IAtomicChange& postChange, const Document& document) {
+	inline bool DeletionChange::appendChange(IAtomicChange& postChange, const Document&) {
 		if(&postChange.type() != &type_)
 			return false;
 		const Position& bottom = region_.end();
@@ -477,8 +559,8 @@ public:
 	explicit UndoManager(Document& document) /*throw()*/;
 	virtual ~UndoManager() /*throw()*/ {clear();}
 	// attributes
-	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + (pendingAtomicChange_.get() != 0) ? 1 : 0;}
-	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + (pendingAtomicChange_.get() != 0) ? 1 : 0;;}
+	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
+	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
 	bool isStackingCompoundOperation() const /*throw()*/ {return compoundChangeDepth_ > 0;}
 	// rollbacks
 	void redo(IUndoableChange::Result& result);
@@ -1164,7 +1246,7 @@ void Document::recordChanges(bool record) /*throw()*/ {
 bool Document::redo(size_t n /* = 1 */) {
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(n > numberOfUndoableChanges())
+	else if(n > numberOfRedoableChanges())
 		throw invalid_argument("n");
 
 	IUndoableChange::Result result;
@@ -1255,6 +1337,7 @@ void Document::removeStateListener(IDocumentStateListener& listener) {
  * - Resets the modification flag to false.
  * - Resets the read-only flag to false.
  * - Revokes the narrowing.
+ * - Removes the all bookmarks.
  * @see #doResetContent
  */
 void Document::resetContent() {
@@ -1264,6 +1347,7 @@ void Document::resetContent() {
 		widen();
 		for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
 			(*i)->moveTo(0, 0);
+		bookmarker_->clear();
 
 		const DocumentChange ca(true, region());
 		fireDocumentAboutToBeChanged(ca);

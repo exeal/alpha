@@ -420,7 +420,10 @@ namespace ascension {
 		 */
 		class IBookmarkListener {
 		private:
-			/// The bookmark on @a line was set or removed.
+			/**
+			 * The bookmark on @a line was set or removed. Note that this is not called when the
+			 * bookmarks were changed by the document's change.
+			 */
 			virtual void bookmarkChanged(length_t line) = 0;
 			/// All bookmarks were removed.
 			virtual void bookmarkCleared() = 0;
@@ -429,18 +432,41 @@ namespace ascension {
 
 		/**
 		 * A @c Bookmarker manages bookmarks of the document.
+		 * @note This class is not intended to be subclassed.
 		 * @see Document#bookmarker, EditPoint#forwardBookmark, EditPoint#backwardBookmark
 		 */
-		class Bookmarker : public IDocumentListener {
+		class Bookmarker : private IDocumentListener {
 			MANAH_NONCOPYABLE_TAG(Bookmarker);
 		public:
+			/// A @c Bookmarker#Iterator enumerates the all marked lines.
+			class Iterator : public StandardBidirectionalIteratorAdapter<Iterator, length_t, length_t> {
+			public:
+				// StandardBidirectionalIteratorAdapter requirements
+				value_type current() const {return *impl_;}
+				bool equals(const Iterator& rhs) const {return impl_ == rhs.impl_;}
+				bool less(const Iterator& rhs) const {return impl_ < rhs.impl_;}
+				void next() {++impl_;}
+				void previous() {--impl_;}
+			private:
+				Iterator(manah::GapBuffer<length_t>::ConstIterator impl) : impl_(impl) {}
+				manah::GapBuffer<length_t>::ConstIterator impl_;
+				friend class Bookmarker;
+			};
+			// destructor
 			~Bookmarker() /*throw()*/;
+			// listeners
 			void addListener(IBookmarkListener& listener);
-			void clear() /*throw()*/;
-			length_t next(length_t from, Direction direction, std::size_t marks = 1) const;
-			bool isMarked(length_t line) const;
-			void mark(length_t line, bool set = true);
 			void removeListener(IBookmarkListener& listener);
+			// attributes
+			bool isMarked(length_t line) const;
+			length_t next(length_t from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
+			std::size_t numberOfMarks() const /*throw()*/;
+			// enumerations
+			Iterator begin() const;
+			Iterator end() const;
+			// operations
+			void clear() /*throw()*/;
+			void mark(length_t line, bool set = true);
 			void toggle(length_t line);
 		private:
 			manah::GapBuffer<length_t>::Iterator find(length_t line) const /*throw()*/;
