@@ -200,7 +200,7 @@ EditPoint::~EditPoint() /*throw()*/ {
  * is no bookmark in the document
  */
 Position EditPoint::backwardBookmark(length_t marks /* = 1 */) const {
-	const length_t line = document()->bookmarker().next(normalized().line, Direction::BACKWARD, marks);
+	const length_t line = document()->bookmarker().next(normalized().line, Direction::BACKWARD, true, marks);
 	return (line != INVALID_INDEX) ? Position(line, 0) : Position::INVALID_POSITION;
 }
 
@@ -359,7 +359,7 @@ bool EditPoint::erase(signed_length_t length /* = 1 */, EditPoint::CharacterUnit
  */
 Position EditPoint::forwardBookmark(length_t marks /* = 1 */) const {
 	const Position p(normalized());
-	const length_t line = document()->bookmarker().next(p.line, Direction::FORWARD, marks);
+	const length_t line = document()->bookmarker().next(p.line, Direction::FORWARD, true, marks);
 	return (line != INVALID_INDEX) ? Position(line, 0) : p;
 }
 

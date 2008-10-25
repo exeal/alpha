@@ -1,5 +1,5 @@
 # vc71.mak
-# (c) 2007 exeal
+# (c) 2007-2008 exeal
 
 !if "$(MSVCDIR)" == ""
 MSVCDIR=$(VS71COMNTOOLS)..\..\VC7
@@ -9,7 +9,7 @@ MSVCDIR=$(VS71COMNTOOLS)..\..\VC7
 !endif
 
 CXX_FLAGS=/c /DWIN32 /D_WINDOWS /D_DEBUG /DASCENSION_TEST /EHac /GS /GX /MTd /nologo /RTCcus /W4 /Wp64 /Zc:forScope /Zc:wchar_t
-XS_FLAGS=/DEBUG /nologo ole32.lib odbc32.lib odbccp32.lib shlwapi.lib
+XS_FLAGS=/DEBUG /nologo ole32.lib
 ALL_HEADER=
 
 all: bin document-test break-iterator-test case-folder-test normalizer-test regex-test unicode-iterator-test
@@ -25,7 +25,7 @@ test: all
 
 # common object files #######################################################
 
-./vc71/encoder.obj: ../encoder.cpp ../encodings/win32cp.cpp $(ALL_HEADER)
+./vc71/encoder.obj: ../encoder.cpp $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/encoder.obj ../encoder.cpp
 
 ./vc71/unicode-property.obj: ../unicode-property.cpp $(ALL_HEADER)
@@ -43,14 +43,17 @@ test: all
 
 # document-test #############################################################
 
+./vc71/point.obj: ../point.cpp $(ALL_HEADER)
+	cl $(CXX_FLAGS) /Fovc71/point.obj ../point.cpp
+
 ./vc71/document.obj: ../document.cpp $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/document.obj ../document.cpp
 
 ./vc71/document-test.obj: document-test.cpp vc71/document.obj $(ALL_HEADER)
 	cl $(CXX_FLAGS) /Fovc71/document-test.obj document-test.cpp
 
-./vc71/document-test.exe: vc71/document-test.obj vc71/document.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj
-	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/document.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj
+./vc71/document-test.exe: vc71/document-test.obj vc71/document.obj vc71/point.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj vc71/break-iterator.obj
+	link $(XS_FLAGS) /out:vc71/document-test.exe vc71/document-test.obj vc71/document.obj vc71/point.obj vc71/encoder.obj vc71/identifier-syntax.obj vc71/unicode-property.obj vc71/break-iterator.obj
 
 document-test: vc71/document-test.exe
 	vc71\document-test.exe

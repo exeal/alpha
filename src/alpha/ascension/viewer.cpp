@@ -137,9 +137,9 @@ public:
 		MANAH_IMPLEMENTS_INTERFACE(IOleWindow)
 	MANAH_END_INTERFACE_TABLE()
 	// IAccessible
-	STDMETHODIMP get_accParent(::IDispatch** ppdispParent);
+	STDMETHODIMP get_accParent(IDispatch** ppdispParent);
 	STDMETHODIMP get_accChildCount(long* pcountChildren);
-	STDMETHODIMP get_accChild(VARIANT varChild, ::IDispatch** ppdispChild);
+	STDMETHODIMP get_accChild(VARIANT varChild, IDispatch** ppdispChild);
 	STDMETHODIMP get_accName(VARIANT varChild, BSTR* pszName);
 	STDMETHODIMP get_accValue(VARIANT varChild, BSTR* pszValue);
 	STDMETHODIMP get_accDescription(VARIANT varChild, BSTR* pszDescription);
@@ -168,7 +168,7 @@ private:
 private:
 	TextViewer& view_;
 	bool available_;
-	ComQIPtr<::IAccessible> defaultServer_;
+	ComQIPtr<IAccessible> defaultServer_;
 //	enum {CHILDID_SELECTION = 1};
 };
 
@@ -2442,7 +2442,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	case WM_GETOBJECT:
 		if(lParam == OBJID_CLIENT) {
-			ComPtr<::IAccessible> acc;
+			ComPtr<IAccessible> acc;
 			if(SUCCEEDED(accessibleObject(*&acc)) && accLib.isAvailable())
 				return accLib.lresultFromObject(IID_IAccessible, wParam, acc.get());
 		} else if(lParam == OBJID_WINDOW) {
@@ -3800,7 +3800,7 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 }
 
 /// @see IDropTarget#DragEnter
-STDMETHODIMP DefaultMouseInputStrategy::DragEnter(::IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
 	if(data == 0)
 		return E_INVALIDARG;
 	MANAH_VERIFY_POINTER(effect);
@@ -3887,7 +3887,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWOR
 }
 
 /// @see IDropTarget#Drop
-STDMETHODIMP DefaultMouseInputStrategy::Drop(::IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
 	if(dnd_.dropTargetHelper.get() != 0) {
 		POINT p = {pt.x, pt.y};
 		dnd_.dropTargetHelper->Drop(data, &p, *effect);
