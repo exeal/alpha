@@ -188,7 +188,7 @@ public:
 	Window setClipboardViewer();
 	// D&D
 	void dragAcceptFiles(bool accept = true);
-	HRESULT registerDragDrop(::IDropTarget& dropTarget);
+	HRESULT registerDragDrop(IDropTarget& dropTarget);
 	HRESULT revokeDragDrop();
 	// caret
 	bool createCaret(HBITMAP bitmap, int width, int height);
@@ -247,7 +247,7 @@ protected:
 		bool handled = false;
 		LRESULT result = processWindowMessage(message, wParam, lParam, handled);
 		if(!handled)
-			result = ::CallWindowProc(::DefWindowProc, getHandle(), message, wParam, lParam);
+			result = ::CallWindowProcW(::DefWindowProcW, getHandle(), message, wParam, lParam);
 		return result;
 	}
 };
@@ -592,9 +592,9 @@ inline bool Window::create(const WCHAR* className, HWND parentOrHInstance,
 	HWND parent = toBoolean(::IsWindow(parentOrHInstance)) ? parentOrHInstance : 0;
 	HINSTANCE instance = (parent != 0) ?
 #ifdef _WIN64
-					reinterpret_cast<HINSTANCE>(::GetWindowLongPtr(parent, GWLP_HINSTANCE))
+					reinterpret_cast<HINSTANCE>(::GetWindowLongPtrW(parent, GWLP_HINSTANCE))
 #else
-					reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLong(parent, GWL_HINSTANCE)))
+					reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongW(parent, GWL_HINSTANCE)))
 #endif // _WIN64
 					: reinterpret_cast<HINSTANCE>(parentOrHInstance);
 
@@ -612,7 +612,7 @@ inline bool Window::createGrayCaret(int width, int height) {return createCaret(r
 
 inline bool Window::createSolidCaret(int width, int height) {return createCaret(0, width, height);}
 
-inline LRESULT Window::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {assertValidAsWindow(); return ::DefWindowProc(getHandle(), message, wParam, lParam);}
+inline LRESULT Window::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {assertValidAsWindow(); return ::DefWindowProcW(getHandle(), message, wParam, lParam);}
 
 inline bool Window::destroy() {if(toBoolean(::DestroyWindow(getHandle()))) {release(); return true;} return false;}
 
@@ -641,10 +641,10 @@ inline Window Window::getCapture() {return Window(::GetCapture());}
 
 inline POINT Window::getCaretPosition() {POINT pt; ::GetCaretPos(&pt); return pt;}
 
-inline DWORD Window::getClassLong(int index) const {assertValidAsWindow(); return ::GetClassLong(getHandle(), index);}
+inline DWORD Window::getClassLong(int index) const {assertValidAsWindow(); return ::GetClassLongW(getHandle(), index);}
 
 #ifdef _WIN64
-inline ULONG_PTR Window::getClassLongPtr(int index) const {assertValidAsWindow(); return ::GetClassLongPtr(getHandle(), index);}
+inline ULONG_PTR Window::getClassLongPtr(int index) const {assertValidAsWindow(); return ::GetClassLongPtrW(getHandle(), index);}
 #endif // _WIN64
 
 inline int Window::getClassName(WCHAR* className, int maxLength) const {assertValidAsWindow(); return ::GetClassNameW(getHandle(), className, maxLength);}
@@ -735,10 +735,10 @@ inline DWORD Window::getContextHelpID() const {assertValidAsWindow(); return ::G
 
 inline gdi::WindowDC Window::getWindowDC() {assertValidAsWindow(); return gdi::WindowDC(getHandle());}
 
-inline LONG Window::getWindowLong(int index) const {assertValidAsWindow(); return ::GetWindowLong(getHandle(), index);}
+inline LONG Window::getWindowLong(int index) const {assertValidAsWindow(); return ::GetWindowLongW(getHandle(), index);}
 
 #ifdef _WIN64
-inline LONG_PTR Window::getWindowLongPtr(int index) const {assertValidAsWindow(); return ::GetWindowLongPtr(getHandle(), index);}
+inline LONG_PTR Window::getWindowLongPtr(int index) const {assertValidAsWindow(); return ::GetWindowLongPtrW(getHandle(), index);}
 #endif // _WIN64
 
 inline bool Window::getPlacement(WINDOWPLACEMENT& placement) const {assertValidAsWindow(); return toBoolean(::GetWindowPlacement(getHandle(), &placement));}
@@ -758,7 +758,7 @@ inline std::wstring Window::getText() const {
 	return std::wstring(buffer.get());
 }
 
-inline int Window::getTextLength() const {assertValidAsWindow(); return ::GetWindowTextLength(getHandle());}
+inline int Window::getTextLength() const {assertValidAsWindow(); return ::GetWindowTextLengthW(getHandle());}
 
 inline DWORD Window::getThreadID() const {assertValidAsWindow(); return ::GetWindowThreadProcessId(getHandle(), 0);}
 
@@ -849,7 +849,7 @@ inline bool Window::redraw(RECT* updateRect /* = 0 */, HRGN clipRegion/* = 0 */,
 		UINT flags /* = RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE */) {
 	assertValidAsWindow(); return toBoolean(::RedrawWindow(getHandle(), updateRect, clipRegion, flags));}
 
-inline HRESULT Window::registerDragDrop(::IDropTarget& dropTarget) {
+inline HRESULT Window::registerDragDrop(IDropTarget& dropTarget) {
 	assertValidAsWindow(); return ::RegisterDragDrop(getHandle(), &dropTarget);}
 
 inline bool Window::releaseCapture() {return toBoolean(::ReleaseCapture());}
@@ -895,11 +895,11 @@ inline Window Window::setCapture() {assertValidAsWindow(); return Window(::SetCa
 
 inline void Window::setCaretPosition(const POINT& pt) {::SetCaretPos(pt.x, pt.y);}
 
-inline DWORD Window::setClassLong(int index, DWORD newLong) {assertValidAsWindow(); return ::SetClassLong(getHandle(), index, newLong);}
+inline DWORD Window::setClassLong(int index, DWORD newLong) {assertValidAsWindow(); return ::SetClassLongW(getHandle(), index, newLong);}
 
 #ifdef _WIN64
 inline ULONG_PTR Window::setClassLongPtr(int index, ULONG_PTR newLong) {
-	assertValidAsWindow(); return ::SetClassLongPtr(getHandle(), index, newLong);}
+	assertValidAsWindow(); return ::SetClassLongPtrW(getHandle(), index, newLong);}
 #endif // _WIN64
 
 inline Window Window::setClipboardViewer() {assertValidAsWindow(); return Window(::SetClipboardViewer(getHandle()));}
@@ -952,10 +952,10 @@ inline UINT_PTR Window::setTimer(
 
 inline bool Window::setContextHelpID(DWORD contextHelpID) {assertValidAsWindow(); return toBoolean(::SetWindowContextHelpId(getHandle(), contextHelpID));}
 
-inline LONG Window::setWindowLong(int index, LONG newLong) {assertValidAsWindow(); return ::SetWindowLong(getHandle(), index, newLong);}
+inline LONG Window::setWindowLong(int index, LONG newLong) {assertValidAsWindow(); return ::SetWindowLongW(getHandle(), index, newLong);}
 
 #ifdef _WIN64
-inline LONG_PTR Window::setWindowLongPtr(int index, LONG_PTR newLong) {assertValidAsWindow(); return ::SetWindowLongPtr(getHandle(), index, newLong);}
+inline LONG_PTR Window::setWindowLongPtr(int index, LONG_PTR newLong) {assertValidAsWindow(); return ::SetWindowLongPtrW(getHandle(), index, newLong);}
 #endif // _WIN64
 
 inline bool Window::setPlacement(const WINDOWPLACEMENT& placement) {assertValidAsWindow(); return toBoolean(::SetWindowPlacement(getHandle(), &placement));}
@@ -1006,15 +1006,15 @@ inline bool Window::winHelp(const WCHAR* help, UINT command /* = HELP_CONTEXT */
 inline LRESULT SubclassableWindow::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {
 	assertValidAsWindow();
 	return (originalProcedure_ != 0) ?
-		::CallWindowProc(originalProcedure_, getHandle(), message, wParam, lParam)
-		: ::DefWindowProc(getHandle(), message, wParam, lParam);
+		::CallWindowProcW(originalProcedure_, getHandle(), message, wParam, lParam)
+		: ::DefWindowProcW(getHandle(), message, wParam, lParam);
 }
 
 inline LRESULT SubclassableWindow::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
 	if(message == WM_NCDESTROY)
 		unsubclass();
 	handled = true;
-	return ::CallWindowProc(originalProcedure_, getHandle(), message, wParam, lParam);
+	return ::CallWindowProcW(originalProcedure_, getHandle(), message, wParam, lParam);
 }
 
 inline bool SubclassableWindow::subclass() {
@@ -1107,9 +1107,9 @@ inline LRESULT CALLBACK CustomControl<Control>::windowProcedure(HWND window, UIN
 	} else {
 		C* const p = reinterpret_cast<C*>(
 #ifdef _WIN64
-			::GetWindowLongPtr(window, GWLP_USERDATA));
+			::GetWindowLongPtrW(window, GWLP_USERDATA));
 #else
-			static_cast<LONG_PTR>(::GetWindowLong(window, GWL_USERDATA)));
+			static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
 #endif // _WIN64
 		if(p == 0)
 			return 1;
