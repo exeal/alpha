@@ -359,6 +359,25 @@ namespace ascension {
 			};
 		} // namespace isc
 
+
+		/// Performs the command and returns the command-specific result value.
+		inline ulong Command::operator()() {const ulong result = perform(); numericPrefix_ = 1; return result;}
+
+		/// Sets beep-on-error mode.
+		inline Command& Command::beepOnError(bool enable /* = true */) /*throw()*/ {beepsOnError_ = enable; return *this;}
+
+		/// Returns true if the command beeps when error occured.
+		inline bool Command::beepsOnError() const /*throw()*/ {return beepsOnError_;}
+
+		/// Returns the numeric prefix for the next execution.
+		inline long Command::numericPrefix() const /*throw()*/ {return numericPrefix_;}
+
+		/// Changes the command target.
+		inline Command& Command::retarget(viewers::TextViewer& viewer) /*throw()*/ {viewer_ = &viewer; return *this;}
+
+		/// Sets the numeric prefix for the next execution.
+		inline Command& Command::setNumericPrefix(long number) /*throw()*/ {numericPrefix_ = number; return *this;}
+
 	} // namespace texteditor
 
 } // namespace ascension

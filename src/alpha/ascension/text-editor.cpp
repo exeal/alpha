@@ -33,41 +33,6 @@ Command::Command(TextViewer& viewer) /*throw()*/ : viewer_(&viewer), numericPref
 Command::~Command() /*throw()*/ {
 }
 
-/// Performs the command and returns the command-specific result value.
-ulong Command::operator()() {
-	const ulong result = perform();
-	numericPrefix_ = 1;
-	return result;
-}
-
-/// Sets beep-on-error mode.
-Command& Command::beepOnError(bool enable /* = true */) /*throw()*/ {
-	beepsOnError_ = enable;
-	return *this;
-}
-
-/// Returns true if the command beeps when error occured.
-bool Command::beepsOnError() const /*throw()*/ {
-	return beepsOnError_;
-}
-
-/// Returns the numeric prefix for the next execution.
-long Command::numericPrefix() const /*throw()*/ {
-	return numericPrefix_;
-}
-
-/// Changes the command target.
-Command& Command::retarget(TextViewer& viewer) /*throw()*/ {
-	viewer_ = &viewer;
-	return *this;
-}
-
-/// Sets the numeric prefix for the next execution.
-Command& Command::setNumericPrefix(long number) /*throw()*/ {
-	numericPrefix_ = number;
-	return *this;
-}
-
 
 // commands.* ///////////////////////////////////////////////////////////////
 
