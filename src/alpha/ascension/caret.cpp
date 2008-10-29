@@ -803,7 +803,7 @@ bool VisualPoint::paste() {
 	verifyViewer();
 	if(document()->isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(canPaste())
+	else if(!canPaste())
 		throw ClipboardException(DV_E_FORMATETC);
 
 	IDataObject* content;
@@ -817,7 +817,7 @@ bool VisualPoint::paste() {
 	content->Release();
 	if(text.first == E_OUTOFMEMORY)
 		throw bad_alloc("getTextFromDataObject returned E_OUTOFMEMORY.");
-	else if(SUCCEEDED(text.first))
+	else if(FAILED(text.first))
 		throw ClipboardException(text.first);
 	return rectangle ? insertRectangle(text.second) : insert(text.second);
 }
