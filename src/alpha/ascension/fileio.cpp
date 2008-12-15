@@ -57,7 +57,7 @@ namespace {
 		if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
 				|| e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
 			return false;
-#endif /* PathFileExists */
+#endif // PathFileExists
 #else // ASCENSION_POSIX
 		struct stat s;
 		if(::stat(name, &s) == 0)
@@ -199,7 +199,7 @@ String fileio::canonicalizePathName(const Char* pathName) {
 
 	WIN32_FIND_DATAW wfd;
 	while(true) {
-		if(Char* next = wcspbrk(p, PATH_SEPARATORS)) {
+		if(Char* next = wcspbrk(const_cast<Char*>(p), PATH_SEPARATORS)) {
 			const Char c = *next;
 			*next = 0;
 			HANDLE h = ::FindFirstFileW(path, &wfd);
@@ -247,15 +247,15 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 #ifdef PathMatchSpec
 	if(toBoolean(::PathMatchSpecW(s1, s2)))
 		return true;
-#endif /* PathMatchSpec */
+#endif // PathMatchSpec
 	// by lexicographical comparison
 	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
-	const int fc1 = LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
-	const int fc2 = LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
+	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
+	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
 		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
-		LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
-		LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
 			return pathExists(s1);
 	}

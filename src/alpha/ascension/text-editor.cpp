@@ -1110,9 +1110,9 @@ ulong TextInputCommand::perform() {
  * @throw std#invalid_argument
  */
 TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(EditPoint::*procedure)(void)) : Command(viewer), procedure_(procedure) {
-	if(procedure_ != EditPoint::transposeCharacters
-			&& procedure_ != EditPoint::transposeWords
-			&& procedure_ != EditPoint::transposeLines)
+	if(procedure_ != &EditPoint::transposeCharacters
+			&& procedure_ != &EditPoint::transposeWords
+			&& procedure_ != &EditPoint::transposeLines)
 		throw invalid_argument("procedure");
 }
 
