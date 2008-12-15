@@ -912,7 +912,8 @@ inline size_t LineLayout::findRunForPosition(length_t column) const /*throw()*/ 
 
 /// Returns an iterator addresses the first styled segment.
 LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const /*throw()*/ {
-	return StyledSegmentIterator(*runs_);
+	const Run* temp = *runs_;
+	return StyledSegmentIterator(temp);
 }
 
 /// Returns if the line contains right-to-left run.
@@ -1041,7 +1042,8 @@ inline void LineLayout::justify() /*throw()*/ {
 
 /// Returns an iterator addresses the last styled segment.
 LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const /*throw()*/ {
-	return StyledSegmentIterator(runs_[numberOfRuns_]);
+	const Run* temp = runs_[numberOfRuns_];
+	return StyledSegmentIterator(temp);
 }
 
 /// Returns the line pitch in pixels.

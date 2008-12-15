@@ -26,13 +26,21 @@ namespace ascension {
 				// helpers for Unicode properties implementation
 				template<typename Code> struct CodeRange {
 					Code first, last;
-					bool operator<(Code rhs) const {return first < rhs;}
+#ifdef _SECURE_SCL
+					bool operator<(const CodeRange<Code>& rhs) const {return first < rhs.first && last < rhs.last;}
+#endif // _SECURE_SCL
 				};
+				template<typename Code> inline bool operator<(const CodeRange<Code>& lhs, CodePoint rhs) {return lhs.first < rhs;}
+				template<typename Code> inline bool operator<(CodePoint lhs, const CodeRange<Code>& rhs) {return lhs < rhs.first;}
 				struct PropertyRange {
 					CodePoint first, last;
 					ushort property;
-					bool operator<(CodePoint rhs) const {return first < rhs;}
+#ifdef _SECURE_SCL
+					bool operator<(const PropertyRange& rhs) const {return first < rhs.first && last < rhs.last;}
+#endif // _SECURE_SCL
 				};
+				inline bool operator<(const PropertyRange& lhs, CodePoint rhs) {return lhs.first < rhs;}
+				inline bool operator<(CodePoint lhs, const PropertyRange& rhs) {return lhs < rhs.first;}
 				template<typename Element> static const Element* findInRange(const Element* first, const Element* last, CodePoint cp) {
 					const Element* p = std::lower_bound(first, last, cp);
 					if(p == last) return 0;

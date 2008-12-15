@@ -807,45 +807,50 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	rules[9] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SQ_STRING, L"\'");
 	rules[10] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
 	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
-	auto_ptr<LexicalPartitioner> p(new LexicalPartitioner());
+	LexicalPartitioner* p = new LexicalPartitioner();
 	p->setRules(rules, MANAH_ENDOF(rules));
-	document().setPartitioner(p);
+	document().setPartitioner(auto_ptr<DocumentPartitioner>(p));
 
 	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
 
 	// JSDoc syntax highlight test
 	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
 		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
-	auto_ptr<WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, MANAH_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
-	auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
-	scanner->addWordRule(jsdocAttributes);
-	scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
-	map<Token::ID, const TextStyle> jsdocStyles;
-	jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(Color(0x00, 0x80, 0x00)))));
-	jsdocStyles.insert(make_pair(219, TextStyle(Colors(Color(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
-	jsdocStyles.insert(make_pair(220, TextStyle(Colors(Color(0x00, 0x80, 0x00)), true)));
-	auto_ptr<LexicalPartitionPresentationReconstructor> ppr(
-		new LexicalPartitionPresentationReconstructor(document(), scanner, jsdocStyles));
-	pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
+	{
+		auto_ptr<const WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, MANAH_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
+		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
+		scanner->addWordRule(jsdocAttributes);
+		scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
+		map<Token::ID, const TextStyle> jsdocStyles;
+		jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(Color(0x00, 0x80, 0x00)))));
+		jsdocStyles.insert(make_pair(219, TextStyle(Colors(Color(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
+		jsdocStyles.insert(make_pair(220, TextStyle(Colors(Color(0x00, 0x80, 0x00)), true)));
+		auto_ptr<IPartitionPresentationReconstructor> ppr(
+			new LexicalPartitionPresentationReconstructor(document(), auto_ptr<ITokenScanner>(scanner.release()), jsdocStyles));
+		pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
+	}
 
 	// JavaScript syntax highlight test
 	static const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
 		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
 	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
 		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
-	auto_ptr<WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, MANAH_ENDOF(JS_KEYWORDS) - 1, L' ', true));
-	auto_ptr<WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, MANAH_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
-	scanner.reset(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
-	scanner->addWordRule(jsKeywords);
-	scanner->addWordRule(jsFutureKeywords);
-	scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
-	map<Token::ID, const TextStyle> jsStyles;
-	jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
-	jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xFF)))));
-	jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
-	jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
-	pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
-		auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(), scanner, jsStyles)));
+	{
+		auto_ptr<const WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, MANAH_ENDOF(JS_KEYWORDS) - 1, L' ', true));
+		auto_ptr<const WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, MANAH_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
+		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
+		scanner->addWordRule(jsKeywords);
+		scanner->addWordRule(jsFutureKeywords);
+		scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
+		map<Token::ID, const TextStyle> jsStyles;
+		jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
+		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xFF)))));
+		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
+		jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
+		pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
+			auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
+				auto_ptr<ITokenScanner>(scanner.release()), jsStyles)));
+	}
 
 	// other contents
 	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
@@ -894,7 +899,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
 	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
 	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
-	setContentAssistant(ca);
+	setContentAssistant(auto_ptr<contentassist::IContentAssistant>(ca));
 	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif /* _DEBUG */
 	
@@ -2347,7 +2352,7 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 //			scroll(xScrollDegree > 0 ? +1 : -1, 0, true);
 
 		if(yScrollDegree != 0) {
-			setTimer(TIMERID_AUTOSCROLL, 500 / static_cast<uint>((pow(2, abs(yScrollDegree) / 2))), 0);
+			setTimer(TIMERID_AUTOSCROLL, 500 / static_cast<uint>((pow(2.0f, abs(yScrollDegree) / 2))), 0);
 			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
 				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD));
 		} else {
