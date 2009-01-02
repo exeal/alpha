@@ -109,7 +109,7 @@ set<TextViewer*>::const_iterator Presentation::firstTextViewer() const /*throw()
  */
 const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numberOfHyperlinks) const {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	else if(hyperlinkDetector_.get() == 0) {
 		numberOfHyperlinks = 0;
 		return 0;
@@ -162,7 +162,7 @@ const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numb
  */
 Colors Presentation::getLineColor(length_t line) const {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	ILineColorDirector::Priority highestPriority = 0, p;
 	Colors result, c;
 	for(list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::const_iterator
@@ -185,7 +185,7 @@ Colors Presentation::getLineColor(length_t line) const {
  */
 const LineStyle& Presentation::getLineStyle(length_t line, bool& delegatedOwnership) const {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	const LineStyle& styles = (lineStyleDirector_.get() != 0) ?
 		lineStyleDirector_->queryLineStyle(line, delegatedOwnership) : LineStyle::NULL_STYLE;
 	if(&styles == &LineStyle::NULL_STYLE)

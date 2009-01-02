@@ -426,7 +426,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	if(document.isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(!document.region().encompasses(scope))
-		throw BadRegionException();
+		throw BadRegionException(scope);
 
 	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
@@ -615,7 +615,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 bool TextSearcher::search(const Document& document,
 		const Position& from, const Region& scope, Direction direction, Region& matchedRegion) const {
 	if(!scope.includes(from))
-		throw BadPositionException();
+		throw BadPositionException(from);
 	bool matched = false;
 	compilePattern(direction);
 	if(options_.type == LITERAL) {

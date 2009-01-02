@@ -96,6 +96,9 @@ namespace ascension {
 			bool operator>=(const Position& rhs) const /*throw()*/ {return *this > rhs || *this == rhs;}
 		};
 
+		template<typename Element, typename Traits>
+		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Position& value);
+
 		/**
 		 * A region consists of two positions and represents a linear range in a document. There
 		 * are no restriction about greater/less relationship between the two positions, but the
@@ -145,6 +148,9 @@ namespace ascension {
 			/// Normalizes the region.
 			Region& normalize() /*throw()*/ {if(!isNormalized()) std::swap(first, second); return *this;}
 		};
+
+		template<typename Element, typename Traits>
+		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value);
 
 		/**
 		 * A document partition.
@@ -219,14 +225,25 @@ namespace ascension {
 		 */
 		class BadPositionException : public std::invalid_argument {
 		public:
-			BadPositionException();
+			explicit BadPositionException(const Position& requested);
+			BadPositionException(const Position& requested, const std::string& message);
+			const Position& requestedPosition() const /*throw()*/;
+		private:
+			const Position requestedPosition_;
 		};
 
 		/**
 		 * Thrown when the specified region intersects outside of the document.
 		 * @see BadPositionException
 		 */
-		class BadRegionException : public BadPositionException {};
+		class BadRegionException : public std::invalid_argument {
+		public:
+			explicit BadRegionException(const Region& requested);
+			BadRegionException(const Region& requested, const std::string& message);
+			const Region& requestedRegion() const /*throw()*/;
+		private:
+			const Region requestedRegion_;
+		};
 
 		/**
 		 * Provides information about a document input.
@@ -760,12 +777,6 @@ namespace ascension {
 		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
 			const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
 
-		// free functions output a primitive into stream
-		template<typename Element, typename Traits>
-		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Position& value);
-		template<typename Element, typename Traits>
-		std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value);
-
 		/// Provides features about file-bound document.
 		namespace fileio {
 			/// Character type for file names. This is equivalent to
@@ -1234,7 +1245,7 @@ inline bool Document::erase(const Position& pos1, const Position& pos2) {return 
  * @throw BadPostionException @a line is outside of the document
  */
 inline const Document::Line& Document::getLineInformation(length_t line) const {
-	if(line >= lines_.size()) throw BadPositionException(); return *lines_[line];}
+	if(line >= lines_.size()) throw BadPositionException(Position(line, 0)); return *lines_[line];}
 
 #if 0
 inline Document::LineIterator Document::getLineIterator(length_t line) const {
@@ -1398,7 +1409,7 @@ inline void DocumentPartitioner::partition(const Position& at, DocumentPartition
 	if(document_ == 0)
 		throw IllegalStateException("the partitioner is not connected to any document.");
 	else if(at > document_->region().second)
-		throw BadPositionException();
+		throw BadPositionException(at);
 	return doGetPartition(at, partition);
 }
 
@@ -1432,7 +1443,7 @@ inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position
 inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
 	const Position e(document_->region().second);
 	if(newRegion.first > e || newRegion.second > e)
-		throw BadRegionException();
+		throw BadRegionException(newRegion);
 	if(!(region_ = newRegion).includes(p_))
 		seek(p_);
 }
