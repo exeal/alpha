@@ -112,7 +112,7 @@ const LineStyle LineStyle::NULL_STYLE = {0, 0};
 class viewers::internal::TextViewerAccessibleProxy :
 		public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
-			IAccessible, manah::com::ole::RegTypeLibTypeInfoHolder<&LIBID_Accessibility, &IID_IAccessible> >,
+			IAccessible, manah::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible> >,
 		public IOleWindow {
 	// IAccessible の実装については以下を参考にした:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
@@ -168,7 +168,7 @@ private:
 private:
 	TextViewer& view_;
 	bool available_;
-	ComQIPtr<IAccessible> defaultServer_;
+	ComPtr<IAccessible> defaultServer_;
 //	enum {CHILDID_SELECTION = 1};
 };
 
@@ -2448,7 +2448,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 	case WM_GETOBJECT:
 		if(lParam == OBJID_CLIENT) {
 			ComPtr<IAccessible> acc;
-			if(SUCCEEDED(accessibleObject(*&acc)) && accLib.isAvailable())
+			if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
 				return accLib.lresultFromObject(IID_IAccessible, wParam, acc.get());
 		} else if(lParam == OBJID_WINDOW) {
 		}
@@ -2712,7 +2712,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 	// TODO: not implemented.
 	assertValidAsWindow();
 	if(line >= document().numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	scrollInfo_.firstVisibleLine = line;
 	scrollInfo_.firstVisibleSubline = 0;
 	length_t visualLine;
@@ -3062,7 +3062,7 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
  */
 TextViewerAccessibleProxy::TextViewerAccessibleProxy(TextViewer& view) /*throw()*/ : view_(view), available_(true) {
 	assert(accLib.isAvailable());
-	accLib.createStdAccessibleObject(view.getHandle(), OBJID_CLIENT, IID_IAccessible, &defaultServer_);
+	accLib.createStdAccessibleObject(view.getHandle(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
 }
 
 /// @see IAccessible#accDoDefaultAction
@@ -3292,7 +3292,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 		return E_INVALIDARG;
 	else if(view_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	view_.caret().replaceSelection(safeBSTR(szValue));
+	view_.caret().replaceSelection((szValue != 0) ? szValue : L"");
 	return S_OK;
 }
 
@@ -3700,9 +3700,11 @@ const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
 DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
 		bool showDraggingImage) : viewer_(0), leftButtonPressed_(false), lastHoveredHyperlink_(0) {
 	if(dnd_.enabled = enableOLEDragAndDrop && showDraggingImage) {
-		if(S_OK == dnd_.dragSourceHelper.createInstance(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER)) {
-			if(S_OK != dnd_.dropTargetHelper.createInstance(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER))
-				dnd_.dragSourceHelper.release();
+		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
+		if(dnd_.dragSourceHelper.get() != 0) {
+			dnd_.dropTargetHelper.ComPtr<IDropTargetHelper>::ComPtr(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
+			if(dnd_.dropTargetHelper.get() == 0)
+				dnd_.dragSourceHelper.reset();
 		}
 	}
 	dnd_.state = DragAndDrop::INACTIVE;

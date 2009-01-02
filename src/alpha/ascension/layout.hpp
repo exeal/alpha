@@ -670,7 +670,7 @@ inline length_t LineLayout::offset(const POINT& pt,
  */
 inline length_t LineLayout::subline(length_t column) const {
 	if(column > text().length())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 	return (numberOfSublines_ == 1) ? 0 :
 		ascension::internal::searchBound(static_cast<length_t>(0),
 			numberOfSublines_, column, std::bind1st(std::mem_fun(&LineLayout::sublineOffset), this));
@@ -693,7 +693,7 @@ inline length_t LineLayout::sublineLength(length_t subline) const {
  */
 inline length_t LineLayout::sublineOffset(length_t subline) const {
 	if(subline >= numberOfSublines_)
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position::INVALID_POSITION);
 	return (sublineOffsets_ != 0) ? sublineOffsets_[subline] : 0;
 }
 

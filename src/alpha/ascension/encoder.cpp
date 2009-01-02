@@ -12,6 +12,23 @@ using namespace ascension::encoding::implementation;
 using namespace std;
 
 
+// free function ////////////////////////////////////////////////////////////
+
+/**
+ * Converts the given encoding name from Unicode into 7-bit US-ASCII can pass to other functions.
+ * @return the converted encoding name
+ * @throw std#bad_alloc out of memory
+ * @throw UnsupportedEncodingException @a source can't convert
+ */
+string encoding::encodingNameFromUnicode(const String& source) {
+	const auto_ptr<Encoder> encoder(Encoder::forMIB(fundamental::US_ASCII));
+	const string temp(encoder->fromUnicode(source));
+	if(temp.empty())
+		throw UnsupportedEncodingException("invalid encoding name character");
+	return temp;
+}
+
+
 // UnsupportedEncodingException /////////////////////////////////////////////
 
 /**

@@ -50,7 +50,7 @@ using namespace std;
 Point::Point(Document& document, const Position& position /* = Position() */) :
 		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(Direction::FORWARD) {
 	if(!document.region().includes(position))
-		throw BadPositionException();
+		throw BadPositionException(position);
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
 
@@ -112,7 +112,7 @@ void Point::doMoveTo(const Position& to) {
 void Point::moveTo(const Position& to) {
 	verifyDocument();
 	if(to > document_->region().end())
-		throw BadPositionException();
+		throw BadPositionException(to);
 	doMoveTo(to);
 }
 

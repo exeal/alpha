@@ -50,7 +50,7 @@ const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
  */
 length_t kernel::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
 	if(at > document.region().second)
-		throw BadPositionException();
+		throw BadPositionException(at);
 	length_t offset = 0;
 	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
 	for(length_t line = start.line; ; ++line) {
@@ -180,9 +180,51 @@ DocumentAccessViolationException::DocumentAccessViolationException() :
 	invalid_argument("The specified position or region is inaccessible.") {
 }
 
-/// Default constructor.
-BadPositionException::BadPositionException() :
-	invalid_argument("The position is outside of the document.") {
+/**
+ * Constructor.
+ * @param requested the requested position in the document
+ */
+BadPositionException::BadPositionException(const Position& requested) : invalid_argument(
+		static_cast<ostringstream&>(ostringstream() << "the position " << requested
+		<< " is outside of the document.").str()), requestedPosition_(requested) {
+}
+
+/**
+ * Constructor.
+ * @param requested the requested position in the document
+ * @param message the message @c #what returns
+ */
+BadPositionException::BadPositionException(const Position& requested,
+		const string& message) : invalid_argument(message), requestedPosition_(requested) {
+}
+
+/// Returns the requested position in the document.
+const Position& BadPositionException::requestedPosition() const /*throw()*/ {
+	return requestedPosition_;
+}
+
+/**
+ * Constructor.
+ * @param requested the requested region in the document
+ * @param message the exception message
+ */
+BadRegionException::BadRegionException(const Region& requested) : invalid_argument(
+		static_cast<ostringstream&>(ostringstream() << "the region " << requested
+		<< ") intersects with the outside of the document.").str()), requestedRegion_(requested) {
+}
+
+/**
+ * Constructor.
+ * @param requested the requested region in the document
+ * @param message the exception message
+ */
+BadRegionException::BadRegionException(const Region& requested,
+		const string& message) : invalid_argument(message), requestedRegion_(requested) {
+}
+
+/// Returns the requested region in the document.
+const Region& BadRegionException::requestedRegion() const /*throw()*/ {
+	return requestedRegion_;
 }
 
 
@@ -286,7 +328,7 @@ inline GapBuffer<length_t>::Iterator Bookmarker::find(length_t line) const /*thr
  */
 bool Bookmarker::isMarked(length_t line) const {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	const GapBuffer<length_t>::ConstIterator i(find(line));
 	return i != markedLines_.end() && *i == line;
 }
@@ -299,7 +341,7 @@ bool Bookmarker::isMarked(length_t line) const {
  */
 void Bookmarker::mark(length_t line, bool set) {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	const GapBuffer<length_t>::Iterator i(find(line));
 	if(i != markedLines_.end() && *i == line) {
 		if(!set) {
@@ -329,7 +371,7 @@ void Bookmarker::mark(length_t line, bool set) {
 length_t Bookmarker::next(length_t from, Direction direction, bool wrapAround /* = true */, size_t marks /* = 1 */) const {
 	// this code is tested by 'test/document-test.cpp'
 	if(from >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(from));
 	else if(marks == 0 || markedLines_.empty())
 		return INVALID_INDEX;
 	else if(marks > markedLines_.size()) {
@@ -388,7 +430,7 @@ void Bookmarker::removeListener(IBookmarkListener& listener) {
  */
 void Bookmarker::toggle(length_t line) {
 	if(line >= document_.numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	const GapBuffer<length_t>::Iterator i(find(line));
 	if(i == markedLines_.end() || *i != line)
 		markedLines_.insert(i, line);
@@ -984,7 +1026,7 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 	if(changing_ || isReadOnly())											\
 		throw ReadOnlyDocumentException();									\
 	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))	\
-		throw BadPositionException();										\
+		throw BadPositionException(at);										\
 	else if(isNarrowed() && !accessibleRegion().includes(at))				\
 		throw DocumentAccessViolationException();							\
 	else if(!isModified() && input_.get() != 0 && !input_->isChangeable())	\
@@ -1167,7 +1209,7 @@ length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
  */
 length_t Document::lineOffset(length_t line, Newline newline) const {
 	if(line >= numberOfLines())
-		throw BadPositionException();
+		throw BadPositionException(Position(line, 0));
 	newline = resolveNewline(*this, newline);
 
 	length_t offset = 0, eolLength = isLiteralNewline(newline) ? getNewlineStringLength(newline) : 0;
@@ -1469,7 +1511,7 @@ void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) /*th
  * @see #property
  */
 void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
-	std::map<const DocumentPropertyKey*, String*>::iterator i(properties_.find(&key));
+	map<const DocumentPropertyKey*, String*>::iterator i(properties_.find(&key));
 	if(i == properties_.end())
 		properties_.insert(make_pair(&key, new String(property)));
 	else
@@ -1608,7 +1650,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document),
 		region_(document.region()), line_(&document.line(position.line)), p_(position) {
 	if(!region_.includes(p_))
-		throw BadPositionException();
+		throw BadPositionException(p_);
 }
 
 /**
@@ -1622,7 +1664,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 		line_(&document.line(region.beginning().line)), p_(region.beginning()) {
 	region_.normalize();
 	if(!document.region().encompasses(region_))
-		throw BadRegionException();
+		throw BadRegionException(region_);
 }
 
 /**
@@ -1637,9 +1679,9 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 		CharacterIterator(CONCRETE_TYPE_TAG_), document_(&document), region_(region), line_(&document.line(position.line)), p_(position) {
 	region_.normalize();
 	if(!document.region().encompasses(region_))
-		throw BadRegionException();
+		throw BadRegionException(region_);
 	else if(!region_.includes(p_))
-		throw BadPositionException();
+		throw BadPositionException(p_);
 }
 
 /// Copy-constructor.

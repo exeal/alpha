@@ -417,13 +417,13 @@ LineLayout::~LineLayout() /*throw()*/ {
 ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
-			throw kernel::BadPositionException();
+			throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 		// use the default level
 		return (lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 	return static_cast<uchar>(runs_[i]->analysis.s.uBidiLevel);
 }
 
@@ -452,7 +452,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 	if(first > last)
 		throw invalid_argument("first is greater than last.");
 	else if(last > text().length())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
 	RECT bounds;	// the result
 	int cx = 0, x;
 
@@ -561,13 +561,13 @@ void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& c
  * @param paintRect the region to draw
  * @param clipRect the clipping region
  * @param selection defines the region and the color of the selection. can be @c null
- * @throw kernel#BadPositionException @a subline is invalid
+ * @throw IndexOutOfBoundsException @a subline is invalid
  * @throw std#invalid_argument @a selection is not @c null and @a selection-&gt;color is invalid
  */
 void LineLayout::draw(length_t subline, DC& dc,
 		int x, int y, const RECT& paintRect, const RECT& clipRect, const Selection* selection) const {
 	if(subline >= numberOfSublines_)
-		throw BadPositionException();
+		throw IndexOutOfBoundsException("subline");
 	else if(selection != 0) {
 		if(!selection->color.foreground.isValid())
 			throw invalid_argument("selection->color.foreground");
@@ -1061,7 +1061,7 @@ inline int LineLayout::linePitch() const /*throw()*/ {
 POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
 	POINT location;
 	if(column > text().length())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 	else if(isDisposed())
 		location.x = location.y = 0;
 	else {
@@ -1286,7 +1286,7 @@ length_t LineLayout::offset(int x, int y, length_t& trailing, bool* outside /* =
  */
 const StyledText& LineLayout::styledSegment(length_t column) const {
 	if(column > text().length())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 	return *runs_[findRunForPosition(column)];
 }
 
@@ -1294,11 +1294,11 @@ const StyledText& LineLayout::styledSegment(length_t column) const {
  * Returns the smallest rectangle emcompasses the specified visual line.
  * @param subline the wrapped line
  * @return the rectangle
- * @throw kernel#BadPositionException @a subline is greater than the number of the wrapped lines
+ * @throw IndexOutOfBoundsException @a subline is greater than the number of the wrapped lines
  */
 RECT LineLayout::sublineBounds(length_t subline) const {
 	if(subline >= numberOfSublines_)
-		throw kernel::BadPositionException();
+		throw IndexOutOfBoundsException("subline");
 	RECT rc;
 	rc.left = 0;
 	rc.top = linePitch() * static_cast<long>(subline);
@@ -1313,7 +1313,7 @@ RECT LineLayout::sublineBounds(length_t subline) const {
  * than the first subline, the result is negative. The first subline's indent is always zero.
  * @param subline the visual line
  * @return the indentation in pixel
- * @throw kernel#BadPositionException @a subline is invalid
+ * @throw IndexOutOfBoundsException @a subline is invalid
  */
 int LineLayout::sublineIndent(length_t subline) const {
 	if(subline == 0)
@@ -1336,11 +1336,11 @@ int LineLayout::sublineIndent(length_t subline) const {
  * Returns the width of the specified wrapped line.
  * @param subline the visual line
  * @return the width
- * @throw kernel#BadPositionException @a subline is greater than the number of visual lines
+ * @throw IndexOutOfBoundsException @a subline is greater than the number of visual lines
  */
 int LineLayout::sublineWidth(length_t subline) const {
 	if(subline >= numberOfSublines_)
-		throw kernel::BadPositionException();
+		throw IndexOutOfBoundsException("subline");
 	else if(isDisposed())
 		return 0;
 	else if(numberOfSublines_ == 1 && longestSublineWidth_ != -1)
@@ -2163,7 +2163,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 	dout << "finding layout for line " << line;
 #endif
 	if(line > lip_->getPresentation().document().numberOfLines())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(line, 0));
 	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
 	list<LineLayout*>::iterator i(self.layouts_.begin());
 	for(const list<LineLayout*>::iterator e(self.layouts_.end()); i != e; ++i) {
@@ -2210,7 +2210,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
  */
 length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
 	if(line >= lip_->getPresentation().document().numberOfLines())
-		throw kernel::BadPositionException();
+		throw kernel::BadPositionException(kernel::Position(line, 0));
 	else if(!lip_->getLayoutSettings().lineWrap.wraps())
 		return line;
 	length_t result = 0, cachedLines = 0;
@@ -3075,7 +3075,8 @@ ISpecialCharacterRenderer* TextRenderer::getSpecialCharacterRenderer() const /*t
  * @param line the line number
  * @param subline the visual subline number
  * @return the indentation in pixel
- * @throw kernel#BadPositionException @a line or @a subline is invalid
+ * @throw kernel#BadPositionException @a line is invalid
+ * @throw IndexOutOfBoundsException @a subline is invalid
  */
 int TextRenderer::lineIndent(length_t line, length_t subline) const {
 	const LayoutSettings& c = getLayoutSettings();

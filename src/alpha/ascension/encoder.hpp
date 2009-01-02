@@ -193,8 +193,9 @@ namespace ascension {
 #ifdef ASCENSION_WINDOWS
 		uint convertMIBtoWinCP(MIBenum mib) /*throw()*/;
 		MIBenum convertWinCPtoMIB(uint codePage) /*throw()*/;
-#endif /* ASCENSION_WINDOWS */
+#endif // ASCENSION_WINDOWS
 		String getEncodingDisplayName(MIBenum mib);
+		std::string encodingNameFromUnicode(const String& source);
 
 		/// Thrown if the specified encoding is not supported.
 		class UnsupportedEncodingException : public std::invalid_argument {
