@@ -1,90 +1,128 @@
 // unknown-impl.hpp
-// (c) 2002-2007 exeal
+// (c) 2002-2009 exeal
 
 #ifndef MANAH_UNKNOWN_IMPL_HPP
 #define MANAH_UNKNOWN_IMPL_HPP
 #include "common.hpp"
+#include "../type-list.hpp"
 
 /**
- *	@file unknown-impl.hpp
- *	IUnknown の3つのメソッドを実装するマクロを定義
+ * @file unknown-impl.hpp
+ * Provides macros implement three methods of @c IUnknown interface.
  */
 
 namespace manah {
-namespace com {
+	namespace com {
 
-template<bool multiThreaded>
-class ReferenceCounter {
-public:
-	ReferenceCounter() throw() : count_(0) {}
-	long get() const throw() {return count_;}
-	long increment();
-	long decrement();
-private:
-	long count_;
-};
+		// Type list and interface list /////////////////////////////////////
 
-template<> inline long ReferenceCounter<true>::decrement() {return ::InterlockedDecrement(&count_);}
-template<> inline long ReferenceCounter<true>::increment() {return ::InterlockedIncrement(&count_);}
-template<> inline long ReferenceCounter<false>::decrement() {return --count_;}
-template<> inline long ReferenceCounter<false>::increment() {return ++count_;}
+		/// A pair of a interface type and its GUID.
+		template<typename InterfaceType, const IID* iid> struct InterfaceSignature {
+			typedef InterfaceType Interface;
+		};
 
-/// 参照カウントを使わない実装 (非ヒープオブジェクト)
-#define IMPLEMENT_UNKNOWN_NO_REF_COUNT()		\
-	STDMETHODIMP_(ULONG) AddRef() {return 2;}	\
-	STDMETHODIMP_(ULONG) Release() {return 1;}
+		/// Generates @c InterfaceSignature code.
+		#define MANAH_INTERFACE_SIGNATURE(name) manah::com::InterfaceSignature<name, &IID_##name> 
 
-/// 参照カウントの増減がスレッドセーフでない実装
-#define IMPLEMENT_UNKNOWN_SINGLE_THREADED()		\
-private:										\
-	manah::com::ReferenceCounter<false> rc_;	\
-public:											\
-	STDMETHODIMP_(ULONG) AddRef() {				\
-		return rc_.increment();					\
-	}											\
-	STDMETHODIMP_(ULONG) Release() {			\
-		if(rc_.decrement() == 0) {				\
-			delete this;						\
-			return 0;							\
-		}										\
-		return rc_.get();						\
-	}
+		/// Generates the type list cosists of interface type from the given type list consists of
+		/// @c InterfaceSignature.
+		template<typename InterfaceList> struct InterfacesFromSignatures;
+		template<typename I, const IID* iid, typename Cdr> struct InterfacesFromSignatures<typelist::Cat<InterfaceSignature<I, iid>, Cdr> > {
+			typedef typelist::Cat<I, typename InterfacesFromSignatures<Cdr>::Result> Result;
+		};
+		template<> struct InterfacesFromSignatures<void> {typedef void Result;};
 
-/// 参照カウントの増減がスレッドセーフな実装
-#define IMPLEMENT_UNKNOWN_MULTI_THREADED()		\
-private:										\
-	manah::com::ReferenceCounter<true>	rc_;	\
-public:											\
-	STDMETHODIMP_(ULONG) AddRef() {				\
-		return rc_.increment();					\
-	}											\
-	STDMETHODIMP_(ULONG) Release() {			\
-		if(rc_.decrement() == 0) {				\
-			delete this;						\
-			return 0;							\
-		}										\
-		return rc_.get();						\
-	}
+		// Interface hierarchy //////////////////////////////////////////////
 
-#define BEGIN_INTERFACE_TABLE()								\
-	STDMETHODIMP QueryInterface(REFIID riid, void** ppv) {	\
-		VERIFY_POINTER(ppv);
+		namespace internal {
+			template<typename Car, typename Cdr> class GenerateInterfaceHierarchy :
+				virtual public Car, public GenerateInterfaceHierarchy<typename Cdr::Car, typename Cdr::Cdr> {};
+			template<typename Interface>
+			class GenerateInterfaceHierarchy<Interface, void> : virtual public Interface {};
+			template<typename Interfaces> struct ImplementsAllBase :
+				public GenerateInterfaceHierarchy<typename Interfaces::Car, typename Interfaces::Cdr> {};
+		} // namespace internal
 
-#define IMPLEMENTS_LEFTMOST_INTERFACE(InterfaceName)			\
-		if(riid == IID_##InterfaceName || riid == IID_IUnknown)	\
-			*ppv = static_cast<InterfaceName*>(this);
+		template<typename Interfaces> struct ImplementsAll :
+			public internal::ImplementsAllBase<typename typelist::RemoveBases<Interfaces>::Result> {};
 
-#define IMPLEMENTS_INTERFACE(InterfaceName)		\
-		else if(riid == IID_##InterfaceName)	\
-			*ppv= static_cast<InterfaceName*>(this);
+		// Threading policy for IUnknownImpl ////////////////////////////////
 
-#define END_INTERFACE_TABLE()							\
-		else											\
-			return (*ppv = 0), E_NOINTERFACE;			\
-		reinterpret_cast<IUnknown*>(*ppv)->AddRef();	\
-		return S_OK;									\
-	}
+		struct NoReferenceCounting {};
+		struct SingleThreaded {};
+		struct MultiThreaded {};
 
-}} // namespace manah::com
+		namespace internal {
+			template<typename ThreadingPolicy = MultiThreaded> class ReferenceCounter {
+			public:
+				ReferenceCounter() /*throw()*/ : c_(0) {}
+				ULONG increment() /*throw()*/;
+				ULONG decrement() /*throw()*/;
+			private:
+				long c_;
+			};
+			template<> class ReferenceCounter<NoReferenceCounting> {
+			public:
+				ULONG increment() {return 2;}
+				ULONG decrement() {return 1;}
+			};
+			template<> inline ULONG ReferenceCounter<SingleThreaded>::increment() {return ++c_;}
+			template<> inline ULONG ReferenceCounter<SingleThreaded>::decrement() {return --c_;}
+			template<> inline ULONG ReferenceCounter<MultiThreaded>::increment() {return ::InterlockedIncrement(&c_);}
+			template<> inline ULONG ReferenceCounter<MultiThreaded>::decrement() {return ::InterlockedDecrement(&c_);}
+		} // namespace internal
 
-#endif /* !MANAH_UNKNOWN_IMPL_HPP */
+		// IUnknownImpl class ///////////////////////////////////////////////
+
+		namespace internal {
+			template<typename Self, typename InterfaceSignatures> struct ChainQueryInterface;
+			template<typename Self, typename Car, const IID* iid, typename Cdr>
+			struct ChainQueryInterface<Self, typelist::Cat<InterfaceSignature<Car, iid>, Cdr> > {
+				HRESULT operator()(Self& self, const IID& riid, void** ppv) {
+					if(toBoolean(::InlineIsEqualGUID(riid, *iid)))
+						return (*ppv = static_cast<Car*>(&self)), self.AddRef(), S_OK;
+					return ChainQueryInterface<Self, Cdr>()(self, riid, ppv);
+				}
+			};
+			template<typename Self> struct ChainQueryInterface<Self, void> {
+				HRESULT operator()(Self& self, const IID& iid, void** ppv) {
+					return (*ppv = 0), E_NOINTERFACE;
+				}
+			};
+		} // namespace internal
+
+		/**
+		 * Implements @c IUnknown interface.
+		 * @param InterfacesSignatures the interfaces to implement
+		 * @param ThreadingPolicy the policy for reference counting. acceptable entities are
+		 * @c NoReferenceCounting, @c SingleThreaded and @c MultiThreaded.
+		 * @note This class must be base of the other interface implementing classes.
+		 */
+		template<typename InterfaceSignatures, typename ThreadingPolicy = MultiThreaded>
+		class IUnknownImpl : public ImplementsAll<typename InterfacesFromSignatures<InterfaceSignatures>::Result> {
+		public:
+			IUnknownImpl() /*throw()*/ {}
+			virtual ~IUnknownImpl() throw() {}
+			STDMETHODIMP_(ULONG) AddRef() {return c_.increment();}
+			STDMETHODIMP_(ULONG) Release() {
+				if(const ULONG c = c_.decrement())
+					return c;
+				delete this;
+				return 0;
+			}
+			STDMETHODIMP QueryInterface(REFIID iid, void** ppv) {
+				MANAH_VERIFY_POINTER(ppv);
+				if(toBoolean(::InlineIsEqualGUID(iid, IID_IUnknown))) {
+					*ppv = static_cast<InterfaceSignatures::Car::Interface*>(this);
+					return AddRef(), S_OK;
+				}
+				return internal::ChainQueryInterface<
+					IUnknownImpl<InterfaceSignatures, ThreadingPolicy>, InterfaceSignatures>()(*this, iid, ppv);
+			}
+		private:
+			internal::ReferenceCounter<ThreadingPolicy> c_;
+		};
+
+}} // namespace manah.com
+
+#endif // !MANAH_UNKNOWN_IMPL_HPP
