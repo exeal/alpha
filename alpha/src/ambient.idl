@@ -1,0 +1,691 @@
+// ambient.idl
+// (c) 2008 exeal
+
+#ifndef AMBIENT_IDL_
+#define AMBIENT_IDL_
+import "oaidl.idl";
+import "ocidl.idl";
+import "dispex.idl";	// IDispatchEx
+
+#ifndef VARIANT_TRUE
+#	define VARIANT_TRUE ((VARIANT_BOOL)-1)
+#endif // !VARIANT_TRUE
+#ifndef VARIANT_FALSE
+#	define VARIANT_FALSE ((VARIANT_BOOL)0)
+#endif // !VARIANT_FALSE
+
+
+[
+	uuid(A2263752-16CA-4336-B80C-5FCE16466E8D),
+	lcid(0), version(0.8), helpstring("")
+]
+library ambient {
+	// this library consists of three parts:
+	// - text editor control
+	// - script system/environment
+	// - CScript/WScript emulations
+
+	// introduce standard definitions
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	// text editor control //////////////////////////////////////////////////
+
+	typedef enum {
+		// these values must match ascension.kernel.Newline enumeration (defined in ascension/document.hpp)
+		LineFeed, CarriageReturn, CrLf, NextLine, LineSeparator, ParagraphSeparator, RawValue = 0x1000, DocumentInput = 0x1001
+	} Newline;
+
+	typedef enum {
+		DontLock, SharedLock, ExclusiveLock, LockOnlyAsEditing
+	} FileLockMode;
+
+	typedef enum {
+		Utf16CodeUnit, Utf32CodeUnit, GraphemeCluster, GlyphCluster, DefaultUnit
+	} CharacterUnit;
+
+	typedef enum {
+		Forward, Backward
+	} Direction;
+
+	[
+		uuid(A685BE8A-DCA7-4817-8A20-0C628D0B0B32),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IPosition : IDispatch {
+		[id(0x1), propget, helpstring("")]
+		HRESULT Column([out, retval] long* column);
+		[id(0x1), propput, helpstring("")]
+		HRESULT Column([in] long column);
+		[id(0x2), propget, helpstring("")]
+		HRESULT Line([out, retval] long* line);
+		[id(0x2), propput, helpstring("")]
+		HRESULT Line([in] long line);
+	}
+
+	[
+		uuid(A25036BA-F43D-4270-AD6E-433989012583),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IRegion : IDispatch {
+		// properties
+		[id(0x1), propget, helpstring("")]
+		HRESULT Beginning([out, retval] IPosition** beginning);
+		[id(0x2), propget, helpstring("")]
+		HRESULT End([out, retval] IPosition** end);
+		// methods
+		[id(0x3), helpstring("")]
+		HRESULT Encompasses([in] IRegion* other, [out, retval] VARIANT_BOOL* result);
+		[id(0x4), helpstring("")]
+		HRESULT GetIntersection([in] IRegion* other, [out, retval] IRegion** result);
+		[id(0x5), helpstring("")]
+		HRESULT GetUnion([in] IRegion* other, [out, retval] IRegion** result);
+		[id(0x6), helpstring("")]
+		HRESULT Includes([in] IPosition* p, [out, retval] VARIANT_BOOL* result);
+		[id(0x7), helpstring("")]
+		HRESULT IntersectsWith([in] IRegion* other, [out, retval] VARIANT_BOOL* result);
+		[id(0x8), helpstring("")]
+		HRESULT IsEmpty([out, retval] VARIANT_BOOL* result);
+//		[id(0x9), helpstring("")]
+//		HRESULT IsNormalized([out, retval] VARIANT_BOOL* result);
+//		[id(0xA), helpstring("")]
+//		HRESULT Normalize();
+	}
+
+	interface IBuffer;
+
+	[
+		uuid(A92A18B8-6A66-4b89-968C-9F1F5E92FCD3),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IPoint : IDispatch {
+		// properties
+		[id(0x1), propget, helpstring("")]
+		HRESULT AdaptsToBuffer([out, retval] VARIANT_BOOL* adapts);
+		[id(0x1), propput, helpstring("")]
+		HRESULT AdaptsToBuffer([in] VARIANT_BOOL adapt);
+		[id(0x2), propget, helpstring("")]
+		HRESULT Buffer([out, retval] IBuffer** buffer);
+		[id(0x3), propget, helpstring("")]
+		HRESULT Column([out, retval] long* column);
+		[id(0x4), propget, helpstring("")]
+		HRESULT ExcludedFromRestriction([out, retval] VARIANT_BOOL* excluded);
+		[id(0x4), propput, helpstring("")]
+		HRESULT ExcludedFromRestriction([in] VARIANT_BOOL excluded);
+		[id(0x5), propget, helpstring("")]
+		HRESULT Gravity([out, retval] Direction* gravity);
+		[id(0x5), propput, helpstring("")]
+		HRESULT Gravity([in] Direction gravity);
+		[id(0x6), propget, helpstring("")]
+		HRESULT Line([out, retval] long* line);
+		[id(0x7), propget, helpstring("")]
+		HRESULT Position([out, retval] IPosition** position);
+		// methods
+		[id(0x8), helpstring("")]
+		HRESULT IsBufferDeleted([out, retval] VARIANT_BOOL* result);
+		[id(0x9), helpstring("")]
+		HRESULT MoveTo([in] IPosition* to);
+	}
+
+	[
+		uuid(A178F060-C5A6-4e56-8283-CEE0FAC58A35),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IEditPoint : IPoint {
+/*		[id(11), helpstring("")]
+		HRESULT BackwardBookmark([in, defaultvalue(1)] long bookmarks, [out, retval] IPosition** result);
+		[id(12), helpstring("")]
+		HRESULT BackwardCharacter([in, defaultvalue(1)] long characters, [out, retval] IPosition** result);
+		[id(13), helpstring("")]
+		HRESULT BackwardLine([in, defaultvalue(1)] long lines, [out, retval] IPosition** result);
+		[id(14), helpstring("")]
+		HRESULT BackwardWord([in, defaultvalue(1)] long words, [out, retval] IPosition** result);
+		[id(15), helpstring("")]
+		HRESULT BackwardWordEnd([in, defaultvalue(1)] long words, [out, retval] IPosition** result);
+		[id(16), helpstring("")]
+		HRESULT BeginningOfBuffer([out, retval] IPosition** result);
+		[id(17), helpstring("")]
+		HRESULT BeginningOfLine([out, retval] IPosition** result);
+		[id(18), propget, helpstring("")]
+		HRESULT Character([out, retval] long* result);
+		[id(19), propget, helpstring("")]
+		HRESULT CharacterUnit([out, retval] CharacterUnit* result);
+		[id(20), helpstring("")]
+		HRESULT DestructiveInsert([in] BSTR text, [in, defaultvalue(VARIANT_TRUE)] boolean keepNewline);
+		[id(21), helpstring("")]
+		HRESULT EndOfBuffer([out, retval] IPosition** result);
+		[id(22), helpstring("")]
+		HRESULT EndOfLine([out, retval] IPosition** result);
+		[id(23), helpstring("")]
+		HRESULT Erase([in, defaultvalue(1)] long length, [in, defaultvalue(DefaultUnit)] CharacterUnit unit);
+		[id(24), helpstring("")]
+		HRESULT ForwardBookmark([in, defaultvalue(1)] long bookmarks, [out, retval] IPosition** result);
+		[id(25), helpstring("")]
+		HRESULT ForwardCharacter([in, defaultvalue(1)] long characters, [out, retval] IPosition** result);
+		[id(26), helpstring("")]
+		HRESULT ForwardLine([in, defaultvalue(1)] long lines, [out, retval] IPosition** result);
+		[id(27), helpstring("")]
+		HRESULT ForwardWord([in, defaultvalue(1)] long words, [out, retval] IPosition** result);
+		[id(28), helpstring("")]
+		HRESULT ForwardWordEnd([in, defaultvalue(1)] long words, [out, retval] IPosition** result);
+		[id(29), helpstring("")]
+		HRESULT Insert([in] BSTR text);
+		[id(30), helpstring("")]
+		HRESULT IsBeginningOfBuffer([out, retval] boolean* result);
+		[id(31), helpstring("")]
+		HRESULT IsBeginningOfLine([out, retval] boolean* result);
+		[id(32), helpstring("")]
+		HRESULT IsEndOfBuffer([out, retval] boolean* result);
+		[id(33), helpstring("")]
+		HRESULT IsEndOfLine([out, retval] boolean* result);
+//		[id(34), helpstring("")]
+//		HRESULT MoveToAbsoluteCharacterOffset([in] long offset);
+		[id(35), helpstring("")]
+		HRESULT NewLine([in, defaultvalue(1)] long newlines);
+		[id(36), helpstring("")]
+		HRESULT SetCharacterUnit([in] CharacterUnit unit);
+		[id(37), helpstring("")]
+		HRESULT TransposeCharacters([out, retval] boolean* succeeded);
+		[id(38), helpstring("")]
+		HRESULT TransposeLines([out, retval] boolean* succeeded);
+		[id(39), helpstring("")]
+		HRESULT TransposeWords([out, retval] boolean* succeeded);
+*/	}
+
+	[
+		uuid(AFACAF4D-69B8-4917-95D3-5170C67BF7E2),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IBookmarker : IDispatch {
+		[id(1), helpstring("")]
+		HRESULT Clear();
+		[id(2), helpstring("")]
+		HRESULT IsMarked([in] long line, [out, retval] VARIANT_BOOL* result);
+		[id(3), helpstring("")]
+		HRESULT Mark([in] long line, [in, defaultvalue(VARIANT_TRUE)] VARIANT_BOOL set);
+		[id(4), helpstring("")]
+		HRESULT Next([in] long from, [in] Direction direction,
+			[in, defaultvalue(VARIANT_TRUE)] VARIANT_BOOL wrapAround, [in, defaultvalue(1)] long marks, [out, retval] long* result);
+		[id(5), helpstring("")]
+		HRESULT Toggle([in] long line);
+	}
+
+	[
+		uuid(AFF3034C-4B74-40b1-8820-B2AA0D179CFF),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IBuffer : IDispatch {
+		// properties
+		[id(1), propget, helpstring("")]
+		HRESULT AccessibleRegion([out, retval] IRegion** region);
+		[id(2), propget, helpstring("")]
+		HRESULT Bookmarker([out, retval] IBookmarker** bookmarker);
+		[id(3), propget, helpstring("")]
+		HRESULT BoundToFile([out, retval] VARIANT_BOOL* bound);
+		[id(4), propget, helpstring("")]
+		HRESULT Encoding([out, retval] BSTR* encoding);
+		[id(4), propput, helpstring("")]
+		HRESULT Encoding([in] BSTR encoding);
+		[id(5), propget, helpstring("")]
+		HRESULT InCompoundChanging([out, retval] VARIANT_BOOL* compound);
+		[id(6), propget, helpstring("")]
+		HRESULT Length([in, defaultvalue(RawValue)] newline, [out, retval] long* length);
+		[id(7), propget, helpstring("")]
+		HRESULT Line([in] long line, [out, retval] BSTR* s);
+		[id(8), propget, helpstring("")]
+		HRESULT Modified([out, retval] VARIANT_BOOL* modified);
+		[id(9), propget, helpstring("")]
+		HRESULT Name([out, retval] BSTR* name);
+		[id(10), propget, helpstring("")]
+		HRESULT Narrowed([out, retval] VARIANT_BOOL* narrowed);
+		[id(11), propget, helpstring("")]
+		HRESULT Newline([out, retval] Newline* newline);
+		[id(11), propput, helpstring("")]
+		HRESULT Newline([in] Newline newline);
+		[id(12), propget, helpstring("")]
+		HRESULT ReadOnly([out, retval] VARIANT_BOOL* readOnly);
+		[id(12), propput, helpstring("")]
+		HRESULT ReadOnly([in] VARIANT_BOOL readOnly);
+		[id(13), propget, helpstring("")]
+		HRESULT RecordsChanges([out, retval] VARIANT_BOOL* records);
+		[id(13), propput, helpstring("")]
+		HRESULT RecordsChanges([in] VARIANT_BOOL record);
+		[id(14), propget, helpstring("")]
+		HRESULT Region([out, retval] IRegion** region);
+		[id(15), propget, helpstring("")]
+		HRESULT RevisionNumber([out, retval] long* revisionNumber);
+		[id(16), propget, helpstring("")]
+		HRESULT UnicodeByteOrderMark([out, retval] VARIANT_BOOL* p);
+		// methods
+		[id(20), helpstring("")]
+		HRESULT BeginCompoundChange();
+		[id(21), helpstring("")]
+		HRESULT ClearUndoBuffer();
+		[id(22), helpstring("")]
+		HRESULT Close();
+		[id(23), helpstring("")]
+		HRESULT EndCompoundChange();
+		[id(24), helpstring("")]
+		HRESULT Erase([in] IRegion* region, [out, retval] VARIANT_BOOL* result);
+		[id(25), helpstring("")]
+		HRESULT Insert([in] IPosition* position, [in] BSTR text, [out, retval] VARIANT_BOOL* result);
+		[id(26), helpstring("")]
+		HRESULT InsertUndoBoundary();
+		[id(27), helpstring("")]
+		HRESULT MarkUnmodified();
+		[id(28), helpstring("")]
+		HRESULT NarrowToRegion([in] IRegion* region);
+		[id(29), helpstring("")]
+		HRESULT Redo([in, defaultvalue(1)] long n, [out, retval] VARIANT_BOOL* result);
+		[id(30), helpstring("")]
+		HRESULT ResetContent();
+		[id(31), helpstring("")]
+		HRESULT Undo([in, defaultvalue(1)] long n, [out, retval] VARIANT_BOOL* result);
+		[id(32), helpstring("")]
+		HRESULT Widen();
+	}
+
+	[
+		uuid(A4F51429-782F-49fe-8840-E59B800CC393),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IBufferList : IDispatch {
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("")]
+		HRESULT Item([in] long index, [out, retval] IBuffer** buffer);
+		[id(1), propget, helpstring("")]
+		HRESULT Length([out, retval] long* length);
+		[id(2), helpstring("")]
+		HRESULT AddNew([in, defaultvalue("")] BSTR name,
+			[in, defaultvalue("UTF-8")] BSTR encoding,
+			[in, defaultvalue(RawValue)] Newline newline, [out, retval] IBuffer** result);
+		[id(3), helpstring("")]
+		HRESULT AddNewDialog([in, defaultvalue("")] BSTR name, [out, retval] IBuffer** result);
+		[id(4), helpstring("")]
+		HRESULT Open([in] BSTR fileName,
+			[in, defaultvalue("UniversalAutoDetect")] BSTR encoding, [in, defaultvalue(DontLock)] FileLockMode lockMode,
+			[in, defaultvalue(VARIANT_FALSE)] VARIANT_BOOL asReadOnly, [out, retval] IBuffer** result);
+		[id(5), helpstring("")]
+		HRESULT OpenDialog([in, defaultvalue("")] BSTR initialDirectory, [out, retval] VARIANT_BOOL* succeeded);
+		[id(6), helpstring("")]
+		HRESULT SaveSomeDialog([out, retval] VARIANT_BOOL* ok);
+	}
+
+	[
+		uuid(AE850138-5112-41ba-B180-4CC399FA4D6D),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IVisualPoint : IEditPoint {
+		[id(51), helpstring("")]
+		HRESULT BeginningOfVisualLine([out, retval] IPosition** result);
+		[id(52), helpstring("")]
+		HRESULT CanPaste([out, retval] boolean* result);
+		[id(53), helpstring("")]
+		HRESULT EndOfVisualLine([out, retval] IPosition** result);
+		[id(54), helpstring("")]
+		HRESULT FirstPrintableCharacterOfLine([out, retval] IPosition** result);
+		[id(55), helpstring("")]
+		HRESULT FirstPrintableCharacterOfVisualLine([out, retval] IPosition** result);
+		[id(56), helpstring("")]
+		HRESULT ForwardPage([in, defaultvalue(1)] long pages, [out, retval] IPosition** result);
+		[id(57), helpstring("")]
+		HRESULT ForwardVisualLine([in, defaultvalue(1)] long lines, [out, retval] IPosition** result);
+		[id(58), helpstring("")]
+		HRESULT InsertRectangle([in] BSTR text, [out, retval] boolean* result);
+		[id(59), propget, helpstring("")]
+		HRESULT VisualColumn([out, retval] long** result);
+	}
+
+	[
+		uuid(AA709221-38BC-4581-AF37-F012E97A1327),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface ICaret : IVisualPoint {
+		[id(61), helpstring("")]
+		HRESULT Anchor([out, retval] IPosition** anchor);
+		[id(62), helpstring("")]
+		HRESULT Beginning([out, retval] IPosition** beginning);
+		[id(63), helpstring("")]
+		HRESULT BeginRectangleSelection();
+		[id(64), helpstring("")]
+		HRESULT ClearSelection();
+		[id(65), helpstring("")]
+		HRESULT CopySelection([in, defaultvalue(VARIANT_FALSE)] boolean useKillRing);
+		[id(66), helpstring("")]
+		HRESULT CutSelection([in, defaultvalue(VARIANT_FALSE)] boolean useKillRing);
+		[id(67), helpstring("")]
+		HRESULT End([out, retval] IPosition** end);
+		[id(68), helpstring("")]
+		HRESULT EndRectangleSelection();
+		[id(69), helpstring("")]
+		HRESULT EraseSelection([out, retval] boolean** succeeded);
+		[id(70), helpstring("")]
+		HRESULT ExtendSelection([in] IDispatch* to);
+		[id(71), helpstring("")]
+		HRESULT InputCharacter([in] long character, [in, defaultvalue(VARIANT_TRUE)] boolean validateSequence,
+			[in, defaultvalue(VARIANT_TRUE)] boolean blockControls, [out, retval] boolean* succeeded);
+		[id(72), helpstring("")]
+		HRESULT IsOvertypeMode([out, retval] boolean* result);
+		[id(73), helpstring("")]
+		HRESULT IsSelectionEmpty([out, retval] boolean* result);
+		[id(74), helpstring("")]
+		HRESULT IsSelectionRectangle([out, retval] boolean* result);
+//		[id(75), helpstring("")]
+//		HRESULT MatchBrackets([out, retval] IRegion** brackets);
+//		[id(76), helpstring("")]
+//		HRESULT MatchBracketsTrackingMode([out, retval] MatchBracketsTrackingMode* mode);
+		[id(77), helpstring("")]
+		HRESULT PasteToSelection([in, defaultvalue(VARIANT_FALSE)] boolean useKillRing);
+		[id(78), helpstring("")]
+		HRESULT ReplaceSelection([in] BSTR text, [in, defaultvalue(VARIANT_FALSE)] boolean rectangleInsertion, [out, retval] boolean* succeeded);
+		[id(79), helpstring("")]
+		HRESULT Select([in] IRegion* region);
+//		[id(80), helpstring("")]
+//		HRESULT SelectedRangeOnLine();
+//		[id(81), helpstring("")]
+//		HRESULT SelectedRangeOnVisualLine();
+		[id(82), helpstring("")]
+		HRESULT SelectionRegion([out, retval] IRegion** region);
+		[id(83), helpstring("")]
+		HRESULT SelectionText([in, defaultvalue(RawValue)] Newline newline, [out, retval] BSTR* text);
+		[id(84), helpstring("")]
+		HRESULT SelectWord();
+		[id(85), helpstring("")]
+		HRESULT SetOvertypeMode([in, defaultvalue(VARIANT_TRUE)] boolean enable);
+		[id(86), helpstring("")]
+		HRESULT ShowAutomatically([in, defaultvalue(VARIANT_TRUE)] boolean enable);
+		[id(87), helpstring("")]
+		HRESULT ShowsAutomatically([out, retval] boolean* enabled);
+//		[id(88), helpstring("")]
+//		HRESULT TrackMatchBrackets(MatchBracketsTrackingMode mode);
+	}
+
+	[
+		uuid(A80D020F-9576-4fae-B9DE-A000B7F9EDEB),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface ITextEditor : IDispatch {
+		[id(1), helpstring("")]
+		HRESULT GetBuffer([out, retval] IBuffer** result);
+		[id(2), helpstring("")]
+		HRESULT GetCaret([out, retval] ICaret** result);
+	}
+
+	[
+		uuid(A5B43144-7520-41ba-A5D9-021AC23B2BA6),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IWindow : IDispatch {
+		[id(1), helpstring("")]
+		HRESULT Activate();
+		[id(2), helpstring("")]
+		HRESULT Close();
+		[id(3), helpstring("")]
+		HRESULT Select([in] VARIANT* o);
+		[id(4), propget, helpstring("")]
+		HRESULT SelectedBuffer([out, retval] IBuffer** result);
+		[id(5), propget, helpstring("")]
+		HRESULT SelectedEditor([out, retval] ITextEditor** result);
+		[id(6), helpstring("")]
+		HRESULT Split();
+		[id(7), helpstring("")]
+		HRESULT SplitSideBySide();
+	}
+
+	[
+		uuid(AD5BE76A-0203-4a0f-AE7A-4152B36EF15A),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IWindowList : IDispatch {
+		[id(DISPID_NEWENUM), , hidden, restricted]
+		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("")]
+		HRESULT Item([in] long index, [out, retval] VARIANT** value);
+		[id(1), propget, helpstring("")]
+		HRESULT Length([out, retval] long* length);
+		[id(2), helpstring("")]
+		HRESULT ActivateNext();
+		[id(3), helpstring("")]
+		HRESULT ActivatePrevious();
+		[id(4), helpstring("")]
+		HRESULT UnsplitAll();
+	}
+
+	[
+		uuid(A373ED31-7A38-45f2-A7A8-29F31554FC85),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IMenu : IDispatch {
+		[id(1), helpstring("")]
+		HRESULT Append([in] short identifier, [in] BSTR caption, [in] VARIANT* command,
+			[in, defaultvalue(VARIANT_FALSE)] VARIANT_BOOL alternative, [out, retval] IMenu** self);
+		[id(2), helpstring("")]
+		HRESULT AppendSeparator([out, retval] IMenu** self);
+		[id(3), helpstring("")]
+		HRESULT Check([in] short identifier, [in] VARIANT_BOOL check, [out, retval] IMenu** self);
+		[id(4), helpstring("")]
+		HRESULT Enable([in] short identifier, [in] VARIANT_BOOL enable, [out, retval] IMenu** self);
+		[id(5), helpstring("")]
+		HRESULT Erase([in] short identifier, [out, retval] IMenu** self);
+		[id(6), hidden, restricted]
+		HRESULT GetHandle([out] LONG_PTR* handle);
+		[id(7), helpstring("")]
+		HRESULT SetChild([in] short identifier, [in] IMenu* child, [out, retval] IMenu** self);
+		[id(8), helpstring("")]
+		HRESULT SetDefault([in] short identifier, [out, retval] IMenu** self);
+	}
+
+	[
+		uuid(A88658D8-EF74-4c5a-B7D3-7953BC90F367),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IPopupMenu : IMenu {
+		[id(9), hidden, restricted]
+		HRESULT Update([in] short identifier);
+	};
+
+	[
+		uuid(A53B0C04-F00D-4a85-9A83-272CF7034570),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IPopupMenuConstructor : IDispatchEx {
+		[id(DISPID_VALUE), hidden, helpstring("")]
+		HRESULT Construct([in, optional] VARIANT popupHandler, [out, retval] IPopupMenu** instance);
+	}
+
+	[
+		uuid(AF898B12-1F02-4517-8FD1-6C810F2262B8),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IMenuBar : IMenu {
+		[id(9), helpstring("")]
+		HRESULT SetAsMenuBar([out, retval] IMenuBar** oldMenuBar);
+	}
+
+	[
+		uuid(A581CCF8-C1DB-4a04-8BDB-680AC19F0EC7),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IMenuBarConstructor : IDispatchEx {
+		[id(DISPID_VALUE), hidden, helpstring("")]
+		HRESULT Construct([out, retval] IMenuBar** instance);
+	}
+
+	// script system / environment //////////////////////////////////////////
+/*
+	enum MessageBox_Result {
+		Abort, Cancel, Ignore, No, Ok, Retry, Yes
+	}
+
+	enum MessageBox_Buttons {
+		AbortRetryIgnore, CancelTryContinue, Ok, OkCancel, RetryCancel, YesNo, YesNoCancel
+	}
+
+	enum MessageBox_Icon {
+		Asterisk, Error, Exclamation, Hand, Information, None, Question, Stop, Warning
+	}
+
+	enum MessageBox_DefaultButton {
+		Button1, Button2, Button3, Button4
+	}
+
+	enum MessageBox_Options {
+		DefaultDesktopOnly, RightAlign, RtlReading, ServiceNotification, SetForeground, TopMost
+	}
+*/
+	[
+		uuid(AB4CC2F7-4873-43f4-AA5E-536D8653FE2C),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IServiceObjectProvider : IDispatch {
+		[id(1), helpstring("")]
+		HRESULT QueryService([in] BSTR serviceName, [out, retval] IDispatch** serviceObject);
+	}
+
+	[
+		uuid(A8B776AA-560E-4262-9CFA-5C0DFA33CEF8),
+		object, dual, pointer_default(unique), helpstring("")
+	]
+	interface IScriptSystem : IDispatch {
+		[id(1), propget, helpstring("")]
+		HRESULT Buffers([out, retval] IBufferList** buffers);
+		[id(2), propget, helpstring("")]
+		HRESULT Windows([out, retval] IWindowList** windows);
+		[id(3), helpstring("")]
+		HRESULT ExecuteFile([in] BSTR fileName, [out, retval] VARIANT** result);
+		[id(4), helpstring("")]
+		HRESULT GetServiceProvider([out, retval] IServiceObjectProvider** serviceProvider);
+		[id(5), helpstring("")]
+		HRESULT LoadConstants([in] VARIANT* libraryNameOrObject, [in] VARIANT* parent);
+		[id(6), helpstring("")]
+		HRESULT LoadScript([in] BSTR fileName, [out, retval] VARIANT* result);
+		[id(7), vararg, helpstring("")]
+		HRESULT Position([in] SAFEARRAY(VARIANT) parameters, [out, retval] IPosition** newInstance);
+		[id(8), vararg, helpstring("")]
+		HRESULT Region([in] SAFEARRAY(VARIANT) parameters, [out, retval] IRegion** newInstance);
+	}
+
+	// CScript / WScript emulations /////////////////////////////////////////
+
+	[
+		uuid(AFF456A8-8042-46aa-ADCC-E3A32D64690C), object, dual, pointer_default(unique),
+		helpstring("Named arguments collection (copy of IHost.IWSHNamedArguments).")
+	]
+	interface INamedArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT Item([in] BSTR switchString, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT length([out, retval] long* count);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT Count([out, retval] long* count);
+		[id(0x3), helpstring("Check if the argument exists")]
+		HRESULT Exists([in] BSTR switchString, [out, retval] VARIANT_BOOL* exists);
+	}
+
+	[
+		uuid(A8AEF8E8-35EF-49da-82A3-B57DCDE1A097), object, dual, pointer_default(unique),
+		helpstring("Unnamed arguments collection object (copy of IHost.IWSHUnnamedArguments).")
+	]
+	interface IUnnamedArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT Item([in] long index, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT length([out, retval] long* count);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT Count([out, retval] long* count);
+	}
+
+	[
+		uuid(A843FB1A-8E28-4d37-805F-9FCFB98A6F05), object, dual, pointer_default(unique),
+		helpstring("Arguments collection object (copy of IHost.IArguments2).")
+	]
+	interface IArguments : IDispatch {
+		// properties
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
+		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
+		[id(DISPID_VALUE), propget, helpstring("An element of the arguments")]
+		HRESULT Item([in] long index, [out, retval] VARIANT** value);
+		[id(0x2), propget, helpstring("Count of the arguments")]
+		HRESULT length([out, retval] long* count);
+		[id(0x3), propget, helpstring("Named set of the arguments")]
+		HRESULT Named([out, retval] INamedArguments** named);
+		[id(0x4), propget, helpstring("Unnamed set of the arguments")]
+		HRESULT Unnamed([out, retval] IUnnamedArguments** unnamed);
+		// methods
+		[id(0x1), helpstring("Count of the arguments")]
+		HRESULT Count([out, retval] long* count);
+		[id(0x5), helpstring("Display the usage of the arguments")]
+		HRESULT ShowUsage();
+	}
+
+	[
+		uuid(A34BB582-A2DA-4197-8A81-3E3FB2E3FD16), object, dual, pointer_default(unique),
+		helpstring("Script host object (copy of IHost.IHost).")
+	]
+	interface IScriptHost : IDispatch {
+		// properties
+		[id(0x64), propget, helpstring("Application object")]
+		HRESULT Application([out, retval] IDispatch** application);
+		[id(0x3ea), propget, helpstring("Command line arguments")]
+		HRESULT Arguments([out, retval] IArguments** arguments);
+		[id(0x3ec), propget, helpstring("Build version of the script host")]
+		HRESULT BuildVersion([out, retval] int* version);
+		[id(0x65), propget, helpstring("Name of the script host")]
+		HRESULT FullName([out, retval] BSTR* name);
+		[id(0x67), propget, helpstring("Interactive mode")]
+		HRESULT Interactive([out, retval] VARIANT_BOOL* interactive);
+		[id(0x67), propput, helpstring("Interactive mode")]
+		HRESULT Interactive([in] VARIANT_BOOL interactive);
+		[id(DISPID_VALUE), propget, helpstring("Name of the script host")]
+		HRESULT Name([out, retval] BSTR* name);
+		[id(0x66), propget, helpstring("Path name of the script host")]
+		HRESULT Path([out, retval] BSTR* path);
+		[id(0x3e9), propget, helpstring("Executing script full file name")]
+		HRESULT ScriptFullName([out, retval] BSTR* name);
+		[id(0x3e8), propget, helpstring("Executing script file name")]
+		HRESULT ScriptName([out, retval] BSTR* name);
+		[id(0x3f0), propget, helpstring("Standard error stream")]
+		HRESULT StdErr([out, retval] IDispatch** stdErr);
+		[id(0x3ee), propget, helpstring("Standard input stream")]
+		HRESULT StdIn([out, retval] IDispatch** stdIn);
+		[id(0x3ef), propget, helpstring("Standard output stream")]
+		HRESULT StdOut([out, retval] IDispatch** stdOut);
+		[id(0x3ed), propget, helpstring("Timeout to abort script execution")]
+		HRESULT Timeout([out, retval] long* timeout);
+		[id(0x3ed), propput, helpstring("Timeout to abort script execution")]
+		HRESULT Timeout([in] long timeout);
+		[id(0x3eb), propget, helpstring("Version of the script host")]
+		HRESULT Version([out, retval] BSTR* version);
+		// methods
+		[id(0x7d5), helpstring("Connect the event sink object")]
+		HRESULT ConnectObject([in] IDispatch* eventSource, [in] BSTR prefix);
+		[id(0x1000), helpstring("Connect the event sink object")]
+		HRESULT ConnectObjectEx([in] IDispatch* eventSource, [in] IDispatch* eventSink);
+		[id(0x7d0), helpstring("Create new automation object")]
+		HRESULT CreateObject([in] BSTR progID, [in, defaultvalue("")] BSTR prefix, [out, retval] IDispatch** object);
+		[id(0x7d3), helpstring("Revoke the connected object")]
+		HRESULT DisconnectObject([in] IDispatch* eventSource);
+		[id(0x1001), helpstring("Revoke the connected object")]
+		HRESULT DisconnectObjectEx([in] IDispatch* eventSource, [in] IDispatch* eventSink);
+		[id(0x7d1), vararg, helpstring("Print out text")]
+		HRESULT Echo([in] SAFEARRAY(VARIANT) arguments);
+		[id(0x7d2), helpstring("Get or create automation object")]
+		HRESULT GetObject([in] BSTR pathName, [in, defaultvalue("")] BSTR progID,
+			[in, defaultvalue("")] BSTR prefix, [out, retval] IDispatch** object);
+		[id(0xc8), helpstring("Quit the application")]
+		HRESULT Quit([in] int exitCode);
+		[id(0x7d4), helpstring("Sleep")]
+		HRESULT Sleep([in] long time);
+	}
+}
+
+#endif // !AMBIENT_IDL_

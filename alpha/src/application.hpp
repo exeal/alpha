@@ -2,22 +2,21 @@
  * @file application.hpp
  * @author exeal
  * @date 2003-2006 (was Alpha.h)
- * @date 2006-2007
+ * @date 2006-2009
  */
 
 #ifndef ALPHA_APPLICATION_HPP
 #define ALPHA_APPLICATION_HPP
+#include "alpha.hpp"
 #include "resource.h"
 #include "buffer.hpp"
-#include "keyboard-map.hpp"
-#include "temporary-macro.hpp"
-#include "ascension/session.hpp"
-#include "ascension/searcher.hpp"
-#include "../manah/win32/module.hpp"
-#include "../manah/win32/ui/common-controls.hpp"
+//#include "search.hpp"	// ui.SearchDialog
+#include <ascension/session.hpp>
+#include <ascension/searcher.hpp>
+#include <manah/win32/module.hpp>
+#include <manah/win32/ui/common-controls.hpp>
 #include <map>
 #include <sstream>
-#include <boost/regex.hpp>
 
 
 // タイトルバーとかに使うアプリケーション名
@@ -57,85 +56,76 @@
 namespace alpha {
 
 	// fwd
-	class MRUManager;
-	namespace command {
-		class CommandManager;
-		class BuiltInCommand;
-	}
 	namespace ui {
 		class SearchDialog;
-		class BookmarkDialog;
+//		class BookmarkDialog;
 	}
+	namespace ambient {
+		class ScriptSystem;
+	};
 
-	/// Alpha のアプリケーションクラス
+	/// The application class of Alpha.
 	class Alpha : public manah::win32::ProfilableApplication<> {
 	public:
 		// constructors
 		Alpha();
 		~Alpha() throw();
 		// 下位オブジェクト
-		BufferList&						bufferList() throw();
-		const BufferList&				bufferList() const throw();
-		command::CommandManager&		commandManager() throw();
-		const command::CommandManager&	commandManager() const throw();
-		command::KeyboardMap&			keyboardMap() throw();
-		const command::KeyboardMap&		keyboardMap() const throw();
-		MRUManager&						mruManager() throw();
-		const MRUManager&				mruManager() const throw();
-		manah::win32::ui::StatusBar&	statusBar() throw();
+//		command::KeyboardMap& keyboardMap() throw();
+//		const command::KeyboardMap& keyboardMap() const throw();
+		manah::win32::ui::StatusBar& statusBar() /*throw()*/;
 		// attributes
-		static Alpha&	instance();
-		void			textEditorFont(::LOGFONTW& font) const throw();
-		void			setFont(const ::LOGFONTW& font);
-		void			setStatusText(const wchar_t* text, HFONT font = 0);
+		static Alpha& instance();
+		void textEditorFont(LOGFONTW& font) const /*throw()*/;
+		void setFont(const LOGFONTW& font);
+		void setStatusText(const wchar_t* text, HFONT font = 0);
 		// searchs
-		ui::SearchDialog&		searchDialog() throw();
-		const ui::SearchDialog&	searchDialog() const throw();
-		void					showSearchDialog();
+		ui::SearchDialog& searchDialog() /*throw()*/;
+		const ui::SearchDialog& searchDialog() const /*throw()*/;
 		// operations
-		void	loadKeyBinds(const std::wstring& schemeName);
-		int		messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
-		void	parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
+//		void	loadKeyBinds(const std::wstring& schemeName);
+		int messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
+		void parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
 
 	private:
-		void	changeFont();
-		LRESULT	dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
-		bool	initInstance(int showCommand);
-		void	loadINISettings();
-		bool	preTranslateMessage(const ::MSG& msg);
-		void	readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void	readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void	saveINISettings();
-		void	setupMenus();
-		void	setupToolbar();
-		void	updateStatusBarPaneSize();
-		void	updateTitleBar();
+		void changeFont();
+		LRESULT dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+//		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
+		bool initInstance(int showCommand);
+		void loadINISettings();
+		bool preTranslateMessage(const ::MSG& msg);
+		void readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
+		void readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
+		void saveINISettings();
+//		void	setupMenus();
+//		void	setupToolbar();
+		void updateStatusBarPaneSize();
+		void updateTitleBar();
 
 		// message handlers
 	protected:
-		void	onToolExecuteCommand();
+		void onToolExecuteCommand();
 	protected:
-		bool	onClose();															// WM_CLOSE
-		bool	onCommand(WORD id, WORD notifyCode, HWND control);					// WM_COMMAND
-		void	onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
-		void	onDestroy();														// WM_DESTROY
-		void	onDrawItem(UINT id, const DRAWITEMSTRUCT& drawItem);				// WM_DRAWITEM
-		void	onDropFiles(HDROP drop);											// WM_DROPFILES
-		void	onEnterMenuLoop(bool isTrackPopup);									// WM_ENTERMENULOOP
-		void	onExitMenuLoop(bool isTrackPopup);									// WM_EXITMENULOOP
-		void	onInitMenuPopup(HMENU menu, UINT index, bool sysMenu);				// WM_INITMENUPOPUP
-		void	onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);						// WM_MEASUREITEM
-		LRESULT	onMenuChar(wchar_t ch, UINT flags, manah::win32::ui::Menu& menu);	// WM_MENUCHAR
-		void	onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);				// WM_MENUSELECT
-		bool	onNotify(int id, NMHDR& nmhdr);										// WM_NOTIFY
-		bool	onSetCursor(HWND window, UINT hitTest, UINT message);				// WM_SETCURSOR
-		void	onSettingChange(UINT flags, const wchar_t* section);				// WM_SETTINGCHANGE
-		void	onSize(UINT type, int cx, int cy);									// WM_SIZE
-		void	onTimer(UINT timerID);												// WM_TIMER
+		bool onClose();																// WM_CLOSE
+		bool onCommand(WORD id, WORD notifyCode, HWND control);						// WM_COMMAND
+		void onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
+		void onDestroy();															// WM_DESTROY
+		void onDrawItem(UINT id, const DRAWITEMSTRUCT& drawItem);					// WM_DRAWITEM
+		void onDropFiles(HDROP drop);												// WM_DROPFILES
+		void onEnterMenuLoop(bool isTrackPopup);									// WM_ENTERMENULOOP
+		void onExitMenuLoop(bool isTrackPopup);										// WM_EXITMENULOOP
+		void onInitMenuPopup(HMENU menu, UINT index, bool sysMenu);					// WM_INITMENUPOPUP
+		void onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);							// WM_MEASUREITEM
+		LRESULT onMenuChar(wchar_t ch, UINT flags, manah::win32::ui::Menu& menu);	// WM_MENUCHAR
+		void onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);					// WM_MENUSELECT
+		bool onNotify(int id, NMHDR& nmhdr);										// WM_NOTIFY
+		bool onSetCursor(HWND window, UINT hitTest, UINT message);					// WM_SETCURSOR
+		void onSettingChange(UINT flags, const wchar_t* section);					// WM_SETTINGCHANGE
+		void onSize(UINT type, int cx, int cy);										// WM_SIZE
+		void onTimer(UINT timerID);													// WM_TIMER
 
 	protected:
-		void	onRebarChevronPushed(const NMREBARCHEVRON& nmRebarChevron);	// RBN_CHEVRONPUSHED
+		void onRebarChevronPushed(const NMREBARCHEVRON& nmRebarChevron);	// RBN_CHEVRONPUSHED
 
 	protected:
 		/* ウィンドウプロシジャ */
@@ -143,58 +133,48 @@ namespace alpha {
 
 	private:
 		static Alpha* instance_;	// ただ 1 つのインスタンス
+		ambient::ScriptSystem* scriptSystem_;
 		// child windows
 		manah::win32::ui::Rebar rebar_;				// レバー
 		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
 		manah::win32::ui::StatusBar statusBar_;		// ステータスバー
-		std::auto_ptr<ui::SearchDialog> searchDialog_;		// [検索と置換] ダイアログ
-		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
+		std::auto_ptr<ui::SearchDialog> searchDialog_;
+//		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
 		// GDI objects
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
 		// features and commands
-		std::auto_ptr<command::CommandManager> commandManager_;
-		command::KeyboardMap keyboardMap_;			// 使用中のキーボードマップ
-		MRUManager* mruManager_;
-		std::auto_ptr<BufferList> buffers_;
+//		std::auto_ptr<command::CommandManager> commandManager_;
+//		command::KeyboardMap keyboardMap_;			// 使用中のキーボードマップ
+//		MRUManager* mruManager_;
 //		std::auto_ptr<ScriptMacroManager> scriptMacroManager_;	// スクリプトマクロの管理
-		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
-		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
-		// オプション
-		bool showMessageBoxOnFind_;			// 検索処理でメッセージボックスを表示する
-		bool initializeFindTextFromEditor_;	// [検索と置換] ダイアログを開いたときに
-											// 検索テキストをエディタから初期化する
-		friend class command::CommandManager;
-		friend class command::BuiltInCommand;
+//		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
+//		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
+//		friend class command::CommandManager;
+//		friend class command::BuiltInCommand;
 	};
 
 
-	/// Returns the buffer list.
-	inline BufferList& Alpha::bufferList() throw() {return *buffers_;}
-
-	/// Returns the buffer list.
-	inline const BufferList& Alpha::bufferList() const throw() {return *buffers_;}
+	/// Returns the command manager.
+//	inline command::CommandManager& Alpha::commandManager() throw() {return *commandManager_;}
 
 	/// Returns the command manager.
-	inline command::CommandManager& Alpha::commandManager() throw() {return *commandManager_;}
-
-	/// Returns the command manager.
-	inline const command::CommandManager& Alpha::commandManager() const throw() {return *commandManager_;}
+//	inline const command::CommandManager& Alpha::commandManager() const throw() {return *commandManager_;}
 
 	/// Returns the singleton application object.
 	inline Alpha& Alpha::instance() {assert(instance_ != 0); return *instance_;}
 
 	/// Returns the keyboard map.
-	inline command::KeyboardMap& Alpha::keyboardMap() throw() {return keyboardMap_;}
+//	inline command::KeyboardMap& Alpha::keyboardMap() throw() {return keyboardMap_;}
 
 	/// Returns the keyboard map.
-	inline const command::KeyboardMap& Alpha::keyboardMap() const throw() {return keyboardMap_;}
+//	inline const command::KeyboardMap& Alpha::keyboardMap() const throw() {return keyboardMap_;}
 
 	/// Returns the MRU manager.
-	inline MRUManager& Alpha::mruManager() throw() {return *mruManager_;}
+//	inline MRUManager& Alpha::mruManager() throw() {return *mruManager_;}
 
 	/// Returns the MRU manager.
-	inline const MRUManager& Alpha::mruManager() const throw() {return *mruManager_;}
+//	inline const MRUManager& Alpha::mruManager() const throw() {return *mruManager_;}
 
 	/// Returns the search dialog box.
 	inline ui::SearchDialog& Alpha::searchDialog() throw() {return *searchDialog_;}
@@ -206,8 +186,8 @@ namespace alpha {
 	inline manah::win32::ui::StatusBar& Alpha::statusBar() throw() {return statusBar_;}
 
 	/// Returns the font for text editors.
-	inline void Alpha::textEditorFont(::LOGFONTW& font) const throw() {::GetObject(editorFont_, sizeof(::LOGFONTW), &font);}
+	inline void Alpha::textEditorFont(LOGFONTW& font) const throw() {::GetObjectW(editorFont_, sizeof(LOGFONTW), &font);}
 
 } // namespace alpha
 
-#endif /* ALPHA_APPLICATION_HPP */
+#endif // ALPHA_APPLICATION_HPP
