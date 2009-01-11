@@ -6,15 +6,15 @@
  * - ARMSCII-8A
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 #include <algorithm>	// std.binary_search
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 #include <bitset>
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -44,7 +44,7 @@ namespace {
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	ARMSCII<7> ARMSCII_7;
 	ARMSCII<0x8A> ARMSCII_8A;
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	class ArmenianDetector : public EncodingDetector {
 	public:
@@ -59,7 +59,7 @@ namespace {
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(ARMSCII_7);
 			Encoder::registerFactory(ARMSCII_8A);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new ArmenianDetector));
 		}
 	} installer;
@@ -86,7 +86,7 @@ namespace {
 	const byte UCStoARMSCII7_0028[] = {
 					0x25, 0x24, N__A, N__A, 0x2B, 0x2C, 0x29, N__A
 	};
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	const byte UCStoARMSCII8_0028[] = {
 					0xA5, 0xA4, 0x2A, 0x2B, 0xAB, 0xAC, 0xA9, 0x2F
 	};
@@ -168,7 +168,7 @@ namespace {
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0xDE
 	};
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	inline const Char* decomposeArmenianLigature(Char c) {
 		switch(c) {
@@ -395,7 +395,7 @@ template<> Encoder::Result ARMSCII<0x8A>::InternalEncoder::doToUnicode(
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 
 // ArmenianDetector /////////////////////////////////////////////////////////
@@ -437,9 +437,9 @@ pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* 
 		props = &ARMSCII_8A;
 	else
 		props = &ARMSCII_7;
-#endif /* ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // ASCENSION_NO_MINORITY_ENCODINGS
 
 	return make_pair(props->mibEnum(), props->name());
 }
 
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS

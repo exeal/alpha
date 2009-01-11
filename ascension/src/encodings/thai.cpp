@@ -10,10 +10,10 @@
  * - windows-874
  * - MacThai
  * @author exeal
- * @date 2004-2007.12.31
+ * @date 2004-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -41,7 +41,7 @@ namespace {
 			CharLine<0x0E50, 0x0E51, 0x0E52, 0x0E53, 0x0E54, 0x0E55, 0x0E56, 0x0E57, 0x0E58, 0x0E59, 0x0E5A, 0x0E5B, 0xFFFD, 0xFFFD, 0xFFFD, 0xFFFD>
 		>
 	> TIS_620("TIS-620", standard::TIS_620, "Thai (TIS 620-2533)", "", 0x1A);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -99,7 +99,7 @@ namespace {
 			CharLine<0x0E50, 0x0E51, 0x0E52, 0x0E53, 0x0E54, 0x0E55, 0x0E56, 0x0E57, 0x0E58, 0x0E59, 0x0E5A, 0x0E5B, 0xF8C5, 0xF8C6, 0xF8C7, 0xF8C8>
 		>
 	> WINDOWS_874("windows-874", MIB_OTHER, "Thai (windows-874)", "\0MS874|windows-874-2000", 0x3F);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -113,23 +113,23 @@ namespace {
 			CharLine<0x0E50, 0x0E51, 0x0E52, 0x0E53, 0x0E54, 0x0E55, 0x0E56, 0x0E57, 0x0E58, 0x0E59, 0x0E5A, 0x0E5B, 0x00A2, 0x00AC, 0x00A6, 0x00A0>
 		>
 	> IBM1161("IBM1161", MIB_OTHER, "Thai (IBM1161)", "\0ibm-1161|ibm-1161_P100-1999", 0x3F);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	struct Installer {
 		Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 			Encoder::registerFactory(ISO_8859_11);
 			Encoder::registerFactory(TIS_620);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM874);
 			Encoder::registerFactory(IBM1160);
 			Encoder::registerFactory(IBM1162);
 			Encoder::registerFactory(WINDOWS_874);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(IBM1161);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
 	} installer;
 } // namespace @0

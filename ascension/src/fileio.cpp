@@ -4,10 +4,10 @@
  * @note Currently, this implementation does not support OpenVMS.
  * @author exeal
  * @date 2007 (separated from document.cpp)
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "document.hpp"
+#include <ascension/document.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
 #	include <errno.h>		// errno

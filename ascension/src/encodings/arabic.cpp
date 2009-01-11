@@ -11,10 +11,10 @@
  * - windows-1256
  * - <del>MacArabic</del>
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -33,7 +33,7 @@ namespace {
 	> ISO_8859_6("ISO-8859-6", standard::ISO_8859_6, "Arabic (ISO 8859-6)",
 		"iso-ir-127|ISO_8859-6|ECMA-114|ASMO-708|arabic|csISOLatinArabic"
 		"\0ibm-1089|8859_6|cp1089|1089|windows-28596|ISO-8859-6-I|ISO-8859-6-E|ibm-1089_P100-1995", 0x1A);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -79,7 +79,7 @@ namespace {
 			CharLine<0x064B, 0x064C, 0x064D, 0x064E, 0x00F4, 0x064F, 0x0650, 0x00F7, 0x0651, 0x00F9, 0x0652, 0x00FB, 0x00FC, 0x200E, 0x200F, 0x06D2>
 		>
 	> WINDOWS_1256("windows-1256", proprietary::WINDOWS_1256, "Arabic (windows-1256)", "\0cp1256|ibm-9448|ibm-9448_X100-2005", 0x3F);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		CharWire<
@@ -137,24 +137,24 @@ namespace {
 			CharLine<0x0650, 0x0651, 0x0652, 0xFED7, 0xFEDB, 0xFEDF, 0x200B, 0xFEF5, 0xFEF7, 0xFEF9, 0xFEFB, 0xFEE3, 0xFEE7, 0xFEEC, 0xFEE9, 0x20AC>
 		>
 	> IBM9238("IBM9238", MIB_OTHER, "Arabic (IBM9238)", "ibm-9238|ibm-9238_X110-1999", 0x1A);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	struct Installer {
 		Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 			Encoder::registerFactory(ISO_8859_6);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM864);
 			Encoder::registerFactory(IBM16804);
 			Encoder::registerFactory(WINDOWS_1256);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(IBM425);
 			Encoder::registerFactory(IBM1046);
 			Encoder::registerFactory(IBM9056);
 			Encoder::registerFactory(IBM9238);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
 	} installer;
 }

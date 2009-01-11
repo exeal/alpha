@@ -1,10 +1,10 @@
 /**
  * @file encoder.cpp
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
-#include "encoder.hpp"
+#include <ascension/encoder.hpp>
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::encoding;

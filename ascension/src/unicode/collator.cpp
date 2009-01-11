@@ -1,11 +1,11 @@
 /**
  * @file collator.cpp
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-#include "../unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace manah;
@@ -68,4 +68,4 @@ std::auto_ptr<CollationElementIterator> NullCollator::createCollationElementIter
 	return auto_ptr<CollationElementIterator>(new ElementIterator(source.clone()));
 }
 
-#endif /* !ASCENSION_NO_UNICODE_COLLATION */
+#endif // !ASCENSION_NO_UNICODE_COLLATION

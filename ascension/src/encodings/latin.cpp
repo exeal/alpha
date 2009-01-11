@@ -12,11 +12,11 @@
  * US-ASCII and ISO-8859-1 are implemented by ../encoder.cpp
  * @author exeal
  * @date 2004-2007 (was iso8859.cpp)
- * @date 2008-01-02
+ * @date 2008-2009
  * @see arabic.cpp, cyrillic.cpp, greek.cpp, hebrew.cpp, thai.cpp, vietnamese.cpp
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -130,4 +130,4 @@ namespace {
 	} installer;
 } // namespace @0
 
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS

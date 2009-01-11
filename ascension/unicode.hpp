@@ -1,15 +1,16 @@
 /**
  * @file unicode.hpp
  * @author exeal
- * @date 2005-2008
+ * @date 2005-2009
  * @see ascension#unicode, break-iterator.cpp, collator.cpp, identifier-syntax.cpp, normalizer.cpp
  */
 
 #ifndef ASCENSION_UNICODE_HPP
 #define ASCENSION_UNICODE_HPP
-#include "internal.hpp"
-#include "../../manah/object.hpp"	// manah.Noncopyable
-#include "../../manah/memory.hpp"	// manah.AutoBuffer
+#include <ascension/internal.hpp>
+#include <manah/object.hpp>	// manah.Noncopyable
+#include <manah/types.hpp>	// manah.Select
+#include <manah/memory.hpp>	// manah.AutoBuffer
 #include <cassert>
 #include <stdexcept>
 #include <iterator>
@@ -405,7 +406,7 @@ namespace ascension {
 		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
 		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator>
 		struct ToUTF32Sequence {
-			typedef typename ascension::internal::Select<
+			typedef typename manah::Select<
 				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
 				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Result Result;
 		};
@@ -1026,7 +1027,7 @@ inline Normalizer& Normalizer::previous() {
  */
 template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first, CharacterSequence last) const {
-	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+	MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 	UTF16To32Iterator<CharacterSequence> i(first, last);
 	if(!i.hasNext() || !isIdentifierStartCharacter(*i))
 		return first;
@@ -1046,7 +1047,7 @@ inline CharacterSequence IdentifierSyntax::eatIdentifier(CharacterSequence first
  */
 template<typename CharacterSequence>
 inline CharacterSequence IdentifierSyntax::eatWhiteSpaces(CharacterSequence first, CharacterSequence last, bool includeTab) const {
-	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+	MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 	UTF16To32Iterator<CharacterSequence> i(first, last);
 	while(i.hasNext() && isWhiteSpace(*i, includeTab))
 		++i;
@@ -1094,7 +1095,7 @@ inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false *
  */
 template<typename CharacterSequence>
 inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, bool excludeTurkishI /* = false */) {
-	ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+	MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 	using namespace std;
 	std::basic_stringbuf<Char> s(ios_base::out);
 	CodePoint c, f;

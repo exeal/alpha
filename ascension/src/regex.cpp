@@ -1,13 +1,13 @@
 /**
  * @file regex.cpp
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_NO_REGEX
-#include "regex.hpp"
-#include "internal.hpp"	// internal.SharedLibrary
-#include "encoder.hpp"
+#include <ascension/regex.hpp>
+#include <ascension/internal.hpp>	// internal.SharedLibrary
+#include <ascension/encoder.hpp>
 
 using namespace ascension;
 using namespace ascension::regex;
@@ -19,7 +19,7 @@ using manah::toBoolean;
 
 
 #ifndef ASCENSION_NO_MIGEMO
-#include "migemo.h"
+#include "third-party/migemo.h"
 
 ASCENSION_DEFINE_SHARED_LIB_ENTRIES(CMigemo, 7);
 ASCENSION_SHARED_LIB_ENTRY(CMigemo, 0, "migemo_open", migemo*(*signature)(char*));

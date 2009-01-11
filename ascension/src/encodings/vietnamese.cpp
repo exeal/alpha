@@ -10,10 +10,10 @@
  * - IBM1165
  * - windows-1258
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -60,7 +60,7 @@ namespace {
 			CharLine<0x1ED6, 0x1EE7, 0x0169, 0x00FA, 0x1EE5, 0x1EEB, 0x1EED, 0x1EEF, 0x1EE9, 0x1EF1, 0x1EF3, 0x1EF7, 0x1EF9, 0x00FD, 0x1EF5, 0x1ED0>
 		>
 	> TCVN("TCVN", MIB_OTHER, "Vietnamese (TCVN)", "", 0x1A);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		CharWire<
@@ -114,7 +114,7 @@ namespace {
 			CharLine<0x0111, 0x00F1, 0x0323, 0x00F3, 0x00F4, 0x01A1, 0x00F6, 0x00F7, 0x00F8, 0x00F9, 0x00FA, 0x00FB, 0x00FC, 0x01B0, 0x20AB, 0x00FF>
 		>
 	> WINDOWS_1258("windows-1258", proprietary::WINDOWS_1258, "Vietnamese (Windows)", "\0ibm-5354|cp1258|ibm-5354_P100-1998", 0x3F);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		CharWire<
@@ -146,7 +146,7 @@ namespace {
 			CharLine<0x0111, 0x00F1, 0x0323, 0x00F3, 0x00F4, 0x01A1, 0x00F6, 0x00F7, 0x00F8, 0x00F9, 0x00FA, 0x00FB, 0x00FC, 0x01B0, 0x20AB, 0x00FF>
 		>
 	> IBM1163("IBM1163", MIB_OTHER, "Vietnamese (IBM1163)", "\0ibm-1163_P100-1999", 0x1A);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class VIQREncoder : public Encoder {

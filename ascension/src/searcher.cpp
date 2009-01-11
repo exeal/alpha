@@ -2,11 +2,11 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "searcher.hpp"
-#include "point.hpp"
+#include <ascension/searcher.hpp>
+#include <ascension/point.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::searcher;

@@ -589,7 +589,7 @@ namespace ascension {
 			} // namespace sbcs
 
 			namespace dbcs {
-				ASCENSION_STATIC_ASSERT(sizeof(ushort) == 2);
+				MANAH_STATIC_ASSERT(sizeof(ushort) == 2);
 
 				/// Generates 16-DBCS character sequence.
 				template<

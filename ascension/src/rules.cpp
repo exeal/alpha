@@ -2,10 +2,10 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "rules.hpp"
+#include <ascension/rules.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;
@@ -95,7 +95,7 @@ HashTable::~HashTable() /*throw()*/ {
  */
 template<typename CharacterSequence>
 inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
-	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
+	MANAH_STATIC_ASSERT(sizeof(*first) == 2);
 	ulong h = 0;
 	while(first < last) {
 		h *= 2;

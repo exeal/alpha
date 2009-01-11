@@ -2,12 +2,12 @@
  * @file content-assist.cpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "content-assist.hpp"
-#include "viewer.hpp"	// TextViewer
-#include "../../manah/win32/ui/standard-controls.hpp"	// manah.windows.ui.ListBox
+#include <ascension/content-assist.hpp>
+#include <ascension/viewer.hpp>					// TextViewer
+#include <manah/win32/ui/standard-controls.hpp>	// manah.windows.ui.ListBox
 using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::kernel;

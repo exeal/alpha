@@ -4,11 +4,11 @@
  * - Nextatep
  * - Atari ST/TT
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -49,4 +49,4 @@ namespace {
 	} installer;
 } // namespace @0
 
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS

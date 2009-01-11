@@ -1,13 +1,13 @@
 /**
  * @file text-editor.cpp
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "text-editor.hpp"
-#include "content-assist.hpp"
-#include "../../manah/win32/utility.hpp"
-#include "../../manah/win32/ui/wait-cursor.hpp"
+#include <ascension/text-editor.hpp>
+#include <ascension/content-assist.hpp>
+#include <manah/win32/utility.hpp>
+#include <manah/win32/ui/wait-cursor.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::texteditor;
@@ -354,7 +354,11 @@ ulong CharacterToCodePointConversionCommand::perform() {
 	const Char* const line = document.line(bottom.lineNumber()).data();
 	const CodePoint cp = text::surrogates::decodeLast(line, line + bottom.columnNumber());
 	Char buffer[7];
+#if(_MSC_VER < 1400)
 	swprintf(buffer, L"%lX", cp);
+#else
+	swprintf(buffer, MANAH_COUNTOF(buffer), L"%lX", cp);
+#endif // _MSC_VER < 1400
 	viewer.freeze();
 	try {
 		caret.select(Position(bottom.lineNumber(), bottom.columnNumber() - ((cp > 0xFFFF) ? 2 : 1)), bottom);

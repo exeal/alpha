@@ -348,10 +348,10 @@ namespace ascension {
 			private:
 				static const Names names_[];
 				friend class PropertyBase<BinaryProperty>;
-#include "code-table/uprops-binary-property-table-definition"
+#include "src/generated/uprops-binary-property-table-definition"
 			};
 
-#include "code-table/uprops-implementation"
+#include "src/generated/uprops-implementation"
 			// derived core properties (explicit specialization)
 			template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint cp) {
 				const int gc = GeneralCategory::of(cp);

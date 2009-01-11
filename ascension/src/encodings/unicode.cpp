@@ -11,10 +11,10 @@
  * - UTF-32LE
  * - UTF-5
  * @author exeal
- * @date 2003-2008
+ * @date 2003-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 #include <algorithm>	// std.find_if
 using namespace ascension;
 using namespace ascension::encoding;
@@ -79,7 +79,7 @@ namespace {
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
 	} utf32be;
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	class UTF_5 : public EncoderFactoryBase {
 	public:
@@ -87,7 +87,7 @@ namespace {
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
 	} utf5;
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	class UnicodeDetector : public EncodingDetector {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
@@ -104,10 +104,10 @@ namespace {
 			Encoder::registerFactory(utf7);
 			Encoder::registerFactory(utf32le);
 			Encoder::registerFactory(utf32be);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(utf5);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UnicodeDetector));
 		}
 	} installer;
@@ -120,7 +120,7 @@ namespace {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	const byte UTF32LE_BOM[] = {0xFF, 0xFF, 0x00, 0x00};
 	const byte UTF32BE_BOM[] = {0xFE, 0xFF, 0x00, 0x00};
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 } // namespace @0
 
 #define ASCENSION_ENCODE_BOM(encoding)												\
@@ -616,7 +616,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 
@@ -779,7 +779,7 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
 	return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 namespace {
 	inline const byte* maybeUTF8(const byte* first, const byte* last) ASC_NOFAIL {
@@ -807,7 +807,7 @@ namespace {
 				else if(memcmp(first, UTF32BE_BOM, MANAH_COUNTOF(UTF32BE_BOM)) == 0)
 					mib = standard::UTF_32BE;
 			}
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 		}
 		if(mib != MIB_UNKNOWN)
 			return last - first;
@@ -834,7 +834,7 @@ pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* l
 			else if(memcmp(first, UTF32BE_BOM, MANAH_COUNTOF(UTF32BE_BOM)) == 0)
 				result = &utf32be;
 		}
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 	}
 	if(result != 0) {
 		if(convertibleBytes != 0)

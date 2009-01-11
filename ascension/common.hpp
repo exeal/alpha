@@ -2,7 +2,7 @@
  * @file common.hpp
  * @brief Common header file used by Ascension library.
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
 #ifndef ASCENSION_COMMON_HPP
@@ -61,7 +61,7 @@
 /// @def ASC_NOFAIL Short version of @c ASCENSION_NOFAIL.
 #define ASC_NOFAIL ASCENSION_NOFAIL
 
-#include "../../manah/object.hpp"
+#include <manah/object.hpp>
 #include "config.hpp"
 #include <new>
 #include <string>	// std.basic_string
@@ -70,7 +70,7 @@
 #include <stdexcept>
 
 #if defined(ASCENSION_WINDOWS) && defined(_DEBUG)
-#include "../../manah/win32/timer.hpp"
+#include <manah/win32/timer.hpp>
 using manah::win32::Timer;
 #endif // defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 
@@ -292,16 +292,9 @@ namespace ascension {
 		}
 	} // namespace texteditor
 
-	// static assertion
-	template<std::size_t> struct StaticAssertTest {};
-	template<int> struct StaticAssertionFailureAtLine;
-	template<> struct StaticAssertionFailureAtLine<-1> {};
-	#define ASCENSION_STATIC_ASSERT(expression)	\
-		typedef StaticAssertTest<sizeof(StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)> oh_static_assertion_shippaidayo_orz
-
 	// basic assertions
-	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
-	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
+	MANAH_STATIC_ASSERT(sizeof(Char) == 2);
+	MANAH_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
 } // namespace ascension
 
