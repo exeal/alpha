@@ -1,23 +1,24 @@
-// object.hpp
-// (c) 2003-2008 exeal
+/**
+ * @file object.hpp
+ * @date 2003-2009 exeal
+ */
 
 #ifndef MANAH_OBJECT_HPP
 #define MANAH_OBJECT_HPP
 
-
 namespace manah {
 
 	// modern types
-	typedef unsigned char	byte;
-	typedef unsigned char	uchar;
-	typedef unsigned short	ushort;
-	typedef unsigned int	uint;
-	typedef unsigned long	ulong;
+	typedef unsigned char byte;		///< Another short synonym for @c unsigned @c char.
+	typedef unsigned char uchar;	///< A short synonym for @c unsigned @c char.
+	typedef unsigned short ushort;	///< A short synonym for @c unsigned @c short.
+	typedef unsigned int uint;		///< A short synonym for @c unsigned @c int.
+	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
 
-	// converts an integral or float into a boolean value
+	/// Converts an integral or float into a boolean value.
 	template<typename T> inline bool toBoolean(T value) {return value != 0;}
 
-	// OR-combinations of enum values (from Qt.QFlags)
+	/// OR-combinations of enum values (from Qt.QFlags).
 	template<typename Enum> class Flags {
 	public:
 		Flags(Enum value) : value_(value) {}
@@ -73,15 +74,26 @@ namespace manah {
 } // namespace manah
 
 
+// static assertion /////////////////////////////////////////////////////////
+
+namespace manah {
+	template<unsigned> struct StaticAssertTest {};
+	template<int> struct StaticAssertionFailureAtLine;
+	template<> struct StaticAssertionFailureAtLine<-1> {};
+	#define MANAH_STATIC_ASSERT(expression)	\
+		typedef manah::StaticAssertTest<sizeof(manah::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)> oh_static_assertion_shippaidayo_orz
+} // namespace manah
+
+
 // macros ///////////////////////////////////////////////////////////////////
 
-// the number of elements of the given array
+/// Returns the number of the elements of the given array.
 #define MANAH_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
-// the end of the given array
+/// Returns the end of the given array.
 #define MANAH_ENDOF(array) ((array) + MANAH_COUNTOF(array))
-// makes the specified class unassignable. used in class definition
+/// Makes the specified class unassignable. Used in class definition.
 #define MANAH_UNASSIGNABLE_TAG(className)	private: className& operator=(const className&)
-// makes the specified class uncopyable. used in class definition
+/// Makes the specified class uncopyable. Used in class definition
 #define MANAH_NONCOPYABLE_TAG(className)	MANAH_UNASSIGNABLE_TAG(className); className(const className&)
 
-#endif /* !MANAH_OBJECT_HPP */
+#endif // !MANAH_OBJECT_HPP

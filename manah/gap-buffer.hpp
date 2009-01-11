@@ -163,7 +163,7 @@ namespace manah {
 		public:
 			typedef Pointer pointer;
 			typedef Reference reference;
-			Reference operator*() const /*throw()*/ {return *current_;}
+			Reference operator*() const /*throw()*/ {return const_cast<Reference>(*current_);}
 			Reference operator->() const /*throw()*/ {return **this;}
 			Iterator& operator++() /*throw()*/ {if(++current_ == target_->gapFirst_) current_ = target_->gapLast_; return *this;}
 			Iterator operator++(int) /*throw()*/ {Iterator temp(*this); ++*this; return temp;}
@@ -215,7 +215,7 @@ namespace manah {
 			std::copy(first, first + c, gapFirst_);
 			gapFirst_ += c;
 		}
-		void makeGapAt(Pointer position) {
+		void makeGapAt(Pointer position) /*throw()*/ {
 			if(position < gapFirst_) {
 				gapLast_ -= gapFirst_ - position;
 				std::memmove(gapLast_, position, (gapFirst_ - position) * sizeof(T));

@@ -1,46 +1,46 @@
 // dispatch-impl.hpp
-// (c) 2002-2007 exeal
+// (c) 2002-2008 exeal
 
 #ifndef MANAH_DISPATCH_IMPL_HPP
 #define MANAH_DISPATCH_IMPL_HPP
 #include "common.hpp"
 
 namespace manah {
-namespace com {
-namespace ole {
+	namespace com {
+		namespace ole {
 
 // IProvideClassInfo2Impl ///////////////////////////////////////////////////
 	
 #ifdef __IProvideClassInfo2_INTERFACE_DEFINED__
 
 /**
- *	IProvideClassInfo2 の基本的な実装
- *	@param clsid		CLSID
- *	@param iid			IID
- *	@param libid		LIBID
- *	@param majorVersion	メジャーバージョン
- *	@param minorVersion	マイナーバージョン
+ * Standard implementation of @c IProvideClassInfo2 interface.
+ * @param clsid the CLSID
+ * @param iid the IID
+ * @param libid the LIBID
+ * @param majorVersion the major version
+ * @param minorVersion the minor version
  */
 template<const CLSID* clsid, const IID* iid, const GUID* libid, WORD majorVersion = 1, WORD minorVersion = 0>
-class IProvideClassInfo2Impl : virtual public IProvideClassInfo2 {
+class IProvideClassInfo2Impl : /*virtual*/ public IProvideClassInfo2 {
 public:
-	/// コンストラクタ
+	/// Constructor.
 	IProvideClassInfo2Impl() {
 		ComPtr<ITypeLib> typeLib;
-		HRESULT hr = ::LoadRegTypeLib(*libid, majorVersion, minorVersion, 0, &typeLib);
+		HRESULT hr = ::LoadRegTypeLib(*libid, majorVersion, minorVersion, 0, typeLib.initialize());
 		assert(SUCCEEDED(hr));
-		typeLib->GetTypeInfoOfGuid(*iid, &typeInfo_);
+		typeLib->GetTypeInfoOfGuid(*iid, typeInfo_.initialize());
 		assert(SUCCEEDED(hr));
 	}
-	///	@see IProvideClassInfo::GetClassInfo
+	///	@see IProvideClassInfo#GetClassInfo
 	STDMETHOD(GetClassInfo)(ITypeInfo** ppTypeInfo) {
-		VERIFY_POINTER(ppTypeInfo);
+		MANAH_VERIFY_POINTER(ppTypeInfo);
 		(*ppTypeInfo = typeInfo_.get())->AddRef();
 		return S_OK;
 	}
-	///	@see IProvideClassInfo2::GetGUID
+	///	@see IProvideClassInfo2#GetGUID
 	STDMETHOD(GetGUID)(DWORD dwGuidKind, GUID* pGUID) {
-		VERIFY_POINTER(pGUID);
+		MANAH_VERIFY_POINTER(pGUID);
 		if(dwGuidKind == GUIDKIND_DEFAULT_SOURCE_DISP_IID && clsid != 0) {
 			*pGUID = iid;
 			return S_OK;
@@ -52,55 +52,69 @@ private:
 	ComPtr<ITypeInfo> typeInfo_;
 };
 
-#endif /* __IProvideClassInfo2_INTERFACE_DEFINED__ */
+#endif // __IProvideClassInfo2_INTERFACE_DEFINED__
 
-
-// IDispatchImpl クラスのための2つのポリシークラス
-/////////////////////////////////////////////////////////////////////////////
 
 /**
- *	LIBID からタイプライブラリをロード
- *	@param libid		タイプライブラリの LIBID
- *	@param iid			IID
- *	@param majorVersion	メジャーバージョン
- *	@param minorVersion	マイナーバージョン
+ * Loads the type library from LIBID.
+ * @param libid the LIBID of the type library
+ * @param iid the IID of the type to load
+ * @param majorVersion the major version
+ * @param minorVersion the minor version
  */
-template<const GUID* libid, const IID* iid, WORD majorVersion = 1, WORD minorVersion = 0> class RegTypeLibTypeInfoHolder {
+template<const GUID* libid, const IID* iid, WORD majorVersion = 1, WORD minorVersion = 0> class TypeInformationFromRegistry {
 public:
-	/// コンストラクタ
-	RegTypeLibTypeInfoHolder() {
-		ComPtr<ITypeLib> typeLib;
+	TypeInformationFromRegistry() {
+		ComPtr<ITypeLib> typeLibrary;
 		assert(libid != 0 && iid != 0);
-		HRESULT hr = ::LoadRegTypeLib(*libid, majorVersion, minorVersion, 0, &typeLib);
+		HRESULT hr = ::LoadRegTypeLib(*libid, majorVersion, minorVersion, 0, typeLibrary.initialize());
 		assert(SUCCEEDED(hr));
-		hr = typeLib->GetTypeInfoOfGuid(*iid, &typeInfo_);
+		hr = typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
 		assert(SUCCEEDED(hr));
 	}
-	/// ITypeInfo インスタンスを返す
-	ComPtr<ITypeInfo> getTypeInfo() const throw() {return typeInfo_;}
+	ComPtr<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
 private:
-	ComPtr<ITypeInfo> typeInfo_;
+	ComPtr<ITypeInfo> typeInformation_;
 };
 
 /**
- *	直接パスを指定してタイプライブラリをロード
- *	@param TypeLibPath	タイプライブラリのパスを提供するクラス
- *	@param iid			IID
+ * Loads the type library from file.
+ * @param TypeLibPath the class provides the path name of the type library.
+ * @param iid the IID of the type to load
  */
-template<class TypeLibPath, const IID* iid> class PathTypeLibTypeInfoHolder {
+template<typename TypeLibraryPath, const IID* iid> class TypeInformationFromPath {
 public:
-	/// コンストラクタ
-	PathTypeLibTypeInfoHolder() {
-		ComPtr<ITypeLib> typeLib;
-		HRESULT hr = ::LoadTypeLib(TypeLibPath::getPath(), &typeLib);
+	TypeInformationFromPath() {
+		ComPtr<ITypeLib> typeLibrary;
+		HRESULT hr = ::LoadTypeLib(TypeLibraryPath::get(), typeLibrary.initialize());
 		assert(SUCCEEDED(hr));
-		hr = typeLib->GetTypeInfoOfGuid(*iid, &typeInfo_);
+		hr = typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
 		assert(SUCCEEDED(hr));
 	}
-	/// ITypeInfo インスタンスを返す
-	ComPtr<ITypeInfo> getTypeInfo() const throw() {return typeInfo_;}
+	/// Returns an @c ITypeInfo instance.
+	ComPtr<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
 private:
-	ComPtr<ITypeInfo> typeInfo_;
+	ComPtr<ITypeInfo> typeInformation_;
+};
+
+/**
+ * Loads the type library from program module.
+ * @param iid IID of the type to load
+ */
+template<const IID* iid> class TypeInformationFromExecutable {
+public:
+	TypeInformationFromExecutable() {
+		WCHAR programName[MAX_PATH];
+		const DWORD n = ::GetModuleFileNameW(0, programName, MANAH_COUNTOF(programName));
+		if(n != 0 && n != MANAH_COUNTOF(programName)) {
+			ComPtr<ITypeLib> typeLibrary;
+			if(SUCCEEDED(::LoadTypeLib(programName, typeLibrary.initialize())))
+				typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
+		}
+	}
+	ComPtr<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
+private:
+	ComPtr<ITypeInfo> typeInformation_;
 };
 
 
@@ -108,45 +122,30 @@ private:
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- *	IDispatch の標準的な実装
- *	@param DI				IDispatch を基底とするインターフェイス
- *	@param TypeInfoHolder	ITypeInfo を提供するクラス
+ * Standard implementation of @c IDispatch interface.
+ * @param Base the base class derived from dispatch interfaces to implement
+ * @param TypeInformationProvider provides @c ITypeInfo
  */
-template<class DI, class TypeInfoHolder>
-class IDispatchImpl : virtual public DI {
+template<typename Base, typename TypeInformationProvider>
+class IDispatchImpl : public Base {
 public:
-	/// @see IDispatch::GetIDsOfNames
-	STDMETHOD(GetIDsOfNames)(REFIID riid,
-			OLECHAR** rgszNames, unsigned int cNames, LCID, DISPID* rgDispId) {
-		assert(riid == IID_NULL);
-		return ::DispGetIDsOfNames(typeInfoHolder_.getTypeInfo(), rgszNames, cNames, rgDispId);
-	}
-	/// @see IDispatch::GetTypeInfo
-	STDMETHOD(GetTypeInfo)(unsigned int iTypeInfo, LCID, ITypeInfo** ppTypeInfo) {
-		VERIFY_POINTER(ppTypeInfo);
-		if(iTypeInfo != 0)
-			return DISP_E_BADINDEX;
-		(*ppTypeInfo = typeInfoHolder_.getTypeInfo())->AddRef();
-		return S_OK;
-	}
-	/// @see IDispatch::GetTypeInfoCount
-	STDMETHOD(GetTypeInfoCount)(unsigned int* pctInfo) {
-		VERIFY_POINTER(pctInfo);
-		*pctInfo = 1;
-		return S_OK;
-	}
-	/// @see IDispatch::Invoke
-	STDMETHOD(Invoke)(DISPID dispidMember, REFIID riid, LCID, WORD wFlags,
-			DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, unsigned int* puArgErr) {
-		if(riid != IID_NULL)
-			return DISP_E_UNKNOWNINTERFACE;
-		return ::DispInvoke(static_cast<DI*>(this),
-				typeInfoHolder_.getTypeInfo(), dispidMember, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-	}
+	/// @see IDispatch#GetIDsOfNames
+	STDMETHODIMP GetIDsOfNames(REFIID iid, OLECHAR** names, unsigned int numberOfNames, LCID, DISPID* id) {
+		return (iid == IID_NULL) ? ::DispGetIDsOfNames(tip_.get().get(), names, numberOfNames, id) : E_INVALIDARG;}
+	/// @see IDispatch#GetTypeInfo
+	STDMETHODIMP GetTypeInfo(unsigned int index, LCID, ITypeInfo** typeInformation) {
+		MANAH_VERIFY_POINTER(typeInformation);
+		return (index == 0) ? ((*typeInformation = tip_.get().get())->AddRef(), S_OK) : DISP_E_BADINDEX;}
+	/// @see IDispatch#GetTypeInfoCount
+	STDMETHODIMP GetTypeInfoCount(unsigned int* number) {MANAH_VERIFY_POINTER(number); *number = 1; return S_OK;}
+	/// @see IDispatch#Invoke
+	STDMETHODIMP Invoke(DISPID id, REFIID iid, LCID, WORD flags, DISPPARAMS* parameters, VARIANT* result,
+		EXCEPINFO* exception, unsigned int* argErr) {return (iid == IID_NULL) ? ::DispInvoke(static_cast<Base*>(this),
+		tip_.get().get(), id, flags, parameters, result, exception, argErr) : DISP_E_UNKNOWNINTERFACE;}
 private:
-	TypeInfoHolder typeInfoHolder_;
+	TypeInformationProvider tip_;
 };
 
-}}} // namespace manah::com::ole
+}}} // namespace manah.com.ole
 
 #endif /* !MANAH_DISPATCH_IMPL_HPP */
