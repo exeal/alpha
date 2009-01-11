@@ -142,7 +142,7 @@ inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /
 	std::size_t i = 0;
 
 	for(std::list<std::wstring>::const_iterator insert(args.args_.begin()), e(args.args_.end()); insert != e; ++insert, ++i)
-		inserts[i] = const_cast<:CHAR*>(insert->c_str());
+		inserts[i] = const_cast<WCHAR*>(insert->c_str());
 	::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY,
 		getHandle(), id, 0, reinterpret_cast<WCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts.get()));
 	if(buffer != 0) {

@@ -253,7 +253,7 @@ public:
 	// constructor
 	explicit MonthCalendarCtrl(HWND handle = 0) : CommonControl<MonthCalendarCtrl>(handle) {}
 	// attributes
-	COLORREF etColor(int colorType) const;
+	COLORREF getColor(int colorType) const;
 	bool getCurSel(SYSTEMTIME& time) const;
 	int getFirstDayOfWeek(bool* localeVal = 0) const;
 	int getMaxSelCount() const;
@@ -605,7 +605,7 @@ public:
 	bool activate(bool active);
 	bool adjustRect(RECT& rect, bool larger = true);
 	bool addTool(const TOOLINFOW& toolInfo);
-	bool ddTool(HWND container, UINT id, UINT flags,
+	bool addTool(HWND container, UINT id, UINT flags,
 		const RECT& toolRect, const WCHAR* text = LPSTR_TEXTCALLBACKW, LPARAM lParam = 0);
 	bool addTool(HWND tool, UINT flags, const WCHAR* text = LPSTR_TEXTCALLBACKW, LPARAM lParam = 0);
 	void deleteTool(HWND window, UINT id = 0);

@@ -28,10 +28,10 @@ namespace ascension {
 		class Color : public manah::FastArenaObject<Color> {
 		public:
 			Color() /*throw()*/ : valid_(false) {}
-			Color(byte red, byte green, byte blue) /*throw()*/ : r_(red), g_(green), b_(blue), valid_(true) {}
+			Color(byte red, byte green, byte blue) /*throw()*/ : r_(red << 8), g_(green << 8), b_(blue << 8), valid_(true) {}
 #ifdef ASCENSION_WINDOWS
-			static Color fromCOLORREF(COLORREF value) /*throw()*/ {
-				return Color(GetRValue(value), GetGValue(value), GetBValue(value));}
+			static Color fromCOLORREF(COLORREF value) /*throw()*/ {return Color(
+				static_cast<byte>(value & 0xFF), static_cast<byte>((value >> 8) & 0xFF), static_cast<byte>((value >> 16) & 0xFF));}
 			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
 #endif // ASCENSION_WINDOWS
 			/// Returns the blue color component of this color.
