@@ -1,14 +1,13 @@
 /**
  * @file new-file-format-dialog.cpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2009
  */
 
-#include "stdafx.h"
 #include "new-file-format-dialog.hpp"
 #include "application.hpp"
-#include "resource/messages.h"
-#include "../manah/win32/ui/standard-controls.hpp"
+#include "../resource/messages.h"
+#include <manah/win32/ui/standard-controls.hpp>
 using alpha::ui::NewFileFormatDialog;
 using manah::win32::ui::ComboBox;
 using namespace ascension::encoding;
@@ -21,7 +20,7 @@ using namespace std;
  * @param encoding the encoding initially selected
  * @param newline the newline initially selected
  */
-NewFileFormatDialog::NewFileFormatDialog(const string& encoding, Newline newline) throw() : encoding_(encoding), newline_(newline) {
+NewFileFormatDialog::NewFileFormatDialog(const string& encoding, ascension::kernel::Newline newline) throw() : encoding_(encoding), newline_(newline) {
 }
 
 /// @see Dialog#onCommand
@@ -87,7 +86,7 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	// [Newline]
 	onCommand(IDC_COMBO_ENCODING, CBN_SELCHANGE, 0);
 	for(int i = 0; i < 6; ++i) {
-		if(newline_ == static_cast<Newline>(newlineCombobox_.getItemData(i))) {
+		if(newline_ == static_cast<ascension::kernel::Newline>(newlineCombobox_.getItemData(i))) {
 			newlineCombobox_.setCurSel(i);
 			break;
 		}
@@ -102,6 +101,6 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
 	encoding_ = Encoder::forID(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()))->properties().name();
-	newline_ = static_cast<Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
+	newline_ = static_cast<ascension::kernel::Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
 }

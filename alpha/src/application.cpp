@@ -1,31 +1,33 @@
 /**
  * @file application.hpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2009
  */
 
-#include "stdafx.h"
 #include "application.hpp"
-#include "command.hpp"
-#include "mru-manager.hpp"
-#include "search-dialog.hpp"
-#include "bookmark-dialog.hpp"
+#include "ambient.hpp"
+#include "ui.hpp"
+#include "editor-window.hpp"
+//#include "command.hpp"
+//#include "mru-manager.hpp"
+//#include "search-dialog.hpp"
+//#include "bookmark-dialog.hpp"
 //#include "DebugDlg.h"
-#include "ascension/text-editor.hpp"
-#include "ascension/regex.hpp"
-#include "resource/messages.h"
-#include "../manah/win32/dc.hpp"
-#include "../manah/win32/gdi-object.hpp"
-#include "../manah/win32/ui/wait-cursor.hpp"
+#include <ascension/text-editor.hpp>
+#include <ascension/regex.hpp>
+#include "../resource/messages.h"
+#include <manah/win32/dc.hpp>
+#include <manah/win32/gdi-object.hpp>
+#include <manah/win32/ui/wait-cursor.hpp>
 #include <algorithm>
 #include <fstream>
 #include <commdlg.h>	// ChooseFont
 #include <shlwapi.h>	// PathXxxx
 #include <comcat.h>		// ICatInformation
 #include <dlgs.h>
-//#include "Msxml3.tlh"	// MSXML2::IXMLDOMDocument
+//#include "Msxml3.tlh"	// MSXML2.IXMLDOMDocument
 using namespace alpha;
-using namespace alpha::command;
+//using namespace alpha::command;
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::viewers;
@@ -36,11 +38,16 @@ using namespace manah::win32::ui;
 using namespace manah::win32::gdi;
 using namespace manah::com;
 using namespace std;
+using manah::toBoolean;
 
 
 // グローバル関数//////////////////////////////////////////////////////////
 
-/// エントリポイント
+void callOleUninitialize() {
+	::OleUninitialize();
+}
+
+/// The entry point.
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	// Shift キーを押しながら起動すると英語モードになるようにしてみた
 	if(toBoolean(::GetAsyncKeyState(VK_SHIFT) & 0x8000)) {
@@ -61,27 +68,27 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif /* _DEBUG */
 
 	// NT 系か調べる
-	::OSVERSIONINFOA osvi;
-	osvi.dwOSVersionInfoSize = sizeof(::OSVERSIONINFOA);
+	OSVERSIONINFOA osvi;
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
 	::GetVersionExA(&osvi);
 	if(!toBoolean(osvi.dwPlatformId & VER_PLATFORM_WIN32_NT)) {
 		char prompt[100];
-		::LoadStringA(hInstance, MSG_ERROR__UNSUPPORTED_OS_VERSION, prompt, countof(prompt));
+		::LoadStringA(hInstance, MSG_ERROR__UNSUPPORTED_OS_VERSION, prompt, MANAH_COUNTOF(prompt));
 		::MessageBoxA(0, prompt, "Alpha", MB_ICONHAND);	// title is obtained from IDS_APPNAME
 		return -1;
 	}
-	::HANDLE mutex = ::CreateMutexW(0, false, IDS_APPFULLVERSION);
+	HANDLE mutex = ::CreateMutexW(0, false, IDS_APPFULLVERSION);
 
 	int	exitCode = 0/*EXIT_SUCCESS*/;
 
 	// 簡単な多重起動抑止 (Ctrl キーを押しながら起動すると多重起動するようにしてみた)
 	if(::GetLastError() != ERROR_ALREADY_EXISTS || toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
 		::OleInitialize(0);	// STA に入る + 高水準サービスの初期化
+		atexit(&callOleUninitialize);
 		initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
 		Alpha* application = new Alpha();
 		exitCode = application->run(nCmdShow);
 		delete application;
-		::OleUninitialize();
 	} else {	// 既存のプロセスにコマンドライン引数を渡す
 		HWND existWnd = ::FindWindowW(IDS_APPNAME, 0);
 		while(!toBoolean(::IsWindow(existWnd))) {
@@ -93,7 +100,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		WCHAR* data = new WCHAR[commandLineLength + 1 + MAX_PATH];
 		::GetCurrentDirectoryW(MAX_PATH, data);
 		wcscpy(data + MAX_PATH, commandLine);
-		MANAH_AUTO_STRUCT(::COPYDATASTRUCT, cd);
+		MANAH_AUTO_STRUCT(COPYDATASTRUCT, cd);
 		cd.lpData = data;
 		cd.cbData = static_cast<DWORD>(sizeof(WCHAR) * (commandLineLength + 1 + MAX_PATH));
 		::SendMessageW(existWnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
@@ -138,7 +145,7 @@ namespace {
 	/// ChooseFontW のためのフックプロシジャ
 	UINT_PTR CALLBACK chooseFontHookProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
 		if(message == WM_COMMAND && LOWORD(wParam) == psh3) {	// [適用] ボタン
-			::LOGFONTW lf;
+			LOGFONTW lf;
 			::SendMessageW(dialog, WM_CHOOSEFONT_GETLOGFONT, 0, reinterpret_cast<LPARAM>(&lf));
 			Alpha::instance().setFont(lf);
 			return true;
@@ -156,26 +163,26 @@ namespace {
 Alpha* Alpha::instance_ = 0;
 
 /// コンストラクタ
-Alpha::Alpha() : editorFont_(0), mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0) {
+Alpha::Alpha() : scriptSystem_(new ambient::ScriptSystem()), editorFont_(0)/*, mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0)*/ {
 	assert(Alpha::instance_ == 0);
 	Alpha::instance_ = this;
-	commandManager_.reset(new CommandManager);
-	searchDialog_.reset(new ui::SearchDialog);
-	bookmarkDialog_.reset(new ui::BookmarkDialog);
+//	searchDialog_.reset(new ui::SearchDialog);	// ctor of SearchDialog calls Alpha
+//	commandManager_.reset(new CommandManager);
+//	bookmarkDialog_.reset(new ui::BookmarkDialog);
 	onSettingChange(0, 0);	// statusFont_ の初期化
 
 	// load startup.xml
-	::WCHAR fileName[MAX_PATH];
+	WCHAR fileName[MAX_PATH];
 	wcscpy(fileName, getModuleFileName());
-	::WCHAR* const separator = wcsrchr(fileName, L'\\');
+	WCHAR* const separator = wcsrchr(fileName, L'\\');
 	assert(separator != 0);
 	wcscpy(separator + 1, L"startup.xml");
 }
 
 /// デストラクタ
 Alpha::~Alpha() {
-	buffers_.reset(0);	// 先に解体する
 	::DeleteObject(statusFont_);
+	delete scriptSystem_;
 	Alpha::instance_ = 0;
 }
 
@@ -186,9 +193,9 @@ LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPA
 
 /// [フォント] ダイアログを表示してエディタのフォントを変更する
 void Alpha::changeFont() {
-	EditorView& activeView = buffers_->activeView();
-	::LOGFONTW font;
-	MANAH_AUTO_STRUCT_SIZE(::CHOOSEFONTW, cf);
+	EditorView& activeView = EditorWindows::instance().activePane().visibleView();
+	LOGFONTW font;
+	MANAH_AUTO_STRUCT_SIZE(CHOOSEFONTW, cf);
 
 	textEditorFont(font);
 	cf.hwndOwner = getMainWindow().getHandle();
@@ -209,8 +216,9 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	switch(message) {
 	case WM_ACTIVATE:
 		if(wParam == WA_ACTIVE) {
-			for(size_t i = 0; i < buffers_->numberOfBuffers(); ++i)
-				buffers_->at(i).textFile().checkTimeStamp();
+			BufferList& buffers = BufferList::instance();
+			for(size_t i = 0; i < buffers.numberOfBuffers(); ++i)
+				buffers.at(i).textFile().checkTimeStamp();
 		}
 		return 0L;
 	case WM_COMMAND:
@@ -219,7 +227,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		onClose();
 		return 0;
 	case WM_COPYDATA:
-		onCopyData(reinterpret_cast<HWND>(wParam), *reinterpret_cast<::COPYDATASTRUCT*>(lParam));
+		onCopyData(reinterpret_cast<HWND>(wParam), *reinterpret_cast<COPYDATASTRUCT*>(lParam));
 		break;
 	case WM_CREATE:
 		break;
@@ -239,6 +247,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		onExitMenuLoop(toBoolean(wParam));
 		break;
 	case WM_INITMENUPOPUP:
+		ambient::ui::handleINITMENUPOPUP(wParam, lParam);
 		onInitMenuPopup(reinterpret_cast<HMENU>(wParam), LOWORD(lParam), toBoolean(HIWORD(lParam)));
 		break;
 	case WM_MEASUREITEM:
@@ -248,6 +257,9 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		auto_ptr<Menu> activePopup(new Menu(reinterpret_cast<HMENU>(lParam)));
 		return onMenuChar(LOWORD(wParam), HIWORD(wParam), *activePopup);
 	}
+	case WM_MENUCOMMAND:
+		ambient::ui::handleMENUCOMMAND(wParam, lParam);
+		break;
 	case WM_MENUSELECT:
 		onMenuSelect(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HMENU>(lParam));
 		break;
@@ -265,8 +277,8 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		// m_iActiveView が閉じられようとしているビューを指す可能性がある
 //		if(m_buffers.GetCount() != 0 && m_buffers.GetActiveDocumentIndex() != -1
 //				&& reinterpret_cast<HWND>(wParam) != m_documents.GetActiveDocument()->GetWindow())
-//			::SendMessage(m_documents.GetActiveDocument()->GetWindow(), message, wParam, lParam);
-		buffers_->editorWindow().setFocus();
+//			::SendMessageW(m_documents.GetActiveDocument()->GetWindow(), message, wParam, lParam);
+		EditorWindows::instance().setFocus();
 		return 0L;
 	case WM_SETTINGCHANGE:
 		onSettingChange(static_cast<UINT>(wParam), reinterpret_cast<wchar_t*>(lParam));
@@ -280,7 +292,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	}
 	return ::DefWindowProc(window, message, wParam, lParam);
 }
-
+#if 0
 /**
  * キー組み合わせをコマンドに変換して実行する
  * @param key 仮想キー
@@ -323,9 +335,12 @@ bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
 	}
 	return true;
 }
-
+#endif
 /// @see manah#windows#Alpha#initInstance
 bool Alpha::initInstance(int showCommand) {
+	// setup the script engine
+//	ambient::ScriptEngine::instance().installModules();
+
 	// ウィンドウクラスの登録
 	MANAH_AUTO_STRUCT_SIZE(::WNDCLASSEXW, wc);
 	wc.style = CS_DBLCLKS/* | CS_DROPSHADOW*/;
@@ -335,10 +350,10 @@ bool Alpha::initInstance(int showCommand) {
 	wc.hInstance = getHandle();
 	wc.hIcon = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
 	wc.hIconSm = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR));
-	wc.hCursor = loadStandardCursor(IDC_ARROW);
+	wc.hCursor = loadStandardCursor(MAKEINTRESOURCEW(32512));	// IDC_ARROW
 	wc.hbrBackground = manah::win32::BrushHandleOrColor(COLOR_3DFACE).brush;
+	wc.lpszMenuName = MAKEINTRESOURCEW(IDR_MENU);
 	wc.lpszClassName = IDS_APPNAME;
-	wc.lpszMenuName = MAKEINTRESOURCE(IDR_MENU);
 	if(!toBoolean(::RegisterClassExW(&wc)))
 		return false;
 
@@ -391,27 +406,31 @@ bool Alpha::initInstance(int showCommand) {
 		WS_EX_TOOLWINDOW);
 	rebar_.setBarInfo(rbi);
 
-	// バッファリスト
-	buffers_.reset(new BufferList(*this));
-
 	// ツールバーの作成
-	setupToolbar();
-	buffers_->createBar(rebar_);
+//	setupToolbar();
+	BufferList::instance().createBar(rebar_);
+
+	// エディタウィンドウの作成
+	// (WS_CLIPCHILDREN を付けると分割ウィンドウのサイズ変更枠が不可視になる...)
+	EditorWindows::instance().create(getMainWindow().getHandle(),
+		DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorWindow));
+	assert(EditorWindows::instance().isWindow());
 
 	// 一般設定の読み込み
 	loadINISettings();
 
 	// スクリプトによる設定
-	wchar_t scriptName[MAX_PATH];
-	wchar_t* fileName = 0;
-	wcscpy(scriptName, getModuleFileName());
-	fileName = ::PathFindFileNameW(scriptName);
-	wcscpy(fileName, IDS_MACRO_DIRECTORY_NAME IDS_EVENTSCRIPTFILENAME);
-	// TODO: initialize script
+	OLECHAR dotAlpha[MAX_PATH];
+	::GetModuleFileNameW(0, dotAlpha, MAX_PATH);
+	OLECHAR* fileName = ::PathFindFileNameW(dotAlpha);
+	wcscpy(fileName, L".alpha");
+	BSTR dotAlphaBstr = ::SysAllocString(dotAlpha);
+	scriptSystem_->ExecuteFile(dotAlphaBstr, 0);
+	::SysFreeString(dotAlphaBstr);
 
 	// MRU リストの作成
-	mruManager_ = new MRUManager(readIntegerProfile(L"File", L"mruLimit", 8), CMD_SPECIAL_MRUSTART);
-	mruManager_->load();
+//	mruManager_ = new MRUManager(readIntegerProfile(L"File", L"mruLimit", 8), CMD_SPECIAL_MRUSTART);
+//	mruManager_->load();
 
 	// ステータスバーの作成
 	statusBar_.create(applicationWindow.getHandle(), DefaultWindowRect(), 0, IDC_STATUSBAR,
@@ -427,9 +446,9 @@ bool Alpha::initInstance(int showCommand) {
 	// TODO: invoke the initialize script
 
 	// 初期のビューの作成
-	buffers_->addNew();
+	BufferList::instance().addNew();
 
-	setupMenus();
+//	setupMenus();
 	if(!toBoolean(readIntegerProfile(L"View", L"visibleToolbar", true)))
 		rebar_.showBand(rebar_.idToIndex(IDC_TOOLBAR), false);
 	if(!toBoolean(readIntegerProfile(L"View", L"visibleStatusBar", true)))
@@ -451,11 +470,11 @@ bool Alpha::initInstance(int showCommand) {
 //	outputWindow.writeLine(OTT_GENERAL, IDS_APPFULLVERSION);
 
 	// ツールダイアログの作成
-	searchDialog_->doModeless(applicationWindow.getHandle(), false);
-	pushModelessDialog(searchDialog_->getHandle());
+//	searchDialog_->doModeless(applicationWindow.getHandle(), false);
+//	pushModelessDialog(searchDialog_->getHandle());
 	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1))) {
-		searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-		searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
+//		searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
+//		searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
 	}
 
 	applicationWindow.setFocus();
@@ -492,29 +511,33 @@ void Alpha::loadINISettings() {
 	wstring	value;
 	list<wstring> findWhats, replacesWiths;
 	for(ushort i = 0; i < 16; ++i) {
+#if(_MSC_VER < 1400)
 		swprintf(keyName, L"findWhat(%u)", i);
+#else
+		swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", i);
+#endif // _MSC_VER < 1400
 		value = readStringProfile(L"Find", keyName);
 		if(value.empty())
 			break;
 		findWhats.push_back(value);
 	}
 	for(ushort i = 0; i < 16; ++i) {
+#if(_MSC_VER < 1400)
 		swprintf(keyName, L"replaceWith(%u)", i);
+#else
+		swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", i);
+#endif // _MSC_VER < 1400
 		value = readStringProfile(L"Find", keyName);
 		if(value.empty())
 			break;
 		replacesWiths.push_back(value);
 	}
-	searcher::TextSearcher& s = buffers_->editorSession().textSearcher();
+	searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
 	s.setMaximumNumberOfStoredStrings(16);
 	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
 	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
-
-	// その他
-	showMessageBoxOnFind_ = toBoolean(readIntegerProfile(L"Find", L"showMessageBox", 1));
-	initializeFindTextFromEditor_ = toBoolean(readIntegerProfile(L"Find", L"initializeFromEditor", 1));
 }
-
+#if 0
 /**
  * キーの (再) 割り当て
  * @param schemeName 使用するキーボードマップスキームの名前。
@@ -535,7 +558,7 @@ void Alpha::loadKeyBinds(const wstring& schemeName) {
 	// メニューの再構築
 	setupMenus();
 }
-
+#endif
 /**
  * メッセージテーブルの文字列をメッセージボックスに表示する
  * @param id メッセージ識別子
@@ -564,9 +587,9 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 		else
 			wcscpy(canonical, argv[i]);
 		if(toBoolean(::PathIsDirectoryW(canonical)))
-			buffers_->openDialog(canonical);
+			BufferList::instance().openDialog(canonical);
 		else
-			buffers_->open(canonical);
+			BufferList::instance().open(canonical);
 	}
 	::LocalFree(argv);
 }
@@ -574,7 +597,7 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 /// @see manah#windows#Alpha#preTranslateMessage
 bool Alpha::preTranslateMessage(const MSG& msg) {
 	// コマンドに割り当てられているキー組み合わせをここで捕捉する
-	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
+/*	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
 		if(msg.hwnd == buffers_->activeView().getHandle()) {
 			KeyModifier modifiers = 0;
 			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))
@@ -601,7 +624,7 @@ bool Alpha::preTranslateMessage(const MSG& msg) {
 					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers)) != 0;
 		}
 	}
-	return false;
+*/	return false;
 }
 
 /**
@@ -690,47 +713,64 @@ void Alpha::saveINISettings() {
 	writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
 
 	// MRU リストの保存
-	mruManager_->save();
+//	mruManager_->save();
 
 	// 検索文字列履歴の保存
-	const searcher::TextSearcher& s = buffers_->editorSession().textSearcher();
+	const searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
 	for(size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
+#if(_MSC_VER < 1400)
 		swprintf(keyName, L"findWhat(%u)", i);
+#else
+		swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", i);
+#endif // _MSC_VER < 1400
 		writeStringProfile(L"Find", keyName, s.pattern(i).c_str());
 	}
+#if(_MSC_VER < 1400)
 	swprintf(keyName, L"findWhat(%u)", s.numberOfStoredPatterns());
+#else
+	swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", s.numberOfStoredPatterns());
+#endif // _MSC_VER < 1400
 	writeStringProfile(L"Find", keyName, L"");
 	for(size_t i = 0; i < s.numberOfStoredReplacements(); ++i) {
+#if(_MSC_VER < 1400)
 		swprintf(keyName, L"replaceWith(%u)", i);
+#else
+		swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", i);
+#endif // _MSC_VER < 1400
 		writeStringProfile(L"Find", keyName, s.replacement(i).c_str());
 	}
+#if(_MSC_VER < 1400)
 	swprintf(keyName, L"replaceWith(%u)", s.numberOfStoredReplacements());
+#else
+	swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", s.numberOfStoredReplacements());
+#endif // _MSC_VER < 1400
 	writeStringProfile(L"Find", keyName, L"");
 }
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
-void Alpha::setFont(const ::LOGFONTW& font) {
-	::LOGFONTW lf = font;
+void Alpha::setFont(const LOGFONTW& font) {
+	LOGFONTW lf = font;
 
 	lf.lfWeight = FW_NORMAL;
 	::DeleteObject(editorFont_);
 	editorFont_ = ::CreateFontIndirectW(&lf);
 
 	// 全てのビューのフォントを更新
-	for(size_t i = 0; i < buffers_->numberOfBuffers(); ++i) {
-		presentation::Presentation& p = buffers_->at(i).presentation();
-		for(presentation::Presentation::TextViewerIterator it = p.firstTextViewer(); it != p.lastTextViewer(); ++it)
+	BufferList& buffers = BufferList::instance();
+	for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
+		presentation::Presentation& p = buffers.at(i).presentation();
+		for(presentation::Presentation::TextViewerIterator it(p.firstTextViewer()); it != p.lastTextViewer(); ++it)
 			(*it)->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 	}
 
 	// 一部のコントロールにも設定
 	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1))) {
-		if(bookmarkDialog_.get() != 0 && bookmarkDialog_->isWindow())
-			bookmarkDialog_->sendItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-		if(searchDialog_.get() != 0 && searchDialog_->isWindow()) {
-			searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-			searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-		}
+//		if(bookmarkDialog_.get() != 0 && bookmarkDialog_->isWindow())
+//			bookmarkDialog_->sendItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
+//		if(searchDialog_.get() != 0 && searchDialog_->isWindow()) {
+//			searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
+//			searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
+//		}
 	}
 
 	// INI ファイルに保存
@@ -749,7 +789,7 @@ void Alpha::setStatusText(const wchar_t* text, HFONT font /* = 0 */) {
 	statusBar_.setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
 	statusBar_.setFont(font);
 }
-
+#if 0
 /// メニューの初期化
 void Alpha::setupMenus() {
 	Menu menuBar(getMainWindow().getMenu());
@@ -996,30 +1036,11 @@ void Alpha::setupToolbar() {
 	rbbi.cxIdeal = rect.right;
 	rebar_.setBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
 }
-
-/// [検索と置換] ダイアログを表示してパターン編集テキストボックスにフォーカスを与える
-void Alpha::showSearchDialog() {
-	if(!searchDialog_->isVisible()) {
-		if(initializeFindTextFromEditor_) {	// アクティブなエディタから検索パターンを取り出す
-			Caret& caret = buffers_->activeView().caret();
-			if(caret.isSelectionEmpty()) {
-//				String s;
-//				// TODO: obtain the word nearest from the caret position.
-//				caret.getNearestWordFromCaret(0, 0, &s);
-//				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
-			} else if(caret.anchor().lineNumber() == caret.lineNumber())
-				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, caret.selectionText().c_str());
-		}
-		searchDialog_->show(SW_SHOW);
-	} else
-		searchDialog_->setActive();
-	::SetFocus(searchDialog_->getItem(IDC_COMBO_FINDWHAT));
-}
-
+#endif
 void Alpha::updateStatusBarPaneSize() {
 	if(!statusBar_.isWindow())
 		return;
-	static const ICON_WIDTH = 16;
+	static const int ICON_WIDTH = 16;
 	int parts[5], borders[3];
 	statusBar_.getBorders(borders);
 	const int padding = (borders[0] + borders[2]) * 2 + 5;
@@ -1045,28 +1066,35 @@ void Alpha::updateStatusBarPaneSize() {
 	// キャレット位置
 	wchar_t text[256];
 	static const wstring format(loadMessage(MSG_STATUS__CARET_POSITION));
+#if(_MSC_VER < 1400)
 	swprintf(text, format.c_str(), 88888888, 88888888, 88888888);
+#else
+	swprintf(text, MANAH_COUNTOF(text), format.c_str(), 88888888, 88888888, 88888888);
+#endif // _MSC_VER < 1400
 	parts[0] = parts[1] - dc.getTextExtent(text, static_cast<int>(wcslen(text))).cx - padding;
 
 	dc.selectObject(oldFont);
-	statusBar_.setParts(countof(parts), parts);
+	statusBar_.setParts(MANAH_COUNTOF(parts), parts);
 }
 
 /// @see WM_CLOSE
 bool Alpha::onClose() {
 	// TODO: invoke application teardown.
 //	eventHandlerScript_->invoke(OLESTR("OnAlphaTerminating"), params);
-	if(buffers_->closeAll(true)) {
-		saveINISettings();
-		getMainWindow().destroy();
-		return true;
+	BufferList& buffers = BufferList::instance();
+	for(size_t i = buffers.numberOfBuffers() - 1; ; --i) {
+		buffers.close(buffers.at(i));
+		if(i == 0)
+			break;
 	}
-	return false;	// ユーザがキャンセルした
+	saveINISettings();
+	getMainWindow().destroy();
+	return true;
 }
 
 /// @see Window::onCommand
 bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
-	const CommandID command = id + CMD_SPECIAL_START;
+/*	const CommandID command = id + CMD_SPECIAL_START;
 //	if(::GetCurrentThreadId() != getMainWindow().getWindowThreadID())
 //		getMainWindow().sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
 	if(command == CMD_SPECIAL_ILLEGALKEYSTROKES) {
@@ -1077,7 +1105,7 @@ bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
 			buffers_->setActive(buffers_->at(command - CMD_SPECIAL_BUFFERSSTART));
 	} else
 		commandManager_->executeCommand(command, true);
-	return true;
+*/	return true;
 }
 
 /// @see WM_COPYDATA
@@ -1091,7 +1119,7 @@ void Alpha::onDestroy() {
 	// 後始末など (Alpha::onClose も参照)
 	getMainWindow().killTimer(ID_TIMER_QUERYCOMMAND);
 
-	delete mruManager_;
+//	delete mruManager_;
 //	toolbar_.destroyWindow();
 //	statusBar_.destroyWindow();
 
@@ -1102,7 +1130,7 @@ void Alpha::onDestroy() {
 void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 	if(drawItem.CtlType != ODT_MENU)	// 現時点ではメニューの描画のみ
 		return;
-	if(drawItem.itemID != 0) {
+/*	if(drawItem.itemID != 0) {
 		const wstring text(commandManager_->menuName(drawItem.itemID + CMD_SPECIAL_START));
 		manah::AutoBuffer<wchar_t> caption(new wchar_t[text.length() + 1]);
 		wcscpy(caption.get(), text.c_str());
@@ -1114,7 +1142,7 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 		Menu::drawItem(drawItem, caption.get(), accel, 0, 0,
 			bufferList().bufferIcon(drawItem.itemID - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START)));
 	} else
-		Menu::drawItem(drawItem, 0);
+*/		Menu::drawItem(drawItem, 0);
 }
 
 /// @see WM_DROPFILES
@@ -1125,13 +1153,13 @@ void Alpha::onDropFiles(HDROP drop) {
 	for(uint i = 0; i < c; ++i) {
 		::DragQueryFileW(drop, i, filePath, MAX_PATH);
 		if(!toBoolean(::PathIsDirectoryW(filePath)))
-			buffers_->open(filePath);
+			BufferList::instance().open(filePath);
 		else
-			buffers_->openDialog(filePath);
+			BufferList::instance().openDialog(filePath);
 	}
 	::DragFinish(drop);
 
-	EditorView& activeView = buffers_->activeView();
+	EditorView& activeView(EditorWindows::instance().activePane().visibleView());
 	if(activeView.isWindow())
 		activeView.setFocus();
 }
@@ -1168,7 +1196,7 @@ void Alpha::onInitMenuPopup(HMENU menu, UINT, bool sysMenu) {
 			CMD_TOOL_DOCTYPELIST_START + static_cast<UINT>(types.find(activeBuffer.getDocumentType())));
 	}
 */	else {
-		Menu popup;
+/*		Menu popup;
 		popup.attach(menu);
 		const int c = popup.getNumberOfItems();
 		for(int i = 0; i < c; ++i) {
@@ -1176,7 +1204,7 @@ void Alpha::onInitMenuPopup(HMENU menu, UINT, bool sysMenu) {
 			popup.enable<Menu::BY_POSITION>(i, commandManager_->isEnabled(id, true));
 			popup.check<Menu::BY_POSITION>(i, commandManager_->isChecked(id));
 		}
-	}
+*/	}
 }
 
 /// @see WM_MEASUREITEM
@@ -1184,7 +1212,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 	if(mi.CtlType == ODT_MENU) {
 		if(mi.itemID == 0)
 			Menu::measureItem(mi, 0);
-		else {
+/*		else {
 			const wstring s(commandManager_->menuName(mi.itemID + CMD_SPECIAL_START));
 			manah::AutoBuffer<wchar_t> caption(new wchar_t[s.length() + 1]);
 			wcscpy(caption.get(), s.c_str());
@@ -1195,7 +1223,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 				*(accel++) = 0;
 			Menu::measureItem(mi, caption.get(), accel);
 		}
-	}
+*/	}
 }
 
 /// @see WM_MENUCHAR
@@ -1205,28 +1233,28 @@ LRESULT Alpha::onMenuChar(wchar_t ch, UINT flags, Menu& menu) {
 
 /// @see WM_MENUSELECT
 void Alpha::onMenuSelect(UINT itemID, UINT flags, HMENU) {
-	const CommandID command = itemID + CMD_SPECIAL_START;
+/*	const CommandID command = itemID + CMD_SPECIAL_START;
 	// 選択項目に対応する説明をステータスバーに表示
-/*	if(command >= CMD_EDIT_PLUGINLIST_START && command < CMD_EDIT_PLUGINLIST_END) {	// マクロ
+	if(command >= CMD_EDIT_PLUGINLIST_START && command < CMD_EDIT_PLUGINLIST_END) {	// マクロ
 		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
 			(scriptMacroManager_->getCount() != 0) ?
 			scriptMacroManager_->getDescription(command - CMD_EDIT_PLUGINLIST_START).c_str() : L"", SBT_NOBORDERS);
-	} else*/ if(command >= CMD_SPECIAL_BUFFERSSTART && command <= CMD_SPECIAL_BUFFERSEND)	// バッファ
+	} else if(command >= CMD_SPECIAL_BUFFERSSTART && command <= CMD_SPECIAL_BUFFERSEND)	// バッファ
 		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
 			buffers_->at(command - CMD_SPECIAL_BUFFERSSTART).textFile().pathName().c_str(), SBT_NOBORDERS);
 	else {
 		const wstring prompt((!toBoolean(flags & MF_POPUP) && !toBoolean(flags & MFT_SEPARATOR)) ? loadMessage(command) : L"");
 		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
 			!prompt.empty() ? wcschr(prompt.data(), L'\n') + 1 : L"", SBT_NOBORDERS);
-	}
+	}*/
 }
 
 /// @see Window#onNotify
 bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 	if(id == IDC_BUFFERBAR)
-		return toBoolean(buffers_->handleBufferBarNotification(*reinterpret_cast<NMTOOLBARW*>(&nmhdr)));
+		return toBoolean(BufferList::instance().handleBufferBarNotification(*reinterpret_cast<NMTOOLBARW*>(&nmhdr)));
 	else if(id == IDC_BUFFERBARPAGER)
-		return toBoolean(buffers_->handleBufferBarPagerNotification(nmhdr));
+		return toBoolean(BufferList::instance().handleBufferBarPagerNotification(nmhdr));
 
 	switch(nmhdr.code) {
 	case RBN_HEIGHTCHANGE:	// レバーの高さが変わった
@@ -1235,16 +1263,17 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 	case RBN_CHEVRONPUSHED:	// ツールバーのシェブロンが押された
 		onRebarChevronPushed(*reinterpret_cast<LPNMREBARCHEVRON>(&nmhdr));
 		return true;
+#if 0
 	case TBN_DROPDOWN: {	// ツールバーのドロップダウン
-		::RECT rect;
-		::POINT pt;
+		RECT rect;
+		POINT pt;
 		const bool ctrlPressed = toBoolean(::GetKeyState(VK_CONTROL) & 0x8000);
 
-		toolbar_.getRect(reinterpret_cast<::LPNMTOOLBAR>(&nmhdr)->iItem, rect);
+		toolbar_.getRect(reinterpret_cast<LPNMTOOLBAR>(&nmhdr)->iItem, rect);
 		pt.x = rect.left;
 		pt.y = rect.bottom;
 		getMainWindow().clientToScreen(pt);
-		switch(reinterpret_cast<::LPNMTOOLBAR>(&nmhdr)->iItem + CMD_SPECIAL_START) {
+		switch(reinterpret_cast<LPNMTOOLBAR>(&nmhdr)->iItem + CMD_SPECIAL_START) {
 		case CMD_FILE_NEW:
 /*			while(newDocTypeMenu_->getItemCount() > 0)	// すべて削除
 				newDocTypeMenu_->deleteMenuItem<Menu::BY_POSITION>(0);
@@ -1257,15 +1286,16 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			newDocTypeMenu_->trackPopupMenu(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow());
 */			return true;
 		case CMD_FILE_OPEN:
-			mruManager_->popupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
+//			mruManager_->popupMenu().trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
 			return true;
 		}
 		break;
 	}
+#endif // 0
 	case TBN_GETOBJECT:
 		onCommand(reinterpret_cast<::LPNMOBJECTNOTIFY>(&nmhdr)->iItem, 0, 0);
 		return 0;
-	case TTN_GETDISPINFOW: {	// ツールバーのツールチップ
+/*	case TTN_GETDISPINFOW: {	// ツールバーのツールチップ
 		const CommandID id = static_cast<CommandID>(nmhdr.idFrom + CMD_SPECIAL_START);
 		if(id >= CMD_SPECIAL_BUFFERSSTART && id <= CMD_SPECIAL_BUFFERSEND)
 			return toBoolean(buffers_->handleBufferBarNotification(*reinterpret_cast<::NMTOOLBARW*>(&nmhdr)));
@@ -1283,7 +1313,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			wcscpy(nmttdi.lpszText = tipText, name.c_str());
 		}
 		return true;
-	}
+*/	}
 /*	case TBN_HOTITEMCHANGE:
 		if(nmhdr.idFrom = IDC_TOOLBAR) {
 			NMTBHOTITEM& nmtbhi = *reinterpret_cast<NMTBHOTITEM*>(&nmhdr);
@@ -1302,7 +1332,7 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 			}
 		}
 		break;
-*/	}
+	}*/
 	return false;
 }
 
@@ -1315,13 +1345,13 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	rebar_.getRect(chevron.uBand, bandRect);
 	rbi.fMask = RBBIM_CHILD | RBBIM_IDEALSIZE;
 	rebar_.getBandInfo(chevron.uBand, rbi);
-	const long buttonCount = static_cast<long>(::SendMessage(rbi.hwndChild, TB_BUTTONCOUNT, 0, 0L));
+	const long buttonCount = static_cast<long>(::SendMessageW(rbi.hwndChild, TB_BUTTONCOUNT, 0, 0L));
 
 	// 非表示のボタンまで進む
 	long i;
 	::RECT buttonRect;
 	for(i = 0; i < buttonCount; ++i) {
-		::SendMessage(rbi.hwndChild, TB_GETITEMRECT, i, reinterpret_cast<LPARAM>(&buttonRect));
+		::SendMessageW(rbi.hwndChild, TB_GETITEMRECT, i, reinterpret_cast<LPARAM>(&buttonRect));
 		if(buttonRect.right + bandRect.left > chevron.rc.left)
 			break;
 	}
@@ -1332,14 +1362,14 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	MANAH_AUTO_STRUCT_SIZE(::TBBUTTONINFOW, tbbi);
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
 	for(; i < buttonCount; ++i) {
-		::SendMessage(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
+		::SendMessageW(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
 		if(toBoolean(tbbi.fsStyle & TBSTYLE_SEP))
 			popup << Menu::SeparatorItem();
-		else
+/*		else
 			popup << Menu::StringItem(tbbi.idCommand, commandManager_->menuName(tbbi.idCommand + CMD_SPECIAL_START).c_str(),
 				(commandManager_->isEnabled(tbbi.idCommand + CMD_SPECIAL_START, true) ? MFS_ENABLED : MFS_DISABLED)
 				| ((commandManager_->isChecked(tbbi.idCommand + CMD_SPECIAL_START)) ? MFS_CHECKED : 0));
-	}
+*/	}
 	rebar_.clientToScreen(pt);
 	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
 }
@@ -1357,7 +1387,7 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 
 	if(pt.y >= clientRect.bottom - (statusBarRect.bottom - statusBarRect.top) - 3
 			&& pt.y <= clientRect.bottom - (statusBarRect.bottom - statusBarRect.top)) {
-		::SetCursor(loadStandardCursor(IDC_SIZENS));
+		::SetCursor(loadStandardCursor(MAKEINTRESOURCEW(32645)));	// IDC_SIZENS
 		return true;
 	}
 
@@ -1400,7 +1430,7 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 	if(rebar_.isVisible()) {
 		rebar_.sendMessage(WM_SIZE, cx, cy);
 		rebar_.getRect(rebarRect);
-		toolbar_.sendMessage(WM_SIZE, cx, rebarRect.bottom - rebarRect.top - 2);
+//		toolbar_.sendMessage(WM_SIZE, cx, rebarRect.bottom - rebarRect.top - 2);
 	} else
 		::SetRect(&rebarRect, 0, 0, 0, 0);
 
@@ -1411,8 +1441,8 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 		- (statusBar_.isVisible() ? statusBarRect.bottom - statusBarRect.top : 0);
 //	if(outputWindow.isWindow() && outputWindow.isVisible())
 //		editorRect.bottom -= outputWndHeight_;
-	if(buffers_->editorWindow().isWindow())
-		buffers_->editorWindow().move(editorRect, true);
+	if(EditorWindows::instance().isWindow())
+		EditorWindows::instance().move(editorRect, true);
 
 //	if(outputWindow_.isWindow()) {
 //		outputWindow_.move(0, editorRect.bottom + 2, cx, outputWndHeight_);
@@ -1422,7 +1452,7 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 
 /// @see WM_TIMER
 void Alpha::onTimer(UINT timerID) {
-	if(timerID == ID_TIMER_QUERYCOMMAND && buffers_->numberOfBuffers() != 0) {
+	if(timerID == ID_TIMER_QUERYCOMMAND && BufferList::instance().numberOfBuffers() != 0) {
 		// ツールバーアイテムの有効化/無効化
 		if(toolbar_.isVisible()) {
 			const size_t buttonCount = toolbar_.getButtonCount();
@@ -1431,8 +1461,8 @@ void Alpha::onTimer(UINT timerID) {
 //			toolbar_.lockWindowUpdate();	// これがあるとツールバーがスクリーン外にある時に画面がちらつく
 			for(size_t i = 0; i < buttonCount; ++i) {
 				toolbar_.getButton(static_cast<int>(i), button);
-				toolbar_.checkButton(button.idCommand, commandManager_->isChecked(button.idCommand + CMD_SPECIAL_START));
-				toolbar_.enableButton(button.idCommand, commandManager_->isEnabled(button.idCommand + CMD_SPECIAL_START, true));
+//				toolbar_.checkButton(button.idCommand, commandManager_->isChecked(button.idCommand + CMD_SPECIAL_START));
+//				toolbar_.enableButton(button.idCommand, commandManager_->isEnabled(button.idCommand + CMD_SPECIAL_START, true));
 			}
 //			toolbar_.unlockWindowUpdate();
 		}

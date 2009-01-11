@@ -1,157 +1,241 @@
 <?xml version="1.0" encoding="shift_jis"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.10"
+	Version="9.00"
 	Name="Alpha"
+	ProjectGUID="{B636D539-C324-4DF9-8233-5DEC6094A186}"
 	RootNamespace="Alpha"
-	SccProjectName=""
-	SccLocalPath="">
+	TargetFrameworkVersion="131072"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\Release"
-			IntermediateDirectory=".\Release"
+			OutputDirectory="$(ProjectDir)Release"
+			IntermediateDirectory="$(ProjectDir)Release"
 			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/ambient.tlb"
+				OutputDirectory="$(ProjectDir)../src"
+				HeaderFileName="ambient-idl.hpp"
+				InterfaceIdentifierFileName="ambient-iid.hpp"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
-				StringPooling="TRUE"
-				RuntimeLibrary="4"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS"
+				StringPooling="true"
+				RuntimeLibrary="0"
 				StructMemberAlignment="0"
-				EnableFunctionLevelLinking="TRUE"
-				TreatWChar_tAsBuiltInType="TRUE"
-				ForceConformanceInForLoopScope="TRUE"
+				EnableFunctionLevelLinking="true"
+				TreatWChar_tAsBuiltInType="true"
+				ForceConformanceInForLoopScope="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough=""
-				PrecompiledHeaderFile=".\Release/Alpha.pch"
-				AssemblerListingLocation=".\Release/"
-				ObjectFile=".\Release/"
-				ProgramDataBaseFileName=".\Release/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)/"
+				ObjectFile="$(IntDir)/"
+				ProgramDataBaseFileName="$(IntDir)/"
+				XMLDocumentationFileName="$(IntDir)/"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				Detect64BitPortabilityProblems="TRUE"
-				DebugInformationFormat="0"/>
+				SuppressStartupBanner="true"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="0"
+				DisableSpecificWarnings="4819"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
-				OutputFile=".\Release/Alpha.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
-				GenerateDebugInformation="FALSE"
-				ProgramDatabaseFile=".\Release/Alpha.pdb"
-				SubSystem="2"
-				TargetMachine="1"/>
-			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\Release/Alpha.tlb"
-				HeaderFileName=""/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1041"/>
+				Culture="1041"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
-				Name="VCXMLDataGeneratorTool"/>
+				Name="VCLinkerTool"
+				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
+				OutputFile="$(OutDir)/Alpha.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				ManifestFile="$(IntDir)/$(TargetFileName).intermediate.manifest"
+				IgnoreDefaultLibraryNames=""
+				GenerateDebugInformation="false"
+				ProgramDatabaseFile="$(OutDir)/Alpha.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
+				Name="VCManifestTool"
+				OutputManifestFile="$(IntDir)/$(TargetFileName).embed.manifest"
+				ManifestResourceFile="$(IntDir)/$(TargetFileName).embed.manifest.res"
+				AdditionalManifestFiles="$(InputDir)../resource/manifest.xml"
+				DependencyInformationFile="$(IntDir)/mt.dep"
+			/>
 			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\Debug"
-			IntermediateDirectory=".\Debug"
+			OutputDirectory="$(ProjectDir)Debug"
+			IntermediateDirectory="$(ProjectDir)Debug"
 			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				WarningLevel="1"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/ambient.tlb"
+				OutputDirectory="$(ProjectDir)../src"
+				HeaderFileName="ambient-idl.hpp"
+				InterfaceIdentifierFileName="ambient-iid.hpp"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
-				StringPooling="TRUE"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)../..&quot;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS"
+				StringPooling="true"
 				BasicRuntimeChecks="3"
-				SmallerTypeCheck="TRUE"
-				RuntimeLibrary="5"
-				BufferSecurityCheck="TRUE"
-				TreatWChar_tAsBuiltInType="TRUE"
-				ForceConformanceInForLoopScope="TRUE"
+				SmallerTypeCheck="true"
+				RuntimeLibrary="1"
+				BufferSecurityCheck="true"
+				TreatWChar_tAsBuiltInType="true"
+				ForceConformanceInForLoopScope="true"
+				RuntimeTypeInfo="false"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough=""
-				PrecompiledHeaderFile=".\Debug/Alpha.pch"
-				AssemblerListingLocation=".\Debug/"
-				ObjectFile=".\Debug/"
-				ProgramDataBaseFileName=".\Debug/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)/"
+				ObjectFile="$(IntDir)/"
+				ProgramDataBaseFileName="$(IntDir)/"
+				XMLDocumentationFileName="$(IntDir)/"
 				BrowseInformation="1"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				Detect64BitPortabilityProblems="TRUE"
-				DebugInformationFormat="4"/>
+				SuppressStartupBanner="true"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="4"
+				DisableSpecificWarnings="4819"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1041"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
 				ShowProgress="0"
-				OutputFile=".\Debug/Alpha.exe"
+				OutputFile="$(OutDir)/Alpha.exe"
 				LinkIncremental="0"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
+				ManifestFile="$(IntDir)/$(TargetFileName).intermediate.manifest"
 				IgnoreDefaultLibraryNames=""
-				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\Debug/Alpha.pdb"
+				GenerateDebugInformation="true"
+				ProgramDatabaseFile="$(OutDir)/Alpha.pdb"
 				SubSystem="2"
-				TargetMachine="1"/>
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\Debug/Alpha.tlb"
-				HeaderFileName=""/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+				OutputManifestFile="$(IntDir)/$(TargetFileName).embed.manifest"
+				ManifestResourceFile="$(IntDir)/$(TargetFileName).embed.manifest.res"
+				AdditionalManifestFiles="$(InputDir)../resource/manifest.xml"
+				DependencyInformationFile="$(IntDir)/mt.dep"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1041"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -159,446 +243,593 @@
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			>
 			<File
-				RelativePath=".\about-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\application.cpp">
-			</File>
-			<File
-				RelativePath=".\bookmark-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\buffer.cpp">
-			</File>
-			<File
-				RelativePath=".\code-pages-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\command.cpp">
-			</File>
-			<File
-				RelativePath=".\execute-command-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\goto-line-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\keyboard-map.cpp">
-			</File>
-			<File
-				RelativePath=".\mru-manager.cpp">
-			</File>
-			<File
-				RelativePath=".\new-file-format-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\print.cpp">
-			</File>
-			<File
-				RelativePath=".\save-some-buffers-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\search-dialog.cpp">
-			</File>
-			<File
-				RelativePath=".\select-language-dialog.cpp">
-			</File>
-			<File
-				RelativePath="StdAfx.cpp">
+				RelativePath="..\src\about-dialog.cpp"
+				>
 				<FileConfiguration
-					Name="Release|Win32">
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="2"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						UsePrecompiledHeader="1"
-						BrowseInformation="1"/>
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\temporary-macro.cpp">
+				RelativePath="..\src\ambient.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\ambient.idl"
+				>
+			</File>
+			<File
+				RelativePath="..\src\application.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\bookmark-dialog.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\buffer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\code-pages-dialog.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\editor-window.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\goto-line-dialog.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\intrinsic.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\menu.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\new-file-format-dialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\print.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\save-some-buffers-dialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\search.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl">
+			Filter="h;hpp;hxx;hm;inl"
+			>
 			<File
-				RelativePath=".\about-dialog.hpp">
+				RelativePath="..\src\alpha.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\application.hpp">
+				RelativePath="..\src\ambient.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\bookmark-dialog.hpp">
+				RelativePath="..\src\application.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\buffer.hpp">
+				RelativePath="..\src\buffer.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\code-pages-dialog.hpp">
+				RelativePath="..\src\code-pages-dialog.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\command.hpp">
+				RelativePath="..\src\editor-window.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\execute-command-dialog.hpp">
+				RelativePath="..\src\intrinsic.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\goto-line-dialog.hpp">
+				RelativePath="..\src\new-file-format-dialog.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\keyboard-map.hpp">
+				RelativePath="..\src\print.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\mru-manager.hpp">
+				RelativePath="..\src\resource.h"
+				>
 			</File>
 			<File
-				RelativePath=".\new-file-format-dialog.hpp">
+				RelativePath="..\src\save-some-buffers-dialog.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\print.hpp">
+				RelativePath="..\src\search.hpp"
+				>
 			</File>
 			<File
-				RelativePath="resource.h">
-			</File>
-			<File
-				RelativePath=".\save-some-buffers-dialog.hpp">
-			</File>
-			<File
-				RelativePath=".\search-dialog.hpp">
-			</File>
-			<File
-				RelativePath=".\select-language-dialog.hpp">
-			</File>
-			<File
-				RelativePath="StdAfx.h">
-			</File>
-			<File
-				RelativePath=".\temporary-macro.hpp">
+				RelativePath="..\src\ui.hpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
-			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+			>
 			<File
-				RelativePath="Resource\alpha.ico">
+				RelativePath="..\resource\alpha.ico"
+				>
 			</File>
 			<File
-				RelativePath=".\Resource\alpha.rc">
+				RelativePath="..\resource\alpha.rc"
+				>
 			</File>
 			<File
-				RelativePath="Resource\logo.bmp">
+				RelativePath="..\resource\logo.bmp"
+				>
 			</File>
 			<File
-				RelativePath="Resource\manifest.xml">
+				RelativePath="..\resource\manifest.xml"
+				>
 			</File>
 			<File
-				RelativePath=".\Resource\messages.mc">
+				RelativePath="..\resource\messages.mc"
+				>
 			</File>
 			<File
-				RelativePath=".\Resource\narrowing.ico">
+				RelativePath="..\resource\narrowing.ico"
+				>
 			</File>
 			<File
-				RelativePath=".\Resource\temp-macro-defining.ico">
+				RelativePath="..\resource\temp-macro-defining.ico"
+				>
 			</File>
 			<File
-				RelativePath=".\Resource\temp-macro-pausing.ico">
+				RelativePath="..\resource\temp-macro-pausing.ico"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="ascension"
-			Filter="">
+			>
 			<Filter
 				Name="Source Files"
-				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+				>
 				<File
-					RelativePath=".\Ascension\content-assist.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\caret.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\dfa.cpp">
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\content-assist.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\document.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\document.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\encoder.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\encoder.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\fileio.cpp">
+					RelativePath="..\..\ascension\src\fileio.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\layout.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\layout.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\point.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\point.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\presentation.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\presentation.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\regex.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\regex.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\rules.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\rules.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\searcher.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\searcher.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\session.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\session.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\text-editor.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\text-editor.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\unicode-property.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\unicode-property.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\viewer.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							WarningLevel="3"/>
-					</FileConfiguration>
+					RelativePath="..\..\ascension\src\viewer.cpp"
+					>
 				</File>
 				<Filter
 					Name="encodings"
-					Filter="">
+					>
 					<File
-						RelativePath=".\ascension\encodings\arabic.cpp">
+						RelativePath="..\..\ascension\src\encodings\arabic.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\armenian.cpp">
+						RelativePath="..\..\ascension\src\encodings\armenian.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\chinese.cpp">
+						RelativePath="..\..\ascension\src\encodings\chinese.cpp"
+						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="TRUE">
+							ExcludedFromBuild="true"
+							>
 							<Tool
-								Name="VCCLCompilerTool"/>
+								Name="VCCLCompilerTool"
+							/>
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\cyrillic.cpp">
+						RelativePath="..\..\ascension\src\encodings\cyrillic.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\greek.cpp">
+						RelativePath="..\..\ascension\src\encodings\greek.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\hebrew.cpp">
+						RelativePath="..\..\ascension\src\encodings\hebrew.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\irish.cpp">
+						RelativePath="..\..\ascension\src\encodings\irish.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\japanese.cpp">
+						RelativePath="..\..\ascension\src\encodings\japanese.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\korean.cpp">
+						RelativePath="..\..\ascension\src\encodings\korean.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\lao.cpp">
+						RelativePath="..\..\ascension\src\encodings\lao.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\encodings\latin.cpp">
+						RelativePath="..\..\ascension\src\encodings\latin.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\thai.cpp">
+						RelativePath="..\..\ascension\src\encodings\thai.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\uncategorized.cpp">
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="TRUE">
-							<Tool
-								Name="VCCLCompilerTool"/>
-						</FileConfiguration>
+						RelativePath="..\..\ascension\src\encodings\uncategorized.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\unicode.cpp">
+						RelativePath="..\..\ascension\src\encodings\unicode.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\Ascension\encodings\vietnamese.cpp">
+						RelativePath="..\..\ascension\src\encodings\vietnamese.cpp"
+						>
 					</File>
 				</Filter>
 				<Filter
 					Name="unicode"
-					Filter="">
+					>
 					<File
-						RelativePath=".\ascension\unicode\break-iterator.cpp">
+						RelativePath="..\..\ascension\src\unicode\break-iterator.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\unicode\collator.cpp">
+						RelativePath="..\..\ascension\src\unicode\collator.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\unicode\identifier-syntax.cpp">
+						RelativePath="..\..\ascension\src\unicode\identifier-syntax.cpp"
+						>
 					</File>
 					<File
-						RelativePath=".\ascension\unicode\normalizer.cpp">
+						RelativePath="..\..\ascension\src\unicode\normalizer.cpp"
+						>
 					</File>
 				</Filter>
 			</Filter>
 			<Filter
 				Name="Header Files"
-				Filter="h;hpp;hxx;hm;inl">
+				Filter="h;hpp;hxx;hm;inl"
+				>
 				<File
-					RelativePath=".\Ascension\common.hpp">
+					RelativePath="..\..\ascension\caret.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\config.hpp">
+					RelativePath="..\..\ascension\common.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\content-assist.hpp">
+					RelativePath="..\..\ascension\config.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\dfa.hpp">
+					RelativePath="..\..\ascension\content-assist.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\document.hpp">
+					RelativePath="..\..\ascension\document.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\encoder.hpp">
+					RelativePath="..\..\ascension\encoder.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\internal.hpp">
+					RelativePath="..\..\ascension\internal.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\layout.hpp">
+					RelativePath="..\..\ascension\layout.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\point.hpp">
+					RelativePath="..\..\ascension\point.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\presentation.hpp">
+					RelativePath="..\..\ascension\presentation.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\regex.hpp">
+					RelativePath="..\..\ascension\regex.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\rules.hpp">
+					RelativePath="..\..\ascension\rules.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\searcher.hpp">
+					RelativePath="..\..\ascension\searcher.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\session.hpp">
+					RelativePath="..\..\ascension\session.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\text-editor.hpp">
+					RelativePath="..\..\ascension\text-editor.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\unicode-property.hpp">
+					RelativePath="..\..\ascension\unicode-property.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\ascension\unicode.hpp">
+					RelativePath="..\..\ascension\unicode.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\Ascension\viewer.hpp">
+					RelativePath="..\..\ascension\viewer.hpp"
+					>
 				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="manah"
+			>
+			<File
+				RelativePath="..\..\manah\gap-buffer.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\manah\memory.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\manah\object.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\manah\small-object.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\manah\type-list.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\manah\types.hpp"
+				>
+			</File>
+			<Filter
+				Name="com"
+				>
+				<File
+					RelativePath="..\..\manah\com\common.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\dispatch-impl.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\enum-impl.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\exception.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\ole-type-wrapper.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\text-data-object.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\com\unknown-impl.hpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="win32"
+				>
+				<File
+					RelativePath="..\..\manah\win32\dc.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\file.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\gdi-object.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\module.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\timer.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\utility.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\manah\win32\windows.hpp"
+					>
+				</File>
+				<Filter
+					Name="ui"
+					>
+					<File
+						RelativePath="..\..\manah\win32\ui\common-controls.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\dialog.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\link-label.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\menu.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\splitter.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\standard-controls.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\theme.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\wait-cursor.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\manah\win32\ui\window.hpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 	</Files>
 	<Globals>
 		<Global
 			Name="RESOURCE_FILE"
-			Value="Alpha.rc"/>
+			Value="Alpha.rc"
+		/>
 	</Globals>
 </VisualStudioProject>

@@ -1,13 +1,12 @@
 /**
  * @file save-some-buffers-dialog.cpp
  * @author exeal
- * @date 2003-2006
+ * @date 2003-2009
  */
 
-#include "stdafx.h"
 #include "application.hpp"
 #include "save-some-buffers-dialog.hpp"
-#include "resource/messages.h"
+#include "../resource/messages.h"
 using alpha::Alpha;
 using alpha::ui::SaveSomeBuffersDialog;
 using namespace std;
@@ -24,7 +23,7 @@ bool SaveSomeBuffersDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 /// @see Dialog#onInitDialog
 void SaveSomeBuffersDialog::onInitDialog(HWND, bool&) {
-	HICON icon = Alpha::loadStandardIcon(IDI_WARNING);
+	HICON icon = Alpha::loadStandardIcon(MAKEINTRESOURCEW(32515));	// IDI_WARNING
 	sendItemMessage(IDC_STATIC_1, STM_SETICON, reinterpret_cast<WPARAM>(icon), 0);
 	::DestroyIcon(icon);
 	selectAllLink_.create(getHandle(), ::GetModuleHandle(0), IDC_LINK_SELECTALL);

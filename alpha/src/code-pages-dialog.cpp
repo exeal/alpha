@@ -1,14 +1,14 @@
 /**
  * @file code-pages-dialog.cpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2009
  */
 
-#include "stdafx.h"
+#include "alpha.hpp"
 #include "code-pages-dialog.hpp"
 #include "application.hpp"
-#include "resource/messages.h"
-#include "../manah/win32/ui/standard-controls.hpp"
+#include "../resource/messages.h"
+#include <manah/win32/ui/standard-controls.hpp>
 using alpha::ui::EncodingsDialog;
 using namespace ascension::encoding;
 using namespace std;
