@@ -252,16 +252,17 @@ namespace ascension {
 		/**
 		 * Default implementation of @c IMouseOperationStrategy interface.
 		 */
-		class DefaultMouseInputStrategy : public IMouseInputStrategy, public IDropSource, public IDropTarget {
+		class DefaultMouseInputStrategy : public IMouseInputStrategy,
+				manah::com::IUnknownImpl<
+					manah::typelist::Cat<
+						MANAH_INTERFACE_SIGNATURE(IDropSource), manah::typelist::Cat<
+							MANAH_INTERFACE_SIGNATURE(IDropTarget)
+						>
+					>, manah::com::NoReferenceCounting
+				> {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			DefaultMouseInputStrategy(bool enableOLEDragAndDrop, bool showDraggingImage);
-			// IUnknown
-			MANAH_IMPLEMENT_UNKNOWN_NO_REF_COUNT()
-			MANAH_BEGIN_INTERFACE_TABLE()
-				MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IDropSource)
-				MANAH_IMPLEMENTS_INTERFACE(IDropTarget)
-			MANAH_END_INTERFACE_TABLE()
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
 			STDMETHODIMP GiveFeedback(DWORD dwEffect);

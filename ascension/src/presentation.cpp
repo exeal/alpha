@@ -2,12 +2,12 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "presentation.hpp"
-#include "rules.hpp"
-#include "viewer.hpp"
+#include <ascension/presentation.hpp>
+#include <ascension/rules.hpp>
+#include <ascension/viewer.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;

@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_NO_REGEX
@@ -10,7 +10,6 @@
 #define ASCENSION_REGEX_HPP
 #include "unicode.hpp"	// text.UTF16To32Iterator
 #include "unicode-property.hpp"
-#include "internal.hpp"	// internal.Int2Type
 #include <memory>
 #include <map>
 #include <bitset>
@@ -67,7 +66,7 @@ namespace ascension {
 			/// match.
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
+			MANAH_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
 		};
 
 		namespace internal {
@@ -187,10 +186,10 @@ namespace ascension {
 			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const;
 		private:
 			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last);
-			template<typename OI> void appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&);
-			template<typename OI> void appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&);
-			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<2>&) const;
-			template<typename OI> OI appendTail(OI out, const ascension::internal::Int2Type<4>&) const;
+			template<typename OI> void appendReplacement(OI out, const String& replacement, const manah::Int2Type<2>&);
+			template<typename OI> void appendReplacement(OI out, const String& replacement, const manah::Int2Type<4>&);
+			template<typename OI> OI appendTail(OI out, const manah::Int2Type<2>&) const;
+			template<typename OI> OI appendTail(OI out, const manah::Int2Type<4>&) const;
 			bool acceptResult() {const bool b(Base::impl()[0].matched); matchedZeroWidth_ = b && Base::impl().length() == 0; if(b) current_ = Base::end(); return b;}
 			void checkInplaceReplacement() const {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
 			void checkPreviousMatch() const {if(!Base::impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
@@ -335,7 +334,7 @@ namespace ascension {
 			replaced_(false), matchedZeroWidth_(false), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 
 		template<typename CPI> template<typename OI>
-		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<2>&) {
+		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const manah::Int2Type<2>&) {
 			typedef typename boost::match_results<CPI>::string_type String32;
 			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, Base::impl()[0].first, out);
 			const String32 replaced(Base::impl().format(String32(
@@ -345,7 +344,7 @@ namespace ascension {
 				text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);}
 
 		template<typename CPI> template<typename OI>
-		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const ascension::internal::Int2Type<4>&) {
+		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const manah::Int2Type<4>&) {
 			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, Base::impl()[0].first, out);
 			const String& replaced(Base::impl().format(replacement)); std::copy(replaced.begin(), replaced.end(), out);}
 
@@ -357,14 +356,14 @@ namespace ascension {
 			appendingPosition_ = Base::impl()[0].second; return *this;}
 		
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
-			const ascension::internal::Int2Type<2>&) const {return std::copy(text::UTF32To16Iterator<CPI>(appendingPosition_), text::UTF32To16Iterator<CPI>(input_.second), out);}
+			const manah::Int2Type<2>&) const {return std::copy(text::UTF32To16Iterator<CPI>(appendingPosition_), text::UTF32To16Iterator<CPI>(input_.second), out);}
 
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
-			const ascension::internal::Int2Type<4>&) const {return std::copy(appendingPosition_, input_.second, out);}
+			const manah::Int2Type<4>&) const {return std::copy(appendingPosition_, input_.second, out);}
 
 		/// Implements a terminal append-and-replace step.
 		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
-			checkInplaceReplacement(); return appendTail(out, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());}
+			checkInplaceReplacement(); return appendTail(out, manah::Int2Type<text::CodeUnitSizeOf<OI>::result>());}
 
 		/// Ends the active in-place replacement context.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {

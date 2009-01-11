@@ -1,15 +1,15 @@
 #!/usr/local/bin/python
 
-# gen-ivs-otft.py (c) 2008 exeal
+# gen-ivs-otft.py (c) 2008-2009 exeal
 
 import sys
 import re
 
 if len(sys.argv) != 2:
-	exit('usage: python gen-ivs-otft.py <IVS_OTFT.txt>')
+	exit('usage: python gen-ivs-otft.py <IVS_OTFT.txt>\nIVS_OTFT.txt can be found at http://yozvox.web.infoseek.co.jp/IVS_OTFT.txt')
 
 input = open(sys.argv[1])
-output = open('ivs-otft.ipp', 'w')
+output = open('../src/generated/ivs-otft.ipp', 'w')
 pattern = re.compile(r"^([0-9A-Fa-f]{4,6})\s([0-9A-Fa-f]{4,6})\s\d+\s'(.{4})'")
 try:
 	for line in input:

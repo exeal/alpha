@@ -2,19 +2,19 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 (was EditView.cpp and EditViewWindowMessages.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "viewer.hpp"
-#include "rules.hpp"
-#include "text-editor.hpp"
-#include "../../manah/win32/ui/menu.hpp"
+#include <ascension/viewer.hpp>
+#include <ascension/rules.hpp>
+#include <ascension/text-editor.hpp>
+#include <manah/win32/ui/menu.hpp>
 #include <limits>	// std.numeric_limit
 #include <zmouse.h>
 #include <msctf.h>
-#include "../../manah/win32/ui/wait-cursor.hpp"
+#include <manah/win32/ui/wait-cursor.hpp>
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-#include "../../manah/com/dispatch-impl.hpp"
+#include <manah/com/dispatch-impl.hpp>
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 #include <Textstor.h>
@@ -112,8 +112,14 @@ const LineStyle LineStyle::NULL_STYLE = {0, 0};
 class viewers::internal::TextViewerAccessibleProxy :
 		public IDocumentListener,
 		public manah::com::ole::IDispatchImpl<
-			IAccessible, manah::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible> >,
-		public IOleWindow {
+			manah::com::IUnknownImpl<
+				manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IAccessible),
+				manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IDispatch),
+				manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IOleWindow)> > >,
+				manah::com::NoReferenceCounting
+			>,
+			manah::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
+		> {
 	// IAccessible の実装については以下を参考にした:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
 	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
@@ -129,13 +135,6 @@ public:
 	TextViewerAccessibleProxy(TextViewer& view);
 	// method
 	void dispose();
-	// IUnknown
-	MANAH_IMPLEMENT_UNKNOWN_MULTI_THREADED()
-	MANAH_BEGIN_INTERFACE_TABLE()
-		MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IAccessible)
-		MANAH_IMPLEMENTS_INTERFACE(IDispatch)
-		MANAH_IMPLEMENTS_INTERFACE(IOleWindow)
-	MANAH_END_INTERFACE_TABLE()
 	// IAccessible
 	STDMETHODIMP get_accParent(IDispatch** ppdispParent);
 	STDMETHODIMP get_accChildCount(long* pcountChildren);
@@ -1775,9 +1774,13 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 
 	// hyperlink
 	if(const hyperlink::IHyperlink* link = getPointedHyperlink(*this, caret())) {
-		AutoBuffer<WCHAR> caption(	// TODO: this code can have buffer overflow in future
-			new WCHAR[(link->region().end() - link->region().beginning()) * 2 + 8]);
+		const length_t len = (link->region().end() - link->region().beginning()) * 2 + 8;
+		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
 		swprintf(caption.get(),
+#if(_MSC_VER < 1400)
+#else
+			len,
+#endif // _MSC_VER < 1400
 			japanese ? L"\x202A%s\x202C \x3092\x958B\x304F" : L"Open \x202A%s\x202C", escapeAmpersands(doc.line(
 				caret().lineNumber()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());

@@ -1,10 +1,10 @@
 /**
  * @file unicode-property.cpp
  * @author exeal
- * @date 2005-2008
+ * @date 2005-2009
  */
 
-#include "unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -564,7 +564,7 @@ const HangulSyllableType::Names HangulSyllableType::names_[HangulSyllableType::L
 
 // BinaryProperty ///////////////////////////////////////////////////////////
 
-#include "code-table/uprops-table"
+#include "generated/uprops-table"
 
 const BinaryProperty::Names BinaryProperty::names_[BinaryProperty::LAST_VALUE - BinaryProperty::FIRST_VALUE] = {
 	{L"Alpha",		L"Alphabetic"},

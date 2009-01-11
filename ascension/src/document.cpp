@@ -2,17 +2,17 @@
  * @file document.cpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "document.hpp"
-#include "point.hpp"
-//#include <shlwapi.h>	// PathXxxx
-//#include <shlobj.h>	// SHGetDesktopFolder, IShellFolder, ...
-//#include <MAPI.h>		// MAPISendMail
+#include <ascension/document.hpp>
+#include <ascension/point.hpp>
 #include <stack>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
+#ifdef ASCENSION_WINDOWS
+//#	include <MAPI.h>	// MAPISendMail
+#endif // ASCENSION_WINDOWS
 
 using namespace ascension;
 using namespace ascension::kernel;
@@ -1239,14 +1239,23 @@ void Document::markUnmodified() /*throw()*/ {
 
 /**
  * Narrows the accessible area to the specified region.
+ * If the document is already narrowed, the accessible region will just change to @a region. In
+ * this case, @a region can be wider than the current accessible region.
  * @param region the region
+ * @throw BadRegionException @a region intersects with the outside of the document
  * @see #isNarrowed, #widen
  */
-void Document::narrow(const Region& region) /*throw()*/ {
-	if(accessibleArea_ == 0)
-		accessibleArea_ = new pair<Position, Point*>;
+void Document::narrowToRegion(const Region& region) {
+	if(region.end() > this->region().end())
+		throw BadRegionException(region);
+	else if(region == accessibleRegion())
+		return;
+	if(accessibleArea_ == 0) {
+		auto_ptr<pair<Position, Point*> > temp(new pair<Position, Point*>);
+		temp->second = new Point(*this);
+		accessibleArea_ = temp.release();
+	}
 	accessibleArea_->first = region.beginning();
-	accessibleArea_->second = new Point(*this);
 	accessibleArea_->second->moveTo(region.end());
 	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
 		if((*i)->isExcludedFromRestriction())

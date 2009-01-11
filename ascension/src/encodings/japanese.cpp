@@ -13,7 +13,7 @@
  * - ISO-2022-JP-2004-Compatible
  * - MacJapanese
  * @author exeal
- * @date 2004-2007
+ * @date 2004-2009
  *
  * Following documentation is written in Japanese (HeHe).
  *
@@ -75,7 +75,7 @@
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 #include <memory>		// std.auto_ptr
 #include <map>
 #include <algorithm>	// std.binary_search
@@ -187,7 +187,7 @@ namespace {
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
 	} iso2022jp2004compatible;
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	class JISAutoDetector : public EncodingDetector {
 	public:
 		JISAutoDetector() : EncodingDetector("JISAutoDetect") {}
@@ -208,7 +208,7 @@ namespace {
 			Encoder::registerFactory(iso2022jp1);
 			Encoder::registerFactory(iso2022jp2004strict);
 			Encoder::registerFactory(iso2022jp2004compatible);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new JISAutoDetector));
 		}
 	} installer;
@@ -228,7 +228,7 @@ namespace {
 		CodePoint c8, CodePoint c9, CodePoint cA, CodePoint cB, CodePoint cC, CodePoint cD, CodePoint cE, CodePoint cF>
 	struct CodePointLine : public CodeLine<CodePoint, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF> {};
 	struct EmptyCodePointLine : public CodePointLine<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0> {};
-#include "data/jis.ipp"
+#include "generated/jis.ipp"
 
 	// JIS X 0201 Roman
 	inline Char convertROMANtoUCS(byte c) ASC_NOFAIL {
@@ -549,7 +549,7 @@ namespace {
 		const bool jis2004 = x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			|| x == 's' || x == 'c'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			;
 		const Char* const beginning = to;
 		auto_ptr<Encoder> gb2312Encoder, ksc5601Encoder, iso88591Encoder, iso88597Encoder;
@@ -604,7 +604,7 @@ namespace {
 									if(x != '2'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 										&& x != '1'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 										) break;
 									state.g0 = EncodingState::JIS_X_0212; from += 3; continue;
 								case 'O':	// "$(O" => JIS X 0213 plane 1
@@ -764,7 +764,7 @@ namespace {
 		const bool jis2004 = x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			|| x == 's' || x == 'c'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			;
 		int charset = EncodingState::ASCII;
 		auto_ptr<Encoder> iso88591Encoder, iso88597Encoder, gb2312Encoder, ksc5601Encoder;
@@ -837,7 +837,7 @@ namespace {
 			else if((x == '2'
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 					|| x == '1'
-#endif /* !ASCENSION_NO_EXTENDED_ENCODINGS */
+#endif // !ASCENSION_NO_EXTENDED_ENCODINGS
 					) && manah::toBoolean(jis = convertUCStoX0212(*from)))
 				charset = EncodingState::JIS_X_0212;
 			else if(/*x == '2' &&*/ gb2312Encoder.get() != 0
@@ -1464,7 +1464,7 @@ ASCENSION_IMPLEMENT_ISO_2022_JP_X('s', JP_2004_STRICT)
 
 ASCENSION_IMPLEMENT_ISO_2022_JP_X('c', JP_2004_COMPATIBLE)
 
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 
 // JISAutoDetector //////////////////////////////////////////////////////////
@@ -1562,7 +1562,7 @@ namespace {
 		char x = '0';	// ISO-2022-JP-X
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 		bool x0208 = false;
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		foundKana = false;
 		const byte* p;
 		for(p = from; p < last; ++p) {
@@ -1580,14 +1580,14 @@ namespace {
 					x0208 = true;
 					if(x == '4')
 						x = 'c';
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 				} else if(memcmp(p + 1, "$A", 2) == 0		// GB2312
 						|| memcmp(p + 1, ".A", 2) == 0		// ISO-8859-1
 						|| memcmp(p + 1, ".F", 2) == 0) {	// ISO-8859-7
 					if(x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 							|| x == 'c'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 						)
 						break;
 					x = '2';
@@ -1597,7 +1597,7 @@ namespace {
 						if(x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 								|| x == 'c'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 							)
 							break;
 						else if(x != '2')
@@ -1606,14 +1606,14 @@ namespace {
 								'1'
 #else
 								'2'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 								;
 						p += 3;
 					} else if(memcmp(p + 1, "$(C", 3) == 0) {	// KS C 5601
 						if(x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 								|| x == 'c'
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 							)
 							break;
 						x = '2';
@@ -1630,7 +1630,7 @@ namespace {
 						else if(x0208)
 							x = 'c';
 						else
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 							x = '4';
 						p += 3;
 					}
@@ -1648,7 +1648,7 @@ namespace {
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 		case '1': result = &iso2022jp1; break;
 		case 'c': result = &iso2022jp2004compatible; break;
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
 		assert(result != 0);
 		return *result;
@@ -1698,4 +1698,4 @@ pair<MIBenum, string> JISAutoDetector::doDetect(const byte* first, const byte* l
 	return result;
 }
 
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS

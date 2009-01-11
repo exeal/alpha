@@ -632,7 +632,7 @@ namespace ascension {
 			bool undo(std::size_t n = 1);
 			// narrowing
 			bool isNarrowed() const /*throw()*/;
-			void narrow(const Region& region) /*throw()*/;
+			void narrowToRegion(const Region& region);
 			void widen() /*throw()*/;
 			// iterations
 			DocumentCharacterIterator begin() const /*throw()*/;

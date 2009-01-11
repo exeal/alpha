@@ -1,11 +1,11 @@
 /**
  * @file break-iterator.cpp
  * @date 2006-2007 (was iterator.cpp)
- * @date 2007-2008
+ * @date 2007-2009
  * @author exeal
  */
 
-#include "../unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 #include <memory>	// std.auto_ptr
 using namespace ascension;
 using namespace ascension::text;

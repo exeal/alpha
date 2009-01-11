@@ -2,15 +2,15 @@
  * @file caret.cpp
  * @author exeal
  * @date 2003-2008 was point.cpp
- * @date 2008 separated from point.cpp
+ * @date 2008-2009 separated from point.cpp
  */
 
 #undef MANAH_OVERRIDDEN_FILE
 static const char MANAH_OVERRIDDEN_FILE[] = __FILE__;
 
-#include "viewer.hpp"
-#include "session.hpp"
-#include "../../manah/win32/utility.hpp"
+#include "ascension/viewer.hpp"
+#include "ascension/session.hpp"
+#include "manah/win32/utility.hpp"
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::layout;
@@ -41,14 +41,10 @@ namespace {
 	// - "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
 	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
 	// ...but these documents have many bugs. Well, there is no interface named "IDropSourceHelper".
-	class GenericDataObject : public IDataObject {
+	class GenericDataObject : public manah::com::IUnknownImpl<
+		manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IDataObject)>, manah::com::NoReferenceCounting > {
 	public:
-		virtual ~GenericDataObject() /*throw()*/;
-		// IUnknown
-		MANAH_IMPLEMENT_UNKNOWN_SINGLE_THREADED()
-		MANAH_BEGIN_INTERFACE_TABLE()
-			MANAH_IMPLEMENTS_LEFTMOST_INTERFACE(IDataObject)
-		MANAH_END_INTERFACE_TABLE()
+		virtual ~GenericDataObject() throw();
 		// IDataObject
 		virtual STDMETHODIMP GetData(FORMATETC* format, STGMEDIUM* medium);
 		virtual STDMETHODIMP GetDataHere(FORMATETC*, STGMEDIUM*) {return E_NOTIMPL;}

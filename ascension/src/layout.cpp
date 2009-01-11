@@ -2,11 +2,11 @@
  * @file layout.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "layout.hpp"
-#include "viewer.hpp"
+#include <ascension/layout.hpp>
+#include <ascension/viewer.hpp>
 #include <limits>	// std.numeric_limits
 #include <usp10.h>
 using namespace ascension;
@@ -1497,7 +1497,7 @@ namespace {
 		OPENTYPE_TAG featureTag;
 	};
 	const IVStoOTFT IVS_TO_OTFT[] = {
-#include "ivs-otft.ipp"
+#include "generated/ivs-otft.ipp"
 	};
 	struct GetIVS {
 		ulong operator()(size_t index) /*throw()*/ {return IVS_TO_OTFT[index].ivs;}
@@ -3305,7 +3305,11 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				// draw line number digits
 				if(configuration_.lineNumbers.visible) {
 					wchar_t buffer[32];
+#if(_MSC_VER < 1400)
 					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
+#else
+					swprintf(buffer, MANAH_COUNTOF(buffer), L"%lu", line + configuration_.lineNumbers.startValue);
+#endif // _MSC_VER < 1400
 					UINT option;
 					switch(configuration_.lineNumbers.digitSubstitution) {
 					case DST_CONTEXTUAL:

@@ -1,11 +1,11 @@
 /**
  * @file session.cpp
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
-#include "session.hpp"
-#include "searcher.hpp"
+#include <ascension/session.hpp>
+#include <ascension/searcher.hpp>
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::texteditor;

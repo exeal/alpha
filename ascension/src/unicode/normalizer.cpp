@@ -1,10 +1,10 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "../unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace std;
@@ -99,7 +99,7 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include "../unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 
 // Normalizer ///////////////////////////////////////////////////////////////
 
@@ -232,7 +232,7 @@ namespace {
 		}
 	}
 
-#include "../code-table/uprops-decomposition-mapping-table"
+#include "../generated/uprops-decomposition-mapping-table"
 
 	inline void splice(Char* at, Char*& last, size_t eraseLength, const Char* replacement, size_t replacementLength) {
 		last += replacementLength - eraseLength;
@@ -279,7 +279,7 @@ namespace {
 					continue;
 				}
 			}
-#endif /* !ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING */
+#endif // !ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
 			++i;
 		}
 		return last - destination;
@@ -302,7 +302,7 @@ namespace {
 	 * @return true if the sequence is in FCD.
 	 */
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
-		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+		MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 		Char buffer[32];
 		length_t len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
@@ -519,4 +519,4 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	return buffer.str();
 }
 
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION

@@ -14,10 +14,10 @@
  * - MacCyrillic
  * - MacUkrainian
  * @author exeal
- * @date 2008-01-02
+ * @date 2008-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -59,7 +59,7 @@ namespace {
 			CharLine<0x041F, 0x042F, 0x0420, 0x0421, 0x0422, 0x0423, 0x0416, 0x0412, 0x042C, 0x042B, 0x0417, 0x0428, 0x042D, 0x0429, 0x0427, 0x042A>
 		>
 	> KOI8_U("KOI8-U", standard::KOI8_U, "Cyrillic/Ukrainian (KOI8-U)", "\0ibm-1168|windows-21866|ibm-1168_P100-2002", 0x1A);
-#endif /* !ASCENSION_STANDARD_ENCODINGS */
+#endif // !ASCENSION_STANDARD_ENCODINGS
 #ifndef ASCENSION_PROPRIETARY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -161,9 +161,9 @@ namespace {
 			CharLine<0x0440, 0x0441, 0x0442, 0x0443, 0x0444, 0x0445, 0x0446, 0x0447, 0x0448, 0x0449, 0x044A, 0x044B, 0x044C, 0x044D, 0x044E, 0x044F>
 		>
 	> WINDOWS_1251("windows-1251", proprietary::WINDOWS_1251, "Cyrillic (windows-1251)", "\0ibm-5347|cp1251|ibm-5347_P100-1998", 0x3F);
-#endif /* !ASCENSION_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_MINORITY_ENCODINGS
-#endif /* !ASCENSION_MINORITY_ENCODINGS */
+#endif // !ASCENSION_MINORITY_ENCODINGS
 
 	struct Installer {
 		Installer() {
@@ -171,7 +171,7 @@ namespace {
 			Encoder::registerFactory(ISO_8859_5);
 			Encoder::registerFactory(KOI8_R);
 			Encoder::registerFactory(KOI8_U);
-#endif /* !ASCENSION_STANDARD_ENCODINGS */
+#endif // !ASCENSION_STANDARD_ENCODINGS */
 #ifndef ASCENSION_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM808);
 			Encoder::registerFactory(IBM848);
@@ -180,9 +180,9 @@ namespace {
 			Encoder::registerFactory(IBM1154);
 			Encoder::registerFactory(IBM1158);
 			Encoder::registerFactory(WINDOWS_1251);
-#endif /* !ASCENSION_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_MINORITY_ENCODINGS
-#endif /* !ASCENSION_MINORITY_ENCODINGS */
+#endif // !ASCENSION_MINORITY_ENCODINGS
 		}
 	} installer;
 }

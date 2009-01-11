@@ -5,10 +5,10 @@
  * - IBM1133
  * - MuleLao-1
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -45,7 +45,7 @@ namespace {
 			CharLine<0x0ED0, 0x0ED1, 0x0ED2, 0x0ED3, 0x0ED4, 0x0ED5, 0x0ED6, 0x0ED7, 0x0ED8, 0x0ED9, 0xFFFD, 0xFFFD, 0x00A2, 0x00AC, 0x00A6, 0x00A0>
 		>
 	> IBM1133("IBM1133", MIB_OTHER, "Lao (IBM1133)", "\0ibm-1133|ibm-1133_P100-1997", 0x1A);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::ISO8859CompatibleCharWire<
@@ -57,14 +57,14 @@ namespace {
 			CharLine<0x0ED0, 0x0ED1, 0x0ED2, 0x0ED3, 0x0ED4, 0x0ED5, 0x0ED6, 0x0ED7, 0x0ED8, 0x0ED9, 0xFFFD, 0xFFFD, 0x0EDC, 0x0EDD, 0xFFFD, 0xFFFD>
 		>
 	> MULE_LAO_1("MuleLao-1", MIB_OTHER, "Lao (MuleLao-1)", "", 0x1A);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	struct Installer {
 		Installer() {
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM1132);
 			Encoder::registerFactory(IBM1133);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(MULE_LAO_1);
 		}
 	} installer;

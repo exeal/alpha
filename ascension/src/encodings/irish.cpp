@@ -6,12 +6,12 @@
  *   0xFD..0xFF characters are mapped to UCS U+169D..169F. And also non-Ogham characters shown in
  *   the above document are mapped.
  * @author exeal
- * @date 2005-2008
+ * @date 2005-2009
  */
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 
@@ -34,4 +34,4 @@ namespace {
 	} installer;
 } // namespace @0
 
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS

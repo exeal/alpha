@@ -1,10 +1,10 @@
 /**
  * @file identifier-syntax.cpp
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "../unicode-property.hpp"
+#include <ascension/unicode-property.hpp>
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;
@@ -82,7 +82,7 @@ namespace {
 IdentifierSyntax::IdentifierSyntax() /*throw()*/ : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, equivalenceType_(NO_DECOMPOSITION)
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 {
 }
 
@@ -90,7 +90,7 @@ IdentifierSyntax::IdentifierSyntax() /*throw()*/ : type_(ASCENSION_DEFAULT_CHARA
 IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) /*throw()*/ : type_(rhs.type_), caseSensitive_(rhs.caseSensitive_),
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		equivalenceType_(rhs.equivalenceType_),
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 		addedIDStartCharacters_(rhs.addedIDStartCharacters_), addedIDNonStartCharacters_(rhs.addedIDNonStartCharacters_),
 		subtractedIDStartCharacters_(rhs.subtractedIDStartCharacters_), subtractedIDNonStartCharacters_(rhs.subtractedIDNonStartCharacters_)
 {
@@ -105,11 +105,11 @@ IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) /*throw()*/ : ty
 IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase /* = false */
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, Decomposition equivalenceType /* = NO_DECOMPOSITION */
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 ) /*throw()*/ : type_(type), caseSensitive_(ignoreCase)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 		, equivalenceType_(equivalenceType)
-#endif /* !ASCENSION_NO_UNICODE_NORMALIZATION */
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 {
 }
 
@@ -145,7 +145,7 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw
 		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
 	assert(false);
-	return false;	// –³ˆÓ–¡
+	return false;	// unreachable
 }
 
 /**
@@ -169,7 +169,7 @@ bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*
 		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
 	assert(false);
-	return false;	// –³ˆÓ–¡
+	return false;	// unreachable
 }
 
 /**
@@ -191,7 +191,7 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw
 		return BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
 	assert(false);
-	return false;	// –³ˆÓ–¡
+	return false;	// unreachable
 }
 
 /**
@@ -205,9 +205,10 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32IteratorUnsafe<String::const_iterator> I;
-	implementOverrides(I(adding.begin()), I(adding.end()),
-		I(subtracting.begin()), I(subtracting.end()), addedIDStartCharacters_, subtractedIDStartCharacters_);
+	typedef UTF16To32Iterator<String::const_iterator> I;
+	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
+		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
+		addedIDStartCharacters_, subtractedIDStartCharacters_);
 }
 
 /**
@@ -236,9 +237,10 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32IteratorUnsafe<String::const_iterator> I;
-	implementOverrides(I(adding.begin()), I(adding.end()),
-		I(subtracting.begin()), I(subtracting.end()), addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
+	typedef UTF16To32Iterator<String::const_iterator> I;
+	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
+		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
+		addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 }
 
 /**

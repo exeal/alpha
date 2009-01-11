@@ -8,10 +8,10 @@
  * - windows-1253
  * - <del>MacGreek</del>
  * @author exeal
- * @date 2007-12-30 .. 2008-01-02
+ * @date 2007-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
@@ -29,7 +29,7 @@ namespace {
 		>
 	> ISO_8859_7("ISO-8859-7", standard::ISO_8859_7, "Greek (ISO 8859-7)",
 		"iso-ir-126|ISO_8859-7|ELOT_928|ECMA-118|greek|greek8|csISOLatinGreek" "\0ibm-9005|windows-28597|ibm-9005_X110-2007", 0x1A);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -55,7 +55,7 @@ namespace {
 			CharLine<0x03C0, 0x03C1, 0x03C2, 0x03C3, 0x03C4, 0x03C5, 0x03C6, 0x03C7, 0x03C8, 0x03C9, 0x03CA, 0x03CB, 0x03CC, 0x03CD, 0x03CE, 0xF8FB>
 		>
 	> WINDOWS_1253("windows-1253", proprietary::WINDOWS_1253, "Greek (windows-1253)", "\0ibm-5349|cp1253|ibm-5349_P100-1998", 0x3F);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	sbcs::SingleByteEncoderFactory<
 		sbcs::IBMPCCompatibleCharWire<
@@ -69,20 +69,20 @@ namespace {
 			CharLine<0x00AD, 0x00B1, 0x03C5, 0x03C6, 0x03C7, 0x00A7, 0x03C8, 0x0385, 0x00B0, 0x00A8, 0x03C9, 0x03CB, 0x03B0, 0x03CE, 0x25A0, 0x00A0>
 		>
 	> IBM9061("IBM9061", MIB_OTHER, "Greek (IBM9061)", "\0ibm-9061|ibm-9061_P100-1999", 0x7F);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 	struct Installer {
 		Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 			Encoder::registerFactory(ISO_8859_7);
-#endif /* !ASCENSION_NO_STANDARD_ENCODINGS */
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
 			Encoder::registerFactory(IBM737);
 			Encoder::registerFactory(WINDOWS_1253);
-#endif /* !ASCENSION_NO_PROPRIETARY_ENCODINGS */
+#endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(IBM9061);
-#endif /* !ASCENSION_NO_MINORITY_ENCODINGS */
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
 	} installer;
 }

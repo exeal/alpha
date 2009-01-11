@@ -6,10 +6,10 @@
  * - JOHAB
  * - ISO-2022-KR
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
-#include "../encoder.hpp"
+#include <ascension/encoder.hpp>
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -18,10 +18,10 @@ using namespace std;
 
 namespace {
 	const Char** const UCS_TO_UHC[256] = {
-#include "data/ucs-to-windows-949.dat"
+#include "generated/ucs-to-windows-949.dat"
 	};
 	const ushort** const UHC_TO_UCS[256] = {
-#include "data/windows-949-to-ucs.dat"
+#include "generated/windows-949-to-ucs.dat"
 	};
 
 	template<typename Factory>
