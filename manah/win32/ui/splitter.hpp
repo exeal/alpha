@@ -84,7 +84,7 @@ namespace internal {
 
 template<typename Pane /* implements AbstractPane*/,
 	template<typename> class PaneDestructionPolicy = panedestructionpolicy::StandardDelete>
-/* final */ class Splitter : public CustomControl<Splitter>, public SplitterBase {
+/* final */ class Splitter : public CustomControl<Splitter<Pane, PaneDestructionPolicy> >, public SplitterBase {
 	MANAH_NONCOPYABLE_TAG(Splitter);
 public:
 	class Iterator {	// once the structure is changed, iterator is inavailable
@@ -512,8 +512,8 @@ inline void Splitter<Pane, PaneDestructionPolicy>::setSplitterSize(uint width, u
 template<typename Pane, template<typename> class PaneDestructionPolicy>
 inline void Splitter<Pane, PaneDestructionPolicy>::split(Pane& pane, Pane& clone, bool ns) {
 	SplitterItem* const parent = findPane(*root_, pane);
-	const pos1 = ns ? TOP : LEFT;	// no matter...
-	const pos2 = ns ? BOTTOM : RIGHT;
+	const PanePosition pos1 = ns ? TOP : LEFT;	// no matter...
+	const PanePosition pos2 = ns ? BOTTOM : RIGHT;
 
 	if(parent == 0)
 		throw std::invalid_argument("The specified pane does not belong to this splitter.");

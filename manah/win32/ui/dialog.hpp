@@ -37,10 +37,10 @@ public:
 	bool checkButton(int buttonID, UINT check);
 	bool checkRadioButton(int firstButtonID, int lastButtonID, int buttonID);
 	int getCheckedRadioButton(int firstButtonID, int lastButtonID) const;
-	DWORD etDefaultID() const;
-	HWND etItem(int itemID) const;
-	int etItemInt(int itemID, bool* translated = 0, bool isSigned = true) const;
-	int etItemText(int itemID, WCHAR* text, int maxLength) const;
+	DWORD getDefaultID() const;
+	HWND getItem(int itemID) const;
+	int getItemInt(int itemID, bool* translated = 0, bool isSigned = true) const;
+	int getItemText(int itemID, WCHAR* text, int maxLength) const;
 	UINT isButtonChecked(int buttonID) const;
 	LRESULT	sendItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam);
 	void setDefaultID(UINT id);
@@ -57,7 +57,7 @@ public:
 	bool isDialogMessage(const MSG& msg);
 protected:
 	virtual INT_PTR	processWindowMessage(UINT, WPARAM, LPARAM) {return false;}
-	void etMessageResult(LRESULT result);
+	void setMessageResult(LRESULT result);
 private:
 	using Window::create;
 	using Window::destroy;
