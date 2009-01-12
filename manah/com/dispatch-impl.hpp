@@ -140,7 +140,7 @@ public:
 	STDMETHODIMP GetTypeInfoCount(unsigned int* number) {MANAH_VERIFY_POINTER(number); *number = 1; return S_OK;}
 	/// @see IDispatch#Invoke
 	STDMETHODIMP Invoke(DISPID id, REFIID iid, LCID, WORD flags, DISPPARAMS* parameters, VARIANT* result,
-		EXCEPINFO* exception, unsigned int* argErr) {return (iid == IID_NULL) ? ::DispInvoke(static_cast<Base*>(this),
+		EXCEPINFO* exception, unsigned int* argErr) {return (iid == IID_NULL) ? ::DispInvoke(static_cast<IDispatch*>(this),
 		tip_.get().get(), id, flags, parameters, result, exception, argErr) : DISP_E_UNKNOWNINTERFACE;}
 private:
 	TypeInformationProvider tip_;

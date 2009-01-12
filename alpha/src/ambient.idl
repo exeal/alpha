@@ -1,5 +1,5 @@
 // ambient.idl
-// (c) 2008 exeal
+// (c) 2008-2009 exeal
 
 #ifndef AMBIENT_IDL_
 #define AMBIENT_IDL_
@@ -438,10 +438,10 @@ library ambient {
 		object, dual, pointer_default(unique), helpstring("")
 	]
 	interface IWindowList : IDispatch {
-		[id(DISPID_NEWENUM), , hidden, restricted]
+		[id(DISPID_NEWENUM), propget, hidden, restricted]
 		HRESULT _NewEnum([out, retval] IUnknown** enumerator);
 		[id(DISPID_VALUE), propget, helpstring("")]
-		HRESULT Item([in] long index, [out, retval] VARIANT** value);
+		HRESULT Item([in] long index, [out, retval] IWindow** value);
 		[id(1), propget, helpstring("")]
 		HRESULT Length([out, retval] long* length);
 		[id(2), helpstring("")]
@@ -548,21 +548,25 @@ library ambient {
 		object, dual, pointer_default(unique), helpstring("")
 	]
 	interface IScriptSystem : IDispatch {
-		[id(1), propget, helpstring("")]
+		[id(0x1), propget, helpstring("")]
+		HRESULT ActiveBuffer([out, retval] IBuffer** activeBuffer);
+		[id(0x2), propget, helpstring("")]
+		HRESULT ActiveWindow([out, retval] IWindow** activeWindow);
+		[id(0x3), propget, helpstring("")]
 		HRESULT Buffers([out, retval] IBufferList** buffers);
-		[id(2), propget, helpstring("")]
+		[id(0x4), propget, helpstring("")]
 		HRESULT Windows([out, retval] IWindowList** windows);
-		[id(3), helpstring("")]
+		[id(0x5), helpstring("")]
 		HRESULT ExecuteFile([in] BSTR fileName, [out, retval] VARIANT** result);
-		[id(4), helpstring("")]
+		[id(0x6), helpstring("")]
 		HRESULT GetServiceProvider([out, retval] IServiceObjectProvider** serviceProvider);
-		[id(5), helpstring("")]
+		[id(0x7), helpstring("")]
 		HRESULT LoadConstants([in] VARIANT* libraryNameOrObject, [in] VARIANT* parent);
-		[id(6), helpstring("")]
+		[id(0x8), helpstring("")]
 		HRESULT LoadScript([in] BSTR fileName, [out, retval] VARIANT* result);
-		[id(7), vararg, helpstring("")]
+		[id(0x9), vararg, helpstring("")]
 		HRESULT Position([in] SAFEARRAY(VARIANT) parameters, [out, retval] IPosition** newInstance);
-		[id(8), vararg, helpstring("")]
+		[id(0xA), vararg, helpstring("")]
 		HRESULT Region([in] SAFEARRAY(VARIANT) parameters, [out, retval] IRegion** newInstance);
 	}
 

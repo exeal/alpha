@@ -112,6 +112,73 @@ STDMETHODIMP Enumeration::Invoke(DISPID id, REFIID iid, LCID, WORD flags,
 }
 
 
+// IEnumVARIANTStaticImpl ///////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param array the array contains the elements to be enumerated
+ * @param length the length of @a array
+ */
+IEnumVARIANTStaticImpl::IEnumVARIANTStaticImpl(AutoBuffer<VARIANT> array, size_t length) : data_(new SharedData) {
+	data_->refs = 1;
+	data_->array = array.release();
+	data_->length = length;
+}
+
+/// Copy-constructor.
+IEnumVARIANTStaticImpl::IEnumVARIANTStaticImpl(const IEnumVARIANTStaticImpl& rhs) : data_(rhs.data_), current_(rhs.current_) {
+	++data_->refs;
+}
+
+/// Destructor.
+IEnumVARIANTStaticImpl::~IEnumVARIANTStaticImpl() throw() {
+	if(--data_->refs == 0) {
+		for(size_t i = 0; i < data_->length; ++i)
+			::VariantClear(data_->array + i);
+		delete[] data_->array;
+		delete data_;
+	}
+}
+
+/// Implements @c IEnumVARIANT#Clone.
+STDMETHODIMP IEnumVARIANTStaticImpl::Clone(IEnumVARIANT** enumerator) {
+	MANAH_VERIFY_POINTER(enumerator);
+	if(*enumerator = new(nothrow) IEnumVARIANTStaticImpl(*this))
+		return S_OK;
+	return E_OUTOFMEMORY;
+}
+
+/// Implements @c IEnumVARIANT#Next.
+STDMETHODIMP IEnumVARIANTStaticImpl::Next(ULONG numberOfElements, VARIANT* values, ULONG* numberOfFetchedElements) {
+	MANAH_VERIFY_POINTER(values);
+	ULONG fetched;
+	for(fetched = 0; fetched < numberOfElements && current_ + fetched < data_->array + data_->length; ++fetched) {
+		const HRESULT hr = ::VariantCopy(values + fetched, current_ + fetched);
+		if(FAILED(hr)) {
+			for(ULONG i = 0; i < fetched; ++i)
+				::VariantClear(current_ + i);
+			return hr;
+		}
+	}
+	if(numberOfFetchedElements != 0)
+		*numberOfFetchedElements = fetched;
+	return (fetched == numberOfElements) ? S_OK : S_FALSE;
+}
+
+/// Implements @c IEnumVARIANT#Reset.
+STDMETHODIMP IEnumVARIANTStaticImpl::Reset() {
+	current_ = data_->array;
+	return S_OK;
+}
+
+/// Implements @c IEnumVARIANT#Skip.
+STDMETHODIMP IEnumVARIANTStaticImpl::Skip(ULONG numberOfElements) {
+	const VARIANT* const previous = current_;
+	current_ = min(current_ + numberOfElements, data_->array + data_->length);
+	return (current_ - previous == numberOfElements) ? S_OK : S_FALSE;
+}
+
+
 // ScriptSystem.ScriptHost //////////////////////////////////////////////////
 
 class ScriptSystem::ScriptHost : public IUnknownImpl<

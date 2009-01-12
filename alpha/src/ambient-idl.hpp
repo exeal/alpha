@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0500 */
-/* at Sun Jan 11 22:55:46 2009
+/* at Mon Jan 12 18:13:50 2009
  */
 /* Compiler settings for ..\src\ambient.idl:
     Oicf, W1, Zp8, env=Win32 (32b run)
@@ -2945,12 +2945,12 @@ EXTERN_C const IID IID_IWindowList;
     IWindowList : public IDispatch
     {
     public:
-        virtual /* [restricted][hidden][id] */ HRESULT STDMETHODCALLTYPE _NewEnum( 
+        virtual /* [restricted][hidden][propget][id] */ HRESULT STDMETHODCALLTYPE get__NewEnum( 
             /* [retval][out] */ IUnknown **enumerator) = 0;
         
         virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Item( 
             /* [in] */ long index,
-            /* [retval][out] */ VARIANT **value) = 0;
+            /* [retval][out] */ IWindow **value) = 0;
         
         virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Length( 
             /* [retval][out] */ long *length) = 0;
@@ -3010,14 +3010,14 @@ EXTERN_C const IID IID_IWindowList;
             /* [out] */ EXCEPINFO *pExcepInfo,
             /* [out] */ UINT *puArgErr);
         
-        /* [restricted][hidden][id] */ HRESULT ( STDMETHODCALLTYPE *_NewEnum )( 
+        /* [restricted][hidden][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get__NewEnum )( 
             IWindowList * This,
             /* [retval][out] */ IUnknown **enumerator);
         
         /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Item )( 
             IWindowList * This,
             /* [in] */ long index,
-            /* [retval][out] */ VARIANT **value);
+            /* [retval][out] */ IWindow **value);
         
         /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Length )( 
             IWindowList * This,
@@ -3068,8 +3068,8 @@ EXTERN_C const IID IID_IWindowList;
     ( (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr) ) 
 
 
-#define IWindowList__NewEnum(This,enumerator)	\
-    ( (This)->lpVtbl -> _NewEnum(This,enumerator) ) 
+#define IWindowList_get__NewEnum(This,enumerator)	\
+    ( (This)->lpVtbl -> get__NewEnum(This,enumerator) ) 
 
 #define IWindowList_get_Item(This,index,value)	\
     ( (This)->lpVtbl -> get_Item(This,index,value) ) 
@@ -4216,6 +4216,12 @@ EXTERN_C const IID IID_IScriptSystem;
     IScriptSystem : public IDispatch
     {
     public:
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_ActiveBuffer( 
+            /* [retval][out] */ IBuffer **activeBuffer) = 0;
+        
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_ActiveWindow( 
+            /* [retval][out] */ IWindow **activeWindow) = 0;
+        
         virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_Buffers( 
             /* [retval][out] */ IBufferList **buffers) = 0;
         
@@ -4294,6 +4300,14 @@ EXTERN_C const IID IID_IScriptSystem;
             /* [out] */ EXCEPINFO *pExcepInfo,
             /* [out] */ UINT *puArgErr);
         
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_ActiveBuffer )( 
+            IScriptSystem * This,
+            /* [retval][out] */ IBuffer **activeBuffer);
+        
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_ActiveWindow )( 
+            IScriptSystem * This,
+            /* [retval][out] */ IWindow **activeWindow);
+        
         /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_Buffers )( 
             IScriptSystem * This,
             /* [retval][out] */ IBufferList **buffers);
@@ -4366,6 +4380,12 @@ EXTERN_C const IID IID_IScriptSystem;
 #define IScriptSystem_Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)	\
     ( (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr) ) 
 
+
+#define IScriptSystem_get_ActiveBuffer(This,activeBuffer)	\
+    ( (This)->lpVtbl -> get_ActiveBuffer(This,activeBuffer) ) 
+
+#define IScriptSystem_get_ActiveWindow(This,activeWindow)	\
+    ( (This)->lpVtbl -> get_ActiveWindow(This,activeWindow) ) 
 
 #define IScriptSystem_get_Buffers(This,buffers)	\
     ( (This)->lpVtbl -> get_Buffers(This,buffers) ) 

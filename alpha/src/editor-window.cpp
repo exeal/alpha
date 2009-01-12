@@ -18,10 +18,39 @@ using namespace ascension::searcher;
 using namespace ascension::viewers;
 using namespace manah::win32;
 using namespace manah::win32::ui;
+using namespace manah::com;
 using namespace std;
 using manah::toBoolean;
 
 #pragma comment(lib, "msimg32.lib")
+
+
+namespace {
+	class WindowProxy : public ambient::AutomationProxy<EditorWindow, ambient::SingleAutomationObject<IWindow, &IID_IWindow> > {
+	public:
+		explicit WindowProxy(EditorWindow& impl);
+		// IWindow
+		STDMETHODIMP Activate();
+		STDMETHODIMP Close();
+		STDMETHODIMP Select(VARIANT* o);
+		STDMETHODIMP get_SelectedBuffer(IBuffer** result);
+		STDMETHODIMP get_SelectedEditor(ITextEditor** result);
+		STDMETHODIMP Split();
+		STDMETHODIMP SplitSideBySide();
+	};
+
+	class WindowListProxy : public ambient::AutomationProxy<EditorWindows, ambient::SingleAutomationObject<IWindowList, &IID_IWindowList> > {
+	public:
+		explicit WindowListProxy(EditorWindows& impl);
+		// IWindowList
+		STDMETHODIMP get__NewEnum(IUnknown** enumerator);
+		STDMETHODIMP get_Item(long index, IWindow** value);
+		STDMETHODIMP get_Length(long* length);
+		STDMETHODIMP ActivateNext();
+		STDMETHODIMP ActivatePrevious();
+		STDMETHODIMP UnsplitAll();
+	};
+} // namespace @0
 
 
 // EditorWindow /////////////////////////////////////////////////////////////
@@ -32,7 +61,7 @@ EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1
 		visibleIndex_ = 0;
 		addView(*initialView);
 	}
-//	self_.reset(new EditorWindowProxy);
+	self_.reset(new WindowProxy(*this));
 }
 
 /// Copy-constructor.
@@ -150,7 +179,6 @@ Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
-	document().textFile().addListener(*this);
 	document().bookmarker().addListener(*this);
 //	self_.reset(new EditorViewProxy(*this));
 //	caretObject_.reset(new CaretProxy(caret()));
@@ -158,7 +186,6 @@ EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), v
 
 /// Copy-constructor.
 EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnStartValue_(rhs.visualColumnStartValue_) {
-	document().textFile().addListener(*this);
 	document().bookmarker().addListener(*this);
 //	self_.reset(EditorViewProxy(*this));
 //	caretObject_.reset(new CaretProxy(caret()));
@@ -166,7 +193,6 @@ EditorView::EditorView(const EditorView& rhs) : TextViewer(rhs), visualColumnSta
 
 /// Destructor.
 EditorView::~EditorView() {
-	document().textFile().removeListener(*this);
 	document().bookmarker().removeListener(*this);
 }
 
@@ -195,29 +221,6 @@ void EditorView::caretMoved(const Caret& self, const Region& oldRegion) {
 	updateCurrentPositionOnStatusBar();
 }
 
-/// @see IDocumentStateListener#documentAccessibleRegionChanged
-void EditorView::documentAccessibleRegionChanged(const Document& document) {
-	TextViewer::documentAccessibleRegionChanged(document);
-	updateNarrowingOnStatusBar();
-}
-
-/// @see IDocumentStateListener#documentModificationSignChanged
-void EditorView::documentModificationSignChanged(const Document& document) {
-	TextViewer::documentModificationSignChanged(document);
-	updateTitleBar();
-}
-
-/// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
-void EditorView::documentPropertyChanged(const Document& document, const DocumentPropertyKey& key) {
-	TextViewer::documentPropertyChanged(document, key);
-}
-
-/// @see IDocumentStateListener#documentReadOnlySignChanged
-void EditorView::documentReadOnlySignChanged(const Document& document) {
-	TextViewer::documentReadOnlySignChanged(document);
-	updateTitleBar();
-}
-
 /// @see TextViewer#drawIndicatorMargin
 void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect) {
 	if(document().bookmarker().isMarked(line)) {
@@ -243,16 +246,6 @@ void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, c
 		mesh.LowerRight = 1;
 		::GradientFill(dc.getHandle(), vertex, MANAH_COUNTOF(vertex), &mesh, 1, GRADIENT_FILL_RECT_H);
 	}
-}
-
-/// @see IFilePropertyListener#fileEncodingChanged
-void EditorView::fileEncodingChanged(const TextFileDocumentInput&) {
-	// do nothing
-}
-
-/// @see IFilePropertyListener#fileNameChanged
-void EditorView::fileNameChanged(const TextFileDocumentInput&) {
-	updateTitleBar();
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchAborted
@@ -321,10 +314,10 @@ void EditorView::onKillFocus(HWND newWindow) {
 /// @see Window#onSetFocus
 void EditorView::onSetFocus(HWND oldWindow) {
 	TextViewer::onSetFocus(oldWindow);
-	updateTitleBar();
 	updateCurrentPositionOnStatusBar();
 	updateNarrowingOnStatusBar();
 	updateOvertypeModeOnStatusBar();
+	BufferList::instance().activeBufferChanged();
 }
 
 /// @see ICaretListener#overtypeModeChanged
@@ -393,19 +386,11 @@ void EditorView::updateOvertypeModeOnStatusBar() {
 			Alpha::instance().loadMessage(caret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
 }
 
-/// Updates the title bar text according to the current state.
-void EditorView::updateTitleBar() {
-	static wstring titleCache;
-	Window& mainWindow = Alpha::instance().getMainWindow();
-	if(!mainWindow.isWindow())
-		return;
-	wstring title(BufferList::getDisplayName(document()));
-	if(title != titleCache) {
-		titleCache = title;
-//		title += L" - " IDS_APPFULLVERSION;
-		title += L" - " IDS_APPNAME;
-		mainWindow.setText(title.c_str());
-	}
+/// Updates the status bar text according to the current state.
+void EditorView::updateStatusBar() {
+	updateCurrentPositionOnStatusBar();
+	updateNarrowingOnStatusBar();
+	updateOvertypeModeOnStatusBar();
 }
 
 
@@ -413,7 +398,7 @@ void EditorView::updateTitleBar() {
 
 /// Default constructor.
 EditorWindows::EditorWindows() {
-//	self_.reset(new EditorWindowsProxy(*this));
+	self_.reset(new WindowListProxy(*this));
 }
 
 /// Returns the active buffer.
@@ -459,4 +444,199 @@ void EditorWindows::paneRemoved(EditorWindow& pane) {
 }
 
 
-STDMETHODIMP ambient::ScriptSystem::get_Windows(IWindowList** windows) {return E_NOTIMPL;}
+// WindowProxy //////////////////////////////////////////////////////////////
+
+WindowProxy::WindowProxy(EditorWindow& impl) : AutomationProxy(impl) {
+}
+
+/// @see IWindow#Activate
+STDMETHODIMP WindowProxy::Activate() {
+	AMBIENT_CHECK_PROXY();
+	if(::SetFocus(impl().getWindow()) == 0)
+		return HRESULT_FROM_WIN32(::GetLastError());
+	return S_OK;
+}
+
+/// @see IWindow#Close
+STDMETHODIMP WindowProxy::Close() {
+	AMBIENT_CHECK_PROXY();
+	Activate();
+	return EditorWindows::instance().removeActivePane(), S_OK;
+}
+
+/// @see IWindow#get_SelectedBuffer
+STDMETHODIMP WindowProxy::get_SelectedBuffer(IBuffer** buffer) {
+	MANAH_VERIFY_POINTER(buffer);
+	AMBIENT_CHECK_PROXY();
+	try {
+		return (*buffer = impl().visibleBuffer().asScript().get())->AddRef(), S_OK;
+	} catch(const logic_error&) {
+		return E_FAIL;
+	}
+}
+
+/// @see IWindow#get_SelectedEditor
+STDMETHODIMP WindowProxy::get_SelectedEditor(ITextEditor** editor) {
+	MANAH_VERIFY_POINTER(editor);
+	AMBIENT_CHECK_PROXY();
+	*editor = 0;
+	return E_NOTIMPL;
+}
+
+namespace {
+	Buffer* extract(IBuffer& buffer) {
+		BufferList& buffers = BufferList::instance();
+		for(size_t i = 0, c = buffers.numberOfBuffers(); i < c; ++i) {
+			if(buffers.at(i).asScript().get() == &buffer)
+				return &buffers.at(i);
+		}
+		return 0;
+	}
+} // namespace @0
+
+STDMETHODIMP WindowProxy::Select(VARIANT* o) {
+	AMBIENT_CHECK_PROXY();
+	MANAH_VERIFY_POINTER(o);
+	Buffer* buffer = 0;
+	switch(V_VT(o)) {
+	case VT_BSTR: {
+		const size_t i = BufferList::instance().find(basic_string<WCHAR>(safeBSTRtoOLESTR(V_BSTR(o))));
+		if(i == -1)
+			return E_INVALIDARG;
+		buffer = &BufferList::instance().at(i);
+		break;
+	}
+	case VT_UNKNOWN:
+	case VT_DISPATCH: {
+		ComQIPtr<IBuffer, &IID_IBuffer> temp1((V_VT(o) == VT_UNKNOWN) ? V_UNKNOWN(o) : V_DISPATCH(o));
+		if(temp1.get() != 0)
+			buffer = extract(*temp1.get());
+		else {
+			ComQIPtr<ITextEditor, &IID_ITextEditor> temp2((V_VT(o) == VT_UNKNOWN) ? V_UNKNOWN(o) : V_DISPATCH(o));
+			if(temp2.get() != 0) {
+				ComPtr<IBuffer> temp3;
+				temp2->GetBuffer(temp3.initialize());
+				buffer = extract(*temp3.get());
+			} else
+				return DISP_E_TYPEMISMATCH;
+		}
+		break;
+	}
+	default:
+		return DISP_E_TYPEMISMATCH;
+	}
+	if(buffer == 0)
+		return E_INVALIDARG;
+	impl().showBuffer(*buffer);
+	return S_OK;
+}
+
+/// @see IWindow#Split
+STDMETHODIMP WindowProxy::Split() {
+	AMBIENT_CHECK_PROXY();
+	try {
+		impl().split();
+	} catch(const bad_alloc&) {
+		return E_OUTOFMEMORY;
+	}
+	return S_OK;
+}
+
+/// @see IWindow#SplitSideBySide
+STDMETHODIMP WindowProxy::SplitSideBySide() {
+	AMBIENT_CHECK_PROXY();
+	try {
+		impl().splitSideBySide();
+	} catch(const bad_alloc&) {
+		return E_OUTOFMEMORY;
+	}
+	return S_OK;
+}
+
+
+// WindowListProxy //////////////////////////////////////////////////////////
+
+/// @see IScriptSystem#get_ActiveBuffer
+STDMETHODIMP ambient::ScriptSystem::get_ActiveBuffer(IBuffer** activeBuffer) {
+	MANAH_VERIFY_POINTER(activeBuffer);
+	return (*activeBuffer = EditorWindows::instance().activeBuffer().asScript().get())->AddRef(), S_OK;
+}
+
+
+/// @see IScriptSystem#get_ActiveWindow
+STDMETHODIMP ambient::ScriptSystem::get_ActiveWindow(IWindow** activeWindow) {
+	MANAH_VERIFY_POINTER(activeWindow);
+	return (*activeWindow = EditorWindows::instance().activePane().asScript().get())->AddRef(), S_OK;
+}
+
+/// @see IScriptSystem#get_Windows
+STDMETHODIMP ambient::ScriptSystem::get_Windows(IWindowList** windows) {
+	MANAH_VERIFY_POINTER(windows);
+	return (*windows = EditorWindows::instance().asScript().get())->AddRef(), S_OK;
+}
+
+/// Constructor.
+WindowListProxy::WindowListProxy(EditorWindows& impl) : AutomationProxy(impl) {
+}
+
+/// @see IWindowList#ActivateNext
+STDMETHODIMP WindowListProxy::ActivateNext() {
+	AMBIENT_CHECK_PROXY();
+	return impl().activateNextPane(), S_OK;
+}
+
+/// @see IWindowList#ActivatePrevious
+STDMETHODIMP WindowListProxy::ActivatePrevious() {
+	AMBIENT_CHECK_PROXY();
+	return impl().activatePreviousPane(), S_OK;
+}
+
+/// @see IWindowList#get__NewEnum
+STDMETHODIMP WindowListProxy::get__NewEnum(IUnknown** enumerator) {
+	MANAH_VERIFY_POINTER(enumerator);
+	AMBIENT_CHECK_PROXY();
+	const size_t c = impl().numberOfPanes();
+	VARIANT* const windows = new(nothrow) VARIANT[c];
+	if(windows == 0)
+		return E_OUTOFMEMORY;
+	size_t i = 0;
+	for(EditorWindows::Iterator it(impl().enumeratePanes()); !it.done(); it.next(), ++i) {
+		::VariantInit(windows + i);
+		V_VT(windows + i) = VT_DISPATCH;
+		(V_DISPATCH(windows + i) = it.get().asScript().get())->AddRef();
+	}
+	manah::AutoBuffer<VARIANT> array(windows);
+	*enumerator = new(nothrow) ambient::IEnumVARIANTStaticImpl(array, c);
+	if(*enumerator == 0) {
+		for(i = 0; i < c; ++i)
+			::VariantClear(windows + i);
+		return E_OUTOFMEMORY;
+	}
+	return (*enumerator)->AddRef(), S_OK;
+}
+
+/// @see IWindowList#get_Item
+STDMETHODIMP WindowListProxy::get_Item(long index, IWindow** window) {
+	MANAH_VERIFY_POINTER(window);
+	AMBIENT_CHECK_PROXY();
+	if(index < 0 || static_cast<size_t>(index) >= impl().numberOfPanes())
+		return DISP_E_BADINDEX;
+	for(EditorWindows::Iterator i(impl().enumeratePanes()); !i.done(); i.next(), --index) {
+		if(index == 0)
+			return (*window = i.get().asScript().get())->AddRef(), S_OK;
+	}
+	return DISP_E_BADINDEX;
+}
+
+/// @see IWindowList#get_Length
+STDMETHODIMP WindowListProxy::get_Length(long* length) {
+	MANAH_VERIFY_POINTER(length);
+	AMBIENT_CHECK_PROXY();
+	return ::VarI4FromUI8(impl().numberOfPanes(), length);
+}
+
+/// @see IWindowList#UnsplitAll
+STDMETHODIMP WindowListProxy::UnsplitAll() {
+	AMBIENT_CHECK_PROXY();
+	return impl().removeInactivePanes(), S_OK;
+}

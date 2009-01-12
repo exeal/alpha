@@ -2,7 +2,7 @@
  * @file buffer.cpp
  * @author exeal
  * @date 2003-2006 (was AlphaDoc.cpp and BufferList.cpp)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #include "application.hpp"
@@ -78,67 +78,6 @@ namespace {
 			if(FAILED(hr)) return hr; swap(temp); return S_OK;}
 		void swap(AutoVARIANT& other) /*throw()*/ {std::swap(static_cast<tagVARIANT&>(*this), static_cast<tagVARIANT&>(other));}
 	};
-
-	class IEnumVARIANTStaticImpl : public IUnknownImpl<manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IEnumVARIANT)> > {
-		MANAH_UNASSIGNABLE_TAG(IEnumVARIANTStaticImpl);
-	public:
-		IEnumVARIANTStaticImpl(manah::AutoBuffer<VARIANT> array, std::size_t length) : data_(new SharedData) {
-			data_->refs = 1;
-			data_->array = array.release();
-			data_->length = length;
-		}
-		~IEnumVARIANTStaticImpl() throw() {
-			if(--data_->refs == 0) {
-				for(size_t i = 0; i < data_->length; ++i)
-					::VariantClear(data_->array + i);
-				delete[] data_->array;
-				delete data_;
-			}
-		}
-		// IEnumVARIANT
-		STDMETHODIMP Next(ULONG numberOfElements, VARIANT* values, ULONG* numberOfFetchedElements) {
-			MANAH_VERIFY_POINTER(values);
-			ULONG fetched;
-			for(fetched = 0; fetched < numberOfElements && current_ + fetched < data_->array + data_->length; ++fetched) {
-				const HRESULT hr = ::VariantCopy(values + fetched, current_ + fetched);
-				if(FAILED(hr)) {
-					for(ULONG i = 0; i < fetched; ++i)
-						::VariantClear(current_ + i);
-					return hr;
-				}
-			}
-			if(numberOfFetchedElements != 0)
-				*numberOfFetchedElements = fetched;
-			return (fetched == numberOfElements) ? S_OK : S_FALSE;
-		}
-		STDMETHODIMP Skip(ULONG numberOfElements) {
-			const VARIANT* const previous = current_;
-			current_ = min(current_ + numberOfElements, data_->array + data_->length);
-			return (current_ - previous == numberOfElements) ? S_OK : S_FALSE;
-		}
-		STDMETHODIMP Reset() {
-			current_ = data_->array;
-			return S_OK;
-		}
-		STDMETHODIMP Clone(IEnumVARIANT** enumerator) {
-			MANAH_VERIFY_POINTER(enumerator);
-			if(*enumerator = new(nothrow) IEnumVARIANTStaticImpl(*this))
-				return S_OK;
-			return E_OUTOFMEMORY;
-		}
-	private:
-		IEnumVARIANTStaticImpl(const IEnumVARIANTStaticImpl& rhs) : data_(rhs.data_), current_(rhs.current_) {
-			++data_->refs;
-		}
-		struct SharedData {
-			std::size_t refs;
-			VARIANT* array;
-			std::size_t length;
-		} * data_;
-		VARIANT* current_;
-	};
-
-#define AMBIENT_CHECK_PROXY() if(!check()) return CO_E_OBJNOTCONNECTED
 
 	class AutomationPosition : public k::Position, public ambient::SingleAutomationObject<IPosition, &IID_IPosition> {
 	public:
@@ -318,6 +257,42 @@ BufferList::~BufferList() {
 	}
 }
 
+void BufferList::activeBufferChanged() {
+	const EditorWindow window = EditorWindows::instance().activePane();
+	const Buffer& buffer = window.visibleBuffer();
+	EditorView& viewer = window.visibleView();
+
+	// update the default active window
+	for(EditorWindows::Iterator i(EditorWindows::instance().enumeratePanes()); !i.done(); i.next()) {
+		if(&i.get().visibleView() == &viewer) {
+			EditorWindows::instance().setDefaultActivePane(i.get());
+			break;
+		}
+	}
+
+	// title bar
+	updateTitleBar();
+
+	// buffer bar button
+	const size_t button = find(buffer);
+	if(button != -1)
+		bufferBar_.checkButton(button);
+
+	// scroll the buffer bar if the button was hidden
+	if(bufferBarPager_.isVisible()) {
+		const int pagerPosition = bufferBarPager_.getPosition();
+		RECT buttonRect, pagerRect;
+		bufferBar_.getItemRect(static_cast<int>(button), buttonRect);
+		bufferBarPager_.getClientRect(pagerRect);
+		if(buttonRect.left < pagerPosition)
+			bufferBarPager_.setPosition(buttonRect.left);
+		else if(buttonRect.right > pagerPosition + pagerRect.right)
+			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
+	}
+
+	viewer.updateStatusBar();
+}
+
 /**
  * Opens the new empty buffer. This method does not activate the new buffer.
  * @param name the name of the buffer
@@ -441,7 +416,7 @@ void BufferList::close(Buffer& buffer) {
 		}
 		resetResources();
 		recalculateBufferBarSize();
-		fireActiveBufferSwitched();
+		activeBufferChanged();
 	} else {	// the buffer is last one
 		buffer.textFile().close();
 		buffer.resetContent();
@@ -496,7 +471,7 @@ bool BufferList::createBar(Rebar& rebar) {
 
 /// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
 void BufferList::documentAccessibleRegionChanged(const k::Document&) {
-	// do nothing
+	updateNarrowingOnStatusBar();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
@@ -504,6 +479,7 @@ void BufferList::documentModificationSignChanged(const k::Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
+	updateTitleBar();
 }
 
 /// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
@@ -516,6 +492,7 @@ void BufferList::documentReadOnlySignChanged(const k::Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
+	updateTitleBar();
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileNameChanged
@@ -525,6 +502,7 @@ void BufferList::fileNameChanged(const k::fileio::TextFileDocumentInput& textFil
 	resetResources();
 	bufferBar_.setButtonText(static_cast<int>(find(buffer)), getDisplayName(buffer).c_str());
 	bufferBarPager_.recalcSize();
+	updateTitleBar();
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileEncodingChanged
@@ -557,42 +535,6 @@ size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 			return i;
 	}
 	return -1;
-}
-
-/// Invokes @c IActiveBufferListener#activeBufferSwitched.
-void BufferList::fireActiveBufferSwitched() {
-	const EditorView& view = EditorWindows::instance().activePane().visibleView();
-	int activeBufferIndex = -1;
-
-	// find the buffer bar button for the new active buffer
-	MANAH_AUTO_STRUCT_SIZE(TBBUTTON, button);
-	for(int i = 0, c = bufferBar_.getButtonCount(); i < c; ++i) {
-		if(bufferBar_.getButton(i, button) && reinterpret_cast<Buffer*>(button.dwData) == &view.document()) {
-			activeBufferIndex = i;
-			break;
-		}
-	}
-	assert(activeBufferIndex != -1);
-
-	bufferBar_.checkButton(activeBufferIndex);
-	for(EditorWindows::Iterator i(EditorWindows::instance().enumeratePanes()); !i.done(); i.next()) {
-		if(i.get().numberOfViews() > 0 && &i.get().visibleView() == &view) {
-			EditorWindows::instance().setDefaultActivePane(i.get());
-			break;
-		}
-	}
-
-	// アクティブなバッファのボタンが隠れていたらスクロールする
-	if(bufferBarPager_.isVisible()) {
-		const int pagerPos = bufferBarPager_.getPosition();
-		RECT buttonRect, pagerRect;
-		bufferBar_.getItemRect(activeBufferIndex, buttonRect);
-		bufferBarPager_.getClientRect(pagerRect);
-		if(buttonRect.left < pagerPos)
-			bufferBarPager_.setPosition(buttonRect.left);
-		else if(buttonRect.right > pagerPos + pagerRect.right)
-			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
-	}
 }
 
 /**
@@ -1526,26 +1468,6 @@ bool BufferList::saveSomeDialog() {
 	return true;
 }
 
-/**
- * Activates the specified buffer in the active pane.
- * @param index the index of the buffer to activate
- * @throw std#out_of_range @a index is invalid
- */
-void BufferList::setActive(size_t index) {
-	EditorWindows::instance().activePane().showBuffer(at(index));
-	fireActiveBufferSwitched();
-}
-
-/**
- * Activates the specified buffer in the active pane.
- * @param buffer the buffer to activate
- * @throw std#invalid_argument @a buffer is not exist
- */
-void BufferList::setActive(const Buffer& buffer) {
-	EditorWindows::instance().activePane().showBuffer(buffer);
-	fireActiveBufferSwitched();
-}
-
 /// @see ascension#presentation#ITextViewerListListener#textViewerListChanged
 void BufferList::textViewerListChanged(a::presentation::Presentation& presentation) {
 }
@@ -1557,6 +1479,21 @@ void BufferList::updateContextMenu() {
 //	contextMenu_ << Menu::StringItem(CMD_FILE_CLOSE, app_.commandManager().menuName(CMD_FILE_CLOSE).c_str())
 //		<< Menu::StringItem(CMD_FILE_CLOSEOTHERS, app_.commandManager().menuName(CMD_FILE_CLOSEOTHERS).c_str());
 //	contextMenu_.setDefault<Menu::BY_COMMAND>(CMD_FILE_CLOSE);
+}
+
+void BufferList::updateTitleBar() {
+	Window& mainWindow = Alpha::instance().getMainWindow();
+	if(mainWindow.isWindow()) {
+		// show the display name of the active buffer and application credit
+		static wstring titleCache;
+		wstring title(getDisplayName(EditorWindows::instance().activePane().visibleBuffer()));
+		if(title != titleCache) {
+			titleCache = title;
+//			title += L" - " IDS_APPFULLVERSION;
+			title += L" - " IDS_APPNAME;
+			mainWindow.setText(title.c_str());
+		}
+	}
 }
 
 
@@ -2325,7 +2262,7 @@ STDMETHODIMP BufferListProxy::get__NewEnum(IUnknown** enumerator) {
 	AMBIENT_CHECK_PROXY();
 	MANAH_VERIFY_POINTER(enumerator);
 	const size_t c = impl().numberOfBuffers();
-	VARIANT* buffers = new(nothrow) VARIANT[c];
+	VARIANT* const buffers = new(nothrow) VARIANT[c];
 	if(buffers == 0)
 		return E_OUTOFMEMORY;
 	for(size_t i = 0; i < c; ++i) {
@@ -2334,7 +2271,7 @@ STDMETHODIMP BufferListProxy::get__NewEnum(IUnknown** enumerator) {
 		(buffers[i].pdispVal = impl().at(i).asScript().get())->AddRef();
 	}
 	manah::AutoBuffer<VARIANT> array(buffers);
-	*enumerator = new(nothrow) IEnumVARIANTStaticImpl(array, c);
+	*enumerator = new(nothrow) ambient::IEnumVARIANTStaticImpl(array, c);
 	if(*enumerator == 0) {
 		for(size_t i = 0; i < c; ++i)
 			::VariantClear(buffers + i);
