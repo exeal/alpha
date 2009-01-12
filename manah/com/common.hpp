@@ -1,5 +1,5 @@
 // common.hpp
-// (c) 2002-2008 exeal
+// (c) 2002-2009 exeal
 
 #ifndef MANAH_COM_COMMON_HPP
 #define MANAH_COM_COMMON_HPP
@@ -14,9 +14,21 @@
 namespace manah {
 	namespace com {
 
-#define MANAH_VERIFY_POINTER(p)	\
-	if((p) == 0)				\
-		return E_POINTER
+#define MANAH_VERIFY_POINTER(p) if((p) == 0) return E_POINTER
+
+		namespace internal {
+			class OlestrButNotBstr {
+			public:
+				explicit OlestrButNotBstr(const OLECHAR* s) : p_(s) {}
+				operator const OLECHAR*() const {return p_;}
+			private:
+				operator BSTR() const;
+				const OLECHAR* const p_;
+			};
+		} // namespace internal
+
+		/// Converts a @c const @c BSTR into @c const @c OLECHAR*. If @a p is @c null, returns OLESTR("").
+		inline internal::OlestrButNotBstr safeBSTRtoOLESTR(const BSTR p) throw() {return internal::OlestrButNotBstr((p != 0) ? p : OLESTR(""));}
 
 		/// Returns true if @a bstr is an empty string.
 		inline bool isEmptyBSTR(const BSTR bstr) throw() {return bstr == 0 || *bstr == 0;}

@@ -4,8 +4,9 @@
 
 #ifndef ALPHA_AMBIENT_HPP
 #define ALPHA_AMBIENT_HPP
-#include <objbase.h>	// interface
+#include <objbase.h>		// interface keyword
 #include "ambient-idl.hpp"
+#include <manah/memory.hpp>	// manah.AutoBuffer
 #include <manah/com/exception.hpp>
 #include <manah/com/unknown-impl.hpp>
 #include <manah/com/dispatch-impl.hpp>
@@ -26,7 +27,7 @@ namespace alpha {
 		class AutomationObject : public IUnknownDispatchImpl<
 			InterfaceSignatures, manah::com::ole::TypeInformationFromExecutable<iid>, ThreadingPolicy> {};
 
-		template<typename Interface, const IID* iid /* = __uuidof(Interface) */, typename ThreadingPolicy = MultiThreaded>
+		template<typename Interface, const IID* iid /* = __uuidof(Interface) */, typename ThreadingPolicy = manah::com::MultiThreaded>
 		class SingleAutomationObject : public AutomationObject<
 			iid, manah::typelist::Cat<
 				manah::com::InterfaceSignature<Interface, iid>
@@ -45,12 +46,36 @@ namespace alpha {
 			Implementation* impl_;
 		};
 
+#define AMBIENT_CHECK_PROXY() if(!check()) return CO_E_OBJNOTCONNECTED
+
+		class IEnumVARIANTStaticImpl : public manah::com::IUnknownImpl<manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IEnumVARIANT)> > {
+			MANAH_UNASSIGNABLE_TAG(IEnumVARIANTStaticImpl);
+		public:
+			IEnumVARIANTStaticImpl(manah::AutoBuffer<VARIANT> array, std::size_t length);
+			~IEnumVARIANTStaticImpl() throw();
+			// IEnumVARIANT
+			STDMETHODIMP Next(ULONG numberOfElements, VARIANT* values, ULONG* numberOfFetchedElements);
+			STDMETHODIMP Skip(ULONG numberOfElements);
+			STDMETHODIMP Reset();
+			STDMETHODIMP Clone(IEnumVARIANT** enumerator);
+		private:
+			IEnumVARIANTStaticImpl(const IEnumVARIANTStaticImpl& rhs);
+			struct SharedData {
+				std::size_t refs;
+				VARIANT* array;
+				std::size_t length;
+			} * data_;
+			VARIANT* current_;
+		};
+
 		class ScriptSystem : public SingleAutomationObject<IScriptSystem, &IID_IScriptSystem, manah::com::NoReferenceCounting> {
 			MANAH_NONCOPYABLE_TAG(ScriptSystem);
 		public:
 			ScriptSystem();
 			~ScriptSystem() throw();
 			// IScriptSystem
+			STDMETHODIMP get_ActiveBuffer(IBuffer** activeBuffer);
+			STDMETHODIMP get_ActiveWindow(IWindow** activeWindow);
 			STDMETHODIMP get_Buffers(IBufferList** buffers);
 			STDMETHODIMP get_Windows(IWindowList** windows);
 			STDMETHODIMP ExecuteFile(BSTR fileName, VARIANT **result);

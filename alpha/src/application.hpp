@@ -64,6 +64,26 @@ namespace alpha {
 		class ScriptSystem;
 	};
 
+	/// The status bar for the application main window.
+	class StatusBar : protected manah::win32::ui::StatusBar {
+	public:
+		void adjustPaneWidths();
+		bool create(HWND parent);
+		void hide();
+		using manah::win32::ui::StatusBar::isVisible;
+		void setText(const WCHAR* text, const LOGFONTW* font = 0);
+		void show();
+		void updateAll();
+		void updateCaretPosition();
+		void updateNarrowingStatus();
+		void updateOvertypeMode();
+		void updateTemporaryMacroRecordingStatus();
+	private:
+		ascension::length_t columnStartValue_;
+		manah::win32::Handle<HFONT, ::DeleteObject> font_;
+		manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
+	};
+
 	/// The application class of Alpha.
 	class Alpha : public manah::win32::ProfilableApplication<> {
 	public:
@@ -73,7 +93,7 @@ namespace alpha {
 		// 下位オブジェクト
 //		command::KeyboardMap& keyboardMap() throw();
 //		const command::KeyboardMap& keyboardMap() const throw();
-		manah::win32::ui::StatusBar& statusBar() /*throw()*/;
+		StatusBar& statusBar() /*throw()*/;
 		// attributes
 		static Alpha& instance();
 		void textEditorFont(LOGFONTW& font) const /*throw()*/;
@@ -137,7 +157,7 @@ namespace alpha {
 		// child windows
 		manah::win32::ui::Rebar rebar_;				// レバー
 		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
-		manah::win32::ui::StatusBar statusBar_;		// ステータスバー
+		StatusBar statusBar_;		// ステータスバー
 		std::auto_ptr<ui::SearchDialog> searchDialog_;
 //		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
 		// GDI objects
@@ -183,7 +203,7 @@ namespace alpha {
 	inline const ui::SearchDialog& Alpha::searchDialog() const throw() {return *searchDialog_;}
 
 	/// Returns the status bar.
-	inline manah::win32::ui::StatusBar& Alpha::statusBar() throw() {return statusBar_;}
+	inline StatusBar& Alpha::statusBar() /*throw()*/ {return statusBar_;}
 
 	/// Returns the font for text editors.
 	inline void Alpha::textEditorFont(LOGFONTW& font) const throw() {::GetObjectW(editorFont_, sizeof(LOGFONTW), &font);}

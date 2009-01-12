@@ -69,6 +69,11 @@
 #define IDC_BTN_SENDEOS                 1505
 #define IDC_BTN_UPDATE                  1506
 #define IDC_BTN_CLEAR                   1507
+#define IDC_BTN_FINDNEXT				1508
+#define IDC_BTN_FINDPREVIOUS			1509
+#define IDC_BTN_MARKALL					1510
+#define IDC_BTN_REPLACE					1511
+#define IDC_BTN_REPLACEALL				1512
 #define IDC_EDIT_FILENAME               1601
 #define IDC_EDIT_DESTPATH               1602
 #define IDC_EDIT_LINENUMBER             1603

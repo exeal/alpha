@@ -66,8 +66,6 @@ namespace alpha {
 		static std::wstring getDisplayName(const Buffer& buffer);
 		const manah::win32::ui::Menu& listMenu() const /*throw()*/;
 		std::size_t numberOfBuffers() const /*throw()*/;
-		void setActive(std::size_t index);
-		void setActive(const Buffer& buffer);
 		// operations
 		Buffer& addNew(const ascension::String& name = L"",
 			const std::string& encoding = "UTF-8",
@@ -88,15 +86,17 @@ namespace alpha {
 		bool saveSomeDialog();
 		bool saveAll(bool addToMRU = true);
 		void updateContextMenu();
+		// notification
+		void activeBufferChanged();
 	private:
 		BufferList();
-		void fireActiveBufferSwitched();
 		Buffer& getConcreteDocument(ascension::kernel::Document& document) const;
 		const Buffer& getConcreteDocument(const ascension::kernel::Document& document) const;
 		bool handleFileIOError(const ::WCHAR* fileName, bool forLoading, ascension::kernel::fileio::IOException::Type result);
 		static UINT_PTR CALLBACK openFileNameHookProc(::HWND window, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 		void recalculateBufferBarSize();
 		void resetResources();
+		void updateTitleBar();
 		// ascension.kernel.IDocumentStateListener
 		void documentAccessibleRegionChanged(const ascension::kernel::Document& document);
 		void documentModificationSignChanged(const ascension::kernel::Document& document);

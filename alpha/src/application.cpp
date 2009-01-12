@@ -33,12 +33,8 @@ using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace ascension::encoding;
 using namespace ascension::texteditor::commands;
-using namespace manah::win32;
-using namespace manah::win32::ui;
-using namespace manah::win32::gdi;
-using namespace manah::com;
+using namespace manah;
 using namespace std;
-using manah::toBoolean;
 
 
 // グローバル関数//////////////////////////////////////////////////////////
@@ -85,7 +81,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	if(::GetLastError() != ERROR_ALREADY_EXISTS || toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
 		::OleInitialize(0);	// STA に入る + 高水準サービスの初期化
 		atexit(&callOleUninitialize);
-		initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
+		win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
 		Alpha* application = new Alpha();
 		exitCode = application->run(nCmdShow);
 		delete application;
@@ -253,10 +249,10 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	case WM_MEASUREITEM:
 		onMeasureItem(static_cast<UINT>(wParam), *reinterpret_cast<::MEASUREITEMSTRUCT*>(lParam));
 		break;
-	case WM_MENUCHAR: {
-		auto_ptr<Menu> activePopup(new Menu(reinterpret_cast<HMENU>(lParam)));
-		return onMenuChar(LOWORD(wParam), HIWORD(wParam), *activePopup);
-	}
+//	case WM_MENUCHAR: {
+//		auto_ptr<Menu> activePopup(new Menu(reinterpret_cast<HMENU>(lParam)));
+//		return onMenuChar(LOWORD(wParam), HIWORD(wParam), *activePopup);
+//	}
 	case WM_MENUCOMMAND:
 		ambient::ui::handleMENUCOMMAND(wParam, lParam);
 		break;
@@ -357,7 +353,7 @@ bool Alpha::initInstance(int showCommand) {
 	if(!toBoolean(::RegisterClassExW(&wc)))
 		return false;
 
-	static Window applicationWindow;
+	static win32::ui::Window applicationWindow;
 
 /*	// コードページ名の読み込み
 	if(HRSRC resource = findResource(IDR_CODEPAGE_NAME_TABLE, RT_RCDATA)) {
@@ -394,14 +390,14 @@ bool Alpha::initInstance(int showCommand) {
 	}
 
 	// トップレベルウィンドウ
-	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<::HWND>(getHandle()),
-			DefaultWindowRect(), 0, /*WS_VISIBLE |*/ WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW))
+	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(getHandle()),
+			win32::ui::DefaultWindowRect(), 0, /*WS_VISIBLE |*/ WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW))
 		return false;
 	setMainWindow(applicationWindow);
 
 	// レバーの作成
-	::REBARINFO rbi = {sizeof(::REBARINFO), 0, 0};
-	rebar_.create(applicationWindow.getHandle(), DefaultWindowRect(), 0, 0,
+	REBARINFO rbi = {sizeof(REBARINFO), 0, 0};
+	rebar_.create(applicationWindow.getHandle(), win32::ui::DefaultWindowRect(), 0, 0,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
 		WS_EX_TOOLWINDOW);
 	rebar_.setBarInfo(rbi);
@@ -413,7 +409,7 @@ bool Alpha::initInstance(int showCommand) {
 	// エディタウィンドウの作成
 	// (WS_CLIPCHILDREN を付けると分割ウィンドウのサイズ変更枠が不可視になる...)
 	EditorWindows::instance().create(getMainWindow().getHandle(),
-		DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorWindow));
+		win32::ui::DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorWindow));
 	assert(EditorWindows::instance().isWindow());
 
 	// 一般設定の読み込み
@@ -433,8 +429,7 @@ bool Alpha::initInstance(int showCommand) {
 //	mruManager_->load();
 
 	// ステータスバーの作成
-	statusBar_.create(applicationWindow.getHandle(), DefaultWindowRect(), 0, IDC_STATUSBAR,
-		WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_BOTTOM | CCS_NODIVIDER | SBARS_SIZEGRIP | SBT_TOOLTIPS);
+	statusBar_.create(applicationWindow.getHandle());
 	updateStatusBarPaneSize();
 
 	// その他の初期化
@@ -452,7 +447,7 @@ bool Alpha::initInstance(int showCommand) {
 	if(!toBoolean(readIntegerProfile(L"View", L"visibleToolbar", true)))
 		rebar_.showBand(rebar_.idToIndex(IDC_TOOLBAR), false);
 	if(!toBoolean(readIntegerProfile(L"View", L"visibleStatusBar", true)))
-		statusBar_.show(SW_HIDE);
+		statusBar_.hide();
 	if(!toBoolean(readIntegerProfile(L"View", L"visibleBufferBar", true)))
 		rebar_.showBand(rebar_.idToIndex(IDC_BUFFERBAR), false);
 	applicationWindow.show(showCommand);
@@ -779,16 +774,6 @@ void Alpha::setFont(const LOGFONTW& font) {
 	// 等幅 <-> 可変幅で表記を変える必要がある
 	updateStatusBarPaneSize();
 }
-
-/**
- * ステータスバーの先頭のペインのテキストを設定する
- * @param text 設定するテキスト。@c null だと既定のテキスト
- * @param font フォント。@c null だと既定
- */
-void Alpha::setStatusText(const wchar_t* text, HFONT font /* = 0 */) {
-	statusBar_.setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
-	statusBar_.setFont(font);
-}
 #if 0
 /// メニューの初期化
 void Alpha::setupMenus() {
@@ -1037,45 +1022,6 @@ void Alpha::setupToolbar() {
 	rebar_.setBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
 }
 #endif
-void Alpha::updateStatusBarPaneSize() {
-	if(!statusBar_.isWindow())
-		return;
-	static const int ICON_WIDTH = 16;
-	int parts[5], borders[3];
-	statusBar_.getBorders(borders);
-	const int padding = (borders[0] + borders[2]) * 2 + 5;
-	::RECT rc;
-	statusBar_.getRect(rc);
-
-	ClientDC dc = statusBar_.getDC();
-	HFONT oldFont = static_cast<HFONT>(dc.selectObject(statusFont_));
-
-	parts[4] = rc.right - rc.left;
-	if(!getMainWindow().isZoomed())
-		parts[4] -= 20;
-	// ナローイング
-	parts[3] = parts[4] - ICON_WIDTH - padding;
-	// 上書き/挿入モード
-	const wstring overtypeMode = loadMessage(MSG_STATUS__OVERTYPE_MODE);
-	const wstring insertMode = loadMessage(MSG_STATUS__INSERT_MODE);
-	parts[2] = parts[3] - max(
-		dc.getTextExtent(overtypeMode.data(), static_cast<int>(overtypeMode.length())).cx,
-		dc.getTextExtent(insertMode.data(), static_cast<int>(insertMode.length())).cx) - padding;
-	// キーボードマクロ
-	parts[1] = parts[2] - ICON_WIDTH - padding;
-	// キャレット位置
-	wchar_t text[256];
-	static const wstring format(loadMessage(MSG_STATUS__CARET_POSITION));
-#if(_MSC_VER < 1400)
-	swprintf(text, format.c_str(), 88888888, 88888888, 88888888);
-#else
-	swprintf(text, MANAH_COUNTOF(text), format.c_str(), 88888888, 88888888, 88888888);
-#endif // _MSC_VER < 1400
-	parts[0] = parts[1] - dc.getTextExtent(text, static_cast<int>(wcslen(text))).cx - padding;
-
-	dc.selectObject(oldFont);
-	statusBar_.setParts(MANAH_COUNTOF(parts), parts);
-}
 
 /// @see WM_CLOSE
 bool Alpha::onClose() {
@@ -1094,6 +1040,7 @@ bool Alpha::onClose() {
 
 /// @see Window::onCommand
 bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
+	EditorWindows::instance().activePane().showBuffer(BufferList::instance().at(id));
 /*	const CommandID command = id + CMD_SPECIAL_START;
 //	if(::GetCurrentThreadId() != getMainWindow().getWindowThreadID())
 //		getMainWindow().sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
@@ -1142,7 +1089,7 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 		Menu::drawItem(drawItem, caption.get(), accel, 0, 0,
 			bufferList().bufferIcon(drawItem.itemID - (CMD_SPECIAL_BUFFERSSTART - CMD_SPECIAL_START)));
 	} else
-*/		Menu::drawItem(drawItem, 0);
+*/		win32::ui::Menu::drawItem(drawItem, 0);
 }
 
 /// @see WM_DROPFILES
@@ -1211,7 +1158,7 @@ void Alpha::onInitMenuPopup(HMENU menu, UINT, bool sysMenu) {
 void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 	if(mi.CtlType == ODT_MENU) {
 		if(mi.itemID == 0)
-			Menu::measureItem(mi, 0);
+			win32::ui::Menu::measureItem(mi, 0);
 /*		else {
 			const wstring s(commandManager_->menuName(mi.itemID + CMD_SPECIAL_START));
 			manah::AutoBuffer<wchar_t> caption(new wchar_t[s.length() + 1]);
@@ -1227,7 +1174,7 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 }
 
 /// @see WM_MENUCHAR
-LRESULT Alpha::onMenuChar(wchar_t ch, UINT flags, Menu& menu) {
+LRESULT Alpha::onMenuChar(wchar_t ch, UINT flags, win32::ui::Menu& menu) {
 	return menu.handleMenuChar(ch, flags);
 }
 
@@ -1357,14 +1304,14 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	}
 
 	// 非表示のボタンをメニュー項目に変換
-	PopupMenu popup;
-	::POINT pt = {chevron.rc.left, chevron.rc.bottom};
-	MANAH_AUTO_STRUCT_SIZE(::TBBUTTONINFOW, tbbi);
+	win32::ui::PopupMenu popup;
+	POINT pt = {chevron.rc.left, chevron.rc.bottom};
+	MANAH_AUTO_STRUCT_SIZE(TBBUTTONINFOW, tbbi);
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
 	for(; i < buttonCount; ++i) {
 		::SendMessageW(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
 		if(toBoolean(tbbi.fsStyle & TBSTYLE_SEP))
-			popup << Menu::SeparatorItem();
+			popup << win32::ui::Menu::SeparatorItem();
 /*		else
 			popup << Menu::StringItem(tbbi.idCommand, commandManager_->menuName(tbbi.idCommand + CMD_SPECIAL_START).c_str(),
 				(commandManager_->isEnabled(tbbi.idCommand + CMD_SPECIAL_START, true) ? MFS_ENABLED : MFS_DISABLED)
@@ -1495,4 +1442,149 @@ void Alpha::onTimer(UINT timerID) {
 		}
 */		getMainWindow().killTimer(ID_TIMER_MOUSEMOVE);
 	}
+}
+
+
+// StatusBar ////////////////////////////////////////////////////////////////
+
+StatusBar::StatusBar() : columnStartValue_(1) {
+}
+
+void StatusBar::adjustPaneWidths() {
+	if(!isWindow())
+		return;
+
+	static const int ICON_WIDTH = 16;
+	int parts[5], borders[3];
+	getBorders(borders);
+	const int padding = (borders[0] + borders[2]) * 2 + 5;
+	RECT rc;
+	getRect(rc);
+
+	win32::gdi::ClientDC dc = getDC();
+	MANAH_AUTO_STRUCT_SIZE(NONCLIENTMETRICSW, ncm);
+	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
+	HFONT font = ::CreateFontIndirectW(&ncm.lfStatusFont);
+	HFONT oldFont = static_cast<HFONT>(dc.selectObject(statusFont_));
+
+	parts[4] = rc.right - rc.left;
+	if(!Alpha::instance().getMainWindow().isZoomed())
+		parts[4] -= 20;
+	// ナローイング
+	parts[3] = parts[4] - ICON_WIDTH - padding;
+	// 上書き/挿入モード
+	const wstring overtypeMode = loadMessage(MSG_STATUS__OVERTYPE_MODE);
+	const wstring insertMode = loadMessage(MSG_STATUS__INSERT_MODE);
+	parts[2] = parts[3] - max(
+		dc.getTextExtent(overtypeMode.data(), static_cast<int>(overtypeMode.length())).cx,
+		dc.getTextExtent(insertMode.data(), static_cast<int>(insertMode.length())).cx) - padding;
+	// キーボードマクロ
+	parts[1] = parts[2] - ICON_WIDTH - padding;
+	// キャレット位置
+	wchar_t text[256];
+	static const wstring format(loadMessage(MSG_STATUS__CARET_POSITION));
+#if(_MSC_VER < 1400)
+	swprintf(text, format.c_str(), 88888888, 88888888, 88888888);
+#else
+	swprintf(text, MANAH_COUNTOF(text), format.c_str(), 88888888, 88888888, 88888888);
+#endif // _MSC_VER < 1400
+	parts[0] = parts[1] - dc.getTextExtent(text, static_cast<int>(wcslen(text))).cx - padding;
+
+	dc.selectObject(oldFont);
+	setParts(MANAH_COUNTOF(parts), parts);
+}
+
+bool StatusBar::create(HWND parent) {
+	return win32::ui::StatusBar::create(parent, win32::ui::DefaultWindowRect(), 0, IDC_STATUSBAR,
+		WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_BOTTOM | CCS_NODIVIDER | SBARS_SIZEGRIP | SBT_TOOLTIPS);
+}
+
+void StatusBar::hide() {
+	win32::ui::StatusBar::show(SW_HIDE);
+}
+
+/**
+ * Sets the text of the first pane.
+ * @param text the text to set. if this is @c null, the default text is used
+ * @param font the font to draw the text. if this is @c null, the default font is used
+ */
+void StatusBar::setText(const WCHAR* text, const LOGFONTW* font /* = 0 */) {
+	win32::ui::StatusBar::setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
+	if(font != 0) {
+		if(HFONT newFont = ::CreateFontIndirectW(font))
+			font_.reset(newFont);
+	} else
+		font_.reset();
+	setFont(font_.get());
+}
+
+void StatusBar::show() {
+	win32::ui::StatusBar::show(SW_SHOWNA);
+}
+
+void StatusBar::updateAll() {
+	updateCaretPosition();
+	updateNarrowingStatus();
+	updateOvertypeMode();
+	updateTemporaryMacroRecordingStatus();
+}
+
+void StatusBar::updateCaretPosition() {
+	if(isWindow()) {
+		const EditorView& viewer = EditorWindows::instance().activePane().visibleView();
+		// build the current position indication string
+		static AutoBuffer<WCHAR> message, messageFormat;
+		static size_t formatLength = 0;
+		if(messageFormat.get() == 0) {
+			void* messageBuffer;
+			if(0 != ::FormatMessageW(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+					::GetModuleHandle(0), MSG_STATUS__CARET_POSITION, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+					reinterpret_cast<wchar_t*>(&messageBuffer), 0, 0)) {
+				formatLength = wcslen(static_cast<WCHAR*>(messageBuffer));
+				messageFormat.reset(new WCHAR[formatLength + 1]);
+				wcscpy(messageFormat.get(), static_cast<WCHAR*>(messageBuffer));
+				::LocalFree(messageBuffer);
+			} else {
+				messageFormat.reset(new WCHAR[1]);
+				messageFormat[0] = 0;
+			}
+			message.reset(new WCHAR[formatLength + 100]);
+		}
+		if(formatLength != 0) {
+			length_t messageArguments[3];
+			MANAH_AUTO_STRUCT(SCROLLINFO, si);
+			viewer.getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
+			messageArguments[0] = viewer.caret().lineNumber() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
+			messageArguments[1] = viewer.caret().visualColumnNumber() + columnStartValue_;
+			messageArguments[2] = viewer.caret().columnNumber() + columnStartValue_;
+			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
+				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
+			// show in the status bar
+			setText(1, message.get());
+		}
+	}
+}
+
+void StatusBar::updateNarrowingStatus() {
+	if(isWindow() && hasFocus()) {
+		const bool narrow = EditorWindows::instance().activePane().visibleBuffer().isNarrowed();
+		Alpha& app = Alpha::instance();
+		if(narrowingIcon_.getHandle() == 0)
+			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
+//		setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
+		setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
+		setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
+	}
+}
+
+void StatusBar::updateOvertypeMode() {
+	if(isWindow())
+		setText(3, Alpha::instance().loadMessage(
+			EditorWindows::instance().activePane().visibleView().caret().isOvertypeMode() ?
+				MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
+}
+
+void StatusBar::updateTemporaryMacroRecordingStatus() {
+	// TODO: not implemented.
 }

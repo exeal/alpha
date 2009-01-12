@@ -9,7 +9,7 @@ namespace alpha {
 	class Buffer;
 
 	/// A view of a text editor.
-	class EditorView : public ascension::viewers::TextViewer, public ascension::kernel::fileio::IFilePropertyListener,
+	class EditorView : public ascension::viewers::TextViewer,
 		public ascension::kernel::IBookmarkListener, public ascension::searcher::IIncrementalSearchCallback {
 	public:
 		// constructors
@@ -26,22 +26,15 @@ namespace alpha {
 		void setVisualColumnStartValue() throw();
 		// operations
 		void beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
+		// notification
+		void updateStatusBar();
 
 	private:
 		void updateCurrentPositionOnStatusBar();
 		void updateNarrowingOnStatusBar();
 		void updateOvertypeModeOnStatusBar();
-		void updateTitleBar();
 		// ascension.viewers.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
-		// ascension.kernel.IDocumentStateListener (overrides)
-		void documentAccessibleRegionChanged(const ascension::kernel::Document& document);
-		void documentModificationSignChanged(const ascension::kernel::Document& document);
-		void documentPropertyChanged(const ascension::kernel::Document& document, const ascension::kernel::DocumentPropertyKey& key);
-		void documentReadOnlySignChanged(const ascension::kernel::Document& document);
-		// ascension.kernel.fileio.IFilePropertyListener
-		void fileEncodingChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
-		void fileNameChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
 		// ascension.viewers.ICaretListener (overrides)
 		void caretMoved(const ascension::viewers::Caret& self, const ascension::kernel::Region& oldRegion);
 		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
