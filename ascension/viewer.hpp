@@ -1045,7 +1045,7 @@ inline void TextViewer::removeViewportListener(IViewportListener& listener) {vie
  * @return the rate
  */
 inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
-	assertValidAsWindow(); return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
+	return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
 
 /**
  * Sets the caret shape provider.

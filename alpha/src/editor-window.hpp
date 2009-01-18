@@ -30,16 +30,13 @@ namespace alpha {
 		void updateStatusBar();
 
 	private:
-		void updateCurrentPositionOnStatusBar();
-		void updateNarrowingOnStatusBar();
-		void updateOvertypeModeOnStatusBar();
 		// ascension.viewers.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
 		// ascension.viewers.ICaretListener (overrides)
 		void caretMoved(const ascension::viewers::Caret& self, const ascension::kernel::Region& oldRegion);
 		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
 		void matchBracketsChanged(const ascension::viewers::Caret& self,
-				const std::pair<ascension::kernel::Position, ascension::kernel::Position>& oldPair, bool outsideOfView);
+			const std::pair<ascension::kernel::Position, ascension::kernel::Position>& oldPair, bool outsideOfView);
 		void overtypeModeChanged(const ascension::viewers::Caret& self);
 		void selectionShapeChanged(const ascension::viewers::Caret& self);
 		// ascension.searcher.IIncrementalSearchCallback
@@ -138,7 +135,7 @@ namespace alpha {
 		return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::document());}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorWindow::getWindow() const /*throw()*/ {return (visibleIndex_ != -1) ? views_[visibleIndex_]->getHandle() : 0;}
+	inline HWND EditorWindow::getWindow() const /*throw()*/ {return (visibleIndex_ != -1) ? views_[visibleIndex_]->get() : 0;}
 
 	/// Returns the number of the viewers.
 	inline std::size_t EditorWindow::numberOfViews() const /*throw()*/ {return views_.size();}

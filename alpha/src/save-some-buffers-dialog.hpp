@@ -28,9 +28,9 @@ namespace alpha {
 			void onOK(bool& continueDialog);
 		public:
 			std::vector<DirtyFile> files_;
-			manah::win32::ui::ListBox bufferListbox_;
-			manah::win32::ui::LinkLabel selectAllLink_;
-			manah::win32::ui::LinkLabel clearAllLink_;
+			manah::win32::Borrowed<manah::win32::ui::ListBox> bufferListbox_;
+			manah::win32::Borrowed<manah::win32::ui::LinkLabel> selectAllLink_;
+			manah::win32::Borrowed<manah::win32::ui::LinkLabel> clearAllLink_;
 			MANAH_BEGIN_CONTROL_BINDING()
 				MANAH_BIND_CONTROL(IDC_LIST_BUFFERS, bufferListbox_)
 			MANAH_END_CONTROL_BINDING()

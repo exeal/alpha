@@ -15,6 +15,7 @@
 #include <ascension/searcher.hpp>
 #include <manah/win32/module.hpp>
 #include <manah/win32/ui/common-controls.hpp>
+#include <manah/win32/gdi-object.hpp>
 #include <map>
 #include <sstream>
 
@@ -67,20 +68,24 @@ namespace alpha {
 	/// The status bar for the application main window.
 	class StatusBar : protected manah::win32::ui::StatusBar {
 	public:
+		StatusBar();
 		void adjustPaneWidths();
 		bool create(HWND parent);
+		using manah::win32::ui::StatusBar::get;
 		void hide();
 		using manah::win32::ui::StatusBar::isVisible;
-		void setText(const WCHAR* text, const LOGFONTW* font = 0);
+		using manah::win32::ui::StatusBar::setSimple;
+		void setText(const WCHAR* text, HFONT font = 0);
 		void show();
 		void updateAll();
 		void updateCaretPosition();
 		void updateNarrowingStatus();
 		void updateOvertypeMode();
 		void updateTemporaryMacroRecordingStatus();
+		using manah::win32::ui::StatusBar::use;
 	private:
 		ascension::length_t columnStartValue_;
-		manah::win32::Handle<HFONT, ::DeleteObject> font_;
+		manah::win32::gdi::Font font_;
 		manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
 	};
 
@@ -98,7 +103,6 @@ namespace alpha {
 		static Alpha& instance();
 		void textEditorFont(LOGFONTW& font) const /*throw()*/;
 		void setFont(const LOGFONTW& font);
-		void setStatusText(const wchar_t* text, HFONT font = 0);
 		// searchs
 		ui::SearchDialog& searchDialog() /*throw()*/;
 		const ui::SearchDialog& searchDialog() const /*throw()*/;
@@ -119,7 +123,6 @@ namespace alpha {
 		void saveINISettings();
 //		void	setupMenus();
 //		void	setupToolbar();
-		void updateStatusBarPaneSize();
 		void updateTitleBar();
 
 		// message handlers

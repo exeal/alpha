@@ -116,24 +116,24 @@ private:
 inline Module::Module(HMODULE handle) : Handle<HMODULE, 0>(handle), accelerators_(0) {
 	assert(handle != 0); ::GetModuleFileNameW(handle, fileName_, MAX_PATH);}
 
-inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type) {return ::FindResourceW(getHandle(), id.name, type);}
+inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type) {return ::FindResourceW(use(), id, type);}
 
-inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type, WORD language) {return ::FindResourceExW(getHandle(), id.name, type, language);}
+inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type, WORD language) {return ::FindResourceExW(use(), id, type, language);}
 
 inline const WCHAR* Module::getModuleFileName() const {return fileName_;}
 
-inline bool Module::loadAccelerators(const ResourceID& id) {return (accelerators_ = ::LoadAcceleratorsW(getHandle(), id.name)) != 0;}
+inline bool Module::loadAccelerators(const ResourceID& id) {return (accelerators_ = ::LoadAcceleratorsW(use(), id)) != 0;}
 
-inline HBITMAP Module::loadBitmap(const ResourceID& id) const {return ::LoadBitmapW(getHandle(), id.name);}
+inline HBITMAP Module::loadBitmap(const ResourceID& id) const {return ::LoadBitmapW(use(), id);}
 
-inline HCURSOR Module::loadCursor(const ResourceID& id) const {return ::LoadCursorW(getHandle(), id.name);}
+inline HCURSOR Module::loadCursor(const ResourceID& id) const {return ::LoadCursorW(use(), id);}
 
-inline HICON Module::loadIcon(const ResourceID& id) const {return ::LoadIconW(getHandle(), id.name);}
+inline HICON Module::loadIcon(const ResourceID& id) const {return ::LoadIconW(use(), id);}
 
 inline HANDLE Module::loadImage(const ResourceID& id, UINT type, int desiredWidth, int desiredHeight, UINT options) const {
-	return ::LoadImageW(getHandle(), id.name, type, desiredWidth, desiredHeight, options);}
+	return ::LoadImageW(use(), id, type, desiredWidth, desiredHeight, options);}
 
-inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenuW(getHandle(), id.name);}
+inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenuW(use(), id);}
 
 inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /* = MessageArguments() */) const {
 	void* buffer = 0;
@@ -144,7 +144,7 @@ inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /
 	for(std::list<std::wstring>::const_iterator insert(args.args_.begin()), e(args.args_.end()); insert != e; ++insert, ++i)
 		inserts[i] = const_cast<WCHAR*>(insert->c_str());
 	::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY,
-		getHandle(), id, 0, reinterpret_cast<WCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts.get()));
+		use(), id, 0, reinterpret_cast<WCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts.get()));
 	if(buffer != 0) {
 		std::wstring temp(static_cast<WCHAR*>(buffer));
 		::LocalFree(buffer);
@@ -153,13 +153,13 @@ inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /
 		return L"";
 }
 
-inline HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(getHandle(), resource);}
+inline HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(use(), resource);}
 
-inline HCURSOR Module::loadStandardCursor(const ResourceID& id) {return ::LoadCursorW(0, id.name);}
+inline HCURSOR Module::loadStandardCursor(const ResourceID& id) {return ::LoadCursorW(0, id);}
 
-inline HICON Module::loadStandardIcon(const ResourceID& id) {return ::LoadIconW(0, id.name);}
+inline HICON Module::loadStandardIcon(const ResourceID& id) {return ::LoadIconW(0, id);}
 
-inline int Module::loadString(UINT id, WCHAR* buffer, int maxLength) const {return ::LoadStringW(getHandle(), id, buffer, maxLength);}
+inline int Module::loadString(UINT id, WCHAR* buffer, int maxLength) const {return ::LoadStringW(use(), id, buffer, maxLength);}
 
 inline std::wstring Module::loadString(UINT id, const MessageArguments& args /* = MessageArguments() */) const {
 	WCHAR buffer[1024];
@@ -184,7 +184,7 @@ inline std::wstring Module::loadString(UINT id, const MessageArguments& args /* 
 	return temp;
 }
 
-inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(getHandle(), resource);}
+inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(use(), resource);}
 
 
 // Application //////////////////////////////////////////////////////////////

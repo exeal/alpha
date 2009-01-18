@@ -68,7 +68,7 @@ EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1
 EditorWindow::EditorWindow(const EditorWindow& rhs) {
 	for(size_t i = 0, c = rhs.views_.size(); i != c; ++i) {
 		auto_ptr<EditorView> newViewer(new EditorView(*rhs.views_[i]));
-		const bool succeeded = newViewer->create(rhs.views_[i]->getParent().getHandle(), DefaultWindowRect(),
+		const bool succeeded = newViewer->create(rhs.views_[i]->getParent().use(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		newViewer->setConfiguration(&rhs.views_[i]->configuration(), 0);
@@ -218,33 +218,34 @@ void EditorView::bookmarkCleared() {
 /// @see ICaretListener#caretMoved
 void EditorView::caretMoved(const Caret& self, const Region& oldRegion) {
 	TextViewer::caretMoved(self, oldRegion);
-	updateCurrentPositionOnStatusBar();
+	if(&EditorWindows::instance().activePane().visibleView() == this)
+		Alpha::instance().statusBar().updateCaretPosition();
 }
 
 /// @see TextViewer#drawIndicatorMargin
 void EditorView::drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect) {
 	if(document().bookmarker().isMarked(line)) {
 		// draw a bookmark indication mark
-		const ::COLORREF selColor = ::GetSysColor(COLOR_HIGHLIGHT);
-		const ::COLORREF selTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+		const COLORREF selColor = ::GetSysColor(COLOR_HIGHLIGHT);
+		const COLORREF selTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
 //		dc.fillSolidRect(rect, selectionColor);
-		::TRIVERTEX vertex[2];
+		TRIVERTEX vertex[2];
 		vertex[0].x = rect.left + 2;
 		vertex[0].y = (rect.top * 2 + rect.bottom) / 3;
-		vertex[0].Red = static_cast<::COLOR16>((selColor >> 0) & 0xFF) << 8;
-		vertex[0].Green = static_cast<::COLOR16>((selColor >> 8) & 0xFF) << 8;
-		vertex[0].Blue = static_cast<::COLOR16>((selColor >> 16) & 0xFF) << 8;
+		vertex[0].Red = static_cast<COLOR16>((selColor >> 0) & 0xFF) << 8;
+		vertex[0].Green = static_cast<COLOR16>((selColor >> 8) & 0xFF) << 8;
+		vertex[0].Blue = static_cast<COLOR16>((selColor >> 16) & 0xFF) << 8;
 		vertex[0].Alpha = 0x0000;
 		vertex[1].x = rect.right - 2;
 		vertex[1].y = (rect.top + rect.bottom * 2) / 3;
-		vertex[1].Red = static_cast<::COLOR16>((selTextColor >> 0) & 0xFF) << 8;
-		vertex[1].Green = static_cast<::COLOR16>((selTextColor >> 8) & 0xFF) << 8;
-		vertex[1].Blue = static_cast<::COLOR16>((selTextColor >> 16) & 0xFF) << 8;
+		vertex[1].Red = static_cast<COLOR16>((selTextColor >> 0) & 0xFF) << 8;
+		vertex[1].Green = static_cast<COLOR16>((selTextColor >> 8) & 0xFF) << 8;
+		vertex[1].Blue = static_cast<COLOR16>((selTextColor >> 16) & 0xFF) << 8;
 		vertex[1].Alpha = 0x0000;
-		::GRADIENT_RECT mesh;
+		GRADIENT_RECT mesh;
 		mesh.UpperLeft = 0;
 		mesh.LowerRight = 1;
-		::GradientFill(dc.getHandle(), vertex, MANAH_COUNTOF(vertex), &mesh, 1, GRADIENT_FILL_RECT_H);
+		::GradientFill(dc.get(), vertex, MANAH_COUNTOF(vertex), &mesh, 1, GRADIENT_FILL_RECT_H);
 	}
 }
 
@@ -256,7 +257,7 @@ void EditorView::incrementalSearchAborted(const Position& initialPosition) {
 
 /// @see IIncrementalSearchListener#incrementalSearchCompleted
 void EditorView::incrementalSearchCompleted() {
-	Alpha::instance().setStatusText(0);
+	Alpha::instance().statusBar().setText(0);
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchPatternChanged
@@ -269,7 +270,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 	if(result == IIncrementalSearchCallback::EMPTY_PATTERN) {
 		caret().select(isearch.matchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
-		app.setStatusText(app.loadMessage(messageID).c_str(),
+		app.statusBar().setText(app.loadMessage(messageID).c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
 		return;
 	} else if(result == IIncrementalSearchCallback::FOUND) {
@@ -285,7 +286,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 
 	ascension::String prompt(app.loadMessage(messageID, MARGS % isearch.pattern()));
 	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
-	app.setStatusText(prompt.c_str(),
+	app.statusBar().setText(prompt.c_str(),
 			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
 }
 
@@ -314,83 +315,17 @@ void EditorView::onKillFocus(HWND newWindow) {
 /// @see Window#onSetFocus
 void EditorView::onSetFocus(HWND oldWindow) {
 	TextViewer::onSetFocus(oldWindow);
-	updateCurrentPositionOnStatusBar();
-	updateNarrowingOnStatusBar();
-	updateOvertypeModeOnStatusBar();
 	BufferList::instance().activeBufferChanged();
 }
 
 /// @see ICaretListener#overtypeModeChanged
 void EditorView::overtypeModeChanged(const Caret&) {
-	updateOvertypeModeOnStatusBar();
+	if(&EditorWindows::instance().activePane().visibleView() == this)
+		Alpha::instance().statusBar().updateOvertypeMode();
 }
 
 /// @see ICaretListener#selectionShapeChanged
 void EditorView::selectionShapeChanged(const Caret&) {
-}
-
-void EditorView::updateCurrentPositionOnStatusBar() {
-	StatusBar& statusBar = Alpha::instance().statusBar();
-	if(statusBar.isWindow() && hasFocus()) {
-		// build the current position indication string
-		static manah::AutoBuffer<WCHAR> message, messageFormat;
-		static size_t formatLength = 0;
-		if(messageFormat.get() == 0) {
-			void* messageBuffer;
-			if(0 != ::FormatMessageW(
-					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-					::GetModuleHandle(0), MSG_STATUS__CARET_POSITION, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-					reinterpret_cast<wchar_t*>(&messageBuffer), 0, 0)) {
-				formatLength = wcslen(static_cast<WCHAR*>(messageBuffer));
-				messageFormat.reset(new WCHAR[formatLength + 1]);
-				wcscpy(messageFormat.get(), static_cast<::WCHAR*>(messageBuffer));
-				::LocalFree(messageBuffer);
-			} else {
-				messageFormat.reset(new WCHAR[1]);
-				messageFormat[0] = 0;
-			}
-			message.reset(new WCHAR[formatLength + 100]);
-		}
-		if(formatLength != 0) {
-			length_t messageArguments[3];
-			MANAH_AUTO_STRUCT(SCROLLINFO, si);
-			getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-			messageArguments[0] = caret().lineNumber() + verticalRulerConfiguration().lineNumbers.startValue;
-			messageArguments[1] = caret().visualColumnNumber() + visualColumnStartValue_;
-			messageArguments[2] = caret().columnNumber() + visualColumnStartValue_;
-			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
-				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
-			// show in the status bar
-			statusBar.setText(1, message.get());
-		}
-	}
-}
-
-void EditorView::updateNarrowingOnStatusBar() {
-	StatusBar& statusBar = Alpha::instance().statusBar();
-	if(statusBar.isWindow() && hasFocus()) {
-		const bool narrow = document().isNarrowed();
-		Alpha& app = Alpha::instance();
-		if(narrowingIcon_.getHandle() == 0)
-			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
-//		statusBar.setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
-		statusBar.setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
-		statusBar.setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
-	}
-}
-
-void EditorView::updateOvertypeModeOnStatusBar() {
-	StatusBar& statusBar = Alpha::instance().statusBar();
-	if(statusBar.isWindow() && hasFocus())
-		statusBar.setText(3,
-			Alpha::instance().loadMessage(caret().isOvertypeMode() ? MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
-}
-
-/// Updates the status bar text according to the current state.
-void EditorView::updateStatusBar() {
-	updateCurrentPositionOnStatusBar();
-	updateNarrowingOnStatusBar();
-	updateOvertypeModeOnStatusBar();
 }
 
 

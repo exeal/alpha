@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0500 */
-/* at Mon Jan 12 18:13:50 2009
+/* at Sun Jan 18 14:27:47 2009
  */
 /* Compiler settings for ..\src\ambient.idl:
     Oicf, W1, Zp8, env=Win32 (32b run)

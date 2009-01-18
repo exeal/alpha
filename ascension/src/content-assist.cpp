@@ -302,13 +302,12 @@ void ContentAssistant::CompletionProposalPopup::onSettingChange(UINT, const WCHA
  * @param font the font to be set. if set to @c null, default font will be selected
  */
 void ContentAssistant::CompletionProposalPopup::setFont(const HFONT font) {
-	assertValidAsWindow();
 	ListBox::setFont((font != 0) ? font : defaultFont_);
 }
 
 /// Updates the default font with system parameter.
 void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
-	MANAH_AUTO_STRUCT_SIZE(NONCLIENTMETRICSW, ncm);
+	manah::win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
 	if(defaultFont_ != 0 && isWindow() && getFont() == defaultFont_) {
@@ -634,7 +633,7 @@ void ContentAssistant::showPossibleCompletions() {
 void ContentAssistant::startPopup() {
 	if(proposalPopup_ == 0) {
 		proposalPopup_ = new CompletionProposalPopup(*this);
-		proposalPopup_->create(textViewer_->getHandle());
+		proposalPopup_->create(textViewer_->use());
 	} else
 		proposalPopup_->resetContent();
 

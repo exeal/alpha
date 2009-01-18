@@ -96,7 +96,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		WCHAR* data = new WCHAR[commandLineLength + 1 + MAX_PATH];
 		::GetCurrentDirectoryW(MAX_PATH, data);
 		wcscpy(data + MAX_PATH, commandLine);
-		MANAH_AUTO_STRUCT(COPYDATASTRUCT, cd);
+		win32::AutoZero<COPYDATASTRUCT> cd;
 		cd.lpData = data;
 		cd.cbData = static_cast<DWORD>(sizeof(WCHAR) * (commandLineLength + 1 + MAX_PATH));
 		::SendMessageW(existWnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
@@ -191,14 +191,14 @@ LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPA
 void Alpha::changeFont() {
 	EditorView& activeView = EditorWindows::instance().activePane().visibleView();
 	LOGFONTW font;
-	MANAH_AUTO_STRUCT_SIZE(CHOOSEFONTW, cf);
+	win32::AutoZeroSize<CHOOSEFONTW> cf;
 
 	textEditorFont(font);
-	cf.hwndOwner = getMainWindow().getHandle();
+	cf.hwndOwner = getMainWindow().use();
 	cf.lpLogFont = &font;
 	cf.lpfnHook = chooseFontHookProc;
 	cf.Flags = CF_APPLY | CF_ENABLEHOOK | CF_INITTOLOGFONTSTRUCT | CF_NOVERTFONTS | CF_SCREENFONTS;
-	cf.hInstance = getHandle();
+	cf.hInstance = use();
 
 	if(toBoolean(::ChooseFontW(&cf))) {
 		font.lfItalic = false;
@@ -338,16 +338,16 @@ bool Alpha::initInstance(int showCommand) {
 //	ambient::ScriptEngine::instance().installModules();
 
 	// ウィンドウクラスの登録
-	MANAH_AUTO_STRUCT_SIZE(::WNDCLASSEXW, wc);
+	win32::AutoZeroSize<WNDCLASSEXW> wc;
 	wc.style = CS_DBLCLKS/* | CS_DROPSHADOW*/;
 	wc.lpfnWndProc = Alpha::appWndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = getHandle();
+	wc.hInstance = use();
 	wc.hIcon = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
 	wc.hIconSm = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR));
 	wc.hCursor = loadStandardCursor(MAKEINTRESOURCEW(32512));	// IDC_ARROW
-	wc.hbrBackground = manah::win32::BrushHandleOrColor(COLOR_3DFACE).brush;
+	wc.hbrBackground = manah::win32::ui::BrushHandleOrColor(COLOR_3DFACE).get();
 	wc.lpszMenuName = MAKEINTRESOURCEW(IDR_MENU);
 	wc.lpszClassName = IDS_APPNAME;
 	if(!toBoolean(::RegisterClassExW(&wc)))
@@ -390,14 +390,14 @@ bool Alpha::initInstance(int showCommand) {
 	}
 
 	// トップレベルウィンドウ
-	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(getHandle()),
+	if(!applicationWindow.create(IDS_APPNAME, reinterpret_cast<HWND>(use()),
 			win32::ui::DefaultWindowRect(), 0, /*WS_VISIBLE |*/ WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW))
 		return false;
 	setMainWindow(applicationWindow);
 
 	// レバーの作成
 	REBARINFO rbi = {sizeof(REBARINFO), 0, 0};
-	rebar_.create(applicationWindow.getHandle(), win32::ui::DefaultWindowRect(), 0, 0,
+	rebar_.create(applicationWindow.use(), win32::ui::DefaultWindowRect(), 0, 0,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
 		WS_EX_TOOLWINDOW);
 	rebar_.setBarInfo(rbi);
@@ -408,7 +408,7 @@ bool Alpha::initInstance(int showCommand) {
 
 	// エディタウィンドウの作成
 	// (WS_CLIPCHILDREN を付けると分割ウィンドウのサイズ変更枠が不可視になる...)
-	EditorWindows::instance().create(getMainWindow().getHandle(),
+	EditorWindows::instance().create(getMainWindow().use(),
 		win32::ui::DefaultWindowRect(), WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE, 0, *(new EditorWindow));
 	assert(EditorWindows::instance().isWindow());
 
@@ -429,8 +429,8 @@ bool Alpha::initInstance(int showCommand) {
 //	mruManager_->load();
 
 	// ステータスバーの作成
-	statusBar_.create(applicationWindow.getHandle());
-	updateStatusBarPaneSize();
+	statusBar_.create(applicationWindow.use());
+	statusBar_.adjustPaneWidths();
 
 	// その他の初期化
 	applicationWindow.dragAcceptFiles(true);
@@ -458,7 +458,7 @@ bool Alpha::initInstance(int showCommand) {
 	parseCommandLine(cd, ::GetCommandLineW());
 
 	// ...
-	setStatusText(0);
+	statusBar_.setText(0);
 
 	// アウトプットウィンドウの作成
 //	outputWindow.create(getMainWindow());
@@ -479,7 +479,7 @@ bool Alpha::initInstance(int showCommand) {
 /// INI ファイルから設定を読み込む
 void Alpha::loadINISettings() {
 	// 表示に関する設定
-	MANAH_AUTO_STRUCT(::LOGFONTW, lf);
+	win32::AutoZero<LOGFONTW> lf;
 	if(!readStructureProfile(L"View", L"Font.default", lf)) {
 		lf.lfCharSet = ANSI_CHARSET;
 		lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
@@ -699,7 +699,7 @@ void Alpha::saveINISettings() {
 	wchar_t keyName[30];
 
 	// バーの可視性の保存
-	MANAH_AUTO_STRUCT(::REBARBANDINFOW, rbbi);
+	win32::AutoZero<REBARBANDINFOW> rbbi;
 	rbbi.fMask = RBBIM_STYLE;
 	rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
 	writeIntegerProfile(L"View", L"visibleToolbar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
@@ -772,7 +772,7 @@ void Alpha::setFont(const LOGFONTW& font) {
 	writeStructureProfile(L"View", L"Font.default", lf);
 
 	// 等幅 <-> 可変幅で表記を変える必要がある
-	updateStatusBarPaneSize();
+	statusBar_.adjustPaneWidths();
 }
 #if 0
 /// メニューの初期化
@@ -1285,8 +1285,8 @@ bool Alpha::onNotify(int id, NMHDR& nmhdr) {
 
 /// RBN_CHEVRONPUSHED の処理
 void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
-	MANAH_AUTO_STRUCT_SIZE(::REBARBANDINFOW, rbi);
-	::RECT bandRect;
+	win32::AutoZeroSize<REBARBANDINFOW> rbi;
+	RECT bandRect;
 
 	// ツールバーを得る (バッファバーでも共通のコードが使える)
 	rebar_.getRect(chevron.uBand, bandRect);
@@ -1296,7 +1296,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 
 	// 非表示のボタンまで進む
 	long i;
-	::RECT buttonRect;
+	RECT buttonRect;
 	for(i = 0; i < buttonCount; ++i) {
 		::SendMessageW(rbi.hwndChild, TB_GETITEMRECT, i, reinterpret_cast<LPARAM>(&buttonRect));
 		if(buttonRect.right + bandRect.left > chevron.rc.left)
@@ -1306,7 +1306,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 	// 非表示のボタンをメニュー項目に変換
 	win32::ui::PopupMenu popup;
 	POINT pt = {chevron.rc.left, chevron.rc.bottom};
-	MANAH_AUTO_STRUCT_SIZE(TBBUTTONINFOW, tbbi);
+	win32::AutoZeroSize<TBBUTTONINFOW> tbbi;
     tbbi.dwMask = TBIF_BYINDEX | TBIF_COMMAND | TBIF_STYLE;
 	for(; i < buttonCount; ++i) {
 		::SendMessageW(rbi.hwndChild, TB_GETBUTTONINFOW, i, reinterpret_cast<LPARAM>(&tbbi));
@@ -1318,7 +1318,7 @@ void Alpha::onRebarChevronPushed(const ::NMREBARCHEVRON& chevron) {
 				| ((commandManager_->isChecked(tbbi.idCommand + CMD_SPECIAL_START)) ? MFS_CHECKED : 0));
 */	}
 	rebar_.clientToScreen(pt);
-	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().getHandle());
+	popup.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, getMainWindow().use());
 }
 
 /// @see WM_SETCURSOR
@@ -1327,7 +1327,7 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 	RECT clientRect, statusBarRect;
 
 	getMainWindow().getClientRect(clientRect);
-	if(statusBar_.isVisible())	statusBar_.getRect(statusBarRect);
+	if(statusBar_.isVisible())	::GetWindowRect(statusBar_.get(), &statusBarRect);
 	else						::SetRect(&statusBarRect, 0, 0, 0, 0);
 	::GetCursorPos(&pt);
 	getMainWindow().screenToClient(pt);
@@ -1343,12 +1343,12 @@ bool Alpha::onSetCursor(HWND hWnd, UINT nHitTest, UINT message) {
 
 /// @see WM_SETTINGCHNAGE
 void Alpha::onSettingChange(UINT, const wchar_t*) {
-	MANAH_AUTO_STRUCT_SIZE(::NONCLIENTMETRICSW, ncm);
+	win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
 	ascension::updateSystemSettings();
 	::DeleteObject(statusFont_);
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 	statusFont_ = ::CreateFontIndirectW(&ncm.lfStatusFont);
-	updateStatusBarPaneSize();
+	statusBar_.adjustPaneWidths();
 }
 
 /**
@@ -1367,14 +1367,14 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 		cy = rect.bottom - rect.top;
 	}
 
-	if(statusBar_.isVisible()) {
-		statusBar_.sendMessage(WM_SIZE, cx, cy);
-		statusBar_.getRect(statusBarRect);
-		updateStatusBarPaneSize();
+	if(statusBar_.get() != 0 && statusBar_.isVisible()) {
+		::SendMessage(statusBar_.get(), WM_SIZE, cx, cy);
+		::GetWindowRect(statusBar_.get(), &statusBarRect);
+		statusBar_.adjustPaneWidths();
 	} else
 		::SetRect(&statusBarRect, 0, 0, 0, 0);
 
-	if(rebar_.isVisible()) {
+	if(rebar_.get() != 0 && rebar_.isVisible()) {
 		rebar_.sendMessage(WM_SIZE, cx, cy);
 		rebar_.getRect(rebarRect);
 //		toolbar_.sendMessage(WM_SIZE, cx, rebarRect.bottom - rebarRect.top - 2);
@@ -1385,7 +1385,7 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 	editorRect.top = rebarRect.bottom - rebarRect.top;
 	editorRect.right = cx;
 	editorRect.bottom = cy
-		- (statusBar_.isVisible() ? statusBarRect.bottom - statusBarRect.top : 0);
+		- ((statusBar_.get() != 0 && statusBar_.isVisible()) ? statusBarRect.bottom - statusBarRect.top : 0);
 //	if(outputWindow.isWindow() && outputWindow.isVisible())
 //		editorRect.bottom -= outputWndHeight_;
 	if(EditorWindows::instance().isWindow())
@@ -1401,9 +1401,9 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 void Alpha::onTimer(UINT timerID) {
 	if(timerID == ID_TIMER_QUERYCOMMAND && BufferList::instance().numberOfBuffers() != 0) {
 		// ツールバーアイテムの有効化/無効化
-		if(toolbar_.isVisible()) {
+		if(toolbar_.isWindow() && toolbar_.isVisible()) {
 			const size_t buttonCount = toolbar_.getButtonCount();
-			::TBBUTTON button;
+			TBBUTTON button;
 
 //			toolbar_.lockWindowUpdate();	// これがあるとツールバーがスクリーン外にある時に画面がちらつく
 			for(size_t i = 0; i < buttonCount; ++i) {
@@ -1461,20 +1461,21 @@ void StatusBar::adjustPaneWidths() {
 	RECT rc;
 	getRect(rc);
 
+	const Alpha& app = Alpha::instance();
 	win32::gdi::ClientDC dc = getDC();
-	MANAH_AUTO_STRUCT_SIZE(NONCLIENTMETRICSW, ncm);
+	win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 	HFONT font = ::CreateFontIndirectW(&ncm.lfStatusFont);
-	HFONT oldFont = static_cast<HFONT>(dc.selectObject(statusFont_));
+	HFONT oldFont = static_cast<HFONT>(dc.selectObject(font_.get()));
 
 	parts[4] = rc.right - rc.left;
-	if(!Alpha::instance().getMainWindow().isZoomed())
+	if(!app.getMainWindow().isZoomed())
 		parts[4] -= 20;
 	// ナローイング
 	parts[3] = parts[4] - ICON_WIDTH - padding;
 	// 上書き/挿入モード
-	const wstring overtypeMode = loadMessage(MSG_STATUS__OVERTYPE_MODE);
-	const wstring insertMode = loadMessage(MSG_STATUS__INSERT_MODE);
+	const wstring overtypeMode = app.loadMessage(MSG_STATUS__OVERTYPE_MODE);
+	const wstring insertMode = app.loadMessage(MSG_STATUS__INSERT_MODE);
 	parts[2] = parts[3] - max(
 		dc.getTextExtent(overtypeMode.data(), static_cast<int>(overtypeMode.length())).cx,
 		dc.getTextExtent(insertMode.data(), static_cast<int>(insertMode.length())).cx) - padding;
@@ -1482,7 +1483,7 @@ void StatusBar::adjustPaneWidths() {
 	parts[1] = parts[2] - ICON_WIDTH - padding;
 	// キャレット位置
 	wchar_t text[256];
-	static const wstring format(loadMessage(MSG_STATUS__CARET_POSITION));
+	static const wstring format(app.loadMessage(MSG_STATUS__CARET_POSITION));
 #if(_MSC_VER < 1400)
 	swprintf(text, format.c_str(), 88888888, 88888888, 88888888);
 #else
@@ -1508,10 +1509,13 @@ void StatusBar::hide() {
  * @param text the text to set. if this is @c null, the default text is used
  * @param font the font to draw the text. if this is @c null, the default font is used
  */
-void StatusBar::setText(const WCHAR* text, const LOGFONTW* font /* = 0 */) {
+void StatusBar::setText(const WCHAR* text, HFONT font /* = 0 */) {
 	win32::ui::StatusBar::setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
 	if(font != 0) {
-		if(HFONT newFont = ::CreateFontIndirectW(font))
+		LOGFONTW lf;
+		if(::GetObjectW(font, sizeof(LOGFONTW), &lf) == 0)
+			throw win32::InvalidHandleException("font");
+		if(HFONT newFont = ::CreateFontIndirectW(&lf))
 			font_.reset(newFont);
 	} else
 		font_.reset();
@@ -1553,7 +1557,7 @@ void StatusBar::updateCaretPosition() {
 		}
 		if(formatLength != 0) {
 			length_t messageArguments[3];
-			MANAH_AUTO_STRUCT(SCROLLINFO, si);
+			win32::AutoZero<SCROLLINFO> si;
 			viewer.getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
 			messageArguments[0] = viewer.caret().lineNumber() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
 			messageArguments[1] = viewer.caret().visualColumnNumber() + columnStartValue_;
@@ -1561,7 +1565,7 @@ void StatusBar::updateCaretPosition() {
 			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
 				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
 			// show in the status bar
-			setText(1, message.get());
+			win32::ui::StatusBar::setText(1, message.get());
 		}
 	}
 }
@@ -1570,17 +1574,17 @@ void StatusBar::updateNarrowingStatus() {
 	if(isWindow() && hasFocus()) {
 		const bool narrow = EditorWindows::instance().activePane().visibleBuffer().isNarrowed();
 		Alpha& app = Alpha::instance();
-		if(narrowingIcon_.getHandle() == 0)
+		if(narrowingIcon_.get() == 0)
 			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
 //		setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
-		setIcon(4, narrow ? narrowingIcon_.getHandle() : 0);
+		setIcon(4, narrow ? narrowingIcon_.use() : 0);
 	}
 }
 
 void StatusBar::updateOvertypeMode() {
 	if(isWindow())
-		setText(3, Alpha::instance().loadMessage(
+		win32::ui::StatusBar::setText(3, Alpha::instance().loadMessage(
 			EditorWindows::instance().activePane().visibleView().caret().isOvertypeMode() ?
 				MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
 }
