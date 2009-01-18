@@ -226,9 +226,9 @@ auto_ptr<Run> Run::split(DC& dc, length_t at) {
 		bind2nd(minus<WORD>(), cl[!rtl ? target.firstCharacter : (target.lastCharacter - 1)]));
 
 	// update placements
-	HRESULT hr = ::ScriptPlace(dc.getHandle(), &shared->cache, glyphs(), numberOfGlyphs(),
+	HRESULT hr = ::ScriptPlace(dc.use(), &shared->cache, glyphs(), numberOfGlyphs(),
 		visualAttributes(), &analysis, const_cast<int*>(advances()), const_cast<GOFFSET*>(glyphOffsets()), &width);
-	hr = ::ScriptPlace(dc.getHandle(), &shared->cache, following->glyphs(), following->numberOfGlyphs(),
+	hr = ::ScriptPlace(dc.get(), &shared->cache, following->glyphs(), following->numberOfGlyphs(),
 		following->visualAttributes(), &analysis, const_cast<int*>(following->advances()),
 		const_cast<GOFFSET*>(following->glyphOffsets()), &following->width);
 
@@ -316,7 +316,7 @@ namespace {
 	inline void drawDecorationLines(DC& dc, const TextStyle& style, COLORREF foregroundColor, int x, int y, int width, int height) {
 		if(style.underlineStyle != NO_UNDERLINE || style.strikeout) {
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
-			if(getDecorationLineMetrics(dc.getHandle(), &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
+			if(getDecorationLineMetrics(dc.get(), &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
 				if(style.underlineStyle != NO_UNDERLINE) {
 					HPEN oldPen = dc.selectObject(createPen(style.underlineColor.isValid() ?
@@ -692,7 +692,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.setTextColor(foregroundColor);
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
-					hr = ::ScriptTextOut(dc.getHandle(), &run.shared->cache, x, y + lip_.getFontSelector().ascent(),
+					hr = ::ScriptTextOut(dc.get(), &run.shared->cache, x, y + lip_.getFontSelector().ascent(),
 						0, &runRect, &run.analysis, 0, 0, run.glyphs(), run.numberOfGlyphs(),
 						run.advances(), run.justifiedAdvances(), run.glyphOffsets());
 				}
@@ -707,7 +707,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		if(selection != 0) {
 			x = startX;
 			clipRegion.setRect(clipRect);
-			dc.selectClipRgn(clipRegion.getHandle(), RGN_XOR);
+			dc.selectClipRgn(clipRegion.get(), RGN_XOR);
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
 				// text
@@ -717,7 +717,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.setTextColor(selection->color.foreground.asCOLORREF());
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
-					hr = ::ScriptTextOut(dc.getHandle(), &run.shared->cache, x, y + lip_.getFontSelector().ascent(),
+					hr = ::ScriptTextOut(dc.get(), &run.shared->cache, x, y + lip_.getFontSelector().ascent(),
 						0, &runRect, &run.analysis, 0, 0, run.glyphs(), run.numberOfGlyphs(),
 						run.advances(), run.justifiedAdvances(), run.glyphOffsets());
 				}
@@ -730,7 +730,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// special character substitution
 		if(specialCharacterRenderer != 0) {
 			// white spaces and C0/C1 control characters
-			dc.selectClipRgn(clipRegion.getHandle());
+			dc.selectClipRgn(clipRegion.get());
 			x = startX;
 			int dx;
 			for(size_t i = firstRun; i < lastRun; ++i) {
@@ -940,8 +940,8 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	const Presentation& presentation = lip_.getPresentation();
 
 	// configure
-	MANAH_AUTO_STRUCT(SCRIPT_CONTROL, control);
-	MANAH_AUTO_STRUCT(SCRIPT_STATE, initialState);
+	AutoZero<SCRIPT_CONTROL> control;
+	AutoZero<SCRIPT_STATE> initialState;
 	initialState.uBidiLevel = (c.orientation == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
@@ -1376,7 +1376,7 @@ namespace {
 	HRESULT buildGlyphs(const DC& dc, const Char* text, Run& run, size_t& expectedNumberOfGlyphs) /*throw()*/ {
 		while(true) {
 			int numberOfGlyphs;
-			HRESULT hr = ::ScriptShape(dc.getHandle(), &run.shared->cache, text,
+			HRESULT hr = ::ScriptShape(dc.get(), &run.shared->cache, text,
 				static_cast<int>(run.length()), static_cast<int>(expectedNumberOfGlyphs), &run.analysis,
 				run.shared->glyphs.get(), run.shared->clusters.get(), run.shared->visualAttributes.get(), &numberOfGlyphs);
 			if(SUCCEEDED(hr))
@@ -1407,7 +1407,7 @@ namespace {
 	inline int countMissingGlyphs(const DC& dc, Run& run) /*throw()*/ {
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-		if(FAILED(ScriptGetFontProperties(dc.getHandle(), &run.shared->cache, &fp)))
+		if(FAILED(ScriptGetFontProperties(dc.get(), &run.shared->cache, &fp)))
 			return 0;	// can't handle
 		// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 		int result = 0;
@@ -1443,7 +1443,7 @@ namespace {
 		assert(run.shared->numberOfReferences == 1);
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-		if(FAILED(::ScriptGetFontProperties(dc.getHandle(), &run.shared->cache, &fp)))
+		if(FAILED(::ScriptGetFontProperties(dc.get(), &run.shared->cache, &fp)))
 			fp.wgDefault = 0;	// hmm...
 		run.setNumberOfGlyphs(static_cast<int>(run.length()));
 		fill_n(run.shared->glyphs.get(), run.numberOfGlyphs(), fp.wgDefault);
@@ -1737,7 +1737,7 @@ void LineLayout::shape() /*throw()*/ {
 					if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xE0100))) {
 						// found valid IVS -> apply OpenType feature tag to obtain the variant
 						// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
-						hr = uspLib->get<0>()(dc->getHandle(), &run->shared->cache, &run->analysis,
+						hr = uspLib->get<0>()(dc->get(), &run->shared->cache, &run->analysis,
 							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, run->glyphs()[0], run->shared->glyphs.get());
 						lastIVSProcessedRun = run;
 					}
@@ -1748,10 +1748,10 @@ void LineLayout::shape() /*throw()*/ {
 				// last character in the previous run and first character in this run are an IVS
 				// => so, remove glyphs correspond to the first character
 				WORD blankGlyph;
-				if(S_OK != (hr = ::ScriptGetCMap(dc->getHandle(), &run->shared->cache, L"\x0020", 1, 0, &blankGlyph))) {
+				if(S_OK != (hr = ::ScriptGetCMap(dc->get(), &run->shared->cache, L"\x0020", 1, 0, &blankGlyph))) {
 					SCRIPT_FONTPROPERTIES fp;
 					fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-					if(FAILED(::ScriptGetFontProperties(dc->getHandle(), &run->shared->cache, &fp)))
+					if(FAILED(::ScriptGetFontProperties(dc->get(), &run->shared->cache, &fp)))
 						fp.wgBlank = 0;	// hmm...
 					blankGlyph = fp.wgBlank;
 				}
@@ -1765,7 +1765,7 @@ void LineLayout::shape() /*throw()*/ {
 
 		run->shared->advances.reset(new int[run->numberOfGlyphs()]);
 		run->shared->glyphOffsets.reset(new GOFFSET[run->numberOfGlyphs()]);
-		hr = ::ScriptPlace(dc->getHandle(), &run->shared->cache, run->glyphs(), run->numberOfGlyphs(),
+		hr = ::ScriptPlace(dc->get(), &run->shared->cache, run->glyphs(), run->numberOfGlyphs(),
 			run->visualAttributes(), &run->analysis, run->shared->advances.get(), run->shared->glyphOffsets.get(), &run->width);
 
 		// query widths of C0 and C1 controls in this logical line
@@ -1782,7 +1782,7 @@ void LineLayout::shape() /*throw()*/ {
 						run->shared->advances[i] = width;
 						if(fp.cBytes == 0) {
 							fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-							::ScriptGetFontProperties(dc->getHandle(), &run->shared->cache, &fp);
+							::ScriptGetFontProperties(dc->get(), &run->shared->cache, &fp);
 						}
 						run->shared->glyphs[i] = fp.wgBlank;
 					}
@@ -2744,7 +2744,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 #define ASCENSION_SELECT_INSTALLED_FONT(charset, fontname)		\
 	lf.lfCharSet = charset;										\
 	wcscpy(lf.lfFaceName, fontname);							\
-	::EnumFontFamiliesExW(dc.getHandle(), &lf,					\
+	::EnumFontFamiliesExW(dc.get(), &lf,						\
 		reinterpret_cast<FONTENUMPROCW>(checkFontInstalled),	\
 		reinterpret_cast<LPARAM>(&installed), 0);				\
 	if(installed) {												\
@@ -3047,7 +3047,7 @@ TextRenderer::~TextRenderer() /*throw()*/ {
 /// @see FontSelector#fontChanged
 void TextRenderer::fontChanged() {
 	invalidate();
-	if(enablesDoubleBuffering_ && memoryBitmap_.getHandle() != 0) {
+	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
 		BITMAP b;
 		memoryBitmap_.getBitmap(b);
 		if(b.bmHeight != calculateMemoryBitmapSize(linePitch()))
@@ -3136,15 +3136,15 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	if(memoryDC_.get() == 0)		
 		self.memoryDC_ = deviceContext()->createCompatibleDC();
 	const int horizontalResolution = calculateMemoryBitmapSize(dc.getDeviceCaps(HORZRES));
-	if(memoryBitmap_.getHandle() != 0) {
+	if(memoryBitmap_.get() != 0) {
 		BITMAP b;
 		memoryBitmap_.getBitmap(b);
 		if(b.bmWidth < horizontalResolution)
 			self.memoryBitmap_.reset();
 	}
-	if(memoryBitmap_.getHandle() == 0)
+	if(memoryBitmap_.get() == 0)
 		self.memoryBitmap_ = Bitmap::createCompatibleBitmap(*getDeviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
-	memoryDC_->selectObject(memoryBitmap_.getHandle());
+	memoryDC_->selectObject(memoryBitmap_.use());
 
 	const long left = max(paintRect.left, clipRect.left), right = min(paintRect.right, clipRect.right);
 	x -= left;
@@ -3154,7 +3154,7 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	for(; subline < layout.numberOfSublines() && offsetedPaintRect.bottom >= 0;
 			++subline, y += dy, offsetedPaintRect.offset(0, -dy), offsetedClipRect.offset(0, -dy)) {
 		layout.draw(subline, *memoryDC_, x, 0, offsetedPaintRect, offsetedClipRect, selection);
-		dc.bitBlt(left, y, right - left, dy, memoryDC_->getHandle(), 0, 0, SRCCOPY);
+		dc.bitBlt(left, y, right - left, dy, memoryDC_->get(), 0, 0, SRCCOPY);
 	}
 }
 
@@ -3187,7 +3187,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(width() == 0)
 		return;
 
-	const RECT& paintRect = dc.getPaintStruct().rcPaint;
+	const RECT& paintRect = dc.paintStruct().rcPaint;
 	const TextRenderer& renderer = viewer_.textRenderer();
 	RECT clientRect;
 	viewer_.getClientRect(clientRect);
@@ -3209,10 +3209,10 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(enablesDoubleBuffering_) {
 		if(memoryDC_.get() == 0)
 			memoryDC_ = viewer_.getDC().createCompatibleDC();
-		if(memoryBitmap_.getHandle() == 0)
+		if(memoryBitmap_.get() == 0)
 			memoryBitmap_ = Bitmap::createCompatibleBitmap(dc,
 				width(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
-		memoryDC_->selectObject(memoryBitmap_.getHandle());
+		memoryDC_->selectObject(memoryBitmap_.get());
 		dcex = memoryDC_.get();
 		left = 0;
 	} else {
@@ -3225,8 +3225,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(configuration_.indicatorMargin.visible) {
 		// インジケータマージンの境界線と内側
 		const int borderX = alignLeft ? left + imWidth - 1 : right - imWidth;
-		HPEN oldPen = dcex->selectObject(indicatorMarginPen_.getHandle());
-		HBRUSH oldBrush = dcex->selectObject(indicatorMarginBrush_.getHandle());
+		HPEN oldPen = dcex->selectObject(indicatorMarginPen_.use());
+		HBRUSH oldBrush = dcex->selectObject(indicatorMarginBrush_.use());
 		dcex->patBlt(alignLeft ? left : borderX + 1, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
 		dcex->moveTo(borderX, paintRect.top);
 		dcex->lineTo(borderX, paintRect.bottom);
@@ -3235,11 +3235,11 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 	if(configuration_.lineNumbers.visible) {
 		// background of the line numbers
-		HBRUSH oldBrush = dcex->selectObject(lineNumbersBrush_.getHandle());
+		HBRUSH oldBrush = dcex->selectObject(lineNumbersBrush_.use());
 		dcex->patBlt(alignLeft ? left + imWidth : left, paintRect.top, right - imWidth, paintRect.bottom, PATCOPY);
 		// border of the line numbers
 		if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
-			HPEN oldPen = dcex->selectObject(lineNumbersPen_.getHandle());
+			HPEN oldPen = dcex->selectObject(lineNumbersPen_.use());
 			const int x = (alignLeft ? right : left + 1) - configuration_.lineNumbers.borderWidth;
 			dcex->moveTo(x, 0/*paintRect.top*/);
 			dcex->lineTo(x, paintRect.bottom);
@@ -3327,7 +3327,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 	if(enablesDoubleBuffering_)
 		dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - width(), paintRect.top,
-			right - left, paintRect.bottom - paintRect.top, memoryDC_->getHandle(), 0, paintRect.top, SRCCOPY);
+			right - left, paintRect.bottom - paintRect.top, memoryDC_->get(), 0, paintRect.top, SRCCOPY);
 	dc.restore(savedCookie);
 }
 
@@ -3341,8 +3341,8 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 			ClientDC dc = viewer_.getDC();
 			HFONT oldFont = dc.selectObject(viewer_.textRenderer().font());
 			SCRIPT_STRING_ANALYSIS ssa;
-			MANAH_AUTO_STRUCT(SCRIPT_CONTROL, sc);
-			MANAH_AUTO_STRUCT(SCRIPT_STATE, ss);
+			AutoZero<SCRIPT_CONTROL> sc;
+			AutoZero<SCRIPT_STATE> ss;
 			HRESULT hr;
 			switch(configuration_.lineNumbers.digitSubstitution) {
 			case DST_CONTEXTUAL:
@@ -3356,7 +3356,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 				break;
 			}
 			dc.setTextCharacterExtra(0);
-			hr = ::ScriptStringAnalyse(dc.getHandle(), L"0123456789", 10,
+			hr = ::ScriptStringAnalyse(dc.use(), L"0123456789", 10,
 				10 * 3 / 2 + 16, -1, SSA_FALLBACK | SSA_GLYPHS | SSA_LINK, 0, &sc, &ss, 0, 0, 0, &ssa);
 			dc.selectObject(oldFont);
 			int glyphWidths[10];

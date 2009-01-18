@@ -1,5 +1,7 @@
-// window.hpp
-// (c) 2002-2008
+/**
+ * @file window.hpp
+ * @date 2002-2009
+ */
 
 #ifndef MANAH_WINDOW_HPP
 #define MANAH_WINDOW_HPP
@@ -30,19 +32,59 @@ namespace manah {
 namespace win32 {
 namespace ui {
 
-struct DefaultWindowRect : public ::tagRECT {
-	DefaultWindowRect() {left = top = right = bottom = CW_USEDEFAULT;}
-};
+		/// Makes a menu handle parameter from either a menu handle or numeric identifier.
+		class MenuHandleOrControlID {
+		public:
+			/// Constructor takes a menu handle.
+			MenuHandleOrControlID(HMENU handle) /*throw()*/ : handle_(handle) {}
+			/// Constructor takes a numeric identifier.
+			MenuHandleOrControlID(UINT_PTR id) /*throw()*/ : handle_(reinterpret_cast<HMENU>(id)) {}
+			/// Returns the menu handle.
+			HMENU get() const /*throw()*/ {return handle_;}
+		private:
+			HMENU handle_;
+		};
+
+		/// Makes a brush handle parameter from either a brush handle or @c COLORREF value. 
+		class BrushHandleOrColor {
+		public:
+			/// Constructor makes @c null @c HBRUSH value.
+			BrushHandleOrColor() /*throw()*/ : brush_(0) {}
+			/// Constructor takes a brush handle.
+			BrushHandleOrColor(HBRUSH handle) /*throw()*/ : brush_(handle) {}
+			/// Constructor takes a @c COLORREF value used to make the brush handle.
+			BrushHandleOrColor(COLORREF color) /*throw()*/ : brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(color + 1))) {}
+			/// Returns the brush handle.
+			HBRUSH get() const /*throw()*/ {return brush_;}
+		private:
+			HBRUSH brush_;
+		};
+
+		/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
+		class CursorHandleOrID {
+		public:
+			/// Constructor makes @c null @c HCURSOR value.
+			CursorHandleOrID() /*throw()*/ : cursor_(0) {}
+			/// Constructor takes a cursor handle.
+			CursorHandleOrID(HCURSOR handle) /*throw()*/ : cursor_(handle) {}
+			/// Constructor takes a numeric identifier for system cursor.
+			CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(0, systemCursorID)) {}
+			/// Returns the cursor handle.
+			HCURSOR get() const /*throw()*/ {return cursor_;}
+		private:
+			HCURSOR cursor_;
+		};
+
+		/// Makes a rectangle whose all member are @c CW_USEDEFAULT values.
+		struct DefaultWindowRect : public tagRECT {
+			DefaultWindowRect() {left = top = right = bottom = CW_USEDEFAULT;}
+		};
 
 class Window : public Handle<HWND, ::DestroyWindow> {
 public:
 	// constructors
 	explicit Window(HWND handle = 0);
-	Window(const Window& rhs);
-	virtual ~Window();
-	// operator
-	Window& operator=(const Window& rhs) {Handle<HWND, ::DestroyWindow>::operator=(rhs); return *this;}
-	bool operator==(const Window& rhs) const {return getHandle() == rhs.getHandle();}
+	virtual ~Window() throw();
 	// constructions
 	void close();
 	bool create(const WCHAR* className, HWND parentOrHInstance,
@@ -68,20 +110,20 @@ public:
 #endif // _WIN64
 	// state
 	bool enable(bool enable = true);
-	static Window getActive();
-	static Window getCapture();
-	static Window getDesktop();
-	static Window getFocus();
-	static Window getForeground();
+	static Borrowed<Window> getActive();
+	static Borrowed<Window> getCapture();
+	static Borrowed<Window> getDesktop();
+	static Borrowed<Window> getFocus();
+	static Borrowed<Window> getForeground();
 	HICON getIcon(bool bigIcon = true) const;
 	bool hasFocus() const;
 	bool isWindow() const;
 	bool isEnabled() const;
 	bool isUnicode() const;
 	static bool releaseCapture();
-	Window setActive();
-	Window setCapture();
-	Window setFocus();
+	Borrowed<Window> setActive();
+	Borrowed<Window> setCapture();
+	Borrowed<Window> setFocus();
 	bool setForeground();
 	HICON setIcon(HICON icon, bool bigIcon  = true);
 	// size and position
@@ -101,20 +143,20 @@ public:
 	int setRegion(const HRGN region, bool redraw = true);
 	// window access
 	void center(HWND alternateWindow = 0);
-	Window childFromPoint(const POINT& pt) const;
-	Window childFromPointEx(const POINT& pt, UINT flags) const;
-	static Window find(const WCHAR* className, const WCHAR* windowName);
+	Borrowed<Window> childFromPoint(const POINT& pt) const;
+	Borrowed<Window> childFromPointEx(const POINT& pt, UINT flags) const;
+	static Borrowed<Window> find(const WCHAR* className, const WCHAR* windowName);
 	int getDlgCtrlID() const;
-	Window getLastActivePopup() const;
-	Window getNext(UINT flag = GW_HWNDNEXT) const;
-	Window getOwner() const;
-	Window getParent() const;
-	Window getTop() const;
-	Window getWindow(UINT command) const;
+	Borrowed<Window> getLastActivePopup() const;
+	Borrowed<Window> getNext(UINT flag = GW_HWNDNEXT) const;
+	Borrowed<Window> getOwner() const;
+	Borrowed<Window> getParent() const;
+	Borrowed<Window> getTop() const;
+	Borrowed<Window> getWindow(UINT command) const;
 	bool isChild(HWND window) const;
 	int setDlgCtrlID(int id);
-	Window setParent(HWND newParent);
-	static Window fromPoint(const POINT& pt);
+	Borrowed<Window> setParent(HWND newParent);
+	static Borrowed<Window> fromPoint(const POINT& pt);
 	// update and paint
 #if(WINVER >= 0x0500)
 	bool animate(DWORD time, DWORD flags, bool catchError = true);
@@ -185,7 +227,7 @@ public:
 	void showScrollBar(int bar, bool show = true);
 	// clipboard viewer
 	bool changeClipboardChain(HWND newNext);
-	Window setClipboardViewer();
+	Borrowed<Window> setClipboardViewer();
 	// D&D
 	void dragAcceptFiles(bool accept = true);
 	HRESULT registerDragDrop(IDropTarget& dropTarget);
@@ -203,8 +245,8 @@ public:
 	bool setCursorPosition(const POINT& pt);
 	// menu
 	void drawMenuBar();
-	Menu getMenu() const;
-	Menu getSystemMenu(bool revert) const;
+	Borrowed<Menu> getMenu() const;
+	Borrowed<Menu> getSystemMenu(bool revert) const;
 	bool hiliteMenuItem(HMENU menu, UINT item, UINT flags);
 	bool setMenu(HMENU menu);
 	// hotkey
@@ -234,11 +276,6 @@ public:
 #endif
 
 protected:
-#ifdef _DEBUG
-	void assertValidAsWindow() const {assert(isWindow());}
-#else
-	void assertValidAsWindow() const {}
-#endif // _DEBUG
 	// Do not override this directly. Use MANAH_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
 	virtual LRESULT processWindowMessage(UINT /* message */, WPARAM /* wParam */, LPARAM /* lParam */, bool& /* handled */) {return 1;}
 	// Call the implementation of the base class if override this.
@@ -247,9 +284,11 @@ protected:
 		bool handled = false;
 		LRESULT result = processWindowMessage(message, wParam, lParam, handled);
 		if(!handled)
-			result = ::CallWindowProcW(::DefWindowProcW, getHandle(), message, wParam, lParam);
+			result = ::CallWindowProcW(::DefWindowProcW, get(), message, wParam, lParam);
 		return result;
 	}
+protected:
+	bool check() const /*throw()*/ {return isWindow();}
 };
 
 namespace internal {
@@ -491,9 +530,9 @@ protected:
 
 // Control must define one static method:
 // void getClass(GET_CLASS_PARAM_LIST)
-#define GET_CLASS_PARAM_LIST	const WCHAR*& name,									\
-	HINSTANCE& instance, UINT& style, manah::win32::BrushHandleOrColor& bgColor,	\
-	manah::win32::CursorHandleOrID& cursor,	HICON& icon, HICON& smallIcon, int& clsExtraBytes, int& wndExtraBytes
+#define GET_CLASS_PARAM_LIST	const WCHAR*& name,										\
+	HINSTANCE& instance, UINT& style, manah::win32::ui::BrushHandleOrColor& bgColor,	\
+	manah::win32::ui::CursorHandleOrID& cursor,	HICON& icon, HICON& smallIcon, int& clsExtraBytes, int& wndExtraBytes
 #define DEFINE_WINDOW_CLASS()	public: static void getClass(GET_CLASS_PARAM_LIST)
 template<class Control>
 class CustomControl : public Window {
@@ -509,8 +548,6 @@ protected:
 	virtual void onPaint(gdi::PaintDC& dc) = 0;	// WM_PAINT
 private:
 	using Window::fireProcessWindowMessage;
-	using Window::attach;
-	using Window::detach;
 };
 
 
@@ -518,14 +555,11 @@ private:
 
 inline Window::Window(HWND handle /* = 0 */) : Handle<HWND, ::DestroyWindow>(handle) {}
 
-inline Window::Window(const Window& rhs) : Handle<HWND, ::DestroyWindow>(rhs) {}
-
-inline Window::~Window() {}
+inline Window::~Window() throw() {}
 
 #if(WINVER >= 0x0500)
 inline bool Window::animate(DWORD time, DWORD flags, bool catchError /* = true */) {
-	assertValidAsWindow();
-	if(toBoolean(::AnimateWindow(getHandle(), time, flags)))
+	if(toBoolean(::AnimateWindow(use(), time, flags)))
 		return true;
 	else if(catchError) {
 		if(toBoolean(flags & AW_HIDE))
@@ -537,19 +571,16 @@ inline bool Window::animate(DWORD time, DWORD flags, bool catchError /* = true *
 }
 #endif
 
-inline UINT Window::arrangeIconicWindows() {return ::ArrangeIconicWindows(getHandle());}
+inline UINT Window::arrangeIconicWindows() {return ::ArrangeIconicWindows(use());}
 
-inline gdi::PaintDC Window::beginPaint(PAINTSTRUCT& paint) {
-	assertValidAsWindow(); ::BeginPaint(getHandle(), &paint); return gdi::PaintDC(getHandle(), paint);}
+inline gdi::PaintDC Window::beginPaint(PAINTSTRUCT& paint) {::BeginPaint(use(), &paint); return gdi::PaintDC(get(), paint);}
 
-inline void Window::bringToTop() {assertValidAsWindow(); ::BringWindowToTop(getHandle());}
+inline void Window::bringToTop() {::BringWindowToTop(use());}
 
 inline void Window::center(HWND alternateWindow /* = 0 */) {
-	assertValidAsWindow();
-
 	RECT winRect, altRect;
-	if(alternateWindow == 0){
-		alternateWindow = getParent().getHandle();
+	if(alternateWindow == 0) {
+		alternateWindow = getParent().get();
 		if(alternateWindow == 0)
 			alternateWindow = ::GetDesktopWindow();
 	}
@@ -561,27 +592,26 @@ inline void Window::center(HWND alternateWindow /* = 0 */) {
 		(altRect.bottom - altRect.top) / 2 - (winRect.bottom - winRect.top) / 2, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
-inline bool Window::changeClipboardChain(HWND newNext) {assertValidAsWindow(); return toBoolean(::ChangeClipboardChain(getHandle(), newNext));}
+inline bool Window::changeClipboardChain(HWND newNext) {return toBoolean(::ChangeClipboardChain(use(), newNext));}
 
-inline Window Window::childFromPoint(const POINT& pt) const {assertValidAsWindow(); return Window(::ChildWindowFromPoint(getHandle(), pt));}
+inline Borrowed<Window> Window::childFromPoint(const POINT& pt) const {return Borrowed<Window>(::ChildWindowFromPoint(use(), pt));}
 
-inline Window Window::childFromPointEx(const POINT& pt, UINT flags) const {assertValidAsWindow(); return Window(::ChildWindowFromPointEx(getHandle(), pt, flags));}
+inline Borrowed<Window> Window::childFromPointEx(const POINT& pt, UINT flags) const {return Borrowed<Window>(::ChildWindowFromPointEx(use(), pt, flags));}
 
 inline void Window::clientToScreen(RECT& rect) const {
-	assertValidAsWindow();
 	POINT point[2];
 	point[0].x = rect.left;
 	point[0].y = rect.top;
 	point[1].x = rect.right;
 	point[1].y = rect.bottom;
-	::ClientToScreen(getHandle(), &point[0]);
-	::ClientToScreen(getHandle(), &point[1]);
+	::ClientToScreen(use(), &point[0]);
+	::ClientToScreen(get(), &point[1]);
 	::SetRect(&rect, point[0].x, point[0].y, point[1].x, point[1].y);
 }
 
-inline void Window::clientToScreen(POINT& pt) const {assertValidAsWindow(); ::ClientToScreen(getHandle(), &pt);}
+inline void Window::clientToScreen(POINT& pt) const {::ClientToScreen(use(), &pt);}
 
-inline void Window::close() {assertValidAsWindow(); ::CloseWindow(getHandle());}
+inline void Window::close() {::CloseWindow(use());}
 
 inline bool Window::create(const WCHAR* className, HWND parentOrHInstance,
 		const RECT& rect /* = DefaultWindowRect() */, const WCHAR* windowName /* = 0 */,
@@ -606,150 +636,142 @@ inline bool Window::create(const WCHAR* className, HWND parentOrHInstance,
 	return false;
 }
 
-inline bool Window::createCaret(HBITMAP bitmap, int width, int height) {assertValidAsWindow(); return toBoolean(::CreateCaret(getHandle(), bitmap, width, height));}
+inline bool Window::createCaret(HBITMAP bitmap, int width, int height) {return toBoolean(::CreateCaret(use(), bitmap, width, height));}
 
 inline bool Window::createGrayCaret(int width, int height) {return createCaret(reinterpret_cast<HBITMAP>(1), width, height);}
 
 inline bool Window::createSolidCaret(int width, int height) {return createCaret(0, width, height);}
 
-inline LRESULT Window::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {assertValidAsWindow(); return ::DefWindowProcW(getHandle(), message, wParam, lParam);}
+inline LRESULT Window::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {return ::DefWindowProcW(use(), message, wParam, lParam);}
 
-inline bool Window::destroy() {if(toBoolean(::DestroyWindow(getHandle()))) {release(); return true;} return false;}
+inline bool Window::destroy() {if(toBoolean(::DestroyWindow(get()))) {release(); return true;} return false;}
 
-inline void Window::dragAcceptFiles(bool accept /* = true */) {assertValidAsWindow(); ::DragAcceptFiles(getHandle(), accept);}
+inline void Window::dragAcceptFiles(bool accept /* = true */) {::DragAcceptFiles(use(), accept);}
 
-inline void Window::drawMenuBar() {assertValidAsWindow(); ::DrawMenuBar(getHandle());}
+inline void Window::drawMenuBar() {::DrawMenuBar(use());}
 
 inline bool Window::enableScrollBar(int barFlags, UINT arrowFlags /* = ESB_ENABLE_BOTH */) {
-	assertValidAsWindow(); return toBoolean(::EnableScrollBar(getHandle(), barFlags, arrowFlags));}
+	return toBoolean(::EnableScrollBar(use(), barFlags, arrowFlags));}
 
-inline bool Window::enable(bool enable /* = true */) {assertValidAsWindow(); return toBoolean(::EnableWindow(getHandle(), enable));}
+inline bool Window::enable(bool enable /* = true */) {return toBoolean(::EnableWindow(use(), enable));}
 
-inline void Window::endPaint(const PAINTSTRUCT& paint) {assertValidAsWindow(); ::EndPaint(getHandle(), &paint);}
+inline void Window::endPaint(const PAINTSTRUCT& paint) {::EndPaint(use(), &paint);}
 
-inline int Window::enumerateProperties(PROPENUMPROCW enumFunction) {assertValidAsWindow(); return ::EnumPropsW(getHandle(), enumFunction);}
+inline int Window::enumerateProperties(PROPENUMPROCW enumFunction) {return ::EnumPropsW(use(), enumFunction);}
 
-inline int Window::enumeratePropertiesEx(PROPENUMPROCEXW enumFunction, LPARAM param) {assertValidAsWindow(); return ::EnumPropsExW(getHandle(), enumFunction, param);}
+inline int Window::enumeratePropertiesEx(PROPENUMPROCEXW enumFunction, LPARAM param) {return ::EnumPropsExW(use(), enumFunction, param);}
 
-inline Window Window::find(const WCHAR* className, const WCHAR* windowName) {return Window(::FindWindowW(className, windowName));}
+inline Borrowed<Window> Window::find(const WCHAR* className, const WCHAR* windowName) {return Borrowed<Window>(::FindWindowW(className, windowName));}
 
-inline bool Window::flash(bool invert) {assertValidAsWindow(); return toBoolean(::FlashWindow(getHandle(), invert));}
+inline bool Window::flash(bool invert) {return toBoolean(::FlashWindow(use(), invert));}
 
-inline Window Window::getActive() {return Window(::GetActiveWindow());}
+inline Borrowed<Window> Window::getActive() {return Borrowed<Window>(::GetActiveWindow());}
 
-inline Window Window::getCapture() {return Window(::GetCapture());}
+inline Borrowed<Window> Window::getCapture() {return Borrowed<Window>(::GetCapture());}
 
 inline POINT Window::getCaretPosition() {POINT pt; ::GetCaretPos(&pt); return pt;}
 
-inline DWORD Window::getClassLong(int index) const {assertValidAsWindow(); return ::GetClassLongW(getHandle(), index);}
+inline DWORD Window::getClassLong(int index) const {return ::GetClassLongW(use(), index);}
 
 #ifdef _WIN64
-inline ULONG_PTR Window::getClassLongPtr(int index) const {assertValidAsWindow(); return ::GetClassLongPtrW(getHandle(), index);}
+inline ULONG_PTR Window::getClassLongPtr(int index) const {return ::GetClassLongPtrW(use(), index);}
 #endif // _WIN64
 
-inline int Window::getClassName(WCHAR* className, int maxLength) const {assertValidAsWindow(); return ::GetClassNameW(getHandle(), className, maxLength);}
+inline int Window::getClassName(WCHAR* className, int maxLength) const {return ::GetClassNameW(use(), className, maxLength);}
 
-inline void Window::getClientRect(RECT& rect) const {assertValidAsWindow(); ::GetClientRect(getHandle(), &rect);}
+inline void Window::getClientRect(RECT& rect) const {::GetClientRect(use(), &rect);}
 
 inline POINT Window::getCursorPosition() const {POINT pt; ::GetCursorPos(&pt); screenToClient(pt); return pt;}
 
-inline gdi::ClientDC Window::getDC() {assertValidAsWindow(); return gdi::ClientDC(getHandle());}
+inline gdi::ClientDC Window::getDC() {return gdi::ClientDC(use());}
 
-inline gdi::ClientDC Window::getDCEx(HRGN clipRegion, DWORD flags) {assertValidAsWindow(); return gdi::ClientDC(getHandle(), clipRegion, flags);}
+inline gdi::ClientDC Window::getDCEx(HRGN clipRegion, DWORD flags) {return gdi::ClientDC(use(), clipRegion, flags);}
 
-inline Window Window::getDesktop() {return Window(::GetDesktopWindow());}
+inline Borrowed<Window> Window::getDesktop() {return Borrowed<Window>(::GetDesktopWindow());}
 
-inline int Window::getDlgCtrlID() const {assertValidAsWindow(); return ::GetDlgCtrlID(getHandle());}
+inline int Window::getDlgCtrlID() const {return ::GetDlgCtrlID(use());}
 
-inline DWORD Window::getExStyle() const {assertValidAsWindow(); return static_cast<DWORD>(getWindowLong(GWL_EXSTYLE));}
+inline DWORD Window::getExStyle() const {return static_cast<DWORD>(getWindowLong(GWL_EXSTYLE));}
 
-inline Window Window::getFocus() {return Window(::GetFocus());}
+inline Borrowed<Window> Window::getFocus() {return Borrowed<Window>(::GetFocus());}
 
-inline HFONT Window::getFont() const {return reinterpret_cast<HFONT>(::SendMessageW(getHandle(), WM_GETFONT, 0, 0L));}
+inline HFONT Window::getFont() const {return reinterpret_cast<HFONT>(::SendMessageW(use(), WM_GETFONT, 0, 0L));}
 
-inline Window Window::getForeground() {return Window(::GetForegroundWindow());}
+inline Borrowed<Window> Window::getForeground() {return Borrowed<Window>(::GetForegroundWindow());}
 
-inline DWORD Window::getHotKey() const {return static_cast<DWORD>(::SendMessageW(getHandle(), WM_GETHOTKEY, 0, 0L));}
+inline DWORD Window::getHotKey() const {return static_cast<DWORD>(::SendMessageW(use(), WM_GETHOTKEY, 0, 0L));}
 
 inline HICON Window::getIcon(bool bigIcon /* = true */) const {
-	return reinterpret_cast<HICON>(::SendMessageW(getHandle(), WM_GETICON, bigIcon ? ICON_BIG : ICON_SMALL, 0L));}
+	return reinterpret_cast<HICON>(::SendMessageW(use(), WM_GETICON, bigIcon ? ICON_BIG : ICON_SMALL, 0L));}
 
-inline Window Window::getLastActivePopup() const {assertValidAsWindow(); return Window(::GetLastActivePopup(getHandle()));}
+inline Borrowed<Window> Window::getLastActivePopup() const {return Borrowed<Window>(::GetLastActivePopup(use()));}
 
 #if(_WIN32_WINNT >= 0x0501)
 inline bool Window::getLayeredAttributes(COLORREF* keyColor, BYTE* alpha, DWORD* flags) const {
-	assertValidAsWindow(); return toBoolean(::GetLayeredWindowAttributes(getHandle(), keyColor, alpha, flags));}
+	return toBoolean(::GetLayeredWindowAttributes(use(), keyColor, alpha, flags));}
 #endif
 
-inline Menu Window::getMenu() const {assertValidAsWindow(); return Menu(::GetMenu(getHandle()));}
+inline Borrowed<Menu> Window::getMenu() const {return Borrowed<Menu>(::GetMenu(use()));}
 
-inline Window Window::getNext(UINT flag /* = GW_HWNDNEXT */) const {assertValidAsWindow(); return Window(::GetNextWindow(getHandle(), flag));}
+inline Borrowed<Window> Window::getNext(UINT flag /* = GW_HWNDNEXT */) const {return Borrowed<Window>(::GetNextWindow(use(), flag));}
 
-inline Window Window::getOwner() const {assertValidAsWindow(); return Window(::GetWindow(getHandle(), GW_OWNER));}
+inline Borrowed<Window> Window::getOwner() const {return Borrowed<Window>(::GetWindow(use(), GW_OWNER));}
 
-inline Window Window::getParent() const {assertValidAsWindow(); return Window(::GetParent(getHandle()));}
+inline Borrowed<Window> Window::getParent() const {return Borrowed<Window>(::GetParent(use()));}
 
-inline HANDLE Window::getProperty(const WCHAR* identifier) const {assertValidAsWindow(); return ::GetPropW(getHandle(), identifier);}
+inline HANDLE Window::getProperty(const WCHAR* identifier) const {return ::GetPropW(use(), identifier);}
 
 inline HANDLE Window::getProperty(ATOM identifier) const {return getProperty(reinterpret_cast<const WCHAR*>(identifier));}
 
 inline bool Window::getScrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask /* = SIF_ALL */) const {
-	assertValidAsWindow();
 	scrollInfo.cbSize = sizeof(SCROLLINFO);
 	scrollInfo.fMask = mask;
-	return toBoolean(::GetScrollInfo(getHandle(), bar, &scrollInfo));
+	return toBoolean(::GetScrollInfo(use(), bar, &scrollInfo));
 }
 
 inline int Window::getScrollLimit(int bar) const {
-	assertValidAsWindow();
 	int dummy, limit;
 	getScrollRange(bar, dummy, limit);
 	return limit;
 }
 
-inline int Window::getScrollPosition(int bar) const {assertValidAsWindow(); return ::GetScrollPos(getHandle(), bar);}
+inline int Window::getScrollPosition(int bar) const {return ::GetScrollPos(use(), bar);}
 
-inline void Window::getScrollRange(int bar, int& minPos, int& maxPos) const {
-	assertValidAsWindow(); ::GetScrollRange(getHandle(), bar, &minPos, &maxPos);}
+inline void Window::getScrollRange(int bar, int& minPos, int& maxPos) const {::GetScrollRange(use(), bar, &minPos, &maxPos);}
 
-inline int Window::getScrollTrackPosition(int bar) const {
-	assertValidAsWindow();
-	SCROLLINFO si;
-	return (getScrollInformation(bar, si, SIF_TRACKPOS)) ? si.nTrackPos : -1;
-}
+inline int Window::getScrollTrackPosition(int bar) const {SCROLLINFO si; return (getScrollInformation(bar, si, SIF_TRACKPOS)) ? si.nTrackPos : -1;}
 
 inline DWORD Window::getStyle() const {return static_cast<DWORD>(getWindowLong(GWL_STYLE));}
 
-inline Menu Window::getSystemMenu(bool revert) const {assertValidAsWindow(); return Menu(::GetSystemMenu(getHandle(), revert));}
+inline Borrowed<Menu> Window::getSystemMenu(bool revert) const {return Borrowed<Menu>(::GetSystemMenu(use(), revert));}
 
-inline Window Window::getTop() const {Window(); return Window(::GetTopWindow(getHandle()));}
+inline Borrowed<Window> Window::getTop() const {return Borrowed<Window>(::GetTopWindow(use()));}
 
-inline bool Window::getUpdateRect(RECT& rect, bool erase /* = false */) {
-	assertValidAsWindow(); return toBoolean(::GetUpdateRect(getHandle(), &rect, erase));}
+inline bool Window::getUpdateRect(RECT& rect, bool erase /* = false */) {return toBoolean(::GetUpdateRect(use(), &rect, erase));}
 
-inline int Window::getUpdateRegion(HRGN region, bool erase /* = false */) {assertValidAsWindow(); return ::GetUpdateRgn(getHandle(), region, erase);}
+inline int Window::getUpdateRegion(HRGN region, bool erase /* = false */) {return ::GetUpdateRgn(use(), region, erase);}
 
-inline Window Window::getWindow(UINT command) const {assertValidAsWindow(); return Window(::GetWindow(getHandle(), command));}
+inline Borrowed<Window> Window::getWindow(UINT command) const {return Borrowed<Window>(::GetWindow(use(), command));}
 
-inline DWORD Window::getContextHelpID() const {assertValidAsWindow(); return ::GetWindowContextHelpId(getHandle());}
+inline DWORD Window::getContextHelpID() const {return ::GetWindowContextHelpId(use());}
 
-inline gdi::WindowDC Window::getWindowDC() {assertValidAsWindow(); return gdi::WindowDC(getHandle());}
+inline gdi::WindowDC Window::getWindowDC() {return gdi::WindowDC(use());}
 
-inline LONG Window::getWindowLong(int index) const {assertValidAsWindow(); return ::GetWindowLongW(getHandle(), index);}
+inline LONG Window::getWindowLong(int index) const {return ::GetWindowLongW(use(), index);}
 
 #ifdef _WIN64
-inline LONG_PTR Window::getWindowLongPtr(int index) const {assertValidAsWindow(); return ::GetWindowLongPtrW(getHandle(), index);}
+inline LONG_PTR Window::getWindowLongPtr(int index) const {return ::GetWindowLongPtrW(use(), index);}
 #endif // _WIN64
 
-inline bool Window::getPlacement(WINDOWPLACEMENT& placement) const {assertValidAsWindow(); return toBoolean(::GetWindowPlacement(getHandle(), &placement));}
+inline bool Window::getPlacement(WINDOWPLACEMENT& placement) const {return toBoolean(::GetWindowPlacement(use(), &placement));}
 
-inline DWORD Window::getProcessID() const {assertValidAsWindow(); DWORD id; ::GetWindowThreadProcessId(getHandle(), &id); return id;}
+inline DWORD Window::getProcessID() const {DWORD id; ::GetWindowThreadProcessId(use(), &id); return id;}
 
-inline void Window::getRect(RECT& rect) const {assertValidAsWindow(); ::GetWindowRect(getHandle(), &rect);}
+inline void Window::getRect(RECT& rect) const {::GetWindowRect(use(), &rect);}
 
-inline int Window::getRegion(HRGN region) const {assertValidAsWindow(); return ::GetWindowRgn(getHandle(), region);}
+inline int Window::getRegion(HRGN region) const {return ::GetWindowRgn(use(), region);}
 
-inline int Window::getText(WCHAR* text, int maxLength) const {assertValidAsWindow(); return ::GetWindowTextW(getHandle(), text, maxLength);}
+inline int Window::getText(WCHAR* text, int maxLength) const {return ::GetWindowTextW(use(), text, maxLength);}
 
 inline std::wstring Window::getText() const {
 	const int len = getTextLength();
@@ -758,61 +780,56 @@ inline std::wstring Window::getText() const {
 	return std::wstring(buffer.get());
 }
 
-inline int Window::getTextLength() const {assertValidAsWindow(); return ::GetWindowTextLengthW(getHandle());}
+inline int Window::getTextLength() const {return ::GetWindowTextLengthW(use());}
 
-inline DWORD Window::getThreadID() const {assertValidAsWindow(); return ::GetWindowThreadProcessId(getHandle(), 0);}
+inline DWORD Window::getThreadID() const {return ::GetWindowThreadProcessId(use(), 0);}
 
-inline bool Window::hasFocus() const {return ::GetFocus() == getHandle();}
+inline bool Window::hasFocus() const {return ::GetFocus() == use();}
 
-inline void Window::hideCaret() {assertValidAsWindow(); ::HideCaret(getHandle());}
+inline void Window::hideCaret() {::HideCaret(use());}
 
-inline bool Window::hiliteMenuItem(HMENU menu, UINT item, UINT flags) {
-	assertValidAsWindow(); return toBoolean(::HiliteMenuItem(getHandle(), menu, item, flags));}
+inline bool Window::hiliteMenuItem(HMENU menu, UINT item, UINT flags) {return toBoolean(::HiliteMenuItem(use(), menu, item, flags));}
 
-inline void Window::invalidate(bool erase /* = true */) {assertValidAsWindow(); ::InvalidateRect(getHandle(), 0, erase);}
+inline void Window::invalidate(bool erase /* = true */) {::InvalidateRect(use(), 0, erase);}
 
-inline void Window::invalidateRect(const RECT* rect, bool erase /* = true */) {
-	assertValidAsWindow(); ::InvalidateRect(getHandle(), rect, erase);}
+inline void Window::invalidateRect(const RECT* rect, bool erase /* = true */) {::InvalidateRect(use(), rect, erase);}
 
-inline void Window::invalidateRegion(HRGN region, bool erase /* = true */) {assertValidAsWindow(); ::InvalidateRgn(getHandle(), region, erase);}
+inline void Window::invalidateRegion(HRGN region, bool erase /* = true */) {::InvalidateRgn(use(), region, erase);}
 
-inline bool Window::isChild(HWND window) const {assertValidAsWindow(); return toBoolean(::IsChild(getHandle(), window));}
+inline bool Window::isChild(HWND window) const {return toBoolean(::IsChild(use(), window));}
 
-inline bool Window::isIconic() const {assertValidAsWindow(); return toBoolean(::IsIconic(getHandle()));}
+inline bool Window::isIconic() const {return toBoolean(::IsIconic(use()));}
 
-inline bool Window::isWindow() const {return toBoolean(::IsWindow(getHandle()));}
+inline bool Window::isWindow() const /*throw()*/ {return toBoolean(::IsWindow(get()));}
 
-inline bool Window::isEnabled() const {assertValidAsWindow(); return toBoolean(::IsWindowEnabled(getHandle()));}
+inline bool Window::isEnabled() const {return toBoolean(::IsWindowEnabled(use()));}
 
-inline bool Window::isUnicode() const {assertValidAsWindow(); return toBoolean(::IsWindowUnicode(getHandle()));}
+inline bool Window::isUnicode() const {return toBoolean(::IsWindowUnicode(use()));}
 
-inline bool Window::isVisible() const {return toBoolean(::IsWindowVisible(getHandle()));}
+inline bool Window::isVisible() const {return toBoolean(::IsWindowVisible(use()));}
 
-inline bool Window::isZoomed() const {assertValidAsWindow(); return toBoolean(::IsZoomed(getHandle()));}
+inline bool Window::isZoomed() const {return toBoolean(::IsZoomed(use()));}
 
-inline bool Window::killTimer(UINT eventID) {assertValidAsWindow(); return toBoolean(::KillTimer(getHandle(), eventID));}
+inline bool Window::killTimer(UINT eventID) {return toBoolean(::KillTimer(use(), eventID));}
 
-inline bool Window::lockUpdate() {assertValidAsWindow(); return toBoolean(::LockWindowUpdate(getHandle()));}
+inline bool Window::lockUpdate() {return toBoolean(::LockWindowUpdate(use()));}
 
 inline void Window::mapWindowPoints(HWND destWindow, RECT& rect) const {
-	assertValidAsWindow();
 	POINT point[2];
 	point[0].x = rect.left;
 	point[0].y = rect.top;
 	point[1].x = rect.right;
 	point[1].y = rect.bottom;
-	::MapWindowPoints(getHandle(), destWindow, point, 2);
+	::MapWindowPoints(use(), destWindow, point, 2);
 	::SetRect(&rect, point[0].x, point[0].y, point[1].x, point[1].y);
 }
 
-inline void Window::mapWindowPoints(HWND destWindow, POINT points[], UINT count) const {
-	assertValidAsWindow(); ::MapWindowPoints(getHandle(), destWindow, points, count);}
+inline void Window::mapWindowPoints(HWND destWindow, POINT points[], UINT count) const {::MapWindowPoints(use(), destWindow, points, count);}
 
 inline int Window::messageBox(const WCHAR* text, const WCHAR* caption /* = 0 */, UINT type /* = MB_OK */) {
-	assertValidAsWindow(); return ::MessageBoxW(getHandle(), text, caption, type);}
+	return ::MessageBoxW(use(), text, caption, type);}
 
 inline bool Window::modifyStyle(DWORD removeStyles, DWORD addStyles) {
-	assertValidAsWindow();
 	DWORD style;
 	style = getStyle();
 	style &= ~removeStyles;
@@ -823,7 +840,6 @@ inline bool Window::modifyStyle(DWORD removeStyles, DWORD addStyles) {
 }
 
 inline bool Window::modifyStyleEx(DWORD removeStyles, DWORD addStyles) {
-	assertValidAsWindow();
 	DWORD exStyle = getExStyle();
 	exStyle &= ~removeStyles;
 	exStyle |= addStyles;
@@ -833,170 +849,165 @@ inline bool Window::modifyStyleEx(DWORD removeStyles, DWORD addStyles) {
 }
 
 inline void Window::move(int x, int y, int width, int height, bool repaint /* = true */) {
-	assertValidAsWindow(); ::MoveWindow(getHandle(), x, y, width, height, repaint);}
+	::MoveWindow(use(), x, y, width, height, repaint);}
 
 inline void Window::move(const RECT& rect, bool repaint /* = true */) {
-	assertValidAsWindow(); ::MoveWindow(getHandle(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, repaint);}
+	::MoveWindow(use(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, repaint);}
 
-inline void Window::print(HDC dc, DWORD flags) const {::SendMessageW(getHandle(), WM_PRINT, reinterpret_cast<WPARAM>(dc), flags);}
+inline void Window::print(HDC dc, DWORD flags) const {::SendMessageW(use(), WM_PRINT, reinterpret_cast<WPARAM>(dc), flags);}
 
-inline void Window::printClient(HDC dc, DWORD flags) const {::SendMessageW(getHandle(), WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), flags);}
+inline void Window::printClient(HDC dc, DWORD flags) const {::SendMessageW(use(), WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), flags);}
 
 inline LRESULT Window::postMessage(UINT message, WPARAM wParam /* = 0 */, LPARAM lParam /* = 0L */) {
-	assertValidAsWindow(); return ::PostMessageW(getHandle(), message, wParam, lParam);}
+	return ::PostMessageW(use(), message, wParam, lParam);}
 
 inline bool Window::redraw(RECT* updateRect /* = 0 */, HRGN clipRegion/* = 0 */,
 		UINT flags /* = RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE */) {
-	assertValidAsWindow(); return toBoolean(::RedrawWindow(getHandle(), updateRect, clipRegion, flags));}
+	return toBoolean(::RedrawWindow(use(), updateRect, clipRegion, flags));}
 
-inline HRESULT Window::registerDragDrop(IDropTarget& dropTarget) {
-	assertValidAsWindow(); return ::RegisterDragDrop(getHandle(), &dropTarget);}
+inline HRESULT Window::registerDragDrop(IDropTarget& dropTarget) {return ::RegisterDragDrop(use(), &dropTarget);}
 
 inline bool Window::releaseCapture() {return toBoolean(::ReleaseCapture());}
 
-inline int Window::releaseDC(HDC dc) {assertValidAsWindow(); return ::ReleaseDC(getHandle(), dc);}
+inline int Window::releaseDC(HDC dc) {return ::ReleaseDC(use(), dc);}
 
-inline HANDLE Window::removeProperty(const WCHAR* identifier) {assertValidAsWindow(); return ::RemovePropW(getHandle(), identifier);}
+inline HANDLE Window::removeProperty(const WCHAR* identifier) {return ::RemovePropW(use(), identifier);}
 
 inline HANDLE Window::removeProperty(ATOM identifier) {return removeProperty(reinterpret_cast<const WCHAR*>(identifier));}
 
-inline HRESULT Window::revokeDragDrop() {assertValidAsWindow(); return ::RevokeDragDrop(getHandle());}
+inline HRESULT Window::revokeDragDrop() {return ::RevokeDragDrop(use());}
 
 inline void Window::screenToClient(RECT& rect) const {
-	assertValidAsWindow();
 	POINT point[2];
 	point[0].x = rect.left;
 	point[0].y = rect.top;
 	point[1].x = rect.right;
 	point[1].y = rect.bottom;
-	::ScreenToClient(getHandle(), &point[0]);
-	::ScreenToClient(getHandle(), &point[1]);
+	::ScreenToClient(use(), &point[0]);
+	::ScreenToClient(get(), &point[1]);
 	::SetRect(&rect, point[0].x, point[0].y, point[1].x, point[1].y);
 }
 
 inline void Window::scroll(int xAmount, int yAmount, RECT* rect /* = 0 */, LPRECT clipRect /* = 0 */) {
-	assertValidAsWindow(); ::ScrollWindow(getHandle(), xAmount, yAmount, rect, clipRect);}
+	::ScrollWindow(use(), xAmount, yAmount, rect, clipRect);}
 
 inline int Window::scrollEx(
 		int dx, int dy, RECT* scrollRect, RECT* clipRect, HRGN updateRegion, RECT* updateRect, UINT flags) {
-	assertValidAsWindow(); return ::ScrollWindowEx(getHandle(), dx, dy, scrollRect, clipRect, updateRegion, updateRect, flags);}
+	return ::ScrollWindowEx(use(), dx, dy, scrollRect, clipRect, updateRegion, updateRect, flags);}
 
 inline LRESULT Window::sendMessage(UINT message, WPARAM wParam /* = 0 */, LPARAM lParam /* = 0L */) {
-	assertValidAsWindow(); return ::SendMessageW(getHandle(), message, wParam, lParam);}
+	return ::SendMessageW(use(), message, wParam, lParam);}
 
 inline bool Window::sendNotifyMessage(UINT message, WPARAM wParam, LPARAM lParam) {
-	assertValidAsWindow(); return toBoolean(::SendNotifyMessageW(getHandle(), message, wParam, lParam));}
+	return toBoolean(::SendNotifyMessageW(use(), message, wParam, lParam));}
 
-inline void Window::screenToClient(POINT& pt) const {assertValidAsWindow(); ::ScreenToClient(getHandle(), &pt);}
+inline void Window::screenToClient(POINT& pt) const {::ScreenToClient(use(), &pt);}
 
-inline Window Window::setActive() {assertValidAsWindow(); return Window(::SetActiveWindow(getHandle()));}
+inline Borrowed<Window> Window::setActive() {return Borrowed<Window>(::SetActiveWindow(use()));}
 
-inline Window Window::setCapture() {assertValidAsWindow(); return Window(::SetCapture(getHandle()));}
+inline Borrowed<Window> Window::setCapture() {return Borrowed<Window>(::SetCapture(use()));}
 
 inline void Window::setCaretPosition(const POINT& pt) {::SetCaretPos(pt.x, pt.y);}
 
-inline DWORD Window::setClassLong(int index, DWORD newLong) {assertValidAsWindow(); return ::SetClassLongW(getHandle(), index, newLong);}
+inline DWORD Window::setClassLong(int index, DWORD newLong) {return ::SetClassLongW(use(), index, newLong);}
 
 #ifdef _WIN64
-inline ULONG_PTR Window::setClassLongPtr(int index, ULONG_PTR newLong) {
-	assertValidAsWindow(); return ::SetClassLongPtrW(getHandle(), index, newLong);}
+inline ULONG_PTR Window::setClassLongPtr(int index, ULONG_PTR newLong) {return ::SetClassLongPtrW(use(), index, newLong);}
 #endif // _WIN64
 
-inline Window Window::setClipboardViewer() {assertValidAsWindow(); return Window(::SetClipboardViewer(getHandle()));}
+inline Borrowed<Window> Window::setClipboardViewer() {return Borrowed<Window>(::SetClipboardViewer(use()));}
 
 inline bool Window::setCursorPosition(const POINT& pt) {POINT p(pt); clientToScreen(p); return toBoolean(::SetCursorPos(p.x, p.y));}
 
-inline int Window::setDlgCtrlID(int id) {assertValidAsWindow(); return static_cast<int>(setWindowLong(GWL_ID, id));}
+inline int Window::setDlgCtrlID(int id) {return static_cast<int>(setWindowLong(GWL_ID, id));}
 
-inline Window Window::setFocus() {assertValidAsWindow(); return Window(::SetFocus(getHandle()));}
+inline Borrowed<Window> Window::setFocus() {return Borrowed<Window>(::SetFocus(use()));}
 
 inline void Window::setFont(HFONT font, bool redraw /* = true */) {
 	sendMessage(WM_SETFONT, reinterpret_cast<WPARAM>(font), MAKELPARAM(redraw, 0));}
 
-inline bool Window::setForeground() {assertValidAsWindow(); return toBoolean(::SetForegroundWindow(getHandle()));}
+inline bool Window::setForeground() {return toBoolean(::SetForegroundWindow(use()));}
 
 inline int Window::setHotKey(WORD virtualKeyCode, WORD modifiers) {
-	assertValidAsWindow(); return static_cast<int>(sendMessage(WM_SETHOTKEY, MAKEWPARAM(virtualKeyCode, modifiers)));}
+	return static_cast<int>(sendMessage(WM_SETHOTKEY, MAKEWPARAM(virtualKeyCode, modifiers)));}
 
 inline HICON Window::setIcon(HICON icon, bool bigIcon /* = true */) {
 	return reinterpret_cast<HICON>(sendMessage(WM_SETICON, bigIcon ? ICON_BIG : ICON_SMALL, reinterpret_cast<LPARAM>(icon)));}
 
 #if(_WIN32_WINNT >= 0x0500)
 inline bool Window::setLayeredAttributes(COLORREF keyColor, BYTE alpha, DWORD flags) {
-	assertValidAsWindow(); return toBoolean(::SetLayeredWindowAttributes(getHandle(), keyColor, alpha, flags));}
+	return toBoolean(::SetLayeredWindowAttributes(use(), keyColor, alpha, flags));}
 #endif
 
-inline bool Window::setMenu(HMENU menu) {assertValidAsWindow(); return toBoolean(::SetMenu(getHandle(), menu));}
+inline bool Window::setMenu(HMENU menu) {return toBoolean(::SetMenu(use(), menu));}
 
-inline Window Window::setParent(HWND newParent) {assertValidAsWindow(); return Window(::SetParent(getHandle(), newParent));}
+inline Borrowed<Window> Window::setParent(HWND newParent) {return Borrowed<Window>(::SetParent(use(), newParent));}
 
-inline bool Window::setProperty(const WCHAR* identifier, HANDLE data) {
-	assertValidAsWindow(); return toBoolean(::SetPropW(getHandle(), identifier, data));}
+inline bool Window::setProperty(const WCHAR* identifier, HANDLE data) {return toBoolean(::SetPropW(use(), identifier, data));}
 
 inline bool Window::setProperty(ATOM identifier, HANDLE data) {return setProperty(reinterpret_cast<const WCHAR*>(identifier), data);}
 
 inline void Window::setRedraw(bool redraw /* = true */) {sendMessage(WM_SETREDRAW, redraw);}
 
 inline bool Window::setScrollInformation(int bar, const SCROLLINFO& scrollInfo, bool redraw /* = true */) {
-	assertValidAsWindow(); return toBoolean(::SetScrollInfo(getHandle(), bar, &scrollInfo, redraw));}
+	return toBoolean(::SetScrollInfo(use(), bar, &scrollInfo, redraw));}
 
 inline int Window::setScrollPosition(int bar, int pos, bool redraw /* = true */) {
-	assertValidAsWindow(); return ::SetScrollPos(getHandle(), bar, pos, redraw);}
+	return ::SetScrollPos(use(), bar, pos, redraw);}
 
 inline void Window::setScrollRange(int bar, int minPos, int maxPos, bool redraw /* = true */) {
-	assertValidAsWindow(); ::SetScrollRange(getHandle(), bar, minPos, maxPos, redraw);}
+	::SetScrollRange(use(), bar, minPos, maxPos, redraw);}
 
 inline UINT_PTR Window::setTimer(
 		UINT_PTR eventID, UINT elapse, void (CALLBACK* procedure)(HWND, UINT, UINT_PTR, DWORD) /* = 0 */) {
-	assertValidAsWindow(); return static_cast<UINT_PTR>(::SetTimer(getHandle(), eventID, elapse, procedure));}
+	return static_cast<UINT_PTR>(::SetTimer(use(), eventID, elapse, procedure));}
 
-inline bool Window::setContextHelpID(DWORD contextHelpID) {assertValidAsWindow(); return toBoolean(::SetWindowContextHelpId(getHandle(), contextHelpID));}
+inline bool Window::setContextHelpID(DWORD contextHelpID) {return toBoolean(::SetWindowContextHelpId(use(), contextHelpID));}
 
-inline LONG Window::setWindowLong(int index, LONG newLong) {assertValidAsWindow(); return ::SetWindowLongW(getHandle(), index, newLong);}
+inline LONG Window::setWindowLong(int index, LONG newLong) {return ::SetWindowLongW(use(), index, newLong);}
 
 #ifdef _WIN64
-inline LONG_PTR Window::setWindowLongPtr(int index, LONG_PTR newLong) {assertValidAsWindow(); return ::SetWindowLongPtrW(getHandle(), index, newLong);}
+inline LONG_PTR Window::setWindowLongPtr(int index, LONG_PTR newLong) {return ::SetWindowLongPtrW(use(), index, newLong);}
 #endif // _WIN64
 
-inline bool Window::setPlacement(const WINDOWPLACEMENT& placement) {assertValidAsWindow(); return toBoolean(::SetWindowPlacement(getHandle(), &placement));}
+inline bool Window::setPlacement(const WINDOWPLACEMENT& placement) {return toBoolean(::SetWindowPlacement(use(), &placement));}
 
 inline bool Window::setPosition(HWND windowInsertAfter, int x, int y, int cx, int cy, UINT flags) {
-	assertValidAsWindow(); return toBoolean(::SetWindowPos(getHandle(), windowInsertAfter, x, y, cx, cy, flags));}
+	return toBoolean(::SetWindowPos(use(), windowInsertAfter, x, y, cx, cy, flags));}
 
 inline bool Window::setPosition(HWND windowInsertAfter, const RECT& rect, UINT flags) {
 	return setPosition(windowInsertAfter, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, flags);}
 
-inline int Window::setRegion(const HRGN region, bool redraw /* = true */) {
-	assertValidAsWindow(); return ::SetWindowRgn(getHandle(), region, redraw);}
+inline int Window::setRegion(const HRGN region, bool redraw /* = true */) {return ::SetWindowRgn(use(), region, redraw);}
 
-inline void Window::setText(const WCHAR* text) {assertValidAsWindow(); ::SetWindowTextW(getHandle(), text);}
+inline void Window::setText(const WCHAR* text) {::SetWindowTextW(use(), text);}
 
-inline void Window::showCaret() {assertValidAsWindow(); ::ShowCaret(getHandle());}
+inline void Window::showCaret() {::ShowCaret(use());}
 
-inline void Window::showOwnedPopups(bool show /* = true */) {assertValidAsWindow(); ::ShowOwnedPopups(getHandle(), show);}
+inline void Window::showOwnedPopups(bool show /* = true */) {::ShowOwnedPopups(use(), show);}
 
-inline void Window::showScrollBar(int bar, bool show /* = true */) {assertValidAsWindow(); ::ShowScrollBar(getHandle(), bar, show);}
+inline void Window::showScrollBar(int bar, bool show /* = true */) {::ShowScrollBar(use(), bar, show);}
 
-inline bool Window::show(UINT command) {assertValidAsWindow(); return toBoolean(::ShowWindow(getHandle(), command));}
+inline bool Window::show(UINT command) {return toBoolean(::ShowWindow(use(), command));}
 
-inline void Window::unlockUpdate() {assertValidAsWindow(); ::LockWindowUpdate(0);}
+inline void Window::unlockUpdate() {::LockWindowUpdate(0);}
 
-inline void Window::update() {assertValidAsWindow(); ::UpdateWindow(getHandle());}
+inline void Window::update() {::UpdateWindow(use());}
 
 #if(_WIN32_WINNT >= 0x0500)
 inline bool Window::updateLayered(HDC destDC, POINT* destPt,
 		SIZE* size, HDC srcDC, POINT* srcPt, COLORREF keyColor, BLENDFUNCTION* blendFunction, DWORD flags) {
-	assertValidAsWindow();return toBoolean(::UpdateLayeredWindow(getHandle(), destDC, destPt, size, srcDC, srcPt, keyColor, blendFunction, flags));}
+	return toBoolean(::UpdateLayeredWindow(use(), destDC, destPt, size, srcDC, srcPt, keyColor, blendFunction, flags));}
 #endif
 
-inline void Window::validateRect(const RECT* rect) {assertValidAsWindow(); ::ValidateRect(getHandle(), rect);}
+inline void Window::validateRect(const RECT* rect) {::ValidateRect(use(), rect);}
 
-inline void Window::validateRegion(HRGN region) {assertValidAsWindow(); ::ValidateRgn(getHandle(), region);}
+inline void Window::validateRegion(HRGN region) {::ValidateRgn(use(), region);}
 
-inline Window Window::fromPoint(const POINT& pt) {return Window(::WindowFromPoint(pt));}
+inline Borrowed<Window> Window::fromPoint(const POINT& pt) {return Borrowed<Window>(::WindowFromPoint(pt));}
 
 inline bool Window::winHelp(const WCHAR* help, UINT command /* = HELP_CONTEXT */, DWORD data /* = 0 */) {
-	return toBoolean(::WinHelpW(getHandle(), help, command, data));}
+	return toBoolean(::WinHelpW(use(), help, command, data));}
 
 #undef RETURN_ATTACHED
 
@@ -1004,21 +1015,19 @@ inline bool Window::winHelp(const WCHAR* help, UINT command /* = HELP_CONTEXT */
 // SubclassableWindow ///////////////////////////////////////////////////////
 
 inline LRESULT SubclassableWindow::defWindowProc(UINT message, WPARAM wParam, LPARAM lParam) {
-	assertValidAsWindow();
 	return (originalProcedure_ != 0) ?
-		::CallWindowProcW(originalProcedure_, getHandle(), message, wParam, lParam)
-		: ::DefWindowProcW(getHandle(), message, wParam, lParam);
+		::CallWindowProcW(originalProcedure_, get(), message, wParam, lParam)
+		: ::DefWindowProcW(get(), message, wParam, lParam);
 }
 
 inline LRESULT SubclassableWindow::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam, bool& handled) {
 	if(message == WM_NCDESTROY)
 		unsubclass();
 	handled = true;
-	return ::CallWindowProcW(originalProcedure_, getHandle(), message, wParam, lParam);
+	return ::CallWindowProcW(originalProcedure_, get(), message, wParam, lParam);
 }
 
 inline bool SubclassableWindow::subclass() {
-	assertValidAsWindow();
 	if(isSubclassed())
 		return false;
 #ifdef _WIN64
@@ -1036,7 +1045,6 @@ inline bool SubclassableWindow::subclass() {
 }
 
 inline bool SubclassableWindow::unsubclass() {
-	assertValidAsWindow();
 	if(!isSubclassed())
 		return false;
 #ifdef _WIN64
@@ -1068,7 +1076,7 @@ inline LRESULT CALLBACK SubclassableWindow::windowProcedure(HWND window, UINT me
 template<class Control> inline CustomControl<Control>::~CustomControl() {
 	// prevent to be called as this by windowProcedure
 	if(isWindow())
-		::SetWindowLongPtrW(getHandle(), GWLP_USERDATA, 0);
+		::SetWindowLongPtrW(get(), GWLP_USERDATA, 0);
 }
 
 template<class Control>
@@ -1076,15 +1084,15 @@ inline bool CustomControl<Control>::create(HWND parent, const RECT& rect /* = De
 		const WCHAR* windowName /* = 0 */, DWORD style /* = 0UL */, DWORD exStyle /* = 0UL */) {
 	BrushHandleOrColor bgColor;
 	CursorHandleOrID cursor;
-	MANAH_AUTO_STRUCT_SIZE(WNDCLASSEXW, wc);
-	MANAH_AUTO_STRUCT_SIZE(WNDCLASSEXW, dummy);
+	AutoZeroSize<WNDCLASSEXW> wc;
+	AutoZeroSize<WNDCLASSEXW> dummy;
 
 	wc.hInstance = ::GetModuleHandleW(0);	// default value
 	wc.lpfnWndProc = CustomControl<Control>::windowProcedure;
 	Control::getClass(wc.lpszClassName, wc.hInstance, wc.style,
 		bgColor, cursor, wc.hIcon, wc.hIconSm, wc.cbClsExtra, wc.cbWndExtra);
-	wc.hbrBackground = bgColor.brush;
-	wc.hCursor = cursor.cursor;
+	wc.hbrBackground = bgColor.get();
+	wc.hCursor = cursor.get();
 	if(::GetClassInfoExW(wc.hInstance, wc.lpszClassName, &dummy) == 0)
 		::RegisterClassExW(&wc);
 	return Window::create(wc.lpszClassName, parent, rect, windowName, style, exStyle, 0, this);
@@ -1118,7 +1126,7 @@ inline LRESULT CALLBACK CustomControl<Control>::windowProcedure(HWND window, UIN
 		if(handled)
 			return r;
 		else if(message == WM_PAINT) {
-			p->onPaint(gdi::PaintDC(p->getHandle()));
+			p->onPaint(gdi::PaintDC(p->get()));
 			return 0;
 		}
 		return p->fireProcessWindowMessage(message, wParam, lParam);

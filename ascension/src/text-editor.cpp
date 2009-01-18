@@ -703,9 +703,9 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
  * @retval 1 failed
  */
 ulong InputMethodOpenStatusToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().getHandle())) {
+	if(HIMC imc = ::ImmGetContext(target().get())) {
 		const bool succeeded = toBoolean(::ImmSetOpenStatus(imc, !toBoolean(::ImmGetOpenStatus(imc))));
-		::ImmReleaseContext(target().getHandle(), imc);
+		::ImmReleaseContext(target().get(), imc);
 		return succeeded ? 0 : 1;
 	}
 	return 1;
@@ -724,13 +724,13 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
  * @retval 1 failed
  */
 ulong InputMethodSoftKeyboardModeToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().getHandle())) {
+	if(HIMC imc = ::ImmGetContext(target().get())) {
 		DWORD conversionMode, sentenceMode;
 		if(toBoolean(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
 			conversionMode = toBoolean(conversionMode & IME_CMODE_SOFTKBD) ?
 				(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
 			const bool succeeded = toBoolean(::ImmSetConversionStatus(imc, conversionMode, sentenceMode));
-			::ImmReleaseContext(target().getHandle(), imc);
+			::ImmReleaseContext(target().get(), imc);
 			return succeeded ? 0 : 1;
 		}
 	}
@@ -892,7 +892,7 @@ ulong ReconversionCommand::perform() {
 	TextViewer& viewer = target();
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
-		if(HIMC imc = ::ImmGetContext(viewer.getHandle())) {
+		if(HIMC imc = ::ImmGetContext(viewer.get())) {
 			if(!toBoolean(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc, true);
 
@@ -923,7 +923,7 @@ ulong ReconversionCommand::perform() {
 				}
 			}
 			::operator delete(rcs);
-			::ImmReleaseContext(viewer.getHandle(), imc);
+			::ImmReleaseContext(viewer.get(), imc);
 		}
 	}
 

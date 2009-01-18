@@ -202,7 +202,7 @@ inline bool Splitter<Pane, PaneDestructionPolicy>::create(HWND parent, const REC
 	assert(numberOfPanes_ == 0);
 	if(!CustomControl<Splitter>::create(parent, rect, 0, style, exStyle))
 		return false;
-	::SetParent(static_cast<AbstractPane&>(initialPane).getWindow(), getHandle());
+	::SetParent(static_cast<AbstractPane&>(initialPane).getWindow(), use());
 	root_->children_[LEFT].type = SplitterItem::PANETYPE_SINGLE;
 	root_->children_[LEFT].body.pane = defaultActivePane_ = &initialPane;
 	doPaneInserted(initialPane);
@@ -422,7 +422,7 @@ inline void Splitter<Pane, PaneDestructionPolicy>::onMouseMove(UINT, const POINT
 
 template<typename Pane, template<typename> class PaneDestructionPolicy>
 inline bool Splitter<Pane, PaneDestructionPolicy>::onSetCursor(HWND window, UINT hitTest, UINT) {
-	if(window == getHandle() && hitTest == HTCLIENT) {
+	if(window == get() && hitTest == HTCLIENT) {
 		const POINT pt = getCursorPosition();
 		if(SplitterItem* splitter = root_->hitTest(pt)) {
 			if(splitter->direction_ != NO_SPLIT) {
@@ -442,7 +442,7 @@ inline void Splitter<Pane, PaneDestructionPolicy>::onSetFocus(HWND) {
 
 template<typename Pane, template<typename> class PaneDestructionPolicy>
 inline void Splitter<Pane, PaneDestructionPolicy>::onSize(UINT, int cx, int cy) {
-	HWND window = getHandle(), parent = ::GetParent(getHandle());
+	HWND window = get(), parent = ::GetParent(get());
 	do {
 		if(toBoolean(::IsIconic(window)))	// ignore if the window is iconic
 			return;

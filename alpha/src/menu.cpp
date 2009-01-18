@@ -233,7 +233,7 @@ Menu<Interface, iid>::Menu(HMENU handle) : handle_(handle) {
 	if(handle == 0)
 		throw invalid_argument("handle");
 	// enable WM_MENUCOMMAND
-	MANAH_AUTO_STRUCT_SIZE(MENUINFO, mi);
+	manah::win32::AutoZeroSize<MENUINFO> mi;
 	mi.fMask = MIM_STYLE;
 	mi.dwStyle = MNS_NOTIFYBYPOS;
 	::SetMenuInfo(handle_, &mi);
@@ -242,7 +242,7 @@ Menu<Interface, iid>::Menu(HMENU handle) : handle_(handle) {
 template<typename Interface, const IID* iid>
 Menu<Interface, iid>::~Menu() throw() {
 	if(handle_ != 0) {
-		MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, mi);
+		manah::win32::AutoZeroSize<MENUITEMINFOW> mi;
 		mi.fMask = MIIM_DATA;
 		while(::GetMenuItemCount(handle_) > 0) {
 			if(::GetMenuItemInfoW(handle_, 0, true, &mi) != 0 && mi.dwItemData != 0)
@@ -270,7 +270,7 @@ STDMETHODIMP Menu<Interface, iid>::Append(short identifier, BSTR caption, VARIAN
 		(*self = this)->AddRef();
 
 	IDispatch* const temp = commandObject.get();
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 	item.fMask = MIIM_DATA | MIIM_FTYPE | MIIM_ID | MIIM_STATE | MIIM_STRING;
 	item.fType = MFT_STRING | (alternative ? MFT_RADIOCHECK : 0);
 	item.fState = MFS_ENABLED | MFS_UNCHECKED;
@@ -288,7 +288,7 @@ template<typename Interface, const IID* iid>
 STDMETHODIMP Menu<Interface, iid>::AppendSeparator(IMenu** self) {
 	if(self != 0)
 		(*self = this)->AddRef();
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 	item.fMask = MIIM_TYPE;
 	item.fType = MFT_SEPARATOR;
 	if(::InsertMenuItemW(handle_, ::GetMenuItemCount(handle_), true, &item) == 0)
@@ -298,7 +298,7 @@ STDMETHODIMP Menu<Interface, iid>::AppendSeparator(IMenu** self) {
 
 namespace {
 	inline HRESULT setMenuItemState(HMENU menu, short id, UINT statesToAdd, UINT statesToRemove) {
-		MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+		manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 		item.fMask = MIIM_STATE;
 		if(manah::toBoolean(::GetMenuItemInfoW(menu, id, false, &item))) {
 			item.fState &= ~statesToRemove;
@@ -338,7 +338,7 @@ template<typename Interface, const IID* iid>
 STDMETHODIMP Menu<Interface, iid>::Erase(short identifier, IMenu** self) {
 	if(self != 0)
 		(*self = this)->AddRef();
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, mi);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
 	if(::GetMenuItemInfoW(handle_, 0, true, &mi) != 0 && mi.dwItemData != 0)
 		reinterpret_cast<IDispatch*>(mi.dwItemData)->Release();
@@ -361,7 +361,7 @@ STDMETHODIMP Menu<Interface, iid>::SetChild(short identifier, IMenu* child, IMen
 	if(FAILED(child->GetHandle(&handle)))
 		return E_INVALIDARG;
 	ComQIPtr<IPopupMenu, &IID_IPopupMenu> dummy(child);
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 	item.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item.dwItemData = reinterpret_cast<ULONG_PTR>(child);
 	item.hSubMenu = reinterpret_cast<HMENU>(handle);
@@ -376,7 +376,7 @@ STDMETHODIMP Menu<Interface, iid>::SetChild(short identifier, IMenu* child, IMen
 
 template<typename Interface, const IID* iid>
 STDMETHODIMP Menu<Interface, iid>::SetDefault(short identifier, IMenu** self) {
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 	item.fMask = MIIM_ID | MIIM_STATE;
 	for(UINT i = 0, c = ::GetMenuItemCount(handle_); i < c; ++i) {
 		if(manah::toBoolean(::GetMenuItemInfoW(handle_, i, true, &item))) {
@@ -420,7 +420,7 @@ PopupMenu::PopupMenu(IDispatch* popupHandler) : Menu(::CreatePopupMenu()), popup
 
 STDMETHODIMP PopupMenu::Update(short identifier) {
 	if(popupHandler_ != 0) {
-		MANAH_AUTO_STRUCT(DISPPARAMS, parameters);
+		manah::win32::AutoZero<DISPPARAMS> parameters;
 		parameters.rgvarg = new VARIANTARG[parameters.cArgs = 2];
 		::VariantInit(&parameters.rgvarg[0]);
 		parameters.rgvarg[0].vt = VT_DISPATCH;
@@ -432,7 +432,7 @@ STDMETHODIMP PopupMenu::Update(short identifier) {
 		VARIANT result;
 		::VariantInit(&result);
 
-		MANAH_AUTO_STRUCT(EXCEPINFO, exception);
+		manah::win32::AutoZero<EXCEPINFO> exception;
 		unsigned int argErr;
 
 		// TODO: call InvokeEx instead for security.
@@ -487,7 +487,7 @@ STDMETHODIMP MenuBarConstructor::Construct(IMenuBar** instance) {
 namespace {
 	pair<IPopupMenu*, short> findPopupMenu(HMENU parent, HMENU popup, UINT position) {
 		pair<IPopupMenu*, short> result;
-		MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, item);
+		manah::win32::AutoZeroSize<MENUITEMINFOW> item;
 		// try an item at 'index'
 		item.fMask = MIIM_DATA | MIIM_ID | MIIM_SUBMENU;
 		if(manah::toBoolean(::GetMenuItemInfoW(parent, position, true, &item)) && item.hSubMenu == popup) {
@@ -512,7 +512,7 @@ namespace {
 void ambient::ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 	if(HIWORD(lp) != 0)
 		return;	// system menu
-	HMENU menuBar = Alpha::instance().getMainWindow().getMenu().getHandle();
+	HMENU menuBar = Alpha::instance().getMainWindow().getMenu().get();
 	if(manah::toBoolean(::IsMenu(menuBar))) {
 		pair<IPopupMenu*, short> popup(findPopupMenu(menuBar, reinterpret_cast<HMENU>(wp), LOWORD(lp)));
 		if(popup.first != 0)
@@ -521,11 +521,11 @@ void ambient::ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 }
 
 void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
-	MANAH_AUTO_STRUCT_SIZE(MENUITEMINFOW, mi);
+	manah::win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
 	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0) {
 		if(IDispatch* command = reinterpret_cast<IDispatch*>(mi.dwItemData)) {
-			MANAH_AUTO_STRUCT(DISPPARAMS, parameters);
+			manah::win32::AutoZero<DISPPARAMS> parameters;
 			command->Invoke(DISPID_VALUE, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &parameters, 0, 0, 0);
 		}
 	}

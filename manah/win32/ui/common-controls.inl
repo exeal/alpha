@@ -1,5 +1,7 @@
-// common-controls.inl
-// (c) 2002-2008 exeal
+/**
+ * @file common-controls.inl Implements common control classes.
+ * @date 2002-2009 exeal
+ */
 
 
 namespace manah {
@@ -12,7 +14,7 @@ namespace ui {
 inline bool AnimateCtrl::close() {return open(ResourceID(0U));}
 
 inline bool AnimateCtrl::open(const ResourceID& id, HINSTANCE hinstance /* = 0 */) {
-	return sendMessageR<bool>(ACM_OPENW, reinterpret_cast<WPARAM>(hinstance), reinterpret_cast<LPARAM>(id.name));}
+	return sendMessageR<bool>(ACM_OPENW, reinterpret_cast<WPARAM>(hinstance), reinterpret_cast<LPARAM>(static_cast<const WCHAR*>(id)));}
 
 inline bool AnimateCtrl::play(UINT from, UINT to, UINT repeatCount) {return sendMessageR<bool>(ACM_PLAY, repeatCount, MAKELONG(from, to));}
 
@@ -62,7 +64,6 @@ inline void HotKeyCtrl::getHotKey(WORD& virtualKeyCode, WORD& modifiers) const {
 }
 
 inline const WCHAR* HotKeyCtrl::getHotKeyName() const {
-	assertValidAsWindow();
 	static WCHAR hotKeyName[100];
 	WORD vKey, modifiers;
 
@@ -73,7 +74,6 @@ inline const WCHAR* HotKeyCtrl::getHotKeyName() const {
 	if(toBoolean(modifiers & HOTKEYF_ALT))		std::wcscat(hotKeyName, L"Alt+");
 	if(toBoolean(modifiers & HOTKEYF_EXT))		std::wcscat(hotKeyName, L"Ext+");
 	std::wcscat(hotKeyName, getKeyName(vKey, false));
-
 	return hotKeyName;
 }
 
@@ -91,50 +91,31 @@ inline void HotKeyCtrl::setRules(WORD invalidCombination, WORD modifiers) {
 
 // ImageList ////////////////////////////////////////////////////////////////
 
-inline ImageList::~ImageList() {if(!isAttached()) destroy();}
+inline int ImageList::add(HBITMAP bitmap, HBITMAP mask /* = 0 */) {return ::ImageList_Add(use(), bitmap, mask);}
 
-inline int ImageList::add(HBITMAP bitmap, HBITMAP mask /* = 0 */) {
-	assertValidAsImageList(); return ::ImageList_Add(getHandle(), bitmap, mask);}
+inline int ImageList::add(HBITMAP bitmap, COLORREF maskColor) {return ::ImageList_AddMasked(use(), bitmap, maskColor);}
 
-inline int ImageList::add(HBITMAP bitmap, COLORREF maskColor) {
-	assertValidAsImageList(); return ::ImageList_AddMasked(getHandle(), bitmap, maskColor);}
-
-inline int ImageList::add(HICON icon) {assertValidAsImageList(); return ImageList_AddIcon(getHandle(), icon);}
+inline int ImageList::add(HICON icon) {return ImageList_AddIcon(use(), icon);}
 
 inline bool ImageList::beginDrag(int index, const POINT& hotSpot) const {return beginDrag(index, hotSpot.x, hotSpot.y);}
 
-inline bool ImageList::beginDrag(int index, int xHotSpot, int yHotSpot) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_BeginDrag(getHandle(), index, xHotSpot, yHotSpot));}
+inline bool ImageList::beginDrag(int index, int xHotSpot, int yHotSpot) const {return toBoolean(::ImageList_BeginDrag(use(), index, xHotSpot, yHotSpot));}
 
-inline bool ImageList::copy(int dest, int src, UINT flags /* = ILCF_MOVE */) {return copy(dest, getHandle(), src, flags);}
+inline bool ImageList::copy(int dest, int src, UINT flags /* = ILCF_MOVE */) {return copy(dest, use(), src, flags);}
 
-inline bool ImageList::copy(int dest, HIMAGELIST imageList, int src, UINT flags /* = ILCF_MOVE */) {
-	assertValidAsImageList(); return toBoolean(::ImageList_Copy(getHandle(), dest, imageList, src, flags));}
+inline bool ImageList::copy(int dest, HIMAGELIST imageList, int src, UINT flags /* = ILCF_MOVE */) {return toBoolean(::ImageList_Copy(use(), dest, imageList, src, flags));}
 
-inline bool ImageList::create(int cx, int cy, UINT flags, int initial, int grow) {
-	if(isImageList())
-		return false;
-	reset(::ImageList_Create(cx, cy, flags, initial, grow));
-	return getHandle() != 0;
-}
+inline ImageList ImageList::create(int cx, int cy, UINT flags, int initial, int grow) {return ImageList(::ImageList_Create(cx, cy, flags, initial, grow));}
 
-inline bool ImageList::create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor) {
-	if(isImageList())
-		return false;
-	reset(ImageList_LoadImageW(hinstance, bitmapName.name, cx, grow, maskColor, IMAGE_BITMAP, 0));
-	return getHandle() != 0;
-}
+inline ImageList ImageList::create(HINSTANCE hinstance, const ResourceID& bitmapName,
+	int cx, int grow, COLORREF maskColor) {return ImageList(ImageList_LoadImageW(hinstance, bitmapName, cx, grow, maskColor, IMAGE_BITMAP, 0));}
 
-inline bool ImageList::createFromImage(HINSTANCE hinstance, const ResourceID& imageName,
+inline ImageList ImageList::createFromImage(HINSTANCE hinstance, const ResourceID& imageName,
 		int cx, int grow, COLORREF maskColor, UINT type, UINT flags /* = LR_DEFAULTCOLOR | LR_DEFAULTSIZE */) {
-	if(isImageList())
-		return false;
-	reset(::ImageList_LoadImageW(hinstance, imageName.name, cx, grow, maskColor, type, flags));
-	return getHandle() != 0;
-}
+	return ImageList(::ImageList_LoadImageW(hinstance, imageName, cx, grow, maskColor, type, flags));}
 
 inline bool ImageList::destroy() {
-	if(isImageList() && toBoolean(::ImageList_Destroy(getHandle()))) {
+	if(get() != 0 && toBoolean(::ImageList_Destroy(get()))) {
 		release();
 		return true;
 	}
@@ -155,91 +136,77 @@ inline bool ImageList::dragShowNolock(bool show /* = true */) {return toBoolean(
 
 inline bool ImageList::draw(HDC dc, int index, const POINT& pt, UINT style) const {return draw(dc, index, pt.x, pt.y, style);}
 
-inline bool ImageList::draw(HDC dc, int index, int x, int y, UINT style) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_Draw(getHandle(), index, dc, x, y, style));}
+inline bool ImageList::draw(HDC dc, int index, int x, int y, UINT style) const {return toBoolean(::ImageList_Draw(use(), index, dc, x, y, style));}
 
 inline bool ImageList::drawEx(HDC dc, int index, const RECT& rect, COLORREF bgColor, COLORREF fgColor, UINT style) const {
 	return drawEx(dc, index, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, bgColor, fgColor, style);}
 
 inline bool ImageList::drawEx(HDC dc, int index, int x, int y, int dx, int dy, COLORREF bgColor, COLORREF fgColor, UINT style) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_DrawEx(getHandle(), index, dc, x, y, dx, dy, bgColor, fgColor, style));}
+	return toBoolean(::ImageList_DrawEx(use(), index, dc, x, y, dx, dy, bgColor, fgColor, style));}
 
 inline bool ImageList::drawIndirect(const IMAGELISTDRAWPARAMS& params) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_DrawIndirect(const_cast<IMAGELISTDRAWPARAMS*>(&params)));}
+	return toBoolean(::ImageList_DrawIndirect(const_cast<IMAGELISTDRAWPARAMS*>(&params)));}
 
-inline std::auto_ptr<ImageList> ImageList::duplicate() const {return duplicate(getHandle());}
+inline ImageList ImageList::duplicate() const {return duplicate(use());}
 
-inline std::auto_ptr<ImageList> ImageList::duplicate(HIMAGELIST imageList) {return std::auto_ptr<ImageList>(new ImageList(::ImageList_Duplicate(imageList)));}
+inline ImageList ImageList::duplicate(HIMAGELIST imageList) {return ImageList(::ImageList_Duplicate(imageList));}
 
 inline void ImageList::endDrag() {::ImageList_EndDrag();}
 
-inline HICON ImageList::extractIcon(int index) const {assertValidAsImageList(); return ImageList_ExtractIcon(0, getHandle(), index);}
+inline HICON ImageList::extractIcon(int index) const {return ImageList_ExtractIcon(0, use(), index);}
 
-inline COLORREF ImageList::getBkColor() const {assertValidAsImageList(); return ::ImageList_GetBkColor(getHandle());}
+inline COLORREF ImageList::getBkColor() const {return ::ImageList_GetBkColor(use());}
 
-inline std::auto_ptr<ImageList> ImageList::getDragImage(POINT* pt, POINT* hotSpot) {
-	return std::auto_ptr<ImageList>(new ImageList(::ImageList_GetDragImage(pt, hotSpot)));}
+inline ImageList ImageList::getDragImage(POINT* pt, POINT* hotSpot) {return ImageList(::ImageList_GetDragImage(pt, hotSpot));}
 
-inline HICON ImageList::getIcon(int index, UINT flags /* = ILD_NORMAL */) const {
-	assertValidAsImageList(); return ::ImageList_GetIcon(getHandle(), index, flags);}
+inline HICON ImageList::getIcon(int index, UINT flags /* = ILD_NORMAL */) const {return ::ImageList_GetIcon(use(), index, flags);}
 
 inline bool ImageList::getIconSize(SIZE& size) const {return getIconSize(size.cx, size.cy);}
 
-inline bool ImageList::getIconSize(long& cx, long& cy) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_GetIconSize(getHandle(), reinterpret_cast<int*>(&cx), reinterpret_cast<int*>(&cy)));}
+inline bool ImageList::getIconSize(long& cx, long& cy) const {return toBoolean(::ImageList_GetIconSize(use(), reinterpret_cast<int*>(&cx), reinterpret_cast<int*>(&cy)));}
 
-inline bool ImageList::getImageInformation(int index, IMAGEINFO& imageInfo) const {
-	assertValidAsImageList(); return toBoolean(::ImageList_GetImageInfo(getHandle(), index, &imageInfo));}
+inline bool ImageList::getImageInformation(int index, IMAGEINFO& imageInfo) const {return toBoolean(::ImageList_GetImageInfo(use(), index, &imageInfo));}
 
-inline int ImageList::getNumberOfImages() const {assertValidAsImageList(); return ::ImageList_GetImageCount(getHandle());}
+inline int ImageList::getNumberOfImages() const {return ::ImageList_GetImageCount(use());}
 
-inline bool ImageList::merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy) {
-	if(getHandle() != 0)
-		return false;
-	reset(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy));
-	return getHandle() != 0;
-}
+inline ImageList ImageList::merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy) {
+	return ImageList(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy));}
 
 #if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
-inline std::auto_ptr<ImageList> ImageList::readFromStream(IStream& stream) {return std::auto_ptr<ImageList>(new ImageList(::ImageList_Read(&stream)));}
+inline ImageList ImageList::readFromStream(IStream& stream) {return ImageList(::ImageList_Read(&stream));}
 
 #if(_WIN32_WINNT >= 0x0501)
-inline HRESULT ImageList::readFromStream(IStream& stream, REFIID riid, void*& pv, DWORD flags) {
-	return ::ImageList_ReadEx(flags, &stream, riid, &pv);}
+inline HRESULT ImageList::readFromStream(IStream& stream, REFIID riid, void*& pv, DWORD flags) {return ::ImageList_ReadEx(flags, &stream, riid, &pv);}
 #endif // _WIN32_WINNT >= 0x0501
 #endif // __IStream_INTERFACE_DEFINED__
 
-inline bool ImageList::remove(int index) {assertValidAsImageList(); return toBoolean(::ImageList_Remove(getHandle(), index));}
+inline bool ImageList::remove(int index) {return toBoolean(::ImageList_Remove(use(), index));}
 
-inline bool ImageList::removeAll() {assertValidAsImageList(); return toBoolean(ImageList_RemoveAll(getHandle()));}
+inline bool ImageList::removeAll() {return toBoolean(ImageList_RemoveAll(use()));}
 
-inline bool ImageList::replace(int index, HBITMAP bitmap, HBITMAP mask) {
-	assertValidAsImageList(); return toBoolean(::ImageList_Replace(getHandle(), index, bitmap, mask));}
+inline bool ImageList::replace(int index, HBITMAP bitmap, HBITMAP mask) {return toBoolean(::ImageList_Replace(use(), index, bitmap, mask));}
 
-inline int ImageList::replace(int index, HICON icon) {assertValidAsImageList(); return ::ImageList_ReplaceIcon(getHandle(), index, icon);}
+inline int ImageList::replace(int index, HICON icon) {return ::ImageList_ReplaceIcon(use(), index, icon);}
 
-inline COLORREF ImageList::setBkColor(COLORREF color) {assertValidAsImageList(); return ::ImageList_SetBkColor(getHandle(), color);}
+inline COLORREF ImageList::setBkColor(COLORREF color) {return ::ImageList_SetBkColor(use(), color);}
 
 inline bool ImageList::setDragCursorImage(int index, int xHotSpot, int yHotSpot) {
-	assertValidAsImageList(); return toBoolean(::ImageList_SetDragCursorImage(getHandle(), index, xHotSpot, yHotSpot));}
+	return toBoolean(::ImageList_SetDragCursorImage(use(), index, xHotSpot, yHotSpot));}
 
 inline bool ImageList::setDragCursorImage(int index, const POINT& hotSpot) {return setDragCursorImage(index, hotSpot.x, hotSpot.y);}
 
 inline bool ImageList::setIconSize(const SIZE& size) {return setIconSize(size.cx, size.cy);}
 
-inline bool ImageList::setIconSize(long cx, long cy) {assertValidAsImageList(); return toBoolean(::ImageList_SetIconSize(getHandle(), cx, cy));}
+inline bool ImageList::setIconSize(long cx, long cy) {return toBoolean(::ImageList_SetIconSize(use(), cx, cy));}
 
-inline bool ImageList::setOverlayImage(int index, int overlayIndex) {
-	assertValidAsImageList(); return toBoolean(::ImageList_SetOverlayImage(getHandle(), index, overlayIndex));}
+inline bool ImageList::setOverlayImage(int index, int overlayIndex) {return toBoolean(::ImageList_SetOverlayImage(use(), index, overlayIndex));}
 
-inline bool ImageList::setNumberOfImages(UINT newCount) {
-	assertValidAsImageList(); return toBoolean(::ImageList_SetImageCount(getHandle(), newCount));}
+inline bool ImageList::setNumberOfImages(UINT newCount) {return toBoolean(::ImageList_SetImageCount(use(), newCount));}
 
 #if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
-inline bool ImageList::writeToStream(IStream& stream) {assertValidAsImageList(); return toBoolean(::ImageList_Write(getHandle(), &stream));}
+inline bool ImageList::writeToStream(IStream& stream) {return toBoolean(::ImageList_Write(use(), &stream));}
 
-inline HRESULT ImageList::writeToStream(IStream& stream, DWORD flags) {
-	assertValidAsImageList(); return ::ImageList_WriteEx(getHandle(), flags, &stream);}
+inline HRESULT ImageList::writeToStream(IStream& stream, DWORD flags) {return ::ImageList_WriteEx(use(), flags, &stream);}
 #endif // __IStream_INTERFACE_DEFINED__
 
 
@@ -263,7 +230,6 @@ inline void IPAddressCtrl::setRange(int field, uchar min, uchar max) {sendMessag
 // ListCtrl /////////////////////////////////////////////////////////////////
 
 inline SIZE ListCtrl::approximateViewRect(const SIZE& size, int count /* = -1 */) const {
-	assertValidAsWindow();
 	SIZE s;
 	DWORD temp = sendMessageC<DWORD>(LVM_APPROXIMATEVIEWRECT, count, MAKELONG(size.cx, size.cy));
 	s.cx = LOWORD(temp);
@@ -421,7 +387,7 @@ inline int ListCtrl::insertColumn(int position,
 inline int ListCtrl::insertItem(const LVITEMW& item) {return sendMessageR<int>(LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&item));}
 
 inline int ListCtrl::insertItem(int index, const WCHAR* text) {
-	MANAH_AUTO_STRUCT(LVITEMW, item);
+	AutoZero<LVITEMW> item;
 	item.mask = LVIF_TEXT;
 	item.iItem = index;
 	item.pszText = const_cast<WCHAR*>(text);
@@ -429,7 +395,7 @@ inline int ListCtrl::insertItem(int index, const WCHAR* text) {
 }
 
 inline int ListCtrl::insertItem(int index, const WCHAR* text, int image) {
-	MANAH_AUTO_STRUCT(LVITEMW, item);
+	AutoZero<LVITEMW> item;
 	item.mask = LVIF_TEXT | LVIF_IMAGE;
 	item.iItem = index;
 	item.pszText = const_cast<WCHAR*>(text);
@@ -728,7 +694,7 @@ inline bool Rebar::getColorScheme(COLORSCHEME& scheme) const {return sendMessage
 inline void Rebar::getDropTarget(::IDropTarget*& dropTarget) const {sendMessageC<int>(RB_GETDROPTARGET, 0, reinterpret_cast<LPARAM>(&dropTarget));}
 
 inline HIMAGELIST Rebar::getImageList() const {
-	MANAH_AUTO_STRUCT_SIZE(REBARINFO, rbi);
+	AutoZeroSize<REBARINFO> rbi;
 	rbi.fMask = RBIM_IMAGELIST;
 	return getBarInfo(rbi) ? rbi.himl : 0;
 }
@@ -756,7 +722,7 @@ inline bool Rebar::insertBand(UINT band, const REBARBANDINFOW& info) {
 
 inline void Rebar::lockBands(bool lock) {
 	const UINT count = getBandCount();
-	MANAH_AUTO_STRUCT_SIZE(REBARBANDINFOW, rbbi);
+	AutoZeroSize<REBARBANDINFOW> rbbi;
 
 	rbbi.fMask = RBBIM_STYLE;
 	for(UINT i = 0; i < count; ++i) {
@@ -798,7 +764,7 @@ inline bool Rebar::setBarInfo(const REBARINFO& info) {return sendMessageR<bool>(
 inline COLORREF Rebar::setBkColor(COLORREF color) {return sendMessageR<COLORREF>(RB_SETBKCOLOR, 0, color);}
 
 inline bool Rebar::setImageList(HIMAGELIST imageList) {
-	MANAH_AUTO_STRUCT_SIZE(REBARINFO, rbi);
+	AutoZeroSize<REBARINFO> rbi;
 	rbi.fMask = RBIM_IMAGELIST;
 	rbi.himl = imageList;
 	return setBarInfo(rbi);
@@ -950,7 +916,6 @@ inline int TabCtrl::getItemCount() const {return sendMessageC<int>(TCM_GETITEMCO
 inline bool TabCtrl::getItemRect(int index, RECT& rect) const {return sendMessageC<bool>(TCM_GETITEMRECT, index, reinterpret_cast<LPARAM>(&rect));}
 
 inline bool TabCtrl::getItemState(int index, DWORD mask, DWORD& state) const {
-	assertValidAsWindow();
 	TCITEMW item;
 	item.mask = TCIF_STATE;
 	item.dwStateMask = mask;
@@ -1206,7 +1171,7 @@ inline bool Toolbar::setButtonSize(int cx, int cy) {return sendMessageR<bool>(TB
 inline void Toolbar::setButtonStructSize(std::size_t size /* = sizeof(TBBUTTON) */) {sendMessage(TB_BUTTONSTRUCTSIZE, size);}
 
 inline void Toolbar::setButtonText(int id, const WCHAR* text) {
-	MANAH_AUTO_STRUCT_SIZE(TBBUTTONINFOW, tbi);
+	AutoZeroSize<TBBUTTONINFOW> tbi;
 	tbi.dwMask = TBIF_TEXT;
 	tbi.pszText = const_cast<WCHAR*>(text);
 	setButtonInfo(id, tbi);
@@ -1279,8 +1244,9 @@ inline bool ToolTipCtrl::addTool(const TOOLINFOW& toolInfo) {return sendMessageR
 
 inline bool ToolTipCtrl::addTool(HWND container, UINT id,
 		UINT flags, const RECT& toolRect, const WCHAR* text /* = LPSTR_TEXTCALLBACKW */, LPARAM lParam /* = 0 */) {
-	assert(toBoolean(::IsWindow(container)));
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	if(!toBoolean(::IsWindow(container)))
+		throw InvalidHandleException("container");
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.uFlags = flags & ~TTF_IDISHWND;
 	ti.hwnd = container;
 	ti.uId = id;
@@ -1292,8 +1258,9 @@ inline bool ToolTipCtrl::addTool(HWND container, UINT id,
 }
 
 inline bool ToolTipCtrl::addTool(HWND tool, UINT flags, const WCHAR* text /* = LPSTR_TEXTCALLBACKW */, LPARAM lParam /* = 0 */) {
-	assert(toBoolean(::IsWindow(tool)));
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	if(!toBoolean(::IsWindow(tool)))
+		throw InvalidHandleException("tool");
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.uFlags = flags | TTF_IDISHWND;
 	ti.hwnd = ::GetParent(tool);
 	ti.uId = reinterpret_cast<UINT_PTR>(tool);
@@ -1318,14 +1285,14 @@ inline bool ToolTipCtrl::create(HWND parent, const RECT& rect /* = DefaultWindow
 }
 
 inline void ToolTipCtrl::deleteTool(HWND window, UINT id /* = 0 */) {
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.hwnd = window;
 	ti.uId = id;
 	sendMessage(TTM_DELTOOL, 0, reinterpret_cast<LPARAM>(&ti));
 }
 
 inline void ToolTipCtrl::deleteTool(HWND window, HWND control) {
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.uFlags = TTF_IDISHWND;
 	ti.hwnd = window;
 	ti.uId = reinterpret_cast<UINT_PTR>(control);
@@ -1351,8 +1318,7 @@ inline void ToolTipCtrl::getMargin(RECT& rect) const {sendMessageC<int>(TTM_GETM
 inline int ToolTipCtrl::getMaxTipWidth() const {return sendMessageC<int>(TTM_GETMAXTIPWIDTH);}
 
 inline void ToolTipCtrl::getText(WCHAR* text, HWND window, UINT toolID /* = 0 */) const {
-	assertValidAsWindow();
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.hwnd = window;
 	ti.uId = toolID;
 	ti.lpszText = text;
@@ -1412,7 +1378,7 @@ inline bool ToolTipCtrl::setTitle(UINT icon, const WCHAR* title) {return sendMes
 inline void ToolTipCtrl::setToolInfo(const TOOLINFOW& toolInfo) {sendMessage(TTM_SETTOOLINFOW, 0, reinterpret_cast<LPARAM>(&toolInfo));}
 
 inline void ToolTipCtrl::setToolRect(HWND window, UINT toolID, const RECT& rect) {
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.uId = toolID;
 	ti.hwnd = window;
 	sendMessage(TTM_GETTOOLINFOW, 0, reinterpret_cast<LPARAM>(&ti));
@@ -1432,7 +1398,7 @@ inline void ToolTipCtrl::trackPosition(int x, int y) {sendMessage(TTM_TRACKPOSIT
 inline void ToolTipCtrl::update() {sendMessage(TTM_UPDATE);}
 
 inline void ToolTipCtrl::updateTipText(const WCHAR* text, HWND window, UINT toolID /* = 0 */) {
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 //	ti.hinst = reinterpret_cast<HINSTANCE>(::GetWindowLong(hWnd, GWL_HINSTANCE));
 	ti.uId = toolID;
 	ti.hwnd = window;
@@ -1441,7 +1407,7 @@ inline void ToolTipCtrl::updateTipText(const WCHAR* text, HWND window, UINT tool
 }
 
 inline void ToolTipCtrl::updateTipText(const WCHAR* text, HWND window, HWND control) {
-	MANAH_AUTO_STRUCT_SIZE(TOOLINFOW, ti);
+	AutoZeroSize<TOOLINFOW> ti;
 	ti.uFlags = TTF_IDISHWND;
 //	ti.hinst = reinterpret_cast<HINSTANCE>(::GetWindowLong(hWnd, GWL_HINSTANCE));
 	ti.uId = reinterpret_cast<UINT_PTR>(control);

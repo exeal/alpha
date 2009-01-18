@@ -92,9 +92,9 @@ inline HFONT LinkLabel::onGetFont() {return font_;}
 inline void LinkLabel::onKeyDown(UINT vkey, UINT flags, bool&) {
 	if(!toBoolean(getStyle() & WS_DISABLED) && vkey == VK_RETURN)
 #ifdef _WIN64
-		getParent().sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(getHandle()));
+		getParent().sendMessage(WM_COMMAND, getWindowLongPtr(GWLP_ID), reinterpret_cast<LPARAM>(get()));
 #else
-		getParent().sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(getHandle()));
+		getParent().sendMessage(WM_COMMAND, getWindowLong(GWL_ID), reinterpret_cast<LPARAM>(get()));
 #endif /* _WIN64 */
 }
 
@@ -117,7 +117,7 @@ inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
 #else
 		getWindowLong(GWL_ID),
 #endif // _WIN64
-		reinterpret_cast<LPARAM>(getHandle()));
+		reinterpret_cast<LPARAM>(get()));
 }
 
 inline void LinkLabel::onPaint(gdi::PaintDC& dc) {
@@ -181,7 +181,7 @@ inline void LinkLabel::recreateFont() {
 	if(font_ != 0)
 		::GetObjectW(font_, sizeof(LOGFONTW), &lf);
 	else {
-		MANAH_AUTO_STRUCT_SIZE(NONCLIENTMETRICSW, ncm);
+		AutoZeroSize<NONCLIENTMETRICSW> ncm;
 		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 		lf = ncm.lfStatusFont;
 	}

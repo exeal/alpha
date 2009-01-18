@@ -1,5 +1,7 @@
-// windows.hpp
-// (c) 2006-2008 exeal
+/**
+ * @file windows.hpp
+ * @date 2006-2009 exeal
+ */
 
 #ifndef MANAH_WINDOWS_HPP
 #define MANAH_WINDOWS_HPP
@@ -53,64 +55,97 @@
 namespace manah {
 	namespace win32 {
 
-		struct ResourceID {
-			MANAH_NONCOPYABLE_TAG(ResourceID);
+		/// The specified handle is invalid.
+		class InvalidHandleException : public std::invalid_argument {
 		public:
-			ResourceID(const WCHAR* nameString) throw() : name(nameString) {}
-			ResourceID(UINT_PTR id) throw() : name(MAKEINTRESOURCEW(id)) {}
-			const WCHAR* const name;
+			explicit InvalidHandleException(const std::string& message) : std::invalid_argument(message) {}
 		};
 
-		// base class for handle-wrapper classes
-		template<typename HandleType = HANDLE, BOOL (WINAPI *deleter)(HandleType) = ::CloseHandle>
+		/// The specified handle is @c null and not allowed.
+		class NullHandleException : public InvalidHandleException {
+		public:
+			explicit NullHandleException(const std::string& message) : InvalidHandleException(message) {}
+		};
+
+		/**
+		 * Holds and manages a handle value. The instance has the ownership of the handle value.
+		 * The semantics of the copy operations is same as @c std#auto_ptr.
+		 * @param T the type of the handle to be held
+		 * @param Win32 function used to discard the handle
+		 */
+		template<typename T = HANDLE, BOOL(WINAPI* deleter)(T) = ::CloseHandle>
 		class Handle {
 		public:
-			Handle(HandleType handle = 0) : handle_(handle), attached_(handle != 0) {}
-			Handle(const Handle& rhs) : handle_(rhs.handle_), attached_(rhs.attached_) {const_cast<Handle&>(rhs).attached_ = true;}
-			virtual ~Handle() {reset();}
-			Handle& operator=(const Handle& rhs) {reset();
-				handle_ = rhs.handle_; attached_ = rhs.attached_; const_cast<Handle&>(rhs).attached_ = true; return *this;}
-			bool operator!() const {return handle_ == 0;}
-			HandleType attach(HandleType handle) {if(handle == 0) throw std::invalid_argument("null handle.");
-				HandleType old = release(); handle_ = handle; attached_ = true; return old;}
-			HandleType detach() {if(!attached_) throw std::logic_error("not attched."); return release();}
-			HandleType getHandle() const {return handle_;}
-			bool isAttached() const throw() {return attached_;}
-			HandleType release() {HandleType old = handle_; handle_ = 0; attached_ = false; return old;}
-			void reset(HandleType newHandle = 0) {
-				if(handle_ != 0 && newHandle != handle_ && !attached_ && deleter != 0)
-					(*deleter)(handle_);
-				handle_ = newHandle;
-				attached_ = false;
-			}
+			typedef T HandleType;	///< The type of the handle to be held.
+		public:
+			/// Constructor takes a handle as the initial value.
+			explicit Handle(HandleType handle = 0) : handle_(handle) {}
+			/// Destructor discards the handle.
+			virtual ~Handle() {if(handle_ != 0) reset();}
+			/// Copy-constructor takes the ownership of the handle away from @a rhs.
+			Handle(Handle<HandleType, deleter>& rhs) : handle_(rhs.handle_) {rhs.handle_ = 0;}
+			/// Assignment operator takes the ownership of the handle away from @a rhs.
+			Handle<HandleType, deleter>& operator=(
+				Handle<HandleType, deleter>& rhs) {reset(); std::swap(handle_, rhs.handle_); return *this;}
+			/// Returns the raw handle value.
+			HandleType get() const {return handle_;}
+			/// Sets the internal handle value to @c null.
+			HandleType release() {HandleType temp(0); std::swap(handle_, temp); return temp;}
+			/// Discards the current handle and takes the new handle's ownership.
+			void reset(HandleType newValue = 0) {aboutToReset(newValue); handle_ = newValue;}
+			/// Returns the raw handle value. If the handle is @c null, throws @c std#logic_error.
+			HandleType use() const {if(handle_ == 0) throw std::logic_error("handle is null.");
+				else if(!check()) throw InvalidHandleException("handle is invalid."); return handle_;}
+		protected:
+			/// Returns false if the handle value is invalid. Called by @c #use method.
+			virtual bool check() const {return true;}
+		private:
+			/// Called by @c #reset method before overwritten by @a newValue.
+			virtual void aboutToReset(HandleType newValue) {if(newValue != handle_ && deleter != 0) (*deleter)(handle_);}
 		private:
 			HandleType handle_;
-			bool attached_;
 		};
 
-		// convenient types from ATL
-		struct MenuHandleOrControlID {
-			MenuHandleOrControlID(HMENU handle) throw() : menu(handle) {}
-			MenuHandleOrControlID(UINT_PTR id) throw() : menu(reinterpret_cast<HMENU>(id)) {}
-			HMENU menu;
+		template<typename T> class Borrowed : public T {
+		public:
+			/// Default constructor.
+			Borrowed() : T() {}
+//			/// Constructor.
+//			explicit Borrowed(const T& t) : T(t.get()) {}
+			/// Constructor.
+			explicit Borrowed(typename T::HandleType handle) : T(handle) {}
+			/// Destructor.
+			~Borrowed() throw() {release();}
+			/// Copy-constructor just copies the handle value.
+			Borrowed(const Borrowed<T>& rhs) : T() {reset(rhs.get());}
+		private:
+			void aboutToReset(typename T::HandleType newValue) {}
 		};
 
-		// others used by (CCustomControl derevied)::GetWindowClass
-		struct BrushHandleOrColor {
-			BrushHandleOrColor() throw() : brush(0) {}
-			BrushHandleOrColor(HBRUSH handle) throw() : brush(handle) {}
-			BrushHandleOrColor(COLORREF color) throw() : brush(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(color + 1))) {}
-			BrushHandleOrColor& operator=(HBRUSH rhs) throw() {brush = rhs; return *this;}
-			BrushHandleOrColor& operator=(COLORREF rhs) throw() {brush = reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(rhs + 1)); return *this;}
-			HBRUSH brush;
+		/// A resource identifier can be initialized by using both a string and a numeric identifier.
+		class ResourceID {
+			MANAH_NONCOPYABLE_TAG(ResourceID);
+		public:
+			/// Constructor takes a string identifier.
+			ResourceID(const WCHAR* name) /*throw()*/ : name_(name) {}
+			/// Constructor takes a numeric identifier.
+			ResourceID(UINT_PTR id) /*throw()*/ : name_(MAKEINTRESOURCEW(id)) {}
+			/// Returns the string identifier.
+			operator const WCHAR*() const /*throw()*/ {return name_;}
+		private:
+			const WCHAR* const name_;
 		};
-		struct CursorHandleOrID {
-			CursorHandleOrID() throw() : cursor(0) {}
-			CursorHandleOrID(HCURSOR handle) throw() : cursor(handle) {}
-			CursorHandleOrID(const WCHAR* systemCursorID) : cursor(::LoadCursorW(0, systemCursorID)) {}
-			CursorHandleOrID& operator=(HCURSOR rhs) {cursor = rhs; return *this;}
-			CursorHandleOrID& operator=(const WCHAR* rhs) {cursor = ::LoadCursorW(0, rhs); return *this;}
-			HCURSOR cursor;
+
+		/// Defines a structure type automatically fills oneself with zero.
+		template<typename Structure> struct AutoZero : public Structure {
+			/// Default constructor.
+			AutoZero() /*throw()*/ {std::memset(this, 0, sizeof(Structure));}
+		};
+
+		/// Defines a structure type automatically fills oneself with zero and sets its size member.
+		template<typename Structure, typename SizeType = int> struct AutoZeroSize : public AutoZero<Structure> {
+			/// Default constructor.
+			AutoZeroSize() /*throw()*/ {*reinterpret_cast<SizeType*>(this) = sizeof(Structure);}
 		};
 
 		class DumpContext {
@@ -149,12 +184,8 @@ namespace manah {
 	}
 }
 
-// Win32 structure initializement
-#define MANAH_AUTO_STRUCT(typeName, instanceName)	\
-	typeName instanceName; std::memset(&instanceName, 0, sizeof(typeName))
-#define MANAH_AUTO_STRUCT_SIZE(typeName, instanceName)	\
-	MANAH_AUTO_STRUCT(typeName, instanceName);			\
-	*reinterpret_cast<int*>(&instanceName) = sizeof(typeName)
+
+// macros ///////////////////////////////////////////////////////////////////
 
 // sizeof(MENUITEMINFO)
 #if(WINVER >= 0x0500 && !defined(MENUITEMINFO_SIZE_VERSION_400))

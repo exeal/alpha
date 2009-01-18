@@ -1,5 +1,7 @@
-// common-controls.hpp
-// (c) 2002-2008 exeal
+/**
+ * @file common-controls.hpp Defines common control classes.
+ * @date 2002-2008 exeal
+ */
 
 #ifndef MANAH_COMMON_CONTROLS_HPP
 #define MANAH_COMMON_CONTROLS_HPP
@@ -69,21 +71,20 @@ class ImageList : public Handle<HIMAGELIST, ::ImageList_Destroy> {
 public:
 	// constructors
 	explicit ImageList(HIMAGELIST handle = 0) : Handle<HIMAGELIST, ::ImageList_Destroy>(handle) {}
-	~ImageList();
 	// constructions
-	bool create(int cx, int cy, UINT flags, int initial, int grow);
-	bool create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor);
-	bool createFromImage(HINSTANCE hinstance, const ResourceID& imageName,
+	static ImageList create(int cx, int cy, UINT flags, int initial, int grow);
+	static ImageList create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor);
+	static ImageList createFromImage(HINSTANCE hinstance, const ResourceID& imageName,
 		int cx, int grow, COLORREF maskColor, UINT type, UINT flags = LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
 	bool destroy();
-	bool merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy);
+	static ImageList merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy);
 	// duplication
-	std::auto_ptr<ImageList> duplicate() const;
-	static std::auto_ptr<ImageList> duplicate(HIMAGELIST imageList);
+	ImageList duplicate() const;
+	static ImageList duplicate(HIMAGELIST imageList);
 	// persistent
 #if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
-	static std::auto_ptr<ImageList> readFromStream(IStream& stream);
-	bool writeToStream(::IStream& stream);
+	static ImageList readFromStream(IStream& stream);
+	bool writeToStream(IStream& stream);
 #if(_WIN32_WINNT >= 0x0501)
 	static HRESULT readFromStream(IStream& stream, REFIID riid, void*& pv, DWORD flags);
 	HRESULT writeToStream(IStream& stream, DWORD flags);
@@ -96,7 +97,6 @@ public:
 	bool getIconSize(long& cx, long& cy) const;
 	bool getImageInformation(int index, IMAGEINFO& info) const;
 	int getNumberOfImages() const;
-	bool isImageList() const {return getHandle() != 0;}
 	COLORREF setBkColor(COLORREF color);
 	bool setIconSize(const SIZE& size);
 	bool setIconSize(long cx, long cy);
@@ -129,12 +129,9 @@ public:
 	static bool	dragMove(int x, int y);
 	static bool	dragShowNolock(bool show = true);
 	static void	endDrag();
-	static std::auto_ptr<ImageList>	getDragImage(POINT* pt, POINT* hotSpot);
+	static ImageList getDragImage(POINT* pt, POINT* hotSpot);
 	bool setDragCursorImage(int index, const POINT& hotSpot);
 	bool setDragCursorImage(int index, int xHotSpot, int yHotSpot);
-
-private:
-	void assertValidAsImageList() const {assert(getHandle() != 0);}
 };
 
 class IPAddressCtrl : public CommonControl<IPAddressCtrl> {

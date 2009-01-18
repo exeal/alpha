@@ -21,12 +21,11 @@
 #include <shlobj.h>					// IShellLink, ...
 #include <dlgs.h>
 using namespace alpha;
-//using namespace manah::win32;
+using namespace manah;
 using namespace manah::win32::ui;
 using namespace manah::com;
 using namespace manah::com::ole;
 using namespace std;
-using manah::toBoolean;
 namespace a = ascension;
 namespace k = ascension::kernel;
 
@@ -192,14 +191,6 @@ namespace {
 
 /// Constructor.
 Buffer::Buffer() {
-//	typedef manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IDispatch), manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IPosition)> > T;
-//	typedef ImplementsAll<InterfacesFromSignatures<T>::Result> U;
-//	IUnknownImpl<U>* p1;
-//	ambient::IUnknownDispatchImpl<manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IPosition)> >* p2;
-//	static_cast<IPosition*>(p1);
-//	static_cast<IDispatch*>(p1);
-//	static_cast<IPosition*>(p2);
-//	static_cast<IDispatch*>(p2);
 	self_.reset(new BufferProxy(*this));
 	presentation_.reset(new a::presentation::Presentation(*this));
 	textFile_.reset(new k::fileio::TextFileDocumentInput(*this));
@@ -249,7 +240,7 @@ BufferList::~BufferList() {
 		editorSession_.removeDocument(*buffers_[i]);
 		delete buffers_[i];
 	}
-	if(icons_.isImageList()) {
+	if(icons_.get() != 0) {
 		const int c = icons_.getNumberOfImages();
 		for(int i = 0; i < c; ++i)
 			::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
@@ -258,7 +249,7 @@ BufferList::~BufferList() {
 }
 
 void BufferList::activeBufferChanged() {
-	const EditorWindow window = EditorWindows::instance().activePane();
+	const EditorWindow& window = EditorWindows::instance().activePane();
 	const Buffer& buffer = window.visibleBuffer();
 	EditorView& viewer = window.visibleView();
 
@@ -276,7 +267,7 @@ void BufferList::activeBufferChanged() {
 	// buffer bar button
 	const size_t button = find(buffer);
 	if(button != -1)
-		bufferBar_.checkButton(button);
+		bufferBar_.checkButton(static_cast<int>(button));
 
 	// scroll the buffer bar if the button was hidden
 	if(bufferBarPager_.isVisible()) {
@@ -290,7 +281,7 @@ void BufferList::activeBufferChanged() {
 			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
 	}
 
-	viewer.updateStatusBar();
+	Alpha::instance().statusBar().updateAll();
 }
 
 /**
@@ -335,7 +326,7 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
 	EditorView* originalView = 0;
 	for(EditorWindows::Iterator i(EditorWindows::instance().enumeratePanes()); !i.done(); i.next()) {
 		EditorView* view = (originalView == 0) ? new EditorView(buffer->presentation()) : new EditorView(*originalView);
-		view->create(EditorWindows::instance().getHandle(), DefaultWindowRect(),
+		view->create(EditorWindows::instance().use(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(view->isWindow());
 		if(originalView == 0)
@@ -354,7 +345,7 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
 
 	// バッファバーにボタンを追加
 	const basic_string<WCHAR> bufferName(buffer->name());
-	MANAH_AUTO_STRUCT(TBBUTTON, button);
+	win32::AutoZero<TBBUTTON> button;
 	button.idCommand = bufferBar_.getButtonCount();
 	button.iBitmap = static_cast<int>(buffers_.size() - 1);
 	button.fsState = TBSTATE_ENABLED;
@@ -436,10 +427,10 @@ bool BufferList::createBar(Rebar& rebar) {
 	}
 
 	// バッファバーとページャを作成する
-	if(!bufferBarPager_.create(rebar.getHandle(), DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
+	if(!bufferBarPager_.create(rebar.use(), DefaultWindowRect(), 0, IDC_BUFFERBARPAGER,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_NORESIZE | PGS_HORZ))
 		return false;
-	if(!bufferBar_.create(bufferBarPager_.getHandle(), DefaultWindowRect(), 0, IDC_BUFFERBAR,
+	if(!bufferBar_.create(bufferBarPager_.use(), DefaultWindowRect(), 0, IDC_BUFFERBAR,
 			WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE
 			| CCS_NODIVIDER | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_TOP
 			| TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_REGISTERDROP | TBSTYLE_TOOLTIPS | TBSTYLE_TRANSPARENT, WS_EX_TOOLWINDOW)) {
@@ -449,10 +440,10 @@ bool BufferList::createBar(Rebar& rebar) {
 	HWND toolTips = bufferBar_.getToolTips();
 	bufferBar_.setButtonStructSize();
 	::SetWindowLongPtrW(toolTips, GWL_STYLE, ::GetWindowLongPtrW(toolTips, GWL_STYLE) | TTS_NOPREFIX);
-	bufferBarPager_.setChild(bufferBar_.getHandle());
+	bufferBarPager_.setChild(bufferBar_.use());
 
 	// レバーに乗せる
-	MANAH_AUTO_STRUCT_SIZE(REBARBANDINFOW, rbbi);
+	win32::AutoZeroSize<REBARBANDINFOW> rbbi;
 	const wstring caption = Alpha::instance().loadMessage(MSG_DIALOG__BUFFERBAR_CAPTION);
 	rbbi.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_ID | RBBIM_STYLE | RBBIM_TEXT;
 	rbbi.fStyle = RBBS_BREAK | RBBS_GRIPPERALWAYS;
@@ -460,7 +451,7 @@ bool BufferList::createBar(Rebar& rebar) {
 	rbbi.cyMinChild = 22;
 	rbbi.wID = IDC_BUFFERBAR;
 	rbbi.lpText = const_cast<wchar_t*>(caption.c_str());
-	rbbi.hwndChild = bufferBarPager_.getHandle();
+	rbbi.hwndChild = bufferBarPager_.use();
 	if(!rebar.insertBand(rebar.getBandCount(), rbbi)) {
 		bufferBar_.destroy();
 		bufferBarPager_.destroy();
@@ -471,7 +462,7 @@ bool BufferList::createBar(Rebar& rebar) {
 
 /// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
 void BufferList::documentAccessibleRegionChanged(const k::Document&) {
-	updateNarrowingOnStatusBar();
+	Alpha::instance().statusBar().updateNarrowingStatus();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
@@ -577,8 +568,8 @@ LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 		if(mouse.dwItemSpec != -1) {
 			POINT pt = mouse.pt;
 			bufferBar_.clientToScreen(pt);
-			setActive(mouse.dwItemSpec);
-			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::instance().getMainWindow().getHandle());
+			EditorWindows::instance().activePane().showBuffer(at(mouse.dwItemSpec));
+			contextMenu_.trackPopup(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, pt.x, pt.y, Alpha::instance().getMainWindow().use());
 			return true;
 		}
 	}
@@ -613,14 +604,14 @@ LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 	else if(nmhdr.hdr.code == TBN_GETOBJECT) {
 		::NMOBJECTNOTIFY& n = *reinterpret_cast<::NMOBJECTNOTIFY*>(&nmhdr.hdr);
 		if(n.iItem != -1) {
-			setActive(bufferBar_.commandToIndex(n.iItem));	// n.iItem は ID
+			EditorWindows::instance().activePane().showBuffer(at(bufferBar_.commandToIndex(n.iItem)));	// n.iItem は ID
 			n.pObject = 0;
 			n.hResult = E_NOINTERFACE;
 		}
 		return 0;
 	}
 
-	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.getHandle() == ::GetCapture()) {
+	else if(nmhdr.hdr.code == TBN_HOTITEMCHANGE && bufferBar_.getButtonCount() > 1 && bufferBar_.get() == ::GetCapture()) {
 		::NMTBHOTITEM& hotItem = *reinterpret_cast<::NMTBHOTITEM*>(&nmhdr.hdr);
 		if(toBoolean(hotItem.dwFlags & HICF_MOUSE)) {	// dragging a button...
 			::TBINSERTMARK mark;
@@ -739,7 +730,7 @@ void BufferList::move(size_t from, size_t to) {
 		bufferBar_.setCommandID(i, i);
 		bufferBar_.setButtonText(i, getDisplayName(*buffers_[i]).c_str());
 	}
-	setActive(*buffer);
+	EditorWindows::instance().activePane().showBuffer(*buffer);
 	resetResources();
 }
 
@@ -788,7 +779,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 	// (テキストエディタで) 既に開かれているか調べる
 	const size_t oldBuffer = find(resolvedName);
 	if(oldBuffer != -1) {
-		setActive(oldBuffer);
+		EditorWindows::instance().activePane().showBuffer(at(oldBuffer));
 		return 0;
 	}
 
@@ -826,7 +817,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 	while(true) {
 		using namespace a::encoding;
 		WaitCursor wc;
-		app.setStatusText(s.c_str());
+		app.statusBar().setText(s.c_str());
 		app.getMainWindow().lockUpdate();
 
 		// 準備ができたのでファイルを開く
@@ -837,7 +828,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 			succeeded = false;
 			errorType = e.type();
 		}
-		app.setStatusText(0);
+		app.statusBar().setText(0);
 		app.getMainWindow().unlockUpdate();
 		if(!succeeded) {
 			// alert the encoding error
@@ -906,7 +897,7 @@ bool BufferList::openDialog(const wstring& initialDirectory /* = wstring() */) {
 	filter[filterSource.length()] = L'\0';
 	filter[filterSource.length() + 1] = L'\0';
 
-	MANAH_AUTO_STRUCT(OSVERSIONINFOW, osVersion);
+	win32::AutoZero<OSVERSIONINFOW> osVersion;
 	osVersion.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
 	::GetVersionExW(&osVersion);
 
@@ -922,10 +913,10 @@ bool BufferList::openDialog(const wstring& initialDirectory /* = wstring() */) {
 	}
 
 	TextFileFormat format = {a::encoding::Encoder::getDefault().properties().name(), k::NLF_RAW_VALUE};
-	MANAH_AUTO_STRUCT_SIZE(OPENFILENAMEW, newOfn);
-	MANAH_AUTO_STRUCT_SIZE(OPENFILENAME_NT4W, oldOfn);
+	win32::AutoZeroSize<OPENFILENAMEW> newOfn;
+	win32::AutoZeroSize<OPENFILENAME_NT4W> oldOfn;
 	OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<OPENFILENAMEW*>(&oldOfn);
-	ofn.hwndOwner = app.getMainWindow().getHandle();
+	ofn.hwndOwner = app.getMainWindow().use();
 	ofn.hInstance = ::GetModuleHandle(0);
 	ofn.lpstrFilter = filter;
 	ofn.lpstrFile = fileName;
@@ -1156,7 +1147,7 @@ bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 		k::Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
 	const Buffer& buffer = getConcreteDocument(document);
 	const Buffer& activeBuffer = EditorWindows::instance().activeBuffer();
-	setActive(buffer);
+	EditorWindows::instance().activePane().showBuffer(buffer);
 	switch(context) {
 	case IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION:
 		return Alpha::instance().messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT,
@@ -1169,7 +1160,7 @@ bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 				MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()))
 			reopen(find(buffer), false);
 		else
-			setActive(activeBuffer);
+			EditorWindows::instance().activePane().showBuffer(activeBuffer);
 		return true;
 	}
 	return false;
@@ -1181,8 +1172,8 @@ void BufferList::recalculateBufferBarSize() {
 
 	// バッファバーの理想長さの再計算
 	if(bufferBar_.isVisible()) {
-		MANAH_AUTO_STRUCT(::REBARBANDINFOW, rbbi);
-		Rebar rebar(bufferBarPager_.getParent().getHandle());
+		win32::AutoZero<REBARBANDINFOW> rbbi;
+		win32::Borrowed<Rebar> rebar(bufferBarPager_.getParent().get());
 		RECT rect;
 		rbbi.fMask = RBBIM_IDEALSIZE;
 		bufferBar_.getItemRect(bufferBar_.getButtonCount() - 1, rect);
@@ -1277,7 +1268,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 
 /// Reconstructs the image list and the menu according to the current buffer list.
 void BufferList::resetResources() {
-	if(icons_.isImageList()) {
+	if(icons_.get() != 0) {
 		const int c = icons_.getNumberOfImages();
 		for(int i = 0; i < c; ++i)
 			::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
@@ -1285,7 +1276,7 @@ void BufferList::resetResources() {
 	}
 	if(buffers_.empty())
 		return;
-	icons_.create(::GetSystemMetrics(SM_CXSMICON),
+	icons_ = ImageList::create(::GetSystemMetrics(SM_CXSMICON),
 		::GetSystemMetrics(SM_CYSMICON), ILC_COLOR32 | ILC_MASK, 0, static_cast<int>(buffers_.size()));
 	while(listMenu_.getNumberOfItems() != 0)
 		listMenu_.erase<Menu::BY_POSITION>(0);
@@ -1298,7 +1289,7 @@ void BufferList::resetResources() {
 		icons_.add(sfi.hIcon);
 		listMenu_ << Menu::OwnerDrawnItem(static_cast<UINT>(i));
 	}
-	bufferBar_.setImageList(icons_.getHandle());
+	bufferBar_.setImageList(icons_.use());
 	if(bufferBar_.isVisible())
 		bufferBar_.invalidateRect(0);
 }
@@ -1325,7 +1316,7 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 
 	// 別名で保存 or ファイルが存在しない
 	if(!overwrite || !buffer.textFile().isOpen() || !toBoolean(::PathFileExistsW(buffer.textFile().pathName().c_str()))) {
-		MANAH_AUTO_STRUCT(OSVERSIONINFOW, osVersion);
+		win32::AutoZero<OSVERSIONINFOW> osVersion;
 		const wstring filterSource(app.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER));
 		wchar_t* const filter = new wchar_t[filterSource.length() + 6];
 
@@ -1335,10 +1326,10 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 		wcsncpy(filter + filterSource.length(), L"\0*.*\0\0", 6);
 		wcscpy(fileName, (buffer.textFile().pathName().c_str()));
 
-		MANAH_AUTO_STRUCT_SIZE(OPENFILENAMEW, newOfn);
-		MANAH_AUTO_STRUCT_SIZE(OPENFILENAME_NT4W, oldOfn);
+		win32::AutoZeroSize<OPENFILENAMEW> newOfn;
+		win32::AutoZeroSize<OPENFILENAME_NT4W> oldOfn;
 		OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<OPENFILENAMEW*>(&oldOfn);
-		ofn.hwndOwner = app.getMainWindow().getHandle();
+		ofn.hwndOwner = app.getMainWindow().use();
 		ofn.hInstance = ::GetModuleHandle(0);
 		ofn.lpstrFilter = filter;
 		ofn.lpstrFile = fileName;
@@ -2270,7 +2261,7 @@ STDMETHODIMP BufferListProxy::get__NewEnum(IUnknown** enumerator) {
 		buffers[i].vt = VT_DISPATCH;
 		(buffers[i].pdispVal = impl().at(i).asScript().get())->AddRef();
 	}
-	manah::AutoBuffer<VARIANT> array(buffers);
+	AutoBuffer<VARIANT> array(buffers);
 	*enumerator = new(nothrow) ambient::IEnumVARIANTStaticImpl(array, c);
 	if(*enumerator == 0) {
 		for(size_t i = 0; i < c; ++i)

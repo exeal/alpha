@@ -857,7 +857,7 @@ void VisualPoint::show() {
 	verifyViewer();
 	const TextRenderer& renderer = viewer_->textRenderer();
 	const length_t visibleLines = viewer_->numberOfVisibleLines();
-	MANAH_AUTO_STRUCT_SIZE(SCROLLINFO, si);
+	AutoZeroSize<SCROLLINFO> si;
 	POINT to = {-1, -1};
 
 	// for vertical direction

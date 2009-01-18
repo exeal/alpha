@@ -312,7 +312,7 @@ HRESULT ScriptSystem::ScriptHost::executeFile(const WCHAR* fileName, VARIANT& re
 
 	if(SUCCEEDED(hr)) {
 		// parse and evaluate
-		MANAH_AUTO_STRUCT(EXCEPINFO, exception);
+		win32::AutoZero<EXCEPINFO> exception;
 		ComQIPtr<IActiveScriptParse, &IID_IActiveScriptParse> parser(scriptEngine_);
 		if(parser.get() != 0) {
 			loadedScripts_.push_back(ascension::kernel::fileio::canonicalizePathName(fileName));	// record the executed script file
@@ -374,7 +374,7 @@ STDMETHODIMP ScriptSystem::ScriptHost::GetLCID(LCID* lcid) {
 /// @see IActiveScriptSiteWindow#GetWindow
 STDMETHODIMP ScriptSystem::ScriptHost::GetWindow(HWND* window) {
 	MANAH_VERIFY_POINTER(window);
-	*window = Alpha::instance().getMainWindow().getHandle();
+	*window = Alpha::instance().getMainWindow().get();
 	return S_OK;
 }
 
@@ -395,7 +395,7 @@ STDMETHODIMP ScriptSystem::ScriptHost::OnScriptError(IActiveScriptError* error) 
 //	else if(!scriptSystem_.isInteractive())
 //		return S_OK;	// ignore
 
-	MANAH_AUTO_STRUCT(EXCEPINFO, exception);
+	win32::AutoZero<EXCEPINFO> exception;
 	error->GetExceptionInfo(&exception);
 	if(exception.scode == S_OK)	// not an error
 		return S_OK;
