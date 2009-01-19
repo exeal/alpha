@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 (was EditView.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -12,8 +12,8 @@
 #include "point.hpp"
 #include "presentation.hpp"
 #include "content-assist.hpp"
-#include "../../manah/win32/ui/window.hpp"
-#include "../../manah/com/unknown-impl.hpp"
+#include <manah/win32/ui/window.hpp>
+#include <manah/com/unknown-impl.hpp>
 #include <set>
 #include <algorithm>
 #include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
@@ -888,6 +888,11 @@ namespace ascension {
 			Caret* caret_;
 			presentation::Colors color_;
 		};
+
+		/// Provides the utility stuffs for viewers.
+		namespace utils {
+			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
+		} // namespace utils
 
 
 // inlines //////////////////////////////////////////////////////////////////

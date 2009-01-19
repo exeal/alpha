@@ -1,0 +1,1830 @@
+/**
+ * @file user-input.cpp Implements the members of the namespace @c ascension#viewers related to the
+ * user input (keyboard and mouse).
+ * @author exeal
+ * @date 2009 separated from viewer.cpp
+ * @see viewer.cpp
+ */
+
+#include <ascension/viewer.hpp>
+#include <ascension/text-editor.hpp>	// texteditor.commands.*
+#include <manah/win32/ui/menu.hpp>
+#include <zmouse.h>
+using namespace ascension;
+using namespace ascension::kernel;
+using namespace ascension::layout;
+using namespace ascension::presentation;
+using namespace ascension::viewers;
+using namespace manah;
+using namespace std;
+
+
+// TextViewer ///////////////////////////////////////////////////////////////
+
+#define ASCENSION_RESTORE_VANISHED_CURSOR()	\
+	if(modeState_.cursorVanished) {			\
+		modeState_.cursorVanished = false;	\
+		::ShowCursor(true);					\
+		releaseCapture();					\
+	}
+
+// local helpers
+namespace {
+	inline void abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+		if(texteditor::Session* session = viewer.document().session()) {
+			if(session->incrementalSearcher().isRunning())
+				session->incrementalSearcher().abort();
+		}
+	}
+	inline void endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+		if(texteditor::Session* session = viewer.document().session()) {
+			if(session->incrementalSearcher().isRunning())
+				session->incrementalSearcher().end();
+		}
+	}
+	inline const hyperlink::IHyperlink* getPointedHyperlink(const TextViewer& viewer, const Position& at) {
+		size_t numberOfHyperlinks;
+		if(const hyperlink::IHyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
+			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
+				if(at.column >= hyperlinks[i]->region().beginning() && at.column <= hyperlinks[i]->region().end())
+					return hyperlinks[i];
+			}
+		}
+		return 0;
+	}
+	inline void toggleOrientation(TextViewer& viewer) /*throw()*/ {
+		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
+		if(viewer.configuration().orientation == LEFT_TO_RIGHT) {
+			vrc.alignment = ALIGN_RIGHT;
+			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
+				vrc.lineNumbers.alignment = ALIGN_LEFT;
+			viewer.setConfiguration(0, &vrc);
+			viewer.modifyStyleEx(WS_EX_LEFT | WS_EX_LTRREADING, WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
+//			if(config.lineWrap.wrapsAtWindowEdge()) {
+//				win32::AutoZeroSize<SCROLLINFO> scroll;
+//				viewer.getScrollInformation(SB_HORZ, scroll);
+//				viewer.setScrollInformation(SB_HORZ, scroll);
+//			}
+		} else {
+			vrc.alignment = ALIGN_LEFT;
+			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
+				vrc.lineNumbers.alignment = ALIGN_RIGHT;
+			viewer.setConfiguration(0, &vrc);
+			viewer.modifyStyleEx(WS_EX_RIGHT | WS_EX_RTLREADING, WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
+//			if(config.lineWrap.wrapsAtWindowEdge()) {
+//				win32::AutoZeroSize<SCROLLINFO> scroll;
+//				viewer.getScrollInformation(SB_HORZ, scroll);
+//				viewer.setScrollInformation(SB_HORZ, scroll);
+//			}
+		}
+	}
+} // namespace @0
+
+/// Starts the auto scroll.
+void TextViewer::beginAutoScroll() {
+	if(!hasFocus() || document().numberOfLines() <= numberOfVisibleLines())
+		return;
+
+	RECT rect;
+	POINT pt;
+	autoScrollOriginMark_->getRect(rect);
+	::GetCursorPos(&pt);
+	autoScroll_.indicatorPosition = pt;
+	screenToClient(autoScroll_.indicatorPosition);
+	autoScrollOriginMark_->setPosition(HWND_TOP,
+		pt.x - (rect.right - rect.left) / 2, pt.y - (rect.bottom - rect.top) / 2,
+		0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	autoScroll_.scrolling = true;
+	setCapture();
+	setTimer(TIMERID_AUTOSCROLL, 0, 0);
+}
+
+/**
+ * Ends the auto scroll.
+ * @return true if the auto scroll was active
+ */
+bool TextViewer::endAutoScroll() {
+	check();
+	if(autoScroll_.scrolling) {
+		killTimer(TIMERID_AUTOSCROLL);
+		autoScroll_.scrolling = false;
+		autoScrollOriginMark_->show(SW_HIDE);
+		releaseCapture();
+		return true;
+	}
+	return false;
+}
+
+/// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
+void TextViewer::handleGUICharacterInput(CodePoint c) {
+	// vanish the cursor when the GUI user began typing
+	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0
+			&& !modeState_.cursorVanished
+			&& configuration_.vanishesCursor
+			&& hasFocus()) {
+		// ignore if the cursor is not over a window belongs to the same thread
+		POINT pt;
+		::GetCursorPos(&pt);
+		win32::Borrowed<Window> temp;
+		Window w(temp);
+		win32::Borrowed<Window> pointedWindow(Window::fromPoint(pt));
+		if(pointedWindow.get() != 0 && pointedWindow.getThreadID() == getThreadID()) {
+			modeState_.cursorVanished = true;
+			::ShowCursor(false);
+			setCapture();
+		}
+	}
+}
+
+/**
+ * Translates key down message to a command.
+ *
+ * This method provides a default implementtation of "key combination to command" map.
+ * Default @c #onKeyDown calls this method.
+ *
+ * This method is not overiddable (not virtual).
+ * To customize key bindings, the derevied class must override @c #onKeyDown method instead.
+ * @param key the virtual-keycode of the key
+ * @param controlPressed true if CTRL key is pressed
+ * @param shiftPressed true if SHIFT key is pressed
+ * @param altPressed true if ALT key is pressed
+ * @return true if the key down was handled
+ */
+bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) /*throw()*/ {
+	using namespace ascension::texteditor::commands;
+//	if(altPressed) {
+//		if(!shiftPressed || (key != VK_LEFT && key != VK_UP && key != VK_RIGHT && key != VK_DOWN))
+//			return false;
+//	}
+	switch(key) {
+	case VK_BACK:	// [BackSpace]
+	case VK_F16:	// [F16]
+		if(controlPressed)
+			WordDeletionCommand(*this, Direction::BACKWARD)();
+		else
+			CharacterDeletionCommand(*this, Direction::BACKWARD)();
+		return true;
+	case VK_CLEAR:	// [Clear]
+		if(controlPressed) {
+			EntireDocumentSelectionCreationCommand(*this)();
+			return true;
+		}
+		break;
+	case VK_RETURN:	// [Enter]
+		NewlineCommand(*this, controlPressed)();
+		return true;
+	case VK_SHIFT:	// [Shift]
+		if(controlPressed
+				&& ((toBoolean(::GetAsyncKeyState(VK_LSHIFT) & 0x8000) && configuration_.orientation == RIGHT_TO_LEFT)
+				|| (toBoolean(::GetAsyncKeyState(VK_RSHIFT) & 0x8000) && configuration_.orientation == LEFT_TO_RIGHT))) {
+			toggleOrientation(*this);
+			return true;
+		}
+		return false;
+	case VK_ESCAPE:	// [Esc]
+		CancelCommand(*this)();
+		return true;
+	case VK_PRIOR:	// [PageUp]
+		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
+		else				CaretMovementCommand(*this, &Caret::backwardPage, shiftPressed)();
+		return true;
+	case VK_NEXT:	// [PageDown]
+		if(controlPressed)	onVScroll(SB_PAGEDOWN, 0, 0);
+		else				CaretMovementCommand(*this, &Caret::forwardPage, shiftPressed)();
+		return true;
+	case VK_HOME:	// [Home]
+		CaretMovementCommand(*this, controlPressed ?
+			&Caret::beginningOfDocument : &Caret::beginningOfVisualLine, shiftPressed)();
+		return true;
+	case VK_END:	// [End]
+		CaretMovementCommand(*this, controlPressed ?
+			&Caret::endOfDocument : &Caret::endOfVisualLine, shiftPressed)();
+		return true;
+	case VK_LEFT:	// [Left]
+		if(altPressed && shiftPressed)
+			RowSelectionExtensionCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter)();
+		else
+			CaretMovementCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter, shiftPressed)();
+		return true;
+	case VK_UP:		// [Up]
+		if(altPressed && shiftPressed && !controlPressed)
+			RowSelectionExtensionCommand(*this, &Caret::backwardVisualLine)();
+		else if(controlPressed && !shiftPressed)
+			scroll(0, -1, true);
+		else
+			CaretMovementCommand(*this, &Caret::backwardVisualLine, shiftPressed)();
+		return true;
+	case VK_RIGHT:	// [Right]
+		if(altPressed) {
+			if(shiftPressed)
+				RowSelectionExtensionCommand(*this, controlPressed ? &Caret::rightWord : &Caret::rightCharacter)();
+			else
+				CompletionProposalPopupCommand(*this)();
+		} else
+			CaretMovementCommand(*this, controlPressed ? &Caret::rightWord: &Caret::rightCharacter, shiftPressed)();
+		return true;
+	case VK_DOWN:	// [Down]
+		if(altPressed && shiftPressed && !controlPressed)
+			RowSelectionExtensionCommand(*this, &Caret::forwardVisualLine)();
+		else if(controlPressed && !shiftPressed)
+			onVScroll(SB_LINEDOWN, 0, 0);
+		else
+			CaretMovementCommand(*this, &Caret::forwardVisualLine, shiftPressed)();
+		return true;
+	case VK_INSERT:	// [Insert]
+		if(altPressed)
+			break;
+		else if(!shiftPressed) {
+			if(controlPressed)	caret().copySelection(true);
+			else				OvertypeModeToggleCommand(*this)();
+		} else if(controlPressed)
+			PasteCommand(*this, false)();
+		else						break;
+		return true;
+	case VK_DELETE:	// [Delete]
+		if(!shiftPressed) {
+			if(controlPressed)
+				WordDeletionCommand(*this, Direction::FORWARD)();
+			else
+				CharacterDeletionCommand(*this, Direction::FORWARD)();
+		} else if(!controlPressed)
+			caret().cutSelection(true);
+		else
+			break;
+		return true;
+	case 'A':	// ^A -> Select All
+		if(controlPressed)
+			return EntireDocumentSelectionCreationCommand(*this)(), true;
+		break;
+	case 'C':	// ^C -> Copy
+		if(controlPressed)
+			return caret().copySelection(true), true;
+		break;
+	case 'H':	// ^H -> Backspace
+		if(controlPressed)
+			CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;
+		break;
+	case 'I':	// ^I -> Tab
+		if(controlPressed)
+			return CharacterInputCommand(*this, 0x0009)(), true;
+		break;
+	case 'J':	// ^J -> New Line
+	case 'M':	// ^M -> New Line
+		if(controlPressed)
+			return NewlineCommand(*this, false)(), true;
+		break;
+	case 'V':	// ^V -> Paste
+		if(controlPressed)
+			return PasteCommand(*this, false)(), true;
+		break;
+	case 'X':	// ^X -> Cut
+		if(controlPressed)
+			return caret().cutSelection(true), true;
+		break;
+	case 'Y':	// ^Y -> Redo
+		if(controlPressed)
+			return UndoCommand(*this, true)(), true;
+		break;
+	case 'Z':	// ^Z -> Undo
+		if(controlPressed)
+			return UndoCommand(*this, false)(), true;
+		break;
+	case VK_NUMPAD5:	// [Number Pad 5]
+		if(controlPressed)
+			return EntireDocumentSelectionCreationCommand(*this)(), true;
+		break;
+	case VK_F12:	// [F12]
+		if(controlPressed && shiftPressed)
+			return CodePointToCharacterConversionCommand(*this)(), true;
+		break;
+	}
+	return false;
+}
+
+/// @see WM_CAPTURECHANGED
+void TextViewer::onCaptureChanged(HWND) {
+	killTimer(TIMERID_AUTOSCROLL);
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->captureChanged();
+}
+
+/// @see WM_CHAR
+void TextViewer::onChar(UINT ch, UINT) {
+	handleGUICharacterInput(ch);
+}
+
+/// @see Window#onCommand
+bool TextViewer::onCommand(WORD id, WORD, HWND) {
+	using namespace ascension::texteditor::commands;
+	switch(id) {
+	case WM_UNDO:	// "Undo"
+		UndoCommand(*this, false)();
+		break;
+	case WM_REDO:	// "Redo"
+		UndoCommand(*this, true)();
+		break;
+	case WM_CUT:	// "Cut"
+		caret().cutSelection(true);
+		break;
+	case WM_COPY:	// "Copy"
+		caret().copySelection(true);
+		break;
+	case WM_PASTE:	// "Paste"
+		PasteCommand(*this, false)();
+		break;
+	case WM_CLEAR:	// "Delete"
+		CharacterDeletionCommand(*this, Direction::FORWARD)();
+		break;
+	case WM_SELECTALL:	// "Select All"
+		EntireDocumentSelectionCreationCommand(*this)();
+		break;
+	case ID_RTLREADING:	// "Right to left Reading order"
+		toggleOrientation(*this);
+		break;
+	case ID_DISPLAYSHAPINGCONTROLS: {	// "Show Unicode control characters"
+		Configuration c(configuration());
+		c.displaysShapingControls = !c.displaysShapingControls;
+		setConfiguration(&c, 0);
+		break;
+	}
+	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200E)();	break;
+	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200F)();	break;
+	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200D)();	break;
+	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200C)();	break;
+	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202A)();	break;
+	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202B)();	break;
+	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202D)();	break;
+	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202E)();	break;
+	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202C)();	break;
+	case ID_INSERT_WJ:		CharacterInputCommand(*this, 0x2060)();	break;
+	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206E)();	break;
+	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206F)();	break;
+	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206B)();	break;
+	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206A)();	break;
+	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206D)();	break;
+	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206C)();	break;
+	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001E)();	break;
+	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001F)();	break;
+	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xFFF9)();	break;
+	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xFFFA)();	break;
+	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xFFFB)();	break;
+	case ID_INSERT_U0020:	CharacterInputCommand(*this, 0x0020)();	break;
+	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00A0)();	break;
+	case ID_INSERT_U1680:	CharacterInputCommand(*this, 0x1680)();	break;
+	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180E)();	break;
+	case ID_INSERT_U2000:	CharacterInputCommand(*this, 0x2000)();	break;
+	case ID_INSERT_U2001:	CharacterInputCommand(*this, 0x2001)();	break;
+	case ID_INSERT_U2002:	CharacterInputCommand(*this, 0x2002)();	break;
+	case ID_INSERT_U2003:	CharacterInputCommand(*this, 0x2003)();	break;
+	case ID_INSERT_U2004:	CharacterInputCommand(*this, 0x2004)();	break;
+	case ID_INSERT_U2005:	CharacterInputCommand(*this, 0x2005)();	break;
+	case ID_INSERT_U2006:	CharacterInputCommand(*this, 0x2006)();	break;
+	case ID_INSERT_U2007:	CharacterInputCommand(*this, 0x2007)();	break;
+	case ID_INSERT_U2008:	CharacterInputCommand(*this, 0x2008)();	break;
+	case ID_INSERT_U2009:	CharacterInputCommand(*this, 0x2009)();	break;
+	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200A)();	break;
+	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200B)();	break;
+	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202F)();	break;
+	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205F)();	break;
+	case ID_INSERT_U3000:	CharacterInputCommand(*this, 0x3000)();	break;
+	case ID_INSERT_NEL:		CharacterInputCommand(*this, NEXT_LINE)();	break;
+	case ID_INSERT_LS:		CharacterInputCommand(*this, LINE_SEPARATOR)();	break;
+	case ID_INSERT_PS:		CharacterInputCommand(*this, PARAGRAPH_SEPARATOR)();	break;
+	case ID_TOGGLEIMESTATUS:	// "Open IME" / "Close IME"
+		InputMethodOpenStatusToggleCommand(*this)();
+		break;
+	case ID_TOGGLESOFTKEYBOARD:	// "Open soft keyboard" / "Close soft keyboard"
+		InputMethodSoftKeyboardModeToggleCommand(*this)();
+		break;
+	case ID_RECONVERT:	// "Reconvert"
+		ReconversionCommand(*this)();
+		break;
+	case ID_INVOKE_HYPERLINK:	// "Open <hyperlink>"
+		if(const hyperlink::IHyperlink* const link = getPointedHyperlink(*this, caret()))
+			link->invoke();
+		break;
+	default:
+//		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+		return true;
+	}
+
+	return false;
+}
+
+namespace {
+	// replaces single "&" with "&&".
+	template<typename CharType>
+	basic_string<CharType> escapeAmpersands(const basic_string<CharType>& s) {
+		static const ctype<CharType>& ct = use_facet<ctype<CharType> >(locale::classic());
+		basic_string<CharType> result;
+		result.reserve(s.length() * 2);
+		for(basic_string<CharType>::size_type i = 0; i < s.length(); ++i) {
+			result += s[i];
+			if(s[i] == ct.widen('&'))
+				result += s[i];
+		}
+		return result;
+	}
+} // namespace 0@
+
+/// @see WM_CONTEXTMENU
+bool TextViewer::onContextMenu(HWND, const POINT& pt) {
+	using namespace win32::ui;
+
+	if(!allowsMouseInput())	// however, may be invoked by other than the mouse...
+		return true;
+	utils::closeCompletionProposalsPopup(*this);
+	abortIncrementalSearch(*this);
+
+	// invoked by the keyboard
+	if(pt.x == 0xFFFF && pt.y == 0xFFFF) {
+		const_cast<POINT&>(pt).x = const_cast<POINT&>(pt).y = 1;	// hmm...
+		clientToScreen(const_cast<POINT&>(pt));
+	}
+
+	// ignore if the point is over the scroll bars
+	RECT rect;
+	getClientRect(rect);
+	clientToScreen(rect);
+	if(!toBoolean(::PtInRect(&rect, pt)))
+		return false;
+
+	const Document& doc = document();
+	const bool hasSelection = !caret().isSelectionEmpty();
+	const bool readOnly = doc.isReadOnly();
+	const bool japanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
+
+	static PopupMenu menu;
+	static const WCHAR* captions[] = {
+		L"&Undo",									L"\x5143\x306B\x623B\x3059(&U)",
+		L"&Redo",									L"\x3084\x308A\x76F4\x3057(&R)",
+		0,											0,
+		L"Cu&t",									L"\x5207\x308A\x53D6\x308A(&T)",
+		L"&Copy",									L"\x30B3\x30D4\x30FC(&C)",
+		L"&Paste",									L"\x8CBC\x308A\x4ED8\x3051(&P)",
+		L"&Delete",									L"\x524A\x9664(&D)",
+		0,											0,
+		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629E(&A)",
+		0,											0,
+		L"&Right to left Reading order",			L"\x53F3\x304B\x3089\x5DE6\x306B\x8AAD\x3080(&R)",
+		L"&Show Unicode control characters",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x8868\x793A(&S)",
+		L"&Insert Unicode control character",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x633F\x5165(&I)",
+		L"Insert Unicode &white space character",	L"Unicode \x7A7A\x767D\x6587\x5B57\x306E\x633F\x5165(&W)",
+	};																	
+#define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
+
+	if(menu.getNumberOfItems() == 0) {	// first initialization
+		menu << Menu::StringItem(WM_UNDO, GET_CAPTION(0))
+			<< Menu::StringItem(WM_REDO, GET_CAPTION(1))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(WM_CUT, GET_CAPTION(3))
+			<< Menu::StringItem(WM_COPY, GET_CAPTION(4))
+			<< Menu::StringItem(WM_PASTE, GET_CAPTION(5))
+			<< Menu::StringItem(WM_CLEAR, GET_CAPTION(6))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(WM_SELECTALL, GET_CAPTION(8))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_RTLREADING, GET_CAPTION(10))
+			<< Menu::StringItem(ID_DISPLAYSHAPINGCONTROLS, GET_CAPTION(11))
+			<< Menu::StringItem(0, GET_CAPTION(12))
+			<< Menu::StringItem(0, GET_CAPTION(13));
+
+		// under "Insert Unicode control character"
+		PopupMenu subMenu;
+		subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
+			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
+			<< Menu::StringItem(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner")
+			<< Menu::StringItem(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner")
+			<< Menu::StringItem(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding")
+			<< Menu::StringItem(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding")
+			<< Menu::StringItem(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override")
+			<< Menu::StringItem(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride")
+			<< Menu::StringItem(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting")
+			<< Menu::StringItem(ID_INSERT_WJ, L"WJ\t&Word Joiner")
+			<< Menu::StringItem(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)")
+			<< Menu::StringItem(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)")
+			<< Menu::StringItem(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_RS, L"RS\tRe&cord Separator")
+			<< Menu::StringItem(ID_INSERT_US, L"US\tUnit &Separator")
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor")
+			<< Menu::StringItem(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator")
+			<< Menu::StringItem(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator");
+		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
+
+		// under "Insert Unicode white space character"
+		subMenu.reset(::CreatePopupMenu());
+		subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
+			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
+			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
+			<< Menu::StringItem(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator")
+			<< Menu::StringItem(ID_INSERT_U2000, L"U+2000\tEn Quad")
+			<< Menu::StringItem(ID_INSERT_U2001, L"U+2001\tEm Quad")
+			<< Menu::StringItem(ID_INSERT_U2002, L"U+2002\tEn Space")
+			<< Menu::StringItem(ID_INSERT_U2003, L"U+2003\tEm Space")
+			<< Menu::StringItem(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2007, L"U+2007\tFigure Space")
+			<< Menu::StringItem(ID_INSERT_U2008, L"U+2008\tPunctuation Space")
+			<< Menu::StringItem(ID_INSERT_U2009, L"U+2009\tThin Space")
+			<< Menu::StringItem(ID_INSERT_U200A, L"U+200A\tHair Space")
+			<< Menu::StringItem(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space")
+			<< Menu::StringItem(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space")
+			<< Menu::StringItem(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space")
+			<< Menu::StringItem(ID_INSERT_U3000, L"U+3000\tIdeographic Space")
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_INSERT_NEL, L"NEL\tNext Line")
+			<< Menu::StringItem(ID_INSERT_LS, L"LS\tLine Separator")
+			<< Menu::StringItem(ID_INSERT_PS, L"PS\tParagraph Separator");
+		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
+
+		// check if the system supports bidi
+		if(!supportsComplexScripts()) {
+			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
+			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
+			menu.enable<Menu::BY_POSITION>(12, false);
+			menu.enable<Menu::BY_POSITION>(13, false);
+		}
+	}
+#undef GET_CAPTION
+
+	// modify menu items
+	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && doc.numberOfUndoableChanges() != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableChanges() != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste());
+	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
+	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
+	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
+
+	// IME commands
+	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
+	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
+			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
+		HIMC imc = ::ImmGetContext(get());
+		WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
+		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
+		WCHAR* openSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x958B\x304F(&E)" : L"Op&en soft keyboard";
+		WCHAR* closeSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x9589\x3058\x308B(&F)" : L"Close so&ft keyboard";
+		WCHAR* reconvert = japanese ? L"\x518D\x5909\x63DB(&R)" : L"&Reconvert";
+
+		menu << Menu::SeparatorItem()
+			<< Menu::StringItem(ID_TOGGLEIMESTATUS, toBoolean(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
+
+		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
+			DWORD convMode;
+			::ImmGetConversionStatus(imc, &convMode, 0);
+			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, toBoolean(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
+		}
+
+		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
+			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
+
+		::ImmReleaseContext(get(), imc);
+	}
+
+	// hyperlink
+	if(const hyperlink::IHyperlink* link = getPointedHyperlink(*this, caret())) {
+		const length_t len = (link->region().end() - link->region().beginning()) * 2 + 8;
+		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
+		swprintf(caption.get(),
+#if(_MSC_VER < 1400)
+#else
+			len,
+#endif // _MSC_VER < 1400
+			japanese ? L"\x202A%s\x202C \x3092\x958B\x304F" : L"Open \x202A%s\x202C", escapeAmpersands(doc.line(
+				caret().lineNumber()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
+	}
+
+	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, get());
+
+	// ...finally erase all items
+	int c = menu.getNumberOfItems();
+	while(c > 13)
+		menu.erase<Menu::BY_POSITION>(c--);
+
+	return true;
+}
+
+/// @see WM_IME_COMPOSITION
+void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
+	if(document().isReadOnly())
+		return;
+	else if(/*lParam == 0 ||*/ toBoolean(lParam & GCS_RESULTSTR)) {	// completed
+		if(HIMC imc = ::ImmGetContext(get())) {
+			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
+				// this was not canceled
+				const AutoBuffer<Char> text(new Char[len + 1]);
+				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
+				text[len] = 0;
+				if(!imeComposingCharacter_)
+					texteditor::commands::TextInputCommand(*this, text.get())();
+				else {
+					Document& doc = document();
+					doc.insertUndoBoundary();
+					if(doc.erase(*caret_, static_cast<DocumentCharacterIterator&>(
+							DocumentCharacterIterator(doc, caret()).next()).tell())) {
+						doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
+						doc.insertUndoBoundary();
+						imeComposingCharacter_ = false;
+						recreateCaret();
+					}
+				}
+			}
+//			updateIMECompositionWindowPosition();
+			::ImmReleaseContext(get(), imc);
+			handled = true;	// prevent to be send WM_CHARs
+		}
+	} else if(toBoolean(GCS_COMPSTR & lParam)) {
+		if(toBoolean(lParam & CS_INSERTCHAR)) {
+			Document& doc = document();
+			if(imeComposingCharacter_)
+				doc.erase(*caret_,
+					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell());
+			doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
+			imeComposingCharacter_ = true;
+			handled = true;
+			if(toBoolean(lParam & CS_NOMOVECARET))
+				caret_->backwardCharacter();
+			recreateCaret();
+		}
+	}
+}
+
+/// @see WM_IME_ENDCOMPOSITION
+void TextViewer::onIMEEndComposition() {
+	imeCompositionActivated_ = false;
+	recreateCaret();
+}
+
+/// @see WM_IME_NOTIFY
+LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
+	if(command == IMN_SETOPENSTATUS)
+		inputStatusListeners_.notify(&ITextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
+	return 0L;
+}
+
+/// @see WM_IME_REQUEST
+LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
+	const Document& doc = document();
+
+	// this command will be sent two times when reconversion is invoked
+	if(command == IMR_RECONVERTSTRING) {
+		if(doc.isReadOnly() || caret().isSelectionRectangle()) {
+			beep();
+			return 0L;
+		}
+		handled = true;
+		if(caret_->isSelectionEmpty()) {	// IME selects the composition target automatically if no selection
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				const String& line = doc.line(caret().lineNumber());
+				rcs->dwStrLen = static_cast<DWORD>(line.length());
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret().columnNumber());
+				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
+				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
+		} else {
+			const String selection(caret().selectionText(NLF_RAW_VALUE));
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = 0;
+				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * selection.length();
+		}
+	}
+
+	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
+	else if(command == IMR_CONFIRMRECONVERTSTRING) {
+		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+			const Region region(doc.accessibleRegion());
+			if(!caret().isSelectionEmpty()) {
+				// reconvert the selected region. the selection may be multi-line
+				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
+					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
+														// (however, NotePad narrows the selection...)
+			} else {
+				// reconvert the region IME passed if no selection (and create the new selection).
+				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
+				if(doc.isNarrowed() && caret().lineNumber() == region.first.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
+						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
+						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
+						rcs->dwCompStrLen = rcs->dwTargetStrLen
+							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
+					}
+				}
+				caret().select(
+					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
+					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+			}
+			handled = true;
+			return true;
+		}
+	}
+
+	// queried position of the composition window
+	else if(command == IMR_QUERYCHARPOSITION)
+		return false;	// handled by updateIMECompositionWindowPosition...
+
+	// queried document content for higher conversion accuracy
+	else if(command == IMR_DOCUMENTFEED) {
+		if(caret().lineNumber() == caret().anchor().lineNumber()) {
+			handled = true;
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(caret().lineNumber()));
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret().beginning().columnNumber());
+				doc.line(caret().lineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
+		}
+	}
+
+	return 0L;
+}
+
+/// @see WM_IME_STARTCOMPOSITION
+void TextViewer::onIMEStartComposition() {
+	imeCompositionActivated_ = true;
+	updateIMECompositionWindowPosition();
+	utils::closeCompletionProposalsPopup(*this);
+}
+
+/// @see WM_KEYDOWN
+void TextViewer::onKeyDown(UINT vkey, UINT, bool& handled) {
+	endAutoScroll();
+	handled = handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), false);
+}
+
+/// @see WM_KILLFOCUS
+void TextViewer::onKillFocus(HWND newWindow) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	endAutoScroll();
+/*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
+			&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
+		FOR_EACH_LISTENERS()
+			(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
+	}
+	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
+		closeCompletionProposalsPopup(*this);
+*/	abortIncrementalSearch(*this);
+	if(imeCompositionActivated_) {	// stop IME input
+		HIMC imc = ::ImmGetContext(get());
+		::ImmNotifyIME(imc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
+		::ImmReleaseContext(get(), imc);
+	}
+	if(newWindow != get()) {
+		hideCaret();
+		::DestroyCaret();
+	}
+	redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
+	update();
+}
+
+/// @see WM_LBUTTONDBLCLK
+void TextViewer::onLButtonDblClk(UINT keyState, const POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+}
+
+/// @see WM_LBUTTONDOWN
+void TextViewer::onLButtonDown(UINT keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+}
+
+/// @see WM_LBUTTONUP
+void TextViewer::onLButtonUp(UINT keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+}
+
+/// @see WM_MBUTTONDBLCLK
+void TextViewer::onMButtonDblClk(UINT keyState, const POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+}
+
+/// @see WM_MBUTTONDOWN
+void TextViewer::onMButtonDown(UINT keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+}
+
+/// @see WM_MBUTTONUP
+void TextViewer::onMButtonUp(UINT keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+}
+
+/// @see WM_MOUSEMOVE
+void TextViewer::onMouseMove(UINT keyState, const POINT& position) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseMoved(position, keyState);
+}
+
+/// @see WM_MOUSEWHEEL
+void TextViewer::onMouseWheel(UINT keyState, short delta, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseWheelRotated(delta, pt, keyState);
+}
+
+/// @see WM_RBUTTONDBLCLK
+void TextViewer::onRButtonDblClk(UINT keyState, const POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+}
+
+/// @see WM_RBUTTONDOWN
+void TextViewer::onRButtonDown(UINT keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+}
+
+/// @see WM_RBUTTONUP
+void TextViewer::onRButtonUp(UINT keyState, const POINT& pt) {
+	if(allowsMouseInput()) {
+		ASCENSION_RESTORE_VANISHED_CURSOR();
+		if(mouseInputStrategy_.get() != 0)
+			mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	}
+}
+
+/// @see WM_SETCURSOR
+bool TextViewer::onSetCursor(HWND, UINT, UINT) {
+	static length_t detectedUriLineLast = INVALID_INDEX;
+	POINT pt = getCursorPosition();	// カーソル位置
+	bool cursorChanged = false;
+
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+
+	// リンクのポップアップやカーソルを変える場合
+//	const HitTestResult htr = hitTest(pt);
+/*	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
+		Region region;
+		AutoBuffer<Char> uri;
+		if(getPointedLinkText(region, uri)) {	// URI
+			// ポップアップを出す
+			const length_t cursorDisplayLine = (pt.y - getTextAreaMargins().top) / renderer_->getLinePitch();
+			String description;
+			HCURSOR cursor = 0;
+			if(cursorDisplayLine != detectedUriLineLast
+					&& linkTextStrategy_->getLinkInformation(region, uri.get(), description, cursor)) {
+				if(!description.empty()) {
+					detectedUriLineLast = cursorDisplayLine;
+					showToolTip(description, 1000, 30000);
+				}
+				// カーソルを変える
+				if(cursor != 0) {
+					::SetCursor(cursor);
+					cursorChanged = true;
+				}
+			}
+		} else {
+			detectedUriLineLast = INVALID_INDEX;
+			hideToolTip();
+		}
+	}
+*/
+	if(!cursorChanged && mouseInputStrategy_.get() != 0)
+		cursorChanged = mouseInputStrategy_->showCursor(pt);
+
+	return cursorChanged;
+}
+
+/// @see WM_SETFOCUS
+void TextViewer::onSetFocus(HWND oldWindow) {
+	// restore the scroll positions
+	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
+	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
+
+	// hmm...
+//	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
+		redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
+		update();
+//	}
+
+	if(oldWindow != get()) {
+		// resurrect the caret
+		recreateCaret();
+		updateCaretPosition();
+		if(texteditor::Session* const session = document().session()) {
+			if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
+				isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+		}
+	}
+}
+
+/// @see WM_SYSCHAR
+void TextViewer::onSysChar(UINT, UINT) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+}
+
+/// @see WM_SYSKEYDOWN
+bool TextViewer::onSysKeyDown(UINT vkey, UINT) {
+	endAutoScroll();
+	return handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), true);;
+}
+
+/// @see WM_SYSKEYUP
+bool TextViewer::onSysKeyUp(UINT, UINT) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	return false;
+}
+
+#ifdef WM_UNICHAR
+/// @see WM_UNICHAR
+void TextViewer::onUniChar(UINT ch, UINT) {
+	if(ch != UNICODE_NOCHAR)
+		handleGUICharacterInput(ch);
+}
+#endif // WM_UNICHAR
+
+/// @see WM_XBUTTONDBLCLK
+bool TextViewer::onXButtonDblClk(WORD xButton, WORD keyState, const POINT& pt) {
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+	return false;
+}
+
+/// @see WM_XBUTTONDOWN
+bool TextViewer::onXButtonDown(WORD xButton, WORD keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+	return false;
+}
+
+/// @see WM_XBUTTONUP
+bool TextViewer::onXButtonUp(WORD xButton, WORD keyState, const POINT& pt) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
+			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	return false;
+}
+
+/// Moves the IME form to valid position.
+void TextViewer::updateIMECompositionWindowPosition() {
+	check();
+	if(!imeCompositionActivated_)
+		return;
+	else if(HIMC imc = ::ImmGetContext(get())) {
+		// composition window placement
+		COMPOSITIONFORM cf;
+		getClientRect(cf.rcArea);
+		RECT margins = textAreaMargins();
+		cf.rcArea.left += margins.left;
+		cf.rcArea.top += margins.top;
+		cf.rcArea.right -= margins.right;
+		cf.rcArea.bottom -= margins.bottom;
+		cf.dwStyle = CFS_POINT;
+		cf.ptCurrentPos = clientXYForCharacter(caret().beginning(), false, LineLayout::LEADING);
+		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
+			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == -32768) ? cf.rcArea.top : cf.rcArea.bottom;
+		else
+			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
+		::ImmSetCompositionWindow(imc, &cf);
+		cf.dwStyle = CFS_RECT;
+		::ImmSetCompositionWindow(imc, &cf);
+
+		// composition font
+		LOGFONTW font;
+		::GetObjectW(renderer_->font(), sizeof(LOGFONTW), &font);
+		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
+		
+		::ImmReleaseContext(get(), imc);
+	}
+}
+
+
+// TextViewer.AutoScrollOriginMark //////////////////////////////////////////
+
+const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
+
+/// Default constructor.
+TextViewer::AutoScrollOriginMark::AutoScrollOriginMark() /*throw()*/ {
+}
+
+/**
+ * Creates the window.
+ * @param view the viewer
+ * @return succeeded or not
+ * @see Window#create
+ */
+bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
+	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
+
+	if(!win32::ui::CustomControl<AutoScrollOriginMark>::create(view.use(),
+			rc, 0, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW))
+		return false;
+	modifyStyleEx(0, WS_EX_LAYERED);	// いきなり CreateWindowEx(WS_EX_LAYERED) とすると NT 4.0 で失敗する
+
+	HRGN rgn = ::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1);
+	setRegion(rgn, false);
+	::DeleteObject(rgn);
+	setLayeredAttributes(::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
+
+	return true;
+}
+
+/**
+ * Returns the cursor should be shown when the auto-scroll is active.
+ * @param type the type of the cursor to obtain
+ * @return the cursor. do not destroy the returned value
+ * @throw UnknownValueException @a type is unknown
+ */
+HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static Handle<HCURSOR, ::DestroyCursor> instances[3];
+	if(type >= MANAH_COUNTOF(instances))
+		throw UnknownValueException("type");
+	if(instances[type].get() == 0) {
+		static const byte AND_LINE_3_TO_11[] = {
+			0xFF, 0xFE, 0x7F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xF0, 0x0F, 0xFF,
+			0xFF, 0xE0, 0x07, 0xFF,
+			0xFF, 0xC0, 0x03, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0x00, 0x00, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF
+		};
+		static const byte XOR_LINE_3_TO_11[] = {
+			0x00, 0x01, 0x80, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x08, 0x10, 0x00,
+			0x00, 0x10, 0x08, 0x00,
+			0x00, 0x20, 0x04, 0x00,
+			0x00, 0x40, 0x02, 0x00,
+			0x00, 0x80, 0x01, 0x00,
+			0x00, 0x7F, 0xFE, 0x00
+		};
+		static const byte AND_LINE_13_TO_18[] = {
+			0xFF, 0xFE, 0x7F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xFE, 0x7F, 0xFF,
+		};
+		static const byte XOR_LINE_13_TO_18[] = {
+			0x00, 0x01, 0x80, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x01, 0x80, 0x00
+		};
+		static const byte AND_LINE_20_TO_28[] = {
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0x00, 0x00, 0xFF,
+			0xFF, 0x80, 0x01, 0xFF,
+			0xFF, 0xC0, 0x03, 0xFF,
+			0xFF, 0xE0, 0x07, 0xFF,
+			0xFF, 0xF0, 0x0F, 0xFF,
+			0xFF, 0xF8, 0x1F, 0xFF,
+			0xFF, 0xFC, 0x3F, 0xFF,
+			0xFF, 0xFE, 0x7F, 0xFF
+		};
+		static const byte XOR_LINE_20_TO_28[] = {
+			0x00, 0x7F, 0xFE, 0x00,
+			0x00, 0x80, 0x01, 0x00,
+			0x00, 0x40, 0x02, 0x00,
+			0x00, 0x20, 0x04, 0x00,
+			0x00, 0x10, 0x08, 0x00,
+			0x00, 0x08, 0x10, 0x00,
+			0x00, 0x04, 0x20, 0x00,
+			0x00, 0x02, 0x40, 0x00,
+			0x00, 0x01, 0x80, 0x00
+		};
+		byte andBits[4 * 32], xorBits[4 * 32];
+		// fill canvases
+		memset(andBits, 0xFF, 4 * 32);
+		memset(xorBits, 0x00, 4 * 32);
+		// draw lines
+		if(type == CURSOR_NEUTRAL || type == CURSOR_UPWARD) {
+			memcpy(andBits + 4 * 3, AND_LINE_3_TO_11, sizeof(AND_LINE_3_TO_11));
+			memcpy(xorBits + 4 * 3, XOR_LINE_3_TO_11, sizeof(XOR_LINE_3_TO_11));
+		}
+		memcpy(andBits + 4 * 13, AND_LINE_13_TO_18, sizeof(AND_LINE_13_TO_18));
+		memcpy(xorBits + 4 * 13, XOR_LINE_13_TO_18, sizeof(XOR_LINE_13_TO_18));
+		if(type == CURSOR_NEUTRAL || type == CURSOR_DOWNWARD) {
+			memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
+			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
+		}
+		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits));
+	}
+	return instances[type].get();
+}
+
+/// @see Window#onPaint
+void TextViewer::AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
+	const COLORREF color = ::GetSysColor(COLOR_APPWORKSPACE);
+	HPEN pen = ::CreatePen(PS_SOLID, 1, color), oldPen = dc.selectObject(pen);
+	HBRUSH brush = ::CreateSolidBrush(color), oldBrush = dc.selectObject(brush);
+	POINT points[4];
+
+	points[0].x = 13; points[0].y = 3;
+	points[1].x = 7; points[1].y = 9;
+	points[2].x = 20; points[2].y = 9;
+	points[3].x = 14; points[3].y = 3;
+	dc.polygon(points, 4);
+
+	points[0].x = 13; points[0].y = 24;
+	points[1].x = 7; points[1].y = 18;
+	points[2].x = 20; points[2].y = 18;
+	points[3].x = 14; points[3].y = 24;
+	dc.polygon(points, 4);
+
+	dc.moveTo(13, 12); dc.lineTo(15, 12);
+	dc.moveTo(12, 13); dc.lineTo(16, 13);
+	dc.moveTo(12, 14); dc.lineTo(16, 14);
+	dc.moveTo(13, 15); dc.lineTo(15, 15);
+
+	dc.selectObject(oldPen);
+	dc.selectObject(oldBrush);
+	::DeleteObject(pen);
+	::DeleteObject(brush);
+}
+
+
+// DefaultMouseInputStrategy ////////////////////////////////////////////////
+
+map<UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
+const UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
+const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
+
+/**
+ * Constructor.
+ * @param enableOLEDragAndDrop set true to enable OLE Drag-and-Drop feature.
+ * @param showDraggingImage set true to display OLE dragging image
+ */
+DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
+		bool showDraggingImage) : viewer_(0), leftButtonPressed_(false), lastHoveredHyperlink_(0) {
+	if(dnd_.enabled = enableOLEDragAndDrop && showDraggingImage) {
+		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
+		if(dnd_.dragSourceHelper.get() != 0) {
+			dnd_.dropTargetHelper.ComPtr<IDropTargetHelper>::ComPtr(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
+			if(dnd_.dropTargetHelper.get() == 0)
+				dnd_.dragSourceHelper.reset();
+		}
+	}
+	dnd_.state = DragAndDrop::INACTIVE;
+}
+
+/// 
+void DefaultMouseInputStrategy::beginTimer(UINT interval) {
+	endTimer();
+	if(const UINT_PTR id = ::SetTimer(0, 0, interval, timeElapsed))
+		timerTable_[id] = this;
+}
+
+/// @see IMouseInputStrategy#captureChanged
+void DefaultMouseInputStrategy::captureChanged() {
+	endTimer();
+	leftButtonPressed_ = false;
+	selectionExtendingUnit_ = CHARACTERS;
+}
+
+///
+void DefaultMouseInputStrategy::doDragAndDrop() {
+	com::ComPtr<IDataObject> draggingContent;
+	const Region selection(viewer_->caret().selectionRegion());
+
+	if(FAILED(viewer_->caret().createTextObject(true, *draggingContent.initialize())))
+		return;
+	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+
+	// setup dragging ghost ixyzzymage
+	if(dnd_.dragSourceHelper.get() != 0) {
+		win32::AutoZero<BITMAPV5HEADER> bh;
+		bh.bV5Size = sizeof(BITMAPV5HEADER);
+		bh.bV5Width = 40;
+		bh.bV5Height = 40;
+		bh.bV5Planes = 1;
+		bh.bV5BitCount = 32;
+		bh.bV5Compression = BI_BITFIELDS;
+		bh.bV5RedMask = 0x00FF0000;
+		bh.bV5GreenMask = 0x0000FF00;
+		bh.bV5BlueMask = 0x000000FF;
+		bh.bV5AlphaMask = 0xFF000000;
+
+		SHDRAGIMAGE image;
+		image.sizeDragImage.cx = bh.bV5Width;
+		image.sizeDragImage.cy = bh.bV5Height;
+		image.ptOffset.x = image.sizeDragImage.cx / 2;
+		image.ptOffset.y = image.sizeDragImage.cy / 2;
+		image.crColorKey = CLR_NONE;
+
+		if(HDC dc = ::CreateCompatibleDC(0)) {
+			void* bits;
+			HBITMAP bitmap = ::CreateDIBSection(dc, reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, 0, 0);
+			if(bitmap != 0 && bits != 0) {
+				HBITMAP memoryBitmap = ::CreateCompatibleBitmap(viewer_->getDC().use(), bh.bV5Width, bh.bV5Height);
+				HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc, memoryBitmap));
+				::SetTextColor(dc, ::GetSysColor(COLOR_HIGHLIGHTTEXT));
+				::SetBkColor(dc, ::GetSysColor(COLOR_HIGHLIGHT));
+				::SetBkMode(dc, OPAQUE);
+				RECT rc;
+				rc.left = rc.top = 0;
+				rc.right = bh.bV5Width;
+				rc.bottom = bh.bV5Height;
+				::ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc, L"xyzzy", 5, 0);
+
+				win32::AutoZero<BITMAPINFOHEADER> bih;
+				bih.biSize = sizeof(BITMAPINFOHEADER);
+				::GetDIBits(dc, memoryBitmap, 0, bh.bV5Height, 0, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
+				byte* memoryBits = new byte[bih.biWidth * bih.biHeight * bih.biBitCount / 8];
+				bih.biCompression = BI_RGB;
+				::GetDIBits(dc, memoryBitmap, 0, bih.biHeight, memoryBits, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
+				::SelectObject(dc, oldBitmap);
+				for(int x = 0; x < bih.biWidth; ++x) {
+					for(int y = 0; y < bih.biHeight; ++y) {
+						const byte* pixel = memoryBits + (x + y * bih.biWidth) * 3;
+						static_cast<ulong*>(bits)[x + y * bih.biWidth] = RGB(pixel[0], pixel[1], pixel[2]) + 0xFF000000;
+					}
+				}
+				delete[] memoryBits;
+
+				image.hbmpDragImage = bitmap;
+				dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get());
+				::DeleteObject(memoryBitmap);
+				::DeleteObject(bitmap);
+			}
+			::DeleteDC(dc);
+		}
+	}
+
+	// operation
+	assert(leftButtonPressed_);
+	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+	dnd_.state = DragAndDrop::DRAGGING_BY_SELF;
+	DWORD effectOwn;	// dummy
+	::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+	endTimer();
+	dnd_.state = DragAndDrop::INACTIVE;
+	leftButtonPressed_ = false;
+	if(viewer_->isVisible())
+		viewer_->setFocus();
+}
+
+/// @see IDropTarget#DragEnter
+STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	MANAH_VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	if(!dnd_.enabled || viewer_->document().isReadOnly()
+			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
+		return S_OK;
+
+	// validate the dragged data if can drop
+	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	if(data->QueryGetData(&fe) != S_OK) {
+		fe.cfFormat = CF_TEXT;
+		if(data->QueryGetData(&fe) != S_OK)
+			return S_OK;	// can't accept
+	}
+
+	if(dnd_.state != DragAndDrop::DRAGGING_BY_SELF) {
+		assert(dnd_.state == DragAndDrop::INACTIVE);
+		// retrieve number of lines if text is rectangle
+		dnd_.numberOfRectangleLines = 0;
+		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+			pair<HRESULT, String> text(getTextFromDataObject(*data));
+			if(SUCCEEDED(text.first))
+				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
+		}
+		dnd_.state = DragAndDrop::DRAGGING_FROM_OTHER;
+	}
+
+	viewer_->setFocus();
+	beginTimer(OLE_DRAGGING_TRACK_INTERVAL);
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->DragEnter(viewer_->get(), data, &p, *effect);
+	}
+	return DragOver(keyState, pt, effect);
+}
+
+/// @see IDropTarget#DragLeave
+STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
+	::SetFocus(0);
+	endTimer();
+	if(dnd_.enabled) {
+		if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER)
+			dnd_.state = DragAndDrop::INACTIVE;
+		if(dnd_.dropTargetHelper.get() != 0)
+			dnd_.dropTargetHelper->DragLeave();
+	}
+	return S_OK;
+}
+
+/// @see IDropTarget#DragOver
+STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
+	MANAH_VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	if(!dnd_.isDragging() || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+
+	POINT caretPoint = {pt.x, pt.y};
+	viewer_->screenToClient(caretPoint);
+	const Position p(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
+	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
+
+	// drop rectangle text into bidirectional line is not supported...
+	const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+	for(length_t line = p.line; line < lines; ++line) {
+		if(viewer_->textRenderer().lineLayout(line).isBidirectional()) {
+			*effect = DROPEFFECT_NONE;
+			return S_OK;
+		}
+	}
+
+	if(toBoolean(keyState & MK_CONTROL & MK_SHIFT))
+		*effect = DROPEFFECT_NONE;
+	else
+		*effect = (!leftButtonPressed_ || toBoolean(keyState & MK_CONTROL)) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->DragOver(&p, *effect);
+	}
+	return S_OK;
+}
+
+/// @see IDropTarget#Drop
+STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->Drop(data, &p, *effect);
+	}
+	if(data == 0)
+		return E_INVALIDARG;
+	MANAH_VERIFY_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+/*
+	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	STGMEDIUM stg;
+	data->GetData(&fe, &stg);
+	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
+	manah::win32::DumpContext dout;
+	dout << bytes;
+	::GlobalUnlock(stg.hGlobal);
+	::ReleaseStgMedium(&stg);
+*/
+	Document& document = viewer_->document();
+	if(!dnd_.enabled || document.isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+	Caret& ca = viewer_->caret();
+	POINT caretPoint = {pt.x, pt.y};
+	viewer_->screenToClient(caretPoint);
+	const Position destination(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
+
+	if(!document.accessibleRegion().includes(destination))
+		return S_OK;
+
+	if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER) {	// dropped from the other widget
+		endTimer();
+		ca.moveTo(destination);
+
+		bool rectangle;
+		pair<HRESULT, String> text(getTextFromDataObject(*data, &rectangle));
+		if(SUCCEEDED(text.first)) {
+			viewer_->freeze();
+			if(rectangle ? ca.insertRectangle(text.second) : ca.insert(text.second)) {
+				if(rectangle)
+					ca.beginRectangleSelection();
+				ca.select(destination, ca);
+				*effect = DROPEFFECT_COPY;
+			}
+			viewer_->unfreeze();
+		}
+		dnd_.state = DragAndDrop::INACTIVE;
+	} else {	// drop from the same widget
+		assert(dnd_.state == DragAndDrop::DRAGGING_BY_SELF);
+		String text(ca.selectionText(NLF_RAW_VALUE));
+
+		// can't drop into the selection
+		if(ca.isPointOverSelection(caretPoint)) {
+			ca.moveTo(destination);
+			dnd_.state = DragAndDrop::INACTIVE;
+		} else {
+			const bool rectangle = ca.isSelectionRectangle();
+			document.insertUndoBoundary();
+			viewer_->freeze();
+			if(toBoolean(keyState & MK_CONTROL)) {	// copy
+//				viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				if(rectangle)	// copy as a rectangle
+					ca.insertRectangle(text);
+				else	// copy as linear
+					ca.insert(text);
+				ca.enableAutoShow(true);
+				ca.select(destination, ca);
+				*effect = DROPEFFECT_COPY;
+			} else if(rectangle) {	// move as a rectangle
+				kernel::Point p(document);
+				p.moveTo(destination);
+				if(ca.eraseSelection()) {
+					p.adaptToDocument(false);
+					ca.enableAutoShow(false);
+					ca.extendSelection(p);
+					ca.insertRectangle(text);
+					ca.enableAutoShow(true);
+					ca.select(p, ca);
+					*effect = DROPEFFECT_MOVE;
+				}
+			} else {	// move as linear
+				VisualPoint activePointOrg(*viewer_);
+				const Position anchorPointOrg = ca.anchor();
+				activePointOrg.moveTo(ca);
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				if(document.erase(anchorPointOrg, activePointOrg)) {
+					const Position temp = ca;
+					ca.endRectangleSelection();
+					ca.insert(text);
+					ca.enableAutoShow(true);
+					ca.select(temp, ca);
+					*effect = DROPEFFECT_MOVE;
+				}
+			}
+			viewer_->unfreeze();
+			document.insertUndoBoundary();
+		}
+	}
+	return S_OK;
+}
+
+///
+void DefaultMouseInputStrategy::endTimer() {
+	for(map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.begin(); i != timerTable_.end(); ++i) {
+		if(i->second == this) {
+			::KillTimer(0, i->first);
+			timerTable_.erase(i);
+			return;
+		}
+	}
+}
+
+/// Extends the selection to the current cursor position.
+void DefaultMouseInputStrategy::extendSelection(const Position* to /* = 0 */) {
+	Position destination;
+	if(to == 0) {
+		RECT rc;
+		const RECT margins = viewer_->textAreaMargins();
+		viewer_->getClientRect(rc);
+		POINT p = viewer_->getCursorPosition();
+		Caret& caret = viewer_->caret();
+		if(selectionExtendingUnit_ != CHARACTERS) {
+			const TextViewer::HitTestResult htr = viewer_->hitTest(p);
+			if(selectionExtendingUnit_ == LINES && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
+				// end line selection
+				selectionExtendingUnit_ = CHARACTERS;
+		}
+		p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
+		p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
+		destination = viewer_->characterForClientXY(p, LineLayout::TRAILING);
+	} else
+		destination = *to;
+
+	const Document& document = viewer_->document();
+	Caret& caret = viewer_->caret();
+	if(selectionExtendingUnit_ == CHARACTERS)
+		caret.extendSelection(destination);
+	else if(selectionExtendingUnit_ == LINES) {
+		const length_t lines = document.numberOfLines();
+		Region s;
+		s.first.line = (destination.line >= noncharacterSelectionExtendingInitialLine_) ?
+			noncharacterSelectionExtendingInitialLine_ : noncharacterSelectionExtendingInitialLine_ + 1;
+		s.first.column = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;
+		s.second.line = (destination.line >= noncharacterSelectionExtendingInitialLine_) ? destination.line + 1 : destination.line;
+		s.second.column = (s.second.line > lines - 1) ? document.lineLength(--s.second.line) : 0;
+		caret.select(s);
+	} else if(selectionExtendingUnit_ == WORDS) {
+		using namespace text;
+		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(caret.getContentType());
+		if(destination.line < noncharacterSelectionExtendingInitialLine_
+				|| (destination.line == noncharacterSelectionExtendingInitialLine_
+					&& destination.column < wordSelectionInitialColumns_.first)) {
+			WordBreakIterator<DocumentCharacterIterator> i(
+				DocumentCharacterIterator(document, destination), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
+			--i;
+			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.second),
+				(i.base().tell().line == destination.line) ? i.base().tell() : Position(destination.line, 0));
+		} else if(destination.line > noncharacterSelectionExtendingInitialLine_
+				|| (destination.line == noncharacterSelectionExtendingInitialLine_
+					&& destination.column > wordSelectionInitialColumns_.second)) {
+			WordBreakIterator<DocumentCharacterIterator> i(
+				DocumentCharacterIterator(document, destination), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
+			++i;
+			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.first),
+				(i.base().tell().line == destination.line) ?
+					i.base().tell() : Position(destination.line, document.lineLength(destination.line)));
+		} else
+			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.first),
+				Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.second));
+	}
+}
+
+/// @see IDropSource#GiveFeedback
+STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
+	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
+}
+
+/// Handles @c WM_LBUTTONDOWN.
+void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, uint keyState) {
+	bool boxDragging = false;
+	Caret& caret = viewer_->caret();
+	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
+
+	utils::closeCompletionProposalsPopup(*viewer_);
+	endIncrementalSearch(*viewer_);
+	leftButtonPressed_ = true;
+
+	// select line(s)
+	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
+		const Position to(viewer_->characterForClientXY(position, LineLayout::LEADING));
+		const bool extend = toBoolean(keyState & MK_SHIFT) && to.line != caret.anchor().lineNumber();
+		selectionExtendingUnit_ = LINES;
+		noncharacterSelectionExtendingInitialLine_ = extend ? caret.anchor().lineNumber() : to.line;
+		extendSelection(&to);
+		viewer_->setCapture();
+		beginTimer(SELECTION_EXPANSION_INTERVAL);
+	}
+
+	// approach OLE drag-and-drop
+	else if(dnd_.enabled && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
+		dnd_.state = DragAndDrop::APPROACHING;
+		dnd_.approachedPosition = position;
+		if(caret.isSelectionRectangle())
+			boxDragging = true;
+	}
+
+	else {
+		// try hyperlink
+		bool hyperlinkInvoked = false;
+		if(toBoolean(keyState & MK_CONTROL)) {
+			if(!caret.isPointOverSelection(position)) {
+				const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true));
+				if(p != Position::INVALID_POSITION) {
+					if(const hyperlink::IHyperlink* link = getPointedHyperlink(*viewer_, p)) {
+						link->invoke();
+						hyperlinkInvoked = true;
+					}
+				}
+			}
+		}
+
+		if(!hyperlinkInvoked) {
+			// modification keys and result
+			//
+			// shift => keep the anchor and move the caret to the cursor position
+			// ctrl  => begin word selection
+			// alt   => begin rectangle selection
+			const Position to(viewer_->characterForClientXY(position, LineLayout::TRAILING));
+			if(toBoolean(keyState & (MK_CONTROL | MK_SHIFT))) {
+				if(toBoolean(keyState & MK_CONTROL)) {
+					// begin word selection
+					selectionExtendingUnit_ = WORDS;
+					caret.moveTo(toBoolean(keyState & MK_SHIFT) ? caret.anchor() : to);
+					caret.selectWord();
+					noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
+					wordSelectionInitialColumns_ = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
+				}
+				if(toBoolean(keyState & MK_SHIFT))
+					extendSelection(&to);
+			} else
+				caret.moveTo(to);
+			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// make the selection reactangle
+				caret.beginRectangleSelection();
+			viewer_->setCapture();
+			beginTimer(SELECTION_EXPANSION_INTERVAL);
+		}
+	}
+
+//	if(!caret.isSelectionRectangle() && !boxDragging)
+//		viewer_->redrawLine(caret.getLineNumber());
+	viewer_->setFocus();
+}
+
+/// Handles @c WM_LBUTTONUP.
+void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, uint) {
+	// OLE ドラッグ開始か -> キャンセル
+	if(dnd_.enabled
+			&& (dnd_.state == DragAndDrop::APPROACHING
+			|| dnd_.state == DragAndDrop::DRAGGING_BY_SELF)) {	// TODO: this should handle only case APPROACHING?
+		dnd_.state = DragAndDrop::INACTIVE;
+		viewer_->caret().moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
+		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
+	}
+
+	endTimer();
+	if(leftButtonPressed_) {
+		leftButtonPressed_ = false;
+		// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
+		viewer_->caret().show();
+	}
+	viewer_->releaseCapture();
+}
+
+/// @see IMouseInputStrategy#install
+void DefaultMouseInputStrategy::install(TextViewer& viewer) {
+	if(viewer_ != 0)
+		uninstall();
+	(viewer_ = &viewer)->registerDragDrop(*this);
+	selectionExtendingUnit_ = CHARACTERS;
+}
+
+/// @see IMouseInputStrategy#mouseButtonInput
+bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, const POINT& position, uint keyState) {
+	if(action != RELEASED && viewer_->isAutoScrolling()) {
+		viewer_->endAutoScroll();
+		return true;
+	} else if(button == LEFT_BUTTON) {
+		if(action == PRESSED)
+			handleLeftButtonPressed(position, keyState);
+		else if(action == RELEASED)
+			handleLeftButtonReleased(position, keyState);
+		else if(action == DOUBLE_CLICKED) {
+			abortIncrementalSearch(*viewer_);
+			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->getCursorPosition());
+			if(htr == TextViewer::LEADING_MARGIN || htr == TextViewer::TOP_MARGIN || htr == TextViewer::TEXT_AREA) {
+				// begin word selection
+				Caret& caret = viewer_->caret();
+				caret.selectWord();
+				selectionExtendingUnit_ = WORDS;
+				noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
+				wordSelectionInitialColumns_ = make_pair(caret.anchor().columnNumber(), caret.columnNumber());
+				viewer_->setCapture();
+				beginTimer(SELECTION_EXPANSION_INTERVAL);
+			}
+		}
+	} else if(button == MIDDLE_BUTTON) {
+		if(action == PRESSED) {
+			viewer_->setFocus();
+			viewer_->beginAutoScroll();
+			return true;
+		}
+	}
+	return false;
+}
+
+/// @see IMouseInputStrategy#mouseMoved
+void DefaultMouseInputStrategy::mouseMoved(const POINT& position, uint) {
+	if(dnd_.enabled && dnd_.state == DragAndDrop::APPROACHING) {	// OLE dragging starts?
+		if(viewer_->caret().isSelectionEmpty())
+			dnd_.state = DragAndDrop::INACTIVE;	// approaching... => cancel
+		else {
+			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
+			const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
+			if((position.x > dnd_.approachedPosition.x + cxDragBox / 2)
+					|| (position.x < dnd_.approachedPosition.x - cxDragBox / 2)
+					|| (position.y > dnd_.approachedPosition.y + cyDragBox / 2)
+					|| (position.y < dnd_.approachedPosition.y - cyDragBox / 2))
+				doDragAndDrop();
+		}
+	} else if(leftButtonPressed_)
+		extendSelection();
+}
+
+/// @see IMouseInputStrategy#mouseWheelRotated
+void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const POINT&, uint) {
+	if(!viewer_->endAutoScroll()) {
+		// use system settings
+		UINT lines;	// the number of lines to scroll
+		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
+			lines = 3;
+		if(lines == WHEEL_PAGESCROLL)
+			lines = static_cast<UINT>(viewer_->numberOfVisibleLines());
+		delta *= static_cast<short>(lines);
+		viewer_->scroll(0, -delta / WHEEL_DELTA, true);
+	}
+}
+
+/// @see IDropSource#QueryContinueDrag
+STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+	if(toBoolean(escapePressed) || toBoolean(keyState & MK_RBUTTON))	// cancel
+		return DRAGDROP_S_CANCEL;
+	if(!toBoolean(keyState & MK_LBUTTON))	// drop
+		return DRAGDROP_S_DROP;
+	return S_OK;
+}
+
+/// @see IMouseInputStrategy#showCursor
+bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
+	using namespace hyperlink;
+	LPCTSTR cursorName = 0;
+	const IHyperlink* newlyHoveredHyperlink = 0;
+
+	// on the vertical ruler?
+	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
+	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
+		cursorName = IDC_ARROW;
+	// on a draggable text selection?
+	else if(dnd_.enabled && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
+		cursorName = IDC_ARROW;
+	else if(htr == TextViewer::TEXT_AREA) {
+		// on a hyperlink?
+		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, EditPoint::UTF16_CODE_UNIT));
+		if(p != Position::INVALID_POSITION)
+			newlyHoveredHyperlink = getPointedHyperlink(*viewer_, p);
+		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
+			cursorName = IDC_HAND;
+	}
+
+	if(cursorName != 0) {
+		::SetCursor(static_cast<HCURSOR>(::LoadImage(
+			0, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+		return true;
+	}
+	if(newlyHoveredHyperlink != 0) {
+		if(newlyHoveredHyperlink != lastHoveredHyperlink_)
+			viewer_->showToolTip(newlyHoveredHyperlink->description(), 1000, 30000);
+	} else
+		viewer_->hideToolTip();
+	lastHoveredHyperlink_ = newlyHoveredHyperlink;
+	return false;
+}
+
+///
+void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD) {
+	map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.find(eventID);
+	if(i == timerTable_.end())
+		return;
+	DefaultMouseInputStrategy& self = *i->second;
+	if(self.dnd_.enabled && self.dnd_.isDragging()) {	// scroll automatically during OLE dragging
+		const POINT pt = self.viewer_->getCursorPosition();
+		RECT clientRect;
+		self.viewer_->getClientRect(clientRect);
+		RECT margins = self.viewer_->textAreaMargins();
+		const TextRenderer& renderer = self.viewer_->textRenderer();
+		margins.left = max<long>(renderer.averageCharacterWidth(), margins.left);
+		margins.top = max<long>(renderer.linePitch() / 2, margins.top);
+		margins.right = max<long>(renderer.averageCharacterWidth(), margins.right);
+		margins.bottom = max<long>(renderer.linePitch() / 2, margins.bottom);
+
+		// 以下のスクロール量には根拠は無い
+		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
+			self.viewer_->scroll(0, -1, true);
+		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
+			self.viewer_->scroll(0, +1, true);
+		else if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
+			self.viewer_->scroll(-3/*viewer_->numberOfVisibleColumns()*/, 0, true);
+		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
+			self.viewer_->scroll(+3/*viewer_->numberOfVisibleColumns()*/, 0, true);
+	} else if(self.leftButtonPressed_) {	// scroll automatically during extending the selection
+		const POINT pt = self.viewer_->getCursorPosition();
+		RECT rc;
+		const RECT margins = self.viewer_->textAreaMargins();
+		self.viewer_->getClientRect(rc);
+		// 以下のスクロール量には根拠は無い
+		if(pt.y < rc.top + margins.top)
+			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->textRenderer().linePitch() - 1, true);
+		else if(pt.y >= rc.bottom - margins.bottom)
+			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->textRenderer().linePitch() + 1, true);
+		else if(pt.x < rc.left + margins.left)
+			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->textRenderer().averageCharacterWidth() - 1, 0, true);
+		else if(pt.x >= rc.right - margins.right)
+			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->textRenderer().averageCharacterWidth() + 1, 0, true);
+		self.extendSelection();
+	}
+}
+
+/// @see IMouseInputStrategy#uninstall
+void DefaultMouseInputStrategy::uninstall() {
+	endTimer();
+	viewer_->revokeDragDrop();
+	viewer_ = 0;
+}
