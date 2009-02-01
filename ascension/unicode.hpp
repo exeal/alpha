@@ -19,7 +19,7 @@
 #include <map>
 #include <locale>
 
-#if ASCENSION_UNICODE_VERSION > 0x0500
+#if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 /// Tracking revision number of UAX #14 ("Line Breaking Properties")
@@ -823,9 +823,9 @@ namespace ascension {
 			static CodePoint foldCommon(CodePoint c) /*throw()*/;
 			static std::size_t foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) /*throw()*/;
 			static CodePoint foldTurkishI(CodePoint c) /*throw()*/;
-			static const Char COMMON_CASED[], COMMON_FOLDED[], SIMPLE_CASED[], SIMPLE_FOLDED[], FULL_CASED[];
-			static const Char* FULL_FOLDED[];
-			static const std::size_t NUMBER_OF_COMMON_CASED, NUMBER_OF_SIMPLE_CASED, NUMBER_OF_FULL_CASED;
+			static const CodePoint COMMON_CASED_[], COMMON_FOLDED_[], SIMPLE_CASED_[], SIMPLE_FOLDED_[], FULL_CASED_[];
+			static const Char* FULL_FOLDED_[];
+			static const std::size_t NUMBER_OF_COMMON_CASED_, NUMBER_OF_SIMPLE_CASED_, NUMBER_OF_FULL_CASED_;
 		};
 
 		class CollationKey : public manah::FastArenaObject<CollationKey> {
@@ -1081,8 +1081,8 @@ inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false *
 	if(c != (result = foldCommon(c)))
 		return result;
 	// simple mapping
-	const Char* const p = std::lower_bound(SIMPLE_CASED, SIMPLE_CASED + NUMBER_OF_SIMPLE_CASED, static_cast<Char>(c & 0xFFFF));
-	return (*p == c) ? SIMPLE_FOLDED[p - SIMPLE_CASED] : c;
+	const CodePoint* const p = std::lower_bound(SIMPLE_CASED_, SIMPLE_CASED_ + NUMBER_OF_SIMPLE_CASED_, c);
+	return (*p == c) ? SIMPLE_FOLDED_[p - SIMPLE_CASED_] : c;
 }
 
 /**
@@ -1104,13 +1104,13 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 		c = *i;
 		if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 			f = foldCommon(c);
-		if(f != c || c >= 0x010000U) {
+		if(f != c || c >= 0x010000u) {
 			if(surrogates::encode(f, buffer) < 2)	s.sputc(buffer[0]);
 			else									s.sputn(buffer, 2);
 		} else {
-			const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFFU));
-			if(*p == c)	s.sputn(FULL_FOLDED[p - FULL_CASED], static_cast<streamsize>(wcslen(FULL_FOLDED[p - FULL_CASED])));
-			else		s.sputc(static_cast<Char>(c & 0xFFFFU));
+			const CodePoint* const p = lower_bound(FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
+			if(*p == c)	s.sputn(FULL_FOLDED_[p - FULL_CASED_], static_cast<std::streamsize>(wcslen(FULL_FOLDED_[p - FULL_CASED_])));
+			else		s.sputc(static_cast<Char>(c & 0xffffu));
 		}
 	}
 	return s.str();
@@ -1126,16 +1126,12 @@ inline String CaseFolder::fold(const String& text, bool excludeTurkishI /* = fal
 	return fold(text.data(), text.data() + text.length(), excludeTurkishI);}
 
 inline CodePoint CaseFolder::foldCommon(CodePoint c) /*throw()*/ {
-	if(c < 0x010000U) {	// BMP
-		const Char* const p = std::lower_bound(COMMON_CASED, COMMON_CASED + NUMBER_OF_COMMON_CASED, static_cast<Char>(c & 0xFFFFU));
-		return (*p == c) ? COMMON_FOLDED[p - COMMON_CASED] : c;
-	} else if(c >= 0x010400U && c < 0x010428U)	// Only Deseret is cased in out of BMP (Unicode 5.0).
-		c += 0x000028U;
-	return c;
+	const CodePoint* const p = std::lower_bound(COMMON_CASED_, COMMON_CASED_ + NUMBER_OF_COMMON_CASED_, c);
+	return (*p == c) ? COMMON_FOLDED_[p - COMMON_CASED_] : c;
 }
 
 inline CodePoint CaseFolder::foldTurkishI(CodePoint c) /*throw()*/ {
-	if(c == 0x0049U) c = 0x0131U; else if(c == 0x0130U) c = 0x0069U; return c;}
+	if(c == 0x0049u) c = 0x0131u; else if(c == 0x0130u) c = 0x0069u; return c;}
 
 }} // namespace ascension.text
 

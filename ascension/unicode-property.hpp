@@ -2,12 +2,12 @@
  * @file unicode-property.hpp
  * Defines Unicode property entries and provides methods to retrieve a property of character.
  * @author exeal
- * @date 2007-2008
+ * @date 2007-2009
  */
 
 #ifndef ASCENSION_UNICODE_PROPERTY_HPP
 #define ASCENSION_UNICODE_PROPERTY_HPP
-#if ASCENSION_UNICODE_VERSION > 0x0500
+#if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 #include "unicode.hpp"
@@ -20,35 +20,6 @@ namespace ascension {
 		 * Character Database)</a>.
 		 */
 		namespace ucd {
-
-			/// @internal
-			namespace internal {
-				// helpers for Unicode properties implementation
-				template<typename Code> struct CodeRange {
-					Code first, last;
-#ifdef _SECURE_SCL
-					bool operator<(const CodeRange<Code>& rhs) const {return first < rhs.first && last < rhs.last;}
-#endif // _SECURE_SCL
-				};
-				template<typename Code> inline bool operator<(const CodeRange<Code>& lhs, CodePoint rhs) {return lhs.first < rhs;}
-				template<typename Code> inline bool operator<(CodePoint lhs, const CodeRange<Code>& rhs) {return lhs < rhs.first;}
-				struct PropertyRange {
-					CodePoint first, last;
-					ushort property;
-#ifdef _SECURE_SCL
-					bool operator<(const PropertyRange& rhs) const {return first < rhs.first && last < rhs.last;}
-#endif // _SECURE_SCL
-				};
-				inline bool operator<(const PropertyRange& lhs, CodePoint rhs) {return lhs.first < rhs;}
-				inline bool operator<(CodePoint lhs, const PropertyRange& rhs) {return lhs < rhs.first;}
-				template<typename Element> static const Element* findInRange(const Element* first, const Element* last, CodePoint cp) {
-					const Element* p = std::lower_bound(first, last, cp);
-					if(p == last) return 0;
-					else if(p->first == cp) return p;
-					else if(p->first > cp && p != first && p[-1].last >= cp) return p - 1;
-					else return 0;
-				}
-			} // namespace internal
 
 			/**
 			 * A function object compares Unicode property (value) names based on "Property and Property Value Matching"
@@ -66,164 +37,91 @@ namespace ascension {
 			/// An invalid property value.
 			const int NOT_PROPERTY = 0;
 
-			/// Base type for all property classes.
-			template<typename ConcreteProperty> class PropertyBase {
-			public:
-				static int forName(const Char* name);
-			protected:
-#ifdef ASCENSION_MSVC
-#pragma warning(disable : 4510 4512 4610)
-#endif // ASCENSION_MSVC
-				struct Names {
-					const Char* const shortName;
-					const Char* const longName;
-				};
-#ifdef ASCENSION_MSVC
-#pragma warning(default : 4510 4512 4610)
-#endif // ASCENSION_MSVC
-			private:
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-			};
-			template<typename ConcreteProperty>
-			std::map<const Char*, int, PropertyNameComparer<Char> > PropertyBase<ConcreteProperty>::names_;
-
-			/// Base type for all enumeration property classes.
-			template<typename ConcreteProperty> class EnumerationProperty : public PropertyBase<ConcreteProperty> {
-			public:
-				static int of(CodePoint c) /*throw()*/;
-			};
+#include "src/generated/uprops-data-types"
 
 			/// General categories. These values are based on Unicode standard 5.0.0 "4.5 General Category".
-			class GeneralCategory : public EnumerationProperty<GeneralCategory> {
+			class GeneralCategory {
 			public:
 				enum {
 					FIRST_VALUE = NOT_PROPERTY + 1,
 					// sub-categories
-					LETTER_UPPERCASE = FIRST_VALUE,	///< Lu = Letter, uppercase
-					LETTER_LOWERCASE,				///< Ll = Letter, lowercase
-					LETTER_TITLECASE,				///< Lt = Letter, titlecase
-					LETTER_MODIFIER,				///< Lm = Letter, modifier
-					LETTER_OTHER,					///< Lo = Letter, other
-					MARK_NONSPACING,				///< Mn = Mark, nonspacing
-					MARK_SPACING_COMBINING,			///< Mc = Mark, spacing combining
-					MARK_ENCLOSING,					///< Me = Mark, enclosing
-					NUMBER_DECIMAL_DIGIT,			///< Nd = Number, decimal digit
-					NUMBER_LETTER,					///< Nl = Number, letter
-					NUMBER_OTHER,					///< No = Number, other
-					PUNCTUATION_CONNECTOR,			///< Pc = Punctuation, connector
-					PUNCTUATION_DASH,				///< Pd = Punctuation, dash
-					PUNCTUATION_OPEN,				///< Ps = Punctuation, open
-					PUNCTUATION_CLOSE,				///< Pe = Punctuation, close
-					PUNCTUATION_INITIAL_QUOTE,		///< Pi = Punctuation, initial quote
-					PUNCTUATION_FINAL_QUOTE,		///< Pf = Punctuation, final quote
-					PUNCTUATION_OTHER,				///< Po = Punctuation, other
-					SYMBOL_MATH,					///< Sm = Symbol, math
-					SYMBOL_CURRENCY,				///< Sc = Symbol, currency
-					SYMBOL_MODIFIER,				///< Sk = Symbol, modifier
-					SYMBOL_OTHER,					///< So = Symbol, other
-					SEPARATOR_SPACE,				///< Zs = Separator, space
-					SEPARATOR_LINE,					///< Zl = Separator, line
-					SEPARATOR_PARAGRAPH,			///< Zp = Separator, paragraph
-					OTHER_CONTROL,					///< Cc = Other, control
-					OTHER_FORMAT,					///< Cf = Other, format
-					OTHER_SURROGATE,				///< Cs = Other, surrogate
-					OTHER_PRIVATE_USE,				///< Co = Other, private use
-					OTHER_UNASSIGNED,				///< Cn = Other, not assigned
+					UPPERCASE_LETTER = FIRST_VALUE,	///< Letter, uppercase (Lu = Uppercase_Letter)
+					LOWERCASE_LETTER,				///< Letter, lowercase (Ll = Lowercase_Letter)
+					TITLECASE_LETTER,				///< Letter, titlecase (Lt = Titlecase_Letter)
+					MODIFIER_LETTER,				///< Letter, modifier (Lm = Modifier_Letter)
+					OTHER_LETTER,					///< Letter, other (Lo = Other_Letter)
+					NONSPACING_MARK,				///< Mark, nonspacing (Mn = Nonspacing_Mark)
+					SPACING_MARK,					///< Mark, spacing combining (Mc = Spacing_Mark)
+					ENCLOSING_MARK,					///< Mark, enclosing (Me = Enclosing_Mark)
+					DECIMAL_NUMBER,					///< Number, decimal digit (Nd = Decimal_Number)
+					LETTER_NUMBER,					///< Number, letter (Nl = Letter_Number)
+					OTHER_NUMBER,					///< Number, other (No = Other_Number)
+					CONNECTOR_PUNCTUATION,			///< Punctuation, connector (Pc = Connector_Punctuation)
+					DASH_PUNCTUATION,				///< Punctuation, dash (Pd = Dash_Punctuation)
+					OPEN_PUNCTUATION,				///< Punctuation, open (Ps = Open_Punctuation)
+					CLOSE_PUNCTUATION,				///< Punctuation, close (Pe = Close_Punctuation)
+					INITIAL_PUNCTUATION,			///< Punctuation, initial quote (Pi = Initial_Punctuation)
+					FINAL_PUNCTUATION,				///< Punctuation, final quote (Pf = Final_Punctuation)
+					OTHER_PUNCTUATION,				///< Punctuation, other (Po = Other_Punctuation)
+					MATH_SYMBOL,					///< Symbol, math (Sm = Math_Symbol)
+					CURRENCY_SYMBOL,				///< Symbol, currency (Sc = Currency_Symbol)
+					MODIFIER_SYMBOL,				///< Symbol, modifier (Sk = Modifier_Symbol)
+					OTHER_SYMBOL,					///< Symbol, other (So = Other_Symbol)
+					SPACE_SEPARATOR,				///< Separator, space (Zs = Space_Separator)
+					LINE_SEPARATOR,					///< Separator, line (Zl = Line_Separator)
+					PARAGRAPH_SEPARATOR,			///< Separator, paragraph (Zp = Paragraph_Separator)
+					CONTROL,						///< Other, control (Cc = Control)
+					FORMAT,							///< Other, format (Cf = Format)
+					SURROGATE,						///< Other, surrogate (Cs = Surrogate)
+					PRIVATE_USE,					///< Other, private use (Co = Private_Use)
+					UNASSIGNED,						///< Other, not assigned (Cn = Unassigned)
 					// super-categories
-					LETTER,			///< L = Letter
-					LETTER_CASED,	///< Lc = Letter, cased
-					MARK,			///< M = Mark
-					NUMBER,			///< N = Number
-					PUNCTUATION,	///< P = Punctuation
-					SYMBOL,			///< S = Symbol
-					SEPARATOR,		///< Z = Separator
-					OTHER,			///< C = Other
+					LETTER,			///< L (L&amp;) = Letter
+					CASED_LETTER,	///< Letter, cased (LC = Cased_Letter)
+					MARK,			///< M (M&amp;) = Mark
+					NUMBER,			///< N (N&amp;) = Number
+					PUNCTUATION,	///< P (P&amp;) = Punctuation
+					SYMBOL,			///< S (S&amp;) = Symbol
+					SEPARATOR,		///< Z (Z&amp;) = Separator
+					OTHER,			///< C (C&amp;) = Other
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
 				template<int superCategory> static bool is(int subCategory);
+				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyRange ranges_[];
-				static const std::size_t count_;
-				static const Names names_[];
-				static const int DEFAULT_VALUE = OTHER_UNASSIGNED;
-				friend class PropertyBase<GeneralCategory>;
-				friend class EnumerationProperty<GeneralCategory>;
+				static const internal::PropertyPartition VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
-			
-			/// Returns true if the specified character is a letter.
-			template<> inline bool GeneralCategory::is<GeneralCategory::LETTER>(int gc) {return gc >= LETTER_UPPERCASE && gc <= LETTER_OTHER;}
-			/// Returns true if the specified sub-category is a cased letter.
-			template<> inline bool GeneralCategory::is<GeneralCategory::LETTER_CASED>(int gc) {return gc >= LETTER_UPPERCASE && gc <= LETTER_TITLECASE;}
-			/// Returns true if the specified sub-category is a mark.
-			template<> inline bool GeneralCategory::is<GeneralCategory::MARK>(int gc) {return gc >= MARK_NONSPACING && gc <= MARK_ENCLOSING;}
-			/// Returns true if the specified sub-category is a number.
-			template<> inline bool GeneralCategory::is<GeneralCategory::NUMBER>(int gc) {return gc >= NUMBER_DECIMAL_DIGIT && gc <= NUMBER_OTHER;}
-			/// Returns true if the specified sub-category is a punctuation.
-			template<> inline bool GeneralCategory::is<GeneralCategory::PUNCTUATION>(int gc) {return gc >= PUNCTUATION_CONNECTOR && gc <= PUNCTUATION_OTHER;}
-			/// Returns true if the specified sub-category is a symbol.
-			template<> inline bool GeneralCategory::is<GeneralCategory::SYMBOL>(int gc) {return gc >= SYMBOL_MATH && gc <= SYMBOL_OTHER;}
-			/// Returns true if the specified sub-category is a separator.
-			template<> inline bool GeneralCategory::is<GeneralCategory::SEPARATOR>(int gc) {return gc >= SEPARATOR_SPACE && gc <= SEPARATOR_PARAGRAPH;}
-			/// Returns true if the specified sub-category is an other.
-			template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {return gc >= OTHER_CONTROL && gc <= OTHER_UNASSIGNED;}
 		
 			/// Code blocks. These values are based on Blocks.txt obtained from UCD.
-			class CodeBlock : public EnumerationProperty<CodeBlock> {
+			/// The order of the definition of the enumeration is based on their code values.
+			class Block {
 			public:
 				enum {
 					FIRST_VALUE = GeneralCategory::LAST_VALUE,
 					NO_BLOCK = FIRST_VALUE,
-					BASIC_LATIN, LATIN_1_SUPPLEMENT, LATIN_EXTENDED_A, LATIN_EXTENDED_B, IPA_EXTENSIONS,
-					SPACING_MODIFIER_LETTERS, COMBINING_DIACRITICAL_MARKS, GREEK_AND_COPTIC, CYRILLIC,
-					CYRILLIC_SUPPLEMENT, ARMENIAN, HEBREW, ARABIC, SYRIAC, ARABIC_SUPPLEMENT, THAANA,
-					NKO, DEVANAGARI, BENGALI, GURMUKHI, GUJARATI, ORIYA, TAMIL, TELUGU, KANNADA, MALAYALAM,
-					SINHALA, THAI, LAO, TIBETAN, MYANMAR, GEORGIAN, HANGUL_JAMO, ETHIOPIC, ETHIOPIC_SUPPLEMENT,
-					CHEROKEE, UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS, OGHAM, RUNIC, TAGALOG, HANUNOO, BUHID,
-					TAGBANWA, KHMER, MONGOLIAN, LIMBU, TAI_LE, NEW_TAI_LUE, KHMER_SYMBOLS, BUGINESE,
-					BALINESE, PHONETIC_EXTENSIONS, PHONETIC_EXTENSIONS_SUPPLEMENT,
-					COMBINING_DIACRITICAL_MARKS_SUPPLEMENT, LATIN_EXTENDED_ADDITIONAL, GREEK_EXTENDED,
-					GENERAL_PUNCTUATION, SUPERSCRIPTS_AND_SUBSCRIPTS, CURRENCY_SYMBOLS,
-					COMBINING_DIACRITICAL_MARKS_FOR_SYMBOLS, LETTERLIKE_SYMBOLS, NUMBER_FORMS, ARROWS,
-					MATHEMATICAL_OPERATORS, MISCELLANEOUS_TECHNICAL, CONTROL_PICTURES,
-					OPTICAL_CHARACTER_RECOGNITION, ENCLOSED_ALPHANUMERICS, BOX_DRAWING, BLOCK_ELEMENTS,
-					GEOMETRIC_SHAPES, MISCELLANEOUS_SYMBOLS, DINGBATS, MISCELLANEOUS_MATHEMATICAL_SYMBOLS_A,
-					SUPPLEMENTAL_ARROWS_A, BRAILLE_PATTERNS, SUPPLEMENTAL_ARROWS_B,
-					MISCELLANEOUS_MATHEMATICAL_SYMBOLS_B, SUPPLEMENTAL_MATHEMATICAL_OPERATORS,
-					MISCELLANEOUS_SYMBOLS_AND_ARROWS, GLAGOLITIC, LATIN_EXTENDED_C, COPTIC,
-					GEORGIAN_SUPPLEMENT, TIFINAGH, ETHIOPIC_EXTENDED, SUPPLEMENTAL_PUNCTUATION,
-					CJK_RADICALS_SUPPLEMENT, KANGXI_RADICALS, IDEOGRAPHIC_DESCRIPTION_CHARACTERS,
-					CJK_SYMBOLS_AND_PUNCTUATION, HIRAGANA, KATAKANA, BOPOMOFO, HANGUL_COMPATIBILITY_JAMO,
-					KANBUN, BOPOMOFO_EXTENDED, CJK_STROKES, KATAKANA_PHONETIC_EXTENSIONS,
-					ENCLOSED_CJK_LETTERS_AND_MONTHS, CJK_COMPATIBILITY, CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A,
-					YIJING_HEXAGRAM_SYMBOLS, CJK_UNIFIED_IDEOGRAPHS, YI_SYLLABLES, YI_RADICALS,
-					MODIFIER_TONE_LETTERS, LATIN_EXTENDED_D, SYLOTI_NAGRI, PHAGS_PA, HANGUL_SYLLABLES,
-					HIGH_SURROGATES, HIGH_PRIVATE_USE_SURROGATES, LOW_SURROGATES, PRIVATE_USE_AREA,
-					CJK_COMPATIBILITY_IDEOGRAPHS, ALPHABETIC_PRESENTATION_FORMS, ARABIC_PRESENTATION_FORMS_A,
-					VARIATION_SELECTORS, VERTICAL_FORMS, COMBINING_HALF_MARKS, CJK_COMPATIBILITY_FORMS,
-					SMALL_FORM_VARIANTS, ARABIC_PRESENTATION_FORMS_B, HALFWIDTH_AND_FULLWIDTH_FORMS,
-					SPECIALS, LINEAR_B_SYLLABARY, LINEAR_B_IDEOGRAMS, AEGEAN_NUMBERS, ANCIENT_GREEK_NUMBERS,
-					OLD_ITALIC, GOTHIC, UGARITIC, OLD_PERSIAN, DESERET, SHAVIAN, OSMANYA, CYPRIOT_SYLLABARY,
-					PHOENICIAN, KHAROSHTHI, CUNEIFORM, CUNEIFORM_NUMBERS_AND_PUNCTUATION, BYZANTINE_MUSICAL_SYMBOLS,
-					MUSICAL_SYMBOLS, ANCIENT_GREEK_MUSICAL_NOTATION, TAI_XUAN_JING_SYMBOLS,
-					COUNTING_ROD_NUMERALS, MATHEMATICAL_ALPHANUMERIC_SYMBOLS, CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B,
-					CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT, TAGS, VARIATION_SELECTORS_SUPPLEMENT,
-					SUPPLEMENTARY_PRIVATE_USE_AREA_A, SUPPLEMENTARY_PRIVATE_USE_AREA_B, LAST_VALUE
+#include "src/generated/uprops-blocks-definition"
+					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
+				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyRange ranges_[];
-				static const std::size_t count_;
-				static const Names names_[];
-				static const int DEFAULT_VALUE = NO_BLOCK;
-				friend class PropertyBase<CodeBlock>;
-				friend class EnumerationProperty<CodeBlock>;
+				static const internal::PropertyPartition VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
 
-#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			/**
 			 * Canonical combining classes. These are based on Unicode standard 5.0.0 "4.3 Combining Classes".
+#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			 * @see Normalizer
+#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 			 */
 			class CanonicalCombiningClass {
 			public:
@@ -240,7 +138,7 @@ namespace ascension {
 					ATTACHED_RIGHT			= 210,	///< Right attached (210). This class does not currently have members.
 					ATTACHED_ABOVE_LEFT		= 212,	///< Above left attached (212). This class does not currently have members.
 					ATTACHED_ABOVE			= 214,	///< Above attached (214). This class does not currently have members.
-					ATTAHCED_ABOVE_RIGHT	= 216,	///< Above right attached (216).
+					ATTACHED_ABOVE_RIGHT	= 216,	///< Above right attached (216).
 					BELOW_LEFT				= 218,	///< Below left (218).
 					BELOW					= 220,	///< Below (220)
 					BELOW_RIGHT				= 222,	///< Below right (222).
@@ -253,28 +151,26 @@ namespace ascension {
 					DOUBLE_ABOVE			= 234,	///< Double above (234).
 					IOTA_SUBSCRIPT			= 240	///< Below (iota subscript) (240).
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int forName(const Char* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const Char SRC_UCS2[];
-				static const CodePoint SRC_UCS4[];
-				static const uchar DEST_UCS2[], DEST_UCS4[];
-				static const std::size_t UCS2_COUNT, UCS4_COUNT;
-				static std::map<const Char*, int, PropertyNameComparer<Char> > names_;
-				static void buildNames();
+				static const CodePoint CHARACTERS_[];
+				static const uchar VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
-#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 
 			/**
 			 * Scripts. These are based on
 			 * <a href="http://www.unicode.org/reports/tr24/">UAX #24: Script Names</a> revision 9
 			 * and Scripts.txt obtained from UCD.
 			 */
-			class Script : public EnumerationProperty<Script> {
+			class Script {
 			public:
 				enum {
-					FIRST_VALUE = CodeBlock::LAST_VALUE, UNKNOWN = FIRST_VALUE, COMMON,
+					FIRST_VALUE = Block::LAST_VALUE, UNKNOWN = FIRST_VALUE, COMMON,
 					// Unicode 4.0
 					LATIN, GREEK, CYRILLIC, ARMENIAN, HEBREW, ARABIC, SYRIAC, THAANA,
 					DEVANAGARI, BENGALI, GURMUKHI, GUJARATI, ORIYA, TAMIL, TELUGU, KANNADA,
@@ -288,22 +184,25 @@ namespace ascension {
 					OLD_PERSIAN, KHAROSHTHI,
 					// Unicode 5.0
 					BALINESE, CUNEIFORM, PHOENICIAN, PHAGS_PA, NKO,
+					// Unicode 5.1
+					SUNDANESE, LEPCHA, OL_CHIKI, VAI, SAURASHTRA, KAYAH_LI, REJANG, LYCIAN,
+					CARIAN, LYDIAN, CHAM,
 					// derived
 					KATAKANA_OR_HIRAGANA,
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
+				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyRange ranges_[];
-				static const std::size_t count_;
-				static const Names names_[];
-				static const int DEFAULT_VALUE = UNKNOWN;
-				friend class EnumerationProperty<Script>;
-				friend class PropertyBase<Script>;
+				static const internal::PropertyPartition VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
 
 			/// Hangul syllable types. These values are based on HangulSyllableType.txt obtained from UCD.
-			class HangulSyllableType : public PropertyBase<HangulSyllableType> {
+			class HangulSyllableType {
 			public:
 				enum {
 					FIRST_VALUE = Script::LAST_VALUE,
@@ -315,18 +214,19 @@ namespace ascension {
 					LVT_SYLLABLE,					///< LVT = LVT_Syllable
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const Names names_[];
-				friend class PropertyBase<HangulSyllableType>;
+				static const internal::ValueName NAMES_[];
 			};
 			
 			/**
 			 * Binary properties These values are based on UCD.html and PropList.txt obtained from UCD.
 			 * @note Some values are not implemented.
 			 */
-			class BinaryProperty : public PropertyBase<BinaryProperty> {
+			class BinaryProperty {
 			public:
 				enum {
 					FIRST_VALUE = HangulSyllableType::LAST_VALUE,
@@ -342,69 +242,17 @@ namespace ascension {
 					TERMINAL_PUNCTUATION, UNIFIED_IDEOGRAPH, UPPERCASE, VARIATION_SELECTOR, WHITE_SPACE,
 					XID_CONTINUE, XID_START, LAST_VALUE
 				};
+				static int forName(const Char* name);
 				static bool is(CodePoint cp, int property);
 				template<int property>
 				static bool is(CodePoint cp) /*throw()*/;
 			private:
-				static const Names names_[];
-				friend class PropertyBase<BinaryProperty>;
-#include "src/generated/uprops-binary-property-table-definition"
+				static const internal::ValueName NAMES_[];
+#include "src/generated/uprops-binary-property-values-definition"
 			};
 
-#include "src/generated/uprops-implementation"
-			// derived core properties (explicit specialization)
-			template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return gc == GeneralCategory::LETTER_UPPERCASE
-					|| gc == GeneralCategory::LETTER_LOWERCASE
-					|| gc == GeneralCategory::LETTER_TITLECASE
-					|| gc == GeneralCategory::LETTER_OTHER
-					|| gc == GeneralCategory::NUMBER_LETTER
-					|| is<OTHER_ALPHABETIC>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return (gc == GeneralCategory::OTHER_FORMAT
-					|| gc == GeneralCategory::OTHER_CONTROL
-					|| gc == GeneralCategory::OTHER_SURROGATE
-					|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
-					|| is<NONCHARACTER_CODE_POINT>(cp))
-					&& !is<WHITE_SPACE>(cp)
-					&& (cp < 0xFFF9 || cp > 0xFFFB);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
-				return GeneralCategory::of(cp) == GeneralCategory::LETTER_LOWERCASE || is<OTHER_LOWERCASE>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return gc == GeneralCategory::MARK_ENCLOSING
-					|| gc == GeneralCategory::MARK_NONSPACING
-					|| is<OTHER_GRAPHEME_EXTEND>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
-					&& gc != GeneralCategory::SEPARATOR_LINE
-					&& gc != GeneralCategory::SEPARATOR_PARAGRAPH
-					&& !is<GRAPHEME_EXTEND>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return GeneralCategory::is<GeneralCategory::LETTER>(gc)
-					|| gc == GeneralCategory::MARK_NONSPACING
-					|| gc == GeneralCategory::MARK_SPACING_COMBINING
-					|| gc == GeneralCategory::NUMBER_DECIMAL_DIGIT
-					|| gc == GeneralCategory::NUMBER_LETTER
-					|| gc == GeneralCategory::PUNCTUATION_CONNECTOR
-					|| is<OTHER_ID_START>(cp)
-					|| is<OTHER_ID_CONTINUE>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint cp) {
-				const int gc = GeneralCategory::of(cp);
-				return GeneralCategory::is<GeneralCategory::LETTER>(gc)
-					|| gc == GeneralCategory::NUMBER_LETTER
-					|| is<OTHER_ID_START>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint cp) {
-				return GeneralCategory::of(cp) == GeneralCategory::SYMBOL_MATH || is<OTHER_MATH>(cp);}
-			template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
-				return GeneralCategory::of(cp) == GeneralCategory::LETTER_UPPERCASE || is<OTHER_UPPERCASE>(cp);}
-
 			/// East_Asian_Width property. These values are based on UAX #11.
-			class EastAsianWidth : public EnumerationProperty<EastAsianWidth> {
+			class EastAsianWidth {
 			public:
 				enum {
 					FIRST_VALUE = BinaryProperty::LAST_VALUE,
@@ -416,21 +264,21 @@ namespace ascension {
 					NEUTRAL,					///< Neutral (Not East Asian) (N).
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
+				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyRange ranges_[];
-				static const std::size_t count_;
-				static const Names names_[];
-				static const int DEFAULT_VALUE = NEUTRAL;
-				friend class PropertyBase<EastAsianWidth>;
-				friend class EnumerationProperty<EastAsianWidth>;
+				static const internal::PropertyPartition VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
 
 			/**
 			 * Line_Break property. These values are based on UAX #14.
 			 * @see AbstractLineBreakIterator, LineBreakIterator
 			 */
-			class LineBreak : public EnumerationProperty<LineBreak> {
+			class LineBreak {
 			public:
 				// these identifier are based on PropertyValueAliases.txt. there are some variations
 				enum {
@@ -443,7 +291,7 @@ namespace ascension {
 					NEXT_LINE,						///< Next Line (NL).
 					SURROGATE,						///< Surrogates (SG).
 					WORD_JOINER,					///< Word Joiner (WJ).
-					ZW_SPACE,						///< Zero Width Space (ZW).
+					ZWSPACE,						///< Zero Width Space (ZW).
 					GLUE,							///< Non-breaking ("Glue") (GL).
 					SPACE,							///< Space (SP).
 					// break opportunities
@@ -478,61 +326,63 @@ namespace ascension {
 					UNKNOWN,						///< Unknown (XX).
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
+				static int forName(const Char* name);
+				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyRange ranges_[];
-				static const std::size_t count_;
-				static const Names names_[];
-				static const int DEFAULT_VALUE = UNKNOWN;
-				friend class PropertyBase<LineBreak>;
-				friend class EnumerationProperty<LineBreak>;
+				static const internal::PropertyPartition VALUES_[];
+				static const std::size_t NUMBER_;
+				static const internal::ValueName NAMES_[];
 			};
 
+#include "src/generated/uprops-inlines"
+
 			/// Grapheme_Cluster_Break property. These values are based on UAX #29.
-			class GraphemeClusterBreak : public PropertyBase<GraphemeClusterBreak> {
+			class GraphemeClusterBreak {
 			public:
 				enum {
 					FIRST_VALUE = LineBreak::LAST_VALUE,
 					CR = FIRST_VALUE, LF, CONTROL, EXTEND, L, V, T, LV, LVT, OTHER,
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const Names names_[];
-				friend class PropertyBase<GraphemeClusterBreak>;
+				static const internal::ValueName NAMES_[];
 			};
 
 			/// Word_Break property. These values are based on UAX #29.
-			class WordBreak : public PropertyBase<WordBreak> {
+			class WordBreak {
 			public:
 				enum {
 					FIRST_VALUE = GraphemeClusterBreak::LAST_VALUE,
 					FORMAT = FIRST_VALUE, KATAKANA, A_LETTER, MID_LETTER, MID_NUM, NUMERIC, EXTEND_NUM_LET, OTHER,
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp,
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 					const std::locale& lc = std::locale::classic()) /*throw()*/;
 			private:
-				static const Names names_[];
-				friend class PropertyBase<WordBreak>;
+				static const internal::ValueName NAMES_[];
 			};
 
 			/// Sentence_Break property. These values are based on UAX #29.
-			class SentenceBreak : public PropertyBase<SentenceBreak> {
+			class SentenceBreak {
 			public:
 				enum {
 					FIRST_VALUE = WordBreak::LAST_VALUE,
 					SEP = FIRST_VALUE, FORMAT, SP, LOWER, UPPER, O_LETTER, NUMERIC, A_TERM, S_TERM, CLOSE, OTHER,
 					LAST_VALUE
 				};
+				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const Names names_[];
-				friend class PropertyBase<SentenceBreak>;
+				static const internal::ValueName NAMES_[];
 			};
 
 			/**
@@ -541,54 +391,114 @@ namespace ascension {
 			 * Annex C: Compatibility Property</a>.
 			 */
 			namespace legacyctype {
-				/// Returns true if the character is an alphabet (alpha := \\p{Alphabetic}).
-				inline bool isalpha(CodePoint cp) {return BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp);}
-				/// Returns true if the character is an alphabet or numeric (alnum := [:alpha:] | [:digit:]).
-				inline bool isalnum(CodePoint cp) {return isalpha(cp) || isdigit(cp);}
-				/// Returns true if the character is a blank (blank := \\p{Whitespace} - [\\N{LF} \\N{VT} \\N{FF} \\N{CR} \\N{NEL} \\p{gc=Line_Separator} \\p{gc=Paragraph_Separator}]).
-				inline bool isblank(CodePoint cp) {
-					if(cp == LINE_FEED || cp == L'\v' || cp == L'\f' || cp == CARRIAGE_RETURN || cp == NEXT_LINE)	return false;
-					if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp)) {
-						const int gc = GeneralCategory::of(cp);
-						return gc != GeneralCategory::SEPARATOR_LINE && gc != GeneralCategory::SEPARATOR_PARAGRAPH;
-					}
-					return false;
-				}
-				/// Returns true if the character is a control code (cntrl := \\p{gc=Control}).
-				inline bool iscntrl(CodePoint cp) {return GeneralCategory::of(cp) == GeneralCategory::OTHER_CONTROL;}
-				/// Returns true if the character is a digit (digit := \\p{gc=Decimal_Number}).
-				inline bool isdigit(CodePoint cp) {return GeneralCategory::of(cp) == GeneralCategory::NUMBER_DECIMAL_DIGIT;}
-				/// Returns true if the character is graphical (graph := [^[:space:]\\p{gc=Control}\\p{Format}\\p{Surrogate}\\p{Unassigned}]).
-				inline bool isgraph(CodePoint cp) {
-					if(isspace(cp))	return false;
-					const int gc = GeneralCategory::of(cp);
-					return gc != GeneralCategory::OTHER_CONTROL
-						&& gc != GeneralCategory::OTHER_FORMAT
-						&& gc != GeneralCategory::OTHER_SURROGATE
-						&& gc != GeneralCategory::OTHER_UNASSIGNED;
-				}
-				/// Returns true if the character is lower (lower := \\p{Lowercase}).
-				inline bool islower(CodePoint cp) {return BinaryProperty::is<BinaryProperty::LOWERCASE>(cp);}
-				/// Returns true if the character is printable (print := ([:graph] | [:blank:]) - [:cntrl:]).
-				inline bool isprint(CodePoint cp) {return (isgraph(cp) || isblank(cp)) && !iscntrl(cp);}
-				/// Returns true if the character is a punctuation (punct := \\p{gc=Punctuation}).
-				inline bool ispunct(CodePoint cp) {return GeneralCategory::is<GeneralCategory::PUNCTUATION>(GeneralCategory::of(cp));}
-				/// Returns true if the character is a white space (space := \\p{Whitespace}).
-				inline bool isspace(CodePoint cp) {return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp);}
-				/// Returns true if the character is capital (upper := \\p{Uppercase}).
-				inline bool isupper(CodePoint cp) {return BinaryProperty::is<BinaryProperty::UPPERCASE>(cp);}
-				/// Returns true if the character can consist a word (word := [:alpha:]\\p{gc=Mark}[:digit:]\\p{gc=Connector_Punctuation}).
-				inline bool isword(CodePoint cp) {
-					if(isalpha(cp) || isdigit(cp)) return true;
-					const int gc = GeneralCategory::of(cp);
-					return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::PUNCTUATION_CONNECTOR;}
-				/// Returns true if the character is a hexadecimal (xdigit := \\p{gc=Decimal_Number} | \\p{Hex_Digit}).
-				inline bool isxdigit(CodePoint cp) {
-					return GeneralCategory::of(cp) == GeneralCategory::NUMBER_DECIMAL_DIGIT || BinaryProperty::is<BinaryProperty::HEX_DIGIT>(cp);}
+				bool isalpha(CodePoint c);
+				bool isalnum(CodePoint c);
+				bool isblank(CodePoint c);
+				bool iscntrl(CodePoint c);
+				bool isdigit(CodePoint c);
+				bool isgraph(CodePoint c);
+				bool islower(CodePoint c);
+				bool isprint(CodePoint c);
+				bool ispunct(CodePoint c);
+				bool isspace(CodePoint c);
+				bool isupper(CodePoint c);
+				bool isword(CodePoint c);
+				bool isxdigit(CodePoint c);
 			} // namespace legacyctype
 
 
 // inline implementations ///////////////////////////////////////////////////
+			
+/// Returns true if the specified character is a letter.
+template<> inline bool GeneralCategory::is<GeneralCategory::LETTER>(int gc) {return gc >= UPPERCASE_LETTER && gc <= OTHER_LETTER;}
+
+/// Returns true if the specified sub-category is a cased letter.
+template<> inline bool GeneralCategory::is<GeneralCategory::CASED_LETTER>(int gc) {return gc >= UPPERCASE_LETTER && gc <= TITLECASE_LETTER;}
+
+/// Returns true if the specified sub-category is a mark.
+template<> inline bool GeneralCategory::is<GeneralCategory::MARK>(int gc) {return gc >= NONSPACING_MARK && gc <= ENCLOSING_MARK;}
+
+/// Returns true if the specified sub-category is a number.
+template<> inline bool GeneralCategory::is<GeneralCategory::NUMBER>(int gc) {return gc >= DECIMAL_NUMBER && gc <= OTHER_NUMBER;}
+
+/// Returns true if the specified sub-category is a punctuation.
+template<> inline bool GeneralCategory::is<GeneralCategory::PUNCTUATION>(int gc) {return gc >= CONNECTOR_PUNCTUATION && gc <= OTHER_PUNCTUATION;}
+
+/// Returns true if the specified sub-category is a symbol.
+template<> inline bool GeneralCategory::is<GeneralCategory::SYMBOL>(int gc) {return gc >= MATH_SYMBOL && gc <= OTHER_SYMBOL;}
+
+/// Returns true if the specified sub-category is a separator.
+template<> inline bool GeneralCategory::is<GeneralCategory::SEPARATOR>(int gc) {return gc >= SPACE_SEPARATOR&& gc <= PARAGRAPH_SEPARATOR;}
+
+/// Returns true if the specified sub-category is an other.
+template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {return gc >= CONTROL && gc <= UNASSIGNED;}
+
+/// Specialization to implement Alphabetic property.
+template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return gc == GeneralCategory::UPPERCASE_LETTER
+		|| gc == GeneralCategory::LOWERCASE_LETTER
+		|| gc == GeneralCategory::TITLECASE_LETTER
+		|| gc == GeneralCategory::OTHER_LETTER
+		|| gc == GeneralCategory::LETTER_NUMBER
+		|| is<OTHER_ALPHABETIC>(cp);}
+
+/// Specialization to implement Default_Ignorable_Code_Point property.
+template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return (gc == GeneralCategory::FORMAT
+		|| gc == GeneralCategory::CONTROL
+		|| gc == GeneralCategory::SURROGATE
+		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
+		|| is<NONCHARACTER_CODE_POINT>(cp))
+		&& !is<WHITE_SPACE>(cp)
+		&& (cp < 0xFFF9 || cp > 0xFFFB);}
+
+/// Specialization to implement Lowercase property.
+template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
+	return GeneralCategory::of(cp) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(cp);}
+
+/// Specialization to implement Grapheme_Extend property.
+template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return gc == GeneralCategory::ENCLOSING_MARK
+		|| gc == GeneralCategory::NONSPACING_MARK
+		|| is<OTHER_GRAPHEME_EXTEND>(cp);}
+
+/// Specialization to implement Grapheme_Base property.
+template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
+		&& gc != GeneralCategory::LINE_SEPARATOR
+		&& gc != GeneralCategory::PARAGRAPH_SEPARATOR
+		&& !is<GRAPHEME_EXTEND>(cp);}
+
+/// Specialization to implement ID_Continue property.
+template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return GeneralCategory::is<GeneralCategory::LETTER>(gc)
+		|| gc == GeneralCategory::NONSPACING_MARK
+		|| gc == GeneralCategory::SPACING_MARK
+		|| gc == GeneralCategory::DECIMAL_NUMBER
+		|| gc == GeneralCategory::LETTER_NUMBER
+		|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
+		|| is<OTHER_ID_START>(cp)
+		|| is<OTHER_ID_CONTINUE>(cp);}
+
+/// Specialization to implement ID_Start property.
+template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint cp) {
+	const int gc = GeneralCategory::of(cp);
+	return GeneralCategory::is<GeneralCategory::LETTER>(gc)
+		|| gc == GeneralCategory::LETTER_NUMBER
+		|| is<OTHER_ID_START>(cp);}
+
+/// Specialization to implement Math property.
+template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint cp) {
+	return GeneralCategory::of(cp) == GeneralCategory::MATH_SYMBOL || is<OTHER_MATH>(cp);}
+
+/// Specialization to implement Uppercase property.
+template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
+	return GeneralCategory::of(cp) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(cp);}
 
 /**
  * Compares the given two strings.
@@ -622,67 +532,77 @@ inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const Cha
 	return *p1 - *p2;
 }
 
-/// Returns the property with the given name.
-template<typename ConcreteProperty>
-inline int PropertyBase<ConcreteProperty>::forName(const Char* name) {
-	if(name == 0)
-		throw NullPointerException("name");
-	if(names_.empty()) {
-		for(int v = ConcreteProperty::FIRST_VALUE; v < ConcreteProperty::LAST_VALUE; ++v) {
-			names_[ConcreteProperty::names_[v - ConcreteProperty::FIRST_VALUE].longName] = v;
-			if(const Char* const shortName = ConcreteProperty::names_[v - ConcreteProperty::FIRST_VALUE].shortName)
-				names_[shortName] = v;
-		}
-	}
-	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));
-	return (i != names_.end()) ? i->second : NOT_PROPERTY;
-}
-
-/// Returns property value of the specified character.
-template<typename ConcreteProperty>
-inline int EnumerationProperty<ConcreteProperty>::of(CodePoint cp) /*throw()*/ {
-	if(const internal::PropertyRange* p =
-			internal::findInRange(ConcreteProperty::ranges_, ConcreteProperty::ranges_ + ConcreteProperty::count_, cp))
-		return p->property;
-	return ConcreteProperty::DEFAULT_VALUE;
-}
-
-#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-/// Returns the Canonical_Combining_Class with the given name.
-inline int CanonicalCombiningClass::forName(const Char* name) {
-	if(name == 0)
-		throw NullPointerException("name");
-	else if(names_.empty())
-		buildNames();
-	const std::map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(name));
-	return (i != names_.end()) ? i->second : NOT_PROPERTY;
-}
-
-/// Returns the Canonical_Combining_Class of the specified character.
-inline int CanonicalCombiningClass::of(CodePoint cp) /*throw()*/ {
-	if(cp < 0x10000) {
-		const Char* const p = std::lower_bound(SRC_UCS2, SRC_UCS2 + UCS2_COUNT, static_cast<Char>(cp & 0xFFFFU));
-		return (*p == cp) ? DEST_UCS2[p - SRC_UCS2] : NOT_REORDERED;
-	} else {
-		const CodePoint* const p = std::lower_bound(SRC_UCS4, SRC_UCS4 + UCS4_COUNT, cp);
-		return (*p != cp) ? DEST_UCS4[p - SRC_UCS4] : NOT_REORDERED;
-	}
-}
-#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
-
 /// Returns the Hangul_Syllable_Type property value of @a cp.
-inline int HangulSyllableType::of(CodePoint cp) /*throw()*/ {
-	if(cp >= 0x1100 && cp <= 0x1159 || cp == 0x115F)
+inline int HangulSyllableType::of(CodePoint c) /*throw()*/ {
+	if(c >= 0x1100 && c <= 0x1159 || c == 0x115F)
 		return LEADING_JAMO;
-	else if(cp >= 0x1160 && cp <= 0x11A2)
+	else if(c >= 0x1160 && c <= 0x11A2)
 		return VOWEL_JAMO;
-	else if(cp >= 0x11A8 && cp <= 0x11F9)
+	else if(c >= 0x11A8 && c <= 0x11F9)
 		return TRAILING_JAMO;
-	else if(cp >= 0xAC00 && cp <= 0xD7A3)
-		return ((cp - 0xAC00) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
+	else if(c >= 0xAC00 && c <= 0xD7A3)
+		return ((c - 0xAC00) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
 	else
 		return NOT_APPLICABLE;
 }
+
+/// Returns true if the character is an alphabet (alpha := \\p{Alphabetic}).
+inline bool legacyctype::isalpha(CodePoint c) {return BinaryProperty::is<BinaryProperty::ALPHABETIC>(c);}
+
+/// Returns true if the character is an alphabet or numeric (alnum := [:alpha:] | [:digit:]).
+inline bool legacyctype::isalnum(CodePoint c) {return isalpha(c) || isdigit(c);}
+
+/// Returns true if the character is a blank (blank := \\p{Whitespace} - [\\N{LF} \\N{VT} \\N{FF} \\N{CR} \\N{NEL} \\p{gc=Line_Separator} \\p{gc=Paragraph_Separator}]).
+inline bool legacyctype::isblank(CodePoint c) {
+	if(c == LINE_FEED || c == L'\v' || c == L'\f' || c == CARRIAGE_RETURN || c == NEXT_LINE)
+		return false;
+	if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c)) {
+		const int gc = GeneralCategory::of(c);
+		return gc != GeneralCategory::LINE_SEPARATOR && gc != GeneralCategory::PARAGRAPH_SEPARATOR;
+	}
+	return false;
+}
+
+/// Returns true if the character is a control code (cntrl := \\p{gc=Control}).
+inline bool legacyctype::iscntrl(CodePoint c) {return GeneralCategory::of(c) == GeneralCategory::CONTROL;}
+
+/// Returns true if the character is a digit (digit := \\p{gc=Decimal_Number}).
+inline bool legacyctype::isdigit(CodePoint c) {return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER;}
+
+/// Returns true if the character is graphical (graph := [^[:space:]\\p{gc=Control}\\p{Format}\\p{Surrogate}\\p{Unassigned}]).
+inline bool legacyctype::isgraph(CodePoint c) {
+	if(isspace(c))	return false;
+	const int gc = GeneralCategory::of(c);
+	return gc != GeneralCategory::CONTROL
+		&& gc != GeneralCategory::FORMAT
+		&& gc != GeneralCategory::SURROGATE
+		&& gc != GeneralCategory::UNASSIGNED;
+}
+
+/// Returns true if the character is lower (lower := \\p{Lowercase}).
+inline bool legacyctype::islower(CodePoint c) {return BinaryProperty::is<BinaryProperty::LOWERCASE>(c);}
+
+/// Returns true if the character is printable (print := ([:graph] | [:blank:]) - [:cntrl:]).
+inline bool legacyctype::isprint(CodePoint c) {return (isgraph(c) || isblank(c)) && !iscntrl(c);}
+
+/// Returns true if the character is a punctuation (punct := \\p{gc=Punctuation}).
+inline bool legacyctype::ispunct(CodePoint c) {return GeneralCategory::is<GeneralCategory::PUNCTUATION>(GeneralCategory::of(c));}
+
+/// Returns true if the character is a white space (space := \\p{Whitespace}).
+inline bool legacyctype::isspace(CodePoint c) {return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c);}
+
+/// Returns true if the character is capital (upper := \\p{Uppercase}).
+inline bool legacyctype::isupper(CodePoint c) {return BinaryProperty::is<BinaryProperty::UPPERCASE>(c);}
+
+/// Returns true if the character can consist a word (word := [:alpha:]\\p{gc=Mark}[:digit:]\\p{gc=Connector_Punctuation}).
+inline bool legacyctype::isword(CodePoint c) {
+	if(isalpha(c) || isdigit(c)) return true;
+	const int gc = GeneralCategory::of(c);
+	return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::CONNECTOR_PUNCTUATION;}
+
+/// Returns true if the character is a hexadecimal (xdigit := \\p{gc=Decimal_Number} | \\p{Hex_Digit}).
+inline bool legacyctype::isxdigit(CodePoint c) {
+	return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER || BinaryProperty::is<BinaryProperty::HEX_DIGIT>(c);}
 
 }}} // namespace ascension.text.ucd
 
