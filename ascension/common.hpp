@@ -12,7 +12,7 @@
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
 
 /// Version of Unicode we're tracking
-#define ASCENSION_UNICODE_VERSION 0x0500	// 5.0.0
+#define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
 
 // platform
 #ifdef _WIN32
