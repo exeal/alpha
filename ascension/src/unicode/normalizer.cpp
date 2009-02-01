@@ -87,12 +87,12 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 	if(*dest != c || c >= 0x010000)
 		return 1;
 	else {
-		const Char* const p = lower_bound(FULL_CASED, FULL_CASED + NUMBER_OF_FULL_CASED, static_cast<Char>(c & 0xFFFF));
+		const CodePoint* const p = lower_bound(FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
 		if(*p != c)
 			return 1;
-		const size_t len = wcslen(FULL_FOLDED[p - FULL_CASED]);
+		const size_t len = wcslen(FULL_FOLDED_[p - FULL_CASED_]);
 		for(size_t i = 0; i < len; ++i)
-			dest[i] = FULL_FOLDED[p - FULL_CASED][i];
+			dest[i] = FULL_FOLDED_[p - FULL_CASED_][i];
 		return len;
 	}
 }
@@ -262,20 +262,20 @@ namespace {
 				splice(i.tell(), last, 1, decomposedHangul, len);
 				continue;
 			}
-			src = lower_bound(CANONICAL_MAPPING_SRC, CANONICAL_MAPPING_SRC + NUMBER_OF_CANONICAL_MAPPINGS, current);
+			src = lower_bound(CANONICAL_MAPPING_SOURCE, MANAH_ENDOF(CANONICAL_MAPPING_SOURCE), current);
 			if(*src == current) {
 				splice(i.tell(), last, (current < 0x010000) ? 1 : 2,
-					CANONICAL_MAPPING_DEST[src - CANONICAL_MAPPING_SRC],
-					wcslen(CANONICAL_MAPPING_DEST[src - CANONICAL_MAPPING_SRC]));
+					CANONICAL_MAPPING_DESTINATION[src - CANONICAL_MAPPING_SOURCE],
+					wcslen(CANONICAL_MAPPING_DESTINATION[src - CANONICAL_MAPPING_SOURCE]));
 				continue;
 			}
 #ifndef ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
 			else if(compatibility) {
-				src = lower_bound(COMPATIBILITY_MAPPING_SRC, COMPATIBILITY_MAPPING_SRC + NUMBER_OF_COMPATIBILITY_MAPPINGS, current);
+				src = lower_bound(COMPATIBILITY_MAPPING_SOURCE, MANAH_ENDOF(COMPATIBILITY_MAPPING_SOURCE), current);
 				if(*src == current) {
 					splice(i.tell(), last, (current < 0x010000) ? 1 : 2,
-						COMPATIBILITY_MAPPING_DEST[src - COMPATIBILITY_MAPPING_SRC],
-						wcslen(COMPATIBILITY_MAPPING_DEST[src - COMPATIBILITY_MAPPING_SRC]));
+						COMPATIBILITY_MAPPING_DESTINATION[src - COMPATIBILITY_MAPPING_SOURCE],
+						wcslen(COMPATIBILITY_MAPPING_DESTINATION[src - COMPATIBILITY_MAPPING_SOURCE]));
 					continue;
 				}
 			}

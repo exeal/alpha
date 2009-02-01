@@ -1649,14 +1649,14 @@ void LineLayout::shape() /*throw()*/ {
 					run->font = 0;
 					// ambiguous CJK?
 					if(script == Script::COMMON && scriptProperties.get(run->analysis.eScript).fAmbiguousCharSet != 0) {
-						switch(CodeBlock::of(surrogates::decodeFirst(textString, textString + run->length()))) {
-						case CodeBlock::CJK_SYMBOLS_AND_PUNCTUATION:
-						case CodeBlock::ENCLOSED_CJK_LETTERS_AND_MONTHS:
-						case CodeBlock::CJK_COMPATIBILITY:
-						case CodeBlock::VERTICAL_FORMS:	// as of GB 18030
-						case CodeBlock::CJK_COMPATIBILITY_FORMS:
-						case CodeBlock::SMALL_FORM_VARIANTS:	// as of CNS-11643
-						case CodeBlock::HALFWIDTH_AND_FULLWIDTH_FORMS:
+						switch(Block::of(surrogates::decodeFirst(textString, textString + run->length()))) {
+						case Block::CJK_SYMBOLS_AND_PUNCTUATION:
+						case Block::ENCLOSED_CJK_LETTERS_AND_MONTHS:
+						case Block::CJK_COMPATIBILITY:
+						case Block::VERTICAL_FORMS:	// as of GB 18030
+						case Block::CJK_COMPATIBILITY_FORMS:
+						case Block::SMALL_FORM_VARIANTS:	// as of CNS-11643
+						case Block::HALFWIDTH_AND_FULLWIDTH_FORMS:
 							run->font = lip_.getFontSelector().font(Script::HAN, run->style.bold, run->style.italic);
 							break;
 						}

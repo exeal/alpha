@@ -143,7 +143,7 @@ namespace {
 		int gc = GeneralCategory::LAST_VALUE;
 		while(i.next().hasNext()) {
 			gc = GeneralCategory::of(cp = i.current());
-			if(gc != GeneralCategory::OTHER_FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
+			if(gc != GeneralCategory::FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 				break;
 		}
 		return gc;
@@ -163,7 +163,7 @@ namespace {
 				break;
 			}
 					gc = GeneralCategory::of(cp);
-			if(gc != GeneralCategory::OTHER_FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
+			if(gc != GeneralCategory::FORMAT && !BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 				break;
 		} while(i.hasPrevious());
 		return gc;
