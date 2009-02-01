@@ -437,7 +437,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool recta
 		length_t indentLength;
 		for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 			// 空白類文字が BMP にしか無いという前提
-			if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SEPARATOR_SPACE)
+			if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 				break;
 		}
 		if(indentLength > 0) {
@@ -472,7 +472,7 @@ Position VisualPoint::doIndent(const Position& other, Char character, bool recta
 			length_t indentLength;
 			for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 				// 空白類文字が BMP にしか無いという前提
-				if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SEPARATOR_SPACE)
+				if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 					break;
 			}
 			if(indentLength > 0) {

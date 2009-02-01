@@ -196,7 +196,7 @@ void StringCharacterIterator::doPrevious() {
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
 	bool isNU(CodePoint cp, int gc) /*throw()*/ {
-		return (gc == GeneralCategory::NUMBER_DECIMAL_DIGIT && cp < 0xFF00 || cp > 0xFFEF)
+		return (gc == GeneralCategory::DECIMAL_NUMBER && cp < 0xFF00 || cp > 0xFFEF)
 			|| cp == 0x066B		// Arabic Decimal Separator
 			|| cp == 0x066C;	// Arabic Thousands Separator
 	}
@@ -210,414 +210,69 @@ namespace {
 	};
 	/// Returns true if the specified character is Line_Break=QU.
 	bool isQU(CodePoint cp, int gc) /*throw()*/ {
-		return gc == GeneralCategory::PUNCTUATION_FINAL_QUOTE
-			|| gc == GeneralCategory::PUNCTUATION_INITIAL_QUOTE
+		return gc == GeneralCategory::FINAL_PUNCTUATION
+			|| gc == GeneralCategory::INITIAL_PUNCTUATION
 			|| binary_search(QU, MANAH_ENDOF(QU), cp);
 	}
 } // namespace @0
 
-//
-// property names are from UNIDATA/PropertyAliases.txt
-// property value names are from UNIDATA/PropertyValueAliases.txt
-// via `perl prop-names.pl`
-//
-#define PROP(shortName, longName, property)	names_[L##shortName] = names_[L##longName] = property
-#define PROP1(longName, property)			names_[L##longName] = property
+#include "generated/uprops-value-names"
 
 
 // GeneralCategory //////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int GeneralCategory::DEFAULT_VALUE = GeneralCategory::UNASSIGNED;
 /// The long name of the property.
 const Char GeneralCategory::LONG_NAME[] = L"General_Category";
 /// The short name of the property.
 const Char GeneralCategory::SHORT_NAME[] = L"gc";
-const PropertyBase<GeneralCategory>::Names GeneralCategory::names_[GeneralCategory::LAST_VALUE - GeneralCategory::FIRST_VALUE] = {
-	{L"Ll",	L"Lowercase_Letter"},
-	{L"Lu",	L"Uppercase_Letter"},
-	{L"Lt",	L"Titlecase_Letter"},
-	{L"Lm",	L"Modifier_Letter"},
-	{L"Lo",	L"Other_Letter"},
-	{L"Mn",	L"Nonspacing_Mark"},
-	{L"Mc",	L"Spacing_Mark"},
-	{L"Me",	L"Enclosing_Mark"},
-	{L"Nd",	L"Decimal_Number"},
-	{L"Nl",	L"Letter_Number"},
-	{L"No",	L"Other_Number"},
-	{L"Pc",	L"Connector_Punctuation"},
-	{L"Pd",	L"Dash_Punctuation"},
-	{L"Ps",	L"Open_Punctuation"},
-	{L"Pe",	L"Close_Punctuation"},
-	{L"Pi",	L"Initial_Punctuation"},
-	{L"Pf",	L"Final_Punctuation"},
-	{L"Po",	L"Other_Punctuation"},
-	{L"Sm",	L"Math_Symbol"},
-	{L"Sc",	L"Currency_Symbol"},
-	{L"Sk",	L"Modifier_Symbol"},
-	{L"So",	L"Other_Symbol"},
-	{L"Zs",	L"Space_Separator"},
-	{L"Zl",	L"Line_Separator"},
-	{L"Zp",	L"Paragraph_Separator"},
-	{L"Cc",	L"Control"},
-	{L"Cf",	L"Format"},
-	{L"Cs",	L"Surrogate"},
-	{L"Co",	L"Private_Use"},
-	{L"Cn",	L"Unassigned"},
-	{L"L&",	L"Letter"},
-	{L"Lc",	L"Cased_Letter"},
-	{L"M&",	L"Mark"},
-	{L"N&",	L"Number"},
-	{L"P&",	L"Punctuation"},
-	{L"S&",	L"Symbol"},
-	{L"Z&",	L"Separator"},
-	{L"C&",	L"Other"}
-};
 
 
-// CodeBlock ////////////////////////////////////////////////////////////////
+// Block ////////////////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int Block::DEFAULT_VALUE = Block::NO_BLOCK;
 /// The long name of the property.
-const Char CodeBlock::LONG_NAME[] = L"Block";
+const Char Block::LONG_NAME[] = L"Block";
 /// The short name of the property.
-const Char CodeBlock::SHORT_NAME[] = L"blk";
-const CodeBlock::Names CodeBlock::names_[CodeBlock::LAST_VALUE - CodeBlock::FIRST_VALUE] = {
-	{0, L"No_Block"},
-	{0, L"Basic_Latin"},
-	{0, L"Latin-1_Supplement"},
-	{0, L"Latin_Extended-A"},
-	{0, L"Latin_Extended-B"},
-	{0, L"IPA_Extensions"},
-	{0, L"Spacing_Modifier_Letters"},
-	{0, L"Combining_Diacritical_Marks"},
-	{0, L"Greek_and_Coptic"},
-	{0, L"Cyrillic"},
-	{0, L"Cyrillic_Supplement"},
-	{0, L"Armenian"},
-	{0, L"Hebrew"},
-	{0, L"Arabic"},
-	{0, L"Syriac"},
-	{0, L"Arabic_Supplement"},
-	{0, L"Thaana"},
-	{0, L"NKo"},
-	{0, L"Devanagari"},
-	{0, L"Bengali"},
-	{0, L"Gurmukhi"},
-	{0, L"Gujarati"},
-	{0, L"Oriya"},
-	{0, L"Tamil"},
-	{0, L"Telugu"},
-	{0, L"Kannada"},
-	{0, L"Malayalam"},
-	{0, L"Sinhala"},
-	{0, L"Thai"},
-	{0, L"Lao"},
-	{0, L"Tibetan"},
-	{0, L"Myanmar"},
-	{0, L"Georgian"},
-	{0, L"Hangul_Jamo"},
-	{0, L"Ethiopic"},
-	{0, L"Ethiopic_Supplement"},
-	{0, L"Cherokee"},
-	{0, L"Unified_Canadian_Aboriginal_Syllabics"},
-	{0, L"Ogham"},
-	{0, L"Runic"},
-	{0, L"Tagalog"},
-	{0, L"Hanunoo"},
-	{0, L"Buhid"},
-	{0, L"Tagbanwa"},
-	{0, L"Khmer"},
-	{0, L"Mongolian"},
-	{0, L"Libmu"},
-	{0, L"Tai_Le"},
-	{0, L"New_Tai_Lue"},
-	{0, L"Khmer_Symbols"},
-	{0, L"Buginese"},
-	{0, L"Balinese"},
-	{0, L"Phonetic_Extensions"},
-	{0, L"Phonetic_Extensions_Supplement"},
-	{0, L"Combining_Diacritical_Marks_Supplement"},
-	{0, L"Latin_Extended_Additional"},
-	{0, L"Greek_Extended"},
-	{0, L"General_Punctuation"},
-	{0, L"Superscripts_and_Subscripts"},
-	{0, L"Currency_Symbols"},
-	{0, L"Combining_Diacritical_Marks_for_Symbols"},
-	{0, L"Letterlike_Symbols"},
-	{0, L"Number_Forms"},
-	{0, L"Arrows"},
-	{0, L"Mathematical_Operators"},
-	{0, L"Miscellaneous_Technical"},
-	{0, L"Control_Pictures"},
-	{0, L"Optical_Character_Recognition"},
-	{0, L"Enclosed_Alphanumerics"},
-	{0, L"Box_Drawing"},
-	{0, L"Block_Elements"},
-	{0, L"Geometric_Shapes"},
-	{0, L"Miscellaneous_Symbols"},
-	{0, L"Dingbats"},
-	{0, L"Miscellaneous_Mathematical_Symbols-A"},
-	{0, L"Supplemental_Arrows-A"},
-	{0, L"Braille_Patterns"},
-	{0, L"Supplemental_Arrows-B"},
-	{0, L"Miscellaneous_Mathematical_Symbols-B"},
-	{0, L"Supplemental_Mathematical_Operators"},
-	{0, L"Miscellaneous_Symbols_and_Arrows"},
-	{0, L"Glagolitic"},
-	{0, L"Latin_Extended-C"},
-	{0, L"Coptic"},
-	{0, L"Georgian_Supplement"},
-	{0, L"Tifinagh"},
-	{0, L"Ethiopic_Extended"},
-	{0, L"Supplemental_Punctuation"},
-	{0, L"CJK_Radicals_Supplement"},
-	{0, L"Kangxi_Radicals"},
-	{0, L"Ideographic_Description_Characters"},
-	{0, L"CJK_Symbols_and_Punctuation"},
-	{0, L"Hiragana"},
-	{0, L"Katakana"},
-	{0, L"Bopomofo"},
-	{0, L"Hangul_Compatibility_Jamo"},
-	{0, L"Kanbun"},
-	{0, L"Bopomofo_Extended"},
-	{0, L"CJK_Strokes"},
-	{0, L"Katakana_Phonetic_Extensions"},
-	{0, L"Enclosed_CJK_Letters_and_Months"},
-	{0, L"CJK_Compatibility"},
-	{0, L"CJK_Unified_Ideographs_Extension_A"},
-	{0, L"Yijing_Hexagram_Symbols"},
-	{0, L"CJK_Unified_Ideographs"},
-	{0, L"Yi_Syllables"},
-	{0, L"Yi_Radicals"},
-	{0, L"Modifier_Tone_Letters"},
-	{0, L"Latin_Extended-D"},
-	{0, L"Syloti_Nagri"},
-	{0, L"Phags-pa"},
-	{0, L"Hangul_Syllables"},
-	{0, L"High_Surrogates"},
-	{0, L"High_Private_Use_Surrogates"},
-	{0, L"Low_Surrogates"},
-	{0, L"Private_Use_Area"},
-	{0, L"CJK_Compatibility_Ideographs"},
-	{0, L"Alphabetic_Presentation_Forms"},
-	{0, L"Arabic_Presentation_Forms-A"},
-	{0, L"Variation_Selectors"},
-	{0, L"Vertical_Forms"},
-	{0, L"Combining_Half_Marks"},
-	{0, L"CJK_Compatibility_Forms"},
-	{0, L"Small_Form_Variants"},
-	{0, L"Arabic_Presentation_Forms-B"},
-	{0, L"Halfwidth_and_Fullwidth_Forms"},
-	{0, L"Specials"},
-	{0, L"Linear_B_Syllabary"},
-	{0, L"Linear_B_Ideograms"},
-	{0, L"Aegean_Numbers"},
-	{0, L"Ancient_Greek_Numbers"},
-	{0, L"Old_Italic"},
-	{0, L"Gothic"},
-	{0, L"Ugaritic"},
-	{0, L"Old_Persian"},
-	{0, L"Deseret"},
-	{0, L"Shavian"},
-	{0, L"Osmanya"},
-	{0, L"Cypriot_Syllabary"},
-	{0, L"Phoenician"},
-	{0, L"Kharoshthi"},
-	{0, L"Cuneiform"},
-	{0, L"Cuneiform_Numbers_and_Punctuation"},
-	{0, L"Byzantine_Musical_Symbols"},
-	{0, L"Musical_Symbols"},
-	{0, L"Ancient_Greek_Musical_Notation"},
-	{0, L"Tai_Xuan_Jing_Symbols"},
-	{0, L"Counting_Rod_Numerals"},
-	{0, L"Mathematical_Alphanumeric_Symbols"},
-	{0, L"CJK_Unified_Ideographs_Extension_B"},
-	{0, L"CJK_Compatibility_Ideographs_Supplement"},
-	{0, L"Tags"},
-	{0, L"Variation_Selectors_Supplement"},
-	{0, L"Supplementary_Private_Use_Area-A"},
-	{0, L"Supplementary_Private_Use_Area-B"},
-};
+const Char Block::SHORT_NAME[] = L"blk";
 
-
-#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 
 // CanonicalCombiningClass //////////////////////////////////////////////////
 
+/// The default of the property.
+const int CanonicalCombiningClass::DEFAULT_VALUE = CanonicalCombiningClass::NOT_REORDERED;
 /// The long name of the property.
 const Char CanonicalCombiningClass::LONG_NAME[] = L"Canonical_Combining_Class";
 /// The shoer name of the property.
 const Char CanonicalCombiningClass::SHORT_NAME[] = L"ccc";
-map<const Char*, int, PropertyNameComparer<Char> > CanonicalCombiningClass::names_;
-
-void CanonicalCombiningClass::buildNames() {
-	names_[L"ATBL"] = names_[L"Attached_Below_Left"] = 200;
-	names_[L"ATB"] = names_[L"Attached_Below"] = 202;
-	names_[L"ATAR"] = names_[L"Attached_Above_Right"] = 216;
-	names_[L"BL"] = names_[L"Below_Left"] = 218;
-	names_[L"B"] = names_[L"Below"] = 220;
-	names_[L"BR"] = names_[L"Below_Right"] = 222;
-	names_[L"L"] = names_[L"Left"] = 224;
-	names_[L"R"] = names_[L"Right"] = 226;
-	names_[L"AL"] = names_[L"Above_Left"] = 228;
-	names_[L"A"] = names_[L"Above"] = 230;
-	names_[L"AR"] = names_[L"Above_Right"] = 232;
-	names_[L"DB"] = names_[L"Double_Below"] = 233;
-	names_[L"DA"] = names_[L"Double_Above"] = 234;
-	names_[L"IS"] = names_[L"Iota_Subscript"] = 240;
-}
-
-#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 
 
 // Script ///////////////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int Script::DEFAULT_VALUE = Script::UNKNOWN;
 /// The long name of the property.
 const Char Script::LONG_NAME[] = L"Script";
 /// The short name of the property.
 const Char Script::SHORT_NAME[] = L"sc";
-const Script::Names Script::names_[Script::LAST_VALUE - Script::FIRST_VALUE] = {
-	{L"Zzzz",	L"Unknown"},
-	{L"Zyyy",	L"Common"},
-	{L"Latn",	L"Latin"},
-	{L"Grek",	L"Greek"},
-	{L"Cyrl",	L"Cyrillic"},
-	{L"Armn",	L"Armenian"},
-	{L"Hebr",	L"Hebrew"},
-	{L"Arab",	L"Arabic"},
-	{L"Syrc",	L"Syriac"},
-	{L"Thaa",	L"Thaana"},
-	{L"Deva",	L"Devanagari"},
-	{L"Beng",	L"Bengali"},
-	{L"Guru",	L"Gurmukhi"},
-	{L"Gujr",	L"Gujarati"},
-	{L"Orya",	L"Oriya"},
-	{L"Taml",	L"Tamil"},
-	{L"Telu",	L"Telugu"},
-	{L"Knda",	L"Kannada"},
-	{L"Mlym",	L"Malayalam"},
-	{L"Sinh",	L"Sinhala"},
-	{0,			L"Thai"},
-	{L"Laoo",	L"Laoo"},
-	{L"Tibt",	L"Tibetan"},
-	{L"Mymr",	L"Myanmar"},
-	{L"Geor",	L"Georgian"},
-	{L"Hang",	L"Hangul"},
-	{L"Ethi",	L"Ethiopic"},
-	{L"Cher",	L"Cherokee"},
-	{L"Cans",	L"Canadian_Aboriginal"},
-	{L"Ogam",	L"Ogham"},
-	{L"Runr",	L"Runic"},
-	{L"Khmr",	L"Khmer"},
-	{L"Mong",	L"Mongolian"},
-	{L"Hira",	L"Hiragana"},
-	{L"Kana",	L"Katakana"},
-	{L"Bopo",	L"Bopomofo"},
-	{L"Hani",	L"Han"},
-	{L"Yiii",	L"Yi"},
-	{L"Ital",	L"Old_Italic"},
-	{L"Goth",	L"Gothic"},
-	{L"Dsrt",	L"Deseret"},
-	{L"Qaai",	L"Inherited"},
-	{L"Tglg",	L"Tagalog"},
-	{L"Hano",	L"Hanunoo"},
-	{L"Buhd",	L"Buhid"},
-	{L"Tagb",	L"Tagbanwa"},
-	{L"Limb",	L"Limbu"},
-	{L"Tale",	L"Tai_Le"},
-	{L"Linb",	L"Linear_B"},
-	{L"Ugar",	L"Ugaritic"},
-	{L"Shaw",	L"Shavian"},
-	{L"Osma",	L"Osmanya"},
-	{L"Cprt",	L"Cypriot"},
-	{L"Brai",	L"Braille"},
-	{L"Bugi",	L"Buginese"},
-	{L"Copt",	L"Coptic"},
-	{L"Talu",	L"New_Tai_Lue"},
-	{L"Glag",	L"Glagolitic"},
-	{L"Tfng",	L"Tifinagh"},
-	{L"Sylo",	L"Syloti_Nagri"},
-	{L"Xpeo",	L"Old_Persian"},
-	{L"Khar",	L"Kharoshthi"},
-	{L"Bali",	L"Balinese"},
-	{L"Xsux",	L"Cuneiform"},
-	{L"Phnx",	L"Phoenician"},
-	{L"Phag",	L"Phags_Pa"},
-	{L"Nkoo",	L"NKO"},
-	{L"Hrkt",	L"Katakana_Or_Hiragana"},
-};
 
 
 // HangulSyllableType ///////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int HangulSyllableType::DEFAULT_VALUE = HangulSyllableType::NOT_APPLICABLE;
 /// The long name of the property.
 const Char HangulSyllableType::LONG_NAME[] = L"Hangul_Syllable_Type";
 /// The short name of the property.
 const Char HangulSyllableType::SHORT_NAME[] = L"hst";
-const HangulSyllableType::Names HangulSyllableType::names_[HangulSyllableType::LAST_VALUE - HangulSyllableType::FIRST_VALUE] = {
-	{L"NA",		L"Not_Applicable"},
-	{L"L",		L"Leading_Jamo"},
-	{L"V",		L"Vowel_Jamo"},
-	{L"T",		L"Trailing_Jamo"},
-	{L"LV",		L"LV_Syllable"},
-	{L"LVT",	L"LVT_Syllable"}
-};
 
 
 // BinaryProperty ///////////////////////////////////////////////////////////
 
-#include "generated/uprops-table"
+#include "generated/uprops-code-table"
 
-const BinaryProperty::Names BinaryProperty::names_[BinaryProperty::LAST_VALUE - BinaryProperty::FIRST_VALUE] = {
-	{L"Alpha",		L"Alphabetic"},
-	{L"AHex",		L"ASCII_Hex_Digit"},
-	{L"Bidi_C",		L"Bidi_Control"},
-	{L"Bidi_M",		L"Bidi_Mirrored"},
-	{L"CE",			L"Composition_Exclusion"},
-	{0,				L"Dash"},
-	{L"DI",			L"Default_Ignorable_Code_Point"},
-	{L"Dep",		L"Deprecated"},
-	{L"Dia",		L"Diacritic"},
-	{L"XO_NFC",		L"Expands_On_NFC"},
-	{L"XO_NFD",		L"Expands_On_NFD"},
-	{L"XO_NFKC",	L"Expands_On_NFKC"},
-	{L"XO_NFKD",	L"Expands_On_NFKD"},
-	{L"Ext",		L"Extender"},
-	{L"Comp_Ex",	L"Full_Composition_Exclusion"},
-	{L"Gr_Base",	L"Grapheme_Base"},
-	{L"Gr_Ext",		L"Grapheme_Extend"},
-	{L"Hex",		L"Hex_Digit"},
-	{0,				L"Hyphen"},
-	{L"IDC",		L"ID_Continue"},
-	{L"IDS",		L"ID_Start"},
-	{L"Ideo",		L"Ideographic"},
-	{L"IDSB",		L"IDS_Binary_Operator"},
-	{L"IDST",		L"IDS_Trinary_Operator"},
-	{L"Join_C",		L"Join_Control"},
-	{L"LOE",		L"Logical_Order_Exception"},
-	{L"Lower",		L"Lowercase"},
-	{0,				L"Math"},
-	{L"NChar",		L"Noncharacter_Code_Point"},
-	{L"OAlpha",		L"Other_Alphabetic"},
-	{L"ODI",		L"Other_Default_Ignorable_Code_Point"},
-	{L"OGr_Ext",	L"Other_Grapheme_Extend"},
-	{L"OIDC",		L"Other_ID_Continue"},
-	{L"OIDS",		L"Other_ID_Start"},
-	{L"OLower",		L"Other_Lowercase"},
-	{L"OMath",		L"Other_Math"},
-	{L"OUpper",		L"Other_Uppercase"},
-	{L"Pat_Syn",	L"Pattern_Syntax"},
-	{L"Pat_WS",		L"Pattern_White_Space"},
-	{L"QMark",		L"Quotation_Mark"},
-	{0,				L"Radical"},
-	{L"SD",			L"Soft_Dotted"},
-	{0,				L"STerm"},
-	{L"Term",		L"Terminal_Punctuation"},
-	{L"UIdeo",		L"Unified_Ideograph"},
-	{L"Upper",		L"Uppercase"},
-	{L"VS",			L"Variation_Selector"},
-	{L"WSpace",		L"White_Space"},
-	{L"XIDC",		L"XID_Continue"},
-	{L"XIDS",		L"XID_Start"}
-};
 
 /**
  * Returns true if the specified character has the binary property.
@@ -684,84 +339,32 @@ bool BinaryProperty::is(CodePoint cp, int property) {
 
 // EastAsianWidth ///////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int EastAsianWidth::DEFAULT_VALUE = EastAsianWidth::NEUTRAL;
 /// The long name of the property.
 const Char EastAsianWidth::LONG_NAME[] = L"East_Asian_Width";
 /// The short name of the property.
 const Char EastAsianWidth::SHORT_NAME[] = L"ea";
-const EastAsianWidth::Names EastAsianWidth::names_[EastAsianWidth::LAST_VALUE - EastAsianWidth::FIRST_VALUE] = {
-	{L"F",	L"Fullwidth"},
-	{L"H",	L"Halfwidth"},
-	{L"W",	L"Wide"},
-	{L"Na",	L"Narrow"},
-	{L"A",	L"Ambiguous"},
-	{L"N",	L"Neutral"}
-};
 
 
 // LineBreak ////////////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int LineBreak::DEFAULT_VALUE = LineBreak::UNKNOWN;
 /// The long name of the property.
 const Char LineBreak::LONG_NAME[] = L"Line_Break";
 /// The short name of the property.
 const Char LineBreak::SHORT_NAME[] = L"lb";
-const LineBreak::Names LineBreak::names_[LineBreak::LAST_VALUE - LineBreak::FIRST_VALUE] = {
-	{L"BK",	L"Mandatory_Break"},
-	{L"CR",	L"Carriage_Return"},
-	{L"LF",	L"Line_Feed"},
-	{L"CM",	L"Combining_Mark"},
-	{L"NL",	L"Next_Line"},
-	{L"SG",	L"Surrogate"},
-	{L"WJ",	L"Word_Joiner"},
-	{L"ZW",	L"ZWSpace"},
-	{L"GL",	L"Glue"},
-	{L"SP",	L"Space"},
-	{L"B2",	L"Break_Both"},
-	{L"BA",	L"Break_After"},
-	{L"BB",	L"Break_Before"},
-	{L"HY",	L"Hyphen"},
-	{L"CB",	L"Contingent_Break"},
-	{L"CL",	L"Close_Punctuation"},
-	{L"EX",	L"Exclamation"},
-	{L"IN",	L"Inseparable"},
-	{L"NS",	L"Nonstarter"},
-	{L"OP",	L"Open_Punctuation"},
-	{L"QU",	L"Quotation"},
-	{L"IS",	L"Infix_Numeric"},
-	{L"NU",	L"Numeric"},
-	{L"PO",	L"Postfix_Numeric"},
-	{L"PR",	L"Prefix_Numeric"},
-	{L"SY",	L"Break_Symbols"},
-	{L"AI",	L"Ambiguous"},
-	{L"AL",	L"Alphabetic"},
-	{0,	L"H2"},
-	{0,	L"H3"},
-	{L"ID",	L"Ideographic"},
-	{0,	L"JL"},
-	{0,	L"JV"},
-	{0,	L"JT"},
-	{L"SA",	L"Complex_Context"},
-	{L"XX",	L"Unknown"}
-};
 
 
 // GraphemeClusterBreak /////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int GraphemeClusterBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
 const Char GraphemeClusterBreak::LONG_NAME[] = L"Grapheme_Cluster_Break";
 /// The short name of the property.
 const Char GraphemeClusterBreak::SHORT_NAME[] = L"GCB";
-const GraphemeClusterBreak::Names GraphemeClusterBreak::names_[GraphemeClusterBreak::LAST_VALUE - GraphemeClusterBreak::FIRST_VALUE] = {
-	{0,		L"CR"},
-	{0,		L"LF"},
-	{L"CN",	L"Control"},
-	{L"EX",	L"Extend"},
-	{0,		L"L"},
-	{0,		L"V"},
-	{0,		L"T"},
-	{0,		L"LV"},
-	{0,		L"LVT"},
-	{L"XX",	L"Other"}
-};
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
 int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
@@ -770,10 +373,10 @@ int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
 	else if(cp == LINE_FEED)
 		return LF;
 	const int gc = GeneralCategory::of(cp);
-	if((gc == GeneralCategory::SEPARATOR_LINE
-			|| gc == GeneralCategory::SEPARATOR_PARAGRAPH
-			|| gc == GeneralCategory::OTHER_CONTROL
-			|| gc == GeneralCategory::OTHER_FORMAT)
+	if((gc == GeneralCategory::LINE_SEPARATOR
+			|| gc == GeneralCategory::PARAGRAPH_SEPARATOR
+			|| gc == GeneralCategory::CONTROL
+			|| gc == GeneralCategory::FORMAT)
 			&& cp != ZERO_WIDTH_NON_JOINER
 			&& cp != ZERO_WIDTH_JOINER)
 		return CONTROL;
@@ -792,20 +395,12 @@ int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
 
 // WordBreak ////////////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int WordBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
 const Char WordBreak::LONG_NAME[] = L"Word_Break";
 /// The short name of the property.
 const Char WordBreak::SHORT_NAME[] = L"WB";
-const WordBreak::Names WordBreak::names_[WordBreak::LAST_VALUE - WordBreak::FIRST_VALUE] = {
-	{L"FO",	L"Format"},
-	{L"KA",	L"Katakana"},
-	{L"LE",	L"ALetter"},
-	{L"ML",	L"MidLetter"},
-	{L"MN",	L"MidNum"},
-	{L"NU",	L"Numeric"},
-	{L"EX",	L"ExtendNumLet"},
-	{L"XX",	L"Other"}
-};
 
 /**
  * Returns Word_Break value of the specified character.
@@ -865,7 +460,7 @@ int WordBreak::of(CodePoint cp,
 	else if(cp == LINE_FEED)
 		return GraphemeClusterBreak::LF;
 	const int gc = GeneralCategory::of(cp);
-	if(gc == GeneralCategory::OTHER_FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
+	if(gc == GeneralCategory::FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
 		return FORMAT;
 	else if(Script::of(cp) == Script::KATAKANA
 			|| binary_search(KATAKANAS, MANAH_ENDOF(KATAKANAS), cp))
@@ -883,7 +478,7 @@ int WordBreak::of(CodePoint cp,
 		return MID_NUM;
 	else if(isNU(cp, gc))
 		return NUMERIC;
-	else if(gc == GeneralCategory::PUNCTUATION_CONNECTOR)
+	else if(gc == GeneralCategory::CONNECTOR_PUNCTUATION)
 		return EXTEND_NUM_LET;
 	else
 		return OTHER;
@@ -892,23 +487,12 @@ int WordBreak::of(CodePoint cp,
 
 // SentenceBreak ////////////////////////////////////////////////////////////
 
+/// The default value of the property.
+const int SentenceBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
 const Char SentenceBreak::LONG_NAME[] = L"Sentence_Break";
 /// The short name of the property.
 const Char SentenceBreak::SHORT_NAME[] = L"SB";
-const SentenceBreak::Names SentenceBreak::names_[SentenceBreak::LAST_VALUE - SentenceBreak::FIRST_VALUE] = {
-	{L"SE",	L"Sep"},
-	{L"FO",	L"Format"},
-	{0,		L"SP"},
-	{L"LO",	L"Lower"},
-	{L"UP",	L"Upper"},
-	{L"LE",	L"OLetter"},
-	{L"NU",	L"Numeric"},
-	{L"AT",	L"ATerm"},
-	{L"ST",	L"STerm"},
-	{L"CL",	L"Close"},
-	{L"XX",	L"Other"}
-};
 
 /// Returns Sentence_Break value of the specified character.
 int SentenceBreak::of(CodePoint cp) /*throw()*/ {
@@ -918,13 +502,13 @@ int SentenceBreak::of(CodePoint cp) /*throw()*/ {
 	else if(binary_search(SEPS, MANAH_ENDOF(SEPS), cp))
 		return SEP;
 	const int gc = GeneralCategory::of(cp);
-	if(gc == GeneralCategory::OTHER_FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
+	if(gc == GeneralCategory::FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
 		return FORMAT;
 	else if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp) && cp != 0x00A0)
 		return SP;
 	else if(BinaryProperty::is<BinaryProperty::LOWERCASE>(cp))
 		return LOWER;
-	else if(gc == GeneralCategory::LETTER_TITLECASE || BinaryProperty::is<BinaryProperty::UPPERCASE>(cp))
+	else if(gc == GeneralCategory::TITLECASE_LETTER || BinaryProperty::is<BinaryProperty::UPPERCASE>(cp))
 		return UPPER;
 	else if(BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp) || cp == 0x00A0 || cp == 0x05F3)
 		return O_LETTER;
@@ -934,9 +518,7 @@ int SentenceBreak::of(CodePoint cp) /*throw()*/ {
 		return A_TERM;
 	else if(BinaryProperty::is<BinaryProperty::STERM>(cp))
 		return S_TERM;
-	else if(gc == GeneralCategory::PUNCTUATION_OPEN || gc == GeneralCategory::PUNCTUATION_CLOSE || isQU(cp, gc))
+	else if(gc == GeneralCategory::OPEN_PUNCTUATION || gc == GeneralCategory::CLOSE_PUNCTUATION || isQU(cp, gc))
 		return CLOSE;
 	return OTHER;
 }
-
-#undef PROP

@@ -361,12 +361,12 @@ void RegexTraits::buildNames() {
 	names_[L"lower"] = BinaryProperty::LOWERCASE;
 	names_[L"upper"] = BinaryProperty::UPPERCASE;
 	names_[L"punct"] = GeneralCategory::PUNCTUATION;
-	names_[L"digit"] = names_[L"d"] = GeneralCategory::NUMBER_DECIMAL_DIGIT;
+	names_[L"digit"] = names_[L"d"] = GeneralCategory::DECIMAL_NUMBER;
 	names_[L"xdigit"] = POSIX_XDIGIT;
 	names_[L"alnum"] = POSIX_ALNUM;
 	names_[L"space"] = names_[L"s"] = BinaryProperty::WHITE_SPACE;
 	names_[L"blank"] = POSIX_BLANK;
-	names_[L"cntrl"] = GeneralCategory::OTHER_CONTROL;
+	names_[L"cntrl"] = GeneralCategory::CONTROL;
 	names_[L"graph"] = POSIX_GRAPH;
 	names_[L"print"] = POSIX_PRINT;
 	names_[L"word"] = names_[L"w"] = POSIX_WORD;
@@ -398,7 +398,7 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 	// higher general category
 	const int gc = GeneralCategory::of(c);
 	if((f[GeneralCategory::LETTER] && GeneralCategory::is<GeneralCategory::LETTER>(gc))
-			|| (f[GeneralCategory::LETTER_CASED] && GeneralCategory::is<GeneralCategory::LETTER_CASED>(gc))
+			|| (f[GeneralCategory::CASED_LETTER] && GeneralCategory::is<GeneralCategory::CASED_LETTER>(gc))
 			|| (f[GeneralCategory::MARK] && GeneralCategory::is<GeneralCategory::MARK>(gc))
 			|| (f[GeneralCategory::NUMBER] && GeneralCategory::is<GeneralCategory::NUMBER>(gc))
 			|| (f[GeneralCategory::SYMBOL] && GeneralCategory::is<GeneralCategory::SYMBOL>(gc))
@@ -406,12 +406,12 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 			|| (f[GeneralCategory::SEPARATOR] && GeneralCategory::is<GeneralCategory::SEPARATOR>(gc))
 			|| (f[GeneralCategory::OTHER] && GeneralCategory::is<GeneralCategory::OTHER>(gc))
 			|| (f[GC_ANY])
-			|| (f[GC_ASSIGNED] && gc != GeneralCategory::OTHER_UNASSIGNED)
+			|| (f[GC_ASSIGNED] && gc != GeneralCategory::UNASSIGNED)
 			|| (f[GC_ASCII] && c < 0x0080))
 		return true;
 
 	// lower general category, block, and script
-	if(f[gc] || f[CodeBlock::of(c)])
+	if(f[gc] || f[Block::of(c)])
 		return true;
 	const int script = Script::of(c);
 	if(f[script] || (f[Script::KATAKANA_OR_HIRAGANA] && (script == Script::HIRAGANA || script == Script::KATAKANA)))
@@ -455,9 +455,9 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		if(PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
 				|| PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
 			valueNameDetector = GeneralCategory::forName;
-		else if(PropertyNameComparer<Char>::compare(name.c_str(), CodeBlock::LONG_NAME) == 0
-				|| PropertyNameComparer<Char>::compare(name.c_str(), CodeBlock::SHORT_NAME) == 0)
-			valueNameDetector = CodeBlock::forName;
+		else if(PropertyNameComparer<Char>::compare(name.c_str(), Block::LONG_NAME) == 0
+				|| PropertyNameComparer<Char>::compare(name.c_str(), Block::SHORT_NAME) == 0)
+			valueNameDetector = Block::forName;
 		else if(PropertyNameComparer<Char>::compare(name.c_str(), Script::LONG_NAME) == 0
 				|| PropertyNameComparer<Char>::compare(name.c_str(), Script::SHORT_NAME) == 0)
 			valueNameDetector = Script::forName;
@@ -478,7 +478,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 
 			int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
 			if(p == NOT_PROPERTY) {
-				p = CodeBlock::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"in", L"IN"));
+				p = Block::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"in", L"IN"));
 				if(p == NOT_PROPERTY) {
 					p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
 					if(p == NOT_PROPERTY)
