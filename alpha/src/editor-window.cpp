@@ -68,7 +68,7 @@ EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1
 EditorWindow::EditorWindow(const EditorWindow& rhs) {
 	for(size_t i = 0, c = rhs.views_.size(); i != c; ++i) {
 		auto_ptr<EditorView> newViewer(new EditorView(*rhs.views_[i]));
-		const bool succeeded = newViewer->create(rhs.views_[i]->getParent().use(), DefaultWindowRect(),
+		const bool succeeded = newViewer->create(rhs.views_[i]->getParent()->use(), DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		newViewer->setConfiguration(&rhs.views_[i]->configuration(), 0);

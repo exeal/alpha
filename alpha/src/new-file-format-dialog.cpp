@@ -27,36 +27,36 @@ NewFileFormatDialog::NewFileFormatDialog(const string& encoding, ascension::kern
 bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 	if(id != IDC_COMBO_ENCODING || notifyCode != CBN_SELCHANGE)
 		return Dialog::onCommand(id, notifyCode, control);
-	const int item = encodingCombobox_.getCurSel();
+	const int item = encodingCombobox_->getCurSel();
 	if(item == CB_ERR)
 		return Dialog::onCommand(id, notifyCode, control);
 
-	const auto_ptr<Encoder> encoder(Encoder::forID(encodingCombobox_.getItemData(item)));
+	const auto_ptr<Encoder> encoder(Encoder::forID(encodingCombobox_->getItemData(item)));
 	const MIBenum mib = (encoder.get() != 0) ? encoder->properties().mibEnum() : MIB_UNKNOWN;
 
 	if(mib == standard::UTF_7 || mib == fundamental::UTF_8
 			|| mib == fundamental::UTF_16LE || mib == fundamental::UTF_16BE || mib == fundamental::UTF_16
 			|| mib == standard::UTF_32 || mib == standard::UTF_32LE || mib == standard::UTF_32BE
 			|| encoder->properties().name() == "UTF-5") {
-		if(newlineCombobox_.getCount() != 6) {
-			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
-			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_NEL), NLF_NEXT_LINE);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LS), NLF_LINE_SEPARATOR);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_PS), NLF_PARAGRAPH_SEPARATOR);
-			newlineCombobox_.setCurSel(org);
+		if(newlineCombobox_->getCount() != 6) {
+			const int org = (newlineCombobox_->getCount() != 0) ? newlineCombobox_->getCurSel() : 0;
+			newlineCombobox_->resetContent();
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_CRLF), NLF_CR_LF);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_LF), NLF_LINE_FEED);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_NEL), NLF_NEXT_LINE);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_LS), NLF_LINE_SEPARATOR);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_PS), NLF_PARAGRAPH_SEPARATOR);
+			newlineCombobox_->setCurSel(org);
 		}
 	} else {
-		if(newlineCombobox_.getCount() != 3) {
-			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
-			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
-			newlineCombobox_.setCurSel((org < newlineCombobox_.getCount()) ? org : 0);
+		if(newlineCombobox_->getCount() != 3) {
+			const int org = (newlineCombobox_->getCount() != 0) ? newlineCombobox_->getCurSel() : 0;
+			newlineCombobox_->resetContent();
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_CRLF), NLF_CR_LF);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_LF), NLF_LINE_FEED);
+			newlineCombobox_->setItemData(newlineCombobox_->addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+			newlineCombobox_->setCurSel((org < newlineCombobox_->getCount()) ? org : 0);
 		}
 	}
 	return true;
@@ -71,23 +71,23 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 	for(vector<pair<size_t, const IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
 		const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
 		if(!name.empty()) {
-			const int item = encodingCombobox_.addString(name.c_str());
+			const int item = encodingCombobox_->addString(name.c_str());
 			if(item >= 0) {
-				encodingCombobox_.setItemData(item, static_cast<DWORD>(encoding->first));
+				encodingCombobox_->setItemData(item, static_cast<DWORD>(encoding->first));
 				const string internalName(encoding->second->name());
 				if(compareEncodingNames(internalName.begin(), internalName.end(), encoding_.begin(), encoding_.end()) == 0)
-					encodingCombobox_.setCurSel(item);
+					encodingCombobox_->setCurSel(item);
 			}
 		}
 	}
-	if(encodingCombobox_.getCurSel() == CB_ERR)
-		encodingCombobox_.setCurSel(0);
+	if(encodingCombobox_->getCurSel() == CB_ERR)
+		encodingCombobox_->setCurSel(0);
 
 	// [Newline]
 	onCommand(IDC_COMBO_ENCODING, CBN_SELCHANGE, 0);
 	for(int i = 0; i < 6; ++i) {
-		if(newline_ == static_cast<ascension::kernel::Newline>(newlineCombobox_.getItemData(i))) {
-			newlineCombobox_.setCurSel(i);
+		if(newline_ == static_cast<ascension::kernel::Newline>(newlineCombobox_->getItemData(i))) {
+			newlineCombobox_->setCurSel(i);
 			break;
 		}
 	}
@@ -100,7 +100,7 @@ void NewFileFormatDialog::onInitDialog(HWND focusWindow, bool&) {
 
 /// @see Dialog#onOK
 void NewFileFormatDialog::onOK(bool&) {
-	encoding_ = Encoder::forID(encodingCombobox_.getItemData(encodingCombobox_.getCurSel()))->properties().name();
-	newline_ = static_cast<ascension::kernel::Newline>(newlineCombobox_.getItemData(newlineCombobox_.getCurSel()));
+	encoding_ = Encoder::forID(encodingCombobox_->getItemData(encodingCombobox_->getCurSel()))->properties().name();
+	newline_ = static_cast<ascension::kernel::Newline>(newlineCombobox_->getItemData(newlineCombobox_->getCurSel()));
 //	documentType_ = documentTypeCombobox_.getCurSel();
 }

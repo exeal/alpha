@@ -580,7 +580,7 @@ inline void Window::bringToTop() {::BringWindowToTop(use());}
 inline void Window::center(HWND alternateWindow /* = 0 */) {
 	RECT winRect, altRect;
 	if(alternateWindow == 0) {
-		alternateWindow = getParent().get();
+		alternateWindow = getParent()->get();
 		if(alternateWindow == 0)
 			alternateWindow = ::GetDesktopWindow();
 	}

@@ -173,7 +173,7 @@ inline void ComboBox::showDropDown(bool show /* = true */) {sendMessage(CB_SHOWD
 
 // DragListBox //////////////////////////////////////////////////////////////
 
-inline void DragListBox::drawInsert(int index) {::DrawInsert(getParent().use(), use(), index);}
+inline void DragListBox::drawInsert(int index) {::DrawInsert(getParent()->use(), use(), index);}
 
 inline UINT DragListBox::getDragListMessage() {
 	static UINT message;

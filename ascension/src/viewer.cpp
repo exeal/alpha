@@ -678,7 +678,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
 	vrc.indicatorMargin.visible = true;
-	vrc.lineNumbers.textColor = Colors(Color(0x00, 0x80, 0x80), Color(0xFF, 0xFF, 0xFF));
+	vrc.lineNumbers.textColor = Colors(Color(0x00, 0x80, 0x80), Color(0xff, 0xff, 0xff));
 	vrc.lineNumbers.borderColor = Color(0x00, 0x80, 0x80);
 	vrc.lineNumbers.borderStyle = VerticalRulerConfiguration::LineNumbers::DOTTED;
 	vrc.lineNumbers.borderWidth = 1;
@@ -754,8 +754,8 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 		scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
 		map<Token::ID, const TextStyle> jsStyles;
 		jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
-		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xFF)))));
-		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xFF)), false, false, false, DASHED_UNDERLINE)));
+		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xff)))));
+		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xff)), false, false, false, DASHED_UNDERLINE)));
 		jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
 		pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
 			auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
@@ -2237,7 +2237,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* 
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
 	if(!view_.isVisible())
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(view_.getTop().use() == ::GetActiveWindow())
+	if(view_.getTop()->use() == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
 	if(view_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
@@ -2693,11 +2693,11 @@ void LocaleSensitiveCaretShaper::getCaretShape(
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
 	::ImmReleaseContext(updater_->textViewer().get(), imc);
 	if(imeOpened) {	// CJK and IME is open
-		static const RGBQUAD red = {0xFF, 0xFF, 0x80, 0x00};
+		static const RGBQUAD red = {0xff, 0xff, 0x80, 0x00};
 		bitmap.reset(new win32::gdi::Bitmap);
 		createSolidCaretBitmap(*bitmap.get(), static_cast<ushort>(solidSize.cx), static_cast<ushort>(solidSize.cy), red);
 	} else if(!overtype && solidSize.cy > 3) {
-		static const RGBQUAD black = {0xFF, 0xFF, 0xFF, 0x00};
+		static const RGBQUAD black = {0xff, 0xff, 0xff, 0x00};
 		const WORD langID = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
 		if(isRTLLanguage(langID)) {	// RTL
 			bitmap.reset(new win32::gdi::Bitmap);
