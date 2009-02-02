@@ -16,6 +16,21 @@
 namespace alpha {
 	namespace ambient {
 
+		class AutoVARIANT : public tagVARIANT {
+			MANAH_UNASSIGNABLE_TAG(AutoVARIANT);
+		public:
+			AutoVARIANT() /*throw()*/ {::VariantInit(this);}
+			AutoVARIANT(const AutoVARIANT& other) {::VariantInit(this); ::VariantCopy(this, &other);}
+			~AutoVARIANT() throw() {::VariantClear(this);}
+			HRESULT coerce(VARTYPE type, USHORT flags) /*throw()*/ {
+				AutoVARIANT temp; const HRESULT hr = ::VariantChangeType(&temp, this, flags, type);
+				if(FAILED(hr)) return hr; swap(temp); return S_OK;}
+			HRESULT coerce(VARTYPE type, USHORT flags, LCID lcid) /*throw()*/ {
+				AutoVARIANT temp; const HRESULT hr = ::VariantChangeTypeEx(&temp, this, lcid, flags, type);
+				if(FAILED(hr)) return hr; swap(temp); return S_OK;}
+			void swap(AutoVARIANT& other) /*throw()*/ {std::swap(static_cast<tagVARIANT&>(*this), static_cast<tagVARIANT&>(other));}
+		};
+
 		template<typename InterfaceSignatures, typename TypeInformationProvider, typename ThreadingPolicy = MultiThreaded>
 		class IUnknownDispatchImpl : public manah::com::ole::IDispatchImpl<
 			manah::com::IUnknownImpl<

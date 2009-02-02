@@ -106,7 +106,7 @@ namespace manah {
 			HandleType handle_;
 		};
 
-		template<typename T> class Borrowed : public T {
+		template<typename T> class Borrowed : private T {
 		public:
 			/// Default constructor.
 			Borrowed() : T() {}
@@ -118,6 +118,10 @@ namespace manah {
 			~Borrowed() throw() {release();}
 			/// Copy-constructor just copies the handle value.
 			Borrowed(const Borrowed<T>& rhs) : T() {reset(rhs.get());}
+			/// Member-access operator returns @c T object.
+			T* operator->() {return this;}
+			/// Member-access operator returns @c const @c T object.
+			const T* operator->() const {return this;}
 		private:
 			void aboutToReset(typename T::HandleType newValue) {}
 		};

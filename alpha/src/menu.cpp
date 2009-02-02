@@ -512,7 +512,7 @@ namespace {
 void ambient::ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 	if(HIWORD(lp) != 0)
 		return;	// system menu
-	HMENU menuBar = Alpha::instance().getMainWindow().getMenu().get();
+	HMENU menuBar = Alpha::instance().getMainWindow().getMenu()->get();
 	if(manah::toBoolean(::IsMenu(menuBar))) {
 		pair<IPopupMenu*, short> popup(findPopupMenu(menuBar, reinterpret_cast<HMENU>(wp), LOWORD(lp)));
 		if(popup.first != 0)

@@ -125,10 +125,8 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 		// ignore if the cursor is not over a window belongs to the same thread
 		POINT pt;
 		::GetCursorPos(&pt);
-		win32::Borrowed<Window> temp;
-		Window w(temp);
 		win32::Borrowed<Window> pointedWindow(Window::fromPoint(pt));
-		if(pointedWindow.get() != 0 && pointedWindow.getThreadID() == getThreadID()) {
+		if(pointedWindow->get() != 0 && pointedWindow->getThreadID() == getThreadID()) {
 			modeState_.cursorVanished = true;
 			::ShowCursor(false);
 			setCapture();
@@ -347,31 +345,31 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 		setConfiguration(&c, 0);
 		break;
 	}
-	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200E)();	break;
-	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200F)();	break;
-	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200D)();	break;
-	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200C)();	break;
-	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202A)();	break;
-	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202B)();	break;
-	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202D)();	break;
-	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202E)();	break;
-	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202C)();	break;
+	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200e)();	break;
+	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200f)();	break;
+	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200d)();	break;
+	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200c)();	break;
+	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202a)();	break;
+	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202b)();	break;
+	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202d)();	break;
+	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202e)();	break;
+	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202c)();	break;
 	case ID_INSERT_WJ:		CharacterInputCommand(*this, 0x2060)();	break;
-	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206E)();	break;
-	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206F)();	break;
-	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206B)();	break;
-	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206A)();	break;
-	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206D)();	break;
-	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206C)();	break;
-	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001E)();	break;
-	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001F)();	break;
-	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xFFF9)();	break;
-	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xFFFA)();	break;
-	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xFFFB)();	break;
+	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206e)();	break;
+	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206f)();	break;
+	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206b)();	break;
+	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206a)();	break;
+	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206d)();	break;
+	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206c)();	break;
+	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001e)();	break;
+	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001f)();	break;
+	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xfff9)();	break;
+	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xfffa)();	break;
+	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xfffb)();	break;
 	case ID_INSERT_U0020:	CharacterInputCommand(*this, 0x0020)();	break;
-	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00A0)();	break;
+	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00a0)();	break;
 	case ID_INSERT_U1680:	CharacterInputCommand(*this, 0x1680)();	break;
-	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180E)();	break;
+	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180e)();	break;
 	case ID_INSERT_U2000:	CharacterInputCommand(*this, 0x2000)();	break;
 	case ID_INSERT_U2001:	CharacterInputCommand(*this, 0x2001)();	break;
 	case ID_INSERT_U2002:	CharacterInputCommand(*this, 0x2002)();	break;
@@ -382,10 +380,10 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	case ID_INSERT_U2007:	CharacterInputCommand(*this, 0x2007)();	break;
 	case ID_INSERT_U2008:	CharacterInputCommand(*this, 0x2008)();	break;
 	case ID_INSERT_U2009:	CharacterInputCommand(*this, 0x2009)();	break;
-	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200A)();	break;
-	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200B)();	break;
-	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202F)();	break;
-	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205F)();	break;
+	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200a)();	break;
+	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200b)();	break;
+	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202f)();	break;
+	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205f)();	break;
 	case ID_INSERT_U3000:	CharacterInputCommand(*this, 0x3000)();	break;
 	case ID_INSERT_NEL:		CharacterInputCommand(*this, NEXT_LINE)();	break;
 	case ID_INSERT_LS:		CharacterInputCommand(*this, LINE_SEPARATOR)();	break;
@@ -437,7 +435,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	abortIncrementalSearch(*this);
 
 	// invoked by the keyboard
-	if(pt.x == 0xFFFF && pt.y == 0xFFFF) {
+	if(pt.x == 0xffff && pt.y == 0xffff) {
 		const_cast<POINT&>(pt).x = const_cast<POINT&>(pt).y = 1;	// hmm...
 		clientToScreen(const_cast<POINT&>(pt));
 	}
@@ -1065,15 +1063,15 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {
 		static const byte AND_LINE_3_TO_11[] = {
-			0xFF, 0xFE, 0x7F, 0xFF,
-			0xFF, 0xFC, 0x3F, 0xFF,
-			0xFF, 0xF8, 0x1F, 0xFF,
-			0xFF, 0xF0, 0x0F, 0xFF,
-			0xFF, 0xE0, 0x07, 0xFF,
-			0xFF, 0xC0, 0x03, 0xFF,
-			0xFF, 0x80, 0x01, 0xFF,
-			0xFF, 0x00, 0x00, 0xFF,
-			0xFF, 0x80, 0x01, 0xFF
+			0xff, 0xfe, 0x7f, 0xff,
+			0xff, 0xfc, 0x3f, 0xff,
+			0xff, 0xf8, 0x1f, 0xff,
+			0xff, 0xf0, 0x0f, 0xff,
+			0xff, 0xe0, 0x07, 0xff,
+			0xff, 0xc0, 0x03, 0xff,
+			0xff, 0x80, 0x01, 0xff,
+			0xff, 0x00, 0x00, 0xff,
+			0xff, 0x80, 0x01, 0xff
 		};
 		static const byte XOR_LINE_3_TO_11[] = {
 			0x00, 0x01, 0x80, 0x00,
@@ -1084,15 +1082,15 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0x00, 0x20, 0x04, 0x00,
 			0x00, 0x40, 0x02, 0x00,
 			0x00, 0x80, 0x01, 0x00,
-			0x00, 0x7F, 0xFE, 0x00
+			0x00, 0x7f, 0xfe, 0x00
 		};
 		static const byte AND_LINE_13_TO_18[] = {
-			0xFF, 0xFE, 0x7F, 0xFF,
-			0xFF, 0xFC, 0x3F, 0xFF,
-			0xFF, 0xF8, 0x1F, 0xFF,
-			0xFF, 0xF8, 0x1F, 0xFF,
-			0xFF, 0xFC, 0x3F, 0xFF,
-			0xFF, 0xFE, 0x7F, 0xFF,
+			0xff, 0xfe, 0x7f, 0xff,
+			0xff, 0xfc, 0x3f, 0xff,
+			0xff, 0xf8, 0x1f, 0xff,
+			0xff, 0xf8, 0x1f, 0xff,
+			0xff, 0xfc, 0x3f, 0xff,
+			0xff, 0xfe, 0x7f, 0xff,
 		};
 		static const byte XOR_LINE_13_TO_18[] = {
 			0x00, 0x01, 0x80, 0x00,
@@ -1103,18 +1101,18 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0x00, 0x01, 0x80, 0x00
 		};
 		static const byte AND_LINE_20_TO_28[] = {
-			0xFF, 0x80, 0x01, 0xFF,
-			0xFF, 0x00, 0x00, 0xFF,
-			0xFF, 0x80, 0x01, 0xFF,
-			0xFF, 0xC0, 0x03, 0xFF,
-			0xFF, 0xE0, 0x07, 0xFF,
-			0xFF, 0xF0, 0x0F, 0xFF,
-			0xFF, 0xF8, 0x1F, 0xFF,
-			0xFF, 0xFC, 0x3F, 0xFF,
-			0xFF, 0xFE, 0x7F, 0xFF
+			0xff, 0x80, 0x01, 0xff,
+			0xff, 0x00, 0x00, 0xff,
+			0xff, 0x80, 0x01, 0xff,
+			0xff, 0xc0, 0x03, 0xff,
+			0xff, 0xe0, 0x07, 0xff,
+			0xff, 0xf0, 0x0f, 0xff,
+			0xff, 0xf8, 0x1f, 0xff,
+			0xff, 0xfc, 0x3f, 0xff,
+			0xff, 0xfe, 0x7f, 0xff
 		};
 		static const byte XOR_LINE_20_TO_28[] = {
-			0x00, 0x7F, 0xFE, 0x00,
+			0x00, 0x7f, 0xfe, 0x00,
 			0x00, 0x80, 0x01, 0x00,
 			0x00, 0x40, 0x02, 0x00,
 			0x00, 0x20, 0x04, 0x00,
@@ -1126,7 +1124,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 		};
 		byte andBits[4 * 32], xorBits[4 * 32];
 		// fill canvases
-		memset(andBits, 0xFF, 4 * 32);
+		memset(andBits, 0xff, 4 * 32);
 		memset(xorBits, 0x00, 4 * 32);
 		// draw lines
 		if(type == CURSOR_NEUTRAL || type == CURSOR_UPWARD) {
@@ -1231,10 +1229,10 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 		bh.bV5Planes = 1;
 		bh.bV5BitCount = 32;
 		bh.bV5Compression = BI_BITFIELDS;
-		bh.bV5RedMask = 0x00FF0000;
-		bh.bV5GreenMask = 0x0000FF00;
-		bh.bV5BlueMask = 0x000000FF;
-		bh.bV5AlphaMask = 0xFF000000;
+		bh.bV5RedMask = 0x00ff0000;
+		bh.bV5GreenMask = 0x0000ff00;
+		bh.bV5BlueMask = 0x000000ff;
+		bh.bV5AlphaMask = 0xff000000;
 
 		SHDRAGIMAGE image;
 		image.sizeDragImage.cx = bh.bV5Width;
@@ -1268,7 +1266,7 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 				for(int x = 0; x < bih.biWidth; ++x) {
 					for(int y = 0; y < bih.biHeight; ++y) {
 						const byte* pixel = memoryBits + (x + y * bih.biWidth) * 3;
-						static_cast<ulong*>(bits)[x + y * bih.biWidth] = RGB(pixel[0], pixel[1], pixel[2]) + 0xFF000000;
+						static_cast<ulong*>(bits)[x + y * bih.biWidth] = RGB(pixel[0], pixel[1], pixel[2]) + 0xff000000;
 					}
 				}
 				delete[] memoryBits;

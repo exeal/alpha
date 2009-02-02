@@ -22,7 +22,7 @@ namespace alpha {
 		private:
 			std::string result_;
 			const bool forReading_;
-			manah::win32::ui::ListBox encodingList_;
+			manah::win32::Borrowed<manah::win32::ui::ListBox> encodingList_;
 			MANAH_BEGIN_CONTROL_BINDING()
 				MANAH_BIND_CONTROL(IDC_LIST_CODEPAGES, encodingList_)
 			MANAH_END_CONTROL_BINDING()

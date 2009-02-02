@@ -94,7 +94,7 @@ private:
 
 #define MANAH_BEGIN_CONTROL_BINDING()	private: void bindControls() {
 
-#define MANAH_BIND_CONTROL(id, name)	name.reset(getItem(id));
+#define MANAH_BIND_CONTROL(id, name)	name->reset(getItem(id));
 
 #define MANAH_END_CONTROL_BINDING()	}
 
@@ -172,9 +172,9 @@ inline bool Dialog::isDialogMessage(const MSG& msg) {return toBoolean(::IsDialog
 
 inline UINT Dialog::isButtonChecked(int buttonID) const {return ::IsDlgButtonChecked(use(), buttonID);}
 
-inline void Dialog::nextControl() const {::SetFocus(getNextTabItem(getFocus().get(), false));}
+inline void Dialog::nextControl() const {::SetFocus(getNextTabItem(getFocus()->get(), false));}
 
-inline void Dialog::previousControl() const {::SetFocus(getNextTabItem(getFocus().get(), true));}
+inline void Dialog::previousControl() const {::SetFocus(getNextTabItem(getFocus()->get(), true));}
 
 inline LRESULT Dialog::sendItemMessage(int itemID, UINT message, WPARAM wParam, LPARAM lParam) {return ::SendDlgItemMessageW(use(), itemID, message, wParam, lParam);}
 

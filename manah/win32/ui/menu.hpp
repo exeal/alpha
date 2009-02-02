@@ -206,18 +206,18 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 #ifndef COLOR_MENUHILIGHT
 			const int COLOR_MENUHILIGHT = 29;
 #endif
-			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
-			dc.frameRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+			dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
+			dc->frameRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 		} else
-			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+			dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 	} else if(di.itemAction == ODA_SELECT)
-		dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENU));
+		dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENU));
 
 	// separator
 	if(text == 0) {
 		RECT rc = di.rcItem;
 		rc.top += (rc.bottom - rc.top) / 2;
-		dc.drawEdge(rc, EDGE_ETCHED, BF_TOP);
+		dc->drawEdge(rc, EDGE_ETCHED, BF_TOP);
 		return true;
 	}
 
@@ -226,18 +226,18 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 	if(icons != 0) {
 		::ImageList_GetIconSize(icons, &iconCx, &iconCy);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
-		::ImageList_DrawEx(icons, iconIndex, dc.use(), di.rcItem.left + 2, iconY,
+		::ImageList_DrawEx(icons, iconIndex, dc->use(), di.rcItem.left + 2, iconY,
 			0, 0, (selected && !checked) ? CLR_NONE : ::GetSysColor(COLOR_MENU), CLR_NONE, ILD_NORMAL);
 	} else if(icon != 0) {
 		iconCx = ::GetSystemMetrics(SM_CXSMICON);
 		iconCy = ::GetSystemMetrics(SM_CYSMICON);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
 		if(checked)
-			dc.fillSolidRect(di.rcItem.left + 2, iconY, iconCx, iconCy, ::GetSysColor(COLOR_MENU));
+			dc->fillSolidRect(di.rcItem.left + 2, iconY, iconCx, iconCy, ::GetSysColor(COLOR_MENU));
 #if(_WIN32_WINNT >= 0x0501)
-		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
+		dc->drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
 #else
-		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
+		dc->drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
 #endif
 	}
 
@@ -250,32 +250,32 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 			buttonRect.right = buttonRect.left + iconCx + 2;
 			buttonRect.bottom = buttonRect.top + iconCy + 2;
 //			if(flat)
-				dc.frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+				dc->frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 //			else {
 //			}
 		} else {
 			const int size = di.rcItem.bottom - di.rcItem.top - 4;
 			HPEN pen = ::CreatePen(PS_SOLID, 1, ::GetSysColor(COLOR_MENUTEXT));
-			HPEN oldPen = dc.selectObject(pen);
-			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
-			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
-			dc.selectObject(oldPen);
+			HPEN oldPen = dc->selectObject(pen);
+			dc->moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1);
+			dc->lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
+			dc->lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
+			dc->moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0);
+			dc->lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
+			dc->lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
+			dc->selectObject(oldPen);
 			::DeleteObject(pen);
 		}
 	}
 
 	// draw text
-	dc.setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
-	dc.setBkMode(TRANSPARENT);
+	dc->setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
+	dc->setBkMode(TRANSPARENT);
 	RECT rc = di.rcItem;
 	rc.left += rc.bottom - rc.top + 4;
-	dc.drawText(text, -1, rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+	dc->drawText(text, -1, rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 	rc.right -= rc.bottom - rc.top;
-	dc.drawText(accelerator, -1, rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+	dc->drawText(accelerator, -1, rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
 
 	return true;
 }

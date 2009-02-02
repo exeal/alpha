@@ -80,7 +80,7 @@ public:
 	Palette(HPALETTE handle = 0) : GDIObject<HPALETTE>(handle) {}
 	static Palette create(const LOGPALETTE& logpalette);
 	static Palette createHalftonePalette(DC& dc);
-	static Palette getStockObject(int index);
+	static Borrowed<Palette> getStockObject(int index);
 	// methods
 	void animate(uint start, uint count, const PALETTEENTRY paletteColors[]);
 	int getEntryCount() const;
@@ -97,7 +97,7 @@ public:
 	static Pen create(int penStyle, int width, COLORREF color);
 	static Pen create(int penStyle, int width, const LOGBRUSH& logbrush, int styleCount = 0, const DWORD styles[] = 0);
 	static Pen create(const LOGPEN& logpen);
-	static Pen getStockObject(int index);
+	static Borrowed<Pen> getStockObject(int index);
 	// methods
 	bool getLogPen(LOGPEN& logpen) const;
 	bool getExtLogPen(EXTLOGPEN& extlogpen) const;
@@ -215,7 +215,7 @@ inline int Palette::getEntryCount() const {return ::GetPaletteEntries(use(), 0, 
 
 inline uint Palette::getNearestIndex(COLORREF color) const {return ::GetNearestPaletteIndex(use(), color);}
 
-inline Palette Palette::getStockObject(int index) {return Borrowed<Palette>(static_cast<HPALETTE>(::GetStockObject(index)));}
+inline Borrowed<Palette> Palette::getStockObject(int index) {return Borrowed<Palette>(static_cast<HPALETTE>(::GetStockObject(index)));}
 
 inline bool Palette::resize(uint count) {return toBoolean(::ResizePalette(use(), count));}
 
@@ -235,7 +235,7 @@ inline bool Pen::getExtLogPen(EXTLOGPEN& extlogpen) const {return toBoolean(::Ge
 
 inline bool Pen::getLogPen(LOGPEN& logpen) const {return toBoolean(::GetObjectW(use(), sizeof(LOGPEN), &logpen));}
 
-inline Pen Pen::getStockObject(int index) {return Borrowed<Pen>(static_cast<HPEN>(::GetStockObject(index)));}
+inline Borrowed<Pen> Pen::getStockObject(int index) {return Borrowed<Pen>(static_cast<HPEN>(::GetStockObject(index)));}
 
 
 // Rgn //////////////////////////////////////////////////////////////////////

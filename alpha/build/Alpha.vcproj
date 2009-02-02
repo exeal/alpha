@@ -353,6 +353,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\src\wscript.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -509,6 +513,10 @@
 				</File>
 				<File
 					RelativePath="..\..\ascension\src\unicode-property.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ascension\src\user-input.cpp"
 					>
 				</File>
 				<File
