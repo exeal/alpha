@@ -434,17 +434,29 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	utils::closeCompletionProposalsPopup(*this);
 	abortIncrementalSearch(*this);
 
+	POINT menuPosition;
+
 	// invoked by the keyboard
 	if(pt.x == 0xffff && pt.y == 0xffff) {
-		const_cast<POINT&>(pt).x = const_cast<POINT&>(pt).y = 1;	// hmm...
-		clientToScreen(const_cast<POINT&>(pt));
-	}
+		// MSDN says "the application should display the context menu at the location of the current selection."
+		menuPosition = clientXYForCharacter(caret(), false);
+		menuPosition.y += textRenderer().lineHeight() + 1;
+		RECT rc;
+		getClientRect(rc);
+		const RECT margins(textAreaMargins());
+		rc.left += margins.left; rc.top += margins.top;
+		rc.right -= margins.right - 1; rc.bottom -= margins.bottom;
+		if(!toBoolean(::PtInRect(&rc, menuPosition)))
+			menuPosition.x = menuPosition.y = 1;
+		clientToScreen(menuPosition);
+	} else
+		menuPosition = pt;
 
 	// ignore if the point is over the scroll bars
 	RECT rect;
 	getClientRect(rect);
 	clientToScreen(rect);
-	if(!toBoolean(::PtInRect(&rect, pt)))
+	if(!toBoolean(::PtInRect(&rect, menuPosition)))
 		return false;
 
 	const Document& doc = document();
@@ -601,7 +613,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
 	}
 
-	menu.trackPopup(TPM_LEFTALIGN, pt.x, pt.y, get());
+	menu.trackPopup(TPM_LEFTALIGN, menuPosition.x, menuPosition.y, get());
 
 	// ...finally erase all items
 	int c = menu.getNumberOfItems();
@@ -1174,6 +1186,25 @@ void TextViewer::AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
 
 
 // DefaultMouseInputStrategy ////////////////////////////////////////////////
+
+/**
+ * Standard implementation of @c IMouseOperationStrategy interface.
+ *
+ * This class implements the standard behavior for the user's mouse input.
+ *
+ * - Begins OLE drag-and-drop operation when the mouse moved with the left button down.
+ * - Enters line-selection mode if the mouse left button pressed when the cursor is over the vertical ruler.
+ * - When the cursor is over an invokable link, pressing the left button to open that link.
+ * - Otherwise when the left button pressed, moves the caret to that position. Modifier keys change
+ *   this behavior as follows: [Shift] The anchor will not move. [Control] Enters word-selection
+ *   mode. [Alt] Enters rectangle-selection mode. These modifications can be combined.
+ * - Double click of the left button selects the word under the cursor. And enters word-selection
+ *   mode.
+ * - Click the middle button to enter auto-scroll mode.
+ * - If the mouse moved with the middle pressed, enters temporary auto-scroll mode. This mode
+ *   automatically ends when the button was released.
+ * - Changes the mouse cursor according to the position of the cursor (Arrow, I-beam and hand).
+ */
 
 map<UINT_PTR, DefaultMouseInputStrategy*> DefaultMouseInputStrategy::timerTable_;
 const UINT DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
