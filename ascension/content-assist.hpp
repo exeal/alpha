@@ -2,7 +2,7 @@
  * @file content-assist.hpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
@@ -285,4 +285,4 @@ namespace ascension {
 */
 }} // namespace ascension.contentassist
 
-#endif /* ASCENSION_CONTENT_ASSIST_HPP */
+#endif // ASCENSION_CONTENT_ASSIST_HPP

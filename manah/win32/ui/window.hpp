@@ -349,18 +349,18 @@ namespace internal {
 		DEFINE_DISPATCH(WM_KEYUP) {w.onKeyUp(static_cast<UINT>(wp), static_cast<UINT>(lp), handled); return !handled;}
 		// WM_KILLFOCUS -> void onKillFocus(HWND newWindow)
 		DEFINE_DISPATCH(WM_KILLFOCUS) {w.onKillFocus(reinterpret_cast<HWND>(wp)); return 1;}
-		// WM_LBUTTONDBLCLK -> void onLButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_LBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDblClk(static_cast<UINT>(wp), p); return 1;}
-		// WM_LBUTTONDOWN -> void onLButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_LBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDown(static_cast<UINT>(wp), p); return 1;}
-		// WM_LBUTTONUP -> void onLButtonUp(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_LBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonUp(static_cast<UINT>(wp), p); return 1;}
-		// WM_MBUTTONDBLCLK -> void onMButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_MBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDblClk(static_cast<UINT>(wp), p); return 1;}
-		// WM_MBUTTONDOWN -> void onMButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_MBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDown(static_cast<UINT>(wp), p); return 1;}
-		// WM_MBUTTONUP -> void onMButtonUp(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_MBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonUp(static_cast<UINT>(wp), p); return 1;}
+		// WM_LBUTTONDBLCLK -> void onLButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_LBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDblClk(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_LBUTTONDOWN -> void onLButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_LBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonDown(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_LBUTTONUP -> void onLButtonUp(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_LBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onLButtonUp(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_MBUTTONDBLCLK -> void onMButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_MBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDblClk(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_MBUTTONDOWN -> void onMButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_MBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonDown(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_MBUTTONUP -> void onMButtonUp(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_MBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onMButtonUp(static_cast<UINT>(wp), p, handled); return 1;}
 		// WM_MOUSEACTIVATE -> int onMouseActivate(HWND desktop, UINT hitTest, UINT message)
 		DEFINE_DISPATCH(WM_MOUSEACTIVATE) {return w.onMouseActivate(reinterpret_cast<HWND>(wp), LOWORD(lp), HIWORD(lp));}
 		// WM_MOUSEMOVE -> void onMouseMove(UINT flags, const POINT& position)
@@ -379,12 +379,12 @@ namespace internal {
 		DEFINE_DISPATCH(WM_NOTIFY) {handled = w.onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp)); return 1;}
 //		// WM_PAINT -> bool onPaint(void)
 //		DEFINE_DISPATCH(WM_PAINT) {return w.onPaint();}
-		// WM_RBUTTONDBLCLK -> void onRButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_RBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDblClk(static_cast<UINT>(wp), p); return 1;}
-		// WM_RBUTTONDOWN -> void onRButtonDblClk(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_RBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDown(static_cast<UINT>(wp), p); return 1;}
-		// WM_RBUTTONUP -> void onRButtonUp(UINT flags, const POINT& position)
-		DEFINE_DISPATCH(WM_RBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonUp(static_cast<UINT>(wp), p); return 1;}
+		// WM_RBUTTONDBLCLK -> void onRButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_RBUTTONDBLCLK) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDblClk(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_RBUTTONDOWN -> void onRButtonDblClk(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_RBUTTONDOWN) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonDown(static_cast<UINT>(wp), p, handled); return 1;}
+		// WM_RBUTTONUP -> void onRButtonUp(UINT flags, const POINT& position, bool& handled)
+		DEFINE_DISPATCH(WM_RBUTTONUP) {const POINT p = {LOWORD(lp), HIWORD(lp)}; w.onRButtonUp(static_cast<UINT>(wp), p, handled); return 1;}
 		// WM_SETCURSOR -> bool onSetCursor(HWND window, UINT hitTest, UINT message)
 		DEFINE_DISPATCH(WM_SETCURSOR) {return handled = w.onSetCursor(reinterpret_cast<HWND>(wp), LOWORD(lp), HIWORD(lp));}
 		// WM_SETFOCUS -> void onSetFocus(HWND oldWindow)

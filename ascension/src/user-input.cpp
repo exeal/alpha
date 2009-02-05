@@ -808,43 +808,49 @@ void TextViewer::onKillFocus(HWND newWindow) {
 }
 
 /// @see WM_LBUTTONDBLCLK
-void TextViewer::onLButtonDblClk(UINT keyState, const POINT& pt) {
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+void TextViewer::onLButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		handled = mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
 }
 
 /// @see WM_LBUTTONDOWN
-void TextViewer::onLButtonDown(UINT keyState, const POINT& pt) {
+void TextViewer::onLButtonDown(UINT keyState, const POINT& pt, bool& handled) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		handled = mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
 }
 
 /// @see WM_LBUTTONUP
-void TextViewer::onLButtonUp(UINT keyState, const POINT& pt) {
+void TextViewer::onLButtonUp(UINT keyState, const POINT& pt, bool& handled) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		handled = mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
 }
 
 /// @see WM_MBUTTONDBLCLK
-void TextViewer::onMButtonDblClk(UINT keyState, const POINT& pt) {
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+void TextViewer::onMButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
 }
 
 /// @see WM_MBUTTONDOWN
-void TextViewer::onMButtonDown(UINT keyState, const POINT& pt) {
+void TextViewer::onMButtonDown(UINT keyState, const POINT& pt, bool& handled) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
 }
 
 /// @see WM_MBUTTONUP
-void TextViewer::onMButtonUp(UINT keyState, const POINT& pt) {
+void TextViewer::onMButtonUp(UINT keyState, const POINT& pt, bool& handled) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ? 
+		mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
 }
 
 /// @see WM_MOUSEMOVE
@@ -862,67 +868,34 @@ void TextViewer::onMouseWheel(UINT keyState, short delta, const POINT& pt) {
 }
 
 /// @see WM_RBUTTONDBLCLK
-void TextViewer::onRButtonDblClk(UINT keyState, const POINT& pt) {
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
+void TextViewer::onRButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
 }
 
 /// @see WM_RBUTTONDOWN
-void TextViewer::onRButtonDown(UINT keyState, const POINT& pt) {
+void TextViewer::onRButtonDown(UINT keyState, const POINT& pt, bool& handled) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
+	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
+		mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
 }
 
 /// @see WM_RBUTTONUP
-void TextViewer::onRButtonUp(UINT keyState, const POINT& pt) {
+void TextViewer::onRButtonUp(UINT keyState, const POINT& pt, bool& handled) {
 	if(allowsMouseInput()) {
 		ASCENSION_RESTORE_VANISHED_CURSOR();
-		if(mouseInputStrategy_.get() != 0)
-			mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
-	}
+		handled = (mouseInputStrategy_.get() != 0) ? mouseInputStrategy_->mouseButtonInput(
+			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
+	} else
+		handled = false;
 }
 
 /// @see WM_SETCURSOR
 bool TextViewer::onSetCursor(HWND, UINT, UINT) {
-	static length_t detectedUriLineLast = INVALID_INDEX;
-	POINT pt = getCursorPosition();	// カーソル位置
-	bool cursorChanged = false;
-
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-
-	// リンクのポップアップやカーソルを変える場合
-//	const HitTestResult htr = hitTest(pt);
-/*	if(htr != INDICATOR_MARGIN && htr != LINE_NUMBERS && !autoScroll_.scrolling && linkTextStrategy_.get() != 0) {
-		Region region;
-		AutoBuffer<Char> uri;
-		if(getPointedLinkText(region, uri)) {	// URI
-			// ポップアップを出す
-			const length_t cursorDisplayLine = (pt.y - getTextAreaMargins().top) / renderer_->getLinePitch();
-			String description;
-			HCURSOR cursor = 0;
-			if(cursorDisplayLine != detectedUriLineLast
-					&& linkTextStrategy_->getLinkInformation(region, uri.get(), description, cursor)) {
-				if(!description.empty()) {
-					detectedUriLineLast = cursorDisplayLine;
-					showToolTip(description, 1000, 30000);
-				}
-				// カーソルを変える
-				if(cursor != 0) {
-					::SetCursor(cursor);
-					cursorChanged = true;
-				}
-			}
-		} else {
-			detectedUriLineLast = INVALID_INDEX;
-			hideToolTip();
-		}
-	}
-*/
-	if(!cursorChanged && mouseInputStrategy_.get() != 0)
-		cursorChanged = mouseInputStrategy_->showCursor(pt);
-
-	return cursorChanged;
+	return (mouseInputStrategy_.get() != 0) ? mouseInputStrategy_->showCursor(getCursorPosition()) : false;
 }
 
 /// @see WM_SETFOCUS
@@ -1592,6 +1565,17 @@ STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
 	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
 }
 
+/**
+ * Handles double click action of the left button.
+ * @param position same as @c IMouseInputStrategy#mouseButtonInput
+ * @param keyState same as @c IMouseInputStrategy#mouseButtonInput
+ * @return true if processed the input. in this case, the original behavior of
+ * @c DefaultMouseInputStrategy is suppressed. the default implementation returns false
+ */
+bool DefaultMouseInputStrategy::handleLeftButtonDoubleClick(const POINT& position, uint keyState) {
+	return false;
+}
+
 /// Handles @c WM_LBUTTONDOWN.
 void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, uint keyState) {
 	bool boxDragging = false;
@@ -1670,7 +1654,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 
 /// Handles @c WM_LBUTTONUP.
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, uint) {
-	// OLE ドラッグ開始か -> キャンセル
+	// cancel if OLE drag-and-drop approaching
 	if(dnd_.enabled
 			&& (dnd_.state == DragAndDrop::APPROACHING
 			|| dnd_.state == DragAndDrop::DRAGGING_BY_SELF)) {	// TODO: this should handle only case APPROACHING?
@@ -1682,10 +1666,43 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, 
 	endTimer();
 	if(leftButtonPressed_) {
 		leftButtonPressed_ = false;
-		// 選択範囲拡大中に画面外でボタンを離すとキャレット位置までスクロールしないことがある
+		// if released the button when extending the selection, the scroll may not reach the caret position
 		viewer_->caret().show();
 	}
 	viewer_->releaseCapture();
+}
+
+/**
+ * Handles the right button.
+ * @param action same as @c IMouseInputStrategy#mouseButtonInput
+ * @param position same as @c IMouseInputStrategy#mouseButtonInput
+ * @param keyState same as @c IMouseInputStrategy#mouseButtonInput
+ * @return same as @c IMouseInputStrategy#mouseButtonInput. the default implementation returns false
+ */
+bool DefaultMouseInputStrategy::handleRightButton(Action action, const POINT& position, uint keyState) {
+	return false;
+}
+
+/**
+ * Handles the first X1 button.
+ * @param action same as @c IMouseInputStrategy#mouseButtonInput
+ * @param position same as @c IMouseInputStrategy#mouseButtonInput
+ * @param keyState same as @c IMouseInputStrategy#mouseButtonInput
+ * @return same as @c IMouseInputStrategy#mouseButtonInput. the default implementation returns false
+ */
+bool DefaultMouseInputStrategy::handleX1Button(Action action, const POINT& position, uint keyState) {
+	return false;
+}
+
+/**
+ * Handles the first X2 button.
+ * @param action same as @c IMouseInputStrategy#mouseButtonInput
+ * @param position same as @c IMouseInputStrategy#mouseButtonInput
+ * @param keyState same as @c IMouseInputStrategy#mouseButtonInput
+ * @return same as @c IMouseInputStrategy#mouseButtonInput. the default implementation returns false
+ */
+bool DefaultMouseInputStrategy::handleX2Button(Action action, const POINT& position, uint keyState) {
+	return false;
 }
 
 /// @see IMouseInputStrategy#install
@@ -1701,13 +1718,17 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 	if(action != RELEASED && viewer_->isAutoScrolling()) {
 		viewer_->endAutoScroll();
 		return true;
-	} else if(button == LEFT_BUTTON) {
+	}
+	switch(button) {
+	case LEFT_BUTTON:
 		if(action == PRESSED)
 			handleLeftButtonPressed(position, keyState);
 		else if(action == RELEASED)
 			handleLeftButtonReleased(position, keyState);
 		else if(action == DOUBLE_CLICKED) {
 			abortIncrementalSearch(*viewer_);
+			if(handleLeftButtonDoubleClick(position, keyState))
+				return true;
 			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->getCursorPosition());
 			if(htr == TextViewer::LEADING_MARGIN || htr == TextViewer::TOP_MARGIN || htr == TextViewer::TEXT_AREA) {
 				// begin word selection
@@ -1718,14 +1739,23 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 				wordSelectionInitialColumns_ = make_pair(caret.anchor().columnNumber(), caret.columnNumber());
 				viewer_->setCapture();
 				beginTimer(SELECTION_EXPANSION_INTERVAL);
+				return true;
 			}
 		}
-	} else if(button == MIDDLE_BUTTON) {
+		break;
+	case MIDDLE_BUTTON:
 		if(action == PRESSED) {
 			viewer_->setFocus();
 			viewer_->beginAutoScroll();
 			return true;
 		}
+		break;
+	case RIGHT_BUTTON:
+		return handleRightButton(action, position, keyState);
+	case X1_BUTTON:
+		return handleX1Button(action, position, keyState);
+	case X2_BUTTON:
+		return handleX2Button(action, position, keyState);
 	}
 	return false;
 }

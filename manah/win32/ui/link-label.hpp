@@ -33,8 +33,8 @@ protected:
 	HFONT onGetFont();											// WM_GETFONT
 	void onKeyDown(UINT vkey, UINT flags, bool& handled);		// WM_KEYDOWN
 	void onKillFocus(HWND newWindow);							// WM_KILLFOCUS
-	void onLButtonDown(UINT flags, const POINT& pt);			// WM_LBUTTONDOWN
-	void onLButtonUp(UINT flags, const POINT& pt);				// WM_LBUTTONUP
+	void onLButtonDown(UINT flags, const POINT& pt, bool&);		// WM_LBUTTONDOWN
+	void onLButtonUp(UINT flags, const POINT& pt, bool&);		// WM_LBUTTONUP
 	void onPaint(gdi::PaintDC& dc);								// WM_PAINT
 	bool onSetCursor(HWND window, UINT hitTest, UINT message);	// WM_SETCURSOR
 	void onSetFocus(HWND oldWindow);							// WM_SETFOCUS
@@ -106,9 +106,9 @@ inline void LinkLabel::onKillFocus(HWND) {
 	dc.drawFocusRect(rect);
 }
 
-inline void LinkLabel::onLButtonDown(UINT, const POINT&) {setFocus();}
+inline void LinkLabel::onLButtonDown(UINT, const POINT&, bool&) {setFocus();}
 
-inline void LinkLabel::onLButtonUp(UINT, const POINT&) {
+inline void LinkLabel::onLButtonUp(UINT, const POINT&, bool&) {
 	if(toBoolean(getStyle() & WS_DISABLED))
 		return;
 	getParent()->sendMessage(WM_COMMAND,

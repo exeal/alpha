@@ -142,9 +142,9 @@ protected:
 	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(Splitter);
 	void onCaptureChanged(HWND newWindow);
 	void onDestroy();
-	void onLButtonDown(UINT, const POINT& pt);
-	void onLButtonDblClk(UINT, const POINT& pt);
-	void onLButtonUp(UINT, const POINT&) {releaseCapture();}
+	void onLButtonDown(UINT, const POINT& pt, bool&);
+	void onLButtonDblClk(UINT, const POINT& pt, bool&);
+	void onLButtonUp(UINT, const POINT&, bool&) {releaseCapture();}
 	void onMouseMove(UINT, const POINT& pt);
 	void onPaint(gdi::PaintDC& dc) {root_->draw(dc, frameWidth_, frameHeight_);}
 	bool onSetCursor(HWND window, UINT hitTest, UINT);
@@ -339,7 +339,7 @@ inline void Splitter<Pane, PaneDestructionPolicy>::onDestroy() {
 }
 
 template<typename Pane, template<typename> class PaneDestructionPolicy>
-inline void Splitter<Pane, PaneDestructionPolicy>::onLButtonDown(UINT, const POINT& pt) {
+inline void Splitter<Pane, PaneDestructionPolicy>::onLButtonDown(UINT, const POINT& pt, bool&) {
 	// begin sizing
 	if(root_->direction_ == NO_SPLIT)
 		return;
@@ -368,7 +368,7 @@ inline void Splitter<Pane, PaneDestructionPolicy>::onLButtonDown(UINT, const POI
 }
 
 template<typename Pane, template<typename> class PaneDestructionPolicy>
-inline void Splitter<Pane, PaneDestructionPolicy>::onLButtonDblClk(UINT, const POINT& pt) {
+inline void Splitter<Pane, PaneDestructionPolicy>::onLButtonDblClk(UINT, const POINT& pt, bool&) {
 	// double click splitter bar to unsplit
 	if(root_->direction_ == NO_SPLIT)
 		return;
