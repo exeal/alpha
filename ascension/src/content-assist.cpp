@@ -215,8 +215,8 @@ private:
 	void updateDefaultFont();
 private:
 	void onDestroy();
-	void onLButtonDblClk(UINT, const POINT&);
-	void onLButtonDown(UINT, const POINT&);
+	void onLButtonDblClk(UINT, const POINT&, bool&);
+	void onLButtonDown(UINT, const POINT&, bool&);
 	void onSetFocus(HWND);
 	void onSettingChange(UINT, const WCHAR*);
 
@@ -276,12 +276,12 @@ void ContentAssistant::CompletionProposalPopup::onDestroy() {
 }
 
 /// @see WM_LBUTTONDBLCLK
-void ContentAssistant::CompletionProposalPopup::onLButtonDblClk(UINT, const POINT&) {
+void ContentAssistant::CompletionProposalPopup::onLButtonDblClk(UINT, const POINT&, bool&) {
 	ui_.complete();
 }
 
 /// @see WM_LBUTTONDOWN
-void ContentAssistant::CompletionProposalPopup::onLButtonDown(UINT, const POINT& pt) {
+void ContentAssistant::CompletionProposalPopup::onLButtonDown(UINT, const POINT& pt, bool&) {
 	bool outside;
 	const int index = itemFromPoint(pt, outside);
 	setCurSel(outside ? -1 : index);

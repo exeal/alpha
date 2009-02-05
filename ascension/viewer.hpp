@@ -249,9 +249,7 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-		/**
-		 * Default implementation of @c IMouseOperationStrategy interface.
-		 */
+		// the documentation is user-input.cpp
 		class DefaultMouseInputStrategy : public IMouseInputStrategy,
 				manah::com::IUnknownImpl<
 					manah::typelist::Cat<
@@ -263,14 +261,11 @@ namespace ascension {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			DefaultMouseInputStrategy(bool enableOLEDragAndDrop, bool showDraggingImage);
-			// IDropSource
-			STDMETHODIMP QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
-			STDMETHODIMP GiveFeedback(DWORD dwEffect);
-			// IDropTarget
-			STDMETHODIMP DragEnter(::IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
-			STDMETHODIMP DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
-			STDMETHODIMP DragLeave();
-			STDMETHODIMP Drop(::IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect);
+		private:
+			virtual bool handleLeftButtonDoubleClick(const POINT& position, uint keyState);
+			virtual bool handleRightButton(Action action, const POINT& position, uint keyState);
+			virtual bool handleX1Button(Action action, const POINT& position, uint keyState);
+			virtual bool handleX2Button(Action action, const POINT& position, uint keyState);
 		private:
 			void beginTimer(UINT interval);
 			void doDragAndDrop();
@@ -282,11 +277,19 @@ namespace ascension {
 			// IMouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
-			virtual bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState);
-			virtual void mouseMoved(const POINT& position, uint keyState);
-			virtual void mouseWheelRotated(short delta, const POINT& position, uint keyState);
-			virtual bool showCursor(const POINT& position);
+			bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState);
+			void mouseMoved(const POINT& position, uint keyState);
+			void mouseWheelRotated(short delta, const POINT& position, uint keyState);
+			bool showCursor(const POINT& position);
 			void uninstall();
+			// IDropSource
+			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
+			STDMETHODIMP GiveFeedback(DWORD effect);
+			// IDropTarget
+			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
+			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
+			STDMETHODIMP DragLeave();
+			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
 		private:
 			TextViewer* viewer_;
 			bool leftButtonPressed_;
@@ -597,12 +600,12 @@ namespace ascension {
 			void onIMEStartComposition();
 			void onKeyDown(UINT ch, UINT flags, bool& handled);
 			void onKillFocus(HWND newWindow);
-			void onLButtonDblClk(UINT keyState, const POINT& pt);
-			void onLButtonDown(UINT keyState, const POINT& pt);
-			void onLButtonUp(UINT keyState, const POINT& pt);
-			void onMButtonDblClk(UINT keyState, const POINT& pt);
-			void onMButtonDown(UINT keyState, const POINT& pt);
-			void onMButtonUp(UINT keyState, const POINT& pt);
+			void onLButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
+			void onLButtonDown(UINT keyState, const POINT& pt, bool& handled);
+			void onLButtonUp(UINT keyState, const POINT& pt, bool& handled);
+			void onMButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
+			void onMButtonDown(UINT keyState, const POINT& pt, bool& handled);
+			void onMButtonUp(UINT keyState, const POINT& pt, bool& handled);
 			void onMouseMove(UINT keyState, const POINT& pt);
 #ifdef WM_MOUSEWHEEL
 			void onMouseWheel(UINT flags, short zDelta, const POINT& pt);
@@ -610,9 +613,9 @@ namespace ascension {
 			bool onNcCreate(CREATESTRUCTW& cs);
 			bool onNotify(int id, NMHDR& nmhdr);
 			void onPaint(manah::win32::gdi::PaintDC& dc);
-			void onRButtonDblClk(UINT keyState, const POINT& pt);
-			void onRButtonDown(UINT keyState, const POINT& pt);
-			void onRButtonUp(UINT keyState, const POINT& pt);
+			void onRButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
+			void onRButtonDown(UINT keyState, const POINT& pt, bool& handled);
+			void onRButtonUp(UINT keyState, const POINT& pt, bool& handled);
 			bool onSetCursor(HWND window, UINT hitTest, UINT message);
 			void onSetFocus(HWND oldWindow);
 			void onSize(UINT type, int cx, int cy);
