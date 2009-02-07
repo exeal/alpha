@@ -519,6 +519,7 @@ namespace ascension {
 			HRESULT accessibleObject(::IAccessible*& acc) const /*throw()*/;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			void hideToolTip();
+			void lockScroll(bool unlock = false);
 			void scroll(int dx, int dy, bool redraw);
 			void scrollTo(int x, int y, bool redraw);
 			void scrollTo(length_t line, bool redraw);
@@ -814,7 +815,8 @@ namespace ascension {
 				} horizontal, vertical;
 				length_t firstVisibleLine, firstVisibleSubline;
 				bool changed;
-				ScrollInfo() /*throw()*/ : firstVisibleLine(0), firstVisibleSubline(0), changed(false) {
+				std::size_t lockCount;	// see TextViewer.lockScroll
+				ScrollInfo() /*throw()*/ : firstVisibleLine(0), firstVisibleSubline(0), changed(false), lockCount(0) {
 					horizontal.position = vertical.position = 0;
 //					horizontal.rate = vertical.rate = 1;
 				}

@@ -1293,15 +1293,39 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
+	HRESULT hr;
+
+#ifdef _DEBUG
+	{
+		win32::DumpContext dout;
+		com::ComPtr<IEnumFORMATETC> formats;
+		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
+			FORMATETC format;
+			ULONG fetched;
+			dout << L"DragEnter received a data object exposes the following formats.\n";
+			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
+				WCHAR name[256];
+				if(::GetClipboardFormatNameW(format.cfFormat, name, MANAH_COUNTOF(name) - 1) != 0)
+					dout << L"\t" << name << L"\n";
+				else
+					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+				if(format.ptd != 0)
+					::CoTaskMemFree(format.ptd);
+			}
+		}
+	}
+#endif // _DEBUG
+
 	if(!dnd_.enabled || viewer_->document().isReadOnly()
 			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
+		// TODO: support alignments other than ALIGN_LEFT.
 		return S_OK;
 
 	// validate the dragged data if can drop
 	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	if(data->QueryGetData(&fe) != S_OK) {
+	if((hr = data->QueryGetData(&fe)) != S_OK) {
 		fe.cfFormat = CF_TEXT;
-		if(data->QueryGetData(&fe) != S_OK)
+		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
 			return S_OK;	// can't accept
 	}
 
@@ -1322,13 +1346,26 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	beginTimer(OLE_DRAGGING_TRACK_INTERVAL);
 	if(dnd_.dropTargetHelper.get() != 0) {
 		POINT p = {pt.x, pt.y};
-		dnd_.dropTargetHelper->DragEnter(viewer_->get(), data, &p, *effect);
+		hr = dnd_.dropTargetHelper->DragEnter(viewer_->get(), data, &p, *effect);
 	}
 	return DragOver(keyState, pt, effect);
 }
 
+/// @see IDropTarget#DragLeave
+STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
+	::SetFocus(0);
+	endTimer();
+	if(dnd_.enabled) {
+		if(state_ == OLE_DND_TARGET)
+			state_ = NONE;
+		if(dnd_.dropTargetHelper.get() != 0)
+			dnd_.dropTargetHelper->DragLeave();
+	}
+	return S_OK;
+}
+
 namespace {
-	SIZE calculateDnDScrollOffset(const TextViewer& viewer) {
+	inline SIZE calculateDnDScrollOffset(const TextViewer& viewer) {
 		const POINT pt = viewer.getCursorPosition();
 		RECT clientRect;
 		viewer.getClientRect(clientRect);
@@ -1343,29 +1380,16 @@ namespace {
 
 		SIZE result = {0, 0};
 		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
-			result.cx = -1;
+			result.cy = -1;
 		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
-			result.cx = +1;
+			result.cy = +1;
 		if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
-			result.cy = -3;	// viewer_->numberOfVisibleColumns()
+			result.cx = -3;	// viewer_->numberOfVisibleColumns()
 		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
-			result.cy = +3;	// viewer_->numberOfVisibleColumns()
+			result.cx = +3;	// viewer_->numberOfVisibleColumns()
 		return result;
 	}
 } // namespace @0
-
-/// @see IDropTarget#DragLeave
-STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
-	::SetFocus(0);
-	endTimer();
-	if(dnd_.enabled) {
-		if(state_ == OLE_DND_TARGET)
-			state_ = NONE;
-		if(dnd_.dropTargetHelper.get() != 0)
-			dnd_.dropTargetHelper->DragLeave();
-	}
-	return S_OK;
-}
 
 /// @see IDropTarget#DragOver
 STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
@@ -1391,17 +1415,19 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWOR
 
 	*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
 	const SIZE scrollOffset = calculateDnDScrollOffset(*viewer_);
-	if(scrollOffset.cx != 0 || scrollOffset.cy != 0)
+	if(scrollOffset.cx != 0 || scrollOffset.cy != 0) {
 		*effect |= DROPEFFECT_SCROLL;
+		// only one direction to scroll
+		if(scrollOffset.cy != 0)
+			viewer_->scroll(0, scrollOffset.cy, true);
+		else
+			viewer_->scroll(scrollOffset.cx, 0, true);
+	}
 	if(dnd_.dropTargetHelper.get() != 0) {
 		POINT p = {pt.x, pt.y};
-//		viewer_->freeze();
-		SCROLLINFO horizontalScroll, verticalScroll;
-		viewer_->getScrollInformation(SB_HORZ, horizontalScroll, SIF_POS);
-		viewer_->getScrollInformation(SB_VERT, verticalScroll, SIF_POS);
-		dnd_.dropTargetHelper->DragOver(&p, DROPEFFECT_SCROLL);
-		viewer_->scrollTo(horizontalScroll.nPos, verticalScroll.nPos, false);
-//		viewer_->unfreeze();
+		viewer_->lockScroll();
+		dnd_.dropTargetHelper->DragOver(&p, DROPEFFECT_SCROLL);	// damn! IDropTargetHelper scrolls the view
+		viewer_->lockScroll(true);
 	}
 	return S_OK;
 }

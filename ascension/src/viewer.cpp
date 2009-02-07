@@ -1084,6 +1084,16 @@ inline void TextViewer::internalUnfreeze() {
 }
 
 /**
+ * @param unlock
+ */
+void TextViewer::lockScroll(bool unlock /* = false */) {
+	if(!unlock)
+		++scrollInfo_.lockCount;
+	else if(scrollInfo_.lockCount != 0)
+		--scrollInfo_.lockCount;
+}
+
+/**
  * Converts the distance from the window top to the logical line.
  * @param y the distance
  * @param[out] logicalLine the logical line index. can be @c null if not needed
@@ -1607,6 +1617,8 @@ void TextViewer::redrawVerticalRuler() {
  */
 void TextViewer::scroll(int dx, int dy, bool redraw) {
 	check();
+	if(scrollInfo_.lockCount != 0)
+		return;
 
 	// preprocess and update the scroll bars
 	if(dx != 0) {
@@ -1693,7 +1705,7 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
 	const int dx = (x != -1) ? x - scrollInfo_.horizontal.position : 0;
 	const int dy = (y != -1) ? y - scrollInfo_.vertical.position : 0;
 	if(dx != 0 || dy != 0)
-		scroll(dx, dy, redraw);
+		scroll(dx, dy, redraw);	// does not work if scroll is lock
 }
 
 /**
@@ -1705,6 +1717,8 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
 void TextViewer::scrollTo(length_t line, bool redraw) {
 	// TODO: not implemented.
 	check();
+	if(scrollInfo_.lockCount != 0)
+		return;
 	if(line >= document().numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	scrollInfo_.firstVisibleLine = line;
