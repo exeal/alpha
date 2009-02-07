@@ -182,6 +182,17 @@ namespace ascension {
 			bool bold_;
 		};
 
+#if 0
+		/**
+		 * Interface of objects which define how the text editors react to the users' keyboard
+		 * input. Ascension also provides the standard implementation of this interface
+		 * @c DefaultKeyboardInputStrategy.
+		 * @see TextViewer#set
+		 */
+		class IKeyboardInputStrategy {
+		};
+#endif
+
 		/**
 		 * Interface of objects which define how the text editors react to the users' mouse input.
 		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
@@ -214,6 +225,13 @@ namespace ascension {
 			 * @see viewer the text viewer uses the strategy. the window had been created at this time
 			 */
 			virtual void install(TextViewer& viewer) = 0;
+			/**
+			 * Interrupts the progressive mouse reaction.
+			 * This method must be called before @c #uninstall call.
+			 * @param forKeyboardInput true if the mouse reaction should interrupt because the
+			 *        keyboard input was occured
+			 */
+			virtual void interruptMouseReaction(bool forKeyboardInput) = 0;
 			/**
 			 * The mouse input was occured and the viewer had focus.
 			 * @param button the button of the mouse input
@@ -269,6 +287,7 @@ namespace ascension {
 		private:
 			void beginTimer(UINT interval);
 			void doDragAndDrop();
+			bool endAutoScroll();
 			void endTimer();
 			void extendSelection(const kernel::Position* to = 0);
 			void handleLeftButtonPressed(const POINT& position, uint keyState);
@@ -277,6 +296,7 @@ namespace ascension {
 			// IMouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
+			void interruptMouseReaction(bool forKeyboardInput);
 			bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState);
 			void mouseMoved(const POINT& position, uint keyState);
 			void mouseWheelRotated(short delta, const POINT& position, uint keyState);
@@ -292,19 +312,24 @@ namespace ascension {
 			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
 		private:
 			TextViewer* viewer_;
-			bool leftButtonPressed_;
-			enum {CHARACTERS, WORDS, LINES} selectionExtendingUnit_;
-			length_t noncharacterSelectionExtendingInitialLine_;	// line of the anchor when entered the selection extending
-			std::pair<length_t, length_t> wordSelectionInitialColumns_;
+			enum {
+				NONE = 0x00,
+				SELECTION_EXTENDING_MASK = 0x10, EXTENDING_CHARACTER_SELECTION, EXTENDING_WORD_SELECTION, EXTENDING_LINE_SELECTION,
+				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
+				OLE_DND_MASK = 0x40, APPROACHING_OLE_DND, OLE_DND_SOURCE, OLE_DND_TARGET
+			} state_;
+			POINT dragApproachedPosition_;
+			struct Selection {
+				length_t initialLine;	// line of the anchor when entered the selection extending
+				std::pair<length_t, length_t> initialWordColumns;
+			} selection_;
 			struct DragAndDrop {
 				bool enabled;
-				enum State {INACTIVE, APPROACHING, DRAGGING_BY_SELF, DRAGGING_FROM_OTHER} state;
-				POINT approachedPosition;
 				length_t numberOfRectangleLines;
 				manah::com::ComPtr<IDragSourceHelper> dragSourceHelper;
 				manah::com::ComPtr<IDropTargetHelper> dropTargetHelper;
-				bool isDragging() const /*throw()*/ {return state == DRAGGING_BY_SELF || state == DRAGGING_FROM_OTHER;}
 			} dnd_;
+			std::auto_ptr<manah::win32::ui::Window> autoScrollOriginMark_;
 			const presentation::hyperlink::IHyperlink* lastHoveredHyperlink_;
 			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
 			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
@@ -480,10 +505,6 @@ namespace ascension {
 			const layout::TextRenderer& textRenderer() const /*throw()*/;
 			void setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler);
 			const VerticalRulerConfiguration& verticalRulerConfiguration() const /*throw()*/;
-			// auto scroll
-			void beginAutoScroll();
-			bool endAutoScroll();
-			bool isAutoScrolling() const /*throw()*/;
 			// caret
 			Caret& caret() /*throw()*/;
 			const Caret& caret() const /*throw()*/;
@@ -657,31 +678,6 @@ namespace ascension {
 			private:
 				TextViewer& viewer_;
 			};
-			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
-				MANAH_NONCOPYABLE_TAG(AutoScrollOriginMark);
-				DEFINE_WINDOW_CLASS() {
-					name = L"AutoScrollOriginMark";
-					style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
-					bgColor = COLOR_WINDOW;
-					cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
-				}
-			public:
-				/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
-				enum CursorType {
-					CURSOR_NEUTRAL,	///< Indicates no scrolling.
-					CURSOR_UPWARD,	///< Indicates scrolling upward.
-					CURSOR_DOWNWARD	///< Indicates scrolling downward.
-				};
-			public:
-				AutoScrollOriginMark() /*throw()*/;
-				bool create(const TextViewer& view);
-				static HCURSOR cursorForScrolling(CursorType type);
-			protected:
-				void onPaint(manah::win32::gdi::PaintDC& dc);
-			private:
-				static const long WINDOW_WIDTH;
-			};
 			/// @c VerticalRulerDrawer draws the vertical ruler of the @c TextViewer.
 			class VerticalRulerDrawer {
 				MANAH_NONCOPYABLE_TAG(VerticalRulerDrawer);
@@ -788,7 +784,6 @@ namespace ascension {
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
-			std::auto_ptr<AutoScrollOriginMark> autoScrollOriginMark_;
 			std::auto_ptr<VerticalRulerDrawer> verticalRulerDrawer_;
 			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -848,13 +843,6 @@ namespace ascension {
 			// input state
 			bool imeCompositionActivated_, imeComposingCharacter_;
 			ulong mouseInputDisabledCount_;
-
-			// automatic scroll
-			struct AutoScroll {
-				POINT indicatorPosition;	// position of the indicator margin (in client coodinates)
-				bool scrolling;				// true if the viewer is scrolling
-				AutoScroll() /*throw()*/ : scrolling(false) {}
-			} autoScroll_;
 
 			friend class VisualPoint;
 			friend class VirtualBox;
@@ -992,9 +980,6 @@ inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visual
 /// Returns true if Global IME is enabled.
 inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return modeState_.activeInputMethodEnabled;}
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-
-/// Returns true if the viewer is auto-scrolling.
-inline bool TextViewer::isAutoScrolling() const /*throw()*/ {return autoScroll_.scrolling;}
 
 /// Returns true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count != 0;}

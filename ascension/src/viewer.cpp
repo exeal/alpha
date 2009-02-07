@@ -382,7 +382,7 @@ MANAH_END_WINDOW_MESSAGE_MAP()
  * Constructor.
  * @param presentation the presentation
  */
-TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation), tipText_(0), autoScrollOriginMark_(0),
+TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation), tipText_(0),
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(0),
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -668,10 +668,6 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 		::SendMessageW(toolTip_, TTM_SETMARGIN, 0, reinterpret_cast<LPARAM>(&margins));
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
 	}
-
-	// create the window for the auto scroll origin mark
-	autoScrollOriginMark_.reset(new AutoScrollOriginMark);
-	autoScrollOriginMark_->create(*this);
 
 	setMouseInputStrategy(0, true);
 
@@ -1194,16 +1190,14 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 
 /// @see WM_DESTROY
 void TextViewer::onDestroy() {
-	endAutoScroll();
 	if(mouseInputStrategy_.get() != 0) {
+		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
 		mouseInputStrategy_.reset();
 	}
 
 	// destroy children
 	::DestroyWindow(toolTip_);
-	if(autoScrollOriginMark_.get() != 0)
-		autoScrollOriginMark_->destroy();
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	if(accessibleProxy_ != 0)
@@ -1396,26 +1390,6 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 	if(eventID == TIMERID_CALLTIP) {	// show the tooltip
 		killTimer(TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
-	} else if(eventID == TIMERID_AUTOSCROLL) {	// auto-scroll
-		killTimer(TIMERID_AUTOSCROLL);
-		const POINT pt = getCursorPosition();
-		const long yScrollDegree = (pt.y - autoScroll_.indicatorPosition.y) / renderer_->linePitch();
-//		const long xScrollDegree = (pt.x - autoScroll_.indicatorPosition.x) / presentation_.lineHeight();
-//		const long scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
-
-		if(yScrollDegree != 0 /*&& abs(yScrollDegree) >= abs(xScrollDegree)*/)
-			scroll(0, yScrollDegree > 0 ? +1 : -1, true);
-//		else if(xScrollDegree != 0)
-//			scroll(xScrollDegree > 0 ? +1 : -1, 0, true);
-
-		if(yScrollDegree != 0) {
-			setTimer(TIMERID_AUTOSCROLL, 500 / static_cast<uint>((pow(2.0f, abs(yScrollDegree) / 2))), 0);
-			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
-				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD));
-		} else {
-			setTimer(TIMERID_AUTOSCROLL, 300, 0);
-			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL));
-		}
 	}
 }
 
@@ -1809,8 +1783,10 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> 
 void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
 	if(!isWindow())
 		throw IllegalStateException("The window is not created yet.");
-	if(mouseInputStrategy_.get() != 0)
+	if(mouseInputStrategy_.get() != 0) {
+		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
+	}
 	if(newStrategy != 0)
 		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
 	else
