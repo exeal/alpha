@@ -80,41 +80,6 @@ namespace {
 	}
 } // namespace @0
 
-/// Starts the auto scroll.
-void TextViewer::beginAutoScroll() {
-	if(!hasFocus() || document().numberOfLines() <= numberOfVisibleLines())
-		return;
-
-	RECT rect;
-	POINT pt;
-	autoScrollOriginMark_->getRect(rect);
-	::GetCursorPos(&pt);
-	autoScroll_.indicatorPosition = pt;
-	screenToClient(autoScroll_.indicatorPosition);
-	autoScrollOriginMark_->setPosition(HWND_TOP,
-		pt.x - (rect.right - rect.left) / 2, pt.y - (rect.bottom - rect.top) / 2,
-		0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_SHOWWINDOW);
-	autoScroll_.scrolling = true;
-	setCapture();
-	setTimer(TIMERID_AUTOSCROLL, 0, 0);
-}
-
-/**
- * Ends the auto scroll.
- * @return true if the auto scroll was active
- */
-bool TextViewer::endAutoScroll() {
-	check();
-	if(autoScroll_.scrolling) {
-		killTimer(TIMERID_AUTOSCROLL);
-		autoScroll_.scrolling = false;
-		autoScrollOriginMark_->show(SW_HIDE);
-		releaseCapture();
-		return true;
-	}
-	return false;
-}
-
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
 	// vanish the cursor when the GUI user began typing
@@ -778,14 +743,16 @@ void TextViewer::onIMEStartComposition() {
 
 /// @see WM_KEYDOWN
 void TextViewer::onKeyDown(UINT vkey, UINT, bool& handled) {
-	endAutoScroll();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(true);
 	handled = handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), false);
 }
 
 /// @see WM_KILLFOCUS
 void TextViewer::onKillFocus(HWND newWindow) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-	endAutoScroll();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(false);
 /*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
 			&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
 		FOR_EACH_LISTENERS()
@@ -928,13 +895,16 @@ void TextViewer::onSysChar(UINT, UINT) {
 
 /// @see WM_SYSKEYDOWN
 bool TextViewer::onSysKeyDown(UINT vkey, UINT) {
-	endAutoScroll();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(true);
 	return handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), true);;
 }
 
 /// @see WM_SYSKEYUP
 bool TextViewer::onSysKeyUp(UINT, UINT) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(true);
 	return false;
 }
 
@@ -1006,12 +976,38 @@ void TextViewer::updateIMECompositionWindowPosition() {
 }
 
 
-// TextViewer.AutoScrollOriginMark //////////////////////////////////////////
+// DefaultMouseInputStrategy ////////////////////////////////////////////////
 
-const long TextViewer::AutoScrollOriginMark::WINDOW_WIDTH = 28;
+namespace {
+	/// Circled window displayed at which the auto scroll started.
+	class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
+		MANAH_NONCOPYABLE_TAG(AutoScrollOriginMark);
+		DEFINE_WINDOW_CLASS() {
+			name = L"AutoScrollOriginMark";
+			style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
+			bgColor = COLOR_WINDOW;
+			cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
+		}
+	public:
+		/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
+		enum CursorType {
+			CURSOR_NEUTRAL,	///< Indicates no scrolling.
+			CURSOR_UPWARD,	///< Indicates scrolling upward.
+			CURSOR_DOWNWARD	///< Indicates scrolling downward.
+		};
+	public:
+		AutoScrollOriginMark() /*throw()*/;
+		bool create(const TextViewer& view);
+		static win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> > cursorForScrolling(CursorType type);
+	protected:
+		void onPaint(win32::gdi::PaintDC& dc);
+	private:
+		static const long WINDOW_WIDTH = 28;
+	};
+} // namespace @0
 
 /// Default constructor.
-TextViewer::AutoScrollOriginMark::AutoScrollOriginMark() /*throw()*/ {
+AutoScrollOriginMark::AutoScrollOriginMark() /*throw()*/ {
 }
 
 /**
@@ -1020,7 +1016,7 @@ TextViewer::AutoScrollOriginMark::AutoScrollOriginMark() /*throw()*/ {
  * @return succeeded or not
  * @see Window#create
  */
-bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
+bool AutoScrollOriginMark::create(const TextViewer& view) {
 	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
 
 	if(!win32::ui::CustomControl<AutoScrollOriginMark>::create(view.use(),
@@ -1042,12 +1038,12 @@ bool TextViewer::AutoScrollOriginMark::create(const TextViewer& view) {
  * @return the cursor. do not destroy the returned value
  * @throw UnknownValueException @a type is unknown
  */
-HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static Handle<HCURSOR, ::DestroyCursor> instances[3];
+win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> > AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static win32::Handle<HCURSOR, ::DestroyCursor> instances[3];
 	if(type >= MANAH_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {
-		static const byte AND_LINE_3_TO_11[] = {
+		static const manah::byte AND_LINE_3_TO_11[] = {
 			0xff, 0xfe, 0x7f, 0xff,
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xf8, 0x1f, 0xff,
@@ -1058,7 +1054,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0xff, 0x00, 0x00, 0xff,
 			0xff, 0x80, 0x01, 0xff
 		};
-		static const byte XOR_LINE_3_TO_11[] = {
+		static const manah::byte XOR_LINE_3_TO_11[] = {
 			0x00, 0x01, 0x80, 0x00,
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x04, 0x20, 0x00,
@@ -1069,7 +1065,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0x00, 0x80, 0x01, 0x00,
 			0x00, 0x7f, 0xfe, 0x00
 		};
-		static const byte AND_LINE_13_TO_18[] = {
+		static const manah::byte AND_LINE_13_TO_18[] = {
 			0xff, 0xfe, 0x7f, 0xff,
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xf8, 0x1f, 0xff,
@@ -1077,7 +1073,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xfe, 0x7f, 0xff,
 		};
-		static const byte XOR_LINE_13_TO_18[] = {
+		static const manah::byte XOR_LINE_13_TO_18[] = {
 			0x00, 0x01, 0x80, 0x00,
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x04, 0x20, 0x00,
@@ -1085,7 +1081,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x01, 0x80, 0x00
 		};
-		static const byte AND_LINE_20_TO_28[] = {
+		static const manah::byte AND_LINE_20_TO_28[] = {
 			0xff, 0x80, 0x01, 0xff,
 			0xff, 0x00, 0x00, 0xff,
 			0xff, 0x80, 0x01, 0xff,
@@ -1096,7 +1092,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xfe, 0x7f, 0xff
 		};
-		static const byte XOR_LINE_20_TO_28[] = {
+		static const manah::byte XOR_LINE_20_TO_28[] = {
 			0x00, 0x7f, 0xfe, 0x00,
 			0x00, 0x80, 0x01, 0x00,
 			0x00, 0x40, 0x02, 0x00,
@@ -1107,7 +1103,7 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x01, 0x80, 0x00
 		};
-		byte andBits[4 * 32], xorBits[4 * 32];
+		manah::byte andBits[4 * 32], xorBits[4 * 32];
 		// fill canvases
 		memset(andBits, 0xff, 4 * 32);
 		memset(xorBits, 0x00, 4 * 32);
@@ -1124,11 +1120,11 @@ HCURSOR TextViewer::AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 		}
 		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits));
 	}
-	return instances[type].get();
+	return win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> >(instances[type].get());
 }
 
 /// @see Window#onPaint
-void TextViewer::AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
+void AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
 	const COLORREF color = ::GetSysColor(COLOR_APPWORKSPACE);
 	HPEN pen = ::CreatePen(PS_SOLID, 1, color), oldPen = dc.selectObject(pen);
 	HBRUSH brush = ::CreateSolidBrush(color), oldBrush = dc.selectObject(brush);
@@ -1156,9 +1152,6 @@ void TextViewer::AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
 	::DeleteObject(pen);
 	::DeleteObject(brush);
 }
-
-
-// DefaultMouseInputStrategy ////////////////////////////////////////////////
 
 /**
  * Standard implementation of @c IMouseOperationStrategy interface.
@@ -1189,7 +1182,7 @@ const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
  * @param showDraggingImage set true to display OLE dragging image
  */
 DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
-		bool showDraggingImage) : viewer_(0), leftButtonPressed_(false), lastHoveredHyperlink_(0) {
+		bool showDraggingImage) : viewer_(0), state_(NONE), lastHoveredHyperlink_(0) {
 	if(dnd_.enabled = enableOLEDragAndDrop && showDraggingImage) {
 		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
 		if(dnd_.dragSourceHelper.get() != 0) {
@@ -1198,7 +1191,6 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
 				dnd_.dragSourceHelper.reset();
 		}
 	}
-	dnd_.state = DragAndDrop::INACTIVE;
 }
 
 /// 
@@ -1211,8 +1203,7 @@ void DefaultMouseInputStrategy::beginTimer(UINT interval) {
 /// @see IMouseInputStrategy#captureChanged
 void DefaultMouseInputStrategy::captureChanged() {
 	endTimer();
-	leftButtonPressed_ = false;
-	selectionExtendingUnit_ = CHARACTERS;
+	state_ = NONE;
 }
 
 ///
@@ -1285,14 +1276,12 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 	}
 
 	// operation
-	assert(leftButtonPressed_);
 	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
-	dnd_.state = DragAndDrop::DRAGGING_BY_SELF;
+	state_ = OLE_DND_SOURCE;
 	DWORD effectOwn;	// dummy
 	::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
 	endTimer();
-	dnd_.state = DragAndDrop::INACTIVE;
-	leftButtonPressed_ = false;
+	state_ = NONE;
 	if(viewer_->isVisible())
 		viewer_->setFocus();
 }
@@ -1316,8 +1305,8 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 			return S_OK;	// can't accept
 	}
 
-	if(dnd_.state != DragAndDrop::DRAGGING_BY_SELF) {
-		assert(dnd_.state == DragAndDrop::INACTIVE);
+	if(state_ != OLE_DND_SOURCE) {
+		assert(state_ == NONE);
 		// retrieve number of lines if text is rectangle
 		dnd_.numberOfRectangleLines = 0;
 		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
@@ -1326,7 +1315,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 			if(SUCCEEDED(text.first))
 				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
 		}
-		dnd_.state = DragAndDrop::DRAGGING_FROM_OTHER;
+		state_ = OLE_DND_TARGET;
 	}
 
 	viewer_->setFocus();
@@ -1338,13 +1327,40 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	return DragOver(keyState, pt, effect);
 }
 
+namespace {
+	SIZE calculateDnDScrollOffset(const TextViewer& viewer) {
+		const POINT pt = viewer.getCursorPosition();
+		RECT clientRect;
+		viewer.getClientRect(clientRect);
+		RECT margins = viewer.textAreaMargins();
+		const TextRenderer& renderer = viewer.textRenderer();
+		margins.left = max<long>(renderer.averageCharacterWidth(), margins.left);
+		margins.top = max<long>(renderer.linePitch() / 2, margins.top);
+		margins.right = max<long>(renderer.averageCharacterWidth(), margins.right);
+		margins.bottom = max<long>(renderer.linePitch() / 2, margins.bottom);
+
+		// oleidl.h defines the value named DD_DEFSCROLLINSET, but...
+
+		SIZE result = {0, 0};
+		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
+			result.cx = -1;
+		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
+			result.cx = +1;
+		if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
+			result.cy = -3;	// viewer_->numberOfVisibleColumns()
+		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
+			result.cy = +3;	// viewer_->numberOfVisibleColumns()
+		return result;
+	}
+} // namespace @0
+
 /// @see IDropTarget#DragLeave
 STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
 	::SetFocus(0);
 	endTimer();
 	if(dnd_.enabled) {
-		if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER)
-			dnd_.state = DragAndDrop::INACTIVE;
+		if(state_ == OLE_DND_TARGET)
+			state_ = NONE;
 		if(dnd_.dropTargetHelper.get() != 0)
 			dnd_.dropTargetHelper->DragLeave();
 	}
@@ -1356,7 +1372,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWOR
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
 
-	if(!dnd_.isDragging() || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+	if((state_ != OLE_DND_SOURCE && state_ != OLE_DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
 
 	POINT caretPoint = {pt.x, pt.y};
@@ -1373,13 +1389,19 @@ STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWOR
 		}
 	}
 
-	if(toBoolean(keyState & MK_CONTROL & MK_SHIFT))
-		*effect = DROPEFFECT_NONE;
-	else
-		*effect = (!leftButtonPressed_ || toBoolean(keyState & MK_CONTROL)) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+	*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+	const SIZE scrollOffset = calculateDnDScrollOffset(*viewer_);
+	if(scrollOffset.cx != 0 || scrollOffset.cy != 0)
+		*effect |= DROPEFFECT_SCROLL;
 	if(dnd_.dropTargetHelper.get() != 0) {
 		POINT p = {pt.x, pt.y};
-		dnd_.dropTargetHelper->DragOver(&p, *effect);
+//		viewer_->freeze();
+		SCROLLINFO horizontalScroll, verticalScroll;
+		viewer_->getScrollInformation(SB_HORZ, horizontalScroll, SIF_POS);
+		viewer_->getScrollInformation(SB_VERT, verticalScroll, SIF_POS);
+		dnd_.dropTargetHelper->DragOver(&p, DROPEFFECT_SCROLL);
+		viewer_->scrollTo(horizontalScroll.nPos, verticalScroll.nPos, false);
+//		viewer_->unfreeze();
 	}
 	return S_OK;
 }
@@ -1415,7 +1437,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 	if(!document.accessibleRegion().includes(destination))
 		return S_OK;
 
-	if(dnd_.state == DragAndDrop::DRAGGING_FROM_OTHER) {	// dropped from the other widget
+	if(state_ == OLE_DND_TARGET) {	// dropped from the other widget
 		endTimer();
 		ca.moveTo(destination);
 
@@ -1431,15 +1453,15 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			}
 			viewer_->unfreeze();
 		}
-		dnd_.state = DragAndDrop::INACTIVE;
+		state_ = NONE;
 	} else {	// drop from the same widget
-		assert(dnd_.state == DragAndDrop::DRAGGING_BY_SELF);
+		assert(state_ == OLE_DND_SOURCE);
 		String text(ca.selectionText(NLF_RAW_VALUE));
 
 		// can't drop into the selection
 		if(ca.isPointOverSelection(caretPoint)) {
 			ca.moveTo(destination);
-			dnd_.state = DragAndDrop::INACTIVE;
+			state_ = NONE;
 		} else {
 			const bool rectangle = ca.isSelectionRectangle();
 			document.insertUndoBoundary();
@@ -1489,6 +1511,21 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 	return S_OK;
 }
 
+/**
+ * Ends the auto scroll.
+ * @return true if the auto scroll was active
+ */
+bool DefaultMouseInputStrategy::endAutoScroll() {
+	if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
+		endTimer();
+		state_ = NONE;
+		autoScrollOriginMark_->show(SW_HIDE);
+		viewer_->releaseCapture();
+		return true;
+	}
+	return false;
+}
+
 ///
 void DefaultMouseInputStrategy::endTimer() {
 	for(map<UINT_PTR, DefaultMouseInputStrategy*>::iterator i = timerTable_.begin(); i != timerTable_.end(); ++i) {
@@ -1502,6 +1539,8 @@ void DefaultMouseInputStrategy::endTimer() {
 
 /// Extends the selection to the current cursor position.
 void DefaultMouseInputStrategy::extendSelection(const Position* to /* = 0 */) {
+	if((state_ & SELECTION_EXTENDING_MASK) != SELECTION_EXTENDING_MASK)
+		throw IllegalStateException("not extending the selection.");
 	Position destination;
 	if(to == 0) {
 		RECT rc;
@@ -1509,11 +1548,11 @@ void DefaultMouseInputStrategy::extendSelection(const Position* to /* = 0 */) {
 		viewer_->getClientRect(rc);
 		POINT p = viewer_->getCursorPosition();
 		Caret& caret = viewer_->caret();
-		if(selectionExtendingUnit_ != CHARACTERS) {
+		if(state_ != EXTENDING_CHARACTER_SELECTION) {
 			const TextViewer::HitTestResult htr = viewer_->hitTest(p);
-			if(selectionExtendingUnit_ == LINES && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
+			if(state_ == EXTENDING_LINE_SELECTION && htr != TextViewer::INDICATOR_MARGIN && htr != TextViewer::LINE_NUMBERS)
 				// end line selection
-				selectionExtendingUnit_ = CHARACTERS;
+				state_ = EXTENDING_CHARACTER_SELECTION;
 		}
 		p.x = min(max(p.x, rc.left + margins.left), rc.right - margins.right);
 		p.y = min(max(p.y, rc.top + margins.top), rc.bottom - margins.bottom);
@@ -1523,40 +1562,39 @@ void DefaultMouseInputStrategy::extendSelection(const Position* to /* = 0 */) {
 
 	const Document& document = viewer_->document();
 	Caret& caret = viewer_->caret();
-	if(selectionExtendingUnit_ == CHARACTERS)
+	if(state_ == EXTENDING_CHARACTER_SELECTION)
 		caret.extendSelection(destination);
-	else if(selectionExtendingUnit_ == LINES) {
+	else if(state_ == EXTENDING_LINE_SELECTION) {
 		const length_t lines = document.numberOfLines();
 		Region s;
-		s.first.line = (destination.line >= noncharacterSelectionExtendingInitialLine_) ?
-			noncharacterSelectionExtendingInitialLine_ : noncharacterSelectionExtendingInitialLine_ + 1;
+		s.first.line = (destination.line >= selection_.initialLine) ? selection_.initialLine : selection_.initialLine + 1;
 		s.first.column = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;
-		s.second.line = (destination.line >= noncharacterSelectionExtendingInitialLine_) ? destination.line + 1 : destination.line;
+		s.second.line = (destination.line >= selection_.initialLine) ? destination.line + 1 : destination.line;
 		s.second.column = (s.second.line > lines - 1) ? document.lineLength(--s.second.line) : 0;
 		caret.select(s);
-	} else if(selectionExtendingUnit_ == WORDS) {
+	} else if(state_ == EXTENDING_WORD_SELECTION) {
 		using namespace text;
 		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(caret.getContentType());
-		if(destination.line < noncharacterSelectionExtendingInitialLine_
-				|| (destination.line == noncharacterSelectionExtendingInitialLine_
-					&& destination.column < wordSelectionInitialColumns_.first)) {
+		if(destination.line < selection_.initialLine
+				|| (destination.line == selection_.initialLine
+					&& destination.column < selection_.initialWordColumns.first)) {
 			WordBreakIterator<DocumentCharacterIterator> i(
 				DocumentCharacterIterator(document, destination), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
 			--i;
-			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.second),
+			caret.select(Position(selection_.initialLine, selection_.initialWordColumns.second),
 				(i.base().tell().line == destination.line) ? i.base().tell() : Position(destination.line, 0));
-		} else if(destination.line > noncharacterSelectionExtendingInitialLine_
-				|| (destination.line == noncharacterSelectionExtendingInitialLine_
-					&& destination.column > wordSelectionInitialColumns_.second)) {
+		} else if(destination.line > selection_.initialLine
+				|| (destination.line == selection_.initialLine
+					&& destination.column > selection_.initialWordColumns.second)) {
 			WordBreakIterator<DocumentCharacterIterator> i(
 				DocumentCharacterIterator(document, destination), AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
 			++i;
-			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.first),
+			caret.select(Position(selection_.initialLine, selection_.initialWordColumns.first),
 				(i.base().tell().line == destination.line) ?
 					i.base().tell() : Position(destination.line, document.lineLength(destination.line)));
 		} else
-			caret.select(Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.first),
-				Position(noncharacterSelectionExtendingInitialLine_, wordSelectionInitialColumns_.second));
+			caret.select(Position(selection_.initialLine, selection_.initialWordColumns.first),
+				Position(selection_.initialLine, selection_.initialWordColumns.second));
 	}
 }
 
@@ -1584,14 +1622,13 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 
 	utils::closeCompletionProposalsPopup(*viewer_);
 	endIncrementalSearch(*viewer_);
-	leftButtonPressed_ = true;
 
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
 		const Position to(viewer_->characterForClientXY(position, LineLayout::LEADING));
 		const bool extend = toBoolean(keyState & MK_SHIFT) && to.line != caret.anchor().lineNumber();
-		selectionExtendingUnit_ = LINES;
-		noncharacterSelectionExtendingInitialLine_ = extend ? caret.anchor().lineNumber() : to.line;
+		state_ = EXTENDING_LINE_SELECTION;
+		selection_.initialLine = extend ? caret.anchor().lineNumber() : to.line;
 		extendSelection(&to);
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
@@ -1599,8 +1636,8 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 
 	// approach OLE drag-and-drop
 	else if(dnd_.enabled && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
-		dnd_.state = DragAndDrop::APPROACHING;
-		dnd_.approachedPosition = position;
+		state_ = APPROACHING_OLE_DND;
+		dragApproachedPosition_ = position;
 		if(caret.isSelectionRectangle())
 			boxDragging = true;
 	}
@@ -1630,11 +1667,11 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 			if(toBoolean(keyState & (MK_CONTROL | MK_SHIFT))) {
 				if(toBoolean(keyState & MK_CONTROL)) {
 					// begin word selection
-					selectionExtendingUnit_ = WORDS;
+					state_ = EXTENDING_WORD_SELECTION;
 					caret.moveTo(toBoolean(keyState & MK_SHIFT) ? caret.anchor() : to);
 					caret.selectWord();
-					noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
-					wordSelectionInitialColumns_ = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
+					selection_.initialLine = caret.lineNumber();
+					selection_.initialWordColumns = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
 				}
 				if(toBoolean(keyState & MK_SHIFT))
 					extendSelection(&to);
@@ -1656,16 +1693,16 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, uint) {
 	// cancel if OLE drag-and-drop approaching
 	if(dnd_.enabled
-			&& (dnd_.state == DragAndDrop::APPROACHING
-			|| dnd_.state == DragAndDrop::DRAGGING_BY_SELF)) {	// TODO: this should handle only case APPROACHING?
-		dnd_.state = DragAndDrop::INACTIVE;
+			&& (state_ == APPROACHING_OLE_DND
+			|| state_ == OLE_DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_OLE_DND?
+		state_ = NONE;
 		viewer_->caret().moveTo(viewer_->characterForClientXY(position, LineLayout::TRAILING));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
 	}
 
 	endTimer();
-	if(leftButtonPressed_) {
-		leftButtonPressed_ = false;
+	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {
+		state_ = NONE;
 		// if released the button when extending the selection, the scroll may not reach the caret position
 		viewer_->caret().show();
 	}
@@ -1710,15 +1747,24 @@ void DefaultMouseInputStrategy::install(TextViewer& viewer) {
 	if(viewer_ != 0)
 		uninstall();
 	(viewer_ = &viewer)->registerDragDrop(*this);
-	selectionExtendingUnit_ = CHARACTERS;
+	state_ = NONE;
+
+	// create the window for the auto scroll origin mark
+	auto_ptr<AutoScrollOriginMark> temp(new AutoScrollOriginMark);
+	temp->create(viewer);
+	autoScrollOriginMark_ = temp;
+}
+
+/// @see IMouseInputStrategy#interruptMouseReaction
+void DefaultMouseInputStrategy::interruptMouseReaction(bool forKeyboardInput) {
+	if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL)
+		endAutoScroll();
 }
 
 /// @see IMouseInputStrategy#mouseButtonInput
 bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, const POINT& position, uint keyState) {
-	if(action != RELEASED && viewer_->isAutoScrolling()) {
-		viewer_->endAutoScroll();
+	if(action != RELEASED && endAutoScroll())
 		return true;
-	}
 	switch(button) {
 	case LEFT_BUTTON:
 		if(action == PRESSED)
@@ -1734,9 +1780,9 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 				// begin word selection
 				Caret& caret = viewer_->caret();
 				caret.selectWord();
-				selectionExtendingUnit_ = WORDS;
-				noncharacterSelectionExtendingInitialLine_ = caret.lineNumber();
-				wordSelectionInitialColumns_ = make_pair(caret.anchor().columnNumber(), caret.columnNumber());
+				state_ = EXTENDING_WORD_SELECTION;
+				selection_.initialLine = caret.lineNumber();
+				selection_.initialWordColumns = make_pair(caret.anchor().columnNumber(), caret.columnNumber());
 				viewer_->setCapture();
 				beginTimer(SELECTION_EXPANSION_INTERVAL);
 				return true;
@@ -1745,9 +1791,28 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 		break;
 	case MIDDLE_BUTTON:
 		if(action == PRESSED) {
-			viewer_->setFocus();
-			viewer_->beginAutoScroll();
-			return true;
+			if(viewer_->document().numberOfLines() > viewer_->numberOfVisibleLines()) {
+				state_ = APPROACHING_AUTO_SCROLL;
+				dragApproachedPosition_ = position;
+				POINT p(position);
+				viewer_->clientToScreen(p);
+				viewer_->setFocus();
+				// show the indicator margin
+				RECT rect;
+				autoScrollOriginMark_->getRect(rect);
+				autoScrollOriginMark_->setPosition(HWND_TOP,
+					p.x - (rect.right - rect.left) / 2, p.y - (rect.bottom - rect.top) / 2,
+					0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_SHOWWINDOW);
+				viewer_->setCapture();
+				showCursor(position);
+				return true;
+			}
+		} else if(action == RELEASED) {
+			if(state_ == APPROACHING_AUTO_SCROLL) {
+				state_ = AUTO_SCROLL;
+				beginTimer(0);
+			} else if(state_ == AUTO_SCROLL_DRAGGING)
+				endAutoScroll();
 		}
 		break;
 	case RIGHT_BUTTON:
@@ -1762,25 +1827,33 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 
 /// @see IMouseInputStrategy#mouseMoved
 void DefaultMouseInputStrategy::mouseMoved(const POINT& position, uint) {
-	if(dnd_.enabled && dnd_.state == DragAndDrop::APPROACHING) {	// OLE dragging starts?
-		if(viewer_->caret().isSelectionEmpty())
-			dnd_.state = DragAndDrop::INACTIVE;	// approaching... => cancel
+	if(state_ == APPROACHING_AUTO_SCROLL
+			|| (dnd_.enabled && state_ == APPROACHING_OLE_DND)) {	// OLE dragging starts?
+		if(state_ == APPROACHING_OLE_DND && viewer_->caret().isSelectionEmpty())
+			state_ = NONE;	// approaching... => cancel
 		else {
+			// the following code can be replaced with DragDetect in user32.lib
 			const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
 			const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
-			if((position.x > dnd_.approachedPosition.x + cxDragBox / 2)
-					|| (position.x < dnd_.approachedPosition.x - cxDragBox / 2)
-					|| (position.y > dnd_.approachedPosition.y + cyDragBox / 2)
-					|| (position.y < dnd_.approachedPosition.y - cyDragBox / 2))
-				doDragAndDrop();
+			if((position.x > dragApproachedPosition_.x + cxDragBox / 2)
+					|| (position.x < dragApproachedPosition_.x - cxDragBox / 2)
+					|| (position.y > dragApproachedPosition_.y + cyDragBox / 2)
+					|| (position.y < dragApproachedPosition_.y - cyDragBox / 2)) {
+				if(state_ == APPROACHING_OLE_DND)
+					doDragAndDrop();
+				else {
+					state_ = AUTO_SCROLL_DRAGGING;
+					beginTimer(0);
+				}
+			}
 		}
-	} else if(leftButtonPressed_)
+	} else if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK)
 		extendSelection();
 }
 
 /// @see IMouseInputStrategy#mouseWheelRotated
 void DefaultMouseInputStrategy::mouseWheelRotated(short delta, const POINT&, uint) {
-	if(!viewer_->endAutoScroll()) {
+	if(!endAutoScroll()) {
 		// use system settings
 		UINT lines;	// the number of lines to scroll
 		if(!toBoolean(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
@@ -1843,27 +1916,13 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 	if(i == timerTable_.end())
 		return;
 	DefaultMouseInputStrategy& self = *i->second;
-	if(self.dnd_.enabled && self.dnd_.isDragging()) {	// scroll automatically during OLE dragging
-		const POINT pt = self.viewer_->getCursorPosition();
-		RECT clientRect;
-		self.viewer_->getClientRect(clientRect);
-		RECT margins = self.viewer_->textAreaMargins();
-		const TextRenderer& renderer = self.viewer_->textRenderer();
-		margins.left = max<long>(renderer.averageCharacterWidth(), margins.left);
-		margins.top = max<long>(renderer.linePitch() / 2, margins.top);
-		margins.right = max<long>(renderer.averageCharacterWidth(), margins.right);
-		margins.bottom = max<long>(renderer.linePitch() / 2, margins.bottom);
-
-		// 以下のスクロール量には根拠は無い
-		if(pt.y >= clientRect.top && pt.y < clientRect.top + margins.top)
-			self.viewer_->scroll(0, -1, true);
-		else if(pt.y >= clientRect.bottom - margins.bottom && pt.y < clientRect.bottom)
-			self.viewer_->scroll(0, +1, true);
-		else if(pt.x >= clientRect.left && pt.x < clientRect.left + margins.left)
-			self.viewer_->scroll(-3/*viewer_->numberOfVisibleColumns()*/, 0, true);
-		else if(pt.x >= clientRect.right - margins.right && pt.y < clientRect.right)
-			self.viewer_->scroll(+3/*viewer_->numberOfVisibleColumns()*/, 0, true);
-	} else if(self.leftButtonPressed_) {	// scroll automatically during extending the selection
+	if(self.dnd_.enabled && (self.state_ & OLE_DND_MASK) == OLE_DND_MASK) {	// scroll automatically during OLE dragging
+/*		const SIZE scrollOffset = calculateDnDScrollOffset(*self.viewer_);
+		if(scrollOffset.cy != 0)
+			self.viewer_->scroll(0, scrollOffset.cy, true);
+		else if(scrollOffset.cx != 0)
+			self.viewer_->scroll(scrollOffset.cx, 0, true);
+*/	} else if((self.state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
 		const POINT pt = self.viewer_->getCursorPosition();
 		RECT rc;
 		const RECT margins = self.viewer_->textAreaMargins();
@@ -1878,12 +1937,37 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 		else if(pt.x >= rc.right - margins.right)
 			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->textRenderer().averageCharacterWidth() + 1, 0, true);
 		self.extendSelection();
+	} else if(self.state_ == AUTO_SCROLL_DRAGGING || self.state_ == AUTO_SCROLL) {
+		self.endTimer();
+		TextViewer& viewer = *self.viewer_;
+		const POINT pt = self.viewer_->getCursorPosition();
+		const long yScrollDegree = (pt.y - self.dragApproachedPosition_.y) / viewer.textRenderer().linePitch();
+//		const long xScrollDegree = (pt.x - self.dragApproachedPosition.x) / viewer.presentation().lineHeight();
+//		const long scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
+
+		if(yScrollDegree != 0 /*&& abs(yScrollDegree) >= abs(xScrollDegree)*/)
+			viewer.scroll(0, yScrollDegree > 0 ? +1 : -1, true);
+//		else if(xScrollDegree != 0)
+//			viewer.scroll(xScrollDegree > 0 ? +1 : -1, 0, true);
+
+		if(yScrollDegree != 0) {
+			self.beginTimer(500 / static_cast<uint>((pow(2.0f, abs(yScrollDegree) / 2))));
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
+				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD)->get());
+		} else {
+			self.beginTimer(300);
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL)->get());
+		}
 	}
 }
 
 /// @see IMouseInputStrategy#uninstall
 void DefaultMouseInputStrategy::uninstall() {
 	endTimer();
+	if(autoScrollOriginMark_.get() != 0) {
+		autoScrollOriginMark_->destroy();
+		autoScrollOriginMark_.reset();
+	}
 	viewer_->revokeDragDrop();
 	viewer_ = 0;
 }
