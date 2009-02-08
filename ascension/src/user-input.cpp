@@ -1206,21 +1206,14 @@ void DefaultMouseInputStrategy::captureChanged() {
 	state_ = NONE;
 }
 
-///
-void DefaultMouseInputStrategy::doDragAndDrop() {
-	com::ComPtr<IDataObject> draggingContent;
-	const Region selection(viewer_->caret().selectionRegion());
+namespace {
+	bool createSelectionImage(const TextViewer& viewer, SHDRAGIMAGE& image) {
+		win32::gdi::DC dc(::CreateCompatibleDC(0));
+		if(dc.get() == 0)
+			return false;
 
-	if(FAILED(viewer_->caret().createTextObject(true, *draggingContent.initialize())))
-		return;
-	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
-
-	// setup dragging ghost ixyzzymage
-	if(dnd_.dragSourceHelper.get() != 0) {
 		win32::AutoZero<BITMAPV5HEADER> bh;
 		bh.bV5Size = sizeof(BITMAPV5HEADER);
-		bh.bV5Width = 40;
-		bh.bV5Height = 40;
 		bh.bV5Planes = 1;
 		bh.bV5BitCount = 32;
 		bh.bV5Compression = BI_BITFIELDS;
@@ -1229,58 +1222,77 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 		bh.bV5BlueMask = 0x000000ff;
 		bh.bV5AlphaMask = 0xff000000;
 
-		SHDRAGIMAGE image;
+		// determine the range to draw
+		const Region selection(viewer.caret().selectionRegion());
+		length_t firstLine, firstSubline;
+		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
+
+		// calculate the size of the image
+		RECT clientRect;
+		viewer.getClientRect(clientRect);
+		const TextRenderer& renderer = viewer.textRenderer();
+		bh.bhWidth = bh.bV5Height = 0;
+		for(length_t line = selection.beginning().line, e = selection.end().line; line < e; ++line) {
+			const RECT lineBounds(renderer.lineLayout(line).bounds());
+			bh.bV5Width = max(lineBounds.right - lineBounds.left, bh.bV5Width);
+			bh.bV5Height += lineBounds.bottom - lineBounds.top;
+			if(bh.bV5Height >= clientRect.bottom - clientRect.top) {
+				bh.bV5Height = clientRect.bottom - clientRect.top;
+				break;
+			}
+		}
+
+		// create a bitmap
+		void* bits;
+		HBITMAP bitmap = ::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, 0, 0);
+
+		// render the lines
+		HBITMAP oldBitmap = dc.selectObject(bitmap);
+		for() {
+			renderer.renderLine();
+		}
+		dc.selectObject(oldBitmap);
+
+		for(RGBQUAD* pixel = static_cast<RGBQUAD*>(bits), *e = static_cast<RGBQUAD*>(bits) + bh.bV5Width * bh.bV5Height; pixel != e; ++pixel)
+			pixel->rgbReserved = 0xFF;
+
+		memset(&image, 0, sizeof(SHDRAGIMAGE));
 		image.sizeDragImage.cx = bh.bV5Width;
 		image.sizeDragImage.cy = bh.bV5Height;
 		image.ptOffset.x = image.sizeDragImage.cx / 2;
 		image.ptOffset.y = image.sizeDragImage.cy / 2;
+		image.hbmpDragImage = bitmap;
 		image.crColorKey = CLR_NONE;
 
-		if(HDC dc = ::CreateCompatibleDC(0)) {
-			void* bits;
-			HBITMAP bitmap = ::CreateDIBSection(dc, reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, 0, 0);
-			if(bitmap != 0 && bits != 0) {
-				HBITMAP memoryBitmap = ::CreateCompatibleBitmap(viewer_->getDC().use(), bh.bV5Width, bh.bV5Height);
-				HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc, memoryBitmap));
-				::SetTextColor(dc, ::GetSysColor(COLOR_HIGHLIGHTTEXT));
-				::SetBkColor(dc, ::GetSysColor(COLOR_HIGHLIGHT));
-				::SetBkMode(dc, OPAQUE);
-				RECT rc;
-				rc.left = rc.top = 0;
-				rc.right = bh.bV5Width;
-				rc.bottom = bh.bV5Height;
-				::ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc, L"xyzzy", 5, 0);
+		return true;
+	}
+}
 
-				win32::AutoZero<BITMAPINFOHEADER> bih;
-				bih.biSize = sizeof(BITMAPINFOHEADER);
-				::GetDIBits(dc, memoryBitmap, 0, bh.bV5Height, 0, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
-				byte* memoryBits = new byte[bih.biWidth * bih.biHeight * bih.biBitCount / 8];
-				bih.biCompression = BI_RGB;
-				::GetDIBits(dc, memoryBitmap, 0, bih.biHeight, memoryBits, reinterpret_cast<BITMAPINFO*>(&bih), DIB_RGB_COLORS);
-				::SelectObject(dc, oldBitmap);
-				for(int x = 0; x < bih.biWidth; ++x) {
-					for(int y = 0; y < bih.biHeight; ++y) {
-						const byte* pixel = memoryBits + (x + y * bih.biWidth) * 3;
-						static_cast<ulong*>(bits)[x + y * bih.biWidth] = RGB(pixel[0], pixel[1], pixel[2]) + 0xff000000;
-					}
-				}
-				delete[] memoryBits;
+///
+void DefaultMouseInputStrategy::doDragAndDrop() {
+	com::ComPtr<IDataObject> draggingContent;
+	const Region selection(viewer_->caret().selectionRegion());
+	HRESULT hr;
 
-				image.hbmpDragImage = bitmap;
-				dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get());
-				::DeleteObject(memoryBitmap);
-				::DeleteObject(bitmap);
-			}
-			::DeleteDC(dc);
+	if(FAILED(hr = viewer_->caret().createTextObject(true, *draggingContent.initialize())))
+		return;
+	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+
+	// setup dragging ghost ixyzzymage
+	if(dnd_.dragSourceHelper.get() != 0) {
+		SHDRAGIMAGE image;
+		if(createSelectionImage(*viewer_, image)) {
+			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
+				::DeleteObject(image.hbmpDragImage);
 		}
 	}
 
 	// operation
-	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
+//	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
 	state_ = OLE_DND_SOURCE;
 	DWORD effectOwn;	// dummy
-	::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
-	endTimer();
+	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+//	endTimer();
 	state_ = NONE;
 	if(viewer_->isVisible())
 		viewer_->setFocus();
@@ -1690,6 +1702,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
 			const Position to(viewer_->characterForClientXY(position, LineLayout::TRAILING));
+			state_ = EXTENDING_CHARACTER_SELECTION;
 			if(toBoolean(keyState & (MK_CONTROL | MK_SHIFT))) {
 				if(toBoolean(keyState & MK_CONTROL)) {
 					// begin word selection
