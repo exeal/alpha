@@ -3104,9 +3104,7 @@ int TextRenderer::linePitch() const /*throw()*/ {
 }
 
 /**
- * Renders the specified logical line to the output device. @a selectionColor and @a marginColor
- * must be actual color. Do not use @c presentation#STANDARD_COLOR or any system color using
- * @c presentation#SYSTEM_COLOR_MASK.
+ * Renders the specified logical line to the output device.
  * @param line the line number
  * @param dc the device context
  * @param x the x-coordinate of the position to draw
