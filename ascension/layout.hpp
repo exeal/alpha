@@ -372,13 +372,20 @@ namespace ascension {
 				TRAILING	///< Trailing edge of a character.
 			};
 			/// Used for @c LineLayout#draw methods.
-			struct Selection {
+			class Selection {
 				MANAH_UNASSIGNABLE_TAG(Selection);
 			public:
 				/// Constructor.
-				Selection(const viewers::Caret& caret, const presentation::Colors& color) /*throw()*/ : caret(caret), color(color) {}
-				const viewers::Caret& caret;		///< Caret object.
-				const presentation::Colors color;	///< Color to render.
+				explicit Selection(const viewers::Caret& caret) /*throw()*/;
+				/// Constructor.
+				Selection(const viewers::Caret& caret, const presentation::Colors& color);
+				/// Returns the caret object.
+				const viewers::Caret& caret() const /*throw()*/ {return caret_;}
+				/// Returns the color to render.
+				const presentation::Colors& color() const /*throw()*/ {return color_;}
+			private:
+				const viewers::Caret& caret_;
+				const presentation::Colors color_;
 			};
 			/// Bidirectional iterator enumerates style runs in a line.
 			class StyledSegmentIterator {

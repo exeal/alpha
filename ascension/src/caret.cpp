@@ -1654,7 +1654,8 @@ void Caret::select(const Position& anchor, const Position& caret) {
  * This method returns a logical range, and does not support rectangular selection.
  * @param line the logical line
  * @param[out] first the start of the range
- * @param[out] last the end of the range. this can include the end of the line
+ * @param[out] last the end of the range. if the selection continued to the next line, this is
+ *                  the column of the end of line + 1
  * @return true if there is selected range on the line
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #getSelectedRangeOnVisualLine
@@ -1677,7 +1678,8 @@ bool Caret::selectedRangeOnLine(length_t line, length_t& first, length_t& last) 
  * @param line the logical line
  * @param subline the visual subline
  * @param[out] first the start of the range
- * @param[out] last the end of the range. this can include the logical end of the line
+ * @param[out] last the end of the range. if the selection continued to the next logical line, this
+ *                  is the column of the end of line + 1
  * @return true if there is selected range on the line
  * @throw kernel#BadPositionException @a line or @a subline is outside of the document
  * @see #getSelectedRangeOnLine

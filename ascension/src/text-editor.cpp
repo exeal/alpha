@@ -1036,7 +1036,7 @@ ulong RowSelectionExtensionCommand::perform() {
 		caret.beginRectangleSelection();
 	if(procedure0_ != 0)
 		return CaretMovementCommand(target(), procedure0_, true)();
-	else if(procedureV1_ != 0)
+	else if(procedure1_ != 0)
 		return CaretMovementCommand(target(), procedure1_, true)();
 	else
 		return CaretMovementCommand(target(), procedureV1_, true)();

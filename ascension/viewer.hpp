@@ -709,7 +709,6 @@ namespace ascension {
 			// timer identifiers
 			enum {
 				TIMERID_CALLTIP,	// interval for tooltip
-				TIMERID_AUTOSCROLL,	// the viewer is auto scrolling
 //				TIMERID_LINEPARSE
 			};
 
