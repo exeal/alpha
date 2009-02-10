@@ -266,7 +266,6 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 
 /// @see WM_CAPTURECHANGED
 void TextViewer::onCaptureChanged(HWND) {
-	killTimer(TIMERID_AUTOSCROLL);
 	if(mouseInputStrategy_.get() != 0)
 		mouseInputStrategy_->captureChanged();
 }
@@ -1223,24 +1222,36 @@ namespace {
 		bh.bV5AlphaMask = 0xff000000;
 
 		// determine the range to draw
-		const Region selection(viewer.caret().selectionRegion());
+		const Region selectedRegion(viewer.caret().selectionRegion());
 		length_t firstLine, firstSubline;
 		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
 
 		// calculate the size of the image
-		RECT clientRect;
+		RECT clientRect, selectionBounds;
 		viewer.getClientRect(clientRect);
 		const TextRenderer& renderer = viewer.textRenderer();
-		bh.bhWidth = bh.bV5Height = 0;
-		for(length_t line = selection.beginning().line, e = selection.end().line; line < e; ++line) {
-			const RECT lineBounds(renderer.lineLayout(line).bounds());
-			bh.bV5Width = max(lineBounds.right - lineBounds.left, bh.bV5Width);
-			bh.bV5Height += lineBounds.bottom - lineBounds.top;
-			if(bh.bV5Height >= clientRect.bottom - clientRect.top) {
-				bh.bV5Height = clientRect.bottom - clientRect.top;
-				break;
+		selectionBounds.left = numeric_limits<LONG>::max();
+		selectionBounds.right = numeric_limits<LONG>::min();
+		selectionBounds.top = selectionBounds.bottom = 0;
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			selectionBounds.bottom += static_cast<LONG>(renderer.linePitch() * renderer.lineLayout(line).numberOfSublines());
+			if(selectionBounds.bottom - selectionBounds.top > clientRect.bottom - clientRect.top)
+				return false;	// overflow
+			const LineLayout& layout = renderer.lineLayout(line);
+			pair<length_t, length_t> range;
+			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
+				if(viewer.caret().selectedRangeOnVisualLine(line, subline, range.first, range.second)) {
+					range.second = min(viewer.document().lineLength(line), range.second);
+					const RECT sublineBounds(layout.bounds(range.first, range.second));
+					selectionBounds.left = min(sublineBounds.left, selectionBounds.left);
+					selectionBounds.right = max(sublineBounds.right, selectionBounds.right);
+					if(selectionBounds.right - selectionBounds.left > clientRect.right - clientRect.left)
+						return false;	// overflow
+				}
 			}
 		}
+		bh.bV5Width = selectionBounds.right - selectionBounds.left;	// this does not consider overhangs...
+		bh.bV5Height = selectionBounds.bottom - selectionBounds.top;
 
 		// create a bitmap
 		void* bits;
@@ -1248,8 +1259,13 @@ namespace {
 
 		// render the lines
 		HBITMAP oldBitmap = dc.selectObject(bitmap);
-		for() {
-			renderer.renderLine();
+		const int dx = -selectionBounds.left;
+		::OffsetRect(&selectionBounds, dx, 0);
+		int y = selectionBounds.top;
+		const LineLayout::Selection selection(viewer.caret());
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			renderer.renderLine(line, dc, dx, y, selectionBounds, selectionBounds, &selection);
+			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
 		dc.selectObject(oldBitmap);
 
@@ -1955,13 +1971,7 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 	if(i == timerTable_.end())
 		return;
 	DefaultMouseInputStrategy& self = *i->second;
-	if(self.dnd_.enabled && (self.state_ & OLE_DND_MASK) == OLE_DND_MASK) {	// scroll automatically during OLE dragging
-/*		const SIZE scrollOffset = calculateDnDScrollOffset(*self.viewer_);
-		if(scrollOffset.cy != 0)
-			self.viewer_->scroll(0, scrollOffset.cy, true);
-		else if(scrollOffset.cx != 0)
-			self.viewer_->scroll(scrollOffset.cx, 0, true);
-*/	} else if((self.state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
+	if((self.state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
 		const POINT pt = self.viewer_->getCursorPosition();
 		RECT rc;
 		const RECT margins = self.viewer_->textAreaMargins();
@@ -1997,6 +2007,14 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 			self.beginTimer(300);
 			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL)->get());
 		}
+#if 0
+	} else if(self.dnd_.enabled && (self.state_ & OLE_DND_MASK) == OLE_DND_MASK) {	// scroll automatically during OLE dragging
+		const SIZE scrollOffset = calculateDnDScrollOffset(*self.viewer_);
+		if(scrollOffset.cy != 0)
+			self.viewer_->scroll(0, scrollOffset.cy, true);
+		else if(scrollOffset.cx != 0)
+			self.viewer_->scroll(scrollOffset.cx, 0, true);
+#endif
 	}
 }
 

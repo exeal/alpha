@@ -1300,13 +1300,7 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 	}
 
 	// draw lines
-	const Colors selectionColor(
-		configuration_.selectionColor.foreground.isValid() ?
-			configuration_.selectionColor.foreground :
-				Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
-		configuration_.selectionColor.background.isValid() ?
-			configuration_.selectionColor.background :
-				Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
+	const LineLayout::Selection selection(*caret_, configuration_.selectionColor);
 	RECT lineRect = clientRect;
 	lineRect.left += margins.left; lineRect.top += margins.top; lineRect.right -= margins.right; lineRect.bottom -= margins.bottom;
 	length_t line, subline;
@@ -1315,7 +1309,6 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 	if(line < lines) {
 		while(y < paintRect.bottom && line < lines) {
 			// draw a logical line
-			LineLayout::Selection selection(*caret_, selectionColor);
 			renderer_->renderLine(line, dc, getDisplayXOffset(line), y, dc.paintStruct().rcPaint, lineRect, &selection);
 			y += linePitch * static_cast<int>(renderer_->numberOfSublinesOfLine(line++));
 			subline = 0;
