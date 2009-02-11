@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -31,7 +31,7 @@ namespace ascension {
 			Color(byte red, byte green, byte blue) /*throw()*/ : r_(red << 8), g_(green << 8), b_(blue << 8), valid_(true) {}
 #ifdef ASCENSION_WINDOWS
 			static Color fromCOLORREF(COLORREF value) /*throw()*/ {return Color(
-				static_cast<byte>(value & 0xFF), static_cast<byte>((value >> 8) & 0xFF), static_cast<byte>((value >> 16) & 0xFF));}
+				static_cast<byte>(value & 0xff), static_cast<byte>((value >> 8) & 0xff), static_cast<byte>((value >> 16) & 0xff));}
 			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
 #endif // ASCENSION_WINDOWS
 			/// Returns the blue color component of this color.
@@ -88,11 +88,11 @@ namespace ascension {
 			bool strikeout;
 			/// Style of the underline.
 			UnderlineStyle underlineStyle;
-			/// Color of the underline. @c STANDARD_COLOR indicates @c color.background.
+			/// Color of the underline. An invalid value indicates @c color.background.
 			Color underlineColor;
 			/// Style of the border.
 			BorderStyle borderStyle;
-			/// Color of the border. @c STANDARD_COLOR indicates @c color.background.
+			/// Color of the border. An invalid value indicates @c color.background.
 			Color borderColor;
 			/// Constructor.
 			explicit TextStyle(const Colors& textColor = Colors(),

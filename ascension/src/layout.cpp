@@ -146,10 +146,14 @@ struct ascension::layout::internal::Run : public StyledText {
 	auto_ptr<Run> split(DC& dc, length_t at);	// 'at' is from the beginning of the line
 	int totalWidth() const /*throw()*/ {return width.abcA + width.abcB + width.abcC;}
 	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {return shared->visualAttributes.get() + firstGlyph;}
-	HRESULT x(size_t offset, bool trailing, int& x) const /*throw()*/ {
-		return ::ScriptCPtoX(static_cast<int>(offset), trailing,
+	int x(size_t offset, bool trailing) const {
+		int result;
+		const HRESULT hr = ::ScriptCPtoX(static_cast<int>(offset), trailing,
 			static_cast<int>(length()), numberOfGlyphs(), clusters(),
-			visualAttributes(), (justifiedAdvances() == 0) ? advances() : justifiedAdvances(), &analysis, &x);
+			visualAttributes(), (justifiedAdvances() == 0) ? advances() : justifiedAdvances(), &analysis, &result);
+		if(FAILED(hr))
+			throw hr;
+		return result;
 	}
 };
 
@@ -358,6 +362,8 @@ namespace {
  * (especially @c ScriptShape and @c ScriptTextOut). For this reason, a combining character will be
  * rendered incorrectly if it is presented at the boundary. The maximum length of a run is 1024.
  *
+ * In present, this class supports only text layout horizontal against the output device.
+ *
  * @note This class is not intended to derive.
  * @see LineLayoutBuffer#lineLayout, LineLayoutBuffer::lineLayoutIfCached
  */
@@ -428,9 +434,73 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 }
 
 /**
- * Returns the smallest rectangle emcompasses the whole text of the line.
+ * Returns the black box bounds of the characters in the specified range. The black box bounds is
+ * an area consisting of the union of the bounding boxes of the all of the characters in the range.
+ * The result region can be disjoint.
+ * @param first the start of the range
+ * @param last the end of the range
+ * @return the Win32 GDI region object encompasses the black box bounds. the coordinates are based
+ *         on the left-top of the first visual subline in the layout
+ * @throw kernel#BadPositionException @a first or @a last is greater than the length of the line
+ * @throw std#invalid_argument @a first is greater than @a last
+ * @see #bounds(void), #bounds(length_t, length_t), #sublineBounds, #sublineIndent
+ */
+Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
+	if(first > last)
+		throw invalid_argument("first is greater than last.");
+	else if(last > text().length())
+		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
+
+	const length_t firstSubline = subline(first), lastSubline = subline(last);
+	vector<RECT> rectangles;
+	RECT rectangle;
+	rectangle.top = 0;
+	rectangle.bottom = rectangle.top + linePitch();
+	for(length_t subline = firstSubline; subline <= lastSubline;
+			++subline, rectangle.top = rectangle.bottom, rectangle.bottom += linePitch()) {
+		const size_t endOfRuns = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
+		int cx = sublineIndent(subline);
+		if(first <= runs_[sublineFirstRuns_[subline]]->column
+				&& last >= runs_[sublineFirstRuns_[endOfRuns - 1]]->column + runs_[sublineFirstRuns_[endOfRuns - 1]]->length()) {
+			// whole visual subline is encompassed by the range
+			rectangle.left = cx;
+			rectangle.right = rectangle.left + sublineWidth(subline);
+			rectangles.push_back(rectangle);
+			continue;
+		}
+		for(size_t i = sublineFirstRuns_[subline]; i < endOfRuns; ++i) {
+			const Run& run = *runs_[i];
+			if(first <= run.column + run.length() && last >= run.column) {
+				rectangle.left = cx + ((first > run.column) ? run.x(first - run.column, false) : 0);
+				rectangle.right = cx + ((last < run.column + run.length()) ? run.x(last - run.column, true) : 0);
+				if(rectangle.left != rectangle.right) {
+					if(rectangle.left > rectangle.right)
+						swap(rectangle.left, rectangle.right);
+					rectangles.push_back(rectangle);
+				}
+			}
+			cx += run.totalWidth();
+		}
+	}
+
+	// create the result region
+	manah::AutoBuffer<POINT> vertices(new POINT[rectangles.size() * 4]);
+	manah::AutoBuffer<int> numbersOfVertices(new int[rectangles.size()]);
+	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
+		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = rectangles[i].left;
+		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = rectangles[i].top;
+		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = rectangles[i].right;
+		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = rectangles[i].bottom;
+	}
+	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
+	return Rgn::createPolyPolygon(vertices.get(), numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING);
+}
+
+/**
+ * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
+ * exactly the ascent, descent or overhangs of the text.
  * @return the size of the bounds
- * @see #bounds(length_t, length_t), #sublineBounds
+ * @see #blackBoxBounds, #bounds(length_t, length_t), #sublineBounds
  */
 SIZE LineLayout::bounds() const /*throw()*/ {
 	SIZE s;
@@ -440,21 +510,21 @@ SIZE LineLayout::bounds() const /*throw()*/ {
 }
 
 /**
- * Returns the smallest rectangle emcompasses all characters in the range.
+ * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
+ * exactly the ascent, descent or overhangs of the specified region of the text.
  * @param first the start of the range
  * @param last the end of the range
  * @return the rectangle whose @c left value is the indentation of the bounds and @c top value is
  *         the distance from the top of the whole line
  * @throw kernel#BadPositionException @a first or @a last is greater than the length of the line
  * @throw std#invalid_argument @a first is greater than @a last
- * @see #bounds(void), #sublineBounds, #sublineIndent
+ * @see #blackBoxBounds, #bounds(void), #sublineBounds, #sublineIndent
  */
 RECT LineLayout::bounds(length_t first, length_t last) const {
 	if(first > last)
 		throw invalid_argument("first is greater than last.");
 	else if(last > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
-	HRESULT hr;
 	RECT bounds;	// the result
 	int cx;
 
@@ -484,9 +554,9 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const Run& run = *runs_[j];
 			if(first <= run.column + run.length() && last >= run.column) {
-				int x;
-				hr = run.x((run.orientation() == LEFT_TO_RIGHT) ?
-					max(first, run.column) : min(last, run.column + run.length()), false, x);
+				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
+					max(first, run.column) : min(last, run.column + run.length())) - run.column,
+					run.orientation() == RIGHT_TO_LEFT);
 				bounds.left = min<LONG>(cx + x, bounds.left);
 				break;
 			}
@@ -499,9 +569,9 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const Run& run = *runs_[j];
 			if(first <= run.column + run.length() && last >= run.column) {
-				int x;
-				hr = run.x((run.orientation() == LEFT_TO_RIGHT) ?
-					min(last, run.column + run.length()) : max(first, run.column), false, x);
+				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
+					min(last, run.column + run.length()) : max(first, run.column)) - run.column,
+					run.orientation() != RIGHT_TO_LEFT);
 				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
 				break;
 			}
@@ -528,9 +598,7 @@ inline void LineLayout::dispose() /*throw()*/ {
 }
 
 /**
- * Draws the layout to the output device. @a selectionColor and @a marginColor must be actual
- * color. Do not use @c presentation#STANDARD_COLOR or any system color using
- * @c presentation#SYSTEM_COLOR_MASK.
+ * Draws the layout to the output device.
  * @param dc the device context
  * @param x the x-coordinate of the position to draw
  * @param y the y-coordinate of the position to draw
@@ -567,9 +635,7 @@ void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& c
 }
 
 /**
- * Draws the specified subline layout to the output device. @a selection-&gt;color must be actual
- * color. Do not use invalid color.
- * @c presentation#SYSTEM_COLOR_MASK.
+ * Draws the specified subline layout to the output device.
  * @param subline the visual subline
  * @param dc the device context
  * @param x the x-coordinate of the position to draw
@@ -658,9 +724,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
 				} else {
 					// selected partially
-					int left, right;
-					hr = run.x(max(selStart, run.column) - run.column, false, left);
-					hr = run.x(min(selEnd, run.column + run.length()) - 1 - run.column, true, right);
+					int left = run.x(max(selStart, run.column) - run.column, false);
+					int right = run.x(min(selEnd, run.column + run.length()) - 1 - run.column, true);
 					if(left > right)
 						swap(left, right);
 					left += x;
@@ -741,24 +806,19 @@ void LineLayout::draw(length_t subline, DC& dc,
 			// white spaces and C0/C1 control characters
 			dc.selectClipRgn(clipRegion.get());
 			x = startX;
-			int dx;
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
 				context.orientation = run.orientation();
 				for(length_t j = run.column; j < run.column + run.length(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-						run.x(j - run.column, false, dx);
-						context.rect.left = x + dx;
-						run.x(j - run.column, true, dx);
-						context.rect.right = x + dx;
+						context.rect.left = x + run.x(j - run.column, false);
+						context.rect.right = x + run.x(j - run.column, true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
 					} else if(isC0orC1Control(line[j])) {
-						run.x(j - run.column, false, dx);
-						context.rect.left = x + dx;
-						run.x(j - run.column, true, dx);
-						context.rect.right = x + dx;
+						context.rect.left = x + run.x(j - run.column, false);
+						context.rect.right = x + run.x(j - run.column, true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawControlCharacter(context, line[j]);
@@ -1083,9 +1143,7 @@ POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				const Run& run = *runs_[i];
 				if(column >= run.column && column <= run.column + run.length()) {
-					int offset;
-					run.x(column - run.column, edge == TRAILING, offset);
-					location.x += offset;
+					location.x += run.x(column - run.column, edge == TRAILING);
 					break;
 				}
 				location.x += run.totalWidth();
@@ -1095,10 +1153,8 @@ POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
 			for(size_t i = lastRun - 1; ; --i) {
 				const Run& run = *runs_[i];
 				location.x -= run.totalWidth();
-				if(column >= run.column && column <= run.column + run.length()) {
-					int offset;
-					run.x(column - run.column, edge == TRAILING, offset);
-					location.x += offset;
+				if(column >= run.column && column <= run.column + run.length()) {					
+					location.x += run.x(column - run.column, edge == TRAILING);
 					break;
 				}
 				if(i == firstRun)
@@ -1300,7 +1356,8 @@ const StyledText& LineLayout::styledSegment(length_t column) const {
 }
 
 /**
- * Returns the smallest rectangle emcompasses the specified visual line.
+ * Returns the smallest rectangle emcompasses the specified visual line. It might not coincide
+ * exactly the ascent, descent or overhangs of the specified subline.
  * @param subline the wrapped line
  * @return the rectangle whose @c left value is the indentation of the subline and @c top value is
  *         the distance from the top of the whole line

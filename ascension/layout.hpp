@@ -1,7 +1,7 @@
 /**
  * @file layout.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_LAYOUT_HPP
@@ -34,11 +34,6 @@ namespace ascension {
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
 		bool supportsComplexScripts() /*throw()*/;
 		bool supportsOpenTypeFeatures() /*throw()*/;
-
-		/// Standard color (This value introduces any fallback).
-		const COLORREF STANDARD_COLOR = 0xFFFFFFFFUL;
-		/// Used like @c (index | SYSTEM_COLOR_MASK) to represent a system color.
-		const COLORREF SYSTEM_COLOR_MASK = 0x80000000UL;
 
 		/// Alignment of the text layout.
 		enum Alignment {
@@ -420,6 +415,7 @@ namespace ascension {
 			length_t sublineOffset(length_t subline) const;
 			const length_t* sublineOffsets() const /*throw()*/;
 			// coordinates
+			manah::win32::gdi::Rgn blackBoxBounds(length_t first, length_t last) const;
 			SIZE bounds() const /*throw()*/;
 			RECT bounds(length_t first, length_t last) const;
 			POINT location(length_t column, Edge edge = LEADING) const;
@@ -443,7 +439,7 @@ namespace ascension {
 			String fillToX(int x) const;
 #ifdef _DEBUG
 			void dumpRuns(std::ostream& out) const;
-#endif /* _DEBUG */
+#endif // _DEBUG
 
 		private:
 			void dispose() /*throw()*/;

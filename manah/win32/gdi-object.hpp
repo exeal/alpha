@@ -32,6 +32,8 @@ public:
 	static Bitmap createCompatibleBitmap(const DC& dc, int width, int height);
 	static Bitmap createDIBitmap(const DC& dc, const BITMAPINFOHEADER& header,
 		DWORD options, const void* data, const BITMAPINFO& bitmapInfo, UINT usage);
+	static Bitmap createDIBSection(HDC dc, const BITMAPINFO& , UINT usage, void*& bits);
+	static Bitmap createDIBSection(HDC dc, const BITMAPINFO& , UINT usage, void*& bits, HANDLE section, DWORD offset);
 	static Bitmap createDiscardableBitmap(const DC& dc, int width, int height);
 	Bitmap createStockObject(int index);
 	static Bitmap load(const ResourceID& id);
@@ -143,6 +145,11 @@ inline Bitmap Bitmap::createCompatibleBitmap(const DC& dc, int width, int height
 
 inline Bitmap Bitmap::createDIBitmap(const DC& dc, const BITMAPINFOHEADER& header, DWORD options, const void* data,
 	const BITMAPINFO& bitmapInfo, UINT usage) {return Bitmap(::CreateDIBitmap(dc.use(), &header, options, data, &bitmapInfo, usage));}
+
+inline Bitmap Bitmap::createDIBSection(HDC dc, const BITMAPINFO& info, UINT usage, void*& bits) {return createDIBSection(dc, info, usage, bits, 0, 0);}
+
+inline Bitmap Bitmap::createDIBSection(HDC dc, const BITMAPINFO& info, UINT usage, void*& bits,
+		HANDLE section, DWORD offset) {return Bitmap(::CreateDIBSection(dc, &info, usage, &bits, section, offset));}
 
 inline Bitmap Bitmap::createDiscardableBitmap(const DC& dc, int width, int height) {return Bitmap(::CreateDiscardableBitmap(dc.use(), width, height));}
 
