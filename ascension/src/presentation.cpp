@@ -157,8 +157,9 @@ const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numb
 /**
  * Returns the colors of the specified line.
  * @param line the line
- * @return the colors of the line. unspecified if its members are @c STANDARD_COLOR
+ * @return the colors of the line. unspecified if its members are not valid
  * @throw BadPositionException @a line is outside of the document
+ * @see Color#isValid
  */
 Colors Presentation::getLineColor(length_t line) const {
 	if(line >= document_.numberOfLines())

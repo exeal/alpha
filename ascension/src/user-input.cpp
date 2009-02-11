@@ -1207,7 +1207,9 @@ void DefaultMouseInputStrategy::captureChanged() {
 
 namespace {
 	bool createSelectionImage(const TextViewer& viewer, SHDRAGIMAGE& image) {
-		win32::gdi::DC dc(::CreateCompatibleDC(0));
+		using namespace win32::gdi;
+
+		DC dc(::CreateCompatibleDC(0));
 		if(dc.get() == 0)
 			return false;
 
@@ -1253,31 +1255,60 @@ namespace {
 		bh.bV5Width = selectionBounds.right - selectionBounds.left;	// this does not consider overhangs...
 		bh.bV5Height = selectionBounds.bottom - selectionBounds.top;
 
-		// create a bitmap
-		void* bits;
-		HBITMAP bitmap = ::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, 0, 0);
+		// create a mask
+		Bitmap mask(Bitmap::create(bh.bV5Width, bh.bV5Height, 1, 1, 0));	// monochrome
+		HBITMAP oldBitmap = dc.selectObject(mask.use());
+		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
+		int y = 0;
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			const LineLayout& layout = renderer.lineLayout(line);
+			pair<length_t, length_t> range;
+			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
+				if(viewer.caret().selectedRangeOnVisualLine(line, subline, range.first, range.second)) {
+					range.second = min(viewer.document().lineLength(line), range.second);
+					Rgn rgn(layout.blackBoxBounds(range.first, range.second));
+					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH)->use());
+				}
+				y += renderer.linePitch();
+			}
+		}
+		dc.selectObject(oldBitmap);
 
+		// create a source image
+		ScreenDC screenDC;
+		Bitmap sourceImage(Bitmap::createCompatibleBitmap(screenDC, bh.bV5Width, bh.bV5Height));
 		// render the lines
-		HBITMAP oldBitmap = dc.selectObject(bitmap);
+		oldBitmap = dc.selectObject(sourceImage.use());
 		const int dx = -selectionBounds.left;
 		::OffsetRect(&selectionBounds, dx, 0);
-		int y = selectionBounds.top;
+		y = selectionBounds.top;
 		const LineLayout::Selection selection(viewer.caret());
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			renderer.renderLine(line, dc, dx, y, selectionBounds, selectionBounds, &selection);
 			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
+
+//		dc.selectObject(mask.get());
+
+		// create the result bitmap
+		void* bits;
+		Bitmap bitmap(Bitmap::createDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
+		memset(bits, 0xff, bh.bV5Width * bh.bV5Height * 4);
+		DC dc2(::CreateCompatibleDC(0));
+		HBITMAP oldBitmap2 = dc2.selectObject(bitmap.use());
+		dc2.maskBlt(0, 0, bh.bV5Width, bh.bV5Height, dc.get(), 0, 0, mask.get(), 0, 0, MAKEROP4(SRCCOPY, PATCOPY));
+		dc2.selectObject(oldBitmap2);
 		dc.selectObject(oldBitmap);
 
 		for(RGBQUAD* pixel = static_cast<RGBQUAD*>(bits), *e = static_cast<RGBQUAD*>(bits) + bh.bV5Width * bh.bV5Height; pixel != e; ++pixel)
-			pixel->rgbReserved = 0xFF;
+			pixel->rgbReserved = /*(pixel->rgbReserved == 0x00) ?*/ 0xff /*: 0x00*/;
 
 		memset(&image, 0, sizeof(SHDRAGIMAGE));
 		image.sizeDragImage.cx = bh.bV5Width;
 		image.sizeDragImage.cy = bh.bV5Height;
 		image.ptOffset.x = image.sizeDragImage.cx / 2;
 		image.ptOffset.y = image.sizeDragImage.cy / 2;
-		image.hbmpDragImage = bitmap;
+		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
 		image.crColorKey = CLR_NONE;
 
 		return true;
@@ -1683,6 +1714,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 		const bool extend = toBoolean(keyState & MK_SHIFT) && to.line != caret.anchor().lineNumber();
 		state_ = EXTENDING_LINE_SELECTION;
 		selection_.initialLine = extend ? caret.anchor().lineNumber() : to.line;
+		viewer_->caret().endRectangleSelection();
 		extendSelection(&to);
 		viewer_->setCapture();
 		beginTimer(SELECTION_EXPANSION_INTERVAL);
@@ -1734,6 +1766,8 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 				caret.moveTo(to);
 			if(toBoolean(::GetKeyState(VK_MENU) & 0x8000))	// make the selection reactangle
 				caret.beginRectangleSelection();
+			else
+				caret.endRectangleSelection();
 			viewer_->setCapture();
 			beginTimer(SELECTION_EXPANSION_INTERVAL);
 		}
