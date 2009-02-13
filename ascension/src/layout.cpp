@@ -461,7 +461,7 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 		const size_t endOfRuns = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		int cx = sublineIndent(subline);
 		if(first <= runs_[sublineFirstRuns_[subline]]->column
-				&& last >= runs_[sublineFirstRuns_[endOfRuns - 1]]->column + runs_[sublineFirstRuns_[endOfRuns - 1]]->length()) {
+				&& last >= runs_[endOfRuns - 1]->column + runs_[endOfRuns - 1]->length()) {
 			// whole visual subline is encompassed by the range
 			rectangle.left = cx;
 			rectangle.right = rectangle.left + sublineWidth(subline);
@@ -472,7 +472,7 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 			const Run& run = *runs_[i];
 			if(first <= run.column + run.length() && last >= run.column) {
 				rectangle.left = cx + ((first > run.column) ? run.x(first - run.column, false) : 0);
-				rectangle.right = cx + ((last < run.column + run.length()) ? run.x(last - run.column, true) : 0);
+				rectangle.right = cx + ((last < run.column + run.length()) ? run.x(last - run.column, false) : run.totalWidth());
 				if(rectangle.left != rectangle.right) {
 					if(rectangle.left > rectangle.right)
 						swap(rectangle.left, rectangle.right);
@@ -555,8 +555,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 			const Run& run = *runs_[j];
 			if(first <= run.column + run.length() && last >= run.column) {
 				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
-					max(first, run.column) : min(last, run.column + run.length())) - run.column,
-					run.orientation() == RIGHT_TO_LEFT);
+					max(first, run.column) : min(last, run.column + run.length())) - run.column, false);
 				bounds.left = min<LONG>(cx + x, bounds.left);
 				break;
 			}
@@ -570,8 +569,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 			const Run& run = *runs_[j];
 			if(first <= run.column + run.length() && last >= run.column) {
 				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
-					min(last, run.column + run.length()) : max(first, run.column)) - run.column,
-					run.orientation() != RIGHT_TO_LEFT);
+					min(last, run.column + run.length()) : max(first, run.column)) - run.column, false);
 				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
 				break;
 			}
