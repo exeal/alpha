@@ -1571,7 +1571,7 @@ namespace {
 	inline bool uniscribeSupportsVSS() /*throw()*/ {
 		static bool checked = false, supports = false;
 		if(!checked) {
-			static const WCHAR text[] = L"\x82A6\xDB40\xDD00";	// <芦, U+E0100>
+			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
 			SCRIPT_ITEM items[4];
 			int numberOfItems;
 			if(SUCCEEDED(::ScriptItemize(text, MANAH_COUNTOF(text) - 1,
@@ -2843,7 +2843,7 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
 		break;													\
 	}
 				ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
-				ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, L"\xFF2D\xFF33 \xFF30\x30B4\x30B7\x30C3\x30AF")	// "ＭＳ Ｐゴシック"
+				ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af")	// "ＭＳ Ｐゴシック"
 				ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
 				ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
 #undef ASCENSION_SELECT_INSTALLED_FONT

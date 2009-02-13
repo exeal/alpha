@@ -1,7 +1,7 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2008
+ * @date 2004-2009
  */
 
 #ifndef ASCENSION_ENCODER_HPP
@@ -157,10 +157,10 @@ namespace ascension {
 		}
 #endif // !ASCENSION_NO_EXTENDED_ENCODINGS
 
-		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c & 0x7FU);}
-		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c & 0xFFU);}
-		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c & 0xFFFFU);}
-		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c & 0xFFFFU);}
+		template<typename T> inline byte mask7Bit(T c) {return static_cast<byte>(c & 0x7fu);}
+		template<typename T> inline byte mask8Bit(T c) {return static_cast<byte>(c & 0xffu);}
+		template<typename T> inline ushort mask16Bit(T c) {return static_cast<ushort>(c & 0xffffu);}
+		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c & 0xffffu);}
 
 		/**
 		 * Compares the given two encoding (charset) names based on
@@ -236,7 +236,7 @@ namespace ascension {
 			 * map. If @c #policy returns @c REPLACE_UNMAPPABLE_CHARACTER, the encoder should use
 			 * this character. Default implementation returns 0x1A.
 			 */
-			virtual byte substitutionCharacter() const /*throw()*/ {return 0x1A;}
+			virtual byte substitutionCharacter() const /*throw()*/ {return 0x1a;}
 		};
 
 		class EncoderFactory;
@@ -429,11 +429,11 @@ namespace ascension {
 		namespace implementation {
 
 			// control codes
-			const byte SI = 0x0F;		// SI (Shift in).
-			const byte SO = 0x0E;		// SO (Shift out).
-			const byte ESC = 0x1B;		// Escape.
-			const byte SS2_8BIT = 0x8E;	// SS2 (Single shift two).
-			const byte SS3_8BIT = 0x8F;	// SS3 (Single shift three).
+			const byte SI = 0x0f;		// SI (Shift in).
+			const byte SO = 0x0e;		// SO (Shift out).
+			const byte ESC = 0x1b;		// Escape.
+			const byte SS2_8BIT = 0x8e;	// SS2 (Single shift two).
+			const byte SS3_8BIT = 0x8f;	// SS3 (Single shift three).
 
 			/// @c EncoderFactoryBase is a base implementation of @c EncoderFactory.
 			class EncoderFactoryBase : public EncoderFactory {
@@ -443,7 +443,7 @@ namespace ascension {
 				EncoderFactoryBase(const std::string& name,
 					MIBenum mib, const std::string& displayName = "",
 					std::size_t maximumNativeBytes = 1, std::size_t maximumUCSLength = 1,
-					const std::string& aliases = "", byte substitutionCharacter = 0x1A);
+					const std::string& aliases = "", byte substitutionCharacter = 0x1a);
 			protected:
 				// IEncodingProperties
 				virtual std::string aliases() const /*throw()*/;
@@ -480,7 +480,7 @@ namespace ascension {
 				start + step * 12, start + step * 13, start + step * 14, start + step * 15> {};
 
 			/// Generates an all NUL character sequence.
-			struct EmptyCharLine : public SequentialCharLine<0xFFFD, 0> {};
+			struct EmptyCharLine : public SequentialCharLine<0xfffdu, 0> {};
 
 			/// Generates 16×16-code sequence.
 			template<typename Code,
@@ -492,7 +492,7 @@ namespace ascension {
 
 			/// Returns a code corresponds to a byte in the 16×16 wire.
 			/// @see CodeWire
-			template<typename Code> inline Code wireAt(const Code** wire, byte c) /*throw()*/ {return wire[c >> 4][c & 0xF];}
+			template<typename Code> inline Code wireAt(const Code** wire, byte c) /*throw()*/ {return wire[c >> 4][c & 0xf];}
 
 			/// Generates 16×16-character sequence.
 			template<
@@ -524,13 +524,13 @@ namespace ascension {
 				};
 
 				/// Generates ISO IR C0 character sequence 0x00 through 0x0F.
-				typedef SequentialCharLine<0x0000U> ISO_IR_C0_LINE0;
+				typedef SequentialCharLine<0x0000u> ISO_IR_C0_LINE0;
 				/// Generates ISO IR C0 character sequence 0x10 through 0x1F.
-				typedef SequentialCharLine<0x0010U> ISO_IR_C0_LINE1;
+				typedef SequentialCharLine<0x0010u> ISO_IR_C0_LINE1;
 				/// Generates ISO IR C1 character sequence 0x80 through 0x8F.
-				typedef SequentialCharLine<0x0080U> ISO_IR_C1_LINE8;
+				typedef SequentialCharLine<0x0080u> ISO_IR_C1_LINE8;
 				/// Generates ISO IR C1 character sequence 0x90 through 0x9F.
-				typedef SequentialCharLine<0x0090U> ISO_IR_C1_LINE9;
+				typedef SequentialCharLine<0x0090u> ISO_IR_C1_LINE9;
 
 				/// Generates 16×16 character table compatible with ISO 646.
 				template<
@@ -538,8 +538,8 @@ namespace ascension {
 					typename LineC, typename LineD, typename LineE, typename LineF>
 				class ASCIICompatibleCharWire : public CharWire<
 					ISO_IR_C0_LINE0, ISO_IR_C0_LINE1,
-					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
-					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>, SequentialCharLine<0x0070U>,
+					SequentialCharLine<0x0020u>, SequentialCharLine<0x0030u>, SequentialCharLine<0x0040u>,
+					SequentialCharLine<0x0050u>, SequentialCharLine<0x0060u>, SequentialCharLine<0x0070u>,
 					Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Generates 16×16 character table compatible with ISO-IR.
@@ -553,8 +553,8 @@ namespace ascension {
 				/// Generates 16×16 character table compatible with ISO 8859.
 				template<typename LineA, typename LineB, typename LineC, typename LineD, typename LineE, typename LineF>
 				class ISO8859CompatibleCharWire : public ISOIRCharWire<
-					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
-					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>, SequentialCharLine<0x0070U>,
+					SequentialCharLine<0x0020u>, SequentialCharLine<0x0030u>, SequentialCharLine<0x0040u>,
+					SequentialCharLine<0x0050u>, SequentialCharLine<0x0060u>, SequentialCharLine<0x0070u>,
 					LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Generates 16×16 character table compatible with IBM PC code page.
@@ -562,13 +562,13 @@ namespace ascension {
 					typename Line8, typename Line9, typename LineA, typename LineB,
 					typename LineC, typename LineD, typename LineE, typename LineF>
 				class IBMPCCompatibleCharWire : public CharWire<
-					SequentialCharLine<0x0000U>,
-					CharLine<0x0010U, 0x0011U, 0x0012U, 0x0013U, 0x0014U, 0x0015U,
-						0x0016U, 0x0017U, 0x0018U, 0x0019U, 0x001CU, 0x001BU, 0x007FU, 0x001DU, 0x001EU, 0x001FU>,
-					SequentialCharLine<0x0020U>, SequentialCharLine<0x0030U>, SequentialCharLine<0x0040U>,
-					SequentialCharLine<0x0050U>, SequentialCharLine<0x0060U>,
-					CharLine<0x0070U, 0x0071U, 0x0072U, 0x0073U, 0x0074U, 0x0075U,
-						0x0076U, 0x0077U, 0x0078U, 0x0079U, 0x007AU, 0x007BU, 0x007CU, 0x007DU, 0x007EU, 0x001AU>,
+					SequentialCharLine<0x0000u>,
+					CharLine<0x0010u, 0x0011u, 0x0012u, 0x0013u, 0x0014u, 0x0015u,
+						0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001cu, 0x001bu, 0x007fu, 0x001du, 0x001eu, 0x001fu>,
+					SequentialCharLine<0x0020u>, SequentialCharLine<0x0030u>, SequentialCharLine<0x0040u>,
+					SequentialCharLine<0x0050u>, SequentialCharLine<0x0060u>,
+					CharLine<0x0070u, 0x0071u, 0x0072u, 0x0073u, 0x0074u, 0x0075u,
+						0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007au, 0x007bu, 0x007cu, 0x007du, 0x007eu, 0x001au>,
 					Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 
 				/// Base class of single byte charset encoder factories.

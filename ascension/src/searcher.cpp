@@ -788,8 +788,8 @@ bool IncrementalSearcher::addCharacter(Char c) {
  */
 bool IncrementalSearcher::addCharacter(CodePoint c) {
 	checkRunning();
-	if(c < 0x010000U)
-		return addCharacter(static_cast<Char>(c & 0xFFFFU));
+	if(c < 0x010000u)
+		return addCharacter(static_cast<Char>(c & 0xffffu));
 	Char surrogates[2];
 	surrogates::encode(c, surrogates);
 	return addString(surrogates, surrogates + 2);

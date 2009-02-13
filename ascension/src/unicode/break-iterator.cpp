@@ -187,7 +187,7 @@ namespace {
 //		else if(locales.isJapanese(lc) && s2 == Script::HIRAGANA && (s1 == Script::KATAKANA || s1 == Script::HAN))
 //			return true;
 		// <ïΩâºñº> + 'Å['
-		else if(s1 == Script::HIRAGANA && following == 0x30FC)
+		else if(s1 == Script::HIRAGANA && following == 0x30fc)
 			return true;
 		return false;
 	}

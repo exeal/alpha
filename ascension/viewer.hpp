@@ -278,7 +278,23 @@ namespace ascension {
 				> {
 			MANAH_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
-			DefaultMouseInputStrategy(bool enableOLEDragAndDrop, bool showDraggingImage);
+			/**
+			 * Defines OLE drag-and-drop support levels.
+			 * @see DefaultMouseInputStrategy#DefaultMouseInputStrategy
+			 */
+			enum OLEDragAndDropSupport {
+				/// Disables OLE drag-and-drop.
+				DONT_SUPPORT_OLE_DND,
+				/// Enables OLE drag-and-drop.
+				SUPPORT_OLE_DND,
+				/// Enables OLE drag-and-drop and shows a drag-image.
+				SUPPORT_OLE_DND_WITH_DRAG_IMAGE,
+				/// Enables OLE drag-and-drop and shows a selection-highlighted drag-image.
+				SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE
+			};
+		public:
+			explicit DefaultMouseInputStrategy(
+				OLEDragAndDropSupport oleDragAndDropSupportLevel = SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE);
 		private:
 			virtual bool handleLeftButtonDoubleClick(const POINT& position, uint keyState);
 			virtual bool handleRightButton(Action action, const POINT& position, uint keyState);
@@ -318,13 +334,13 @@ namespace ascension {
 				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
 				OLE_DND_MASK = 0x40, APPROACHING_OLE_DND, OLE_DND_SOURCE, OLE_DND_TARGET
 			} state_;
-			POINT dragApproachedPosition_;
+			POINT dragApproachedPosition_;	// in client coordinates
 			struct Selection {
 				length_t initialLine;	// line of the anchor when entered the selection extending
 				std::pair<length_t, length_t> initialWordColumns;
 			} selection_;
 			struct DragAndDrop {
-				bool enabled;
+				OLEDragAndDropSupport supportLevel;
 				length_t numberOfRectangleLines;
 				manah::com::ComPtr<IDragSourceHelper> dragSourceHelper;
 				manah::com::ComPtr<IDropTargetHelper> dropTargetHelper;

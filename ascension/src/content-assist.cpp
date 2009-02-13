@@ -259,7 +259,7 @@ bool ContentAssistant::CompletionProposalPopup::create(HWND parent) {
 #if 0
 		// 影を付けてみたりする...
 #ifndef CS_DROPSHADOW
-		const ULONG_PTR CS_DROPSHADOW = 0x00020000UL;
+		const ULONG_PTR CS_DROPSHADOW = 0x00020000ul;
 #endif // !CS_DROPSHADOW
 		const ULONG_PTR styleBits = ::GetClassLongPtrW(getHandle(), GCL_STYLE);
 		::SetClassLongPtrW(getHandle(), GCL_STYLE, styleBits | CS_DROPSHADOW);

@@ -586,9 +586,9 @@ namespace {
 
 	BasicLatinEncoderFactory US_ASCII("US-ASCII", fundamental::US_ASCII, "",
 			"ANSI_X3.4-1968|iso-ir-6|ANSI_X3.4-1986|ISO_646.irv:1991|ASCII|ISO646-US|us|IBM367|cp367"
-			"\0csASCII|iso_646.irv:1983|ascii7|646|windows-20127|ibm-367", 0x7F);
+			"\0csASCII|iso_646.irv:1983|ascii7|646|windows-20127|ibm-367", 0x7f);
 	BasicLatinEncoderFactory ISO_8859_1("ISO-8859-1", fundamental::ISO_8859_1, "Western (ISO 8859-1)",
-			"iso-ir-100|ISO_8859-1|latin1|l1|IBM819|CP819|csISOLatin1" "\0ibm-819|8859_1|819", 0xFF);
+			"iso-ir-100|ISO_8859-1|latin1|l1|IBM819|CP819|csISOLatin1" "\0ibm-819|8859_1|819", 0xff);
 
 	struct Installer {
 		Installer() /*throw()*/ {
@@ -656,7 +656,7 @@ namespace {
 EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 		const string& displayName /* = "" */,
 		size_t maximumNativeBytes /* = 1 */, size_t maximumUCSLength /* = 1 */,
-		const string& aliases /* = "" */, byte substitutionCharacter /* = 0x1A */)
+		const string& aliases /* = "" */, byte substitutionCharacter /* = 0x1a */)
 		: name_(name), displayName_(displayName.empty() ? name : displayName), aliases_(aliases),
 		maximumNativeBytes_(maximumNativeBytes), maximumUCSLength_(maximumUCSLength),
 		mib_(mib), substitutionCharacter_(substitutionCharacter) {
@@ -735,7 +735,7 @@ sbcs::BidirectionalMap::~BidirectionalMap() /*throw()*/ {
 void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
 	fill_n(unicodeToByte_, MANAH_COUNTOF(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
-	for(int i = 0x00; i < 0xFF; ++i) {
+	for(int i = 0x00; i < 0xff; ++i) {
 		const Char ucs = wireAt(byteToUnicode_, static_cast<byte>(i));
 		byte*& p = unicodeToByte_[ucs >> 8];
 		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {

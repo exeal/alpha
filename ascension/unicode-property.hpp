@@ -452,7 +452,7 @@ template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE
 		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
 		|| is<NONCHARACTER_CODE_POINT>(cp))
 		&& !is<WHITE_SPACE>(cp)
-		&& (cp < 0xFFF9 || cp > 0xFFFB);}
+		&& (cp < 0xfff9u || cp > 0xfffbu);}
 
 /// Specialization to implement Lowercase property.
 template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
@@ -534,14 +534,14 @@ inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const Cha
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint c) /*throw()*/ {
-	if(c >= 0x1100 && c <= 0x1159 || c == 0x115F)
+	if(c >= 0x1100u && c <= 0x1159u || c == 0x115fu)
 		return LEADING_JAMO;
-	else if(c >= 0x1160 && c <= 0x11A2)
+	else if(c >= 0x1160u && c <= 0x11a2u)
 		return VOWEL_JAMO;
-	else if(c >= 0x11A8 && c <= 0x11F9)
+	else if(c >= 0x11a8u && c <= 0x11f9u)
 		return TRAILING_JAMO;
-	else if(c >= 0xAC00 && c <= 0xD7A3)
-		return ((c - 0xAC00) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
+	else if(c >= 0xac00u && c <= 0xd7a3u)
+		return ((c - 0xac00u) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
 	else
 		return NOT_APPLICABLE;
 }

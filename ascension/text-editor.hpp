@@ -337,9 +337,9 @@ namespace ascension {
 				static const CharacterClass charClasses_[];
 				static const char checkMap_[];
 				static CharacterClass getCharacterClass(CodePoint cp) /*throw()*/ {
-					if(cp < 0x0020 || cp == 0x007F)			return CTRL;
-					else if(cp >= 0x0E00 && cp < 0x0E60)	return charClasses_[cp - 0x0E00];
-					else if(cp >= 0x0E60 && cp < 0x0E80)	return CTRL;
+					if(cp < 0x0020u || cp == 0x007fu)		return CTRL;
+					else if(cp >= 0x0e00u && cp < 0x0e60u)	return charClasses_[cp - 0x0e00u];
+					else if(cp >= 0x0e60u && cp < 0x0e80u)	return CTRL;
 					else									return NON;
 				}
 				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) /*throw()*/ {

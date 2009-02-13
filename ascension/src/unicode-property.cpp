@@ -98,7 +98,7 @@ using namespace std;
  */
 
 /// Indicates the iterator is the last.
-const CodePoint CharacterIterator::DONE = 0xFFFFFFFFUL;
+const CodePoint CharacterIterator::DONE = 0xfffffffful;
 
 
 // StringCharacterIterator //////////////////////////////////////////////////
@@ -196,17 +196,17 @@ void StringCharacterIterator::doPrevious() {
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
 	bool isNU(CodePoint cp, int gc) /*throw()*/ {
-		return (gc == GeneralCategory::DECIMAL_NUMBER && cp < 0xFF00 || cp > 0xFFEF)
-			|| cp == 0x066B		// Arabic Decimal Separator
-			|| cp == 0x066C;	// Arabic Thousands Separator
+		return (gc == GeneralCategory::DECIMAL_NUMBER && cp < 0xff00 || cp > 0xffef)
+			|| cp == 0x066b		// Arabic Decimal Separator
+			|| cp == 0x066c;	// Arabic Thousands Separator
 	}
 	const CodePoint QU[] = {
 		0x0022,	// Quotation Mark
 		0x0027,	// Apostrophe
-		0x275B,	// Heavy Single Turned Comma Quotation Mark Ornament
-		0x275C,	// Heavy Single Comma Quotation Mark Ornament
-		0x275D,	// Heavy Double Turned Comma Quotation Mark Ornament
-		0x275E	// Heavy Double Comma Quotation Mark Ornament
+		0x275b,	// Heavy Single Turned Comma Quotation Mark Ornament
+		0x275c,	// Heavy Single Comma Quotation Mark Ornament
+		0x275d,	// Heavy Double Turned Comma Quotation Mark Ornament
+		0x275e	// Heavy Double Comma Quotation Mark Ornament
 	};
 	/// Returns true if the specified character is Line_Break=QU.
 	bool isQU(CodePoint cp, int gc) /*throw()*/ {
@@ -417,32 +417,32 @@ int WordBreak::of(CodePoint cp,
 		0x3033,	// Vertical Kana Repeat Mark Upper Half
 		0x3034,	// Vertical Kana Repeat With Voiced Sound Mark Upper Half
 		0x3035,	// Vertical Kana Repeat Mark Lower Half
-		0x309B,	// Katakana-Hiragana Voiced Sound Mark
-		0x309C,	// Katakana-Hiragana Semi-Voiced Sound Mark
-		0x30A0,	// Katakana-Hiragana Double Hyphen
-		0x30FC,	// Katakana-Hiragana Prolonged Sound Mark
-		0xFF70,	// Halfwidth Katakana-Hiragana Prolonged Sound Mark
-		0xFF9E,	// Halfwidth Katakana Voiced Sound Mark
-		0xFF9F	// Halfwidth Katakana Semi-Voiced Sound Mark
+		0x309b,	// Katakana-Hiragana Voiced Sound Mark
+		0x309c,	// Katakana-Hiragana Semi-Voiced Sound Mark
+		0x30a0,	// Katakana-Hiragana Double Hyphen
+		0x30fc,	// Katakana-Hiragana Prolonged Sound Mark
+		0xff70,	// Halfwidth Katakana-Hiragana Prolonged Sound Mark
+		0xff9e,	// Halfwidth Katakana Voiced Sound Mark
+		0xff9f	// Halfwidth Katakana Semi-Voiced Sound Mark
 	};
 	static const CodePoint MID_LETTERS[] = {
 		0x0027,	// Apostrophe
-		0x00B7,	// Middle Dot
-		0x05F4,	// Hebrew Punctuation Gershayim
+		0x00b7,	// Middle Dot
+		0x05f4,	// Hebrew Punctuation Gershayim
 		0x2019,	// Right Single Quotation Mark
 		0x2027	// Hyphenation Point
 	};
 	static const CodePoint MID_NUMS[] = {
-		0x002C,	// Comma
-		0x002E,	// Full Stop
-		0x003B,	// Semicolon
-		0x037E,	// Greek Question Mark
+		0x002c,	// Comma
+		0x002e,	// Full Stop
+		0x003b,	// Semicolon
+		0x037e,	// Greek Question Mark
 		0x0589,	// Armenian Full Stop
-		0x060D,	// Arabic Date Separator
+		0x060d,	// Arabic Date Separator
 		0x2044,	// Fraction Slash
-		0xFE10,	// Presentation Form For Vertical Comma
-		0xFE13,	// Presentation Form For Vertical Colon
-		0xFE14	// Presentation Form For Vertical Semicolon
+		0xfe10,	// Presentation Form For Vertical Comma
+		0xfe13,	// Presentation Form For Vertical Colon
+		0xfe14	// Presentation Form For Vertical Semicolon
 	};
 	static bool localeInitialized = false;
 	static auto_ptr<locale> japanese, swedish;
@@ -468,11 +468,11 @@ int WordBreak::of(CodePoint cp,
 	else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
 		return GraphemeClusterBreak::EXTEND;
 	else if((syntax.isIdentifierStartCharacter(cp)
-			|| cp == 0x00A0		// No-Break Space
-			|| cp == 0x05F3))	// Hebrew Punctuation Geresh
+			|| cp == 0x00a0		// No-Break Space
+			|| cp == 0x05f3))	// Hebrew Punctuation Geresh
 		return A_LETTER;
 	else if(binary_search(MID_LETTERS, MANAH_ENDOF(MID_LETTERS), cp)
-			|| (cp == 0x003A && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
+			|| (cp == 0x003a && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
 		return MID_LETTER;
 	else if(binary_search(MID_NUMS, MANAH_ENDOF(MID_NUMS), cp))
 		return MID_NUM;
@@ -504,17 +504,17 @@ int SentenceBreak::of(CodePoint cp) /*throw()*/ {
 	const int gc = GeneralCategory::of(cp);
 	if(gc == GeneralCategory::FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
 		return FORMAT;
-	else if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp) && cp != 0x00A0)
+	else if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp) && cp != 0x00a0)
 		return SP;
 	else if(BinaryProperty::is<BinaryProperty::LOWERCASE>(cp))
 		return LOWER;
 	else if(gc == GeneralCategory::TITLECASE_LETTER || BinaryProperty::is<BinaryProperty::UPPERCASE>(cp))
 		return UPPER;
-	else if(BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp) || cp == 0x00A0 || cp == 0x05F3)
+	else if(BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp) || cp == 0x00a0 || cp == 0x05f3)
 		return O_LETTER;
 	else if(isNU(cp, gc))
 		return NUMERIC;
-	else if(cp == 0x002E)
+	else if(cp == 0x002e)
 		return A_TERM;
 	else if(BinaryProperty::is<BinaryProperty::STERM>(cp))
 		return S_TERM;

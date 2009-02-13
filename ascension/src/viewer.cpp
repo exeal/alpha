@@ -1797,7 +1797,7 @@ void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool de
 	if(newStrategy != 0)
 		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(true, true), true);	// TODO: the two parameters don't have rationales.
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(), true);	// TODO: the two parameters don't have rationales.
 	mouseInputStrategy_->install(*this);
 }
 

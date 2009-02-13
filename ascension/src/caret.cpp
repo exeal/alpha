@@ -1420,7 +1420,7 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 	Document& doc = *document();
 	if(doc.isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(blockControls && cp <= 0xFF && cp != 0x09 && cp != 0x1E && cp != 0x1F && toBoolean(iscntrl(static_cast<int>(cp))))
+	else if(blockControls && cp <= 0xff && cp != 0x09 && cp != 0x1e && cp != 0x1f && toBoolean(iscntrl(static_cast<int>(cp))))
 		return false;
 
 	// check the input sequence

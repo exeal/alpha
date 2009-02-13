@@ -57,39 +57,39 @@ namespace ascension {
 			 * @param cp the code point
 			 * @return true if @a cp is supplemental
 			 */
-			inline bool isSupplemental(CodePoint cp) /*throw()*/ {return (cp & 0xFFFF0000U) != 0;}
+			inline bool isSupplemental(CodePoint cp) /*throw()*/ {return (cp & 0xffff0000ul) != 0;}
 			/**
 			 * Returns if the specified code unit is high (leading)-surrogate.
 			 * @param cp the code point
 			 * @return true if @a cp is high-surrogate
 			 */
-			inline bool isHighSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xFFFFFC00U) == 0xD800U;}
+			inline bool isHighSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffffc00ul) == 0xd800u;}
 			/**
 			 * Returns if the specified code unit is low (trailing)-surrogate.
 			 * @param cp the code point
 			 * @return true if @a cp is low-surrogate
 			 */
-			inline bool isLowSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xFFFFFC00U) == 0xDC00U;}
+			inline bool isLowSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffffc00ul) == 0xdc00u;}
 			/**
 			 * Returns if the specified code unit is surrogate.
 			 * @param cp the code point
 			 * @return true if @a cp is surrogate
 			 */
-			inline bool isSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xFFFFF800U) == 0xD800U;}
+			inline bool isSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffff800ul) == 0xd800u;}
 			/**
 			 * Returns high (leading)-surrogate for the specified code point.
 			 * @note If @a cp is in BMP, the behavior is undefined.
 			 * @param cp the code point
 			 * @return the high-surrogate code unit for @a cp
 			 */
-			inline Char highSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>((cp >> 10) & 0xFFFF) + 0xD7C0U;}
+			inline Char highSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>((cp >> 10) & 0xffffu) + 0xd7c0u;}
 			/**
 			 * Returns low (trailing)-surrogate for the specified code point.
 			 * @note If @a cp is in BMP, the behavior is undefined.
 			 * @param cp the code point
 			 * @return the low-surrogate code unit for @a cp
 			 */
-			inline Char lowSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>(cp & 0x03FFU) | 0xDC00U;}
+			inline Char lowSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>(cp & 0x03ffu) | 0xdc00u;}
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
 			 * @param high the high-surrogate
@@ -97,7 +97,7 @@ namespace ascension {
 			 * @return the code point or the value of @a high if the pair is not valid
 			 */
 			inline CodePoint decode(Char high, Char low) /*throw()*/ {
-				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000U + (high - 0xD800U) * 0x0400U + low - 0xDC00U : high;}
+				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u : high;}
 			/**
 			 * Converts the first surrogate pair in the given character sequence to the corresponding code point.
 			 * @param first the start of the UTF-16 character sequence
@@ -127,10 +127,10 @@ namespace ascension {
 			 */
 			template<typename OutputIterator>
 			inline length_t encode(CodePoint cp, OutputIterator dest) {
-				if(cp < 0x00010000U) {
-					*dest = static_cast<Char>(cp & 0xFFFFU);
+				if(cp < 0x00010000ul) {
+					*dest = static_cast<Char>(cp & 0xffffu);
 					return !isSurrogate(cp) ? 1 : 0;
-				} else if(cp <= 0x0010FFFFU) {
+				} else if(cp <= 0x0010fffful) {
 					*dest = highSurrogate(cp);
 					*++dest = lowSurrogate(cp);
 					return 2;
@@ -179,7 +179,7 @@ namespace ascension {
 		} // namespace surrogates
 
 		/// Returns true if the specified code point is in Unicode codespace (0..10FFFF).
-		inline bool isValidCodePoint(CodePoint cp) /*throw()*/ {return cp <= 0x10FFFFU;}
+		inline bool isValidCodePoint(CodePoint cp) /*throw()*/ {return cp <= 0x10fffful;}
 
 		/// Returns true if the specified code point is Unicode scalar value.
 		inline bool isScalarValue(CodePoint cp) /*throw()*/ {return isValidCodePoint(cp) && !surrogates::isSurrogate(cp);}
@@ -301,7 +301,7 @@ namespace ascension {
 				++const_cast<UTF16To32IteratorBase*>(this)->p_;
 				const CodePoint next = getConcrete().hasNext() ? *p_ : INVALID_CODE_POINT;
 				--const_cast<UTF16To32IteratorBase*>(this)->p_;
-				return (next != INVALID_CODE_POINT) ? surrogates::decode(*p_, static_cast<Char>(next & 0xFFFF)) : *p_;}
+				return (next != INVALID_CODE_POINT) ? surrogates::decode(*p_, static_cast<Char>(next & 0xffffu)) : *p_;}
 			/// Dereference operator.
 			CodePoint operator->() const {return operator*();}
 			/// Pre-fix increment operator.
@@ -433,16 +433,16 @@ namespace ascension {
 			/// Assignment operator.
 			UTF32To16Iterator& operator=(const UTF32To16Iterator& rhs) {p_ = rhs.p_; high_ = rhs.high_;}
 			/// Dereference operator.
-			Char operator*() const {if(*p_ < 0x10000U) return static_cast<Char>(*p_ & 0xFFFFU);
+			Char operator*() const {if(*p_ < 0x10000ul) return static_cast<Char>(*p_ & 0xffffu);
 				else {Char text[2]; surrogates::encode(*p_, text); return text[high_ ? 0 : 1];}}
 			/// Dereference operator.
 			Char operator->() const {return operator*();}
 			/// Pre-fix increment operator.
-			UTF32To16Iterator& operator++() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000U) ++p_; else high_ = false; return *this;}
+			UTF32To16Iterator& operator++() {if(!high_) {high_ = true; ++p_;} else if(*p_ < 0x10000ul) ++p_; else high_ = false; return *this;}
 			/// Post-fix increment operator.
 			const UTF32To16Iterator operator++(int) {UTF32To16Iterator temp(*this); ++*this; return temp;}
 		  	/// Pre-fix decrement operator.
-			UTF32To16Iterator& operator--() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000U;} return *this;}
+			UTF32To16Iterator& operator--() {if(!high_) high_ = true; else {--p_; high_ = *p_ < 0x10000ul;} return *this;}
 			/// Post-fix decrement operator.
 			const UTF32To16Iterator operator--(int) {UTF32To16Iterator temp(*this); --*this; return temp;}
 			/// Equality operator.

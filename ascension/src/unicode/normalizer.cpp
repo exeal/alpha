@@ -84,7 +84,7 @@ int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2
 inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) /*throw()*/ {
 	if(!excludeTurkishI || c == (*dest = foldTurkishI(c)))
 		*dest = foldCommon(c);
-	if(*dest != c || c >= 0x010000)
+	if(*dest != c || c >= 0x010000ul)
 		return 1;
 	else {
 		const CodePoint* const p = lower_bound(FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
@@ -150,7 +150,7 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 namespace {
 	// Based on 3.12 Combining Jamo Behavior and UAX #15 X16 Hangul of Unicode 5.0.
 	const Char
-		S_BASE = 0xAC00, L_BASE = 0x1100, V_BASE = 0x1161, T_BASE = 0x11A7,
+		S_BASE = 0xac00, L_BASE = 0x1100, V_BASE = 0x1161, T_BASE = 0x11a7,
 		L_COUNT = 19, V_COUNT = 21, T_COUNT = 28, N_COUNT = V_COUNT * T_COUNT, S_COUNT = L_COUNT * N_COUNT;
 
 	/**
@@ -258,13 +258,13 @@ namespace {
 		const CodePoint* src;
 		for(UTF16To32IteratorUnsafe<Char*> i(destination); i.tell() < last; ) {
 			current = *i;
-			if(current < 0x010000 && (0 != (len = decomposeHangul(static_cast<Char>(current & 0xFFFF), decomposedHangul)))) {
+			if(current < 0x010000ul && (0 != (len = decomposeHangul(static_cast<Char>(current & 0xffffu), decomposedHangul)))) {
 				splice(i.tell(), last, 1, decomposedHangul, len);
 				continue;
 			}
 			src = lower_bound(CANONICAL_MAPPING_SOURCE, MANAH_ENDOF(CANONICAL_MAPPING_SOURCE), current);
 			if(*src == current) {
-				splice(i.tell(), last, (current < 0x010000) ? 1 : 2,
+				splice(i.tell(), last, (current < 0x010000ul) ? 1 : 2,
 					CANONICAL_MAPPING_DESTINATION[src - CANONICAL_MAPPING_SOURCE],
 					wcslen(CANONICAL_MAPPING_DESTINATION[src - CANONICAL_MAPPING_SOURCE]));
 				continue;
@@ -273,7 +273,7 @@ namespace {
 			else if(compatibility) {
 				src = lower_bound(COMPATIBILITY_MAPPING_SOURCE, MANAH_ENDOF(COMPATIBILITY_MAPPING_SOURCE), current);
 				if(*src == current) {
-					splice(i.tell(), last, (current < 0x010000) ? 1 : 2,
+					splice(i.tell(), last, (current < 0x010000ul) ? 1 : 2,
 						COMPATIBILITY_MAPPING_DESTINATION[src - COMPATIBILITY_MAPPING_SOURCE],
 						wcslen(COMPATIBILITY_MAPPING_DESTINATION[src - COMPATIBILITY_MAPPING_SOURCE]));
 					continue;
@@ -509,8 +509,8 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	Char surrogate[2];
 	for(Normalizer n(text, form); n.hasNext(); n.next()) {
 		c = n.current();
-		if(c < 0x010000)
-			buffer.sputc(static_cast<Char>(c & 0xFFFF));
+		if(c < 0x010000ul)
+			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {
 			surrogates::encode(c, surrogate);
 			buffer.sputn(surrogate, 2);
