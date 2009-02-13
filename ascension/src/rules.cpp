@@ -296,10 +296,10 @@ namespace {
 	// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
 	inline const Char* handlePrivate(const Char* first, const Char* last) {
 		if(first < last) {
-			if(inRange<Char>(*first, 0xE000, 0xF8FF))
+			if(inRange<Char>(*first, 0xe000, 0xf8ff))
 				return ++first;
 			const CodePoint c = surrogates::decodeFirst(first, last);
-			if(inRange<CodePoint>(c, 0xF0000U, 0xFFFFDU) || inRange<CodePoint>(c, 0x100000U, 0x10FFFDU))
+			if(inRange<CodePoint>(c, 0xf0000u, 0xffffdu) || inRange<CodePoint>(c, 0x100000u, 0x10fffdu))
 				return first += 2;
 		}
 		return 0;
@@ -313,11 +313,11 @@ namespace {
 	//         / %xD0000-DFFFD / %xE1000-EFFFD
 	inline const Char* handleUcschar(const Char* first, const Char* last) {
 		if(first < last) {
-			if(inRange<Char>(*first, 0x00A0, 0xD7FF) || inRange<Char>(*first, 0xF900, 0xFDCF) || inRange<Char>(*first, 0xFDF0, 0xFFEF))
+			if(inRange<Char>(*first, 0x00a0, 0xd7ff) || inRange<Char>(*first, 0xf900, 0xfdcf) || inRange<Char>(*first, 0xfdf0, 0xffef))
 				return ++first;
 			const CodePoint c = surrogates::decodeFirst(first, last);
-			if(c >= 0x10000 && c < 0xF0000 && (c & 0xFFFF) >= 0x0000 && (c & 0xFFFF) <= 0xFFFD) {
-				if((c & 0xF0000) != 0xE || (c & 0xFFFF) >= 0x1000)
+			if(c >= 0x10000 && c < 0xf0000 && (c & 0xffff) >= 0x0000 && (c & 0xffff) <= 0xfffd) {
+				if((c & 0xf0000) != 0xe || (c & 0xffff) >= 0x1000)
 					return first += 2;
 			}
 		}

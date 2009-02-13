@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -44,9 +44,9 @@ namespace ascension {
 
 		// special content types
 		const ContentType
-			DEFAULT_CONTENT_TYPE = 0UL,					///< Default content type.
-			PARENT_CONTENT_TYPE = 0xFFFFFFFFUL,			///< Type of the parent (means "transition source") content.
-			UNDETERMINED_CONTENT_TYPE = 0xFFFFFFFEUL;	///< Type of Undetermined (not calculated) content.
+			DEFAULT_CONTENT_TYPE = 0ul,					///< Default content type.
+			PARENT_CONTENT_TYPE = 0xfffffffful,			///< Type of the parent (means "transition source") content.
+			UNDETERMINED_CONTENT_TYPE = 0xfffffffeul;	///< Type of Undetermined (not calculated) content.
 
 		/**
 		 * Value represent a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are

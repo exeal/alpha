@@ -45,7 +45,7 @@ namespace {
 	public:
 		UHC() ASC_NOFAIL : EncoderFactoryBase("UHC", standard::UHC, "Korean (UHC)", 2, 1,
 			"KS_C_5601-1987|iso-ir-149|KS_C_5601-1989|KSC_5601|korean|csKSC56011987"
-			"\0ibm-1363|5601|cp1363|ksc|windows-949|ibm-1363_VSUB_VPUA|ms949|ibm-1363_P11B-1998|windows-949-2000", 0x3F) {}
+			"\0ibm-1363|5601|cp1363|ksc|windows-949|ibm-1363_VSUB_VPUA|ms949|ibm-1363_P11B-1998|windows-949-2000", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UHC>(*this));}
 	} uhc;
@@ -153,8 +153,8 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doFromUnicode(
 			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
 				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
 					const byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
-					if(lead - 0xA1U < 0x5E && trail - 0xA1 < 0x5E) {
-//					if(lead >= 0xA1 && lead <= 0xFE && trail >= 0xA1 && trail <= 0xFE) {
+					if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
+//					if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
 						if(to + 1 >= toEnd)
 							break;	// the destnation buffer is insufficient
 						*(to++) = lead;
@@ -187,8 +187,8 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 			fromNext = from;
 			return flags().has(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
-			if(from[0] - 0xA1U > 0x5DU || from[1] - 0xA1U > 0x5DU) {
-//			if(!(from[0] >= 0xA1 && from[0] <= 0xFE) || !(from[1] >= 0xA1 && from[1] <= 0xFE)) {
+			if(from[0] - 0xa1u > 0x5du || from[1] - 0xa1u > 0x5du) {
+//			if(!(from[0] >= 0xa1 && from[0] <= 0xfe) || !(from[1] >= 0xa1 && from[1] <= 0xfe)) {
 				toNext = to;
 				fromNext = from;
 				return MALFORMED_INPUT;
@@ -232,7 +232,7 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
 			fromNext = from;
 			return INSUFFICIENT_BUFFER;
 		}
-		memcpy(to, "\x1B$)C", 4);
+		memcpy(to, "\x1b$)C", 4);
 		++encodingState_;
 		to += 4;
 	}
@@ -257,8 +257,8 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
 			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
 				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
 					const byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
-					if(lead - 0xA1U < 0x5E && trail - 0xA1 < 0x5E) {
-//					if(lead >= 0xA1 && lead <= 0xFE && trail >= 0xA1 && trail <= 0xFE) {
+					if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
+//					if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
 						if(to + 1 >= toEnd)
 							break;	// the destnation buffer is insufficient
 						*(to++) = mask7Bit(lead);
@@ -314,8 +314,8 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
 			fromNext = from;
 			return flags().has(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
-			if(from[0] - 0x21U > 0x5DU || from[1] - 0x21U > 0x5DU) {
-//			if(!(from[0] >= 0x21 && from[0] <= 0x7E) || !(from[1] >= 0x21 && from[1] <= 0x7E)) {
+			if(from[0] - 0x21u > 0x5du || from[1] - 0x21u > 0x5du) {
+//			if(!(from[0] >= 0x21 && from[0] <= 0x7e) || !(from[1] >= 0x21 && from[1] <= 0x7e)) {
 				toNext = to;
 				fromNext = from;
 				return MALFORMED_INPUT;

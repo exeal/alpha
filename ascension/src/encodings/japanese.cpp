@@ -119,49 +119,49 @@ namespace {
 
 	class SHIFT_JIS : public EncoderFactoryBase {
 	public:
-		SHIFT_JIS() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3F) {}
+		SHIFT_JIS() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS>(*this));}
 	} shiftjis;
 
 	class SHIFT_JIS_2004 : public EncoderFactoryBase {
 	public:
-		SHIFT_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3F) {}
+		SHIFT_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS_2004>(*this));}
 	} shiftjis2004;
 
 	class EUC_JP : public EncoderFactoryBase {
 	public:
-		EUC_JP() ASC_NOFAIL : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3F) {}
+		EUC_JP() ASC_NOFAIL : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<EUC_JP>(*this));}
 	} eucjp;
 
 	class EUC_JIS_2004 : public EncoderFactoryBase {
 	public:
-		EUC_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3F) {}
+		EUC_JIS_2004() ASC_NOFAIL : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<EUC_JIS_2004>(*this));}
 	} eucjis2004;
 
 	class ISO_2022_JP : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3F) {}
+		ISO_2022_JP() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP>(*this));}
 	} iso2022jp;
 
 	class ISO_2022_JP_2 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3F) {}
+		ISO_2022_JP_2() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2>(*this));}
 	} iso2022jp2;
 
 	class ISO_2022_JP_2004 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004>(*this));}
 	} iso2022jp2004;
@@ -169,21 +169,21 @@ namespace {
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 	class ISO_2022_JP_1 : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_1() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_1() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_1>(*this));}
 	} iso2022jp1;
 
 	class ISO_2022_JP_2004_STRICT : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004_STRICT() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004_STRICT() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_STRICT>(*this));}
 	} iso2022jp2004strict;
 
 	class ISO_2022_JP_2004_COMPATIBLE : public EncoderFactoryBase {
 	public:
-		ISO_2022_JP_2004_COMPATIBLE() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3F) {}
+		ISO_2022_JP_2004_COMPATIBLE() ASC_NOFAIL : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3f) {}
 	private:
 		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
 	} iso2022jp2004compatible;
@@ -232,25 +232,25 @@ namespace {
 
 	// JIS X 0201 Roman
 	inline Char convertROMANtoUCS(byte c) ASC_NOFAIL {
-		if(c == 0x5C)					return 0x00A5;					// Yen Sign
-		else if(c == 0x7E)				return 0x203E;					// Overline
-		else if(c >= 0x20 && c <= 0x7D)	return c;						// 7-bit
+		if(c == 0x5c)					return 0x00a5u;					// Yen Sign
+		else if(c == 0x7e)				return 0x203eu;					// Overline
+		else if(c >= 0x20 && c <= 0x7d)	return c;						// 7-bit
 		else							return REPLACEMENT_CHARACTER;	// unmappable
 	}
 	inline byte convertUCStoROMAN(Char c) ASC_NOFAIL {
-		if(c >= 0x0020 && c <= 0x005B)		return mask8Bit(c);	// 7-bit
-		else if(c >= 0x005D && c <= 0x007D)	return mask8Bit(c);	// 7-bit
-		else if(c == 0x00A5)				return 0x5C;		// Yen Sign
-		else if(c == 0x203E)				return 0x7E;		// Overline
-		else								return 0x00;		// unmappable
+		if(c >= 0x0020u && c <= 0x005bu)		return mask8Bit(c);	// 7-bit
+		else if(c >= 0x005du && c <= 0x007du)	return mask8Bit(c);	// 7-bit
+		else if(c == 0x00a5u)					return 0x5c;		// Yen Sign
+		else if(c == 0x203eu)					return 0x7e;		// Overline
+		else									return 0x00;		// unmappable
 	}
 
 	// JIS X 0201 Kana
 	inline Char convertKANAtoUCS(byte c) ASC_NOFAIL {
-		return (c >= 0xA1 && c <= 0xDF) ? c + 0xFEC0 : REPLACEMENT_CHARACTER;
+		return (c >= 0xa1 && c <= 0xdf) ? c + 0xfec0u : REPLACEMENT_CHARACTER;
 	}
 	inline byte convertUCStoKANA(Char c) ASC_NOFAIL {
-		return (c >= 0xFF61 && c <= 0xFF9F) ? mask8Bit(c - 0xFEC0) : 0x00;
+		return (c >= 0xff61u && c <= 0xff9fu) ? mask8Bit(c - 0xfec0u) : 0x00;
 	}
 
 	// JIS X 0208:1997
@@ -308,48 +308,48 @@ namespace {
 					return Encoder::COMPLETED;
 				}
 			} else {
-				if(first[1] == 0x309A) {	// <(kana), Combining Katakana-Hiragana Semi-Voiced Sound Mark>
+				if(first[1] == 0x309a) {	// <(kana), Combining Katakana-Hiragana Semi-Voiced Sound Mark>
 					switch(first[0]) {
-					case 0x304B: jis = 0x2477; break;	// ka -> bidakuon nga
-					case 0x304D: jis = 0x2478; break;	// ki -> bidakuon ngi
-					case 0x304F: jis = 0x2479; break;	// ku -> bidakuon ngu
-					case 0x3051: jis = 0x247A; break;	// ke -> bidakuon nge
-					case 0x3053: jis = 0x247B; break;	// ko -> bidakuon ngo
-					case 0x30AB: jis = 0x2577; break;	// ka -> bidakuon nga
-					case 0x30AD: jis = 0x2578; break;	// ki -> bidakuon ngi
-					case 0x30AF: jis = 0x2579; break;	// ku -> bidakuon ngu
-					case 0x30B1: jis = 0x257A; break;	// ke -> bidakuon nge
-					case 0x30B3: jis = 0x257B; break;	// ko -> bidakuon ngo
-					case 0x30BB: jis = 0x257C; break;	// se -> ainu ce
-					case 0x30C4: jis = 0x257D; break;	// tu -> ainu tu (tu)
-					case 0x30C8: jis = 0x257E; break;	// to -> ainu to (tu)
-					case 0x31F7: jis = 0x2678; break;	// small fu -> ainu p
+					case 0x304b: jis = 0x2477; break;	// ka -> bidakuon nga
+					case 0x304d: jis = 0x2478; break;	// ki -> bidakuon ngi
+					case 0x304f: jis = 0x2479; break;	// ku -> bidakuon ngu
+					case 0x3051: jis = 0x247a; break;	// ke -> bidakuon nge
+					case 0x3053: jis = 0x247b; break;	// ko -> bidakuon ngo
+					case 0x30ab: jis = 0x2577; break;	// ka -> bidakuon nga
+					case 0x30ad: jis = 0x2578; break;	// ki -> bidakuon ngi
+					case 0x30af: jis = 0x2579; break;	// ku -> bidakuon ngu
+					case 0x30b1: jis = 0x257a; break;	// ke -> bidakuon nge
+					case 0x30b3: jis = 0x257b; break;	// ko -> bidakuon ngo
+					case 0x30bb: jis = 0x257c; break;	// se -> ainu ce
+					case 0x30c4: jis = 0x257d; break;	// tu -> ainu tu (tu)
+					case 0x30c8: jis = 0x257e; break;	// to -> ainu to (tu)
+					case 0x31f7: jis = 0x2678; break;	// small fu -> ainu p
 					}
 				} else if(first[1] == 0x0300) {	// <X, Combining Grave Accent>
 					switch(first[0]) {
-					case 0x00E6: jis = 0x2B44; break;	// ae
-					case 0x0254: jis = 0x2B48; break;	// open o
-					case 0x0259: jis = 0x2B4C; break;	// schwa
-					case 0x025A: jis = 0x2B4E; break;	// schwa with hook
-					case 0x028C: jis = 0x2B4A; break;	// turned v
+					case 0x00e6: jis = 0x2b44; break;	// ae
+					case 0x0254: jis = 0x2b48; break;	// open o
+					case 0x0259: jis = 0x2b4c; break;	// schwa
+					case 0x025a: jis = 0x2b4e; break;	// schwa with hook
+					case 0x028c: jis = 0x2b4a; break;	// turned v
 					}
 				} else if(first[1] == 0x0301) {	// <X, Combining Acute Accent>
 					switch(first[0]) {
-					case 0x0254: jis = 0x2B49; break;	// open o
-					case 0x0259: jis = 0x2B4D; break;	// schwa
-					case 0x025A: jis = 0x2B4F; break;	// schwa with hook
-					case 0x028C: jis = 0x2B4B; break;	// turned v
+					case 0x0254: jis = 0x2b49; break;	// open o
+					case 0x0259: jis = 0x2b4d; break;	// schwa
+					case 0x025a: jis = 0x2b4f; break;	// schwa with hook
+					case 0x028c: jis = 0x2b4b; break;	// turned v
 					}
-				} else if(first[0] == 0x02E9) {
-					if(first[1] == 0x02E5)
-						jis = 0x2B65;	// <Extra-Low Tone Bar, Extra-High Tone Bar> -> rising symbol
-					else if(first[1] == ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02E5)
-						jis = 0x2B64;	// just dependent Extra-Low Tone Bar
-				} else if(first[0] == 0x02E5) {
-					if(first[1] == 0x02E9)
-						jis = 0x2B66;	// <Extra-High Tone Bar, Extra-Low Tone Bar> -> falling symbol
-					else if(first[1] == ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02E9)
-						jis = 0x2B60;	// just dependent Extra-High Tone Bar
+				} else if(first[0] == 0x02e9) {
+					if(first[1] == 0x02e5)
+						jis = 0x2b65;	// <Extra-Low Tone Bar, Extra-High Tone Bar> -> rising symbol
+					else if(first[1] == ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02e5)
+						jis = 0x2b64;	// just dependent Extra-Low Tone Bar
+				} else if(first[0] == 0x02e5) {
+					if(first[1] == 0x02e9)
+						jis = 0x2b66;	// <Extra-High Tone Bar, Extra-Low Tone Bar> -> falling symbol
+					else if(first[1] == ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02e9)
+						jis = 0x2b60;	// just dependent Extra-High Tone Bar
 				}
 				if(jis != 0) {
 					next = first + 2;
@@ -366,17 +366,17 @@ namespace {
 				return eob ? Encoder::MALFORMED_INPUT : Encoder::COMPLETED;
 			}
 			const CodePoint c = surrogates::decodeFirst(first, last);
-			if(c < 0x10000U) {
+			if(c < 0x10000ul) {
 				next = first;
 				return Encoder::MALFORMED_INPUT;
-			} else if(c >= 0x20000U && c < 0x30000U) {
+			} else if(c >= 0x20000ul && c < 0x30000ul) {
 				const ushort** wire;
-				if(0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000U) >> 8)])) {
-					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000U))))
+				if(0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000ul) >> 8)])) {
+					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000ul))))
 						plane2 = false;
 				}
-				if(jis == 0 && 0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000U) >> 8)])) {
-					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000U))))
+				if(jis == 0 && 0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000ul) >> 8)])) {
+					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000ul))))
 						plane2 = true;
 				}
 				if(jis != 0) {
@@ -637,8 +637,8 @@ namespace {
 				return Encoder::MALFORMED_INPUT;
 			}
 
-			if(*from <= 0x20 || (*from >= 0x80 && *from < 0xA0)) {	// C0 or C1
-				if(*from == 0x0A || *from == 0x0D) {
+			if(*from <= 0x20 || (*from >= 0x80 && *from < 0xa0)) {	// C0 or C1
+				if(*from == 0x0a || *from == 0x0d) {
 					state.g0 = EncodingState::ASCII;
 					state.g2 = EncodingState::UNDESIGNATED;
 				}
@@ -732,16 +732,16 @@ namespace {
 						return Encoder::UNMAPPABLE_CHARACTER;
 					}
 				}
-				if(ucs > 0xFFFFU) {
+				if(ucs > 0xffffu) {
 					if(to + 1 >= toEnd)
 						break;	// INSUFFICIENT_BUFFER
-					if(ucs > 0x0010FFFFU) {	// two UCS characters
+					if(ucs > 0x0010fffful) {	// two UCS characters
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
 					} else
 						surrogates::encode(ucs, to++);
 				} else {
-					if(to > beginning && ((to[-1] == L'\x02E9' && ucs == 0x02E5U) || (to[-1] == L'\x02E5' && ucs == 0x02E9U))) {
+					if(to > beginning && ((to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u))) {
 						if(to + 1 >= toEnd)
 							break;	// INSUFFICIENT_BUFFER
 						*(to++) = ZERO_WIDTH_NON_JOINER;
@@ -781,7 +781,7 @@ namespace {
 
 #define ASCENSION_HANDLE_UNMAPPABLE()										\
 	if(substitutionPolicy == Encoder::REPLACE_UNMAPPABLE_CHARACTER) {		\
-		jis = mbcs[0] = 0x1A;												\
+		jis = mbcs[0] = 0x1a;												\
 		mbcs[1] = 1;														\
 		charset = EncodingState::ASCII;										\
 	} else if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTER) {	\
@@ -873,49 +873,49 @@ namespace {
 	}
 
 			if(charset == EncodingState::ASCII) {	// ASCII
-				ASCENSION_DESIGNATE_TO_G0("\x1B(B", 3);
+				ASCENSION_DESIGNATE_TO_G0("\x1b(B", 3);
 				*to = mask8Bit(jis);
 			} else if(charset == EncodingState::JIS_X_0201_ROMAN) {	// JIS X 0201-Roman
-				ASCENSION_DESIGNATE_TO_G0("\x1B(J", 3);
+				ASCENSION_DESIGNATE_TO_G0("\x1b(J", 3);
 				*to = mask8Bit(jis);
 //			} else if(charset == EncodingState::JIS_X_0201_KANA) {	// JIS X 0201-Kana
-//				ASCENSION_DESIGNATE_TO_G0("\x1B(I", 3);
+//				ASCENSION_DESIGNATE_TO_G0("\x1b(I", 3);
 //				*to = mask8Bit(jis);
 			} else if(charset == EncodingState::JIS_X_0208) {	// JIS X 0208:1997 (:1990)
-				ASCENSION_DESIGNATE_TO_G0("\x1B$B", 3);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$B", 3);
 				*to = mask8Bit(jis >> 8);
 				*++to = mask8Bit(jis);
 			} else if(charset == EncodingState::JIS_X_0212) {	// JIS X 0212:1990
-				ASCENSION_DESIGNATE_TO_G0("\x1B$(D", 4);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$(D", 4);
 				*to = mask8Bit(jis >> 8);
 				*++to = mask8Bit(jis);
 			} else if(charset == EncodingState::JIS_X_0213_PLANE_1) {	// JIS X 0213:2004 plane-1 /* or :2000 plane-1 */
-				ASCENSION_DESIGNATE_TO_G0("\x1B$(Q" /*"\x1B$(O"*/, 4);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$(Q" /*"\x1b$(O"*/, 4);
 				*to = mask8Bit(jis >> 8);
 				*++to = mask8Bit(jis);
 			} else if(charset == EncodingState::JIS_X_0213_PLANE_2) {	// JIS X 0213:2004 (:2000) plane-2
-				ASCENSION_DESIGNATE_TO_G0("\x1B$(P", 4);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$(P", 4);
 				*to = mask8Bit(jis >> 8);
 				*++to = mask8Bit(jis);
 			} else if(charset == EncodingState::GB2312) {	// GB2312:1980
-				ASCENSION_DESIGNATE_TO_G0("\x1B$A", 3);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$A", 3);
 				*to = mask7Bit(mbcs[0]);
 				if(mbcs[1] != 0)
 					*++to = mask7Bit(mbcs[1]);
 			} else if(charset == EncodingState::KS_C_5601) {	// KSC5601:1987
-				ASCENSION_DESIGNATE_TO_G0("\x1B$(C", 4);
+				ASCENSION_DESIGNATE_TO_G0("\x1b$(C", 4);
 				*to = mask7Bit(mbcs[0]);
 				if(mbcs[1] != 0)
 					*++to = mask7Bit(mbcs[1]);
 			} else if(charset == EncodingState::ISO_8859_1) {	// ISO-8859-1
-				ASCENSION_DESIGNATE_TO_G2("\x1B.A", 3);
+				ASCENSION_DESIGNATE_TO_G2("\x1b.A", 3);
 				if(to + 3 >= toEnd)
 					break;	// INSUFFICIENT_BUFFER
 				*to = ESC;	// SS2
 				*++to = 'N';
 				*++to = mask8Bit(mbcs[0]);
 			} else if(charset == EncodingState::ISO_8859_7) {	// ISO-8859-7
-				ASCENSION_DESIGNATE_TO_G2("\x1B.F", 3);
+				ASCENSION_DESIGNATE_TO_G2("\x1b.F", 3);
 				if(to + 3 >= toEnd)
 					break;	// INSUFFICIENT_BUFFER
 				*to = ESC;	// SS2
@@ -926,7 +926,7 @@ namespace {
 
 		// restore G0 into ASCII and end (if sufficient buffer is)
 		if(from == fromEnd && state.g0 != EncodingState::ASCII && to + 3 <= toEnd) {
-			memcpy(to, "\x1B(B", 3);
+			memcpy(to, "\x1b(B", 3);
 			to += 3;
 			state.g0 = EncodingState::ASCII;
 		}
@@ -946,53 +946,53 @@ namespace {
 
 		assert(jk >= 1 && jk <= 94 && jt >= 1 && jt <= 94);
 		if(!plane2)	// plane 1
-//			dbcs[0] = (jk - 1) / 2 + ((jk <= 62) ? 0x81 : 0xC1);
+//			dbcs[0] = (jk - 1) / 2 + ((jk <= 62) ? 0x81 : 0xc1);
 			dbcs[0] = (jk + ((jk <= 62) ? 0x101 : 0x181)) / 2;
 		else	// plane 2
-			dbcs[0] = (jk >= 78) ? ((jk + 0x19B) / 2) : ((jk + 0x1DF) / 2 - jk / 8 * 3);
-		if((jk & 0x1) == 0)	dbcs[1] = jt + 0x9E;
-		else				dbcs[1] = jt + ((jt <= 63) ? 0x3F : 0x40);
+			dbcs[0] = (jk >= 78) ? ((jk + 0x19b) / 2) : ((jk + 0x1df) / 2 - jk / 8 * 3);
+		if((jk & 0x1) == 0)	dbcs[1] = jt + 0x9e;
+		else				dbcs[1] = jt + ((jt <= 63) ? 0x3f : 0x40);
 	}
 	inline ushort unshiftCodeX0208(const byte dbcs[]) {
 		assert(dbcs != 0);
 		byte jk, jt;
 
-		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9F)	// ku: 01..62
-			jk = (dbcs[0] - 0x81) * 2 + ((dbcs[1] > 0x9E) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0x81
+		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9f)	// ku: 01..62
+			jk = (dbcs[0] - 0x81) * 2 + ((dbcs[1] > 0x9e) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0x81
 		else	// ku: 63..94
-			jk = (dbcs[0] - 0xC1) * 2 + ((dbcs[1] > 0x9E) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0xC1
+			jk = (dbcs[0] - 0xc1) * 2 + ((dbcs[1] > 0x9e) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0xc1
 		if((jk & 0x1) == 0)
-			jt = dbcs[1] - 0x9E;	// < trailbyte = jt + 0x9E
-		else if(dbcs[1] <= 0x3F + 63)	// ten: 01..63
-			jt = dbcs[1] - 0x3F;	// < trailbyte = jt + 0x3F
+			jt = dbcs[1] - 0x9e;	// < trailbyte = jt + 0x9E
+		else if(dbcs[1] <= 0x3f + 63)	// ten: 01..63
+			jt = dbcs[1] - 0x3f;	// < trailbyte = jt + 0x3F
 		else	// ten: 64..94
 			jt = dbcs[1] - 0x40;	// < trailbyte = jt + 0x40
 		return ((jk << 8) | jt) + 0x2020;
 	}
 	inline ushort unshiftCodeX0213(const byte dbcs[], bool& plane2) {
 		byte jk, jt;
-		const bool kuIsEven = dbcs[1] > 0x9E;
+		const bool kuIsEven = dbcs[1] > 0x9e;
 
-		plane2 = dbcs[0] >= 0xF0;
-		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9F)
+		plane2 = dbcs[0] >= 0xf0;
+		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9f)
 			jk = dbcs[0] * 2 - 0x101 + (kuIsEven ? 1 : 0);
-		else if(dbcs[0] >= 0xE0 && dbcs[0] <= 0xEF)
+		else if(dbcs[0] >= 0xe0 && dbcs[0] <= 0xef)
 			jk = dbcs[0] * 2 - 0x181 + (kuIsEven ? 1 : 0);
-		else if((dbcs[0] == 0xF4 && kuIsEven) || (dbcs[0] >= 0xF5 && dbcs[0] <= 0xFC))
-			jk = dbcs[0] * 2 - 0x19B + (kuIsEven ? 1 : 0);
-		else if((dbcs[0] >= 0xF0 && dbcs[0] <= 0xF3) || (dbcs[0] == 0xF4 && !kuIsEven)) {
+		else if((dbcs[0] == 0xf4 && kuIsEven) || (dbcs[0] >= 0xf5 && dbcs[0] <= 0xfc))
+			jk = dbcs[0] * 2 - 0x19b + (kuIsEven ? 1 : 0);
+		else if((dbcs[0] >= 0xf0 && dbcs[0] <= 0xf3) || (dbcs[0] == 0xf4 && !kuIsEven)) {
 			switch(dbcs[0]) {
-			case 0xF0:	jk = kuIsEven ? 8 : 1; break;
-			case 0xF1:	jk = kuIsEven ? 4 : 3; break;
-			case 0xF2:	jk = kuIsEven ? 12 : 5; break;
-			case 0xF3:	jk = kuIsEven ? 14 : 13; break;
-			case 0xF4:	jk = 15; break;
+			case 0xf0:	jk = kuIsEven ? 8 : 1; break;
+			case 0xf1:	jk = kuIsEven ? 4 : 3; break;
+			case 0xf2:	jk = kuIsEven ? 12 : 5; break;
+			case 0xf3:	jk = kuIsEven ? 14 : 13; break;
+			case 0xf4:	jk = 15; break;
 			}
 		}
 		if((jk & 0x1) == 0)
-			jt = dbcs[1] - 0x9E;	// < trailbyte = jt + 0x9E
-		else if(dbcs[1] <= 0x3F + 63)	// ten: 01..63
-			jt = dbcs[1] - 0x3F;	// < trailbyte = jt + 0x3F
+			jt = dbcs[1] - 0x9e;	// < trailbyte = jt + 0x9E
+		else if(dbcs[1] <= 0x3f + 63)	// ten: 01..63
+			jt = dbcs[1] - 0x3f;	// < trailbyte = jt + 0x3F
 		else	// ten: 64..94
 			jt = dbcs[1] - 0x40;	// < trailbyte = jt + 0x40
 		return ((jk << 8) | jt) + 0x2020;
@@ -1039,14 +1039,14 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)	// ascii
 			*to = *from;
-		else if(*from >= 0xA1 && *from <= 0xDF)	// 1-byte kana
+		else if(*from >= 0xa1 && *from <= 0xdf)	// 1-byte kana
 			*to = convertKANAtoUCS(*from);
-		else if(*from == 0xA0) {
+		else if(*from == 0xa0) {
 			toNext = to;
 			fromNext = from;
 			return MALFORMED_INPUT;
 		} else {	// DBCS leading byte
-			if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xFC && from[1] != 0x7F) {
+			if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f) {
 				*to = convertX0208toUCS(unshiftCodeX0208(from));
 				if(*to == REPLACEMENT_CHARACTER) {
 					if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
@@ -1132,9 +1132,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)	// ASCII
 			*to = *from;
-		else if(*from >= 0xA1 && *from <= 0xDF)	// kana
+		else if(*from >= 0xa1 && *from <= 0xdf)	// kana
 			*to = convertKANAtoUCS(*from);
-		else if(*from == 0xA0) {	// illegal byte
+		else if(*from == 0xa0) {	// illegal byte
 			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
 				*to = properties().substitutionCharacter();
 			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
@@ -1145,7 +1145,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 				return UNMAPPABLE_CHARACTER;
 			}
 		} else {
-			if(from + 1 < fromEnd && (from[1] >= 0x40 && from[1] <= 0xFC && from[1] != 0x7F)) {	// double byte
+			if(from + 1 < fromEnd && (from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f)) {	// double byte
 				bool plane2;
 				const ushort jis = unshiftCodeX0213(from, plane2);
 				const CodePoint ucs = !plane2 ? convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
@@ -1159,16 +1159,16 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 						return UNMAPPABLE_CHARACTER;
 					}
 					continue;
-				} else if(ucs >= 0x010000U && to + 1 >= toEnd)
+				} else if(ucs >= 0x010000ul && to + 1 >= toEnd)
 					break;	// INSUFFICIENT_BUFFER
 
-				if(ucs > 0x0010FFFFU) {	// a character uses two code points
+				if(ucs > 0x0010fffful) {	// a character uses two code points
 					*to = maskUCS2(ucs >> 16);
 					*++to = maskUCS2(ucs);
-				} else if(ucs >= 0x00010000U)	// out of BMP
+				} else if(ucs >= 0x00010000ul)	// out of BMP
 					surrogates::encode(ucs, to++);
 				else {
-					if(to > beginning && (to[-1] == L'\x02E9' && ucs == 0x02E5UL) || (to[-1] == L'\x02E5' && ucs == 0x02E9UL)) {
+					if(to > beginning && (to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u)) {
 						if(to + 1 >= toEnd)
 							break;	// INSUFFICIENT_BUFFER
 						*(to++) = ZERO_WIDTH_NON_JOINER;
@@ -1372,12 +1372,12 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 				const ushort jis = ((from[1] << 8) | from[2]) - 0x8080;
 				const CodePoint ucs = convertX0213Plane2toUCS(jis);
 				if(ucs != REPLACEMENT_CHARACTER) {
-					if(ucs > 0x010000U && to + 1 >= toEnd)
+					if(ucs > 0x010000ul && to + 1 >= toEnd)
 						break;	// INSUFFICIENT_BUFFER
-					if(ucs > 0x0010FFFFU) {	// a character uses two code points
+					if(ucs > 0x0010fffful) {	// a character uses two code points
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs >> 0);
-					} else if(ucs >= 0x00010000U)	// out of BMP
+					} else if(ucs >= 0x00010000ul)	// out of BMP
 						surrogates::encode(ucs, to++);
 					else
 						*to = maskUCS2(ucs);
@@ -1386,15 +1386,15 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 				const ushort jis = ((*from << 8) | from[1]) - 0x8080;
 				const CodePoint ucs = convertX0213Plane1toUCS(jis);
 				if(ucs != REPLACEMENT_CHARACTER) {
-					if(ucs > 0x0010FFFFU) {	// a character uses two code points
+					if(ucs > 0x0010fffful) {	// a character uses two code points
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs >> 0);
-					} else if(ucs >= 0x00010000U)	// out of BMP
+					} else if(ucs >= 0x00010000ul)	// out of BMP
 						surrogates::encode(ucs, to++);
 					else {
 						if(to > beginning
-								&& ((to[-1] == L'\x02E9' && ucs == 0x02E5UL)
-								|| (to[-1] == L'\x02E5' && ucs == 0x02E9UL))) {
+								&& ((to[-1] == L'\x02e9' && ucs == 0x02e5u)
+								|| (to[-1] == L'\x02e5' && ucs == 0x02e9u))) {
 							if(to + 1 >= toEnd)
 								break;	// INSUFFICIENT_BUFFER
 							*(to++) = ZERO_WIDTH_NON_JOINER;
@@ -1479,12 +1479,12 @@ namespace {
 				break;
 			else if(*p < 0x80)	// ASCII is ok
 				continue;
-			else if(*p >= 0xA1 && *p <= 0xDF)	// JIS X 0201 kana
+			else if(*p >= 0xa1 && *p <= 0xdf)	// JIS X 0201 kana
 				foundKana = true;
 			else if(p < last - 1) {	// 2-byte character?
-				if(*p < 0x81 || *p > 0xFC || (*p > 0x9F && *p < 0xE0))
+				if(*p < 0x81 || *p > 0xfc || (*p > 0x9f && *p < 0xe0))
 					break;	// illegal lead byte
-				else if(p[1] < 0x40 || p[1] > 0xFC || p[1] == 0x7F)
+				else if(p[1] < 0x40 || p[1] > 0xfc || p[1] == 0x7f)
 					break;	// illegal trail byte
 
 				bool plane2;
@@ -1516,7 +1516,7 @@ namespace {
 			else if(*p < 0x80)	// ASCII is ok
 				continue;
 			else if(*p == SS2_8BIT) {	// SS2 introduces JIS X 0201 kana
-				if(p + 1 >= last || p[1] < 0xA0 || p[1] > 0xE0)
+				if(p + 1 >= last || p[1] < 0xa0 || p[1] > 0xe0)
 					break;
 				foundKana = true;
 				++p;

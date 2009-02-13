@@ -357,7 +357,7 @@ namespace {
 	class URIHyperlink : public IHyperlink {
 	public:
 		explicit URIHyperlink(const Range<length_t>& region, const String& uri) /*throw()*/ : IHyperlink(region), uri_(uri) {}
-		String description() const /*throw()*/ {return L"\x202A" + uri_ + L"\x202C\nCTRL + click to follow the link.";}
+		String description() const /*throw()*/ {return L"\x202a" + uri_ + L"\x202c\nCTRL + click to follow the link.";}
 		void invoke() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 			::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);

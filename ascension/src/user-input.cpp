@@ -430,20 +430,20 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 
 	static PopupMenu menu;
 	static const WCHAR* captions[] = {
-		L"&Undo",									L"\x5143\x306B\x623B\x3059(&U)",
-		L"&Redo",									L"\x3084\x308A\x76F4\x3057(&R)",
+		L"&Undo",									L"\x5143\x306b\x623b\x3059(&U)",
+		L"&Redo",									L"\x3084\x308a\x76f4\x3057(&R)",
 		0,											0,
-		L"Cu&t",									L"\x5207\x308A\x53D6\x308A(&T)",
-		L"&Copy",									L"\x30B3\x30D4\x30FC(&C)",
-		L"&Paste",									L"\x8CBC\x308A\x4ED8\x3051(&P)",
-		L"&Delete",									L"\x524A\x9664(&D)",
+		L"Cu&t",									L"\x5207\x308a\x53d6\x308a(&T)",
+		L"&Copy",									L"\x30b3\x30d4\x30fc(&C)",
+		L"&Paste",									L"\x8cbc\x308a\x4ed8\x3051(&P)",
+		L"&Delete",									L"\x524a\x9664(&D)",
 		0,											0,
-		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629E(&A)",
+		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629e(&A)",
 		0,											0,
-		L"&Right to left Reading order",			L"\x53F3\x304B\x3089\x5DE6\x306B\x8AAD\x3080(&R)",
-		L"&Show Unicode control characters",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x8868\x793A(&S)",
-		L"&Insert Unicode control character",		L"Unicode \x5236\x5FA1\x6587\x5B57\x306E\x633F\x5165(&I)",
-		L"Insert Unicode &white space character",	L"Unicode \x7A7A\x767D\x6587\x5B57\x306E\x633F\x5165(&W)",
+		L"&Right to left Reading order",			L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)",
+		L"&Show Unicode control characters",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)",
+		L"&Insert Unicode control character",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)",
+		L"Insert Unicode &white space character",	L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)",
 	};																	
 #define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
 
@@ -542,11 +542,11 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
 		HIMC imc = ::ImmGetContext(get());
-		WCHAR* openIme = japanese ? L"IME \x3092\x958B\x304F(&O)" : L"&Open IME";
-		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308B(&L)" : L"C&lose IME";
-		WCHAR* openSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x958B\x304F(&E)" : L"Op&en soft keyboard";
-		WCHAR* closeSftKbd = japanese ? L"\x30BD\x30D5\x30C8\x30AD\x30FC\x30DC\x30FC\x30C9\x3092\x9589\x3058\x308B(&F)" : L"Close so&ft keyboard";
-		WCHAR* reconvert = japanese ? L"\x518D\x5909\x63DB(&R)" : L"&Reconvert";
+		WCHAR* openIme = japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME";
+		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME";
+		WCHAR* openSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard";
+		WCHAR* closeSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x9589\x3058\x308b(&F)" : L"Close so&ft keyboard";
+		WCHAR* reconvert = japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert";
 
 		menu << Menu::SeparatorItem()
 			<< Menu::StringItem(ID_TOGGLEIMESTATUS, toBoolean(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
@@ -572,7 +572,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 #else
 			len,
 #endif // _MSC_VER < 1400
-			japanese ? L"\x202A%s\x202C \x3092\x958B\x304F" : L"Open \x202A%s\x202C", escapeAmpersands(doc.line(
+			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
 				caret().lineNumber()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
 	}
@@ -1180,9 +1180,9 @@ const UINT DefaultMouseInputStrategy::OLE_DRAGGING_TRACK_INTERVAL = 100;
  * @param enableOLEDragAndDrop set true to enable OLE Drag-and-Drop feature.
  * @param showDraggingImage set true to display OLE dragging image
  */
-DefaultMouseInputStrategy::DefaultMouseInputStrategy(bool enableOLEDragAndDrop,
-		bool showDraggingImage) : viewer_(0), state_(NONE), lastHoveredHyperlink_(0) {
-	if(dnd_.enabled = enableOLEDragAndDrop && showDraggingImage) {
+DefaultMouseInputStrategy::DefaultMouseInputStrategy(
+		OLEDragAndDropSupport oleDragAndDropSupportLevel) : viewer_(0), state_(NONE), lastHoveredHyperlink_(0) {
+	if((dnd_.supportLevel = oleDragAndDropSupportLevel) >= SUPPORT_OLE_DND_WITH_DRAG_IMAGE) {
 		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
 		if(dnd_.dragSourceHelper.get() != 0) {
 			dnd_.dropTargetHelper.ComPtr<IDropTargetHelper>::ComPtr(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
@@ -1206,7 +1206,7 @@ void DefaultMouseInputStrategy::captureChanged() {
 }
 
 namespace {
-	bool createSelectionImage(const TextViewer& viewer, SHDRAGIMAGE& image) {
+	bool createSelectionImage(const TextViewer& viewer, const POINT& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
 		using namespace win32::gdi;
 
 		DC dc(::CreateCompatibleDC(0));
@@ -1299,7 +1299,7 @@ namespace {
 		y = selectionBounds.top;
 		const LineLayout::Selection selection(viewer.caret());
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			renderer.renderLine(line, dc, -selectionBounds.left, y, selectionBounds, selectionBounds, &selection);
+			renderer.renderLine(line, dc, -selectionBounds.left, y, selectionBounds, selectionBounds, highlightSelection ? &selection : 0);
 			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
 		dc.selectObject(oldBitmap);
@@ -1319,7 +1319,7 @@ namespace {
 
 		// locate the hotspot of the image based on the cursor position
 		const RECT margins(viewer.textAreaMargins());
-		POINT hotspot(viewer.getCursorPosition());
+		POINT hotspot(cursorPosition);
 		hotspot.x -= margins.left - viewer.getScrollPosition(SB_HORZ) * renderer.averageCharacterWidth() + selectionBounds.left;
 		hotspot.y -= viewer.clientXYForCharacter(Position(selectedRegion.beginning().line, 0), true).y;
 
@@ -1344,10 +1344,10 @@ void DefaultMouseInputStrategy::doDragAndDrop() {
 		return;
 	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
 
-	// setup dragging ghost ixyzzymage
+	// setup drag-image
 	if(dnd_.dragSourceHelper.get() != 0) {
 		SHDRAGIMAGE image;
-		if(createSelectionImage(*viewer_, image)) {
+		if(createSelectionImage(*viewer_, dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE, image)) {
 			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
 				::DeleteObject(image.hbmpDragImage);
 		}
@@ -1394,7 +1394,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	}
 #endif // _DEBUG
 
-	if(!dnd_.enabled || viewer_->document().isReadOnly()
+	if(dnd_.supportLevel == DONT_SUPPORT_OLE_DND || viewer_->document().isReadOnly()
 			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
 		// TODO: support alignments other than ALIGN_LEFT.
 		return S_OK;
@@ -1433,7 +1433,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
 	::SetFocus(0);
 	endTimer();
-	if(dnd_.enabled) {
+	if(dnd_.supportLevel >= SUPPORT_OLE_DND) {
 		if(state_ == OLE_DND_TARGET)
 			state_ = NONE;
 		if(dnd_.dropTargetHelper.get() != 0)
@@ -1531,7 +1531,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 	::ReleaseStgMedium(&stg);
 */
 	Document& document = viewer_->document();
-	if(!dnd_.enabled || document.isReadOnly() || !viewer_->allowsMouseInput())
+	if(dnd_.supportLevel == DONT_SUPPORT_OLE_DND || document.isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
 	Caret& ca = viewer_->caret();
 	POINT caretPoint = {pt.x, pt.y};
@@ -1740,7 +1740,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 	}
 
 	// approach OLE drag-and-drop
-	else if(dnd_.enabled && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
 		state_ = APPROACHING_OLE_DND;
 		dragApproachedPosition_ = position;
 		if(caret.isSelectionRectangle())
@@ -1800,7 +1800,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 /// Handles @c WM_LBUTTONUP.
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, uint) {
 	// cancel if OLE drag-and-drop approaching
-	if(dnd_.enabled
+	if(dnd_.supportLevel >= SUPPORT_OLE_DND
 			&& (state_ == APPROACHING_OLE_DND
 			|| state_ == OLE_DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_OLE_DND?
 		state_ = NONE;
@@ -1936,7 +1936,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 /// @see IMouseInputStrategy#mouseMoved
 void DefaultMouseInputStrategy::mouseMoved(const POINT& position, uint) {
 	if(state_ == APPROACHING_AUTO_SCROLL
-			|| (dnd_.enabled && state_ == APPROACHING_OLE_DND)) {	// OLE dragging starts?
+			|| (dnd_.supportLevel >= SUPPORT_OLE_DND && state_ == APPROACHING_OLE_DND)) {	// OLE dragging starts?
 		if(state_ == APPROACHING_OLE_DND && viewer_->caret().isSelectionEmpty())
 			state_ = NONE;	// approaching... => cancel
 		else {
@@ -1993,7 +1993,7 @@ bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
 		cursorName = IDC_ARROW;
 	// on a draggable text selection?
-	else if(dnd_.enabled && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?

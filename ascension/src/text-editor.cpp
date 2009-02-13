@@ -361,7 +361,7 @@ ulong CharacterToCodePointConversionCommand::perform() {
 #endif // _MSC_VER < 1400
 	viewer.freeze();
 	try {
-		caret.select(Position(bottom.lineNumber(), bottom.columnNumber() - ((cp > 0xFFFF) ? 2 : 1)), bottom);
+		caret.select(Position(bottom.lineNumber(), bottom.columnNumber() - ((cp > 0xffff) ? 2 : 1)), bottom);
 		caret.replaceSelection(buffer, buffer + wcslen(buffer), false);
 	} catch(...) {
 		viewer.unfreeze();
@@ -509,7 +509,7 @@ ulong CodePointToCharacterConversionCommand::perform() {
 			bool succeeded = true;
 			try {
 				caret.select(Position(bottom.lineNumber(), i), bottom);
-				caret.replaceSelection(buffer, buffer + (cp < 0x10000U ? 1 : 2), false);
+				caret.replaceSelection(buffer, buffer + (cp < 0x10000u ? 1 : 2), false);
 			} catch(...) {
 				succeeded = false;
 			}
@@ -1257,11 +1257,11 @@ ulong WordSelectionCreationCommand::perform() {
 /// @see InputSequenceChecker#check
 bool AinuInputSequenceChecker::check(HKL, const Char* first, const Char* last, CodePoint cp) const {
 	// 結合可能な半濁点のペアが正しいか調べるだけ
-	return cp != 0x309A || (first < last && (
-		last[-1] == L'\x30BB'		// セ
-		|| last[-1] == L'\x30C4'	// ツ
-		|| last[-1] == L'\x30C8'	// ト
-		|| last[-1] == L'\x31F7'));	// 小さいフ
+	return cp != 0x309a || (first < last && (
+		last[-1] == L'\x30bb'		// セ
+		|| last[-1] == L'\x30c4'	// ツ
+		|| last[-1] == L'\x30c8'	// ト
+		|| last[-1] == L'\x31f7'));	// 小さいフ
 }
 
 
@@ -1309,7 +1309,7 @@ bool ThaiInputSequenceChecker::check(HKL, const Char* first, const Char* last, C
 		return true;
 	return doCheck(
 		(first != last) ? getCharacterClass(last[-1]) : CTRL,	// 先行する文字が無い場合は制御文字があるとする
-		getCharacterClass((cp != 0x0E33) ? cp : 0x0E4D),		// Sara Am -> Nikhahit + Sara Aa
+		getCharacterClass((cp != 0x0e33) ? cp : 0x0e4d),		// Sara Am -> Nikhahit + Sara Aa
 		mode_ == STRICT_MODE);
 }
 
@@ -1326,7 +1326,7 @@ bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const Char* first
 	// (Uniscribe と同じく母音字が合成文字の場合は無視)
 	static const CodePoint VOWELS[24] = {
 		L'A', L'E', L'I', L'O', L'U', L'Y', L'a', L'e', L'i', L'o', L'u', L'y',
-		0x00C2, 0x00CA, 0x00D4, 0x00E2, 0x00EA, 0x00F4, 0x0102, 0x0103, 0x01A0, 0x01A1, 0x01AF, 0x01B0,
+		0x00c2, 0x00ca, 0x00d4, 0x00e2, 0x00ea, 0x00f4, 0x0102, 0x0103, 0x01a0, 0x01a1, 0x01af, 0x01b0,
 	};
 	static CodePoint TONE_MARKS[5] = {0x0300, 0x0301, 0x0303, 0x309, 0x0323};
 

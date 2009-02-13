@@ -21,7 +21,7 @@ Collator::~Collator() /*throw()*/ {
 
 // CollationElementIterator /////////////////////////////////////////////////
 
-const int CollationElementIterator::NULL_ORDER = 0xFFFFFFFFU;
+const int CollationElementIterator::NULL_ORDER = 0xffffffffu;
 
 /// Protected default constructor.
 CollationElementIterator::CollationElementIterator() /*throw()*/ {
