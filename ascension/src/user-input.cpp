@@ -1299,7 +1299,7 @@ namespace {
 		y = selectionBounds.top;
 		const LineLayout::Selection selection(viewer.caret());
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			renderer.renderLine(line, dc, -selectionBounds.left, y, selectionBounds, selectionBounds, highlightSelection ? &selection : 0);
+			renderer.renderLine(line, dc, -selectionBounds.left, y, selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
 			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
 		dc.selectObject(oldBitmap);
@@ -1307,11 +1307,16 @@ namespace {
 		// set alpha chunnel
 		const manah::byte* maskByte = maskBits;
 		for(LONG y = 0; y < bh.bV5Height; ++y) {
-			for(LONG x = 0; x < bh.bV5Width; ++x) {
+			for(LONG x = 0; ; ) {
 				RGBQUAD& pixel = static_cast<RGBQUAD*>(bits)[x + bh.bV5Width * y];
 				pixel.rgbReserved = alphaChunnels[(*maskByte & (1 << ((8 - x % 8) - 1))) ? 0 : 1];
 				if(x % 8 == 7)
 					++maskByte;
+				if(++x == bh.bV5Width) {
+					if(x % 8 != 0)
+						++maskByte;
+					break;
+				}
 			}
 			if(reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD) != 0)
 				maskByte += sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD);
