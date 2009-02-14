@@ -451,6 +451,10 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 	else if(last > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
 
+	// handle empty line
+	if(numberOfRuns_ == 0)
+		return Rgn::createRect(0, 0, 0, linePitch());
+
 	const length_t firstSubline = subline(first), lastSubline = subline(last);
 	vector<RECT> rectangles;
 	RECT rectangle;
@@ -527,6 +531,13 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
 	RECT bounds;	// the result
 	int cx;
+
+	// handle empty line
+	if(numberOfRuns_ == 0) {
+		bounds.left = bounds.top = bounds.right = 0;
+		bounds.bottom = bounds.top + linePitch();
+		return bounds;
+	}
 
 	// determine the top and the bottom (it's so easy)
 	const length_t firstSubline = subline(first), lastSubline = subline(last);
