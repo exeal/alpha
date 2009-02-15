@@ -1317,7 +1317,9 @@ namespace {
 		y = selectionBounds.top;
 		const LineLayout::Selection selection(viewer.caret());
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			renderer.renderLine(line, dc, -selectionBounds.left, y, selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
+			renderer.renderLine(line, dc,
+				renderer.lineIndent(line) - selectionBounds.left, y,
+				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
 			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
 		dc.selectObject(oldBitmap);
@@ -1421,9 +1423,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	}
 #endif // _DEBUG
 
-	if(dnd_.supportLevel == DONT_SUPPORT_OLE_DND || viewer_->document().isReadOnly()
-			|| !viewer_->allowsMouseInput() || viewer_->configuration().alignment != ALIGN_LEFT)
-		// TODO: support alignments other than ALIGN_LEFT.
+	if(dnd_.supportLevel == DONT_SUPPORT_OLE_DND || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return S_OK;
 
 	// validate the dragged data if can drop
@@ -1440,6 +1440,8 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 		dnd_.numberOfRectangleLines = 0;
 		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+			if(viewer_->configuration().alignment != ALIGN_LEFT)
+				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
 			pair<HRESULT, String> text(getTextFromDataObject(*data));
 			if(SUCCEEDED(text.first))
 				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
