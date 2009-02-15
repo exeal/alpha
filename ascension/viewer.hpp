@@ -302,7 +302,7 @@ namespace ascension {
 			virtual bool handleX2Button(Action action, const POINT& position, uint keyState);
 		private:
 			void beginTimer(UINT interval);
-			void doDragAndDrop();
+			HRESULT doDragAndDrop();
 			bool endAutoScroll();
 			void endTimer();
 			void extendSelection(const kernel::Position* to = 0);
