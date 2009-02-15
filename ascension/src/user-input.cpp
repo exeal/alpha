@@ -1206,12 +1206,12 @@ void DefaultMouseInputStrategy::captureChanged() {
 }
 
 namespace {
-	bool createSelectionImage(const TextViewer& viewer, const POINT& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
+	HRESULT createSelectionImage(const TextViewer& viewer, const POINT& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
 		using namespace win32::gdi;
 
 		DC dc(::CreateCompatibleDC(0));
 		if(dc.get() == 0)
-			return false;
+			return E_FAIL;
 
 		win32::AutoZero<BITMAPV5HEADER> bh;
 		bh.bV5Size = sizeof(BITMAPV5HEADER);
@@ -1238,7 +1238,7 @@ namespace {
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			selectionBounds.bottom += static_cast<LONG>(renderer.linePitch() * renderer.lineLayout(line).numberOfSublines());
 			if(selectionBounds.bottom - selectionBounds.top > clientRect.bottom - clientRect.top)
-				return false;	// overflow
+				return S_FALSE;	// overflow
 			const LineLayout& layout = renderer.lineLayout(line);
 			const int indent = renderer.lineIndent(line);
 			pair<length_t, length_t> range;
@@ -1249,7 +1249,7 @@ namespace {
 					selectionBounds.left = min(sublineBounds.left + indent, selectionBounds.left);
 					selectionBounds.right = max(sublineBounds.right + indent, selectionBounds.right);
 					if(selectionBounds.right - selectionBounds.left > clientRect.right - clientRect.left)
-						return false;	// overflow
+						return S_FALSE;	// overflow
 				}
 			}
 		}
@@ -1258,7 +1258,9 @@ namespace {
 
 		// create a mask
 		Bitmap mask(Bitmap::create(bh.bV5Width, bh.bV5Height, 1, 1, 0));	// monochrome
-		HBITMAP oldBitmap = dc.selectObject(mask.use());
+		if(mask.get() == 0)
+			return E_FAIL;
+		HBITMAP oldBitmap = dc.selectObject(mask.get());
 		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
 		int y = 0;
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
@@ -1276,22 +1278,38 @@ namespace {
 			}
 		}
 		dc.selectObject(oldBitmap);
-		BITMAPINFO* const bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
-		memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
-		bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, 0, bi, DIB_RGB_COLORS);
-		assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
-		manah::AutoBuffer<manah::byte> maskBuffer(new manah::byte[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
-		manah::byte* const maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
-		::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS);
+		BITMAPINFO* bi = 0;
+		manah::AutoBuffer<manah::byte> maskBuffer;
+		manah::byte* maskBits;
 		BYTE alphaChunnels[2] = {0xff, 0x01};
-		if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
-			swap(alphaChunnels[0], alphaChunnels[1]);
+		try {
+			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
+			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
+			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+			int r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, 0, bi, DIB_RGB_COLORS);
+			if(r == 0 || r == ERROR_INVALID_PARAMETER)
+				throw runtime_error("");
+			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
+			maskBuffer.reset(new manah::byte[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
+			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
+			r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS);
+			if(r == 0 || r == ERROR_INVALID_PARAMETER)
+				throw runtime_error("");
+			if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
+				swap(alphaChunnels[0], alphaChunnels[1]);
+		} catch(const bad_alloc&) {
+			return E_OUTOFMEMORY;
+		} catch(const runtime_error&) {
+			::operator delete(bi);
+			return E_FAIL;
+		}
 		::operator delete(bi);
 
 		// create the result bitmap
 		void* bits;
 		Bitmap bitmap(Bitmap::createDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
+		if(bitmap.get() == 0)
+			return E_FAIL;
 		// render the lines
 		oldBitmap = dc.selectObject(bitmap.use());
 		RECT selectionExtent(selectionBounds);
@@ -1335,38 +1353,42 @@ namespace {
 		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
 		image.crColorKey = CLR_NONE;
 
-		return true;
+		return S_OK;
 	}
 }
 
-///
-void DefaultMouseInputStrategy::doDragAndDrop() {
+HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
 	com::ComPtr<IDataObject> draggingContent;
-	const Region selection(viewer_->caret().selectionRegion());
+	const Caret& caret = viewer_->caret();
 	HRESULT hr;
 
 	if(FAILED(hr = viewer_->caret().createTextObject(true, *draggingContent.initialize())))
-		return;
-	dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+		return hr;
+	if(!caret.isSelectionRectangle())
+		dnd_.numberOfRectangleLines = 0;
+	else {
+		const Region selection(caret.selectionRegion());
+		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+	}
 
 	// setup drag-image
 	if(dnd_.dragSourceHelper.get() != 0) {
 		SHDRAGIMAGE image;
-		if(createSelectionImage(*viewer_, dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE, image)) {
+		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
+				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
 			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
 				::DeleteObject(image.hbmpDragImage);
 		}
 	}
 
 	// operation
-//	beginTimer(viewer_->caret().isSelectionRectangle() ? OLE_DRAGGING_TRACK_INTERVAL * 2 : OLE_DRAGGING_TRACK_INTERVAL);
 	state_ = OLE_DND_SOURCE;
 	DWORD effectOwn;	// dummy
 	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
-//	endTimer();
 	state_ = NONE;
 	if(viewer_->isVisible())
 		viewer_->setFocus();
+	return hr;
 }
 
 /// @see IDropTarget#DragEnter
@@ -1478,38 +1500,44 @@ namespace {
 STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
 	MANAH_VERIFY_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
+	bool acceptable = true;
 
 	if((state_ != OLE_DND_SOURCE && state_ != OLE_DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
-		return S_OK;
+		acceptable = false;
+	else {
+		POINT caretPoint = {pt.x, pt.y};
+		viewer_->screenToClient(caretPoint);
+		const Position p(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
+		viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
 
-	POINT caretPoint = {pt.x, pt.y};
-	viewer_->screenToClient(caretPoint);
-	const Position p(viewer_->characterForClientXY(caretPoint, LineLayout::TRAILING));
-	viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, LineLayout::LEADING));
-
-	// drop rectangle text into bidirectional line is not supported...
-	const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
-	for(length_t line = p.line; line < lines; ++line) {
-		if(viewer_->textRenderer().lineLayout(line).isBidirectional()) {
-			*effect = DROPEFFECT_NONE;
-			return S_OK;
+		// drop rectangle text into bidirectional line is not supported...
+		if(dnd_.numberOfRectangleLines != 0) {
+			const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+			for(length_t line = p.line; line < lines; ++line) {
+				if(viewer_->textRenderer().lineLayout(line).isBidirectional()) {
+					acceptable = false;
+					break;
+				}
+			}
 		}
 	}
 
-	*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-	const SIZE scrollOffset = calculateDnDScrollOffset(*viewer_);
-	if(scrollOffset.cx != 0 || scrollOffset.cy != 0) {
-		*effect |= DROPEFFECT_SCROLL;
-		// only one direction to scroll
-		if(scrollOffset.cy != 0)
-			viewer_->scroll(0, scrollOffset.cy, true);
-		else
-			viewer_->scroll(scrollOffset.cx, 0, true);
+	if(acceptable) {
+		*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+		const SIZE scrollOffset = calculateDnDScrollOffset(*viewer_);
+		if(scrollOffset.cx != 0 || scrollOffset.cy != 0) {
+			*effect |= DROPEFFECT_SCROLL;
+			// only one direction to scroll
+			if(scrollOffset.cy != 0)
+				viewer_->scroll(0, scrollOffset.cy, true);
+			else
+				viewer_->scroll(scrollOffset.cx, 0, true);
+		}
 	}
 	if(dnd_.dropTargetHelper.get() != 0) {
 		POINT p = {pt.x, pt.y};
 		viewer_->lockScroll();
-		dnd_.dropTargetHelper->DragOver(&p, DROPEFFECT_SCROLL);	// damn! IDropTargetHelper scrolls the view
+		dnd_.dropTargetHelper->DragOver(&p, *effect);	// damn! IDropTargetHelper scrolls the view
 		viewer_->lockScroll(true);
 	}
 	return S_OK;
