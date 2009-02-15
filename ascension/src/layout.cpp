@@ -464,8 +464,7 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 			++subline, rectangle.top = rectangle.bottom, rectangle.bottom += linePitch()) {
 		const size_t endOfRuns = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		int cx = sublineIndent(subline);
-		if(first <= runs_[sublineFirstRuns_[subline]]->column
-				&& last >= runs_[endOfRuns - 1]->column + runs_[endOfRuns - 1]->length()) {
+		if(first <= sublineOffset(subline) && last >= sublineOffset(subline) + sublineLength(subline)) {
 			// whole visual subline is encompassed by the range
 			rectangle.left = cx;
 			rectangle.right = rectangle.left + sublineWidth(subline);
