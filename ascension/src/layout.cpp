@@ -475,8 +475,10 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 		for(size_t i = sublineFirstRuns_[subline]; i < endOfRuns; ++i) {
 			const Run& run = *runs_[i];
 			if(first <= run.column + run.length() && last >= run.column) {
-				rectangle.left = cx + ((first > run.column) ? run.x(first - run.column, false) : 0);
-				rectangle.right = cx + ((last < run.column + run.length()) ? run.x(last - run.column, false) : run.totalWidth());
+				rectangle.left = cx + ((first > run.column) ?
+					run.x(first - run.column, false) : ((run.orientation() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
+				rectangle.right = cx + ((last < run.column + run.length()) ?
+					run.x(last - run.column, false) : ((run.orientation() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
 				if(rectangle.left != rectangle.right) {
 					if(rectangle.left > rectangle.right)
 						swap(rectangle.left, rectangle.right);
