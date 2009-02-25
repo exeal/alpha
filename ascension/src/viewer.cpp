@@ -892,12 +892,12 @@ void TextViewer::documentReadOnlySignChanged(const Document&) {
 
 /// @see kernel#IDocumentRollbackListener#documentUndoSequenceStarted
 void TextViewer::documentUndoSequenceStarted(const Document&) {
-	freeze(false);
+	freeze(false);	// TODO: replace with AutoFreeze.
 }
 
 /// @see kernel#IDocumentRollbackListener#documentUndoSequenceStopped
 void TextViewer::documentUndoSequenceStopped(const Document&, const Position& resultPosition) {
-	unfreeze(false);
+	unfreeze(false);	// TODO: replace with AutoFreeze.
 	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
 		utils::closeCompletionProposalsPopup(*this);
 		caret_->moveTo(resultPosition);
@@ -2017,6 +2017,43 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
 	}
 	if(!documentChanged && scrollInfo_.changed)
 		updateScrollBars();
+}
+
+
+// AutoFreeze ///////////////////////////////////////////////////////////////
+
+/**
+ * @class ascension#viewers#AutoFreeze
+ *
+ * Calls automatically @c TextViewer#freeze and @c TextViewer#unfreeze.
+ *
+ * @code
+ * extern TextViewer* target;
+ * AutoFreeze af(target);
+ * target-&gt;mayThrow();
+ * // target-&gt;unfreeze() will be called automatically
+ * @endcode
+ */
+
+/**
+ * Constructor calls @c TextViewer#freeze.
+ * @param textViewer the text viewer this object manages. if this is @c null, the object does
+ *                   nothing at all
+ * @param forAllClones see the documentation of @c TextViewer#freeze method
+ * @throw ... any exceptions @c TextViewer#freeze throws
+ */
+AutoFreeze::AutoFreeze(TextViewer* textViewer, bool forAllClones /* = true */) : textViewer_(textViewer), forAllClones_(forAllClones) {
+	if(textViewer_ != 0)
+		textViewer_->freeze(forAllClones_);
+}
+
+/**
+ * Destructor calls @c TextViewer#unfreeze.
+ * @throw ... any exceptions @c TextViewer#unfreeze throws
+ */
+AutoFreeze::~AutoFreeze() {
+	if(textViewer_ != 0)
+		textViewer_->unfreeze(forAllClones_);
 }
 
 

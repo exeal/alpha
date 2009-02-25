@@ -868,6 +868,16 @@ namespace ascension {
 			friend class Renderer;
 		};
 
+		// the documentation is viewer.cpp
+		class AutoFreeze {
+		public:
+			explicit AutoFreeze(TextViewer* textViewer, bool forAllClones = true);
+			~AutoFreeze();
+		private:
+			TextViewer* const textViewer_;
+			const bool forAllClones_;
+		};
+
 		/// Highlights the line on which the caret is put.
 		class CurrentLineHighlighter : public presentation::ILineColorDirector,
 				public ICaretListener, public ICaretStateListener, public kernel::IPointLifeCycleListener {

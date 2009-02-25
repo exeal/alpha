@@ -1441,14 +1441,13 @@ bool Caret::inputCharacter(CodePoint cp, bool validateSequence /* = true */, boo
 	surrogates::encode(cp, buffer);
 	if(!isSelectionEmpty()) {	// just replace if the selection is not empty
 		doc.insertUndoBoundary();
-		if(!(interrupted = !replaceSelection(buffer, buffer + ((cp < 0x10000) ? 1 : 2))))
+		if(!(interrupted = !replaceSelection(buffer, buffer + ((cp < 0x10000u) ? 1 : 2))))
 			doc.insertUndoBoundary();
 	} else if(overtypeMode_) {
-		textViewer().freeze(true);
+		AutoFreeze af(&textViewer(), true);
 		doc.insertUndoBoundary();
-		if(!(interrupted = !destructiveInsert(buffer, buffer + ((cp < 0x10000) ? 1 : 2))))
+		if(!(interrupted = !destructiveInsert(buffer, buffer + ((cp < 0x10000u) ? 1 : 2))))
 			doc.insertUndoBoundary();
-		textViewer().unfreeze(true);
 	} else {
 		const bool alpha = identifierSyntax().isIdentifierContinueCharacter(cp);
 		if(lastTypedPosition_ != Position::INVALID_POSITION && (!alpha || lastTypedPosition_ != position())) {
@@ -1514,18 +1513,12 @@ bool Caret::pasteToSelection(bool useKillRing) {
 	if(useKillRing && (session == 0 || session->killRing().numberOfKills() == 0))
 		return true;
 
-	textViewer().freeze(true);
+	AutoFreeze af(&textViewer(), true);
 	document()->insertUndoBoundary();
 	bool failed = true;
 	if(!useKillRing) {
-		if(!(failed = !eraseSelection())) {	// if there is no selection, this does nothing
-			try {
-				failed = !paste();	// TODO: if threw, deleted content is lost.
-			} catch(ClipboardException&) {
-				textViewer().unfreeze(true);
-				throw;
-			}
-		}
+		if(!(failed = !eraseSelection()))	// if there is no selection, this does nothing
+			failed = !paste();	// TODO: if threw (ClipboardException), deleted content is lost.
 	} else {
 		texteditor::KillRing& killRing = session->killRing();
 		const pair<String, bool>& text = yanking_ ? killRing.setCurrent(+1) : killRing.get();
@@ -1549,7 +1542,6 @@ bool Caret::pasteToSelection(bool useKillRing) {
 		}
 	}
 	document()->insertUndoBoundary();
-	textViewer().unfreeze(true);
 	return !failed;
 }
 
@@ -1613,7 +1605,7 @@ bool Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 	else if(first > last)
 		throw invalid_argument("first > last");
 	const Region oldRegion(selectionRegion());
-	textViewer().freeze(true);
+	AutoFreeze af(&textViewer(), true);
 	const bool interrupted = !eraseSelection();
 	if(!interrupted) {
 		// TODO: insert and insertRectangle may throw and breaks strong guarentee for exception^safety.
@@ -1622,7 +1614,6 @@ bool Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
 		else
 			insert(first, last);
 	}
-	textViewer().unfreeze(true);
 	return !interrupted;
 }
 
