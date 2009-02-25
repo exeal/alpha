@@ -1583,14 +1583,13 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		bool rectangle;
 		pair<HRESULT, String> text(getTextFromDataObject(*data, &rectangle));
 		if(SUCCEEDED(text.first)) {
-			viewer_->freeze();
+			AutoFreeze af(viewer_);
 			if(rectangle ? ca.insertRectangle(text.second) : ca.insert(text.second)) {
 				if(rectangle)
 					ca.beginRectangleSelection();
 				ca.select(destination, ca);
 				*effect = DROPEFFECT_COPY;
 			}
-			viewer_->unfreeze();
 		}
 		state_ = NONE;
 	} else {	// drop from the same widget
@@ -1604,7 +1603,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		} else {
 			const bool rectangle = ca.isSelectionRectangle();
 			document.insertUndoBoundary();
-			viewer_->freeze();
+			AutoFreeze af(viewer_);
 			if(toBoolean(keyState & MK_CONTROL)) {	// copy
 //				viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
 				ca.enableAutoShow(false);
@@ -1643,7 +1642,6 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 					*effect = DROPEFFECT_MOVE;
 				}
 			}
-			viewer_->unfreeze();
 			document.insertUndoBoundary();
 		}
 	}
