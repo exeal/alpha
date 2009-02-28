@@ -650,9 +650,6 @@ namespace ascension {
 			Position insertText(const Position& position, const Char* first, const Char* last);
 			void partitioningChanged(const Region& changedRegion) /*throw()*/;
 			void updatePoints(const DocumentChange& change) /*throw()*/;
-#ifdef ASCENSION_WINDOWS
-			static UINT translateSpecialCodePage(UINT codePage);
-#endif /* ASCENSION_WINDOWS */
 			// internal.ISessionElement
 			void setSession(texteditor::Session& session) /*throw()*/ {session_ = &session;}
 			// internal.IPointCollection<Point>
@@ -702,6 +699,15 @@ namespace ascension {
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
+		};
+
+		// the documentation is document.cpp
+		class CompoundChangeSaver {
+		public:
+			explicit CompoundChangeSaver(Document* document);
+			~CompoundChangeSaver();
+		private:
+			Document* const document_;
 		};
 
 		/**

@@ -692,8 +692,8 @@ inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
 // ends the compound change
 inline void Document::UndoManager::endCompoundChange() /*throw()*/ {
 	if(compoundChangeDepth_ == 0)
-// this does not throw IllegalStateException even if the internal counter, because undo() and
-// redo() reset the counter to zero.
+// this does not throw IllegalStateException even if the internal counter is zero, because undo()
+// and redo() reset the counter to zero.
 //		throw IllegalStateException("there is no compound change in this document.");
 		return;
 	--compoundChangeDepth_;
@@ -1539,31 +1539,6 @@ void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
 	}
 }
 
-#if 0
-/**
- * Translates the special Win32 code page to concrete one.
- * @param cp the code page to be translated
- * @return the concrete code page
- * @deprecated 0.8
- */
-UINT Document::translateSpecialCodePage(UINT codePage) {
-	if(codePage == CP_ACP)
-		return ::GetACP();
-	else if(codePage == CP_OEMCP)
-		return ::GetOEMCP();
-	else if(codePage == CP_MACCP) {
-		wchar_t	wsz[7];
-		::GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTMACCODEPAGE, wsz, 6);
-		return (wcscmp(wsz, L"2") != 0) ? wcstoul(wsz, 0, 10) : 0;
-	} else if(codePage == CP_THREAD_ACP) {
-		wchar_t	wsz[7];
-		::GetLocaleInfoW(::GetThreadLocale(), LOCALE_IDEFAULTANSICODEPAGE, wsz, 6);
-		return (wcscmp(wsz, L"3") != 0) ? wcstoul(wsz, 0, 10) : 0;
-	}
-	return codePage;
-}
-#endif /* 0 */
-
 /**
  * Performs the undo. Does nothing if the target region is inaccessible.
  * @param n the repeat count
@@ -1620,6 +1595,41 @@ void Document::widen() /*throw()*/ {
 		accessibleArea_ = 0;
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 	}
+}
+
+
+// CompoundChangeSaver //////////////////////////////////////////////////////
+
+/**
+ * @class ascension#kernel#CompoundChangeSaver
+ *
+ * Calls automatically @c Document#beginCompoundChange and @c Document#endCompoundChange.
+ *
+ * @code
+ * extern Document* target;
+ * CompoundChangeSaver saver(target);
+ * target-&gt;mayThrow();
+ * // target-&gt;endCompoundChange() will be called automatically
+ * @endcode
+ */
+
+/**
+ * Constructor calls @c Document#beginCompoundChange.
+ * @param document the document this object manages. if this is @c null, the object does nothing
+ * @throw ... any exceptions @c Document#beginCompoundChange throws
+ */
+CompoundChangeSaver::CompoundChangeSaver(Document* document) : document_(document) {
+	if(document_ != 0)
+		document_->beginCompoundChange();
+}
+
+/**
+ * Destructor calls @c Document#endCompoundChange.
+ * @throw ... any exceptions @c Document#endCompoundChange throws
+ */
+CompoundChangeSaver::~CompoundChangeSaver() {
+	if(document_ != 0)
+		document_->endCompoundChange();
 }
 
 
