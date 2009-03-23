@@ -67,15 +67,15 @@ bool CompletionProposal::isAutoInsertable() const /*throw()*/ {
 	return autoInsertable_;
 }
 
-/// @see ICompletionProposal#replace
+/**
+ * Implements @c ICompletionProposal#replace.
+ * This method may throw any exceptions @c kernel#Document#replace throws other than
+ * @c kernel#ReadOnlyDocumentException.
+ */
 void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
 	if(!document.isReadOnly()) {
 		document.insertUndoBoundary();
-		try {
-			if(document.erase(replacementRegion))
-				document.insert(replacementRegion.beginning(), replacementString_);
-		} catch(const DocumentAccessViolationException&) {
-		}
+		kernel::replace(document, replacementRegion, replacementString_);
 		document.insertUndoBoundary();
 	}
 }
@@ -113,19 +113,19 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 
 	// find the preceding identifier
 	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
-	if(!incremental || caret.isBeginningOfLine())
+	if(!incremental || locations::isBeginningOfLine(caret))
 		replacementRegion.first = caret;
-	else if(source::getNearestIdentifier(*caret.document(), caret, &replacementRegion.first.column, 0))
-		replacementRegion.first.line = caret.lineNumber();
+	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.column, 0))
+		replacementRegion.first.line = caret.line();
 	else
 		replacementRegion.first = caret;
 
 	// collect identifiers in the document
 	static const length_t MAXIMUM_BACKTRACKING_LINES = 500;
-	const Document& document = *caret.document();
+	const Document& document = caret.document();
 	DocumentCharacterIterator i(document, Region(Position(
-		(caret.lineNumber() > MAXIMUM_BACKTRACKING_LINES) ?
-			caret.lineNumber() - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
+		(caret.line() > MAXIMUM_BACKTRACKING_LINES) ?
+			caret.line() - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
 	DocumentPartition currentPartition;
 	set<String> identifiers;
 	bool followingNIDs = false;
@@ -421,17 +421,18 @@ void ContentAssistant::characterInputted(const Caret&, CodePoint c) {
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
 				Document& document = textViewer_->document();
-				if(!document.isReadOnly()) {
+				Caret& caret = textViewer_->caret();
+				try {
 					document.insertUndoBoundary();
-					if(textViewer_->caret().erase(-1, EditPoint::UTF32_CODE_UNIT)) {
-						document.insertUndoBoundary();
-						complete();
-					}
+					erase(document, locations::backwardCharacter(caret, locations::UTF32_CODE_UNIT), caret);
+					document.insertUndoBoundary();
+					complete();
+				} catch(...) {
 				}
 			}
 		} else {
 			// activate automatically
-			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->caret().getContentType())) {
+			if(const IContentAssistProcessor* const cap = getContentAssistProcessor(textViewer_->caret().contentType())) {
 				if(cap->isCompletionProposalAutoActivationCharacter(c)) {
 					if(autoActivationDelay_ == 0)
 						showPossibleCompletions();
@@ -482,7 +483,7 @@ bool ContentAssistant::complete() {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-void ContentAssistant::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void ContentAssistant::documentAboutToBeChanged(const Document&) {
 	// do nothing
 }
 
@@ -490,14 +491,16 @@ void ContentAssistant::documentAboutToBeChanged(const Document&, const DocumentC
 void ContentAssistant::documentChanged(const Document&, const DocumentChange& change) {
 	if(completionSession_.get() != 0) {
 		// exit or update the replacement region
-		if(!completionSession_->incremental || change.region().first.line != change.region().second.line)
+		if(!completionSession_->incremental
+				|| change.erasedRegion().first.line != change.erasedRegion().second.line
+				|| change.insertedRegion().first.line != change.insertedRegion().second.line)
 			close();
 		const Region& replacementRegion = completionSession_->replacementRegion;
-		if(change.isDeletion() && !replacementRegion.encompasses(change.region()))
+		if(!change.erasedRegion().isEmpty() && !replacementRegion.encompasses(change.erasedRegion()))
 			close();
 		completionSession_->replacementRegion.second =
-			updatePosition(completionSession_->replacementRegion.second, change, Direction::FORWARD);
-		if(!change.isDeletion() && !replacementRegion.encompasses(change.region()))
+			positions::updatePosition(completionSession_->replacementRegion.second, change, Direction::FORWARD);
+		if(!change.insertedRegion().isEmpty() && !replacementRegion.encompasses(change.insertedRegion()))
 			close();
 
 		// rebuild proposals
@@ -601,7 +604,7 @@ void ContentAssistant::showPossibleCompletions() {
 	if(textViewer_ == 0 || completionSession_.get() != 0 || textViewer_->document().isReadOnly())
 		return textViewer_->beep();
 	const Caret& caret = textViewer_->caret();
-	if(const IContentAssistProcessor* const cap = getContentAssistProcessor(caret.getContentType())) {
+	if(const IContentAssistProcessor* const cap = getContentAssistProcessor(caret.contentType())) {
 		set<ICompletionProposal*> proposals;
 		completionSession_.reset(new CompletionSession);
 		(completionSession_->processor = cap)->computeCompletionProposals(caret,

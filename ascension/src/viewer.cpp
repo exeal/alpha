@@ -155,7 +155,7 @@ public:
 	STDMETHODIMP ContextSensitiveHelp(BOOL fEnterMode);
 private:
 	// IDocumentListener
-	void documentAboutToBeChanged(const Document& document, const DocumentChange& change);
+	void documentAboutToBeChanged(const Document& document);
 	void documentChanged(const Document& document, const DocumentChange& change);
 private:
 	TextViewer& view_;
@@ -313,12 +313,12 @@ namespace {
 namespace {
 	inline void getCurrentCharacterSize(const TextViewer& viewer, SIZE& result) {
 		const Caret& caret = viewer.caret();
-		if(caret.isEndOfLine())	// EOL
+		if(locations::isEndOfLine(caret))	// EOL
 			result.cx = viewer.textRenderer().averageCharacterWidth();
 		else {
-			const LineLayout& layout = viewer.textRenderer().lineLayout(caret.lineNumber());
-			const int leading = layout.location(caret.columnNumber(), LineLayout::LEADING).x;
-			const int trailing = layout.location(caret.columnNumber(), LineLayout::TRAILING).x;
+			const LineLayout& layout = viewer.textRenderer().lineLayout(caret.line());
+			const int leading = layout.location(caret.column(), LineLayout::LEADING).x;
+			const int trailing = layout.location(caret.column(), LineLayout::TRAILING).x;
 			result.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
 		}
 		result.cy = viewer.textRenderer().lineHeight();
@@ -475,7 +475,7 @@ HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
 	if(!isVisible())
 		return;
-	const Region newRegion = self.selectionRegion();
+	const Region newRegion(self.selectedRegion());
 	bool changed = false;
 
 	// adjust the caret
@@ -533,16 +533,13 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
  * @param abortNoCharacter if set to true, this method returns @c Position#INVALID_POSITION
  * immediately when @a pt hovered outside of the text layout (e.g. far left or right of the line,
  * beyond the last line, ...).
- * @param snapPolicy which character boundary the returned position snapped to. if
- * EditPoint#DEFAULT_UNIT is set, obtains by Caret#characterUnit()
+ * @param snapPolicy which character boundary the returned position snapped to
  * @return returns the document position
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
  * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
 Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge,
-		bool abortNoCharacter /* = false */, EditPoint::CharacterUnit snapPolicy /* = EditPoint::DEFAULT_UNIT */) const {
-	if(snapPolicy == EditPoint::DEFAULT_UNIT)
-		snapPolicy = caret().characterUnit();
+		bool abortNoCharacter /* = false */, locations::CharacterUnit snapPolicy /* = locations::GRAPHEME_CLUSTER */) const {
 	Position result;
 
 	// determine the logical line
@@ -567,12 +564,12 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 		return Position::INVALID_POSITION;
 
 	// snap intervening position to the boundary
-	if(result.column != 0 && snapPolicy != EditPoint::UTF16_CODE_UNIT) {
+	if(result.column != 0 && snapPolicy != locations::UTF16_CODE_UNIT) {
 		using namespace text;
 		const String& s = document().line(result.line);
 		const bool interveningSurrogates =
 			surrogates::isLowSurrogate(s[result.column]) && surrogates::isHighSurrogate(s[result.column - 1]);
-		if(snapPolicy == EditPoint::UTF32_CODE_UNIT) {
+		if(snapPolicy == locations::UTF32_CODE_UNIT) {
 			if(interveningSurrogates) {
 				if(edge == LineLayout::LEADING)
 					--result.column;
@@ -582,7 +579,7 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 				else
 					++result.column;
 			}
-		} else if(snapPolicy == EditPoint::GRAPHEME_CLUSTER) {
+		} else if(snapPolicy == locations::GRAPHEME_CLUSTER) {
 			GraphemeBreakIterator<DocumentCharacterIterator> i(
 				DocumentCharacterIterator(document(), Region(result.line, make_pair(0, s.length())), result));
 			if(interveningSurrogates || !i.isBoundary(i.base())) {
@@ -833,7 +830,7 @@ void TextViewer::documentAccessibleRegionChanged(const Document&) {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-void TextViewer::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void TextViewer::documentAboutToBeChanged(const Document&) {
 	// do nothing
 }
 
@@ -1079,7 +1076,7 @@ inline void TextViewer::internalUnfreeze() {
 
 	verticalRulerDrawer_->update();
 
-	caretMoved(caret(), caret().selectionRegion());
+	caretMoved(caret(), caret().selectedRegion());
 	update();
 }
 
@@ -1483,7 +1480,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
 	case WM_SETTEXT:
 		EntireDocumentSelectionCreationCommand(*this)();
-		caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
+		replaceSelection(caret(), String(reinterpret_cast<const wchar_t*>(lParam)), false);
 		handled = true;
 		return 0L;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -1730,8 +1727,8 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 
 /// @see ICaretStateListener#selectionShapeChanged
 void TextViewer::selectionShapeChanged(const Caret& self) {
-	if(!isFrozen() && !self.isSelectionEmpty())
-		redrawLines(self.beginning().lineNumber(), self.end().lineNumber());
+	if(!isFrozen() && !isSelectionEmpty(self))
+		redrawLines(self.beginning().line(), self.end().line());
 }
 
 /**
@@ -1887,7 +1884,7 @@ void TextViewer::updateCaretPosition() {
 	if(!toBoolean(::PtInRect(&textArea, pt)))	// "hide" the caret
 		pt.y = -renderer_->linePitch();
 	else if(caretShape_.orientation == RIGHT_TO_LEFT
-			|| renderer_->lineLayout(caret().lineNumber()).bidiEmbeddingLevel(caret().columnNumber()) % 2 == 1)
+			|| renderer_->lineLayout(caret().line()).bidiEmbeddingLevel(caret().column()) % 2 == 1)
 		pt.x -= caretShape_.width;
 	setCaretPosition(pt);
 	updateIMECompositionWindowPosition();
@@ -2033,6 +2030,8 @@ void TextViewer::visualLinesModified(length_t first, length_t last,
  * target-&gt;mayThrow();
  * // target-&gt;unfreeze() will be called automatically
  * @endcode
+ *
+ * @note This class is not intended to be subclassed.
  */
 
 /**
@@ -2142,7 +2141,7 @@ void TextViewerAccessibleProxy::dispose() {
 }
 
 /// @see Document#IListener#documentAboutToBeChanged
-void TextViewerAccessibleProxy::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void TextViewerAccessibleProxy::documentAboutToBeChanged(const Document&) {
 	// do nothing
 }
 
@@ -2299,7 +2298,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 		return E_INVALIDARG;
 	else if(view_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	view_.caret().replaceSelection((szValue != 0) ? szValue : L"");
+	replaceSelection(view_.caret(), (szValue != 0) ? szValue : L"");
 	return S_OK;
 }
 
@@ -2700,7 +2699,7 @@ void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 void LocaleSensitiveCaretShaper::getCaretShape(
 		auto_ptr<win32::gdi::Bitmap>& bitmap, SIZE& solidSize, Orientation& orientation) /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
-	const bool overtype = caret.isOvertypeMode() && caret.isSelectionEmpty();
+	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
 	if(!overtype) {
 		solidSize.cx = bold_ ? 2 : 1;	// this ignores the system setting...
@@ -2809,12 +2808,12 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
 /// @see ICaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
-		if(!caret_->isSelectionEmpty() || caret_->lineNumber() != oldRegion.first.line)
+		if(!isSelectionEmpty(*caret_) || caret_->line() != oldRegion.first.line)
 			caret_->textViewer().redrawLine(oldRegion.first.line, false);
 	}
-	if(caret_->isSelectionEmpty()) {
-		if(!oldRegion.isEmpty() || caret_->lineNumber() != oldRegion.first.line)
-			caret_->textViewer().redrawLine(caret_->lineNumber(), false);
+	if(isSelectionEmpty(*caret_)) {
+		if(!oldRegion.isEmpty() || caret_->line() != oldRegion.first.line)
+			caret_->textViewer().redrawLine(caret_->line(), false);
 	}
 }
 
@@ -2840,7 +2839,7 @@ void CurrentLineHighlighter::pointDestroyed() {
 
 /// @see ILineColorDirector#queryLineColor
 ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t line, Colors& color) const {
-	if(caret_ != 0 && caret_->isSelectionEmpty() && caret_->lineNumber() == line && caret_->textViewer().hasFocus()) {
+	if(caret_ != 0 && isSelectionEmpty(*caret_) && caret_->line() == line && caret_->textViewer().hasFocus()) {
 		color = color_;
 		return LINE_COLOR_PRIORITY;
 	} else {

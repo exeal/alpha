@@ -1,7 +1,7 @@
 /**
  * @file text-editor.hpp
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_TEXT_EDITOR_HPP
@@ -20,24 +20,21 @@ namespace ascension {
 		 */
 		class Command {
 		public:
-			virtual ~Command() /*throw()*/;
-			ulong operator()();
-			Command& beepOnError(bool enable = true) /*throw()*/;
-			bool beepsOnError() const /*throw()*/;
+			virtual ~Command() throw();
+			bool operator()();
 			long numericPrefix() const /*throw()*/;
 			Command& retarget(viewers::TextViewer& viewer) /*throw()*/;
 			Command& setNumericPrefix(long number) /*throw()*/;
 		protected:
 			explicit Command(viewers::TextViewer& viewer) /*throw()*/;
-			/// Returns the command target.
+			/// Returns the text viewer which is the target of this command.
 			viewers::TextViewer& target() const /*throw()*/ {return *viewer_;}
 		private:
-			/// Called by @c #operator().
-			virtual ulong perform() = 0;
+			/// Called by @c #operator(). For semantics, see @c #operator().
+			virtual bool perform() = 0;
 		private:
 			viewers::TextViewer* viewer_;
 			long numericPrefix_;
-			bool beepsOnError_;
 		};
 
 		/**
@@ -52,31 +49,45 @@ namespace ascension {
 			public:
 				explicit BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
 					const kernel::Region& region = kernel::Region()) /*throw()*/;
+				length_t numberOfMarkedLines() const /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const kernel::Region region_;
+				length_t numberOfMarkedLines_;
 			};
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {
 			public:
 				explicit CancelCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Moves the caret or extends the selection.
 			class CaretMovementCommand : public Command {
 			public:
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(viewers::Caret::*procedure)(void) const, bool extendSelection = false);
+					kernel::Position(*procedure)(const kernel::Point&), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(viewers::Caret::*procedure)(length_t) const, bool extendSelection = false);
+					kernel::Position(*procedure)(const kernel::Point&, length_t), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const, bool extendSelection = false);
+					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, length_t), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&, length_t), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t), bool extendSelection = false);
+				CaretMovementCommand(viewers::TextViewer& viewer,
+					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, length_t), bool extendSelection = false);
 			private:
-				ulong perform();
-				kernel::Position(viewers::Caret::*const procedure0_)(void) const;
-				kernel::Position(viewers::Caret::*const procedure1_)(length_t) const;
-				viewers::VerticalDestinationProxy(viewers::Caret::*const procedureV1_)(length_t) const;
+				bool perform();
+				kernel::Position(*procedureP_)(const kernel::Point&);
+				kernel::Position(*procedurePL_)(const kernel::Point&, length_t);
+				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, length_t);
+				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
+				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, length_t);
+				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t);
+				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, length_t);
 				const bool extends_;
 			};
 			/**
@@ -89,7 +100,7 @@ namespace ascension {
 			public:
 				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const Direction direction_;
 			};
 			/// Converts a character into the text represents the code value of the character.
@@ -97,7 +108,7 @@ namespace ascension {
 			public:
 				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/**
 			 * Inputs a character on the caret position, or appends to the end of the active
@@ -108,7 +119,7 @@ namespace ascension {
 			public:
 				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c);
 			private:
-				ulong perform();
+				bool perform();
 				const CodePoint c_;
 			};
 			/// Inputs a character is at same position in the next/previous visual line.
@@ -116,7 +127,7 @@ namespace ascension {
 			public:
 				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const bool fromPreviousLine_;
 			};
 			/// Converts a text represents a code value into the character has the code value.
@@ -124,7 +135,7 @@ namespace ascension {
 			public:
 				CodePointToCharacterConversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/**
 			 * Shows completion proposals and aborts the active incremental search.
@@ -134,14 +145,14 @@ namespace ascension {
 			public:
 				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Selects the entire document.
 			class EntireDocumentSelectionCreationCommand : public Command {
 			public:
 				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/**
 			 * Searches the next/previous or the previous match and selects matched region. The
@@ -154,7 +165,7 @@ namespace ascension {
 			public:
 				FindNextCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const Direction direction_;
 			};
 			/**
@@ -166,7 +177,7 @@ namespace ascension {
 				IncrementalFindCommand(viewers::TextViewer& view,
 					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const Direction direction_;
 				searcher::IIncrementalSearchCallback* const callback_;
 			};
@@ -178,7 +189,7 @@ namespace ascension {
 			public:
 				IndentationCommand(viewers::TextViewer& view, bool increase) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				bool increases_;
 			};
 			/// Toggles the input method's open status.
@@ -186,21 +197,21 @@ namespace ascension {
 			public:
 				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Toggles Soft Keyboard mode of the input method.
 			class InputMethodSoftKeyboardModeToggleCommand : public Command {
 			public:
 				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Moves the caret or extends the selection to the match bracket.
 			class MatchBracketCommand : public Command {
 			public:
 				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const bool extends_;
 			};
 			/**
@@ -212,7 +223,7 @@ namespace ascension {
 			public:
 				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const bool insertsPrevious_;
 			};
 			/// Toggles overtype mode of the caret.
@@ -220,13 +231,13 @@ namespace ascension {
 			public:
 				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Inserts the content of the kill ring or the clipboard at the caret position.
 			class PasteCommand : public Command {
 			public:
 				PasteCommand(viewers::TextViewer& view, bool useKillRing) /*throw()*/;
-				ulong perform();
+				bool perform();
 			private:
 				const bool usesKillRing_;
 			};
@@ -235,39 +246,53 @@ namespace ascension {
 			public:
 				explicit ReconversionCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 			/// Replaces all matched texts.
 			class ReplaceAllCommand : public Command {
 			public:
 				ReplaceAllCommand(viewers::TextViewer& viewer,
 					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
+				std::size_t numberOfLastReplacements() const /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const bool onlySelection_;
 				searcher::IInteractiveReplacementCallback* const callback_;
+				std::size_t numberOfLastReplacements_;
 			};
 			/// Extends the selection and begins rectangular selection.
 			class RowSelectionExtensionCommand : public Command {
 			public:
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(viewers::Caret::*procedure)(void) const);
+					kernel::Position(*procedure)(const kernel::Point&));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(viewers::Caret::*procedure)(length_t) const);
+					kernel::Position(*procedure)(const kernel::Point&, length_t));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(viewers::Caret::*procedure)(length_t) const);
-				ulong perform();
+					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, length_t));
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&));
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&, length_t));
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t));
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, length_t));
+				bool perform();
 			private:
-				kernel::Position(viewers::Caret::*procedure0_)(void) const;
-				kernel::Position(viewers::Caret::*procedure1_)(length_t) const;
-				viewers::VerticalDestinationProxy(viewers::Caret::*procedureV1_)(length_t) const;
+				kernel::Position(*procedureP_)(const kernel::Point&);
+				kernel::Position(*procedurePL_)(const kernel::Point&, length_t);
+				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, length_t);
+				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
+				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, length_t);
+				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t);
+				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, length_t);
 			};
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
 			public:
 				TabifyCommand(viewers::TextViewer& view, bool untabify) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				bool untabify_;
 			};
 			/// Inputs a text.
@@ -275,23 +300,23 @@ namespace ascension {
 			public:
 				TextInputCommand(viewers::TextViewer& view, const String& text) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				String text_;
 			};
 			/// Transposes (swaps) the two text elements.
 			class TranspositionCommand : public Command {
 			public:
-				TranspositionCommand(viewers::TextViewer& view, bool(kernel::EditPoint::*procedure)(void));
+				TranspositionCommand(viewers::TextViewer& view, bool(*procedure)(viewers::Caret&));
 			private:
-				ulong perform();
-				bool(kernel::EditPoint::*const procedure_)(void);
+				bool perform();
+				bool(*procedure_)(viewers::Caret&);
 			};
 			/// Performs undo or redo.
 			class UndoCommand : public Command {
 			public:
 				UndoCommand(viewers::TextViewer& view, bool redo) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const bool redo_;
 			};
 			/// Deletes the forward/backward N word(s).
@@ -299,7 +324,7 @@ namespace ascension {
 			public:
 				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 				const Direction direction_;
 			};
 			/// Selects the current word.
@@ -307,7 +332,7 @@ namespace ascension {
 			public:
 				explicit WordSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
 			private:
-				ulong perform();
+				bool perform();
 			};
 		} // namespace commands
 
@@ -360,14 +385,16 @@ namespace ascension {
 		} // namespace isc
 
 
-		/// Performs the command and returns the command-specific result value.
-		inline ulong Command::operator()() {const ulong result = perform(); numericPrefix_ = 1; return result;}
-
-		/// Sets beep-on-error mode.
-		inline Command& Command::beepOnError(bool enable /* = true */) /*throw()*/ {beepsOnError_ = enable; return *this;}
-
-		/// Returns true if the command beeps when error occured.
-		inline bool Command::beepsOnError() const /*throw()*/ {return beepsOnError_;}
+		/**
+		 * Performs the command. The command can return the command-specific result value.
+		 * @retval true the command succeeded
+		 * @retval false ignorable or easily recoverable error occured. or the command tried to
+		 *               change the read-only document or the document's input rejected the change
+		 * @throw ... a fatal error occured. the type of exception(s) is defined by the derived
+		 *            class. see the documentation of @c #perform methods of the implementation
+		 * @see kernel#DocumentCantChangeException, kernel#ReadOnlyDocumentException
+		 */
+		inline bool Command::operator()() {const bool result = perform(); numericPrefix_ = 1; return result;}
 
 		/// Returns the numeric prefix for the next execution.
 		inline long Command::numericPrefix() const /*throw()*/ {return numericPrefix_;}

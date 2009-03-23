@@ -149,50 +149,68 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_PRIOR:	// [PageUp]
 		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
-		else				CaretMovementCommand(*this, &Caret::backwardPage, shiftPressed)();
+		else				CaretMovementCommand(*this, &locations::backwardPage, shiftPressed)();
 		return true;
 	case VK_NEXT:	// [PageDown]
 		if(controlPressed)	onVScroll(SB_PAGEDOWN, 0, 0);
-		else				CaretMovementCommand(*this, &Caret::forwardPage, shiftPressed)();
+		else				CaretMovementCommand(*this, &locations::forwardPage, shiftPressed)();
 		return true;
 	case VK_HOME:	// [Home]
-		CaretMovementCommand(*this, controlPressed ?
-			&Caret::beginningOfDocument : &Caret::beginningOfVisualLine, shiftPressed)();
+		if(controlPressed)
+			CaretMovementCommand(*this, &locations::beginningOfDocument, shiftPressed)();
+		else
+			CaretMovementCommand(*this, &locations::beginningOfVisualLine, shiftPressed)();
 		return true;
 	case VK_END:	// [End]
-		CaretMovementCommand(*this, controlPressed ?
-			&Caret::endOfDocument : &Caret::endOfVisualLine, shiftPressed)();
+		if(controlPressed)
+			CaretMovementCommand(*this, &locations::endOfDocument, shiftPressed)();
+		else
+			CaretMovementCommand(*this, &locations::endOfVisualLine, shiftPressed)();
 		return true;
 	case VK_LEFT:	// [Left]
-		if(altPressed && shiftPressed)
-			RowSelectionExtensionCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter)();
-		else
-			CaretMovementCommand(*this, controlPressed ? &Caret::leftWord : &Caret::leftCharacter, shiftPressed)();
+		if(altPressed && shiftPressed) {
+			if(controlPressed)
+				RowSelectionExtensionCommand(*this, &locations::leftWord)();
+			else
+				RowSelectionExtensionCommand(*this, &locations::leftCharacter)();
+		} else {
+			if(controlPressed)
+				CaretMovementCommand(*this, &locations::leftWord, shiftPressed)();
+			else
+				CaretMovementCommand(*this, &locations::leftCharacter, shiftPressed)();
+		}
 		return true;
 	case VK_UP:		// [Up]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &Caret::backwardVisualLine)();
+			RowSelectionExtensionCommand(*this, &locations::backwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			scroll(0, -1, true);
 		else
-			CaretMovementCommand(*this, &Caret::backwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &locations::backwardVisualLine, shiftPressed)();
 		return true;
 	case VK_RIGHT:	// [Right]
 		if(altPressed) {
-			if(shiftPressed)
-				RowSelectionExtensionCommand(*this, controlPressed ? &Caret::rightWord : &Caret::rightCharacter)();
-			else
+			if(shiftPressed) {
+				if(controlPressed)
+					RowSelectionExtensionCommand(*this, &locations::rightWord)();
+				else
+					RowSelectionExtensionCommand(*this, &locations::rightCharacter)();
+			} else
 				CompletionProposalPopupCommand(*this)();
-		} else
-			CaretMovementCommand(*this, controlPressed ? &Caret::rightWord: &Caret::rightCharacter, shiftPressed)();
+		} else {
+			if(controlPressed)
+				CaretMovementCommand(*this, &locations::rightWord, shiftPressed)();
+			else
+				CaretMovementCommand(*this, &locations::rightCharacter, shiftPressed)();
+		}
 		return true;
 	case VK_DOWN:	// [Down]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &Caret::forwardVisualLine)();
+			RowSelectionExtensionCommand(*this, &locations::forwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			onVScroll(SB_LINEDOWN, 0, 0);
 		else
-			CaretMovementCommand(*this, &Caret::forwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &locations::forwardVisualLine, shiftPressed)();
 		return true;
 	case VK_INSERT:	// [Insert]
 		if(altPressed)
@@ -229,7 +247,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		break;
 	case 'I':	// ^I -> Tab
 		if(controlPressed)
-			return CharacterInputCommand(*this, 0x0009)(), true;
+			return CharacterInputCommand(*this, 0x0009u)(), true;
 		break;
 	case 'J':	// ^J -> New Line
 	case 'M':	// ^M -> New Line
@@ -424,7 +442,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		return false;
 
 	const Document& doc = document();
-	const bool hasSelection = !caret().isSelectionEmpty();
+	const bool hasSelection = !isSelectionEmpty(caret());
 	const bool readOnly = doc.isReadOnly();
 	const bool japanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
 
@@ -531,7 +549,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableChanges() != 0);
 	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
-	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste());
+	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste(false));
 	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
 	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
@@ -573,7 +591,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 			len,
 #endif // _MSC_VER < 1400
 			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
-				caret().lineNumber()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+				caret().line()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
 	}
 
@@ -602,14 +620,16 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 					texteditor::commands::TextInputCommand(*this, text.get())();
 				else {
 					Document& doc = document();
-					doc.insertUndoBoundary();
-					if(doc.erase(*caret_, static_cast<DocumentCharacterIterator&>(
-							DocumentCharacterIterator(doc, caret()).next()).tell())) {
-						doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
+					try {
 						doc.insertUndoBoundary();
-						imeComposingCharacter_ = false;
-						recreateCaret();
+						replace(doc, Region(*caret_,
+							static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
+							String(1, static_cast<Char>(wParam)));
+						doc.insertUndoBoundary();
+					} catch(const DocumentCantChangeException&) {
 					}
+					imeComposingCharacter_ = false;
+					recreateCaret();
 				}
 			}
 //			updateIMECompositionWindowPosition();
@@ -619,14 +639,20 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 	} else if(toBoolean(GCS_COMPSTR & lParam)) {
 		if(toBoolean(lParam & CS_INSERTCHAR)) {
 			Document& doc = document();
-			if(imeComposingCharacter_)
-				doc.erase(*caret_,
-					static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell());
-			doc.insert(*caret_, String(1, static_cast<Char>(wParam)));
-			imeComposingCharacter_ = true;
+			const Position temp(*caret_);
+			try {
+				if(imeComposingCharacter_)
+					replace(doc, Region(*caret_,
+						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
+						String(1, static_cast<Char>(wParam)));
+				else
+					insert(doc, *caret_, String(1, static_cast<Char>(wParam)));
+				imeComposingCharacter_ = true;
+				if(toBoolean(lParam & CS_NOMOVECARET))
+					caret_->moveTo(temp);
+			} catch(...) {
+			}
 			handled = true;
-			if(toBoolean(lParam & CS_NOMOVECARET))
-				caret_->backwardCharacter();
 			recreateCaret();
 		}
 	}
@@ -656,18 +682,18 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			return 0L;
 		}
 		handled = true;
-		if(caret_->isSelectionEmpty()) {	// IME selects the composition target automatically if no selection
+		if(isSelectionEmpty(*caret_)) {	// IME selects the composition target automatically if no selection
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-				const String& line = doc.line(caret().lineNumber());
+				const String& line = doc.line(caret().line());
 				rcs->dwStrLen = static_cast<DWORD>(line.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret().columnNumber());
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret().column());
 				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
 				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
 		} else {
-			const String selection(caret().selectionText(NLF_RAW_VALUE));
+			const String selection(selectedString(caret(), NLF_RAW_VALUE));
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
 				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
@@ -682,7 +708,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
 		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
 			const Region region(doc.accessibleRegion());
-			if(!caret().isSelectionEmpty()) {
+			if(!isSelectionEmpty(caret())) {
 				// reconvert the selected region. the selection may be multi-line
 				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
 					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
@@ -690,7 +716,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			} else {
 				// reconvert the region IME passed if no selection (and create the new selection).
 				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(doc.isNarrowed() && caret().lineNumber() == region.first.line) {	// the document is narrowed
+				if(doc.isNarrowed() && caret().line() == region.first.line) {	// the document is narrowed
 					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
 						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
 						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
@@ -703,8 +729,8 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 					}
 				}
 				caret().select(
-					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char)),
-					Position(caret().lineNumber(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+					Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char)),
+					Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
 			handled = true;
 			return true;
@@ -717,16 +743,16 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 
 	// queried document content for higher conversion accuracy
 	else if(command == IMR_DOCUMENTFEED) {
-		if(caret().lineNumber() == caret().anchor().lineNumber()) {
+		if(caret().line() == caret().anchor().line()) {
 			handled = true;
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(caret().lineNumber()));
+				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(caret().line()));
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret().beginning().columnNumber());
-				doc.line(caret().lineNumber()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret().beginning().column());
+				doc.line(caret().line()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().lineNumber());
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
 		}
 	}
 
@@ -769,7 +795,7 @@ void TextViewer::onKillFocus(HWND newWindow) {
 		hideCaret();
 		::DestroyCaret();
 	}
-	redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
+	redrawLines(caret().beginning().line(), caret().end().line());
 	update();
 }
 
@@ -872,7 +898,7 @@ void TextViewer::onSetFocus(HWND oldWindow) {
 
 	// hmm...
 //	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(caret().beginning().lineNumber(), caret().end().lineNumber());
+		redrawLines(caret().beginning().line(), caret().end().line());
 		update();
 //	}
 
@@ -1224,7 +1250,7 @@ namespace {
 		bh.bV5AlphaMask = 0xff000000;
 
 		// determine the range to draw
-		const Region selectedRegion(viewer.caret().selectionRegion());
+		const Region selectedRegion(viewer.caret());
 		length_t firstLine, firstSubline;
 		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
 
@@ -1243,7 +1269,7 @@ namespace {
 			const int indent = renderer.lineIndent(line);
 			pair<length_t, length_t> range;
 			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
-				if(viewer.caret().selectedRangeOnVisualLine(line, subline, range.first, range.second)) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range.first, range.second)) {
 					range.second = min(viewer.document().lineLength(line), range.second);
 					const RECT sublineBounds(layout.bounds(range.first, range.second));
 					selectionBounds.left = min(sublineBounds.left + indent, selectionBounds.left);
@@ -1268,7 +1294,7 @@ namespace {
 			const int indent = renderer.lineIndent(line);
 			pair<length_t, length_t> range;
 			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
-				if(viewer.caret().selectedRangeOnVisualLine(line, subline, range.first, range.second)) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range.first, range.second)) {
 					range.second = min(viewer.document().lineLength(line), range.second);
 					Rgn rgn(layout.blackBoxBounds(range.first, range.second));
 					rgn.offset(indent - selectionBounds.left, y - selectionBounds.top);
@@ -1369,7 +1395,7 @@ HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
 	if(!caret.isSelectionRectangle())
 		dnd_.numberOfRectangleLines = 0;
 	else {
-		const Region selection(caret.selectionRegion());
+		const Region selection(caret.selectedRegion());
 		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
 	}
 
@@ -1442,7 +1468,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
 			if(viewer_->configuration().alignment != ALIGN_LEFT)
 				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
-			pair<HRESULT, String> text(getTextFromDataObject(*data));
+			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
 			if(SUCCEEDED(text.first))
 				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
 		}
@@ -1581,10 +1607,17 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		ca.moveTo(destination);
 
 		bool rectangle;
-		pair<HRESULT, String> text(getTextFromDataObject(*data, &rectangle));
-		if(SUCCEEDED(text.first)) {
+		pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
+		if(SUCCEEDED(content.first)) {
 			AutoFreeze af(viewer_);
-			if(rectangle ? ca.insertRectangle(text.second) : ca.insert(text.second)) {
+			bool failed = false;
+			ca.moveTo(destination);
+			try {
+				replaceSelection(ca, content.second, rectangle);
+			} catch(...) {
+				failed = true;
+			}
+			if(!failed) {
 				if(rectangle)
 					ca.beginRectangleSelection();
 				ca.select(destination, ca);
@@ -1594,7 +1627,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		state_ = NONE;
 	} else {	// drop from the same widget
 		assert(state_ == OLE_DND_SOURCE);
-		String text(ca.selectionText(NLF_RAW_VALUE));
+		String text(selectedString(ca, NLF_RAW_VALUE));
 
 		// can't drop into the selection
 		if(ca.isPointOverSelection(caretPoint)) {
@@ -1605,42 +1638,43 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			document.insertUndoBoundary();
 			AutoFreeze af(viewer_);
 			if(toBoolean(keyState & MK_CONTROL)) {	// copy
-//				viewer_->redrawLines(ca.beginning().lineNumber(), ca.end().lineNumber());
+//				viewer_->redrawLines(ca.beginning().line(), ca.end().line());
+				bool failed = false;
 				ca.enableAutoShow(false);
 				ca.moveTo(destination);
-				if(rectangle)	// copy as a rectangle
-					ca.insertRectangle(text);
-				else	// copy as linear
-					ca.insert(text);
+				try {
+					replaceSelection(ca, text, rectangle);
+				} catch(...) {
+					failed = true;
+				}
 				ca.enableAutoShow(true);
-				ca.select(destination, ca);
-				*effect = DROPEFFECT_COPY;
-			} else if(rectangle) {	// move as a rectangle
-				kernel::Point p(document);
-				p.moveTo(destination);
-				if(ca.eraseSelection()) {
-					p.adaptToDocument(false);
-					ca.enableAutoShow(false);
-					ca.extendSelection(p);
-					ca.insertRectangle(text);
-					ca.enableAutoShow(true);
-					ca.select(p, ca);
-					*effect = DROPEFFECT_MOVE;
+				if(!failed) {
+					ca.select(destination, ca);
+					*effect = DROPEFFECT_COPY;
 				}
-			} else {	// move as linear
-				VisualPoint activePointOrg(*viewer_);
-				const Position anchorPointOrg = ca.anchor();
-				activePointOrg.moveTo(ca);
+			} else {	// move as a rectangle or linear
+				bool failed = false;
+				pair<Point, Point> oldSelection(make_pair(Point(ca.anchor()), Point(ca)));
 				ca.enableAutoShow(false);
 				ca.moveTo(destination);
-				if(document.erase(anchorPointOrg, activePointOrg)) {
-					const Position temp = ca;
-					ca.endRectangleSelection();
-					ca.insert(text);
-					ca.enableAutoShow(true);
-					ca.select(temp, ca);
-					*effect = DROPEFFECT_MOVE;
+				try {
+					replaceSelection(ca, text, rectangle);
+				} catch(...) {
+					failed = true;
 				}
+				if(!failed) {
+					ca.select(destination, ca);
+					if(rectangle)
+						ca.beginRectangleSelection();
+					try {
+						erase(ca.document(), oldSelection.first, oldSelection.second);
+					} catch(...) {
+						failed = true;
+					}
+				}
+				ca.enableAutoShow(true);
+				if(!failed)
+					*effect = DROPEFFECT_MOVE;
 			}
 			document.insertUndoBoundary();
 		}
@@ -1711,7 +1745,7 @@ void DefaultMouseInputStrategy::extendSelection(const Position* to /* = 0 */) {
 		caret.select(s);
 	} else if(state_ == EXTENDING_WORD_SELECTION) {
 		using namespace text;
-		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(caret.getContentType());
+		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(caret.contentType());
 		if(destination.line < selection_.initialLine
 				|| (destination.line == selection_.initialLine
 					&& destination.column < selection_.initialWordColumns.first)) {
@@ -1763,9 +1797,9 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
 		const Position to(viewer_->characterForClientXY(position, LineLayout::LEADING));
-		const bool extend = toBoolean(keyState & MK_SHIFT) && to.line != caret.anchor().lineNumber();
+		const bool extend = toBoolean(keyState & MK_SHIFT) && to.line != caret.anchor().line();
 		state_ = EXTENDING_LINE_SELECTION;
-		selection_.initialLine = extend ? caret.anchor().lineNumber() : to.line;
+		selection_.initialLine = extend ? caret.anchor().line() : to.line;
 		viewer_->caret().endRectangleSelection();
 		extendSelection(&to);
 		viewer_->setCapture();
@@ -1773,7 +1807,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 	}
 
 	// approach OLE drag-and-drop
-	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !caret.isSelectionEmpty() && caret.isPointOverSelection(position)) {
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(caret) && caret.isPointOverSelection(position)) {
 		state_ = APPROACHING_OLE_DND;
 		dragApproachedPosition_ = position;
 		if(caret.isSelectionRectangle())
@@ -1808,9 +1842,9 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 					// begin word selection
 					state_ = EXTENDING_WORD_SELECTION;
 					caret.moveTo(toBoolean(keyState & MK_SHIFT) ? caret.anchor() : to);
-					caret.selectWord();
-					selection_.initialLine = caret.lineNumber();
-					selection_.initialWordColumns = make_pair(caret.beginning().columnNumber(), caret.end().columnNumber());
+					selectWord(caret);
+					selection_.initialLine = caret.line();
+					selection_.initialWordColumns = make_pair(caret.beginning().column(), caret.end().column());
 				}
 				if(toBoolean(keyState & MK_SHIFT))
 					extendSelection(&to);
@@ -1826,7 +1860,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 	}
 
 //	if(!caret.isSelectionRectangle() && !boxDragging)
-//		viewer_->redrawLine(caret.getLineNumber());
+//		viewer_->redrawLine(caret.line());
 	viewer_->setFocus();
 }
 
@@ -1845,7 +1879,7 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const POINT& position, 
 	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {
 		state_ = NONE;
 		// if released the button when extending the selection, the scroll may not reach the caret position
-		viewer_->caret().show();
+		utils::show(viewer_->caret());
 	}
 	viewer_->releaseCapture();
 }
@@ -1920,10 +1954,10 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 			if(htr == TextViewer::LEADING_MARGIN || htr == TextViewer::TOP_MARGIN || htr == TextViewer::TEXT_AREA) {
 				// begin word selection
 				Caret& caret = viewer_->caret();
-				caret.selectWord();
+				selectWord(caret);
 				state_ = EXTENDING_WORD_SELECTION;
-				selection_.initialLine = caret.lineNumber();
-				selection_.initialWordColumns = make_pair(caret.anchor().columnNumber(), caret.columnNumber());
+				selection_.initialLine = caret.line();
+				selection_.initialWordColumns = make_pair(caret.anchor().column(), caret.column());
 				viewer_->setCapture();
 				beginTimer(SELECTION_EXPANSION_INTERVAL);
 				return true;
@@ -1970,7 +2004,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Button button, Action action, c
 void DefaultMouseInputStrategy::mouseMoved(const POINT& position, uint) {
 	if(state_ == APPROACHING_AUTO_SCROLL
 			|| (dnd_.supportLevel >= SUPPORT_OLE_DND && state_ == APPROACHING_OLE_DND)) {	// OLE dragging starts?
-		if(state_ == APPROACHING_OLE_DND && viewer_->caret().isSelectionEmpty())
+		if(state_ == APPROACHING_OLE_DND && isSelectionEmpty(viewer_->caret()))
 			state_ = NONE;	// approaching... => cancel
 		else {
 			// the following code can be replaced with DragDetect in user32.lib
@@ -2026,11 +2060,11 @@ bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
 		cursorName = IDC_ARROW;
 	// on a draggable text selection?
-	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !viewer_->caret().isSelectionEmpty() && viewer_->caret().isPointOverSelection(position))
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(viewer_->caret()) && viewer_->caret().isPointOverSelection(position))
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
-		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, EditPoint::UTF16_CODE_UNIT));
+		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, locations::UTF16_CODE_UNIT));
 		if(p != Position::INVALID_POSITION)
 			newlyHoveredHyperlink = getPointedHyperlink(*viewer_, p);
 		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))

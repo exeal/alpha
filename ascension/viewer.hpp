@@ -40,8 +40,6 @@ namespace ascension {
 	 */
 	LANGID getUserDefaultUILanguage() /*throw()*/;
 
-	namespace texteditor {class EditorCommand;}
-
 	namespace viewers {class TextViewer;}
 
 	/// Provides stuffs for source code editors.
@@ -559,7 +557,7 @@ namespace ascension {
 			// client coordinates vs. character position mappings
 			kernel::Position characterForClientXY(const POINT& pt,
 				layout::LineLayout::Edge, bool abortNoCharacter = false,
-				kernel::EditPoint::CharacterUnit snapPolicy = kernel::EditPoint::DEFAULT_UNIT) const;
+				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 			POINT clientXYForCharacter(const kernel::Position& position,
 				bool fullSearchY, layout::LineLayout::Edge edge = layout::LineLayout::LEADING) const;
 			// utilities
@@ -603,7 +601,7 @@ namespace ascension {
 			virtual void selectionShapeChanged(const Caret& self);
 		private:
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.IDocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document);
@@ -870,6 +868,7 @@ namespace ascension {
 
 		// the documentation is viewer.cpp
 		class AutoFreeze {
+			MANAH_NONCOPYABLE_TAG(AutoFreeze);
 		public:
 			explicit AutoFreeze(TextViewer* textViewer, bool forAllClones = true);
 			~AutoFreeze();

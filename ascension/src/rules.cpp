@@ -1214,8 +1214,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 			if(p.start < change.region().beginning())
 				continue;
 			else if(p.start > change.region().end()) {
-				p.start = updatePosition(p.start, change, Direction::FORWARD);
-				p.tokenStart = updatePosition(p.tokenStart, change, Direction::FORWARD);
+				p.start = positions::updatePosition(p.start, change, Direction::FORWARD);
+				p.tokenStart = positions::updatePosition(p.tokenStart, change, Direction::FORWARD);
 			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.region().end()) {
 				// this partition is encompassed with the deleted region
 				partitions_.erase(i);
@@ -1233,8 +1233,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 	} else {
 		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
 			Partition& p = *partitions_[i];
-			p.start = updatePosition(p.start, change, Direction::FORWARD);
-			p.tokenStart = updatePosition(p.tokenStart, change, Direction::FORWARD);
+			p.start = positions::updatePosition(p.start, change, Direction::FORWARD);
+			p.tokenStart = positions::updatePosition(p.tokenStart, change, Direction::FORWARD);
 		}
 	}
 	verify();
