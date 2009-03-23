@@ -695,7 +695,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		HRESULT hr;
 		length_t selStart, selEnd;
 		if(selection != 0) {
-			if(!selection->caret().selectedRangeOnVisualLine(lineNumber_, subline, selStart, selEnd))
+			if(!selectedRangeOnVisualLine(selection->caret(), lineNumber_, subline, selStart, selEnd))
 				selection = 0;
 		}
 
@@ -2140,32 +2140,34 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-void LineLayoutBuffer::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
+void LineLayoutBuffer::documentAboutToBeChanged(const kernel::Document&) {
 	documentChangePhase_ = ABOUT_CHANGE;
 }
 
 /// @see kernel#IDocumentListener#documentChanged
 void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
-	const length_t top = change.region().beginning().line, bottom = change.region().end().line;
 	documentChangePhase_ = CHANGING;
-	if(top != bottom) {
-		if(change.isDeletion()) {	// deleted region includes newline(s)
-			clearCaches(top + 1, bottom + 1, false);
-			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-				if((*i)->lineNumber() > top)
-					(*i)->lineNumber_ -= bottom - top;	// $friendly-access
-			}
-		} else {	// inserted text is multiline
-			for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-				if((*i)->lineNumber() > top)
-					(*i)->lineNumber_ += bottom - top;	// $friendly-access
-			}
-			fireVisualLinesInserted(top + 1, bottom + 1);
+	assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
+	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
+		const Region& region = change.erasedRegion();
+		clearCaches(region.first.line + 1, region.second.line + 1, false);
+		for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+			if((*i)->lineNumber() > region.first.line)
+				(*i)->lineNumber_ -= region.second.line - region.first.line;	// $friendly-access
 		}
 	}
+	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {	// inserted text is multiline
+		const Region& region = change.insertedRegion();
+		for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+			if((*i)->lineNumber() > region.first.line)
+				(*i)->lineNumber_ += region.second.line - region.first.line;	// $friendly-access
+		}
+		fireVisualLinesInserted(region.first.line + 1, region.second.line + 1);
+	}
+	const length_t firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
 	if(pendingCacheClearance_.first == INVALID_INDEX
-			|| top < pendingCacheClearance_.first || top >= pendingCacheClearance_.last)
-		invalidate(top);
+			|| firstLine < pendingCacheClearance_.first || firstLine >= pendingCacheClearance_.last)
+		invalidate(firstLine);
 	documentChangePhase_ = NONE;
 	if(pendingCacheClearance_.first != INVALID_INDEX) {
 		clearCaches(pendingCacheClearance_.first, pendingCacheClearance_.last, autoRepair_);

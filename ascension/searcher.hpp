@@ -160,6 +160,7 @@ namespace ascension {
 			TextSearcher();
 			virtual ~TextSearcher();
 			// pattern/replacement
+			bool hasPattern() const /*throw()*/;
 			std::size_t numberOfStoredPatterns() const /*throw()*/;
 			std::size_t numberOfStoredReplacements() const /*throw()*/;
 			const String& pattern(std::size_t index = 0) const;
@@ -294,7 +295,7 @@ namespace ascension {
 		private:
 			bool update();
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.IBookmarkListener
 			void bookmarkChanged(length_t line);
@@ -334,13 +335,15 @@ namespace ascension {
 	inline Direction LiteralPattern::direction() const /*throw()*/ {return direction_;}
 	/// Returns true if the pattern performs case-sensitive match.
 	inline bool LiteralPattern::isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
+	/// Returns true if any pattern is set on the searcher .
+	inline bool TextSearcher::hasPattern() const /*throw()*/ {return !storedPatterns_.empty() || !temporaryPattern_.empty();}
 	/// Returns true if the search using regular expression is available.
 	inline bool TextSearcher::isRegexAvailable() /*throw()*/ {
 #ifdef ASCENSION_NO_REGEX
 		return false;
 #else
 		return true;
-#endif /* ASCENSION_NO_REGEX */
+#endif // ASCENSION_NO_REGEX
 	}
 	/// Returns the number of the stored patterns.
 	inline std::size_t TextSearcher::numberOfStoredPatterns() const /*throw()*/ {return storedPatterns_.size();}

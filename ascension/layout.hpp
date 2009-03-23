@@ -555,7 +555,7 @@ namespace ascension {
 			void presentationStylistChanged();
 			void updateLongestLine(length_t line, int width) /*throw()*/;
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			struct CachedLineComparer {

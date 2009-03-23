@@ -233,7 +233,7 @@ void TextSearcher::clearPatternCache() {
  * @throw IllegalStateException the pattern is not specified
  */
 void TextSearcher::compilePattern(Direction direction) const {
-	if(storedPatterns_.empty() && temporaryPattern_.empty())
+	if(!hasPattern())
 		throw IllegalStateException("pattern is not set.");
 	TextSearcher& self = *const_cast<TextSearcher*>(this);
 	const String& p = temporaryPattern_.empty() ? storedPatterns_.front() : temporaryPattern_;
@@ -489,15 +489,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 				if(action == IInteractiveReplacementCallback::REPLACE_ALL)
 					callback = 0;
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
-					if(!matchedRegion.isEmpty()) {
-						document.erase(matchedRegion);
-						i.seek(matchedRegion.beginning());
-					}
-					if(!replacement.empty()) {
-						Position p;
-						document.insert(matchedRegion.first, replacement, &p);	// TODO: this may return false.
-						i.seek(p);
-					}
+					Position e;
+					replace(document, matchedRegion, replacement, &e);	// TODO: handle exceptions this may throw.
+					i.seek(e);
 					i.setRegion(Region(scope.beginning(), endOfScope));
 					documentRevision = document.revisionNumber();
 				}
@@ -563,14 +557,11 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 					if(action == IInteractiveReplacementCallback::REPLACE_ALL)
 						callback = 0;
 					history.push(matchedRegion);
-					if(!matchedRegion.isEmpty()) {
-						document.erase(matchedRegion);
+					assert(!matchedRegion.isEmpty() || !replacement.empty());
+					replace(document, matchedRegion, matcher->replaceInplace(replacement));
+					if(!matchedRegion.isEmpty())
 						next = matchedRegion.beginning();
-					}
 					if(!replacement.empty()) {
-						const String r(matcher->replaceInplace(replacement));
-						if(!r.empty())
-							document.insert(matchedRegion.beginning(), r, &next);	// TODO: this may return false.
 						matcher->endInplaceReplacement(document.begin(), document.end(),
 							DocumentCharacterIterator(document, scope.beginning()), DocumentCharacterIterator(document, endOfScope),
 							DocumentCharacterIterator(document, next));
@@ -831,7 +822,7 @@ void IncrementalSearcher::checkRunning() const {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-void IncrementalSearcher::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void IncrementalSearcher::documentAboutToBeChanged(const Document&) {
 	abort();
 }
 

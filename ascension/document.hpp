@@ -12,8 +12,8 @@
 #	include <sys/stat.h>	// for POSIX environment
 #endif
 #include "encoder.hpp"
-#include "../../manah/memory.hpp"		// manah.FastArenaObject
-#include "../../manah/gap-buffer.hpp"	// manah.GapBuffer
+#include <manah/memory.hpp>		// manah.FastArenaObject
+#include <manah/gap-buffer.hpp>	// manah.GapBuffer
 #include <set>
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
@@ -172,25 +172,13 @@ namespace ascension {
 		class DocumentChange {
 			MANAH_NONCOPYABLE_TAG(DocumentChange);
 		public:
-			/// Returns true if the modification is deletion or insertion.
-			bool isDeletion() const /*throw()*/ {return deletion_;}
-			/// Returns the deleted region if the modification is deletion, otherwise the region of the inserted text.
-			const Region& region() const /*throw()*/ {return region_;}
+			const Region& erasedRegion() const /*throw()*/;
+			const Region& insertedRegion() const /*throw()*/;
 		private:
-			explicit DocumentChange(bool deletion, const Region& region) /*throw()*/ : deletion_(deletion), region_(region) {}
-			~DocumentChange() /*throw()*/ {}
-			bool deletion_;
-			Region region_;
+			explicit DocumentChange(const Region& erasedRegion, const Region& insertedRegion) /*throw()*/;
+			~DocumentChange() /*throw()*/;
+			const Region erasedRegion_, insertedRegion_;
 			friend class Document;
-		};
-
-		/**
-		 * Exception represents the document is already disposed.
-		 * @see Point
-		 */
-		class DisposedDocumentException : public std::runtime_error {
-		public:
-			DisposedDocumentException();
 		};
 
 		/**
@@ -204,8 +192,20 @@ namespace ascension {
 			DocumentPropertyKey() /*throw()*/ {}
 		};
 
+		/**
+		 * Base class of the exceptions represent @c Document#insert or @c Document#erase could not
+		 * change the document because of its property.
+		 * @see ReadOnlyDocumentException, IDocumentInput#ChangeRejectedException
+		 */
+		class DocumentCantChangeException : public std::runtime_error {
+		public:
+			virtual ~DocumentCantChangeException();
+		protected:
+			DocumentCantChangeException();
+		};
+
 		/// Thrown when the read only document is about to be modified.
-		class ReadOnlyDocumentException : public IllegalStateException {
+		class ReadOnlyDocumentException : public DocumentCantChangeException, virtual public IllegalStateException {
 		public:
 			ReadOnlyDocumentException();
 		};
@@ -251,6 +251,16 @@ namespace ascension {
 		 */
 		class IDocumentInput {
 		public:
+			/**
+			 * Thrown if @c IDocumentInput rejected the change of the document. For details, see the
+			 * documentation of @c Document class.
+			 * @see Document#erase, Document#insert, Document#lock, IDocumentInput#isChangeable
+			 */
+			class ChangeRejectedException : public DocumentCantChangeException {
+			public:
+				ChangeRejectedException();
+			};
+		public:
 			/// Destructor.
 			virtual ~IDocumentInput() /*throw()*/ {}
 			/// Returns the encoding of the document input.
@@ -277,9 +287,8 @@ namespace ascension {
 			/**
 			 * The document is about to be changed.
 			 * @param document the document
-			 * @param change the modification content. @c change.region() may return an empty
 			 */
-			virtual void documentAboutToBeChanged(const Document& document, const DocumentChange& change) = 0;
+			virtual void documentAboutToBeChanged(const Document& document) = 0;
 			/**
 			 * The text was deleted or inserted.
 			 * @param document the document
@@ -488,7 +497,7 @@ namespace ascension {
 		private:
 			manah::GapBuffer<length_t>::Iterator find(length_t line) const /*throw()*/;
 			// IDocumentListener
-			void documentAboutToBeChanged(const Document& document, const DocumentChange& change);
+			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
 			explicit Bookmarker(Document& document) /*throw()*/;
@@ -543,23 +552,24 @@ namespace ascension {
 			/// The property key for the title of the document.
 			static const DocumentPropertyKey TITLE_PROPERTY;
 
-			/// Content of a line.
+			/**
+			 * Content of a line.
+			 * @note This class is not intended to be subclassed.
+			 */
 			class Line : public manah::FastArenaObject<Line> {
 			public:
-				/// Returns true if the line has been changed.
-				/// @deprecated 0.8
-				bool isModified() const /*throw()*/ {return operationHistory_ != 0;}
 				/// Returns the newline of the line.
 				Newline newline() const /*throw()*/ {return newline_;}
+				/// Returns the revision number when this last was changed previously.
+				std::size_t revisionNumber() const /*throw()*/ {return revisionNumber_;}
 				/// Returns the text of the line.
 				const String& text() const /*throw()*/ {return text_;}
 			private:
-				Line() /*throw()*/ : operationHistory_(0), newline_(ASCENSION_DEFAULT_NEWLINE) {}
-				explicit Line(const String& text, Newline newline = ASCENSION_DEFAULT_NEWLINE, bool modified = false)
-					: text_(text), operationHistory_(modified ? 1 : 0), newline_(newline) {}
+				explicit Line(std::size_t revisionNumber) /*throw()*/;
+				Line(std::size_t revisionNumber, const String& text, Newline newline = ASCENSION_DEFAULT_NEWLINE);
 				String text_;
-				ulong operationHistory_;
 				Newline newline_;
+				std::size_t revisionNumber_;
 				friend class Document;
 			};
 			typedef manah::GapBuffer<Line*,
@@ -612,12 +622,15 @@ namespace ascension {
 			IContentTypeInformationProvider& contentTypeInformation() const /*throw()*/;
 			void setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) /*throw()*/;
 			// manipulations
-			bool erase(const Region& region);
-			bool erase(const Position& pos1, const Position& pos2);
-			bool insert(const Position& at, const String& text, Position* eos = 0);
-			bool insert(const Position& at, const Char* first, const Char* last, Position* eos = 0);
-			bool insert(const Position& at, std::basic_istream<Char>& in, Position* eos = 0);
 			bool isChanging() const /*throw()*/;
+			void replace(const Region& region, const Char* first, const Char* last, Position* eos = 0);
+			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = 0);
+#if 0
+			// locks
+			bool lock(const void* locker);
+			const void* locker() const /*throw()*/;
+			void unlock(const void* locker);
+#endif
 			// undo/redo & compound changes
 			void beginCompoundChange();
 			void clearUndoBuffer() /*throw()*/;
@@ -643,11 +656,11 @@ namespace ascension {
 
 		private:
 			void doSetModified(bool modified) /*throw()*/;
-			void eraseText(const Region& region);
-			void fireDocumentAboutToBeChanged(const DocumentChange& c) /*throw()*/;
+			void eraseRegion(const Region& region);
+			void fireDocumentAboutToBeChanged() /*throw()*/;
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) /*throw()*/;
 			void initialize();
-			Position insertText(const Position& position, const Char* first, const Char* last);
+			Position insertString(const Position& position, const Char* first, const Char* last);
 			void partitioningChanged(const Region& changedRegion) /*throw()*/;
 			void updatePoints(const DocumentChange& change) /*throw()*/;
 			// internal.ISessionElement
@@ -666,16 +679,6 @@ namespace ascension {
 				text::IdentifierSyntax syntax_;
 			};
 
-			class ModificationGuard {
-				MANAH_UNASSIGNABLE_TAG(ModificationGuard);
-			public:
-				ModificationGuard(Document& document) /*throw()*/ : document_(document) {document_.changing_ = true;}
-				~ModificationGuard() /*throw()*/ {document_.changing_= false;}
-			private:
-				Document& document_;
-			};
-			friend class ModificationGuard;
-
 			texteditor::Session* session_;
 			ascension::internal::StrategyPointer<IDocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
@@ -689,6 +692,9 @@ namespace ascension {
 			UndoManager* undoManager_;
 			std::map<const DocumentPropertyKey*, String*> properties_;
 			bool onceUndoBufferCleared_, recordingChanges_, changing_;
+#if 0
+			const void* locker_;
+#endif
 
 			std::pair<Position, Point*>* accessibleArea_;
 
@@ -699,75 +705,29 @@ namespace ascension {
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
+			friend class Memento;
 		};
 
 		// the documentation is document.cpp
 		class CompoundChangeSaver {
+			MANAH_NONCOPYABLE_TAG(CompoundChangeSaver);
 		public:
 			explicit CompoundChangeSaver(Document* document);
 			~CompoundChangeSaver();
 		private:
 			Document* const document_;
 		};
-
-		/**
-		 * @c std#basic_streambuf implementation for @c Document. This supports both input and
-		 * output streams. Seeking is not supported. Virtual methods this class overrides are:
-		 * - @c overflow
-		 * - @c sync
-		 * - @c uflow
-		 * - @c underflow
-		 * Destructor automatically flushes the internal buffer.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class DocumentBuffer : public std::basic_streambuf<Char> {
+#if 0
+		// the documentation is document.cpp
+		class DocumentLocker {
+			MANAH_NONCOPYABLE_TAG(DocumentLocker);
 		public:
-			explicit DocumentBuffer(Document& document, const Position& initialPosition = Position::ZERO_POSITION,
-				Newline newline = NLF_RAW_VALUE, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-			~DocumentBuffer() /*throw()*/;
-			const Position&	tell() const /*throw()*/;
+			DocumentLocker(Document& document);
+			~DocumentLocker() /*throw()*/;
 		private:
-			int_type overflow(int_type c);
-			int sync();
-			int_type uflow();
-			int_type underflow();
-		private:
-			Document& document_;
-			const Newline newline_;
-			const std::ios_base::openmode mode_;
-			Position current_;
-			char_type buffer_[8192];
+			Document* const document_;
 		};
-
-		/// Input stream for @c Document.
-		class DocumentInputStream : public std::basic_istream<Char> {
-		public:
-			explicit DocumentInputStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
-			DocumentBuffer* rdbuf() const;
-		private:
-			DocumentBuffer buffer_;
-		};
-
-		/// Output stream for @c Document.
-		class DocumentOutputStream : public std::basic_ostream<Char> {
-		public:
-			explicit DocumentOutputStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
-			DocumentBuffer* rdbuf() const;
-		private:
-			DocumentBuffer buffer_;
-		};
-
-		/// Stream for @c Document.
-		class DocumentStream : public std::basic_iostream<Char> {
-		public:
-			explicit DocumentStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
-			DocumentBuffer* rdbuf() const;
-		private:
-			DocumentBuffer buffer_;
-		};
+#endif
 
 		// free functions about newlines
 		template<typename ForwardIterator> Newline eatNewline(ForwardIterator first, ForwardIterator last);
@@ -777,330 +737,28 @@ namespace ascension {
 		length_t getNumberOfLines(const String& text) /*throw()*/;
 		bool isLiteralNewline(Newline newline) /*throw()*/;
 
+		// free functions to change document
+		void erase(Document& document, const Region& region);
+		void erase(Document& document, const Position& first, const Position& second);
+		void insert(Document& document, const Position& at, const String& text, Position* endOfInsertedString = 0);
+		void insert(Document& document, const Position& at, const Char* first, const Char* last, Position* endOfInsertedString = 0);
+		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = 0);
+		void replace(Document& document, const Region& region, const String& text, Position* endOfInsertedString = 0);
+
 		// other free functions related to document
-		length_t getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
-		Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/;
 		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
 			const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
 
-		/// Provides features about file-bound document.
-		namespace fileio {
-			/// Character type for file names. This is equivalent to
-			/// @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
-			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
-			/// String type for file names.
-			typedef std::basic_string<Char> String;
-
-			/// File I/O exception.
-			class IOException : public std::runtime_error {
-			public:
-				/// Error types.
-				enum Type {
-					/// The specified file is not found.
-					FILE_NOT_FOUND,
-					/// The specified encoding is invalid.
-					INVALID_ENCODING,
-					/// The specified newline is based on Unicode but the encoding is not Unicode.
-					INVALID_NEWLINE,
-					/// The encoding failed for unmappable character.
-					/// @see encoding#Encoder#UNMAPPABLE_CHARACTER
-					UNMAPPABLE_CHARACTER,
-					/// The encoding failed for malformed input.
-					/// @see encoding#Encoder#MALFORMED_INPUT
-					MALFORMED_INPUT,
-					/// Failed for out of memory.
-					OUT_OF_MEMORY,
-					/// The file to be opend is too huge.
-					HUGE_FILE,
-					/// Tried to write the read only document. If the disk file is read only, POSIX
-					/// @c errno is set to @c BBADF, or Win32 @c GetLastError returns
-					/// @c ERROR_FILE_READ_ONLY.
-					READ_ONLY_MODE,
-					/// The file is read only and not writable.
-					UNWRITABLE_FILE,
-					/// Failed to create the temporary file for writing.
-					CANNOT_CREATE_TEMPORARY_FILE,
-					/// Failed to write to the file and the file was <strong>lost</strong>.
-					LOST_DISK_FILE,
-					/// A platform-dependent error whose detail can be obtained by POSIX @c errno
-					/// or Win32 @c GetLastError.
-					PLATFORM_DEPENDENT_ERROR
-				};
-			public:
-				/// Constructor.
-				explicit IOException(Type type) /*throw()*/ : std::runtime_error(""), type_(type) {}
-				/// Returns the error type.
-				Type type() const /*throw()*/ {return type_;}
-			private:
-				Type type_;
-			};
-
-			class TextFileDocumentInput;
-
-			/**
-			 * Interface for objects which are interested in getting informed about changes of @c FileBinder.
-			 * @see FileBinder#addListener, FileBinder#removeListener
-			 */
-			class IFilePropertyListener {
-			private:
-				/// The encoding or newline of the bound file was changed.
-				virtual void fileEncodingChanged(const TextFileDocumentInput& textFile) = 0;
-				/// The the name of the bound file was changed.
-				virtual void fileNameChanged(const TextFileDocumentInput& textFile) = 0;
-				friend class TextFileDocumentInput;
-			};
-
-			/// Interface for objects which should handle the unexpected time stamp of the file.
-			class IUnexpectedFileTimeStampDirector {
-			public:
-				/// Context.
-				enum Context {
-					FIRST_MODIFICATION,	///< The call is for the first modification of the document.
-					OVERWRITE_FILE,		///< The call is for overwriting the file.
-					CLIENT_INVOCATION	///< The call was invoked by @c Document#checkTimeStamp.
-				};
-			private:
-				/**
-				 * Handles.
-				 * @param document the document
-				 * @param context the context
-				 * @retval true	the process will be continued and the internal time stamp will be updated
-				 * @retval false the process will be aborted
-				 */
-				virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) /*throw()*/ = 0;
-				friend class TextFileDocumentInput;
-			};
-#if 0
-			/// Interface for objects which are interested in getting informed about progression of file IO.
-			class IFileIOProgressMonitor {
-			public:
-				enum ProcessType {};
-			private:
-				/**
-				 * This method will be called when 
-				 * @param type the type of the precess
-				 * @param processedAmount the amount of the data had processed
-				 * @param totalAmount the total amount of the data to process
-				 */
-				virtual void onProgress(ProcessType type, ULONGLONG processedAmount, ULONGLONG totalAmount) = 0;
-				/// Returns the internal number of lines.
-				virtual length_t queryIntervalLineCount() const = 0;
-				/// Releases the object.
-				virtual void release() = 0;
-				friend class Document;
-			};
-#endif
-			/**
-			 * @c std#basic_streambuf implementation of the text file with encoding conversion.
-			 * @note This class is not intended to be subclassed.
-			 */
-			class TextFileStreamBuffer : public std::basic_streambuf<ascension::Char> {
-				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
-			public:
-				TextFileStreamBuffer(const String& fileName, std::ios_base::openmode mode,
-					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					bool writeByteOrderMark);
-				~TextFileStreamBuffer();
-				TextFileStreamBuffer* close();
-				std::string encoding() const /*throw()*/;
-				bool isOpen() const /*throw()*/;
-				bool unicodeByteOrderMark() const /*throw()*/;
-			private:
-				int_type overflow(int_type c /* = traits_type::eof() */);
-				int_type pbackfail(int_type c /* = traits_type::eof() */);
-				int sync();
-				int_type underflow();
-			private:
-				typedef std::basic_streambuf<ascension::Char> Base;
-#ifdef ASCENSION_WINDOWS
-				HANDLE fileHandle_, fileMapping_;
-#else // ASCENSION_POSIX
-				int fileDescriptor_;
-#endif
-				struct {
-					const byte* first;
-					const byte* last;
-					const byte* current;
-				} inputMapping_;
-				std::auto_ptr<encoding::Encoder> encoder_;
-				ascension::Char ucsBuffer_[8192];
-			};
-
-			class TextFileDocumentInput : public IDocumentInput, public IDocumentStateListener {
-				MANAH_NONCOPYABLE_TAG(TextFileDocumentInput);
-			public:
-				/// The structure used to represent a file time.
-#ifdef ASCENSION_WINDOWS
-				typedef FILETIME Time;
-#else // ASCENSION_POSIX
-				typedef ::time_t Time;
-#endif
-				/// Lock modes for opened file.
-				typedef byte LockMode;
-				static const LockMode
-					DONT_LOCK				= 0x00,	///< Does not lock.
-					SHARED_LOCK				= 0x01,	///< Uses shared lock.
-					EXCLUSIVE_LOCK			= 0x02,	///< Uses exclusive lock.
-					LOCK_TYPE_MASK			= 0x03,	///< A bit mask for lock type.
-					LOCK_ONLY_AS_EDITING	= 0x08;	///< The lock will not be performed unless modification occurs.
-				/// Option flags for @c FileBinder#write and @c FileBinder#writeRegion.
-				struct WriteParameters {
-					/// The the encoding name.
-					std::string encoding;
-					/// The newline.
-					Newline newline;
-					/// The substituion policy of encoding.
-					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy;
-					enum Option {
-						WRITE_UNICODE_BYTE_ORDER_SIGNATURE	= 0x01,	///< Writes a UTF byte order signature.
-						BY_COPYING							= 0x02,	///< Not implemented.
-						CREATE_BACKUP						= 0x04	///< Creates backup files.
-					};
-					manah::Flags<Option> options;	///< Miscellaneous options.
-				};
-			public:
-				explicit TextFileDocumentInput(Document& document);
-				~TextFileDocumentInput() /*throw()*/;
-				bool checkTimeStamp();
-				const Document& document() const /*throw()*/;
-				LockMode lockMode() const /*throw()*/;
-				// listener
-				void addListener(IFilePropertyListener& listener);
-				void removeListener(IFilePropertyListener& listener);
-				// bound file name
-				String extensionName() const /*throw()*/;
-				bool isOpen() const /*throw()*/;
-				String name() const /*throw()*/;
-				String pathName() const /*throw()*/;
-				// encodings
-				void setEncoding(const std::string& encoding);
-				void setNewline(Newline newline);
-				bool unicodeByteOrderMark() const /*throw()*/;
-				// I/O
-				void close();
-				bool open(const String& fileName, LockMode lockMode,
-					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
-				bool write(const String& fileName, const WriteParameters& params);
-				bool writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
-				// IDocumentInput
-				std::string encoding() const /*throw()*/;
-				bool isChangeable() const /*throw()*/;
-				ascension::String location() const /*throw()*/;
-				Newline newline() const /*throw()*/;
-			private:
-				bool lock() /*throw()*/;
-				bool unlock() /*throw()*/;
-				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
-				// IDocumentStateListener
-				void documentAccessibleRegionChanged(const Document& document);
-				void documentModificationSignChanged(const Document& document);
-				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
-				void documentReadOnlySignChanged(const Document& document);
-			private:
-				Document& document_;
-				String fileName_;
-				std::string encoding_;
-				bool unicodeByteOrderMark_;
-				Newline newline_;
-				LockMode lockMode_;
-#ifdef ASCENSION_WINDOWS
-				HANDLE lockingFile_;
-#else // ASCENSION_POSIX
-				int lockingFile_;
-#endif
-				std::size_t savedDocumentRevision_;
-				Time userLastWriteTime_, internalLastWriteTime_;
-				ascension::internal::Listeners<IFilePropertyListener> listeners_;
-				IUnexpectedFileTimeStampDirector* timeStampDirector_;
-			};
-
-#ifndef ASCENSION_NO_GREP
-			class DirectoryIteratorBase {
-				MANAH_NONCOPYABLE_TAG(DirectoryIteratorBase);
-			public:
-				virtual ~DirectoryIteratorBase() /*throw()*/;
-				/**
-				 * Returns the current entry name.
-				 * @throw NoSuchElementException the iteration has already ended
-				 */
-				virtual const String& current() const = 0;
-				/**
-				 * Returns the directory name this iterator traverses. This value does not end
-				 * with path-separator.
-				 */
-				virtual const String& directory() const /*throw()*/ = 0;
-				/**
-				 * Returns true if the current entry is directory.
-				 * @throw NoSuchElementException the iteration has already ended
-				 */
-				virtual bool isDirectory() const = 0;
-				/**
-				 * Returns true if the iterator is end.
-				 * @throw NoSuchElementException the iteration has already ended
-				 */
-				virtual bool isDone() const /*throw()*/ = 0;
-				/**
-				 * Moves to the next entry. If the iterator has already reached at the end, does
-				 * nothing.
-				 * @throw IOException any I/O error occured
-				 */
-				virtual void next() = 0;
-			protected:
-				DirectoryIteratorBase() /*throw()*/;
-			};
-
-			/// Traverses entries in the specified directory.
-			class DirectoryIterator : public DirectoryIteratorBase {
-			public:
-				// constructors
-				DirectoryIterator(const Char* directoryName);
-				~DirectoryIterator() /*throw()*/;
-				// DirectoryIteratorBase
-				const String& current() const;
-				const String& directory() const /*throw()*/;
-				bool isDirectory() const;
-				bool isDone() const /*throw()*/;
-				void next();
-			private:
-				void update(const void* info);
-			private:
-#ifdef ASCENSION_WINDOWS
-				HANDLE handle_;
-#else // ASCENSION_POSIX
-				DIR* handle_;
-#endif
-				String current_, directory_;
-				bool currentIsDirectory_, done_;
-			};
-
-			/// Recursive version of @c DirectoryIterator.
-			class RecursiveDirectoryIterator : public DirectoryIteratorBase {
-			public:
-				// constructors
-				RecursiveDirectoryIterator(const Char* directoryName);
-				~RecursiveDirectoryIterator() /*throw()*/;
-				// attributes
-				void dontPush();
-				std::size_t level() const /*throw()*/;
-				void pop();
-				// DirectoryIteratorBase
-				const String& current() const;
-				const String& directory() const /*throw()*/;
-				bool isDirectory() const;
-				bool isDone() const /*throw()*/;
-				void next();
-			private:
-				std::stack<DirectoryIterator*> stack_;
-				String directory_;
-				bool doesntPushNext_;
-			};
-#endif // !ASCENSION_NO_GREP
-
-			// free functions related to file path name
-			String canonicalizePathName(const Char* pathName);
-			bool comparePathNames(const Char* s1, const Char* s2);
-		} // namespace fileio
+		namespace positions {
+			length_t absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
+//			bool isOutsideOfAccessibleRegion(const Document& document, const Position& position) /*throw()*/;
+			bool isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/;
+			Position shrinkToAccessibleRegion(const Document& document, const Position& position) /*throw()*/;
+			Region shrinkToAccessibleRegion(const Document& document, const Region& region) /*throw()*/;
+			Position shrinkToDocumentRegion(const Document& document, const Position& position) /*throw()*/;
+			Region shrinkToDocumentRegion(const Document& document, const Region& region) /*throw()*/;
+			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/;
+		} // namespace positions
 
 
 // inline implementation ////////////////////////////////////////////////////
@@ -1146,6 +804,12 @@ inline Newline eatNewline(ForwardIterator first, ForwardIterator last) {
 	default:					return NLF_RAW_VALUE;
 	}
 }
+
+/// Calls @c Document#replace.
+inline void erase(Document& document, const Region& region) {return document.replace(region, 0, 0);}
+
+/// Calls @c Document#replace.
+inline void erase(Document& document, const Position& first, const Position& second) {return erase(document, Region(first, second));}
 
 /**
  * Returns the null-terminated string represents the specified newline.
@@ -1223,8 +887,68 @@ inline length_t getNumberOfLines(ForwardIterator first, ForwardIterator last) {
  */
 inline length_t getNumberOfLines(const String& text) /*throw()*/ {return getNumberOfLines(text.begin(), text.end());}
 
+/// Calls @c Document#replace.
+inline void insert(Document& document, const Position& at, const Char* first, const Char* last,
+	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), first, last, endOfInsertedString);}
+
+/// Calls @c Document#replace.
+inline void insert(Document& document, const Position& at, const String& text,
+	Position* endOfInsertedString /* = 0 */) {return insert(document, at, text.data(), text.data() + text.length(), endOfInsertedString);}
+
+/// Calls @c Document#replace.
+inline void insert(Document& document, const Position& at, std::basic_istream<Char>& in,
+	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), in, endOfInsertedString);}
+
 /// Returns true if the given newline value is a literal.
 inline bool isLiteralNewline(Newline newline) /*throw()*/ {return newline >= NLF_LINE_FEED && newline <= NLF_PARAGRAPH_SEPARATOR;}
+
+/// Calls @c Document#replace.
+inline void replace(Document& document, const Region& region, const String& text,
+	Position* endOfInsertedString) {return document.replace(region, text.data(), text.data() + text.length(), endOfInsertedString);}
+
+/// Returns true if the given position is outside of the document.
+inline bool positions::isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
+	return position.line >= document.numberOfLines() || position.column > document.lineLength(position.line);}
+
+/** 
+ * Shrinks the given position into the accessible region of the document.
+ * @param document the document
+ * @param position the source position. this value can be outside of the document
+ * @return the result
+ */
+inline Position positions::shrinkToAccessibleRegion(const Document& document, const Position& position) /*throw()*/ {
+	if(!document.isNarrowed())
+		return shrinkToDocumentRegion(document, position);
+	const Region accessibleRegion(document.accessibleRegion());
+	if(position < accessibleRegion.first)
+		return accessibleRegion.first;
+	else if(position > accessibleRegion.second)
+		return accessibleRegion.second;
+	return Position(position.line, std::min(position.column, document.lineLength(position.line)));
+}
+
+/** 
+ * Shrinks the given region into the accessible region of the document.
+ * @param document the document
+ * @param region the source region. this value can intersect with outside of the document
+ * @return the result. this may not be normalized
+ */
+inline Region positions::shrinkToAccessibleRegion(const Document& document, const Region& region) /*throw()*/ {
+	return Region(shrinkToAccessibleRegion(document, region.first), shrinkToAccessibleRegion(document, region.second));}
+
+/// Shrinks the given position into the document region.
+inline Position positions::shrinkToDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
+	Position p(std::min(position.line, document.numberOfLines() - 1), 0); p.column = std::min(position.column, document.lineLength(p.line)); return p;}
+
+/// Shrinks the given region into the document region. The result may not be normalized.
+inline Region positions::shrinkToDocumentRegion(const Document& document, const Region& region) /*throw()*/ {
+	return Region(shrinkToDocumentRegion(document, region.first), shrinkToDocumentRegion(document, region.second));}
+
+/// Returns the erased region in the change. The returned region is normalized. Empty if no content was erased.
+inline const Region& DocumentChange::erasedRegion() const /*throw()*/ {return erasedRegion_;}
+
+/// Returns the inserted region in the change. The returned region is normalized. Empty if no string was inserted.
+inline const Region& DocumentChange::insertedRegion() const /*throw()*/ {return insertedRegion_;}
 
 /// Returns the @c DocumentCharacterIterator addresses the beginning of the document.
 inline DocumentCharacterIterator Document::begin() const /*throw()*/ {return DocumentCharacterIterator(*this, Position::ZERO_POSITION);}
@@ -1240,9 +964,6 @@ inline IContentTypeInformationProvider& Document::contentTypeInformation() const
 
 /// Returns the @c DocumentCharacterIterator addresses the end of the document.
 inline DocumentCharacterIterator Document::end() const /*throw()*/ {return DocumentCharacterIterator(*this, region().second);}
-
-/// @see #erase(const Region&)
-inline bool Document::erase(const Position& pos1, const Position& pos2) {return erase(Region(pos1, pos2));}
 
 /**
  * Returns the information of the specified line.
@@ -1266,18 +987,9 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 inline IDocumentInput* Document::input() const /*throw()*/ {return input_.get();}
 
 /**
- * Inserts the text at the specified position. For details, see the documentation of
- * @c #insert(const Position&, const Char*, const Char*).
- * @param at the position
- * @param text the text
- * @return the result position
- * @throw BadPositionException @a at is outside of the document
- * @throw ReadOnlyDocumentException the document is read only
+ * Returns true if the document is changing (this means the document is in @c #insert or
+ * @c #insert call).
  */
-inline bool Document::insert(const Position& at, const String& text, Position* eos /* = 0 */) {
-	return insert(at, text.data(), text.data() + text.length(), eos);}
-
-/// Returns true if the document is in changing.
 inline bool Document::isChanging() const /*throw()*/ {return changing_;}
 
 /**
@@ -1319,7 +1031,10 @@ inline const String& Document::line(length_t line) const {return getLineInformat
  * @throw BadLocationException @a line is outside of the document
  */
 inline length_t Document::lineLength(length_t line) const {return this->line(line).length();}
-
+#if 0
+/// Returns the object locks the document or @c null if the document is not locked.
+inline const void* Document::locker() const /*throw()*/ {return locker_;}
+#endif
 /// Returns the number of lines in the document.
 inline length_t Document::numberOfLines() const /*throw()*/ {return lines_.size();}
 
@@ -1441,52 +1156,8 @@ inline const Region& DocumentCharacterIterator::region() const /*throw()*/ {retu
 inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
 	line_ = &document_->line((p_ = std::max(std::min(to, region_.second), region_.first)).line); return *this;}
 
-/**
- * Sets the region of the iterator. The current position will adjusted.
- * @param newRegion the new region to set
- * @throw BadRegionException @a newRegion intersects outside of the document
- */
-inline void DocumentCharacterIterator::setRegion(const Region& newRegion) {
-	const Position e(document_->region().second);
-	if(newRegion.first > e || newRegion.second > e)
-		throw BadRegionException(newRegion);
-	if(!(region_ = newRegion).includes(p_))
-		seek(p_);
-}
-
 /// Returns the document position the iterator addresses.
 inline const Position& DocumentCharacterIterator::tell() const /*throw()*/ {return p_;}
-
-/// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentInputStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
-
-/// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentOutputStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
-
-/// Returns the stored stream buffer.
-inline DocumentBuffer* DocumentStream::rdbuf() const {return const_cast<DocumentBuffer*>(&buffer_);}
-
-/// Returns the document.
-inline const Document& fileio::TextFileDocumentInput::document() const /*throw()*/ {return document_;}
-
-/// @see IDocumentInput#encoding, #setEncoding
-inline std::string fileio::TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
-
-/// Returns true if the document is bound to any file.
-inline bool fileio::TextFileDocumentInput::isOpen() const /*throw()*/ {return !fileName_.empty();}
-
-/// Returns the file lock mode.
-inline fileio::TextFileDocumentInput::LockMode fileio::TextFileDocumentInput::lockMode() const /*throw()*/ {return lockMode_;}
-
-/// @see IDocumentInput#newline, #setNewline
-inline Newline fileio::TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
-
-/// Returns the file full name or an empty string if the document is not bound to any of the files.
-inline fileio::String fileio::TextFileDocumentInput::pathName() const /*throw()*/ {return fileName_;}
-
-/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
-/// the last output file.
-inline bool fileio::TextFileDocumentInput::unicodeByteOrderMark() const /*throw()*/ {return unicodeByteOrderMark_;}
 
 }} // namespace ascension.kernel
 

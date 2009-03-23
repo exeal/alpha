@@ -10,9 +10,6 @@
 #include <stack>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
-#ifdef ASCENSION_WINDOWS
-//#	include <MAPI.h>	// MAPISendMail
-#endif // ASCENSION_WINDOWS
 
 using namespace ascension;
 using namespace ascension::kernel;
@@ -40,73 +37,6 @@ const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
 
 
 // kernel free functions ////////////////////////////////////////////////////
-
-/**
- * Returns absolute character offset of the specified position from the start of the document.
- * @param document the document
- * @param at the position
- * @param fromAccessibleStart
- * @throw BadPositionException @a at is outside of the document
- */
-length_t kernel::getAbsoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
-	if(at > document.region().second)
-		throw BadPositionException(at);
-	length_t offset = 0;
-	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
-	for(length_t line = start.line; ; ++line) {
-		if(line == at.line) {
-			offset += at.column;
-			break;
-		} else {
-			offset += document.lineLength(line) + 1;	// +1 is for a newline character
-			if(line == start.line)
-				offset -= start.column;
-		}
-	}
-	return offset;
-}
-
-/**
- * Adapts the specified position to the document change.
- * @param position the original position
- * @param change the content of the document change
- * @param gravity the gravity which determines the direction to which the position should move if
- * a text was inserted at the position. if @c FORWARD is specified, the position will move to the
- * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
- * @return the result position
- */
-Position kernel::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/ {
-	Position newPosition(position);
-	if(!change.isDeletion()) {	// insertion
-		if(position < change.region().first)	// behind the current position
-			return newPosition;
-		else if(position == change.region().first && gravity == Direction::BACKWARD) // the current position + backward gravity
-			return newPosition;
-		else if(position.line > change.region().first.line)	// in front of the current line
-			newPosition.line += change.region().second.line - change.region().first.line;
-		else {	// in the current line
-			newPosition.line += change.region().second.line - change.region().first.line;
-			newPosition.column += change.region().second.column - change.region().first.column;
-		}
-	} else {	// deletion
-		if(position < change.region().second) {	// the end is behind the current line
-			if(position <= change.region().first)
-				return newPosition;
-			else	// in the region
-				newPosition = change.region().first;
-		} else if(position.line > change.region().second.line)	// in front of the current line
-			newPosition.line -= change.region().second.line - change.region().first.line;
-		else {	// the end is the current line
-			if(position.line == change.region().first.line)	// the region is single-line
-				newPosition.column -= change.region().second.column - change.region().first.column;
-			else {	// the region is multiline
-				newPosition.line -= change.region().second.line - change.region().first.line;
-				newPosition.column -= change.region().second.column - change.region().first.column;
-			}
-		}
-	}
-	return newPosition;
-}
 
 /**
  * Writes the content of the document to the specified output stream.
@@ -149,6 +79,78 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 	return out.flush();
 }
 
+
+// kernel.positions free functions //////////////////////////////////////////
+
+/**
+ * Returns absolute character offset of the specified position from the start of the document.
+ * @param document the document
+ * @param at the position
+ * @param fromAccessibleStart
+ * @throw BadPositionException @a at is outside of the document
+ */
+length_t positions::absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
+	if(at > document.region().second)
+		throw BadPositionException(at);
+	length_t offset = 0;
+	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
+	for(length_t line = start.line; ; ++line) {
+		if(line == at.line) {
+			offset += at.column;
+			break;
+		} else {
+			offset += document.lineLength(line) + 1;	// +1 is for a newline character
+			if(line == start.line)
+				offset -= start.column;
+		}
+	}
+	return offset;
+}
+
+/**
+ * Adapts the specified position to the document change.
+ * @param position the original position
+ * @param change the content of the document change
+ * @param gravity the gravity which determines the direction to which the position should move if
+ * a text was inserted at the position. if @c FORWARD is specified, the position will move to the
+ * start of the inserted text (no movement occur). Otherwise, move to the end of the inserted text
+ * @return the result position
+ */
+Position positions::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/ {
+	Position newPosition(position);
+	if(!change.erasedRegion().isEmpty()) {	// deletion
+		if(position < change.erasedRegion().second) {	// the end is behind the current line
+			if(position <= change.erasedRegion().first)
+				return newPosition;
+			else	// in the region
+				newPosition = change.erasedRegion().first;
+		} else if(position.line > change.erasedRegion().second.line)	// in front of the current line
+			newPosition.line -= change.erasedRegion().second.line - change.erasedRegion().first.line;
+		else {	// the end is the current line
+			if(position.line == change.erasedRegion().first.line)	// the region is single-line
+				newPosition.column -= change.erasedRegion().second.column - change.erasedRegion().first.column;
+			else {	// the region is multiline
+				newPosition.line -= change.erasedRegion().second.line - change.erasedRegion().first.line;
+				newPosition.column -= change.erasedRegion().second.column - change.erasedRegion().first.column;
+			}
+		}
+	}
+	if(!change.insertedRegion().isEmpty()) {	// insertion
+		if(position < change.insertedRegion().first)	// behind the current position
+			return newPosition;
+		else if(position == change.insertedRegion().first && gravity == Direction::BACKWARD) // the current position + backward gravity
+			return newPosition;
+		else if(position.line > change.insertedRegion().first.line)	// in front of the current line
+			newPosition.line += change.insertedRegion().second.line - change.insertedRegion().first.line;
+		else {	// in the current line
+			newPosition.line += change.insertedRegion().second.line - change.insertedRegion().first.line;
+			newPosition.column += change.insertedRegion().second.column - change.insertedRegion().first.column;
+		}
+	}
+	return newPosition;
+}
+
+
 namespace {
 #ifdef _DEBUG
 	// for Document.length_ diagnostic
@@ -165,9 +167,12 @@ namespace {
 
 // exception classes ////////////////////////////////////////////////////////
 
-/// Default constructor.
-DisposedDocumentException::DisposedDocumentException() :
-	runtime_error("The document the object connecting to has been already disposed.") {
+/// Protected default constructor.
+DocumentCantChangeException::DocumentCantChangeException() : runtime_error("") {
+}
+
+/// Destructor.
+DocumentCantChangeException::~DocumentCantChangeException() {
 }
 
 /// Default constructor.
@@ -227,6 +232,28 @@ const Region& BadRegionException::requestedRegion() const /*throw()*/ {
 	return requestedRegion_;
 }
 
+/// Constructor.
+IDocumentInput::ChangeRejectedException::ChangeRejectedException() {
+}
+
+
+// DocumentChange ///////////////////////////////////////////////////////////
+
+/**
+ * Private constructor.
+ * @param erasedRegion the erased region in the change
+ * @param insertedRegion the inserted region in the change
+ */
+DocumentChange::DocumentChange(const Region& erasedRegion, const Region& insertedRegion)
+		/*throw()*/ : erasedRegion_(erasedRegion), insertedRegion_(insertedRegion) {
+	const_cast<Region&>(erasedRegion_).normalize();
+	const_cast<Region&>(erasedRegion_).normalize();
+}
+
+/// Private destructor.
+DocumentChange::~DocumentChange() /*throw()*/ {
+}
+
 
 // Bookmarker ///////////////////////////////////////////////////////////////
 
@@ -269,25 +296,25 @@ void Bookmarker::clear() /*throw()*/ {
 }
 
 /// @see IDocumentListener#documentAboutToBeChanged
-void Bookmarker::documentAboutToBeChanged(const Document&, const DocumentChange&) {
+void Bookmarker::documentAboutToBeChanged(const Document&) {
 	// do nothing
 }
 
 /// @see IDocumentListener#documentChanged
 void Bookmarker::documentChanged(const Document& document, const DocumentChange& change) {
 	// update markedLines_ based on the change
-	if(&document_ != &document || markedLines_.empty() || change.region().first.line == change.region().second.line)
+	if(&document_ != &document || markedLines_.empty())
 		return;
-	const length_t lines = change.region().second.line - change.region().first.line;
-	if(change.isDeletion()) {
+	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 		// remove the marks on the deleted lines
+		const length_t lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
 		const GapBuffer<length_t>::Iterator e(markedLines_.end());
-		GapBuffer<length_t>::Iterator top(find(change.region().first.line));
+		GapBuffer<length_t>::Iterator top(find(change.erasedRegion().first.line));
 		if(top != e) {
-			if(*top == change.region().first.line)
+			if(*top == change.erasedRegion().first.line)
 				++top;
-			GapBuffer<length_t>::Iterator bottom(find(change.region().second.line));
-			if(bottom != e && *bottom == change.region().second.line)
+			GapBuffer<length_t>::Iterator bottom(find(change.erasedRegion().second.line));
+			if(bottom != e && *bottom == change.erasedRegion().second.line)
 				++bottom;
 			// slide the following lines before removing
 			if(bottom != e) {
@@ -296,10 +323,12 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 			}
 			markedLines_.erase(top, bottom);	// GapBuffer<>.erase does not return an iterator
 		}
-	} else {
-		GapBuffer<length_t>::Iterator i(find(change.region().first.line));
+	}
+	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
+		const length_t lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
+		GapBuffer<length_t>::Iterator i(find(change.insertedRegion().first.line));
 		if(i != markedLines_.end()) {
-			if(*i == change.region().first.line && change.region().first.column != 0)
+			if(*i == change.insertedRegion().first.line && change.insertedRegion().first.column != 0)
 				++i;
 			for(const GapBuffer<length_t>::Iterator e(markedLines_.end()); i != e; ++i)
 				*i += lines;
@@ -451,303 +480,6 @@ DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
 }
 
 
-// Document.UndoManager /////////////////////////////////////////////////////
-
-// about document undo/redo
-namespace {
-	class IAtomicChange;
-
-	// an abstract edit operation
-	class IUndoableChange {
-	public:
-		// result of IUndoableChange.perform
-		struct Result {
-			bool completed;				// true if the change was *completely* performed
-			size_t numberOfRevisions;	// the number of the performed changes
-			Position endOfChange;		// the end position of the change
-			void reset() /*throw()*/ {completed = false; numberOfRevisions = 0; endOfChange = Position::INVALID_POSITION;}
-		};
-	public:
-		// destructor
-		virtual ~IUndoableChange() /*throw()*/ {}
-		// appends the "postChange" to this change and returns true, or returns false
-		virtual bool appendChange(IAtomicChange& postChange, const Document& document) = 0;
-		// returns true if the change can perform
-		virtual bool canPerform(const Document& document) const = 0;
-		// performs the change. this method may fail
-		virtual void perform(Document& document, Result& result) = 0;
-	};
-
-	// base interface of InsertionChange and DeletionChange
-	class IAtomicChange : public IUndoableChange {
-	public:
-		struct TypeTag {};	// ugly dynamic type system for performance reason
-		virtual ~IAtomicChange() /*throw()*/ {}
-		virtual const TypeTag& type() const /*throw()*/ = 0;
-	};
-
-	// an atomic insertion change
-	class InsertionChange : public IAtomicChange, public manah::FastArenaObject<InsertionChange> {
-	public:
-		InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-		bool appendChange(IAtomicChange&, const Document&) /*throw()*/ {return false;}
-		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().includes(position_);}
-		void perform(Document& document, Result& result);
-	private:
-		const TypeTag& type() const /*throw()*/ {return type_;}
-	private:
-		const Position position_;
-		const String text_;
-		static const TypeTag type_;
-	};
-
-	// an atomic deletion change
-	class DeletionChange : public IAtomicChange, public manah::FastArenaObject<DeletionChange> {
-	public:
-		explicit DeletionChange(const Region& region) /*throw()*/ : region_(region), revisions_(1) {}
-		bool appendChange(IAtomicChange& postChange, const Document&) /*throw()*/;
-		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
-		void perform(Document& document, Result& result);
-	private:
-		const TypeTag& type() const /*throw()*/ {return type_;}
-	private:
-		Region region_;
-		size_t revisions_;
-		static const TypeTag type_;
-	};
-
-	// a compound change
-	class CompoundChange : public IUndoableChange {
-	public:
-		~CompoundChange() /*throw()*/;
-		bool appendChange(IAtomicChange& postChange, const Document& document);
-		bool canPerform(const Document& document) const /*throw()*/ {return !changes_.empty() && changes_.back()->canPerform(document);}
-		void perform(Document& document, Result& result);
-	private:
-		vector<IAtomicChange*> changes_;
-	};
-
-	// static members initialization (inherent parens? see "Exceptional C++ Style" item 29)
-	const IAtomicChange::TypeTag InsertionChange::type_((IAtomicChange::TypeTag()));
-	const IAtomicChange::TypeTag DeletionChange::type_((IAtomicChange::TypeTag()));
-
-	inline void InsertionChange::perform(Document& document, Result& result) {
-		result.numberOfRevisions = (result.completed = document.insert(position_, text_, &result.endOfChange)) ? 1 : 0;
-	}
-
-	inline bool DeletionChange::appendChange(IAtomicChange& postChange, const Document&) {
-		if(&postChange.type() != &type_)
-			return false;
-		const Position& bottom = region_.end();
-		if(bottom.column == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
-			return false;
-		else {
-			region_.end() = static_cast<DeletionChange&>(postChange).region_.end();
-			delete &postChange;
-			++revisions_;
-			return true;
-		}
-	}
-
-	inline void DeletionChange::perform(Document& document, Result& result) {
-		if(result.completed = document.erase(region_)) {
-			result.numberOfRevisions = revisions_;
-			result.endOfChange = region_.first;
-		} else {
-			result.numberOfRevisions = 0;
-			result.endOfChange = Position::INVALID_POSITION;
-		}
-	}
-
-	CompoundChange::~CompoundChange() /*throw()*/ {
-		for(vector<IAtomicChange*>::iterator i(changes_.begin()), e(changes_.end()); i != e; ++i)
-			delete *i;
-	}
-
-	inline bool CompoundChange::appendChange(IAtomicChange& postChange, const Document& document) {
-		if(changes_.empty() || !changes_.back()->appendChange(postChange, document))
-			changes_.push_back(&postChange);
-		return true;
-	}
-
-	void CompoundChange::perform(Document& document, Result& result) {
-		assert(!changes_.empty());
-		result.reset();
-		Result delta;
-		vector<IAtomicChange*>::iterator i(changes_.end()), e(changes_.begin());
-		for(--i; ; --i) {
-			(*i)->perform(document, delta);
-			result.numberOfRevisions += delta.numberOfRevisions;
-			if(!delta.completed) {
-				if(i != --changes_.end())
-					// partially completed
-					changes_.erase(++i, changes_.end());
-				result.endOfChange = delta.endOfChange;
-				break;
-			} else if(i == e) {	// completed
-				result.completed = true;
-				result.endOfChange = delta.endOfChange;
-				break;
-			}
-		}
-	}
-} // namespace @0
-
-// manages undo/redo of the document.
-class Document::UndoManager {
-	MANAH_NONCOPYABLE_TAG(UndoManager);
-public:
-	// constructors
-	explicit UndoManager(Document& document) /*throw()*/;
-	virtual ~UndoManager() /*throw()*/ {clear();}
-	// attributes
-	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
-	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
-	bool isStackingCompoundOperation() const /*throw()*/ {return compoundChangeDepth_ > 0;}
-	// rollbacks
-	void redo(IUndoableChange::Result& result);
-	void undo(IUndoableChange::Result& result);
-	// recordings
-	void addUndoableChange(IAtomicChange& c);
-	void beginCompoundChange() /*throw()*/ {++compoundChangeDepth_;}
-	void clear() /*throw()*/;
-	void endCompoundChange() /*throw()*/;
-	void insertBoundary() /*throw()*/;
-private:
-	void commitPendingChange(bool beginCompound);
-	Document& document_;
-	stack<IUndoableChange*> undoableChanges_, redoableChanges_;
-	auto_ptr<IAtomicChange> pendingAtomicChange_;
-	size_t compoundChangeDepth_;
-	bool rollbacking_;
-	CompoundChange* rollbackingChange_;
-	CompoundChange* currentCompoundChange_;
-};
-
-// constructor takes the target document
-Document::UndoManager::UndoManager(Document& document) /*throw()*/ : document_(document),
-		compoundChangeDepth_(0), rollbacking_(false), rollbackingChange_(0), currentCompoundChange_(0) {
-}
-
-// pushes the operation into the undo stack
-void Document::UndoManager::addUndoableChange(IAtomicChange& c) {
-	if(!rollbacking_) {
-		if(currentCompoundChange_ != 0)
-			currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
-		else if(pendingAtomicChange_.get() != 0) {
-			if(!pendingAtomicChange_->appendChange(c, document_)) {
-				commitPendingChange(true);
-				currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
-			}
-		} else
-			pendingAtomicChange_.reset(&c);
-
-		// make the redo stack empty
-		while(!redoableChanges_.empty()) {
-			delete redoableChanges_.top();
-			redoableChanges_.pop();
-		}
-	} else {
-		// delay pushing to the stack when rollbacking
-		if(rollbackingChange_ == 0)
-			rollbackingChange_ = new CompoundChange();
-		rollbackingChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
-	}
-}
-
-// clears the stacks
-inline void Document::UndoManager::clear() /*throw()*/ {
-	while(!undoableChanges_.empty()) {
-		delete undoableChanges_.top();
-		undoableChanges_.pop();
-	}
-	while(!redoableChanges_.empty()) {
-		delete redoableChanges_.top();
-		redoableChanges_.pop();
-	}
-	pendingAtomicChange_.reset();
-	compoundChangeDepth_ = 0;
-	currentCompoundChange_ = 0;
-}
-
-// commits the pending undoable change
-inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
-	if(pendingAtomicChange_.get() != 0) {
-		if(beginCompound) {
-			auto_ptr<CompoundChange> newCompound(new CompoundChange());
-			newCompound->appendChange(*pendingAtomicChange_.get(), document_);
-			undoableChanges_.push(newCompound.release());
-			pendingAtomicChange_.release();
-			currentCompoundChange_ = static_cast<CompoundChange*>(undoableChanges_.top());	// safe down cast
-		} else {
-			if(currentCompoundChange_ == 0 || !currentCompoundChange_->appendChange(*pendingAtomicChange_.get(), document_)) {
-				undoableChanges_.push(pendingAtomicChange_.get());
-				currentCompoundChange_ = 0;
-			}
-			pendingAtomicChange_.release();
-		}
-	}
-}
-
-// ends the compound change
-inline void Document::UndoManager::endCompoundChange() /*throw()*/ {
-	if(compoundChangeDepth_ == 0)
-// this does not throw IllegalStateException even if the internal counter is zero, because undo()
-// and redo() reset the counter to zero.
-//		throw IllegalStateException("there is no compound change in this document.");
-		return;
-	--compoundChangeDepth_;
-}
-
-// stops the current compound chaining
-inline void Document::UndoManager::insertBoundary() {
-	if(compoundChangeDepth_ == 0)
-		commitPendingChange(false);
-}
-
-// redoes one change
-void Document::UndoManager::redo(IUndoableChange::Result& result) {
-	commitPendingChange(false);
-	if(redoableChanges_.empty()) {
-		result.reset();
-		return;
-	}
-	IUndoableChange* c = redoableChanges_.top();
-	rollbacking_ = true;
-	c->perform(document_, result);
-	if(result.completed)
-		redoableChanges_.pop();
-	if(rollbackingChange_ != 0)
-		undoableChanges_.push(rollbackingChange_);	// move the rollbcked change(s) into the undo stack
-	rollbackingChange_ = currentCompoundChange_ = 0;
-	rollbacking_ = false;
-	if(result.completed)
-		delete c;
-	compoundChangeDepth_ = 0;
-}
-
-// undoes one change
-void Document::UndoManager::undo(IUndoableChange::Result& result) {
-	commitPendingChange(false);
-	if(undoableChanges_.empty()) {
-		result.reset();
-		return;
-	}
-	IUndoableChange* c = undoableChanges_.top();
-	rollbacking_ = true;
-	c->perform(document_, result);
-	if(result.completed)
-		undoableChanges_.pop();
-	if(rollbackingChange_ != 0)
-		redoableChanges_.push(rollbackingChange_);	// move the rollbacked change(s) into the redo stack
-	rollbackingChange_ = currentCompoundChange_ = 0;
-	rollbacking_ = false;
-	if(result.completed)
-		delete c;
-	compoundChangeDepth_ = 0;
-}
-
-
 // Document //////////////////////////////////////////////////////////////////
 
 /**
@@ -757,15 +489,15 @@ void Document::UndoManager::undo(IUndoableChange::Result& result) {
  * All text content is represented in UTF-16. To treat this as UTF-32, use
  * @c DocumentCharacterIterator.
  *
- * A document manages also its operation history, encoding, and line-breaks
- * and writes to or reads the content from files or streams.
+ * A document manages also its operation history, encoding, and newlines and writes to or reads the
+ * content from files or streams.
  *
  * @c #insert inserts a text string into any position. @c #erase deletes any text region.
  * Other classes also provide text manipulation for the document.
  *
- * @c #insert and @c #erase methods return false when the change was rejected. This occurs if the
- * the document was not marked modified and the document input's @c IDocumentInput#isChangeable
- * returned false.
+ * @c #insert and @c #erase methods throw @c DocumentCantChangeException when the change was
+ * rejected. This occurs if the the document was not marked modified and the document input's
+ * @c IDocumentInput#isChangeable returned @c false.
  *
  * A document manages a revision number indicates how many times the document was changed. This
  * value is initially zero. @c #insert, @c #erase, @c #redo, and @c #resetContent methods increment
@@ -783,30 +515,6 @@ void Document::UndoManager::undo(IUndoableChange::Result& result) {
  */
 
 const DocumentPropertyKey Document::TITLE_PROPERTY;
-
-/// Constructor.
-Document::Document() : session_(0), partitioner_(0),
-		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
-		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
-		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), accessibleArea_(0) {
-	bookmarker_.reset(new Bookmarker(*this));
-	undoManager_ = new UndoManager(*this);
-	resetContent();
-}
-
-/// Destructor.
-Document::~Document() {
-	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
-		(*i)->documentDisposed();
-	if(accessibleArea_ != 0) {
-		delete accessibleArea_->second;
-		delete accessibleArea_;
-	}
-	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
-		delete i->second;
-	delete undoManager_;
-	bookmarker_.reset(0);	// Bookmarker.~Bookmarker() calls Document...
-}
 
 /**
  * Returns the accessible region of the document. The returned region is normalized.
@@ -879,136 +587,17 @@ void Document::addStateListener(IDocumentStateListener& listener) {
 	stateListeners_.add(listener);
 }
 
-/**
- * Starts the compound change.
- * @throw ReadOnlyDocumentException the document is read only
- * @see #endCompoundChange, #isCompoundChanging
- */
-void Document::beginCompoundChange() {
-//	const bool init = !undoManager_->isStackingCompoundOperation();
-	undoManager_->beginCompoundChange();
-//	if(init)
-//		compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStarted, *this);
-}
-
-/// Clears the undo/redo stacks and deletes the history.
-void Document::clearUndoBuffer() /*throw()*/ {
-	undoManager_->clear();
-	onceUndoBufferCleared_ = true;
-}
-
 /// @c #resetContent invokes this method finally. Default implementation does nothing.
 void Document::doResetContent() {
 }
 
-/**
- * Ends the active compound change.
- * @throw IllegalStateException there is no compound change in this document
- * @see #beginCompoundChange, #isCompoundChanging
- */
-void Document::endCompoundChange() {
-	undoManager_->endCompoundChange();	// this may throw IllegalStateException (this is doubt now. see UndoManager)
-//	if(!undoManager_->isStackingCompoundOperation())
-//		compoundChangeListeners_.notify<const Document&>(&ICompoundChangeListener::documentCompoundChangeStopped, *this);
-}
-
-/**
- * Deletes the specified region of the document.
- * This method sets the modification flag and calls the listeners'
- * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
- * @param region the region to be deleted. if empty, this method does nothing
- * @return false if the document input refused
- * @throw ReadOnlyDocumentException the document is read only
- * @throw DocumentAccessViolationException @a region intersects the inaccesible region
- */
-bool Document::erase(const Region& region) {
-	if(changing_ || isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(region.isEmpty())	// empty -> ignore
-		return true;
-	else if(isNarrowed() && !accessibleRegion().encompasses(region))
-		throw DocumentAccessViolationException();
-	else if(!isModified() && input_.get() != 0 && !input_->isChangeable())
-		return false;
-
-	ModificationGuard guard(*this);
-	fireDocumentAboutToBeChanged(DocumentChange(true, region));
-	return eraseText(region), true;
-}
-
-void Document::eraseText(const Region& region) {
-	assert(!isNarrowed() || accessibleRegion().encompasses(region));
-	const Position& beginning = region.beginning();
-	const Position& end = region.end();
-	basic_stringbuf<Char> deletedString;
-
-	// this does the followings:
-	// - save deleted content (into 'deletedString') for undo information (optional)
-	// - delete substring of a line
-	// - destruct whole line(s) and remove line(s) from line list ('lines_')
-	// - update 'length_'
-	// - increment 'revisionNumber_'
-
-	if(beginning.line == end.line) {	// region is single line
-		const Line&	lineInfo = getLineInformation(end.line);
-		String&	line = const_cast<String&>(this->line(end.line));
-
-		++const_cast<Line&>(lineInfo).operationHistory_;
-		deletedString.sputn(line.data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
-		line.erase(beginning.column, end.column - beginning.column);
-		length_ -= end.column - beginning.column;
-	} else {						// region is multiline
-		Line* line = lines_[beginning.line];
-		auto_ptr<String> tail;
-		deletedString.sputn(line->text_.data() + beginning.column, static_cast<streamsize>(line->text_.length() - beginning.column));
-		length_ -= line->text_.length() - beginning.column;
-		line->text_.erase(beginning.column);
-
-		Line& firstLine = *lines_[beginning.line];
-		Newline lastNewline;
-		deletedString.sputn(getNewlineString(lines_[beginning.line]->newline_),
-			static_cast<streamsize>(getNewlineStringLength(lines_[beginning.line]->newline_)));
-		for(length_t i = beginning.line + 1; ; ++i) {
-			line = lines_[i];
-			deletedString.sputn(line->text_.data(), static_cast<streamsize>((i != end.line) ? line->text_.length() : end.column));
-			length_ -= line->text_.length();
-			if(i != end.line)
-				deletedString.sputn(getNewlineString(line->newline_), static_cast<streamsize>(getNewlineStringLength(line->newline_)));
-			else {	// last
-				tail.reset(new String(line->text_.substr(end.column)));
-				lastNewline = line->newline_;
-				break;
-			}
-		}
-		lines_.erase(beginning.line + 1, end.line - beginning.line);
-
-		// concatinate before and after erased part
-		firstLine.newline_ = lastNewline;
-		++firstLine.operationHistory_;
-		if(!tail->empty()) {
-			firstLine.text_ += *tail;
-			length_ += tail->length();
-		}
-	}
-
-	if(isRecordingChanges())
-		undoManager_->addUndoableChange(*(new InsertionChange(beginning, deletedString.str())));
-
-	// notify the change
-	++revisionNumber_;
-	fireDocumentChanged(DocumentChange(true, Region(beginning, end)));
-	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
-
-//	return beginning;
-}
-
-void Document::fireDocumentAboutToBeChanged(const DocumentChange& c) /*throw()*/ {
+void Document::fireDocumentAboutToBeChanged() /*throw()*/ {
 	if(partitioner_.get() != 0)
 		partitioner_->documentAboutToBeChanged();
 	for(list<IDocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
-		(*i)->documentAboutToBeChanged(*this, c);
+		(*i)->documentAboutToBeChanged(*this);
 	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
-		(*i)->documentAboutToBeChanged(*this, c);
+		(*i)->documentAboutToBeChanged(*this);
 }
 
 void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) /*throw()*/ {
@@ -1020,163 +609,6 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 		(*i)->documentChanged(*this, c);
 	for(list<IDocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
 		(*i)->documentChanged(*this, c);
-}
-
-#define ASCENSION_DOCUMENT_INSERT_PROLOGUE()								\
-	if(changing_ || isReadOnly())											\
-		throw ReadOnlyDocumentException();									\
-	else if(at.line >= numberOfLines() || at.column > lineLength(at.line))	\
-		throw BadPositionException(at);										\
-	else if(isNarrowed() && !accessibleRegion().includes(at))				\
-		throw DocumentAccessViolationException();							\
-	else if(!isModified() && input_.get() != 0 && !input_->isChangeable())	\
-		return false;														\
-	ModificationGuard guard(*this);											\
-	fireDocumentAboutToBeChanged(DocumentChange(false, Region(at)));		\
-	Position resultPosition(at)
-
-#define ASCENSION_DOCUMENT_INSERT_EPILOGUE()																	\
-	if(isRecordingChanges())																					\
-		undoManager_->addUndoableChange(*(new DeletionChange(Region(at, resultPosition))));						\
-	/* notify the change */																						\
-	++revisionNumber_;																							\
-	fireDocumentChanged(DocumentChange(false, Region(at, resultPosition)));										\
-	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);	\
-	/* diagnose length_  */																						\
-/*	assert(length_ == calculateDocumentLength(*this)); */														\
-	if(eos != 0)																								\
-		*eos = resultPosition;																					\
-	return true
-
-/**
- * Inserts the text into the specified position.
- * This method sets the modification flag and calls the listeners'
- * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
- * @param at the position
- * @param first the start of the text
- * @param last the end of the text
- * @param[out] eos the position of the end of the inserted text. can be @c null if not needed
- * @return false if the document input refused
- * @throw BadPositionException @a at is outside of the document
- * @throw ReadOnlyDocumentException the document is read only
- * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
- * @throw NullPointerException either @a first or @a last is @c null
- * @throw std#invalid_argument either @a first is greater than @a last
- */
-bool Document::insert(const Position& at, const Char* first, const Char* last, Position* eos /* = 0 */) {
-	if(first == 0)
-		throw NullPointerException("first");
-	else if(last == 0)
-		throw NullPointerException("last");
-	else if(first > last)
-		throw invalid_argument("first > last");
-	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
-	resultPosition = insertText(at, first, last);
-	ASCENSION_DOCUMENT_INSERT_EPILOGUE();
-}
-
-/**
- * Inserts the text provided by the given stream into the specified position. For details, see the
- * documentation of @c #insert(const Position&, const Char*, const Char*)
- * @param at the position
- * @param in the input stream
- * @param[out] eos the position of the end of the inserted text. can be @c null if not needed
- * @return false if the document input refused
- * @throw BadPositionException @a at is outside of the document
- * @throw ReadOnlyDocumentException the document is read only
- * @throw DocumentAccessViolationException @a at is inside of the inaccessible region
- * @see writeDocumentToStream
- */
-bool Document::insert(const Position& at, basic_istream<Char>& in, Position* eos /* = 0 */) {
-	ASCENSION_DOCUMENT_INSERT_PROLOGUE();
-	Char buffer[8192];
-	while(in) {
-		in.read(buffer, MANAH_COUNTOF(buffer));
-		if(in.gcount() == 0)
-			break;
-		resultPosition = insertText(resultPosition, buffer, buffer + in.gcount());
-	}
-	ASCENSION_DOCUMENT_INSERT_EPILOGUE();
-}
-
-// called by insert(const Position&, const Char*, const Char*) and insert(const Position&, basic_istream<Char>&).
-Position Document::insertText(const Position& position, const Char* first, const Char* last) {
-	Position resultPosition(position.line, 0);
-	const Char* breakPoint = find_first_of(first, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
-
-	if(breakPoint == last) {	// single-line
-		Line& line = const_cast<Line&>(getLineInformation(position.line));
-		line.text_.insert(position.column, first, static_cast<String::size_type>(last - first));
-		length_ += static_cast<length_t>(last - first);
-		++line.operationHistory_;
-		resultPosition.column = position.column + (last - first);
-	} else {	// multiline
-		length_t line = position.line;
-		Line& firstLine = *lines_[line];
-		const Char* lastBreak;
-		const Newline firstNewline = firstLine.newline_;	// 先頭行の改行文字 (挿入後、一番後ろに付けられる)
-
-		// 最後の改行位置を探し、resultPosition の文字位置も決定する
-		for(lastBreak = last - 1; ; --lastBreak) {
-			if(binary_search(NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS), *lastBreak))
-				break;
-		}
-		resultPosition.column = static_cast<length_t>((last - first) - (lastBreak - first) - 1);
-		if(*lastBreak == LINE_FEED && lastBreak != breakPoint && *(lastBreak - 1) == CARRIAGE_RETURN)
-			--lastBreak;
-
-		// 先頭行の置換
-		const String firstLineRest = firstLine.text_.substr(position.column, firstLine.text_.length() - position.column);
-		length_ += breakPoint - first - firstLineRest.length();
-		firstLine.text_.replace(position.column, firstLineRest.length(), first, static_cast<String::size_type>(breakPoint - first));
-		firstLine.newline_ = eatNewline(breakPoint, last);
-		assert(firstLine.newline_ != NLF_RAW_VALUE);
-		breakPoint += (firstLine.newline_ != NLF_CR_LF) ? 1 : 2;
-		++firstLine.operationHistory_;
-		++line;
-		++resultPosition.line;
-
-		// 改行ごとに行に区切っていく
-		while(true) {
-			if(breakPoint <= lastBreak) {
-				const Char* const nextBreak =
-					find_first_of(breakPoint, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
-				assert(nextBreak != last);
-				const Newline newline = eatNewline(nextBreak, last);
-
-				length_ += nextBreak - breakPoint;
-				lines_.insert(line, new Line(String(breakPoint, nextBreak), newline, true));
-				++line;
-				++resultPosition.line;
-				breakPoint = nextBreak + ((newline != NLF_CR_LF) ? 1 : 2);
-			} else {	// 最終行
-				length_ += last - breakPoint + firstLineRest.length();
-				lines_.insert(line, new Line(String(breakPoint, last) + firstLineRest, firstNewline, true));
-				break;
-			}
-		}
-	}
-
-	return resultPosition;
-}
-
-/**
- * Marks a boundary between units of undo.
- * An undo call will stop at this point. However, see the documentation of @c Document.
- * @throw ReadOnlyDocumentException the document is read only
- */
-void Document::insertUndoBoundary() {
-	if(readOnly_)
-		throw ReadOnlyDocumentException();
-	undoManager_->insertBoundary();
-}
-
-/**
- * Returns true if the document is compound changing.
- * @see #beginCompoundChange, #endCompoundChange
- */
-bool Document::isCompoundChanging() const /*throw()*/ {
-	return undoManager_->isStackingCompoundOperation();
 }
 
 /**
@@ -1225,7 +657,29 @@ length_t Document::lineOffset(length_t line, Newline newline) const {
 	}
 	return offset;
 }
-
+#if 0
+/**
+ * Locks the document.
+ * @param locker the object locks the document. this object is used with later @c #unlock call
+ * @retval true succeeded to lock
+ * @retval false failed to lock because the other object already had locked, or the document's
+ *         input rejected the lock (only when the document was not marked as modified)
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw NullPointerException @a locker is @c null
+ * @see #unlock
+ */
+bool Document::lock(const void* locker) {
+	// TODO: should support exclusive operation.
+	if(isReadOnly())
+		throw ReadOnlyDocumentException();
+	else if(locker == 0)
+		throw NullPointerException("locker");
+	else if(locker_ != 0 || (isModified() && input_.get() != 0 && !input_->isChangeable()))
+		return false;
+	locker_ = locker;
+	return true;
+}
+#endif
 /**
  * Marks the document modified. There is not a method like @c markModified.
  * @see #isModified, IDocumentStateListener#documentModificationSignChanged
@@ -1263,69 +717,6 @@ void Document::narrowToRegion(const Region& region) {
 	}
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 }
-
-/// Returns the number of undoable changes.
-size_t Document::numberOfUndoableChanges() const /*throw()*/ {
-	return undoManager_->numberOfUndoableChanges();
-}
-
-/// Returns the number of redoable changes.
-size_t Document::numberOfRedoableChanges() const /*throw()*/ {
-	return undoManager_->numberOfRedoableChanges();
-}
-
-/**
- * Sets whether the document records or not the changes for undo/redo. Recording in a newly created
- * document is enabled to start with.
- * @param record if set to true, this method enables the recording and subsequent changes can be
- * undone. if set to false, discards the undo/redo information and disables the recording
- * @see #isRecordingChanges, #undo, #redo
- */
-void Document::recordChanges(bool record) /*throw()*/ {
-	if(!(recordingChanges_ = record))
-		clearUndoBuffer();
-}
-
-/**
- * Performs the redo. Does nothing if the target region is inaccessible.
- * @param n the repeat count
- * @return false if the redo was not completely performed
- * @throw ReadOnlyDocumentException the document is read only
- * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
- * @see #undo
- */
-bool Document::redo(size_t n /* = 1 */) {
-	if(isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(n > numberOfRedoableChanges())
-		throw invalid_argument("n");
-
-	IUndoableChange::Result result;
-	result.completed = true;
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
-
-	for(; n > 0 && result.completed; --n) {
-		beginCompoundChange();
-		undoManager_->redo(result);
-		endCompoundChange();
-	}
-	assert(n == 0 || !result.completed);
-
-	rollbackListeners_.notify<const Document&, const Position&>(
-		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
-	return result.completed;
-}
-
-#if 0
-/**
- * Removes the compound change listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
-	compoundChangeListeners_.remove(listener);
-}
-#endif
 
 /**
  * Removes the document listener from the document.
@@ -1393,22 +784,22 @@ void Document::removeStateListener(IDocumentStateListener& listener) {
  */
 void Document::resetContent() {
 	if(lines_.empty())	// called by constructor
-		lines_.insert(lines_.begin(), new Line);
+		lines_.insert(lines_.begin(), new Line(0));
 	else {
 		widen();
 		for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
 			(*i)->moveTo(0, 0);
 		bookmarker_->clear();
 
-		const DocumentChange ca(true, region());
-		fireDocumentAboutToBeChanged(ca);
+		fireDocumentAboutToBeChanged();
 		if(length_ != 0) {
 			assert(!lines_.empty());
 			lines_.clear();
-			lines_.insert(lines_.begin(), new Line);
+			lines_.insert(lines_.begin(), new Line(revisionNumber_ + 1));
 			length_ = 0;
 			++revisionNumber_;
 		}
+		const DocumentChange ca(region(), Region(region().beginning()));
 		fireDocumentChanged(ca, false);
 	}
 
@@ -1418,80 +809,6 @@ void Document::resetContent() {
 	onceUndoBufferCleared_ = false;
 	doResetContent();
 }
-
-#if 0
-/**
- * Sends the document to the user's mailer.
- * @param asAttachment true to send as attachment. in this case, the modification  is not 
- * 現在の変更は反映されない。本文として送信する場合は現在のドキュメントが使用される
- * @param showDialog true to show the user selection dialog
- * @return true if succeeded
- * @deprecated 0.8
- */
-bool Document::sendFile(bool asAttachment, bool showDialog /* = true */) {
-	if(asAttachment && getFilePathName() == 0)
-		return false;
-
-	ui::WaitCursor wc;
-	HMODULE dll = ::LoadLibraryW(L"MAPI32.DLL");
-	if(dll == 0)
-		return false;
-
-	MAPISENDMAIL* MAPISendMailPtr = reinterpret_cast<MAPISENDMAIL*>(::GetProcAddress(dll, "MAPISendMail"));
-	if(MAPISendMailPtr == 0) {
-		::FreeLibrary(dll);
-		return false;
-	}
-
-	MANAH_AUTO_STRUCT(::MapiMessage, message);
-	ulong error;
-
-	message.flFlags = MAPI_RECEIPT_REQUESTED;
-
-	if(asAttachment) {	// 添付ファイルにするとき
-		MANAH_AUTO_STRUCT(::MapiFileDesc, fileDesc);
-		const int cb = ::WideCharToMultiByte(CP_ACP, 0,
-							getFilePathName(), static_cast<int>(wcslen(getFileName())), 0, 0, 0, 0);
-		char* const filePath = new char[cb + 1];
-
-		::WideCharToMultiByte(CP_ACP, 0, getFilePathName(), static_cast<int>(wcslen(getFileName())), filePath, cb, 0, 0);
-		filePath[cb] = 0;
-		message.nFileCount = 1;
-		message.lpFiles = &fileDesc;
-
-		fileDesc.lpszPathName = filePath;
-		fileDesc.nPosition = static_cast<ulong>(-1);
-		error = MAPISendMailPtr(0, 0, &message, MAPI_LOGON_UI | (showDialog ? MAPI_DIALOG : 0), 0);
-		delete[] filePath;
-	} else {	// 本文として送信するとき
-		wchar_t* const content = new wchar_t[length_ + 1];
-		for(length_t i = 0, offset = 0; ; ++i) {
-			const Line& line = *lines_[i];
-			wmemcpy(content + offset, line.text_.data(), line.text_.length());
-			offset += line.text_.length();
-			if(i != lines_.getSize() - 1) {
-				wcscpy(content + offset, getNewlineString(line.newline_));
-				offset += getNewlineStringLength(line.newline_);
-			} else
-				break;
-		}
-		content[length_] = 0;
-
-		// ユーザ既定のマルチバイト文字列に変換
-		const int contentSize = ::WideCharToMultiByte(CP_ACP, 0, content, static_cast<int>(length_), 0, 0, 0, 0);
-		char* const	nativeContent = new char[contentSize + 1];
-		::WideCharToMultiByte(CP_ACP, 0, content, static_cast<int>(length_), nativeContent, contentSize, 0, 0);
-		nativeContent[contentSize] = 0;
-		message.lpszNoteText = nativeContent;
-		delete[] content;
-		error = MAPISendMailPtr(0, 0, &message, MAPI_LOGON_UI | (showDialog ? MAPI_DIALOG : 0), 0);
-		delete[] nativeContent;
-	}
-
-	::FreeLibrary(dll);
-	return error == SUCCESS_SUCCESS || error == MAPI_USER_ABORT || error == MAPI_E_LOGIN_FAILURE;
-}
-#endif /* 0 */
 
 /**
  * Sets the new document input.
@@ -1538,41 +855,26 @@ void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentReadOnlySignChanged, *this);
 	}
 }
-
+#if 0
 /**
- * Performs the undo. Does nothing if the target region is inaccessible.
- * @param n the repeat count
- * @return false if the undo was not completely performed
- * @throw ReadOnlyDocumentException the document is read only
- * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
- * @see #redo
+ * Unlocks the document.
+ * @param locker the object used with previous @c #lock call
+ * @throw IllegalStateException the document is not locked
+ * @throw NullPointerException @a locker is @c null
+ * @throw std#invalid_argument @a locker is not the object used with @c #lock call
+ * @see #lock
  */
-bool Document::undo(size_t n /* = 1 */) {
-	if(isReadOnly())
-		throw ReadOnlyDocumentException();
-	else if(n > numberOfUndoableChanges())
-		throw invalid_argument("n");
-
-	const size_t oldRevisionNumber = revisionNumber_;
-	IUndoableChange::Result result;
-	result.completed = true;
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
-
-	for(; n > 0 && result.completed; --n) {
-		beginCompoundChange();
-		undoManager_->undo(result);
-		endCompoundChange();
-		revisionNumber_ = oldRevisionNumber - result.numberOfRevisions;
-	}
-	assert(n == 0 || !result.completed);
-
-	rollbackListeners_.notify<const Document&, const Position&>(
-		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
-	if(!isModified())
-		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
-	return result.completed;
+void Document::unlock(const void* locker) {
+	// TODO: support exclusive operation.
+	if(locker_ == 0)
+		throw IllegalStateException("the document's input is not locked.");
+	else if(locker == 0)
+		throw NullPointerException("locker");
+	else if(locker != locker_)
+		throw invalid_argument("locker");
+	locker_ = 0;
 }
-
+#endif
 /**
  * Informs the document change to the adapting points.
  * @param change the document change
@@ -1598,6 +900,16 @@ void Document::widen() /*throw()*/ {
 }
 
 
+// Document.Line ////////////////////////////////////////////////////////////
+
+Document::Line::Line(size_t revisionNumber) /*throw()*/ : newline_(ASCENSION_DEFAULT_NEWLINE), revisionNumber_(revisionNumber) {
+}
+
+Document::Line::Line(size_t revisionNumber, const String& text,
+		Newline newline /* = ASCENSION_DEFAULT_NEWLINE */) : text_(text), newline_(newline), revisionNumber_(revisionNumber) {
+}
+
+
 // CompoundChangeSaver //////////////////////////////////////////////////////
 
 /**
@@ -1611,6 +923,8 @@ void Document::widen() /*throw()*/ {
  * target-&gt;mayThrow();
  * // target-&gt;endCompoundChange() will be called automatically
  * @endcode
+ *
+ * @note This class is not intended to be subclassed.
  */
 
 /**
@@ -1632,6 +946,34 @@ CompoundChangeSaver::~CompoundChangeSaver() {
 		document_->endCompoundChange();
 }
 
+#if 0
+// DocumentLocker ///////////////////////////////////////////////////////////
+
+/**
+ * @class ascension::kernel::DocumentLocker
+ *
+ * Calls @c Document#lock and @c Document#unlock automatically.
+ *
+ * @note This class is not intended to be subclassed.
+ */
+
+/**
+ * Constructor calls @c Document#lock.
+ * @param document the document to lock
+ * @throw ReadOnlyDocumentException the document is read only
+ * @throw DocumentCantChangeException failed to lock the document
+ */
+DocumentLocker::DocumentLocker(Document& document) : document_((document.locker() == 0) ? &document : 0) {
+	if(document_ != 0 && !document_->lock(this))	// manage lock if there is not an active lock
+		throw DocumentCantChangeException();
+}
+
+/// Destructor calls @c Document#unlock.
+DocumentLocker::~DocumentLocker() /*throw()*/ {
+	if(document_ != 0)
+		document_->unlock(this);
+}
+#endif
 
 // DocumentCharacterIterator ////////////////////////////////////////////////
 
@@ -1779,87 +1121,17 @@ void DocumentCharacterIterator::doPrevious() {
 		--p_.column;
 }
 
-
-// DocumentBuffer ///////////////////////////////////////////////////////////
-
 /**
- * Constructor.
- * @param document the document
- * @param initialPosition the initial position of streams
- * @param nlr the newline representation
- * @param streamMode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
- * @throw UnknownValueException @a streamMode is invalid
+ * Sets the region of the iterator. The current position will adjusted.
+ * @param newRegion the new region to set
+ * @throw BadRegionException @a newRegion intersects outside of the document
  */
-DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
-		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
-	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
-		throw UnknownValueException("streamMode");
-	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
-}
-
-/// Destructor.
-DocumentBuffer::~DocumentBuffer() /*throw()*/ {
-	sync();
-}
-
-/// Returns the current position in the document.
-const Position& DocumentBuffer::tell() const /*throw()*/ {
-	return current_;
-}
-
-/// @see std#basic_streambuf#overflow
-DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
-	if((mode_ & ios_base::out) == 0)
-		return traits_type::eof();
-	char_type* p = pptr();
-	if(!traits_type::eq_int_type(c, traits_type::eof()))
-		*p++ = traits_type::to_char_type(c);
-	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
-	if(buffer_ < p)
-		document_.insert(current_, buffer_, p, &current_);
-	return traits_type::not_eof(c);
-}
-
-/// @see std#basic_streambuf#sync
-int DocumentBuffer::sync() {
-	if((mode_ & ios_base::out) != 0)
-		return traits_type::eq_int_type(overflow(traits_type::eof()), traits_type::eof()) ? -1 : 0;
-	else
-		return 0;
-}
-
-/// @see std#basic_streambuf#uflow
-DocumentBuffer::int_type DocumentBuffer::uflow() {
-	if(gptr() != egptr()) {
-		const int_type temp = traits_type::to_int_type(*gptr());
-		gbump(1);
-		return temp;
-	} else
-		return traits_type::eof();
-}
-
-/// @see std#basic_streambuf#underflow
-DocumentBuffer::int_type DocumentBuffer::underflow() {
-	return (gptr() != egptr()) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
-}
-
-
-// document stream classes //////////////////////////////////////////////////
-
-/// Constructor.
-DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_istream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
-}
-
-/// Constructor.
-DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_ostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
-}
-
-/// Constructor.
-DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_iostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+void DocumentCharacterIterator::setRegion(const Region& newRegion) {
+	const Position e(document_->region().second);
+	if(newRegion.first > e || newRegion.second > e)
+		throw BadRegionException(newRegion);
+	if(!(region_ = newRegion).includes(p_))
+		seek(p_);
 }
 
 

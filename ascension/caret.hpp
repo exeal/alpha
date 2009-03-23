@@ -4,6 +4,7 @@
  * @author exeal
  * @date 2003-2008 (was point.hpp)
  * @date 2008 (separated from point.hpp)
+ * @date 2009
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -19,11 +20,14 @@
 namespace ascension {
 
 	namespace viewers {
+
+		namespace utils {
+			std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = 0);
+		}
+
 		class TextViewer;
 		class VirtualBox;
 		class VisualPoint;
-
-		std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = 0);
 
 		/**
 		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
@@ -41,11 +45,13 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-		/// Target @a TextViewer of @c VisualPoint has been disposed.
-		class DisposedViewerException : public std::runtime_error {
+		/**
+		 * The text viewer the object connecting to had been disposed.
+		 * @see kernel#DocumentDisposedException, VisualPoint
+		 */
+		class TextViewerDisposedException : public std::logic_error {
 		public:
-			DisposedViewerException() :
-				std::runtime_error("Target viewer is already inavailable. This object is no longer able to be used anyway.") {}
+			TextViewerDisposedException();
 		};
 
 		/// Clipboard Win32 API was failed.
@@ -62,71 +68,69 @@ namespace ascension {
 			explicit VerticalDestinationProxy(const kernel::Position& p) : Position(p) {}
 			friend class VisualPoint;
 		};
+	}
+
+	namespace kernel {
+		namespace locations {
+			bool isEndOfVisualLine(const viewers::VisualPoint& p);
+			bool isFirstPrintableCharacterOfLine(const viewers::VisualPoint& p);
+			bool isFirstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			bool isLastPrintableCharacterOfLine(const viewers::VisualPoint& p);
+			bool isLastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			bool isBeginningOfVisualLine(const viewers::VisualPoint& p);
+			viewers::VerticalDestinationProxy backwardPage(const viewers::VisualPoint& p, length_t pages = 1);
+			viewers::VerticalDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, length_t lines = 1);
+			kernel::Position beginningOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position contextualBeginningOfLine(const viewers::VisualPoint& p);
+			kernel::Position contextualBeginningOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position contextualEndOfLine(const viewers::VisualPoint& p);
+			kernel::Position contextualEndOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position endOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position firstPrintableCharacterOfLine(const viewers::VisualPoint& p);
+			kernel::Position firstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			viewers::VerticalDestinationProxy forwardPage(const viewers::VisualPoint& p, length_t pages = 1);
+			viewers::VerticalDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, length_t lines = 1);
+			kernel::Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p);
+			kernel::Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position leftCharacter(const viewers::VisualPoint& p, CharacterUnit unit, length_t characters = 1);
+			kernel::Position leftWord(const viewers::VisualPoint& p, length_t words = 1);
+			kernel::Position leftWordEnd(const viewers::VisualPoint& p, length_t words = 1);
+			kernel::Position rightCharacter(const viewers::VisualPoint& p, CharacterUnit unit, length_t characters = 1);
+			kernel::Position rightWord(const viewers::VisualPoint& p, length_t words = 1);
+			kernel::Position rightWordEnd(const viewers::VisualPoint& p, length_t words = 1);
+		} // namespace locations
+	} // namespace kernel
+
+	namespace viewers {
 
 		/**
-		 * Extension of @c EditPoint for viewer and layout.
-		 * @see kernel#EditPoint, kernel#IPointListener, kernel#DisposedViewException
+		 * Extension of @c kernel#Point class for viewer and layout.
+		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
 		 */
-		class VisualPoint : public kernel::EditPoint, public layout::IVisualLinesListener {
+		class VisualPoint : public kernel::Point, public layout::IVisualLinesListener {
 			MANAH_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
 				const kernel::Position& position = kernel::Position(), kernel::IPointListener* listener = 0);
-			VisualPoint(const VisualPoint& rhs);
+			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() /*throw()*/;
 			// attributes
-			static bool canPaste() /*throw()*/;
-			bool isEndOfVisualLine() const;
-			bool isFirstPrintableCharacterOfLine() const;
-			bool isFirstPrintableCharacterOfVisualLine() const;
-			bool isLastPrintableCharacterOfLine() const;
-			bool isLastPrintableCharacterOfVisualLine() const;
-			bool isBeginningOfVisualLine() const;
+			bool isTextViewerDisposed() const /*throw()*/;
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
-			length_t visualColumnNumber() const;
-			// destination calculations
-			VerticalDestinationProxy backwardPage(length_t pages = 1) const;
-			VerticalDestinationProxy backwardVisualLine(length_t lines = 1) const;
-			kernel::Position beginningOfVisualLine() const;
-			kernel::Position contextualBeginningOfLine() const;
-			kernel::Position contextualBeginningOfVisualLine() const;
-			kernel::Position contextualEndOfLine() const;
-			kernel::Position contextualEndOfVisualLine() const;
-			kernel::Position endOfVisualLine() const;
-			kernel::Position firstPrintableCharacterOfLine() const;
-			kernel::Position firstPrintableCharacterOfVisualLine() const;
-			VerticalDestinationProxy forwardPage(length_t pages = 1) const;
-			VerticalDestinationProxy forwardVisualLine(length_t lines = 1) const;
-			kernel::Position lastPrintableCharacterOfLine() const;
-			kernel::Position lastPrintableCharacterOfVisualLine() const;
-			kernel::Position leftCharacter(length_t characters = 1) const;
-			kernel::Position leftWord(length_t words = 1) const;
-			kernel::Position leftWordEnd(length_t words = 1) const;
-			kernel::Position rightCharacter(length_t characters = 1) const;
-			kernel::Position rightWord(length_t words = 1) const;
-			kernel::Position rightWordEnd(length_t words = 1) const;
+			length_t visualColumn() const;
+			length_t visualLine() const;
+			length_t visualSubline() const;
 			// movement
-			using EditPoint::moveTo;
+			using kernel::Point::moveTo;
 			void moveTo(const VerticalDestinationProxy& to);
-			// scroll
-			void recenter();
-			void show();
-			// text manipulations
-			bool insertRectangle(const String& text);
-			bool insertRectangle(const Char* first, const Char* last);
-			bool newLine(bool inheritIndent, size_t newlines = 1);
-			bool paste();
-			kernel::Position spaceIndent(const kernel::Position& other, bool rectangle, long level = 1);
-			kernel::Position tabIndent(const kernel::Position& other, bool rectangle, long level = 1);
 
 		protected:
+			static VerticalDestinationProxy makeVerticalDestinationProxy(const kernel::Position& source);
+			// kernel.Point
 			virtual void doMoveTo(const kernel::Position& to);
-			void verifyViewer() const;
 		private:
-			using kernel::EditPoint::newLine;	// 明示的な隠蔽
-			kernel::Position doIndent(const kernel::Position& other, Char character, bool rectangle, long level);
 			void updateLastX();
 			void viewerDisposed() /*throw()*/;
 			// layout.IVisualLinesListener
@@ -138,10 +142,18 @@ namespace ascension {
 		private:
 			TextViewer* viewer_;
 			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
-			bool crossingLines_;	// 行間移動中
-			length_t visualLine_, visualSubline_;	// 点の表示行
+			bool crossingLines_;	// true only when the point is moving across the different lines
+			length_t visualLine_, visualSubline_;	// caches
 			friend class TextViewer;
+			friend VerticalDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, length_t lines);
+			friend VerticalDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, length_t lines);
 		};
+
+		namespace utils {
+			// scroll
+			void recenter(VisualPoint& p);
+			void show(VisualPoint& p);
+		}	// namespace utils
 
 		/**
 		 * Interface for objects which are interested in getting informed about caret movement.
@@ -224,16 +236,13 @@ namespace ascension {
 			const VirtualBox& boxForRectangleSelection() const;
 			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
 			bool isPointOverSelection(const POINT& pt) const;
-			bool isSelectionEmpty() const /*throw()*/;
 			bool isSelectionRectangle() const /*throw()*/;
-			bool selectedRangeOnLine(length_t line, length_t& first, length_t& last) const;
-			bool selectedRangeOnVisualLine(length_t line, length_t subline, length_t& first, length_t& last) const;
-			kernel::Region selectionRegion() const /*throw()*/;
-			String selectionText(kernel::Newline newline = kernel::NLF_RAW_VALUE) const;
+			kernel::Region selectedRegion() const /*throw()*/;
 			// attributes : character input
 			bool isOvertypeMode() const /*throw()*/;
 			Caret& setOvertypeMode(bool overtype) /*throw()*/;
 			// attributes : clipboard
+			bool canPaste(bool useKillRing) const /*throw()*/;
 			LCID clipboardLocale() const /*throw()*/;
 			LCID setClipboardLocale(LCID newLocale);
 			// attributes : matched braces
@@ -244,19 +253,20 @@ namespace ascension {
 			void beginRectangleSelection();
 			void clearSelection();
 			void copySelection(bool useKillRing);
-			bool cutSelection(bool useKillRing);
+			void cutSelection(bool useKillRing);
 			void endRectangleSelection();
-			bool eraseSelection();
+			void eraseSelection();
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(const VerticalDestinationProxy& to);
-			bool pasteToSelection(bool useKillRing);
-			bool replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
-			bool replaceSelection(const String& text, bool rectangleInsertion = false);
+			void paste(bool useKillRing);
+			void replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
 			void select(const kernel::Region& region);
 			void select(const kernel::Position& anchor, const kernel::Position& caret);
-			void selectWord();
 			// text manipulation
 			bool inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
+
+		private:
+			using kernel::Point::excludeFromRestriction;	// hides explicitly
 
 		private:
 			void checkMatchBrackets();
@@ -266,11 +276,10 @@ namespace ascension {
 			// VisualPoint
 			void doMoveTo(const kernel::Position& position);
 			// kernel.IPointListener
-			void pointMoved(const kernel::EditPoint& self, const kernel::Position& oldPosition);
+			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			using kernel::EditPoint::getListener;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
@@ -285,7 +294,7 @@ namespace ascension {
 				const kernel::Position& positionBeforeInternalUpdate() const /*throw()*/ {
 					assert(isInternalUpdating()); return posBeforeUpdate_;}
 			private:
-				using Point::adaptToDocument;
+				using kernel::Point::adaptToDocument;
 				kernel::Position posBeforeUpdate_;
 			} * anchor_;
 			LCID clipboardLocale_;
@@ -305,25 +314,58 @@ namespace ascension {
 			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
 		};
 
+		// free functions related to selection of Caret class
+		bool isPointOverSelection(const Caret& caret, const POINT& p);
+		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
+		bool selectedRangeOnLine(const Caret& caret, length_t line, length_t& first, length_t& last);
+		bool selectedRangeOnVisualLine(const Caret& caret,
+			length_t line, length_t subline, length_t& first, length_t& last);
+		String selectedString(const Caret& caret, kernel::Newline newline = kernel::NLF_RAW_VALUE);
+		std::basic_ostream<Char>& selectedString(const Caret& caret,
+			std::basic_ostream<Char>& out, kernel::Newline newline = kernel::NLF_RAW_VALUE);
+		void selectWord(Caret& caret);
+
+		// free functions change the document by using Caret class
+		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
+		void destructiveInsert(Caret& caret, const String& text, bool keepNewline = true);
+		void destructiveInsert(Caret& caret, const Char* first, const Char* last, bool keepNewline = true);
+		void eraseSelection(Caret& caret);
+		void insertRectangle(Caret& caret, const Char* first, const Char* last);
+		void insertRectangle(Caret& caret, const String& text);
+		void indentBySpaces(Caret& caret, bool rectangle, long level = 1);
+		void indentByTabs(Caret& caret, bool rectangle, long level = 1);
+		void newLine(Caret& caret, std::size_t newlines = 1);
+		bool transposeCharacters(Caret& caret);
+		void replaceSelection(Caret& caret, const String& text, bool rectangleInsertion = false);
+		bool transposeLines(Caret& caret);
+//		bool transposeParagraphs(Caret& caret);
+//		bool transposeSentences(Caret& caret);
+		bool transposeWords(Caret& caret);
+
 
 		// inline implementations ///////////////////////////////////////////
 
-		/**
-		 * Inserts the specified text at the current position as a rectangle.
-		 * @param text the text to insert
-		 * @return false if the change was interrupted
-		 * @throw ReadOnlyDocumentException the document is read only
-		 * @see EditPoint#insert(const String&)
-		 */
-		inline bool VisualPoint::insertRectangle(const String& text) {return insertRectangle(text.data(), text.data() + text.length());}
-		/// Returns the text viewer.
-		inline TextViewer& VisualPoint::textViewer() {verifyViewer(); return *viewer_;}
-		/// Returns the text viewer.
-		inline const TextViewer& VisualPoint::textViewer() const {verifyViewer(); return *viewer_;}
-		/// Throws @c DisposedViewerException if the text viewer is already disposed.
-		inline void VisualPoint::verifyViewer() const {verifyDocument(); if(viewer_ == 0) throw DisposedViewerException();}
+		/// @internal
+		inline VerticalDestinationProxy VisualPoint::makeVerticalDestinationProxy(
+			const kernel::Position& source) {return VerticalDestinationProxy(source);}
+		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
+		/// point connecting to has been disposed.
+		inline TextViewer& VisualPoint::textViewer() {
+			if(viewer_ == 0) throw TextViewerDisposedException(); return *viewer_;}
+		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
+		/// point connecting to has been disposed.
+		inline const TextViewer& VisualPoint::textViewer() const {
+			if(viewer_ == 0) throw TextViewerDisposedException(); return *viewer_;}
 		/// Called when the text viewer is disposed.
 		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = 0;}
+
+		/// Returns the visual subline number.
+		inline length_t VisualPoint::visualSubline() const {
+			if(visualLine_ == INVALID_INDEX)
+				visualLine();
+			return visualSubline_;
+		}
+
 		/// Returns the anchor of the selection.
 		inline const VisualPoint& Caret::anchor() const /*throw()*/ {return *anchor_;}
 		/// Returns the neighborhood to the beginning of the document among the anchor and this point.
@@ -352,8 +394,6 @@ namespace ascension {
 		inline bool Caret::isAutoShowEnabled() const /*throw()*/ {return autoShow_;}
 		/// Returns true if the caret is in overtype mode.
 		inline bool Caret::isOvertypeMode() const /*throw()*/ {return overtypeMode_;}
-		/// Returns true if the selection is empty.
-		inline bool Caret::isSelectionEmpty() const /*throw()*/ {return anchor_->position() == position();}
 		/// Returns true if the selection is rectangle.
 		inline bool Caret::isSelectionRectangle() const /*throw()*/ {return box_ != 0;}
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
@@ -361,21 +401,12 @@ namespace ascension {
 		/// Returns the matched braces tracking mode.
 		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {return matchBracketsTrackingMode_;}
 		/**
-		 * Replaces the selected region with the specified text.
-		 * @param text the text
-		 * @param rectangleInsertion if set to true, @a text is inserted as rectangle
-		 * @return false if the change was interrupted
-		 * @throw ReadOnlyDocumentException the document is read only
-		 */
-		inline bool Caret::replaceSelection(const String& text, bool rectangleInsertion /* = false */) {
-			return replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);}
-		/**
 		 * Selects the specified region.
 		 * @param region the region. @a pos1 member is the anchor, @a pos2 member is the caret
 		 */
 		inline void Caret::select(const kernel::Region& region) {select(region.first, region.second);}
 		/// Returns the selected region.
-		inline kernel::Region Caret::selectionRegion() const /*throw()*/ {return kernel::Region(*anchor_, position());}
+		inline kernel::Region Caret::selectedRegion() const /*throw()*/ {return kernel::Region(*anchor_, position());}
 		/**
 		 * Tracks the match bracket.
 		 * @param mode the tracking mode
@@ -383,6 +414,18 @@ namespace ascension {
 		 */
 		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
 			if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();} return *this;}
+
+		/// Returns true if the selection of the given caret is empty.
+		inline bool isSelectionEmpty(const Caret& caret) /*throw()*/ {return caret.selectedRegion().isEmpty();}
+		/**
+		 * Returns the selected text string.
+		 * @param caret the caret gives a selection
+		 * @param newline the newline representation for multiline selection. if the selection is
+		 *                rectangular, this value is ignored and the document's newline is used instead
+		 * @return the text string
+		 */
+		inline String selectedString(const Caret& caret, kernel::Newline newline /* = NLF_RAW_VALUE */) {
+			std::basic_ostringstream<Char> ss; selectedString(caret, ss, newline); return ss.str();}
 
 	} // namespace viewers
 } // namespace ascension

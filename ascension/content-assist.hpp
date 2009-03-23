@@ -244,7 +244,7 @@ namespace ascension {
 			void install(viewers::TextViewer& viewer);
 			void uninstall();
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// viewers.ICaretListener
 			void caretMoved(const viewers::Caret& self, const kernel::Region& oldRegion);

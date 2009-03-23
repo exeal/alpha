@@ -7,7 +7,7 @@
  * @date 2007-2009
  */
 
-#include <ascension/document.hpp>
+#include <ascension/fileio.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
 #	include <errno.h>		// errno
@@ -783,7 +783,7 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	try {
 		basic_istream<a::Char> in(&sb);
 		in.exceptions(ios_base::badbit);
-		document_.insert(document_.region().beginning(), in);
+		insert(document_, document_.region().beginning(), in);
 	} catch(...) {
 		document_.resetContent();
 		document_.recordChanges(recorded);
