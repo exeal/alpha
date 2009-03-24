@@ -71,20 +71,22 @@ void Presentation::documentAboutToBeChanged(const Document& document, const Docu
 
 /// @see kernel#IDocumentListener#documentChanged
 void Presentation::documentChanged(const Document&, const DocumentChange& change) {
-	const Range<length_t> lines(change.region().first.line, change.region().second.line);
+	const Range<length_t>
+		erasedLines(change.erasedRegion().first.line, change.erasedRegion().second.line),
+		insertedLines(change.insertedRegion().first.line, change.insertedRegion().second.line);
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ) {
 		const length_t line = (*i)->lineNumber;
-		if(line == lines.beginning() || (change.isDeletion() && lines.includes(line))) {
+		if(line == insertedLines.beginning() || erasedLines.includes(line)) {
 			for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 				delete (*i)->hyperlinks[j];
 			delete *i;
 			i = hyperlinks_.erase(i);
 			continue;
-		} else if(line >= lines.end() && !lines.isEmpty()) {
-			if(change.isDeletion())
-				(*i)->lineNumber -= lines.end() - lines.beginning();
-			else
-				(*i)->lineNumber += lines.end() - lines.beginning();
+		} else {
+			if(line >= erasedLines.end() && !erasedLines.isEmpty())
+				(*i)->lineNumber -= erasedLines.end() - erasedLines.beginning();
+			if(line >= insertedLines.end() && !insertedLines.isEmpty())
+				(*i)->lineNumber += insertedLines.end() - insertedLines.beginning();
 		}
 		++i;
 	}
