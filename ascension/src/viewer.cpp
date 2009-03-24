@@ -837,17 +837,15 @@ void TextViewer::documentAboutToBeChanged(const Document&) {
 /// @see kernel#IDocumentListener#documentChanged
 void TextViewer::documentChanged(const Document&, const DocumentChange& change) {
 	// cancel the active incremental search
-	if(texteditor::Session* session = document().session()) {	// TODO: why is the code here?
+	if(texteditor::Session* session = document().session()) {	// TODO: should TextViewer handle this? (I.S. would...)
 		if(session->incrementalSearcher().isRunning())
 			session->incrementalSearcher().abort();
 	}
 
-	const Region& region = change.region();
-	const bool multiLine = region.beginning().line != region.end().line;
-	if(isFrozen() && multiLine && freezeInfo_.invalidLines.first != INVALID_INDEX) {
-		// slide the frozen lines to be drawn
-		const length_t first = region.beginning().line + 1, last = region.end().line;
-		if(change.isDeletion()) {
+	// slide the frozen lines to be drawn
+	if(isFrozen() && freezeInfo_.invalidLines.first != INVALID_INDEX) {
+		if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
+			const length_t first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
 			if(freezeInfo_.invalidLines.first > last)
 				freezeInfo_.invalidLines.first -= last - first + 1;
 			else if(freezeInfo_.invalidLines.first > first)
@@ -858,7 +856,9 @@ void TextViewer::documentChanged(const Document&, const DocumentChange& change) 
 				else if(freezeInfo_.invalidLines.second > first)
 					freezeInfo_.invalidLines.second = first;
 			}
-		} else {
+		}
+		if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
+			const length_t first = change.insertedRegion().first.line + 1, last = change.insertedRegion().second.line;
 			if(freezeInfo_.invalidLines.first >= first)
 				freezeInfo_.invalidLines.first += last - first + 1;
 			if(freezeInfo_.invalidLines.second >= first && freezeInfo_.invalidLines.second != numeric_limits<length_t>::max())
