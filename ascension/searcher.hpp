@@ -26,78 +26,34 @@ namespace ascension {
 	namespace searcher {
 
 		/**
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
 		 */
 		class LiteralPattern {
+			MANAH_NONCOPYABLE_TAG(LiteralPattern);
 		public:
-			// constructor
-			LiteralPattern(const Char* first, const Char* last,
-				Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
-			LiteralPattern(const String& pattern, Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
+			// constructors
+			LiteralPattern(const String& pattern, bool caseSensitive = true,
+				std::auto_ptr<const text::Collator> collator = std::auto_ptr<const text::Collator>(0));
 			~LiteralPattern() /*throw()*/;
 			// attributes
-			Direction direction() const /*throw()*/;
 			bool isCaseSensitive() const /*throw()*/;
-			// operation
-			void compile(const Char* first, const Char* last,
-				Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
-			void compile(const String& pattern, Direction direction, bool ignoreCase = false, const text::Collator* collator = 0);
+			const String& pattern() const /*throw()*/;
+			// operations
 			bool matches(const text::CharacterIterator& target) const;
-			bool search(const text::CharacterIterator& target,
+			bool search(const text::CharacterIterator& target, Direction direction,
 				std::auto_ptr<text::CharacterIterator>& matchedFirst, std::auto_ptr<text::CharacterIterator>& matchedLast) const;
 		private:
-			Direction direction_;
-			bool caseSensitive_;
+			void makeShiftTable(Direction direction) /*throw()*/;
+		private:
+			const String pattern_;
+			const bool caseSensitive_;
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-			std::auto_ptr<text::Collator> collator_;
+			const std::auto_ptr<const text::Collator> collator_;
 #endif // !ASCENSION_NO_UNICODE_COLLATION
-			std::ptrdiff_t lastOccurences_[65536];
+			std::ptrdiff_t lastOccurences_[65536];	// for forward search
+			std::ptrdiff_t firstOccurences_[65536];	// for backward search
 			int* first_;	// collation elements of the pattern
 			int* last_;
-		};
-
-		/// Types of search.
-		enum SearchType {
-			LITERAL,			///< Literal search.
-#ifndef ASCENSION_NO_REGEX
-			REGULAR_EXPRESSION,	///< Regular expression search.
-#ifndef ASCENSION_NO_MIGEMO
-			MIGEMO				///< Migemo.
-#endif // !ASCENSION_NO_REGEX
-#endif // !ASCENSION_NO_MIGEMO
-		};
-
-		/// Options for search.
-		struct SearchOptions {
-			/// Constraint the edges of the matched region must satisfy.
-			enum WholeMatch {
-				NONE,				///< No constraint.
-				GRAPHEME_CLUSTER,	///< The start and the end of the match region must be grapheme cluster boundaries.
-				WORD				///< The start and the end of the match region must be word boundaries (called whole word match).
-			};
-			SearchType type;			///< Type the of search.
-			bool caseSensitive;			///< For caseless match.
-			bool canonicalEquivalents;	///< Set true to enable canonical equivalents (not implemented).
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-			int collationWeight;		///< Collation weight level (not implemented).
-#endif // !ASCENSION_NO_UNICODE_COLLATION
-			WholeMatch wholeMatch;		///< Whole match constraint.
-			bool wrapAround;			///< Wrap around when the scanning was reached the end/start of the target region.
-			/// Constructor.
-			SearchOptions() /*throw()*/ : type(LITERAL), caseSensitive(true), canonicalEquivalents(false), wholeMatch(NONE) {}
-			/// Equality operator.
-			bool operator==(const SearchOptions& rhs) const /*throw()*/ {
-				return type == rhs.type
-					&& caseSensitive == rhs.caseSensitive
-					&& canonicalEquivalents == rhs.canonicalEquivalents
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-					&& collationWeight == rhs.collationWeight
-#endif // !ASCENSION_NO_UNICODE_COLLATION
-					&& wholeMatch == rhs.wholeMatch
-					&& wrapAround == rhs.wrapAround;
-			}
-			/// Unequality operator.
-			bool operator!=(const SearchOptions& rhs) const /*throw()*/ {return !operator==(rhs);}
 		};
 
 		/**
@@ -138,27 +94,32 @@ namespace ascension {
 			friend class TextSearcher;
 		};
 
-		/**
-		 * Searches the specified pattern in the document.
-		 *
-		 * A session holds an instance of this class, while client can create instances.
-		 *
-		 * @c TextSearcher has the list of patterns used for search. The pattern which is given by
-		 * #setPattern method is pushed into this list, and the client can reuse those patterns
-		 * later. @c IncrementalSearcher uses this list to get the pattern used previously. To get
-		 * this stored patterns, call #pattern method. To get the length of the list, call
-		 * @c #numberOfStoredPatterns method. The maximum length of the list can be changed by
-		 * calling @c #setMaximumNumberOfStoredStrings method. Default length is 16 and the minimum
-		 * is 4.
-		 * @see texteditor#Session#getTextSearcher, texteditor#commands#FindAllCommand,
-		 * texteditor#commands#FindNextCommand
-		 */
+		// the documentation is searcher.cpp
 		class TextSearcher {
 			MANAH_NONCOPYABLE_TAG(TextSearcher);
 		public:
+			/// Types of search.
+			enum Type {
+				LITERAL,			///< Literal search.
+#ifndef ASCENSION_NO_REGEX
+				REGULAR_EXPRESSION,	///< Regular expression search.
+#ifndef ASCENSION_NO_MIGEMO
+				MIGEMO				///< Migemo.
+#endif // !ASCENSION_NO_REGEX
+#endif // !ASCENSION_NO_MIGEMO
+			};
+			/// Constraint the edges of the matched region must satisfy.
+			enum WholeMatch {
+				/// No constraint.
+				MATCH_UTF32_CODE_UNIT,
+				/// The start and the end of the match region must be grapheme cluster boundaries.
+				MATCH_GRAPHEME_CLUSTER,
+				/// The start and the end of the match region must be word boundaries (called whole word match).
+				MATCH_WORD
+			};
+		public:
 			// constructors.
 			TextSearcher();
-			virtual ~TextSearcher();
 			// pattern/replacement
 			bool hasPattern() const /*throw()*/;
 			std::size_t numberOfStoredPatterns() const /*throw()*/;
@@ -166,16 +127,23 @@ namespace ascension {
 			const String& pattern(std::size_t index = 0) const;
 			const String& replacement(std::size_t index = 0) const;
 			void setMaximumNumberOfStoredStrings(std::size_t number) /*throw()*/;
-			void setPattern(const String& pattern, bool dontRemember = false);
+			template<typename PatternType>
+			void setPattern(std::auto_ptr<const PatternType> pattern, bool dontRemember = false);
 			void setReplacement(const String& replacement);
-			// options
+			// search conditions
+			int collationWeight() const /*throw()*/;
+			bool isCaseSensitive() const /*throw()*/;
+			TextSearcher& setWholeMatch(WholeMatch newValue);
+			Type type() const /*throw()*/;
+			bool usesCanonicalEquivalents() const /*throw()*/;
+			WholeMatch wholeMatch() const /*throw()*/;
+//			TextSearcher& wrapAround(bool wrap) /*throw()*/;
+//			bool wrapsAround() const /*throw()*/;
 			// result
 			bool isLastPatternMatched() const /*throw()*/;
 			// services
 			bool isMigemoAvailable() const /*throw()*/;
 			static bool isRegexAvailable() /*throw()*/;
-			const SearchOptions& options() const /*throw()*/;
-			void setOptions(const SearchOptions& options) /*throw()*/;
 			// operations
 			void abortInteractiveReplacement();
 			std::size_t replaceAll(kernel::Document& document,
@@ -185,14 +153,12 @@ namespace ascension {
 			template<typename InputIterator>
 			void setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
 		private:
-			bool checkBoundary(const kernel::DocumentCharacterIterator& first, const kernel::DocumentCharacterIterator& last) const;
-			void clearPatternCache();
-			void compilePattern(Direction direction) const;
 			void pushHistory(const String& s, bool forReplacements);
 		private:
-			std::auto_ptr<LiteralPattern> literalPattern_;
+			std::auto_ptr<const LiteralPattern> literalPattern_;
 #ifndef ASCENSION_NO_REGEX
 			std::auto_ptr<const regex::Pattern> regexPattern_;
+			std::auto_ptr<const regex::MigemoPattern> migemoPattern_;
 			std::auto_ptr<regex::Matcher<kernel::DocumentCharacterIterator> > regexMatcher_;
 #endif // !ASCENSION_NO_REGEX
 			mutable struct LastResult {
@@ -210,8 +176,9 @@ namespace ascension {
 				void updateDocumentRevision(const kernel::Document& document) /*throw()*/ {
 					this->document = &document; documentRevisionNumber = document.revisionNumber();}
 			} lastResult_;
-			SearchOptions options_;
-			String temporaryPattern_;
+			Type searchType_;
+			WholeMatch wholeMatch_;
+//			bool wrapsAround_;
 			std::list<String> storedPatterns_, storedReplacements_;
 			std::size_t maximumNumberOfStoredStrings_;
 			bool abortedInteractiveReplacement_;
@@ -293,6 +260,7 @@ namespace ascension {
 				TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
 			bool undo();
 		private:
+			void setPatternToSearcher(bool pushToHistory);
 			bool update();
 			// kernel.IDocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
@@ -321,23 +289,13 @@ namespace ascension {
 
 // inline ///////////////////////////////////////////////////////////////////
 
-	/**
-	 * Compiles the pattern.
-	 * @param pattern the search pattern
-	 * @param direction the direction to search
-	 * @param ignoreCase set true to perform case-insensitive search
-	 * @param collator the collator or @c null if not needed
-	 * @throw std#invalid_argument @a first and/or @a last are invalid
-	 */
-	inline void LiteralPattern::compile(const String& pattern, Direction direction, bool ignoreCase /* = false */,
-		const text::Collator* collator /* = 0 */) {compile(pattern.data(), pattern.data() + pattern.length(), direction, ignoreCase, collator);}
-	/// Returns the direction to search.
-	inline Direction LiteralPattern::direction() const /*throw()*/ {return direction_;}
-	/// Returns true if the pattern performs case-sensitive match.
+	/// Returns @c true if the pattern performs case-sensitive match.
 	inline bool LiteralPattern::isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
-	/// Returns true if any pattern is set on the searcher .
-	inline bool TextSearcher::hasPattern() const /*throw()*/ {return !storedPatterns_.empty() || !temporaryPattern_.empty();}
-	/// Returns true if the search using regular expression is available.
+	/// Returns the pattern string.
+	inline const String& LiteralPattern::pattern() const /*throw()*/ {return pattern_;}
+	/// Returns @c true if any pattern is set on the searcher .
+	inline bool TextSearcher::hasPattern() const /*throw()*/ {return !storedPatterns_.empty();}
+	/// Returns @c true if the search using regular expression is available.
 	inline bool TextSearcher::isRegexAvailable() /*throw()*/ {
 #ifdef ASCENSION_NO_REGEX
 		return false;
@@ -349,8 +307,6 @@ namespace ascension {
 	inline std::size_t TextSearcher::numberOfStoredPatterns() const /*throw()*/ {return storedPatterns_.size();}
 	/// Returns the number of the stored replacements.
 	inline std::size_t TextSearcher::numberOfStoredReplacements() const /*throw()*/ {return storedReplacements_.size();}
-	/// Returns the search options.
-	inline const SearchOptions& TextSearcher::options() const /*throw()*/ {return options_;}
 	/// Returns the pattern string.
 	inline const String& TextSearcher::pattern(std::size_t index /* = 0 */) const {
 		if(index >= storedPatterns_.size()) throw IndexOutOfBoundsException();
@@ -359,6 +315,26 @@ namespace ascension {
 	inline const String& TextSearcher::replacement(std::size_t index /* = 0 */) const {
 		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
 		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
+	template<> inline void TextSearcher::setPattern<LiteralPattern>(std::auto_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
+		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+			pushHistory(pattern->pattern(), false);
+		literalPattern_ = pattern;
+	}
+#ifndef ASCENSION_NO_REGEX
+	template<> inline void TextSearcher::setPattern<regex::Pattern>(std::auto_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
+		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+			pushHistory(pattern->pattern(), false);
+		regexPattern_ = pattern;
+	}
+#ifndef ASCENSION_NO_MIGEMO
+	template<> inline void TextSearcher::setPattern<regex::MigemoPattern>(std::auto_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
+		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+			pushHistory(pattern->pattern(), false);
+		migemoPattern_ = pattern;
+	}
+#endif // !ASCENSION_NO_MIGEMO
+#endif // !ASCENSION_NO_REGEX
+
 	/**
 	 * Sets the stored list.
 	 * @param first the first string of the list

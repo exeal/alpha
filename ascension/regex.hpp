@@ -42,6 +42,7 @@ namespace ascension {
 		 * seen but not modified through a @c MatchResult.</p>
 		 * <p>Almost all methods throw @c IllegalStateException if no match has yet been attempted,
 		 * or if the previous match operation failed.</p>
+		 * @tparam CodePointIterator 
 		 * @see Matcher
 		 */
 		template<typename CodePointIterator> class MatchResult {
@@ -285,11 +286,11 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 			MANAH_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
-			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool ignoreCase);
+			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool caseSensitive);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
 			static bool isMigemoInstalled() /*throw()*/;
 		private:
-			MigemoPattern(const Char* first, const Char* last, bool ignoreCase);
+			MigemoPattern(const Char* first, const Char* last, bool caseSensitive);
 			static void install();
 			static manah::AutoBuffer<char> runtimePathName_, dictionaryPathName_;
 		};

@@ -503,10 +503,10 @@ manah::AutoBuffer<char> MigemoPattern::dictionaryPathName_;
  * Private constructor.
  * @param first the start of the pattern string
  * @param last the end of the pattern string
- * @param ignoreCase set true to enable case-insensitive match
+ * @param caseSensitive set @c true to enable case-sensitive match
  */
-MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool ignoreCase) :
-		Pattern(first, last, (ignoreCase ? boost::regex_constants::icase : 0)
+MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool caseSensitive) :
+		Pattern(first, last, (!caseSensitive ? boost::regex_constants::icase : 0)
 			| boost::regex_constants::no_char_classes | boost::regex_constants::nosubs | boost::regex_constants::perl) {
 }
 
@@ -514,16 +514,16 @@ MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool ignoreCas
  * Constructor creates new regular expression pattern for Migemo match.
  * @param first the start of the pattern string
  * @param last the end of the pattern string
- * @param ignoreCase set true to enable case-insensitive match
+ * @param caseSensitive set @c true to enable case-sensitive match
  * @return the pattern or @c null if Migemo is not installed
  */
-auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* last, bool ignoreCase) {
+auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* last, bool caseSensitive) {
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
 		const Char* const p = migemoLib->query(first, last, len);
 		using namespace boost::regex_constants;
-		return auto_ptr<MigemoPattern>(new MigemoPattern(p, p + len, ignoreCase));
+		return auto_ptr<MigemoPattern>(new MigemoPattern(p, p + len, caseSensitive));
 	} else
 		return auto_ptr<MigemoPattern>();
 }
