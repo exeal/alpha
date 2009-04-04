@@ -284,8 +284,8 @@ namespace ascension {
 		 *
 		 * This supports four relation operators general bidirectional iterators don't have.
 		 * These are available if @a BaseIterator have these facilities.
-		 * @param BaseIterator the base bidirectional iterator presents UTF-16 character sequence
-		 * @param ConcreteIterator set to @c UTF16To32Iterator template class
+		 * @tparam BaseIterator the base bidirectional iterator presents UTF-16 character sequence
+		 * @tparam ConcreteIterator set to @c UTF16To32Iterator template class
 		 * @see UTF16To32Iterator, UTF16To32IteratorUnsafe, UTF32To16Iterator, ToUTF32Sequence
 		 */
 		template<typename BaseIterator, typename ConcreteIterator>
@@ -418,7 +418,7 @@ namespace ascension {
 		 *
 		 * This supports four relation operators general bidirectional iterators don't have.
 		 * These are available if @a BaseIterator have these facilities.
-		 * @param BaseIterator the base bidirectional iterator presents UTF-32 character sequence
+		 * @tparam BaseIterator the base bidirectional iterator presents UTF-32 character sequence
 		 * @see UTF16To32Iterator
 		 */
 		template<class BaseIterator = const CodePoint*>
@@ -593,7 +593,7 @@ namespace ascension {
 		namespace internal {
 			/**
 			 * Provides standard C++ iterator interface and facilities for the concrete iterator class.
-			 * @param ConcreteIterator the concrete iterator
+			 * @tparam ConcreteIterator the concrete iterator
 			 */
 			template<class ConcreteIterator> class BreakIteratorFacade : public std::iterator<std::random_access_iterator_tag, Char> {
 			public:

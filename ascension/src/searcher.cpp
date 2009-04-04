@@ -47,30 +47,27 @@ using namespace std;
 // LiteralPattern ///////////////////////////////////////////////////////////
 
 /**
- * Constructor.
- * @param first the start of the search pattern
- * @param last the end of the search pattern
- * @param direction the direction to search
- * @param ignoreCase set true to perform case-insensitive search
- * @param collator the collator or @c null if not needed
- * @throw std#invalid_argument @a first and/or @a last are invalid
- */
-LiteralPattern::LiteralPattern(const Char* first, const Char* last,
-		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) : direction_(Direction::FORWARD) {
-	compile(first, last, direction, ignoreCase, collator);
-}
-
-/**
- * Constructor.
+ * Constructor compiles the pattern.
  * @param pattern the search pattern
  * @param direction the direction to search
- * @param ignoreCase set true to perform case-insensitive search
+ * @param caseSensitive set @c true to perform case-sensitive search
  * @param collator the collator or @c null if not needed
- * @throw std#invalid_argument @a first and/or @a last are invalid
+ * @throw std#invalid_argument @a pattern is empty
  */
-LiteralPattern::LiteralPattern(const String& pattern,
-		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) : direction_(Direction::FORWARD) {
-	compile(pattern, direction, ignoreCase, collator);
+LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */,
+		auto_ptr<const Collator> collator /* = null */) : pattern_(pattern), caseSensitive_(caseSensitive)
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+		, collator_(collator)
+#endif // !ASCENSION_NO_UNICODE_COLLATION
+{
+	// TODO: use collator.
+	if(pattern.empty())
+		throw invalid_argument("pattern");
+	lastOccurences_[0] = firstOccurences_[0] = numeric_limits<ptrdiff_t>::min();
+	// build pseudo collation elements
+	first_ = last_ = new int[pattern_.length()];
+	for(StringCharacterIterator i(pattern_); i.hasNext(); ++i, ++last_)
+		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
 }
 
 /// Destructor.
@@ -78,37 +75,18 @@ LiteralPattern::~LiteralPattern() /*throw()*/ {
 	delete[] first_;
 }
 
-/**
- * Compiles the pattern.
- * @param first the start of the search pattern
- * @param last the end of the search pattern
- * @param direction the direction to search
- * @param ignoreCase set true to perform case-insensitive search
- * @param collator the collator or @c null if not needed
- * @throw std#invalid_argument @a first and/or @a last are invalid
- */
-void LiteralPattern::compile(const Char* first, const Char* last,
-		Direction direction, bool ignoreCase /* = false */, const Collator* collator /* = 0 */) {
-	// TODO: use collator.
-	if(first == 0 || last == 0 || first >= last)
-		throw invalid_argument("invalid pattern input.");
-	direction_ = direction;
-	caseSensitive_ = !ignoreCase;
-#ifndef ASCENSION_NO_UNICODE_COLLATION
-	collator_ = collator;
-#endif // !ASCENSION_NO_UNICODE_COLLATION
-	// build pseudo collation elements
-	first_ = last_ = new int[last - first];
-	for(UTF16To32Iterator<const Char*> i(first, last); i.hasNext(); ++i, ++last_)
-		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
-	// build BM shift table
-	fill(lastOccurences_, MANAH_ENDOF(lastOccurences_), last_ - first_);
+// builds BM shift table for forward/backward search
+inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 	if(direction == Direction::FORWARD) {
-		for(const int* e = first_; e < last_; ++e)
-			lastOccurences_[*e] = last_ - e - 1;
-	} else {
+		if(lastOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
+			fill(lastOccurences_, MANAH_ENDOF(lastOccurences_), last_ - first_);
+			for(const int* e = first_; e < last_; ++e)
+				lastOccurences_[*e] = last_ - e - 1;
+		}
+	} else if(firstOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
+		fill(firstOccurences_, MANAH_ENDOF(firstOccurences_), last_ - first_);
 		for(const int* e = last_ - 1; ; --e) {
-			lastOccurences_[*e] = e - first_;
+			firstOccurences_[*e] = e - first_;
 			if(e == first_)
 				break;
 		}
@@ -141,15 +119,18 @@ namespace {
 /**
  * Searches in the specified character sequence.
  * @param target the target character sequence
+ * @param direction the direction to search. if this is @c Direction#FORWARD, the method finds the
+ *                  first occurence of the pattern in @a target. otherwise finds the last one
  * @param[out] matchedFirst 
  * @param[out] matchedLast 
  * @return true if the pattern was found
  */
-bool LiteralPattern::search(const CharacterIterator& target,
+bool LiteralPattern::search(const CharacterIterator& target, Direction direction,
 		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
+	const_cast<LiteralPattern*>(this)->makeShiftTable(direction);
 	// TODO: this implementation is just scrath.
 	auto_ptr<CharacterIterator> t(target.clone());
-	if(direction_ == Direction::FORWARD) {
+	if(direction == Direction::FORWARD) {
 		orzAdvance(*t, last_ - first_ - 1);
 		for(const int* pattern; t->hasNext(); orzAdvance(*t,
 				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
@@ -190,88 +171,61 @@ bool LiteralPattern::search(const CharacterIterator& target,
 
 // TextSearcher /////////////////////////////////////////////////////////////
 
+/**
+ * @class ascension::searcher::TextSearcher
+ *
+ * Searches the specified pattern in the document.
+ *
+ * A session holds an instance of this class, while client can create instances.
+ *
+ * @c TextSearcher has the list of patterns used for search. The pattern which is given by
+ * #setPattern method is pushed into this list, and the client can reuse those patterns
+ * later. @c IncrementalSearcher uses this list to get the pattern used previously. To get
+ * this stored patterns, call #pattern method. To get the length of the list, call
+ * @c #numberOfStoredPatterns method. The maximum length of the list can be changed by
+ * calling @c #setMaximumNumberOfStoredStrings method. Default length is 16 and the minimum
+ * is 4.
+ *
+ * @note This class is not intended to be subclassed.
+ *
+ * @see texteditor#Session#getTextSearcher, texteditor#commands#FindAllCommand,
+ * texteditor#commands#FindNextCommand
+ */
+
 /// Default constructor.
 TextSearcher::TextSearcher() : maximumNumberOfStoredStrings_(DEFAULT_NUMBER_OF_STORED_STRINGS) {
 }
 
-/// Destructor.
-TextSearcher::~TextSearcher() {
-	clearPatternCache();
-}
-
-inline bool TextSearcher::checkBoundary(const DocumentCharacterIterator& first, const DocumentCharacterIterator& last) const {
-	switch(options_.wholeMatch) {
-		case SearchOptions::GRAPHEME_CLUSTER: {
-			const GraphemeBreakIterator<DocumentCharacterIterator> bi(first);
-			return bi.isBoundary(first) && bi.isBoundary(last);
-		} case SearchOptions::WORD: {
-			const Document& document = *first.document();
-			const WordBreakIterator<DocumentCharacterIterator> bi1(first, AbstractWordBreakIterator::START_OF_SEGMENT,
-				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(first.tell())));
-			if(!bi1.isBoundary(first))
-				return false;
-			const WordBreakIterator<DocumentCharacterIterator> bi2(last, AbstractWordBreakIterator::END_OF_SEGMENT,
-				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(last.tell())));
-			return bi2.isBoundary(last);
-		}
-	}
-	return true;
-}
-
-/// Clears the cache of the search pattern.
-void TextSearcher::clearPatternCache() {
-	literalPattern_.reset();
-#ifndef ASCENSION_NO_REGEX
-	regexPattern_.reset();
-	regexMatcher_.reset();
-#endif // !ASCENSION_NO_REGEX
-}
-
 /**
- * Compiles the regular expression pattern.
- * @param direction the direction to search (this is used by only @c LiteralPattern)
- * @throw IllegalStateException the pattern is not specified
+ * Returns the collation weight level.
+ * This feature is not implemented and returns always zero.
  */
-void TextSearcher::compilePattern(Direction direction) const {
-	if(!hasPattern())
-		throw IllegalStateException("pattern is not set.");
-	TextSearcher& self = *const_cast<TextSearcher*>(this);
-	const String& p = temporaryPattern_.empty() ? storedPatterns_.front() : temporaryPattern_;
-	switch(options_.type) {
-	case LITERAL:
-		if(self.literalPattern_.get() == 0)
-			self.literalPattern_.reset(new LiteralPattern(p.data(), p.data() + p.length(), direction, !options_.caseSensitive));
-		break;
+int TextSearcher::collationWeight() const /*throw()*/ {
+	return 0;
+}
+
+/// Returns @c false if caseless match is enabled. This setting is obtained from the pattern.
+bool TextSearcher::isCaseSensitive() const {
+	if(literalPattern_.get() != 0)
+		return literalPattern_->isCaseSensitive();
 #ifndef ASCENSION_NO_REGEX
-	case REGULAR_EXPRESSION:
-		if(regexPattern_.get() == 0) {
-			self.regexPattern_ = regex::Pattern::compile(p,
-				regex::Pattern::MULTILINE | (options_.caseSensitive ? 0 : regex::Pattern::CASE_INSENSITIVE));
-			if(regexMatcher_.get() != 0)
-				self.regexMatcher_->reset();
-		}
-		break;
+	else if(regexPattern_.get() != 0)
+		return (regexPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) != 0;
 #ifndef ASCENSION_NO_MIGEMO
-	case MIGEMO:
-		if(regexPattern_.get() == 0)
-			self.regexPattern_ = regex::MigemoPattern::compile(p.data(), p.data() + p.length(), !options_.caseSensitive);
-		if(regexPattern_.get() == 0)
-			throw runtime_error("failed to create a regular expression pattern by using C/Migemo.");
-		break;
+	else if(migemoPattern_.get() != 0)
+		return  (migemoPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) != 0;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-	}
-	if(!temporaryPattern_.empty())
-		self.temporaryPattern_.erase();
+	throw "unreachable.";
 }
 
-/// Returns true if Migemo is available.
+/// Returns @c true if Migemo is available.
 bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
 #ifdef ASCENSION_NO_MIGEMO
 	return false;
 #else
 	return regex::MigemoPattern::isMigemoInstalled();
-#endif /* ASCENSION_NO_MIGEMO */
+#endif // ASCENSION_NO_MIGEMO
 }
 
 #if 0
@@ -328,7 +282,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
  */
 void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 	list<String>& history = forReplacements ? storedReplacements_ : storedPatterns_;
-	const list<String>::iterator d = find(history.begin(), history.end(), s);
+	const list<String>::iterator d(find(history.begin(), history.end(), s));
 	if(d != history.end())
 		history.erase(d);
 	else if(history.size() == maximumNumberOfStoredStrings_)
@@ -399,7 +353,26 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 		*endOfReplacement = eor;
 	return true;
 }
-#endif /* 0 */
+#endif // 0
+
+inline bool checkBoundary(const DocumentCharacterIterator& first, const DocumentCharacterIterator& last, TextSearcher::WholeMatch wholeMatch) {
+	switch(wholeMatch) {
+		case TextSearcher::MATCH_GRAPHEME_CLUSTER: {
+			const GraphemeBreakIterator<DocumentCharacterIterator> bi(first);
+			return bi.isBoundary(first) && bi.isBoundary(last);
+		} case TextSearcher::MATCH_WORD: {
+			const Document& document = *first.document();
+			const WordBreakIterator<DocumentCharacterIterator> bi1(first, AbstractWordBreakIterator::START_OF_SEGMENT,
+				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(first.tell())));
+			if(!bi1.isBoundary(first))
+				return false;
+			const WordBreakIterator<DocumentCharacterIterator> bi2(last, AbstractWordBreakIterator::END_OF_SEGMENT,
+				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(last.tell())));
+			return bi2.isBoundary(last);
+		}
+	}
+	return true;
+}
 
 /**
  * Searches and replaces all occurences in the specified region.
@@ -417,7 +390,7 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
  * @param scope the region to search and replace
  * @param callback the callback object for interactive replacement. if @c null, this method
  * replaces all the occurences silently
- * @return the number of replacements
+ * @return the number of replaced occurences
  * @throw IllegalStateException the pattern is not specified
  * @throw ReadOnlyDocumentException @a document is read-only
  * @throw BadRegionException @a region intersects outside of the document
@@ -428,7 +401,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	else if(!document.region().encompasses(scope))
 		throw BadRegionException(scope);
 
-	const String replacement = !storedReplacements_.empty() ? storedReplacements_.front() : String();
+	const String replacement(!storedReplacements_.empty() ? storedReplacements_.front() : String());
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
 	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
 	size_t documentRevision = document.revisionNumber();	// to detect other interruptions
@@ -438,20 +411,15 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	if(callback != 0)
 		callback->replacementStarted(document, Region(scope).normalize());
 
-	compilePattern(Direction::FORWARD);
-	if(options_.type == LITERAL) {
-		if(literalPattern_->direction() != Direction::FORWARD) {	// recompile to change the direction
-			const String& p = storedPatterns_.front();
-			literalPattern_->compile(p.data(), p.data() + p.length(), Direction::FORWARD, !options_.caseSensitive);
-		}
+	if(type() == LITERAL) {
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
 		Point endOfScope(document, scope.end());
 		for(DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
-			if(!literalPattern_->search(i, matchedFirst, matchedLast))
+			if(!literalPattern_->search(i, Direction::FORWARD, matchedFirst, matchedLast))
 				break;
 			else if(!checkBoundary(
 					static_cast<DocumentCharacterIterator&>(*matchedFirst),
-					static_cast<DocumentCharacterIterator&>(*matchedLast))) {
+					static_cast<DocumentCharacterIterator&>(*matchedLast), wholeMatch_)) {
 				i.next();
 				continue;
 			}
@@ -505,9 +473,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 	}
 
 #ifndef ASCENSION_NO_REGEX
-	if(options_.type == REGULAR_EXPRESSION
+	if(type() == REGULAR_EXPRESSION
 #ifndef ASCENSION_NO_MIGEMO
-			|| options_.type == MIGEMO
+			|| type() == MIGEMO
 #endif // !ASCENSION_NO_MIGEMO
 	) {
 		const Point endOfScope(document, scope.end());
@@ -522,7 +490,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 		lastResult_.reset();
 
 		while(matcher->find()) {
-			if(!checkBoundary(matcher->start(), matcher->end()))
+			if(!checkBoundary(matcher->start(), matcher->end(), wholeMatch_))
 				matcher->region(++DocumentCharacterIterator(matcher->start()), matcher->end());
 			else {
 				Position next(Position::ZERO_POSITION);
@@ -608,21 +576,16 @@ bool TextSearcher::search(const Document& document,
 	if(!scope.includes(from))
 		throw BadPositionException(from);
 	bool matched = false;
-	compilePattern(direction);
-	if(options_.type == LITERAL) {
-		if(direction != literalPattern_->direction()) {	// recompile to change the direction
-			const String& p = storedPatterns_.front();
-			literalPattern_->compile(p.data(), p.data() + p.length(), direction, !options_.caseSensitive);
-		}
+	if(type() == LITERAL) {
 		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
 		for(DocumentCharacterIterator i(document, scope, from);
 				(direction == Direction::FORWARD) ? i.hasNext() : i.hasPrevious();
 				(direction == Direction::FORWARD) ? i.next() : i.previous()) {
-			if(!literalPattern_->search(i, matchedFirst, matchedLast))
+			if(!literalPattern_->search(i, direction, matchedFirst, matchedLast))
 				break;	// not found
 			else if(checkBoundary(
 					static_cast<DocumentCharacterIterator&>(*matchedFirst),
-					static_cast<DocumentCharacterIterator&>(*matchedLast))) {
+					static_cast<DocumentCharacterIterator&>(*matchedLast), wholeMatch_)) {
 				matchedRegion.first = static_cast<DocumentCharacterIterator*>(matchedFirst.get())->tell();
 				matchedRegion.second = static_cast<DocumentCharacterIterator*>(matchedLast.get())->tell();
 				matched = true;
@@ -632,9 +595,9 @@ bool TextSearcher::search(const Document& document,
 	}
 
 #ifndef ASCENSION_NO_REGEX
-	else if(options_.type == REGULAR_EXPRESSION
+	else if(type() == REGULAR_EXPRESSION
 #ifndef ASCENSION_NO_MIGEMO
-			|| options_.type == MIGEMO
+			|| type() == MIGEMO
 #endif // !ASCENSION_NO_MIGEMO
 	) {
 		if(regexMatcher_.get() == 0)
@@ -652,7 +615,7 @@ bool TextSearcher::search(const Document& document,
 			if(!maybeContinuous || from != lastResult_.matchedRegion.second)
 				regexMatcher_->region(DocumentCharacterIterator(document, from), eob);
 			while(regexMatcher_->find()) {
-				if(matched = checkBoundary(regexMatcher_->start(), regexMatcher_->end()))
+				if(matched = checkBoundary(regexMatcher_->start(), regexMatcher_->end(), wholeMatch_))
 					break;
 				regexMatcher_->region(++DocumentCharacterIterator(regexMatcher_->start()), eob);
 			}
@@ -666,7 +629,8 @@ bool TextSearcher::search(const Document& document,
 					b.previous();
 				while(true) {
 					regexMatcher_->region(b, e);
-					if(matched = (regexMatcher_->lookingAt() && checkBoundary(regexMatcher_->start(), regexMatcher_->end())))
+					if(matched = (regexMatcher_->lookingAt()
+							&& checkBoundary(regexMatcher_->start(), regexMatcher_->end(), wholeMatch_)))
 						break;
 					else if(b.tell() <= scope.beginning())
 						break;
@@ -703,32 +667,13 @@ void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
 	maximumNumberOfStoredStrings_ = number;
 }
 
-/// Sets the new search options
-void TextSearcher::setOptions(const SearchOptions& options) /*throw()*/ {
-	if(options != options_) {
-		clearPatternCache();
-		options_ = options;
-	}
-}
-
 /**
- * Sets the new pattern.
+ * @fn ascension::searcher::TextSearcher::setPattern
+ * @brief Sets the new pattern.
  * @param pattern the pattern string
- * @param dontRemember set true to not add the pattern into the stored list. in this case, the
- * following #pattern call will not return the pattern set by this
- * @throw std#invalid_argument @a pattern is empty
+ * @param dontRemember set @c true to not add the pattern into the stored list. in this case, the
+ *                     following @c #pattern call will not return the pattern set by this
  */
-void TextSearcher::setPattern(const String& pattern, bool dontRemember /* = false */) {
-	if(pattern.empty())
-		throw invalid_argument("the pattern is empty.");
-	else if(storedPatterns_.empty() || pattern != storedPatterns_.front()) {
-		if(!dontRemember)
-			pushHistory(pattern, false);
-		else
-			temporaryPattern_ = pattern;
-		clearPatternCache();
-	}
-}
 
 /**
  * Sets the new replacement string.
@@ -736,6 +681,43 @@ void TextSearcher::setPattern(const String& pattern, bool dontRemember /* = fals
  */
 void TextSearcher::setReplacement(const String& replacement) {
 	pushHistory(replacement, true);
+}
+
+/**
+ * Sets the "whole match" condition.
+ * @param newValue the new whole match value to set
+ * @return this object
+ * @throw UnknownValueException @a newValue is invalid
+ * @see #wholeMatch
+ */
+TextSearcher& TextSearcher::setWholeMatch(WholeMatch newValue) {
+	if(newValue < MATCH_UTF32_CODE_UNIT || newValue > MATCH_WORD)
+		throw UnknownValueException("newValue");
+	wholeMatch_ = newValue;
+	return *this;
+}
+
+/**
+ * Returns the type of search.
+ * @see #setPattern
+ */
+TextSearcher::Type TextSearcher::type() const /*throw()*/ {
+	if(literalPattern_.get() != 0)
+		return LITERAL;
+#ifndef ASCENSION_NO_REGEX
+	else if(regexPattern_.get() != 0)
+		return REGULAR_EXPRESSION;
+#ifndef ASCENSION_NO_MIGEMO
+	else if(migemoPattern_.get() != 0)
+		return MIGEMO;
+#endif // !ASCENSION_NO_MIGEMO
+#endif // !ASCENSION_NO_REGEX
+	throw "unreachable.";
+}
+
+/// Returns the "whole match" condition.
+TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
+	return wholeMatch_;
 }
 
 
@@ -840,7 +822,7 @@ void IncrementalSearcher::end() {
 		if(callback_ != 0)
 			callback_->incrementalSearchCompleted();
 		if(!pattern_.empty())
-			searcher_->setPattern(pattern_);	// store to reuse
+			setPatternToSearcher(true);	// store to reuse
 		searcher_ = 0;
 		callback_ = 0;
 		pattern_.erase();
@@ -893,6 +875,30 @@ void IncrementalSearcher::reset() {
 	pattern_.erase();
 	if(callback_ != 0)
 		callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+}
+
+inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
+	if(pattern_.empty())
+		throw IllegalStateException("the pattern is empty.");
+	switch(searcher_->type()) {
+	case TextSearcher::LITERAL:
+		// TODO: specify 'collator' parameter.
+		searcher_->setPattern(
+			auto_ptr<const LiteralPattern>(new LiteralPattern(pattern_, searcher_->isCaseSensitive())), pushToHistory);
+		break;
+#ifndef ASCENSION_NO_REGEX
+	case TextSearcher::REGULAR_EXPRESSION:
+		searcher_->setPattern(regex::Pattern::compile(pattern_,
+			regex::Pattern::MULTILINE | (searcher_->isCaseSensitive() ? 0 : regex::Pattern::CASE_INSENSITIVE)), pushToHistory);
+		break;
+#ifndef ASCENSION_NO_MIGEMO
+	case TextSearcher::MIGEMO:
+		searcher_->setPattern(regex::MigemoPattern::compile(
+			pattern_.data(), pattern_.data() + pattern_.length(), searcher_->isCaseSensitive()), pushToHistory);
+		break;
+#endif // !ASCENSION_NO_MIGEMO
+#endif // !ASCENSION_NO_REGEX
+	}
 }
 
 /**
@@ -968,11 +974,12 @@ bool IncrementalSearcher::update() {
 		assert(statusHistory_.size() == 1);
 		matchedRegion_ = lastStatus.matchedRegion;
 		if(callback_ != 0)
-			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+			callback_->incrementalSearchPatternChanged(
+				IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
 		return true;
 	}
+	setPatternToSearcher(false);
 
-	searcher_->setPattern(pattern_, true);
 	Region matchedRegion;
 	Region scope(document_->accessibleRegion());
 /*	if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
