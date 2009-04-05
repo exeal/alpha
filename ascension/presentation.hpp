@@ -282,7 +282,7 @@ namespace ascension {
 		private:
 			void clearHyperlinksCache() /*throw()*/;
 			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// internal.ITextViewerCollection
 			void addTextViewer(viewers::TextViewer& viewer) /*throw()*/;

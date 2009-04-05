@@ -193,7 +193,8 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
  */
 
 /// Default constructor.
-TextSearcher::TextSearcher() : maximumNumberOfStoredStrings_(DEFAULT_NUMBER_OF_STORED_STRINGS) {
+TextSearcher::TextSearcher() : searchType_(LITERAL),
+		wholeMatch_(MATCH_UTF32_CODE_UNIT), maximumNumberOfStoredStrings_(DEFAULT_NUMBER_OF_STORED_STRINGS) {
 }
 
 /**
@@ -724,7 +725,7 @@ TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
 // IncrementalSearcher //////////////////////////////////////////////////////
 
 /// Constructor.
-IncrementalSearcher::IncrementalSearcher() /*throw()*/ {
+IncrementalSearcher::IncrementalSearcher() /*throw()*/ : type_(TextSearcher::LITERAL) {
 }
 
 /// Aborts the search.
@@ -880,7 +881,7 @@ void IncrementalSearcher::reset() {
 inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
 	if(pattern_.empty())
 		throw IllegalStateException("the pattern is empty.");
-	switch(searcher_->type()) {
+	switch(type_) {
 	case TextSearcher::LITERAL:
 		// TODO: specify 'collator' parameter.
 		searcher_->setPattern(
@@ -906,11 +907,12 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
  * @param document the document to search
  * @param from the position at which the search starts
  * @param searcher the text search object
+ * @param type the search type
  * @param direction the initial search direction
  * @param callback the callback object. can be @c null
  */
-void IncrementalSearcher::start(Document& document, const Position& from,
-		TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback /* = 0 */) {
+void IncrementalSearcher::start(Document& document, const Position& from, TextSearcher& searcher,
+		TextSearcher::Type type, Direction direction, IIncrementalSearchCallback* callback /* = 0 */) {
 	if(isRunning())
 		end();
 	const Status s = {Region(from, from), direction};
@@ -919,6 +921,7 @@ void IncrementalSearcher::start(Document& document, const Position& from,
 	(document_ = &document)->addListener(*this);
 	document_->bookmarker().addListener(*this);
 	searcher_ = &searcher;
+	type_ = type;
 	matchedRegion_ = statusHistory_.top().matchedRegion;
 	if(0 != (callback_ = callback)) {
 		callback_->incrementalSearchStarted(document);

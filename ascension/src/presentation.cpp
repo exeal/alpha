@@ -65,7 +65,7 @@ Document& Presentation::document() /*throw()*/ {
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
-void Presentation::documentAboutToBeChanged(const Document& document, const DocumentChange& change) {
+void Presentation::documentAboutToBeChanged(const Document& document) {
 	// TODO: not implemented.
 }
 

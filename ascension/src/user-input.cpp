@@ -1630,7 +1630,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 		String text(selectedString(ca, NLF_RAW_VALUE));
 
 		// can't drop into the selection
-		if(ca.isPointOverSelection(caretPoint)) {
+		if(isPointOverSelection(ca, caretPoint)) {
 			ca.moveTo(destination);
 			state_ = NONE;
 		} else {
@@ -1807,7 +1807,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 	}
 
 	// approach OLE drag-and-drop
-	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(caret) && caret.isPointOverSelection(position)) {
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(caret) && isPointOverSelection(caret, position)) {
 		state_ = APPROACHING_OLE_DND;
 		dragApproachedPosition_ = position;
 		if(caret.isSelectionRectangle())
@@ -1818,7 +1818,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 		// try hyperlink
 		bool hyperlinkInvoked = false;
 		if(toBoolean(keyState & MK_CONTROL)) {
-			if(!caret.isPointOverSelection(position)) {
+			if(!isPointOverSelection(caret, position)) {
 				const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true));
 				if(p != Position::INVALID_POSITION) {
 					if(const hyperlink::IHyperlink* link = getPointedHyperlink(*viewer_, p)) {
@@ -2060,7 +2060,7 @@ bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS)
 		cursorName = IDC_ARROW;
 	// on a draggable text selection?
-	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(viewer_->caret()) && viewer_->caret().isPointOverSelection(position))
+	else if(dnd_.supportLevel >= SUPPORT_OLE_DND && !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position))
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?

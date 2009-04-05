@@ -46,7 +46,7 @@ namespace manah {
 
 		/**
 		 * COM smart pointer.
-		 * @param T the interface type
+		 * @tparam T the interface type
 		 */
 		template<typename T> class ComPtr {
 		public:
@@ -124,7 +124,7 @@ namespace manah {
 
 		/**
 		 * A critical section.
-		 * @param automatic set true to initialize/terminate the critical section automatically
+		 * @tparam automatic set true to initialize/terminate the critical section automatically
 		 * when the instance is created/deleted.
 		 */
 		template<bool automatic = true> class ComCriticalSection {
@@ -169,9 +169,9 @@ namespace manah {
 
 		/**
 		 * Simple implementation of @c IObjectSafety interface.
-		 * @param supportedSafety the options to support
-		 * @param initialSafety the initial value
-		 * @param Base the base type inherits @c IObjectSafety
+		 * @tparam supportedSafety the options to support
+		 * @tparam initialSafety the initial value
+		 * @tparam Base the base type inherits @c IObjectSafety
 		 */
 		template<DWORD supportedSafety, DWORD initialSafety, typename Base> class IObjectSafetyImpl : public Base {
 		public:
