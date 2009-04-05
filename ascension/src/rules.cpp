@@ -1201,22 +1201,23 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 	// this code reconstructs partitions in the region changed by the document modification using
 	// the registered partitioning rules
 
-	if(change.region().isEmpty())
-		return;
+	assert(!change.erasedRegion().isEmpty() || !change.insertedRegion().isEmpty());
+//	if(change.region().isEmpty())
+//		return;
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
 	const Document& doc = *document();
 
 	// move the partitions adapting to the document change. this does not affect partitions out of
 	// the deleted region
-	if(change.isDeletion()) {
+	if(!change.erasedRegion().isEmpty()) {
 		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
 			Partition& p = *partitions_[i];
-			if(p.start < change.region().beginning())
+			if(p.start < change.erasedRegion().beginning())
 				continue;
-			else if(p.start > change.region().end()) {
+			else if(p.start > change.erasedRegion().end()) {
 				p.start = positions::updatePosition(p.start, change, Direction::FORWARD);
 				p.tokenStart = positions::updatePosition(p.tokenStart, change, Direction::FORWARD);
-			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.region().end()) {
+			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.erasedRegion().end()) {
 				// this partition is encompassed with the deleted region
 				partitions_.erase(i);
 				if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
@@ -1228,9 +1229,10 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 					break;
 			} else
 				// this partition will be erased later
-				p.start = p.tokenStart = change.region().beginning();
+				p.start = p.tokenStart = change.erasedRegion().beginning();
 		}
-	} else {
+	}
+	if(!change.insertedRegion().isEmpty()) {
 		for(size_t i = 1, c = partitions_.size(); i < c; ++i) {
 			Partition& p = *partitions_[i];
 			p.start = positions::updatePosition(p.start, change, Direction::FORWARD);
@@ -1242,7 +1244,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 	// compute partitioning for the affected region using the registered rules
 	vector<Partition*> newPartitions;	// newly computed partitions for the affected region
 	DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
-		Region(Position(change.region().beginning().line, 0), doc.region().end()));
+		Region(Position(min(change.erasedRegion().beginning().line, change.insertedRegion().beginning().line), 0), doc.region().end()));
 	ContentType contentType, destination;
 	contentType = (i.tell().line == 0) ? DEFAULT_CONTENT_TYPE
 		: partitions_[partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1)))]->contentType;
@@ -1268,7 +1270,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 			if(!i.hasNext())
 				break;
 			// if reached the end of the affected region and content types are same, we are done
-			else if(i.tell() >= change.region().second && transitionStateAt(i.tell()) == contentType)
+			else if(i.tell() >= max(change.erasedRegion().second, change.insertedRegion().second) && transitionStateAt(i.tell()) == contentType)
 				break;
 		}
 		// go to the next character if no transition occured
@@ -1289,7 +1291,8 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 		dump();
 #endif
 	verify();
-	notifyDocument(Region(Position(change.region().beginning().line, 0), i.tell()));
+	notifyDocument(Region(Position(min(
+		change.erasedRegion().beginning().line, change.insertedRegion().beginning().line), 0), i.tell()));
 }
 
 /// @see kernel#DocumentPartitioner#doGetPartition

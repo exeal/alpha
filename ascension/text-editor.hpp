@@ -174,10 +174,11 @@ namespace ascension {
 			 */
 			class IncrementalFindCommand : public Command {
 			public:
-				IncrementalFindCommand(viewers::TextViewer& view,
+				IncrementalFindCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
 					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) /*throw()*/;
 			private:
 				bool perform();
+				searcher::TextSearcher::Type type_;
 				const Direction direction_;
 				searcher::IIncrementalSearchCallback* const callback_;
 			};

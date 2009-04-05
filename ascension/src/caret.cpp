@@ -1063,7 +1063,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 			if(const texteditor::InputSequenceCheckers* const checker = session->inputSequenceCheckers()) {
 				const Char* const line = doc.line(beginning().line()).data();
 				if(!checker->check(line, line + beginning().column(), character)) {
-					eraseSelection();
+					eraseSelection(*this);
 					return false;	// invalid sequence
 				}
 			}
@@ -1731,7 +1731,7 @@ Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */)
 }
 
 
-// viewers.spots free functions /////////////////////////////////////////////
+// viewers free functions ///////////////////////////////////////////////////
 
 /**
  * Breaks the line at the caret position and moves the caret to the end of the inserted string.
@@ -1762,6 +1762,15 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 		s.assign(sb.str());
 	}
 	return viewers::replaceSelection(caret, s);
+}
+
+/**
+ * Deletes the selected region.
+ * @param caret the caret provides a selection
+ * @throw ... any exceptions @c Document#insert and @c Document#erase throw
+ */
+void viewers::eraseSelection(Caret& caret) {
+	return caret.replaceSelection(0, 0);
 }
 
 namespace {
@@ -1875,6 +1884,18 @@ void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */)
  */
 void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
 	return indent(caret, L'\t', rectangle, level);
+}
+
+/**
+ * Replaces the selected region with the specified text.
+ * If the selection is empty, inserts the text at current position.
+ * @param caret the caret provides a selection
+ * @param text the text
+ * @param rectangleInsertion true to insert text as rectangle
+ * @throw ... any exceptions @c Document#insert and @c Document#erase throw
+ */
+void viewers::replaceSelection(Caret& caret, const String& text, bool rectangleInsertion /* = false */) {
+	return caret.replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);
 }
 
 /**

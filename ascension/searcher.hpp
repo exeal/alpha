@@ -247,6 +247,7 @@ namespace ascension {
 			bool isRunning() const /*throw()*/;
 			const kernel::Region& matchedRegion() const;
 			const String& pattern() const;
+			TextSearcher::Type type() const;
 			// operations
 			void abort();
 			bool addCharacter(Char c);
@@ -257,7 +258,8 @@ namespace ascension {
 			bool next(Direction direction);
 			void reset();
 			void start(kernel::Document& document, const kernel::Position& from,
-				TextSearcher& searcher, Direction direction, IIncrementalSearchCallback* callback = 0);
+				TextSearcher& searcher, TextSearcher::Type type, Direction direction,
+				IIncrementalSearchCallback* callback = 0);
 			bool undo();
 		private:
 			void setPatternToSearcher(bool pushToHistory);
@@ -283,6 +285,7 @@ namespace ascension {
 			std::stack<Operation> operationHistory_;
 			std::stack<Status> statusHistory_;
 			String pattern_;
+			TextSearcher::Type type_;
 			bool matched_;	// true if matched in the last update() call
 		};
 
@@ -373,6 +376,11 @@ namespace ascension {
 	 * @throw NotRunningException the searcher is not running
 	 */
 	inline const String& IncrementalSearcher::pattern() const {checkRunning(); return pattern_;}
+	/**
+	 * Returns the current search type.
+	 * @throw NotRunningException the searcher is not running
+	 */
+	inline TextSearcher::Type IncrementalSearcher::type() const {checkRunning(); return type_;}
 
 }} // namespace ascension.searcher
 

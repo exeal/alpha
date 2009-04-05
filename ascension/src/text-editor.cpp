@@ -679,11 +679,13 @@ bool FindNextCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
+ * @param type the search type
  * @param direction the direction to search
  * @param callback the callback object for the incremental search. can be @c null
  */
-IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, Direction direction,
-		searcher::IIncrementalSearchCallback* callback /* = 0 */) /*throw()*/ : Command(viewer), direction_(direction), callback_(callback) {
+IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, searcher::TextSearcher::Type type,
+		Direction direction, searcher::IIncrementalSearchCallback* callback /* = 0 */) /*throw()*/
+		: Command(viewer), type_(type), direction_(direction), callback_(callback) {
 }
 
 /**
@@ -700,7 +702,7 @@ bool IncrementalFindCommand::perform() {
 		n = abs(n);
 		searcher::IncrementalSearcher& isearch = session->incrementalSearcher();
 		if(!isearch.isRunning()) {	// begin the search if not running
-			isearch.start(target().document(), target().caret(), session->textSearcher(), realDirection, callback_);
+			isearch.start(target().document(), target().caret(), session->textSearcher(), type_, realDirection, callback_);
 			--n;
 		}
 		for(; n > 0; --n) {	// jump N times

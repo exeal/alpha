@@ -141,7 +141,7 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			int lastX_;				// ç‚¹ã®ã€è¡Œè¡¨ç¤ºé ˜åŸŸç«¯ã‹ã‚‰ã®è·é›¢ã€‚è¡Œé–“ç§»å‹•æ™‚ã«ä¿æŒã—ã¦ãŠãã€‚-1 ã ã¨æœªè¨ˆç®—
+			int lastX_;				// “_‚ÌAs•\¦—Ìˆæ’[‚©‚ç‚Ì‹——£BsŠÔˆÚ“®‚É•Û‚µ‚Ä‚¨‚­B-1 ‚¾‚Æ–¢ŒvZ
 			bool crossingLines_;	// true only when the point is moving across the different lines
 			length_t visualLine_, visualSubline_;	// caches
 			friend class TextViewer;
@@ -235,7 +235,6 @@ namespace ascension {
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
 			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
-			bool isPointOverSelection(const POINT& pt) const;
 			bool isSelectionRectangle() const /*throw()*/;
 			kernel::Region selectedRegion() const /*throw()*/;
 			// attributes : character input
@@ -255,7 +254,6 @@ namespace ascension {
 			void copySelection(bool useKillRing);
 			void cutSelection(bool useKillRing);
 			void endRectangleSelection();
-			void eraseSelection();
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(const VerticalDestinationProxy& to);
 			void paste(bool useKillRing);
@@ -301,7 +299,7 @@ namespace ascension {
 			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
 			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
-			bool yanking_;			// ã‚¯ãƒªãƒƒãƒ—ãƒœãƒ¼ãƒ‰ãƒªãƒ³ã‚°ã‹ã‚‰è²¼ã‚Šä»˜ã‘ãŸç›´å¾Œã§ãƒªãƒ³ã‚°å¾ªç’°ã®ãŸã‚å¾…æ©Ÿä¸­
+			bool yanking_;			// ƒNƒŠƒbƒvƒ{[ƒhƒŠƒ“ƒO‚©‚ç“\‚è•t‚¯‚½’¼Œã‚ÅƒŠƒ“ƒOzŠÂ‚Ì‚½‚ß‘Ò‹@’†
 			bool leaveAnchorNext_;	// true if should leave the anchor at the next movement
 			bool leadingAnchor_;	// true if in anchor_->moveTo calling, and ignore pointMoved
 			bool autoShow_;			// true if show itself when movements
@@ -311,7 +309,7 @@ namespace ascension {
 			bool callingDocumentInsertForTyping_;	// true during call Document.insert in inputCharacter
 			kernel::Position lastTypedPosition_;	// the position the caret input character previously or INVALID_POSITION
 			kernel::Region regionBeforeMoved_;
-			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// å¼·èª¿è¡¨ç¤ºã™ã‚‹å¯¾æ‹¬å¼§ã®ä½ç½® (ç„¡ã„å ´åˆ Position.INVALID_POSITION)
+			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// ‹­’²•\¦‚·‚é‘ÎŠ‡ŒÊ‚ÌˆÊ’u (–³‚¢ê‡ Position.INVALID_POSITION)
 		};
 
 		// free functions related to selection of Caret class
@@ -327,8 +325,6 @@ namespace ascension {
 
 		// free functions change the document by using Caret class
 		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
-		void destructiveInsert(Caret& caret, const String& text, bool keepNewline = true);
-		void destructiveInsert(Caret& caret, const Char* first, const Char* last, bool keepNewline = true);
 		void eraseSelection(Caret& caret);
 		void insertRectangle(Caret& caret, const Char* first, const Char* last);
 		void insertRectangle(Caret& caret, const String& text);
@@ -345,6 +341,8 @@ namespace ascension {
 
 		// inline implementations ///////////////////////////////////////////
 
+		/// Returns @c true if the text viewer the point connecting to has been disposed.
+		inline bool VisualPoint::isTextViewerDisposed() const /*throw()*/ {return viewer_ == 0;}
 		/// @internal
 		inline VerticalDestinationProxy VisualPoint::makeVerticalDestinationProxy(
 			const kernel::Position& source) {return VerticalDestinationProxy(source);}
@@ -396,7 +394,7 @@ namespace ascension {
 		inline bool Caret::isOvertypeMode() const /*throw()*/ {return overtypeMode_;}
 		/// Returns true if the selection is rectangle.
 		inline bool Caret::isSelectionRectangle() const /*throw()*/ {return box_ != 0;}
-		/// ã‚­ãƒ£ãƒ¬ãƒƒãƒˆä½ç½®ã®æ‹¬å¼§ã¨å¯¾å¿œã™ã‚‹æ‹¬å¼§ã®ä½ç½®ã‚’è¿”ã™ (@a first ãŒå¯¾æ‹¬å¼§ã€@a second ãŒã‚­ãƒ£ãƒ¬ãƒƒãƒˆå‘¨è¾ºã®æ‹¬å¼§)
+		/// ƒLƒƒƒŒƒbƒgˆÊ’u‚ÌŠ‡ŒÊ‚Æ‘Î‰‚·‚éŠ‡ŒÊ‚ÌˆÊ’u‚ğ•Ô‚· (@a first ‚ª‘ÎŠ‡ŒÊA@a second ‚ªƒLƒƒƒŒƒbƒgü•Ó‚ÌŠ‡ŒÊ)
 		inline const std::pair<kernel::Position, kernel::Position>& Caret::matchBrackets() const /*throw()*/ {return matchBrackets_;}
 		/// Returns the matched braces tracking mode.
 		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {return matchBracketsTrackingMode_;}

@@ -508,7 +508,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\ascension\src\stream.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\ascension\src\text-editor.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ascension\src\undo.cpp"
 					>
 				</File>
 				<File
@@ -645,6 +653,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\ascension\fileio.hpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\ascension\internal.hpp"
 					>
 				</File>
@@ -674,6 +686,10 @@
 				</File>
 				<File
 					RelativePath="..\..\ascension\session.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ascension\stream.hpp"
 					>
 				</File>
 				<File
