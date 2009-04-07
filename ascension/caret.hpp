@@ -269,6 +269,7 @@ namespace ascension {
 		private:
 			void checkMatchBrackets();
 			void internalExtendSelection(void (*algorithm)(void));
+			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
@@ -299,14 +300,14 @@ namespace ascension {
 			ascension::internal::Listeners<ICaretListener> listeners_;
 			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
 			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
-			bool yanking_;			// クリップボードリングから貼り付けた直後でリング循環のため待機中
+			bool yanking_;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
 			bool leaveAnchorNext_;	// true if should leave the anchor at the next movement
 			bool leadingAnchor_;	// true if in anchor_->moveTo calling, and ignore pointMoved
 			bool autoShow_;			// true if show itself when movements
 			VirtualBox* box_;		// for rectangular selection. null when the selection is linear
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			bool overtypeMode_;
-			bool callingDocumentInsertForTyping_;	// true during call Document.insert in inputCharacter
+			bool typing_;			// true when inputCharacter called (see prechangeDocument)
 			kernel::Position lastTypedPosition_;	// the position the caret input character previously or INVALID_POSITION
 			kernel::Region regionBeforeMoved_;
 			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)

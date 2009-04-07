@@ -71,6 +71,18 @@ namespace ascension {
 		/// Returns absolute difference of two numerals.
 		template<typename T> inline std::size_t distance(T i0, T i1) {return (i0 > i1) ? i0 - i1 : i1 - i0;}
 
+		/// @internal
+		template<typename T> class ValueSaver {
+		public:
+			/// Constructor saves the value.
+			ValueSaver(T& value) : value_(value), originalValue_(value) {}
+			/// Destructor restores the value.
+			~ValueSaver() {value_ = originalValue_;}
+		private:
+			T& value_;
+			T originalValue_;
+		};
+
 		/// Manages a strategy object.
 		template<typename Strategy> class StrategyPointer {
 			MANAH_NONCOPYABLE_TAG(StrategyPointer);
