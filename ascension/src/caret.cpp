@@ -591,7 +591,7 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) /*throw()*/ : VisualPoint(viewer, position, 0),
 		anchor_(new SelectionAnchor(viewer)), clipboardLocale_(::GetUserDefaultLCID()),
 		yanking_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
-		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), callingDocumentInsertForTyping_(false),
+		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), typing_(false),
 		lastTypedPosition_(Position::INVALID_POSITION), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
 		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
 	document().addListener(*this);
@@ -847,10 +847,7 @@ void Caret::cutSelection(bool useKillRing) {
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
 void Caret::documentAboutToBeChanged(const Document&) {
-	if(lastTypedPosition_ != Position::INVALID_POSITION && !callingDocumentInsertForTyping_) {
-		document().insertUndoBoundary();
-		lastTypedPosition_ = Position::INVALID_POSITION;
-	}
+	// does nothing
 }
 
 /// @see kernel#IDocumentListener#documentChanged
@@ -1077,6 +1074,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 		replaceSelection(buffer, buffer + ((character < 0x10000u) ? 1 : 2));
 		doc.insertUndoBoundary();
 	} else if(overtypeMode_) {
+		prechangeDocument();
 		doc.insertUndoBoundary();
 		destructiveInsert(*this, buffer, buffer + ((character < 0x10000u) ? 1 : 2));
 		doc.insertUndoBoundary();
@@ -1091,14 +1089,9 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 			// (re)start sequential typing
 			doc.insertUndoBoundary();
 
-		callingDocumentInsertForTyping_ = true;
-		try {
-			replaceSelection(buffer, buffer + ((character < 0x10000u) ? 1 : 2));
-		} catch(...) {
-			callingDocumentInsertForTyping_ = false;
-			throw;
-		}
-		callingDocumentInsertForTyping_ = false;
+		ascension::internal::ValueSaver<bool> lock(typing_);
+		typing_ = true;
+		replaceSelection(buffer, buffer + ((character < 0x10000u) ? 1 : 2));	// this may throw
 		if(alpha)
 			lastTypedPosition_ = position();
 	}
@@ -1173,6 +1166,14 @@ void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 	listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, Region(oldPosition, position()));
 }
 
+/// @internal Should be called before change the document.
+inline void Caret::prechangeDocument() {
+	if(lastTypedPosition_ != Position::INVALID_POSITION && !typing_) {
+		document().insertUndoBoundary();
+		lastTypedPosition_ = Position::INVALID_POSITION;
+	}
+}
+
 /**
  * Removes the listener
  * @param listener the listener to be removed
@@ -1212,9 +1213,11 @@ void Caret::removeStateListener(ICaretStateListener& listener) {
  */
 void Caret::replaceSelection(const Char* first, const Char* last, bool rectangleInsertion /* = false */) {
 	Position e;
+	prechangeDocument();
 	if(!isSelectionRectangle() && !rectangleInsertion)
 		document().replace(selectedRegion(), first, last, &e);
 	else {
+		// TODO: not implemented.
 	}
 	moveTo(e);
 }

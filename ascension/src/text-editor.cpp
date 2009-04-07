@@ -320,11 +320,11 @@ bool CaretMovementCommand::perform() {
 		else if(procedurePCL_ != 0)
 			destination = (*procedurePCL_)(caret, locations::GRAPHEME_CLUSTER, n);
 		else if(procedureV_ != 0)
-			destination = (*procedureP_)(caret);
+			destination = (*procedureV_)(caret);
 		else if(procedureVL_ != 0)
-			destination = (*procedurePL_)(caret, n);
+			destination = (*procedureVL_)(caret, n);
 		else if(procedureVCL_ != 0)
-			destination = (*procedurePCL_)(caret, locations::GRAPHEME_CLUSTER, n);
+			destination = (*procedureVCL_)(caret, locations::GRAPHEME_CLUSTER, n);
 		else
 			assert(false);
 		if(!extends_)
