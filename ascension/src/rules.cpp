@@ -1173,6 +1173,8 @@ LexicalPartitioner::LexicalPartitioner() /*throw()*/ {
 /// Destructor.
 LexicalPartitioner::~LexicalPartitioner() /*throw()*/ {
 	clearRules();
+	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
+		delete partitions_[i];
 }
 
 /// Deletes all the transition rules.
@@ -1201,7 +1203,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 	// this code reconstructs partitions in the region changed by the document modification using
 	// the registered partitioning rules
 
-	assert(!change.erasedRegion().isEmpty() || !change.insertedRegion().isEmpty());
+//	assert(!change.erasedRegion().isEmpty() || !change.insertedRegion().isEmpty());
 //	if(change.region().isEmpty())
 //		return;
 	// TODO: there is more efficient implementation using LexicalPartitioner.computePartitioning.
@@ -1219,8 +1221,10 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 				p.tokenStart = positions::updatePosition(p.tokenStart, change, Direction::FORWARD);
 			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.erasedRegion().end()) {
 				// this partition is encompassed with the deleted region
+				delete partitions_[i];
 				partitions_.erase(i);
 				if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
+					delete partitions_[i];
 					partitions_.erase(i);
 					--c;
 				}
@@ -1306,6 +1310,8 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 
 /// @see kernel#DocumentPartitioner#doInstall
 void LexicalPartitioner::doInstall() /*throw()*/ {
+	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
+		delete partitions_[i];
 	partitions_.clear();
 	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
 	Region dummy;
@@ -1323,7 +1329,7 @@ void LexicalPartitioner::dump() const {
 		dout << "\t" << p.contentType << " = ("
 			<< static_cast<ulong>(p.start.line) << ", " << static_cast<ulong>(p.start.column) << ")\n";
 	}
-#endif /* _DEBUG */
+#endif // _DEBUG
 }
 
 // erases partitions encompassed with the region between the given two positions.
@@ -1344,6 +1350,8 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 		if(deletedFirst > 0 && deletedLast < partitions_.size()
 				&& partitions_[deletedFirst - 1]->contentType == partitions_[deletedLast]->contentType)
 			++deletedLast;	// combine
+		for(size_t i = deletedFirst; i < deletedLast; ++i)
+			delete partitions_[i];
 		partitions_.erase(deletedFirst, deletedLast - deletedFirst);
 	}
 
@@ -1359,8 +1367,10 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	}
 
 	// delete the partition whose start position is the end of the document
-	if(partitions_.size() > 1 && partitions_.back()->start == d.region().second)
+	if(partitions_.size() > 1 && partitions_.back()->start == d.region().second) {
+		delete partitions_[partitions_.size() - 1];
 		partitions_.erase(partitions_.size() - 1);
+	}
 }
 
 // returns the index of the partition encompasses the given position.
@@ -1423,7 +1433,7 @@ inline void LexicalPartitioner::verify() const {
 		assert(partitions_[i]->contentType != partitions_[i + 1]->contentType);
 		if(partitions_[i]->start == partitions_[i + 1]->start) {
 			if(previousWasEmpty)
-				throw runtime_error("");
+				throw runtime_error("LexicalPartitioner.verify failed.");
 			previousWasEmpty = true;
 		} else {
 			assert(partitions_[i]->start < partitions_[i + 1]->start);

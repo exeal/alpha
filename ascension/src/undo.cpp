@@ -365,6 +365,8 @@ Document::~Document() {
 		delete i->second;
 	delete undoManager_;
 	bookmarker_.reset(0);	// Bookmarker.~Bookmarker() calls Document...
+	for(size_t i = 0, c = lines_.size(); i < c; ++i)
+		delete lines_[i];
 }
 
 /**
@@ -613,6 +615,8 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 					try {
 						firstLine.text_.replace(beginning.column, erasedLength, first, insertedLength);
 					} catch(...) {
+						for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)
+							delete lines_[i];
 						lines_.erase(end.line + 1, allocatedLines.size());
 						throw;
 					}
