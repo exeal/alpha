@@ -794,6 +794,8 @@ void Document::resetContent() {
 		fireDocumentAboutToBeChanged();
 		if(length_ != 0) {
 			assert(!lines_.empty());
+			for(size_t i = 0, c = lines_.size(); i < c; ++i)
+				delete lines_[i];
 			lines_.clear();
 			lines_.insert(lines_.begin(), new Line(revisionNumber_ + 1));
 			length_ = 0;

@@ -292,7 +292,8 @@ namespace ascension {
 			/**
 			 * The text was deleted or inserted.
 			 * @param document the document
-			 * @param change the modification content. @c change.region() may return an empty
+			 * @param change the modification content. both @c change.erasedRegion() and
+			 *               @c change.insertedRegion() may return an empty
 			 */
 			virtual void documentChanged(const Document& document, const DocumentChange& change) = 0;
 			friend class Document;
@@ -572,8 +573,7 @@ namespace ascension {
 				std::size_t revisionNumber_;
 				friend class Document;
 			};
-			typedef manah::GapBuffer<Line*,
-				manah::GapBuffer_DeletePointer<Line*> >	LineList;	///< List of lines.
+			typedef manah::GapBuffer<Line*>	LineList;	///< List of lines.
 
 			// constructors
 			Document();

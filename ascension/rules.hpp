@@ -292,7 +292,7 @@ namespace ascension {
 				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
 			const kernel::Position& getPartitionStart(size_t partition) const /*throw()*/ {return partitions_[partition]->start;}
-			manah::GapBuffer<Partition*, manah::GapBuffer_DeletePointer<Partition*> > partitions_;
+			manah::GapBuffer<Partition*> partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
 		};

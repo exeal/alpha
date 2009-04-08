@@ -1,5 +1,5 @@
 // gap-buffer.hpp
-// (c) 2005-2007 exeal
+// (c) 2005-2009 exeal
 
 #ifndef MANAH_GAP_BUFFER_HPP
 #define MANAH_GAP_BUFFER_HPP
@@ -11,10 +11,7 @@
 
 namespace manah {
 
-	template<typename T> struct GapBuffer_DoNothing {void operator()(T*, T*) {}};
-	template<typename T> struct GapBuffer_DeletePointer {void operator()(T* first, T* last) {while(first != last) delete *(first++);}};
-
-	template<typename T, typename ElementsDeleter = GapBuffer_DoNothing<T>, typename Allocator = std::allocator<T> >	// T must be primitive...
+	template<typename T, typename Allocator = std::allocator<T> >	// T must be primitive...
 	/* final */ class GapBuffer {
 	public:
 		// types
@@ -99,12 +96,10 @@ namespace manah {
 		void clear() {erase(begin(), end());}
 		void erase(SizeType index, SizeType length = 1) {
 			if(first_ + index <= gapFirst_ && gapFirst_ <= first_ + index + length) {
-				ElementsDeleter()(first_ + index, gapFirst_);
 				length -= (gapFirst_ - first_) - index;
 				gapFirst_ = first_ + index;
 			} else
 				makeGapAt(first_ + index);
-			ElementsDeleter()(gapLast_, gapLast_ + length);
 			gapLast_ += length;
 		}
 		Iterator erase(Iterator position) {const DifferenceType offset = position.offset(); erase(offset); return begin() + offset;}
@@ -121,8 +116,8 @@ namespace manah {
 		public:
 			ConstIterator() : target_(0), current_(0) {}
 		protected:
-			ConstIterator(const GapBuffer<ValueType, ElementsDeleter, Allocator>& target, Pointer position)
-				: target_(&target), current_(position) {assert(current_ != 0);}
+			ConstIterator(const GapBuffer<ValueType, Allocator>& target,
+				Pointer position) : target_(&target), current_(position) {assert(current_ != 0);}
 		public:
 			ConstReference operator*() const /*throw()*/ {return *current_;}
 			ConstReference operator->() const /*throw()*/ {return **this;}
@@ -151,15 +146,15 @@ namespace manah {
 			DifferenceType offset() const /*throw()*/ {
 				return (current_ <= target_->gapFirst_) ?
 					current_ - target_->first_ : current_ - target_->gapLast_ + target_->gapFirst_ - target_->first_;}
-			const GapBuffer<ValueType, ElementsDeleter, Allocator>* target_;
+			const GapBuffer<ValueType, Allocator>* target_;
 			Pointer current_;
-			friend class GapBuffer<ValueType, ElementsDeleter, Allocator>;
+			friend class GapBuffer<ValueType, Allocator>;
 		};
 		class Iterator : public ConstIterator {
 		public:
 			Iterator() {}
 		private:
-			Iterator(const GapBuffer<ValueType, ElementsDeleter, Allocator>& target, Pointer position) : ConstIterator(target, position) {}
+			Iterator(const GapBuffer<ValueType, Allocator>& target, Pointer position) : ConstIterator(target, position) {}
 		public:
 			typedef Pointer pointer;
 			typedef Reference reference;
@@ -190,7 +185,7 @@ namespace manah {
 			using ConstIterator::current_;
 			using ConstIterator::offset;
 			friend Iterator operator+(DifferenceType lhs, const Iterator& rhs) /*throw()*/ {return rhs + lhs;}
-			friend class GapBuffer<ValueType, ElementsDeleter, Allocator>;
+			friend class GapBuffer<ValueType, Allocator>;
 		};
 	private:
 		// helpers
@@ -250,4 +245,4 @@ namespace manah {
 
 } // namespace manah
 
-#endif /* MANAH_GAP_BUFFER_HPP */
+#endif // !MANAH_GAP_BUFFER_HPP
