@@ -656,11 +656,9 @@ namespace ascension {
 
 		private:
 			void doSetModified(bool modified) /*throw()*/;
-			void eraseRegion(const Region& region);
 			void fireDocumentAboutToBeChanged() /*throw()*/;
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) /*throw()*/;
 			void initialize();
-			Position insertString(const Position& position, const Char* first, const Char* last);
 			void partitioningChanged(const Region& changedRegion) /*throw()*/;
 			void updatePoints(const DocumentChange& change) /*throw()*/;
 			// internal.ISessionElement
