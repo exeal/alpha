@@ -579,17 +579,16 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			const Char* const firstNewline = nextNewline;
 			if(first != 0 && nextNewline != last) {
 				try {
-					const Char* p = nextNewline;
-					nextNewline += getNewlineStringLength(eatNewline(nextNewline, last));
+					const Char* p = nextNewline + getNewlineStringLength(eatNewline(nextNewline, last));
 					while(true) {
+						nextNewline = find_first_of(p, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 						auto_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, last)));
 						allocatedLines.push_back(temp.get());
 						temp.release();
 						insertedStringLength += allocatedLines.back()->text().length();
 						if(nextNewline == last)
 							break;
-						p += getNewlineStringLength(allocatedLines.back()->newline());
-						nextNewline = find_first_of(p, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
+						p = nextNewline + getNewlineStringLength(allocatedLines.back()->newline());
 					}
 					// merge last line
 					Line& lastAllocatedLine = *allocatedLines.back();
@@ -665,7 +664,17 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 
 /***/
 void Document::replace(const Region& region, basic_istream<Char>& in, Position* endOfInsertedString /* = 0 */) {
-	// TODO: not implemented.
+	// TODO: this implementation is provisional and not exception-safe.
+	Position e;
+	Char buffer[0x8000];
+	for(Region r(region); in; r.first = r.second = e) {
+		in.read(buffer, MANAH_COUNTOF(buffer));
+		if(in.gcount() == 0)
+			break;
+		replace(r, buffer, buffer + in.gcount(), &e);
+	}
+	if(endOfInsertedString != 0)
+		*endOfInsertedString = e;
 }
 
 /**

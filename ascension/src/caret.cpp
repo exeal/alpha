@@ -1339,7 +1339,7 @@ bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, length_t& f
 	if(bos.line > line)
 		return false;
 	const Position eos(caret.end());
-	if(bos.line < line)
+	if(eos.line < line)
 		return false;
 	first = (line == bos.line) ? bos.column : 0;
 	last = (line == eos.line) ? eos.column : caret.document().lineLength(line) + 1;
