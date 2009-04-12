@@ -569,7 +569,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 							erasedString.sputn(getNewlineString(line.newline()),
 								static_cast<streamsize>(getNewlineStringLength(line.newline())));
 					}
-					erasedStringLength += e - p.column;
+//					erasedStringLength += e - p.column;
 					if(last)
 						break;
 				}
@@ -602,31 +602,39 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 						delete *i;
 					throw;
 				}
-			}
-			// 3. insert allocated strings
-			if(!allocatedLines.empty()) {
-				try {
+			} else
+				endOfInsertedString = beginning;
+			try {
+				// 3. insert allocated strings
+				if(!allocatedLines.empty())
 					lines_.insert(end.line + 1, allocatedLines.begin(), allocatedLines.end());
-					// 4. replace first line
-					Line& firstLine = *lines_[beginning.line];
-					const length_t erasedLength = firstLine.text().length() - beginning.column;
-					const length_t insertedLength = firstNewline - first;
-					try {
+				// 4. replace first line
+				Line& firstLine = *lines_[beginning.line];
+				const length_t erasedLength = firstLine.text().length() - beginning.column;
+				const length_t insertedLength = firstNewline - first;
+				try {
+					if(!allocatedLines.empty())
 						firstLine.text_.replace(beginning.column, erasedLength, first, insertedLength);
-					} catch(...) {
-						for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)
-							delete lines_[i];
-						lines_.erase(end.line + 1, allocatedLines.size());
-						throw;
+					else {
+						// join the first and the last line
+						const Line& lastLine = *lines_[end.line];
+						firstLine.text_.replace(beginning.column, erasedLength,
+							lastLine.text().data() + end.column, lastLine.text().length() - end.column);
 					}
-					firstLine.newline_ = eatNewline(firstNewline, last);
-					erasedStringLength += erasedLength;
-					insertedStringLength += insertedLength;
 				} catch(...) {
-					for(vector<Line*>::iterator i(allocatedLines.begin()), e(allocatedLines.end()); i != e; ++i)
-						delete *i;
+					for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)
+						delete lines_[i];
+					lines_.erase(end.line + 1, allocatedLines.size());
 					throw;
 				}
+				if(firstNewline != 0)
+					firstLine.newline_ = eatNewline(firstNewline, last);
+				erasedStringLength += erasedLength;
+				insertedStringLength += insertedLength;
+			} catch(...) {
+				for(vector<Line*>::iterator i(allocatedLines.begin()), e(allocatedLines.end()); i != e; ++i)
+					delete *i;
+				throw;
 			}
 			// 5. remove lines to erase
 			if(!region.isEmpty()) {
