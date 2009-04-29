@@ -60,7 +60,7 @@ namespace ascension {
 			explicit ClipboardException(HRESULT hr);
 		};
 
-		/// 
+		/// See the documentation of @c kernel#locations namespace.
 		class VerticalDestinationProxy : private kernel::Position {
 		public:
 			const kernel::Position& position() const {return static_cast<const kernel::Position&>(*this);}
