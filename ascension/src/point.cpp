@@ -13,13 +13,20 @@ using namespace ascension::text;
 using namespace std;
 
 
-namespace {
-	inline String regionText(const Document& document, const Position& first, const Position& second, Newline newline) {
-		basic_ostringstream<Char> out;
-		writeDocumentToStream(out, document, Region(first, second), newline);
-		return out.str();
-	}
-} // namespace @0
+/**
+ * @namespace ascension::kernel::locations
+ *
+ * Provides several functions related to locations in document.
+ *
+ * Functions this namespace defines are categorized into the following three:
+ *
+ * - Functions calculate take a position and return other position (ex. @c forwardCharacter).
+ * - Functions check if the given position is specific location (ex. isBeginningOfLine).
+ * - @c characterAt.
+ *
+ * Some of the above functions return @c VerticalDestinationProxy objects and these can be passed
+ * to @c VisualPoint#moveTo method.
+ */
 
 
 // DocumentDisposedException ////////////////////////////////////////////////

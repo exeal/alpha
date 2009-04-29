@@ -627,8 +627,8 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 					lines_.erase(end.line + 1, allocatedLines.size());
 					throw;
 				}
-				if(firstNewline != 0)
-					firstLine.newline_ = eatNewline(firstNewline, last);
+				firstLine.newline_ = (firstNewline != 0) ?
+					eatNewline(firstNewline, last) : lines_[end.line]->newline();
 				erasedStringLength += erasedLength;
 				insertedStringLength += insertedLength;
 			} catch(...) {
