@@ -82,6 +82,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		::OleInitialize(0);	// STA に入る + 高水準サービスの初期化
 		atexit(&callOleUninitialize);
 		win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
+		ambient::Interpreter::instance().install();
 		Alpha* application = new Alpha();
 		exitCode = application->run(nCmdShow);
 		delete application;
@@ -159,7 +160,7 @@ namespace {
 Alpha* Alpha::instance_ = 0;
 
 /// コンストラクタ
-Alpha::Alpha() : scriptSystem_(new ambient::ScriptSystem()), editorFont_(0)/*, mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0)*/ {
+Alpha::Alpha() : editorFont_(0)/*, mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0)*/ {
 	assert(Alpha::instance_ == 0);
 	Alpha::instance_ = this;
 //	searchDialog_.reset(new ui::SearchDialog);	// ctor of SearchDialog calls Alpha
@@ -178,7 +179,6 @@ Alpha::Alpha() : scriptSystem_(new ambient::ScriptSystem()), editorFont_(0)/*, m
 /// デストラクタ
 Alpha::~Alpha() {
 	::DeleteObject(statusFont_);
-	delete scriptSystem_;
 	Alpha::instance_ = 0;
 }
 
@@ -337,18 +337,18 @@ bool Alpha::initInstance(int showCommand) {
 	// setup the script engine
 //	ambient::ScriptEngine::instance().installModules();
 
-	// ウィンドウクラスの登録
+	// register the top level window class
 	win32::AutoZeroSize<WNDCLASSEXW> wc;
 	wc.style = CS_DBLCLKS/* | CS_DROPSHADOW*/;
 	wc.lpfnWndProc = Alpha::appWndProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
+//	wc.cbClsExtra = 0;
+//	wc.cbWndExtra = 0;
 	wc.hInstance = use();
 	wc.hIcon = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
 	wc.hIconSm = static_cast<HICON>(loadImage(IDR_ICONS, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR));
 	wc.hCursor = loadStandardCursor(MAKEINTRESOURCEW(32512));	// IDC_ARROW
 	wc.hbrBackground = manah::win32::ui::BrushHandleOrColor(COLOR_3DFACE).get();
-	wc.lpszMenuName = MAKEINTRESOURCEW(IDR_MENU);
+//	wc.lpszMenuName = 0;
 	wc.lpszClassName = IDS_APPNAME;
 	if(!toBoolean(::RegisterClassExW(&wc)))
 		return false;
@@ -416,13 +416,15 @@ bool Alpha::initInstance(int showCommand) {
 	loadINISettings();
 
 	// スクリプトによる設定
-	OLECHAR dotAlpha[MAX_PATH];
-	::GetModuleFileNameW(0, dotAlpha, MAX_PATH);
-	OLECHAR* fileName = ::PathFindFileNameW(dotAlpha);
-	wcscpy(fileName, L".alpha");
-	BSTR dotAlphaBstr = ::SysAllocString(dotAlpha);
-	scriptSystem_->ExecuteFile(dotAlphaBstr, 0);
-	::SysFreeString(dotAlphaBstr);
+	char dotAlpha[MAX_PATH];
+	::GetModuleFileNameA(0, dotAlpha, MAX_PATH);
+	char* fileName = ::PathFindFileNameA(dotAlpha);
+	strcpy(fileName, ".alpha");
+	try {
+		ambient::Interpreter::instance().executeFile(dotAlpha);
+	} catch(const boost::python::error_already_set&) {
+		ambient::Interpreter::instance().handleException();
+	}
 
 	// MRU リストの作成
 //	mruManager_ = new MRUManager(readIntegerProfile(L"File", L"mruLimit", 8), CMD_SPECIAL_MRUSTART);
@@ -1559,9 +1561,9 @@ void StatusBar::updateCaretPosition() {
 			length_t messageArguments[3];
 			win32::AutoZero<SCROLLINFO> si;
 			viewer.getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-			messageArguments[0] = viewer.caret().lineNumber() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
-			messageArguments[1] = viewer.caret().visualColumnNumber() + columnStartValue_;
-			messageArguments[2] = viewer.caret().columnNumber() + columnStartValue_;
+			messageArguments[0] = viewer.caret().line() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
+			messageArguments[1] = viewer.caret().visualColumn() + columnStartValue_;
+			messageArguments[2] = viewer.caret().column() + columnStartValue_;
 			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
 				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
 			// show in the status bar
