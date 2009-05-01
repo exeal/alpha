@@ -10,47 +10,19 @@
 #include "../resource/messages.h"
 #include <ascension/text-editor.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 using namespace alpha;
+using namespace ambient;
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::kernel::fileio;
 using namespace ascension::presentation;
 using namespace ascension::searcher;
 using namespace ascension::viewers;
-using namespace manah::win32;
-using namespace manah::win32::ui;
+using namespace manah;
 using namespace manah::com;
 using namespace std;
-using manah::toBoolean;
+namespace py = boost::python;
 
 #pragma comment(lib, "msimg32.lib")
-
-
-namespace {
-	class WindowProxy : public ambient::AutomationProxy<EditorWindow, ambient::SingleAutomationObject<IWindow, &IID_IWindow> > {
-	public:
-		explicit WindowProxy(EditorWindow& impl);
-		// IWindow
-		STDMETHODIMP Activate();
-		STDMETHODIMP Close();
-		STDMETHODIMP Select(VARIANT* o);
-		STDMETHODIMP get_SelectedBuffer(IBuffer** result);
-		STDMETHODIMP get_SelectedEditor(ITextEditor** result);
-		STDMETHODIMP Split();
-		STDMETHODIMP SplitSideBySide();
-	};
-
-	class WindowListProxy : public ambient::AutomationProxy<EditorWindows, ambient::SingleAutomationObject<IWindowList, &IID_IWindowList> > {
-	public:
-		explicit WindowListProxy(EditorWindows& impl);
-		// IWindowList
-		STDMETHODIMP get__NewEnum(IUnknown** enumerator);
-		STDMETHODIMP get_Item(long index, IWindow** value);
-		STDMETHODIMP get_Length(long* length);
-		STDMETHODIMP ActivateNext();
-		STDMETHODIMP ActivatePrevious();
-		STDMETHODIMP UnsplitAll();
-	};
-} // namespace @0
 
 
 // EditorWindow /////////////////////////////////////////////////////////////
@@ -61,14 +33,13 @@ EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1
 		visibleIndex_ = 0;
 		addView(*initialView);
 	}
-	self_.reset(new WindowProxy(*this));
 }
 
 /// Copy-constructor.
 EditorWindow::EditorWindow(const EditorWindow& rhs) {
 	for(size_t i = 0, c = rhs.views_.size(); i != c; ++i) {
 		auto_ptr<EditorView> newViewer(new EditorView(*rhs.views_[i]));
-		const bool succeeded = newViewer->create(rhs.views_[i]->getParent()->use(), DefaultWindowRect(),
+		const bool succeeded = newViewer->create(rhs.views_[i]->getParent()->use(), win32::ui::DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		newViewer->setConfiguration(&rhs.views_[i]->configuration(), 0);
@@ -79,7 +50,6 @@ EditorWindow::EditorWindow(const EditorWindow& rhs) {
 		if(i == lastVisibleIndex_)
 			lastVisibleIndex_ = i;
 	}
-//	self_.reset(new EditorWindowProxy);
 }
 
 /// Destructor.
@@ -175,7 +145,7 @@ MANAH_BEGIN_WINDOW_MESSAGE_MAP(EditorView, TextViewer)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
 MANAH_END_WINDOW_MESSAGE_MAP()
 
-Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
+win32::Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {
@@ -197,12 +167,8 @@ EditorView::~EditorView() {
 }
 
 /// Begins incremental search.
-void EditorView::beginIncrementalSearch(SearchType type, ascension::Direction direction) {
-	TextSearcher& searcher = BufferList::instance().editorSession().textSearcher();
-	SearchOptions options = searcher.options();
-	options.type = type;
-	searcher.setOptions(options);
-	texteditor::commands::IncrementalFindCommand(*this, direction, this)();
+void EditorView::beginIncrementalSearch(TextSearcher::Type type, ascension::Direction direction) {
+	texteditor::commands::IncrementalFindCommand(*this, type, direction, this)();
 }
 
 /// @see IBookmarkListener#bookmarkChanged
@@ -333,7 +299,6 @@ void EditorView::selectionShapeChanged(const Caret&) {
 
 /// Default constructor.
 EditorWindows::EditorWindows() {
-	self_.reset(new WindowListProxy(*this));
 }
 
 /// Returns the active buffer.
@@ -379,199 +344,116 @@ void EditorWindows::paneRemoved(EditorWindow& pane) {
 }
 
 
-// WindowProxy //////////////////////////////////////////////////////////////
-
-WindowProxy::WindowProxy(EditorWindow& impl) : AutomationProxy(impl) {
-}
-
-/// @see IWindow#Activate
-STDMETHODIMP WindowProxy::Activate() {
-	AMBIENT_CHECK_PROXY();
-	if(::SetFocus(impl().getWindow()) == 0)
-		return HRESULT_FROM_WIN32(::GetLastError());
-	return S_OK;
-}
-
-/// @see IWindow#Close
-STDMETHODIMP WindowProxy::Close() {
-	AMBIENT_CHECK_PROXY();
-	Activate();
-	return EditorWindows::instance().removeActivePane(), S_OK;
-}
-
-/// @see IWindow#get_SelectedBuffer
-STDMETHODIMP WindowProxy::get_SelectedBuffer(IBuffer** buffer) {
-	MANAH_VERIFY_POINTER(buffer);
-	AMBIENT_CHECK_PROXY();
-	try {
-		return (*buffer = impl().visibleBuffer().asScript().get())->AddRef(), S_OK;
-	} catch(const logic_error&) {
-		return E_FAIL;
-	}
-}
-
-/// @see IWindow#get_SelectedEditor
-STDMETHODIMP WindowProxy::get_SelectedEditor(ITextEditor** editor) {
-	MANAH_VERIFY_POINTER(editor);
-	AMBIENT_CHECK_PROXY();
-	*editor = 0;
-	return E_NOTIMPL;
-}
-
 namespace {
-	Buffer* extract(IBuffer& buffer) {
-		BufferList& buffers = BufferList::instance();
-		for(size_t i = 0, c = buffers.numberOfBuffers(); i < c; ++i) {
-			if(buffers.at(i).asScript().get() == &buffer)
-				return &buffers.at(i);
-		}
-		return 0;
+	void activateWindow(EditorWindow& window) {
+		if(::SetFocus(window.getWindow()) == 0)
+			Interpreter::instance().throwLastWin32Error();
 	}
-} // namespace @0
-
-STDMETHODIMP WindowProxy::Select(VARIANT* o) {
-	AMBIENT_CHECK_PROXY();
-	MANAH_VERIFY_POINTER(o);
-	Buffer* buffer = 0;
-	switch(V_VT(o)) {
-	case VT_BSTR: {
-		const size_t i = BufferList::instance().find(basic_string<WCHAR>(safeBSTRtoOLESTR(V_BSTR(o))));
-		if(i == -1)
-			return E_INVALIDARG;
-		buffer = &BufferList::instance().at(i);
-		break;
+	py::object activeBuffer() {
+		return EditorWindows::instance().activeBuffer().self();
 	}
-	case VT_UNKNOWN:
-	case VT_DISPATCH: {
-		ComQIPtr<IBuffer, &IID_IBuffer> temp1((V_VT(o) == VT_UNKNOWN) ? V_UNKNOWN(o) : V_DISPATCH(o));
-		if(temp1.get() != 0)
-			buffer = extract(*temp1.get());
+	py::object activeWindow() {
+		return EditorWindows::instance().activePane().self();
+	}
+	py::object bufferOfPoint(const Point& p) {
+		return static_cast<const Buffer&>(p.document()).self();
+	}
+	py::object bufferOfTextEditor(const EditorView& editor) {
+		return editor.document().self();
+	}
+	void closeWindow(EditorWindow& window) {
+		activateWindow(window);
+		EditorWindows::instance().removeActivePane();
+	}
+	py::object selectedBuffer(const EditorWindow& window) {
+		return window.visibleBuffer().self();
+	}
+	py::object selectedTextEditor(const EditorWindow& window) {
+		return py::object();
+	}
+	void selectInWindow(EditorWindow& window, py::object o) {
+		Buffer* buffer = 0;	// buffer to select
+		if(toBoolean(PyUnicode_Check(o.ptr()))) {
+			PyUnicodeObject* unicode = reinterpret_cast<PyUnicodeObject*>(o.ptr());
+			py::ssize_t n = ::PyUnicode_GetSize(o.ptr());
+			AutoBuffer<wchar_t> name(new wchar_t[n + 1]);
+			n = ::PyUnicode_AsWideChar(unicode, name.get(), n);
+			if(n == -1)
+				py::throw_error_already_set();
+			name[static_cast<size_t>(n)] = 0;
+			const size_t i = BufferList::instance().find(name.get());
+			if(i == -1) {
+				::PyErr_BadArgument();
+				py::throw_error_already_set();
+			}
+			buffer = &BufferList::instance().at(i);
+		} else if(py::extract<Buffer*>(o).check())
+			buffer = static_cast<Buffer*>(py::extract<Buffer*>(o));
+		else if(py::extract<EditorView&>(o).check())
+			buffer = &static_cast<EditorView&>(py::extract<EditorView&>(o)).document();
 		else {
-			ComQIPtr<ITextEditor, &IID_ITextEditor> temp2((V_VT(o) == VT_UNKNOWN) ? V_UNKNOWN(o) : V_DISPATCH(o));
-			if(temp2.get() != 0) {
-				ComPtr<IBuffer> temp3;
-				temp2->GetBuffer(temp3.initialize());
-				buffer = extract(*temp3.get());
-			} else
-				return DISP_E_TYPEMISMATCH;
+			::PyErr_BadArgument();
+			py::throw_error_already_set();
 		}
-		break;
+		window.showBuffer(*buffer);
 	}
-	default:
-		return DISP_E_TYPEMISMATCH;
+	py::object windowAt(const EditorWindows& windows, py::ssize_t at) {
+		for(EditorWindows::Iterator i(windows.enumeratePanes()); !i.done(); i.next(), --at) {
+			if(at == 0)
+				return i.get().self();
+		}
+		::PyErr_BadArgument();
+		py::throw_error_already_set();
+		return py::object();
 	}
-	if(buffer == 0)
-		return E_INVALIDARG;
-	impl().showBuffer(*buffer);
-	return S_OK;
-}
-
-/// @see IWindow#Split
-STDMETHODIMP WindowProxy::Split() {
-	AMBIENT_CHECK_PROXY();
-	try {
-		impl().split();
-	} catch(const bad_alloc&) {
-		return E_OUTOFMEMORY;
+	py::object windows() {
+		return EditorWindows::instance().self();
 	}
-	return S_OK;
-}
 
-/// @see IWindow#SplitSideBySide
-STDMETHODIMP WindowProxy::SplitSideBySide() {
-	AMBIENT_CHECK_PROXY();
-	try {
-		impl().splitSideBySide();
-	} catch(const bad_alloc&) {
-		return E_OUTOFMEMORY;
+	void installAPIs() {
+		py::scope temp(Interpreter::instance().toplevelPackage());
+
+		py::class_<Point>("Point", py::init<Buffer&, const Position&>())
+			.add_property("adapts_to_buffer", &Point::adaptsToDocument,
+				py::make_function(&Point::adaptToDocument, py::return_value_policy<py::reference_existing_object>()))
+			.add_property("buffer", &bufferOfPoint)
+			.add_property("column", &Point::column)
+			.add_property("excluded_from_restriction", &Point::isExcludedFromRestriction,
+				py::make_function(&Point::excludeFromRestriction, py::return_value_policy<py::reference_existing_object>()))
+			.add_property("gravity", &Point::gravity,
+				py::make_function(&Point::setGravity, py::return_value_policy<py::reference_existing_object>()))
+			.add_property("line", &Point::line)
+			.add_property("position", py::make_function(&Point::position, py::return_value_policy<py::copy_const_reference>()))
+			.def("is_buffer_deleted", &Point::isDocumentDisposed)
+			.def<void (Point::*)(const Position&)>("move_to", &Point::moveTo);
+		py::class_<Caret, py::bases<>, Caret, boost::noncopyable>("_Caret", py::no_init);
+		py::class_<EditorView, py::bases<>, EditorView, boost::noncopyable>("_TextEditor", py::no_init)
+			.add_property("buffer", &bufferOfTextEditor)
+			.add_property("caret", &EditorView::asCaret);
+		py::class_<EditorWindow, py::bases<>, EditorWindow, boost::noncopyable>("_Window", py::no_init)
+			.add_property("selected_buffer", &selectedBuffer)
+			.add_property("selected_editor", &selectedTextEditor)
+			.def("activate", &activateWindow)
+			.def("close", &closeWindow)
+			.def("select", &selectInWindow)
+			.def("split", &EditorWindow::split)
+			.def("split_side_by_side", &EditorWindow::splitSideBySide);
+		py::class_<EditorWindows, py::bases<>, EditorWindows, boost::noncopyable>("_WindowList", py::no_init)
+//			.def("__contains__", &)
+			.def("__getitem__", &windowAt)
+//			.def("__iter__", &)
+			.def("__len__", &EditorWindows::numberOfPanes)
+			.def("activate_next", &EditorWindows::activateNextPane)
+			.def("activate_previous", &EditorWindows::activatePreviousPane)
+			.def("unsplit_all", &EditorWindows::removeInactivePanes);
+
+		py::def("active_window", &activeWindow);
+		py::def("windows", &windows);
 	}
-	return S_OK;
-}
 
-
-// WindowListProxy //////////////////////////////////////////////////////////
-
-/// @see IScriptSystem#get_ActiveBuffer
-STDMETHODIMP ambient::ScriptSystem::get_ActiveBuffer(IBuffer** activeBuffer) {
-	MANAH_VERIFY_POINTER(activeBuffer);
-	return (*activeBuffer = EditorWindows::instance().activeBuffer().asScript().get())->AddRef(), S_OK;
-}
-
-
-/// @see IScriptSystem#get_ActiveWindow
-STDMETHODIMP ambient::ScriptSystem::get_ActiveWindow(IWindow** activeWindow) {
-	MANAH_VERIFY_POINTER(activeWindow);
-	return (*activeWindow = EditorWindows::instance().activePane().asScript().get())->AddRef(), S_OK;
-}
-
-/// @see IScriptSystem#get_Windows
-STDMETHODIMP ambient::ScriptSystem::get_Windows(IWindowList** windows) {
-	MANAH_VERIFY_POINTER(windows);
-	return (*windows = EditorWindows::instance().asScript().get())->AddRef(), S_OK;
-}
-
-/// Constructor.
-WindowListProxy::WindowListProxy(EditorWindows& impl) : AutomationProxy(impl) {
-}
-
-/// @see IWindowList#ActivateNext
-STDMETHODIMP WindowListProxy::ActivateNext() {
-	AMBIENT_CHECK_PROXY();
-	return impl().activateNextPane(), S_OK;
-}
-
-/// @see IWindowList#ActivatePrevious
-STDMETHODIMP WindowListProxy::ActivatePrevious() {
-	AMBIENT_CHECK_PROXY();
-	return impl().activatePreviousPane(), S_OK;
-}
-
-/// @see IWindowList#get__NewEnum
-STDMETHODIMP WindowListProxy::get__NewEnum(IUnknown** enumerator) {
-	MANAH_VERIFY_POINTER(enumerator);
-	AMBIENT_CHECK_PROXY();
-	const size_t c = impl().numberOfPanes();
-	VARIANT* const windows = new(nothrow) VARIANT[c];
-	if(windows == 0)
-		return E_OUTOFMEMORY;
-	size_t i = 0;
-	for(EditorWindows::Iterator it(impl().enumeratePanes()); !it.done(); it.next(), ++i) {
-		::VariantInit(windows + i);
-		V_VT(windows + i) = VT_DISPATCH;
-		(V_DISPATCH(windows + i) = it.get().asScript().get())->AddRef();
-	}
-	manah::AutoBuffer<VARIANT> array(windows);
-	*enumerator = new(nothrow) ambient::IEnumVARIANTStaticImpl(array, c);
-	if(*enumerator == 0) {
-		for(i = 0; i < c; ++i)
-			::VariantClear(windows + i);
-		return E_OUTOFMEMORY;
-	}
-	return (*enumerator)->AddRef(), S_OK;
-}
-
-/// @see IWindowList#get_Item
-STDMETHODIMP WindowListProxy::get_Item(long index, IWindow** window) {
-	MANAH_VERIFY_POINTER(window);
-	AMBIENT_CHECK_PROXY();
-	if(index < 0 || static_cast<size_t>(index) >= impl().numberOfPanes())
-		return DISP_E_BADINDEX;
-	for(EditorWindows::Iterator i(impl().enumeratePanes()); !i.done(); i.next(), --index) {
-		if(index == 0)
-			return (*window = i.get().asScript().get())->AddRef(), S_OK;
-	}
-	return DISP_E_BADINDEX;
-}
-
-/// @see IWindowList#get_Length
-STDMETHODIMP WindowListProxy::get_Length(long* length) {
-	MANAH_VERIFY_POINTER(length);
-	AMBIENT_CHECK_PROXY();
-	return ::VarI4FromUI8(impl().numberOfPanes(), length);
-}
-
-/// @see IWindowList#UnsplitAll
-STDMETHODIMP WindowListProxy::UnsplitAll() {
-	AMBIENT_CHECK_PROXY();
-	return impl().removeInactivePanes(), S_OK;
+	struct Exposer {
+		Exposer() {
+			Interpreter::instance().addInstaller(&installAPIs);
+		}
+	} temp;
 }

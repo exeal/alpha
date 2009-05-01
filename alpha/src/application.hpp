@@ -156,7 +156,6 @@ namespace alpha {
 
 	private:
 		static Alpha* instance_;	// ただ 1 つのインスタンス
-		ambient::ScriptSystem* scriptSystem_;
 		// child windows
 		manah::win32::ui::Rebar rebar_;				// レバー
 		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー

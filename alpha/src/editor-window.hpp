@@ -1,3 +1,9 @@
+/**
+ * @file editor-window.hpp
+ * @author exeal
+ * @date 2009
+ */
+
 #ifndef ALPHA_EDITOR_WINDOW_HPP
 #define ALPHA_EDITOR_WINDOW_HPP
 #include "ambient.hpp"
@@ -17,15 +23,15 @@ namespace alpha {
 		EditorView(const EditorView& rhs);
 		~EditorView();
 		// attributes
-		manah::com::ComPtr<ITextEditor> asScript() const;
-		manah::com::ComPtr<ICaret> caretObject() const;
+		boost::python::object asCaret() const;
+		boost::python::object asTextEditor() const;
 		const wchar_t* currentPositionString() const;
 		Buffer& document() /*throw()*/;
 		const Buffer& document() const /*throw()*/;
 		ascension::length_t visualColumnStartValue() const /*throw()*/;
 		void setVisualColumnStartValue() throw();
 		// operations
-		void beginIncrementalSearch(ascension::searcher::SearchType type, ascension::Direction direction);
+		void beginIncrementalSearch(ascension::searcher::TextSearcher::Type type, ascension::Direction direction);
 		// notification
 		void updateStatusBar();
 
@@ -54,8 +60,7 @@ namespace alpha {
 		void onKillFocus(HWND newWindow);
 		void onSetFocus(HWND oldWindow);
 	private:
-		manah::com::ComPtr<ITextEditor> self_;
-		manah::com::ComPtr<ICaret> caretObject_;
+		mutable boost::python::object asCaret_, asTextEditor_;
 		ascension::length_t visualColumnStartValue_;
 		static manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
 	};
@@ -69,8 +74,8 @@ namespace alpha {
 		EditorWindow(const EditorWindow& rhs);
 		~EditorWindow();
 		// attributes
-		manah::com::ComPtr<IWindow> asScript() const;
 		std::size_t numberOfViews() const /*throw()*/;
+		boost::python::object self() const;
 		Buffer& visibleBuffer() const;
 		EditorView& visibleView() const;
 		// operations
@@ -83,7 +88,7 @@ namespace alpha {
 		// manah.win32.ui.AbstractPane
 		HWND getWindow() const /*throw()*/;
 	private:
-		manah::com::ComPtr<IWindow> self_;
+		mutable boost::python::object self_;
 		std::vector<EditorView*> views_;
 		std::size_t visibleIndex_, lastVisibleIndex_;
 	};
@@ -102,30 +107,33 @@ namespace alpha {
 		Buffer& activeBuffer();
 		const Buffer& activeBuffer() const;
 		void addActiveBufferListener(IActiveBufferListener& listener);
-		manah::com::ComPtr<IWindowList> asScript() const;
 		EditorWindow& at(std::size_t index);
 		const EditorWindow& at(std::size_t index) const;
 		bool contains(const EditorWindow& pane) const;
 		static EditorWindows& instance();
 		void removeActiveBufferListener(IActiveBufferListener& listener);
+		boost::python::object self() const;
 	private:
 		void paneInserted(EditorWindow& pane);
 		void paneRemoved(EditorWindow& pane);
 	private:
-		manah::com::ComPtr<IWindowList> self_;
+		mutable boost::python::object self_;
 		std::vector<EditorWindow*> windows_;
 		std::list<IActiveBufferListener*> activeBufferListeners_;
 	};
 
 
 	/// Returns the script object corresponding to the text editor.
-	inline manah::com::ComPtr<ITextEditor> EditorView::asScript() const {return self_;}
+	inline boost::python::object EditorView::asCaret() const {
+		if(asCaret_ == boost::python::object()) asCaret_ = boost::python::object(*this); return asCaret_;}
 
 	/// Returns the script object corresponding to the caret.
-	inline manah::com::ComPtr<ICaret> EditorView::caretObject() const {return caretObject_;}
+	inline boost::python::object EditorView::asTextEditor() const {
+		if(asTextEditor_ == boost::python::object()) asTextEditor_ = boost::python::object(*this); return asTextEditor_;}
 
 	/// Returns the script object corresponding to the window.
-	inline manah::com::ComPtr<IWindow> EditorWindow::asScript() const {return self_;}
+	inline boost::python::object EditorWindow::self() const {
+		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
 
 	/// @see ascension#viewers#TextViewer#document
 	inline Buffer& EditorView::document() /*throw()*/ {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::document());}
@@ -148,7 +156,8 @@ namespace alpha {
 		if(visibleIndex_ == -1) throw std::logic_error("There no views."); return *views_[visibleIndex_];}
 
 	/// Returns the script object corresponding to the windows.
-	inline manah::com::ComPtr<IWindowList> EditorWindows::asScript() const {return self_;}
+	inline boost::python::object EditorWindows::self() const {
+		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
 
 }
 

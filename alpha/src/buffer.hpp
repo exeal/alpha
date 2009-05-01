@@ -8,6 +8,7 @@
 #define ALPHA_BUFFER_HPP
 
 #include "ambient.hpp"
+#include <ascension/fileio.hpp>
 #include <ascension/presentation.hpp>
 #include <ascension/session.hpp>
 #include <manah/win32/ui/menu.hpp>
@@ -25,15 +26,15 @@ namespace alpha {
 		Buffer() /*throw()*/;
 		~Buffer() /*throw()*/;
 		// attributes
-		manah::com::ComPtr<IBuffer> asScript() const;
 		const std::basic_string<WCHAR> name() const;
+		boost::python::object self() const;
 		// shortcuts
 		ascension::presentation::Presentation& presentation() /*throw()*/;
 		const ascension::presentation::Presentation& presentation() const /*throw()*/;
 		ascension::kernel::fileio::TextFileDocumentInput& textFile() /*throw()*/;
 		const ascension::kernel::fileio::TextFileDocumentInput& textFile() const /*throw()*/;
 	private:
-		manah::com::ComPtr<IBuffer> self_;
+		mutable boost::python::object self_;
 		std::auto_ptr<ascension::presentation::Presentation> presentation_;
 		std::auto_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
 	};
@@ -58,7 +59,6 @@ namespace alpha {
 		// instance
 		static BufferList& instance();
 		// attributes
-		manah::com::ComPtr<IBufferList> asScript() const;
 		Buffer& at(std::size_t index) const;
 		HICON bufferIcon(std::size_t index) const;
 		ascension::texteditor::Session& editorSession() /*throw()*/;
@@ -66,6 +66,7 @@ namespace alpha {
 		static std::wstring getDisplayName(const Buffer& buffer);
 		const manah::win32::ui::Menu& listMenu() const /*throw()*/;
 		std::size_t numberOfBuffers() const /*throw()*/;
+		boost::python::object self() const;
 		// operations
 		Buffer& addNew(const ascension::String& name = L"",
 			const std::string& encoding = "UTF-8",
@@ -83,7 +84,7 @@ namespace alpha {
 		bool openDialog(const std::wstring& initialDirectory = std::wstring());
 		OpenResult reopen(std::size_t index, bool changeCodePage);
 		bool save(std::size_t index, bool overwrite = true, bool addToMRU = true);
-		bool saveSomeDialog();
+		bool saveSomeDialog(boost::python::tuple buffersToSave = boost::python::tuple());
 		bool saveAll(bool addToMRU = true);
 		void updateContextMenu();
 		// notification
@@ -111,7 +112,7 @@ namespace alpha {
 		// ascension.presentation.ITextViewerListListener
 		void textViewerListChanged(ascension::presentation::Presentation& presentation);
 	private:
-		manah::com::ComPtr<IBufferList> self_;
+		mutable boost::python::object self_;
 		ascension::texteditor::Session editorSession_;
 		std::vector<Buffer*> buffers_;
 		manah::win32::ui::Toolbar bufferBar_;
@@ -122,16 +123,14 @@ namespace alpha {
 
 
 	/// Returns the script object corresponding to the buffer.
-	inline manah::com::ComPtr<IBuffer> Buffer::asScript() const {return self_;}
+	inline boost::python::object Buffer::self() const {
+		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
 
 	/// Returns the input text file.
 	inline ascension::kernel::fileio::TextFileDocumentInput& Buffer::textFile() /*throw()*/ {return *textFile_;}
 
 	/// Returns the input text file.
 	inline const ascension::kernel::fileio::TextFileDocumentInput& Buffer::textFile() const /*throw()*/ {return *textFile_;}
-
-	/// Returns the script object corresponding to the buffer list.
-	inline manah::com::ComPtr<IBufferList> BufferList::asScript() const {return self_;}
 
 	/// Returns the viewer has the given index.
 	inline Buffer& BufferList::at(std::size_t index) const {return *buffers_.at(index);}
@@ -151,6 +150,10 @@ namespace alpha {
 
 	/// Returns the number of the buffers.
 	inline std::size_t BufferList::numberOfBuffers() const /*throw()*/ {return buffers_.size();}
+
+	/// Returns the script object corresponding to the buffer list.
+	inline boost::python::object BufferList::self() const {
+		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
 }
 
 #endif // !ALPHA_BUFFER_HPP
