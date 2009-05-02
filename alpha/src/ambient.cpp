@@ -46,16 +46,15 @@ void Interpreter::handleException() {
 	PyObject* value;
 	PyObject* traceback;
 	::PyErr_Fetch(&type, &value, &traceback);
-	::PyErr_Restore(type, value, traceback);
 	basic_ostringstream<WCHAR> out;
 	if(value != 0)
 		out << toWideString(value);
 	if(traceback != 0 && PyTraceBack_Check(traceback)) {
 		py::object tracebackModule(py::import("traceback"));
 		if(tracebackModule != py::object()) {
-			py::object formatStack(tracebackModule.attr("format_stack"));
-			if(formatStack != py::object()) {
-				const py::list callStack(formatStack());
+			py::object extractTB(tracebackModule.attr("extract_tb"));
+			if(extractTB != py::object()) {
+				const py::list callStack(extractTB(py::object(py::borrowed<>(traceback))));
 				if(callStack != py::object()) {
 					py::ssize_t i = py::len(callStack);
 					out << L"\r\n\r\n";
@@ -86,11 +85,12 @@ Interpreter& Interpreter::instance() {
 
 py::object Interpreter::module(const char* name) {
 	py::object ambient(toplevelPackage());
-	if(!ambient[name]) {
+	py::dict d(ambient.attr("__dict__"));
+	if(!d.has_key(name)) {
 		string fullName("ambient.");
 		fullName += name;
 		if(PyObject* newModule = ::PyImport_AddModule(fullName.c_str())) {
-			if(0 == ::PyModule_AddObject(ambient.ptr(), "name", newModule)) {
+			if(0 == ::PyModule_AddObject(ambient.ptr(), name, newModule)) {
 				::Py_InitModule(fullName.c_str(), 0);
 				return py::object(py::handle<>(py::borrowed(newModule)));
 			}
@@ -98,11 +98,4 @@ py::object Interpreter::module(const char* name) {
 		throw runtime_error("failed to initialize the module.");
 	}
 	return ambient.attr(name);
-}
-
-namespace {
-	struct Installer {
-		Installer() {
-		}
-	} installer;
 }
