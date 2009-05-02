@@ -29,6 +29,7 @@ namespace alpha {
 		private:
 			Interpreter();
 		private:
+			boost::python::object package_;
 			std::stack<void (*)()> installers_;
 		};
 
@@ -42,7 +43,9 @@ namespace alpha {
 		}
 
 		inline boost::python::object Interpreter::toplevelPackage() {
-			return boost::python::object(boost::python::borrowed(::Py_InitModule("ambient", 0)));
+			if(package_ == boost::python::object())
+				package_ = boost::python::object(boost::python::borrowed(::Py_InitModule("ambient", 0)));
+			return package_;
 		}
 	}
 }
