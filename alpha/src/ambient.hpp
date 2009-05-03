@@ -39,7 +39,8 @@ namespace alpha {
 		}
 
 		inline boost::python::object Interpreter::executeFile(boost::python::str fileName) {
-			return boost::python::exec_file(fileName, boost::python::import("__main__").attr("__dict__"));
+			boost::python::object ns(boost::python::import("__main__").attr("__dict__"));
+			return boost::python::exec_file(fileName, ns, ns);
 		}
 
 		inline boost::python::object Interpreter::toplevelPackage() {

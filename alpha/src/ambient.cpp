@@ -46,25 +46,22 @@ void Interpreter::handleException() {
 	PyObject* value;
 	PyObject* traceback;
 	::PyErr_Fetch(&type, &value, &traceback);
-	basic_ostringstream<WCHAR> out;
-	if(value != 0)
-		out << toWideString(value);
-	if(traceback != 0 && PyTraceBack_Check(traceback)) {
+	if(type != 0 && value != 0) {
+		ostringstream out;
 		py::object tracebackModule(py::import("traceback"));
 		if(tracebackModule != py::object()) {
-			py::object extractTB(tracebackModule.attr("extract_tb"));
-			if(extractTB != py::object()) {
-				const py::list callStack(extractTB(py::object(py::borrowed<>(traceback))));
-				if(callStack != py::object()) {
-					py::ssize_t i = py::len(callStack);
-					out << L"\r\n\r\n";
-					for(--i; i >= 0; --i)
-						out << toWideString(py::object(callStack[i]).ptr()) << L"\r\n";
+			py::object formatException(tracebackModule.attr("format_exception"));
+			if(formatException != py::object()) {
+				const py::list li(formatException(py::object(py::borrowed<>(type)),
+					py::object(py::borrowed<>(value)), py::object(py::borrowed<>(traceback))));
+				if(li != py::object()) {
+					for(py::ssize_t i = 0, c = py::len(li); i < c; ++i)
+						out << ::PyString_AsString(py::object(li[i]).ptr());
 				}
 			}
 		}
+		::MessageBoxA(Alpha::instance().getMainWindow().use(), out.str().c_str(), "Alpha", MB_ICONEXCLAMATION);
 	}
-	Alpha::instance().getMainWindow().messageBox(out.str().c_str(), IDS_APPNAME, MB_ICONEXCLAMATION);
 	Py_XDECREF(type);
 	Py_XDECREF(value);
 	Py_XDECREF(traceback);
