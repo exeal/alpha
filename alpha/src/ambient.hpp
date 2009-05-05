@@ -51,4 +51,19 @@ namespace alpha {
 	}
 }
 
+#define ALPHA_EXPOSE_PROLOGUE()	\
+	namespace {					\
+		void installAPIs() {
+
+#define ALPHA_EXPOSE_EPILOGUE()														\
+		}																			\
+		struct Exposer {															\
+			Exposer() {																\
+				alpha::ambient::Interpreter::instance().addInstaller(&installAPIs);	\
+			}																		\
+		} exposer;																	\
+	}
+
+
+
 #endif // !ALPHA_AMBIENT_HPP

@@ -82,7 +82,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		::OleInitialize(0);	// STA に入る + 高水準サービスの初期化
 		atexit(&callOleUninitialize);
 		win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
-//		ambient::Interpreter::instance().install();
+		ambient::Interpreter::instance().install();
 		ambient::Interpreter::instance().toplevelPackage();
 		Alpha* application = new Alpha();
 		exitCode = application->run(nCmdShow);
