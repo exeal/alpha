@@ -1374,122 +1374,116 @@ namespace {
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, Newline newline) {buffer.textFile().setNewline(newline);}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
-
-	void installAPIs() {
-		py::scope temp(Interpreter::instance().toplevelPackage());
-
-		py::enum_<locations::CharacterUnit>("CharacterUnit")
-			.value("utf16_code_unit", locations::UTF16_CODE_UNIT)
-			.value("utf32_code_unit", locations::UTF32_CODE_UNIT)
-			.value("grapheme_cluster", locations::GRAPHEME_CLUSTER)
-			.value("glyph_cluster", locations::GLYPH_CLUSTER);
-		py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
-			.value("dont_lock", fileio::TextFileDocumentInput::DONT_LOCK)
-			.value("shared_lock", fileio::TextFileDocumentInput::SHARED_LOCK)
-			.value("exclusive_lock", fileio::TextFileDocumentInput::EXCLUSIVE_LOCK)
-			.value("lock_type_mask", fileio::TextFileDocumentInput::LOCK_TYPE_MASK)
-			.value("lock_only_as_editing", fileio::TextFileDocumentInput::LOCK_ONLY_AS_EDITING);
-		py::enum_<Newline>("Newline")
-			.value("line_feed", NLF_LINE_FEED)
-			.value("carriage_return", NLF_CARRIAGE_RETURN)
-			.value("cr_lf", NLF_CR_LF)
-			.value("next_line", NLF_NEXT_LINE)
-			.value("line_separator", NLF_LINE_SEPARATOR)
-			.value("paragraph_separator", NLF_PARAGRAPH_SEPARATOR)
-			.value("special_value_mask", NLF_SPECIAL_VALUE_MASK)
-			.value("raw_value", NLF_RAW_VALUE)
-			.value("document_input", NLF_DOCUMENT_INPUT);
-
-		py::class_<Direction>("Direction", py::no_init)
-			.def_readonly("forward", &Direction::FORWARD)
-			.def_readonly("backward", &Direction::BACKWARD);
-		py::class_<Position>("Position", py::init<>())
-			.def(py::init<length_t, length_t>())
-			.def_readwrite("line", &Position::line)
-			.def_readwrite("column", &Position::column);
-		py::class_<Region>("Region", py::init<>())
-			.def(py::init<const Position&, const Position&>())
-			.def(py::init<const Position&>())
-			.def_readwrite("first", &Region::first)
-			.def_readwrite("second", &Region::second)
-			.def<Position& (Region::*)(void)>("beginning", &Region::beginning, py::return_value_policy<py::reference_existing_object>())
-			.def("encompasses", &Region::encompasses)
-			.def<Position& (Region::*)(void)>("end", &Region::end, py::return_value_policy<py::reference_existing_object>())
-			.def("includes", &Region::includes)
-			.def("intersection", &Region::getIntersection, py::return_value_policy<py::return_by_value>())
-			.def("intersects_with", &Region::intersectsWith)
-			.def("is_empty", &Region::isEmpty)
-			.def("is_normalized", &Region::isNormalized)
-			.def("normalize", &Region::normalize, py::return_value_policy<py::reference_existing_object>())
-			.def("union", &Region::getUnion, py::return_value_policy<py::return_by_value>());
-		py::class_<Bookmarker, py::bases<>, Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
-			.def("clear", &Bookmarker::clear)
-			.def("is_marked", &Bookmarker::isMarked)
-			.def("mark", &Bookmarker::mark, (py::arg("line"), py::arg("set") = true))
-			.def("next", &Bookmarker::next, (py::arg("from"), py::arg("direction"), py::arg("wrap_around") = true, py::arg("marks") = 1))
-			.def("toggle", &Bookmarker::toggle);
-		py::class_<Buffer, py::bases<>, Buffer, boost::noncopyable>("_Buffer", py::no_init)
-			.add_property("accessible_region", &Buffer::accessibleRegion)
-			.add_property("bookmarker", py::make_function<
-				Bookmarker& (Buffer::*)(void), py::return_value_policy<py::reference_existing_object>
-				>(&Buffer::bookmarker, py::return_value_policy<py::reference_existing_object>()))
-			.add_property("encoding", &encodingOfBuffer, &setEncodingOfBuffer)
-			.add_property("name", &Buffer::name)
-			.add_property("newline", &newlineOfBuffer, &setNewlineOfBuffer)
-			.add_property("number_of_lines", &Buffer::numberOfLines)
-			.add_property("number_of_redoable_changes", &Buffer::numberOfRedoableChanges)
-			.add_property("number_of_undoable_changes", &Buffer::numberOfUndoableChanges)
-			.add_property("read_only", &Buffer::isReadOnly, &Buffer::setReadOnly)
-			.add_property("records_changes", &Buffer::isRecordingChanges, &Buffer::recordChanges)
-			.add_property("region", &Buffer::region)
-			.add_property("revision_number", &Buffer::revisionNumber)
-			.add_property("unicode_byte_order_mark", &unicodeByteOrderMarkOfBuffer)
-			.def("begin_compound_change", &Buffer::beginCompoundChange)
-			.def("clear_undo_buffer", &Buffer::clearUndoBuffer)
-			.def("close", &closeBuffer)
-			.def("end_compound_change", &Buffer::endCompoundChange)
-			.def<void (*)(Document&, const Region&)>("erase", &erase)
-			.def("insert", &insertString)
-			.def("insert_undo_boundary", &Buffer::insertUndoBoundary)
-			.def("is_active", &isBufferActive)
-			.def("is_bound_to_file", &isBufferBoundToFile)
-			.def("is_compound_changing", &Buffer::isCompoundChanging)
-			.def("is_modified", &Buffer::isModified)
-			.def("is_narrowed", &Buffer::isNarrowed)
-			.def("length", &Buffer::length, py::arg("newline") = NLF_RAW_VALUE)
-			.def("line", &Buffer::line, py::return_value_policy<py::copy_const_reference>())
-			.def("mark_unmodified", &Buffer::markUnmodified)
-			.def("narrow_to_region", &Buffer::narrowToRegion)
-			.def("redo", &Buffer::redo, py::arg("n") = 1)
-			.def("replace", &replaceString)
-			.def("reset_content", &Buffer::resetContent)
-			.def("undo", &Buffer::undo, py::arg("n") = 1)
-			.def("widen", &Buffer::widen);
-		py::class_<BufferList, py::bases<>, BufferList, boost::noncopyable>("_BufferList", py::no_init)
-//			.def("__contains__", &)
-			.def("__getitem__", &bufferAt)
-//			.def("__iter__", &)
-			.def("__len__", &BufferList::numberOfBuffers)
-			.def("add_new", &BufferList::addNew,
-				(py::arg("name") = wstring(), py::arg("encoding") = "UTF-8", py::arg("newline") = NLF_RAW_VALUE),
-				py::return_value_policy<py::reference_existing_object>())
-			.def("add_new_dialog", &BufferList::addNewDialog,
-				py::arg("name") = wstring(), py::return_value_policy<py::reference_existing_object>())
-//			.def("close_all", &BufferList::closeAll)
-			.def("open", &BufferList::open,
-				(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect", py::arg("as_read_only") = false),
-				py::return_value_policy<py::reference_existing_object>())
-			.def("open_dialog", &BufferList::openDialog, py::arg("initial_directory") = wstring())
-			.def("save_all", &BufferList::saveAll)
-/*			.def("save_some_dialog", &BufferList, py::arg("buffers_to_save") = py::tuple())*/;
-
-		py::def("active_buffer", &activeBuffer);
-		py::def("buffers", &buffers);
-	}
-
-	struct Exposer {
-		Exposer() {
-			Interpreter::instance().addInstaller(&installAPIs);
-		}
-	} temp;
 }
+
+ALPHA_EXPOSE_PROLOGUE()
+	py::scope temp(Interpreter::instance().toplevelPackage());
+
+	py::enum_<locations::CharacterUnit>("CharacterUnit")
+		.value("utf16_code_unit", locations::UTF16_CODE_UNIT)
+		.value("utf32_code_unit", locations::UTF32_CODE_UNIT)
+		.value("grapheme_cluster", locations::GRAPHEME_CLUSTER)
+		.value("glyph_cluster", locations::GLYPH_CLUSTER);
+	py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
+		.value("dont_lock", fileio::TextFileDocumentInput::DONT_LOCK)
+		.value("shared_lock", fileio::TextFileDocumentInput::SHARED_LOCK)
+		.value("exclusive_lock", fileio::TextFileDocumentInput::EXCLUSIVE_LOCK)
+		.value("lock_type_mask", fileio::TextFileDocumentInput::LOCK_TYPE_MASK)
+		.value("lock_only_as_editing", fileio::TextFileDocumentInput::LOCK_ONLY_AS_EDITING);
+	py::enum_<Newline>("Newline")
+		.value("line_feed", NLF_LINE_FEED)
+		.value("carriage_return", NLF_CARRIAGE_RETURN)
+		.value("cr_lf", NLF_CR_LF)
+		.value("next_line", NLF_NEXT_LINE)
+		.value("line_separator", NLF_LINE_SEPARATOR)
+		.value("paragraph_separator", NLF_PARAGRAPH_SEPARATOR)
+		.value("special_value_mask", NLF_SPECIAL_VALUE_MASK)
+		.value("raw_value", NLF_RAW_VALUE)
+		.value("document_input", NLF_DOCUMENT_INPUT);
+
+	py::class_<Direction>("Direction", py::no_init)
+		.def_readonly("forward", &Direction::FORWARD)
+		.def_readonly("backward", &Direction::BACKWARD);
+	py::class_<Position>("Position", py::init<>())
+		.def(py::init<length_t, length_t>())
+		.def_readwrite("line", &Position::line)
+		.def_readwrite("column", &Position::column);
+	py::class_<Region>("Region", py::init<>())
+		.def(py::init<const Position&, const Position&>())
+		.def(py::init<const Position&>())
+		.def_readwrite("first", &Region::first)
+		.def_readwrite("second", &Region::second)
+		.def<Position& (Region::*)(void)>("beginning", &Region::beginning, py::return_value_policy<py::reference_existing_object>())
+		.def("encompasses", &Region::encompasses)
+		.def<Position& (Region::*)(void)>("end", &Region::end, py::return_value_policy<py::reference_existing_object>())
+		.def("includes", &Region::includes)
+		.def("intersection", &Region::getIntersection, py::return_value_policy<py::return_by_value>())
+		.def("intersects_with", &Region::intersectsWith)
+		.def("is_empty", &Region::isEmpty)
+		.def("is_normalized", &Region::isNormalized)
+		.def("normalize", &Region::normalize, py::return_value_policy<py::reference_existing_object>())
+		.def("union", &Region::getUnion, py::return_value_policy<py::return_by_value>());
+	py::class_<Bookmarker, py::bases<>, Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
+		.def("clear", &Bookmarker::clear)
+		.def("is_marked", &Bookmarker::isMarked)
+		.def("mark", &Bookmarker::mark, (py::arg("line"), py::arg("set") = true))
+		.def("next", &Bookmarker::next, (py::arg("from"), py::arg("direction"), py::arg("wrap_around") = true, py::arg("marks") = 1))
+		.def("toggle", &Bookmarker::toggle);
+	py::class_<Buffer, py::bases<>, Buffer, boost::noncopyable>("_Buffer", py::no_init)
+		.add_property("accessible_region", &Buffer::accessibleRegion)
+		.add_property("bookmarker", py::make_function<
+			Bookmarker& (Buffer::*)(void), py::return_value_policy<py::reference_existing_object>
+			>(&Buffer::bookmarker, py::return_value_policy<py::reference_existing_object>()))
+		.add_property("encoding", &encodingOfBuffer, &setEncodingOfBuffer)
+		.add_property("name", &Buffer::name)
+		.add_property("newline", &newlineOfBuffer, &setNewlineOfBuffer)
+		.add_property("number_of_lines", &Buffer::numberOfLines)
+		.add_property("number_of_redoable_changes", &Buffer::numberOfRedoableChanges)
+		.add_property("number_of_undoable_changes", &Buffer::numberOfUndoableChanges)
+		.add_property("read_only", &Buffer::isReadOnly, &Buffer::setReadOnly)
+		.add_property("records_changes", &Buffer::isRecordingChanges, &Buffer::recordChanges)
+		.add_property("region", &Buffer::region)
+		.add_property("revision_number", &Buffer::revisionNumber)
+		.add_property("unicode_byte_order_mark", &unicodeByteOrderMarkOfBuffer)
+		.def("begin_compound_change", &Buffer::beginCompoundChange)
+		.def("clear_undo_buffer", &Buffer::clearUndoBuffer)
+		.def("close", &closeBuffer)
+		.def("end_compound_change", &Buffer::endCompoundChange)
+		.def<void (*)(Document&, const Region&)>("erase", &erase)
+		.def("insert", &insertString)
+		.def("insert_undo_boundary", &Buffer::insertUndoBoundary)
+		.def("is_active", &isBufferActive)
+		.def("is_bound_to_file", &isBufferBoundToFile)
+		.def("is_compound_changing", &Buffer::isCompoundChanging)
+		.def("is_modified", &Buffer::isModified)
+		.def("is_narrowed", &Buffer::isNarrowed)
+		.def("length", &Buffer::length, py::arg("newline") = NLF_RAW_VALUE)
+		.def("line", &Buffer::line, py::return_value_policy<py::copy_const_reference>())
+		.def("mark_unmodified", &Buffer::markUnmodified)
+		.def("narrow_to_region", &Buffer::narrowToRegion)
+		.def("redo", &Buffer::redo, py::arg("n") = 1)
+		.def("replace", &replaceString)
+		.def("reset_content", &Buffer::resetContent)
+		.def("undo", &Buffer::undo, py::arg("n") = 1)
+		.def("widen", &Buffer::widen);
+	py::class_<BufferList, py::bases<>, BufferList, boost::noncopyable>("_BufferList", py::no_init)
+//		.def("__contains__", &)
+		.def("__getitem__", &bufferAt)
+//		.def("__iter__", &)
+		.def("__len__", &BufferList::numberOfBuffers)
+		.def("add_new", &BufferList::addNew,
+			(py::arg("name") = wstring(), py::arg("encoding") = "UTF-8", py::arg("newline") = NLF_RAW_VALUE),
+			py::return_value_policy<py::reference_existing_object>())
+		.def("add_new_dialog", &BufferList::addNewDialog,
+			py::arg("name") = wstring(), py::return_value_policy<py::reference_existing_object>())
+//		.def("close_all", &BufferList::closeAll)
+		.def("open", &BufferList::open,
+			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect", py::arg("as_read_only") = false),
+			py::return_value_policy<py::reference_existing_object>())
+		.def("open_dialog", &BufferList::openDialog, py::arg("initial_directory") = wstring())
+		.def("save_all", &BufferList::saveAll)
+/*		.def("save_some_dialog", &BufferList, py::arg("buffers_to_save") = py::tuple())*/;
+
+	py::def("active_buffer", &activeBuffer);
+	py::def("buffers", &buffers);
+ALPHA_EXPOSE_EPILOGUE()

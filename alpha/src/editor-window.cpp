@@ -409,51 +409,45 @@ namespace {
 	py::object windows() {
 		return EditorWindows::instance().self();
 	}
-
-	void installAPIs() {
-		py::scope temp(Interpreter::instance().toplevelPackage());
-
-		py::class_<Point>("Point", py::init<Buffer&, const Position&>())
-			.add_property("adapts_to_buffer", &Point::adaptsToDocument,
-				py::make_function(&Point::adaptToDocument, py::return_value_policy<py::reference_existing_object>()))
-			.add_property("buffer", &bufferOfPoint)
-			.add_property("column", &Point::column)
-			.add_property("excluded_from_restriction", &Point::isExcludedFromRestriction,
-				py::make_function(&Point::excludeFromRestriction, py::return_value_policy<py::reference_existing_object>()))
-			.add_property("gravity", &Point::gravity,
-				py::make_function(&Point::setGravity, py::return_value_policy<py::reference_existing_object>()))
-			.add_property("line", &Point::line)
-			.add_property("position", py::make_function(&Point::position, py::return_value_policy<py::copy_const_reference>()))
-			.def("is_buffer_deleted", &Point::isDocumentDisposed)
-			.def<void (Point::*)(const Position&)>("move_to", &Point::moveTo);
-		py::class_<Caret, py::bases<>, Caret, boost::noncopyable>("_Caret", py::no_init);
-		py::class_<EditorView, py::bases<>, EditorView, boost::noncopyable>("_TextEditor", py::no_init)
-			.add_property("buffer", &bufferOfTextEditor)
-			.add_property("caret", &EditorView::asCaret);
-		py::class_<EditorWindow, py::bases<>, EditorWindow, boost::noncopyable>("_Window", py::no_init)
-			.add_property("selected_buffer", &selectedBuffer)
-			.add_property("selected_editor", &selectedTextEditor)
-			.def("activate", &activateWindow)
-			.def("close", &closeWindow)
-			.def("select", &selectInWindow)
-			.def("split", &EditorWindow::split)
-			.def("split_side_by_side", &EditorWindow::splitSideBySide);
-		py::class_<EditorWindows, py::bases<>, EditorWindows, boost::noncopyable>("_WindowList", py::no_init)
-//			.def("__contains__", &)
-			.def("__getitem__", &windowAt)
-//			.def("__iter__", &)
-			.def("__len__", &EditorWindows::numberOfPanes)
-			.def("activate_next", &EditorWindows::activateNextPane)
-			.def("activate_previous", &EditorWindows::activatePreviousPane)
-			.def("unsplit_all", &EditorWindows::removeInactivePanes);
-
-		py::def("active_window", &activeWindow);
-		py::def("windows", &windows);
-	}
-
-	struct Exposer {
-		Exposer() {
-			Interpreter::instance().addInstaller(&installAPIs);
-		}
-	} temp;
 }
+
+ALPHA_EXPOSE_PROLOGUE()
+	py::scope temp(Interpreter::instance().toplevelPackage());
+
+	py::class_<Point>("Point", py::init<Buffer&, const Position&>())
+		.add_property("adapts_to_buffer", &Point::adaptsToDocument,
+			py::make_function(&Point::adaptToDocument, py::return_value_policy<py::reference_existing_object>()))
+		.add_property("buffer", &bufferOfPoint)
+		.add_property("column", &Point::column)
+		.add_property("excluded_from_restriction", &Point::isExcludedFromRestriction,
+			py::make_function(&Point::excludeFromRestriction, py::return_value_policy<py::reference_existing_object>()))
+		.add_property("gravity", &Point::gravity,
+			py::make_function(&Point::setGravity, py::return_value_policy<py::reference_existing_object>()))
+		.add_property("line", &Point::line)
+		.add_property("position", py::make_function(&Point::position, py::return_value_policy<py::copy_const_reference>()))
+		.def("is_buffer_deleted", &Point::isDocumentDisposed)
+		.def<void (Point::*)(const Position&)>("move_to", &Point::moveTo);
+	py::class_<Caret, py::bases<>, Caret, boost::noncopyable>("_Caret", py::no_init);
+	py::class_<EditorView, py::bases<>, EditorView, boost::noncopyable>("_TextEditor", py::no_init)
+		.add_property("buffer", &bufferOfTextEditor)
+		.add_property("caret", &EditorView::asCaret);
+	py::class_<EditorWindow, py::bases<>, EditorWindow, boost::noncopyable>("_Window", py::no_init)
+		.add_property("selected_buffer", &selectedBuffer)
+		.add_property("selected_editor", &selectedTextEditor)
+		.def("activate", &activateWindow)
+		.def("close", &closeWindow)
+		.def("select", &selectInWindow)
+		.def("split", &EditorWindow::split)
+		.def("split_side_by_side", &EditorWindow::splitSideBySide);
+	py::class_<EditorWindows, py::bases<>, EditorWindows, boost::noncopyable>("_WindowList", py::no_init)
+//		.def("__contains__", &)
+		.def("__getitem__", &windowAt)
+//		.def("__iter__", &)
+		.def("__len__", &EditorWindows::numberOfPanes)
+		.def("activate_next", &EditorWindows::activateNextPane)
+		.def("activate_previous", &EditorWindows::activatePreviousPane)
+		.def("unsplit_all", &EditorWindows::removeInactivePanes);
+
+	py::def("active_window", &activeWindow);
+	py::def("windows", &windows);
+ALPHA_EXPOSE_EPILOGUE()

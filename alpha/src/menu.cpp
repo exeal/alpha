@@ -270,26 +270,18 @@ void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	}
 }
 
-namespace {
-	void installAPIs() {
-		py::scope temp(ambient::Interpreter::instance().module("ui"));
+ALPHA_EXPOSE_PROLOGUE()
+	py::scope temp(ambient::Interpreter::instance().module("ui"));
 
-		py::class_<Menu>("_Menu", py::no_init)
-			.def("append", &Menu::append)
-			.def("append_separator", &Menu::appendSeparator)
-			.def("check", &Menu::check)
-			.def("enable", &Menu::enable)
-			.def("erase", &Menu::erase)
-			.def("set_child", &Menu::setChild)
-			.def("set_default", &Menu::setDefault);
-		py::class_<PopupMenu>("PopupMenu", py::init<py::object>());
-		py::class_<MenuBar>("MenuBar")
-			.def("set_as_menu_bar", &MenuBar::setAsMenuBar);
-	}
-
-	struct Exposer {
-		Exposer() {
-			ambient::Interpreter::instance().addInstaller(&installAPIs);
-		}
-	} exposer;
-}
+	py::class_<Menu>("_Menu", py::no_init)
+		.def("append", &Menu::append)
+		.def("append_separator", &Menu::appendSeparator)
+		.def("check", &Menu::check)
+		.def("enable", &Menu::enable)
+		.def("erase", &Menu::erase)
+		.def("set_child", &Menu::setChild)
+		.def("set_default", &Menu::setDefault);
+	py::class_<PopupMenu>("PopupMenu", py::init<py::object>());
+	py::class_<MenuBar>("MenuBar")
+		.def("set_as_menu_bar", &MenuBar::setAsMenuBar);
+ALPHA_EXPOSE_EPILOGUE()

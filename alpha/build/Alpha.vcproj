@@ -289,14 +289,6 @@
 						RuntimeTypeInfo="true"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						RuntimeTypeInfo="true"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\code-pages-dialog.cpp"
@@ -306,7 +298,7 @@
 				RelativePath="..\src\editor-window.cpp"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -340,6 +332,10 @@
 			</File>
 			<File
 				RelativePath="..\src\menu.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\message-box.cpp"
 				>
 			</File>
 			<File
