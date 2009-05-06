@@ -473,7 +473,7 @@ namespace ascension {
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) /*throw()*/ {usesAnchoringBounds_ = b; return *this;}
 
 		/// Changes the pattern the matcher uses to find matches with. This method causes the
-		/// matcher to lose information about the groups of the last match that occured. The
+		/// matcher to lose information about the groups of the last match that occurred. The
 		/// matcher's position in the input is maintained and its last append position is unaffected.
 		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::usePattern(
 			const Pattern& newPattern) {pattern_ = &pattern; Base::impl().reset(); return *this;}

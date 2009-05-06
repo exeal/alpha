@@ -44,7 +44,7 @@ DocumentDisposedException::DocumentDisposedException() :
  *
  * A point represents a document position and adapts to the document change.
  *
- * When the document change occured, @c Point moves automatically as follows:
+ * When the document change occurred, @c Point moves automatically as follows:
  *
  * - If text was inserted or deleted before the point, the point will move accordingly.
  * - If text was inserted or deleted after the point, the point will not move.

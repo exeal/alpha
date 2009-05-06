@@ -1106,7 +1106,7 @@ TransitionRule::~TransitionRule() /*throw()*/ {
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
  * @param pattern the pattern string to introduce the transition.
- * if empty string is specified, the transition will be occured at the end of line
+ * if empty string is specified, the transition will be occurred at the end of line
  * @param escapeCharacter the character which a character will be ignored. if @c NONCHARACTER is
  * specified, the escape character will be not set. this is always case-sensitive
  * @param caseSensitive set false to enable caseless match
@@ -1277,7 +1277,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 			else if(i.tell() >= max(change.erasedRegion().second, change.insertedRegion().second) && transitionStateAt(i.tell()) == contentType)
 				break;
 		}
-		// go to the next character if no transition occured
+		// go to the next character if no transition occurred
 		if(tokenLength == 0) {
 			i.next();
 			if(i.tell().column == 0)	// entered the next line

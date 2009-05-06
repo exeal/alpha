@@ -41,7 +41,7 @@ namespace {
 	 * @param name the name of the file
 	 * @return if the file exists
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occured. for
+	 * @throw IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occurred. for
 	 * details, use POSIX @c errno or Win32 @c GetLastError
 	 */
 	bool pathExists(const Char* name) {
@@ -78,7 +78,7 @@ namespace {
 	 * Returns the last write time of the specified file.
 	 * @param fileName the name of the file
 	 * @param[out] timeStamp the time
-	 * @throw IOException any I/O error occured
+	 * @throw IOException any I/O error occurred
 	 */
 	void getFileLastWriteTime(const String& fileName, TextFileDocumentInput::Time& timeStamp) {
 #ifdef ASCENSION_WINDOWS
@@ -104,7 +104,7 @@ namespace {
 	 * @param fileName the name of the file
 	 * @return the size of the file in bytes or -1 if the file is too large
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException any I/O error occured
+	 * @throw IOException any I/O error occurred
 	 */
 	ptrdiff_t getFileSize(const Char* fileName) {
 		if(fileName == 0)
@@ -131,7 +131,7 @@ namespace {
 	 * Creates a name for a temporary file.
 	 * @param seed the string contains a directory path and a prefix string
 	 * @return the result string
-	 * @throw IOException any I/O error occured
+	 * @throw IOException any I/O error occurred
 	 */
 	String getTemporaryFileName(const String& seed) {
 		manah::AutoBuffer<Char> s(new Char[seed.length() + 1]);
@@ -319,7 +319,7 @@ namespace {
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
- * @throw IOException any I/O error occured
+ * @throw IOException any I/O error occurred
  * @throw UnknownValueException<std#iose_base#openmode> @a mode is neigher @c in nor @c out
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
@@ -645,7 +645,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
 /**
  * Closes the file and unbind from the document.
  * @note This method does NOT reset the content of the document.
- * @throw IOException any I/O error occured
+ * @throw IOException any I/O error occurred
  */
 void TextFileDocumentInput::close() {
 	if(!unlock())
@@ -767,7 +767,7 @@ String TextFileDocumentInput::name() const /*throw()*/ {
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
  * @return true if succeeded to lock the file with the desired mode @a lockMode
- * @throw IOException any I/O error occured. in this case, the document's content will be lost
+ * @throw IOException any I/O error occurred. in this case, the document's content will be lost
  */
 bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, const std::string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
@@ -941,7 +941,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
  * @param fileName the file name
  * @param params the options
  * @return true if succeeded
- * @throw IOException any I/O error occured
+ * @throw IOException any I/O error occurred
  */
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
 	// check Unicode spcific newlines
@@ -1114,7 +1114,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
  * @param params the options
  * @param append true to append to the file
  * @return the result. @c FIR_OK if succeeded
- * @throw IOException any I/O error occured
+ * @throw IOException any I/O error occurred
  */
 bool TextFileDocumentInput::writeRegion(const String& fileName, const Region& region, const TextFileDocumentInput::WriteParameters& params, bool append) {
 	// TODO: not implemented.

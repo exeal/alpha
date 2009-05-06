@@ -237,7 +237,7 @@ bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
  * @return true if matched
  * @throw IllegalStateException the pattern is not specified
  * @throw regex#PatternSyntaxException the speicifed regular expression was invalid
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
 	bool matched = false;
@@ -570,7 +570,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
  * @return true if the pattern is found
  * @throw IllegalStateException the pattern is not specified
  * @throw kernel#BadPositionException @a from is outside of @a scope
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
  */
 bool TextSearcher::search(const Document& document,
 		const Position& from, const Region& scope, Direction direction, Region& matchedRegion) const {
@@ -969,7 +969,7 @@ bool IncrementalSearcher::undo() {
 /**
  * Re-searches using the current state.
  * @return true if the pattern is found
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
  */
 bool IncrementalSearcher::update() {
 	const Status& lastStatus = statusHistory_.top();
