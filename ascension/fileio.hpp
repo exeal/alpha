@@ -275,7 +275,7 @@ namespace ascension {
 				/**
 				 * Moves to the next entry. If the iterator has already reached at the end, does
 				 * nothing.
-				 * @throw IOException any I/O error occured
+				 * @throw IOException any I/O error occurred
 				 */
 				virtual void next() = 0;
 			protected:

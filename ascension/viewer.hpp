@@ -227,11 +227,11 @@ namespace ascension {
 			 * Interrupts the progressive mouse reaction.
 			 * This method must be called before @c #uninstall call.
 			 * @param forKeyboardInput true if the mouse reaction should interrupt because the
-			 *        keyboard input was occured
+			 *        keyboard input was occurred
 			 */
 			virtual void interruptMouseReaction(bool forKeyboardInput) = 0;
 			/**
-			 * The mouse input was occured and the viewer had focus.
+			 * The mouse input was occurred and the viewer had focus.
 			 * @param button the button of the mouse input
 			 * @param action the action of the input
 			 * @param position the mouse position (client coordinates)

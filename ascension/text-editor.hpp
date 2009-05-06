@@ -389,9 +389,9 @@ namespace ascension {
 		/**
 		 * Performs the command. The command can return the command-specific result value.
 		 * @retval true the command succeeded
-		 * @retval false ignorable or easily recoverable error occured. or the command tried to
+		 * @retval false ignorable or easily recoverable error occurred. or the command tried to
 		 *               change the read-only document or the document's input rejected the change
-		 * @throw ... a fatal error occured. the type of exception(s) is defined by the derived
+		 * @throw ... a fatal error occurred. the type of exception(s) is defined by the derived
 		 *            class. see the documentation of @c #perform methods of the implementation
 		 * @see kernel#DocumentCantChangeException, kernel#ReadOnlyDocumentException
 		 */
