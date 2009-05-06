@@ -35,7 +35,7 @@ namespace {
 	private:
 		HMENU handle_;
 		py::object self_;
-		set<PopupMenu*> children_;
+		set<py::object> children_;
 	};
 
 	class PopupMenu : public Menu {
@@ -74,8 +74,8 @@ Menu::~Menu() /*throw()*/ {
 		}
 		::DestroyMenu(handle_);
 	}
-	for(set<PopupMenu*>::iterator i(children_.begin()), e(children_.end()); i != e; ++i)
-		delete *i;
+//	for(set<PopupMenu*>::iterator i(children_.begin()), e(children_.end()); i != e; ++i)
+//		delete *i;
 }
 
 py::object Menu::append(short identifier, const wstring& caption, py::object command, bool alternative) {
@@ -143,8 +143,14 @@ STDMETHODIMP Menu::Erase(IMenu** self) {
 py::object Menu::erase(short identifier) {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
-	if(::GetMenuItemInfoW(handle_, 0, true, &mi) != 0)
-		Py_XDECREF(reinterpret_cast<PyObject*>(mi.dwItemData));
+	if(::GetMenuItemInfoW(handle_, 0, true, &mi) != 0) {
+		for(set<py::object>::iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
+			if(i->ptr() == reinterpret_cast<PyObject*>(mi.dwItemData)) {
+				children_.erase(i);
+				break;
+			}
+		}
+	}
 	if(!toBoolean(::RemoveMenu(handle_, identifier, MF_BYCOMMAND)))
 		Interpreter::instance().throwLastWin32Error();
 	return self();
@@ -159,8 +165,7 @@ py::object Menu::self() {
 }
 
 py::object Menu::setChild(short identifier, py::object child) {
-	PopupMenu& c = py::extract<PopupMenu&>(child);
-	if(children_.find(&c) != children_.end()) {
+	if(children_.find(child) != children_.end()) {
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
 	}
@@ -170,8 +175,7 @@ py::object Menu::setChild(short identifier, py::object child) {
 	item.hSubMenu = handle();
 	if(::SetMenuItemInfoW(handle_, identifier, false, &item) == 0)
 		Interpreter::instance().throwLastWin32Error();
-	children_.insert(&c);
-//	Py_INCREF(child.ptr());
+	children_.insert(child);
 	return self();
 }
 
@@ -274,14 +278,14 @@ ALPHA_EXPOSE_PROLOGUE()
 	py::scope temp(ambient::Interpreter::instance().module("ui"));
 
 	py::class_<Menu>("_Menu", py::no_init)
-		.def("append", &Menu::append)
+		.def("append", &Menu::append, (py::arg("identifier"), py::arg("caption"), py::arg("command"), py::arg("alternative") = false))
 		.def("append_separator", &Menu::appendSeparator)
 		.def("check", &Menu::check)
 		.def("enable", &Menu::enable)
 		.def("erase", &Menu::erase)
 		.def("set_child", &Menu::setChild)
 		.def("set_default", &Menu::setDefault);
-	py::class_<PopupMenu>("PopupMenu", py::init<py::object>());
-	py::class_<MenuBar>("MenuBar")
+	py::class_<PopupMenu, py::bases<Menu> >("PopupMenu", py::init<py::object>());
+	py::class_<MenuBar, py::bases<Menu> >("MenuBar")
 		.def("set_as_menu_bar", &MenuBar::setAsMenuBar);
 ALPHA_EXPOSE_EPILOGUE()
