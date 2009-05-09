@@ -1277,15 +1277,20 @@ bool TranspositionCommand::perform() {
  * @param viewer the target text viewer
  * @param redo set true to perform redo, rather than undo
  */
-UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo) {
+UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), incompleted_(false) {
+}
+
+/**
+ * Returns @ true if the last performance was done incompletely.
+ * @see Document#undo, Document#redo
+ */
+bool UndoCommand::isLastActionIncompleted() const /*throw()*/ {
+	return incompleted_;
 }
 
 /**
  * Undo or redo.
- * @retval 0 succeeded
- * @retval 1 failed
- * @retval 2 partialy done
- * @see Document#undo, Document#redo
+ * @return a boolean value returned by @c Document#undo or @c Document#redo.
  */
 bool UndoCommand::perform() {
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
@@ -1296,10 +1301,9 @@ bool UndoCommand::perform() {
 
 	WaitCursor wc;
 	Document& document = target().document();
-	if(!redo_)
-		return document.undo(min(static_cast<size_t>(numericPrefix()), document.numberOfUndoableChanges()));
-	else
-		return document.redo(min(static_cast<size_t>(numericPrefix()), document.numberOfRedoableChanges()));
+	bool (Document::*f)(size_t) = !redo_ ? &Document::undo : &Document::redo;
+	incompleted_ = (document.*f)(min(static_cast<size_t>(numericPrefix()), document.numberOfUndoableChanges()));
+	return true;
 }
 
 /**

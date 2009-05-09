@@ -316,9 +316,11 @@ namespace ascension {
 			class UndoCommand : public Command {
 			public:
 				UndoCommand(viewers::TextViewer& view, bool redo) /*throw()*/;
+				bool isLastActionIncompleted() const /*throw()*/;
 			private:
 				bool perform();
 				const bool redo_;
+				bool incompleted_;
 			};
 			/// Deletes the forward/backward N word(s).
 			class WordDeletionCommand : public Command {
