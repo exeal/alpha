@@ -22,7 +22,7 @@ using manah::win32::ui::WaitCursor;
 // Command //////////////////////////////////////////////////////////////////
 
 /**
- * Protected constructor enables the beep-on-error mode.
+ * Protected constructor.
  * @param viewer the target text viewer
  */
 Command::Command(TextViewer& viewer) /*throw()*/ : viewer_(&viewer), numericPrefix_(1) {
@@ -54,7 +54,7 @@ namespace {
 	}
 }
 
-#define ASSERT_IFISWINDOW()	assert(target().isWindow())
+#define ASCENSION_ASSERT_IFISWINDOW()	assert(target().isWindow())
 
 // the command can't perform and throw if the document is read only
 #define ASCENSION_CHECK_DOCUMENT_READ_ONLY()	\
@@ -148,7 +148,7 @@ CancelCommand::CancelCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
  * @return true
  */
 bool CancelCommand::perform() {
-	ASSERT_IFISWINDOW();
+	ASCENSION_ASSERT_IFISWINDOW();
 	abortModes(target());
 	target().caret().clearSelection();
 	return true;
@@ -913,7 +913,7 @@ PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) /*throw()*/ : C
  * @return false the internal call of @c Caret#pasteToSelection threw
  */
 bool PasteCommand::perform() {
-	ASSERT_IFISWINDOW();
+	ASCENSION_ASSERT_IFISWINDOW();
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 	utils::closeCompletionProposalsPopup(target());
 	try {
