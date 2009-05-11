@@ -395,6 +395,10 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
  * @throw IllegalStateException the pattern is not specified
  * @throw ReadOnlyDocumentException @a document is read-only
  * @throw BadRegionException @a region intersects outside of the document
+ * @throw ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt; the input
+ *        of the document rejected this change. if thrown, the replacement will be interrupted
+ * @throw ReplacementInterruptedException&lt;std#bad_alloc&gt; the internal memory allocation
+ *        failed. if thrown, the replacement will be interrupted
  */
 size_t TextSearcher::replaceAll(Document& document, const Region& scope, IInteractiveReplacementCallback* callback) const {
 	if(document.isReadOnly())
@@ -459,7 +463,13 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 					callback = 0;
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
 					Position e;
-					replace(document, matchedRegion, replacement, &e);	// TODO: handle exceptions this may throw.
+					try {
+						replace(document, matchedRegion, replacement, &e);
+					} catch(const IDocumentInput::ChangeRejectedException&) {
+						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
+					} catch(const bad_alloc& e) {
+						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
+					}
 					i.seek(e);
 					i.setRegion(Region(scope.beginning(), endOfScope));
 					documentRevision = document.revisionNumber();
@@ -527,7 +537,13 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 						callback = 0;
 					history.push(matchedRegion);
 					assert(!matchedRegion.isEmpty() || !replacement.empty());
-					replace(document, matchedRegion, matcher->replaceInplace(replacement));
+					try {
+						replace(document, matchedRegion, matcher->replaceInplace(replacement));
+					} catch(const IDocumentInput::ChangeRejectedException&) {
+						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
+					} catch(const bad_alloc& e) {
+						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
+					}
 					if(!matchedRegion.isEmpty())
 						next = matchedRegion.beginning();
 					if(!replacement.empty()) {

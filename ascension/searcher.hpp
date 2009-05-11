@@ -95,6 +95,17 @@ namespace ascension {
 		};
 
 		// the documentation is searcher.cpp
+		template<typename SourceException>
+		class ReplacementInterruptedException : public SourceException {
+		public:
+			explicit ReplacementInterruptedException(std::size_t numberOfReplacements);
+			ReplacementInterruptedException(const char* message, std::size_t numberOfReplacements);
+			std::size_t numberOfReplacements() const /*throw()*/;
+		private:
+			const std::size_t numberOfReplacements_;
+		};
+
+		// the documentation is searcher.cpp
 		class TextSearcher {
 			MANAH_NONCOPYABLE_TAG(TextSearcher);
 		public:
@@ -296,6 +307,25 @@ namespace ascension {
 	inline bool LiteralPattern::isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
 	/// Returns the pattern string.
 	inline const String& LiteralPattern::pattern() const /*throw()*/ {return pattern_;}
+	/**
+	 * Constructor.
+	 * @param numberOfReplacements the number of the replacements the object done successfully
+	 */
+	template<typename SourceException>
+	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
+		std::size_t numberOfReplacements) : numberOfReplacements_(numberOfReplacements) {}
+	/**
+	 * Constructor.
+	 * @param message the message string passed to the @a SourceException's constructor
+	 * @param numberOfReplacements the number of the replacements the object done successfully
+	 */
+	template<typename SourceException>
+	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
+		const char* message, std::size_t numberOfReplacements)
+		: SourceException(message), numberOfReplacements_(numberOfReplacements) {}
+	/// Returns the number of the replacements the object done successfully.
+	template<typename SourceException>
+	inline std::size_t ReplacementInterruptedException<SourceException>::numberOfReplacements() const /*throw()*/ {return numberOfReplacements_;}
 	/// Returns @c true if any pattern is set on the searcher .
 	inline bool TextSearcher::hasPattern() const /*throw()*/ {return !storedPatterns_.empty();}
 	/// Returns @c true if the search using regular expression is available.

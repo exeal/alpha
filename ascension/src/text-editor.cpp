@@ -1005,16 +1005,19 @@ ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
 /**
  * Replaces all matched texts. This does not freeze the text viewer.
  * @return the number of replced strings
+ * @throw ... any exceptions @c searcher::TextSearcher::replaceAll throws other than
+ *            @c ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt;
  */
 bool ReplaceAllCommand::perform() {
 	abortModes(target());
     if(onlySelection_ && isSelectionEmpty(target().caret()))
 		return false;
 
+	using namespace searcher;
 	WaitCursor wc;
 	TextViewer& viewer = target();
 	Document& document = viewer.document();
-	const searcher::TextSearcher* s;
+	const TextSearcher* s;
 	if(const Session* const session = document.session())
 		s = &session->textSearcher();
 	else
@@ -1027,14 +1030,17 @@ bool ReplaceAllCommand::perform() {
 			document.accessibleRegion().second) : document.accessibleRegion().second);
 
 	// mark to restore the selection later
-	kernel::Point oldAnchor(document, viewer.caret().anchor());
-	kernel::Point oldCaret(document, viewer.caret());
+	Point oldAnchor(document, viewer.caret().anchor());
+	Point oldCaret(document, viewer.caret());
 
 	AutoFreeze af(&viewer);
 	try {
 		numberOfLastReplacements_ = s->replaceAll(document, scope, callback_);
-	} catch(...) {
-		numberOfLastReplacements_ = 0;
+	} catch(const ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>& e) {
+		numberOfLastReplacements_ = e.numberOfReplacements();
+		throw;
+	} catch(const ReplacementInterruptedException<bad_alloc>& e) {
+		numberOfLastReplacements_ = e.numberOfReplacements();
 		throw;
 	}
 	if(numberOfLastReplacements_ != 0)
@@ -1190,9 +1196,10 @@ TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) /*thr
 
 /**
  * Inserts a text. If the incremental search is active, appends a string to the end of the pattern.
- * @retval false 
+ * @retval false the change was rejected
  * @throw ... any exceptions @c searcher#IncrementalSearcher#addString and
- *            @c viewers#replaceSelection throw
+ *            @c viewers#replaceSelection throw other than
+ *            @c kernel#IDocumentInput#ChangeRejectedException
  */
 bool TextInputCommand::perform() {
 	const long n = numericPrefix();
