@@ -36,21 +36,23 @@ Command::~Command() /*throw()*/ {
 // commands.* ///////////////////////////////////////////////////////////////
 
 namespace {
-	inline void abortIncrementalSearch(TextViewer& target) {
+	inline bool abortIncrementalSearch(TextViewer& target) {
 		if(Session* const session = target.document().session()) {
 			if(session->incrementalSearcher().isRunning())
-				session->incrementalSearcher().abort();
+				return session->incrementalSearcher().abort(), true;
 		}
+		return false;
 	}
-	inline void endIncrementalSearch(TextViewer& target) {
+	inline bool endIncrementalSearch(TextViewer& target) {
 		if(Session* const session = target.document().session()) {
 			if(session->incrementalSearcher().isRunning())
-				session->incrementalSearcher().abort();
+				return session->incrementalSearcher().end(), true;
 		}
+		return false;
 	}
-	inline void abortModes(TextViewer& target) {
+	inline bool abortModes(TextViewer& target) {
 		utils::closeCompletionProposalsPopup(target);
-		abortIncrementalSearch(target);
+		return abortIncrementalSearch(target);
 	}
 }
 
@@ -91,7 +93,7 @@ namespace {
  * Constructor.
  * @param viewer the target text viewer
  * @param region the region to operate on. if empty, the accessible region of the document. this
- * region will be shrunk to the accessible region when the command performed
+ *               region will be shrunk to the accessible region when the command performed
  */
 BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(TextViewer& viewer,
 		const Region& region /* = Region() */) /*throw()*/ : Command(viewer), region_(region), numberOfMarkedLines_(0) {
@@ -413,47 +415,6 @@ bool CharacterDeletionCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- */
-CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
-}
-
-/**
- * Implements @c Command#perform.
- * @retval false the end of the selection is the beginning of the line and couldn't find the string
- *               to convert
- */
-bool CharacterToCodePointConversionCommand::perform() {
-	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-	TextViewer& viewer = target();
-	abortModes(viewer);
-	const Document& document = viewer.document();
-	const VisualPoint& eos = viewer.caret().end();
-	if(locations::isBeginningOfLine(eos)
-			|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
-		return false;
-
-	Caret& caret = viewer.caret();
-	const Char* const line = document.line(eos.line()).data();
-	const CodePoint cp = text::surrogates::decodeLast(line, line + eos.column());
-	Char buffer[7];
-#if(_MSC_VER < 1400)
-	swprintf(buffer, L"%lX", cp);
-#else
-	swprintf(buffer, MANAH_COUNTOF(buffer), L"%lX", cp);
-#endif // _MSC_VER < 1400
-	AutoFreeze af(&viewer);
-	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
-	try {
-		caret.replaceSelection(buffer, buffer + wcslen(buffer), false);
-	} catch(const IDocumentInput::ChangeRejectedException&) {
-		return false;
-	}
-	return true;
-}
-
-/**
- * Constructor.
- * @param viewer the target text viewer
  * @param c the code point of the character to input
  * @throw invalid_argument @a c is not valid Unicode scalar value
  */
@@ -493,8 +454,8 @@ bool CharacterInputCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param fromPreviousLine set true to use a character on the previous visual line. otherwise one
- * on the next visual line is used
+ * @param fromPreviousLine set @c true to use a character on the previous visual line. otherwise
+ *                         one on the next visual line is used
  */
 CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
 		TextViewer& viewer, bool fromPreviousLine) /*throw()*/ : Command(viewer), fromPreviousLine_(fromPreviousLine) {
@@ -524,6 +485,47 @@ bool CharacterInputFromNextLineCommand::perform() {
 	if(p.column >= line.length())
 		return false;
 	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + p.column, line.end()))();
+}
+
+/**
+ * Constructor.
+ * @param viewer the target text viewer
+ */
+CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+}
+
+/**
+ * Implements @c Command#perform.
+ * @retval false the end of the selection is the beginning of the line and couldn't find the string
+ *               to convert
+ */
+bool CharacterToCodePointConversionCommand::perform() {
+	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
+	TextViewer& viewer = target();
+	abortModes(viewer);
+	const Document& document = viewer.document();
+	const VisualPoint& eos = viewer.caret().end();
+	if(locations::isBeginningOfLine(eos)
+			|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
+		return false;
+
+	Caret& caret = viewer.caret();
+	const Char* const line = document.line(eos.line()).data();
+	const CodePoint cp = text::surrogates::decodeLast(line, line + eos.column());
+	Char buffer[7];
+#if(_MSC_VER < 1400)
+	swprintf(buffer, L"%lX", cp);
+#else
+	swprintf(buffer, MANAH_COUNTOF(buffer), L"%lX", cp);
+#endif // _MSC_VER < 1400
+	AutoFreeze af(&viewer);
+	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
+	try {
+		caret.replaceSelection(buffer, buffer + wcslen(buffer), false);
+	} catch(const IDocumentInput::ChangeRejectedException&) {
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -728,7 +730,7 @@ IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*thro
 bool IndentationCommand::perform() {
 	const long n = numericPrefix();
 	if(n == 0)
-		return 0;
+		return true;
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 	TextViewer& viewer = target();
@@ -830,9 +832,8 @@ NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) /*throw(
 }
 
 /**
- * @see Command#perform
- * @retval true succeeded
- * @retval false failed
+ * Implements @c Command#perform.
+ * @retval false the document was read only or the change was rejected
  */
 bool NewlineCommand::perform() {
 	if(numericPrefix() <= 0)
@@ -846,12 +847,8 @@ bool NewlineCommand::perform() {
 		}
 	}
 
-	if(Session* const session = viewer.document().session()) {
-		if(session->incrementalSearcher().isRunning()) {
-			session->incrementalSearcher().end();
-			return true;
-		}
-	}
+	if(endIncrementalSearch(viewer))
+		return true;
 
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY(1);
@@ -910,7 +907,7 @@ PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) /*throw()*/ : C
 
 /**
  * @see Command#perform
- * @return false the internal call of @c Caret#pasteToSelection threw
+ * @return false the internal call of @c Caret#paste threw
  */
 bool PasteCommand::perform() {
 	ASCENSION_ASSERT_IFISWINDOW();
@@ -935,7 +932,7 @@ ReconversionCommand::ReconversionCommand(TextViewer& viewer) /*throw()*/ : Comma
  * Implements @c Command#perform.
  * @return false the selection was empty or rectangle. or the system didn't support IME
  *               reconversion
- * @throw std::bad_alloc out of memory
+ * @throw std#bad_alloc out of memory
  * @see viewers#TextViewer#onIMERequest
  */
 bool ReconversionCommand::perform() {
@@ -1209,10 +1206,12 @@ bool TextInputCommand::perform() {
 	if(Session* const session = target().document().session()) {
 		if(session->incrementalSearcher().isRunning()) {
 			if(n > 1) {
-				basic_stringbuf<Char> b;
+				const size_t len = text_.length();
+				String s;
+				s.reserve(n * len);
 				for(long i = 0; i < n; ++i)
-					b.sputn(text_.data(), static_cast<streamsize>(text_.length()));
-				session->incrementalSearcher().addString(b.str());
+					s.append(text_.data(), len);
+				session->incrementalSearcher().addString(s);
 			} else
 				session->incrementalSearcher().addString(text_);
 			return true;
