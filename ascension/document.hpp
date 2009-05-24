@@ -193,11 +193,11 @@ namespace ascension {
 		};
 
 		/**
-		 * Base class of the exceptions represent @c Document#insert or @c Document#erase could not
-		 * change the document because of its property.
+		 * Base class of the exceptions represent @c Document#replace could not change the document
+		 * because of its property.
 		 * @see ReadOnlyDocumentException, IDocumentInput#ChangeRejectedException
 		 */
-		class DocumentCantChangeException : public std::runtime_error {
+		class DocumentCantChangeException {
 		public:
 			virtual ~DocumentCantChangeException();
 		protected:
@@ -205,7 +205,7 @@ namespace ascension {
 		};
 
 		/// Thrown when the read only document is about to be modified.
-		class ReadOnlyDocumentException : public DocumentCantChangeException, virtual public IllegalStateException {
+		class ReadOnlyDocumentException : public DocumentCantChangeException, public IllegalStateException {
 		public:
 			ReadOnlyDocumentException();
 		};
@@ -214,7 +214,7 @@ namespace ascension {
 		 * Thrown when the caller accessed inaccessible region of the document.
 		 * Document#accessibleRegion, Document#erase, Document#insert
 		 */
-		class DocumentAccessViolationException : public std::invalid_argument {
+		class DocumentAccessViolationException : public DocumentCantChangeException, public std::invalid_argument {
 		public:
 			DocumentAccessViolationException();
 		};
@@ -689,7 +689,7 @@ namespace ascension {
 			std::set<Point*> points_;
 			UndoManager* undoManager_;
 			std::map<const DocumentPropertyKey*, String*> properties_;
-			bool onceUndoBufferCleared_, recordingChanges_, changing_;
+			bool onceUndoBufferCleared_, recordingChanges_, changing_, rollbacking_;
 #if 0
 			const void* locker_;
 #endif

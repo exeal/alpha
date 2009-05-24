@@ -484,6 +484,7 @@ bool CharacterInputFromNextLineCommand::perform() {
 	const String& line = document.line(caret.line() + (fromPreviousLine_ ? -1 : 1));
 	if(p.column >= line.length())
 		return false;
+	setNumericPrefix(1);
 	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + p.column, line.end()))();
 }
 
@@ -1191,6 +1192,17 @@ bool TabifyCommand::perform() {
 TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) /*throw()*/ : Command(viewer), text_(text) {
 }
 
+namespace {
+	inline String multiplyString(const String& s, size_t n) {
+		const size_t len = s.length();
+		String temp;
+		temp.reserve(n * len);
+		for(size_t i = 0; i < n; ++i)
+			temp.append(s.data(), len);
+		return temp;
+	}
+}
+
 /**
  * Inserts a text. If the incremental search is active, appends a string to the end of the pattern.
  * @retval false the change was rejected
@@ -1205,15 +1217,7 @@ bool TextInputCommand::perform() {
 
 	if(Session* const session = target().document().session()) {
 		if(session->incrementalSearcher().isRunning()) {
-			if(n > 1) {
-				const size_t len = text_.length();
-				String s;
-				s.reserve(n * len);
-				for(long i = 0; i < n; ++i)
-					s.append(text_.data(), len);
-				session->incrementalSearcher().addString(s);
-			} else
-				session->incrementalSearcher().addString(text_);
+			session->incrementalSearcher().addString((n > 1) ? multiplyString(text_, static_cast<size_t>(n)) : text_);
 			return true;
 		}
 	}
@@ -1221,11 +1225,8 @@ bool TextInputCommand::perform() {
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 	if(n > 1) {
-		basic_stringbuf<Char> b;
-		for(long i = 0; i < n; ++i)
-			b.sputn(text_.data(), static_cast<streamsize>(text_.length()));
 		try {
-			replaceSelection(target().caret(), b.str());
+			replaceSelection(target().caret(), multiplyString(text_, static_cast<size_t>(n)));
 		} catch(const IDocumentInput::ChangeRejectedException&) {
 			return false;
 		}

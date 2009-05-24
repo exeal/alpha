@@ -168,7 +168,7 @@ namespace {
 // exception classes ////////////////////////////////////////////////////////
 
 /// Protected default constructor.
-DocumentCantChangeException::DocumentCantChangeException() : runtime_error("") {
+DocumentCantChangeException::DocumentCantChangeException() {
 }
 
 /// Destructor.

@@ -108,16 +108,18 @@ namespace {
 	const IAtomicChange::TypeTag DeletionChange::type_((IAtomicChange::TypeTag()));
 	const IAtomicChange::TypeTag ReplacementChange::type_((IAtomicChange::TypeTag()));
 
+	// implements IUndoableChange.perform
 	inline void InsertionChange::perform(Document& document, Result& result) {
-//		try {
+		try {
 			insert(document, position_, text_, &result.endOfChange);
-//		} catch(...) {
-//			result.reset();
-//		}
+		} catch(DocumentAccessViolationException&) {
+			result.reset();	// the position was inaccessible
+		}	// std.bad_alloc is ignored...
 		result.completed = true;
 		result.numberOfRevisions = 1;
 	}
 
+	// implements IUndoableChange.appendChange
 	inline bool DeletionChange::appendChange(IAtomicChange& postChange, const Document&) {
 		if(&postChange.type() != &type_)
 			return false;
@@ -132,19 +134,25 @@ namespace {
 		}
 	}
 
+	// implements IUndoableChange.perform
 	inline void DeletionChange::perform(Document& document, Result& result) {
-//		try {
+		try {
 			erase(document, region_);
-//		} catch(...) {
-//			result.reset();
-//		}
+		} catch(DocumentAccessViolationException&) {
+			result.reset();	// the region was inaccessible
+		}	// std.bad_alloc is ignored...
 		result.completed = true;
 		result.numberOfRevisions = revisions_;
 		result.endOfChange = region_.first;
 	}
 
+	// implements IUndoableChange.perform
 	inline void ReplacementChange::perform(Document& document, Result& result) {
-		replace(document, region_, text_, &result.endOfChange);
+		try {
+			replace(document, region_, text_, &result.endOfChange);
+		} catch(DocumentAccessViolationException&) {
+			result.reset();	// the region was inaccessible
+		}	// std.bad_alloc is ignored...
 		result.completed = true;
 		result.numberOfRevisions = 1;
 	}
@@ -154,12 +162,14 @@ namespace {
 			delete *i;
 	}
 
+	// implements IUndoableChange.appendChange
 	inline bool CompoundChange::appendChange(IAtomicChange& postChange, const Document& document) {
 		if(changes_.empty() || !changes_.back()->appendChange(postChange, document))
 			changes_.push_back(&postChange);
 		return true;
 	}
 
+	// implements IUndoableChange.perform
 	void CompoundChange::perform(Document& document, Result& result) {
 		assert(!changes_.empty());
 		result.reset();
@@ -347,7 +357,7 @@ void Document::UndoManager::undo(IUndoableChange::Result& result) {
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
-		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), /*locker_(0),*/ accessibleArea_(0) {
+		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false), /*locker_(0),*/ accessibleArea_(0) {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_ = new UndoManager(*this);
 	resetContent();
@@ -375,6 +385,8 @@ Document::~Document() {
  * @see #endCompoundChange, #isCompoundChanging
  */
 void Document::beginCompoundChange() {
+	if(isReadOnly())
+		throw ReadOnlyDocumentException();
 //	const bool init = !undoManager_->isStackingCompoundOperation();
 	undoManager_->beginCompoundChange();
 //	if(init)
@@ -443,6 +455,17 @@ void Document::recordChanges(bool record) /*throw()*/ {
 		clearUndoBuffer();
 }
 
+namespace {
+	void checkChangeable(const Document& document) {
+		if(!document.isModified()) {
+			if(IDocumentInput* input = document.input()) {
+				if(!input->isChangeable())
+					throw IDocumentInput::ChangeRejectedException();
+			}
+		}
+	}
+} // namespace @0
+
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.
  * @param n the repeat count
@@ -456,6 +479,7 @@ bool Document::redo(size_t n /* = 1 */) {
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfRedoableChanges())
 		throw invalid_argument("n");
+	checkChangeable(*this);
 
 	IUndoableChange::Result result;
 	result.completed = true;
@@ -463,7 +487,9 @@ bool Document::redo(size_t n /* = 1 */) {
 
 	for(; n > 0 && result.completed; --n) {
 		beginCompoundChange();
-		undoManager_->redo(result);
+		rollbacking_ = true;
+		undoManager_->redo(result);	// this shouldn't throw
+		rollbacking_ = false;
 		endCompoundChange();
 	}
 	assert(n == 0 || !result.completed);
@@ -517,7 +543,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
-	else if(!isModified() && input_.get() != 0 && !input_->isChangeable())
+	else if(!rollbacking_ && (checkChangeable(*this), false))
 		throw IDocumentInput::ChangeRejectedException();
 	else if(region.isEmpty() && (first == 0 || first == last))
 		return;	// nothing to do
@@ -698,6 +724,7 @@ bool Document::undo(size_t n /* = 1 */) {
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfUndoableChanges())
 		throw invalid_argument("n");
+	checkChangeable(*this);
 
 	const size_t oldRevisionNumber = revisionNumber_;
 	IUndoableChange::Result result;
@@ -706,7 +733,9 @@ bool Document::undo(size_t n /* = 1 */) {
 
 	for(; n > 0 && result.completed; --n) {
 		beginCompoundChange();
-		undoManager_->undo(result);
+		rollbacking_ = true;
+		undoManager_->undo(result);	// this shouldn't throw
+		rollbacking_ = false;
 		endCompoundChange();
 		revisionNumber_ = oldRevisionNumber - result.numberOfRevisions;
 	}
