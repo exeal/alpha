@@ -1308,8 +1308,9 @@ bool UndoCommand::perform() {
 
 	WaitCursor wc;
 	Document& document = target().document();
-	bool (Document::*f)(size_t) = !redo_ ? &Document::undo : &Document::redo;
-	incompleted_ = (document.*f)(min(static_cast<size_t>(numericPrefix()), document.numberOfUndoableChanges()));
+	bool (Document::*performance)(size_t) = !redo_ ? &Document::undo : &Document::redo;
+	size_t (Document::*number)() const = !redo_ ? &Document::numberOfUndoableChanges : &Document::numberOfRedoableChanges;
+	incompleted_ = (document.*performance)(min(static_cast<size_t>(numericPrefix()), (document.*number)()));
 	return true;
 }
 
