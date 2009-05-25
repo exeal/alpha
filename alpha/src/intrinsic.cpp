@@ -25,54 +25,76 @@ namespace {
 		return temp.numberOfMarkedLines();
 	}
 
-	void cancel(EditorView& ed) {
-		(CancelCommand(ed))();
+	void cancel(EditorView& ed) {(CancelCommand(ed))();}
+
+	bool convertCharacterToCodePoint(EditorView& ed) {return CharacterToCodePointConversionCommand(ed)();}
+
+	bool convertCodePointToCharacter(EditorView& ed) {return CodePointToCharacterConversionCommand(ed)();}
+
+/*	bool copySelection(EditorView& ed, bool useKillRing) {
+		try {
+			ed.caret().copySelection(useKillRing);
+		} catch(viewers::ClipboardException&) {
+			return false;
+		}
+		return true;
 	}
 
-	bool convertCharacterToCodePoint(EditorView& ed) {
-		return CharacterToCodePointConversionCommand(ed)();
+	bool cutSelection(EditorView& ed, bool useKillRing) {
+		try {
+			ed.caret().cutSelection(useKillRing);
+		} catch(viewers::ClipboardException&) {
+			return false;
+		}
+		return true;
+	}
+*/
+	template<const Direction* direction> bool deleteCharacter(EditorView& ed, py::ssize_t n) {return CharacterDeletionCommand(ed, *direction).setNumericPrefix(static_cast<long>(n))();}
+
+	template<const Direction* direction> bool deleteWord(EditorView& ed, py::ssize_t n) {return WordDeletionCommand(ed, *direction).setNumericPrefix(static_cast<long>(n))();}
+
+	template<const Direction* direction> bool findNext(EditorView& ed, py::ssize_t n) {return FindNextCommand(ed, *direction).setNumericPrefix(static_cast<long>(n))();}
+
+	bool inputCharacter(EditorView& ed, int character) {return CharacterInputCommand(ed, character)();}
+
+	template<bool previous> bool inputCharacterFromNextLine(EditorView& ed) {return CharacterInputFromNextLineCommand(ed, previous)();}
+
+	bool indent(EditorView& ed, py::ssize_t n);
+
+	bool insertString(EditorView& ed, const String& s, py::ssize_t n) {
+		try {
+			return TextInputCommand(ed, s).setNumericPrefix(static_cast<long>(n))();
+		} catch(kernel::DocumentCantChangeException&) {
+			return false;
+		}
+		return true;
 	}
 
-	bool convertCodePointToCharacter(EditorView& ed) {
-		return CodePointToCharacterConversionCommand(ed)();
-	}
+//	template<const Direction* direction> bool isearch() {}
 
-	bool deleteBackwardCharacter(EditorView& ed, py::ssize_t n) {
-		return CharacterDeletionCommand(ed, Direction::BACKWARD).setNumericPrefix(static_cast<long>(n))();
-	}
+	template<bool previous> bool newline(EditorView& ed, py::ssize_t n) {return NewlineCommand(ed, previous).setNumericPrefix(static_cast<long>(n))();}
 
-	bool deleteBackwardWord(EditorView& ed, py::ssize_t n) {
-		return WordDeletionCommand(ed, Direction::BACKWARD).setNumericPrefix(static_cast<long>(n))();
-	}
+	bool paste(EditorView& ed, bool useKillRing) {return PasteCommand(ed, useKillRing)();}
 
-	bool deleteForwardCharacter(EditorView& ed, py::ssize_t n) {
-		return CharacterDeletionCommand(ed, Direction::FORWARD).setNumericPrefix(static_cast<long>(n))();
-	}
+	bool reconvert(EditorView& ed) {return (ReconversionCommand(ed))();}
 
-	bool deleteForwardWord(EditorView& ed, py::ssize_t n) {
-		return WordDeletionCommand(ed, Direction::FORWARD).setNumericPrefix(static_cast<long>(n))();
-	}
+//	bool redo(EditorView& ed, py::ssize_t n) {
+//		return UndoCommand(activeViewer(), true).setNumericPrefix(static_cast<long>(n))() == 0;
+//	}
 
-	bool paste(bool useKillRing) {
-		return PasteCommand(activeViewer(), useKillRing)() == 0;
-	}
+	void selectAll(EditorView& ed) {(EntireDocumentSelectionCreationCommand(ed))();}
 
-	bool redo(py::ssize_t n) {
-		return UndoCommand(activeViewer(), true).setNumericPrefix(static_cast<long>(n))() == 0;
-	}
+	void selectWord(EditorView& ed) {(WordSelectionCreationCommand(ed))();}
 
-	void selectAll() {
-		EntireDocumentSelectionCreationCommand temp(activeViewer());
-		temp();
-	}
+	bool showCompletionProposalsPopup(EditorView& ed) {return (CompletionProposalPopupCommand(ed))();}
 
-	void showPossibleCompletions() {
-		EditorView& viewer = EditorWindows::instance().activePane().visibleView();
-		if(contentassist::IContentAssistant* ca = viewer.contentAssistant())
-			ca->showPossibleCompletions();
-		else
-			viewer.beep();
-	}
+	bool toggleIMEStatus(EditorView& ed) {return (InputMethodOpenStatusToggleCommand(ed))();}
+
+	bool toggleOvertypeMode(EditorView& ed) {return (OvertypeModeToggleCommand(ed))();}
+
+	bool toggleSoftKeyboardMode(EditorView& ed) {return (InputMethodSoftKeyboardModeToggleCommand(ed))();}
+
+	template<bool(*procedure)(viewers::Caret&)> bool transpose(EditorView& ed /*, py::ssize_t n*/) {return TranspositionCommand(ed, procedure)();}
 
 	bool undo(py::ssize_t n) {
 		return UndoCommand(activeViewer(), false).setNumericPrefix(static_cast<long>(n))() == 0;
@@ -87,38 +109,38 @@ py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
 //	py::def("clear_all_bookmarks", &);
 	py::def("convert_character_to_code_point", &convertCharacterToCodePoint);
 	py::def("convert_code_point_to_character", &convertCodePointToCharacter);
-//	py::def("copy_selection", &);
-//	py::def("cut_selection", &);
-	py::def("delete_backward_character", &deleteBackwardCharacter, (py::arg("ed"), py::arg("n") = 1));
-	py::def("delete_backward_word", &deleteBackwardWord, (py::arg("ed"), py::arg("n") = 1));
-	py::def("delete_forward_character", &deleteForwardCharacter, (py::arg("ed"), py::arg("n") = 1));
-	py::def("delete_forward_word", &deleteForwardWord, (py::arg("ed"), py::arg("n") = 1));
-/*	py::def("delete_line", &);
-	py::def("find_next", &findNext, (py::arg("ed"), py::arg("n") = 1));
-	py::def("find_previous", &findPrevious, (py::arg("ed"), py::arg("n") = 1));
-	py::def("input_character", &);
-	py::def("input_character_from_next_line", &);
-	py::def("input_character_from_previous_line", &);
-	py::def("indent", &);
-	py::def("insert_previous_line", &);
-	py::def("insert_string", &);
-	py::def("isearch_backward", &);
-	py::def("isearch_forward", &);
-	py::def("newline", &newline, (py::arg("ed"), py::arg("n") = 1));
-	py::def("paste", &);
-	py::def("reconvert", &);
-	py::def("redo", &redo, (py::arg("ed"), py::arg("n") = 1));
-	py::def("replace_all", &);
-	py::def("select_all", &);
-	py::def("select_word", &);
-	py::def("show_completion_proposals_popup", &);
-	py::def("toggle_bookmark", &);
-	py::def("toggle_ime_status", &);
-	py::def("toggle_overtype_mode", &);
-	py::def("toggle_soft_keyboard_mode", &);
-	py::def("transpose_characters", &);
-	py::def("transpose_lines", &);
-	py::def("transpose_words", &);
-	py::def("undo", &undo, (py::arg("ed"), py::arg("n") = 1));
-	py::def("unindent", &);*/
+//	py::def("copy_selection", &copySelection, (py::arg("ed"), py::arg("use_kill_ring") = true));
+//	py::def("cut_selection", &cutSelection, (py::arg("ed"), py::arg("use_kill_ring") = true));
+	py::def("delete_backward_character", &deleteCharacter<&Direction::BACKWARD>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("delete_backward_word", &deleteWord<&Direction::BACKWARD>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("delete_forward_character", &deleteCharacter<&Direction::FORWARD>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("delete_forward_word", &deleteWord<&Direction::FORWARD>, (py::arg("ed"), py::arg("n") = 1));
+//	py::def("delete_line", &);
+	py::def("find_next", &findNext<&Direction::FORWARD>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("find_previous", &findNext<&Direction::BACKWARD>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("input_character", &inputCharacter);
+	py::def("input_character_from_next_line", &inputCharacterFromNextLine<false>);
+	py::def("input_character_from_previous_line", &inputCharacterFromNextLine<true>);
+//	py::def("indent", &indent);
+	py::def("insert_previous_line", &newline<true>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("insert_string", &insertString);
+//	py::def("isearch_backward", &);
+//	py::def("isearch_forward", &);
+	py::def("newline", &newline<false>, (py::arg("ed"), py::arg("n") = 1));
+	py::def("paste", &paste);
+	py::def("reconvert", &reconvert);
+//	py::def("redo", &redo, (py::arg("ed"), py::arg("n") = 1));
+//	py::def("replace_all", &);
+	py::def("select_all", &selectAll);
+	py::def("select_word", &selectWord);
+	py::def("show_completion_proposals_popup", &showCompletionProposalsPopup);
+//	py::def("toggle_bookmark", &);
+	py::def("toggle_ime_status", &toggleIMEStatus);
+	py::def("toggle_overtype_mode", &toggleOvertypeMode);
+	py::def("toggle_soft_keyboard_mode", &toggleSoftKeyboardMode);
+	py::def("transpose_characters", &transpose<&viewers::transposeCharacters>/*, (py::arg("ed"), py::arg("n") = 1)*/);
+	py::def("transpose_lines", &transpose<&viewers::transposeLines>/*, (py::arg("ed"), py::arg("n") = 1)*/);
+	py::def("transpose_words", &transpose<&viewers::transposeWords>/*, (py::arg("ed"), py::arg("n") = 1)*/);
+//	py::def("undo", Invoker<UndoCommand, >, (py::arg("ed"), py::arg("n") = 1));
+//	py::def("unindent", &unindent);
 ALPHA_EXPOSE_EPILOGUE()
