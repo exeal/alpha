@@ -78,10 +78,6 @@ namespace {
 
 	bool reconvert(EditorView& ed) {return (ReconversionCommand(ed))();}
 
-//	bool redo(EditorView& ed, py::ssize_t n) {
-//		return UndoCommand(activeViewer(), true).setNumericPrefix(static_cast<long>(n))() == 0;
-//	}
-
 	void selectAll(EditorView& ed) {(EntireDocumentSelectionCreationCommand(ed))();}
 
 	void selectWord(EditorView& ed) {(WordSelectionCreationCommand(ed))();}
@@ -96,13 +92,11 @@ namespace {
 
 	template<bool(*procedure)(viewers::Caret&)> bool transpose(EditorView& ed /*, py::ssize_t n*/) {return TranspositionCommand(ed, procedure)();}
 
-	bool undo(py::ssize_t n) {
-		return UndoCommand(activeViewer(), false).setNumericPrefix(static_cast<long>(n))() == 0;
-	}
+	template<bool redo> bool undo(EditorView& ed, py::ssize_t n) {return UndoCommand(ed, redo).setNumericPrefix(static_cast<long>(n))();}
 } // namespace @0
 
 ALPHA_EXPOSE_PROLOGUE()
-py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
+	py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
 
 	py::def("bookmark_match_lines", &bookmarkMatchLines);
 	py::def("cancel", &cancel);
@@ -129,7 +123,7 @@ py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
 	py::def("newline", &newline<false>, (py::arg("ed"), py::arg("n") = 1));
 	py::def("paste", &paste);
 	py::def("reconvert", &reconvert);
-//	py::def("redo", &redo, (py::arg("ed"), py::arg("n") = 1));
+	py::def("redo", &undo<true>, (py::arg("ed"), py::arg("n") = 1));
 //	py::def("replace_all", &);
 	py::def("select_all", &selectAll);
 	py::def("select_word", &selectWord);
@@ -141,6 +135,6 @@ py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
 	py::def("transpose_characters", &transpose<&viewers::transposeCharacters>/*, (py::arg("ed"), py::arg("n") = 1)*/);
 	py::def("transpose_lines", &transpose<&viewers::transposeLines>/*, (py::arg("ed"), py::arg("n") = 1)*/);
 	py::def("transpose_words", &transpose<&viewers::transposeWords>/*, (py::arg("ed"), py::arg("n") = 1)*/);
-//	py::def("undo", Invoker<UndoCommand, >, (py::arg("ed"), py::arg("n") = 1));
+	py::def("undo", &undo<false>, (py::arg("ed"), py::arg("n") = 1));
 //	py::def("unindent", &unindent);
 ALPHA_EXPOSE_EPILOGUE()
