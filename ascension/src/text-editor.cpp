@@ -1284,25 +1284,26 @@ bool TranspositionCommand::perform() {
  * @param viewer the target text viewer
  * @param redo set true to perform redo, rather than undo
  */
-UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), incompleted_(false) {
+UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
 }
 
 /**
- * Returns @ true if the last performance was done incompletely.
+ * Returns @c true if the last performance was done incompletely.
+ * @throw IllegalStateException the command has never performed
  * @see Document#undo, Document#redo
  */
-bool UndoCommand::isLastActionIncompleted() const /*throw()*/ {
-	return incompleted_;
+bool UndoCommand::isLastActionIncompleted() const {
+	if(lastResult_ == INDETERMINATE)
+		throw IllegalStateException("this command has never performed.");
+	return lastResult_ == INCOMPLETED;
 }
 
 /**
  * Undo or redo.
- * @return a boolean value returned by @c Document#undo or @c Document#redo.
+ * @retval false the change was rejected
  */
 bool UndoCommand::perform() {
-	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY(1);
-
 	if(numericPrefix() < 0)
 		setNumericPrefix(0);	// currently, this is no-op
 
@@ -1310,7 +1311,11 @@ bool UndoCommand::perform() {
 	Document& document = target().document();
 	bool (Document::*performance)(size_t) = !redo_ ? &Document::undo : &Document::redo;
 	size_t (Document::*number)() const = !redo_ ? &Document::numberOfUndoableChanges : &Document::numberOfRedoableChanges;
-	incompleted_ = (document.*performance)(min(static_cast<size_t>(numericPrefix()), (document.*number)()));
+	try {
+		lastResult_ = (document.*performance)(min(static_cast<size_t>(numericPrefix()), (document.*number)())) ? COMPLETED : INCOMPLETED;
+	} catch(DocumentCantChangeException&) {
+		return false;
+	}
 	return true;
 }
 

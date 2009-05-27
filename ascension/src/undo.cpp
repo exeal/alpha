@@ -471,6 +471,7 @@ namespace {
  * @param n the repeat count
  * @return false if the redo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
+ * @throw IDocumentInput#ChangeRejectedException the change was rejected
  * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
  * @see #undo
  */
@@ -716,6 +717,7 @@ void Document::replace(const Region& region, basic_istream<Char>& in, Position* 
  * @param n the repeat count
  * @return false if the undo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
+ * @throw IDocumentInput#ChangeRejectedException the change was rejected
  * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
  * @see #redo
  */
