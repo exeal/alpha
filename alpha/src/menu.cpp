@@ -49,7 +49,7 @@ namespace {
 	class MenuBar : public Menu {
 	public:
 		MenuBar();
-		py::object setAsMenuBar();
+		static py::object setAsMenuBar(py::object newMenuBar);
 	};
 } // namespace @0
 
@@ -161,6 +161,8 @@ inline HMENU Menu::handle() const {
 }
 
 py::object Menu::self() {
+	if(self_ == py::object())
+		self_ = py::object(*this);
 	return self_;
 }
 
@@ -200,12 +202,12 @@ py::object Menu::setDefault(short identifier) {
 MenuBar::MenuBar() : Menu(::CreateMenu()) {
 }
 
-py::object MenuBar::setAsMenuBar() {
+py::object MenuBar::setAsMenuBar(py::object newMenuBar) {
 	static py::object singletonHolder;
-	if(!Alpha::instance().getMainWindow().setMenu(handle()))
+	if(!Alpha::instance().getMainWindow().setMenu(static_cast<MenuBar&>(py::extract<MenuBar&>(newMenuBar)).handle()))
 		Interpreter::instance().throwLastWin32Error();
 	py::object oldMenuBar(singletonHolder);
-	singletonHolder = self();
+	singletonHolder = newMenuBar;
 	return oldMenuBar;
 }
 
@@ -213,7 +215,7 @@ py::object MenuBar::setAsMenuBar() {
 // PopupMenu ////////////////////////////////////////////////////////////////
 
 PopupMenu::PopupMenu(py::object popupHandler) : Menu(::CreatePopupMenu()), popupHandler_(popupHandler) {
-	if(!toBoolean(::PyCallable_Check(popupHandler_.ptr()))) {
+	if(popupHandler != py::object() && !toBoolean(::PyCallable_Check(popupHandler_.ptr()))) {
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
 	}
@@ -235,7 +237,7 @@ namespace {
 		item.fMask = MIIM_DATA | MIIM_ID | MIIM_SUBMENU;
 		if(toBoolean(::GetMenuItemInfoW(parent, position, true, &item)) && item.hSubMenu == popup) {
 			if(item.wID <= static_cast<UINT>(numeric_limits<short>::max()) && item.dwItemData != 0) {
-				result.first = py::object(py::handle<>(reinterpret_cast<PyObject*>(item.dwItemData)));
+				result.first = py::object(py::borrowed(reinterpret_cast<PyObject*>(item.dwItemData)));
 				result.second = static_cast<short>(item.wID);
 				return result;
 			}
@@ -285,7 +287,8 @@ ALPHA_EXPOSE_PROLOGUE()
 		.def("erase", &Menu::erase)
 		.def("set_child", &Menu::setChild)
 		.def("set_default", &Menu::setDefault);
-	py::class_<PopupMenu, py::bases<Menu> >("PopupMenu", py::init<py::object>());
+	py::class_<PopupMenu, py::bases<Menu> >("PopupMenu", py::init<py::object>(py::arg("popup_handler") = py::object()));
 	py::class_<MenuBar, py::bases<Menu> >("MenuBar")
-		.def("set_as_menu_bar", &MenuBar::setAsMenuBar);
+		.def("set_as_menu_bar", &MenuBar::setAsMenuBar)
+		.staticmethod("set_as_menu_bar");
 ALPHA_EXPOSE_EPILOGUE()
