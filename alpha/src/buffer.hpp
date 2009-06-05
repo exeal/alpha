@@ -124,7 +124,7 @@ namespace alpha {
 
 	/// Returns the script object corresponding to the buffer.
 	inline boost::python::object Buffer::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
+		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
 
 	/// Returns the input text file.
 	inline ascension::kernel::fileio::TextFileDocumentInput& Buffer::textFile() /*throw()*/ {return *textFile_;}
@@ -153,7 +153,7 @@ namespace alpha {
 
 	/// Returns the script object corresponding to the buffer list.
 	inline boost::python::object BufferList::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
+		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
 }
 
 #endif // !ALPHA_BUFFER_HPP

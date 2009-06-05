@@ -133,7 +133,7 @@ namespace alpha {
 
 	/// Returns the script object corresponding to the window.
 	inline boost::python::object EditorWindow::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
+		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
 
 	/// @see ascension#viewers#TextViewer#document
 	inline Buffer& EditorView::document() /*throw()*/ {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::document());}
@@ -157,7 +157,7 @@ namespace alpha {
 
 	/// Returns the script object corresponding to the windows.
 	inline boost::python::object EditorWindows::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(*this); return self_;}
+		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
 
 }
 
