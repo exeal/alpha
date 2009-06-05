@@ -276,8 +276,10 @@ void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	mi.fMask = MIIM_DATA;
 	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0) {
 		if(PyObject* command = reinterpret_cast<PyObject*>(mi.dwItemData)) {
-			if(toBoolean(::PyCallable_Check(command)))
-				Py_XDECREF(::PyObject_CallObject(command, 0));
+			if(toBoolean(::PyCallable_Check(command))) {
+				PyObject* temp = ::PyObject_CallObject(command, 0);
+				Py_XDECREF(temp);
+			}
 		}
 	}
 }
