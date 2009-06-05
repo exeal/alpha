@@ -162,7 +162,7 @@ inline HMENU Menu::handle() const {
 
 py::object Menu::self() {
 	if(self_ == py::object())
-		self_ = py::object(*this);
+		self_ = py::object(py::ptr(this));
 	return self_;
 }
 
@@ -171,10 +171,11 @@ py::object Menu::setChild(short identifier, py::object child) {
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
 	}
+	HMENU childHandle = static_cast<Menu&>(py::extract<Menu&>(child)).handle();
 	win32::AutoZeroSize<MENUITEMINFOW> item;
 	item.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item.dwItemData = reinterpret_cast<ULONG_PTR>(child.ptr());
-	item.hSubMenu = handle();
+	item.hSubMenu = childHandle;
 	if(::SetMenuItemInfoW(handle_, identifier, false, &item) == 0)
 		Interpreter::instance().throwLastWin32Error();
 	children_.insert(child);
@@ -222,8 +223,13 @@ PopupMenu::PopupMenu(py::object popupHandler) : Menu(::CreatePopupMenu()), popup
 }
 
 void PopupMenu::update(short identifier) {
-	if(popupHandler_ != py::object())
-		popupHandler_(identifier, self());
+	if(popupHandler_ != py::object()) {
+		try {
+			popupHandler_(identifier, self());
+		} catch(py::error_already_set&) {
+			Interpreter::instance().handleException();
+		}
+	}
 }
 
 
