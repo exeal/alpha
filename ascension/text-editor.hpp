@@ -62,7 +62,11 @@ namespace ascension {
 			private:
 				bool perform();
 			};
-			/// Moves the caret or extends the selection.
+			/**
+			 * Moves the caret or extends the selection. @c CharacterUnit#GRAPHEME_CLUSTER is
+			 * always used as character unit.
+			 * @see viewers#Caret
+			 */
 			class CaretMovementCommand : public Command {
 			public:
 				CaretMovementCommand(viewers::TextViewer& viewer,

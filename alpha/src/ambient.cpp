@@ -52,8 +52,7 @@ void Interpreter::handleException() {
 		if(tracebackModule != py::object()) {
 			py::object formatException(tracebackModule.attr("format_exception"));
 			if(formatException != py::object()) {
-				const py::list li(formatException(py::object(py::borrowed<>(type)),
-					py::object(py::borrowed<>(value)), py::object(py::borrowed<>(traceback))));
+				const py::list li(formatException(py::handle<>(type), py::handle<>(value), py::handle<>(py::allow_null(traceback))));
 				if(li != py::object()) {
 					for(py::ssize_t i = 0, c = py::len(li); i < c; ++i)
 						out << ::PyString_AsString(py::object(li[i]).ptr());

@@ -79,7 +79,7 @@ void GotoLineDialog::onOK(bool& continueDialog) {
 namespace {
 	void gotoLineDialog() {
 		static GotoLineDialog dialog;
-		dialog.doModeless(Alpha::instance().getMainWindow(), !dialog.isVisible());
+		dialog.doModeless(Alpha::instance().getMainWindow(), !dialog.isWindow() || !dialog.isVisible());
 	}
 }
 
