@@ -1427,17 +1427,17 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_CLEAR:
 		if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
-			caret().cutSelection(true);
+			cutSelection(caret(), true);
 		else
 			CharacterDeletionCommand(*this, Direction::FORWARD)();
 		handled = true;
 		return 0L;
 	case WM_COPY:
-		caret().copySelection(true);
+		copySelection(caret(), true);
 		handled = true;
 		return 0L;
 	case WM_CUT:
-		caret().cutSelection(true);
+		cutSelection(caret(), true);
 		handled = true;
 		return 0L;
 #endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */

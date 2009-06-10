@@ -251,8 +251,6 @@ namespace ascension {
 			// selection manipulations
 			void beginRectangleSelection();
 			void clearSelection();
-			void copySelection(bool useKillRing);
-			void cutSelection(bool useKillRing);
 			void endRectangleSelection();
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(const VerticalDestinationProxy& to);
@@ -314,6 +312,8 @@ namespace ascension {
 		};
 
 		// free functions related to selection of Caret class
+		void copySelection(Caret& caret, bool useKillRing);
+		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const POINT& p);
 		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
 		bool selectedRangeOnLine(const Caret& caret, length_t line, length_t& first, length_t& last);
