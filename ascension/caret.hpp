@@ -22,6 +22,7 @@ namespace ascension {
 	namespace viewers {
 
 		namespace utils {
+			HRESULT createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content);
 			std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = 0);
 		}
 
@@ -234,7 +235,6 @@ namespace ascension {
 			bool isAutoShowEnabled() const /*throw()*/;
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
-			HRESULT createTextObject(bool rtf, IDataObject*& content) const;
 			bool isSelectionRectangle() const /*throw()*/;
 			kernel::Region selectedRegion() const /*throw()*/;
 			// attributes : character input
