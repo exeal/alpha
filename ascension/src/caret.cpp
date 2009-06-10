@@ -196,6 +196,103 @@ namespace {
 } // namespace @0
 
 /**
+ * Creates an @c IDataObject represents the selected content.
+ * @param caret the caret gives the selection
+ * @param rtf set true if the content is available as Rich Text Format. this feature is not
+ * implemented yet and the parameter is ignored
+ * @param[out] content the data object
+ * @retval S_OK succeeded
+ * @retval E_OUTOFMEMORY failed to allocate memory for @a content
+ */
+HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content) {
+	GenericDataObject* o = new(nothrow) GenericDataObject();
+	if(o == 0)
+		return E_OUTOFMEMORY;
+	o->AddRef();
+
+	// get text on the given region
+	const String text(selectedString(caret, NLF_CR_LF));
+
+	// register datas...
+	FORMATETC format;
+	format.ptd = 0;
+	format.dwAspect = DVASPECT_CONTENT;
+	format.lindex = -1;
+	format.tymed = TYMED_HGLOBAL;
+	STGMEDIUM medium;
+	medium.tymed = TYMED_HGLOBAL;
+	medium.pUnkForRelease = 0;
+
+	// Unicode text format
+	format.cfFormat = CF_UNICODETEXT;
+	medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (text.length() + 1));
+	if(medium.hGlobal == 0) {
+		o->Release();
+		return E_OUTOFMEMORY;
+	}
+	wcscpy(static_cast<wchar_t*>(::GlobalLock(medium.hGlobal)), text.c_str());
+	::GlobalUnlock(medium.hGlobal);
+	HRESULT hr = o->SetData(&format, &medium, false);
+
+	// rectangle text format
+	if(caret.isSelectionRectangle()) {
+		if(0 != (format.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))))
+			hr = o->SetData(&format, &medium, false);
+	}
+
+	::GlobalFree(medium.hGlobal);
+
+	// ANSI text format and locale
+	hr = S_OK;
+	UINT codePage = CP_ACP;
+	wchar_t codePageString[6];
+	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, MANAH_COUNTOF(codePageString))) {
+		wchar_t* eob;
+		codePage = wcstoul(codePageString, &eob, 10);
+		format.cfFormat = CF_TEXT;
+		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
+			manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
+			if(ansiBuffer.get() != 0) {
+				ansiLength = ::WideCharToMultiByte(codePage, 0,
+					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
+				if(ansiLength != 0) {
+					if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
+						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
+							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
+							temp[ansiLength] = 0;
+							::GlobalUnlock(medium.hGlobal);
+							hr = o->SetData(&format, &medium, false);
+						} else
+							hr = E_FAIL;
+						::GlobalFree(medium.hGlobal);
+						if(SUCCEEDED(hr)) {
+							format.cfFormat = CF_LOCALE;
+							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
+								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
+									*lcid = caret.clipboardLocale();
+									hr = o->SetData(&format, &medium, false);
+								}
+								::GlobalUnlock(medium.hGlobal);
+								::GlobalFree(medium.hGlobal);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if(rtf) {
+		const CLIPFORMAT rtfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format"));	// CF_RTF
+		const CLIPFORMAT rtfWithoutObjectsFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format Without Objects"));	// CF_RTFNOOBJS
+		// TODO: implement the follow...
+	}
+
+	content = o;
+	return S_OK;
+}
+
+/**
  * Returns the text content from the given data object.
  * @param data the data object
  * @param[out] rectangle true if the data is rectangle format. can be @c null
@@ -692,102 +789,6 @@ void Caret::clearSelection() {
 	endRectangleSelection();
 	leaveAnchorNext_ = false;
 	moveTo(*this);
-}
-
-/**
- * Creates an IDataObject represents the selected content.
- * @param rtf set true if the content is available as Rich Text Format. this feature is not
- * implemented yet and the parameter is ignored
- * @param[out] content the data object
- * @retval S_OK succeeded
- * @retval E_OUTOFMEMORY failed to allocate memory for @a content
- */
-HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
-	GenericDataObject* o = new(nothrow) GenericDataObject();
-	if(o == 0)
-		return E_OUTOFMEMORY;
-	o->AddRef();
-
-	// get text on the given region
-	const String text(selectedString(*this, NLF_CR_LF));
-
-	// register datas...
-	FORMATETC format;
-	format.ptd = 0;
-	format.dwAspect = DVASPECT_CONTENT;
-	format.lindex = -1;
-	format.tymed = TYMED_HGLOBAL;
-	STGMEDIUM medium;
-	medium.tymed = TYMED_HGLOBAL;
-	medium.pUnkForRelease = 0;
-
-	// Unicode text format
-	format.cfFormat = CF_UNICODETEXT;
-	medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (text.length() + 1));
-	if(medium.hGlobal == 0) {
-		o->Release();
-		return E_OUTOFMEMORY;
-	}
-	wcscpy(static_cast<wchar_t*>(::GlobalLock(medium.hGlobal)), text.c_str());
-	::GlobalUnlock(medium.hGlobal);
-	HRESULT hr = o->SetData(&format, &medium, false);
-
-	// rectangle text format
-	if(isSelectionRectangle()) {
-		if(0 != (format.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))))
-			hr = o->SetData(&format, &medium, false);
-	}
-
-	::GlobalFree(medium.hGlobal);
-
-	// ANSI text format and locale
-	hr = S_OK;
-	UINT codePage = CP_ACP;
-	wchar_t codePageString[6];
-	if(0 != ::GetLocaleInfoW(clipboardLocale_, LOCALE_IDEFAULTANSICODEPAGE, codePageString, MANAH_COUNTOF(codePageString))) {
-		wchar_t* eob;
-		codePage = wcstoul(codePageString, &eob, 10);
-		format.cfFormat = CF_TEXT;
-		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
-			manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
-			if(ansiBuffer.get() != 0) {
-				ansiLength = ::WideCharToMultiByte(codePage, 0,
-					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
-				if(ansiLength != 0) {
-					if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
-						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
-							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
-							temp[ansiLength] = 0;
-							::GlobalUnlock(medium.hGlobal);
-							hr = o->SetData(&format, &medium, false);
-						} else
-							hr = E_FAIL;
-						::GlobalFree(medium.hGlobal);
-						if(SUCCEEDED(hr)) {
-							format.cfFormat = CF_LOCALE;
-							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
-								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
-									*lcid = clipboardLocale_;
-									hr = o->SetData(&format, &medium, false);
-								}
-								::GlobalUnlock(medium.hGlobal);
-								::GlobalFree(medium.hGlobal);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if(rtf) {
-		const CLIPFORMAT rtfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format"));	// CF_RTF
-		const CLIPFORMAT rtfWithoutObjectsFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format Without Objects"));	// CF_RTFNOOBJS
-		// TODO: implement the follow...
-	}
-
-	content = o;
-	return S_OK;
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
@@ -1725,7 +1726,7 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 		return;
 
 	IDataObject* content;
-	HRESULT hr = caret.createTextObject(true, content);
+	HRESULT hr = utils::createTextObjectForSelectedString(caret, true, content);
 	if(hr == E_OUTOFMEMORY)
 		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
 	hr = tryOleClipboard(::OleSetClipboard, content);

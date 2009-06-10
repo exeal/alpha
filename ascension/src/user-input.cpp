@@ -1390,7 +1390,7 @@ HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
 	const Caret& caret = viewer_->caret();
 	HRESULT hr;
 
-	if(FAILED(hr = viewer_->caret().createTextObject(true, *draggingContent.initialize())))
+	if(FAILED(hr = utils::createTextObjectForSelectedString(viewer_->caret(), true, *draggingContent.initialize())))
 		return hr;
 	if(!caret.isSelectionRectangle())
 		dnd_.numberOfRectangleLines = 0;
