@@ -216,7 +216,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		if(altPressed)
 			break;
 		else if(!shiftPressed) {
-			if(controlPressed)	caret().copySelection(true);
+			if(controlPressed)	copySelection(caret(), true);
 			else				OvertypeModeToggleCommand(*this)();
 		} else if(controlPressed)
 			PasteCommand(*this, false)();
@@ -229,7 +229,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 			else
 				CharacterDeletionCommand(*this, Direction::FORWARD)();
 		} else if(!controlPressed)
-			caret().cutSelection(true);
+			cutSelection(caret(), true);
 		else
 			break;
 		return true;
@@ -239,7 +239,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		break;
 	case 'C':	// ^C -> Copy
 		if(controlPressed)
-			return caret().copySelection(true), true;
+			return copySelection(caret(), true), true;
 		break;
 	case 'H':	// ^H -> Backspace
 		if(controlPressed)
@@ -260,7 +260,7 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		break;
 	case 'X':	// ^X -> Cut
 		if(controlPressed)
-			return caret().cutSelection(true), true;
+			return cutSelection(caret(), true), true;
 		break;
 	case 'Y':	// ^Y -> Redo
 		if(controlPressed)
@@ -304,10 +304,10 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 		UndoCommand(*this, true)();
 		break;
 	case WM_CUT:	// "Cut"
-		caret().cutSelection(true);
+		cutSelection(caret(), true);
 		break;
 	case WM_COPY:	// "Copy"
-		caret().copySelection(true);
+		copySelection(caret(), true);
 		break;
 	case WM_PASTE:	// "Paste"
 		PasteCommand(*this, false)();

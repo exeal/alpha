@@ -695,34 +695,6 @@ void Caret::clearSelection() {
 }
 
 /**
- * Copies the selected content to the clipboard.
- * If the caret does not have a selection, this method does nothing.
- * @param useKillRing set @c true to send to the kill ring, not only the system clipboard
- * @throw ClipboardException the clipboard operation failed
- * @throw bad_alloc internal memory allocation failed
- */
-void Caret::copySelection(bool useKillRing) {
-	if(isSelectionEmpty(*this))
-		return;
-
-	IDataObject* content;
-	HRESULT hr = createTextObject(true, content);
-	if(hr == E_OUTOFMEMORY)
-		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
-	hr = tryOleClipboard(::OleSetClipboard, content);
-	if(FAILED(hr)) {
-		content->Release();
-		throw ClipboardException(hr);
-	}
-	hr = tryOleClipboard(::OleFlushClipboard);
-	content->Release();
-	if(useKillRing) {
-		if(texteditor::Session* const session = document().session())
-			session->killRing().addNew(selectedString(*this, NLF_RAW_VALUE), isSelectionRectangle());
-	}
-}
-
-/**
  * Creates an IDataObject represents the selected content.
  * @param rtf set true if the content is available as Rich Text Format. this feature is not
  * implemented yet and the parameter is ignored
@@ -816,33 +788,6 @@ HRESULT Caret::createTextObject(bool rtf, IDataObject*& content) const {
 
 	content = o;
 	return S_OK;
-}
-
-/**
- * Copies and deletes the selected text. If the selection is empty, this method does nothing.
- * @param useKillRing true to send also the kill ring
- * @return false if the change was interrupted
- * @throw ClipboardException the clipboard operation failed
- * @throw bad_alloc internal memory allocation failed
- * @throw ... any exceptions @c Document#insert and @c Document#erase throw
- */
-void Caret::cutSelection(bool useKillRing) {
-	if(isSelectionEmpty(*this))
-		return;
-
-	com::ComPtr<IDataObject> previousContent;
-	HRESULT hr = tryOleClipboard(::OleGetClipboard, previousContent.initialize());
-	if(hr == E_OUTOFMEMORY)
-		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
-	else if(FAILED(hr))
-		throw ClipboardException(hr);
-	copySelection(useKillRing);	// this may throw
-	try {
-		viewers::eraseSelection(*this);
-	} catch(...) {
-		hr = tryOleClipboard(::OleSetClipboard, previousContent.get());
-		throw;
-	}
 }
 
 /// @see kernel#IDocumentListener#documentAboutToBeChanged
@@ -1765,6 +1710,63 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 		s.assign(sb.str());
 	}
 	return viewers::replaceSelection(caret, s);
+}
+
+/**
+ * Copies the selected content to the clipboard.
+ * If the caret does not have a selection, this function does nothing.
+ * @param caret the caret gives the selection
+ * @param useKillRing set @c true to send to the kill ring, not only the system clipboard
+ * @throw ClipboardException the clipboard operation failed
+ * @throw bad_alloc internal memory allocation failed
+ */
+void viewers::copySelection(Caret& caret, bool useKillRing) {
+	if(isSelectionEmpty(caret))
+		return;
+
+	IDataObject* content;
+	HRESULT hr = caret.createTextObject(true, content);
+	if(hr == E_OUTOFMEMORY)
+		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
+	hr = tryOleClipboard(::OleSetClipboard, content);
+	if(FAILED(hr)) {
+		content->Release();
+		throw ClipboardException(hr);
+	}
+	hr = tryOleClipboard(::OleFlushClipboard);
+	content->Release();
+	if(useKillRing) {
+		if(texteditor::Session* const session = caret.document().session())
+			session->killRing().addNew(selectedString(caret, NLF_RAW_VALUE), caret.isSelectionRectangle());
+	}
+}
+
+/**
+ * Copies and deletes the selected text. If the selection is empty, this function does nothing.
+ * @param caret the caret gives the selection
+ * @param useKillRing true to send also the kill ring
+ * @return false if the change was interrupted
+ * @throw ClipboardException the clipboard operation failed
+ * @throw bad_alloc internal memory allocation failed
+ * @throw ... any exceptions @c Document#replace throws
+ */
+void viewers::cutSelection(Caret& caret, bool useKillRing) {
+	if(isSelectionEmpty(caret))
+		return;
+
+	com::ComPtr<IDataObject> previousContent;
+	HRESULT hr = tryOleClipboard(::OleGetClipboard, previousContent.initialize());
+	if(hr == E_OUTOFMEMORY)
+		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
+	else if(FAILED(hr))
+		throw ClipboardException(hr);
+	copySelection(caret, useKillRing);	// this may throw
+	try {
+		viewers::eraseSelection(caret);
+	} catch(...) {
+		hr = tryOleClipboard(::OleSetClipboard, previousContent.get());
+		throw;
+	}
 }
 
 /**
