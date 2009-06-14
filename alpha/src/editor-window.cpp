@@ -355,6 +355,7 @@ namespace {
 	py::object activeWindow() {
 		return EditorWindows::instance().activePane().self();
 	}
+
 	py::object bufferOfPoint(const Point& p) {
 		return static_cast<const Buffer&>(p.document()).self();
 	}
@@ -365,11 +366,28 @@ namespace {
 		activateWindow(window);
 		EditorWindows::instance().removeActivePane();
 	}
+
+	void extendSelection(Caret& caret, py::object to) {
+		if(py::extract<const Position&>(to).check())
+			caret.extendSelection(static_cast<Position>(py::extract<Position>(to)));
+		else if(py::extract<const VerticalDestinationProxy&>(to).check())
+			caret.extendSelection(static_cast<VerticalDestinationProxy>(py::extract<VerticalDestinationProxy>(to)));
+		else if(py::extract<const Point&>(to).check())
+			caret.extendSelection(static_cast<const Point&>(py::extract<const Point&>(to)).position());
+		else {
+			::PyErr_BadArgument();
+			py::throw_error_already_set();
+		}
+	}
+
+	template<const VisualPoint& (Caret::*procedure)() const>
+	Position positionOfCaret(const Caret& c) {return (c.*procedure)().position();}
+
 	py::object selectedBuffer(const EditorWindow& window) {
 		return window.visibleBuffer().self();
 	}
 	py::object selectedTextEditor(const EditorWindow& window) {
-		return py::object();
+		return window.visibleView().asTextEditor();
 	}
 	void selectInWindow(EditorWindow& window, py::object o) {
 		Buffer* buffer = 0;	// buffer to select
@@ -414,6 +432,7 @@ namespace {
 ALPHA_EXPOSE_PROLOGUE()
 	py::scope temp(Interpreter::instance().toplevelPackage());
 
+	py::class_<VerticalDestinationProxy>("_VerticalDestinationProxy", py::no_init);
 	py::class_<Point>("Point", py::init<Buffer&, const Position&>())
 		.add_property("adapts_to_buffer", &Point::adaptsToDocument,
 			py::make_function(&Point::adaptToDocument, py::return_value_policy<py::reference_existing_object>()))
@@ -427,7 +446,31 @@ ALPHA_EXPOSE_PROLOGUE()
 		.add_property("position", py::make_function(&Point::position, py::return_value_policy<py::copy_const_reference>()))
 		.def("is_buffer_deleted", &Point::isDocumentDisposed)
 		.def<void (Point::*)(const Position&)>("move_to", &Point::moveTo);
-	py::class_<Caret, py::bases<>, Caret, boost::noncopyable>("_Caret", py::no_init);
+	py::class_<Caret, py::bases<>, Caret, boost::noncopyable>("_Caret", py::no_init)
+		.add_property("anchor", &positionOfCaret<&Caret::anchor>)
+		.add_property("beginning", &positionOfCaret<&Caret::beginning>)
+		.add_property("end", &positionOfCaret<&Caret::end>)
+		.add_property("selected_region", &Caret::selectedRegion)
+		.def("begin_rectangle_selection", &Caret::beginRectangleSelection)
+		.def("clear_selection", &Caret::clearSelection)
+		.def("copy_selection", &copySelection)
+		.def("cut_selection", &cutSelection)
+		.def("delete_selection", &eraseSelection)
+		.def("end_rectangle_selection", &Caret::endRectangleSelection)
+		.def("extend_selection", &extendSelection)
+		.def("input_character", &Caret::inputCharacter,
+			(py::arg("character"), py::arg("validate_sequence") = true, py::arg("block_controls") = true))
+		.def("is_overtype_mode", &Caret::isOvertypeMode)
+		.def("is_selection_empty", &isSelectionEmpty)
+		.def("is_selection_rectangle", &Caret::isSelectionRectangle)
+		.def("paste", &Caret::paste, py::arg("use_killring") = false)
+		.def("replace_selection", &replaceSelection, (py::arg("text"), py::arg("rectangle_insertion") = false))
+		.def<void (Caret::*)(const Region&)>("select", &Caret::select)
+		.def("select_word", &selectWord)
+		.def<ascension::String (*)(const Caret&, Newline)>("selected_string", &selectedString, py::arg("newline") = NLF_RAW_VALUE)
+		.def("set_overtype_mode", &Caret::setOvertypeMode, py::arg("set") = true, py::return_value_policy<py::reference_existing_object>())
+/*		.def("show_automatically", &Caret::showAutomatically)
+		.def("shows_automatically", &Caret::showsAutomatically)*/;
 	py::class_<EditorView, py::bases<>, EditorView, boost::noncopyable>("_TextEditor", py::no_init)
 		.add_property("buffer", &bufferOfTextEditor)
 		.add_property("caret", &EditorView::asCaret);
