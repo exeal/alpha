@@ -125,11 +125,11 @@ namespace alpha {
 
 	/// Returns the script object corresponding to the text editor.
 	inline boost::python::object EditorView::asCaret() const {
-		if(asCaret_ == boost::python::object()) asCaret_ = boost::python::object(*this); return asCaret_;}
+		if(asCaret_ == boost::python::object()) asCaret_ = boost::python::object(boost::python::ptr(&caret())); return asCaret_;}
 
 	/// Returns the script object corresponding to the caret.
 	inline boost::python::object EditorView::asTextEditor() const {
-		if(asTextEditor_ == boost::python::object()) asTextEditor_ = boost::python::object(*this); return asTextEditor_;}
+		if(asTextEditor_ == boost::python::object()) asTextEditor_ = boost::python::object(boost::python::ptr(this)); return asTextEditor_;}
 
 	/// Returns the script object corresponding to the window.
 	inline boost::python::object EditorWindow::self() const {
