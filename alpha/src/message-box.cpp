@@ -30,7 +30,7 @@ namespace {
 	};
 }
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(20)
 	py::scope module(ambient::Interpreter::instance().module("ui"));
 
 	py::class_<MessageBox> klass("MessageBox", py::no_init);

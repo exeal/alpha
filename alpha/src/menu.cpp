@@ -284,7 +284,7 @@ void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	}
 }
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(21)
 	py::scope temp(ambient::Interpreter::instance().module("ui"));
 
 	py::class_<Menu>("_Menu", py::no_init)

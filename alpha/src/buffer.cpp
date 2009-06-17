@@ -1376,7 +1376,7 @@ namespace {
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
 }
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(1)
 	py::scope temp(Interpreter::instance().toplevelPackage());
 
 	py::enum_<locations::CharacterUnit>("CharacterUnit")

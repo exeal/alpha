@@ -7,7 +7,7 @@
 #include <manah/object.hpp>	// MANAH_NONCOPYABLE_TAG
 #define BOOST_PYTHON_STATIC_LIB
 #include <boost/python.hpp>
-#include <stack>
+#include <list>
 
 namespace alpha {
 	namespace ambient {
@@ -18,7 +18,7 @@ namespace alpha {
 			MANAH_NONCOPYABLE_TAG(Interpreter);
 		public:
 			~Interpreter() /*throw()*/;
-			void addInstaller(void (*installer)());
+			void addInstaller(void (*installer)(), manah::uint order);
 			boost::python::object executeFile(boost::python::str fileName);
 			void handleException();
 			void install();
@@ -29,8 +29,12 @@ namespace alpha {
 		private:
 			Interpreter();
 		private:
+			struct Installer {
+				manah::uint order;
+				void (*function)();
+			};
 			boost::python::object package_;
-			std::stack<void (*)()> installers_;
+			std::list<Installer> installers_;
 		};
 
 		inline void Interpreter::throwLastWin32Error() {
@@ -51,17 +55,18 @@ namespace alpha {
 	}
 }
 
-#define ALPHA_EXPOSE_PROLOGUE()	\
-	namespace {					\
+#define ALPHA_EXPOSE_PROLOGUE(order)				\
+	namespace {										\
+	const manah::uint installationOrder = order;	\
 		void installAPIs() {
 
-#define ALPHA_EXPOSE_EPILOGUE()														\
-		}																			\
-		struct Exposer {															\
-			Exposer() {																\
-				alpha::ambient::Interpreter::instance().addInstaller(&installAPIs);	\
-			}																		\
-		} exposer;																	\
+#define ALPHA_EXPOSE_EPILOGUE()																			\
+		}																								\
+		struct Exposer {																				\
+			Exposer() {																					\
+				alpha::ambient::Interpreter::instance().addInstaller(&installAPIs, installationOrder);	\
+			}																							\
+		} exposer;																						\
 	}
 
 
