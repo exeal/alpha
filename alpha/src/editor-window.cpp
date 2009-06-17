@@ -429,7 +429,7 @@ namespace {
 	}
 }
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(2)
 	py::scope temp(Interpreter::instance().toplevelPackage());
 
 	py::class_<VerticalDestinationProxy>("_VerticalDestinationProxy", py::no_init);
@@ -452,6 +452,7 @@ ALPHA_EXPOSE_PROLOGUE()
 		.add_property("end", &positionOfCaret<&Caret::end>)
 		.add_property("selected_region", &Caret::selectedRegion)
 		.def("begin_rectangle_selection", &Caret::beginRectangleSelection)
+		.def("can_paste", &Caret::canPaste, py::arg("use_killring") = false)
 		.def("clear_selection", &Caret::clearSelection)
 		.def("copy_selection", &copySelection)
 		.def("cut_selection", &cutSelection)

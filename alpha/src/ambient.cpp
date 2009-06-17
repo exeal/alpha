@@ -35,8 +35,16 @@ Interpreter::~Interpreter() {
 //	::Py_Finalize();
 }
 
-void Interpreter::addInstaller(void (*installer)()) {
-	installers_.push(installer);
+void Interpreter::addInstaller(void (*installer)(), manah::uint order) {
+	list<Installer>::iterator i(installers_.begin());
+	for(const list<Installer>::iterator e(installers_.end()); i != e; ++i) {
+		if(i->order == order)
+			throw invalid_argument("");
+		else if(i->order > order)
+			break;
+	}
+	Installer newInstaller = {order, installer};
+	installers_.insert(i, newInstaller);
 }
 
 void Interpreter::handleException() {
@@ -68,10 +76,9 @@ void Interpreter::handleException() {
 }
 
 void Interpreter::install() {
-	while(!installers_.empty()) {
-		(*installers_.top())();
-		installers_.pop();
-	}
+	for(list<Installer>::const_iterator i(installers_.begin()), e(installers_.end()); i != e; ++i)
+		(*i->function)();
+	installers_.clear();
 }
 
 Interpreter& Interpreter::instance() {

@@ -103,7 +103,7 @@ namespace {
 	template<bool redo> bool undo(EditorView& ed, py::ssize_t n) {return UndoCommand(ed, redo).setNumericPrefix(static_cast<long>(n))();}
 } // namespace @0
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(10)
 	py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
 
 	py::def("backward_bookmark",

@@ -60,7 +60,7 @@ namespace {
 	}
 }
 
-ALPHA_EXPOSE_PROLOGUE()
+ALPHA_EXPOSE_PROLOGUE(22)
 	py::scope temp(alpha::ambient::Interpreter::instance().module("ui"));
 
 	py::def("about_dialog", &aboutDialog);
