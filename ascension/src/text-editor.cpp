@@ -439,7 +439,11 @@ bool CharacterInputCommand::perform() {
 				return true;
 			}
 		}
-		return target().caret().inputCharacter(c_);
+		try {
+			return target().caret().inputCharacter(c_);
+		} catch(const DocumentCantChangeException&) {
+			return false;
+		}
 	} else {
 		ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 		if(numericPrefix() > 0) {

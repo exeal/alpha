@@ -988,7 +988,7 @@ namespace {
  * @retval false the input was rejected by the input sequence validation (when @a validateSequence
  *               was @c true)
  * @return false @c character was control character and blocked (when @a blockControls was @c true)
- * @throw ... any exceptions @c Document#insert and @c Document#erase throw
+ * @throw ... any exceptions @c Document#insertUndoBoundary and @c Caret#replaceSelection throw
  * @see #isOvertypeMode, #setOvertypeMode, texteditor#commands#TextInputCommand
  */
 bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true */, bool blockControls /* = true */) {

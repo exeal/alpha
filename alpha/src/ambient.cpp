@@ -102,3 +102,22 @@ py::object Interpreter::module(const char* name) {
 	}
 	return ambient.attr(name);
 }
+
+namespace {
+	py::object recoverableErrorObject;
+	void raiseRecoverableError(py::object value) {
+		::PyErr_SetObject(recoverableErrorObject.ptr(), value.ptr());
+		py::throw_error_already_set();
+	}
+}
+
+py::object Interpreter::toplevelPackage() {
+	if(package_ == py::object()) {
+		package_ = py::object(py::borrowed(::Py_InitModule("ambient", 0)));
+		recoverableErrorObject = py::object(py::handle<>(::PyErr_NewException("ambient.RecoverableError", 0, 0)));
+		::PyModule_AddObject(package_.ptr(), "RecoverableError", recoverableErrorObject.ptr());
+		py::scope temp(package_);
+		py::def("error", &raiseRecoverableError);
+	}
+	return package_;
+}
