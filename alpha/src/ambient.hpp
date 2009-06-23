@@ -46,12 +46,6 @@ namespace alpha {
 			boost::python::object ns(boost::python::import("__main__").attr("__dict__"));
 			return boost::python::exec_file(fileName, ns, ns);
 		}
-
-		inline boost::python::object Interpreter::toplevelPackage() {
-			if(package_ == boost::python::object())
-				package_ = boost::python::object(boost::python::borrowed(::Py_InitModule("ambient", 0)));
-			return package_;
-		}
 	}
 }
 
