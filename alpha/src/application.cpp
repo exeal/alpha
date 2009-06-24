@@ -1402,6 +1402,7 @@ void Alpha::onSize(UINT type, int cx, int cy) {
 
 /// @see WM_TIMER
 void Alpha::onTimer(UINT timerID) {
+	return;
 	if(timerID == ID_TIMER_QUERYCOMMAND && BufferList::instance().numberOfBuffers() != 0) {
 		// ツールバーアイテムの有効化/無効化
 		if(toolbar_.isWindow() && toolbar_.isVisible()) {

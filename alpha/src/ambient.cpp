@@ -47,6 +47,34 @@ void Interpreter::addInstaller(void (*installer)(), manah::uint order) {
 	installers_.insert(i, newInstaller);
 }
 
+namespace {
+	py::object recoverableErrorClass;
+	void raiseRecoverableError(py::object value) {
+		::PyErr_SetObject(recoverableErrorClass.ptr(), value.ptr());
+		py::throw_error_already_set();
+	}
+}
+
+py::object Interpreter::executeCommand(py::object command) {
+	try {
+		return command();
+	} catch(py::error_already_set&) {
+		if(::PyErr_ExceptionMatches(recoverableErrorClass.ptr()) != 0) {
+			PyObject* type;
+			PyObject* value;
+			PyObject* traceback;
+			::PyErr_Fetch(&type, &value, &traceback);
+			if(type != 0 && value != 0) {
+				::MessageBoxW(Alpha::instance().getMainWindow().use(), toWideString(value).c_str(), L"Alpha", MB_ICONEXCLAMATION);
+				return py::object();
+			}
+			::PyErr_Restore(type, value, traceback);
+		}
+		handleException();
+	}
+	return py::object();
+}
+
 void Interpreter::handleException() {
 	if(0 == ::PyErr_Occurred())
 		return;
@@ -60,7 +88,8 @@ void Interpreter::handleException() {
 		if(tracebackModule != py::object()) {
 			py::object formatException(tracebackModule.attr("format_exception"));
 			if(formatException != py::object()) {
-				const py::list li(formatException(py::handle<>(type), py::handle<>(value), py::handle<>(py::allow_null(traceback))));
+				const py::list li(formatException(py::handle<>(py::borrowed(type)),
+					py::handle<>(py::borrowed(value)), py::handle<>(py::borrowed(py::allow_null(traceback)))));
 				if(li != py::object()) {
 					for(py::ssize_t i = 0, c = py::len(li); i < c; ++i)
 						out << ::PyString_AsString(py::object(li[i]).ptr());
@@ -103,19 +132,11 @@ py::object Interpreter::module(const char* name) {
 	return ambient.attr(name);
 }
 
-namespace {
-	py::object recoverableErrorObject;
-	void raiseRecoverableError(py::object value) {
-		::PyErr_SetObject(recoverableErrorObject.ptr(), value.ptr());
-		py::throw_error_already_set();
-	}
-}
-
 py::object Interpreter::toplevelPackage() {
 	if(package_ == py::object()) {
 		package_ = py::object(py::borrowed(::Py_InitModule("ambient", 0)));
-		recoverableErrorObject = py::object(py::handle<>(::PyErr_NewException("ambient.RecoverableError", 0, 0)));
-		::PyModule_AddObject(package_.ptr(), "RecoverableError", recoverableErrorObject.ptr());
+		recoverableErrorClass = py::object(py::handle<>(::PyErr_NewException("ambient.RecoverableError", 0, 0)));
+		::PyModule_AddObject(package_.ptr(), "RecoverableError", recoverableErrorClass.ptr());
 		py::scope temp(package_);
 		py::def("error", &raiseRecoverableError);
 	}

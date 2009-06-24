@@ -275,12 +275,8 @@ void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
 	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0) {
-		if(PyObject* command = reinterpret_cast<PyObject*>(mi.dwItemData)) {
-			if(toBoolean(::PyCallable_Check(command))) {
-				PyObject* temp = ::PyObject_CallObject(command, 0);
-				Py_XDECREF(temp);
-			}
-		}
+		if(PyObject* command = reinterpret_cast<PyObject*>(mi.dwItemData))
+			Interpreter::instance().executeCommand(py::object(py::handle<>(py::borrowed(command))));
 	}
 }
 

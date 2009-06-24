@@ -1362,7 +1362,15 @@ void BufferList::updateTitleBar() {
 
 namespace {
 	py::object activeBuffer() {return EditorWindows::instance().activeBuffer().self();}
-	py::object bufferAt(const BufferList& buffers, py::ssize_t at) {return buffers.at(at).self();}
+	py::object bufferAt(const BufferList& buffers, py::ssize_t at) {
+		try {
+			return buffers.at(at).self();
+		} catch(const out_of_range& e) {
+			::PyErr_SetString(PyExc_IndexError, e.what());
+			py::throw_error_already_set();
+		}
+		return py::object();
+	}
 	py::object buffers() {return BufferList::instance().self();}
 	void closeBuffer(Buffer& buffer) {BufferList::instance().close(buffer);}
 	string encodingOfBuffer(const Buffer& buffer) {return buffer.textFile().encoding();}
