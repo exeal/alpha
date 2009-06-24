@@ -19,6 +19,7 @@ namespace alpha {
 		public:
 			~Interpreter() /*throw()*/;
 			void addInstaller(void (*installer)(), manah::uint order);
+			boost::python::object executeCommand(boost::python::object command);
 			boost::python::object executeFile(boost::python::str fileName);
 			void handleException();
 			void install();
