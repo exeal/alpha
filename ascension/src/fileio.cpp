@@ -588,7 +588,7 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
  * @param document the document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) :
-		document_(document), encoding_(Encoder::getDefault().properties().name()),
+		document_(document), encoding_(Encoder::defaultInstance().properties().name()),
 		unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
 #ifdef ASCENSION_WINDOWS
 		INVALID_HANDLE_VALUE
@@ -655,7 +655,7 @@ void TextFileDocumentInput::close() {
 			document_.setInput(0, false);	// unbind
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-		setEncoding(Encoder::getDefault().properties().name());
+		setEncoding(Encoder::defaultInstance().properties().name());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
