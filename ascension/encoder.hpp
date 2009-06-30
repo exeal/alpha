@@ -331,6 +331,8 @@ namespace ascension {
 			Result toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
 			String toUnicode(const std::string& from);
 			// factory
+			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
+			static Encoder& defaultInstance() /*throw()*/;
 			static std::auto_ptr<Encoder> forCCSID(int ccsid) /*throw()*/;
 			static std::auto_ptr<Encoder> forCPGID(int cpgid) /*throw()*/;
 			static std::auto_ptr<Encoder> forID(std::size_t id) /*throw()*/;
@@ -339,8 +341,6 @@ namespace ascension {
 			static std::auto_ptr<Encoder> forWindowsCodePage(uint codePage) /*throw()*/;
 			static bool supports(MIBenum mib) /*throw()*/;
 			static bool supports(const std::string& name) /*throw()*/;
-			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
-			static Encoder& getDefault() /*throw()*/;
 			static void registerFactory(EncoderFactory& newFactory);
 
 		protected:
@@ -362,7 +362,8 @@ namespace ascension {
 			 * Converts the given string from the native encoding into UTF-16.
 			 * @param[out] to the beginning of the destination buffer
 			 * @param[out] toEnd the end of the destination buffer
-			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
+			 * @param[out] toNext points the first unaltered character in the destination buffer
+			 *             after the conversion
 			 * @param[in] from the beginning of the buffer to be converted
 			 * @param[in] fromEnd the end of the buffer to be converted
 			 * @param[in] fromNext points to the first unconverted character after the conversion
@@ -414,7 +415,8 @@ namespace ascension {
 			 * @param first the beginning of the sequence
 			 * @param last the end of the sequence
 			 * @param[out] convertibleBytes the number of bytes (from @a first) absolutely
-			 * detected. the value can't exceed the result of (@a last - @a first). may be @c null
+			 *             detected. the value can't exceed the result of (@a last - @a first).
+			 *             may be @c null
 			 * @return the MIBenum value and the name of the detected encoding
 			 */
 			virtual std::pair<MIBenum, std::string> doDetect(
@@ -615,9 +617,9 @@ namespace ascension {
 		/**
 		 * Returns informations for all available encodings.
 		 * @param[out] out the output iterator to receive pairs consist of the enumeration
-		 * identifier and the encoding information. the expected type of the pair is
-		 * @c std#pair<std::size_t, const IEncodingProperties*>. the enumeration identifier can be
-		 * used with @c #forID method.
+		 *             identifier and the encoding information. the expected type of the pair is
+		 *             @c std#pair&lt;std::size_t, const IEncodingProperties*&gt;. the enumeration
+		 *             identifier can be used with @c #forID method.
 		 */
 		template<typename OutputIterator> inline void Encoder::availableEncodings(OutputIterator out) {
 			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out) *out = std::make_pair<std::size_t, const IEncodingProperties*>(i, registry()[i]);}

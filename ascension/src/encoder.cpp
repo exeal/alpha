@@ -124,7 +124,7 @@ Encoder::~Encoder() /*throw()*/ {
 }
 
 /**
- * Returns true if the given character can be fully encoded with this encoding. This calls
+ * Returns @c true if the given character can be fully encoded with this encoding. This calls
  * @c #resetEncodingState method.
  * @param c the code point of the character
  * @return succeeded or not
@@ -138,7 +138,7 @@ bool Encoder::canEncode(CodePoint c) {
 }
 
 /**
- * Returns true if the given string can be fully encoded with this encoding. This calls
+ * Returns @c true if the given string can be fully encoded with this encoding. This calls
  * @c #resetEncodingState method.
  * @param first the beginning of the string
  * @param last the end of the string
@@ -162,13 +162,23 @@ bool Encoder::canEncode(const Char* first, const Char* last) {
 
 
 /**
- * Returns true if the given string can be fully encoded with this encoding. This calls
+ * Returns @c true if the given string can be fully encoded with this encoding. This calls
  * @c #resetEncodingState method.
  * @param s the string
  * @return succeeded or not
  */
 bool Encoder::canEncode(const String& s) {
 	return canEncode(s.data(), s.data() + s.length());
+}
+
+/// Returns the default encoder.
+Encoder& Encoder::defaultInstance() /*throw()*/ {
+//#ifdef ASCENSION_WINDOWS
+//	return convertWin32CPtoMIB(::GetACP());
+//#else
+	static auto_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
+	return *instance;
+//#endif /* ASCENSION_WINDOWS */
 }
 
 EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
@@ -302,16 +312,6 @@ string Encoder::fromUnicode(const String& from) {
 	return string(temp.get(), toNext);
 }
 
-/// Returns the default encoder.
-Encoder& Encoder::getDefault() /*throw()*/ {
-//#ifdef ASCENSION_WINDOWS
-//	return convertWin32CPtoMIB(::GetACP());
-//#else
-	static auto_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
-	return *instance;
-//#endif /* ASCENSION_WINDOWS */
-}
-
 /**
  * Registers the new encoder factory.
  * @param newFactory the encoder factory
@@ -371,12 +371,12 @@ Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
 	return *this;
 }
 
-/// Returns true if supports the encoding has the given MIBenum value.
+/// Returns @c true if supports the encoding has the given MIBenum value.
 bool Encoder::supports(MIBenum mib) /*throw()*/ {
 	return find(mib) != 0;
 }
 
-/// Returns true if supports the encoding has to the given name or alias.
+/// Returns @c true if supports the encoding has to the given name or alias.
 bool Encoder::supports(const string& name) /*throw()*/ {
 	return find(name) != 0;
 }
@@ -449,7 +449,7 @@ EncodingDetector::~EncodingDetector() /*throw()*/ {
  * @param first the beginning of the sequence
  * @param last the end of the sequence
  * @param[out] convertibleBytes the number of bytes (from @a first) absolutely detected. the value
- * can't exceed the result of (@a last - @a first). can be @c null if not needed
+ *             can't exceed the result of (@a last - @a first). can be @c null if not needed
  * @return the MIBenum and the name of the detected encoding
  * @throw NullPointerException @a first or @last is @c null
  * @throw std#invalid_argument @c first is greater than @a last
@@ -535,7 +535,7 @@ pair<MIBenum, string> UniversalDetector::doDetect(const byte* first, const byte*
 	availableNames(back_inserter(names));
 
 	pair<MIBenum, string> result = make_pair(
-		Encoder::getDefault().properties().mibEnum(), Encoder::getDefault().properties().name());
+		Encoder::defaultInstance().properties().mibEnum(), Encoder::defaultInstance().properties().name());
 	ptrdiff_t bestScore = 0, score;
 	for(vector<string>::const_iterator name(names.begin()), e(names.end()); name != e; ++name) {
 		if(const EncodingDetector* detector = forName(*name)) {
