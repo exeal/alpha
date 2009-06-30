@@ -38,7 +38,7 @@ Interpreter::~Interpreter() {
 void Interpreter::addInstaller(void (*installer)(), manah::uint order) {
 	list<Installer>::iterator i(installers_.begin());
 	for(const list<Installer>::iterator e(installers_.end()); i != e; ++i) {
-		if(i->order == order)
+		if(order != LOWEST_INSTALLATION_ORDER && i->order == order)
 			throw invalid_argument("");
 		else if(i->order > order)
 			break;

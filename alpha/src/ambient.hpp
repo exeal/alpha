@@ -17,6 +17,8 @@ namespace alpha {
 		class Interpreter {
 			MANAH_NONCOPYABLE_TAG(Interpreter);
 		public:
+			static const manah::uint LOWEST_INSTALLATION_ORDER = static_cast<manah::uint>(-1);
+		public:
 			~Interpreter() /*throw()*/;
 			void addInstaller(void (*installer)(), manah::uint order);
 			boost::python::object executeCommand(boost::python::object command);

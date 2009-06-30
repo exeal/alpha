@@ -11,6 +11,7 @@
 #include <manah/win32/ui/dialog.hpp>
 #include <manah/win32/ui/link-label.hpp>
 
+using namespace alpha::ambient;
 namespace py = boost::python;
 
 
@@ -60,8 +61,8 @@ namespace {
 	}
 }
 
-ALPHA_EXPOSE_PROLOGUE(22)
-	py::scope temp(alpha::ambient::Interpreter::instance().module("ui"));
+ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
+	py::scope temp(Interpreter::instance().module("ui"));
 
 	py::def("about_dialog", &aboutDialog);
 ALPHA_EXPOSE_EPILOGUE()

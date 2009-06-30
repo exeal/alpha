@@ -249,13 +249,6 @@
 			<File
 				RelativePath="..\src\about-dialog.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\ambient.cpp"
@@ -306,26 +299,16 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\file-dialog.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\src\goto-line-dialog.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\intrinsic.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\menu.cpp"
