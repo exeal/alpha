@@ -16,7 +16,6 @@
 #include "../resource/messages.h"
 #include <manah/win32/ui/wait-cursor.hpp>
 #include <manah/com/common.hpp>	// ComPtr, ComQIPtr
-#include <commdlg.h>
 #include <shlwapi.h>				// PathXxxx, StrXxxx, ...
 #include <shlobj.h>					// IShellLink, ...
 #include <dlgs.h>
@@ -243,7 +242,7 @@ Buffer* BufferList::addNewDialog(const ascension::String& name /* = L"" */) {
 	TextFileFormat format;
 	format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(app.readStringProfile(L"File", L"defaultEncoding"));
 	if(!Encoder::supports(format.encoding))
-		format.encoding = Encoder::getDefault().properties().name();
+		format.encoding = Encoder::defaultInstance().properties().name();
 	format.newline = static_cast<Newline>(app.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
@@ -757,6 +756,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
  * @return false if failed or the user canceled
  */
 bool BufferList::openDialog(const wstring& initialDirectory /* = wstring() */) {
+#if 0
 	Alpha& app = Alpha::instance();
 	wstring filterSource = app.readStringProfile(L"File", L"filter", app.loadMessage(MSG_DIALOG__DEFAULT_OPENFILE_FILTER).c_str());
 	wchar_t* filter = new wchar_t[filterSource.length() + 2];
@@ -825,9 +825,10 @@ bool BufferList::openDialog(const wstring& initialDirectory /* = wstring() */) {
 			return !failedOnce;
 		}
 	} else
+#endif
 		return false;
 }
-
+#if 0
 /// Hook procedure for @c GetOpenFileNameW and @c GetSaveFileNameW.
 UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	using namespace ascension::encoding;
@@ -1013,7 +1014,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 
 	return 0L;
 }
-
+#endif
 /// @see ascension#text#IUnexpectedFileTimeStampDirector::queryAboutUnexpectedTimeStamp
 bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 		Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
@@ -1175,6 +1176,7 @@ void BufferList::resetResources() {
  * @throw std#out_of_range @a index is invalid
  */
 bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /* = true */) {
+#if 0
 	Alpha& app = Alpha::instance();
 	Buffer& buffer = at(index);
 
@@ -1293,6 +1295,8 @@ bool BufferList::save(size_t index, bool overwrite /* = true */, bool addToMRU /
 //	if(succeeded && addToMRU && newName)
 //		app_.mruManager().add(fileName);
 	return succeeded;
+#endif
+	return false;
 }
 
 /**
