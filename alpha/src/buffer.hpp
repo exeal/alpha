@@ -81,7 +81,6 @@ namespace alpha {
 		void move(std::size_t from, std::size_t to);
 		Buffer* open(const std::basic_string<WCHAR>& fileName,
 			const std::string& encoding = "UniversalAutoDetect", bool asReadOnly = false);
-		bool openDialog(const std::wstring& initialDirectory = std::wstring());
 		OpenResult reopen(std::size_t index, bool changeCodePage);
 		bool save(std::size_t index, bool overwrite = true, bool addToMRU = true);
 		bool saveSomeDialog(boost::python::tuple buffersToSave = boost::python::tuple());
