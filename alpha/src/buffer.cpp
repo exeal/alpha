@@ -748,86 +748,6 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 	}
 	return 0;
 }
-
-/**
- * Shows "Open" dialog box and opens file(s).
- * @param initialDirectory the directory name to show in the dialog first. if an empty string, the
- * directory of the active buffer. if the active buffer is not bound to a file, the system default
- * @return false if failed or the user canceled
- */
-bool BufferList::openDialog(const wstring& initialDirectory /* = wstring() */) {
-#if 0
-	Alpha& app = Alpha::instance();
-	wstring filterSource = app.readStringProfile(L"File", L"filter", app.loadMessage(MSG_DIALOG__DEFAULT_OPENFILE_FILTER).c_str());
-	wchar_t* filter = new wchar_t[filterSource.length() + 2];
-	WCHAR fileName[MAX_PATH + 1] = L"";
-	wstring errorMessage;
-
-	// フィルタを整形
-	replace_if(filterSource.begin(), filterSource.end(), bind2nd(equal_to<wchar_t>(), L':'), L'\0');
-	filterSource.copy(filter, filterSource.length());
-	filter[filterSource.length()] = L'\0';
-	filter[filterSource.length() + 1] = L'\0';
-
-	win32::AutoZero<OSVERSIONINFOW> osVersion;
-	osVersion.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
-	::GetVersionExW(&osVersion);
-
-	WCHAR* activeBufferDir = 0;
-	if(initialDirectory.empty() && EditorWindows::instance().activeBuffer().textFile().isOpen()) {
-		activeBufferDir = new WCHAR[MAX_PATH];
-		wcscpy(activeBufferDir, EditorWindows::instance().activeBuffer().textFile().pathName().c_str());
-		*::PathFindFileNameW(activeBufferDir) = 0;
-		if(activeBufferDir[0] == 0) {
-			delete[] activeBufferDir;
-			activeBufferDir = 0;
-		}
-	}
-
-	TextFileFormat format = {ascension::encoding::Encoder::getDefault().properties().name(), NLF_RAW_VALUE};
-	win32::AutoZeroSize<OPENFILENAMEW> newOfn;
-	win32::AutoZeroSize<OPENFILENAME_NT4W> oldOfn;
-	OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<OPENFILENAMEW*>(&oldOfn);
-	ofn.hwndOwner = app.getMainWindow().use();
-	ofn.hInstance = ::GetModuleHandle(0);
-	ofn.lpstrFilter = filter;
-	ofn.lpstrFile = fileName;
-	ofn.lpstrInitialDir = !initialDirectory.empty() ? initialDirectory.c_str() : activeBufferDir;
-	ofn.nFilterIndex = app.readIntegerProfile(L"File", L"activeFilter", 0);
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_ALLOWMULTISELECT | OFN_ENABLEHOOK | OFN_ENABLESIZING | OFN_ENABLETEMPLATE
-		| OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST/* | OFN_SHOWHELP*/;
-	ofn.lCustData = reinterpret_cast<LPARAM>(&format);
-	ofn.lpfnHook = openFileNameHookProc;
-	ofn.lpTemplateName = MAKEINTRESOURCEW(IDD_DLG_OPENFILE);
-
-	const bool succeeded = toBoolean(::GetOpenFileNameW(&ofn));
-	delete[] filter;
-	delete[] activeBufferDir;
-	app.writeIntegerProfile(L"File", L"activeFilter", ofn.nFilterIndex);	// save the used filter
-
-	if(succeeded) {
-		const wstring directory = ofn.lpstrFile;
-
-		if(directory.length() > ofn.nFileOffset)	// the number of files to open is 1
-			// ofn.lpstrFile is full name
-			return open(directory, format.encoding, toBoolean(ofn.Flags & OFN_READONLY)) != 0;
-		else {	// open multiple files
-			wchar_t* fileNames = ofn.lpstrFile + ofn.nFileOffset;
-			bool failedOnce = false;
-
-			while(*fileNames != 0) {
-				const size_t len = wcslen(fileNames);
-				if(open(directory + L"\\" + wstring(fileNames, len), format.encoding, toBoolean(ofn.Flags & OFN_READONLY)) == 0)
-					failedOnce = true;
-				fileNames += len + 1;
-			}
-			return !failedOnce;
-		}
-	} else
-#endif
-		return false;
-}
 #if 0
 /// Hook procedure for @c GetOpenFileNameW and @c GetSaveFileNameW.
 UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -1492,7 +1412,6 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("open", &BufferList::open,
 			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect", py::arg("as_read_only") = false),
 			py::return_value_policy<py::reference_existing_object>())
-		.def("open_dialog", &BufferList::openDialog, py::arg("initial_directory") = wstring())
 		.def("save_all", &BufferList::saveAll)
 /*		.def("save_some_dialog", &BufferList, py::arg("buffers_to_save") = py::tuple())*/;
 
