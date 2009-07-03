@@ -575,8 +575,9 @@ int Alpha::messageBox(DWORD id, UINT type, MessageArguments& args /* = MessageAr
  * @see Alpha#onCopyData, WinMain
  */
 void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine) {
+	// TODO: this code should be reimplemented by Python.
 	// CommandLineToArgvW ‚Í argv[0] ‚É‘Î‚·‚é“ñdˆø—p•„‚Ìˆµ‚¢‚É–â‘è‚ª‚ ‚é‚æ‚¤‚¾...
-	int argc;
+/*	int argc;
 	WCHAR** argv = ::CommandLineToArgvW(commandLine, &argc);
 	WCHAR canonical[MAX_PATH];
 	for(int i = 1; i < argc; ++i) {
@@ -590,7 +591,7 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 			BufferList::instance().open(canonical);
 	}
 	::LocalFree(argv);
-}
+*/}
 
 /// @see manah#windows#Alpha#preTranslateMessage
 bool Alpha::preTranslateMessage(const MSG& msg) {
@@ -1104,8 +1105,8 @@ void Alpha::onDropFiles(HDROP drop) {
 		::DragQueryFileW(drop, i, filePath, MAX_PATH);
 		if(!toBoolean(::PathIsDirectoryW(filePath)))
 			BufferList::instance().open(filePath);
-		else
-			BufferList::instance().openDialog(filePath);
+//		else
+//			BufferList::instance().openDialog(filePath);
 	}
 	::DragFinish(drop);
 
