@@ -610,17 +610,19 @@ void BufferList::move(size_t from, size_t to) {
  * This method may show a dialog to indicate the result.
  * @param fileName the name of the file to open
  * @param encoding the encoding. auto-detect if omitted
+ * @param lockMode the lock mode
  * @param asReadOnly set true to open as read only
  * @return the opened buffer or @c None if failed
  */
-Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
-		const string& encoding /* = "UniversalAutoDetect" */, bool asReadOnly /* = false */) {
+py::object BufferList::open(const basic_string<WCHAR>& fileName,
+		const string& encoding /* = "UniversalAutoDetect" */,
+		fileio::TextFileDocumentInput::LockMode lockMode /* = DONT_LOCK */, bool asReadOnly /* = false */) {
 	// TODO: this method is too complex.
 	using namespace ascension::kernel::fileio;
 	Alpha& app = Alpha::instance();
 	WCHAR resolvedName[MAX_PATH];
 
-	// ショートカットの解決
+	// resolve shortcut
 	const WCHAR* extension = ::PathFindExtensionW(fileName.c_str());
 	if(wcslen(extension) != 0 && (
 			(::StrCmpIW(extension + 1, L"lnk") == 0)
@@ -642,27 +644,20 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 				throw hr;
 		} catch(HRESULT /*hr_*/) {
 			app.messageBox(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MB_ICONHAND, MARGS % fileName);
-			return 0;
+			return py::object();
 		}
 	} else
 		wcscpy(resolvedName, canonicalizePathName(fileName.c_str()).c_str());
 
-	// (テキストエディタで) 既に開かれているか調べる
+	// check if the file is already open with other text editor
 	const size_t oldBuffer = find(resolvedName);
 	if(oldBuffer != -1) {
 		EditorWindows::instance().activePane().showBuffer(at(oldBuffer));
-		return 0;
+		return py::object();
 	}
 
 	Buffer* buffer = &EditorWindows::instance().activeBuffer();
-	TextFileDocumentInput::LockMode lockMode;
-	switch(app.readIntegerProfile(L"File", L"shareMode", 0)) {
-	case 0:	lockMode = TextFileDocumentInput::DONT_LOCK; break;
-	case 1:	lockMode = TextFileDocumentInput::SHARED_LOCK; break;
-	case 2:	lockMode = TextFileDocumentInput::EXCLUSIVE_LOCK; break;
-	}
-
-	if(buffer->isModified() || buffer->textFile().isOpen()) {	// 新しいコンテナで開く
+	if(buffer->isModified() || buffer->textFile().isOpen()) {	// open in the new container
 		if(ascension::encoding::Encoder::supports(encoding))
 			addNew(L"", encoding);
 		else
@@ -693,7 +688,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 
 		// 準備ができたのでファイルを開く
 		try {
-			// TODO: 戻り値を調べる必要がある。
+			// TODO: check the returned value.
 			buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::DONT_SUBSTITUTE);
 		} catch(IOException& e) {
 			succeeded = false;
@@ -718,7 +713,7 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 				// the user want to change the encoding
 				ui::EncodingsDialog dlg(modifiedEncoding, true);
 				if(dlg.doModal(app.getMainWindow()) != IDOK)
-					return 0;	// the user canceled
+					return py::object();	// the user canceled
 				modifiedEncoding = dlg.resultEncoding();
 				continue;
 			} else if(userAnswer == IDNO) {
@@ -730,11 +725,11 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
 						app.messageBox(MSG_IO__MALFORMED_INPUT_FILE, MB_OK | MB_ICONEXCLAMATION,
 							MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
-						return 0;
+						return py::object();
 					}
 				}
 			} else
-				return 0;	// the user canceled
+				return py::object();	// the user canceled
 		}
 		break;
 	}
@@ -744,9 +739,9 @@ Buffer* BufferList::open(const basic_string<WCHAR>& fileName,
 	if(succeeded || handleFileIOError(resolvedName, true, errorType)) {
 		if(asReadOnly)
 			buffer->setReadOnly();
-		return buffers_.back();
+		return buffers_.back()->self();
 	}
-	return 0;
+	return py::object();
 }
 #if 0
 /// Hook procedure for @c GetOpenFileNameW and @c GetSaveFileNameW.
@@ -1410,8 +1405,8 @@ ALPHA_EXPOSE_PROLOGUE(1)
 			py::arg("name") = wstring(), py::return_value_policy<py::reference_existing_object>())
 //		.def("close_all", &BufferList::closeAll)
 		.def("open", &BufferList::open,
-			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect", py::arg("as_read_only") = false),
-			py::return_value_policy<py::reference_existing_object>())
+			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
+			py::arg("lock_mode") = fileio::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
 		.def("save_all", &BufferList::saveAll)
 /*		.def("save_some_dialog", &BufferList, py::arg("buffers_to_save") = py::tuple())*/;
 

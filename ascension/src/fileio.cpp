@@ -33,16 +33,16 @@ namespace {
 	static const Char PATH_SEPARATORS[] = "/";
 #endif
 	static const Char PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
-	/// Returns true if the given character is a path separator.
+	/// Returns @c true if the given character is a path separator.
 	inline bool isPathSeparator(Char c) /*throw()*/ {
 		return find(PATH_SEPARATORS, MANAH_ENDOF(PATH_SEPARATORS) - 1, c) != MANAH_ENDOF(PATH_SEPARATORS) - 1;}
 	/**
-	 * Returns true if the specified file or directory exists.
+	 * Returns @c true if the specified file or directory exists.
 	 * @param name the name of the file
 	 * @return if the file exists
 	 * @throw NullPointerException @a fileName is @c null
 	 * @throw IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occurred. for
-	 * details, use POSIX @c errno or Win32 @c GetLastError
+	 *        details, use POSIX @c errno or Win32 @c GetLastError
 	 */
 	bool pathExists(const Char* name) {
 		if(name == 0)
@@ -232,10 +232,10 @@ String fileio::canonicalizePathName(const Char* pathName) {
 }
 
 /**
- * Returns true if the specified two file path names are equivalent.
+ * Returns @c true if the specified two file path names are equivalent.
  * @param s1 the first path name
  * @param s2 the second path name
- * @return true if @a s1 and @a s2 are equivalent
+ * @return @c true if @a s1 and @a s2 are equivalent
  * @throw NullPointerException either file name is @c null
  * @see canonicalizePathName
  */
@@ -318,7 +318,7 @@ namespace {
  * @param mode the file open mode. must be either @c std#ios_base#in or @c std#ios_base#out
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
- * @param writeByteOrderMark set true to write Unicode byte order mark into the output file
+ * @param writeByteOrderMark set @c true to write Unicode byte order mark into the output file
  * @throw IOException any I/O error occurred
  * @throw UnknownValueException<std#iose_base#openmode> @a mode is neigher @c in nor @c out
  */
@@ -445,7 +445,7 @@ string TextFileStreamBuffer::encoding() const /*throw()*/ {
 	return encoder_->properties().name();
 }
 
-/// Returns true if the file is open.
+/// Returns @c true if the file is open.
 bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 	return fileHandle_ != INVALID_HANDLE_VALUE;
@@ -540,7 +540,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	return (toNext > ucsBuffer_) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
 }
 
-/// Returns true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
+/// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
 bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 	return encoder_->flags().has(Encoder::UNICODE_BYTE_ORDER_MARK);
 }
@@ -623,7 +623,7 @@ void TextFileDocumentInput::addListener(IFilePropertyListener& listener) {
  * Checks the last modified date/time of the bound file and verifies if the other modified the
  * file. If the file is modified, the listener's
  * @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
- * @return the value which the listener returned or true if the listener is not set
+ * @return the value which the listener returned or @c true if the listener is not set
  */
 bool TextFileDocumentInput::checkTimeStamp() {
 	Time newTimeStamp;
@@ -723,7 +723,7 @@ a::String TextFileDocumentInput::location() const /*throw()*/ {
 
 /**
  * Locks the file.
- * @return true if locked successfully or the lock mode is @c DONT_LOCK
+ * @return @c true if locked successfully or the lock mode is @c DONT_LOCK
  */
 bool TextFileDocumentInput::lock() /*throw()*/ {
 	unlock();
@@ -762,11 +762,11 @@ String TextFileDocumentInput::name() const /*throw()*/ {
  * Binds the document to the specified file. This method call document's @c Document#setInput.
  * @param fileName the file name. this method doesn't resolve the short cut
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
- * description of the return value
+ *                 description of the return value
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
- * @return true if succeeded to lock the file with the desired mode @a lockMode
+ * @return @c true if succeeded to lock the file with the desired mode @a lockMode
  * @throw IOException any I/O error occurred. in this case, the document's content will be lost
  */
 bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, const std::string& encoding,
@@ -908,9 +908,9 @@ bool TextFileDocumentInput::unlock() /*throw()*/ {
 
 /**
  * Returns last modified time.
- * @param internal set true for @c internalLastWriteTime_, false for @c userLastWriteTime_
+ * @param internal set @c true for @c internalLastWriteTime_, @c false for @c userLastWriteTime_
  * @param[out] newTimeStamp the actual time stamp
- * @return false if not match
+ * @return @c false if not match
  */
 bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/ {
 	static Time uninitialized;
@@ -940,7 +940,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
  * Writes the content of the document to the specified file.
  * @param fileName the file name
  * @param params the options
- * @return true if succeeded
+ * @return @c true if succeeded
  * @throw IOException any I/O error occurred
  */
 bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
@@ -1112,7 +1112,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
  * @param fileName the file name
  * @param region the region to be written
  * @param params the options
- * @param append true to append to the file
+ * @param append set @c true to append to the file
  * @return the result. @c FIR_OK if succeeded
  * @throw IOException any I/O error occurred
  */
