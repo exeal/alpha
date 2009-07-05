@@ -41,7 +41,7 @@ namespace {
 	 * @param name the name of the file
 	 * @return if the file exists
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException(files#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occurred. for
+	 * @throw IOException(fileio#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occurred. for
 	 *        details, use POSIX @c errno or Win32 @c GetLastError
 	 */
 	bool pathExists(const Char* name) {
