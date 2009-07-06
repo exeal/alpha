@@ -279,10 +279,10 @@ namespace ascension {
 			enum SubstitutionPolicy {
 				/// Aborts with @c UNMAPPABLE_CHARACTER return value.
 				DONT_SUBSTITUTE,
-				/// Replaces a unmappable byte/character with replacement character/byte.
-				REPLACE_UNMAPPABLE_CHARACTER,
+				/// Replaces unmappable bytes/characters with replacement characters/bytes.
+				REPLACE_UNMAPPABLE_CHARACTERS,
 				/// Skips (ignores) unmappable bytes/characters.
-				IGNORE_UNMAPPABLE_CHARACTER
+				IGNORE_UNMAPPABLE_CHARACTERS
 			};
 
 			/// Miscellaneous conversion flag.
