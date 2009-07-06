@@ -719,7 +719,7 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 			} else if(userAnswer == IDNO) {
 				succeeded = true;
 				try {
-					buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+					buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::REPLACE_UNMAPPABLE_CHARACTERS);
 				} catch(IOException& e) {
 					succeeded = false;
 					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
@@ -1032,7 +1032,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 				succeeded = true;
 				try {
 					buffer.textFile().open(buffer.textFile().pathName(),
-						buffer.textFile().lockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTER);
+						buffer.textFile().lockMode(), encoding, Encoder::REPLACE_UNMAPPABLE_CHARACTERS);
 				} catch(IOException& e) {
 					succeeded = false;
 					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
@@ -1298,6 +1298,26 @@ namespace {
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isOpen();}
 	Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
 	Position replaceString(Buffer& buffer, const Region& region, const String& text) {Position temp; replace(buffer, region, text, &temp); return temp;}
+	fileio::IOException::Type saveBuffer(Buffer& buffer, const wstring& fileName,
+			const string& encoding, Newline newlines, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
+		if(buffer.textFile().isOpen() && !buffer.isModified())
+			return static_cast<fileio::IOException::Type>(-1);
+
+		fileio::IOException::Type errorType = static_cast<fileio::IOException::Type>(-1);
+		fileio::TextFileDocumentInput::WriteParameters params;
+		params.encoding = encoding;
+		params.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
+		params.newline = newlines;
+//		if(writeBOM)
+//			params.options = TextFileDocumentInput::WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
+
+		try {
+			buffer.textFile().write(fileName, params);
+		} catch(fileio::IOException& e) {
+			errorType = e.type();
+		}
+		return errorType;
+	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, Newline newline) {buffer.textFile().setNewline(newline);}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
@@ -1311,6 +1331,24 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("utf32_code_unit", locations::UTF32_CODE_UNIT)
 		.value("grapheme_cluster", locations::GRAPHEME_CLUSTER)
 		.value("glyph_cluster", locations::GLYPH_CLUSTER);
+	py::enum_<encoding::Encoder::SubstitutionPolicy>("EncodingSubstitutionPolicy")
+		.value("dont_substitute", encoding::Encoder::DONT_SUBSTITUTE)
+		.value("replace_unmappable_characters", encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+		.value("ignore_unmappable_characters", encoding::Encoder::IGNORE_UNMAPPABLE_CHARACTERS);
+	py::enum_<fileio::IOException::Type>("FileIoError")
+		.value("ok", static_cast<fileio::IOException::Type>(-1))
+		.value("file_not_found", fileio::IOException::FILE_NOT_FOUND)
+		.value("invalid_encoding", fileio::IOException::INVALID_ENCODING)
+		.value("invalid_newline", fileio::IOException::INVALID_NEWLINE)
+		.value("unmappable_character", fileio::IOException::UNMAPPABLE_CHARACTER)
+		.value("malformed_input", fileio::IOException::MALFORMED_INPUT)
+		.value("out_of_memory", fileio::IOException::OUT_OF_MEMORY)
+		.value("huge_file", fileio::IOException::HUGE_FILE)
+		.value("read_only_mode", fileio::IOException::READ_ONLY_MODE)
+		.value("unwritable_file", fileio::IOException::UNWRITABLE_FILE)
+		.value("cannot_create_temporary_file", fileio::IOException::CANNOT_CREATE_TEMPORARY_FILE)
+		.value("lost_disk_file", fileio::IOException::LOST_DISK_FILE)
+		.value("platform_dependent_error", fileio::IOException::PLATFORM_DEPENDENT_ERROR);
 	py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
 		.value("dont_lock", fileio::TextFileDocumentInput::DONT_LOCK)
 		.value("shared_lock", fileio::TextFileDocumentInput::SHARED_LOCK)
@@ -1391,6 +1429,9 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("redo", &Buffer::redo, py::arg("n") = 1)
 		.def("replace", &replaceString)
 		.def("reset_content", &Buffer::resetContent)
+		.def("save", &saveBuffer,
+			(py::arg("filename"), py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
+			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE))
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
 		.def("widen", &Buffer::widen);
 	py::class_<BufferList, py::bases<>, BufferList, boost::noncopyable>("_BufferList", py::no_init)
