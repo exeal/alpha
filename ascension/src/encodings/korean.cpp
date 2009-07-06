@@ -92,9 +92,9 @@ template<> Encoder::Result InternalEncoder<UHC>::doFromUnicode(
 					continue;
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = properties().substitutionCharacter();
-			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -124,10 +124,10 @@ template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 					continue;
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				*(to++) = REPLACEMENT_CHARACTER;
 				from += 2;
-			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;
 			else {
 				toNext = to;
@@ -163,9 +163,9 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doFromUnicode(
 					}
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = properties().substitutionCharacter();
-			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -200,10 +200,10 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 					continue;
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				*(to++) = REPLACEMENT_CHARACTER;
 				from += 2;
-			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;
 			else {
 				toNext = to;
@@ -267,9 +267,9 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
 					}
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = properties().substitutionCharacter();
-			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -327,10 +327,10 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
 					continue;
 				}
 			}
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				*(to++) = REPLACEMENT_CHARACTER;
 				from += 2;
-			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;
 			else {
 				toNext = to;

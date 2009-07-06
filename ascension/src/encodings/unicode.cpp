@@ -375,9 +375,9 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
 		if(isValidCodePoint(c)) {
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -416,9 +416,9 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
 		if(isValidCodePoint(cp)) {
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = REPLACEMENT_CHARACTER;
-			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
 				fromNext = from;
 				toNext = to;
 				return UNMAPPABLE_CHARACTER;
@@ -716,9 +716,9 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doFromUnicode(
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*(to++) = properties().substitutionCharacter();
-			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				continue;
 			else {
 				fromNext = from;
@@ -752,11 +752,11 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
 			toNext = to;
 			return MALFORMED_INPUT;
 		} else if(!isValidCodePoint(cp)) {
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				cp = REPLACEMENT_CHARACTER;
 				if(e == from)
 					e = from + 1;
-			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
+			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS) {
 				++from;
 				continue;
 			} else {
