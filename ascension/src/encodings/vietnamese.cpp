@@ -252,9 +252,9 @@ Encoder::Result VIQREncoder::doFromUnicode(byte* to, byte* toEnd,
 	for(; to < toEnd && from < fromEnd; ++from) {
 		byte viscii = table_->toByte(*from);
 		if(viscii == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
-			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				continue;
-			else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				viscii = properties().substitutionCharacter();
 			else {
 				toNext = to;

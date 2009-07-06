@@ -217,10 +217,10 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
 			*to = props_.substitutionCharacter();
 
 		if(*to == props_.substitutionCharacter()) {
-			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER) {
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS) {
 				--to;
 				continue;
-			} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -240,7 +240,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
 			*to = *from;
 		else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20 - 0x80];
-		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 			--to;
 		else if(substitutionPolicy() == DONT_SUBSTITUTE) {
 			toNext = to;
@@ -289,9 +289,9 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
 			*to = props_.substitutionCharacter();
 
 		if(*to == props_.substitutionCharacter()) {
-			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
-			else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -310,7 +310,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
 			*to = *from;
 		else if(*from < 0x20 + MANAH_COUNTOF(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20];
-		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 			--to;
 		else if(substitutionPolicy() == DONT_SUBSTITUTE) {
 			toNext = to;
@@ -357,9 +357,9 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
 			*to = props_.substitutionCharacter();
 
 		if(*to == props_.substitutionCharacter()) {
-			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
-			else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER) {
+			else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 				toNext = to;
 				fromNext = from;
 				return UNMAPPABLE_CHARACTER;
@@ -381,7 +381,7 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
 		else
 			*to = ARMSCII8AtoUCS_D8[*from - 0xd8];
 		if(*to == REPLACEMENT_CHARACTER) {
-			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
 			else if(substitutionPolicy() == DONT_SUBSTITUTE) {
 				toNext = to;

@@ -556,9 +556,9 @@ namespace {
 		bool checkedGB2312 = false, checkedKSC5601 = false;
 
 #define ASCENSION_HANDLE_UNMAPPABLE()	{									\
-	if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTER)			\
+	if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS)			\
 		--to;																\
-	else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTER) {	\
+	else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {	\
 		toNext = to;														\
 		fromNext = from;													\
 		return Encoder::UNMAPPABLE_CHARACTER;								\
@@ -722,11 +722,11 @@ namespace {
 					convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
 				if(ucs == REPLACEMENT_CHARACTER) {
-					if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTER) {
+					if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS) {
 						--to;
 						++from;
 						continue;
-					} else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTER) {
+					} else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {
 						toNext = to;
 						fromNext = from;
 						return Encoder::UNMAPPABLE_CHARACTER;
@@ -780,11 +780,11 @@ namespace {
 		}
 
 #define ASCENSION_HANDLE_UNMAPPABLE()										\
-	if(substitutionPolicy == Encoder::REPLACE_UNMAPPABLE_CHARACTER) {		\
+	if(substitutionPolicy == Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {		\
 		jis = mbcs[0] = 0x1a;												\
 		mbcs[1] = 1;														\
 		charset = EncodingState::ASCII;										\
-	} else if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTER) {	\
+	} else if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS) {	\
 		--to;																\
 		continue;															\
 	} else {																\
@@ -1014,9 +1014,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doFromUnicode(
 				if(const byte kana = convertUCStoKANA(*from)) {	// try JIS X 0201 kana
 					*to = kana;
 					continue;
-				} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = properties().substitutionCharacter();
-				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
 				else {
 					toNext = to;
@@ -1049,9 +1049,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doToUnicode(
 			if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f) {
 				*to = convertX0208toUCS(unshiftCodeX0208(from));
 				if(*to == REPLACEMENT_CHARACTER) {
-					if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+					if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 						--to;
-					else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+					else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 						toNext = to;
 						fromNext = from;
 						return UNMAPPABLE_CHARACTER;
@@ -1092,9 +1092,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doFromUnicode(
 			break;
 		case UNMAPPABLE_CHARACTER:
 			if(0 == (jis = convertUCStoKANA(*from))) {
-				if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = properties().substitutionCharacter();
-				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
 				else {
 					toNext = to;
@@ -1135,9 +1135,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 		else if(*from >= 0xa1 && *from <= 0xdf)	// kana
 			*to = convertKANAtoUCS(*from);
 		else if(*from == 0xa0) {	// illegal byte
-			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*to = properties().substitutionCharacter();
-			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
 			else {
 				toNext = to;
@@ -1151,9 +1151,9 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 				const CodePoint ucs = !plane2 ? convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
 				if(ucs == REPLACEMENT_CHARACTER) {	// unmappable
-					if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+					if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 						--to;
-					else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+					else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 						toNext = to;
 						fromNext = from;
 						return UNMAPPABLE_CHARACTER;
@@ -1215,9 +1215,9 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doFromUnicode(
 				*to = SS2_8BIT;
 				*++to = kana;
 				continue;
-			} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+			} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 				*to = properties().substitutionCharacter();
-			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+			else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
 			else {
 				toNext = to;
@@ -1271,9 +1271,9 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doToUnicode(
 			}
 
 			if(*to == REPLACEMENT_CHARACTER) {	// unmappable
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;
@@ -1311,9 +1311,9 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doFromUnicode(
 			}
 		case UNMAPPABLE_CHARACTER:
 			if(0 == (jis = convertUCStoKANA(*from))) {
-				if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = properties().substitutionCharacter();
-				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
 				else {
 					toNext = to;
@@ -1404,9 +1404,9 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 				}
 			}
 			if(*to == REPLACEMENT_CHARACTER) {	// unmappable
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;
