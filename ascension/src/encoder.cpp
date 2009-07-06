@@ -365,7 +365,7 @@ Encoder& Encoder::setFlags(const Flags& newFlags) {
  * @throw UnknownValueException<SubstitutionPolicy> @a newPolicy is invalid
  */
 Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
-	if(newPolicy < DONT_SUBSTITUTE || newPolicy > IGNORE_UNMAPPABLE_CHARACTER)
+	if(newPolicy < DONT_SUBSTITUTE || newPolicy > IGNORE_UNMAPPABLE_CHARACTERS)
 		throw UnknownValueException("newPolicy");
 	substitutionPolicy_ = newPolicy;
 	return *this;
@@ -602,9 +602,9 @@ namespace {
 			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = properties().substitutionCharacter();
 				else {
 					toNext = to;
@@ -623,9 +623,9 @@ namespace {
 			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = REPLACEMENT_CHARACTER;
 				else {
 					toNext = to;
@@ -774,9 +774,9 @@ namespace {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			*to = table_.toByte(*from);
 			if(*to == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTER)
+				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 					*to = properties().substitutionCharacter();
 				else {
 					toNext = to;
@@ -795,9 +795,9 @@ namespace {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			*to = table_.toCharacter(*from);
 			if(*to == REPLACEMENT_CHARACTER) {
-				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTER)
+				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
-				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTER) {
+				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
 					toNext = to;
 					fromNext = from;
 					return UNMAPPABLE_CHARACTER;
