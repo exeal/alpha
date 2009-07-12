@@ -131,13 +131,14 @@ namespace {
 	 * Creates a name for a temporary file.
 	 * @param seed the string contains a directory path and a prefix string
 	 * @return the result string
+	 * @throw std#bad_alloc POSIX @c tempnam failed
 	 * @throw IOException any I/O error occurred
 	 */
 	String getTemporaryFileName(const String& seed) {
 		manah::AutoBuffer<Char> s(new Char[seed.length() + 1]);
 		copy(seed.begin(), seed.end(), s.get());
 		s[seed.length()] = 0;
-		Char* name = s.get() + (findFileName(seed) - seed.begin());
+		Char* const name = s.get() + (findFileName(seed) - seed.begin());
 		if(name != s.get())
 			name[-1] = 0;
 #ifdef ASCENSION_WINDOWS
@@ -149,7 +150,8 @@ namespace {
 			String result(p);
 			::free(p);
 			return result;
-		}
+		} else if(errno == ENOMEM)
+			throw bad_alloc("tempnam failed.");
 #endif
 		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
 	}
@@ -267,9 +269,9 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 		HANDLE f2 = ::CreateFileW(s2, 0,
 			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 		if(f2 != INVALID_HANDLE_VALUE) {
-			::BY_HANDLE_FILE_INFORMATION fi1;
+			BY_HANDLE_FILE_INFORMATION fi1;
 			if(toBoolean(::GetFileInformationByHandle(f1, &fi1))) {
-				::BY_HANDLE_FILE_INFORMATION fi2;
+				BY_HANDLE_FILE_INFORMATION fi2;
 				if(toBoolean(::GetFileInformationByHandle(f2, &fi2)))
 					eq = fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
 						&& fi1.nFileIndexHigh == fi2.nFileIndexHigh

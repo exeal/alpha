@@ -40,14 +40,18 @@ namespace ascension {
 					/// The encoding failed for malformed input.
 					/// @see encoding#Encoder#MALFORMED_INPUT
 					MALFORMED_INPUT,
+#if 0
 					/// Failed for out of memory.
 					OUT_OF_MEMORY,
+#endif
 					/// The file to be opend is too huge.
 					HUGE_FILE,
+#if 0
 					/// Tried to write the read only document. If the disk file is read only, POSIX
 					/// @c errno is set to @c BBADF, or Win32 @c GetLastError returns
 					/// @c ERROR_FILE_READ_ONLY.
 					READ_ONLY_MODE,
+#endif
 					/// The file is read only and not writable.
 					UNWRITABLE_FILE,
 					/// Failed to create the temporary file for writing.
