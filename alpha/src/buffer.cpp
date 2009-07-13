@@ -12,7 +12,7 @@
 //#include "mru-manager.hpp"
 #include "new-file-format-dialog.hpp"
 #include "save-some-buffers-dialog.hpp"
-#include "code-pages-dialog.hpp"
+//#include "code-pages-dialog.hpp"
 #include "../resource/messages.h"
 #include <manah/win32/ui/wait-cursor.hpp>
 #include <manah/com/common.hpp>	// ComPtr, ComQIPtr
@@ -21,16 +21,16 @@
 #include <dlgs.h>
 using namespace alpha;
 using namespace ambient;
-using namespace ascension;
-using namespace ascension::kernel;
 using namespace manah;
 using namespace std;
+namespace a = ascension;
+namespace k = ascension::kernel;
 namespace py = boost::python;
 
 namespace {
 	struct TextFileFormat {
 		string encoding;
-		Newline newline;
+		k::Newline newline;
 	};
 /*	class FileIOCallback : virtual public IFileIOListener {
 	public:
@@ -65,8 +65,8 @@ namespace {
 
 /// Constructor.
 Buffer::Buffer() {
-	presentation_.reset(new presentation::Presentation(*this));
-	textFile_.reset(new fileio::TextFileDocumentInput(*this));
+	presentation_.reset(new a::presentation::Presentation(*this));
+	textFile_.reset(new k::fileio::TextFileDocumentInput(*this));
 }
 
 /// Destructor.
@@ -85,12 +85,12 @@ const basic_string<WCHAR> Buffer::name() const throw() {
 }
 
 /// Returns the presentation object of Ascension.
-presentation::Presentation& Buffer::presentation() throw() {
+a::presentation::Presentation& Buffer::presentation() throw() {
 	return *presentation_;
 }
 
 /// Returns the presentation object of Ascension.
-const presentation::Presentation& Buffer::presentation() const throw() {
+const a::presentation::Presentation& Buffer::presentation() const throw() {
 	return *presentation_;
 }
 
@@ -184,11 +184,11 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
 	auto_ptr<Buffer> buffer(new Buffer());
 
 	buffer->textFile().setEncoding(encoding);
-	if((newline & NLF_SPECIAL_VALUE_MASK) == 0)
+	if((newline & k::NLF_SPECIAL_VALUE_MASK) == 0)
 		buffer->textFile().setNewline(newline);
 
 	editorSession_.addDocument(*buffer);
-	buffer->setProperty(Document::TITLE_PROPERTY, !name.empty() ? name : L"*untitled*");
+	buffer->setProperty(k::Document::TITLE_PROPERTY, !name.empty() ? name : L"*untitled*");
 	buffers_.push_back(buffer.get());
 
 	// 現在のペインの数だけビューを作成する
@@ -243,7 +243,7 @@ Buffer* BufferList::addNewDialog(const ascension::String& name /* = L"" */) {
 	format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(app.readStringProfile(L"File", L"defaultEncoding"));
 	if(!Encoder::supports(format.encoding))
 		format.encoding = Encoder::defaultInstance().properties().name();
-	format.newline = static_cast<Newline>(app.readIntegerProfile(L"file", L"defaultNewline", NLF_CR_LF));
+	format.newline = static_cast<k::Newline>(app.readIntegerProfile(L"file", L"defaultNewline", k::NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
 	if(dlg.doModal(app.getMainWindow()) != IDOK)
@@ -332,12 +332,12 @@ bool BufferList::createBar(win32::ui::Rebar& rebar) {
 }
 
 /// @see ascension#text#IDocumentStateListener#documentAccessibleRegionChanged
-void BufferList::documentAccessibleRegionChanged(const Document&) {
+void BufferList::documentAccessibleRegionChanged(const k::Document&) {
 	Alpha::instance().statusBar().updateNarrowingStatus();
 }
 
 /// @see ascension#text#IDocumentStateListener#documentModificationSignChanged
-void BufferList::documentModificationSignChanged(const Document& document) {
+void BufferList::documentModificationSignChanged(const k::Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
@@ -345,12 +345,12 @@ void BufferList::documentModificationSignChanged(const Document& document) {
 }
 
 /// @see ascension#text#IDocumentStateListenerdocumentPropertyChanged
-void BufferList::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
+void BufferList::documentPropertyChanged(const k::Document&, const k::DocumentPropertyKey&) {
 	// do nothing
 }
 
 /// @see ascension#text#IDocumentStateListenerdocumentReadOnlySignChanged
-void BufferList::documentReadOnlySignChanged(const Document& document) {
+void BufferList::documentReadOnlySignChanged(const k::Document& document) {
 	const Buffer& buffer = getConcreteDocument(document);
 	bufferBar_.setButtonText(static_cast<int>(find(buffer)), getDisplayName(buffer).c_str());
 	recalculateBufferBarSize();
@@ -358,7 +358,7 @@ void BufferList::documentReadOnlySignChanged(const Document& document) {
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileNameChanged
-void BufferList::fileNameChanged(const fileio::TextFileDocumentInput& textFile) {
+void BufferList::fileNameChanged(const k::fileio::TextFileDocumentInput& textFile) {
 	const Buffer& buffer = getConcreteDocument(textFile.document());
 	// TODO: call mode-application.
 	resetResources();
@@ -368,7 +368,7 @@ void BufferList::fileNameChanged(const fileio::TextFileDocumentInput& textFile) 
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileEncodingChanged
-void BufferList::fileEncodingChanged(const fileio::TextFileDocumentInput& textFile) {
+void BufferList::fileEncodingChanged(const k::fileio::TextFileDocumentInput& textFile) {
 	// do nothing
 }
 
@@ -393,7 +393,7 @@ size_t BufferList::find(const Buffer& buffer) const {
 size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
 		if(buffers_[i]->textFile().isOpen()
-				&& fileio::comparePathNames(buffers_[i]->textFile().pathName().c_str(), fileName.c_str()))
+				&& k::fileio::comparePathNames(buffers_[i]->textFile().pathName().c_str(), fileName.c_str()))
 			return i;
 	}
 	return -1;
@@ -405,7 +405,7 @@ size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
  * @throw std#invalid_argument @a document is not found
  * @see BufferList#find
  */
-Buffer& BufferList::getConcreteDocument(Document& document) const {
+Buffer& BufferList::getConcreteDocument(k::Document& document) const {
 	for(size_t i = 0; i < buffers_.size(); ++i) {
 		if(buffers_[i] == &document)
 			return *buffers_[i];
@@ -414,8 +414,8 @@ Buffer& BufferList::getConcreteDocument(Document& document) const {
 }
 
 /// Const-version of @c #getConcreteDocument(Document&).
-const Buffer& BufferList::getConcreteDocument(const Document& document) const {
-	return getConcreteDocument(const_cast<Document&>(document));
+const Buffer& BufferList::getConcreteDocument(const k::Document& document) const {
+	return getConcreteDocument(const_cast<k::Document&>(document));
 }
 
 /**
@@ -530,48 +530,6 @@ LRESULT BufferList::handleBufferBarPagerNotification(NMHDR& nmhdr) {
 	return false;
 }
 
-/**
- * ファイルを開いたり保存したりするのに失敗したときの処理
- * @param fileName 処理中のファイル名 (このバッファがアクティブになっていなければならない)
- * @param forLoading 呼び出し元がファイルを開こうとしたとき true
- * @param result エラー内容
- * @return 結果的にエラーである場合 false
- */
-bool BufferList::handleFileIOError(const WCHAR* fileName, bool forLoading, fileio::IOException::Type result) {
-	using kernel::fileio::IOException;
-	assert(fileName != 0);
-	if(result == IOException::FILE_NOT_FOUND) {
-		::SetLastError(ERROR_FILE_NOT_FOUND);
-		result = IOException::PLATFORM_DEPENDENT_ERROR;
-	}
-	if(result == IOException::PLATFORM_DEPENDENT_ERROR) {
-		void* buffer = 0;
-		wstring message(fileName);
-		::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			0, ::GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&buffer), 0, 0);
-		message += L"\n\n";
-		message += static_cast<wchar_t*>(buffer);
-		::LocalFree(buffer);
-		Alpha::instance().getMainWindow().messageBox(message.c_str(), IDS_APPNAME, MB_ICONEXCLAMATION);
-	} else if(result != IOException::UNMAPPABLE_CHARACTER && result != IOException::MALFORMED_INPUT) {
-		DWORD messageID;
-		switch(result) {
-		case IOException::INVALID_ENCODING:				messageID = MSG_IO__INVALID_ENCODING; break;
-		case IOException::INVALID_NEWLINE:				messageID = MSG_IO__INVALID_NEWLINE; break;
-		case IOException::OUT_OF_MEMORY:				messageID = MSG_ERROR__OUT_OF_MEMORY; break;
-		case IOException::HUGE_FILE:					messageID = MSG_IO__HUGE_FILE; break;
-		case IOException::READ_ONLY_MODE:
-		case IOException::UNWRITABLE_FILE:				messageID = MSG_IO__FAILED_TO_WRITE_FOR_READONLY; break;
-		case IOException::CANNOT_CREATE_TEMPORARY_FILE:	messageID = MSG_IO__CANNOT_CREATE_TEMP_FILE; break;
-		case IOException::LOST_DISK_FILE:				messageID = MSG_IO__LOST_DISK_FILE; break;
-		}
-		Alpha::instance().messageBox(messageID, MB_ICONEXCLAMATION, MARGS % fileName);
-	}
-	if(forLoading)
-		close(EditorWindows::instance().activeBuffer());
-	return false;
-}
-
 /// Returns the singleton instance.
 BufferList& BufferList::instance() {
 	static BufferList singleton;
@@ -616,7 +574,8 @@ void BufferList::move(size_t from, size_t to) {
  */
 py::object BufferList::open(const basic_string<WCHAR>& fileName,
 		const string& encoding /* = "UniversalAutoDetect" */,
-		fileio::TextFileDocumentInput::LockMode lockMode /* = DONT_LOCK */, bool asReadOnly /* = false */) {
+		a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+		k::fileio::TextFileDocumentInput::LockMode lockMode /* = DONT_LOCK */, bool asReadOnly /* = false */) {
 	// TODO: this method is too complex.
 	using namespace ascension::kernel::fileio;
 	Alpha& app = Alpha::instance();
@@ -643,8 +602,9 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 			if(FAILED(hr = shellLink->GetPath(resolvedName, MAX_PATH, 0, 0)))
 				throw hr;
 		} catch(HRESULT /*hr_*/) {
-			app.messageBox(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MB_ICONHAND, MARGS % fileName);
-			return py::object();
+			::PyErr_SetObject(PyExc_IOError, convertWideStringToUnicodeObject(
+				app.loadMessage(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MARGS % fileName)).ptr());
+			py::throw_error_already_set();
 		}
 	} else
 		wcscpy(resolvedName, canonicalizePathName(fileName.c_str()).c_str());
@@ -676,72 +636,35 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 //		}
 	}
 */
-	string modifiedEncoding(encoding);
 	bool succeeded = true;
 	IOException::Type errorType;
-	const wstring s(app.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName));
-	while(true) {
+	{
 		using namespace ascension::encoding;
 		win32::ui::WaitCursor wc;
-		app.statusBar().setText(s.c_str());
+		app.statusBar().setText(app.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName).c_str());
 		app.getMainWindow().lockUpdate();
 
 		// 準備ができたのでファイルを開く
 		try {
 			// TODO: check the returned value.
-			buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::DONT_SUBSTITUTE);
+			buffer->textFile().open(resolvedName, lockMode, encoding, encodingSubstitutionPolicy);
 		} catch(IOException& e) {
 			succeeded = false;
 			errorType = e.type();
 		}
 		app.statusBar().setText(0);
 		app.getMainWindow().unlockUpdate();
-		if(!succeeded) {
-			// alert the encoding error
-			int userAnswer;
-			modifiedEncoding = buffer->textFile().encoding();
-			if(errorType == IOException::UNMAPPABLE_CHARACTER)
-				userAnswer = app.messageBox(MSG_IO__UNCONVERTABLE_NATIVE_CHAR, MB_YESNOCANCEL | MB_ICONEXCLAMATION,
-					MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
-			else if(errorType == IOException::MALFORMED_INPUT)
-				userAnswer = app.messageBox(MSG_IO__MALFORMED_INPUT_FILE, MB_OKCANCEL | MB_ICONEXCLAMATION,
-					MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
-			else
-				break;
-			succeeded = true;
-			if(userAnswer == IDYES || userAnswer == IDOK) {
-				// the user want to change the encoding
-				ui::EncodingsDialog dlg(modifiedEncoding, true);
-				if(dlg.doModal(app.getMainWindow()) != IDOK)
-					return py::object();	// the user canceled
-				modifiedEncoding = dlg.resultEncoding();
-				continue;
-			} else if(userAnswer == IDNO) {
-				succeeded = true;
-				try {
-					buffer->textFile().open(resolvedName, lockMode, modifiedEncoding, Encoder::REPLACE_UNMAPPABLE_CHARACTERS);
-				} catch(IOException& e) {
-					succeeded = false;
-					if((errorType = e.type()) == IOException::MALFORMED_INPUT) {
-						app.messageBox(MSG_IO__MALFORMED_INPUT_FILE, MB_OK | MB_ICONEXCLAMATION,
-							MARGS % resolvedName % Encoder::forMIB(fundamental::US_ASCII)->toUnicode(modifiedEncoding).c_str());
-						return py::object();
-					}
-				}
-			} else
-				return py::object();	// the user canceled
-		}
-		break;
 	}
-
 	app.getMainWindow().show(app.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
-	if(succeeded || handleFileIOError(resolvedName, true, errorType)) {
-		if(asReadOnly)
-			buffer->setReadOnly();
-		return buffers_.back()->self();
+	if(!succeeded) {
+		::PyErr_SetObject(PyExc_IOError, py::object(errorType).ptr());
+		py::throw_error_already_set();
 	}
-	return py::object();
+
+	if(asReadOnly)
+		buffer->setReadOnly();
+	return buffers_.back()->self();
 }
 #if 0
 /// Hook procedure for @c GetOpenFileNameW and @c GetSaveFileNameW.
@@ -932,7 +855,7 @@ UINT_PTR CALLBACK BufferList::openFileNameHookProc(HWND window, UINT message, WP
 #endif
 /// @see ascension#text#IUnexpectedFileTimeStampDirector::queryAboutUnexpectedTimeStamp
 bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
-		Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
+		k::Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
 	const Buffer& buffer = getConcreteDocument(document);
 	const Buffer& activeBuffer = EditorWindows::instance().activeBuffer();
 	EditorWindows::instance().activePane().showBuffer(buffer);
@@ -978,6 +901,7 @@ void BufferList::recalculateBufferBarSize() {
  * @throw std#out_of_range @a index is invalid
  */
 BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
+#if 0
 	using namespace ascension::kernel::fileio;
 	Alpha& app = Alpha::instance();
 	Buffer& buffer = at(index);
@@ -1051,6 +975,7 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 //		app.mruManager().add(buffer.textFile().pathName());
 		return OPENRESULT_SUCCEEDED;
 	} else
+#endif
 		return OPENRESULT_FAILED;
 }
 
@@ -1251,7 +1176,7 @@ bool BufferList::saveSomeDialog(py::tuple buffersToSave /* = py::tuple() */) {
 }
 
 /// @see ascension#presentation#ITextViewerListListener#textViewerListChanged
-void BufferList::textViewerListChanged(presentation::Presentation& presentation) {
+void BufferList::textViewerListChanged(a::presentation::Presentation& presentation) {
 }
 
 /// Reconstructs the context menu.
@@ -1293,37 +1218,39 @@ namespace {
 	py::object buffers() {return BufferList::instance().self();}
 	void closeBuffer(Buffer& buffer) {BufferList::instance().close(buffer);}
 	string encodingOfBuffer(const Buffer& buffer) {return buffer.textFile().encoding();}
-	Position insertString(Buffer& buffer, const Position& at, const String& text) {Position temp; insert(buffer, at, text, &temp); return temp;}
+	k::Position insertString(Buffer& buffer, const k::Position& at, const a::String& text) {k::Position temp; k::insert(buffer, at, text, &temp); return temp;}
 	bool isBufferActive(const Buffer& buffer) {return &buffer == &EditorWindows::instance().activeBuffer();}
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isOpen();}
-	Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
-	Position replaceString(Buffer& buffer, const Region& region, const String& text) {Position temp; replace(buffer, region, text, &temp); return temp;}
-	fileio::IOException::Type saveBuffer(Buffer& buffer, const wstring& fileName,
-			const string& encoding, Newline newlines, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
+	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
+	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
+	k::fileio::IOException::Type saveBuffer(Buffer& buffer, const wstring& fileName,
+			const string& encoding, k::Newline newlines, a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
 		if(buffer.textFile().isOpen() && !buffer.isModified())
-			return static_cast<fileio::IOException::Type>(-1);
+			return static_cast<k::fileio::IOException::Type>(-1);
 
-		fileio::IOException::Type errorType = static_cast<fileio::IOException::Type>(-1);
-		fileio::TextFileDocumentInput::WriteParameters params;
-		params.encoding = encoding;
+		k::fileio::IOException::Type errorType = static_cast<k::fileio::IOException::Type>(-1);
+		k::fileio::TextFileDocumentInput::WriteParameters params;
+		params.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
 		params.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
-		params.newline = newlines;
+		params.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
 //		if(writeBOM)
 //			params.options = TextFileDocumentInput::WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
 
 		try {
 			buffer.textFile().write(fileName, params);
-		} catch(fileio::IOException& e) {
+		} catch(k::fileio::IOException& e) {
 			errorType = e.type();
 		}
 		return errorType;
 	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
-	void setNewlineOfBuffer(Buffer& buffer, Newline newline) {buffer.textFile().setNewline(newline);}
+	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
 }
 
 ALPHA_EXPOSE_PROLOGUE(1)
+	using namespace ascension;
+	using namespace ascension::kernel;
 	py::scope temp(Interpreter::instance().toplevelPackage());
 
 	py::enum_<locations::CharacterUnit>("CharacterUnit")
@@ -1342,9 +1269,9 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("invalid_newline", fileio::IOException::INVALID_NEWLINE)
 		.value("unmappable_character", fileio::IOException::UNMAPPABLE_CHARACTER)
 		.value("malformed_input", fileio::IOException::MALFORMED_INPUT)
-		.value("out_of_memory", fileio::IOException::OUT_OF_MEMORY)
+//		.value("out_of_memory", fileio::IOException::OUT_OF_MEMORY)
 		.value("huge_file", fileio::IOException::HUGE_FILE)
-		.value("read_only_mode", fileio::IOException::READ_ONLY_MODE)
+//		.value("read_only_mode", fileio::IOException::READ_ONLY_MODE)
 		.value("unwritable_file", fileio::IOException::UNWRITABLE_FILE)
 		.value("cannot_create_temporary_file", fileio::IOException::CANNOT_CREATE_TEMPORARY_FILE)
 		.value("lost_disk_file", fileio::IOException::LOST_DISK_FILE)

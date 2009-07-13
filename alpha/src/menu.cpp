@@ -92,7 +92,7 @@ py::object Menu::append(short identifier, const wstring& caption, py::object com
 	item.dwItemData = reinterpret_cast<UINT_PTR>(command.ptr());
 	item.dwTypeData = const_cast<WCHAR*>(caption.c_str());
 	if(::InsertMenuItemW(handle_, ::GetMenuItemCount(handle_), true, &item) == 0)
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	Py_XINCREF(reinterpret_cast<PyObject*>(item.dwItemData));
 	return self();
 }
@@ -102,7 +102,7 @@ py::object Menu::appendSeparator() {
 	item.fMask = MIIM_TYPE;
 	item.fType = MFT_SEPARATOR;
 	if(::InsertMenuItemW(handle_, ::GetMenuItemCount(handle_), true, &item) == 0)
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	return self();
 }
 
@@ -116,7 +116,7 @@ namespace {
 			if(toBoolean(::SetMenuItemInfoW(menu, id, false, &item)))
 				return;
 		}
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	}
 } // namespace @0
 
@@ -152,7 +152,7 @@ py::object Menu::erase(short identifier) {
 		}
 	}
 	if(!toBoolean(::RemoveMenu(handle_, identifier, MF_BYCOMMAND)))
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	return self();
 }
 
@@ -177,7 +177,7 @@ py::object Menu::setChild(short identifier, py::object child) {
 	item.dwItemData = reinterpret_cast<ULONG_PTR>(child.ptr());
 	item.hSubMenu = childHandle;
 	if(::SetMenuItemInfoW(handle_, identifier, false, &item) == 0)
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	children_.insert(child);
 	return self();
 }
@@ -206,7 +206,7 @@ MenuBar::MenuBar() : Menu(::CreateMenu()) {
 py::object MenuBar::setAsMenuBar(py::object newMenuBar) {
 	static py::object singletonHolder;
 	if(!Alpha::instance().getMainWindow().setMenu(static_cast<MenuBar&>(py::extract<MenuBar&>(newMenuBar)).handle()))
-		Interpreter::instance().throwLastWin32Error();
+		Interpreter::instance().raiseLastWin32Error();
 	py::object oldMenuBar(singletonHolder);
 	singletonHolder = newMenuBar;
 	return oldMenuBar;
