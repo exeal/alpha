@@ -24,7 +24,7 @@ namespace {
 			const int answer = Alpha::instance().getMainWindow().messageBox(
 				message.c_str(), caption.c_str(), buttons | icon | defaultButton | options);
 			if(answer == 0)
-				ambient::Interpreter::instance().throwLastWin32Error();
+				ambient::Interpreter::instance().raiseLastWin32Error();
 			return static_cast<Result>(answer);
 		}
 	};

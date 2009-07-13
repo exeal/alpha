@@ -10,7 +10,7 @@ using namespace std;
 namespace py = boost::python;
 
 
-wstring alpha::ambient::toWideString(PyObject* object) {
+wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 	py::object o(py::handle<>(PyUnicode_Check(object) ? py::expect_non_null(object) : ::PyObject_Unicode(object)));
 	if(py::ssize_t n = ::PyUnicode_GetSize(o.ptr())) {
 		static wchar_t s[0x100];
@@ -22,6 +22,10 @@ wstring alpha::ambient::toWideString(PyObject* object) {
 		return p;
 	}
 	return wstring();
+}
+
+py::object alpha::ambient::convertWideStringToUnicodeObject(const wstring& s) {
+	return py::object(py::handle<>(::PyUnicode_FromWideChar(s.data(), s.length())));
 }
 
 
@@ -65,7 +69,8 @@ py::object Interpreter::executeCommand(py::object command) {
 			PyObject* traceback;
 			::PyErr_Fetch(&type, &value, &traceback);
 			if(type != 0 && value != 0) {
-				::MessageBoxW(Alpha::instance().getMainWindow().use(), toWideString(value).c_str(), L"Alpha", MB_ICONEXCLAMATION);
+				::MessageBoxW(Alpha::instance().getMainWindow().use(),
+					convertUnicodeObjectToWideString(value).c_str(), L"Alpha", MB_ICONEXCLAMATION);
 				return py::object();
 			}
 			::PyErr_Restore(type, value, traceback);
@@ -110,26 +115,56 @@ void Interpreter::install() {
 	installers_.clear();
 }
 
+void Interpreter::installException(const string& name, py::object base /* = py::object() */) {
+	py::object package(toplevelPackage());
+	py::object newException(py::handle<>(::PyErr_NewException("ambient.RecoverableError", base.ptr(), 0)));
+}
+
 Interpreter& Interpreter::instance() {
 	static Interpreter singleton;
 	return singleton;
 }
 
-py::object Interpreter::module(const char* name) {
-	py::object ambient(toplevelPackage());
-	py::dict d(ambient.attr("__dict__"));
-	if(!d.has_key(name)) {
-		string fullName("ambient.");
-		fullName += name;
-		if(PyObject* newModule = ::PyImport_AddModule(fullName.c_str())) {
-			if(0 == ::PyModule_AddObject(ambient.ptr(), name, newModule)) {
-				::Py_InitModule(fullName.c_str(), 0);
-				return py::object(py::handle<>(py::borrowed(newModule)));
+py::object Interpreter::module(const string& name) {
+	py::object parent(toplevelPackage());
+	string moduleName;
+	for(string::size_type dot = name.find('.'), previousDot = 0; ; previousDot = dot + 1, dot = name.find('.', previousDot)) {
+		moduleName = name.substr(previousDot, (dot != string::npos) ? dot - previousDot : string::npos);
+		if(!py::dict(parent.attr("__dict__")).has_key(moduleName)) {
+			const string missingModule("ambient." + name.substr(0, dot));
+			if(PyObject* newModule = ::PyImport_AddModule(missingModule.c_str())) {
+				if(0 == ::PyModule_AddObject(parent.ptr(), moduleName.c_str(), newModule)) {
+					::Py_InitModule(missingModule.c_str(), 0);
+					if(dot == string::npos)
+						return py::object(py::handle<>(py::borrowed(newModule)));
+				}
 			}
+			throw runtime_error("failed to initialize the module.");
 		}
-		throw runtime_error("failed to initialize the module.");
+		if(dot == string::npos)
+			break;
+		parent = parent.attr(moduleName.c_str());
 	}
-	return ambient.attr(name);
+	return parent.attr(moduleName.c_str());
+}
+
+/**
+ * Sets error indicator with the installed exception.
+ * @param name the name of the installed exception type
+ * @param value the exception value
+ * @throw std#invalid_argument the exception type specified by @a name is not installed
+ */
+void Interpreter::raiseException(const string& name, py::object value) {
+	map<const string, py::object>::const_iterator exception(exceptionClasses_.find(name));
+	if(exception == exceptionClasses_.end())
+		throw invalid_argument("specified exception is not installed.");
+	::PyErr_SetObject(exception->second.ptr(), value.ptr());
+	py::throw_error_already_set();
+}
+
+void Interpreter::raiseLastWin32Error() {
+	::PyErr_SetFromWindowsErr(0);
+	py::throw_error_already_set();
 }
 
 py::object Interpreter::toplevelPackage() {

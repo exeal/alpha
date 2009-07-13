@@ -79,8 +79,11 @@ namespace alpha {
 		LRESULT handleBufferBarNotification(NMTOOLBARW& nmhdr);
 		LRESULT handleBufferBarPagerNotification(NMHDR& nmhdr);
 		void move(std::size_t from, std::size_t to);
-		boost::python::object open(const std::basic_string<WCHAR>& fileName,
+		boost::python::object open(
+			const std::basic_string<WCHAR>& fileName,
 			const std::string& encoding = "UniversalAutoDetect",
+			ascension::encoding::Encoder::SubstitutionPolicy
+				encodingSubstitutionPolicy = ascension::encoding::Encoder::DONT_SUBSTITUTE,
 			ascension::kernel::fileio::TextFileDocumentInput::LockMode lockMode
 				= ascension::kernel::fileio::TextFileDocumentInput::DONT_LOCK,
 			bool asReadOnly = false);
@@ -95,7 +98,6 @@ namespace alpha {
 		BufferList();
 		Buffer& getConcreteDocument(ascension::kernel::Document& document) const;
 		const Buffer& getConcreteDocument(const ascension::kernel::Document& document) const;
-		bool handleFileIOError(const ::WCHAR* fileName, bool forLoading, ascension::kernel::fileio::IOException::Type result);
 		static UINT_PTR CALLBACK openFileNameHookProc(::HWND window, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
 		void recalculateBufferBarSize();
 		void resetResources();

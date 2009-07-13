@@ -83,7 +83,7 @@ namespace {
 	}
 }
 
-ALPHA_EXPOSE_PROLOGUE(23)
+ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
 	py::scope temp(ambient::Interpreter::instance().module("ui"));
 	py::def("goto_line_dialog", &gotoLineDialog);
 ALPHA_EXPOSE_EPILOGUE()

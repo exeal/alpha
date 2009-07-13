@@ -347,7 +347,7 @@ void EditorWindows::paneRemoved(EditorWindow& pane) {
 namespace {
 	void activateWindow(EditorWindow& window) {
 		if(::SetFocus(window.getWindow()) == 0)
-			Interpreter::instance().throwLastWin32Error();
+			Interpreter::instance().raiseLastWin32Error();
 	}
 	py::object activeBuffer() {
 		return EditorWindows::instance().activeBuffer().self();
