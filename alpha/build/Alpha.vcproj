@@ -283,10 +283,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\code-pages-dialog.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\src\editor-window.cpp"
 				>
 				<FileConfiguration
@@ -297,6 +293,10 @@
 						RuntimeTypeInfo="true"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\encodings-dialog.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\src\file-dialog.cpp"
@@ -369,10 +369,6 @@
 			</File>
 			<File
 				RelativePath="..\src\buffer.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\src\code-pages-dialog.hpp"
 				>
 			</File>
 			<File
