@@ -95,14 +95,12 @@ Menu::~Menu() /*throw()*/ {
 		win32::AutoZeroSize<MENUITEMINFOW> mi;
 		mi.fMask = MIIM_DATA;
 		while(numberOfItems() > 0) {
-			if(toBoolean(::GetMenuItemInfoW(handle_, 0, true, &mi)) && mi.dwItemData != 0)
-				Py_DECREF(reinterpret_cast<PyObject*>(mi.dwItemData));
+			if(toBoolean(::GetMenuItemInfoW(handle_, 0, true, &mi)))
+				Py_XDECREF(reinterpret_cast<PyObject*>(mi.dwItemData));
 			::RemoveMenu(handle_, 0, MF_BYPOSITION);
 		}
 		::DestroyMenu(handle_);
 	}
-//	for(set<PopupMenu*>::iterator i(children_.begin()), e(children_.end()); i != e; ++i)
-//		delete *i;
 }
 
 py::object Menu::append(short identifier, const wstring& caption, py::object command, bool alternative) {
@@ -251,8 +249,10 @@ inline UINT Menu::itemType(short identifier) const {
 
 py::ssize_t Menu::numberOfItems() const {
 	const int c = ::GetMenuItemCount(handle_);
-	if(c == -1)
+	if(c == -1) {
+		const DWORD e = ::GetLastError();
 		Interpreter::instance().raiseLastWin32Error();
+	}
 	return c;
 
 }
@@ -455,6 +455,7 @@ ALPHA_EXPOSE_PROLOGUE(21)
 		.add_property("number_of_items", &Menu::numberOfItems)
 		.def("append", &Menu::append, (py::arg("identifier"), py::arg("caption"), py::arg("command"), py::arg("alternative") = false))
 		.def("append_separator", &Menu::appendSeparator)
+		.def("caption", &Menu::caption)
 		.def("check", &Menu::check)
 		.def("clear", &Menu::clear)
 		.def("enable", &Menu::enable)

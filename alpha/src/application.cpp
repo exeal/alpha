@@ -1069,6 +1069,7 @@ void Alpha::onCopyData(HWND window, const COPYDATASTRUCT& cds) {
 void Alpha::onDestroy() {
 	// å„énññÇ»Ç« (Alpha::onClose Ç‡éQè∆)
 	getMainWindow().killTimer(ID_TIMER_QUERYCOMMAND);
+	getMainWindow().setMenu(0);
 
 //	delete mruManager_;
 //	toolbar_.destroyWindow();
