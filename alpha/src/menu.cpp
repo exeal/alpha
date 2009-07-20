@@ -18,6 +18,7 @@ namespace {
 	class PopupMenu;
 
 	class Menu {
+		MANAH_NONCOPYABLE_TAG(Menu);
 	public:
 		static const short NOT_IDENTIFIED;
 	public:
@@ -72,6 +73,7 @@ namespace {
 	};
 
 	class MenuBar : public Menu {
+		MANAH_NONCOPYABLE_TAG(MenuBar);
 	public:
 		MenuBar();
 		static py::object setAsMenuBar(py::object newMenuBar);
@@ -450,7 +452,7 @@ void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 ALPHA_EXPOSE_PROLOGUE(21)
 	py::scope temp(ambient::Interpreter::instance().module("ui"));
 
-	py::class_<Menu>("_Menu", py::no_init)
+	py::class_<Menu, boost::noncopyable>("_Menu", py::no_init)
 		.add_property("default", &Menu::defaultItem)
 		.add_property("number_of_items", &Menu::numberOfItems)
 		.def("append", &Menu::append, (py::arg("identifier"), py::arg("caption"), py::arg("command"), py::arg("alternative") = false))
@@ -473,8 +475,8 @@ ALPHA_EXPOSE_PROLOGUE(21)
 		.def("set_command", &Menu::setCommand)
 		.def("set_default", &Menu::setDefault)
 		.def("sub_menu", &Menu::subMenu);
-	py::class_<PopupMenu, py::bases<Menu> >("PopupMenu", py::init<py::object>(py::arg("popup_handler") = py::object()));
-	py::class_<MenuBar, py::bases<Menu> >("MenuBar")
+	py::class_<PopupMenu, py::bases<Menu>, boost::noncopyable>("PopupMenu", py::init<py::object>(py::arg("popup_handler") = py::object()));
+	py::class_<MenuBar, py::bases<Menu>, boost::noncopyable>("MenuBar")
 		.def("set_as_menu_bar", &MenuBar::setAsMenuBar)
 		.staticmethod("set_as_menu_bar");
 ALPHA_EXPOSE_EPILOGUE()
