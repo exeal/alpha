@@ -78,7 +78,7 @@ namespace alpha {
 		std::size_t find(const std::basic_string<WCHAR>& fileName) const;
 		LRESULT handleBufferBarNotification(NMTOOLBARW& nmhdr);
 		LRESULT handleBufferBarPagerNotification(NMHDR& nmhdr);
-		void move(std::size_t from, std::size_t to);
+		void move(boost::python::ssize_t from, boost::python::ssize_t to);
 		boost::python::object open(
 			const std::basic_string<WCHAR>& fileName,
 			const std::string& encoding = "UniversalAutoDetect",
@@ -98,7 +98,7 @@ namespace alpha {
 		BufferList();
 		Buffer& getConcreteDocument(ascension::kernel::Document& document) const;
 		const Buffer& getConcreteDocument(const ascension::kernel::Document& document) const;
-		static UINT_PTR CALLBACK openFileNameHookProc(::HWND window, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
+		static UINT_PTR CALLBACK openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 		void recalculateBufferBarSize();
 		void resetResources();
 		void updateTitleBar();
@@ -115,6 +115,9 @@ namespace alpha {
 				ascension::kernel::fileio::IUnexpectedFileTimeStampDirector::Context context) /*throw()*/;
 		// ascension.presentation.ITextViewerListListener
 		void textViewerListChanged(ascension::presentation::Presentation& presentation);
+	public:
+		// for properties
+		boost::python::object unexpectedFileTimeStampDirector;
 	private:
 		mutable boost::python::object self_;
 		ascension::texteditor::Session editorSession_;

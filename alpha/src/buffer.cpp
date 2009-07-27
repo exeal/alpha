@@ -77,7 +77,7 @@ Buffer::~Buffer() {
  * Returns the name of the buffer.
  * @see BufferList#getDisplayName
  */
-const basic_string<WCHAR> Buffer::name() const throw() {
+const basic_string<WCHAR> Buffer::name() const /*throw()*/ {
 	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
 	if(textFile_->isOpen())
 		return textFile_->name();
@@ -85,12 +85,12 @@ const basic_string<WCHAR> Buffer::name() const throw() {
 }
 
 /// Returns the presentation object of Ascension.
-a::presentation::Presentation& Buffer::presentation() throw() {
+a::presentation::Presentation& Buffer::presentation() /*throw()*/ {
 	return *presentation_;
 }
 
 /// Returns the presentation object of Ascension.
-const a::presentation::Presentation& Buffer::presentation() const throw() {
+const a::presentation::Presentation& Buffer::presentation() const /*throw()*/ {
 	return *presentation_;
 }
 
@@ -542,10 +542,11 @@ BufferList& BufferList::instance() {
  * @param to 移動先
  * @throw std::out_of_range @a from が不正なときスロー
  */
-void BufferList::move(size_t from, size_t to) {
-	if(from >= buffers_.size() || to > buffers_.size())
-		throw out_of_range("The specified index is out of range.");
-	else if(from == to)
+void BufferList::move(py::ssize_t from, py::ssize_t to) {
+	if(from < 0 || to < 0 || static_cast<size_t>(from) >= buffers_.size() || static_cast<size_t>(to) > buffers_.size()) {
+		::PyErr_SetString(PyExc_IndexError, "The specified index is out of range.");
+		py::throw_error_already_set();
+	} else if(from == to)
 		return;
 
 	// リスト内で移動
@@ -670,25 +671,16 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 /// @see ascension#text#IUnexpectedFileTimeStampDirector::queryAboutUnexpectedTimeStamp
 bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 		k::Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
-	const Buffer& buffer = getConcreteDocument(document);
-	const Buffer& activeBuffer = EditorWindows::instance().activeBuffer();
-	EditorWindows::instance().activePane().showBuffer(buffer);
-	switch(context) {
-	case IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION:
-		return Alpha::instance().messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_EDIT,
-			MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()) == IDYES;
-	case IUnexpectedFileTimeStampDirector::OVERWRITE_FILE:
-		return Alpha::instance().messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_SAVE,
-			MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()) == IDYES;
-	case IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION:
-		if(IDYES == Alpha::instance().messageBox(MSG_BUFFER__FILE_IS_MODIFIED_AND_REOPEN,
-				MB_YESNO | MB_ICONQUESTION, MARGS % buffer.textFile().pathName()))
-			reopen(find(buffer), false);
-		else
-			EditorWindows::instance().activePane().showBuffer(activeBuffer);
-		return true;
+	if(unexpectedFileTimeStampDirector == py::object())
+		return false;
+	try {
+		py::object f(unexpectedFileTimeStampDirector.attr("query_about_unexpected_time_stamp"));
+		const py::object result(f(getConcreteDocument(document), context));
+		return ::PyObject_IsTrue(result.ptr()) == 1;
+	} catch(py::error_already_set&) {
+		Interpreter::instance().handleException();
+		return false;
 	}
-	return false;
 }
 
 /// Recalculates the size of the buffer bar.
@@ -1059,6 +1051,7 @@ namespace {
 	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
+	void unbindBuffer(Buffer& buffer) {buffer.textFile().close();}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
 }
 
@@ -1106,6 +1099,10 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("special_value_mask", NLF_SPECIAL_VALUE_MASK)
 		.value("raw_value", NLF_RAW_VALUE)
 		.value("document_input", NLF_DOCUMENT_INPUT);
+	py::enum_<fileio::IUnexpectedFileTimeStampDirector::Context>("UnexpectedFileTimeStampContext")
+		.value("first_modification", fileio::IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION)
+		.value("overwrite_file", fileio::IUnexpectedFileTimeStampDirector::OVERWRITE_FILE)
+		.value("client_invocation", fileio::IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION);
 
 	py::class_<Direction>("Direction", py::no_init)
 		.def_readonly("forward", &Direction::FORWARD)
@@ -1129,13 +1126,13 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("is_normalized", &Region::isNormalized)
 		.def("normalize", &Region::normalize, py::return_value_policy<py::reference_existing_object>())
 		.def("union", &Region::getUnion, py::return_value_policy<py::return_by_value>());
-	py::class_<Bookmarker, py::bases<>, Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
+	py::class_<Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
 		.def("clear", &Bookmarker::clear)
 		.def("is_marked", &Bookmarker::isMarked)
 		.def("mark", &Bookmarker::mark, (py::arg("line"), py::arg("set") = true))
 		.def("next", &Bookmarker::next, (py::arg("from"), py::arg("direction"), py::arg("wrap_around") = true, py::arg("marks") = 1))
 		.def("toggle", &Bookmarker::toggle);
-	py::class_<Buffer, py::bases<>, Buffer, boost::noncopyable>("_Buffer", py::no_init)
+	py::class_<Buffer, boost::noncopyable>("_Buffer", py::no_init)
 		.add_property("accessible_region", &Buffer::accessibleRegion)
 		.add_property("bookmarker", py::make_function<
 			Bookmarker& (Buffer::*)(void), py::return_value_policy<py::reference_existing_object>
@@ -1170,12 +1167,14 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("redo", &Buffer::redo, py::arg("n") = 1)
 		.def("replace", &replaceString)
 		.def("reset_content", &Buffer::resetContent)
+		.def("unbind", &unbindBuffer)
 		.def("save", &saveBuffer,
 			(py::arg("filename"), py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
 			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE))
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
 		.def("widen", &Buffer::widen);
-	py::class_<BufferList, py::bases<>, BufferList, boost::noncopyable>("_BufferList", py::no_init)
+	py::class_<BufferList, boost::noncopyable>("_BufferList", py::no_init)
+		.def_readwrite("unexpected_file_time_stamp_director", &BufferList::unexpectedFileTimeStampDirector)
 //		.def("__contains__", &)
 		.def("__getitem__", &bufferAt)
 //		.def("__iter__", &)
@@ -1186,11 +1185,11 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("add_new_dialog", &BufferList::addNewDialog,
 			py::arg("name") = wstring(), py::return_value_policy<py::reference_existing_object>())
 //		.def("close_all", &BufferList::closeAll)
+		.def("move", &BufferList::move)
 		.def("open", &BufferList::open,
 			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
 			py::arg("lock_mode") = fileio::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
-		.def("save_all", &BufferList::saveAll)
-/*		.def("save_some_dialog", &BufferList, py::arg("buffers_to_save") = py::tuple())*/;
+		.def("save_all", &BufferList::saveAll);
 
 	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);
