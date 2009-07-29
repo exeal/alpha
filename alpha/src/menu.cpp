@@ -54,7 +54,7 @@ namespace {
 	private:
 		py::object insertItem(short at, short identifier, const wstring& caption, py::object command, bool alternative);
 		void item(short identifier, win32::AutoZeroSize<MENUITEMINFOW>& mi) const;
-		py::object setItem(short identifier, const win32::AutoZeroSize<MENUITEMINFO>& mi);
+		py::object setItem(short identifier, const win32::AutoZeroSize<MENUITEMINFOW>& mi);
 		UINT itemState(short identifier) const;
 		UINT itemType(short identifier) const;
 		py::object setItemState(short identifier, UINT statesToAdd, UINT statesToRemove);
@@ -337,7 +337,7 @@ py::object Menu::setDefault(short identifier) {
 	return self();
 }
 
-py::object Menu::setItem(short identifier, const win32::AutoZeroSize<MENUITEMINFO>& mi) {
+py::object Menu::setItem(short identifier, const win32::AutoZeroSize<MENUITEMINFOW>& mi) {
 	if(!toBoolean(::SetMenuItemInfoW(handle_, identifier, false, &mi)))
 		Interpreter::instance().raiseLastWin32Error();
 	return self();
