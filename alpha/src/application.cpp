@@ -423,6 +423,8 @@ bool Alpha::initInstance(int showCommand) {
 	strcpy(fileName, ".alpha");
 	try {
 		ambient::Interpreter::instance().executeFile(dotAlpha);
+	} catch(const invalid_argument&) {
+		// TODO: warn that ".alpha" is not found
 	} catch(const boost::python::error_already_set&) {
 		ambient::Interpreter::instance().handleException();
 	}
