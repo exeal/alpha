@@ -568,6 +568,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
 			line.text_.erase(beginning.column, end.column - beginning.column);
 			erasedStringLength += end.column - beginning.column;
+			endOfInsertedString = beginning;
 		} else if(region.isEmpty() && nextNewline == last) {	// insert single line
 			lines_[region.first.line]->text_.insert(
 				region.first.column, first, static_cast<String::size_type>(last - first));
