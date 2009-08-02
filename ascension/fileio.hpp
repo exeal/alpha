@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_FILEIO_HPP
 #define ASCENSION_FILEIO_HPP
-#include "document.hpp"
+#include <ascension/document.hpp>
 
 namespace ascension {
 	namespace kernel {
@@ -23,23 +23,60 @@ namespace ascension {
 			/// String type for file names.
 			typedef std::basic_string<Char> String;
 
+			/// Used by functions and methods write to files. 
+			struct WritingFormat {
+				/// The the encoding name.
+				std::string encoding;
+				/// The newline.
+				Newline newline;
+				/// The substituion policy of encoding.
+				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy;
+				/// Set @c true to write a UTF byte order signature. This member is ignored if the
+				/// encoding was not Unicode.
+				bool unicodeByteOrderMark;
+			};
+
+			/// The specified file is not found.
+			class FileNotFoundException : public std::ios_base::failure {
+			public:
+				explicit FileNotFoundException(const String& fileName);
+				const String& fileName() const /*throw()*/;
+			private:
+				const String fileName_;
+			};
+
+			/// The access to the target entity was rejected.
+			class AccessDeniedException : public std::ios_base::failure {
+			public:
+				AccessDeniedException();
+			};
+
+			/// The encoding failed for unmappable character.
+			/// @see encoding#Encoder#UNMAPPABLE_CHARACTER
+			class UnmappableCharacterException : public std::ios_base::failure {
+			public:
+				UnmappableCharacterException();
+			};
+
+			/// The encoding failed for malformed input.
+			/// @see encoding#Encoder#MALFORMED_INPUT
+			class MalformedInputException : public std::ios_base::failure {
+			public:
+				MalformedInputException();
+			};
+
+			/// A platform-dependent error whose detail can be obtained by POSIX @c errno
+			/// or Win32 @c GetLastError.
+			class PlatformDependentError : public std::ios_base::failure {
+			public:
+				PlatformDependentError();
+			};
+
 			/// File I/O exception.
 			class IOException : public std::runtime_error {
 			public:
 				/// Error types.
 				enum Type {
-					/// The specified file is not found.
-					FILE_NOT_FOUND,
-					/// The specified encoding is invalid.
-					INVALID_ENCODING,
-					/// The specified newline is based on Unicode but the encoding is not Unicode.
-					INVALID_NEWLINE,
-					/// The encoding failed for unmappable character.
-					/// @see encoding#Encoder#UNMAPPABLE_CHARACTER
-					UNMAPPABLE_CHARACTER,
-					/// The encoding failed for malformed input.
-					/// @see encoding#Encoder#MALFORMED_INPUT
-					MALFORMED_INPUT,
 #if 0
 					/// Failed for out of memory.
 					OUT_OF_MEMORY,
@@ -57,10 +94,7 @@ namespace ascension {
 					/// Failed to create the temporary file for writing.
 					CANNOT_CREATE_TEMPORARY_FILE,
 					/// Failed to write to the file and the file was <strong>lost</strong>.
-					LOST_DISK_FILE,
-					/// A platform-dependent error whose detail can be obtained by POSIX @c errno
-					/// or Win32 @c GetLastError.
-					PLATFORM_DEPENDENT_ERROR
+					LOST_DISK_FILE
 				};
 			public:
 				/// Constructor.
@@ -179,20 +213,10 @@ namespace ascension {
 					EXCLUSIVE_LOCK			= 0x02,	///< Uses exclusive lock.
 					LOCK_TYPE_MASK			= 0x03,	///< A bit mask for lock type.
 					LOCK_ONLY_AS_EDITING	= 0x08;	///< The lock will not be performed unless modification occurs.
-				/// Option flags for @c FileBinder#write and @c FileBinder#writeRegion.
-				struct WriteParameters {
-					/// The the encoding name.
-					std::string encoding;
-					/// The newline.
-					Newline newline;
-					/// The substituion policy of encoding.
-					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy;
-					enum Option {
-						WRITE_UNICODE_BYTE_ORDER_SIGNATURE	= 0x01,	///< Writes a UTF byte order signature.
-						BY_COPYING							= 0x02,	///< Not implemented.
-						CREATE_BACKUP						= 0x04	///< Creates backup files.
-					};
-					manah::Flags<Option> options;	///< Miscellaneous options.
+				/// Option flags for @c TextFileDocumentInput#write method.
+				enum WritingOption {
+					BY_COPYING		= 0x01,	///< Not implemented.
+					CREATE_BACKUP	= 0x02	///< Creates backup files.
 				};
 			public:
 				explicit TextFileDocumentInput(Document& document);
@@ -217,8 +241,7 @@ namespace ascension {
 				bool open(const String& fileName, LockMode lockMode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
-				bool write(const String& fileName, const WriteParameters& params);
-				bool writeRegion(const String& fileName, const Region& region, const WriteParameters& params, bool append);
+				bool write(const String& fileName, const WritingFormat& format, const manah::Flags<WritingOption>& options);
 				// IDocumentInput
 				std::string encoding() const /*throw()*/;
 				bool isChangeable() const /*throw()*/;
@@ -336,6 +359,10 @@ namespace ascension {
 			// free functions related to file path name
 			String canonicalizePathName(const Char* pathName);
 			bool comparePathNames(const Char* s1, const Char* s2);
+
+			// free function
+			void writeRegion(const Document& document, const Region& region,
+				const String& fileName, const WritingFormat& format, bool append = false);
 
 			/// Returns the document.
 			inline const Document& fileio::TextFileDocumentInput::document() const /*throw()*/ {return document_;}

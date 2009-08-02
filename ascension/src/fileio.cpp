@@ -41,8 +41,8 @@ namespace {
 	 * @param name the name of the file
 	 * @return if the file exists
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException(fileio#IOException#PLATFORM_DEPENDENT_ERROR) any I/O error occurred. for
-	 *        details, use POSIX @c errno or Win32 @c GetLastError
+	 * @throw PlatformDependentError any I/O error occurred. for details, use POSIX @c errno or
+	 *                               Win32 @c GetLastError
 	 */
 	bool pathExists(const Char* name) {
 		if(name == 0)
@@ -65,7 +65,7 @@ namespace {
 		else if(errno == ENOENT)
 			return false;
 #endif
-		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		throw PlatformDependentError();
 	}
 
 	/// Finds the base name in the given file path name.
@@ -78,7 +78,8 @@ namespace {
 	 * Returns the last write time of the specified file.
 	 * @param fileName the name of the file
 	 * @param[out] timeStamp the time
-	 * @throw IOException any I/O error occurred
+	 * @throw FileNotFoundException the file is not found
+	 * @throw PlatformDependentError
 	 */
 	void getFileLastWriteTime(const String& fileName, TextFileDocumentInput::Time& timeStamp) {
 #ifdef ASCENSION_WINDOWS
@@ -87,15 +88,19 @@ namespace {
 			timeStamp = attributes.ftLastWriteTime;
 		else {
 			const DWORD e = ::GetLastError();
-			throw IOException((e == ERROR_FILE_NOT_FOUND
-				|| e == ERROR_PATH_NOT_FOUND) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+			if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND)
+				throw FileNotFoundException(fileName);
+			else
+				throw PlatformDependentError();
 		}
 #else // ASCENSION_POSIX
 		struct stat s;
 		if(::stat(fileName.c_str(), &s) == 0)
 			timeStamp = s.st_mtime;
+		else if(errno == ENOENT)
+			throw FileNotFoundException();
 		else
-			throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+			throw PlatformDependentError();
 #endif
 	}
 
@@ -104,7 +109,8 @@ namespace {
 	 * @param fileName the name of the file
 	 * @return the size of the file in bytes or -1 if the file is too large
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException any I/O error occurred
+	 * @throw FileNotFoundException the file is not found
+	 * @throw PlatformDependentError
 	 */
 	ptrdiff_t getFileSize(const Char* fileName) {
 		if(fileName == 0)
@@ -113,16 +119,22 @@ namespace {
 		WIN32_FILE_ATTRIBUTE_DATA attributes;
 		if(::GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes) == 0) {
 			DWORD e = ::GetLastError();
-			throw IOException((e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME
-				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+			if(e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_BAD_NETPATH)
+				throw FileNotFoundException(fileName);
+			else
+				throw PlatformDependentError();
 		}
 		return (attributes.nFileSizeHigh == 0
 			&& attributes.nFileSizeLow <= static_cast<DWORD>(numeric_limits<ptrdiff_t>::max())) ?
 				static_cast<ptrdiff_t>(attributes.nFileSizeLow) : -1;
 #else // ASCENSION_POSIX
 		struct stat s;
-		if(::stat(fileName, &s) != 0)
-			throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+		if(::stat(fileName, &s) != 0) {
+			if(errno == ENOENT)
+				throw FileNotFoundException(fileName);
+			else
+				throw PlatformDependentError();
+		}
 		return s.st_size;
 #endif
 	}
@@ -131,8 +143,8 @@ namespace {
 	 * Creates a name for a temporary file.
 	 * @param seed the string contains a directory path and a prefix string
 	 * @return the result string
-	 * @throw std#bad_alloc POSIX @c tempnam failed
-	 * @throw IOException any I/O error occurred
+	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_POSIX was defined)
+	 * @throw PlatformDependentError
 	 */
 	String getTemporaryFileName(const String& seed) {
 		manah::AutoBuffer<Char> s(new Char[seed.length() + 1]);
@@ -153,7 +165,7 @@ namespace {
 		} else if(errno == ENOMEM)
 			throw bad_alloc("tempnam failed.");
 #endif
-		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		throw PlatformDependentError();
 	}
 } // namespace @0
 
@@ -294,6 +306,48 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 #endif
 }
 
+/**
+ * Writes the specified region of the document into the specified file.
+ * @param document the document
+ * @param region the region to write
+ * @param fileName the file name
+ * @param format the encoding and the newline
+ * @param append set @c true to append to the file
+ * @throw IOException any I/O error occurred
+ */
+void fileio::writeRegion(const Document& document, const Region& region,
+		const String& fileName, const WritingFormat& format, bool append /* = false */) {
+	// TODO: not implemented.
+}
+
+
+// exception classes ////////////////////////////////////////////////////////
+
+/// Default constructor.
+FileNotFoundException::FileNotFoundException(const String& fileName) : ios_base::failure("file not found."), fileName_(fileName) {
+}
+
+/// Returns the file name.
+const String& FileNotFoundException::fileName() const /*throw()*/ {
+	return fileName_;
+}
+
+/// Default constructor.
+AccessDeniedException::AccessDeniedException() : ios_base::failure("access denied.") {
+}
+
+/// Default constructor.
+UnmappableCharacterException::UnmappableCharacterException() : ios_base::failure("encountered an unmappable character in encoding/decoding.") {
+}
+
+/// Default constructor.
+MalformedInputException::MalformedInputException() : ios_base::failure("detected malformed input in encoding/decoding.") {
+}
+
+/// Default constructor.
+PlatformDependentError::PlatformDependentError() : ios_base::failure("a platform-dependent error occured.") {
+}
+
 
 // TextFileStreamBuffer /////////////////////////////////////////////////////
 
@@ -321,33 +375,37 @@ namespace {
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param writeByteOrderMark set @c true to write Unicode byte order mark into the output file
- * @throw IOException any I/O error occurred
- * @throw UnknownValueException<std#iose_base#openmode> @a mode is neigher @c in nor @c out
+ * @throw FileNotFoundException the file specified @a fileName is not found
+ * @throw UnknownValueException @a mode is neigher @c in nor @c out
+ * @throw UnsupportedEncodingException the encoding specified by @a encoding is not supported
+ * @throw PlatformDependentError
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 		bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
 	if(!pathExists(fileName.c_str()))
-		throw IOException(IOException::FILE_NOT_FOUND);
+		throw FileNotFoundException(fileName);
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	if(mode == ios_base::in) {
 		EncodingDetector* encodingDetector = 0;
 		if(encoder_.get() == 0) {	// 'encoding' may be for auto-detection
 			encodingDetector = EncodingDetector::forName(encoding);
 			if(encodingDetector == 0)
-				throw IOException(IOException::INVALID_ENCODING);
+				throw UnsupportedEncodingException("<encoding> = " + encoding);
 		}
 		// open the file and create memory-mapped object
 		const ptrdiff_t fileSize = getFileSize(fileName.c_str());
 		if(fileSize == -1)
-			throw IOException(IOException::HUGE_FILE);
+			throw bad_alloc("the file is too large.");	// TODO: this was IOException(IOException::HUGE_FILE).
 #ifdef ASCENSION_WINDOWS
 		fileHandle_ = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 			FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE) {
 			const DWORD e = ::GetLastError();
-			throw IOException((e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER
-				|| e == ERROR_BAD_NETPATH) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+			if(e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
+				throw FileNotFoundException(fileName);
+			else
+				throw PlatformDependentError();
 		}
 		if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
 			inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
@@ -356,16 +414,20 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			if(fileMapping_ != 0)
 				::CloseHandle(fileMapping_);
 			::CloseHandle(fileHandle_);
-			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			throw PlatformDependentError();
 		}
 #else // ASCENSION_POSIX
-		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY)))
-			throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY))) {
+			if(errno == ENOENT)
+				throw FileNotFoundException(fileName);
+			else
+				throw PlatformDependentError();
+		}
 		if(MAP_FAILED == (inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)))) {
 			SystemErrorSaver temp;
 			inputMapping_.first = 0;
 			::close(fileDescriptor_);
-			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			throw PlatformDependentError();
 		}
 #endif
 		inputMapping_.last = inputMapping_.first + fileSize;
@@ -378,19 +440,19 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			else
 				encoder_ = Encoder::forName(detected.second);
 			if(encoder_.get() == 0)
-				throw IOException(IOException::INVALID_ENCODING);	// can't resolve
+				throw UnsupportedEncodingException("<detected.second> = " + detected.second);	// can't resolve
 		}
 		inputMapping_.current = inputMapping_.first;
 	} else if(mode == ios_base::out) {
 		if(encoder_.get() == 0)
-			throw IOException(IOException::INVALID_ENCODING);
+			throw UnsupportedEncodingException("<encoding> = " + encoding);
 #ifdef ASCENSION_WINDOWS
 		if(INVALID_HANDLE_VALUE == (fileHandle_ =
 				::CreateFileW(fileName.c_str(), GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE, 0)))
-			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			throw PlatformDependentError();
 #else // ASCENSION_POSIX
 		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT)))
-			throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+			throw PlatformDependentError();
 #endif
 		if(writeByteOrderMark)
 			encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
@@ -492,9 +554,9 @@ int TextFileStreamBuffer::sync() {
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
 				nativeBuffer, MANAH_ENDOF(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
-				throw IOException(IOException::UNMAPPABLE_CHARACTER);
+				throw UnmappableCharacterException();
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
-				throw IOException(IOException::MALFORMED_INPUT);
+				throw MalformedInputException();
 
 			// write into the file
 #ifdef ASCENSION_WINDOWS
@@ -502,7 +564,7 @@ int TextFileStreamBuffer::sync() {
 			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<DWORD>::max());
 			const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
 			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+				throw PlatformDependentError();
 #else // ASCENSION_POSIX
 			const size_t bytes = toNext - nativeBuffer;
 			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
@@ -530,9 +592,9 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 	switch(encoder_->toUnicode(ucsBuffer_, MANAH_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
-		throw IOException(IOException::UNMAPPABLE_CHARACTER);
+		throw UnmappableCharacterException();
 	case Encoder::MALFORMED_INPUT:
-		throw IOException(IOException::MALFORMED_INPUT);
+		throw MalformedInputException();
 	default:
 		break;
 	}
@@ -651,7 +713,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
  */
 void TextFileDocumentInput::close() {
 	if(!unlock())
-		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		throw PlatformDependentError();
 	if(isOpen()) {
 		if(document_.input() == this)
 			document_.setInput(0, false);	// unbind
@@ -843,7 +905,7 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	try {
 		getFileLastWriteTime(fileName_, internalLastWriteTime_);
 		userLastWriteTime_ = internalLastWriteTime_;
-	} catch(IOException&) {
+	} catch(ios_base::failure&) {
 		// ignore...
 	}
 
@@ -941,16 +1003,23 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 /**
  * Writes the content of the document to the specified file.
  * @param fileName the file name
- * @param params the options
+ * @param format the encoding and the newline
+ * @param options the options
  * @return @c true if succeeded
- * @throw IOException any I/O error occurred
+ * @throw UnsupportedEncodingException the encoding specified by @a format.encoding is not supported
+ * @throw std#invalid_argument @a format.newline is not supported or based on Unicode but the
+ *                             encoding is not Unicode.
+ * @throw AccessDeniedException the access to the file was denied
+ * @throw IOException(IOException#LOST_DISK_FILE)
+ * @throw PlatformDependentError
+ * @throw ... any exceptions @c kernel#writeDocumentToStream function throws
  */
-bool TextFileDocumentInput::write(const String& fileName, const TextFileDocumentInput::WriteParameters& params) {
+bool TextFileDocumentInput::write(const String& fileName, const WritingFormat& format, const manah::Flags<TextFileDocumentInput::WritingOption>& options) {
 	// check Unicode spcific newlines
-	if(params.newline == NLF_NEXT_LINE || params.newline == NLF_LINE_SEPARATOR || params.newline == NLF_PARAGRAPH_SEPARATOR) {
-		const auto_ptr<Encoder> encoder(Encoder::forName(params.encoding));
+	if(format.newline == NLF_NEXT_LINE || format.newline == NLF_LINE_SEPARATOR || format.newline == NLF_PARAGRAPH_SEPARATOR) {
+		const auto_ptr<Encoder> encoder(Encoder::forName(format.encoding));
 		if(encoder.get() == 0)
-			throw IOException(IOException::INVALID_ENCODING);
+			throw UnsupportedEncodingException("<format.encoding> = " + format.encoding);
 		const MIBenum mib = encoder->properties().mibEnum();
 		if(mib != fundamental::UTF_8
 				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE && fundamental::UTF_16
@@ -961,14 +1030,14 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 				&& encoder->properties().name() == "UTF-5"
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			)
-			throw IOException(IOException::INVALID_NEWLINE);
+			throw invalid_argument("format.newline");
 	}
 
 	// check if writable
 #ifdef ASCENSION_WINDOWS
 	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
 	if(originalAttributes != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttributes & FILE_ATTRIBUTE_READONLY))
-		throw IOException(IOException::UNWRITABLE_FILE);
+		throw AccessDeniedException();	// TODO: this was IOException(IOException::UNWRITABLE_FILE).
 #else // ASCENSION_POSIX
 	struct stat originalStat;
 	bool gotStat = ::stat(fileName_.c_str(), &originalStat) == 0;
@@ -977,7 +1046,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 #else
 	if(::access(fileName_.c_str(), 2) < 0)
 #endif
-		throw IOException(IOException::UNWRITABLE_FILE);
+		throw AccessDeniedException("unwritable file.");	// TODO: this was IOException(IOException::UNWRITABLE_FILE).
 #endif
 
 	// check if the existing file was modified by others
@@ -997,12 +1066,12 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 
 	// create a temporary file and write into
 	const String tempFileName(getTemporaryFileName(realName));
-	TextFileStreamBuffer sb(tempFileName, ios_base::out, params.encoding,
-		params.encodingSubstitutionPolicy, params.options.has(WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE));
+	TextFileStreamBuffer sb(tempFileName, ios_base::out,
+		format.encoding, format.encodingSubstitutionPolicy, format.unicodeByteOrderMark);
 	basic_ostream<a::Char> outputStream(&sb);
 	try {
 		outputStream.exceptions(ios_base::badbit);
-		writeDocumentToStream(outputStream, document_, document_.region(), params.newline);
+		writeDocumentToStream(outputStream, document_, document_.region(), format.newline);
 		sb.close();
 	} catch(...) {
 		// delete the temporary file...
@@ -1028,7 +1097,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 			SystemErrorSaver ses;
 			if(::GetLastError() != ERROR_FILE_NOT_FOUND) {
 				::DeleteFileW(tempFileName.c_str());
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+				throw PlatformDependentError();
 			}
 		}
 	}
@@ -1037,7 +1106,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 			throw IOException(IOException::LOST_DISK_FILE);
 		SystemErrorSaver ses;
 		::DeleteFileW(tempFileName.c_str());
-		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		throw PlatformDependentError();
 	}
 #else // ASCENSION_POSIX
 	if(gotStat) {
@@ -1047,7 +1116,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 			SystemErrorSaver ses;
 			if(errno != ENOENT) {
 				::remove(tempFileName.c_str());
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+				throw PlatformDependentError();
 			}
 		}
 	}
@@ -1056,7 +1125,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 			throw IOException(IOException::LOST_DISK_FILE);
 		SystemErrorSaver ses;
 		::remove(tempFileName.c_str());
-		throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+		throw PlatformDependentError();
 	}
 #endif
 
@@ -1078,12 +1147,12 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	}
 */
 
-	if(isLiteralNewline(params.newline)) {
-		setNewline(params.newline);	// determine the newlines
+	if(isLiteralNewline(format.newline)) {
+		setNewline(format.newline);	// determine the newlines
 //		for(length_t i = 0; i < lines_.getSize(); ++i) {
 //			Line& line = *lines_[i];
 //			line.operationHistory_ = 0;		// erase the operation history
-//			line.newline_ = params.newline;	// overwrite the newline
+//			line.newline_ = format.newline;	// overwrite the newline
 //		}
 	} else {
 //		for(length_t i = 0; i < lines_.getSize(); ++i)
@@ -1092,7 +1161,7 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	savedDocumentRevision_ = document_.revisionNumber();
 	document_.markUnmodified();
 	document_.setReadOnly(false);
-	setEncoding(params.encoding);
+	setEncoding(format.encoding);
 	if(fileName_ != realName) {
 		fileName_ = realName;
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
@@ -1107,20 +1176,6 @@ bool TextFileDocumentInput::write(const String& fileName, const TextFileDocument
 	userLastWriteTime_ = internalLastWriteTime_;
 
 	return lock();
-}
-
-/**
- * Writes the specified region to the specified file.
- * @param fileName the file name
- * @param region the region to be written
- * @param params the options
- * @param append set @c true to append to the file
- * @return the result. @c FIR_OK if succeeded
- * @throw IOException any I/O error occurred
- */
-bool TextFileDocumentInput::writeRegion(const String& fileName, const Region& region, const TextFileDocumentInput::WriteParameters& params, bool append) {
-	// TODO: not implemented.
-	return false;
 }
 
 
@@ -1149,7 +1204,8 @@ namespace {
  * Constructor.
  * @param directoryName the directory to traverse
  * @throw NullPointerException @a directoryName is @c null
- * @throw IOException can be @c IOException#FILE_NOT_FOUND or @c IOException#PLATFORM_DEPENDENT_ERROR
+ * @throw FileNotFoundException the path name specified by @a directoryName is not found
+ * @throw PlatformDependentError
  */
 DirectoryIterator::DirectoryIterator(const Char* directoryName) :
 #ifdef ASCENSION_WINDOWS
@@ -1161,11 +1217,11 @@ DirectoryIterator::DirectoryIterator(const Char* directoryName) :
 	if(directoryName == 0)
 		throw a::NullPointerException("directoryName");
 	else if(directoryName[0] == 0)
-		throw IOException(IOException::FILE_NOT_FOUND);
+		throw FileNotFoundException(directoryName);
 
 #ifdef ASCENSION_WINDOWS
 	if(!pathExists(directoryName))
-		throw IOException(IOException::FILE_NOT_FOUND);
+		throw FileNotFoundException(directoryName);
 	const size_t len = wcslen(directoryName);
 	assert(len > 0);
 	manah::AutoBuffer<Char> pattern(new Char[len + 3]);
@@ -1173,15 +1229,22 @@ DirectoryIterator::DirectoryIterator(const Char* directoryName) :
 	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
 	WIN32_FIND_DATAW data;
 	handle_ = ::FindFirstFileW(pattern.get(), &data);
-	if(handle_ == INVALID_HANDLE_VALUE)
-		throw IOException((::GetLastError() == ERROR_FILE_NOT_FOUND) ?
-			IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+	if(handle_ == INVALID_HANDLE_VALUE) {
+		if(::GetLastError() == ERROR_FILE_NOT_FOUND)
+			throw FileNotFoundException(directoryName);
+		else
+			throw PlatformDependentError();
+	}
 	update(&data);
 	directory_.assign(pattern.get(), isPathSeparator(pattern[len - 1]) ? len - 1 : len);
 #else // ASCENSION_POSIX
 	handle_ = ::opendir(directoryName);
-	if(handle_ == 0)
-		throw IOException((errno == ENOENT) ? IOException::FILE_NOT_FOUND : IOException::PLATFORM_DEPENDENT_ERROR);
+	if(handle_ == 0) {
+		if(errno == ENOENT)
+			throw FileNotFoundException(directoryName);
+		else
+			throw PlatformDependentError();
+	}
 	update(0);
 	directory_.assign(pattern.get());
 	if(isPathSeparator(directory_[directory_.length() - 1]))
@@ -1236,7 +1299,7 @@ void DirectoryIterator::next() {
 			if(::GetLastError() == ERROR_NO_MORE_FILES)
 				done_ = true;
 			else
-				throw IOException(IOException::PLATFORM_DEPENDENT_ERROR);
+				throw PlatformDependentError();
 		} else
 			update(&data);
 #else // ASCENSION_POSIX

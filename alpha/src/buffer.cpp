@@ -637,31 +637,35 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 //		}
 	}
 */
-	bool succeeded = true;
-	IOException::Type errorType;
 	{
 		using namespace ascension::encoding;
 		win32::ui::WaitCursor wc;
 		app.statusBar().setText(app.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName).c_str());
 		app.getMainWindow().lockUpdate();
 
-		// 準備ができたのでファイルを開く
 		try {
 			// TODO: check the returned value.
 			buffer->textFile().open(resolvedName, lockMode, encoding, encodingSubstitutionPolicy);
+		} catch(const FileNotFoundException& e) {
+			::PyErr_SetString(PyExc_IOError, e.what());
+		} catch(const AccessDeniedException& e) {
+			::PyErr_SetString(PyExc_IOError, e.what());
+		} catch(const UnmappableCharacterException& e) {
+			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
+		} catch(const MalformedInputException& e) {
+			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
+		} catch(const PlatformDependentError&) {
+			::PyErr_SetFromWindowsErr(0);
 		} catch(IOException& e) {
-			succeeded = false;
-			errorType = e.type();
+			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
 		}
 		app.statusBar().setText(0);
 		app.getMainWindow().unlockUpdate();
 	}
 	app.getMainWindow().show(app.getMainWindow().isVisible() ? SW_SHOW : SW_RESTORE);
 
-	if(!succeeded) {
-		::PyErr_SetObject(PyExc_IOError, py::object(errorType).ptr());
+	if(::PyErr_Occurred() != 0)
 		py::throw_error_already_set();
-	}
 
 	if(asReadOnly)
 		buffer->setReadOnly();
@@ -1035,15 +1039,14 @@ namespace {
 			return static_cast<k::fileio::IOException::Type>(-1);
 
 		k::fileio::IOException::Type errorType = static_cast<k::fileio::IOException::Type>(-1);
-		k::fileio::TextFileDocumentInput::WriteParameters params;
-		params.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
-		params.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
-		params.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
-//		if(writeBOM)
-//			params.options = TextFileDocumentInput::WriteParameters::WRITE_UNICODE_BYTE_ORDER_SIGNATURE;
+		k::fileio::WritingFormat format;
+		format.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
+		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
+		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
+//		format.unicodeByteOrderMark = writeBOM;
 
 		try {
-			buffer.textFile().write(fileName, params);
+			buffer.textFile().write(fileName, format, 0);
 		} catch(k::fileio::IOException& e) {
 			errorType = e.type();
 		}
@@ -1069,7 +1072,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("dont_substitute", encoding::Encoder::DONT_SUBSTITUTE)
 		.value("replace_unmappable_characters", encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
 		.value("ignore_unmappable_characters", encoding::Encoder::IGNORE_UNMAPPABLE_CHARACTERS);
-	py::enum_<fileio::IOException::Type>("FileIoError")
+/*	py::enum_<fileio::IOException::Type>("FileIoError")
 		.value("ok", static_cast<fileio::IOException::Type>(-1))
 		.value("file_not_found", fileio::IOException::FILE_NOT_FOUND)
 		.value("invalid_encoding", fileio::IOException::INVALID_ENCODING)
@@ -1083,7 +1086,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("cannot_create_temporary_file", fileio::IOException::CANNOT_CREATE_TEMPORARY_FILE)
 		.value("lost_disk_file", fileio::IOException::LOST_DISK_FILE)
 		.value("platform_dependent_error", fileio::IOException::PLATFORM_DEPENDENT_ERROR);
-	py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
+*/	py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
 		.value("dont_lock", fileio::TextFileDocumentInput::DONT_LOCK)
 		.value("shared_lock", fileio::TextFileDocumentInput::SHARED_LOCK)
 		.value("exclusive_lock", fileio::TextFileDocumentInput::EXCLUSIVE_LOCK)
