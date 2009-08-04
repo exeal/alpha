@@ -115,7 +115,7 @@ namespace manah {
 			/// Constructor.
 			explicit Borrowed(typename T::HandleType handle) : T(handle) {}
 			/// Destructor.
-			~Borrowed() throw() {release();}
+			~Borrowed() throw() {T::release();}
 			/// Copy-constructor just copies the handle value.
 			Borrowed(const Borrowed<T>& rhs) : T() {reset(rhs.get());}
 			/// Member-access operator returns @c T object.
