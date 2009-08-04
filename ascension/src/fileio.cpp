@@ -167,6 +167,36 @@ namespace {
 #endif
 		throw PlatformDependentError();
 	}
+
+	/**
+	 * Verifies if the newline is allowed in the given character encoding.
+	 * @param encoding the character encoding
+	 * @param newline the newline to verify
+	 * @throw encoding#UnsupportedEncodingException @a encoding is not supported
+	 * @throw std#invalid_argument @a newline is not allowed
+	 */
+	void verifyNewline(const string& encoding, Newline newline) {
+		if(newline == NLF_NEXT_LINE || newline == NLF_LINE_SEPARATOR || newline == NLF_PARAGRAPH_SEPARATOR) {
+			auto_ptr<Encoder> encoder(Encoder::forName(encoding));
+			if(encoder.get() == 0)
+				throw UnsupportedEncodingException("the specified encoding is not supported.");
+			else if(!encoder->canEncode(getNewlineString(newline)[0]))
+				throw invalid_argument("the specified newline is not allowed in the specified character encoding.");
+#if 0
+			const MIBenum mib = encoding.properties().mibEnum();
+			if(mib != fundamental::UTF_8
+					&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE && fundamental::UTF_16
+#ifndef ASCENSION_NO_STANDARD_ENCODINGS
+					&& mib != standard::UTF_7 && mib != standard::UTF_32 && mib != standard::UTF_32LE && mib != standard::UTF_32BE
+#endif // !ASCENSION_NO_STANDARD_ENCODINGS
+#ifndef ASCENSION_NO_MINORITY_ENCODINGS
+					&& encoding.properties().name() == "UTF-5"
+#endif // !ASCENSION_NO_MINORITY_ENCODINGS
+				)
+				throw invalid_argument("the specified newline is not allowed in the specified character encoding.");
+#endif
+		}
+	}
 } // namespace @0
 
 /**
@@ -317,7 +347,18 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
  */
 void fileio::writeRegion(const Document& document, const Region& region,
 		const String& fileName, const WritingFormat& format, bool append /* = false */) {
-	// TODO: not implemented.
+	// verify encoding-specific newline
+	verifyNewline(format.encoding, format.newline);
+
+	// open file to write
+	TextFileStreamBuffer sb(fileName, ios_base::out,
+		format.encoding, format.encodingSubstitutionPolicy, format.unicodeByteOrderMark);
+	basic_ostream<a::Char> out(&sb);
+	out.exceptions(ios_base::badbit);
+
+	// write into file
+	writeDocumentToStream(out, document, region, format.newline);
+	sb.close();
 }
 
 
@@ -371,7 +412,15 @@ namespace {
 /**
  * Constructor opens the specified file.
  * @param fileName the name of the file
- * @param mode the file open mode. must be either @c std#ios_base#in or @c std#ios_base#out
+ * @param mode the file open mode. valid values are the following:
+ *   <dl>
+ *     <dt>@c std#ios_base#in</dt>
+ *     <dd></dd>
+ *     <dt>@c std#ios_base#out</dt>
+ *     <dd></dd>
+ *     <dt>@c std#ios_base#out | @c std#ios_base#app</dt>
+ *     <dd></dd>
+ *   </dl>
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param writeByteOrderMark set @c true to write Unicode byte order mark into the output file
@@ -382,9 +431,7 @@ namespace {
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-		bool writeByteOrderMark) : encoder_(Encoder::forName(encoding)) {
-	if(!pathExists(fileName.c_str()))
-		throw FileNotFoundException(fileName);
+		bool writeByteOrderMark) : mode_(mode), encoder_(Encoder::forName(encoding)) {
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	if(mode == ios_base::in) {
 		EncodingDetector* encodingDetector = 0;
@@ -402,22 +449,30 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 			FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE) {
 			const DWORD e = ::GetLastError();
-			if(e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
+			if(e == ERROR_FILE_NOT_FOUND)
+//			if(e == ERROR_PATH_NOT_FOUND || e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
 				throw FileNotFoundException(fileName);
+			else if(e == ERROR_ACCESS_DENIED)
+				throw AccessDeniedException();
 			else
 				throw PlatformDependentError();
 		}
-		if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
-			inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
-		if(inputMapping_.first == 0) {
-			SystemErrorSaver temp;
-			if(fileMapping_ != 0)
-				::CloseHandle(fileMapping_);
-			::CloseHandle(fileHandle_);
-			throw PlatformDependentError();
-		}
+		if(fileSize != 0) {
+			if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
+				inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
+			if(inputMapping_.first == 0) {
+				SystemErrorSaver temp;
+				if(fileMapping_ != 0)
+					::CloseHandle(fileMapping_);
+				::CloseHandle(fileHandle_);
+				throw PlatformDependentError();
+			}
+		} else
+			fileMapping_ = 0;
 #else // ASCENSION_POSIX
 		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY))) {
+			if(errno == EACCES)
+				throw AccessDeniedException();
 			if(errno == ENOENT)
 				throw FileNotFoundException(fileName);
 			else
@@ -443,17 +498,59 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 				throw UnsupportedEncodingException("<detected.second> = " + detected.second);	// can't resolve
 		}
 		inputMapping_.current = inputMapping_.first;
-	} else if(mode == ios_base::out) {
+	} else if((mode & ios_base::out) != 0
+			&& (mode & (ios_base::out | ios_base::app)) == (ios_base::out | ios_base::app)) {
 		if(encoder_.get() == 0)
 			throw UnsupportedEncodingException("<encoding> = " + encoding);
+		if((mode & ios_base::app) != 0) {
 #ifdef ASCENSION_WINDOWS
-		if(INVALID_HANDLE_VALUE == (fileHandle_ =
-				::CreateFileW(fileName.c_str(), GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE, 0)))
-			throw PlatformDependentError();
+			fileHandle_ = ::CreateFileW(fileName.c_str(), GENERIC_WRITE, 0, 0,
+				OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+			if(fileHandle_ == INVALID_HANDLE_VALUE) {
+				const DWORD e = ::GetLastError();
+				if(e == ERROR_FILE_NOT_FOUND)
+					mode_ &= ios_base::app;
+				else if(e == ERROR_ACCESS_DENIED)
+					throw AccessDeniedException();
+				else
+					throw PlatformDependentError();
+			} else {
+				LARGE_INTEGER p = {0, 0};
+				if(!toBoolean(::SetFilePointerEx(fileHandle_, p, &p, FILE_END)))
+					throw PlatformDependentError();
+			}
 #else // ASCENSION_POSIX
-		if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT)))
-			throw PlatformDependentError();
+			fileDescriptor_  = ::open(fileName.c_str(), O_WRONLY | O_APPEND);
+			if(fileDescriptor_ == -1) {
+				if(errno == ENOENT)
+					mode_ &= ios_base::app;
+				else if(errno == EACCES)
+					throw AccessDeniedException();
+				else
+					throw PlatformDependentError();
+			}
 #endif
+		}
+		if(mode_ == ios_base::out) {
+#ifdef ASCENSION_WINDOWS
+			fileHandle_ = ::CreateFileW(fileName.c_str(), GENERIC_WRITE, 0, 0,
+				CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+			if(fileHandle_ == INVALID_HANDLE_VALUE) {
+				if(::GetLastError() == ERROR_ACCESS_DENIED)
+					throw AccessDeniedException();
+				else
+					throw PlatformDependentError();
+			}
+#else // ASCENSION_POSIX
+		fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT);
+			if(fileDescriptor_ == -1) {
+				if(errno == EACCES)
+					throw AccessDeniedException();
+				else
+					throw PlatformDependentError();
+			}
+#endif
+		}
 		if(writeByteOrderMark)
 			encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
 		setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
@@ -1006,32 +1103,17 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
  * @param format the encoding and the newline
  * @param options the options
  * @return @c true if succeeded
- * @throw UnsupportedEncodingException the encoding specified by @a format.encoding is not supported
- * @throw std#invalid_argument @a format.newline is not supported or based on Unicode but the
- *                             encoding is not Unicode.
+ * @throw UnsupportedEncodingException the character encoding specified by @a format.encoding is
+ *                                     not supported
+ * @throw std#invalid_argument @a format.newline is not supported or not allowed in the specified
+ *                             character encoding
  * @throw AccessDeniedException the access to the file was denied
  * @throw IOException(IOException#LOST_DISK_FILE)
  * @throw PlatformDependentError
  * @throw ... any exceptions @c kernel#writeDocumentToStream function throws
  */
 bool TextFileDocumentInput::write(const String& fileName, const WritingFormat& format, const manah::Flags<TextFileDocumentInput::WritingOption>& options) {
-	// check Unicode spcific newlines
-	if(format.newline == NLF_NEXT_LINE || format.newline == NLF_LINE_SEPARATOR || format.newline == NLF_PARAGRAPH_SEPARATOR) {
-		const auto_ptr<Encoder> encoder(Encoder::forName(format.encoding));
-		if(encoder.get() == 0)
-			throw UnsupportedEncodingException("<format.encoding> = " + format.encoding);
-		const MIBenum mib = encoder->properties().mibEnum();
-		if(mib != fundamental::UTF_8
-				&& mib != fundamental::UTF_16LE && mib != fundamental::UTF_16BE && fundamental::UTF_16
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-				&& mib != standard::UTF_7 && mib != standard::UTF_32 && mib != standard::UTF_32LE && mib != standard::UTF_32BE
-#endif // !ASCENSION_NO_STANDARD_ENCODINGS
-#ifndef ASCENSION_NO_MINORITY_ENCODINGS
-				&& encoder->properties().name() == "UTF-5"
-#endif // !ASCENSION_NO_MINORITY_ENCODINGS
-			)
-			throw invalid_argument("format.newline");
-	}
+	verifyNewline(format.encoding, format.newline);
 
 	// check if writable
 #ifdef ASCENSION_WINDOWS

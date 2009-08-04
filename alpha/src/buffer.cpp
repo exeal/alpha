@@ -620,10 +620,9 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 	Buffer* buffer = &EditorWindows::instance().activeBuffer();
 	if(buffer->isModified() || buffer->textFile().isOpen()) {	// open in the new container
 		if(ascension::encoding::Encoder::supports(encoding))
-			addNew(L"", encoding);
+			buffer = &addNew(L"", encoding);
 		else
-			addNew();
-		buffer = &EditorWindows::instance().activeBuffer();
+			buffer = &addNew();
 	}
 /*
 	if(Encoder::supports(encoding)) {

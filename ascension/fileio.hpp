@@ -187,6 +187,7 @@ namespace ascension {
 #else // ASCENSION_POSIX
 				int fileDescriptor_;
 #endif
+				std::ios_base::openmode mode_;
 				struct {
 					const byte* first;
 					const byte* last;
