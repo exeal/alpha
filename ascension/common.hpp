@@ -193,6 +193,37 @@ namespace ascension {
 		explicit UnknownValueException(const std::string& message) : invalid_argument(message) {}
 	};
 
+	/**
+	 * A platform-dependent error whose detail can be obtained by POSIX @c errno or Win32
+	 * @c GetLastError.
+	 * @tparam Base the base exception class
+	 */
+	template<typename Base = std::runtime_error>
+	class PlatformDependentError : public Base {
+	public:
+#ifdef ASCENSION_WINDOWS
+		typedef DWORD Code;
+#else
+		typedef int Code;
+#endif
+	public:
+		/**
+		 * Constructor.
+		 * @param code the error code
+		 */
+		explicit PlatformDependentError(Code code
+#ifdef ASCENSION_WINDOWS
+			= ::GetLastError()
+#else
+			= errno
+#endif
+			) : Base("platform-dependent error occurred."), code_(code) {}
+		/// Returns the error code.
+		Code code() const /*throw()*/;
+	private:
+		const Code code_;
+	};
+
 	/// Represents an invariant range.
 	/// @note This class is not compatible with Boost.Range.
 	/// @see kernel#Region

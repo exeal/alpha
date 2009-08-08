@@ -653,7 +653,7 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
 		} catch(const MalformedInputException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const PlatformDependentError&) {
+		} catch(const PlatformDependentIOError&) {
 			::PyErr_SetFromWindowsErr(0);
 		} catch(IOException& e) {
 			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
