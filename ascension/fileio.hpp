@@ -8,6 +8,9 @@
 #ifndef ASCENSION_FILEIO_HPP
 #define ASCENSION_FILEIO_HPP
 #include <ascension/document.hpp>
+#ifdef ASCENSION_POSIX
+#include <sys/types.h>
+#endif // ASCENSION_POSIX
 
 namespace ascension {
 	namespace kernel {
@@ -22,6 +25,8 @@ namespace ascension {
 			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
 			/// String type for file names.
 			typedef std::basic_string<Char> String;
+			/// Represents platform-dependent IO error.
+			typedef PlatformDependentError<std::ios_base::failure> PlatformDependentIOError;
 
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
@@ -63,13 +68,6 @@ namespace ascension {
 			class MalformedInputException : public std::ios_base::failure {
 			public:
 				MalformedInputException();
-			};
-
-			/// A platform-dependent error whose detail can be obtained by POSIX @c errno
-			/// or Win32 @c GetLastError.
-			class PlatformDependentError : public std::ios_base::failure {
-			public:
-				PlatformDependentError();
 			};
 
 			/// File I/O exception.
@@ -169,13 +167,20 @@ namespace ascension {
 			public:
 				TextFileStreamBuffer(const String& fileName, std::ios_base::openmode mode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					bool writeByteOrderMark);
+					bool writeUnicodeByteOrderMark);
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
+				TextFileStreamBuffer* closeAndDiscard();
 				std::string encoding() const /*throw()*/;
+				const String& fileName() const /*throw()*/;
 				bool isOpen() const /*throw()*/;
+				std::ios_base::openmode mode() const /*throw()*/;
 				bool unicodeByteOrderMark() const /*throw()*/;
 			private:
+				TextFileStreamBuffer* closeFile() /*throw()*/;
+				void openForReading(const std::string& encoding);
+				void openForWriting(bool writeUnicodeByteOrderMark);
+				// std.basic_streambuf
 				int_type overflow(int_type c /* = traits_type::eof() */);
 				int_type pbackfail(int_type c /* = traits_type::eof() */);
 				int sync();
@@ -187,12 +192,18 @@ namespace ascension {
 #else // ASCENSION_POSIX
 				int fileDescriptor_;
 #endif
+				const String fileName_;
 				std::ios_base::openmode mode_;
 				struct {
 					const byte* first;
 					const byte* last;
 					const byte* current;
 				} inputMapping_;
+#ifdef ASCENSION_WINDOWS
+				LARGE_INTEGER originalFileEnd_;
+#else // ASCENSION_POSIX
+				off_t originalFileEnd_;
+#endif
 				std::auto_ptr<encoding::Encoder> encoder_;
 				ascension::Char ucsBuffer_[8192];
 			};
@@ -365,27 +376,33 @@ namespace ascension {
 			void writeRegion(const Document& document, const Region& region,
 				const String& fileName, const WritingFormat& format, bool append = false);
 
+			/// Returns the file name.
+			inline const String& TextFileStreamBuffer::fileName() const /*throw()*/ {return fileName_;}
+
+			/// Returns the open mode.
+			inline std::ios_base::openmode TextFileStreamBuffer::mode() const /*throw()*/ {return mode_;}
+
 			/// Returns the document.
-			inline const Document& fileio::TextFileDocumentInput::document() const /*throw()*/ {return document_;}
+			inline const Document& TextFileDocumentInput::document() const /*throw()*/ {return document_;}
 
 			/// @see IDocumentInput#encoding, #setEncoding
-			inline std::string fileio::TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
+			inline std::string TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
 
 			/// Returns true if the document is bound to any file.
-			inline bool fileio::TextFileDocumentInput::isOpen() const /*throw()*/ {return !fileName_.empty();}
+			inline bool TextFileDocumentInput::isOpen() const /*throw()*/ {return !fileName_.empty();}
 
 			/// Returns the file lock mode.
-			inline fileio::TextFileDocumentInput::LockMode fileio::TextFileDocumentInput::lockMode() const /*throw()*/ {return lockMode_;}
+			inline TextFileDocumentInput::LockMode TextFileDocumentInput::lockMode() const /*throw()*/ {return lockMode_;}
 
 			/// @see IDocumentInput#newline, #setNewline
-			inline Newline fileio::TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
+			inline Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
 
 			/// Returns the file full name or an empty string if the document is not bound to any of the files.
-			inline fileio::String fileio::TextFileDocumentInput::pathName() const /*throw()*/ {return fileName_;}
+			inline String TextFileDocumentInput::pathName() const /*throw()*/ {return fileName_;}
 
 			/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
 			/// the last output file.
-			inline bool fileio::TextFileDocumentInput::unicodeByteOrderMark() const /*throw()*/ {return unicodeByteOrderMark_;}
+			inline bool TextFileDocumentInput::unicodeByteOrderMark() const /*throw()*/ {return unicodeByteOrderMark_;}
 
 		}	// namespace fileio
 	}	// namespace kernel
