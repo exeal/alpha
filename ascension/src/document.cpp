@@ -41,13 +41,15 @@ const Position Position::INVALID_POSITION(INVALID_INDEX, INVALID_INDEX);
 /**
  * Writes the content of the document to the specified output stream.
  * <p>This method does not write Unicode byte order mark.</p>
- * <p>This method explicitly flushes te output stream.</p>
+ * <p>This method explicitly flushes the output stream.</p>
  * @param out the output stream
  * @param document the document
  * @param region the region to be written (this region is not restricted with narrowing)
  * @param newline the newline representation
  * @return @a out
- * @see getNewlineString, readDocumentFromStream
+ * @throw UnknownValueException @a newline is invalid
+ * @throw ... any exceptions out.operator bool, out.write and out.flush throw
+ * @see getNewlineString, Document#insert
  */
 basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		const Document& document, const Region& region, Newline newline /* = NLF_RAW_VALUE */) {

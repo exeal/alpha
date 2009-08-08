@@ -341,8 +341,14 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
  * @param region the region to write
  * @param fileName the file name
  * @param format the encoding and the newline
- * @param append set @c true to append to the file
- * @throw IOException any I/O error occurred
+ * @param append set @c true to append to the file. if this is @c true, this function does not
+ *               write a unicode order mark regardless of the value of
+ *               @a format.unicodeByteOrderMark. see constructor of TextFileStreamBuffer
+ * @throw UnsupportedEncodingException the character encoding specified by @a format.encoding is
+ *                                     not supported
+ * @throw std#invalid_argument @a format.newline is not supported or not allowed in the specified
+ *                             character encoding
+ * @throw ... any I/O error occurred
  */
 void fileio::writeRegion(const Document& document, const Region& region,
 		const String& fileName, const WritingFormat& format, bool append /* = false */) {
@@ -350,13 +356,18 @@ void fileio::writeRegion(const Document& document, const Region& region,
 	verifyNewline(format.encoding, format.newline);
 
 	// open file to write
-	TextFileStreamBuffer sb(fileName, ios_base::out,
+	TextFileStreamBuffer sb(fileName,
+		append ? (ios_base::out | ios_base::app) : ios_base::out,
 		format.encoding, format.encodingSubstitutionPolicy, format.unicodeByteOrderMark);
-	basic_ostream<a::Char> out(&sb);
-	out.exceptions(ios_base::badbit);
-
-	// write into file
-	writeDocumentToStream(out, document, region, format.newline);
+	try {
+		basic_ostream<a::Char> out(&sb);
+		out.exceptions(ios_base::badbit);
+		// write into file
+		writeDocumentToStream(out, document, region, format.newline);
+	} catch(...) {
+		sb.closeAndDiscard();
+		throw;
+	}
 	sb.close();
 }
 
@@ -420,7 +431,9 @@ namespace {
  *   </dl>
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
- * @param writeUnicodeByteOrderMark set @c true to write Unicode byte order mark into the file
+ * @param writeUnicodeByteOrderMark set @c true to write Unicode byte order mark into the file.
+ *                                  this parameter is ignored if @a mode contained
+ *                                  @c std#ios_base#app and the output file was existing
  * @throw FileNotFoundException the file specified @a fileName is not found
  * @throw UnknownValueException @a mode is invalid
  * @throw UnsupportedEncodingException the encoding specified by @a encoding is not supported
@@ -472,15 +485,15 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
  * @throw ... any exceptions @c #close throws when @c #mode returned @c std#ios_base#in
  */
 TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
-	if(mode_ == ios_base::in)
+	if(mode() == ios_base::in)
 		return close();
-	else if(mode_ == ios_base::out) {
+	else if((mode() & ~ios_base::trunc) == ios_base::out) {
 		if(TextFileStreamBuffer* const self = closeFile()) {
 			::DeleteFileW(fileName_.c_str());
 			return self;
 		} else
 			return 0;
-	} else if(mode_ == (ios_base::out | ios_base::app)) {
+	} else if(mode() == (ios_base::out | ios_base::app)) {
 #ifdef ASCENSION_WINDOWS
 		::SetFilePointerEx(fileHandle_, originalFileEnd_, 0, FILE_BEGIN);
 		::SetEndOfFile(fileHandle_);
@@ -495,7 +508,8 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
-	if(inputMapping_.first != 0) {
+	if(mode() == ios_base::in) {
+		assert(inputMapping_.first != 0);
 		::UnmapViewOfFile(const_cast<byte*>(inputMapping_.first));
 		::CloseHandle(fileMapping_);
 		inputMapping_.first = 0;
@@ -507,7 +521,8 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 		return this;
 	}
 #else // ASCENSION_POSIX
-	if(inputMapping_.first != 0) {
+	if(mode() == ios_base::in) {
+		assert(inputMapping_.first != 0);
 		::munmap(const_cast<byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
@@ -622,6 +637,7 @@ void TextFileStreamBuffer::openForWriting(bool writeUnicodeByteOrderMark) {
 			originalFileEnd_.QuadPart = 0;
 			if(!toBoolean(::SetFilePointerEx(fileHandle_, originalFileEnd_, &originalFileEnd_, FILE_END)))
 				throw PlatformDependentIOError();
+			writeUnicodeByteOrderMark = false;
 		}
 #else // ASCENSION_POSIX
 		fileDescriptor_  = ::open(fileName.c_str(), O_WRONLY | O_APPEND);
