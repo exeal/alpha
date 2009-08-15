@@ -1032,29 +1032,53 @@ namespace {
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isOpen();}
 	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
 	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
-	k::fileio::IOException::Type saveBuffer(Buffer& buffer, const wstring& fileName,
-			const string& encoding, k::Newline newlines, a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
+	void saveBuffer(Buffer& buffer, const string& encoding, k::Newline newlines,
+			a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
 		if(buffer.textFile().isOpen() && !buffer.isModified())
-			return static_cast<k::fileio::IOException::Type>(-1);
+			return;
 
 		k::fileio::IOException::Type errorType = static_cast<k::fileio::IOException::Type>(-1);
 		k::fileio::WritingFormat format;
 		format.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
 		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
 		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
-//		format.unicodeByteOrderMark = writeBOM;
+		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
 
 		try {
 			buffer.textFile().write(fileName, format, 0);
+		} catch(const k::fileio::AccessDeniedException& e) {
+			::PyErr_SetString(PyExc_IOError, e.what());
+		} catch(const k::fileio::UnmappableCharacterException& e) {
+			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
+		} catch(const k::fileio::PlatformDependentIOError&) {
+			::PyErr_SetFromWindowsErr(0);
 		} catch(k::fileio::IOException& e) {
-			errorType = e.type();
+			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
 		}
-		return errorType;
 	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
 	void unbindBuffer(Buffer& buffer) {buffer.textFile().close();}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
+	void writeBufferRegion(const Buffer& buffer, const k::Region& region, const wstring& fileName, bool append,
+			const string& encoding, k::Newline newlines, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
+		k::fileio::WritingFormat format;
+		format.encoding = encoding;
+		format.newline = newlines;
+		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
+		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
+		try {
+			k::fileio::writeRegion(buffer, region, fileName, format, append);
+		} catch(const k::fileio::AccessDeniedException& e) {
+			::PyErr_SetString(PyExc_IOError, e.what());
+		} catch(const k::fileio::UnmappableCharacterException& e) {
+			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
+		} catch(const k::fileio::PlatformDependentIOError&) {
+			::PyErr_SetFromWindowsErr(0);
+		} catch(k::fileio::IOException& e) {
+			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
+		}
+	}
 }
 
 ALPHA_EXPOSE_PROLOGUE(1)
@@ -1171,10 +1195,16 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("reset_content", &Buffer::resetContent)
 		.def("unbind", &unbindBuffer)
 		.def("save", &saveBuffer,
-			(py::arg("filename"), py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
-			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE))
+			(py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
+			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE,
+			py::arg("write_unicode_byte_order_mark") = false))
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
-		.def("widen", &Buffer::widen);
+		.def("widen", &Buffer::widen)
+		.def("write_region", &writeBufferRegion,
+			(py::arg("region"), py::arg("filename"), py::arg("append") = false,
+			py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
+			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE,
+			py::arg("write_unicode_byte_order_mark") = false));
 	py::class_<BufferList, boost::noncopyable>("_BufferList", py::no_init)
 		.def_readwrite("unexpected_file_time_stamp_director", &BufferList::unexpectedFileTimeStampDirector)
 //		.def("__contains__", &)

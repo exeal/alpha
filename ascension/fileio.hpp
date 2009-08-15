@@ -217,14 +217,17 @@ namespace ascension {
 #else // ASCENSION_POSIX
 				typedef ::time_t Time;
 #endif
-				/// Lock modes for opened file.
-				typedef byte LockMode;
-				static const LockMode
-					DONT_LOCK				= 0x00,	///< Does not lock.
-					SHARED_LOCK				= 0x01,	///< Uses shared lock.
-					EXCLUSIVE_LOCK			= 0x02,	///< Uses exclusive lock.
-					LOCK_TYPE_MASK			= 0x03,	///< A bit mask for lock type.
-					LOCK_ONLY_AS_EDITING	= 0x08;	///< The lock will not be performed unless modification occurs.
+				/// Lock types for opened file.
+				enum LockType {
+					DONT_LOCK,		///< Does not lock.
+					SHARED_LOCK,	///< Uses shared lock.
+					EXCLUSIVE_LOCK	///< Uses exclusive lock.
+				};
+				/// Lock mode for opened file.
+				struct LockMode {
+					LockType type;		///< The type of the lock.
+					bool onlyAsEditing;	///< @c true if the lock will not be performed unless modification occurs.
+				};
 				/// Option flags for @c TextFileDocumentInput#write method.
 				enum WritingOption {
 					BY_COPYING		= 0x01,	///< Not implemented.
@@ -235,7 +238,7 @@ namespace ascension {
 				~TextFileDocumentInput() /*throw()*/;
 				bool checkTimeStamp();
 				const Document& document() const /*throw()*/;
-				LockMode lockMode() const /*throw()*/;
+				LockType lockType() const /*throw()*/;
 				// listener
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
@@ -244,6 +247,7 @@ namespace ascension {
 				bool isOpen() const /*throw()*/;
 				String name() const /*throw()*/;
 				String pathName() const /*throw()*/;
+				bool rebind(const String& fileName);
 				// encodings
 				void setEncoding(const std::string& encoding);
 				void setNewline(Newline newline);
@@ -269,17 +273,13 @@ namespace ascension {
 				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
 				void documentReadOnlySignChanged(const Document& document);
 			private:
+				class FileLocker;
+				FileLocker* fileLocker_;
 				Document& document_;
 				String fileName_;
 				std::string encoding_;
 				bool unicodeByteOrderMark_;
 				Newline newline_;
-				LockMode lockMode_;
-#ifdef ASCENSION_WINDOWS
-				HANDLE lockingFile_;
-#else // ASCENSION_POSIX
-				int lockingFile_;
-#endif
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
 				ascension::internal::Listeners<IFilePropertyListener> listeners_;
@@ -390,9 +390,6 @@ namespace ascension {
 
 			/// Returns true if the document is bound to any file.
 			inline bool TextFileDocumentInput::isOpen() const /*throw()*/ {return !fileName_.empty();}
-
-			/// Returns the file lock mode.
-			inline TextFileDocumentInput::LockMode TextFileDocumentInput::lockMode() const /*throw()*/ {return lockMode_;}
 
 			/// @see IDocumentInput#newline, #setNewline
 			inline Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}

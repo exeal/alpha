@@ -772,6 +772,185 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 }
 
 
+// TextFileDocumentInput.FileLocker /////////////////////////////////////////
+
+class TextFileDocumentInput::FileLocker {
+	MANAH_NONCOPYABLE_TAG(FileLocker);
+public:
+	FileLocker() /*throw()*/;
+	~FileLocker() /*throw()*/;
+	bool hasLock() const /*throw()*/;
+	bool isReserved() const /*throw()*/;
+	bool lock(const String& fileName, bool share);
+	bool lockReserved(const String& fileName);
+	LockType type() const /*throw()*/;
+	bool unlock() /*throw()*/;
+	bool unlockAndReserve(bool share);
+private:
+	LockType type_;
+#ifdef ASCENSION_WINDOWS
+	HANDLE file_;
+#else // ASCENSION_POSIX
+	int file_;
+	bool deleteFileOnClose_;
+	String fileName_;
+#endif
+};
+
+/// Default constructor.
+TextFileDocumentInput::FileLocker::FileLocker() /*throw()*/ : type_(DONT_LOCK), file_(
+#ifdef ASCENSION_WINDOWS
+		INVALID_HANDLE_VALUE
+#else // ASCENSION_POSIX
+		-1), deleteFileOnClose_(false
+#endif
+		) {
+}
+
+/// Destructor.
+TextFileDocumentInput::FileLocker::~FileLocker() /*throw()*/ {
+	unlock();
+}
+
+inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
+#ifdef ASCENSION_WINDOWS
+	return file_ != INVALID_HANDLE_VALUE;
+#else // ASCENSION_POSIX
+	return file_ != -1;
+#endif
+}
+
+inline bool TextFileDocumentInput::FileLocker::isReserved() const /*throw()*/ {
+	return !hasLock() && type() != DONT_LOCK;
+}
+
+/**
+ * Locks the file.
+ * @param fileName
+ * @param share set @c true if shared-lock
+ * @retval true if locked successfully or the lock mode is @c DONT_LOCK
+ * @retval false the current lock mode was @c SHARED_LOCK and an other existing process had already
+ *               locked the file with same lock mode
+ * @throw AccessDeniedException
+ * @throw PlatformDependentError
+ */
+bool TextFileDocumentInput::FileLocker::lock(const String& fileName, bool share) {
+	if(fileName.empty())
+		throw FileNotFoundException(fileName);
+	bool alreadyShared = false;
+#ifdef ASCENSION_POSIX
+	flock fl;
+	fl.l_whence = SEEK_SET;
+	fl.l_start = 0;
+	fl.l_len = 0;
+#endif // ASCENSION_POSIX
+
+	if(share) {
+		// check the file had already been shared-locked
+#ifdef ASCENSION_WINDOWS
+		HANDLE temp = ::CreateFileW(fileName.c_str(),
+			GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		if(temp == INVALID_HANDLE_VALUE) {
+			if(::GetLastError() == ERROR_SHARING_VIOLATION)
+				alreadyShared = true;
+		} else
+			::CloseHandle(temp);
+#else // ASCENSION_POSIX
+		int temp = ::open(fileName.c_str(), O_RDONLY);
+		if(temp != -1) {
+			fl.l_type = F_WRLCK;
+			if(::fcntl(temp, F_SETLK, &fl) == -1) {
+				if(errno == EACCES || errno == EAGAIN)
+					alreadyShared = true;
+				fl.l_type = F_UNLCK;
+				::fcntl(temp, &fl);
+			}
+			::close(temp);
+		}
+#endif
+	}
+
+#ifdef ASCENSION_WINDOWS
+	HANDLE f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
+		share ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	if(f == INVALID_HANDLE_VALUE) {
+		DWORD e = ::GetLastError();
+		if(e == ERROR_ACCESS_DENIED)
+			throw AccessDeniedException();
+		else if(e != ERROR_FILE_NOT_FOUND)
+			throw PlatformDependentIOError();
+		f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
+			share ? FILE_SHARE_READ : 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, 0);
+		if(f == INVALID_HANDLE_VALUE) {
+			if(::GetLastError() == ERROR_ACCESS_DENIED)
+				throw AccessDeniedException();
+			else
+				throw PlatformDependentIOError();
+		}
+	}
+#else // ASCENSION_POSIX
+	int f = ::open(fileName.c_str(), O_RDONLY);
+	if(f == -1) {
+		if(errno == EACCES)
+			throw AccessDeniedException();
+		else if(errno != ENOENT)
+			throw PlatformDependentError();
+		f = ::open(fileName.c_str(), O_RDONLY | O_CREAT);
+		if(f == -1) {
+			if(errno == EACCES)
+				throw AccessDeniedException();
+			else
+				throw PlatformDependentIOError();
+		}
+		fl.l_type = share ? F_RDLCK : F_WRLCK;
+		if(::fcntl(f, F_SETLK, &fl) == 0) {
+			::close(f);
+			throw PlatformDependentIOError();
+		}
+		deleteFileOnClose_ = true;
+		fileName_ = fileName;
+	}
+#endif
+
+	unlock();
+	file_ = f;
+	type_ = share ? SHARED_LOCK : EXCLUSIVE_LOCK;
+	return !alreadyShared;
+}
+
+inline TextFileDocumentInput::LockType TextFileDocumentInput::FileLocker::type() const /*throw()*/ {
+	return hasLock() ? type_ : DONT_LOCK;
+}
+
+/**
+ * Unlocks the file.
+ * @return succeeded or not
+ */
+bool TextFileDocumentInput::FileLocker::unlock() {
+	bool succeeded = true;
+	if(hasLock()) {
+#ifdef ASCENSION_WINDOWS
+		succeeded = toBoolean(::CloseHandle(file_));
+		file_ = INVALID_HANDLE_VALUE;
+#else // ASCENSION_POSIX
+		succeeded = ::close(file_) == 0;
+		if(deleteFileOnClose_) {
+			::remove(fileName_.c_str());
+			deleteFileOnClose_ = false;
+		}
+		file_ = -1;
+#endif
+	}
+	return succeeded;
+}
+
+bool TextFileDocumentInput::FileLocker::unlockAndReserve(bool share) {
+	const bool succeeded = unlock();
+	type_ = share ? SHARED_LOCK : EXCLUSIVE_LOCK;
+	return succeeded;
+}
+
+
 // TextFileDocumentInput ////////////////////////////////////////////////////
 
 /**
@@ -814,15 +993,8 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
  * @param document the document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) :
-		document_(document), encoding_(Encoder::defaultInstance().properties().name()),
-		unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), lockingFile_(
-#ifdef ASCENSION_WINDOWS
-		INVALID_HANDLE_VALUE
-#else // ASCENSION_POSIX
-		-1
-#endif
-		), savedDocumentRevision_(0), timeStampDirector_(0) {
-	lockMode_ = DONT_LOCK | LOCK_ONLY_AS_EDITING;
+		fileLocker_(new FileLocker), document_(document), encoding_(Encoder::defaultInstance().properties().name()),
+		unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), savedDocumentRevision_(0), timeStampDirector_(0) {
 	memset(&userLastWriteTime_, 0, sizeof(Time));
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
 	document.setProperty(Document::TITLE_PROPERTY, L"");
@@ -830,6 +1002,7 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 
 /// Destructor.
 TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
+	delete fileLocker_;
 	try {
 		close();
 	} catch(IOException&) {
@@ -893,11 +1066,11 @@ void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(toBoolean(lockMode_ & LOCK_ONLY_AS_EDITING) && isOpen()) {
+	if(fileLocker_->isReserved() && isOpen()) {
 		if(document_.isModified())
-			lock();
+			fileLocker_->lockReserved(pathName());
 		else
-			unlock();
+			fileLocker_->unlock();
 	}
 }
 
@@ -947,35 +1120,9 @@ a::String TextFileDocumentInput::location() const /*throw()*/ {
 #endif
 }
 
-/**
- * Locks the file.
- * @return @c true if locked successfully or the lock mode is @c DONT_LOCK
- */
-bool TextFileDocumentInput::lock() /*throw()*/ {
-	unlock();
-	if((lockMode_ & LOCK_TYPE_MASK) == DONT_LOCK && isOpen()) {
-#ifdef ASCENSION_WINDOWS
-		assert(lockingFile_ == INVALID_HANDLE_VALUE);
-		lockingFile_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ,
-			((lockMode_ & LOCK_TYPE_MASK) == SHARED_LOCK) ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if(lockingFile_ == INVALID_HANDLE_VALUE)
-			return false;
-#else // ASCENSION_POSIX
-		assert(lockingFile_ == -1);
-		if(-1 == (lockingFile_ = ::open(fileName_.c_str(), O_RDONLY)))
-			return false;
-		::flock fl;
-		fl.l_whence = SEEK_SET;
-		fl.l_start = 0;
-		fl.l_len = 0;
-		fl.l_type = ((lockMode_ & LOCK_TYPE_MASK) == SHARED_LOCK) ? F_RDLCK : F_WRLCK;
-		if(::fcntl(lockingFile_, F_SETLK, &fl) == 0) {
-			::close(lockingFile_);
-			lockingFile_ = -1;
-		}
-#endif
-	}
-	return true;
+/// Returns the file lock type.
+TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*throw()*/ {
+	return fileLocker_->type();
 }
 
 /// Returns the file name or an empty string if the document is not bound to any of the files.
@@ -997,7 +1144,7 @@ String TextFileDocumentInput::name() const /*throw()*/ {
  */
 bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, const std::string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
-//	Timer tm(L"FileBinder.bind");	// 2.86s / 1MB
+//	Timer tm(L"TextFileDocumentInput.open");	// 2.86s / 1MB
 	unlock();
 	document_.resetContent();
 	timeStampDirector_ = 0;
@@ -1020,16 +1167,19 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	sb.close();
 
 	// lock the file
-	bool lockSucceeded = true;
-	lockMode_ = lockMode;
-	if((lockMode_ & LOCK_TYPE_MASK) != DONT_LOCK && !toBoolean(lockMode_ & LOCK_ONLY_AS_EDITING)) {
-		if(!(lockSucceeded = lock())) {
-			if((lockMode_ & LOCK_TYPE_MASK) == EXCLUSIVE_LOCK) {
-				lockMode_ &= ~LOCK_TYPE_MASK;
-				lockMode_ |= SHARED_LOCK;
-				if(!lock()) {
-					lockMode_ &= ~LOCK_TYPE_MASK;
-					lockMode_ |= DONT_LOCK;
+	if(lockMode.type != DONT_LOCK) {
+		const bool share = lockMode.type == SHARED_LOCK;
+		if(lockMode.onlyAsEditing)
+			fileLocker_->unlockAndReserve(share);
+		else {
+			try {
+				fileLocker_->lock(fileName, share);
+			} catch(...) {
+				if(!share) {
+					try {
+						fileLocker_->lock(fileName, true);
+					} catch(...) {
+					}
 				}
 			}
 		}
@@ -1072,7 +1222,31 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	}
 
 	document_.setInput(this, false);
-	return lockSucceeded;
+	return lockMode.type == fileLocker_->type();
+}
+
+/**
+ *
+ * @param fileName
+ */
+bool TextFileDocumentInput::rebind(const String& fileName) {
+	bool succeededToLock = true;
+	if(fileName.empty()) {
+		if(!isOpen())
+			return true;
+		unlock();
+	} else {
+		if(fileLocker_->hasLock()) {
+			try {
+				fileLocker_->lock(fileName, fileLocker_->type() == SHARED_LOCK);
+			} catch(...) {
+				succeededToLock = false;
+			}
+		}
+	}
+	fileName_ = fileName;
+	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	return succeededToLock;
 }
 
 /**
@@ -1112,27 +1286,6 @@ void TextFileDocumentInput::setNewline(Newline newline) {
 }
 
 /**
- * Unlocks the file.
- * @return succeeded or not
- */
-bool TextFileDocumentInput::unlock() /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
-	if(lockingFile_ != INVALID_HANDLE_VALUE) {
-		if(!toBoolean(::CloseHandle(lockingFile_)))
-			return false;
-		lockingFile_ = INVALID_HANDLE_VALUE;
-	}
-#else // ASCENSION_POSIX
-	if(lockingFile_ != -1) {
-		if(::close(lockingFile_) != 0)
-			return false;
-		lockingFile_ = -1;
-	}
-#endif
-	return true;
-}
-
-/**
  * Returns last modified time.
  * @param internal set @c true for @c internalLastWriteTime_, @c false for @c userLastWriteTime_
  * @param[out] newTimeStamp the actual time stamp
@@ -1147,7 +1300,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 	const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
 	if(!isOpen()
 			|| memcmp(&about, &uninitialized, sizeof(Time)) == 0
-			|| (lockMode_ & LOCK_TYPE_MASK) != DONT_LOCK)
+			|| fileLocker_->hasLock())
 		return true;	// not managed
 
 	try {
@@ -1328,7 +1481,7 @@ bool TextFileDocumentInput::write(const String& fileName, const WritingFormat& f
 
 #ifndef ASCENSION_NO_GREP
 
-// DirectoryIteratorBase ////////////////////////////////////////////////////////
+// DirectoryIteratorBase ////////////////////////////////////////////////////
 
 /// Protected default constructor.
 DirectoryIteratorBase::DirectoryIteratorBase() /*throw()*/ {
