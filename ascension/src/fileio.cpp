@@ -336,6 +336,30 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
 }
 
 /**
+ * Inserts the contents of the file into the specified position.
+ * @param document the document
+ * @param at the position into which the contents is inserted
+ * @param fileName the file name
+ * @param encoding the character encoding of the input file or auto detection name
+ * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
+ * @param[out] endOfInsertedString the position of the end of the inserted text. can be @c null if
+ *                                 not needed
+ * @return a pair consists of the encoding used to convert and the boolean value means if the input
+ *         contained Unicode byte order mark
+ * @throw ... any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
+ */
+pair<string, bool> fileio::insertFileContents(Document& document, const Position& at,
+		const String& fileName, const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString /* = 0 */) {
+	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingSubstitutionPolicy, false);
+	basic_istream<a::Char> in(&sb);
+	in.exceptions(ios_base::badbit);
+	insert(document, at, in, endOfInsertedString);
+	const pair<string, bool> result(make_pair(sb.encoding(), sb.unicodeByteOrderMark()));
+	sb.close();
+	return result;
+}
+
+/**
  * Writes the specified region of the document into the specified file.
  * @param document the document
  * @param region the region to write
@@ -1044,7 +1068,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
 /**
  * Closes the file and unbind from the document.
  * @note This method does NOT reset the content of the document.
- * @throw std#ios_base::failure any I/O error occurred
+ * @throw std#ios_base#failure any I/O error occurred
  */
 void TextFileDocumentInput::close() {
 	if(!unlock())
@@ -1150,21 +1174,18 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	timeStampDirector_ = 0;
 
 	// read from the file
-	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingSubstitutionPolicy, false);
+	pair<string, bool> resultEncoding;
 	const bool recorded = document_.isRecordingChanges();
 	document_.recordChanges(false);
 	try {
-		basic_istream<a::Char> in(&sb);
-		in.exceptions(ios_base::badbit);
-		insert(document_, document_.region().beginning(), in);
+		resultEncoding = insertFileContents(document_, document_.region().beginning(), fileName, encoding, encodingSubstitutionPolicy);
 	} catch(...) {
 		document_.resetContent();
 		document_.recordChanges(recorded);
 		throw;
 	}
 	document_.recordChanges(recorded);
-	unicodeByteOrderMark_ = sb.unicodeByteOrderMark();
-	sb.close();
+	unicodeByteOrderMark_ = resultEncoding.second;
 
 	// lock the file
 	if(lockMode.type != DONT_LOCK) {
@@ -1205,7 +1226,7 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 		document_.setProperty(Document::TITLE_PROPERTY, ucs.get());
 	}
 #endif
-	encoding_ = sb.encoding();
+	encoding_ = resultEncoding.first;
 	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
