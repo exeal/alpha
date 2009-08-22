@@ -373,6 +373,9 @@ namespace ascension {
 			bool comparePathNames(const Char* s1, const Char* s2);
 
 			// free function
+			std::pair<std::string, bool> insertFileContents(Document& document,
+				const Position& at, const String& fileName, const std::string& encoding,
+				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = 0);
 			void writeRegion(const Document& document, const Region& region,
 				const String& fileName, const WritingFormat& format, bool append = false);
 
