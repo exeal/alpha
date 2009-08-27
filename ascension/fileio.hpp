@@ -242,22 +242,22 @@ namespace ascension {
 				// listener
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
-				// bound file name
-				String extensionName() const /*throw()*/;
-				bool isOpen() const /*throw()*/;
-				String name() const /*throw()*/;
-				String pathName() const /*throw()*/;
-				bool rebind(const String& fileName);
+				// bound file
+				bool bind(const String& fileName);
+				String fileName() const /*throw()*/;
+				bool isBoundToFile() const /*throw()*/;
+				bool revert(const LockMode& lockMode, const std::string& encoding,
+					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
+				void unbind() /*throw()*/;
+				bool write(const WritingFormat& format);
 				// encodings
-				void setEncoding(const std::string& encoding);
-				void setNewline(Newline newline);
+				TextFileDocumentInput& setEncoding(const std::string& encoding);
+				TextFileDocumentInput& setNewline(Newline newline);
 				bool unicodeByteOrderMark() const /*throw()*/;
 				// I/O
-				void close();
-				bool open(const String& fileName, LockMode lockMode,
-					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
-				bool write(const String& fileName, const WritingFormat& format, const manah::Flags<WritingOption>& options);
+				bool writeOtherFile(const String& fileName,
+					const WritingFormat& format, const manah::Flags<WritingOption>& options);
 				// IDocumentInput
 				std::string encoding() const /*throw()*/;
 				bool isChangeable() const /*throw()*/;
@@ -391,14 +391,14 @@ namespace ascension {
 			/// @see IDocumentInput#encoding, #setEncoding
 			inline std::string TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
 
+			/// Returns the file full name or an empty string if the document is not bound to any of the files.
+			inline String TextFileDocumentInput::fileName() const /*throw()*/ {return fileName_;}
+
 			/// Returns true if the document is bound to any file.
-			inline bool TextFileDocumentInput::isOpen() const /*throw()*/ {return !fileName_.empty();}
+			inline bool TextFileDocumentInput::isBoundToFile() const /*throw()*/ {return !fileName_.empty();}
 
 			/// @see IDocumentInput#newline, #setNewline
 			inline Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
-
-			/// Returns the file full name or an empty string if the document is not bound to any of the files.
-			inline String TextFileDocumentInput::pathName() const /*throw()*/ {return fileName_;}
 
 			/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
 			/// the last output file.

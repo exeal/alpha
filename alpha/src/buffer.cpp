@@ -16,6 +16,7 @@
 #include "../resource/messages.h"
 #include <manah/win32/ui/wait-cursor.hpp>
 #include <manah/com/common.hpp>	// ComPtr, ComQIPtr
+#include <manah/com/exception.hpp>
 #include <shlwapi.h>				// PathXxxx, StrXxxx, ...
 #include <shlobj.h>					// IShellLink, ...
 #include <dlgs.h>
@@ -24,6 +25,8 @@ using namespace ambient;
 using namespace manah;
 using namespace std;
 namespace a = ascension;
+namespace e = ascension::encoding;
+namespace f = ascension::kernel::fileio;
 namespace k = ascension::kernel;
 namespace py = boost::python;
 
@@ -66,7 +69,7 @@ namespace {
 /// Constructor.
 Buffer::Buffer() {
 	presentation_.reset(new a::presentation::Presentation(*this));
-	textFile_.reset(new k::fileio::TextFileDocumentInput(*this));
+	textFile_.reset(new f::TextFileDocumentInput(*this));
 }
 
 /// Destructor.
@@ -79,7 +82,7 @@ Buffer::~Buffer() {
  */
 const basic_string<WCHAR> Buffer::name() const /*throw()*/ {
 	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
-	if(textFile_->isOpen())
+	if(textFile_->isBoundToFile())
 		return textFile_->name();
 	return untitled.c_str();
 }
@@ -237,12 +240,11 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
  * @return the buffer added or @c null if the user canceled
  */
 Buffer* BufferList::addNewDialog(const ascension::String& name /* = L"" */) {
-	using namespace ascension::encoding;
 	Alpha& app = Alpha::instance();
 	TextFileFormat format;
-	format.encoding = Encoder::forMIB(fundamental::US_ASCII)->fromUnicode(app.readStringProfile(L"File", L"defaultEncoding"));
-	if(!Encoder::supports(format.encoding))
-		format.encoding = Encoder::defaultInstance().properties().name();
+	format.encoding = e::Encoder::forMIB(e::fundamental::US_ASCII)->fromUnicode(app.readStringProfile(L"File", L"defaultEncoding"));
+	if(!e::Encoder::supports(format.encoding))
+		format.encoding = e::Encoder::defaultInstance().properties().name();
 	format.newline = static_cast<k::Newline>(app.readIntegerProfile(L"file", L"defaultNewline", k::NLF_CR_LF));
 
 	ui::NewFileFormatDialog dlg(format.encoding, format.newline);
@@ -268,7 +270,7 @@ void BufferList::close(Buffer& buffer) {
 		buffers_.erase(buffers_.begin() + index);
 		editorSession_.removeDocument(buffer);
 		buffer.textFile().removeListener(*this);
-		buffer.textFile().close();
+		buffer.textFile().unbind();
 		delete &buffer;
 
 		// reset the following buffer bar buttons
@@ -280,7 +282,7 @@ void BufferList::close(Buffer& buffer) {
 		recalculateBufferBarSize();
 		activeBufferChanged();
 	} else {	// the buffer is last one
-		buffer.textFile().close();
+		buffer.textFile().unbind();
 		buffer.resetContent();
 	}
 }
@@ -358,7 +360,7 @@ void BufferList::documentReadOnlySignChanged(const k::Document& document) {
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileNameChanged
-void BufferList::fileNameChanged(const k::fileio::TextFileDocumentInput& textFile) {
+void BufferList::fileNameChanged(const f::TextFileDocumentInput& textFile) {
 	const Buffer& buffer = getConcreteDocument(textFile.document());
 	// TODO: call mode-application.
 	resetResources();
@@ -368,7 +370,7 @@ void BufferList::fileNameChanged(const k::fileio::TextFileDocumentInput& textFil
 }
 
 /// @see ascension#kernel#fileio#IFilePropertyListener#fileEncodingChanged
-void BufferList::fileEncodingChanged(const k::fileio::TextFileDocumentInput& textFile) {
+void BufferList::fileEncodingChanged(const f::TextFileDocumentInput& textFile) {
 	// do nothing
 }
 
@@ -385,18 +387,14 @@ size_t BufferList::find(const Buffer& buffer) const {
 	return -1;
 }
 
-/**
- * Finds the buffer in the list.
- * @param fileName the name of the buffer to find
- * @return the index of the buffer or -1 if not found
- */
-size_t BufferList::find(const basic_string<WCHAR>& fileName) const {
-	for(size_t i = 0; i < buffers_.size(); ++i) {
-		if(buffers_[i]->textFile().isOpen()
-				&& k::fileio::comparePathNames(buffers_[i]->textFile().pathName().c_str(), fileName.c_str()))
-			return i;
+/// Implements _BufferList.for_filename method.
+py::object BufferList::forFileName(const basic_string<WCHAR>& fileName) const {
+	for(size_t i = 0, c = buffers_.size(); i < c; ++i) {
+		if(buffers_[i]->textFile().isBoundToFile()
+				&& f::comparePathNames(buffers_[i]->textFile().fileName().c_str(), fileName.c_str()))
+			return buffers_[i]->self();
 	}
-	return -1;
+	return py::object();
 }
 
 /**
@@ -452,7 +450,7 @@ LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 
 //		nmttdi->hinst = getHandle();
 		const Buffer& buffer = at(nmttdi.hdr.idFrom);
-		wcscpy(tipText, (buffer.textFile().isOpen() ? buffer.textFile().location() : buffer.name()).c_str());
+		wcscpy(tipText, (buffer.textFile().isBoundToFile() ? buffer.textFile().location() : buffer.name()).c_str());
 		nmttdi.lpszText = tipText;
 		return true;
 	}
@@ -564,6 +562,32 @@ void BufferList::move(py::ssize_t from, py::ssize_t to) {
 	resetResources();
 }
 
+namespace {
+	basic_string<WCHAR> resolveShortcut(const basic_string<WCHAR>& s) {
+		const WCHAR* extension = ::PathFindExtensionW(s.c_str());
+		if(wcslen(extension) != 0 && (
+				(::StrCmpIW(extension + 1, L"lnk") == 0)
+				/*|| (::StrCmpIW(extension + 1, L"url") == 0)*/)) {
+			HRESULT hr;
+			com::ComPtr<IShellLinkW> shellLink(CLSID_ShellLink, IID_IShellLinkW, CLSCTX_ALL, 0, &hr);
+			if(SUCCEEDED(hr)) {
+				com::ComPtr<IPersistFile> file;
+				if(SUCCEEDED(hr = shellLink->QueryInterface(IID_IPersistFile, file.initializePPV()))) {
+					if(SUCCEEDED(hr = file->Load(s.c_str(), STGM_READ))) {
+						if(SUCCEEDED(hr = shellLink->Resolve(0, SLR_ANY_MATCH | SLR_NO_UI))) {
+							WCHAR resolved[MAX_PATH];
+							if(SUCCEEDED(hr = shellLink->GetPath(resolved, MAX_PATH, 0, 0)))
+								return resolved;
+						}
+					}
+				}
+			}
+			throw com::ComException(hr, IID_NULL, OLESTR("@0.resolveShortcut"));
+		} else
+			return f::canonicalizePathName(s.c_str());
+	}
+}
+
 /**
  * Opens the specified file.
  * This method may show a dialog to indicate the result.
@@ -575,40 +599,20 @@ void BufferList::move(py::ssize_t from, py::ssize_t to) {
  */
 py::object BufferList::open(const basic_string<WCHAR>& fileName,
 		const string& encoding /* = "UniversalAutoDetect" */,
-		a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-		k::fileio::TextFileDocumentInput::LockMode lockMode /* = DONT_LOCK */, bool asReadOnly /* = false */) {
+		e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+		f::TextFileDocumentInput::LockType lockMode /* = DONT_LOCK */, bool asReadOnly /* = false */) {
 	// TODO: this method is too complex.
-	using namespace ascension::kernel::fileio;
 	Alpha& app = Alpha::instance();
-	WCHAR resolvedName[MAX_PATH];
 
 	// resolve shortcut
-	const WCHAR* extension = ::PathFindExtensionW(fileName.c_str());
-	if(wcslen(extension) != 0 && (
-			(::StrCmpIW(extension + 1, L"lnk") == 0)
-			/*|| (::StrCmpIW(extension + 1, L"url") == 0)*/)) {
-		HRESULT hr;
-		com::ComPtr<IShellLinkW> shellLink(CLSID_ShellLink, IID_IShellLinkW, CLSCTX_ALL, 0, &hr);
-		com::ComPtr<IPersistFile> file;
-
-		try {
-			if(FAILED(hr))
-				throw hr;
-			if(FAILED(hr = shellLink->QueryInterface(IID_IPersistFile, file.initializePPV())))
-				throw hr;
-			if(FAILED(hr = file->Load(fileName.c_str(), STGM_READ)))
-				throw hr;
-			if(FAILED(hr = shellLink->Resolve(0, SLR_ANY_MATCH | SLR_NO_UI)))
-				throw hr;
-			if(FAILED(hr = shellLink->GetPath(resolvedName, MAX_PATH, 0, 0)))
-				throw hr;
-		} catch(HRESULT /*hr_*/) {
-			::PyErr_SetObject(PyExc_IOError, convertWideStringToUnicodeObject(
-				app.loadMessage(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MARGS % fileName)).ptr());
-			py::throw_error_already_set();
-		}
-	} else
-		wcscpy(resolvedName, canonicalizePathName(fileName.c_str()).c_str());
+	basic_string<WCHAR> resolvedName;
+	try {
+		resolvedName = resolveShortcut(fileName);
+	} catch(com::ComException&) {
+		::PyErr_SetObject(PyExc_IOError, convertWideStringToUnicodeObject(
+			app.loadMessage(MSG_IO__FAILED_TO_RESOLVE_SHORTCUT, MARGS % fileName)).ptr());
+		py::throw_error_already_set();
+	}
 
 	// check if the file is already open with other text editor
 	const size_t oldBuffer = find(resolvedName);
@@ -618,8 +622,8 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 	}
 
 	Buffer* buffer = &EditorWindows::instance().activeBuffer();
-	if(buffer->isModified() || buffer->textFile().isOpen()) {	// open in the new container
-		if(ascension::encoding::Encoder::supports(encoding))
+	if(buffer->isModified() || buffer->textFile().isBoundToFile()) {	// open in the new container
+		if(e::Encoder::supports(encoding))
 			buffer = &addNew(L"", encoding);
 		else
 			buffer = &addNew();
@@ -637,7 +641,6 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 	}
 */
 	{
-		using namespace ascension::encoding;
 		win32::ui::WaitCursor wc;
 		app.statusBar().setText(app.loadMessage(MSG_STATUS__LOADING_FILE, MARGS % resolvedName).c_str());
 		app.getMainWindow().lockUpdate();
@@ -645,17 +648,17 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 		try {
 			// TODO: check the returned value.
 			buffer->textFile().open(resolvedName, lockMode, encoding, encodingSubstitutionPolicy);
-		} catch(const FileNotFoundException& e) {
+		} catch(const f::FileNotFoundException& e) {
 			::PyErr_SetString(PyExc_IOError, e.what());
-		} catch(const AccessDeniedException& e) {
+		} catch(const f::AccessDeniedException& e) {
 			::PyErr_SetString(PyExc_IOError, e.what());
-		} catch(const UnmappableCharacterException& e) {
+		} catch(const f::UnmappableCharacterException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const MalformedInputException& e) {
+		} catch(const f::MalformedInputException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const PlatformDependentIOError&) {
+		} catch(const f::PlatformDependentIOError&) {
 			::PyErr_SetFromWindowsErr(0);
-		} catch(IOException& e) {
+		} catch(f::IOException& e) {
 			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
 		}
 		app.statusBar().setText(0);
@@ -806,8 +809,8 @@ void BufferList::resetResources() {
 	SHFILEINFOW sfi;
 	for(size_t i = 0; i < buffers_.size(); ++i) {
 		::SHGetFileInfoW(
-			(buffers_[i]->textFile().isOpen()) ? buffers_[i]->textFile().pathName().c_str() : L"",
-			0, &sfi, sizeof(::SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
+			(buffers_[i]->textFile().isBoundToFile()) ? buffers_[i]->textFile().fileName().c_str() : L"",
+			0, &sfi, sizeof(SHFILEINFOW), SHGFI_ICON | SHGFI_SMALLICON);
 		icons_.add(sfi.hIcon);
 		listMenu_ << win32::ui::Menu::OwnerDrawnItem(static_cast<UINT>(i));
 	}
@@ -1029,16 +1032,16 @@ namespace {
 	string encodingOfBuffer(const Buffer& buffer) {return buffer.textFile().encoding();}
 	k::Position insertString(Buffer& buffer, const k::Position& at, const a::String& text) {k::Position temp; k::insert(buffer, at, text, &temp); return temp;}
 	bool isBufferActive(const Buffer& buffer) {return &buffer == &EditorWindows::instance().activeBuffer();}
-	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isOpen();}
+	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isBoundToFile();}
 	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
 	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
 	void saveBuffer(Buffer& buffer, const string& encoding, k::Newline newlines,
-			a::encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
-		if(buffer.textFile().isOpen() && !buffer.isModified())
+			e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
+		if(buffer.textFile().isBoundToFile() && !buffer.isModified())
 			return;
 
-		k::fileio::IOException::Type errorType = static_cast<k::fileio::IOException::Type>(-1);
-		k::fileio::WritingFormat format;
+		f::IOException::Type errorType = static_cast<f::IOException::Type>(-1);
+		f::WritingFormat format;
 		format.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
 		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
 		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
@@ -1046,36 +1049,36 @@ namespace {
 
 		try {
 			buffer.textFile().write(fileName, format, 0);
-		} catch(const k::fileio::AccessDeniedException& e) {
+		} catch(const f::AccessDeniedException& e) {
 			::PyErr_SetString(PyExc_IOError, e.what());
-		} catch(const k::fileio::UnmappableCharacterException& e) {
+		} catch(const f::UnmappableCharacterException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const k::fileio::PlatformDependentIOError&) {
+		} catch(const f::PlatformDependentIOError&) {
 			::PyErr_SetFromWindowsErr(0);
-		} catch(k::fileio::IOException& e) {
+		} catch(f::IOException& e) {
 			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
 		}
 	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
-	void unbindBuffer(Buffer& buffer) {buffer.textFile().close();}
+	void unbindBuffer(Buffer& buffer) {buffer.textFile().unbind();}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
 	void writeBufferRegion(const Buffer& buffer, const k::Region& region, const wstring& fileName, bool append,
 			const string& encoding, k::Newline newlines, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
-		k::fileio::WritingFormat format;
+		f::WritingFormat format;
 		format.encoding = encoding;
 		format.newline = newlines;
 		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
 		try {
-			k::fileio::writeRegion(buffer, region, fileName, format, append);
-		} catch(const k::fileio::AccessDeniedException& e) {
+			f::writeRegion(buffer, region, fileName, format, append);
+		} catch(const f::AccessDeniedException& e) {
 			::PyErr_SetString(PyExc_IOError, e.what());
-		} catch(const k::fileio::UnmappableCharacterException& e) {
+		} catch(const f::UnmappableCharacterException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const k::fileio::PlatformDependentIOError&) {
+		} catch(const f::PlatformDependentIOError&) {
 			::PyErr_SetFromWindowsErr(0);
-		} catch(k::fileio::IOException& e) {
+		} catch(f::IOException& e) {
 			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
 		}
 	}
@@ -1091,30 +1094,30 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("utf32_code_unit", locations::UTF32_CODE_UNIT)
 		.value("grapheme_cluster", locations::GRAPHEME_CLUSTER)
 		.value("glyph_cluster", locations::GLYPH_CLUSTER);
-	py::enum_<encoding::Encoder::SubstitutionPolicy>("EncodingSubstitutionPolicy")
-		.value("dont_substitute", encoding::Encoder::DONT_SUBSTITUTE)
-		.value("replace_unmappable_characters", encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
-		.value("ignore_unmappable_characters", encoding::Encoder::IGNORE_UNMAPPABLE_CHARACTERS);
-/*	py::enum_<fileio::IOException::Type>("FileIoError")
-		.value("ok", static_cast<fileio::IOException::Type>(-1))
-		.value("file_not_found", fileio::IOException::FILE_NOT_FOUND)
-		.value("invalid_encoding", fileio::IOException::INVALID_ENCODING)
-		.value("invalid_newline", fileio::IOException::INVALID_NEWLINE)
-		.value("unmappable_character", fileio::IOException::UNMAPPABLE_CHARACTER)
-		.value("malformed_input", fileio::IOException::MALFORMED_INPUT)
-//		.value("out_of_memory", fileio::IOException::OUT_OF_MEMORY)
-		.value("huge_file", fileio::IOException::HUGE_FILE)
-//		.value("read_only_mode", fileio::IOException::READ_ONLY_MODE)
-		.value("unwritable_file", fileio::IOException::UNWRITABLE_FILE)
-		.value("cannot_create_temporary_file", fileio::IOException::CANNOT_CREATE_TEMPORARY_FILE)
-		.value("lost_disk_file", fileio::IOException::LOST_DISK_FILE)
-		.value("platform_dependent_error", fileio::IOException::PLATFORM_DEPENDENT_ERROR);
-*/	py::enum_<fileio::TextFileDocumentInput::LockMode>("FileLockMode")
-		.value("dont_lock", fileio::TextFileDocumentInput::DONT_LOCK)
-		.value("shared_lock", fileio::TextFileDocumentInput::SHARED_LOCK)
-		.value("exclusive_lock", fileio::TextFileDocumentInput::EXCLUSIVE_LOCK)
-		.value("lock_type_mask", fileio::TextFileDocumentInput::LOCK_TYPE_MASK)
-		.value("lock_only_as_editing", fileio::TextFileDocumentInput::LOCK_ONLY_AS_EDITING);
+	py::enum_<e::Encoder::SubstitutionPolicy>("EncodingSubstitutionPolicy")
+		.value("dont_substitute", e::Encoder::DONT_SUBSTITUTE)
+		.value("replace_unmappable_characters", e::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+		.value("ignore_unmappable_characters", e::Encoder::IGNORE_UNMAPPABLE_CHARACTERS);
+/*	py::enum_<f::IOException::Type>("FileIoError")
+		.value("ok", static_cast<f::IOException::Type>(-1))
+		.value("file_not_found", f::IOException::FILE_NOT_FOUND)
+		.value("invalid_encoding", f::IOException::INVALID_ENCODING)
+		.value("invalid_newline", f::IOException::INVALID_NEWLINE)
+		.value("unmappable_character", f::IOException::UNMAPPABLE_CHARACTER)
+		.value("malformed_input", f::IOException::MALFORMED_INPUT)
+//		.value("out_of_memory", f::IOException::OUT_OF_MEMORY)
+		.value("huge_file", f::IOException::HUGE_FILE)
+//		.value("read_only_mode", f::IOException::READ_ONLY_MODE)
+		.value("unwritable_file", f::IOException::UNWRITABLE_FILE)
+		.value("cannot_create_temporary_file", f::IOException::CANNOT_CREATE_TEMPORARY_FILE)
+		.value("lost_disk_file", f::IOException::LOST_DISK_FILE)
+		.value("platform_dependent_error", f::IOException::PLATFORM_DEPENDENT_ERROR);
+*/	py::enum_<f::TextFileDocumentInput::LockType>("FileLockMode")
+		.value("dont_lock", f::TextFileDocumentInput::DONT_LOCK)
+		.value("shared_lock", f::TextFileDocumentInput::SHARED_LOCK)
+		.value("exclusive_lock", f::TextFileDocumentInput::EXCLUSIVE_LOCK)
+		.value("lock_type_mask", static_cast<f::TextFileDocumentInput::LockType>(0x3)/*f::TextFileDocumentInput::LOCK_TYPE_MASK*/)
+		.value("lock_only_as_editing", static_cast<f::TextFileDocumentInput::LockType>(0x4)/*f::TextFileDocumentInput::LOCK_ONLY_AS_EDITING*/);
 	py::enum_<Newline>("Newline")
 		.value("line_feed", NLF_LINE_FEED)
 		.value("carriage_return", NLF_CARRIAGE_RETURN)
@@ -1125,10 +1128,10 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("special_value_mask", NLF_SPECIAL_VALUE_MASK)
 		.value("raw_value", NLF_RAW_VALUE)
 		.value("document_input", NLF_DOCUMENT_INPUT);
-	py::enum_<fileio::IUnexpectedFileTimeStampDirector::Context>("UnexpectedFileTimeStampContext")
-		.value("first_modification", fileio::IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION)
-		.value("overwrite_file", fileio::IUnexpectedFileTimeStampDirector::OVERWRITE_FILE)
-		.value("client_invocation", fileio::IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION);
+	py::enum_<f::IUnexpectedFileTimeStampDirector::Context>("UnexpectedFileTimeStampContext")
+		.value("first_modification", f::IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION)
+		.value("overwrite_file", f::IUnexpectedFileTimeStampDirector::OVERWRITE_FILE)
+		.value("client_invocation", f::IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION);
 
 	py::class_<Direction>("Direction", py::no_init)
 		.def_readonly("forward", &Direction::FORWARD)
@@ -1180,6 +1183,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("end_compound_change", &Buffer::endCompoundChange)
 		.def<void (*)(Document&, const Region&)>("erase", &erase)
 		.def("insert", &insertString)
+		.def("insert_file_contents", &f::insertFileContents)
 		.def("insert_undo_boundary", &Buffer::insertUndoBoundary)
 		.def("is_active", &isBufferActive)
 		.def("is_bound_to_file", &isBufferBoundToFile)
@@ -1196,14 +1200,14 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("unbind", &unbindBuffer)
 		.def("save", &saveBuffer,
 			(py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
-			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE,
+			py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE,
 			py::arg("write_unicode_byte_order_mark") = false))
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
 		.def("widen", &Buffer::widen)
 		.def("write_region", &writeBufferRegion,
 			(py::arg("region"), py::arg("filename"), py::arg("append") = false,
 			py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
-			py::arg("encoding_substitution_policy") = encoding::Encoder::DONT_SUBSTITUTE,
+			py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE,
 			py::arg("write_unicode_byte_order_mark") = false));
 	py::class_<BufferList, boost::noncopyable>("_BufferList", py::no_init)
 		.def_readwrite("unexpected_file_time_stamp_director", &BufferList::unexpectedFileTimeStampDirector)
@@ -1217,10 +1221,11 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("add_new_dialog", &BufferList::addNewDialog,
 			py::arg("name") = wstring(), py::return_value_policy<py::reference_existing_object>())
 //		.def("close_all", &BufferList::closeAll)
+		.def("for_filename", &BufferList::forFileName)
 		.def("move", &BufferList::move)
 		.def("open", &BufferList::open,
 			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
-			py::arg("lock_mode") = fileio::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
+			py::arg("lock_mode") = f::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
 		.def("save_all", &BufferList::saveAll);
 
 	py::def("active_buffer", &activeBuffer);
