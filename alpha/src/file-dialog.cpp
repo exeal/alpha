@@ -214,10 +214,10 @@ namespace {
 		filterString.sputc(L'\0');
 
 		AutoBuffer<WCHAR> activeBufferDirectory;
-		if(initialDirectory.empty() && EditorWindows::instance().activeBuffer().textFile().isOpen()) {
+		if(initialDirectory.empty() && EditorWindows::instance().activeBuffer().textFile().isBoundToFile()) {
 			// use the directory of the active buffer
 			activeBufferDirectory.reset(new WCHAR[MAX_PATH]);
-			wcscpy(activeBufferDirectory.get(), EditorWindows::instance().activeBuffer().textFile().pathName().c_str());
+			wcscpy(activeBufferDirectory.get(), EditorWindows::instance().activeBuffer().textFile().fileName().c_str());
 			*::PathFindFileNameW(activeBufferDirectory.get()) = 0;
 			if(activeBufferDirectory[0] == 0)
 				activeBufferDirectory.reset();

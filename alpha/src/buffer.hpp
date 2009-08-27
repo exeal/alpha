@@ -75,7 +75,7 @@ namespace alpha {
 		void close(Buffer& buffer);
 		bool createBar(manah::win32::ui::Rebar& rebar);
 		std::size_t find(const Buffer& buffer) const;
-		std::size_t find(const std::basic_string<WCHAR>& fileName) const;
+		boost::python::object forFileName(const std::basic_string<WCHAR>& fileName) const;
 		LRESULT handleBufferBarNotification(NMTOOLBARW& nmhdr);
 		LRESULT handleBufferBarPagerNotification(NMHDR& nmhdr);
 		void move(boost::python::ssize_t from, boost::python::ssize_t to);
@@ -84,7 +84,7 @@ namespace alpha {
 			const std::string& encoding = "UniversalAutoDetect",
 			ascension::encoding::Encoder::SubstitutionPolicy
 				encodingSubstitutionPolicy = ascension::encoding::Encoder::DONT_SUBSTITUTE,
-			ascension::kernel::fileio::TextFileDocumentInput::LockMode lockMode
+			ascension::kernel::fileio::TextFileDocumentInput::LockType lockMode
 				= ascension::kernel::fileio::TextFileDocumentInput::DONT_LOCK,
 			bool asReadOnly = false);
 		OpenResult reopen(std::size_t index, bool changeCodePage);

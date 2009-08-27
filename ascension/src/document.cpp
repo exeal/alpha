@@ -23,7 +23,7 @@ namespace {
 		if(newline == NLF_DOCUMENT_INPUT) {
 			// fallback
 			newline = (document.input() != 0) ? document.input()->newline() : ASCENSION_DEFAULT_NEWLINE;
-			assert((newline & NLF_SPECIAL_VALUE_MASK) != 0);
+			assert(isLiteralNewline(newline));
 		}
 		return newline;
 	}
@@ -62,7 +62,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		}
 	} else {
 		newline = resolveNewline(document, newline);
-		const String eol(isLiteralNewline(newline) ? getNewlineString(newline) : L"");
+		const String eol(isLiteralNewline(newline) ? newlineString(newline) : L"");
 		if(eol.empty() && newline != NLF_RAW_VALUE)
 			throw UnknownValueException("newline");
 		for(length_t i = beginning.line; out; ++i) {
@@ -73,7 +73,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 			if(i == end.line)
 				break;
 			if(newline == NLF_RAW_VALUE)
-				out.write(getNewlineString(line.newline()), static_cast<streamsize>(getNewlineStringLength(line.newline())));
+				out.write(newlineString(line.newline()), static_cast<streamsize>(newlineStringLength(line.newline())));
 			else
 				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}
@@ -628,7 +628,7 @@ length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
 		const length_t lines = numberOfLines();
 		assert(lines > 0);
 		for(length_t i = 0; i < lines - 1; ++i)
-			len += getNewlineStringLength(lines_[i]->newline_);
+			len += newlineStringLength(lines_[i]->newline_);
 		return len;
 	} else
 		throw UnknownValueException("newline");
@@ -646,14 +646,14 @@ length_t Document::lineOffset(length_t line, Newline newline) const {
 		throw BadPositionException(Position(line, 0));
 	newline = resolveNewline(*this, newline);
 
-	length_t offset = 0, eolLength = isLiteralNewline(newline) ? getNewlineStringLength(newline) : 0;
+	length_t offset = 0, eolLength = isLiteralNewline(newline) ? newlineStringLength(newline) : 0;
 	if(eolLength == 0 && newline != NLF_RAW_VALUE)
 		throw UnknownValueException("newline");
 	for(length_t i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
 		if(newline == NLF_RAW_VALUE)
-			offset += getNewlineStringLength(ln.newline_);
+			offset += newlineStringLength(ln.newline_);
 		else
 			offset += eolLength;
 	}

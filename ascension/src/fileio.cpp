@@ -172,14 +172,15 @@ namespace {
 	 * @param encoding the character encoding
 	 * @param newline the newline to verify
 	 * @throw encoding#UnsupportedEncodingException @a encoding is not supported
-	 * @throw std#invalid_argument @a newline is not allowed
+	 * @throw UnknownValueExcepion @a newline is undefined value
+	 * @throw std#invalid_argument @a newline is not allowed or not a literal value
 	 */
 	void verifyNewline(const string& encoding, Newline newline) {
 		if(newline == NLF_NEXT_LINE || newline == NLF_LINE_SEPARATOR || newline == NLF_PARAGRAPH_SEPARATOR) {
 			auto_ptr<Encoder> encoder(Encoder::forName(encoding));
 			if(encoder.get() == 0)
 				throw UnsupportedEncodingException("the specified encoding is not supported.");
-			else if(!encoder->canEncode(getNewlineString(newline)[0]))
+			else if(!encoder->canEncode(newlineString(newline)[0]))
 				throw invalid_argument("the specified newline is not allowed in the specified character encoding.");
 #if 0
 			const MIBenum mib = encoding.properties().mibEnum();
@@ -990,12 +991,13 @@ bool TextFileDocumentInput::FileLocker::unlockAndReserve(bool share) {
  * @code
  * extern Document d;
  * TextFileDocumentInput in(d);
- * in.open(...);   // open the file
+ * in.bind(...);  // bind the document to a file
+ * in.revert(...);
  *
  * // .. edit the document ..
  *
- * in.write(...);  // write the file
- * in.close();
+ * in.save(...);  // write the file
+ * in.unbind();
  * @endcode
  *
  * <h3>Encoding and newline of the file</h3>
@@ -1026,11 +1028,8 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 
 /// Destructor.
 TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
+	unbind();
 	delete fileLocker_;
-	try {
-		close();
-	} catch(IOException&) {
-	}
 }
 
 /**
@@ -1040,6 +1039,31 @@ TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
  */
 void TextFileDocumentInput::addListener(IFilePropertyListener& listener) {
 	listeners_.add(listener);
+}
+
+/**
+ *
+ * @param fileName
+ */
+bool TextFileDocumentInput::bind(const String& fileName) {
+	if(fileName.empty())
+		return unbind(), true;
+
+	const String realName(canonicalizePathName(fileName.c_str()));
+	if(!pathExists(realName.c_str()))
+		throw FileNotFoundException(realName);
+	bool succeededToLock = true;
+	if(fileLocker_->hasLock()) {
+		try {
+			fileLocker_->lock(realName, fileLocker_->type() == SHARED_LOCK);
+		} catch(...) {
+			succeededToLock = false;
+		}
+	}
+	document_.setInput(this, false);
+	fileName_ = realName;
+	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	return succeededToLock;
 }
 
 /**
@@ -1065,34 +1089,15 @@ bool TextFileDocumentInput::checkTimeStamp() {
 	return true;
 }
 
-/**
- * Closes the file and unbind from the document.
- * @note This method does NOT reset the content of the document.
- * @throw std#ios_base#failure any I/O error occurred
- */
-void TextFileDocumentInput::close() {
-	if(!unlock())
-		throw PlatformDependentIOError();
-	if(isOpen()) {
-		if(document_.input() == this)
-			document_.setInput(0, false);	// unbind
-		fileName_.erase();
-		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-		setEncoding(Encoder::defaultInstance().properties().name());
-		memset(&userLastWriteTime_, 0, sizeof(Time));
-		memset(&internalLastWriteTime_, 0, sizeof(Time));
-	}
-}
-
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
 void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
 }
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(fileLocker_->isReserved() && isOpen()) {
+	if(fileLocker_->isReserved() && isBoundToFile()) {
 		if(document_.isModified())
-			fileLocker_->lockReserved(pathName());
+			fileLocker_->lockReserved(fileName());
 		else
 			fileLocker_->unlock();
 	}
@@ -1104,13 +1109,6 @@ void TextFileDocumentInput::documentPropertyChanged(const Document&, const Docum
 
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
 void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
-}
-
-/// Returns the file extension name or an ampty string if the document is not bound to any of the files.
-String TextFileDocumentInput::extensionName() const /*throw()*/ {
-	const String s(pathName());
-	const String::size_type dot = s.rfind('.');
-	return (dot != String::npos) ? s.substr(dot + 1) : String();
 }
 
 /// @see IDocumentInput#isChangeable
@@ -1149,26 +1147,30 @@ TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*throw(
 	return fileLocker_->type();
 }
 
-/// Returns the file name or an empty string if the document is not bound to any of the files.
-String TextFileDocumentInput::name() const /*throw()*/ {
-	const String::const_iterator p = findFileName(fileName_);
-	return fileName_.substr(p - fileName_.begin());
+/**
+ * Removes the file property listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
+	listeners_.remove(listener);
 }
 
 /**
- * Binds the document to the specified file. This method call document's @c Document#setInput.
- * @param fileName the file name. this method doesn't resolve the short cut
+ * Replaces the document's content with the text of the bound file on disk.
  * @param lockMode the lock mode. this method may fail to lock with desired mode. see the
  *                 description of the return value
  * @param encoding the file encoding or auto detection name
  * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
- * @return @c true if succeeded to lock the file with the desired mode @a lockMode
+ * @return @c true if succeeded to lock the file with the desired type @a lockMode.type
+ * @throw IllegalStateException the object was not bound to a file
  * @throw IOException any I/O error occurred. in this case, the document's content will be lost
  */
-bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, const std::string& encoding,
+bool TextFileDocumentInput::revert(const LockMode& lockMode, const std::string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
-//	Timer tm(L"TextFileDocumentInput.open");	// 2.86s / 1MB
+	if(!isBoundToFile())
+		throw IllegalStateException("the object is not bound to a file.");
 	unlock();
 	document_.resetContent();
 	timeStampDirector_ = 0;
@@ -1178,7 +1180,7 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	const bool recorded = document_.isRecordingChanges();
 	document_.recordChanges(false);
 	try {
-		resultEncoding = insertFileContents(document_, document_.region().beginning(), fileName, encoding, encodingSubstitutionPolicy);
+		resultEncoding = insertFileContents(document_, document_.region().beginning(), fileName(), encoding, encodingSubstitutionPolicy);
 	} catch(...) {
 		document_.resetContent();
 		document_.recordChanges(recorded);
@@ -1194,11 +1196,11 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 			fileLocker_->unlockAndReserve(share);
 		else {
 			try {
-				fileLocker_->lock(fileName, share);
+				fileLocker_->lock(fileName(), share);
 			} catch(...) {
 				if(!share) {
 					try {
-						fileLocker_->lock(fileName, true);
+						fileLocker_->lock(fileName(), true);
 					} catch(...) {
 					}
 				}
@@ -1209,11 +1211,11 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 	// set the new properties of the document
 	savedDocumentRevision_ = document_.revisionNumber();
 	timeStampDirector_ = unexpectedTimeStampDirector;
-	fileName_ = canonicalizePathName(fileName.c_str());
+//	fileName_ = canonicalizePathName(fileName.c_str());
 #ifdef ASCENSION_WINDOWS
-	document_.setProperty(Document::TITLE_PROPERTY, name());
+	document_.setProperty(Document::TITLE_PROPERTY, fileName());
 #else // ASCENSION_POSIX
-	const String title(name());
+	const String title(fileName());
 	const locale lc("");
 	const codecvt<a::Char, Char, mbstate_t>& conv = use_facet<codecvt<a::Char, Char, mbstate_t> >(lc);
 	mbstate_t state;
@@ -1242,67 +1244,54 @@ bool TextFileDocumentInput::open(const String& fileName, LockMode lockMode, cons
 		// ignore...
 	}
 
-	document_.setInput(this, false);
 	return lockMode.type == fileLocker_->type();
 }
 
 /**
- *
- * @param fileName
- */
-bool TextFileDocumentInput::rebind(const String& fileName) {
-	bool succeededToLock = true;
-	if(fileName.empty()) {
-		if(!isOpen())
-			return true;
-		unlock();
-	} else {
-		if(fileLocker_->hasLock()) {
-			try {
-				fileLocker_->lock(fileName, fileLocker_->type() == SHARED_LOCK);
-			} catch(...) {
-				succeededToLock = false;
-			}
-		}
-	}
-	fileName_ = fileName;
-	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-	return succeededToLock;
-}
-
-/**
- * Removes the file property listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
-	listeners_.remove(listener);
-}
-
-/**
- * Sets the encoding.
+ * Sets the character encoding.
  * @param encoding the encoding
+ * @return this object
  * @throw encoding#UnsupportedEncodingException @a encoding is not supported
  * @see #encoding
  */
-void TextFileDocumentInput::setEncoding(const string& encoding) {
+TextFileDocumentInput& TextFileDocumentInput::setEncoding(const string& encoding) {
 	if(!encoding.empty() && !Encoder::supports(encoding))
 		throw UnsupportedEncodingException("encoding");
 	encoding_ = encoding;
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	return *this;
 }
 
 /**
  * Sets the newline.
  * @param newline the newline
+ * @return this object
  * @throw UnknownValueException @a newline is invalid
  */
-void TextFileDocumentInput::setNewline(Newline newline) {
+TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
 	if(!isLiteralNewline(newline))
 		throw UnknownValueException("newline");
 	else if(newline != newline_) {
 		newline_ = newline;
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	}
+	return *this;
+}
+
+/**
+ * Unbinds the file and the document.
+ * @note This method does NOT reset the content of the document.
+ */
+void TextFileDocumentInput::unbind() /*throw()*/ {
+	unlock();	// this may return false
+	if(isBoundToFile()) {
+		if(document_.input() == this)
+			document_.setInput(0, false);
+		fileName_.erase();
+		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+		setEncoding(Encoder::defaultInstance().properties().name());
+		memset(&userLastWriteTime_, 0, sizeof(Time));
+		memset(&internalLastWriteTime_, 0, sizeof(Time));
 	}
 }
 
@@ -1319,7 +1308,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 		memset(&uninitialized, 0, sizeof(Time));
 
 	const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
-	if(!isOpen()
+	if(!isBoundToFile()
 			|| memcmp(&about, &uninitialized, sizeof(Time)) == 0
 			|| fileLocker_->hasLock())
 		return true;	// not managed
@@ -1334,6 +1323,10 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 #else // ASCENSION_POSIX
 	return about >= newTimeStamp;
 #endif
+}
+
+/***/
+bool TextFileDocumentInput::write(const WritingFormat& format) {
 }
 
 /**
