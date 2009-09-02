@@ -25,8 +25,6 @@ namespace ascension {
 			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
 			/// String type for file names.
 			typedef std::basic_string<Char> String;
-			/// Represents platform-dependent IO error.
-			typedef PlatformDependentError<std::ios_base::failure> PlatformDependentIOError;
 
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
@@ -41,19 +39,24 @@ namespace ascension {
 				bool unicodeByteOrderMark;
 			};
 
-			/// The specified file is not found.
-			class FileNotFoundException : public std::ios_base::failure {
+			class IOException : public std::ios_base::failure {
 			public:
-				explicit FileNotFoundException(const String& fileName);
+#ifdef ASCENSION_WINDOWS
+				typedef DWORD Code;	///< Type of the value returned by @c #code method.
+#else // ASCENSION_POSIX
+				typedef int Code;	///< Type of the value returned by @c #code method.
+#endif
+			public:
+				explicit IOException(const String& fileName);
+				IOException(const String& fileName, Code code);
+				Code code() const /*throw()*/;
 				const String& fileName() const /*throw()*/;
+			public:
+				static bool isFileNotFound(const IOException& e);
+				static bool isPermissionDenied(const IOException& e);
 			private:
 				const String fileName_;
-			};
-
-			/// The access to the target entity was rejected.
-			class AccessDeniedException : public std::ios_base::failure {
-			public:
-				AccessDeniedException();
+				const Code code_;
 			};
 
 			/// The encoding failed for unmappable character.
@@ -68,39 +71,6 @@ namespace ascension {
 			class MalformedInputException : public std::ios_base::failure {
 			public:
 				MalformedInputException();
-			};
-
-			/// File I/O exception.
-			class IOException : public std::runtime_error {
-			public:
-				/// Error types.
-				enum Type {
-#if 0
-					/// Failed for out of memory.
-					OUT_OF_MEMORY,
-#endif
-					/// The file to be opend is too huge.
-					HUGE_FILE,
-#if 0
-					/// Tried to write the read only document. If the disk file is read only, POSIX
-					/// @c errno is set to @c BBADF, or Win32 @c GetLastError returns
-					/// @c ERROR_FILE_READ_ONLY.
-					READ_ONLY_MODE,
-#endif
-					/// The file is read only and not writable.
-					UNWRITABLE_FILE,
-					/// Failed to create the temporary file for writing.
-					CANNOT_CREATE_TEMPORARY_FILE,
-					/// Failed to write to the file and the file was <strong>lost</strong>.
-					LOST_DISK_FILE
-				};
-			public:
-				/// Constructor.
-				explicit IOException(Type type) /*throw()*/ : std::runtime_error(""), type_(type) {}
-				/// Returns the error type.
-				Type type() const /*throw()*/ {return type_;}
-			private:
-				Type type_;
 			};
 
 			class TextFileDocumentInput;
@@ -219,7 +189,7 @@ namespace ascension {
 #endif
 				/// Lock types for opened file.
 				enum LockType {
-					DONT_LOCK,		///< Does not lock.
+					NO_LOCK,		///< Does not lock or unlock.
 					SHARED_LOCK,	///< Uses shared lock.
 					EXCLUSIVE_LOCK	///< Uses exclusive lock.
 				};
@@ -243,30 +213,32 @@ namespace ascension {
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
 				// bound file
-				bool bind(const String& fileName);
+				void bind(const String& fileName);
 				String fileName() const /*throw()*/;
 				bool isBoundToFile() const /*throw()*/;
-				bool revert(const LockMode& lockMode, const std::string& encoding,
+				void lockFile(const LockMode& mode);
+				void revert(const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				void unbind() /*throw()*/;
-				bool write(const WritingFormat& format);
+				void unlockFile();
+				void write(const WritingFormat& format, const manah::Flags<WritingOption>& options);
 				// encodings
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(Newline newline);
 				bool unicodeByteOrderMark() const /*throw()*/;
 				// I/O
-				bool writeOtherFile(const String& fileName,
+				void writeOtherFile(const String& fileName,
 					const WritingFormat& format, const manah::Flags<WritingOption>& options);
 				// IDocumentInput
 				std::string encoding() const /*throw()*/;
-				bool isChangeable() const /*throw()*/;
 				ascension::String location() const /*throw()*/;
 				Newline newline() const /*throw()*/;
 			private:
-				bool lock() /*throw()*/;
-				bool unlock() /*throw()*/;
 				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
+				// IDocumentInput
+				bool isChangeable(const Document& document) const /*throw()*/;
+				void postFirstDocumentChange(const Document& document) /*throw()*/;
 				// IDocumentStateListener
 				void documentAccessibleRegionChanged(const Document& document);
 				void documentModificationSignChanged(const Document& document);

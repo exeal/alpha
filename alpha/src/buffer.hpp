@@ -79,15 +79,6 @@ namespace alpha {
 		LRESULT handleBufferBarNotification(NMTOOLBARW& nmhdr);
 		LRESULT handleBufferBarPagerNotification(NMHDR& nmhdr);
 		void move(boost::python::ssize_t from, boost::python::ssize_t to);
-		boost::python::object open(
-			const std::basic_string<WCHAR>& fileName,
-			const std::string& encoding = "UniversalAutoDetect",
-			ascension::encoding::Encoder::SubstitutionPolicy
-				encodingSubstitutionPolicy = ascension::encoding::Encoder::DONT_SUBSTITUTE,
-			ascension::kernel::fileio::TextFileDocumentInput::LockType lockMode
-				= ascension::kernel::fileio::TextFileDocumentInput::DONT_LOCK,
-			bool asReadOnly = false);
-		OpenResult reopen(std::size_t index, bool changeCodePage);
 		bool save(std::size_t index, bool overwrite = true, bool addToMRU = true);
 		bool saveSomeDialog(boost::python::tuple buffersToSave = boost::python::tuple());
 		bool saveAll(bool addToMRU = true);

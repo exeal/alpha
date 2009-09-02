@@ -262,9 +262,10 @@ namespace ascension {
 		class IDocumentInput {
 		public:
 			/**
-			 * Thrown if @c IDocumentInput rejected the change of the document. For details, see the
-			 * documentation of @c Document class.
-			 * @see Document#erase, Document#insert, Document#lock, IDocumentInput#isChangeable
+			 * Thrown if @c IDocumentInput rejected the change of the document. For details, see
+			 * the documentation of @c Document class.
+			 * @see Document#redo, Document#replace, Document#resetContent, Document#undo,
+			 *      IDocumentInput#documentAboutToBeChanged
 			 */
 			class ChangeRejectedException : public DocumentCantChangeException {
 			public:
@@ -273,15 +274,17 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~IDocumentInput() /*throw()*/ {}
-			/// Returns the encoding of the document input.
+			/// Returns the character encoding of the document input.
 			virtual std::string encoding() const /*throw()*/ = 0;
-			/// Returns true if the document is changeable.
-			virtual bool isChangeable() const /*throw()*/ = 0;
-			/// Returns the location of the document input or an empty string.
+			/// Returns a string represents the location of the document input or an empty string.
 			virtual String location() const /*throw()*/ = 0;
 			/// Returns the default newline of the document. The returned value can be neighter
 			/// @c NLF_RAW_VALUE nor @c NLF_DOCUMENT_INPUT.
 			virtual Newline newline() const /*throw()*/ = 0;
+		private:
+			virtual bool isChangeable(const Document& document) const /*throw()*/ = 0;
+			virtual void postFirstDocumentChange(const Document& document) /*throw()*/ = 0;
+			friend class Document;
 		};
 
 		/**

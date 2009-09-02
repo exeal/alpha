@@ -18,6 +18,8 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 		manah::AutoBuffer<wchar_t> buffer(large ? new wchar_t[n] : 0);
 		wchar_t* const p = large ? buffer.get() : s;
 		n = ::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), p, n);
+		if(n == -1)
+			py::throw_error_already_set();
 		p[static_cast<size_t>(n)] = 0;
 		return p;
 	}

@@ -1101,15 +1101,32 @@ void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
 
 /// @see WM_DROPFILES
 void Alpha::onDropFiles(HDROP drop) {
-	const uint c = ::DragQueryFileW(drop, 0xFFFFFFFF, 0, 0);
-	WCHAR filePath[MAX_PATH];
+	const UINT c = ::DragQueryFileW(drop, 0xffffffffu, 0, 0);
+	AutoBuffer<WCHAR> fileName(new WCHAR[MAX_PATH]);
+	UINT fileNameLength = MAX_PATH;
+//	py::list files;
+
+	// TODO: detect the window under the cursor by using DragQueryPoint.
+
+//	if(<activates-on-drop-files>) {
+//		if(mainWindow().isIconic())
+//			mainWindow().show(SW_RESTORE);
+//		mainWindow().forceSetForeground();
+//	}
 
 	for(uint i = 0; i < c; ++i) {
-		::DragQueryFileW(drop, i, filePath, MAX_PATH);
+		const UINT len = ::DragQueryFileW(drop, i, 0, 0);
+		if(len > fileNameLength)
+			fileName.reset(new WCHAR[(fileNameLength = len) + 1]);
+		::DragQueryFileW(drop, i, fileName.get(), fileNameLength);
+#if 1
+//		files.extend(ambient.convertWideStringToUnicodeObject(fileName));
+#else
 		if(!toBoolean(::PathIsDirectoryW(filePath)))
 			BufferList::instance().open(filePath);
-//		else
-//			BufferList::instance().openDialog(filePath);
+		else
+			BufferList::instance().openDialog(filePath);
+#endif
 	}
 	::DragFinish(drop);
 

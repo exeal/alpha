@@ -782,6 +782,7 @@ void Document::removeStateListener(IDocumentStateListener& listener) {
  * - Resets the read-only flag to false.
  * - Revokes the narrowing.
  * - Removes the all bookmarks.
+ * @note This method does not call @c IDocumentInput#isChangeable for rejection.
  * @see #doResetContent
  */
 void Document::resetContent() {

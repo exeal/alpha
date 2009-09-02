@@ -61,6 +61,25 @@ namespace {
 		const CodePage encoding_;
 		bool retryWithOtherCodePage_;
 	};*/
+	void saveBuffer(Buffer& buffer, const string& encoding = string(), k::Newline newlines = k::NLF_RAW_VALUE,
+			e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy = e::Encoder::DONT_SUBSTITUTE, bool writeUnicodeByteOrderMark = false) {
+		if(buffer.textFile().isBoundToFile() && !buffer.isModified())
+			return;
+
+		f::WritingFormat format;
+		format.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
+		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
+		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
+		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
+
+		try {
+			buffer.textFile().write(format, 0);
+		} catch(const f::UnmappableCharacterException& e) {
+			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
+		} catch(const f::IOException& e) {
+			::PyErr_SetFromWindowsErr(e.code());
+		}
+	}
 } // namespace @0
 
 
@@ -82,9 +101,8 @@ Buffer::~Buffer() {
  */
 const basic_string<WCHAR> Buffer::name() const /*throw()*/ {
 	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
-	if(textFile_->isBoundToFile())
-		return textFile_->name();
-	return untitled.c_str();
+	return !textFile_->isBoundToFile() ? ::PathFindFileNameW(textFile_->location().c_str()) : untitled;
+	
 }
 
 /// Returns the presentation object of Ascension.
@@ -187,7 +205,7 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
 	auto_ptr<Buffer> buffer(new Buffer());
 
 	buffer->textFile().setEncoding(encoding);
-	if((newline & k::NLF_SPECIAL_VALUE_MASK) == 0)
+	if(isLiteralNewline(newline))
 		buffer->textFile().setNewline(newline);
 
 	editorSession_.addDocument(*buffer);
@@ -587,7 +605,7 @@ namespace {
 			return f::canonicalizePathName(s.c_str());
 	}
 }
-
+#if 0
 /**
  * Opens the specified file.
  * This method may show a dialog to indicate the result.
@@ -673,7 +691,7 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 		buffer->setReadOnly();
 	return buffers_.back()->self();
 }
-
+#endif
 /// @see ascension#text#IUnexpectedFileTimeStampDirector::queryAboutUnexpectedTimeStamp
 bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
 		k::Document& document, IUnexpectedFileTimeStampDirector::Context context) throw() {
@@ -705,6 +723,7 @@ void BufferList::recalculateBufferBarSize() {
 	}
 }
 
+#if 0
 /**
  * Reopens the specified buffer.
  * @param index the index of the buffer to reopen
@@ -713,7 +732,6 @@ void BufferList::recalculateBufferBarSize() {
  * @throw std#out_of_range @a index is invalid
  */
 BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
-#if 0
 	using namespace ascension::kernel::fileio;
 	Alpha& app = Alpha::instance();
 	Buffer& buffer = at(index);
@@ -787,9 +805,9 @@ BufferList::OpenResult BufferList::reopen(size_t index, bool changeEncoding) {
 //		app.mruManager().add(buffer.textFile().pathName());
 		return OPENRESULT_SUCCEEDED;
 	} else
-#endif
 		return OPENRESULT_FAILED;
 }
+#endif
 
 /// Reconstructs the image list and the menu according to the current buffer list.
 void BufferList::resetResources() {
@@ -980,8 +998,12 @@ bool BufferList::saveSomeDialog(py::tuple buffersToSave /* = py::tuple() */) {
 	// save the checked buffers
 	for(vector<ui::DirtyFile>::reverse_iterator it(dialog.files_.rbegin()); it != dialog.files_.rend(); ++it) {
 		if(it->save) {
-			if(!save(find(it->fileName), true))
-				return false;
+			py::object buffer(forFileName(it->fileName));
+			if(buffer != py::object()) {
+				py::extract<Buffer&> temp(buffer);
+				if(temp.check())
+					saveBuffer(static_cast<Buffer&>(temp));
+			}
 		}
 	}
 	return true;
@@ -1018,6 +1040,7 @@ void BufferList::updateTitleBar() {
 
 namespace {
 	py::object activeBuffer() {return EditorWindows::instance().activeBuffer().self();}
+	void bindBufferToFile(Buffer& buffer, const wstring& fileName) {buffer.textFile().bind(fileName);}
 	py::object bufferAt(const BufferList& buffers, py::ssize_t at) {
 		try {
 			return buffers.at(at).self();
@@ -1033,35 +1056,16 @@ namespace {
 	k::Position insertString(Buffer& buffer, const k::Position& at, const a::String& text) {k::Position temp; k::insert(buffer, at, text, &temp); return temp;}
 	bool isBufferActive(const Buffer& buffer) {return &buffer == &EditorWindows::instance().activeBuffer();}
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isBoundToFile();}
+	void lockFile(Buffer& buffer, f::TextFileDocumentInput::LockType type, bool onlyAsEditing) {
+		f::TextFileDocumentInput::LockMode mode; mode.type = type; mode.onlyAsEditing = onlyAsEditing; buffer.textFile().lockFile(mode);}
 	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
 	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
-	void saveBuffer(Buffer& buffer, const string& encoding, k::Newline newlines,
-			e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
-		if(buffer.textFile().isBoundToFile() && !buffer.isModified())
-			return;
-
-		f::IOException::Type errorType = static_cast<f::IOException::Type>(-1);
-		f::WritingFormat format;
-		format.encoding = !encoding.empty() ? encoding : buffer.textFile().encoding();
-		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
-		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
-		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
-
-		try {
-			buffer.textFile().write(fileName, format, 0);
-		} catch(const f::AccessDeniedException& e) {
-			::PyErr_SetString(PyExc_IOError, e.what());
-		} catch(const f::UnmappableCharacterException& e) {
-			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const f::PlatformDependentIOError&) {
-			::PyErr_SetFromWindowsErr(0);
-		} catch(f::IOException& e) {
-			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
-		}
-	}
-	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {return buffer.textFile().setEncoding(encoding);}
+	void revertBufferToFile(Buffer& buffer, const string& encoding,
+		e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {buffer.textFile().revert(encoding, encodingSubstitutionPolicy);}
+	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
-	void unbindBuffer(Buffer& buffer) {buffer.textFile().unbind();}
+	void unbindBufferFromFile(Buffer& buffer) {buffer.textFile().unbind();}
+	void unlockFile(Buffer& buffer) {buffer.textFile().unlockFile();}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
 	void writeBufferRegion(const Buffer& buffer, const k::Region& region, const wstring& fileName, bool append,
 			const string& encoding, k::Newline newlines, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, bool writeUnicodeByteOrderMark) {
@@ -1072,14 +1076,10 @@ namespace {
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
 		try {
 			f::writeRegion(buffer, region, fileName, format, append);
-		} catch(const f::AccessDeniedException& e) {
-			::PyErr_SetString(PyExc_IOError, e.what());
 		} catch(const f::UnmappableCharacterException& e) {
 			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const f::PlatformDependentIOError&) {
-			::PyErr_SetFromWindowsErr(0);
-		} catch(f::IOException& e) {
-			::PyErr_SetObject(PyExc_IOError, py::object(e.type()).ptr());
+		} catch(const f::IOException& e) {
+			::PyErr_SetFromWindowsErr(e.code());
 		}
 	}
 }
@@ -1113,11 +1113,9 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("lost_disk_file", f::IOException::LOST_DISK_FILE)
 		.value("platform_dependent_error", f::IOException::PLATFORM_DEPENDENT_ERROR);
 */	py::enum_<f::TextFileDocumentInput::LockType>("FileLockMode")
-		.value("dont_lock", f::TextFileDocumentInput::DONT_LOCK)
+		.value("no_lock", f::TextFileDocumentInput::NO_LOCK)
 		.value("shared_lock", f::TextFileDocumentInput::SHARED_LOCK)
-		.value("exclusive_lock", f::TextFileDocumentInput::EXCLUSIVE_LOCK)
-		.value("lock_type_mask", static_cast<f::TextFileDocumentInput::LockType>(0x3)/*f::TextFileDocumentInput::LOCK_TYPE_MASK*/)
-		.value("lock_only_as_editing", static_cast<f::TextFileDocumentInput::LockType>(0x4)/*f::TextFileDocumentInput::LOCK_ONLY_AS_EDITING*/);
+		.value("exclusive_lock", f::TextFileDocumentInput::EXCLUSIVE_LOCK);
 	py::enum_<Newline>("Newline")
 		.value("line_feed", NLF_LINE_FEED)
 		.value("carriage_return", NLF_CARRIAGE_RETURN)
@@ -1125,7 +1123,6 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("next_line", NLF_NEXT_LINE)
 		.value("line_separator", NLF_LINE_SEPARATOR)
 		.value("paragraph_separator", NLF_PARAGRAPH_SEPARATOR)
-		.value("special_value_mask", NLF_SPECIAL_VALUE_MASK)
 		.value("raw_value", NLF_RAW_VALUE)
 		.value("document_input", NLF_DOCUMENT_INPUT);
 	py::enum_<f::IUnexpectedFileTimeStampDirector::Context>("UnexpectedFileTimeStampContext")
@@ -1178,6 +1175,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.add_property("revision_number", &Buffer::revisionNumber)
 		.add_property("unicode_byte_order_mark", &unicodeByteOrderMarkOfBuffer)
 		.def("begin_compound_change", &Buffer::beginCompoundChange)
+		.def("bind_file", &bindBufferToFile)
 		.def("clear_undo_buffer", &Buffer::clearUndoBuffer)
 		.def("close", &closeBuffer)
 		.def("end_compound_change", &Buffer::endCompoundChange)
@@ -1192,12 +1190,15 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("is_narrowed", &Buffer::isNarrowed)
 		.def("length", &Buffer::length, py::arg("newline") = NLF_RAW_VALUE)
 		.def("line", &Buffer::line, py::return_value_policy<py::copy_const_reference>())
+		.def("lock_file", &lockFile)
 		.def("mark_unmodified", &Buffer::markUnmodified)
 		.def("narrow_to_region", &Buffer::narrowToRegion)
 		.def("redo", &Buffer::redo, py::arg("n") = 1)
 		.def("replace", &replaceString)
 		.def("reset_content", &Buffer::resetContent)
-		.def("unbind", &unbindBuffer)
+		.def("revert_to_file", &revertBufferToFile)
+		.def("unbind_file", &unbindBufferFromFile)
+		.def("unlock_file", &unlockFile)
 		.def("save", &saveBuffer,
 			(py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
 			py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE,
@@ -1223,9 +1224,9 @@ ALPHA_EXPOSE_PROLOGUE(1)
 //		.def("close_all", &BufferList::closeAll)
 		.def("for_filename", &BufferList::forFileName)
 		.def("move", &BufferList::move)
-		.def("open", &BufferList::open,
-			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
-			py::arg("lock_mode") = f::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
+//		.def("open", &BufferList::open,
+//			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
+//			py::arg("lock_mode") = f::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
 		.def("save_all", &BufferList::saveAll);
 
 	py::def("active_buffer", &activeBuffer);

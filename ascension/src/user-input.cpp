@@ -1470,7 +1470,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
 			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
 			if(SUCCEEDED(text.first))
-				dnd_.numberOfRectangleLines = getNumberOfLines(text.second) - 1;
+				dnd_.numberOfRectangleLines = calculateNumberOfLines(text.second) - 1;
 		}
 		state_ = OLE_DND_TARGET;
 	}
