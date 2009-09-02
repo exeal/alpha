@@ -392,19 +392,13 @@ namespace {
 	void selectInWindow(EditorWindow& window, py::object o) {
 		Buffer* buffer = 0;	// buffer to select
 		if(toBoolean(PyUnicode_Check(o.ptr()))) {
-			PyUnicodeObject* unicode = reinterpret_cast<PyUnicodeObject*>(o.ptr());
-			py::ssize_t n = ::PyUnicode_GetSize(o.ptr());
-			AutoBuffer<wchar_t> name(new wchar_t[n + 1]);
-			n = ::PyUnicode_AsWideChar(unicode, name.get(), n);
-			if(n == -1)
-				py::throw_error_already_set();
-			name[static_cast<size_t>(n)] = 0;
-			const size_t i = BufferList::instance().find(name.get());
-			if(i == -1) {
+			const wstring name(ambient::convertUnicodeObjectToWideString(o.ptr()));
+			py::object buf(BufferList::instance().forFileName(name));
+			if(buf == py::object()) {
 				::PyErr_BadArgument();
 				py::throw_error_already_set();
 			}
-			buffer = &BufferList::instance().at(i);
+			buffer = static_cast<Buffer*>(py::extract<Buffer*>(buf));
 		} else if(py::extract<Buffer*>(o).check())
 			buffer = static_cast<Buffer*>(py::extract<Buffer*>(o));
 		else if(py::extract<EditorView&>(o).check())

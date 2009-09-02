@@ -456,15 +456,25 @@ void Document::recordChanges(bool record) /*throw()*/ {
 }
 
 namespace {
-	void checkChangeable(const Document& document) {
-		if(!document.isModified()) {
-			if(IDocumentInput* input = document.input()) {
-				if(!input->isChangeable())
-					throw IDocumentInput::ChangeRejectedException();
-			}
-		}
-	}
-} // namespace @0
+	class FirstChangeHolder {
+	public:
+		FirstChangeHolder(const Document& document, IDocumentInput* input,
+			void(IDocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {assert(post_ != 0);}
+		~FirstChangeHolder() {if(input_ != 0) (input_->*post_)(document_);}
+	private:
+		const Document& document_;
+		IDocumentInput* input_;
+		void(IDocumentInput::*post_)(const Document&);
+	};
+}
+
+#define ASCENSION_PREPARE_FIRST_CHANGE(skip)									\
+	const bool firstChange = !(skip) && !isModified() && (input_.get() != 0);	\
+	if(firstChange) {															\
+		if(!input_->isChangeable(*this))										\
+			throw IDocumentInput::ChangeRejectedException();					\
+	}																			\
+	FirstChangeHolder fch(*this, firstChange ? input_.get() : 0, &IDocumentInput::postFirstDocumentChange)
 
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.
@@ -480,7 +490,7 @@ bool Document::redo(size_t n /* = 1 */) {
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfRedoableChanges())
 		throw invalid_argument("n");
-	checkChangeable(*this);
+	ASCENSION_PREPARE_FIRST_CHANGE(false);
 
 	IUndoableChange::Result result;
 	result.completed = true;
@@ -544,10 +554,9 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
-	else if(!rollbacking_ && (checkChangeable(*this), false))
-		throw IDocumentInput::ChangeRejectedException();
 	else if(region.isEmpty() && (first == 0 || first == last))
 		return;	// nothing to do
+	ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
 	// preprocess. these can't throw
 	ascension::internal::ValueSaver<bool> writeLock(changing_);
@@ -594,8 +603,8 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 					if(recordingChanges_) {
 						erasedString.sputn(line.text().data() + p.column, static_cast<streamsize>(e - p.column));
 						if(!last)
-							erasedString.sputn(getNewlineString(line.newline()),
-								static_cast<streamsize>(getNewlineStringLength(line.newline())));
+							erasedString.sputn(newlineString(line.newline()),
+								static_cast<streamsize>(newlineStringLength(line.newline())));
 					}
 //					erasedStringLength += e - p.column;
 					if(last)
@@ -607,7 +616,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			const Char* const firstNewline = nextNewline;
 			if(first != 0 && nextNewline != last) {
 				try {
-					const Char* p = nextNewline + getNewlineStringLength(eatNewline(nextNewline, last));
+					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, last));
 					while(true) {
 						nextNewline = find_first_of(p, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
 						auto_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, last)));
@@ -616,7 +625,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 						insertedStringLength += allocatedLines.back()->text().length();
 						if(nextNewline == last)
 							break;
-						p = nextNewline + getNewlineStringLength(allocatedLines.back()->newline());
+						p = nextNewline + newlineStringLength(allocatedLines.back()->newline());
 					}
 					// merge last line
 					Line& lastAllocatedLine = *allocatedLines.back();
@@ -727,7 +736,7 @@ bool Document::undo(size_t n /* = 1 */) {
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfUndoableChanges())
 		throw invalid_argument("n");
-	checkChangeable(*this);
+	ASCENSION_PREPARE_FIRST_CHANGE(false);
 
 	const size_t oldRevisionNumber = revisionNumber_;
 	IUndoableChange::Result result;

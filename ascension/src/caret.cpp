@@ -1339,7 +1339,7 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 				const Document::Line& ln = document.getLineInformation(line);
 				caret.boxForRectangleSelection().overlappedSubline(line, 0, first, last);	// TODO: recognize wrap (second parameter).
 				out.write(ln.text().data() + first, static_cast<streamsize>(last - first));
-				out.write(getNewlineString(ln.newline()), static_cast<streamsize>(getNewlineStringLength(ln.newline())));
+				out.write(newlineString(ln.newline()), static_cast<streamsize>(newlineStringLength(ln.newline())));
 			}
 		}
 	}
@@ -1695,7 +1695,7 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 		return;
 
 	const IDocumentInput* const di = caret.document().input();
-	String s(getNewlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
+	String s(newlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
 
 	if(inheritIndent) {	// simple auto-indent
 		const String& currentLine = caret.document().line(caret.line());
@@ -1996,7 +1996,7 @@ bool viewers::transposeLines(Caret& caret) {
 	const Position old(caret.position());
 	const length_t firstLine = (old.line != document.numberOfLines() - 1) ? old.line : old.line - 1;
 	String s(document.line(firstLine + 1));
-	s += getNewlineString(document.getLineInformation(firstLine).newline());
+	s += newlineString(document.getLineInformation(firstLine).newline());
 	s += document.line(firstLine);
 
 	try {
