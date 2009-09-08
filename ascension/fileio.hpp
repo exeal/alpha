@@ -147,9 +147,11 @@ namespace ascension {
 				std::ios_base::openmode mode() const /*throw()*/;
 				bool unicodeByteOrderMark() const /*throw()*/;
 			private:
+				void buildEncoder(const std::string& encoding, bool detectEncoding);
+				void buildInputMapping();
 				TextFileStreamBuffer* closeFile() /*throw()*/;
 				void openForReading(const std::string& encoding);
-				void openForWriting(bool writeUnicodeByteOrderMark);
+				void openForWriting(const std::string& encoding, bool writeUnicodeByteOrderMark);
 				// std.basic_streambuf
 				int_type overflow(int_type c /* = traits_type::eof() */);
 				int_type pbackfail(int_type c /* = traits_type::eof() */);

@@ -546,7 +546,7 @@ namespace {
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-		bool writeUnicodeByteOrderMark) : fileName_(fileName), mode_(mode), encoder_(Encoder::forName(encoding)) {
+		bool writeUnicodeByteOrderMark) : fileName_(fileName), mode_(mode) {
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
 	switch(mode) {
 	case ios_base::in:
@@ -557,7 +557,7 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 	case ios_base::out | ios_base::app:
 		if(encoder_.get() == 0)
 			throw UnsupportedEncodingException("<encoding> = " + encoding);
-		openForWriting(writeUnicodeByteOrderMark);
+		openForWriting(encoding, writeUnicodeByteOrderMark);
 		break;
 	default:
 		throw UnknownValueException("mode");
@@ -572,6 +572,65 @@ TextFileStreamBuffer::~TextFileStreamBuffer() {
 		close();	// this may throw
 	} catch(const IOException&) {
 	}
+}
+
+void TextFileStreamBuffer::buildEncoder(const string& encoding, bool detectEncoding) {
+	assert(encoder_.get() == 0);
+	encoder_ = Encoder::forName(encoding);
+	if(encoder_.get() != 0)
+		return;
+	else if(detectEncoding) {
+		if(EncodingDetector* detector = EncodingDetector::forName(encoding)) {
+			const pair<MIBenum, string> detected(detector->detect(
+				inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), 0));
+			if(detected.first != MIB_OTHER)
+				encoder_ = Encoder::forMIB(detected.first);
+			else
+				encoder_ = Encoder::forName(detected.second);
+			if(encoder_.get() != 0)
+				return;	// resolved
+		}
+	}
+	throw UnsupportedEncodingException(encoding);
+}
+
+void TextFileStreamBuffer::buildInputMapping() {
+	assert(isOpen());
+#ifdef ASCENSION_WINDOWS
+	LARGE_INTEGER fileSize;
+	if(!toBoolean(::GetFileSizeEx(fileHandle_, &fileSize)))
+		throw IOException(fileName());
+	if(fileSize.QuadPart != 0) {
+		fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0);
+		if(fileMapping_ == 0)
+			throw IOException(fileName());
+		inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
+		if(inputMapping_.first == 0) {
+			SystemErrorSaver ses;
+			::CloseHandle(fileMapping_);
+			throw IOException(fileName(), ses.code());
+		}
+	} else
+		fileMapping_ = 0;
+	inputMapping_.last = inputMapping_.first + fileSize.QuadPart;
+#else // ASCENSION_POSIX
+	inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
+	if(inputMapping_.first == MAP_FAILED)
+		throw IOException(fileName());
+	bool succeeded = false;
+	off_t org = ::lseek(fileDescriptor_, 0, SEEK_CUR);
+	if(org != -1) {
+		off_t end = ::lseek(fileDescriptor_, 0, SEEK_END);
+		if(end != -1) {
+			::lseek(fileDescriptor_, org, SEEK_SET);
+			succeeded = true;
+		}
+	}
+	if(!succeeded)
+		throw IOException(fileName());
+	inputMapping_.last = first + fileSize;
+#endif
+	inputMapping_.current = inputMapping_.first;
 }
 
 /**
@@ -613,8 +672,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
-	if(mode() == ios_base::in) {
-		assert(inputMapping_.first != 0);
+	if(fileMapping_ != 0) {
 		::UnmapViewOfFile(const_cast<byte*>(inputMapping_.first));
 		::CloseHandle(fileMapping_);
 		inputMapping_.first = 0;
@@ -626,8 +684,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 		return this;
 	}
 #else // ASCENSION_POSIX
-	if(mode() == ios_base::in) {
-		assert(inputMapping_.first != 0);
+	if(inputMapping_.first != 0) {
 		::munmap(const_cast<byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
@@ -637,12 +694,17 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 		return this;
 	}
 #endif
-	encoder_->resetEncodingState();
-	encoder_->resetDecodingState();
-	return 0;
+	if(encoder_.get() != 0) {
+		encoder_->resetEncodingState();
+		encoder_->resetDecodingState();
+	}
+	return 0;	// didn't close the file actually
 }
 
-/// Returns the encoding.
+/**
+ * Returns the character encoding. If the encoding name passed to the constructor was detection
+ * name, returns the detected encoding.
+ */
 string TextFileStreamBuffer::encoding() const /*throw()*/ {
 	return encoder_->properties().name();
 }
@@ -658,74 +720,43 @@ bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
 
 // called by only the constructor
 void TextFileStreamBuffer::openForReading(const string& encoding) {
-	EncodingDetector* encodingDetector = 0;
-	if(encoder_.get() == 0) {	// 'encoding' may be for auto-detection
-		encodingDetector = EncodingDetector::forName(encoding);
-		if(encodingDetector == 0)
-			throw UnsupportedEncodingException("<encoding> = " + encoding);
-	}
-	// open the file and create memory-mapped object
-	const ptrdiff_t fileSize = getFileSize(fileName_.c_str());
-	if(fileSize == -1)
-		throw bad_alloc("the file is too large.");	// TODO: this was IOException(IOException::HUGE_FILE).
+	// open the file
 #ifdef ASCENSION_WINDOWS
-	fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ,
+	fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_READ,
 		FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 	if(fileHandle_ == INVALID_HANDLE_VALUE)
-		throw IOException(fileName_);
-	if(fileSize != 0) {
-		if(0 != (fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0)))
-			inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
-		if(inputMapping_.first == 0) {
-			SystemErrorSaver ses;
-			if(fileMapping_ != 0)
-				::CloseHandle(fileMapping_);
-			::CloseHandle(fileHandle_);
-			throw IOException(fileName_, ses.code());
-		}
-	} else
-		fileMapping_ = 0;
 #else // ASCENSION_POSIX
-	if(-1 == (fileDescriptor_ = ::open(fileName.c_str(), O_RDONLY)))
-		throw IOException(fileName);
-	if(MAP_FAILED == (inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)))) {
-		SystemErrorSaver ses;
-		inputMapping_.first = 0;
-		::close(fileDescriptor_);
-		throw IOException(fileName_, ses.code());
-	}
+	if(-1 == (fileDescriptor_ = ::open(fileName().c_str(), O_RDONLY)))
 #endif
-	inputMapping_.last = inputMapping_.first + fileSize;
-	// detect input encoding if neccssary
-	if(encodingDetector != 0) {
-		const pair<MIBenum, string> detected(encodingDetector->detect(
-			inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), 0));
-		if(detected.first != MIB_OTHER)
-			encoder_ = Encoder::forMIB(detected.first);
-		else
-			encoder_ = Encoder::forName(detected.second);
-		if(encoder_.get() == 0)
-			throw UnsupportedEncodingException("<detected.second> = " + detected.second);	// can't resolve
+		throw IOException(fileName());
+
+	try {
+		// create memory-mapped file
+		buildInputMapping();
+		// detect input encoding if neccssary, and create the encoder
+		buildEncoder(encoding, true);
+	} catch(...) {
+		closeFile();
+		throw;
 	}
-	inputMapping_.current = inputMapping_.first;
 }
 
 // called by only the constructor
-void TextFileStreamBuffer::openForWriting(bool writeUnicodeByteOrderMark) {
+void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnicodeByteOrderMark) {
 	if((mode_ & ios_base::app) != 0) {
 #ifdef ASCENSION_WINDOWS
-		fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_WRITE, 0, 0,
-			OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+		fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ | GENERIC_WRITE,
+			0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE) {
 			const DWORD e = ::GetLastError();
 			if(e == ERROR_FILE_NOT_FOUND)
 				mode_ &= ~ios_base::app;
 			else
-				throw IOException(fileName_, e);
+				throw IOException(fileName(), e);
 		} else {
 			originalFileEnd_.QuadPart = 0;
 			if(!toBoolean(::SetFilePointerEx(fileHandle_, originalFileEnd_, &originalFileEnd_, FILE_END)))
-				throw IOException(fileName_);
+				throw IOException(fileName());
 			writeUnicodeByteOrderMark = false;
 		}
 #else // ASCENSION_POSIX
@@ -733,26 +764,34 @@ void TextFileStreamBuffer::openForWriting(bool writeUnicodeByteOrderMark) {
 		if(fileDescriptor_ != -1) {
 			originalFileEnd_ = ::lseek(fileDescriptor_, 0, SEEK_CUR);
 			if(originalFileEnd_ == static_cast<off_t>(-1))
-				throw IOException(fileName_);
+				throw IOException(fileName());
 		} else {
 			if(errno == ENOENT)
 				mode_ &= ~ios_base::app;
 			else
-				throw IOException(fileName_);
+				throw IOException(fileName());
 		}
 #endif
 	}
 	if((mode_ & ~ios_base::trunc) == ios_base::out) {
 #ifdef ASCENSION_WINDOWS
-		fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_WRITE, 0, 0,
+		fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_WRITE, 0, 0,
 			CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE)
 #else // ASCENSION_POSIX
-	fileDescriptor_ = ::open(fileName.c_str(), O_WRONLY | O_CREAT);
+		fileDescriptor_ = ::open(fileName().c_str(), O_WRONLY | O_CREAT);
 		if(fileDescriptor_ == -1)
 #endif
-			throw IOException(fileName_);
+			throw IOException(fileName());
 	}
+
+	try {
+		buildEncoder(encoding, (mode() & ios_base::app) != 0);
+	} catch(...) {
+		closeFile();
+		throw;
+	}
+
 	if(writeUnicodeByteOrderMark)
 		encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
 	setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
