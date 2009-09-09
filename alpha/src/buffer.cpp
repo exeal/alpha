@@ -101,7 +101,7 @@ Buffer::~Buffer() {
  */
 const basic_string<WCHAR> Buffer::name() const /*throw()*/ {
 	static const wstring untitled(Alpha::instance().loadMessage(MSG_BUFFER__UNTITLED));
-	return !textFile_->isBoundToFile() ? ::PathFindFileNameW(textFile_->location().c_str()) : untitled;
+	return textFile_->isBoundToFile() ? ::PathFindFileNameW(textFile_->location().c_str()) : untitled;
 	
 }
 
