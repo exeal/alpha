@@ -210,7 +210,6 @@ namespace ascension {
 				~TextFileDocumentInput() /*throw()*/;
 				bool checkTimeStamp();
 				const Document& document() const /*throw()*/;
-				LockType lockType() const /*throw()*/;
 				// listener
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
@@ -219,6 +218,7 @@ namespace ascension {
 				String fileName() const /*throw()*/;
 				bool isBoundToFile() const /*throw()*/;
 				void lockFile(const LockMode& mode);
+				LockType lockType() const /*throw()*/;
 				void revert(const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
@@ -256,6 +256,7 @@ namespace ascension {
 				Newline newline_;
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
+				LockMode desiredLockMode_;
 				ascension::internal::Listeners<IFilePropertyListener> listeners_;
 				IUnexpectedFileTimeStampDirector* timeStampDirector_;
 			};

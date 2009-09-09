@@ -895,15 +895,10 @@ class TextFileDocumentInput::FileLocker {
 public:
 	FileLocker() /*throw()*/;
 	~FileLocker() /*throw()*/;
-	void cancel() /*throw()*/;
 	bool hasLock() const /*throw()*/;
-	bool isReserved() const /*throw()*/;
 	bool lock(const String& fileName, bool share);
-	bool lockReserved();
-	void reserve(const String& fileName, bool share) /*throw()*/;
 	LockType type() const /*throw()*/;
 	bool unlock() /*throw()*/;
-	bool unlockAndReserve(bool share);
 private:
 	LockType type_;
 #ifdef ASCENSION_WINDOWS
@@ -936,10 +931,6 @@ inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
 #else // ASCENSION_POSIX
 	return file_ != -1;
 #endif
-}
-
-inline bool TextFileDocumentInput::FileLocker::isReserved() const /*throw()*/ {
-	return !hasLock() && type() != NO_LOCK;
 }
 
 /**
@@ -1054,12 +1045,6 @@ bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
 	return succeeded;
 }
 
-bool TextFileDocumentInput::FileLocker::unlockAndReserve(bool share) {
-	const bool succeeded = unlock();
-	type_ = share ? SHARED_LOCK : EXCLUSIVE_LOCK;
-	return succeeded;
-}
-
 
 // TextFileDocumentInput ////////////////////////////////////////////////////
 
@@ -1108,6 +1093,8 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 		unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), savedDocumentRevision_(0), timeStampDirector_(0) {
 	memset(&userLastWriteTime_, 0, sizeof(Time));
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
+	desiredLockMode_.type = NO_LOCK;
+	desiredLockMode_.onlyAsEditing = false;
 	document.setProperty(Document::TITLE_PROPERTY, L"");
 }
 
@@ -1141,10 +1128,13 @@ void TextFileDocumentInput::bind(const String& fileName) {
 #else // ASCENSION_POSIX
 		throw IOException(fileName, ENOENT);
 #endif
-	if(fileLocker_->hasLock())
+	if(fileLocker_->hasLock()) {
+		assert(fileLocker_->type() == desiredLockMode_.type);
+		if(desiredLockMode_.onlyAsEditing)
+			assert(!document_.isModified());
+//			assert(savedDocumentRevision_ != document_.revisionNumber());
 		fileLocker_->lock(realName, fileLocker_->type() == SHARED_LOCK);
-	else if(fileLocker_->isReserved())
-		fileLocker_->reserve(realName, fileLocker_->type() == SHARED_LOCK);
+	}
 	document_.setInput(this, false);
 	fileName_ = realName;
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
@@ -1179,12 +1169,8 @@ void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(fileLocker_->isReserved() && isBoundToFile()) {
-		if(document_.isModified())
-			fileLocker_->lockReserved();
-		else
-			fileLocker_->unlock();
-	}
+	if(isBoundToFile() && desiredLockMode_.onlyAsEditing && !document_.isModified())
+		fileLocker_->unlock();
 }
 
 /// @see IDocumentStateListener#documentPropertyChanged
@@ -1197,21 +1183,23 @@ void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
 
 /// @see IDocumentInput#isChangeable
 bool TextFileDocumentInput::isChangeable(const Document&) const {
-	// check the time stamp if this is the first modification
-	if(timeStampDirector_ != 0 && !document_.isModified()) {
-		Time realTimeStamp;
-		TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
-		if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
-			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
-					document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
-				return false;
-			self.internalLastWriteTime_ = self.userLastWriteTime_ = realTimeStamp;
+	if(isBoundToFile()) {
+		// check the time stamp if this is the first modification
+		if(timeStampDirector_ != 0 && !document_.isModified()) {
+			Time realTimeStamp;
+			TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
+			if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
+				if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
+						document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
+					return false;
+				self.internalLastWriteTime_ = self.userLastWriteTime_ = realTimeStamp;
+			}
 		}
-	}
 
-	// lock the bound file
-	if(fileLocker_->isReserved())
-		fileLocker_->lockReserved();
+		// lock the bound file
+		if(desiredLockMode_.onlyAsEditing)
+			fileLocker_->lock(fileName(), desiredLockMode_.type == SHARED_LOCK);
+	}
 
 	return true;
 }
@@ -1219,15 +1207,15 @@ bool TextFileDocumentInput::isChangeable(const Document&) const {
 /// @see IDocumentInput#location
 a::String TextFileDocumentInput::location() const /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
-	return fileName_;
+	return fileName();
 #else // ASCENSION_POSIX
 	const codecvt<a::Char, Char, mbstate_t>& converter = use_facet<codecvt<a::Char, Char, mbstate_t> >(locale());
 	a::Char result[PATH_MAX * 2];
 	mbstate_t dummy;
 	const Char* fromNext;
 	a::Char* toNext;
-	return (converter.in(dummy, fileName_.c_str(),
-		fileName_.c_str() + fileName_.length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok ? result : L"");
+	return (converter.in(dummy, fileName().c_str(),
+		fileName().c_str() + fileName().length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok ? result : L"");
 #endif
 }
 
@@ -1240,21 +1228,23 @@ void TextFileDocumentInput::lockFile(const LockMode& mode) {
 		throw IllegalStateException("the input is not bound to a file.");
 	if(mode.type == NO_LOCK)
 		fileLocker_->unlock();
-	else if(mode.onlyAsEditing)
-		fileLocker_->reserve(fileName_, mode.type == SHARED_LOCK);
-	else
-		fileLocker_->lock(fileName_, mode.type == SHARED_LOCK);
+	else if(!mode.onlyAsEditing || !document_.isModified())
+		fileLocker_->lock(fileName(), mode.type == SHARED_LOCK);
+	desiredLockMode_ = mode;
 }
 
-/// Returns the file lock type.
+/**
+ * Returns the file lock type, or @c NO_LOCK when @c onlyAsEditing value of the desired lock mode
+ * and the file was not locked actually.
+ */
 TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*throw()*/ {
 	return fileLocker_->type();
 }
 
 /// @see IDocumentInput#postFirstDocumentChange
 void TextFileDocumentInput::postFirstDocumentChange(const Document&) /*throw()*/ {
-	if(!document_.isModified())
-		fileLocker_->cancel();
+	if(!document_.isModified() && desiredLockMode_.onlyAsEditing)
+		fileLocker_->unlock();
 }
 
 /**
