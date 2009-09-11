@@ -15,6 +15,13 @@ namespace alpha {
 
 		std::wstring convertUnicodeObjectToWideString(PyObject* object);
 		boost::python::object convertWideStringToUnicodeObject(const std::wstring& s);
+		template<typename Exception> class CppStdExceptionTranslator {
+		public:
+			explicit CppStdExceptionTranslator(PyObject* type) : type_(type) {assert(type != 0);}
+			void operator()(const Exception& e) const {::PyErr_SetString(type_, e.what());}
+		private:
+			PyObject* const type_;
+		};
 
 		class Interpreter {
 			MANAH_NONCOPYABLE_TAG(Interpreter);

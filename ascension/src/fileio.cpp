@@ -125,7 +125,7 @@ namespace {
 	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_POSIX was defined)
 	 * @throw IOException any I/O error occurred
 	 */
-	String getTemporaryFileName(const String& seed) {
+	String makeTemporaryFileName(const String& seed) {
 		manah::AutoBuffer<Char> s(new Char[seed.length() + 1]);
 		copy(seed.begin(), seed.end(), s.get());
 		s[seed.length()] = 0;
@@ -357,6 +357,8 @@ bool fileio::comparePathNames(const Char* s1, const Char* s2) {
  *                                 not needed
  * @return a pair consists of the encoding used to convert and the boolean value means if the input
  *         contained Unicode byte order mark
+ * @throw UnmappableCharacterException
+ * @throw MalformedInputException
  * @throw ... any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
  */
 pair<string, bool> fileio::insertFileContents(Document& document, const Position& at,
@@ -392,7 +394,11 @@ void fileio::writeRegion(const Document& document, const Region& region,
 
 	// check if not special file
 	if(isSpecialFile(fileName))
-		throw invalid_argument("the file is special.");
+#ifdef ASCENSION_WINDOWS
+		throw IOException(fileName, ERROR_BAD_FILE_TYPE);
+#else // ASCENSION_POSIX
+		throw IOException(fileName, ENXIO);
+#endif
 
 	// check if writable
 #ifdef ASCENSION_WINDOWS
@@ -407,7 +413,7 @@ void fileio::writeRegion(const Document& document, const Region& region,
 #else
 	if(::access(fileName_.c_str(), 2) < 0)
 #endif
-		throw IOException(fileName, EACCES);
+		throw IOException(fileName, EACCES);	// EROFS is an alternative
 #endif
 
 	// open file to write
@@ -539,8 +545,7 @@ namespace {
  * @param writeUnicodeByteOrderMark set @c true to write Unicode byte order mark into the file.
  *                                  this parameter is ignored if @a mode contained
  *                                  @c std#ios_base#app and the output file was existing
- * @throw FileNotFoundException the file specified @a fileName is not found
- * @throw UnknownValueException @a mode is invalid
+ * @throw UnknownValueException @a mode or @a encodingSubstitutionPolicy is invalid
  * @throw UnsupportedEncodingException the encoding specified by @a encoding is not supported
  * @throw PlatformDependentIOError
  */
@@ -555,8 +560,6 @@ TextFileStreamBuffer::TextFileStreamBuffer(const String& fileName, ios_base::ope
 	case ios_base::out:
 	case ios_base::out | ios_base::trunc:
 	case ios_base::out | ios_base::app:
-		if(encoder_.get() == 0)
-			throw UnsupportedEncodingException("<encoding> = " + encoding);
 		openForWriting(encoding, writeUnicodeByteOrderMark);
 		break;
 	default:
@@ -786,6 +789,10 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 	}
 
 	try {
+		if((mode() & ios_base::app) != 0)
+			buildInputMapping();
+		else
+			fileMapping_ = 0;
 		buildEncoder(encoding, (mode() & ios_base::app) != 0);
 	} catch(...) {
 		closeFile();
@@ -940,8 +947,7 @@ inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
  * @retval true if locked successfully or the lock mode is @c DONT_LOCK
  * @retval false the current lock mode was @c SHARED_LOCK and an other existing process had already
  *               locked the file with same lock mode
- * @throw AccessDeniedException
- * @throw PlatformDependentError
+ * @throw IOException
  */
 bool TextFileDocumentInput::FileLocker::lock(const String& fileName, bool share) {
 	if(fileName.empty())
@@ -1131,8 +1137,8 @@ void TextFileDocumentInput::bind(const String& fileName) {
 	if(fileLocker_->hasLock()) {
 		assert(fileLocker_->type() == desiredLockMode_.type);
 		if(desiredLockMode_.onlyAsEditing)
-			assert(!document_.isModified());
-//			assert(savedDocumentRevision_ != document_.revisionNumber());
+			assert(!document().isModified());
+//			assert(savedDocumentRevision_ != document().revisionNumber());
 		fileLocker_->lock(realName, fileLocker_->type() == SHARED_LOCK);
 	}
 	document_.setInput(this, false);
@@ -1169,7 +1175,7 @@ void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(isBoundToFile() && desiredLockMode_.onlyAsEditing && !document_.isModified())
+	if(isBoundToFile() && desiredLockMode_.onlyAsEditing && !document().isModified())
 		fileLocker_->unlock();
 }
 
@@ -1185,7 +1191,7 @@ void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
 bool TextFileDocumentInput::isChangeable(const Document&) const {
 	if(isBoundToFile()) {
 		// check the time stamp if this is the first modification
-		if(timeStampDirector_ != 0 && !document_.isModified()) {
+		if(timeStampDirector_ != 0 && !document().isModified()) {
 			Time realTimeStamp;
 			TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
 			if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
@@ -1228,7 +1234,7 @@ void TextFileDocumentInput::lockFile(const LockMode& mode) {
 		throw IllegalStateException("the input is not bound to a file.");
 	if(mode.type == NO_LOCK)
 		fileLocker_->unlock();
-	else if(!mode.onlyAsEditing || !document_.isModified())
+	else if(!mode.onlyAsEditing || !document().isModified())
 		fileLocker_->lock(fileName(), mode.type == SHARED_LOCK);
 	desiredLockMode_ = mode;
 }
@@ -1243,7 +1249,7 @@ TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*throw(
 
 /// @see IDocumentInput#postFirstDocumentChange
 void TextFileDocumentInput::postFirstDocumentChange(const Document&) /*throw()*/ {
-	if(!document_.isModified() && desiredLockMode_.onlyAsEditing)
+	if(!document().isModified() && desiredLockMode_.onlyAsEditing)
 		fileLocker_->unlock();
 }
 
@@ -1263,6 +1269,7 @@ void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
  * @param unexpectedTimeStampDirector
  * @throw IllegalStateException the object was not bound to a file
  * @throw IOException any I/O error occurred. in this case, the document's content will be lost
+ * @throw ... any exceptions @c insertFileContents throws
  */
 void TextFileDocumentInput::revert(const string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
@@ -1273,10 +1280,10 @@ void TextFileDocumentInput::revert(const string& encoding,
 
 	// read from the file
 	pair<string, bool> resultEncoding;
-	const bool recorded = document_.isRecordingChanges();
+	const bool recorded = document().isRecordingChanges();
 	document_.recordChanges(false);
 	try {
-		resultEncoding = insertFileContents(document_, document_.region().beginning(), fileName(), encoding, encodingSubstitutionPolicy);
+		resultEncoding = insertFileContents(document_, document().region().beginning(), fileName(), encoding, encodingSubstitutionPolicy);
 	} catch(...) {
 		document_.resetContent();
 		document_.recordChanges(recorded);
@@ -1286,7 +1293,7 @@ void TextFileDocumentInput::revert(const string& encoding,
 	unicodeByteOrderMark_ = resultEncoding.second;
 
 	// set the new properties of the document
-	savedDocumentRevision_ = document_.revisionNumber();
+	savedDocumentRevision_ = document().revisionNumber();
 	timeStampDirector_ = unexpectedTimeStampDirector;
 #ifdef ASCENSION_WINDOWS
 	document_.setProperty(Document::TITLE_PROPERTY, fileName());
@@ -1305,7 +1312,7 @@ void TextFileDocumentInput::revert(const string& encoding,
 	}
 #endif
 	encoding_ = resultEncoding.first;
-	newline_ = document_.getLineInformation(0).newline();	// use the newline of the first line
+	newline_ = document().getLineInformation(0).newline();	// use the newline of the first line
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
 
@@ -1314,7 +1321,7 @@ void TextFileDocumentInput::revert(const string& encoding,
 
 	// update the internal time stamp
 	try {
-		getFileLastWriteTime(fileName_, internalLastWriteTime_);
+		getFileLastWriteTime(fileName(), internalLastWriteTime_);
 		userLastWriteTime_ = internalLastWriteTime_;
 	} catch(ios_base::failure&) {
 		// ignore...
@@ -1359,7 +1366,7 @@ TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
 void TextFileDocumentInput::unbind() /*throw()*/ {
 	if(isBoundToFile()) {
 		fileLocker_->unlock();	// this may return false
-		if(document_.input() == this)
+		if(document().input() == this)
 			document_.setInput(0, false);
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
@@ -1392,7 +1399,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 		return true;	// not managed
 
 	try {
-		getFileLastWriteTime(fileName_.c_str(), newTimeStamp);
+		getFileLastWriteTime(fileName().c_str(), newTimeStamp);
 	} catch(IOException&) {
 		return true;
 	}
@@ -1403,70 +1410,38 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 #endif
 }
 
-namespace {
-	void writeFile() {
+/*
+void backupAtRecycleBin(const String& fileName) {
+	if(pathExists(fileName.c_str())) {
+		WCHAR backupPath[MAX_PATH + 1];
+		SHFILEOPSTRUCTW	shfos = {
+			0, FO_DELETE, backupPath, 0, FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT, false, 0
+		};
+		wcscpy(backupPath, fileName.c_str());
+		wcscat(backupPath, L".bak");
+		backupPath[wcslen(backupPath) + 1] = 0;
+		::CopyFileW(filePath.c_str(), backupPath, false);
+		::SHFileOperationW(&shfos);
 	}
-} // namespace @0
+}
+*/
 
-/***/
-void TextFileDocumentInput::write(const WritingFormat& format, const manah::Flags<WritingOption>& options) {
+/**
+ * Writes the content of the document into the bound file.
+ * @param format the character encoding and the newlines
+ * @param options the other options
+ * @throw
+ */
+void TextFileDocumentInput::write(const WritingFormat& format, const WritingOption* options /* = 0 */) {
+	if(!document().isModified())
+		return;
 	if(!isBoundToFile())
 		throw IllegalStateException("no file name.");
 	verifyNewline(format.encoding, format.newline);
 
 	// TODO: check if the input had been truncated.
 
-	writeRegion(document_, document_.region(), fileName_, format, false);
-
-	savedDocumentRevision_ = document_.revisionNumber();
-	document_.markUnmodified();
-	document_.setReadOnly(false);
-
-	// update the internal time stamp
-	try {
-		getFileLastWriteTime(fileName_, internalLastWriteTime_);
-	} catch(IOException&) {
-		memset(&internalLastWriteTime_, 0, sizeof(Time));
-	}
-	userLastWriteTime_ = internalLastWriteTime_;
-}
-
-/**
- * Writes the content of the document to the specified file.
- * @param fileName the file name
- * @param format the encoding and the newline
- * @param options the options
- * @throw UnsupportedEncodingException the character encoding specified by @a format.encoding is
- *                                     not supported
- * @throw std#invalid_argument @a format.newline is not supported or not allowed in the specified
- *                             character encoding
- * @throw AccessDeniedException the access to the file was denied
- * @throw IOException(IOException#LOST_DISK_FILE)
- * @throw PlatformDependentIOError
- * @throw ... any exceptions @c kernel#writeDocumentToStream function throws
- */
-void TextFileDocumentInput::writeOtherFile(const String& fileName, const WritingFormat& format, const manah::Flags<TextFileDocumentInput::WritingOption>& options) {
-	verifyNewline(format.encoding, format.newline);
-
-	// TODO: query, if the content had been truncated when read from the bound file.
-
-	// check if writable
-#ifdef ASCENSION_WINDOWS
-	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
-	if(originalAttributes != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttributes & FILE_ATTRIBUTE_READONLY))
-		throw IOException(fileName, ERROR_ACCESS_DENIED);
-#else // ASCENSION_POSIX
-	struct stat originalStat;
-	bool gotStat = ::stat(fileName_.c_str(), &originalStat) == 0;
-#if 1
-	if(::euidaccess(fileName_.c_str(), 2) < 0)
-#else
-	if(::access(fileName_.c_str(), 2) < 0)
-#endif
-		throw IOException(fileName, EACCES);
-#endif
-
-	// check if the existing file was modified by others
+	// check if the disk file had changed
 	if(timeStampDirector_ != 0) {
 		Time realTimeStamp;
 		if(!verifyTimeStamp(true, realTimeStamp)) {
@@ -1475,103 +1450,75 @@ void TextFileDocumentInput::writeOtherFile(const String& fileName, const Writing
 				return;
 		}
 	}
-	const String realName(canonicalizePathName(fileName.c_str()));
 
-//	// query progression callback
-//	IFileIOProgressListener* progressEvent = (callback != 0) ? callback->queryProgressCallback() : 0;
-//	const length_t intervalLineCount = (progressEvent != 0) ? progressEvent->queryIntervalLineCount() : 0;
-
-	// create a temporary file and write into
-	const String tempFileName(getTemporaryFileName(realName));
-	TextFileStreamBuffer sb(tempFileName, ios_base::out,
-		format.encoding, format.encodingSubstitutionPolicy, format.unicodeByteOrderMark);
-	basic_ostream<a::Char> outputStream(&sb);
-	try {
-		outputStream.exceptions(ios_base::badbit);
-		writeDocumentToStream(outputStream, document_, document_.region(), format.newline);
-		sb.close();
-	} catch(...) {
-		// delete the temporary file...
-		SystemErrorSaver ses;
-#ifdef ASCENSION_WINDOWS
-		::DeleteFileW(tempFileName.c_str());
-#else // ASCENSION_POSIX
-		::remove(tempFileName.c_str());
-#endif
-		throw;
-	}
-	unicodeByteOrderMark_ = sb.unicodeByteOrderMark();
-
+	// TODO: backup the file.
 	const bool makeBackup = false;
 
+	// create a temporary file and write into
+	const String tempFileName(makeTemporaryFileName(fileName()));
+	writeRegion(document(), document().region(), tempFileName, format, false);
+
 	// copy file attributes (file mode) and delete the old file
-//	unlock();
+	try {
+		if(fileLocker_->type() != NO_LOCK)
+			unlockFile();
 #ifdef ASCENSION_WINDOWS
-	if(originalAttributes != INVALID_FILE_ATTRIBUTES) {
-		::SetFileAttributesW(tempFileName.c_str(), originalAttributes);
-		if(makeBackup) {
-		} else if(!toBoolean(::DeleteFileW(realName.c_str()))) {
-			SystemErrorSaver ses;
-			if(::GetLastError() != ERROR_FILE_NOT_FOUND) {
-				::DeleteFileW(tempFileName.c_str());
-				throw IOException(tempFileName);
+		const DWORD attributes = ::GetFileAttributesW(fileName().c_str());
+		if(attributes != INVALID_FILE_ATTRIBUTES) {
+			::SetFileAttributesW(tempFileName.c_str(), attributes);
+			if(makeBackup) {
+			} else if(!toBoolean(::DeleteFileW(fileName().c_str()))) {
+				SystemErrorSaver ses;
+				if(ses.code() != ERROR_FILE_NOT_FOUND) {
+					::DeleteFileW(tempFileName.c_str());
+					throw IOException(tempFileName, ses.code());
+				}
 			}
 		}
-	}
-	if(!::MoveFileW(tempFileName.c_str(), realName.c_str())) {
-		if(originalAttributes != INVALID_FILE_ATTRIBUTES)
-			throw ios_base::failure("lost the disk file.");
-		SystemErrorSaver ses;
-		::DeleteFileW(tempFileName.c_str());
-		throw IOException(realName);
-	}
+		if(!toBoolean(::MoveFileW(tempFileName.c_str(), fileName().c_str()))) {
+			if(attributes != INVALID_FILE_ATTRIBUTES)
+				throw ios_base::failure("lost the disk file.");
+			SystemErrorSaver ses;
+			::DeleteFileW(tempFileName.c_str());
+			throw IOException(fileName(), ses.code());
+		}
 #else // ASCENSION_POSIX
-	if(gotStat) {
-		::chmod(tempFileName.c_str(), originalStat.st_mode);
-		if(makeBackup) {
-		} else if(::remove(realName.c_str()) != 0) {
-			SystemErrorSaver ses;
-			if(errno != ENOENT) {
-				::remove(tempFileName.c_str());
-				throw IOException(realName);
+		struct stat s;
+		bool fileLost = false;
+		if(::stat(fileName().c_str(), &s) != -1) {
+			::chmod(tempFileName.c_str(), s.st_mode);
+			if(makeBackup) {
+			} else if(::remove(fileName().c_str()) != 0) {
+				SystemErrorSaver ses;
+				if(ses.code() != ENOENT) {
+					::remove(tempFileName.c_str());
+					throw IOException(fileName(), ses.code());
+				}
 			}
+			fileLost = true;
+		}
+		if(::rename(tempFileName.c_str(), fileName().c_str()) != 0) {
+			if(fileLost)
+				throw ios_base::failure("lost the disk file.");
+			SystemErrorSaver ses;
+			::remove(tempFileName.c_str());
+			throw IOException(fileName(), ses.code());
+		}
+#endif
+	} catch(...) {
+		try {
+			lockFile(desiredLockMode_);
+		} catch(...) {
 		}
 	}
-	if(::rename(tempFileName.c_str(), realName.c_str()) != 0) {
-		if(gotStat)
-			throw IOException(IOException::LOST_DISK_FILE);
-		SystemErrorSaver ses;
-		::remove(tempFileName.c_str());
-		throw IOException(realName);
-	}
-#endif
 
-	// TODO: support backup on writing.
-/*	if(
-#ifdef _DEBUG
-	true ||
-#endif
-	(options.has(SDO_CREATE_BACKUP) && toBoolean(::PathFileExistsW(fileName.c_str())))) {
-		WCHAR backupPath[MAX_PATH + 1];
-		SHFILEOPSTRUCTW	shfos = {
-			0, FO_DELETE, backupPath, 0, FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT, false, 0
-		};
-		wcscpy(backupPath, filePath.c_str());
-		wcscat(backupPath, L".bak");
-		backupPath[wcslen(backupPath) + 1] = 0;
-		::CopyFileW(filePath.c_str(), backupPath, false);
-		::SHFileOperationW(&shfos);
-	}
-*/
+	// relock the file
+	lockFile(desiredLockMode_);
 
-	savedDocumentRevision_ = document_.revisionNumber();
+	// update internal status
+	savedDocumentRevision_ = document().revisionNumber();
 	document_.markUnmodified();
 	document_.setReadOnly(false);
-	setEncoding(format.encoding);
-	if(fileName_ != realName) {
-		fileName_ = realName;
-		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
-	}
 
 	// update the internal time stamp
 	try {

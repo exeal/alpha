@@ -200,10 +200,9 @@ namespace ascension {
 					LockType type;		///< The type of the lock.
 					bool onlyAsEditing;	///< @c true if the lock will not be performed unless modification occurs.
 				};
-				/// Option flags for @c TextFileDocumentInput#write method.
-				enum WritingOption {
-					BY_COPYING		= 0x01,	///< Not implemented.
-					CREATE_BACKUP	= 0x02	///< Creates backup files.
+				/// Option for @c TextFileDocumentInput#write method.
+				struct WritingOption {
+					bool createBackup;	///< Set @c true to creates backup files (not implemented).
 				};
 			public:
 				explicit TextFileDocumentInput(Document& document);
@@ -224,14 +223,11 @@ namespace ascension {
 					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				void unbind() /*throw()*/;
 				void unlockFile();
-				void write(const WritingFormat& format, const manah::Flags<WritingOption>& options);
+				void write(const WritingFormat& format, const WritingOption* options = 0);
 				// encodings
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(Newline newline);
 				bool unicodeByteOrderMark() const /*throw()*/;
-				// I/O
-				void writeOtherFile(const String& fileName,
-					const WritingFormat& format, const manah::Flags<WritingOption>& options);
 				// IDocumentInput
 				std::string encoding() const /*throw()*/;
 				ascension::String location() const /*throw()*/;
