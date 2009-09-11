@@ -1056,14 +1056,17 @@ namespace {
 	k::Position insertString(Buffer& buffer, const k::Position& at, const a::String& text) {k::Position temp; k::insert(buffer, at, text, &temp); return temp;}
 	bool isBufferActive(const Buffer& buffer) {return &buffer == &EditorWindows::instance().activeBuffer();}
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isBoundToFile();}
+	wstring locationOfBuffer(const Buffer& buffer) {return buffer.textFile().location();}
 	void lockFile(Buffer& buffer, f::TextFileDocumentInput::LockType type, bool onlyAsEditing) {
 		f::TextFileDocumentInput::LockMode mode; mode.type = type; mode.onlyAsEditing = onlyAsEditing; buffer.textFile().lockFile(mode);}
 	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
 	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
-	void revertBufferToFile(Buffer& buffer, const string& encoding,
-		e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {buffer.textFile().revert(encoding, encodingSubstitutionPolicy);}
+	void revertBufferToFile(Buffer& buffer, const string& encoding, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
+		buffer.textFile().revert(encoding, encodingSubstitutionPolicy);
+	}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
+	void translateIOException(const f::IOException& e) {::PyErr_SetFromWindowsErr(e.code());}
 	void unbindBufferFromFile(Buffer& buffer) {buffer.textFile().unbind();}
 	void unlockFile(Buffer& buffer) {buffer.textFile().unlockFile();}
 	bool unicodeByteOrderMarkOfBuffer(const Buffer& buffer) {return buffer.textFile().unicodeByteOrderMark();}
@@ -1074,13 +1077,7 @@ namespace {
 		format.newline = newlines;
 		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
-		try {
-			f::writeRegion(buffer, region, fileName, format, append);
-		} catch(const f::UnmappableCharacterException& e) {
-			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const f::IOException& e) {
-			::PyErr_SetFromWindowsErr(e.code());
-		}
+		f::writeRegion(buffer, region, fileName, format, append);
 	}
 }
 
@@ -1164,6 +1161,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 			Bookmarker& (Buffer::*)(void), py::return_value_policy<py::reference_existing_object>
 			>(&Buffer::bookmarker, py::return_value_policy<py::reference_existing_object>()))
 		.add_property("encoding", &encodingOfBuffer, &setEncodingOfBuffer)
+		.add_property("location", &locationOfBuffer)
 		.add_property("name", &Buffer::name)
 		.add_property("newline", &newlineOfBuffer, &setNewlineOfBuffer)
 		.add_property("number_of_lines", &Buffer::numberOfLines)
@@ -1196,7 +1194,8 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("redo", &Buffer::redo, py::arg("n") = 1)
 		.def("replace", &replaceString)
 		.def("reset_content", &Buffer::resetContent)
-		.def("revert_to_file", &revertBufferToFile)
+		.def("revert_to_file", &revertBufferToFile,
+			(py::arg("encoding") = string(), py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE))
 		.def("unbind_file", &unbindBufferFromFile)
 		.def("unlock_file", &unlockFile)
 		.def("save", &saveBuffer,
@@ -1224,11 +1223,14 @@ ALPHA_EXPOSE_PROLOGUE(1)
 //		.def("close_all", &BufferList::closeAll)
 		.def("for_filename", &BufferList::forFileName)
 		.def("move", &BufferList::move)
-//		.def("open", &BufferList::open,
-//			(py::arg("filename"), py::arg("encoding") = "UniversalAutoDetect",
-//			py::arg("lock_mode") = f::TextFileDocumentInput::DONT_LOCK, py::arg("as_read_only") = false))
 		.def("save_all", &BufferList::saveAll);
 
 	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);
+
+	py::register_exception_translator<f::UnmappableCharacterException>(
+		CppStdExceptionTranslator<f::UnmappableCharacterException>(PyExc_IOError));
+	py::register_exception_translator<f::MalformedInputException>(
+		CppStdExceptionTranslator<f::MalformedInputException>(PyExc_IOError));
+	py::register_exception_translator<f::IOException>(&translateIOException);
 ALPHA_EXPOSE_EPILOGUE()
