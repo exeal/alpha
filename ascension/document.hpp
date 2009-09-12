@@ -618,6 +618,7 @@ namespace ascension {
 			texteditor::Session* session() /*throw()*/;
 			const texteditor::Session* session() const /*throw()*/;
 			void setInput(IDocumentInput* newInput, bool delegateOwnership) /*throw()*/;
+			void setModified() /*throw()*/;
 			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
 			void setReadOnly(bool readOnly = true) /*throw()*/;
@@ -668,7 +669,7 @@ namespace ascension {
 			virtual void doResetContent();
 
 		private:
-			void doSetModified(bool modified) /*throw()*/;
+//			void doSetModified(bool modified) /*throw()*/;
 			void fireDocumentAboutToBeChanged() /*throw()*/;
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) /*throw()*/;
 			void initialize();

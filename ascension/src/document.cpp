@@ -501,11 +501,43 @@ DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
  * rejected. This occurs if the the document was not marked modified and the document input's
  * @c IDocumentInput#isChangeable returned @c false.
  *
- * A document manages a revision number indicates how many times the document was changed. This
- * value is initially zero. @c #insert, @c #erase, @c #redo, and @c #resetContent methods increment
- * and @c #undo method decrement the revision number. The current revision number can be obtained
- * by @c #revisionNumber. It is guarenteed that the contents of a document correspond to same
- * revision number are equivalent.
+ * <h3>Revision and Modification Signature</h3>
+ *
+ * A document manages the revision number indicates how many times the document was changed. This
+ * value is initially zero. @c #replace, @c #redo and @c #resetContent methods increment and
+ * @c #undo method decrements the revision number. The current revision number can be obtained
+ * by @c #revisionNumber method. It is guarenteed that the contents of a document correspond to
+ * same revision number are equivalent.
+ *
+ * Clients of @c Document can query if "the document has been changed" by @c #isModified method.
+ * The modification signature (state) is determined based on the revision of the document. In a
+ * word, the document is treated as "modified" if the revision number is different from the one at
+ * "unmodified". For example (parenthesized numbers are the revisions),
+ *
+ * @code
+ * Document d;         // a document is unmodified initially (0)
+ * insert(d, L"foo");  // increment the revision (1)
+ * d.isModified();     // true
+ * d.undo();           // decrement the revision (0)
+ * d.isModified();     // false
+ * @endcode
+ *
+ * Use @c #markUnmodified method to set the current revision as unmodified.
+ *
+ * To set the modification state as modified explicitly, use @c #setModified method. Called this
+ * method, the document never becomes unmodified unless @c #markUnmodified called.
+ *
+ * @code
+ * Document d;
+ * insert(d, L"foo");
+ * d.markUnmodified();  // the revision 1 is as unmodified
+ * d.undo();            // modified (0)
+ * d.redo();            // unmodified (1)
+ * d.setModified();     // modified (1)
+ * d.undo();            // modified (0)
+ * @endcode
+ *
+ * <h3>Partitions</h3>
  *
  * A document can be devides into a sequence of semantic segments called partition.
  * Document partitioners expressed by @c DocumentPartitioner class define these
@@ -683,8 +715,9 @@ bool Document::lock(const void* locker) {
 }
 #endif
 /**
- * Marks the document modified. There is not a method like @c markModified.
- * @see #isModified, IDocumentStateListener#documentModificationSignChanged
+ * Marks the document unmodified at the current revision.
+ * For details about modification signature, see the documentation of @c Document class.
+ * @see #isModified, #setModified, IDocumentStateListener#documentModificationSignChanged
  */
 void Document::markUnmodified() /*throw()*/ {
 	if(isModified()) {
@@ -822,6 +855,18 @@ void Document::resetContent() {
  */
 void Document::setInput(IDocumentInput* newInput, bool delegateOwnership) /*throw()*/ {
 	input_.reset(newInput, delegateOwnership);
+}
+
+/**
+ * Marks the document modified.
+ * For details about modification signature, see the documentation of @c Document class.
+ * @see #isModified, #markUnmodified, IDocumentStateListener#documentModificationSignChanged
+ */
+void Document::setModified() /*throw()*/ {
+	const bool modified = isModified();
+	lastUnmodifiedRevisionNumber_ = numeric_limits<size_t>::max();
+	if(!modified)
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 }
 
 /**

@@ -71,14 +71,7 @@ namespace {
 		format.encodingSubstitutionPolicy = encodingSubstitutionPolicy;
 		format.newline = k::isLiteralNewline(newlines) ? newlines : buffer.textFile().newline();
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
-
-		try {
-			buffer.textFile().write(format, 0);
-		} catch(const f::UnmappableCharacterException& e) {
-			::PyErr_SetString(PyExc_UnicodeDecodeError, e.what());
-		} catch(const f::IOException& e) {
-			::PyErr_SetFromWindowsErr(e.code());
-		}
+		buffer.textFile().write(format, 0);
 	}
 } // namespace @0
 
@@ -1084,7 +1077,8 @@ namespace {
 ALPHA_EXPOSE_PROLOGUE(1)
 	using namespace ascension;
 	using namespace ascension::kernel;
-	py::scope temp(Interpreter::instance().toplevelPackage());
+	Interpreter& interpreter = Interpreter::instance();
+	py::scope temp(interpreter.toplevelPackage());
 
 	py::enum_<locations::CharacterUnit>("CharacterUnit")
 		.value("utf16_code_unit", locations::UTF16_CODE_UNIT)
@@ -1228,9 +1222,12 @@ ALPHA_EXPOSE_PROLOGUE(1)
 	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);
 
+	interpreter.installException("UnmappableCharacterError", py::object(py::borrowed(PyExc_IOError)));
+	interpreter.installException("MalformedInputError", py::object(py::borrowed(PyExc_IOError)));
+
 	py::register_exception_translator<f::UnmappableCharacterException>(
-		CppStdExceptionTranslator<f::UnmappableCharacterException>(PyExc_IOError));
+		CppStdExceptionTranslator<f::UnmappableCharacterException>(interpreter.exceptionClass("UnmappableCharacterError")));
 	py::register_exception_translator<f::MalformedInputException>(
-		CppStdExceptionTranslator<f::MalformedInputException>(PyExc_IOError));
+		CppStdExceptionTranslator<f::MalformedInputException>(interpreter.exceptionClass("MalformedInputError")));
 	py::register_exception_translator<f::IOException>(&translateIOException);
 ALPHA_EXPOSE_EPILOGUE()

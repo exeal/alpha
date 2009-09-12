@@ -54,18 +54,25 @@ void Interpreter::addInstaller(void (*installer)(), manah::uint order) {
 }
 
 namespace {
-	py::object recoverableErrorClass;
 	void raiseRecoverableError(py::object value) {
-		::PyErr_SetObject(recoverableErrorClass.ptr(), value.ptr());
+		static py::object klass(Interpreter::instance().exceptionClass("RecoverableError"));
+		::PyErr_SetObject(klass.ptr(), value.ptr());
 		py::throw_error_already_set();
 	}
+}
+
+py::object Interpreter::exceptionClass(const string& name) const {
+	map<const string, py::object>::const_iterator i(exceptionClasses_.find(name));
+	if(i == exceptionClasses_.end())
+		throw invalid_argument("the exception class with the given name not found.");
+	return i->second;
 }
 
 py::object Interpreter::executeCommand(py::object command) {
 	try {
 		return command();
 	} catch(py::error_already_set&) {
-		if(::PyErr_ExceptionMatches(recoverableErrorClass.ptr()) != 0) {
+		if(::PyErr_ExceptionMatches(exceptionClass("RecoverableError").ptr()) != 0) {
 			PyObject* type;
 			PyObject* value;
 			PyObject* traceback;
@@ -118,8 +125,15 @@ void Interpreter::install() {
 }
 
 void Interpreter::installException(const string& name, py::object base /* = py::object() */) {
-	py::object package(toplevelPackage());
-	py::object newException(py::handle<>(::PyErr_NewException("ambient.RecoverableError", base.ptr(), 0)));
+	if(exceptionClasses_.find(name) != exceptionClasses_.end())
+		throw invalid_argument("the exception with the given name has already been installed.");
+	manah::AutoBuffer<char> fullName(new char[name.length() + 9]);
+	strcpy(fullName.get(), "ambient.");
+	strcat(fullName.get(), name.c_str());
+	py::object newException(py::handle<>(::PyErr_NewException(fullName.get(), base.ptr(), 0)));
+	if(-1 == ::PyModule_AddObject(toplevelPackage().ptr(), name.c_str(), newException.ptr()))
+		throw runtime_error("PyModule_AddObject failed.");
+	exceptionClasses_.insert(make_pair(name, newException));
 }
 
 Interpreter& Interpreter::instance() {
@@ -172,8 +186,7 @@ void Interpreter::raiseLastWin32Error() {
 py::object Interpreter::toplevelPackage() {
 	if(package_ == py::object()) {
 		package_ = py::object(py::borrowed(::Py_InitModule("ambient", 0)));
-		recoverableErrorClass = py::object(py::handle<>(::PyErr_NewException("ambient.RecoverableError", 0, 0)));
-		::PyModule_AddObject(package_.ptr(), "RecoverableError", recoverableErrorClass.ptr());
+		installException("RecoverableError", py::object(py::borrowed(PyExc_Exception)));
 		py::scope temp(package_);
 		py::def("error", &raiseRecoverableError);
 	}
