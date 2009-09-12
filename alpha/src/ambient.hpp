@@ -17,10 +17,10 @@ namespace alpha {
 		boost::python::object convertWideStringToUnicodeObject(const std::wstring& s);
 		template<typename Exception> class CppStdExceptionTranslator {
 		public:
-			explicit CppStdExceptionTranslator(PyObject* type) : type_(type) {assert(type != 0);}
-			void operator()(const Exception& e) const {::PyErr_SetString(type_, e.what());}
+			explicit CppStdExceptionTranslator(boost::python::object type) : type_(type) {assert(type != 0);}
+			void operator()(const Exception& e) const {::PyErr_SetString(type_.ptr(), e.what());}
 		private:
-			PyObject* const type_;
+			const boost::python::object type_;
 		};
 
 		class Interpreter {
@@ -38,6 +38,7 @@ namespace alpha {
 			boost::python::object module(const std::string& name);
 			boost::python::object toplevelPackage();
 			// exceptions
+			boost::python::object exceptionClass(const std::string& name) const;
 			void handleException();
 			void installException(const std::string& name, boost::python::object base = boost::python::object());
 			void raiseException(const std::string& name, boost::python::object value);

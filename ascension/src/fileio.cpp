@@ -681,9 +681,9 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 		inputMapping_.first = 0;
 		fileMapping_ = 0;
 	}
-	if(fileHandle_ != 0) {
+	if(fileHandle_ != INVALID_HANDLE_VALUE) {
 		::CloseHandle(fileHandle_);
-		fileHandle_ = 0;
+		fileHandle_ = INVALID_HANDLE_VALUE;
 		return this;
 	}
 #else // ASCENSION_POSIX
@@ -828,7 +828,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
 /// std#basic_streambuf#sync
 int TextFileStreamBuffer::sync() {
 	// this method converts ucsBuffer_ into the native encoding and writes
-	if(inputMapping_.first == 0 && pptr() > pbase()) {
+	if(isOpen() && inputMapping_.first == 0 && pptr() > pbase()) {
 		byte* toNext;
 		const a::Char* fromNext;
 		byte nativeBuffer[MANAH_COUNTOF(ucsBuffer_)];
@@ -1144,6 +1144,7 @@ void TextFileDocumentInput::bind(const String& fileName) {
 	document_.setInput(this, false);
 	fileName_ = realName;
 	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	document_.setModified();
 }
 
 /**
@@ -1175,8 +1176,12 @@ void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
 
 /// @see IDocumentStateListener#documentModificationSignChanged
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
-	if(isBoundToFile() && desiredLockMode_.onlyAsEditing && !document().isModified())
-		fileLocker_->unlock();
+	if(isBoundToFile() && desiredLockMode_.onlyAsEditing) {
+		if(!document().isModified())
+			fileLocker_->unlock();
+		else if(desiredLockMode_.type != NO_LOCK)
+			fileLocker_->lock(fileName(), desiredLockMode_.type == SHARED_LOCK);
+	}
 }
 
 /// @see IDocumentStateListener#documentPropertyChanged
