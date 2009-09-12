@@ -479,19 +479,22 @@ namespace {
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.
  * @param n the repeat count
- * @return false if the redo was not completely performed
+ * @return @c false if the redo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
  * @throw IDocumentInput#ChangeRejectedException the change was rejected
  * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
  * @see #undo
  */
 bool Document::redo(size_t n /* = 1 */) {
-	if(isReadOnly())
+	if(n == 0)
+		return true;
+	else if(isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfRedoableChanges())
 		throw invalid_argument("n");
 	ASCENSION_PREPARE_FIRST_CHANGE(false);
 
+	const bool modified = isModified();
 	IUndoableChange::Result result;
 	result.completed = true;
 	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
@@ -507,6 +510,8 @@ bool Document::redo(size_t n /* = 1 */) {
 
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
+	if(isModified() != modified)
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	return result.completed;
 }
 
@@ -695,19 +700,23 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 		else
 			undoManager_->addUndoableChange(*(new ReplacementChange(region, erasedString.str())));
 	}
+	const bool modified = isModified();
 	++revisionNumber_;
 	length_ += insertedStringLength;
 	length_ -= erasedStringLength;
 
 	const DocumentChange change(region, Region(beginning, endOfInsertedString));
 	fireDocumentChanged(change);
-	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+	if(!rollbacking_ && !modified)
+		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 
 	if(eos != 0)
 		*eos = endOfInsertedString;
 }
 
-/***/
+/**
+ * @see fileio#insertFileContents
+ */
 void Document::replace(const Region& region, basic_istream<Char>& in, Position* endOfInsertedString /* = 0 */) {
 	// TODO: this implementation is provisional and not exception-safe.
 	Position e;
@@ -725,19 +734,22 @@ void Document::replace(const Region& region, basic_istream<Char>& in, Position* 
 /**
  * Performs the undo. Does nothing if the target region is inaccessible.
  * @param n the repeat count
- * @return false if the undo was not completely performed
+ * @return @c false if the undo was not completely performed
  * @throw ReadOnlyDocumentException the document is read only
  * @throw IDocumentInput#ChangeRejectedException the change was rejected
  * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
  * @see #redo
  */
 bool Document::undo(size_t n /* = 1 */) {
-	if(isReadOnly())
+	if(n == 0)
+		return true;
+	else if(isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(n > numberOfUndoableChanges())
 		throw invalid_argument("n");
 	ASCENSION_PREPARE_FIRST_CHANGE(false);
 
+	const bool modified = isModified();
 	const size_t oldRevisionNumber = revisionNumber_;
 	IUndoableChange::Result result;
 	result.completed = true;
@@ -755,7 +767,7 @@ bool Document::undo(size_t n /* = 1 */) {
 
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
-	if(!isModified())
+	if(isModified() != modified)
 		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
 	return result.completed;
 }
