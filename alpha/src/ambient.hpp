@@ -31,7 +31,7 @@ namespace alpha {
 			~Interpreter() /*throw()*/;
 			void addInstaller(void (*installer)(), manah::uint order);
 			boost::python::object executeCommand(boost::python::object command);
-			boost::python::object executeFile(boost::python::str fileName);
+			boost::python::object executeFile(const std::string& fileName);
 			void install();
 			static Interpreter& instance();
 			// package and modules
@@ -54,11 +54,6 @@ namespace alpha {
 			std::list<Installer> installers_;
 			std::map<const std::string, boost::python::object> exceptionClasses_;
 		};
-
-		inline boost::python::object Interpreter::executeFile(boost::python::str fileName) {
-			boost::python::object ns(boost::python::import("__main__").attr("__dict__"));
-			return boost::python::exec_file(fileName, ns, ns);
-		}
 	}
 }
 

@@ -89,6 +89,19 @@ py::object Interpreter::executeCommand(py::object command) {
 	return py::object();
 }
 
+py::object Interpreter::executeFile(const string& fileName) {
+	py::object ns(py::import("__main__").attr("__dict__"));
+	manah::AutoBuffer<char> p(new char[fileName.length() + 1]);
+	strcpy(p.get(), fileName.c_str());
+	char* pp[1] = {p.get()};
+	::PySys_SetArgv(1, pp);
+	py::object result(py::exec_file(fileName.c_str(), ns, ns));
+	static char emptyString[] = "";
+	pp[0] = emptyString;
+	::PySys_SetArgv(1, pp);
+	return result;
+}
+
 void Interpreter::handleException() {
 	if(0 == ::PyErr_Occurred())
 		return;
