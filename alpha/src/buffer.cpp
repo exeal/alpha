@@ -1196,6 +1196,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 			(py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
 			py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE,
 			py::arg("write_unicode_byte_order_mark") = false))
+		.def("set_modified", &Buffer::setModified)
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
 		.def("widen", &Buffer::widen)
 		.def("write_region", &writeBufferRegion,
