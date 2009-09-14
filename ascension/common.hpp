@@ -15,7 +15,7 @@
 #define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
 
 // platform
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
 #	define ASCENSION_WINDOWS
 #else
 #	define ASCENSION_POSIX
@@ -40,12 +40,14 @@
 #	define ASCENSION_FASTCALL
 #endif // __i386__
 
-#ifndef _GLIBCXX_USE_WCHAR_T
-#	define _GLIBCXX_USE_WCHAR_T 1
-#endif
-#ifndef _GLIBCXX_USE_WSTRING
-#	define _GLIBCXX_USE_WSTRING 1
-#endif
+#ifdef ASCENSION_WINDOWS
+#	ifndef _GLIBCXX_USE_WCHAR_T
+#		define _GLIBCXX_USE_WCHAR_T 1
+#	endif
+#	ifndef _GLIBCXX_USE_WSTRING
+#		define _GLIBCXX_USE_WSTRING 1
+#	endif
+#endif // ASCENSION_WINDOWS
 
 /**
  * @def ASCENSION_NOFAIL The method which has this tag guarentees "no-fail".
@@ -69,12 +71,40 @@
 #include <iterator>
 #include <stdexcept>
 
+#if !defined(ASCENSION_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
+#	include <cinttypes>
+#	define ASCENSION_HAS_CINTTYPES
+#endif
+
 #if defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 #include <manah/win32/timer.hpp>
 using manah::win32::Timer;
 #endif // defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 
 namespace ascension {
+
+	// sized integer types
+#if defined(ASCENSION_HAS_CINTTYPES)
+	using std::int8_t;
+	using std::int16_t;
+	using std::int32_t;
+	using std::int64_t;
+	using std::uint8_t;
+	using std::uint16_t;
+	using std::uint32_t;
+	using std::uint64_t;
+#elif defined (ASCENSION_MSVC)
+	typedef signed char int8_t;
+	typedef short int16_t;
+	typedef long int32_t;
+	typedef __int64 int64_t;
+	typedef unsigned char uint8_t;
+	typedef unsigned short uint16_t;
+	typedef unsigned int uint32_t;
+	typedef unsigned __int64 uint64_t;
+#else
+#	error "Could not define sized integer types."
+#endif
 
 	// shorten type names
 	using manah::byte;
@@ -84,7 +114,11 @@ namespace ascension {
 	using manah::ulong;
 
 	// character and string
+#ifdef ASCENSION_WINDOWS
 	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
+#else
+	typedef uint16_t;						///< Type for characters as UTF-16 code unit.
+#endif
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
 	typedef std::size_t length_t;			///< Length of string or index.
 
@@ -92,7 +126,7 @@ namespace ascension {
 	const length_t INVALID_INDEX = 0xfffffffful;
 
 	/// Unicode code point.
-	typedef unsigned long CodePoint;	// uint32_t
+	typedef uint32_t CodePoint;
 	/// Code point of LINE FEED (U+000A).
 	const Char LINE_FEED = 0x000au;
 	/// Code point of CARRIAGE RETURN (U+000D).
