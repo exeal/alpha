@@ -63,9 +63,9 @@ namespace ascension {
 			MANAH_UNASSIGNABLE_TAG(CompletionProposal);
 		public:
 			explicit CompletionProposal(const String& replacementString,
-				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
+				const String& description = String(), HICON icon = 0, bool autoInsertable = true);
 			CompletionProposal(const String& replacementString, const String& displayString,
-				const String& description = L"", HICON icon = 0, bool autoInsertable = true);
+				const String& description = String(), HICON icon = 0, bool autoInsertable = true);
 		public:
 			String getDescription() const /*throw()*/;
 			String getDisplayString() const /*throw()*/;

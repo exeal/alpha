@@ -28,7 +28,7 @@ using manah::AutoBuffer;
  * @param autoInsertable set true to enable auto insertion for the proposal
  */
 CompletionProposal::CompletionProposal(const String& replacementString,
-		const String& description /* = L"" */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		const String& description /* = String() */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
 		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
@@ -42,7 +42,7 @@ CompletionProposal::CompletionProposal(const String& replacementString,
  * @param autoInsertable set true to enable auto insertion for the proposal
  */
 CompletionProposal::CompletionProposal(const String& replacementString,
-		const String& displayString, const String& description /* = L"" */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		const String& displayString, const String& description /* = String() */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
 		displayString_(displayString), replacementString_(replacementString), icon_(icon),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }

@@ -62,7 +62,7 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		}
 	} else {
 		newline = resolveNewline(document, newline);
-		const String eol(isLiteralNewline(newline) ? newlineString(newline) : L"");
+		const String eol(isLiteralNewline(newline) ? newlineString(newline) : String());
 		if(eol.empty() && newline != NLF_RAW_VALUE)
 			throw UnknownValueException("newline");
 		for(length_t i = beginning.line; out; ++i) {

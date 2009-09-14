@@ -1795,7 +1795,8 @@ namespace {
 		const String indent = String(abs(level), character);
 		const Region region(caret.selectedRegion());
 
-		if(region.beginning().line == region.end().line) {	// 選択が 1 行以内 -> 単純な文字挿入
+		if(region.beginning().line == region.end().line) {
+			// number of selected lines is one -> just insert tab character(s)
 			replaceSelection(caret, indent);
 			return;
 		}
@@ -1816,8 +1817,8 @@ namespace {
 			const String& s = document.line(line);
 			length_t indentLength;
 			for(indentLength = 0; indentLength < s.length(); ++indentLength) {
-				// 空白類文字が BMP にしか無いという前提
-				if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
+				// this assumes that all white space characters belong to BMP
+				if(s[indentLength] == '\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 					break;
 			}
 			if(indentLength > 0) {
@@ -1851,8 +1852,8 @@ namespace {
 				const String& s = document.line(line);
 				length_t indentLength;
 				for(indentLength = 0; indentLength < s.length(); ++indentLength) {
-					// 空白類文字が BMP にしか無いという前提
-					if(s[indentLength] == L'\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
+				// this assumes that all white space characters belong to BMP
+					if(s[indentLength] == '\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 						break;
 				}
 				if(indentLength > 0) {
@@ -1877,7 +1878,7 @@ namespace {
  * @deprecated 0.8
  */
 void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */) {
-	return indent(caret, L' ', rectangle, level);
+	return indent(caret, ' ', rectangle, level);
 }
 
 /**
@@ -1889,7 +1890,7 @@ void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */)
  * @deprecated 0.8
  */
 void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
-	return indent(caret, L'\t', rectangle, level);
+	return indent(caret, '\t', rectangle, level);
 }
 
 /**
