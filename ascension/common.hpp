@@ -76,6 +76,10 @@
 #	define ASCENSION_HAS_CINTTYPES
 #endif
 
+#if defined(ASCENSION_WINDOWS)
+#	define ASCENSION_USE_INTRINSIC_WCHAR_T
+#endif
+
 #if defined(ASCENSION_WINDOWS) && defined(_DEBUG)
 #include <manah/win32/timer.hpp>
 using manah::win32::Timer;
@@ -114,7 +118,7 @@ namespace ascension {
 	using manah::ulong;
 
 	// character and string
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
 	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
 #else
 	typedef uint16_t;						///< Type for characters as UTF-16 code unit.
@@ -360,6 +364,18 @@ namespace ascension {
 	// basic assertions
 	MANAH_STATIC_ASSERT(sizeof(Char) == 2);
 	MANAH_STATIC_ASSERT(sizeof(CodePoint) == 4);
+
+	namespace kernel {
+		namespace fileio {
+			/**
+			 * Character type for file names. This is equivalent to
+			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
+			 */
+			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE PathCharacter;
+			/// String type for file names.
+			typedef std::basic_string<PathCharacter> PathString;
+		}
+	}
 
 } // namespace ascension
 
