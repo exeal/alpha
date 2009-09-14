@@ -18,14 +18,6 @@ namespace ascension {
 		/// Provides features about file-bound document.
 		namespace fileio {
 
-			/**
-			 * Character type for file names. This is equivalent to
-			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
-			 */
-			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE Char;
-			/// String type for file names.
-			typedef std::basic_string<Char> String;
-
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
 				/// The the encoding name.
@@ -47,15 +39,15 @@ namespace ascension {
 				typedef int Code;	///< Type of the value returned by @c #code method.
 #endif
 			public:
-				explicit IOException(const String& fileName);
-				IOException(const String& fileName, Code code);
+				explicit IOException(const PathString& fileName);
+				IOException(const PathString& fileName, Code code);
 				Code code() const /*throw()*/;
-				const String& fileName() const /*throw()*/;
+				const PathString& fileName() const /*throw()*/;
 			public:
 				static bool isFileNotFound(const IOException& e);
 				static bool isPermissionDenied(const IOException& e);
 			private:
-				const String fileName_;
+				const PathString fileName_;
 				const Code code_;
 			};
 
@@ -132,17 +124,17 @@ namespace ascension {
 			 * @c std#basic_streambuf implementation of the text file with encoding conversion.
 			 * @note This class is not intended to be subclassed.
 			 */
-			class TextFileStreamBuffer : public std::basic_streambuf<ascension::Char> {
+			class TextFileStreamBuffer : public std::basic_streambuf<Char> {
 				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
-				TextFileStreamBuffer(const String& fileName, std::ios_base::openmode mode,
+				TextFileStreamBuffer(const PathString& fileName, std::ios_base::openmode mode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					bool writeUnicodeByteOrderMark);
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
 				TextFileStreamBuffer* closeAndDiscard();
 				std::string encoding() const /*throw()*/;
-				const String& fileName() const /*throw()*/;
+				const PathString& fileName() const /*throw()*/;
 				bool isOpen() const /*throw()*/;
 				std::ios_base::openmode mode() const /*throw()*/;
 				bool unicodeByteOrderMark() const /*throw()*/;
@@ -158,13 +150,13 @@ namespace ascension {
 				int sync();
 				int_type underflow();
 			private:
-				typedef std::basic_streambuf<ascension::Char> Base;
+				typedef std::basic_streambuf<Char> Base;
 #ifdef ASCENSION_WINDOWS
 				HANDLE fileHandle_, fileMapping_;
 #else // ASCENSION_POSIX
 				int fileDescriptor_;
 #endif
-				const String fileName_;
+				const PathString fileName_;
 				std::ios_base::openmode mode_;
 				struct {
 					const byte* first;
@@ -177,7 +169,7 @@ namespace ascension {
 				off_t originalFileEnd_;
 #endif
 				std::auto_ptr<encoding::Encoder> encoder_;
-				ascension::Char ucsBuffer_[8192];
+				Char ucsBuffer_[8192];
 			};
 
 			class TextFileDocumentInput : public IDocumentInput, public IDocumentStateListener {
@@ -213,8 +205,8 @@ namespace ascension {
 				void addListener(IFilePropertyListener& listener);
 				void removeListener(IFilePropertyListener& listener);
 				// bound file
-				void bind(const String& fileName);
-				String fileName() const /*throw()*/;
+				void bind(const PathString& fileName);
+				PathString fileName() const /*throw()*/;
 				bool isBoundToFile() const /*throw()*/;
 				void lockFile(const LockMode& mode);
 				LockType lockType() const /*throw()*/;
@@ -230,7 +222,7 @@ namespace ascension {
 				bool unicodeByteOrderMark() const /*throw()*/;
 				// IDocumentInput
 				std::string encoding() const /*throw()*/;
-				ascension::String location() const /*throw()*/;
+				String location() const /*throw()*/;
 				Newline newline() const /*throw()*/;
 			private:
 				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
@@ -246,7 +238,7 @@ namespace ascension {
 				class FileLocker;
 				FileLocker* fileLocker_;
 				Document& document_;
-				String fileName_;
+				PathString fileName_;
 				std::string encoding_;
 				bool unicodeByteOrderMark_;
 				Newline newline_;
@@ -266,12 +258,12 @@ namespace ascension {
 				 * Returns the current entry name.
 				 * @throw NoSuchElementException the iteration has already ended
 				 */
-				virtual const String& current() const = 0;
+				virtual const PathString& current() const = 0;
 				/**
 				 * Returns the directory name this iterator traverses. This value does not end
 				 * with path-separator.
 				 */
-				virtual const String& directory() const /*throw()*/ = 0;
+				virtual const PathString& directory() const /*throw()*/ = 0;
 				/**
 				 * Returns true if the current entry is directory.
 				 * @throw NoSuchElementException the iteration has already ended
@@ -296,11 +288,11 @@ namespace ascension {
 			class DirectoryIterator : public DirectoryIteratorBase {
 			public:
 				// constructors
-				DirectoryIterator(const Char* directoryName);
+				DirectoryIterator(const PathCharacter* directoryName);
 				~DirectoryIterator() /*throw()*/;
 				// DirectoryIteratorBase
-				const String& current() const;
-				const String& directory() const /*throw()*/;
+				const PathString& current() const;
+				const PathString& directory() const /*throw()*/;
 				bool isDirectory() const;
 				bool isDone() const /*throw()*/;
 				void next();
@@ -312,7 +304,7 @@ namespace ascension {
 #else // ASCENSION_POSIX
 				DIR* handle_;
 #endif
-				String current_, directory_;
+				PathString current_, directory_;
 				bool currentIsDirectory_, done_;
 			};
 
@@ -320,38 +312,38 @@ namespace ascension {
 			class RecursiveDirectoryIterator : public DirectoryIteratorBase {
 			public:
 				// constructors
-				RecursiveDirectoryIterator(const Char* directoryName);
+				RecursiveDirectoryIterator(const PathCharacter* directoryName);
 				~RecursiveDirectoryIterator() /*throw()*/;
 				// attributes
 				void dontPush();
 				std::size_t level() const /*throw()*/;
 				void pop();
 				// DirectoryIteratorBase
-				const String& current() const;
-				const String& directory() const /*throw()*/;
+				const PathString& current() const;
+				const PathString& directory() const /*throw()*/;
 				bool isDirectory() const;
 				bool isDone() const /*throw()*/;
 				void next();
 			private:
 				std::stack<DirectoryIterator*> stack_;
-				String directory_;
+				PathString directory_;
 				bool doesntPushNext_;
 			};
 #endif // !ASCENSION_NO_GREP
 
 			// free functions related to file path name
-			String canonicalizePathName(const Char* pathName);
-			bool comparePathNames(const Char* s1, const Char* s2);
+			PathString canonicalizePathName(const PathCharacter* pathName);
+			bool comparePathNames(const PathCharacter* s1, const PathCharacter* s2);
 
 			// free function
 			std::pair<std::string, bool> insertFileContents(Document& document,
-				const Position& at, const String& fileName, const std::string& encoding,
+				const Position& at, const PathString& fileName, const std::string& encoding,
 				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = 0);
 			void writeRegion(const Document& document, const Region& region,
-				const String& fileName, const WritingFormat& format, bool append = false);
+				const PathString& fileName, const WritingFormat& format, bool append = false);
 
 			/// Returns the file name.
-			inline const String& TextFileStreamBuffer::fileName() const /*throw()*/ {return fileName_;}
+			inline const PathString& TextFileStreamBuffer::fileName() const /*throw()*/ {return fileName_;}
 
 			/// Returns the open mode.
 			inline std::ios_base::openmode TextFileStreamBuffer::mode() const /*throw()*/ {return mode_;}
@@ -363,7 +355,7 @@ namespace ascension {
 			inline std::string TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
 
 			/// Returns the file full name or an empty string if the document is not bound to any of the files.
-			inline String TextFileDocumentInput::fileName() const /*throw()*/ {return fileName_;}
+			inline PathString TextFileDocumentInput::fileName() const /*throw()*/ {return fileName_;}
 
 			/// Returns true if the document is bound to any file.
 			inline bool TextFileDocumentInput::isBoundToFile() const /*throw()*/ {return !fileName_.empty();}

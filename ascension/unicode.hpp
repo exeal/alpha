@@ -8,6 +8,7 @@
 #ifndef ASCENSION_UNICODE_HPP
 #define ASCENSION_UNICODE_HPP
 #include <ascension/internal.hpp>
+#include <ascension/ustring.hpp>	// ustrlen
 #include <manah/object.hpp>	// manah.Noncopyable
 #include <manah/types.hpp>	// manah.Select
 #include <manah/memory.hpp>	// manah.AutoBuffer
@@ -1109,7 +1110,7 @@ inline String CaseFolder::fold(CharacterSequence first, CharacterSequence last, 
 			else									s.sputn(buffer, 2);
 		} else {
 			const CodePoint* const p = lower_bound(FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
-			if(*p == c)	s.sputn(FULL_FOLDED_[p - FULL_CASED_], static_cast<std::streamsize>(wcslen(FULL_FOLDED_[p - FULL_CASED_])));
+			if(*p == c)	s.sputn(FULL_FOLDED_[p - FULL_CASED_], static_cast<std::streamsize>(ustrlen(FULL_FOLDED_[p - FULL_CASED_])));
 			else		s.sputc(static_cast<Char>(c & 0xffffu));
 		}
 	}

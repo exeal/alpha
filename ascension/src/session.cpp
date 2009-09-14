@@ -192,8 +192,13 @@ void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) /*throw()*/ {
 /// Constructor.
 Session::Session() /*throw()*/ : isearch_(0), textSearcher_(0) {
 #ifndef ASCENSION_NO_MIGEMO
+#ifdef ASCENSION_WINDOWS
 	wcscpy(migemoRuntimePathName_, L"");
 	wcscpy(migemoDictionaryPathName_, L"");
+#else // ASCENSION_POSIX
+	strcpy(migemoRuntimePathName_, "");
+	strcpy(migemoDictionaryPathName_, "");
+#endif
 #endif // !ASCENSION_NO_MIGEMO
 }
 
@@ -245,7 +250,7 @@ const KillRing& Session::killRing() const /*throw()*/ {
  * @param runtime true to get about DLL, false to get about dictionary
  * @return the path name of the directory
  */
-const WCHAR* Session::migemoPathName(bool runtime) /*throw()*/ {
+const kernel::fileio::PathCharacter* Session::migemoPathName(bool runtime) /*throw()*/ {
 	return runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_;
 }
 #endif // !ASCENSION_NO_MIGEMO
@@ -269,13 +274,22 @@ void Session::removeDocument(kernel::Document& document) {
  * @param runtime true to set about DLL, false to set about dictionary
  * @param std#length_error @a @pathName is too long
  */
-void Session::setMigemoPathName(const WCHAR* pathName, bool runtime) {
+void Session::setMigemoPathName(const kernel::fileio::PathCharacter* pathName, bool runtime) {
 	if(pathName == 0)
+#ifdef ASCENSION_WINDOWS
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, L"");
 	else if(wcslen(pathName) > MAX_PATH - 1)
+#else // ASCENSION_POSIX
+		strcpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, "");
+	else if(strlen(pathName) > MAX_PATH - 1)
+#endif
 		throw length_error("pathName");
 	else
+#ifdef ASCENSION_WINDOWS
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
+#else // ASCENSION_POSIX
+		strcpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
+#endif
 }
 #endif // !ASCENSION_NO_MIGEMO
 

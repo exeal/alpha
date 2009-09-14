@@ -1,7 +1,7 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_SESSION_HPP
@@ -107,7 +107,7 @@ namespace ascension {
 			std::list<InputSequenceChecker*> strategies_;
 			HKL keyboardLayout_;
 		};
-#endif /* ASCENSION_WINDOWS */
+#endif // ASCENSION_WINDOWS
 
 		/**
 		 * @note This class is not derivable.
@@ -127,13 +127,13 @@ namespace ascension {
 			KillRing& killRing() /*throw()*/;
 			const KillRing& killRing() const /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			const WCHAR* migemoPathName(bool runtime) /*throw()*/;
+			const kernel::fileio::PathCharacter* migemoPathName(bool runtime) /*throw()*/;
 #endif // !ASCENSION_NO_MIGEMO
 			searcher::TextSearcher& textSearcher() /*throw()*/;
 			const searcher::TextSearcher& textSearcher() const /*throw()*/;
 			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			void setMigemoPathName(const WCHAR* pathName, bool runtime);
+			void setMigemoPathName(const kernel::fileio::PathCharacter* pathName, bool runtime);
 #endif // !ASCENSION_NO_MIGEMO
 			// operations
 			void addDocument(kernel::Document& document);
@@ -146,7 +146,7 @@ namespace ascension {
 			searcher::TextSearcher* textSearcher_;
 			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			WCHAR migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
+			kernel::fileio::PathCharacter migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
 #endif // !ASCENSION_NO_MIGEMO
 		};
 

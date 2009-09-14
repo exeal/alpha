@@ -147,12 +147,14 @@ namespace {
    
 	// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 	inline const Char* handleSubDelims(const Char* first, const Char* last) {
-		return (first < last && wcschr(L"!$&'()*+,;=", *first) != 0) ? ++first : 0;
+		static const Char SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=', 0};
+		return (first < last && ustrchr(SUB_DELIMS, *first) != 0) ? ++first : 0;
 	}
 
 	// gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 	inline const Char* handleGenDelims(const Char* first, const Char* last) {
-		return (first < last && wcschr(L":/?#[]@", *first) != 0) ? ++first : 0;
+		static const Char GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@', 0};
+		return (first < last && ustrchr(GEN_DELIMS, *first) != 0) ? ++first : 0;
 	}
 
 	// reserved = gen-delims / sub-delims
@@ -162,12 +164,13 @@ namespace {
 
 	// unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 	inline const Char* handleUnreserved(const Char* first, const Char* last) {
-		return (first < last && (isalnum(*first, cl) || wcschr(L"-._~", *first) != 0)) ? ++first : 0;
+		static const Char UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~', 0};
+		return (first < last && (isalnum(*first, cl) || ustrchr(UNRESERVED_LEFTOVERS, *first) != 0)) ? ++first : 0;
 	}
 
 	// pct-encoded = "%" HEXDIG HEXDIG
 	inline const Char* handlePctEncoded(const Char* first, const Char* last) {
-		return (last - first >= 3 && first[0] == L'%' && isxdigit(first[1], cl) && isxdigit(first[2], cl)) ? first += 3 : 0;
+		return (last - first >= 3 && first[0] == '%' && isxdigit(first[1], cl) && isxdigit(first[2], cl)) ? first += 3 : 0;
 	}
 
 	// IPv6address =                            6( h16 ":" ) ls32
