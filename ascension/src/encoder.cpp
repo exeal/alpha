@@ -423,7 +423,7 @@ String Encoder::toUnicode(const string& from) {
 		else if(result == INSUFFICIENT_BUFFER)
 			temp.reset(new Char[chars *= 2]);
 		else
-			return L"";
+			return String();
 	}
 	return String(temp.get(), toNext);
 }

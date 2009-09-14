@@ -6,6 +6,7 @@
  */
 
 #include <ascension/rules.hpp>
+#include <ascension/ustring.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;
@@ -117,14 +118,14 @@ bool HashTable::matches(const Char* first, const Char* last) const {
 			return false;
 		const size_t h = hashCode(first, last);
 		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
-			if(entry->data.length() == static_cast<size_t>(last - first) && wmemcmp(entry->data.data(), first, entry->data.length()) == 0)
+			if(entry->data.length() == static_cast<size_t>(last - first) && umemcmp(entry->data.data(), first, entry->data.length()) == 0)
 				return true;
 		}
 	} else {
 		const String folded(CaseFolder::fold(String(first, last)));
 		const size_t h = hashCode(folded.begin(), folded.end());
 		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
-			if(entry->data.length() == folded.length() && wmemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
+			if(entry->data.length() == folded.length() && umemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
 				return true;
 		}
 	}
@@ -186,17 +187,17 @@ namespace {
 
 	// IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
 	const Char* ASCENSION_FASTCALL handleIPvFuture(const Char* first, const Char* last) {
-		if(last - first >= 4 && *first == L'v' && isxdigit(*++first, cl)) {
+		if(last - first >= 4 && *first == 'v' && isxdigit(*++first, cl)) {
 			while(isxdigit(*first, cl)) {
 				if(++first == last)
 					return 0;
 			}
-			if(*first == L'.' && ++first < last) {
+			if(*first == '.' && ++first < last) {
 				const Char* p = first;
 				while(p < last) {
 					if(0 != (p = handleUnreserved(p, last)) || (0 != (p = handleSubDelims(p, last))))
 						continue;
-					else if(*p == L':')
+					else if(*p == ':')
 						++p;
 					else
 						break;
@@ -209,10 +210,10 @@ namespace {
 
 	// IP-literal = "[" ( IPv6address / IPvFuture  ) "]"
 	inline const Char* handleIPLiteral(const Char* first, const Char* last) {
-		if(first < last && *first == L'[') {
+		if(first < last && *first == '[') {
 			const Char* p;
 			if(0 != (p = handleIPv6address(++first, last)) || 0 != (p = handleIPvFuture(first, last))) {
-				if(p < last && *p == L']')
+				if(p < last && *p == ']')
 					return ++p;
 			}
 		}
@@ -233,22 +234,22 @@ namespace {
 	//           / "25" %x30-35      ; 250-255
 	const Char* ASCENSION_FASTCALL handleDecOctet(const Char* first, const Char* last) {
 		if(first < last) {
-			if(*first == L'0')
+			if(*first == '0')
 				return ++first;
-			else if(*first == L'1')
+			else if(*first == '1')
 				return (++first < last && isdigit(*first, cl) && ++first < last && isdigit(*first, cl)) ? ++first : first;
-			else if(*first == L'2') {
+			else if(*first == '2') {
 				if(++first < last) {
-					if(inRange(*first, L'0', L'4')) {
+					if(inRange<Char>(*first, '0', '4')) {
 						if(isdigit(*++first, cl))
 							++first;
-					} else if(*first == L'5') {
-						if(inRange(*first, L'0', L'5'))
+					} else if(*first == '5') {
+						if(inRange<Char>(*first, '0', '5'))
 							++first;
 					}
 				}
 				return first;
-			} else if(inRange(*first, L'3', L'9'))
+			} else if(inRange<Char>(*first, '3', '9'))
 				return (++first < last && isdigit(*first, cl)) ? ++first : first;
 		}
 		return 0;
@@ -258,11 +259,11 @@ namespace {
 	inline const Char* handleIPv4address(const Char* first, const Char* last) {
 		return (last - first >= 7
 			&& 0 != (first = handleDecOctet(first, last))
-			&& first < last && *first == L'.'
+			&& first < last && *first == '.'
 			&& 0 != (first = handleDecOctet(++first, last))
-			&& first < last && *first == L'.'
+			&& first < last && *first == '.'
 			&& 0 != (first = handleDecOctet(++first, last))
-			&& first < last && *first == L'.'
+			&& first < last && *first == '.'
 			&& 0 != (first = handleDecOctet(++first, last))) ? first : 0;
 	}
 
@@ -280,7 +281,7 @@ namespace {
 	// ls32 = ( h16 ":" h16 ) / IPv4address
 	inline const Char* handleLs32(const Char* first, const Char* last) {
 		const Char* p;
-		return (0 != (p = handleH16(first, last)) && p + 2 < last && *++p == L':' && 0 != (p = handleH16(p, last))
+		return (0 != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && 0 != (p = handleH16(p, last))
 			|| 0 != (p = handleIPv4address(first, last))) ? p : 0;
 	}
 
@@ -288,7 +289,7 @@ namespace {
 	const Char* ASCENSION_FASTCALL handleScheme(const Char* first, const Char* last) {
 		if(isalpha(*first, cl)) {
 			while(++first != last) {
-				if(!isalnum(*first, cl) && *first != L'+' && *first != L'-' && *first != L'.')
+				if(!isalnum(*first, cl) && *first != '+' && *first != '-' && *first != '.')
 					return first;
 			}
 			return last;
@@ -341,7 +342,7 @@ namespace {
 					|| 0 != (p = handlePctEncoded(first, last))
 					|| 0 != (p = handleSubDelims(first, last)))
 				return p;
-			else if(*first == L':' || *first == L'@')
+			else if(*first == ':' || *first == '@')
 				return ++first;
 		}
 		return 0;
@@ -370,7 +371,7 @@ namespace {
 					|| 0 != (eop = handlePctEncoded(first, last))
 					|| 0 != (eop = handleSubDelims(first, last)))
 				first = eop;
-			else if(*first == L'@')
+			else if(*first == '@')
 				++first;
 			else
 				break;
@@ -383,7 +384,7 @@ namespace {
 
 	// ipath-abempty = *( "/" isegment )
 	const Char* ASCENSION_FASTCALL handlePathAbempty(const Char* first, const Char* last) {	// [nullable]
-		while(first < last && *first == L'/')
+		while(first < last && *first == '/')
 			first = handleSegment(first + 1, last);
 		return first;
 	}
@@ -402,7 +403,7 @@ namespace {
 
 	// ipath-absolute = "/" [ isegment-nz *( "/" isegment ) ]
 	inline const Char* handlePathAbsolute(const Char* first, const Char* last) {
-		return (first < last && *first == L'/') ? handlePathRootless(++first, last) : 0;
+		return (first < last && *first == '/') ? handlePathRootless(++first, last) : 0;
 	}
 
 	// ireg-name = *( iunreserved / pct-encoded / sub-delims )
@@ -429,7 +430,7 @@ namespace {
 					|| 0 != (eop = handlePctEncoded(first, last))
 					|| 0 != (eop = handleSubDelims(first, last)))
 				first = eop;
-			else if(*first == L':')
+			else if(*first == ':')
 				++first;
 			else
 				break;
@@ -443,13 +444,13 @@ namespace {
 		first = handleUserinfo(first, last);
 		assert(first != 0);
 		if(first > beginning) {
-			if(first >= last || *++first != L'@')
+			if(first >= last || *++first != '@')
 				first = beginning;
-		} else if(first < last && *++first != L'@')
+		} else if(first < last && *++first != '@')
 			--first;
 		if(0 != (first = handleHost(first, last))) {
 			if(first != last) {
-				if(*first == L':')
+				if(*first == ':')
 					++first;
 				first = handlePort(first, last);
 				assert(first != 0);
@@ -460,8 +461,9 @@ namespace {
 
 	// ihier-part = ("//" iauthority ipath-abempty) / ipath-absolute / ipath-rootless / ipath-empty
 	const Char* ASCENSION_FASTCALL handleHierPart(const Char* first, const Char* last) {
+		static const Char DOUBLE_SLASH[] = {'/', '/', 0};
 		const Char* eop;
-		(last - first > 2 && wmemcmp(first, L"//", 2) == 0
+		(last - first > 2 && umemcmp(first, DOUBLE_SLASH, 2) == 0
 			&& 0 != (eop = handleAuthority(first + 2, last)) && 0 != (eop = handlePathAbempty(eop, last)))
 			|| 0 != (eop = handlePathAbsolute(first, last))
 			|| 0 != (eop = handlePathRootless(first, last))
@@ -474,7 +476,7 @@ namespace {
 		for(const Char* eop; first < last; ) {
 			if(0 != (eop = handlePchar(first, last)) || 0 != (eop = handlePrivate(first, last)))
 				first = eop;
-			else if(*first == L'/' || *first == L'?')
+			else if(*first == '/' || *first == '?')
 				++first;
 			else
 				break;
@@ -487,7 +489,7 @@ namespace {
 		for(const Char* eop; first < last; ) {
 			if(0 != (eop = handlePchar(first, last)))
 				first = eop;
-			else if(*first == L'/' || *first == L'?')
+			else if(*first == '/' || *first == '?')
 				++first;
 			else
 				break;
@@ -498,13 +500,13 @@ namespace {
 	// IRI = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
 	const Char* ASCENSION_FASTCALL handleIRI(const Char* first, const Char* last) {
 		if(0 != (first = handleScheme(first, last))) {
-			if(*first == L':') {
+			if(*first == ':') {
 				if(0 != (first = handleHierPart(++first, last))) {
-					if(*first == L'?') {
+					if(*first == '?') {
 						first = handleQuery(++first, last);
 						assert(first != 0);
 					}
-					if(*first == L'#') {
+					if(*first == '#') {
 						first = handleFragment(++first, last);
 						assert(first != 0);
 					}
@@ -548,7 +550,7 @@ const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 			L"|afs|dtn|iax2|mailserver|pack|tn3270"
 			// historical URI schemes
 			L"prospero|wais",
-			L'|');
+			'|');
 	return singleton;
 }
 
@@ -570,11 +572,11 @@ const Char* URIDetector::detect(const Char* first, const Char* last) const {
 	// check scheme
 	const Char* endOfScheme;
 	if(validSchemes_ != 0) {
-		endOfScheme = wmemchr(first + 1, ':', min<size_t>(last - first - 1, validSchemes_->maximumLength()));
+		endOfScheme = umemchr(first + 1, ':', min<size_t>(last - first - 1, validSchemes_->maximumLength()));
 		if(!validSchemes_->matches(first, endOfScheme))
 			endOfScheme = 0;
 	} else {
-		endOfScheme = wmemchr(first + 1, ':', static_cast<size_t>(last - first - 1));
+		endOfScheme = umemchr(first + 1, ':', static_cast<size_t>(last - first - 1));
 		if(handleScheme(first, endOfScheme) != endOfScheme)
 			endOfScheme = 0;
 	}
@@ -602,7 +604,7 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
 		return false;
 
 	// search scheme
-	const Char* nextColon = wmemchr(first, L':', last - first);
+	const Char* nextColon = umemchr(first, ':', last - first);
 	if(nextColon == 0)
 		return false;
 	while(true) {
@@ -616,7 +618,7 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
 			++first;
 		if(first == nextColon) {
 			first = nextColon;
-			nextColon = wmemchr(first, L':', last - first);
+			nextColon = umemchr(first, ':', last - first);
 			if(nextColon == 0)
 				break;
 		}
@@ -709,7 +711,7 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
 	// match the start sequence
 	if(first[0] != startSequence_[0]
 			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
-			|| (startSequence_.length() > 1 && wmemcmp(first + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
+			|| (startSequence_.length() > 1 && umemcmp(first + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
 		return auto_ptr<Token>(0);
 	const Char* end = last;
 	if(!endSequence_.empty()) {
@@ -717,7 +719,7 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
 		for(const Char* p = first + startSequence_.length(); p <= last - endSequence_.length(); ++p) {
 			if(escapeCharacter_ != NONCHARACTER && *p == escapeCharacter_)
 				++p;
-			else if(*p == endSequence_[0] && wmemcmp(p + 1, endSequence_.data() + 1, endSequence_.length() - 1) == 0) {
+			else if(*p == endSequence_[0] && umemcmp(p + 1, endSequence_.data() + 1, endSequence_.length() - 1) == 0) {
 				end = p + endSequence_.length();
 				break;
 			}
@@ -754,12 +756,12 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 	*/
 	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
 	if(scanner.getPosition().column > 0	// see below
-			&& (inRange(first[-1], L'0', L'9') || inRange(first[-1], L'A', L'F') || inRange(first[-1], L'a', L'f')))
+			&& (inRange<Char>(first[-1], '0', '9') || inRange<Char>(first[-1], 'A', 'F') || inRange<Char>(first[-1], 'a', 'f')))
 		return auto_ptr<Token>(0);
 	const Char* e;
-	if(last - first > 2 && first[0] == L'0' && (first[1] == L'x' || first[1] == L'X')) {	// HexIntegerLiteral?
+	if(last - first > 2 && first[0] == '0' && (first[1] == 'x' || first[1] == 'X')) {	// HexIntegerLiteral?
 		for(e = first + 2; e < last; ++e) {
-			if(inRange(*e, L'0', L'9') || inRange(*e, L'A', L'F') || inRange(*e, L'a', L'f'))
+			if(inRange<Char>(*e, '0', '9') || inRange<Char>(*e, 'A', 'F') || inRange<Char>(*e, 'a', 'f'))
 				continue;
 			break;
 		}
@@ -767,36 +769,36 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 			return auto_ptr<Token>(0);
 	} else {	// DecimalLiteral?
 		bool foundDecimalIntegerLiteral = false, foundDot = false;
-		if(inRange(first[0], L'0', L'9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+		if(inRange<Char>(first[0], '0', '9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
 			e = first + 1;
 			foundDecimalIntegerLiteral = true;
-			if(first[0] != L'0')
-				e = find_if(e, last, not1(InRange<Char>(L'0', L'9')));
+			if(first[0] != '0')
+				e = find_if(e, last, not1(InRange<Char>('0', '9')));
 		} else
 			e = first;
-		if(e < last && *e == L'.') {	// . DecimalDigits ::= /\.[0-9]+/
+		if(e < last && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
 			foundDot = true;
-			e = find_if(++e, last, not1(InRange<Char>(L'0', L'9')));
-			if(e[-1] == L'.')
+			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
+			if(e[-1] == '.')
 				return auto_ptr<Token>(0);
 		}
 		if(!foundDecimalIntegerLiteral && !foundDot)
 			return auto_ptr<Token>(0);
-		if(e < last && (*e == L'e' || *e == L'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
+		if(e < last && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
 			if(++e == last)
 				return auto_ptr<Token>(0);
-			if(*e == L'+' || *e == L'-') {
+			if(*e == '+' || *e == '-') {
 				if(++e == last)
 					return auto_ptr<Token>(0);
 			}
-			e = find_if(++e, last, not1(InRange<Char>(L'0', L'9')));
+			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
 		}
 	}
 
 	// e points the end of the found token
 	assert(e > first);
 	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-	if(e < last && (inRange(*e, L'0', L'9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
+	if(e < last && (inRange<Char>(*e, '0', '9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
 		return auto_ptr<Token>(0);
 
 	auto_ptr<Token> temp(new Token);
@@ -1128,7 +1130,7 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
 	else if(line.length() - column < pattern_.length())
 		return 0;
 	else if(caseSensitive_)
-		return (wmemcmp(pattern_.data(), line.data() + column, pattern_.length()) == 0) ? pattern_.length() : 0;
+		return (umemcmp(pattern_.data(), line.data() + column, pattern_.length()) == 0) ? pattern_.length() : 0;
 	return (CaseFolder::compare(StringCharacterIterator(pattern_),
 		StringCharacterIterator(line, line.begin() + column)) == 0) ? pattern_.length() : 0;
 }

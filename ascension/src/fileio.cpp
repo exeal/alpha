@@ -1101,7 +1101,7 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
 	desiredLockMode_.type = NO_LOCK;
 	desiredLockMode_.onlyAsEditing = false;
-	document.setProperty(Document::TITLE_PROPERTY, L"");
+	document.setProperty(Document::TITLE_PROPERTY, String());
 }
 
 /// Destructor.
@@ -1226,7 +1226,7 @@ String TextFileDocumentInput::location() const /*throw()*/ {
 	const PathCharacter* fromNext;
 	Char* toNext;
 	return (converter.in(dummy, fileName().c_str(),
-		fileName().c_str() + fileName().length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok ? result : L"");
+		fileName().c_str() + fileName().length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok) ? result : String();
 #endif
 }
 
