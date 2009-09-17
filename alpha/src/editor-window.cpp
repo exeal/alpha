@@ -440,7 +440,7 @@ ALPHA_EXPOSE_PROLOGUE(2)
 		.add_property("position", py::make_function(&Point::position, py::return_value_policy<py::copy_const_reference>()))
 		.def("is_buffer_deleted", &Point::isDocumentDisposed)
 		.def<void (Point::*)(const Position&)>("move_to", &Point::moveTo);
-	py::class_<Caret, boost::noncopyable>("_Caret", py::no_init)
+	py::class_<Caret, py::bases<Point>, boost::noncopyable>("_Caret", py::no_init)
 		.add_property("anchor", &positionOfCaret<&Caret::anchor>)
 		.add_property("beginning", &positionOfCaret<&Caret::beginning>)
 		.add_property("end", &positionOfCaret<&Caret::end>)
