@@ -262,6 +262,14 @@
 				RelativePath="..\src\bookmark-dialog.cpp"
 				>
 				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Win32"
 					ExcludedFromBuild="true"
 					>
@@ -304,6 +312,10 @@
 			</File>
 			<File
 				RelativePath="..\src\goto-line-dialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\input.cpp"
 				>
 			</File>
 			<File
@@ -373,6 +385,10 @@
 			</File>
 			<File
 				RelativePath="..\src\editor-window.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\input.hpp"
 				>
 			</File>
 			<File
