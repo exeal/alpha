@@ -1144,6 +1144,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("normalize", &Region::normalize, py::return_value_policy<py::reference_existing_object>())
 		.def("union", &Region::getUnion, py::return_value_policy<py::return_by_value>());
 	py::class_<Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
+		.def("__len__", &Bookmark::numberOfMarks)
 		.def("clear", &Bookmarker::clear)
 		.def("is_marked", &Bookmarker::isMarked)
 		.def("mark", &Bookmarker::mark, (py::arg("line"), py::arg("set") = true))
@@ -1218,7 +1219,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 //		.def("close_all", &BufferList::closeAll)
 		.def("for_filename", &BufferList::forFileName)
 		.def("move", &BufferList::move)
-		.def("save_all", &BufferList::saveAll);
+		.def("save_some_dialog", &BufferList::saveSomeDialog, py::arg("buffers_to_save") = py::tuple());
 
 	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);

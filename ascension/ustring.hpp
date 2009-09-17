@@ -2,6 +2,16 @@
  * @file ustring.hpp
  */
 
+#ifndef ASCENSION_USTRING_HPP
+#define ASCENSION_USTRING_HPP
+
+namespace ascension {
+	const Char* umemchr(const Char* s, Char c, std::size_t length);
+	int umemcmp(const Char* s1, const Char* s2, std::size_t n);
+	const Char* ustrchr(const Char* s, Char c);
+	std::size_t ustrlen(const Char* s);
+}
+
 #ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
 
 #include <cwchar>
@@ -54,3 +64,5 @@ namespace ascension {
 }
 
 #endif
+
+#endif // ASCENSION_USTRING_HPP
