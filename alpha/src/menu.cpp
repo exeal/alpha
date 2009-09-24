@@ -29,6 +29,7 @@ namespace {
 		wstring caption(short identifier) const;
 		py::object check(short identifier, bool check);
 		py::object clear();
+		py::object command(short identifier) const;
 		short defaultItem() const;
 		py::object enable(short identifier, bool enable);
 		py::object erase(short identifier);
@@ -137,6 +138,13 @@ wstring Menu::caption(short identifier) const {
 
 py::object Menu::check(short identifier, bool check) {
 	return setItemState(identifier, check ? MFS_CHECKED : MFS_UNCHECKED, check ? MFS_UNCHECKED : MFS_CHECKED);
+}
+
+py::object Menu::command(short identifier) const {
+	win32::AutoZeroSize<MENUITEMINFOW> mi;
+	mi.fMask = MIIM_DATA;
+	item(identifier, mi);
+	return (mi.dwItemData != 0) ? py::object(py::handle<>(reinterpret_cast<PyObject*>(mi.dwItemData))) : py::object();
 }
 
 short Menu::defaultItem() const {
@@ -397,6 +405,16 @@ void PopupMenu::update(short identifier) {
 			popupHandler_(identifier, self());
 		} catch(py::error_already_set&) {
 			Interpreter::instance().handleException();
+		}
+	}
+
+	// show bound input sequences
+	for(ssize_t i = 0, c = numberOfItems(); i < c; ++i) {
+		const short id = identifier(i);
+		py::object f(command(id));
+		if(f != py::object()) {
+			InputMappingScheme& ims = InputManager::instance().mappingScheme();
+			ims.inputSequencesForCommand(f);
 		}
 	}
 }

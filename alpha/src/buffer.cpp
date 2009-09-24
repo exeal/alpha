@@ -1144,7 +1144,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("normalize", &Region::normalize, py::return_value_policy<py::reference_existing_object>())
 		.def("union", &Region::getUnion, py::return_value_policy<py::return_by_value>());
 	py::class_<Bookmarker, boost::noncopyable>("_Bookmarker", py::no_init)
-		.def("__len__", &Bookmark::numberOfMarks)
+		.def("__len__", &Bookmarker::numberOfMarks)
 		.def("clear", &Bookmarker::clear)
 		.def("is_marked", &Bookmarker::isMarked)
 		.def("mark", &Bookmarker::mark, (py::arg("line"), py::arg("set") = true))

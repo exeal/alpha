@@ -6,12 +6,11 @@
 
 #include "application.hpp"
 #include "ambient.hpp"
+#include "input.hpp"
 #include "ui.hpp"
 #include "editor-window.hpp"
 //#include "command.hpp"
-//#include "mru-manager.hpp"
 //#include "search-dialog.hpp"
-//#include "bookmark-dialog.hpp"
 //#include "DebugDlg.h"
 #include <ascension/text-editor.hpp>
 #include <ascension/regex.hpp>
@@ -595,37 +594,9 @@ void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* command
 	::LocalFree(argv);
 */}
 
-/// @see manah#windows#Alpha#preTranslateMessage
-bool Alpha::preTranslateMessage(const MSG& msg) {
-	// コマンドに割り当てられているキー組み合わせをここで捕捉する
-/*	if(msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN) {	// WM_CHAR が発行されないようにする
-		if(msg.hwnd == buffers_->activeView().getHandle()) {
-			KeyModifier modifiers = 0;
-			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))
-				modifiers |= KM_CTRL;
-			if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
-				modifiers |= KM_SHIFT;
-			if(msg.message == WM_SYSKEYDOWN || toBoolean(::GetKeyState(VK_MENU) & 0x8000))
-				modifiers |= KM_ALT;
-			return handleKeyDown(static_cast<VirtualKey>(msg.wParam), modifiers);
-		}
-	} else if(msg.message == WM_SYSCHAR) {
-		if(msg.hwnd == buffers_->activeView().getHandle()) {
-			// キー組み合わせがキーボードスキームに登録されているか調べる。
-			// 登録されていれば既定の処理 (メニューのアクティベーション) を妨害
-			const VirtualKey key = LOBYTE(::VkKeyScanExW(static_cast<WCHAR>(msg.wParam), ::GetKeyboardLayout(0)));
-			KeyModifier modifiers = KM_ALT;
-			if(toBoolean(::GetKeyState(VK_CONTROL) & 0x8000))	modifiers |= KM_CTRL;
-			if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))		modifiers |= KM_SHIFT;
-
-			if(twoStroke1stKey_ == VK_NULL)
-				return keyboardMap_.command(KeyCombination(key, modifiers)) != 0;
-			else
-				return keyboardMap_.command(
-					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers)) != 0;
-		}
-	}
-*/	return false;
+/// @see manah#win32#Application#preTranslateMessage
+bool Alpha::preTranslateMessage(const MSG& message) {
+	return (message.message >= WM_KEYFIRST && message.message <= WM_KEYLAST) ? ui::InputManager::instance().input(message) : false;
 }
 
 /**
