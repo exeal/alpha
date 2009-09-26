@@ -410,10 +410,10 @@ void PopupMenu::update(short identifier) {
 
 	// show bound input sequences
 	for(ssize_t i = 0, c = numberOfItems(); i < c; ++i) {
-		const short id = identifier(i);
+		const short id = this->identifier(i);
 		py::object f(command(id));
 		if(f != py::object()) {
-			InputMappingScheme& ims = InputManager::instance().mappingScheme();
+			ui::InputMappingScheme& ims = ui::InputManager::instance().mappingScheme();
 			ims.inputSequencesForCommand(f);
 		}
 	}

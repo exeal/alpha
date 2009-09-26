@@ -47,6 +47,7 @@ namespace {
 		}
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
+		return 0;	// dummy
 	}
 }
 
@@ -170,6 +171,8 @@ public:
 	bool define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command);
 	bool find(py::object command, vector<const KeyStroke>& sequence) const;
 private:
+	KeyTableElement** access(const KeyStroke& keys, bool force) const;
+private:
 	KeyTableElement*** planes_[KeyStroke::ALTERNATIVE_KEY << 2];
 };
 
@@ -181,8 +184,9 @@ const py::object* CommandHolder::command(vector<const KeyStroke>::const_iterator
 }
 
 bool CommandHolder::define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	if(first != last)
+	if(first < last)
 		return false;
+	assert(first == last);
 	return (command_ = command), true;
 }
 
@@ -213,8 +217,7 @@ const py::object* SparseKeymap::command(vector<const KeyStroke>::const_iterator 
 }
 
 bool SparseKeymap::define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	if(first == last)
-		return false;
+	assert(first < last);
 	map<const KeyStroke, KeyTableElement*>::const_iterator i(map_.find(*first));
 	if(i == map_.end()) {	// new
 		if(command != py::object()) {
@@ -224,13 +227,13 @@ bool SparseKeymap::define(vector<const KeyStroke>::const_iterator first, vector<
 				map_.insert(make_pair(*first, new SparseKeymap(first + 1, last, command)));
 		}
 	} else if(command == py::object()) {	// undefine
+		if(first + 1 < last)
+			return false;
 		delete i->second;
 		map_.erase(i);
 	} else {	// overwrite
-		if(!i->second->define(++first, last, command)) {
-			undefine(first, last);
-			define(first, last, command);
-		}
+		assert(i->second != 0);
+		return i->second->define(++first, last, command);
 	}
 	return true;
 }
@@ -243,24 +246,11 @@ bool SparseKeymap::find(py::object command, vector<const KeyStroke>& sequence) c
 	return false;
 }
 
-
-class InputMappingScheme::FirstKeyTable {
-public:
-	FirstKeyTable();
-	~FirstKeyTable();
-	void assign(const KeyStroke& keys, py::object command, bool force);
-	void* get(const KeyStroke& keys) const {void** p = access(keys, false); return (p != 0) ? *p : 0;}
-private:
-	void** access(const KeyStroke& keys, bool force) const;
-private:
-	void*** planes_[KeyStroke::ALTERNATIVE_KEY << 2];
-};
-
-InputMappingScheme::VectorKeymap::FirstKeyTable() {
+InputMappingScheme::VectorKeymap::VectorKeymap() {
 	memset(planes_, 0, sizeof(KeyTableElement***) * MANAH_COUNTOF(planes_));
 }
 
-InputMappingScheme::VectorKeymap::~FirstKeyTable() {
+InputMappingScheme::VectorKeymap::~VectorKeymap() {
 	for(KeyTableElement**** plane = planes_; plane < MANAH_ENDOF(planes_); ++plane) {
 		for(size_t i = 0; i < 2; ++i) {
 			KeyTableElement** half = (*plane)[i];
@@ -288,37 +278,56 @@ KeyTableElement** InputMappingScheme::VectorKeymap::access(const KeyStroke& keys
 	return &half[keys.naturalKey() & 0x7f];
 }
 
-void InputMappingScheme::FirstKeyTable::assign(const KeyStroke& keys, py::object command, bool force) {
-	void** slot = access(keys, true);
-	if(*slot == 0) {
-		auto_ptr<py::object> p(new py::object());
-		*p = command;
-		*slot = p.release();
-	} else if(force)
-		*static_cast<py::object*>(*slot) = command;
-}
-
 const py::object* InputMappingScheme::VectorKeymap::command(
 		vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const {
 	assert(first < last);
 	const KeyTableElement* const * const slot = access(*first, false);
+	return (slot != 0) ? ((*slot != 0) ? (*slot)->command(++first, last) : 0) : &PATH_NOT_FOUND;
 }
 
 bool InputMappingScheme::VectorKeymap::define(
 		vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
+	if(first == last)
+		return false;
+	KeyTableElement** slot = access(*first, true);
+	if(*slot == 0) {	// new
+		if(first + 1 == last)
+			*slot = new CommandHolder(command);
+		else
+			*slot = new SparseKeymap(++first, last, command);
+	} else if(command == py::object()) {	// undefine
+		if(first + 1 < last)
+			return false;
+		delete *slot;
+		*slot = 0;
+	} else	// overwrite
+		return (*slot)->define(++first, last, command);
+	return true;
 }
 
 bool InputMappingScheme::VectorKeymap::find(py::object command, vector<const KeyStroke>& sequence) const {
+	for(manah::byte m = 0; m < MANAH_COUNTOF(planes_); ++m) {
+		KeyTableElement*** const plane = planes_[m];
+		for(KeyStroke::VirtualKey h = 0; h < 2; ++h) {
+			KeyTableElement** const half = plane[h];
+			for(KeyStroke::VirtualKey k = 0; k < 0x80; ++k) {
+				const KeyTableElement* slot = half[k];
+				if(slot->find(command, sequence))
+					return sequence.push_back(KeyStroke(static_cast<KeyStroke::ModifierKey>(m), k | (h << 7))), true;
+			}
+		}
+	}
+	return false;
 }
 
 
 // InputMappingScheme ///////////////////////////////////////////////////////
 
-InputMappingScheme::InputMappingScheme(const wstring& name) : name_(name), firstKeyTable_(new FirstKeyTable) {
+InputMappingScheme::InputMappingScheme(const wstring& name) : name_(name), keymap_(new VectorKeymap) {
 }
 
 InputMappingScheme::~InputMappingScheme() {
-	delete firstKeyTable_;
+	delete keymap_;
 }
 
 py::object** InputMappingScheme::access(py::object input) const {
@@ -334,13 +343,30 @@ py::object InputMappingScheme::boundCommands() const {
 	return py::object(py::handle<>(::PyFrozenSet_New(0)));
 }
 
+#include <boost/python/stl_iterator.hpp>
+
+namespace {
+	void toKeySequence(py::object input, vector<const KeyStroke>& v) {
+		if(py::extract<const KeyStroke&>(input).check()) {
+			const KeyStroke& keys = py::extract<const KeyStroke&>(input);
+			v.assign(&keys, &keys + 1);
+		} else
+			v.assign(py::stl_input_iterator<const KeyStroke>(input), py::stl_input_iterator<const KeyStroke>());
+	}
+}
+
 py::object InputMappingScheme::command(py::object input) const {
-	py::object* const p = static_cast<py::object*>(firstKeyTable_->get(py::extract<const KeyStroke&>(input)));
-	return (p != 0) ? *p : py::object();	
+	vector<const KeyStroke> v;
+	toKeySequence(input, v);
+	const py::object* p = keymap_->command(v.begin(), v.end());
+	return (*p != 0) ? *p : py::object();
 }
 
 void InputMappingScheme::define(const py::object input, py::object command, bool force /* = true */) {
-	firstKeyTable_->assign(py::extract<const KeyStroke&>(input), command, force);
+	// TODO: consider force paramter.
+	vector<const KeyStroke> v;
+	toKeySequence(input, v);
+	keymap_->define(v.begin(), v.end(), command);
 }
 
 py::object InputMappingScheme::definedInputSequences() const {
