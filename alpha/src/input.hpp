@@ -97,8 +97,8 @@ namespace alpha {
 			boost::python::object** access(boost::python::object input) const;
 		private:
 			const std::wstring name_;
-			class FirstKeyTable;
-			FirstKeyTable* firstKeyTable_;
+			class VectorKeymap;
+			VectorKeymap* keymap_;
 //			boost::python::object resolveParent_;
 		};
 
