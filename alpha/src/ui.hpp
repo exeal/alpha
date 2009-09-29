@@ -7,11 +7,9 @@
 #include <manah/win32/windows.hpp>
 
 namespace alpha {
-	namespace ambient {
-		namespace ui {
-			void handleINITMENUPOPUP(WPARAM wp, LPARAM lp);
-			void handleMENUCOMMAND(WPARAM wp, LPARAM lp);
-		}
+	namespace ui {
+		void handleINITMENUPOPUP(WPARAM wp, LPARAM lp);
+		void handleMENUCOMMAND(WPARAM wp, LPARAM lp);
 	}
 }
 

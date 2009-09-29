@@ -17,15 +17,15 @@
 
 namespace alpha {
 	namespace ui {
-
+/*
 		class InputTrigger {
-		private:
-//			virtual bool equals(const InputTrigger& other) const /*throw()*/ = 0;
-			virtual std::wstring format() const /*throw()*/ = 0;
+		public:
+			virtual bool equals(const InputTrigger& other) const throw() = 0;
+			virtual std::wstring format() const throw() = 0;
 		};
-		std::wostream& operator<<(std::wostream& out, const InputTrigger& v);
-
-		class KeyStroke : public InputTrigger {
+		std::wostream& operator<<(std::wostream& out, const InputTrigger& v) {return out << v.format();}
+*/
+		class KeyStroke /*: public InputTrigger*/ {
 		public:
 			/// A virtual key code.
 			typedef manah::byte VirtualKey;
@@ -43,6 +43,7 @@ namespace alpha {
 			KeyStroke(boost::python::object a1, boost::python::object a2);
 			bool operator==(const KeyStroke& other) const /*throw()*/;
 			bool operator<(const KeyStroke& other) const /*throw()*/;
+			static std::wstring format(boost::python::object keys);
 			ModifierKey modifierKeys() const /*throw()*/;
 			VirtualKey naturalKey() const /*throw()*/;
 		private:
@@ -52,12 +53,12 @@ namespace alpha {
 			/*const*/ VirtualKey naturalKey_;
 			/*const*/ ModifierKey modifierKeys_ : 8;
 		};
-
+/*
 		class InputTriggerSequence {
 		public:
 			virtual std::wostream& operator<<(std::wostream& out) = 0;
 			bool endsWith(const InputTriggerSequence& triggerSequence, bool equals) const;
-			bool isEmpty() const /*throw()*/;
+			bool isEmpty() const throw();
 			virtual boost::python::tuple prefixes() const = 0;
 			bool startsWith(const InputTriggerSequence& triggerSequence, bool equals) const;
 			boost::python::tuple triggers() const;
@@ -69,11 +70,11 @@ namespace alpha {
 
 		class KeySequence : public InputTriggerSequence {
 		public:
-			boost::python::tuple keyStrokes() const /*throw()*/;
+			boost::python::tuple keyStrokes() const throw();
 		private:
 			boost::python::tuple keyStrokes_;
 		};
-
+*/
 		/// Maps user inputs and commands.
 		class InputMappingScheme {
 			MANAH_NONCOPYABLE_TAG(InputMappingScheme);
@@ -82,6 +83,7 @@ namespace alpha {
 			~InputMappingScheme() /*throw()*/;
 			boost::python::dict allDefinitions() const;
 			boost::python::object boundCommands() const;
+			boost::python::object command(const std::vector<const KeyStroke>& keySequence, bool* partialMatch) const;
 			boost::python::object command(boost::python::object input) const;
 			void define(const boost::python::object input, boost::python::object command, bool force = true);
 			boost::python::object definedInputSequences() const;
@@ -114,7 +116,7 @@ namespace alpha {
 			void setModalMappingScheme(boost::python::object scheme);
 		private:
 			std::pair<boost::python::object, const InputMappingScheme*> mappingScheme_, modalMappingScheme_;
-			std::vector<KeyStroke> pendingKeySequence_;
+			std::vector<const KeyStroke> pendingKeySequence_;
 		};
 
 	}

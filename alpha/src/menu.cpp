@@ -5,6 +5,7 @@
 
 #include "application.hpp"
 #include "ui.hpp"
+#include "input.hpp"
 using namespace alpha;
 using namespace alpha::ambient;
 using namespace manah;
@@ -130,7 +131,7 @@ wstring Menu::caption(short identifier) const {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_STRING;
 	item(identifier, mi);
-	AutoBuffer<WCHAR> s(new WCHAR[mi.cch + 1]);
+	AutoBuffer<WCHAR> s(new WCHAR[++mi.cch]);
 	mi.dwTypeData = s.get();
 	item(identifier, mi);
 	return wstring(mi.dwTypeData);
@@ -144,7 +145,12 @@ py::object Menu::command(short identifier) const {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
 	item(identifier, mi);
-	return (mi.dwItemData != 0) ? py::object(py::handle<>(reinterpret_cast<PyObject*>(mi.dwItemData))) : py::object();
+	PyObject* const p = reinterpret_cast<PyObject*>(mi.dwItemData);
+	if(p != 0) {
+		Py_INCREF(p);
+		return py::object(py::handle<>(p));
+	}
+	return py::object();
 }
 
 short Menu::defaultItem() const {
@@ -411,10 +417,34 @@ void PopupMenu::update(short identifier) {
 	// show bound input sequences
 	for(ssize_t i = 0, c = numberOfItems(); i < c; ++i) {
 		const short id = this->identifier(i);
+		if(id == -1)
+			continue;
 		py::object f(command(id));
 		if(f != py::object()) {
-			ui::InputMappingScheme& ims = ui::InputManager::instance().mappingScheme();
-			ims.inputSequencesForCommand(f);
+			const ui::InputMappingScheme& ims = py::extract<ui::InputMappingScheme&>(ui::InputManager::instance().mappingScheme());
+			py::object s(ims.inputSequencesForCommand(f));
+			wstring inputSequence;
+			if(py::len(s) != 0) {
+				py::object i(py::handle<>(::PyObject_GetIter(s.ptr())));
+				py::object k(py::handle<>(::PyIter_Next(i.ptr())));
+				inputSequence = ui::KeyStroke::format(k);
+			}
+			const wstring oldCaption(caption(id));
+			wstring newCaption(oldCaption);
+			const size_t tab = oldCaption.find(L'\t');
+			if(tab == wstring::npos) {
+				if(!inputSequence.empty()) {
+					newCaption += L'\t';
+					newCaption += inputSequence;
+				}
+			} else if(inputSequence.empty())
+				newCaption.erase(tab);
+			else {
+				newCaption.replace(tab, wstring::npos, L"\t");
+				newCaption += inputSequence;
+			}
+			if(newCaption != oldCaption)
+				setCaption(id, newCaption);
 		}
 	}
 }
@@ -447,7 +477,7 @@ namespace {
 	}
 }
 
-void ambient::ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
+void ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 	if(HIWORD(lp) != 0)
 		return;	// system menu
 	HMENU menuBar = Alpha::instance().getMainWindow().getMenu()->get();
@@ -458,7 +488,7 @@ void ambient::ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 	}
 }
 
-void ambient::ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
+void ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA;
 	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0) {
