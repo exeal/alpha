@@ -243,7 +243,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		onExitMenuLoop(toBoolean(wParam));
 		break;
 	case WM_INITMENUPOPUP:
-		ambient::ui::handleINITMENUPOPUP(wParam, lParam);
+		ui::handleINITMENUPOPUP(wParam, lParam);
 		onInitMenuPopup(reinterpret_cast<HMENU>(wParam), LOWORD(lParam), toBoolean(HIWORD(lParam)));
 		break;
 	case WM_MEASUREITEM:
@@ -254,7 +254,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 //		return onMenuChar(LOWORD(wParam), HIWORD(wParam), *activePopup);
 //	}
 	case WM_MENUCOMMAND:
-		ambient::ui::handleMENUCOMMAND(wParam, lParam);
+		ui::handleMENUCOMMAND(wParam, lParam);
 		break;
 	case WM_MENUSELECT:
 		onMenuSelect(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HMENU>(lParam));
