@@ -29,12 +29,14 @@ namespace {
 		py::object appendSeparator();
 		wstring caption(short identifier) const;
 		py::object check(short identifier, bool check);
+		py::object child(short identifier) const;
 		py::object clear();
 		py::object command(short identifier) const;
 		short defaultItem() const;
 		py::object enable(short identifier, bool enable);
 		py::object erase(short identifier);
 		py::ssize_t find(short identifier) const;
+		bool hasChild(short identifier) const;
 		short identifier(py::ssize_t position) const;
 		py::object insert(short at, short identifier, const wstring& caption, py::object command, bool alternative);
 		bool isAlternative(short identifier) const;
@@ -47,7 +49,6 @@ namespace {
 		py::object setChild(short identifier, py::object child);
 		py::object setCommand(short identifier, py::object command);
 		py::object setDefault(short identifier);
-		py::object subMenu(short identifier) const;
 	protected:
 		explicit Menu(HMENU handle);
 		HMENU handle() const;
@@ -120,13 +121,6 @@ py::object Menu::appendSeparator() {
 	return self();
 }
 
-py::object Menu::clear() {
-	// TODO: this code is not exception-safe and can interrupt.
-	while(numberOfItems() > 0)
-		erase(identifier(0));
-	return self();
-}
-
 wstring Menu::caption(short identifier) const {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_STRING;
@@ -139,6 +133,27 @@ wstring Menu::caption(short identifier) const {
 
 py::object Menu::check(short identifier, bool check) {
 	return setItemState(identifier, check ? MFS_CHECKED : MFS_UNCHECKED, check ? MFS_UNCHECKED : MFS_CHECKED);
+}
+
+py::object Menu::child(short identifier) const {
+	win32::AutoZeroSize<MENUITEMINFOW> item;
+	item.fMask = MIIM_SUBMENU;
+	if(!toBoolean(::GetMenuItemInfoW(handle_, identifier, false, &item)))
+		Interpreter::instance().raiseLastWin32Error();
+	if(item.hSubMenu != 0) {
+		for(set<py::object>::const_iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
+			if(static_cast<const Menu&>(py::extract<const Menu&>(*i)).handle_ == item.hSubMenu)
+				return *i;
+		}
+	}
+	return py::object();
+}
+
+py::object Menu::clear() {
+	// TODO: this code is not exception-safe and can interrupt.
+	while(numberOfItems() > 0)
+		erase(identifier(0));
+	return self();
 }
 
 py::object Menu::command(short identifier) const {
@@ -187,6 +202,13 @@ py::ssize_t Menu::find(short identifier) const {
 
 inline HMENU Menu::handle() const {
 	return handle_;
+}
+
+bool Menu::hasChild(short identifier) const {
+	win32::AutoZeroSize<MENUITEMINFOW> mi;
+	mi.fMask = MIIM_SUBMENU;
+	item(identifier, mi);
+	return mi.hSubMenu != 0;
 }
 
 short Menu::identifier(py::ssize_t position) const {
@@ -366,20 +388,6 @@ py::object Menu::setItemState(short identifier, UINT statesToAdd, UINT statesToR
 	return setItem(identifier, mi);
 }
 
-py::object Menu::subMenu(short identifier) const {
-	win32::AutoZeroSize<MENUITEMINFOW> item;
-	item.fMask = MIIM_SUBMENU;
-	if(!toBoolean(::GetMenuItemInfoW(handle_, identifier, false, &item)))
-		Interpreter::instance().raiseLastWin32Error();
-	if(item.hSubMenu != 0) {
-		for(set<py::object>::const_iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
-			if(static_cast<const Menu&>(py::extract<const Menu&>(*i)).handle_ == item.hSubMenu)
-				return *i;
-		}
-	}
-	return py::object();
-}
-
 
 // MenuBar //////////////////////////////////////////////////////////////////
 
@@ -406,7 +414,6 @@ PopupMenu::PopupMenu(py::object popupHandler) : Menu(::CreatePopupMenu()), popup
 }
 
 void PopupMenu::update(short identifier) {
-	::OutputDebugStringW(L"XXXX\n");
 	if(popupHandler_ != py::object()) {
 		try {
 			popupHandler_(identifier, self());
@@ -515,10 +522,12 @@ ALPHA_EXPOSE_PROLOGUE(21)
 		.def("append_separator", &Menu::appendSeparator)
 		.def("caption", &Menu::caption)
 		.def("check", &Menu::check)
+		.def("child", &Menu::child)
 		.def("clear", &Menu::clear)
 		.def("enable", &Menu::enable)
 		.def("erase", &Menu::erase)
 		.def("find", &Menu::find)
+		.def("has_child", &Menu::hasChild)
 		.def("identifier", &Menu::identifier)
 		.def("insert", &Menu::insert, (py::arg("at"), py::arg("identifier"), py::arg("caption"), py::arg("command"), py::arg("alternative") = false))
 		.def("is_alternative", &Menu::isAlternative)
@@ -529,8 +538,7 @@ ALPHA_EXPOSE_PROLOGUE(21)
 		.def("set_caption", &Menu::setCaption)
 		.def("set_child", &Menu::setChild)
 		.def("set_command", &Menu::setCommand)
-		.def("set_default", &Menu::setDefault)
-		.def("sub_menu", &Menu::subMenu);
+		.def("set_default", &Menu::setDefault);
 	py::class_<PopupMenu, py::bases<Menu>, boost::noncopyable>("PopupMenu", py::init<py::object>(py::arg("popup_handler") = py::object()));
 	py::class_<MenuBar, py::bases<Menu>, boost::noncopyable>("MenuBar")
 		.def("set_as_menu_bar", &MenuBar::setAsMenuBar)
