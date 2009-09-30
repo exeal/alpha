@@ -31,7 +31,7 @@ py::object alpha::ambient::convertWideStringToUnicodeObject(const wstring& s) {
 }
 
 
-Interpreter::Interpreter() {
+Interpreter::Interpreter() : numericPrefix_(make_pair(false, 0)) {
 //	::Py_SetProgramName();
 	::Py_Initialize();
 }
@@ -70,7 +70,14 @@ py::object Interpreter::exceptionClass(const string& name) const {
 
 py::object Interpreter::executeCommand(py::object command) {
 	try {
-		return command();
+		if(numericPrefix_.first) {
+			unsetNumericPrefix();
+			py::tuple args;
+			py::dict kw;
+			kw["n"] = numericPrefix_.second;
+			return py::object(py::handle<>(::PyObject_Call(command.ptr(), args.ptr(), kw.ptr())));
+		} else
+			return command();
 	} catch(py::error_already_set&) {
 		if(::PyErr_ExceptionMatches(exceptionClass("RecoverableError").ptr()) != 0) {
 			PyObject* type;
@@ -196,6 +203,11 @@ void Interpreter::raiseLastWin32Error() {
 	py::throw_error_already_set();
 }
 
+void Interpreter::setNumericPrefix(py::ssize_t n) {
+	numericPrefix_.first = true;
+	numericPrefix_.second = n;
+}
+
 py::object Interpreter::toplevelPackage() {
 	if(package_ == py::object()) {
 		package_ = py::object(py::borrowed(::Py_InitModule("ambient", 0)));
@@ -204,4 +216,8 @@ py::object Interpreter::toplevelPackage() {
 		py::def("error", &raiseRecoverableError);
 	}
 	return package_;
+}
+
+void Interpreter::unsetNumericPrefix() {
+	numericPrefix_.first = false;
 }

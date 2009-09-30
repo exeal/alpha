@@ -137,7 +137,6 @@ namespace alpha {
 		void onDropFiles(HDROP drop);												// WM_DROPFILES
 		void onEnterMenuLoop(bool isTrackPopup);									// WM_ENTERMENULOOP
 		void onExitMenuLoop(bool isTrackPopup);										// WM_EXITMENULOOP
-		void onInitMenuPopup(HMENU menu, UINT index, bool sysMenu);					// WM_INITMENUPOPUP
 		void onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);							// WM_MEASUREITEM
 		LRESULT onMenuChar(wchar_t ch, UINT flags, manah::win32::ui::Menu& menu);	// WM_MENUCHAR
 		void onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);					// WM_MENUSELECT

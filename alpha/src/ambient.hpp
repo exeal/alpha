@@ -30,7 +30,6 @@ namespace alpha {
 		public:
 			~Interpreter() /*throw()*/;
 			void addInstaller(void (*installer)(), manah::uint order);
-			boost::python::object executeCommand(boost::python::object command);
 			boost::python::object executeFile(const std::string& fileName);
 			void install();
 			static Interpreter& instance();
@@ -43,6 +42,11 @@ namespace alpha {
 			void installException(const std::string& name, boost::python::object base = boost::python::object());
 			void raiseException(const std::string& name, boost::python::object value);
 			void raiseLastWin32Error();
+			// commands
+			boost::python::object executeCommand(boost::python::object command);
+//			boost::python::ssize_t numericPrefix() const /*throw()*/;
+			void setNumericPrefix(boost::python::ssize_t n) /*throw()*/;
+			void unsetNumericPrefix() /*throw()*/;
 		private:
 			Interpreter();
 		private:
@@ -53,6 +57,7 @@ namespace alpha {
 			boost::python::object package_;
 			std::list<Installer> installers_;
 			std::map<const std::string, boost::python::object> exceptionClasses_;
+			std::pair<bool, boost::python::ssize_t> numericPrefix_;
 		};
 	}
 }

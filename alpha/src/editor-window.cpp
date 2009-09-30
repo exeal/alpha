@@ -269,7 +269,7 @@ void EditorView::matchBracketsChanged(const Caret& self, const pair<Position, Po
 void EditorView::onKeyDown(UINT vkey, UINT flags, bool& handled) {
 	// disable default keyboard bindings
 	handled = true;
-	return TextViewer::onKeyDown(vkey, flags, handled);
+//	return TextViewer::onKeyDown(vkey, flags, handled);
 }
 
 /// @see Window#onKillFocus

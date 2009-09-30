@@ -406,6 +406,7 @@ PopupMenu::PopupMenu(py::object popupHandler) : Menu(::CreatePopupMenu()), popup
 }
 
 void PopupMenu::update(short identifier) {
+	::OutputDebugStringW(L"XXXX\n");
 	if(popupHandler_ != py::object()) {
 		try {
 			popupHandler_(identifier, self());
@@ -415,36 +416,39 @@ void PopupMenu::update(short identifier) {
 	}
 
 	// show bound input sequences
-	for(ssize_t i = 0, c = numberOfItems(); i < c; ++i) {
-		const short id = this->identifier(i);
-		if(id == -1)
-			continue;
-		py::object f(command(id));
-		if(f != py::object()) {
-			const ui::InputMappingScheme& ims = py::extract<ui::InputMappingScheme&>(ui::InputManager::instance().mappingScheme());
-			py::object s(ims.inputSequencesForCommand(f));
-			wstring inputSequence;
-			if(py::len(s) != 0) {
-				py::object i(py::handle<>(::PyObject_GetIter(s.ptr())));
-				py::object k(py::handle<>(::PyIter_Next(i.ptr())));
-				inputSequence = ui::KeyStroke::format(k);
-			}
-			const wstring oldCaption(caption(id));
-			wstring newCaption(oldCaption);
-			const size_t tab = oldCaption.find(L'\t');
-			if(tab == wstring::npos) {
-				if(!inputSequence.empty()) {
-					newCaption += L'\t';
+	py::object schemeObject(ui::InputManager::instance().mappingScheme());
+	if(schemeObject != py::object()) {
+		const ui::InputMappingScheme& scheme = py::extract<ui::InputMappingScheme&>(schemeObject);
+		for(ssize_t i = 0, c = numberOfItems(); i < c; ++i) {
+			const short id = this->identifier(i);
+			if(id == -1)
+				continue;
+			py::object f(command(id));
+			if(f != py::object()) {
+				py::object s(scheme.inputSequencesForCommand(f));
+				wstring inputSequence;
+				if(py::len(s) != 0) {
+					py::object i(py::handle<>(::PyObject_GetIter(s.ptr())));
+					py::object k(py::handle<>(::PyIter_Next(i.ptr())));
+					inputSequence = ui::KeyStroke::format(k);
+				}
+				const wstring oldCaption(caption(id));
+				wstring newCaption(oldCaption);
+				const size_t tab = oldCaption.find(L'\t');
+				if(tab == wstring::npos) {
+					if(!inputSequence.empty()) {
+						newCaption += L'\t';
+						newCaption += inputSequence;
+					}
+				} else if(inputSequence.empty())
+					newCaption.erase(tab);
+				else {
+					newCaption.replace(tab, wstring::npos, L"\t");
 					newCaption += inputSequence;
 				}
-			} else if(inputSequence.empty())
-				newCaption.erase(tab);
-			else {
-				newCaption.replace(tab, wstring::npos, L"\t");
-				newCaption += inputSequence;
+				if(newCaption != oldCaption)
+					setCaption(id, newCaption);
 			}
-			if(newCaption != oldCaption)
-				setCaption(id, newCaption);
 		}
 	}
 }
@@ -495,6 +499,10 @@ void ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 		if(PyObject* command = reinterpret_cast<PyObject*>(mi.dwItemData))
 			Interpreter::instance().executeCommand(py::object(py::handle<>(py::borrowed(command))));
 	}
+}
+
+void ui::handleMENUSELECT(WPARAM wp, LPARAM lp) {
+	// TODO: show the description of the selected command on the status bar.
 }
 
 ALPHA_EXPOSE_PROLOGUE(21)

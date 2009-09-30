@@ -43,6 +43,8 @@ namespace alpha {
 			KeyStroke(boost::python::object a1, boost::python::object a2);
 			bool operator==(const KeyStroke& other) const /*throw()*/;
 			bool operator<(const KeyStroke& other) const /*throw()*/;
+			template<typename InputIterator>
+			static std::wstring format(InputIterator first, InputIterator last);
 			static std::wstring format(boost::python::object keys);
 			ModifierKey modifierKeys() const /*throw()*/;
 			VirtualKey naturalKey() const /*throw()*/;
@@ -118,6 +120,18 @@ namespace alpha {
 			std::pair<boost::python::object, const InputMappingScheme*> mappingScheme_, modalMappingScheme_;
 			std::vector<const KeyStroke> pendingKeySequence_;
 		};
+
+
+		template<typename InputIterator> inline std::wstring KeyStroke::format(InputIterator first, InputIterator last) {
+			std::wstring s;
+			while(true) {
+				s += first->format();
+				if(++first == last)
+					break;
+				s += L" ";
+			}
+			return s;
+		}
 
 	}
 } // namespace alpha.ui
