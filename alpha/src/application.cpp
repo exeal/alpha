@@ -244,7 +244,6 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		break;
 	case WM_INITMENUPOPUP:
 		ui::handleINITMENUPOPUP(wParam, lParam);
-		onInitMenuPopup(reinterpret_cast<HMENU>(wParam), LOWORD(lParam), toBoolean(HIWORD(lParam)));
 		break;
 	case WM_MEASUREITEM:
 		onMeasureItem(static_cast<UINT>(wParam), *reinterpret_cast<::MEASUREITEMSTRUCT*>(lParam));
@@ -257,7 +256,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		ui::handleMENUCOMMAND(wParam, lParam);
 		break;
 	case WM_MENUSELECT:
-		onMenuSelect(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HMENU>(lParam));
+		ui::handleMENUSELECT(wParam, lParam);
 		break;
 	case WM_NOTIFY:
 		onNotify(static_cast<UINT>(wParam), *reinterpret_cast<NMHDR*>(lParam));
@@ -1116,39 +1115,6 @@ void Alpha::onExitMenuLoop(bool isTrackPopup) {
 	statusBar_.setSimple(false);
 }
 
-/// @see WM_INITMENUPOPUP
-void Alpha::onInitMenuPopup(HMENU menu, UINT, bool sysMenu) {
-	if(sysMenu)
-		return;
-	// TODO: handle message about mode list menu
-/*	else if(appDocTypeMenu_->getSafeHmenu() == menu) {	// 適用文書タイプ
-		const AlphaDoc& activeBuffer = buffers_->getActive();
-		const DocumentTypeManager& types = buffers_->getDocumentTypeManager();
-		const bool ctrlPressed = toBoolean(::GetKeyState(VK_CONTROL) & 0x8000);
-
-		while(appDocTypeMenu_->getItemCount() > 0)	// すべて削除
-			appDocTypeMenu_->deleteMenuItem<Controls::Menu::BY_POSITION>(0);
-		for(size_t i = 0; i < types.getCount(); ++i) {
-			const DocumentType& type = types.getAt(i);
-			if(type.hidden && !ctrlPressed)
-				continue;
-			appDocTypeMenu_->appendMenuItem(CMD_TOOL_DOCTYPELIST_START + static_cast<UINT>(i), type.name.c_str(), MFT_OWNERDRAW);
-		}
-		appDocTypeMenu_->checkMenuItem<Controls::Menu::BY_COMMAND>(
-			CMD_TOOL_DOCTYPELIST_START + static_cast<UINT>(types.find(activeBuffer.getDocumentType())));
-	}
-*/	else {
-/*		Menu popup;
-		popup.attach(menu);
-		const int c = popup.getNumberOfItems();
-		for(int i = 0; i < c; ++i) {
-			const CommandID id = popup.getID(i) + CMD_SPECIAL_START;
-			popup.enable<Menu::BY_POSITION>(i, commandManager_->isEnabled(id, true));
-			popup.check<Menu::BY_POSITION>(i, commandManager_->isChecked(id));
-		}
-*/	}
-}
-
 /// @see WM_MEASUREITEM
 void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 	if(mi.CtlType == ODT_MENU) {
@@ -1171,24 +1137,6 @@ void Alpha::onMeasureItem(UINT id, ::MEASUREITEMSTRUCT& mi) {
 /// @see WM_MENUCHAR
 LRESULT Alpha::onMenuChar(wchar_t ch, UINT flags, win32::ui::Menu& menu) {
 	return menu.handleMenuChar(ch, flags);
-}
-
-/// @see WM_MENUSELECT
-void Alpha::onMenuSelect(UINT itemID, UINT flags, HMENU) {
-/*	const CommandID command = itemID + CMD_SPECIAL_START;
-	// 選択項目に対応する説明をステータスバーに表示
-	if(command >= CMD_EDIT_PLUGINLIST_START && command < CMD_EDIT_PLUGINLIST_END) {	// マクロ
-		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
-			(scriptMacroManager_->getCount() != 0) ?
-			scriptMacroManager_->getDescription(command - CMD_EDIT_PLUGINLIST_START).c_str() : L"", SBT_NOBORDERS);
-	} else if(command >= CMD_SPECIAL_BUFFERSSTART && command <= CMD_SPECIAL_BUFFERSEND)	// バッファ
-		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
-			buffers_->at(command - CMD_SPECIAL_BUFFERSSTART).textFile().pathName().c_str(), SBT_NOBORDERS);
-	else {
-		const wstring prompt((!toBoolean(flags & MF_POPUP) && !toBoolean(flags & MFT_SEPARATOR)) ? loadMessage(command) : L"");
-		statusBar_.setText(statusBar_.isSimple() ? SB_SIMPLEID : 0,
-			!prompt.empty() ? wcschr(prompt.data(), L'\n') + 1 : L"", SBT_NOBORDERS);
-	}*/
 }
 
 /// @see Window#onNotify

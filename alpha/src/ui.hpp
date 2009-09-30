@@ -10,6 +10,7 @@ namespace alpha {
 	namespace ui {
 		void handleINITMENUPOPUP(WPARAM wp, LPARAM lp);
 		void handleMENUCOMMAND(WPARAM wp, LPARAM lp);
+		void handleMENUSELECT(WPARAM wp, LPARAM lp);
 	}
 }
 

@@ -132,14 +132,7 @@ wstring KeyStroke::format() const {
 wstring KeyStroke::format(py::object keys) {
 	if(py::extract<const KeyStroke&>(keys).check())
 		return static_cast<const KeyStroke&>(py::extract<const KeyStroke&>(keys)).format();
-	wstring s;
-	for(py::stl_input_iterator<const KeyStroke> i(makeStlInputIterator<const KeyStroke>(keys)), e; ; ) {
-		s += i->format();
-		if(++i == e)
-			break;
-		s += L" ";
-	}
-	return s;
+	return format(makeStlInputIterator<const KeyStroke>(keys), py::stl_input_iterator<const KeyStroke>());
 }
 
 KeyStroke::ModifierKey KeyStroke::modifierKeys() const /*throw()*/ {
@@ -279,13 +272,16 @@ InputMappingScheme::VectorKeymap::VectorKeymap() {
 
 InputMappingScheme::VectorKeymap::~VectorKeymap() {
 	for(KeyTableElement**** plane = planes_; plane < MANAH_ENDOF(planes_); ++plane) {
-		for(size_t i = 0; i < 2; ++i) {
-			KeyTableElement** half = (*plane)[i];
-			for(size_t j = 0; j < 0x80; ++j)
-				delete half[j];
-			delete[] half;
+		if(*plane != 0) {
+			for(size_t i = 0; i < 2; ++i) {
+				if(KeyTableElement** half = (*plane)[i]) {
+					for(size_t j = 0; j < 0x80; ++j)
+						delete half[j];
+					delete[] half;
+				}
+			}
+			delete[] *plane;
 		}
-		delete[] *plane;
 	}
 }
 
@@ -458,13 +454,19 @@ bool InputManager::input(const MSG& message) {
 		if(command != py::object()) {
 			pendingKeySequence_.clear();
 			ambient::Interpreter::instance().executeCommand(command);
+			alpha::Alpha::instance().statusBar().setText(L"");
 			return true;
 		} else if(partialMatch) {
-//			alpha::Alpha::instance().statusBar().setText();
+			const wstring s(KeyStroke::format(pendingKeySequence_.begin(), pendingKeySequence_.end()));
+			alpha::Alpha::instance().statusBar().setText(s.c_str());
+#ifdef _DEBUG
+			manah::win32::DumpContext() << L"[" << message.time << L"]" << s;
+#endif
 			return true;
 		}
 		pendingKeySequence_.clear();
 		::MessageBeep(MB_OK);
+		alpha::Alpha::instance().statusBar().setText(L"");
 	} else if(message.message == WM_SYSCHAR) {
 		// interrupt menu activation if key sequence is defined
 		const KeyStroke k(
@@ -515,6 +517,8 @@ void InputManager::setModalMappingScheme(py::object scheme) {
 
 
 namespace {
+	py::object mappingScheme() {return InputManager::instance().mappingScheme();}
+	py::object modalMappingScheme() {return InputManager::instance().modalMappingScheme();}
 	void setAsMappingScheme(py::object s) {InputManager::instance().setMappingScheme(s);}
 	void setAsModalMappingScheme(py::object s) {InputManager::instance().setModalMappingScheme(s);}
 }
@@ -673,10 +677,14 @@ ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
 		.value("pa1", VK_PA1)
 		.value("oem_clear", VK_OEM_CLEAR);
 	py::enum_<KeyStroke::ModifierKey>("ModifierKey")
-		.value("no_modifier", KeyStroke::NO_MODIFIER)
-		.value("control_key", KeyStroke::CONTROL_KEY)
-		.value("shift_key", KeyStroke::SHIFT_KEY)
-		.value("alternative_key", KeyStroke::ALTERNATIVE_KEY);
+		.value("none", KeyStroke::NO_MODIFIER)
+		.value("ctrl", KeyStroke::CONTROL_KEY)
+		.value("shift", KeyStroke::SHIFT_KEY)
+		.value("alt", KeyStroke::ALTERNATIVE_KEY)
+		.value("ctrl_shift", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::SHIFT_KEY))
+		.value("ctrl_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::ALTERNATIVE_KEY))
+		.value("shift_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::SHIFT_KEY | KeyStroke::ALTERNATIVE_KEY))
+		.value("ctrl_shift_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::SHIFT_KEY | KeyStroke::ALTERNATIVE_KEY));
 
 	py::class_<KeyStroke>("KeyStroke", py::init<py::object, py::object>())
 		.def(py::init<py::object>())
@@ -690,6 +698,8 @@ ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
 		.def<py::object (InputMappingScheme::*)(py::object) const>("command", &InputMappingScheme::command)
 		.def("define", &InputMappingScheme::define, (py::arg("input"), py::arg("command"), py::arg("force") = true))
 		.def("defined_input_sequences", &InputMappingScheme::definedInputSequences)
+		.def("get", &mappingScheme).staticmethod("get")
+		.def("get_modal", &modalMappingScheme).staticmethod("get_modal")
 		.def("is_locally_defined", &InputMappingScheme::isLocallyDefined)
 		.def("reset", &InputMappingScheme::reset)
 		.def("set_as_mapping_scheme", &setAsMappingScheme)
