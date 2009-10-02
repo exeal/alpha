@@ -380,8 +380,16 @@ namespace {
 		}
 	}
 
+	py::ssize_t numberOfVisibleColumns(const EditorWindow& window) {return window.visibleView().numberOfVisibleColumns();}
+
+	py::ssize_t numberOfVisibleLines(const EditorWindow& window) {return window.visibleView().numberOfVisibleLines();}
+
 	template<const VisualPoint& (Caret::*procedure)() const>
 	Position positionOfCaret(const Caret& c) {return (c.*procedure)().position();}
+
+	void scroll(EditorWindow& window, py::ssize_t lines, py::ssize_t columns) {
+		window.visibleView().scroll(columns, lines, true);
+	}
 
 	py::object selectedBuffer(const EditorWindow& window) {
 		return window.visibleBuffer().self();
@@ -470,10 +478,13 @@ ALPHA_EXPOSE_PROLOGUE(2)
 		.add_property("buffer", &bufferOfTextEditor)
 		.add_property("caret", &EditorView::asCaret);
 	py::class_<EditorWindow, boost::noncopyable>("_Window", py::no_init)
+		.add_property("number_of_visible_columns", &numberOfVisibleColumns)
+		.add_property("number_of_visible_lines", &numberOfVisibleLines)
 		.add_property("selected_buffer", &selectedBuffer)
 		.add_property("selected_editor", &selectedTextEditor)
 		.def("activate", &activateWindow)
 		.def("close", &closeWindow)
+		.def("scroll", &scroll)
 		.def("select", &selectInWindow)
 		.def("split", &EditorWindow::split)
 		.def("split_side_by_side", &EditorWindow::splitSideBySide);
