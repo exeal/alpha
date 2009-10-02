@@ -98,9 +98,9 @@ Menu::Menu(HMENU handle) : handle_(handle) {
 Menu::~Menu() /*throw()*/ {
 	if(handle_ != 0) {
 		win32::AutoZeroSize<MENUITEMINFOW> mi;
-		mi.fMask = MIIM_DATA;
+		mi.fMask = MIIM_DATA | MIIM_SUBMENU;
 		while(numberOfItems() > 0) {
-			if(toBoolean(::GetMenuItemInfoW(handle_, 0, true, &mi)))
+			if(toBoolean(::GetMenuItemInfoW(handle_, 0, true, &mi)) && mi.hSubMenu == 0)
 				Py_XDECREF(reinterpret_cast<PyObject*>(mi.dwItemData));
 			::RemoveMenu(handle_, 0, MF_BYPOSITION);
 		}
@@ -136,13 +136,12 @@ py::object Menu::check(short identifier, bool check) {
 }
 
 py::object Menu::child(short identifier) const {
-	win32::AutoZeroSize<MENUITEMINFOW> item;
-	item.fMask = MIIM_SUBMENU;
-	if(!toBoolean(::GetMenuItemInfoW(handle_, identifier, false, &item)))
-		Interpreter::instance().raiseLastWin32Error();
-	if(item.hSubMenu != 0) {
+	win32::AutoZeroSize<MENUITEMINFOW> mi;
+	mi.fMask = MIIM_SUBMENU;
+	item(identifier, mi);
+	if(mi.hSubMenu != 0) {
 		for(set<py::object>::const_iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
-			if(static_cast<const Menu&>(py::extract<const Menu&>(*i)).handle_ == item.hSubMenu)
+			if(static_cast<const Menu&>(py::extract<const Menu&>(*i)).handle_ == mi.hSubMenu)
 				return *i;
 		}
 	}
@@ -158,12 +157,14 @@ py::object Menu::clear() {
 
 py::object Menu::command(short identifier) const {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
-	mi.fMask = MIIM_DATA;
+	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item(identifier, mi);
-	PyObject* const p = reinterpret_cast<PyObject*>(mi.dwItemData);
-	if(p != 0) {
-		Py_INCREF(p);
-		return py::object(py::handle<>(p));
+	if(mi.hSubMenu == 0) {
+		PyObject* const p = reinterpret_cast<PyObject*>(mi.dwItemData);
+		if(p != 0) {
+			Py_INCREF(p);
+			return py::object(py::handle<>(p));
+		}
 	}
 	return py::object();
 }
@@ -179,12 +180,14 @@ py::object Menu::enable(short identifier, bool enable) {
 
 py::object Menu::erase(short identifier) {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
-	mi.fMask = MIIM_DATA;
+	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item(identifier, mi);
-	for(set<py::object>::iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
-		if(i->ptr() == reinterpret_cast<PyObject*>(mi.dwItemData)) {
-			children_.erase(i);
-			break;
+	if(mi.hSubMenu != 0) {
+		for(set<py::object>::iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
+			if(i->ptr() == reinterpret_cast<PyObject*>(mi.dwItemData)) {
+				children_.erase(i);
+				break;
+			}
 		}
 	}
 	if(!toBoolean(::RemoveMenu(handle_, identifier, MF_BYCOMMAND)))
@@ -216,7 +219,12 @@ short Menu::identifier(py::ssize_t position) const {
 		::PyErr_SetString(PyExc_IndexError, "the specified position is out of range.");
 		py::throw_error_already_set();
 	}
-	return ::GetMenuItemID(handle_, static_cast<int>(position));
+//	return ::GetMenuItemID(handle_, static_cast<int>(position));
+	win32::AutoZeroSize<MENUITEMINFOW> mi;
+	mi.fMask = MIIM_ID;
+	if(!toBoolean(::GetMenuItemInfoW(handle_, static_cast<UINT>(position), true, &mi)))
+		Interpreter::instance().raiseLastWin32Error();
+	return mi.wID;
 }
 
 py::object Menu::insert(short at, short identifier, const wstring& caption, py::object command, bool alternative) {
@@ -242,7 +250,7 @@ py::object Menu::insertItem(short at, short identifier, const wstring& caption, 
 	item.fType = MFT_STRING | (alternative ? MFT_RADIOCHECK : 0);
 	item.fState = MFS_ENABLED | MFS_UNCHECKED;
 	item.wID = identifier;
-	item.dwItemData = reinterpret_cast<UINT_PTR>(command.ptr());
+	item.dwItemData = (command != py::object()) ? reinterpret_cast<UINT_PTR>(command.ptr()) : 0;
 	item.dwTypeData = const_cast<WCHAR*>(caption.c_str());
 	if(::InsertMenuItemW(handle_, append ? static_cast<UINT>(numberOfItems()) : at, append, &item) == 0)
 		Interpreter::instance().raiseLastWin32Error();
@@ -336,6 +344,11 @@ py::object Menu::setChild(short identifier, py::object child) {
 	HMENU childHandle = static_cast<Menu&>(py::extract<Menu&>(child)).handle();
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
 	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
+	item(identifier, mi);
+	if(mi.hSubMenu == 0 && mi.dwItemData != 0) {
+		::PyErr_SetString(PyExc_TypeError, "the menu item has a command can't open a sub menu.");
+		py::throw_error_already_set();
+	}
 	mi.dwItemData = reinterpret_cast<ULONG_PTR>(child.ptr());
 	mi.hSubMenu = childHandle;
 	setItem(identifier, mi);
@@ -349,9 +362,12 @@ py::object Menu::setCommand(short identifier, py::object command) {
 		py::throw_error_already_set();
 	}
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
-	mi.fMask = MIIM_DATA;
+	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item(identifier, mi);
-	Py_XDECREF(reinterpret_cast<PyObject*>(mi.dwItemData));
+	if(mi.hSubMenu != 0) {
+		::PyErr_SetString(PyExc_TypeError, "the menu item opens a sub menu can't have a command.");
+		py::throw_error_already_set();
+	}
 	mi.dwItemData = reinterpret_cast<UINT_PTR>(command.ptr());
 	setItem(identifier, mi);
 	Py_XINCREF(reinterpret_cast<PyObject*>(mi.dwItemData));
@@ -455,7 +471,8 @@ void PopupMenu::update(short identifier) {
 				}
 				if(newCaption != oldCaption)
 					setCaption(id, newCaption);
-			}
+			} else if(hasChild(id))
+				static_cast<PopupMenu&>(py::extract<PopupMenu&>(child(id))).update(id);
 		}
 	}
 }
@@ -501,8 +518,8 @@ void ui::handleINITMENUPOPUP(WPARAM wp, LPARAM lp) {
 
 void ui::handleMENUCOMMAND(WPARAM wp, LPARAM lp) {
 	win32::AutoZeroSize<MENUITEMINFOW> mi;
-	mi.fMask = MIIM_DATA;
-	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0) {
+	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
+	if(::GetMenuItemInfoW(reinterpret_cast<HMENU>(lp), static_cast<UINT>(wp), true, &mi) != 0 && mi.hSubMenu == 0) {
 		if(PyObject* command = reinterpret_cast<PyObject*>(mi.dwItemData))
 			Interpreter::instance().executeCommand(py::object(py::handle<>(py::borrowed(command))));
 	}
