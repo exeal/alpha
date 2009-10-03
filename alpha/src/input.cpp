@@ -448,6 +448,12 @@ bool InputManager::input(const MSG& message) {
 				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
 				| ((message.message == WM_SYSKEYDOWN || ::GetKeyState(VK_MENU) < 0) ? KeyStroke::ALTERNATIVE_KEY : 0)),
 			static_cast<KeyStroke::VirtualKey>(message.wParam & 0x00ffu));
+		switch(k.naturalKey()) {
+		case VK_SHIFT:
+		case VK_CONTROL:
+		case VK_MENU:
+			return false;
+		}
 		bool partialMatch;
 		pendingKeySequence_.push_back(k);
 		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
@@ -459,16 +465,18 @@ bool InputManager::input(const MSG& message) {
 		} else if(partialMatch) {
 			const wstring s(KeyStroke::format(pendingKeySequence_.begin(), pendingKeySequence_.end()));
 			alpha::Alpha::instance().statusBar().setText(s.c_str());
-#ifdef _DEBUG
-			manah::win32::DumpContext() << L"[" << message.time << L"]" << s;
-#endif
 			return true;
 		}
+		const bool interruptMenuActivation =
+			pendingKeySequence_.size() > 1 && (k.modifierKeys() & KeyStroke::ALTERNATIVE_KEY) != 0;
 		pendingKeySequence_.clear();
 		::MessageBeep(MB_OK);
 		alpha::Alpha::instance().statusBar().setText(L"");
+		return interruptMenuActivation;
 	} else if(message.message == WM_SYSCHAR) {
-		// interrupt menu activation if key sequence is defined
+/*		// interrupt menu activation if key sequence is defined
+		if(!pendingKeySequence_.empty())
+			return true;
 		const KeyStroke k(
 			static_cast<KeyStroke::ModifierKey>(
 				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
@@ -479,7 +487,7 @@ bool InputManager::input(const MSG& message) {
 		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
 		if(command != py::object() || partialMatch)
 			return true;
-	}
+*/	}
 	return false;
 }
 
