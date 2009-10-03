@@ -13,22 +13,6 @@ using namespace ascension::text;
 using namespace std;
 
 
-/**
- * @namespace ascension::kernel::locations
- *
- * Provides several functions related to locations in document.
- *
- * Functions this namespace defines are categorized into the following three:
- *
- * - Functions calculate take a position and return other position (ex. @c forwardCharacter).
- * - Functions check if the given position is specific location (ex. isBeginningOfLine).
- * - @c characterAt.
- *
- * Some of the above functions return @c VerticalDestinationProxy objects and these can be passed
- * to @c VisualPoint#moveTo method.
- */
-
-
 // DocumentDisposedException ////////////////////////////////////////////////
 
 /// Default constructor.
@@ -48,21 +32,21 @@ DocumentDisposedException::DocumentDisposedException() :
  *
  * - If text was inserted or deleted before the point, the point will move accordingly.
  * - If text was inserted or deleted after the point, the point will not move.
- * - If region includes the point was deleted, the point will move to the start (= end) of
+ * - If region includes the point was deleted, the point will move to the beginning (= end) of
  *   the region.
  * - If text was inserted at the point, the point will or will not move according to the
  *   gravity.
  *
- * For details of gravity, see the description of @c updatePosition function.
- *
  * When the document was reset (by @c Document#resetContent), the all points move to the
- * start of the document.
+ * beginning of the document.
  *
- * Almost all methods of this or derived classes will throw @c DisposedDocumentException if
+ * Almost all methods of this or derived classes will throw @c DocumentDisposedException if
  * the document is already disposed. Call @c #isDocumentDisposed to check if the document
  * is exist or not.
  *
- * @see Position, Document, EditPoint, viewers#VisualPoint, viewers#Caret
+ * @c Point is unaffected by narrowing and can moves outside of the accessible region.
+ *
+ * @see Position, Document, locations, viewers#VisualPoint, viewers#Caret
  */
 
 /**
@@ -73,7 +57,7 @@ DocumentDisposedException::DocumentDisposedException() :
  * @throw BadPositionException @a position is outside of the document
  */
 Point::Point(Document& document, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
-		document_(&document), position_(position), adapting_(true), excludedFromRestriction_(false), gravity_(Direction::FORWARD), listener_(listener) {
+		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
 	if(!document.region().includes(position))
 		throw BadPositionException(position);
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
@@ -81,12 +65,11 @@ Point::Point(Document& document, const Position& position /* = Position() */, IP
 
 /**
  * Copy-constructor.
- * @param rhs the source object
- * @throw DocumentDisposedException the document to which @a rhs belongs had been disposed
+ * @param other the source object
+ * @throw DocumentDisposedException the document to which @a other belongs had been disposed
  */
-Point::Point(const Point& rhs) :
-		document_(rhs.document_), position_(rhs.position_), adapting_(rhs.adapting_),
-		excludedFromRestriction_(rhs.excludedFromRestriction_), gravity_(rhs.gravity_), listener_(rhs.listener_) {
+Point::Point(const Point& other) : document_(other.document_), position_(other.position_),
+		adapting_(other.adapting_), gravity_(other.gravity_), listener_(other.listener_) {
 	if(document_ == 0)
 		throw DocumentDisposedException();
 	static_cast<internal::IPointCollection<Point>*>(document_)->addNewPoint(*this);
@@ -109,47 +92,59 @@ void Point::addLifeCycleListener(IPointLifeCycleListener& listener) {
 }
 
 /**
- * Moves to the specified position.
- * <p>Derived classes can override this method to hook all movement of the point. In this case, the
- * derived class should call from its @c doMoveTo method.</p>
- * <p>If @a to is outside of the document, the destination will be the beginning or the end of the
- * document. Otherwise if @a is outside of the accessible region and @c #isExcludedFromRestriction
- * returns true, the destination will be the beginning or the end of the accessible region. Unlike
- * @c #moveTo public interface, this does not throw about bad position.</p>
- * @param to the destination position
- * @throw DisposedDocumentException the document to which the point belongs is already disposed
+ * This overridable method is called by @c #moveTo to check and adjust the desitination position.
+ * If you override this, consider the followings:
+ *
+ * - To change the destination, modify the value of @a parameter.
+ * - Call @c #aboutToMove method of the super class with the same parameter.
+ * - Throw any exceptions to interrupt the movement.
+ *
+ * @c Point#aboutToMove does nothing.
+ * @param to the destination position. implementation can modify this value
+ * @throw DocumentDisposedException the document to which the point belongs is already disposed
+ * @see #moved, moveTo
  */
-void Point::doMoveTo(const Position& to) {
-	assert(!isDocumentDisposed());
-	if(position_ != to) {
-		const Position old(position_);
-		position_ = to;
-		normalize();
-		if(listener_ != 0)
-			listener_->pointMoved(*this, old);
-	}
+void Point::aboutToMove(Position& to) {
 }
 
-/// 
-Point& Point::excludeFromRestriction(bool exclude) {
-	if(isDocumentDisposed())
-		throw DocumentDisposedException();
-	if(excludedFromRestriction_ = exclude)
-		normalize();
-	return *this;
+/**
+ * This overridable method is called by @c #moveTo to notify the movement was finished.
+ * If you override this, call @c #moved method of the super class with the same parameter. And
+ * don't throw any exceptions. Note that this method may be not called even if @c #aboutToMove was
+ * called.
+ * @c Point's implementation does nothing.
+ * @param from the position before the point moved
+ * @see #aboutToMove, moveTo
+ */
+void Point::moved(const Position& from) /*throw()*/ {
 }
 
 /**
  * Moves to the specified position.
- * Even if @a to is outside of the accessible region, this method will successes. In this case, the
- * destination position is the beginning or the end of the accessible region.
+ * While this method fails when @a to was outside of the document, whether it depends on the
+ * derived class when @a to was outside of the accessible region. @c Point succeeds in the latter
+ * case. For other classes, see the documentations of the classes.
  * @param to the destination position
  * @throw BadPositionException @a to is outside of the document
+ * @throw ... any exceptions @c #aboutToMove implementation of sub-classe throws
  */
 void Point::moveTo(const Position& to) {
-	if(to > document().region().end())
+	if(isDocumentDisposed())
+		throw DocumentDisposedException();
+	else if(to > document().region().end())
 		throw BadPositionException(to);
-	doMoveTo(to);
+	if(to != position()) {
+		Position destination(to);
+		aboutToMove(destination);
+		const Position from(position());
+		destination = positions::shrinkToDocumentRegion(document(), destination);
+		if(destination != from) {
+			position_ = destination;
+			moved(from);
+			if(listener_ != 0)
+				listener_->pointMoved(*this, from);
+		}
+	}
 }
 
 /**
@@ -178,21 +173,35 @@ Point& Point::setGravity(Direction gravity) /*throw()*/ {
  * @param change the content of the document change
  */
 void Point::update(const DocumentChange& change) {
-	if(document_ == 0 || !adapting_)
+	if(document_ == 0 || !adaptsToDocument())
 		return;
 
 //	normalize();
-	const Position newPosition = positions::updatePosition(position_, change, gravity_);
-	if(newPosition == position_)
-		return;
-	doMoveTo(newPosition);
+	const Position newPosition = positions::updatePosition(position(), change, gravity());
+	if(newPosition != position())
+		moveTo(newPosition);	// TODO: this may throw...
 }
 
 
 // kernel.locations free functions //////////////////////////////////////////
 
 /**
- * @namespace ascension#kernel#locations
+ * @namespace ascension::kernel::locations
+ *
+ * Provides several functions related to locations in document.
+ *
+ * Functions this namespace defines are categorized into the following three:
+ *
+ * - Functions take a position and return other position (ex. @c forwardCharacter). These functions
+ *   take a @c Point or @c VisualPoint as the first parameter excepting @c nextCharacter.
+ * - Functions check if the given position is specific location (ex. isBeginningOfLine). These
+ *   functions take a @c Point or @c VisualPoint as the first parameter.
+ * - @c characterAt.
+ *
+ * Some of the above functions return @c VerticalDestinationProxy objects and these can be passed
+ * to @c VisualPoint#moveTo method.
+ *
+ * All functions are unaffected by accessible region of the document.
  */
 
 namespace {
@@ -288,8 +297,10 @@ Position locations::beginningOfLine(const Point& p) {
 /**
  * Returns the code point of the current character.
  * @param p the base point
- * @param useLineFeed true to return LF (U+000A) when the current position is end of the line. otherwise LS (U+2008)
- * @return the code point. if the current position is end of document, result is @c INVALID_CODE_POINT
+ * @param useLineFeed set @c true to return LF (U+000A) when the current position is the end of the
+ *                    line. otherwise LS (U+2008)
+ * @return the code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the
+ *         document
  */
 CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */) {
 	const String& line = p.document().line(p.line());
@@ -382,22 +393,22 @@ Position locations::forwardWordEnd(const Point& p, length_t words /* = 1 */) {
 	return (i += words).base().tell();
 }
 
-/// Returns true if the given point @a p is the beginning of the document.
+/// Returns @c true if the given point @a p is the beginning of the document.
 bool locations::isBeginningOfDocument(const Point& p) {
 	return p.position() == p.document().accessibleRegion().first;
 }
 
-/// Returns true if the given point @a p is the beginning of the line.
+/// Returns @c true if the given point @a p is the beginning of the line.
 bool locations::isBeginningOfLine(const Point& p) {
 	return p.column() == 0 || (p.document().isNarrowed() && p.position() == p.document().accessibleRegion().first);
 }
 
-/// Returns true if the given point @a p is the end of the document.
+/// Returns @c true if the given point @a p is the end of the document.
 bool locations::isEndOfDocument(const Point& p) {
 	return p.position() == p.document().accessibleRegion().second;
 }
 
-/// Returns true if the given point @a p is the end of the line.
+/// Returns @c true if the given point @a p is the end of the line.
 bool locations::isEndOfLine(const Point& p) {
 	return p.column() == p.document().lineLength(p.line()) || p.position() == p.document().accessibleRegion().second;
 }

@@ -130,7 +130,8 @@ namespace ascension {
 		protected:
 			static VerticalDestinationProxy makeVerticalDestinationProxy(const kernel::Position& source);
 			// kernel.Point
-			virtual void doMoveTo(const kernel::Position& to);
+			virtual void aboutToMove(kernel::Position& to);
+			virtual void moved(const kernel::Position& from) /*throw()*/;
 		private:
 			void updateLastX();
 			void viewerDisposed() /*throw()*/;
@@ -262,16 +263,14 @@ namespace ascension {
 			bool inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
 
 		private:
-			using kernel::Point::excludeFromRestriction;	// hides explicitly
-
-		private:
 			void checkMatchBrackets();
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
-			void doMoveTo(const kernel::Position& position);
+			void aboutToMove(kernel::Position& to);
+			void moved(const kernel::Position& from) /*throw()*/;
 			// kernel.IPointListener
 			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
 			// kernel.IDocumentListener

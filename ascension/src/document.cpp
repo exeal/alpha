@@ -321,7 +321,7 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 			// slide the following lines before removing
 			if(bottom != e) {
 				for(GapBuffer<length_t>::Iterator i(bottom); i != e; ++i)
-					*i -= lines;
+					*i -= lines;	// ??? C4267@MSVC9
 			}
 			markedLines_.erase(top, bottom);	// GapBuffer<>.erase does not return an iterator
 		}
@@ -333,7 +333,7 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 			if(*i == change.insertedRegion().first.line && change.insertedRegion().first.column != 0)
 				++i;
 			for(const GapBuffer<length_t>::Iterator e(markedLines_.end()); i != e; ++i)
-				*i += lines;
+				*i += lines;	// ??? - C4267@MSVC9
 		}
 	}
 }
@@ -746,10 +746,10 @@ void Document::narrowToRegion(const Region& region) {
 	}
 	accessibleArea_->first = region.beginning();
 	accessibleArea_->second->moveTo(region.end());
-	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
-		if((*i)->isExcludedFromRestriction())
-			(*i)->normalize();
-	}
+//	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
+//		if((*i)->isExcludedFromRestriction())
+//			(*i)->normalize();
+//	}
 	stateListeners_.notify<const Document&>(&IDocumentStateListener::documentAccessibleRegionChanged, *this);
 }
 
