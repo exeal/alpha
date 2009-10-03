@@ -71,9 +71,7 @@ namespace ascension {
 			// behaviors
 			bool adaptsToDocument() const /*throw()*/;
 			Point& adaptToDocument(bool adapt) /*throw()*/;
-			Point& excludeFromRestriction(bool exclude);
 			Direction gravity() const /*throw()*/;
-			bool isExcludedFromRestriction() const /*throw()*/;
 			Point& setGravity(Direction gravity) /*throw()*/;
 			// listeners
 			void addLifeCycleListener(IPointLifeCycleListener& listener);
@@ -87,16 +85,16 @@ namespace ascension {
 			void moveTo(length_t line, length_t column);
 
 		protected:
-			Point& operator=(const Position& rhs) /*throw()*/;
+			Point& operator=(const Position& other) /*throw()*/;
+			virtual void aboutToMove(Position& to);
 			void documentDisposed() /*throw()*/;
-			virtual void doMoveTo(const Position& to);
+			virtual void moved(const Position& from) /*throw()*/;
 			void normalize() const;
 			virtual void update(const DocumentChange& change);
 		private:
 			Document* document_;
 			Position position_;
 			bool adapting_;
-			bool excludedFromRestriction_;
 			Direction gravity_;
 			IPointListener* listener_;
 			ascension::internal::Listeners<IPointLifeCycleListener> lifeCycleListeners_;
@@ -110,6 +108,7 @@ namespace ascension {
 		bool operator>(const Point& lhs, const Point& rhs) /*throw()*/;
 		bool operator>=(const Point& lhs, const Point& rhs) /*throw()*/;
 
+		// documentation is point.cpp
 		namespace locations {
 			/// Character unit defines what is one character.
 			enum CharacterUnit {
@@ -163,11 +162,11 @@ namespace ascension {
 		/// Conversion operator for convenience.
 		inline Point::operator const Position() const /*throw()*/ {return position_;}
 		/**
-		 * Protected assignment operator moves the point to @a rhs.
+		 * Protected assignment operator moves the point to @a other.
 		 * @see #moveTo
 		 */
-		inline Point& Point::operator=(const Position& rhs) /*throw()*/ {position_ = rhs; return *this;}
-		/// Returns true if the point is adapting to the document change.
+		inline Point& Point::operator=(const Position& other) /*throw()*/ {position_ = other; return *this;}
+		/// Returns @c true if the point is adapting to the document change.
 		inline bool Point::adaptsToDocument() const /*throw()*/ {return adapting_;}
 		/// Adapts the point to the document change.
 		inline Point& Point::adaptToDocument(bool adapt) /*throw()*/ {adapting_ = adapt; return *this;}
@@ -183,10 +182,8 @@ namespace ascension {
 		inline void Point::documentDisposed() /*throw()*/ {document_ = 0;}
 		/// Returns the gravity.
 		inline Direction Point::gravity() const /*throw()*/ {return gravity_;}
-		/// Returns true if the document is already disposed.
+		/// Returns @c true if the document is already disposed.
 		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == 0;}
-		/// Returns true if the point can't enter the inaccessible area of the document.
-		inline bool Point::isExcludedFromRestriction() const /*throw()*/ {return excludedFromRestriction_;}
 		/// Returns the line number.
 		inline length_t Point::line() const /*throw()*/ {return position_.line;}
 		/// Moves to the specified position.
@@ -197,8 +194,7 @@ namespace ascension {
 		 */
 		inline void Point::normalize() const {const_cast<Point*>(this)->position_ = normalized();}
 		/// Returns the normalized position of the point.
-		inline Position Point::normalized() const {return isExcludedFromRestriction() ?
-			positions::shrinkToAccessibleRegion(document(), position()) : positions::shrinkToDocumentRegion(document(), position());}
+		inline Position Point::normalized() const {return positions::shrinkToDocumentRegion(document(), position());}
 		/// Returns the position.
 		inline const Position& Point::position() const /*throw()*/ {return position_;}
 

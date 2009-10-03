@@ -388,7 +388,7 @@ namespace {
 	Position positionOfCaret(const Caret& c) {return (c.*procedure)().position();}
 
 	void scroll(EditorWindow& window, py::ssize_t lines, py::ssize_t columns) {
-		window.visibleView().scroll(columns, lines, true);
+		window.visibleView().scroll(static_cast<int>(columns), static_cast<int>(lines), true);
 	}
 
 	py::object selectedBuffer(const EditorWindow& window) {
@@ -440,8 +440,8 @@ ALPHA_EXPOSE_PROLOGUE(2)
 			py::make_function(&Point::adaptToDocument, py::return_value_policy<py::reference_existing_object>()))
 		.add_property("buffer", &bufferOfPoint)
 		.add_property("column", &Point::column)
-		.add_property("excluded_from_restriction", &Point::isExcludedFromRestriction,
-			py::make_function(&Point::excludeFromRestriction, py::return_value_policy<py::reference_existing_object>()))
+//		.add_property("excluded_from_restriction", &Point::isExcludedFromRestriction,
+//			py::make_function(&Point::excludeFromRestriction, py::return_value_policy<py::reference_existing_object>()))
 		.add_property("gravity", &Point::gravity,
 			py::make_function(&Point::setGravity, py::return_value_policy<py::reference_existing_object>()))
 		.add_property("line", &Point::line)

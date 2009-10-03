@@ -481,18 +481,25 @@ VisualPoint::~VisualPoint() /*throw()*/ {
 	}
 }
 
-/// @see Point#doMoveTo
-void VisualPoint::doMoveTo(const Position& to) {
+/// @see Point#aboutToMove
+void VisualPoint::aboutToMove(Position& to) {
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
-	if(line() == to.line && visualLine_ != INVALID_INDEX) {
-		const LineLayout* layout = viewer_->textRenderer().lineLayoutIfCached(to.line);
+	Point::aboutToMove(to);
+}
+
+/// @see Point#moved
+void VisualPoint::moved(const Position& from) {
+	if(isTextViewerDisposed())
+		return;
+	if(from.line == line() && visualLine_ != INVALID_INDEX) {
+		const LineLayout* layout = viewer_->textRenderer().lineLayoutIfCached(line());
 		visualLine_ -= visualSubline_;
-		visualSubline_ = (layout != 0) ? layout->subline(to.column) : 0;
+		visualSubline_ = (layout != 0) ? layout->subline(column()) : 0;
 		visualLine_ += visualSubline_;
 	} else
 		visualLine_ = INVALID_INDEX;
-	Point::doMoveTo(to);
+	Point::moved(from);
 	if(!crossingLines_)
 		lastX_ = -1;
 }
@@ -555,7 +562,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	}
 }
 #endif
-/// @internal @c Point#moveTo for @c PositionProxy.
+/// @internal @c Point#moveTo for @c VerticalDestinationProxy.
 void VisualPoint::moveTo(const VerticalDestinationProxy& to) {
 	if(lastX_ == -1)
 		updateLastX();
@@ -633,6 +640,8 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 }
 
 // Caret ////////////////////////////////////////////////////////////////////
+
+// TODO: rewrite this documentation.
 
 /**
  * @class ascension::viewers::Caret
@@ -803,18 +812,23 @@ void Caret::documentChanged(const Document&, const DocumentChange&) {
 		updateVisualAttributes();
 }
 
-/// @see VisualPoint#doMoveTo
-void Caret::doMoveTo(const Position& to) {
+/// @see VisualPoint#aboutToMove
+void Caret::aboutToMove(Position& to) {
+	VisualPoint::aboutToMove(to);
+}
+
+/// @see VisualPoint#moved
+void Caret::moved(const Position& from) {
 	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
-		anchor_->positionBeforeInternalUpdate() : anchor_->position(), position());
+		anchor_->positionBeforeInternalUpdate() : anchor_->position(), from);
 	if(leaveAnchorNext_)
 		leaveAnchorNext_ = false;
 	else {
 		leadingAnchor_ = true;
-		anchor_->moveTo(to);
+		anchor_->moveTo(position());
 		leadingAnchor_ = false;
 	}
-	VisualPoint::doMoveTo(to);
+	VisualPoint::moved(from);
 	if(!document().isChanging())
 		updateVisualAttributes();
 }
@@ -1182,7 +1196,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 		leadingAnchor_ = true;
 		anchor_->moveTo(anchor);
 		leadingAnchor_ = false;
-		VisualPoint::doMoveTo(caret);
+		VisualPoint::moveTo(caret);	// TODO: this may throw...
 		if(isSelectionRectangle())
 			box_->update(selectedRegion());
 		if(autoShow_)
