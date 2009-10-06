@@ -110,10 +110,10 @@ void Point::aboutToMove(Position& to) {
 /**
  * This overridable method is called by @c #moveTo to notify the movement was finished.
  * If you override this, call @c #moved method of the super class with the same parameter. And
- * don't throw any exceptions. Note that this method may be not called even if @c #aboutToMove was
- * called.
+ * don't throw any exceptions. Note that this method is not called if @c #aboutToMove threw an
+ * exception.
  * @c Point's implementation does nothing.
- * @param from the position before the point moved
+ * @param from the position before the point moved. this value may equal to the current position
  * @see #aboutToMove, moveTo
  */
 void Point::moved(const Position& from) /*throw()*/ {
@@ -133,18 +133,18 @@ void Point::moveTo(const Position& to) {
 		throw DocumentDisposedException();
 	else if(to > document().region().end())
 		throw BadPositionException(to);
-	if(to != position()) {
+//	if(to != position()) {
 		Position destination(to);
 		aboutToMove(destination);
-		const Position from(position());
 		destination = positions::shrinkToDocumentRegion(document(), destination);
-		if(destination != from) {
+//		if(destination != position()) {
+			const Position from(position());
 			position_ = destination;
 			moved(from);
-			if(listener_ != 0)
+			if(listener_ != 0 && destination != from)
 				listener_->pointMoved(*this, from);
-		}
-	}
+//		}
+//	}
 }
 
 /**
