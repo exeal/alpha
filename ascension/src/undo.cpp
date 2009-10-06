@@ -595,7 +595,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			erasedStringLength += end.column - beginning.column;
 			insertedStringLength += static_cast<length_t>(last - first);
 			endOfInsertedString.line = region.first.line;
-			endOfInsertedString.column = region.first.column + (last - first) - (end.column - beginning.column);
+			endOfInsertedString.column = region.first.column + (last - first);
 		}
 		// complex case: erased region and/or inserted string are/is multi-line
 		else {
