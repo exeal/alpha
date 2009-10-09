@@ -590,8 +590,9 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			endOfInsertedString.line = region.first.line;
 			endOfInsertedString.column = region.first.column + (last - first);
 		} else if(beginning.line == end.line && nextNewline == last) {	// replace in single line
-			lines_[region.first.line]->text_.replace(
-				beginning.column, end.column - beginning.column, first, static_cast<String::size_type>(last - first));
+			Line& line = *lines_[beginning.line];
+			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
+			line.text_.replace(beginning.column, end.column - beginning.column, first, static_cast<String::size_type>(last - first));
 			erasedStringLength += end.column - beginning.column;
 			insertedStringLength += static_cast<length_t>(last - first);
 			endOfInsertedString.line = region.first.line;
@@ -658,10 +659,12 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 					if(!allocatedLines.empty())
 						firstLine.text_.replace(beginning.column, erasedLength, first, insertedLength);
 					else {
-						// join the first and the last line
+						// join the first line, inserted string and the last line
+						String temp(first, insertedLength);
 						const Line& lastLine = *lines_[end.line];
-						firstLine.text_.replace(beginning.column, erasedLength,
-							lastLine.text().data() + end.column, lastLine.text().length() - end.column);
+						temp.append(lastLine.text(), end.column, lastLine.text().length() - end.column);
+						firstLine.text_.replace(beginning.column, erasedLength, temp);
+						endOfInsertedString.column += insertedLength;
 					}
 				} catch(...) {
 					for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)
@@ -698,7 +701,7 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 		else if(first == 0 || first == last)
 			undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
 		else
-			undoManager_->addUndoableChange(*(new ReplacementChange(region, erasedString.str())));
+			undoManager_->addUndoableChange(*(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str())));
 	}
 	const bool modified = isModified();
 	++revisionNumber_;
