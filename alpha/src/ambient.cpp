@@ -72,12 +72,35 @@ py::object Interpreter::executeCommand(py::object command) {
 	try {
 		if(numericPrefix_.first) {
 			unsetNumericPrefix();
-			py::tuple args;
-			py::dict kw;
-			kw["n"] = numericPrefix_.second;
-			return py::object(py::handle<>(::PyObject_Call(command.ptr(), args.ptr(), kw.ptr())));
-		} else
-			return command();
+			// use numeric prefix?
+			if(PyFunction_Check(command.ptr())) {
+				// check if this function has a argument named "n"
+				const py::object code(py::borrowed<>(::PyFunction_GetCode(command.ptr())));
+				if(PyCode_Check(code.ptr())) {
+					bool hasN = false;
+					if((py::extract<int>(code.attr("co_flags")) & 0x0008/*CO_VARKEYWORDS*/) != 0)
+						hasN = true;
+					else {
+						const py::str STRING_N("n");
+						const py::tuple argumentNames(py::extract<py::tuple>(code.attr("co_varnames")));
+						const py::ssize_t c = py::extract<py::ssize_t>(code.attr("co_argcount"));
+						for(py::ssize_t i = 0; i < c; ++i) {
+							if(::PyObject_Compare(static_cast<py::object>(argumentNames[i]).ptr(), STRING_N.ptr()) == 0) {
+								hasN = true;
+								break;
+							}
+						}
+					}
+					if(hasN) {
+						py::tuple args;
+						py::dict kw;
+						kw["n"] = numericPrefix_.second;
+						return py::object(py::handle<>(::PyObject_Call(command.ptr(), args.ptr(), kw.ptr())));
+					}
+				}
+			}
+		}
+		return command();
 	} catch(py::error_already_set&) {
 		if(::PyErr_ExceptionMatches(exceptionClass("RecoverableError").ptr()) != 0) {
 			PyObject* type;
