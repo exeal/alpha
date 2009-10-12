@@ -95,11 +95,11 @@ namespace ascension {
 			int width;
 			/// Default constructor.
 			LineWrapConfiguration() /*throw()*/ : mode(NONE), width(0) {};
-			/// Returns true if the all members are valid.
+			/// Returns @c true if the all members are valid.
 			bool verify() const /*throw()*/ {return width >= 0;}
-			/// Returns true if @c mode is not @c NONE.
+			/// Returns @c true if @c mode is not @c NONE.
 			bool wraps() const /*throw()*/ {return mode != NONE;}
-			/// Returns true if @c algorithm is not @c NO_WRAP and @c width is zero.
+			/// Returns @c true if @c algorithm is not @c NO_WRAP and @c width is zero.
 			bool wrapsAtWindowEdge() const /*throw()*/ {return wraps() && width == 0;}
 		};
 
@@ -122,15 +122,15 @@ namespace ascension {
 			Alignment alignment;
 			/// Line wrap configuration.
 			LineWrapConfiguration lineWrap;
-			/// Set true to justify the lines if wrapped. Default value is false.
+			/// Set @c true to justify the lines if wrapped. Default value is @c false.
 			bool justifiesLines;
-			/// Set true to inhibit any shaping. Default value is false.
+			/// Set @c true to inhibit any shaping. Default value is @c false.
 			bool inhibitsShaping;
-			/// If set to true, zero width control characters are shaped as representative glyphs. Default is false.
+			/// If set to @c true, zero width control characters are shaped as representative glyphs. Default is @c false.
 			bool displaysShapingControls;
-			/// Set true to inhibit from generating mirrored glyphs. Default value is false.
+			/// Set @c true to inhibit from generating mirrored glyphs. Default value is @c false.
 			bool inhibitsSymmetricSwapping;
-			/// Set true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is false.
+			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is @c false.
 			bool disablesDeprecatedFormatCharacters;
 			/// Digits substitution type. Default value is @c DST_USER_DEFAULT.
 			DigitSubstitutionType digitSubstitutionType;
@@ -139,7 +139,7 @@ namespace ascension {
 				orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
 				justifiesLines(false), inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
 				disablesDeprecatedFormatCharacters(false), digitSubstitutionType(DST_USER_DEFAULT) {}
-			/// Returns true if the all mwmbers are valid.
+			/// Returns @c true if the all mwmbers are valid.
 			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 		};
 
@@ -420,10 +420,8 @@ namespace ascension {
 			RECT bounds(length_t first, length_t last) const;
 			POINT location(length_t column, Edge edge = LEADING) const;
 			int longestSublineWidth() const /*throw()*/;
-			length_t offset(int x, int y, Edge edge = LEADING, bool* outside = 0) const /*throw()*/;
-			length_t offset(int x, int y, length_t& trailing, bool* outside = 0) const /*throw()*/;
-			length_t offset(const POINT& pt, Edge edge = LEADING, bool* outside = 0) const /*throw()*/;
-			length_t offset(const POINT& pt, length_t& trailing, bool* outside = 0) const /*throw()*/;
+			std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
+			std::pair<length_t, length_t> offset(const POINT& pt, bool* outside = 0) const /*throw()*/;
 			RECT sublineBounds(length_t subline) const;
 			int sublineIndent(length_t subline) const;
 			int sublineWidth(length_t subline) const;
@@ -482,7 +480,7 @@ namespace ascension {
 			 * @param first the first of created lines
 			 * @param last the last of created lines (exclusive)
 			 * @param sublines the total number of sublines of created lines
-			 * @param longestLineChanged true if the longest line is changed
+			 * @param longestLineChanged set @c true if the longest line is changed
 			 */
 			virtual void visualLinesDeleted(length_t first, length_t last,
 				length_t sublines, bool longestLineChanged) /*throw()*/ = 0;
@@ -497,8 +495,8 @@ namespace ascension {
 			 * @param first the first of modified lines
 			 * @param last the last of modified lines (exclusive)
 			 * @param sublinesDifference the difference of the number of sublines between before and after the modification
-			 * @param documentChanged true if the layouts were modified for the document change
-			 * @param longestLineChanged true if the longest line is changed
+			 * @param documentChanged set @c true if the layouts were modified for the document change
+			 * @param longestLineChanged set @c true if the longest line is changed
 			 */
 			virtual void visualLinesModified(length_t first, length_t last,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
@@ -630,40 +628,13 @@ inline length_t LineLayout::numberOfSublines() const /*throw()*/ {return numberO
 
 /**
  * Returns the character column (offset) for the specified point.
- * @param x the x coordinate of the point. distance from the left edge of the renderer (not of the line)
- * @param y the y coordinate of the point
- * @param edge the edge of the column
- * @param[out] outside true if the specified point is outside of the layout. optional
- * @return the character offset
- * @see #location
- */
-inline length_t LineLayout::offset(int x, int y, Edge edge /* = LEADING */, bool* outside /* = 0 */) const /*throw()*/ {
-	length_t trailing;
-	const length_t o = offset(x, y, trailing, outside);
-	return (edge == LEADING) ? o : o + trailing;
-}
-
-/**
- * Returns the character column (offset) for the specified point.
  * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
- * @param edge the edge of the column
- * @param[out] outside true if the specified point is outside of the layout. optional
+ * @param[out] outside @c true if the specified point is outside of the layout. optional
  * @return the character offset
  * @see #location
  */
-inline length_t LineLayout::offset(const POINT& pt,
-	Edge edge /* = LEADING */, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y, edge);}
-
-/**
- * Returns the character column (offset) for the specified point.
- * @param pt the point. pt.x is distance from the left edge of the renderer (not of the line)
- * @param[out] trailing the trailing buffer
- * @param[out] outside true if the specified point is outside of the layout. optional
- * @return the character offset
- * @see #location
- */
-inline length_t LineLayout::offset(const POINT& pt,
-	length_t& trailing, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y, trailing);}
+inline std::pair<length_t, length_t> LineLayout::offset(
+	const POINT& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
 
 /**
  * Returns the wrapped line containing the specified column.
@@ -711,7 +682,7 @@ inline const length_t* LineLayout::sublineOffsets() const /*throw()*/ {return su
 inline LineLayout::StyledSegmentIterator&
 	LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) /*throw()*/ {p_ = rhs.p_; return *this;}
 
-/// Returns true if the two iterators address the same segment.
+/// Returns @c true if the two iterators address the same segment.
 inline bool LineLayout::StyledSegmentIterator::equals(const StyledSegmentIterator& rhs) const /*throw()*/ {return p_ == rhs.p_;}
 
 /// Moves to the next.
@@ -806,20 +777,20 @@ inline void DefaultSpecialCharacterRenderer::setWhiteSpaceColor(COLORREF color) 
 
 /**
  * Sets the appearances of line terminators.
- * @param show set true to show
+ * @param show set @c true to show
  */
 inline void DefaultSpecialCharacterRenderer::showLineTerminators(bool show) /*throw()*/ {showsEOLs_ = show;}
 
 /**
  * Sets the appearances of white space characters.
- * @param show set true to show
+ * @param show set @c true to show
  */
 inline void DefaultSpecialCharacterRenderer::showWhiteSpaces(bool show) /*throw()*/ {showsWhiteSpaces_ = show;}
 
-/// Returns true if line terminators are visible.
+/// Returns @c true if line terminators are visible.
 inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const /*throw()*/ {return showsEOLs_;}
 
-/// Returns true if white space characters are visible.
+/// Returns @c true if white space characters are visible.
 inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const /*throw()*/ {return showsWhiteSpaces_;}
 
 /**
