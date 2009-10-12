@@ -2516,8 +2516,8 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, length_t& fi
 	else {
 		const TextRenderer& renderer = view_.textRenderer();
 		const LineLayout& layout = renderer.lineLayout(line);
-		first = layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline));
-		last = layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline));
+		first = layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first;
+		last = layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first;
 		if(first > last)
 			swap(first, last);
 		return first != last;

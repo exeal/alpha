@@ -287,12 +287,12 @@ bool layout::getDecorationLineMetrics(HDC dc, int* baselineOffset,
 	return true;
 }
 
-/// Returns true if complex scripts are supported.
+/// Returns @c true if complex scripts are supported.
 bool layout::supportsComplexScripts() /*throw()*/ {
 	return true;
 }
 
-/// Returns true if OpenType features are supported.
+/// Returns @c true if OpenType features are supported.
 bool layout::supportsOpenTypeFeatures() /*throw()*/ {
 	return uspLib->get<0>() != 0;
 }
@@ -1290,7 +1290,7 @@ inline int LineLayout::nextTabStop(int x, Direction direction) const /*throw()*/
 /**
  * Returns the next tab stop.
  * @param x the distance from the left edge of the line to base position (can not be negative)
- * @param right true to find the next right position
+ * @param right @c true to find the next right position
  * @return the tab stop position in pixel
  */
 int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
@@ -1307,14 +1307,15 @@ int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
  * Returns the character column (offset) for the specified point.
  * @param x the x coordinate of the point. distance from the left edge of the first subline
  * @param y the y coordinate of the point. distance from the top edge of the first subline
- * @param[out] trailing the trailing buffer
- * @param[out] outside true if the specified point is outside of the layout. optional
- * @return the character offset
+ * @param[out] outside @c true if the specified point is outside of the layout. optional
+ * @return a pair of the character offsets. the first element addresses the character whose black
+ *         box (bounding box) encompasses the specified point. the second element addresses the
+ *         character whose leading point is the closest to the specified point in the line
  * @see #location
  */
-length_t LineLayout::offset(int x, int y, length_t& trailing, bool* outside /* = 0 */) const /*throw()*/ {
+pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 */) const /*throw()*/ {
 	if(text().empty())
-		return trailing = 0;
+		return make_pair(0, 0);
 
 	// determine the subline
 	length_t subline = 0;
@@ -1323,34 +1324,41 @@ length_t LineLayout::offset(int x, int y, length_t& trailing, bool* outside /* =
 			break;
 	}
 
+	pair<length_t, length_t> result;
+
 	// determine the column
 	assert(numberOfRuns_ > 0);
 	const size_t lastRun = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 	int cx = sublineIndent(subline);
 	if(x <= cx) {	// on the left margin
-		trailing = 0;
 		if(outside != 0)
 			*outside = true;
 		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
-		return firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length());
+		result.first = result.second = firstRun.column + ((firstRun.analysis.fRTL == 0) ? 0 : firstRun.length());
+		return result;
 	}
 	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
 		const Run& run = *runs_[i];
 		if(x >= cx && x <= cx + run.totalWidth()) {
-			int cp, t;
-			::ScriptXtoCP(x - cx, static_cast<int>(run.length()), run.numberOfGlyphs(), run.clusters(),
-				run.visualAttributes(), (run.justifiedAdvances() == 0) ? run.advances() : run.justifiedAdvances(), &run.analysis, &cp, &t);
-			trailing = static_cast<length_t>(t);
+			int cp, trailing;
+			::ScriptXtoCP(x - cx, static_cast<int>(run.length()), run.numberOfGlyphs(),
+				run.clusters(), run.visualAttributes(),
+				(run.justifiedAdvances() == 0) ? run.advances() : run.justifiedAdvances(),
+				&run.analysis, &cp, &trailing);
 			if(outside != 0)
 				*outside = false;
-			return run.column + static_cast<length_t>(cp);
+			result.first = run.column + static_cast<length_t>(cp);
+			result.second = result.first + static_cast<length_t>(trailing);
+			return result;
 		}
 		cx += run.totalWidth();
 	}
-	trailing = 0;	// on the right margin
+	// on the right margin
 	if(outside != 0)
 		*outside = true;
-	return runs_[lastRun - 1]->column + ((runs_[lastRun - 1]->analysis.fRTL == 0) ? runs_[lastRun - 1]->length() : 0);
+	result.first = result.second =
+		runs_[lastRun - 1]->column + ((runs_[lastRun - 1]->analysis.fRTL == 0) ? runs_[lastRun - 1]->length() : 0);
+	return result;
 }
 
 /**
@@ -2052,7 +2060,8 @@ const StyledText& LineLayout::StyledSegmentIterator::current() const /*throw()*/
  * Constructor.
  * @param document the document
  * @param bufferSize the maximum number of lines cached
- * @param autoRepair true to repair disposed layout automatically if the line number of its line was not changed
+ * @param autoRepair set @c true to repair disposed layout automatically if the line number of its
+ *                   line was not changed
  * @throw std#invalid_argument @a bufferSize is zero
  */
 LineLayoutBuffer::LineLayoutBuffer(Document& document, length_t bufferSize, bool autoRepair) :
@@ -2088,7 +2097,7 @@ void LineLayoutBuffer::addVisualLinesListener(IVisualLinesListener& listener) {
  * Clears the layout caches of the specified lines. This method calls @c #layoutModified.
  * @param first the start of lines
  * @param last the end of lines (exclusive. this line will not be cleared)
- * @param repair set true to recreate layouts for the lines. if true, this method calls
+ * @param repair set @c true to recreate layouts for the lines. if @c true, this method calls
  * @c #layoutModified. otherwise calls @c #layoutDeleted
  * @throw std#invalid_argument @a first and/or @a last are invalid
  */
@@ -2194,7 +2203,7 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 	numberOfVisualLines_ -= oldSublines;
 
 	// update the longest line
-	bool longestLineChanged = false;;
+	bool longestLineChanged = false;
 	if(longestLine_ >= first && longestLine_ < last) {
 		updateLongestLine(static_cast<length_t>(-1), 0);
 		longestLineChanged = true;
@@ -2400,7 +2409,7 @@ Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& po
  * @param[in,out] line the logical line
  * @param[in,out] subline the visual subline
  * @param[in] offset the offset
- * @param[out] overflowedOrUnderflowed true if absolute value of @a offset is too large so that
+ * @param[out] overflowedOrUnderflowed @c true if absolute value of @a offset is too large so that
  * the results were snapped to the beginning or the end of the document. optional
  */
 void LineLayoutBuffer::offsetVisualLine(length_t& line, length_t& subline,
@@ -2441,7 +2450,7 @@ void LineLayoutBuffer::presentationStylistChanged() {
 /**
  * Sets the new layout information provider.
  * @param newProvider the layout information provider
- * @param delegateOwnership set true to transfer the ownership of @a newProvider into the callee
+ * @param delegateOwnership set @c true to transfer the ownership of @a newProvider into the callee
  */
 void LineLayoutBuffer::setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership) {
 	lip_.reset(newProvider, delegateOwnership);
@@ -2767,7 +2776,7 @@ FontSelector::~FontSelector() /*throw()*/ {
 /**
  * Enables or disables the font linking feature for CJK. When this method is called,
  * @c #fontChanged method of the derived class will be called.
- * @param enable set true to enable
+ * @param enable set @c true to enable
  */
 void FontSelector::enableFontLinking(bool enable /* = true */) /*throw()*/ {
 	if(enable) {
@@ -2874,8 +2883,8 @@ const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations()
  * Returns the font associated to the specified script.
  * @param script the language. set to @c Script#COMMON to get the primary font. other special
  * script values @c Script#UNKNOWN, @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set
- * @param bold true to get the bold variant
- * @param italic true to get the italic variant
+ * @param bold set @c true to get the bold variant
+ * @param italic set @c true to get the italic variant
  * @return the primary font if @a script is @c Script#COMMON. otherwise, a fallbacked font or @c null
  * @throw UnknownValueException<int> @a script is invalid
  * @see #linkedFont, #setFont
@@ -2904,8 +2913,8 @@ HFONT FontSelector::fontForShapingControls() const /*throw()*/ {
 /**
  * Returns the font in the given font set.
  * @param fontset the font set
- * @param bold set true to get a bold font
- * @param italic set true to get an italic font
+ * @param bold set @c true to get a bold font
+ * @param italic set @c true to get an italic font
  * @return the font
  */
 HFONT FontSelector::fontInFontset(const Fontset& fontset, bool bold, bool italic) const /*throw()*/ {
@@ -2934,8 +2943,8 @@ HFONT FontSelector::fontInFontset(const Fontset& fontset, bool bold, bool italic
 /**
  * Returns the font linking to the primary font.
  * @param index the index in the link fonts chain
- * @param bold true to get the bold variant
- * @param italic true to get the italic variant
+ * @param bold set @c true to get the bold variant
+ * @param italic set @c true to get the italic variant
  * @return the font
  * @throw IndexOutOfBoundsException @a index is invalid
  * @see #font, #numberOfLinkedFonts
@@ -3118,7 +3127,7 @@ namespace {
 /**
  * Constructor.
  * @param presentation the presentation
- * @param enableDoubleBuffering set true to use double-buffering for non-flicker drawing
+ * @param enableDoubleBuffering set @c true to use double-buffering for non-flicker drawing
  */
 TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBuffering) :
 		LineLayoutBuffer(presentation.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
@@ -3264,7 +3273,7 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 /**
  * Sets the special character renderer.
  * @param newRenderer the new renderer or @c null
- * @param delegateOwnership set true to transfer the ownership into the callee
+ * @param delegateOwnership set @c true to transfer the ownership into the callee
  * @throw std#invalid_argument @a newRenderer is already registered
  */
 void TextRenderer::setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership) {
