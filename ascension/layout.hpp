@@ -419,6 +419,7 @@ namespace ascension {
 			SIZE bounds() const /*throw()*/;
 			RECT bounds(length_t first, length_t last) const;
 			POINT location(length_t column, Edge edge = LEADING) const;
+			std::pair<POINT, POINT> locations(length_t column) const;
 			int longestSublineWidth() const /*throw()*/;
 			std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
 			std::pair<length_t, length_t> offset(const POINT& pt, bool* outside = 0) const /*throw()*/;
@@ -446,6 +447,7 @@ namespace ascension {
 			void itemize(length_t lineNumber) /*throw()*/;
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
+			void locations(length_t column, POINT* leading, POINT* trailing) const;
 			void merge(const SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) /*throw()*/;
 			int nextTabStop(int x, Direction direction) const /*throw()*/;
 			const String& text() const /*throw()*/;
@@ -622,6 +624,34 @@ inline bool LineLayout::isDisposed() const /*throw()*/ {return runs_ == 0;}
 
 /// Returns the line number.
 inline length_t LineLayout::lineNumber() const /*throw()*/ {return lineNumber_;}
+
+/**
+ * Returns the location for the specified character offset.
+ * @param column the character offset from the beginning of the line
+ * @param edge the edge of the character to locate
+ * @return the location. x-coordinate is distance from the left edge of the renderer, y-coordinate
+ *         is relative in the visual lines
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
+ */
+inline POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
+	POINT result;
+	locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
+	return result;
+}
+
+/**
+ * Returns the locations for the specified character offset.
+ * @param column the character offset from the beginning of the line
+ * @return a pair consists of the locations. the first element means the leading, the second
+ *         element means the trailing position of the character. x-coordinates are distances from
+ *         the left edge of the renderer, y-coordinates are relative in the visual lines
+ * @throw kernel#BadPositionException @a column is greater than the length of the line
+ */
+inline std::pair<POINT, POINT> LineLayout::locations(length_t column) const {
+	std::pair<POINT, POINT> result;
+	locations(column, &result.first, &result.second);
+	return result;
+}
 
 /// Returns the number of the wrapped lines.
 inline length_t LineLayout::numberOfSublines() const /*throw()*/ {return numberOfSublines_;}

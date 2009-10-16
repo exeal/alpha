@@ -1130,51 +1130,56 @@ inline int LineLayout::linePitch() const /*throw()*/ {
 	return lip_.getFontSelector().lineHeight() + max(lip_.getLayoutSettings().lineSpacing, lip_.getFontSelector().lineGap());
 }
 
-/**
- * Return the location for the specified character offset.
- * @param column the character offset from the line start
- * @param edge the edge of the character to locate
- * @return the location. x-coordinate is distance from the left edge of the renderer, y-coordinate is relative in the visual lines
- * @throw kernel#BadPositionException @a column is greater than the length of the line
- */
-POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
-	POINT location;
+// implements public location methods
+void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) const {
+	assert(leading != 0 || trailing != 0);
 	if(column > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
-	else if(isDisposed())
-		location.x = location.y = 0;
-	else {
-		const length_t sl = subline(column);
-		const length_t firstRun = sublineFirstRuns_[sl];
-		const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
-		// about x
-		if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
-			location.x = sublineIndent(sl);
-			for(size_t i = firstRun; i < lastRun; ++i) {
-				const Run& run = *runs_[i];
-				if(column >= run.column && column <= run.column + run.length()) {
-					location.x += run.x(column - run.column, edge == TRAILING);
-					break;
-				}
-				location.x += run.totalWidth();
-			}
-		} else {	// RTL
-			location.x = sublineIndent(sl) + sublineWidth(sl);
-			for(size_t i = lastRun - 1; ; --i) {
-				const Run& run = *runs_[i];
-				location.x -= run.totalWidth();
-				if(column >= run.column && column <= run.column + run.length()) {					
-					location.x += run.x(column - run.column, edge == TRAILING);
-					break;
-				}
-				if(i == firstRun)
-					break;
-			}
-		}
-		// about y
-		location.y = static_cast<long>(sl * linePitch());
+	else if(isDisposed()) {
+		if(leading != 0)
+			leading->x = leading->y = 0;
+		if(trailing != 0)
+			trailing->x = trailing->y = 0;
+		return;
 	}
-	return location;
+	const length_t sl = subline(column);
+	const length_t firstRun = sublineFirstRuns_[sl];
+	const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
+	// about x
+	if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
+		int x = sublineIndent(sl);
+		for(size_t i = firstRun; i < lastRun; ++i) {
+			const Run& run = *runs_[i];
+			if(column >= run.column && column <= run.column + run.length()) {
+				if(leading != 0)
+					leading->x = x + run.x(column - run.column, false);
+				if(trailing != 0)
+					trailing->x = x + run.x(column - run.column, true);
+				break;
+			}
+			x += run.totalWidth();
+		}
+	} else {	// RTL
+		int x = sublineIndent(sl) + sublineWidth(sl);
+		for(size_t i = lastRun - 1; ; --i) {
+			const Run& run = *runs_[i];
+			x -= run.totalWidth();
+			if(column >= run.column && column <= run.column + run.length()) {
+				if(leading != 0)
+					leading->x = x + run.x(column - run.column, false);
+				if(trailing)
+					trailing->x = x + run.x(column - run.column, true);
+				break;
+			}
+			if(i == firstRun)
+				break;
+		}
+	}
+	// about y
+	if(leading != 0)
+		leading->y = static_cast<long>(sl * linePitch());
+	if(trailing != 0)
+		trailing->y = static_cast<long>(sl * linePitch());
 }
 
 /// Returns the width of the longest subline.

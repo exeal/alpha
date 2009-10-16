@@ -529,12 +529,12 @@ void TextViewer::caretMoved(const Caret& self, const Region& oldRegion) {
  * Returns the document position nearest from the specified point.
  * @param pt the coordinates of the point. can be outside of the window
  * @param edge if set @c LineLayout#LEADING, the result is the leading of the character at @a pt.
- * otherwise the result is the position nearest @a pt
- * @param abortNoCharacter if set to true, this method returns @c Position#INVALID_POSITION
- * immediately when @a pt hovered outside of the text layout (e.g. far left or right of the line,
- * beyond the last line, ...).
+ *             otherwise the result is the position nearest @a pt
+ * @param abortNoCharacter if set to @c true, this method returns @c Position#INVALID_POSITION
+ *                         immediately when @a pt hovered outside of the text layout (e.g. far left
+ *                         or right of the line, beyond the last line, ...)
  * @param snapPolicy which character boundary the returned position snapped to
- * @return returns the document position
+ * @return the document position
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
  * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
@@ -553,12 +553,10 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 	// determine the column
 	const long x = pt.x - getDisplayXOffset(result.line);
 	if(edge == LineLayout::LEADING)
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), LineLayout::LEADING, &outside);
-	else if(edge == LineLayout::TRAILING) {
-		length_t trailing;
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), trailing, &outside);
-		result.column += trailing;
-	} else
+		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), &outside).first;
+	else if(edge == LineLayout::TRAILING)
+		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), &outside).second;
+	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
 		return Position::INVALID_POSITION;
@@ -602,12 +600,12 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 /**
  * Returns the point nearest from the specified document position.
  * @param position the document position. can be outside of the window
- * @param fullSearchY if this is false, this method stops at top or bottom of the client area.
+ * @param fullSearchY if this is @c false, this method stops at top or bottom of the client area.
  * otherwise, the calculation of y-coordinate is performed completely. but in this case, may be
  * very slow. see the description of return value
  * @param edge the edge of the character
  * @return the client coordinates of the point. about the y-coordinate of the point, if
- * @a fullSearchY is false and @a position.line is outside of the client area, the result is 32767
+ * @a fullSearchY is @c false and @a position.line is outside of the client area, the result is 32767
  * (for upward) or -32768 (for downward)
  * @throw BadPositionException @a position is outside of the document
  * @see #characterForClientXY, #hitTest, layout#LineLayout#location
@@ -631,7 +629,7 @@ POINT TextViewer::clientXYForCharacter(const Position& position, bool fullSearch
  * @param rect the position and size of the window
  * @param style the style of the window
  * @param exStyle the extended style of the window
- * @return true if succeeded
+ * @return @c true if succeeded
  * @see manah#windows#controls#Window#create
  */
 bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle) {
@@ -921,7 +919,7 @@ void TextViewer::fontChanged() /*throw()*/ {
 
 /**
  * Freezes the drawing of the viewer.
- * @param forAllClones set true to freeze also all clones of the viewer
+ * @param forAllClones set @c true to freeze also all clones of the viewer
  * @see #isFrozen, #unfreeze
  */
 void TextViewer::freeze(bool forAllClones /* = true */) {
@@ -964,7 +962,7 @@ int TextViewer::getDisplayXOffset(length_t line) const {
  * Returns the text and the region of a link near the cursor.
  * @param[out] region the region of the link
  * @param[out] text the text of the link. if the link is mail address, "mailto:" will be added to the head
- * @return true if the cursor is on link
+ * @return @c true if the cursor is on link
  * @deprecated 0.8
  */
 bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) const {
@@ -1095,7 +1093,7 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
  * @param y the distance
  * @param[out] logicalLine the logical line index. can be @c null if not needed
  * @param[out] visualSublineOffset the offset from the first line in @a logicalLine. can be @c null if not needed
- * @param[out] snapped true if there was not a line at @a y. optional
+ * @param[out] snapped @c true if there was not a line at @a y. optional
  * @see #mapLineToClientY, TextRenderer#offsetVisualLine
  */
 void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped /* = 0 */) const /*throw()*/ {
@@ -1120,10 +1118,10 @@ void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visual
 /**
  * Returns the client y-coordinate of the logical line.
  * @param line the logical line number
- * @param fullSearch false to return special value for the line outside of the client area
+ * @param fullSearch @c false to return special value for the line outside of the client area
  * @return the y-coordinate of the top of the line
- * @retval 32767 @a fullSearch is false and @a line is outside of the client area upward
- * @retval -32768 @a fullSearch is false and @a line is outside of the client area downward
+ * @retval 32767 @a fullSearch is @c false and @a line is outside of the client area upward
+ * @retval -32768 @a fullSearch is @c false and @a line is outside of the client area downward
  * @throw BadPositionException @a line is outside of the document
  * @see #mapClientYToLine, TextRenderer#offsetVisualLine
  */
@@ -1440,7 +1438,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		cutSelection(caret(), true);
 		handled = true;
 		return 0L;
-#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	case WM_GETOBJECT:
 		if(lParam == OBJID_CLIENT) {
@@ -1477,7 +1475,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		PasteCommand(*this, false)();
 		handled = true;
 		return 0L;
-#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_SETTEXT:
 		EntireDocumentSelectionCreationCommand(*this)();
 		replaceSelection(caret(), String(reinterpret_cast<const wchar_t*>(lParam)), false);
@@ -1488,7 +1486,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 		UndoCommand(*this, false)();
 		handled = true;
 		return 0L;
-#endif /* ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES */
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	}
 
 	return BaseControl::preTranslateWindowMessage(message, wParam, lParam, handled);
@@ -1531,7 +1529,7 @@ void TextViewer::recreateCaret() {
  * Redraws the specified line on the view.
  * If the viewer is frozen, redraws after unfrozen.
  * @param line the line to be redrawn
- * @param following true to redraw also the all lines follow to @a line
+ * @param following @c true to redraw also the all lines follow to @a line
  */
 void TextViewer::redrawLine(length_t line, bool following) {
 	redrawLines(line, following ? numeric_limits<length_t>::max() : line);
@@ -1683,7 +1681,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
  * Scrolls the viewer to the specified position.
  * @param x the visual line of the position. if set -1, does not scroll in this direction
  * @param y the column of the position. if set -1, does not scroll in this direction
- * @param redraw true to redraw the window after scroll
+ * @param redraw @c true to redraw the window after scroll
  * @see #scroll
  */
 void TextViewer::scrollTo(int x, int y, bool redraw) {
@@ -1701,7 +1699,7 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
 /**
  * Scrolls the viewer to the specified line.
  * @param line the logical line
- * @param redraw true to redraw the window after scroll
+ * @param redraw set @c true to redraw the window after scroll
  * @throw BadPositionException @a line is outside of the document
  */
 void TextViewer::scrollTo(length_t line, bool redraw) {
@@ -1781,7 +1779,7 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::IContentAssistant> 
  * Sets the mouse input strategy. An instance of @c TextViewer has the default strategy implemented
  * by @c DefaultMouseInputStrategy class as the construction.
  * @param newStrategy the new strategy or @c null
- * @param delegateOwnership set true to transfer the ownership into the callee
+ * @param delegateOwnership set @c true to transfer the ownership into the callee
  * @throw IllegalStateException the window is not created yet
  */
 void TextViewer::setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership) {
@@ -1853,7 +1851,7 @@ RECT TextViewer::textAreaMargins() const /*throw()*/ {
 
 /**
  * Revokes the frozen state of the viewer.
- * @param forAllClones true to revoke also all clones of the viewer
+ * @param forAllClones set @c true to revoke also all clones of the viewer
  * @see #freeze, #isFrozen
  */
 void TextViewer::unfreeze(bool forAllClones /* = true */) {
@@ -2373,7 +2371,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 /**
  * Constructor.
  * @param viewer the viewer
- * @param enableDoubleBuffering set true to use double-buffering for non-flicker drawing
+ * @param enableDoubleBuffering set @c true to use double-buffering for non-flicker drawing
  */
 TextViewer::VerticalRulerDrawer::VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering)
 		: viewer_(viewer), width_(0), lineNumberDigitsCache_(0), enablesDoubleBuffering_(enableDoubleBuffering) {
@@ -2475,7 +2473,7 @@ VirtualBox::VirtualBox(const TextViewer& view, const Region& region) /*throw()*/
 /**
  * Returns if the specified point is on the virtual box.
  * @param pt the client coordinates of the point
- * @return true if the point is on the virtual box
+ * @return @c true if the point is on the virtual box
  */
 bool VirtualBox::isPointOver(const POINT& pt) const /*throw()*/ {
 	assert(view_.isWindow());
@@ -2504,7 +2502,7 @@ bool VirtualBox::isPointOver(const POINT& pt) const /*throw()*/ {
  * @param subline the visual subline
  * @param[out] first the start of range
  * @param[out] last the end of range
- * @return true if the box and the visual line overlap
+ * @return @c true if the box and the visual line overlap
  */
 bool VirtualBox::overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const /*throw()*/ {
 	assert(view_.isWindow());
@@ -2591,11 +2589,11 @@ void DefaultCaretShaper::uninstall() /*throw()*/ {
 // LocaleSensitiveCaretShaper ///////////////////////////////////////////////
 
 namespace {
-	/// Returns true if the specified language is RTL.
+	/// Returns @c true if the specified language is RTL.
 	inline bool isRTLLanguage(LANGID id) /*throw()*/ {
 		return id == LANG_ARABIC || id == LANG_FARSI || id == LANG_HEBREW || id == LANG_SYRIAC || id == LANG_URDU;
 	}
-	/// Returns true if the specified language is Thai or Lao.
+	/// Returns @c true if the specified language is Thai or Lao.
 	inline bool isTISLanguage(LANGID id) /*throw()*/ {
 #ifndef LANG_LAO
 		const LANGID LANG_LAO = 0x54;
@@ -2638,7 +2636,7 @@ namespace {
 	 * Creates the bitmap for RTL caret.
 	 * @param[in,out] bitmap the bitmap
 	 * @param height the height of the image in pixels
-	 * @param bold set true to create a bold shape
+	 * @param bold set @c true to create a bold shape
 	 * @param color the color
 	 */
 	inline void createRTLCaretBitmap(win32::gdi::Bitmap& bitmap, ushort height, bool bold, const RGBQUAD& color) {
@@ -2661,7 +2659,7 @@ namespace {
 	 * Creates the bitmap for Thai or Lao caret.
 	 * @param[in,out] bitmap the bitmap
 	 * @param height the height of the image in pixels
-	 * @param bold set true to create a bold shape
+	 * @param bold set @c true to create a bold shape
 	 * @param color the color
 	 */
 	inline void createTISCaretBitmap(win32::gdi::Bitmap& bitmap, ushort height, bool bold, const RGBQUAD& color) {
@@ -2880,7 +2878,8 @@ void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
  * @param position the position
  * @param[out] startColumn the start of the identifier. can be @c null if not needed
  * @param[out] endColumn the end of the identifier. can be @c null if not needed
- * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
+ * @return @c false if the identifier is not found (in this case, the values of the output
+ *         parameters are undefined)
  * @see #getPointedIdentifier
  */
 bool source::getNearestIdentifier(const Document& document, const Position& position, length_t* startColumn, length_t* endColumn) {
@@ -2937,7 +2936,8 @@ bool source::getNearestIdentifier(const Document& document, const Position& posi
  * @param viewer the text viewer
  * @param[out] startPosition the start of the identifier. can be @c null if not needed
  * @param[out] endPosition the end of the identifier. can be @c null if not needed
- * @return false if the identifier is not found (in this case, the values of the output parameters are undefined)
+ * @return @c false if the identifier is not found (in this case, the values of the output
+ *         parameters are undefined)
  * @see #getNearestIdentifier
  */
 bool source::getPointedIdentifier(const TextViewer& viewer, Position* startPosition, Position* endPosition) {
