@@ -226,7 +226,7 @@ namespace ascension {
 			/**
 			 * Interrupts the progressive mouse reaction.
 			 * This method must be called before @c #uninstall call.
-			 * @param forKeyboardInput true if the mouse reaction should interrupt because the
+			 * @param forKeyboardInput @c true if the mouse reaction should interrupt because the
 			 *        keyboard input was occurred
 			 */
 			virtual void interruptMouseReaction(bool forKeyboardInput) = 0;
@@ -236,14 +236,14 @@ namespace ascension {
 			 * @param action the action of the input
 			 * @param position the mouse position (client coordinates)
 			 * @param keyState indicates whether various key are pressed. this value is same as Win32 WM_*BUTTON*
-			 * @return true if the strategy processed
+			 * @return @c true if the strategy processed
 			 */
 			virtual bool mouseButtonInput(Button button, Action action, const POINT& position, uint keyState) = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
 			 * @param position the mouse position (client coordinates)
 			 * @param keyState indicates whether various key are pressed. this value is same as Win32 @c WM_MOSEMOVE
-			 * @return true if the strategy processed
+			 * @return @c true if the strategy processed
 			 */
 			virtual void mouseMoved(const POINT& position, uint keyState) = 0;
 			/**
@@ -256,8 +256,8 @@ namespace ascension {
 			/**
 			 * Shows a cursor on the viewer.
 			 * @param position the cursor position (client coordinates)
-			 * @retval true if the callee showed a cursor
-			 * @retval false if the callee did not know the appropriate cursor
+			 * @retval @c true if the callee showed a cursor
+			 * @retval @c false if the callee did not know the appropriate cursor
 			 */
 			virtual bool showCursor(const POINT& position) = 0;
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
@@ -404,9 +404,9 @@ namespace ascension {
 				int leadingMargin;
 				/// The amount of the top margin in pixels. Default value is 1.
 				int topMargin;
-				/// Set true to vanish the cursor when the user types. Default value depends on system setting.
+				/// Set @c true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
-				/// Set true to use also Rich Text Format for clipboard operations. Default value is false.
+				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
 				bool usesRichTextClipboardFormat;
 				/// Constructor.
 				Configuration() /*throw()*/ : leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
@@ -427,7 +427,7 @@ namespace ascension {
 			struct VerticalRulerConfiguration {
 				/// Configuration about a line numbers area.
 				struct LineNumbers {
-					/// Whether the area is visible or not. Default value is false and the line numbers is invisible.
+					/// Whether the area is visible or not. Default value is @c false and the line numbers is invisible.
 					bool visible;
 					/// Alignment of the digits. Default value is @c presentation#ALIGN_AUTO.
 					/// If @c presentation#ALIGN_AUTO is set, the digits are aligned to the leading edge.
@@ -462,12 +462,12 @@ namespace ascension {
 					LineNumbers() /*throw()*/ : visible(false), alignment(layout::ALIGN_AUTO), startValue(1),
 						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(presentation::Color()),
 						borderWidth(1), borderStyle(SOLID), digitSubstitution(layout::DST_USER_DEFAULT) {}
-					/// Returns true if one of the all members are valid.
+					/// Returns @c true if one of the all members are valid.
 					bool verify() const /*throw()*/ {return leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
 				/// Configuration about an indicator margin.
 				struct IndicatorMargin {
-					/// Wether the indicator margin is visible or not. Default value is false and the indicator margin is invisible.
+					/// Wether the indicator margin is visible or not. Default value is @c false and the indicator margin is invisible.
 					bool visible;
 					/// Width of the indicator margin. Default value is 15.
 					ushort width;
@@ -479,7 +479,7 @@ namespace ascension {
 					presentation::Color borderColor;
 					/// Constructor initializes the all members to their default values.
 					IndicatorMargin() /*throw()*/ : visible(false), width(15) {}
-					/// Returns true if one of the all members are valid.
+					/// Returns @c true if one of the all members are valid.
 					bool verify() const /*throw()*/ {return width >= 0;}
 				} indicatorMargin;	/// Configuration about the indicator margin.
 				/// Alignment of the vertical ruler. Can be either @c layout#ALIGN_LEFT or
@@ -488,7 +488,7 @@ namespace ascension {
 				/// Constructor.
 				VerticalRulerConfiguration() /*throw()*/ :
 					alignment(ASCENSION_DEFAULT_TEXT_ORIENTATION == layout::LEFT_TO_RIGHT ? layout::ALIGN_LEFT : layout::ALIGN_RIGHT) {}
-				/// Returns true if one of the all members are valid.
+				/// Returns @c true if one of the all members are valid.
 				bool verify() const /*throw()*/ {return lineNumbers.verify()
 					&& indicatorMargin.verify() && (alignment == layout::ALIGN_LEFT || alignment == layout::ALIGN_RIGHT);}
 			};
@@ -530,7 +530,7 @@ namespace ascension {
 			// UI
 			void beep() /*throw()*/;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			HRESULT accessibleObject(::IAccessible*& acc) const /*throw()*/;
+			HRESULT accessibleObject(IAccessible*& acc) const /*throw()*/;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			void hideToolTip();
 			void lockScroll(bool unlock = false);
@@ -936,7 +936,7 @@ inline void TextViewer::addInputStatusListener(ITextViewerInputStatusListener& l
 inline void TextViewer::addViewportListener(IViewportListener& listener) {viewportListeners_.add(listener);}
 
 /**
- * Returns true if the viewer allows the mouse operations.
+ * Returns @c true if the viewer allows the mouse operations.
  * @see #enableMouseInput
  */
 inline bool TextViewer::allowsMouseInput() const /*throw()*/ {return mouseInputDisabledCount_ == 0;} 
@@ -981,7 +981,7 @@ inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) /*thro
  * inputs are not allowed.
  *
  * These is no way to disable the scroll bars.
- * @param enable set false to increment the disabled count, true to decrement
+ * @param enable set @c false to increment the disabled count, @c true to decrement
  * @see #allowsMouseInput
  */
 inline void TextViewer::enableMouseInput(bool enable) {
@@ -991,7 +991,8 @@ inline void TextViewer::enableMouseInput(bool enable) {
  * Returns the information about the uppermost visible line in the viewer.
  * @param[out] logicalLine the logical index of the line. can be @c null if not needed
  * @param[out] visualLine the visual index of the line. can be @c null if not needed
- * @param[out] visualSubline the offset of @a visualLine from the first line in @a logicalLine. can be @c null if not needed
+ * @param[out] visualSubline the offset of @a visualLine from the first line in @a logicalLine. can
+ *                           be @c null if not needed
  */
 inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/ {
 	if(logicalLine != 0)
@@ -1003,11 +1004,11 @@ inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visual
 }
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-/// Returns true if Global IME is enabled.
+/// Returns @c true if Global IME is enabled.
 inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return modeState_.activeInputMethodEnabled;}
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
-/// Returns true if the viewer is frozen.
+/// Returns @c true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count != 0;}
 
 /**
@@ -1060,7 +1061,7 @@ inline void TextViewer::removeViewportListener(IViewportListener& listener) {vie
 
 /**
  * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
- * @param horizontal set true for horizontal, false for vertical
+ * @param horizontal set @c true for horizontal, @c false for vertical
  * @return the rate
  */
 inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
