@@ -160,7 +160,7 @@ bool CancelCommand::perform() {
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&), bool extendSelection /* = false */) :
@@ -175,7 +175,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, length_t), bool extendSelection /* = false */) :
@@ -190,7 +190,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
@@ -205,7 +205,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&), bool extendSelection /* = false */) :
@@ -220,7 +220,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
@@ -235,7 +235,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
@@ -250,7 +250,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * Constructor.
  * @param viewer the target text viewer
  * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set true to extend selection
+ * @param extendSelection set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
@@ -723,7 +723,7 @@ bool IncrementalFindCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param increase set true to increase the indentation
+ * @param increase set @c true to increase the indentation
  */
 IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*throw()*/ : Command(viewer), increases_(increase) {
 }
@@ -803,7 +803,7 @@ bool InputMethodSoftKeyboardModeToggleCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param extendSelection set true to extend the selection
+ * @param extendSelection set @c true to extend the selection
  */
 MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelection) /*throw()*/ : Command(viewer), extends_(extendSelection) {
 }
@@ -831,7 +831,7 @@ bool MatchBracketCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param insertPrevious set true to insert on previous line. otherwise on the current line
+ * @param insertPrevious set @c true to insert on previous line. otherwise on the current line
  */
 NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) /*throw()*/ : Command(viewer), insertsPrevious_(insertPrevious) {
 }
@@ -1153,25 +1153,25 @@ bool RowSelectionExtensionCommand::perform() {
 	if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
 		caret.beginRectangleSelection();
 	if(procedureP_ != 0)
-		return CaretMovementCommand(target(), procedureP_, true)();
+		return CaretMovementCommand(target(), procedureP_, true).setNumericPrefix(numericPrefix())();
 	else if(procedurePL_ != 0)
-		return CaretMovementCommand(target(), procedurePL_, true)();
+		return CaretMovementCommand(target(), procedurePL_, true).setNumericPrefix(numericPrefix())();
 	else if(procedurePCL_ != 0)
-		return CaretMovementCommand(target(), procedurePCL_, true)();
+		return CaretMovementCommand(target(), procedurePCL_, true).setNumericPrefix(numericPrefix())();
 	else if(procedureV_ != 0)
-		return CaretMovementCommand(target(), procedureV_, true)();
+		return CaretMovementCommand(target(), procedureV_, true).setNumericPrefix(numericPrefix())();
 	else if(procedureVL_ != 0)
-		return CaretMovementCommand(target(), procedureVL_, true)();
+		return CaretMovementCommand(target(), procedureVL_, true).setNumericPrefix(numericPrefix())();
 	else if(procedureVCL_ != 0)
-		return CaretMovementCommand(target(), procedureVCL_, true)();
+		return CaretMovementCommand(target(), procedureVCL_, true).setNumericPrefix(numericPrefix())();
 	else
-		return CaretMovementCommand(target(), procedureVLV_, true)();
+		return CaretMovementCommand(target(), procedureVLV_, true).setNumericPrefix(numericPrefix())();
 }
 
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param untabify set true to untabify rather than tabify
+ * @param untabify set @c true to untabify rather than tabify
  */
 TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) /*throw()*/ : Command(viewer), untabify_(untabify) {
 }
@@ -1260,7 +1260,7 @@ TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(*procedure)(
 
 /**
  * Implements @c Command#perform by using a transposition method of @c viewers#Caret class. 
- * @return false the internal transposition method call returned false
+ * @return false the internal transposition method call returned @c false
  * @throw ... any exceptions the transposition method returns other than
  *            @c kernel#ReadOnlyDocumentException and @c kernel#DocumentCantChangeException
  */
@@ -1286,7 +1286,7 @@ bool TranspositionCommand::perform() {
 /**
  * Constructor.
  * @param viewer the target text viewer
- * @param redo set true to perform redo, rather than undo
+ * @param redo set @c true to perform redo, rather than undo
  */
 UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
 }
