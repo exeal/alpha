@@ -51,6 +51,7 @@
 #include <windows.h>
 #undef size_t
 #include <stdexcept>
+#include <sstream>
 
 namespace manah {
 	namespace win32 {

@@ -65,11 +65,11 @@
 
 #include <manah/object.hpp>
 #include "config.hpp"
-#include <new>
 #include <string>	// std.basic_string
-#include <sstream>	// std.basic_stringbuf, std.basic_stringstream, ...
 #include <iterator>
 #include <stdexcept>
+#include <utility>	// std.pair, std.min, std.max
+#include <new>		// std.bad_alloc, std::nothrow_t, ...
 
 #if !defined(ASCENSION_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
 #	include <cinttypes>

@@ -14,6 +14,7 @@
 #include "encoder.hpp"
 #include <manah/memory.hpp>		// manah.FastArenaObject
 #include <manah/gap-buffer.hpp>	// manah.GapBuffer
+#include <iostream>
 #include <set>
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
