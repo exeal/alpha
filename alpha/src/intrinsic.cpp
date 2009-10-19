@@ -111,6 +111,19 @@ namespace {
 
 	template<bool(*procedure)(v::Caret&)> bool transpose(py::object ed /*, py::ssize_t n*/) {return TranspositionCommand(extractEditor(ed), procedure)();}
 
+	void tryToBeginRectangleSelection(py::object ed) {
+		EditorView& viewer = extractEditor(ed);
+		v::Caret& caret = viewer.caret();
+		// the following code is copied from ascension/text-editor.cpp
+		v::utils::closeCompletionProposalsPopup(viewer);
+		if(a::texteditor::Session* const session = viewer.document().session()) {
+			if(session->incrementalSearcher().isRunning())
+				session->incrementalSearcher().end();
+		}
+		if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
+			caret.beginRectangleSelection();
+	}
+
 	template<bool redo> bool undo(py::object ed, py::ssize_t n) {return UndoCommand(extractEditor(ed), redo).setNumericPrefix(static_cast<long>(n))();}
 } // namespace @0
 
@@ -256,6 +269,7 @@ ALPHA_EXPOSE_PROLOGUE(10)
 	py::def("transpose_characters", &transpose<&v::transposeCharacters>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
 	py::def("transpose_lines", &transpose<&v::transposeLines>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
 	py::def("transpose_words", &transpose<&v::transposeWords>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
+	py::def("try_to_begin_rectangle_selection", &tryToBeginRectangleSelection, py::arg("ed") = py::object());
 	py::def("undo", &undo<false>, (py::arg("ed") = py::object(), py::arg("n") = 1));
 //	py::def("unindent", &unindent);
 ALPHA_EXPOSE_EPILOGUE()
