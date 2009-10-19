@@ -1410,6 +1410,8 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, len
 		return VisualPoint::makeVerticalDestinationProxy(np);
 	renderer.offsetVisualLine(np.line, subline, -static_cast<signed_length_t>(lines));
 	const LineLayout& layout = renderer.lineLayout(np.line);
+	if(p.lastX_ == -1)
+		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout.offset(
 		p.lastX_ - renderer.lineIndent(np.line), renderer.linePitch() * static_cast<long>(subline)).second;
 	if(layout.subline(np.column) != subline)
@@ -1541,6 +1543,8 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, leng
 		return VisualPoint::makeVerticalDestinationProxy(np);
 	renderer.offsetVisualLine(np.line, subline, static_cast<signed_length_t>(lines));
 	layout = &renderer.lineLayout(np.line);
+	if(p.lastX_ == -1)
+		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout->offset(
 		p.lastX_ - renderer.lineIndent(np.line), renderer.linePitch() * static_cast<long>(subline)).second;
 	if(layout->subline(np.column) != subline)
