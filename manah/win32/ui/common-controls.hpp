@@ -1,12 +1,12 @@
 /**
- * @file common-controls.hpp Defines common control classes.
- * @date 2002-2008 exeal
+ * @file common-controls.hpp
+ * Defines common control classes.
+ * @date 2002-2009 exeal
  */
 
 #ifndef MANAH_COMMON_CONTROLS_HPP
 #define MANAH_COMMON_CONTROLS_HPP
 #include "window.hpp"
-#include <memory>	// std.auto_ptr
 #include <commctrl.h>
 
 namespace manah {
@@ -25,8 +25,7 @@ inline bool initCommonControls(DWORD controls) {
 class AnimateCtrl : public CommonControl<AnimateCtrl> {
 	DEFINE_CLASS_NAME(ANIMATE_CLASSW)
 public:
-	// constructor
-	explicit AnimateCtrl(HWND handle = 0) : CommonControl<AnimateCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(AnimateCtrl)
 	// methods
 	bool close();
 	bool open(const ResourceID& id, HINSTANCE instance = 0);
@@ -38,8 +37,7 @@ public:
 class DateTimePickerCtrl : public CommonControl<DateTimePickerCtrl> {
 	DEFINE_CLASS_NAME(DATETIMEPICK_CLASSW)
 public:
-	// constructor
-	explicit DateTimePickerCtrl(HWND handle = 0) : CommonControl<DateTimePickerCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(DateTimePickerCtrl)
 	// methods
 	HWND getMonthCalendar() const;
 	COLORREF getMonthCalendarColor(int colorType) const;
@@ -56,8 +54,7 @@ public:
 class HotKeyCtrl : public CommonControl<HotKeyCtrl> {
 	DEFINE_CLASS_NAME(HOTKEY_CLASSW)
 public:
-	// constructor
-	explicit HotKeyCtrl(HWND handle = 0) : CommonControl<HotKeyCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(HotKeyCtrl)
 	// methods
 	DWORD getHotKey() const;
 	void getHotKey(WORD& virutalKeyCode, WORD& modifiers) const;
@@ -67,10 +64,9 @@ public:
 	void setRules(WORD invalidCombination, WORD modifiers);
 };
 
-class ImageList : public Handle<HIMAGELIST, ::ImageList_Destroy> {
+class ImageList : public Object<HIMAGELIST, ::ImageList_Destroy> {
 public:
-	// constructors
-	explicit ImageList(HIMAGELIST handle = 0) : Handle<HIMAGELIST, ::ImageList_Destroy>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ImageList)
 	// constructions
 	static ImageList create(int cx, int cy, UINT flags, int initial, int grow);
 	static ImageList create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor);
@@ -137,8 +133,7 @@ public:
 class IPAddressCtrl : public CommonControl<IPAddressCtrl> {
 	DEFINE_CLASS_NAME(WC_IPADDRESSW)
 public:
-	// constructor
-	explicit IPAddressCtrl(HWND handle = 0) : CommonControl<IPAddressCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(IPAddressCtrl)
 	// methods
 	void clearAddress();
 	int getAddress(DWORD& address) const;
@@ -152,8 +147,7 @@ public:
 class ListCtrl : public CommonControl<ListCtrl> {
 	DEFINE_CLASS_NAME(WC_LISTVIEWW)
 public:
-	// constructor
-	explicit ListCtrl(HWND handle = 0) : CommonControl<ListCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ListCtrl)
 	// attributes
 	SIZE approximateViewRect(const SIZE& size, int count = -1) const;
 	COLORREF getBkColor() const;
@@ -247,8 +241,7 @@ public:
 class MonthCalendarCtrl : public CommonControl<MonthCalendarCtrl> {
 	DEFINE_CLASS_NAME(MONTHCAL_CLASSW)
 public:
-	// constructor
-	explicit MonthCalendarCtrl(HWND handle = 0) : CommonControl<MonthCalendarCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(MonthCalendarCtrl)
 	// attributes
 	COLORREF getColor(int colorType) const;
 	bool getCurSel(SYSTEMTIME& time) const;
@@ -279,8 +272,7 @@ public:
 class PagerCtrl : public CommonControl<PagerCtrl> {
 	DEFINE_CLASS_NAME(WC_PAGESCROLLERW)
 public:
-	// constructor
-	explicit PagerCtrl(HWND handle = 0) : CommonControl<PagerCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(PagerCtrl)
 	// attributes
 	void forwardMouse(bool forward);
 	COLORREF getBkColor() const;
@@ -301,8 +293,7 @@ public:
 class ProgressBarCtrl : public CommonControl<ProgressBarCtrl> {
 	DEFINE_CLASS_NAME(PROGRESS_CLASSW)
 public:
-	// constructor
-	explicit ProgressBarCtrl(HWND handle = 0) : CommonControl<ProgressBarCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ProgressBarCtrl)
 	// attributes
 	int getHighLimit() const;
 	int getLowLimit() const;
@@ -326,8 +317,7 @@ public:
 class Rebar : public CommonControl<Rebar> {
 	DEFINE_CLASS_NAME(REBARCLASSNAMEW)
 public:
-	// constructor
-	explicit Rebar(HWND handle = 0) : CommonControl<Rebar>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Rebar)
 	// attributes
 	void getBandBorders(int band, RECT& rect) const;
 	UINT getBandCount() const;
@@ -383,8 +373,7 @@ public:
 class StatusBar : public CommonControl<StatusBar> {
 	DEFINE_CLASS_NAME(STATUSCLASSNAMEW)
 public:
-	// constructor
-	explicit StatusBar(HWND handle = 0) : CommonControl<StatusBar>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(StatusBar)
 	// attributes
 	using Window::getText;
 	using Window::getTextLength;
@@ -421,8 +410,7 @@ private:
 class TabCtrl : public CommonControl<TabCtrl> {
 	DEFINE_CLASS_NAME(WC_TABCONTROLW)
 public:
-	// constructor
-	explicit TabCtrl(HWND handle = 0) : CommonControl<TabCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(TabCtrl)
 	// attributes
 	HIMAGELIST getImageList() const;
 	HIMAGELIST setImageList(HIMAGELIST imageList);
@@ -465,8 +453,7 @@ protected:
 class Toolbar : public CommonControl<Toolbar> {
 	DEFINE_CLASS_NAME(TOOLBARCLASSNAMEW)
 public:
-	// constructor
-	explicit Toolbar(HWND handle = 0) : CommonControl<Toolbar>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Toolbar)
 	// attributes
 	bool getAnchorHighlight() const;
 	int getBitmap(int id) const;
@@ -571,8 +558,7 @@ class ToolTipCtrl :
 	DEFINE_CLASS_NAME(TOOLTIPS_CLASSW)
 public:
 	// constructions
-	explicit ToolTipCtrl(HWND handle = 0) :
-		CommonControl<ToolTipCtrl, AdditiveWindowStyles<WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, WS_EX_TOOLWINDOW> >(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ToolTipCtrl)
 	bool create(HWND parent, const RECT& rect = DefaultWindowRect(),
 		const WCHAR* windowName = 0, INT_PTR id = 0, DWORD style = 0, DWORD exStyle = 0);
 	// attributes
@@ -626,8 +612,7 @@ public:
 class TreeCtrl : public CommonControl<TreeCtrl> {
 	DEFINE_CLASS_NAME(WC_TREEVIEWW)
 public:
-	// constructor
-	explicit TreeCtrl(HWND handle = 0) : CommonControl<TreeCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(TreeCtrl)
 	// attributes
 	COLORREF getBkColor() const;
 	bool getCheck(HTREEITEM item) const;
@@ -685,7 +670,7 @@ public:
 	HWND setToolTips(HWND toolTips);
 	bool setUnicodeFormat(bool unicode = true);
 	// operations
-	std::auto_ptr<ImageList> createDragImage(HTREEITEM item);
+	ImageList createDragImage(HTREEITEM item);
 	bool deleteAllItems();
 	bool deleteItem(HTREEITEM item);
 	HWND editLabel(HTREEITEM item);
@@ -713,8 +698,7 @@ public:
 class UpDownCtrl : public CommonControl<UpDownCtrl> {
 	DEFINE_CLASS_NAME(UPDOWN_CLASSW)
 public:
-	// constructor
-	explicit UpDownCtrl(HWND handle = 0) : CommonControl<UpDownCtrl>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(UpDownCtrl)
 	// methods
 	UINT getAccel(int count, UDACCEL accel[]) const;
 	UINT getBase() const;

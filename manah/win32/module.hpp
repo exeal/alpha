@@ -13,7 +13,7 @@
 namespace manah {
 	namespace win32 {
 
-		class Module : public Handle<HMODULE, 0> {
+		class Module : public Object<HMODULE, 0> {
 		public:
 			// message arguments
 			class MessageArguments {
@@ -32,7 +32,7 @@ namespace manah {
 			};
 
 			// constructor
-			explicit Module(HMODULE handle);
+			template<typename T> explicit Module(T* handle);
 			// methods
 			HCURSOR createCursor(int xHotSpot, int yHotSpot, int width, int height, const void* andPlane, const void* xorPlane);
 			HICON createIcon(int width, int height, BYTE planeCount, BYTE bitsPixel, const BYTE* andBits, const BYTE* xorBits);
@@ -113,8 +113,8 @@ private:
 
 // Module ///////////////////////////////////////////////////////////////////
 
-inline Module::Module(HMODULE handle) : Handle<HMODULE, 0>(handle), accelerators_(0) {
-	assert(handle != 0); ::GetModuleFileNameW(handle, fileName_, MAX_PATH);}
+template<typename T>
+inline Module::Module(T* handle) : Object<HMODULE, 0>(handle), accelerators_(0) {::GetModuleFileNameW(get(), fileName_, MAX_PATH);}
 
 inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type) {return ::FindResourceW(use(), id, type);}
 
@@ -191,7 +191,7 @@ inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(use
 
 template<class TopWindow>
 inline Application<TopWindow>::Application(TopWindow* topWindow /* = 0 */)
-	: Module(::GetModuleHandle(0)), mainWindow_(topWindow), running_(false) {}
+	: Module(borrowed(::GetModuleHandle(0))), mainWindow_(topWindow), running_(false) {}
 
 template<class TopWindow> inline void Application<TopWindow>::getCommandLineArguments(const WCHAR* cmdLine, std::vector<std::wstring>& args) {
 	assert(cmdLine != 0);

@@ -289,7 +289,7 @@ void ContentAssistant::CompletionProposalPopup::onLButtonDown(UINT, const POINT&
 
 /// @see WM_SETFOCUS
 void ContentAssistant::CompletionProposalPopup::onSetFocus(HWND) {
-	getParent()->setFocus();
+	getParent().setFocus();
 }
 
 /// @see WM_SETTINGCHANGE

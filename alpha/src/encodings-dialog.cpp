@@ -24,7 +24,7 @@ namespace {
 	private:
 		string result_;
 		const bool forReading_;
-		manah::win32::Borrowed<manah::win32::ui::ListBox> encodingList_;
+		manah::win32::ui::ListBox encodingList_;
 		MANAH_BEGIN_CONTROL_BINDING()
 			MANAH_BIND_CONTROL(IDC_LIST_CODEPAGES, encodingList_)
 		MANAH_END_CONTROL_BINDING()
@@ -62,12 +62,12 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 	for(vector<pair<size_t, const e::IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
 		const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
 		if(!name.empty()) {
-			const int item = encodingList_->addString(name.c_str());
+			const int item = encodingList_.addString(name.c_str());
 			if(item >= 0) {
-				encodingList_->setItemData(item, static_cast<DWORD>(encoding->first));
+				encodingList_.setItemData(item, static_cast<DWORD>(encoding->first));
 				const string internalName(encoding->second->name());
 				if(e::compareEncodingNames(internalName.begin(), internalName.end(), result_.begin(), result_.end()) == 0)
-					encodingList_->setCurSel(item);
+					encodingList_.setCurSel(item);
 			}
 		}
 	}
@@ -77,28 +77,28 @@ void EncodingsDialog::onInitDialog(HWND focusWindow, bool&) {
 		for(vector<string>::const_iterator detector(detectors.begin()), e(detectors.end()); detector != e; ++detector) {
 			const wstring name(asciiEncoder->toUnicode(*detector));
 			if(!name.empty()) {
-				const int item = encodingList_->addString(name.c_str());
+				const int item = encodingList_.addString(name.c_str());
 				if(item >= 0) {
-					encodingList_->setItemData(item, 0xffffffffu);
+					encodingList_.setItemData(item, 0xffffffffu);
 					if(e::compareEncodingNames(name.begin(), name.end(), result_.begin(), result_.end()) == 0)
-						encodingList_->setCurSel(item);
+						encodingList_.setCurSel(item);
 				}
 			}
 		}
 	}
 
-	encodingList_->setCurSel((encodingList_->getCurSel() != LB_ERR) ? encodingList_->getCurSel() : 0);
+	encodingList_.setCurSel((encodingList_.getCurSel() != LB_ERR) ? encodingList_.getCurSel() : 0);
 }
 
 /// @see Dialog#onOK
 void EncodingsDialog::onOK(bool&) {
-	const int item = encodingList_->getCurSel();
-	const DWORD id = encodingList_->getItemData(item);
+	const int item = encodingList_.getCurSel();
+	const DWORD id = encodingList_.getItemData(item);
 	if(id != 0xffffffffu)
 		result_ = e::Encoder::forID(id)->properties().name();
-	else if(const int len = encodingList_->getTextLen(item)) {
+	else if(const int len = encodingList_.getTextLen(item)) {
 		manah::AutoBuffer<wchar_t> name(new wchar_t[len + 1]);
-		encodingList_->getText(item, name.get());
+		encodingList_.getText(item, name.get());
 		result_ = e::Encoder::forMIB(e::fundamental::US_ASCII)->fromUnicode(name.get());
 	}
 }

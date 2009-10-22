@@ -21,7 +21,7 @@ namespace manah {
 namespace win32 {
 namespace ui {
 
-class Menu : public Handle<HMENU, ::DestroyMenu> {
+class Menu : public Object<HMENU, ::DestroyMenu> {
 public:
 	struct ItemInfo : public MENUITEMINFOW {
 		ItemInfo() {std::memset(this, 0, Menu::sizeOfMENUITEMINFOW()); cbSize = sizeOfMENUITEMINFOW();}
@@ -65,7 +65,7 @@ public:
 	};
 
 	// constructors
-	explicit Menu(HMENU menu = 0);
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Menu)
 	virtual ~Menu();
 	// constructions
 	static Menu load(HINSTANCE instance, const ResourceID& id);
@@ -84,7 +84,7 @@ public:
 	int getNumberOfItems() const;
 	template<ItemIdentificationPolicy idPolicy>
 	UINT getState(UINT item) const;
-	Borrowed<Menu> getSubMenu(UINT index) const;
+	Menu getSubMenu(UINT index) const;
 	bool hasSubMenu(UINT index) const;
 	bool isMenu() const;
 	int itemFromPoint(HWND window, const POINT& pt) const;
@@ -117,7 +117,7 @@ public:
 	template<ItemIdentificationPolicy idPolicy>
 	bool remove(UINT item);
 	template<ItemIdentificationPolicy idPolicy>
-	bool setChildPopup(UINT item, Borrowed<Menu> popup);
+	bool setChildPopup(UINT item, Borrowed<HMENU> popup);
 	template<ItemIdentificationPolicy idPolicy>
 	bool setChildPopup(UINT item, Menu popup);
 	template<ItemIdentificationPolicy idPolicy>
@@ -139,7 +139,7 @@ public:
 	static UINT	sizeOfMENUITEMINFOW() /*throw()*/;
 
 protected:
-	bool check() const /*throw()*/ {return isMenu();}
+	bool check(HMENU handle) const /*throw()*/ {return toBoolean(::IsMenu(handle));}
 private:
 	enum {TEXT_MARGIN = 2, BUTTON_GAP = 1};
 	std::set<HMENU> managedChildren_;	// for ownership
@@ -147,17 +147,14 @@ private:
 
 class MenuBar : public Menu {
 public:
-	MenuBar() : Menu(::CreateMenu()) {}
+	MenuBar() : Menu(managed(::CreateMenu())) {}
 };
 
 class PopupMenu : public Menu {
 public:
-	PopupMenu() : Menu(::CreatePopupMenu()) {}
+	PopupMenu() : Menu(managed(::CreatePopupMenu())) {}
 };
 
-
-inline Menu::Menu(HMENU handle /* = 0*/) : Handle<HMENU, ::DestroyMenu>(handle) {
-	if(get() != 0 && !isMenu()) throw InvalidHandleException("the handle is not a menu.");}
 
 inline Menu::~Menu() {
 	if(isMenu()) {
@@ -188,7 +185,7 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 	if(di.CtlType != ODT_MENU)
 		return false;
 	assert(icons == 0 || iconIndex < ::ImageList_GetImageCount(icons));
-	Borrowed<gdi::DC> dc(di.hDC);
+	gdi::DC dc(borrowed(di.hDC));
 	const bool selected = toBoolean(di.itemState & ODS_SELECTED);
 	const bool checked = toBoolean(di.itemState & ODS_CHECKED);
 	const bool disabled = toBoolean(di.itemState & ODS_GRAYED);
@@ -205,19 +202,19 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 		if(flat) {
 #ifndef COLOR_MENUHILIGHT
 			const int COLOR_MENUHILIGHT = 29;
-#endif
-			dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
-			dc->frameRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+#endif // !COLOR_MENUHILIGHT
+			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
+			dc.frameRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 		} else
-			dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 	} else if(di.itemAction == ODA_SELECT)
-		dc->fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENU));
+		dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENU));
 
 	// separator
 	if(text == 0) {
 		RECT rc = di.rcItem;
 		rc.top += (rc.bottom - rc.top) / 2;
-		dc->drawEdge(rc, EDGE_ETCHED, BF_TOP);
+		dc.drawEdge(rc, EDGE_ETCHED, BF_TOP);
 		return true;
 	}
 
@@ -226,18 +223,18 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 	if(icons != 0) {
 		::ImageList_GetIconSize(icons, &iconCx, &iconCy);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
-		::ImageList_DrawEx(icons, iconIndex, dc->use(), di.rcItem.left + 2, iconY,
+		::ImageList_DrawEx(icons, iconIndex, dc.use(), di.rcItem.left + 2, iconY,
 			0, 0, (selected && !checked) ? CLR_NONE : ::GetSysColor(COLOR_MENU), CLR_NONE, ILD_NORMAL);
 	} else if(icon != 0) {
 		iconCx = ::GetSystemMetrics(SM_CXSMICON);
 		iconCy = ::GetSystemMetrics(SM_CYSMICON);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
 		if(checked)
-			dc->fillSolidRect(di.rcItem.left + 2, iconY, iconCx, iconCy, ::GetSysColor(COLOR_MENU));
+			dc.fillSolidRect(di.rcItem.left + 2, iconY, iconCx, iconCy, ::GetSysColor(COLOR_MENU));
 #if(_WIN32_WINNT >= 0x0501)
-		dc->drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
+		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
 #else
-		dc->drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
+		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
 #endif
 	}
 
@@ -250,32 +247,32 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 			buttonRect.right = buttonRect.left + iconCx + 2;
 			buttonRect.bottom = buttonRect.top + iconCy + 2;
 //			if(flat)
-				dc->frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+				dc.frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 //			else {
 //			}
 		} else {
 			const int size = di.rcItem.bottom - di.rcItem.top - 4;
 			HPEN pen = ::CreatePen(PS_SOLID, 1, ::GetSysColor(COLOR_MENUTEXT));
-			HPEN oldPen = dc->selectObject(pen);
-			dc->moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1);
-			dc->lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
-			dc->lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
-			dc->moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0);
-			dc->lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
-			dc->lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
-			dc->selectObject(oldPen);
+			HPEN oldPen = dc.selectObject(pen);
+			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1);
+			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
+			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
+			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0);
+			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
+			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
+			dc.selectObject(oldPen);
 			::DeleteObject(pen);
 		}
 	}
 
 	// draw text
-	dc->setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
-	dc->setBkMode(TRANSPARENT);
+	dc.setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
+	dc.setBkMode(TRANSPARENT);
 	RECT rc = di.rcItem;
 	rc.left += rc.bottom - rc.top + 4;
-	dc->drawText(text, -1, rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+	dc.drawText(text, -1, rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 	rc.right -= rc.bottom - rc.top;
-	dc->drawText(accelerator, -1, rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+	dc.drawText(accelerator, -1, rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
 
 	return true;
 }
@@ -308,11 +305,11 @@ inline bool Menu::getRect(HWND window, UINT index, RECT& rect) const {return toB
 template<Menu::ItemIdentificationPolicy idPolicy> inline UINT Menu::getState(UINT item) const {
 	ItemInfo mi; mi.fMask = MIIM_STATE; getItemInformation<idPolicy>(item, mi); return mi.fState;}
 
-inline Borrowed<Menu> Menu::getSubMenu(UINT index) const {
+inline Menu Menu::getSubMenu(UINT index) const {
 	HMENU handle = ::GetSubMenu(use(), index);
 	if(handle == 0)
 		throw std::invalid_argument("Specified index is out of range or invalid.");
-	return Borrowed<Menu>(handle);
+	return Menu(borrowed(handle));
 }
 
 inline LRESULT Menu::handleMenuChar(WCHAR charCode, UINT /*flag*/) {
@@ -378,9 +375,9 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::insertSepara
 
 inline bool Menu::isMenu() const /*throw()*/ {return toBoolean(::IsMenu(get()));}
 
-inline Menu Menu::load(HINSTANCE instance, const ResourceID& id) {return Menu(::LoadMenuW(instance, id));}
+inline Menu Menu::load(HINSTANCE instance, const ResourceID& id) {return Menu(managed(::LoadMenuW(instance, id)));}
 
-inline Menu Menu::load(const MENUTEMPLATEW* menuTemplate) {return Menu(::LoadMenuIndirectW(menuTemplate));}
+inline Menu Menu::load(const MENUTEMPLATEW* menuTemplate) {return Menu(managed(::LoadMenuIndirectW(menuTemplate)));}
 
 inline int Menu::itemFromPoint(HWND window, const POINT& pt) const {return ::MenuItemFromPoint(window, use(), pt);}
 
@@ -426,10 +423,10 @@ template<> inline bool Menu::setBitmaps<Menu::BY_COMMAND>(UINT item, HBITMAP unc
 template<> inline bool Menu::setBitmaps<Menu::BY_POSITION>(UINT item, HBITMAP uncheckedBitmap, HBITMAP checkedBitmap) {
 	return toBoolean(::SetMenuItemBitmaps(use(), item, MF_BYPOSITION, uncheckedBitmap, checkedBitmap));}
 
-template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setChildPopup(UINT item, Borrowed<Menu> popup) {
+template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setChildPopup(UINT item, Borrowed<HMENU> popup) {
 	ItemInfo info;
 	info.fMask = MIIM_SUBMENU;
-	info.hSubMenu = popup.use();
+	info.hSubMenu = popup.handle;
 	return setItemInformation<idPolicy>(item, info);
 }
 

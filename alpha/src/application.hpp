@@ -86,7 +86,7 @@ namespace alpha {
 	private:
 		ascension::length_t columnStartValue_;
 		manah::win32::gdi::Font font_;
-		manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
+		manah::win32::Object<HICON, ::DestroyIcon> narrowingIcon_;
 	};
 
 	/// The application class of Alpha.

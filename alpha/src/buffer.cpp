@@ -707,12 +707,12 @@ void BufferList::recalculateBufferBarSize() {
 	// バッファバーの理想長さの再計算
 	if(bufferBar_.isVisible()) {
 		win32::AutoZero<REBARBANDINFOW> rbbi;
-		win32::Borrowed<win32::ui::Rebar> rebar(bufferBarPager_.getParent()->get());
+		win32::ui::Rebar rebar(win32::borrowed(bufferBarPager_.getParent().get()));
 		RECT rect;
 		rbbi.fMask = RBBIM_IDEALSIZE;
 		bufferBar_.getItemRect(bufferBar_.getButtonCount() - 1, rect);
 		rbbi.cxIdeal = rect.right;
-		rebar->setBandInfo(rebar->idToIndex(IDC_BUFFERBAR), rbbi);
+		rebar.setBandInfo(rebar.idToIndex(IDC_BUFFERBAR), rbbi);
 	}
 }
 

@@ -39,7 +39,7 @@ EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1
 EditorWindow::EditorWindow(const EditorWindow& rhs) {
 	for(size_t i = 0, c = rhs.views_.size(); i != c; ++i) {
 		auto_ptr<EditorView> newViewer(new EditorView(*rhs.views_[i]));
-		const bool succeeded = newViewer->create(rhs.views_[i]->getParent()->use(), win32::ui::DefaultWindowRect(),
+		const bool succeeded = newViewer->create(rhs.views_[i]->getParent().use(), win32::ui::DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
 		newViewer->setConfiguration(&rhs.views_[i]->configuration(), 0);
@@ -145,7 +145,7 @@ MANAH_BEGIN_WINDOW_MESSAGE_MAP(EditorView, TextViewer)
 	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
 MANAH_END_WINDOW_MESSAGE_MAP()
 
-win32::Handle<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
+win32::Object<HICON, ::DestroyIcon> EditorView::narrowingIcon_;
 
 /// Constructor.
 EditorView::EditorView(Presentation& presentation) : TextViewer(presentation), visualColumnStartValue_(1) {

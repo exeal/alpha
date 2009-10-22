@@ -80,10 +80,10 @@ namespace ui {
 			DefaultWindowRect() {left = top = right = bottom = CW_USEDEFAULT;}
 		};
 
-class Window : public Handle<HWND, ::DestroyWindow> {
+class Window : public Object<HWND, ::DestroyWindow> {
 public:
 	// constructors
-	explicit Window(HWND handle = 0);
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Window)
 	virtual ~Window() throw();
 	// constructions
 	void close();
@@ -110,20 +110,20 @@ public:
 #endif // _WIN64
 	// state
 	bool enable(bool enable = true);
-	static Borrowed<Window> getActive();
-	static Borrowed<Window> getCapture();
-	static Borrowed<Window> getDesktop();
-	static Borrowed<Window> getFocus();
-	static Borrowed<Window> getForeground();
+	static Window getActive();
+	static Window getCapture();
+	static Window getDesktop();
+	static Window getFocus();
+	static Window getForeground();
 	HICON getIcon(bool bigIcon = true) const;
 	bool hasFocus() const;
 	bool isWindow() const;
 	bool isEnabled() const;
 	bool isUnicode() const;
 	static bool releaseCapture();
-	Borrowed<Window> setActive();
-	Borrowed<Window> setCapture();
-	Borrowed<Window> setFocus();
+	Window setActive();
+	Window setCapture();
+	Window setFocus();
 	bool setForeground();
 	HICON setIcon(HICON icon, bool bigIcon  = true);
 	// size and position
@@ -143,20 +143,20 @@ public:
 	int setRegion(const HRGN region, bool redraw = true);
 	// window access
 	void center(HWND alternateWindow = 0);
-	Borrowed<Window> childFromPoint(const POINT& pt) const;
-	Borrowed<Window> childFromPointEx(const POINT& pt, UINT flags) const;
-	static Borrowed<Window> find(const WCHAR* className, const WCHAR* windowName);
+	Window childFromPoint(const POINT& pt) const;
+	Window childFromPointEx(const POINT& pt, UINT flags) const;
+	static Window find(const WCHAR* className, const WCHAR* windowName);
 	int getDlgCtrlID() const;
-	Borrowed<Window> getLastActivePopup() const;
-	Borrowed<Window> getNext(UINT flag = GW_HWNDNEXT) const;
-	Borrowed<Window> getOwner() const;
-	Borrowed<Window> getParent() const;
-	Borrowed<Window> getTop() const;
-	Borrowed<Window> getWindow(UINT command) const;
+	Window getLastActivePopup() const;
+	Window getNext(UINT flag = GW_HWNDNEXT) const;
+	Window getOwner() const;
+	Window getParent() const;
+	Window getTop() const;
+	Window getWindow(UINT command) const;
 	bool isChild(HWND window) const;
 	int setDlgCtrlID(int id);
-	Borrowed<Window> setParent(HWND newParent);
-	static Borrowed<Window> fromPoint(const POINT& pt);
+	Window setParent(HWND newParent);
+	static Window fromPoint(const POINT& pt);
 	// update and paint
 #if(WINVER >= 0x0500)
 	bool animate(DWORD time, DWORD flags, bool catchError = true);
@@ -227,7 +227,7 @@ public:
 	void showScrollBar(int bar, bool show = true);
 	// clipboard viewer
 	bool changeClipboardChain(HWND newNext);
-	Borrowed<Window> setClipboardViewer();
+	Window setClipboardViewer();
 	// D&D
 	void dragAcceptFiles(bool accept = true);
 	HRESULT registerDragDrop(IDropTarget& dropTarget);
@@ -245,8 +245,8 @@ public:
 	bool setCursorPosition(const POINT& pt);
 	// menu
 	void drawMenuBar();
-	Borrowed<Menu> getMenu() const;
-	Borrowed<Menu> getSystemMenu(bool revert) const;
+	Menu getMenu() const;
+	Menu getSystemMenu(bool revert) const;
 	bool hiliteMenuItem(HMENU menu, UINT item, UINT flags);
 	bool setMenu(HMENU menu);
 	// hotkey
@@ -463,7 +463,8 @@ protected:																		\
 class SubclassableWindow : public Window {
 	MANAH_NONCOPYABLE_TAG(SubclassableWindow);
 public:
-	explicit SubclassableWindow(HWND handle = 0) : Window(handle), originalProcedure_(0) {}
+	SubclassableWindow() : Window(), originalProcedure_(0) {}
+	template<typename T> explicit SubclassableWindow(T* handle) : Window(handle), originalProcedure_(0) {}
 	virtual ~SubclassableWindow() {if(isWindow()) unsubclass();}
 public:
 	virtual LRESULT	defWindowProc(UINT message, WPARAM wParam, LPARAM lParam);
@@ -501,9 +502,12 @@ typedef DefaultWindowStyles<WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VI
 template<class Control, class DefaultStyles = DefaultControlStyles>
 class StandardControl : public SubclassableWindow {
 public:
-	explicit StandardControl(HWND handle = 0) : SubclassableWindow(handle) {}
-	virtual ~StandardControl() {}
+	typedef StandardControl<Control, DefaultStyles> BaseObject;
 public:
+	StandardControl() : SubclassableWindow() {}
+	explicit StandardControl(Managed<HWND>* handle) : SubclassableWindow(handle) {}
+	explicit StandardControl(Borrowed<HWND>* handle) : SubclassableWindow(handle) {}
+	virtual ~StandardControl() {}
 	virtual bool create(HWND parent, const RECT& rect = DefaultWindowRect(),
 			const WCHAR* windowName = 0, INT_PTR id = 0, DWORD style = 0, DWORD exStyle = 0) {
 		return Window::create(Control::getClassName(), parent, rect, windowName,
@@ -538,7 +542,9 @@ template<class Control>
 class CustomControl : public Window {
 	MANAH_UNASSIGNABLE_TAG(CustomControl);
 public:
-	explicit CustomControl(HWND handle = 0) : Window(handle) {}
+	CustomControl() : Window() {}
+	explicit CustomControl(const Managed<HWND>& handle) : Window(handle) {}
+	explicit CustomControl(const Borrowed<HWND>& handle) : Window(handle) {}
 	virtual ~CustomControl();
 	bool create(HWND parent, const RECT& rect = DefaultWindowRect(),
 		const WCHAR* windowName = 0, DWORD style = 0UL, DWORD exStyle = 0UL);
@@ -552,8 +558,6 @@ private:
 
 
 // Window ///////////////////////////////////////////////////////////////////
-
-inline Window::Window(HWND handle /* = 0 */) : Handle<HWND, ::DestroyWindow>(handle) {}
 
 inline Window::~Window() throw() {}
 
@@ -580,7 +584,7 @@ inline void Window::bringToTop() {::BringWindowToTop(use());}
 inline void Window::center(HWND alternateWindow /* = 0 */) {
 	RECT winRect, altRect;
 	if(alternateWindow == 0) {
-		alternateWindow = getParent()->get();
+		alternateWindow = getParent().get();
 		if(alternateWindow == 0)
 			alternateWindow = ::GetDesktopWindow();
 	}
@@ -594,9 +598,9 @@ inline void Window::center(HWND alternateWindow /* = 0 */) {
 
 inline bool Window::changeClipboardChain(HWND newNext) {return toBoolean(::ChangeClipboardChain(use(), newNext));}
 
-inline Borrowed<Window> Window::childFromPoint(const POINT& pt) const {return Borrowed<Window>(::ChildWindowFromPoint(use(), pt));}
+inline Window Window::childFromPoint(const POINT& pt) const {return Window(borrowed(::ChildWindowFromPoint(use(), pt)));}
 
-inline Borrowed<Window> Window::childFromPointEx(const POINT& pt, UINT flags) const {return Borrowed<Window>(::ChildWindowFromPointEx(use(), pt, flags));}
+inline Window Window::childFromPointEx(const POINT& pt, UINT flags) const {return Window(borrowed(::ChildWindowFromPointEx(use(), pt, flags)));}
 
 inline void Window::clientToScreen(RECT& rect) const {
 	POINT point[2];
@@ -630,7 +634,7 @@ inline bool Window::create(const WCHAR* className, HWND parentOrHInstance,
 
 	if(HWND handle = ::CreateWindowExW(exStyle, className, windowName, style,
 			rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, parent, menu, instance, param)) {
-		reset(handle);
+		reset(managed(handle));
 		return true;
 	}
 	return false;
@@ -661,13 +665,13 @@ inline int Window::enumerateProperties(PROPENUMPROCW enumFunction) {return ::Enu
 
 inline int Window::enumeratePropertiesEx(PROPENUMPROCEXW enumFunction, LPARAM param) {return ::EnumPropsExW(use(), enumFunction, param);}
 
-inline Borrowed<Window> Window::find(const WCHAR* className, const WCHAR* windowName) {return Borrowed<Window>(::FindWindowW(className, windowName));}
+inline Window Window::find(const WCHAR* className, const WCHAR* windowName) {return Window(borrowed(::FindWindowW(className, windowName)));}
 
 inline bool Window::flash(bool invert) {return toBoolean(::FlashWindow(use(), invert));}
 
-inline Borrowed<Window> Window::getActive() {return Borrowed<Window>(::GetActiveWindow());}
+inline Window Window::getActive() {return Window(borrowed(::GetActiveWindow()));}
 
-inline Borrowed<Window> Window::getCapture() {return Borrowed<Window>(::GetCapture());}
+inline Window Window::getCapture() {return Window(borrowed(::GetCapture()));}
 
 inline POINT Window::getCaretPosition() {POINT pt; ::GetCaretPos(&pt); return pt;}
 
@@ -687,37 +691,37 @@ inline gdi::ClientDC Window::getDC() {return gdi::ClientDC(use());}
 
 inline gdi::ClientDC Window::getDCEx(HRGN clipRegion, DWORD flags) {return gdi::ClientDC(use(), clipRegion, flags);}
 
-inline Borrowed<Window> Window::getDesktop() {return Borrowed<Window>(::GetDesktopWindow());}
+inline Window Window::getDesktop() {return Window(borrowed(::GetDesktopWindow()));}
 
 inline int Window::getDlgCtrlID() const {return ::GetDlgCtrlID(use());}
 
 inline DWORD Window::getExStyle() const {return static_cast<DWORD>(getWindowLong(GWL_EXSTYLE));}
 
-inline Borrowed<Window> Window::getFocus() {return Borrowed<Window>(::GetFocus());}
+inline Window Window::getFocus() {return Window(borrowed(::GetFocus()));}
 
 inline HFONT Window::getFont() const {return reinterpret_cast<HFONT>(::SendMessageW(use(), WM_GETFONT, 0, 0L));}
 
-inline Borrowed<Window> Window::getForeground() {return Borrowed<Window>(::GetForegroundWindow());}
+inline Window Window::getForeground() {return Window(borrowed(::GetForegroundWindow()));}
 
 inline DWORD Window::getHotKey() const {return static_cast<DWORD>(::SendMessageW(use(), WM_GETHOTKEY, 0, 0L));}
 
 inline HICON Window::getIcon(bool bigIcon /* = true */) const {
 	return reinterpret_cast<HICON>(::SendMessageW(use(), WM_GETICON, bigIcon ? ICON_BIG : ICON_SMALL, 0L));}
 
-inline Borrowed<Window> Window::getLastActivePopup() const {return Borrowed<Window>(::GetLastActivePopup(use()));}
+inline Window Window::getLastActivePopup() const {return Window(borrowed(::GetLastActivePopup(use())));}
 
 #if(_WIN32_WINNT >= 0x0501)
 inline bool Window::getLayeredAttributes(COLORREF* keyColor, BYTE* alpha, DWORD* flags) const {
 	return toBoolean(::GetLayeredWindowAttributes(use(), keyColor, alpha, flags));}
 #endif
 
-inline Borrowed<Menu> Window::getMenu() const {return Borrowed<Menu>(::GetMenu(use()));}
+inline Menu Window::getMenu() const {return Menu(borrowed(::GetMenu(use())));}
 
-inline Borrowed<Window> Window::getNext(UINT flag /* = GW_HWNDNEXT */) const {return Borrowed<Window>(::GetNextWindow(use(), flag));}
+inline Window Window::getNext(UINT flag /* = GW_HWNDNEXT */) const {return Window(borrowed(::GetNextWindow(use(), flag)));}
 
-inline Borrowed<Window> Window::getOwner() const {return Borrowed<Window>(::GetWindow(use(), GW_OWNER));}
+inline Window Window::getOwner() const {return Window(borrowed(::GetWindow(use(), GW_OWNER)));}
 
-inline Borrowed<Window> Window::getParent() const {return Borrowed<Window>(::GetParent(use()));}
+inline Window Window::getParent() const {return Window(borrowed(::GetParent(use())));}
 
 inline HANDLE Window::getProperty(const WCHAR* identifier) const {return ::GetPropW(use(), identifier);}
 
@@ -743,15 +747,15 @@ inline int Window::getScrollTrackPosition(int bar) const {SCROLLINFO si; return 
 
 inline DWORD Window::getStyle() const {return static_cast<DWORD>(getWindowLong(GWL_STYLE));}
 
-inline Borrowed<Menu> Window::getSystemMenu(bool revert) const {return Borrowed<Menu>(::GetSystemMenu(use(), revert));}
+inline Menu Window::getSystemMenu(bool revert) const {return Menu(borrowed(::GetSystemMenu(use(), revert)));}
 
-inline Borrowed<Window> Window::getTop() const {return Borrowed<Window>(::GetTopWindow(use()));}
+inline Window Window::getTop() const {return Window(borrowed(::GetTopWindow(use())));}
 
 inline bool Window::getUpdateRect(RECT& rect, bool erase /* = false */) {return toBoolean(::GetUpdateRect(use(), &rect, erase));}
 
 inline int Window::getUpdateRegion(HRGN region, bool erase /* = false */) {return ::GetUpdateRgn(use(), region, erase);}
 
-inline Borrowed<Window> Window::getWindow(UINT command) const {return Borrowed<Window>(::GetWindow(use(), command));}
+inline Window Window::getWindow(UINT command) const {return Window(borrowed(::GetWindow(use(), command)));}
 
 inline DWORD Window::getContextHelpID() const {return ::GetWindowContextHelpId(use());}
 
@@ -903,9 +907,9 @@ inline bool Window::sendNotifyMessage(UINT message, WPARAM wParam, LPARAM lParam
 
 inline void Window::screenToClient(POINT& pt) const {::ScreenToClient(use(), &pt);}
 
-inline Borrowed<Window> Window::setActive() {return Borrowed<Window>(::SetActiveWindow(use()));}
+inline Window Window::setActive() {return Window(borrowed(::SetActiveWindow(use())));}
 
-inline Borrowed<Window> Window::setCapture() {return Borrowed<Window>(::SetCapture(use()));}
+inline Window Window::setCapture() {return Window(borrowed(::SetCapture(use())));}
 
 inline void Window::setCaretPosition(const POINT& pt) {::SetCaretPos(pt.x, pt.y);}
 
@@ -915,13 +919,13 @@ inline DWORD Window::setClassLong(int index, DWORD newLong) {return ::SetClassLo
 inline ULONG_PTR Window::setClassLongPtr(int index, ULONG_PTR newLong) {return ::SetClassLongPtrW(use(), index, newLong);}
 #endif // _WIN64
 
-inline Borrowed<Window> Window::setClipboardViewer() {return Borrowed<Window>(::SetClipboardViewer(use()));}
+inline Window Window::setClipboardViewer() {return Window(borrowed(::SetClipboardViewer(use())));}
 
 inline bool Window::setCursorPosition(const POINT& pt) {POINT p(pt); clientToScreen(p); return toBoolean(::SetCursorPos(p.x, p.y));}
 
 inline int Window::setDlgCtrlID(int id) {return static_cast<int>(setWindowLong(GWL_ID, id));}
 
-inline Borrowed<Window> Window::setFocus() {return Borrowed<Window>(::SetFocus(use()));}
+inline Window Window::setFocus() {return Window(borrowed(::SetFocus(use())));}
 
 inline void Window::setFont(HFONT font, bool redraw /* = true */) {
 	sendMessage(WM_SETFONT, reinterpret_cast<WPARAM>(font), MAKELPARAM(redraw, 0));}
@@ -941,7 +945,7 @@ inline bool Window::setLayeredAttributes(COLORREF keyColor, BYTE alpha, DWORD fl
 
 inline bool Window::setMenu(HMENU menu) {return toBoolean(::SetMenu(use(), menu));}
 
-inline Borrowed<Window> Window::setParent(HWND newParent) {return Borrowed<Window>(::SetParent(use(), newParent));}
+inline Window Window::setParent(HWND newParent) {return Window(borrowed(::SetParent(use(), newParent)));}
 
 inline bool Window::setProperty(const WCHAR* identifier, HANDLE data) {return toBoolean(::SetPropW(use(), identifier, data));}
 
@@ -1004,7 +1008,7 @@ inline void Window::validateRect(const RECT* rect) {::ValidateRect(use(), rect);
 
 inline void Window::validateRegion(HRGN region) {::ValidateRgn(use(), region);}
 
-inline Borrowed<Window> Window::fromPoint(const POINT& pt) {return Borrowed<Window>(::WindowFromPoint(pt));}
+inline Window Window::fromPoint(const POINT& pt) {return Window(borrowed(::WindowFromPoint(pt)));}
 
 inline bool Window::winHelp(const WCHAR* help, UINT command /* = HELP_CONTEXT */, DWORD data /* = 0 */) {
 	return toBoolean(::WinHelpW(use(), help, command, data));}
@@ -1104,7 +1108,7 @@ inline LRESULT CALLBACK CustomControl<Control>::windowProcedure(HWND window, UIN
 	if(message == WM_NCCREATE) {
 		C* const p = reinterpret_cast<C*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
 		assert(p != 0);
-		p->reset(window);	// ... the handle will be reset by Window.create (no problem)
+		p->reset(borrowed(window));	// ... the handle will be reset by Window.create (no problem)
 #ifdef _WIN64
 		p->setWindowLongPtr(GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p));
 #else

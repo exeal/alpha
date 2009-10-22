@@ -26,8 +26,8 @@ namespace alpha {
 			void onOK(bool& continueDialog);
 			std::string encoding_;
 			ascension::kernel::Newline newline_;
-			manah::win32::Borrowed<manah::win32::ui::ComboBox> encodingCombobox_;
-			manah::win32::Borrowed<manah::win32::ui::ComboBox> newlineCombobox_;
+			manah::win32::ui::ComboBox encodingCombobox_;
+			manah::win32::ui::ComboBox newlineCombobox_;
 			MANAH_BEGIN_CONTROL_BINDING()
 				MANAH_BIND_CONTROL(IDC_COMBO_ENCODING, encodingCombobox_)
 				MANAH_BIND_CONTROL(IDC_COMBO_NEWLINE, newlineCombobox_)

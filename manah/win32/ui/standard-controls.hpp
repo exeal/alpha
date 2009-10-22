@@ -1,5 +1,5 @@
 // standard-controls.hpp
-// (c) 2002-2008 exeal
+// (c) 2002-2009 exeal
 
 #ifndef MANAH_STANDARD_CONTROLS_HPP
 #define MANAH_STANDARD_CONTROLS_HPP
@@ -14,8 +14,7 @@ class Button : public StandardControl<Button> {
 	MANAH_NONCOPYABLE_TAG(Button);
 	DEFINE_CLASS_NAME(L"BUTTON")
 public:
-	// constructor
-	explicit Button(HWND handle = 0) : StandardControl<Button>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Button)
 	// attributes
 	HBITMAP getBitmap() const;
 	UINT getButtonStyle() const;
@@ -44,8 +43,7 @@ class ComboBox : public StandardControl<ComboBox> {
 	MANAH_NONCOPYABLE_TAG(ComboBox);
 	DEFINE_CLASS_NAME(L"COMBOBOX")
 public:
-	// constructor
-	explicit ComboBox(HWND handle = 0) : StandardControl<ComboBox>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ComboBox)
 	// initialize
 	int initStorage(int itemCount, UINT bytes);
 	// attributes
@@ -101,8 +99,7 @@ class Edit : public StandardControl<Edit> {
 	MANAH_NONCOPYABLE_TAG(Edit);
 	DEFINE_CLASS_NAME(L"EDIT")
 public:
-	// constructor
-	explicit Edit(HWND handle = 0) : StandardControl<Edit>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Edit)
 	// attributes
 	bool canUndo() const;
 	int charFromPos(const POINT& pt) const;
@@ -161,8 +158,7 @@ class ListBox : public StandardControl<ListBox> {
 	MANAH_NONCOPYABLE_TAG(ListBox);
 	DEFINE_CLASS_NAME(L"LISTBOX")
 public:
-	// constructor
-	explicit ListBox(HWND handle = 0) : StandardControl<ListBox>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ListBox)
 	// initialize
 	int initStorage(int itemCount, UINT bytes);
 	// attributes
@@ -213,8 +209,7 @@ class ScrollBar : public StandardControl<ScrollBar> {
 	MANAH_NONCOPYABLE_TAG(ScrollBar);
 	DEFINE_CLASS_NAME(L"SCROLLBAR")
 public:
-	// constructor
-	explicit ScrollBar(HWND handle = 0) : StandardControl<ScrollBar>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(ScrollBar)
 	// attributes
 	bool getScrollInformation(SCROLLINFO& scrollInfo) const;
 	int getScrollLimit() const;
@@ -235,8 +230,7 @@ class Static : public StandardControl<Static> {
 	MANAH_NONCOPYABLE_TAG(Static);
 	DEFINE_CLASS_NAME(L"STATIC")
 public:
-	// constructors
-	explicit Static(HWND handle = 0) : StandardControl<Static>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(Static)
 	// methods
 	HBITMAP getBitmap() const;
 	HCURSOR getCursor() const;
@@ -251,8 +245,8 @@ public:
 class DragListBox : public ListBox {
 	MANAH_NONCOPYABLE_TAG(DragListBox);
 public:
-	// constructor
-	explicit DragListBox(HWND handle) : ListBox(handle) {}
+	DragListBox() : ListBox() {}
+	template<typename T> explicit DragListBox(T* handle) : ListBox(handle) {}
 	// methods
 	void drawInsert(int index);
 	static UINT getDragListMessage();
