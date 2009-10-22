@@ -23,7 +23,7 @@ namespace {
 		void onInitDialog(HWND, bool&);
 		void onOK(bool& continueDialog);
 	private:
-		manah::win32::Borrowed<manah::win32::ui::UpDownCtrl> lineNumberSpin_;
+		manah::win32::ui::UpDownCtrl lineNumberSpin_;
 		MANAH_BEGIN_CONTROL_BINDING()
 			MANAH_BIND_CONTROL(IDC_SPIN_LINENUMBER, lineNumberSpin_)
 		MANAH_END_CONTROL_BINDING()
@@ -42,11 +42,11 @@ void GotoLineDialog::onInitDialog(HWND, bool&) {
 						% static_cast<ulong>(buffer.accessibleRegion().second.line + lineOffset));
 
 	setItemText(IDC_STATIC_1, s.c_str());
-	lineNumberSpin_->setRange(
+	lineNumberSpin_.setRange(
 		static_cast<int>(buffer.accessibleRegion().first.line + lineOffset),
 		static_cast<int>(buffer.accessibleRegion().second.line + lineOffset));
-	lineNumberSpin_->setPosition(static_cast<int>(viewer.caret().line() + lineOffset));
-	lineNumberSpin_->invalidateRect(0);
+	lineNumberSpin_.setPosition(static_cast<int>(viewer.caret().line() + lineOffset));
+	lineNumberSpin_.invalidateRect(0);
 
 	checkButton(IDC_CHK_SAVESELECTION,
 		app.readIntegerProfile(L"Search", L"GotoLineDialog.extendSelection", 0) == 1 ? BST_CHECKED : BST_UNCHECKED);
@@ -63,7 +63,7 @@ void GotoLineDialog::onOK(bool& continueDialog) {
 	}
 */
 	EditorView& viewer = EditorWindows::instance().activePane().visibleView();
-	length_t line = lineNumberSpin_->getPosition();
+	length_t line = lineNumberSpin_.getPosition();
 	line -= viewer.verticalRulerConfiguration().lineNumbers.startValue;
 
 	// jump

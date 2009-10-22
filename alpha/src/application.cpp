@@ -1460,7 +1460,7 @@ void StatusBar::setText(const WCHAR* text, HFONT font /* = 0 */) {
 		if(::GetObjectW(font, sizeof(LOGFONTW), &lf) == 0)
 			throw win32::InvalidHandleException("font");
 		if(HFONT newFont = ::CreateFontIndirectW(&lf))
-			font_.reset(newFont);
+			font_.reset(win32::managed(newFont));
 	} else
 		font_.reset();
 	setFont(font_.get());
@@ -1519,7 +1519,7 @@ void StatusBar::updateNarrowingStatus() {
 		const bool narrow = EditorWindows::instance().activePane().visibleBuffer().isNarrowed();
 		Alpha& app = Alpha::instance();
 		if(narrowingIcon_.get() == 0)
-			narrowingIcon_.reset(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR)));
+			narrowingIcon_.reset(win32::managed(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))));
 //		setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
 		setIcon(4, narrow ? narrowingIcon_.use() : 0);

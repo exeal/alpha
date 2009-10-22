@@ -6,7 +6,6 @@
 #ifndef MANAH_DC_HPP
 #define MANAH_DC_HPP
 #include "windows.hpp"
-#include <memory>	// std.auto_ptr
 
 namespace manah {
 	namespace win32 {
@@ -15,10 +14,10 @@ namespace manah {
 
 		namespace gdi {
 
-class DC : public Handle<HDC, ::DeleteDC> {
+class DC : public Object<HDC, ::DeleteDC> {
 public:
 	// constructors
-	explicit DC(HDC handle = 0) /*throw()*/ : Handle<HDC, ::DeleteDC>(handle) {}
+	MANAH_WIN32_OBJECT_CONSTRUCTORS(DC)
 	virtual ~DC() throw() {}
 	// current objects
 	HBITMAP getCurrentBitmap() const;
@@ -28,7 +27,7 @@ public:
 	HPEN getCurrentPen() const;
 	HWND getWindow() const;
 	// device context
-	std::auto_ptr<DC> createCompatibleDC() const;
+	DC createCompatibleDC() const;
 	int getDeviceCaps(int index) const;
 	virtual bool restore(int savedDC);
 	virtual int save();
@@ -86,7 +85,7 @@ public:
 	// layout
 	DWORD getLayout() const;
 	DWORD setLayout(DWORD layout);
-#endif /* LAYOUT_RTL */
+#endif // LAYOUT_RTL
 	// coordinates
 	bool dpToLP(POINT ps[], int c) const;
 	bool dpToLP(POINT& p) const;
@@ -198,7 +197,7 @@ public:
 #if(_WIN32_WINNT >= 0x0500)
 	bool getTextExtentExPointI(LPWORD glyphs, int count, int maxExtent, LPINT fit, LPINT dx, LPSIZE size) const;
 	bool getTextExtentPointI(LPWORD glyphs, int count, LPSIZE size) const;
-#endif /* _WIN32_WINNT >= 0x0500 */
+#endif // _WIN32_WINNT >= 0x0500
 	int getTextFace(int faceNameCount, WCHAR* faceName) const;
 	bool getTextMetrics(TEXTMETRICW& metrics) const;
 	virtual bool grayString(HBRUSH brush, GRAYSTRINGPROC outputProc, LPARAM data, int length, int x, int y, int width, int height);
@@ -221,13 +220,13 @@ public:
 	bool getCharWidthI(WORD* glyphs, UINT numberOfGlyphs, int buffer[]) const;
 	bool getCharABCWidthsI(UINT firstGlyph, UINT numberOfGlyphs, ABC buffer[]) const;
 	bool getCharABCWidthsI(const WORD glyphs[], UINT numberOfGlyphs, ABC buffer[]) const;
-#endif /* _WIN32_WINNT >= 0x0500 */
+#endif // _WIN32_WINNT >= 0x0500
 	DWORD getFontData(DWORD table, DWORD offset, LPVOID data, DWORD bytes) const;
 	DWORD getFontLanguageInfo() const;
 #if(_WIN32_WINNT >= 0x0500)
 	DWORD getFontUnicodeRanges(GLYPHSET& glyphSet) const;
 	DWORD getGlyphIndices(const WCHAR* text, int length, WORD* indices, DWORD flags) const;
-#endif /* _WIN32_WINNT >= 0x0500 */
+#endif // _WIN32_WINNT >= 0x0500
 	DWORD getGlyphOutline(UINT ch, UINT format, LPGLYPHMETRICS gm, DWORD bufferSize, LPVOID data, const MAT2* mat2) const;
 	DWORD getKerningPairs(DWORD pairs, LPKERNINGPAIR kerningPair) const;
 	UINT getOutlineTextMetrics(UINT dataSize, LPOUTLINETEXTMETRICW otm) const;
@@ -252,7 +251,7 @@ namespace internal {
 	class WindowRelatedDC : public DC {
 	protected:
 		WindowRelatedDC(HWND window, HDC handle);
-		WindowRelatedDC(const WindowRelatedDC& rhs);
+		WindowRelatedDC(const WindowRelatedDC& other);
 		virtual ~WindowRelatedDC() throw();
 	private:
 		HWND window_;
@@ -263,7 +262,7 @@ namespace internal {
 class PaintDC : public DC {
 public:
 	PaintDC(HWND window);
-	PaintDC(const PaintDC& rhs);
+	PaintDC(const PaintDC& other);
 	~PaintDC();
 	const PAINTSTRUCT& paintStruct() const /*throw()*/;
 private:
@@ -279,7 +278,7 @@ private:
 
 class ClientDC : public internal::WindowRelatedDC {
 public:
-	ClientDC(const ClientDC& rhs) : internal::WindowRelatedDC(rhs) {}
+	ClientDC(const ClientDC& other) : internal::WindowRelatedDC(other) {}
 	virtual ~ClientDC() {}
 protected:
 	explicit ClientDC(HWND window) : internal::WindowRelatedDC(window, ::GetDC(window)) {}
@@ -289,7 +288,7 @@ protected:
 
 class WindowDC : public internal::WindowRelatedDC {
 public:
-	WindowDC(const WindowDC& rhs) : internal::WindowRelatedDC(rhs) {}
+	WindowDC(const WindowDC& other) : internal::WindowRelatedDC(other) {}
 private:
 	WindowDC(HWND window) : internal::WindowRelatedDC(window, ::GetWindowDC(window)) {}
 	friend class ui::Window;
@@ -331,7 +330,7 @@ inline bool DC::chord(int x1, int y1, int x2, int y2, int x3, int y3, int x4, in
 inline bool DC::chord(const RECT& rect, const POINT& start, const POINT& end) {
 	return chord(rect.left, rect.top, rect.right, rect.bottom, start.x, start.y, end.x, end.y);}
 
-inline std::auto_ptr<DC> DC::createCompatibleDC() const {assertValidAsDC(); return std::auto_ptr<DC>(new DC(::CreateCompatibleDC(get())));}
+inline DC DC::createCompatibleDC() const {assertValidAsDC(); return DC(managed(::CreateCompatibleDC(get())));}
 
 inline bool DC::dpToLP(POINT ps[], int c) const {assertValidAsDC(); return toBoolean(::DPtoLP(get(), ps, c));}
 
@@ -807,7 +806,7 @@ inline void DC::updateColors() {assertValidAsDC(); ::UpdateColors(get());}
 
 // internal.WindowRelatedDC /////////////////////////////////////////////////
 
-inline internal::WindowRelatedDC::WindowRelatedDC(HWND window, HDC handle) : DC(handle), window_(window), refCount_(new ulong) {
+inline internal::WindowRelatedDC::WindowRelatedDC(HWND window, HDC handle) : DC(borrowed(handle)), window_(window), refCount_(new ulong) {
 	if(window_ != 0 && !toBoolean(::IsWindow(window_))) {
 		delete refCount_;
 		throw std::invalid_argument("window");
@@ -819,7 +818,8 @@ inline internal::WindowRelatedDC::WindowRelatedDC(HWND window, HDC handle) : DC(
 	*refCount_ = 1;
 }
 
-inline internal::WindowRelatedDC::WindowRelatedDC(const WindowRelatedDC& rhs) : DC(rhs.get()), window_(rhs.window_), refCount_(rhs.refCount_) {
+inline internal::WindowRelatedDC::WindowRelatedDC(const WindowRelatedDC& other) :
+		DC(borrowed(other.get())), window_(other.window_), refCount_(other.refCount_) {
 	++*refCount_;
 }
 
@@ -839,7 +839,7 @@ inline PaintDC::PaintDC(HWND window) : data_(new Data) {
 		delete data_;
 		throw std::invalid_argument("window");
 	}
-	reset(::BeginPaint(data_->window = window, &data_->paint));
+	reset(borrowed(::BeginPaint(data_->window = window, &data_->paint)));
 	data_->refCount = 1;
 	data_->createdByWindow = false;
 	if(get() == 0) {
@@ -848,7 +848,7 @@ inline PaintDC::PaintDC(HWND window) : data_(new Data) {
 	}
 }
 
-inline PaintDC::PaintDC(const PaintDC& rhs) : DC(rhs.get()), data_(rhs.data_) {++data_->refCount;}
+inline PaintDC::PaintDC(const PaintDC& other) : DC(borrowed(other.get())), data_(other.data_) {++data_->refCount;}
 
 inline PaintDC::~PaintDC() {
 	if(--data_->refCount == 0) {
@@ -871,7 +871,7 @@ inline PaintDC::PaintDC(HWND window, PAINTSTRUCT& paint) : data_(new Data) {
 		throw std::invalid_argument("paint.hdc");
 	}
 	data_->window = window;
-	reset((data_->paint = paint).hdc);
+	reset(borrowed((data_->paint = paint).hdc));
 	data_->refCount = 1;
 	data_->createdByWindow = true;
 }

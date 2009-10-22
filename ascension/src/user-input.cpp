@@ -90,8 +90,8 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 		// ignore if the cursor is not over a window belongs to the same thread
 		POINT pt;
 		::GetCursorPos(&pt);
-		win32::Borrowed<Window> pointedWindow(Window::fromPoint(pt));
-		if(pointedWindow->get() != 0 && pointedWindow->getThreadID() == getThreadID()) {
+		Window pointedWindow(Window::fromPoint(pt));
+		if(pointedWindow.get() != 0 && pointedWindow.getThreadID() == getThreadID()) {
 			modeState_.cursorVanished = true;
 			::ShowCursor(false);
 			setCapture();
@@ -508,7 +508,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
 
 		// under "Insert Unicode white space character"
-		subMenu.reset(::CreatePopupMenu());
+		subMenu.reset(win32::managed(::CreatePopupMenu()));
 		subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
 			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
 			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
@@ -1023,7 +1023,7 @@ namespace {
 	public:
 		AutoScrollOriginMark() /*throw()*/;
 		bool create(const TextViewer& view);
-		static win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> > cursorForScrolling(CursorType type);
+		static win32::Object<HCURSOR, ::DestroyCursor> cursorForScrolling(CursorType type);
 	protected:
 		void onPaint(win32::gdi::PaintDC& dc);
 	private:
@@ -1063,8 +1063,8 @@ bool AutoScrollOriginMark::create(const TextViewer& view) {
  * @return the cursor. do not destroy the returned value
  * @throw UnknownValueException @a type is unknown
  */
-win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> > AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static win32::Handle<HCURSOR, ::DestroyCursor> instances[3];
+win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static win32::Object<HCURSOR, ::DestroyCursor> instances[3];
 	if(type >= MANAH_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {
@@ -1143,9 +1143,9 @@ win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> > AutoScrollOriginMark::
 			memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
-		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits));
+		instances[type].reset(win32::managed(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits)));
 	}
-	return win32::Borrowed<win32::Handle<HCURSOR, ::DestroyCursor> >(instances[type].get());
+	return win32::Object<HCURSOR, ::DestroyCursor>(win32::borrowed(instances[type].get()));
 }
 
 /// @see Window#onPaint
@@ -1235,7 +1235,7 @@ namespace {
 	HRESULT createSelectionImage(const TextViewer& viewer, const POINT& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
 		using namespace win32::gdi;
 
-		DC dc(::CreateCompatibleDC(0));
+		DC dc(win32::managed(::CreateCompatibleDC(0)));
 		if(dc.get() == 0)
 			return E_FAIL;
 
@@ -1298,7 +1298,7 @@ namespace {
 					range.second = min(viewer.document().lineLength(line), range.second);
 					Rgn rgn(layout.blackBoxBounds(range.first, range.second));
 					rgn.offset(indent - selectionBounds.left, y - selectionBounds.top);
-					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH)->use());
+					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH).use());
 				}
 				y += renderer.linePitch();
 			}
@@ -2122,10 +2122,10 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 		if(yScrollDegree != 0) {
 			self.beginTimer(500 / static_cast<uint>((pow(2.0f, abs(yScrollDegree) / 2))));
 			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
-				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD)->get());
+				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).get());
 		} else {
 			self.beginTimer(300);
-			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL)->get());
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).get());
 		}
 #if 0
 	} else if(self.dnd_.enabled && (self.state_ & OLE_DND_MASK) == OLE_DND_MASK) {	// scroll automatically during OLE dragging

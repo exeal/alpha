@@ -714,7 +714,7 @@ namespace ascension {
 				manah::win32::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
 				manah::win32::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
 				const bool enablesDoubleBuffering_;
-				std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
+				manah::win32::gdi::DC memoryDC_;
 				manah::win32::gdi::Bitmap memoryBitmap_;
 			};
 

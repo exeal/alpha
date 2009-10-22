@@ -952,7 +952,7 @@ String LineLayout::fillToX(int x) const {
 	if(cx == x)
 		return String(numberOfTabs, L'\t');
 
-	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
+	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
 	HFONT oldFont = dc->selectObject(lip_.getFontSelector().font(Script::COMMON));
 	int spaceWidth;
 	dc->getCharWidth(L' ', L' ', &spaceWidth);
@@ -1612,7 +1612,7 @@ namespace {
 /// Generates the glyphs for the text.
 void LineLayout::shape() /*throw()*/ {
 	HRESULT hr;
-	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
+	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	const Run* lastIVSProcessedRun = 0;
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -1892,7 +1892,7 @@ void LineLayout::wrap() /*throw()*/ {
 	const String& line = text();
 	vector<length_t> sublineFirstRuns;
 	sublineFirstRuns.push_back(0);
-	auto_ptr<DC> dc = lip_.getFontSelector().deviceContext();
+	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
 	const int cookie = dc->save();
 	int cx = 0;
 	manah::AutoBuffer<int> logicalWidths;
@@ -2929,7 +2929,7 @@ HFONT FontSelector::fontInFontset(const Fontset& fontset, bool bold, bool italic
 		font = ::CreateFontW(-(ascent_ + descent_ - internalLeading_),
 			0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
 			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
-		auto_ptr<DC> dc = deviceContext();
+		auto_ptr<DC> dc(deviceContext());
 		HFONT oldFont = dc->selectObject(font);
 		TEXTMETRICW tm;
 		dc->getTextMetrics(tm);
@@ -3249,19 +3249,18 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 		return;	// this logical line does not need to draw
 	y += static_cast<int>(dy * subline);
 
-	TextRenderer& self = *const_cast<TextRenderer*>(this);
 	if(memoryDC_.get() == 0)		
-		self.memoryDC_ = deviceContext()->createCompatibleDC();
+		memoryDC_ = deviceContext()->createCompatibleDC();
 	const int horizontalResolution = calculateMemoryBitmapSize(dc.getDeviceCaps(HORZRES));
 	if(memoryBitmap_.get() != 0) {
 		BITMAP b;
 		memoryBitmap_.getBitmap(b);
 		if(b.bmWidth < horizontalResolution)
-			self.memoryBitmap_.reset();
+			memoryBitmap_.reset();
 	}
 	if(memoryBitmap_.get() == 0)
-		self.memoryBitmap_ = Bitmap::createCompatibleBitmap(*getDeviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
-	memoryDC_->selectObject(memoryBitmap_.use());
+		memoryBitmap_ = Bitmap::createCompatibleBitmap(*getDeviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
+	memoryDC_.selectObject(memoryBitmap_.use());
 
 	const long left = max(paintRect.left, clipRect.left), right = min(paintRect.right, clipRect.right);
 	x -= left;
@@ -3270,8 +3269,8 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	offsetedClipRect.offset(-left, -y);
 	for(; subline < layout.numberOfSublines() && offsetedPaintRect.bottom >= 0;
 			++subline, y += dy, offsetedPaintRect.offset(0, -dy), offsetedClipRect.offset(0, -dy)) {
-		layout.draw(subline, *memoryDC_, x, 0, offsetedPaintRect, offsetedClipRect, selection);
-		dc.bitBlt(left, y, right - left, dy, memoryDC_->get(), 0, 0, SRCCOPY);
+		layout.draw(subline, memoryDC_, x, 0, offsetedPaintRect, offsetedClipRect, selection);
+		dc.bitBlt(left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
 	}
 }
 
@@ -3329,8 +3328,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		if(memoryBitmap_.get() == 0)
 			memoryBitmap_ = Bitmap::createCompatibleBitmap(dc,
 				width(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
-		memoryDC_->selectObject(memoryBitmap_.get());
-		dcex = memoryDC_.get();
+		memoryDC_.selectObject(memoryBitmap_.get());
+		dcex = &memoryDC_;
 		left = 0;
 	} else {
 		dcex = &dc;
@@ -3444,7 +3443,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 
 	if(enablesDoubleBuffering_)
 		dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - width(), paintRect.top,
-			right - left, paintRect.bottom - paintRect.top, memoryDC_->get(), 0, paintRect.top, SRCCOPY);
+			right - left, paintRect.bottom - paintRect.top, memoryDC_.get(), 0, paintRect.top, SRCCOPY);
 	dc.restore(savedCookie);
 }
 

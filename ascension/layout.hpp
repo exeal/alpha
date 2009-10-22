@@ -9,8 +9,8 @@
 #include "document.hpp"
 #include "unicode-property.hpp"
 #include "presentation.hpp"
-#include "../../manah/win32/dc.hpp"
-#include "../../manah/win32/gdi-object.hpp"
+#include <manah/win32/dc.hpp>
+#include <manah/win32/gdi-object.hpp>
 #include <vector>
 
 // forward declaration
@@ -611,8 +611,8 @@ namespace ascension {
 		private:
 			presentation::Presentation& presentation_;
 			const bool enablesDoubleBuffering_;
-			std::auto_ptr<manah::win32::gdi::DC> memoryDC_;
-			manah::win32::gdi::Bitmap memoryBitmap_;
+			mutable manah::win32::gdi::DC memoryDC_;
+			mutable manah::win32::gdi::Bitmap memoryBitmap_;
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 		};
 

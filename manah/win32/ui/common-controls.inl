@@ -105,14 +105,14 @@ inline bool ImageList::copy(int dest, int src, UINT flags /* = ILCF_MOVE */) {re
 
 inline bool ImageList::copy(int dest, HIMAGELIST imageList, int src, UINT flags /* = ILCF_MOVE */) {return toBoolean(::ImageList_Copy(use(), dest, imageList, src, flags));}
 
-inline ImageList ImageList::create(int cx, int cy, UINT flags, int initial, int grow) {return ImageList(::ImageList_Create(cx, cy, flags, initial, grow));}
+inline ImageList ImageList::create(int cx, int cy, UINT flags, int initial, int grow) {return ImageList(managed(::ImageList_Create(cx, cy, flags, initial, grow)));}
 
-inline ImageList ImageList::create(HINSTANCE hinstance, const ResourceID& bitmapName,
-	int cx, int grow, COLORREF maskColor) {return ImageList(ImageList_LoadImageW(hinstance, bitmapName, cx, grow, maskColor, IMAGE_BITMAP, 0));}
+inline ImageList ImageList::create(HINSTANCE hinstance, const ResourceID& bitmapName, int cx, int grow, COLORREF maskColor) {
+	return ImageList(managed(ImageList_LoadImageW(hinstance, bitmapName, cx, grow, maskColor, IMAGE_BITMAP, 0)));}
 
 inline ImageList ImageList::createFromImage(HINSTANCE hinstance, const ResourceID& imageName,
 		int cx, int grow, COLORREF maskColor, UINT type, UINT flags /* = LR_DEFAULTCOLOR | LR_DEFAULTSIZE */) {
-	return ImageList(::ImageList_LoadImageW(hinstance, imageName, cx, grow, maskColor, type, flags));}
+	return ImageList(managed(::ImageList_LoadImageW(hinstance, imageName, cx, grow, maskColor, type, flags)));}
 
 inline bool ImageList::destroy() {
 	if(get() != 0 && toBoolean(::ImageList_Destroy(get()))) {
@@ -149,7 +149,7 @@ inline bool ImageList::drawIndirect(const IMAGELISTDRAWPARAMS& params) const {
 
 inline ImageList ImageList::duplicate() const {return duplicate(use());}
 
-inline ImageList ImageList::duplicate(HIMAGELIST imageList) {return ImageList(::ImageList_Duplicate(imageList));}
+inline ImageList ImageList::duplicate(HIMAGELIST imageList) {return ImageList(managed(::ImageList_Duplicate(imageList)));}
 
 inline void ImageList::endDrag() {::ImageList_EndDrag();}
 
@@ -157,7 +157,7 @@ inline HICON ImageList::extractIcon(int index) const {return ImageList_ExtractIc
 
 inline COLORREF ImageList::getBkColor() const {return ::ImageList_GetBkColor(use());}
 
-inline ImageList ImageList::getDragImage(POINT* pt, POINT* hotSpot) {return ImageList(::ImageList_GetDragImage(pt, hotSpot));}
+inline ImageList ImageList::getDragImage(POINT* pt, POINT* hotSpot) {return ImageList(managed(::ImageList_GetDragImage(pt, hotSpot)));}
 
 inline HICON ImageList::getIcon(int index, UINT flags /* = ILD_NORMAL */) const {return ::ImageList_GetIcon(use(), index, flags);}
 
@@ -170,7 +170,7 @@ inline bool ImageList::getImageInformation(int index, IMAGEINFO& imageInfo) cons
 inline int ImageList::getNumberOfImages() const {return ::ImageList_GetImageCount(use());}
 
 inline ImageList ImageList::merge(HIMAGELIST imageList1, int image1, HIMAGELIST imageList2, int image2, int dx, int dy) {
-	return ImageList(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy));}
+	return ImageList(managed(::ImageList_Merge(imageList1, image1, imageList2, image2, dx, dy)));}
 
 #if 0/*defined(__IStream_INTERFACE_DEFINED__)*/
 inline ImageList ImageList::readFromStream(IStream& stream) {return ImageList(::ImageList_Read(&stream));}
@@ -1677,8 +1677,8 @@ inline HTREEITEM TreeCtrl::hitTest(const POINT& pt, UINT flags) {
 	return hitTest(tvhti);
 }
 
-inline std::auto_ptr<ImageList> TreeCtrl::createDragImage(HTREEITEM item) {
-	return std::auto_ptr<ImageList>(new ImageList(reinterpret_cast<HIMAGELIST>(sendMessage(TVM_CREATEDRAGIMAGE, 0, reinterpret_cast<LPARAM>(item)))));}
+inline ImageList TreeCtrl::createDragImage(HTREEITEM item) {
+	return ImageList(managed(reinterpret_cast<HIMAGELIST>(sendMessage(TVM_CREATEDRAGIMAGE, 0, reinterpret_cast<LPARAM>(item)))));}
 
 inline bool TreeCtrl::sortChildren(HTREEITEM item, bool recurse /* = false */) {
 	return sendMessageR<bool>(TVM_SORTCHILDREN, recurse, reinterpret_cast<LPARAM>(item));}
@@ -1703,14 +1703,14 @@ inline bool TreeCtrl::setUnicodeFormat(bool unicode /* = true */) {return sendMe
 inline COLORREF TreeCtrl::getLineColor() const {
 #ifndef TVM_GETLINECOLOR
 	const UINT TVM_GETLINECOLOR = TV_FIRST + 41;
-#endif /* !TVM_GETLINECOLOR */
+#endif // !TVM_GETLINECOLOR
 	return sendMessageC<COLORREF>(TVM_GETLINECOLOR);
 }
 
 inline COLORREF TreeCtrl::setLineColor(COLORREF color /* = CLR_DEFAULT */) {
 #ifndef TVM_GETLINECOLOR
 	const UINT TVM_SETLINECOLOR = TV_FIRST + 40;
-#endif /* !TVM_GETLINECOLOR */
+#endif // !TVM_GETLINECOLOR
 	return sendMessageR<COLORREF>(TVM_SETLINECOLOR, 0, color);
 }
 
@@ -1736,7 +1736,7 @@ inline UINT UpDownCtrl::getAccel(int count, UDACCEL accel[]) const {
 
 inline UINT UpDownCtrl::getBase() const {return sendMessageC<UINT>(UDM_GETBASE);}
 
-inline Window UpDownCtrl::getBuddy() const {return Window(reinterpret_cast<HWND>(sendMessageC<LRESULT>(UDM_GETBUDDY)));}
+inline Window UpDownCtrl::getBuddy() const {return Window(borrowed(reinterpret_cast<HWND>(sendMessageC<LRESULT>(UDM_GETBUDDY))));}
 
 inline int UpDownCtrl::getPosition(bool* error /* = 0 */) const {return sendMessageC<int>(UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(error));}
 
@@ -1751,7 +1751,7 @@ inline bool UpDownCtrl::setAccel(int count, const UDACCEL accel[]) {
 inline int UpDownCtrl::setBase(int base) {return sendMessageR<int>(UDM_SETBASE, base);}
 
 inline Window UpDownCtrl::setBuddy(HWND buddy) {
-	return Window(reinterpret_cast<HWND>(sendMessageR<LRESULT>(UDM_GETBUDDY, reinterpret_cast<WPARAM>(buddy))));}
+	return Window(borrowed(reinterpret_cast<HWND>(sendMessageR<LRESULT>(UDM_GETBUDDY, reinterpret_cast<WPARAM>(buddy)))));}
 
 inline int UpDownCtrl::setPosition(int pos) {return sendMessageR<int>(UDM_SETPOS32, 0, static_cast<LPARAM>(pos));}
 

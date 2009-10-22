@@ -22,39 +22,39 @@ namespace {
 		case WM_COMMAND:
 			// changed "Encoding" => change "Newlines" list whether the encoding is Unicode
 			if(LOWORD(wp) == IDC_COMBO_ENCODING && HIWORD(wp) == CBN_SELCHANGE) {
-				win32::Borrowed<win32::ui::ComboBox> newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
-				if(!newlineCombobox->isWindow())
+				win32::ui::ComboBox newlineCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_NEWLINE)));
+				if(!newlineCombobox.isWindow())
 					break;
-				win32::Borrowed<win32::ui::ComboBox> encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
+				win32::ui::ComboBox encodingCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_ENCODING)));
 				const wstring keepNLF = Alpha::instance().loadMessage(MSG_DIALOG__KEEP_NEWLINE);
-				const auto_ptr<e::Encoder> encoder(e::Encoder::forID(encodingCombobox->getItemData(encodingCombobox->getCurSel())));
+				const auto_ptr<e::Encoder> encoder(e::Encoder::forID(encodingCombobox.getItemData(encodingCombobox.getCurSel())));
 				const e::MIBenum encoding = (encoder.get() != 0) ? encoder->properties().mibEnum() : e::MIB_UNKNOWN;
-				const int newline = (newlineCombobox->getCount() != 0) ? newlineCombobox->getCurSel() : 0;
+				const int newline = (newlineCombobox.getCount() != 0) ? newlineCombobox.getCurSel() : 0;
 
 				// TODO:
 				if(/*encoding == minority::UTF_5 ||*/ encoding == e::standard::UTF_7
 						|| encoding == e::fundamental::UTF_8
 						|| encoding == e::fundamental::UTF_16LE || encoding == e::fundamental::UTF_16BE || encoding == e::fundamental::UTF_16
 						|| encoding == e::standard::UTF_32 || encoding == e::standard::UTF_32LE || encoding == e::standard::UTF_32BE) {
-					if(newlineCombobox->getCount() != 7) {
-						newlineCombobox->resetContent();
-						newlineCombobox->setItemData(newlineCombobox->addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_NEL), k::NLF_NEXT_LINE);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_LS), k::NLF_LINE_SEPARATOR);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_PS), k::NLF_PARAGRAPH_SEPARATOR);
-						newlineCombobox->setCurSel(newline);
+					if(newlineCombobox.getCount() != 7) {
+						newlineCombobox.resetContent();
+						newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_NEL), k::NLF_NEXT_LINE);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LS), k::NLF_LINE_SEPARATOR);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_PS), k::NLF_PARAGRAPH_SEPARATOR);
+						newlineCombobox.setCurSel(newline);
 					}
 				} else {
-					if(newlineCombobox->getCount() != 4) {
-						newlineCombobox->resetContent();
-						newlineCombobox->setItemData(newlineCombobox->addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
-						newlineCombobox->setItemData(newlineCombobox->addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
-						newlineCombobox->setCurSel((newline < 4) ? newline : 0);
+					if(newlineCombobox.getCount() != 4) {
+						newlineCombobox.resetContent();
+						newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
+						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
+						newlineCombobox.setCurSel((newline < 4) ? newline : 0);
 					}
 				}
 			}
@@ -62,10 +62,10 @@ namespace {
 		case WM_INITDIALOG: {
 			OPENFILENAMEW& ofn = *reinterpret_cast<OPENFILENAMEW*>(lp);
 			HWND dialog = ::GetParent(window);
-			win32::Borrowed<win32::ui::ComboBox> encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
-			win32::Borrowed<win32::ui::Static> encodingLabel(::GetDlgItem(window, IDC_STATIC_1));
-			win32::Borrowed<win32::ui::ComboBox> newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
-			win32::Borrowed<win32::ui::Static> newlineLabel(::GetDlgItem(window, IDC_STATIC_2));
+			win32::ui::ComboBox encodingCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_ENCODING)));
+			win32::ui::Static encodingLabel(win32::borrowed(::GetDlgItem(window, IDC_STATIC_1)));
+			win32::ui::ComboBox newlineCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_NEWLINE)));
+			win32::ui::Static newlineLabel(win32::borrowed(::GetDlgItem(window, IDC_STATIC_2)));
 			HFONT guiFont = reinterpret_cast<HFONT>(::SendMessageW(dialog, WM_GETFONT, 0, 0L));
 
 			// ダイアログテンプレートのコントロールの位置合わせなど
@@ -78,25 +78,25 @@ namespace {
 			// labels
 			::GetWindowRect(::GetDlgItem(dialog, stc2), &rect);
 			long x = rect.left;
-			encodingLabel->getRect(rect);
-			encodingLabel->setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-			encodingLabel->setFont(guiFont);
-			if(newlineLabel->isWindow()) {
-				newlineLabel->getRect(rect);
-				newlineLabel->setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-				newlineLabel->setFont(guiFont);
+			encodingLabel.getRect(rect);
+			encodingLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			encodingLabel.setFont(guiFont);
+			if(newlineLabel.isWindow()) {
+				newlineLabel.getRect(rect);
+				newlineLabel.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+				newlineLabel.setFont(guiFont);
 			}
 
 			// comboboxes
 			::GetWindowRect(::GetDlgItem(dialog, cmb1), &rect);
 			x = rect.left;
-			encodingCombobox->getRect(rect);
-			encodingCombobox->setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-			encodingCombobox->setFont(guiFont);
-			if(newlineCombobox->isWindow()) {
-				newlineCombobox->getRect(rect);
-				newlineCombobox->setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-				newlineCombobox->setFont(guiFont);
+			encodingCombobox.getRect(rect);
+			encodingCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			encodingCombobox.setFont(guiFont);
+			if(newlineCombobox.isWindow()) {
+				newlineCombobox.getRect(rect);
+				newlineCombobox.setPosition(0, x - pt.x, rect.top - pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+				newlineCombobox.setFont(guiFont);
 			}
 
 			const pair<string, k::Newline>& format = *reinterpret_cast<pair<string, k::Newline>*>(ofn.lCustData);
@@ -108,42 +108,42 @@ namespace {
 			for(vector<pair<size_t, const e::IEncodingProperties*> >::const_iterator encoding(encodings.begin()), e(encodings.end()); encoding != e; ++encoding) {
 				const wstring name(asciiEncoder->toUnicode(encoding->second->displayName(locale::classic())));
 				if(!name.empty()) {
-					const int item = encodingCombobox->addString(name.c_str());
+					const int item = encodingCombobox.addString(name.c_str());
 					if(item >= 0) {
-						encodingCombobox->setItemData(item, static_cast<DWORD>(encoding->first));
+						encodingCombobox.setItemData(item, static_cast<DWORD>(encoding->first));
 						const string internalName(encoding->second->name());
 						if(e::compareEncodingNames(internalName.begin(), internalName.end(), format.first.begin(), format.first.end()) == 0)
-							encodingCombobox->setCurSel(item);
+							encodingCombobox.setCurSel(item);
 					}
 				}
 			}
 
-			if(!newlineCombobox->isWindow()) {
+			if(!newlineCombobox.isWindow()) {
 				vector<string> detectors;
 				e::EncodingDetector::availableNames(back_inserter(detectors));
 				for(vector<string>::const_iterator detector(detectors.begin()), e(detectors.end()); detector != e; ++detector) {
 					const wstring name(asciiEncoder->toUnicode(*detector));
 					if(!name.empty()) {
-						const int item = encodingCombobox->addString(name.c_str());
-						encodingCombobox->setItemData(item, 0xffffffffu);
+						const int item = encodingCombobox.addString(name.c_str());
+						encodingCombobox.setItemData(item, 0xffffffffu);
 						if(e::compareEncodingNames(name.begin(), name.end(), format.first.begin(), format.first.end()) == 0)
-							encodingCombobox->setCurSel(item);
+							encodingCombobox.setCurSel(item);
 					}
 				}
 			}
 
-			if(encodingCombobox->getCurSel() == CB_ERR)
-				encodingCombobox->setCurSel(0);
+			if(encodingCombobox.getCurSel() == CB_ERR)
+				encodingCombobox.setCurSel(0);
 
-			if(newlineCombobox->isWindow()) {
+			if(newlineCombobox.isWindow()) {
 				switch(format.second) {
-				case k::NLF_RAW_VALUE:				newlineCombobox->setCurSel(0);	break;
-				case k::NLF_CR_LF:					newlineCombobox->setCurSel(1);	break;
-				case k::NLF_LINE_FEED:				newlineCombobox->setCurSel(2);	break;
-				case k::NLF_CARRIAGE_RETURN:		newlineCombobox->setCurSel(3);	break;
-				case k::NLF_NEXT_LINE:				newlineCombobox->setCurSel(4);	break;
-				case k::NLF_LINE_SEPARATOR:			newlineCombobox->setCurSel(5);	break;
-				case k::NLF_PARAGRAPH_SEPARATOR:	newlineCombobox->setCurSel(6);	break;
+				case k::NLF_RAW_VALUE:				newlineCombobox.setCurSel(0);	break;
+				case k::NLF_CR_LF:					newlineCombobox.setCurSel(1);	break;
+				case k::NLF_LINE_FEED:				newlineCombobox.setCurSel(2);	break;
+				case k::NLF_CARRIAGE_RETURN:		newlineCombobox.setCurSel(3);	break;
+				case k::NLF_NEXT_LINE:				newlineCombobox.setCurSel(4);	break;
+				case k::NLF_LINE_SEPARATOR:			newlineCombobox.setCurSel(5);	break;
+				case k::NLF_PARAGRAPH_SEPARATOR:	newlineCombobox.setCurSel(6);	break;
 				}
 				::SendMessageW(window, WM_COMMAND, MAKEWPARAM(IDC_COMBO_ENCODING, CBN_SELCHANGE), 0);
 			}
@@ -152,20 +152,20 @@ namespace {
 		case WM_NOTIFY: {
 			OFNOTIFYW& ofn = *reinterpret_cast<OFNOTIFYW*>(lp);
 			if(ofn.hdr.code == CDN_FILEOK) {	// "Open" or "Save"
-				win32::Borrowed<win32::ui::ComboBox> encodingCombobox(::GetDlgItem(window, IDC_COMBO_ENCODING));
-				win32::Borrowed<win32::ui::ComboBox> newlineCombobox(::GetDlgItem(window, IDC_COMBO_NEWLINE));
-				win32::Borrowed<win32::ui::Button> readOnlyCheckbox(::GetDlgItem(::GetParent(window), chx1));
+				win32::ui::ComboBox encodingCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_ENCODING)));
+				win32::ui::ComboBox newlineCombobox(win32::borrowed(::GetDlgItem(window, IDC_COMBO_NEWLINE)));
+				win32::ui::Button readOnlyCheckbox(win32::borrowed(::GetDlgItem(::GetParent(window), chx1)));
 				pair<string, k::Newline>& format = *reinterpret_cast<pair<string, k::Newline>*>(ofn.lpOFN->lCustData);
 
 				format.first.erase();
-				const int encodingCurSel = encodingCombobox->getCurSel();
+				const int encodingCurSel = encodingCombobox.getCurSel();
 				if(encodingCurSel != CB_ERR) {
-					const DWORD id = encodingCombobox->getItemData(encodingCurSel);
+					const DWORD id = encodingCombobox.getItemData(encodingCurSel);
 					if(id != 0xffffffffu)
 						format.first = e::Encoder::forID(id)->properties().name();
 				}
 				if(format.first.empty()) {
-					const wstring encodingName(encodingCombobox->getText());
+					const wstring encodingName(encodingCombobox.getText());
 					format.first = e::Encoder::forMIB(e::fundamental::US_ASCII)->fromUnicode(encodingName);
 				}
 				if(!e::Encoder::supports(format.first) && e::EncodingDetector::forName(format.first) == 0) {
@@ -174,8 +174,8 @@ namespace {
 					::SetWindowLongPtrW(window, DWLP_MSGRESULT, true);
 					return true;
 				}
-				if(newlineCombobox->isWindow()) {
-					switch(newlineCombobox->getCurSel()) {
+				if(newlineCombobox.isWindow()) {
+					switch(newlineCombobox.getCurSel()) {
 					case 0:	format.second = k::NLF_RAW_VALUE;			break;
 					case 1:	format.second = k::NLF_CR_LF;				break;
 					case 2:	format.second = k::NLF_LINE_FEED;			break;
@@ -185,10 +185,10 @@ namespace {
 					case 6:	format.second = k::NLF_PARAGRAPH_SEPARATOR;	break;
 					}
 				}
-				if(readOnlyCheckbox->isWindow()) {
+				if(readOnlyCheckbox.isWindow()) {
 					// 複数ファイルの場合、チェックボックスの状態が無視される
 					// (意図的かもしれない)
-					if(readOnlyCheckbox->getCheck() == BST_CHECKED)
+					if(readOnlyCheckbox.getCheck() == BST_CHECKED)
 						ofn.lpOFN->Flags |= OFN_READONLY;
 					else
 						ofn.lpOFN->Flags &= ~OFN_READONLY;

@@ -407,7 +407,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
  * Copy-constructor. Unlike @c manah#win32#Handle class, this does not copy the window handle. For
  * more details, see the description of @c TextViewer.
  */
-TextViewer::TextViewer(const TextViewer& rhs) : win32::ui::CustomControl<TextViewer>(0), presentation_(rhs.presentation_), tipText_(0)
+TextViewer::TextViewer(const TextViewer& rhs) : win32::ui::CustomControl<TextViewer>(), presentation_(rhs.presentation_), tipText_(0)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		, accessibleProxy_(0)
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -2254,7 +2254,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* 
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
 	if(!view_.isVisible())
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(view_.getTop()->use() == ::GetActiveWindow())
+	if(view_.getTop().use() == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
 	if(view_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;

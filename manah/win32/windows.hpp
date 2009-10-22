@@ -68,64 +68,49 @@ namespace manah {
 			explicit NullHandleException(const std::string& message) : InvalidHandleException(message) {}
 		};
 
+		template<typename Handle> struct Managed {};
+		template<typename Handle> struct Borrowed {};
+		template<typename Handle> inline Managed<Handle>* managed(Handle handle) {return reinterpret_cast<Managed<Handle>*>(handle);}
+		template<typename Handle> inline Borrowed<Handle>* borrowed(Handle handle) {return reinterpret_cast<Borrowed<Handle>*>(handle);}
+
 		/**
 		 * Holds and manages a handle value. The instance has the ownership of the handle value.
 		 * The semantics of the copy operations is same as @c std#auto_ptr.
-		 * @param T the type of the handle to be held
-		 * @param Win32 function used to discard the handle
+		 * @tparam HandleType the type of the handle to be held
+		 * @tparam deleter Win32 function used to discard the handle
+		 * @tparam HeldType the type of the handle to be held actually
 		 */
-		template<typename T = HANDLE, BOOL(WINAPI* deleter)(T) = ::CloseHandle>
-		class Handle {
+		template<typename HandleType = HANDLE, BOOL(WINAPI* deleter)(HandleType) = ::CloseHandle, typename HeldType = HandleType>
+		class Object {
 		public:
-			typedef T HandleType;	///< The type of the handle to be held.
+			/// The type of the handle to be held.
+			typedef HeldType Handle;
+			/// Alias of this type.
+			typedef Object<HandleType, deleter, Handle> BaseObject;
 		public:
-			/// Constructor takes a handle as the initial value.
-			explicit Handle(HandleType handle = 0) : handle_(handle) {}
-			/// Destructor discards the handle.
-			virtual ~Handle() {if(handle_ != 0) reset();}
-			/// Copy-constructor takes the ownership of the handle away from @a rhs.
-			Handle(Handle<HandleType, deleter>& rhs) : handle_(rhs.handle_) {rhs.handle_ = 0;}
-			/// Assignment operator takes the ownership of the handle away from @a rhs.
-			Handle<HandleType, deleter>& operator=(
-				Handle<HandleType, deleter>& rhs) {reset(); std::swap(handle_, rhs.handle_); return *this;}
-			/// Returns the raw handle value.
-			HandleType get() const {return handle_;}
-			/// Sets the internal handle value to @c null.
-			HandleType release() {HandleType temp(0); std::swap(handle_, temp); return temp;}
-			/// Discards the current handle and takes the new handle's ownership.
-			void reset(HandleType newValue = 0) {aboutToReset(newValue); handle_ = newValue;}
-			/// Returns the raw handle value. If the handle is @c null, throws @c std#logic_error.
-			HandleType use() const {if(handle_ == 0) throw std::logic_error("handle is null.");
-				else if(!check()) throw InvalidHandleException("handle is invalid."); return handle_;}
+			explicit Object(Managed<Handle>* handle);
+			explicit Object(Borrowed<Handle>* handle = 0);
+			virtual ~Object();
+			Object(Object<HandleType, deleter, Handle>& other);
+			Object<HandleType, deleter, Handle>& operator=(Object<HandleType, deleter, Handle>& other);
+			Handle get() const;
+			Handle release();
+			void reset(Managed<Handle>* newValue);
+			void reset(Borrowed<Handle>* newValue = 0);
+			Handle use() const;
 		protected:
-			/// Returns false if the handle value is invalid. Called by @c #use method.
-			virtual bool check() const {return true;}
+			/// Returns @c false if @a handle is invalid. Called by @c #use method.
+			virtual bool check(Handle handle) const {return true;}
 		private:
-			/// Called by @c #reset method before overwritten by @a newValue.
-			virtual void aboutToReset(HandleType newValue) {if(newValue != handle_ && deleter != 0) (*deleter)(handle_);}
-		private:
-			HandleType handle_;
+			void resetHandle(Handle newHandle);
+			Handle handle_;
+			bool manages_;
 		};
 
-		template<typename T> class Borrowed : private T {
-		public:
-			/// Default constructor.
-			Borrowed() : T() {}
-//			/// Constructor.
-//			explicit Borrowed(const T& t) : T(t.get()) {}
-			/// Constructor.
-			explicit Borrowed(typename T::HandleType handle) : T(handle) {}
-			/// Destructor.
-			~Borrowed() throw() {T::release();}
-			/// Copy-constructor just copies the handle value.
-			Borrowed(const Borrowed<T>& rhs) : T() {reset(rhs.get());}
-			/// Member-access operator returns @c T object.
-			T* operator->() {return this;}
-			/// Member-access operator returns @c const @c T object.
-			const T* operator->() const {return this;}
-		private:
-			void aboutToReset(typename T::HandleType newValue) {}
-		};
+#define MANAH_WIN32_OBJECT_CONSTRUCTORS(ClassName)									\
+	ClassName() : BaseObject() {}													\
+	explicit ClassName(Managed<Handle>* handle) : BaseObject(handle) {}	\
+	explicit ClassName(Borrowed<Handle>* handle) : BaseObject(handle) {}
 
 		/// A resource identifier can be initialized by using both a string and a numeric identifier.
 		class ResourceID {
@@ -185,6 +170,97 @@ namespace manah {
 			ss << rhs;
 			::OutputDebugStringW(ss.str().c_str());
 			return *this;
+		}
+
+
+		/// Constructor takes a handle as the initial value and manages it.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline Object<HandleType, deleter, HeldType>::Object(Managed<Handle>* handle) : handle_(reinterpret_cast<Handle>(handle)), manages_(true) {
+			if(handle_ != 0 && !check(handle_))
+				throw InvalidHandleException("handle");
+		}
+
+		/// Constructor takes a handle as the initial value.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline Object<HandleType, deleter, HeldType>::Object(Borrowed<Handle>* handle /* = 0 */) : handle_(reinterpret_cast<Handle>(handle)), manages_(false) {
+			if(handle_ != 0 && !check(handle_))
+				throw InvalidHandleException("handle");
+		}
+
+		/// Destructor discards the handle.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline Object<HandleType, deleter, HeldType>::~Object() {
+			reset();
+		}
+
+		/// Copy-constructor takes the ownership of the handle away from @a other.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline Object<HandleType, deleter, HeldType>::Object(Object<HandleType, deleter, HeldType>& other) : handle_(other.handle_), manages_(other.manages_) {
+			other.handle_ = 0;
+		}
+
+		/// Assignment operator takes the ownership of the handle away from @a other.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline Object<HandleType, deleter, HeldType>& Object<HandleType, deleter, HeldType>::operator=(Object<HandleType, deleter, HeldType>& other) {
+			reset();
+			std::swap(handle_, other.handle_);
+			manages_ = other.manages_;
+			return *this;
+		}
+
+		/// Returns the raw handle value.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline typename Object<HandleType, deleter, HeldType>::Handle Object<HandleType, deleter, HeldType>::get() const {
+			return handle_;
+		}
+
+		/// Sets the internal handle value to @c null.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline typename Object<HandleType, deleter, HeldType>::Handle Object<HandleType, deleter, HeldType>::release() {
+			Handle temp(0);
+			std::swap(handle_, temp);
+			return temp;
+		}
+
+		/// Discards or release the current handle, holds the new handle value and manages it.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline void Object<HandleType, deleter, HeldType>::reset(Managed<Handle>* newValue) {
+			resetHandle(reinterpret_cast<Handle>(newValue));
+			manages_ = true;
+		}
+
+		/// Discards or release the current handle and holds the new handle value.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline void Object<HandleType, deleter, HeldType>::reset(Borrowed<Handle>* newValue /* = 0 */) {
+			resetHandle(reinterpret_cast<Handle>(newValue));
+			manages_ = false;
+		}
+
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline void Object<HandleType, deleter, HeldType>::resetHandle(Handle newHandle) {
+			if(newHandle != 0 && !check(newHandle))
+				throw InvalidHandleException("newValue");
+			if(handle_ == 0)
+				handle_ = newHandle;
+			else if(newHandle == 0) {
+				if(deleter != 0 && manages_)
+					(*deleter)(handle_);
+				handle_ = 0;
+			} else {
+				if(newHandle != handle_ && deleter != 0 && manages_)
+					(*deleter)(handle_);
+				handle_ = newHandle;
+			}
+		}
+
+		/// Returns the raw handle value. If the handle is @c null, throws @c std#logic_error.
+		template<typename HandleType, BOOL(WINAPI* deleter)(HandleType), typename HeldType>
+		inline typename Object<HandleType, deleter, HeldType>::Handle Object<HandleType, deleter, HeldType>::use() const {
+			if(handle_ == 0)
+				throw std::logic_error("handle is null.");
+			else if(!check(handle_))
+				throw InvalidHandleException("handle is invalid.");
+			return handle_;
 		}
 	}
 }

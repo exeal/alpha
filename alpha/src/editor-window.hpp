@@ -62,7 +62,7 @@ namespace alpha {
 	private:
 		mutable boost::python::object asCaret_, asTextEditor_;
 		ascension::length_t visualColumnStartValue_;
-		static manah::win32::Handle<HICON, ::DestroyIcon> narrowingIcon_;
+		static manah::win32::Object<HICON, ::DestroyIcon> narrowingIcon_;
 	};
 
 	/// A window pane for a text editor.
