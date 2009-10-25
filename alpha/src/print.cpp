@@ -1,21 +1,46 @@
 /**
  * @file print.cpp
+ * Exposes @c printing module into Python.
  * @author exeal
- * @date 2007
+ * @date 2007, 2009
  */
 
-#include "stdafx.h"
-#include "print.hpp"
 #include "application.hpp"
-#include "resource/messages.h"
-#include "../manah/win32/ui/dialog.hpp"
+#include "editor-window.hpp"
+#include "../resource/messages.h"
+#include <manah/win32/dc.hpp>
+#include <manah/win32/ui/dialog.hpp>
+#include <ascension/layout.hpp>
+#include <ascension/viewer.hpp>
 #include <commdlg.h>	// PrintDlgExW, SetupPageDlgW, ...
 #include <shlwapi.h>	// PathCompactPathW
 using namespace alpha;
+using namespace manah;
 using namespace std;
+namespace py = boost::python;
 
 
 namespace {
+	class Printing {
+		MANAH_NONCOPYABLE_TAG(Printing);
+	public:
+		void abort();
+		static Printing& instance() /*throw()*/;
+		bool print(const Buffer& buffer, bool showDialog);
+		bool setupPages();
+	private:
+		Printing();
+		~Printing() /*throw()*/;
+		static BOOL CALLBACK abortProcedure(HDC dc, int error);
+		bool doSetupPages(bool returnDefault);
+	private:
+		HGLOBAL devmode_, devnames_;
+		SIZE paperSize_;	// width and height of papers in mm
+		RECT margins_;		// margin widths in mm
+		bool printsLineNumbers_, printsHeader_;
+		bool printing_, userAborted_;
+	};
+
 	class PrintingRenderer : public ascension::layout::TextRenderer {
 	public:
 		PrintingRenderer(ascension::presentation::Presentation& presentation, HDC deviceContext,
@@ -25,9 +50,8 @@ namespace {
 		}
 	private:
 		// FontSelector
-		auto_ptr<manah::win32::gdi::DC> getDeviceContext() const {
-			auto_ptr<manah::win32::gdi::DC> temp(new manah::win32::gdi::DC());
-			temp->attach(dc_);
+		auto_ptr<win32::gdi::DC> getDeviceContext() const {
+			auto_ptr<win32::gdi::DC> temp(new win32::gdi::DC(win32::borrowed(dc_)));
 			return temp;
 		}
 		// ILayoutInformationProvider
@@ -43,12 +67,16 @@ namespace {
 		int width_;
 	};
 
-	class PrintingPrompt : public manah::win32::ui::FixedIDDialog<IDD_DLG_PRINTING> {
+	class PrintingPrompt : public win32::ui::FixedIDDialog<IDD_DLG_PRINTING> {
 	public:
-		explicit PrintingPrompt(const basic_string<::WCHAR>& bufferName) : bufferName_(bufferName) {}
+		explicit PrintingPrompt(const basic_string<WCHAR>& bufferName) : bufferName_(bufferName) {}
 		void setPageNumber(ulong page) {
-			::WCHAR s[32];
+			WCHAR s[128];
+#if(_MSC_VER < 1400)
 			swprintf(s, L"%lu", page);
+#else
+			swprintf(s, MANAH_COUNTOF(s), L"%lu", page);
+#endif // _MSC_VER < 1400
 			setItemText(IDC_STATIC_2, s);
 		}
 	private:
@@ -61,7 +89,7 @@ namespace {
 			setItemText(IDC_STATIC_2, L"0");
 		}
 	private:
-		const basic_string<::WCHAR> bufferName_;
+		const basic_string<WCHAR> bufferName_;
 	};
 } // namespace @0
 
@@ -92,7 +120,7 @@ void Printing::abort() {
 BOOL CALLBACK Printing::abortProcedure(HDC dc, int error) {
 	if(error != 0 && error != SP_OUTOFDISK)
 		return false;
-	::MSG message;
+	MSG message;
 	while(!Printing::instance().userAborted_ && ::PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
 		if(message.message == WM_QUIT) {
 			::PostQuitMessage(0);
@@ -106,10 +134,10 @@ BOOL CALLBACK Printing::abortProcedure(HDC dc, int error) {
 
 /// Displays "Page Setup" dialog box.
 bool Printing::doSetupPages(bool returnDefault) {
-	::PAGESETUPDLGW psd;
-	memset(&psd, 0, sizeof(::PAGESETUPDLGW));
-	psd.lStructSize = sizeof(::PAGESETUPDLGW);
-	psd.hwndOwner = Alpha::instance().getMainWindow().getHandle();
+	PAGESETUPDLGW psd;
+	memset(&psd, 0, sizeof(PAGESETUPDLGW));
+	psd.lStructSize = sizeof(PAGESETUPDLGW);
+	psd.hwndOwner = Alpha::instance().getMainWindow().get();
 	psd.hDevMode = devmode_;
 	psd.hDevNames = devnames_;
 	psd.Flags = PSD_DEFAULTMINMARGINS | PSD_INHUNDREDTHSOFMILLIMETERS | PSD_SHOWHELP;
@@ -143,7 +171,7 @@ Printing& Printing::instance() throw() {
 /**
  * Prints the specified buffer.
  * @param buffer the buffer to print
- * @param showDialog
+ * @param showDialog set @c true to display "Print" dialog box
  */
 bool Printing::print(const Buffer& buffer, bool showDialog) {
 	if(printing_)
@@ -151,10 +179,10 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	printing_ = true;
 
 	// display "Print" dialog box
-	::PRINTDLGEXW pdex;
-	memset(&pdex, 0, sizeof(::PRINTDLGEXW));
-	pdex.lStructSize = sizeof(::PRINTDLGEXW);
-	pdex.hwndOwner = Alpha::instance().getMainWindow().getHandle();
+	PRINTDLGEXW pdex;
+	memset(&pdex, 0, sizeof(PRINTDLGEXW));
+	pdex.lStructSize = sizeof(PRINTDLGEXW);
+	pdex.hwndOwner = Alpha::instance().getMainWindow().get();
 	pdex.hDevMode = devmode_;
 	pdex.hDevNames = devnames_;
 	pdex.Flags = (showDialog ? (PD_COLLATE | PD_NOCURRENTPAGE | PD_NOPAGENUMS | PD_NOSELECTION) : PD_RETURNDEFAULT) | PD_RETURNDC;
@@ -173,13 +201,12 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	devnames_ = pdex.hDevNames;
 
 	// update metrics
-	manah::win32::gdi::DC dc;
-	dc.attach(pdex.hDC);
+	win32::gdi::DC dc(win32::borrowed(pdex.hDC));
 	static const int MM100_PER_INCH = 2540;			// 1 in = 2.540 mm
 	const int xdpi = dc.getDeviceCaps(LOGPIXELSX);	// resolutions in px/in
 	const int ydpi = dc.getDeviceCaps(LOGPIXELSY);
-	const ::POINT physicalOffsetInMM = {dc.getDeviceCaps(PHYSICALOFFSETX), dc.getDeviceCaps(PHYSICALOFFSETY)};
-	const ::POINT physicalOffset = {	// physical offsets in mm
+	const POINT physicalOffsetInMM = {dc.getDeviceCaps(PHYSICALOFFSETX), dc.getDeviceCaps(PHYSICALOFFSETY)};
+	const POINT physicalOffset = {	// physical offsets in mm
 		::MulDiv(physicalOffsetInMM.x, MM100_PER_INCH, xdpi), ::MulDiv(physicalOffsetInMM.y, MM100_PER_INCH, ydpi)};
 	paperSize_.cx = ::MulDiv(dc.getDeviceCaps(PHYSICALWIDTH), MM100_PER_INCH, xdpi);
 	paperSize_.cy = ::MulDiv(dc.getDeviceCaps(PHYSICALHEIGHT), MM100_PER_INCH, ydpi);
@@ -190,23 +217,22 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	margins_.bottom = max<long>(margins_.bottom,
 		paperSize_.cy - ::MulDiv(dc.getDeviceCaps(VERTRES), MM100_PER_INCH, ydpi) - margins_.right);
 
-#define MM100_TO_PIXELS_X(mm100)	::MulDiv(mm100, xdpi, MM100_PER_INCH)
-#define MM100_TO_PIXELS_Y(mm100)	::MulDiv(mm100, ydpi, MM100_PER_INCH)
+#define ALPHA_MM100_TO_PIXELS_X(mm100)	::MulDiv(mm100, xdpi, MM100_PER_INCH)
+#define ALPHA_MM100_TO_PIXELS_Y(mm100)	::MulDiv(mm100, ydpi, MM100_PER_INCH)
 
 	// reset fonts
 	PrintingRenderer renderer(const_cast<ascension::presentation::Presentation&>(buffer.presentation()),
-		dc.getHandle(), (*buffer.presentation().firstTextViewer())->configuration(),
-		MM100_TO_PIXELS_X(paperSize_.cx - margins_.left - margins_.right));
-	::LOGFONTW lf;
-	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().font(), sizeof(::LOGFONTW), &lf);
-	manah::win32::gdi::ScreenDC screenDC;
+		dc.get(), (*buffer.presentation().firstTextViewer())->configuration(),
+		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.left - margins_.right));
+	LOGFONTW lf;
+	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().font(), sizeof(LOGFONTW), &lf);
+	win32::gdi::ScreenDC screenDC;
 	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
 
 	// start printing
 	dc.setAbortProc(abortProcedure);
-	const basic_string<::WCHAR> bufferName(buffer.textFile().isOpen() ? buffer.textFile().location() : buffer.name());
-	::DOCINFOW di;
-	memset(&di, 0, sizeof(::DOCINFOW));
+	const basic_string<WCHAR> bufferName(buffer.textFile().isBoundToFile() ? buffer.textFile().location() : buffer.name());
+	win32::AutoZero<DOCINFOW> di;
 	di.lpszDocName = bufferName.c_str();
 	if(dc.startDoc(di) == SP_ERROR) {
 		printing_ = false;
@@ -218,16 +244,18 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	prompt.doModeless(Alpha::instance().getMainWindow());
 
 	// calculate compacted path name
-	::RECT rc = {MM100_TO_PIXELS_X(margins_.left), 0,
-		MM100_TO_PIXELS_X(paperSize_.cx - margins_.right), MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
-	::HFONT oldFont = dc.selectObject(renderer.font());
-	::WCHAR compactedPathName[MAX_PATH];
+	RECT rc = {
+		ALPHA_MM100_TO_PIXELS_X(margins_.left), 0,
+		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.right),
+		ALPHA_MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
+	HFONT oldFont = dc.selectObject(renderer.font());
+	WCHAR compactedPathName[MAX_PATH];
 	wcscpy(compactedPathName, bufferName.c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
 
 	// create a pen draws separators
 	int separatorThickness;
-	if(!ascension::layout::getDecorationLineMetrics(dc.getHandle(), 0, 0, &separatorThickness, 0, 0))
+	if(!ascension::layout::getDecorationLineMetrics(dc.get(), 0, 0, &separatorThickness, 0, 0))
 		separatorThickness = 1;
 	HPEN separatorPen = ::CreatePen(PS_SOLID, separatorThickness, RGB(0x00, 0x00, 0x00));
 	dc.selectObject(oldFont);
@@ -235,7 +263,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	// print lines on pages
 	bool error = false;
 	ulong page = 0;
-	::WCHAR pageNumber[128];
+	WCHAR pageNumber[128];
 	const int linePitch = renderer.linePitch();
 	const ascension::layout::Alignment alignment = (*buffer.presentation().firstTextViewer())->configuration().alignment;
 	rc.top = rc.bottom;
@@ -250,21 +278,25 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 						break;
 					}
 				}
-				if(!toBoolean(abortProcedure(dc.getHandle(), 0)) || dc.startPage() == SP_ERROR) {
+				if(!toBoolean(abortProcedure(dc.get(), 0)) || dc.startPage() == SP_ERROR) {
 					error = true;
 					break;
 				}
 				prompt.setPageNumber(page);
 				dc.setViewportOrg(-physicalOffsetInMM.x, -physicalOffsetInMM.y);
 				// print a header
-				::HFONT oldFont = dc.selectObject(renderer.font());
+				HFONT oldFont = dc.selectObject(renderer.font());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
-				dc.textOut(rc.left, rc.top = MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
+				dc.textOut(rc.left, rc.top = ALPHA_MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
+#if(_MSC_VER < 1400)
 				swprintf(pageNumber, L"%lu", page);
+#else
+				swprintf(pageNumber, MANAH_COUNTOF(pageNumber), L"%lu", page);
+#endif // _MSC_VER < 1400
 				dc.setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.right, rc.top, pageNumber, static_cast<int>(wcslen(pageNumber)));
 				dc.selectObject(oldFont);
-				::HPEN oldPen = dc.selectObject(separatorPen);
+				HPEN oldPen = dc.selectObject(separatorPen);
 				dc.moveTo(rc.left, rc.top + linePitch + separatorThickness / 2);
 				dc.lineTo(rc.right, rc.top + linePitch + separatorThickness / 2);
 				dc.selectObject(oldPen);
@@ -285,8 +317,8 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		}
 	}
 
-#undef MM100_TO_PIXELS_X
-#undef MM100_TO_PIXELS_Y
+#undef ALPHA_MM100_TO_PIXELS_X
+#undef ALPHA_MM100_TO_PIXELS_Y
 
 	if(!error && !userAborted_) {
 		dc.endPage();
@@ -305,3 +337,25 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 bool Printing::setupPages() {
 	return doSetupPages(false);
 }
+
+
+namespace {
+	void abortPrinting() {
+		Printing::instance().abort();
+	}
+	bool printBuffer(py::object buffer, bool showDialog) {
+		return Printing::instance().print((buffer != py::object()) ?
+			py::extract<const Buffer&>(buffer) : EditorWindows::instance().activeBuffer(), showDialog);
+	}
+	bool setupPagesDialog() {
+		return Printing::instance().setupPages();
+	}
+}
+
+ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
+	py::scope temp(ambient::Interpreter::instance().module("printing"));
+
+	py::def("abort", &abortPrinting);
+	py::def("print_buffer", &printBuffer, (py::arg("buffer") = py::object(), py::arg("show_dialog") = false));
+	py::def("setup_pages_dialog", &setupPagesDialog);
+ALPHA_EXPOSE_EPILOGUE()
