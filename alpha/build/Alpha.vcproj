@@ -399,10 +399,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\print.hpp"
-				>
-			</File>
-			<File
 				RelativePath="..\src\resource.h"
 				>
 			</File>
