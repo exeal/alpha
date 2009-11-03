@@ -438,15 +438,14 @@ InputManager::InputManager() :
 
 /***/
 bool InputManager::input(const MSG& message) {
-	if(message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) {
+	if((message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) && message.wParam != VK_PROCESSKEY) {
 		// this interrupts WM_CHARs
 		const KeyStroke k(
 			static_cast<KeyStroke::ModifierKey>(
 				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
 				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
 				| ((message.message == WM_SYSKEYDOWN || ::GetKeyState(VK_MENU) < 0) ? KeyStroke::ALTERNATIVE_KEY : 0)),
-			static_cast<KeyStroke::VirtualKey>(((message.wParam != VK_PROCESSKEY) ?
-				message.wParam : ::MapVirtualKey((message.lParam >> 16) & 0xffu, MAPVK_VSC_TO_VK_EX)) & 0x00ffu));
+			static_cast<KeyStroke::VirtualKey>(message.wParam));
 		switch(k.naturalKey()) {
 		case VK_SHIFT:
 		case VK_CONTROL:
