@@ -119,6 +119,7 @@ namespace alpha {
 		private:
 			std::pair<boost::python::object, const InputMappingScheme*> mappingScheme_, modalMappingScheme_;
 			std::vector<const KeyStroke> pendingKeySequence_;
+			boost::python::object inputTypedCharacterCommand_;
 		};
 
 

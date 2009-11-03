@@ -40,28 +40,26 @@ namespace {
 	KeyStroke::VirtualKey toVirtualKey(py::object o) {
 		if(py::extract<KeyStroke::VirtualKey>(o).check())
 			return py::extract<KeyStroke::VirtualKey>(o);
-		else if(py::extract<py::str>(o).check()) {	// o is a str
-			if(py::len(o) != 1) {
-				::PyErr_BadArgument();
-				py::throw_error_already_set();
+		WCHAR c = 0xffffu;
+		if(py::extract<py::str>(o).check()) {	// o is a str
+			if(py::len(o) == 1) {
+				const py::str s = py::extract<py::str>(o);
+				c = ::PyString_AsString(s.ptr())[0];
 			}
-			const py::str s = py::extract<py::str>(o);
-			return static_cast<KeyStroke::VirtualKey>(toupper(::PyString_AsString(s.ptr())[0], locale::classic()));
 		} else if(PyUnicode_Check(o.ptr()) != 0) {	// o is a unicode
 			if(::PyUnicode_GetSize(o.ptr()) == 1) {
-				wchar_t c;
-				if(::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), &c, 1) != -1) {
-					if(c < 0x0100u)
-						return static_cast<KeyStroke::VirtualKey>(toupper(static_cast<char>(c & 0x00ffu), locale::classic()));
-					else
-						::PyErr_BadArgument();
-				}
+				wchar_t wc;
+				if(::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), &wc, 1) != -1)
+					c = wc;
 			}
-			py::throw_error_already_set();
+		}
+		if(c != 0xffffu) {
+			const KeyStroke::VirtualKey k = LOBYTE(::VkKeyScanW(c));
+			if(k != 0xffu)
+				return k;
 		}
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
-		return 0;	// dummy
 	}
 }
 
@@ -447,7 +445,8 @@ bool InputManager::input(const MSG& message) {
 				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
 				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
 				| ((message.message == WM_SYSKEYDOWN || ::GetKeyState(VK_MENU) < 0) ? KeyStroke::ALTERNATIVE_KEY : 0)),
-			static_cast<KeyStroke::VirtualKey>(message.wParam & 0x00ffu));
+			static_cast<KeyStroke::VirtualKey>(((message.wParam != VK_PROCESSKEY) ?
+				message.wParam : ::MapVirtualKey((message.lParam >> 16) & 0xffu, MAPVK_VSC_TO_VK_EX)) & 0x00ffu));
 		switch(k.naturalKey()) {
 		case VK_SHIFT:
 		case VK_CONTROL:
@@ -459,20 +458,26 @@ bool InputManager::input(const MSG& message) {
 		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
 		if(command != py::object()) {
 			pendingKeySequence_.clear();
-			ambient::Interpreter::instance().executeCommand(command);
+			bool typed = false;
+			if(inputTypedCharacterCommand_ == py::object())
+				inputTypedCharacterCommand_ = Interpreter::instance().module("intrinsics").attr("input_typed_character");
+			if(command == inputTypedCharacterCommand_)
+				typed = true;
+			if(!typed)
+				ambient::Interpreter::instance().executeCommand(command);
 			alpha::Alpha::instance().statusBar().setText(L"");
-			return true;
+			return !typed;
 		} else if(partialMatch) {
 			const wstring s(KeyStroke::format(pendingKeySequence_.begin(), pendingKeySequence_.end()));
 			alpha::Alpha::instance().statusBar().setText(s.c_str());
 			return true;
 		}
-		const bool interruptMenuActivation =
-			pendingKeySequence_.size() > 1 && (k.modifierKeys() & KeyStroke::ALTERNATIVE_KEY) != 0;
+		const bool activateMenu =
+			pendingKeySequence_.size() == 1 && (k.modifierKeys() & KeyStroke::ALTERNATIVE_KEY) != 0;
 		pendingKeySequence_.clear();
 		::MessageBeep(MB_OK);
 		alpha::Alpha::instance().statusBar().setText(L"");
-		return interruptMenuActivation;
+		return !activateMenu;
 	} else if(message.message == WM_SYSCHAR) {
 /*		// interrupt menu activation if key sequence is defined
 		if(!pendingKeySequence_.empty())
@@ -525,6 +530,7 @@ void InputManager::setModalMappingScheme(py::object scheme) {
 
 
 namespace {
+	void inputTypedCharacter(py::object ed, py::ssize_t n) {::PyErr_SetString(PyExc_NotImplementedError, "This command is not callable.");}
 	py::object mappingScheme() {return InputManager::instance().mappingScheme();}
 	py::object modalMappingScheme() {return InputManager::instance().modalMappingScheme();}
 	void setAsMappingScheme(py::object s) {InputManager::instance().setMappingScheme(s);}
@@ -533,7 +539,7 @@ namespace {
 
 ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
 	Interpreter& interpreter = Interpreter::instance();
-	py::scope temp(interpreter.module("bindings"));
+	py::scope scope(interpreter.module("bindings"));
 
 	py::enum_<KeyStroke::VirtualKey>("NaturalKey")
 		.value("left_mouse_button", VK_LBUTTON)
@@ -713,4 +719,7 @@ ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
 		.def("set_as_mapping_scheme", &setAsMappingScheme)
 		.def("set_as_modal_mapping_scheme", &setAsModalMappingScheme)
 		.def("undefine", &InputMappingScheme::undefine);
+
+	py::scope scope1(interpreter.module("intrinsics"));
+	py::def("input_typed_character", &inputTypedCharacter, (py::arg("ed") = py::object(), py::arg("n") = 1));
 ALPHA_EXPOSE_EPILOGUE()
