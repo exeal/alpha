@@ -732,6 +732,15 @@ TextSearcher::Type TextSearcher::type() const /*throw()*/ {
 	throw "unreachable.";
 }
 
+/// Returns @c true if the pattern uses Unicode canonical equivalents.
+bool TextSearcher::usesCanonicalEquivalents() const /*throw()*/ {
+#ifndef ASCENSION_NO_REGEX
+	if(regexPattern_.get() != 0 && manah::toBoolean(regexPattern_->flags() & regex::Pattern::CANON_EQ))
+		return true;
+#endif  // !ASCENSION_NO_REGEX
+	return false;
+}
+
 /// Returns the "whole match" condition.
 TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
 	return wholeMatch_;
