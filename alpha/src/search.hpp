@@ -1,16 +1,17 @@
 /**
- * @file search-dialog.hpp
+ * @file search.hpp
  * @author exeal
- * @date 2003-2007
+ * @date 2003-2007 (was search-dialog.hpp)
+ * @date 2008-2009
  */
 
-#ifndef ALPHA_SEARCH_DIALOG_HPP
-#define ALPHA_SEARCH_DIALOG_HPP
+#ifndef ALPHA_SEARCH_HPP
+#define ALPHA_SEARCH_HPP
 #include "resource.h"
-#include "../manah/win32/ui/dialog.hpp"
-#include "../manah/win32/ui/standard-controls.hpp"
-#include "../manah/win32/ui/menu.hpp"
-#include "ascension/searcher.hpp"
+#include <manah/win32/ui/dialog.hpp>
+#include <manah/win32/ui/standard-controls.hpp>
+#include <manah/win32/ui/menu.hpp>
+#include <ascension/searcher.hpp>
 
 // fwd. decl.
 namespace ascension {
@@ -20,29 +21,30 @@ namespace ascension {
 namespace alpha {
 	class EditorView;
 
+	std::size_t bookmarkMatchLines(const ascension::kernel::Region& region, bool interactive);
+
 	namespace ui {
 		/// "Search and Replace" dialog box.
 		class SearchDialog : public manah::win32::ui::FixedIDDialog<IDD_DLG_SEARCH> {
 		public:
+			SearchDialog();
 			// attributes
-			std::wstring	activePattern() const throw();
-			std::wstring	activeReplacement() const throw();
-			void			setOptions();
+			std::wstring activePattern() const /*throw()*/;
+			std::wstring activeReplacement() const /*throw()*/;
+			void applyOptions();
 			// operations
-			void	bookmarkAll();
-			void	replaceAll(bool interactive);
-			bool	searchNext(ascension::Direction direction);
+			void replaceAll(bool interactive);
 
 		private:
-			INT_PTR	processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam);
-			void	showRegexErrorMessage(const ascension::regex::PatternSyntaxException* e);
-			void	updateOptions();
+			INT_PTR processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam);
+			void updateOptions();
 		private:
-			void	onCancel(bool& continueDialog);						// IDCANCEL
-			void	onClose(bool& continueDialog);						// WM_CLOSE
-			bool	onCommand(WORD id, WORD notifyCode, HWND control);	// WM_COMMAND
-			void	onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
+			void onCancel(bool& continueDialog);						// IDCANCEL
+			void onClose(bool& continueDialog);							// WM_CLOSE
+			bool onCommand(WORD id, WORD notifyCode, HWND control);		// WM_COMMAND
+			void onInitDialog(HWND focusWindow, bool& focusDefault);	// WM_INITDIALOG
 		private:
+			bool initializesPatternFromEditor_;
 			// widgets
 			manah::win32::ui::ComboBox patternCombobox_;
 			manah::win32::ui::ComboBox replacementCombobox_;
@@ -63,12 +65,12 @@ namespace alpha {
 		public:
 			InteractiveReplacementCallback();
 			~InteractiveReplacementCallback() throw();
-			void	setTextViewer(ascension::viewers::TextViewer& textViewer) throw();
+			void setTextViewer(ascension::viewers::TextViewer& textViewer) throw();
 		private:
 			ascension::searcher::IInteractiveReplacementCallback::Action
-					queryReplacementAction(const ascension::kernel::Region& matchedRegion, bool canUndo);
-			void	replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements);
-			void	replacementStarted(const ascension::kernel::Document& document, const ascension::kernel::Region& scope);
+				queryReplacementAction(const ascension::kernel::Region& matchedRegion, bool canUndo);
+			void replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements);
+			void replacementStarted(const ascension::kernel::Document& document, const ascension::kernel::Region& scope);
 		private:
 			HMENU menu_;
 			ascension::viewers::TextViewer* textViewer_;
@@ -76,4 +78,4 @@ namespace alpha {
 	}
 }
 
-#endif /* !ALPHA_SEARCH_DIALOG_HPP */
+#endif // !ALPHA_SEARCH_HPP

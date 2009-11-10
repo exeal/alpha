@@ -9,8 +9,8 @@
 #include "input.hpp"
 #include "ui.hpp"
 #include "editor-window.hpp"
+#include "search.hpp"
 //#include "command.hpp"
-//#include "search-dialog.hpp"
 //#include "DebugDlg.h"
 #include <ascension/text-editor.hpp>
 #include <ascension/regex.hpp>
@@ -163,7 +163,7 @@ Alpha* Alpha::instance_ = 0;
 Alpha::Alpha() : editorFont_(0)/*, mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0)*/ {
 	assert(Alpha::instance_ == 0);
 	Alpha::instance_ = this;
-//	searchDialog_.reset(new ui::SearchDialog);	// ctor of SearchDialog calls Alpha
+	searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
 //	commandManager_.reset(new CommandManager);
 //	bookmarkDialog_.reset(new ui::BookmarkDialog);
 	onSettingChange(0, 0);	// statusFont_ の初期化
@@ -468,8 +468,8 @@ bool Alpha::initInstance(int showCommand) {
 //	outputWindow.writeLine(OTT_GENERAL, IDS_APPFULLVERSION);
 
 	// ツールダイアログの作成
-//	searchDialog_->doModeless(applicationWindow.getHandle(), false);
-//	pushModelessDialog(searchDialog_->getHandle());
+	searchDialog_->doModeless(applicationWindow.get(), false);
+	pushModelessDialog(searchDialog_->get());
 	if(toBoolean(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1))) {
 //		searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
 //		searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
