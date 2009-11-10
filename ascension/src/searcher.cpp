@@ -217,7 +217,8 @@ bool TextSearcher::isCaseSensitive() const {
 		return  (migemoPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) != 0;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-	throw "unreachable.";
+	else
+		return true;
 }
 
 /// Returns @c true if Migemo is available.
@@ -719,17 +720,16 @@ TextSearcher& TextSearcher::setWholeMatch(WholeMatch newValue) {
  * @see #setPattern
  */
 TextSearcher::Type TextSearcher::type() const /*throw()*/ {
-	if(literalPattern_.get() != 0)
-		return LITERAL;
 #ifndef ASCENSION_NO_REGEX
-	else if(regexPattern_.get() != 0)
+	if(regexPattern_.get() != 0)
 		return REGULAR_EXPRESSION;
 #ifndef ASCENSION_NO_MIGEMO
 	else if(migemoPattern_.get() != 0)
 		return MIGEMO;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-	throw "unreachable.";
+//	if(literalPattern_.get() != 0)
+		return LITERAL;
 }
 
 /// Returns @c true if the pattern uses Unicode canonical equivalents.
