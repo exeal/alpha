@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2008
+ * @date 2006-2009
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -129,7 +129,7 @@ namespace ascension {
 				MATCH_WORD
 			};
 		public:
-			// constructors.
+			// constructor
 			TextSearcher();
 			// pattern/replacement
 			bool hasPattern() const /*throw()*/;
@@ -139,8 +139,7 @@ namespace ascension {
 			const String& replacement(std::size_t index = 0) const;
 			void setMaximumNumberOfStoredStrings(std::size_t number) /*throw()*/;
 			template<typename PatternType>
-			void setPattern(std::auto_ptr<const PatternType> pattern, bool dontRemember = false);
-			void setReplacement(const String& replacement);
+			TextSearcher& setPattern(std::auto_ptr<const PatternType> pattern, bool dontRemember = false);
 			// search conditions
 			int collationWeight() const /*throw()*/;
 			bool isCaseSensitive() const /*throw()*/;
@@ -157,8 +156,9 @@ namespace ascension {
 			static bool isRegexAvailable() /*throw()*/;
 			// operations
 			void abortInteractiveReplacement();
-			std::size_t replaceAll(kernel::Document& document,
-				const kernel::Region& scope, IInteractiveReplacementCallback* callback) const;
+			std::size_t replaceAll(
+				kernel::Document& document, const kernel::Region& scope,
+				const String& replacement, IInteractiveReplacementCallback* callback);
 			bool search(const kernel::Document& document, const kernel::Position& from,
 				const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
 			template<typename InputIterator>
@@ -348,22 +348,25 @@ namespace ascension {
 	inline const String& TextSearcher::replacement(std::size_t index /* = 0 */) const {
 		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
 		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
-	template<> inline void TextSearcher::setPattern<LiteralPattern>(std::auto_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(std::auto_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		literalPattern_ = pattern;
+		return *this;
 	}
 #ifndef ASCENSION_NO_REGEX
-	template<> inline void TextSearcher::setPattern<regex::Pattern>(std::auto_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(std::auto_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		regexPattern_ = pattern;
+		return *this;
 	}
 #ifndef ASCENSION_NO_MIGEMO
-	template<> inline void TextSearcher::setPattern<regex::MigemoPattern>(std::auto_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(std::auto_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		migemoPattern_ = pattern;
+		return *this;
 	}
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX

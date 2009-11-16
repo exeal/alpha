@@ -43,7 +43,7 @@ namespace {
 		bool found;
 		try {
 			found = a::texteditor::commands::FindNextCommand(
-				EditorWindows::instance().activePane().visibleView(), direction).setNumericPrefix(static_cast<long>(n))() == 0;
+				EditorWindows::instance().activePane().visibleView(), direction).setNumericPrefix(static_cast<long>(n))();
 		} catch(const re::PatternSyntaxException& e) {
 //			if(interactive)
 				showRegexErrorMessage(&e);
@@ -132,7 +132,6 @@ void SearchDialog::applyOptions() {
 			break;
 		}
 	}
-	searcher.setReplacement(activeReplacement());
 }
 
 /// @see Dialog#onCancel
@@ -220,14 +219,15 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	onCommand(IDC_COMBO_FINDWHAT, CBN_EDITCHANGE, getItem(IDC_COMBO_FINDWHAT));
 }
 
-/// Implements "replace all" command.
+/**
+ * Implements "replace all" command.
+ * @param interactive set @c true to perform interactive replacements
+ */
 void SearchDialog::replaceAll(bool interactive) {
 	static InteractiveReplacementCallback callback;
 	const bool wasVisible = isVisible();
 	v::TextViewer& textViewer = EditorWindows::instance().activePane().visibleView();
 	callback.setTextViewer(textViewer);
-	a::texteditor::commands::ReplaceAllCommand command(textViewer,
-		manah::toBoolean(isButtonChecked(IDC_RADIO_SELECTION)), interactive ? &callback : 0);
 	a::ulong c = -1;
 
 	applyOptions();
@@ -239,7 +239,7 @@ void SearchDialog::replaceAll(bool interactive) {
 	}
 	try {
 		c = a::texteditor::commands::ReplaceAllCommand(textViewer,
-			manah::toBoolean(isButtonChecked(IDC_RADIO_SELECTION)), interactive ? &callback : 0)();
+			manah::toBoolean(isButtonChecked(IDC_RADIO_SELECTION)), activeReplacement(), interactive ? &callback : 0)();
 	} catch(const re::PatternSyntaxException& e) {
 		showRegexErrorMessage(&e);
 	} catch(runtime_error&) {

@@ -390,24 +390,25 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
  * This method does not begin and terminate an <em>compound change</em>.
  * @param document the document
  * @param scope the region to search and replace
+ * @param replacement the replacement string
  * @param callback the callback object for interactive replacement. if @c null, this method
- * replaces all the occurences silently
+ *                 replaces all the occurences silently
  * @return the number of replaced occurences
  * @throw IllegalStateException the pattern is not specified
  * @throw ReadOnlyDocumentException @a document is read-only
- * @throw BadRegionException @a region intersects outside of the document
+ * @throw BadRegionException @a scope intersects outside of the document
  * @throw ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt; the input
  *        of the document rejected this change. if thrown, the replacement will be interrupted
  * @throw ReplacementInterruptedException&lt;std#bad_alloc&gt; the internal memory allocation
  *        failed. if thrown, the replacement will be interrupted
  */
-size_t TextSearcher::replaceAll(Document& document, const Region& scope, IInteractiveReplacementCallback* callback) const {
+size_t TextSearcher::replaceAll(Document& document, const Region& scope, const String& replacement, IInteractiveReplacementCallback* callback) {
 	if(document.isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(!document.region().encompasses(scope))
 		throw BadRegionException(scope);
 
-	const String replacement(!storedReplacements_.empty() ? storedReplacements_.front() : String());
+//	const String replacement(!storedReplacements_.empty() ? storedReplacements_.front() : String());
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
 	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
 	size_t documentRevision = document.revisionNumber();	// to detect other interruptions
@@ -574,6 +575,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
 
 	if(storedCallback != 0)
 		storedCallback->replacementEnded(numberOfMatches, numberOfReplacements);
+	pushHistory(replacement, true);	// only this call make this method not-const...
 	return numberOfReplacements;
 }
 
@@ -583,11 +585,13 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, IIntera
  * @param from the position where the search begins
  * @param scope the region to search
  * @param direction the direction to search
- * @param[out] matchedRegion the matched region. the value is not changed unless the process successes
+ * @param[out] matchedRegion the matched region. the value is not changed unless the process
+ *                           successes
  * @return true if the pattern is found
  * @throw IllegalStateException the pattern is not specified
  * @throw kernel#BadPositionException @a from is outside of @a scope
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
+ * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression
+ *            error occurred
  */
 bool TextSearcher::search(const Document& document,
 		const Position& from, const Region& scope, Direction direction, Region& matchedRegion) const {
@@ -688,18 +692,13 @@ void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
 /**
  * @fn ascension::searcher::TextSearcher::setPattern
  * @brief Sets the new pattern.
+ * @tparam PatternType the pattern type. can be @c LiteralPattern, @c regex#Pattern or
+ *                     @c regex#MigemoPattern
  * @param pattern the pattern string
  * @param dontRemember set @c true to not add the pattern into the stored list. in this case, the
  *                     following @c #pattern call will not return the pattern set by this
+ * @return this object
  */
-
-/**
- * Sets the new replacement string.
- * @param replacement the replacement string
- */
-void TextSearcher::setReplacement(const String& replacement) {
-	pushHistory(replacement, true);
-}
 
 /**
  * Sets the "whole match" condition.
