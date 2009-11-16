@@ -1000,8 +1000,8 @@ bool ReconversionCommand::perform() {
  * @param callback
  */
 ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
-		searcher::IInteractiveReplacementCallback* callback) /*throw()*/
-		: Command(viewer), onlySelection_(onlySelection), callback_(callback) {
+		const String& replacement, searcher::IInteractiveReplacementCallback* callback) /*throw()*/
+		: Command(viewer), onlySelection_(onlySelection), replacement_(replacement), callback_(callback) {
 }
 
 /**
@@ -1019,8 +1019,8 @@ bool ReplaceAllCommand::perform() {
 	WaitCursor wc;
 	TextViewer& viewer = target();
 	Document& document = viewer.document();
-	const TextSearcher* s;
-	if(const Session* const session = document.session())
+	TextSearcher* s;
+	if(Session* const session = document.session())
 		s = &session->textSearcher();
 	else
 		return false;	// TODO: prepares a default text searcher.
@@ -1037,7 +1037,7 @@ bool ReplaceAllCommand::perform() {
 
 	AutoFreeze af(&viewer);
 	try {
-		numberOfLastReplacements_ = s->replaceAll(document, scope, callback_);
+		numberOfLastReplacements_ = s->replaceAll(document, scope, replacement_, callback_);
 	} catch(const ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>& e) {
 		numberOfLastReplacements_ = e.numberOfReplacements();
 		throw;

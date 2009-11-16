@@ -60,6 +60,7 @@ namespace {
 		}
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
+		throw;	// unreachable
 	}
 }
 

@@ -256,12 +256,13 @@ namespace ascension {
 			/// Replaces all matched texts.
 			class ReplaceAllCommand : public Command {
 			public:
-				ReplaceAllCommand(viewers::TextViewer& viewer,
-					bool onlySelection, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
+				ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
+					const String& replacement, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
 				std::size_t numberOfLastReplacements() const /*throw()*/;
 			private:
 				bool perform();
 				const bool onlySelection_;
+				const String replacement_;
 				searcher::IInteractiveReplacementCallback* const callback_;
 				std::size_t numberOfLastReplacements_;
 			};
