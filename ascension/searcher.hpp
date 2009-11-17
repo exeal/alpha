@@ -359,6 +359,7 @@ namespace ascension {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		regexPattern_ = pattern;
+		regexMatcher_.reset();
 		return *this;
 	}
 #ifndef ASCENSION_NO_MIGEMO
@@ -366,6 +367,7 @@ namespace ascension {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		migemoPattern_ = pattern;
+		regexMatcher_.reset();
 		return *this;
 	}
 #endif // !ASCENSION_NO_MIGEMO
