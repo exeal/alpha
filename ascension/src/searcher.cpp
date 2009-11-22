@@ -94,7 +94,7 @@ inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 }
 
 /**
- * Returns true if the pattern matches the specified character sequence.
+ * Returns @c true if the pattern matches the specified character sequence.
  * @param target the character sequence to match
  * @return true if matched
  */
@@ -232,7 +232,7 @@ bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
 
 #if 0
 /**
- * Returns true if the pattern matches the specified text.
+ * Returns @c true if the pattern matches the specified text.
  * @param document the document
  * @param target the target to match
  * @return true if matched
@@ -280,7 +280,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 /**
  * Pushes the new string to the stored list.
  * @param s the string to push
- * @param forReplacements set true to push to the replacements list
+ * @param forReplacements set @c true to push to the replacements list
  */
 void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 	list<String>& history = forReplacements ? storedReplacements_ : storedPatterns_;
@@ -295,7 +295,7 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 #if 0
 /**
  * Replaces the specified region with the replacement string.
- * <p>If the current search pattern does not match @a target, this method will fail and return false.<p>
+ * <p>If the current search pattern does not match @a target, this method will fail and return @c false.<p>
  * <p>If the stored replacements list is empty, an empty is used as the replacement string.</p>
  * <p>This method does not begin and terminate an edit collection.</p>
  * @param document the document
@@ -964,7 +964,7 @@ bool IncrementalSearcher::undo() {
 
 	const Operation lastOperation = operationHistory_.top();
 	operationHistory_.pop();
-	if(lastOperation == TYPE) {	// 文字の入力を元に戻す -> 検索式の末尾を削る
+	if(lastOperation == TYPE) {	// undo the last typing -> delete the last character in the pattern
 		if(pattern_.length() > 1
 				&& surrogates::isHighSurrogate(pattern_[pattern_.length() - 2])
 				&& surrogates::isLowSurrogate(pattern_[pattern_.length() - 1])) {
@@ -973,11 +973,11 @@ bool IncrementalSearcher::undo() {
 		} else
 			pattern_.erase(pattern_.length() - 1);
 		return update();
-	} else if(lastOperation == JUMP) {	// 次のマッチ位置へのジャンプを元に戻す -> 1 つ前の状態に戻る
+	} else if(lastOperation == JUMP) {	// undo the last jump -> revert to the last state
 		matchedRegion_ = statusHistory_.top().matchedRegion;
 		statusHistory_.pop();
 		assert(!statusHistory_.empty());
-		if(!matched_) {	// ジャンプを元に戻すと必ずマッチした状態になる
+		if(!matched_) {	// ... and should be matched state
 			matched_ = true;
 			if(callback_ != 0)
 				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::FOUND, IIncrementalSearchCallback::NO_WRAPPED);
@@ -985,7 +985,7 @@ bool IncrementalSearcher::undo() {
 		return true;
 	}
 	assert(false);
-	return false;	// あり得ぬ
+	return false;	// unreachable
 }
 
 /**

@@ -326,8 +326,17 @@ namespace ascension {
 	/// Returns the number of the replacements the object done successfully.
 	template<typename SourceException>
 	inline std::size_t ReplacementInterruptedException<SourceException>::numberOfReplacements() const /*throw()*/ {return numberOfReplacements_;}
-	/// Returns @c true if any pattern is set on the searcher .
-	inline bool TextSearcher::hasPattern() const /*throw()*/ {return !storedPatterns_.empty();}
+	/// Returns @c true if any pattern is set on the searcher.
+	inline bool TextSearcher::hasPattern() const /*throw()*/ {
+		return literalPattern_.get() != 0
+#ifdef ASCENSION_NO_REGEX
+			|| regexPattern_.get() != 0
+#ifndef ASCENSION_NO_MIGEMO
+			|| migemoPattern_.get() != 0
+#endif // !ASCENSION_NO_MIGEMO
+#endif // ASCENSION_NO_REGEX
+			;
+	}
 	/// Returns @c true if the search using regular expression is available.
 	inline bool TextSearcher::isRegexAvailable() /*throw()*/ {
 #ifdef ASCENSION_NO_REGEX
