@@ -202,7 +202,7 @@ TextSearcher::TextSearcher() : searchType_(LITERAL),
  * This feature is not implemented and returns always zero.
  */
 int TextSearcher::collationWeight() const /*throw()*/ {
-	return 0;
+	return Collator::IDENTICAL;
 }
 
 /// Returns @c false if caseless match is enabled. This setting is obtained from the pattern.
@@ -211,10 +211,10 @@ bool TextSearcher::isCaseSensitive() const {
 		return literalPattern_->isCaseSensitive();
 #ifndef ASCENSION_NO_REGEX
 	else if(regexPattern_.get() != 0)
-		return (regexPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) != 0;
+		return (regexPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) == 0;
 #ifndef ASCENSION_NO_MIGEMO
 	else if(migemoPattern_.get() != 0)
-		return  (migemoPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) != 0;
+		return  (migemoPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) == 0;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
 	else
