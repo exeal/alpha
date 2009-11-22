@@ -329,12 +329,12 @@ namespace ascension {
 	/// Returns @c true if any pattern is set on the searcher.
 	inline bool TextSearcher::hasPattern() const /*throw()*/ {
 		return literalPattern_.get() != 0
-#ifdef ASCENSION_NO_REGEX
+#ifndef ASCENSION_NO_REGEX
 			|| regexPattern_.get() != 0
 #ifndef ASCENSION_NO_MIGEMO
 			|| migemoPattern_.get() != 0
 #endif // !ASCENSION_NO_MIGEMO
-#endif // ASCENSION_NO_REGEX
+#endif // !ASCENSION_NO_REGEX
 			;
 	}
 	/// Returns @c true if the search using regular expression is available.
