@@ -352,20 +352,33 @@ namespace ascension {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		literalPattern_ = pattern;
+#ifndef ASCENSION_NO_REGEX
+		regexPattern_.reset();
+		regexMatcher_.reset();
+#ifndef ASCENSION_NO_MIGEMO
+		migemoPattern_.reset();
+#endif // !ASCENSION_NO_MIGEMO
+#endif // !ASCENSION_NO_REGEX
 		return *this;
 	}
 #ifndef ASCENSION_NO_REGEX
 	template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(std::auto_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
+		literalPattern_.reset();
 		regexPattern_ = pattern;
 		regexMatcher_.reset();
+#ifndef ASCENSION_NO_MIGEMO
+		migemoPattern_.reset();
+#endif // !ASCENSION_NO_MIGEMO
 		return *this;
 	}
 #ifndef ASCENSION_NO_MIGEMO
 	template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(std::auto_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
+		literalPattern_.reset();
+		regexPattern_.reset();
 		migemoPattern_ = pattern;
 		regexMatcher_.reset();
 		return *this;
