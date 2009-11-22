@@ -39,7 +39,7 @@ namespace {
 	}
 
 	bool search(const wstring& pattern, a::Direction direction, bool noerror, py::ssize_t n) {
-		return Alpha::instance().searchDialog().search(pattern, direction, noerror, n);
+		return Alpha::instance().searchDialog().search(pattern, direction, noerror, static_cast<long>(n));
 	}
 }
 
@@ -215,7 +215,7 @@ void SearchDialog::rebuildPattern() {
 	case 1:	type = s::TextSearcher::REGULAR_EXPRESSION; break;
 	case 2:	type = s::TextSearcher::MIGEMO; break;
 	}
-	const int collationWeight = 15;
+	const int collationWeight = a::text::Collator::IDENTICAL;
 	const bool caseSensitive = isButtonChecked(IDC_CHK_IGNORECASE) != BST_CHECKED;
 	const bool canonicalEquivalents = isButtonChecked(IDC_CHK_CANONICALEQUIVALENTS) == BST_CHECKED;
 
