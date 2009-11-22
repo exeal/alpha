@@ -31,13 +31,15 @@ namespace alpha {
 			// attributes
 			std::wstring activePattern() const /*throw()*/;
 			std::wstring activeReplacement() const /*throw()*/;
-			void applyOptions();
 			// operations
+			bool repeatSearch(ascension::Direction direction, bool noerror = true, long n = 1);
+			bool search(const ascension::String& pattern, ascension::Direction direction, bool noerror = true, long n = 1);
 			void replaceAll(bool interactive);
 
 		private:
 			INT_PTR processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam);
-			void updateOptions();
+			void rebuildPattern();
+			void updateConditions();
 		private:
 			void onCancel(bool& continueDialog);						// IDCANCEL
 			void onClose(bool& continueDialog);							// WM_CLOSE

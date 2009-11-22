@@ -38,29 +38,12 @@ namespace {
 				MARGS % app.loadMessage(MSG_SEARCH__BAD_PATTERN_START + e->getCode()) % static_cast<long>(e->getIndex()));
 	}
 
-	bool searchAgain(a::Direction direction, py::ssize_t n) {
-		Alpha::instance().searchDialog().applyOptions();
-		bool found;
-		try {
-			found = a::texteditor::commands::FindNextCommand(
-				EditorWindows::instance().activePane().visibleView(), direction).setNumericPrefix(static_cast<long>(n))();
-		} catch(const re::PatternSyntaxException& e) {
-//			if(interactive)
-				showRegexErrorMessage(&e);
-			return false;
-		} catch(runtime_error&) {
-//			if(interactive)
-				Alpha::instance().messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
-			return false;
-		}
-		if(!found /*&& interactive*/)
-			Alpha::instance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
-		return found;
+	bool search(const wstring& pattern, a::Direction direction, bool noerror, py::ssize_t n) {
+		return Alpha::instance().searchDialog().search(pattern, direction, noerror, n);
 	}
 }
 
 size_t alpha::bookmarkMatchLines(const k::Region& region, bool interactive) {
-	Alpha::instance().searchDialog().applyOptions();
 	try {
 		return a::texteditor::commands::BookmarkMatchLinesCommand(EditorWindows::instance().activePane().visibleView(), region)();
 	} catch(re::PatternSyntaxException& e) {
@@ -102,38 +85,6 @@ wstring SearchDialog::activeReplacement() const throw() {
 	return L"";
 }
 
-/// GUI 上のオプションを検索オブジェクトに設定する
-void SearchDialog::applyOptions() {
-	check();
-
-	s::TextSearcher& searcher = BufferList::instance().editorSession().textSearcher();
-
-	switch(wholeMatchCombobox_.getCurSel()) {
-	case 0:	searcher.setWholeMatch(s::TextSearcher::MATCH_UTF32_CODE_UNIT); break;
-	case 1:	searcher.setWholeMatch(s::TextSearcher::MATCH_GRAPHEME_CLUSTER); break;
-	case 2:	searcher.setWholeMatch(s::TextSearcher::MATCH_WORD); break;
-	}
-
-	const wstring p(activePattern());
-	if(!p.empty()) {
-		const bool caseSensitive = isButtonChecked(IDC_CHK_IGNORECASE) != BST_CHECKED;
-		const bool canonicalEquivalents = isButtonChecked(IDC_CHK_CANONICALEQUIVALENTS) == BST_CHECKED;
-
-		switch(searchTypeCombobox_.getCurSel()) {
-		case 0:
-			searcher.setPattern(auto_ptr<s::LiteralPattern>(new s::LiteralPattern(p, caseSensitive)));
-			break;
-		case 1:
-			searcher.setPattern(re::Pattern::compile(p, re::Pattern::MULTILINE
-				| (!caseSensitive ? re::Pattern::CASE_INSENSITIVE : 0) | (canonicalEquivalents ? re::Pattern::CANON_EQ : 0)));
-			break;
-		case 2:
-			searcher.setPattern(re::MigemoPattern::compile(p.data(), p.data() + p.length(), caseSensitive));
-			break;
-		}
-	}
-}
-
 /// @see Dialog#onCancel
 void SearchDialog::onCancel(bool& continueDialog) {
 	show(SW_HIDE);
@@ -152,12 +103,12 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 	switch(id) {
 	case IDC_BTN_FINDNEXT:		// "Find Forward"
-		searchAgain(a::Direction::FORWARD, true);
+		this->search(activePattern(), a::Direction::FORWARD, false);
 		return true;
 	case IDC_BTN_FINDPREVIOUS:	// "Find Backward"
-		searchAgain(a::Direction::BACKWARD, true);
+		this->search(activePattern(), a::Direction::BACKWARD, false);
 		return true;
-	case IDC_BTN_MARKALL:	// "Mark All"
+	case IDC_BTN_MARKALL:		// "Mark All"
 		bookmarkMatchLines(manah::toBoolean(isButtonChecked(IDC_RADIO_SELECTION)) ?
 			EditorWindows::instance().activePane().visibleView().caret().selectedRegion() : k::Region(), true);
 		return true;
@@ -184,6 +135,23 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		::EnableWindow(getItem(IDC_BTN_FINDPREVIOUS), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(IDC_BTN_REPLACE),
 			enableCommandsAsOnlySelection && !EditorWindows::instance().activeBuffer().isReadOnly());
+		break;
+	case IDC_COMBO_WHOLEMATCH:
+		if(notifyCode == CBN_SELCHANGE) {
+			s::TextSearcher::WholeMatch f;
+			switch(wholeMatchCombobox_.getCurSel()) {
+			case 0:
+				f = s::TextSearcher::MATCH_UTF32_CODE_UNIT;
+				break;
+			case 1:
+				f = s::TextSearcher::MATCH_GRAPHEME_CLUSTER;
+				break;
+			case 2:
+				f = s::TextSearcher::MATCH_WORD;
+				break;
+			}
+			BufferList::instance().editorSession().textSearcher().setWholeMatch(f);
+		}
 		break;
 	case IDC_BTN_BROWSE: {	// "Extended Options"
 //			RECT rect;
@@ -216,7 +184,66 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 	collationWeightCombobox_.addString(L"15..IDENTICAL");
 	collationWeightCombobox_.setCurSel(0);
 
+	updateConditions();
 	onCommand(IDC_COMBO_FINDWHAT, CBN_EDITCHANGE, getItem(IDC_COMBO_FINDWHAT));
+}
+
+/// @see Dialog#processWindowMessage
+INT_PTR SearchDialog::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
+	switch(message) {
+	case WM_SHOWWINDOW:
+		if(manah::toBoolean(wParam) && lParam == 0 && initializesPatternFromEditor_) {
+			v::Caret& caret = EditorWindows::instance().activePane().visibleView().caret();
+			if(isSelectionEmpty(caret)) {
+//				String s;
+//				// TODO: obtain the word nearest from the caret position.
+//				caret.getNearestWordFromCaret(0, 0, &s);
+//				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
+			} else if(caret.anchor().line() == caret.line())
+				setItemText(IDC_COMBO_FINDWHAT, selectedString(caret).c_str());
+		}
+		break;
+	}
+	return Dialog::processWindowMessage(message, wParam, lParam);
+}
+
+void SearchDialog::rebuildPattern() {
+	const a::String pattern(activePattern());
+	s::TextSearcher::Type type;
+	switch(searchTypeCombobox_.getCurSel()) {
+	case 0:	type = s::TextSearcher::LITERAL; break;
+	case 1:	type = s::TextSearcher::REGULAR_EXPRESSION; break;
+	case 2:	type = s::TextSearcher::MIGEMO; break;
+	}
+	const int collationWeight = 15;
+	const bool caseSensitive = isButtonChecked(IDC_CHK_IGNORECASE) != BST_CHECKED;
+	const bool canonicalEquivalents = isButtonChecked(IDC_CHK_CANONICALEQUIVALENTS) == BST_CHECKED;
+
+	s::TextSearcher& searcher = BufferList::instance().editorSession().textSearcher();
+	if(!searcher.hasPattern()
+			|| pattern != searcher.pattern()
+			|| type != searcher.type()
+			|| caseSensitive != searcher.isCaseSensitive()
+			|| canonicalEquivalents != searcher.usesCanonicalEquivalents()
+			|| collationWeight != searcher.collationWeight()) {
+		switch(type) {
+		case s::TextSearcher::LITERAL:
+			searcher.setPattern(auto_ptr<s::LiteralPattern>(new s::LiteralPattern(pattern, caseSensitive)));
+			break;
+		case s::TextSearcher::REGULAR_EXPRESSION:
+			searcher.setPattern(re::Pattern::compile(pattern, re::Pattern::MULTILINE
+				| (!caseSensitive ? re::Pattern::CASE_INSENSITIVE : 0) | (canonicalEquivalents ? re::Pattern::CANON_EQ : 0)));
+			break;
+		case s::TextSearcher::MIGEMO:
+			searcher.setPattern(re::MigemoPattern::compile(pattern.data(), pattern.data() + pattern.length(), caseSensitive));
+		}
+	}
+}
+
+bool SearchDialog::repeatSearch(a::Direction direction, bool noerror /* = true */, long n /* = 1 */) {
+	::PyErr_SetString(PyExc_NotImplementedError, "");
+	py::throw_error_already_set();
+	return false;
 }
 
 /**
@@ -230,7 +257,7 @@ void SearchDialog::replaceAll(bool interactive) {
 	callback.setTextViewer(textViewer);
 	a::ulong c = -1;
 
-	applyOptions();
+//	rebuildPattern();
 	if(isWindow())
 		show(SW_HIDE);
 	if(!interactive) {
@@ -259,33 +286,32 @@ void SearchDialog::replaceAll(bool interactive) {
 	}
 }
 
-/// @see Dialog#processWindowMessage
-INT_PTR SearchDialog::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
-	switch(message) {
-	case WM_ACTIVATE:
-		if(LOWORD(wParam) == WA_INACTIVE)
-			applyOptions();
-		else
-			updateOptions();
-		break;
-	case WM_SHOWWINDOW:
-		if(manah::toBoolean(wParam) && lParam == 0 && initializesPatternFromEditor_) {
-			v::Caret& caret = EditorWindows::instance().activePane().visibleView().caret();
-			if(isSelectionEmpty(caret)) {
-//				String s;
-//				// TODO: obtain the word nearest from the caret position.
-//				caret.getNearestWordFromCaret(0, 0, &s);
-//				searchDialog_->setItemText(IDC_COMBO_FINDWHAT, s.c_str());
-			} else if(caret.anchor().line() == caret.line())
-				setItemText(IDC_COMBO_FINDWHAT, selectedString(caret).c_str());
-		}
-		break;
+bool SearchDialog::search(const a::String& pattern, a::Direction direction, bool noerror /* = true */, long n /* = 1 */) {
+	patternCombobox_.setText(pattern.c_str());
+	rebuildPattern();
+
+	bool found;
+	try {
+		found = a::texteditor::commands::FindNextCommand(
+			EditorWindows::instance().activePane().visibleView(), direction).setNumericPrefix(n)();
+	} catch(const a::IllegalStateException& e) {
+		::PyErr_SetString(PyExc_RuntimeError, e.what());
+	} catch(const re::PatternSyntaxException& e) {
+		if(!noerror)
+			showRegexErrorMessage(&e);
+		return false;
+	} catch(runtime_error&) {
+		if(!noerror)
+			Alpha::instance().messageBox(MSG_ERROR__REGEX_UNKNOWN_ERROR, MB_ICONEXCLAMATION);
+		return false;
 	}
-	return Dialog::processWindowMessage(message, wParam, lParam);
+	if(!found & !noerror)
+		Alpha::instance().messageBox(MSG_SEARCH__PATTERN_NOT_FOUND, MB_ICONINFORMATION);
+	return found;
 }
 
 /// Updates GUI according to the current search options.
-void SearchDialog::updateOptions() {
+void SearchDialog::updateConditions() {
 	const BufferList& buffers = BufferList::instance();
 	const s::TextSearcher& searcher = buffers.editorSession().textSearcher();
 
@@ -436,8 +462,9 @@ ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
 		py::scope scope(interpreter.module("intrinsics"));
 		py::def("incremental_search", &isearch, py::arg("direction"));
 		py::def("query_replace", &queryReplace);
+//		py::def("repeat_search", &repeatSearch, (py::arg("direction"), py::arg("noerror") = true, py::arg("n") = 1));
 		py::def("replace_string", &replaceString);
-		py::def("search_again", &searchAgain, (py::arg("direction"), py::arg("n") = 1));
+		py::def("search", &::search, (py::arg("pattern"), py::arg("direction"), py::arg("noerror") = true, py::arg("n") = 1));
 	}
 	{
 		py::scope scope(interpreter.module("ui"));

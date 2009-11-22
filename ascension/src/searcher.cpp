@@ -677,8 +677,6 @@ bool TextSearcher::search(const Document& document,
 	return matched;
 }
 
-#undef CREATE_BREAK_ITERATOR
-
 /// Sets the maximum number of the stored patterns or replacement strings.
 void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
 	number = max<size_t>(number, MINIMUM_NUMBER_OF_STORED_STRINGS);
