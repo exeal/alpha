@@ -198,8 +198,8 @@ namespace {
 /**
  * Creates an @c IDataObject represents the selected content.
  * @param caret the caret gives the selection
- * @param rtf set true if the content is available as Rich Text Format. this feature is not
- * implemented yet and the parameter is ignored
+ * @param rtf set @c true if the content is available as Rich Text Format. this feature is not
+ *            implemented yet and the parameter is ignored
  * @param[out] content the data object
  * @retval S_OK succeeded
  * @retval E_OUTOFMEMORY failed to allocate memory for @a content
@@ -295,8 +295,9 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 /**
  * Returns the text content from the given data object.
  * @param data the data object
- * @param[out] rectangle true if the data is rectangle format. can be @c null
- * @return a pair of the result HRESULT and the text content. SCODE is one of S_OK, E_OUTOFMEMORY and DV_E_FORMATETC
+ * @param[out] rectangle @c true if the data is rectangle format. can be @c null
+ * @return a pair of the result HRESULT and the text content. SCODE is one of S_OK, E_OUTOFMEMORY
+ *         and DV_E_FORMATETC
  */
 pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
 	pair<HRESULT, String> result;
@@ -750,7 +751,7 @@ void Caret::beginRectangleSelection() {
 }
 
 /**
- * Returns true if a paste operation can be performed.
+ * Returns @c true if a paste operation can be performed.
  * @note Even when this method returned @c true, the following @c #paste call can fail.
  * @param useKillRing set @c true to get the content from the kill-ring of the session, not from
  *                    the system clipboard
@@ -1119,7 +1120,7 @@ void Caret::paste(bool useKillRing) {
 void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 	assert(&self == &*anchor_);
 	yanking_ = false;
-	if(leadingAnchor_)	// doMoveTo で anchor_->moveTo 呼び出し中
+	if(leadingAnchor_)	// calling anchor_->moveTo in this->moved
 		return;
 	if((oldPosition == position()) != isSelectionEmpty(*this))
 		checkMatchBrackets();
@@ -1135,7 +1136,7 @@ inline void Caret::prechangeDocument() {
 }
 
 /**
- * Removes the listener
+ * Removes the listener.
  * @param listener the listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
@@ -1166,7 +1167,7 @@ void Caret::removeStateListener(ICaretStateListener& listener) {
  * If the selection is empty, inserts the text at current position.
  * @param first the start of the text
  * @param last the end of the text
- * @param rectangleInsertion true to insert text as rectangle
+ * @param rectangleInsertion set @c true to insert text as rectangle
  * @throw NullPointerException @a first and/or @last is @c null
  * @throw std#invalid_argument @a first &gt; @a last
  * @throw ... any exceptions @c Document#insert and @c Document#erase throw
@@ -1196,7 +1197,13 @@ void Caret::select(const Position& anchor, const Position& caret) {
 		leadingAnchor_ = true;
 		anchor_->moveTo(anchor);
 		leadingAnchor_ = false;
-		VisualPoint::moveTo(caret);	// TODO: this may throw...
+		leaveAnchorNext_ = true;
+		try {
+			VisualPoint::moveTo(caret);	// TODO: this may throw...
+		} catch(...) {
+			leaveAnchorNext_ = false;
+			throw;
+		}
 		if(isSelectionRectangle())
 			box_->update(selectedRegion());
 		if(autoShow_)
@@ -1221,7 +1228,7 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
 
 /**
  * Sets character input mode.
- * @param overtype true to set to overtype mode, false to set to insert mode
+ * @param overtype set @c true to set to overtype mode, @c false to set to insert mode
  * @return this caret
  * @see #inputCharacter, #isOvertypeMode
  */
@@ -1258,7 +1265,7 @@ inline void Caret::updateVisualAttributes() {
 // viewers free functions ///////////////////////////////////////////////////
 
 /**
- * Returns true if the specified point is over the selection.
+ * Returns @c true if the specified point is over the selection.
  * @param p the client coordinates of the point
  * @return true if the point is over the selection
  * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
@@ -1553,7 +1560,7 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, leng
 }
 
 /**
- * Returns true if the point is the beginning of the visual line.
+ * Returns @c true if the point is the beginning of the visual line.
  * @param p the base position
  * @see EditPoint#isBeginningOfLine
  */
@@ -1566,7 +1573,7 @@ bool locations::isBeginningOfVisualLine(const VisualPoint& p) {
 }
 
 /**
- * Returns true if the point is end of the visual line.
+ * Returns @c true if the point is end of the visual line.
  * @param p the base position
  * @see kernel#EditPoint#isEndOfLine
  */
@@ -1579,7 +1586,7 @@ bool locations::isEndOfVisualLine(const VisualPoint& p) {
 	return np.column == layout.sublineOffset(subline) + layout.sublineLength(subline);
 }
 
-/// Returns true if the given position is the first printable character in the line.
+/// Returns @c true if the given position is the first printable character in the line.
 bool locations::isFirstPrintableCharacterOfLine(const VisualPoint& p) {
 	const Position np(p.normalized()), bob(p.document().accessibleRegion().first);
 	const length_t offset = (bob.line == np.line) ? bob.column : 0;
@@ -1588,13 +1595,13 @@ bool locations::isFirstPrintableCharacterOfLine(const VisualPoint& p) {
 		== identifierSyntax(p).eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
 }
 
-/// Returns true if the given position is the first printable character in the visual line.
+/// Returns @c true if the given position is the first printable character in the visual line.
 bool locations::isFirstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	// TODO: not implemented.
 	return false;
 }
 
-/// Returns true if the given position is the last printable character in the line.
+/// Returns @c true if the given position is the last printable character in the line.
 bool locations::isLastPrintableCharacterOfLine(const VisualPoint& p) {
 	const Position np(p.normalized()), eob(p.document().accessibleRegion().second);
 	const String& line = p.document().line(np.line);
@@ -1603,7 +1610,7 @@ bool locations::isLastPrintableCharacterOfLine(const VisualPoint& p) {
 		== identifierSyntax(p).eatWhiteSpaces(line.data() + np.column, line.data() + lineLength, true);
 }
 
-/// Returns true if the given position is the last printable character in the visual line.
+/// Returns @c true if the given position is the last printable character in the visual line.
 bool locations::isLastPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	// TODO: not implemented.
 	return false;
@@ -1705,7 +1712,7 @@ Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */)
 /**
  * Breaks the line at the caret position and moves the caret to the end of the inserted string.
  * @param caret the caret
- * @param inheritIndent true to inherit the indent of the line @c{at.line}
+ * @param inheritIndent set @c true to inherit the indent of the line @c{at.line}
  * @param newlines the number of newlines to insert
  * @throw DocumentDisposedException the document @a caret connecting to has been disposed
  * @throw ... any exceptions @c Document#insert throws
@@ -1765,7 +1772,7 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 /**
  * Copies and deletes the selected text. If the selection is empty, this function does nothing.
  * @param caret the caret gives the selection
- * @param useKillRing true to send also the kill ring
+ * @param useKillRing set @c true to send also the kill ring
  * @return false if the change was interrupted
  * @throw ClipboardException the clipboard operation failed
  * @throw bad_alloc internal memory allocation failed
@@ -1804,7 +1811,7 @@ namespace {
 	 * @internal Indents the region selected by the caret.
 	 * @param caret the caret gives the region to indent
 	 * @param character a character to make indents
-	 * @param rectangle set true for rectangular indents (will be ignored level is negative)
+	 * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
 	 * @param level the level of the indentation
 	 * @deprecated 0.8
 	 */
@@ -1892,7 +1899,7 @@ namespace {
 /**
  * Indents the region selected by the caret by using spaces.
  * @param caret the caret gives the region to indent
- * @param rectangle set true for rectangular indents (will be ignored level is negative)
+ * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
  * @param level the level of the indentation
  * @throw ...
  * @deprecated 0.8
@@ -1904,7 +1911,7 @@ void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */)
 /**
  * Indents the region selected by the caret by using horizontal tabs.
  * @param caret the caret gives the region to indent
- * @param rectangle set true for rectangular indents (will be ignored level is negative)
+ * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
  * @param level the level of the indentation
  * @throw ...
  * @deprecated 0.8
@@ -1918,7 +1925,7 @@ void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
  * If the selection is empty, inserts the text at current position.
  * @param caret the caret provides a selection
  * @param text the text
- * @param rectangleInsertion true to insert text as rectangle
+ * @param rectangleInsertion set @c true to insert text as rectangle
  * @throw ... any exceptions @c Document#insert and @c Document#erase throw
  */
 void viewers::replaceSelection(Caret& caret, const String& text, bool rectangleInsertion /* = false */) {
