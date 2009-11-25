@@ -34,6 +34,7 @@ using namespace ascension::encoding;
 using namespace ascension::texteditor::commands;
 using namespace manah;
 using namespace std;
+namespace py = boost::python;
 
 
 // グローバル関数//////////////////////////////////////////////////////////
@@ -220,7 +221,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	case WM_COMMAND:
 		return onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
 	case WM_CLOSE:
-		onClose();
+		teardown();
 		return 0;
 	case WM_COPYDATA:
 		onCopyData(reinterpret_cast<HWND>(wParam), *reinterpret_cast<COPYDATASTRUCT*>(lParam));
@@ -262,7 +263,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		onNotify(static_cast<UINT>(wParam), *reinterpret_cast<NMHDR*>(lParam));
 		break;
 	case WM_QUERYENDSESSION:
-		return onClose();
+		return teardown();
 	case WM_SETCURSOR:
 		if(onSetCursor(reinterpret_cast<HWND>(wParam),
 				static_cast<UINT>(LOWORD(lParam)), static_cast<UINT>(HIWORD(lParam))))
@@ -999,21 +1000,6 @@ void Alpha::setupToolbar() {
 }
 #endif
 
-/// @see WM_CLOSE
-bool Alpha::onClose() {
-	// TODO: invoke application teardown.
-//	eventHandlerScript_->invoke(OLESTR("OnAlphaTerminating"), params);
-	BufferList& buffers = BufferList::instance();
-	for(size_t i = buffers.numberOfBuffers() - 1; ; --i) {
-		buffers.close(buffers.at(i));
-		if(i == 0)
-			break;
-	}
-	saveINISettings();
-	getMainWindow().destroy();
-	return true;
-}
-
 /// @see Window::onCommand
 bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
 	EditorWindows::instance().activePane().showBuffer(BufferList::instance().at(id));
@@ -1039,7 +1025,7 @@ void Alpha::onCopyData(HWND window, const COPYDATASTRUCT& cds) {
 
 /// @see Window::onDestroy
 void Alpha::onDestroy() {
-	// 後始末など (Alpha::onClose も参照)
+	// see also 'teardown'
 	getMainWindow().killTimer(ID_TIMER_QUERYCOMMAND);
 	getMainWindow().setMenu(0);
 
@@ -1047,11 +1033,11 @@ void Alpha::onDestroy() {
 //	toolbar_.destroyWindow();
 //	statusBar_.destroyWindow();
 
-	::PostQuitMessage(0);	// STA スレッド終了
+	::PostQuitMessage(0);	// terminate STA thread
 }
 
 /// @see WM_DRAWITEM
-void Alpha::onDrawItem(UINT, const ::DRAWITEMSTRUCT& drawItem) {
+void Alpha::onDrawItem(UINT, const DRAWITEMSTRUCT& drawItem) {
 	if(drawItem.CtlType != ODT_MENU)	// 現時点ではメニューの描画のみ
 		return;
 /*	if(drawItem.itemID != 0) {
@@ -1388,6 +1374,20 @@ void Alpha::onTimer(UINT timerID) {
 	}
 }
 
+bool Alpha::teardown(bool callHook /* = true */) {
+	if(callHook) {
+		py::object toplevel(ambient::Interpreter::instance().toplevelPackage());
+		if(toBoolean(::PyObject_HasAttrString(toplevel.ptr(), "about_to_be_killed_hook"))) {
+			if(!toBoolean(::PyObject_IsTrue(toplevel.attr("about_to_be_killed_hook")().ptr())))
+				return false;
+		}
+	}
+	saveINISettings();
+	getMainWindow().destroy();
+//	::PostQuitMessage(0);
+	return true;
+}
+
 
 // StatusBar ////////////////////////////////////////////////////////////////
 
@@ -1536,3 +1536,15 @@ void StatusBar::updateOvertypeMode() {
 void StatusBar::updateTemporaryMacroRecordingStatus() {
 	// TODO: not implemented.
 }
+
+
+namespace {
+	bool killAlpha(bool callHook) {return Alpha::instance().teardown(callHook);}
+}
+
+ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
+	ambient::Interpreter& interpreter = ambient::Interpreter::instance();
+	py::scope scope(interpreter.toplevelPackage());
+
+	py::def("kill_alpha", &killAlpha, py::arg("call_hook") = true);
+ALPHA_EXPOSE_EPILOGUE()

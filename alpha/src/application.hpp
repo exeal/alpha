@@ -98,18 +98,18 @@ namespace alpha {
 		// 下位オブジェクト
 //		command::KeyboardMap& keyboardMap() throw();
 //		const command::KeyboardMap& keyboardMap() const throw();
+		ui::SearchDialog& searchDialog() /*throw()*/;
+		const ui::SearchDialog& searchDialog() const /*throw()*/;
 		StatusBar& statusBar() /*throw()*/;
 		// attributes
 		static Alpha& instance();
 		void textEditorFont(LOGFONTW& font) const /*throw()*/;
 		void setFont(const LOGFONTW& font);
-		// searchs
-		ui::SearchDialog& searchDialog() /*throw()*/;
-		const ui::SearchDialog& searchDialog() const /*throw()*/;
 		// operations
 //		void	loadKeyBinds(const std::wstring& schemeName);
 		int messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
 		void parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
+		bool teardown(bool callHook = true);
 
 	private:
 		void changeFont();
@@ -129,7 +129,6 @@ namespace alpha {
 	protected:
 		void onToolExecuteCommand();
 	protected:
-		bool onClose();																// WM_CLOSE
 		bool onCommand(WORD id, WORD notifyCode, HWND control);						// WM_COMMAND
 		void onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
 		void onDestroy();															// WM_DESTROY
