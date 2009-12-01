@@ -37,9 +37,9 @@ KeyStroke::KeyStroke(ModifierKey modifierKeys, VirtualKey naturalKey) : naturalK
 }
 
 namespace {
-	KeyStroke::VirtualKey toVirtualKey(py::object o) {
+	pair<KeyStroke::VirtualKey, KeyStroke::ModifierKey> crackKeyStroke(py::object o) {
 		if(py::extract<KeyStroke::VirtualKey>(o).check())
-			return py::extract<KeyStroke::VirtualKey>(o);
+			return make_pair(static_cast<KeyStroke::VirtualKey>(py::extract<KeyStroke::VirtualKey>(o)), KeyStroke::NO_MODIFIER);
 		WCHAR c = 0xffffu;
 		if(py::extract<py::str>(o).check()) {	// o is a str
 			if(py::len(o) == 1) {
@@ -54,9 +54,22 @@ namespace {
 			}
 		}
 		if(c != 0xffffu) {
-			const KeyStroke::VirtualKey k = LOBYTE(::VkKeyScanW(c));
-			if(k != 0xffu)
-				return k;
+			const short k = ::VkKeyScanW(c);
+			if(HIBYTE(k) == 0)
+				return make_pair(LOBYTE(k), KeyStroke::NO_MODIFIER);
+			for(UINT vk = 0; vk < 0x100; ++vk) {
+				const UINT ch = ::MapVirtualKeyW(vk, MAPVK_VK_TO_CHAR);
+				if(ch != 0 && HIWORD(ch) == 0 && LOWORD(ch) == c)
+					return make_pair(static_cast<KeyStroke::VirtualKey>(vk), KeyStroke::NO_MODIFIER);
+			}
+			KeyStroke::ModifierKey m = KeyStroke::NO_MODIFIER;
+			if((HIBYTE(k) & 1) != 0)
+				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::SHIFT_KEY);
+			if((HIBYTE(k) & 2) != 0)
+				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::CONTROL_KEY);
+			if((HIBYTE(k) & 4) != 0)
+				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::ALTERNATIVE_KEY);
+			return make_pair(LOBYTE(k), m);
 		}
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
@@ -64,20 +77,32 @@ namespace {
 	}
 }
 
-KeyStroke::KeyStroke(py::object naturalKey) : naturalKey_(toVirtualKey(naturalKey)), modifierKeys_(NO_MODIFIER) {
+KeyStroke::KeyStroke(py::object naturalKey) {
+	const pair<VirtualKey, ModifierKey> k(crackKeyStroke(naturalKey));
+	naturalKey_ = k.first;
+	modifierKeys_ = k.second;
 }
 
 KeyStroke::KeyStroke(py::object a1, py::object a2) {
+	bool ok = false;
+	pair<VirtualKey, ModifierKey> k;
 	if(py::extract<ModifierKey>(a1).check()) {
 		modifierKeys_ = py::extract<ModifierKey>(a1);
-		naturalKey_ = toVirtualKey(a2);
+		k = crackKeyStroke(a2);
+		ok = true;
 	} else if(py::extract<ModifierKey>(a2).check()) {
-		naturalKey_ = toVirtualKey(a1);
+		k = crackKeyStroke(a1);
 		modifierKeys_ = py::extract<ModifierKey>(a2);
-	} else {
+		ok = true;
+	}
+	if(ok && (k.second & modifierKeys_) != 0)
+		ok = false;
+	if(!ok) {
 		::PyErr_BadArgument();
 		py::throw_error_already_set();
 	}
+	naturalKey_ = k.first;
+	modifierKeys_ = static_cast<ModifierKey>(modifierKeys_ | k.second);
 }
 
 bool KeyStroke::operator==(const KeyStroke& other) const /*throw()*/ {

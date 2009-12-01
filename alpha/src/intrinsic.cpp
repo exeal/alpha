@@ -84,6 +84,8 @@ namespace {
 
 //	template<const Direction* direction> bool isearch() {}
 
+	bool matchingParen(py::object ed, bool extendSelection) {return MatchBracketCommand(extractEditor(ed), extendSelection)();}
+
 	template<typename Signature, Signature* procedure>
 	void moveCaret(py::object ed, bool extendSelection) {CaretMovementCommand(extractEditor(ed), procedure, extendSelection)();}
 
@@ -242,9 +244,10 @@ ALPHA_EXPOSE_PROLOGUE(10)
 	py::def("left_word",
 		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::leftWord>,
 		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("right_word_end",
+	py::def("left_word_end",
 		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::leftWordEnd>,
 		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
+	py::def("matching_paren", &matchingParen, (py::arg("ed") = py::object(), py::arg("extend_selection") = false));
 	py::def("newline", &newline<false>, (py::arg("ed") = py::object(), py::arg("n") = 1));
 	py::def("paste", &paste, (py::arg("ed") = py::object(), py::arg("use_killring") = true));
 	py::def("reconvert", &reconvert, py::arg("ed") = py::object());
