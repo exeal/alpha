@@ -10,8 +10,6 @@
 #include "ui.hpp"
 #include "editor-window.hpp"
 #include "search.hpp"
-//#include "command.hpp"
-//#include "DebugDlg.h"
 #include <ascension/text-editor.hpp>
 #include <ascension/regex.hpp>
 #include "../resource/messages.h"
@@ -24,7 +22,6 @@
 #include <shlwapi.h>	// PathXxxx
 #include <comcat.h>		// ICatInformation
 #include <dlgs.h>
-//#include "Msxml3.tlh"	// MSXML2.IXMLDOMDocument
 using namespace alpha;
 //using namespace alpha::command;
 using namespace ascension;
@@ -161,20 +158,11 @@ namespace {
 Alpha* Alpha::instance_ = 0;
 
 /// コンストラクタ
-Alpha::Alpha() : editorFont_(0)/*, mruManager_(0), twoStroke1stKey_(VK_NULL), twoStroke1stModifiers_(0)*/ {
+Alpha::Alpha() : editorFont_(0) {
 	assert(Alpha::instance_ == 0);
 	Alpha::instance_ = this;
 	searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
-//	commandManager_.reset(new CommandManager);
-//	bookmarkDialog_.reset(new ui::BookmarkDialog);
 	onSettingChange(0, 0);	// statusFont_ の初期化
-
-	// load startup.xml
-	WCHAR fileName[MAX_PATH];
-	wcscpy(fileName, getModuleFileName());
-	WCHAR* const separator = wcsrchr(fileName, L'\\');
-	assert(separator != 0);
-	wcscpy(separator + 1, L"startup.xml");
 }
 
 /// デストラクタ
@@ -288,50 +276,7 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 	}
 	return ::DefWindowProc(window, message, wParam, lParam);
 }
-#if 0
-/**
- * キー組み合わせをコマンドに変換して実行する
- * @param key 仮想キー
- * @param modifiers 修飾キー
- * @return コマンドに変換できた場合 true
- */
-bool Alpha::handleKeyDown(VirtualKey key, KeyModifier modifiers) {
-	if(key == VK_MENU && modifiers == 0) {	// [Alt] のみ -> メニューをアクティブにする
-		getMainWindow().sendMessage(WM_INITMENU, reinterpret_cast<WPARAM>(getMainWindow().getMenu().getHandle()));
-		return true;
-	} else if(key == VK_CONTROL || key == VK_MENU || key == VK_SHIFT)	// 修飾キーが単独で押された -> 無視
-		return false;
 
-	if(twoStroke1stKey_ == VK_NULL) {	// 1ストローク目
-		Command* command = keyboardMap_.command(KeyCombination(key, modifiers));
-		if(command == 0)
-			return false;
-		else if(command->isBuiltIn() && command->getID() == CMD_SPECIAL_WAITINGFORNEXTKEYCOMBINATION) {
-			twoStroke1stKey_ = key;
-			twoStroke1stModifiers_ = modifiers;
-			const wstring s(loadMessage(MSG_STATUS__WAITING_FOR_2ND_KEYS,
-				MARGS % KeyboardMap::strokeString(KeyCombination(key, modifiers))));
-			setStatusText(s.c_str());
-		} else
-			command->execute();
-	} else {	// 2ストローク目
-		Command* command = keyboardMap_.command(
-			KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers));
-		if(command != 0) {
-			setStatusText(0);
-			command->execute();
-		} else {
-			const wstring s(loadMessage(MSG_STATUS__INVALID_2STROKE_COMBINATION,
-				MARGS % KeyboardMap::strokeString(
-					KeyCombination(twoStroke1stKey_, twoStroke1stModifiers_), KeyCombination(key, modifiers))));
-			::MessageBeep(MB_OK);
-			setStatusText(s.c_str());
-		}
-		twoStroke1stKey_ = VK_NULL;
-	}
-	return true;
-}
-#endif
 /// @see manah#windows#Alpha#initInstance
 bool Alpha::initInstance(int showCommand) {
 	// setup the script engine
@@ -427,10 +372,6 @@ bool Alpha::initInstance(int showCommand) {
 	} catch(const boost::python::error_already_set&) {
 		ambient::Interpreter::instance().handleException();
 	}
-
-	// MRU リストの作成
-//	mruManager_ = new MRUManager(readIntegerProfile(L"File", L"mruLimit", 8), CMD_SPECIAL_MRUSTART);
-//	mruManager_->load();
 
 	// ステータスバーの作成
 	statusBar_.create(applicationWindow.use());
@@ -536,28 +477,7 @@ void Alpha::loadINISettings() {
 	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
 	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
 }
-#if 0
-/**
- * キーの (再) 割り当て
- * @param schemeName 使用するキーボードマップスキームの名前。
- * 空文字列を指定するとアプリケーションに結び付けられているキー割り当てオブジェクトからアクセラレータテーブルを再構築する
- */
-void Alpha::loadKeyBinds(const wstring& schemeName) {
-	if(!schemeName.empty()) {
-		wchar_t pathName[MAX_PATH];
-		::GetModuleFileNameW(0, pathName, MAX_PATH);
-		wcscpy(::PathFindFileNameW(pathName), IDS_KEYBOARDSCHEME_DIRECTORY_NAME);
-		if(wcslen(pathName) + schemeName.length() + 4 >= MAX_PATH)
-			return;
-		wcscat(pathName, schemeName.c_str());
-		wcscat(pathName, L".akm");
-		keyboardMap_.load(pathName);
-	}
 
-	// メニューの再構築
-	setupMenus();
-}
-#endif
 /**
  * メッセージテーブルの文字列をメッセージボックスに表示する
  * @param id メッセージ識別子
@@ -669,7 +589,7 @@ void Alpha::registerScriptEngineAssociations() {
 		}
 	}
 }
-#endif /* 0 */
+#endif // 0
 
 /// INI ファイルに設定を保存する
 void Alpha::saveINISettings() {
@@ -683,9 +603,6 @@ void Alpha::saveINISettings() {
 	rebar_.getBandInfo(rebar_.idToIndex(IDC_BUFFERBAR), rbbi);
 	writeIntegerProfile(L"View", L"visibleBufferBar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
 	writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
-
-	// MRU リストの保存
-//	mruManager_->save();
 
 	// 検索文字列履歴の保存
 	const searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
@@ -752,125 +669,6 @@ void Alpha::setFont(const LOGFONTW& font) {
 	statusBar_.adjustPaneWidths();
 }
 #if 0
-/// メニューの初期化
-void Alpha::setupMenus() {
-	Menu menuBar(getMainWindow().getMenu());
-	while(true) {
-		const UINT c = menuBar.getNumberOfItems();
-		if(c == 0 || c == -1)
-			break;
-		menuBar.remove<Menu::BY_POSITION>(0);
-	}
-
-	const Menu::SeparatorItem sep;
-
-#define ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->menuName(id).c_str())
-#define RADIO_ITEM(id) Menu::StringItem(id - CMD_SPECIAL_START, commandManager_->menuName(id).c_str(), MFS_ENABLED, true)
-
-	// メニューバー
-	menuBar << Menu::StringItem(CMD_FILE_TOP - CMD_SPECIAL_START, loadMessage(CMD_FILE_TOP).c_str())
-		<< Menu::StringItem(CMD_EDIT_TOP - CMD_SPECIAL_START, loadMessage(CMD_EDIT_TOP).c_str())
-		<< Menu::StringItem(CMD_SEARCH_TOP - CMD_SPECIAL_START, loadMessage(CMD_SEARCH_TOP).c_str())
-		<< Menu::StringItem(CMD_VIEW_TOP - CMD_SPECIAL_START, loadMessage(CMD_VIEW_TOP).c_str())
-		<< Menu::StringItem(CMD_MACRO_TOP - CMD_SPECIAL_START, loadMessage(CMD_MACRO_TOP).c_str())
-		<< Menu::StringItem(CMD_TOOL_TOP - CMD_SPECIAL_START, loadMessage(CMD_TOOL_TOP).c_str())
-		<< Menu::StringItem(CMD_WINDOW_TOP - CMD_SPECIAL_START, loadMessage(CMD_WINDOW_TOP).c_str())
-		<< Menu::StringItem(CMD_HELP_TOP - CMD_SPECIAL_START, loadMessage(CMD_HELP_TOP).c_str());
-
-	// [ファイル]
-	auto_ptr<Menu> popup(new PopupMenu);
-	*popup << ITEM(CMD_FILE_NEW) << ITEM(CMD_FILE_NEWWITHFORMAT) << sep << ITEM(CMD_FILE_OPEN)
-		<< ITEM(CMD_FILE_REOPEN) << ITEM(CMD_FILE_REOPENWITHCODEPAGE) << ITEM(CMD_FILE_MRU) << sep
-		<< ITEM(CMD_FILE_CLOSE) << ITEM(CMD_FILE_CLOSEALL) << ITEM(CMD_FILE_CLOSEOTHERS) << sep
-		<< ITEM(CMD_FILE_SAVE) << ITEM(CMD_FILE_SAVEAS) << ITEM(CMD_FILE_SAVEALL) << sep
-		<< ITEM(CMD_FILE_PRINT) << /*ITEM(CMD_FILE_PRINTPREVIEW) <<*/ ITEM(CMD_FILE_PRINTSETUP) << sep
-		<< ITEM(CMD_FILE_SENDMAIL) << sep << ITEM(CMD_FILE_EXIT);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_FILE_MRU - CMD_SPECIAL_START, mruManager_->popupMenu());
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_FILE_TOP - CMD_SPECIAL_START, popup);
-
-	// [編集]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_EDIT_UNDO) << ITEM(CMD_EDIT_REDO) << sep << ITEM(CMD_EDIT_CUT)
-		<< ITEM(CMD_EDIT_COPY) << ITEM(CMD_EDIT_PASTE) << ITEM(CMD_EDIT_PASTEFROMCLIPBOARDRING)
-		<< ITEM(CMD_EDIT_DELETE) << ITEM(CMD_EDIT_SELECTALL) << sep << ITEM(CMD_EDIT_ADVANCED)
-		<< ITEM(CMD_EDIT_OPENCANDIDATEWINDOW);
-	auto_ptr<Menu> advMenu(new PopupMenu);	// [編集]-[高度な操作]
-	*advMenu << ITEM(CMD_EDIT_CHARTOCODEPOINT) << ITEM(CMD_EDIT_CODEPOINTTOCHAR) << sep
-		<< ITEM(CMD_EDIT_NARROWTOSELECTION) << ITEM(CMD_EDIT_WIDEN);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_EDIT_ADVANCED - CMD_SPECIAL_START, advMenu);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_EDIT_TOP - CMD_SPECIAL_START, popup);
-
-	// [検索]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_SEARCH_FIND) << ITEM(CMD_SEARCH_FINDNEXT) << ITEM(CMD_SEARCH_FINDPREV)
-		<< ITEM(CMD_SEARCH_INCREMENTALSEARCH) << ITEM(CMD_SEARCH_REVOKEMARK) << sep
-		<< ITEM(CMD_SEARCH_GOTOLINE) << ITEM(CMD_SEARCH_BOOKMARKS) << sep << ITEM(CMD_SEARCH_GOTOMATCHBRACKET)
-		<< ITEM(CMD_SEARCH_EXTENDTOMATCHBRACKET) << sep << ITEM(CMD_SEARCH_FINDFILES)
-		<< ITEM(CMD_SEARCH_SEARCHMULTIPLEFILES) << ITEM(CMD_SEARCH_REPLACEMULTIPLEFILES);
-	// [検索]-[ブックマーク]
-	auto_ptr<PopupMenu> bookmarksMenu(new PopupMenu);
-	*bookmarksMenu << ITEM(CMD_SEARCH_TOGGLEBOOKMARK) << ITEM(CMD_SEARCH_NEXTBOOKMARK)
-		<< ITEM(CMD_SEARCH_PREVBOOKMARK) << ITEM(CMD_SEARCH_CLEARBOOKMARKS) << ITEM(CMD_SEARCH_MANAGEBOOKMARKS);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_BOOKMARKS - CMD_SPECIAL_START, bookmarksMenu);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_SEARCH_TOP - CMD_SPECIAL_START, popup);
-
-
-	// [表示]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_VIEW_TOOLBAR) << ITEM(CMD_VIEW_STATUSBAR) << ITEM(CMD_VIEW_BUFFERBAR)
-		<< sep << ITEM(CMD_VIEW_BUFFERS) << ITEM(CMD_VIEW_NEXTBUFFER) << ITEM(CMD_VIEW_PREVBUFFER)
-		<< sep << RADIO_ITEM(CMD_VIEW_WRAPNO) << RADIO_ITEM(CMD_VIEW_WRAPBYSPECIFIEDWIDTH)
-		<< RADIO_ITEM(CMD_VIEW_WRAPBYWINDOWWIDTH) << sep << ITEM(CMD_VIEW_REFRESH);
-	popup->setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_BUFFERS - CMD_SPECIAL_START, buffers_->listMenu());
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_VIEW_TOP - CMD_SPECIAL_START, popup);
-
-	// [マクロ]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_MACRO_EXECUTE) << ITEM(CMD_MACRO_DEFINE) << ITEM(CMD_MACRO_APPEND)
-		<< ITEM(CMD_MACRO_PAUSERESTART) << ITEM(CMD_MACRO_INSERTQUERY) << ITEM(CMD_MACRO_ABORT)
-		<< ITEM(CMD_MACRO_SAVEAS) << ITEM(CMD_MACRO_LOAD) << sep << ITEM(CMD_MACRO_SCRIPTS);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_MACRO_TOP - CMD_SPECIAL_START, popup);
-
-	// [マクロ]-[スクリプト] (暫定)
-/*	popup.reset(new PopupMenu);
-	*scriptMenu << ITEM(CMD_EDIT_RELOADPLUGIN) << sep;
-	const size_t c = scriptMacroManager_->getCount();
-	if(c != 0) {
-		*scriptControls << ITEM(CMD_MACRO_INTERRUPT) << sep;
-		for(size_t i = 0; i < c; ++i)
-			*scriptMenu << ITEM(CMD_EDIT_PLUGINLIST_START + static_cast<UINT>(i));
-	} else
-		*scriptMenu << ITEM(CMD_EDIT_PLUGINLIST_START, MFS_GRAYED | MFS_DISABLED);
-	macroMenu->setChildPopup<Menu::BY_COMMAND>(CMD_MACRO_SCRIPTS - CMD_SPECIAL_START, *scriptMenu, true);
-*/
-	// [ツール]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_TOOL_EXECUTE) << ITEM(CMD_TOOL_EXECUTECOMMAND) << sep
-		<< ITEM(CMD_TOOL_APPDOCTYPES) << ITEM(CMD_TOOL_DOCTYPEOPTION)
-		<< ITEM(CMD_TOOL_COMMONOPTION) << ITEM(CMD_TOOL_FONT);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_TOP - CMD_SPECIAL_START, popup);
-//	delete appDocTypeMenu_;
-//	appDocTypeMenu_ = new Menu();	// [適用文書タイプ]
-//	popup->setChildPopup<Menu::BY_COMMAND>(CMD_TOOL_APPDOCTYPES - CMD_SPECIAL_START, *appDocTypeMenu_, false);
-
-	// [ウィンドウ]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_WINDOW_SPLITNS) << ITEM(CMD_WINDOW_SPLITWE) << ITEM(CMD_WINDOW_UNSPLITOTHERS)
-		<< ITEM(CMD_WINDOW_UNSPLITACTIVE) << ITEM(CMD_WINDOW_NEXTPANE) << ITEM(CMD_WINDOW_PREVPANE)
-		<< sep << ITEM(CMD_WINDOW_TOPMOSTALWAYS);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_WINDOW_TOP - CMD_SPECIAL_START, popup);
-
-	// [ヘルプ]
-	popup.reset(new PopupMenu);
-	*popup << ITEM(CMD_HELP_ABOUT);
-	menuBar.setChildPopup<Menu::BY_COMMAND>(CMD_HELP_TOP - CMD_SPECIAL_START, popup);
-
-#undef ITEM
-#undef RADIO_ITEM
-
-	getMainWindow().drawMenuBar();
-}
-
 /// ツールバーの初期化 (1 回しか呼び出してはならない)
 void Alpha::setupToolbar() {
 	// 標準ツールバー

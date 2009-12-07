@@ -96,8 +96,6 @@ namespace alpha {
 		Alpha();
 		~Alpha() throw();
 		// 下位オブジェクト
-//		command::KeyboardMap& keyboardMap() throw();
-//		const command::KeyboardMap& keyboardMap() const throw();
 		ui::SearchDialog& searchDialog() /*throw()*/;
 		const ui::SearchDialog& searchDialog() const /*throw()*/;
 		StatusBar& statusBar() /*throw()*/;
@@ -106,7 +104,6 @@ namespace alpha {
 		void textEditorFont(LOGFONTW& font) const /*throw()*/;
 		void setFont(const LOGFONTW& font);
 		// operations
-//		void	loadKeyBinds(const std::wstring& schemeName);
 		int messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
 		void parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
 		bool teardown(bool callHook = true);
@@ -121,7 +118,6 @@ namespace alpha {
 		void readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
 		void readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
 		void saveINISettings();
-//		void	setupMenus();
 //		void	setupToolbar();
 		void updateTitleBar();
 
@@ -159,42 +155,14 @@ namespace alpha {
 		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
 		StatusBar statusBar_;		// ステータスバー
 		std::auto_ptr<ui::SearchDialog> searchDialog_;
-//		std::auto_ptr<ui::BookmarkDialog> bookmarkDialog_;	// [ブックマーク] ダイアログ
 		// GDI objects
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
-		// features and commands
-//		std::auto_ptr<command::CommandManager> commandManager_;
-//		command::KeyboardMap keyboardMap_;			// 使用中のキーボードマップ
-//		MRUManager* mruManager_;
-//		std::auto_ptr<ScriptMacroManager> scriptMacroManager_;	// スクリプトマクロの管理
-//		command::VirtualKey twoStroke1stKey_;			// 入力中の 2 ストロークシーケンスの 1 ストローク目のキー
-//		command::KeyModifier twoStroke1stModifiers_;	// 入力中の 2 ストロークシーケンスの 1 ストローク目の修飾キー
-//		friend class command::CommandManager;
-//		friend class command::BuiltInCommand;
 	};
 
 
-	/// Returns the command manager.
-//	inline command::CommandManager& Alpha::commandManager() throw() {return *commandManager_;}
-
-	/// Returns the command manager.
-//	inline const command::CommandManager& Alpha::commandManager() const throw() {return *commandManager_;}
-
 	/// Returns the singleton application object.
 	inline Alpha& Alpha::instance() {assert(instance_ != 0); return *instance_;}
-
-	/// Returns the keyboard map.
-//	inline command::KeyboardMap& Alpha::keyboardMap() throw() {return keyboardMap_;}
-
-	/// Returns the keyboard map.
-//	inline const command::KeyboardMap& Alpha::keyboardMap() const throw() {return keyboardMap_;}
-
-	/// Returns the MRU manager.
-//	inline MRUManager& Alpha::mruManager() throw() {return *mruManager_;}
-
-	/// Returns the MRU manager.
-//	inline const MRUManager& Alpha::mruManager() const throw() {return *mruManager_;}
 
 	/// Returns the search dialog box.
 	inline ui::SearchDialog& Alpha::searchDialog() throw() {return *searchDialog_;}
