@@ -192,7 +192,7 @@ void SearchDialog::onInitDialog(HWND, bool&) {
 INT_PTR SearchDialog::processWindowMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 	switch(message) {
 	case WM_SHOWWINDOW:
-		if(manah::toBoolean(wParam) && lParam == 0 && initializesPatternFromEditor_) {
+		if(manah::toBoolean(wParam) && lParam == 0 && initializesPatternFromEditor_) {	// ??? C4244@MSVC9
 			v::Caret& caret = EditorWindows::instance().activePane().visibleView().caret();
 			if(isSelectionEmpty(caret)) {
 //				String s;

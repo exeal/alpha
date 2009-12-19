@@ -64,7 +64,9 @@ namespace {
 	private:
 		HMENU handle_;
 		py::object self_;
-		set<py::object> children_;
+		struct PyPtrComparer {bool operator()(const py::object& lhs, const py::object& rhs) {return lhs.ptr() < rhs.ptr();}};
+		typedef set<py::object, PyPtrComparer> Children;
+		Children children_;
 	};
 
 	class PopupMenu : public Menu {
@@ -140,7 +142,7 @@ py::object Menu::child(short identifier) const {
 	mi.fMask = MIIM_SUBMENU;
 	item(identifier, mi);
 	if(mi.hSubMenu != 0) {
-		for(set<py::object>::const_iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
+		for(Children::const_iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
 			if(static_cast<const Menu&>(py::extract<const Menu&>(*i)).handle_ == mi.hSubMenu)
 				return *i;
 		}
@@ -183,7 +185,7 @@ py::object Menu::erase(short identifier) {
 	mi.fMask = MIIM_DATA | MIIM_SUBMENU;
 	item(identifier, mi);
 	if(mi.hSubMenu != 0) {
-		for(set<py::object>::iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
+		for(Children::iterator i(children_.begin()), e(children_.end()); i != e; ++i) {
 			if(i->ptr() == reinterpret_cast<PyObject*>(mi.dwItemData)) {
 				children_.erase(i);
 				break;

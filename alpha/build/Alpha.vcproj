@@ -161,7 +161,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)../..&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;UNICODE;_UNICODE;BOOST_LIB_DIAGNOSTIC"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;UNICODE;_UNICODE;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB"
 				StringPooling="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
@@ -198,8 +198,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
-				ShowProgress="0"
+				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib libboost_python3-vc90-mt-sgd-1_41.lib"
+				ShowProgress="2"
 				OutputFile="$(OutDir)/Alpha.exe"
 				LinkIncremental="0"
 				SuppressStartupBanner="true"
@@ -345,13 +345,6 @@
 			<File
 				RelativePath="..\src\search.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
