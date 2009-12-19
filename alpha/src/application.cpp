@@ -108,6 +108,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	return exitCode;
 }
 
+AutoBuffer<WCHAR> alpha::a2u(const char* first, const char* last, DWORD flags /* = MB_PRECOMPOSED */) {
+	const int len = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, first, static_cast<int>(last - first), 0, 0);
+	manah::AutoBuffer<WCHAR> buffer(new WCHAR[len]);
+	::MultiByteToWideChar(CP_ACP, flags, first, static_cast<int>(last - first), buffer.get(), len);
+	return buffer;
+}
+
+AutoBuffer<char> alpha::u2a(const WCHAR* first, const WCHAR* last, DWORD flags /* = 0 */) {
+	const int len = ::WideCharToMultiByte(CP_ACP, 0, first, static_cast<int>(last - first), 0, 0, 0, 0);
+	manah::AutoBuffer<char> buffer(new char[len]);
+	::WideCharToMultiByte(CP_ACP, flags, first, static_cast<int>(last - first), buffer.get(), len, 0, 0);
+	return buffer;
+}
+
 namespace {
 	inline void showLastErrorMessage(HWND parent = 0) {
 		void* buffer;
@@ -124,18 +138,6 @@ namespace {
 	inline void b2s(std::basic_string<WCHAR>& s) {replace_if(s.begin(), s.end(), bind2nd(equal_to<WCHAR>(), L'\\'), L'/');}
 
 	// UTF-16 とユーザ既定コードページの変換
-	manah::AutoBuffer<char> u2a(const wchar_t* first, const wchar_t* last) {
-		const int len = ::WideCharToMultiByte(CP_ACP, 0, first, static_cast<int>(last - first), 0, 0, 0, 0);
-		manah::AutoBuffer<char> buffer(new char[len]);
-		::WideCharToMultiByte(CP_ACP, 0, first, static_cast<int>(last - first), buffer.get(), len, 0, 0);
-		return buffer;
-	}
-	manah::AutoBuffer<wchar_t> a2u(const char* first, const char* last) {
-		const int len = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, first, static_cast<int>(last - first), 0, 0);
-		manah::AutoBuffer<wchar_t> buffer(new wchar_t[len]);
-		::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, first, static_cast<int>(last - first), buffer.get(), len);
-		return buffer;
-	}
 
 	/// ChooseFontW のためのフックプロシジャ
 	UINT_PTR CALLBACK chooseFontHookProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -226,10 +228,10 @@ LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lP
 		onDropFiles(reinterpret_cast<HDROP>(wParam));
 		break;
 	case WM_ENTERMENULOOP:
-		onEnterMenuLoop(toBoolean(wParam));
+		onEnterMenuLoop(toBoolean(wParam));	// ??? C4244@MSVC9
 		break;
 	case WM_EXITMENULOOP:
-		onExitMenuLoop(toBoolean(wParam));
+		onExitMenuLoop(toBoolean(wParam));	// ??? C4244@MSVC9
 		break;
 	case WM_INITMENUPOPUP:
 		ui::handleINITMENUPOPUP(wParam, lParam);
@@ -361,10 +363,10 @@ bool Alpha::initInstance(int showCommand) {
 	loadINISettings();
 
 	// スクリプトによる設定
-	char dotAlpha[MAX_PATH];
-	::GetModuleFileNameA(0, dotAlpha, MAX_PATH);
-	char* fileName = ::PathFindFileNameA(dotAlpha);
-	strcpy(fileName, ".alpha");
+	wchar_t dotAlpha[MAX_PATH];
+	::GetModuleFileNameW(0, dotAlpha, MAX_PATH);
+	wchar_t* fileName = ::PathFindFileNameW(dotAlpha);
+	wcscpy(fileName, L".alpha");
 	try {
 		ambient::Interpreter::instance().executeFile(dotAlpha);
 	} catch(const invalid_argument&) {

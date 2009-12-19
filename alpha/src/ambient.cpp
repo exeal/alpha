@@ -11,7 +11,9 @@ namespace py = boost::python;
 
 
 wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
-	py::object o(py::handle<>(PyUnicode_Check(object) ? py::expect_non_null(object) : ::PyObject_Unicode(object)));
+	const py::object o(PyUnicode_Check(object) ?
+		py::object(py::borrowed(py::expect_non_null(object)))
+		: py::object(py::handle<>(::PyObject_Str(object))));
 	if(py::ssize_t n = ::PyUnicode_GetSize(o.ptr())) {
 		static wchar_t s[0x100];
 		const bool large = n > MANAH_COUNTOF(s);
@@ -26,14 +28,10 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 	return wstring();
 }
 
-py::object alpha::ambient::convertWideStringToUnicodeObject(const wstring& s) {
-	return py::object(py::handle<>(::PyUnicode_FromWideChar(s.data(), s.length())));
-}
-
-
 Interpreter::Interpreter() : numericPrefix_(make_pair(false, 0)) {
 //	::Py_SetProgramName();
 	::Py_Initialize();
+	assert(::Py_IsInitialized() != 0);
 }
 
 Interpreter::~Interpreter() {
@@ -85,7 +83,7 @@ py::object Interpreter::executeCommand(py::object command) {
 						const py::tuple argumentNames(py::extract<py::tuple>(code.attr("co_varnames")));
 						const py::ssize_t c = py::extract<py::ssize_t>(code.attr("co_argcount"));
 						for(py::ssize_t i = 0; i < c; ++i) {
-							if(::PyObject_Compare(static_cast<py::object>(argumentNames[i]).ptr(), STRING_N.ptr()) == 0) {
+							if(::PyObject_RichCompareBool(static_cast<py::object>(argumentNames[i]).ptr(), STRING_N.ptr(), Py_EQ) == 1) {
 								hasN = true;
 								break;
 							}
@@ -119,17 +117,43 @@ py::object Interpreter::executeCommand(py::object command) {
 	return py::object();
 }
 
-py::object Interpreter::executeFile(const string& fileName) {
-	py::object ns(py::import("__main__").attr("__dict__"));
-	manah::AutoBuffer<char> p(new char[fileName.length() + 1]);
-	strcpy(p.get(), fileName.c_str());
-	char* pp[1] = {p.get()};
-	::PySys_SetArgv(1, pp);
-	py::object result(py::exec_file(fileName.c_str(), ns, ns));
-	static char emptyString[] = "";
-	pp[0] = emptyString;
-	::PySys_SetArgv(1, pp);
-	return result;
+py::object Interpreter::executeFile(const wstring& fileName) {
+	HANDLE file = ::CreateFileW(fileName.c_str(), GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+	if(file == INVALID_HANDLE_VALUE) {
+		char s[MAX_PATH + 64];
+		sprintf(s, "No such file or directory: '%s'", fileName.c_str());
+		::PyErr_SetString(PyExc_IOError, s);
+		py::throw_error_already_set();
+	}
+
+	PyObject* result = 0;
+	HANDLE mapping = ::CreateFileMappingW(file, 0, PAGE_READONLY, 0, 0, 0);
+	if(mapping != 0) {
+		const char* const script = static_cast<const char*>(::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0));
+		if(script != 0) {
+			PyObject* const code = ::Py_CompileString(
+				script, u2a(fileName.c_str(), fileName.c_str() + fileName.length() + 1).get(), Py_file_input);
+			if(code == 0)
+				py::throw_error_already_set();
+			const py::object ns(py::import("__main__").attr("__dict__"));
+			manah::AutoBuffer<wchar_t> arg0(new wchar_t[fileName.length() + 1]);
+			wcscpy(arg0.get(), fileName.c_str());
+			wchar_t* argv[1] = {arg0.get()};
+			::PySys_SetArgv(1, argv);
+			result = ::PyEval_EvalCode(reinterpret_cast<PyCodeObject*>(code), ns.ptr(), ns.ptr());
+			static wchar_t emptyString[] = L"";
+			argv[0] = emptyString;
+			::PySys_SetArgv(1, argv);
+			::UnmapViewOfFile(script);
+		}
+		::CloseHandle(mapping);
+	}
+	::CloseHandle(file);
+
+	if(result == 0)
+		py::throw_error_already_set();
+	return py::object(py::handle<>(result));
 }
 
 void Interpreter::handleException() {
@@ -140,20 +164,37 @@ void Interpreter::handleException() {
 	PyObject* traceback;
 	::PyErr_Fetch(&type, &value, &traceback);
 	if(type != 0 && value != 0) {
-		ostringstream out;
+		if(::PyErr_GivenExceptionMatches(value, type) == 0)
+			::PyErr_NormalizeException(&type, &value, &traceback);
+		wostringstream out;
+		const py::object none;
 		py::object tracebackModule(py::import("traceback"));
-		if(tracebackModule != py::object()) {
-			py::object formatException(tracebackModule.attr("format_exception"));
-			if(formatException != py::object()) {
-				const py::list li(formatException(py::handle<>(py::borrowed(type)),
-					py::handle<>(py::borrowed(value)), py::handle<>(py::borrowed(py::allow_null(traceback)))));
-				if(li != py::object()) {
-					for(py::ssize_t i = 0, c = py::len(li); i < c; ++i)
-						out << ::PyString_AsString(py::object(li[i]).ptr());
+		if(tracebackModule != none) {
+			const py::object formatException(tracebackModule.attr("format_exception"));
+			if(formatException != none) {
+#ifdef _DEBUG
+				try {
+#endif // _DEBUG
+					const py::list lines(formatException(
+						py::borrowed(type), py::borrowed(value), py::handle<>(py::allow_null(py::borrowed(traceback)))));
+					if(lines != none) {
+						for(py::ssize_t i = 0, c = py::len(lines); i < c; ++i)
+							out << convertUnicodeObjectToWideString(py::object(lines[i]).ptr());
+					}
+#ifdef _DEBUG
+				} catch(py::error_already_set&) {
+					Py_DECREF(type);
+					Py_DECREF(value);
+					Py_XDECREF(traceback);
+					type = value = traceback = 0;
+					::PyErr_Fetch(&type, &value, &traceback);
+					::OutputDebugStringW(convertUnicodeObjectToWideString(value).c_str());
+					::DebugBreak();
 				}
+#endif // _DEBUG
 			}
 		}
-		::MessageBoxA(Alpha::instance().getMainWindow().use(), out.str().c_str(), "Alpha", MB_ICONEXCLAMATION);
+		::MessageBoxW(Alpha::instance().getMainWindow().use(), out.str().c_str(), L"Alpha", MB_ICONEXCLAMATION);
 	}
 	Py_XDECREF(type);
 	Py_XDECREF(value);
@@ -193,7 +234,7 @@ py::object Interpreter::module(const string& name) {
 			const string missingModule("ambient." + name.substr(0, dot));
 			if(PyObject* newModule = ::PyImport_AddModule(missingModule.c_str())) {
 				if(0 == ::PyModule_AddObject(parent.ptr(), moduleName.c_str(), newModule)) {
-					::Py_InitModule(missingModule.c_str(), 0);
+					::PyImport_AddModule(missingModule.c_str());	// Py_InitModule was used in 2.x
 					if(dot == string::npos)
 						return py::object(py::handle<>(py::borrowed(newModule)));
 				}
@@ -233,7 +274,7 @@ void Interpreter::setNumericPrefix(py::ssize_t n) {
 
 py::object Interpreter::toplevelPackage() {
 	if(package_ == py::object()) {
-		package_ = py::object(py::borrowed(::Py_InitModule("ambient", 0)));
+		package_ = py::object(py::borrowed(::PyImport_AddModule("ambient")));	// Py_InitModule was used in 2.x
 		installException("RecoverableError", py::object(py::borrowed(PyExc_Exception)));
 		py::scope temp(package_);
 		py::def("error", &raiseRecoverableError);

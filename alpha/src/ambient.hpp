@@ -14,7 +14,7 @@ namespace alpha {
 	namespace ambient {
 
 		std::wstring convertUnicodeObjectToWideString(PyObject* object);
-		boost::python::object convertWideStringToUnicodeObject(const std::wstring& s);
+		template<typename T> T convertWideStringToUnicodeObject(const std::wstring& s);
 		template<typename Exception> class CppStdExceptionTranslator {
 		public:
 			explicit CppStdExceptionTranslator(boost::python::object type) : type_(type) {assert(type != 0);}
@@ -30,7 +30,7 @@ namespace alpha {
 		public:
 			~Interpreter() /*throw()*/;
 			void addInstaller(void (*installer)(), manah::uint order);
-			boost::python::object executeFile(const std::string& fileName);
+			boost::python::object executeFile(const std::wstring& fileName);
 			void install();
 			static Interpreter& instance();
 			// package and modules
@@ -59,6 +59,14 @@ namespace alpha {
 			std::map<const std::string, boost::python::object> exceptionClasses_;
 			std::pair<bool, boost::python::ssize_t> numericPrefix_;
 		};
+
+		template<> inline boost::python::object convertWideStringToUnicodeObject<boost::python::object>(const std::wstring& s) {
+			return boost::python::object(boost::python::handle<>(::PyUnicode_FromWideChar(s.data(), s.length())));
+		}
+
+		template<> inline boost::python::str convertWideStringToUnicodeObject<boost::python::str>(const std::wstring& s) {
+			return boost::python::str(boost::python::handle<>(::PyUnicode_FromWideChar(s.data(), s.length())));
+		}
 	}
 }
 

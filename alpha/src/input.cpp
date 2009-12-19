@@ -41,12 +41,12 @@ namespace {
 		if(py::extract<KeyStroke::VirtualKey>(o).check())
 			return make_pair(static_cast<KeyStroke::VirtualKey>(py::extract<KeyStroke::VirtualKey>(o)), KeyStroke::NO_MODIFIER);
 		WCHAR c = 0xffffu;
-		if(py::extract<py::str>(o).check()) {	// o is a str
+	/*	if(py::extract<py::str>(o).check()) {	// o is a str
 			if(py::len(o) == 1) {
 				const py::str s = py::extract<py::str>(o);
 				c = ::PyString_AsString(s.ptr())[0];
 			}
-		} else if(PyUnicode_Check(o.ptr()) != 0) {	// o is a unicode
+		} else*/ if(PyUnicode_Check(o.ptr()) != 0) {	// o is a unicode
 			if(::PyUnicode_GetSize(o.ptr()) == 1) {
 				wchar_t wc;
 				if(::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), &wc, 1) != -1)

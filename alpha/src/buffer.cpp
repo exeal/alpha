@@ -1033,6 +1033,7 @@ void BufferList::updateTitleBar() {
 
 namespace {
 	py::object activeBuffer() {return EditorWindows::instance().activeBuffer().self();}
+//	Direction attrOfDirection
 	void bindBufferToFile(Buffer& buffer, const wstring& fileName) {buffer.textFile().bind(fileName);}
 	py::object bufferAt(const BufferList& buffers, py::ssize_t at) {
 		try {
@@ -1121,9 +1122,10 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.value("overwrite_file", f::IUnexpectedFileTimeStampDirector::OVERWRITE_FILE)
 		.value("client_invocation", f::IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION);
 
-	py::class_<Direction>("Direction", py::no_init)/*
+	py::class_<Direction>("Direction", py::no_init)
+//		.def("__getattr__", &attrOfDirection)/*
 		.def_readonly("forward", &Direction::FORWARD)
-		.def_readonly("backward", &Direction::BACKWARD)*/;
+		.def_readonly("backward", &Direction::BACKWARD);
 	py::class_<Position>("Position", py::init<>())
 		.def(py::init<length_t, length_t>())
 		.def_readwrite("line", &Position::line)
