@@ -199,7 +199,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib libboost_python3-vc90-mt-sgd-1_41.lib"
-				ShowProgress="2"
 				OutputFile="$(OutDir)/Alpha.exe"
 				LinkIncremental="0"
 				SuppressStartupBanner="true"

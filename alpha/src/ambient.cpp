@@ -130,10 +130,32 @@ py::object Interpreter::executeFile(const wstring& fileName) {
 	PyObject* result = 0;
 	HANDLE mapping = ::CreateFileMappingW(file, 0, PAGE_READONLY, 0, 0, 0);
 	if(mapping != 0) {
-		const char* const script = static_cast<const char*>(::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0));
-		if(script != 0) {
+		// read the input file
+		const char* const content = static_cast<const char*>(::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0));
+		if(content != 0) {
+			LARGE_INTEGER fileSize;
+			if(!manah::toBoolean(::GetFileSizeEx(file, &fileSize)))
+				raiseLastWin32Error();
+			manah::AutoBuffer<char> script;
+			try {
+				script.reset(new char[fileSize.QuadPart + 1]);
+			} catch(const bad_alloc& e) {
+				::PyErr_SetString(PyExc_MemoryError, e.what());
+			}
+			// convert the file content into script text
+			char* e = script.get();
+			for(const char* p = content; ; ++e) {
+				if(const char* eol = strpbrk(p, "\n\r")) {
+					memcpy(e, p, eol - p);
+					*(e += (eol - p)) = '\n';
+					p = eol + ((*eol == '\r' && eol[1] == '\n') ? 2 : 1);
+				} else {
+					strcpy(e, p);
+					break;
+				}
+			}
 			PyObject* const code = ::Py_CompileString(
-				script, u2a(fileName.c_str(), fileName.c_str() + fileName.length() + 1).get(), Py_file_input);
+				script.get(), u2a(fileName.c_str(), fileName.c_str() + fileName.length() + 1).get(), Py_file_input);
 			if(code == 0)
 				py::throw_error_already_set();
 			const py::object ns(py::import("__main__").attr("__dict__"));
@@ -145,7 +167,7 @@ py::object Interpreter::executeFile(const wstring& fileName) {
 			static wchar_t emptyString[] = L"";
 			argv[0] = emptyString;
 			::PySys_SetArgv(1, argv);
-			::UnmapViewOfFile(script);
+			::UnmapViewOfFile(content);
 		}
 		::CloseHandle(mapping);
 	}
