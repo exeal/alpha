@@ -80,7 +80,7 @@ public:
 protected:
 	virtual LRESULT dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 	virtual bool initInstance(int showCommand) = 0;
-	void popModelessDialog(HWND dialog);
+//	void popModelessDialog(HWND dialog);
 	virtual bool preTranslateMessage(const MSG& msg);
 	void pushModelessDialog(HWND dialog);
 	void setMainWindow(TopWindow& window) {mainWindow_ = &window;}
@@ -279,44 +279,43 @@ template<class TopWindow> inline TopWindow& Application<TopWindow>::getMainWindo
 
 template<class TopWindow> inline bool Application<TopWindow>::preTranslateMessage(const MSG& msg) {return false;}
 
-template<class TopWindow> inline void Application<TopWindow>::popModelessDialog(HWND dialog) {modelessDialogs_.erase(dialog);}
-
 template<class TopWindow> inline void Application<TopWindow>::pushModelessDialog(HWND dialog) {assert(toBoolean(::IsWindow(dialog))); modelessDialogs_.insert(dialog);}
 
 template<class TopWindow> inline int Application<TopWindow>::run(int showCommand) {
 	if(running_)
 		return -1;
-	MSG msg;
+	MSG message;
 	int f;
-	bool isDlgMsg;
+	bool dialogMessage;
 
 	if(!initInstance(showCommand))
 		return -1;
 	running_ = true;
 	while(true) {
-		isDlgMsg = false;
-		f = ::GetMessageW(&msg, 0, 0, 0);
+		dialogMessage = false;
+		f = ::GetMessageW(&message, 0, 0, 0);
 		assert(f != -1);
 		if(f == 0)
-			return static_cast<int>(msg.wParam);
-		for(std::set<HWND>::iterator it = modelessDialogs_.begin(); it != modelessDialogs_.end(); ++it) {
-			if(!toBoolean(::IsWindow(*it)))	// auto pop
-				it = modelessDialogs_.erase(it);
-			else if(toBoolean(::IsDialogMessage(*it, &msg))) {
-				isDlgMsg = true;
+			return static_cast<int>(message.wParam);
+		for(std::set<HWND>::iterator i(modelessDialogs_.begin()); i != modelessDialogs_.end(); ) {
+			if(!toBoolean(::IsWindow(*i))) {	// auto pop
+				modelessDialogs_.erase(i++);
+			} else if(toBoolean(::IsDialogMessage(*i, &message))) {
+				dialogMessage = true;
 				break;
-			}
+			} else
+				++i;
 		}
-		if(!isDlgMsg) {
+		if(!dialogMessage) {
 			if(getAccelerators() != 0) {
-				if(!toBoolean(::TranslateAcceleratorW(msg.hwnd, getAccelerators(), &msg))
-						&& !preTranslateMessage(msg)) {
-					::TranslateMessage(&msg);
-					::DispatchMessageW(&msg);
+				if(!toBoolean(::TranslateAcceleratorW(message.hwnd, getAccelerators(), &message))
+						&& !preTranslateMessage(message)) {
+					::TranslateMessage(&message);
+					::DispatchMessageW(&message);
 				}
-			} else if(!preTranslateMessage(msg)) {
-				::TranslateMessage(&msg);
-				::DispatchMessageW(&msg);
+			} else if(!preTranslateMessage(message)) {
+				::TranslateMessage(&message);
+				::DispatchMessageW(&message);
 			}
 		}
 	}
