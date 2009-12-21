@@ -187,7 +187,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	pdex.hDevNames = devnames_;
 	pdex.Flags = (showDialog ? (PD_COLLATE | PD_NOCURRENTPAGE | PD_NOPAGENUMS | PD_NOSELECTION) : PD_RETURNDEFAULT) | PD_RETURNDC;
 	pdex.nStartPage = START_PAGE_GENERAL;
-	if(S_OK != ::PrintDlgEx(&pdex))
+	if(S_OK != ::PrintDlgExW(&pdex))
 		return false;
 	else if(pdex.dwResultAction == PD_RESULT_CANCEL)
 		return true;

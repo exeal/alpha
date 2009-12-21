@@ -46,10 +46,10 @@ bool AboutDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 void AboutDialog::onInitDialog(HWND, bool&) {
 	homePageLink_.create(use(), ::GetModuleHandle(0), IDC_LINK_HOMEPAGE);
 	homePageLink_.setText(HOME_PAGE_URL);
-	homePageLink_.setPosition(0, 88, 98, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
+	homePageLink_.setPosition(0, 88, 83, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 	sourceForgeLink_.create(get(), ::GetModuleHandle(0), IDC_LINK_SOURCEFORGE);
 	sourceForgeLink_.setText(PROJECT_PAGE_URL);
-	sourceForgeLink_.setPosition(0, 88, 114, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
+	sourceForgeLink_.setPosition(0, 88, 99, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 	addToolTip(homePageLink_.use(), L"Home page");
 	addToolTip(sourceForgeLink_.use(), L"Project page");
 }
