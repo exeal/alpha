@@ -52,6 +52,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)../..&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -85,7 +86,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib"
+				AdditionalDependencies="shlwapi.lib comctl32.lib imm32.lib libboost_python3-vc90-mt-s-1_41.lib"
 				OutputFile="$(OutDir)/Alpha.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"

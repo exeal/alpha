@@ -64,7 +64,7 @@ namespace {
 	private:
 		HMENU handle_;
 		py::object self_;
-		struct PyPtrComparer {bool operator()(const py::object& lhs, const py::object& rhs) {return lhs.ptr() < rhs.ptr();}};
+		struct PyPtrComparer {bool operator()(const py::object& lhs, const py::object& rhs) const {return lhs.ptr() < rhs.ptr();}};
 		typedef set<py::object, PyPtrComparer> Children;
 		Children children_;
 	};

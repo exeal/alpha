@@ -17,6 +17,7 @@
 // platform
 #if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
 #	define ASCENSION_WINDOWS
+#	include <manah/win32/windows.hpp>
 #else
 #	define ASCENSION_POSIX
 #endif
