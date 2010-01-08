@@ -1639,6 +1639,9 @@ void LineLayout::shape() /*throw()*/ {
 				run->analysis.eScript = SCRIPT_UNDEFINED;	// hmm...
 				hr = buildGlyphs(*dc, textString, *run, expectedNumberOfGlyphs);
 				assert(SUCCEEDED(hr));
+			} else {
+				for(int i = 0; i < run->numberOfGlyphs(); ++i)
+					run->shared->visualAttributes[i].fZeroWidth = 1;
 			}
 			dc->selectObject(oldFont);
 		} else {
