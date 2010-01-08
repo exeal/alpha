@@ -2,7 +2,7 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include <ascension/rules.hpp>
@@ -61,7 +61,7 @@ namespace ascension {
  * Constructor.
  * @param first the start of the strings
  * @param last the end of the strings
- * @param caseSensitive set true to enable case sensitive match
+ * @param caseSensitive set @c true to enable case sensitive match
  */
 template<typename StringSequence>
 HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensitive)
@@ -110,7 +110,7 @@ inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last
  * Searches the specified string.
  * @param first the start of the string
  * @param last the end of the string
- * @return true if the specified string is found
+ * @return @c true if the specified string is found
  */
 bool HashTable::matches(const Char* first, const Char* last) const {
 	if(caseSensitive_) {
@@ -592,7 +592,7 @@ const Char* URIDetector::detect(const Char* first, const Char* last) const {
  * @param first the beginning of the character sequence
  * @param last the end of the character sequence
  * @param[out] result the range of the found URI in the target character sequence
- * @return true if a URI was found
+ * @return @c true if a URI was found
  * @throw NullPointerException @a first and/or @a last are @c null
  */
 bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, const Char*>& result) const {
@@ -629,8 +629,8 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
 /**
  * Sets the valid schemes.
  * @param scheme the set of the schemes to set
- * @param caseSensitive set true to use case-sensitive comparison for scheme name matching.
- * However, RFC 3986 Section 3.1 says that schemes are case-insensitive
+ * @param caseSensitive set @c true to use case-sensitive comparison for scheme name matching.
+ *                      However, RFC 3986 Section 3.1 says that schemes are case-insensitive
  * @return the detector
  * @throw std#invalid_argument invalid name as a scheme was found
  */
@@ -653,7 +653,7 @@ URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseS
 /**
  * Sets the valid schemes.
  * @param scheme the string contains the schemes separated by @a separator
- * @param caseSensitive set true to use case-sensitive comparison for scheme name matching
+ * @param caseSensitive set @c true to use case-sensitive comparison for scheme name matching
  * @param separator the character delimits scheme names in @a schemes. this can be a surrogate
  * @return the detector
  * @throw std#invalid_argument invalid name as a scheme was found
@@ -681,8 +681,9 @@ const Token::ID Token::UNCALCULATED = static_cast<Token::ID>(-1);
 
 /**
  * Protected constructor.
- * @param tokenID the identifier of the token which will be returned by the rule. can be @c Token#NULL_ID
- * @param caseSensitive set false to enable caseless match
+ * @param tokenID the identifier of the token which will be returned by the rule. can be
+ *                @c Token#NULL_ID
+ * @param caseSensitive set @c false to enable caseless match
  */
 Rule::Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/ : id_(tokenID), caseSensitive_(caseSensitive) {
 }
@@ -696,7 +697,7 @@ Rule::Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/ : id_(tokenID), ca
  * @param startSequence the pattern's start sequence
  * @param endSequence the pattern's end sequence. if empty, token will end at end of line
  * @param escapeCharacter the character which a character will be ignored
- * @param caseSensitive set false to enable caseless match
+ * @param caseSensitive set @c false to enable caseless match
  * @throw std#invalid_argument @a startSequence is empty
  */
 RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& endSequence,
@@ -843,7 +844,7 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
  * @param id the identifier of the token which will be returned by the rule
  * @param first the start of the words
  * @param last the end of the words
- * @param caseSensitive set false to enable caseless match
+ * @param caseSensitive set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt;= @a last
  */
@@ -863,7 +864,7 @@ WordRule::WordRule(Token::ID id, const String* first, const String* last, bool c
  * @param first the start of the string
  * @param last the end of the string
  * @param separator the separator character in the string
- * @param caseSensitive set false to enable caseless match
+ * @param caseSensitive set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
  */
@@ -915,7 +916,7 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
  * @param pattern the pattern string
- * @param caseSensitive set false to enable caseless match
+ * @param caseSensitive set @c false to enable caseless match
  * @throw regex#PatternSyntaxException the specified pattern is invalid
  */
 RegexRule::RegexRule(Token::ID id, const String& pattern, bool caseSensitive /* = true */)
@@ -1094,12 +1095,12 @@ TransitionRule::~TransitionRule() /*throw()*/ {
 
 /**
  * @fn TransitionRule::matches
- * Returns true if the rule matches the specified text. Note that an implementation can't use the
- * partitioning of the document to generate the new partition.
+ * Returns @c true if the rule matches the specified text. Note that an implementation can't use
+ * the partitioning of the document to generate the new partition.
  * @param line the target line text
  * @param column the column number at which match starts
  * @return the length of the matched pattern. if and only if the match failed, returns 0.
- * if matched zero width text, returns 1
+ *         if matched zero width text, returns 1
  * @todo this documentation is confusable.
  */
 
@@ -1110,11 +1111,12 @@ TransitionRule::~TransitionRule() /*throw()*/ {
  * Constructor.
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
- * @param pattern the pattern string to introduce the transition.
- * if empty string is specified, the transition will be occurred at the end of line
+ * @param pattern the pattern string to introduce the transition. if empty string is specified, the
+ *                transition will be occurred at the end of line
  * @param escapeCharacter the character which a character will be ignored. if @c NONCHARACTER is
- * specified, the escape character will be not set. this is always case-sensitive
- * @param caseSensitive set false to enable caseless match
+ *                        specified, the escape character will be not set. this is always
+ *                        case-sensitive
+ * @param caseSensitive set @c false to enable caseless match
  */
 LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination,
 		const String& pattern, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
@@ -1145,7 +1147,7 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
  * @param pattern the pattern string to introduce the transition. can't be empty
- * @param caseSensitive set false to enable caseless match
+ * @param caseSensitive set @c false to enable caseless match
  * @throw regex#PatternSyntaxException @a pattern is invalid
  */
 RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
@@ -1399,8 +1401,8 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 /**
  * @fn void ascension::rules::LexicalPartitioner::setRules(InputIterator first, InputIterator last)
  * @brief Sets the new transition rules.
- * @tparam InputIterator
- * @param first, last
+ * @tparam InputIterator input iterator provides transition rules
+ * @param first, last the transition rules
  * @throw IllegalStateException this partitioner had already been connected to a document
  */
 
@@ -1465,7 +1467,7 @@ inline void LexicalPartitioner::verify() const {
  * @param document the document
  * @param tokenScanner the token scanner to use for tokenization
  * @param styles token identifier to its text style map. this must include a element has identifier
- * of @c Token#DEFAULT_TOKEN.
+ *               of @c Token#DEFAULT_TOKEN.
  * @throw std#invalid_argument @a styles does not include @c Token#DEFAULT_TOKEN
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(

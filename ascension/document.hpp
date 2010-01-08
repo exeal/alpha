@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -40,17 +40,23 @@ namespace ascension {
 		class Document;
 		struct DocumentPartition;
 
-		/// Content type of a document partition.
+		/**
+		 * Content type of a document partition.
+		 * The values less than 100 are reserved for library internal use.
+		 */
 		typedef ulong ContentType;
 
 		// special content types
 		const ContentType
 			/// Default content type.
-			DEFAULT_CONTENT_TYPE = 0ul,
+			DEFAULT_CONTENT_TYPE = 0,
 			/// Type of the parent (means "transition source") content.
-			PARENT_CONTENT_TYPE = 0xfffffffful,
+			PARENT_CONTENT_TYPE = 1,
 			/// Type of Undetermined (not calculated) content.
-			UNDETERMINED_CONTENT_TYPE = 0xfffffffeul;
+			UNDETERMINED_CONTENT_TYPE = 2;
+
+		/// Returns @c true if the given content type value @a v is for special use.
+		inline bool isSpecialContentType(ContentType v) {return v < 100;}
 
 		/**
 		 * Value represent a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
