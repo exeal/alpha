@@ -681,8 +681,8 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	using namespace rules;
 	using namespace text;
 
-	static const ContentType JS_MULTILINE_DOC_COMMENT = 40,
-		JS_MULTILINE_COMMENT = 42, JS_SINGLELINE_COMMENT = 43, JS_DQ_STRING = 44, JS_SQ_STRING = 45;
+	static const ContentType JS_MULTILINE_DOC_COMMENT = 140,
+		JS_MULTILINE_COMMENT = 142, JS_SINGLELINE_COMMENT = 143, JS_DQ_STRING = 144, JS_SQ_STRING = 145;
 
 	class JSContentTypeInformation : public IContentTypeInformationProvider {
 	public:
@@ -802,7 +802,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
 	setContentAssistant(auto_ptr<contentassist::IContentAssistant>(ca));
 	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
-#endif /* _DEBUG */
+#endif // 1
 	
 	renderer_->addFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
