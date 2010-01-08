@@ -142,7 +142,7 @@ namespace ascension {
 			Position& beginning() /*throw()*/ {return (first < second) ? first : second;}
 			/// Returns the beginning of the region.
 			const Position& beginning() const /*throw()*/ {return (first < second) ? first : second;}
-			/// Returns true if the region encompasses the other region.
+			/// Returns @c true if the region encompasses the other region.
 			bool encompasses(const Region& other) const /*throw()*/ {return beginning() <= other.beginning() && end() >= other.end();}
 			/// Returns the end of the region.
 			Position& end() /*throw()*/ {return (first > second) ? first : second;}
@@ -154,13 +154,13 @@ namespace ascension {
 			/// Returns a union of the two regions. If the two regions don't intersect, throws @c std#invalid_argument.
 			Region getUnion(const Region& other) const {
 				if(!intersectsWith(other)) throw std::invalid_argument("can't make a union."); return Region(beginning(), other.end());}
-			/// Returns true if @a p is contained by the region.
+			/// Returns @c true if @a p is contained by the region.
 			bool includes(const Position& p) const /*throw()*/ {return p >= beginning() && p <= end();}
-			/// Returns true if the region intersects with the other region.
+			/// Returns @c true if the region intersects with the other region.
 			bool intersectsWith(const Region& other) const /*throw()*/ {return includes(other.first) || includes(other.second);}
-			/// Returns true if the region is empty.
+			/// Returns @c true if the region is empty.
 			bool isEmpty() const /*throw()*/ {return first == second;}
-			/// Returns true if the region is normalized.
+			/// Returns @c true if the region is normalized.
 			bool isNormalized() const /*throw()*/ {return first <= second;}
 			/// Normalizes the region.
 			Region& normalize() /*throw()*/ {if(!isNormalized()) std::swap(first, second); return *this;}
@@ -878,7 +878,7 @@ inline void insert(Document& document, const Position& at, std::basic_istream<Ch
 	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), in, endOfInsertedString);}
 
 /**
- * Returns true if the given newline value is a literal.
+ * Returns @c true if the given newline value is a literal.
  * @throw UnknownValueException @a newline is invalid (undefined value)
  */
 inline bool isLiteralNewline(Newline newline) /*throw()*/ {
@@ -887,7 +887,7 @@ inline bool isLiteralNewline(Newline newline) /*throw()*/ {
 #endif
 	if(newline < NLF_LINE_FEED || newline >= NLF_COUNT)
 		throw UnknownValueException("newline");
-	return newline > NLF_PARAGRAPH_SEPARATOR;
+	return newline <= NLF_PARAGRAPH_SEPARATOR;
 }
 
 /**
@@ -942,7 +942,7 @@ inline length_t newlineStringLength(Newline newline) {
 inline void replace(Document& document, const Region& region, const String& text,
 	Position* endOfInsertedString) {return document.replace(region, text.data(), text.data() + text.length(), endOfInsertedString);}
 
-/// Returns true if the given position is outside of the document.
+/// Returns @c true if the given position is outside of the document.
 inline bool positions::isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
 	return position.line >= document.numberOfLines() || position.column > document.lineLength(position.line);}
 
@@ -1023,31 +1023,31 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 inline IDocumentInput* Document::input() const /*throw()*/ {return input_.get();}
 
 /**
- * Returns true if the document is changing (this means the document is in @c #insert or
+ * Returns @c true if the document is changing (this means the document is in @c #insert or
  * @c #insert call).
  */
 inline bool Document::isChanging() const /*throw()*/ {return changing_;}
 
 /**
- * Returns true if the document has been modified.
+ * Returns @c true if the document has been modified.
  * @see #setModified, IDocumentStateListener#documentModificationSignChanged
  */
 inline bool Document::isModified() const /*throw()*/ {return revisionNumber() != lastUnmodifiedRevisionNumber_;}
 
 /**
- * Returns true if the document is narrowed.
+ * Returns @c true if the document is narrowed.
  * @see #narrow, #widen
  */
 inline bool Document::isNarrowed() const /*throw()*/ {return accessibleArea_ != 0;}
 
 /**
- * Returns true if the document is read only.
+ * Returns @c true if the document is read only.
  * @see ReadOnlyDocumentException, #setReadOnly
  */
 inline bool Document::isReadOnly() const /*throw()*/ {return readOnly_;}
 
 /**
- * Returns true if the document is recording the changes for undo/redo.
+ * Returns @c true if the document is recording the changes for undo/redo.
  * @see #recordChanges, #numberOfUndoableChanges, #numberOfRedoableChanges
  */
 inline bool Document::isRecordingChanges() const /*throw()*/ {return recordingChanges_;}
