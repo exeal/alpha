@@ -1396,6 +1396,14 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 	return result;
 }
 
+/**
+ * @fn void ascension::rules::LexicalPartitioner::setRules(InputIterator first, InputIterator last)
+ * @brief Sets the new transition rules.
+ * @tparam InputIterator
+ * @param first, last
+ * @throw IllegalStateException this partitioner had already been connected to a document
+ */
+
 // returns the transition state (corresponding content type) at the given position.
 inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
 	if(at == Position::ZERO_POSITION)
