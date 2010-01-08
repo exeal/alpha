@@ -212,7 +212,6 @@ namespace ascension {
 
 		/**
 		 * A rule for detecting patterns which begin new partition in document.
-		 * @note This class is not dervable.
 		 * @see LexicalPartitioner
 		 */
 		class TransitionRule {
