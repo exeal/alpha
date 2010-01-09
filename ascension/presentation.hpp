@@ -3,24 +3,21 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
 #include "document.hpp"
 #ifdef ASCENSION_WINDOWS
-#	include "../../manah/win32/windows.hpp"	// COLORREF
+#	include <manah/win32/windows.hpp>	// COLORREF
 #endif // ASCENSION_WINDOWS
 
 namespace ascension {
 
 	namespace viewers {class TextViewer;}
 
-	namespace rules {
-		class Scanner;
-		class URIDetector;
-	}
+	namespace rules {class URIDetector;}
 
 	namespace presentation {
 
@@ -40,7 +37,7 @@ namespace ascension {
 			byte green() const /*throw()*/ {return g_ >> 8;}
 			/// Returns the red color component of this color.
 			byte red() const /*throw()*/ {return r_ >> 8;}
-			/// Returns true if this is valid.
+			/// Returns @c true if this is valid.
 			bool isValid() const /*throw()*/ {return valid_;}
 		private:
 			ushort r_, g_, b_;
@@ -129,7 +126,7 @@ namespace ascension {
 			/**
 			 * Queries the style of the line.
 			 * @param line the line to be queried
-			 * @param[out] delegatedOwnership true if the caller must delete the returned value
+			 * @param[out] delegatedOwnership @c true if the caller must delete the returned value
 			 * @return the style of the line or @c LineStyle#NULL_STYLE
 			 */
 			virtual const LineStyle& queryLineStyle(length_t line, bool& delegatedOwnership) const = 0;

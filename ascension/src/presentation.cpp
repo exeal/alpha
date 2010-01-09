@@ -2,7 +2,7 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2009
+ * @date 2007-2010
  */
 
 #include <ascension/presentation.hpp>
@@ -182,7 +182,7 @@ Colors Presentation::getLineColor(length_t line) const {
 /**
  * Returns the style of the specified line.
  * @param line the line
- * @param delegatedOwnership true if the caller must delete the returned value
+ * @param delegatedOwnership set @c true if the caller must delete the returned value
  * @return the line style or @c LineStyle#NULL_STYLE
  * @throw BadPositionException @a line is outside of the document
  */
@@ -214,7 +214,7 @@ void Presentation::removeTextViewer(TextViewer& textViewer) /*throw()*/ {
 /**
  * Sets the hyperlink detector.
  * @param newDirector the director. @c null to unregister
- * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
+ * @param delegateOwnership set @c true to transfer the ownership of @a newDirector to the callee
  */
 void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/ {
 	hyperlinkDetector_.reset(newDetector, delegateOwnership);
@@ -225,7 +225,7 @@ void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool de
  * Sets the line style director.
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param newDirector the director. @c null to unregister
- * @param delegateOwnership set true to transfer the ownership of @a newDirector to the callee
+ * @param delegateOwnership set @c true to transfer the ownership of @a newDirector to the callee
  */
 void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) /*throw()*/ {
 	lineStyleDirector_ = newDirector;
