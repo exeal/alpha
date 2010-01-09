@@ -2,7 +2,7 @@
  * @file rules.hpp
  * @author exeal
  * @date 2004-2006 (was Lexer.h)
- * @date 2006-2008
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -45,7 +45,7 @@ namespace ascension {
 
 		/**
 		 * 
-		 * @see token#TokenScanner, partition#PartitionScanner
+		 * @see ITokenScanner
 		 */
 		class BadScannerStateException : public IllegalStateException {
 		public:
@@ -73,7 +73,7 @@ namespace ascension {
 			virtual ~Rule() /*throw()*/ {}
 			/// Returns the identifier of the token.
 			Token::ID getTokenID() const /*throw()*/ {return id_;}
-			/// Returns true if the match is case sensitive.
+			/// Returns @c true if the match is case sensitive.
 			bool isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
 			/**
 			 * 
@@ -144,7 +144,7 @@ namespace ascension {
 		 * @c ITokenScanner scans a range of document and returns the tokens it finds. To start
 		 * scanning, call @c #parse method with a target document region. And then call
 		 * @c #nextToken method repeatedly to get tokens. When reached the end of the scanning
-		 * region, the scanning is end and @c #isDone will return true.
+		 * region, the scanning is end and @c #isDone will return @c true.
 		 */
 		class ITokenScanner {
 		public:
@@ -154,7 +154,7 @@ namespace ascension {
 			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
 			/// Returns the current position.
 			virtual kernel::Position getPosition() const /*throw()*/ = 0;
-			/// Returns true if the scanning is done.
+			/// Returns @c true if the scanning is done.
 			virtual bool isDone() const /*throw()*/ = 0;
 			/**
 			 * Moves to the next token and returns it.
@@ -171,7 +171,10 @@ namespace ascension {
 			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
 		};
 
-		/// @c NullTokenScanner returns no tokens. @c NullTokenScanner#isDone returns always true.
+		/**
+		 * @c NullTokenScanner returns no tokens. @c NullTokenScanner#isDone returns always
+		 * @c true.
+		 */
 		class NullTokenScanner : public ITokenScanner {
 		public:
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
@@ -298,7 +301,7 @@ namespace ascension {
 
 		/**
 		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor. This
-		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
+		 * implementation performs rule based lexical tokenization using the given @c ITokenScanner.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LexicalPartitionPresentationReconstructor : public presentation::IPartitionPresentationReconstructor {
@@ -307,7 +310,7 @@ namespace ascension {
 			explicit LexicalPartitionPresentationReconstructor(const kernel::Document& document,
 				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);
 		private:
-			// IPartitionPresentationReconstructor
+			// presentation.IPartitionPresentationReconstructor
 			std::auto_ptr<presentation::LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
 			const kernel::Document& document_;
@@ -329,6 +332,7 @@ namespace ascension {
 			std::copy(first, last, std::back_inserter(rules_));
 		}
 
-}} // namespace ascension.rules
+	}
+} // namespace ascension.rules
 
 #endif // !ASCENSION_RULES_HPP
