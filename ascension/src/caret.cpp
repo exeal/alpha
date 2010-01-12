@@ -493,7 +493,7 @@ void VisualPoint::aboutToMove(Position& to) {
 void VisualPoint::moved(const Position& from) {
 	if(isTextViewerDisposed())
 		return;
-	if(from.line == line() && visualLine_ != INVALID_INDEX) {
+	if(position() != Position() && from.line == line() && visualLine_ != INVALID_INDEX) {
 		const LineLayout* layout = viewer_->textRenderer().lineLayoutIfCached(line());
 		visualLine_ -= visualSubline_;
 		visualSubline_ = (layout != 0) ? layout->subline(column()) : 0;
@@ -695,12 +695,11 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
  * @param position the initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
-Caret::Caret(TextViewer& viewer, const Position& position /* = Position() */) /*throw()*/ : VisualPoint(viewer, position, 0),
-		anchor_(new SelectionAnchor(viewer)), clipboardLocale_(::GetUserDefaultLCID()),
+Caret::Caret(TextViewer& viewer, const Position& position /* = Position(0, 0) */) /*throw()*/ : VisualPoint(viewer, position, 0),
+		anchor_(new SelectionAnchor(viewer, position)), clipboardLocale_(::GetUserDefaultLCID()),
 		yanking_(false), leaveAnchorNext_(false), leadingAnchor_(false), autoShow_(true), box_(0),
 		matchBracketsTrackingMode_(DONT_TRACK), overtypeMode_(false), typing_(false),
-		lastTypedPosition_(Position::INVALID_POSITION), regionBeforeMoved_(Position::INVALID_POSITION, Position::INVALID_POSITION),
-		matchBrackets_(make_pair(Position::INVALID_POSITION, Position::INVALID_POSITION)) {
+		lastTypedPosition_(), regionBeforeMoved_(), matchBrackets_(make_pair(Position(), Position())) {
 	document().addListener(*this);
 }
 
@@ -710,6 +709,13 @@ Caret::~Caret() /*throw()*/ {
 		document().removeListener(*this);
 	delete anchor_;
 	delete box_;
+}
+
+/// @see VisualPoint#aboutToMove
+void Caret::aboutToMove(Position& to) {
+	if(positions::isOutsideOfDocumentRegion(document(), to))
+		throw BadPositionException(to, "caret tried to move outside of document.");
+	VisualPoint::aboutToMove(to);
 }
 
 /**
@@ -809,28 +815,7 @@ void Caret::documentAboutToBeChanged(const Document&) {
 /// @see kernel#IDocumentListener#documentChanged
 void Caret::documentChanged(const Document&, const DocumentChange&) {
 	yanking_ = false;
-	if(regionBeforeMoved_.first != Position::INVALID_POSITION)
-		updateVisualAttributes();
-}
-
-/// @see VisualPoint#aboutToMove
-void Caret::aboutToMove(Position& to) {
-	VisualPoint::aboutToMove(to);
-}
-
-/// @see VisualPoint#moved
-void Caret::moved(const Position& from) {
-	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
-		anchor_->positionBeforeInternalUpdate() : anchor_->position(), from);
-	if(leaveAnchorNext_)
-		leaveAnchorNext_ = false;
-	else {
-		leadingAnchor_ = true;
-		anchor_->moveTo(position());
-		leadingAnchor_ = false;
-	}
-	VisualPoint::moved(from);
-	if(!document().isChanging())
+	if(regionBeforeMoved_.first != Position())
 		updateVisualAttributes();
 }
 
@@ -1041,12 +1026,12 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 		doc.insertUndoBoundary();
 	} else {
 		const bool alpha = identifierSyntax(*this).isIdentifierContinueCharacter(character);
-		if(lastTypedPosition_ != Position::INVALID_POSITION && (!alpha || lastTypedPosition_ != position())) {
+		if(lastTypedPosition_ != Position() && (!alpha || lastTypedPosition_ != position())) {
 			// end sequential typing
 			doc.insertUndoBoundary();
-			lastTypedPosition_ = Position::INVALID_POSITION;
+			lastTypedPosition_ = Position();
 		}
-		if(alpha && lastTypedPosition_ == Position::INVALID_POSITION)
+		if(alpha && lastTypedPosition_ == Position())
 			// (re)start sequential typing
 			doc.insertUndoBoundary();
 
@@ -1060,6 +1045,22 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	characterInputListeners_.notify<const Caret&, CodePoint>(
 		&ICharacterInputListener::characterInputted, *this, character);
 	return true;
+}
+
+/// @see VisualPoint#moved
+void Caret::moved(const Position& from) {
+	regionBeforeMoved_ = Region(anchor_->isInternalUpdating() ?
+		anchor_->positionBeforeInternalUpdate() : anchor_->position(), from);
+	if(leaveAnchorNext_)
+		leaveAnchorNext_ = false;
+	else {
+		leadingAnchor_ = true;
+		anchor_->moveTo(position());
+		leadingAnchor_ = false;
+	}
+	VisualPoint::moved(from);
+	if(!document().isChanging())
+		updateVisualAttributes();
 }
 
 /**
@@ -1129,9 +1130,9 @@ void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 
 /// @internal Should be called before change the document.
 inline void Caret::prechangeDocument() {
-	if(lastTypedPosition_ != Position::INVALID_POSITION && !typing_) {
+	if(lastTypedPosition_ != Position() && !typing_) {
 		document().insertUndoBoundary();
-		lastTypedPosition_ = Position::INVALID_POSITION;
+		lastTypedPosition_ = Position();
 	}
 }
 
@@ -1187,10 +1188,15 @@ void Caret::replaceSelection(const Char* first, const Char* last, bool rectangle
  * Selects the specified region. The active selection mode will be cleared.
  * @param anchor the position where the anchor moves to
  * @param caret the position where the caret moves to
+ * @throw BadPositionException @a anchor or @a caret is outside of the document
  */
 void Caret::select(const Position& anchor, const Position& caret) {
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
+	else if(positions::isOutsideOfDocumentRegion(document(), anchor))
+		throw BadPositionException(anchor);
+	else if(positions::isOutsideOfDocumentRegion(document(), caret))
+		throw BadPositionException(caret);
 	yanking_ = false;
 	if(anchor != anchor_->position() || caret != position()) {
 		const Region oldRegion(selectedRegion());
@@ -1258,7 +1264,7 @@ inline void Caret::updateVisualAttributes() {
 	if(autoShow_)
 		utils::show(*this);
 	checkMatchBrackets();
-	regionBeforeMoved_.first = regionBeforeMoved_.second = Position::INVALID_POSITION;
+	regionBeforeMoved_.first = regionBeforeMoved_.second = Position();
 }
 
 

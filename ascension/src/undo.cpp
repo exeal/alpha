@@ -26,7 +26,7 @@ namespace {
 			bool completed;				// true if the change was *completely* performed
 			size_t numberOfRevisions;	// the number of the performed changes
 			Position endOfChange;		// the end position of the change
-			void reset() /*throw()*/ {completed = false; numberOfRevisions = 0; endOfChange = Position::INVALID_POSITION;}
+			void reset() /*throw()*/ {completed = false; numberOfRevisions = 0; endOfChange = Position();}
 		};
 	public:
 		// destructor

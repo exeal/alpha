@@ -1820,7 +1820,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const POINT& position, u
 		if(toBoolean(keyState & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
 				const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true));
-				if(p != Position::INVALID_POSITION) {
+				if(p != Position()) {
 					if(const hyperlink::IHyperlink* link = getPointedHyperlink(*viewer_, p)) {
 						link->invoke();
 						hyperlinkInvoked = true;
@@ -2065,7 +2065,7 @@ bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
 		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, locations::UTF16_CODE_UNIT));
-		if(p != Position::INVALID_POSITION)
+		if(p != Position())
 			newlyHoveredHyperlink = getPointedHyperlink(*viewer_, p);
 		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;

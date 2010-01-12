@@ -92,13 +92,15 @@ namespace ascension {
 		 */
 		class Position : public manah::FastArenaObject<Position> {
 		public:
-			length_t line;		///< Line number.
-			length_t column;	///< Position in the line.
-			static const Position ZERO_POSITION;	///< A position whose line and column number are zero.
-			static const Position INVALID_POSITION;	///< Unused or invalid position.
+			/// Line number. Zero means that the position is the first line in the document.
+			length_t line;
+			/// Position in the line. Zero means that the position is the beginning of the line.
+			length_t column;
 		public:
+			/// Default constructor creates an invalid or unused position.
+			Position() /*throw()*/ : line(INVALID_INDEX), column(INVALID_INDEX) {}
 			/// Constructor.
-			explicit Position(length_t lineNumber = 0, length_t columnNumber = 0) /*throw()*/ : line(lineNumber), column(columnNumber) {}
+			explicit Position(length_t line, length_t column) /*throw()*/ : line(line), column(column) {}
 			/// Equality operator.
 			bool operator==(const Position& rhs) const /*throw()*/ {return line == rhs.line && column == rhs.column;}
 			/// Unequality operator.
@@ -125,15 +127,13 @@ namespace ascension {
 		 */
 		class Region : public std::pair<Position, Position>, public manah::FastArenaObject<Region> {
 		public:
-			/// Default constructor. Equals to "Region(Position(), Position())".
-			Region() /*throw()*/ {}
+			/// Constructor creates an empty region.
+			explicit Region(const Position& p = Position()) /*throw()*/ : std::pair<Position, Position>(p, p) {}
 			/// Constructor.
-			Region(const Position& one, const Position& other) /*throw()*/ : std::pair<Position, Position>(one, other) {}
+			Region(const Position& first, const Position& second) /*throw()*/ : std::pair<Position, Position>(first, second) {}
 			/// Constructor creates a region in a line.
 			Region(length_t line, const std::pair<length_t, length_t>& columns) /*throw()*/
 				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
-			/// Constructor creates an empty region.
-			explicit Region(const Position& p) /*throw()*/ : std::pair<Position, Position>(p, p) {}
 			/// Returns an intersection of the two regions. Same as @c #getIntersection.
 			Region operator&(const Region& rhs) const /*throw()*/ {return getIntersection(rhs);}
 			/// Returns a union of the two regions. Same as @c #getUnion.
@@ -711,9 +711,6 @@ namespace ascension {
 			UndoManager* undoManager_;
 			std::map<const DocumentPropertyKey*, String*> properties_;
 			bool onceUndoBufferCleared_, recordingChanges_, changing_, rollbacking_;
-#if 0
-			const void* locker_;
-#endif
 
 			std::pair<Position, Point*>* accessibleArea_;
 
@@ -724,7 +721,6 @@ namespace ascension {
 			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
-			friend class Memento;
 		};
 
 		// the documentation is document.cpp
@@ -953,7 +949,9 @@ inline bool positions::isOutsideOfDocumentRegion(const Document& document, const
  * @return the result
  */
 inline Position positions::shrinkToAccessibleRegion(const Document& document, const Position& position) /*throw()*/ {
-	if(!document.isNarrowed())
+	if(position == Position())
+		return position;
+	else if(!document.isNarrowed())
 		return shrinkToDocumentRegion(document, position);
 	const Region accessibleRegion(document.accessibleRegion());
 	if(position < accessibleRegion.first)
@@ -974,7 +972,12 @@ inline Region positions::shrinkToAccessibleRegion(const Document& document, cons
 
 /// Shrinks the given position into the document region.
 inline Position positions::shrinkToDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
-	Position p(std::min(position.line, document.numberOfLines() - 1), 0); p.column = std::min(position.column, document.lineLength(p.line)); return p;}
+	if(position == Position())
+		return position;
+	Position p(std::min(position.line, document.numberOfLines() - 1), 0);
+	p.column = std::min(position.column, document.lineLength(p.line));
+	return p;
+}
 
 /// Shrinks the given region into the document region. The result may not be normalized.
 inline Region positions::shrinkToDocumentRegion(const Document& document, const Region& region) /*throw()*/ {
@@ -987,7 +990,7 @@ inline const Region& DocumentChange::erasedRegion() const /*throw()*/ {return er
 inline const Region& DocumentChange::insertedRegion() const /*throw()*/ {return insertedRegion_;}
 
 /// Returns the @c DocumentCharacterIterator addresses the beginning of the document.
-inline DocumentCharacterIterator Document::begin() const /*throw()*/ {return DocumentCharacterIterator(*this, Position::ZERO_POSITION);}
+inline DocumentCharacterIterator Document::begin() const /*throw()*/ {return DocumentCharacterIterator(*this, region().first);}
 
 /// Returns the bookmarker of the document.
 inline Bookmarker& Document::bookmarker() /*throw()*/ {return *bookmarker_;}
@@ -1105,7 +1108,7 @@ inline const String* Document::property(const DocumentPropertyKey& key) const /*
 /// Returns the entire region of the document. The returned region is normalized.
 /// @see #accessibleRegion
 inline Region Document::region() const /*throw()*/ {
-	return Region(Position::ZERO_POSITION, Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));}
+	return Region(Position(0, 0), Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));}
 
 /// Returns the revision number.
 inline std::size_t Document::revisionNumber() const /*throw()*/ {return revisionNumber_;}

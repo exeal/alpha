@@ -25,7 +25,7 @@ namespace ascension {
 		 */
 		class DocumentBuffer : public std::basic_streambuf<Char> {
 		public:
-			explicit DocumentBuffer(Document& document, const Position& initialPosition = Position::ZERO_POSITION,
+			explicit DocumentBuffer(Document& document, const Position& initialPosition = Position(0, 0),
 				Newline newline = NLF_RAW_VALUE, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 			~DocumentBuffer() /*throw()*/;
 			const Position&	tell() const /*throw()*/;
@@ -46,7 +46,7 @@ namespace ascension {
 		class DocumentInputStream : public std::basic_istream<Char> {
 		public:
 			explicit DocumentInputStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+				const Position& initialPosition = Position(0, 0), Newline newline = NLF_RAW_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
 			DocumentBuffer buffer_;
@@ -56,7 +56,7 @@ namespace ascension {
 		class DocumentOutputStream : public std::basic_ostream<Char> {
 		public:
 			explicit DocumentOutputStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+				const Position& initialPosition = Position(0, 0), Newline newline = NLF_RAW_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
 			DocumentBuffer buffer_;
@@ -66,7 +66,7 @@ namespace ascension {
 		class DocumentStream : public std::basic_iostream<Char> {
 		public:
 			explicit DocumentStream(Document& document,
-				const Position& initialPosition = Position::ZERO_POSITION, Newline newline = NLF_RAW_VALUE);
+				const Position& initialPosition = Position(0, 0), Newline newline = NLF_RAW_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
 			DocumentBuffer buffer_;

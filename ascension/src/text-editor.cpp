@@ -816,7 +816,7 @@ bool MatchBracketCommand::perform() {
 	endIncrementalSearch(target());
 	Caret& caret = target().caret();
 	const Position matchBracket(caret.matchBrackets().first);
-	if(matchBracket == Position::INVALID_POSITION)
+	if(matchBracket == Position())
 		return false;	// not found
 	caret.endRectangleSelection();
 	if(!extends_)
@@ -868,7 +868,7 @@ bool NewlineCommand::perform() {
 		if(oldSelection.first.line != 0)
 			caret.moveTo(Position(oldSelection.first.line - 1, INVALID_INDEX));
 		else
-			caret.moveTo(Position::ZERO_POSITION);
+			caret.moveTo(viewer.document().region().first);
 		caret.enableAutoShow(autoShow);
 	}
 

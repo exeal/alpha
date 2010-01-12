@@ -547,7 +547,7 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 	bool outside;
 	mapClientYToLine(pt.y, &result.line, &subline, &outside);
 	if(abortNoCharacter && outside)
-		return Position::INVALID_POSITION;
+		return Position();
 	const LineLayout& layout = renderer_->lineLayout(result.line);
 
 	// determine the column
@@ -559,7 +559,7 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
-		return Position::INVALID_POSITION;
+		return Position();
 
 	// snap intervening position to the boundary
 	if(result.column != 0 && snapPolicy != locations::UTF16_CODE_UNIT) {
@@ -893,7 +893,7 @@ void TextViewer::documentUndoSequenceStarted(const Document&) {
 /// @see kernel#IDocumentRollbackListener#documentUndoSequenceStopped
 void TextViewer::documentUndoSequenceStopped(const Document&, const Position& resultPosition) {
 	unfreeze(false);	// TODO: replace with AutoFreeze.
-	if(resultPosition != Position::INVALID_POSITION && hasFocus()) {
+	if(resultPosition != Position() && hasFocus()) {
 		utils::closeCompletionProposalsPopup(*this);
 		caret_->moveTo(resultPosition);
 	}
@@ -1162,8 +1162,8 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 /// @see ICaretStateListener#matchBracketsChanged
 void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Position>& oldPair, bool outsideOfView) {
 	const pair<Position, Position>& newPair = self.matchBrackets();
-	if(newPair.first != Position::INVALID_POSITION) {
-		assert(newPair.second != Position::INVALID_POSITION);
+	if(newPair.first != Position()) {
+		assert(newPair.second != Position());
 		redrawLine(newPair.first.line);
 		if(!isFrozen())
 			update();
@@ -1172,18 +1172,18 @@ void TextViewer::matchBracketsChanged(const Caret& self, const pair<Position, Po
 			if(!isFrozen())
 				update();
 		}
-		if(oldPair.first != Position::INVALID_POSITION	// clear the previous highlight
+		if(oldPair.first != Position()	// clear the previous highlight
 				&& oldPair.first.line != newPair.first.line && oldPair.first.line != newPair.second.line) {
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
 				update();
 		}
-		if(oldPair.second != Position::INVALID_POSITION && oldPair.second.line != newPair.first.line
+		if(oldPair.second != Position() && oldPair.second.line != newPair.first.line
 				&& oldPair.second.line != newPair.second.line && oldPair.second.line != oldPair.first.line)
 			redrawLine(oldPair.second.line);
 	} else {
-		if(oldPair.first != Position::INVALID_POSITION) {	// clear the previous highlight
-			assert(oldPair.second != Position::INVALID_POSITION);
+		if(oldPair.first != Position()) {	// clear the previous highlight
+			assert(oldPair.second != Position());
 			redrawLine(oldPair.first.line);
 			if(!isFrozen())
 				update();

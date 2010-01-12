@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 (was point.hpp)
  * @date 2008 (separated from point.hpp)
- * @date 2009
+ * @date 2009-2010
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -38,9 +38,9 @@ namespace ascension {
 		private:
 			/**
 			 * The scroll positions of the viewer were changed.
-			 * @param horizontal true if the vertical scroll position is changed
-			 * @param vertical true if the vertical scroll position is changed
-			 * @see TextViewer#getFirstVisibleLine
+			 * @param horizontal @c true if the vertical scroll position is changed
+			 * @param vertical @c true if the vertical scroll position is changed
+			 * @see TextViewer#firstVisibleLine
 			 */
 			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
 			friend class TextViewer;
@@ -143,7 +143,7 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			int lastX_;				// 点の、行表示領域端からの距離。行間移動時に保持しておく。-1 だと未計算
+			int lastX_;				// distance from left edge and saved during crossing visual lines. -1 if not calculated
 			bool crossingLines_;	// true only when the point is moving across the different lines
 			length_t visualLine_, visualSubline_;	// caches
 			friend class TextViewer;
@@ -219,7 +219,7 @@ namespace ascension {
 			};
 
 			// constructor
-			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position());
+			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
 			~Caret();
 			// listeners
 			void addListener(ICaretListener& listener);
@@ -279,19 +279,19 @@ namespace ascension {
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
-				SelectionAnchor(TextViewer& viewer) /*throw()*/ :
-					VisualPoint(viewer), posBeforeUpdate_(kernel::Position::INVALID_POSITION) {adaptToDocument(false);}
+				SelectionAnchor(TextViewer& viewer, const kernel::Position& position) /*throw()*/ :
+					VisualPoint(viewer, position), positionBeforeUpdate_() {adaptToDocument(false);}
 				void beginInternalUpdate(const kernel::DocumentChange& change) /*throw()*/ {
-					assert(!isInternalUpdating()); posBeforeUpdate_ = position();
+					assert(!isInternalUpdating()); positionBeforeUpdate_ = position();
 					adaptToDocument(true); update(change); adaptToDocument(false);}
 				void endInternalUpdate() /*throw()*/ {
-					assert(isInternalUpdating()); posBeforeUpdate_ = kernel::Position::INVALID_POSITION;}
-				bool isInternalUpdating() const /*throw()*/ {return posBeforeUpdate_ != kernel::Position::INVALID_POSITION;}
+					assert(isInternalUpdating()); positionBeforeUpdate_ = kernel::Position();}
+				bool isInternalUpdating() const /*throw()*/ {return positionBeforeUpdate_ != kernel::Position();}
 				const kernel::Position& positionBeforeInternalUpdate() const /*throw()*/ {
-					assert(isInternalUpdating()); return posBeforeUpdate_;}
+					assert(isInternalUpdating()); return positionBeforeUpdate_;}
 			private:
 				using kernel::Point::adaptToDocument;
-				kernel::Position posBeforeUpdate_;
+				kernel::Position positionBeforeUpdate_;
 			} * anchor_;
 			LCID clipboardLocale_;
 			ascension::internal::Listeners<ICaretListener> listeners_;
@@ -307,7 +307,7 @@ namespace ascension {
 			bool typing_;			// true when inputCharacter called (see prechangeDocument)
 			kernel::Position lastTypedPosition_;	// the position the caret input character previously or INVALID_POSITION
 			kernel::Region regionBeforeMoved_;
-			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// 強調表示する対括弧の位置 (無い場合 Position.INVALID_POSITION)
+			std::pair<kernel::Position, kernel::Position> matchBrackets_;	// matched brackets' positions. Position() for none
 		};
 
 		// free functions related to selection of Caret class
@@ -380,7 +380,7 @@ namespace ascension {
 		inline LCID Caret::clipboardLocale() const /*throw()*/ {return clipboardLocale_;}
 		/**
 		 * Sets the new auto-show mode.
-		 * @param enable set true to enable the mode
+		 * @param enable set @c true to enable the mode
 		 * @return this caret
 		 * @see #isAutoShowEnabled
 		 */
@@ -388,11 +388,11 @@ namespace ascension {
 		/// Returns the neighborhood to the end of the document among the anchor and this point.
 		inline const VisualPoint& Caret::end() const /*throw()*/ {
 			return std::max(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));}
-		/// Returns true if the point will be shown automatically when moved. Default is true.
+		/// Returns @c true if the point will be shown automatically when moved. Default is @c true.
 		inline bool Caret::isAutoShowEnabled() const /*throw()*/ {return autoShow_;}
-		/// Returns true if the caret is in overtype mode.
+		/// Returns @c true if the caret is in overtype mode.
 		inline bool Caret::isOvertypeMode() const /*throw()*/ {return overtypeMode_;}
-		/// Returns true if the selection is rectangle.
+		/// Returns @c true if the selection is rectangle.
 		inline bool Caret::isSelectionRectangle() const /*throw()*/ {return box_ != 0;}
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
 		inline const std::pair<kernel::Position, kernel::Position>& Caret::matchBrackets() const /*throw()*/ {return matchBrackets_;}
@@ -413,7 +413,7 @@ namespace ascension {
 		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
 			if(mode != matchBracketsTrackingMode_) {matchBracketsTrackingMode_ = mode; checkMatchBrackets();} return *this;}
 
-		/// Returns true if the selection of the given caret is empty.
+		/// Returns @c true if the selection of the given caret is empty.
 		inline bool isSelectionEmpty(const Caret& caret) /*throw()*/ {return caret.selectedRegion().isEmpty();}
 		/**
 		 * Returns the selected text string.
