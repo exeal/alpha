@@ -177,13 +177,12 @@ namespace ascension {
 				kernel::Region matchedRegion;
 				Direction direction;
 				std::size_t documentRevisionNumber;
-				LastResult() /*throw()*/ :
-					document(0), matchedRegion(kernel::Position::INVALID_POSITION), direction(Direction::FORWARD) {}
+				LastResult() /*throw()*/ : document(0), matchedRegion(), direction(Direction::FORWARD) {}
 				~LastResult() /*throw()*/ {reset();}
 				bool checkDocumentRevision(const kernel::Document& current) const /*throw()*/ {
 					return document == &current && documentRevisionNumber == current.revisionNumber();}
-				bool matched() const /*throw()*/ {return matchedRegion.first != kernel::Position::INVALID_POSITION;}
-				void reset() /*throw()*/ {matchedRegion.first = matchedRegion.second = kernel::Position::INVALID_POSITION;}
+				bool matched() const /*throw()*/ {return matchedRegion.first != kernel::Position();}
+				void reset() /*throw()*/ {matchedRegion.first = matchedRegion.second = kernel::Position();}
 				void updateDocumentRevision(const kernel::Document& document) /*throw()*/ {
 					this->document = &document; documentRevisionNumber = document.revisionNumber();}
 			} lastResult_;

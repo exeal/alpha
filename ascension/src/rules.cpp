@@ -949,7 +949,7 @@ const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*
 
 /// @see ITokenScanner#getPosition
 Position NullTokenScanner::getPosition() const /*throw()*/ {
-	return Position::INVALID_POSITION;
+	return Position();
 }
 
 /// @see ITokenScanner#isDone
@@ -1320,7 +1320,7 @@ void LexicalPartitioner::doInstall() /*throw()*/ {
 	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
 		delete partitions_[i];
 	partitions_.clear();
-	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
+	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
 	Region dummy;
 	const Region entire(document()->region());
 	computePartitioning(entire.first, entire.second, dummy);
@@ -1366,7 +1366,8 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	const Document& d = *document();
 	if(partitions_.empty() || partitions_[0]->start != d.region().first) {
 		if(partitions_.empty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
-			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position::ZERO_POSITION, Position::ZERO_POSITION, 0));
+			const Position bob(d.region().first);
+			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, bob, bob, 0));
 		} else {
 			partitions_[0]->start = partitions_[0]->tokenStart = d.region().first;
 			partitions_[0]->tokenLength = 0;
@@ -1408,7 +1409,7 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 
 // returns the transition state (corresponding content type) at the given position.
 inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
-	if(at == Position::ZERO_POSITION)
+	if(at.line == 0 && at.column == 0)
 		return DEFAULT_CONTENT_TYPE;
 	size_t i = partitionAt(at);
 	if(partitions_[i]->start == at)

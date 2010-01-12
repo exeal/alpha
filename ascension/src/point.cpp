@@ -58,7 +58,7 @@ DocumentDisposedException::DocumentDisposedException() :
  */
 Point::Point(Document& document, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
 		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
-	if(!document.region().includes(position))
+	if(position != Position() && !document.region().includes(position))
 		throw BadPositionException(position);
 	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
@@ -131,7 +131,7 @@ void Point::moved(const Position& from) /*throw()*/ {
 void Point::moveTo(const Position& to) {
 	if(isDocumentDisposed())
 		throw DocumentDisposedException();
-	else if(to > document().region().end())
+	else if(to != Position() && to > document().region().end())
 		throw BadPositionException(to);
 //	if(to != position()) {
 		Position destination(to);
@@ -177,7 +177,7 @@ void Point::update(const DocumentChange& change) {
 		return;
 
 //	normalize();
-	const Position newPosition = positions::updatePosition(position(), change, gravity());
+	const Position newPosition(positions::updatePosition(position(), change, gravity()));
 	if(newPosition != position())
 		moveTo(newPosition);	// TODO: this may throw...
 }
@@ -219,7 +219,7 @@ namespace {
  */
 Position locations::backwardBookmark(const Point& p, length_t marks /* = 1 */) {
 	const length_t line = p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks);
-	return (line != INVALID_INDEX) ? Position(line, 0) : Position::INVALID_POSITION;
+	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
 }
 
 /**
@@ -336,7 +336,7 @@ Position locations::endOfLine(const Point& p) {
  */
 Position locations::forwardBookmark(const Point& p, length_t marks /* = 1 */) {
 	const length_t line = p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks);
-	return (line != INVALID_INDEX) ? Position(line, 0) : Position::INVALID_POSITION;
+	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
 }
 
 /**

@@ -697,7 +697,7 @@ inline length_t LineLayout::sublineLength(length_t subline) const {
  */
 inline length_t LineLayout::sublineOffset(length_t subline) const {
 	if(subline >= numberOfSublines_)
-		throw kernel::BadPositionException(kernel::Position::INVALID_POSITION);
+		throw kernel::BadPositionException(kernel::Position());
 	return (sublineOffsets_ != 0) ? sublineOffsets_[subline] : 0;
 }
 

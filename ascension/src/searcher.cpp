@@ -506,7 +506,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 			if(!checkBoundary(matcher->start(), matcher->end(), wholeMatch_))
 				matcher->region(++DocumentCharacterIterator(matcher->start()), matcher->end());
 			else {
-				Position next(Position::ZERO_POSITION);
+				Position next(document.region().first);
 				// matched -> replace
 				++numberOfMatches;
 				Region matchedRegion(matcher->start().tell(), matcher->end().tell());
