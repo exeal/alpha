@@ -133,7 +133,7 @@ namespace ascension {
 		/// A concrete rule detects tokens using regular expression match.
 		class RegexRule : public Rule {
 		public:
-			RegexRule(Token::ID id, const String& pattern, bool caseSensitive = true);
+			RegexRule(Token::ID id, std::auto_ptr<const regex::Pattern> pattern);
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
@@ -247,7 +247,7 @@ namespace ascension {
 		class RegexTransitionRule : public TransitionRule {
 		public:
 			RegexTransitionRule(kernel::ContentType contentType,
-				kernel::ContentType destination, const String& pattern, bool caseSensitive = true);
+				kernel::ContentType destination, std::auto_ptr<const regex::Pattern> pattern);
 			length_t matches(const String& line, length_t column) const;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
