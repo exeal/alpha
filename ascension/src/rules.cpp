@@ -915,12 +915,10 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
 /**
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
- * @param pattern the pattern string
- * @param caseSensitive set @c false to enable caseless match
+ * @param pattern the compiled regular expression
  * @throw regex#PatternSyntaxException the specified pattern is invalid
  */
-RegexRule::RegexRule(Token::ID id, const String& pattern, bool caseSensitive /* = true */)
-		: Rule(id, caseSensitive), pattern_(regex::Pattern::compile(pattern)) {
+RegexRule::RegexRule(Token::ID id, auto_ptr<const regex::Pattern> pattern) : Rule(id, !(pattern->flags() | regex::Pattern::CASE_INSENSITIVE)), pattern_(pattern) {
 }
 
 /// @see Rule#parse
@@ -1146,13 +1144,11 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
  * Constructor.
  * @param contentType the content type of the transition source
  * @param destination the content type of the transition destination
- * @param pattern the pattern string to introduce the transition. can't be empty
- * @param caseSensitive set @c false to enable caseless match
+ * @param pattern the compiled regular expression to introduce the transition
  * @throw regex#PatternSyntaxException @a pattern is invalid
  */
-RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination, const String& pattern,
-		bool caseSensitive /* = true */) : TransitionRule(contentType, destination),
-		pattern_(regex::Pattern::compile(pattern, caseSensitive ? 0 : regex::Pattern::CASE_INSENSITIVE)) {
+RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination,
+		auto_ptr<const regex::Pattern> pattern) : TransitionRule(contentType, destination), pattern_(pattern) {
 }
 
 /// @see TransitionRule#matches
