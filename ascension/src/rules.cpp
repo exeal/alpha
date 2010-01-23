@@ -683,9 +683,8 @@ const Token::ID Token::UNCALCULATED = static_cast<Token::ID>(-1);
  * Protected constructor.
  * @param tokenID the identifier of the token which will be returned by the rule. can be
  *                @c Token#NULL_ID
- * @param caseSensitive set @c false to enable caseless match
  */
-Rule::Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/ : id_(tokenID), caseSensitive_(caseSensitive) {
+Rule::Rule(Token::ID tokenID) /*throw()*/ : id_(tokenID) {
 }
 
 
@@ -701,8 +700,8 @@ Rule::Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/ : id_(tokenID), ca
  * @throw std#invalid_argument @a startSequence is empty
  */
 RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& endSequence,
-		Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */)
-		: Rule(id, caseSensitive), startSequence_(startSequence), endSequence_(endSequence), escapeCharacter_(escapeCharacter) {
+		Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) : Rule(id),
+		startSequence_(startSequence), endSequence_(endSequence), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 	if(startSequence.empty())
 		throw invalid_argument("the start sequence is empty.");
 }
@@ -727,7 +726,7 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
 		}
 	}
 	auto_ptr<Token> result(new Token);
-	result->id = getTokenID();
+	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
 	result->region.first.column = scanner.getPosition().line;
 	result->region.second.column = result->region.first.column + (end - first);
@@ -741,7 +740,7 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
  */
-NumberRule::NumberRule(Token::ID id) /*throw()*/ : Rule(id, true) {
+NumberRule::NumberRule(Token::ID id) /*throw()*/ : Rule(id) {
 }
 
 /// @see Rule#parse
@@ -803,7 +802,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 		return auto_ptr<Token>(0);
 
 	auto_ptr<Token> temp(new Token);
-	temp->id = getTokenID();
+	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
 	temp->region.first.column = scanner.getPosition().column;
 	temp->region.second.column = temp->region.first.column + e - first;
@@ -819,7 +818,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
  * @param uriDetector the URI detector
  */
 URIRule::URIRule(Token::ID id, const URIDetector& uriDetector,
-		bool delegateOwnership) /*throw()*/ : Rule(id, true), uriDetector_(&uriDetector, delegateOwnership) {
+		bool delegateOwnership) /*throw()*/ : Rule(id), uriDetector_(&uriDetector, delegateOwnership) {
 }
 
 /// @see Rule#parse
@@ -829,7 +828,7 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
 	if(e == first)
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> temp(new Token);
-	temp->id = getTokenID();
+	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
 	temp->region.first.column = scanner.getPosition().column;
 	temp->region.second.column = temp->region.first.column + e - first;
@@ -848,7 +847,8 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt;= @a last
  */
-WordRule::WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id, caseSensitive) {
+WordRule::WordRule(Token::ID id, const String* first, const String* last,
+		bool caseSensitive /* = true */) : Rule(id) {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -868,7 +868,7 @@ WordRule::WordRule(Token::ID id, const String* first, const String* last, bool c
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
  */
-WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id, caseSensitive) {
+WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id) {
 	if(first == 0)
 		throw NullPointerException("first");
 	if(last == 0)
@@ -900,7 +900,7 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
 	if(!words_->matches(first, last))
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> result(new Token);
-	result->id = getTokenID();
+	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
 	result->region.first.column = scanner.getPosition().column;
 	result->region.second.column = result->region.first.column + (last - first);
@@ -918,7 +918,7 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
  * @param pattern the compiled regular expression
  * @throw regex#PatternSyntaxException the specified pattern is invalid
  */
-RegexRule::RegexRule(Token::ID id, auto_ptr<const regex::Pattern> pattern) : Rule(id, !(pattern->flags() | regex::Pattern::CASE_INSENSITIVE)), pattern_(pattern) {
+RegexRule::RegexRule(Token::ID id, auto_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(pattern) {
 }
 
 /// @see Rule#parse
@@ -928,7 +928,7 @@ auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first
 	if(!matcher->lookingAt())
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> token(new Token);
-	token->id = getTokenID();
+	token->id = tokenID();
 	token->region.first.line = token->region.second.line = scanner.getPosition().line;
 	token->region.first.column = scanner.getPosition().column;
 	token->region.second.column = token->region.first.column + (matcher->end().tell() - matcher->start().tell());

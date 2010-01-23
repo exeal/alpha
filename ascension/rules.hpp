@@ -71,10 +71,6 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~Rule() /*throw()*/ {}
-			/// Returns the identifier of the token.
-			Token::ID getTokenID() const /*throw()*/ {return id_;}
-			/// Returns @c true if the match is case sensitive.
-			bool isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
 			/**
 			 * 
 			 * @param scanner the scanner
@@ -84,11 +80,12 @@ namespace ascension {
 			 */
 			virtual std::auto_ptr<Token> parse(
 				const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
+			/// Returns the identifier of the token.
+			Token::ID tokenID() const /*throw()*/ {return id_;}
 		protected:
-			explicit Rule(Token::ID tokenID, bool caseSensitive) /*throw()*/;
+			explicit Rule(Token::ID tokenID) /*throw()*/;
 		private:
 			const Token::ID id_;
-			const bool caseSensitive_;
 		};
 
 		/***/
@@ -100,6 +97,7 @@ namespace ascension {
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
+			const bool caseSensitive_;
 		};
 
 		/// A concrete rule detects numeric tokens.
