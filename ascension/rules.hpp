@@ -219,6 +219,7 @@ namespace ascension {
 			MANAH_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() /*throw()*/;
+			virtual std::auto_ptr<TransitionRule> clone() const = 0;
 			kernel::ContentType contentType() const /*throw()*/;
 			kernel::ContentType destination() const /*throw()*/;
 			virtual length_t matches(const String& line, length_t column) const = 0;
@@ -233,6 +234,7 @@ namespace ascension {
 		public:
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
 				const String& pattern, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
+			std::auto_ptr<TransitionRule> clone() const;
 			length_t matches(const String& line, length_t column) const;
 		private:
 			const String pattern_;
@@ -246,6 +248,8 @@ namespace ascension {
 		public:
 			RegexTransitionRule(kernel::ContentType contentType,
 				kernel::ContentType destination, std::auto_ptr<const regex::Pattern> pattern);
+			RegexTransitionRule(const RegexTransitionRule& other);
+			std::auto_ptr<TransitionRule> clone() const;
 			length_t matches(const String& line, length_t column) const;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
