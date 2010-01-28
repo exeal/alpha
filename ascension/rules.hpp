@@ -262,6 +262,7 @@ namespace ascension {
 		 * @see kernel#Document
 		 */
 		class LexicalPartitioner : public kernel::DocumentPartitioner {
+			MANAH_NONCOPYABLE_TAG(LexicalPartitioner);
 		public:
 			// constructor
 			LexicalPartitioner() /*throw()*/;
