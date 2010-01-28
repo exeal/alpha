@@ -14,6 +14,7 @@
 #include "save-some-buffers-dialog.hpp"
 //#include "code-pages-dialog.hpp"
 #include "../resource/messages.h"
+#include <ascension/rules.hpp>
 #include <manah/win32/ui/wait-cursor.hpp>
 #include <manah/com/common.hpp>	// ComPtr, ComQIPtr
 #include <manah/com/exception.hpp>
@@ -1234,4 +1235,15 @@ ALPHA_EXPOSE_PROLOGUE(1)
 	py::register_exception_translator<f::MalformedInputException>(
 		CppStdExceptionTranslator<f::MalformedInputException>(interpreter.exceptionClass("MalformedInputError")));
 	py::register_exception_translator<f::IOException>(&translateIOException);
+
+	py::scope ruleModule(interpreter.module("rules"));
+	py::class_<a::rules::TransitionRule, boost::noncopyable>("_TransitionRule", py::no_init)
+		.add_property("content_type", &a::rules::TransitionRule::contentType)
+		.add_property("destination", &a::rules::TransitionRule::destination);
+	py::class_<a::rules::LiteralTransitionRule, py::bases<a::rules::TransitionRule> >(
+		"LiteralTransitionRule", py::init<k::ContentType, k::ContentType, wstring, a::CodePoint, bool>(
+			py::arg("content_type"), py::arg("destination"), py::arg("pattern"),
+			py::arg("escape_character") = a::NONCHARACTER, py::arg("case_sensitive") = true));
+//	py::class_<a::rules::RegexTransitionRule, py::bases<a::rules::TransitionRule> >(
+//		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
 ALPHA_EXPOSE_EPILOGUE()
