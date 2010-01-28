@@ -39,7 +39,7 @@ namespace manah {
 			gapFirst_(first_), gapLast_(last_) {insert(0, count, value);}
 		template<typename InputIterator> GapBuffer(InputIterator first, InputIterator last, const Allocator& allocator = Allocator()) :
 			allocator_(allocator), first_(0), last_(0), gapFirst_(0), gapLast_(0) {insert(0, first, last);}
-		GapBuffer(const GapBuffer& rhs) : allocator_(rhs.allocator),
+		GapBuffer(const GapBuffer& rhs) : allocator_(rhs.allocator_),
 				first_(allocator_.allocate(last_ - first_)), last_(first_ + (rhs.last_ - rhs.first_)),
 				gapFirst_(first_ + (rhs.gapFirst_ - rhs.first_)), gapLast_(first_ + (rhs.gapLast_ - rhs.first_)) {
 			std::uninitialized_copy(rhs.first_, rhs.gapFirst_, first_);
