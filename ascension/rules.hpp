@@ -270,9 +270,9 @@ namespace ascension {
 			template<typename InputIterator>
 			void setRules(InputIterator first, InputIterator last);
 		private:
-			void clearRules() /*throw()*/;
 			void computePartitioning(const kernel::Position& start,
 				const kernel::Position& minimalLast, kernel::Region& changedRegion);
+			static void deleteRules(std::list<const TransitionRule*>& rules) /*throw()*/;
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			std::size_t partitionAt(const kernel::Position& at) const /*throw()*/;
@@ -330,8 +330,16 @@ namespace ascension {
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(document() != 0)
 				throw IllegalStateException("The partitioner is already connected to document.");
-			clearRules();
-			std::copy(first, last, std::back_inserter(rules_));
+			std::list<const TransitionRule*> temp;
+			try {
+				for(; first != last; ++first)
+					temp.push_back((*first)->clone().release());
+			} catch(...) {
+				deleteRules(temp);
+				throw;
+			}
+			std::swap(rules_, temp);
+			deleteRules(temp);
 		}
 
 	}
