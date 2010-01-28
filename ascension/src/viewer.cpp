@@ -675,7 +675,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	vrc.lineNumbers.borderWidth = 1;
 	setConfiguration(0, &vrc);
 
-#if 1
+#if 0
 	// this is JavaScript partitioning and lexing settings for test
 	using namespace contentassist;
 	using namespace rules;
@@ -710,6 +710,8 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
 	LexicalPartitioner* p = new LexicalPartitioner();
 	p->setRules(rules, MANAH_ENDOF(rules));
+	for(size_t i = 0; i < MANAH_COUNTOF(rules); ++i)
+		delete rules[i];
 	document().setPartitioner(auto_ptr<DocumentPartitioner>(p));
 
 	PresentationReconstructor* pr = new PresentationReconstructor(presentation());

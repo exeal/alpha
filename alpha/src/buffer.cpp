@@ -2,7 +2,7 @@
  * @file buffer.cpp
  * @author exeal
  * @date 2003-2006 (was AlphaDoc.cpp and BufferList.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include "application.hpp"
@@ -18,6 +18,7 @@
 #include <manah/win32/ui/wait-cursor.hpp>
 #include <manah/com/common.hpp>	// ComPtr, ComQIPtr
 #include <manah/com/exception.hpp>
+#include <boost/python/stl_iterator.hpp>
 #include <shlwapi.h>				// PathXxxx, StrXxxx, ...
 #include <shlobj.h>					// IShellLink, ...
 #include <dlgs.h>
@@ -1074,6 +1075,20 @@ namespace {
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
 		f::writeRegion(buffer, region, fileName, format, append);
 	}
+
+	class RegexTransitionRuleAdapter : public a::rules::RegexTransitionRule {
+	public:
+		RegexTransitionRuleAdapter(k::ContentType contentType, k::ContentType destination, const wstring& pattern, bool caseSensitive) :
+			a::rules::RegexTransitionRule(contentType, destination, a::regex::Pattern::compile(pattern, caseSensitive ? 0 : a::regex::Pattern::CASE_INSENSITIVE)) {
+		}
+	};
+
+	class LexicalPartitionerAdapter : public a::rules::LexicalPartitioner {
+	public:
+		explicit LexicalPartitionerAdapter(py::object rules) {
+			setRules(py::stl_input_iterator<a::rules::TransitionRule*>(rules), py::stl_input_iterator<a::rules::TransitionRule*>());
+		}
+	};
 }
 
 ALPHA_EXPOSE_PROLOGUE(1)
@@ -1223,6 +1238,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("for_filename", &BufferList::forFileName)
 		.def("move", &BufferList::move)
 		.def("save_some_dialog", &BufferList::saveSomeDialog, py::arg("buffers_to_save") = py::tuple());
+	py::class_<k::DocumentPartitioner, boost::noncopyable>("_DocumentPartitioner", py::no_init);
 
 	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);
@@ -1241,9 +1257,11 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.add_property("content_type", &a::rules::TransitionRule::contentType)
 		.add_property("destination", &a::rules::TransitionRule::destination);
 	py::class_<a::rules::LiteralTransitionRule, py::bases<a::rules::TransitionRule> >(
-		"LiteralTransitionRule", py::init<k::ContentType, k::ContentType, wstring, a::CodePoint, bool>(
+		"LiteralTransitionRule", py::init<k::ContentType, k::ContentType, wstring, a::CodePoint, bool>((
 			py::arg("content_type"), py::arg("destination"), py::arg("pattern"),
-			py::arg("escape_character") = a::NONCHARACTER, py::arg("case_sensitive") = true));
-//	py::class_<a::rules::RegexTransitionRule, py::bases<a::rules::TransitionRule> >(
-//		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
+			py::arg("escape_character") = a::NONCHARACTER, py::arg("case_sensitive") = true)));
+	py::class_<RegexTransitionRuleAdapter, py::bases<a::rules::TransitionRule> >(
+		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
+	py::class_<LexicalPartitionerAdapter,
+		py::bases<k::DocumentPartitioner>, boost::noncopyable>("LexicalPartitioner", py::init<py::object>());
 ALPHA_EXPOSE_EPILOGUE()
