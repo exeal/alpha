@@ -847,8 +847,7 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt;= @a last
  */
-WordRule::WordRule(Token::ID id, const String* first, const String* last,
-		bool caseSensitive /* = true */) : Rule(id) {
+WordRule::WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id) {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -1092,6 +1091,12 @@ TransitionRule::~TransitionRule() /*throw()*/ {
 }
 
 /**
+ * @fn TransitionRule::clone
+ * Creates and returns a copy of the object.
+ * @return a copy of the object
+ */
+
+/**
  * @fn TransitionRule::matches
  * Returns @c true if the rule matches the specified text. Note that an implementation can't use
  * the partitioning of the document to generate the new partition.
@@ -1119,6 +1124,11 @@ TransitionRule::~TransitionRule() /*throw()*/ {
 LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination,
 		const String& pattern, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
 		TransitionRule(contentType, destination), pattern_(pattern), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
+}
+
+/// @see TransitionRule#clone
+auto_ptr<TransitionRule> LiteralTransitionRule::clone() const {
+	return auto_ptr<TransitionRule>(new LiteralTransitionRule(*this));
 }
 
 /// @see TransitionRule#matches
@@ -1149,6 +1159,16 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
  */
 RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination,
 		auto_ptr<const regex::Pattern> pattern) : TransitionRule(contentType, destination), pattern_(pattern) {
+}
+
+/// Copy-constructor.
+RegexTransitionRule::RegexTransitionRule(const RegexTransitionRule& other) :
+		TransitionRule(other), pattern_(new regex::Pattern(*other.pattern_.get())) {
+}
+
+/// @see TransitionRule#clone
+auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
+	return auto_ptr<TransitionRule>(new RegexTransitionRule(*this));
 }
 
 /// @see TransitionRule#matches
