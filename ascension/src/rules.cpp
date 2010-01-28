@@ -1195,16 +1195,15 @@ LexicalPartitioner::LexicalPartitioner() /*throw()*/ {
 
 /// Destructor.
 LexicalPartitioner::~LexicalPartitioner() /*throw()*/ {
-	clearRules();
+	deleteRules(rules_);
 	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
 		delete partitions_[i];
 }
 
-/// Deletes all the transition rules.
-void LexicalPartitioner::clearRules() /*throw()*/ {
-	for(list<const TransitionRule*>::const_iterator i(rules_.begin()); i != rules_.end(); ++i)
+/// @internal Deletes all the transition rules.
+void LexicalPartitioner::deleteRules(list<const TransitionRule*>& rules) /*throw()*/ {
+	for(list<const TransitionRule*>::const_iterator i(rules.begin()); i != rules.end(); ++i)
 		delete *i;
-	rules_.clear();
 }
 
 /**
