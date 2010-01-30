@@ -28,27 +28,25 @@ namespace py = boost::python;
 // EditorWindow /////////////////////////////////////////////////////////////
 
 /// Constructor.
-EditorWindow::EditorWindow(EditorView* initialView /* = 0 */) : visibleIndex_(-1), lastVisibleIndex_(-1) {
-	if(initialView != 0) {
-		visibleIndex_ = 0;
-		addView(*initialView);
-	}
+EditorWindow::EditorWindow(EditorView* initialViewer /* = 0 */) : visibleViewer_(0), lastVisibleViewer_(0) {
+	if(initialViewer != 0)
+		addView(*initialViewer);
 }
 
 /// Copy-constructor.
-EditorWindow::EditorWindow(const EditorWindow& rhs) {
-	for(size_t i = 0, c = rhs.views_.size(); i != c; ++i) {
-		auto_ptr<EditorView> newViewer(new EditorView(*rhs.views_[i]));
-		const bool succeeded = newViewer->create(rhs.views_[i]->getParent().use(), win32::ui::DefaultWindowRect(),
+EditorWindow::EditorWindow(const EditorWindow& other) {
+	for(size_t i = 0, c = other.viewers_.size(); i != c; ++i) {
+		auto_ptr<EditorView> newViewer(new EditorView(*other.viewers_[i]));
+		const bool succeeded = newViewer->create(other.viewers_[i]->getParent().use(), win32::ui::DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
-		newViewer->setConfiguration(&rhs.views_[i]->configuration(), 0);
-		newViewer->scrollTo(rhs.views_[i]->getScrollPosition(SB_HORZ), rhs.views_[i]->getScrollPosition(SB_VERT), false);
-		views_.push_back(newViewer.release());
-		if(i == rhs.visibleIndex_)
-			visibleIndex_ = i;
-		if(i == lastVisibleIndex_)
-			lastVisibleIndex_ = i;
+		newViewer->setConfiguration(&other.viewers_[i]->configuration(), 0);
+		newViewer->scrollTo(other.viewers_[i]->getScrollPosition(SB_HORZ), other.viewers_[i]->getScrollPosition(SB_VERT), false);
+		viewers_.push_back(newViewer.release());
+		if(other.viewers_[i] == other.visibleViewer_)
+			visibleViewer_ = viewers_[i];
+		if(other.viewers_[i] == other.lastVisibleViewer_)
+			lastVisibleViewer_ = viewers_[i];
 	}
 }
 
@@ -59,20 +57,20 @@ EditorWindow::~EditorWindow() {
 
 /**
  * Adds the new viewer
- * @param view the viewer to add
+ * @param viewer the viewer to add
  */
-void EditorWindow::addView(EditorView& view) {
-	views_.push_back(&view);
-	if(views_.size() == 1)
-		showBuffer(view.document());
+void EditorWindow::addView(EditorView& viewer) {
+	viewers_.push_back(&viewer);
+	if(viewers_.size() == 1)
+		showBuffer(viewer.document());
 }
 
 /// Removes all viewers.
 void EditorWindow::removeAll() {
-	for(vector<EditorView*>::iterator i(views_.begin()), e(views_.end()); i != e; ++i)
+	for(vector<EditorView*>::iterator i(viewers_.begin()), e(viewers_.end()); i != e; ++i)
 		delete *i;
-	views_.clear();
-	visibleIndex_ = lastVisibleIndex_ = -1;
+	viewers_.clear();
+	visibleViewer_ = lastVisibleViewer_ = 0;
 }
 
 /**
@@ -80,19 +78,19 @@ void EditorWindow::removeAll() {
  * @param buffer the buffer has the viewer to remove
  */
 void EditorWindow::removeBuffer(const Buffer& buffer) {
-	for(size_t i = 0, c = views_.size(); i < c; ++i) {
-		if(&views_[i]->document() == &buffer) {
-			EditorView* const removing = views_[i];
-			views_.erase(views_.begin() + i);
-			if(i == visibleIndex_) {
-				visibleIndex_ = -1;
-				if(i == lastVisibleIndex_)
-					lastVisibleIndex_ = -1;
-				if(views_.size() == 1 || lastVisibleIndex_ == -1)
-					showBuffer((*views_.begin())->document());
-				else if(!views_.empty()) {
-					showBuffer(views_[lastVisibleIndex_]->document());
-					lastVisibleIndex_ = -1;
+	for(vector<EditorView*>::iterator viewer(viewers_.begin()), e(viewers_.end()); viewer != e; ++viewer) {
+		if(&(*viewer)->document() == &buffer) {
+			EditorView* const removing = *viewer;
+			viewers_.erase(viewer);
+			if(removing == visibleViewer_) {
+				visibleViewer_ = 0;
+				if(removing == lastVisibleViewer_)
+					lastVisibleViewer_ = 0;
+				if(viewers_.size() == 1 || lastVisibleViewer_ == 0)
+					showBuffer((*viewers_.begin())->document());
+				else if(!viewers_.empty()) {
+					showBuffer(lastVisibleViewer_->document());
+					lastVisibleViewer_ = 0;
 				}
 			}
 			delete removing;
@@ -107,17 +105,17 @@ void EditorWindow::removeBuffer(const Buffer& buffer) {
  * @throw std#invalid_argument @a buffer is not exist
  */
 void EditorWindow::showBuffer(const Buffer& buffer) {
-	if(visibleIndex_ != -1 && &visibleBuffer() == &buffer)
+	if(visibleViewer_ != 0 && &visibleBuffer() == &buffer)
 		return;
-	for(size_t i = 0, c = views_.size(); i < c; ++i) {
-		if(&views_[i]->document() == &buffer) {
-			const bool hadFocus = visibleIndex_ == -1 || visibleView().hasFocus();
-			lastVisibleIndex_ = visibleIndex_;
-			visibleIndex_ = i;
+	for(vector<EditorView*>::iterator viewer(viewers_.begin()), e(viewers_.end()); viewer != e; ++viewer) {
+		if(&(*viewer)->document() == &buffer) {
+			const bool hadFocus = visibleViewer_ == 0 || visibleView().hasFocus();
+			lastVisibleViewer_ = visibleViewer_;
+			visibleViewer_ = *viewer;
 			EditorWindows::instance().adjustPanes();
 			visibleView().show(SW_SHOW);
-			if(lastVisibleIndex_ != -1)
-				views_[lastVisibleIndex_]->show(SW_HIDE);
+			if(lastVisibleViewer_ != 0)
+				lastVisibleViewer_->show(SW_HIDE);
 			if(hadFocus)
 				visibleView().setFocus();
 			return;
