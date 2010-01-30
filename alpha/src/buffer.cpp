@@ -1034,6 +1034,42 @@ void BufferList::updateTitleBar() {
 
 
 namespace {
+	class RegexTransitionRuleAdapter : public a::rules::RegexTransitionRule {
+	public:
+		RegexTransitionRuleAdapter(k::ContentType contentType, k::ContentType destination, const wstring& pattern, bool caseSensitive) :
+			a::rules::RegexTransitionRule(contentType, destination, a::regex::Pattern::compile(pattern, caseSensitive ? 0 : a::regex::Pattern::CASE_INSENSITIVE)) {
+		}
+	};
+
+	class DocumentPartitionerProxy {
+	public:
+		virtual void set(Buffer& buffer) = 0;
+	};
+
+	class LexicalPartitionerProxy : public DocumentPartitionerProxy {
+		MANAH_NONCOPYABLE_TAG(LexicalPartitionerProxy);
+	public:
+		explicit LexicalPartitionerProxy(py::object rules) {
+			try {
+				auto_ptr<a::rules::LexicalPartitioner> temp(new a::rules::LexicalPartitioner());
+				temp->setRules(py::stl_input_iterator<a::rules::TransitionRule*>(rules), py::stl_input_iterator<a::rules::TransitionRule*>());
+				impl_.reset(temp.release());
+			} catch(bad_alloc&) {
+				::PyErr_NoMemory();
+				py::throw_error_already_set();
+			}
+		}
+		void set(Buffer& buffer) {
+			if(impl_.get() == 0) {
+				::PyErr_SetString(PyExc_ValueError, "This ambient.rules.LexicalPartitioner had already been deleted.");
+				py::throw_error_already_set();
+			}
+			buffer.setPartitioner(impl_);
+		}
+	private:
+		auto_ptr<k::DocumentPartitioner> impl_;
+	};
+
 	py::object activeBuffer() {return EditorWindows::instance().activeBuffer().self();}
 //	Direction attrOfDirection
 	void bindBufferToFile(Buffer& buffer, const wstring& fileName) {buffer.textFile().bind(fileName);}
@@ -1060,6 +1096,8 @@ namespace {
 	void revertBufferToFile(Buffer& buffer, const string& encoding, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
 		buffer.textFile().revert(encoding, encodingSubstitutionPolicy);
 	}
+	void setDocumentPartitioner(Buffer& buffer, DocumentPartitionerProxy* partitioner) {
+		(partitioner != 0) ? partitioner->set(buffer) : buffer.setPartitioner(auto_ptr<k::DocumentPartitioner>());}
 	void setEncodingOfBuffer(Buffer& buffer, const string& encoding) {buffer.textFile().setEncoding(encoding);}
 	void setNewlineOfBuffer(Buffer& buffer, k::Newline newline) {buffer.textFile().setNewline(newline);}
 	void translateIOException(const f::IOException& e) {::PyErr_SetFromWindowsErr(e.code());}
@@ -1075,20 +1113,6 @@ namespace {
 		format.unicodeByteOrderMark = writeUnicodeByteOrderMark;
 		f::writeRegion(buffer, region, fileName, format, append);
 	}
-
-	class RegexTransitionRuleAdapter : public a::rules::RegexTransitionRule {
-	public:
-		RegexTransitionRuleAdapter(k::ContentType contentType, k::ContentType destination, const wstring& pattern, bool caseSensitive) :
-			a::rules::RegexTransitionRule(contentType, destination, a::regex::Pattern::compile(pattern, caseSensitive ? 0 : a::regex::Pattern::CASE_INSENSITIVE)) {
-		}
-	};
-
-	class LexicalPartitionerAdapter : public a::rules::LexicalPartitioner {
-	public:
-		explicit LexicalPartitionerAdapter(py::object rules) {
-			setRules(py::stl_input_iterator<a::rules::TransitionRule*>(rules), py::stl_input_iterator<a::rules::TransitionRule*>());
-		}
-	};
 }
 
 ALPHA_EXPOSE_PROLOGUE(1)
@@ -1215,6 +1239,7 @@ ALPHA_EXPOSE_PROLOGUE(1)
 			(py::arg("encoding") = string(), py::arg("newlines") = NLF_RAW_VALUE,
 			py::arg("encoding_substitution_policy") = e::Encoder::DONT_SUBSTITUTE,
 			py::arg("write_unicode_byte_order_mark") = false))
+		.def("set_partitioner", &setDocumentPartitioner)
 		.def("set_modified", &Buffer::setModified)
 		.def("undo", &Buffer::undo, py::arg("n") = 1)
 		.def("widen", &Buffer::widen)
@@ -1259,9 +1284,10 @@ ALPHA_EXPOSE_PROLOGUE(1)
 	py::class_<a::rules::LiteralTransitionRule, py::bases<a::rules::TransitionRule> >(
 		"LiteralTransitionRule", py::init<k::ContentType, k::ContentType, wstring, a::CodePoint, bool>((
 			py::arg("content_type"), py::arg("destination"), py::arg("pattern"),
-			py::arg("escape_character") = a::NONCHARACTER, py::arg("case_sensitive") = true)));
+			py::arg("escape_character") = static_cast<long>(a::NONCHARACTER), py::arg("case_sensitive") = true)));
 	py::class_<RegexTransitionRuleAdapter, py::bases<a::rules::TransitionRule> >(
 		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
-	py::class_<LexicalPartitionerAdapter,
-		py::bases<k::DocumentPartitioner>, boost::noncopyable>("LexicalPartitioner", py::init<py::object>());
+	py::class_<DocumentPartitionerProxy, boost::noncopyable>("_DocumentPartitioner", py::no_init);
+	py::class_<LexicalPartitionerProxy, py::bases<DocumentPartitionerProxy>,
+		boost::noncopyable>("LexicalPartitioner", py::init<py::object>());
 ALPHA_EXPOSE_EPILOGUE()
