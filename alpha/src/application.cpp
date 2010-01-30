@@ -1178,8 +1178,12 @@ bool Alpha::teardown(bool callHook /* = true */) {
 	if(callHook) {
 		py::object toplevel(ambient::Interpreter::instance().toplevelPackage());
 		if(toBoolean(::PyObject_HasAttrString(toplevel.ptr(), "about_to_be_killed_hook"))) {
-			if(!toBoolean(::PyObject_IsTrue(toplevel.attr("about_to_be_killed_hook")().ptr())))
-				return false;
+			try {
+				if(!toBoolean(::PyObject_IsTrue(toplevel.attr("about_to_be_killed_hook")().ptr())))
+					return false;
+			} catch(py::error_already_set&) {
+				ambient::Interpreter::instance().handleException();
+			}
 		}
 	}
 	saveINISettings();

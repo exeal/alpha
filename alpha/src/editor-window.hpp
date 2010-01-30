@@ -71,7 +71,7 @@ namespace alpha {
 	public:
 		// constructor
 		EditorWindow(EditorView* initialView = 0);
-		EditorWindow(const EditorWindow& rhs);
+		EditorWindow(const EditorWindow& other);
 		~EditorWindow();
 		// attributes
 		std::size_t numberOfViews() const /*throw()*/;
@@ -89,8 +89,9 @@ namespace alpha {
 		HWND getWindow() const /*throw()*/;
 	private:
 		mutable boost::python::object self_;
-		std::vector<EditorView*> views_;
-		std::size_t visibleIndex_, lastVisibleIndex_;
+		std::vector<EditorView*> viewers_;
+		EditorView* visibleViewer_;
+		EditorView* lastVisibleViewer_;
 	};
 
 	class IActiveBufferListener {
@@ -143,17 +144,17 @@ namespace alpha {
 		return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::document());}
 
 	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorWindow::getWindow() const /*throw()*/ {return (visibleIndex_ != -1) ? views_[visibleIndex_]->get() : 0;}
+	inline HWND EditorWindow::getWindow() const /*throw()*/ {return (visibleViewer_ != 0) ? visibleViewer_->get() : 0;}
 
 	/// Returns the number of the viewers.
-	inline std::size_t EditorWindow::numberOfViews() const /*throw()*/ {return views_.size();}
+	inline std::size_t EditorWindow::numberOfViews() const /*throw()*/ {return viewers_.size();}
 
 	/// Returns the visible buffer.
 	inline Buffer& EditorWindow::visibleBuffer() const {return visibleView().document();}
 
 	/// Returns the visible viewer.
 	inline EditorView& EditorWindow::visibleView() const {
-		if(visibleIndex_ == -1) throw std::logic_error("There no views."); return *views_[visibleIndex_];}
+		if(visibleViewer_ == 0) throw std::logic_error("There no viewers."); return *visibleViewer_;}
 
 	/// Returns the script object corresponding to the windows.
 	inline boost::python::object EditorWindows::self() const {
