@@ -125,7 +125,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 			enableCommandsAsOnlySelection = ::GetWindowTextLength(getItem(IDC_COMBO_FINDWHAT)) != 0;
 		::EnableWindow(getItem(IDC_BTN_MARKALL), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(IDC_BTN_REPLACEALL),
-			enableCommandsAsOnlySelection && !EditorWindows::instance().activeBuffer().isReadOnly());
+			enableCommandsAsOnlySelection && !EditorWindows::instance().selectedBuffer().isReadOnly());
 		/* fall-through */
 	case IDC_RADIO_WHOLEFILE:	// "Whole File"
 	case IDC_RADIO_SELECTION:	// "Only Selection"
@@ -134,7 +134,7 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		::EnableWindow(getItem(IDC_BTN_FINDNEXT), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(IDC_BTN_FINDPREVIOUS), enableCommandsAsOnlySelection);
 		::EnableWindow(getItem(IDC_BTN_REPLACE),
-			enableCommandsAsOnlySelection && !EditorWindows::instance().activeBuffer().isReadOnly());
+			enableCommandsAsOnlySelection && !EditorWindows::instance().selectedBuffer().isReadOnly());
 		break;
 	case IDC_COMBO_WHOLEMATCH:
 		if(notifyCode == CBN_SELCHANGE) {
@@ -340,7 +340,7 @@ void SearchDialog::updateConditions() {
 
 	const bool patternIsEmpty = patternCombobox_.getTextLength() == 0;
 	const bool hasSelection = !isSelectionEmpty(EditorWindows::instance().activePane().visibleView().caret());
-	const bool readOnly = EditorWindows::instance().activeBuffer().isReadOnly();
+	const bool readOnly = EditorWindows::instance().selectedBuffer().isReadOnly();
 	const bool onlySelection = isButtonChecked(IDC_RADIO_SELECTION) == BST_CHECKED;
 	if(!hasSelection)
 		checkRadioButton(IDC_RADIO_SELECTION, IDC_RADIO_WHOLEFILE, IDC_RADIO_WHOLEFILE);

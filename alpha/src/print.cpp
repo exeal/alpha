@@ -345,7 +345,7 @@ namespace {
 	}
 	bool printBuffer(py::object buffer, bool showDialog) {
 		return Printing::instance().print((buffer != py::object()) ?
-			py::extract<const Buffer&>(buffer) : EditorWindows::instance().activeBuffer(), showDialog);
+			py::extract<const Buffer&>(buffer) : EditorWindows::instance().selectedBuffer(), showDialog);
 	}
 	bool setupPagesDialog() {
 		return Printing::instance().setupPages();

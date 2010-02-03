@@ -279,7 +279,7 @@ void EditorView::onKillFocus(HWND newWindow) {
 /// @see Window#onSetFocus
 void EditorView::onSetFocus(HWND oldWindow) {
 	TextViewer::onSetFocus(oldWindow);
-	BufferList::instance().activeBufferChanged();
+	BufferList::instance().bufferSelectionChanged();
 }
 
 /// @see ICaretListener#overtypeModeChanged
@@ -298,12 +298,6 @@ void EditorView::selectionShapeChanged(const Caret&) {
 /// Default constructor.
 EditorWindows::EditorWindows() {
 }
-
-/// Returns the active buffer.
-Buffer& EditorWindows::activeBuffer() {return activePane().visibleBuffer();}
-
-/// Returns the active buffer.
-const Buffer& EditorWindows::activeBuffer() const {return activePane().visibleBuffer();}
 
 /// Returns the editor window at the given position.
 EditorWindow& EditorWindows::at(size_t index) {
@@ -341,19 +335,14 @@ void EditorWindows::paneRemoved(EditorWindow& pane) {
 	}
 }
 
+/// Returns the selected buffer.
+Buffer& EditorWindows::selectedBuffer() {return activePane().visibleBuffer();}
+
+/// Returns the selected buffer.
+const Buffer& EditorWindows::selectedBuffer() const {return activePane().visibleBuffer();}
+
 
 namespace {
-	void activateWindow(EditorWindow& window) {
-		if(::SetFocus(window.getWindow()) == 0)
-			Interpreter::instance().raiseLastWin32Error();
-	}
-	py::object activeBuffer() {
-		return EditorWindows::instance().activeBuffer().self();
-	}
-	py::object activeWindow() {
-		return EditorWindows::instance().activePane().self();
-	}
-
 	py::object bufferOfPoint(const Point& p) {
 		return static_cast<const Buffer&>(p.document()).self();
 	}
@@ -361,10 +350,10 @@ namespace {
 		return editor.document().self();
 	}
 	void closeWindow(EditorWindow& window) {
-		activateWindow(window);
+		py::call_method<void>(window.self().ptr(), "select");
+//		selectInWindow(window, py::object());
 		EditorWindows::instance().removeActivePane();
 	}
-
 	void extendSelection(Caret& caret, py::object to) {
 		if(py::extract<const Position&>(to).check())
 			caret.extendSelection(static_cast<Position>(py::extract<Position>(to)));
@@ -377,25 +366,35 @@ namespace {
 			py::throw_error_already_set();
 		}
 	}
-
-	py::ssize_t numberOfVisibleColumns(const EditorWindow& window) {return window.visibleView().numberOfVisibleColumns();}
-
-	py::ssize_t numberOfVisibleLines(const EditorWindow& window) {return window.visibleView().numberOfVisibleLines();}
-
+	py::ssize_t numberOfVisibleColumns(const EditorWindow& window) {
+		return window.visibleView().numberOfVisibleColumns();
+	}
+	py::ssize_t numberOfVisibleLines(const EditorWindow& window) {
+		return window.visibleView().numberOfVisibleLines();
+	}
 	template<const VisualPoint& (Caret::*procedure)() const>
 	Position positionOfCaret(const Caret& c) {return (c.*procedure)().position();}
-
 	void scroll(EditorWindow& window, py::ssize_t lines, py::ssize_t columns) {
 		window.visibleView().scroll(static_cast<int>(columns), static_cast<int>(lines), true);
 	}
-
 	py::object selectedBuffer(const EditorWindow& window) {
 		return window.visibleBuffer().self();
+	}
+	py::object selectedBuffer() {
+		return EditorWindows::instance().selectedBuffer().self();
+	}
+	py::object selectedWindow() {
+		return EditorWindows::instance().activePane().self();
 	}
 	py::object selectedTextEditor(const EditorWindow& window) {
 		return window.visibleView().asTextEditor();
 	}
 	void selectInWindow(EditorWindow& window, py::object o) {
+		if(o == py::object()) {
+			if(::SetFocus(window.getWindow()) == 0)
+				Interpreter::instance().raiseLastWin32Error();
+			return;
+		}
 		Buffer* buffer = 0;	// buffer to select
 		if(toBoolean(PyUnicode_Check(o.ptr()))) {
 			const wstring name(ambient::convertUnicodeObjectToWideString(o.ptr()));
@@ -478,12 +477,11 @@ ALPHA_EXPOSE_PROLOGUE(2)
 	py::class_<EditorWindow, boost::noncopyable>("_Window", py::no_init)
 		.add_property("number_of_visible_columns", &numberOfVisibleColumns)
 		.add_property("number_of_visible_lines", &numberOfVisibleLines)
-		.add_property("selected_buffer", &selectedBuffer)
+		.add_property<py::object(const EditorWindow&)>("selected_buffer", &selectedBuffer)
 		.add_property("selected_editor", &selectedTextEditor)
-		.def("activate", &activateWindow)
 		.def("close", &closeWindow)
 		.def("scroll", &scroll)
-		.def("select", &selectInWindow)
+		.def("select", &selectInWindow, py::arg("object") = py::object())
 		.def("split", &EditorWindow::split)
 		.def("split_side_by_side", &EditorWindow::splitSideBySide);
 	py::class_<EditorWindows, boost::noncopyable>("_WindowList", py::no_init)
@@ -495,6 +493,6 @@ ALPHA_EXPOSE_PROLOGUE(2)
 		.def("activate_previous", &EditorWindows::activatePreviousPane)
 		.def("unsplit_all", &EditorWindows::removeInactivePanes);
 
-	py::def("active_window", &activeWindow);
+	py::def("selected_window", &selectedWindow);
 	py::def("windows", &windows);
 ALPHA_EXPOSE_EPILOGUE()

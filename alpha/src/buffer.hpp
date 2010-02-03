@@ -1,7 +1,7 @@
 /**
  * @file buffer.hpp
  * @author exeal
- * @date 2003-2009 (was AlphaDoc.h and BufferList.h)
+ * @date 2003-2010 (was AlphaDoc.h and BufferList.h)
  */
 
 #ifndef ALPHA_BUFFER_HPP
@@ -84,7 +84,7 @@ namespace alpha {
 		bool saveAll(bool addToMRU = true);
 		void updateContextMenu();
 		// notification
-		void activeBufferChanged();
+		void bufferSelectionChanged();
 	private:
 		BufferList();
 		Buffer& getConcreteDocument(ascension::kernel::Document& document) const;

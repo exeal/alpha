@@ -34,7 +34,7 @@ namespace {
 /// @see Dialog#onInitDialog
 void GotoLineDialog::onInitDialog(HWND, bool&) {
 	Alpha& app = Alpha::instance();
-	const Buffer& buffer = EditorWindows::instance().activeBuffer();
+	const Buffer& buffer = EditorWindows::instance().selectedBuffer();
 	const EditorView& viewer = EditorWindows::instance().activePane().visibleView();
 	const length_t lineOffset = viewer.verticalRulerConfiguration().lineNumbers.startValue;
 	const wstring s = app.loadMessage(MSG_DIALOG__LINE_NUMBER_RANGE, MARGS
