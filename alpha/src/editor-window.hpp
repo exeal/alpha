@@ -1,7 +1,7 @@
 /**
  * @file editor-window.hpp
  * @author exeal
- * @date 2009
+ * @date 2009-2010
  */
 
 #ifndef ALPHA_EDITOR_WINDOW_HPP
@@ -94,10 +94,10 @@ namespace alpha {
 		EditorView* lastVisibleViewer_;
 	};
 
-	class IActiveBufferListener {
+	class IBufferSelectionListener {
 	private:
 		/// The active buffer was switched.
-		virtual void activeBufferSwitched() = 0;
+		virtual void bufferSelectionChanged() = 0;
 		friend class EditorWindows;
 	};
 
@@ -105,14 +105,14 @@ namespace alpha {
 	class EditorWindows : public manah::win32::ui::Splitter<EditorWindow> {
 	public:
 		EditorWindows();
-		Buffer& activeBuffer();
-		const Buffer& activeBuffer() const;
-		void addActiveBufferListener(IActiveBufferListener& listener);
+		void addBufferSelectionListener(IBufferSelectionListener& listener);
 		EditorWindow& at(std::size_t index);
 		const EditorWindow& at(std::size_t index) const;
 		bool contains(const EditorWindow& pane) const;
 		static EditorWindows& instance();
-		void removeActiveBufferListener(IActiveBufferListener& listener);
+		void removeActiveBufferListener(IBufferSelectionListener& listener);
+		Buffer& selectedBuffer();
+		const Buffer& selectedBuffer() const;
 		boost::python::object self() const;
 	private:
 		void paneInserted(EditorWindow& pane);
@@ -120,7 +120,7 @@ namespace alpha {
 	private:
 		mutable boost::python::object self_;
 		std::vector<EditorWindow*> windows_;
-		std::list<IActiveBufferListener*> activeBufferListeners_;
+		std::list<IBufferSelectionListener*> bufferSelectionListeners_;
 	};
 
 

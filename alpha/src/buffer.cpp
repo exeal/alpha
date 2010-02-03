@@ -135,42 +135,6 @@ BufferList::~BufferList() {
 	}
 }
 
-void BufferList::activeBufferChanged() {
-	const EditorWindow& window = EditorWindows::instance().activePane();
-	const Buffer& buffer = window.visibleBuffer();
-	EditorView& viewer = window.visibleView();
-
-	// update the default active window
-	for(EditorWindows::Iterator i(EditorWindows::instance().enumeratePanes()); !i.done(); i.next()) {
-		if(&i.get().visibleView() == &viewer) {
-			EditorWindows::instance().setDefaultActivePane(i.get());
-			break;
-		}
-	}
-
-	// title bar
-	updateTitleBar();
-
-	// buffer bar button
-	const size_t button = find(buffer);
-	if(button != -1)
-		bufferBar_.checkButton(static_cast<int>(button));
-
-	// scroll the buffer bar if the button was hidden
-	if(bufferBarPager_.isVisible()) {
-		const int pagerPosition = bufferBarPager_.getPosition();
-		RECT buttonRect, pagerRect;
-		bufferBar_.getItemRect(static_cast<int>(button), buttonRect);
-		bufferBarPager_.getClientRect(pagerRect);
-		if(buttonRect.left < pagerPosition)
-			bufferBarPager_.setPosition(buttonRect.left);
-		else if(buttonRect.right > pagerPosition + pagerRect.right)
-			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
-	}
-
-	Alpha::instance().statusBar().updateAll();
-}
-
 /**
  * Opens the new empty buffer. This method does not activate the new buffer.
  * @param name the name of the buffer
@@ -266,6 +230,42 @@ Buffer* BufferList::addNewDialog(const ascension::String& name /* = L"" */) {
 	return &addNew(name, dlg.encoding(), dlg.newline());
 }
 
+void BufferList::bufferSelectionChanged() {
+	const EditorWindow& window = EditorWindows::instance().activePane();
+	const Buffer& buffer = window.visibleBuffer();
+	EditorView& viewer = window.visibleView();
+
+	// update the default selected window
+	for(EditorWindows::Iterator i(EditorWindows::instance().enumeratePanes()); !i.done(); i.next()) {
+		if(&i.get().visibleView() == &viewer) {
+			EditorWindows::instance().setDefaultActivePane(i.get());
+			break;
+		}
+	}
+
+	// title bar
+	updateTitleBar();
+
+	// buffer bar button
+	const size_t button = find(buffer);
+	if(button != -1)
+		bufferBar_.checkButton(static_cast<int>(button));
+
+	// scroll the buffer bar if the button was hidden
+	if(bufferBarPager_.isVisible()) {
+		const int pagerPosition = bufferBarPager_.getPosition();
+		RECT buttonRect, pagerRect;
+		bufferBar_.getItemRect(static_cast<int>(button), buttonRect);
+		bufferBarPager_.getClientRect(pagerRect);
+		if(buttonRect.left < pagerPosition)
+			bufferBarPager_.setPosition(buttonRect.left);
+		else if(buttonRect.right > pagerPosition + pagerRect.right)
+			bufferBarPager_.setPosition(buttonRect.right - pagerRect.right);
+	}
+
+	Alpha::instance().statusBar().updateAll();
+}
+
 /**
  * Closes the specified buffer.
  * @param buffer the buffer to close
@@ -293,7 +293,7 @@ void BufferList::close(Buffer& buffer) {
 		}
 		resetResources();
 		recalculateBufferBarSize();
-		activeBufferChanged();
+		bufferSelectionChanged();
 	} else {	// the buffer is last one
 		buffer.textFile().unbind();
 		buffer.resetContent();
@@ -482,7 +482,7 @@ LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 		}
 	}
 
-	// drag -> switch the active buffer
+	// drag -> switch the selected buffer
 	else if(nmhdr.hdr.code == TBN_GETOBJECT) {
 		::NMOBJECTNOTIFY& n = *reinterpret_cast<::NMOBJECTNOTIFY*>(&nmhdr.hdr);
 		if(n.iItem != -1) {
@@ -634,7 +634,7 @@ py::object BufferList::open(const basic_string<WCHAR>& fileName,
 		return py::object();
 	}
 
-	Buffer* buffer = &EditorWindows::instance().activeBuffer();
+	Buffer* buffer = &EditorWindows::instance().selectedBuffer();
 	if(buffer->isModified() || buffer->textFile().isBoundToFile()) {	// open in the new container
 		if(e::Encoder::supports(encoding))
 			buffer = &addNew(L"", encoding);
@@ -1020,7 +1020,7 @@ void BufferList::updateContextMenu() {
 void BufferList::updateTitleBar() {
 	win32::ui::Window& mainWindow = Alpha::instance().getMainWindow();
 	if(mainWindow.isWindow()) {
-		// show the display name of the active buffer and application credit
+		// show the display name of the selected buffer and application credit
 		static wstring titleCache;
 		wstring title(getDisplayName(EditorWindows::instance().activePane().visibleBuffer()));
 		if(title != titleCache) {
@@ -1070,7 +1070,7 @@ namespace {
 		auto_ptr<k::DocumentPartitioner> impl_;
 	};
 
-	py::object activeBuffer() {return EditorWindows::instance().activeBuffer().self();}
+	py::object selectedBuffer() {return EditorWindows::instance().selectedBuffer().self();}
 //	Direction attrOfDirection
 	void bindBufferToFile(Buffer& buffer, const wstring& fileName) {buffer.textFile().bind(fileName);}
 	py::object bufferAt(const BufferList& buffers, py::ssize_t at) {
@@ -1086,8 +1086,8 @@ namespace {
 	void closeBuffer(Buffer& buffer) {BufferList::instance().close(buffer);}
 	string encodingOfBuffer(const Buffer& buffer) {return buffer.textFile().encoding();}
 	k::Position insertString(Buffer& buffer, const k::Position& at, const a::String& text) {k::Position temp; k::insert(buffer, at, text, &temp); return temp;}
-	bool isBufferActive(const Buffer& buffer) {return &buffer == &EditorWindows::instance().activeBuffer();}
 	bool isBufferBoundToFile(const Buffer& buffer) {return buffer.textFile().isBoundToFile();}
+	bool isBufferSelected(const Buffer& buffer) {return &buffer == &EditorWindows::instance().selectedBuffer();}
 	wstring locationOfBuffer(const Buffer& buffer) {return buffer.textFile().location();}
 	void lockFile(Buffer& buffer, f::TextFileDocumentInput::LockType type, bool onlyAsEditing) {
 		f::TextFileDocumentInput::LockMode mode; mode.type = type; mode.onlyAsEditing = onlyAsEditing; buffer.textFile().lockFile(mode);}
@@ -1218,11 +1218,11 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("insert", &insertString)
 		.def("insert_file_contents", &f::insertFileContents)
 		.def("insert_undo_boundary", &Buffer::insertUndoBoundary)
-		.def("is_active", &isBufferActive)
 		.def("is_bound_to_file", &isBufferBoundToFile)
 		.def("is_compound_changing", &Buffer::isCompoundChanging)
 		.def("is_modified", &Buffer::isModified)
 		.def("is_narrowed", &Buffer::isNarrowed)
+		.def("is_selected", &isBufferSelected)
 		.def("length", &Buffer::length, py::arg("newline") = NLF_RAW_VALUE)
 		.def("line", &Buffer::line, py::return_value_policy<py::copy_const_reference>())
 		.def("lock_file", &lockFile)
@@ -1265,8 +1265,8 @@ ALPHA_EXPOSE_PROLOGUE(1)
 		.def("save_some_dialog", &BufferList::saveSomeDialog, py::arg("buffers_to_save") = py::tuple());
 	py::class_<k::DocumentPartitioner, boost::noncopyable>("_DocumentPartitioner", py::no_init);
 
-	py::def("active_buffer", &activeBuffer);
 	py::def("buffers", &buffers);
+	py::def("selected_buffer", &selectedBuffer);
 
 	interpreter.installException("UnmappableCharacterError", py::object(py::borrowed(PyExc_IOError)));
 	interpreter.installException("MalformedInputError", py::object(py::borrowed(PyExc_IOError)));
