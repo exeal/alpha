@@ -168,7 +168,7 @@ Colors Presentation::getLineColor(length_t line) const {
 		throw BadPositionException(Position(line, 0));
 	ILineColorDirector::Priority highestPriority = 0, p;
 	Colors result, c;
-	for(list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::const_iterator
+	for(list<tr1::shared_ptr<ILineColorDirector> >::const_iterator
 			i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
 		p = (*i)->queryLineColor(line, c);
 		if(p > highestPriority) {
@@ -227,7 +227,7 @@ void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool de
  * @param newDirector the director. @c null to unregister
  * @param delegateOwnership set @c true to transfer the ownership of @a newDirector to the callee
  */
-void Presentation::setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) /*throw()*/ {
+void Presentation::setLineStyleDirector(tr1::shared_ptr<ILineStyleDirector> newDirector) /*throw()*/ {
 	lineStyleDirector_ = newDirector;
 }
 
@@ -258,7 +258,7 @@ auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentat
  * @param presentation the presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(this));	// TODO: danger call (may delete this).
+	presentation_.setLineStyleDirector(tr1::shared_ptr<ILineStyleDirector>(this));	// TODO: danger call (may delete this).
 	presentation_.document().addPartitioningListener(*this);
 }
 

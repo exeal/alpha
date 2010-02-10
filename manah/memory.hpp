@@ -1,14 +1,13 @@
 // memory.hpp
-// (c) 2005-2008 exeal
+// (c) 2005-2010 exeal
 
 #ifndef MANAH_MEMORY_HPP
 #define MANAH_MEMORY_HPP
 
 // This file contains following classes
-//	AutoBuffer
-//	SharedPointer
-//	MemoryPool
-//	FastArenaObject
+// - AutoBuffer
+// - MemoryPool
+// - FastArenaObject
 
 #include "object.hpp"	// MANAH_NONCOPYABLE_TAG
 #include <cassert>
@@ -139,59 +138,6 @@ namespace manah {
 
 	template<typename T> std::auto_ptr<MemoryPool> FastArenaObject<T>::pool_;
 
-
-	// SharedPointer ////////////////////////////////////////////////////////
-
-	namespace internal {
-		class SharedPointerRC : public FastArenaObject<SharedPointerRC> {
-			MANAH_NONCOPYABLE_TAG(SharedPointerRC);
-		public:
-			SharedPointerRC() /*throw()*/ : c_(1) {}
-			~SharedPointerRC() /*throw()*/ {assert(c_ == 0);}
-			void addReference() {++c_;}
-			ulong release() /*throw()*/ {return --c_;}
-		private:
-			ulong c_;
-		};
-	}
-
-	// reference-counted smart pointer (from boost.shared_ptr)
-	template<typename T> /* final */ class SharedPointer {
-	public:
-		//types
-		typedef T ValueType;
-		typedef T* Pointer;
-		typedef T& Reference;
-		// constructors
-		SharedPointer() /*throw()*/ : pointee_(0), rc_(0) {}
-		template<typename U> explicit SharedPointer(U* p) : pointee_(p), rc_((p != 0) ? new internal::SharedPointerRC : 0) {}
-		SharedPointer(const SharedPointer& rhs) : pointee_(rhs.pointee_), rc_(rhs.rc_) {if(rc_ != 0) rc_->addReference();}
-		template<typename U> SharedPointer(const SharedPointer<U>& rhs) : pointee_(rhs.pointee_), rc_(rhs.rc_) {if(rc_ != 0) rc_->addReference();}
-		~SharedPointer() {if(rc_ != 0 && rc_->release() == 0) {delete pointee_; delete rc_;}}
-		// operators
-		template<typename U> SharedPointer& operator=(const SharedPointer<U>& rhs) {
-			if(pointee_ != rhs.pointee_) {
-				reset();
-				pointee_ = rhs.pointee_;
-				if((rc_ = rhs.rc_) != 0)
-					rc_->addReference();
-			}
-			return *this;
-		}
-		SharedPointer& operator=(const SharedPointer& rhs) {return operator=<ValueType>(rhs);}
-		Reference operator*() const {assert(pointee_ != 0); return *pointee_;}
-		Pointer operator->() const {assert(pointee_ != 0); return pointee_;}
-		// methods
-		Pointer get() const /*throw()*/ {return pointee_;}
-		void reset() /*throw()*/ {SharedPointer().swap(*this);}
-		template<typename U> void reset(U* p) {SharedPointer(p).swap(*this);}
-		void swap(SharedPointer& rhs) /*throw()*/ {std::swap(pointee_, rhs.pointee_); std::swap(rc_, rhs.rc_);}
-	private:
-		T* pointee_;
-		internal::SharedPointerRC* rc_;
-		template<typename U> friend class SharedPointer;
-	};
-
 } // namespace manah
 
-#endif /* MANAH_MEMORY_HPP */
+#endif // !MANAH_MEMORY_HPP

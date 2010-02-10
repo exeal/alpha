@@ -2,7 +2,7 @@
  * @file common.hpp
  * @brief Common header file used by Ascension library.
  * @author exeal
- * @date 2004-2009
+ * @date 2004-2010
  */
 
 #ifndef ASCENSION_COMMON_HPP
@@ -71,6 +71,16 @@
 #include <stdexcept>
 #include <utility>	// std.pair, std.min, std.max
 #include <new>		// std.bad_alloc, std::nothrow_t, ...
+
+#ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
+#	include ASCENSION_CUSTOM_SHARED_PTR_HPP
+#elif defined(ASCENSION_MSVC) && _MSC_VER >= 1500
+#	include <memory>
+#elif defined(ASCENSION_GCC) && __GNUC__ >= 4
+#	include <tr1/memory>
+#else
+#	include <boost/tr1/memory.hpp>
+#endif
 
 #if !defined(ASCENSION_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
 #	include <cinttypes>

@@ -2789,7 +2789,7 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
  * @param color the initial color
  */
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret, const Colors& color) : caret_(&caret), color_(color) {
-	ASCENSION_SHARED_POINTER<ILineColorDirector> temp(this);
+	tr1::shared_ptr<ILineColorDirector> temp(this);
 	caret.textViewer().presentation().addLineColorDirector(temp);
 	caret.addListener(*this);
 	caret.addStateListener(*this);
