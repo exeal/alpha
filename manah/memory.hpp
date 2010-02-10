@@ -21,9 +21,7 @@
 
 namespace manah {
 
-	// AutoBuffer ///////////////////////////////////////////////////////////
-
-	// std.auto_ptr for arrays
+	// std.auto_ptr for arrays.
 	template<typename T> class AutoBuffer {
 	public:
 		// type
@@ -46,17 +44,18 @@ namespace manah {
 		ElementType* buffer_;
 	};
 
-
-	// MemoryPool ///////////////////////////////////////////////////////////
-
-	// efficient memory pool implementation (from MemoryPool of Efficient C++).
-	// template paramater of Allocator always bound to char
+	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
 	class MemoryPool {
 		MANAH_NONCOPYABLE_TAG(MemoryPool);
 	public:
-		MemoryPool(std::size_t chunkSize) : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {expandChunks();}
+		MemoryPool(std::size_t chunkSize) /*throw()*/ : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {}
 		~MemoryPool() /*throw()*/ {release();}
 		void* allocate() {
+			if(void* const chunk = allocate(std::nothrow))
+				return chunk;
+			throw std::bad_alloc();
+		}
+		void* allocate(const std::nothrow_t&) {
 			if(chunks_ == 0)
 				expandChunks();
 			if(Chunk* head = chunks_) {
@@ -78,7 +77,7 @@ namespace manah {
 			}
 		}
 	private:
-		void expandChunks() {
+		void expandChunks() /*throw()*/ {
 			assert(chunks_ == 0);
 			Chunk* p = static_cast<Chunk*>(::operator new(chunkSize_, std::nothrow));
 			if(p == 0)
@@ -110,9 +109,7 @@ namespace manah {
 		Chunk* chunks_;
 	};
 
-
-	// FastArenaObject //////////////////////////////////////////////////////
-
+	// Base class for types whose new and delete are fast.
 	template<typename T> /* final */ class FastArenaObject {
 	public:
 		static void* operator new(std::size_t bytes) /*throw(std::bad_alloc)*/ {
@@ -128,7 +125,7 @@ namespace manah {
 		static void* operator new(std::size_t, const std::nothrow_t&) /*throw()*/ {
 			if(pool_.get() == 0)
 				pool_.reset(new(std::nothrow) MemoryPool(sizeof(T)));
-			return (pool_.get() != 0) ? pool_->allocate() : 0;
+			return (pool_.get() != 0) ? pool_->allocate(std::nothrow) : 0;
 		}
 		static void* operator new(std::size_t bytes, void* p) /*throw()*/ {return ::operator new(bytes, p);}
 		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != 0) pool_->deallocate(p);}
