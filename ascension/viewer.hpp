@@ -506,7 +506,7 @@ namespace ascension {
 			void removeDisplaySizeListener(IDisplaySizeListener& listener);
 			void removeInputStatusListener(ITextViewerInputStatusListener& listener);
 			void removeViewportListener(IViewportListener& listener);
-			void setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) /*throw()*/;
+			void setCaretShapeProvider(std::tr1::shared_ptr<ICaretShapeProvider> shaper) /*throw()*/;
 			void setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
 			const Configuration& configuration() const /*throw()*/;
@@ -848,7 +848,7 @@ namespace ascension {
 
 			// a bitmap for caret presentation
 			struct CaretShape {
-				ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper;
+				std::tr1::shared_ptr<ICaretShapeProvider> shaper;
 				layout::Orientation orientation;
 				int width;
 				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
@@ -1071,7 +1071,7 @@ inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
  * Sets the caret shape provider.
  * @param shaper the new caret shaper
  */
-inline void TextViewer::setCaretShapeProvider(ASCENSION_SHARED_POINTER<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
+inline void TextViewer::setCaretShapeProvider(std::tr1::shared_ptr<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
 inline layout::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}

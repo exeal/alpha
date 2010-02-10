@@ -1,8 +1,8 @@
 /**
- *	@file config.hpp
- *	@brief Configure Ascension build settings using this file.
- *	@author exeal
- *	@date 2005-2008
+ * @file config.hpp
+ * @brief Configure Ascension build settings using this file.
+ * @author exeal
+ * @date 2005-2010
  */
 
 #ifndef ASCENSION_CONFIG_HPP
@@ -10,12 +10,12 @@
 
 
 /**
- * @def ASCENSION_SHARED_POINTER
- * Reference-counted smart pointer template class. Default is @c manah#SharedPointer. You can use
- * other class such as @c boost#shared_ptr.
+ * @def ASCENSION_CUSTOM_SHARED_PTR_HPP
+ * User-provided header file path.
+ * Ascension uses @c std#tr1#shared_ptr class and includes the header file provided by compiler or
+ * Boost.SharedPtr. If you don't have the neither, you can specify your own shared_ptr.hpp file.
  */
-#define ASCENSION_SHARED_POINTER manah::SharedPointer
-//#define ASCENSION_SHARED_POINTER boost::shared_ptr
+// #define ASCENSION_CUSTOM_BOOST_SHARED_PTR_HPP
 
 
 // about ascension.kernel ///////////////////////////////////////////////////

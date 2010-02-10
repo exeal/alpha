@@ -266,10 +266,10 @@ namespace ascension {
 			const LineStyle& getLineStyle(length_t line, bool& delegatedOwnership) const;
 			void removeTextViewerListListener(ITextViewerListListener& listener);
 			// strategies
-			void addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director);
+			void addLineColorDirector(std::tr1::shared_ptr<ILineColorDirector> director);
 			void removeLineColorDirector(ILineColorDirector& director) /*throw()*/;
 			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
-			void setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector> newDirector) /*throw()*/;
+			void setLineStyleDirector(std::tr1::shared_ptr<ILineStyleDirector> newDirector) /*throw()*/;
 			// TextViewer enumeration
 			TextViewerIterator firstTextViewer() /*throw()*/;
 			TextViewerConstIterator firstTextViewer() const /*throw()*/;
@@ -287,8 +287,8 @@ namespace ascension {
 		private:
 			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
-			ASCENSION_SHARED_POINTER<ILineStyleDirector> lineStyleDirector_;
-			std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> > lineColorDirectors_;
+			std::tr1::shared_ptr<ILineStyleDirector> lineStyleDirector_;
+			std::list<std::tr1::shared_ptr<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
 			ascension::internal::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
@@ -355,7 +355,7 @@ namespace ascension {
 		 * @param director the director to register
 		 * @throw NullPointerException @a director is @c null
 		 */
-		inline void Presentation::addLineColorDirector(ASCENSION_SHARED_POINTER<ILineColorDirector> director) {
+		inline void Presentation::addLineColorDirector(std::tr1::shared_ptr<ILineColorDirector> director) {
 			if(director.get() == 0) throw NullPointerException("director"); lineColorDirectors_.push_back(director);}
 
 		/**
@@ -373,7 +373,7 @@ namespace ascension {
 		 * @param director the director to remove
 		 */
 		inline void Presentation::removeLineColorDirector(ILineColorDirector& director) /*throw()*/ {
-			for(std::list<ASCENSION_SHARED_POINTER<ILineColorDirector> >::iterator
+			for(std::list<std::tr1::shared_ptr<ILineColorDirector> >::iterator
 					i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
 				if(i->get() == &director) {lineColorDirectors_.erase(i); return;}
 			}
