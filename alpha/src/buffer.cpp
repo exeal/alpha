@@ -1034,10 +1034,31 @@ void BufferList::updateTitleBar() {
 
 
 namespace {
-	class RegexTransitionRuleAdapter : public a::rules::RegexTransitionRule {
+	class TransitionRuleAdapter {
 	public:
-		RegexTransitionRuleAdapter(k::ContentType contentType, k::ContentType destination, const wstring& pattern, bool caseSensitive) :
-			a::rules::RegexTransitionRule(contentType, destination, a::regex::Pattern::compile(pattern, caseSensitive ? 0 : a::regex::Pattern::CASE_INSENSITIVE)) {
+		explicit TransitionRuleAdapter(auto_ptr<a::rules::TransitionRule> impl) : impl_(impl.release()) {}
+		k::ContentType contentType() const {return impl_->contentType();}
+		k::ContentType destination() const {return impl_->destination();}
+		tr1::shared_ptr<a::rules::TransitionRule> impl() const {return impl_;}
+	private:
+		tr1::shared_ptr<a::rules::TransitionRule> impl_;
+	};
+
+	class LiteralTransitionRuleAdapter : public TransitionRuleAdapter {
+	public:
+		LiteralTransitionRuleAdapter(k::ContentType contentType, k::ContentType destination,
+			const wstring& pattern, a::Char escapeCharacter, bool caseSensitive)
+			: TransitionRuleAdapter(auto_ptr<a::rules::TransitionRule>(
+				new a::rules::LiteralTransitionRule(contentType, destination, pattern, escapeCharacter, caseSensitive))) {}
+	};
+
+	class RegexTransitionRuleAdapter : public TransitionRuleAdapter {
+	public:
+		RegexTransitionRuleAdapter(k::ContentType contentType,
+			k::ContentType destination, const wstring& pattern, bool caseSensitive)
+			: TransitionRuleAdapter(auto_ptr<a::rules::TransitionRule>(
+				new a::rules::RegexTransitionRule(contentType, destination,
+					a::regex::Pattern::compile(pattern, caseSensitive ? 0 : a::regex::Pattern::CASE_INSENSITIVE)))) {
 		}
 	};
 
@@ -1051,9 +1072,12 @@ namespace {
 	public:
 		explicit LexicalPartitionerProxy(py::object rules) {
 			try {
-				auto_ptr<a::rules::LexicalPartitioner> temp(new a::rules::LexicalPartitioner());
-				temp->setRules(py::stl_input_iterator<a::rules::TransitionRule*>(rules), py::stl_input_iterator<a::rules::TransitionRule*>());
-				impl_.reset(temp.release());
+				list<tr1::shared_ptr<a::rules::TransitionRule> > l;
+				for(py::stl_input_iterator<TransitionRuleAdapter> i(rules), e; i != e; ++i)
+					l.push_back(i->impl());
+				auto_ptr<a::rules::LexicalPartitioner> partitioner(new a::rules::LexicalPartitioner());
+				partitioner->setRules(l.begin(), l.end());
+				impl_.reset(partitioner.release());
 			} catch(bad_alloc&) {
 				::PyErr_NoMemory();
 				py::throw_error_already_set();
@@ -1278,14 +1302,14 @@ ALPHA_EXPOSE_PROLOGUE(1)
 	py::register_exception_translator<f::IOException>(&translateIOException);
 
 	py::scope ruleModule(interpreter.module("rules"));
-	py::class_<a::rules::TransitionRule, boost::noncopyable>("_TransitionRule", py::no_init)
-		.add_property("content_type", &a::rules::TransitionRule::contentType)
-		.add_property("destination", &a::rules::TransitionRule::destination);
-	py::class_<a::rules::LiteralTransitionRule, py::bases<a::rules::TransitionRule> >(
+	py::class_<TransitionRuleAdapter, boost::noncopyable>("_TransitionRule", py::no_init)
+		.add_property("content_type", &TransitionRuleAdapter::contentType)
+		.add_property("destination", &TransitionRuleAdapter::destination);
+	py::class_<LiteralTransitionRuleAdapter, py::bases<TransitionRuleAdapter> >(
 		"LiteralTransitionRule", py::init<k::ContentType, k::ContentType, wstring, a::CodePoint, bool>((
 			py::arg("content_type"), py::arg("destination"), py::arg("pattern"),
 			py::arg("escape_character") = static_cast<long>(a::NONCHARACTER), py::arg("case_sensitive") = true)));
-	py::class_<RegexTransitionRuleAdapter, py::bases<a::rules::TransitionRule> >(
+	py::class_<RegexTransitionRuleAdapter, py::bases<TransitionRuleAdapter> >(
 		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
 	py::class_<DocumentPartitionerProxy, boost::noncopyable>("_DocumentPartitioner", py::no_init);
 	py::class_<LexicalPartitionerProxy, py::bases<DocumentPartitionerProxy>,
