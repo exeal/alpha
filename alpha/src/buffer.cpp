@@ -1310,7 +1310,8 @@ ALPHA_EXPOSE_PROLOGUE(1)
 			py::arg("content_type"), py::arg("destination"), py::arg("pattern"),
 			py::arg("escape_character") = static_cast<long>(a::NONCHARACTER), py::arg("case_sensitive") = true)));
 	py::class_<RegexTransitionRuleAdapter, py::bases<TransitionRuleAdapter> >(
-		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>());
+		"RegexTransitionRule", py::init<k::ContentType, k::ContentType, wstring, bool>((
+			py::arg("content_type"), py::arg("destination"), py::arg("pattern"), py::arg("case_sensitive") = true)));
 	py::class_<DocumentPartitionerProxy, boost::noncopyable>("_DocumentPartitioner", py::no_init);
 	py::class_<LexicalPartitionerProxy, py::bases<DocumentPartitionerProxy>,
 		boost::noncopyable>("LexicalPartitioner", py::init<py::object>());
