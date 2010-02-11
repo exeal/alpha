@@ -17,13 +17,12 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 	if(py::ssize_t n = ::PyUnicode_GetSize(o.ptr())) {
 		static wchar_t s[0x100];
 		const bool large = n > MANAH_COUNTOF(s);
-		manah::AutoBuffer<wchar_t> buffer(large ? new wchar_t[n] : 0);
+		manah::AutoBuffer<wchar_t> buffer(large ? new wchar_t[n + 1] : 0);
 		wchar_t* const p = large ? buffer.get() : s;
 		n = ::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), p, n);
 		if(n == -1)
 			py::throw_error_already_set();
-		p[static_cast<size_t>(n)] = 0;
-		return p;
+		return wstring(p, n);
 	}
 	return wstring();
 }
