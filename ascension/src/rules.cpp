@@ -1417,7 +1417,9 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 /**
  * @fn void ascension::rules::LexicalPartitioner::setRules(InputIterator first, InputIterator last)
  * @brief Sets the new transition rules.
- * @tparam InputIterator input iterator provides transition rules
+ * @tparam InputIterator input iterator provides transition rules. the deference operator should
+ *                       return a value implicitly convertible to a pointer to @c TransitionRule.
+ *                       this method calls @c TransitionRule#clone to copy the values
  * @param first, last the transition rules
  * @throw IllegalStateException this partitioner had already been connected to a document
  */
