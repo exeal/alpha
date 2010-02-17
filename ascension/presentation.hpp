@@ -24,23 +24,29 @@ namespace ascension {
 		/// @c Color provides colors based on RGB values.
 		class Color : public manah::FastArenaObject<Color> {
 		public:
+			/// Creates
 			Color() /*throw()*/ : valid_(false) {}
-			Color(byte red, byte green, byte blue) /*throw()*/ : r_(red << 8), g_(green << 8), b_(blue << 8), valid_(true) {}
+			/// Creates a color value based on RGB values.
+			Color(byte red, byte green, byte blue) /*throw()*/ : red_(red << 8), green_(green << 8), blue_(blue << 8), valid_(true) {}
 #ifdef ASCENSION_WINDOWS
+			/// Creates an object from Win32 @c COLORREF value.
 			static Color fromCOLORREF(COLORREF value) /*throw()*/ {return Color(
 				static_cast<byte>(value & 0xff), static_cast<byte>((value >> 8) & 0xff), static_cast<byte>((value >> 16) & 0xff));}
 			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
 #endif // ASCENSION_WINDOWS
 			/// Returns the blue color component of this color.
-			byte blue() const /*throw()*/ {return b_ >> 8;}
+			byte blue() const /*throw()*/ {return blue_ >> 8;}
 			/// Returns the green color component of this color.
-			byte green() const /*throw()*/ {return g_ >> 8;}
+			byte green() const /*throw()*/ {return green_ >> 8;}
 			/// Returns the red color component of this color.
-			byte red() const /*throw()*/ {return r_ >> 8;}
-			/// Returns @c true if this is valid.
-			bool isValid() const /*throw()*/ {return valid_;}
+			byte red() const /*throw()*/ {return red_ >> 8;}
+			/// Equality operator.
+			bool operator==(const Color& other) const /*throw()*/ {return valid_ == other.valid_
+				&& (!valid_ || (red() == other.red() && green() == other.green() && blue() == other.blue()));}
+			/// Inequality operator.
+			bool operator!=(const Color& other) const /*throw()*/ {return !(*this == other);}
 		private:
-			ushort r_, g_, b_;
+			ushort red_, green_, blue_;
 			bool valid_;
 		};
 

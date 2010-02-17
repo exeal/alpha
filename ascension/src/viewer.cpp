@@ -2,7 +2,7 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 (was EditView.cpp and EditViewWindowMessages.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  * @see user-input.cpp
  */
 
@@ -1285,7 +1285,7 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 
 	// draw horizontal margins
 	const RECT margins = textAreaMargins();
-	const COLORREF marginColor = configuration_.color.background.isValid() ?
+	const COLORREF marginColor = (configuration_.color.background != Color()) ?
 		configuration_.color.background.asCOLORREF() : ::GetSysColor(COLOR_WINDOW);
 	if(margins.left > 0) {
 		const int vrWidth = (verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
