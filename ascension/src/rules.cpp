@@ -1175,7 +1175,7 @@ auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
 length_t RegexTransitionRule::matches(const String& line, length_t column) const {
 	try {
 		typedef UTF16To32Iterator<String::const_iterator> I;
-		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.begin())));
+		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
 		matcher->region(I(line.begin(), line.end(), line.begin() + column), matcher->regionEnd());
 		matcher->useAnchoringBounds(false).useTransparentBounds(true);
 		return matcher->lookingAt() ? max(matcher->end().tell() - matcher->start().tell(), 1) : 0;
