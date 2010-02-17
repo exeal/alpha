@@ -2,7 +2,7 @@
  * @file layout.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include <ascension/layout.hpp>
@@ -33,7 +33,7 @@ namespace {
 	public:
 		SystemColors() /*throw()*/ {update();}
 		COLORREF get(int index) const {assert(index >= 0 && index < MANAH_COUNTOF(c_)); return c_[index];}
-		COLORREF get(const Color& color, int index) const {return color.isValid() ? color.asCOLORREF() : get(index);}
+		COLORREF get(const Color& color, int index) const {return (color != Color()) ? color.asCOLORREF() : get(index);}
 		void update() /*throw()*/ {for(int i = 0; i < MANAH_COUNTOF(c_); ++i) c_[i] = ::GetSysColor(i);}
 	private:
 		COLORREF c_[128];
@@ -323,7 +323,7 @@ namespace {
 			if(getDecorationLineMetrics(dc.get(), &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
 				if(style.underlineStyle != NO_UNDERLINE) {
-					HPEN oldPen = dc.selectObject(createPen(style.underlineColor.isValid() ?
+					HPEN oldPen = dc.selectObject(createPen((style.underlineColor != Color()) ?
 						style.underlineColor.asCOLORREF() : foregroundColor, underlineThickness, style.underlineStyle));
 					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
 					dc.moveTo(x, underlineY);
@@ -344,7 +344,7 @@ namespace {
 		// draw border
 		if(style.borderStyle != NO_BORDER) {
 			HPEN oldPen = dc.selectObject(createPen(
-				style.borderColor.isValid() ? style.borderColor.asCOLORREF() : foregroundColor, 1, style.borderStyle));
+				(style.borderColor != Color()) ? style.borderColor.asCOLORREF() : foregroundColor, 1, style.borderStyle));
 			HBRUSH oldBrush = dc.selectObject(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)));
 			dc.rectangle(x, y, x + width, y + height);
 			::DeleteObject(dc.selectObject(oldPen));
@@ -723,7 +723,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 				++firstRun;
 				startX = x + run.totalWidth();
 			} else {
-				const COLORREF bgColor = lineColor.background.isValid() ?
+				const COLORREF bgColor = (lineColor.background != Color()) ?
 					marginColor : systemColors.get(run.style.color.background, COLOR_WINDOW);
 				if(selection == 0 || run.column >= selEnd || run.column + run.length() <= selStart)
 					// no selection in this run
@@ -768,7 +768,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		dc.setBkMode(TRANSPARENT);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			Run& run = *runs_[i];
-			const COLORREF foregroundColor = lineColor.foreground.isValid() ?
+			const COLORREF foregroundColor = (lineColor.foreground != Color()) ?
 				lineColor.foreground.asCOLORREF() : systemColors.get(run.style.color.foreground, COLOR_WINDOWTEXT);
 			if(line[run.column] != L'\t') {
 				if(selection == 0 || run.overhangs() || !(run.column >= selStart && run.column + run.length() <= selEnd)) {
@@ -2023,9 +2023,9 @@ void LineLayout::wrap() /*throw()*/ {
 namespace {
 	inline Colors fallbackSelectionColors(const Colors& source, bool focused) {
 		return Colors(
-			source.foreground.isValid() ? source.foreground :
+			(source.foreground != Color()) ? source.foreground :
 				Color::fromCOLORREF(::GetSysColor(focused ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
-			source.background.isValid() ? source.background :
+			(source.background != Color()) ? source.background :
 				Color::fromCOLORREF(::GetSysColor(focused ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
 	}
 }
