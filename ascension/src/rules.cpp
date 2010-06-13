@@ -673,18 +673,20 @@ URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator,
 
 // Token ////////////////////////////////////////////////////////////////////
 
-const Token::ID Token::DEFAULT_TOKEN = 0;
-const Token::ID Token::UNCALCULATED = static_cast<Token::ID>(-1);
+const Token::Identifier Token::UNCALCULATED = static_cast<Token::Identifier>(-1);
 
 
 // Rule /////////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.
- * @param tokenID the identifier of the token which will be returned by the rule. can be
- *                @c Token#NULL_ID
+ * @param tokenID the identifier of the token which will be returned by the rule. can't be
+ *                @c Token#UNCALCULATED which is for internal use
+ * @throw std#invalid_argument @a tokenID is invalid
  */
-Rule::Rule(Token::ID tokenID) /*throw()*/ : id_(tokenID) {
+Rule::Rule(Token::Identifier tokenID) : id_(tokenID) {
+	if(tokenID == Token::UNCALCULATED)
+		throw invalid_argument("tokenID");
 }
 
 
@@ -699,7 +701,7 @@ Rule::Rule(Token::ID tokenID) /*throw()*/ : id_(tokenID) {
  * @param caseSensitive set @c false to enable caseless match
  * @throw std#invalid_argument @a startSequence is empty
  */
-RegionRule::RegionRule(Token::ID id, const String& startSequence, const String& endSequence,
+RegionRule::RegionRule(Token::Identifier id, const String& startSequence, const String& endSequence,
 		Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) : Rule(id),
 		startSequence_(startSequence), endSequence_(endSequence), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 	if(startSequence.empty())
@@ -740,7 +742,7 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
  * Constructor.
  * @param id the identifier of the token which will be returned by the rule
  */
-NumberRule::NumberRule(Token::ID id) /*throw()*/ : Rule(id) {
+NumberRule::NumberRule(Token::Identifier id) /*throw()*/ : Rule(id) {
 }
 
 /// @see Rule#parse
@@ -817,7 +819,7 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
  * @param id the identifier of the token which will be returned by the rule
  * @param uriDetector the URI detector
  */
-URIRule::URIRule(Token::ID id, const URIDetector& uriDetector,
+URIRule::URIRule(Token::Identifier id, const URIDetector& uriDetector,
 		bool delegateOwnership) /*throw()*/ : Rule(id), uriDetector_(&uriDetector, delegateOwnership) {
 }
 
@@ -847,7 +849,7 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt;= @a last
  */
-WordRule::WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id) {
+WordRule::WordRule(Token::Identifier id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id) {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -867,7 +869,7 @@ WordRule::WordRule(Token::ID id, const String* first, const String* last, bool c
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
  */
-WordRule::WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id) {
+WordRule::WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id) {
 	if(first == 0)
 		throw NullPointerException("first");
 	if(last == 0)
@@ -917,7 +919,7 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
  * @param pattern the compiled regular expression
  * @throw regex#PatternSyntaxException the specified pattern is invalid
  */
-RegexRule::RegexRule(Token::ID id, auto_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(pattern) {
+RegexRule::RegexRule(Token::Identifier id, auto_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(pattern) {
 }
 
 /// @see Rule#parse
@@ -1482,50 +1484,17 @@ inline void LexicalPartitioner::verify() const {
 
 /**
  * Constructor.
- * @param document the document
+ * @param presentation the presentation which gives the document and default text run style
  * @param tokenScanner the token scanner to use for tokenization
- * @param styles token identifier to its text style map. this must include a element has identifier
- *               of @c Token#DEFAULT_TOKEN.
- * @throw std#invalid_argument @a styles does not include @c Token#DEFAULT_TOKEN
+ * @param styles token identifier to its text style map
+ * @param defaultStyle the style for the regions out of tokens. can be @c null
+ * @throw NullPointerException @a tokenScanner is @c null
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
-		const Document& document, auto_ptr<ITokenScanner> tokenScanner, const map<Token::ID, const TextStyle>& styles)
-		: document_(document), tokenScanner_(tokenScanner), styles_(styles) {
-	if(styles.find(Token::DEFAULT_TOKEN) == styles.end())
-		throw invalid_argument("the given style map does not include Token.DEFAULT_TOKEN.");
-}
-
-/// @see presentation#IPartitionPresentationReconstructor#getPresentation
-auto_ptr<LineStyle> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
-	list<StyledText> result;
-	Position lastTokenEnd = region.beginning();	// the end of the last token
-	tokenScanner_->parse(document_, region);
-	while(!tokenScanner_->isDone()) {
-		auto_ptr<Token> token(tokenScanner_->nextToken());
-		if(token.get() == 0)
-			break;
-		map<Token::ID, const TextStyle>::const_iterator style(styles_.find(token->id));
-		if(style != styles_.end()) {
-			if(lastTokenEnd != token->region.beginning()) {
-				// fill a default style segment between the two tokens
-				result.push_back(StyledText());
-				result.back().column = lastTokenEnd.column;
-				result.back().style = styles_.find(Token::DEFAULT_TOKEN)->second;
-			}
-			result.push_back(StyledText());
-			result.back().column = token->region.first.column;
-			result.back().style = style->second;
-		}
-		lastTokenEnd = token->region.end();
-	}
-	if(lastTokenEnd != region.end()) {
-		// fill a default style segment at the end of the region
-		result.push_back(StyledText());
-		result.back().column = lastTokenEnd.column;
-		result.back().style = styles_.find(Token::DEFAULT_TOKEN)->second;
-	}
-	auto_ptr<LineStyle> temp(new LineStyle);
-	temp->array = new StyledText[temp->count = result.size()];
-	copy(result.begin(), result.end(), temp->array);
-	return temp;
+		const Presentation& presentation, auto_ptr<ITokenScanner> tokenScanner,
+		const map<Token::Identifier, tr1::shared_ptr<const presentation::RunStyle> >& styles,
+		tr1::shared_ptr<const presentation::RunStyle> defaultStyle /* = tr1::shared_ptr<const presentation::RunStyle>() */)
+		: presentation_(presentation), tokenScanner_(tokenScanner), styles_(styles) {
+	if(tokenScanner_.get() == 0)
+		throw NullPointerException("tokenScanner");
 }

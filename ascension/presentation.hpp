@@ -27,7 +27,8 @@ namespace ascension {
 			/// Creates
 			Color() /*throw()*/ : valid_(false) {}
 			/// Creates a color value based on RGB values.
-			Color(byte red, byte green, byte blue) /*throw()*/ : red_(red << 8), green_(green << 8), blue_(blue << 8), valid_(true) {}
+			Color(byte red, byte green, byte blue, byte alpha = 255) /*throw()*/
+				: red_(red << 8), green_(green << 8), blue_(blue << 8), alpha_(alpha << 8), valid_(true) {}
 #ifdef ASCENSION_WINDOWS
 			/// Creates an object from Win32 @c COLORREF value.
 			static Color fromCOLORREF(COLORREF value) /*throw()*/ {return Color(
@@ -40,13 +41,17 @@ namespace ascension {
 			byte green() const /*throw()*/ {return green_ >> 8;}
 			/// Returns the red color component of this color.
 			byte red() const /*throw()*/ {return red_ >> 8;}
+			/// Returns the alpha value of this color.
+			byte alpha() const /*throw()*/ {return alpha_ >> 8;}
+			/// Returns @c true if this color is transparent.
+			bool isTransparent() const /**/ {return alpha() == 0;}
 			/// Equality operator.
 			bool operator==(const Color& other) const /*throw()*/ {return valid_ == other.valid_
-				&& (!valid_ || (red() == other.red() && green() == other.green() && blue() == other.blue()));}
+				&& (!valid_ || (red() == other.red() && green() == other.green() && blue() == other.blue() && alpha() == other.alpha()));}
 			/// Inequality operator.
 			bool operator!=(const Color& other) const /*throw()*/ {return !(*this == other);}
 		private:
-			ushort red_, green_, blue_;
+			ushort red_, green_, blue_, alpha_;
 			bool valid_;
 		};
 
@@ -63,61 +68,166 @@ namespace ascension {
 				const Color& backgroundColor = Color()) /*throw()*/ : foreground(foregroundColor), background(backgroundColor) {}
 		};
 
-		/// Style of the underline.
-		enum UnderlineStyle {
-			NO_UNDERLINE,		///< Does not display underline.
-			SOLID_UNDERLINE,	///< Solid underline.
-			DASHED_UNDERLINE,	///< Dashed underline.
-			DOTTED_UNDERLINE	///< Dotted underline.
+		struct Border {
+			enum Style {
+				NONE, HIDDEN, DOTTED, DASHED, SOLID,
+				DOT_DASH, DOT_DOT_DASH,
+				DOUBLE, GROOVE, RIDGE, INSET, OUTSET,
+				INHERIT
+			};
+			struct Part {
+				Style style;
+				Color color;	// if is Color(), same as the foreground
+//				??? width;
+			} top, right, bottom, left;
 		};
 
-		/// Type of the border and underline.
-		enum BorderStyle {
-			NO_BORDER,		///< Does not display border.
-			SOLID_BORDER,	///< Solid border.
-			DASHED_BORDER,	///< Dashed border.
-			DOTTED_BORDER	///< Dotted border.
-		};
+		struct BaselineAlignment {
+/*			enum DominantBaseline {
+				DOMINANT_BASELINE_AUTO,
+				DOMINANT_BASELINE_USE_SCRIPT,
+				DOMINANT_BASELINE_NO_CHANGE,
+				DOMINANT_BASELINE_RESET_SIZE,
+				DOMINANT_BASELINE_ALPHABETIC,
+				DOMINANT_BASELINE_HANGING,
+				DOMINANT_BASELINE_IDEOGRAPHIC,
+				DOMINANT_BASELINE_MATHEMATICAL,
+				DOMINANT_BASELINE_CENTRAL,
+				DOMINANT_BASELINE_MIDDLE,
+				DOMINANT_BASELINE_TEXT_AFTER_EDGE,
+				DOMINANT_BASELINE_TEXT_DEFORE_EDGE
+			} dominantBaseline;
+			enum AlignmentBaseline {
+				ALIGNMENT_BASELINE_BASELINE,
+				ALIGNMENT_BASELINE_USE_SCRIPT,
+				ALIGNMENT_BASELINE_BEFORE_EDGE,
+				ALIGNMENT_BASELINE_TEXT_BEFORE_EDGE,
+				ALIGNMENT_BASELINE_AFTER_EDGE,
+				ALIGNMENT_BASELINE_TEXT_AFTER_EDGE,
+				ALIGNMENT_BASELINE_CENTRAL,
+				ALIGNMENT_BASELINE_MIDDLE,
+				ALIGNMENT_BASELINE_IDEOGRAPHIC,
+				ALIGNMENT_BASELINE_ALPHABETIC,
+				ALIGNMENT_BASELINE_HANGING,
+				ALIGNMENT_BASELINE_MATHEMATICAL
+			} alignmentBaseline;
+			enum AlignmentAdjustEnums {
+				ALIGNMENT_ADJUST_AUTO,
+				ALIGNMENT_ADJUST_BASELINE,
+				ALIGNMENT_ADJUST_BEFORE_EDGE,
+				ALIGNMENT_ADJUST_TEXT_BEFORE_EDGE,
+				ALIGNMENT_ADJUST_MIDDLE,
+				ALIGNMENT_ADJUST_CENTRAL,
+				ALIGNMENT_ADJUST_AFTER_EDGE,
+				ALIGNMENT_ADJUST_TEXT_AFTER_EDGE,
+				ALIGNMENT_ADJUST_IDEOGRAPHIC,
+				ALIGNMENT_ADJUST_ALPHABETIC,
+				ALIGNMENT_ADJUST_HANGING,
+				ALIGNMENT_ADJUST_MATHEMATICAL
+			};
+			boost::any alignmentAdjust;
+			enum BaselineShiftEnums {
+				BASELINE_SHIFT_BASELINE,
+				BASELINE_SHIFT_SUB,
+				BASELINE_SHIFT_SUPER
+			};
+			boost::any baselineShift;
+*/		};
 
-		/// Visual attributes of a text segment.
-		struct TextStyle : public manah::FastArenaObject<TextStyle> {
-			/// Color of the text.
-			Colors color;
-			/// True if the font is bold.
-			bool bold;
-			/// True if the font is italic.
-			bool italic;
-			/// True if the font is strokeout.
-			bool strikeout;
-			/// Style of the underline.
-			UnderlineStyle underlineStyle;
-			/// Color of the underline. An invalid value indicates @c color.background.
-			Color underlineColor;
-			/// Style of the border.
-			BorderStyle borderStyle;
-			/// Color of the border. An invalid value indicates @c color.background.
-			Color borderColor;
+		struct FontProperties {
+			enum Weight {
+				NORMAL_WEIGHT = 400, BOLD = 700, BOLDER, LIGHTER,
+				THIN = 100, EXTRA_LIGHT = 200, ULTRA_LIGHT = 200, LIGHT = 300, 
+				MEDIUM = 500, SEMI_BOLD = 600, DEMI_BOLD = 600,
+				EXTRA_BOLD = 800, ULTRA_BOLD = 800, BLACK = 900, HEAVY = 900, INHERIT_WEIGHT
+			} weight;
+			enum Stretch {
+				NORMAL_STRETCH, WIDER, NARROWER, ULTRA_CONDENSED, EXTRA_CONDENSED, CONDENSED, SEMI_CONDENSED,
+				SEMI_EXPANDED, EXPANDED, EXTRA_EXPANDED, ULTRA_EXPANDED, INHERIT_STRETCH
+			} stretch;
+			enum Style {
+				NORMAL_STYLE, ITALIC, OBLIQUE, INHERIT_STYLE
+			} style;
+			double size;	///< Font size in DIP. Zero means inherit the parent.
+
 			/// Constructor.
-			explicit TextStyle(const Colors& textColor = Colors(),
-				bool boldFont = false, bool italicFont = false, bool strikeoutFont = false,
-				UnderlineStyle styleOfUnderline = NO_UNDERLINE, Color colorOfUnderline = Color(),
-				BorderStyle styleOfBorder = NO_BORDER, Color colorOfBorder = Color()) /*throw()*/
-				: color(textColor), bold(boldFont), italic(italicFont), strikeout(strikeoutFont),
-				underlineStyle(styleOfUnderline), underlineColor(colorOfUnderline),
-				borderStyle(styleOfBorder), borderColor(colorOfBorder) {}
+			explicit FontProperties(Weight weight = INHERIT_WEIGHT,
+				Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0)
+				: weight(weight), stretch(stretch), style(style), size(size) {}
 		};
 
-		/// A styled text segment.
-		struct StyledText {
-			length_t column;	///< Column number from which the text starts.
-			TextStyle style;	///< Style of the text.
+
+
+
+		struct TypographyProperties {};
+
+		struct Decorations {
+			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
+			struct {
+				Color color;	// if is Color(), same as the foreground
+				Style style;
+			} overline, strikethrough, baseline, underline;
 		};
 
-		/// An array of styled segments.
-		struct LineStyle {
-			StyledText* array;					///< The styled segments.
-			std::size_t count;					///< The number of the styled segments.
-			static const LineStyle NULL_STYLE;	///< Empty styles.
+		struct NumberSubstitution {
+			std::locale localeOverride;
+			enum LocaleSource {TEXT, USER, OVERRIDE} localeSource;
+			enum Method {AS_LOCALE, CONTEXTUAL, EUROPEAN, NATIVE_NATIONAL, TRADITIONAL} method;
+		};
+
+		enum TextTransform {
+			CAPITALIZE, UPPERCASE, LOWERCASE, NONE, TEXT_TRANSFORM_INHERIT
+		};
+
+		/// Visual style settings of a text run.
+		struct RunStyle : public manah::FastArenaObject<RunStyle> {
+			Color foreground;	///< Foreground color.
+			Color background;	///< Background color.
+			Border border;		///< Border of a text run.
+			BaselineAlignment baselineAlignment;
+			String fontFamily;	///< Family name. Empty means inherit the parent.
+			FontProperties fontProperties;
+			std::locale locale;
+			TypographyProperties typographyProperties;
+			Decorations decorations;
+			double letterSpacing;	/// Letter spacing in DIP. Default is 0.
+			double wordSpacing;		/// Word spacing in DIP. Default is 0.
+			NumberSubstitution numberSubstitution;
+			TextTransform textTransform;
+//			RubyProperties rubyProperties;
+//			Effects effects;
+			bool shapingEnabled;	/// Set @c false to disable shaping.
+
+			/// Default constructor.
+			RunStyle() : letterSpacing(0), wordSpacing(0), textTransform(), shapingEnabled(true) {}
+			RunStyle& resolveInheritance(const RunStyle& base);
+		};
+
+		class VisualLineStyle {};
+
+		struct StyledRun {
+			/// The beginning column in the line of the text range which the style applies.
+			length_t column;
+			/// The style of the text run.
+			std::tr1::shared_ptr<const RunStyle> style;
+			/// Default constructor.
+			StyledRun() {}
+			/// Constructor initializes the all members.
+			StyledRun(length_t column, std::tr1::shared_ptr<const RunStyle> style) : column(column), style(style) {}
+		};
+
+		class IStyledRunIterator {
+		public:
+			/// Destructor.
+			virtual ~IStyledRunIterator() /*throw()*/ {}
+			/// Returns the current styled run.
+			virtual const StyledRun& current() const = 0;
+			/// Returns the base (default) style for the styles returned by @c #current or @c null.
+			virtual std::tr1::shared_ptr<const RunStyle> defaultStyle() const = 0;
+			/// Returns @c true if the iterator addresses the end of the range.
+			virtual bool isDone() const = 0;
+			/// Moves the iterator to the next styled run or throws @c IllegalStateException.
+			virtual void next() = 0;
 		};
 
 		/**
@@ -132,10 +242,9 @@ namespace ascension {
 			/**
 			 * Queries the style of the line.
 			 * @param line the line to be queried
-			 * @param[out] delegatedOwnership @c true if the caller must delete the returned value
-			 * @return the style of the line or @c LineStyle#NULL_STYLE
+			 * @return the style of the line or @c null (filled by the presentation's default style)
 			 */
-			virtual const LineStyle& queryLineStyle(length_t line, bool& delegatedOwnership) const = 0;
+			virtual std::auto_ptr<IStyledRunIterator> queryLineStyle(length_t line) const = 0;
 			friend class Presentation;
 		};
 
@@ -268,9 +377,12 @@ namespace ascension {
 			kernel::Document& document() /*throw()*/;
 			const kernel::Document& document() const /*throw()*/;
 			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
-			Colors getLineColor(length_t line) const;
-			const LineStyle& getLineStyle(length_t line, bool& delegatedOwnership) const;
 			void removeTextViewerListListener(ITextViewerListListener& listener);
+			// styles
+			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle() const /*throw()*/;
+			Colors getLineColor(length_t line) const;
+			std::auto_ptr<IStyledRunIterator> getLineStyle(length_t line) const;
+			void setDefaultTextRunStyle(std::tr1::shared_ptr<const RunStyle> newStyle);
 			// strategies
 			void addLineColorDirector(std::tr1::shared_ptr<ILineColorDirector> director);
 			void removeLineColorDirector(ILineColorDirector& director) /*throw()*/;
@@ -293,6 +405,7 @@ namespace ascension {
 		private:
 			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
+			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle_;
 			std::tr1::shared_ptr<ILineStyleDirector> lineStyleDirector_;
 			std::list<std::tr1::shared_ptr<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
@@ -314,9 +427,9 @@ namespace ascension {
 			/**
 			 * Returns the styled text segments for the specified document region.
 			 * @param region the region to reconstruct the new presentation
-			 * @return the presentation. the ownership will be transferred to the caller
+			 * @return the presentation or @c null (filled by the presentation's default style)
 			 */
-			virtual std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
+			virtual std::auto_ptr<IStyledRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
 			friend class PresentationReconstructor;
 		};
 
@@ -324,12 +437,14 @@ namespace ascension {
 		class SingleStyledPartitionPresentationReconstructor : public IPartitionPresentationReconstructor {
 			MANAH_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(const TextStyle& style) /*throw()*/;
+			explicit SingleStyledPartitionPresentationReconstructor(std::tr1::shared_ptr<const RunStyle> style) /*throw()*/;
 		private:
 			// IPartitionPresentationReconstructor
-			std::auto_ptr<LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::auto_ptr<IStyledRunIterator>
+				getPresentation(length_t line, const Range<length_t>& columnRange) const /*throw()*/;
 		private:
-			const TextStyle style_;
+			class StyledRunIterator;
+			const std::tr1::shared_ptr<const RunStyle> style_;
 		};
 
 		/**
@@ -346,10 +461,11 @@ namespace ascension {
 				std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
 		private:
 			// ILineStyleDirector
-			const LineStyle& queryLineStyle(length_t line, bool& delegates) const;
+			std::auto_ptr<IStyledRunIterator> queryLineStyle(length_t line) const;
 			// kernel.IDocumentPartitioningListener
 			void documentPartitioningChanged(const kernel::Region& changedRegion);
 		private:
+			class StyledRunIterator;
 			Presentation& presentation_;
 			std::map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
 		};

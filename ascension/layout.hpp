@@ -356,8 +356,6 @@ namespace ascension {
 			virtual int getWidth() const /*throw()*/ = 0;
 		};
 
-		namespace internal {struct Run;}
-
 		class LineLayout {
 			MANAH_NONCOPYABLE_TAG(LineLayout);
 		public:
@@ -382,6 +380,7 @@ namespace ascension {
 				const viewers::Caret& caret_;
 				const presentation::Colors color_;
 			};
+#if 0
 			/// Bidirectional iterator enumerates style runs in a line.
 			class StyledSegmentIterator {
 			public:
@@ -390,7 +389,7 @@ namespace ascension {
 				// operators
 				StyledSegmentIterator& operator=(const StyledSegmentIterator& rhs) /*throw()*/;
 				// methods
-				const presentation::StyledText& current() const /*throw()*/;
+				presentation::StyledRun current() const /*throw()*/;
 				bool equals(const StyledSegmentIterator& rhs) const /*throw()*/;
 				StyledSegmentIterator& next() /*throw()*/;
 				StyledSegmentIterator& previous() /*throw()*/;
@@ -399,6 +398,7 @@ namespace ascension {
 				const internal::Run** p_;
 				friend class LineLayout;
 			};
+#endif
 
 			// constructors
 			LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line);
@@ -427,9 +427,9 @@ namespace ascension {
 			int sublineIndent(length_t subline) const;
 			int sublineWidth(length_t subline) const;
 			// styled segments
-			StyledSegmentIterator firstStyledSegment() const /*throw()*/;
-			StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-			const presentation::StyledText& styledSegment(length_t column) const;
+//			StyledSegmentIterator firstStyledSegment() const /*throw()*/;
+//			StyledSegmentIterator lastStyledSegment() const /*throw()*/;
+			presentation::StyledRun styledTextRun(length_t column) const;
 			// operations
 			void draw(manah::win32::gdi::DC& dc, int x, int y,
 				const RECT& paintRect, const RECT& clipRect, const Selection* selection) const /*throw()*/;
@@ -448,7 +448,7 @@ namespace ascension {
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
 			void locations(length_t column, POINT* leading, POINT* trailing) const;
-			void merge(const SCRIPT_ITEM items[], std::size_t numberOfItems, const presentation::LineStyle& styles) /*throw()*/;
+			void merge(const SCRIPT_ITEM items[], std::size_t numberOfItems, std::auto_ptr<presentation::IStyledRunIterator> styles) /*throw()*/;
 			int nextTabStop(int x, Direction direction) const /*throw()*/;
 			const String& text() const /*throw()*/;
 			void reorder() /*throw()*/;
@@ -459,7 +459,8 @@ namespace ascension {
 		private:
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
-			internal::Run** runs_;
+			class Run;
+			Run** runs_;
 			std::size_t numberOfRuns_;
 			length_t* sublineOffsets_;		// size is numberOfSublines_
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
@@ -467,7 +468,7 @@ namespace ascension {
 			int longestSublineWidth_;
 			int wrapWidth_;	// -1 if should not wrap
 			friend class LineLayoutBuffer;
-			friend class StyledSegmentIterator;
+//			friend class StyledSegmentIterator;
 		};
 
 		/**
@@ -619,7 +620,7 @@ namespace ascension {
 
 // inlines //////////////////////////////////////////////////////////////////
 
-/// Returns if the layout has been disposed.
+/// Returns @c true if the layout has been disposed.
 inline bool LineLayout::isDisposed() const /*throw()*/ {return runs_ == 0;}
 
 /// Returns the line number.
@@ -707,7 +708,7 @@ inline length_t LineLayout::sublineOffset(length_t subline) const {
  * @return the line offsets whose length is #numberOfSublines(), or @c null if the line is empty
  */
 inline const length_t* LineLayout::sublineOffsets() const /*throw()*/ {return sublineOffsets_;}
-
+#if 0
 /// Asignment operator.
 inline LineLayout::StyledSegmentIterator&
 	LineLayout::StyledSegmentIterator::operator=(const StyledSegmentIterator& rhs) /*throw()*/ {p_ = rhs.p_; return *this;}
@@ -720,7 +721,7 @@ inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::nex
 
 /// Moves to the previous.
 inline LineLayout::StyledSegmentIterator& LineLayout::StyledSegmentIterator::previous() /*throw()*/ {--p_; return *this;}
-
+#endif
 /// Returns the document.
 inline const kernel::Document& LineLayoutBuffer::document() const /*throw()*/ {return document_;}
 

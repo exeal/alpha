@@ -246,7 +246,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class StringCharacterIterator : public CharacterIterator,
-			public StandardBidirectionalIteratorAdapter<StringCharacterIterator, CodePoint, CodePoint> {
+			public StandardConstBidirectionalIteratorAdapter<StringCharacterIterator, CodePoint> {
 		public:
 			StringCharacterIterator() /*throw()*/;
 			StringCharacterIterator(const Char* first, const Char* last);
@@ -480,7 +480,7 @@ namespace ascension {
 		};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-		class Normalizer : public StandardBidirectionalIteratorAdapter<Normalizer, CodePoint, const CodePoint&> {
+		class Normalizer : public StandardConstBidirectionalIteratorAdapter<Normalizer, CodePoint> {
 		public:
 			/// Normalization forms.
 			enum Form {

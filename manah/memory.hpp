@@ -28,21 +28,23 @@ namespace manah {
 		typedef T ElementType;
 		// constructors
 		explicit AutoBuffer(ElementType* p = 0) /*throw()*/ : buffer_(p) {}
-		AutoBuffer(AutoBuffer& rhs) /*throw()*/ : buffer_(rhs.release()) {}
-		template<typename Other> AutoBuffer(AutoBuffer<Other>& rhs) /*throw()*/ : buffer_(rhs.release()) {}
+		AutoBuffer(AutoBuffer& other) /*throw()*/ : buffer_(other.release()) {}
+		template<typename Other> AutoBuffer(AutoBuffer<Other>& other) /*throw()*/ : buffer_(other.release()) {}
 		~AutoBuffer() /*throw()*/ {delete[] buffer_;}
 		// operators
-		AutoBuffer& operator=(AutoBuffer& rhs) /*throw()*/ {reset(rhs.release()); return *this;}
-		template<typename Other> AutoBuffer& operator=(AutoBuffer<Other>& rhs) /*throw()*/ {reset(rhs.release()); return *this;}
-		ElementType& operator[](int i) const /*throw()*/ {return buffer_[i];}
-		ElementType& operator[](std::size_t i) const /*throw()*/ {return buffer_[i];}
+		AutoBuffer& operator=(AutoBuffer& other) /*throw()*/ {reset(other.release()); return *this;}
+		template<typename Other> AutoBuffer& operator=(AutoBuffer<Other>& other) /*throw()*/ {reset(other.release()); return *this;}
+		ElementType& operator[](std::ptrdiff_t i) const /*throw()*/ {return buffer_[i];}
 		// methods
 		ElementType* get() const /*throw()*/ {return buffer_;}
 		ElementType* release() /*throw()*/ {ElementType* const temp = buffer_; buffer_ = 0; return temp;}
 		void reset(ElementType* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
+		void swap(AutoBuffer<ElementType>& other) /*throw()*/ {std::swap(buffer_, other.buffer_);}
 	private:
 		ElementType* buffer_;
 	};
+
+	template<typename T> inline void swap(AutoBuffer<T>& left, AutoBuffer<T>& right) {return left.swap(right);}
 
 	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
 	class MemoryPool {
