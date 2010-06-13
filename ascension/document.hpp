@@ -486,9 +486,9 @@ namespace ascension {
 			MANAH_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
-			class Iterator : public StandardBidirectionalIteratorAdapter<Iterator, length_t, length_t> {
+			class Iterator : public StandardConstBidirectionalIteratorAdapter<Iterator, length_t> {
 			public:
-				// StandardBidirectionalIteratorAdapter requirements
+				// StandardConstBidirectionalIteratorAdapter requirements
 				value_type current() const {return *impl_;}
 				bool equals(const Iterator& rhs) const {return impl_ == rhs.impl_;}
 				bool less(const Iterator& rhs) const {return impl_ < rhs.impl_;}
@@ -529,7 +529,7 @@ namespace ascension {
 		};
 
 		class DocumentCharacterIterator : public text::CharacterIterator,
-			public StandardBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint, CodePoint> {
+			public StandardConstBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint> {
 		public:
 			// constructors
 			DocumentCharacterIterator() /*throw()*/;

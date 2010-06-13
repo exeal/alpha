@@ -182,18 +182,14 @@ Colors Presentation::getLineColor(length_t line) const {
 /**
  * Returns the style of the specified line.
  * @param line the line
- * @param delegatedOwnership set @c true if the caller must delete the returned value
- * @return the line style or @c LineStyle#NULL_STYLE
+ * @return an iterator enumerates the styles of the text runs in the line, or @c null if the line
+ *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-const LineStyle& Presentation::getLineStyle(length_t line, bool& delegatedOwnership) const {
+auto_ptr<IStyledRunIterator> Presentation::getLineStyle(length_t line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const LineStyle& styles = (lineStyleDirector_.get() != 0) ?
-		lineStyleDirector_->queryLineStyle(line, delegatedOwnership) : LineStyle::NULL_STYLE;
-	if(&styles == &LineStyle::NULL_STYLE)
-		delegatedOwnership = false;
-	return styles;
+	return (lineStyleDirector_.get() != 0) ? lineStyleDirector_->queryLineStyle(line) : auto_ptr<IStyledRunIterator>();
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.
@@ -232,22 +228,136 @@ void Presentation::setLineStyleDirector(tr1::shared_ptr<ILineStyleDirector> newD
 }
 
 
+// SingleStyledPartitionPresentationReconstructor.StyledRunIterator /////////
+
+class SingleStyledPartitionPresentationReconstructor::StyledRunIterator : public IStyledRunIterator {
+public:
+	StyledRunIterator(length_t column, tr1::shared_ptr<const RunStyle> style) : run_(column, style), done_(false) {}
+private:
+	// IStyledRunIterator
+	const StyledRun& current() const {if(done_) throw IllegalStateException("the iterator addresses the end."); return run_;}
+	tr1::shared_ptr<const RunStyle> defaultStyle() const {return run_.style;}
+	bool isDone() const {return done_;}
+	void next() {if(done_) throw IllegalStateException("the iterator addresses the end."); done_ = true;}
+private:
+	const StyledRun run_;
+	bool done_;
+};
+
+
 // SingleStyledPartitionPresentationReconstructor ///////////////////////////
 
 /**
  * Constructor.
  * @param style the style
  */
-SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(const TextStyle& style) /*throw()*/ : style_(style) {
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(tr1::shared_ptr<const RunStyle> style) /*throw()*/ : style_(style) {
 }
 
 /// @see IPartitionPresentationReconstructor#getPresentation
-auto_ptr<LineStyle> SingleStyledPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
-	auto_ptr<LineStyle> result(new LineStyle);
-	result->array = new StyledText[result->count = 1];
-	result->array[0].column = region.beginning().column;
-	result->array[0].style = style_;
-	return result;
+auto_ptr<IStyledRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(length_t, const Range<length_t>& columnRange) const /*throw()*/ {
+	return auto_ptr<IStyledRunIterator>(new StyledRunIterator(columnRange.beginning(), style_));
+}
+
+
+// PresentationReconstructor.StyledRunIterator //////////////////////////////
+
+class PresentationReconstructor::StyledRunIterator : public IStyledRunIterator {
+public:
+	StyledRunIterator(const Presentation& presentation,
+		const map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors, length_t line);
+private:
+	void updateSubiterator();
+	// IStyledRunIterator
+	const StyledRun& current() const;
+	tr1::shared_ptr<const RunStyle> defaultStyle() const;
+	bool isDone() const;
+	void next();
+private:
+	const Presentation& presentation_;
+	const map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
+	const length_t line_;
+	DocumentPartition currentPartition_;
+	auto_ptr<IStyledRunIterator> subiterator_;
+	StyledRun current_;
+};
+
+/**
+ * Constructor.
+ */
+PresentationReconstructor::StyledRunIterator::StyledRunIterator(
+		const Presentation& presentation, const map<kernel::ContentType,
+		IPartitionPresentationReconstructor*> reconstructors, length_t line)
+		: presentation_(presentation), reconstructors_(reconstructors), line_(line) {
+	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
+	length_t column = 0;
+	for(const length_t lineLength = presentation_.document().lineLength(line);;) {
+		partitioner.partition(Position(line, column), currentPartition_);	// this may throw BadPositionException
+		if(!currentPartition_.region.isEmpty())
+			break;
+		if(++column >= lineLength) {	// rare case...
+			currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
+			currentPartition_.region = Region(line, make_pair(0, lineLength));
+			break;
+		}
+	}
+	updateSubiterator();
+}
+
+/// @see IStyledRunIterator#current
+const StyledRun& PresentationReconstructor::StyledRunIterator::current() const {
+	if(subiterator_.get() != 0)
+		return subiterator_->current();
+	else if(!isDone())
+		return current_;
+	throw IllegalStateException("the iterator addresses the end.");
+}
+
+/// @see IStyledRunIterator#defaultStyle
+tr1::shared_ptr<const RunStyle> PresentationReconstructor::StyledRunIterator::defaultStyle() const {
+	return (subiterator_.get() != 0) ? subiterator_->defaultStyle() : tr1::shared_ptr<const RunStyle>();
+}
+
+/// @see IStyledRunIterator#isDone
+bool PresentationReconstructor::StyledRunIterator::isDone() const {
+	return currentPartition_.region.isEmpty();
+}
+
+/// @see IStyledRunIterator#next
+void PresentationReconstructor::StyledRunIterator::next() {
+	if(subiterator_.get() != 0) {
+		subiterator_->next();
+		if(subiterator_->isDone())
+			subiterator_.reset();
+	}
+	if(subiterator_.get() == 0) {
+		const Document& document = presentation_.document();
+		const length_t lineLength = document.lineLength(line_);
+		if(currentPartition_.region.end() >= Position(line_, lineLength)) {
+			// done
+			currentPartition_.region = Region(currentPartition_.region.end());
+			return;
+		}
+		// find the next partition
+		const DocumentPartitioner& partitioner = document.partitioner();
+		for(length_t column = currentPartition_.region.end().column; ; ) {
+			partitioner.partition(Position(line_, column), currentPartition_);
+			if(!currentPartition_.region.isEmpty())
+				break;
+			if(++column >= lineLength) {	// rare case...
+				currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
+				currentPartition_.region = Region(line_, make_pair(column, lineLength));
+			}
+		}
+		updateSubiterator();
+	}
+}
+
+inline void PresentationReconstructor::StyledRunIterator::updateSubiterator() {
+	map<ContentType, IPartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
+	subiterator_ = (r != reconstructors_.end()) ? r->second->getPresentation(currentPartition_.region) : auto_ptr<IStyledRunIterator>();
+	if(subiterator_.get() == 0)
+		current_ = StyledRun(currentPartition_.region.beginning().column, presentation_.defaultTextRunStyle());
 }
 
 
@@ -277,67 +387,16 @@ void PresentationReconstructor::documentPartitioningChanged(const Region& change
 }
 
 /// @see ILineStyleDirector#queryLineStyle
-const LineStyle& PresentationReconstructor::queryLineStyle(length_t line, bool& delegates) const {
-	const length_t lineLength = presentation_.document().lineLength(line);
-	if(lineLength == 0) {	// empty line
-		delegates = false;
-		return LineStyle::NULL_STYLE;
-	}
-
-	// get partitions in this line
-	vector<DocumentPartition> partitions;
-	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
-	delegates = true;
-	for(length_t column = 0; column < lineLength; ) {
-		DocumentPartition temp;
-		partitioner.partition(Position(line, column), temp);
-		if(!temp.region.isEmpty()) {	// skip an empty partition
-			partitions.push_back(temp);
-			if(temp.region.end().line != line)
-				break;
-			column = temp.region.end().column;
-		} else
-			++column;
-	}
-	if(partitions.empty())	// rare case
-		partitions.push_back(DocumentPartition(DEFAULT_CONTENT_TYPE, presentation_.document().region()));
-	partitions.front().region.first = max(Position(line, 0), partitions.front().region.first);
-	partitions.back().region.second = min(Position(line, lineLength), partitions.back().region.second);
-
-	// get styles of each partitions
-	manah::AutoBuffer<auto_ptr<LineStyle> > partitionStyles(new auto_ptr<LineStyle>[partitions.size()]);
-	for(size_t i = 0; i < partitions.size(); ++i) {
-		map<ContentType, IPartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(partitions[i].contentType));
-		if(r != reconstructors_.end())
-			partitionStyles[i] = r->second->getPresentation(partitions[i].region);
-	}
-
-	// build the result
-	auto_ptr<LineStyle> result(new LineStyle);
-	result->count = 0;
-	for(size_t i = 0; i < partitions.size(); ++i)
-		result->count += (partitionStyles[i].get() != 0) ? partitionStyles[i]->count : 0;
-	if(result->count == 0) {
-		delegates = false;
-		return LineStyle::NULL_STYLE;
-	}
-	result->array = new StyledText[result->count];
-	for(size_t i = 0, c = 0; i < partitions.size(); ++i) {
-		if(partitionStyles[i].get() != 0) {
-			copy(partitionStyles[i]->array, partitionStyles[i]->array + partitionStyles[i]->count, result->array + c);
-			c += partitionStyles[i]->count;
-			delete[] partitionStyles[i]->array;
-		}
-	}
-	return *result.release();
+auto_ptr<IStyledRunIterator> PresentationReconstructor::queryLineStyle(length_t line) const {
+	return auto_ptr<IStyledRunIterator>(new StyledRunIterator(presentation_, reconstructors_, line));
 }
 
 /**
  * Sets the partition presentation reconstructor for the specified content type.
  * @param contentType the content type. if a reconstructor for this content type was already be
- * set, the old will be deleted
+ *                    set, the old will be deleted
  * @param reconstructor the partition presentation reconstructor to set. can't be @c null. the
- * ownership will be transferred to the callee
+ *                      ownership will be transferred to the callee
  * @throw NullPointerException @a reconstructor is @c null
  */
 void PresentationReconstructor::setPartitionReconstructor(
@@ -429,9 +488,9 @@ auto_ptr<IHyperlink> CompositeHyperlinkDetector::nextHyperlink(
 /**
  * Sets the hyperlink detector for the specified content type.
  * @param contentType the content type. if a detector for this content type was already be set, the
- * old will be deleted
+ *                    old will be deleted
  * @param detector the hyperlink detector to set. can't be @c null. the ownership will be
- * transferred to the callee
+ *                 transferred to the callee
  * @throw NullPointerException @a detector is @c null
  */
 void CompositeHyperlinkDetector::setDetector(ContentType contentType, auto_ptr<IHyperlinkDetector> detector) {
@@ -443,4 +502,101 @@ void CompositeHyperlinkDetector::setDetector(ContentType contentType, auto_ptr<I
 		delete old->second;
 	}
 	composites_.insert(make_pair(contentType, detector.release()));
+}
+
+
+// LexicalPartitionPresentationReconstructor.StyledRunIterator //////////////
+
+/// @internal
+class LexicalPartitionPresentationReconstructor::StyledRunIterator : public IStyledRunIterator {
+public:
+	StyledRunIterator(const Document& document, ITokenScanner& tokenScanner,
+		const map<Token::Identifier, tr1::shared_ptr<const RunStyle> >& styles, tr1::shared_ptr<const RunStyle> defaultStyle, const Region& region);
+private:
+	void nextRun();
+	// IStyledRunIterator
+	const StyledRun& current() const;
+	tr1::shared_ptr<const RunStyle> defaultStyle() const;
+	bool isDone() const;
+	void next();
+private:
+//	const LexicalPartitionPresentationReconstructor& reconstructor_;
+	ITokenScanner& tokenScanner_;
+	const map<Token::Identifier, tr1::shared_ptr<const RunStyle> >& styles_;
+	tr1::shared_ptr<const RunStyle> defaultStyle_;
+	Region region_;
+	StyledRun current_;
+	auto_ptr<Token> next_;
+	Position lastTokenEnd_;
+};
+
+LexicalPartitionPresentationReconstructor::StyledRunIterator::StyledRunIterator(
+		const Document& document, ITokenScanner& tokenScanner,
+		const map<Token::Identifier, tr1::shared_ptr<const RunStyle> >& styles,
+		tr1::shared_ptr<const RunStyle> defaultStyle, const Region& region) :
+		tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), lastTokenEnd_(region.beginning()) {
+	tokenScanner_.parse(document, region);
+	nextRun();
+}
+
+/// @see IStyledRunIterator#current
+const StyledRun& LexicalPartitionPresentationReconstructor::StyledRunIterator::current() const {
+	if(isDone())
+		throw IllegalStateException("the iterator addresses the end.");
+	return current_;
+}
+
+/// @see IStyledRunIterator#defaultStyle
+tr1::shared_ptr<const RunStyle> LexicalPartitionPresentationReconstructor::StyledRunIterator::defaultStyle() const {
+	return defaultStyle_;
+}
+
+/// @see IStyledRunIterator#isDone
+bool LexicalPartitionPresentationReconstructor::StyledRunIterator::isDone() const {
+	return lastTokenEnd_.column == region_.end().column;
+}
+
+/// @see IStyledRunIterator#next
+void LexicalPartitionPresentationReconstructor::StyledRunIterator::next() {
+	if(isDone())
+		throw IllegalStateException("the iterator addresses the end.");
+	nextRun();
+}
+
+inline void LexicalPartitionPresentationReconstructor::StyledRunIterator::nextRun() {
+	if(next_.get() != 0) {
+		map<Token::Identifier, tr1::shared_ptr<const RunStyle> >::const_iterator style(styles_.find(next_->id));
+		current_.column = next_->region.beginning().column;
+		current_.style = (style != styles_.end()) ? style->second : defaultStyle_;
+		lastTokenEnd_ = next_->region.end();
+		next_.reset();
+	} else if(!tokenScanner_.isDone()) {
+		next_ = tokenScanner_.nextToken();
+		assert(next_.get() != 0);
+		if(next_->region.beginning() != lastTokenEnd_) {
+			// 
+			current_.column = lastTokenEnd_.column;
+			current_.style = defaultStyle_;
+			lastTokenEnd_ = next_->region.beginning();
+		} else {
+			map<Token::Identifier, tr1::shared_ptr<const RunStyle> >::const_iterator style(styles_.find(next_->id));
+			current_.column = next_->region.beginning().column;
+			current_.style = (style != styles_.end()) ? style->second : defaultStyle_;
+			lastTokenEnd_ = next_->region.beginning();
+			next_.reset();
+		}
+	} else if(lastTokenEnd_ != region_.end()) {
+		//
+		current_.column = lastTokenEnd_.column;
+		current_.style = defaultStyle_;
+		lastTokenEnd_ = region_.end();
+	}
+}
+
+
+// LexicalPartitionPresentationReconstructor ////////////////////////////////
+
+/// @see presentation#IPartitionPresentationReconstructor#getPresentation
+auto_ptr<IStyledRunIterator> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
+	return auto_ptr<IStyledRunIterator>(new StyledRunIterator(presentation_.document(), *tokenScanner_, styles_, defaultStyle_, region));
 }

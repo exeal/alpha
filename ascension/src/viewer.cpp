@@ -89,11 +89,6 @@ LANGID ASCENSION_FASTCALL ascension::getUserDefaultUILanguage() /*throw()*/ {
 }
 
 
-// LineStyle ////////////////////////////////////////////////////////////////
-
-const LineStyle LineStyle::NULL_STYLE = {0, 0};
-
-
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 // TextViewerAccessibleProxy ////////////////////////////////////////////////

@@ -346,6 +346,10 @@
 				RelativePath="..\src\search.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\src\style.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

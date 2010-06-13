@@ -54,9 +54,9 @@ namespace ascension {
 
 		/// A token is a text segment with identifier.
 		struct Token : public manah::FastArenaObject<Token> {
-			typedef ushort ID;
-			static const ID DEFAULT_TOKEN, UNCALCULATED;
-			ID id;
+			typedef ushort Identifier;
+			static const Identifier UNCALCULATED;
+			Identifier id;
 			kernel::Region region;
 		};
 
@@ -81,17 +81,17 @@ namespace ascension {
 			virtual std::auto_ptr<Token> parse(
 				const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
 			/// Returns the identifier of the token.
-			Token::ID tokenID() const /*throw()*/ {return id_;}
+			Token::Identifier tokenID() const /*throw()*/ {return id_;}
 		protected:
-			explicit Rule(Token::ID tokenID) /*throw()*/;
+			explicit Rule(Token::Identifier tokenID);
 		private:
-			const Token::ID id_;
+			const Token::Identifier id_;
 		};
 
 		/***/
 		class RegionRule : public Rule {
 		public:
-			RegionRule(Token::ID id, const String& startSequence,
+			RegionRule(Token::Identifier id, const String& startSequence,
 				const String& endSequence, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
@@ -103,14 +103,14 @@ namespace ascension {
 		/// A concrete rule detects numeric tokens.
 		class NumberRule : public Rule {
 		public:
-			explicit NumberRule(Token::ID id) /*throw()*/;
+			explicit NumberRule(Token::Identifier id) /*throw()*/;
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::ID id, const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+			URIRule(Token::Identifier id, const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			ascension::internal::StrategyPointer<const URIDetector> uriDetector_;
@@ -119,8 +119,8 @@ namespace ascension {
 		/// A concrete rule detects the registered words.
 		class WordRule : protected Rule {
 		public:
-			WordRule(Token::ID id, const String* first, const String* last, bool caseSensitive = true);
-			WordRule(Token::ID id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
+			WordRule(Token::Identifier id, const String* first, const String* last, bool caseSensitive = true);
+			WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
 			~WordRule() /*throw()*/;
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
@@ -131,7 +131,7 @@ namespace ascension {
 		/// A concrete rule detects tokens using regular expression match.
 		class RegexRule : public Rule {
 		public:
-			RegexRule(Token::ID id, std::auto_ptr<const regex::Pattern> pattern);
+			RegexRule(Token::Identifier id, std::auto_ptr<const regex::Pattern> pattern);
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
@@ -310,15 +310,19 @@ namespace ascension {
 		class LexicalPartitionPresentationReconstructor : public presentation::IPartitionPresentationReconstructor {
 			MANAH_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
-			explicit LexicalPartitionPresentationReconstructor(const kernel::Document& document,
-				std::auto_ptr<ITokenScanner> tokenScanner, const std::map<Token::ID, const presentation::TextStyle>& styles);
+			explicit LexicalPartitionPresentationReconstructor(
+				const presentation::Presentation& presentation, std::auto_ptr<ITokenScanner> tokenScanner,
+				const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::RunStyle> >& styles,
+				std::tr1::shared_ptr<const presentation::RunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::RunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::LineStyle> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::auto_ptr<presentation::IStyledRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
-			const kernel::Document& document_;
+			class StyledRunIterator;
+			const presentation::Presentation& presentation_;
 			std::auto_ptr<ITokenScanner> tokenScanner_;
-			const std::map<Token::ID, const presentation::TextStyle> styles_;
+			std::tr1::shared_ptr<const presentation::RunStyle> defaultStyle_;
+			const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::RunStyle> > styles_;
 		};
 
 

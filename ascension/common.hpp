@@ -273,13 +273,18 @@ namespace ascension {
 		const Code code_;
 	};
 
-	/// Represents an invariant range.
-	/// @note This class is not compatible with Boost.Range.
-	/// @see kernel#Region
+	/**
+	 * Represents an invariant range.
+	 * @tparam T the element type
+	 * @note This class is not compatible with Boost.Range.
+	 * @see kernel#Region
+	 */
 	template<typename T> class Range : protected std::pair<T, T> {
 	public:
 		typedef T ValueType;
 	public:
+		/// Default constructor.
+		Range() {}
 		/// Constructor.
 		Range(ValueType v1, ValueType v2) : std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
 		/// Returns the beginning (minimum) of the range.
@@ -287,10 +292,75 @@ namespace ascension {
 		/// Returns the end (maximum) of the range.
 		ValueType end() const {return std::pair<T, T>::second;}
 		/// Returns the given value is included by the range.
-		bool includes(ValueType v) const {return v >= std::pair<T, T>::first && v < std::pair<T, T>::second;}
-		/// Returns true if the range is empty.
-		bool isEmpty() const {return std::pair<T, T>::first == std::pair<T, T>::second;}
+		bool includes(ValueType v) const {return v >= beginning() && v < end();}
+		/// Returns @c true if the range is empty.
+		bool isEmpty() const {return beginning() == end();}
+		/// Returns the length of the range.
+		typename std::iterator_traits<T>::difference_type length() const {return end() - beginning();}
 	};
+
+	template<typename ConcreteIterator, typename Reference>
+	class StandardInputIteratorAdapterBase {
+	public:
+		/// Dereference operator.
+		const Reference operator*() const {return concrete().current();}
+		/// Dereference operator.
+		const Reference operator->() const {return concrete().current();}
+		/// Pre-fix increment operator.
+		ConcreteIterator& operator++() {concrete().next(); return concrete();}
+		/// Post-fix increment operator.
+		const ConcreteIterator operator++(int) {ConcreteIterator temp(concrete()); ++*this; return temp;}
+		/// Equality operator.
+		bool operator==(const ConcreteIterator& other) const {return concrete().equals(other.concrete());}
+		/// Inequality operator.
+		bool operator!=(const ConcreteIterator& other) const {return !operator==(other);}
+	protected:
+		ConcreteIterator& concrete() /*throw()*/ {return static_cast<ConcreteIterator&>(*this);}
+		const ConcreteIterator& concrete() const /*throw()*/ {return static_cast<const ConcreteIterator&>(*this);}
+	};
+
+	namespace internal {
+		template<typename T> struct RemoveReference {typedef T Type;};
+		template<typename T> struct RemoveReference<T&> {typedef T Type;};
+	}
+
+	template<typename ConcreteIterator, typename Reference>
+	class StandardConstBidirectionalIteratorAdapterBase : public StandardInputIteratorAdapterBase<ConcreteIterator, Reference> {
+	public:
+		/// Pre-fix decrement operator.
+		ConcreteIterator& operator--() {concrete().previous(); return concrete();}
+		/// Post-fix decrement operator.
+		const ConcreteIterator operator--(int) {ConcreteIterator temp(concrete()); --*this; return temp;}
+	};
+
+	template<class ConcreteIterator>
+	class StandardIteratorLessGreaterDecoratorBase {
+	public:
+		/// Relational operator.
+		bool operator<(const ConcreteIterator& other) const {return static_cast<const ConcreteIterator*>(this)->less(rhs.concrete());}
+		/// Relational operator.
+		bool operator<=(const ConcreteIterator& other) const {return operator<(rhs) || operator==(rhs);}
+		/// Relational operator.
+		bool operator>(const ConcreteIterator& other) const {return !operator<=(rhs);}
+		/// Relational operator.
+		bool operator>=(const ConcreteIterator& other) const {return !operator<(rhs);}
+	};
+
+	template<typename ConcreteIterator, typename Reference, typename Distance = std::ptrdiff_t>
+	class StandardInputIteratorAdapter :
+		public StandardInputIteratorAdapterBase<ConcreteIterator, Reference>,
+		public StandardIteratorLessGreaterDecoratorBase<ConcreteIterator>,
+		public std::iterator<
+			std::input_iterator_tag, typename internal::RemoveReference<Reference>::Type,
+			Distance, const typename internal::RemoveReference<Reference>::Type*, const Reference> {};
+
+	template<typename ConcreteIterator, typename Reference, typename Distance = std::ptrdiff_t>
+	class StandardConstBidirectionalIteratorAdapter :
+		public StandardConstBidirectionalIteratorAdapterBase<ConcreteIterator, Reference>,
+		public StandardIteratorLessGreaterDecoratorBase<ConcreteIterator>,
+		public std::iterator<
+			std::bidirectional_iterator_tag, typename internal::RemoveReference<Reference>::Type,
+			Distance, const typename internal::RemoveReference<Reference>::Type*, const Reference> {};
 
 	/**
 	 * Converts an Ascension basic bidirectional iterator class into the corresponding C++
@@ -311,8 +381,7 @@ namespace ascension {
 	 * const Document& = ...;
 	 * // DocumentCharacterIterator is derived from StandardBidirectionalIteratorAdapter
 	 * std::find(
-	 *   DocumentCharacterIterator(document, document.getStartPosition()),
-	 *   DocumentCharacterIterator(document, document.getEndPosition()),
+	 *   document.begin(), document.end(),
 	 *   LINE_SEPARATOR  // DocumentCharacterIterator returns LINE_SEPARATOR at EOL
 	 * );
 	 * @endcode
@@ -329,37 +398,6 @@ namespace ascension {
 	 *   <tr><td>i1.less(i2)</td><td>bool</td><td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td></tr>
 	 * </table>
 	 */
-	template<class ConcreteIterator, typename Type, typename Reference = Type&, typename Pointer = Type*, typename Distance = std::ptrdiff_t>
-	class StandardBidirectionalIteratorAdapter : public std::iterator<std::bidirectional_iterator_tag, Type, Distance, Pointer, Reference> {
-	public:
-		/// Dereference operator.
-		Reference operator*() const {return concrete().current();}
-		/// Dereference operator.
-		Reference operator->() const {return concrete().current();}
-		/// Pre-fix increment operator.
-		ConcreteIterator& operator++() {concrete().next(); return concrete();}
-		/// Post-fix increment operator.
-		const ConcreteIterator operator++(int) {ConcreteIterator temp(concrete()); ++*this; return temp;}
-		/// Pre-fix decrement operator.
-		ConcreteIterator& operator--() {concrete().previous(); return concrete();}
-		/// Post-fix decrement operator.
-		const ConcreteIterator operator--(int) {ConcreteIterator temp(concrete()); --*this; return temp;}
-		/// Equality operator.
-		bool operator==(const ConcreteIterator& rhs) const {return concrete().equals(rhs.concrete());}
-		/// Inequality operator.
-		bool operator!=(const ConcreteIterator& rhs) const {return !operator==(rhs);}
-		/// Relational operator.
-		bool operator<(const ConcreteIterator& rhs) const {return concrete().less(rhs.concrete());}
-		/// Relational operator.
-		bool operator<=(const ConcreteIterator& rhs) const {return operator<(rhs) || operator==(rhs);}
-		/// Relational operator.
-		bool operator>(const ConcreteIterator& rhs) const {return !operator<=(rhs);}
-		/// Relational operator.
-		bool operator>=(const ConcreteIterator& rhs) const {return !operator<(rhs);}
-	private:
-		ConcreteIterator& concrete() /*throw()*/ {return static_cast<ConcreteIterator&>(*this);}
-		const ConcreteIterator& concrete() const /*throw()*/ {return static_cast<const ConcreteIterator&>(*this);}
-	};
 
 	namespace texteditor {	// see session.hpp
 		class Session;
