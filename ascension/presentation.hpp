@@ -154,6 +154,11 @@ namespace ascension {
 			explicit FontProperties(Weight weight = INHERIT_WEIGHT,
 				Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0)
 				: weight(weight), stretch(stretch), style(style), size(size) {}
+			/// Equality operator.
+			bool operator==(const FontProperties& other) const /*throw()*/ {
+				return weight == other.weight && stretch == other.stretch && style == other.style && size == other.size;}
+			/// Inequality operator.
+			bool operator!=(const FontProperties& other) const /*throw()*/ {return !(*this == other);}
 		};
 
 
@@ -486,6 +491,9 @@ namespace ascension {
 		 * @throw std#invalid_argument @a listener is already registered
 		 */
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
+
+		/// Returns the default text run style this object gives.
+		inline std::tr1::shared_ptr<const RunStyle> Presentation::defaultTextRunStyle() const /*throw()*/ {return defaultTextRunStyle_;}
 
 		/// Returns the number of text viewers.
 		inline std::size_t Presentation::numberOfTextViewers() const /*throw()*/ {return textViewers_.size();}
