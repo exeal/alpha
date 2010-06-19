@@ -1359,9 +1359,9 @@ void LineLayout::draw(length_t subline, DC& dc,
 	} else {
 		const String& line = text();
 		HRESULT hr;
-		length_t selStart, selEnd;
+		Range<length_t> selectedRange;
 		if(selection != 0) {
-			if(!selectedRangeOnVisualLine(selection->caret(), lineNumber_, subline, selStart, selEnd))
+			if(!selectedRangeOnVisualLine(selection->caret(), lineNumber_, subline, selectedRange))
 				selection = 0;
 		}
 
@@ -1399,17 +1399,17 @@ void LineLayout::draw(length_t subline, DC& dc,
 					background = run.requestedStyle()->background.asCOLORREF();
 				else
 					background = defaultBackground;
-				if(selection == 0 || run.column() >= selEnd || run.column() + run.length() <= selStart)
+				if(selection == 0 || run.column() >= selectedRange.end() || run.column() + run.length() <= selectedRange.beginning())
 					// no selection in this run
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, background);
-				else if(selection != 0 && run.column() >= selStart && run.column() + run.length() <= selEnd) {
+				else if(selection != 0 && run.column() >= selectedRange.beginning() && run.column() + run.length() <= selectedRange.end()) {
 					// this run is selected entirely
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, selection->color().background.asCOLORREF());
 					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
 				} else {
 					// selected partially
-					int left = run.x(max(selStart, run.column()) - run.column(), false);
-					int right = run.x(min(selEnd, run.column() + run.length()) - 1 - run.column(), true);
+					int left = run.x(max(selectedRange.beginning(), run.column()) - run.column(), false);
+					int right = run.x(min(selectedRange.end(), run.column() + run.length()) - 1 - run.column(), true);
 					if(left > right)
 						swap(left, right);
 					left += x;
@@ -1450,7 +1450,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 			else
 				foreground = defaultForeground;
 			if(line[run.column()] != L'\t') {
-				if(selection == 0 || run.overhangs() || !(run.column() >= selStart && run.column() + run.length() <= selEnd)) {
+				if(selection == 0 || run.overhangs()
+						|| !(run.column() >= selectedRange.beginning() && run.column() + run.length() <= selectedRange.end())) {
 					dc.setTextColor(foreground);
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
@@ -1473,7 +1474,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 				Run& run = *runs_[i];
 				// text
 				if(selection != 0 && line[run.column()] != L'\t'
-						&& (run.overhangs() || (run.column() < selEnd && run.column() + run.length() > selStart))) {
+						&& (run.overhangs() || (run.column() < selectedRange.end() && run.column() + run.length() > selectedRange.beginning()))) {
 					dc.setTextColor(selection->color().foreground.asCOLORREF());
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();

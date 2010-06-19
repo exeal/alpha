@@ -315,9 +315,8 @@ namespace ascension {
 		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const POINT& p);
 		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
-		bool selectedRangeOnLine(const Caret& caret, length_t line, length_t& first, length_t& last);
-		bool selectedRangeOnVisualLine(const Caret& caret,
-			length_t line, length_t subline, length_t& first, length_t& last);
+		bool selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range);
+		bool selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range);
 		String selectedString(const Caret& caret, kernel::Newline newline = kernel::NLF_RAW_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, kernel::Newline newline = kernel::NLF_RAW_VALUE);
