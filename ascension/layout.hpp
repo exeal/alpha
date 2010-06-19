@@ -1,7 +1,7 @@
 /**
  * @file layout.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_LAYOUT_HPP
@@ -18,11 +18,6 @@ struct tag_SCRIPT_ITEM;
 typedef tag_SCRIPT_ITEM SCRIPT_ITEM;
 
 namespace ascension {
-
-	namespace presentation {
-		struct StyledText;
-		struct LineStyle;
-	}
 
 	namespace presentation {class Presentation;}
 	namespace viewers {class Caret;}
