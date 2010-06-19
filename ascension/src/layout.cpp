@@ -230,7 +230,7 @@ public:
 	Orientation orientation() const /*throw()*/;
 	bool overhangs() const /*throw()*/;
 	HRESULT place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
-	const RunStyle& requestedStyle() const /*throw()*/ {return *style_;}
+	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
 	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun);
 	auto_ptr<Run> splitIfTooLong(const String& lineString);
 	int totalWidth() const /*throw()*/;
@@ -656,8 +656,14 @@ namespace {
 void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun) {
 	if(glyphs_->clusters.get() != 0)
 		throw IllegalStateException("");
-	if(!requestedStyle().shapingEnabled)
-		analysis_.eScript = SCRIPT_UNDEFINED;
+	if(requestedStyle().get() != 0) {
+		if(!requestedStyle()->shapingEnabled)
+			analysis_.eScript = SCRIPT_UNDEFINED;
+	} else {
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip.getPresentation().defaultTextRunStyle());
+		if(defaultStyle.get() != 0 && !defaultStyle->shapingEnabled)
+			analysis_.eScript = SCRIPT_UNDEFINED;
+	}
 
 	HRESULT hr;
 	const WORD originalScript = analysis_.eScript;
@@ -689,18 +695,19 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
 		// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
 
-		String computedFontFamily(requestedStyle().fontFamily);
-		FontProperties computedFontProperties(requestedStyle().fontProperties);
-		if(computedFontFamily.empty())
+		String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
+		FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip.getPresentation().defaultTextRunStyle());
+		if(computedFontFamily.empty() && defaultStyle.get() != 0)
 			computedFontFamily = lip.getPresentation().defaultTextRunStyle()->fontFamily;
 		if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
-			computedFontProperties.weight = lip.getPresentation().defaultTextRunStyle()->fontProperties.weight;
+			computedFontProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
 		if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
-			computedFontProperties.stretch = lip.getPresentation().defaultTextRunStyle()->fontProperties.stretch;
+			computedFontProperties.stretch = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
 		if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
-			computedFontProperties.style = lip.getPresentation().defaultTextRunStyle()->fontProperties.style;
-		if(computedFontProperties.size == 0.0f)
-			computedFontProperties.size = lip.getPresentation().defaultTextRunStyle()->fontProperties.size;
+			computedFontProperties.style = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
+		if(computedFontProperties.size == 0.0f && defaultStyle.get() != 0)
+			computedFontProperties.size = defaultStyle->fontProperties.size;
 
 		int script = NOT_PROPERTY;	// script of the run for fallback
 		vector<pair<HFONT, int> > failedFonts;	// failed fonts (font handle vs. # of missings)
@@ -1369,8 +1376,9 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// 1. paint background of the runs
 		// 2. determine the first and the last runs need to draw
 		// 3. mask selected region
-		const COLORREF defaultForeground = systemColors.serve(lip_.getPresentation().defaultTextRunStyle()->foreground, COLOR_WINDOWTEXT);
-		const COLORREF defaultBackground = systemColors.serve(lip_.getPresentation().defaultTextRunStyle()->background, COLOR_WINDOW);
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip_.getPresentation().defaultTextRunStyle());
+		const COLORREF defaultForeground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->foreground : Color(), COLOR_WINDOWTEXT);
+		const COLORREF defaultBackground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->background : Color(), COLOR_WINDOW);
 		size_t firstRun = sublineFirstRuns_[subline];
 		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		// paint the left margin
@@ -1387,8 +1395,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 				COLORREF background;
 				if(lineColor.background != Color())
 					background = marginColor;
-				else if(run.requestedStyle().background != Color())
-					background = run.requestedStyle().background.asCOLORREF();
+				else if(run.requestedStyle().get() != 0 && run.requestedStyle()->background != Color())
+					background = run.requestedStyle()->background.asCOLORREF();
 				else
 					background = defaultBackground;
 				if(selection == 0 || run.column() >= selEnd || run.column() + run.length() <= selStart)
@@ -1437,8 +1445,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 			COLORREF foreground;
 			if(lineColor.foreground != Color())
 				foreground = lineColor.foreground.asCOLORREF();
-			else if(run.requestedStyle().foreground != Color())
-				foreground = run.requestedStyle().foreground.asCOLORREF();
+			else if(run.requestedStyle().get() != 0 && run.requestedStyle()->foreground != Color())
+				foreground = run.requestedStyle()->foreground.asCOLORREF();
 			else
 				foreground = defaultForeground;
 			if(line[run.column()] != L'\t') {
@@ -1450,7 +1458,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 				}
 			}
 			// decoration (underline and border)
-			drawDecorationLines(dc, run.requestedStyle(), foreground, x, y, run.totalWidth(), dy);
+			if(run.requestedStyle().get() != 0)
+				drawDecorationLines(dc, *run.requestedStyle(), foreground, x, y, run.totalWidth(), dy);
 			x += run.totalWidth();
 			runRect.left = x;
 		}
@@ -1471,7 +1480,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 					hr = run.draw(dc, x, y + lip_.getFontSelector().ascent(), false, &runRect);
 				}
 				// decoration (underline and border)
-				drawDecorationLines(dc, run.requestedStyle(), selection->color().foreground.asCOLORREF(), x, y, run.totalWidth(), dy);
+				if(run.requestedStyle().get() != 0)
+					drawDecorationLines(dc, *run.requestedStyle(), selection->color().foreground.asCOLORREF(), x, y, run.totalWidth(), dy);
 				x += run.totalWidth();
 			}
 		}

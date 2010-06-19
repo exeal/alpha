@@ -236,7 +236,6 @@ public:
 private:
 	// IStyledRunIterator
 	const StyledRun& current() const {if(done_) throw IllegalStateException("the iterator addresses the end."); return run_;}
-	tr1::shared_ptr<const RunStyle> defaultStyle() const {return run_.style;}
 	bool isDone() const {return done_;}
 	void next() {if(done_) throw IllegalStateException("the iterator addresses the end."); done_ = true;}
 private:
@@ -270,7 +269,6 @@ private:
 	void updateSubiterator();
 	// IStyledRunIterator
 	const StyledRun& current() const;
-	tr1::shared_ptr<const RunStyle> defaultStyle() const;
 	bool isDone() const;
 	void next();
 private:
@@ -311,11 +309,6 @@ const StyledRun& PresentationReconstructor::StyledRunIterator::current() const {
 	else if(!isDone())
 		return current_;
 	throw IllegalStateException("the iterator addresses the end.");
-}
-
-/// @see IStyledRunIterator#defaultStyle
-tr1::shared_ptr<const RunStyle> PresentationReconstructor::StyledRunIterator::defaultStyle() const {
-	return (subiterator_.get() != 0) ? subiterator_->defaultStyle() : tr1::shared_ptr<const RunStyle>();
 }
 
 /// @see IStyledRunIterator#isDone
@@ -511,12 +504,12 @@ void CompositeHyperlinkDetector::setDetector(ContentType contentType, auto_ptr<I
 class LexicalPartitionPresentationReconstructor::StyledRunIterator : public IStyledRunIterator {
 public:
 	StyledRunIterator(const Document& document, ITokenScanner& tokenScanner,
-		const map<Token::Identifier, tr1::shared_ptr<const RunStyle> >& styles, tr1::shared_ptr<const RunStyle> defaultStyle, const Region& region);
+		const map<Token::Identifier, tr1::shared_ptr<const RunStyle> >& styles,
+		tr1::shared_ptr<const RunStyle> defaultStyle, const Region& region);
 private:
 	void nextRun();
 	// IStyledRunIterator
 	const StyledRun& current() const;
-	tr1::shared_ptr<const RunStyle> defaultStyle() const;
 	bool isDone() const;
 	void next();
 private:
@@ -544,11 +537,6 @@ const StyledRun& LexicalPartitionPresentationReconstructor::StyledRunIterator::c
 	if(isDone())
 		throw IllegalStateException("the iterator addresses the end.");
 	return current_;
-}
-
-/// @see IStyledRunIterator#defaultStyle
-tr1::shared_ptr<const RunStyle> LexicalPartitionPresentationReconstructor::StyledRunIterator::defaultStyle() const {
-	return defaultStyle_;
 }
 
 /// @see IStyledRunIterator#isDone

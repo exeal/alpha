@@ -227,8 +227,6 @@ namespace ascension {
 			virtual ~IStyledRunIterator() /*throw()*/ {}
 			/// Returns the current styled run.
 			virtual const StyledRun& current() const = 0;
-			/// Returns the base (default) style for the styles returned by @c #current or @c null.
-			virtual std::tr1::shared_ptr<const RunStyle> defaultStyle() const = 0;
 			/// Returns @c true if the iterator addresses the end of the range.
 			virtual bool isDone() const = 0;
 			/// Moves the iterator to the next styled run or throws @c IllegalStateException.
