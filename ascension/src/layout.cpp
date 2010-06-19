@@ -45,7 +45,7 @@ namespace {
 			for(tr1::unordered_map<pair<String, FontProperties>, HFONT>::iterator i(registry_.begin()), e(registry_.end()); i != e; ++i)
 				::DeleteObject(i->second);
 		}
-		String fallback(int script) const;
+		String fallback(int script) const {return String();}	// TODO: implement later.
 		Font get(const String& familyName, const FontProperties& properties) const {
 			tr1::unordered_map<pair<String, FontProperties>, HFONT>::const_iterator i(registry_.find(make_pair(familyName, properties)));
 			if(i != registry_.end())
@@ -66,8 +66,12 @@ namespace {
 			registry_.insert(make_pair(make_pair(familyName, properties), font));
 			return Font(borrowed(font));
 		}
+		struct Hasher : tr1::hash<String> {
+			size_t operator()(const pair<String, FontProperties>& value) const {
+				return tr1::hash<String>::operator()(value.first) + value.second.weight + value.second.stretch + value.second.style;}
+		};
 	private:
-		tr1::unordered_map<pair<String, FontProperties>, HFONT> registry_;
+		tr1::unordered_map<pair<String, FontProperties>, HFONT, Hasher> registry_;
 	} systemFonts;
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -228,7 +232,7 @@ public:
 	HRESULT place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
 	const RunStyle& requestedStyle() const /*throw()*/ {return *style_;}
 	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun);
-	auto_ptr<Run> splitIfTooLong();
+	auto_ptr<Run> splitIfTooLong(const String& lineString);
 	int totalWidth() const /*throw()*/;
 	int x(size_t offset, bool trailing) const;
 protected:
@@ -497,7 +501,7 @@ inline HRESULT LineLayout::Run::justify(int width) {
 inline HRESULT LineLayout::Run::logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const {
 	if(attributes == 0)
 		throw NullPointerException("attributes");
-	::ScriptBreak(lineString.data() + column(), static_cast<int>(length()), &analysis_, attributes);
+	return ::ScriptBreak(lineString.data() + column(), static_cast<int>(length()), &analysis_, attributes);
 }
 
 inline HRESULT LineLayout::Run::logicalWidths(int widths[]) const {
@@ -552,8 +556,8 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 					glyphs_->advances[i] = w;
 					if(fp.cBytes == 0) {
 						fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-						hr = ::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp);
-						if(FAILED(hr))
+						const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp);
+						if(FAILED(hr2))
 							fp.wgBlank = 0;	// hmm...
 					}
 					if(glyphIndices.get() == 0) {
@@ -579,6 +583,7 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 			memcpy(glyphs_->indices.get() + glyphRange_.beginning(), glyphIndices.get(), sizeof(WORD) * numberOfGlyphs());
 	}
 	swap(width, width_);
+	return hr;
 }
 
 // shaping stuffs
@@ -899,6 +904,37 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		}
 	}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+}
+
+auto_ptr<LineLayout::Run> LineLayout::Run::splitIfTooLong(const String& lineString) {
+	if(estimateNumberOfGlyphs(length()) <= 65535)
+		return auto_ptr<Run>();
+
+	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
+	static const length_t MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
+	length_t opportunity = 0;
+	manah::AutoBuffer<SCRIPT_LOGATTR> la(new SCRIPT_LOGATTR[length()]);
+	const HRESULT hr = logicalAttributes(lineString, la.get());
+	if(SUCCEEDED(hr)) {
+		for(length_t i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
+			if(la[i].fCharStop != 0) {
+				if(legacyctype::isspace(lineString[i]) || legacyctype::isspace(lineString[i - 1])) {
+					opportunity = i;
+					break;
+				}
+				opportunity = max(i, opportunity);
+			}
+		}
+	}
+	if(opportunity == 0) {
+		opportunity = MAXIMUM_RUN_LENGTH;
+		if(surrogates::isLowSurrogate(lineString[opportunity]) && surrogates::isHighSurrogate(lineString[opportunity - 1]))
+			--opportunity;
+	}
+
+	auto_ptr<Run> following(new Run(opportunity, length() - opportunity, analysis_, style_));
+	characterRange_ = Range<length_t>(0, opportunity);
+	return following;
 }
 
 inline int LineLayout::Run::totalWidth() const /*throw()*/ {
@@ -1815,55 +1851,67 @@ inline void LineLayout::merge(const SCRIPT_ITEM items[], size_t numberOfItems, a
 		runs.push_back(piece);											\
 	}
 
+	const String& lineString = text();
 	vector<Run*> runs;
 	runs.reserve(static_cast<size_t>(numberOfItems * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = items;
-	const SCRIPT_ITEM* nextScriptRun = (numberOfItems > 1) ? (items + 1) : 0;
+	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;
+	nextScriptRun.first = (numberOfItems > 1) ? (items + 1) : 0;
+	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
 	const StyledRun* styleRun = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
 	if(styleRun != 0)
 		styles->next();
-	const StyledRun* nextStyleRun = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
+	pair<const StyledRun*, length_t> nextStyleRun;
+	nextStyleRun.first = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
+	nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
 	do {
 		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, (styleRun != 0) ? styleRun->column : 0);
-		assert(previousRunEnd == runs.back()->column() + runs.back()->length());
-		bool forwardScriptRun = false, forwardStyleRun = false;
-		Run* newRun;
-		if(nextStyleRun == 0 || static_cast<length_t>(nextScriptRun->iCharPos) < nextStyleRun->column) {
-			newRun = new Run(previousRunEnd, scriptRun->iCharPos - previousRunEnd,
-				scriptRun->a, (styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>());
-			forwardScriptRun = true;
-		} else if(styleRun != 0 && (nextScriptRun == 0 || nextStyleRun->column < static_cast<length_t>(nextScriptRun->iCharPos))) {
-			const String& lineString = text();
-			assert(previousRunEnd > 0);
-			const bool linkSplitScriptRuns =
-				!legacyctype::isspace(lineString[previousRunEnd - 1]) && !legacyctype::isspace(lineString[previousRunEnd]);
-			if(linkSplitScriptRuns)
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 1;
-			newRun = new Run(previousRunEnd, styleRun->column - previousRunEnd, scriptRun->a, styleRun->style);
-			if(linkSplitScriptRuns) {
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 1;
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
-			}
-			forwardStyleRun = true;
-		} else {	// nextScriptRun->iCharPos < nextStyleRun->column
-			newRun = new Run(previousRunEnd, styleRun->column - previousRunEnd, scriptRun->a, styleRun->style);
+		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
+		length_t newRunEnd;
+		bool forwardScriptRun = false, forwardStyleRun = false, breakScriptRun = false;
+
+		if(nextScriptRun.second == nextStyleRun.second) {
+			newRunEnd = nextScriptRun.second;
 			forwardScriptRun = forwardStyleRun = true;
-		}
-		if(forwardScriptRun) {
-			scriptRun = nextScriptRun;
-			if(++nextScriptRun == items + numberOfItems)
-				nextScriptRun = 0;
-		}
-		if(forwardStyleRun) {
-			styleRun = nextStyleRun;
-			styles->next();
-			nextStyleRun = styles->isDone() ? 0 : &styles->current();
+		} else if(nextScriptRun.second < nextStyleRun.second) {
+			newRunEnd = nextScriptRun.second;
+			forwardScriptRun = true;
+		} else {	// nextScriptRun.second > nextStyleRun.second
+			newRunEnd = nextStyleRun.second;
+			forwardStyleRun = true;
+			breakScriptRun = true;
 		}
 
-		runs.push_back(newRun);
+		if(breakScriptRun) {
+			if(breakScriptRun =
+					!legacyctype::isspace(lineString[previousRunEnd - 1]) && !legacyctype::isspace(lineString[previousRunEnd]))
+				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 1;
+		}
+		runs.push_back(
+			new Run(previousRunEnd, newRunEnd - previousRunEnd,
+				scriptRun->a, (styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>()));
+		if(breakScriptRun) {
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 1;
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
+		}
+		if(forwardScriptRun) {
+			scriptRun = nextScriptRun.first;
+			if(nextScriptRun.first != 0) {
+				if(++nextScriptRun.first == items + numberOfItems)
+					nextScriptRun.first = 0;
+				nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
+			}
+		}
+		if(forwardStyleRun && styles.get() != 0) {
+			styleRun = nextStyleRun.first;
+			styles->next();
+			nextStyleRun.first = styles->isDone() ? 0 : &styles->current();
+			nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+		}
+
 		while(true) {
-			auto_ptr<Run> piece(runs.back()->splitIfTooLong());
+			auto_ptr<Run> piece(runs.back()->splitIfTooLong(lineString));
 			if(piece.get() == 0)
 				break;
 			runs.push_back(piece.release());
