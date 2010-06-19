@@ -2497,11 +2497,10 @@ bool VirtualBox::isPointOver(const POINT& pt) const /*throw()*/ {
  * Returns the range which the box overlaps with in specified visual line.
  * @param line the logical line
  * @param subline the visual subline
- * @param[out] first the start of range
- * @param[out] last the end of range
+ * @param[out] range the range
  * @return @c true if the box and the visual line overlap
  */
-bool VirtualBox::overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const /*throw()*/ {
+bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/ {
 	assert(view_.isWindow());
 	const Point& top = beginning();
 	const Point& bottom = end();
@@ -2511,11 +2510,10 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, length_t& fi
 	else {
 		const TextRenderer& renderer = view_.textRenderer();
 		const LineLayout& layout = renderer.lineLayout(line);
-		first = layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first;
-		last = layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first;
-		if(first > last)
-			swap(first, last);
-		return first != last;
+		range = Range<length_t>(
+			layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first,
+			layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first);
+		return !range.isEmpty();
 	}
 }
 

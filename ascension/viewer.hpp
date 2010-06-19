@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 (was EditView.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -63,7 +63,7 @@ namespace ascension {
 		public:
 			VirtualBox(const TextViewer& view, const kernel::Region& region) /*throw()*/;
 			bool isPointOver(const POINT& pt) const /*throw()*/;
-			bool overlappedSubline(length_t line, length_t subline, length_t& first, length_t& last) const /*throw()*/;
+			bool overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
 		private:
 			struct Point {

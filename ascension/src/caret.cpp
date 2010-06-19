@@ -1299,23 +1299,23 @@ bool viewers::isPointOverSelection(const Caret& caret, const POINT& p) {
  * This function returns a logical range, and does not support rectangular selection.
  * @param caret the caret gives a selection
  * @param line the logical line
- * @param[out] first the start of the range
- * @param[out] last the end of the range. if the selection continued to the next line, this is
- *                  the column of the end of line + 1
- * @return true if there is selected range on the line
+ * @param[out] range the selected range. if the selection continued to the next line,
+ *             @c range.end() returns the column of the end of line + 1
+ * @return @c true if there is selected range on the line
  * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #selectedRangeOnVisualLine
  */
-bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, length_t& first, length_t& last) {
+bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range) {
 	const Position bos(caret.beginning());
 	if(bos.line > line)
 		return false;
 	const Position eos(caret.end());
 	if(eos.line < line)
 		return false;
-	first = (line == bos.line) ? bos.column : 0;
-	last = (line == eos.line) ? eos.column : caret.document().lineLength(line) + 1;
+	range = Range<length_t>(
+		(line == bos.line) ? bos.column : 0,
+		(line == eos.line) ? eos.column : caret.document().lineLength(line) + 1);
 	return true;
 }
 
@@ -1324,26 +1324,26 @@ bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, length_t& f
  * @param caret the caret gives a selection
  * @param line the logical line
  * @param subline the visual subline
- * @param[out] first the start of the range
- * @param[out] last the end of the range. if the selection continued to the next logical line, this
- *                  is the column of the end of line + 1
- * @return true if there is selected range on the line
+ * @param[out] range the selected range. if the selection continued to the next logical line,
+ *             @c range.end() returns the column of the end of line + 1
+ * @return @c true if there is selected range on the line
  * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
  * @throw TextViewerDisposedException the text viewer @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line or @a subline is outside of the document
  * @see #selectedRangeOnLine
  */
-bool viewers::selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, length_t& first, length_t& last) {
+bool viewers::selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range) {
 	if(!caret.isSelectionRectangle()) {
-		if(!selectedRangeOnLine(caret, line, first, last))
+		if(!selectedRangeOnLine(caret, line, range))
 			return false;
 		const LineLayout& layout = caret.textViewer().textRenderer().lineLayout(line);
 		const length_t sublineOffset = layout.sublineOffset(subline);
-		first = max(first, sublineOffset);
-		last = min(last, sublineOffset + layout.sublineLength(subline) + ((subline < layout.numberOfSublines() - 1) ? 0 : 1));
-		return first != last;
+		range = Range<length_t>(
+			max(range.beginning(), sublineOffset),
+			min(range.end(), sublineOffset + layout.sublineLength(subline) + ((subline < layout.numberOfSublines() - 1) ? 0 : 1)));
+		return !range.isEmpty();
 	} else
-		return caret.boxForRectangleSelection().overlappedSubline(line, subline, first, last);
+		return caret.boxForRectangleSelection().overlappedSubline(line, subline, range);
 }
 
 /**
@@ -1361,11 +1361,11 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 		else {
 			const Document& document = caret.document();
 			const length_t lastLine = caret.end().line();
-			length_t first, last;
+			Range<length_t> selection;
 			for(length_t line = caret.beginning().line(); line <= lastLine; ++line) {
 				const Document::Line& ln = document.getLineInformation(line);
-				caret.boxForRectangleSelection().overlappedSubline(line, 0, first, last);	// TODO: recognize wrap (second parameter).
-				out.write(ln.text().data() + first, static_cast<streamsize>(last - first));
+				caret.boxForRectangleSelection().overlappedSubline(line, 0, selection);	// TODO: recognize wrap (second parameter).
+				out.write(ln.text().data() + selection.beginning(), static_cast<streamsize>(selection.length()));
 				out.write(newlineString(ln.newline()), static_cast<streamsize>(newlineStringLength(ln.newline())));
 			}
 		}
@@ -1870,8 +1870,9 @@ namespace {
 				if(document.lineLength(line) != 0 && (line != region.end().line || region.end().column > 0)) {
 					length_t insertPosition = 0;
 					if(rectangle) {
-						length_t dummy;
-						caret.boxForRectangleSelection().overlappedSubline(line, 0, insertPosition, dummy);	// TODO: recognize wrap (second parameter).
+						Range<length_t> dummy;
+						caret.boxForRectangleSelection().overlappedSubline(line, 0, dummy);	// TODO: recognize wrap (second parameter).
+						insertPosition = dummy.beginning();
 					}
 					insert(document, Position(line, insertPosition), indent);
 					if(line == otherResult.line && otherResult.column != 0)

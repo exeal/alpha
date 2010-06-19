@@ -1244,10 +1244,10 @@ namespace {
 		bh.bV5Planes = 1;
 		bh.bV5BitCount = 32;
 		bh.bV5Compression = BI_BITFIELDS;
-		bh.bV5RedMask = 0x00ff0000;
-		bh.bV5GreenMask = 0x0000ff00;
-		bh.bV5BlueMask = 0x000000ff;
-		bh.bV5AlphaMask = 0xff000000;
+		bh.bV5RedMask = 0x00ff0000ul;
+		bh.bV5GreenMask = 0x0000ff00ul;
+		bh.bV5BlueMask = 0x000000fful;
+		bh.bV5AlphaMask = 0xff000000ul;
 
 		// determine the range to draw
 		const Region selectedRegion(viewer.caret());
@@ -1267,11 +1267,13 @@ namespace {
 				return S_FALSE;	// overflow
 			const LineLayout& layout = renderer.lineLayout(line);
 			const int indent = renderer.lineIndent(line);
-			pair<length_t, length_t> range;
+			Range<length_t> range;
 			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
-				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range.first, range.second)) {
-					range.second = min(viewer.document().lineLength(line), range.second);
-					const RECT sublineBounds(layout.bounds(range.first, range.second));
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<length_t>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					const RECT sublineBounds(layout.bounds(range.beginning(), range.end()));
 					selectionBounds.left = min(sublineBounds.left + indent, selectionBounds.left);
 					selectionBounds.right = max(sublineBounds.right + indent, selectionBounds.right);
 					if(selectionBounds.right - selectionBounds.left > clientRect.right - clientRect.left)
@@ -1292,11 +1294,13 @@ namespace {
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			const LineLayout& layout = renderer.lineLayout(line);
 			const int indent = renderer.lineIndent(line);
-			pair<length_t, length_t> range;
+			Range<length_t> range;
 			for(length_t subline = 0, sublines = layout.numberOfSublines(); subline < sublines; ++subline) {
-				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range.first, range.second)) {
-					range.second = min(viewer.document().lineLength(line), range.second);
-					Rgn rgn(layout.blackBoxBounds(range.first, range.second));
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<length_t>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					Rgn rgn(layout.blackBoxBounds(range.beginning(), range.end()));
 					rgn.offset(indent - selectionBounds.left, y - selectionBounds.top);
 					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH).use());
 				}
