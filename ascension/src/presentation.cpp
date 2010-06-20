@@ -84,9 +84,9 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 			continue;
 		} else {
 			if(line >= erasedLines.end() && !erasedLines.isEmpty())
-				(*i)->lineNumber -= erasedLines.end() - erasedLines.beginning();
+				(*i)->lineNumber -= erasedLines.length();
 			if(line >= insertedLines.end() && !insertedLines.isEmpty())
-				(*i)->lineNumber += insertedLines.end() - insertedLines.beginning();
+				(*i)->lineNumber += insertedLines.length();
 		}
 		++i;
 	}
