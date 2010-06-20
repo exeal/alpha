@@ -360,6 +360,9 @@ HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const String& lineString) /*t
 		numberOfGlyphs *= 2;
 	}
 
+	if(analysis_.fNoGlyphIndex != 0)
+		return GDI_ERROR;	// the caller should try other fonts or disable shaping
+
 	// commit
 	if(SUCCEEDED(hr)) {
 		swap(glyphs_->indices, indices);
