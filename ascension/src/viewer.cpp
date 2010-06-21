@@ -431,7 +431,7 @@ TextViewer::~TextViewer() {
 	document().removeListener(*this);
 	document().removeStateListener(*this);
 	document().removeRollbackListener(*this);
-	renderer_->removeFontListener(*this);
+	renderer_->removeDefaultFontListener(*this);
 	renderer_->removeVisualLinesListener(*this);
 	caret_->removeListener(*this);
 	caret_->removeStateListener(*this);
@@ -801,7 +801,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif // 1
 	
-	renderer_->addFontListener(*this);
+	renderer_->addDefaultFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
 
 	// placement and display
@@ -810,6 +810,15 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 		show(SW_SHOW);
 
 	return true;
+}
+
+/// @see IDefaultFontListener#defaultFontChanged
+void TextViewer::defaultFontChanged() /*throw()*/ {
+	verticalRulerDrawer_->update();
+	scrollInfo_.resetBars(*this, SB_BOTH, true);
+	updateScrollBars();
+	recreateCaret();
+	redrawLine(0, true);
 }
 
 /// Implementation of @c #beep method. The subclasses can override to customize the behavior.
@@ -903,15 +912,6 @@ void TextViewer::documentUndoSequenceStopped(const Document&, const Position& re
  * @param rect the rectangle to draw
  */
 void TextViewer::drawIndicatorMargin(length_t /* line */, win32::gdi::DC& /* dc */, const RECT& /* rect */) {
-}
-
-/// @see IFontSelectorListener#fontChanged
-void TextViewer::fontChanged() /*throw()*/ {
-	verticalRulerDrawer_->update();
-	scrollInfo_.resetBars(*this, SB_BOTH, true);
-	updateScrollBars();
-	recreateCaret();
-	redrawLine(0, true);
 }
 
 /**
@@ -1216,7 +1216,7 @@ bool TextViewer::onEraseBkgnd(HDC) {
 
 /// @see WM_GETFONT
 HFONT TextViewer::onGetFont() {
-	return renderer_->font();
+	return renderer_->defaultFont().get();
 }
 
 /// @see WM_HSCROLL
@@ -2304,7 +2304,8 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 // TextViewer.Renderer //////////////////////////////////////////////////////
 
 /// Constructor.
-TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), true), viewer_(viewer) {
+TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer) {
+	// TODO: other IFontCollection object used?
 #if 0
 	// for test
 	setSpecialCharacterRenderer(new DefaultSpecialCharacterRenderer, true);
@@ -2315,31 +2316,14 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.present
 TextViewer::Renderer::Renderer(const Renderer& rhs, TextViewer& viewer) : TextRenderer(rhs), viewer_(viewer) {
 }
 
-/// @see layout#FontSelector#getDeviceContext
-auto_ptr<win32::gdi::DC> TextViewer::Renderer::getDeviceContext() const {
-	return auto_ptr<win32::gdi::DC>(viewer_.isWindow() ?
-		new win32::gdi::ClientDC(const_cast<TextViewer&>(viewer_).getDC()) : new win32::gdi::ScreenDC());
+/// @see layout#LineLayoutBuffer#deviceContext
+win32::gdi::DC TextViewer::Renderer::deviceContext() const {
+	return viewer_.isWindow() ? win32::gdi::ClientDC(const_cast<TextViewer&>(viewer_).getDC()) : win32::gdi::ScreenDC();
 }
 
-/// @see layout#ILayoutInformationProvider#getLayoutSettings
-const LayoutSettings& TextViewer::Renderer::getLayoutSettings() const /*throw()*/ {
+/// @see layout#ILayoutInformationProvider#layoutSettings
+const LayoutSettings& TextViewer::Renderer::layoutSettings() const /*throw()*/ {
 	return viewer_.configuration();
-}
-
-/// @see layout#ILayoutInformationProvider#getWidth
-int TextViewer::Renderer::getWidth() const /*throw()*/ {
-	const LineWrapConfiguration& lwc = viewer_.configuration().lineWrap;
-	if(!lwc.wraps()) {
-		win32::AutoZeroSize<SCROLLINFO> si;
-		si.fMask = SIF_RANGE;
-		viewer_.getScrollInformation(SB_HORZ, si);
-		return (si.nMax + 1) * viewer_.textRenderer().averageCharacterWidth();
-	} else if(lwc.wrapsAtWindowEdge()) {
-		RECT rc, margins = viewer_.textAreaMargins();
-		viewer_.getClientRect(rc);
-		return rc.right - rc.left - margins.left - margins.right;	// $friendly-access
-	} else
-		return lwc.width;
 }
 
 /// Rewraps the visual lines at the window's edge.
@@ -2358,6 +2342,22 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 				invalidate(layout.lineNumber(), layout.lineNumber() + 1);
 		}
 	}
+}
+
+/// @see layout#ILayoutInformationProvider#width
+int TextViewer::Renderer::width() const /*throw()*/ {
+	const LineWrapConfiguration& lwc = viewer_.configuration().lineWrap;
+	if(!lwc.wraps()) {
+		win32::AutoZeroSize<SCROLLINFO> si;
+		si.fMask = SIF_RANGE;
+		viewer_.getScrollInformation(SB_HORZ, si);
+		return (si.nMax + 1) * viewer_.textRenderer().averageCharacterWidth();
+	} else if(lwc.wrapsAtWindowEdge()) {
+		RECT rc, margins = viewer_.textAreaMargins();
+		viewer_.getClientRect(rc);
+		return rc.right - rc.left - margins.left - margins.right;	// $friendly-access
+	} else
+		return lwc.width;
 }
 
 

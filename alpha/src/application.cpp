@@ -646,12 +646,21 @@ void Alpha::setFont(const LOGFONTW& font) {
 	::DeleteObject(editorFont_);
 	editorFont_ = ::CreateFontIndirectW(&lf);
 
-	// 全てのビューのフォントを更新
+	// update the all presentations
+	const int ydpi = win32::gdi::ScreenDC().getDeviceCaps(LOGPIXELSY); 
 	BufferList& buffers = BufferList::instance();
 	for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
 		presentation::Presentation& p = buffers.at(i).presentation();
-		for(presentation::Presentation::TextViewerIterator it(p.firstTextViewer()); it != p.lastTextViewer(); ++it)
-			(*it)->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
+		tr1::shared_ptr<const presentation::RunStyle> defaultStyle(p.defaultTextRunStyle());
+		auto_ptr<presentation::RunStyle> newDefaultStyle(
+			(defaultStyle.get() != 0) ? new presentation::RunStyle(*defaultStyle) : new presentation::RunStyle);
+		newDefaultStyle->fontFamily = lf.lfFaceName;
+		newDefaultStyle->fontProperties.weight = static_cast<presentation::FontProperties::Weight>(lf.lfWeight);
+		newDefaultStyle->fontProperties.style = (lf.lfItalic != 0) ?
+			presentation::FontProperties::ITALIC : presentation::FontProperties::NORMAL_STYLE;
+		newDefaultStyle->fontProperties.size = lf.lfHeight * 96.0 / ydpi;
+		newDefaultStyle->fontSizeAdjust = 0.0;
+		p.setDefaultTextRunStyle(tr1::shared_ptr<const presentation::RunStyle>(newDefaultStyle.release()));
 	}
 
 	// 一部のコントロールにも設定

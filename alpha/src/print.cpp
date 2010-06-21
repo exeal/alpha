@@ -45,20 +45,19 @@ namespace {
 	public:
 		PrintingRenderer(ascension::presentation::Presentation& presentation, HDC deviceContext,
 				const ascension::layout::LayoutSettings& layoutSettings, int width)
-				: TextRenderer(presentation, false), dc_(deviceContext), layoutSettings_(layoutSettings), width_(width) {
+				: TextRenderer(presentation, ascension::layout::systemFonts(), false), dc_(deviceContext), layoutSettings_(layoutSettings), width_(width) {
 			layoutSettings_.lineWrap.mode = ascension::layout::LineWrapConfiguration::NORMAL;
 		}
 	private:
 		// FontSelector
-		auto_ptr<win32::gdi::DC> getDeviceContext() const {
-			auto_ptr<win32::gdi::DC> temp(new win32::gdi::DC(win32::borrowed(dc_)));
-			return temp;
+		win32::gdi::DC deviceContext() const {
+			return win32::gdi::DC(win32::borrowed(dc_));
 		}
 		// ILayoutInformationProvider
-		const ascension::layout::LayoutSettings& getLayoutSettings() const throw() {
+		const ascension::layout::LayoutSettings& layoutSettings() const throw() {
 			return layoutSettings_;
 		}
-		int getWidth() const throw() {
+		int width() const throw() {
 			return width_;
 		}
 	private:
@@ -225,9 +224,9 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		dc.get(), (*buffer.presentation().firstTextViewer())->configuration(),
 		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.left - margins_.right));
 	LOGFONTW lf;
-	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().font(), sizeof(LOGFONTW), &lf);
+	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().defaultFont().get(), sizeof(LOGFONTW), &lf);
 	win32::gdi::ScreenDC screenDC;
-	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
+//	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
 
 	// start printing
 	dc.setAbortProc(abortProcedure);
@@ -248,7 +247,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		ALPHA_MM100_TO_PIXELS_X(margins_.left), 0,
 		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.right),
 		ALPHA_MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
-	HFONT oldFont = dc.selectObject(renderer.font());
+	HFONT oldFont = dc.selectObject(renderer.defaultFont().get());
 	WCHAR compactedPathName[MAX_PATH];
 	wcscpy(compactedPathName, bufferName.c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
@@ -285,7 +284,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				prompt.setPageNumber(page);
 				dc.setViewportOrg(-physicalOffsetInMM.x, -physicalOffsetInMM.y);
 				// print a header
-				HFONT oldFont = dc.selectObject(renderer.font());
+				HFONT oldFont = dc.selectObject(renderer.defaultFont().get());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.left, rc.top = ALPHA_MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
 #if(_MSC_VER < 1400)

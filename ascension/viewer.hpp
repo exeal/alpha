@@ -367,7 +367,7 @@ namespace ascension {
 		class TextViewer :
 				public manah::win32::ui::CustomControl<TextViewer>,
 				public kernel::IDocumentListener, public kernel::IDocumentStateListener,
-				public kernel::IDocumentRollbackListener, public layout::IFontSelectorListener,
+				public kernel::IDocumentRollbackListener, public layout::IDefaultFontListener,
 				public layout::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
 				public ascension::kernel::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
@@ -606,8 +606,8 @@ namespace ascension {
 			// kernel.IDocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document);
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
-			// layout.IFontSelectorListener
-			void fontChanged() /*throw()*/;
+			// layout.IDefaultFontListener
+			void defaultFontChanged() /*throw()*/;
 			// layout.IVisualLinesListener
 			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/;
 			void visualLinesInserted(length_t first, length_t last) /*throw()*/;
@@ -685,11 +685,11 @@ namespace ascension {
 				Renderer(const Renderer& rhs, TextViewer& viewer);
 				void rewrapAtWindowEdge();
 			private:
-				// FontSelector
-				std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const;
+				// LineLayoutBuffer
+				manah::win32::gdi::DC deviceContext() const;
 				// ILayoutInformationProvider
-				const layout::LayoutSettings& getLayoutSettings() const /*throw()*/;
-				int getWidth() const /*throw()*/;
+				const layout::LayoutSettings& layoutSettings() const /*throw()*/;
+				int width() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
 			};

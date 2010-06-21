@@ -38,41 +38,120 @@ namespace {
 		COLORREF c_[128];
 	} systemColors;
 
-	// SystemFonts caches the system fonts. But we should take more generic way...
-	class SystemFonts {
-	public:
-		~SystemFonts() /*throw()*/ {
-			for(tr1::unordered_map<pair<String, FontProperties>, HFONT>::iterator i(registry_.begin()), e(registry_.end()); i != e; ++i)
-				::DeleteObject(i->second);
+	int CALLBACK checkFontInstalled(ENUMLOGFONTEXW*, NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
+		*reinterpret_cast<bool*>(param) = true;
+		return 0;
+	}
+
+	template<typename T> inline int round(T value) {return static_cast<int>(floor(value + 0.5));}
+
+	LANGID userCJKLanguage() /*throw()*/ {
+		// this code is preliminary...
+		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
+		LANGID result = getUserDefaultUILanguage();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		result = ::GetUserDefaultLangID();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		result = ::GetSystemDefaultLangID();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		switch(::GetACP()) {
+		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
+		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
+		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
 		}
-		String fallback(int script) const {return String();}	// TODO: implement later.
-		Font get(const String& familyName, const FontProperties& properties) const {
-			tr1::unordered_map<pair<String, FontProperties>, HFONT>::const_iterator i(registry_.find(make_pair(familyName, properties)));
-			if(i != registry_.end())
-				return Font(borrowed(i->second));
-			return const_cast<SystemFonts*>(this)->cache(familyName, properties);
+		return result;
+	}
+
+	/***/
+	String fallback(int script) {
+		if(script <= Script::FIRST_VALUE || script == Script::INHERITED
+				|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
+			throw UnknownValueException("script");
+
+		static map<int, const String> associations;
+		if(associations.empty()) {
+			associations.insert(make_pair(Script::ARABIC, L"Microsoft Sans Serif"));
+			associations.insert(make_pair(Script::CYRILLIC, L"Microsoft Sans Serif"));
+			associations.insert(make_pair(Script::GREEK, L"Microsoft Sans Serif"));
+			associations.insert(make_pair(Script::HANGUL, L"Gulim"));
+			associations.insert(make_pair(Script::HEBREW, L"Microsoft Sans Serif"));
+//			associations.insert(make_pair(Script::HIRAGANA, L"MS P Gothic"));
+//			associations.insert(make_pair(Script::KATAKANA, L"MS P Gothic"));
+			associations.insert(make_pair(Script::LATIN, L"Tahoma"));
+			associations.insert(make_pair(Script::THAI, L"Tahoma"));
+			// Windows 2000
+			associations.insert(make_pair(Script::ARMENIAN, L"Sylfaen"));
+			associations.insert(make_pair(Script::DEVANAGARI, L"Mangal"));
+			associations.insert(make_pair(Script::GEORGIAN, L"Sylfaen"));	// partial support?
+			associations.insert(make_pair(Script::TAMIL, L"Latha"));
+			// Windows XP
+			associations.insert(make_pair(Script::GUJARATI, L"Shruti"));
+			associations.insert(make_pair(Script::GURMUKHI, L"Raavi"));
+			associations.insert(make_pair(Script::KANNADA, L"Tunga"));
+			associations.insert(make_pair(Script::SYRIAC, L"Estrangelo Edessa"));
+			associations.insert(make_pair(Script::TELUGU, L"Gautami"));
+			associations.insert(make_pair(Script::THAANA, L"MV Boli"));
+			// Windows XP SP2
+			associations.insert(make_pair(Script::BENGALI, L"Vrinda"));
+			associations.insert(make_pair(Script::MALAYALAM, L"Kartika"));
+			// Windows Vista
+			associations.insert(make_pair(Script::CANADIAN_ABORIGINAL, L"Euphemia"));
+			associations.insert(make_pair(Script::CHEROKEE, L"Plantagenet"));
+			associations.insert(make_pair(Script::ETHIOPIC, L"Nyala"));
+			associations.insert(make_pair(Script::KHMER, L"DaunPenh"));	// or "MoolBoran"
+			associations.insert(make_pair(Script::LAO, L"DokChampa"));
+			associations.insert(make_pair(Script::MONGOLIAN, L"Mongolian Baiti"));
+			associations.insert(make_pair(Script::ORIYA, L"Kalinga"));
+			associations.insert(make_pair(Script::SINHALA, L"Iskoola Pota"));
+			associations.insert(make_pair(Script::TIBETAN, L"Microsoft Himalaya"));
+			associations.insert(make_pair(Script::YI, L"Yi Baiti"));
+			// CJK
+			const LANGID uiLang = userCJKLanguage();
+			switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
+			case LANG_CHINESE:
+				associations.insert(make_pair(Script::HAN, (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
+					&& SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? L"PMingLiu" : L"SimSun")); break;
+			case LANG_JAPANESE:
+				associations.insert(make_pair(Script::HAN, L"MS P Gothic")); break;
+			case LANG_KOREAN:
+				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
+			default:
+				{
+					ScreenDC dc;
+					bool installed = false;
+					LOGFONTW lf;
+					memset(&lf, 0, sizeof(LOGFONTW));
+#define ASCENSION_SELECT_INSTALLED_FONT(charset, fontname)			\
+	lf.lfCharSet = charset;											\
+	wcscpy(lf.lfFaceName, fontname);								\
+	::EnumFontFamiliesExW(dc.get(), &lf,							\
+		reinterpret_cast<FONTENUMPROCW>(checkFontInstalled),		\
+		reinterpret_cast<LPARAM>(&installed), 0);					\
+	if(installed) {													\
+		associations.insert(make_pair(Script::HAN, lf.lfFaceName));	\
+		break;														\
+	}
+					ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
+					ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af")	// "ＭＳ Ｐゴシック"
+					ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
+					ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
+#undef ASCENSION_SELECT_INSTALLED_FONT
+				}
+				break;
+			}
+			if(associations.find(Script::HAN) != associations.end()) {
+				associations.insert(make_pair(Script::HIRAGANA, associations[Script::HAN]));
+				associations.insert(make_pair(Script::KATAKANA, associations[Script::HAN]));
+			}
 		}
-	private:
-		Font cache(const String& familyName, const FontProperties& properties) {
-			if(familyName.length() >= LF_FACESIZE)
-				throw length_error("");
-			LOGFONTW lf;
-			memset(&lf, 0, sizeof(LOGFONTW));
-			lf.lfHeight = properties.size;
-			lf.lfWeight = properties.weight;
-			lf.lfItalic = (properties.style == FontProperties::ITALIC) || (properties.style == FontProperties::OBLIQUE);
-			wcscpy(lf.lfFaceName, familyName.c_str());
-			HFONT font = ::CreateFontIndirectW(&lf);
-			registry_.insert(make_pair(make_pair(familyName, properties), font));
-			return Font(borrowed(font));
-		}
-		struct Hasher : tr1::hash<String> {
-			size_t operator()(const pair<String, FontProperties>& value) const {
-				return tr1::hash<String>::operator()(value.first) + value.second.weight + value.second.stretch + value.second.style;}
-		};
-	private:
-		tr1::unordered_map<pair<String, FontProperties>, HFONT, Hasher> registry_;
-	} systemFonts;
+
+		map<int, const String>::const_iterator i(associations.find(script));
+		return (i != associations.end()) ? i->second : String();
+	}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	typedef ulong OPENTYPE_TAG;
@@ -126,27 +205,6 @@ namespace {
 		case ALIGN_CENTER:
 		default:			return c.orientation;
 		}
-	}
-
-	LANGID getUserCJKLanguage() /*throw()*/ {
-		// this code is preliminary...
-		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
-		LANGID result = getUserDefaultUILanguage();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetUserDefaultLangID();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetSystemDefaultLangID();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		switch(::GetACP()) {
-		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
-		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
-		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
-		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
-		}
-		return result;
 	}
 } // namespace @0
 
@@ -209,6 +267,51 @@ bool layout::supportsOpenTypeFeatures() /*throw()*/ {
 }
 
 
+// SystemFonts //////////////////////////////////////////////////////////////
+
+namespace {
+	class SystemFonts : public IFontCollection {
+		FontPointer get(const DC& dc, const String& familyName, const FontProperties& properties, double sizeAdjust) const;
+	private:
+		FontPointer cache(const DC& dc, const String& familyName, const FontProperties& properties, double sizeAdjust);
+		struct Hasher : tr1::hash<String> {
+			size_t operator()(const pair<String, FontProperties>& value) const {
+				return tr1::hash<String>::operator()(value.first) + value.second.weight + value.second.stretch + value.second.style;}
+		};
+	private:
+		tr1::unordered_map<pair<String, FontProperties>, FontPointer, Hasher> registry_;
+	};
+} // namespace @0
+
+FontPointer SystemFonts::get(const DC& dc, const String& familyName, const FontProperties& properties, double sizeAdjust) const {
+	tr1::unordered_map<pair<String, FontProperties>, FontPointer, Hasher>::const_iterator i(registry_.find(make_pair(familyName, properties)));
+	if(i != registry_.end())
+		return i->second;
+	return const_cast<SystemFonts*>(this)->cache(dc, familyName, properties, sizeAdjust);
+}
+
+FontPointer SystemFonts::cache(const DC& dc, const String& familyName, const FontProperties& properties, double sizeAdjust) {
+	if(familyName.length() >= LF_FACESIZE)
+		throw length_error("");
+	// TODO: recognize 'properties.stretch' and 'sizeAdjust' parameter.
+	LOGFONTW lf;
+	memset(&lf, 0, sizeof(LOGFONTW));
+	lf.lfHeight = -round(properties.size / 96.0 * dc.getDeviceCaps(LOGPIXELSY));
+	lf.lfWeight = properties.weight;
+	lf.lfItalic = (properties.style == FontProperties::ITALIC) || (properties.style == FontProperties::OBLIQUE);
+	wcscpy(lf.lfFaceName, familyName.c_str());
+	FontPointer font(::CreateFontIndirectW(&lf), &DeleteObject);
+	registry_.insert(make_pair(make_pair(familyName, properties), font));
+	return font;
+}
+
+/// Returns the object implements @c IFontCollection interface.
+const IFontCollection& layout::systemFonts() {
+	static SystemFonts instance;
+	return instance;
+}
+
+
 // LineLayout.Run ///////////////////////////////////////////////////////////
 
 class LineLayout::Run {
@@ -266,12 +369,12 @@ private:
 	tr1::shared_ptr<GlyphData> glyphs_;	// glyph range in 'glyphs_'
 	Range<int> glyphRange_;
 	tr1::shared_ptr<const RunStyle> style_;
-	HFONT font_;
+	FontPointer font_;
 	ABC width_;
 };
 
 LineLayout::Run::Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const RunStyle> style) /*throw()*/
-		: characterRange_(0, length), analysis_(script), glyphs_(new GlyphData(column)), style_(style), font_(0) {
+		: characterRange_(0, length), analysis_(script), glyphs_(new GlyphData(column)), style_(style) {
 }
 
 LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary) /*throw()*/ :
@@ -407,7 +510,7 @@ inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc) cons
  * @return
  */
 inline HRESULT LineLayout::Run::draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect /* = 0 */, UINT options /* = 0 */) const {
-	HFONT oldFont = dc.selectObject(font_);
+	HFONT oldFont = dc.selectObject(font_.get());
 	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->cache, x, y, 0, clipRect,
 		&analysis_, 0, 0, glyphs(), numberOfGlyphs(), advances(), justifiedAdvances(), glyphOffsets());
 	if(restoreFont)
@@ -536,7 +639,7 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 	HRESULT hr = ::ScriptPlace(0, &glyphs_->cache, glyphs(), numberOfGlyphs(),
 		visualAttributes(), &analysis_, advances.get(), offsets.get(), &width);
 	if(hr == E_PENDING) {
-		dc.selectObject(font_);
+		dc.selectObject(font_.get());
 		hr = ::ScriptPlace(dc.get(), &glyphs_->cache, glyphs(), numberOfGlyphs(),
 			visualAttributes(), &analysis_, advances.get(), offsets.get(), &width);
 	}
@@ -545,10 +648,10 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 
 	// query widths of C0 and C1 controls in this run
 	manah::AutoBuffer<WORD> glyphIndices;
-	if(ISpecialCharacterRenderer* scr = lip.getSpecialCharacterRenderer()) {
+	if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
 		ISpecialCharacterRenderer::LayoutContext context(dc);
 		context.orientation = orientation();
-		dc.selectObject(font_);
+		dc.selectObject(font_.get());
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = 0;
 		for(length_t i = column(), e = column() + length(); i < e; ++i) {
@@ -663,7 +766,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		if(!requestedStyle()->shapingEnabled)
 			analysis_.eScript = SCRIPT_UNDEFINED;
 	} else {
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip.getPresentation().defaultTextRunStyle());
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
 		if(defaultStyle.get() != 0 && !defaultStyle->shapingEnabled)
 			analysis_.eScript = SCRIPT_UNDEFINED;
 	}
@@ -672,9 +775,30 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	const WORD originalScript = analysis_.eScript;
 	HFONT oldFont;
 
+	// compute font properties
+	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
+	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
+	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
+	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+	if(computedFontFamily.empty() && defaultStyle.get() != 0)
+		computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
+	if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
+		computedFontProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
+	if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
+		computedFontProperties.stretch = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
+	if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
+		computedFontProperties.style = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
+	if(computedFontProperties.size == 0.0f && defaultStyle.get() != 0)
+		computedFontProperties.size = defaultStyle->fontProperties.size;
+	if(computedFontSizeAdjust < 0.0)
+		computedFontSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
+
 	if(analysis_.s.fDisplayZWG != 0 && scriptProperties.get(analysis_.eScript).fControl != 0) {
 		// bidirectional format controls
-		oldFont = dc.selectObject(font_ = lip.getFontSelector().fontForShapingControls());
+		FontProperties fp;
+		fp.size = computedFontProperties.size;
+		FontPointer font(lip.fontCollection().get(dc, L"Arial", fp, computedFontSizeAdjust));	// TODO: tell the adjust size.
+		oldFont = dc.selectObject((font_ = font).get());
 		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, lineString))) {
 			analysis_.eScript = SCRIPT_UNDEFINED;
 			hr = buildGlyphs(dc, lineString);
@@ -698,22 +822,9 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
 		// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
 
-		String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
-		FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip.getPresentation().defaultTextRunStyle());
-		if(computedFontFamily.empty() && defaultStyle.get() != 0)
-			computedFontFamily = lip.getPresentation().defaultTextRunStyle()->fontFamily;
-		if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
-			computedFontProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
-		if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
-			computedFontProperties.stretch = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
-		if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
-			computedFontProperties.style = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
-		if(computedFontProperties.size == 0.0f && defaultStyle.get() != 0)
-			computedFontProperties.size = defaultStyle->fontProperties.size;
-
 		int script = NOT_PROPERTY;	// script of the run for fallback
-		vector<pair<HFONT, int> > failedFonts;	// failed fonts (font handle vs. # of missings)
+		typedef vector<pair<FontPointer, int> > FailedFonts;
+		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
 		int numberOfMissingGlyphs;
 
 		const Char* textString = lineString.data();
@@ -728,7 +839,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 
 #define ASCENSION_CHECK_FAILED_FONTS()										\
 	bool skip = false;														\
-	for(vector<pair<HFONT, int> >::const_iterator							\
+	for(FailedFonts::const_iterator											\
 			i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {	\
 		if(i->first == font_) {												\
 			skip = true;													\
@@ -745,7 +856,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		}
 
 		// 1. the primary font
-		oldFont = dc.selectObject(font_ = systemFonts.get(computedFontFamily, computedFontProperties).get());
+		oldFont = dc.selectObject((font_ = lip.fontCollection().get(dc, computedFontFamily, computedFontProperties)).get());
 		hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 		if(hr != S_OK) {
 			::ScriptFreeCache(&glyphs_->cache);
@@ -756,12 +867,12 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		if(hr == USP_E_SCRIPT_NOT_IN_FONT && analysis_.eScript != SCRIPT_UNDEFINED && analysis_.s.fDigitSubstitute != 0) {
 			script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(analysis_.eScript).langid);
 			if(script != NOT_PROPERTY) {
-				const basic_string<WCHAR> fallbackFontFamily(systemFonts.fallback(script));
+				const basic_string<WCHAR> fallbackFontFamily(fallback(script));
 				if(!fallbackFontFamily.empty()) {
-					font_ = systemFonts.get(fallbackFontFamily, computedFontProperties).get();
+					font_ = lip.fontCollection().get(dc, fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
 					ASCENSION_CHECK_FAILED_FONTS()
 					if(!skip) {
-						dc.selectObject(font_);
+						dc.selectObject(font_.get());
 						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 						if(hr != S_OK) {
 							::ScriptFreeCache(&glyphs_->cache);
@@ -795,11 +906,11 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 					break;
 			}
 			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED) {
-				const basic_string<WCHAR> fallbackFontFamily(systemFonts.fallback(script));
+				const basic_string<WCHAR> fallbackFontFamily(fallback(script));
 				if(!fallbackFontFamily.empty())
-					font_ = systemFonts.get(fallbackFontFamily, computedFontProperties).get();
+					font_ = lip.fontCollection().get(dc, fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
 			} else {
-				font_ = 0;
+				font_.reset();
 				// ambiguous CJK?
 				if(script == Script::COMMON && scriptProperties.get(analysis_.eScript).fAmbiguousCharSet != 0) {
 					// TODO: this code check only the first character in the run?
@@ -811,9 +922,9 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 					case Block::CJK_COMPATIBILITY_FORMS:
 					case Block::SMALL_FORM_VARIANTS:	// as of CNS-11643
 					case Block::HALFWIDTH_AND_FULLWIDTH_FORMS: {
-						const basic_string<WCHAR> fallbackFontFamily(systemFonts.fallback(Script::HAN));
+						const basic_string<WCHAR> fallbackFontFamily(fallback(Script::HAN));
 						if(!fallbackFontFamily.empty())
-							font_ = systemFonts.get(fallbackFontFamily, computedFontProperties).get();
+							font_ = lip.fontCollection().get(dc, fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
 						break;
 						}
 					}
@@ -827,7 +938,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			if(font_ != 0) {
 				ASCENSION_CHECK_FAILED_FONTS()
 				if(!skip) {
-					dc.selectObject(font_);
+					dc.selectObject(font_.get());
 					hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 					if(hr != S_OK) {
 						::ScriptFreeCache(&glyphs_->cache);
@@ -845,9 +956,10 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 				if(find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
 					ASCENSION_MAKE_TEXT_STRING_SAFE();
 				}
-				for(vector<pair<HFONT, int> >::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
+				for(FailedFonts::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
 					if(i->second == numeric_limits<int>::max()) {
-						dc.selectObject(font_ = i->first);
+						font_.reset();
+						dc.selectObject((font_ = i->first).get());
 						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 						if(hr == S_OK)
 							break;	// found the best
@@ -861,12 +973,12 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			if(hr != S_OK) {
 				// select the font which generated the least missing glyphs
 				assert(!failedFonts.empty());
-				vector<pair<HFONT, int> >::const_iterator bestFont(failedFonts.begin());
-				for(vector<pair<HFONT, int> >::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
+				FailedFonts::const_iterator bestFont(failedFonts.begin());
+				for(FailedFonts::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
 					if(i->second < bestFont->second)
 						bestFont = i;
 				}
-				dc.selectObject(font_ = bestFont->first);
+				dc.selectObject((font_ = bestFont->first).get());
 				if(bestFont->second < 0)
 					analysis_.eScript = SCRIPT_UNDEFINED;
 				hr = generateGlyphs(dc, textString, 0);
@@ -885,12 +997,12 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	if(!uniscribeSupportsVSS() && supportsOpenTypeFeatures()) {
 		if(previousRun != 0 && length() > 1) {
 			const CodePoint vs = surrogates::decodeFirst(lineString.begin() + column(), lineString.begin() + column() + 2);
-			if(vs >= 0xe0100u && vs <= 0xe01efu) {
+			if(vs >= 0xe0100ul && vs <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
 					lineString.data() + previousRun->column(), lineString.data() + previousRun->column() + previousRun->length());
 				const size_t i = ascension::internal::searchBound(
-					0u, MANAH_COUNTOF(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xe0100u), GetIVS());
-				if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xe0100u))) {
+					0u, MANAH_COUNTOF(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xe0100ul), GetIVS());
+				if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xe0100ul))) {
 					// found valid IVS -> apply OpenType feature tag to obtain the variant
 					// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
 					hr = uspLib->get<0>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
@@ -1039,26 +1151,26 @@ namespace {
 
 /**
  * Constructor.
+ * @param dc the device context
  * @param layoutInformation the layout information
  * @param line the line
  * @throw kernel#BadPositionException @a line is invalid
  */
-LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation), lineNumber_(line),
+LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation), lineNumber_(line),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
 	// calculate the wrapping width
-	if(layoutInformation.getLayoutSettings().lineWrap.wraps()) {
-		wrapWidth_ = layoutInformation.getWidth();
-		if(ISpecialCharacterRenderer* scr = lip_.getSpecialCharacterRenderer()) {
-			auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
-			ISpecialCharacterRenderer::LayoutContext context(*dc);
-			context.orientation = lip_.getLayoutSettings().orientation;
+	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
+		wrapWidth_ = layoutInformation.width();
+		if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
+			ISpecialCharacterRenderer::LayoutContext context(dc);
+			context.orientation = lip_.layoutSettings().orientation;
 			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
 		}
 	}
 	// construct the layout
 	if(!text().empty()) {
 		itemize(line);
-		shape();
+		shape(dc);
 		if(numberOfRuns_ == 0 || wrapWidth_ == -1) {
 			numberOfSublines_ = 1;
 			sublineFirstRuns_ = new size_t[1];
@@ -1066,9 +1178,9 @@ LineLayout::LineLayout(const ILayoutInformationProvider& layoutInformation, leng
 			reorder();
 			expandTabsWithoutWrapping();
 		} else {
-			wrap();
+			wrap(dc);
 			reorder();
-			if(lip_.getLayoutSettings().justifiesLines)
+			if(lip_.layoutSettings().justifiesLines)
 				justify();
 		}
 	} else {	// an empty line
@@ -1094,7 +1206,7 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 		// use the default level
-		return (lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
+		return (lip_.layoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
@@ -1295,7 +1407,7 @@ void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& c
 		r.top = max(clipRect.top, max<long>(paintRect.top, y));
 		r.right = min(paintRect.right, clipRect.right);
 		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + dy));
-		const Colors lineColor = lip_.getPresentation().getLineColor(lineNumber_);
+		const Colors lineColor = lip_.presentation().getLineColor(lineNumber_);
 		dc.fillSolidRect(r, systemColors.serve(lineColor.background, COLOR_WINDOW));
 		return;
 	}
@@ -1339,11 +1451,11 @@ void LineLayout::draw(length_t subline, DC& dc,
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
 	const int dy = linePitch();
-	const int lineHeight = lip_.getFontSelector().lineHeight();
-	const Colors lineColor = lip_.getPresentation().getLineColor(lineNumber_);
+	const int lineHeight = lip_.textMetrics().lineHeight();
+	const Colors lineColor = lip_.presentation().getLineColor(lineNumber_);
 	const COLORREF marginColor = systemColors.serve(lineColor.background, COLOR_WINDOW);
 	ISpecialCharacterRenderer::DrawingContext context(dc);
-	ISpecialCharacterRenderer* specialCharacterRenderer = lip_.getSpecialCharacterRenderer();
+	ISpecialCharacterRenderer* specialCharacterRenderer = lip_.specialCharacterRenderer();
 
 	if(specialCharacterRenderer != 0) {
 		context.rect.top = y;
@@ -1379,7 +1491,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// 1. paint background of the runs
 		// 2. determine the first and the last runs need to draw
 		// 3. mask selected region
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip_.getPresentation().defaultTextRunStyle());
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip_.presentation().defaultTextRunStyle());
 		const COLORREF defaultForeground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->foreground : Color(), COLOR_WINDOWTEXT);
 		const COLORREF defaultBackground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->background : Color(), COLOR_WINDOW);
 		size_t firstRun = sublineFirstRuns_[subline];
@@ -1458,7 +1570,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.setTextColor(foreground);
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
-					hr = run.draw(dc, x, y + lip_.getFontSelector().ascent(), false, &runRect);
+					hr = run.draw(dc, x, y + lip_.textMetrics().ascent(), false, &runRect);
 				}
 			}
 			// decoration (underline and border)
@@ -1481,7 +1593,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.setTextColor(selection->color().foreground.asCOLORREF());
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
-					hr = run.draw(dc, x, y + lip_.getFontSelector().ascent(), false, &runRect);
+					hr = run.draw(dc, x, y + lip_.textMetrics().ascent(), false, &runRect);
 				}
 				// decoration (underline and border)
 				if(run.requestedStyle().get() != 0)
@@ -1516,18 +1628,18 @@ void LineLayout::draw(length_t subline, DC& dc,
 				x += run.totalWidth();
 			}
 		}
-		if(subline == numberOfSublines_ - 1 && lip_.getLayoutSettings().alignment == ALIGN_RIGHT)
+		if(subline == numberOfSublines_ - 1 && lip_.layoutSettings().alignment == ALIGN_RIGHT)
 			x = startX;
 	} // end of nonempty line case
 	
 	// line terminator and line wrapping mark
-	const Document& document = lip_.getPresentation().document();
+	const Document& document = lip_.presentation().document();
 	if(specialCharacterRenderer != 0) {
-		context.orientation = getLineTerminatorOrientation(lip_.getLayoutSettings());
+		context.orientation = getLineTerminatorOrientation(lip_.layoutSettings());
 		if(subline < numberOfSublines_ - 1) {	// line wrapping mark
 			const int markWidth = specialCharacterRenderer->getLineWrappingMarkWidth(context);
 			if(context.orientation == LEFT_TO_RIGHT) {
-				context.rect.right = lip_.getWidth();
+				context.rect.right = lip_.width();
 				context.rect.left = context.rect.right - markWidth;
 			} else {
 				context.rect.left = 0;
@@ -1578,10 +1690,10 @@ void LineLayout::dumpRuns(ostream& out) const {
 /// Expands the all tabs and resolves each width.
 inline void LineLayout::expandTabsWithoutWrapping() /*throw()*/ {
 	const String& lineString = text();
-	const int fullTabWidth = lip_.getFontSelector().averageCharacterWidth() * lip_.getLayoutSettings().tabWidth;
+	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	int x = 0;
 
-	if(getLineTerminatorOrientation(lip_.getLayoutSettings()) == LEFT_TO_RIGHT) {	// expand from the left most
+	if(getLineTerminatorOrientation(lip_.layoutSettings()) == LEFT_TO_RIGHT) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
 			Run& run = *runs_[i];
 			run.expandTabCharacters(lineString, x, fullTabWidth, numeric_limits<int>::max());
@@ -1607,6 +1719,7 @@ inline void LineLayout::expandTabsWithoutWrapping() /*throw()*/ {
  * @note This does not support line wrapping and bidirectional context.
  */
 String LineLayout::fillToX(int x) const {
+#if 0
 	int cx = longestSublineWidth();
 	if(cx >= x)
 		return L"";
@@ -1639,6 +1752,9 @@ String LineLayout::fillToX(int x) const {
 	String result(numberOfTabs + numberOfSpaces, L' ');
 	result.replace(0, numberOfTabs, numberOfTabs, L'\t');
 	return result;
+#else
+	return String();
+#endif
 }
 
 /**
@@ -1668,7 +1784,7 @@ LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const /*throw
 #endif
 /// Returns if the line contains right-to-left run.
 bool LineLayout::isBidirectional() const /*throw()*/ {
-	if(lip_.getLayoutSettings().orientation == RIGHT_TO_LEFT)
+	if(lip_.layoutSettings().orientation == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		if(runs_[i]->orientation() == RIGHT_TO_LEFT)
@@ -1686,8 +1802,8 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	assert(!line.empty());
 
 	HRESULT hr;
-	const LayoutSettings& c = lip_.getLayoutSettings();
-	const Presentation& presentation = lip_.getPresentation();
+	const LayoutSettings& c = lip_.layoutSettings();
+	const Presentation& presentation = lip_.presentation();
 
 	// configure
 	AutoZero<SCRIPT_CONTROL> control;
@@ -1774,7 +1890,7 @@ LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const /*throw(
 #endif
 /// Returns the line pitch in pixels.
 inline int LineLayout::linePitch() const /*throw()*/ {
-	return lip_.getFontSelector().lineHeight() + max(lip_.getLayoutSettings().lineSpacing, lip_.getFontSelector().lineGap());
+	return lip_.textMetrics().lineHeight() + max(lip_.layoutSettings().lineSpacing, lip_.textMetrics().lineGap());
 }
 
 // implements public location methods
@@ -1793,7 +1909,7 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 	const length_t firstRun = sublineFirstRuns_[sl];
 	const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
 	// about x
-	if(lip_.getLayoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
+	if(lip_.layoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
 		int x = sublineIndent(sl);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const Run& run = *runs_[i];
@@ -1969,7 +2085,7 @@ inline void LineLayout::reorder() /*throw()*/ {
  */
 inline int LineLayout::nextTabStop(int x, Direction direction) const /*throw()*/ {
 	assert(x >= 0);
-	const int tabWidth = lip_.getFontSelector().averageCharacterWidth() * lip_.getLayoutSettings().tabWidth;
+	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	return (direction == Direction::FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
 }
 
@@ -1981,8 +2097,8 @@ inline int LineLayout::nextTabStop(int x, Direction direction) const /*throw()*/
  */
 int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
 	assert(x >= 0);
-	const LayoutSettings& c = lip_.getLayoutSettings();
-	const int tabWidth = lip_.getFontSelector().averageCharacterWidth() * c.tabWidth;
+	const LayoutSettings& c = lip_.layoutSettings();
+	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
 	if(getLineTerminatorOrientation(c) == LEFT_TO_RIGHT)
 		return nextTabStop(x, right ? Direction::FORWARD : Direction::BACKWARD);
 	else
@@ -2089,7 +2205,7 @@ RECT LineLayout::sublineBounds(length_t subline) const {
 int LineLayout::sublineIndent(length_t subline) const {
 	if(subline == 0)
 		return 0;
-	const LayoutSettings& c = lip_.getLayoutSettings();
+	const LayoutSettings& c = lip_.layoutSettings();
 	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
 		return 0;
 	switch(c.alignment) {
@@ -2127,37 +2243,31 @@ int LineLayout::sublineWidth(length_t subline) const {
 
 /// Returns the text of the line.
 inline const String& LineLayout::text() const /*throw()*/ {
-	return lip_.getPresentation().document().line(lineNumber_);
+	return lip_.presentation().document().line(lineNumber_);
 }
 
 /// Generates the glyphs for the text.
-void LineLayout::shape() /*throw()*/ {
-	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	const Run* lastIVSProcessedRun = 0;
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
+void LineLayout::shape(DC& dc) /*throw()*/ {
 	// for each runs...
 	const String& lineString = text();
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		Run& run = *runs_[i];
-		run.shape(*dc, lineString, lip_, i > 0 ? runs_[i - 1] : 0);
-		run.place(*dc, lineString, lip_);
+		run.shape(dc, lineString, lip_, i > 0 ? runs_[i - 1] : 0);
+		run.place(dc, lineString, lip_);
 	}
 }
 
 /// Locates the wrap points and resolves tab expansions.
-void LineLayout::wrap() /*throw()*/ {
-	assert(numberOfRuns_ != 0 && lip_.getLayoutSettings().lineWrap.wraps());
+void LineLayout::wrap(DC& dc) /*throw()*/ {
+	assert(numberOfRuns_ != 0 && lip_.layoutSettings().lineWrap.wraps());
 	assert(numberOfSublines_ == 0 && sublineOffsets_ == 0 && sublineFirstRuns_ == 0);
 
 	const String& lineString = text();
 	vector<length_t> sublineFirstRuns;
 	sublineFirstRuns.push_back(0);
-	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
-	const int cookie = dc->save();
+	const int cookie = dc.save();
 	int x1 = 0;	// addresses the beginning of the run. see x2
-	const int fullTabWidth = lip_.getFontSelector().averageCharacterWidth() * lip_.getLayoutSettings().tabWidth;
+	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	manah::AutoBuffer<int> logicalWidths;
 	manah::AutoBuffer<SCRIPT_LOGATTR> logicalAttributes;
 	length_t longestRunLength = 0;	// for efficient allocation
@@ -2239,7 +2349,7 @@ void LineLayout::wrap() /*throw()*/ {
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					auto_ptr<Run> followingRun(run->breakAt(*dc, lastBreakable, lineString, lip_));
+					auto_ptr<Run> followingRun(run->breakAt(dc, lastBreakable, lineString, lip_));
 					newRuns.push_back(run);
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
@@ -2258,7 +2368,7 @@ void LineLayout::wrap() /*throw()*/ {
 		x1 += widthInThisRun;
 	}
 //dout << L"...broke the all lines.\n";
-	dc->restore(cookie);
+	dc.restore(cookie);
 	if(newRuns.empty())
 		newRuns.push_back(0);
 	delete[] runs_;
@@ -2378,6 +2488,7 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 //	const size_t originalSize = layouts_.size();
 	length_t oldSublines = 0, cachedLines = 0;
 	if(repair) {
+		DC dc;
 		length_t newSublines = 0, actualFirst = last, actualLast = first;
 		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
 			LineLayout*& layout = *i;
@@ -2385,7 +2496,9 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 			if(lineNumber >= first && lineNumber < last) {
 				oldSublines += layout->numberOfSublines();
 				delete layout;
-				layout = new LineLayout(*lip_, lineNumber);
+				if(dc.get() == 0)
+					dc = deviceContext();
+				layout = new LineLayout(dc, *lip_, lineNumber);
 				newSublines += layout->numberOfSublines();
 				++cachedLines;
 				actualFirst = min(actualFirst, lineNumber);
@@ -2491,7 +2604,7 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 
 /// Invalidates all layouts.
 void LineLayoutBuffer::invalidate() /*throw()*/ {
-	clearCaches(0, lip_->getPresentation().document().numberOfLines(), autoRepair_);
+	clearCaches(0, lip_->presentation().document().numberOfLines(), autoRepair_);
 }
 
 /**
@@ -2517,7 +2630,7 @@ inline void LineLayoutBuffer::invalidate(length_t line) {
 			const length_t oldSublines = p->numberOfSublines();
 			delete p;
 			if(autoRepair_) {
-				p = new LineLayout(*lip_, line);
+				p = new LineLayout(deviceContext(), *lip_, line);
 				fireVisualLinesModified(line, line + 1, p->numberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
@@ -2539,7 +2652,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 	manah::win32::DumpContext dout;
 	dout << "finding layout for line " << line;
 #endif
-	if(line > lip_->getPresentation().document().numberOfLines())
+	if(line > lip_->presentation().document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
 	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
 	list<LineLayout*>::iterator i(self.layouts_.begin());
@@ -2571,7 +2684,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 				1, p->numberOfSublines(), documentChangePhase_ == CHANGING);
 			delete p;
 		}
-		LineLayout* const layout = new LineLayout(*lip_, line);
+		LineLayout* const layout = new LineLayout(deviceContext(), *lip_, line);
 		self.layouts_.push_front(layout);
 		self.fireVisualLinesModified(line, line + 1, layout->numberOfSublines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
@@ -2586,9 +2699,9 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
  * @see #mapLogicalPositionToVisualPosition
  */
 length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
-	if(line >= lip_->getPresentation().document().numberOfLines())
+	if(line >= lip_->presentation().document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
-	else if(!lip_->getLayoutSettings().lineWrap.wraps())
+	else if(!lip_->layoutSettings().lineWrap.wraps())
 		return line;
 	length_t result = 0, cachedLines = 0;
 	for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
@@ -2609,7 +2722,7 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
  * @see #mapLogicalLineToVisualLine
  */
 length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
-	if(!lip_->getLayoutSettings().lineWrap.wraps()) {
+	if(!lip_->layoutSettings().lineWrap.wraps()) {
 		if(column != 0)
 			*column = position.column;
 		return position.line;
@@ -2835,7 +2948,7 @@ DefaultSpecialCharacterRenderer::~DefaultSpecialCharacterRenderer() /*throw()*/ 
 
 /// @see ISpecialCharacterRenderer#drawControlCharacter
 void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
-	HFONT oldFont = context.dc.selectObject(renderer_->font());
+	HFONT oldFont = context.dc.selectObject(renderer_->defaultFont().get());
 	context.dc.setTextColor(controlColor_);
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
@@ -2846,7 +2959,8 @@ void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext&
 /// @see ISpecialCharacterRenderer#drawLineTerminator
 void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, kernel::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xffffu) {
-		HFONT oldFont = context.dc.selectObject(manah::toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000u) ? font_ : renderer_->font());
+		HFONT oldFont = context.dc.selectObject(
+			manah::toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000ul) ? font_ : renderer_->defaultFont().get());
 		context.dc.setTextColor(eolColor_);
 		context.dc.extTextOut(context.rect.left,
 			context.rect.top + renderer_->ascent(), ETO_GLYPH_INDEX, 0, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
@@ -2859,7 +2973,8 @@ void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext&
 	const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
 	const WCHAR glyph = glyphs_[id];
 	if(glyph != 0xffffu) {
-		HFONT oldFont = context.dc.selectObject(manah::toBoolean(glyphWidths_[id] & 0x80000000u) ? font_ : renderer_->font());
+		HFONT oldFont = context.dc.selectObject(
+			manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : renderer_->defaultFont().get());
 		context.dc.setTextColor(wrapMarkColor_);
 		context.dc.extTextOut(context.rect.left, context.rect.top + renderer_->ascent(), ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
 		context.dc.selectObject(oldFont);
@@ -2874,8 +2989,9 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
 		const WCHAR glyph = glyphs_[id];
 		if(glyph != 0xffffu) {
-			HFONT oldFont = context.dc.selectObject(manah::toBoolean(glyphWidths_[id] & 0x80000000u) ? font_ : renderer_->font());
-			const int glyphWidth = glyphWidths_[id] & 0x7fffffffu;
+			HFONT oldFont = context.dc.selectObject(
+				manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : renderer_->defaultFont().get());
+			const int glyphWidth = glyphWidths_[id] & 0x7ffffffful;
 			const int x =
 				((context.orientation == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
 					|| (context.orientation == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
@@ -2885,22 +3001,23 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 			context.dc.selectObject(oldFont);
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xffffu) {
-		HFONT oldFont = context.dc.selectObject(manah::toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000u) ? font_ : renderer_->font());
+		HFONT oldFont = context.dc.selectObject(
+			manah::toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000ul) ? font_ : renderer_->defaultFont().get());
 		context.dc.setTextColor(whiteSpaceColor_);
-		context.dc.extTextOut((context.rect.left + context.rect.right - (glyphWidths_[WHITE_SPACE] & 0x7fffffffu)) / 2,
+		context.dc.extTextOut((context.rect.left + context.rect.right - (glyphWidths_[WHITE_SPACE] & 0x7ffffffful)) / 2,
 			context.rect.top + renderer_->ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect,
 			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
 		context.dc.selectObject(oldFont);
 	}
 }
 
-/// @see IFontSelectorListener#fontChanged
-void DefaultSpecialCharacterRenderer::fontChanged() {
-	static const Char codes[] = {0x2192, 0x2190, 0x2193, 0x21a9, 0x21aa, 0x00b7};
+/// @see IDefaultFontListener#defaultFontChanged
+void DefaultSpecialCharacterRenderer::defaultFontChanged() {
+	static const Char codes[] = {0x2192u, 0x2190u, 0x2193u, 0x21a9u, 0x21aau, 0x00b7u};
 
 	// using the primary font
 	ScreenDC dc;
-	HFONT oldFont = dc.selectObject(renderer_->font());
+	HFONT oldFont = dc.selectObject(renderer_->defaultFont().get());
 	dc.getGlyphIndices(codes, MANAH_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
 	dc.getCharWidthI(glyphs_, MANAH_COUNTOF(codes), glyphWidths_);
 
@@ -2909,7 +3026,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 	font_ = 0;
 	if(find(glyphs_, MANAH_ENDOF(glyphs_), 0xffffu) != MANAH_ENDOF(glyphs_)) {
 		LOGFONTW lf;
-		::GetObjectW(renderer_->font(), sizeof(LOGFONTW), &lf);
+		::GetObjectW(renderer_->defaultFont().get(), sizeof(LOGFONTW), &lf);
 		lf.lfWeight = FW_REGULAR;
 		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
 		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");
@@ -2922,7 +3039,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 			if(glyphs_[i] == 0xffffu) {
 				if(g[i] != 0xffff) {
 					glyphs_[i] = g[i];
-					glyphWidths_[i] = w[i] | 0x80000000u;
+					glyphWidths_[i] = w[i] | 0x80000000ul;
 				} else
 					glyphWidths_[i] = 0;	// missing
 			}
@@ -2936,7 +3053,7 @@ void DefaultSpecialCharacterRenderer::fontChanged() {
 int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	HFONT oldFont = context.dc.selectObject(renderer_->font());
+	HFONT oldFont = context.dc.selectObject(renderer_->defaultFont().get());
 	const int result = context.dc.getTextExtent(buffer, 2).cx;
 	context.dc.selectObject(oldFont);
 	return result;
@@ -2944,23 +3061,23 @@ int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContex
 
 /// @see ISpecialCharacterRenderer#getLineTerminatorWidth
 int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&, kernel::Newline) const {
-	return showsEOLs_ ? (glyphWidths_[LINE_TERMINATOR] & 0x7fffffff) : 0;
+	return showsEOLs_ ? (glyphWidths_[LINE_TERMINATOR] & 0x7ffffffful) : 0;
 }
 
 /// @see ISpecialCharacterRenderer#getLineWrappingMarkWidth
 int DefaultSpecialCharacterRenderer::getLineWrappingMarkWidth(const LayoutContext& context) const {
-	return glyphWidths_[(context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK] & 0x7fffffff;
+	return glyphWidths_[(context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK] & 0x7ffffffful;
 }
 
 /// @see ISpecialCharacterRenderer#install
 void DefaultSpecialCharacterRenderer::install(TextRenderer& renderer) {
-	(renderer_ = &renderer)->addFontListener(*this);
-	fontChanged();
+	(renderer_ = &renderer)->addDefaultFontListener(*this);
+	defaultFontChanged();
 }
 
 /// @see ISpecialCharacterRenderer#uninstall
 void DefaultSpecialCharacterRenderer::uninstall() {
-	renderer_->removeFontListener(*this);
+	renderer_->removeDefaultFontListener(*this);
 	renderer_ = 0;
 }
 
@@ -2973,249 +3090,6 @@ namespace {
 		::GetObjectW(src, sizeof(LOGFONTW), &lf);
 		return ::CreateFontIndirectW(&lf);
 	}
-}
-
-struct FontSelector::Fontset {
-	MANAH_UNASSIGNABLE_TAG(Fontset);
-public:
-	WCHAR faceName[LF_FACESIZE];
-	HFONT regular, bold, italic, boldItalic;
-	explicit Fontset(const WCHAR* name) /*throw()*/ : regular(0), bold(0), italic(0), boldItalic(0) {
-		if(wcslen(name) >= LF_FACESIZE)
-			throw length_error("name");
-		wcscpy(faceName, name);
-	}
-	Fontset(const Fontset& rhs) : regular(0), bold(0), italic(0), boldItalic(0) {
-		wcscpy(faceName, rhs.faceName);
-	}
-	~Fontset() /*throw()*/ {
-		clear(L"");
-	}
-	void clear(const WCHAR* newName = 0) {
-		if(newName != 0 && wcslen(newName) >= LF_FACESIZE)
-			throw length_error("newName");
-		::DeleteObject(regular);
-		::DeleteObject(bold);
-		::DeleteObject(italic);
-		::DeleteObject(boldItalic);
-		regular = bold = italic = boldItalic = 0;
-		if(newName != 0)
-			wcscpy(faceName, newName);
-	}
-};
-
-FontSelector::FontAssociations FontSelector::defaultAssociations_;
-
-/// Constructor.
-FontSelector::FontSelector() : primaryFont_(new Fontset(L"")), shapingControlsFont_(0), linkedFonts_(0) {
-	resetPrimaryFont(ScreenDC(), copyFont(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT))));
-}
-
-/// Copy-constructor.
-FontSelector::FontSelector(const FontSelector& rhs) : primaryFont_(new Fontset(L"")), shapingControlsFont_(0), linkedFonts_(0) {
-	resetPrimaryFont(ScreenDC(), copyFont(rhs.primaryFont_->regular));
-	for(map<int, Fontset*>::const_iterator i(rhs.associations_.begin()), e(rhs.associations_.end()); i != e; ++i)
-		associations_.insert(make_pair(i->first, new Fontset(i->second->faceName)));
-	if(rhs.linkedFonts_ != 0) {
-		linkedFonts_ = new vector<Fontset*>;
-		for(vector<Fontset*>::const_iterator i(rhs.linkedFonts_->begin()), e(rhs.linkedFonts_->end()); i != e; ++i)
-			linkedFonts_->push_back(new Fontset(**i));
-	}
-}
-
-/// Destructor.
-FontSelector::~FontSelector() /*throw()*/ {
-	::DeleteObject(shapingControlsFont_);
-	delete primaryFont_;
-	for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
-		delete i->second;
-	if(linkedFonts_ != 0) {
-		for(vector<Fontset*>::iterator i(linkedFonts_->begin()); i != linkedFonts_->end(); ++i)
-			delete *i;
-		delete linkedFonts_;
-	}
-}
-
-/**
- * Enables or disables the font linking feature for CJK. When this method is called,
- * @c #fontChanged method of the derived class will be called.
- * @param enable set @c true to enable
- */
-void FontSelector::enableFontLinking(bool enable /* = true */) /*throw()*/ {
-	if(enable) {
-		if(linkedFonts_ == 0)
-			linkedFonts_ = new std::vector<Fontset*>;
-		linkPrimaryFont();
-	} else if(linkedFonts_ != 0) {
-		delete linkedFonts_;
-		linkedFonts_ = 0;
-	}
-}
-
-inline void FontSelector::fireFontChanged() {
-	fontChanged();
-	listeners_.notify(&IFontSelectorListener::fontChanged);
-}
-
-namespace {
-	int CALLBACK checkFontInstalled(ENUMLOGFONTEXW*, NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
-		*reinterpret_cast<bool*>(param) = true;
-		return 0;
-	}
-}
-
-/// Returns the default font association (fallback) map.
-const FontSelector::FontAssociations& FontSelector::getDefaultFontAssociations() /*throw()*/ {
-	if(defaultAssociations_.empty()) {
-		defaultAssociations_[Script::ARABIC] = L"Microsoft Sans Serif";
-		defaultAssociations_[Script::CYRILLIC] = L"Microsoft Sans Serif";
-		defaultAssociations_[Script::GREEK] = L"Microsoft Sans Serif";
-		defaultAssociations_[Script::HANGUL] = L"Gulim";
-		defaultAssociations_[Script::HEBREW] = L"Microsoft Sans Serif";
-//		defaultAssociations_[Script::HIRAGANA] = L"MS P Gothic";
-//		defaultAssociations_[Script::KATAKANA] = L"MS P Gothic";
-		defaultAssociations_[Script::LATIN] = L"Tahoma";
-		defaultAssociations_[Script::THAI] = L"Tahoma";
-		// Windows 2000
-		defaultAssociations_[Script::ARMENIAN] = L"Sylfaen";
-		defaultAssociations_[Script::DEVANAGARI] = L"Mangal";
-		defaultAssociations_[Script::GEORGIAN] = L"Sylfaen";	// partial support?
-		defaultAssociations_[Script::TAMIL] = L"Latha";
-		// Windows XP
-		defaultAssociations_[Script::GUJARATI] = L"Shruti";
-		defaultAssociations_[Script::GURMUKHI] = L"Raavi";
-		defaultAssociations_[Script::KANNADA] = L"Tunga";
-		defaultAssociations_[Script::SYRIAC] = L"Estrangelo Edessa";
-		defaultAssociations_[Script::TELUGU] = L"Gautami";
-		defaultAssociations_[Script::THAANA] = L"MV Boli";
-		// Windows XP SP2
-		defaultAssociations_[Script::BENGALI] = L"Vrinda";
-		defaultAssociations_[Script::MALAYALAM] = L"Kartika";
-		// Windows Vista
-		defaultAssociations_[Script::CANADIAN_ABORIGINAL] = L"Euphemia";
-		defaultAssociations_[Script::CHEROKEE] = L"Plantagenet";
-		defaultAssociations_[Script::ETHIOPIC] = L"Nyala";
-		defaultAssociations_[Script::KHMER] = L"DaunPenh";	// or "MoolBoran"
-		defaultAssociations_[Script::LAO] = L"DokChampa";
-		defaultAssociations_[Script::MONGOLIAN] = L"Mongolian Baiti";
-		defaultAssociations_[Script::ORIYA] = L"Kalinga";
-		defaultAssociations_[Script::SINHALA] = L"Iskoola Pota";
-		defaultAssociations_[Script::TIBETAN] = L"Microsoft Himalaya";
-		defaultAssociations_[Script::YI] = L"Yi Baiti";
-		// CJK
-		const LANGID uiLang = getUserCJKLanguage();
-		switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
-		case LANG_CHINESE:
-			defaultAssociations_[Script::HAN] = (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
-				&& SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? L"PMingLiu" : L"SimSun"; break;
-		case LANG_JAPANESE:
-			defaultAssociations_[Script::HAN] = L"MS P Gothic"; break;
-		case LANG_KOREAN:
-			defaultAssociations_[Script::HAN] = L"Gulim"; break;
-		default:
-			{
-				ScreenDC dc;
-				bool installed = false;
-				LOGFONTW lf;
-				memset(&lf, 0, sizeof(LOGFONTW));
-#define ASCENSION_SELECT_INSTALLED_FONT(charset, fontname)		\
-	lf.lfCharSet = charset;										\
-	wcscpy(lf.lfFaceName, fontname);							\
-	::EnumFontFamiliesExW(dc.get(), &lf,						\
-		reinterpret_cast<FONTENUMPROCW>(checkFontInstalled),	\
-		reinterpret_cast<LPARAM>(&installed), 0);				\
-	if(installed) {												\
-		defaultAssociations_[Script::HAN] = lf.lfFaceName;		\
-		break;													\
-	}
-				ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
-				ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af")	// "ＭＳ Ｐゴシック"
-				ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
-				ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
-#undef ASCENSION_SELECT_INSTALLED_FONT
-			}
-			break;
-		}
-		if(defaultAssociations_.find(Script::HAN) != defaultAssociations_.end())
-			defaultAssociations_[Script::HIRAGANA] = defaultAssociations_[Script::KATAKANA] = defaultAssociations_[Script::HAN];
-	}
-	return defaultAssociations_;
-}
-
-/**
- * Returns the font associated to the specified script.
- * @param script the language. set to @c Script#COMMON to get the primary font. other special
- * script values @c Script#UNKNOWN, @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set
- * @param bold set @c true to get the bold variant
- * @param italic set @c true to get the italic variant
- * @return the primary font if @a script is @c Script#COMMON. otherwise, a fallbacked font or @c null
- * @throw UnknownValueException<int> @a script is invalid
- * @see #linkedFont, #setFont
- */
-HFONT FontSelector::font(int script /* = Script::COMMON */, bool bold /* = false */, bool italic /* = false */) const {
-	if(script <= Script::FIRST_VALUE || script == Script::INHERITED
-			|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
-		throw UnknownValueException("script");
-	if(script == Script::COMMON)
-		return fontInFontset(*const_cast<FontSelector*>(this)->primaryFont_, bold, italic);
-	else {
-		map<int, Fontset*>::iterator i = const_cast<FontSelector*>(this)->associations_.find(script);
-		return (i != associations_.end()) ? fontInFontset(*i->second, bold, italic) : 0;
-	}
-}
-
-/// Returns the font to render shaping control characters.
-HFONT FontSelector::fontForShapingControls() const /*throw()*/ {
-	if(shapingControlsFont_ == 0)
-		const_cast<FontSelector*>(this)->shapingControlsFont_ = ::CreateFontW(
-			-(ascent_ + descent_ - internalLeading_), 0, 0, 0, FW_REGULAR, false, false, false,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
-	return shapingControlsFont_;
-}
-
-/**
- * Returns the font in the given font set.
- * @param fontset the font set
- * @param bold set @c true to get a bold font
- * @param italic set @c true to get an italic font
- * @return the font
- */
-HFONT FontSelector::fontInFontset(const Fontset& fontset, bool bold, bool italic) const /*throw()*/ {
-	Fontset& fs = const_cast<Fontset&>(fontset);
-	HFONT& font = bold ? (italic ? fs.boldItalic : fs.bold) : (italic ? fs.italic : fs.regular);
-	if(font == 0) {
-		font = ::CreateFontW(-(ascent_ + descent_ - internalLeading_),
-			0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
-			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
-		auto_ptr<DC> dc(deviceContext());
-		HFONT oldFont = dc->selectObject(font);
-		TEXTMETRICW tm;
-		dc->getTextMetrics(tm);
-		dc->selectObject(oldFont);
-		// adjust to the primary ascent and descent
-		if(tm.tmAscent > ascent_ && tm.tmAscent > 0) {	// we don't consider the descents...
-			::DeleteObject(font);
-			font = ::CreateFontW(-::MulDiv(ascent_ + descent_ - internalLeading_, ascent_, tm.tmAscent),
-				0, 0, 0, bold ? FW_BOLD : FW_REGULAR, italic, 0, 0, DEFAULT_CHARSET,
-				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, fs.faceName);
-		}
-	}
-	return font;
-}
-
-/**
- * Returns the font linking to the primary font.
- * @param index the index in the link fonts chain
- * @param bold set @c true to get the bold variant
- * @param italic set @c true to get the italic variant
- * @return the font
- * @throw IndexOutOfBoundsException @a index is invalid
- * @see #font, #numberOfLinkedFonts
- */
-HFONT FontSelector::linkedFont(size_t index, bool bold /* = false */, bool italic /* = false */) const {
-	if(linkedFonts_ == 0)
-		throw IndexOutOfBoundsException();
-	return fontInFontset(*linkedFonts_->at(index), bold, italic);
 }
 
 namespace {
@@ -3266,7 +3140,7 @@ namespace {
 		return manah::AutoBuffer<WCHAR>(0);
 	}
 } // namespace @0
-
+#if 0
 void FontSelector::linkPrimaryFont() /*throw()*/ {
 	// TODO: this does not support nested font linking.
 	assert(linkedFonts_ != 0);
@@ -3301,82 +3175,7 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 	}
 	fireFontChanged();
 }
-
-void FontSelector::resetPrimaryFont(DC& dc, HFONT font) {
-	assert(font != 0);
-	// update the font metrics
-	TEXTMETRICW tm;
-	HFONT oldFont = dc.selectObject(primaryFont_->regular = font);
-	dc.getTextMetrics(tm);
-	ascent_ = tm.tmAscent;
-	descent_ = tm.tmDescent;
-	internalLeading_ = tm.tmInternalLeading;
-	externalLeading_ = tm.tmExternalLeading;
-	averageCharacterWidth_ = (tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100);
-	dc.selectObject(oldFont);
-	// real name is needed for font linking
-	LOGFONTW lf;
-	::GetObjectW(primaryFont_->regular, sizeof(LOGFONTW), &lf);
-	wcscpy(primaryFont_->faceName, lf.lfFaceName);
-}
-
-/**
- * Sets the primary font and the association table.
- * @param faceName the typeface name of the primary font. if this is @c null, the primary font
- * will not change
- * @param height the height of the font in logical units. if @a faceName is @c null, this value
- * will be ignored
- * @param associations the association table. script values @c Script#COMMON, @c Script#UNKNOWN,
- * @c Script#INHERITED and @c Script#KATAKANA_OR_HIRAGANA can't set. if this value is @c null,
- * the current associations will not be changed
- * @throw UnknownValueException<int> any script of @a associations is invalid
- * @throw std#length_error the length of @a faceName or any typeface name of @a associations
- * exceeds @c LF_FACESIZE
- */
-void FontSelector::setFont(const WCHAR* faceName, int height, const FontAssociations* associations) {
-	// check the arguments
-	if(faceName != 0 && wcslen(faceName) >= LF_FACESIZE)
-		throw length_error("the primary typeface name is too long.");
-	else if(associations != 0) {
-		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i) {
-			if(i->first == Script::COMMON || i->first == Script::UNKNOWN
-					|| i->first == Script::INHERITED || i->first == Script::KATAKANA_OR_HIRAGANA)
-				throw UnknownValueException("the association script is invalid.");
-			else if(i->second.length() >= LF_FACESIZE)
-				throw length_error("the association font name is too long.");
-		}
-	}
-	// reset the association table
-	if(associations != 0) {
-		for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
-			delete i->second;
-		associations_.clear();
-		for(FontAssociations::const_iterator i = associations->begin(); i != associations->end(); ++i)
-			associations_.insert(make_pair(i->first, new Fontset(i->second.c_str())));
-	}
-	// reset the primary font
-	bool notified = false;
-	if(faceName != 0) {
-		primaryFont_->clear(faceName);
-		for(map<int, Fontset*>::iterator i = associations_.begin(); i != associations_.end(); ++i)
-			i->second->clear();
-		// create the primary font and reset the text metrics
-		resetPrimaryFont(*getDeviceContext(), ::CreateFontW(height, 0, 0, 0, FW_REGULAR, false, false, false,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, faceName));
-		// reset the fontset for rendering shaping control characters
-		if(shapingControlsFont_ != 0) {
-			::DeleteObject(shapingControlsFont_);
-			shapingControlsFont_ = 0;
-		}
-		if(linkedFonts_ != 0) {
-			linkPrimaryFont();	// this calls fireFontChanged()
-			notified = true;
-		}
-	}
-	if(!notified)
-		fireFontChanged();
-}
-
+#endif
 
 // TextRenderer /////////////////////////////////////////////////////////////
 
@@ -3388,30 +3187,43 @@ namespace {
 } // namespace @0
 
 /**
+ * @class ascension::layout::TextRenderer
+ * @c TextRenderer renders styled text to the display or to a printer. Although this class
+ * extends @c LineLayoutBuffer class and implements @c ILayoutInformationProvider interface,
+ * @c LineLayoutBuffer#deviceContext, @c ILayoutInformationProvider#layoutSettings, and
+ * @c ILayoutInformationProvider#width methods are not defined (An internal extension
+ * @c TextViewer#Renderer class implements these).
+ * @see LineLayout, LineLayoutBuffer, Presentation
+ */
+
+/**
  * Constructor.
  * @param presentation the presentation
+ * @param fontCollection the font collection provides fonts this renderer uses
  * @param enableDoubleBuffering set @c true to use double-buffering for non-flicker drawing
  */
-TextRenderer::TextRenderer(Presentation& presentation, bool enableDoubleBuffering) :
+TextRenderer::TextRenderer(Presentation& presentation, const IFontCollection& fontCollection, bool enableDoubleBuffering) :
 		LineLayoutBuffer(presentation.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
-		presentation_(presentation), enablesDoubleBuffering_(enableDoubleBuffering) {
+		presentation_(presentation), fontCollection_(fontCollection), enablesDoubleBuffering_(enableDoubleBuffering) {
 	setLayoutInformation(this, false);
-	setFont(0, 0, &getDefaultFontAssociations());
-	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
+	updateTextMetrics();
+/*	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 	case LANG_CHINESE:
 	case LANG_JAPANESE:
 	case LANG_KOREAN:
 		enableFontLinking();
 		break;
-	}
+	}*/
 //	updateViewerSize(); ???
 }
 
 /// Copy-constructor.
-TextRenderer::TextRenderer(const TextRenderer& rhs) : FontSelector(rhs),
-		LineLayoutBuffer(rhs.presentation_.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
-		presentation_(rhs.presentation_), enablesDoubleBuffering_(rhs.enablesDoubleBuffering_) {
+TextRenderer::TextRenderer(const TextRenderer& other) :
+		LineLayoutBuffer(other.presentation_.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
+		presentation_(other.presentation_), fontCollection_(other.fontCollection_),
+		enablesDoubleBuffering_(other.enablesDoubleBuffering_), defaultFont_() {
 	setLayoutInformation(this, false);
+	updateTextMetrics();
 //	updateViewerSize(); ???
 }
 
@@ -3419,6 +3231,15 @@ TextRenderer::TextRenderer(const TextRenderer& rhs) : FontSelector(rhs),
 TextRenderer::~TextRenderer() /*throw()*/ {
 //	getTextViewer().removeDisplaySizeListener(*this);
 //	layouts_.removeVisualLinesListener(*this);
+}
+
+/**
+ * Registers the default font selector listener.
+ * @param listener the listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void TextRenderer::addDefaultFontListener(IDefaultFontListener& listener) {
+	listeners_.add(listener);
 }
 
 /// @see FontSelector#fontChanged
@@ -3432,19 +3253,9 @@ void TextRenderer::fontChanged() {
 	}
 }
 
-/// @see ILayoutInformationProvider#getFontSelector
-const FontSelector& TextRenderer::getFontSelector() const /*throw()*/ {
-	return *this;
-}
-
-/// @see ILayoutInformationProvider#getPresentation
-const Presentation& TextRenderer::getPresentation() const /*throw()*/ {
-	return presentation_;
-}
-
-/// @see ILayoutInformationProvider#getSpecialCharacterRenderer
-ISpecialCharacterRenderer* TextRenderer::getSpecialCharacterRenderer() const /*throw()*/ {
-	return specialCharacterRenderer_.get();
+/// @see ILayoutInformationProvider#fontCollection
+const IFontCollection& TextRenderer::fontCollection() const {
+	return fontCollection_;
 }
 
 /**
@@ -3456,28 +3267,34 @@ ISpecialCharacterRenderer* TextRenderer::getSpecialCharacterRenderer() const /*t
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
 int TextRenderer::lineIndent(length_t line, length_t subline) const {
-	const LayoutSettings& c = getLayoutSettings();
+	const LayoutSettings& c = layoutSettings();
 	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
 		return 0;
 	else {
-		int width = getWidth();
+		int w = width();
 		switch(c.alignment) {
 		case ALIGN_RIGHT:
-			return width - lineLayout(line).sublineWidth(subline);
+			return w - lineLayout(line).sublineWidth(subline);
 		case ALIGN_CENTER:
-			return (width - lineLayout(line).sublineWidth(subline)) / 2;
+			return (w - lineLayout(line).sublineWidth(subline)) / 2;
 		default:
 			return 0;
 		}
 	}
 }
 
+/// @see ILayoutInformationProvider#presentation
+const Presentation& TextRenderer::presentation() const /*throw()*/ {
+	return presentation_;
+}
+
 /**
- * Returns the pitch of each lines (height + space).
- * @see FontSelector#lineHeight
+ * Removes the default font selector listener.
+ * @param listener the listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
  */
-int TextRenderer::linePitch() const /*throw()*/ {
-	return lineHeight() + max(getLayoutSettings().lineSpacing, lineGap());
+void TextRenderer::removeDefaultFontListener(IDefaultFontListener& listener) {
+	listeners_.remove(listener);
 }
 
 /**
@@ -3508,7 +3325,7 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	y += static_cast<int>(dy * subline);
 
 	if(memoryDC_.get() == 0)		
-		memoryDC_ = deviceContext()->createCompatibleDC();
+		memoryDC_ = deviceContext().createCompatibleDC();
 	const int horizontalResolution = calculateMemoryBitmapSize(dc.getDeviceCaps(HORZRES));
 	if(memoryBitmap_.get() != 0) {
 		BITMAP b;
@@ -3517,7 +3334,7 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 			memoryBitmap_.reset();
 	}
 	if(memoryBitmap_.get() == 0)
-		memoryBitmap_ = Bitmap::createCompatibleBitmap(*getDeviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
+		memoryBitmap_ = Bitmap::createCompatibleBitmap(deviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
 	memoryDC_.selectObject(memoryBitmap_.use());
 
 	const long left = max(paintRect.left, clipRect.left), right = min(paintRect.right, clipRect.right);
@@ -3546,6 +3363,46 @@ void TextRenderer::setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRen
 	specialCharacterRenderer_.reset(newRenderer, delegateOwnership);
 	newRenderer->install(*this);
 	invalidate();
+}
+
+/// @see ILayoutInformationProvider#specialCharacterRenderer
+ISpecialCharacterRenderer* TextRenderer::specialCharacterRenderer() const /*throw()*/ {
+	return specialCharacterRenderer_.get();
+}
+
+/// @see ILayoutInformationProvider#textMetrics
+const ITextMetrics& TextRenderer::textMetrics() const /*throw()*/ {
+	return *this;
+}
+
+bool TextRenderer::updateTextMetrics() {
+	// get the primary font
+	HFONT font;
+	tr1::shared_ptr<const RunStyle> defaultStyle(presentation_.defaultTextRunStyle());
+	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
+		font = fontCollection().get(deviceContext(), defaultStyle->fontFamily, defaultStyle->fontProperties).get();
+	else
+		font = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+
+	// get text metrics for this font
+	ScreenDC dc;
+	HFONT oldFont = dc.selectObject(font);
+	const int oldMappingMode = dc.getMapMode();
+	if(oldMappingMode != MM_TEXT && dc.setMapMode(MM_TEXT) == 0)
+		return false;
+/*	const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
+	const double ydpi = dc.getDeviceCaps(LOGPIXELSY);
+*/	TEXTMETRICW tm;
+	dc.getTextMetrics(tm);
+	dc.selectObject(oldFont);
+	defaultFont_.reset(borrowed(font));
+	ascent_ = tm.tmAscent/* * 96.0 / ydpi*/;
+	descent_ = tm.tmDescent/* * 96.0 / ydpi*/;
+	internalLeading_ = tm.tmInternalLeading/* * 96.0 / ydpi*/;
+	externalLeading_ = tm.tmExternalLeading/* * 96.0 / ydpi*/;
+	averageCharacterWidth_ = ((tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100))/* * 96.0 / xdpi*/;
+	if(oldMappingMode != MM_TEXT)
+		dc.setMapMode(oldMappingMode);
 }
 
 
@@ -3595,9 +3452,9 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 	const int right = left + width();
 
-	// まず、描画領域全体を描いておく
+	// first of all, paint the drawing area
 	if(configuration_.indicatorMargin.visible) {
-		// インジケータマージンの境界線と内側
+		// border and inside of the indicator margin
 		const int borderX = alignLeft ? left + imWidth - 1 : right - imWidth;
 		HPEN oldPen = dcex->selectObject(indicatorMarginPen_.use());
 		HBRUSH oldBrush = dcex->selectObject(indicatorMarginBrush_.use());
@@ -3621,14 +3478,14 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		}
 		dcex->selectObject(oldBrush);
 
-		// 次の準備...
+		// for next...
 		dcex->setBkMode(TRANSPARENT);
 		dcex->setTextColor(systemColors.serve(configuration_.lineNumbers.textColor.foreground, COLOR_WINDOWTEXT));
-		dcex->setTextCharacterExtra(0);	// 行番号表示は文字間隔の設定を無視
-		dcex->selectObject(viewer_.textRenderer().font());
+		dcex->setTextCharacterExtra(0);	// line numbers ignore character extra
+		dcex->selectObject(viewer_.textRenderer().defaultFont().get());
 	}
 
-	// 行番号描画の準備
+	// prepare to draw the line numbers
 	Alignment lineNumbersAlignment;
 	int lineNumbersX;
 	if(configuration_.lineNumbers.visible) {
@@ -3646,7 +3503,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				right - configuration_.lineNumbers.trailingMargin - 1 : right - imWidth - configuration_.lineNumbers.leadingMargin;
 			dcex->setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 			break;
-		case ALIGN_CENTER:	// 中央揃えなんて誰も使わんと思うけど...
+		case ALIGN_CENTER:
 			lineNumbersX = alignLeft ?
 				left + (imWidth + configuration_.lineNumbers.leadingMargin + width() - configuration_.lineNumbers.trailingMargin) / 2
 				: right - (width() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
@@ -3713,7 +3570,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 		if(newLineNumberDigits != lineNumberDigitsCache_) {
 			// the width of the line numbers area is determined by the maximum width of glyphs of 0..9
 			ClientDC dc = viewer_.getDC();
-			HFONT oldFont = dc.selectObject(viewer_.textRenderer().font());
+			HFONT oldFont = dc.selectObject(viewer_.textRenderer().defaultFont().get());
 			SCRIPT_STRING_ANALYSIS ssa;
 			AutoZero<SCRIPT_CONTROL> sc;
 			AutoZero<SCRIPT_STATE> ss;

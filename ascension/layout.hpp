@@ -100,7 +100,7 @@ namespace ascension {
 
 		/**
 		 * General settings for layout.
-		 * @see ILayoutInformationProvider#getLayoutSettings, TextViewer#Configuration
+		 * @see ILayoutInformationProvider#layoutSettings, TextViewer#Configuration
 		 */
 		struct LayoutSettings {
 			/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
@@ -138,81 +138,19 @@ namespace ascension {
 			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 		};
 
+		class TextRenderer;
+
 		/*
-		 * Interface for objects which are interested in change of a @c FontSelector.
-		 * @see FontSelector#addFontListener, FontSelector#removeFontListener
+		 * Interface for objects which are interested in change of the default font of
+		 * @c TextRenderer.
+		 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
 		 */
-		class IFontSelectorListener {
+		class IDefaultFontListener {
 		private:
 			/// The font settings was changed.
-			virtual void fontChanged() = 0;
-			friend class FontSelector;
+			virtual void defaultFontChanged() = 0;
+			friend class TextRenderer;
 		};
-
-		/**
-		 * A @c FontSelector holds a primary font, the font metrics and a font association table
-		 * for text rendering.
-		 * 
-		 * This class supports Font Linking (limited) mechanism for CJK end users. And also supports
-		 * Font Fallback mechanism for multilingual text display.
-		 * @see TextRenderer
-		 */
-		class FontSelector {
-			MANAH_UNASSIGNABLE_TAG(FontSelector);
-		public:
-			/// Font association table consists of pairs of a script and a font familiy name.
-			typedef std::map<int, std::basic_string<WCHAR> > FontAssociations;
-
-			// device context
-			std::auto_ptr<manah::win32::gdi::DC> deviceContext() const;
-
-			// metrics
-			int ascent() const /*throw()*/;
-			int averageCharacterWidth() const /*throw()*/;
-			int descent() const /*throw()*/;
-			int lineGap() const /*throw()*/;
-			int lineHeight() const /*throw()*/;
-
-			// primary font and alternatives
-			HFONT font(int script = text::ucd::Script::COMMON, bool bold = false, bool italic = false) const;
-			HFONT fontForShapingControls() const /*throw()*/;
-			void setFont(const WCHAR* faceName, int height, const FontAssociations* associations);
-
-			// default settings
-			static const FontAssociations& getDefaultFontAssociations() /*throw()*/;
-
-			// font linking
-			void enableFontLinking(bool enable = true) /*throw()*/;
-			bool enablesFontLinking() const /*throw()*/;
-			HFONT linkedFont(std::size_t index, bool bold = false, bool italic = false) const;
-			std::size_t numberOfLinkedFonts() const /*throw()*/;
-
-			// listener
-			void addFontListener(IFontSelectorListener& listener);
-			void removeFontListener(IFontSelectorListener& listener);
-
-		protected:
-			FontSelector();
-			FontSelector(const FontSelector& rhs);
-			virtual ~FontSelector() /*throw()*/;
-			virtual std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const = 0;
-			virtual void fontChanged() = 0;
-		private:
-			struct Fontset;
-			void fireFontChanged();
-			HFONT fontInFontset(const Fontset& fontset, bool bold, bool italic) const /*throw()*/;
-			void linkPrimaryFont() /*throw()*/;
-			void resetPrimaryFont(manah::win32::gdi::DC& dc, HFONT font);
-			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;
-			Fontset* primaryFont_;
-			std::map<int, Fontset*> associations_;
-			HFONT shapingControlsFont_;			// for shaping control characters (LRM, ZWJ, NADS, ASS, AAFS, ...)
-			std::vector<Fontset*>* linkedFonts_;	// for the font linking feature
-			ascension::internal::Listeners<IFontSelectorListener> listeners_;
-			static FontAssociations defaultAssociations_;
-		};
-
-		class TextRenderer;
 
 		class ISpecialCharacterRenderer {
 		public:
@@ -289,7 +227,7 @@ namespace ascension {
 			friend class TextRenderer;
 		};
 
-		class DefaultSpecialCharacterRenderer : public ISpecialCharacterRenderer, public IFontSelectorListener {
+		class DefaultSpecialCharacterRenderer : public ISpecialCharacterRenderer, public IDefaultFontListener {
 		public:
 			// constructors
 			DefaultSpecialCharacterRenderer() /*throw()*/;
@@ -318,8 +256,8 @@ namespace ascension {
 			int getLineWrappingMarkWidth(const LayoutContext& context) const;
 			void install(TextRenderer& textRenderer);
 			void uninstall();
-			// IFontSelectorListener
-			void fontChanged();
+			// IDefaultFontListener
+			void defaultFontChanged();
 		private:
 			TextRenderer* renderer_;
 			COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
@@ -330,6 +268,44 @@ namespace ascension {
 			int glyphWidths_[6];
 		};
 
+		class ITextMetrics {
+		public:
+			/// Returns the ascent of the text in pixels.
+			virtual int ascent() const /*throw()*/ = 0;
+			/// Returns the average width of a character in pixels.
+			virtual int averageCharacterWidth() const /*throw()*/ = 0;
+			/// Returns the descent of the text in pixels.
+			virtual int descent() const /*throw()*/ = 0;
+			/// Returns the gap of the lines (external leading) in pixels.
+			virtual int lineGap() const /*throw()*/ = 0;
+			/// Returns the height of a line in pixels.
+			int lineHeight() const /*throw()*/ {return ascent() + descent();}
+			/// Returns the pitch of lines in pixels.
+			/// @note This method ignores @c LayoutSettings#lineSpacing value.
+			int linePitch() const /*throw()*/ {return lineHeight() + lineGap();}
+		};
+
+		typedef std::tr1::shared_ptr<internal::RemovePointer<HFONT>::Type> FontPointer;	// BAD idea :( HFONT may be not pointer
+
+		/// An interface represents an object provides a set of fonts.
+		class IFontCollection {
+		public:
+			/// Destructor.
+			virtual ~IFontCollection() /*throw()*/ {}
+			/**
+			 * Returns the font matches the given properties.
+			 * @param dc the device context
+			 * @param familyName the font family name
+			 * @param properties the font properties
+			 * @param sizeAdjust 
+			 * @return the font handle
+			 */
+			virtual FontPointer get(const manah::win32::gdi::DC& dc,
+				const String& familyName, const presentation::FontProperties& properties, double sizeAdjust = 0.0) const = 0;
+		};
+
+		const IFontCollection& systemFonts() /*throw()*/;
+
 		/**
 		 * Defines the stuffs for layout. Clients of Ascension can implement this interface or use
 		 * a higher level @c TextRenderer class.
@@ -339,16 +315,18 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~ILayoutInformationProvider() /*throw()*/ {}
-			/// Returns the font selector.
-			virtual const FontSelector& getFontSelector() const /*throw()*/ = 0;
+			/// Returns the font collection.
+			virtual const IFontCollection& fontCollection() const /*throw()*/ = 0;
 			/// Returns the layout settings.
-			virtual const LayoutSettings& getLayoutSettings() const /*throw()*/ = 0;
+			virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
 			/// Returns the presentation object.
-			virtual const presentation::Presentation& getPresentation() const /*throw()*/ = 0;
+			virtual const presentation::Presentation& presentation() const /*throw()*/ = 0;
 			/// Returns the special character renderer.
-			virtual ISpecialCharacterRenderer* getSpecialCharacterRenderer() const /*throw()*/ = 0;
+			virtual ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/ = 0;
+			/// Returns the text metrics.
+			virtual const ITextMetrics& textMetrics() const /*throw()*/ = 0;
 			/// Returns the width of the rendering area in pixels.
-			virtual int getWidth() const /*throw()*/ = 0;
+			virtual int width() const /*throw()*/ = 0;
 		};
 
 		class LineLayout {
@@ -396,7 +374,7 @@ namespace ascension {
 #endif
 
 			// constructors
-			LineLayout(const ILayoutInformationProvider& layoutInformation, length_t line);
+			LineLayout(manah::win32::gdi::DC& dc, const ILayoutInformationProvider& layoutInformation, length_t line);
 			~LineLayout() /*throw()*/;
 			// general attributes
 			byte bidiEmbeddingLevel(length_t column) const;
@@ -448,9 +426,9 @@ namespace ascension {
 			const String& text() const /*throw()*/;
 			void reorder() /*throw()*/;
 //			void rewrap();
-			void shape() /*throw()*/;
+			void shape(manah::win32::gdi::DC& dc) /*throw()*/;
 			int nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/;
-			void wrap() /*throw()*/;
+			void wrap(manah::win32::gdi::DC& dc) /*throw()*/;
 		private:
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
@@ -523,7 +501,7 @@ namespace ascension {
 			void addVisualLinesListener(IVisualLinesListener& listener);
 			void removeVisualLinesListener(IVisualLinesListener& listener);
 			// strategy
-			void	setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
+			void setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
 			// position translations
 			length_t mapLogicalLineToVisualLine(length_t line) const;
 			length_t mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
@@ -540,6 +518,8 @@ namespace ascension {
 			typedef std::list<LineLayout*>::const_iterator Iterator;
 			Iterator firstCachedLine() const /*throw()*/;
 			Iterator lastCachedLine() const /*throw()*/;
+			// abstract
+			virtual manah::win32::gdi::DC deviceContext() const = 0;
 		private:
 			void clearCaches(length_t first, length_t last, bool repair);
 			void createLineLayout(length_t line) /*throw()*/;
@@ -572,44 +552,49 @@ namespace ascension {
 			ascension::internal::Listeners<IVisualLinesListener> listeners_;
 		};
 
-		/**
-		 * @c TextRenderer renders styled text to the display or to a printer. Although this class
-		 * extends @c FontSelector class and implements @c ILayoutInformationProvider interface,
-		 * @c FontSelector#doGetDeviceContext, @c ILayoutInformationProvider#getLayoutSettings, and
-		 * @c ILayoutInformationProvider#getWidth methods are not defined (An internal extension
-		 * @c TextViewer#Renderer class implements these).
-		 * @see LineLayout, LineLayoutBuffer, FontSelector, Presentation
-		 */
-		class TextRenderer : public LineLayoutBuffer, public FontSelector, public ILayoutInformationProvider {
+		// documentation is layout.cpp
+		class TextRenderer : public LineLayoutBuffer, public ITextMetrics, public ILayoutInformationProvider {
 		public:
 			// constructors
-			TextRenderer(presentation::Presentation& presentation, bool enableDoubleBuffering);
-			TextRenderer(const TextRenderer& rhs);
+			TextRenderer(presentation::Presentation& presentation,
+				const IFontCollection& fontCollection, bool enableDoubleBuffering);
+			TextRenderer(const TextRenderer& other);
 			virtual ~TextRenderer() /*throw()*/;
-			// attributes
-			int linePitch() const /*throw()*/;
+			// text metrics
+			manah::win32::gdi::Font defaultFont() const /*throw()*/;
 			int lineIndent(length_t line, length_t subline = 0) const;
+			bool updateTextMetrics();
+			// listener
+			void addDefaultFontListener(IDefaultFontListener& listener);
+			void removeDefaultFontListener(IDefaultFontListener& listener);
 			// strategy
 			void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 			// operation
 			void renderLine(length_t line, manah::win32::gdi::DC& dc, int x, int y,
 				const RECT& paintRect, const RECT& clipRect, const LineLayout::Selection* selection) const /*throw()*/;
+			// ITextMetrics
+			int ascent() const /*throw()*/;
+			int averageCharacterWidth() const /*throw()*/;
+			int descent() const /*throw()*/;
+			int lineGap() const /*throw()*/;
 		private:
-			// FontSelector
-//			std::auto_ptr<manah::win32::gdi::DC> getDeviceContext() const;
+			// IDefaultFontListener
 			void fontChanged();
-			// ILayoutInformation
-			const FontSelector& getFontSelector() const /*throw()*/;
-//			const LayoutSettings& getLayoutSettings() const /*throw()*/;
-			const presentation::Presentation& getPresentation() const /*throw()*/;
-			ISpecialCharacterRenderer* getSpecialCharacterRenderer() const /*throw()*/;
-//			int getWidth() const /*throw()*/;
+			// ILayoutInformationProvider
+			const IFontCollection& fontCollection() const /*throw()*/;
+			const presentation::Presentation& presentation() const /*throw()*/;
+			ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
+			const ITextMetrics& textMetrics() const /*throw()*/;
 		private:
 			presentation::Presentation& presentation_;
+			const IFontCollection& fontCollection_;
 			const bool enablesDoubleBuffering_;
 			mutable manah::win32::gdi::DC memoryDC_;
 			mutable manah::win32::gdi::Bitmap memoryBitmap_;
+			manah::win32::gdi::Font defaultFont_;
+			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;	// in pixels
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
+			ascension::internal::Listeners<IDefaultFontListener> listeners_;
 		};
 
 
@@ -819,49 +804,23 @@ inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const /*thro
 /// Returns @c true if white space characters are visible.
 inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const /*throw()*/ {return showsWhiteSpaces_;}
 
-/**
- * Registers the font selector listener.
- * @param listener the listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void FontSelector::addFontListener(IFontSelectorListener& listener) {listeners_.add(listener);}
-
 /// Returns the ascent of the text.
-inline int FontSelector::ascent() const /*throw()*/ {return ascent_;}
+inline int TextRenderer::ascent() const /*throw()*/ {return ascent_;}
 
 /// Returns average width of a character.
-inline int FontSelector::averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
+inline int TextRenderer::averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
+
+/// Returns the default font.
+inline manah::win32::gdi::Font TextRenderer::defaultFont() const /*throw()*/ {return manah::win32::gdi::Font(manah::win32::borrowed(defaultFont_.get()));}
 
 /// Returns the descent of the text.
-inline int FontSelector::descent() const /*throw()*/ {return descent_;}
-
-/// Returns the device context.
-inline std::auto_ptr<manah::win32::gdi::DC> FontSelector::deviceContext() const {return getDeviceContext();}
-
-/// Returns the font linking is enabled.
-inline bool FontSelector::enablesFontLinking() const /*throw()*/ {return linkedFonts_ != 0;}
+inline int TextRenderer::descent() const /*throw()*/ {return descent_;}
 
 /**
- * Returns the ideal line gap (external leading of the primary font).
+ * Returns the ideal line gap (external leading of the font).
  * @see LayoutSettings#lineSpacing
  */
-inline int FontSelector::lineGap() const /*throw()*/ {return externalLeading_;}
-
-/**
- * Returns the height of the lines.
- * @see TextRenderer#getLinePitch
- */
-inline int FontSelector::lineHeight() const /*throw()*/ {return ascent_ + descent_;}
-
-/// Returns the number of the linked fonts.
-inline std::size_t FontSelector::numberOfLinkedFonts() const /*throw()*/ {return (linkedFonts_ != 0) ? linkedFonts_->size() : 0;}
-
-/**
- * Removes the font selector listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void FontSelector::removeFontListener(IFontSelectorListener& listener) {listeners_.remove(listener);}
+inline int TextRenderer::lineGap() const /*throw()*/ {return externalLeading_;}
 
 }} // namespace ascension.viewers
 

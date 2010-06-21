@@ -598,7 +598,7 @@ length_t VisualPoint::visualColumn() const {
 	if(c.alignment == ALIGN_LEFT || (c.alignment != ALIGN_RIGHT && c.orientation == LEFT_TO_RIGHT))
 		return lastX_ / renderer.averageCharacterWidth();
 	else
-		return (renderer.getWidth() - lastX_) / renderer.averageCharacterWidth();
+		return (renderer.width() - lastX_) / renderer.averageCharacterWidth();
 }
 
 /// Returns the visual line number.

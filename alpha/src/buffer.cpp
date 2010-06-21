@@ -183,7 +183,7 @@ Buffer& BufferList::addNew(const ascension::String& name /* = L"" */,
 		if(originalView == 0)
 			originalView = view;
 		i.get().addView(*view);
-		view->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
+//		view->textRenderer().setFont(font.lfFaceName, font.lfHeight, 0);
 		if(originalView != view)
 			view->setConfiguration(&originalView->configuration(), 0);
 	}
