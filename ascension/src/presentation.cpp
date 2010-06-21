@@ -208,6 +208,16 @@ void Presentation::removeTextViewer(TextViewer& textViewer) /*throw()*/ {
 }
 
 /**
+ * Sets the default text run style.
+ * @param newStyle the style to set
+ */
+void Presentation::setDefaultTextRunStyle(tr1::shared_ptr<const RunStyle> newStyle) {
+	defaultTextRunStyle_ = newStyle;
+	for(set<TextViewer*>::iterator i(textViewers_.begin()), e(textViewers_.end()); i != e; ++i)
+		(*i)->textRenderer().updateTextMetrics();
+}
+
+/**
  * Sets the hyperlink detector.
  * @param newDirector the director. @c null to unregister
  * @param delegateOwnership set @c true to transfer the ownership of @a newDirector to the callee

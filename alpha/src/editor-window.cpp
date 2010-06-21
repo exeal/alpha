@@ -235,7 +235,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 		caret().select(isearch.matchedRegion());
 		messageID = forward ? MSG_STATUS__ISEARCH_EMPTY_PATTERN : MSG_STATUS__RISEARCH_EMPTY_PATTERN;
 		app.statusBar().setText(app.loadMessage(messageID).c_str(),
-			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().defaultFont().get() : 0);
 		return;
 	} else if(result == IIncrementalSearchCallback::FOUND) {
 		caret().select(isearch.matchedRegion());
@@ -251,7 +251,7 @@ void EditorView::incrementalSearchPatternChanged(Result result, const manah::Fla
 	ascension::String prompt(app.loadMessage(messageID, MARGS % isearch.pattern()));
 	replace_if(prompt.begin(), prompt.end(), bind2nd(equal_to<wchar_t>(), L'\t'), L' ');
 	app.statusBar().setText(prompt.c_str(),
-			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().font() : 0);
+			toBoolean(app.readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1)) ? textRenderer().defaultFont().get() : 0);
 }
 
 /// @see IIncrementalSearchListener#incrementalSearchStarted

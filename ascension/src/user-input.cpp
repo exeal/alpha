@@ -993,7 +993,7 @@ void TextViewer::updateIMECompositionWindowPosition() {
 
 		// composition font
 		LOGFONTW font;
-		::GetObjectW(renderer_->font(), sizeof(LOGFONTW), &font);
+		::GetObjectW(renderer_->defaultFont().get(), sizeof(LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
 		
 		::ImmReleaseContext(get(), imc);

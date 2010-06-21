@@ -192,6 +192,7 @@ namespace ascension {
 			BaselineAlignment baselineAlignment;
 			String fontFamily;	///< Family name. Empty means inherit the parent.
 			FontProperties fontProperties;
+			double fontSizeAdjust;	///< in DIP unit. 0.0 means 'none', negative value means 'inherit'.
 			std::locale locale;
 			TypographyProperties typographyProperties;
 			Decorations decorations;
