@@ -359,9 +359,9 @@ protected:
 	const int* justifiedAdvances() const /*throw()*/ {return glyphs_->justifiedAdvances.get() + glyphRange_.beginning();}
 	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {return glyphs_->visualAttributes.get() + glyphRange_.beginning();}
 private:
-	HRESULT buildGlyphs(const DC& dc, const String& lineString) /*throw()*/;
+	HRESULT buildGlyphs(const DC& dc, const Char* lineString) /*throw()*/;
 	pair<int, HRESULT> countMissingGlyphs(const DC& dc) const /*throw()*/;
-	HRESULT generateGlyphs(const DC& dc, const String& lineString, int* numberOfMissingGlyphs);
+	HRESULT generateGlyphs(const DC& dc, const Char* lineString, int* numberOfMissingGlyphs);
 	void generateDefaultGlyphs(const DC& dc);
 private:
 	Range<length_t> characterRange_;	// character range in 'glyphs_'
@@ -443,7 +443,7 @@ auto_ptr<LineLayout::Run> LineLayout::Run::breakAt(DC& dc, length_t at, const St
  * @retval HRESULT other Uniscribe error
  * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
  */
-HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const String& lineString) /*throw()*/ {
+HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* lineString) /*throw()*/ {
 	assert(glyphs_->advances.get() == 0);
 
 	manah::AutoBuffer<WORD> indices, clusters;
@@ -454,7 +454,7 @@ HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const String& lineString) /*t
 	while(true) {
 		indices.reset(new WORD[numberOfGlyphs]);
 		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-		hr = ::ScriptShape(dc.get(), &glyphs_->cache, lineString.data() + column(),
+		hr = ::ScriptShape(dc.get(), &glyphs_->cache, lineString + column(),
 			static_cast<int>(length()), numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis_),
 			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 		if(hr != E_OUTOFMEMORY)
@@ -549,7 +549,7 @@ inline bool LineLayout::Run::expandTabCharacters(const String& lineString, int x
  * @retval S_FALSE there are missing glyphs
  * @retval otherwise see @c buildGlyphs function
  */
-inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const String& lineString, int* numberOfMissingGlyphs) {
+inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const Char* lineString, int* numberOfMissingGlyphs) {
 	HRESULT hr = buildGlyphs(dc, lineString);
 	if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc).first))
 		hr = S_FALSE;
@@ -799,9 +799,9 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		fp.size = computedFontProperties.size;
 		FontPointer font(lip.fontCollection().get(dc, L"Arial", fp, computedFontSizeAdjust));	// TODO: tell the adjust size.
 		oldFont = dc.selectObject((font_ = font).get());
-		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, lineString))) {
+		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, lineString.data()))) {
 			analysis_.eScript = SCRIPT_UNDEFINED;
-			hr = buildGlyphs(dc, lineString);
+			hr = buildGlyphs(dc, lineString.data());
 		}
 		if(FAILED(hr))
 			generateDefaultGlyphs(dc);
@@ -3403,6 +3403,7 @@ bool TextRenderer::updateTextMetrics() {
 	averageCharacterWidth_ = ((tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100))/* * 96.0 / xdpi*/;
 	if(oldMappingMode != MM_TEXT)
 		dc.setMapMode(oldMappingMode);
+	return true;
 }
 
 
