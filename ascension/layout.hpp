@@ -578,8 +578,7 @@ namespace ascension {
 			int descent() const /*throw()*/;
 			int lineGap() const /*throw()*/;
 		private:
-			// IDefaultFontListener
-			void fontChanged();
+			void fireDefaultFontChanged();
 			// ILayoutInformationProvider
 			const IFontCollection& fontCollection() const /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
