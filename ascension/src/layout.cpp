@@ -73,14 +73,15 @@ namespace {
 			throw UnknownValueException("script");
 
 		static map<int, const String> associations;
+		static const WCHAR MS_P_GOTHIC[] = L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af";	// "ＭＳ Ｐゴシック"
 		if(associations.empty()) {
 			associations.insert(make_pair(Script::ARABIC, L"Microsoft Sans Serif"));
 			associations.insert(make_pair(Script::CYRILLIC, L"Microsoft Sans Serif"));
 			associations.insert(make_pair(Script::GREEK, L"Microsoft Sans Serif"));
 			associations.insert(make_pair(Script::HANGUL, L"Gulim"));
 			associations.insert(make_pair(Script::HEBREW, L"Microsoft Sans Serif"));
-//			associations.insert(make_pair(Script::HIRAGANA, L"MS P Gothic"));
-//			associations.insert(make_pair(Script::KATAKANA, L"MS P Gothic"));
+//			associations.insert(make_pair(Script::HIRAGANA, MS_P_GOTHIC));
+//			associations.insert(make_pair(Script::KATAKANA, MS_P_GOTHIC));
 			associations.insert(make_pair(Script::LATIN, L"Tahoma"));
 			associations.insert(make_pair(Script::THAI, L"Tahoma"));
 			// Windows 2000
@@ -116,7 +117,7 @@ namespace {
 				associations.insert(make_pair(Script::HAN, (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
 					&& SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? L"PMingLiu" : L"SimSun")); break;
 			case LANG_JAPANESE:
-				associations.insert(make_pair(Script::HAN, L"MS P Gothic")); break;
+				associations.insert(make_pair(Script::HAN, MS_P_GOTHIC)); break;
 			case LANG_KOREAN:
 				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
 			default:
@@ -136,7 +137,7 @@ namespace {
 		break;														\
 	}
 					ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
-					ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af")	// "ＭＳ Ｐゴシック"
+					ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, MS_P_GOTHIC)
 					ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
 					ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
 #undef ASCENSION_SELECT_INSTALLED_FONT
@@ -302,6 +303,15 @@ FontPointer SystemFonts::cache(const DC& dc, const String& familyName, const Fon
 	wcscpy(lf.lfFaceName, familyName.c_str());
 	FontPointer font(::CreateFontIndirectW(&lf), &DeleteObject);
 	registry_.insert(make_pair(make_pair(familyName, properties), font));
+#ifdef _DEBUG
+	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
+		::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
+		::OutputDebugStringW(lf.lfFaceName);
+		::OutputDebugStringW(L"' for request '");
+		::OutputDebugStringW(familyName.c_str());
+		::OutputDebugStringW(L"'.\n");
+	}
+#endif
 	return font;
 }
 
@@ -359,9 +369,9 @@ protected:
 	const int* justifiedAdvances() const /*throw()*/ {return glyphs_->justifiedAdvances.get() + glyphRange_.beginning();}
 	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {return glyphs_->visualAttributes.get() + glyphRange_.beginning();}
 private:
-	HRESULT buildGlyphs(const DC& dc, const Char* lineString) /*throw()*/;
+	HRESULT buildGlyphs(const DC& dc, const Char* text) /*throw()*/;
 	pair<int, HRESULT> countMissingGlyphs(const DC& dc) const /*throw()*/;
-	HRESULT generateGlyphs(const DC& dc, const Char* lineString, int* numberOfMissingGlyphs);
+	HRESULT generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs);
 	void generateDefaultGlyphs(const DC& dc);
 private:
 	Range<length_t> characterRange_;	// character range in 'glyphs_'
@@ -436,15 +446,25 @@ auto_ptr<LineLayout::Run> LineLayout::Run::breakAt(DC& dc, length_t at, const St
 /**
  * Builds glyphs into the run structure.
  * @param dc the device context
- * @param lineString the text to generate glyphs
+ * @param text the text to generate glyphs
  * @retval S_OK succeeded
  * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
  * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
  * @retval HRESULT other Uniscribe error
  * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
  */
-HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* lineString) /*throw()*/ {
+HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* text) /*throw()*/ {
 	assert(glyphs_->advances.get() == 0);
+
+#ifdef _DEBUG
+	if(HFONT currentFont = dc.getCurrentFont()) {
+		LOGFONTW lf;
+		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
+			DumpContext dout;
+			dout << L"[LineLayout.Run.buildGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+		}
+	}
+#endif
 
 	manah::AutoBuffer<WORD> indices, clusters;
 	manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
@@ -454,8 +474,8 @@ HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* lineString) /*thr
 	while(true) {
 		indices.reset(new WORD[numberOfGlyphs]);
 		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-		hr = ::ScriptShape(dc.get(), &glyphs_->cache, lineString + column(),
-			static_cast<int>(length()), numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis_),
+		hr = ::ScriptShape(dc.get(), &glyphs_->cache, text, static_cast<int>(length()),
+			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis_),
 			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 		if(hr != E_OUTOFMEMORY)
 			break;
@@ -549,8 +569,8 @@ inline bool LineLayout::Run::expandTabCharacters(const String& lineString, int x
  * @retval S_FALSE there are missing glyphs
  * @retval otherwise see @c buildGlyphs function
  */
-inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const Char* lineString, int* numberOfMissingGlyphs) {
-	HRESULT hr = buildGlyphs(dc, lineString);
+inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs) {
+	HRESULT hr = buildGlyphs(dc, text);
 	if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc).first))
 		hr = S_FALSE;
 	else if(hr == USP_E_SCRIPT_NOT_IN_FONT && numberOfMissingGlyphs != 0)
@@ -827,7 +847,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
 		int numberOfMissingGlyphs;
 
-		const Char* textString = lineString.data();
+		const Char* textString = lineString.data() + column();
 
 #define ASCENSION_MAKE_TEXT_STRING_SAFE()												\
 	assert(safeString.get() == 0);														\
@@ -3085,14 +3105,6 @@ void DefaultSpecialCharacterRenderer::uninstall() {
 // FontSelector /////////////////////////////////////////////////////////////
 
 namespace {
-	inline HFONT copyFont(HFONT src) /*throw()*/ {
-		LOGFONTW lf;
-		::GetObjectW(src, sizeof(LOGFONTW), &lf);
-		return ::CreateFontIndirectW(&lf);
-	}
-}
-
-namespace {
 	manah::AutoBuffer<WCHAR> ASCENSION_FASTCALL mapFontFileNameToTypeface(const WCHAR* fileName) {
 		assert(fileName != 0);
 		static const WCHAR KEY_NAME[] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
@@ -3242,8 +3254,7 @@ void TextRenderer::addDefaultFontListener(IDefaultFontListener& listener) {
 	listeners_.add(listener);
 }
 
-/// @see FontSelector#fontChanged
-void TextRenderer::fontChanged() {
+void TextRenderer::fireDefaultFontChanged() {
 	invalidate();
 	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
 		BITMAP b;
@@ -3251,6 +3262,7 @@ void TextRenderer::fontChanged() {
 		if(b.bmHeight != calculateMemoryBitmapSize(linePitch()))
 			memoryBitmap_.reset();
 	}
+	listeners_.notify(&IDefaultFontListener::defaultFontChanged);
 }
 
 /// @see ILayoutInformationProvider#fontCollection
@@ -3396,6 +3408,7 @@ bool TextRenderer::updateTextMetrics() {
 	dc.getTextMetrics(tm);
 	dc.selectObject(oldFont);
 	defaultFont_.reset(borrowed(font));
+	fireDefaultFontChanged();
 	ascent_ = tm.tmAscent/* * 96.0 / ydpi*/;
 	descent_ = tm.tmDescent/* * 96.0 / ydpi*/;
 	internalLeading_ = tm.tmInternalLeading/* * 96.0 / ydpi*/;
