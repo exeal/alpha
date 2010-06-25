@@ -1029,7 +1029,7 @@ inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
 	RECT r;
 	getClientRect(r);
-	return (r.top == r.bottom) ? 0 : (r.bottom - r.top - configuration_.topMargin) / renderer_->lineHeight();
+	return (r.top == r.bottom) ? 0 : (r.bottom - r.top - configuration_.topMargin) / renderer_->linePitch();
 }
 
 /// Returns the presentation object. 
