@@ -800,8 +800,10 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
 	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
 	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
-	if(computedFontFamily.empty() && defaultStyle.get() != 0)
-		computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
+	if(computedFontFamily.empty()) {
+		if(defaultStyle.get() != 0)
+			computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
+	}
 	if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
 		computedFontProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
 	if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
@@ -1471,7 +1473,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
 	const int dy = linePitch();
-	const int lineHeight = lip_.textMetrics().lineHeight();
+	const int lineHeight = lip_.textMetrics().cellHeight();
 	const Colors lineColor = lip_.presentation().getLineColor(lineNumber_);
 	const COLORREF marginColor = systemColors.serve(lineColor.background, COLOR_WINDOW);
 	ISpecialCharacterRenderer::DrawingContext context(dc);
@@ -1910,7 +1912,7 @@ LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const /*throw(
 #endif
 /// Returns the line pitch in pixels.
 inline int LineLayout::linePitch() const /*throw()*/ {
-	return lip_.textMetrics().lineHeight() + max(lip_.layoutSettings().lineSpacing, lip_.textMetrics().lineGap());
+	return lip_.textMetrics().cellHeight() + max(lip_.layoutSettings().lineSpacing, lip_.textMetrics().lineGap());
 }
 
 // implements public location methods

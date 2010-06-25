@@ -266,21 +266,28 @@ namespace ascension {
 			int glyphWidths_[6];
 		};
 
+		/// Provides physical font metrics information.
 		class ITextMetrics {
 		public:
 			/// Returns the ascent of the text in pixels.
 			virtual int ascent() const /*throw()*/ = 0;
 			/// Returns the average width of a character in pixels.
 			virtual int averageCharacterWidth() const /*throw()*/ = 0;
+			/// Returns the cell height in pixels.
+			int cellHeight() const /*throw()*/ {return ascent() + descent();}
 			/// Returns the descent of the text in pixels.
 			virtual int descent() const /*throw()*/ = 0;
+			/// Returns the em height.
+			int emHeight() const /*throw()*/ {return cellHeight() - internalLeading();}
+			/// Returns the external leading in pixels.
+			virtual int externalLeading() const /*throw()*/ = 0;
+			/// Returns the internal leading in pixels.
+			virtual int internalLeading() const /*throw()*/ = 0;
 			/// Returns the gap of the lines (external leading) in pixels.
-			virtual int lineGap() const /*throw()*/ = 0;
-			/// Returns the height of a line in pixels.
-			int lineHeight() const /*throw()*/ {return ascent() + descent();}
+			int lineGap() const /*throw()*/ {return externalLeading();}
 			/// Returns the pitch of lines in pixels.
 			/// @note This method ignores @c LayoutSettings#lineSpacing value.
-			int linePitch() const /*throw()*/ {return lineHeight() + lineGap();}
+			int linePitch() const /*throw()*/ {return cellHeight() + lineGap();}
 		};
 
 		typedef std::tr1::shared_ptr<internal::RemovePointer<HFONT>::Type> FontPointer;	// BAD idea :( HFONT may be not pointer
@@ -574,7 +581,8 @@ namespace ascension {
 			int ascent() const /*throw()*/;
 			int averageCharacterWidth() const /*throw()*/;
 			int descent() const /*throw()*/;
-			int lineGap() const /*throw()*/;
+			int externalLeading() const /*throw()*/;
+			int internalLeading() const /*throw()*/;
 		private:
 			void fireDefaultFontChanged();
 			// ILayoutInformationProvider
@@ -801,23 +809,23 @@ inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const /*thro
 /// Returns @c true if white space characters are visible.
 inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const /*throw()*/ {return showsWhiteSpaces_;}
 
-/// Returns the ascent of the text.
+/// @see ITextMetrics#ascent
 inline int TextRenderer::ascent() const /*throw()*/ {return ascent_;}
 
-/// Returns average width of a character.
+/// @see ITextMetrics#averageCharacterWidth
 inline int TextRenderer::averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
 
 /// Returns the default font.
 inline manah::win32::gdi::Font TextRenderer::defaultFont() const /*throw()*/ {return manah::win32::gdi::Font(manah::win32::borrowed(defaultFont_.get()));}
 
-/// Returns the descent of the text.
+/// @see ITextMetrics#descent
 inline int TextRenderer::descent() const /*throw()*/ {return descent_;}
 
-/**
- * Returns the ideal line gap (external leading of the font).
- * @see LayoutSettings#lineSpacing
- */
-inline int TextRenderer::lineGap() const /*throw()*/ {return externalLeading_;}
+/// @see ITextMetrics#externalLeading
+inline int TextRenderer::externalLeading() const /*throw()*/ {return externalLeading_;}
+
+/// @see ITextMetrics#internalLeading
+inline int TextRenderer::internalLeading() const /*throw()*/ {return internalLeading_;}
 
 }} // namespace ascension.viewers
 
