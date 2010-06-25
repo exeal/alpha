@@ -52,7 +52,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)../..&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)../../ascension&quot;;&quot;$(ProjectDir)../..&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -161,7 +161,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)../..&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)../../ascension&quot;;&quot;$(ProjectDir)../..&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB"
 				StringPooling="true"
 				BasicRuntimeChecks="3"
@@ -626,87 +626,87 @@
 				Filter="h;hpp;hxx;hm;inl"
 				>
 				<File
-					RelativePath="..\..\ascension\caret.hpp"
+					RelativePath="..\..\ascension\include\caret.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\common.hpp"
+					RelativePath="..\..\ascension\include\common.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\config.hpp"
+					RelativePath="..\..\ascension\include\config.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\content-assist.hpp"
+					RelativePath="..\..\ascension\include\content-assist.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\document.hpp"
+					RelativePath="..\..\ascension\include\document.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\encoder.hpp"
+					RelativePath="..\..\ascension\include\encoder.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\fileio.hpp"
+					RelativePath="..\..\ascension\include\fileio.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\internal.hpp"
+					RelativePath="..\..\ascension\include\internal.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\layout.hpp"
+					RelativePath="..\..\ascension\include\layout.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\point.hpp"
+					RelativePath="..\..\ascension\include\point.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\presentation.hpp"
+					RelativePath="..\..\ascension\include\presentation.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\regex.hpp"
+					RelativePath="..\..\ascension\include\regex.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\rules.hpp"
+					RelativePath="..\..\ascension\include\rules.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\searcher.hpp"
+					RelativePath="..\..\ascension\include\searcher.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\session.hpp"
+					RelativePath="..\..\ascension\include\session.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\stream.hpp"
+					RelativePath="..\..\ascension\include\stream.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\text-editor.hpp"
+					RelativePath="..\..\ascension\include\text-editor.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\unicode-property.hpp"
+					RelativePath="..\..\ascension\include\unicode-property.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\unicode.hpp"
+					RelativePath="..\..\ascension\include\unicode.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\ustring.hpp"
+					RelativePath="..\..\ascension\include\ustring.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\viewer.hpp"
+					RelativePath="..\..\ascension\include\viewer.hpp"
 					>
 				</File>
 			</Filter>
