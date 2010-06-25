@@ -422,7 +422,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	if(pt.x == 0xffff && pt.y == 0xffff) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
 		menuPosition = clientXYForCharacter(caret(), false);
-		menuPosition.y += textRenderer().lineHeight() + 1;
+		menuPosition.y += textRenderer().cellHeight() + 1;
 		RECT rc;
 		getClientRect(rc);
 		const RECT margins(textAreaMargins());
