@@ -803,6 +803,8 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	if(computedFontFamily.empty()) {
 		if(defaultStyle.get() != 0)
 			computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
+		if(computedFontFamily.empty())
+			computedFontFamily = lip.textMetrics().familyName();
 	}
 	if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
 		computedFontProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
@@ -810,8 +812,12 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		computedFontProperties.stretch = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
 	if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
 		computedFontProperties.style = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
-	if(computedFontProperties.size == 0.0f && defaultStyle.get() != 0)
-		computedFontProperties.size = defaultStyle->fontProperties.size;
+	if(computedFontProperties.size == 0.0f) {
+		if(defaultStyle.get() != 0)
+			computedFontProperties.size = defaultStyle->fontProperties.size;
+		if(computedFontProperties.size == 0.0f)
+			computedFontProperties.size = lip.textMetrics().emHeight() * 96.0 / dc.getDeviceCaps(LOGPIXELSY);
+	}
 	if(computedFontSizeAdjust < 0.0)
 		computedFontSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
 
@@ -3397,6 +3403,10 @@ bool TextRenderer::updateTextMetrics() {
 		font = fontCollection().get(deviceContext(), defaultStyle->fontFamily, defaultStyle->fontProperties).get();
 	else
 		font = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+
+	// get font family name
+	LOGFONTW lf;
+	fontFamilyName_ = (::GetObjectW(font, sizeof(LOGFONTW), &lf) > 0) ? lf.lfFaceName : L"";
 
 	// get text metrics for this font
 	ScreenDC dc;

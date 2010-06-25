@@ -316,7 +316,7 @@ namespace {
 			const int trailing = layout.location(caret.column(), LineLayout::TRAILING).x;
 			result.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
 		}
-		result.cy = viewer.textRenderer().lineHeight();
+		result.cy = viewer.textRenderer().cellHeight();
 	}
 } // namespace @0
 
@@ -2566,7 +2566,7 @@ void DefaultCaretShaper::getCaretShape(auto_ptr<win32::gdi::Bitmap>&, SIZE& soli
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	solidSize.cx = width;
-	solidSize.cy = viewer_->textRenderer().lineHeight();
+	solidSize.cy = viewer_->textRenderer().cellHeight();
 	orientation = LEFT_TO_RIGHT;	// no matter
 }
 
@@ -2696,7 +2696,7 @@ void LocaleSensitiveCaretShaper::getCaretShape(
 
 	if(!overtype) {
 		solidSize.cx = bold_ ? 2 : 1;	// this ignores the system setting...
-		solidSize.cy = updater_->textViewer().textRenderer().lineHeight();
+		solidSize.cy = updater_->textViewer().textRenderer().cellHeight();
 	} else	// use the width of the glyph when overtype mode
 		getCurrentCharacterSize(updater_->textViewer(), solidSize);
 	orientation = LEFT_TO_RIGHT;

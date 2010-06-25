@@ -280,7 +280,10 @@ namespace ascension {
 			/// Returns the em height.
 			int emHeight() const /*throw()*/ {return cellHeight() - internalLeading();}
 			/// Returns the external leading in pixels.
+			/// @note In Ascension, external leadings are placed below characters.
 			virtual int externalLeading() const /*throw()*/ = 0;
+			/// Returns the font family name.
+			virtual String familyName() const /*throw()*/ = 0;
 			/// Returns the internal leading in pixels.
 			virtual int internalLeading() const /*throw()*/ = 0;
 			/// Returns the gap of the lines (external leading) in pixels.
@@ -582,6 +585,7 @@ namespace ascension {
 			int averageCharacterWidth() const /*throw()*/;
 			int descent() const /*throw()*/;
 			int externalLeading() const /*throw()*/;
+			String familyName() const /*throw()*/;
 			int internalLeading() const /*throw()*/;
 		private:
 			void fireDefaultFontChanged();
@@ -597,6 +601,7 @@ namespace ascension {
 			mutable manah::win32::gdi::DC memoryDC_;
 			mutable manah::win32::gdi::Bitmap memoryBitmap_;
 			manah::win32::gdi::Font defaultFont_;
+			String fontFamilyName_;
 			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;	// in pixels
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 			ascension::internal::Listeners<IDefaultFontListener> listeners_;
@@ -823,6 +828,9 @@ inline int TextRenderer::descent() const /*throw()*/ {return descent_;}
 
 /// @see ITextMetrics#externalLeading
 inline int TextRenderer::externalLeading() const /*throw()*/ {return externalLeading_;}
+
+/// @see ITextMetrics#familyName
+inline String TextRenderer::familyName() const /*throw()*/ {return fontFamilyName_;}
 
 /// @see ITextMetrics#internalLeading
 inline int TextRenderer::internalLeading() const /*throw()*/ {return internalLeading_;}
