@@ -626,87 +626,87 @@
 				Filter="h;hpp;hxx;hm;inl"
 				>
 				<File
-					RelativePath="..\..\ascension\include\caret.hpp"
+					RelativePath="..\..\ascension\ascension\caret.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\common.hpp"
+					RelativePath="..\..\ascension\ascension\common.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\config.hpp"
+					RelativePath="..\..\ascension\ascension\config.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\content-assist.hpp"
+					RelativePath="..\..\ascension\ascension\content-assist.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\document.hpp"
+					RelativePath="..\..\ascension\ascension\document.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\encoder.hpp"
+					RelativePath="..\..\ascension\ascension\encoder.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\fileio.hpp"
+					RelativePath="..\..\ascension\ascension\fileio.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\internal.hpp"
+					RelativePath="..\..\ascension\ascension\internal.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\layout.hpp"
+					RelativePath="..\..\ascension\ascension\layout.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\point.hpp"
+					RelativePath="..\..\ascension\ascension\point.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\presentation.hpp"
+					RelativePath="..\..\ascension\ascension\presentation.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\regex.hpp"
+					RelativePath="..\..\ascension\ascension\regex.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\rules.hpp"
+					RelativePath="..\..\ascension\ascension\rules.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\searcher.hpp"
+					RelativePath="..\..\ascension\ascension\searcher.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\session.hpp"
+					RelativePath="..\..\ascension\ascension\session.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\stream.hpp"
+					RelativePath="..\..\ascension\ascension\stream.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\text-editor.hpp"
+					RelativePath="..\..\ascension\ascension\text-editor.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\unicode-property.hpp"
+					RelativePath="..\..\ascension\ascension\unicode-property.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\unicode.hpp"
+					RelativePath="..\..\ascension\ascension\unicode.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\ustring.hpp"
+					RelativePath="..\..\ascension\ascension\ustring.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\include\viewer.hpp"
+					RelativePath="..\..\ascension\ascension\viewer.hpp"
 					>
 				</File>
 			</Filter>

@@ -119,8 +119,6 @@ namespace ascension {
 			LineWrapConfiguration lineWrap;
 			/// Set @c true to justify the lines if wrapped. Default value is @c false.
 			bool justifiesLines;
-			/// Set @c true to inhibit any shaping. Default value is @c false.
-			bool inhibitsShaping;
 			/// If set to @c true, zero width control characters are shaped as representative glyphs. Default is @c false.
 			bool displaysShapingControls;
 			/// Set @c true to inhibit from generating mirrored glyphs. Default value is @c false.
@@ -132,7 +130,7 @@ namespace ascension {
 			/// Constructor initializes the all members to their default values.
 			LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
 				orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
-				justifiesLines(false), inhibitsShaping(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
+				justifiesLines(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
 				disablesDeprecatedFormatCharacters(false), digitSubstitutionType(DST_USER_DEFAULT) {}
 			/// Returns @c true if the all mwmbers are valid.
 			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
