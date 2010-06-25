@@ -101,7 +101,7 @@ namespace {
 			associations.insert(make_pair(Script::MALAYALAM, L"Kartika"));
 			// Windows Vista
 			associations.insert(make_pair(Script::CANADIAN_ABORIGINAL, L"Euphemia"));
-			associations.insert(make_pair(Script::CHEROKEE, L"Plantagenet"));
+			associations.insert(make_pair(Script::CHEROKEE, L"Plantagenet Cherokee"));
 			associations.insert(make_pair(Script::ETHIOPIC, L"Nyala"));
 			associations.insert(make_pair(Script::KHMER, L"DaunPenh"));	// or "MoolBoran"
 			associations.insert(make_pair(Script::LAO, L"DokChampa"));
@@ -109,7 +109,7 @@ namespace {
 			associations.insert(make_pair(Script::ORIYA, L"Kalinga"));
 			associations.insert(make_pair(Script::SINHALA, L"Iskoola Pota"));
 			associations.insert(make_pair(Script::TIBETAN, L"Microsoft Himalaya"));
-			associations.insert(make_pair(Script::YI, L"Yi Baiti"));
+			associations.insert(make_pair(Script::YI, L"Microsoft Yi Baiti"));
 			// CJK
 			const LANGID uiLang = userCJKLanguage();
 			switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
