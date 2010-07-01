@@ -1038,22 +1038,24 @@ void TextViewer::hideToolTip() {
  */
 TextViewer::HitTestResult TextViewer::hitTest(const POINT& pt) const {
 	check();
-	const VerticalRulerConfiguration& vrc = verticalRulerDrawer_->configuration();
 	RECT clientRect;
 	getClientRect(clientRect);
 	if(!toBoolean(::PtInRect(&clientRect, pt)))
 		return OUT_OF_VIEW;
 
+	const VerticalRulerConfiguration& vrc = verticalRulerConfiguration();
+	const TextAlignment verticalRulerAlignment = vrc.computedAlignment(presentation().defaultLineStyle()->readingDirection);
+
 	if(vrc.indicatorMargin.visible
-			&& ((vrc.alignment == ALIGN_LEFT && pt.x < vrc.indicatorMargin.width)
-			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - vrc.indicatorMargin.width)))
+			&& ((verticalRulerAlignment == ALIGN_LEFT && pt.x < vrc.indicatorMargin.width)
+			|| (verticalRulerAlignment == ALIGN_RIGHT && pt.x >= clientRect.right - vrc.indicatorMargin.width)))
 		return INDICATOR_MARGIN;
 	else if(vrc.lineNumbers.visible
-			&& ((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->width())
-			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width())))
+			&& ((verticalRulerAlignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->width())
+			|| (verticalRulerAlignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width())))
 		return LINE_NUMBERS;
 	else if((vrc.alignment == ALIGN_LEFT && pt.x < verticalRulerDrawer_->width() + configuration_.leadingMargin)
-			|| (vrc.alignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width() - configuration_.leadingMargin))
+			|| (verticalRulerAlignment == ALIGN_RIGHT && pt.x >= clientRect.right - verticalRulerDrawer_->width() - configuration_.leadingMargin))
 		return LEADING_MARGIN;
 	else if(pt.y < textAreaMargins().top)
 		return TOP_MARGIN;
@@ -1285,11 +1287,13 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 	const COLORREF marginColor = (configuration_.color.background != Color()) ?
 		configuration_.color.background.asCOLORREF() : ::GetSysColor(COLOR_WINDOW);
 	if(margins.left > 0) {
-		const int vrWidth = (verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (verticalRulerConfiguration().computedAlignment(
+			presentation().defaultLineStyle()->readingDirection) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
-		const int vrWidth = (verticalRulerDrawer_->configuration().alignment == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (verticalRulerConfiguration().computedAlignment(
+			presentation().defaultLineStyle()->readingDirection) == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 
