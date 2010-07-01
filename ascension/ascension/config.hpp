@@ -134,19 +134,6 @@
 // about ascension.layout ///////////////////////////////////////////////////
 
 /**
- * @def ASCENSION_DEFAULT_TEXT_ORIENTATION
- * Default text orientation for rendering. This must be one of @c ascension#layout#Orientation
- * enumeration.
- */
-#define ASCENSION_DEFAULT_TEXT_ORIENTATION ascension::layout::LEFT_TO_RIGHT
-
-/**
- * @def ASCENSION_DEFAULT_TEXT_ALIGNMENT
- * Default text alignment for rendering. This must be one of @c ascension#layout#Alignment enumeration.
- */
-#define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::layout::ALIGN_LEFT
-
-/**
  * @def ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE
  * Default size of cache buffer of @c ascension#layout#LineLayoutBuffer. This value is used by
  * @c ascension#layout#LineLayoutBuffer class.
@@ -162,6 +149,20 @@
 
 
 // about ascension.presentation /////////////////////////////////////////////
+
+/**
+ * @def ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+ * Default text reading direction for rendering. This must be one of
+ * @c ascension#presentation#ReadingDirection enumeration.
+ */
+#define ASCENSION_DEFAULT_TEXT_READING_DIRECTION ascension::presentation::LEFT_TO_RIGHT
+
+/**
+ * @def ASCENSION_DEFAULT_TEXT_ALIGNMENT
+ * Default text alignment for rendering. This must be one of
+ * @c ascension#presentation#TextAlignment enumeration.
+ */
+#define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::presentation::ALIGN_START
 
 /**
  * @def ASCENSION_HYPERLINKS_CACHE_SIZE

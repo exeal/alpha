@@ -54,10 +54,10 @@ namespace {
 	}
 	inline void toggleOrientation(TextViewer& viewer) /*throw()*/ {
 		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
-		if(viewer.configuration().orientation == LEFT_TO_RIGHT) {
+		if(viewer.configuration().readingDirection == LEFT_TO_RIGHT) {
 			vrc.alignment = ALIGN_RIGHT;
-			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
-				vrc.lineNumbers.alignment = ALIGN_LEFT;
+//			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
+//				vrc.lineNumbers.alignment = ALIGN_LEFT;
 			viewer.setConfiguration(0, &vrc);
 			viewer.modifyStyleEx(WS_EX_LEFT | WS_EX_LTRREADING, WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
@@ -67,8 +67,8 @@ namespace {
 //			}
 		} else {
 			vrc.alignment = ALIGN_LEFT;
-			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
-				vrc.lineNumbers.alignment = ALIGN_RIGHT;
+//			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
+//				vrc.lineNumbers.alignment = ALIGN_RIGHT;
 			viewer.setConfiguration(0, &vrc);
 			viewer.modifyStyleEx(WS_EX_RIGHT | WS_EX_RTLREADING, WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
@@ -138,8 +138,8 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_SHIFT:	// [Shift]
 		if(controlPressed
-				&& ((toBoolean(::GetAsyncKeyState(VK_LSHIFT) & 0x8000) && configuration_.orientation == RIGHT_TO_LEFT)
-				|| (toBoolean(::GetAsyncKeyState(VK_RSHIFT) & 0x8000) && configuration_.orientation == LEFT_TO_RIGHT))) {
+				&& ((toBoolean(::GetAsyncKeyState(VK_LSHIFT) & 0x8000) && configuration_.readingDirection == RIGHT_TO_LEFT)
+				|| (toBoolean(::GetAsyncKeyState(VK_RSHIFT) & 0x8000) && configuration_.readingDirection == LEFT_TO_RIGHT))) {
 			toggleOrientation(*this);
 			return true;
 		}
@@ -552,7 +552,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste(false));
 	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
-	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.orientation == RIGHT_TO_LEFT);
+	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.readingDirection == RIGHT_TO_LEFT);
 	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
 
 	// IME commands

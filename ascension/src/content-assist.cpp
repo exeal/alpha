@@ -2,7 +2,7 @@
  * @file content-assist.cpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include <ascension/content-assist.hpp>
@@ -11,7 +11,7 @@
 using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::kernel;
-using namespace ascension::layout;
+using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
@@ -641,7 +641,7 @@ void ContentAssistant::startPopup() {
 		proposalPopup_->resetContent();
 
 	// determine the horizontal orientation of the window
-	const bool rtl = textViewer_->configuration().orientation == RIGHT_TO_LEFT;
+	const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
 	proposalPopup_->modifyStyleEx(rtl ? 0: WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
 	setupPopupContent(*proposalPopup_, completionSession_->proposals.get(), completionSession_->numberOfProposals);
 
@@ -676,8 +676,8 @@ void ContentAssistant::updatePopupPositions() {
 		textViewer_->getClientRect(viewerRect);
 		int cx = (viewerRect.right - viewerRect.left) / 4;
 		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
-		const POINT pt = textViewer_->clientXYForCharacter(completionSession_->replacementRegion.beginning(), false, LineLayout::LEADING);
-		const bool rtl = textViewer_->configuration().orientation == RIGHT_TO_LEFT;
+		const POINT pt = textViewer_->clientXYForCharacter(completionSession_->replacementRegion.beginning(), false, layout::LineLayout::LEADING);
+		const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
 		int x = !rtl ? (pt.x - 3) : (pt.x - cx - 1 + 3);
 		if(x + cx > viewerRect.right) {
 //			if()
