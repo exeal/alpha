@@ -174,12 +174,6 @@ namespace ascension {
 			} overline, strikethrough, baseline, underline;
 		};
 
-		struct NumberSubstitution {
-			std::locale localeOverride;
-			enum LocaleSource {TEXT, USER, OVERRIDE} localeSource;
-			enum Method {AS_LOCALE, CONTEXTUAL, EUROPEAN, NATIVE_NATIONAL, TRADITIONAL} method;
-		};
-
 		enum TextTransform {
 			CAPITALIZE, UPPERCASE, LOWERCASE, NONE, TEXT_TRANSFORM_INHERIT
 		};
@@ -198,7 +192,6 @@ namespace ascension {
 			Decorations decorations;
 			double letterSpacing;	/// Letter spacing in DIP. Default is 0.
 			double wordSpacing;		/// Word spacing in DIP. Default is 0.
-			NumberSubstitution numberSubstitution;
 			TextTransform textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
@@ -208,8 +201,6 @@ namespace ascension {
 			RunStyle() : letterSpacing(0), wordSpacing(0), textTransform(), shapingEnabled(true) {}
 			RunStyle& resolveInheritance(const RunStyle& base);
 		};
-
-		class VisualLineStyle {};
 
 		struct StyledRun {
 			/// The beginning column in the line of the text range which the style applies.
@@ -235,6 +226,74 @@ namespace ascension {
 		};
 
 		/**
+		 * @c TextAlignment describes horizontal alignment of a paragraph. This implements
+		 * 'text-align' property in CSS 3
+		 * (http://www.w3.org/TR/2007/WD-css3-text-20070306/#text-align).
+		 * @see resolveTextAlignment, LineStyle#textAlignment, LineStyle#lastLineAlignment
+		 */
+		enum TextAlignment {
+			/// The text is aligned to the start edge of the paragraph.
+			ALIGN_START,
+			/// The text is aligned to the end edge of the paragraph.
+			ALIGN_END,
+			/// The text is aligned to the left of the paragraph.
+			ALIGN_LEFT,
+			/// The text is aligned to the right of the paragraph.
+			ALIGN_RIGHT,
+			/// The text is aligned to the center of the paragraph.
+			/// Some methods which take @c ParagraphAlignment don't accept this value.
+			ALIGN_CENTER,
+			/// The text is justified according to the method specified @c Justification value.
+			JUSTIFY,
+			/// The alignment is automatically determined.
+			/// Some methods which take @c TextAlignment don't accept this value.
+			INHERIT_ALIGNMENT
+		};
+
+		/**
+		 * Orientation of the text layout.
+		 * @see LineStyle#readingDirection
+		 */
+		enum ReadingDirection {
+			LEFT_TO_RIGHT,				///< The text is left-to-right.
+			RIGHT_TO_LEFT,				///< The text is right-to-left.
+			INHERIT_READING_DIRECTION	///< 
+		};
+
+		struct NumberSubstitution {
+			/// Specifies how to apply number substitution on digits and related punctuation.
+			enum Method {
+				/// The substitution method should be determined based on the locale.
+				FROM_LOCALE,
+				/// The number shapes depend on the context.
+				CONTEXTUAL,
+				/// No substitution is performed. Characters U+0030..0039 are always rendered as
+				/// nominal numeral shapes (European numbers).
+				NONE,
+				/// Numbers are rendered using the national number shapes.
+				NATIONAL,
+				/// Numbers are rendered using the traditional shapes for the specified locale.
+				TRADITIONAL
+			} method;	///< The substitution method.
+			/// The name of the locale to be used.
+			std::string localeName;
+			/// Whether to ignore user override.
+			bool ignoreUserOverride;
+
+			/// Default constructor.
+			NumberSubstitution() /*throw()*/ : method(NONE), ignoreUserOverride(false) {}
+		};
+
+		struct LineStyle {
+			ReadingDirection readingDirection;
+			TextAlignment alignment;
+			NumberSubstitution numberSubstitution;
+
+			/// Default constructor.
+			LineStyle() /*throw()*/ : readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), alignment(ALIGN_START) {}
+		};
+
+		/**
 		 * Interface for objects which direct style of a line.
 		 * @see Presentation#setLineStyleDirector
 		 */
@@ -247,8 +306,28 @@ namespace ascension {
 			 * Queries the style of the line.
 			 * @param line the line to be queried
 			 * @return the style of the line or @c null (filled by the presentation's default style)
+			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::auto_ptr<IStyledRunIterator> queryLineStyle(length_t line) const = 0;
+			virtual std::tr1::shared_ptr<const LineStyle> queryLineStyle(length_t line) const = 0;
+			friend class Presentation;
+		};
+
+		/**
+		 * Interface for objects which direct style of text runs in a line.
+		 * @see Presentation#setTextRunStyleDirector
+		 */
+		class ITextRunStyleDirector {
+		public:
+			/// Destructor.
+			virtual ~ITextRunStyleDirector() /*throw()*/ {}
+		private:
+			/**
+			 * Queries the style of the line.
+			 * @param line the line to be queried
+			 * @return the style of the line or @c null (filled by the presentation's default style)
+			 * @throw BadPositionException @a line is outside of the document
+			 */
+			virtual std::auto_ptr<IStyledRunIterator> queryTextRunStyle(length_t line) const = 0;
 			friend class Presentation;
 		};
 
@@ -383,15 +462,19 @@ namespace ascension {
 			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
 			void removeTextViewerListListener(ITextViewerListListener& listener);
 			// styles
+			std::tr1::shared_ptr<const LineStyle> defaultLineStyle() const /*throw()*/;
 			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle() const /*throw()*/;
 			Colors getLineColor(length_t line) const;
-			std::auto_ptr<IStyledRunIterator> getLineStyle(length_t line) const;
+			void setDefaultLineStyle(std::tr1::shared_ptr<const LineStyle> newStyle);
 			void setDefaultTextRunStyle(std::tr1::shared_ptr<const RunStyle> newStyle);
+			std::tr1::shared_ptr<const LineStyle> lineStyle(length_t line) const;
+			std::auto_ptr<IStyledRunIterator> textRunStyles(length_t line) const;
 			// strategies
 			void addLineColorDirector(std::tr1::shared_ptr<ILineColorDirector> director);
 			void removeLineColorDirector(ILineColorDirector& director) /*throw()*/;
 			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
 			void setLineStyleDirector(std::tr1::shared_ptr<ILineStyleDirector> newDirector) /*throw()*/;
+			void setTextRunStyleDirector(std::tr1::shared_ptr<ITextRunStyleDirector> newDirector) /*throw()*/;
 			// TextViewer enumeration
 			TextViewerIterator firstTextViewer() /*throw()*/;
 			TextViewerConstIterator firstTextViewer() const /*throw()*/;
@@ -409,8 +492,11 @@ namespace ascension {
 		private:
 			kernel::Document& document_;
 			std::set<viewers::TextViewer*> textViewers_;
+			static std::tr1::shared_ptr<const LineStyle> DEFAULT_LINE_STYLE;
+			std::tr1::shared_ptr<const LineStyle> defaultLineStyle_;
 			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle_;
 			std::tr1::shared_ptr<ILineStyleDirector> lineStyleDirector_;
+			std::tr1::shared_ptr<ITextRunStyleDirector> textRunStyleDirector_;
 			std::list<std::tr1::shared_ptr<ILineColorDirector> > lineColorDirectors_;
 			ascension::internal::Listeners<ITextViewerListListener> textViewerListListeners_;
 			ascension::internal::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
@@ -454,7 +540,7 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : public ILineStyleDirector, public kernel::IDocumentPartitioningListener {
+		class PresentationReconstructor : public ITextRunStyleDirector, public kernel::IDocumentPartitioningListener {
 			MANAH_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
@@ -464,8 +550,8 @@ namespace ascension {
 			void setPartitionReconstructor(kernel::ContentType contentType,
 				std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
 		private:
-			// ILineStyleDirector
-			std::auto_ptr<IStyledRunIterator> queryLineStyle(length_t line) const;
+			// ITextRunStyleDirector
+			std::auto_ptr<IStyledRunIterator> queryTextRunStyle(length_t line) const;
 			// kernel.IDocumentPartitioningListener
 			void documentPartitioningChanged(const kernel::Region& changedRegion);
 		private:
@@ -491,8 +577,19 @@ namespace ascension {
 		 */
 		inline void Presentation::addTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.add(listener);}
 
+		/// Returns the default line style this object gives.
+		inline std::tr1::shared_ptr<const LineStyle> Presentation::defaultLineStyle() const /*throw()*/ {return defaultLineStyle_;}
+
 		/// Returns the default text run style this object gives.
 		inline std::tr1::shared_ptr<const RunStyle> Presentation::defaultTextRunStyle() const /*throw()*/ {return defaultTextRunStyle_;}
+
+		/// Returns the style of the specified line.
+		inline std::tr1::shared_ptr<const LineStyle> Presentation::lineStyle(length_t line) const /*throw()*/ {
+			std::tr1::shared_ptr<const LineStyle> style;
+			if(lineStyleDirector_.get() != 0)
+				style = lineStyleDirector_->queryLineStyle(line);
+			return (style.get() != 0) ? style : defaultLineStyle();
+		}
 
 		/// Returns the number of text viewers.
 		inline std::size_t Presentation::numberOfTextViewers() const /*throw()*/ {return textViewers_.size();}
@@ -514,6 +611,24 @@ namespace ascension {
 		 * @throw std#invalid_argument @a listener is not registered
 		 */
 		inline void Presentation::removeTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.remove(listener);}
+
+		/**
+		 * Resolve an ambiguous text alignment value (@c ALIGN_START and @c ALIGN_END).
+		 * @param value the text alignment to compute
+		 * @param direction the reading direction
+		 * @return the resolved text alignment
+		 * @note This function does not resolve @c INHERIT_ALIGNMENT.
+		 */
+		inline TextAlignment resolveTextAlignment(TextAlignment value, ReadingDirection direction) {
+			switch(value) {
+				case ALIGN_START:
+					return (direction == LEFT_TO_RIGHT) ? ALIGN_LEFT : ALIGN_RIGHT;
+				case ALIGN_END:
+					return (direction == LEFT_TO_RIGHT) ? ALIGN_RIGHT : ALIGN_LEFT;
+				default:
+					return value;
+			}
+		}
 
 }} // namespace ascension.presentation
 

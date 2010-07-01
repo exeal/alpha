@@ -199,14 +199,68 @@ namespace {
 
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
 
-	inline Orientation getLineTerminatorOrientation(const LayoutSettings& c) /*throw()*/ {
-		switch(c.alignment) {
+	inline ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/ {
+		const TextAlignment alignment = (style.alignment != INHERIT_ALIGNMENT) ?
+			style.alignment : ((defaultStyle.get() != 0 && defaultStyle->alignment != INHERIT_ALIGNMENT) ?
+				defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT);
+		const ReadingDirection readingDirection = (style.readingDirection != INHERIT_READING_DIRECTION) ?
+			style.readingDirection : ((defaultStyle.get() != 0 && defaultStyle->readingDirection != INHERIT_READING_DIRECTION) ?
+				defaultStyle->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION);
+		switch(resolveTextAlignment(alignment, readingDirection)) {
 		case ALIGN_LEFT:	return LEFT_TO_RIGHT;
 		case ALIGN_RIGHT:	return RIGHT_TO_LEFT;
 		case ALIGN_CENTER:
-		default:			return c.orientation;
+		default:			return readingDirection;
 		}
 	}
+
+	HRESULT resolveNumberSubstitution(const NumberSubstitution& configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
+//		if(!configuration.ignoreUserOverride)
+			return ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &sc, &ss);
+/*		NumberSubstitution::Method method;
+		if(configuration.method == NumberSubstitution::FROM_LOCALE) {
+			DWORD n;
+			if(::GetLocaleInfoW(configuration.localeName,
+					LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
+				return HRESULT_FROM_WIN32(::GetLastError());
+			switch(n) {
+				case 0:
+					method = NumberSubstitution::CONTEXTUAL;
+					break;
+				case 1:
+					method = NumberSubstitution::NONE;
+					break;
+				case 2:
+					method = NumberSubstitution::NATIONAL;
+					break;
+				default:
+					return S_FALSE;	// hmm...
+			}
+		} else
+			method = configuration.method;
+		SCRIPT_DIGITSUBSTITUTE sds;
+		switch(configuration.method) {
+			case NumberSubstitution::CONTEXTUAL:
+//				sc.fContextDigits = ss.fDigitSubstitute = 1;
+				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+				break;
+			case NumberSubstitution::NONE:
+//				ss.fDigitSubstitute = 0;
+				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
+				break;
+			case NumberSubstitution::NATIONAL:
+//				initialState.fDigitSubstitute = 1;
+				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+			case NumberSubstitution::TRADITIONAL:
+//				initialState.fDigitSubstitute = 1;
+				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_TRADITIONAL;
+				break;
+			default:
+				throw invalid_argument("configuration.method");
+		}
+		sds.NationalDigitLanguage = sds.TraditionalDigitLanguage = configuration.localeName;
+		return ::ScriptApplyDigitSubstitution(&sds, &sc, &ss);
+*/	}
 } // namespace @0
 
 void dumpRuns(const LineLayout& layout) {
@@ -340,7 +394,7 @@ public:
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
 	HRESULT logicalWidths(int widths[]) const;
 	int numberOfGlyphs() const /*throw()*/;
-	Orientation orientation() const /*throw()*/;
+	ReadingDirection readingDirection() const /*throw()*/;
 	bool overhangs() const /*throw()*/;
 	HRESULT place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
 	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
@@ -390,8 +444,8 @@ LineLayout::Run::Run(length_t column, length_t length, const SCRIPT_ANALYSIS& sc
 LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary) /*throw()*/ :
 		characterRange_(characterBoundary, leading.characterRange_.end()), analysis_(leading.analysis_),
 		glyphs_(leading.glyphs_), glyphRange_(
-			(leading.orientation() == LEFT_TO_RIGHT) ? glyphBoundary : leading.glyphRange_.beginning(),
-			(leading.orientation() == LEFT_TO_RIGHT) ? leading.glyphRange_.end() : glyphBoundary),
+			(leading.readingDirection() == LEFT_TO_RIGHT) ? glyphBoundary : leading.glyphRange_.beginning(),
+			(leading.readingDirection() == LEFT_TO_RIGHT) ? leading.glyphRange_.end() : glyphBoundary),
 		font_(leading.font_) {
 	if(leading.glyphs_.get() == 0)
 		throw invalid_argument("leading");
@@ -401,7 +455,7 @@ LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary
 		throw invalid_argument("firstGlyph");
 
 	// modify 'leading's ranges
-	const bool ltr = leading.orientation() == LEFT_TO_RIGHT;
+	const bool ltr = leading.readingDirection() == LEFT_TO_RIGHT;
 	leading.characterRange_ = Range<length_t>(leading.characterRange_.beginning(), characterBoundary);
 	if(ltr)
 		leading.glyphRange_ = Range<int>(leading.glyphRange_.beginning(), glyphBoundary);
@@ -428,7 +482,7 @@ auto_ptr<LineLayout::Run> LineLayout::Run::breakAt(DC& dc, length_t at, const St
 	assert(at > column() && at < column() + length());
 	assert(glyphs_->clusters[at - column()] != glyphs_->clusters[at - column() - 1]);
 
-	const bool ltr = orientation() == LEFT_TO_RIGHT;
+	const bool ltr = readingDirection() == LEFT_TO_RIGHT;
 	const length_t newLength = at - column();
 	const int newNumberOfGlyphs = ltr ? glyphs_->clusters[newLength] : (numberOfGlyphs() - glyphs_->clusters[newLength - 1]);
 	assert(ltr == (analysis_.fRTL == 0));
@@ -641,10 +695,6 @@ inline int LineLayout::Run::numberOfGlyphs() const /*throw()*/ {
 	return glyphRange_.length();
 }
 
-inline Orientation LineLayout::Run::orientation() const /*throw()*/ {
-	return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
-}
-
 inline bool LineLayout::Run::overhangs() const /*throw()*/ {
 	return width_.abcA < 0 || width_.abcC < 0;
 }
@@ -670,7 +720,7 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 	manah::AutoBuffer<WORD> glyphIndices;
 	if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
 		ISpecialCharacterRenderer::LayoutContext context(dc);
-		context.orientation = orientation();
+		context.readingDirection = readingDirection();
 		dc.selectObject(font_.get());
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = 0;
@@ -710,6 +760,10 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 	}
 	swap(width, width_);
 	return hr;
+}
+
+inline ReadingDirection LineLayout::Run::readingDirection() const /*throw()*/ {
+	return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
 }
 
 // shaping stuffs
@@ -1184,14 +1238,15 @@ namespace {
  * @param line the line
  * @throw kernel#BadPositionException @a line is invalid
  */
-LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformation, length_t line) : lip_(layoutInformation), lineNumber_(line),
+LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformation,
+		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().lineStyle(line)),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
 	// calculate the wrapping width
 	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
 		wrapWidth_ = layoutInformation.width();
 		if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
 			ISpecialCharacterRenderer::LayoutContext context(dc);
-			context.orientation = lip_.layoutSettings().orientation;
+			context.readingDirection = lip_.layoutSettings().readingDirection;
 			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
 		}
 	}
@@ -1234,7 +1289,7 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 		// use the default level
-		return (lip_.layoutSettings().orientation == RIGHT_TO_LEFT) ? 1 : 0;
+		return (lip_.layoutSettings().readingDirection == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
@@ -1284,9 +1339,9 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 			const Run& run = *runs_[i];
 			if(first <= run.column() + run.length() && last >= run.column()) {
 				rectangle.left = cx + ((first > run.column()) ?
-					run.x(first - run.column(), false) : ((run.orientation() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
+					run.x(first - run.column(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
 				rectangle.right = cx + ((last < run.column() + run.length()) ?
-					run.x(last - run.column(), false) : ((run.orientation() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
+					run.x(last - run.column(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
 				if(rectangle.left != rectangle.right) {
 					if(rectangle.left > rectangle.right)
 						swap(rectangle.left, rectangle.right);
@@ -1375,7 +1430,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const Run& run = *runs_[j];
 			if(first <= run.column() + run.length() && last >= run.column()) {
-				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
+				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
 					max(first, run.column()) : min(last, run.column() + run.length())) - run.column(), false);
 				bounds.left = min<LONG>(cx + x, bounds.left);
 				break;
@@ -1389,7 +1444,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const Run& run = *runs_[j];
 			if(first <= run.column() + run.length() && last >= run.column()) {
-				const int x = run.x(((run.orientation() == LEFT_TO_RIGHT) ?
+				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
 					min(last, run.column() + run.length()) : max(first, run.column())) - run.column(), false);
 				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
 				break;
@@ -1637,7 +1692,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			x = startX;
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				Run& run = *runs_[i];
-				context.orientation = run.orientation();
+				context.readingDirection = run.readingDirection();
 				for(length_t j = run.column(); j < run.column() + run.length(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
 						context.rect.left = x + run.x(j - run.column(), false);
@@ -1656,17 +1711,18 @@ void LineLayout::draw(length_t subline, DC& dc,
 				x += run.totalWidth();
 			}
 		}
-		if(subline == numberOfSublines_ - 1 && lip_.layoutSettings().alignment == ALIGN_RIGHT)
+		if(subline == numberOfSublines_ - 1
+				&& resolveTextAlignment(lip_.layoutSettings().alignment, lip_.layoutSettings().readingDirection) == ALIGN_RIGHT)
 			x = startX;
 	} // end of nonempty line case
 	
 	// line terminator and line wrapping mark
 	const Document& document = lip_.presentation().document();
 	if(specialCharacterRenderer != 0) {
-		context.orientation = getLineTerminatorOrientation(lip_.layoutSettings());
+		context.readingDirection = lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle());
 		if(subline < numberOfSublines_ - 1) {	// line wrapping mark
 			const int markWidth = specialCharacterRenderer->getLineWrappingMarkWidth(context);
-			if(context.orientation == LEFT_TO_RIGHT) {
+			if(context.readingDirection == LEFT_TO_RIGHT) {
 				context.rect.right = lip_.width();
 				context.rect.left = context.rect.right - markWidth;
 			} else {
@@ -1677,7 +1733,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		} else if(lineNumber_ < document.numberOfLines() - 1) {	// line teminator
 			const kernel::Newline nlf = document.getLineInformation(lineNumber_).newline();
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
-			if(context.orientation == LEFT_TO_RIGHT) {
+			if(context.readingDirection == LEFT_TO_RIGHT) {
 				context.rect.left = x;
 				context.rect.right = x + nlfWidth;
 			} else {
@@ -1689,7 +1745,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 				if(!selection->caret().isSelectionRectangle()
 						&& selection->caret().beginning().position() <= eol
 						&& selection->caret().end().position() > eol)
-					dc.fillSolidRect(x - (context.orientation == RIGHT_TO_LEFT ? nlfWidth : 0),
+					dc.fillSolidRect(x - (context.readingDirection == RIGHT_TO_LEFT ? nlfWidth : 0),
 						y, nlfWidth, dy, selection->color().background.asCOLORREF());
 			}
 			dc.setBkMode(TRANSPARENT);
@@ -1721,7 +1777,7 @@ inline void LineLayout::expandTabsWithoutWrapping() /*throw()*/ {
 	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	int x = 0;
 
-	if(getLineTerminatorOrientation(lip_.layoutSettings()) == LEFT_TO_RIGHT) {	// expand from the left most
+	if(lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle()) == LEFT_TO_RIGHT) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
 			Run& run = *runs_[i];
 			run.expandTabCharacters(lineString, x, fullTabWidth, numeric_limits<int>::max());
@@ -1812,10 +1868,10 @@ LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const /*throw
 #endif
 /// Returns if the line contains right-to-left run.
 bool LineLayout::isBidirectional() const /*throw()*/ {
-	if(lip_.layoutSettings().orientation == RIGHT_TO_LEFT)
+	if(lip_.layoutSettings().readingDirection == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(runs_[i]->orientation() == RIGHT_TO_LEFT)
+		if(runs_[i]->readingDirection() == RIGHT_TO_LEFT)
 			return true;
 	}
 	return false;
@@ -1836,27 +1892,11 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	// configure
 	AutoZero<SCRIPT_CONTROL> control;
 	AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (c.orientation == RIGHT_TO_LEFT) ? 1 : 0;
+	initialState.uBidiLevel = (c.readingDirection == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
 	initialState.fDisplayZWG = c.displaysShapingControls;
-	switch(c.digitSubstitutionType) {
-	case DST_NOMINAL:
-		initialState.fDigitSubstitute = 0;
-		break;
-	case DST_NATIONAL:
-		control.uDefaultLanguage = userSettings.getDefaultLanguage();
-		initialState.fDigitSubstitute = 1;
-		break;
-	case DST_CONTEXTUAL:
-		control.uDefaultLanguage = userSettings.getDefaultLanguage();
-		control.fContextDigits = 1;
-		initialState.fDigitSubstitute = 1;
-		break;
-	case DST_USER_DEFAULT:
-		hr = ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &control, &initialState);
-		break;
-	}
+	resolveNumberSubstitution(c.numberSubstitution, control, initialState);	// ignore result...
 
 	// itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
@@ -1890,7 +1930,7 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	}
 
 	// style
-	merge(items, numberOfItems, presentation.getLineStyle(lineNumber));
+	merge(items, numberOfItems, presentation.textRunStyles(lineNumber));
 
 	if(items != fastItems)
 		delete[] items;
@@ -1937,7 +1977,7 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 	const length_t firstRun = sublineFirstRuns_[sl];
 	const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
 	// about x
-	if(lip_.layoutSettings().orientation == LEFT_TO_RIGHT) {	// LTR
+	if(lip_.layoutSettings().readingDirection == LEFT_TO_RIGHT) {	// LTR
 		int x = sublineIndent(sl);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const Run& run = *runs_[i];
@@ -2127,7 +2167,7 @@ int LineLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
 	assert(x >= 0);
 	const LayoutSettings& c = lip_.layoutSettings();
 	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
-	if(getLineTerminatorOrientation(c) == LEFT_TO_RIGHT)
+	if(lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle()) == LEFT_TO_RIGHT)
 		return nextTabStop(x, right ? Direction::FORWARD : Direction::BACKWARD);
 	else
 		return right ? x + (x - longestSublineWidth()) % tabWidth : x - (tabWidth - (x - longestSublineWidth()) % tabWidth);
@@ -2165,7 +2205,7 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
 			*outside = true;
 		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
 		result.first = result.second = firstRun.column()
-			+ ((firstRun.orientation() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
+			+ ((firstRun.readingDirection() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
 		return result;
 	}
 	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
@@ -2185,7 +2225,7 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
 	if(outside != 0)
 		*outside = true;
 	result.first = result.second = runs_[lastRun - 1]->column()
-		+ ((runs_[lastRun - 1]->orientation() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
+		+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
 	return result;
 }
 #if 0
@@ -2234,9 +2274,10 @@ int LineLayout::sublineIndent(length_t subline) const {
 	if(subline == 0)
 		return 0;
 	const LayoutSettings& c = lip_.layoutSettings();
-	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
+	const TextAlignment alignment = resolveTextAlignment(c.alignment, c.readingDirection);
+	if(alignment == ALIGN_LEFT || c.justifiesLines)
 		return 0;
-	switch(c.alignment) {
+	switch(alignment) {
 	case ALIGN_LEFT:
 	default:
 		return 0;
@@ -2998,7 +3039,7 @@ void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& c
 
 /// @see ISpecialCharacterRenderer#drawLineWrappingMark
 void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext& context) const {
-	const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
+	const int id = (context.readingDirection == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
 	const WCHAR glyph = glyphs_[id];
 	if(glyph != 0xffffu) {
 		HFONT oldFont = context.dc.selectObject(
@@ -3014,15 +3055,15 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 	if(!showsWhiteSpaces_)
 		return;
 	else if(c == 0x0009u) {
-		const int id = (context.orientation == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
+		const int id = (context.readingDirection == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
 		const WCHAR glyph = glyphs_[id];
 		if(glyph != 0xffffu) {
 			HFONT oldFont = context.dc.selectObject(
 				manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : renderer_->defaultFont().get());
 			const int glyphWidth = glyphWidths_[id] & 0x7ffffffful;
 			const int x =
-				((context.orientation == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
-					|| (context.orientation == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
+				((context.readingDirection == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
+					|| (context.readingDirection == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
 				context.rect.left : context.rect.right - glyphWidth;
 			context.dc.setTextColor(whiteSpaceColor_);
 			context.dc.extTextOut(x, context.rect.top + renderer_->ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect, &glyph, 1, 0);
@@ -3094,7 +3135,7 @@ int DefaultSpecialCharacterRenderer::getLineTerminatorWidth(const LayoutContext&
 
 /// @see ISpecialCharacterRenderer#getLineWrappingMarkWidth
 int DefaultSpecialCharacterRenderer::getLineWrappingMarkWidth(const LayoutContext& context) const {
-	return glyphWidths_[(context.orientation == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK] & 0x7ffffffful;
+	return glyphWidths_[(context.readingDirection == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK] & 0x7ffffffful;
 }
 
 /// @see ISpecialCharacterRenderer#install
@@ -3288,11 +3329,12 @@ const IFontCollection& TextRenderer::fontCollection() const {
  */
 int TextRenderer::lineIndent(length_t line, length_t subline) const {
 	const LayoutSettings& c = layoutSettings();
-	if(c.alignment == ALIGN_LEFT || c.justifiesLines)
+	const TextAlignment alignment = resolveTextAlignment(c.alignment, c.readingDirection);
+	if(alignment == ALIGN_LEFT || c.justifiesLines)
 		return 0;
 	else {
 		int w = width();
-		switch(c.alignment) {
+		switch(alignment) {
 		case ALIGN_RIGHT:
 			return w - lineLayout(line).sublineWidth(subline);
 		case ALIGN_CENTER:
@@ -3434,6 +3476,8 @@ bool TextRenderer::updateTextMetrics() {
 
 // TextViewer.VerticalRulerDrawer ///////////////////////////////////////////
 
+// TODO: support locale-dependent number format.
+
 using viewers::TextViewer;
 
 /**
@@ -3448,8 +3492,9 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	const TextRenderer& renderer = viewer_.textRenderer();
 	RECT clientRect;
 	viewer_.getClientRect(clientRect);
-	if((configuration_.alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + width())
-			|| (configuration_.alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - width()))
+	const TextAlignment alignment = resolveTextAlignment(configuration_.alignment, LEFT_TO_RIGHT/*configuration_.readingDirection*/);
+	if((alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + width())
+			|| (alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - width()))
 		return;
 
 #ifdef _DEBUG
@@ -3458,7 +3503,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 #endif // _DEBUG
 
 	const int savedCookie = dc.save();
-	const bool alignLeft = configuration_.alignment == ALIGN_LEFT;
+	const bool alignLeft = alignment == ALIGN_LEFT;
 	const int imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
 
 	int left;
@@ -3512,11 +3557,11 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 
 	// prepare to draw the line numbers
-	Alignment lineNumbersAlignment;
+	TextAlignment lineNumbersAlignment;
 	int lineNumbersX;
 	if(configuration_.lineNumbers.visible) {
-		lineNumbersAlignment = configuration_.lineNumbers.alignment;
-		if(lineNumbersAlignment == ALIGN_AUTO)
+		lineNumbersAlignment = resolveTextAlignment(configuration_.lineNumbers.alignment, LEFT_TO_RIGHT);
+		if(lineNumbersAlignment == INHERIT_ALIGNMENT)
 			lineNumbersAlignment = alignLeft ? ALIGN_RIGHT : ALIGN_LEFT;
 		switch(lineNumbersAlignment) {
 		case ALIGN_LEFT:
@@ -3568,12 +3613,16 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 					swprintf(buffer, MANAH_COUNTOF(buffer), L"%lu", line + configuration_.lineNumbers.startValue);
 #endif // _MSC_VER < 1400
 					UINT option;
+#if 0
 					switch(configuration_.lineNumbers.digitSubstitution) {
 					case DST_CONTEXTUAL:
 					case DST_NOMINAL:		option = ETO_NUMERICSLATIN; break;
 					case DST_NATIONAL:		option = ETO_NUMERICSLOCAL; break;
 					case DST_USER_DEFAULT:	option = 0; break;
 					}
+#else
+					option = 0;
+#endif
 					dcex->extTextOut(lineNumbersX, y, option, 0, buffer, static_cast<int>(wcslen(buffer)), 0);
 				}
 			}
@@ -3601,7 +3650,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 			AutoZero<SCRIPT_CONTROL> sc;
 			AutoZero<SCRIPT_STATE> ss;
 			HRESULT hr;
-			switch(configuration_.lineNumbers.digitSubstitution) {
+/*			switch(configuration_.lineNumbers.digitSubstitution) {
 			case DST_CONTEXTUAL:
 			case DST_NOMINAL:
 				break;
@@ -3609,10 +3658,10 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 				ss.fDigitSubstitute = 1;
 				break;
 			case DST_USER_DEFAULT:
-				hr = ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &sc, &ss);
-				break;
+*/				hr = ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &sc, &ss);
+/*				break;
 			}
-			dc.setTextCharacterExtra(0);
+*/			dc.setTextCharacterExtra(0);
 			hr = ::ScriptStringAnalyse(dc.use(), L"0123456789", 10,
 				estimateNumberOfGlyphs(10), -1, SSA_FALLBACK | SSA_GLYPHS | SSA_LINK, 0, &sc, &ss, 0, 0, 0, &ssa);
 			dc.selectObject(oldFont);

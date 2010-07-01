@@ -121,10 +121,10 @@ namespace ascension {
 			 * Returns the bitmap or the solid size defines caret shape.
 			 * @param[out] bitmap the bitmap defines caret shape. if @c null, @a solidSize is used and the shape is solid
 			 * @param[out] solidSize the size of solid caret. if @a bitmap is not @c null, this parameter is ignored
-			 * @param[out] orientation the orientation of the caret. this value is used for hot spot calculation
+			 * @param[out] readingDirection the orientation of the caret. this value is used for hot spot calculation
 			 */
 			virtual void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
-				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/ = 0;
+				SIZE& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
 			/**
 			 * Installs the provider.
 			 * @param updater the caret updator which notifies the text viewer to update the caret
@@ -144,7 +144,7 @@ namespace ascension {
 			DefaultCaretShaper() /*throw()*/;
 		private:
 			void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
-				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/;
+				SIZE& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void install(CaretShapeUpdater& updater) /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
@@ -162,7 +162,7 @@ namespace ascension {
 		private:
 			// ICaretShapeProvider
 			void getCaretShape(std::auto_ptr<manah::win32::gdi::Bitmap>& bitmap,
-				SIZE& solidSize, layout::Orientation& orientation) /*throw()*/;
+				SIZE& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void install(CaretShapeUpdater& updater) /*throw()*/;
 			void uninstall() /*throw()*/;
 			// ICaretListener
@@ -422,16 +422,18 @@ namespace ascension {
 
 			/**
 			 * A vertical ruler's configuration.
-			 * @see TextViewer#getVerticalRulerConfigurations, TextViewer#setVerticalRulerConfigurations
+			 * @see TextViewer#verticalRulerConfiguration, TextViewer#setConfiguration
 			 */
 			struct VerticalRulerConfiguration {
 				/// Configuration about a line numbers area.
 				struct LineNumbers {
 					/// Whether the area is visible or not. Default value is @c false and the line numbers is invisible.
 					bool visible;
-					/// Alignment of the digits. Default value is @c presentation#ALIGN_AUTO.
-					/// If @c presentation#ALIGN_AUTO is set, the digits are aligned to the leading edge.
-					layout::Alignment alignment;
+					/// 
+					presentation::ReadingDirection readingDirection;
+					/// Alignment of the digits. Default value is @c presentation#ALIGN_END.
+					/// Can't be @c presentation#INHERIT_ALIGNMENT.
+					presentation::TextAlignment alignment;
 					/// Start value of the line number. Default value is 1.
 					length_t startValue;
 					/// Minimum number of digits. Default value is 4.
@@ -457,13 +459,13 @@ namespace ascension {
 						DOTTED			///< Dotted line.
 					} borderStyle;
 					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
-					layout::DigitSubstitutionType digitSubstitution;
+					presentation::NumberSubstitution numberSubstitution;
 					/// Constructor initializes the all members to their default values.
-					LineNumbers() /*throw()*/ : visible(false), alignment(layout::ALIGN_AUTO), startValue(1),
-						minimumDigits(4), leadingMargin(6), trailingMargin(1), borderColor(presentation::Color()),
-						borderWidth(1), borderStyle(SOLID), digitSubstitution(layout::DST_USER_DEFAULT) {}
+					LineNumbers() /*throw()*/ : visible(false), alignment(presentation::ALIGN_END),
+						startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
+						borderColor(presentation::Color()), borderWidth(1), borderStyle(SOLID) {}
 					/// Returns @c true if one of the all members are valid.
-					bool verify() const /*throw()*/ {return leadingMargin >= 0 && trailingMargin >= 0;}
+					bool verify() const /*throw()*/ {return alignment != presentation::INHERIT_ALIGNMENT && leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
 				/// Configuration about an indicator margin.
 				struct IndicatorMargin {
@@ -484,13 +486,11 @@ namespace ascension {
 				} indicatorMargin;	/// Configuration about the indicator margin.
 				/// Alignment of the vertical ruler. Can be either @c layout#ALIGN_LEFT or
 				/// @c layout#ALIGN_RIGHT. Default value is determined based on @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
-				layout::Alignment alignment;
-				/// Constructor.
-				VerticalRulerConfiguration() /*throw()*/ :
-					alignment(ASCENSION_DEFAULT_TEXT_ORIENTATION == layout::LEFT_TO_RIGHT ? layout::ALIGN_LEFT : layout::ALIGN_RIGHT) {}
-				/// Returns @c true if one of the all members are valid.
-				bool verify() const /*throw()*/ {return lineNumbers.verify()
-					&& indicatorMargin.verify() && (alignment == layout::ALIGN_LEFT || alignment == layout::ALIGN_RIGHT);}
+				presentation::TextAlignment alignment;
+
+				VerticalRulerConfiguration() /*throw()*/;
+				presentation::TextAlignment computedAlignment(presentation::ReadingDirection defaultReadingDirection) const /*throw()*/;
+				bool verify() const /*throw()*/;
 			};
 
 			// constructors
@@ -849,10 +849,10 @@ namespace ascension {
 			// a bitmap for caret presentation
 			struct CaretShape {
 				std::tr1::shared_ptr<ICaretShapeProvider> shaper;
-				layout::Orientation orientation;
+				presentation::ReadingDirection readingDirection;
 				int width;
 				std::auto_ptr<manah::win32::gdi::Bitmap> bitmap;
-				CaretShape() /*throw()*/ : orientation(layout::LEFT_TO_RIGHT), width(0) {}
+				CaretShape() /*throw()*/ : readingDirection(presentation::LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 
 			// input state
@@ -1085,6 +1085,32 @@ inline const layout::TextRenderer& TextViewer::textRenderer() const /*throw()*/ 
  */
 inline const TextViewer::VerticalRulerConfiguration&
 	TextViewer::verticalRulerConfiguration() const /*throw()*/ {return verticalRulerDrawer_->configuration();}
+
+/// Constructor.
+inline TextViewer::VerticalRulerConfiguration::VerticalRulerConfiguration() /*throw()*/ : alignment(presentation::ALIGN_START) {}
+
+/// Returns real alignment of the vertical ruler in the window.
+inline presentation::TextAlignment TextViewer::VerticalRulerConfiguration::computedAlignment(
+		presentation::ReadingDirection defaultReadingDirection) const {
+	if(defaultReadingDirection == presentation::INHERIT_READING_DIRECTION)
+		defaultReadingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+	switch(alignment) {
+		case presentation::ALIGN_START:
+			return (defaultReadingDirection == presentation::LEFT_TO_RIGHT) ? presentation::ALIGN_LEFT : presentation::ALIGN_RIGHT;
+		case presentation::ALIGN_END:
+			return (defaultReadingDirection == presentation::LEFT_TO_RIGHT) ? presentation::ALIGN_RIGHT : presentation::ALIGN_LEFT;
+		case presentation::ALIGN_LEFT:
+		case presentation::ALIGN_RIGHT:
+			return alignment;
+		default:
+			throw UnknownValueException("alignment");
+	}
+}
+
+/// Returns @c true if one of the all members are valid.
+inline bool TextViewer::VerticalRulerConfiguration::verify() const /*throw()*/ {
+	return lineNumbers.verify() && indicatorMargin.verify()
+		&& (alignment >= presentation::ALIGN_START && alignment <= presentation::ALIGN_RIGHT);}
 
 /// Returns the vertical ruler's configurations.
 inline const TextViewer::VerticalRulerConfiguration&

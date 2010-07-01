@@ -30,28 +30,6 @@ namespace ascension {
 		bool supportsComplexScripts() /*throw()*/;
 		bool supportsOpenTypeFeatures() /*throw()*/;
 
-		/// Alignment of the text layout.
-		enum Alignment {
-			ALIGN_AUTO,		///< The alignment is automatically determined. Some methods don't accept this value.
-			ALIGN_LEFT,		///< The text is aligned to left.
-			ALIGN_RIGHT,	///< The text is aligned to right.
-			ALIGN_CENTER	///< The text is aligned to center. Some methods don't accept this value.
-		};
-
-		/// Orientation of the text layout.
-		enum Orientation {
-			LEFT_TO_RIGHT,	///< The text is left-to-right.
-			RIGHT_TO_LEFT	///< The text is right-to-left.
-		};
-
-		/// Digit shape (substitution) types.
-		enum DigitSubstitutionType {
-			DST_NOMINAL,		///< Digits are not substituted.
-			DST_NATIONAL,		///< Digits are substituted by the native digits of the user's locale.
-			DST_CONTEXTUAL,		///< Digits are substituted using the language of the prior letter.
-			DST_USER_DEFAULT	///< Follows the NLS native digit and digit substitution settings.
-		};
-
 		/**
 		 * Configuration about line wrapping.
 		 * @see Presentation#Configurations#lineWrap
@@ -112,9 +90,9 @@ namespace ascension {
 			/// Line spacing in pixel. Default value is 1.
 			int lineSpacing;
 			/// Orientation ("paragraph direction") of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
-			Orientation orientation;
+			presentation::ReadingDirection readingDirection;
 			/// Alignment of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ALIGNMENT.
-			Alignment alignment;
+			presentation::TextAlignment alignment;
 			/// Line wrap configuration.
 			LineWrapConfiguration lineWrap;
 			/// Set @c true to justify the lines if wrapped. Default value is @c false.
@@ -126,12 +104,12 @@ namespace ascension {
 			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is @c false.
 			bool disablesDeprecatedFormatCharacters;
 			/// Digits substitution type. Default value is @c DST_USER_DEFAULT.
-			DigitSubstitutionType digitSubstitutionType;
+			presentation::NumberSubstitution numberSubstitution;
 			/// Constructor initializes the all members to their default values.
 			LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
-				orientation(ASCENSION_DEFAULT_TEXT_ORIENTATION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
+				readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
 				justifiesLines(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
-				disablesDeprecatedFormatCharacters(false), digitSubstitutionType(DST_USER_DEFAULT) {}
+				disablesDeprecatedFormatCharacters(false) {}
 			/// Returns @c true if the all mwmbers are valid.
 			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 		};
@@ -159,8 +137,8 @@ namespace ascension {
 			struct LayoutContext {
 				MANAH_UNASSIGNABLE_TAG(LayoutContext);
 			public:
-				mutable manah::win32::gdi::DC& dc;	///< the device context.
-				Orientation orientation;			///< the orientation of the character.
+				mutable manah::win32::gdi::DC& dc;					///< the device context.
+				presentation::ReadingDirection readingDirection;	///< the orientation of the character.
 				/// Constructor.
 				explicit LayoutContext(manah::win32::gdi::DC& deviceContext) /*throw()*/ : dc(deviceContext) {}
 			};
@@ -382,13 +360,15 @@ namespace ascension {
 #endif
 
 			// constructors
-			LineLayout(manah::win32::gdi::DC& dc, const ILayoutInformationProvider& layoutInformation, length_t line);
+			LineLayout(manah::win32::gdi::DC& dc,
+				const ILayoutInformationProvider& layoutInformation, length_t line);
 			~LineLayout() /*throw()*/;
 			// general attributes
 			byte bidiEmbeddingLevel(length_t column) const;
 			bool isBidirectional() const /*throw()*/;
 			bool isDisposed() const /*throw()*/;
 			length_t lineNumber() const /*throw()*/;
+			const presentation::LineStyle& style() const /*throw()*/;
 			// subline accesses
 			length_t numberOfSublines() const /*throw()*/;
 			length_t subline(length_t column) const;
@@ -440,6 +420,7 @@ namespace ascension {
 		private:
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
+			std::tr1::shared_ptr<const presentation::LineStyle> style_;
 			class Run;
 			Run** runs_;
 			std::size_t numberOfRuns_;
@@ -656,6 +637,9 @@ inline length_t LineLayout::numberOfSublines() const /*throw()*/ {return numberO
  */
 inline std::pair<length_t, length_t> LineLayout::offset(
 	const POINT& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
+
+/// Returns the text line style.
+inline const presentation::LineStyle& LineLayout::style() const /*throw()*/ {return *style_;}
 
 /**
  * Returns the wrapped line containing the specified column.

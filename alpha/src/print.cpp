@@ -264,7 +264,8 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	ulong page = 0;
 	WCHAR pageNumber[128];
 	const int linePitch = renderer.linePitch();
-	const ascension::layout::Alignment alignment = (*buffer.presentation().firstTextViewer())->configuration().alignment;
+	const ascension::viewers::TextViewer::Configuration& configuration = (*buffer.presentation().firstTextViewer())->configuration();
+	const ascension::presentation::TextAlignment alignment = ascension::presentation::resolveTextAlignment(configuration.alignment, configuration.readingDirection);
 	rc.top = rc.bottom;
 	for(ascension::length_t line = 0, lines = buffer.numberOfLines(); !error && line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.lineLayout(line);
@@ -302,13 +303,13 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				rc.top += linePitch * 2;
 			}
 			switch(alignment) {
-			case ascension::layout::ALIGN_LEFT:
+			case ascension::presentation::ALIGN_LEFT:
 				layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
 				break;
-			case ascension::layout::ALIGN_RIGHT:
+			case ascension::presentation::ALIGN_RIGHT:
 				layout.draw(subline, dc, rc.right - layout.sublineWidth(0), rc.top, rc, rc, 0);
 				break;
-			case ascension::layout::ALIGN_CENTER:
+			case ascension::presentation::ALIGN_CENTER:
 				layout.draw(subline, dc, (rc.right - layout.sublineWidth(0)) / 2, rc.top, rc, rc, 0);
 				break;
 			}

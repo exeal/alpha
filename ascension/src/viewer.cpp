@@ -936,18 +936,20 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
  */
 int TextViewer::getDisplayXOffset(length_t line) const {
 	const RECT margins = textAreaMargins();
-	if(configuration_.alignment == ALIGN_LEFT || configuration_.justifiesLines)
+	const LineLayout& layout = renderer_->lineLayout(line);
+	const TextAlignment alignment = resolveTextAlignment(layout.style().alignment, layout.style().readingDirection);
+	if(alignment == ALIGN_LEFT || alignment == JUSTIFY)	// TODO: this code ignores last visual line with justification.
 		return margins.left - scrollInfo_.x() * renderer_->averageCharacterWidth();
 
 	int indent;
 	win32::Rect clientRect;
 	getClientRect(clientRect);
 	if(renderer_->longestLineWidth() + margins.left + margins.right > clientRect.getWidth()) {
-		indent = renderer_->longestLineWidth() - renderer_->lineLayout(line).sublineWidth(0) + margins.left;
+		indent = renderer_->longestLineWidth() - layout.sublineWidth(0) + margins.left;
 		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->averageCharacterWidth();
 	} else
-		indent = clientRect.getWidth() - renderer_->lineLayout(line).sublineWidth(0) - margins.right;
-	if(configuration_.alignment == ALIGN_CENTER)
+		indent = clientRect.getWidth() - layout.sublineWidth(0) - margins.right;
+	if(alignment == ALIGN_CENTER)
 		indent /= 2;
 	else
 		assert(configuration_.alignment == ALIGN_RIGHT);
@@ -1355,7 +1357,7 @@ void TextViewer::onStyleChanged(int type, const STYLESTRUCT& style) {
 			&& (((style.styleOld ^ style.styleNew) & (WS_EX_RIGHT | WS_EX_RTLREADING)) != 0)) {
 		// synchronize the resentation with the window style
 		Configuration c(configuration());
-		c.orientation = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+		c.readingDirection = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
 		c.alignment = ((style.styleNew & WS_EX_RIGHT) != 0) ? ALIGN_RIGHT : ALIGN_LEFT;
 		setConfiguration(&c, 0);
 	}
@@ -1502,12 +1504,12 @@ void TextViewer::recreateCaret() {
 	else if(imeCompositionActivated_)
 		solidSize.cx = solidSize.cy = 1;
 	else if(caretShape_.shaper.get() != 0)
-		caretShape_.shaper->getCaretShape(caretShape_.bitmap, solidSize, caretShape_.orientation);
+		caretShape_.shaper->getCaretShape(caretShape_.bitmap, solidSize, caretShape_.readingDirection);
 	else {
 		DefaultCaretShaper s;
 		CaretShapeUpdater u(*this);
 		static_cast<ICaretShapeProvider&>(s).install(u);
-		static_cast<ICaretShapeProvider&>(s).getCaretShape(caretShape_.bitmap, solidSize, caretShape_.orientation);
+		static_cast<ICaretShapeProvider&>(s).getCaretShape(caretShape_.bitmap, solidSize, caretShape_.readingDirection);
 		static_cast<ICaretShapeProvider&>(s).uninstall();
 	}
 
@@ -1739,12 +1741,14 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 		verticalRulerDrawer_->setConfiguration(*verticalRuler);
 	}
 	if(general != 0) {
-		const Alignment oldAlignment = configuration_.alignment;
+		const TextAlignment oldAlignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
 		configuration_ = *general;
 		displaySizeListeners_.notify(&IDisplaySizeListener::viewerDisplaySizeChanged);
 		renderer_->invalidate();
-		if((oldAlignment == ALIGN_LEFT && configuration_.alignment == ALIGN_RIGHT)
-				|| (oldAlignment == ALIGN_RIGHT && configuration_.alignment == ALIGN_LEFT))
+
+		const TextAlignment newAlignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
+		if((oldAlignment == ALIGN_LEFT && newAlignment == ALIGN_RIGHT)
+				|| (oldAlignment == ALIGN_RIGHT && newAlignment == ALIGN_LEFT))
 			scrollInfo_.horizontal.position = scrollInfo_.horizontal.maximum
 				- scrollInfo_.horizontal.pageSize - scrollInfo_.horizontal.position + 1;
 		scrollInfo_.resetBars(*this, SB_BOTH, false);
@@ -1834,10 +1838,10 @@ HRESULT TextViewer::startTextServices() {
  */
 RECT TextViewer::textAreaMargins() const /*throw()*/ {
 	RECT margins = {0, 0, 0, 0};
-	((verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->width();
-	Alignment alignment = configuration_.alignment;
-	if(alignment != ALIGN_LEFT && alignment != ALIGN_RIGHT)
-		alignment = (configuration_.orientation == LEFT_TO_RIGHT) ? ALIGN_LEFT : ALIGN_RIGHT;
+	((verticalRulerConfiguration().computedAlignment(
+		presentation().defaultLineStyle()->readingDirection) == ALIGN_LEFT) ?
+			margins.left : margins.right) += verticalRulerDrawer_->width();
+	TextAlignment alignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
 	if(alignment == ALIGN_LEFT)
 		margins.left += configuration_.leadingMargin;
 	else if(alignment == ALIGN_RIGHT)
@@ -1878,7 +1882,7 @@ void TextViewer::updateCaretPosition() {
 
 	if(!toBoolean(::PtInRect(&textArea, pt)))	// "hide" the caret
 		pt.y = -renderer_->linePitch();
-	else if(caretShape_.orientation == RIGHT_TO_LEFT
+	else if(caretShape_.readingDirection == RIGHT_TO_LEFT
 			|| renderer_->lineLayout(caret().line()).bidiEmbeddingLevel(caret().column()) % 2 == 1)
 		pt.x -= caretShape_.width;
 	setCaretPosition(pt);
@@ -2411,7 +2415,7 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 	if(bars == SB_HORZ || bars == SB_BOTH) {
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
-		const Alignment alignment = viewer.configuration().alignment;
+		const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
 		const int dx = viewer.textRenderer().averageCharacterWidth();
 		assert(dx > 0);
 		const ulong columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ? viewer.textRenderer().longestLineWidth() / dx : 0;
@@ -2561,13 +2565,13 @@ DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : viewer_(0) {
 }
 
 /// @see ICaretShapeProvider#getCaretShape
-void DefaultCaretShaper::getCaretShape(auto_ptr<win32::gdi::Bitmap>&, SIZE& solidSize, Orientation& orientation) /*throw()*/ {
+void DefaultCaretShaper::getCaretShape(auto_ptr<win32::gdi::Bitmap>&, SIZE& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	DWORD width;
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	solidSize.cx = width;
 	solidSize.cy = viewer_->textRenderer().cellHeight();
-	orientation = LEFT_TO_RIGHT;	// no matter
+	readingDirection = LEFT_TO_RIGHT;	// no matter
 }
 
 /// @see ICaretShapeProvider#install
@@ -2690,7 +2694,7 @@ void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const Region&) {
 
 /// @see ICaretShapeProvider#getCaretShape
 void LocaleSensitiveCaretShaper::getCaretShape(
-		auto_ptr<win32::gdi::Bitmap>& bitmap, SIZE& solidSize, Orientation& orientation) /*throw()*/ {
+		auto_ptr<win32::gdi::Bitmap>& bitmap, SIZE& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
@@ -2699,7 +2703,7 @@ void LocaleSensitiveCaretShaper::getCaretShape(
 		solidSize.cy = updater_->textViewer().textRenderer().cellHeight();
 	} else	// use the width of the glyph when overtype mode
 		getCurrentCharacterSize(updater_->textViewer(), solidSize);
-	orientation = LEFT_TO_RIGHT;
+	readingDirection = LEFT_TO_RIGHT;
 
 	HIMC imc = ::ImmGetContext(updater_->textViewer().get());
 	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
@@ -2714,7 +2718,7 @@ void LocaleSensitiveCaretShaper::getCaretShape(
 		if(isRTLLanguage(langID)) {	// RTL
 			bitmap.reset(new win32::gdi::Bitmap);
 			createRTLCaretBitmap(*bitmap.get(), static_cast<ushort>(solidSize.cy), bold_, black);
-			orientation = RIGHT_TO_LEFT;
+			readingDirection = RIGHT_TO_LEFT;
 		} else if(isTISLanguage(langID)) {	// Thai relations
 			bitmap.reset(new win32::gdi::Bitmap);
 			createTISCaretBitmap(*bitmap.get(), static_cast<ushort>(solidSize.cy), bold_, black);

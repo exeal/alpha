@@ -20,6 +20,8 @@ using ascension::presentation::Colors;
 
 // Presentation /////////////////////////////////////////////////////////////
 
+tr1::shared_ptr<const LineStyle> Presentation::DEFAULT_LINE_STYLE(new LineStyle());
+
 struct Presentation::Hyperlinks {
 	length_t lineNumber;
 	manah::AutoBuffer<IHyperlink*> hyperlinks;
@@ -31,6 +33,7 @@ struct Presentation::Hyperlinks {
  * @param document the target document
  */
 Presentation::Presentation(Document& document) /*throw()*/ : document_(document) {
+	setDefaultLineStyle(tr1::shared_ptr<const LineStyle>());
 	document_.addListener(*this);
 }
 
@@ -179,19 +182,6 @@ Colors Presentation::getLineColor(length_t line) const {
 	return result;
 }
 
-/**
- * Returns the style of the specified line.
- * @param line the line
- * @return an iterator enumerates the styles of the text runs in the line, or @c null if the line
- *         has no styled text runs
- * @throw BadPositionException @a line is outside of the document
- */
-auto_ptr<IStyledRunIterator> Presentation::getLineStyle(length_t line) const {
-	if(line >= document_.numberOfLines())
-		throw BadPositionException(Position(line, 0));
-	return (lineStyleDirector_.get() != 0) ? lineStyleDirector_->queryLineStyle(line) : auto_ptr<IStyledRunIterator>();
-}
-
 /// Returns an iterator addresses the location succeeding the last text viewer.
 set<TextViewer*>::iterator Presentation::lastTextViewer() /*throw()*/ {
 	return textViewers_.end();
@@ -208,8 +198,18 @@ void Presentation::removeTextViewer(TextViewer& textViewer) /*throw()*/ {
 }
 
 /**
+ * Sets the default line style.
+ * @param newStyle the style to set
+ * @see #defaultTextLineStyle, #setDefaultTextRunStyle
+ */
+void Presentation::setDefaultLineStyle(tr1::shared_ptr<const LineStyle> newStyle) {
+	defaultLineStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_LINE_STYLE;
+}
+
+/**
  * Sets the default text run style.
  * @param newStyle the style to set
+ * @see #defaultTextRunStyle, #setDefaultTextLineStyle
  */
 void Presentation::setDefaultTextRunStyle(tr1::shared_ptr<const RunStyle> newStyle) {
 	defaultTextRunStyle_ = newStyle;
@@ -229,12 +229,32 @@ void Presentation::setHyperlinkDetector(IHyperlinkDetector* newDetector, bool de
 
 /**
  * Sets the line style director.
- * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param newDirector the director. @c null to unregister
- * @param delegateOwnership set @c true to transfer the ownership of @a newDirector to the callee
  */
 void Presentation::setLineStyleDirector(tr1::shared_ptr<ILineStyleDirector> newDirector) /*throw()*/ {
 	lineStyleDirector_ = newDirector;
+}
+
+/**
+ * Sets the text run style director.
+ * This method does not call @c TextRenderer#invalidate and the layout is not updated.
+ * @param newDirector the director. @c null to unregister
+ */
+void Presentation::setTextRunStyleDirector(tr1::shared_ptr<ITextRunStyleDirector> newDirector) /*throw()*/ {
+	textRunStyleDirector_ = newDirector;
+}
+
+/**
+ * Returns the styles of the text runs in the specified line.
+ * @param line the line
+ * @return an iterator enumerates the styles of the text runs in the line, or @c null if the line
+ *         has no styled text runs
+ * @throw BadPositionException @a line is outside of the document
+ */
+auto_ptr<IStyledRunIterator> Presentation::textRunStyles(length_t line) const {
+	if(line >= document_.numberOfLines())
+		throw BadPositionException(Position(line, 0));
+	return (textRunStyleDirector_.get() != 0) ? textRunStyleDirector_->queryTextRunStyle(line) : auto_ptr<IStyledRunIterator>();
 }
 
 
@@ -371,7 +391,7 @@ inline void PresentationReconstructor::StyledRunIterator::updateSubiterator() {
  * @param presentation the presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-	presentation_.setLineStyleDirector(tr1::shared_ptr<ILineStyleDirector>(this));	// TODO: danger call (may delete this).
+	presentation_.setTextRunStyleDirector(tr1::shared_ptr<ITextRunStyleDirector>(this));	// TODO: danger call (may delete this).
 	presentation_.document().addPartitioningListener(*this);
 }
 
@@ -389,8 +409,8 @@ void PresentationReconstructor::documentPartitioningChanged(const Region& change
 		(*i)->textRenderer().invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
 }
 
-/// @see ILineStyleDirector#queryLineStyle
-auto_ptr<IStyledRunIterator> PresentationReconstructor::queryLineStyle(length_t line) const {
+/// @see ILineStyleDirector#queryTextRunStyle
+auto_ptr<IStyledRunIterator> PresentationReconstructor::queryTextRunStyle(length_t line) const {
 	return auto_ptr<IStyledRunIterator>(new StyledRunIterator(presentation_, reconstructors_, line));
 }
 
