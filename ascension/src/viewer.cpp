@@ -668,7 +668,7 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	vrc.lineNumbers.borderColor = Color(0x00, 0x80, 0x80);
 	vrc.lineNumbers.borderStyle = VerticalRulerConfiguration::LineNumbers::DOTTED;
 	vrc.lineNumbers.borderWidth = 1;
-	setConfiguration(0, &vrc);
+	setConfiguration(0, &vrc, false);
 
 #if 0
 	// this is JavaScript partitioning and lexing settings for test
@@ -1363,8 +1363,7 @@ void TextViewer::onStyleChanged(int type, const STYLESTRUCT& style) {
 		// (ignore the alignment)
 		Configuration c(configuration());
 		c.readingDirection = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-		setConfiguration(&c, 0);
-
+		setConfiguration(&c, 0, false);
 	}
 }
 
@@ -1737,9 +1736,12 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
  * Updates the configurations.
  * @param general the general configurations. @c null to unchange
  * @param verticalRuler the configurations about the vertical ruler. @c null to unchange
+ * @param synchronizeUI set @c true to change the window style according to the new style. this
+ *                      sets @c WS_EX_LEFTSCROLLBAR, @c WS_EX_RIGHTSCROLLBAR, @c WS_EX_LTRREADING
+ *                      and @c WS_EX_RTLREADING styles
  * @throw std#invalid_argument the content of @a verticalRuler is invalid
  */
-void TextViewer::setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler) {
+void TextViewer::setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler, bool synchronizeUI) {
 	if(verticalRuler != 0) {
 		if(!verticalRuler->verify())
 			throw invalid_argument("The content of `verticalRuler' is invalid.");
@@ -1763,10 +1765,12 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 			recreateCaret();
 			updateCaretPosition();
 		}
-		const bool rtl = configuration_.readingDirection == RIGHT_TO_LEFT;
-		modifyStyleEx(
-			rtl ? WS_EX_RIGHTSCROLLBAR : WS_EX_LEFTSCROLLBAR,
-			rtl ? WS_EX_LEFTSCROLLBAR : WS_EX_RIGHTSCROLLBAR);
+		if(synchronizeUI) {
+			if(configuration_.readingDirection == LEFT_TO_RIGHT)
+				modifyStyleEx(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR, WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
+			else
+				modifyStyleEx(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR, WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
+		}
 	}
 	invalidateRect(0, false);
 }

@@ -301,21 +301,14 @@ namespace ascension {
 			/// Returns the layout settings.
 			virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
 			/**
-			 * Returns the override reading direction or @c presentation#INHERIT_READING_DIRECTION.
-			 * The returned value takes priority over the given @c presentation#LineStyle. Default
-			 * implementation returns @c presentation#INHERIT_READING_DIRECTION.
-			 * @see #overrideTextAlignment, presentation#LineStyle#readingDirection,
-			 *      presentation#Presentation#defaultLineStyle
+			 * Returns the default reading direction of UI. The value this method returns is
+			 * treated as "last resort" for resolvement reading direction of text layout. If
+			 * returns @c INHERIT_READING_DIRECTION, the caller should use the value defined by
+			 * @c ASCENSION_DEFAULT_READING_DIRECTION symbol.
+			 * @see presentation#LineStyle#readingDirection
+			 * @see presentation#Presentation#defaultLineStyle
 			 */
-			virtual presentation::ReadingDirection overrideReadingDirection() const /*throw()*/ {return presentation::INHERIT_READING_DIRECTION;}
-			/**
-			 * Returns the override text alignment or @c presentation#INHERIT_TEXT_ALIGNMENT. The
-			 * returned value takes priority over the given @c presentation#LineStyle. Default
-			 * implementation returns @c presentation#INHERIT_TEXT_ALIGNMENT.
-			 * @see #overrideReadingDirection, presentation#LineStyle#alignment,
-			 *      presentation#Presentation#defaultLineStyle
-			 */
-			virtual presentation::TextAlignment overrideTextAlignment() const /*throw()*/ {return presentation::INHERIT_TEXT_ALIGNMENT;}
+			virtual presentation::ReadingDirection defaultUIReadingDirection() const /*throw()*/ = 0;
 			/// Returns the presentation object.
 			virtual const presentation::Presentation& presentation() const /*throw()*/ = 0;
 			/// Returns the special character renderer.

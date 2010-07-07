@@ -54,6 +54,9 @@ namespace {
 			return win32::gdi::DC(win32::borrowed(dc_));
 		}
 		// ILayoutInformationProvider
+		ascension::presentation::ReadingDirection defaultUIReadingDirection() const {
+			return ascension::presentation::INHERIT_READING_DIRECTION;
+		}
 		const ascension::layout::LayoutSettings& layoutSettings() const throw() {
 			return layoutSettings_;
 		}
