@@ -53,24 +53,19 @@ namespace {
 		return 0;
 	}
 	inline void toggleOrientation(TextViewer& viewer) /*throw()*/ {
+		TextViewer::Configuration vc = viewer.configuration();
 		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
-		if(viewer.configuration().readingDirection == LEFT_TO_RIGHT) {
-			vrc.alignment = ALIGN_RIGHT;
-//			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
-//				vrc.lineNumbers.alignment = ALIGN_LEFT;
-			viewer.setConfiguration(0, &vrc);
-			viewer.modifyStyleEx(WS_EX_LEFT | WS_EX_LTRREADING, WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
+		if(vc.readingDirection == LEFT_TO_RIGHT) {
+			vc.readingDirection = RIGHT_TO_LEFT;
+			viewer.setConfiguration(&vc, &vrc, true);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
 //				win32::AutoZeroSize<SCROLLINFO> scroll;
 //				viewer.getScrollInformation(SB_HORZ, scroll);
 //				viewer.setScrollInformation(SB_HORZ, scroll);
 //			}
 		} else {
-			vrc.alignment = ALIGN_LEFT;
-//			if(vrc.lineNumbers.alignment != ALIGN_AUTO)
-//				vrc.lineNumbers.alignment = ALIGN_RIGHT;
-			viewer.setConfiguration(0, &vrc);
-			viewer.modifyStyleEx(WS_EX_RIGHT | WS_EX_RTLREADING, WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
+			vc.readingDirection = LEFT_TO_RIGHT;
+			viewer.setConfiguration(&vc, &vrc, true);
 //			if(config.lineWrap.wrapsAtWindowEdge()) {
 //				win32::AutoZeroSize<SCROLLINFO> scroll;
 //				viewer.getScrollInformation(SB_HORZ, scroll);
@@ -324,7 +319,7 @@ bool TextViewer::onCommand(WORD id, WORD, HWND) {
 	case ID_DISPLAYSHAPINGCONTROLS: {	// "Show Unicode control characters"
 		Configuration c(configuration());
 		c.displaysShapingControls = !c.displaysShapingControls;
-		setConfiguration(&c, 0);
+		setConfiguration(&c, 0, false);
 		break;
 	}
 	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200e)();	break;

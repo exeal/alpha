@@ -511,7 +511,8 @@ namespace ascension {
 			ulong scrollRate(bool horizontal) const /*throw()*/;
 			layout::TextRenderer& textRenderer() /*throw()*/;
 			const layout::TextRenderer& textRenderer() const /*throw()*/;
-			void setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler);
+			void setConfiguration(const Configuration* general,
+				const VerticalRulerConfiguration* verticalRuler, bool synchronizeUI);
 			const VerticalRulerConfiguration& verticalRulerConfiguration() const /*throw()*/;
 			// caret
 			Caret& caret() /*throw()*/;
@@ -676,8 +677,6 @@ namespace ascension {
 				MANAH_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
-				void overrideReadingDirection(presentation::ReadingDirection readingDirection);
-				void overrideTextAlignment(presentation::TextAlignment alignment);
 				Renderer(const Renderer& other, TextViewer& viewer);
 				void rewrapAtWindowEdge();
 			private:
@@ -685,8 +684,7 @@ namespace ascension {
 				manah::win32::gdi::DC deviceContext() const;
 				// ILayoutInformationProvider
 				const layout::LayoutSettings& layoutSettings() const /*throw()*/;
-				presentation::ReadingDirection overrideReadingDirection() const /*throw()*/;
-				presentation::TextAlignment overrideTextAlignment() const /*throw()*/;
+				presentation::ReadingDirection defaultUIReadingDirection() const /*throw()*/;
 				int width() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
@@ -1120,12 +1118,8 @@ inline const TextViewer::VerticalRulerConfiguration&
 /// Returns the width of the vertical ruler.
 inline int TextViewer::VerticalRulerDrawer::width() const /*throw()*/ {return width_;}
 
-/// @see layout#ILayoutInformationProvider#overrideReadingDirection
-inline presentation::ReadingDirection TextViewer::Renderer::overrideReadingDirection() const /*throw()*/ {return overrideReadingDirection_;}
-
-/// @see layout#ILayoutInformationProvider#overrideTextAlignment
-inline presentation::TextAlignment TextViewer::Renderer::overrideTextAlignment() const /*throw()*/ {return overrideTextAlignment_;}
-
+/// @see layout#ILayoutInformationProvider#defaultUIReadingDirection
+inline presentation::ReadingDirection TextViewer::Renderer::defaultUIReadingDirection() const /*throw()*/ {return viewer_.configuration().readingDirection;}
 
 }} // namespace ascension.viewers
 

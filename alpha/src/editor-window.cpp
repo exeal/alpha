@@ -40,7 +40,7 @@ EditorWindow::EditorWindow(const EditorWindow& other) {
 		const bool succeeded = newViewer->create(other.viewers_[i]->getParent().use(), win32::ui::DefaultWindowRect(),
 			WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 		assert(succeeded);
-		newViewer->setConfiguration(&other.viewers_[i]->configuration(), 0);
+		newViewer->setConfiguration(&other.viewers_[i]->configuration(), 0, true);
 		newViewer->scrollTo(other.viewers_[i]->getScrollPosition(SB_HORZ), other.viewers_[i]->getScrollPosition(SB_VERT), false);
 		viewers_.push_back(newViewer.release());
 		if(other.viewers_[i] == other.visibleViewer_)

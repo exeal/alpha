@@ -1284,10 +1284,7 @@ LineLayout::~LineLayout() /*throw()*/ {
  * @see #readingDirection, presentation#resolveTextAlignment
  */
 TextAlignment LineLayout::alignment() const /*throw()*/ {
-	const TextAlignment override = lip_.overrideTextAlignment();
-	if(override != INHERIT_TEXT_ALIGNMENT)
-		return override;
-	else if(style_.get() != 0 && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
+	if(style_.get() != 0 && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
 		style_->readingDirection;
 	tr1::shared_ptr<const LineStyle> defaultStyle(lip_.presentation().defaultLineStyle());
 	return (defaultStyle.get() != 0
@@ -2250,12 +2247,24 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
  * @see #alignment
  */
 ReadingDirection LineLayout::readingDirection() const /*throw()*/ {
-	const ReadingDirection override = lip_.overrideReadingDirection();
-	if(override != INHERIT_READING_DIRECTION)
-		return override;
-	else if(style_.get() != 0 && style_->readingDirection != INHERIT_READING_DIRECTION)
-		return style_->readingDirection;
-	return defaultReadingDirection(lip_.presentation());
+	ReadingDirection result = INHERIT_READING_DIRECTION;
+	// try the requested line style
+	if(style_.get() != 0)
+		result = style_->readingDirection;
+	// try the default line style
+	if(result == INHERIT_READING_DIRECTION) {
+		tr1::shared_ptr<const LineStyle> defaultLineStyle(lip_.presentation().defaultLineStyle());
+		if(defaultLineStyle.get() != 0)
+			result = defaultLineStyle->readingDirection;
+	}
+	// try the default UI style
+	if(result == INHERIT_READING_DIRECTION)
+		result = lip_.defaultUIReadingDirection();
+	// use user default
+	if(result == INHERIT_READING_DIRECTION)
+		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+	assert(result == LEFT_TO_RIGHT || result == RIGHT_TO_LEFT);
+	return result;
 }
 #if 0
 /**
