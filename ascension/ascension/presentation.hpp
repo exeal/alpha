@@ -229,7 +229,7 @@ namespace ascension {
 		 * @c TextAlignment describes horizontal alignment of a paragraph. This implements
 		 * 'text-align' property in CSS 3
 		 * (http://www.w3.org/TR/2007/WD-css3-text-20070306/#text-align).
-		 * @see resolveTextAlignment, LineStyle#textAlignment, LineStyle#lastLineAlignment
+		 * @see resolveTextAlignment, LineStyle#alignment, LineStyle#lastSublineAlignment
 		 */
 		enum TextAlignment {
 			/// The text is aligned to the start edge of the paragraph.
@@ -247,7 +247,7 @@ namespace ascension {
 			JUSTIFY,
 			/// The alignment is automatically determined.
 			/// Some methods which take @c TextAlignment don't accept this value.
-			INHERIT_ALIGNMENT
+			INHERIT_TEXT_ALIGNMENT
 		};
 
 		/**
@@ -611,6 +611,20 @@ namespace ascension {
 		 * @throw std#invalid_argument @a listener is not registered
 		 */
 		inline void Presentation::removeTextViewerListListener(ITextViewerListListener& listener) {textViewerListListeners_.remove(listener);}
+
+		/// 
+		inline TextAlignment defaultTextAlignment(const Presentation& presentation) {
+			std::tr1::shared_ptr<const LineStyle> style(presentation.defaultLineStyle());
+			return (style.get() != 0
+				&& style->alignment != INHERIT_TEXT_ALIGNMENT) ? style->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
+		}
+
+		///
+		inline ReadingDirection defaultReadingDirection(const Presentation& presentation) {
+			std::tr1::shared_ptr<const LineStyle> style(presentation.defaultLineStyle());
+			return (style.get() != 0
+				&& style->readingDirection != INHERIT_READING_DIRECTION) ? style->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+		}
 
 		/**
 		 * Resolve an ambiguous text alignment value (@c ALIGN_START and @c ALIGN_END).
