@@ -292,7 +292,7 @@ bool CaretMovementCommand::perform() {
 		}
 		caret.endRectangleSelection();
 		if(!isSelectionEmpty(caret)) {	// just clear the selection
-			const bool rtl = target().configuration().readingDirection == presentation::RIGHT_TO_LEFT;
+			const bool rtl = defaultReadingDirection(target().presentation()) == presentation::RIGHT_TO_LEFT;
 			if(procedurePCL_ == &locations::forwardCharacter
 					|| (procedureVCL_ == &locations::rightCharacter && !rtl)
 					|| (procedureVCL_ == &locations::leftCharacter && rtl)) {

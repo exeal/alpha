@@ -399,15 +399,15 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 }
 
 /**
- * Copy-constructor. Unlike @c manah#win32#Handle class, this does not copy the window handle. For
+ * Copy-constructor. Unlike @c manah#win32#Object class, this does not copy the window handle. For
  * more details, see the description of @c TextViewer.
  */
-TextViewer::TextViewer(const TextViewer& rhs) : win32::ui::CustomControl<TextViewer>(), presentation_(rhs.presentation_), tipText_(0)
+TextViewer::TextViewer(const TextViewer& other) : win32::ui::CustomControl<TextViewer>(), presentation_(other.presentation_), tipText_(0)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		, accessibleProxy_(0)
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 {
-	renderer_.reset(new Renderer(*rhs.renderer_, *this));
+	renderer_.reset(new Renderer(*other.renderer_, *this));
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
@@ -415,7 +415,7 @@ TextViewer::TextViewer(const TextViewer& rhs) : win32::ui::CustomControl<TextVie
 	caret_->addStateListener(*this);
 	verticalRulerDrawer_.reset(new VerticalRulerDrawer(*this, true));
 
-	modeState_ = rhs.modeState_;
+	modeState_ = other.modeState_;
 
 	imeCompositionActivated_ = imeComposingCharacter_ = false;
 	mouseInputDisabledCount_ = 0;
@@ -937,7 +937,7 @@ void TextViewer::freeze(bool forAllClones /* = true */) {
 int TextViewer::getDisplayXOffset(length_t line) const {
 	const RECT margins = textAreaMargins();
 	const LineLayout& layout = renderer_->lineLayout(line);
-	const TextAlignment alignment = resolveTextAlignment(layout.style().alignment, layout.style().readingDirection);
+	const TextAlignment alignment = resolveTextAlignment(layout.alignment(), layout.readingDirection());
 	if(alignment == ALIGN_LEFT || alignment == JUSTIFY)	// TODO: this code ignores last visual line with justification.
 		return margins.left - scrollInfo_.x() * renderer_->averageCharacterWidth();
 
@@ -952,7 +952,7 @@ int TextViewer::getDisplayXOffset(length_t line) const {
 	if(alignment == ALIGN_CENTER)
 		indent /= 2;
 	else
-		assert(configuration_.alignment == ALIGN_RIGHT);
+		assert(alignment == ALIGN_RIGHT);
 	return indent - static_cast<long>(scrollInfo_.x()) * renderer_->averageCharacterWidth();
 }
 
@@ -1359,11 +1359,12 @@ void TextViewer::onSize(UINT type, int, int) {
 void TextViewer::onStyleChanged(int type, const STYLESTRUCT& style) {
 	if(type == GWL_EXSTYLE
 			&& (((style.styleOld ^ style.styleNew) & (WS_EX_RIGHT | WS_EX_RTLREADING)) != 0)) {
-		// synchronize the resentation with the window style
+		// synchronize the reading direction with the window's style
+		// (ignore the alignment)
 		Configuration c(configuration());
 		c.readingDirection = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-		c.alignment = ((style.styleNew & WS_EX_RIGHT) != 0) ? ALIGN_RIGHT : ALIGN_LEFT;
 		setConfiguration(&c, 0);
+
 	}
 }
 
@@ -1745,14 +1746,14 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 		verticalRulerDrawer_->setConfiguration(*verticalRuler);
 	}
 	if(general != 0) {
-		const TextAlignment oldAlignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
+		const ReadingDirection oldReadingDirection = configuration_.readingDirection;
+		assert(oldReadingDirection != INHERIT_READING_DIRECTION && general->readingDirection != INHERIT_READING_DIRECTION);
 		configuration_ = *general;
 		displaySizeListeners_.notify(&IDisplaySizeListener::viewerDisplaySizeChanged);
 		renderer_->invalidate();
 
-		const TextAlignment newAlignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
-		if((oldAlignment == ALIGN_LEFT && newAlignment == ALIGN_RIGHT)
-				|| (oldAlignment == ALIGN_RIGHT && newAlignment == ALIGN_LEFT))
+		if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
+				|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
 			scrollInfo_.horizontal.position = scrollInfo_.horizontal.maximum
 				- scrollInfo_.horizontal.pageSize - scrollInfo_.horizontal.position + 1;
 		scrollInfo_.resetBars(*this, SB_BOTH, false);
@@ -1762,10 +1763,10 @@ void TextViewer::setConfiguration(const Configuration* general, const VerticalRu
 			recreateCaret();
 			updateCaretPosition();
 		}
-		const bool rightAlign = configuration_.alignment == ALIGN_RIGHT;
+		const bool rtl = configuration_.readingDirection == RIGHT_TO_LEFT;
 		modifyStyleEx(
-			rightAlign ? WS_EX_RIGHTSCROLLBAR : WS_EX_LEFTSCROLLBAR,
-			rightAlign ? WS_EX_LEFTSCROLLBAR : WS_EX_RIGHTSCROLLBAR);
+			rtl ? WS_EX_RIGHTSCROLLBAR : WS_EX_LEFTSCROLLBAR,
+			rtl ? WS_EX_LEFTSCROLLBAR : WS_EX_RIGHTSCROLLBAR);
 	}
 	invalidateRect(0, false);
 }
@@ -1845,7 +1846,8 @@ RECT TextViewer::textAreaMargins() const /*throw()*/ {
 	((verticalRulerConfiguration().computedAlignment(
 		presentation().defaultLineStyle()->readingDirection) == ALIGN_LEFT) ?
 			margins.left : margins.right) += verticalRulerDrawer_->width();
-	TextAlignment alignment = resolveTextAlignment(configuration_.alignment, configuration_.readingDirection);
+	const TextAlignment alignment = resolveTextAlignment(
+		defaultTextAlignment(presentation()), configuration_.readingDirection);
 	if(alignment == ALIGN_LEFT)
 		margins.left += configuration_.leadingMargin;
 	else if(alignment == ALIGN_RIGHT)
@@ -2312,7 +2314,8 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 // TextViewer.Renderer //////////////////////////////////////////////////////
 
 /// Constructor.
-TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer) {
+TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), systemFonts(), true),
+		viewer_(viewer), overrideReadingDirection_(INHERIT_READING_DIRECTION), overrideTextAlignment_(INHERIT_TEXT_ALIGNMENT) {
 	// TODO: other IFontCollection object used?
 #if 0
 	// for test
@@ -2321,7 +2324,8 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.present
 }
 
 /// Copy-constructor with a parameter.
-TextViewer::Renderer::Renderer(const Renderer& rhs, TextViewer& viewer) : TextRenderer(rhs), viewer_(viewer) {
+TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) : TextRenderer(other), viewer_(viewer),
+		overrideReadingDirection_(other.overrideReadingDirection_), overrideTextAlignment_(other.overrideTextAlignment_) {
 }
 
 /// @see layout#LineLayoutBuffer#deviceContext
@@ -2412,14 +2416,31 @@ void TextViewer::VerticalRulerDrawer::update() /*throw()*/ {
 #undef RESTORE_HIDDEN_CURSOR
 
 
+// TextViewer.Configuration /////////////////////////////////////////////////
+
+/// Default constructor.
+TextViewer::Configuration::Configuration() /*throw()*/ :
+		readingDirection(LEFT_TO_RIGHT), leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
+#if(_WIN32_WINNT >= 0x0501)
+	BOOL b;
+	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
+		vanishesCursor = manah::toBoolean(b);
+	else
+		vanishesCursor = false;
+#else
+	vanishesCursor = false;
+#endif // _WIN32_WINNT >= 0x0501
+}
+
+
 // TextViewer.ScrollInfo ////////////////////////////////////////////////////
 
 void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) /*throw()*/ {
-	// 水平方向
+	// about horizontal
 	if(bars == SB_HORZ || bars == SB_BOTH) {
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
-		const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
+	//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
 		const int dx = viewer.textRenderer().averageCharacterWidth();
 		assert(dx > 0);
 		const ulong columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ? viewer.textRenderer().longestLineWidth() / dx : 0;
@@ -2427,24 +2448,24 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 //		assert(horizontal.rate != 0);
 		const int oldMaximum = horizontal.maximum;
 		horizontal.maximum = max(static_cast<int>(columns/* / horizontal.rate*/), static_cast<int>(viewer.numberOfVisibleColumns() - 1));
-		if(alignment == ALIGN_RIGHT)
-			horizontal.position += horizontal.maximum - oldMaximum;
-		else if(alignment == ALIGN_CENTER)
-//			horizontal.position += (horizontal.maximum - oldMaximum) / 2;
-			horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
+	//	if(alignment == ALIGN_RIGHT)
+	//		horizontal.position += horizontal.maximum - oldMaximum;
+	//	else if(alignment == ALIGN_CENTER)
+//	//		horizontal.position += (horizontal.maximum - oldMaximum) / 2;
+	//		horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
 		horizontal.position = max(horizontal.position, 0);
 		if(pageSizeChanged) {
 			const UINT oldPageSize = horizontal.pageSize;
 			horizontal.pageSize = static_cast<UINT>(viewer.numberOfVisibleColumns());
-			if(alignment == ALIGN_RIGHT)
-				horizontal.position -= horizontal.pageSize - oldPageSize;
-			else if(alignment == ALIGN_CENTER)
-//				horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
-				horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
+	//		if(alignment == ALIGN_RIGHT)
+	//			horizontal.position -= horizontal.pageSize - oldPageSize;
+	//		else if(alignment == ALIGN_CENTER)
+//	//			horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
+	//			horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
 			horizontal.position = max(horizontal.position, 0);
 		}
 	}
-	// 垂直方向
+	// about vertical
 	if(bars == SB_VERT || bars == SB_BOTH) {
 		const length_t lines = viewer.textRenderer().numberOfVisualLines();
 		assert(lines > 0);

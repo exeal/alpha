@@ -264,8 +264,6 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	ulong page = 0;
 	WCHAR pageNumber[128];
 	const int linePitch = renderer.linePitch();
-	const ascension::viewers::TextViewer::Configuration& configuration = (*buffer.presentation().firstTextViewer())->configuration();
-	const ascension::presentation::TextAlignment alignment = ascension::presentation::resolveTextAlignment(configuration.alignment, configuration.readingDirection);
 	rc.top = rc.bottom;
 	for(ascension::length_t line = 0, lines = buffer.numberOfLines(); !error && line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.lineLayout(line);
@@ -302,7 +300,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				dc.selectObject(oldPen);
 				rc.top += linePitch * 2;
 			}
-			switch(alignment) {
+			switch(layout.alignment()) {
 			case ascension::presentation::ALIGN_LEFT:
 				layout.draw(subline, dc, rc.left, rc.top, rc, rc, 0);
 				break;

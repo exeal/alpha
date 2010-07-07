@@ -200,8 +200,8 @@ namespace {
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
 
 	inline ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/ {
-		const TextAlignment alignment = (style.alignment != INHERIT_ALIGNMENT) ?
-			style.alignment : ((defaultStyle.get() != 0 && defaultStyle->alignment != INHERIT_ALIGNMENT) ?
+		const TextAlignment alignment = (style.alignment != INHERIT_TEXT_ALIGNMENT) ?
+			style.alignment : ((defaultStyle.get() != 0 && defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ?
 				defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT);
 		const ReadingDirection readingDirection = (style.readingDirection != INHERIT_READING_DIRECTION) ?
 			style.readingDirection : ((defaultStyle.get() != 0 && defaultStyle->readingDirection != INHERIT_READING_DIRECTION) ?
@@ -1228,7 +1228,7 @@ namespace {
  * In present, this class supports only text layout horizontal against the output device.
  *
  * @note This class is not intended to derive.
- * @see LineLayoutBuffer#lineLayout, LineLayoutBuffer::lineLayoutIfCached
+ * @see LineLayoutBuffer#lineLayout, LineLayoutBuffer#lineLayoutIfCached
  */
 
 /**
@@ -1246,7 +1246,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		wrapWidth_ = layoutInformation.width();
 		if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
 			ISpecialCharacterRenderer::LayoutContext context(dc);
-			context.readingDirection = lip_.layoutSettings().readingDirection;
+			context.readingDirection = readingDirection();
 			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
 		}
 	}
@@ -1279,6 +1279,22 @@ LineLayout::~LineLayout() /*throw()*/ {
 }
 
 /**
+ * Returns the computed text alignment of the line. The returned value may be
+ * @c presentation#ALIGN_START or @c presentation#ALIGN_END.
+ * @see #readingDirection, presentation#resolveTextAlignment
+ */
+TextAlignment LineLayout::alignment() const /*throw()*/ {
+	const TextAlignment override = lip_.overrideTextAlignment();
+	if(override != INHERIT_TEXT_ALIGNMENT)
+		return override;
+	else if(style_.get() != 0 && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
+		style_->readingDirection;
+	tr1::shared_ptr<const LineStyle> defaultStyle(lip_.presentation().defaultLineStyle());
+	return (defaultStyle.get() != 0
+		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
+}
+
+/**
  * Returns the bidirectional embedding level at specified position.
  * @param column the column
  * @return the embedding level
@@ -1289,7 +1305,7 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 		// use the default level
-		return (lip_.layoutSettings().readingDirection == RIGHT_TO_LEFT) ? 1 : 0;
+		return (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
@@ -1712,7 +1728,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 			}
 		}
 		if(subline == numberOfSublines_ - 1
-				&& resolveTextAlignment(lip_.layoutSettings().alignment, lip_.layoutSettings().readingDirection) == ALIGN_RIGHT)
+				&& resolveTextAlignment(alignment(), readingDirection()) == ALIGN_RIGHT)
 			x = startX;
 	} // end of nonempty line case
 	
@@ -1868,7 +1884,7 @@ LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const /*throw
 #endif
 /// Returns if the line contains right-to-left run.
 bool LineLayout::isBidirectional() const /*throw()*/ {
-	if(lip_.layoutSettings().readingDirection == RIGHT_TO_LEFT)
+	if(readingDirection() == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		if(runs_[i]->readingDirection() == RIGHT_TO_LEFT)
@@ -1892,7 +1908,7 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	// configure
 	AutoZero<SCRIPT_CONTROL> control;
 	AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (c.readingDirection == RIGHT_TO_LEFT) ? 1 : 0;
+	initialState.uBidiLevel = (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
 	initialState.fDisplayZWG = c.displaysShapingControls;
@@ -1977,7 +1993,7 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 	const length_t firstRun = sublineFirstRuns_[sl];
 	const length_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
 	// about x
-	if(lip_.layoutSettings().readingDirection == LEFT_TO_RIGHT) {	// LTR
+	if(readingDirection() == LEFT_TO_RIGHT) {	// LTR
 		int x = sublineIndent(sl);
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const Run& run = *runs_[i];
@@ -2228,6 +2244,19 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
 		+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
 	return result;
 }
+
+/**
+ * Returns the computed reading direction of the line.
+ * @see #alignment
+ */
+ReadingDirection LineLayout::readingDirection() const /*throw()*/ {
+	const ReadingDirection override = lip_.overrideReadingDirection();
+	if(override != INHERIT_READING_DIRECTION)
+		return override;
+	else if(style_.get() != 0 && style_->readingDirection != INHERIT_READING_DIRECTION)
+		return style_->readingDirection;
+	return defaultReadingDirection(lip_.presentation());
+}
 #if 0
 /**
  * Returns the styled text run containing the specified column.
@@ -2273,11 +2302,10 @@ RECT LineLayout::sublineBounds(length_t subline) const {
 int LineLayout::sublineIndent(length_t subline) const {
 	if(subline == 0)
 		return 0;
-	const LayoutSettings& c = lip_.layoutSettings();
-	const TextAlignment alignment = resolveTextAlignment(c.alignment, c.readingDirection);
-	if(alignment == ALIGN_LEFT || c.justifiesLines)
+	const TextAlignment resolvedAlignment = resolveTextAlignment(alignment(), readingDirection());
+	if(resolvedAlignment == ALIGN_LEFT || resolvedAlignment == JUSTIFY)	// TODO: recognize the last line if justified.
 		return 0;
-	switch(alignment) {
+	switch(resolvedAlignment) {
 	case ALIGN_LEFT:
 	default:
 		return 0;
@@ -3328,17 +3356,17 @@ const IFontCollection& TextRenderer::fontCollection() const {
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
 int TextRenderer::lineIndent(length_t line, length_t subline) const {
-	const LayoutSettings& c = layoutSettings();
-	const TextAlignment alignment = resolveTextAlignment(c.alignment, c.readingDirection);
-	if(alignment == ALIGN_LEFT || c.justifiesLines)
+	const LineLayout& layout = lineLayout(line);
+	const TextAlignment resolvedAlignment = resolveTextAlignment(layout.alignment(), layout.readingDirection());
+	if(resolvedAlignment == ALIGN_LEFT || resolvedAlignment == JUSTIFY)	// TODO: recognize the last subline of a justified line.
 		return 0;
 	else {
 		int w = width();
-		switch(alignment) {
+		switch(resolvedAlignment) {
 		case ALIGN_RIGHT:
-			return w - lineLayout(line).sublineWidth(subline);
+			return w - layout.sublineWidth(subline);
 		case ALIGN_CENTER:
-			return (w - lineLayout(line).sublineWidth(subline)) / 2;
+			return (w - layout.sublineWidth(subline)) / 2;
 		default:
 			return 0;
 		}
@@ -3561,7 +3589,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	int lineNumbersX;
 	if(configuration_.lineNumbers.visible) {
 		lineNumbersAlignment = resolveTextAlignment(configuration_.lineNumbers.alignment, LEFT_TO_RIGHT);
-		if(lineNumbersAlignment == INHERIT_ALIGNMENT)
+		if(lineNumbersAlignment == INHERIT_TEXT_ALIGNMENT)
 			lineNumbersAlignment = alignLeft ? ALIGN_RIGHT : ALIGN_LEFT;
 		switch(lineNumbersAlignment) {
 		case ALIGN_LEFT:

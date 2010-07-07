@@ -1470,7 +1470,11 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 		dnd_.numberOfRectangleLines = 0;
 		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
-			if(viewer_->configuration().alignment != ALIGN_LEFT)
+			const TextAlignment alignment = defaultTextAlignment(viewer_->presentation());
+			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
+			if(alignment == ALIGN_END
+					|| (alignment == ALIGN_LEFT && readingDirection == RIGHT_TO_LEFT)
+					|| (alignment == ALIGN_RIGHT && readingDirection == LEFT_TO_RIGHT))
 				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
 			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
 			if(SUCCEEDED(text.first))

@@ -400,6 +400,8 @@ namespace ascension {
 				presentation::Colors inactiveSelectionColor;
 				/// Color of the inaccessible area. Standard setting is {@c COLOR_GRAYTEXT, @c color.background}.
 				presentation::Colors restrictionColor;
+				/// The reading direction of UI. Can't be @c INHERIT_READING_DIRECTION.
+				presentation::ReadingDirection readingDirection;
 				/// The amount of the leading margin in pixels. Default value is 5. This member will be ignored if the text is center-aligned.
 				int leadingMargin;
 				/// The amount of the top margin in pixels. Default value is 1.
@@ -408,16 +410,8 @@ namespace ascension {
 				bool vanishesCursor;
 				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
 				bool usesRichTextClipboardFormat;
-				/// Constructor.
-				Configuration() /*throw()*/ : leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
-#if(_WIN32_WINNT >= 0x0501)
-					BOOL b;
-					::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0);
-					vanishesCursor = manah::toBoolean(b);
-#else
-					vanishesCursor = false;
-#endif // _WIN32_WINNT >= 0x0501
-				}
+
+				Configuration() /*throw()*/;
 			};
 
 			/**
@@ -465,7 +459,7 @@ namespace ascension {
 						startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
 						borderColor(presentation::Color()), borderWidth(1), borderStyle(SOLID) {}
 					/// Returns @c true if one of the all members are valid.
-					bool verify() const /*throw()*/ {return alignment != presentation::INHERIT_ALIGNMENT && leadingMargin >= 0 && trailingMargin >= 0;}
+					bool verify() const /*throw()*/ {return alignment != presentation::INHERIT_TEXT_ALIGNMENT && leadingMargin >= 0 && trailingMargin >= 0;}
 				} lineNumbers;	/// Configuration about the line numbers area.
 				/// Configuration about an indicator margin.
 				struct IndicatorMargin {
@@ -495,7 +489,7 @@ namespace ascension {
 
 			// constructors
 			explicit TextViewer(presentation::Presentation& presentation);
-			TextViewer(const TextViewer& rhs);
+			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 			// window creation
 			virtual bool create(HWND parent, const RECT& rect, DWORD style, DWORD exStyle);
@@ -682,16 +676,22 @@ namespace ascension {
 				MANAH_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
-				Renderer(const Renderer& rhs, TextViewer& viewer);
+				void overrideReadingDirection(presentation::ReadingDirection readingDirection);
+				void overrideTextAlignment(presentation::TextAlignment alignment);
+				Renderer(const Renderer& other, TextViewer& viewer);
 				void rewrapAtWindowEdge();
 			private:
 				// LineLayoutBuffer
 				manah::win32::gdi::DC deviceContext() const;
 				// ILayoutInformationProvider
 				const layout::LayoutSettings& layoutSettings() const /*throw()*/;
+				presentation::ReadingDirection overrideReadingDirection() const /*throw()*/;
+				presentation::TextAlignment overrideTextAlignment() const /*throw()*/;
 				int width() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
+				presentation::ReadingDirection overrideReadingDirection_;
+				presentation::TextAlignment overrideTextAlignment_;
 			};
 			/// @c VerticalRulerDrawer draws the vertical ruler of the @c TextViewer.
 			class VerticalRulerDrawer {
@@ -786,7 +786,7 @@ namespace ascension {
 
 			// data members
 		private:
-			// 大物
+			// big stars
 			presentation::Presentation& presentation_;
 			std::auto_ptr<Caret> caret_;
 			std::auto_ptr<Renderer> renderer_;
@@ -794,6 +794,7 @@ namespace ascension {
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;
 			Char* tipText_;
+			// strategies and listeners
 			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
@@ -1118,6 +1119,13 @@ inline const TextViewer::VerticalRulerConfiguration&
 
 /// Returns the width of the vertical ruler.
 inline int TextViewer::VerticalRulerDrawer::width() const /*throw()*/ {return width_;}
+
+/// @see layout#ILayoutInformationProvider#overrideReadingDirection
+inline presentation::ReadingDirection TextViewer::Renderer::overrideReadingDirection() const /*throw()*/ {return overrideReadingDirection_;}
+
+/// @see layout#ILayoutInformationProvider#overrideTextAlignment
+inline presentation::TextAlignment TextViewer::Renderer::overrideTextAlignment() const /*throw()*/ {return overrideTextAlignment_;}
+
 
 }} // namespace ascension.viewers
 

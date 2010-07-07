@@ -89,10 +89,6 @@ namespace ascension {
 			int tabWidth;
 			/// Line spacing in pixel. Default value is 1.
 			int lineSpacing;
-			/// Orientation ("paragraph direction") of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
-			presentation::ReadingDirection readingDirection;
-			/// Alignment of the lines. Default value is @c ASCENSION_DEFAULT_TEXT_ALIGNMENT.
-			presentation::TextAlignment alignment;
 			/// Line wrap configuration.
 			LineWrapConfiguration lineWrap;
 			/// Set @c true to justify the lines if wrapped. Default value is @c false.
@@ -107,7 +103,6 @@ namespace ascension {
 			presentation::NumberSubstitution numberSubstitution;
 			/// Constructor initializes the all members to their default values.
 			LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
-				readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), alignment(ASCENSION_DEFAULT_TEXT_ALIGNMENT),
 				justifiesLines(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
 				disablesDeprecatedFormatCharacters(false) {}
 			/// Returns @c true if the all mwmbers are valid.
@@ -305,6 +300,22 @@ namespace ascension {
 			virtual const IFontCollection& fontCollection() const /*throw()*/ = 0;
 			/// Returns the layout settings.
 			virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
+			/**
+			 * Returns the override reading direction or @c presentation#INHERIT_READING_DIRECTION.
+			 * The returned value takes priority over the given @c presentation#LineStyle. Default
+			 * implementation returns @c presentation#INHERIT_READING_DIRECTION.
+			 * @see #overrideTextAlignment, presentation#LineStyle#readingDirection,
+			 *      presentation#Presentation#defaultLineStyle
+			 */
+			virtual presentation::ReadingDirection overrideReadingDirection() const /*throw()*/ {return presentation::INHERIT_READING_DIRECTION;}
+			/**
+			 * Returns the override text alignment or @c presentation#INHERIT_TEXT_ALIGNMENT. The
+			 * returned value takes priority over the given @c presentation#LineStyle. Default
+			 * implementation returns @c presentation#INHERIT_TEXT_ALIGNMENT.
+			 * @see #overrideReadingDirection, presentation#LineStyle#alignment,
+			 *      presentation#Presentation#defaultLineStyle
+			 */
+			virtual presentation::TextAlignment overrideTextAlignment() const /*throw()*/ {return presentation::INHERIT_TEXT_ALIGNMENT;}
 			/// Returns the presentation object.
 			virtual const presentation::Presentation& presentation() const /*throw()*/ = 0;
 			/// Returns the special character renderer.
@@ -364,10 +375,12 @@ namespace ascension {
 				const ILayoutInformationProvider& layoutInformation, length_t line);
 			~LineLayout() /*throw()*/;
 			// general attributes
+			presentation::TextAlignment alignment() const /*throw()*/;
 			byte bidiEmbeddingLevel(length_t column) const;
 			bool isBidirectional() const /*throw()*/;
 			bool isDisposed() const /*throw()*/;
 			length_t lineNumber() const /*throw()*/;
+			presentation::ReadingDirection readingDirection() const /*throw()*/;
 			const presentation::LineStyle& style() const /*throw()*/;
 			// subline accesses
 			length_t numberOfSublines() const /*throw()*/;
