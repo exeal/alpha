@@ -306,6 +306,33 @@ namespace {
 
 // local helpers
 namespace {
+	TextAlignment computeVerticalRulerAlignment(const TextViewer& viewer) {
+		TextAlignment alignment = viewer.verticalRulerConfiguration().alignment;
+		switch(alignment) {
+			case ALIGN_LEFT:
+			case ALIGN_RIGHT:
+				return alignment;
+			case ALIGN_START:
+			case ALIGN_END: {
+				ReadingDirection readingDirection = INHERIT_READING_DIRECTION;
+				tr1::shared_ptr<const LineStyle> defaultLineStyle(viewer.presentation().defaultLineStyle());
+				if(defaultLineStyle.get() != 0)
+					readingDirection = defaultLineStyle->readingDirection;
+				if(readingDirection == INHERIT_READING_DIRECTION)
+					readingDirection = viewer.textRenderer().defaultUIReadingDirection();
+				if(readingDirection == INHERIT_READING_DIRECTION)
+					readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+				switch(readingDirection) {
+					case LEFT_TO_RIGHT:
+						return (alignment == ALIGN_START) ? ALIGN_LEFT : ALIGN_RIGHT;
+					case RIGHT_TO_LEFT:
+						return (alignment == ALIGN_START) ? ALIGN_RIGHT : ALIGN_LEFT;
+				}
+			}
+		}
+		throw UnknownValueException("viewer");
+	}
+
 	inline void getCurrentCharacterSize(const TextViewer& viewer, SIZE& result) {
 		const Caret& caret = viewer.caret();
 		if(locations::isEndOfLine(caret))	// EOL
@@ -1044,7 +1071,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const POINT& pt) const {
 		return OUT_OF_VIEW;
 
 	const VerticalRulerConfiguration& vrc = verticalRulerConfiguration();
-	const TextAlignment verticalRulerAlignment = vrc.computedAlignment(presentation().defaultLineStyle()->readingDirection);
+	const TextAlignment verticalRulerAlignment = computeVerticalRulerAlignment(*this);
 
 	if(vrc.indicatorMargin.visible
 			&& ((verticalRulerAlignment == ALIGN_LEFT && pt.x < vrc.indicatorMargin.width)
@@ -1287,13 +1314,11 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 	const COLORREF marginColor = (configuration_.color.background != Color()) ?
 		configuration_.color.background.asCOLORREF() : ::GetSysColor(COLOR_WINDOW);
 	if(margins.left > 0) {
-		const int vrWidth = (verticalRulerConfiguration().computedAlignment(
-			presentation().defaultLineStyle()->readingDirection) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
-		const int vrWidth = (verticalRulerConfiguration().computedAlignment(
-			presentation().defaultLineStyle()->readingDirection) == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (computeVerticalRulerAlignment(*this) == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 
@@ -1739,14 +1764,11 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
  * @param synchronizeUI set @c true to change the window style according to the new style. this
  *                      sets @c WS_EX_LEFTSCROLLBAR, @c WS_EX_RIGHTSCROLLBAR, @c WS_EX_LTRREADING
  *                      and @c WS_EX_RTLREADING styles
- * @throw std#invalid_argument the content of @a verticalRuler is invalid
+ * @throw UnknownValueException the content of @a verticalRuler is invalid
  */
 void TextViewer::setConfiguration(const Configuration* general, const VerticalRulerConfiguration* verticalRuler, bool synchronizeUI) {
-	if(verticalRuler != 0) {
-		if(!verticalRuler->verify())
-			throw invalid_argument("The content of `verticalRuler' is invalid.");
+	if(verticalRuler != 0)
 		verticalRulerDrawer_->setConfiguration(*verticalRuler);
-	}
 	if(general != 0) {
 		const ReadingDirection oldReadingDirection = configuration_.readingDirection;
 		assert(oldReadingDirection != INHERIT_READING_DIRECTION && general->readingDirection != INHERIT_READING_DIRECTION);
@@ -1847,9 +1869,7 @@ HRESULT TextViewer::startTextServices() {
  */
 RECT TextViewer::textAreaMargins() const /*throw()*/ {
 	RECT margins = {0, 0, 0, 0};
-	((verticalRulerConfiguration().computedAlignment(
-		presentation().defaultLineStyle()->readingDirection) == ALIGN_LEFT) ?
-			margins.left : margins.right) += verticalRulerDrawer_->width();
+	((computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->width();
 	const TextAlignment alignment = resolveTextAlignment(
 		defaultTextAlignment(presentation()), configuration_.readingDirection);
 	if(alignment == ALIGN_LEFT)
@@ -2315,6 +2335,30 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 
+// TextViewer.VerticalRulerConfiguration ////////////////////////////////////
+
+/// Default constructor.
+TextViewer::VerticalRulerConfiguration::VerticalRulerConfiguration() /*throw()*/ : alignment(ALIGN_START) {
+}
+
+
+// TextViewer.VerticalRulerConfiguration.LineNumbers ////////////////////////
+
+/// Constructor initializes the all members to their default values.
+TextViewer::VerticalRulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ :
+		visible(false), readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION),
+		alignment(presentation::ALIGN_END), startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
+		borderColor(presentation::Color()), borderWidth(1), borderStyle(SOLID) {
+}
+
+
+// TextViewer.VerticalRulerConfiguration.IndicatorMargin ////////////////////
+
+/// Constructor initializes the all members to their default values.
+TextViewer::VerticalRulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(false), width(15) {
+}
+
+
 // TextViewer.Renderer //////////////////////////////////////////////////////
 
 /// Constructor.
@@ -2403,8 +2447,17 @@ uchar TextViewer::VerticalRulerDrawer::getLineNumberMaxDigits() const /*throw()*
 }
 
 void TextViewer::VerticalRulerDrawer::setConfiguration(const VerticalRulerConfiguration& configuration) {
-	if(!configuration.lineNumbers.verify())
-		throw invalid_argument("Any member of the specified VerticalRulerConfiguration is invalid.");
+	if(configuration.alignment != ALIGN_START && configuration.alignment != ALIGN_END
+			&& configuration.alignment != ALIGN_LEFT && configuration.alignment != ALIGN_RIGHT)
+		throw UnknownValueException("verticalRuler->alignment");
+	if(configuration.lineNumbers.alignment != ALIGN_START && configuration.lineNumbers.alignment != ALIGN_END
+			&& configuration.lineNumbers.alignment != ALIGN_LEFT && configuration.lineNumbers.alignment != ALIGN_RIGHT
+			&& configuration.lineNumbers.alignment != ALIGN_CENTER && configuration.lineNumbers.alignment != JUSTIFY)
+		throw UnknownValueException("verticalRuler->lineNumber.alignment");
+	if(configuration.lineNumbers.readingDirection != LEFT_TO_RIGHT
+			&& configuration.lineNumbers.readingDirection != RIGHT_TO_LEFT
+			&& configuration.lineNumbers.readingDirection != INHERIT_READING_DIRECTION)
+		throw UnknownValueException("verticalRuler->lineNumber.readingDirection");
 	configuration_ = configuration;
 	update();
 }
