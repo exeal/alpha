@@ -454,37 +454,39 @@ namespace ascension {
 					} borderStyle;
 					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 					presentation::NumberSubstitution numberSubstitution;
-					/// Constructor initializes the all members to their default values.
-					LineNumbers() /*throw()*/ : visible(false), alignment(presentation::ALIGN_END),
-						startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
-						borderColor(presentation::Color()), borderWidth(1), borderStyle(SOLID) {}
-					/// Returns @c true if one of the all members are valid.
-					bool verify() const /*throw()*/ {return alignment != presentation::INHERIT_TEXT_ALIGNMENT && leadingMargin >= 0 && trailingMargin >= 0;}
+
+					LineNumbers() /*throw()*/;
 				} lineNumbers;	/// Configuration about the line numbers area.
 				/// Configuration about an indicator margin.
 				struct IndicatorMargin {
-					/// Wether the indicator margin is visible or not. Default value is @c false and the indicator margin is invisible.
+					/**
+					 * Whether the indicator margin is visible or not. Default value is @c false
+					 * and the indicator margin is invisible.
+					 */
 					bool visible;
-					/// Width of the indicator margin. Default value is 15.
+					/// Width of the indicator margin in pixels. Default value is 15.
 					ushort width;
-					/// Background color. Default value is invalid color which is fallbacked to the
-					/// system color @c COLOR_3DFACE.
+					/**
+					 * Background color. Default value is invalid color which is fallbacked to the
+					 * platform-dependent color. On Win32, it is @c COLOR_3DFACE.
+					 */
 					presentation::Color color;
-					/// Color of the border. Default value is invalid color which is fallbacked to
-					/// the system color @c COLOR_3DSHADOW.
+					/**
+					 * Color of the border. Default value is invalid color which is fallbacked to
+					 * the platform-dependent color. On Win32, it is @c COLOR_3DSHADOW.
+					 */
 					presentation::Color borderColor;
-					/// Constructor initializes the all members to their default values.
-					IndicatorMargin() /*throw()*/ : visible(false), width(15) {}
-					/// Returns @c true if one of the all members are valid.
-					bool verify() const /*throw()*/ {return width >= 0;}
+
+					IndicatorMargin() /*throw()*/;
 				} indicatorMargin;	/// Configuration about the indicator margin.
-				/// Alignment of the vertical ruler. Can be either @c layout#ALIGN_LEFT or
-				/// @c layout#ALIGN_RIGHT. Default value is determined based on @c ASCENSION_DEFAULT_TEXT_ORIENTATION.
+				/**
+				 * Alignment of the vertical ruler. Must be either @c presentation#ALIGN_START,
+				 * @c presentation#ALIGN_END, @c presentation#ALIGN_LEFT or
+				 * @c presentation#ALIGN_RIGHT. Default value is @c presentation#ALIGN_START.
+				 */
 				presentation::TextAlignment alignment;
 
 				VerticalRulerConfiguration() /*throw()*/;
-				presentation::TextAlignment computedAlignment(presentation::ReadingDirection defaultReadingDirection) const /*throw()*/;
-				bool verify() const /*throw()*/;
 			};
 
 			// constructors
@@ -913,6 +915,15 @@ namespace ascension {
 
 // inlines //////////////////////////////////////////////////////////////////
 
+/// Returns the UI reading direction of @a object.
+inline presentation::ReadingDirection computeUIReadingDirection(const TextViewer& viewer) {
+	presentation::ReadingDirection result = viewer.textRenderer().defaultUIReadingDirection();
+	if(result == presentation::INHERIT_READING_DIRECTION)
+		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+	assert(result == presentation::LEFT_TO_RIGHT && result == presentation::RIGHT_TO_LEFT);
+	return result;
+}
+
 /**
  * Registers the display size listener.
  * @param listener the listener to be registered
@@ -1087,29 +1098,6 @@ inline const TextViewer::VerticalRulerConfiguration&
 
 /// Constructor.
 inline TextViewer::VerticalRulerConfiguration::VerticalRulerConfiguration() /*throw()*/ : alignment(presentation::ALIGN_START) {}
-
-/// Returns real alignment of the vertical ruler in the window.
-inline presentation::TextAlignment TextViewer::VerticalRulerConfiguration::computedAlignment(
-		presentation::ReadingDirection defaultReadingDirection) const {
-	if(defaultReadingDirection == presentation::INHERIT_READING_DIRECTION)
-		defaultReadingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-	switch(alignment) {
-		case presentation::ALIGN_START:
-			return (defaultReadingDirection == presentation::LEFT_TO_RIGHT) ? presentation::ALIGN_LEFT : presentation::ALIGN_RIGHT;
-		case presentation::ALIGN_END:
-			return (defaultReadingDirection == presentation::LEFT_TO_RIGHT) ? presentation::ALIGN_RIGHT : presentation::ALIGN_LEFT;
-		case presentation::ALIGN_LEFT:
-		case presentation::ALIGN_RIGHT:
-			return alignment;
-		default:
-			throw UnknownValueException("alignment");
-	}
-}
-
-/// Returns @c true if one of the all members are valid.
-inline bool TextViewer::VerticalRulerConfiguration::verify() const /*throw()*/ {
-	return lineNumbers.verify() && indicatorMargin.verify()
-		&& (alignment >= presentation::ALIGN_START && alignment <= presentation::ALIGN_RIGHT);}
 
 /// Returns the vertical ruler's configurations.
 inline const TextViewer::VerticalRulerConfiguration&

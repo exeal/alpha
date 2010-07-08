@@ -1656,7 +1656,7 @@ Position locations::lastPrintableCharacterOfVisualLine(const VisualPoint& p) {
  * @return the destination
  */
 Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation()) == LEFT_TO_RIGHT) ?
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
 		backwardCharacter(p, unit, characters) : forwardCharacter(p, unit, characters);
 }
 
@@ -1667,7 +1667,7 @@ Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, leng
  * @return the destination
  */
 Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation()) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 }
 
 /**
@@ -1677,7 +1677,7 @@ Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @return the destination
  */
 Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation()) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
 
 /**
@@ -1688,7 +1688,7 @@ Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) 
  * @return the destination
  */
 Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation()) == LEFT_TO_RIGHT) ?
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
 		forwardCharacter(p, unit, characters) : backwardCharacter(p, unit, characters);
 }
 
@@ -1699,7 +1699,7 @@ Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, len
  * @return the destination
  */
 Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation()) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 }
 
 /**
@@ -1709,7 +1709,7 @@ Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @return the destination
  */
 Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
-	return (defaultReadingDirection(p.textViewer().presentation())== LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
+	return (computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 }
 
 

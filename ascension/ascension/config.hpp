@@ -25,20 +25,25 @@
  * Default newline. This must be one of @c ascension#kernel#Newline enumerations except 
  * @c ascension#kernel#NLF_RAW_VALUE and @c ascension#kernel#NLF_DOCUMENT_INPUT.
  */
-#ifdef _WIN32
-#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CR_LF
-#else
-#	define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LINE_FEED
-#endif
+#ifndef ASCENSION_DEFAULT_NEWLINE
+#	ifdef _WIN32
+#		define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CR_LF
+#	else
+#		define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LINE_FEED
+#	endif
+#endif	// !ASCENSION_DEFAULT_NEWLINE
 
 
 // about ascension.kernel.fileio /////////////////////////////////////////////
 
-#ifdef _WIN32
-#	define ASCENSION_FILE_NAME_CHARACTER_TYPE WCHAR
-#else
-#	define ASCENSION_FILE_NAME_CHARACTER_TYPE char
-#endif
+/// @def ASCENSION_FILE_NAME_CHARACTER_TYPE
+#	ifndef ASCENSION_FILE_NAME_CHARACTER_TYPE
+#	ifdef _WIN32
+#		define ASCENSION_FILE_NAME_CHARACTER_TYPE WCHAR
+#	else
+#		define ASCENSION_FILE_NAME_CHARACTER_TYPE char
+#	endif
+#endif	// !ASCENSION_FILE_NAME_CHARACTER_TYPE
 
 /**
  * @def ASCENSION_NO_GREP
@@ -55,7 +60,9 @@
  * character classification (such as the partitioner which does not have scanners). This must be
  * one of @c ascension#text#CharacterDetector#CharacterClassification enumeration.
  */
-#define ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION ascension::text::IdentifierSyntax::UNICODE_DEFAULT
+#ifndef ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
+#	define ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION ascension::text::IdentifierSyntax::UNICODE_DEFAULT
+#endif	// !ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
 
 /**
  * @def ASCENSION_NO_UNICODE_NORMALIZATION
@@ -138,7 +145,9 @@
  * Default size of cache buffer of @c ascension#layout#LineLayoutBuffer. This value is used by
  * @c ascension#layout#LineLayoutBuffer class.
  */
-#define ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE 256
+#ifndef ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE
+#	define ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE 256
+#endif	// !ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE
 
 /**
  * @def ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -152,23 +161,30 @@
 
 /**
  * @def ASCENSION_DEFAULT_TEXT_READING_DIRECTION
- * Default text reading direction for rendering. This must be one of
- * @c ascension#presentation#ReadingDirection enumeration.
+ * Default text reading direction for rendering. This must be either @c LEFT_TO_RIGHT or
+ * @c RIGHT_TO_LEFT of @c ascension#presentation#ReadingDirection enumeration.
  */
-#define ASCENSION_DEFAULT_TEXT_READING_DIRECTION ascension::presentation::LEFT_TO_RIGHT
+#ifndef ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#	define ASCENSION_DEFAULT_TEXT_READING_DIRECTION ascension::presentation::LEFT_TO_RIGHT
+#endif	// !ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 
 /**
  * @def ASCENSION_DEFAULT_TEXT_ALIGNMENT
- * Default text alignment for rendering. This must be one of
- * @c ascension#presentation#TextAlignment enumeration.
+ * Default text alignment for rendering. This must be either @c ALIGN_START, @c ALIGN_END,
+ * @c ALIGN_LEFT, @c ALIGN_RIGHT or @c JUSTIFY of @c ascension#presentation#TextAlignment
+ * enumeration.
  */
-#define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::presentation::ALIGN_START
+#ifndef ASCENSION_DEFAULT_TEXT_ALIGNMENT
+#	define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::presentation::ALIGN_START
+#endif	// !ASCENSION_DEFAULT_TEXT_ALIGNMENT
 
 /**
  * @def ASCENSION_HYPERLINKS_CACHE_SIZE
  * Size of cache buffer of @c ascension#presentation#Presentation#hyperlinks.
  */
-#define ASCENSION_HYPERLINKS_CACHE_SIZE 256
+#ifndef ASCENSION_HYPERLINKS_CACHE_SIZE
+#	define ASCENSION_HYPERLINKS_CACHE_SIZE 256
+#endif	// !ASCENSION_HYPERLINKS_CACHE_SIZE
 
 
 // about ascension.texteditor ///////////////////////////////////////////////
@@ -177,7 +193,9 @@
  * @def ASCENSION_DEFAULT_MAXIMUM_KILLS
  * The default value of the parameter of @c ascension#texteditor#KillRing constructor.
  */
-#define ASCENSION_DEFAULT_MAXIMUM_KILLS 30
+#ifndef ASCENSION_DEFAULT_MAXIMUM_KILLS
+#	define ASCENSION_DEFAULT_MAXIMUM_KILLS 30
+#endif	// !ASCENSION_DEFAULT_MAXIMUM_KILLS
 
 
 // about ascension.viewers //////////////////////////////////////////////////
@@ -226,7 +244,9 @@
  * @def ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
  * Clipboard format for rectangle text. This effects only on Win32 platform.
  */
-#define ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT L"MSDEVColumnSelect"
+#ifndef ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
+#	define ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT L"MSDEVColumnSelect"
+#endif	// !ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
 
 #ifdef ASCENSION_NO_REGEX
 #ifndef ASCENSION_NO_MIGEMO

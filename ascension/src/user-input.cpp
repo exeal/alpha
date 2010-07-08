@@ -53,25 +53,15 @@ namespace {
 		return 0;
 	}
 	inline void toggleOrientation(TextViewer& viewer) /*throw()*/ {
-		TextViewer::Configuration vc = viewer.configuration();
-		TextViewer::VerticalRulerConfiguration vrc = viewer.verticalRulerConfiguration();
-		if(vc.readingDirection == LEFT_TO_RIGHT) {
-			vc.readingDirection = RIGHT_TO_LEFT;
-			viewer.setConfiguration(&vc, &vrc, true);
-//			if(config.lineWrap.wrapsAtWindowEdge()) {
-//				win32::AutoZeroSize<SCROLLINFO> scroll;
-//				viewer.getScrollInformation(SB_HORZ, scroll);
-//				viewer.setScrollInformation(SB_HORZ, scroll);
-//			}
-		} else {
-			vc.readingDirection = LEFT_TO_RIGHT;
-			viewer.setConfiguration(&vc, &vrc, true);
-//			if(config.lineWrap.wrapsAtWindowEdge()) {
-//				win32::AutoZeroSize<SCROLLINFO> scroll;
-//				viewer.getScrollInformation(SB_HORZ, scroll);
-//				viewer.setScrollInformation(SB_HORZ, scroll);
-//			}
-		}
+		TextViewer::Configuration configuration(viewer.configuration());
+		configuration.readingDirection =
+			(computeUIReadingDirection(viewer) == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+		viewer.setConfiguration(&configuration, 0, true);
+//		if(config.lineWrap.wrapsAtWindowEdge()) {
+//			win32::AutoZeroSize<SCROLLINFO> scroll;
+//			viewer.getScrollInformation(SB_HORZ, scroll);
+//			viewer.setScrollInformation(SB_HORZ, scroll);
+//		}
 	}
 } // namespace @0
 
