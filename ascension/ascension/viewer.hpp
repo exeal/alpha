@@ -1096,18 +1096,12 @@ inline const layout::TextRenderer& TextViewer::textRenderer() const /*throw()*/ 
 inline const TextViewer::VerticalRulerConfiguration&
 	TextViewer::verticalRulerConfiguration() const /*throw()*/ {return verticalRulerDrawer_->configuration();}
 
-/// Constructor.
-inline TextViewer::VerticalRulerConfiguration::VerticalRulerConfiguration() /*throw()*/ : alignment(presentation::ALIGN_START) {}
-
 /// Returns the vertical ruler's configurations.
 inline const TextViewer::VerticalRulerConfiguration&
 	TextViewer::VerticalRulerDrawer::configuration() const /*throw()*/ {return configuration_;}
 
 /// Returns the width of the vertical ruler.
 inline int TextViewer::VerticalRulerDrawer::width() const /*throw()*/ {return width_;}
-
-/// @see layout#ILayoutInformationProvider#defaultUIReadingDirection
-inline presentation::ReadingDirection TextViewer::Renderer::defaultUIReadingDirection() const /*throw()*/ {return viewer_.configuration().readingDirection;}
 
 }} // namespace ascension.viewers
 
