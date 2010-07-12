@@ -2361,7 +2361,10 @@ TextViewer::VerticalRulerConfiguration::IndicatorMargin::IndicatorMargin() /*thr
 
 // TextViewer.Renderer //////////////////////////////////////////////////////
 
-/// Constructor.
+/**
+ * Constructor.
+ * @param viewer the text viewer
+ */
 TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.presentation(), systemFonts(), true),
 		viewer_(viewer), overrideReadingDirection_(INHERIT_READING_DIRECTION), overrideTextAlignment_(INHERIT_TEXT_ALIGNMENT) {
 	// TODO: other IFontCollection object used?
@@ -2371,9 +2374,21 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) : TextRenderer(viewer.present
 #endif
 }
 
-/// Copy-constructor with a parameter.
+/**
+ * Copy-constructor with a parameter.
+ * @param other the source object
+ * @param viewer the text viewer
+ */
 TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) : TextRenderer(other), viewer_(viewer),
 		overrideReadingDirection_(other.overrideReadingDirection_), overrideTextAlignment_(other.overrideTextAlignment_) {
+}
+
+/**
+ * Implements @c layout#ILayoutInformationProvider#defaultUIReadingDirection abstract method.
+ * This returns the value of @c TextViewer#Configuration#readingDirection.
+ */
+ReadingDirection TextViewer::Renderer::defaultUIReadingDirection() const /*throw()*/ {
+	return viewer_.configuration().readingDirection;
 }
 
 /// @see layout#LineLayoutBuffer#deviceContext
