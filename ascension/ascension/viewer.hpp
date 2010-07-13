@@ -421,12 +421,20 @@ namespace ascension {
 			struct VerticalRulerConfiguration {
 				/// Configuration about a line numbers area.
 				struct LineNumbers {
-					/// Whether the area is visible or not. Default value is @c false and the line numbers is invisible.
+					/**
+					 * Whether the area is visible or not. Default value is @c false and the line
+					 * numbers is invisible.
+					 */
 					bool visible;
-					/// 
+					/**
+					 * Reading direction of the digits. Default value is
+					 * @c presentation#INHERIT_READING_DIRECTION.
+					 */
 					presentation::ReadingDirection readingDirection;
-					/// Alignment of the digits. Default value is @c presentation#ALIGN_END.
-					/// Can't be @c presentation#INHERIT_ALIGNMENT.
+					/**
+					 * Alignment of the digits. Default value is @c presentation#ALIGN_END. Can't
+					 * be @c presentation#INHERIT_ALIGNMENT.
+					 */
 					presentation::TextAlignment alignment;
 					/// Start value of the line number. Default value is 1.
 					length_t startValue;

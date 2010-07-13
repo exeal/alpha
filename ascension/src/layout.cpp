@@ -3594,12 +3594,45 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 
 	// prepare to draw the line numbers
+	ReadingDirection lineNumbersReadingDirection;
 	TextAlignment lineNumbersAlignment;
 	int lineNumbersX;
 	if(configuration_.lineNumbers.visible) {
-		lineNumbersAlignment = resolveTextAlignment(configuration_.lineNumbers.alignment, LEFT_TO_RIGHT);
-		if(lineNumbersAlignment == INHERIT_TEXT_ALIGNMENT)
-			lineNumbersAlignment = alignLeft ? ALIGN_RIGHT : ALIGN_LEFT;
+		// compute reading direction of the line numbers from 'configuration_.lineNumbers.readingDirection'
+		switch(configuration_.lineNumbers.readingDirection) {
+			case LEFT_TO_RIGHT:
+			case RIGHT_TO_LEFT:
+				lineNumbersReadingDirection = configuration_.lineNumbers.readingDirection;
+				break;
+			case INHERIT_READING_DIRECTION: {
+				tr1::shared_ptr<const LineStyle> defaultLineStyle(viewer_.presentation().defaultLineStyle());
+				if(defaultLineStyle.get() != 0)
+					lineNumbersReadingDirection = defaultLineStyle->readingDirection;
+				if(lineNumbersReadingDirection == INHERIT_READING_DIRECTION)
+					lineNumbersReadingDirection = viewer_.textRenderer().defaultUIReadingDirection();
+				if(lineNumbersReadingDirection == INHERIT_READING_DIRECTION)
+					lineNumbersReadingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+				assert(lineNumbersReadingDirection == LEFT_TO_RIGHT || lineNumbersReadingDirection == RIGHT_TO_LEFT);
+				break;
+			}
+			default:
+				throw runtime_error("");
+		}
+		// compute alignment of the line numbers from 'configuration_.lineNumbers.alignment'
+		switch(configuration_.lineNumbers.alignment) {
+			case ALIGN_LEFT:
+			case ALIGN_RIGHT:
+			case ALIGN_CENTER:
+			case JUSTIFY:
+				lineNumbersAlignment = configuration_.lineNumbers.alignment;
+				break;
+			case ALIGN_START:
+			case ALIGN_END:
+				lineNumbersAlignment = resolveTextAlignment(configuration_.lineNumbers.alignment, lineNumbersReadingDirection);
+				break;
+			default:
+				throw runtime_error("");
+		}
 		switch(lineNumbersAlignment) {
 		case ALIGN_LEFT:
 			lineNumbersX = alignLeft ?
