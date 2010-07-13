@@ -285,12 +285,14 @@ namespace ascension {
 		};
 
 		struct LineStyle {
+			/// The reading direction of the line. Default value is @c INHERIT_READING_DIRECTION.
 			ReadingDirection readingDirection;
+			/// The text alignment of the line. Default value is @c ALIGN_START.
 			TextAlignment alignment;
+			/// The number substitution setting. Default value is built by the default constructor.
 			NumberSubstitution numberSubstitution;
 
-			/// Default constructor.
-			LineStyle() /*throw()*/ : readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), alignment(ALIGN_START) {}
+			LineStyle() /*throw()*/;
 		};
 
 		/**

@@ -910,17 +910,19 @@ namespace ascension {
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
+			presentation::ReadingDirection computeUIReadingDirection(const TextViewer& viewer);
+			presentation::TextAlignment computeVerticalRulerAlignment(const TextViewer& viewer);
 		} // namespace utils
 
 
 // inlines //////////////////////////////////////////////////////////////////
 
 /// Returns the UI reading direction of @a object.
-inline presentation::ReadingDirection computeUIReadingDirection(const TextViewer& viewer) {
+inline presentation::ReadingDirection utils::computeUIReadingDirection(const TextViewer& viewer) {
 	presentation::ReadingDirection result = viewer.textRenderer().defaultUIReadingDirection();
 	if(result == presentation::INHERIT_READING_DIRECTION)
 		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-	assert(result == presentation::LEFT_TO_RIGHT && result == presentation::RIGHT_TO_LEFT);
+	assert(result == presentation::LEFT_TO_RIGHT || result == presentation::RIGHT_TO_LEFT);
 	return result;
 }
 
