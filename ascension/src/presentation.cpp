@@ -18,6 +18,14 @@ using namespace std;
 using ascension::presentation::Colors;
 
 
+// LineStyle ////////////////////////////////////////////////////////////////
+
+/// Default constructor.
+LineStyle::LineStyle() /*throw()*/ :
+		readingDirection(INHERIT_READING_DIRECTION), alignment(ALIGN_START) {
+}
+
+
 // Presentation /////////////////////////////////////////////////////////////
 
 tr1::shared_ptr<const LineStyle> Presentation::DEFAULT_LINE_STYLE(new LineStyle());

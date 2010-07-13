@@ -306,33 +306,6 @@ namespace {
 
 // local helpers
 namespace {
-	TextAlignment computeVerticalRulerAlignment(const TextViewer& viewer) {
-		TextAlignment alignment = viewer.verticalRulerConfiguration().alignment;
-		switch(alignment) {
-			case ALIGN_LEFT:
-			case ALIGN_RIGHT:
-				return alignment;
-			case ALIGN_START:
-			case ALIGN_END: {
-				ReadingDirection readingDirection = INHERIT_READING_DIRECTION;
-				tr1::shared_ptr<const LineStyle> defaultLineStyle(viewer.presentation().defaultLineStyle());
-				if(defaultLineStyle.get() != 0)
-					readingDirection = defaultLineStyle->readingDirection;
-				if(readingDirection == INHERIT_READING_DIRECTION)
-					readingDirection = viewer.textRenderer().defaultUIReadingDirection();
-				if(readingDirection == INHERIT_READING_DIRECTION)
-					readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-				switch(readingDirection) {
-					case LEFT_TO_RIGHT:
-						return (alignment == ALIGN_START) ? ALIGN_LEFT : ALIGN_RIGHT;
-					case RIGHT_TO_LEFT:
-						return (alignment == ALIGN_START) ? ALIGN_RIGHT : ALIGN_LEFT;
-				}
-			}
-		}
-		throw UnknownValueException("viewer");
-	}
-
 	inline void getCurrentCharacterSize(const TextViewer& viewer, SIZE& result) {
 		const Caret& caret = viewer.caret();
 		if(locations::isEndOfLine(caret))	// EOL
@@ -1071,7 +1044,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const POINT& pt) const {
 		return OUT_OF_VIEW;
 
 	const VerticalRulerConfiguration& vrc = verticalRulerConfiguration();
-	const TextAlignment verticalRulerAlignment = computeVerticalRulerAlignment(*this);
+	const TextAlignment verticalRulerAlignment = utils::computeVerticalRulerAlignment(*this);
 
 	if(vrc.indicatorMargin.visible
 			&& ((verticalRulerAlignment == ALIGN_LEFT && pt.x < vrc.indicatorMargin.width)
@@ -1314,11 +1287,11 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 	const COLORREF marginColor = (configuration_.color.background != Color()) ?
 		configuration_.color.background.asCOLORREF() : ::GetSysColor(COLOR_WINDOW);
 	if(margins.left > 0) {
-		const int vrWidth = (computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (utils::computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.left + vrWidth, paintRect.top, margins.left - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 	if(margins.right > 0) {
-		const int vrWidth = (computeVerticalRulerAlignment(*this) == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
+		const int vrWidth = (utils::computeVerticalRulerAlignment(*this) == ALIGN_RIGHT) ? verticalRulerDrawer_->width() : 0;
 		dc.fillSolidRect(clientRect.right - margins.right, paintRect.top, margins.right - vrWidth, paintRect.bottom - paintRect.top, marginColor);
 	}
 
@@ -1869,7 +1842,7 @@ HRESULT TextViewer::startTextServices() {
  */
 RECT TextViewer::textAreaMargins() const /*throw()*/ {
 	RECT margins = {0, 0, 0, 0};
-	((computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->width();
+	((utils::computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? margins.left : margins.right) += verticalRulerDrawer_->width();
 	const TextAlignment alignment = resolveTextAlignment(
 		defaultTextAlignment(presentation()), configuration_.readingDirection);
 	if(alignment == ALIGN_LEFT)
@@ -2963,6 +2936,38 @@ void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
 		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI())
 			cpui->close();
 	}
+}
+
+/**
+ * Computes the alignment of the vertical ruler.
+ * @param viewer the text viewer
+ * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
+ */
+TextAlignment utils::computeVerticalRulerAlignment(const TextViewer& viewer) {
+	TextAlignment alignment = viewer.verticalRulerConfiguration().alignment;
+	switch(alignment) {
+		case ALIGN_LEFT:
+		case ALIGN_RIGHT:
+			return alignment;
+		case ALIGN_START:
+		case ALIGN_END: {
+			ReadingDirection readingDirection = INHERIT_READING_DIRECTION;
+			tr1::shared_ptr<const LineStyle> defaultLineStyle(viewer.presentation().defaultLineStyle());
+			if(defaultLineStyle.get() != 0)
+				readingDirection = defaultLineStyle->readingDirection;
+			if(readingDirection == INHERIT_READING_DIRECTION)
+				readingDirection = viewer.textRenderer().defaultUIReadingDirection();
+			if(readingDirection == INHERIT_READING_DIRECTION)
+				readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+			switch(readingDirection) {
+				case LEFT_TO_RIGHT:
+					return (alignment == ALIGN_START) ? ALIGN_LEFT : ALIGN_RIGHT;
+				case RIGHT_TO_LEFT:
+					return (alignment == ALIGN_START) ? ALIGN_RIGHT : ALIGN_LEFT;
+			}
+		}
+	}
+	throw UnknownValueException("viewer");
 }
 
 

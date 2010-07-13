@@ -55,7 +55,7 @@ namespace {
 	inline void toggleOrientation(TextViewer& viewer) /*throw()*/ {
 		TextViewer::Configuration configuration(viewer.configuration());
 		configuration.readingDirection =
-			(computeUIReadingDirection(viewer) == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+			(utils::computeUIReadingDirection(viewer) == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
 		viewer.setConfiguration(&configuration, 0, true);
 //		if(config.lineWrap.wrapsAtWindowEdge()) {
 //			win32::AutoZeroSize<SCROLLINFO> scroll;

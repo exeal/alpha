@@ -3529,7 +3529,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	const TextRenderer& renderer = viewer_.textRenderer();
 	RECT clientRect;
 	viewer_.getClientRect(clientRect);
-	const TextAlignment alignment = resolveTextAlignment(configuration_.alignment, LEFT_TO_RIGHT/*configuration_.readingDirection*/);
+	const TextAlignment alignment = utils::computeVerticalRulerAlignment(viewer_);
 	if((alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + width())
 			|| (alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - width()))
 		return;
