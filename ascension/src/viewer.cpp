@@ -2319,7 +2319,7 @@ TextViewer::VerticalRulerConfiguration::VerticalRulerConfiguration() /*throw()*/
 
 /// Constructor initializes the all members to their default values.
 TextViewer::VerticalRulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ :
-		visible(false), readingDirection(ASCENSION_DEFAULT_TEXT_READING_DIRECTION),
+		visible(false), readingDirection(INHERIT_READING_DIRECTION),
 		alignment(presentation::ALIGN_END), startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
 		borderColor(presentation::Color()), borderWidth(1), borderStyle(SOLID) {
 }
@@ -2959,12 +2959,8 @@ TextAlignment utils::computeVerticalRulerAlignment(const TextViewer& viewer) {
 				readingDirection = viewer.textRenderer().defaultUIReadingDirection();
 			if(readingDirection == INHERIT_READING_DIRECTION)
 				readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-			switch(readingDirection) {
-				case LEFT_TO_RIGHT:
-					return (alignment == ALIGN_START) ? ALIGN_LEFT : ALIGN_RIGHT;
-				case RIGHT_TO_LEFT:
-					return (alignment == ALIGN_START) ? ALIGN_RIGHT : ALIGN_LEFT;
-			}
+			if(readingDirection != INHERIT_READING_DIRECTION)
+				return resolveTextAlignment(alignment, readingDirection);
 		}
 	}
 	throw UnknownValueException("viewer");
