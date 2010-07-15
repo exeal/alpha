@@ -569,7 +569,8 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 	fireDocumentAboutToBeChanged();
 
 	// change the content
-	const Position& beginning = region.beginning(), end = region.end();
+	const Position& beginning = region.beginning();
+	const Position& end = region.end();
 	const Char* nextNewline = (first != 0 && first != last) ?
 		find_first_of(first, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS)) : 0;
 	basic_stringbuf<Char> erasedString;
@@ -584,19 +585,19 @@ void Document::replace(const Region& region, const Char* first, const Char* last
 			erasedStringLength += end.column - beginning.column;
 			endOfInsertedString = beginning;
 		} else if(region.isEmpty() && nextNewline == last) {	// insert single line
-			lines_[region.first.line]->text_.insert(
-				region.first.column, first, static_cast<String::size_type>(last - first));
+			lines_[beginning.line]->text_.insert(
+				beginning.column, first, static_cast<String::size_type>(last - first));
 			insertedStringLength += static_cast<length_t>(last - first);
-			endOfInsertedString.line = region.first.line;
-			endOfInsertedString.column = region.first.column + (last - first);
+			endOfInsertedString.line = beginning.line;
+			endOfInsertedString.column = beginning.column + (last - first);
 		} else if(beginning.line == end.line && nextNewline == last) {	// replace in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
 			line.text_.replace(beginning.column, end.column - beginning.column, first, static_cast<String::size_type>(last - first));
 			erasedStringLength += end.column - beginning.column;
 			insertedStringLength += static_cast<length_t>(last - first);
-			endOfInsertedString.line = region.first.line;
-			endOfInsertedString.column = region.first.column + (last - first);
+			endOfInsertedString.line = beginning.line;
+			endOfInsertedString.column = beginning.column + (last - first);
 		}
 		// complex case: erased region and/or inserted string are/is multi-line
 		else {
