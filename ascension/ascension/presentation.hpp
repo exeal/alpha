@@ -68,6 +68,28 @@ namespace ascension {
 				const Color& backgroundColor = Color()) /*throw()*/ : foreground(foregroundColor), background(backgroundColor) {}
 		};
 
+		struct Length {
+			double value;	///< Value of the length.
+			enum Unit {
+				EM_HEIGHT,		///< The font size of the relevant font.
+				X_HEIGHT,		///< The x-height of the relevant font.
+				PIXELS,			///< Pixels, relative to the viewing device.
+				INCHES,			///< Inches -- 1 inch is equal to 2.54 centimeters.
+				CENTIMETERS,	///< Centimeters.
+				MILLIMETERS,	///< Millimeters.
+				POINTS,			///< Points -- the point used by CSS 2.1 are equal to 1/72nd of an inch.
+				PICAS,			///< Picas --1 pica is equal to 12 points.
+				DIPS,			///< Device independent pixels. 1 DIP is equal to 1/96th of an inch.
+				PERCENTAGE,		///< Percentage.
+				INHERIT			///< Inherits from the parent.
+			} unit;	///< Unit of the length.
+
+			/// Default constructor.
+			Length() /*throw()*/ : unit(INHERIT) {}
+			/// Constructor.
+			explicit Length(double value, Unit unit = PIXELS) : value(value), unit(unit) {}
+		};
+
 		struct Border {
 			enum Style {
 				NONE, HIDDEN, DOTTED, DASHED, SOLID,
@@ -190,8 +212,8 @@ namespace ascension {
 			std::locale locale;
 			TypographyProperties typographyProperties;
 			Decorations decorations;
-			double letterSpacing;	/// Letter spacing in DIP. Default is 0.
-			double wordSpacing;		/// Word spacing in DIP. Default is 0.
+			Length letterSpacing;	/// Letter spacing in DIP. Default is 0.
+			Length wordSpacing;		/// Word spacing in DIP. Default is 0.
 			TextTransform textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
