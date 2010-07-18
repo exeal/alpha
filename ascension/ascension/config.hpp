@@ -37,7 +37,7 @@
 // about ascension.kernel.fileio /////////////////////////////////////////////
 
 /// @def ASCENSION_FILE_NAME_CHARACTER_TYPE
-#	ifndef ASCENSION_FILE_NAME_CHARACTER_TYPE
+#ifndef ASCENSION_FILE_NAME_CHARACTER_TYPE
 #	ifdef _WIN32
 #		define ASCENSION_FILE_NAME_CHARACTER_TYPE WCHAR
 #	else

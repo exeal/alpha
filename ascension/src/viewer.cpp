@@ -2061,7 +2061,7 @@ AutoFreeze::~AutoFreeze() {
 // TextViewerAccessibleProxy ////////////////////////////////////////////////
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-#define VERIFY_AVAILABILITY()	\
+#define ASCENSION_VERIFY_AVAILABILITY()	\
 	if(!available_) return RPC_E_DISCONNECTED
 
 /**
@@ -2075,13 +2075,13 @@ TextViewerAccessibleProxy::TextViewerAccessibleProxy(TextViewer& view) /*throw()
 
 /// @see IAccessible#accDoDefaultAction
 STDMETHODIMP TextViewerAccessibleProxy::accDoDefaultAction(VARIANT) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#accHitTest
 STDMETHODIMP TextViewerAccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
 	MANAH_VERIFY_POINTER(pvarChild);
 	POINT pt = {xLeft, yTop};
@@ -2100,7 +2100,7 @@ STDMETHODIMP TextViewerAccessibleProxy::accHitTest(long xLeft, long yTop, VARIAN
 
 /// @see IAccessible#accLocation
 STDMETHODIMP TextViewerAccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pxLeft);
 	MANAH_VERIFY_POINTER(pyTop);
 	MANAH_VERIFY_POINTER(pcxWidth);
@@ -2119,13 +2119,13 @@ STDMETHODIMP TextViewerAccessibleProxy::accLocation(long* pxLeft, long* pyTop, l
 
 /// @see IAccessible#accNavigate
 STDMETHODIMP TextViewerAccessibleProxy::accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return defaultServer_->accNavigate(navDir, varStart, pvarEndUpAt);
 }
 
 /// @see IAccessible#accSelect
 STDMETHODIMP TextViewerAccessibleProxy::accSelect(long flagsSelect, VARIANT varChild) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return (varChild.vt == VT_I4 && varChild.lVal == CHILDID_SELF) ?
 		defaultServer_->accSelect(flagsSelect, varChild) : E_INVALIDARG;
 }
@@ -2155,7 +2155,7 @@ void TextViewerAccessibleProxy::documentChanged(const Document&, const DocumentC
 
 /// @see IAccessible#get_accChild
 STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(ppdispChild);
 	*ppdispChild = 0;
 	return S_OK;
@@ -2163,7 +2163,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accChild(VARIANT, IDispatch** ppdisp
 
 /// @see IAccessible#get_accChildCount
 STDMETHODIMP TextViewerAccessibleProxy::get_accChildCount(long* pcountChildren) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pcountChildren);
 	*pcountChildren = 0;
 	return S_OK;
@@ -2171,19 +2171,19 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accChildCount(long* pcountChildren) 
 
 /// @see IAccessible#get_accDefaultAction
 STDMETHODIMP TextViewerAccessibleProxy::get_accDefaultAction(VARIANT, BSTR*) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accDescription
 STDMETHODIMP TextViewerAccessibleProxy::get_accDescription(VARIANT, BSTR*) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accFocus
 STDMETHODIMP TextViewerAccessibleProxy::get_accFocus(VARIANT* pvarChild) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pvarChild);
 	pvarChild->vt = VT_I4;
 	pvarChild->lVal = CHILDID_SELF;
@@ -2192,19 +2192,19 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 
 /// @see IAccessible#get_accHelp
 STDMETHODIMP TextViewerAccessibleProxy::get_accHelp(VARIANT, BSTR*) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accHelpTopic
 STDMETHODIMP TextViewerAccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accKeyboardShortcut
 STDMETHODIMP TextViewerAccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pszKeyboardShortcut);
 	*pszKeyboardShortcut = 0;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -2214,7 +2214,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accKeyboardShortcut(VARIANT varChild
 
 /// @see IAccessible#get_accName
 STDMETHODIMP TextViewerAccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pszName);
 	*pszName = 0;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -2224,7 +2224,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accName(VARIANT varChild, BSTR* pszN
 
 /// @see IAccessible#get_accParent
 STDMETHODIMP TextViewerAccessibleProxy::get_accParent(IDispatch** ppdispParent) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
 		return accLib.accessibleObjectFromWindow(view_.use(), OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
 	return defaultServer_->get_accParent(ppdispParent);
@@ -2232,7 +2232,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accParent(IDispatch** ppdispParent) 
 
 /// @see IAccessible#get_accRole
 STDMETHODIMP TextViewerAccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pvarRole);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -2243,7 +2243,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accRole(VARIANT varChild, VARIANT* p
 
 /// @see IAccessible#get_accSelection
 STDMETHODIMP TextViewerAccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pvarChildren);
 	pvarChildren->vt = VT_EMPTY;
 	return S_FALSE;
@@ -2251,7 +2251,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accSelection(VARIANT* pvarChildren) 
 
 /// @see IAccessible#get_accState
 STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* pvarState) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	pvarState->vt = VT_I4;
@@ -2269,7 +2269,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accState(VARIANT varChild, VARIANT* 
 
 /// @see IAccessible#get_accValue
 STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(pszValue);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -2281,7 +2281,7 @@ STDMETHODIMP TextViewerAccessibleProxy::get_accValue(VARIANT varChild, BSTR* psz
 
 /// @see IOleWindow#GetWindow
 STDMETHODIMP TextViewerAccessibleProxy::GetWindow(HWND* phwnd) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	MANAH_VERIFY_POINTER(phwnd);
 	*phwnd = view_.get();
 	return S_OK;
@@ -2289,13 +2289,13 @@ STDMETHODIMP TextViewerAccessibleProxy::GetWindow(HWND* phwnd) {
 
 /// @see IAccessible#put_accName
 STDMETHODIMP TextViewerAccessibleProxy::put_accName(VARIANT, BSTR) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#put_accValue
 STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szValue) {
-	VERIFY_AVAILABILITY();
+	ASCENSION_VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	else if(view_.document().isReadOnly())
@@ -2304,7 +2304,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 	return S_OK;
 }
 
-#undef VERIFY_AVAILABILITY
+#undef ASCENSION_VERIFY_AVAILABILITY
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 
