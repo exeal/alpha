@@ -746,6 +746,23 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 		}
 	}
 
+	// handle letter spacing
+	if(style_.get() != 0 && style_->letterSpacing.unit != Length::INHERIT) {
+		// TODO: this code handles a value only in DIP specification.
+		const int letterSpacing = style_->letterSpacing.value / 96.0 * dc.getDeviceCaps(LOGPIXELSX);
+		const bool rtl = readingDirection() == RIGHT_TO_LEFT;
+		const SCRIPT_VISATTR* const va = visualAttributes();
+		for(size_t i = glyphRange_.beginning(), e = numberOfGlyphs(); i < e; ++i) {
+			if((!rtl && (i + 1 == e || va[i + 1].fClusterStart != 0))
+					|| (rtl && (i == 0 || va[i - 1].fClusterStart != 0))) {
+				advances[i] += letterSpacing;
+				width.abcB += letterSpacing;
+				if(rtl)
+					offsets[i].du += letterSpacing;
+			}
+		}
+	}
+
 	// commit
 	if(glyphs_.unique()) {
 		swap(advances, glyphs_->advances);
@@ -850,7 +867,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	HFONT oldFont;
 
 	// compute font properties
-	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
+	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String(L"\x30E1\x30A4\x30EA\x30AA"));
 	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
 	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
 	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
@@ -1152,6 +1169,9 @@ inline int LineLayout::Run::x(size_t offset, bool trailing) const {
 		((justifiedAdvances() == 0) ? advances() : justifiedAdvances()), &analysis_, &result);
 	if(FAILED(hr))
 		throw hr;
+	// TODO: handle letter-spacing correctly.
+//	if(visualAttributes()[offset].fClusterStart == 0) {
+//	}
 	return result;
 }
 
@@ -3517,6 +3537,39 @@ bool TextRenderer::updateTextMetrics() {
 
 using viewers::TextViewer;
 
+HRESULT drawLineNumber(DC& dc, int x, int y, length_t lineNumber/*, const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState*/) {
+	// format number string
+	wchar_t s[128];	// oops, is this sufficient?
+#if(_MSC_VER < 1400)
+	const int length = swprintf(s, L"%lu", lineNumber);
+#else
+	const int length = swprintf(s, MANAH_COUNTOF(s), L"%lu", lineNumber);
+#endif // _MSC_VER < 1400
+
+	UINT option;
+#if 0
+	if(!ignoreUserOverride)
+		option = 0;
+	else {
+		switch(???) {
+			case CONTEXTUAL:
+			case NONE:
+				option = ETO_NUMERICSLATIN;
+				break;
+			case FROM_LOCALE:
+			case NATIONAL:
+			case TRADITIONAL:
+				option = ETO_NUMERICSLOCAL;
+				break;
+		}
+	}
+#else
+	option = 0;
+#endif
+	dc.extTextOut(x, y, option, 0, s, length, 0);
+	return S_OK;
+}
+
 /**
  * Draws the vertical ruler.
  * @param dc the device context
@@ -3590,7 +3643,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		dcex->setBkMode(TRANSPARENT);
 		dcex->setTextColor(systemColors.serve(configuration_.lineNumbers.textColor.foreground, COLOR_WINDOWTEXT));
 		dcex->setTextCharacterExtra(0);	// line numbers ignore character extra
-		dcex->selectObject(viewer_.textRenderer().defaultFont().get());
+		dcex->selectObject(renderer.defaultFont().get());
 	}
 
 	// prepare to draw the line numbers
@@ -3609,14 +3662,14 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				if(defaultLineStyle.get() != 0)
 					lineNumbersReadingDirection = defaultLineStyle->readingDirection;
 				if(lineNumbersReadingDirection == INHERIT_READING_DIRECTION)
-					lineNumbersReadingDirection = viewer_.textRenderer().defaultUIReadingDirection();
+					lineNumbersReadingDirection = renderer.defaultUIReadingDirection();
 				if(lineNumbersReadingDirection == INHERIT_READING_DIRECTION)
 					lineNumbersReadingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
 				assert(lineNumbersReadingDirection == LEFT_TO_RIGHT || lineNumbersReadingDirection == RIGHT_TO_LEFT);
 				break;
 			}
 			default:
-				throw runtime_error("");
+				throw runtime_error("can't resolve reading direction of line numbers in vertical ruler.");
 		}
 		// compute alignment of the line numbers from 'configuration_.lineNumbers.alignment'
 		switch(configuration_.lineNumbers.alignment) {
@@ -3631,7 +3684,7 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				lineNumbersAlignment = resolveTextAlignment(configuration_.lineNumbers.alignment, lineNumbersReadingDirection);
 				break;
 			default:
-				throw runtime_error("");
+				throw runtime_error("can't resolve alignment of line numbers in vertical ruler.");
 		}
 		switch(lineNumbersAlignment) {
 		case ALIGN_LEFT:
@@ -3675,26 +3728,8 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 				}
 
 				// draw line number digits
-				if(configuration_.lineNumbers.visible) {
-					wchar_t buffer[32];
-#if(_MSC_VER < 1400)
-					swprintf(buffer, L"%lu", line + configuration_.lineNumbers.startValue);
-#else
-					swprintf(buffer, MANAH_COUNTOF(buffer), L"%lu", line + configuration_.lineNumbers.startValue);
-#endif // _MSC_VER < 1400
-					UINT option;
-#if 0
-					switch(configuration_.lineNumbers.digitSubstitution) {
-					case DST_CONTEXTUAL:
-					case DST_NOMINAL:		option = ETO_NUMERICSLATIN; break;
-					case DST_NATIONAL:		option = ETO_NUMERICSLOCAL; break;
-					case DST_USER_DEFAULT:	option = 0; break;
-					}
-#else
-					option = 0;
-#endif
-					dcex->extTextOut(lineNumbersX, y, option, 0, buffer, static_cast<int>(wcslen(buffer)), 0);
-				}
+				if(configuration_.lineNumbers.visible)
+					drawLineNumber(*dcex, lineNumbersX, y, line + configuration_.lineNumbers.startValue);
 			}
 			++line;
 			y = nextY;
