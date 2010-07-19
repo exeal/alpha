@@ -356,7 +356,6 @@ FontPointer SystemFonts::cache(const DC& dc, const String& familyName, const Fon
 	lf.lfItalic = (properties.style == FontProperties::ITALIC) || (properties.style == FontProperties::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
 	FontPointer font(::CreateFontIndirectW(&lf), &DeleteObject);
-	registry_.insert(make_pair(make_pair(familyName, properties), font));
 #ifdef _DEBUG
 	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 		::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
@@ -366,6 +365,26 @@ FontPointer SystemFonts::cache(const DC& dc, const String& familyName, const Fon
 		::OutputDebugStringW(L"'.\n");
 	}
 #endif
+
+	if(!equals(sizeAdjust, 0.0) && sizeAdjust > 0.0) {
+		TEXTMETRICW tm;
+		HFONT oldFont = const_cast<DC&>(dc).selectObject(font.get());
+		if(dc.getTextMetrics(tm)) {
+			GLYPHMETRICS gm;
+			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
+			const int xHeight =
+				(dc.getGlyphOutline(L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
+					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
+			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
+			FontProperties adjustedProperties(properties);
+			adjustedProperties.size = max(properties.size * (sizeAdjust / aspect), 1.0);
+			const_cast<DC&>(dc).selectObject(oldFont);
+			return cache(dc, familyName, adjustedProperties, 0.0);
+		}
+		const_cast<DC&>(dc).selectObject(oldFont);
+	}
+
+	registry_.insert(make_pair(make_pair(familyName, properties), font));
 	return font;
 }
 
@@ -749,7 +768,7 @@ HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutIn
 	// handle letter spacing
 	if(style_.get() != 0 && style_->letterSpacing.unit != Length::INHERIT) {
 		// TODO: this code handles a value only in DIP specification.
-		const int letterSpacing = style_->letterSpacing.value / 96.0 * dc.getDeviceCaps(LOGPIXELSX);
+		const int letterSpacing = static_cast<int>(style_->letterSpacing.value / 96.0 * dc.getDeviceCaps(LOGPIXELSX));
 		const bool rtl = readingDirection() == RIGHT_TO_LEFT;
 		const SCRIPT_VISATTR* const va = visualAttributes();
 		for(size_t i = glyphRange_.beginning(), e = numberOfGlyphs(); i < e; ++i) {
@@ -867,7 +886,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	HFONT oldFont;
 
 	// compute font properties
-	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String(L"\x30E1\x30A4\x30EA\x30AA"));
+	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
 	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
 	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
 	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
