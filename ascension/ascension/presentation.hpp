@@ -105,6 +105,7 @@ namespace ascension {
 		};
 
 		struct BaselineAlignment {
+			enum Identifier {};
 /*			enum DominantBaseline {
 				DOMINANT_BASELINE_AUTO,
 				DOMINANT_BASELINE_USE_SCRIPT,
@@ -174,17 +175,14 @@ namespace ascension {
 
 			/// Constructor.
 			explicit FontProperties(Weight weight = INHERIT_WEIGHT,
-				Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0)
+				Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0, double sizeAdjust = 0.0)
 				: weight(weight), stretch(stretch), style(style), size(size) {}
 			/// Equality operator.
 			bool operator==(const FontProperties& other) const /*throw()*/ {
-				return weight == other.weight && stretch == other.stretch && style == other.style && size == other.size;}
+				return weight == other.weight && stretch == other.stretch && style == other.style && equals(size, other.size);}
 			/// Inequality operator.
 			bool operator!=(const FontProperties& other) const /*throw()*/ {return !(*this == other);}
 		};
-
-
-
 
 		struct TypographyProperties {};
 
@@ -208,7 +206,7 @@ namespace ascension {
 			BaselineAlignment baselineAlignment;
 			String fontFamily;	///< Family name. Empty means inherit the parent.
 			FontProperties fontProperties;
-			double fontSizeAdjust;	///< in DIP unit. 0.0 means 'none', negative value means 'inherit'.
+			double fontSizeAdjust;	///< 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			std::locale locale;
 			TypographyProperties typographyProperties;
 			Decorations decorations;

@@ -71,6 +71,7 @@
 #include <stdexcept>
 #include <utility>	// std.pair, std.min, std.max
 #include <new>		// std.bad_alloc, std::nothrow_t, ...
+#include <cmath>	// std.abs(double)
 
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
 #	include ASCENSION_CUSTOM_SHARED_PTR_HPP
@@ -167,6 +168,9 @@ namespace ascension {
 	/// Set of newline characters.
 	/// @see kernel#Newline
 	const Char NEWLINE_CHARACTERS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
+
+	/// Returns @c true if the given floating-point numbers are (approximately) equal.
+	inline bool equals(double n1, double n2, double epsilon = 1.0e-5) {return std::abs(n1 - n2) <= epsilon;}
 
 	/**
 	 * Represents direction in a text or a document (not visual orientation. See @c #viewers#Orientation).
