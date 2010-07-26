@@ -1003,7 +1003,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		if(defaultStyle.get() != 0)
 			computedFontProperties.size = defaultStyle->fontProperties.size;
 		if(computedFontProperties.size == 0.0f)
-			computedFontProperties.size = lip.textMetrics().emHeight() * 96.0 / dc.getDeviceCaps(LOGPIXELSY);
+			computedFontProperties.size = lip.textMetrics().emHeight();
 	}
 	if(computedFontSizeAdjust < 0.0)
 		computedFontSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
@@ -3635,7 +3635,7 @@ bool TextRenderer::updateTextMetrics() {
 		fontFamily = lf.lfFaceName;
 		fontProperties.weight = static_cast<FontProperties::Weight>(lf.lfWeight);
 		fontProperties.style = (lf.lfItalic != 0) ? FontProperties::ITALIC : FontProperties::NORMAL_STYLE;
-		fontProperties.size = (lf.lfHeight < 0) ? -lf.lfHeight * 96.0 / ScreenDC().getDeviceCaps(LOGPIXELSY) : 0;
+		fontProperties.size = (lf.lfHeight < 0) ? -lf.lfHeight : 0;
 	}
 	primaryFont_ = fontCollection().get(fontFamily, fontProperties);
 	fireDefaultFontChanged();
