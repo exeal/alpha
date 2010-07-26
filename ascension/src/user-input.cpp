@@ -407,7 +407,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	if(pt.x == 0xffff && pt.y == 0xffff) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
 		menuPosition = clientXYForCharacter(caret(), false);
-		menuPosition.y += textRenderer().cellHeight() + 1;
+		menuPosition.y += textRenderer().textMetrics().cellHeight() + 1;
 		RECT rc;
 		getClientRect(rc);
 		const RECT margins(textAreaMargins());
@@ -978,7 +978,7 @@ void TextViewer::updateIMECompositionWindowPosition() {
 
 		// composition font
 		LOGFONTW font;
-		::GetObjectW(renderer_->defaultFont().get(), sizeof(LOGFONTW), &font);
+		::GetObjectW(renderer_->primaryFont()->handle().get(), sizeof(LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
 		
 		::ImmReleaseContext(get(), imc);
@@ -1247,7 +1247,7 @@ namespace {
 		selectionBounds.right = numeric_limits<LONG>::min();
 		selectionBounds.top = selectionBounds.bottom = 0;
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			selectionBounds.bottom += static_cast<LONG>(renderer.linePitch() * renderer.lineLayout(line).numberOfSublines());
+			selectionBounds.bottom += static_cast<LONG>(renderer.textMetrics().linePitch() * renderer.lineLayout(line).numberOfSublines());
 			if(selectionBounds.bottom - selectionBounds.top > clientRect.bottom - clientRect.top)
 				return S_FALSE;	// overflow
 			const LineLayout& layout = renderer.lineLayout(line);
@@ -1289,7 +1289,7 @@ namespace {
 					rgn.offset(indent - selectionBounds.left, y - selectionBounds.top);
 					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH).use());
 				}
-				y += renderer.linePitch();
+				y += renderer.textMetrics().linePitch();
 			}
 		}
 		dc.selectObject(oldBitmap);
@@ -1335,7 +1335,7 @@ namespace {
 			renderer.renderLine(line, dc,
 				renderer.lineIndent(line) - selectionBounds.left, y,
 				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
-			y += static_cast<int>(renderer.linePitch() * renderer.numberOfSublinesOfLine(line));
+			y += static_cast<int>(renderer.textMetrics().linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
 		dc.selectObject(oldBitmap);
 
@@ -1360,7 +1360,7 @@ namespace {
 		// locate the hotspot of the image based on the cursor position
 		const RECT margins(viewer.textAreaMargins());
 		POINT hotspot(cursorPosition);
-		hotspot.x -= margins.left - viewer.getScrollPosition(SB_HORZ) * renderer.averageCharacterWidth() + selectionBounds.left;
+		hotspot.x -= margins.left - viewer.getScrollPosition(SB_HORZ) * renderer.textMetrics().averageCharacterWidth() + selectionBounds.left;
 		hotspot.y -= viewer.clientXYForCharacter(Position(selectedRegion.beginning().line, 0), true).y;
 
 		memset(&image, 0, sizeof(SHDRAGIMAGE));
@@ -1497,10 +1497,10 @@ namespace {
 		viewer.getClientRect(clientRect);
 		RECT margins = viewer.textAreaMargins();
 		const TextRenderer& renderer = viewer.textRenderer();
-		margins.left = max<long>(renderer.averageCharacterWidth(), margins.left);
-		margins.top = max<long>(renderer.linePitch() / 2, margins.top);
-		margins.right = max<long>(renderer.averageCharacterWidth(), margins.right);
-		margins.bottom = max<long>(renderer.linePitch() / 2, margins.bottom);
+		margins.left = max<long>(renderer.textMetrics().averageCharacterWidth(), margins.left);
+		margins.top = max<long>(renderer.textMetrics().linePitch() / 2, margins.top);
+		margins.right = max<long>(renderer.textMetrics().averageCharacterWidth(), margins.right);
+		margins.bottom = max<long>(renderer.textMetrics().linePitch() / 2, margins.bottom);
 
 		// oleidl.h defines the value named DD_DEFSCROLLINSET, but...
 
@@ -2091,20 +2091,20 @@ void CALLBACK DefaultMouseInputStrategy::timeElapsed(HWND, UINT, UINT_PTR eventI
 		self.viewer_->getClientRect(rc);
 		// à»â∫ÇÃÉXÉNÉçÅ[Éãó Ç…ÇÕç™ãíÇÕñ≥Ç¢
 		if(pt.y < rc.top + margins.top)
-			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->textRenderer().linePitch() - 1, true);
+			self.viewer_->scroll(0, (pt.y - (rc.top + margins.top)) / self.viewer_->textRenderer().textMetrics().linePitch() - 1, true);
 		else if(pt.y >= rc.bottom - margins.bottom)
-			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->textRenderer().linePitch() + 1, true);
+			self.viewer_->scroll(0, (pt.y - (rc.bottom - margins.bottom)) / self.viewer_->textRenderer().textMetrics().linePitch() + 1, true);
 		else if(pt.x < rc.left + margins.left)
-			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->textRenderer().averageCharacterWidth() - 1, 0, true);
+			self.viewer_->scroll((pt.x - (rc.left + margins.left)) / self.viewer_->textRenderer().textMetrics().averageCharacterWidth() - 1, 0, true);
 		else if(pt.x >= rc.right - margins.right)
-			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->textRenderer().averageCharacterWidth() + 1, 0, true);
+			self.viewer_->scroll((pt.x - (rc.right - margins.right)) / self.viewer_->textRenderer().textMetrics().averageCharacterWidth() + 1, 0, true);
 		self.extendSelection();
 	} else if(self.state_ == AUTO_SCROLL_DRAGGING || self.state_ == AUTO_SCROLL) {
 		self.endTimer();
 		TextViewer& viewer = *self.viewer_;
 		const POINT pt = self.viewer_->getCursorPosition();
-		const long yScrollDegree = (pt.y - self.dragApproachedPosition_.y) / viewer.textRenderer().linePitch();
-//		const long xScrollDegree = (pt.x - self.dragApproachedPosition.x) / viewer.presentation().lineHeight();
+		const long yScrollDegree = (pt.y - self.dragApproachedPosition_.y) / viewer.textRenderer().textMetrics().linePitch();
+//		const long xScrollDegree = (pt.x - self.dragApproachedPosition.x) / viewer.presentation().textMetrics().lineHeight();
 //		const long scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
 		if(yScrollDegree != 0 /*&& abs(yScrollDegree) >= abs(xScrollDegree)*/)

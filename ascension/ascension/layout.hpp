@@ -240,7 +240,7 @@ namespace ascension {
 		};
 
 		/// Provides physical font metrics information.
-		class ITextMetrics {
+		class IFontMetrics {
 		public:
 			/// Returns the ascent of the text in pixels.
 			virtual int ascent() const /*throw()*/ = 0;
@@ -264,9 +264,20 @@ namespace ascension {
 			/// Returns the pitch of lines in pixels.
 			/// @note This method ignores @c LayoutSettings#lineSpacing value.
 			int linePitch() const /*throw()*/ {return cellHeight() + lineGap();}
+			/// Returns the x-height of the font in pixels.
+			virtual int xHeight() const /*throw()*/ = 0;
 		};
 
-		typedef std::tr1::shared_ptr<internal::RemovePointer<HFONT>::Type> FontPointer;	// BAD idea :( HFONT may be not pointer
+		class AbstractFont {
+		public:
+			/// Destructor.
+			virtual ~AbstractFont() /*throw()*/ {}
+			/// Returns the platform-dependent handle object.
+			/// @deprecated
+			virtual manah::win32::Object<HGDIOBJ, &::DeleteObject, HFONT> handle() const /*throw()*/ = 0;
+			/// Returns the metrics of the font.
+			virtual const IFontMetrics& metrics() const /*throw()*/ = 0;
+		};
 
 		/// An interface represents an object provides a set of fonts.
 		class IFontCollection {
@@ -275,14 +286,13 @@ namespace ascension {
 			virtual ~IFontCollection() /*throw()*/ {}
 			/**
 			 * Returns the font matches the given properties.
-			 * @param dc the device context
 			 * @param familyName the font family name
 			 * @param properties the font properties
 			 * @param sizeAdjust 
-			 * @return the font handle
+			 * @return the font has the requested properties or the default one
 			 */
-			virtual FontPointer get(const manah::win32::gdi::DC& dc,
-				const String& familyName, const presentation::FontProperties& properties, double sizeAdjust = 0.0) const = 0;
+			virtual std::tr1::shared_ptr<const AbstractFont> get(const String& familyName,
+				const presentation::FontProperties& properties, double sizeAdjust = 0.0) const = 0;
 		};
 
 		const IFontCollection& systemFonts() /*throw()*/;
@@ -314,7 +324,7 @@ namespace ascension {
 			/// Returns the special character renderer.
 			virtual ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/ = 0;
 			/// Returns the text metrics.
-			virtual const ITextMetrics& textMetrics() const /*throw()*/ = 0;
+			virtual const IFontMetrics& textMetrics() const /*throw()*/ = 0;
 			/// Returns the width of the rendering area in pixels.
 			virtual int width() const /*throw()*/ = 0;
 		};
@@ -548,7 +558,7 @@ namespace ascension {
 		};
 
 		// documentation is layout.cpp
-		class TextRenderer : public LineLayoutBuffer, public ITextMetrics, public ILayoutInformationProvider {
+		class TextRenderer : public LineLayoutBuffer, public ILayoutInformationProvider {
 		public:
 			// constructors
 			TextRenderer(presentation::Presentation& presentation,
@@ -556,7 +566,7 @@ namespace ascension {
 			TextRenderer(const TextRenderer& other);
 			virtual ~TextRenderer() /*throw()*/;
 			// text metrics
-			manah::win32::gdi::Font defaultFont() const /*throw()*/;
+			std::tr1::shared_ptr<const AbstractFont> primaryFont() const /*throw()*/;
 			int lineIndent(length_t line, length_t subline = 0) const;
 			bool updateTextMetrics();
 			// listener
@@ -567,29 +577,20 @@ namespace ascension {
 			// operation
 			void renderLine(length_t line, manah::win32::gdi::DC& dc, int x, int y,
 				const RECT& paintRect, const RECT& clipRect, const LineLayout::Selection* selection) const /*throw()*/;
-			// ITextMetrics
-			int ascent() const /*throw()*/;
-			int averageCharacterWidth() const /*throw()*/;
-			int descent() const /*throw()*/;
-			int externalLeading() const /*throw()*/;
-			String familyName() const /*throw()*/;
-			int internalLeading() const /*throw()*/;
-		private:
-			void fireDefaultFontChanged();
 			// ILayoutInformationProvider
 			const IFontCollection& fontCollection() const /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
 			ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
-			const ITextMetrics& textMetrics() const /*throw()*/;
+			const IFontMetrics& textMetrics() const /*throw()*/;
+		private:
+			void fireDefaultFontChanged();
 		private:
 			presentation::Presentation& presentation_;
 			const IFontCollection& fontCollection_;
 			const bool enablesDoubleBuffering_;
 			mutable manah::win32::gdi::DC memoryDC_;
 			mutable manah::win32::gdi::Bitmap memoryBitmap_;
-			manah::win32::gdi::Font defaultFont_;
-			String fontFamilyName_;
-			int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_;	// in pixels
+			std::tr1::shared_ptr<const AbstractFont> primaryFont_;
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 			ascension::internal::Listeners<IDefaultFontListener> listeners_;
 		};
@@ -804,26 +805,11 @@ inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const /*thro
 /// Returns @c true if white space characters are visible.
 inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const /*throw()*/ {return showsWhiteSpaces_;}
 
-/// @see ITextMetrics#ascent
-inline int TextRenderer::ascent() const /*throw()*/ {return ascent_;}
+/// Returns the primary font.
+inline std::tr1::shared_ptr<const AbstractFont> TextRenderer::primaryFont() const /*throw()*/ {return primaryFont_;}
 
-/// @see ITextMetrics#averageCharacterWidth
-inline int TextRenderer::averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
-
-/// Returns the default font.
-inline manah::win32::gdi::Font TextRenderer::defaultFont() const /*throw()*/ {return manah::win32::gdi::Font(manah::win32::borrowed(defaultFont_.get()));}
-
-/// @see ITextMetrics#descent
-inline int TextRenderer::descent() const /*throw()*/ {return descent_;}
-
-/// @see ITextMetrics#externalLeading
-inline int TextRenderer::externalLeading() const /*throw()*/ {return externalLeading_;}
-
-/// @see ITextMetrics#familyName
-inline String TextRenderer::familyName() const /*throw()*/ {return fontFamilyName_;}
-
-/// @see ITextMetrics#internalLeading
-inline int TextRenderer::internalLeading() const /*throw()*/ {return internalLeading_;}
+/// @see ILayoutInformationProvider#textMetrics
+inline const IFontMetrics& TextRenderer::textMetrics() const /*throw()*/ {return primaryFont()->metrics();}
 
 }} // namespace ascension.viewers
 

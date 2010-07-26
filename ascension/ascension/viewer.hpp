@@ -1039,7 +1039,7 @@ inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 	RECT r;
 	getClientRect(r);
 	return (r.left == r.right) ? 0 :
-		(r.right - r.left - configuration_.leadingMargin - verticalRulerDrawer_->width()) / renderer_->averageCharacterWidth();
+		(r.right - r.left - configuration_.leadingMargin - verticalRulerDrawer_->width()) / renderer_->primaryFont()->metrics().averageCharacterWidth();
 }
 
 /**
@@ -1049,7 +1049,7 @@ inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
 	RECT r;
 	getClientRect(r);
-	return (r.top == r.bottom) ? 0 : (r.bottom - r.top - configuration_.topMargin) / renderer_->linePitch();
+	return (r.top == r.bottom) ? 0 : (r.bottom - r.top - configuration_.topMargin) / renderer_->primaryFont()->metrics().linePitch();
 }
 
 /// Returns the presentation object. 

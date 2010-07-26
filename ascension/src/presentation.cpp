@@ -18,6 +18,14 @@ using namespace std;
 using ascension::presentation::Colors;
 
 
+// Border ///////////////////////////////////////////////////////////////////
+
+// TODO: these value are changed later.
+const Length Border::THIN(0.05, Length::EM_HEIGHT);
+const Length Border::MEDIUM(0.10, Length::EM_HEIGHT);
+const Length Border::THICK(0.20, Length::EM_HEIGHT);
+
+
 // LineStyle ////////////////////////////////////////////////////////////////
 
 /// Default constructor.

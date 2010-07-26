@@ -71,15 +71,31 @@ namespace ascension {
 		struct Length {
 			double value;	///< Value of the length.
 			enum Unit {
+				// relative length units
 				EM_HEIGHT,		///< The font size of the relevant font.
 				X_HEIGHT,		///< The x-height of the relevant font.
 				PIXELS,			///< Pixels, relative to the viewing device.
+				// relative length units introduced by CSS 3
+				GRIDS,				///< The grid.
+				REMS,				///< The font size of the primary font.
+				VIEWPORT_WIDTH,		///< The viewport's width.
+				VIEWPORT_HEIGHT,	///< The viewport's height.
+				VIEWPORT_MINIMUM,	///< The viewport's height or width, whichever is smaller of the two.
+				/**
+				 * The width of the "0" (ZERO, U+0030) glyph found in the font for the font size
+				 * used to render. If the "0" glyph is not found in the font, the average character
+				 * width may be used.
+				 */
+				CHARACTERS,
+				// absolute length units
 				INCHES,			///< Inches -- 1 inch is equal to 2.54 centimeters.
 				CENTIMETERS,	///< Centimeters.
 				MILLIMETERS,	///< Millimeters.
 				POINTS,			///< Points -- the point used by CSS 2.1 are equal to 1/72nd of an inch.
-				PICAS,			///< Picas --1 pica is equal to 12 points.
+				PICAS,			///< Picas -- 1 pica is equal to 12 points.
+				// used in DirectWrite
 				DIPS,			///< Device independent pixels. 1 DIP is equal to 1/96th of an inch.
+				// percentages (exactly not a length)
 				PERCENTAGE,		///< Percentage.
 				INHERIT			///< Inherits from the parent.
 			} unit;	///< Unit of the length.
@@ -97,11 +113,21 @@ namespace ascension {
 				DOUBLE, GROOVE, RIDGE, INSET, OUTSET,
 				INHERIT
 			};
+			static const Length THIN, MEDIUM, THICK;
 			struct Part {
+				/**
+				 * The foreground color of the border. Default value is Color() which means same as
+				 * the foreground color of the text.
+				 */
+				Color color;
+				/// Style of the border. Default value is @c NONE.
 				Style style;
-				Color color;	// if is Color(), same as the foreground
-//				??? width;
-			} top, right, bottom, left;
+				/// Thickness of the border. Default value is @c MEDIUM_WIDTH.
+				Length width;
+
+				/// Default constructor.
+				Part() : color(), style(NONE), width(MEDIUM) {}
+			} before, after, start, end;
 		};
 
 		struct BaselineAlignment {
@@ -171,7 +197,7 @@ namespace ascension {
 			enum Style {
 				NORMAL_STYLE, ITALIC, OBLIQUE, INHERIT_STYLE
 			} style;
-			double size;	///< Font size in DIP. Zero means inherit the parent.
+			double size;	///< Font size (em height) in pixels. Zero means inherit the parent.
 
 			/// Constructor.
 			explicit FontProperties(Weight weight = INHERIT_WEIGHT,

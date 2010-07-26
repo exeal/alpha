@@ -412,11 +412,11 @@ void utils::show(VisualPoint& p) {
 		const length_t visibleColumns = viewer.numberOfVisibleColumns();
 		const ulong x = renderer.lineLayout(np.line).location(np.column, LineLayout::LEADING).x + renderer.lineIndent(np.line, 0);
 		viewer.getScrollInformation(SB_HORZ, si);
-		const ulong scrollOffset = si.nPos * viewer.scrollRate(true) * renderer.averageCharacterWidth();
+		const ulong scrollOffset = si.nPos * viewer.scrollRate(true) * renderer.textMetrics().averageCharacterWidth();
 		if(x <= scrollOffset)	// 画面より左
-			to.x = x / renderer.averageCharacterWidth() - visibleColumns / 4;
-		else if(x >= (si.nPos * viewer.scrollRate(true) + visibleColumns) * renderer.averageCharacterWidth())	// 画面より右
-			to.x = x / renderer.averageCharacterWidth() - visibleColumns * 3 / 4;
+			to.x = x / renderer.textMetrics().averageCharacterWidth() - visibleColumns / 4;
+		else if(x >= (si.nPos * viewer.scrollRate(true) + visibleColumns) * renderer.textMetrics().averageCharacterWidth())	// 画面より右
+			to.x = x / renderer.textMetrics().averageCharacterWidth() - visibleColumns * 3 / 4;
 		if(to.x < -1)
 			to.x = 0;
 	}
@@ -596,7 +596,7 @@ length_t VisualPoint::visualColumn() const {
 	const TextViewer::Configuration& c = viewer_->configuration();
 	const TextRenderer& renderer = viewer_->textRenderer();
 //	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
-		return lastX_ / renderer.averageCharacterWidth();
+		return lastX_ / renderer.textMetrics().averageCharacterWidth();
 //	else
 //		return (renderer.width() - lastX_) / renderer.averageCharacterWidth();
 }
@@ -1426,7 +1426,7 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, len
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout.offset(
-		p.lastX_ - renderer.lineIndent(np.line), renderer.linePitch() * static_cast<long>(subline)).second;
+		p.lastX_ - renderer.lineIndent(np.line), renderer.textMetrics().linePitch() * static_cast<long>(subline)).second;
 	if(layout.subline(np.column) != subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return VisualPoint::makeVerticalDestinationProxy(np);
@@ -1559,7 +1559,7 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, leng
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout->offset(
-		p.lastX_ - renderer.lineIndent(np.line), renderer.linePitch() * static_cast<long>(subline)).second;
+		p.lastX_ - renderer.lineIndent(np.line), renderer.textMetrics().linePitch() * static_cast<long>(subline)).second;
 	if(layout->subline(np.column) != subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return VisualPoint::makeVerticalDestinationProxy(np);

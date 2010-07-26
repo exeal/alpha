@@ -682,7 +682,7 @@ void ContentAssistant::updatePopupPositions() {
 		if(x + cx > viewerRect.right) {
 //			if()
 		}
-		int y = pt.y + textViewer_->textRenderer().cellHeight();
+		int y = pt.y + textViewer_->textRenderer().textMetrics().cellHeight();
 		if(y + cy > viewerRect.bottom) {
 			if(pt.y - 1 - viewerRect.top < viewerRect.bottom - y)
 				cy = viewerRect.bottom - y;
