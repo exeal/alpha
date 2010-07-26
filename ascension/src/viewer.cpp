@@ -309,14 +309,14 @@ namespace {
 	inline void getCurrentCharacterSize(const TextViewer& viewer, SIZE& result) {
 		const Caret& caret = viewer.caret();
 		if(locations::isEndOfLine(caret))	// EOL
-			result.cx = viewer.textRenderer().averageCharacterWidth();
+			result.cx = viewer.textRenderer().textMetrics().averageCharacterWidth();
 		else {
 			const LineLayout& layout = viewer.textRenderer().lineLayout(caret.line());
 			const int leading = layout.location(caret.column(), LineLayout::LEADING).x;
 			const int trailing = layout.location(caret.column(), LineLayout::TRAILING).x;
 			result.cx = static_cast<int>(ascension::internal::distance(leading, trailing));
 		}
-		result.cy = viewer.textRenderer().cellHeight();
+		result.cy = viewer.textRenderer().textMetrics().cellHeight();
 	}
 } // namespace @0
 
@@ -548,9 +548,9 @@ Position TextViewer::characterForClientXY(const POINT& pt, LineLayout::Edge edge
 	// determine the column
 	const long x = pt.x - getDisplayXOffset(result.line);
 	if(edge == LineLayout::LEADING)
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), &outside).first;
+		result.column = layout.offset(x, static_cast<int>(renderer_->textMetrics().linePitch() * subline), &outside).first;
 	else if(edge == LineLayout::TRAILING)
-		result.column = layout.offset(x, static_cast<int>(renderer_->linePitch() * subline), &outside).second;
+		result.column = layout.offset(x, static_cast<int>(renderer_->textMetrics().linePitch() * subline), &outside).second;
 	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
@@ -939,21 +939,21 @@ int TextViewer::getDisplayXOffset(length_t line) const {
 	const LineLayout& layout = renderer_->lineLayout(line);
 	const TextAlignment alignment = resolveTextAlignment(layout.alignment(), layout.readingDirection());
 	if(alignment == ALIGN_LEFT || alignment == JUSTIFY)	// TODO: this code ignores last visual line with justification.
-		return margins.left - scrollInfo_.x() * renderer_->averageCharacterWidth();
+		return margins.left - scrollInfo_.x() * renderer_->textMetrics().averageCharacterWidth();
 
 	int indent;
 	win32::Rect clientRect;
 	getClientRect(clientRect);
 	if(renderer_->longestLineWidth() + margins.left + margins.right > clientRect.getWidth()) {
 		indent = renderer_->longestLineWidth() - layout.sublineWidth(0) + margins.left;
-		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->averageCharacterWidth();
+		indent += (clientRect.getWidth() - margins.left - margins.right) % renderer_->textMetrics().averageCharacterWidth();
 	} else
 		indent = clientRect.getWidth() - layout.sublineWidth(0) - margins.right;
 	if(alignment == ALIGN_CENTER)
 		indent /= 2;
 	else
 		assert(alignment == ALIGN_RIGHT);
-	return indent - static_cast<long>(scrollInfo_.x()) * renderer_->averageCharacterWidth();
+	return indent - static_cast<long>(scrollInfo_.x()) * renderer_->textMetrics().averageCharacterWidth();
 }
 
 #if 0
@@ -1109,7 +1109,7 @@ void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visual
 	y -= margins.top;
 	length_t line, subline;
 	firstVisibleLine(&line, 0, &subline);
-	renderer_->offsetVisualLine(line, subline, y / renderer_->linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
+	renderer_->offsetVisualLine(line, subline, y / renderer_->textMetrics().linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
 	if(logicalLine != 0)
 		*logicalLine = line;
 	if(visualSublineOffset != 0)
@@ -1132,9 +1132,9 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 		if(scrollInfo_.firstVisibleSubline == 0)
 			return margins.top;
 		else
-			return fullSearch ? margins.top - static_cast<int>(renderer_->linePitch() * scrollInfo_.firstVisibleSubline) : -32768;
+			return fullSearch ? margins.top - static_cast<int>(renderer_->textMetrics().linePitch() * scrollInfo_.firstVisibleSubline) : -32768;
 	} else if(line > scrollInfo_.firstVisibleLine) {
-		const int lineSpan = renderer_->linePitch();
+		const int lineSpan = renderer_->textMetrics().linePitch();
 		RECT clientRect;
 		getClientRect(clientRect);
 		int y = margins.top;
@@ -1148,7 +1148,7 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 	} else if(!fullSearch)
 		return -32768;
 	else {
-		const int linePitch = renderer_->linePitch();
+		const int linePitch = renderer_->textMetrics().linePitch();
 		int y = margins.top - static_cast<int>(linePitch * scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
 			y -= static_cast<int>(renderer_->numberOfSublinesOfLine(i) * linePitch);
@@ -1220,7 +1220,7 @@ bool TextViewer::onEraseBkgnd(HDC) {
 
 /// @see WM_GETFONT
 HFONT TextViewer::onGetFont() {
-	return renderer_->defaultFont().get();
+	return renderer_->primaryFont()->handle().get();
 }
 
 /// @see WM_HSCROLL
@@ -1277,7 +1277,7 @@ void TextViewer::onPaint(win32::gdi::PaintDC& dc) {
 
 	const length_t lines = doc.numberOfLines();
 	const RECT& paintRect = dc.paintStruct().rcPaint;
-	const int linePitch = renderer_->linePitch();
+	const int linePitch = renderer_->textMetrics().linePitch();
 
 	// draw the vertical ruler
 	verticalRulerDrawer_->draw(dc);
@@ -1576,9 +1576,9 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 		return;
 	// 下端
 	if(last != numeric_limits<length_t>::max()) {
-		long bottom = rect.top + static_cast<long>(renderer_->numberOfSublinesOfLine(first) * renderer_->linePitch());
+		long bottom = rect.top + static_cast<long>(renderer_->numberOfSublinesOfLine(first) * renderer_->textMetrics().linePitch());
 		for(length_t line = first + 1; line <= last; ++line) {
-			bottom += static_cast<long>(renderer_->numberOfSublinesOfLine(line) * renderer_->linePitch());
+			bottom += static_cast<long>(renderer_->numberOfSublinesOfLine(line) * renderer_->textMetrics().linePitch());
 			if(bottom >= rect.bottom)
 				break;
 		}
@@ -1648,7 +1648,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	if(static_cast<uint>(abs(dy)) >= numberOfVisibleLines())
 		invalidateRect(&clipRect, false);	// redraw all if the amount of the scroll is over a page
 	else if(dx == 0)	// only vertical
-		scrollEx(0, -dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+		scrollEx(0, -dy * scrollRate(false) * renderer_->textMetrics().linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 	else {	// process the leading margin and the edit region independently
 		// scroll the edit region
 		clipRect.left += margins.left;
@@ -1656,8 +1656,8 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		if(static_cast<uint>(abs(dx)) >= numberOfVisibleColumns())
 			invalidateRect(&clipRect, false);	// redraw all if the amount of the scroll is over a page
 		else
-			scrollEx(-dx * scrollRate(true) * renderer_->averageCharacterWidth(),
-				-dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+			scrollEx(-dx * scrollRate(true) * renderer_->textMetrics().averageCharacterWidth(),
+				-dy * scrollRate(false) * renderer_->textMetrics().linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		// scroll the vertical ruler
 		if(dy != 0) {
 			if(verticalRulerDrawer_->configuration().alignment == ALIGN_LEFT) {
@@ -1667,7 +1667,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 				clipRect.right = clientRect.right;
 				clipRect.left = clipRect.right - verticalRulerDrawer_->width();
 			}
-			scrollEx(0, -dy * scrollRate(false) * renderer_->linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
+			scrollEx(0, -dy * scrollRate(false) * renderer_->textMetrics().linePitch(), 0, &clipRect, 0, 0, SW_INVALIDATE);
 		}
 	}
 
@@ -1884,7 +1884,7 @@ void TextViewer::updateCaretPosition() {
 	textArea.right -= margins.right - 1; textArea.bottom -= margins.bottom;
 
 	if(!toBoolean(::PtInRect(&textArea, pt)))	// "hide" the caret
-		pt.y = -renderer_->linePitch();
+		pt.y = -renderer_->textMetrics().linePitch();
 	else if(caretShape_.readingDirection == RIGHT_TO_LEFT
 			|| renderer_->lineLayout(caret().line()).bidiEmbeddingLevel(caret().column()) % 2 == 1)
 		pt.x -= caretShape_.width;
@@ -2399,7 +2399,7 @@ int TextViewer::Renderer::width() const /*throw()*/ {
 		win32::AutoZeroSize<SCROLLINFO> si;
 		si.fMask = SIF_RANGE;
 		viewer_.getScrollInformation(SB_HORZ, si);
-		return (si.nMax + 1) * viewer_.textRenderer().averageCharacterWidth();
+		return (si.nMax + 1) * viewer_.textRenderer().textMetrics().averageCharacterWidth();
 	} else if(lwc.wrapsAtWindowEdge()) {
 		RECT rc, margins = viewer_.textAreaMargins();
 		viewer_.getClientRect(rc);
@@ -2486,7 +2486,7 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
 	//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
-		const int dx = viewer.textRenderer().averageCharacterWidth();
+		const int dx = viewer.textRenderer().textMetrics().averageCharacterWidth();
 		assert(dx > 0);
 		const ulong columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ? viewer.textRenderer().longestLineWidth() / dx : 0;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
@@ -2585,8 +2585,10 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length
 		const TextRenderer& renderer = view_.textRenderer();
 		const LineLayout& layout = renderer.lineLayout(line);
 		range = Range<length_t>(
-			layout.offset(points_[0].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first,
-			layout.offset(points_[1].x - renderer.lineIndent(line, 0), static_cast<int>(renderer.linePitch() * subline)).first);
+			layout.offset(points_[0].x - renderer.lineIndent(line, 0),
+			static_cast<int>(renderer.textMetrics().linePitch() * subline)).first,
+			layout.offset(points_[1].x - renderer.lineIndent(line, 0),
+			static_cast<int>(renderer.textMetrics().linePitch() * subline)).first);
 		return !range.isEmpty();
 	}
 }
@@ -2600,11 +2602,11 @@ void VirtualBox::update(const Region& region) /*throw()*/ {
 	const LineLayout* layout = &r.lineLayout(points_[0].line = region.first.line);
 	POINT location = layout->location(region.first.column);
 	points_[0].x = location.x + r.lineIndent(points_[0].line, 0);
-	points_[0].subline = location.y / r.linePitch();
+	points_[0].subline = location.y / r.textMetrics().linePitch();
 	layout = &r.lineLayout(points_[1].line = region.second.line);
 	location = layout->location(region.second.column);
 	points_[1].x = location.x + r.lineIndent(points_[1].line, 0);
-	points_[1].subline = location.y / r.linePitch();
+	points_[1].subline = location.y / r.textMetrics().linePitch();
 }
 
 
@@ -2640,7 +2642,7 @@ void DefaultCaretShaper::getCaretShape(auto_ptr<win32::gdi::Bitmap>&, SIZE& soli
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	solidSize.cx = width;
-	solidSize.cy = viewer_->textRenderer().cellHeight();
+	solidSize.cy = viewer_->textRenderer().textMetrics().cellHeight();
 	readingDirection = LEFT_TO_RIGHT;	// no matter
 }
 
@@ -2770,7 +2772,7 @@ void LocaleSensitiveCaretShaper::getCaretShape(
 
 	if(!overtype) {
 		solidSize.cx = bold_ ? 2 : 1;	// this ignores the system setting...
-		solidSize.cy = updater_->textViewer().textRenderer().cellHeight();
+		solidSize.cy = updater_->textViewer().textRenderer().textMetrics().cellHeight();
 	} else	// use the width of the glyph when overtype mode
 		getCurrentCharacterSize(updater_->textViewer(), solidSize);
 	readingDirection = LEFT_TO_RIGHT;

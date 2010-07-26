@@ -227,7 +227,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		dc.get(), (*buffer.presentation().firstTextViewer())->configuration(),
 		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.left - margins_.right));
 	LOGFONTW lf;
-	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().defaultFont().get(), sizeof(LOGFONTW), &lf);
+	::GetObject((*buffer.presentation().firstTextViewer())->textRenderer().primaryFont()->handle().get(), sizeof(LOGFONTW), &lf);
 	win32::gdi::ScreenDC screenDC;
 //	renderer.setFont(lf.lfFaceName, ::MulDiv(lf.lfHeight, ydpi, screenDC.getDeviceCaps(LOGPIXELSY)), 0);
 
@@ -250,7 +250,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 		ALPHA_MM100_TO_PIXELS_X(margins_.left), 0,
 		ALPHA_MM100_TO_PIXELS_X(paperSize_.cx - margins_.right),
 		ALPHA_MM100_TO_PIXELS_Y(paperSize_.cy - margins_.top - margins_.bottom)};
-	HFONT oldFont = dc.selectObject(renderer.defaultFont().get());
+	HFONT oldFont = dc.selectObject(renderer.primaryFont()->handle().get());
 	WCHAR compactedPathName[MAX_PATH];
 	wcscpy(compactedPathName, bufferName.c_str());
 	::PathCompactPathW(pdex.hDC, compactedPathName, (rc.right - rc.left) * 9 / 10);
@@ -266,7 +266,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	bool error = false;
 	ulong page = 0;
 	WCHAR pageNumber[128];
-	const int linePitch = renderer.linePitch();
+	const int linePitch = renderer.textMetrics().linePitch();
 	rc.top = rc.bottom;
 	for(ascension::length_t line = 0, lines = buffer.numberOfLines(); !error && line < lines; ++line) {
 		const ascension::layout::LineLayout& layout = renderer.lineLayout(line);
@@ -286,7 +286,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 				prompt.setPageNumber(page);
 				dc.setViewportOrg(-physicalOffsetInMM.x, -physicalOffsetInMM.y);
 				// print a header
-				HFONT oldFont = dc.selectObject(renderer.defaultFont().get());
+				HFONT oldFont = dc.selectObject(renderer.primaryFont()->handle().get());
 				dc.setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
 				dc.textOut(rc.left, rc.top = ALPHA_MM100_TO_PIXELS_Y(margins_.top), compactedPathName, static_cast<int>(wcslen(compactedPathName)));
 #if(_MSC_VER < 1400)

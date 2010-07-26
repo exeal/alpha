@@ -381,7 +381,7 @@ InteractiveReplacementCallback::queryReplacementAction(const k::Region& matchedR
 		textViewer_->getClientRect(clientRect);
 		p.y = clientRect.bottom;
 	} else
-		p.y += textViewer_->textRenderer().cellHeight();
+		p.y += textViewer_->textRenderer().textMetrics().cellHeight();
 	textViewer_->clientToScreen(p);
 
 //	TPMPARAMS tpmp;
