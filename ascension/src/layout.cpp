@@ -473,8 +473,8 @@ tr1::shared_ptr<const AbstractFont> SystemFonts::cache(const String& familyName,
 	if(properties.stretch != FontProperties::NORMAL_STRETCH) {
 		// TODO: this implementation is too simple...
 		if(::GetObject(font.get(), sizeof(LOGFONTW), &lf) > 0) {
-			static const int WIDTH_RATIOS[] = {100, 100, 100, 20, 40, 60, 80, 120, 140, 160, 180, 100};
-			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch], 100);
+			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
+			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch], 1000);
 			Object<HGDIOBJ, &::DeleteObject, HFONT> temp(managed(::CreateFontIndirectW(&lf)));
 			if(temp.get() != 0)
 				font = temp;
