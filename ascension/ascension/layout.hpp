@@ -27,6 +27,7 @@ namespace ascension {
 		// free functions
 		bool getDecorationLineMetrics(HDC dc, int* baselineOffset,
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
+		uint32_t makeTrueTypeTag(const char name[]);
 		bool supportsComplexScripts() /*throw()*/;
 		bool supportsOpenTypeFeatures() /*throw()*/;
 
@@ -597,6 +598,21 @@ namespace ascension {
 
 
 // inlines //////////////////////////////////////////////////////////////////
+
+/// Returns an 32-bit integer represents the given TrueType tag.
+inline uint32_t makeTrueTypeTag(const char name[]) {
+	const size_t len = std::strlen(name);
+	if(len == 0 || len > 4)
+		throw std::length_error("name");
+	uint32_t tag = name[0];
+	if(len > 1)
+		tag |= name[1] << 8;
+	if(len > 2)
+		tag |= name[2] << 16;
+	if(len > 3)
+		tag |= name[3] << 24;
+	return tag;
+}
 
 /// Returns @c true if the layout has been disposed.
 inline bool LineLayout::isDisposed() const /*throw()*/ {return runs_ == 0;}

@@ -154,7 +154,17 @@
  * Define the symbol to enable Unicode Variation Selectors Supplement (U+E0100..E01EF) workaround.
  * For more details, see the description of layout.cpp.
  */
-#define ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#ifndef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#	define ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#endif // !ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+
+/**
+ * @def ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
+ * Define the symbol to enable Unicode Variation Selectors Supplement (U+E0100..E01EF) workaround.
+ * For more details, see the description of layout.cpp.
+ * @deprecated 0.7.94.398 This configuration is deprecated.
+ */
+#define ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
 
 
 // about ascension.presentation /////////////////////////////////////////////

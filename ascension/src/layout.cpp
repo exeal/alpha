@@ -26,7 +26,6 @@ using namespace std;
 extern bool DIAGNOSE_INHERENT_DRAWING;
 
 namespace {
-
 	// SystemColors caches the system colors.
 	class SystemColors {
 	public:
@@ -38,35 +37,68 @@ namespace {
 		COLORREF c_[128];
 	} systemColors;
 
+	const class ScriptProperties {
+	public:
+		ScriptProperties() /*throw()*/ : p_(0), c_(0) {::ScriptGetProperties(&p_, &c_);}
+		const SCRIPT_PROPERTIES& get(int script) const {if(script >= c_) throw out_of_range("script"); return *p_[script];}
+		int numberOfOfScripts() const /*throw()*/ {return c_;}
+	private:
+		const SCRIPT_PROPERTIES** p_;
+		int c_;
+	} scriptProperties;
+
+	class UserSettings {
+	public:
+		UserSettings() /*throw()*/ {update();}
+		LANGID getDefaultLanguage() const /*throw()*/ {return langID_;}
+		const SCRIPT_DIGITSUBSTITUTE& getDigitSubstitution() const /*throw()*/ {return digitSubstitution_;}
+		void update() /*throw()*/ {langID_ = ::GetUserDefaultLangID();
+			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);}
+	private:
+		LANGID langID_;
+		SCRIPT_DIGITSUBSTITUTE digitSubstitution_;
+	} userSettings;
+
 	int CALLBACK checkFontInstalled(ENUMLOGFONTEXW*, NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
 		*reinterpret_cast<bool*>(param) = true;
 		return 0;
 	}
 
+	inline int estimateNumberOfGlyphs(length_t length) {return static_cast<int>(length) * 3 / 2 + 16;}
+	String fallback(int script);
+	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
+	ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/;
+	int pixels(const DC& dc, const Length& length, bool vertical, const IFontMetrics& fontMetrics);
+	HRESULT resolveNumberSubstitution(const NumberSubstitution& configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
 	template<typename T> inline int round(T value) {return static_cast<int>(floor(value + 0.5));}
+	bool uniscribeSupportsVSS() /*throw()*/;
+	LANGID userCJKLanguage() /*throw()*/;
 
-	LANGID userCJKLanguage() /*throw()*/ {
-		// this code is preliminary...
-		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
-		LANGID result = getUserDefaultUILanguage();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetUserDefaultLangID();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetSystemDefaultLangID();
-		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
-			return result;
-		switch(::GetACP()) {
-		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
-		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
-		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
-		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
-		}
-		return result;
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	typedef tr1::unordered_map<uint32_t, uint16_t> IdeographicVariationSequences;
+	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs);
+#endif // !ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+
+	typedef ulong OPENTYPE_TAG;
+	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 1);
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptSubstituteSingleGlyph",
+		HRESULT(WINAPI *signature)(HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*,
+			OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG, WORD, WORD*));
+	auto_ptr<ascension::internal::SharedLibrary<Uniscribe16> > uspLib(new ascension::internal::SharedLibrary<Uniscribe16>("usp10.dll"));
+} // namespace @0
+
+// file-local free functions ////////////////////////////////////////////////
+
+namespace {
+
+	void dumpRuns(const LineLayout& layout) {
+#ifdef _DEBUG
+		ostringstream s;
+		layout.dumpRuns(s);
+		::OutputDebugStringA(s.str().c_str());
+#endif // _DEBUG
 	}
 
-	/***/
 	String fallback(int script) {
 		if(script <= Script::FIRST_VALUE || script == Script::INHERITED
 				|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
@@ -155,49 +187,58 @@ namespace {
 	}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	typedef ulong OPENTYPE_TAG;
-	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 1);
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptSubstituteSingleGlyph",
-		HRESULT(WINAPI *signature)(HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*,
-			OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG, WORD, WORD*));
-	auto_ptr<ascension::internal::SharedLibrary<Uniscribe16> > uspLib(new ascension::internal::SharedLibrary<Uniscribe16>("usp10.dll"));
-
-	OPENTYPE_TAG makeOpenTypeTag(const char name[]) {
-		const size_t len = strlen(name);
-		assert(len > 0 && len <= 4);
-		OPENTYPE_TAG tag = name[0];
-		if(len > 1) tag |= name[1] << 8;
-		if(len > 2) tag |= name[2] << 16;
-		if(len > 3) tag |= name[3] << 24;
-		return tag;
+	template<size_t bytes> uint32_t readBytes(const uint8_t*& p);
+	template<> inline uint32_t readBytes<1>(const uint8_t*& p) {
+		return *(p++);
+	}
+	template<> inline uint32_t readBytes<2>(const uint8_t*& p) {
+		p += 2;
+		return (p[-2] << 8) | (p[-1] << 0);
+	}
+	template<> inline uint32_t readBytes<3>(const uint8_t*& p) {
+		p += 3;
+		return (p[-3] << 16) | (p[-2] << 8) | (p[-1] << 0);
+	}
+	template<> inline uint32_t readBytes<4>(const uint8_t*& p) {
+		p += 4;
+		return (p[-4] << 24) | (p[-3] << 16) | (p[-2] << 8) | (p[-1] << 0);
+	}
+	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs) {
+//	if(length > ) {
+			const uint8_t* p = static_cast<const uint8_t*>(cmapData);
+			const uint32_t numberOfSubtables = readBytes<2>(p += 2);
+			const uint8_t* uvsSubtable = 0;
+			for(uint16_t i = 0; i < numberOfSubtables; ++i) {
+				const uint32_t platformID = readBytes<2>(p);
+				const uint32_t encodingID = readBytes<2>(p);
+				const uint32_t offset = readBytes<4>(p);
+				const uint8_t* temp = static_cast<const uint8_t*>(cmapData) + offset;
+				const uint32_t format = readBytes<2>(temp);
+				if(format == 14 && platformID == 0 && encodingID == 5) {
+					uvsSubtable = temp - 2;
+					break;
+				}
+			}
+			if(uvsSubtable != 0) {
+				p = uvsSubtable + 6;
+				const uint32_t numberOfRecords = readBytes<4>(p);
+				for(uint32_t i = 0; i < numberOfRecords; ++i) {
+					const uint32_t varSelector = readBytes<3>(p);
+					const uint32_t nonDefaultUVSOffset = readBytes<4>(p += 4);
+					if(nonDefaultUVSOffset != 0) {
+						const uint8_t* q = uvsSubtable/*static_cast<const uint8_t*>(cmapData)*/ + nonDefaultUVSOffset;
+						const uint32_t numberOfMappings = readBytes<4>(q);
+						for(uint32_t j = 0; j < numberOfMappings; ++j) {
+							const uint32_t unicodeValue = readBytes<3>(q);
+							const uint32_t glyphID = readBytes<2>(q);
+							ivs.insert(make_pair(((varSelector - 0x0e0100u) << 24) | unicodeValue, static_cast<uint16_t>(glyphID)));
+						}
+					}
+				}
+			}
+//		}
 	}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
-	const class ScriptProperties {
-	public:
-		ScriptProperties() /*throw()*/ : p_(0), c_(0) {::ScriptGetProperties(&p_, &c_);}
-		const SCRIPT_PROPERTIES& get(int script) const {if(script >= c_) throw out_of_range("script"); return *p_[script];}
-		int numberOfOfScripts() const /*throw()*/ {return c_;}
-	private:
-		const SCRIPT_PROPERTIES** p_;
-		int c_;
-	} scriptProperties;
-
-	class UserSettings {
-	public:
-		UserSettings() /*throw()*/ {update();}
-		LANGID getDefaultLanguage() const /*throw()*/ {return langID_;}
-		const SCRIPT_DIGITSUBSTITUTE& getDigitSubstitution() const /*throw()*/ {return digitSubstitution_;}
-		void update() /*throw()*/ {langID_ = ::GetUserDefaultLangID();
-			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);}
-	private:
-		LANGID langID_;
-		SCRIPT_DIGITSUBSTITUTE digitSubstitution_;
-	} userSettings;
-
-	inline int estimateNumberOfGlyphs(length_t length) {return static_cast<int>(length) * 3 / 2 + 16;}
-
-	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
 
 	inline ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/ {
 		const TextAlignment alignment = (style.alignment != INHERIT_TEXT_ALIGNMENT) ?
@@ -207,10 +248,10 @@ namespace {
 			style.readingDirection : ((defaultStyle.get() != 0 && defaultStyle->readingDirection != INHERIT_READING_DIRECTION) ?
 				defaultStyle->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION);
 		switch(resolveTextAlignment(alignment, readingDirection)) {
-		case ALIGN_LEFT:	return LEFT_TO_RIGHT;
-		case ALIGN_RIGHT:	return RIGHT_TO_LEFT;
-		case ALIGN_CENTER:
-		default:			return readingDirection;
+			case ALIGN_LEFT:	return LEFT_TO_RIGHT;
+			case ALIGN_RIGHT:	return RIGHT_TO_LEFT;
+			case ALIGN_CENTER:
+			default:			return readingDirection;
 		}
 	}
 
@@ -295,20 +336,50 @@ namespace {
 		sds.NationalDigitLanguage = sds.TraditionalDigitLanguage = configuration.localeName;
 		return ::ScriptApplyDigitSubstitution(&sds, &sc, &ss);
 */	}
-} // namespace @0
 
-void dumpRuns(const LineLayout& layout) {
-#ifdef _DEBUG
-	ostringstream s;
-	layout.dumpRuns(s);
-	::OutputDebugStringA(s.str().c_str());
-#endif // _DEBUG
-}
+	inline bool uniscribeSupportsIVS() /*throw()*/ {
+		static bool checked = false, supports = false;
+		if(!checked) {
+			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
+			SCRIPT_ITEM items[4];
+			int numberOfItems;
+			if(SUCCEEDED(::ScriptItemize(text, MANAH_COUNTOF(text) - 1,
+					MANAH_COUNTOF(items), 0, 0, items, &numberOfItems)) && numberOfItems == 1)
+				supports = true;
+			checked = true;
+		}
+		return supports;
+	}
+
+	LANGID userCJKLanguage() /*throw()*/ {
+		// this code is preliminary...
+		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
+		LANGID result = getUserDefaultUILanguage();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		result = ::GetUserDefaultLangID();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		result = ::GetSystemDefaultLangID();
+		if(find(CJK_LANGUAGES, MANAH_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != MANAH_ENDOF(CJK_LANGUAGES))
+			return result;
+		switch(::GetACP()) {
+		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
+		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
+		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
+		}
+		return result;
+	}
+} // namespace @0
 
 void ascension::updateSystemSettings() /*throw()*/ {
 	systemColors.update();
 	userSettings.update();
 }
+
+
+// layout.* free functions //////////////////////////////////////////////////
 
 /**
  * Returns metrics of underline and/or strikethrough for the currently selected font.
@@ -362,6 +433,9 @@ namespace {
 	class SystemFont : public AbstractFont, public IFontMetrics {
 	public:
 		explicit SystemFont(HFONT handle);
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+		pair<bool, uint16_t> ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector) const;
+#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 		// AbstractFont
 		Object<HGDIOBJ, &::DeleteObject, HFONT> handle() const /*throw()*/ {return Object<HGDIOBJ, &::DeleteObject, HFONT>(borrowed(handle_.get()));}
 		const IFontMetrics& metrics() const /*throw()*/ {return *this;}
@@ -377,6 +451,9 @@ namespace {
 		Object<HGDIOBJ, &::DeleteObject, HFONT> handle_;
 		int ascent_, averageCharacterWidth_, descent_, externalLeading_, internalLeading_, xHeight_;
 		String familyName_;
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+		auto_ptr<IdeographicVariationSequences> ivsMappings_;
+#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	};
 	class SystemFonts : public IFontCollection {
 		tr1::shared_ptr<const AbstractFont> get(const String& familyName, const FontProperties& properties, double sizeAdjust) const;
@@ -420,6 +497,32 @@ SystemFont::SystemFont(HFONT handle) : handle_(managed(handle)) {
 	LOGFONTW lf;
 	familyName_ = (::GetObjectW(handle_.get(), sizeof(LOGFONTW), &lf) > 0) ? lf.lfFaceName : L"";
 }
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+pair<bool, uint16_t> SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector) const {
+	if(!isValidCodePoint(baseCharacter))
+		throw invalid_argument("baseCharacter");
+	else if(!isValidCodePoint(variationSelector))
+		throw invalid_argument("variationSelector");
+	else if(variationSelector < 0x0e0100ul || variationSelector > 0x0e01eful)
+		return make_pair(false, 0);
+	if(ivsMappings_.get() == 0) {
+		const_cast<SystemFont*>(this)->ivsMappings_.reset(new IdeographicVariationSequences);
+		ScreenDC dc;
+		HFONT oldFont = dc.selectObject(handle_.get());
+		static const uint32_t CMAP_TAG = makeTrueTypeTag("cmap");
+		const DWORD bytes = dc.getFontData(CMAP_TAG, 0, 0, 0);
+		if(bytes != GDI_ERROR) {
+			manah::AutoBuffer<uint8_t> data(new uint8_t[bytes]);
+			if(GDI_ERROR != dc.getFontData(CMAP_TAG, 0, data.get(), bytes))
+				generateIVSMappings(data.get(), bytes, *const_cast<SystemFont*>(this)->ivsMappings_);
+		}
+		dc.selectObject(oldFont);
+	}
+	IdeographicVariationSequences::const_iterator i(ivsMappings_->find(((variationSelector - 0x0e0100ul) << 24) | baseCharacter));
+	return (i != ivsMappings_->end()) ? make_pair(true, i->second) : make_pair(false, 0);
+}
+#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 tr1::shared_ptr<const AbstractFont> SystemFonts::get(const String& familyName, const FontProperties& properties, double sizeAdjust) const {
 	Registry::const_iterator i(registry_.find(make_pair(familyName, properties)));
@@ -935,11 +1038,11 @@ namespace {
 		return NOT_PROPERTY;
 	}
 
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	const OPENTYPE_TAG HANI_TAG = makeOpenTypeTag("hani");
-	const OPENTYPE_TAG JP78_TAG = makeOpenTypeTag("jp78");
-	const OPENTYPE_TAG JP90_TAG = makeOpenTypeTag("jp90");
-	const OPENTYPE_TAG JP04_TAG = makeOpenTypeTag("jp04");
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
+	const OPENTYPE_TAG HANI_TAG = makeTrueTypeTag("hani");
+	const OPENTYPE_TAG JP78_TAG = makeTrueTypeTag("jp78");
+	const OPENTYPE_TAG JP90_TAG = makeTrueTypeTag("jp90");
+	const OPENTYPE_TAG JP04_TAG = makeTrueTypeTag("jp04");
 	struct IVStoOTFT {
 		ulong ivs;	// (base character) << 8 | (variation selector number)
 		OPENTYPE_TAG featureTag;
@@ -950,20 +1053,7 @@ namespace {
 	struct GetIVS {
 		ulong operator()(size_t index) /*throw()*/ {return IVS_TO_OTFT[index].ivs;}
 	};
-	inline bool uniscribeSupportsVSS() /*throw()*/ {
-		static bool checked = false, supports = false;
-		if(!checked) {
-			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
-			SCRIPT_ITEM items[4];
-			int numberOfItems;
-			if(SUCCEEDED(::ScriptItemize(text, MANAH_COUNTOF(text) - 1,
-					MANAH_COUNTOF(items), 0, 0, items, &numberOfItems)) && numberOfItems == 1)
-				supports = true;
-			checked = true;
-		}
-		return supports;
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
 } // namespace @0
 
 void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun) {
@@ -983,7 +1073,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	HFONT oldFont;
 
 	// compute font properties
-	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String());
+	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String(L"\x5c0f\x585a\x660e\x671d Pr6N R"));
 	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
 	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
 	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
@@ -1208,20 +1298,37 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 #undef ASCENSION_CHECK_FAILED_FONTS
 	}
 
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	if(!uniscribeSupportsVSS() && supportsOpenTypeFeatures()) {
+#if defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND) || defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND)
+	if(!uniscribeSupportsIVS()
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
+			&& supportsOpenTypeFeatures()
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
+			) {
 		if(previousRun != 0 && length() > 1) {
-			const CodePoint vs = surrogates::decodeFirst(lineString.begin() + column(), lineString.begin() + column() + 2);
-			if(vs >= 0xe0100ul && vs <= 0xe01eful) {
+			const CodePoint variationSelector = surrogates::decodeFirst(lineString.begin() + column(), lineString.begin() + column() + 2);
+			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
 					lineString.data() + previousRun->column(), lineString.data() + previousRun->column() + previousRun->length());
+				const WORD originalGlyph = previousRun->glyphs_->indices[0];
+
+				pair<bool, uint16_t> result;
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+				result = static_cast<const SystemFont*>(font_.get())->ivsGlyph(baseCharacter, variationSelector);
+#elif ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
+				result.first = false;
 				const size_t i = ascension::internal::searchBound(
 					0u, MANAH_COUNTOF(IVS_TO_OTFT), (baseCharacter << 8) | (vs - 0xe0100ul), GetIVS());
 				if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xe0100ul))) {
 					// found valid IVS -> apply OpenType feature tag to obtain the variant
 					// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
-					hr = uspLib->get<0>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
-						HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, previousRun->glyphs_->indices[0], previousRun->glyphs_->indices.get());
+					if(SUCCEEDED(hr = uspLib->get<0>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
+							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, originalGlyph, &result.second)))
+						result.first = true;
+				}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+
+				if(result.first) {
+					previousRun->glyphs_->indices[0] = result.second;
 					// last character in the previous run and first character in this run are an IVS
 					// => so, remove glyphs correspond to the first character
 					WORD blankGlyph;
@@ -1240,7 +1347,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			}
 		}
 	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_*_WORKAROUND
 }
 
 auto_ptr<LineLayout::Run> LineLayout::Run::splitIfTooLong(const String& lineString) {
