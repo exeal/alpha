@@ -210,7 +210,7 @@ namespace ascension {
 			bool operator!=(const FontProperties& other) const /*throw()*/ {return !(*this == other);}
 		};
 
-		struct TypographyProperties {};
+		typedef uint32_t TrueTypeFontTag;
 
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
@@ -224,24 +224,37 @@ namespace ascension {
 			CAPITALIZE, UPPERCASE, LOWERCASE, NONE, TEXT_TRANSFORM_INHERIT
 		};
 
-		/// Visual style settings of a text run.
+		/**
+		 * Visual style settings of a text run.
+		 * @see StyledRun, IStyledRunIterator, LineStyle
+		 */
 		struct RunStyle : public manah::FastArenaObject<RunStyle> {
-			Color foreground;	///< Foreground color.
-			Color background;	///< Background color.
-			Border border;		///< Border of a text run.
+			/// Foreground color.
+			Color foreground;
+			/// Background color.
+			Color background;
+			/// Border of the text run. See the description of @c Border.
+			Border border;
 			BaselineAlignment baselineAlignment;
-			String fontFamily;	///< Family name. Empty means inherit the parent.
+			/// Font family name. An empty string means inherit the parent.
+			String fontFamily;
+			/// Font properties. See @c FontProperties.
 			FontProperties fontProperties;
-			double fontSizeAdjust;	///< 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
+			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
+			double fontSizeAdjust;
 			std::locale locale;
-			TypographyProperties typographyProperties;
+			/// Typography features applied to the text. See the description of @c TypographyProperties.
+			std::map<TrueTypeFontTag, uint32_t> typographyProperties;
 			Decorations decorations;
-			Length letterSpacing;	/// Letter spacing in DIP. Default is 0.
-			Length wordSpacing;		/// Word spacing in DIP. Default is 0.
+			/// Letter spacing in DIP. Default is 0.
+			Length letterSpacing;
+			/// Word spacing in DIP. Default is 0.
+			Length wordSpacing;
 			TextTransform textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
-			bool shapingEnabled;	/// Set @c false to disable shaping.
+			/// Set @c false to disable shaping.
+			bool shapingEnabled;
 
 			/// Default constructor.
 			RunStyle() : letterSpacing(0), wordSpacing(0), textTransform(), shapingEnabled(true) {}
@@ -309,25 +322,35 @@ namespace ascension {
 		struct NumberSubstitution {
 			/// Specifies how to apply number substitution on digits and related punctuation.
 			enum Method {
-				/// The substitution method should be determined based on the locale.
+				/// Uses the user setting.
+				USER_SETTING,
+				/**
+				 * The substitution method should be determined based on the system setting for
+				 * the locale given in the text.
+				 */
 				FROM_LOCALE,
-				/// The number shapes depend on the context.
+				/**
+				 * The number shapes depend on the context (the nearest preceding strong character,
+				 * or the reading direction if there is none).
+				 */
 				CONTEXTUAL,
-				/// No substitution is performed. Characters U+0030..0039 are always rendered as
-				/// nominal numeral shapes (European numbers).
+				/**
+				 * No substitution is performed. Characters U+0030..0039 are always rendered as
+				 * nominal numeral shapes (European numbers, not Arabic-Indic digits).
+				 */
 				NONE,
 				/// Numbers are rendered using the national number shapes.
 				NATIONAL,
 				/// Numbers are rendered using the traditional shapes for the specified locale.
 				TRADITIONAL
-			} method;	///< The substitution method.
+			} method;	///< The substitution method. Default value is @c USER_SETTING.
 			/// The name of the locale to be used.
 			std::string localeName;
-			/// Whether to ignore user override.
+			/// Whether to ignore user override. Default value is @c false.
 			bool ignoreUserOverride;
 
 			/// Default constructor.
-			NumberSubstitution() /*throw()*/ : method(NONE), ignoreUserOverride(false) {}
+			NumberSubstitution() /*throw()*/ : method(USER_SETTING), ignoreUserOverride(false) {}
 		};
 
 		struct LineStyle {
