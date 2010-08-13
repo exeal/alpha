@@ -92,20 +92,15 @@ namespace ascension {
 			int lineSpacing;
 			/// Line wrap configuration.
 			LineWrapConfiguration lineWrap;
-			/// Set @c true to justify the lines if wrapped. Default value is @c false.
-			bool justifiesLines;
 			/// If set to @c true, zero width control characters are shaped as representative glyphs. Default is @c false.
 			bool displaysShapingControls;
 			/// Set @c true to inhibit from generating mirrored glyphs. Default value is @c false.
 			bool inhibitsSymmetricSwapping;
 			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is @c false.
 			bool disablesDeprecatedFormatCharacters;
-			/// Digits substitution type. Default value is @c DST_USER_DEFAULT.
-			presentation::NumberSubstitution numberSubstitution;
 			/// Constructor initializes the all members to their default values.
 			LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
-				justifiesLines(false), displaysShapingControls(false), inhibitsSymmetricSwapping(false),
-				disablesDeprecatedFormatCharacters(false) {}
+				displaysShapingControls(false), inhibitsSymmetricSwapping(false), disablesDeprecatedFormatCharacters(false) {}
 			/// Returns @c true if the all mwmbers are valid.
 			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 		};

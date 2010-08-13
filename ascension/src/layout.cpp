@@ -50,13 +50,18 @@ namespace {
 	class UserSettings {
 	public:
 		UserSettings() /*throw()*/ {update();}
-		LANGID getDefaultLanguage() const /*throw()*/ {return langID_;}
-		const SCRIPT_DIGITSUBSTITUTE& getDigitSubstitution() const /*throw()*/ {return digitSubstitution_;}
-		void update() /*throw()*/ {langID_ = ::GetUserDefaultLangID();
-			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);}
+		LANGID defaultLanguage() const /*throw()*/ {return languageID_;}
+		const SCRIPT_DIGITSUBSTITUTE& digitSubstitution(bool ignoreUserOverride) const /*throw()*/ {
+			return ignoreUserOverride ? digitSubstitutionNoUserOverride_ : digitSubstitution_;
+		}
+		void update() /*throw()*/ {
+			languageID_ = ::GetUserDefaultLangID();
+			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);
+			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT | LOCALE_NOUSEROVERRIDE, &digitSubstitutionNoUserOverride_);
+		}
 	private:
-		LANGID langID_;
-		SCRIPT_DIGITSUBSTITUTE digitSubstitution_;
+		LANGID languageID_;
+		SCRIPT_DIGITSUBSTITUTE digitSubstitution_, digitSubstitutionNoUserOverride_;
 	} userSettings;
 
 	int CALLBACK checkFontInstalled(ENUMLOGFONTEXW*, NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
@@ -69,7 +74,7 @@ namespace {
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
 	ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/;
 	int pixels(const DC& dc, const Length& length, bool vertical, const IFontMetrics& fontMetrics);
-	HRESULT resolveNumberSubstitution(const NumberSubstitution& configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
+	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
 	template<typename T> inline int round(T value) {return static_cast<int>(floor(value + 0.5));}
 	bool uniscribeSupportsVSS() /*throw()*/;
 	LANGID userCJKLanguage() /*throw()*/;
@@ -79,12 +84,50 @@ namespace {
 	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs);
 #endif // !ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-	typedef ulong OPENTYPE_TAG;
-	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 1);
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptSubstituteSingleGlyph",
-		HRESULT(WINAPI *signature)(HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*,
-			OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG, WORD, WORD*));
-	auto_ptr<ascension::internal::SharedLibrary<Uniscribe16> > uspLib(new ascension::internal::SharedLibrary<Uniscribe16>("usp10.dll"));
+	// New Uniscribe features (usp10.dll 1.6) dynamic loading
+#if(!defined(UNISCRIBE_OPENTYPE) || UNISCRIBE_OPENTYPE < 0x0100)
+	typedef ULONG OPENTYPE_TAG;
+	static const OPENTYPE_TAG SCRIPT_TAG_UNKNOWN = 0x00000000;
+	struct OPENTYPE_FEATURE_RECORD {
+		OPENTYPE_TAG tagFeature;
+		LONG lParameter;
+	};
+	struct SCRIPT_CHARPROP {
+		WORD fCanGlyphAlone : 1;
+		WORD reserved : 15;
+	};
+	struct SCRIPT_GLYPHPROP {
+		SCRIPT_VISATTR sva;
+		WORD reserved;
+	};
+	struct TEXTRANGE_PROPERTIES {
+		OPENTYPE_FEATURE_RECORD* potfRecords;
+		int cotfRecords;
+	};
+#endif // not usp10-1.6
+	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 4);
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptPlaceOpenType",
+		HRESULT(WINAPI* signature)(
+			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
+			TEXTRANGE_PROPERTIES**, int, const WCHAR*, WORD*, SCRIPT_CHARPROP*, int, const WORD*,
+			const SCRIPT_GLYPHPROP*, int, int*, GOFFSET*, ABC*));
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 1, "ScriptShapeOpenType",
+		HRESULT(WINAPI* signature)(
+			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
+			TEXTRANGE_PROPERTIES**, int, const WCHAR*, int, int, WORD*, SCRIPT_CHARPROP*, WORD*,
+			SCRIPT_GLYPHPROP*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 2, "ScriptItemizeOpenType",
+		HRESULT(WINAPI* signature)(
+			const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*,
+			OPENTYPE_TAG*, int*));
+//#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 3, "ScriptSubstituteSingleGlyph",
+		HRESULT(WINAPI *signature)(
+			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
+			WORD, WORD*));
+//#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	auto_ptr<ascension::internal::SharedLibrary<Uniscribe16> > uspLib(
+		new ascension::internal::SharedLibrary<Uniscribe16>("usp10.dll"));
 } // namespace @0
 
 // file-local free functions ////////////////////////////////////////////////
@@ -289,13 +332,16 @@ namespace {
 		}
 	}
 
-	HRESULT resolveNumberSubstitution(const NumberSubstitution& configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
-//		if(!configuration.ignoreUserOverride)
-			return ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &sc, &ss);
-/*		NumberSubstitution::Method method;
-		if(configuration.method == NumberSubstitution::FROM_LOCALE) {
+	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
+		if(configuration == 0 || configuration->method == NumberSubstitution::USER_SETTING)
+			return ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(
+				(configuration != 0) ? configuration->ignoreUserOverride : false), &sc, &ss);
+
+		NumberSubstitution::Method method;
+		if(configuration->method == NumberSubstitution::FROM_LOCALE) {
 			DWORD n;
-			if(::GetLocaleInfoW(configuration.localeName,
+			if(::GetLocaleInfoW(
+					LOCALE_USER_DEFAULT | (configuration->ignoreUserOverride ? LOCALE_NOUSEROVERRIDE : 0),
 					LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
 				return HRESULT_FROM_WIN32(::GetLastError());
 			switch(n) {
@@ -312,30 +358,31 @@ namespace {
 					return S_FALSE;	// hmm...
 			}
 		} else
-			method = configuration.method;
-		SCRIPT_DIGITSUBSTITUTE sds;
-		switch(configuration.method) {
+			method = configuration->method;
+
+		// modify SCRIPT_CONTROL and SCRIPT_STATE (without SCRIPT_DIGITSUBSTITUTE)
+		sc.uDefaultLanguage = PRIMARYLANGID(userSettings.defaultLanguage());
+		switch(method) {
 			case NumberSubstitution::CONTEXTUAL:
-//				sc.fContextDigits = ss.fDigitSubstitute = 1;
-				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+				sc.fContextDigits = ss.fDigitSubstitute = 1;
+				ss.fArabicNumContext = 0;
 				break;
 			case NumberSubstitution::NONE:
-//				ss.fDigitSubstitute = 0;
-				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
+				ss.fDigitSubstitute = 0;
 				break;
 			case NumberSubstitution::NATIONAL:
-//				initialState.fDigitSubstitute = 1;
-				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+				ss.fDigitSubstitute = 1;
+				sc.fContextDigits = ss.fArabicNumContext = 0;
+				break;
 			case NumberSubstitution::TRADITIONAL:
-//				initialState.fDigitSubstitute = 1;
-				sds.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_TRADITIONAL;
+				ss.fDigitSubstitute = ss.fArabicNumContext = 1;
+				sc.fContextDigits = 0;
 				break;
 			default:
 				throw invalid_argument("configuration.method");
 		}
-		sds.NationalDigitLanguage = sds.TraditionalDigitLanguage = configuration.localeName;
-		return ::ScriptApplyDigitSubstitution(&sds, &sc, &ss);
-*/	}
+		return S_OK;
+	}
 
 	inline bool uniscribeSupportsIVS() /*throw()*/ {
 		static bool checked = false, supports = false;
@@ -1494,6 +1541,7 @@ namespace {
 LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformation,
 		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().lineStyle(line)),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
+	assert(style_.get() != 0);
 	// calculate the wrapping width
 	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
 		wrapWidth_ = layoutInformation.width();
@@ -1516,7 +1564,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		} else {
 			wrap(dc);
 			reorder();
-			if(lip_.layoutSettings().justifiesLines)
+			if(style_->alignment == JUSTIFY)
 				justify();
 		}
 	} else {	// an empty line
@@ -2162,7 +2210,8 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
 	initialState.fDisplayZWG = c.displaysShapingControls;
-	resolveNumberSubstitution(c.numberSubstitution, control, initialState);	// ignore result...
+	resolveNumberSubstitution(
+		(style_.get() != 0) ? &style_->numberSubstitution : 0, control, initialState);	// ignore result...
 
 	// itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
@@ -2195,7 +2244,7 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 		}
 	}
 
-	// style
+	// text run style
 	merge(items, numberOfItems, presentation.textRunStyles(lineNumber));
 
 	if(items != fastItems)
@@ -3983,7 +4032,7 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 				ss.fDigitSubstitute = 1;
 				break;
 			case DST_USER_DEFAULT:
-*/				hr = ::ScriptApplyDigitSubstitution(&userSettings.getDigitSubstitution(), &sc, &ss);
+*/				hr = ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(false), &sc, &ss);
 /*				break;
 			}
 */			dc.setTextCharacterExtra(0);

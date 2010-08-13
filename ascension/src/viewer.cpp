@@ -2385,7 +2385,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 			const LineLayout& layout = **i;
 			++i;	// invalidate() may break iterator
 			if(layout.numberOfSublines() != 1
-					|| viewer_.configuration().justifiesLines || layout.longestSublineWidth() > newWidth)
+					|| layout.style().alignment == JUSTIFY || layout.longestSublineWidth() > newWidth)
 //				layout.rewrap();
 				invalidate(layout.lineNumber(), layout.lineNumber() + 1);
 		}
