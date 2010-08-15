@@ -24,7 +24,9 @@ namespace ascension {
 		/// @c Color provides colors based on RGB values.
 		class Color : public manah::FastArenaObject<Color> {
 		public:
-			/// Creates
+			static const Color TRANSPARENT_COLOR;
+		public:
+			/// Creates an invalid @c Color object.
 			Color() /*throw()*/ : valid_(false) {}
 			/// Creates a color value based on RGB values.
 			Color(byte red, byte green, byte blue, byte alpha = 255) /*throw()*/
@@ -51,7 +53,7 @@ namespace ascension {
 			/// Inequality operator.
 			bool operator!=(const Color& other) const /*throw()*/ {return !(*this == other);}
 		private:
-			ushort red_, green_, blue_, alpha_;
+			uint16_t red_, green_, blue_, alpha_;
 			bool valid_;
 		};
 
