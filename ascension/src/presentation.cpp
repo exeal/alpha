@@ -18,6 +18,12 @@ using namespace std;
 using ascension::presentation::Colors;
 
 
+// Color ////////////////////////////////////////////////////////////////////
+
+/// A transparent object whose all components are zero.
+const Color Color::TRANSPARENT_COLOR(0, 0, 0, 0);
+
+
 // Border ///////////////////////////////////////////////////////////////////
 
 // TODO: these value are changed later.
