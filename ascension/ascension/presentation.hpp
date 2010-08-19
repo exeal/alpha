@@ -124,7 +124,7 @@ namespace ascension {
 				Color color;
 				/// Style of the border. Default value is @c NONE.
 				Style style;
-				/// Thickness of the border. Default value is @c MEDIUM_WIDTH.
+				/// Thickness of the border. Default value is @c MEDIUM.
 				Length width;
 
 				/// Default constructor.
@@ -197,7 +197,7 @@ namespace ascension {
 				SEMI_EXPANDED, EXPANDED, EXTRA_EXPANDED, ULTRA_EXPANDED, INHERIT_STRETCH
 			} stretch;
 			enum Style {
-				NORMAL_STYLE, ITALIC, OBLIQUE, INHERIT_STYLE
+				NORMAL_STYLE, ITALIC, OBLIQUE, BACKSLANT, INHERIT_STYLE
 			} style;
 			double size;	///< Font size (em height) in pixels. Zero means inherit the parent.
 

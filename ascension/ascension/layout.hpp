@@ -13,10 +13,6 @@
 #include <manah/win32/gdi-object.hpp>
 #include <vector>
 
-// forward declaration
-struct tag_SCRIPT_ITEM;
-typedef tag_SCRIPT_ITEM SCRIPT_ITEM;
-
 namespace ascension {
 
 	namespace presentation {class Presentation;}
@@ -421,12 +417,10 @@ namespace ascension {
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
 			void locations(length_t column, POINT* leading, POINT* trailing) const;
-			void merge(const SCRIPT_ITEM items[], std::size_t numberOfItems, std::auto_ptr<presentation::IStyledRunIterator> styles) /*throw()*/;
 			int nextTabStop(int x, Direction direction) const /*throw()*/;
 			const String& text() const /*throw()*/;
 			void reorder() /*throw()*/;
 //			void rewrap();
-			void shape(manah::win32::gdi::DC& dc) /*throw()*/;
 			int nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/;
 			void wrap(manah::win32::gdi::DC& dc) /*throw()*/;
 		private:

@@ -106,20 +106,20 @@ namespace {
 	};
 #endif // not usp10-1.6
 	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 4);
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptPlaceOpenType",
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptItemizeOpenType",
+		HRESULT(WINAPI* signature)(
+			const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*,
+			OPENTYPE_TAG*, int*));
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 1, "ScriptPlaceOpenType",
 		HRESULT(WINAPI* signature)(
 			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
 			TEXTRANGE_PROPERTIES**, int, const WCHAR*, WORD*, SCRIPT_CHARPROP*, int, const WORD*,
 			const SCRIPT_GLYPHPROP*, int, int*, GOFFSET*, ABC*));
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 1, "ScriptShapeOpenType",
+	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 2, "ScriptShapeOpenType",
 		HRESULT(WINAPI* signature)(
 			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
 			TEXTRANGE_PROPERTIES**, int, const WCHAR*, int, int, WORD*, SCRIPT_CHARPROP*, WORD*,
 			SCRIPT_GLYPHPROP*, int*));
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 2, "ScriptItemizeOpenType",
-		HRESULT(WINAPI* signature)(
-			const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*,
-			OPENTYPE_TAG*, int*));
 //#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 3, "ScriptSubstituteSingleGlyph",
 		HRESULT(WINAPI *signature)(
@@ -648,7 +648,7 @@ const IFontCollection& layout::systemFonts() {
 class LineLayout::Run {
 	MANAH_UNASSIGNABLE_TAG(Run);
 public:
-	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
+	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
 	virtual ~Run() /*throw()*/;
 	uchar bidiEmbeddingLevel() const /*throw()*/;
 	auto_ptr<Run> breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip);	// 'at' is from the beginning of the line
@@ -659,6 +659,8 @@ public:
 	HRESULT justify(int width);
 	length_t length() const /*throw()*/ {return characterRange_.length();}
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
+	static void mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles, vector<Run*>& result);
 	HRESULT logicalWidths(int widths[]) const;
 	int numberOfGlyphs() const /*throw()*/;
 	ReadingDirection readingDirection() const /*throw()*/;
@@ -672,13 +674,14 @@ public:
 protected:
 	struct GlyphData {
 		const length_t column;	// first character (distance from the beginning of the line) for this glyph arrays
+		const OPENTYPE_TAG scriptTag;
 		SCRIPT_CACHE cache;
 		// only 'clusters' is character-base. others are glyph-base
 		manah::AutoBuffer<WORD> indices, clusters;
 		manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
 		manah::AutoBuffer<int> advances, justifiedAdvances;
 		manah::AutoBuffer<GOFFSET> offsets;
-		explicit GlyphData(length_t column) /*throw()*/ : column(column), cache(0) {}
+		GlyphData(length_t column, OPENTYPE_TAG scriptTag) /*throw()*/ : column(column), scriptTag(scriptTag), cache(0) {}
 		~GlyphData() /*throw()*/ {::ScriptFreeCache(&cache);}
 	};
 protected:
@@ -704,8 +707,9 @@ private:
 	ABC width_;
 };
 
-LineLayout::Run::Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const RunStyle> style) /*throw()*/
-		: characterRange_(0, length), analysis_(script), glyphs_(new GlyphData(column)), style_(style) {
+LineLayout::Run::Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script,
+		OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/
+		: characterRange_(0, length), analysis_(script), glyphs_(new GlyphData(column, scriptTag)), style_(style) {
 }
 
 LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary) /*throw()*/ :
@@ -956,6 +960,107 @@ inline HRESULT LineLayout::Run::logicalWidths(int widths[]) const {
 		throw NullPointerException("widths");
 	return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
 		numberOfGlyphs(), advances(), clusters(), visualAttributes(), widths);
+}
+
+/**
+ * Merges the given item runs and the given style runs.
+ * @param lineString
+ * @param items the items itemized by @c #itemize()
+ * @param numberOfItems the length of the array @a items
+ * @param styles the iterator returns the styled runs in the line. can be @c null
+ * @see presentation#Presentation#getLineStyle
+ */
+void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles, vector<Run*>& result) {
+	if(scriptRuns == 0)
+		throw NullPointerException("scriptRuns");
+	else if(numberOfScriptRuns == 0)
+		throw invalid_argument("numberOfScriptRuns");
+
+#define ASCENSION_SPLIT_LAST_RUN()										\
+	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {					\
+		Run& back = *runs.back();										\
+		Run* piece = new SimpleRun(back.style);							\
+		length_t pieceLength = MAXIMUM_RUN_LENGTH;						\
+		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
+			--pieceLength;												\
+		piece->analysis = back.analysis;								\
+		piece->column = back.column + pieceLength;						\
+		piece->setLength(back.length() - pieceLength);					\
+		back.setLength(pieceLength);									\
+		runs.push_back(piece);											\
+	}
+
+	vector<Run*> runs;
+	runs.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
+
+	const SCRIPT_ITEM* scriptRun = scriptRuns;
+	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;
+	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
+	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
+	const StyledRun* styleRun = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
+	if(styleRun != 0)
+		styles->next();
+	pair<const StyledRun*, length_t> nextStyleRun;
+	nextStyleRun.first = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
+	nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+	do {
+		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, (styleRun != 0) ? styleRun->column : 0);
+		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
+		length_t newRunEnd;
+		bool forwardScriptRun = false, forwardStyleRun = false, breakScriptRun = false;
+
+		if(nextScriptRun.second == nextStyleRun.second) {
+			newRunEnd = nextScriptRun.second;
+			forwardScriptRun = forwardStyleRun = true;
+		} else if(nextScriptRun.second < nextStyleRun.second) {
+			newRunEnd = nextScriptRun.second;
+			forwardScriptRun = true;
+		} else {	// nextScriptRun.second > nextStyleRun.second
+			newRunEnd = nextStyleRun.second;
+			forwardStyleRun = true;
+			breakScriptRun = true;
+		}
+
+		if(breakScriptRun) {
+			if(breakScriptRun =
+					!legacyctype::isspace(lineString[previousRunEnd - 1]) && !legacyctype::isspace(lineString[previousRunEnd]))
+				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 1;
+		}
+		runs.push_back(
+			new Run(previousRunEnd, newRunEnd - previousRunEnd, scriptRun->a,
+			(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN,	// TODO: 'DFLT' is preferred?
+			(styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>()));
+		if(breakScriptRun) {
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 1;
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
+		}
+		if(forwardScriptRun) {
+			scriptRun = nextScriptRun.first;
+			if(nextScriptRun.first != 0) {
+				if(++nextScriptRun.first == scriptRuns + numberOfScriptRuns)
+					nextScriptRun.first = 0;
+				nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
+			}
+		}
+		if(forwardStyleRun && styles.get() != 0) {
+			styleRun = nextStyleRun.first;
+			styles->next();
+			nextStyleRun.first = styles->isDone() ? 0 : &styles->current();
+			nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+		}
+
+		while(true) {
+			auto_ptr<Run> piece(runs.back()->splitIfTooLong(lineString));
+			if(piece.get() == 0)
+				break;
+			runs.push_back(piece.release());
+		}
+	} while(scriptRun != 0 || styleRun != 0);
+
+	swap(runs, result);
+
+#undef ASCENSION_SPLIT_LAST_RUN
 }
 
 inline int LineLayout::Run::numberOfGlyphs() const /*throw()*/ {
@@ -1356,7 +1461,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
 					lineString.data() + previousRun->column(), lineString.data() + previousRun->column() + previousRun->length());
-				const WORD originalGlyph = previousRun->glyphs_->indices[0];
+				WORD& originalGlyph = previousRun->glyphs_->indices[previousRun->glyphs_->clusters[previousRun->length() - 1]];
 
 				pair<bool, uint16_t> result;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -1368,14 +1473,14 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 				if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xe0100ul))) {
 					// found valid IVS -> apply OpenType feature tag to obtain the variant
 					// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
-					if(SUCCEEDED(hr = uspLib->get<0>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
+					if(SUCCEEDED(hr = uspLib->get<3>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
 							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, originalGlyph, &result.second)))
 						result.first = true;
 				}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 				if(result.first) {
-					previousRun->glyphs_->indices[0] = result.second;
+					originalGlyph = result.second;
 					// last character in the previous run and first character in this run are an IVS
 					// => so, remove glyphs correspond to the first character
 					WORD blankGlyph;
@@ -1423,7 +1528,7 @@ auto_ptr<LineLayout::Run> LineLayout::Run::splitIfTooLong(const String& lineStri
 			--opportunity;
 	}
 
-	auto_ptr<Run> following(new Run(opportunity, length() - opportunity, analysis_, style_));
+	auto_ptr<Run> following(new Run(opportunity, length() - opportunity, analysis_, glyphs_->scriptTag, style_));
 	characterRange_ = Range<length_t>(0, opportunity);
 	return following;
 }
@@ -1542,6 +1647,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().lineStyle(line)),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
 	assert(style_.get() != 0);
+
 	// calculate the wrapping width
 	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
 		wrapWidth_ = layoutInformation.width();
@@ -1551,26 +1657,37 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
 		}
 	}
-	// construct the layout
-	if(!text().empty()) {
-		itemize(line);
-		shape(dc);
-		if(numberOfRuns_ == 0 || wrapWidth_ == -1) {
-			numberOfSublines_ = 1;
-			sublineFirstRuns_ = new size_t[1];
-			sublineFirstRuns_[0] = 0;
-			reorder();
-			expandTabsWithoutWrapping();
-		} else {
-			wrap(dc);
-			reorder();
-			if(style_->alignment == JUSTIFY)
-				justify();
-		}
-	} else {	// an empty line
+
+	const String& lineString = text();
+	if(lineString.empty()) {	// an empty line
 		numberOfRuns_ = 0;
 		numberOfSublines_ = 1;
 		longestSublineWidth_ = 0;
+		return;
+	}
+
+	// construct the layout
+	itemize(line);
+
+	// generate and position the glyphs for the text
+	for(size_t i = 0; i < numberOfRuns_; ++i) {
+		Run& run = *runs_[i];
+		run.shape(dc, lineString, lip_, i > 0 ? runs_[i - 1] : 0);
+		run.place(dc, lineString, lip_);
+	}
+
+	// wrap into visual sublines and reorder runs in each sublines
+	if(numberOfRuns_ == 0 || wrapWidth_ == -1) {
+		numberOfSublines_ = 1;
+		sublineFirstRuns_ = new size_t[1];
+		sublineFirstRuns_[0] = 0;
+		reorder();
+		expandTabsWithoutWrapping();
+	} else {
+		wrap(dc);
+		reorder();
+		if(style_->alignment == JUSTIFY)
+			justify();
 	}
 }
 
@@ -2191,6 +2308,16 @@ bool LineLayout::isBidirectional() const /*throw()*/ {
 	return false;
 }
 
+inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
+		const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
+	static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+	if(scriptItemizeOpenType != 0 && scriptTags != 0)
+		return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
+	else
+		return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+}
+
 /**
  * Itemizes the text into shapable runs.
  * @param lineNumber the line number of the line
@@ -2216,26 +2343,33 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	// itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
 	static SCRIPT_ITEM fastItems[128];
-	int expectedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2);
+	static OPENTYPE_TAG fastScriptTags[MANAH_COUNTOF(fastItems)];
 	SCRIPT_ITEM* items;
-	int numberOfItems;
-	if(expectedNumberOfRuns <= MANAH_COUNTOF(fastItems)) {
-		hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
-			expectedNumberOfRuns = MANAH_COUNTOF(fastItems) - 1, &control, &initialState, items = fastItems, &numberOfItems);
-		if(hr == E_OUTOFMEMORY)
-			expectedNumberOfRuns *= 2;
-	} else
-		hr = E_OUTOFMEMORY;
-	if(hr == E_OUTOFMEMORY) {
-		while(true) {
-			items = new SCRIPT_ITEM[expectedNumberOfRuns];
-			hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
-				expectedNumberOfRuns - 1, &control, &initialState, items, &numberOfItems);
-			if(hr != E_OUTOFMEMORY)	// expectedNumberOfRuns was enough...
-				break;
-			delete[] items;
-			expectedNumberOfRuns *= 2;
+	OPENTYPE_TAG* scriptTags;
+	manah::AutoBuffer<SCRIPT_ITEM> autoItems;
+	manah::AutoBuffer<OPENTYPE_TAG> autoScriptTags;
+	int estimatedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2), numberOfItems;
+	HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+	while(true) {
+		if(estimatedNumberOfRuns <= MANAH_COUNTOF(fastItems)) {
+			items = fastItems;
+			scriptTags = (scriptItemizeOpenType != 0) ? fastScriptTags : 0;
+		} else {
+			autoItems.reset(new SCRIPT_ITEM[estimatedNumberOfRuns]);
+			items = autoItems.get();
+			autoScriptTags.reset((scriptItemizeOpenType != 0) ? new OPENTYPE_TAG[estimatedNumberOfRuns] : 0);
+			scriptTags = autoScriptTags.get();
 		}
+		if(scriptItemizeOpenType != 0)
+			hr = (*scriptItemizeOpenType)(line.data(), static_cast<int>(line.length()),
+				estimatedNumberOfRuns, &control, &initialState, items, scriptTags, &numberOfItems);
+		else
+			hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
+				estimatedNumberOfRuns, &control, &initialState, items, &numberOfItems);
+		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
+			break;
+		estimatedNumberOfRuns *= 2;
 	}
 	if(c.disablesDeprecatedFormatCharacters) {
 		for(int i = 0; i < numberOfItems; ++i) {
@@ -2245,10 +2379,10 @@ inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
 	}
 
 	// text run style
-	merge(items, numberOfItems, presentation.textRunStyles(lineNumber));
-
-	if(items != fastItems)
-		delete[] items;
+	vector<Run*> runs;
+	Run::mergeScriptsAndStyles(line.data(), items, scriptTags, numberOfItems, presentation.textRunStyles(lineNumber), runs);
+	runs_ = new Run*[numberOfRuns_ = runs.size()];
+	copy(runs.begin(), runs.end(), runs_);
 }
 
 /// Justifies the wrapped visual lines.
@@ -2337,104 +2471,6 @@ int LineLayout::longestSublineWidth() const /*throw()*/ {
 		const_cast<LineLayout*>(this)->longestSublineWidth_ = width;
 	}
 	return longestSublineWidth_;
-}
-
-/**
- * Merges the given item runs and the given style runs.
- * @param items the items itemized by @c #itemize()
- * @param numberOfItems the length of the array @a items
- * @param styles the iterator returns the styled runs in the line. can be @c null
- * @see presentation#Presentation#getLineStyle
- */
-inline void LineLayout::merge(const SCRIPT_ITEM items[], size_t numberOfItems, auto_ptr<IStyledRunIterator> styles) /*throw()*/ {
-	// TODO: 'styles' value seems to be not needed to pass as a parameter.
-	assert(runs_ == 0 && items != 0 && numberOfItems > 0);
-
-#define ASCENSION_SPLIT_LAST_RUN()										\
-	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {					\
-		Run& back = *runs.back();										\
-		Run* piece = new SimpleRun(back.style);							\
-		length_t pieceLength = MAXIMUM_RUN_LENGTH;						\
-		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
-			--pieceLength;												\
-		piece->analysis = back.analysis;								\
-		piece->column = back.column + pieceLength;						\
-		piece->setLength(back.length() - pieceLength);					\
-		back.setLength(pieceLength);									\
-		runs.push_back(piece);											\
-	}
-
-	const String& lineString = text();
-	vector<Run*> runs;
-	runs.reserve(static_cast<size_t>(numberOfItems * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
-
-	const SCRIPT_ITEM* scriptRun = items;
-	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;
-	nextScriptRun.first = (numberOfItems > 1) ? (items + 1) : 0;
-	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
-	const StyledRun* styleRun = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
-	if(styleRun != 0)
-		styles->next();
-	pair<const StyledRun*, length_t> nextStyleRun;
-	nextStyleRun.first = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
-	nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
-	do {
-		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, (styleRun != 0) ? styleRun->column : 0);
-		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
-		length_t newRunEnd;
-		bool forwardScriptRun = false, forwardStyleRun = false, breakScriptRun = false;
-
-		if(nextScriptRun.second == nextStyleRun.second) {
-			newRunEnd = nextScriptRun.second;
-			forwardScriptRun = forwardStyleRun = true;
-		} else if(nextScriptRun.second < nextStyleRun.second) {
-			newRunEnd = nextScriptRun.second;
-			forwardScriptRun = true;
-		} else {	// nextScriptRun.second > nextStyleRun.second
-			newRunEnd = nextStyleRun.second;
-			forwardStyleRun = true;
-			breakScriptRun = true;
-		}
-
-		if(breakScriptRun) {
-			if(breakScriptRun =
-					!legacyctype::isspace(lineString[previousRunEnd - 1]) && !legacyctype::isspace(lineString[previousRunEnd]))
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 1;
-		}
-		runs.push_back(
-			new Run(previousRunEnd, newRunEnd - previousRunEnd,
-				scriptRun->a, (styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>()));
-		if(breakScriptRun) {
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 1;
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
-		}
-		if(forwardScriptRun) {
-			scriptRun = nextScriptRun.first;
-			if(nextScriptRun.first != 0) {
-				if(++nextScriptRun.first == items + numberOfItems)
-					nextScriptRun.first = 0;
-				nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
-			}
-		}
-		if(forwardStyleRun && styles.get() != 0) {
-			styleRun = nextStyleRun.first;
-			styles->next();
-			nextStyleRun.first = styles->isDone() ? 0 : &styles->current();
-			nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
-		}
-
-		while(true) {
-			auto_ptr<Run> piece(runs.back()->splitIfTooLong(lineString));
-			if(piece.get() == 0)
-				break;
-			runs.push_back(piece.release());
-		}
-	} while(scriptRun != 0 || styleRun != 0);
-
-	runs_ = new Run*[numberOfRuns_ = runs.size()];
-	copy(runs.begin(), runs.end(), runs_);
-
-#undef ASCENSION_SPLIT_LAST_RUN
 }
 
 /// Reorders the runs in visual order.
@@ -2652,17 +2688,6 @@ int LineLayout::sublineWidth(length_t subline) const {
 /// Returns the text of the line.
 inline const String& LineLayout::text() const /*throw()*/ {
 	return lip_.presentation().document().line(lineNumber_);
-}
-
-/// Generates the glyphs for the text.
-void LineLayout::shape(DC& dc) /*throw()*/ {
-	// for each runs...
-	const String& lineString = text();
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		Run& run = *runs_[i];
-		run.shape(dc, lineString, lip_, i > 0 ? runs_[i - 1] : 0);
-		run.place(dc, lineString, lip_);
-	}
 }
 
 /// Locates the wrap points and resolves tab expansions.
