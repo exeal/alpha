@@ -702,7 +702,7 @@ private:
 	SCRIPT_ANALYSIS analysis_;
 	tr1::shared_ptr<GlyphData> glyphs_;	// glyph range in 'glyphs_'
 	Range<int> glyphRange_;
-	tr1::shared_ptr<const RunStyle> style_;
+	const tr1::shared_ptr<const RunStyle> style_;
 	tr1::shared_ptr<const AbstractFont> font_;
 	ABC width_;
 };
@@ -717,7 +717,7 @@ LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary
 		glyphs_(leading.glyphs_), glyphRange_(
 			(leading.readingDirection() == LEFT_TO_RIGHT) ? glyphBoundary : leading.glyphRange_.beginning(),
 			(leading.readingDirection() == LEFT_TO_RIGHT) ? leading.glyphRange_.end() : glyphBoundary),
-		font_(leading.font_) {
+		style_(leading.style_), font_(leading.font_) {
 	if(leading.glyphs_.get() == 0)
 		throw invalid_argument("leading");
 	if(characterBoundary >= leading.length())
