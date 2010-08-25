@@ -646,7 +646,7 @@ const IFontCollection& layout::systemFonts() {
 // LineLayout.Run ///////////////////////////////////////////////////////////
 
 class LineLayout::Run {
-	MANAH_UNASSIGNABLE_TAG(Run);
+	MANAH_NONCOPYABLE_TAG(Run);
 public:
 	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
 	virtual ~Run() /*throw()*/;
