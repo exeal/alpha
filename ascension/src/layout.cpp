@@ -667,7 +667,7 @@ public:
 	bool overhangs() const /*throw()*/;
 	HRESULT place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
 	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
-	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun);
+	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* nextRun);
 	auto_ptr<Run> splitIfTooLong(const String& lineString);
 	int totalWidth() const /*throw()*/;
 	int x(size_t offset, bool trailing) const;
@@ -699,7 +699,7 @@ private:
 	void generateDefaultGlyphs(const DC& dc);
 private:
 	Range<length_t> characterRange_;	// character range in 'glyphs_'
-	SCRIPT_ANALYSIS analysis_;
+	SCRIPT_ANALYSIS analysis_;			// fLogicalOrder member is always 0 (however see shape())
 	tr1::shared_ptr<GlyphData> glyphs_;	// glyph range in 'glyphs_'
 	Range<int> glyphRange_;
 	const tr1::shared_ptr<const RunStyle> style_;
@@ -1208,7 +1208,7 @@ namespace {
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
 } // namespace @0
 
-void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* previousRun) {
+void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* nextRun) {
 	if(glyphs_->clusters.get() != 0)
 		throw IllegalStateException("");
 	if(requestedStyle().get() != 0) {
@@ -1249,6 +1249,14 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	}
 	if(computedFontSizeAdjust < 0.0)
 		computedFontSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
+
+#if defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND) || defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND)
+	bool firstVariationSelectorWasted = false;
+	if(analysis_.fLogicalOrder != 0) {
+		analysis_.fLogicalOrder = 0;
+		firstVariationSelectorWasted = true;
+	}
+#endif // defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND) || defined(ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND)
 
 	if(analysis_.s.fDisplayZWG != 0 && scriptProperties.get(analysis_.eScript).fControl != 0) {
 		// bidirectional format controls
@@ -1315,7 +1323,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		// 1. the primary font
 		oldFont = dc.selectObject((font_ = lip.fontCollection().get(computedFontFamily, computedFontProperties))->handle().get());
 		hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-		if(hr != S_OK) {
+		if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 			::ScriptFreeCache(&glyphs_->cache);
 			failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
 		}
@@ -1386,11 +1394,11 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 						}
 					}
 				}
-				if(font_ == 0 && previousRun != 0) {
-					// use the previous run setting (but this will copy the style of the font...)
-					analysis_.eScript = previousRun->analysis_.eScript;
-					font_ = previousRun->font_;
-				}
+//				if(font_ == 0 && previousRun != 0) {
+//					// use the previous run setting (but this will copy the style of the font...)
+//					analysis_.eScript = previousRun->analysis_.eScript;
+//					font_ = previousRun->font_;
+//				}
 			}
 			if(font_ != 0) {
 				ASCENSION_CHECK_FAILED_FONTS()
@@ -1456,12 +1464,30 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			&& supportsOpenTypeFeatures()
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_LEGACY_WORKAROUND
 			) {
-		if(previousRun != 0 && length() > 1) {
-			const CodePoint variationSelector = surrogates::decodeFirst(lineString.begin() + column(), lineString.begin() + column() + 2);
+		if(firstVariationSelectorWasted) {
+			// remove glyphs correspond to the first character which is conjuncted with the last
+			// character as a variation character
+			assert(length() > 1);
+			WORD blankGlyph;
+			if(S_OK != (hr = ::ScriptGetCMap(dc.get(), &glyphs_->cache, L"\x0020", 1, 0, &blankGlyph))) {
+				SCRIPT_FONTPROPERTIES fp;
+				fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
+				if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp)))
+					fp.wgBlank = 0;	// hmm...
+				blankGlyph = fp.wgBlank;
+			}
+			glyphs_->indices[glyphs_->clusters[0]] = glyphs_->indices[glyphs_->clusters[1]] = blankGlyph;
+			SCRIPT_VISATTR* const va = glyphs_->visualAttributes.get();
+			va[glyphs_->clusters[0]].uJustification = va[glyphs_->clusters[1]].uJustification = SCRIPT_JUSTIFY_BLANK;
+			va[glyphs_->clusters[0]].fZeroWidth = va[glyphs_->clusters[1]].fZeroWidth = 1;
+		}
+		if(nextRun != 0 && nextRun->length() > 1) {
+			const CodePoint variationSelector = surrogates::decodeFirst(
+				lineString.begin() + nextRun->column(), lineString.begin() + nextRun->column() + 2);
 			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
-					lineString.data() + previousRun->column(), lineString.data() + previousRun->column() + previousRun->length());
-				WORD& originalGlyph = previousRun->glyphs_->indices[previousRun->glyphs_->clusters[previousRun->length() - 1]];
+					lineString.data() + column(), lineString.data() + column() + length());
+				WORD& glyph = glyphs_->indices[glyphs_->clusters[length() - 1]];
 
 				pair<bool, uint16_t> result;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -1473,28 +1499,15 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 				if(i != MANAH_COUNTOF(IVS_TO_OTFT) && IVS_TO_OTFT[i].ivs == ((baseCharacter << 8) | (vs - 0xe0100ul))) {
 					// found valid IVS -> apply OpenType feature tag to obtain the variant
 					// note that this glyph alternation is not effective unless the script in run->analysis is 'hani'
-					if(SUCCEEDED(hr = uspLib->get<3>()(dc.get(), &previousRun->glyphs_->cache, &previousRun->analysis_,
-							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, originalGlyph, &result.second)))
+					if(SUCCEEDED(hr = uspLib->get<3>()(dc.get(), &glyphs_->cache, &analysis_,
+							HANI_TAG, 0, IVS_TO_OTFT[i].featureTag, 1, glyph, &result.second)))
 						result.first = true;
 				}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 				if(result.first) {
-					originalGlyph = result.second;
-					// last character in the previous run and first character in this run are an IVS
-					// => so, remove glyphs correspond to the first character
-					WORD blankGlyph;
-					if(S_OK != (hr = ::ScriptGetCMap(dc.get(), &glyphs_->cache, L"\x0020", 1, 0, &blankGlyph))) {
-						SCRIPT_FONTPROPERTIES fp;
-						fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-						if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp)))
-							fp.wgBlank = 0;	// hmm...
-						blankGlyph = fp.wgBlank;
-					}
-					glyphs_->indices[glyphs_->clusters[0]] = glyphs_->indices[glyphs_->clusters[1]] = blankGlyph;
-					SCRIPT_VISATTR* const va = glyphs_->visualAttributes.get();
-					va[glyphs_->clusters[0]].uJustification = va[glyphs_->clusters[1]].uJustification = SCRIPT_JUSTIFY_BLANK;
-					va[glyphs_->clusters[0]].fZeroWidth = va[glyphs_->clusters[1]].fZeroWidth = 1;
+					glyph = result.second;
+					nextRun->analysis_.fLogicalOrder = 1;
 				}
 			}
 		}
@@ -1672,7 +1685,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 	// generate and position the glyphs for the text
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		Run& run = *runs_[i];
-		run.shape(dc, lineString, lip_, i > 0 ? runs_[i - 1] : 0);
+		run.shape(dc, lineString, lip_, (i + 1 < numberOfRuns_) ? runs_[i + 1] : 0);
 		run.place(dc, lineString, lip_);
 	}
 
