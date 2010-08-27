@@ -33,13 +33,13 @@ if len(sys.argv) != 3:
 
 class PropertyNames(object):
     def __init__(self, input_directory):
-        print 'Building property name table...'
+        print('Building property name table...')
         self._properties = {}
         comment = re.compile(r'#.*$')
         delimiters = re.compile(r'[\s;]+')
         # collect names
         f = open(os.path.join(input_directory, 'PropertyAliases.txt'))
-        print '...Loaded %s.' % os.path.realpath(f.name)
+        print('...Loaded %s.' % os.path.realpath(f.name))
         for line in f:
             s = comment.sub('', line)
             if len(s) > 0:
@@ -52,7 +52,7 @@ class PropertyNames(object):
         f.close()
         # collect value names
         f = open(os.path.join(input_directory, 'PropertyValueAliases.txt'))
-        print '...Loaded %s.' % os.path.realpath(f.name)
+        print('...Loaded %s.' % os.path.realpath(f.name))
         for line in f:
             s = comment.sub('', line)
             if len(s) > 0:
@@ -66,7 +66,7 @@ class PropertyNames(object):
                         names[1] = names[2]
                     self._properties[names[0]]['values'].append(names[1:])
         f.close()
-        print '...Done.'
+        print('...Done.')
     def binary_value_names(self):
         names = []
         for (short_name, p) in self._properties.iteritems():
@@ -108,7 +108,7 @@ class PropertyNames(object):
         for aliases in vns:
             if short_value_name in aliases:
                 return aliases[1]
-        raise ValueError, ('\'%s\' for \'%s\' is unknown (%s are exist).' % (short_value_name, short_or_long_name, vns))
+        raise ValueError('\'%s\' for \'%s\' is unknown (%s are exist).' % (short_value_name, short_or_long_name, vns))
     def short_name(self, long_name):
         for i in self._properties.iteritems():
             if i[1]['aliases'][0] == long_name:
@@ -248,7 +248,7 @@ class CodeGenerator(object):
                     else:
                         value = self._current_group_value
                     if value == '':
-                        raise RuntimeError, 'Property %s is not defined for character U+%04x.' % (short_name, current_range[0])
+                        raise RuntimeError('Property %s is not defined for character U+%04x.' % (short_name, current_range[0]))
                     partitions.append((first, last, value))
                 elif name == 'group' and attributes.has_key(short_name):
                     self._current_group_value = attributes.getValue(short_name)
@@ -269,10 +269,10 @@ class CodeGenerator(object):
         i = 0
         while i + 1 < len(partitions):
             if partitions[i][1] != partitions[i + 1][0]:
-                raise RuntimeError, r'The input repartoire is not successive at U+%X.' % partitions[i][1]
+                raise RuntimeError(r'The input repartoire is not successive at U+%X.' % partitions[i][1])
             i += 1
         if partitions[-1][1] != 0x110000:
-            raise RuntimeError, r'The input repartoire is not successive at U+%X.' % partitions[-1][0]
+            raise RuntimeError(r'The input repartoire is not successive at U+%X.' % partitions[-1][0])
         return [(p[0], p[2]) for p in partitions]
 
     def _print_forname_code(self, long_name, value_names):
@@ -399,10 +399,10 @@ class CodeGenerator(object):
         sys.stdout.write(' ([%d])\n' % len(ps))
 
     def _process_cases(self):
-        print 'Generating case folding code...'
+        print('Generating case folding code...')
         filename = os.path.realpath(os.path.join(self._ucd_input_directory, r'CaseFolding.txt'))
         input = open(filename)
-        print '...Loaded %s' % filename
+        print('...Loaded %s' % filename)
         common_map, simple_map, full_map = [], [], []
         pattern = re.compile(r'^([\dA-F]{4,6});\s+([CSF]);\s+([^;]+)')  # yes, almost all cased characters are in BMP, but...
         for line in input:
@@ -425,10 +425,10 @@ class CodeGenerator(object):
             + ('};\nconst std::size_t CaseFolder::NUMBER_OF_COMMON_CASED_ = %d;\n' % len(common_map))
             + ('const std::size_t CaseFolder::NUMBER_OF_SIMPLE_CASED_ = %d;\n' % len(simple_map))
             + ('const std::size_t CaseFolder::NUMBER_OF_FULL_CASED_ = %d;\n' % len(full_map)))
-        print '...Processed common case mapping (%d).' % len(common_map)
-        print '...Processed simple case mapping (%d).' % len(simple_map)
-        print '...Processed full case mapping (%d).' % len(full_map)
-        print '...Done'
+        print('...Processed common case mapping (%d).' % len(common_map))
+        print('...Processed simple case mapping (%d).' % len(simple_map))
+        print('...Processed full case mapping (%d).' % len(full_map))
+        print('...Done')
 
     def _process_decomposition_mappings(self):
         canonical_mappings, compatibility_mappings = [], []
@@ -482,7 +482,7 @@ class CodeGenerator(object):
                 self._current_dt = 'none'
                 self._current_dm = '#'
 
-        print 'Generating \'Decomposition_Mapping\' code table...'
+        print('Generating \'Decomposition_Mapping\' code table...')
         xml.sax.parse(self._ucdxml_filename, ContentHandler(self._output_files['ct']))
         out = self._open_output_file('decomposition-mapping-table')
         canonical_mappings.sort()
@@ -499,9 +499,9 @@ class CodeGenerator(object):
         out.write(','.join([x[1] for x in compatibility_mappings]))
         out.write('};\n#endif // !ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING\n'
                   + '#endif // !ASCENSION_NO_UNICODE_NORMALIZATION\n')
-        print '...Processed canonical mappings (%d).' % len(canonical_mappings)
-        print '...Processed compatibility mappings (%d).' % len(compatibility_mappings)
-        print '...Done,'
+        print('...Processed canonical mappings (%d).' % len(canonical_mappings))
+        print('...Processed compatibility mappings (%d).' % len(compatibility_mappings))
+        print('...Done,')
 
     def _process_blocks(self):
         class ContentHandler(xml.sax.ContentHandler):
@@ -529,7 +529,7 @@ class CodeGenerator(object):
                     code_table.write(r'{0x%x,Block::%s},' % (block[0], cpp_name))
                 code_table.write('};\n')
                 code_table.write('const std::size_t Block::NUMBER_ = MANAH_COUNTOF(Block::VALUES_);\n')
-                print ' ([%d])' % len(self._blocks)
+                print(' ([%d])' % len(self._blocks))
         self._open_output_file(r'blocks-definition')
         xml.sax.parse(self._ucdxml_filename, ContentHandler(self))
         self._print_partitioned_of_code('Block')
@@ -550,12 +550,12 @@ class CodeGenerator(object):
         out_ct.write('const std::size_t %s::NUMBER_ = MANAH_COUNTOF(%s::VALUES_);\n' % (cpp_name, cpp_name))
         self._print_partitioned_of_code(long_name)
         self._print_value_names(long_name)
-        print ' ([%d])' % len(ps)
+        print(' ([%d])' % len(ps))
 
 
 def main():
     CodeGenerator(sys.argv[1], sys.argv[2], r'../src/generated/').main()
-    print 'Done.'
+    print('Done.')
 
 if __name__ == '__main__':
     main()
