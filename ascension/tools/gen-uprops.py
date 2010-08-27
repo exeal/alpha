@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 #
-# gen-uprops.py (c) 2009 exeal
+# gen-uprops.py (c) 2009-2010 exeal
 # [was] props.py (c) 2008 exeal
 # [was] props.pl (c) 2005-2007 exeal
 #
@@ -9,17 +9,22 @@
 #   usage: python gen-uprops.py <ucd.nounihan.grouped.xml> <ucd-files-directory>
 #
 # The input file ucd.nounihan.grouped.xml can be obtained from Unicode.org web
-# site (http://www.unicode.org/Public/5.1.0/ucdxml/).
+# site (http://www.unicode.org/Public/<unicode-version>/ucdxml/).
 #
 # The parameter 'ucd-files-directory' is the directory contains the input files
-# PropertyAliases.txt and PropertyValueAliases.txt. These files also can be
-# obtained from Unicode.ord web site
-# (http://www.unicode.org/Public/5.1.0/ucd/PropertyValueAliases.txt).
+# include:
+#
+# - CaseFolding.txt
+# - PropertyAliases.txt
+# - PropertyValueAliases.txt
+#
+# These files also can be found at Unicode.org web site
+# (http://www.unicode.org/Public/<unicode-version>/ucd/).
 #
 # This code is for Unicode version 5.1.0.
 #
 # For the detailed description about Ascension's Unicode property
-# implementation, see the document unicode-property.pdf
+# implementation, see the document unicode-property.pdf.
 
 import os.path
 import re
@@ -44,7 +49,7 @@ class PropertyNames(object):
             s = comment.sub('', line)
             if len(s) > 0:
                 names = delimiters.split(s)  # [0] short, [1] long, [2:] others
-                names = filter(lambda x : x != '', names)
+                names = tuple(filter(lambda x : x != '', names))
                 if len(names) > 1:
                     self._properties[names[0]] = {'aliases' : [names[1]], 'values' : []}
                     if len(names) > 2:
@@ -60,7 +65,7 @@ class PropertyNames(object):
                 if names[0] == 'ccc':  # ouch, order of ccc names is different...
                     names.append(names[1])
                     del names[1]
-                names = filter(lambda x : x != '', names)
+                names = list(filter(lambda x : x != '', names))
                 if len(names) > 1:
                     if names[1] == 'n/a':
                         names[1] = names[2]
@@ -69,7 +74,7 @@ class PropertyNames(object):
         print('...Done.')
     def binary_value_names(self):
         names = []
-        for (short_name, p) in self._properties.iteritems():
+        for (short_name, p) in iter(self._properties.items()):
             v = p['values']
             if len(v) == 2 and len(v[0]) == 4 and len(v[1]) == 4 and sorted((v[0][0], v[1][0])) == ['N', 'Y']:
                 # p is a binary property
@@ -82,7 +87,13 @@ class PropertyNames(object):
         return PropertyNames._unique_value_names(names)
     @staticmethod
     def compare_names(name1, name2):
-        return cmp(PropertyNames.cpp_name(name1), PropertyNames.cpp_name(name2))
+        temp = (PropertyNames.cpp_name(name1), PropertyNames.cpp_name(name2))
+        if temp[0] > temp[1]:
+            return 1
+        elif temp[0] == temp[1]:
+            return 0
+        else:
+            return -1
     @staticmethod
     def cpp_name(name):
         return re.sub(r'[^A-Za-z0-9]', '', name)
@@ -110,7 +121,7 @@ class PropertyNames(object):
                 return aliases[1]
         raise ValueError('\'%s\' for \'%s\' is unknown (%s are exist).' % (short_value_name, short_or_long_name, vns))
     def short_name(self, long_name):
-        for i in self._properties.iteritems():
+        for i in iter(self._properties.items()):
             if i[1]['aliases'][0] == long_name:
                 return i[0]
         raise ValueError
@@ -124,9 +135,9 @@ class PropertyNames(object):
                 names.append((PropertyNames.fold_name(alias), PropertyNames.cpp_value_name(aliases[1])))
         return PropertyNames._unique_value_names(names)
     def _property(self, short_or_long_name):
-        if self._properties.has_key(short_or_long_name):
+        if short_or_long_name in self._properties:
             return self._properties[short_or_long_name]
-        for i in self._properties.iteritems():
+        for i in iter(self._properties.items()):
             if i[1]['aliases'][0] == short_or_long_name:
                 return i[1]
         raise ValueError
@@ -166,7 +177,7 @@ class CodeGenerator(object):
         self._process_blocks()
         self._process_canonical_combining_classes()
         self._process_binary_properties()
-        for file in self._output_files.iteritems():
+        for file in iter(self._output_files.items()):
             file[1].close()
 
     def _output_data_types_definition(self):
@@ -237,20 +248,20 @@ class CodeGenerator(object):
                 self._current_group_value = ''
             def startElement(self, name, attributes):
                 if name in ['char', 'noncharacter', 'reserved', 'surrogate']:
-                    if attributes.has_key('cp'):
+                    if 'cp' in attributes:
                         first = int(attributes.getValue('cp'), 16)
                         last = first + 1
                     else:
                         first = int(attributes.getValue('first-cp'), 16)
                         last = int(attributes.getValue('last-cp'), 16) + 1
-                    if attributes.has_key(short_name):
+                    if short_name in attributes:
                         value = attributes.getValue(short_name)
                     else:
                         value = self._current_group_value
                     if value == '':
                         raise RuntimeError('Property %s is not defined for character U+%04x.' % (short_name, current_range[0]))
                     partitions.append((first, last, value))
-                elif name == 'group' and attributes.has_key(short_name):
+                elif name == 'group' and (short_name in attributes):
                     self._current_group_value = attributes.getValue(short_name)
             def endElement(self, name):
                 if name == 'group':
@@ -451,19 +462,19 @@ class CodeGenerator(object):
                 self._reset_group()
             def startElement(self, name, attributes):
                 if name == 'char':
-                    if attributes.has_key('dm'):
+                    if 'dm' in attributes:
                         dm = attributes.getValue('dm')
                     else:
                         dm = self._current_dm
                     if dm == '#':
                         return
-                    if attributes.has_key('dt'):
+                    if 'dt' in attributes:
                         dt = attributes.getValue('dt')
                     else:
                         dt = self._current_dt
-                    if dt == 'none' or (attributes.has_key('na') and attributes.getValue('na').startswith('HANGUL SYLLABLE ')):
+                    if dt == 'none' or (('na' in attributes) and attributes.getValue('na').startswith('HANGUL SYLLABLE ')):
                         return
-                    if attributes.has_key('cp'):
+                    if 'cp' in attributes:
                         first_cp = last_cp = int(attributes.getValue('cp'), 16)
                     else:
                         first_cp, last_cp = int(attributes.getValue('first_cp'), 16), int(attributes.getValue('last_cp'), 16)
@@ -471,9 +482,9 @@ class CodeGenerator(object):
                     for c in range(first_cp, last_cp + 1):
                         mappings.append((c, code_point_sequence_to_cpp_literal(dm)))
                 elif name == 'group':
-                    if attributes.has_key('dt'):
+                    if 'dt' in attributes:
                         self._current_dt = attributes.getValue('dt')
-                    if attributes.has_key('dm'):
+                    if 'dm' in attributes:
                         self._current_dm = attributes.getValue('dm')
             def endElement(self, name):
                 if name == 'group':
@@ -554,7 +565,7 @@ class CodeGenerator(object):
 
 
 def main():
-    CodeGenerator(sys.argv[1], sys.argv[2], r'../src/generated/').main()
+    CodeGenerator(sys.argv[1], sys.argv[2], r'../src/generated~/').main()
     print('Done.')
 
 if __name__ == '__main__':
