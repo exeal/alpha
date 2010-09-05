@@ -1,7 +1,7 @@
 /**
  * @file unicode.hpp
  * @author exeal
- * @date 2005-2009
+ * @date 2005-2010
  * @see ascension#unicode, break-iterator.cpp, collator.cpp, identifier-syntax.cpp, normalizer.cpp
  */
 
@@ -49,48 +49,66 @@ namespace ascension {
 	namespace text {
 
 		/**
+		 * Returns the size of a code unit of the specified code unit sequence in bytes.
+		 * @tparam CodeUnitSequence the type represents a code unit sequence
+		 * @see ToUTF32Sequence
+		 */
+		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
+			enum {result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)};
+		};
+		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
+			enum {result = sizeof(T::value_type)};
+		};
+		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
+			enum {result = sizeof(T::value_type)};
+		};
+		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
+			enum {result = sizeof(T)};
+		};
+
+		/**
 		 * @c surrogates namespace collects low level procedures handle UTF-16 surrogate pair.
 		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
 		namespace surrogates {
 			/**
-			 * Returns true if the specified code point is supplemental (out of BMP).
-			 * @param cp the code point
-			 * @return true if @a cp is supplemental
+			 * Returns @c true if the specified code point is supplemental (out of BMP).
+			 * @param c the code point
+			 * @return true if @a c is supplemental
 			 */
-			inline bool isSupplemental(CodePoint cp) /*throw()*/ {return (cp & 0xffff0000ul) != 0;}
+			inline bool isSupplemental(CodePoint c) /*throw()*/ {return (c & 0xffff0000ul) != 0;}
 			/**
-			 * Returns if the specified code unit is high (leading)-surrogate.
-			 * @param cp the code point
-			 * @return true if @a cp is high-surrogate
+			 * Returns @c true if the specified code unit is high (leading)-surrogate.
+			 * @param c the code point
+			 * @return true if @a c is high-surrogate
 			 */
-			inline bool isHighSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffffc00ul) == 0xd800u;}
+			inline bool isHighSurrogate(CodePoint c) /*throw()*/ {return (c & 0xfffffc00ul) == 0xd800u;}
 			/**
-			 * Returns if the specified code unit is low (trailing)-surrogate.
-			 * @param cp the code point
-			 * @return true if @a cp is low-surrogate
+			 * Returns @c true if the specified code unit is low (trailing)-surrogate.
+			 * @param c the code point
+			 * @return true if @a c is low-surrogate
 			 */
-			inline bool isLowSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffffc00ul) == 0xdc00u;}
+			inline bool isLowSurrogate(CodePoint c) /*throw()*/ {return (c & 0xfffffc00ul) == 0xdc00u;}
 			/**
-			 * Returns if the specified code unit is surrogate.
-			 * @param cp the code point
-			 * @return true if @a cp is surrogate
+			 * Returns @c true if the specified code unit is surrogate.
+			 * @param c the code point
+			 * @return true if @a c is surrogate
 			 */
-			inline bool isSurrogate(CodePoint cp) /*throw()*/ {return (cp & 0xfffff800ul) == 0xd800u;}
+			inline bool isSurrogate(CodePoint c) /*throw()*/ {return (c & 0xfffff800ul) == 0xd800u;}
 			/**
 			 * Returns high (leading)-surrogate for the specified code point.
-			 * @note If @a cp is in BMP, the behavior is undefined.
-			 * @param cp the code point
-			 * @return the high-surrogate code unit for @a cp
+			 * @note If @a c is in BMP, the behavior is undefined.
+			 * @param c the code point
+			 * @return the high-surrogate code unit for @a c
 			 */
-			inline Char highSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>((cp >> 10) & 0xffffu) + 0xd7c0u;}
+			inline Char highSurrogate(CodePoint c) /*throw()*/ {return static_cast<Char>((c >> 10) & 0xffffu) + 0xd7c0u;}
 			/**
 			 * Returns low (trailing)-surrogate for the specified code point.
-			 * @note If @a cp is in BMP, the behavior is undefined.
-			 * @param cp the code point
-			 * @return the low-surrogate code unit for @a cp
+			 * @note If @a c is in BMP, the behavior is undefined.
+			 * @param c the code point
+			 * @return the low-surrogate code unit for @a c
 			 */
-			inline Char lowSurrogate(CodePoint cp) /*throw()*/ {return static_cast<Char>(cp & 0x03ffu) | 0xdc00u;}
+			inline Char lowSurrogate(CodePoint c) /*throw()*/ {return static_cast<Char>(c & 0x03ffu) | 0xdc00u;}
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
 			 * @param high the high-surrogate
@@ -101,77 +119,91 @@ namespace ascension {
 				return (isHighSurrogate(high) && isLowSurrogate(low)) ? 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u : high;}
 			/**
 			 * Converts the first surrogate pair in the given character sequence to the corresponding code point.
-			 * @param first the start of the UTF-16 character sequence
-			 * @param last the end of the UTF-16 character sequence
+			 * @tparam InputIterator the input iterator represents a UTF-16 character sequence
+			 * @param first the beginning of the character sequence
+			 * @param last the end of the character sequence
 			 * @return the code point
 			 */
-			template<typename CharacterSequence>
-			inline CodePoint decodeFirst(CharacterSequence first, CharacterSequence last) /*throw()*/ {
-				assert(first < last); return (last - first > 1) ? decode(first[0], first[1]) : first[0];}
+			template<typename InputIterator>
+			inline CodePoint decodeFirst(InputIterator first, InputIterator last) /*throw()*/ {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2); assert(first != last);
+				const Char high = *first; return (++first != last) ? decode(high, *first) : high;}
 			/**
 			 * Converts the last surrogate pair in the given character sequence to the corresponding code point.
-			 * @param first the start of the UTF-16 character sequence
-			 * @param last the end of the UTF-16 character sequence
+			 * @tparam BidirectionalIterator the bidirectional iterator represents a UTF-16 character sequence
+			 * @param first the beginning of the character sequence
+			 * @param last the end of the character sequence
 			 * @return the code point
 			 */
-			template<typename CharacterSequence>
-			inline CodePoint decodeLast(CharacterSequence first, CharacterSequence last) /*throw()*/ {assert(first < last);
-				return (last - first > 1 && isHighSurrogate(last[-2]) && isLowSurrogate(last[-1])) ? decode(last[-2], last[-1]) : last[-1];}
+			template<typename BidirectionalIterator>
+			inline CodePoint decodeLast(BidirectionalIterator first, BidirectionalIterator last) /*throw()*/ {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2); assert(first != last);
+				const Char low = *--last;
+				return (last != first && isLowSurrogate(low) && isHighSurrogate(*--last)) ? decode(*last, low) : low;}
 			/**
 			 * Converts the specified code point to a corresponding surrogate pair.
-			 * @param cp the code point
+			 * @tparam OutputIterator the output iterator represents a UTF-16 character sequence
+			 * @param c the code point
 			 * @param[out] dest the surrogate pair
-			 * @retval 0 @a cp is a surrogate. in this case, @a dest[0] will be @a cp
-			 * @retval 1 @a cp is in BMP
-			 * @retval 2 @a cp is out of BMP
-			 * @throw std#invalid_argument @a cp can't be expressed by UTF-16
+			 * @retval 0 @a c is a surrogate. in this case, @a *dest will be @a c
+			 * @retval 1 @a c is in BMP
+			 * @retval 2 @a c is out of BMP
+			 * @throw std#invalid_argument @a c can't be expressed by UTF-16
 			 */
 			template<typename OutputIterator>
-			inline length_t encode(CodePoint cp, OutputIterator dest) {
-				if(cp < 0x00010000ul) {
-					*dest = static_cast<Char>(cp & 0xffffu);
-					return !isSurrogate(cp) ? 1 : 0;
-				} else if(cp <= 0x0010fffful) {
-					*dest = highSurrogate(cp);
-					*++dest = lowSurrogate(cp);
+			inline length_t encode(CodePoint c, OutputIterator dest) {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::result == 2);
+				if(c < 0x00010000ul) {
+					*dest = static_cast<Char>(c & 0xffffu);
+					return !isSurrogate(c) ? 1 : 0;
+				} else if(c <= 0x0010fffful) {
+					*dest = highSurrogate(c);
+					*++dest = lowSurrogate(c);
 					return 2;
 				}
 				throw std::invalid_argument("the specified code point is not valid.");
 			}
 			/**
-			 * Searches the next high-surrogate in the string.
+			 * Searches the next high-surrogate in the given character sequence.
+			 * @tparam InputIterator the input iterator represents a UTF-16 character sequence
 			 * @param start the start position to search
-			 * @param last the end of the string
+			 * @param last the end of the character sequence
 			 * @return the next high-surrogate
 			 */
-			template<typename CharacterSequence>
-			inline CharacterSequence next(CharacterSequence start, CharacterSequence last) /*throw()*/ {assert(start < last);
-				return start + ((isHighSurrogate(start[0]) && (last - start > 1) && isLowSurrogate(start[1])) ? 2 : 1);}
+			template<typename InputIterator>
+			inline InputIterator next(InputIterator start, InputIterator last) /*throw()*/ {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2); assert(start != last);
+				return (isHighSurrogate(*(start++)) && (start != last) && isLowSurrogate(*start)) ? start : ++start;}
 			/**
-			 * Searches the previous high-surrogate in the string.
-			 * @param first the start of the string
+			 * Searches the previous high-surrogate in the given character sequence.
+			 * @tparam BidirectionalIterator the bidirectional iterator represents a UTF-16 character sequence
+			 * @param first the beginning of the character sequence
 			 * @param start the start position to search
 			 * @return the previous high-surrogate
 			 */
-			template<typename CharacterSequence>
-			inline CharacterSequence previous(CharacterSequence first, CharacterSequence start) /*throw()*/ {assert(first < start);
-				return start - ((isLowSurrogate(start[-1]) && (start - first > 1) && isHighSurrogate(start[-2])) ? 2 : 1);}
+			template<typename BidirectionalIterator>
+			inline BidirectionalIterator previous(BidirectionalIterator first, BidirectionalIterator start) /*throw()*/ {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2); assert(first != start);
+				return (!isLowSurrogate(*--start) || (start == first) || isHighSurrogate(*--start)) ? start : ++start;}
 			/**
-			 * Searches an isolated surrogate character in the specified UTF-16 string.
-			 * About UTF-32 strings, use <code>std#find_if(,, std::ptr_fun(isSurrogate))</code> instead.
-			 * @a CharacterSequence must represent random-accessible 16-bit character sequence.
-			 * @param first the start of the string
-			 * @param last the end of the string
+			 * Searches an isolated surrogate character in the given UTF-16 code unit sequence.
+			 * @note About UTF-32 code unit sequence, use <code>std#find_if(,,
+			 *       std::ptr_fun(isSurrogate))</code> instead.
+			 * @tparam InputIterator the input iterator represents a UTF-16 character sequence
+			 * @param first the beginning of the character sequence
+			 * @param last the end of the sequence
 			 * @return the isolated surrogate or @a last if not found
 			 */
-			template<typename CharacterSequence>
-			inline CharacterSequence searchIsolatedSurrogate(CharacterSequence first, CharacterSequence last) /*throw()*/ {
-				assert(first <= last);
-				while(first < last) {
-					if(isLowSurrogate(*first)) break;
+			template<typename InputIterator>
+			inline InputIterator searchIsolatedSurrogate(InputIterator first, InputIterator last) /*throw()*/ {
+				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				while(first != last) {
+					if(isLowSurrogate(*first))
+						break;
 					else if(isHighSurrogate(*first)) {
-						if(last - first > 1 && isLowSurrogate(first[1])) ++first;
-						else break;
+						const InputIterator high(first);
+						if(++first == last || !isLowSurrogate(*first))
+							return high;
 					}
 					++first;
 				}
@@ -179,11 +211,11 @@ namespace ascension {
 			}
 		} // namespace surrogates
 
-		/// Returns true if the specified code point is in Unicode codespace (0..10FFFF).
-		inline bool isValidCodePoint(CodePoint cp) /*throw()*/ {return cp <= 0x10fffful;}
+		/// Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
+		inline bool isValidCodePoint(CodePoint c) /*throw()*/ {return c <= 0x10fffful;}
 
-		/// Returns true if the specified code point is Unicode scalar value.
-		inline bool isScalarValue(CodePoint cp) /*throw()*/ {return isValidCodePoint(cp) && !surrogates::isSurrogate(cp);}
+		/// Returns @c true if the specified code point is Unicode scalar value.
+		inline bool isScalarValue(CodePoint c) /*throw()*/ {return isValidCodePoint(c) && !surrogates::isSurrogate(c);}
 
 		class CharacterIterator {
 		public:
@@ -395,14 +427,6 @@ namespace ascension {
 				const Container& c, typename Container::const_iterator start) {
 			return UTF16To32Iterator<typename Container::const_iterator>(c.begin(), c.end(), start);
 		}
-
-		/// Returns the size of a code unit of the specified code unit sequence in bytes.
-		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			enum {result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)};
-		};
-		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
-			enum {result = sizeof(T)};
-		};
 
 		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
 		template<typename CodeUnitSequence, template<class> class AdaptionIterator = UTF16To32Iterator>
