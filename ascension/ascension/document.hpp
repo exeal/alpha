@@ -11,7 +11,7 @@
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
-#include "encoder.hpp"
+#include "character-iterator.hpp"
 #include <manah/memory.hpp>		// manah.FastArenaObject
 #include <manah/gap-buffer.hpp>	// manah.GapBuffer
 #include <iostream>
@@ -22,6 +22,8 @@
 
 
 namespace ascension {
+
+	namespace text {class IdentifierSyntax;}
 
 	namespace kernel {
 
@@ -692,10 +694,11 @@ namespace ascension {
 			class UndoManager;
 			class DefaultContentTypeInformationProvider : public IContentTypeInformationProvider {
 			public:
-				~DefaultContentTypeInformationProvider() /*throw()*/ {}
-				const text::IdentifierSyntax& getIdentifierSyntax(ContentType) const /*throw()*/ {return syntax_;}
+				DefaultContentTypeInformationProvider();
+				~DefaultContentTypeInformationProvider() /*throw()*/;
+				const text::IdentifierSyntax& getIdentifierSyntax(ContentType) const /*throw()*/ {return *syntax_;}
 			private:
-				text::IdentifierSyntax syntax_;
+				text::IdentifierSyntax* syntax_;	// use a pointer to brake dependency
 			};
 
 			texteditor::Session* session_;
