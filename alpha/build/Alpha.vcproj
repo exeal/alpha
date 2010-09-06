@@ -630,6 +630,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\ascension\ascension\character-iterator.hpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\ascension\ascension\common.hpp"
 					>
 				</File>

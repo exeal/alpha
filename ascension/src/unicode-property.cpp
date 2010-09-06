@@ -1,7 +1,7 @@
 /**
  * @file unicode-property.cpp
  * @author exeal
- * @date 2005-2009
+ * @date 2005-2010
  */
 
 #include <ascension/unicode-property.hpp>
@@ -12,7 +12,7 @@ using namespace ascension::text::ucd::internal;
 using namespace std;
 
 
-// CharacterIterator ////////////////////////////////////////////////////////
+// CharacterIterator //////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::text::CharacterIterator
@@ -89,9 +89,9 @@ using namespace std;
  * This means that the following implementation with down-cast is safe.
  *
  * @code
- * bool MyIterator::equals(const CharacterIterator& rhs) const {
- *   // rhs actually refers a MyIterator.
- *   const MyIterator& concrete = static_cast<const MyIterator&>(rhs);
+ * bool MyIterator::equals(const CharacterIterator& other) const {
+ *   // 'other' actually refers a MyIterator.
+ *   const MyIterator& concrete = static_cast<const MyIterator&>(other);
  *   // compare this and concrete...
  * }
  * @endcode
@@ -101,54 +101,51 @@ using namespace std;
 const CodePoint CharacterIterator::DONE = 0xfffffffful;
 
 
-// StringCharacterIterator //////////////////////////////////////////////////
+// StringCharacterIterator ////////////////////////////////////////////////////////////////////////
 
-const CharacterIterator::ConcreteTypeTag StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
+const CharacterIterator::ConcreteTypeTag
+	StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
-StringCharacterIterator::StringCharacterIterator() /*throw()*/ : CharacterIterator(CONCRETE_TYPE_TAG_) {
+StringCharacterIterator::StringCharacterIterator() /*throw()*/
+		: CharacterIterator(CONCRETE_TYPE_TAG_) {
 }
 
-StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(first), first_(first), last_(last) {
-	if(first_ > last_)
-		throw invalid_argument("the first is greater than last.");
+StringCharacterIterator::StringCharacterIterator(const Range<Char*>& text) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.beginning()),
+		first_(text.beginning()), last_(text.end()) {
 }
 
-StringCharacterIterator::StringCharacterIterator(const Char* first, const Char* last, const Char* start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), first_(first), last_(last) {
-	if(first_ > last_ || current_ < first_ || current_ > last_)
+StringCharacterIterator::StringCharacterIterator(const Range<Char*>& text, const Char* start) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start),
+		first_(text.beginning()), last_(text.end()) {
+	if(current_ < first_ || current_ > last_)
 		throw invalid_argument("invalid input.");
 }
 
 StringCharacterIterator::StringCharacterIterator(const String& s) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data()), first_(s.data()), last_(s.data() + s.length()) {
-	if(first_ > last_)
-		throw invalid_argument("the first is greater than last.");
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data()),
+		first_(s.data()), last_(s.data() + s.length()) {
 }
 
 StringCharacterIterator::StringCharacterIterator(const String& s, String::const_iterator start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data() + (start - s.begin())), first_(s.data()), last_(s.data() + s.length()) {
-	if(first_ > last_ || current_ < first_ || current_ > last_)
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data() + (start - s.begin())),
+		first_(s.data()), last_(s.data() + s.length()) {
+	if(current_ < first_ || current_ > last_)
 		throw invalid_argument("invalid input.");
 }
 
 /// Copy-constructor.
-StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& rhs) /*throw()*/
-		: CharacterIterator(rhs), current_(rhs.current_), first_(rhs.first_), last_(rhs.last_) {
-}
-
-/// @see CharacterIterator#current
-CodePoint StringCharacterIterator::current() const /*throw()*/ {
-	return (current_ != last_) ? surrogates::decodeFirst(current_, last_) : DONE;
+StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& other) /*throw()*/
+		: CharacterIterator(other), current_(other.current_), first_(other.first_), last_(other.last_) {
 }
 
 /// @see CharacterIterator#doAssign
-void StringCharacterIterator::doAssign(const CharacterIterator& rhs) {
-	CharacterIterator::operator=(rhs);
-	current_ = static_cast<const StringCharacterIterator&>(rhs).current_;
-	first_ = static_cast<const StringCharacterIterator&>(rhs).first_;
-	last_ = static_cast<const StringCharacterIterator&>(rhs).last_;
+void StringCharacterIterator::doAssign(const CharacterIterator& other) {
+	CharacterIterator::operator=(other);
+	current_ = static_cast<const StringCharacterIterator&>(other).current_;
+	first_ = static_cast<const StringCharacterIterator&>(other).first_;
+	last_ = static_cast<const StringCharacterIterator&>(other).last_;
 }
 
 /// @see CharacterIterator#doClone
@@ -157,8 +154,8 @@ auto_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
 }
 
 /// @see CharacterIterator#doEquals
-bool StringCharacterIterator::doEquals(const CharacterIterator& rhs) const {
-	return current_ == static_cast<const StringCharacterIterator&>(rhs).current_;
+bool StringCharacterIterator::doEquals(const CharacterIterator& other) const {
+	return current_ == static_cast<const StringCharacterIterator&>(other).current_;
 }
 
 /// @see CharacterIterator#doFirst
@@ -172,8 +169,8 @@ void StringCharacterIterator::doLast() {
 }
 
 /// @see CharacterIterator#doLess
-bool StringCharacterIterator::doLess(const CharacterIterator& rhs) const {
-	return current_ < static_cast<const StringCharacterIterator&>(rhs).current_;
+bool StringCharacterIterator::doLess(const CharacterIterator& other) const {
+	return current_ < static_cast<const StringCharacterIterator&>(other).current_;
 }
 
 /// @see CharacterIterator#doNext
@@ -219,7 +216,7 @@ namespace {
 #include "generated/uprops-value-names"
 
 
-// GeneralCategory //////////////////////////////////////////////////////////
+// GeneralCategory ////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int GeneralCategory::DEFAULT_VALUE = GeneralCategory::UNASSIGNED;
@@ -229,7 +226,7 @@ const Char GeneralCategory::LONG_NAME[] = L"General_Category";
 const Char GeneralCategory::SHORT_NAME[] = L"gc";
 
 
-// Block ////////////////////////////////////////////////////////////////////
+// Block //////////////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int Block::DEFAULT_VALUE = Block::NO_BLOCK;
@@ -239,7 +236,7 @@ const Char Block::LONG_NAME[] = L"Block";
 const Char Block::SHORT_NAME[] = L"blk";
 
 
-// CanonicalCombiningClass //////////////////////////////////////////////////
+// CanonicalCombiningClass ////////////////////////////////////////////////////////////////////////
 
 /// The default of the property.
 const int CanonicalCombiningClass::DEFAULT_VALUE = CanonicalCombiningClass::NOT_REORDERED;
@@ -249,7 +246,7 @@ const Char CanonicalCombiningClass::LONG_NAME[] = L"Canonical_Combining_Class";
 const Char CanonicalCombiningClass::SHORT_NAME[] = L"ccc";
 
 
-// Script ///////////////////////////////////////////////////////////////////
+// Script /////////////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int Script::DEFAULT_VALUE = Script::UNKNOWN;
@@ -259,7 +256,7 @@ const Char Script::LONG_NAME[] = L"Script";
 const Char Script::SHORT_NAME[] = L"sc";
 
 
-// HangulSyllableType ///////////////////////////////////////////////////////
+// HangulSyllableType /////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int HangulSyllableType::DEFAULT_VALUE = HangulSyllableType::NOT_APPLICABLE;
@@ -269,7 +266,7 @@ const Char HangulSyllableType::LONG_NAME[] = L"Hangul_Syllable_Type";
 const Char HangulSyllableType::SHORT_NAME[] = L"hst";
 
 
-// BinaryProperty ///////////////////////////////////////////////////////////
+// BinaryProperty /////////////////////////////////////////////////////////////////////////////////
 
 #include "generated/uprops-code-table"
 
@@ -337,7 +334,7 @@ bool BinaryProperty::is(CodePoint cp, int property) {
 }
 
 
-// EastAsianWidth ///////////////////////////////////////////////////////////
+// EastAsianWidth /////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int EastAsianWidth::DEFAULT_VALUE = EastAsianWidth::NEUTRAL;
@@ -347,7 +344,7 @@ const Char EastAsianWidth::LONG_NAME[] = L"East_Asian_Width";
 const Char EastAsianWidth::SHORT_NAME[] = L"ea";
 
 
-// LineBreak ////////////////////////////////////////////////////////////////
+// LineBreak //////////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int LineBreak::DEFAULT_VALUE = LineBreak::UNKNOWN;
@@ -357,7 +354,7 @@ const Char LineBreak::LONG_NAME[] = L"Line_Break";
 const Char LineBreak::SHORT_NAME[] = L"lb";
 
 
-// GraphemeClusterBreak /////////////////////////////////////////////////////
+// GraphemeClusterBreak ///////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int GraphemeClusterBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
@@ -393,7 +390,7 @@ int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
 }
 
 
-// WordBreak ////////////////////////////////////////////////////////////////
+// WordBreak //////////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int WordBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
@@ -485,7 +482,7 @@ int WordBreak::of(CodePoint cp,
 }
 
 
-// SentenceBreak ////////////////////////////////////////////////////////////
+// SentenceBreak //////////////////////////////////////////////////////////////////////////////////
 
 /// The default value of the property.
 const int SentenceBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
