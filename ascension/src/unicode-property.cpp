@@ -111,12 +111,12 @@ StringCharacterIterator::StringCharacterIterator() /*throw()*/
 		: CharacterIterator(CONCRETE_TYPE_TAG_) {
 }
 
-StringCharacterIterator::StringCharacterIterator(const Range<Char*>& text) :
+StringCharacterIterator::StringCharacterIterator(const Range<const Char*>& text) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.beginning()),
 		first_(text.beginning()), last_(text.end()) {
 }
 
-StringCharacterIterator::StringCharacterIterator(const Range<Char*>& text, const Char* start) :
+StringCharacterIterator::StringCharacterIterator(const Range<const Char*>& text, const Char* start) :
 		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start),
 		first_(text.beginning()), last_(text.end()) {
 	if(current_ < first_ || current_ > last_)

@@ -7,6 +7,7 @@
 
 #include <ascension/document.hpp>
 #include <ascension/point.hpp>
+#include <ascension/unicode.hpp>
 #include <stack>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
@@ -960,6 +961,16 @@ Document::Line::Line(size_t revisionNumber) /*throw()*/ : newline_(ASCENSION_DEF
 
 Document::Line::Line(size_t revisionNumber, const String& text,
 		Newline newline /* = ASCENSION_DEFAULT_NEWLINE */) : text_(text), newline_(newline), revisionNumber_(revisionNumber) {
+}
+
+
+// Document.DefaultContentTypeInformationProvider /////////////////////////////////////////////////
+
+Document::DefaultContentTypeInformationProvider::DefaultContentTypeInformationProvider() : syntax_(new IdentifierSyntax()) {
+}
+
+Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationProvider() /*throw()*/ {
+	delete syntax_;
 }
 
 

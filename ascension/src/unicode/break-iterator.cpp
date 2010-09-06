@@ -30,7 +30,7 @@ AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& 
 
 void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
 	assert(amount > 0);
-	CharacterIterator& i = getCharacterIterator();
+	CharacterIterator& i = characterIterator();
 	if(!i.hasNext())	// (GB2)
 		return;
 	CodePoint prevCP, cp = i.current();
@@ -62,7 +62,7 @@ void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
 
 void AbstractGraphemeBreakIterator::doPrevious(ptrdiff_t amount) {
 	assert(amount > 0);
-	CharacterIterator& i = getCharacterIterator();
+	CharacterIterator& i = characterIterator();
 	if(!i.hasPrevious() || !i.previous().hasPrevious())	// (GB1)
 		return;
 	CodePoint prevCP, cp = i.current();
@@ -214,7 +214,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	// | | current-boundary-candidate
 	// | prev
 	// prev-prev
-	CharacterIterator& i = getCharacterIterator();
+	CharacterIterator& i = characterIterator();
 	if(!i.hasNext())	// (WB2)
 		return;
 	nextBase(i);
@@ -308,7 +308,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 	//   current-boundary-candidate | |
 	//                       prev (i) |
 	//                        prev-prev
-	CharacterIterator& i = getCharacterIterator();
+	CharacterIterator& i = characterIterator();
 	if(!i.hasPrevious())	// (WB1)
 		return;
 	previousBase(i);
@@ -558,7 +558,7 @@ AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
 	// TODO: not implemented.
-	CharacterIterator& i = getCharacterIterator();
+	CharacterIterator& i = characterIterator();
 	while(i.hasNext()) {
 		if(i.current() == CARRIAGE_RETURN) {
 			i.next();

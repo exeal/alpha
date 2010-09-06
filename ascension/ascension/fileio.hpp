@@ -3,11 +3,13 @@
  * Defines @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2009 separated from document.hpp
+ * @date 2009-2010
  */
 
 #ifndef ASCENSION_FILEIO_HPP
 #define ASCENSION_FILEIO_HPP
-#include <ascension/document.hpp>
+#include "document.hpp"
+#include "encoder.hpp"	// encoding.Encoder.*
 #ifdef ASCENSION_POSIX
 #include <sys/types.h>
 #endif // ASCENSION_POSIX

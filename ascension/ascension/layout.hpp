@@ -413,7 +413,6 @@ namespace ascension {
 			void dispose() /*throw()*/;
 			void expandTabsWithoutWrapping() /*throw()*/;
 			std::size_t findRunForPosition(length_t column) const /*throw()*/;
-			void itemize(length_t lineNumber) /*throw()*/;
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
 			void locations(length_t column, POINT* leading, POINT* trailing) const;
