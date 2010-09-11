@@ -347,9 +347,8 @@ namespace ascension {
 			public StandardConstBidirectionalIteratorAdapter<StringCharacterIterator, CodePoint> {
 		public:
 			StringCharacterIterator() /*throw()*/;
-			StringCharacterIterator(const Range<const Char*>& text);
+			StringCharacterIterator(const StringPiece& text);
 			StringCharacterIterator(const Range<const Char*>& text, const Char* start);
-			StringCharacterIterator(const String& s);
 			StringCharacterIterator(const String& s, String::const_iterator start);
 			StringCharacterIterator(const StringCharacterIterator& other) /*throw()*/;
 

@@ -648,10 +648,12 @@ const IFontCollection& layout::systemFonts() {
 class LineLayout::Run {
 	MANAH_NONCOPYABLE_TAG(Run);
 public:
-	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script, OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
+	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script,
+		OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
 	virtual ~Run() /*throw()*/;
 	uchar bidiEmbeddingLevel() const /*throw()*/;
-	auto_ptr<Run> breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip);	// 'at' is from the beginning of the line
+	auto_ptr<Run> breakAt(DC& dc, length_t at,	// 'at' is from the beginning of the line
+		const String& lineString, const ILayoutInformationProvider& lip);
 	length_t column() const /*throw()*/ {return glyphs_->column + characterRange_.beginning();}
 	HRESULT draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect = 0, UINT options = 0) const;
 	bool expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth);
@@ -660,7 +662,8 @@ public:
 	length_t length() const /*throw()*/ {return characterRange_.length();}
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
 	static void mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles, vector<Run*>& result);
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
+		const ILayoutInformationProvider& lip, vector<Run*>& result);
 	HRESULT logicalWidths(int widths[]) const;
 	int numberOfGlyphs() const /*throw()*/;
 	ReadingDirection readingDirection() const /*throw()*/;
@@ -694,7 +697,7 @@ protected:
 	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {return glyphs_->visualAttributes.get() + glyphRange_.beginning();}
 private:
 	HRESULT buildGlyphs(const DC& dc, const Char* text) /*throw()*/;
-	pair<int, HRESULT> countMissingGlyphs(const DC& dc) const /*throw()*/;
+	pair<int, HRESULT> countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/;
 	HRESULT generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs);
 	void generateDefaultGlyphs(const DC& dc);
 private:
@@ -827,7 +830,7 @@ HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* text) /*throw()*/
  * @param run the run
  * @return the number of missing glyphs
  */
-inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc) const /*throw()*/ {
+inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
 	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp);
@@ -835,12 +838,15 @@ inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc) cons
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 	int result = 0;
-	for(int i = glyphRange_.beginning(); i < glyphRange_.end(); ++i) {
-		const WORD glyph = glyphs_->indices[i];
-		if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
-			++result;
-		else if(glyphs_->visualAttributes[i].fZeroWidth == 1 && scriptProperties.get(analysis_.eScript).fComplex == 0)
-			++result;
+	for(length_t i = characterRange_.beginning(), e = characterRange_.end(); i < e; ++i) {
+		if(!BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(
+				surrogates::decodeFirst(text + column() + i, text + column() + e))) {
+			const WORD glyph = glyphs_->indices[glyphs_->clusters[i]];
+			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
+				++result;
+			else if(glyphs_->visualAttributes[i].fZeroWidth == 1 && scriptProperties.get(analysis_.eScript).fComplex == 0)
+				++result;
+		}
 	}
 	return make_pair(result, S_OK);
 }
@@ -896,7 +902,7 @@ inline bool LineLayout::Run::expandTabCharacters(const String& lineString, int x
  */
 inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs) {
 	HRESULT hr = buildGlyphs(dc, text);
-	if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc).first))
+	if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc, text).first))
 		hr = S_FALSE;
 	else if(hr == USP_E_SCRIPT_NOT_IN_FONT && numberOfMissingGlyphs != 0)
 		*numberOfMissingGlyphs = numberOfGlyphs();
@@ -962,16 +968,62 @@ inline HRESULT LineLayout::Run::logicalWidths(int widths[]) const {
 		numberOfGlyphs(), advances(), clusters(), visualAttributes(), widths);
 }
 
+namespace {
+	void resolveFontSpecifications(const ILayoutInformationProvider& lip,
+			tr1::shared_ptr<const RunStyle> requestedStyle, String& computedFamilyName,
+			FontProperties& computedProperties, double& computedSizeAdjust) {
+		tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+		// family name
+		computedFamilyName = (requestedStyle.get() != 0) ? requestedStyle->fontFamily : String();
+		if(computedFamilyName.empty()) {
+			if(defaultStyle.get() != 0)
+				computedFamilyName = lip.presentation().defaultTextRunStyle()->fontFamily;
+			if(computedFamilyName.empty())
+				computedFamilyName = lip.textMetrics().familyName();
+		}
+		// properties
+		computedProperties = (requestedStyle.get() != 0) ? requestedStyle->fontProperties : FontProperties();
+		if(computedProperties.weight == FontProperties::INHERIT_WEIGHT)
+			computedProperties.weight = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
+		if(computedProperties.stretch == FontProperties::INHERIT_STRETCH)
+			computedProperties.stretch = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
+		if(computedProperties.style == FontProperties::INHERIT_STYLE)
+			computedProperties.style = (defaultStyle.get() != 0) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
+		if(computedProperties.size == 0.0f) {
+			if(defaultStyle.get() != 0)
+				computedProperties.size = defaultStyle->fontProperties.size;
+			if(computedProperties.size == 0.0f)
+				computedProperties.size = lip.textMetrics().emHeight();
+		}
+		// size-adjust
+		computedSizeAdjust = (requestedStyle.get() != 0) ? requestedStyle->fontSizeAdjust : -1.0;
+		if(computedSizeAdjust < 0.0)
+			computedSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
+	}
+	pair<const Char*, tr1::shared_ptr<const AbstractFont> > findNextFontRun(
+			const Range<const Char*>& text, tr1::shared_ptr<const RunStyle> requestedStyle,
+			tr1::shared_ptr<const AbstractFont> previousFont, const ILayoutInformationProvider& lip) {
+		String familyName;
+		FontProperties properties;
+		double sizeAdjust;
+		resolveFontSpecifications(lip, requestedStyle, familyName, properties, sizeAdjust);
+		return make_pair(static_cast<const Char*>(0), lip.fontCollection().get(familyName, properties, sizeAdjust));
+	}
+} // namespace @0
+
 /**
  * Merges the given item runs and the given style runs.
  * @param lineString
  * @param items the items itemized by @c #itemize()
  * @param numberOfItems the length of the array @a items
  * @param styles the iterator returns the styled runs in the line. can be @c null
+ * @param lip
+ * @param[out] result
  * @see presentation#Presentation#getLineStyle
  */
 void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles, vector<Run*>& result) {
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
+		const ILayoutInformationProvider& lip, vector<Run*>& result) {
 	if(scriptRuns == 0)
 		throw NullPointerException("scriptRuns");
 	else if(numberOfScriptRuns == 0)
@@ -1004,11 +1056,12 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 	pair<const StyledRun*, length_t> nextStyleRun;
 	nextStyleRun.first = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
 	nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+	tr1::shared_ptr<const AbstractFont> font;
 	do {
 		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, (styleRun != 0) ? styleRun->column : 0);
 		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
 		length_t newRunEnd;
-		bool forwardScriptRun = false, forwardStyleRun = false, breakScriptRun = false;
+		bool forwardScriptRun = false, forwardStyleRun = false;
 
 		if(nextScriptRun.second == nextStyleRun.second) {
 			newRunEnd = nextScriptRun.second;
@@ -1019,22 +1072,30 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		} else {	// nextScriptRun.second > nextStyleRun.second
 			newRunEnd = nextStyleRun.second;
 			forwardStyleRun = true;
-			breakScriptRun = true;
 		}
 
-		if(breakScriptRun) {
-			if(breakScriptRun =
-					!legacyctype::isspace(lineString[previousRunEnd - 1]) && !legacyctype::isspace(lineString[previousRunEnd]))
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 1;
+		if(surrogates::next(lineString.data() + previousRunEnd,
+				lineString.data() + newRunEnd) < lineString.data() + newRunEnd || font.get() == 0) {
+			const pair<const Char*, tr1::shared_ptr<const AbstractFont> > nextFontRun(
+				findNextFontRun(
+					Range<const Char*>(lineString.data() + previousRunEnd, lineString.data() + newRunEnd),
+					(styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>(), font, lip));
+			font = nextFontRun.second;
+			if(nextFontRun.first != 0) {
+				newRunEnd = nextFontRun.first - lineString.data();
+				forwardScriptRun = forwardStyleRun = false;
+			}
 		}
+
+		const bool breakScriptRun = newRunEnd < nextScriptRun.second;
+		if(breakScriptRun)
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
 		runs.push_back(
 			new Run(previousRunEnd, newRunEnd - previousRunEnd, scriptRun->a,
 			(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN,	// TODO: 'DFLT' is preferred?
 			(styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>()));
-		if(breakScriptRun) {
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 1;
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
-		}
+		if(breakScriptRun)
+			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
 		if(forwardScriptRun) {
 			scriptRun = nextScriptRun.first;
 			if(nextScriptRun.first != 0) {
@@ -1365,7 +1426,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 */
 		// 4. the fallback font
 		if(hr != S_OK) {
-			for(StringCharacterIterator i(textString, textString + length()); i.hasNext(); i.next()) {
+			for(StringCharacterIterator i(Range<const Char*>(textString, textString + length())); i.hasNext(); i.next()) {
 				script = Script::of(i.current());
 				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 					break;
@@ -1649,6 +1710,55 @@ namespace {
  * @see LineLayoutBuffer#lineLayout, LineLayoutBuffer#lineLayoutIfCached
  */
 
+namespace {
+	template<typename T, size_t staticCapacity>
+	class AutoArray {
+	public:
+		typedef T ElementType;
+		static const size_t STATIC_CAPACITY = staticCapacity;
+	public:
+		AutoArray() : capacity_(STATIC_CAPACITY) {
+		}
+		ElementType& operator[](size_t i) {
+			return p_[i];
+		}
+		const ElementType& operator[](size_t i) const {
+			return p_[i];
+		}
+		ElementType& at(size_t i) {
+			if(i >= capacity_)
+				throw out_of_range("i");
+			return operator[](i);
+		}
+		const ElementType& at(size_t i) const {
+			if(i >= capacity_)
+				throw out_of_range("i");
+			return operator[](i);
+		}
+		ElementType* get() const {
+			return p_;
+		}
+		void reallocate(size_t n) {
+			if(n <= STATIC_CAPACITY) {
+				allocated_.reset();
+				p_ = auto_;
+				capacity_ = STATIC_CAPACITY;
+			} else {
+				if(n > capacity_) {
+					allocated_.reset(new ElementType[n]);
+					capacity_ = n;
+				}
+				p_ = allocated_.get();
+			}
+		}
+	private:
+		ElementType auto_[STATIC_CAPACITY];
+		manah::AutoBuffer<ElementType> allocated_;
+		size_t capacity_;
+		ElementType* p_;
+	};
+}
+
 /**
  * Constructor.
  * @param dc the device context
@@ -1679,8 +1789,68 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		return;
 	}
 
-	// construct the layout
-	itemize(line);
+	// split the text line into style runs as following steps:
+	// 1. split the text into script runs by Uniscribe
+	// 2. split each script runs into style runs with StyledRunIterator
+	// 3. resplit each script runs into font runs to shape
+	// 4. merge style runs and font runs
+
+	// 1. split the text into script runs by Uniscribe
+	HRESULT hr;
+	const LayoutSettings& c = lip_.layoutSettings();
+	const Presentation& presentation = lip_.presentation();
+
+	// 1-1. configure Uniscribe's itemize
+	AutoZero<SCRIPT_CONTROL> control;
+	AutoZero<SCRIPT_STATE> initialState;
+	initialState.uBidiLevel = (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
+//	initialState.fOverrideDirection = 1;
+	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
+	initialState.fDisplayZWG = c.displaysShapingControls;
+	resolveNumberSubstitution(
+		(style_.get() != 0) ? &style_->numberSubstitution : 0, control, initialState);	// ignore result...
+
+	// 1-2. itemize
+	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
+	AutoArray<SCRIPT_ITEM, 128> scriptRuns;
+	AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
+	int estimatedNumberOfScriptRuns = max(static_cast<int>(lineString.length()) / 4, 2), numberOfScriptRuns;
+	HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+	while(true) {
+		scriptRuns.reallocate(estimatedNumberOfScriptRuns);
+		scriptTags.reallocate(estimatedNumberOfScriptRuns);
+		if(scriptItemizeOpenType != 0)
+			hr = (*scriptItemizeOpenType)(lineString.data(), static_cast<int>(lineString.length()),
+				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), scriptTags.get(), &numberOfScriptRuns);
+		else
+			hr = ::ScriptItemize(lineString.data(), static_cast<int>(lineString.length()),
+				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), &numberOfScriptRuns);
+		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
+			break;
+		estimatedNumberOfScriptRuns *= 2;
+	}
+	if(c.disablesDeprecatedFormatCharacters) {
+		for(int i = 0; i < numberOfScriptRuns; ++i) {
+			scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
+			scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
+		}
+	}
+	if(scriptItemizeOpenType == 0)
+		fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
+
+	// 2. split each script runs into style runs with StyledRunIterator
+	vector<Run*> styleRuns;
+	Run::mergeScriptsAndStyles(lineString.data(),
+		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
+		presentation.textRunStyles(lineNumber()), lip_, styleRuns);
+	runs_ = new Run*[numberOfRuns_ = styleRuns.size()];
+	copy(styleRuns.begin(), styleRuns.end(), runs_);
+
+	// 3. resplit each script runs into font runs to shape
+//	for(size_t i = 0; i < numberOfScriptRuns; ++i) {
+//		computeFontRuns();
+//	}
 
 	// generate and position the glyphs for the text
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
@@ -1900,6 +2070,18 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 	}
 
 	return bounds;
+}
+
+namespace {
+	inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
+			const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
+		static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+			const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+		if(scriptItemizeOpenType != 0 && scriptTags != 0)
+			return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
+		else
+			return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+	}
 }
 
 /// Disposes the layout.
@@ -2319,83 +2501,6 @@ bool LineLayout::isBidirectional() const /*throw()*/ {
 			return true;
 	}
 	return false;
-}
-
-inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
-		const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
-	static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-	if(scriptItemizeOpenType != 0 && scriptTags != 0)
-		return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
-	else
-		return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
-}
-
-/**
- * Itemizes the text into shapable runs.
- * @param lineNumber the line number of the line
- */
-inline void LineLayout::itemize(length_t lineNumber) /*throw()*/ {
-	const String& line = text();
-	assert(!line.empty());
-
-	HRESULT hr;
-	const LayoutSettings& c = lip_.layoutSettings();
-	const Presentation& presentation = lip_.presentation();
-
-	// configure
-	AutoZero<SCRIPT_CONTROL> control;
-	AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
-//	initialState.fOverrideDirection = 1;
-	initialState.fInhibitSymSwap = c.inhibitsSymmetricSwapping;
-	initialState.fDisplayZWG = c.displaysShapingControls;
-	resolveNumberSubstitution(
-		(style_.get() != 0) ? &style_->numberSubstitution : 0, control, initialState);	// ignore result...
-
-	// itemize
-	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
-	static SCRIPT_ITEM fastItems[128];
-	static OPENTYPE_TAG fastScriptTags[MANAH_COUNTOF(fastItems)];
-	SCRIPT_ITEM* items;
-	OPENTYPE_TAG* scriptTags;
-	manah::AutoBuffer<SCRIPT_ITEM> autoItems;
-	manah::AutoBuffer<OPENTYPE_TAG> autoScriptTags;
-	int estimatedNumberOfRuns = max(static_cast<int>(line.length()) / 8, 2), numberOfItems;
-	HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-	while(true) {
-		if(estimatedNumberOfRuns <= MANAH_COUNTOF(fastItems)) {
-			items = fastItems;
-			scriptTags = (scriptItemizeOpenType != 0) ? fastScriptTags : 0;
-		} else {
-			autoItems.reset(new SCRIPT_ITEM[estimatedNumberOfRuns]);
-			items = autoItems.get();
-			autoScriptTags.reset((scriptItemizeOpenType != 0) ? new OPENTYPE_TAG[estimatedNumberOfRuns] : 0);
-			scriptTags = autoScriptTags.get();
-		}
-		if(scriptItemizeOpenType != 0)
-			hr = (*scriptItemizeOpenType)(line.data(), static_cast<int>(line.length()),
-				estimatedNumberOfRuns, &control, &initialState, items, scriptTags, &numberOfItems);
-		else
-			hr = ::ScriptItemize(line.data(), static_cast<int>(line.length()),
-				estimatedNumberOfRuns, &control, &initialState, items, &numberOfItems);
-		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
-			break;
-		estimatedNumberOfRuns *= 2;
-	}
-	if(c.disablesDeprecatedFormatCharacters) {
-		for(int i = 0; i < numberOfItems; ++i) {
-			items[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
-			items[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
-		}
-	}
-
-	// text run style
-	vector<Run*> runs;
-	Run::mergeScriptsAndStyles(line.data(), items, scriptTags, numberOfItems, presentation.textRunStyles(lineNumber), runs);
-	runs_ = new Run*[numberOfRuns_ = runs.size()];
-	copy(runs.begin(), runs.end(), runs_);
 }
 
 /// Justifies the wrapped visual lines.
