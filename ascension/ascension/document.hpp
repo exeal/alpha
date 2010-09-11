@@ -61,10 +61,10 @@ namespace ascension {
 		inline bool isSpecialContentType(ContentType v) {return v < 100;}
 
 		/**
-		 * Value represent a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
+		 * Value represents a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
 		 * special values indicate how to interpret newlines during any text I/O.
 		 * @see newlineStringLength, newlineString, Document, ASCENSION_DEFAULT_NEWLINE,
-		 * NEWLINE_CHARACTERS
+		 *      NEWLINE_CHARACTERS
 		 */
 		enum Newline {
 			/// Line feed. Standard of Unix (Lf, U+000A).
@@ -104,17 +104,17 @@ namespace ascension {
 			/// Constructor.
 			explicit Position(length_t line, length_t column) /*throw()*/ : line(line), column(column) {}
 			/// Equality operator.
-			bool operator==(const Position& rhs) const /*throw()*/ {return line == rhs.line && column == rhs.column;}
+			bool operator==(const Position& other) const /*throw()*/ {return line == other.line && column == other.column;}
 			/// Unequality operator.
-			bool operator!=(const Position& rhs) const /*throw()*/ {return line != rhs.line || column != rhs.column;}
+			bool operator!=(const Position& other) const /*throw()*/ {return line != other.line || column != other.column;}
 			/// Relational operator.
-			bool operator<(const Position& rhs) const /*throw()*/ {return line < rhs.line || (line == rhs.line && column < rhs.column);}
+			bool operator<(const Position& other) const /*throw()*/ {return line < other.line || (line == other.line && column < other.column);}
 			/// Relational operator.
-			bool operator<=(const Position& rhs) const /*throw()*/ {return *this < rhs || *this == rhs;}
+			bool operator<=(const Position& other) const /*throw()*/ {return *this < other || *this == other;}
 			/// Relational operator.
-			bool operator>(const Position& rhs) const /*throw()*/ {return line > rhs.line || (line == rhs.line && column > rhs.column);}
+			bool operator>(const Position& other) const /*throw()*/ {return line > other.line || (line == other.line && column > other.column);}
 			/// Relational operator.
-			bool operator>=(const Position& rhs) const /*throw()*/ {return *this > rhs || *this == rhs;}
+			bool operator>=(const Position& other) const /*throw()*/ {return *this > other || *this == other;}
 		};
 
 		template<typename Element, typename Traits>
@@ -137,9 +137,9 @@ namespace ascension {
 			Region(length_t line, const std::pair<length_t, length_t>& columns) /*throw()*/
 				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
 			/// Returns an intersection of the two regions. Same as @c #getIntersection.
-			Region operator&(const Region& rhs) const /*throw()*/ {return getIntersection(rhs);}
+			Region operator&(const Region& other) const /*throw()*/ {return getIntersection(other);}
 			/// Returns a union of the two regions. Same as @c #getUnion.
-			Region operator|(const Region& rhs) const {return getUnion(rhs);}
+			Region operator|(const Region& other) const {return getUnion(other);}
 			/// Returns the beginning of the region.
 			Position& beginning() /*throw()*/ {return (first < second) ? first : second;}
 			/// Returns the beginning of the region.
@@ -492,8 +492,8 @@ namespace ascension {
 			public:
 				// StandardConstBidirectionalIteratorAdapter requirements
 				value_type current() const {return *impl_;}
-				bool equals(const Iterator& rhs) const {return impl_ == rhs.impl_;}
-				bool less(const Iterator& rhs) const {return impl_ < rhs.impl_;}
+				bool equals(const Iterator& other) const {return impl_ == other.impl_;}
+				bool less(const Iterator& other) const {return impl_ < other.impl_;}
 				void next() {++impl_;}
 				void previous() {--impl_;}
 			private:
@@ -538,7 +538,7 @@ namespace ascension {
 			DocumentCharacterIterator(const Document& document, const Position& position);
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
-			DocumentCharacterIterator(const DocumentCharacterIterator& rhs) /*throw()*/;
+			DocumentCharacterIterator(const DocumentCharacterIterator& other) /*throw()*/;
 			// attributes
 			const Document* document() const /*throw()*/;
 			const String& line() const /*throw()*/;
@@ -552,12 +552,12 @@ namespace ascension {
 			bool hasNext() const /*throw()*/;
 			bool hasPrevious() const /*throw()*/;
 		private:
-			void doAssign(const CharacterIterator& rhs);
+			void doAssign(const CharacterIterator& other);
 			std::auto_ptr<CharacterIterator> doClone() const;
 			void doFirst();
 			void doLast();
-			bool doEquals(const CharacterIterator& rhs) const;
-			bool doLess(const CharacterIterator& rhs) const;
+			bool doEquals(const CharacterIterator& other) const;
+			bool doLess(const CharacterIterator& other) const;
 			void doNext();
 			void doPrevious();
 		private:
@@ -646,7 +646,7 @@ namespace ascension {
 			void setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) /*throw()*/;
 			// manipulations
 			bool isChanging() const /*throw()*/;
-			void replace(const Region& region, const Char* first, const Char* last, Position* eos = 0);
+			void replace(const Region& region, const StringPiece& text, Position* eos = 0);
 			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = 0);
 #if 0
 			// locks
@@ -758,10 +758,8 @@ namespace ascension {
 		// free functions to change document
 		void erase(Document& document, const Region& region);
 		void erase(Document& document, const Position& first, const Position& second);
-		void insert(Document& document, const Position& at, const String& text, Position* endOfInsertedString = 0);
-		void insert(Document& document, const Position& at, const Char* first, const Char* last, Position* endOfInsertedString = 0);
+		void insert(Document& document, const Position& at, const StringPiece& text, Position* endOfInsertedString = 0);
 		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = 0);
-		void replace(Document& document, const Region& region, const String& text, Position* endOfInsertedString = 0);
 
 		// other free functions related to document
 		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
@@ -781,7 +779,7 @@ namespace ascension {
 
 // inline implementation ////////////////////////////////////////////////////
 
-/// Write a @c Position into the output stream.
+/// Writes a @c Position into the output stream.
 template<typename Element, typename Traits>
 inline std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Position& value) {
 	const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
@@ -793,7 +791,7 @@ inline std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Elemen
 	return out << s.str().c_str();
 }
 
-/// Write a @c Region into the output stream.
+/// Writes a @c Region into the output stream.
 template<typename Element, typename Traits>
 inline std::basic_ostream<Element, Traits>& operator<<(std::basic_ostream<Element, Traits>& out, const Region& value) {
 	const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
@@ -865,12 +863,8 @@ inline void erase(Document& document, const Region& region) {return document.rep
 inline void erase(Document& document, const Position& first, const Position& second) {return erase(document, Region(first, second));}
 
 /// Calls @c Document#replace.
-inline void insert(Document& document, const Position& at, const Char* first, const Char* last,
-	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), first, last, endOfInsertedString);}
-
-/// Calls @c Document#replace.
-inline void insert(Document& document, const Position& at, const String& text,
-	Position* endOfInsertedString /* = 0 */) {return insert(document, at, text.data(), text.data() + text.length(), endOfInsertedString);}
+inline void insert(Document& document, const Position& at, const StringPiece& text,
+	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), text, endOfInsertedString);}
 
 /// Calls @c Document#replace.
 inline void insert(Document& document, const Position& at, std::basic_istream<Char>& in,
@@ -936,10 +930,6 @@ inline length_t newlineStringLength(Newline newline) {
 			throw UnknownValueException("newline");
 	}
 }
-
-/// Calls @c Document#replace.
-inline void replace(Document& document, const Region& region, const String& text,
-	Position* endOfInsertedString) {return document.replace(region, text.data(), text.data() + text.length(), endOfInsertedString);}
 
 /// Returns @c true if the given position is outside of the document.
 inline bool positions::isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/ {

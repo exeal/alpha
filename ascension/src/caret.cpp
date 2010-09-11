@@ -946,24 +946,23 @@ namespace {
 	 * @internal Deletes the forward one character and inserts the specified text.
 	 * This function emulates keyboard overtyping input.
 	 * @param caret the caret
-	 * @param first the beginning of the text
-	 * @param last the end of the text
+	 * @param text the text to insert
 	 * @param keepNewline set @c false to overwrite a newline characer
 	 * @throw NullPointerException @a first is @c null
 	 * @throw DocumentDisposedException
 	 * @throw TextViewerDisposedException
 	 * @throw ... any exceptions @c Document#replace throws
 	 */
-	void destructiveInsert(Caret& caret, const Char* first, const Char* last, bool keepNewline = true) {
-		if(first == 0)
-			throw NullPointerException("first");
+	void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
+		if(text.beginning() == 0)
+			throw NullPointerException("text");
 		const bool adapts = caret.adaptsToDocument();
 		caret.adaptToDocument(false);
 		Position e((keepNewline && locations::isEndOfLine(caret)) ?
 			caret.position() : locations::forwardCharacter(caret, locations::GRAPHEME_CLUSTER));
 		if(e != caret.position()) {
 			try {
-				caret.document().replace(Region(caret.position(), e), first, last, &e);
+				caret.document().replace(Region(caret.position(), e), text, &e);
 			} catch(...) {
 				caret.adaptToDocument(adapts);
 				throw;
@@ -1017,12 +1016,12 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	surrogates::encode(character, buffer);
 	if(!isSelectionEmpty(*this)) {	// just replace if the selection is not empty
 		doc.insertUndoBoundary();
-		replaceSelection(buffer, buffer + ((character < 0x10000u) ? 1 : 2));
+		replaceSelection(StringPiece(buffer, (character < 0x10000u) ? 1 : 2));
 		doc.insertUndoBoundary();
 	} else if(overtypeMode_) {
 		prechangeDocument();
 		doc.insertUndoBoundary();
-		destructiveInsert(*this, buffer, buffer + ((character < 0x10000u) ? 1 : 2));
+		destructiveInsert(*this, StringPiece(buffer, (character < 0x10000u) ? 1 : 2));
 		doc.insertUndoBoundary();
 	} else {
 		const bool alpha = identifierSyntax(*this).isIdentifierContinueCharacter(character);
@@ -1037,7 +1036,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 
 		ascension::internal::ValueSaver<bool> lock(typing_);
 		typing_ = true;
-		replaceSelection(buffer, buffer + ((character < 0x10000u) ? 1 : 2));	// this may throw
+		replaceSelection(StringPiece(buffer, (character < 0x10000u) ? 1 : 2));	// this may throw
 		if(alpha)
 			lastTypedPosition_ = position();
 	}
@@ -1090,7 +1089,7 @@ void Caret::paste(bool useKillRing) {
 		else if(FAILED(text.first))
 			throw ClipboardException(text.first);
 		document().insertUndoBoundary();
-		viewers::replaceSelection(*this, text.second, rectangle);
+		replaceSelection(text.second, rectangle);
 	} else {
 		texteditor::Session* const session = document().session();
 		if(session == 0 || session->killRing().numberOfKills() == 0)
@@ -1102,7 +1101,7 @@ void Caret::paste(bool useKillRing) {
 		try {
 			if(!isSelectionEmpty(*this) && yanking_)
 				document().undo();
-			viewers::replaceSelection(*this, text.first, text.second);
+			replaceSelection(text.first, text.second);
 		} catch(...) {
 			killRing.setCurrent(-1);
 			throw;
@@ -1166,18 +1165,17 @@ void Caret::removeStateListener(ICaretStateListener& listener) {
 /**
  * Replaces the selected region with the specified text.
  * If the selection is empty, inserts the text at current position.
- * @param first the start of the text
- * @param last the end of the text
+ * @param text the text to insert
  * @param rectangleInsertion set @c true to insert text as rectangle
  * @throw NullPointerException @a first and/or @last is @c null
  * @throw std#invalid_argument @a first &gt; @a last
  * @throw ... any exceptions @c Document#insert and @c Document#erase throw
  */
-void Caret::replaceSelection(const Char* first, const Char* last, bool rectangleInsertion /* = false */) {
+void Caret::replaceSelection(const StringPiece& text, bool rectangleInsertion /* = false */) {
 	Position e;
 	prechangeDocument();
 	if(!isSelectionRectangle() && !rectangleInsertion)
-		document().replace(selectedRegion(), first, last, &e);
+		document().replace(selectedRegion(), text, &e);
 	else {
 		// TODO: not implemented.
 	}
@@ -1743,7 +1741,7 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 			sb.sputn(s.data(), static_cast<streamsize>(s.length()));
 		s.assign(sb.str());
 	}
-	return viewers::replaceSelection(caret, s);
+	return caret.replaceSelection(s);
 }
 
 /**
@@ -1825,12 +1823,12 @@ namespace {
 		// TODO: this code is not exception-safe.
 		if(level == 0)
 			return;
-		const String indent = String(abs(level), character);
+		const String indent(abs(level), character);
 		const Region region(caret.selectedRegion());
 
 		if(region.beginning().line == region.end().line) {
 			// number of selected lines is one -> just insert tab character(s)
-			replaceSelection(caret, indent);
+			caret.replaceSelection(indent);
 			return;
 		}
 
@@ -1928,18 +1926,6 @@ void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
 }
 
 /**
- * Replaces the selected region with the specified text.
- * If the selection is empty, inserts the text at current position.
- * @param caret the caret provides a selection
- * @param text the text
- * @param rectangleInsertion set @c true to insert text as rectangle
- * @throw ... any exceptions @c Document#insert and @c Document#erase throw
- */
-void viewers::replaceSelection(Caret& caret, const String& text, bool rectangleInsertion /* = false */) {
-	return caret.replaceSelection(text.data(), text.data() + text.length(), rectangleInsertion);
-}
-
-/**
  * Transposes the character (grapheme cluster) addressed by the caret and the previous character,
  * and moves the caret to the end of them.
  * If the characters to transpose are not inside of the accessible region, this method fails and
@@ -2003,7 +1989,7 @@ bool viewers::transposeCharacters(Caret& caret) {
 	writeDocumentToStream(ss, caret.document(), Region(pos[1], pos[2]), NLF_LINE_SEPARATOR);
 	writeDocumentToStream(ss, caret.document(), Region(pos[0], pos[1]), NLF_LINE_SEPARATOR);
 	try {
-		replace(caret.document(), Region(pos[0], pos[2]), ss.str());
+		caret.document().replace(Region(pos[0], pos[2]), ss.str());
 	} catch(DocumentAccessViolationException&) {
 		return false;
 	}
@@ -2035,7 +2021,7 @@ bool viewers::transposeLines(Caret& caret) {
 	s += document.line(firstLine);
 
 	try {
-		replace(document, Region(
+		document.replace(Region(
 			Position(firstLine, 0), Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
 		caret.moveTo((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, old.column);
 	} catch(const DocumentAccessViolationException&) {
@@ -2093,7 +2079,7 @@ bool viewers::transposeWords(Caret& caret) {
 	writeDocumentToStream(ss, caret.document(), Region(pos[0], pos[1]), NLF_RAW_VALUE);
 	Position e;
 	try {
-		replace(caret.document(), Region(pos[0], pos[3]), ss.str(), &e);
+		caret.document().replace(Region(pos[0], pos[3]), ss.str(), &e);
 	} catch(const DocumentAccessViolationException&) {
 		return false;
 	}

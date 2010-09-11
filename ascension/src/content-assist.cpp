@@ -75,7 +75,7 @@ bool CompletionProposal::isAutoInsertable() const /*throw()*/ {
 void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
 	if(!document.isReadOnly()) {
 		document.insertUndoBoundary();
-		kernel::replace(document, replacementRegion, replacementString_);
+		document.replace(replacementRegion, replacementString_);
 		document.insertUndoBoundary();
 	}
 }

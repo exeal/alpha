@@ -1426,7 +1426,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 */
 		// 4. the fallback font
 		if(hr != S_OK) {
-			for(StringCharacterIterator i(Range<const Char*>(textString, textString + length())); i.hasNext(); i.next()) {
+			for(StringCharacterIterator i(StringPiece(textString, textString + length())); i.hasNext(); i.next()) {
 				script = Script::of(i.current());
 				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
 					break;

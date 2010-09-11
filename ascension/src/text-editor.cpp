@@ -526,7 +526,7 @@ bool CharacterToCodePointConversionCommand::perform() {
 	AutoFreeze af(&viewer);
 	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
 	try {
-		caret.replaceSelection(buffer, buffer + wcslen(buffer), false);
+		caret.replaceSelection(buffer, false);
 	} catch(const IDocumentInput::ChangeRejectedException&) {
 		return false;
 	}
@@ -582,7 +582,7 @@ bool CodePointToCharacterConversionCommand::perform() {
 			AutoFreeze af(&viewer);
 			caret.select(Position(eos.line(), i), eos);
 			try {
-				caret.replaceSelection(buffer, buffer + (cp < 0x10000u ? 1 : 2), false);
+				caret.replaceSelection(StringPiece(buffer, (cp < 0x10000u ? 1 : 2)), false);
 			} catch(const IDocumentInput::ChangeRejectedException&) {
 				return false;
 			}
@@ -1230,13 +1230,13 @@ bool TextInputCommand::perform() {
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 	if(n > 1) {
 		try {
-			replaceSelection(target().caret(), multiplyString(text_, static_cast<size_t>(n)));
+			target().caret().replaceSelection(multiplyString(text_, static_cast<size_t>(n)));
 		} catch(const IDocumentInput::ChangeRejectedException&) {
 			return false;
 		}
 	} else {
 		try {
-			replaceSelection(target().caret(), text_);
+			target().caret().replaceSelection(text_);
 		} catch(const IDocumentInput::ChangeRejectedException&) {
 			return false;
 		}

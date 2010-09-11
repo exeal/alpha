@@ -466,7 +466,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
 					Position e;
 					try {
-						replace(document, matchedRegion, replacement, &e);
+						document.replace(matchedRegion, replacement, &e);
 					} catch(const IDocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {
@@ -540,7 +540,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 					history.push(matchedRegion);
 					assert(!matchedRegion.isEmpty() || !replacement.empty());
 					try {
-						replace(document, matchedRegion, matcher->replaceInplace(replacement));
+						document.replace(matchedRegion, matcher->replaceInplace(replacement));
 					} catch(const IDocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {

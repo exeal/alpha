@@ -1479,7 +1479,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wParam, LPARA
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_SETTEXT:
 		EntireDocumentSelectionCreationCommand(*this)();
-		replaceSelection(caret(), String(reinterpret_cast<const wchar_t*>(lParam)), false);
+		caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lParam)), false);
 		handled = true;
 		return 0L;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -2300,7 +2300,7 @@ STDMETHODIMP TextViewerAccessibleProxy::put_accValue(VARIANT varChild, BSTR szVa
 		return E_INVALIDARG;
 	else if(view_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	replaceSelection(view_.caret(), (szValue != 0) ? szValue : L"");
+	view_.caret().replaceSelection((szValue != 0) ? szValue : L"");
 	return S_OK;
 }
 

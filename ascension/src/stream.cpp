@@ -46,7 +46,7 @@ DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
 		*p++ = traits_type::to_char_type(c);
 	setp(buffer_, MANAH_ENDOF(buffer_) - 1);
 	if(buffer_ < p)
-		insert(document_, current_, buffer_, p, &current_);
+		insert(document_, current_, StringPiece(buffer_, p), &current_);
 	return traits_type::not_eof(c);
 }
 
