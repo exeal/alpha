@@ -324,8 +324,7 @@ namespace ascension {
 			SubstitutionPolicy substitutionPolicy() const /*throw()*/;
 			// conversion
 			bool canEncode(CodePoint c);
-			bool canEncode(const Char* first, const Char* last);
-			bool canEncode(const String& s);
+			bool canEncode(const StringPiece& s);
 			Result fromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 			std::string fromUnicode(const String& from);
 			Result toUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);

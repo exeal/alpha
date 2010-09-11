@@ -262,8 +262,7 @@ namespace ascension {
 			void abort();
 			bool addCharacter(Char c);
 			bool addCharacter(CodePoint c);
-			bool addString(const Char* first, const Char* last);
-			bool addString(const String& text);
+			bool addString(const StringPiece& text);
 			void end();
 			bool next(Direction direction);
 			void reset();
@@ -403,15 +402,6 @@ namespace ascension {
 	template<typename InputIterator>
 	inline void TextSearcher::setStoredStrings(InputIterator first, InputIterator last, bool forReplacements) {
 		(forReplacements ? storedReplacements_ : storedPatterns_).assign(first, last);}
-	/**
-	 * Appends the specified text to the end of the current pattern.
-	 * @param text the string to append
-	 * @return true if the pattern is found
-	 * @throw NotRunningException the searcher is not running
-	 * @throw std#invalid_argument the string is empty
-	 * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
-	 */
-	inline bool IncrementalSearcher::addString(const String& text) {return addString(text.data(), text.data() + text.length());}
 	/// Returns if the previous command is undoable.
 	inline bool IncrementalSearcher::canUndo() const /*throw()*/ {return !operationHistory_.empty();}
 	/**

@@ -595,7 +595,7 @@ const Char* URIDetector::detect(const Char* first, const Char* last) const {
  * @return @c true if a URI was found
  * @throw NullPointerException @a first and/or @a last are @c null
  */
-bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, const Char*>& result) const {
+bool URIDetector::search(const Char* first, const Char* last, Range<const Char*>& result) const {
 	if(first == 0)
 		throw NullPointerException("first");
 	else if(last == 0)
@@ -610,8 +610,10 @@ bool URIDetector::search(const Char* first, const Char* last, pair<const Char*, 
 	while(true) {
 		if(handleScheme(first, nextColon) == nextColon) {
 			if(validSchemes_ == 0 || validSchemes_->matches(first, nextColon)) {
-				if(0 != (result.second = handleIRI(result.first = first, last)))
+				if(const Char* const e = handleIRI(first, last)) {
+					result = Range<const Char*>(first, e);
 					return true;
+				}
 			}
 			first = nextColon;
 		} else

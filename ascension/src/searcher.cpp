@@ -787,25 +787,28 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
 	if(c < 0x010000u)
 		return addCharacter(static_cast<Char>(c & 0xffffu));
 	Char surrogates[2];
-	surrogates::encode(c, surrogates);
-	return addString(surrogates, surrogates + 2);
+	const length_t n = surrogates::encode(c, surrogates);
+	return addString(StringPiece(surrogates, n));
 }
 
 /**
  * Appends the specified string to the end of the search pattern.
- * @param first the start of the string to append
- * @param last the end og the string to append
+ * @param text the string to append
  * @return true if the pattern is found
  * @throw IllegalStateException the searcher is not running
- * @throw std#invalid_argument the string is empty
+ * @throw NotRunningException the searcher is not running
+ * @throw NullPointerException @a text is @c null
+ * @throw std#invalid_argument @a text is empty
+ * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
  */
-bool IncrementalSearcher::addString(const Char* first, const Char* last) {
-	assert(first != 0 && last != 0 && first <= last);
+bool IncrementalSearcher::addString(const StringPiece& text) {
+	if(text.beginning() == 0 || text.end() == 0)
+		throw NullPointerException("text");
 	checkRunning();
-	if(first == last)
+	if(text.isEmpty())
 		throw invalid_argument("Added string is empty.");
-	pattern_.append(first, last);
-	for(const Char* p = first; p < last; ++p)
+	pattern_.append(text.beginning(), text.end());
+	for(const Char* p = text.beginning(); p < text.end(); ++p)
 		operationHistory_.push(TYPE);
 	return update();
 }

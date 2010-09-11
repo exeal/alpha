@@ -32,7 +32,7 @@ namespace ascension {
 			~URIDetector() /*throw()*/;
 			// parsing
 			const Char* detect(const Char* first, const Char* last) const;
-			bool search(const Char* first, const Char* last, std::pair<const Char*, const Char*>& result) const;
+			bool search(const Char* first, const Char* last, Range<const Char*>& result) const;
 			// attribute
 			URIDetector& setValidSchemes(const std::set<String>& schemes, bool caseSensitive = false);
 			URIDetector& setValidSchemes(const String& schemes, Char separator, bool caseSensitive = false);

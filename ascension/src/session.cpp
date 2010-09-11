@@ -1,7 +1,7 @@
 /**
  * @file session.cpp
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include <ascension/session.hpp>
@@ -152,15 +152,16 @@ void InputSequenceCheckers::add(auto_ptr<InputSequenceChecker> checker) {
 
 /**
  * Checks the sequence.
- * @param first start of the string preceding the character to be input
- * @param last end of the string preceding the character to be input
- * @param cp the code point of the character to be input
+ * @param preceding the string preceding the character to be input
+ * @param c the code point of the character to be input
  * @return true if the input is acceptable
+ * @throw NullPointerException preceding is @c null
  */
-bool InputSequenceCheckers::check(const Char* first, const Char* last, CodePoint cp) const {
-	assert(first != 0 && last != 0 && first <= last);
+bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
+	if(preceding.beginning() == 0 || preceding.end() == 0)
+		throw NullPointerException("preceding");
 	for(list<InputSequenceChecker*>::const_iterator i = strategies_.begin(); i != strategies_.end(); ++i) {
-		if(!(*i)->check(keyboardLayout_, first, last, cp))
+		if(!(*i)->check(keyboardLayout_, preceding, c))
 			return false;
 	}
 	return true;
