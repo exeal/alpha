@@ -256,7 +256,7 @@ namespace ascension {
 			void extendSelection(const kernel::Position& to);
 			void extendSelection(const VerticalDestinationProxy& to);
 			void paste(bool useKillRing);
-			void replaceSelection(const Char* first, const Char* last, bool rectangleInsertion = false);
+			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
 			void select(const kernel::Region& region);
 			void select(const kernel::Position& anchor, const kernel::Position& caret);
 			// text manipulation
@@ -331,7 +331,6 @@ namespace ascension {
 		void indentByTabs(Caret& caret, bool rectangle, long level = 1);
 		void newLine(Caret& caret, std::size_t newlines = 1);
 		bool transposeCharacters(Caret& caret);
-		void replaceSelection(Caret& caret, const String& text, bool rectangleInsertion = false);
 		bool transposeLines(Caret& caret);
 //		bool transposeParagraphs(Caret& caret);
 //		bool transposeSentences(Caret& caret);

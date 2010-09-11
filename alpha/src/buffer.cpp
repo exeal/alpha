@@ -1094,7 +1094,7 @@ namespace {
 	void lockFile(Buffer& buffer, f::TextFileDocumentInput::LockType type, bool onlyAsEditing) {
 		f::TextFileDocumentInput::LockMode mode; mode.type = type; mode.onlyAsEditing = onlyAsEditing; buffer.textFile().lockFile(mode);}
 	k::Newline newlineOfBuffer(const Buffer& buffer) {return buffer.textFile().newline();}
-	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; replace(buffer, region, text, &temp); return temp;}
+	k::Position replaceString(Buffer& buffer, const k::Region& region, const a::String& text) {k::Position temp; buffer.replace(region, text, &temp); return temp;}
 	void revertBufferToFile(Buffer& buffer, const string& encoding, e::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
 		buffer.textFile().revert(encoding, encodingSubstitutionPolicy);
 	}

@@ -607,7 +607,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 					Document& doc = document();
 					try {
 						doc.insertUndoBoundary();
-						replace(doc, Region(*caret_,
+						doc.replace(Region(*caret_,
 							static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
 							String(1, static_cast<Char>(wParam)));
 						doc.insertUndoBoundary();
@@ -627,7 +627,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 			const Position temp(*caret_);
 			try {
 				if(imeComposingCharacter_)
-					replace(doc, Region(*caret_,
+					doc.replace(Region(*caret_,
 						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
 						String(1, static_cast<Char>(wParam)));
 				else
@@ -1606,7 +1606,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 			bool failed = false;
 			ca.moveTo(destination);
 			try {
-				replaceSelection(ca, content.second, rectangle);
+				ca.replaceSelection(content.second, rectangle);
 			} catch(...) {
 				failed = true;
 			}
@@ -1636,7 +1636,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 				ca.enableAutoShow(false);
 				ca.moveTo(destination);
 				try {
-					replaceSelection(ca, text, rectangle);
+					ca.replaceSelection(text, rectangle);
 				} catch(...) {
 					failed = true;
 				}
@@ -1651,7 +1651,7 @@ STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, 
 				ca.enableAutoShow(false);
 				ca.moveTo(destination);
 				try {
-					replaceSelection(ca, text, rectangle);
+					ca.replaceSelection(text, rectangle);
 				} catch(...) {
 					failed = true;
 				}

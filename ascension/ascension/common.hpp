@@ -308,6 +308,7 @@ namespace ascension {
 	 * @tparam Character the character type
 	 * @tparam CharacterTraits the character traits type gives @c length class method returns a
 	 *                         length of a string
+	 * @note Constructors do <strong>not</strong> check their parameters if are @c null.
 	 */
 	template<typename Character, typename CharacterTraits = std::char_traits<Character> >
 	class BasicStringPiece : public Range<const Character*> {
@@ -357,7 +358,7 @@ namespace ascension {
 		 * @return the character
 		 * @throw std#out_of_range @a i is equal to or greater than the length of the string
 		 */
-		value_type at(size_type::pos_type i) const {
+		value_type at(size_type i) const {
 			if(i >= length()) throw std::out_of_range("i"); return operator[](i);}
 	};
 	/// Specialization of @c BasicStringPiece for @c Char type.
