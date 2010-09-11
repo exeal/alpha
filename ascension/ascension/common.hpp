@@ -303,6 +303,66 @@ namespace ascension {
 		typename std::iterator_traits<T>::difference_type length() const {return end() - beginning();}
 	};
 
+	/**
+	 * String-like object addresses a sized piece of memory.
+	 * @tparam Character the character type
+	 * @tparam CharacterTraits the character traits type gives @c length class method returns a
+	 *                         length of a string
+	 */
+	template<typename Character, typename CharacterTraits = std::char_traits<Character> >
+	class BasicStringPiece : public Range<const Character*> {
+	public:
+		typedef Character value_type;
+		typedef const value_type* const_pointer;
+		typedef const value_type& const_reference;
+		typedef std::basic_string<value_type> string_type;
+		typedef typename string_type::size_type size_type;
+		typedef CharacterTraits traits_type;
+	public:
+		/// Default constructor.
+		BasicStringPiece() : Range<const Character*>(0, 0) {}
+		/**
+		 * Implicit constructor. The length of the string is calculated by using
+		 * @c traits_type#length function.
+		 * @param p a pointer addresses the beginning of the string
+		 */
+		BasicStringPiece(const_pointer p) : Range<const Character*>(p, (p != 0) ? p + traits_type::length(p) : 0) {}
+		/**
+		 * Constructor takes the beginning and the end of a string.
+		 * @param first a pointer addresses the beginning of the string
+		 * @param last a pointer addresses the end of the string
+		 */
+		BasicStringPiece(const_pointer first, const_pointer last) : Range<const Character*>(first, last) {}
+		/**
+		 * Constructor takes a pointer to the beginning of the string and the length.
+		 * @param p a pointer addresses the beginning of the string
+		 * @param n the length of the string
+		 */
+		BasicStringPiece(const_pointer p, size_type n) : Range<const Character*>(p, p + n) {}
+		/**
+		 * Implicit constructor takes a standard C++ string object.
+		 * @param s the string object
+		 */
+		BasicStringPiece(const string_type& s) : Range<const Character*>(s.data(), s.data() + s.length()) {}
+		/**
+		 * Returns the character at the specified position in the string.
+		 * @param i the index of the position of the character to get. if @a i is equal to or
+		 *          greater than the length of the string
+		 * @return the character
+		 */
+		value_type operator[](size_type i) const {beginning() + i;}
+		/**
+		 * Returns the character at the specified position in the string.
+		 * @param i the index of the position of the character to get
+		 * @return the character
+		 * @throw std#out_of_range @a i is equal to or greater than the length of the string
+		 */
+		value_type at(size_type::pos_type i) const {
+			if(i >= length()) throw std::out_of_range("i"); return operator[](i);}
+	};
+	/// Specialization of @c BasicStringPiece for @c Char type.
+	typedef BasicStringPiece<Char> StringPiece;
+
 	template<typename ConcreteIterator, typename Reference>
 	class StandardInputIteratorAdapterBase {
 	public:
@@ -371,11 +431,11 @@ namespace ascension {
 	/**
 	 * Converts an Ascension basic bidirectional iterator class into the corresponding C++
 	 * standard-compliant one.
-	 * @param ConcreteIterator the iterator class converted. see the next section
-	 * @param Type the element type
-	 * @param Reference the reference type
-	 * @param Pointer the pointer type
-	 * @param Distance the distance type
+	 * @tparam ConcreteIterator the iterator class converted. see the next section
+	 * @tparam Type the element type
+	 * @tparam Reference the reference type
+	 * @tparam Pointer the pointer type
+	 * @tparam Distance the distance type
 	 * @note This class is not intended to be subclassed.
 	 * @see StringCharacterIterator, DocumentCharacterIterator
 	 *
