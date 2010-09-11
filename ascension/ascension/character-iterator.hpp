@@ -167,7 +167,7 @@ namespace ascension {
 				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
 				assert(start != last);
 				return (isHighSurrogate(*(start++))
-					&& (start != last) && isLowSurrogate(*start)) ? start : ++start;
+					&& (start != last) && isLowSurrogate(*start)) ? ++start : start;
 			}
 			/**
 			 * Searches the previous high-surrogate in the given character sequence.
