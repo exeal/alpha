@@ -1,7 +1,7 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_SESSION_HPP
@@ -82,12 +82,11 @@ namespace ascension {
 			/**
 			 * Checks the sequence.
 			 * @param keyboardLayout the active keyboard layout
-			 * @param first the start of the string preceding to the input
-			 * @param last the end of the string preceding to the input
-			 * @param cp the code point of the character to be input
+			 * @param preceding the string preceding to the input
+			 * @param c the code point of the character to be input
 			 * @return true if the input is acceptable
 			 */
-			virtual bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const = 0;
+			virtual bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const = 0;
 		};
 
 		/**
@@ -99,7 +98,7 @@ namespace ascension {
 		public:
 			~InputSequenceCheckers();
 			void add(std::auto_ptr<InputSequenceChecker> checker);
-			bool check(const Char* first, const Char* last, CodePoint cp) const;
+			bool check(const StringPiece& preceding, CodePoint c) const;
 			void clear();
 			bool isEmpty() const /*throw()*/;
 			void setKeyboardLayout(HKL keyboardLayout) /*throw()*/;

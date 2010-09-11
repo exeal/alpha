@@ -1,7 +1,7 @@
 /**
  * @file text-editor.cpp
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #include <ascension/text-editor.hpp>
@@ -1400,13 +1400,13 @@ bool WordSelectionCreationCommand::perform() {
 // isc.AinuInputSequenceChecker /////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
-bool AinuInputSequenceChecker::check(HKL, const Char* first, const Char* last, CodePoint cp) const {
+bool AinuInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
 	// only check a pair consists of combining semi-voiced sound mark is valid
-	return cp != 0x309au || (first < last && (
-		last[-1] == L'\x30bb'		// se (セ)
-		|| last[-1] == L'\x30c4'	// tu (ツ)
-		|| last[-1] == L'\x30c8'	// to (ト)
-		|| last[-1] == L'\x31f7'));	// small fu (小さいフ)
+	return c != 0x309au || (preceding.beginning() < preceding.end() && (
+		preceding.end()[-1] == L'\x30bb'		// se (セ)
+		|| preceding.end()[-1] == L'\x30c4'		// tu (ツ)
+		|| preceding.end()[-1] == L'\x30c8'		// to (ト)
+		|| preceding.end()[-1] == L'\x31f7'));	// small fu (小さいフ)
 }
 
 
@@ -1447,15 +1447,15 @@ const char ThaiInputSequenceChecker::checkMap_[] =
 	"XAAASSA" "RRRCRCRRRR";	// AV3
 
 /// @see InputSequenceChecker#check
-bool ThaiInputSequenceChecker::check(HKL, const Char* first, const Char* last, CodePoint cp) const {
+bool ThaiInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
 	// standardized by WTT 2.0:
 	// - http://mozart.inet.co.th/cyberclub/trin/thairef/wtt2/char-class.pdf
 	// - http://www.nectec.or.th/it-standards/keyboard_layout/thai-key.htm
 	if(mode_ == PASS_THROUGH)
 		return true;
 	return doCheck(
-		(first != last) ? getCharacterClass(last[-1]) : CTRL,	// if there is not a preceding character, as if a control is
-		getCharacterClass((cp != 0x0e33u) ? cp : 0x0e4du),		// Sara Am -> Nikhahit + Sara Aa
+		!preceding.isEmpty() ? getCharacterClass(preceding.end()[-1]) : CTRL,	// if there is not a preceding character, as if a control is
+		getCharacterClass((c != 0x0e33u) ? c : 0x0e4du),						// Sara Am -> Nikhahit + Sara Aa
 		mode_ == STRICT_MODE);
 }
 
@@ -1463,7 +1463,7 @@ bool ThaiInputSequenceChecker::check(HKL, const Char* first, const Char* last, C
 // isc.VietnameseInputSequenceChecker ///////////////////////////////////////
 
 /// @see InputSequenceChecker#check
-bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const {
+bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const {
 	// The Vietnamese alphabet (quốc ngữ) has 12 vowels, 5 tone marks and other consonants. This
 	// code checks if the input is conflicting the pattern <vowel> + <0 or 1 tone mark>. Does not
 	// check when the input locale is not Vietnamese, because Vietnamese does not have own script
@@ -1480,7 +1480,7 @@ bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const Char* first
 
 	if(PRIMARYLANGID(LOWORD(keyboardLayout)) != LANG_VIETNAMESE)
 		return true;
-	else if(first < last && binary_search(TONE_MARKS, MANAH_ENDOF(TONE_MARKS), cp))
-		return binary_search(VOWELS, MANAH_ENDOF(VOWELS), last[-1]);
+	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, MANAH_ENDOF(TONE_MARKS), c))
+		return binary_search(VOWELS, MANAH_ENDOF(VOWELS), preceding.end()[-1]);
 	return true;
 }

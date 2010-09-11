@@ -491,12 +491,13 @@ URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
 /// @see IHyperlinkDetector#nextHyperlink
 auto_ptr<IHyperlink> URIHyperlinkDetector::nextHyperlink(
 		const Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ {
+	// TODO: ??? range is not used???
 	const String& s = document.line(line);
 	const Char* p = s.data();
-	pair<const Char*, const Char*> result;
+	Range<const Char*> result;
 	if(uriDetector_->search(p, p + s.length(), result))
 		return auto_ptr<IHyperlink>(new URIHyperlink(
-			Range<length_t>(result.first - p, result.second - p), String(result.first, result.second)));
+			Range<length_t>(result.beginning() - p, result.end() - p), String(result.beginning(), result.end())));
 	else
 		return auto_ptr<IHyperlink>(0);
 }

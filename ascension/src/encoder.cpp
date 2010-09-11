@@ -134,32 +134,8 @@ bool Encoder::canEncode(CodePoint c) {
 	if(!text::isScalarValue(c))
 		throw invalid_argument("the code point is not a scalar value.");
 	Char temp[2];
-	return canEncode(temp, temp + text::surrogates::encode(c, temp));
+	return canEncode(StringPiece(temp, temp + text::surrogates::encode(c, temp)));
 }
-
-/**
- * Returns @c true if the given string can be fully encoded with this encoding. This calls
- * @c #resetEncodingState method.
- * @param first the beginning of the string
- * @param last the end of the string
- * @return succeeded or not
- */
-bool Encoder::canEncode(const Char* first, const Char* last) {
-	if(first == 0)
-		throw NullPointerException("first");
-	else if(last == 0)
-		throw NullPointerException("last");
-	else if(first > last)
-		throw invalid_argument("first > last");
-	// TODO: Should be able to implement without heap/free store...
-	const size_t bytes = (last - first) * properties().maximumNativeBytes();
-	manah::AutoBuffer<byte> temp(new byte[bytes]);
-	const Char* fromNext;
-	byte* toNext;
-	resetEncodingState();
-	return fromUnicode(temp.get(), temp.get() + bytes, toNext, first, last, fromNext) == COMPLETED;
-}
-
 
 /**
  * Returns @c true if the given string can be fully encoded with this encoding. This calls
@@ -167,8 +143,18 @@ bool Encoder::canEncode(const Char* first, const Char* last) {
  * @param s the string
  * @return succeeded or not
  */
-bool Encoder::canEncode(const String& s) {
-	return canEncode(s.data(), s.data() + s.length());
+bool Encoder::canEncode(const StringPiece& s) {
+	if(s.beginning() == 0)
+		throw NullPointerException("s.beginning()");
+	else if(s.end() == 0)
+		throw NullPointerException("s.end()");
+	// TODO: Should be able to implement without heap/free store...
+	const size_t bytes = s.length() * properties().maximumNativeBytes();
+	manah::AutoBuffer<byte> temp(new byte[bytes]);
+	const Char* fromNext;
+	byte* toNext;
+	resetEncodingState();
+	return fromUnicode(temp.get(), temp.get() + bytes, toNext, s.beginning(), s.end(), fromNext) == COMPLETED;
 }
 
 /// Returns the default encoder.

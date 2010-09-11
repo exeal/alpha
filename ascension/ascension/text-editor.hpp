@@ -1,7 +1,7 @@
 /**
  * @file text-editor.hpp
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_TEXT_EDITOR_HPP
@@ -349,7 +349,7 @@ namespace ascension {
 			/// I.S.C. for Ainu.
 			class AinuInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
+				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
 			};
 			/// I.S.C. for Thai.
 			class ThaiInputSequenceChecker : public InputSequenceChecker {
@@ -357,7 +357,7 @@ namespace ascension {
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
 				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}
-				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
+				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
 			private:
 				enum CharacterClass {
 					CTRL, NON, CONS,	// treat unassigned characters in Thai block as controls
@@ -388,7 +388,7 @@ namespace ascension {
 			/// I.S.C. for Vietnamese.
 			class VietnameseInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(HKL keyboardLayout, const Char* first, const Char* last, CodePoint cp) const;
+				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
 			};
 		} // namespace isc
 

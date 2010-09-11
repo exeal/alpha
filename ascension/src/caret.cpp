@@ -1004,7 +1004,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 		if(const texteditor::Session* const session = doc.session()) {
 			if(const texteditor::InputSequenceCheckers* const checker = session->inputSequenceCheckers()) {
 				const Char* const line = doc.line(beginning().line()).data();
-				if(!checker->check(line, line + beginning().column(), character)) {
+				if(!checker->check(StringPiece(line, beginning().column()), character)) {
 					eraseSelection(*this);
 					return false;	// invalid sequence
 				}
