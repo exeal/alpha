@@ -80,7 +80,10 @@ namespace {
 	LANGID userCJKLanguage() /*throw()*/;
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	typedef tr1::unordered_map<uint32_t, uint16_t> IdeographicVariationSequences;
+	struct IdeographicVariationSequences {
+		vector<uint32_t> defaultMappings;
+		tr1::unordered_map<uint32_t, uint16_t> nonDefaultMappings;
+	};
 	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs);
 #endif // !ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
@@ -267,17 +270,28 @@ namespace {
 				const uint32_t numberOfRecords = readBytes<4>(p);
 				for(uint32_t i = 0; i < numberOfRecords; ++i) {
 					const uint32_t varSelector = readBytes<3>(p);
-					const uint32_t nonDefaultUVSOffset = readBytes<4>(p += 4);
-					if(nonDefaultUVSOffset != 0) {
+					if(const uint32_t defaultUVSOffset = readBytes<4>(p)) {
+						const uint8_t* q = uvsSubtable/*static_cast<const uint8_t*>(cmapData)*/ + defaultUVSOffset;
+						const uint32_t numUnicodeValueRanges = readBytes<4>(q);
+						for(uint32_t j = 0; j < numUnicodeValueRanges; ++j) {
+							const uint32_t startUnicodeValue = readBytes<3>(q);
+							const uint8_t additionalCount = readBytes<1>(q);
+							for(uint32_t c = startUnicodeValue; c <= startUnicodeValue + additionalCount; ++c)
+								ivs.defaultMappings.push_back(((varSelector - 0x0e0100u) << 24) | c);
+						}
+					}
+					if(const uint32_t nonDefaultUVSOffset = readBytes<4>(p)) {
 						const uint8_t* q = uvsSubtable/*static_cast<const uint8_t*>(cmapData)*/ + nonDefaultUVSOffset;
 						const uint32_t numberOfMappings = readBytes<4>(q);
 						for(uint32_t j = 0; j < numberOfMappings; ++j) {
 							const uint32_t unicodeValue = readBytes<3>(q);
 							const uint32_t glyphID = readBytes<2>(q);
-							ivs.insert(make_pair(((varSelector - 0x0e0100u) << 24) | unicodeValue, static_cast<uint16_t>(glyphID)));
+							ivs.nonDefaultMappings.insert(
+								make_pair(((varSelector - 0x0e0100u) << 24) | unicodeValue, static_cast<uint16_t>(glyphID)));
 						}
 					}
 				}
+				sort(ivs.defaultMappings.begin(), ivs.defaultMappings.end());
 			}
 //		}
 	}
@@ -499,7 +513,7 @@ namespace {
 		int ascent_, averageCharacterWidth_, descent_, externalLeading_, internalLeading_, xHeight_;
 		String familyName_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		auto_ptr<IdeographicVariationSequences> ivsMappings_;
+		auto_ptr<IdeographicVariationSequences> ivs_;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	};
 	class SystemFonts : public IFontCollection {
@@ -553,8 +567,8 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		throw invalid_argument("variationSelector");
 	else if(variationSelector < 0x0e0100ul || variationSelector > 0x0e01eful)
 		return false;
-	if(ivsMappings_.get() == 0) {
-		const_cast<SystemFont*>(this)->ivsMappings_.reset(new IdeographicVariationSequences);
+	if(ivs_.get() == 0) {
+		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
 		ScreenDC dc;
 		HFONT oldFont = dc.selectObject(handle_.get());
 		static const uint32_t CMAP_TAG = makeTrueTypeTag("cmap");
@@ -562,12 +576,16 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		if(bytes != GDI_ERROR) {
 			manah::AutoBuffer<uint8_t> data(new uint8_t[bytes]);
 			if(GDI_ERROR != dc.getFontData(CMAP_TAG, 0, data.get(), bytes))
-				generateIVSMappings(data.get(), bytes, *const_cast<SystemFont*>(this)->ivsMappings_);
+				generateIVSMappings(data.get(), bytes, *const_cast<SystemFont*>(this)->ivs_);
 		}
 		dc.selectObject(oldFont);
 	}
-	IdeographicVariationSequences::const_iterator i(ivsMappings_->find(((variationSelector - 0x0e0100ul) << 24) | baseCharacter));
-	if(i == ivsMappings_->end())
+
+	const uint32_t v = ((variationSelector - 0x0e0100ul) << 24) | baseCharacter;
+	if(binary_search(ivs_->defaultMappings.begin(), ivs_->defaultMappings.end(), v))
+		return true;
+	tr1::unordered_map<uint32_t, uint16_t>::const_iterator i(ivs_->nonDefaultMappings.find(v));
+	if(i == ivs_->nonDefaultMappings.end())
 		return false;
 	return (glyph = i->second), true;
 }
@@ -1534,11 +1552,11 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 					StringPiece(lineString.data() + column(), length()), lineString.data() + column() + 2); i.hasNext(); i.next()) {
 				const CodePoint variationSelector = i.current();
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-					uint16_t glyph;
 					StringCharacterIterator baseCharacter(i);
 					baseCharacter.previous();
-					if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(baseCharacter.current(), variationSelector, glyph)) {
-						glyphs_->indices[glyphs_->clusters[baseCharacter.tell() - lineString.data()]] = glyph;
+					if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
+							baseCharacter.current(), variationSelector,
+							glyphs_->indices[glyphs_->clusters[baseCharacter.tell() - lineString.data()]])) {
 						ASCENSION_VANISH_VARIATION_SELECTOR(i.tell() - lineString.data());
 					}
 				}
@@ -1550,11 +1568,9 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
 					lineString.data() + column(), lineString.data() + column() + length());
-				uint16_t glyph;
-				if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(baseCharacter, variationSelector, glyph)) {
-					glyphs_->indices[glyphs_->clusters[length() - 1]] = glyph;
+				if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
+						baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
 					nextRun->analysis_.fLogicalOrder = 1;
-				}
 			}
 		}
 #undef ASCENSION_VANISH_VARIATION_SELECTOR
