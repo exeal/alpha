@@ -435,6 +435,8 @@ template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {retu
 
 /// Specialization to implement Alphabetic property.
 template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint cp) {
+	// Alphabetic :=
+	//   Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic
 	const int gc = GeneralCategory::of(cp);
 	return gc == GeneralCategory::UPPERCASE_LETTER
 		|| gc == GeneralCategory::LOWERCASE_LETTER
@@ -445,21 +447,24 @@ template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint 
 
 /// Specialization to implement Default_Ignorable_Code_Point property.
 template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint cp) {
-	const int gc = GeneralCategory::of(cp);
-	return (gc == GeneralCategory::FORMAT
-		|| gc == GeneralCategory::CONTROL
-		|| gc == GeneralCategory::SURROGATE
-		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp)
-		|| is<NONCHARACTER_CODE_POINT>(cp))
+	// Default_Ignorable_Code_Point :=
+	//   Other_Default_Ignorable_Code_Point
+	//   + Cf (Format characters)
+	//   + Variation_Selector
+	//   - White_Space
+	//   - FFF9..FFFB (Annotation Characters)
+	//   - 0600..0603, 06DD, 070F (exceptional Cf characters that should be visible)
+	static const CodePoint EXCLUDED[] = {0x0600u, 0x0601u, 0x0602u, 0x0603u, 0x06ddu, 0x070fu, 0xfff9u, 0xfffau, 0xfffbu};
+	return (GeneralCategory::of(cp) == GeneralCategory::FORMAT
+		|| is<VARIATION_SELECTOR>(cp)
+		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp))
 		&& !is<WHITE_SPACE>(cp)
-		&& (cp < 0xfff9u || cp > 0xfffbu);}
-
-/// Specialization to implement Lowercase property.
-template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
-	return GeneralCategory::of(cp) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(cp);}
+		&& !std::binary_search(EXCLUDED, MANAH_ENDOF(EXCLUDED), cp);}
 
 /// Specialization to implement Grapheme_Extend property.
 template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {
+	// Grapheme_Extend :=
+	//   Me + Mn + Other_Grapheme_Extend
 	const int gc = GeneralCategory::of(cp);
 	return gc == GeneralCategory::ENCLOSING_MARK
 		|| gc == GeneralCategory::NONSPACING_MARK
@@ -467,37 +472,60 @@ template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodeP
 
 /// Specialization to implement Grapheme_Base property.
 template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint cp) {
+	// Grapheme_Base :=
+	//   [0..10FFFF] - Cc - Cf - Cs - Co - Cn - Zl - Zp - Grapheme_Extend
 	const int gc = GeneralCategory::of(cp);
 	return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
 		&& gc != GeneralCategory::LINE_SEPARATOR
 		&& gc != GeneralCategory::PARAGRAPH_SEPARATOR
 		&& !is<GRAPHEME_EXTEND>(cp);}
 
-/// Specialization to implement ID_Continue property.
-template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
-	const int gc = GeneralCategory::of(cp);
-	return GeneralCategory::is<GeneralCategory::LETTER>(gc)
-		|| gc == GeneralCategory::NONSPACING_MARK
-		|| gc == GeneralCategory::SPACING_MARK
-		|| gc == GeneralCategory::DECIMAL_NUMBER
-		|| gc == GeneralCategory::LETTER_NUMBER
-		|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
-		|| is<OTHER_ID_START>(cp)
-		|| is<OTHER_ID_CONTINUE>(cp);}
-
 /// Specialization to implement ID_Start property.
 template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint cp) {
+	// ID_Start :=
+	//     Lu + Ll + Lt + Lm + Lo + Nl
+	//   + Other_ID_Start
+	//   - Pattern_Syntax
+	//   - Pattern_White_Space
 	const int gc = GeneralCategory::of(cp);
-	return GeneralCategory::is<GeneralCategory::LETTER>(gc)
-		|| gc == GeneralCategory::LETTER_NUMBER
-		|| is<OTHER_ID_START>(cp);}
+	return (GeneralCategory::is<GeneralCategory::LETTER>(gc)
+		|| gc == GeneralCategory::LETTER_NUMBER || is<OTHER_ID_START>(cp))
+		&& !is<PATTERN_SYNTAX>(cp) && !is<PATTERN_WHITE_SPACE>(cp);}
+
+/// Specialization to implement ID_Continue property.
+template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
+	// ID_Continue :=
+	//     ID_Start
+	//   + Mn + Mc + Nd + Pc
+	//   + Other_ID_Continue
+	//   - Pattern_Syntax
+	//   - Pattern_White_Space
+	if(is<BinaryProperty::ID_START>(cp))
+		return true;
+	const int gc = GeneralCategory::of(cp);
+	return gc == GeneralCategory::NONSPACING_MARK
+		|| gc == GeneralCategory::SPACING_MARK
+		|| gc == GeneralCategory::DECIMAL_NUMBER
+		|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
+		|| is<OTHER_ID_CONTINUE>(cp)
+		&& !is<PATTERN_SYNTAX>(cp) && !is<PATTERN_WHITE_SPACE>(cp);}
+
+/// Specialization to implement Lowercase property.
+template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
+	// Lowercase :=
+	//   Ll + Other_Lowercase
+	return GeneralCategory::of(cp) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(cp);}
 
 /// Specialization to implement Math property.
 template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint cp) {
+	// Math :=
+	//   Sm + Other_Math
 	return GeneralCategory::of(cp) == GeneralCategory::MATH_SYMBOL || is<OTHER_MATH>(cp);}
 
 /// Specialization to implement Uppercase property.
 template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
+	// Uppercase :=
+	//   Lu + Other_Uppercase
 	return GeneralCategory::of(cp) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(cp);}
 
 /**
