@@ -187,24 +187,24 @@ void StringCharacterIterator::doPrevious() {
 
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
-	bool isNU(CodePoint cp, int gc) /*throw()*/ {
-		return (gc == GeneralCategory::DECIMAL_NUMBER && cp < 0xff00 || cp > 0xffef)
-			|| cp == 0x066b		// Arabic Decimal Separator
-			|| cp == 0x066c;	// Arabic Thousands Separator
+	bool isNU(CodePoint c, int gc) /*throw()*/ {
+		return (gc == GeneralCategory::DECIMAL_NUMBER && c < 0xff00u || c > 0xffefu)
+			|| c == 0x066bu		// Arabic Decimal Separator
+			|| c == 0x066cu;	// Arabic Thousands Separator
 	}
 	const CodePoint QU[] = {
-		0x0022,	// Quotation Mark
-		0x0027,	// Apostrophe
-		0x275b,	// Heavy Single Turned Comma Quotation Mark Ornament
-		0x275c,	// Heavy Single Comma Quotation Mark Ornament
-		0x275d,	// Heavy Double Turned Comma Quotation Mark Ornament
-		0x275e	// Heavy Double Comma Quotation Mark Ornament
+		0x0022u,	// Quotation Mark
+		0x0027u,	// Apostrophe
+		0x275bu,	// Heavy Single Turned Comma Quotation Mark Ornament
+		0x275cu,	// Heavy Single Comma Quotation Mark Ornament
+		0x275du,	// Heavy Double Turned Comma Quotation Mark Ornament
+		0x275eu		// Heavy Double Comma Quotation Mark Ornament
 	};
 	/// Returns true if the specified character is Line_Break=QU.
-	bool isQU(CodePoint cp, int gc) /*throw()*/ {
+	bool isQU(CodePoint c, int gc) /*throw()*/ {
 		return gc == GeneralCategory::FINAL_PUNCTUATION
 			|| gc == GeneralCategory::INITIAL_PUNCTUATION
-			|| binary_search(QU, MANAH_ENDOF(QU), cp);
+			|| binary_search(QU, MANAH_ENDOF(QU), c);
 	}
 } // namespace @0
 
@@ -396,45 +396,45 @@ const Char WordBreak::SHORT_NAME[] = L"WB";
 
 /**
  * Returns Word_Break value of the specified character.
- * @param cp the character
+ * @param c the character
  * @param syntax the identifier syntax definition for deciding what character is ID_Start
  * @param lc the locale
  */
-int WordBreak::of(CodePoint cp,
+int WordBreak::of(CodePoint c,
 		const IdentifierSyntax& syntax /* = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT) */,
 		const locale& lc /* = locale::classic() */) /*throw()*/ {
 	static const CodePoint KATAKANAS[] = {
-		0x3031,	// Vertical Kana Repeat Mark
-		0x3032,	// Vertical Kana Repeat With Voiced Sound Mark
-		0x3033,	// Vertical Kana Repeat Mark Upper Half
-		0x3034,	// Vertical Kana Repeat With Voiced Sound Mark Upper Half
-		0x3035,	// Vertical Kana Repeat Mark Lower Half
-		0x309b,	// Katakana-Hiragana Voiced Sound Mark
-		0x309c,	// Katakana-Hiragana Semi-Voiced Sound Mark
-		0x30a0,	// Katakana-Hiragana Double Hyphen
-		0x30fc,	// Katakana-Hiragana Prolonged Sound Mark
-		0xff70,	// Halfwidth Katakana-Hiragana Prolonged Sound Mark
-		0xff9e,	// Halfwidth Katakana Voiced Sound Mark
-		0xff9f	// Halfwidth Katakana Semi-Voiced Sound Mark
+		0x3031u,	// Vertical Kana Repeat Mark
+		0x3032u,	// Vertical Kana Repeat With Voiced Sound Mark
+		0x3033u,	// Vertical Kana Repeat Mark Upper Half
+		0x3034u,	// Vertical Kana Repeat With Voiced Sound Mark Upper Half
+		0x3035u,	// Vertical Kana Repeat Mark Lower Half
+		0x309bu,	// Katakana-Hiragana Voiced Sound Mark
+		0x309cu,	// Katakana-Hiragana Semi-Voiced Sound Mark
+		0x30a0u,	// Katakana-Hiragana Double Hyphen
+		0x30fcu,	// Katakana-Hiragana Prolonged Sound Mark
+		0xff70u,	// Halfwidth Katakana-Hiragana Prolonged Sound Mark
+		0xff9eu,	// Halfwidth Katakana Voiced Sound Mark
+		0xff9fu		// Halfwidth Katakana Semi-Voiced Sound Mark
 	};
 	static const CodePoint MID_LETTERS[] = {
-		0x0027,	// Apostrophe
-		0x00b7,	// Middle Dot
-		0x05f4,	// Hebrew Punctuation Gershayim
-		0x2019,	// Right Single Quotation Mark
-		0x2027	// Hyphenation Point
+		0x0027u,	// Apostrophe
+		0x00b7u,	// Middle Dot
+		0x05f4u,	// Hebrew Punctuation Gershayim
+		0x2019u,	// Right Single Quotation Mark
+		0x2027u		// Hyphenation Point
 	};
 	static const CodePoint MID_NUMS[] = {
-		0x002c,	// Comma
-		0x002e,	// Full Stop
-		0x003b,	// Semicolon
-		0x037e,	// Greek Question Mark
-		0x0589,	// Armenian Full Stop
-		0x060d,	// Arabic Date Separator
-		0x2044,	// Fraction Slash
-		0xfe10,	// Presentation Form For Vertical Comma
-		0xfe13,	// Presentation Form For Vertical Colon
-		0xfe14	// Presentation Form For Vertical Semicolon
+		0x002cu,	// Comma
+		0x002eu,	// Full Stop
+		0x003bu,	// Semicolon
+		0x037eu,	// Greek Question Mark
+		0x0589u,	// Armenian Full Stop
+		0x060du,	// Arabic Date Separator
+		0x2044u,	// Fraction Slash
+		0xfe10u,	// Presentation Form For Vertical Comma
+		0xfe13u,	// Presentation Form For Vertical Colon
+		0xfe14u		// Presentation Form For Vertical Semicolon
 	};
 	static bool localeInitialized = false;
 	static auto_ptr<locale> japanese, swedish;
@@ -447,28 +447,28 @@ int WordBreak::of(CodePoint cp,
 			japanese.reset(0);
 		}
 	}
-	if(cp == CARRIAGE_RETURN)
+	if(c == CARRIAGE_RETURN)
 		return GraphemeClusterBreak::CR;
-	else if(cp == LINE_FEED)
+	else if(c == LINE_FEED)
 		return GraphemeClusterBreak::LF;
-	const int gc = GeneralCategory::of(cp);
-	if(gc == GeneralCategory::FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
+	const int gc = GeneralCategory::of(c);
+	if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)
 		return FORMAT;
-	else if(Script::of(cp) == Script::KATAKANA
-			|| binary_search(KATAKANAS, MANAH_ENDOF(KATAKANAS), cp))
+	else if(Script::of(c) == Script::KATAKANA
+			|| binary_search(KATAKANAS, MANAH_ENDOF(KATAKANAS), c))
 		return KATAKANA;
-	else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
+	else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 		return GraphemeClusterBreak::EXTEND;
-	else if((syntax.isIdentifierStartCharacter(cp)
-			|| cp == 0x00a0		// No-Break Space
-			|| cp == 0x05f3))	// Hebrew Punctuation Geresh
+	else if((syntax.isIdentifierStartCharacter(c)
+			|| c == 0x00a0u		// No-Break Space
+			|| c == 0x05f3u))	// Hebrew Punctuation Geresh
 		return A_LETTER;
-	else if(binary_search(MID_LETTERS, MANAH_ENDOF(MID_LETTERS), cp)
-			|| (cp == 0x003a && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
+	else if(binary_search(MID_LETTERS, MANAH_ENDOF(MID_LETTERS), c)
+			|| (c == 0x003au && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
 		return MID_LETTER;
-	else if(binary_search(MID_NUMS, MANAH_ENDOF(MID_NUMS), cp))
+	else if(binary_search(MID_NUMS, MANAH_ENDOF(MID_NUMS), c))
 		return MID_NUM;
-	else if(isNU(cp, gc))
+	else if(isNU(c, gc))
 		return NUMERIC;
 	else if(gc == GeneralCategory::CONNECTOR_PUNCTUATION)
 		return EXTEND_NUM_LET;
@@ -487,30 +487,30 @@ const Char SentenceBreak::LONG_NAME[] = L"Sentence_Break";
 const Char SentenceBreak::SHORT_NAME[] = L"SB";
 
 /// Returns Sentence_Break value of the specified character.
-int SentenceBreak::of(CodePoint cp) /*throw()*/ {
+int SentenceBreak::of(CodePoint c) /*throw()*/ {
 	static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
-	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(cp))
+	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 		return GraphemeClusterBreak::EXTEND;
-	else if(binary_search(SEPS, MANAH_ENDOF(SEPS), cp))
+	else if(binary_search(SEPS, MANAH_ENDOF(SEPS), c))
 		return SEP;
-	const int gc = GeneralCategory::of(cp);
-	if(gc == GeneralCategory::FORMAT && cp != ZERO_WIDTH_NON_JOINER && cp != ZERO_WIDTH_JOINER)
+	const int gc = GeneralCategory::of(c);
+	if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)
 		return FORMAT;
-	else if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(cp) && cp != 0x00a0)
+	else if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c) && c != 0x00a0u)
 		return SP;
-	else if(BinaryProperty::is<BinaryProperty::LOWERCASE>(cp))
+	else if(BinaryProperty::is<BinaryProperty::LOWERCASE>(c))
 		return LOWER;
-	else if(gc == GeneralCategory::TITLECASE_LETTER || BinaryProperty::is<BinaryProperty::UPPERCASE>(cp))
+	else if(gc == GeneralCategory::TITLECASE_LETTER || BinaryProperty::is<BinaryProperty::UPPERCASE>(c))
 		return UPPER;
-	else if(BinaryProperty::is<BinaryProperty::ALPHABETIC>(cp) || cp == 0x00a0 || cp == 0x05f3)
+	else if(BinaryProperty::is<BinaryProperty::ALPHABETIC>(c) || c == 0x00a0u || c == 0x05f3u)
 		return O_LETTER;
-	else if(isNU(cp, gc))
+	else if(isNU(c, gc))
 		return NUMERIC;
-	else if(cp == 0x002e)
+	else if(c == 0x002eu)
 		return A_TERM;
-	else if(BinaryProperty::is<BinaryProperty::STERM>(cp))
+	else if(BinaryProperty::is<BinaryProperty::STERM>(c))
 		return S_TERM;
-	else if(gc == GeneralCategory::OPEN_PUNCTUATION || gc == GeneralCategory::CLOSE_PUNCTUATION || isQU(cp, gc))
+	else if(gc == GeneralCategory::OPEN_PUNCTUATION || gc == GeneralCategory::CLOSE_PUNCTUATION || isQU(c, gc))
 		return CLOSE;
 	return OTHER;
 }
