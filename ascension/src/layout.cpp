@@ -1074,7 +1074,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		styles->current(styleRun.first);
 		styles->next();
 	}
-	pair<StyledRun, length_t> nextStyleRun;	// 'second' is false if 'first' is invalid
+	pair<StyledRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
 	if(nextStyleRun.second = styles.get() != 0 && !styles->isDone())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
@@ -1119,8 +1119,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		if(breakScriptRun)
 			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
 		if(forwardScriptRun) {
-			scriptRun = nextScriptRun.first;
-			if(nextScriptRun.first != 0) {
+			if((scriptRun = nextScriptRun.first) != 0) {
 				if(++nextScriptRun.first == scriptRuns + numberOfScriptRuns)
 					nextScriptRun.first = 0;
 				nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
@@ -1130,7 +1129,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 			if(styleRun.second = nextStyleRun.second) {
 				styleRun.first = nextStyleRun.first;
 				styles->next();
-				if(nextStyleRun.second = styles->isDone())
+				if(nextStyleRun.second = !styles->isDone())
 					styles->current(nextStyleRun.first);
 				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
 			}
