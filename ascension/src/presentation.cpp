@@ -287,9 +287,19 @@ public:
 	StyledRunIterator(length_t column, tr1::shared_ptr<const RunStyle> style) : run_(column, style), done_(false) {}
 private:
 	// IStyledRunIterator
-	const StyledRun& current() const {if(done_) throw IllegalStateException("the iterator addresses the end."); return run_;}
-	bool isDone() const {return done_;}
-	void next() {if(done_) throw IllegalStateException("the iterator addresses the end."); done_ = true;}
+	void current(StyledRun& run) const {
+		if(done_)
+			throw IllegalStateException("the iterator addresses the end.");
+		run = run_;
+	}
+	bool isDone() const {
+		return done_;
+	}
+	void next() {
+		if(done_)
+			throw IllegalStateException("the iterator addresses the end.");
+		done_ = true;
+	}
 private:
 	const StyledRun run_;
 	bool done_;
@@ -320,7 +330,7 @@ public:
 private:
 	void updateSubiterator();
 	// IStyledRunIterator
-	const StyledRun& current() const;
+	void current(StyledRun& run) const;
 	bool isDone() const;
 	void next();
 private:
@@ -355,11 +365,11 @@ PresentationReconstructor::StyledRunIterator::StyledRunIterator(
 }
 
 /// @see IStyledRunIterator#current
-const StyledRun& PresentationReconstructor::StyledRunIterator::current() const {
+void PresentationReconstructor::StyledRunIterator::current(StyledRun& run) const {
 	if(subiterator_.get() != 0)
-		return subiterator_->current();
+		subiterator_->current(run);
 	else if(!isDone())
-		return current_;
+		run = current_;
 	throw IllegalStateException("the iterator addresses the end.");
 }
 
@@ -562,7 +572,7 @@ public:
 private:
 	void nextRun();
 	// IStyledRunIterator
-	const StyledRun& current() const;
+	void current(StyledRun& run) const;
 	bool isDone() const;
 	void next();
 private:
@@ -586,10 +596,10 @@ LexicalPartitionPresentationReconstructor::StyledRunIterator::StyledRunIterator(
 }
 
 /// @see IStyledRunIterator#current
-const StyledRun& LexicalPartitionPresentationReconstructor::StyledRunIterator::current() const {
+void LexicalPartitionPresentationReconstructor::StyledRunIterator::current(StyledRun& run) const {
 	if(isDone())
 		throw IllegalStateException("the iterator addresses the end.");
-	return current_;
+	run = current_;
 }
 
 /// @see IStyledRunIterator#isDone

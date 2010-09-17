@@ -1066,30 +1066,33 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 	runs.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = scriptRuns;
-	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;
+	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;	// 'second' is the beginning position
 	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
-	const StyledRun* styleRun = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
-	if(styleRun != 0)
+	pair<StyledRun, bool> styleRun;	// 'second' is false if 'first' is invalid
+	if(styleRun.second = styles.get() != 0 && !styles->isDone()) {
+		styles->current(styleRun.first);
 		styles->next();
-	pair<const StyledRun*, length_t> nextStyleRun;
-	nextStyleRun.first = (styles.get() != 0 && !styles->isDone()) ? &styles->current() : 0;
-	nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+	}
+	pair<StyledRun, length_t> nextStyleRun;	// 'second' is false if 'first' is invalid
+	if(nextStyleRun.second = styles.get() != 0 && !styles->isDone())
+		styles->current(nextStyleRun.first);
+	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
 	tr1::shared_ptr<const AbstractFont> font;
 	do {
-		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, (styleRun != 0) ? styleRun->column : 0);
+		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, styleRun.second ? styleRun.first.column : 0);
 		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
 		length_t newRunEnd;
 		bool forwardScriptRun = false, forwardStyleRun = false;
 
-		if(nextScriptRun.second == nextStyleRun.second) {
+		if(nextScriptRun.second == beginningOfNextStyleRun) {
 			newRunEnd = nextScriptRun.second;
 			forwardScriptRun = forwardStyleRun = true;
-		} else if(nextScriptRun.second < nextStyleRun.second) {
+		} else if(nextScriptRun.second < beginningOfNextStyleRun) {
 			newRunEnd = nextScriptRun.second;
 			forwardScriptRun = true;
-		} else {	// nextScriptRun.second > nextStyleRun.second
-			newRunEnd = nextStyleRun.second;
+		} else {	// nextScriptRun.second > beginningOfNextStyleRun
+			newRunEnd = beginningOfNextStyleRun;
 			forwardStyleRun = true;
 		}
 
@@ -1098,7 +1101,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 			const pair<const Char*, tr1::shared_ptr<const AbstractFont> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(lineString.data() + previousRunEnd, lineString.data() + newRunEnd),
-					(styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>(), font, lip));
+					styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>(), font, lip));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
 				newRunEnd = nextFontRun.first - lineString.data();
@@ -1112,7 +1115,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		runs.push_back(
 			new Run(previousRunEnd, newRunEnd - previousRunEnd, scriptRun->a,
 			(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN,	// TODO: 'DFLT' is preferred?
-			(styleRun != 0) ? styleRun->style : tr1::shared_ptr<const RunStyle>()));
+			styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>()));
 		if(breakScriptRun)
 			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
 		if(forwardScriptRun) {
@@ -1123,11 +1126,14 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 				nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
 			}
 		}
-		if(forwardStyleRun && styles.get() != 0) {
-			styleRun = nextStyleRun.first;
-			styles->next();
-			nextStyleRun.first = styles->isDone() ? 0 : &styles->current();
-			nextStyleRun.second = (nextStyleRun.first != 0) ? nextStyleRun.first->column : lineString.length();
+		if(forwardStyleRun) {
+			if(styleRun.second = nextStyleRun.second) {
+				styleRun.first = nextStyleRun.first;
+				styles->next();
+				if(nextStyleRun.second = styles->isDone())
+					styles->current(nextStyleRun.first);
+				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
+			}
 		}
 
 		while(true) {
@@ -1136,7 +1142,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 				break;
 			runs.push_back(piece.release());
 		}
-	} while(scriptRun != 0 || styleRun != 0);
+	} while(scriptRun != 0 || styleRun.second);
 
 	swap(runs, result);
 
