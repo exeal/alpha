@@ -216,9 +216,11 @@ namespace ascension {
 
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
-			struct {
+			struct Part {
 				Color color;	// if is Color(), same as the foreground
-				Style style;
+				Style style;	///< Default value is @c NONE.
+				/// Default constructor.
+				Part() : style(NONE) {}
 			} overline, strikethrough, baseline, underline;
 		};
 
@@ -252,14 +254,14 @@ namespace ascension {
 			Length letterSpacing;
 			/// Word spacing in DIP. Default is 0.
 			Length wordSpacing;
-			TextTransform textTransform;
+//			TextTransform textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
 			/// Set @c false to disable shaping.
 			bool shapingEnabled;
 
 			/// Default constructor.
-			RunStyle() : letterSpacing(0), wordSpacing(0), textTransform(), shapingEnabled(true) {}
+			RunStyle() : letterSpacing(0), wordSpacing(0), shapingEnabled(true) {}
 			RunStyle& resolveInheritance(const RunStyle& base);
 		};
 
