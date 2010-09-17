@@ -278,8 +278,8 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~IStyledRunIterator() /*throw()*/ {}
-			/// Returns the current styled run.
-			virtual const StyledRun& current() const = 0;
+			/// Returns the current styled run or throws @c IllegalStateException.
+			virtual void current(StyledRun& run) const = 0;
 			/// Returns @c true if the iterator addresses the end of the range.
 			virtual bool isDone() const = 0;
 			/// Moves the iterator to the next styled run or throws @c IllegalStateException.

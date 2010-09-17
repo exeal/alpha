@@ -800,6 +800,55 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 	setContentAssistant(auto_ptr<contentassist::IContentAssistant>(ca));
 	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
 #endif // 1
+
+	class ZebraTextRunStyleTest : public ITextRunStyleDirector {
+	private:
+		class Iterator : public IStyledRunIterator {
+		public:
+			Iterator(length_t lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
+				current_.column = 0;
+				update();
+			}
+			void current(StyledRun& sr) const {
+				if(isDone())
+					throw IllegalStateException("");
+				sr = current_;
+			}
+			bool isDone() const {
+				return current_.column == length_;
+			}
+			void next() {
+				if(isDone())
+					throw IllegalStateException("");
+				++current_.column;
+				update();
+			}
+		private:
+			void update() {
+				static const Color black(0, 0, 0), white(255, 255, 255);
+				int temp = beginningIsBlackBack_ ? 0 : 1;
+				temp += (current_.column % 2 == 0) ? 0 : 1;
+				auto_ptr<RunStyle> style(new RunStyle);
+				style->foreground = (temp % 2 == 0) ? white : black;
+				style->background = (temp % 2 == 0) ? black : white;
+				current_.style.reset(style.release());
+			}
+		private:
+			const length_t length_;
+			const bool beginningIsBlackBack_;
+			StyledRun current_;
+		};
+	public:
+		ZebraTextRunStyleTest(const Document& document) : document_(document) {
+		}
+		auto_ptr<IStyledRunIterator> queryTextRunStyle(length_t line) const {
+			return auto_ptr<IStyledRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
+		}
+	private:
+		const Document& document_;
+	};
+	presentation().setTextRunStyleDirector(
+		tr1::shared_ptr<ITextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
 	
 	renderer_->addDefaultFontListener(*this);
 	renderer_->addVisualLinesListener(*this);
