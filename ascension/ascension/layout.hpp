@@ -426,9 +426,11 @@ namespace ascension {
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
 			std::tr1::shared_ptr<const presentation::LineStyle> style_;
-			class Run;
-			Run** runs_;
+			class TextRun;
+			TextRun** runs_;
 			std::size_t numberOfRuns_;
+			manah::AutoBuffer<presentation::StyledRun> styledRanges_;
+			std::size_t numberOfStyledRanges_;
 			length_t* sublineOffsets_;		// size is numberOfSublines_
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
 			length_t numberOfSublines_;

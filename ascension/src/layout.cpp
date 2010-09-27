@@ -8,6 +8,7 @@
 #include <ascension/layout.hpp>
 #include <ascension/viewer.hpp>
 #include <limits>	// std.numeric_limits
+#include <numeric>	// std.accumulate
 #include <boost/tr1/unordered_map.hpp>
 #include <usp10.h>
 using namespace ascension;
@@ -663,185 +664,210 @@ const IFontCollection& layout::systemFonts() {
 }
 
 
-// LineLayout.Run ///////////////////////////////////////////////////////////
+// LineLayout.TextRun /////////////////////////////////////////////////////////////////////////////
 
-class LineLayout::Run {
-	MANAH_NONCOPYABLE_TAG(Run);
+// Uniscribe conventions
+namespace {
+	inline size_t characterPositionToGlyphPosition(const WORD clusters[],
+			size_t length, size_t numberOfGlyphs, size_t at, const SCRIPT_ANALYSIS& a) {
+		assert(a.fLogicalOrder == 0 && at <= length);
+		if(a.fRTL == 0)	// LTR
+			return (at < length) ? clusters[at] : numberOfGlyphs;
+		else	// RTL
+			return (at < length) ? clusters[at] + 1 : 0;
+	}
+	inline bool overhangs(const ABC& width) /*throw()*/ {return width.abcA < 0 || width.abcC < 0;}
+} // namespace
+
+namespace {
+	class SimpleStyledRunIterator : public IStyledRunIterator {
+	public:
+		SimpleStyledRunIterator(const Range<const StyledRun*>& range, length_t start) : range_(range) {
+			ascension::internal::searchBound(static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun());
+		}
+		// presentation.IStyledRunIterator
+		void current(StyledRun& run) const {
+			if(isDone())
+				throw IllegalStateException("");
+			run = *current_;
+		}
+		bool isDone() const {
+			return current_ == range_.end();
+		}
+		void next() {
+			if(isDone())
+				throw IllegalStateException("");
+			++current_;
+		}
+	private:
+		struct BeginningOfStyledRun {
+			length_t operator()(const StyledRun* p) {return p->column;}
+		};
+		const Range<const StyledRun*> range_;
+		const StyledRun* current_;
+	};
+}
+
+/// TextRun class represents minimum text run whose characters can shaped by single font.
+class LineLayout::TextRun : public Range<length_t> {	// beginning() and end() return position in the line
+	MANAH_NONCOPYABLE_TAG(TextRun);
 public:
-	Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script,
-		OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/;
-	virtual ~Run() /*throw()*/;
-	uchar bidiEmbeddingLevel() const /*throw()*/;
-	auto_ptr<Run> breakAt(DC& dc, length_t at,	// 'at' is from the beginning of the line
+	TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
+		tr1::shared_ptr<const AbstractFont> font, OPENTYPE_TAG scriptTag) /*throw()*/;
+	virtual ~TextRun() /*throw()*/;
+	uchar bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
+	auto_ptr<TextRun> breakAt(DC& dc, length_t at,	// 'at' is from the beginning of the line
 		const String& lineString, const ILayoutInformationProvider& lip);
-	length_t column() const /*throw()*/ {return glyphs_->column + characterRange_.beginning();}
 	HRESULT draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect = 0, UINT options = 0) const;
+	void drawBackground(DC& dc, const POINT& p,
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const;
+	void drawForeground(DC& dc, const POINT& p,
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const;
 	bool expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth);
 	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	HRESULT justify(int width);
-	length_t length() const /*throw()*/ {return characterRange_.length();}
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
-	static void mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
-		const ILayoutInformationProvider& lip, vector<Run*>& result);
 	HRESULT logicalWidths(int widths[]) const;
-	int numberOfGlyphs() const /*throw()*/;
-	ReadingDirection readingDirection() const /*throw()*/;
-	bool overhangs() const /*throw()*/;
-	HRESULT place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
-	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
-	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* nextRun);
-	auto_ptr<Run> splitIfTooLong(const String& lineString);
-	int totalWidth() const /*throw()*/;
+	static void mergeScriptsAndStyles(DC& dc, const String& lineString, const SCRIPT_ITEM scriptRuns[],
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
+		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges);
+	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
+	void positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles);
+	ReadingDirection readingDirection() const /*throw()*/ {
+		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
+//	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
+	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
+	auto_ptr<TextRun> splitIfTooLong(const String& lineString);
+	static void substituteGlyphs(const DC& dc, const Range<TextRun**>& runs, const String& lineString);
+	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
 	int x(size_t offset, bool trailing) const;
-protected:
-	struct GlyphData {
-		const length_t column;	// first character (distance from the beginning of the line) for this glyph arrays
+private:
+	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
+		const Range<length_t> characters;	// character range for this glyph arrays in the line
+		const tr1::shared_ptr<const AbstractFont> font;
 		const OPENTYPE_TAG scriptTag;
-		SCRIPT_CACHE cache;
+		mutable SCRIPT_CACHE fontCache;
 		// only 'clusters' is character-base. others are glyph-base
 		manah::AutoBuffer<WORD> indices, clusters;
 		manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
 		manah::AutoBuffer<int> advances, justifiedAdvances;
 		manah::AutoBuffer<GOFFSET> offsets;
-		GlyphData(length_t column, OPENTYPE_TAG scriptTag) /*throw()*/ : column(column), scriptTag(scriptTag), cache(0) {}
-		~GlyphData() /*throw()*/ {::ScriptFreeCache(&cache);}
+		Glyphs(const Range<length_t>& characters, tr1::shared_ptr<const AbstractFont> font,
+				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(0) {
+			if(font.get() == 0)
+				throw NullPointerException("font");
+		}
+		~Glyphs() /*throw()*/ {::ScriptFreeCache(&fontCache);}
+		void vanish(const DC& dc, size_t at);	// 'at' is distance from the beginning of this run
 	};
-protected:
-	Run(Run& leading, length_t characterBoundary, int glyphBoundary) /*throw()*/;
-	const int* advances() const /*throw()*/ {return glyphs_->advances.get() + glyphRange_.beginning();}
-	const WORD* clusters() const /*throw()*/ {return glyphs_->clusters.get() + characterRange_.beginning();}
-	const WORD* glyphs() const /*throw()*/ {return glyphs_->indices.get() + glyphRange_.beginning();}
-	const GOFFSET* glyphOffsets() const /*throw()*/ {return glyphs_->offsets.get() + glyphRange_.beginning();}
-	const int* justifiedAdvances() const /*throw()*/ {return glyphs_->justifiedAdvances.get() + glyphRange_.beginning();}
-	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {return glyphs_->visualAttributes.get() + glyphRange_.beginning();}
 private:
-	HRESULT buildGlyphs(const DC& dc, const Char* text) /*throw()*/;
+	TextRun(TextRun& leading, length_t characterBoundary) /*throw()*/;
+	const int* advances() const /*throw()*/ {
+		if(const int* const p = glyphs_->advances.get()) return p + glyphRange_.beginning(); return 0;}
+	const WORD* clusters() const /*throw()*/ {
+		if(const WORD* const p = glyphs_->clusters.get())
+			return p + (beginning() - glyphs_->characters.beginning()); return 0;}
 	pair<int, HRESULT> countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/;
-	HRESULT generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs);
-	void generateDefaultGlyphs(const DC& dc);
+	static HRESULT generateGlyphs(const DC& dc, const StringPiece& text,
+		const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
+	static void generateDefaultGlyphs(const DC& dc,
+		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs);
+	Glyphs& glyphRun() {return *glyphs_;}
+	const Glyphs& glyphRun() const {return *glyphs_;}
+	const WORD* glyphs() const /*throw()*/ {
+		if(const WORD* const p = glyphs_->indices.get()) return p + glyphRange_.beginning(); return 0;}
+	const GOFFSET* glyphOffsets() const /*throw()*/ {
+		if(const GOFFSET* const p = glyphs_->offsets.get()) return p + glyphRange_.beginning(); return 0;}
+	const int* justifiedAdvances() const /*throw()*/ {
+		if(const int* const p = glyphs_->justifiedAdvances.get()) return p + glyphRange_.beginning(); return 0;}
+	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {
+		if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get()) return p + glyphRange_.beginning(); return 0;}
 private:
-	Range<length_t> characterRange_;	// character range in 'glyphs_'
-	SCRIPT_ANALYSIS analysis_;			// fLogicalOrder member is always 0 (however see shape())
-	tr1::shared_ptr<GlyphData> glyphs_;	// glyph range in 'glyphs_'
-	Range<int> glyphRange_;
-	const tr1::shared_ptr<const RunStyle> style_;
-	tr1::shared_ptr<const AbstractFont> font_;
-	ABC width_;
+	SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
+	tr1::shared_ptr<Glyphs> glyphs_;
+	Range<WORD> glyphRange_;	// range of this run in 'glyphs_' arrays
+	int width_ : sizeof(int) - 1;
+	bool mayOverhang_ : 1;
 };
 
-LineLayout::Run::Run(length_t column, length_t length, const SCRIPT_ANALYSIS& script,
-		OPENTYPE_TAG scriptTag, tr1::shared_ptr<const RunStyle> style) /*throw()*/
-		: characterRange_(0, length), analysis_(script), glyphs_(new GlyphData(column, scriptTag)), style_(style) {
+void LineLayout::TextRun::Glyphs::vanish(const DC& dc, size_t at) {
+	assert(advances.get() == 0);
+	WORD blankGlyph;
+	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
+	if(hr == S_OK) {
+		SCRIPT_FONTPROPERTIES fp;
+		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
+		if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
+			fp.wgBlank = 0;	/* hmm... */
+		blankGlyph = fp.wgBlank;
+	}
+	indices[clusters[at]] = indices[clusters[at + 1]] = blankGlyph;
+	SCRIPT_VISATTR* const va = visualAttributes.get();
+	va[clusters[at]].uJustification = SCRIPT_JUSTIFY_BLANK;
+	va[clusters[at]].fZeroWidth = 1;
 }
 
-LineLayout::Run::Run(Run& leading, length_t characterBoundary, int glyphBoundary) /*throw()*/ :
-		characterRange_(characterBoundary, leading.characterRange_.end()), analysis_(leading.analysis_),
-		glyphs_(leading.glyphs_), glyphRange_(
-			(leading.readingDirection() == LEFT_TO_RIGHT) ? glyphBoundary : leading.glyphRange_.beginning(),
-			(leading.readingDirection() == LEFT_TO_RIGHT) ? leading.glyphRange_.end() : glyphBoundary),
-		style_(leading.style_), font_(leading.font_) {
-	if(leading.glyphs_.get() == 0)
-		throw invalid_argument("leading");
-	if(characterBoundary >= leading.length())
-		throw invalid_argument("firstCharacter");
-	if(glyphBoundary >= leading.numberOfGlyphs())
-		throw invalid_argument("firstGlyph");
+/**
+ * Constructor.
+ * @param characterRange the character range this text run covers
+ * @param script @c SCRIPT_ANALYSIS object obtained by @c ScriptItemize(OpenType)
+ * @param font the font renders this text run. can't be @c null
+ * @param scriptTag an OpenType script tag describes the script of this text run
+ * @throw NullPointerException @a font is @c null
+ */
+LineLayout::TextRun::TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
+		tr1::shared_ptr<const AbstractFont> font, OPENTYPE_TAG scriptTag) /*throw()*/
+		: Range<length_t>(characterRange), analysis_(script) {
+	glyphs_.reset(new Glyphs(*this, font, scriptTag));
+	if(font.get() == 0)
+		throw NullPointerException("font");
+}
 
-	// modify 'leading's ranges
-	const bool ltr = leading.readingDirection() == LEFT_TO_RIGHT;
-	leading.characterRange_ = Range<length_t>(leading.characterRange_.beginning(), characterBoundary);
-	if(ltr)
-		leading.glyphRange_ = Range<int>(leading.glyphRange_.beginning(), glyphBoundary);
-	else
-		leading.glyphRange_ = Range<int>(glyphBoundary, leading.glyphRange_.end());
+/**
+ * Another private constructor separates an existing text run.
+ * @param leading the original text run
+ * @param characterBoundary
+ * @throw std#invalid_argument @a leading has not been shaped
+ * @throw std#out_of_range @a characterBoundary is outside of the character range @a leading covers
+ * @see #splitIfTooLong
+ */
+LineLayout::TextRun::TextRun(TextRun& leading, length_t characterBoundary) /*throw()*/ :
+		Range<length_t>(characterBoundary, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
+	if(leading.glyphs_.get() == 0)
+		throw invalid_argument("leading has not been shaped");
+	if(characterBoundary >= leading.length())
+		throw out_of_range("firstCharacter");
+
+	// compute 'glyphRange_'
 
 	// modify clusters
-	Run& target = ltr ? *this : leading;
-	WORD* const clusters = glyphs_->clusters.get();
-	transform(target.clusters(), target.clusters() + target.length(), clusters + target.characterRange_.beginning(),
-		bind2nd(minus<WORD>(), clusters[ltr ? target.characterRange_.beginning() : (target.characterRange_.end() - 1)]));
+//	TextRun& target = ltr ? *this : leading;
+//	WORD* const clusters = glyphs_->clusters.get();
+//	transform(target.clusters(), target.clusters() + target.length(),
+//		clusters + target.beginning(), bind2nd(minus<WORD>(), clusters[ltr ? target.beginning() : (target.end() - 1)]));
 }
 
-LineLayout::Run::~Run() /*throw()*/ {
+LineLayout::TextRun::~TextRun() /*throw()*/ {
 //	if(cache_ != 0)
 //		::ScriptFreeCache(&cache_);
 }
 
-inline uchar LineLayout::Run::bidiEmbeddingLevel() const /*throw()*/ {
-	return static_cast<uchar>(analysis_.s.uBidiLevel);
-}
-
-auto_ptr<LineLayout::Run> LineLayout::Run::breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
-	assert(at > column() && at < column() + length());
-	assert(glyphs_->clusters[at - column()] != glyphs_->clusters[at - column() - 1]);
+auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
+	assert(at > beginning() && at < end());
+	assert(glyphRun().clusters[at - beginning()] != glyphRun().clusters[at - beginning() - 1]);
 
 	const bool ltr = readingDirection() == LEFT_TO_RIGHT;
-	const length_t newLength = at - column();
-	const int newNumberOfGlyphs = ltr ? glyphs_->clusters[newLength] : (numberOfGlyphs() - glyphs_->clusters[newLength - 1]);
+	const length_t newLength = at - beginning();
 	assert(ltr == (analysis_.fRTL == 0));
 
 	// create the new following run
-	auto_ptr<Run> following(new Run(*this, newLength, ltr ? newNumberOfGlyphs : (numberOfGlyphs() - newNumberOfGlyphs)));
+	auto_ptr<TextRun> following(new TextRun(*this, newLength));
 
 	// update placements
-	place(dc, lineString, lip);
-	following->place(dc, lineString, lip);
+//	place(dc, lineString, lip);
+//	following->place(dc, lineString, lip);
 
 	return following;
-}
-
-/**
- * Builds glyphs into the run structure.
- * @param dc the device context
- * @param text the text to generate glyphs
- * @retval S_OK succeeded
- * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
- * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
- * @retval HRESULT other Uniscribe error
- * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
- */
-HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* text) /*throw()*/ {
-	assert(glyphs_->advances.get() == 0);
-
-#ifdef _DEBUG
-	if(HFONT currentFont = dc.getCurrentFont()) {
-		LOGFONTW lf;
-		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
-			DumpContext dout;
-			dout << L"[LineLayout.Run.buildGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
-		}
-	}
-#endif
-
-	manah::AutoBuffer<WORD> indices, clusters;
-	manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
-	clusters.reset(new WORD[length()]);
-	int numberOfGlyphs = estimateNumberOfGlyphs(length());
-	HRESULT hr;
-	while(true) {
-		indices.reset(new WORD[numberOfGlyphs]);
-		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-		hr = ::ScriptShape(dc.get(), &glyphs_->cache, text, static_cast<int>(length()),
-			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis_),
-			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
-		if(hr != E_OUTOFMEMORY)
-			break;
-		// repeat until a large enough buffer is provided
-		numberOfGlyphs *= 2;
-	}
-
-	if(analysis_.fNoGlyphIndex != 0)
-		return GDI_ERROR;	// the caller should try other fonts or disable shaping
-
-	// commit
-	if(SUCCEEDED(hr)) {
-		swap(glyphs_->indices, indices);
-		swap(glyphs_->clusters, clusters);
-		swap(glyphs_->visualAttributes, visualAttributes);
-		glyphRange_ = Range<int>(0, numberOfGlyphs);
-	}
-	return hr;
 }
 
 /**
@@ -850,20 +876,21 @@ HRESULT LineLayout::Run::buildGlyphs(const DC& dc, const Char* text) /*throw()*/
  * @param run the run
  * @return the number of missing glyphs
  */
-inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/ {
+inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp);
+	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphRun().fontCache, &fp);
 	if(FAILED(hr))
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 	int result = 0;
-	for(StringCharacterIterator i(StringPiece(text + column() + characterRange_.beginning(), characterRange_.length())); i.hasNext(); i.next()) {
+	for(StringCharacterIterator i(StringPiece(text + beginning(), length())); i.hasNext(); i.next()) {
 		if(!BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
-			const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
+			const WORD glyph = glyphRun().indices[glyphRun().clusters[i.tell() - i.beginning()]];
 			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
 				++result;
-			else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1 && scriptProperties.get(analysis_.eScript).fComplex == 0)
+			else if(glyphRun().visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
+					&& scriptProperties.get(analysis_.eScript).fComplex == 0)
 				++result;
 		}
 	}
@@ -879,13 +906,39 @@ inline pair<int, HRESULT> LineLayout::Run::countMissingGlyphs(const DC& dc, cons
  * @param options
  * @return
  */
-inline HRESULT LineLayout::Run::draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect /* = 0 */, UINT options /* = 0 */) const {
-	HFONT oldFont = dc.selectObject(font_->handle().get());
-	const HRESULT hr = ::ScriptTextOut(dc.use(), &glyphs_->cache, x, y, 0, clipRect,
+inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect /* = 0 */, UINT options /* = 0 */) const {
+	HFONT oldFont = dc.selectObject(glyphRun().font->handle().get());
+	const HRESULT hr = ::ScriptTextOut(dc.use(), &glyphRun().fontCache, x, y, 0, clipRect,
 		&analysis_, 0, 0, glyphs(), numberOfGlyphs(), advances(), justifiedAdvances(), glyphOffsets());
 	if(restoreFont)
 		dc.selectObject(oldFont);
 	return hr;
+}
+
+void LineLayout::TextRun::drawBackground(DC& dc, const POINT& p,
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const {
+	if(dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left)
+		return;
+	int left = x(range.beginning(), false), right = x(range.end(), true);
+	if(left > right)
+		std::swap(left, right);
+	dc.fillSolidRect(p.x + left, p.y - glyphs_->font->metrics().ascent(),
+		p.x + right, p.y + glyphs_->font->metrics().descent(), color.asCOLORREF());
+}
+
+void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const {
+	dc.selectObject(glyphs_->font->handle().get());
+	dc.setTextAlign(color.asCOLORREF());
+	const Range<size_t> glyphRange(
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.beginning(), analysis_),
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.end(), analysis_));
+	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
+		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
+		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
+		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
+		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
+		glyphOffsets() + glyphRange.beginning());
 }
 
 /**
@@ -897,90 +950,128 @@ inline HRESULT LineLayout::Run::draw(DC& dc, int x, int y, bool restoreFont, con
  * @return @c true if expanded tab characters
  * @throw std#invalid_argument @a maximumWidth &lt;= 0
  */
-inline bool LineLayout::Run::expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth) {
+inline bool LineLayout::TextRun::expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth) {
 	if(maximumWidth <= 0)
 		throw invalid_argument("maximumWidth");
-	if(lineString[column()] != L'\t')
+	if(lineString[beginning()] != L'\t')
 		return false;
-	assert(length() == 1);
-	width_.abcB = min(tabWidth - x % tabWidth, maximumWidth);
-	width_.abcA = width_.abcC = 0;
-	assert(glyphs_.unique());
-	glyphs_->advances[0] = totalWidth();
-	glyphs_->justifiedAdvances.reset();
+	assert(length() == 1 && glyphs_.unique());
+	glyphRun().advances[0] = min(tabWidth - x % tabWidth, maximumWidth);
+	glyphRun().justifiedAdvances.reset();
 	return true;
 }
 
-/**
- * @param dc the device context
- * @param lineString the text to generate glyphs
- * @param run the run
- * @param[out] numberOfMissingGlyphs the number of the missing glyphs. can be @c null
- * @retval S_FALSE there are missing glyphs
- * @retval otherwise see @c buildGlyphs function
- */
-inline HRESULT LineLayout::Run::generateGlyphs(const DC& dc, const Char* text, int* numberOfMissingGlyphs) {
-	HRESULT hr = buildGlyphs(dc, text);
-	if(SUCCEEDED(hr) && numberOfMissingGlyphs != 0 && 0 != (*numberOfMissingGlyphs = countMissingGlyphs(dc, text).first))
-		hr = S_FALSE;
-	else if(hr == USP_E_SCRIPT_NOT_IN_FONT && numberOfMissingGlyphs != 0)
-		*numberOfMissingGlyphs = numberOfGlyphs();
-	return hr;
-}
-
 /// Fills the glyph array with default index, instead of using @c ScriptShape.
-inline void LineLayout::Run::generateDefaultGlyphs(const DC& dc) {
-	assert(glyphs_->advances.get() == 0);
-
+inline void LineLayout::TextRun::generateDefaultGlyphs(const DC& dc,
+		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs) {
+	SCRIPT_CACHE fontCache(0);
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp)))
+	if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
 		fp.wgDefault = 0;	// hmm...
 
 	manah::AutoBuffer<WORD> indices, clusters;
 	manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
-	const int numberOfGlyphs = static_cast<int>(length());
+	const int numberOfGlyphs = static_cast<int>(text.length());
 	indices.reset(new WORD[numberOfGlyphs]);
-	clusters.reset(new WORD[length()]);
+	clusters.reset(new WORD[text.length()]);
 	visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 	fill_n(indices.get(), numberOfGlyphs, fp.wgDefault);
-	const bool ltr = analysis_.fRTL == 0 || analysis_.fLogicalOrder == 1;
-	for(size_t i = 0, c = length(); i < c; ++i)
+	const bool ltr = analysis.fRTL == 0 || analysis.fLogicalOrder == 1;
+	for(size_t i = 0, c = text.length(); i < c; ++i)
 		clusters[i] = static_cast<WORD>(ltr ? i : (c - i));
 	const SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
 	fill_n(visualAttributes.get(), numberOfGlyphs, va);
 
 	// commit
-	swap(glyphs_->indices, indices);
-	swap(glyphs_->clusters, clusters);
-	swap(glyphs_->visualAttributes, visualAttributes);
-	glyphRange_ = Range<int>(0, numberOfGlyphs);
+	std::swap(glyphs.fontCache, fontCache);
+	std::swap(glyphs.indices, indices);
+	std::swap(glyphs.clusters, clusters);
+	std::swap(glyphs.visualAttributes, visualAttributes);
+	::ScriptFreeCache(&fontCache);
 }
 
-inline HRESULT LineLayout::Run::hitTest(int x, int& cp, int& trailing) const {
+/**
+ * Generates glyphs for the text.
+ * @param dc the device context
+ * @param text the text to generate glyphs
+ * @param analysis the Uniscribe's @c SCRIPT_ANALYSIS object
+ * @param[out] glyphs
+ * @param[out] numberOfGlyphs the number of glyphs written to @a run
+ * @retval S_OK succeeded
+ * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
+ * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
+ * @retval HRESULT other Uniscribe error
+ * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
+ */
+HRESULT LineLayout::TextRun::generateGlyphs(const DC& dc,
+		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs) {
+#ifdef _DEBUG
+	if(HFONT currentFont = dc.getCurrentFont()) {
+		LOGFONTW lf;
+		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
+			DumpContext dout;
+			dout << L"[LineLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+		}
+	}
+#endif
+
+	SCRIPT_CACHE fontCache(0);	// TODO: this object should belong to a font, not glyph run???
+	manah::AutoBuffer<WORD> indices, clusters;
+	manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
+	clusters.reset(new WORD[text.length()]);
+	numberOfGlyphs = estimateNumberOfGlyphs(text.length());
+	HRESULT hr;
+	while(true) {
+		indices.reset(new WORD[numberOfGlyphs]);
+		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
+		hr = ::ScriptShape(dc.get(), &fontCache, text.beginning(), static_cast<int>(text.length()),
+			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
+			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
+		if(hr != E_OUTOFMEMORY)
+			break;
+		// repeat until a large enough buffer is provided
+		numberOfGlyphs *= 2;
+	}
+
+	if(analysis.fNoGlyphIndex != 0)
+		hr = GDI_ERROR;	// the caller should try other fonts or disable shaping
+
+	// commit
+	if(SUCCEEDED(hr)) {
+		std::swap(glyphs.fontCache, fontCache);
+		std::swap(glyphs.indices, indices);
+		std::swap(glyphs.clusters, clusters);
+		std::swap(glyphs.visualAttributes, visualAttributes);
+	}
+	::ScriptFreeCache(&fontCache);
+	return hr;
+}
+
+inline HRESULT LineLayout::TextRun::hitTest(int x, int& cp, int& trailing) const {
 	return ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters(),
 		visualAttributes(), (justifiedAdvances() == 0) ? advances() : justifiedAdvances(), &analysis_, &cp, &trailing);
 }
 
-inline HRESULT LineLayout::Run::justify(int width) {
-	assert(glyphs_.get() != 0 && advances() != 0);
+inline HRESULT LineLayout::TextRun::justify(int width) {
+	assert(glyphRun().indices.get() != 0 && advances() != 0);
 	HRESULT hr = S_OK;
 	if(width != totalWidth()) {
-		glyphs_->justifiedAdvances.reset(new int[numberOfGlyphs()]);
-		hr = ::ScriptJustify(visualAttributes(), advances(), numberOfGlyphs(),
-			width - totalWidth(), 2, glyphs_->justifiedAdvances.get() + glyphRange_.beginning());
-		width_.abcB += width - totalWidth();
+		if(glyphRun().justifiedAdvances.get() == 0)
+			glyphRun().justifiedAdvances.reset(new int[numberOfGlyphs()]);
+		hr = ::ScriptJustify(visualAttributes(), advances(), numberOfGlyphs(), width - totalWidth(),
+			2, glyphRun().justifiedAdvances.get() + (beginning() - glyphRun().characters.beginning()));
 	}
 	return hr;
 }
 
-inline HRESULT LineLayout::Run::logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const {
+inline HRESULT LineLayout::TextRun::logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const {
 	if(attributes == 0)
 		throw NullPointerException("attributes");
-	return ::ScriptBreak(lineString.data() + column(), static_cast<int>(length()), &analysis_, attributes);
+	return ::ScriptBreak(lineString.data() + beginning(), static_cast<int>(length()), &analysis_, attributes);
 }
 
-inline HRESULT LineLayout::Run::logicalWidths(int widths[]) const {
+inline HRESULT LineLayout::TextRun::logicalWidths(int widths[]) const {
 	if(widths == 0)
 		throw NullPointerException("widths");
 	return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
@@ -1026,6 +1117,7 @@ namespace {
 		FontProperties properties;
 		double sizeAdjust;
 		resolveFontSpecifications(lip, requestedStyle, familyName, properties, sizeAdjust);
+		familyName.assign(L"Times New Roman");
 		return make_pair(static_cast<const Char*>(0), lip.fontCollection().get(familyName, properties, sizeAdjust));
 	}
 } // namespace @0
@@ -1037,12 +1129,13 @@ namespace {
  * @param numberOfItems the length of the array @a items
  * @param styles the iterator returns the styled runs in the line. can be @c null
  * @param lip
- * @param[out] result
+ * @param[out] textRuns
+ * @param[out] styledRanges
  * @see presentation#Presentation#getLineStyle
  */
-void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRIPT_ITEM scriptRuns[],
+void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
-		const ILayoutInformationProvider& lip, vector<Run*>& result) {
+		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges) {
 	if(scriptRuns == 0)
 		throw NullPointerException("scriptRuns");
 	else if(numberOfScriptRuns == 0)
@@ -1050,8 +1143,8 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 
 #define ASCENSION_SPLIT_LAST_RUN()										\
 	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {					\
-		Run& back = *runs.back();										\
-		Run* piece = new SimpleRun(back.style);							\
+		TextRun& back = *runs.back();									\
+		TextRun* piece = new SimpleRun(back.style);						\
 		length_t pieceLength = MAXIMUM_RUN_LENGTH;						\
 		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
 			--pieceLength;												\
@@ -1062,8 +1155,8 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		runs.push_back(piece);											\
 	}
 
-	vector<Run*> runs;
-	runs.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
+	pair<vector<TextRun*>, vector<const StyledRun> > results;
+	results.first.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = scriptRuns;
 	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;	// 'second' is the beginning position
@@ -1073,17 +1166,19 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 	if(styleRun.second = styles.get() != 0 && !styles->isDone()) {
 		styles->current(styleRun.first);
 		styles->next();
+		results.second.push_back(styleRun.first);
 	}
 	pair<StyledRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
 	if(nextStyleRun.second = styles.get() != 0 && !styles->isDone())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
-	tr1::shared_ptr<const AbstractFont> font;
+	pair<size_t, length_t> glyphRun(0, 0);	// 'first' is current run (vector's index) and 'second' is first opportunity of end
+	tr1::shared_ptr<const AbstractFont> font;	// font for current glyph run
 	do {
 		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, styleRun.second ? styleRun.first.column : 0);
-		assert((runs.empty() && previousRunEnd == 0) || (previousRunEnd == runs.back()->column() + runs.back()->length()));
+		assert((results.first.empty() && previousRunEnd == 0) || (previousRunEnd == results.first.back()->end()));
 		length_t newRunEnd;
-		bool forwardScriptRun = false, forwardStyleRun = false;
+		bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
 
 		if(nextScriptRun.second == beginningOfNextStyleRun) {
 			newRunEnd = nextScriptRun.second;
@@ -1104,20 +1199,25 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 					styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>(), font, lip));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
-				newRunEnd = nextFontRun.first - lineString.data();
+				forwardGlyphRun = true;
+				glyphRun.second = newRunEnd = nextFontRun.first - lineString.data();
 				forwardScriptRun = forwardStyleRun = false;
 			}
 		}
+		if(!forwardGlyphRun && forwardScriptRun)
+			forwardGlyphRun = true;
 
-		const bool breakScriptRun = newRunEnd < nextScriptRun.second;
-		if(breakScriptRun)
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
-		runs.push_back(
-			new Run(previousRunEnd, newRunEnd - previousRunEnd, scriptRun->a,
-			(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN,	// TODO: 'DFLT' is preferred?
-			styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>()));
-		if(breakScriptRun)
-			const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
+		if(forwardGlyphRun) {
+			const bool breakScriptRun = newRunEnd < nextScriptRun.second;
+			if(breakScriptRun)
+				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
+			results.first.push_back(
+				new TextRun(Range<length_t>(previousRunEnd, newRunEnd - previousRunEnd),
+					scriptRun->a, font,
+					(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
+			if(breakScriptRun)
+				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
+		}
 		if(forwardScriptRun) {
 			if((scriptRun = nextScriptRun.first) != 0) {
 				if(++nextScriptRun.first == scriptRuns + numberOfScriptRuns)
@@ -1128,6 +1228,7 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		if(forwardStyleRun) {
 			if(styleRun.second = nextStyleRun.second) {
 				styleRun.first = nextStyleRun.first;
+				results.second.push_back(styleRun.first);
 				styles->next();
 				if(nextStyleRun.second = !styles->isDone())
 					styles->current(nextStyleRun.first);
@@ -1136,107 +1237,97 @@ void LineLayout::Run::mergeScriptsAndStyles(const String& lineString, const SCRI
 		}
 
 		while(true) {
-			auto_ptr<Run> piece(runs.back()->splitIfTooLong(lineString));
+			auto_ptr<TextRun> piece(results.first.back()->splitIfTooLong(lineString));
 			if(piece.get() == 0)
 				break;
-			runs.push_back(piece.release());
+			results.first.push_back(piece.release());
 		}
 	} while(scriptRun != 0 || styleRun.second);
 
-	swap(runs, result);
+	// commit
+	std::swap(textRuns, results.first);
+	std::swap(styledRanges, results.second);
 
 #undef ASCENSION_SPLIT_LAST_RUN
 }
 
-inline int LineLayout::Run::numberOfGlyphs() const /*throw()*/ {
-	return glyphRange_.length();
-}
-
-inline bool LineLayout::Run::overhangs() const /*throw()*/ {
-	return width_.abcA < 0 || width_.abcC < 0;
-}
-
-HRESULT LineLayout::Run::place(DC& dc, const String& lineString, const ILayoutInformationProvider& lip) {
-	assert(glyphs_.get() != 0 && glyphs() != 0);
-	// TODO: rewrite this method to be able to call multiple times.
+/**
+ * 
+ * @see #merge, #substituteGlyphs
+ */
+void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles) {
+	assert(glyphs_.get() != 0 && glyphs_.unique());
+	assert(glyphRun().indices.get() != 0 && glyphRun().advances.get() == 0);
 
 	manah::AutoBuffer<int> advances(new int[numberOfGlyphs()]);
 	manah::AutoBuffer<GOFFSET> offsets(new GOFFSET[numberOfGlyphs()]);
-	ABC width(width_);
-	HRESULT hr = ::ScriptPlace(0, &glyphs_->cache, glyphs(), numberOfGlyphs(),
-		visualAttributes(), &analysis_, advances.get(), offsets.get(), &width);
+//	ABC width;
+	HRESULT hr = ::ScriptPlace(0, &glyphRun().fontCache, glyphRun().indices.get(), numberOfGlyphs(),
+		glyphRun().visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 	if(hr == E_PENDING) {
-		dc.selectObject(font_->handle().get());
-		hr = ::ScriptPlace(dc.get(), &glyphs_->cache, glyphs(), numberOfGlyphs(),
-			visualAttributes(), &analysis_, advances.get(), offsets.get(), &width);
+		HFONT oldFont = const_cast<DC&>(dc).selectObject(glyphRun().font->handle().get());
+		hr = ::ScriptPlace(dc.get(), &glyphRun().fontCache, glyphRun().indices.get(), numberOfGlyphs(),
+			glyphRun().visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
+		const_cast<DC&>(dc).selectObject(oldFont);
 	}
 	if(FAILED(hr))
-		return hr;
+		throw hr;
 
-	// query widths of C0 and C1 controls in this run
-	manah::AutoBuffer<WORD> glyphIndices;
-	if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
-		ISpecialCharacterRenderer::LayoutContext context(dc);
-		context.readingDirection = readingDirection();
-		dc.selectObject(font_->handle().get());
-		SCRIPT_FONTPROPERTIES fp;
-		fp.cBytes = 0;
-		for(length_t i = column(), e = column() + length(); i < e; ++i) {
-			if(isC0orC1Control(lineString[i])) {
-				if(const int w = scr->getControlCharacterWidth(context, lineString[i])) {
-					// substitute the glyph
-					width.abcB += w - glyphs_->advances[i - column()];
-					glyphs_->advances[i] = w;
-					if(fp.cBytes == 0) {
-						fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-						const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp);
-						if(FAILED(hr2))
-							fp.wgBlank = 0;	// hmm...
+	// apply text run styles
+	for(; styles.isDone(); styles.next()) {
+		StyledRun styledRange;
+		styles.current(styledRange);
+/*
+		// query widths of C0 and C1 controls in this run
+		manah::AutoBuffer<WORD> glyphIndices;
+		if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
+			ISpecialCharacterRenderer::LayoutContext context(dc);
+			context.readingDirection = readingDirection();
+			dc.selectObject(glyphs_->font->handle().get());
+			SCRIPT_FONTPROPERTIES fp;
+			fp.cBytes = 0;
+			for(length_t i = beginning(); i < end(); ++i) {
+				if(isC0orC1Control(lineString[i])) {
+					if(const int w = scr->getControlCharacterWidth(context, lineString[i])) {
+						// substitute the glyph
+						width.abcB += w - glyphs_->advances[i - beginning()];
+						glyphs_->advances[i] = w;
+						if(fp.cBytes == 0) {
+							fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
+							const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
+							if(FAILED(hr2))
+								fp.wgBlank = 0;	// hmm...
+						}
+						if(glyphIndices.get() == 0) {
+							glyphIndices.reset(new WORD[numberOfGlyphs()]);
+							memcpy(glyphIndices.get(), glyphs(), sizeof(WORD) * numberOfGlyphs());
+						}
+						glyphIndices[i] = fp.wgBlank;
 					}
-					if(glyphIndices.get() == 0) {
-						glyphIndices.reset(new WORD[numberOfGlyphs()]);
-						memcpy(glyphIndices.get(), glyphs(), sizeof(WORD) * numberOfGlyphs());
-					}
-					glyphIndices[i] = fp.wgBlank;
 				}
 			}
 		}
-	}
-
-	// handle letter spacing
-	if(style_.get() != 0 && style_->letterSpacing.unit != Length::INHERIT) {
-		const int letterSpacing = pixels(dc, style_->letterSpacing, false, font_->metrics());
-		const bool rtl = readingDirection() == RIGHT_TO_LEFT;
-		const SCRIPT_VISATTR* const va = visualAttributes();
-		for(size_t i = glyphRange_.beginning(), e = numberOfGlyphs(); i < e; ++i) {
-			if((!rtl && (i + 1 == e || va[i + 1].fClusterStart != 0))
-					|| (rtl && (i == 0 || va[i - 1].fClusterStart != 0))) {
-				advances[i] += letterSpacing;
-				width.abcB += letterSpacing;
-				if(rtl)
-					offsets[i].du += letterSpacing;
+*/
+/*		// handle letter spacing
+		if(styledRange.style.get() != 0 && styledRange.style->letterSpacing.unit != Length::INHERIT) {
+			if(const int letterSpacing = pixels(dc, styledRange.style->letterSpacing, false, glyphs_->font->metrics())) {
+				const bool rtl = readingDirection() == RIGHT_TO_LEFT;
+				for(size_t i = textRun.glyphRange_.beginning(), e = textRun.glyphRange_.end(); i < e; ++i) {
+					if((!rtl && (i + 1 == e || glyphs_->visualAttributes[i + 1].fClusterStart != 0))
+							|| (rtl && (i == 0 || glyphs_->visualAttributes[i - 1].fClusterStart != 0))) {
+						advances[i] += letterSpacing;
+						if(rtl)
+							offsets[i].du += letterSpacing;
+					}
+				}
 			}
 		}
-	}
+*/	}
 
 	// commit
-	if(glyphs_.unique()) {
-		swap(advances, glyphs_->advances);
-		swap(offsets, glyphs_->offsets);
-		if(glyphIndices.get() != 0)
-			swap(glyphIndices, glyphs_->indices);
-	} else {
-		memcpy(glyphs_->advances.get() + glyphRange_.beginning(), advances.get(), sizeof(int) * numberOfGlyphs());
-		memcpy(glyphs_->offsets.get() + glyphRange_.beginning(), offsets.get(), sizeof(GOFFSET) * numberOfGlyphs());
-		if(glyphIndices.get() != 0)
-			memcpy(glyphs_->indices.get() + glyphRange_.beginning(), glyphIndices.get(), sizeof(WORD) * numberOfGlyphs());
-	}
-	swap(width, width_);
-	return hr;
-}
-
-inline ReadingDirection LineLayout::Run::readingDirection() const /*throw()*/ {
-	return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
+	glyphRun().advances = advances;
+	glyphRun().offsets = offsets;
+//	glyphRun().width = width;
 }
 
 // shaping stuffs
@@ -1276,7 +1367,27 @@ namespace {
 	}
 } // namespace @0
 
-void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, Run* nextRun) {
+void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip) {
+	assert(glyphs_.unique());
+
+	// TODO: check if the requested style (or the default one) disables shaping.
+
+	HFONT oldFont = dc.selectObject(static_cast<const SystemFont*>(glyphRun().font.get())->handle().get());
+	const StringPiece text(lineString.data() + beginning(), lineString.data() + end());
+	int numberOfGlyphs;
+	HRESULT hr = generateGlyphs(dc, text, analysis_, glyphRun(), numberOfGlyphs);
+	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
+		analysis_.eScript = SCRIPT_UNDEFINED;
+		hr = generateGlyphs(dc, text, analysis_, glyphRun(), numberOfGlyphs);
+	}
+	if(FAILED(hr))
+		generateDefaultGlyphs(dc, text, analysis_, glyphRun());
+
+	// commit
+	glyphRange_ = Range<WORD>(0, static_cast<WORD>(numberOfGlyphs));
+}
+#if 0
+void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip, TextRun* nextRun) {
 	if(glyphs_->clusters.get() != 0)
 		throw IllegalStateException("");
 	if(requestedStyle().get() != 0) {
@@ -1360,12 +1471,12 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
 		int numberOfMissingGlyphs;
 
-		const Char* textString = lineString.data() + column();
+		const Char* textString = lineString.data() + beginning();
 
 #define ASCENSION_MAKE_TEXT_STRING_SAFE()												\
 	assert(safeString.get() == 0);														\
 	safeString.reset(new Char[length()]);												\
-	wmemcpy(safeString.get(), lineString.data() + column(), length());					\
+	wmemcpy(safeString.get(), lineString.data() + beginning(), length());				\
 	replace_if(safeString.get(),														\
 		safeString.get() + length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);	\
 	textString = safeString.get();
@@ -1392,7 +1503,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		oldFont = dc.selectObject((font_ = lip.fontCollection().get(computedFontFamily, computedFontProperties))->handle().get());
 		hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 		if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-			::ScriptFreeCache(&glyphs_->cache);
+			::ScriptFreeCache(&glyphs_->fontCache);
 			failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
 		}
 
@@ -1408,7 +1519,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 						dc.selectObject(font_->handle().get());
 						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 						if(hr != S_OK) {
-							::ScriptFreeCache(&glyphs_->cache);
+							::ScriptFreeCache(&glyphs_->fontCache);
 							failedFonts.push_back(make_pair(font_, numberOfMissingGlyphs));	// not material what hr is...
 						}
 					}
@@ -1474,7 +1585,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 					dc.selectObject(font_->handle().get());
 					hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 					if(hr != S_OK) {
-						::ScriptFreeCache(&glyphs_->cache);
+						::ScriptFreeCache(&glyphs_->fontCache);
 						failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
 					}
 				}
@@ -1496,7 +1607,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 						if(hr == S_OK)
 							break;	// found the best
-						::ScriptFreeCache(&glyphs_->cache);
+						::ScriptFreeCache(&glyphs_->fontCache);
 						if(hr == S_FALSE)
 							i->second = -numberOfMissingGlyphs;
 					}
@@ -1516,7 +1627,7 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 					analysis_.eScript = SCRIPT_UNDEFINED;
 				hr = generateGlyphs(dc, textString, 0);
 				if(FAILED(hr)) {
-					::ScriptFreeCache(&glyphs_->cache);
+					::ScriptFreeCache(&glyphs_->fontCache);
 					generateDefaultGlyphs(dc);	// worst case...
 				}
 			}
@@ -1529,21 +1640,21 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	if(!uniscribeSupportsIVS()) {
 
-#define ASCENSION_VANISH_VARIATION_SELECTOR(index)													\
-	WORD blankGlyph;																				\
-	if(S_OK != (hr = ::ScriptGetCMap(dc.get(), &glyphs_->cache, L"\x0020", 1, 0, &blankGlyph))) {	\
-		SCRIPT_FONTPROPERTIES fp;																	\
-		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);													\
-		if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->cache, &fp)))						\
-			fp.wgBlank = 0;	/* hmm... */															\
-		blankGlyph = fp.wgBlank;																	\
-	}																								\
-	glyphs_->indices[glyphs_->clusters[index]]														\
-		= glyphs_->indices[glyphs_->clusters[index + 1]] = blankGlyph;								\
-	SCRIPT_VISATTR* const va = glyphs_->visualAttributes.get();										\
-	va[glyphs_->clusters[index]].uJustification														\
-		= va[glyphs_->clusters[index + 1]].uJustification = SCRIPT_JUSTIFY_BLANK;					\
-	va[glyphs_->clusters[index]].fZeroWidth															\
+#define ASCENSION_VANISH_VARIATION_SELECTOR(index)														\
+	WORD blankGlyph;																					\
+	if(S_OK != (hr = ::ScriptGetCMap(dc.get(), &glyphs_->fontCache, L"\x0020", 1, 0, &blankGlyph))) {	\
+		SCRIPT_FONTPROPERTIES fp;																		\
+		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);														\
+		if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp)))						\
+			fp.wgBlank = 0;	/* hmm... */																\
+		blankGlyph = fp.wgBlank;																		\
+	}																									\
+	glyphs_->indices[glyphs_->clusters[index]]															\
+		= glyphs_->indices[glyphs_->clusters[index + 1]] = blankGlyph;									\
+	SCRIPT_VISATTR* const va = glyphs_->visualAttributes.get();											\
+	va[glyphs_->clusters[index]].uJustification															\
+		= va[glyphs_->clusters[index + 1]].uJustification = SCRIPT_JUSTIFY_BLANK;						\
+	va[glyphs_->clusters[index]].fZeroWidth																\
 		= va[glyphs_->clusters[index + 1]].fZeroWidth = 1
 
 		if(firstVariationSelectorWasted) {
@@ -1552,9 +1663,9 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 			assert(length() > 1);
 			ASCENSION_VANISH_VARIATION_SELECTOR(0);
 		} else if(analysis_.eScript != SCRIPT_UNDEFINED && length() > 3
-				&& surrogates::isHighSurrogate(lineString[column()]) && surrogates::isLowSurrogate(lineString[column() + 1])) {
+				&& surrogates::isHighSurrogate(lineString[beginning()]) && surrogates::isLowSurrogate(lineString[beginning() + 1])) {
 			for(StringCharacterIterator i(
-					StringPiece(lineString.data() + column(), length()), lineString.data() + column() + 2); i.hasNext(); i.next()) {
+					StringPiece(lineString.data() + beginning(), length()), lineString.data() + beginning() + 2); i.hasNext(); i.next()) {
 				const CodePoint variationSelector = i.current();
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 					StringCharacterIterator baseCharacter(i);
@@ -1569,10 +1680,10 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 		}
 		if(nextRun != 0 && nextRun->length() > 1) {
 			const CodePoint variationSelector = surrogates::decodeFirst(
-				lineString.begin() + nextRun->column(), lineString.begin() + nextRun->column() + 2);
+				lineString.begin() + nextRun->beginning(), lineString.begin() + nextRun->beginning() + 2);
 			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 				const CodePoint baseCharacter = surrogates::decodeLast(
-					lineString.data() + column(), lineString.data() + column() + length());
+					lineString.data() + beginning(), lineString.data() + end());
 				if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
 						baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
 					nextRun->analysis_.fLogicalOrder = 1;
@@ -1582,10 +1693,10 @@ void LineLayout::Run::shape(DC& dc, const String& lineString, const ILayoutInfor
 	}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
-
-auto_ptr<LineLayout::Run> LineLayout::Run::splitIfTooLong(const String& lineString) {
+#endif
+auto_ptr<LineLayout::TextRun> LineLayout::TextRun::splitIfTooLong(const String& lineString) {
 	if(estimateNumberOfGlyphs(length()) <= 65535)
-		return auto_ptr<Run>();
+		return auto_ptr<TextRun>();
 
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
 	static const length_t MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
@@ -1609,16 +1720,78 @@ auto_ptr<LineLayout::Run> LineLayout::Run::splitIfTooLong(const String& lineStri
 			--opportunity;
 	}
 
-	auto_ptr<Run> following(new Run(opportunity, length() - opportunity, analysis_, glyphs_->scriptTag, style_));
-	characterRange_ = Range<length_t>(0, opportunity);
+	auto_ptr<TextRun> following(new TextRun(Range<length_t>(
+		opportunity, length() - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
+	static_cast<Range<length_t>&>(*this) = Range<length_t>(0, opportunity);
 	return following;
 }
 
-inline int LineLayout::Run::totalWidth() const /*throw()*/ {
-	return width_.abcA + width_.abcB + width_.abcC;
+/**
+ * 
+ * @param dc the device context
+ * @param runs the minimal runs
+ * @param lineString the line string
+ * @see #merge, #positionGlyphs
+ */
+void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>& runs, const String& lineString) {
+	// this method processes the following substitutions:
+	// 1. missing glyphs
+	// 2. ideographic variation sequences (if Uniscribe did not support)
+
+	// 1. Presentative glyphs for missing ones
+
+	// TODO: generate missing glyphs.
+
+	// 2. Ideographic Variation Sequences (Uniscribe workaround)
+	// Older Uniscribe (version < 1.626.7100.0) does not support IVS.
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+	if(!uniscribeSupportsIVS()) {
+		for(TextRun** p = runs.beginning(); p < runs.end(); ++p) {
+			TextRun& run = **p;
+
+			// process IVSes in a glyph run
+			if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
+					&& surrogates::isHighSurrogate(lineString[run.beginning()])
+					&& surrogates::isLowSurrogate(lineString[run.beginning() + 1])) {
+				for(StringCharacterIterator i(StringPiece(lineString.data() + run.beginning(),
+						run.length()), lineString.data() + run.beginning() + 2); i.hasNext(); i.next()) {
+					const CodePoint variationSelector = i.current();
+					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
+						StringCharacterIterator baseCharacter(i);
+						baseCharacter.previous();
+						if(static_cast<const SystemFont*>(run.glyphRun().font.get())->ivsGlyph(
+								baseCharacter.current(), variationSelector,
+								run.glyphRun().indices[run.glyphRun().clusters[baseCharacter.tell() - lineString.data()]])) {
+							run.glyphRun().vanish(dc, i.tell() - lineString.data() - run.beginning());
+							run.glyphRun().vanish(dc, i.tell() - lineString.data() - run.beginning() + 1);
+						}
+					}
+				}
+			}
+
+			// process an IVS across two glyph runs
+			if(p + 1 != runs.end() && p[1]->length() > 1) {
+				TextRun& next = *p[1];
+				const CodePoint variationSelector = surrogates::decodeFirst(
+					lineString.begin() + next.beginning(), lineString.begin() + next.beginning() + 2);
+				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
+					const CodePoint baseCharacter = surrogates::decodeLast(
+						lineString.data() + run.beginning(), lineString.data() + run.end());
+					if(static_cast<const SystemFont*>(run.glyphRun().font.get())->ivsGlyph(
+							baseCharacter, variationSelector, run.glyphRun().indices[run.glyphRun().clusters[run.length() - 1]])) {
+						next.glyphRun().vanish(dc, 0);
+						next.glyphRun().vanish(dc, 1);
+					}
+				}
+			}
+		}
+#undef ASCENSION_VANISH_VARIATION_SELECTOR
+	}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
 
-inline int LineLayout::Run::x(size_t offset, bool trailing) const {
+inline int LineLayout::TextRun::x(size_t offset, bool trailing) const {
 	int result;
 	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(offset), trailing,
 		static_cast<int>(length()), numberOfGlyphs(), clusters(), visualAttributes(),
@@ -1796,11 +1969,11 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		return;
 	}
 
-	// split the text line into style runs as following steps:
-	// 1. split the text into script runs by Uniscribe
-	// 2. split each script runs into style runs with StyledRunIterator
-	// 3. resplit each script runs into font runs to shape
-	// 4. merge style runs and font runs
+	// split the text line into text runs as following steps:
+	// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
+	// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
+	// 3. generate glyphs for each text runs
+	// 4. position glyphs for each text runs
 
 	// 1. split the text into script runs by Uniscribe
 	HRESULT hr;
@@ -1846,25 +2019,26 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 	if(scriptItemizeOpenType == 0)
 		fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
 
-	// 2. split each script runs into style runs with StyledRunIterator
-	vector<Run*> styleRuns;
-	Run::mergeScriptsAndStyles(lineString.data(),
+	// 2. split each script runs into text runs with StyledRunIterator
+	vector<TextRun*> textRuns;
+	vector<const StyledRun> styledRanges;
+	TextRun::mergeScriptsAndStyles(dc, lineString.data(),
 		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
-		presentation.textRunStyles(lineNumber()), lip_, styleRuns);
-	runs_ = new Run*[numberOfRuns_ = styleRuns.size()];
-	copy(styleRuns.begin(), styleRuns.end(), runs_);
+		presentation.textRunStyles(lineNumber()), lip_, textRuns, styledRanges);
+	runs_ = new TextRun*[numberOfRuns_ = textRuns.size()];
+	copy(textRuns.begin(), textRuns.end(), runs_);
+	styledRanges_.reset(new StyledRun[numberOfStyledRanges_ = styledRanges.size()]);
+	copy(styledRanges.begin(), styledRanges.end(), styledRanges_.get());
 
-	// 3. resplit each script runs into font runs to shape
-//	for(size_t i = 0; i < numberOfScriptRuns; ++i) {
-//		computeFontRuns();
-//	}
+	// 3. generate glyphs for each text runs
+	for(size_t i = 0; i < numberOfRuns_; ++i)
+		runs_[i]->shape(dc, lineString, lip_);
+	TextRun::substituteGlyphs(dc, Range<TextRun**>(runs_, runs_ + numberOfRuns_), lineString);
 
-	// generate and position the glyphs for the text
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		Run& run = *runs_[i];
-		run.shape(dc, lineString, lip_, (i + 1 < numberOfRuns_) ? runs_[i + 1] : 0);
-		run.place(dc, lineString, lip_);
-	}
+	// 4. position glyphs for each text runs
+	for(size_t i = 0; i < numberOfRuns_; ++i)
+		runs_[i]->positionGlyphs(dc, lineString, SimpleStyledRunIterator(Range<const StyledRun*>(
+			styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), runs_[i]->beginning()));
 
 	// wrap into visual sublines and reorder runs in each sublines
 	if(numberOfRuns_ == 0 || wrapWidth_ == -1) {
@@ -1957,12 +2131,12 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 			continue;
 		}
 		for(size_t i = sublineFirstRuns_[subline]; i < endOfRuns; ++i) {
-			const Run& run = *runs_[i];
-			if(first <= run.column() + run.length() && last >= run.column()) {
-				rectangle.left = cx + ((first > run.column()) ?
-					run.x(first - run.column(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
-				rectangle.right = cx + ((last < run.column() + run.length()) ?
-					run.x(last - run.column(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
+			const TextRun& run = *runs_[i];
+			if(first <= run.end() && last >= run.beginning()) {
+				rectangle.left = cx + ((first > run.beginning()) ?
+					run.x(first - run.beginning(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
+				rectangle.right = cx + ((last < run.end()) ?
+					run.x(last - run.beginning(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
 				if(rectangle.left != rectangle.right) {
 					if(rectangle.left > rectangle.right)
 						swap(rectangle.left, rectangle.right);
@@ -2049,10 +2223,10 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 		for(size_t j = sublineFirstRuns_[subline]; j < endOfRuns; ++j) {
 			if(cx >= bounds.left)
 				break;
-			const Run& run = *runs_[j];
-			if(first <= run.column() + run.length() && last >= run.column()) {
+			const TextRun& run = *runs_[j];
+			if(first <= run.end() && last >= run.beginning()) {
 				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
-					max(first, run.column()) : min(last, run.column() + run.length())) - run.column(), false);
+					max(first, run.beginning()) : min(last, run.end())) - run.beginning(), false);
 				bounds.left = min<LONG>(cx + x, bounds.left);
 				break;
 			}
@@ -2063,10 +2237,10 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 		for(size_t j = endOfRuns - 1; ; --j) {
 			if(cx <= bounds.right)
 				break;
-			const Run& run = *runs_[j];
-			if(first <= run.column() + run.length() && last >= run.column()) {
+			const TextRun& run = *runs_[j];
+			if(first <= run.end() && last >= run.beginning()) {
 				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
-					min(last, run.column() + run.length()) : max(first, run.column())) - run.column(), false);
+					min(last, run.end()) : max(first, run.beginning())) - run.beginning(), false);
 				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
 				break;
 			}
@@ -2218,7 +2392,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// paint background of the runs
 		int startX = x;
 		for(size_t i = firstRun; i < lastRun; ++i) {
-			Run& run = *runs_[i];
+			TextRun& run = *runs_[i];
 			if(x + run.totalWidth() < paintRect.left) {	// this run does not need to draw
 				++firstRun;
 				startX = x + run.totalWidth();
@@ -2230,17 +2404,17 @@ void LineLayout::draw(length_t subline, DC& dc,
 					background = run.requestedStyle()->background.asCOLORREF();
 				else
 					background = defaultBackground;
-				if(selection == 0 || run.column() >= selectedRange.end() || run.column() + run.length() <= selectedRange.beginning())
+				if(selection == 0 || run.beginning() >= selectedRange.end() || run.end() <= selectedRange.beginning())
 					// no selection in this run
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, background);
-				else if(selection != 0 && run.column() >= selectedRange.beginning() && run.column() + run.length() <= selectedRange.end()) {
+				else if(selection != 0 && run.beginning() >= selectedRange.beginning() && run.end() <= selectedRange.end()) {
 					// this run is selected entirely
 					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, selection->color().background.asCOLORREF());
 					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
 				} else {
 					// selected partially
-					int left = run.x(max(selectedRange.beginning(), run.column()) - run.column(), false);
-					int right = run.x(min(selectedRange.end(), run.column() + run.length()) - 1 - run.column(), true);
+					int left = run.x(max(selectedRange.beginning(), run.beginning()) - run.beginning(), false);
+					int right = run.x(min(selectedRange.end(), run.end()) - 1 - run.beginning(), true);
 					if(left > right)
 						swap(left, right);
 					left += x;
@@ -2272,7 +2446,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		runRect.left = x = startX;
 		dc.setBkMode(TRANSPARENT);
 		for(size_t i = firstRun; i < lastRun; ++i) {
-			Run& run = *runs_[i];
+			TextRun& run = *runs_[i];
 			COLORREF foreground;
 			if(lineColor.foreground != Color())
 				foreground = lineColor.foreground.asCOLORREF();
@@ -2280,9 +2454,9 @@ void LineLayout::draw(length_t subline, DC& dc,
 				foreground = run.requestedStyle()->foreground.asCOLORREF();
 			else
 				foreground = defaultForeground;
-			if(line[run.column()] != L'\t') {
-				if(selection == 0 || run.overhangs()
-						|| !(run.column() >= selectedRange.beginning() && run.column() + run.length() <= selectedRange.end())) {
+			if(line[run.beginning()] != L'\t') {
+				if(selection == 0 /*|| run.overhangs()*/
+						|| !(run.beginning() >= selectedRange.beginning() && run.end() <= selectedRange.end())) {
 					dc.setTextColor(foreground);
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
@@ -2302,10 +2476,10 @@ void LineLayout::draw(length_t subline, DC& dc,
 			clipRegion.setRect(clipRect);
 			dc.selectClipRgn(clipRegion.get(), RGN_XOR);
 			for(size_t i = firstRun; i < lastRun; ++i) {
-				Run& run = *runs_[i];
+				TextRun& run = *runs_[i];
 				// text
-				if(selection != 0 && line[run.column()] != L'\t'
-						&& (run.overhangs() || (run.column() < selectedRange.end() && run.column() + run.length() > selectedRange.beginning()))) {
+				if(selection != 0 && line[run.beginning()] != L'\t'
+						&& (/*run.overhangs() ||*/ (run.beginning() < selectedRange.end() && run.end() > selectedRange.beginning()))) {
 					dc.setTextColor(selection->color().foreground.asCOLORREF());
 					runRect.left = x;
 					runRect.right = runRect.left + run.totalWidth();
@@ -2324,18 +2498,18 @@ void LineLayout::draw(length_t subline, DC& dc,
 			dc.selectClipRgn(clipRegion.get());
 			x = startX;
 			for(size_t i = firstRun; i < lastRun; ++i) {
-				Run& run = *runs_[i];
+				TextRun& run = *runs_[i];
 				context.readingDirection = run.readingDirection();
-				for(length_t j = run.column(); j < run.column() + run.length(); ++j) {
+				for(length_t j = run.beginning(); j < run.end(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-						context.rect.left = x + run.x(j - run.column(), false);
-						context.rect.right = x + run.x(j - run.column(), true);
+						context.rect.left = x + run.x(j - run.beginning(), false);
+						context.rect.right = x + run.x(j - run.beginning(), true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
 					} else if(isC0orC1Control(line[j])) {
-						context.rect.left = x + run.x(j - run.column(), false);
-						context.rect.right = x + run.x(j - run.column(), true);
+						context.rect.left = x + run.x(j - run.beginning(), false);
+						context.rect.right = x + run.x(j - run.beginning(), true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawControlCharacter(context, line[j]);
@@ -2396,9 +2570,9 @@ void LineLayout::draw(length_t subline, DC& dc,
  */
 void LineLayout::dumpRuns(ostream& out) const {
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		const Run& run = *runs_[i];
+		const TextRun& run = *runs_[i];
 		out << static_cast<uint>(i)
-			<< ":column=" << static_cast<uint>(run.column())
+			<< ":beginning=" << static_cast<uint>(run.beginning())
 			<< ",length=" << static_cast<uint>(run.length()) << endl;
 	}
 }
@@ -2412,13 +2586,13 @@ inline void LineLayout::expandTabsWithoutWrapping() /*throw()*/ {
 
 	if(lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle()) == LEFT_TO_RIGHT) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
-			Run& run = *runs_[i];
+			TextRun& run = *runs_[i];
 			run.expandTabCharacters(lineString, x, fullTabWidth, numeric_limits<int>::max());
 			x += run.totalWidth();
 		}
 	} else {	// expand from the right most
 		for(size_t i = numberOfRuns_; i > 0; --i) {
-			Run& run = *runs_[i - 1];
+			TextRun& run = *runs_[i - 1];
 			run.expandTabCharacters(lineString, x, fullTabWidth, numeric_limits<int>::max());
 			x += run.totalWidth();
 		}
@@ -2486,7 +2660,7 @@ inline size_t LineLayout::findRunForPosition(length_t column) const /*throw()*/ 
 	const length_t sl = subline(column);
 	const size_t lastRun = (sl + 1 < numberOfSublines_) ? sublineFirstRuns_[sl + 1] : numberOfRuns_;
 	for(size_t i = sublineFirstRuns_[sl]; i < lastRun; ++i) {
-		if(runs_[i]->column() <= column && runs_[i]->column() + runs_[i]->length() > column)
+		if(runs_[i]->beginning() <= column && runs_[i]->end() > column)	// TODO: replace with includes().
 			return i;
 	}
 	assert(false);
@@ -2495,7 +2669,7 @@ inline size_t LineLayout::findRunForPosition(length_t column) const /*throw()*/ 
 #if 0
 /// Returns an iterator addresses the first styled segment.
 LineLayout::StyledSegmentIterator LineLayout::firstStyledSegment() const /*throw()*/ {
-	const Run* temp = *runs_;
+	const TextRun* temp = *runs_;
 	return StyledSegmentIterator(temp);
 }
 #endif
@@ -2517,7 +2691,7 @@ inline void LineLayout::justify() /*throw()*/ {
 		const int lineWidth = sublineWidth(subline);
 		const size_t last = (subline + 1 < numberOfSublines_) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 		for(size_t i = sublineFirstRuns_[subline]; i < last; ++i) {
-			Run& run = *runs_[i];
+			TextRun& run = *runs_[i];
 			const int newRunWidth = ::MulDiv(run.totalWidth(), wrapWidth_, lineWidth);	// TODO: there is more precise way.
 			run.justify(newRunWidth);
 		}
@@ -2526,7 +2700,7 @@ inline void LineLayout::justify() /*throw()*/ {
 #if 0
 /// Returns an iterator addresses the last styled segment.
 LineLayout::StyledSegmentIterator LineLayout::lastStyledSegment() const /*throw()*/ {
-	const Run* temp = runs_[numberOfRuns_];
+	const TextRun* temp = runs_[numberOfRuns_];
 	return StyledSegmentIterator(temp);
 }
 #endif
@@ -2554,12 +2728,12 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 	if(readingDirection() == LEFT_TO_RIGHT) {	// LTR
 		int x = sublineIndent(sl);
 		for(size_t i = firstRun; i < lastRun; ++i) {
-			const Run& run = *runs_[i];
-			if(column >= run.column() && column <= run.column() + run.length()) {
+			const TextRun& run = *runs_[i];
+			if(column >= run.beginning() && column <= run.end()) {
 				if(leading != 0)
-					leading->x = x + run.x(column - run.column(), false);
+					leading->x = x + run.x(column - run.beginning(), false);
 				if(trailing != 0)
-					trailing->x = x + run.x(column - run.column(), true);
+					trailing->x = x + run.x(column - run.beginning(), true);
 				break;
 			}
 			x += run.totalWidth();
@@ -2567,13 +2741,13 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 	} else {	// RTL
 		int x = sublineIndent(sl) + sublineWidth(sl);
 		for(size_t i = lastRun - 1; ; --i) {
-			const Run& run = *runs_[i];
+			const TextRun& run = *runs_[i];
 			x -= run.totalWidth();
-			if(column >= run.column() && column <= run.column() + run.length()) {
+			if(column >= run.beginning() && column <= run.end()) {
 				if(leading != 0)
-					leading->x = x + run.x(column - run.column(), false);
+					leading->x = x + run.x(column - run.beginning(), false);
 				if(trailing)
-					trailing->x = x + run.x(column - run.column(), true);
+					trailing->x = x + run.x(column - run.beginning(), true);
 				break;
 			}
 			if(i == firstRun)
@@ -2602,8 +2776,8 @@ int LineLayout::longestSublineWidth() const /*throw()*/ {
 inline void LineLayout::reorder() /*throw()*/ {
 	if(numberOfRuns_ == 0)
 		return;
-	Run** temp = new Run*[numberOfRuns_];
-	memcpy(temp, runs_, sizeof(Run*) * numberOfRuns_);
+	TextRun** temp = new TextRun*[numberOfRuns_];
+	memcpy(temp, runs_, sizeof(TextRun*) * numberOfRuns_);
 	for(length_t subline = 0; subline < numberOfSublines_; ++subline) {
 		const size_t numberOfRunsInSubline = ((subline < numberOfSublines_ - 1) ?
 			sublineFirstRuns_[subline + 1] : numberOfRuns_) - sublineFirstRuns_[subline];
@@ -2679,19 +2853,19 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
 	if(x <= cx) {	// on the left margin
 		if(outside != 0)
 			*outside = true;
-		const Run& firstRun = *runs_[sublineFirstRuns_[subline]];
-		result.first = result.second = firstRun.column()
+		const TextRun& firstRun = *runs_[sublineFirstRuns_[subline]];
+		result.first = result.second = firstRun.beginning()
 			+ ((firstRun.readingDirection() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
 		return result;
 	}
 	for(size_t i = sublineFirstRuns_[subline]; i < lastRun; ++i) {
-		const Run& run = *runs_[i];
+		const TextRun& run = *runs_[i];
 		if(x >= cx && x <= cx + run.totalWidth()) {
 			int cp, trailing;
 			run.hitTest(x - cx, cp, trailing);	// TODO: check the returned value.
 			if(outside != 0)
 				*outside = false;
-			result.first = run.column() + static_cast<length_t>(cp);
+			result.first = run.beginning() + static_cast<length_t>(cp);
 			result.second = result.first + static_cast<length_t>(trailing);
 			return result;
 		}
@@ -2700,7 +2874,7 @@ pair<length_t, length_t> LineLayout::offset(int x, int y, bool* outside /* = 0 *
 	// on the right margin
 	if(outside != 0)
 		*outside = true;
-	result.first = result.second = runs_[lastRun - 1]->column()
+	result.first = result.second = runs_[lastRun - 1]->beginning()
 		+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
 	return result;
 }
@@ -2739,7 +2913,7 @@ ReadingDirection LineLayout::readingDirection() const /*throw()*/ {
 StyledRun LineLayout::styledTextRun(length_t column) const {
 	if(column > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
-	const Run& run = *runs_[findRunForPosition(column)];
+	const TextRun& run = *runs_[findRunForPosition(column)];
 	return StyledRun(run.column(), run.requestedStyle());
 }
 #endif
@@ -2829,11 +3003,11 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 	manah::AutoBuffer<int> logicalWidths;
 	manah::AutoBuffer<SCRIPT_LOGATTR> logicalAttributes;
 	length_t longestRunLength = 0;	// for efficient allocation
-	vector<Run*> newRuns;
+	vector<TextRun*> newRuns;
 	newRuns.reserve(numberOfRuns_ * 3 / 2);
 	// for each runs... (at this time, runs_ is in logical order)
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		Run* run = runs_[i];
+		TextRun* run = runs_[i];
 
 		// if the run is a tab, expand and calculate actual width
 		if(run->expandTabCharacters(lineString, (x1 < wrapWidth_) ? x1 : 0, fullTabWidth, wrapWidth_ - (x1 < wrapWidth_) ? x1 : 0)) {
@@ -2857,12 +3031,12 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 		}
 		HRESULT hr = run->logicalWidths(logicalWidths.get());
 		hr = run->logicalAttributes(lineString, logicalAttributes.get());
-		const length_t originalRunPosition = run->column();
+		const length_t originalRunPosition = run->beginning();
 		int widthInThisRun = 0;
-		length_t lastBreakable = run->column(), lastGlyphEnd = run->column();
+		length_t lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
 		int lastBreakableX = x1, lastGlyphEndX = x1;
 		// for each characters in the run...
-		for(length_t j = run->column(); j < run->column() + run->length(); ) {	// j is position in the LOGICAL line
+		for(length_t j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
 			const int x2 = x1 + widthInThisRun;
 			// remember this opportunity
 			if(logicalAttributes[j - originalRunPosition].fCharStop != 0) {
@@ -2877,10 +3051,10 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 			// break if the width of the visual line overs the wrap width
 			if(x2 + logicalWidths[j - originalRunPosition] > wrapWidth_) {
 				// the opportunity is the start of this run
-				if(lastBreakable == run->column()) {
+				if(lastBreakable == run->beginning()) {
 					// break at the last glyph boundary if no opportunities
 					if(sublineFirstRuns.empty() || sublineFirstRuns.back() == newRuns.size()) {
-						if(lastGlyphEnd == run->column()) {	// break here if no glyph boundaries
+						if(lastGlyphEnd == run->beginning()) {	// break here if no glyph boundaries
 							lastBreakable = j;
 							lastBreakableX = x2;
 						} else {
@@ -2891,13 +3065,13 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 				}
 
 				// case 1: break at the start of the run
-				if(lastBreakable == run->column()) {
+				if(lastBreakable == run->beginning()) {
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
 //dout << L"broke the line at " << lastBreakable << L" where the run start.\n";
 				}
 				// case 2: break at the end of the run
-				else if(lastBreakable == run->column() + run->length()) {
+				else if(lastBreakable == run->end()) {
 					if(lastBreakable < lineString.length()) {
 						assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 						sublineFirstRuns.push_back(newRuns.size() + 1);
@@ -2907,7 +3081,7 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					auto_ptr<Run> followingRun(run->breakAt(dc, lastBreakable, lineString, lip_));
+					auto_ptr<TextRun> followingRun(run->breakAt(dc, lastBreakable, lineString, lip_));
 					newRuns.push_back(run);
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
@@ -2930,13 +3104,13 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 	if(newRuns.empty())
 		newRuns.push_back(0);
 	delete[] runs_;
-	runs_ = new Run*[numberOfRuns_ = newRuns.size()];
+	runs_ = new TextRun*[numberOfRuns_ = newRuns.size()];
 	copy(newRuns.begin(), newRuns.end(), runs_);
 	sublineFirstRuns_ = new length_t[numberOfSublines_ = sublineFirstRuns.size()];
 	copy(sublineFirstRuns.begin(), sublineFirstRuns.end(), sublineFirstRuns_);
 	sublineOffsets_ = new length_t[numberOfSublines_];
 	for(size_t i = 0; i < numberOfSublines_; ++i)
-		sublineOffsets_[i] = runs_[sublineFirstRuns_[i]]->column();
+		sublineOffsets_[i] = runs_[sublineFirstRuns_[i]]->beginning();
 }
 
 
@@ -2971,7 +3145,7 @@ LineLayout::Selection::Selection(const viewers::Caret& caret, const Colors& colo
  * Private constructor.
  * @param start
  */
-LineLayout::StyledSegmentIterator::StyledSegmentIterator(const Run*& start) /*throw()*/ : p_(&start) {
+LineLayout::StyledSegmentIterator::StyledSegmentIterator(const TextRun*& start) /*throw()*/ : p_(&start) {
 }
 
 /// Copy-constructor.
@@ -2980,7 +3154,7 @@ LineLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIter
 
 /// Returns the current segment.
 StyledRun LineLayout::StyledSegmentIterator::current() const /*throw()*/ {
-	const Run& run = **p_;
+	const TextRun& run = **p_;
 	return StyledRun(run.column, run.style);
 }
 #endif
