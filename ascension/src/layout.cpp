@@ -683,7 +683,7 @@ namespace {
 	class SimpleStyledRunIterator : public IStyledRunIterator {
 	public:
 		SimpleStyledRunIterator(const Range<const StyledRun*>& range, length_t start) : range_(range) {
-			ascension::internal::searchBound(static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun());
+			ascension::internal::searchBound(static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun(range_.beginning()));
 		}
 		// presentation.IStyledRunIterator
 		void current(StyledRun& run) const {
@@ -701,7 +701,9 @@ namespace {
 		}
 	private:
 		struct BeginningOfStyledRun {
-			length_t operator()(const StyledRun* p) {return p->column;}
+			explicit BeginningOfStyledRun(const StyledRun* range) : range(range) {}
+			length_t operator()(ptrdiff_t i) {return range[i].column;}
+			const StyledRun* range;
 		};
 		const Range<const StyledRun*> range_;
 		const StyledRun* current_;
@@ -711,6 +713,11 @@ namespace {
 /// TextRun class represents minimum text run whose characters can shaped by single font.
 class LineLayout::TextRun : public Range<length_t> {	// beginning() and end() return position in the line
 	MANAH_NONCOPYABLE_TAG(TextRun);
+public:
+	struct Overlay {
+		Color color;
+		Range<length_t> range;
+	};
 public:
 	TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
 		tr1::shared_ptr<const AbstractFont> font, OPENTYPE_TAG scriptTag) /*throw()*/;
@@ -722,8 +729,9 @@ public:
 	void drawBackground(DC& dc, const POINT& p,
 		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const;
 	void drawForeground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const;
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const;
 	bool expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth);
+	tr1::shared_ptr<const AbstractFont> font() const {return glyphs_->font;}
 	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	HRESULT justify(int width);
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
@@ -735,12 +743,11 @@ public:
 	void positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles);
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
-//	tr1::shared_ptr<const RunStyle> requestedStyle() const /*throw()*/ {return style_;}
 	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
 	auto_ptr<TextRun> splitIfTooLong(const String& lineString);
 	static void substituteGlyphs(const DC& dc, const Range<TextRun**>& runs, const String& lineString);
 	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
-	int x(size_t offset, bool trailing) const;
+	int x(length_t at, bool trailing) const;
 private:
 	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
 		const Range<length_t> characters;	// character range for this glyph arrays in the line
@@ -922,23 +929,33 @@ void LineLayout::TextRun::drawBackground(DC& dc, const POINT& p,
 	int left = x(range.beginning(), false), right = x(range.end(), true);
 	if(left > right)
 		std::swap(left, right);
-	dc.fillSolidRect(p.x + left, p.y - glyphs_->font->metrics().ascent(),
-		p.x + right, p.y + glyphs_->font->metrics().descent(), color.asCOLORREF());
+	const IFontMetrics& fontMetrics = glyphs_->font->metrics();
+	dc.fillSolidRect(p.x + left, p.y - fontMetrics.ascent(),
+		right - left, fontMetrics.cellHeight(), color.asCOLORREF());
 }
 
 void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const {
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const {
 	dc.selectObject(glyphs_->font->handle().get());
-	dc.setTextAlign(color.asCOLORREF());
+	dc.setTextColor(color.asCOLORREF());
+	dc.setBkMode(TRANSPARENT);
 	const Range<size_t> glyphRange(
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.beginning(), analysis_),
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.end(), analysis_));
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.beginning() - beginning(), analysis_),
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.end() - beginning(), analysis_));
+	const int px = p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0);
+	const int py = p.y - glyphs_->font->metrics().ascent();
+	const WORD* const pglyphs = glyphs() + glyphRange.beginning();
+	const int* padvances = advances() + glyphRange.beginning();
+	const int* pjustifiedadvances = (justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0;
+	const GOFFSET* poffsets = glyphOffsets() + glyphRange.beginning();
 	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
-		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
-		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
-		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
-		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
-		glyphOffsets() + glyphRange.beginning());
+		px, py, 0, dirtyRect, &analysis_, 0, 0, pglyphs, glyphRange.length(), padvances, pjustifiedadvances, poffsets);
+//	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
+//		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
+//		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
+//		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
+//		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
+//		glyphOffsets() + glyphRange.beginning());
 }
 
 /**
@@ -1212,7 +1229,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 			if(breakScriptRun)
 				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
 			results.first.push_back(
-				new TextRun(Range<length_t>(previousRunEnd, newRunEnd - previousRunEnd),
+				new TextRun(Range<length_t>(previousRunEnd, newRunEnd),
 					scriptRun->a, font,
 					(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
 			if(breakScriptRun)
@@ -1791,9 +1808,11 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
 
-inline int LineLayout::TextRun::x(size_t offset, bool trailing) const {
+inline int LineLayout::TextRun::x(length_t at, bool trailing) const {
+	if(at < beginning() || at > end())
+		throw BadPositionException(Position(INVALID_INDEX, at));
 	int result;
-	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(offset), trailing,
+	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at) - beginning(), trailing,
 		static_cast<int>(length()), numberOfGlyphs(), clusters(), visualAttributes(),
 		((justifiedAdvances() == 0) ? advances() : justifiedAdvances()), &analysis_, &result);
 	if(FAILED(hr))
@@ -2134,9 +2153,9 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 			const TextRun& run = *runs_[i];
 			if(first <= run.end() && last >= run.beginning()) {
 				rectangle.left = cx + ((first > run.beginning()) ?
-					run.x(first - run.beginning(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
+					run.x(first, false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
 				rectangle.right = cx + ((last < run.end()) ?
-					run.x(last - run.beginning(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
+					run.x(last, false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
 				if(rectangle.left != rectangle.right) {
 					if(rectangle.left > rectangle.right)
 						swap(rectangle.left, rectangle.right);
@@ -2225,8 +2244,8 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const TextRun& run = *runs_[j];
 			if(first <= run.end() && last >= run.beginning()) {
-				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
-					max(first, run.beginning()) : min(last, run.end())) - run.beginning(), false);
+				const int x = run.x((
+					(run.readingDirection() == LEFT_TO_RIGHT) ? max(first, run.beginning()) : min(last, run.end())), false);
 				bounds.left = min<LONG>(cx + x, bounds.left);
 				break;
 			}
@@ -2239,8 +2258,8 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 				break;
 			const TextRun& run = *runs_[j];
 			if(first <= run.end() && last >= run.beginning()) {
-				const int x = run.x(((run.readingDirection() == LEFT_TO_RIGHT) ?
-					min(last, run.end()) : max(first, run.beginning())) - run.beginning(), false);
+				const int x = run.x((
+					(run.readingDirection() == LEFT_TO_RIGHT) ? min(last, run.end()) : max(first, run.beginning())), false);
 				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
 				break;
 			}
@@ -2353,7 +2372,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 	}
 
 	const int savedCookie = dc.save();
-	dc.setTextAlign(TA_BASELINE | TA_LEFT | TA_NOUPDATECP);
+	dc.setTextAlign(TA_TOP | TA_LEFT | TA_NOUPDATECP);
 	if(isDisposed()) {	// empty line
 		RECT r;
 		r.left = max(paintRect.left, clipRect.left);
@@ -2370,33 +2389,48 @@ void LineLayout::draw(length_t subline, DC& dc,
 				selection = 0;
 		}
 
-		// paint between sublines
-		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(y, clipRect.top), clipRect.right, min<long>(y + dy, clipRect.bottom)));
+		// 1. paint gap of sublines
+		// 2. paint the left margin
+		// 3. paint background of the text runs
+		// 4. paint the right margin
+		// 5. draw the foreground glyphs
+
+		// 1. paint gap of sublines
+		POINT basePoint = {x, y};
+		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(basePoint.y, clipRect.top), clipRect.right, min<long>(basePoint.y + dy, clipRect.bottom)));
 //		dc.selectClipRgn(clipRegion.getHandle());
 		if(dy - lineHeight > 0)
-			dc.fillSolidRect(paintRect.left, y + lineHeight, paintRect.right - paintRect.left, dy - lineHeight, marginColor);
+			dc.fillSolidRect(paintRect.left, basePoint.y + lineHeight, paintRect.right - paintRect.left, dy - lineHeight, marginColor);
 
-		x += sublineIndent(subline);
+		basePoint.x += sublineIndent(subline);
 
-		// 1. paint background of the runs
-		// 2. determine the first and the last runs need to draw
-		// 3. mask selected region
 		tr1::shared_ptr<const RunStyle> defaultStyle(lip_.presentation().defaultTextRunStyle());
 		const COLORREF defaultForeground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->foreground : Color(), COLOR_WINDOWTEXT);
 		const COLORREF defaultBackground = systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->background : Color(), COLOR_WINDOW);
 		size_t firstRun = sublineFirstRuns_[subline];
 		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
-		// paint the left margin
-		if(x > paintRect.left)
-			dc.fillSolidRect(paintRect.left, y, x - paintRect.left, lineHeight, marginColor);
-		// paint background of the runs
-		int startX = x;
+
+		// 2. paint the left margin
+		if(basePoint.x > paintRect.left)
+			dc.fillSolidRect(paintRect.left, basePoint.y, basePoint.x - paintRect.left, lineHeight, marginColor);
+
+		// 3. paint background of the text runs
+		int startX = basePoint.x;
 		for(size_t i = firstRun; i < lastRun; ++i) {
-			TextRun& run = *runs_[i];
-			if(x + run.totalWidth() < paintRect.left) {	// this run does not need to draw
+			const TextRun& run = *runs_[i];
+			if(basePoint.x + run.totalWidth() < paintRect.left) {	// this run does not need to draw
 				++firstRun;
-				startX = x + run.totalWidth();
+				startX = basePoint.x + run.totalWidth();
 			} else {
+//				SimpleStyledRunIterator styledRun(Range<const StyledRun*>(
+//					styledRanges_.get(), styledRanges_.get() + numberStyledRanges_), run.beginning());
+//				for(const StyledRun* next; !styledRun.isDone()) {
+//					const StyledRun
+//				}
+				basePoint.y += run.font()->metrics().ascent();
+				run.drawBackground(dc, basePoint, run, Color(0xff, 0xff, 0xff), &paintRect);
+				basePoint.y -= run.font()->metrics().ascent();
+#if 0
 				COLORREF background;
 				if(lineColor.background != Color())
 					background = marginColor;
@@ -2413,8 +2447,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
 				} else {
 					// selected partially
-					int left = run.x(max(selectedRange.beginning(), run.beginning()) - run.beginning(), false);
-					int right = run.x(min(selectedRange.end(), run.end()) - 1 - run.beginning(), true);
+					int left = run.x(max(selectedRange.beginning(), run.beginning()), false);
+					int right = run.x(min(selectedRange.end(), run.end()) - 1, true);
 					if(left > right)
 						swap(left, right);
 					left += x;
@@ -2428,17 +2462,29 @@ void LineLayout::draw(length_t subline, DC& dc,
 					if(right < x + run.totalWidth())
 						dc.fillSolidRect(right, y, run.totalWidth() - (left - x), lineHeight, background);
 				}
+#endif
 			}
-			x += run.totalWidth();
-			if(x >= paintRect.right) {
+			basePoint.x += run.totalWidth();
+			if(basePoint.x >= paintRect.right) {
 				lastRun = i + 1;
 				break;
 			}
 		}
-		// paint the right margin
-		if(x < paintRect.right)
-			dc.fillSolidRect(x, y, paintRect.right - x, dy, marginColor);
 
+		// 4. paint the right margin
+		if(basePoint.x < paintRect.right)
+			dc.fillSolidRect(basePoint.x, basePoint.y, paintRect.right - basePoint.x, dy, marginColor);
+
+		// 5. draw the foreground glyphs
+		basePoint.x = startX;
+		for(size_t i = firstRun; i < lastRun; ++i) {
+			const TextRun& run = *runs_[i];
+			basePoint.y += run.font()->metrics().ascent();
+			run.drawForeground(dc, basePoint, run, Color(0, 0, 0), &paintRect, 0);
+			basePoint.y -= run.font()->metrics().ascent();
+			basePoint.x += run.totalWidth();
+		}
+#if 0
 		// draw outside of the selection
 		RECT runRect;
 		runRect.top = y;
@@ -2502,14 +2548,14 @@ void LineLayout::draw(length_t subline, DC& dc,
 				context.readingDirection = run.readingDirection();
 				for(length_t j = run.beginning(); j < run.end(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-						context.rect.left = x + run.x(j - run.beginning(), false);
-						context.rect.right = x + run.x(j - run.beginning(), true);
+						context.rect.left = x + run.x(j, false);
+						context.rect.right = x + run.x(j, true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
 					} else if(isC0orC1Control(line[j])) {
-						context.rect.left = x + run.x(j - run.beginning(), false);
-						context.rect.right = x + run.x(j - run.beginning(), true);
+						context.rect.left = x + run.x(j, false);
+						context.rect.right = x + run.x(j, true);
 						if(context.rect.left > context.rect.right)
 							swap(context.rect.left, context.rect.right);
 						specialCharacterRenderer->drawControlCharacter(context, line[j]);
@@ -2558,8 +2604,8 @@ void LineLayout::draw(length_t subline, DC& dc,
 			dc.setBkMode(TRANSPARENT);
 			specialCharacterRenderer->drawLineTerminator(context, nlf);
 		}
+#endif
 	}
-
 	dc.restore(savedCookie);
 }
 
@@ -2731,9 +2777,9 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 			const TextRun& run = *runs_[i];
 			if(column >= run.beginning() && column <= run.end()) {
 				if(leading != 0)
-					leading->x = x + run.x(column - run.beginning(), false);
+					leading->x = x + run.x(column, false);
 				if(trailing != 0)
-					trailing->x = x + run.x(column - run.beginning(), true);
+					trailing->x = x + run.x(column, true);
 				break;
 			}
 			x += run.totalWidth();
@@ -2745,9 +2791,9 @@ void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) con
 			x -= run.totalWidth();
 			if(column >= run.beginning() && column <= run.end()) {
 				if(leading != 0)
-					leading->x = x + run.x(column - run.beginning(), false);
+					leading->x = x + run.x(column, false);
 				if(trailing)
-					trailing->x = x + run.x(column - run.beginning(), true);
+					trailing->x = x + run.x(column, true);
 				break;
 			}
 			if(i == firstRun)
