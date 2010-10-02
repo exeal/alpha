@@ -779,8 +779,6 @@ private:
 		const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
 	static void generateDefaultGlyphs(const DC& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs);
-	Glyphs& glyphRun() {return *glyphs_;}
-	const Glyphs& glyphRun() const {return *glyphs_;}
 	const WORD* glyphs() const /*throw()*/ {
 		if(const WORD* const p = glyphs_->indices.get()) return p + glyphRange_.beginning(); return 0;}
 	const GOFFSET* glyphOffsets() const /*throw()*/ {
@@ -861,7 +859,7 @@ LineLayout::TextRun::~TextRun() /*throw()*/ {
 
 auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
 	assert(at > beginning() && at < end());
-	assert(glyphRun().clusters[at - beginning()] != glyphRun().clusters[at - beginning() - 1]);
+	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
 
 	const bool ltr = readingDirection() == LEFT_TO_RIGHT;
 	const length_t newLength = at - beginning();
@@ -886,17 +884,17 @@ auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, 
 inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphRun().fontCache, &fp);
+	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
 	if(FAILED(hr))
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 	int result = 0;
 	for(StringCharacterIterator i(StringPiece(text + beginning(), length())); i.hasNext(); i.next()) {
 		if(!BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
-			const WORD glyph = glyphRun().indices[glyphRun().clusters[i.tell() - i.beginning()]];
+			const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
 			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
 				++result;
-			else if(glyphRun().visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
+			else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
 					&& scriptProperties.get(analysis_.eScript).fComplex == 0)
 				++result;
 		}
@@ -914,8 +912,8 @@ inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(const DC& dc, 
  * @return
  */
 inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect /* = 0 */, UINT options /* = 0 */) const {
-	HFONT oldFont = dc.selectObject(glyphRun().font->handle().get());
-	const HRESULT hr = ::ScriptTextOut(dc.use(), &glyphRun().fontCache, x, y, 0, clipRect,
+	HFONT oldFont = dc.selectObject(glyphs_->font->handle().get());
+	const HRESULT hr = ::ScriptTextOut(dc.use(), &glyphs_->fontCache, x, y, 0, clipRect,
 		&analysis_, 0, 0, glyphs(), numberOfGlyphs(), advances(), justifiedAdvances(), glyphOffsets());
 	if(restoreFont)
 		dc.selectObject(oldFont);
@@ -942,20 +940,12 @@ void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
 	const Range<size_t> glyphRange(
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.beginning() - beginning(), analysis_),
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.end() - beginning(), analysis_));
-	const int px = p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0);
-	const int py = p.y - glyphs_->font->metrics().ascent();
-	const WORD* const pglyphs = glyphs() + glyphRange.beginning();
-	const int* padvances = advances() + glyphRange.beginning();
-	const int* pjustifiedadvances = (justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0;
-	const GOFFSET* poffsets = glyphOffsets() + glyphRange.beginning();
 	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
-		px, py, 0, dirtyRect, &analysis_, 0, 0, pglyphs, glyphRange.length(), padvances, pjustifiedadvances, poffsets);
-//	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
-//		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
-//		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
-//		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
-//		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
-//		glyphOffsets() + glyphRange.beginning());
+		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
+		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
+		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
+		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
+		glyphOffsets() + glyphRange.beginning());
 }
 
 /**
@@ -973,8 +963,8 @@ inline bool LineLayout::TextRun::expandTabCharacters(const String& lineString, i
 	if(lineString[beginning()] != L'\t')
 		return false;
 	assert(length() == 1 && glyphs_.unique());
-	glyphRun().advances[0] = min(tabWidth - x % tabWidth, maximumWidth);
-	glyphRun().justifiedAdvances.reset();
+	glyphs_->advances[0] = min(tabWidth - x % tabWidth, maximumWidth);
+	glyphs_->justifiedAdvances.reset();
 	return true;
 }
 
@@ -1071,13 +1061,13 @@ inline HRESULT LineLayout::TextRun::hitTest(int x, int& cp, int& trailing) const
 }
 
 inline HRESULT LineLayout::TextRun::justify(int width) {
-	assert(glyphRun().indices.get() != 0 && advances() != 0);
+	assert(glyphs_->indices.get() != 0 && advances() != 0);
 	HRESULT hr = S_OK;
 	if(width != totalWidth()) {
-		if(glyphRun().justifiedAdvances.get() == 0)
-			glyphRun().justifiedAdvances.reset(new int[numberOfGlyphs()]);
+		if(glyphs_->justifiedAdvances.get() == 0)
+			glyphs_->justifiedAdvances.reset(new int[numberOfGlyphs()]);
 		hr = ::ScriptJustify(visualAttributes(), advances(), numberOfGlyphs(), width - totalWidth(),
-			2, glyphRun().justifiedAdvances.get() + (beginning() - glyphRun().characters.beginning()));
+			2, glyphs_->justifiedAdvances.get() + (beginning() - glyphs_->characters.beginning()));
 	}
 	return hr;
 }
@@ -1189,11 +1179,13 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 	if(nextStyleRun.second = styles.get() != 0 && !styles->isDone())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
-	pair<size_t, length_t> glyphRun(0, 0);	// 'first' is current run (vector's index) and 'second' is first opportunity of end
 	tr1::shared_ptr<const AbstractFont> font;	// font for current glyph run
 	do {
 		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, styleRun.second ? styleRun.first.column : 0);
-		assert((results.first.empty() && previousRunEnd == 0) || (previousRunEnd == results.first.back()->end()));
+		assert(
+			(previousRunEnd == 0 && results.first.empty() && results.second.empty())
+			|| (!results.first.empty() && previousRunEnd == results.first.back()->end())
+			|| (!results.second.empty() && previousRunEnd == results.second.back().column));
 		length_t newRunEnd;
 		bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
 
@@ -1217,7 +1209,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
 				forwardGlyphRun = true;
-				glyphRun.second = newRunEnd = nextFontRun.first - lineString.data();
+				newRunEnd = nextFontRun.first - lineString.data();
 				forwardScriptRun = forwardStyleRun = false;
 			}
 		}
@@ -1229,9 +1221,15 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 			if(breakScriptRun)
 				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
 			results.first.push_back(
-				new TextRun(Range<length_t>(previousRunEnd, newRunEnd),
+				new TextRun(Range<length_t>(!results.first.empty() ? results.first.back()->end() : 0, newRunEnd),
 					scriptRun->a, font,
 					(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
+			while(true) {
+				auto_ptr<TextRun> piece(results.first.back()->splitIfTooLong(lineString));
+				if(piece.get() == 0)
+					break;
+				results.first.push_back(piece.release());
+			}
 			if(breakScriptRun)
 				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
 		}
@@ -1252,13 +1250,6 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
 			}
 		}
-
-		while(true) {
-			auto_ptr<TextRun> piece(results.first.back()->splitIfTooLong(lineString));
-			if(piece.get() == 0)
-				break;
-			results.first.push_back(piece.release());
-		}
 	} while(scriptRun != 0 || styleRun.second);
 
 	// commit
@@ -1274,17 +1265,17 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
  */
 void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles) {
 	assert(glyphs_.get() != 0 && glyphs_.unique());
-	assert(glyphRun().indices.get() != 0 && glyphRun().advances.get() == 0);
+	assert(glyphs_->indices.get() != 0 && glyphs_->advances.get() == 0);
 
 	manah::AutoBuffer<int> advances(new int[numberOfGlyphs()]);
 	manah::AutoBuffer<GOFFSET> offsets(new GOFFSET[numberOfGlyphs()]);
 //	ABC width;
-	HRESULT hr = ::ScriptPlace(0, &glyphRun().fontCache, glyphRun().indices.get(), numberOfGlyphs(),
-		glyphRun().visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
+	HRESULT hr = ::ScriptPlace(0, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
+		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 	if(hr == E_PENDING) {
-		HFONT oldFont = const_cast<DC&>(dc).selectObject(glyphRun().font->handle().get());
-		hr = ::ScriptPlace(dc.get(), &glyphRun().fontCache, glyphRun().indices.get(), numberOfGlyphs(),
-			glyphRun().visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
+		HFONT oldFont = const_cast<DC&>(dc).selectObject(glyphs_->font->handle().get());
+		hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
+			glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 		const_cast<DC&>(dc).selectObject(oldFont);
 	}
 	if(FAILED(hr))
@@ -1342,9 +1333,9 @@ void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString,
 */	}
 
 	// commit
-	glyphRun().advances = advances;
-	glyphRun().offsets = offsets;
-//	glyphRun().width = width;
+	glyphs_->advances = advances;
+	glyphs_->offsets = offsets;
+//	glyphs_->width = width;
 }
 
 // shaping stuffs
@@ -1389,16 +1380,16 @@ void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutI
 
 	// TODO: check if the requested style (or the default one) disables shaping.
 
-	HFONT oldFont = dc.selectObject(static_cast<const SystemFont*>(glyphRun().font.get())->handle().get());
+	HFONT oldFont = dc.selectObject(static_cast<const SystemFont*>(glyphs_->font.get())->handle().get());
 	const StringPiece text(lineString.data() + beginning(), lineString.data() + end());
 	int numberOfGlyphs;
-	HRESULT hr = generateGlyphs(dc, text, analysis_, glyphRun(), numberOfGlyphs);
+	HRESULT hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
 	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 		analysis_.eScript = SCRIPT_UNDEFINED;
-		hr = generateGlyphs(dc, text, analysis_, glyphRun(), numberOfGlyphs);
+		hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
 	}
 	if(FAILED(hr))
-		generateDefaultGlyphs(dc, text, analysis_, glyphRun());
+		generateDefaultGlyphs(dc, text, analysis_, *glyphs_);
 
 	// commit
 	glyphRange_ = Range<WORD>(0, static_cast<WORD>(numberOfGlyphs));
@@ -1740,6 +1731,7 @@ auto_ptr<LineLayout::TextRun> LineLayout::TextRun::splitIfTooLong(const String& 
 	auto_ptr<TextRun> following(new TextRun(Range<length_t>(
 		opportunity, length() - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
 	static_cast<Range<length_t>&>(*this) = Range<length_t>(0, opportunity);
+	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 	return following;
 }
 
@@ -1777,11 +1769,11 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 						StringCharacterIterator baseCharacter(i);
 						baseCharacter.previous();
-						if(static_cast<const SystemFont*>(run.glyphRun().font.get())->ivsGlyph(
+						if(static_cast<const SystemFont*>(run.glyphs_->font.get())->ivsGlyph(
 								baseCharacter.current(), variationSelector,
-								run.glyphRun().indices[run.glyphRun().clusters[baseCharacter.tell() - lineString.data()]])) {
-							run.glyphRun().vanish(dc, i.tell() - lineString.data() - run.beginning());
-							run.glyphRun().vanish(dc, i.tell() - lineString.data() - run.beginning() + 1);
+								run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - lineString.data()]])) {
+							run.glyphs_->vanish(dc, i.tell() - lineString.data() - run.beginning());
+							run.glyphs_->vanish(dc, i.tell() - lineString.data() - run.beginning() + 1);
 						}
 					}
 				}
@@ -1795,10 +1787,10 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 					const CodePoint baseCharacter = surrogates::decodeLast(
 						lineString.data() + run.beginning(), lineString.data() + run.end());
-					if(static_cast<const SystemFont*>(run.glyphRun().font.get())->ivsGlyph(
-							baseCharacter, variationSelector, run.glyphRun().indices[run.glyphRun().clusters[run.length() - 1]])) {
-						next.glyphRun().vanish(dc, 0);
-						next.glyphRun().vanish(dc, 1);
+					if(static_cast<const SystemFont*>(run.glyphs_->font.get())->ivsGlyph(
+							baseCharacter, variationSelector, run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
+						next.glyphs_->vanish(dc, 0);
+						next.glyphs_->vanish(dc, 1);
 					}
 				}
 			}
@@ -1812,7 +1804,7 @@ inline int LineLayout::TextRun::x(length_t at, bool trailing) const {
 	if(at < beginning() || at > end())
 		throw BadPositionException(Position(INVALID_INDEX, at));
 	int result;
-	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at) - beginning(), trailing,
+	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at - beginning()), trailing,
 		static_cast<int>(length()), numberOfGlyphs(), clusters(), visualAttributes(),
 		((justifiedAdvances() == 0) ? advances() : justifiedAdvances()), &analysis_, &result);
 	if(FAILED(hr))
