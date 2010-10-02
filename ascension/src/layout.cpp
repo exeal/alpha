@@ -683,7 +683,8 @@ namespace {
 	class SimpleStyledRunIterator : public IStyledRunIterator {
 	public:
 		SimpleStyledRunIterator(const Range<const StyledRun*>& range, length_t start) : range_(range) {
-			ascension::internal::searchBound(static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun(range_.beginning()));
+			current_ = range_.beginning() + ascension::internal::searchBound(
+				static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun(range_.beginning()));
 		}
 		// presentation.IStyledRunIterator
 		void current(StyledRun& run) const {
@@ -920,11 +921,23 @@ inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont,
 	return hr;
 }
 
+/**
+ * Paints the background of the specified character range in this run.
+ * @param dc the device context
+ * @param p the base point of this run (, does not corresponds to @c range.beginning())
+ * @param range the character range to paint. if the edges addressed outside of this run, they are
+ *              truncated
+ * @param color the background color. should be valid
+ * @param dirtyRect can be @c null
+ * @throw std#invalid_argument @a color is not valid
+ */
 void LineLayout::TextRun::drawBackground(DC& dc, const POINT& p,
 		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const {
-	if(dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left)
+	if(color == Color())
+		throw invalid_argument("color");
+	if(range.isEmpty() || (dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left))
 		return;
-	int left = x(range.beginning(), false), right = x(range.end(), true);
+	int left = x(max(range.beginning(), beginning()), false), right = x(min(range.end(), end()) - 1, true);
 	if(left > right)
 		std::swap(left, right);
 	const IFontMetrics& fontMetrics = glyphs_->font->metrics();
@@ -2419,58 +2432,41 @@ void LineLayout::draw(length_t subline, DC& dc,
 					run.drawBackground(dc, basePoint, run, selection->color().background, &paintRect);
 				else {
 					SimpleStyledRunIterator i(Range<const StyledRun*>(
-						styledRanges_.get(), styledRanges_.get() + numberStyledRanges_), run.beginning());
+						styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning());
 					StyledRun styledRun;
 					pair<bool, StyledRun> next;
 					assert(!i.isDone());
 					i.current(next.second);
+					next.second.column = run.beginning();
 					do {
 						styledRun = next.second;
 						i.next();
-						if(next.first = !styledRun.isDone())
+						if(next.first = !i.isDone())
 							i.current(next.second);
 						length_t end = next.first ? next.second.column : run.end();
 						if(end >= run.end()) {
 							end = run.end();
 							next.first = false;
 						}
+
+						if(selection == 0 || end <= selectedRange.beginning() || styledRun.column >= selectedRange.end())
+							run.drawBackground(dc, basePoint, Range<length_t>(styledRun.column, end),
+								(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+						else {
+							// paint before selection
+							if(selectedRange.beginning() > styledRun.column)
+								run.drawBackground(dc, basePoint, Range<length_t>(styledRun.column, selectedRange.beginning()),
+									(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+							// paint selection
+							run.drawBackground(dc, basePoint, selectedRange, selection->color().background, &paintRect);
+							// paint after selection
+							if(selectedRange.end() < end)
+								run.drawBackground(dc, basePoint, Range<length_t>(selectedRange.end(), end),
+									(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+						}
 					} while(next.first);
-					run.drawBackground(dc, basePoint, run, Color(0xff, 0xff, 0xff), &paintRect);
 				}
 				basePoint.y -= run.font()->metrics().ascent();
-#if 0
-				COLORREF background;
-				if(lineColor.background != Color())
-					background = marginColor;
-				else if(run.requestedStyle().get() != 0 && run.requestedStyle()->background != Color())
-					background = run.requestedStyle()->background.asCOLORREF();
-				else
-					background = defaultBackground;
-				if(selection == 0 || run.beginning() >= selectedRange.end() || run.end() <= selectedRange.beginning())
-					// no selection in this run
-					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, background);
-				else if(selection != 0 && run.beginning() >= selectedRange.beginning() && run.end() <= selectedRange.end()) {
-					// this run is selected entirely
-					dc.fillSolidRect(x, y, run.totalWidth(), lineHeight, selection->color().background.asCOLORREF());
-					dc.excludeClipRect(x, y, x + run.totalWidth(), y + lineHeight);
-				} else {
-					// selected partially
-					int left = run.x(max(selectedRange.beginning(), run.beginning()), false);
-					int right = run.x(min(selectedRange.end(), run.end()) - 1, true);
-					if(left > right)
-						swap(left, right);
-					left += x;
-					right += x;
-					if(left > x/* && left > paintRect.left*/)
-						dc.fillSolidRect(x, y, left - x, lineHeight, background);
-					if(right > left) {
-						dc.fillSolidRect(left, y, right - left, lineHeight, selection->color().background.asCOLORREF());
-						dc.excludeClipRect(left, y, right, y + lineHeight);
-					}
-					if(right < x + run.totalWidth())
-						dc.fillSolidRect(right, y, run.totalWidth() - (left - x), lineHeight, background);
-				}
-#endif
 			}
 			basePoint.x += run.totalWidth();
 			if(basePoint.x >= paintRect.right) {
@@ -2485,6 +2481,11 @@ void LineLayout::draw(length_t subline, DC& dc,
 
 		// 5. draw the foreground glyphs
 		basePoint.x = startX;
+		const TextRun::Overlay selectionOverlay;
+		if(selection != 0) {
+			selectionOverlay.color = selection->color().foreground;
+			selectionOverlay.range = selectedRange;
+		}
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const TextRun& run = *runs_[i];
 			basePoint.y += run.font()->metrics().ascent();
