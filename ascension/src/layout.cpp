@@ -2414,13 +2414,29 @@ void LineLayout::draw(length_t subline, DC& dc,
 				++firstRun;
 				startX = basePoint.x + run.totalWidth();
 			} else {
-//				SimpleStyledRunIterator styledRun(Range<const StyledRun*>(
-//					styledRanges_.get(), styledRanges_.get() + numberStyledRanges_), run.beginning());
-//				for(const StyledRun* next; !styledRun.isDone()) {
-//					const StyledRun
-//				}
 				basePoint.y += run.font()->metrics().ascent();
-				run.drawBackground(dc, basePoint, run, Color(0xff, 0xff, 0xff), &paintRect);
+				if(selection != 0 && selectedRange.includes(run))
+					run.drawBackground(dc, basePoint, run, selection->color().background, &paintRect);
+				else {
+					SimpleStyledRunIterator i(Range<const StyledRun*>(
+						styledRanges_.get(), styledRanges_.get() + numberStyledRanges_), run.beginning());
+					StyledRun styledRun;
+					pair<bool, StyledRun> next;
+					assert(!i.isDone());
+					i.current(next.second);
+					do {
+						styledRun = next.second;
+						i.next();
+						if(next.first = !styledRun.isDone())
+							i.current(next.second);
+						length_t end = next.first ? next.second.column : run.end();
+						if(end >= run.end()) {
+							end = run.end();
+							next.first = false;
+						}
+					} while(next.first);
+					run.drawBackground(dc, basePoint, run, Color(0xff, 0xff, 0xff), &paintRect);
+				}
 				basePoint.y -= run.font()->metrics().ascent();
 #if 0
 				COLORREF background;

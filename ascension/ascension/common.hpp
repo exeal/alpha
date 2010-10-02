@@ -290,16 +290,21 @@ namespace ascension {
 		/// Default constructor.
 		Range() {}
 		/// Constructor.
-		Range(ValueType v1, ValueType v2) : std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
+		Range(ValueType v1, ValueType v2) :
+			std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
 		/// Returns the beginning (minimum) of the range.
 		ValueType beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
 		ValueType end() const {return std::pair<T, T>::second;}
-		/// Returns the given value is included by the range.
+		/// Returns @c true if the given value is included by this range.
 		bool includes(ValueType v) const {return v >= beginning() && v < end();}
+		/// Returns @c true if the given range is included by this range.
+		template<typename U> bool includes(const Range<U>& other) const {
+			return other.beginning() >= beginning() && other.end() <= end();}
 		/// Returns @c true if the range is empty.
 		bool isEmpty() const {return beginning() == end();}
 		/// Returns the length of the range.
+		/// @note This class does not define a method named "size".
 		typename std::iterator_traits<T>::difference_type length() const {return end() - beginning();}
 	};
 
