@@ -4,7 +4,7 @@
  * @note Currently, this implementation does not support OpenVMS.
  * @author exeal
  * @date 2007 (separated from document.cpp)
- * @date 2007-2009
+ * @date 2007-2010
  */
 
 #include <ascension/fileio.hpp>
@@ -1629,16 +1629,16 @@ const PathString& DirectoryIterator::directory() const {
 	return directory_;
 }
 
+/// @see DirectoryIteratorBase#hasNext
+bool DirectoryIterator::hasNext() const /*throw()*/ {
+	return !done_;
+}
+
 /// @see DirectoryIteratorBase#isDirectory
 bool DirectoryIterator::isDirectory() const {
 	if(done_)
 		throw NoSuchElementException();
 	return currentIsDirectory_;
-}
-
-/// @see DirectoryIteratorBase#isDone
-bool DirectoryIterator::isDone() const /*throw()*/ {
-	return done_;
 }
 
 /// @see DirectoryIteratorBase#next
@@ -1698,7 +1698,7 @@ RecursiveDirectoryIterator::~RecursiveDirectoryIterator() /*throw()*/ {
 
 /// @see DirectoryIteratorBase#current
 const PathString& RecursiveDirectoryIterator::current() const {
-	if(isDone())
+	if(!hasNext())
 		throw NoSuchElementException();
 	return stack_.top()->current();
 }
@@ -1712,21 +1712,21 @@ const PathString& RecursiveDirectoryIterator::directory() const /*throw()*/ {
  * @throw NoSuchElementException
  */
 void RecursiveDirectoryIterator::dontPush() {
-	if(isDone())
+	if(!hasNext())
 		throw NoSuchElementException();
 	doesntPushNext_ = true;
 }
 
-/// @see DirectoryIteratorBase#isDirectory
-bool RecursiveDirectoryIterator::isDirectory() const {
-	if(isDone())
-		throw NoSuchElementException();
-	return stack_.top()->isDirectory();
+/// @see DirectoryIteratorBase#hasNext
+bool RecursiveDirectoryIterator::hasNext() const /*throw()*/ {
+	return stack_.size() != 1 || stack_.top()->hasNext();
 }
 
-/// @see DirectoryIteratorBase#isDone
-bool RecursiveDirectoryIterator::isDone() const /*throw()*/ {
-	return stack_.size() == 1 && stack_.top()->isDone();
+/// @see DirectoryIteratorBase#isDirectory
+bool RecursiveDirectoryIterator::isDirectory() const {
+	if(!hasNext())
+		throw NoSuchElementException();
+	return stack_.top()->isDirectory();
 }
 
 /// Returns the depth of the recursion.
@@ -1736,7 +1736,7 @@ size_t RecursiveDirectoryIterator::level() const /*throw()*/ {
 
 /// @see DirectoryIteratorBase#next
 void RecursiveDirectoryIterator::next() {
-	if(isDone())
+	if(!hasNext())
 		throw NoSuchElementException();
 	if(doesntPushNext_)
 		doesntPushNext_ = false;
@@ -1745,16 +1745,16 @@ void RecursiveDirectoryIterator::next() {
 		subdir += PATH_SEPARATORS[0];
 		subdir += current();
 		auto_ptr<DirectoryIterator> sub(new DirectoryIterator(subdir.c_str()));
-		if(!sub->isDone()) {
+		if(sub->hasNext()) {
 			stack_.push(sub.release());
 			return;
 		}
 	}
 	stack_.top()->next();
-	while(stack_.top()->isDone() && stack_.size() > 1) {
+	while(!stack_.top()->hasNext() && stack_.size() > 1) {
 		delete stack_.top();
 		stack_.pop();
-		assert(!stack_.top()->isDone());
+		assert(stack_.top()->hasNext());
 		stack_.top()->next();
 	}
 }
@@ -1763,7 +1763,7 @@ void RecursiveDirectoryIterator::next() {
 void RecursiveDirectoryIterator::pop() {
 	while(!stack_.empty()) {
 		stack_.top()->next();
-		if(!stack_.top()->isDone())
+		if(stack_.top()->hasNext())
 			break;
 		delete stack_.top();
 		stack_.pop();

@@ -688,15 +688,15 @@ namespace {
 		}
 		// presentation.IStyledRunIterator
 		void current(StyledRun& run) const {
-			if(isDone())
+			if(!hasNext())
 				throw IllegalStateException("");
 			run = *current_;
 		}
-		bool isDone() const {
-			return current_ == range_.end();
+		bool hasNext() const {
+			return current_ != range_.end();
 		}
 		void next() {
-			if(isDone())
+			if(!hasNext())
 				throw IllegalStateException("");
 			++current_;
 		}
@@ -1183,13 +1183,13 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : lineString.length();
 	pair<StyledRun, bool> styleRun;	// 'second' is false if 'first' is invalid
-	if(styleRun.second = styles.get() != 0 && !styles->isDone()) {
+	if(styleRun.second = styles.get() != 0 && styles->hasNext()) {
 		styles->current(styleRun.first);
 		styles->next();
 		results.second.push_back(styleRun.first);
 	}
 	pair<StyledRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
-	if(nextStyleRun.second = styles.get() != 0 && !styles->isDone())
+	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
 	tr1::shared_ptr<const AbstractFont> font;	// font for current glyph run
@@ -1258,7 +1258,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 				styleRun.first = nextStyleRun.first;
 				results.second.push_back(styleRun.first);
 				styles->next();
-				if(nextStyleRun.second = !styles->isDone())
+				if(nextStyleRun.second = styles->hasNext())
 					styles->current(nextStyleRun.first);
 				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
 			}
@@ -1295,7 +1295,7 @@ void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString,
 		throw hr;
 
 	// apply text run styles
-	for(; styles.isDone(); styles.next()) {
+	for(; styles.hasNext(); styles.next()) {
 		StyledRun styledRange;
 		styles.current(styledRange);
 /*
@@ -2435,13 +2435,13 @@ void LineLayout::draw(length_t subline, DC& dc,
 						styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning());
 					StyledRun styledRun;
 					pair<bool, StyledRun> next;
-					assert(!i.isDone());
+					assert(i.hasNext());
 					i.current(next.second);
 					next.second.column = run.beginning();
 					do {
 						styledRun = next.second;
 						i.next();
-						if(next.first = !i.isDone())
+						if(next.first = i.hasNext())
 							i.current(next.second);
 						length_t end = next.first ? next.second.column : run.end();
 						if(end >= run.end()) {
@@ -2481,7 +2481,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 
 		// 5. draw the foreground glyphs
 		basePoint.x = startX;
-		const TextRun::Overlay selectionOverlay;
+		TextRun::Overlay selectionOverlay;
 		if(selection != 0) {
 			selectionOverlay.color = selection->color().foreground;
 			selectionOverlay.range = selectedRange;

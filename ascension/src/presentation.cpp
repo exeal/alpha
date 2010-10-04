@@ -292,8 +292,8 @@ private:
 			throw IllegalStateException("the iterator addresses the end.");
 		run = run_;
 	}
-	bool isDone() const {
-		return done_;
+	bool hasNext() const {
+		return !done_;
 	}
 	void next() {
 		if(done_)
@@ -331,7 +331,7 @@ private:
 	void updateSubiterator();
 	// IStyledRunIterator
 	void current(StyledRun& run) const;
-	bool isDone() const;
+	bool hasNext() const;
 	void next();
 private:
 	const Presentation& presentation_;
@@ -368,21 +368,21 @@ PresentationReconstructor::StyledRunIterator::StyledRunIterator(
 void PresentationReconstructor::StyledRunIterator::current(StyledRun& run) const {
 	if(subiterator_.get() != 0)
 		subiterator_->current(run);
-	else if(!isDone())
+	else if(hasNext())
 		run = current_;
 	throw IllegalStateException("the iterator addresses the end.");
 }
 
-/// @see IStyledRunIterator#isDone
-bool PresentationReconstructor::StyledRunIterator::isDone() const {
-	return currentPartition_.region.isEmpty();
+/// @see IStyledRunIterator#hasNext
+bool PresentationReconstructor::StyledRunIterator::hasNext() const {
+	return !currentPartition_.region.isEmpty();
 }
 
 /// @see IStyledRunIterator#next
 void PresentationReconstructor::StyledRunIterator::next() {
 	if(subiterator_.get() != 0) {
 		subiterator_->next();
-		if(subiterator_->isDone())
+		if(!subiterator_->hasNext())
 			subiterator_.reset();
 	}
 	if(subiterator_.get() == 0) {
@@ -573,7 +573,7 @@ private:
 	void nextRun();
 	// IStyledRunIterator
 	void current(StyledRun& run) const;
-	bool isDone() const;
+	bool hasNext() const;
 	void next();
 private:
 //	const LexicalPartitionPresentationReconstructor& reconstructor_;
@@ -597,19 +597,19 @@ LexicalPartitionPresentationReconstructor::StyledRunIterator::StyledRunIterator(
 
 /// @see IStyledRunIterator#current
 void LexicalPartitionPresentationReconstructor::StyledRunIterator::current(StyledRun& run) const {
-	if(isDone())
+	if(!hasNext())
 		throw IllegalStateException("the iterator addresses the end.");
 	run = current_;
 }
 
-/// @see IStyledRunIterator#isDone
-bool LexicalPartitionPresentationReconstructor::StyledRunIterator::isDone() const {
-	return lastTokenEnd_.column == region_.end().column;
+/// @see IStyledRunIterator#hasNext
+bool LexicalPartitionPresentationReconstructor::StyledRunIterator::hasNext() const {
+	return lastTokenEnd_.column != region_.end().column;
 }
 
 /// @see IStyledRunIterator#next
 void LexicalPartitionPresentationReconstructor::StyledRunIterator::next() {
-	if(isDone())
+	if(!hasNext())
 		throw IllegalStateException("the iterator addresses the end.");
 	nextRun();
 }
@@ -621,7 +621,7 @@ inline void LexicalPartitionPresentationReconstructor::StyledRunIterator::nextRu
 		current_.style = (style != styles_.end()) ? style->second : defaultStyle_;
 		lastTokenEnd_ = next_->region.end();
 		next_.reset();
-	} else if(!tokenScanner_.isDone()) {
+	} else if(tokenScanner_.hasNext()) {
 		next_ = tokenScanner_.nextToken();
 		assert(next_.get() != 0);
 		if(next_->region.beginning() != lastTokenEnd_) {

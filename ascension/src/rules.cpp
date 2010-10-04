@@ -953,9 +953,9 @@ Position NullTokenScanner::getPosition() const /*throw()*/ {
 	return Position();
 }
 
-/// @see ITokenScanner#isDone
-bool NullTokenScanner::isDone() const /*throw()*/ {
-	return true;
+/// @see ITokenScanner#hasNext
+bool NullTokenScanner::hasNext() const /*throw()*/ {
+	return false;
 }
 
 /// @see ITokenScanner#nextToken
@@ -1000,7 +1000,7 @@ const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw
 void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 	if(rule.get() == 0)
 		throw NullPointerException("rule");
-	else if(!isDone())
+	else if(hasNext())
 		throw BadScannerStateException();
 	else if(find(rules_.begin(), rules_.end(), rule.get()) != rules_.end())
 		throw invalid_argument("the rule is already registered.");
@@ -1017,7 +1017,7 @@ void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 	if(rule.get() == 0)
 		throw NullPointerException("rule");
-	else if(!isDone())
+	else if(hasNext())
 		throw BadScannerStateException();
 	else if(find(wordRules_.begin(), wordRules_.end(), rule.get()) != wordRules_.end())
 		throw invalid_argument("the rule is already registered.");
@@ -1029,9 +1029,9 @@ Position LexicalTokenScanner::getPosition() const /*throw()*/ {
 	return current_.tell();
 }
 
-/// @see ITokenScanner#isDone
-bool LexicalTokenScanner::isDone() const /*throw()*/ {
-	return !current_.hasNext();
+/// @see ITokenScanner#hasNext
+bool LexicalTokenScanner::hasNext() const /*throw()*/ {
+	return current_.hasNext();
 }
 
 /// @see ITokenScanner#nextToken
