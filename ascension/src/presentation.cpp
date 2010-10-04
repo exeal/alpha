@@ -32,6 +32,69 @@ const Length Border::MEDIUM(0.10, Length::EM_HEIGHT);
 const Length Border::THICK(0.20, Length::EM_HEIGHT);
 
 
+// StyledRunEnumerator ////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param sourceIterator the iterator to encapsulate
+ * @param end the end character position
+ * @throw NullPointerException @a sourceIterator is @c null
+ */
+StyledRunEnumerator::StyledRunEnumerator(
+		auto_ptr<IStyledRunIterator> sourceIterator, length_t end) : iterator_(sourceIterator), end_(end) {
+	if(iterator_.get() == 0)
+		throw NullPointerException("sourceIterator");
+	if(current_.first = iterator_->hasNext()) {
+		iterator_->current(current_.second);
+		iterator_->next();
+		if(next_.first = iterator_->hasNext()) {
+			iterator_->current(next_.second);
+			iterator_->next();
+		}
+	} else
+		next_.first = false;
+}
+
+/**
+ * Returns the character range of the current styled run.
+ * @throw NoSuchElementException the enumerator addresses the end
+ */
+Range<length_t> StyledRunEnumerator::currentRange() const {
+	if(!current_.first)
+		throw NoSuchElementException();
+	return Range<length_t>(current_.second.column, next_.first ? next_.second.column : end_);
+}
+
+/**
+ * Returns the style of the current styled run.
+ * @throw NoSuchElementException the enumerator addresses the end
+ */
+tr1::shared_ptr<const RunStyle> StyledRunEnumerator::currentStyle() const {
+	if(!current_.first)
+		throw NoSuchElementException();
+	return current_.second.style;
+}
+
+/// Returns @c false if the enumerator addresses the end.
+bool StyledRunEnumerator::hasNext() const /*throw()*/ {
+	return next_.first;
+}
+
+/**
+ * Moves to the next styled run.
+ * @throw NoSuchElementException the enumerator addresses the end
+ */
+void StyledRunEnumerator::next() {
+	if(!hasNext())
+		throw NoSuchElementException();
+	current_ = next_;
+	if(next_.first = iterator_->hasNext()) {
+		iterator_->current(next_.second);
+		iterator_->next();
+	}
+}
+
+
 // LineStyle ////////////////////////////////////////////////////////////////
 
 /// Default constructor.

@@ -288,6 +288,19 @@ namespace ascension {
 			virtual void next() = 0;
 		};
 
+		class StyledRunEnumerator {
+		public:
+			StyledRunEnumerator(std::auto_ptr<IStyledRunIterator> sourceIterator, length_t end);
+			Range<length_t> currentRange() const;
+			std::tr1::shared_ptr<const RunStyle> currentStyle() const;
+			bool hasNext() const /*throw()*/;
+			void next();
+		private:
+			std::auto_ptr<IStyledRunIterator> iterator_;
+			std::pair<bool, StyledRun> current_, next_;
+			const length_t end_;
+		};
+
 		/**
 		 * @c TextAlignment describes horizontal alignment of a paragraph. This implements
 		 * 'text-align' property in CSS 3
