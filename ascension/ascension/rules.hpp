@@ -142,7 +142,7 @@ namespace ascension {
 		 * @c ITokenScanner scans a range of document and returns the tokens it finds. To start
 		 * scanning, call @c #parse method with a target document region. And then call
 		 * @c #nextToken method repeatedly to get tokens. When reached the end of the scanning
-		 * region, the scanning is end and @c #isDone will return @c true.
+		 * region, the scanning is end and @c #hasNext will return @c false.
 		 */
 		class ITokenScanner {
 		public:
@@ -152,8 +152,8 @@ namespace ascension {
 			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
 			/// Returns the current position.
 			virtual kernel::Position getPosition() const /*throw()*/ = 0;
-			/// Returns @c true if the scanning is done.
-			virtual bool isDone() const /*throw()*/ = 0;
+			/// Returns @c false if the scanning is done.
+			virtual bool hasNext() const /*throw()*/ = 0;
 			/**
 			 * Moves to the next token and returns it.
 			 * @return the token or @c null if the scanning was done.
@@ -170,14 +170,14 @@ namespace ascension {
 		};
 
 		/**
-		 * @c NullTokenScanner returns no tokens. @c NullTokenScanner#isDone returns always
-		 * @c true.
+		 * @c NullTokenScanner returns no tokens. @c NullTokenScanner#hasNext returns always
+		 * @c false.
 		 */
 		class NullTokenScanner : public ITokenScanner {
 		public:
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const /*throw()*/;
-			bool isDone() const /*throw()*/;
+			bool hasNext() const /*throw()*/;
 			std::auto_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		};
@@ -201,7 +201,7 @@ namespace ascension {
 			// ITokenScanner
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const /*throw()*/;
-			bool isDone() const /*throw()*/;
+			bool hasNext() const /*throw()*/;
 			std::auto_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		private:

@@ -810,15 +810,15 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 				update();
 			}
 			void current(StyledRun& sr) const {
-				if(isDone())
+				if(!hasNext())
 					throw IllegalStateException("");
 				sr = current_;
 			}
-			bool isDone() const {
-				return current_.column == length_;
+			bool hasNext() const {
+				return current_.column != length_;
 			}
 			void next() {
-				if(isDone())
+				if(!hasNext())
 					throw IllegalStateException("");
 				++current_.column;
 				update();

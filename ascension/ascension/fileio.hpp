@@ -267,15 +267,14 @@ namespace ascension {
 				 */
 				virtual const PathString& directory() const /*throw()*/ = 0;
 				/**
-				 * Returns true if the current entry is directory.
+				 * Returns @c false if the iterator is end.
+				 */
+				virtual bool hasNext() const /*throw()*/ = 0;
+				/**
+				 * Returns @c true if the current entry is directory.
 				 * @throw NoSuchElementException the iteration has already ended
 				 */
 				virtual bool isDirectory() const = 0;
-				/**
-				 * Returns true if the iterator is end.
-				 * @throw NoSuchElementException the iteration has already ended
-				 */
-				virtual bool isDone() const /*throw()*/ = 0;
 				/**
 				 * Moves to the next entry. If the iterator has already reached at the end, does
 				 * nothing.
@@ -295,8 +294,8 @@ namespace ascension {
 				// DirectoryIteratorBase
 				const PathString& current() const;
 				const PathString& directory() const /*throw()*/;
+				bool hasNext() const /*throw()*/;
 				bool isDirectory() const;
-				bool isDone() const /*throw()*/;
 				void next();
 			private:
 				void update(const void* info);
@@ -323,8 +322,8 @@ namespace ascension {
 				// DirectoryIteratorBase
 				const PathString& current() const;
 				const PathString& directory() const /*throw()*/;
+				bool hasNext() const /*throw()*/;
 				bool isDirectory() const;
-				bool isDone() const /*throw()*/;
 				void next();
 			private:
 				std::stack<DirectoryIterator*> stack_;
