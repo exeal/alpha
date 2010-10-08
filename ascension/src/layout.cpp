@@ -971,12 +971,13 @@ void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
 	const Range<size_t> glyphRange(
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
-	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
-		p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : truncatedRange.end(), analysis_.fRTL != 0),
-		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
-		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
-		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
-		glyphOffsets() + glyphRange.beginning());
+	if(!glyphRange.isEmpty())
+		const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
+			p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
+			p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
+			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
+			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
+			glyphOffsets() + glyphRange.beginning());
 }
 
 /**
