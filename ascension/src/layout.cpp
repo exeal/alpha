@@ -726,9 +726,10 @@ public:
 	uchar bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
 	auto_ptr<TextRun> breakAt(DC& dc, length_t at,	// 'at' is from the beginning of the line
 		const String& lineString, const ILayoutInformationProvider& lip);
+	void blackBoxBounds(const Range<length_t>& range, RECT& bounds) const;
 	HRESULT draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect = 0, UINT options = 0) const;
 	void drawBackground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const;
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, RECT* bounds) const;
 	void drawForeground(DC& dc, const POINT& p,
 		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const;
 	bool expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth);
@@ -858,6 +859,16 @@ LineLayout::TextRun::~TextRun() /*throw()*/ {
 //		::ScriptFreeCache(&cache_);
 }
 
+void LineLayout::TextRun::blackBoxBounds(const Range<length_t>& range, RECT& bounds) const {
+	bounds.left = x(max(range.beginning(), beginning()), false);
+	bounds.right = x(min(range.end(), end()) - 1, true);
+	if(readingDirection() == RIGHT_TO_LEFT)
+		std::swap(bounds.left, bounds.right);
+	const IFontMetrics& fontMetrics = glyphs_->font->metrics();
+	bounds.top = -fontMetrics.ascent();
+	bounds.bottom = fontMetrics.descent();
+}
+
 auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
 	assert(at > beginning() && at < end());
 	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
@@ -929,32 +940,39 @@ inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont,
  *              truncated
  * @param color the background color. should be valid
  * @param dirtyRect can be @c null
+ * @param[out] bounds the rectangle this method painted. can be @c null
  * @throw std#invalid_argument @a color is not valid
  */
 void LineLayout::TextRun::drawBackground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect) const {
+		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, RECT* bounds) const {
 	if(color == Color())
 		throw invalid_argument("color");
 	if(range.isEmpty() || (dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left))
 		return;
-	int left = x(max(range.beginning(), beginning()), false), right = x(min(range.end(), end()) - 1, true);
-	if(left > right)
-		std::swap(left, right);
-	const IFontMetrics& fontMetrics = glyphs_->font->metrics();
-	dc.fillSolidRect(p.x + left, p.y - fontMetrics.ascent(),
-		right - left, fontMetrics.cellHeight(), color.asCOLORREF());
+	RECT r;
+	blackBoxBounds(range, r);
+	r.left += p.x;
+	r.right += p.x;
+	r.top += p.y;
+	r.bottom += p.y;
+	dc.fillSolidRect(r, color.asCOLORREF());
+	if(bounds != 0)
+		*bounds = r;
 }
 
 void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
 		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const {
+	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
+	if(truncatedRange.isEmpty())
+		return;
 	dc.selectObject(glyphs_->font->handle().get());
 	dc.setTextColor(color.asCOLORREF());
 	dc.setBkMode(TRANSPARENT);
 	const Range<size_t> glyphRange(
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.beginning() - beginning(), analysis_),
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), range.end() - beginning(), analysis_));
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
+		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
 	const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
-		p.x + x((analysis_.fRTL == 0) ? range.beginning() : range.end(), analysis_.fRTL != 0),
+		p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : truncatedRange.end(), analysis_.fRTL != 0),
 		p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
 		glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
 		(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
@@ -1138,6 +1156,7 @@ namespace {
 		double sizeAdjust;
 		resolveFontSpecifications(lip, requestedStyle, familyName, properties, sizeAdjust);
 		familyName.assign(L"Times New Roman");
+//		properties.style = FontProperties::ITALIC;
 		return make_pair(static_cast<const Char*>(0), lip.fontCollection().get(familyName, properties, sizeAdjust));
 	}
 } // namespace @0
@@ -2428,43 +2447,37 @@ void LineLayout::draw(length_t subline, DC& dc,
 				startX = basePoint.x + run.totalWidth();
 			} else {
 				basePoint.y += run.font()->metrics().ascent();
-				if(selection != 0 && selectedRange.includes(run))
-					run.drawBackground(dc, basePoint, run, selection->color().background, &paintRect);
-				else {
-					SimpleStyledRunIterator i(Range<const StyledRun*>(
-						styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning());
-					StyledRun styledRun;
-					pair<bool, StyledRun> next;
+				if(selection != 0 && selectedRange.includes(run)) {
+					RECT selectedBounds;
+					run.drawBackground(dc, basePoint, run, selection->color().background, &paintRect, &selectedBounds);
+					dc.excludeClipRect(selectedBounds);
+				} else {
+					StyledRunEnumerator i(auto_ptr<IStyledRunIterator>(
+						new SimpleStyledRunIterator(Range<const StyledRun*>(
+							styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
 					assert(i.hasNext());
-					i.current(next.second);
-					next.second.column = run.beginning();
-					do {
-						styledRun = next.second;
-						i.next();
-						if(next.first = i.hasNext())
-							i.current(next.second);
-						length_t end = next.first ? next.second.column : run.end();
-						if(end >= run.end()) {
-							end = run.end();
-							next.first = false;
-						}
-
-						if(selection == 0 || end <= selectedRange.beginning() || styledRun.column >= selectedRange.end())
-							run.drawBackground(dc, basePoint, Range<length_t>(styledRun.column, end),
-								(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+					for(; i.hasNext(); i.next()) {
+						Range<length_t> range(i.currentRange());
+						if(range.beginning() < run.beginning())
+							range = Range<length_t>(run.beginning(), range.end());
+						if(selection == 0 || range.end() <= selectedRange.beginning() || range.beginning() >= selectedRange.end())
+							run.drawBackground(dc, basePoint, range,
+								(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
 						else {
 							// paint before selection
-							if(selectedRange.beginning() > styledRun.column)
-								run.drawBackground(dc, basePoint, Range<length_t>(styledRun.column, selectedRange.beginning()),
-									(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+							if(selectedRange.beginning() > range.beginning())
+								run.drawBackground(dc, basePoint, Range<length_t>(range.beginning(), selectedRange.beginning()),
+									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
 							// paint selection
-							run.drawBackground(dc, basePoint, selectedRange, selection->color().background, &paintRect);
+							RECT selectedBounds;
+							run.drawBackground(dc, basePoint, selectedRange, selection->color().background, &paintRect, &selectedBounds);
+							dc.excludeClipRect(selectedBounds);
 							// paint after selection
-							if(selectedRange.end() < end)
-								run.drawBackground(dc, basePoint, Range<length_t>(selectedRange.end(), end),
-									(styledRun.style->background != Color()) ? styledRun.style->background : Color::fromCOLORREF(marginColor), &paintRect);
+							if(selectedRange.end() < range.end())
+								run.drawBackground(dc, basePoint, Range<length_t>(selectedRange.end(), range.end()),
+									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
 						}
-					} while(next.first);
+					}
 				}
 				basePoint.y -= run.font()->metrics().ascent();
 			}
@@ -2489,9 +2502,28 @@ void LineLayout::draw(length_t subline, DC& dc,
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const TextRun& run = *runs_[i];
 			basePoint.y += run.font()->metrics().ascent();
-			run.drawForeground(dc, basePoint, run, Color(0, 0, 0), &paintRect, 0);
+			StyledRunEnumerator j(auto_ptr<IStyledRunIterator>(
+				new SimpleStyledRunIterator(Range<const StyledRun*>(
+					styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
+			for(; j.hasNext(); j.next())
+				run.drawForeground(dc, basePoint, j.currentRange(), j.currentStyle()->foreground, &paintRect, 0);
 			basePoint.y -= run.font()->metrics().ascent();
 			basePoint.x += run.totalWidth();
+		}
+
+		// 6. draw the selected foreground glyphs
+		if(selection != 0) {
+			basePoint.x = startX;
+			dc.selectClipRgn(Rgn::createRect(paintRect).get(), RGN_XOR);
+			for(size_t i = firstRun; i < lastRun; ++i) {
+				const TextRun& run = *runs_[i];
+				if(run.beginning() < selectedRange.end() && run.end() > selectedRange.beginning()) {
+					basePoint.y += run.font()->metrics().ascent();
+					run.drawForeground(dc, basePoint, selectedRange, selection->color().foreground, &paintRect, 0);
+					basePoint.y -= run.font()->metrics().ascent();
+				}
+				basePoint.x += run.totalWidth();
+			}
 		}
 #if 0
 		// draw outside of the selection
