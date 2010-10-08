@@ -46,11 +46,20 @@ StyledRunEnumerator::StyledRunEnumerator(
 		throw NullPointerException("sourceIterator");
 	if(current_.first = iterator_->hasNext()) {
 		iterator_->current(current_.second);
-		iterator_->next();
-		if(next_.first = iterator_->hasNext()) {
-			iterator_->current(next_.second);
+		if(current_.second.column < end_) {
 			iterator_->next();
-		}
+			if(next_.first = iterator_->hasNext()) {
+				iterator_->current(next_.second);
+				if(next_.second.column < end_)
+					iterator_->next();
+				else {
+					next_.first = false;
+					next_.second.column = end_;
+				}
+			} else
+				next_.second.column = end_;
+		} else
+			current_.first = false;
 	} else
 		next_.first = false;
 }
@@ -62,7 +71,7 @@ StyledRunEnumerator::StyledRunEnumerator(
 Range<length_t> StyledRunEnumerator::currentRange() const {
 	if(!current_.first)
 		throw NoSuchElementException();
-	return Range<length_t>(current_.second.column, next_.first ? next_.second.column : end_);
+	return Range<length_t>(current_.second.column, next_.second.column);
 }
 
 /**
@@ -77,7 +86,7 @@ tr1::shared_ptr<const RunStyle> StyledRunEnumerator::currentStyle() const {
 
 /// Returns @c false if the enumerator addresses the end.
 bool StyledRunEnumerator::hasNext() const /*throw()*/ {
-	return next_.first;
+	return current_.first;
 }
 
 /**
@@ -90,8 +99,13 @@ void StyledRunEnumerator::next() {
 	current_ = next_;
 	if(next_.first = iterator_->hasNext()) {
 		iterator_->current(next_.second);
-		iterator_->next();
-	}
+		if(next_.second.column >= end_) {
+			next_.first = false;
+			next_.second.column = end_;
+		} else
+			iterator_->next();
+	} else
+		next_.second.column = end_;
 }
 
 

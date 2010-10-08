@@ -825,12 +825,11 @@ bool TextViewer::create(HWND parent, const RECT& rect, DWORD style, DWORD exStyl
 			}
 		private:
 			void update() {
-				static const Color black(0, 0, 0), white(255, 255, 255);
 				int temp = beginningIsBlackBack_ ? 0 : 1;
 				temp += (current_.column % 2 == 0) ? 0 : 1;
 				auto_ptr<RunStyle> style(new RunStyle);
-				style->foreground = (temp % 2 == 0) ? white : black;
-				style->background = (temp % 2 == 0) ? black : white;
+				style->foreground = (temp % 2 == 0) ? Color(0xff, 0x00, 0x00) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOWTEXT));
+				style->background = (temp % 2 == 0) ? Color(0xff, 0xcc, 0xcc) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW));
 				current_.style.reset(style.release());
 			}
 		private:
