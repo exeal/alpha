@@ -308,6 +308,9 @@ namespace ascension {
 		typename std::iterator_traits<T>::difference_type length() const {return end() - beginning();}
 	};
 
+	/// Returns a @c Range object using the given two values.
+	template<typename T> inline Range<T> makeRange(T v1, T v2) {return Range<T>(v1, v2);}
+
 	/**
 	 * String-like object addresses a sized piece of memory.
 	 * @tparam Character the character type
