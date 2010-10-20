@@ -9,8 +9,7 @@
 #include "document.hpp"
 #include "unicode-property.hpp"
 #include "presentation.hpp"
-#include <manah/win32/dc.hpp>
-#include <manah/win32/gdi-object.hpp>
+#include "graphics.hpp"
 #include <vector>
 
 namespace ascension {
@@ -18,12 +17,11 @@ namespace ascension {
 	namespace presentation {class Presentation;}
 	namespace viewers {class Caret;}
 
-	namespace layout {
+	namespace graphics {
 
 		// free functions
-		bool getDecorationLineMetrics(HDC dc, int* baselineOffset,
+		bool getDecorationLineMetrics(const manah::win32::Handle<HDC>& dc, int* baselineOffset,
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
-		uint32_t makeTrueTypeTag(const char name[]);
 		bool supportsComplexScripts() /*throw()*/;
 		bool supportsOpenTypeFeatures() /*throw()*/;
 
@@ -124,16 +122,16 @@ namespace ascension {
 			struct LayoutContext {
 				MANAH_UNASSIGNABLE_TAG(LayoutContext);
 			public:
-				mutable manah::win32::gdi::DC& dc;					///< the device context.
+				mutable Context& renderingContext;					///< the rendering context.
 				presentation::ReadingDirection readingDirection;	///< the orientation of the character.
 				/// Constructor.
-				explicit LayoutContext(manah::win32::gdi::DC& deviceContext) /*throw()*/ : dc(deviceContext) {}
+				explicit LayoutContext(Context& renderingContext) /*throw()*/ : renderingContext(renderingContext) {}
 			};
 			/// Context of the drawing.
 			struct DrawingContext : public LayoutContext {
-				RECT rect;	///< the bounding box to draw.
+				Rect<int> rect;	///< the bounding box to draw.
 				/// Constructor.
-				DrawingContext(manah::win32::gdi::DC& deviceContext) /*throw()*/ : LayoutContext(deviceContext) {}
+				DrawingContext(Context& deviceContext) /*throw()*/ : LayoutContext(renderingContext) {}
 			};
 		private:
 			/**
@@ -194,7 +192,6 @@ namespace ascension {
 		public:
 			// constructors
 			DefaultSpecialCharacterRenderer() /*throw()*/;
-			~DefaultSpecialCharacterRenderer() /*throw()*/;
 			// attributes
 			COLORREF controlCharacterColor() const /*throw()*/;
 			COLORREF lineTerminatorColor() const /*throw()*/;
@@ -225,69 +222,11 @@ namespace ascension {
 			TextRenderer* renderer_;
 			COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
 			bool showsEOLs_, showsWhiteSpaces_;
-			HFONT font_;	// provides substitution glyphs
+			manah::win32::Handle<HFONT> font_;	// provides substitution glyphs
 			enum {LTR_HORIZONTAL_TAB, RTL_HORIZONTAL_TAB, LINE_TERMINATOR, LTR_WRAPPING_MARK, RTL_WRAPPING_MARK, WHITE_SPACE};
 			WORD glyphs_[6];
 			int glyphWidths_[6];
 		};
-
-		/// Provides physical font metrics information.
-		class IFontMetrics {
-		public:
-			/// Returns the ascent of the text in pixels.
-			virtual int ascent() const /*throw()*/ = 0;
-			/// Returns the average width of a character in pixels.
-			virtual int averageCharacterWidth() const /*throw()*/ = 0;
-			/// Returns the cell height in pixels.
-			int cellHeight() const /*throw()*/ {return ascent() + descent();}
-			/// Returns the descent of the text in pixels.
-			virtual int descent() const /*throw()*/ = 0;
-			/// Returns the em height.
-			int emHeight() const /*throw()*/ {return cellHeight() - internalLeading();}
-			/// Returns the external leading in pixels.
-			/// @note In Ascension, external leadings are placed below characters.
-			virtual int externalLeading() const /*throw()*/ = 0;
-			/// Returns the font family name.
-			virtual String familyName() const /*throw()*/ = 0;
-			/// Returns the internal leading in pixels.
-			virtual int internalLeading() const /*throw()*/ = 0;
-			/// Returns the gap of the lines (external leading) in pixels.
-			int lineGap() const /*throw()*/ {return externalLeading();}
-			/// Returns the pitch of lines in pixels.
-			/// @note This method ignores @c LayoutSettings#lineSpacing value.
-			int linePitch() const /*throw()*/ {return cellHeight() + lineGap();}
-			/// Returns the x-height of the font in pixels.
-			virtual int xHeight() const /*throw()*/ = 0;
-		};
-
-		class AbstractFont {
-		public:
-			/// Destructor.
-			virtual ~AbstractFont() /*throw()*/ {}
-			/// Returns the platform-dependent handle object.
-			/// @deprecated
-			virtual manah::win32::Object<HGDIOBJ, &::DeleteObject, HFONT> handle() const /*throw()*/ = 0;
-			/// Returns the metrics of the font.
-			virtual const IFontMetrics& metrics() const /*throw()*/ = 0;
-		};
-
-		/// An interface represents an object provides a set of fonts.
-		class IFontCollection {
-		public:
-			/// Destructor.
-			virtual ~IFontCollection() /*throw()*/ {}
-			/**
-			 * Returns the font matches the given properties.
-			 * @param familyName the font family name
-			 * @param properties the font properties
-			 * @param sizeAdjust 
-			 * @return the font has the requested properties or the default one
-			 */
-			virtual std::tr1::shared_ptr<const AbstractFont> get(const String& familyName,
-				const presentation::FontProperties& properties, double sizeAdjust = 0.0) const = 0;
-		};
-
-		const IFontCollection& systemFonts() /*throw()*/;
 
 		/**
 		 * Defines the stuffs for layout. Clients of Ascension can implement this interface or use
@@ -299,7 +238,7 @@ namespace ascension {
 			/// Destructor.
 			virtual ~ILayoutInformationProvider() /*throw()*/ {}
 			/// Returns the font collection.
-			virtual const IFontCollection& fontCollection() const /*throw()*/ = 0;
+			virtual const FontCollection& fontCollection() const /*throw()*/ = 0;
 			/// Returns the layout settings.
 			virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
 			/**
@@ -316,7 +255,7 @@ namespace ascension {
 			/// Returns the special character renderer.
 			virtual ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/ = 0;
 			/// Returns the text metrics.
-			virtual const IFontMetrics& textMetrics() const /*throw()*/ = 0;
+			virtual const Font::Metrics& textMetrics() const /*throw()*/ = 0;
 			/// Returns the width of the rendering area in pixels.
 			virtual int width() const /*throw()*/ = 0;
 		};
@@ -366,8 +305,7 @@ namespace ascension {
 #endif
 
 			// constructors
-			LineLayout(manah::win32::gdi::DC& dc,
-				const ILayoutInformationProvider& layoutInformation, length_t line);
+			LineLayout(Context& context, const ILayoutInformationProvider& layoutInformation, length_t line);
 			~LineLayout() /*throw()*/;
 			// general attributes
 			presentation::TextAlignment alignment() const /*throw()*/;
@@ -384,15 +322,15 @@ namespace ascension {
 			length_t sublineOffset(length_t subline) const;
 			const length_t* sublineOffsets() const /*throw()*/;
 			// coordinates
-			manah::win32::gdi::Rgn blackBoxBounds(length_t first, length_t last) const;
-			SIZE bounds() const /*throw()*/;
-			RECT bounds(length_t first, length_t last) const;
-			POINT location(length_t column, Edge edge = LEADING) const;
-			std::pair<POINT, POINT> locations(length_t column) const;
+			manah::win32::Handle<HRGN> blackBoxBounds(length_t first, length_t last) const;
+			Dimension<int> bounds() const /*throw()*/;
+			Rect<int> bounds(length_t first, length_t last) const;
+			Point<int> location(length_t column, Edge edge = LEADING) const;
+			std::pair<Point<int>, Point<int> > locations(length_t column) const;
 			int longestSublineWidth() const /*throw()*/;
 			std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
-			std::pair<length_t, length_t> offset(const POINT& pt, bool* outside = 0) const /*throw()*/;
-			RECT sublineBounds(length_t subline) const;
+			std::pair<length_t, length_t> offset(const Point<int>& pt, bool* outside = 0) const /*throw()*/;
+			Rect<int> sublineBounds(length_t subline) const;
 			int sublineIndent(length_t subline) const;
 			int sublineWidth(length_t subline) const;
 			// styled segments
@@ -400,10 +338,10 @@ namespace ascension {
 //			StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 			presentation::StyledRun styledTextRun(length_t column) const;
 			// operations
-			void draw(manah::win32::gdi::DC& dc, int x, int y,
-				const RECT& paintRect, const RECT& clipRect, const Selection* selection) const /*throw()*/;
-			void draw(length_t subline, manah::win32::gdi::DC& dc, int x, int y,
-				const RECT& paintRect, const RECT& clipRect, const Selection* selection) const;
+			void draw(Context& context, int x, int y,
+				const Rect<int>& paintRect, const Rect<int>& clipRect, const Selection* selection) const /*throw()*/;
+			void draw(length_t subline, Context& context, int x, int y,
+				const Rect<int>& paintRect, const Rect<int>& clipRect, const Selection* selection) const;
 			String fillToX(int x) const;
 #ifdef _DEBUG
 			void dumpRuns(std::ostream& out) const;
@@ -415,13 +353,13 @@ namespace ascension {
 			std::size_t findRunForPosition(length_t column) const /*throw()*/;
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
-			void locations(length_t column, POINT* leading, POINT* trailing) const;
+			void locations(length_t column, Point<int>* leading, Point<int>* trailing) const;
 			int nextTabStop(int x, Direction direction) const /*throw()*/;
 			const String& text() const /*throw()*/;
 			void reorder() /*throw()*/;
 //			void rewrap();
 			int nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/;
-			void wrap(manah::win32::gdi::DC& dc) /*throw()*/;
+			void wrap(Context& context) /*throw()*/;
 		private:
 			const ILayoutInformationProvider& lip_;
 			length_t lineNumber_;
@@ -515,7 +453,7 @@ namespace ascension {
 			Iterator firstCachedLine() const /*throw()*/;
 			Iterator lastCachedLine() const /*throw()*/;
 			// abstract
-			virtual manah::win32::gdi::DC deviceContext() const = 0;
+			virtual std::auto_ptr<Context> renderingContext() const = 0;
 		private:
 			void clearCaches(length_t first, length_t last, bool repair);
 			void createLineLayout(length_t line) /*throw()*/;
@@ -553,11 +491,11 @@ namespace ascension {
 		public:
 			// constructors
 			TextRenderer(presentation::Presentation& presentation,
-				const IFontCollection& fontCollection, bool enableDoubleBuffering);
+				const FontCollection& fontCollection, bool enableDoubleBuffering);
 			TextRenderer(const TextRenderer& other);
 			virtual ~TextRenderer() /*throw()*/;
 			// text metrics
-			std::tr1::shared_ptr<const AbstractFont> primaryFont() const /*throw()*/;
+			std::tr1::shared_ptr<const Font> primaryFont() const /*throw()*/;
 			int lineIndent(length_t line, length_t subline = 0) const;
 			bool updateTextMetrics();
 			// listener
@@ -566,43 +504,29 @@ namespace ascension {
 			// strategy
 			void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 			// operation
-			void renderLine(length_t line, manah::win32::gdi::DC& dc, int x, int y,
-				const RECT& paintRect, const RECT& clipRect, const LineLayout::Selection* selection) const /*throw()*/;
+			void renderLine(length_t line, Context& context, int x, int y,
+				const Rect<int>& paintRect, const Rect<int>& clipRect,
+				const LineLayout::Selection* selection) const /*throw()*/;
 			// ILayoutInformationProvider
-			const IFontCollection& fontCollection() const /*throw()*/;
+			const FontCollection& fontCollection() const /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
 			ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
-			const IFontMetrics& textMetrics() const /*throw()*/;
+			const Font::Metrics& textMetrics() const /*throw()*/;
 		private:
 			void fireDefaultFontChanged();
 		private:
 			presentation::Presentation& presentation_;
-			const IFontCollection& fontCollection_;
+			const FontCollection& fontCollection_;
 			const bool enablesDoubleBuffering_;
-			mutable manah::win32::gdi::DC memoryDC_;
-			mutable manah::win32::gdi::Bitmap memoryBitmap_;
-			std::tr1::shared_ptr<const AbstractFont> primaryFont_;
+			mutable manah::win32::Handle<HDC> memoryDC_;
+			mutable manah::win32::Handle<HBITMAP> memoryBitmap_;
+			std::tr1::shared_ptr<const Font> primaryFont_;
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 			ascension::internal::Listeners<IDefaultFontListener> listeners_;
 		};
 
 
 // inlines //////////////////////////////////////////////////////////////////
-
-/// Returns an 32-bit integer represents the given TrueType tag.
-inline uint32_t makeTrueTypeTag(const char name[]) {
-	const size_t len = std::strlen(name);
-	if(len == 0 || len > 4)
-		throw std::length_error("name");
-	uint32_t tag = name[0];
-	if(len > 1)
-		tag |= name[1] << 8;
-	if(len > 2)
-		tag |= name[2] << 16;
-	if(len > 3)
-		tag |= name[3] << 24;
-	return tag;
-}
 
 /// Returns @c true if the layout has been disposed.
 inline bool LineLayout::isDisposed() const /*throw()*/ {return runs_ == 0;}
@@ -618,8 +542,8 @@ inline length_t LineLayout::lineNumber() const /*throw()*/ {return lineNumber_;}
  *         is relative in the visual lines
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-inline POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
-	POINT result;
+inline Point<int> LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
+	Point<int> result;
 	locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
 	return result;
 }
@@ -632,8 +556,8 @@ inline POINT LineLayout::location(length_t column, Edge edge /* = LEADING */) co
  *         the left edge of the renderer, y-coordinates are relative in the visual lines
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-inline std::pair<POINT, POINT> LineLayout::locations(length_t column) const {
-	std::pair<POINT, POINT> result;
+inline std::pair<Point<int>, Point<int> > LineLayout::locations(length_t column) const {
+	std::pair<Point<int>, Point<int> > result;
 	locations(column, &result.first, &result.second);
 	return result;
 }
@@ -649,7 +573,7 @@ inline length_t LineLayout::numberOfSublines() const /*throw()*/ {return numberO
  * @see #location
  */
 inline std::pair<length_t, length_t> LineLayout::offset(
-	const POINT& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
+	const Point<int>& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
 
 /// Returns the text line style.
 inline const presentation::LineStyle& LineLayout::style() const /*throw()*/ {return *style_;}
@@ -812,11 +736,11 @@ inline bool DefaultSpecialCharacterRenderer::showsLineTerminators() const /*thro
 inline bool DefaultSpecialCharacterRenderer::showsWhiteSpaces() const /*throw()*/ {return showsWhiteSpaces_;}
 
 /// Returns the primary font.
-inline std::tr1::shared_ptr<const AbstractFont> TextRenderer::primaryFont() const /*throw()*/ {return primaryFont_;}
+inline std::tr1::shared_ptr<const Font> TextRenderer::primaryFont() const /*throw()*/ {return primaryFont_;}
 
 /// @see ILayoutInformationProvider#textMetrics
-inline const IFontMetrics& TextRenderer::textMetrics() const /*throw()*/ {return primaryFont()->metrics();}
+inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {return primaryFont()->metrics();}
 
-}} // namespace ascension.viewers
+}} // namespace ascension.graphics
 
 #endif // !ASCENSION_LAYOUT_HPP

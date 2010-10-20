@@ -9,22 +9,36 @@
 #include <ascension/viewer.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
-#include <boost/tr1/unordered_map.hpp>
 #include <usp10.h>
 using namespace ascension;
-using namespace ascension::kernel;
-using namespace ascension::layout;
+using namespace ascension::graphics;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace manah::win32;
-using namespace manah::win32::gdi;
 using namespace std;
+namespace k = ascension::kernel;
 
 #pragma comment(lib, "usp10.lib")
 
 //#define TRACE_LAYOUT_CACHES
 extern bool DIAGNOSE_INHERENT_DRAWING;
+
+namespace {
+	template<typename Coordinate> inline POINT toNative(const Point<Coordinate>& source) {
+		POINT temp = {source.x, source.y};
+		return temp;
+	}
+	template<typename Coordinate> inline SIZE toNative(const Dimension<Coordinate>& source) {
+		SIZE temp = {source.cx, source.cy};
+		return temp;
+	}
+	template<typename Coordinate> inline RECT toNative(const Rect<Coordinate>& source) {
+		RECT temp;
+		::SetRect(&temp, source.x().beginning(), source.y().beginning(), source.x().end(), source.y().end());
+		return temp;
+	}
+}
 
 namespace {
 	// SystemColors caches the system colors.
@@ -74,19 +88,10 @@ namespace {
 	String fallback(int script);
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
 	ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/;
-	int pixels(const DC& dc, const Length& length, bool vertical, const IFontMetrics& fontMetrics);
+	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics);
 	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
-	template<typename T> inline int round(T value) {return static_cast<int>(floor(value + 0.5));}
 	bool uniscribeSupportsVSS() /*throw()*/;
 	LANGID userCJKLanguage() /*throw()*/;
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	struct IdeographicVariationSequences {
-		vector<uint32_t> defaultMappings;
-		tr1::unordered_map<uint32_t, uint16_t> nonDefaultMappings;
-	};
-	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs);
-#endif // !ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 	// New Uniscribe features (usp10.dll 1.6) dynamic loading
 #if(!defined(UNISCRIBE_OPENTYPE) || UNISCRIBE_OPENTYPE < 0x0100)
@@ -201,7 +206,7 @@ namespace {
 				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
 			default:
 				{
-					ScreenDC dc;
+					gdi::ScreenDC dc;
 					bool installed = false;
 					LOGFONTW lf;
 					memset(&lf, 0, sizeof(LOGFONTW));
@@ -233,70 +238,6 @@ namespace {
 		return (i != associations.end()) ? i->second : String();
 	}
 
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	template<size_t bytes> uint32_t readBytes(const uint8_t*& p);
-	template<> inline uint32_t readBytes<1>(const uint8_t*& p) {
-		return *(p++);
-	}
-	template<> inline uint32_t readBytes<2>(const uint8_t*& p) {
-		p += 2;
-		return (p[-2] << 8) | (p[-1] << 0);
-	}
-	template<> inline uint32_t readBytes<3>(const uint8_t*& p) {
-		p += 3;
-		return (p[-3] << 16) | (p[-2] << 8) | (p[-1] << 0);
-	}
-	template<> inline uint32_t readBytes<4>(const uint8_t*& p) {
-		p += 4;
-		return (p[-4] << 24) | (p[-3] << 16) | (p[-2] << 8) | (p[-1] << 0);
-	}
-	void generateIVSMappings(const void* cmapData, size_t length, IdeographicVariationSequences& ivs) {
-//	if(length > ) {
-			const uint8_t* p = static_cast<const uint8_t*>(cmapData);
-			const uint32_t numberOfSubtables = readBytes<2>(p += 2);
-			const uint8_t* uvsSubtable = 0;
-			for(uint16_t i = 0; i < numberOfSubtables; ++i) {
-				const uint32_t platformID = readBytes<2>(p);
-				const uint32_t encodingID = readBytes<2>(p);
-				const uint32_t offset = readBytes<4>(p);
-				const uint8_t* temp = static_cast<const uint8_t*>(cmapData) + offset;
-				const uint32_t format = readBytes<2>(temp);
-				if(format == 14 && platformID == 0 && encodingID == 5) {
-					uvsSubtable = temp - 2;
-					break;
-				}
-			}
-			if(uvsSubtable != 0) {
-				p = uvsSubtable + 6;
-				const uint32_t numberOfRecords = readBytes<4>(p);
-				for(uint32_t i = 0; i < numberOfRecords; ++i) {
-					const uint32_t varSelector = readBytes<3>(p);
-					if(const uint32_t defaultUVSOffset = readBytes<4>(p)) {
-						const uint8_t* q = uvsSubtable/*static_cast<const uint8_t*>(cmapData)*/ + defaultUVSOffset;
-						const uint32_t numUnicodeValueRanges = readBytes<4>(q);
-						for(uint32_t j = 0; j < numUnicodeValueRanges; ++j) {
-							const uint32_t startUnicodeValue = readBytes<3>(q);
-							const uint8_t additionalCount = readBytes<1>(q);
-							for(uint32_t c = startUnicodeValue; c <= startUnicodeValue + additionalCount; ++c)
-								ivs.defaultMappings.push_back(((varSelector - 0x0e0100u) << 24) | c);
-						}
-					}
-					if(const uint32_t nonDefaultUVSOffset = readBytes<4>(p)) {
-						const uint8_t* q = uvsSubtable/*static_cast<const uint8_t*>(cmapData)*/ + nonDefaultUVSOffset;
-						const uint32_t numberOfMappings = readBytes<4>(q);
-						for(uint32_t j = 0; j < numberOfMappings; ++j) {
-							const uint32_t unicodeValue = readBytes<3>(q);
-							const uint32_t glyphID = readBytes<2>(q);
-							ivs.nonDefaultMappings.insert(
-								make_pair(((varSelector - 0x0e0100u) << 24) | unicodeValue, static_cast<uint16_t>(glyphID)));
-						}
-					}
-				}
-				sort(ivs.defaultMappings.begin(), ivs.defaultMappings.end());
-			}
-//		}
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 	inline ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/ {
 		const TextAlignment alignment = (style.alignment != INHERIT_TEXT_ALIGNMENT) ?
@@ -313,7 +254,7 @@ namespace {
 		}
 	}
 
-	int pixels(const DC& dc, const Length& length, bool vertical, const IFontMetrics& fontMetrics) {
+	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics) {
 		if(equals(length.value, 0.0))
 			return 0;
 		switch(length.unit) {
@@ -325,7 +266,7 @@ namespace {
 				return round(length.value);
 			case Length::INCHES:	case Length::CENTIMETERS:	case Length::MILLIMETERS:
 			case Length::POINTS:	case Length::PICAS:			case Length::DIPS: {
-				const double dpi = dc.getDeviceCaps(vertical ? LOGPIXELSY : LOGPIXELSX);
+				const double dpi = vertical ? context.device()->logicalDpiY() : context.device()->logicalDpiX();
 				const double inches = length.value * dpi;
 				switch(length.unit) {
 					case Length::INCHES:
@@ -453,15 +394,15 @@ void ascension::updateSystemSettings() /*throw()*/ {
  * @param[out] strikethroughThickness the thickness of linethrough in pixels
  * @return succeeded or not
  */
-bool layout::getDecorationLineMetrics(HDC dc, int* baselineOffset,
+bool graphics::getDecorationLineMetrics(const Handle<HDC>& dc, int* baselineOffset,
 		int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/ {
 	OUTLINETEXTMETRICW* otm = 0;
 	TEXTMETRICW tm;
-	if(const UINT c = ::GetOutlineTextMetricsW(dc, 0, 0)) {
+	if(const UINT c = ::GetOutlineTextMetricsW(dc.use(), 0, 0)) {
 		otm = static_cast<OUTLINETEXTMETRICW*>(::operator new(c));
-		if(!manah::toBoolean(::GetOutlineTextMetricsW(dc, c, otm)))
+		if(!manah::toBoolean(::GetOutlineTextMetricsW(dc.get(), c, otm)))
 			return false;
-	} else if(!manah::toBoolean(::GetTextMetricsW(dc, &tm)))
+	} else if(!manah::toBoolean(::GetTextMetricsW(dc.get(), &tm)))
 		return false;
 	const int baseline = (otm != 0) ? otm->otmTextMetrics.tmAscent : tm.tmAscent;
 	if(baselineOffset != 0)
@@ -479,188 +420,13 @@ bool layout::getDecorationLineMetrics(HDC dc, int* baselineOffset,
 }
 
 /// Returns @c true if complex scripts are supported.
-bool layout::supportsComplexScripts() /*throw()*/ {
+bool graphics::supportsComplexScripts() /*throw()*/ {
 	return true;
 }
 
 /// Returns @c true if OpenType features are supported.
-bool layout::supportsOpenTypeFeatures() /*throw()*/ {
+bool graphics::supportsOpenTypeFeatures() /*throw()*/ {
 	return uspLib->get<0>() != 0;
-}
-
-
-// SystemFont and SystemFonts ///////////////////////////////////////////////
-
-namespace {
-	class SystemFont : public AbstractFont, public IFontMetrics {
-	public:
-		explicit SystemFont(HFONT handle);
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const;
-#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		// AbstractFont
-		Object<HGDIOBJ, &::DeleteObject, HFONT> handle() const /*throw()*/ {return Object<HGDIOBJ, &::DeleteObject, HFONT>(borrowed(handle_.get()));}
-		const IFontMetrics& metrics() const /*throw()*/ {return *this;}
-		// IFontMetrics
-		int ascent() const /*throw()*/ {return ascent_;}
-		int averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
-		int descent() const /*throw()*/ {return descent_;}
-		int externalLeading() const /*throw()*/ {return externalLeading_;}
-		String familyName() const /*throw()*/ {return familyName_;}
-		int internalLeading() const /*throw()*/ {return internalLeading_;}
-		int xHeight() const /*throw()*/ {return xHeight_;}
-	private:
-		Object<HGDIOBJ, &::DeleteObject, HFONT> handle_;
-		int ascent_, averageCharacterWidth_, descent_, externalLeading_, internalLeading_, xHeight_;
-		String familyName_;
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		auto_ptr<IdeographicVariationSequences> ivs_;
-#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	};
-	class SystemFonts : public IFontCollection {
-		tr1::shared_ptr<const AbstractFont> get(const String& familyName, const FontProperties& properties, double sizeAdjust) const;
-	private:
-		tr1::shared_ptr<const AbstractFont> cache(const String& familyName, const FontProperties& properties, double sizeAdjust);
-		struct Hasher : tr1::hash<String> {
-			size_t operator()(const pair<String, FontProperties>& value) const {
-				return tr1::hash<String>::operator()(value.first) + value.second.weight + value.second.stretch + value.second.style;}
-		};
-	private:
-		typedef tr1::unordered_map<pair<String, FontProperties>, tr1::shared_ptr<AbstractFont>, Hasher> Registry;
-		Registry registry_;
-	};
-} // namespace @0
-
-SystemFont::SystemFont(HFONT handle) : handle_(managed(handle)) {
-	ScreenDC dc;
-	HFONT oldFont = dc.selectObject(handle_.use());
-	::SetGraphicsMode(dc.get(), GM_ADVANCED);
-//	const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
-//	const double ydpi = dc.getDeviceCaps(LOGPIXELSY);
-
-	// generic font metrics
-	TEXTMETRICW tm;
-	if(!manah::toBoolean(dc.getTextMetrics(tm)))
-		throw runtime_error("GetTextMetricsW failed.");
-	ascent_ = tm.tmAscent/* * 96.0 / ydpi*/;
-	descent_ = tm.tmDescent/* * 96.0 / ydpi*/;
-	internalLeading_ = tm.tmInternalLeading/* * 96.0 / ydpi*/;
-	externalLeading_ = tm.tmExternalLeading/* * 96.0 / ydpi*/;
-	averageCharacterWidth_ = max<int>(((tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100)), 1)/* * 96.0 / xdpi*/;
-
-	// x-height
-	GLYPHMETRICS gm;
-	const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
-	xHeight_ = (dc.getGlyphOutline(L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR
-		&& gm.gmptGlyphOrigin.y > 0) ? gm.gmptGlyphOrigin.y : round(static_cast<double>(ascent_) * 0.56);
-	dc.selectObject(oldFont);
-
-	// family name
-	LOGFONTW lf;
-	familyName_ = (::GetObjectW(handle_.get(), sizeof(LOGFONTW), &lf) > 0) ? lf.lfFaceName : L"";
-}
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const {
-	if(!isValidCodePoint(baseCharacter))
-		throw invalid_argument("baseCharacter");
-	else if(!isValidCodePoint(variationSelector))
-		throw invalid_argument("variationSelector");
-	else if(variationSelector < 0x0e0100ul || variationSelector > 0x0e01eful)
-		return false;
-	if(ivs_.get() == 0) {
-		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
-		ScreenDC dc;
-		HFONT oldFont = dc.selectObject(handle_.get());
-		static const uint32_t CMAP_TAG = makeTrueTypeTag("cmap");
-		const DWORD bytes = dc.getFontData(CMAP_TAG, 0, 0, 0);
-		if(bytes != GDI_ERROR) {
-			manah::AutoBuffer<uint8_t> data(new uint8_t[bytes]);
-			if(GDI_ERROR != dc.getFontData(CMAP_TAG, 0, data.get(), bytes))
-				generateIVSMappings(data.get(), bytes, *const_cast<SystemFont*>(this)->ivs_);
-		}
-		dc.selectObject(oldFont);
-	}
-
-	const uint32_t v = ((variationSelector - 0x0e0100ul) << 24) | baseCharacter;
-	if(binary_search(ivs_->defaultMappings.begin(), ivs_->defaultMappings.end(), v))
-		return true;
-	tr1::unordered_map<uint32_t, uint16_t>::const_iterator i(ivs_->nonDefaultMappings.find(v));
-	if(i == ivs_->nonDefaultMappings.end())
-		return false;
-	return (glyph = i->second), true;
-}
-#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
-tr1::shared_ptr<const AbstractFont> SystemFonts::get(const String& familyName, const FontProperties& properties, double sizeAdjust) const {
-	Registry::const_iterator i(registry_.find(make_pair(familyName, properties)));
-	if(i != registry_.end())
-		return i->second;
-	return const_cast<SystemFonts*>(this)->cache(familyName, properties, sizeAdjust);
-}
-
-tr1::shared_ptr<const AbstractFont> SystemFonts::cache(const String& familyName, const FontProperties& properties, double sizeAdjust) {
-	if(familyName.length() >= LF_FACESIZE)
-		throw length_error("");
-
-	LOGFONTW lf;
-	memset(&lf, 0, sizeof(LOGFONTW));
-	lf.lfHeight = -round(properties.size);
-	lf.lfWeight = properties.weight;
-	lf.lfItalic = (properties.style == FontProperties::ITALIC) || (properties.style == FontProperties::OBLIQUE);
-	wcscpy(lf.lfFaceName, familyName.c_str());
-	Object<HANDLE, &::DeleteObject, HFONT> font(managed(::CreateFontIndirectW(&lf)));
-#ifdef _DEBUG
-	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
-		::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
-		::OutputDebugStringW(lf.lfFaceName);
-		::OutputDebugStringW(L"' for request '");
-		::OutputDebugStringW(familyName.c_str());
-		::OutputDebugStringW(L"'.\n");
-	}
-#endif
-
-	// handle RunStyle.fontSizeAdjust
-	if(!equals(sizeAdjust, 0.0) && sizeAdjust > 0.0) {
-		ScreenDC dc;
-		HFONT oldFont = dc.selectObject(font.get());
-		TEXTMETRICW tm;
-		if(dc.getTextMetrics(tm)) {
-			GLYPHMETRICS gm;
-			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
-			const int xHeight =
-				(dc.getGlyphOutline(L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
-					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
-			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
-			FontProperties adjustedProperties(properties);
-			adjustedProperties.size = max(properties.size * (sizeAdjust / aspect), 1.0);
-			dc.selectObject(oldFont);
-			return cache(familyName, adjustedProperties, 0.0);
-		}
-		dc.selectObject(oldFont);
-	}
-
-	// handle 'font-stretch'
-	if(properties.stretch != FontProperties::NORMAL_STRETCH) {
-		// TODO: this implementation is too simple...
-		if(::GetObject(font.get(), sizeof(LOGFONTW), &lf) > 0) {
-			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
-			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch], 1000);
-			Object<HGDIOBJ, &::DeleteObject, HFONT> temp(managed(::CreateFontIndirectW(&lf)));
-			if(temp.get() != 0)
-				font = temp;
-		}
-	}
-
-	tr1::shared_ptr<AbstractFont> newFont(new SystemFont(font.release()));
-	registry_.insert(make_pair(make_pair(familyName, properties), newFont));
-	return newFont;
-}
-
-/// Returns the object implements @c IFontCollection interface.
-const IFontCollection& layout::systemFonts() {
-	static SystemFonts instance;
-	return instance;
 }
 
 
@@ -721,39 +487,38 @@ public:
 	};
 public:
 	TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
-		tr1::shared_ptr<const AbstractFont> font, OPENTYPE_TAG scriptTag) /*throw()*/;
+		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
 	uchar bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
-	auto_ptr<TextRun> breakAt(DC& dc, length_t at,	// 'at' is from the beginning of the line
+	auto_ptr<TextRun> breakAt(Context& context, length_t at,	// 'at' is from the beginning of the line
 		const String& lineString, const ILayoutInformationProvider& lip);
-	void blackBoxBounds(const Range<length_t>& range, RECT& bounds) const;
-	HRESULT draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect = 0, UINT options = 0) const;
-	void drawBackground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, RECT* bounds) const;
-	void drawForeground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const;
+	void blackBoxBounds(const Range<length_t>& range, Rect<int>& bounds) const;
+	void drawBackground(Context& context, const Point<int>& p,
+		const Range<length_t>& range, const Color& color, const Rect<int>* dirtyRect, Rect<int>* bounds) const;
+	void drawForeground(Context& context, const Point<int>& p,
+		const Range<length_t>& range, const Color& color, const Rect<int>* dirtyRect, const Overlay* overlay) const;
 	bool expandTabCharacters(const String& lineString, int x, int tabWidth, int maximumWidth);
-	tr1::shared_ptr<const AbstractFont> font() const {return glyphs_->font;}
+	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
 	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	HRESULT justify(int width);
 	HRESULT logicalAttributes(const String& lineString, SCRIPT_LOGATTR attributes[]) const;
 	HRESULT logicalWidths(int widths[]) const;
-	static void mergeScriptsAndStyles(DC& dc, const String& lineString, const SCRIPT_ITEM scriptRuns[],
+	static void mergeScriptsAndStyles(Context& context, const String& lineString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
 		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges);
 	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
-	void positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles);
+	void positionGlyphs(const Context& context, const String& lineString, SimpleStyledRunIterator& styles);
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
-	void shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip);
+	void shape(Context& context, const String& lineString, const ILayoutInformationProvider& lip);
 	auto_ptr<TextRun> splitIfTooLong(const String& lineString);
-	static void substituteGlyphs(const DC& dc, const Range<TextRun**>& runs, const String& lineString);
+	static void substituteGlyphs(const Context& context, const Range<TextRun**>& runs, const String& lineString);
 	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
 	int x(length_t at, bool trailing) const;
 private:
 	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
 		const Range<length_t> characters;	// character range for this glyph arrays in the line
-		const tr1::shared_ptr<const AbstractFont> font;
+		const tr1::shared_ptr<const Font> font;
 		const OPENTYPE_TAG scriptTag;
 		mutable SCRIPT_CACHE fontCache;
 		// only 'clusters' is character-base. others are glyph-base
@@ -761,13 +526,13 @@ private:
 		manah::AutoBuffer<SCRIPT_VISATTR> visualAttributes;
 		manah::AutoBuffer<int> advances, justifiedAdvances;
 		manah::AutoBuffer<GOFFSET> offsets;
-		Glyphs(const Range<length_t>& characters, tr1::shared_ptr<const AbstractFont> font,
+		Glyphs(const Range<length_t>& characters, tr1::shared_ptr<const Font> font,
 				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(0) {
 			if(font.get() == 0)
 				throw NullPointerException("font");
 		}
 		~Glyphs() /*throw()*/ {::ScriptFreeCache(&fontCache);}
-		void vanish(const DC& dc, size_t at);	// 'at' is distance from the beginning of this run
+		void vanish(const Context& context, size_t at);	// 'at' is distance from the beginning of this run
 	};
 private:
 	TextRun(TextRun& leading, length_t characterBoundary) /*throw()*/;
@@ -776,10 +541,10 @@ private:
 	const WORD* clusters() const /*throw()*/ {
 		if(const WORD* const p = glyphs_->clusters.get())
 			return p + (beginning() - glyphs_->characters.beginning()); return 0;}
-	pair<int, HRESULT> countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/;
-	static HRESULT generateGlyphs(const DC& dc, const StringPiece& text,
+	pair<int, HRESULT> countMissingGlyphs(const Context& context, const Char* text) const /*throw()*/;
+	static HRESULT generateGlyphs(const Context& context, const StringPiece& text,
 		const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
-	static void generateDefaultGlyphs(const DC& dc,
+	static void generateDefaultGlyphs(const Context& context,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs);
 	const WORD* glyphs() const /*throw()*/ {
 		if(const WORD* const p = glyphs_->indices.get()) return p + glyphRange_.beginning(); return 0;}
@@ -797,14 +562,14 @@ private:
 	bool mayOverhang_ : 1;
 };
 
-void LineLayout::TextRun::Glyphs::vanish(const DC& dc, size_t at) {
+void LineLayout::TextRun::Glyphs::vanish(const Context& context, size_t at) {
 	assert(advances.get() == 0);
 	WORD blankGlyph;
-	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
+	HRESULT hr = ::ScriptGetCMap(context.engine()->nativeHandle().get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 	if(hr == S_OK) {
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-		if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
+		if(FAILED(hr = ::ScriptGetFontProperties(context.engine()->nativeHandle().get(), &fontCache, &fp)))
 			fp.wgBlank = 0;	/* hmm... */
 		blankGlyph = fp.wgBlank;
 	}
@@ -822,8 +587,8 @@ void LineLayout::TextRun::Glyphs::vanish(const DC& dc, size_t at) {
  * @param scriptTag an OpenType script tag describes the script of this text run
  * @throw NullPointerException @a font is @c null
  */
-LineLayout::TextRun::TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
-		tr1::shared_ptr<const AbstractFont> font, OPENTYPE_TAG scriptTag) /*throw()*/
+LineLayout::TextRun::TextRun(const Range<length_t>& characterRange,
+		const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/
 		: Range<length_t>(characterRange), analysis_(script) {
 	glyphs_.reset(new Glyphs(*this, font, scriptTag));
 	if(font.get() == 0)
@@ -859,17 +624,17 @@ LineLayout::TextRun::~TextRun() /*throw()*/ {
 //		::ScriptFreeCache(&cache_);
 }
 
-void LineLayout::TextRun::blackBoxBounds(const Range<length_t>& range, RECT& bounds) const {
-	bounds.left = x(max(range.beginning(), beginning()), false);
-	bounds.right = x(min(range.end(), end()) - 1, true);
-	if(readingDirection() == RIGHT_TO_LEFT)
-		std::swap(bounds.left, bounds.right);
-	const IFontMetrics& fontMetrics = glyphs_->font->metrics();
-	bounds.top = -fontMetrics.ascent();
-	bounds.bottom = fontMetrics.descent();
+void LineLayout::TextRun::blackBoxBounds(const Range<length_t>& range, Rect<int>& bounds) const {
+	const int left = x(max(range.beginning(), beginning()), false);
+	const int right = x(min(range.end(), end()) - 1, true);
+	const Font::Metrics& fontMetrics = glyphs_->font->metrics();
+	bounds = Rect<int>(
+		Point<int>(left, -fontMetrics.ascent()),
+		Dimension<int>(right - left, fontMetrics.cellHeight())).normalize();
 }
 
-auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
+auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(
+		Context& context, length_t at, const String& lineString, const ILayoutInformationProvider& lip) {
 	assert(at > beginning() && at < end());
 	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
 
@@ -881,7 +646,7 @@ auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, 
 	auto_ptr<TextRun> following(new TextRun(*this, newLength));
 
 	// update placements
-//	place(dc, lineString, lip);
+//	place(context, lineString, lip);
 //	following->place(dc, lineString, lip);
 
 	return following;
@@ -893,10 +658,11 @@ auto_ptr<LineLayout::TextRun> LineLayout::TextRun::breakAt(DC& dc, length_t at, 
  * @param run the run
  * @return the number of missing glyphs
  */
-inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(const DC& dc, const Char* text) const /*throw()*/ {
+inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(
+		const Context& context, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
+	const HRESULT hr = ::ScriptGetFontProperties(context.engine()->nativeHandle().get(), &glyphs_->fontCache, &fp);
 	if(FAILED(hr))
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
@@ -915,26 +681,8 @@ inline pair<int, HRESULT> LineLayout::TextRun::countMissingGlyphs(const DC& dc, 
 }
 
 /**
- * @param dc the device context
- * @param x
- * @param y
- * @param restoreFont set @c true to 
- * @param clipRect
- * @param options
- * @return
- */
-inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont, const RECT* clipRect /* = 0 */, UINT options /* = 0 */) const {
-	HFONT oldFont = dc.selectObject(glyphs_->font->handle().get());
-	const HRESULT hr = ::ScriptTextOut(dc.use(), &glyphs_->fontCache, x, y, 0, clipRect,
-		&analysis_, 0, 0, glyphs(), numberOfGlyphs(), advances(), justifiedAdvances(), glyphOffsets());
-	if(restoreFont)
-		dc.selectObject(oldFont);
-	return hr;
-}
-
-/**
  * Paints the background of the specified character range in this run.
- * @param dc the device context
+ * @param context the graphics context
  * @param p the base point of this run (, does not corresponds to @c range.beginning())
  * @param range the character range to paint. if the edges addressed outside of this run, they are
  *              truncated
@@ -943,41 +691,41 @@ inline HRESULT LineLayout::TextRun::draw(DC& dc, int x, int y, bool restoreFont,
  * @param[out] bounds the rectangle this method painted. can be @c null
  * @throw std#invalid_argument @a color is not valid
  */
-void LineLayout::TextRun::drawBackground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, RECT* bounds) const {
+void LineLayout::TextRun::drawBackground(Context& context, const Point<int>& p,
+		const Range<length_t>& range, const Color& color, const Rect<int>* dirtyRect, Rect<int>* bounds) const {
 	if(color == Color())
 		throw invalid_argument("color");
-	if(range.isEmpty() || (dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left))
+	if(range.isEmpty() || (dirtyRect != 0 && p.x + totalWidth() < dirtyRect->x().beginning()))
 		return;
-	RECT r;
+	Rect<int> r;
 	blackBoxBounds(range, r);
-	r.left += p.x;
-	r.right += p.x;
-	r.top += p.y;
-	r.bottom += p.y;
-	dc.fillSolidRect(r, color.asCOLORREF());
+	context.fillRectangle(r.translate(p), color);
 	if(bounds != 0)
 		*bounds = r;
 }
 
-void LineLayout::TextRun::drawForeground(DC& dc, const POINT& p,
-		const Range<length_t>& range, const Color& color, const RECT* dirtyRect, const Overlay* overlay) const {
+void LineLayout::TextRun::drawForeground(Context& context, const Point<int>& p,
+		const Range<length_t>& range, const Color& color, const Rect<int>* dirtyRect, const Overlay* overlay) const {
 	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
 	if(truncatedRange.isEmpty())
 		return;
-	dc.selectObject(glyphs_->font->handle().get());
-	dc.setTextColor(color.asCOLORREF());
-	dc.setBkMode(TRANSPARENT);
 	const Range<size_t> glyphRange(
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
-	if(!glyphRange.isEmpty())
-		const HRESULT hr = ::ScriptTextOut(dc.get(), &glyphs_->fontCache,
+	if(!glyphRange.isEmpty()) {
+		context.setFont(*glyphs_->font);
+		context.setBackgroundMode(Context::TRANSPARENT_MODE);
+		::SetTextColor(context.engine()->nativeHandle().get(), color.asCOLORREF());
+		RECT temp;
+		if(dirtyRect != 0)
+			::SetRect(&temp, dirtyRect->x().beginning(), dirtyRect->y().beginning(), dirtyRect->x().end(), dirtyRect->y().end());
+		const HRESULT hr = ::ScriptTextOut(context.engine()->nativeHandle().get(), &glyphs_->fontCache,
 			p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			p.y - glyphs_->font->metrics().ascent(), 0, dirtyRect, &analysis_, 0, 0,
+			p.y - glyphs_->font->metrics().ascent(), 0, (dirtyRect != 0) ? &temp : 0, &analysis_, 0, 0,
 			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
 			glyphOffsets() + glyphRange.beginning());
+	}
 }
 
 /**
@@ -1001,12 +749,12 @@ inline bool LineLayout::TextRun::expandTabCharacters(const String& lineString, i
 }
 
 /// Fills the glyph array with default index, instead of using @c ScriptShape.
-inline void LineLayout::TextRun::generateDefaultGlyphs(const DC& dc,
+inline void LineLayout::TextRun::generateDefaultGlyphs(const Context& context,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs) {
 	SCRIPT_CACHE fontCache(0);
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
+	if(FAILED(::ScriptGetFontProperties(context.engine()->nativeHandle().get(), &fontCache, &fp)))
 		fp.wgDefault = 0;	// hmm...
 
 	manah::AutoBuffer<WORD> indices, clusters;
@@ -1032,7 +780,7 @@ inline void LineLayout::TextRun::generateDefaultGlyphs(const DC& dc,
 
 /**
  * Generates glyphs for the text.
- * @param dc the device context
+ * @param context the graphics context
  * @param text the text to generate glyphs
  * @param analysis the Uniscribe's @c SCRIPT_ANALYSIS object
  * @param[out] glyphs
@@ -1043,10 +791,10 @@ inline void LineLayout::TextRun::generateDefaultGlyphs(const DC& dc,
  * @retval HRESULT other Uniscribe error
  * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
  */
-HRESULT LineLayout::TextRun::generateGlyphs(const DC& dc,
+HRESULT LineLayout::TextRun::generateGlyphs(const Context& context,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs) {
 #ifdef _DEBUG
-	if(HFONT currentFont = dc.getCurrentFont()) {
+	if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(context.engine()->nativeHandle().get(), OBJ_FONT))) {
 		LOGFONTW lf;
 		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
 			DumpContext dout;
@@ -1064,7 +812,8 @@ HRESULT LineLayout::TextRun::generateGlyphs(const DC& dc,
 	while(true) {
 		indices.reset(new WORD[numberOfGlyphs]);
 		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-		hr = ::ScriptShape(dc.get(), &fontCache, text.beginning(), static_cast<int>(text.length()),
+		hr = ::ScriptShape(context.engine()->nativeHandle().get(), &fontCache,
+			text.beginning(), static_cast<int>(text.length()),
 			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
 			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 		if(hr != E_OUTOFMEMORY)
@@ -1149,9 +898,9 @@ namespace {
 		if(computedSizeAdjust < 0.0)
 			computedSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
 	}
-	pair<const Char*, tr1::shared_ptr<const AbstractFont> > findNextFontRun(
+	pair<const Char*, tr1::shared_ptr<const Font> > findNextFontRun(
 			const Range<const Char*>& text, tr1::shared_ptr<const RunStyle> requestedStyle,
-			tr1::shared_ptr<const AbstractFont> previousFont, const ILayoutInformationProvider& lip) {
+			tr1::shared_ptr<const Font> previousFont, const ILayoutInformationProvider& lip) {
 		String familyName;
 		FontProperties properties;
 		double sizeAdjust;
@@ -1164,6 +913,7 @@ namespace {
 
 /**
  * Merges the given item runs and the given style runs.
+ * @param context the graphics context
  * @param lineString
  * @param items the items itemized by @c #itemize()
  * @param numberOfItems the length of the array @a items
@@ -1173,7 +923,7 @@ namespace {
  * @param[out] styledRanges
  * @see presentation#Presentation#getLineStyle
  */
-void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString, const SCRIPT_ITEM scriptRuns[],
+void LineLayout::TextRun::mergeScriptsAndStyles(Context& context, const String& lineString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
 		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges) {
 	if(scriptRuns == 0)
@@ -1212,7 +962,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : lineString.length();
-	tr1::shared_ptr<const AbstractFont> font;	// font for current glyph run
+	tr1::shared_ptr<const Font> font;	// font for current glyph run
 	do {
 		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, styleRun.second ? styleRun.first.column : 0);
 		assert(
@@ -1235,7 +985,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
 
 		if(surrogates::next(lineString.data() + previousRunEnd,
 				lineString.data() + newRunEnd) < lineString.data() + newRunEnd || font.get() == 0) {
-			const pair<const Char*, tr1::shared_ptr<const AbstractFont> > nextFontRun(
+			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(lineString.data() + previousRunEnd, lineString.data() + newRunEnd),
 					styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>(), font, lip));
@@ -1296,7 +1046,7 @@ void LineLayout::TextRun::mergeScriptsAndStyles(DC& dc, const String& lineString
  * 
  * @see #merge, #substituteGlyphs
  */
-void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString, SimpleStyledRunIterator& styles) {
+void LineLayout::TextRun::positionGlyphs(const Context& context, const String& lineString, SimpleStyledRunIterator& styles) {
 	assert(glyphs_.get() != 0 && glyphs_.unique());
 	assert(glyphs_->indices.get() != 0 && glyphs_->advances.get() == 0);
 
@@ -1306,10 +1056,10 @@ void LineLayout::TextRun::positionGlyphs(const DC& dc, const String& lineString,
 	HRESULT hr = ::ScriptPlace(0, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 	if(hr == E_PENDING) {
-		HFONT oldFont = const_cast<DC&>(dc).selectObject(glyphs_->font->handle().get());
-		hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(context.engine()->nativeHandle().get(), glyphs_->font->nativeHandle().get()));
+		hr = ::ScriptPlace(context.engine()->nativeHandle().get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 			glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
-		const_cast<DC&>(dc).selectObject(oldFont);
+		::SelectObject(context.engine()->nativeHandle().get(), oldFont);
 	}
 	if(FAILED(hr))
 		throw hr;
@@ -1408,21 +1158,21 @@ namespace {
 	}
 } // namespace @0
 
-void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutInformationProvider& lip) {
+void LineLayout::TextRun::shape(Context& context, const String& lineString, const ILayoutInformationProvider& lip) {
 	assert(glyphs_.unique());
 
 	// TODO: check if the requested style (or the default one) disables shaping.
 
-	HFONT oldFont = dc.selectObject(static_cast<const SystemFont*>(glyphs_->font.get())->handle().get());
+	context.setFont(*glyphs_->font);
 	const StringPiece text(lineString.data() + beginning(), lineString.data() + end());
 	int numberOfGlyphs;
-	HRESULT hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
+	HRESULT hr = generateGlyphs(context, text, analysis_, *glyphs_, numberOfGlyphs);
 	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 		analysis_.eScript = SCRIPT_UNDEFINED;
-		hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
+		hr = generateGlyphs(context, text, analysis_, *glyphs_, numberOfGlyphs);
 	}
 	if(FAILED(hr))
-		generateDefaultGlyphs(dc, text, analysis_, *glyphs_);
+		generateDefaultGlyphs(context, text, analysis_, *glyphs_);
 
 	// commit
 	glyphRange_ = Range<WORD>(0, static_cast<WORD>(numberOfGlyphs));
@@ -1482,7 +1232,7 @@ void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutI
 		// bidirectional format controls
 		FontProperties fp;
 		fp.size = computedFontProperties.size;
-		tr1::shared_ptr<const AbstractFont> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
+		tr1::shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
 		oldFont = dc.selectObject((font_ = font)->handle().get());
 		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, lineString.data()))) {
 			analysis_.eScript = SCRIPT_UNDEFINED;
@@ -1508,7 +1258,7 @@ void LineLayout::TextRun::shape(DC& dc, const String& lineString, const ILayoutI
 		// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
 
 		int script = NOT_PROPERTY;	// script of the run for fallback
-		typedef vector<pair<tr1::shared_ptr<const AbstractFont>, int> > FailedFonts;
+		typedef vector<pair<tr1::shared_ptr<const Font>, int> > FailedFonts;
 		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
 		int numberOfMissingGlyphs;
 
@@ -1770,12 +1520,12 @@ auto_ptr<LineLayout::TextRun> LineLayout::TextRun::splitIfTooLong(const String& 
 
 /**
  * 
- * @param dc the device context
+ * @param context the graphics context
  * @param runs the minimal runs
  * @param lineString the line string
  * @see #merge, #positionGlyphs
  */
-void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>& runs, const String& lineString) {
+void LineLayout::TextRun::substituteGlyphs(const Context& context, const Range<TextRun**>& runs, const String& lineString) {
 	// this method processes the following substitutions:
 	// 1. missing glyphs
 	// 2. ideographic variation sequences (if Uniscribe did not support)
@@ -1802,11 +1552,11 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 						StringCharacterIterator baseCharacter(i);
 						baseCharacter.previous();
-						if(static_cast<const SystemFont*>(run.glyphs_->font.get())->ivsGlyph(
+						if(run.glyphs_->font->ivsGlyph(
 								baseCharacter.current(), variationSelector,
 								run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - lineString.data()]])) {
-							run.glyphs_->vanish(dc, i.tell() - lineString.data() - run.beginning());
-							run.glyphs_->vanish(dc, i.tell() - lineString.data() - run.beginning() + 1);
+							run.glyphs_->vanish(context, i.tell() - lineString.data() - run.beginning());
+							run.glyphs_->vanish(context, i.tell() - lineString.data() - run.beginning() + 1);
 						}
 					}
 				}
@@ -1820,10 +1570,10 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 					const CodePoint baseCharacter = surrogates::decodeLast(
 						lineString.data() + run.beginning(), lineString.data() + run.end());
-					if(static_cast<const SystemFont*>(run.glyphs_->font.get())->ivsGlyph(
-							baseCharacter, variationSelector, run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
-						next.glyphs_->vanish(dc, 0);
-						next.glyphs_->vanish(dc, 1);
+					if(run.glyphs_->font->ivsGlyph(baseCharacter, variationSelector,
+							run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
+						next.glyphs_->vanish(context, 0);
+						next.glyphs_->vanish(context, 1);
 					}
 				}
 			}
@@ -1835,7 +1585,7 @@ void LineLayout::TextRun::substituteGlyphs(const DC& dc, const Range<TextRun**>&
 
 inline int LineLayout::TextRun::x(length_t at, bool trailing) const {
 	if(at < beginning() || at > end())
-		throw BadPositionException(Position(INVALID_INDEX, at));
+		throw k::BadPositionException(k::Position(INVALID_INDEX, at));
 	int result;
 	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at - beginning()), trailing,
 		static_cast<int>(length()), numberOfGlyphs(), clusters(), visualAttributes(),
@@ -1854,48 +1604,58 @@ inline int LineLayout::TextRun::x(length_t at, bool trailing) const {
 // helpers for LineLayout.draw
 namespace {
 	const size_t MAXIMUM_RUN_LENGTH = 1024;
-	inline HPEN createPen(COLORREF color, int width, int style) {
+	inline Handle<HPEN> createPen(const Color& color, int width, int style) {
+		if(color == Color() || color.alpha() < 0xff)
+			throw invalid_argument("color");
 		LOGBRUSH brush;
-		brush.lbColor = color;
+		brush.lbColor = color.asCOLORREF();
 		brush.lbStyle = BS_SOLID;
+		HPEN pen = 0;
 		switch(style) {
 		case 1:	// solid
-			return (width == 1) ? ::CreatePen(PS_SOLID, 1, color) : ::ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+			pen = (width == 1) ? ::CreatePen(PS_SOLID, 1, color.asCOLORREF())
+				: ::ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_FLAT, width, &brush, 0, 0);
 		case 2:	// dashed
-			return ::ExtCreatePen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+			pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, width, &brush, 0, 0);
 		case 3:	// dotted
-			return ::ExtCreatePen(PS_GEOMETRIC | PS_DOT | PS_ENDCAP_FLAT, width, &brush, 0, 0);
+			pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DOT | PS_ENDCAP_FLAT, width, &brush, 0, 0);
 		}
-		throw UnknownValueException("style");
+		if(pen == 0)
+			throw UnknownValueException("style");
+		return Handle<HPEN>(pen, &::DeleteObject);
 	}
-	inline void drawDecorationLines(DC& dc, const RunStyle& style, COLORREF foregroundColor, int x, int y, int width, int height) {
+	inline void drawDecorationLines(Context& context, const RunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
 		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
+			const Handle<HDC> dc(context.engine()->nativeHandle());
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
-			if(getDecorationLineMetrics(dc.get(), &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
+			if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
 				if(style.decorations.underline.style != Decorations::NONE) {
-					HPEN oldPen = dc.selectObject(createPen((style.decorations.underline.color != Color()) ?
-						style.decorations.underline.color.asCOLORREF() : foregroundColor, underlineThickness, style.decorations.underline.style));
+					Handle<HPEN> pen(createPen((style.decorations.underline.color != Color()) ?
+						style.decorations.underline.color : foregroundColor, underlineThickness, style.decorations.underline.style));
+					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.use()));
 					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
-					dc.moveTo(x, underlineY);
-					dc.lineTo(x + width, underlineY);
-					::DeleteObject(dc.selectObject(oldPen));
+					::MoveToEx(dc.get(), x, underlineY, 0);
+					::LineTo(dc.get(), x + width, underlineY);
+					::SelectObject(dc.get(), oldPen);
 				}
 				// draw strikethrough line
 				if(style.decorations.strikethrough.style != Decorations::NONE) {
-					HPEN oldPen = dc.selectObject(createPen((style.decorations.strikethrough.color != Color()) ?
-						style.decorations.strikethrough.color.asCOLORREF() : foregroundColor, linethroughThickness, 1));
+					Handle<HPEN> pen(createPen((style.decorations.strikethrough.color != Color()) ?
+						style.decorations.strikethrough.color : foregroundColor, linethroughThickness, 1));
+					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.use()));
 					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
-					dc.moveTo(x, strikeoutY);
-					dc.lineTo(x + width, strikeoutY);
-					::DeleteObject(dc.selectObject(oldPen));
+					::MoveToEx(dc.get(), x, strikeoutY, 0);
+					::LineTo(dc.get(), x + width, strikeoutY);
+					::SelectObject(dc.get(), oldPen);
 				}
 			}
 		}
 	}
-	inline void drawBorder(DC& dc, const Border& style, const IFontMetrics& fontMetrics,
-			const Color& currentColor, int start, int before, int end, int after) {
+	inline void drawBorder(Context& context, const Border& style,
+			const Font::Metrics& fontMetrics, const Color& currentColor, int start, int before, int end, int after) {
 		// TODO: rewrite later.
+		const Handle<HDC> dc(context.engine()->nativeHandle());
 		const Border::Part* const styles[] = {&style.before, &style.after, &style.start, &style.end};
 		const POINT points[4][2] = {
 			{{start, before}, {end, before}},
@@ -1905,13 +1665,14 @@ namespace {
 		};
 		for(size_t i = 0; i < MANAH_COUNTOF(styles); ++i) {
 			if(styles[i]->style != Border::NONE && styles[i]->style != Border::HIDDEN) {
-				const int width = pixels(dc,  styles[i]->width, true, fontMetrics);
+				const int width = pixels(context, styles[i]->width, true, fontMetrics);
 				if(width != 0) {
-					HPEN oldPen = dc.selectObject(createPen(
-						((styles[i]->color != Color()) ? styles[i]->color : currentColor).asCOLORREF(), width, styles[i]->style));
-					dc.moveTo(points[i][0].x, points[i][0].y);
-					dc.lineTo(points[i][1].x, points[i][1].y);
-					dc.selectObject(oldPen);
+					Handle<HPEN> pen(createPen(
+						((styles[i]->color != Color()) ? styles[i]->color : currentColor), width, styles[i]->style));
+					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.use()));
+					::MoveToEx(dc.get(), points[i][0].x, points[i][0].y, 0);
+					::LineTo(dc.get(), points[i][1].x, points[i][1].y);
+					::SelectObject(dc.get(), oldPen);
 				}
 			}
 		}
@@ -1990,7 +1751,7 @@ namespace {
  * @param line the line
  * @throw kernel#BadPositionException @a line is invalid
  */
-LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformation,
+LineLayout::LineLayout(Context& context, const ILayoutInformationProvider& layoutInformation,
 		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().lineStyle(line)),
 		runs_(0), numberOfRuns_(0), sublineOffsets_(0), sublineFirstRuns_(0), numberOfSublines_(0), longestSublineWidth_(-1), wrapWidth_(-1) {
 	assert(style_.get() != 0);
@@ -1999,9 +1760,9 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
 		wrapWidth_ = layoutInformation.width();
 		if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
-			ISpecialCharacterRenderer::LayoutContext context(dc);
-			context.readingDirection = readingDirection();
-			wrapWidth_ -= scr->getLineWrappingMarkWidth(context);
+			ISpecialCharacterRenderer::LayoutContext lc(context);
+			lc.readingDirection = readingDirection();
+			wrapWidth_ -= scr->getLineWrappingMarkWidth(lc);
 		}
 	}
 
@@ -2066,7 +1827,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRun*> textRuns;
 	vector<const StyledRun> styledRanges;
-	TextRun::mergeScriptsAndStyles(dc, lineString.data(),
+	TextRun::mergeScriptsAndStyles(context, lineString.data(),
 		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
 		presentation.textRunStyles(lineNumber()), lip_, textRuns, styledRanges);
 	runs_ = new TextRun*[numberOfRuns_ = textRuns.size()];
@@ -2076,12 +1837,12 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 
 	// 3. generate glyphs for each text runs
 	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->shape(dc, lineString, lip_);
-	TextRun::substituteGlyphs(dc, Range<TextRun**>(runs_, runs_ + numberOfRuns_), lineString);
+		runs_[i]->shape(context, lineString, lip_);
+	TextRun::substituteGlyphs(context, Range<TextRun**>(runs_, runs_ + numberOfRuns_), lineString);
 
 	// 4. position glyphs for each text runs
 	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->positionGlyphs(dc, lineString, SimpleStyledRunIterator(Range<const StyledRun*>(
+		runs_[i]->positionGlyphs(context, lineString, SimpleStyledRunIterator(Range<const StyledRun*>(
 			styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), runs_[i]->beginning()));
 
 	// wrap into visual sublines and reorder runs in each sublines
@@ -2092,7 +1853,7 @@ LineLayout::LineLayout(DC& dc, const ILayoutInformationProvider& layoutInformati
 		reorder();
 		expandTabsWithoutWrapping();
 	} else {
-		wrap(dc);
+		wrap(context);
 		reorder();
 		if(style_->alignment == JUSTIFY)
 			justify();
@@ -2148,7 +1909,7 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
  * @throw std#invalid_argument @a first is greater than @a last
  * @see #bounds(void), #bounds(length_t, length_t), #sublineBounds, #sublineIndent
  */
-Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
+Handle<HRGN> LineLayout::blackBoxBounds(length_t first, length_t last) const {
 	if(first > last)
 		throw invalid_argument("first is greater than last.");
 	else if(last > text().length())
@@ -2156,7 +1917,7 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
-		return Rgn::createRect(0, 0, 0, linePitch());
+		return Handle<HRGN>(::CreateRectRgn(0, 0, 0, linePitch()), &::DeleteObject);
 
 	const length_t firstSubline = subline(first), lastSubline = subline(last);
 	vector<RECT> rectangles;
@@ -2201,7 +1962,8 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
 		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = rectangles[i].bottom;
 	}
 	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
-	return Rgn::createPolyPolygon(vertices.get(), numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING);
+	return Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
+		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 
 /**
@@ -2210,11 +1972,8 @@ Rgn LineLayout::blackBoxBounds(length_t first, length_t last) const {
  * @return the size of the bounds
  * @see #blackBoxBounds, #bounds(length_t, length_t), #sublineBounds
  */
-SIZE LineLayout::bounds() const /*throw()*/ {
-	SIZE s;
-	s.cx = longestSublineWidth();
-	s.cy = static_cast<long>(linePitch() * numberOfSublines_);
-	return s;
+Dimension<int> LineLayout::bounds() const /*throw()*/ {
+	return Dimension<int>(longestSublineWidth(), static_cast<long>(linePitch() * numberOfSublines_));
 }
 
 /**
@@ -2228,36 +1987,32 @@ SIZE LineLayout::bounds() const /*throw()*/ {
  * @throw std#invalid_argument @a first is greater than @a last
  * @see #blackBoxBounds, #bounds(void), #sublineBounds, #sublineIndent
  */
-RECT LineLayout::bounds(length_t first, length_t last) const {
+Rect<int> LineLayout::bounds(length_t first, length_t last) const {
 	if(first > last)
 		throw invalid_argument("first is greater than last.");
 	else if(last > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, last));
-	RECT bounds;	// the result
-	int cx;
 
 	// handle empty line
-	if(numberOfRuns_ == 0) {
-		bounds.left = bounds.top = bounds.right = 0;
-		bounds.bottom = bounds.top + linePitch();
-		return bounds;
-	}
+	if(numberOfRuns_ == 0)
+		return Rect<int>(Point<int>(0, 0), Dimension<int>(0, linePitch()));
 
 	// determine the top and the bottom (it's so easy)
+	Rect<int> bounds;	// the result
 	const length_t firstSubline = subline(first), lastSubline = subline(last);
-	bounds.top = static_cast<LONG>(linePitch() * firstSubline);
-	bounds.bottom = static_cast<LONG>(linePitch() * (lastSubline + 1));
+	bounds.setY(Range<int>(
+		static_cast<int>(linePitch() * firstSubline), static_cast<LONG>(linePitch() * (lastSubline + 1))));
 
 	// find side bounds between 'firstSubline' and 'lastSubline'
-	bounds.left = numeric_limits<LONG>::max();
-	bounds.right = numeric_limits<LONG>::min();
+	int left = numeric_limits<LONG>::max(), right = numeric_limits<LONG>::min();
 	for(length_t subline = firstSubline + 1; subline < lastSubline; ++subline) {
-		const LONG indent = sublineIndent(subline);
-		bounds.left = min(indent, bounds.left);
-		bounds.right = max(indent + sublineWidth(subline), bounds.right);
+		const int indent = sublineIndent(subline);
+		left = min(indent, left);
+		right = max(indent + sublineWidth(subline), right);
 	}
 
 	// find side bounds in 'firstSubline' and 'lastSubline'
+	int cx;
 	const length_t firstAndLast[2] = {firstSubline, lastSubline};
 	for(size_t i = 0; i < MANAH_COUNTOF(firstAndLast); ++i) {
 		const length_t subline = firstAndLast[i];
@@ -2265,13 +2020,13 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 		// find left bound
 		cx = sublineIndent(subline);
 		for(size_t j = sublineFirstRuns_[subline]; j < endOfRuns; ++j) {
-			if(cx >= bounds.left)
+			if(cx >= left)
 				break;
 			const TextRun& run = *runs_[j];
 			if(first <= run.end() && last >= run.beginning()) {
 				const int x = run.x((
 					(run.readingDirection() == LEFT_TO_RIGHT) ? max(first, run.beginning()) : min(last, run.end())), false);
-				bounds.left = min<LONG>(cx + x, bounds.left);
+				left = min(cx + x, left);
 				break;
 			}
 			cx += run.totalWidth();
@@ -2279,13 +2034,13 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 		// find right bound
 		cx = sublineIndent(firstSubline) + sublineWidth(lastSubline);
 		for(size_t j = endOfRuns - 1; ; --j) {
-			if(cx <= bounds.right)
+			if(cx <= right)
 				break;
 			const TextRun& run = *runs_[j];
 			if(first <= run.end() && last >= run.beginning()) {
 				const int x = run.x((
 					(run.readingDirection() == LEFT_TO_RIGHT) ? min(last, run.end()) : max(first, run.beginning())), false);
-				bounds.right = max<LONG>(cx - run.totalWidth() + x, bounds.right);
+				right = max(cx - run.totalWidth() + x, right);
 				break;
 			}
 			if(j == sublineFirstRuns_[subline])
@@ -2293,6 +2048,7 @@ RECT LineLayout::bounds(length_t first, length_t last) const {
 			cx -= run.totalWidth();
 		}
 	}
+	bounds.setX(Range<int>(left, right));
 
 	return bounds;
 }
@@ -2324,37 +2080,41 @@ inline void LineLayout::dispose() /*throw()*/ {
 
 /**
  * Draws the layout to the output device.
- * @param dc the device context
+ * @param context the rendering context
  * @param x the x-coordinate of the position to draw
  * @param y the y-coordinate of the position to draw
  * @param paintRect the region to draw
  * @param clipRect the clipping region
  * @param selection defines the region and the color of the selection
  */
-void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& clipRect, const Selection* selection) const /*throw()*/ {
+void LineLayout::draw(Context& context, int x, int y, const Rect<int>& paintRect,
+		const Rect<int>& clipRect, const Selection* selection) const /*throw()*/ {
 	const int dy = linePitch();
 
 	// empty line
 	if(isDisposed()) {
-		RECT r;
-		r.left = max(paintRect.left, clipRect.left);
-		r.top = max(clipRect.top, max<long>(paintRect.top, y));
-		r.right = min(paintRect.right, clipRect.right);
-		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + dy));
 		const Colors lineColor = lip_.presentation().getLineColor(lineNumber_);
-		dc.fillSolidRect(r, systemColors.serve(lineColor.background, COLOR_WINDOW));
+		context.fillRectangle(
+			Rect<int>(
+				Point<int>(
+					max(paintRect.x().beginning(), clipRect.x().beginning()),
+					max(clipRect.y().beginning(), max(paintRect.y().beginning(), y))),
+				Point<int>(
+					min(paintRect.x().end(), clipRect.x().end()),
+					min(clipRect.y().end(), min(paintRect.y().end(), y + dy)))),
+			Color::fromCOLORREF(systemColors.serve(lineColor.background, COLOR_WINDOW)));
 		return;
 	}
 
 	// skip to the subline needs to draw
-	length_t subline = (y + dy >= paintRect.top) ? 0 : (paintRect.top - (y + dy)) / dy;
+	length_t subline = (y + dy >= paintRect.y().beginning()) ? 0 : (paintRect.y().beginning() - (y + dy)) / dy;
 	if(subline >= numberOfSublines_)
 		return;	// this logical line does not need to draw
 	y += static_cast<int>(dy * subline);
 
 	for(; subline < numberOfSublines_; ++subline) {
-		draw(subline, dc, x, y, paintRect, clipRect, selection);
-		if((y += dy) >= paintRect.bottom)	// to next subline
+		draw(subline, context, x, y, paintRect, clipRect, selection);
+		if((y += dy) >= paintRect.y().end())	// to next subline
 			break;
 	}
 }
@@ -2362,7 +2122,7 @@ void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& c
 /**
  * Draws the specified subline layout to the output device.
  * @param subline the visual subline
- * @param dc the device context
+ * @param context the graphics context
  * @param x the x-coordinate of the position to draw
  * @param y the y-coordinate of the position to draw
  * @param paintRect the region to draw
@@ -2370,8 +2130,8 @@ void LineLayout::draw(DC& dc, int x, int y, const RECT& paintRect, const RECT& c
  * @param selection defines the region and the color of the selection. can be @c null
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
-void LineLayout::draw(length_t subline, DC& dc,
-		int x, int y, const RECT& paintRect, const RECT& clipRect, const Selection* selection) const {
+void LineLayout::draw(length_t subline, Context& context,
+		int x, int y, const Rect<int>& paintRect, const Rect<int>& clipRect, const Selection* selection) const {
 	if(subline >= numberOfSublines_)
 		throw IndexOutOfBoundsException("subline");
 
@@ -2387,25 +2147,27 @@ void LineLayout::draw(length_t subline, DC& dc,
 	const int dy = linePitch();
 	const int lineHeight = lip_.textMetrics().cellHeight();
 	const Colors lineColor = lip_.presentation().getLineColor(lineNumber_);
-	const COLORREF marginColor = systemColors.serve(lineColor.background, COLOR_WINDOW);
-	ISpecialCharacterRenderer::DrawingContext context(dc);
+	const Color marginColor(Color::fromCOLORREF(systemColors.serve(lineColor.background, COLOR_WINDOW)));
+	ISpecialCharacterRenderer::DrawingContext dc(context);
 	ISpecialCharacterRenderer* specialCharacterRenderer = lip_.specialCharacterRenderer();
 
-	if(specialCharacterRenderer != 0) {
-		context.rect.top = y;
-		context.rect.bottom = y + lineHeight;
-	}
+	if(specialCharacterRenderer != 0)
+		context.rect.setY(Range<int>(y, y + lineHeight));
 
-	const int savedCookie = dc.save();
-	dc.setTextAlign(TA_TOP | TA_LEFT | TA_NOUPDATECP);
-	if(isDisposed()) {	// empty line
-		RECT r;
-		r.left = max(paintRect.left, clipRect.left);
-		r.top = max(clipRect.top, max<long>(paintRect.top, y));
-		r.right = min(paintRect.right, clipRect.right);
-		r.bottom = min(clipRect.bottom, min<long>(paintRect.bottom, y + dy));
-		dc.fillSolidRect(r, marginColor);
-	} else {
+	context.save();
+	::SetTextAlign(context.engine()->nativeHandle().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
+	if(isDisposed())	// empty line
+		context.fillRectangle(
+			Rect<int>(
+				Point<int>(
+					max(paintRect.x().beginning(), clipRect.x().beginning()),
+					max(clipRect.y().beginning(), max(paintRect.y().beginning(), y))),
+				Point<int>(
+					min(paintRect.x().end(), clipRect.x().end()),
+					min(clipRect.y().end(), min(paintRect.y().end(), y + dy)))
+			),
+			marginColor);
+	else {
 		const String& line = text();
 		HRESULT hr;
 		Range<length_t> selectedRange;
@@ -2421,11 +2183,17 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// 5. draw the foreground glyphs
 
 		// 1. paint gap of sublines
-		POINT basePoint = {x, y};
-		Rgn clipRegion(Rgn::createRect(clipRect.left, max<long>(basePoint.y, clipRect.top), clipRect.right, min<long>(basePoint.y + dy, clipRect.bottom)));
+		Point<int> basePoint(x, y);
+		Handle<HRGN> clipRegion(::CreateRectRgn(
+			clipRect.x().beginning(), max(basePoint.y, clipRect.y().beginning()),
+			clipRect.x().end(), min<long>(basePoint.y + dy, clipRect.y().end())), &::DeleteObject);
 //		dc.selectClipRgn(clipRegion.getHandle());
 		if(dy - lineHeight > 0)
-			dc.fillSolidRect(paintRect.left, basePoint.y + lineHeight, paintRect.right - paintRect.left, dy - lineHeight, marginColor);
+			context.fillRectangle(
+				Rect<int>(
+					Point<int>(paintRect.x().beginning(), basePoint.y + lineHeight),
+					Dimension<int>(paintRect.x().end() - paintRect.x().beginning(), dy - lineHeight)),
+				marginColor);
 
 		basePoint.x += sublineIndent(subline);
 
@@ -2436,22 +2204,28 @@ void LineLayout::draw(length_t subline, DC& dc,
 		size_t lastRun = (subline < numberOfSublines_ - 1) ? sublineFirstRuns_[subline + 1] : numberOfRuns_;
 
 		// 2. paint the left margin
-		if(basePoint.x > paintRect.left)
-			dc.fillSolidRect(paintRect.left, basePoint.y, basePoint.x - paintRect.left, lineHeight, marginColor);
+		if(basePoint.x > paintRect.x().beginning())
+			context.fillRectangle(
+				Rect<int>(
+					Point<int>(paintRect.x().beginning(), basePoint.y),
+					Dimension<int>(basePoint.x - paintRect.x().beginning(), lineHeight)),
+				marginColor);
 
 		// 3. paint background of the text runs
 		int startX = basePoint.x;
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const TextRun& run = *runs_[i];
-			if(basePoint.x + run.totalWidth() < paintRect.left) {	// this run does not need to draw
+			if(basePoint.x + run.totalWidth() < paintRect.x().beginning()) {	// this run does not need to draw
 				++firstRun;
 				startX = basePoint.x + run.totalWidth();
 			} else {
 				basePoint.y += run.font()->metrics().ascent();
 				if(selection != 0 && selectedRange.includes(run)) {
-					RECT selectedBounds;
-					run.drawBackground(dc, basePoint, run, selection->color().background, &paintRect, &selectedBounds);
-					dc.excludeClipRect(selectedBounds);
+					Rect<int> selectedBounds;
+					run.drawBackground(context, basePoint, run, selection->color().background, &paintRect, &selectedBounds);
+					::ExcludeClipRect(context.engine()->nativeHandle().get(),
+						selectedBounds.x().beginning(), selectedBounds.y().beginning(),
+						selectedBounds.x().end(), selectedBounds.y().end());
 				} else {
 					StyledRunEnumerator i(auto_ptr<IStyledRunIterator>(
 						new SimpleStyledRunIterator(Range<const StyledRun*>(
@@ -2462,36 +2236,38 @@ void LineLayout::draw(length_t subline, DC& dc,
 						if(range.beginning() < run.beginning())
 							range = Range<length_t>(run.beginning(), range.end());
 						if(selection == 0 || range.end() <= selectedRange.beginning() || range.beginning() >= selectedRange.end())
-							run.drawBackground(dc, basePoint, range,
-								(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
+							run.drawBackground(context, basePoint, range,
+								(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &paintRect, 0);
 						else {
 							// paint before selection
 							if(selectedRange.beginning() > range.beginning())
-								run.drawBackground(dc, basePoint, Range<length_t>(range.beginning(), selectedRange.beginning()),
-									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
+								run.drawBackground(context, basePoint, Range<length_t>(range.beginning(), selectedRange.beginning()),
+									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &paintRect, 0);
 							// paint selection
-							RECT selectedBounds;
-							run.drawBackground(dc, basePoint, selectedRange, selection->color().background, &paintRect, &selectedBounds);
-							dc.excludeClipRect(selectedBounds);
+							Rect<int> selectedBounds;
+							run.drawBackground(context, basePoint, selectedRange, selection->color().background, &paintRect, &selectedBounds);
+							::ExcludeClipRect(context.engine()->nativeHandle().get(),
+								selectedBounds.x().beginning(), selectedBounds.y().beginning(),
+								selectedBounds.x().end(), selectedBounds.y().end());
 							// paint after selection
 							if(selectedRange.end() < range.end())
-								run.drawBackground(dc, basePoint, Range<length_t>(selectedRange.end(), range.end()),
-									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : Color::fromCOLORREF(marginColor), &paintRect, 0);
+								run.drawBackground(context, basePoint, Range<length_t>(selectedRange.end(), range.end()),
+									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &paintRect, 0);
 						}
 					}
 				}
 				basePoint.y -= run.font()->metrics().ascent();
 			}
 			basePoint.x += run.totalWidth();
-			if(basePoint.x >= paintRect.right) {
+			if(basePoint.x >= paintRect.x().end()) {
 				lastRun = i + 1;
 				break;
 			}
 		}
 
 		// 4. paint the right margin
-		if(basePoint.x < paintRect.right)
-			dc.fillSolidRect(basePoint.x, basePoint.y, paintRect.right - basePoint.x, dy, marginColor);
+		if(basePoint.x < paintRect.x().end())
+			context.fillRectangle(Rect<int>(basePoint, Dimension<int>(paintRect.x().end() - basePoint.x, dy)), marginColor);
 
 		// 5. draw the foreground glyphs
 		basePoint.x = startX;
@@ -2507,7 +2283,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 				new SimpleStyledRunIterator(Range<const StyledRun*>(
 					styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
 			for(; j.hasNext(); j.next())
-				run.drawForeground(dc, basePoint, j.currentRange(), j.currentStyle()->foreground, &paintRect, 0);
+				run.drawForeground(context, basePoint, j.currentRange(), j.currentStyle()->foreground, &paintRect, 0);
 			basePoint.y -= run.font()->metrics().ascent();
 			basePoint.x += run.totalWidth();
 		}
@@ -2515,12 +2291,12 @@ void LineLayout::draw(length_t subline, DC& dc,
 		// 6. draw the selected foreground glyphs
 		if(selection != 0) {
 			basePoint.x = startX;
-			dc.selectClipRgn(Rgn::createRect(paintRect).get(), RGN_XOR);
+			::ExtSelectClipRgn(context.engine()->nativeHandle().get(), Handle<HRGN>(::CreateRectRgnIndirect(&toNative(paintRect))).get(), RGN_XOR);
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				const TextRun& run = *runs_[i];
 				if(run.beginning() < selectedRange.end() && run.end() > selectedRange.beginning()) {
 					basePoint.y += run.font()->metrics().ascent();
-					run.drawForeground(dc, basePoint, selectedRange, selection->color().foreground, &paintRect, 0);
+					run.drawForeground(context, basePoint, selectedRange, selection->color().foreground, &paintRect, 0);
 					basePoint.y -= run.font()->metrics().ascent();
 				}
 				basePoint.x += run.totalWidth();
@@ -2528,7 +2304,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		}
 #if 0
 		// draw outside of the selection
-		RECT runRect;
+		Rect<int> runRect;
 		runRect.top = y;
 		runRect.bottom = y + dy;
 		runRect.left = x = startX;
@@ -2590,16 +2366,10 @@ void LineLayout::draw(length_t subline, DC& dc,
 				context.readingDirection = run.readingDirection();
 				for(length_t j = run.beginning(); j < run.end(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-						context.rect.left = x + run.x(j, false);
-						context.rect.right = x + run.x(j, true);
-						if(context.rect.left > context.rect.right)
-							swap(context.rect.left, context.rect.right);
+						context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
 						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
 					} else if(isC0orC1Control(line[j])) {
-						context.rect.left = x + run.x(j, false);
-						context.rect.right = x + run.x(j, true);
-						if(context.rect.left > context.rect.right)
-							swap(context.rect.left, context.rect.right);
+						context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
 						specialCharacterRenderer->drawControlCharacter(context, line[j]);
 					}
 				}
@@ -2617,24 +2387,18 @@ void LineLayout::draw(length_t subline, DC& dc,
 		context.readingDirection = lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle());
 		if(subline < numberOfSublines_ - 1) {	// line wrapping mark
 			const int markWidth = specialCharacterRenderer->getLineWrappingMarkWidth(context);
-			if(context.readingDirection == LEFT_TO_RIGHT) {
-				context.rect.right = lip_.width();
-				context.rect.left = context.rect.right - markWidth;
-			} else {
-				context.rect.left = 0;
-				context.rect.right = markWidth;
-			}
+			if(context.readingDirection == LEFT_TO_RIGHT)
+				context.rect.setX(makeRange(lip_.width() - markWidth, lip_.width());
+			else
+				context.rect.setX(makeRange(0, markWidth));
 			specialCharacterRenderer->drawLineWrappingMark(context);
 		} else if(lineNumber_ < document.numberOfLines() - 1) {	// line teminator
 			const kernel::Newline nlf = document.getLineInformation(lineNumber_).newline();
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
-			if(context.readingDirection == LEFT_TO_RIGHT) {
-				context.rect.left = x;
-				context.rect.right = x + nlfWidth;
-			} else {
-				context.rect.left = x - nlfWidth;
-				context.rect.right = x;
-			}
+			if(context.readingDirection == LEFT_TO_RIGHT)
+				context.rect.setX(makeRange(x, x + nlfWidth));
+			else
+				context.rect.setX(makeRange(x - nlfWidth, x));
 			if(selection != 0) {
 				const Position eol(lineNumber_, document.lineLength(lineNumber_));
 				if(!selection->caret().isSelectionRectangle()
@@ -2648,7 +2412,7 @@ void LineLayout::draw(length_t subline, DC& dc,
 		}
 #endif
 	}
-	dc.restore(savedCookie);
+	context.restore();
 }
 
 #ifdef _DEBUG
@@ -2798,7 +2562,7 @@ inline int LineLayout::linePitch() const /*throw()*/ {
 }
 
 // implements public location methods
-void LineLayout::locations(length_t column, POINT* leading, POINT* trailing) const {
+void LineLayout::locations(length_t column, Point<int>* leading, Point<int>* trailing) const {
 	assert(leading != 0 || trailing != 0);
 	if(column > text().length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
@@ -3014,15 +2778,12 @@ StyledRun LineLayout::styledTextRun(length_t column) const {
  * @throw IndexOutOfBoundsException @a subline is greater than the number of the wrapped lines
  * @see #sublineIndent
  */
-RECT LineLayout::sublineBounds(length_t subline) const {
+Rect<int> LineLayout::sublineBounds(length_t subline) const {
 	if(subline >= numberOfSublines_)
 		throw IndexOutOfBoundsException("subline");
-	RECT rc;
-	rc.left = sublineIndent(subline);
-	rc.top = linePitch() * static_cast<long>(subline);
-	rc.right = rc.left + sublineWidth(subline);
-	rc.bottom = rc.top + linePitch();
-	return rc;
+	return Rect<int>(
+		Point<int>(sublineIndent(subline), linePitch() * static_cast<long>(subline)),
+		Dimension<int>(sublineWidth(subline), linePitch()));
 }
 
 /**
@@ -3078,14 +2839,14 @@ inline const String& LineLayout::text() const /*throw()*/ {
 }
 
 /// Locates the wrap points and resolves tab expansions.
-void LineLayout::wrap(DC& dc) /*throw()*/ {
+void LineLayout::wrap(Context& context) /*throw()*/ {
 	assert(numberOfRuns_ != 0 && lip_.layoutSettings().lineWrap.wraps());
 	assert(numberOfSublines_ == 0 && sublineOffsets_ == 0 && sublineFirstRuns_ == 0);
 
 	const String& lineString = text();
 	vector<length_t> sublineFirstRuns;
 	sublineFirstRuns.push_back(0);
-	const int cookie = dc.save();
+	context.save();
 	int x1 = 0;	// addresses the beginning of the run. see x2
 	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	manah::AutoBuffer<int> logicalWidths;
@@ -3169,7 +2930,7 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					auto_ptr<TextRun> followingRun(run->breakAt(dc, lastBreakable, lineString, lip_));
+					auto_ptr<TextRun> followingRun(run->breakAt(context, lastBreakable, lineString, lip_));
 					newRuns.push_back(run);
 					assert(sublineFirstRuns.empty() || newRuns.size() != sublineFirstRuns.back());
 					sublineFirstRuns.push_back(newRuns.size());
@@ -3188,7 +2949,7 @@ void LineLayout::wrap(DC& dc) /*throw()*/ {
 		x1 += widthInThisRun;
 	}
 //dout << L"...broke the all lines.\n";
-	dc.restore(cookie);
+	context.restore();
 	if(newRuns.empty())
 		newRuns.push_back(0);
 	delete[] runs_;
@@ -3257,7 +3018,7 @@ StyledRun LineLayout::StyledSegmentIterator::current() const /*throw()*/ {
  *                   line was not changed
  * @throw std#invalid_argument @a bufferSize is zero
  */
-LineLayoutBuffer::LineLayoutBuffer(Document& document, length_t bufferSize, bool autoRepair) :
+LineLayoutBuffer::LineLayoutBuffer(k::Document& document, length_t bufferSize, bool autoRepair) :
 		document_(document), bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
 		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
 	pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
@@ -3308,7 +3069,7 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 //	const size_t originalSize = layouts_.size();
 	length_t oldSublines = 0, cachedLines = 0;
 	if(repair) {
-		DC dc;
+		auto_ptr<Context> context;
 		length_t newSublines = 0, actualFirst = last, actualLast = first;
 		for(list<LineLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
 			LineLayout*& layout = *i;
@@ -3316,9 +3077,9 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 			if(lineNumber >= first && lineNumber < last) {
 				oldSublines += layout->numberOfSublines();
 				delete layout;
-				if(dc.get() == 0)
-					dc = deviceContext();
-				layout = new LineLayout(dc, *lip_, lineNumber);
+				if(context.get() == 0)
+					context = renderingContext();
+				layout = new LineLayout(*context, *lip_, lineNumber);
 				newSublines += layout->numberOfSublines();
 				++cachedLines;
 				actualFirst = min(actualFirst, lineNumber);
@@ -3354,7 +3115,7 @@ void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::Do
 	documentChangePhase_ = CHANGING;
 	assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
-		const Region& region = change.erasedRegion();
+		const k::Region& region = change.erasedRegion();
 		clearCaches(region.first.line + 1, region.second.line + 1, false);
 		for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if((*i)->lineNumber() > region.first.line)
@@ -3362,7 +3123,7 @@ void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::Do
 		}
 	}
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {	// inserted text is multiline
-		const Region& region = change.insertedRegion();
+		const k::Region& region = change.insertedRegion();
 		for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if((*i)->lineNumber() > region.first.line)
 				(*i)->lineNumber_ += region.second.line - region.first.line;	// $friendly-access
@@ -3444,13 +3205,14 @@ void LineLayoutBuffer::invalidate(length_t first, length_t last) {
  * @param line the line to invalidate layout
  */
 inline void LineLayoutBuffer::invalidate(length_t line) {
+	auto_ptr<Context> context(renderingContext());
 	for(list<LineLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		LineLayout*& p = *i;
 		if(p->lineNumber() == line) {
 			const length_t oldSublines = p->numberOfSublines();
 			delete p;
 			if(autoRepair_) {
-				p = new LineLayout(deviceContext(), *lip_, line);
+				p = new LineLayout(*context, *lip_, line);
 				fireVisualLinesModified(line, line + 1, p->numberOfSublines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
@@ -3504,7 +3266,7 @@ const LineLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 				1, p->numberOfSublines(), documentChangePhase_ == CHANGING);
 			delete p;
 		}
-		LineLayout* const layout = new LineLayout(deviceContext(), *lip_, line);
+		LineLayout* const layout = new LineLayout(*renderingContext(), *lip_, line);
 		self.layouts_.push_front(layout);
 		self.fireVisualLinesModified(line, line + 1, layout->numberOfSublines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
@@ -3541,7 +3303,7 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
  * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalLineToVisualLine
  */
-length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const Position& position, length_t* column) const {
+length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const k::Position& position, length_t* column) const {
 	if(!lip_->layoutSettings().lineWrap.wraps()) {
 		if(column != 0)
 			*column = position.column;
@@ -3589,10 +3351,10 @@ length_t LineLayoutBuffer::mapVisualLineToLogicalLine(length_t line, length_t* s
  * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
  */
-Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const Position& position) const {
+k::Position LineLayoutBuffer::mapVisualPositionToLogicalPosition(const k::Position& position) const {
 	if(!getTextViewer().getConfiguration().lineWrap.wraps())
 		return position;
-	Position result;
+	k::Position result;
 	length_t subline;
 	result.line = mapVisualLineToLogicalLine(position.line, &subline);
 	result.column = getLineLayout(result.line).getSublineOffset(subline) + position.column;
@@ -3760,33 +3522,30 @@ DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() /*throw()*/ :
 		whiteSpaceColor_(RGB(0x00, 0x80, 0x80)), showsEOLs_(true), showsWhiteSpaces_(true), font_(0) {
 }
 
-/// Destructor.
-DefaultSpecialCharacterRenderer::~DefaultSpecialCharacterRenderer() /*throw()*/ {
-	::DeleteObject(font_);
-	font_ = 0;
-}
-
 /// @see ISpecialCharacterRenderer#drawControlCharacter
 void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
-	tr1::shared_ptr<const AbstractFont> primaryFont(renderer_->primaryFont());
-	HFONT oldFont = context.dc.selectObject(primaryFont->handle().get());
-	context.dc.setTextColor(controlColor_);
+	Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+	tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), primaryFont->nativeHandle().get()));
+	::SetTextColor(dc.get(), controlColor_);
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	context.dc.extTextOut(context.rect.left, context.rect.top + primaryFont->metrics().ascent(), 0, 0, buffer, 2, 0);
-	context.dc.selectObject(oldFont);
+	::ExtTextOutW(dc.get(), context.rect.x().beginning(), context.rect.y().beginning() + primaryFont->metrics().ascent(), 0, 0, buffer, 2, 0);
+	::SelectObject(dc.get(), oldFont);
 }
 
 /// @see ISpecialCharacterRenderer#drawLineTerminator
 void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, kernel::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xffffu) {
-		tr1::shared_ptr<const AbstractFont> primaryFont(renderer_->primaryFont());
-		HFONT oldFont = context.dc.selectObject(
-			manah::toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000ul) ? font_ : primaryFont->handle().get());
-		context.dc.setTextColor(eolColor_);
-		context.dc.extTextOut(context.rect.left, context.rect.top + primaryFont->metrics().ascent(),
+		Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
+			(manah::toBoolean(glyphWidths_[LINE_TERMINATOR] & 0x80000000ul) ? font_ : primaryFont->nativeHandle()).get()));
+		::SetTextColor(dc.get(), eolColor_);
+		::ExtTextOutW(dc.get(),
+			context.rect.x().beginning(), context.rect.y().beginning() + primaryFont->metrics().ascent(),
 			ETO_GLYPH_INDEX, 0, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
-		context.dc.selectObject(oldFont);
+		::SelectObject(dc.get(), oldFont);
 	}
 }
 
@@ -3795,12 +3554,15 @@ void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext&
 	const int id = (context.readingDirection == LEFT_TO_RIGHT) ? LTR_WRAPPING_MARK : RTL_WRAPPING_MARK;
 	const WCHAR glyph = glyphs_[id];
 	if(glyph != 0xffffu) {
-		tr1::shared_ptr<const AbstractFont> primaryFont(renderer_->primaryFont());
-		HFONT oldFont = context.dc.selectObject(
-			manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont->handle().get());
-		context.dc.setTextColor(wrapMarkColor_);
-		context.dc.extTextOut(context.rect.left, context.rect.top + primaryFont->metrics().ascent(), ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
-		context.dc.selectObject(oldFont);
+		Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
+			(manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont->nativeHandle()).get()));
+		::SetTextColor(dc.get(), wrapMarkColor_);
+		::ExtTextOutW(dc.get(),
+			context.rect.x().beginning(), context.rect.y().beginning() + primaryFont->metrics().ascent(),
+			ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
+		::SelectObject(dc.get(), oldFont);
 	}
 }
 
@@ -3812,27 +3574,32 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		const int id = (context.readingDirection == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
 		const WCHAR glyph = glyphs_[id];
 		if(glyph != 0xffffu) {
-			tr1::shared_ptr<const AbstractFont> primaryFont(renderer_->primaryFont());
-			HFONT oldFont = context.dc.selectObject(
-				manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont->handle().get());
+			Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+			tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+			HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
+				(manah::toBoolean(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont->nativeHandle()).get()));
 			const int glyphWidth = glyphWidths_[id] & 0x7ffffffful;
 			const int x =
-				((context.readingDirection == LEFT_TO_RIGHT && glyphWidth < context.rect.right - context.rect.left)
-					|| (context.readingDirection == RIGHT_TO_LEFT && glyphWidth > context.rect.right - context.rect.left)) ?
-				context.rect.left : context.rect.right - glyphWidth;
-			context.dc.setTextColor(whiteSpaceColor_);
-			context.dc.extTextOut(x, context.rect.top + primaryFont->metrics().ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect, &glyph, 1, 0);
-			context.dc.selectObject(oldFont);
+				((context.readingDirection == LEFT_TO_RIGHT && glyphWidth < context.rect.size().cx)
+					|| (context.readingDirection == RIGHT_TO_LEFT && glyphWidth > context.rect.size().cx)) ?
+				context.rect.x().beginning() : context.rect.x().end() - glyphWidth;
+			::SetTextColor(dc.get(), whiteSpaceColor_);
+			::ExtTextOutW(dc.get(),
+				x, context.rect.y().beginning() + primaryFont->metrics().ascent(),
+				ETO_CLIPPED | ETO_GLYPH_INDEX, &toNative(context.rect), &glyph, 1, 0);
+			::SelectObject(dc.get(), oldFont);
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xffffu) {
-		tr1::shared_ptr<const AbstractFont> primaryFont(renderer_->primaryFont());
-		HFONT oldFont = context.dc.selectObject(
-			manah::toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000ul) ? font_ : primaryFont->handle().get());
-		context.dc.setTextColor(whiteSpaceColor_);
-		context.dc.extTextOut((context.rect.left + context.rect.right - (glyphWidths_[WHITE_SPACE] & 0x7ffffffful)) / 2,
-			context.rect.top + primaryFont->metrics().ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &context.rect,
+		Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
+			(manah::toBoolean(glyphWidths_[WHITE_SPACE] & 0x80000000ul) ? font_ : primaryFont->nativeHandle()).get()));
+		::SetTextColor(dc.get(), whiteSpaceColor_);
+		::ExtTextOutW(dc.get(),
+			(context.rect.x().beginning() + context.rect.x().end() - (glyphWidths_[WHITE_SPACE] & 0x7ffffffful)) / 2,
+			context.rect.y().beginning() + primaryFont->metrics().ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &toNative(context.rect),
 			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
-		context.dc.selectObject(oldFont);
+		::SelectObject(dc.get(), oldFont);
 	}
 }
 
@@ -3841,25 +3608,25 @@ void DefaultSpecialCharacterRenderer::defaultFontChanged() {
 	static const Char codes[] = {0x2192u, 0x2190u, 0x2193u, 0x21a9u, 0x21aau, 0x00b7u};
 
 	// using the primary font
-	ScreenDC dc;
-	HFONT oldFont = dc.selectObject(renderer_->primaryFont()->handle().get());
-	dc.getGlyphIndices(codes, MANAH_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
-	dc.getCharWidthI(glyphs_, MANAH_COUNTOF(codes), glyphWidths_);
+	Handle<HDC> dc(::GetDC(0), bind1st(ptr_fun(&::ReleaseDC), 0));
+	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.use(), renderer_->primaryFont()->nativeHandle().get()));
+	::GetGlyphIndicesW(dc.get(), codes, MANAH_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
+	::GetCharWidthI(dc.get(), 0, MANAH_COUNTOF(codes), glyphs_, glyphWidths_);
 
 	// using the fallback font
-	::DeleteObject(font_);
-	font_ = 0;
+	font_.reset();
 	if(find(glyphs_, MANAH_ENDOF(glyphs_), 0xffffu) != MANAH_ENDOF(glyphs_)) {
 		LOGFONTW lf;
-		::GetObjectW(renderer_->primaryFont()->handle().get(), sizeof(LOGFONTW), &lf);
+		::GetObjectW(renderer_->primaryFont()->nativeHandle().get(), sizeof(LOGFONTW), &lf);
 		lf.lfWeight = FW_REGULAR;
 		lf.lfItalic = lf.lfUnderline = lf.lfStrikeOut = false;
 		wcscpy(lf.lfFaceName, L"Lucida Sans Unicode");
-		dc.selectObject(font_ = ::CreateFontIndirectW(&lf));
+		font_.reset(::CreateFontIndirectW(&lf), &::DeleteObject);
+		::SelectObject(dc.get(), font_.use());
 		WORD g[MANAH_COUNTOF(glyphs_)];
 		int w[MANAH_COUNTOF(glyphWidths_)];
-		dc.getGlyphIndices(codes, MANAH_COUNTOF(codes), g, GGI_MARK_NONEXISTING_GLYPHS);
-		dc.getCharWidthI(g, MANAH_COUNTOF(codes), w);
+		::GetGlyphIndicesW(dc.get(), codes, MANAH_COUNTOF(codes), g, GGI_MARK_NONEXISTING_GLYPHS);
+		::GetCharWidthI(dc.get(), 0, MANAH_COUNTOF(codes), g, w);
 		for(int i = 0; i < MANAH_COUNTOF(glyphs_); ++i) {
 			if(glyphs_[i] == 0xffffu) {
 				if(g[i] != 0xffff) {
@@ -3871,17 +3638,19 @@ void DefaultSpecialCharacterRenderer::defaultFontChanged() {
 		}
 	}
 
-	dc.selectObject(oldFont);
+	::SelectObject(dc.get(), oldFont);
 }
 
 /// @see ISpecialCharacterRenderer#getControlCharacterWidth
 int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	HFONT oldFont = context.dc.selectObject(renderer_->primaryFont()->handle().get());
-	const int result = context.dc.getTextExtent(buffer, 2).cx;
-	context.dc.selectObject(oldFont);
-	return result;
+	Handle<HDC> dc(context.renderingContext.engine()->nativeHandle());
+	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), renderer_->primaryFont()->nativeHandle().get()));
+	SIZE temp;
+	::GetTextExtentPoint32W(dc.get(), buffer, 2, &temp);
+	::SelectObject(dc.get(), oldFont);
+	return temp.cx;
 }
 
 /// @see ISpecialCharacterRenderer#getLineTerminatorWidth
@@ -4019,7 +3788,7 @@ namespace {
  * @param fontCollection the font collection provides fonts this renderer uses
  * @param enableDoubleBuffering set @c true to use double-buffering for non-flicker drawing
  */
-TextRenderer::TextRenderer(Presentation& presentation, const IFontCollection& fontCollection, bool enableDoubleBuffering) :
+TextRenderer::TextRenderer(Presentation& presentation, const FontCollection& fontCollection, bool enableDoubleBuffering) :
 		LineLayoutBuffer(presentation.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(presentation), fontCollection_(fontCollection), enablesDoubleBuffering_(enableDoubleBuffering) {
 	setLayoutInformation(this, false);
@@ -4062,16 +3831,16 @@ void TextRenderer::addDefaultFontListener(IDefaultFontListener& listener) {
 void TextRenderer::fireDefaultFontChanged() {
 	invalidate();
 	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
-		BITMAP b;
-		memoryBitmap_.getBitmap(b);
-		if(b.bmHeight != calculateMemoryBitmapSize(primaryFont()->metrics().linePitch()))
+		BITMAP temp;
+		::GetObjectW(memoryBitmap_.use(), sizeof(HBITMAP), &temp);
+		if(temp.bmHeight != calculateMemoryBitmapSize(primaryFont()->metrics().linePitch()))
 			memoryBitmap_.reset();
 	}
 	listeners_.notify(&IDefaultFontListener::defaultFontChanged);
 }
 
 /// @see ILayoutInformationProvider#fontCollection
-const IFontCollection& TextRenderer::fontCollection() const {
+const FontCollection& TextRenderer::fontCollection() const {
 	return fontCollection_;
 }
 
@@ -4118,17 +3887,17 @@ void TextRenderer::removeDefaultFontListener(IDefaultFontListener& listener) {
 /**
  * Renders the specified logical line to the output device.
  * @param line the line number
- * @param dc the device context
+ * @param context the graphics context
  * @param x the x-coordinate of the position to draw
  * @param y the y-coordinate of the position to draw
  * @param paintRect the region to draw
  * @param clipRect the clipping region
  * @param selection the selection
  */
-void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
-		const RECT& paintRect, const RECT& clipRect, const LineLayout::Selection* selection) const /*throw()*/ {
+void TextRenderer::renderLine(length_t line, Context& context, int x, int y,
+		const Rect<int>& paintRect, const Rect<int>& clipRect, const LineLayout::Selection* selection) const /*throw()*/ {
 	if(!enablesDoubleBuffering_) {
-		lineLayout(line).draw(dc, x, y, paintRect, clipRect, selection);
+		lineLayout(line).draw(context, x, y, paintRect, clipRect, selection);
 		return;
 	}
 
@@ -4136,34 +3905,37 @@ void TextRenderer::renderLine(length_t line, DC& dc, int x, int y,
 	const int dy = textMetrics().linePitch();
 
 	// skip to the subline needs to draw
-	const int top = max(paintRect.top, clipRect.top);
+	const int top = max(paintRect.y().beginning(), clipRect.y().beginning());
 	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
 	if(subline >= layout.numberOfSublines())
 		return;	// this logical line does not need to draw
 	y += static_cast<int>(dy * subline);
 
 	if(memoryDC_.get() == 0)		
-		memoryDC_ = deviceContext().createCompatibleDC();
-	const int horizontalResolution = calculateMemoryBitmapSize(dc.getDeviceCaps(HORZRES));
+		memoryDC_.reset(::CreateCompatibleDC(renderingContext()->engine()->nativeHandle().get()), &::DeleteDC);
+	const int horizontalResolution = calculateMemoryBitmapSize(context.device()->size().cx);
 	if(memoryBitmap_.get() != 0) {
-		BITMAP b;
-		memoryBitmap_.getBitmap(b);
-		if(b.bmWidth < horizontalResolution)
+		BITMAP temp;
+		::GetObjectW(memoryBitmap_.use(), sizeof(HBITMAP), &temp);
+		if(temp.bmWidth < horizontalResolution)
 			memoryBitmap_.reset();
 	}
 	if(memoryBitmap_.get() == 0)
-		memoryBitmap_ = Bitmap::createCompatibleBitmap(deviceContext(), horizontalResolution, calculateMemoryBitmapSize(dy));
-	memoryDC_.selectObject(memoryBitmap_.use());
+		memoryBitmap_.reset(::CreateCompatibleBitmap(
+			renderingContext()->engine()->nativeHandle().get(),
+			horizontalResolution, calculateMemoryBitmapSize(dy)), &::DeleteObject);
+	::SelectObject(memoryDC_.get(), memoryBitmap_.use());
 
-	const long left = max(paintRect.left, clipRect.left), right = min(paintRect.right, clipRect.right);
+	const int left = max(paintRect.x().beginning(), clipRect.x().beginning());
+	const int right = min(paintRect.x().end(), clipRect.x().end());
 	x -= left;
-	manah::win32::Rect offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
-	offsetedPaintRect.offset(-left, -y);
-	offsetedClipRect.offset(-left, -y);
-	for(; subline < layout.numberOfSublines() && offsetedPaintRect.bottom >= 0;
-			++subline, y += dy, offsetedPaintRect.offset(0, -dy), offsetedClipRect.offset(0, -dy)) {
+	Rect<int> offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
+	offsetedPaintRect.translate(Dimension<int>(-left, -y));
+	offsetedClipRect.translate(Dimension<int>(-left, -y));
+	for(; subline < layout.numberOfSublines() && offsetedPaintRect.y().end() >= 0;
+			++subline, y += dy, offsetedPaintRect.translate(Dimension<int>(0, -dy)), offsetedClipRect.translate(Dimension<int>(0, -dy))) {
 		layout.draw(subline, memoryDC_, x, 0, offsetedPaintRect, offsetedClipRect, selection);
-		dc.bitBlt(left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
+		::BitBlt(context.engine()->nativeHandle().get(), left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
 	}
 }
 
@@ -4217,7 +3989,7 @@ bool TextRenderer::updateTextMetrics() {
 
 using viewers::TextViewer;
 
-HRESULT drawLineNumber(DC& dc, int x, int y, length_t lineNumber/*, const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState*/) {
+HRESULT drawLineNumber(Context& context, int x, int y, length_t lineNumber/*, const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState*/) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
 #if(_MSC_VER < 1400)
@@ -4246,7 +4018,7 @@ HRESULT drawLineNumber(DC& dc, int x, int y, length_t lineNumber/*, const SCRIPT
 #else
 	option = 0;
 #endif
-	dc.extTextOut(x, y, option, 0, s, length, 0);
+	::ExtTextOutW(context.engine()->nativeHandle().get(), x, y, option, 0, s, length, 0);
 	return S_OK;
 }
 
@@ -4254,42 +4026,43 @@ HRESULT drawLineNumber(DC& dc, int x, int y, length_t lineNumber/*, const SCRIPT
  * Draws the vertical ruler.
  * @param dc the device context
  */
-void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
+void TextViewer::VerticalRulerDrawer::draw(Context& context) {
 	if(width() == 0)
 		return;
 
-	const RECT& paintRect = dc.paintStruct().rcPaint;
+	const Rect<int>& paintRect = dc.paintStruct().rcPaint;
 	const TextRenderer& renderer = viewer_.textRenderer();
-	RECT clientRect;
+	Rect<int> clientRect;
 	viewer_.getClientRect(clientRect);
 	const TextAlignment alignment = utils::computeVerticalRulerAlignment(viewer_);
-	if((alignment == ALIGN_LEFT && paintRect.left >= clientRect.left + width())
-			|| (alignment == ALIGN_RIGHT && paintRect.right < clientRect.right - width()))
+	if((alignment == ALIGN_LEFT && paintRect.x().beginning() >= clientRect.x().beginning() + width())
+			|| (alignment == ALIGN_RIGHT && paintRect.x().end() < clientRect.x().end() - width()))
 		return;
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		manah::win32::DumpContext() << L"@VerticalRulerDrawer.draw draws y = " << paintRect.top << L" ~ " << paintRect.bottom << L"\n";
+		manah::win32::DumpContext() << L"@VerticalRulerDrawer.draw draws y = "
+			<< paintRect.y().beginning() << L" ~ " << paintRect.y().end() << L"\n";
 #endif // _DEBUG
 
-	const int savedCookie = dc.save();
+	context.save();
 	const bool alignLeft = alignment == ALIGN_LEFT;
 	const int imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
 
 	int left;
-	DC* dcex;
+	HDC dcex;
 	if(enablesDoubleBuffering_) {
 		if(memoryDC_.get() == 0)
-			memoryDC_ = viewer_.getDC().createCompatibleDC();
+			memoryDC_.reset(::CreateCompatibleDC(viewer_.getDC().get()), &::DeleteDC);
 		if(memoryBitmap_.get() == 0)
-			memoryBitmap_ = Bitmap::createCompatibleBitmap(dc,
-				width(), clientRect.bottom - clientRect.top + ::GetSystemMetrics(SM_CYHSCROLL));
-		memoryDC_.selectObject(memoryBitmap_.get());
-		dcex = &memoryDC_;
+			memoryBitmap_.reset(::CreateCompatibleBitmap(context.engine()->nativeHandle().get(),
+				width(), clientRect.y().end() - clientRect.y().beginning() + ::GetSystemMetrics(SM_CYHSCROLL)), &::DeleteObject);
+		::SelectObject(memoryDC_.get(), memoryBitmap_.get());
+		dcex = memoryDC_.get();
 		left = 0;
 	} else {
-		dcex = &dc;
-		left = alignLeft ? clientRect.left : clientRect.right - width();
+		dcex = context.engine()->nativeHandle().get();
+		left = alignLeft ? clientRect.x().beginning() : clientRect.x().end() - width();
 	}
 	const int right = left + width();
 
@@ -4297,33 +4070,34 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	if(configuration_.indicatorMargin.visible) {
 		// border and inside of the indicator margin
 		const int borderX = alignLeft ? left + imWidth - 1 : right - imWidth;
-		HPEN oldPen = dcex->selectObject(indicatorMarginPen_.use());
-		HBRUSH oldBrush = dcex->selectObject(indicatorMarginBrush_.use());
-		dcex->patBlt(alignLeft ? left : borderX + 1, paintRect.top, imWidth, paintRect.bottom - paintRect.top, PATCOPY);
-		dcex->moveTo(borderX, paintRect.top);
-		dcex->lineTo(borderX, paintRect.bottom);
-		dcex->selectObject(oldPen);
-		dcex->selectObject(oldBrush);
+		HPEN oldPen = static_cast<HPEN>(::SelectObject(dcex, indicatorMarginPen_.use()));
+		HBRUSH oldBrush = static_cast<HBRUSH>(::SelectObject(dcex, indicatorMarginBrush_.use()));
+		::PatBlt(dcex, alignLeft ? left : borderX + 1, paintRect.y().beginning(),
+			imWidth, paintRect.y().end() - paintRect.y().beginning(), PATCOPY);
+		::MoveToEx(dcex, borderX, paintRect.y().beginning(), 0);
+		::LineTo(dcex, borderX, paintRect.y().end());
+		::SelectObject(dcex, oldPen);
+		::SelectObject(dcex, oldBrush);
 	}
 	if(configuration_.lineNumbers.visible) {
 		// background of the line numbers
-		HBRUSH oldBrush = dcex->selectObject(lineNumbersBrush_.use());
-		dcex->patBlt(alignLeft ? left + imWidth : left, paintRect.top, right - imWidth, paintRect.bottom, PATCOPY);
+		HBRUSH oldBrush = static_cast<HBRUSH>(::SelectObject(dcex, lineNumbersBrush_.use()));
+		::PatBlt(dcex, alignLeft ? left + imWidth : left, paintRect.y().beginning(), right - imWidth, paintRect.y().end(), PATCOPY);
 		// border of the line numbers
 		if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
-			HPEN oldPen = dcex->selectObject(lineNumbersPen_.use());
+			HPEN oldPen = static_cast<HPEN>(::SelectObject(dcex, lineNumbersPen_.use()));
 			const int x = (alignLeft ? right : left + 1) - configuration_.lineNumbers.borderWidth;
-			dcex->moveTo(x, 0/*paintRect.top*/);
-			dcex->lineTo(x, paintRect.bottom);
-			dcex->selectObject(oldPen);
+			::MoveToEx(dcex, x, 0/*paintRect.top*/, 0);
+			::LineTo(dcex, x, paintRect.y().end());
+			::SelectObject(dcex, oldPen);
 		}
-		dcex->selectObject(oldBrush);
+		::SelectObject(dcex, oldBrush);
 
 		// for next...
-		dcex->setBkMode(TRANSPARENT);
-		dcex->setTextColor(systemColors.serve(configuration_.lineNumbers.textColor.foreground, COLOR_WINDOWTEXT));
-		dcex->setTextCharacterExtra(0);	// line numbers ignore character extra
-		dcex->selectObject(renderer.primaryFont()->handle().get());
+		::SetBkMode(dcex, TRANSPARENT);
+		::SetTextColor(dcex, systemColors.serve(configuration_.lineNumbers.textColor.foreground, COLOR_WINDOWTEXT));
+		::SetTextCharacterExtra(dcex, 0);	// line numbers ignore character extra
+		::SelectObject(dcex, renderer.primaryFont()->nativeHandle().get());
 	}
 
 	// prepare to draw the line numbers
@@ -4370,18 +4144,18 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 		case ALIGN_LEFT:
 			lineNumbersX = alignLeft ?
 				left + imWidth + configuration_.lineNumbers.leadingMargin : left + configuration_.lineNumbers.trailingMargin + 1;
-			dcex->setTextAlign(TA_LEFT | TA_TOP | TA_NOUPDATECP);
+			::SetTextAlign(dcex, TA_LEFT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_RIGHT:
 			lineNumbersX = alignLeft ?
 				right - configuration_.lineNumbers.trailingMargin - 1 : right - imWidth - configuration_.lineNumbers.leadingMargin;
-			dcex->setTextAlign(TA_RIGHT | TA_TOP | TA_NOUPDATECP);
+			::SetTextAlign(dcex, TA_RIGHT | TA_TOP | TA_NOUPDATECP);
 			break;
 		case ALIGN_CENTER:
 			lineNumbersX = alignLeft ?
 				left + (imWidth + configuration_.lineNumbers.leadingMargin + width() - configuration_.lineNumbers.trailingMargin) / 2
 				: right - (width() - configuration_.lineNumbers.trailingMargin + imWidth + configuration_.lineNumbers.leadingMargin) / 2;
-			dcex->setTextAlign(TA_CENTER | TA_TOP | TA_NOUPDATECP);
+			::SetTextAlign(dcex, TA_CENTER | TA_TOP | TA_NOUPDATECP);
 			break;
 		}
 	}
@@ -4389,23 +4163,24 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	// 1 行ずつ細かい描画
 	length_t line, visualSublineOffset;
 	const length_t lines = viewer_.document().numberOfLines();
-	viewer_.mapClientYToLine(paintRect.top, &line, &visualSublineOffset);	// $friendly-access
+	viewer_.mapClientYToLine(paintRect.y().beginning(), &line, &visualSublineOffset);	// $friendly-access
 	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
 		++line;
 	int y = viewer_.mapLineToClientY(line, false);
 	if(y != 32767 && y != -32768) {
 		const int dy = renderer.textMetrics().linePitch();
-		while(y < paintRect.bottom && line < lines) {
+		while(y < paintRect.y().end() && line < lines) {
 			const LineLayout& layout = renderer.lineLayout(line);
 			const int nextY = y + static_cast<int>(layout.numberOfSublines() * dy);
-			if(nextY >= paintRect.top) {
+			if(nextY >= paintRect.y().beginning()) {
 				// 派生クラスにインジケータマージンの描画機会を与える
 				if(configuration_.indicatorMargin.visible) {
-					RECT rect = {
-						alignLeft ? left : right - configuration_.indicatorMargin.width, y,
-						alignLeft ? left + configuration_.indicatorMargin.width : right, y + dy
-					};
-					viewer_.drawIndicatorMargin(line, *dcex, rect);
+					Rect<int> rect;
+					rect.setX(makeRange(
+						alignLeft ? left : right - configuration_.indicatorMargin.width,
+						alignLeft ? left + configuration_.indicatorMargin.width : right));
+					rect.setY(makeRange(y, y + dy));
+						viewer_.drawIndicatorMargin(line, *dcex, rect);
 				}
 
 				// draw line number digits
@@ -4418,9 +4193,10 @@ void TextViewer::VerticalRulerDrawer::draw(PaintDC& dc) {
 	}
 
 	if(enablesDoubleBuffering_)
-		dc.bitBlt(alignLeft ? clientRect.left : clientRect.right - width(), paintRect.top,
-			right - left, paintRect.bottom - paintRect.top, memoryDC_.get(), 0, paintRect.top, SRCCOPY);
-	dc.restore(savedCookie);
+		::BitBlt(context.engine()->nativeHandle().get(),
+			alignLeft ? clientRect.x().beginning() : clientRect.x().end() - width(), paintRect.y().beginning(),
+			right - left, paintRect.size().cy, memoryDC_.get(), 0, paintRect.y().beginning(), SRCCOPY);
+	context.restore();
 }
 
 /// Recalculates the width of the vertical ruler.
@@ -4430,8 +4206,8 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 		const uchar newLineNumberDigits = getLineNumberMaxDigits();
 		if(newLineNumberDigits != lineNumberDigitsCache_) {
 			// the width of the line numbers area is determined by the maximum width of glyphs of 0..9
-			ClientDC dc = viewer_.getDC();
-			HFONT oldFont = dc.selectObject(viewer_.textRenderer().primaryFont()->handle().get());
+			Handle<HDC> dc(viewer_.getDC());
+			HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.use(), viewer_.textRenderer().primaryFont()->nativeHandle().get()));
 			SCRIPT_STRING_ANALYSIS ssa;
 			AutoZero<SCRIPT_CONTROL> sc;
 			AutoZero<SCRIPT_STATE> ss;
@@ -4447,10 +4223,10 @@ void TextViewer::VerticalRulerDrawer::recalculateWidth() /*throw()*/ {
 */				hr = ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(false), &sc, &ss);
 /*				break;
 			}
-*/			dc.setTextCharacterExtra(0);
-			hr = ::ScriptStringAnalyse(dc.use(), L"0123456789", 10,
+*/			::SetTextCharacterExtra(dc.get(), 0);
+			hr = ::ScriptStringAnalyse(dc.get(), L"0123456789", 10,
 				estimateNumberOfGlyphs(10), -1, SSA_FALLBACK | SSA_GLYPHS | SSA_LINK, 0, &sc, &ss, 0, 0, 0, &ssa);
-			dc.selectObject(oldFont);
+			::SelectObject(dc.get(), oldFont);
 			int glyphWidths[10];
 			hr = ::ScriptStringGetLogicalWidths(ssa, glyphWidths);
 			int maxGlyphWidth = *max_element(glyphWidths, MANAH_ENDOF(glyphWidths));
@@ -4477,30 +4253,33 @@ void TextViewer::VerticalRulerDrawer::updateGDIObjects() /*throw()*/ {
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {
-		indicatorMarginPen_ = Pen::create(PS_SOLID, 1,
-			systemColors.serve(configuration_.indicatorMargin.borderColor, COLOR_3DSHADOW));
-		indicatorMarginBrush_ = Brush::create(systemColors.serve(configuration_.indicatorMargin.color, COLOR_3DFACE));
+		indicatorMarginPen_.reset(::CreatePen(PS_SOLID, 1,
+			systemColors.serve(configuration_.indicatorMargin.borderColor, COLOR_3DSHADOW)), &::DeleteObject);
+		indicatorMarginBrush_.reset(::CreateSolidBrush(
+			systemColors.serve(configuration_.indicatorMargin.color, COLOR_3DFACE)), &::DeleteObject);
 	}
 
 	lineNumbersPen_.reset();
 	lineNumbersBrush_.reset();
 	if(configuration_.lineNumbers.visible) {
 		if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::SOLID)	// 実線
-			lineNumbersPen_ = Pen::create(PS_SOLID, configuration_.lineNumbers.borderWidth,
-				systemColors.serve(configuration_.lineNumbers.borderColor, COLOR_WINDOWTEXT));
+			lineNumbersPen_.reset(::CreatePen(PS_SOLID, configuration_.lineNumbers.borderWidth,
+				systemColors.serve(configuration_.lineNumbers.borderColor, COLOR_WINDOWTEXT)), &::DeleteObject);
 		else if(configuration_.lineNumbers.borderStyle != VerticalRulerConfiguration::LineNumbers::NONE) {
 			LOGBRUSH brush;
 			brush.lbColor = systemColors.serve(configuration_.lineNumbers.borderColor, COLOR_WINDOWTEXT);
 			brush.lbStyle = BS_SOLID;
 			if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED)	// 破線
-				lineNumbersPen_ = Pen::create(
-					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(::ExtCreatePen(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, configuration_.lineNumbers.borderWidth, &brush, 0, 0), &::DeleteObject);
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DASHED_ROUNDED)	// 丸破線
-				lineNumbersPen_ = Pen::create(
-					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(::ExtCreatePen(
+					PS_GEOMETRIC | PS_DASH | PS_ENDCAP_ROUND, configuration_.lineNumbers.borderWidth, &brush, 0, 0), &::DeleteObject);
 			else if(configuration_.lineNumbers.borderStyle == VerticalRulerConfiguration::LineNumbers::DOTTED)	// 点線
-				lineNumbersPen_ = Pen::create(PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, brush, 0, 0);
+				lineNumbersPen_.reset(::ExtCreatePen(
+					PS_GEOMETRIC | PS_DOT, configuration_.lineNumbers.borderWidth, &brush, 0, 0), &::DeleteObject);
 		}
-		lineNumbersBrush_ = Brush::create(systemColors.serve(configuration_.lineNumbers.textColor.background, COLOR_WINDOW));
+		lineNumbersBrush_.reset(::CreateSolidBrush(
+			systemColors.serve(configuration_.lineNumbers.textColor.background, COLOR_WINDOW)), &::DeleteObject);
 	}
 }

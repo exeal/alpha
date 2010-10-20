@@ -1,6 +1,7 @@
 // document-test.cpp
 
-#include "../document.hpp"
+#include <ascension/document.hpp>
+#include <ascension/stream.hpp>
 #include <boost/test/included/test_exec_monitor.hpp>
 namespace a = ascension;
 namespace k = ascension::kernel;
@@ -17,10 +18,10 @@ void testMiscellaneousFunctions() {
 	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 9, s.end()), k::NLF_CARRIAGE_RETURN);
 	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 13, s.end()), k::NLF_LINE_SEPARATOR);
 	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 14, s.end()), k::NLF_PARAGRAPH_SEPARATOR);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 15, s.end()), k::NLF_RAW_VALUE);
+//	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 15, s.end()), k::NLF_RAW_VALUE);
 }
 
-void testDocument() {
+void testSimpleChange() {
 	k::Document d;
 
 	// initial state
@@ -40,15 +41,15 @@ void testDocument() {
 	BOOST_CHECK_EQUAL(d.numberOfLines(), 1);
 	BOOST_CHECK_EQUAL(d.session(), static_cast<a::texteditor::Session*>(0));
 
-	// simple modification
-	d.insert(k::Position(), a::String(L"abcde"));
+	// simple change
+	k::insert(d, k::Position(), a::String(L"abcde"));
 	BOOST_CHECK(d.isModified());
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"abcde"));
 	BOOST_CHECK_EQUAL(d.length(), 5);
 	BOOST_CHECK_EQUAL(d.region(), k::Region(k::Position(0, 0), k::Position(0, 5)));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 1);
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
-	d.erase(k::Position(0, 0), k::Position(0, 3));
+	k::erase(d, k::Position(0, 0), k::Position(0, 3));
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"de"));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
@@ -63,29 +64,36 @@ void testDocument() {
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 0);
 	d.undo();
+	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
+}
 
-	// undo boundary
-	d.insert(k::Position(), a::String(L"a"));
-	d.insert(k::Position(0, 1), a::String(L"b"));
+void testUndoBoundary() {
+	k::Document d;
+
+	k::insert(d, k::Position(), a::String(L"a"));
+	k::insert(d, k::Position(0, 1), a::String(L"b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
-	d.insert(k::Position(), a::String(L"a"));
+	k::insert(d, k::Position(), a::String(L"a"));
 	d.insertUndoBoundary();
-	d.insert(k::Position(0, 1), a::String(L"b"));
+	k::insert(d, k::Position(0, 1), a::String(L"b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 2);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
+}
 
-	// compound modification
+void testCompoundChange() {
+	k::Document d;
+
 	d.beginCompoundChange();
-	d.insert(d.region().end(), a::String(L"This "));
-	d.insert(d.region().end(), a::String(L"is a "));
-	d.insert(d.region().end(), a::String(L"compound."));
+	k::insert(d, d.region().end(), a::String(L"This "));
+	k::insert(d, d.region().end(), a::String(L"is a "));
+	k::insert(d, d.region().end(), a::String(L"compound."));
 	d.endCompoundChange();
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"This is a compound."));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 3);
@@ -100,7 +108,7 @@ void testDocument() {
 
 void testIterators() {
 	k::Document d;
-	d.insert(d.region().end(), L"This is the first line.\nThis is the second line.\r\nAnd this is the last line.");
+	k::insert(d, d.region().end(), L"This is the first line.\nThis is the second line.\r\nAnd this is the last line.");
 
 	k::DocumentCharacterIterator i(d.begin());
 	BOOST_CHECK_EQUAL(i.document(), &d);
@@ -134,7 +142,7 @@ void testStreams() {
 
 void testBookmarks() {
 	k::Document d;
-	d.insert(d.region().end(),
+	k::insert(d, d.region().end(),
 		L"m\n"
 		L"\n"
 		L"m\n"
@@ -193,7 +201,7 @@ void testBookmarks() {
 	BOOST_CHECK_EQUAL(b.next(1, a::Direction::BACKWARD, true, 0), a::INVALID_INDEX);
 
 	// update
-	d.insert(d.region().beginning(), L"\n");
+	k::insert(d, d.region().beginning(), L"\n");
 	BOOST_CHECK(!b.isMarked(0));
 	BOOST_CHECK(b.isMarked(1));
 	BOOST_CHECK(!b.isMarked(2));
@@ -204,7 +212,7 @@ void testBookmarks() {
 	BOOST_CHECK(b.isMarked(7));
 	BOOST_CHECK(!b.isMarked(8));
 
-	d.erase(k::Position(1, 0), k::Position(5, 0));
+	k::erase(d, k::Position(1, 0), k::Position(5, 0));
 	BOOST_CHECK(!b.isMarked(0));
 	BOOST_CHECK(b.isMarked(1));
 	BOOST_CHECK(!b.isMarked(2));
@@ -218,7 +226,9 @@ void testBookmarks() {
 
 int test_main(int, char*[]) {
 	testMiscellaneousFunctions();
-	testDocument();
+	testSimpleChange();
+	testUndoBoundary();
+	testCompoundChange();
 	testIterators();
 	testStreams();
 	testBookmarks();

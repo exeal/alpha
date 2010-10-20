@@ -8,40 +8,8 @@
 
 namespace manah {
 
-	// modern types
-	typedef unsigned char byte;		///< Another short synonym for @c unsigned @c char.
-	typedef unsigned char uchar;	///< A short synonym for @c unsigned @c char.
-	typedef unsigned short ushort;	///< A short synonym for @c unsigned @c short.
-	typedef unsigned int uint;		///< A short synonym for @c unsigned @c int.
-	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
-
 	/// Converts an integral or float into a boolean value.
 	template<typename T> inline bool toBoolean(T value) {return value != 0;}
-
-	/// OR-combinations of enum values (from Qt.QFlags).
-	template<typename Enum> class Flags {
-	public:
-		Flags(Enum value) : value_(value) {}
-		Flags(int value = 0) : value_(static_cast<Enum>(value)) {}
-		Flags(const Flags<Enum>& rhs) /*throw()*/ : value_(rhs.value_) {}
-		Flags<Enum>& operator=(const Flags<Enum>& rhs) /*throw()*/ {value_ = rhs.value_; return *this;}
-		Flags<Enum> operator&(int rhs) const /*throw()*/ {Flags<Enum> temp(*this); return temp &= rhs;}
-		Flags<Enum> operator&(uint rhs) const /*throw()*/ {Flags<Enum> temp(*this); return temp &= rhs;}
-		Flags<Enum> operator|(Enum rhs) const {Flags<Enum> temp(*this); return temp |= rhs;}
-		Flags<Enum> operator^(Enum rhs) const {Flags<Enum> temp(*this); return temp ^= rhs;}
-		Flags<Enum>& operator&=(int rhs) /*throw()*/ {value_ &= rhs; return *this;}
-		Flags<Enum>& operator&=(uint rhs) /*throw()*/ {value_ &= rhs; return *this;}
-		Flags<Enum>& operator|=(Enum rhs) {value_ |= rhs; return *this;}
-		Flags<Enum>& operator^=(Enum rhs) {value_ ^= rhs; return *this;}
-		Flags<Enum>& operator~() const /*throw()*/ {return ~value_;}
-		bool operator!() const /*throw()*/ {return value_ == 0;}
-		operator Enum() const {return static_cast<Enum>(value_);}
-		void clear() /*throw()*/ {value_ = 0;}
-		bool has(Enum e) const {return (value_ & e) != 0;}
-		Flags<Enum>& set(Enum e, bool value = true) {if(value) value_ |= e; else value_ &= ~e; return *this;}
-	private:
-		int value_;
-	};
 
 	// provides convenient base classes for defining unassignable/uncopyable classes.
 	// however, MANAH_***ABLE_TAG macros are preferrable...
@@ -72,28 +40,5 @@ namespace manah {
 #endif /* 0 */
 
 } // namespace manah
-
-
-// static assertion /////////////////////////////////////////////////////////
-
-namespace manah {
-	template<unsigned> struct StaticAssertTest {};
-	template<int> struct StaticAssertionFailureAtLine;
-	template<> struct StaticAssertionFailureAtLine<-1> {};
-	#define MANAH_STATIC_ASSERT(expression)	\
-		typedef manah::StaticAssertTest<sizeof(manah::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)> oh_static_assertion_shippaidayo_orz
-} // namespace manah
-
-
-// macros ///////////////////////////////////////////////////////////////////
-
-/// Returns the number of the elements of the given array.
-#define MANAH_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
-/// Returns the end of the given array.
-#define MANAH_ENDOF(array) ((array) + MANAH_COUNTOF(array))
-/// Makes the specified class unassignable. Used in class definition.
-#define MANAH_UNASSIGNABLE_TAG(className)	private: className& operator=(const className&)
-/// Makes the specified class uncopyable. Used in class definition
-#define MANAH_NONCOPYABLE_TAG(className)	MANAH_UNASSIGNABLE_TAG(className); className(const className&)
 
 #endif // !MANAH_OBJECT_HPP

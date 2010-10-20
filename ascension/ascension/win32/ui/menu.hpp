@@ -10,7 +10,6 @@
 #	pragma warning(disable : 4297)
 #endif // _MSC_VER
 
-#include "../dc.hpp"
 #include "../../memory.hpp"
 #include <commctrl.h>
 #include <set>
@@ -185,7 +184,6 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 	if(di.CtlType != ODT_MENU)
 		return false;
 	assert(icons == 0 || iconIndex < ::ImageList_GetImageCount(icons));
-	gdi::DC dc(borrowed(di.hDC));
 	const bool selected = toBoolean(di.itemState & ODS_SELECTED);
 	const bool checked = toBoolean(di.itemState & ODS_CHECKED);
 	const bool disabled = toBoolean(di.itemState & ODS_GRAYED);
@@ -203,18 +201,18 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 #ifndef COLOR_MENUHILIGHT
 			const int COLOR_MENUHILIGHT = 29;
 #endif // !COLOR_MENUHILIGHT
-			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
-			dc.frameRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+			::FillRect(di.hDC, &di.rcItem, ::GetSysColorBrush(COLOR_MENUHILIGHT));
+			::FrameRect(di.hDC, &di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 		} else
-			dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+			::FillRect(di.hDC, &di.rcItem, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 	} else if(di.itemAction == ODA_SELECT)
-		dc.fillRect(di.rcItem, ::GetSysColorBrush(COLOR_MENU));
+		::FillRect(di.hDC, &di.rcItem, ::GetSysColorBrush(COLOR_MENU));
 
 	// separator
 	if(text == 0) {
 		RECT rc = di.rcItem;
 		rc.top += (rc.bottom - rc.top) / 2;
-		dc.drawEdge(rc, EDGE_ETCHED, BF_TOP);
+		::DrawEdge(di.hDC, &rc, EDGE_ETCHED, BF_TOP);
 		return true;
 	}
 
@@ -223,18 +221,24 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 	if(icons != 0) {
 		::ImageList_GetIconSize(icons, &iconCx, &iconCy);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
-		::ImageList_DrawEx(icons, iconIndex, dc.use(), di.rcItem.left + 2, iconY,
+		::ImageList_DrawEx(icons, iconIndex, di.hDC, di.rcItem.left + 2, iconY,
 			0, 0, (selected && !checked) ? CLR_NONE : ::GetSysColor(COLOR_MENU), CLR_NONE, ILD_NORMAL);
 	} else if(icon != 0) {
 		iconCx = ::GetSystemMetrics(SM_CXSMICON);
 		iconCy = ::GetSystemMetrics(SM_CYSMICON);
 		iconY = (di.rcItem.bottom + di.rcItem.top) / 2 - iconCy / 2;
-		if(checked)
-			dc.fillSolidRect(di.rcItem.left + 2, iconY, iconCx, iconCy, ::GetSysColor(COLOR_MENU));
+		if(checked) {
+			RECT rc;
+			rc.left = di.rcItem.left + 2;
+			rc.top = iconY;
+			rc.right = rc.left + iconCx;
+			rc.bottom = rc.top + iconCy;
+			::FillRect(di.hDC, &rc, ::GetSysColorBrush(COLOR_MENU));
+		}
 #if(_WIN32_WINNT >= 0x0501)
-		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
+		::DrawIconEx(di.hDC, di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL | DI_NOMIRROR);
 #else
-		dc.drawIconEx(di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
+		::DrawIconEx(di.hDC, di.rcItem.left + 2, iconY, icon, 0, 0, 0, 0, DI_NORMAL);
 #endif
 	}
 
@@ -247,32 +251,32 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 			buttonRect.right = buttonRect.left + iconCx + 2;
 			buttonRect.bottom = buttonRect.top + iconCy + 2;
 //			if(flat)
-				dc.frameRect(buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
+				::FrameRect(di.hDC, &buttonRect, ::GetSysColorBrush(COLOR_HIGHLIGHT));
 //			else {
 //			}
 		} else {
 			const int size = di.rcItem.bottom - di.rcItem.top - 4;
 			HPEN pen = ::CreatePen(PS_SOLID, 1, ::GetSysColor(COLOR_MENUTEXT));
-			HPEN oldPen = dc.selectObject(pen);
-			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
-			dc.moveTo(di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
-			dc.lineTo(di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
-			dc.selectObject(oldPen);
+			HPEN oldPen = static_cast<HPEN>(::SelectObject(di.hDC, pen));
+			::MoveToEx(di.hDC, di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 - 1, 0);
+			::LineTo(di.hDC, di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 1);
+			::LineTo(di.hDC, di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 4);
+			::MoveToEx(di.hDC, di.rcItem.left + 2 + size / 2 - 3, di.rcItem.top + 2 + size / 2 + 0, 0);
+			::LineTo(di.hDC, di.rcItem.left + 2 + size / 2 - 1, di.rcItem.top + 2 + size / 2 + 2);
+			::LineTo(di.hDC, di.rcItem.left + 2 + size / 2 + 4, di.rcItem.top + 2 + size / 2 - 3);
+			::SelectObject(di.hDC, oldPen);
 			::DeleteObject(pen);
 		}
 	}
 
 	// draw text
-	dc.setTextColor(::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
-	dc.setBkMode(TRANSPARENT);
+	::SetTextColor(di.hDC, ::GetSysColor(disabled ? COLOR_GRAYTEXT : (selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
+	::SetBkMode(di.hDC, TRANSPARENT);
 	RECT rc = di.rcItem;
 	rc.left += rc.bottom - rc.top + 4;
-	dc.drawText(text, -1, rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+	::DrawText(di.hDC, text, -1, &rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 	rc.right -= rc.bottom - rc.top;
-	dc.drawText(accelerator, -1, rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+	::DrawText(di.hDC, accelerator, -1, &rc, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
 
 	return true;
 }
@@ -392,22 +396,24 @@ inline LRESULT Menu::measureItem(MEASUREITEMSTRUCT& mi, const WCHAR* text, const
 		::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 		ncm.lfMenuFont.lfWeight = FW_BOLD;
 		HFONT menuFont = ::CreateFontIndirectW(&ncm.lfMenuFont);
-		gdi::ScreenDC dc;
-		HFONT oldFont = (dc.selectObject(menuFont));
+		HDC dc = ::GetDC(0);
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc, menuFont));
 		RECT textRect, accelRect = {0, 0, 0, 0};
-		dc.drawText(text, -1, textRect, DT_CALCRECT | DT_LEFT | DT_NOPREFIX | DT_SINGLELINE);
+		::DrawTextW(dc, text, -1, &textRect, DT_CALCRECT | DT_LEFT | DT_NOPREFIX | DT_SINGLELINE);
 		if(accelerator != 0)
-			dc.drawText(accelerator, -1, accelRect, DT_CALCRECT | DT_RIGHT | DT_NOPREFIX | DT_SINGLELINE);
+			::DrawTextW(dc, accelerator, -1, &accelRect, DT_CALCRECT | DT_RIGHT | DT_NOPREFIX | DT_SINGLELINE);
 
+		SIZE xExtent;
+		::GetTextExtentPoint32W(dc, L"x", 1, &xExtent);
 		mi.itemWidth = textRect.right - textRect.left
 			+ accelRect.right - accelRect.left + TEXT_MARGIN * 2 + BUTTON_GAP
 			+ (::GetSystemMetrics(SM_CXSMICON) + 1) * 2
-			+ dc.getTextExtent(L"x", 1).cx - ::GetSystemMetrics(SM_CXMENUCHECK) - 1;
+			+ xExtent.cx - ::GetSystemMetrics(SM_CXMENUCHECK) - 1;
 		mi.itemHeight = std::max<long>(
 			std::max(textRect.bottom - textRect.top, accelRect.bottom - accelRect.top),
 			std::max(::GetSystemMetrics(SM_CYSMICON) + 4, ::GetSystemMetrics(SM_CYMENUCHECK) - 1));
 
-		dc.selectObject(oldFont);
+		::SelectObject(dc, oldFont);
 		::DeleteObject(menuFont);
 	}
 	return true;

@@ -9,9 +9,7 @@
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
 #include "document.hpp"
-#ifdef ASCENSION_WINDOWS
-#	include <manah/win32/windows.hpp>	// COLORREF
-#endif // ASCENSION_WINDOWS
+#include "graphics-datatypes.hpp"	// graphics.Color
 
 namespace ascension {
 
@@ -21,53 +19,18 @@ namespace ascension {
 
 	namespace presentation {
 
-		/// @c Color provides colors based on RGB values.
-		class Color : public manah::FastArenaObject<Color> {
-		public:
-			static const Color TRANSPARENT_COLOR;
-		public:
-			/// Creates an invalid @c Color object.
-			Color() /*throw()*/ : valid_(false) {}
-			/// Creates a color value based on RGB values.
-			Color(byte red, byte green, byte blue, byte alpha = 255) /*throw()*/
-				: red_(red << 8), green_(green << 8), blue_(blue << 8), alpha_(alpha << 8), valid_(true) {}
-#ifdef ASCENSION_WINDOWS
-			/// Creates an object from Win32 @c COLORREF value.
-			static Color fromCOLORREF(COLORREF value) /*throw()*/ {return Color(
-				static_cast<byte>(value & 0xff), static_cast<byte>((value >> 8) & 0xff), static_cast<byte>((value >> 16) & 0xff));}
-			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
-#endif // ASCENSION_WINDOWS
-			/// Returns the blue color component of this color.
-			byte blue() const /*throw()*/ {return blue_ >> 8;}
-			/// Returns the green color component of this color.
-			byte green() const /*throw()*/ {return green_ >> 8;}
-			/// Returns the red color component of this color.
-			byte red() const /*throw()*/ {return red_ >> 8;}
-			/// Returns the alpha value of this color.
-			byte alpha() const /*throw()*/ {return alpha_ >> 8;}
-			/// Returns @c true if this color is transparent.
-			bool isTransparent() const /**/ {return alpha() == 0;}
-			/// Equality operator.
-			bool operator==(const Color& other) const /*throw()*/ {return valid_ == other.valid_
-				&& (!valid_ || (red() == other.red() && green() == other.green() && blue() == other.blue() && alpha() == other.alpha()));}
-			/// Inequality operator.
-			bool operator!=(const Color& other) const /*throw()*/ {return !(*this == other);}
-		private:
-			uint16_t red_, green_, blue_, alpha_;
-			bool valid_;
-		};
-
 		/// Foreground color and background.
 		struct Colors {
-			Color foreground;	///< Color of foreground (text).
-			Color background;	///< Color of background.
+			graphics::Color foreground;	///< Color of foreground (text).
+			graphics::Color background;	///< Color of background.
 			/**
 			 * Constructor initializes the each colors.
 			 * @param foregroundColor foreground color
 			 * @param backgroundColor background color
 			 */
-			explicit Colors(const Color& foregroundColor = Color(),
-				const Color& backgroundColor = Color()) /*throw()*/ : foreground(foregroundColor), background(backgroundColor) {}
+			explicit Colors(const graphics::Color& foregroundColor = graphics::Color(),
+				const graphics::Color& backgroundColor = graphics::Color()) /*throw()*/
+				: foreground(foregroundColor), background(backgroundColor) {}
 		};
 
 		struct Length {
@@ -121,7 +84,7 @@ namespace ascension {
 				 * The foreground color of the border. Default value is Color() which means same as
 				 * the foreground color of the text.
 				 */
-				Color color;
+				graphics::Color color;
 				/// Style of the border. Default value is @c NONE.
 				Style style;
 				/// Thickness of the border. Default value is @c MEDIUM.
@@ -185,39 +148,12 @@ namespace ascension {
 			boost::any baselineShift;
 */		};
 
-		struct FontProperties {
-			enum Weight {
-				NORMAL_WEIGHT = 400, BOLD = 700, BOLDER, LIGHTER,
-				THIN = 100, EXTRA_LIGHT = 200, ULTRA_LIGHT = 200, LIGHT = 300, 
-				MEDIUM = 500, SEMI_BOLD = 600, DEMI_BOLD = 600,
-				EXTRA_BOLD = 800, ULTRA_BOLD = 800, BLACK = 900, HEAVY = 900, INHERIT_WEIGHT
-			} weight;
-			enum Stretch {
-				NORMAL_STRETCH, WIDER, NARROWER, ULTRA_CONDENSED, EXTRA_CONDENSED, CONDENSED, SEMI_CONDENSED,
-				SEMI_EXPANDED, EXPANDED, EXTRA_EXPANDED, ULTRA_EXPANDED, INHERIT_STRETCH
-			} stretch;
-			enum Style {
-				NORMAL_STYLE, ITALIC, OBLIQUE, BACKSLANT, INHERIT_STYLE
-			} style;
-			double size;	///< Font size (em height) in pixels. Zero means inherit the parent.
-
-			/// Constructor.
-			explicit FontProperties(Weight weight = INHERIT_WEIGHT,
-				Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0, double sizeAdjust = 0.0)
-				: weight(weight), stretch(stretch), style(style), size(size) {}
-			/// Equality operator.
-			bool operator==(const FontProperties& other) const /*throw()*/ {
-				return weight == other.weight && stretch == other.stretch && style == other.style && equals(size, other.size);}
-			/// Inequality operator.
-			bool operator!=(const FontProperties& other) const /*throw()*/ {return !(*this == other);}
-		};
-
 		typedef uint32_t TrueTypeFontTag;
 
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
 			struct Part {
-				Color color;	// if is Color(), same as the foreground
+				graphics::Color color;	// if is Color(), same as the foreground
 				Style style;	///< Default value is @c NONE.
 				/// Default constructor.
 				Part() : style(NONE) {}
@@ -234,16 +170,16 @@ namespace ascension {
 		 */
 		struct RunStyle : public manah::FastArenaObject<RunStyle> {
 			/// Foreground color.
-			Color foreground;
+			graphics::Color foreground;
 			/// Background color.
-			Color background;
+			graphics::Color background;
 			/// Border of the text run. See the description of @c Border.
 			Border border;
 			BaselineAlignment baselineAlignment;
 			/// Font family name. An empty string means inherit the parent.
 			String fontFamily;
-			/// Font properties. See @c FontProperties.
-			FontProperties fontProperties;
+			/// Font properties. See @c graphics#FontProperties.
+			graphics::FontProperties fontProperties;
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			double fontSizeAdjust;
 			std::locale locale;

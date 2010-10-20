@@ -1,13 +1,12 @@
 /**
  * @file window.hpp
- * @date 2002-2009
+ * @date 2002-2010
  */
 
 #ifndef MANAH_WINDOW_HPP
 #define MANAH_WINDOW_HPP
 
 #include "menu.hpp"
-#include "../dc.hpp"
 #include "../../memory.hpp"	// manah.AutoBuffer
 #include <shellapi.h>		// DragAcceptFiles
 #include <ole2.h>			// D&D
@@ -161,14 +160,12 @@ public:
 #if(WINVER >= 0x0500)
 	bool animate(DWORD time, DWORD flags, bool catchError = true);
 #endif
-	gdi::PaintDC beginPaint(PAINTSTRUCT& paint);
 	bool enableScrollBar(int barFlags, UINT arrowFlags = ESB_ENABLE_BOTH);
-	void endPaint(const PAINTSTRUCT& paint);
-	gdi::ClientDC getDC();
-	gdi::ClientDC getDCEx(HRGN clipRegion, DWORD flags);
+	Handle<HDC> getDC();
+	Handle<HDC> getDCEx(HRGN clipRegion, DWORD flags);
 	bool getUpdateRect(RECT& rect, bool erase = false);
 	int getUpdateRegion(HRGN region, bool erase = false);
-	gdi::WindowDC getWindowDC();
+	Handle<HDC> getWindowDC();
 	bool lockUpdate();
 	void invalidate(bool erase = true);
 	void invalidateRect(const RECT* rect, bool erase = true);
@@ -551,7 +548,7 @@ public:
 protected:
 	CustomControl(const CustomControl<Control>& rhs) : Window() {}
 	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-	virtual void onPaint(gdi::PaintDC& dc) = 0;	// WM_PAINT
+	virtual void onPaint(const Handle<HDC>& dc, const PAINTSTRUCT& ps) = 0;	// WM_PAINT
 private:
 	using Window::fireProcessWindowMessage;
 };
@@ -576,8 +573,6 @@ inline bool Window::animate(DWORD time, DWORD flags, bool catchError /* = true *
 #endif
 
 inline UINT Window::arrangeIconicWindows() {return ::ArrangeIconicWindows(use());}
-
-inline gdi::PaintDC Window::beginPaint(PAINTSTRUCT& paint) {::BeginPaint(use(), &paint); return gdi::PaintDC(get(), paint);}
 
 inline void Window::bringToTop() {::BringWindowToTop(use());}
 
@@ -659,8 +654,6 @@ inline bool Window::enableScrollBar(int barFlags, UINT arrowFlags /* = ESB_ENABL
 
 inline bool Window::enable(bool enable /* = true */) {return toBoolean(::EnableWindow(use(), enable));}
 
-inline void Window::endPaint(const PAINTSTRUCT& paint) {::EndPaint(use(), &paint);}
-
 inline int Window::enumerateProperties(PROPENUMPROCW enumFunction) {return ::EnumPropsW(use(), enumFunction);}
 
 inline int Window::enumeratePropertiesEx(PROPENUMPROCEXW enumFunction, LPARAM param) {return ::EnumPropsExW(use(), enumFunction, param);}
@@ -687,9 +680,16 @@ inline void Window::getClientRect(RECT& rect) const {::GetClientRect(use(), &rec
 
 inline POINT Window::getCursorPosition() const {POINT pt; ::GetCursorPos(&pt); screenToClient(pt); return pt;}
 
-inline gdi::ClientDC Window::getDC() {return gdi::ClientDC(use());}
+namespace {
+	struct WindowRelatedDCReleaser {
+		HWND window;
+		int operator()(HDC dc) {return ::ReleaseDC(window, dc);}
+	};
+}
 
-inline gdi::ClientDC Window::getDCEx(HRGN clipRegion, DWORD flags) {return gdi::ClientDC(use(), clipRegion, flags);}
+inline Handle<HDC> Window::getDC() {return Handle<HDC>(::GetDC(use()), std::bind1st(std::ptr_fun(&::ReleaseDC), get()));}
+
+inline Handle<HDC> Window::getDCEx(HRGN clipRegion, DWORD flags) {return Handle<HDC>(::GetDCEx(use(), clipRegion, flags), std::bind1st(std::ptr_fun(&::ReleaseDC), get()));}
 
 inline Window Window::getDesktop() {return Window(borrowed(::GetDesktopWindow()));}
 
@@ -759,7 +759,7 @@ inline Window Window::getWindow(UINT command) const {return Window(borrowed(::Ge
 
 inline DWORD Window::getContextHelpID() const {return ::GetWindowContextHelpId(use());}
 
-inline gdi::WindowDC Window::getWindowDC() {return gdi::WindowDC(use());}
+inline Handle<HDC> Window::getWindowDC() {return Handle<HDC>(::GetWindowDC(use()), std::bind1st(std::ptr_fun(&::ReleaseDC), get()));}
 
 inline LONG Window::getWindowLong(int index) const {return ::GetWindowLongW(use(), index);}
 
@@ -1130,7 +1130,10 @@ inline LRESULT CALLBACK CustomControl<Control>::windowProcedure(HWND window, UIN
 		if(handled)
 			return r;
 		else if(message == WM_PAINT) {
-			p->onPaint(gdi::PaintDC(p->get()));
+			PAINTSTRUCT ps;
+			Handle<HDC> dc(::BeginPaint(p->get(), &ps));
+			p->onPaint(dc, ps);
+			::EndPaint(p->get(), &ps);
 			return 0;
 		}
 		return p->fireProcessWindowMessage(message, wParam, lParam);

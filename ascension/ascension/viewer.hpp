@@ -12,6 +12,7 @@
 #include "point.hpp"
 #include "presentation.hpp"
 #include "content-assist.hpp"
+#include <manah/win32/gdi-object.hpp>
 #include <manah/win32/ui/window.hpp>
 #include <manah/com/unknown-impl.hpp>
 #include <set>
@@ -367,8 +368,8 @@ namespace ascension {
 		class TextViewer :
 				public manah::win32::ui::CustomControl<TextViewer>,
 				public kernel::IDocumentListener, public kernel::IDocumentStateListener,
-				public kernel::IDocumentRollbackListener, public layout::IDefaultFontListener,
-				public layout::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
+				public kernel::IDocumentRollbackListener, public graphics::IDefaultFontListener,
+				public graphics::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
 				public ascension::kernel::internal::IPointCollection<VisualPoint> {
 			typedef manah::win32::ui::CustomControl<TextViewer> BaseControl;
 			DEFINE_WINDOW_CLASS() {
@@ -393,7 +394,7 @@ namespace ascension {
 			 * A general configuration of the viewer.
 			 * @see TextViewer#getConfigurations, TextViewer#setConfigurations
 			 */
-			struct Configuration : public layout::LayoutSettings {
+			struct Configuration : public graphics::LayoutSettings {
 				/// Color of active selected text. Standard setting is {@c COLOR_HIGHLIGHTTEXT, @c COLOR_HIGHLIGHT}.
 				presentation::Colors selectionColor;
 				/// Color of inactive selected text. Standard setting is {@c COLOR_INACTIVECAPTIONTEXT, @c COLOR_INACTIVECAPTION}.
@@ -449,7 +450,7 @@ namespace ascension {
 					presentation::Colors textColor;
 					/// Color of the border. Default value is invalid color which is fallbacked to
 					/// the color of the system normal text.
-					presentation::Color borderColor;
+					graphics::Color borderColor;
 					/// Width of the border. Default value is 1.
 					uchar borderWidth;
 					/// Style of the border. Default value is @c SOLID.
@@ -478,12 +479,12 @@ namespace ascension {
 					 * Background color. Default value is invalid color which is fallbacked to the
 					 * platform-dependent color. On Win32, it is @c COLOR_3DFACE.
 					 */
-					presentation::Color color;
+					graphics::Color color;
 					/**
 					 * Color of the border. Default value is invalid color which is fallbacked to
 					 * the platform-dependent color. On Win32, it is @c COLOR_3DSHADOW.
 					 */
-					presentation::Color borderColor;
+					graphics::Color borderColor;
 
 					IndicatorMargin() /*throw()*/;
 				} indicatorMargin;	/// Configuration about the indicator margin.
@@ -519,8 +520,8 @@ namespace ascension {
 			presentation::Presentation& presentation() /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
 			ulong scrollRate(bool horizontal) const /*throw()*/;
-			layout::TextRenderer& textRenderer() /*throw()*/;
-			const layout::TextRenderer& textRenderer() const /*throw()*/;
+			graphics::TextRenderer& textRenderer() /*throw()*/;
+			const graphics::TextRenderer& textRenderer() const /*throw()*/;
 			void setConfiguration(const Configuration* general,
 				const VerticalRulerConfiguration* verticalRuler, bool synchronizeUI);
 			const VerticalRulerConfiguration& verticalRulerConfiguration() const /*throw()*/;
@@ -561,10 +562,10 @@ namespace ascension {
 			void enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
 			kernel::Position characterForClientXY(const POINT& pt,
-				layout::LineLayout::Edge, bool abortNoCharacter = false,
+				graphics::LineLayout::Edge, bool abortNoCharacter = false,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 			POINT clientXYForCharacter(const kernel::Position& position,
-				bool fullSearchY, layout::LineLayout::Edge edge = layout::LineLayout::LEADING) const;
+				bool fullSearchY, graphics::LineLayout::Edge edge = graphics::LineLayout::LEADING) const;
 			// utilities
 			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
 			HitTestResult hitTest(const POINT& pt) const;
@@ -574,7 +575,7 @@ namespace ascension {
 
 		protected:
 			virtual void doBeep() /*throw()*/;
-			virtual void drawIndicatorMargin(length_t line, manah::win32::gdi::DC& dc, const RECT& rect);
+			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::Rect<int>& rect);
 			bool handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) /*throw()*/;
 
 			// helpers
@@ -653,7 +654,7 @@ namespace ascension {
 #endif // WM_MOUSEWHEEL
 			bool onNcCreate(CREATESTRUCTW& cs);
 			bool onNotify(int id, NMHDR& nmhdr);
-			void onPaint(manah::win32::gdi::PaintDC& dc);
+			void onPaint(const manah::win32::Handle<HDC>& dc, const PAINTSTRUCT& ps);
 			void onRButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
 			void onRButtonDown(UINT keyState, const POINT& pt, bool& handled);
 			void onRButtonUp(UINT keyState, const POINT& pt, bool& handled);
@@ -682,8 +683,8 @@ namespace ascension {
 
 			// internal classes
 		private:
-			/// Internal extension of @c layout#TextRenderer.
-			class Renderer : public layout::TextRenderer {
+			/// Internal extension of @c graphics#TextRenderer.
+			class Renderer : public graphics::TextRenderer {
 				MANAH_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
@@ -691,9 +692,9 @@ namespace ascension {
 				void rewrapAtWindowEdge();
 			private:
 				// LineLayoutBuffer
-				manah::win32::gdi::DC deviceContext() const;
+				std::auto_ptr<graphics::Context> renderingContext() const;
 				// ILayoutInformationProvider
-				const layout::LayoutSettings& layoutSettings() const /*throw()*/;
+				const graphics::LayoutSettings& layoutSettings() const /*throw()*/;
 				presentation::ReadingDirection defaultUIReadingDirection() const /*throw()*/;
 				int width() const /*throw()*/;
 			private:
@@ -707,7 +708,7 @@ namespace ascension {
 			public:
 				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
 				const VerticalRulerConfiguration& configuration() const /*throw()*/;
-				void draw(manah::win32::gdi::PaintDC& dc);
+				void draw(graphics::Context& context);
 				void setConfiguration(const VerticalRulerConfiguration& configuration);
 				void update() /*throw()*/;
 				int width() const /*throw()*/;
@@ -719,11 +720,11 @@ namespace ascension {
 				VerticalRulerConfiguration configuration_;
 				int width_;
 				uchar lineNumberDigitsCache_;
-				manah::win32::gdi::Pen indicatorMarginPen_, lineNumbersPen_;
-				manah::win32::gdi::Brush indicatorMarginBrush_, lineNumbersBrush_;
+				manah::win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
+				manah::win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
 				const bool enablesDoubleBuffering_;
-				manah::win32::gdi::DC memoryDC_;
-				manah::win32::gdi::Bitmap memoryBitmap_;
+				manah::win32::Handle<HDC> memoryDC_;
+				manah::win32::Handle<HBITMAP> memoryBitmap_;
 			};
 
 			// enumerations
@@ -1094,10 +1095,10 @@ inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 inline void TextViewer::setCaretShapeProvider(std::tr1::shared_ptr<ICaretShapeProvider> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
-inline layout::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
+inline graphics::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
 
 /// Returns the text renderer.
-inline const layout::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
+inline const graphics::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
 
 /**
  * Returns the vertical ruler's configuration.
