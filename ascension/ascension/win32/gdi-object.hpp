@@ -1,13 +1,14 @@
 /**
  * @file gdi-object.hpp Defines GDI object wrapper classes.
- * @date 2004-2009 exeal
+ * @author exeal
+ * @date 2004-2010
  */
 
 #ifndef MANAH_GDI_OBJECT_HPP
 #define MANAH_GDI_OBJECT_HPP
 
-#include "utility.hpp"
 #include <commctrl.h>	// COLORMAP
+#include "dc.hpp"
 
 namespace manah {
 namespace win32 {
@@ -43,9 +44,9 @@ public:
 	// methods
 	bool getBitmap(BITMAP& bitmap) const;
 	DWORD getBits(DWORD count, void* bits) const;
-	Size getDimension() const;
+	SIZE getDimension() const;
 	DWORD setBits(DWORD count, const void* bits);
-	Size setDimension(int width, int height);
+	SIZE setDimension(int width, int height);
 };
 
 class Brush : public GDIObject<HBRUSH> {
@@ -159,7 +160,7 @@ inline bool Bitmap::getBitmap(BITMAP& bitmap) const {return ::GetObjectW(use(), 
 
 inline DWORD Bitmap::getBits(DWORD count, void* bits) const {return ::GetBitmapBits(use(), count, bits);}
 
-inline Size Bitmap::getDimension() const {SIZE size; ::GetBitmapDimensionEx(use(), &size); return size;}
+inline SIZE Bitmap::getDimension() const {SIZE size; ::GetBitmapDimensionEx(use(), &size); return size;}
 
 inline Bitmap Bitmap::load(const ResourceID& id) {return Bitmap(managed(::LoadBitmapW(::GetModuleHandleW(0), id)));}
 
@@ -170,7 +171,7 @@ inline Bitmap Bitmap::loadOEMBitmap(uint id) {return Bitmap(managed(::LoadBitmap
 
 inline DWORD Bitmap::setBits(DWORD count, const void* bits) {return ::SetBitmapBits(use(), count, bits);}
 
-inline Size Bitmap::setDimension(int width, int height) {SIZE size; ::SetBitmapDimensionEx(use(), width, height, &size); return size;}
+inline SIZE Bitmap::setDimension(int width, int height) {SIZE size; ::SetBitmapDimensionEx(use(), width, height, &size); return size;}
 
 
 // Brush ////////////////////////////////////////////////////////////////////

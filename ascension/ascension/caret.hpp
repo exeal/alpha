@@ -108,7 +108,7 @@ namespace ascension {
 		 * Extension of @c kernel#Point class for viewer and layout.
 		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
 		 */
-		class VisualPoint : public kernel::Point, public layout::IVisualLinesListener {
+		class VisualPoint : public kernel::Point, public graphics::IVisualLinesListener {
 			MANAH_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
