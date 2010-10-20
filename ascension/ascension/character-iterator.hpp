@@ -12,7 +12,6 @@
 #include <ascension/internal.hpp>
 #include <ascension/ustring.hpp>	// ustrlen
 #include <manah/object.hpp>	// manah.Noncopyable
-#include <manah/types.hpp>	// manah.Select
 #include <manah/memory.hpp>	// manah.AutoBuffer
 #include <cassert>
 #include <stdexcept>
@@ -553,7 +552,7 @@ namespace ascension {
 		template<typename CodeUnitSequence,
 			template<class> class AdaptionIterator = UTF16To32Iterator>
 		struct ToUTF32Sequence {
-			typedef typename manah::Select<
+			typedef typename internal::Select<
 				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
 				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Result Result;
 		};

@@ -2,7 +2,7 @@
  * @file internal.hpp
  * @brief Private entries used by Ascension internally.
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_INTERNAL_HPP
@@ -23,6 +23,13 @@ namespace ascension {
 	 * @internal
 	 */
 	namespace internal {
+
+		/// Generates a type from the constant integer.
+		template<int v> struct Int2Type {static const int value = v;};
+
+		/// Returns the type @a T if @a condition is @c true, otherwise type @a U.
+		template<bool condition, typename T, typename U> struct Select {typedef T Result;};
+		template<typename T, typename U> struct Select<false, T, U> {typedef U Result;};
 
 		/// Generates signed numeral types.
 		template<typename T> struct ToSigned;

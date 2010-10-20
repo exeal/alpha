@@ -172,6 +172,62 @@ namespace {
 } // namespace @0
 
 
+// Matcher //////////////////////////////////////////////////////////////////
+
+/**
+ * @class ascension::regex::Matcher regex.hpp
+ *
+ * An engine that performs match operations on a character sequence represented by
+ * @a CodePointIterator by interpreting a @c Pattern.
+ *
+ * <h3>Java/ICU-like replacements</h3>
+ *
+ * This class defines two types of methods for replacing matched subsequences: Java/ICU like and
+ * in-place replacement. Java/ICU style methods are the following:
+ *
+ * - @c #appendReplacement
+ * - @c #appendTail
+ * - @c #replaceAll
+ * - @c #replaceFirst
+ *
+ * The @c #appendReplacement and @c #appendTail methods can be used in tandem in order to collect
+ * the result into an output iterator, or the more convenient @c #replaceAll method can be used to
+ * create a string in which every macthing subsequence in the input sequence is replaced.
+ *
+ * <h3>In-place replacements</h3>
+ *
+ * - @c #replaceInplace
+ * - @c #endInplaceReplacement
+ *
+ * <h3>Region boundaries</h3>
+ *
+ * By default, a matcher uses anchoring and opaque region bounds.
+ */
+
+/**
+ * @fn ascension::regex::Matcher::appendReplacement(OutputIterator out, const String& replacement)
+ * @brief
+ * @tparam OutputIterator
+ * @param out
+ * @param replacement
+ * @return
+ */
+
+/**
+ * @fn String ascension::regex::Matcher::replaceAll(const String& replacement)
+ * @brief
+ * @param replacement
+ * @return
+ */
+
+/**
+ * @fn String ascension::regex::Matcher::replceFirst(const String& replacement)
+ * @brief
+ * @param replacement
+ * @return
+ */
+
+
 // PatternSyntaxException ///////////////////////////////////////////////////
 
 PatternSyntaxException::PatternSyntaxException(
@@ -279,36 +335,6 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  * @c Pattern can handle property name and value pair notation like "\p{name=value}" or "\p{name:value}".
  *
  * POSIX compatible character classes are also supported (as standard recommendation version).
- */
-
-/**
- * @class ascension::regex::Matcher regex.hpp
- *
- * An engine that performs match operations on a character sequence represented by
- * @a CodePointIterator by interpreting a @c Pattern.
- *
- * <h3>Java/ICU-like replacements</h3>
- *
- * This class defines two types of methods for replacing matched subsequences: Java/ICU like and
- * in-place replacement. Java/ICU style methods are the following:
- *
- * - @c #appendReplacement
- * - @c #appendTail
- * - @c #replaceAll
- * - @c #replaceFirst
- *
- * The @c #appendReplacement and @c #appendTail methods can be used in tandem in order to collect
- * the result into an output iterator, or the more convenient @c #replaceAll method can be used to
- * create a string in which every macthing subsequence in the input sequence is replaced.
- *
- * <h3>In-place replacements</h3>
- *
- * - @c #replaceInplace
- * - @c #endInplaceReplacement
- *
- * <h3>Region boundaries</h3>
- *
- * By default, a matcher uses anchoring and opaque region bounds.
  */
 
 /// @internal Private constructor.
