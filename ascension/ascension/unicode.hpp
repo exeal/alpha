@@ -13,7 +13,6 @@
 #include "internal.hpp"
 #include "ustring.hpp"	// ustrlen
 #include <manah/object.hpp>	// manah.Noncopyable
-#include <manah/types.hpp>	// manah.Select
 #include <manah/memory.hpp>	// manah.AutoBuffer
 #include <cassert>
 #include <stdexcept>

@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_NO_REGEX
@@ -42,29 +42,56 @@ namespace ascension {
 		 * seen but not modified through a @c MatchResult.</p>
 		 * <p>Almost all methods throw @c IllegalStateException if no match has yet been attempted,
 		 * or if the previous match operation failed.</p>
-		 * @tparam CodePointIterator 
+		 * @tparam CodePointIterator an iterator represents a position in the input character
+		 *                           sequence (should be UTF-32)
 		 * @see Matcher
 		 */
 		template<typename CodePointIterator> class MatchResult {
 		public:
 			/// Destructor.
-			virtual ~MatchResult() {}
-			/// Returns the position after the last character matched.
+			virtual ~MatchResult() /*throw()*/ {}
+			/**
+			 * Returns the position after the last character matched.
+			 * @return The position after the last character matched
+			 */
 			virtual const CodePointIterator& end() const = 0;
-			/// Returns the position after the last character of the subsequence captured by
-			/// @a group during this match.
+			/**
+			 * Returns the position after the last character of the subsequence captured by the
+			 * given group during this match.
+			 * @param group The index of a capturing group in this matcher's pattern
+			 * @return The position after the last character captured by the group
+			 */
 			virtual const CodePointIterator& end(int group) const = 0;
-			/// Returns the input subsequence matched by the previous match.
+			/**
+			 * Returns the input subsequence matched by the previous match.
+			 * @return The (possibly empty) subsequence matched by the previous match, in string
+			 *         form
+			 */
 			virtual String group() const = 0;
-			/// Returns the input subsequence captured by @a group during the previous match
-			/// operation.
+			/**
+			 * Returns the input subsequence captured by the given group during the previous match
+			 * operation.
+			 * @param group The index of a capturing group in this matcher's pattern
+			 * @return The (possibly empty) subsequence captured by the group during the previous
+			 *         match
+			 */
 			virtual String group(int group) const = 0;
-			/// Returns the number of the capturing groups this match result's pattern.
+			/**
+			 * Returns the number of the capturing groups this match result's pattern.
+			 * @return The number of capturing groups in this matcher's pattern
+			 */
 			virtual std::size_t groupCount() const = 0;
-			/// Returns the start position of the match.
+			/**
+			 * Returns the start position of the match.
+			 * @return The position of the first character matched
+			 */
 			virtual const CodePointIterator& start() const = 0;
-			/// Returns the start position of the subsequence captured by @a group during this
-			/// match.
+			/**
+			 * Returns the start position of the subsequence captured by the given group during
+			 * this match.
+			 * @param group The index of a capturing group in this matcher's pattern
+			 * @return The position of the first character captured by the group
+			 */
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
 			MANAH_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
@@ -76,11 +103,16 @@ namespace ascension {
 			class MatchResultImpl : public MatchResult<CodePointIterator> {
 			public:
 				MatchResultImpl() {}
-				explicit MatchResultImpl(const boost::match_results<CodePointIterator>& src) : impl_(src) {}
+				explicit MatchResultImpl(
+					const boost::match_results<CodePointIterator>& src) : impl_(src) {}
 				const CodePointIterator& end() const {return end(0);}
 				const CodePointIterator& end(int group) const {return get(group).second;}
 				String group() const {return group(0);}
-				String group(int group) const;
+				String group(int group) const {
+					const std::basic_string<CodePoint> s(get(group).str());
+					return String(text::UTF32To16Iterator<>(
+						s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+				}
 				std::size_t groupCount() const {return impl_.size();}
 				const CodePointIterator& start() const {return start(0);}
 				const CodePointIterator& start(int group) const {return get(group).first;}
@@ -90,8 +122,10 @@ namespace ascension {
 			private:
 				const boost::sub_match<CodePointIterator>& get(int group) const {
 					const boost::sub_match<CodePointIterator>& s = impl_[group];
-					if(group != 0 && !impl_[0].matched) throw IllegalStateException("the previous was not performed or failed.");
-					if(group != 0 && !s.matched) throw IndexOutOfBoundsException("the specified sub match group is not exist.");
+					if(group != 0 && !impl_[0].matched)
+						throw IllegalStateException("the previous was not performed or failed.");
+					if(group != 0 && !s.matched)
+						throw IndexOutOfBoundsException("the specified sub match group is not exist.");
 					return s;
 				}
 				boost::match_results<CodePointIterator> impl_;
@@ -124,15 +158,36 @@ namespace ascension {
 				typedef std::locale locale_type;
 				typedef std::bitset<CLASS_END> char_class_type;
 				static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
-				char_type translate(char_type c) const;
+				char_type translate(char_type c) const {
+					if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
+					return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
+						MANAH_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
+				}
 				char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
 				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
 				string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				bool isctype(char_type c, const char_class_type& f) const;
-				int value(char_type c, int radix) const;
-				locale_type imbue(locale_type l) {locale_type temp = locale_; collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l); return temp;}
+				int value(char_type c, int radix) const {
+					switch(radix) {
+					case 8:
+						return (c >= '0' && c <= '7') ? static_cast<int>(c - '0') : -1;
+					case 10:
+						return (c >= '0' && c <= '9') ? static_cast<int>(c - '0') : -1;
+					case 16:
+						if(c >= '0' && c <= '9')		return c - '0';
+						else if(c >= 'A' && c <= 'F')	return c - 'A' + 10;
+						else if(c >= 'a' && c <= 'f')	return c - 'a' + 10;
+					default:
+						return -1;
+					}
+				}
+				locale_type imbue(locale_type l) {
+					locale_type temp = locale_;
+					collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l);
+					return temp;
+				}
 				locale_type getloc() const {return locale_;}
 				std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
 			private:
@@ -147,54 +202,348 @@ namespace ascension {
 
 		class Pattern;
 
+		// the documentation is regex.cpp
 		template<typename CodePointIterator>
 		class Matcher : public regex::internal::MatchResultImpl<CodePointIterator> {
 		private:
 			typedef typename regex::internal::MatchResultImpl<CodePointIterator> Base;
 		public:
-			// patterns
-			const Pattern& pattern() const /*throw()*/;
-			Matcher& usePattern(const Pattern& newPattern);
-			// region
-			Matcher& region(CodePointIterator start, CodePointIterator end);
-			const CodePointIterator& regionEnd() const /*throw()*/;
-			const CodePointIterator& regionStart() const /*throw()*/;
-			// restrictions
-			bool hasAnchoringBounds() const /*throw()*/;
-			bool hasTransparentBounds() const /*throw()*/;
-			Matcher& useAnchoringBounds(bool b) /*throw()*/;
-			Matcher& useTransparentBounds(bool b) /*throw()*/;
-			// search
-			bool find();
-			bool find(CodePointIterator start);
-			bool lookingAt();
-			bool matches();
-			// replacement
+			/**
+			 * Returns the pattern that is interpreted by this matcher.
+			 * @return The pattern for which this matcher was created
+			 */
+			const Pattern& pattern() const /*throw()*/ {return *pattern_;}
+			/**
+			 * Changes the @c Pattern that this @c Matcher uses to find matches with.
+			 * This method causes this matcher to lose information about the groups of the last
+			 * match that occurred. The matcher's position in the input is maintained and its last
+			 * append position is unaffected.
+			 * @param newPattern The new pattern used by this matcher
+			 * @return This matcher
+			 */
+			Matcher& usePattern(const Pattern& newPattern) {pattern_ = &pattern; Base::impl().reset(); return *this;}
+
+			/**
+			 * @brief Sets the limits of this matcher's region. The region is the part of the input
+			 * sequence that will be searched to find a match. Invoking this method resets the
+			 * matcher, and then sets the region to start at the index specified by the @a start
+			 * parameter and end at the index specified by the @a end parameter.
+			 * @par Depending on the transparency and anchoring being used (see
+			 * @c useTransparentBounds and @c useAnchoringBounds), certain constructs such as
+			 * anchors may behave differently at or around the boundaries of the region.
+			 * @param start The index to start searching at (inclusive)
+			 * @param end The index to end searching at (exclusive)
+			 * @return This matcher
+			 * @throw std#out_of_range If @a start is greater than the length of the input
+			 *                         sequence, if @a end is greater than the length of the input
+			 *                         sequence, or if @a start is greater than @a end
+			 */
+			Matcher& region(CodePointIterator start, CodePointIterator end) {
+				reset();
+				current_ = region_.first = start;
+				region_.second = end;
+				return *this;
+			}
+			/**
+			 * Reports the end index (exclusive) of this matcher's region. The searches this
+			 * matcher conducts are limited to finding matches within @c regionStart (inclusive)
+			 * and @c regionEnd (exclusive).
+			 * @return The ending point of this matcher's region
+			 */
+			const CodePointIterator& regionEnd() const /*throw()*/ {return region_.second;}
+			/**
+			 * Reports the start index of this matcher's region. The searches this matcher conducts
+			 * are limited to finding matches within @c regionStart (inclusive) and @c regionEnd
+			 * (exclusive).
+			 * @return The starting point of this matcher's region
+			 */
+			const CodePointIterator& regionStart() const /*throw()*/ {return region_.first;}
+
+			/**
+			 * Queries the anchoring of region bounds for this matcher.
+			 * @par This method returns @c true if this matcher uses <em>anchoring</em> bounds,
+			 * @c false otherwise.
+			 * @par See @c useAnchoringBounds for a description of anchoring bounds.
+			 * @par By default, a matcher uses anchoring region boundaries.
+			 * @return true if this matcher is using anchoring bounds, false otherwise
+			 * @see useAnchoringBounds
+			 */
+			bool hasAnchoringBounds() const /*throw()*/ {return usesAnchoringBounds_;}
+			/**
+			 * Queries the transparency of region bounds for this matcher.
+			 * @par This method returns @c true if this matcher uses <em>transparent</em> bounds,
+			 * @c false if it uses <em>opaque</em> bounds.
+			 * @par See @c useTransparentBounds for a description of transparent and opaque bounds.
+			 * @par By default, a matcher uses opaque region boundaries.
+			 * @return true if this matcher is using transparent bounds, false otherwise
+			 * @see useTransparentBounds
+			 */
+			bool hasTransparentBounds() const /*throw()*/ {return usesTransparentBounds_;}
+			/**
+			 * Sets the anchoring of region bounds for this matcher.
+			 * @par Invoking this method with an argument of @c true will set this matcher to use
+			 * <em>anchoring</em> bounds. If the boolean argument is @c false, then
+			 * <em>non-anchoring</em> bounds will be used.
+			 * @par Using anchoring bounds, the boundaries of this matcher's region match anchors
+			 * such as ^ and $.
+			 * @par Without anchoring bounds, the boundaries of this matcher's region will not
+			 * match anchors such as ^ and $.
+			 * @par By default, a matcher uses anchoring region boundaries.
+			 * @param b A boolean indicating whether or not to use anchoring bounds
+			 * @return This matcher
+			 * @see hasAnchoringBounds
+			 */
+			Matcher& useAnchoringBounds(bool b) /*throw()*/ {usesAnchoringBounds_ = b; return *this;}
+			/**
+			 * Sets the transparency of region bounds for this matcher.
+			 * @par Invoking this method with an argument of @c true will set this matcher to use
+			 * <em>transparent</em> bounds. If the boolean argument is @c false, then
+			 * <em>opaque</em> bounds will be used.
+			 * @par Using transparent bounds, the boundaries of this matcher's region are
+			 * transparent to lookahead, lookbehind, and boundary matching constructs. Those
+			 * constructs can see beyond the boundaries of the region to see if a match is
+			 * appropriate.
+			 * @par Using opaque bounds, the boundaries of this matcher's region are opaque to
+			 * lookahead, lookbehind, and boundary matching constructs that may try to see beyond
+			 * them. Those constructs cannot look past the boundaries so they will fail to match
+			 * anything outside of the region.
+			 * @par By default, a matcher uses opaque bounds.
+			 * @param b A boolean indicating whether to use opaque or transparent regions
+			 * @return This matcher
+			 * @see hasTransparentBounds
+			 */
+			Matcher& useTransparentBounds(bool b) /*throw()*/ {usesTransparentBounds_ = b; return *this;}
+
+			/**
+			 * Attempts to find the next subsequence of the input sequence that matches the
+			 * pattern.
+			 * <p>This method starts at the beginning of the matcher's region, or, if a previous
+			 * invocation of the method was successful and the matcher has not since been reset, at
+			 * the first character not matched by the previous match.</p>
+			 * <p>If the match succeeds then more information can be obtained via the @c start,
+			 * @c end, and @c group methods.</p>
+			 * @return true if, and only if, a subsequence of the input sequence matches this
+			 *         matcher's pattern
+			 */
+			bool find() {
+				checkInplaceReplacement();
+				boost::regex_search(current_, region_.second, Base::impl(),
+					pattern_->impl_, nativeFlags(current_, region_.second, true));
+				return acceptResult();
+			}
+			/**
+			 * Resets this matcher and then attempts to find the next subsequence of the input
+			 * sequence that matches the pattern, starting at the specified index.
+			 * If the match succeeds then more information can be obtained via the @c start,
+			 * @c end, and @c group methods, and subsequent invocations of the @c find() method
+			 * will start at the first character not matched by this match.
+			 * @param start 
+			 * @return true if, and only if, a subsequence of the input sequence starting at the
+			 *         given index matches this matcher's pattern
+			 * @throw std::out_of_range 
+			 */
+			bool find(CodePointIterator start) {
+				reset();
+				boost::regex_search(start, input_.second, Base::impl(),
+					pattern_->impl_, nativeFlags(start, input_.second, true));
+				return acceptResult();
+			}
+			/**
+			 * Attempts to match the input sequence, starting at the beginning of the region,
+			 * against the pattern.
+			 * <p>Like the @c matches method, this method always starts at the beginning of the
+			 * region; unlike that method, it does not require that the entire region be matched.
+			 * </p>
+			 * <p>If the match succeeds then more information can be obtained via the @c start,
+			 * @c end, and @c group methods.
+			 * @return true if, and only if, a prefix of the input sequence matches this matcher's
+			 *         pattern
+			 */
+			bool lookingAt() {
+				boost::regex_search(region_.first, region_.second, Base::impl(),
+					pattern_->impl_, nativeFlags(region_.first, region_.second, false)
+						| boost::regex_constants::match_continuous);
+				return acceptResult();}
+			/**
+			 * Attempts to match the entire region against the pattern.
+			 * If the match succeeded then more information can be obtained via the @c start,
+			 * @c end, and @c group methods.
+			 * @return true if, and only if, the entire region sequence matches this matcher's
+			 *         pattern
+			 */
+			bool matches() {
+				boost::regex_match(region_.first, region_.second, Base::impl(),
+					pattern_->impl_, nativeFlags(region_.first, region_.second, false));
+				return acceptResult();
+			}
+
+			// documentation is regex.cpp
 			template<typename OutputIterator>
-			Matcher& appendReplacement(OutputIterator out, const String& replacement);
+			Matcher& appendReplacement(OutputIterator out, const String& replacement) {
+				checkInplaceReplacement(); checkPreviousMatch();
+				appendReplacement(out, replacement, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());
+				appendingPosition_ = Base::impl()[0].second;
+				return *this;
+			}
+			/**
+			 * Implements a terminal append-and-replace step.
+			 * This method reads characters from the input sequence, starting at the append
+			 * position, and appends them to the given string buffer. It is intended to be invoked
+			 * after one or more invocations of the @c appendReplacement method in order to copy
+			 * the remainder of the input sequence.
+			 * @tparam OutputIterator The type of @a out
+			 * @param out The output character sequence
+			 * @return The output iterator
+			 */
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out) const;
-			String replaceAll(const String& replacement);
-			String replaceFirst(const String& replacement);
-			// in-place replacement
+			OutputIterator appendTail(OutputIterator out) const {
+				checkInplaceReplacement();
+				return appendTail(out, internal::Int2Type<text::CodeUnitSizeOf<OutputIterator>::result>());
+			}
+			// documentation is regex.cpp
+			String replaceAll(const String& replacement) {
+				reset();
+				std::basic_ostringstream<Char> s;
+				std::ostream_iterator<Char, Char> os(s);
+				while(find())
+					appendReplacement(os, replacement);
+				appendTail(os);
+				return s.str();
+			}
+			// documentation is regex.cpp
+			String replaceFirst(const String& replacement) {
+				reset();
+				std::basic_ostringstream<Char> s;
+				std::ostream_iterator<Char, Char> os(s);
+				if(find())
+					appendReplacement(os, replacement);
+				appendTail(os);
+				return s.str();
+			}
+
+			/// Ends the active in-place replacement context.
 			Matcher& endInplaceReplacement(CodePointIterator first, CodePointIterator last,
-				CodePointIterator regionFirst, CodePointIterator regionLast, CodePointIterator next);
-			String replaceInplace(const String& replacement);
-			// explicit reset
-			Matcher& reset();
-			Matcher& reset(CodePointIterator first, CodePointIterator last);
-			// result
-			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const;
+					CodePointIterator regionFirst, CodePointIterator regionLast, CodePointIterator next) {
+				if(!replaced_)
+					throw IllegalStateException("the matcher is not entered in in-place replacement context.");
+				const bool matchedZW = matchedZeroWidth_;
+				reset(first, last);
+				region_.first = regionFirst;
+				region_.second = regionLast;
+				current_ = next;
+				matchedZeroWidth_ = matchedZW;
+				return *this;
+			}
+			/// ...
+			String replaceInplace(const String& replacement) {
+				if(!Base::impl()[0].matched)
+					throw IllegalStateException("the previous was failed or not performed.");
+				else if(replaced_)
+					throw IllegalStateException("this matcher already entered in in-place replacement.");
+				const std::basic_string<CodePoint> temp(Base::impl().format(std::basic_string<CodePoint>(
+					text::UTF16To32Iterator<String::const_iterator>(
+						replacement.begin(), replacement.end()),
+					text::UTF16To32Iterator<String::const_iterator>(
+						replacement.begin(), replacement.end(), replacement.end()))));
+				replaced_ = true;
+				return String(text::UTF32To16Iterator<>(
+					temp.data()), text::UTF32To16Iterator<>(temp.data() + temp.length()));
+			}
+
+			/**
+			 * Resets the matcher.
+			 * Resetting a matcher discards all of its explicit state information and sets its
+			 * append position to the beginning of the input. The matcher's region is set to the
+			 * default region, which is its entire character sequence. The anchoring and
+			 * transparency of this matcher's region boundaries are unaffected.
+			 * @return This matcher
+			 */
+			Matcher& reset() {
+				Base::impl() = boost::match_results<CodePointIterator>();
+				region_ = input_;
+				current_ = appendingPosition_ = input_.first;
+				replaced_ = false;
+				return *this;
+			}
+			/**
+			 * Resets this matcher with a new input sequence.
+			 * Resetting a matcher discards all of its explicit state information and sets its
+			 * append position to the beginning of the input. The matcher's region is set to the
+			 * default region, which is its entire character sequence. The anchoring and
+			 * transparency of this matcher's region boundaries are unaffected.
+			 * @param first The beginning of the new input character sequence
+			 * @param last The end of the new input character sequence
+			 * @return This matcher
+			 */
+			Matcher& reset(CodePointIterator first, CodePointIterator last) {
+				input_.first = first;
+				input_.second = last;
+				return reset();
+			}
+
+			/**
+			 * Returns the match state of this matcher as a @c MatchResult.
+			 * The result is unaffected by subsequent operations performed upon the matcher.
+			 * @return A @c MatchResult with the state of this matcher
+			 */
+			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
+				return std::auto_ptr<MatchResult<CPI> >(new internal::MatchResultImpl<CPI>(Base::impl()));
+			}
 		private:
-			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last);
-			template<typename OI> void appendReplacement(OI out, const String& replacement, const manah::Int2Type<2>&);
-			template<typename OI> void appendReplacement(OI out, const String& replacement, const manah::Int2Type<4>&);
-			template<typename OI> OI appendTail(OI out, const manah::Int2Type<2>&) const;
-			template<typename OI> OI appendTail(OI out, const manah::Int2Type<4>&) const;
+			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last) :
+				pattern_(&pattern), current_(first), input_(first, last), region_(first, last),
+				appendingPosition_(input_.first), replaced_(false), matchedZeroWidth_(false),
+				usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
+			template<typename OutputIterator> void appendReplacement(OutputIterator out,
+					const String& replacement, const ascension::internal::Int2Type<2>&) {
+				typedef typename boost::match_results<CodePointIterator>::string_type String32;
+				if(appendingPosition_ != input_.second)
+					std::copy(appendingPosition_, Base::impl()[0].first, out);
+				const String32 replaced(Base::impl().format(String32(
+					text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
+					text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
+				std::copy(text::UTF32To16Iterator<typename String32::const_iterator>(replaced.begin()),
+					text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);
+			}
+			template<typename OutputIterator> void appendReplacement(OutputIterator out,
+					const String& replacement, const ascension::internal::Int2Type<4>&) {
+				if(appendingPosition_ != input_.second)
+					std::copy(appendingPosition_, Base::impl()[0].first, out);
+				const String& replaced(Base::impl().format(replacement));
+				std::copy(replaced.begin(), replaced.end(), out);
+			}
+			template<typename OutputIterator>
+			OutputIterator appendTail(OutputIterator out, const ascension::internal::Int2Type<2>&) const {
+				return std::copy(
+					text::UTF32To16Iterator<CodePointIterator>(appendingPosition_),
+					text::UTF32To16Iterator<CodePointIterator>(input_.second), out);
+			}
+			template<typename OutputIterator>
+			OutputIterator appendTail(OutputIterator out, const ascension::internal::Int2Type<4>&) const {
+				return std::copy(appendingPosition_, input_.second, out);
+			}
 			bool acceptResult() {const bool b(Base::impl()[0].matched); matchedZeroWidth_ = b && Base::impl().length() == 0; if(b) current_ = Base::end(); return b;}
 			void checkInplaceReplacement() const {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
 			void checkPreviousMatch() const {if(!Base::impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
-			boost::match_flag_type getNativeFlags(const CodePointIterator& first, const CodePointIterator& last, bool continuous) const /*throw()*/;
+			boost::match_flag_type nativeFlags(const CodePointIterator& first,
+					const CodePointIterator& last, bool continuous) const /*throw()*/ {
+				boost::match_flag_type f(boost::regex_constants::match_default);
+				if((pattern_->flags() & Pattern::DOTALL) == 0)
+					f |= boost::regex_constants::match_not_dot_newline;
+				if((pattern_->flags() & Pattern::MULTILINE) == 0)
+					f |= boost::regex_constants::match_single_line;
+				if(continuous && matchedZeroWidth_)
+					f |= boost::regex_constants::match_not_initial_null;
+				if(!usesAnchoringBounds_) {
+					if(first != input_.first)
+						f |= boost::regex_constants::match_not_bob | boost::regex_constants::match_not_bol;
+					if(last != input_.second)
+						f |= boost::regex_constants::match_not_eol | boost::regex_constants::match_not_eol;
+				}
+				if(usesTransparentBounds_ && first != input_.first)
+					f |= boost::regex_constants::match_prev_avail;
+				return f;
+			}
 			const Pattern* pattern_;
 			CodePointIterator current_;
 			std::pair<CodePointIterator, CodePointIterator> input_, region_;
@@ -244,6 +593,7 @@ namespace ascension {
 			const String pattern_;
 		};
 
+		// the documentation is regex.cpp
 		class Pattern {
 			MANAH_UNASSIGNABLE_TAG(Pattern);
 		public:
@@ -259,17 +609,75 @@ namespace ascension {
 			};
 		public:
 			virtual ~Pattern() /*throw()*/;
-			// attributes
-			int flags() const /*throw()*/;
-			String pattern() const;
-			// compilation
-			static std::auto_ptr<const Pattern> compile(const String& regex, int flags = 0);
+
+			/**
+			 * Returns this pattern's match flags.
+			 * @return The match flags specified when this pattern was compiled
+			 */
+			int flags() const /*throw()*/ {return flags_;}
+			/**
+			 * Returns the regular expression from which this pattern was compiled.
+			 * @return The source of this pattern
+			 */
+			String pattern() const {
+				const std::basic_string<CodePoint> s(impl_.str());
+				return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+			}
+
+			/**
+			 * Compiles the given regular expression into a pattern with the given flags.
+			 * @param regex The expression to be compiled
+			 * @param flags Match flags
+			 * @throw UnknownValueException Bit values other than those corresponding to the
+			 *                              defined match flags are set in @a flags
+			 * @throw PatternSyntaxException The expression's syntax is invalid
+			 */
+			static std::auto_ptr<const Pattern> compile(const String& regex, int flags = 0) {
+				return std::auto_ptr<const Pattern>(new Pattern(regex, flags));
+			}
+			/**
+			 * Creates a matcher that will match the given input against this pattern.
+			 * @tparam CodePointIterator A type of the input character sequence
+			 * @param first The beginning of the character sequence to be matched
+			 * @param last The end of the character sequence to be matched
+			 * @return A new matcher for this pattern
+			 */
 			template<typename CodePointIterator>
-			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const;
-			// tools
-			static bool matches(const String& regex, const String& input);
+			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
+				return std::auto_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
+			}
+
+			/**
+			 * Compiles the given regular expression and attempts to match the given input against it.
+			 * An invocation of this convenience method of the form
+			 * @code
+			 * Pattern.matches(regex, input);
+			 * @endcode
+			 * behaves in exactly the same way as the expression
+			 * @code
+			 * Pattern.compile(regex).matcher(input).matches()
+			 * @endcode
+			 * If a pattern is to be used multiple times, compiling it once and reusing it will be
+			 * more efficient than invoking this method each time.
+			 * @param regex the expression to be compiled
+			 * @param input the character sequence to be matched
+			 * @throw PatternSyntaxException the expression's syntax is invalid
+			 */
+			static bool matches(const String& regex, const String& input) {
+				return matches(regex,
+					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
+			}
+			/**
+			 * Compiles the given regular expression and attempts to match the given input against it.
+			 * @param regex the expression to be compiled
+			 * @param first the character sequence to be matched
+			 * @param last the end of @a first
+			 * @throw PatternSyntaxException the expression's syntax is invalid
+			 */
 			template<typename CodePointIterator>
-			static bool matches(const String& regex, CodePointIterator first, CodePointIterator last);
+			static bool matches(const String& regex, CodePointIterator first, CodePointIterator last) {
+				return compile(regex)->matcher(first, last)->matches();
+			}
 //			template<typename CodePointIterator, typename OutputIterator>
 //			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
 		protected:
@@ -296,235 +704,8 @@ namespace ascension {
 		};
 #endif // !ASCENSION_NO_MIGEMO
 
-
-		// internal.RegexTraits /////////////////////////////////////////////
-
-		inline internal::RegexTraits::char_type internal::RegexTraits::translate(char_type c) const {
-			if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
-			return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
-				MANAH_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
-		}
-
-		inline int internal::RegexTraits::value(char_type c, int radix) const {
-			switch(radix) {
-			case 8:
-				return (c >= '0' && c <= '7') ? static_cast<int>(c - '0') : -1;
-			case 10:
-				return (c >= '0' && c <= '9') ? static_cast<int>(c - '0') : -1;
-			case 16:
-				if(c >= '0' && c <= '9')		return c - '0';
-				else if(c >= 'A' && c <= 'F')	return c - 'A' + 10;
-				else if(c >= 'a' && c <= 'f')	return c - 'a' + 10;
-			default:
-				return -1;
-			}
-		}
-
-		// internal.MatchResultImpl /////////////////////////////////////////
-
-		template<typename CPI> inline String regex::internal::MatchResultImpl<CPI>::group(int group) const {
-			const std::basic_string<CodePoint> s(get(group).str());
-			return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));}
-
-
-		// Matcher //////////////////////////////////////////////////////////
-
-		/// Private constructor.
-		template<typename CPI> inline Matcher<CPI>::Matcher(const Pattern& pattern, CPI first, CPI last) :
-			pattern_(&pattern), current_(first), input_(first, last), region_(first, last), appendingPosition_(input_.first),
-			replaced_(false), matchedZeroWidth_(false), usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
-
-		template<typename CPI> template<typename OI>
-		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const manah::Int2Type<2>&) {
-			typedef typename boost::match_results<CPI>::string_type String32;
-			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, Base::impl()[0].first, out);
-			const String32 replaced(Base::impl().format(String32(
-				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-			std::copy(text::UTF32To16Iterator<typename String32::const_iterator>(replaced.begin()),
-				text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);}
-
-		template<typename CPI> template<typename OI>
-		inline void Matcher<CPI>::appendReplacement(OI out, const String& replacement, const manah::Int2Type<4>&) {
-			if(appendingPosition_ != input_.second) std::copy(appendingPosition_, Base::impl()[0].first, out);
-			const String& replaced(Base::impl().format(replacement)); std::copy(replaced.begin(), replaced.end(), out);}
-
-		/// Implements a non-terminal append-and-replace step.
-		template<typename CPI> template<typename OI>
-		inline Matcher<CPI>& Matcher<CPI>::appendReplacement(OI out, const String& replacement) {
-			checkInplaceReplacement(); checkPreviousMatch();
-			appendReplacement(out, replacement, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());
-			appendingPosition_ = Base::impl()[0].second; return *this;}
-		
-		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
-			const manah::Int2Type<2>&) const {return std::copy(text::UTF32To16Iterator<CPI>(appendingPosition_), text::UTF32To16Iterator<CPI>(input_.second), out);}
-
-		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out,
-			const manah::Int2Type<4>&) const {return std::copy(appendingPosition_, input_.second, out);}
-
-		/// Implements a terminal append-and-replace step.
-		template<typename CPI> template<typename OI> inline OI Matcher<CPI>::appendTail(OI out) const {
-			checkInplaceReplacement(); return appendTail(out, manah::Int2Type<text::CodeUnitSizeOf<OI>::result>());}
-
-		/// Ends the active in-place replacement context.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::endInplaceReplacement(CPI first, CPI last, CPI regionFirst, CPI regionLast, CPI next) {
-			if(!replaced_) throw IllegalStateException("the matcher is not entered in in-place replacement context.");
-			const bool matchedZW = matchedZeroWidth_; reset(first, last);
-			region_.first = regionFirst; region_.second = regionLast; current_ = next; matchedZeroWidth_ = matchedZW; return *this;}
-
-		/// Attempts to find the next subsequence of the input sequence that matches the pattern.
-		/// This method starts at the beginning of the matcher's region, or, if a previous
-		/// invocation of the method was successful and the matcher has not since been reset, at the
-		/// first character not matched by the previous match.
-		template<typename CPI> inline bool Matcher<CPI>::find() {checkInplaceReplacement(); boost::regex_search(
-			current_, region_.second, Base::impl(), pattern_->impl_, getNativeFlags(current_, region_.second, true)); return acceptResult();}
-
-		/// Resets the matcher and then attempts to find the next subsequence of the input sequence
-		/// that matches the pattern, starting at the specified position.
-		template<typename CPI> inline bool Matcher<CPI>::find(CPI start) {reset(); boost::regex_search(
-			start, input_.second, Base::impl(), pattern_->impl_, getNativeFlags(start, input_.second, true)); return acceptResult();}
-
-		template<typename CPI> inline boost::match_flag_type
-		Matcher<CPI>::getNativeFlags(const CPI& first, const CPI& last, bool continuous) const /*throw()*/ {
-			boost::match_flag_type f(boost::regex_constants::match_default);
-			if((pattern_->flags() & Pattern::DOTALL) == 0) f |= boost::regex_constants::match_not_dot_newline;
-			if((pattern_->flags() & Pattern::MULTILINE) == 0) f |= boost::regex_constants::match_single_line;
-			if(continuous && matchedZeroWidth_) f |= boost::regex_constants::match_not_initial_null;
-			if(!usesAnchoringBounds_) {
-				if(first != input_.first) f |= boost::regex_constants::match_not_bob | boost::regex_constants::match_not_bol;
-				if(last != input_.second) f |= boost::regex_constants::match_not_eol | boost::regex_constants::match_not_eol;
-			}
-			if(usesTransparentBounds_ && first != input_.first) f |= boost::regex_constants::match_prev_avail;
-			return f;
-		}
-
-		/// Queries the anchoring of region bounds for the matcher.
-		/// @return true the matcher uses <em>anchoring</em> bounds. false otherwise
-		template<typename CPI> inline bool Matcher<CPI>::hasAnchoringBounds() const /*throw()*/ {return usesAnchoringBounds_;}
-
-		/// Queries the transparency of the region bounds for the matcher.
-		/// @retval true the matcher uses <em>transparent</em> bounds
-		/// @retval false the matcher uses <em>opaque</em> bounds
-		template<typename CPI> inline bool Matcher<CPI>::hasTransparentBounds() const /*throw()*/ {return usesTransparentBounds_;}
-
-		/// Attempts to match the input sequence, starting at the beginning of the region, against
-		/// the pattern. Like the @c matches method, this method always starts at the beginning of
-		/// the region; unlike that method, it does not require that the entire region be matched.
-		template<typename CPI> inline bool Matcher<CPI>::lookingAt() {
-			boost::regex_search(region_.first, region_.second, Base::impl(), pattern_->impl_, getNativeFlags(
-				region_.first, region_.second, false) | boost::regex_constants::match_continuous); return acceptResult();}
-
-		/// Attempts to match the entire region against the pattern.
-		template<typename CPI> inline bool Matcher<CPI>::matches() {
-			boost::regex_match(region_.first, region_.second, Base::impl(), pattern_->impl_,
-				getNativeFlags(region_.first, region_.second, false)); return acceptResult();}
-
-		/// Returns the pattern interpreted by the matcher.
-		template<typename CPI> inline const Pattern& Matcher<CPI>::pattern() const /*throw()*/ {return *pattern_;}
-
-		/// Sets the limits of the matcher's region. Invoking this method resets the matcher.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::region(
-			CPI start, CPI end) {reset(); current_ = region_.first = start; region_.second = end; return *this;}
-
-		/// Reports the end of the matcher's region.
-		template<typename CPI> inline const CPI& Matcher<CPI>::regionEnd() const /*throw()*/ {return region_.second;}
-
-		/// Reports the beginning of the matcher's region.
-		template<typename CPI> inline const CPI& Matcher<CPI>::regionStart() const /*throw()*/ {return region_.first;}
-
-		/// ...
-		template<typename CPI> inline String Matcher<CPI>::replaceInplace(const String& replacement) {
-			if(!Base::impl()[0].matched) throw IllegalStateException("the previous was failed or not performed.");
-			else if(replaced_) throw IllegalStateException("this matcher already entered in in-place replacement.");
-			const std::basic_string<CodePoint> temp(Base::impl().format(std::basic_string<CodePoint>(
-				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-				text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-			replaced_ = true;
-			return String(text::UTF32To16Iterator<>(temp.data()), text::UTF32To16Iterator<>(temp.data() + temp.length()));}
-
-		/// Replaces every subsequence of the input sequence that matches the pattern with the given
-		/// replacement string. This method first resets the matcher.
-		template<typename CPI> inline String Matcher<CPI>::replaceAll(const String& replacement) {reset(); std::basic_ostringstream<Char> s;
-			std::ostream_iterator<Char, Char> os(s); while(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
-
-		/// Replaces the first subsequence of the input sequence that matches the pattern with the
-		/// given replacement string. This method first resets the matcher.
-		template<typename CPI> inline String Matcher<CPI>::replaceFirst(const String& replacement) {reset(); std::basic_ostringstream<Char> s;
-			std::ostream_iterator<Char, Char> os(s); if(find()) appendReplacement(os, replacement); appendTail(os); return s.str();}
-
-		/// Resets the matcher. Resetting a matcher discards all of its explicit state information
-		/// and sets its append position to the beginning of the input. The matcher's region is set
-		/// to the default region, which is its entire character sequence. The anchoring and
-		/// transparency of the matcher's region boundaries are unaffected. 
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset() {Base::impl() = boost::match_results<CPI>();
-			region_ = input_; current_ = appendingPosition_ = input_.first; replaced_ = false; return *this;}
-
-		/// Resets the matcher with a new input sequence.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::reset(
-			CPI first, CPI last) {input_.first = first; input_.second = last; return reset();}
-
-		/// Returns the match state of the matcher as a @c MatchResult.
-		/// This result is unaffected by subsequent operations performed upon the matcher.
-		template<typename CPI> inline std::auto_ptr<MatchResult<CPI> > Matcher<CPI>::toMatchResult() const {
-			return std::auto_ptr<MatchResult<CPI> >(new internal::MatchResultImpl<CPI>(Base::impl()));}
-
-		/// Sets the anchoring of region bounds for the matcher.
-		/// @param b true to use <em>anchoring</em> bounds
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useAnchoringBounds(bool b) /*throw()*/ {usesAnchoringBounds_ = b; return *this;}
-
-		/// Changes the pattern the matcher uses to find matches with. This method causes the
-		/// matcher to lose information about the groups of the last match that occurred. The
-		/// matcher's position in the input is maintained and its last append position is unaffected.
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::usePattern(
-			const Pattern& newPattern) {pattern_ = &pattern; Base::impl().reset(); return *this;}
-
-		/// Sets the transparency of region bounds for the matcher.
-		/// @param b true to use <em>transparent</em> bounds
-		template<typename CPI> inline Matcher<CPI>& Matcher<CPI>::useTransparentBounds(bool b) /*throw()*/ {usesTransparentBounds_ = b; return *this;}
-
-		// Pattern //////////////////////////////////////////////////////////
-
-		/**
-		 * Compiles the given regular expression into a pattern with the given flags.
-		 * @param regex the expression to be compiled
-		 * @param flags match flags
-		 * @throw UnknownValueException bit values other than those corresponding to the defined match flags are set in @a flags
-		 * @throw PatternSyntaxException the expression's syntax is invalid
-		 */
-		inline std::auto_ptr<const Pattern> Pattern::compile(
-			const String& regex, int flags /* = 0 */) {return std::auto_ptr<const Pattern>(new Pattern(regex, flags));}
-
-		/// Returns this pattern's match flags.
-		inline int Pattern::flags() const /*throw()*/ {return flags_;}
-
-		/// Creates a matcher that will match the given input against this pattern.
-		template<typename CPI> inline std::auto_ptr<Matcher<CPI> > Pattern::matcher(
-			CPI first, CPI last) const {return std::auto_ptr<Matcher<CPI> >(new Matcher<CPI>(*this, first, last));}
-
-		/**
-		 * Compiles the given regular expression and attempts to match the given input against it.
-		 * @param regex the expression to be compiled
-		 * @param first the character sequence to be matched
-		 * @param last the end of @a first
-		 * @throw PatternSyntaxException the expression's syntax is invalid
-		 */
-		template<typename CPI> inline bool Pattern::matches(
-			const String& regex, CPI first, CPI last) {return compile(regex)->matcher(first, last)->matches();}
-
-		/**
-		 * Compiles the given regular expression and attempts to match the given input against it.
-		 * @param regex the expression to be compiled
-		 * @param input the character sequence to be matched
-		 * @throw PatternSyntaxException the expression's syntax is invalid
-		 */
-		inline bool Pattern::matches(const String& regex, const String& input) {
-			return matches(regex, text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));}
-
-		/// Returns the regular expression from which this pattern was compiled.
-		inline String Pattern::pattern() const {const std::basic_string<CodePoint> s(impl_.str());
-			return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));}
-
-}}	// namespace ascension.regex
+	}
+}	// namespace ascension.regex
 
 #endif // !ASCENSION_REGEX_HPP
 #endif // !ASCENSION_NO_REGEX
