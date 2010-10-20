@@ -12,8 +12,8 @@
 #	include <sys/stat.h>	// for POSIX environment
 #endif
 #include "character-iterator.hpp"
+#include "gap-vector.hpp"
 #include <manah/memory.hpp>		// manah.FastArenaObject
-#include <manah/gap-buffer.hpp>	// manah.GapBuffer
 #include <iostream>
 #include <set>
 #ifndef ASCENSION_NO_GREP
@@ -497,8 +497,8 @@ namespace ascension {
 				void next() {++impl_;}
 				void previous() {--impl_;}
 			private:
-				Iterator(manah::GapBuffer<length_t>::ConstIterator impl) : impl_(impl) {}
-				manah::GapBuffer<length_t>::ConstIterator impl_;
+				Iterator(ascension::internal::GapVector<length_t>::ConstIterator impl) : impl_(impl) {}
+				ascension::internal::GapVector<length_t>::ConstIterator impl_;
 				friend class Bookmarker;
 			};
 			// destructor
@@ -518,14 +518,14 @@ namespace ascension {
 			void mark(length_t line, bool set = true);
 			void toggle(length_t line);
 		private:
-			manah::GapBuffer<length_t>::Iterator find(length_t line) const /*throw()*/;
+			ascension::internal::GapVector<length_t>::Iterator find(length_t line) const /*throw()*/;
 			// IDocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
 			explicit Bookmarker(Document& document) /*throw()*/;
 			Document& document_;
-			manah::GapBuffer<length_t> markedLines_;
+			ascension::internal::GapVector<length_t> markedLines_;
 			ascension::internal::Listeners<IBookmarkListener> listeners_;
 			friend class Document;
 		};
@@ -595,7 +595,7 @@ namespace ascension {
 				std::size_t revisionNumber_;
 				friend class Document;
 			};
-			typedef manah::GapBuffer<Line*>	LineList;	///< List of lines.
+			typedef ascension::internal::GapVector<Line*> LineList;	///< List of lines.
 
 			// constructors
 			Document();
